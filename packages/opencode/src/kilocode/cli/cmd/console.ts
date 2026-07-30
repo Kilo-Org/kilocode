@@ -46,6 +46,7 @@ const OpenCommand = cmd({
       type: "boolean",
     }),
   handler: async (args) => {
+    console.warn("Kilo Console is deprecated and will be removed in a future release.")
     const run = async (signal?: AbortSignal) => {
       const opts = await AppRuntime.runPromise(resolveNetworkOptions(args))
       warnPort(opts.port)
