@@ -182,6 +182,9 @@ export function createSideTerminal(deps: SideTerminalDeps) {
   const press = (e: KeyboardEvent): boolean => {
     const mod = mac ? e.metaKey && !e.ctrlKey : e.ctrlKey && !e.metaKey
     if (e.key !== "/" || e.shiftKey || e.altKey || !mod) return false
+    // An echo either arrives promptly or never; drop the backlog of a
+    // dropped echo so it cannot swallow a later unrelated invocation.
+    if (Date.now() - lastPress > ECHO_MS) pending = 0
     pending++
     lastPress = Date.now()
     openPreferred("keyboard_shortcut")

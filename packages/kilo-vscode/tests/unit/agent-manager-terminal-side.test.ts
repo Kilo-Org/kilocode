@@ -154,6 +154,17 @@ describe("Agent Manager side terminal controller", () => {
     expect(item.ctl.echo()).toBe(false)
   })
 
+  it("expires a dropped echo's backlog at the next spaced press", async () => {
+    const item = scene({ destination: "agentManager", mac: true })
+    // First press's echo never arrives (dropped forwarding); its backlog
+    // must not outlive the echo window into the next press.
+    item.ctl.press({ key: "/", metaKey: true } as KeyboardEvent)
+    await new Promise((resolve) => setTimeout(resolve, 550))
+    item.ctl.press({ key: "/", metaKey: true } as KeyboardEvent)
+    expect(item.ctl.echo()).toBe(true)
+    expect(item.ctl.echo()).toBe(false)
+  })
+
   it("persists the picked destination with a section-relative settings key", () => {
     const item = scene()
     item.ctl.choose("agentManager")
