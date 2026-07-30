@@ -1518,7 +1518,7 @@ export const layer = Layer.effect(
           }
 
           if (provider.discoverModels === true) {
-            discoveryLoaders[providerID] = () => discoverModels(providerID, provider, parsed)
+            discoveryLoaders[providerID] = () => discoverModels(providerID, provider, parsed, provider.npm) // kilocode_change
           }
 
           database[providerID] = parsed
@@ -1641,6 +1641,7 @@ export const layer = Layer.effect(
             }),
           ),
           { concurrency: "unbounded" },
+        ) // kilocode_change
 
         for (const [id, provider] of Object.entries(providers)) {
           const providerID = ProviderV2.ID.make(id)

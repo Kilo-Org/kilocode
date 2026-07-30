@@ -1,16 +1,18 @@
+// kilocode_change - new file
 import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { Effect } from "effect"
-import { Model } from "./provider"
+import { type Model } from "./provider"
 import { buildTimeoutSignal } from "@/kilocode/provider/provider"
 
 export async function discoverModels(
   providerID: string,
-  provider: { options?: Record<string, any>; api?: string },
-  parsed: { models: Record<string, any> },
+  provider: { options?: Record<string, any>; api?: string; npm?: string },
+  parsed: { models: Record<string, Model> },
+  npm?: string,
 ): Promise<Record<string, Model>> {
   const first = Object.values(parsed.models)[0]
-  const baseURL = provider.options?.baseURL ?? provider.api ?? (first as any)?.api?.url
+  const baseURL = provider.options?.baseURL ?? provider.api ?? first?.api?.url
   if (typeof baseURL !== "string" || baseURL === "") return {}
 
   const url = new URL("models", baseURL.endsWith("/") ? baseURL : `${baseURL}/`).toString()
@@ -44,7 +46,7 @@ export async function discoverModels(
         api: {
           id: modelID,
           url,
-          npm: "@ai-sdk/openai-compatible",
+          npm: npm ?? provider.npm ?? "@ai-sdk/openai-compatible",
         },
         name: modelID,
         family: "",
