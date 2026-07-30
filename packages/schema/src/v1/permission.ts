@@ -38,7 +38,12 @@ export type Request = typeof Request.Type
 export const Reply = Schema.Literals(["once", "always", "reject"])
 export type Reply = typeof Reply.Type
 
-export const ReplyBody = Schema.Struct({ reply: Reply, message: Schema.optional(Schema.String) }).annotate({
+export const ReplyBody = Schema.Struct({
+  reply: Reply,
+  message: Schema.optional(Schema.String),
+  // kilocode_change - set by clients when a human answered the prompt; the server refuses machine approvals of skill-shell batches
+  interactive: Schema.optional(Schema.Boolean),
+}).annotate({
   identifier: "PermissionReplyBody",
 })
 export type ReplyBody = typeof ReplyBody.Type

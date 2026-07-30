@@ -3771,6 +3771,7 @@ export class Permission extends HeyApiClient {
       workspace?: string
       reply?: "once" | "always" | "reject"
       message?: string
+      interactive?: boolean
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -3784,6 +3785,7 @@ export class Permission extends HeyApiClient {
             { in: "query", key: "workspace" },
             { in: "body", key: "reply" },
             { in: "body", key: "message" },
+            { in: "body", key: "interactive" },
           ],
         },
       ],
@@ -10856,6 +10858,7 @@ export class Pty2 extends HeyApiClient {
       "location[workspace]"?: string
       cursor?: string
       ticket?: string
+      replayExited?: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -10869,6 +10872,7 @@ export class Pty2 extends HeyApiClient {
             { in: "query", key: "location[workspace]" },
             { in: "query", key: "cursor" },
             { in: "query", key: "ticket" },
+            { in: "query", key: "replayExited" },
           ],
         },
       ],

@@ -3137,6 +3137,9 @@
                       },
                       "content": {
                         "type": "string"
+                      },
+                      "trusted": {
+                        "type": "boolean"
                       }
                     },
                     "required": ["name", "location", "content"],
@@ -5281,6 +5284,9 @@
                   },
                   "message": {
                     "type": "string"
+                  },
+                  "interactive": {
+                    "type": "boolean"
                   }
                 },
                 "required": ["reply"],
@@ -24473,6 +24479,13 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "replayExited",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "security": [],
@@ -25591,6 +25604,9 @@
             "$ref": "#/components/schemas/EventSandboxStatusChanged"
           },
           {
+            "$ref": "#/components/schemas/EventLspClientDiagnostics"
+          },
+          {
             "$ref": "#/components/schemas/EventSuggestionShown"
           },
           {
@@ -25616,9 +25632,6 @@
           },
           {
             "$ref": "#/components/schemas/EventKilo-sessionsRemote-status-changed"
-          },
-          {
-            "$ref": "#/components/schemas/EventLspClientDiagnostics"
           },
           {
             "$ref": "#/components/schemas/EventMemoryStatus1"
@@ -28688,6 +28701,9 @@
                 "$ref": "#/components/schemas/EventSandboxStatusChanged"
               },
               {
+                "$ref": "#/components/schemas/EventLspClientDiagnostics"
+              },
+              {
                 "$ref": "#/components/schemas/EventSuggestionShown"
               },
               {
@@ -28713,9 +28729,6 @@
               },
               {
                 "$ref": "#/components/schemas/EventKilo-sessionsRemote-status-changed"
-              },
-              {
-                "$ref": "#/components/schemas/EventLspClientDiagnostics"
               },
               {
                 "$ref": "#/components/schemas/EventMemoryStatus"
@@ -33450,6 +33463,9 @@
               "type": "boolean"
             }
           },
+          "web_search": {
+            "type": "boolean"
+          },
           "attachment": {
             "$ref": "#/components/schemas/AttachmentConfig"
           },
@@ -34679,6 +34695,9 @@
           "source": {
             "type": "string",
             "enum": ["command", "mcp", "skill"]
+          },
+          "trusted": {
+            "type": "boolean"
           },
           "template": {
             "type": "string"
@@ -39925,7 +39944,7 @@
               },
               "reason": {
                 "type": "string",
-                "enum": ["completed", "error", "interrupted"]
+                "enum": ["completed", "error", "interrupted", "superseded"]
               }
             },
             "required": ["sessionID", "reason"],
@@ -40259,6 +40278,33 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
+      "EventLspClientDiagnostics": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["lsp.client.diagnostics"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "serverID": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              }
+            },
+            "required": ["serverID", "path"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
       "EventSuggestionShown": {
         "type": "object",
         "properties": {
@@ -40549,33 +40595,6 @@
               }
             },
             "required": ["enabled", "connected"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
-      "EventLspClientDiagnostics": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["lsp.client.diagnostics"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "serverID": {
-                "type": "string"
-              },
-              "path": {
-                "type": "string"
-              }
-            },
-            "required": ["serverID", "path"],
             "additionalProperties": false
           }
         },

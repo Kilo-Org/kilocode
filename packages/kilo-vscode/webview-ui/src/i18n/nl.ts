@@ -307,7 +307,6 @@ export const dict = {
 
   "session.tab.review": "Beoordelen",
   "session.review.filesChanged": "{{count}} bestanden gewijzigd",
-  "session.review.change.other": "Wijzigingen",
   "session.review.loadingChanges": "Wijzigingen laden...",
   "session.review.noChanges": "Geen wijzigingen",
 
@@ -658,7 +657,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "Agent Gedrag",
   "settings.autoApprove.title": "Automatisch Goedkeuren",
-  "settings.browser.title": "Browser",
+  "settings.webTools.title": "Webtools",
+  "settings.webTools.description": "Configureer zoeken op internet en browserautomatisering.",
+  "settings.webTools.webSearch.enable": "Inschakelen voor alle providers",
+  "settings.webTools.browserAutomation": "Browserautomatisering",
+  "settings.webTools.webSearch.title": "Zoeken op internet",
+  "settings.webTools.webSearch.description": "Maak zoeken op internet beschikbaar voor modellen van alle providers.",
   "settings.checkpoints.title": "Controlepunten",
   "settings.display.title": "Weergave",
   "settings.autocomplete.title": "Automatisch Aanvullen",
@@ -713,6 +717,13 @@ export const dict = {
   "session.messages.scrollToBottom": "Scroll naar beneden",
   "session.messages.initializing": "Initialiseren...",
   "session.messages.taskStarting": "Starten...",
+  "session.prompts.navLabel": "Promptnavigator",
+  "session.prompts.tick": "Prompt {{index}} van {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "Nog geen reactie",
+  "session.prompts.queued": "In wachtrij",
+  "session.prompts.first": "Eerste prompt",
+  "session.prompts.latest": "Meest recente prompt",
+  "session.prompts.overflow": "{{count}} eerdere prompts",
   "session.status.writingResponse": "Antwoord schrijven...",
   "session.status.retry": "Opnieuw proberen...",
   "session.status.working": "Bezig...",
@@ -739,7 +750,8 @@ export const dict = {
   "dialog.model.noProviders": "Geen providers",
 
   "prompt.placeholder.connecting": "Verbinden met server...",
-  "prompt.placeholder.default": "Typ een bericht... (Enter om te verzenden, Shift+Enter voor nieuwe regel)",
+  "prompt.placeholder.default":
+    "Typ een bericht, @ om bestanden te vermelden... (Enter om te verzenden, Shift+Enter voor nieuwe regel)",
   "prompt.placeholder.error": "Verbinding mislukt. Controleer het uitvoerpaneel of herstart de extensie.",
 
   "context.usage.sessionCost": "Sessiekosten",

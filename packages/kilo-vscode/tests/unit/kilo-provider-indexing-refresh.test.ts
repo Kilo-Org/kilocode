@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import type { Config } from "@kilocode/sdk/v2/client"
+import { fetchSnapshot } from "../../src/kilo-provider/config-snapshot"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
 const { KiloProvider } = await import("../../src/KiloProvider")
@@ -17,6 +18,7 @@ type Internals = {
     projectUnset?: string[][],
   ) => Promise<void>
   fetchAndSendConfig: () => Promise<void>
+  fetchAndSendConfigUpdated: () => Promise<void>
   fetchAndSendProviders: () => Promise<void>
   fetchAndSendAgents: () => Promise<void>
   fetchAndSendSkills: () => Promise<void>
@@ -28,17 +30,18 @@ type Internals = {
 function createConnection() {
   let drains = 0
   const patches: unknown[] = []
+  const config = { snapshot: true }
+  const global = { snapshot: false }
+  const project = { default_agent: "code" }
   const client = {
     global: {
       config: {
-        get: async () => ({ data: {} }),
-        update: async () => ({ data: {} }),
+        get: async () => ({ data: global }),
       },
     },
     config: {
-      get: async () => ({ data: {} }),
-      update: async () => ({ data: {} }),
-      overlay: async () => ({ data: { project: {} } }),
+      get: async () => ({ data: config }),
+      overlay: async () => ({ data: { project } }),
       overlayUpdate: async (patch: unknown) => {
         patches.push(patch)
         return { data: {} }
@@ -47,6 +50,7 @@ function createConnection() {
   }
 
   return {
+    client,
     drains: () => drains,
     patches: () => patches,
     service: {
@@ -59,6 +63,29 @@ function createConnection() {
 }
 
 describe("KiloProvider indexing refresh", () => {
+  it("shares snapshot payloads across load, SSE refresh, and post-save refresh", async () => {
+    const conn = createConnection()
+    const settings = () => ({ maxCost: 0, languageCommitMessage: "sync" })
+    const snapshot = await fetchSnapshot(conn.client as never, "/repo", settings)
+    const provider = new KiloProvider({} as never, conn.service as never)
+    const internal = provider as unknown as Internals
+    const sent: unknown[] = []
+    provider.postMessage = (message) => void sent.push(message)
+    Object.assign(internal, { connectionState: "connected", commitMessageLanguageSetting: () => "sync" })
+    await internal.fetchAndSendConfig()
+    await internal.fetchAndSendConfigUpdated()
+    await internal.handleUpdateConfig({})
+
+    expect(sent).toEqual([
+      { type: "configLoaded", ...snapshot },
+      { type: "configUpdated", ...snapshot },
+      { type: "configUpdated", ...snapshot },
+    ])
+    sent.length = 0
+    internal.connectionState = "disconnected"
+    await internal.fetchAndSendConfig()
+    expect(sent).toEqual([{ type: "configLoaded", ...snapshot }])
+  })
   it("reloadAfterAuthChange fetches config first, then indexing status", async () => {
     const provider = new KiloProvider({} as never, {} as never)
     const internal = provider as unknown as Internals

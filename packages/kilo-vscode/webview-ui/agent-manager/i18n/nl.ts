@@ -32,6 +32,7 @@ export const dict = {
   "agentManager.section.moveDown": "Omlaag verplaatsen",
 
   "agentManager.hoverCard.branch": "BRANCH",
+  "agentManager.hoverCard.worktree": "Worktree",
   "agentManager.hoverCard.base": "Basis",
   "agentManager.hoverCard.sessions": "Sessies",
   "agentManager.hoverCard.files": "Bestanden",
@@ -62,7 +63,7 @@ export const dict = {
   "agentManager.terminal.new": "Nieuw terminaltabblad",
   "agentManager.terminal.ended": "terminal beëindigd — sluit tabblad om te negeren",
   "agentManager.terminal.connectionError": "terminalverbindingsfout",
-  "agentManager.terminal.kill": "Terminal beëindigen",
+  "agentManager.terminal.add": "Nieuwe terminal",
   "agentManager.terminal.empty": "Hier is nog geen terminal",
   "agentManager.terminal.start": "Terminal starten",
   "agentManager.terminal.destination": "Kies wat de terminalknop opent",
@@ -143,6 +144,8 @@ export const dict = {
   "agentManager.diff.revertFile": "Bestand terugzetten",
   "agentManager.diff.revertSuccess": "Bestand teruggezet",
   "agentManager.diff.revertError": "Terugzetten mislukt",
+  "agentManager.diff.applyBranchOnly":
+    "Toepassen werkt alleen op de volledige branch-diff. Schakel naar het bereik Branch om toe te passen.",
   "agentManager.open.button": "Openen",
   "agentManager.open.tooltip": "Open deze worktree in VS Code",
   "agentManager.apply.globalButton": "Toepassen",

@@ -306,7 +306,6 @@ export const dict = {
 
   "session.tab.review": "Огляд",
   "session.review.filesChanged": "{{count}} файлів змінено",
-  "session.review.change.other": "Змін",
   "session.review.loadingChanges": "Завантаження змін...",
   "session.review.noChanges": "Змін немає",
 
@@ -655,7 +654,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "Поведінка агента",
   "settings.autoApprove.title": "Автоматичне схвалення",
-  "settings.browser.title": "Браузер",
+  "settings.webTools.title": "Вебінструменти",
+  "settings.webTools.description": "Налаштуйте вебпошук і автоматизацію браузера.",
+  "settings.webTools.webSearch.enable": "Увімкнути для всіх постачальників",
+  "settings.webTools.browserAutomation": "Автоматизація браузера",
+  "settings.webTools.webSearch.title": "Вебпошук",
+  "settings.webTools.webSearch.description": "Зробіть вебпошук доступним для моделей усіх постачальників.",
   "settings.checkpoints.title": "Контрольні точки",
   "settings.display.title": "Відображення",
   "settings.autocomplete.title": "Автодоповнення",
@@ -709,6 +713,13 @@ export const dict = {
   "session.messages.scrollToBottom": "Прокрутити до низу",
   "session.messages.initializing": "Ініціалізація...",
   "session.messages.taskStarting": "Запуск...",
+  "session.prompts.navLabel": "Навігатор запитів",
+  "session.prompts.tick": "Запит {{index}} з {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "Відповіді ще немає",
+  "session.prompts.queued": "У черзі",
+  "session.prompts.first": "Перший запит",
+  "session.prompts.latest": "Останній запит",
+  "session.prompts.overflow": "{{count}} попередніх запитів",
   "session.status.writingResponse": "Пишу відповідь...",
   "session.status.retry": "Повторна спроба…",
   "session.status.working": "Працює...",
@@ -735,7 +746,8 @@ export const dict = {
   "dialog.model.noProviders": "Немає провайдерів",
 
   "prompt.placeholder.connecting": "Підключення до сервера...",
-  "prompt.placeholder.default": "Напишіть повідомлення... (Enter для надсилання, Shift+Enter для нового рядка)",
+  "prompt.placeholder.default":
+    "Напишіть повідомлення, @ щоб згадати файли... (Enter для надсилання, Shift+Enter для нового рядка)",
   "prompt.placeholder.error": "Підключення не вдалося. Перевірте панель виводу або перезапустіть розширення.",
 
   "context.usage.sessionCost": "Вартість сесії",

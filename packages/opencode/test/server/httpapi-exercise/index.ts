@@ -1765,6 +1765,7 @@ const scenarios: Scenario[] = [
     .json(200, boolean, "status"),
   http.protected
     .get("/tui/control/next", "tui.control.next")
+    .skipValidAuthProbe() // kilocode_change - valid requests intentionally block waiting for queued TUI input
     .mutating()
     .seeded((ctx) => ctx.tuiRequest({ path: "/tui/exercise", body: { text: "queued" } }))
     .json(

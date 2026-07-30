@@ -12,6 +12,7 @@ import { SessionSchema } from "./session/schema" // kilocode_change
 import { Shell } from "./shell"
 import { lazy } from "./util/lazy"
 import { KiloPtySelfCommand } from "./kilocode/pty-self-command" // kilocode_change
+import { KiloPtyTermination } from "./kilocode/pty/termination" // kilocode_change
 
 const BUFFER_LIMIT = 1024 * 1024 * 2
 // Exited sessions stay observable (status, exit code, retained output) until removed explicitly.
@@ -36,6 +37,7 @@ type Active = {
   cursor: number
   subscribers: Map<object, Subscriber>
   listeners: Disp[]
+  stopping: boolean // kilocode_change
 }
 
 // kilocode_change - the Kilo `sessionID` field now lives on the canonical shared schema (see
@@ -65,6 +67,8 @@ export type AttachInput = {
   readonly onData: (chunk: string) => void
   // Fired once when the session stops producing output: process exit (exitCode set), removal, or service teardown.
   readonly onEnd: (event: { exitCode?: number }) => void
+  // Canonical routes can replay retained output after exit; legacy callers retain the former error.
+  readonly allowExited?: boolean // kilocode_change
 }
 
 export type Attachment = {
@@ -122,23 +126,25 @@ const layer = Layer.effect(
       session.subscribers.clear()
     }
 
-    function teardown(session: Active) {
+    // kilocode_change start - terminate the complete PTY tree before reporting removal.
+    async function teardown(session: Active) {
+      session.stopping = true
+      if (session.info.status === "running") await KiloPtyTermination.terminate(session.process)
       for (const listener of session.listeners) listener.dispose()
       session.listeners.length = 0
-      if (session.info.status === "running") {
-        try {
-          session.process.kill()
-        } catch {}
-      }
-      notifyEnd(session, {})
+      notifyEnd(session, session.info.status === "exited" ? { exitCode: session.info.exitCode } : {})
     }
+    // kilocode_change end
 
-    yield* Effect.addFinalizer(() =>
-      Effect.sync(() => {
-        for (const session of sessions.values()) teardown(session)
-        sessions.clear()
-        exitOrder.length = 0
-      }),
+    yield* Effect.addFinalizer(
+      () =>
+        // kilocode_change start - wait for process-tree termination during async service teardown.
+        Effect.promise(async () => {
+          await Promise.all(Array.from(sessions.values()).map(teardown))
+          sessions.clear()
+          exitOrder.length = 0
+        }),
+      // kilocode_change end
     )
 
     const requireSession = Effect.fn("Pty.requireSession")(function* (id: PtyID) {
@@ -148,14 +154,18 @@ const layer = Layer.effect(
     })
 
     const removeSession = Effect.fnUntraced(function* (id: PtyID) {
-      const session = sessions.get(id)
-      if (!session) return
-      sessions.delete(id)
-      const index = exitOrder.indexOf(id)
-      if (index !== -1) exitOrder.splice(index, 1)
-      yield* Effect.logInfo("removing session", { id })
-      teardown(session)
-      yield* events.publish(Event.Deleted, { id: session.info.id })
+      // kilocode_change start - removal and its deleted event are one uninterruptible lifecycle transition.
+      yield* Effect.gen(function* () {
+        const session = sessions.get(id)
+        if (!session) return
+        yield* Effect.logInfo("removing session", { id })
+        yield* Effect.promise(() => teardown(session))
+        sessions.delete(id)
+        const index = exitOrder.indexOf(id)
+        if (index !== -1) exitOrder.splice(index, 1)
+        yield* events.publish(Event.Deleted, { id: session.info.id })
+      }).pipe(Effect.uninterruptible)
+      // kilocode_change end
     })
 
     const remove = Effect.fn("Pty.remove")(function* (id: PtyID) {
@@ -179,9 +189,10 @@ const layer = Layer.effect(
         args: input.args ? [...input.args] : undefined,
         cwd: input.cwd,
       })
+      const implicit = !resolved.command
       const command = resolved.command || Shell.preferred(Config.latest(yield* config.entries(), "shell"))
       const base = resolved.args ?? []
-      const args = Shell.login(command) ? [...base, "-l"] : [...base]
+      const args = implicit && Shell.login(command) ? [...base, "-l"] : [...base]
       const cwd = resolved.cwd || location.directory
       // kilocode_change end
       const env = {
@@ -221,6 +232,7 @@ const layer = Layer.effect(
         cursor: 0,
         subscribers: new Map(),
         listeners: [],
+        stopping: false, // kilocode_change
       }
       sessions.set(id, session)
       session.listeners.push(
@@ -244,7 +256,7 @@ const layer = Layer.effect(
           session.bufferCursor += excess
         }),
         proc.onExit(({ exitCode }) => {
-          if (session.info.status === "exited") return
+          if (session.info.status === "exited" || session.stopping) return // kilocode_change
           session.info.status = "exited"
           session.info.exitCode = exitCode
           notifyEnd(session, { exitCode })
@@ -284,7 +296,7 @@ const layer = Layer.effect(
 
     const attach = Effect.fn("Pty.attach")(function* (id: PtyID, input: AttachInput) {
       const session = yield* requireSession(id)
-      if (session.info.status !== "running") return yield* new ExitedError({ ptyID: id })
+      if (session.info.status !== "running" && !input.allowExited) return yield* new ExitedError({ ptyID: id }) // kilocode_change
       yield* Effect.logInfo("client attached to session", { id, directory: location.directory })
       const token = {}
       const subscriber: Subscriber = {
@@ -293,6 +305,7 @@ const layer = Layer.effect(
         active: false,
         detached: false,
         pending: [],
+        end: session.info.status === "exited" ? { exitCode: session.info.exitCode } : undefined, // kilocode_change
       }
       session.subscribers.set(token, subscriber)
       const start = session.bufferCursor

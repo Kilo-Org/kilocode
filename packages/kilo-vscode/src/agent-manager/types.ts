@@ -16,6 +16,7 @@ import type { BranchListItem, WorktreeSetupErrorCode } from "./git-import"
 import type { RunStatus } from "./run/manager"
 import type { TerminalFont } from "./terminal-font"
 import type { TerminalDestination } from "./terminal-destination"
+import type { ScriptTerminalView } from "./ScriptTerminalManager"
 
 export type { TerminalFont }
 
@@ -177,6 +178,11 @@ interface TerminalFontChangedMessage {
   font: TerminalFont
 }
 
+interface ScriptTerminalsMessage {
+  type: "agentManager.scriptTerminals"
+  terminals: ScriptTerminalView[]
+}
+
 interface ErrorOutMessage {
   type: "error"
   message: string
@@ -286,6 +292,18 @@ interface RevertWorktreeFileResultMessage {
   message: string
 }
 
+/** Branch picker data for a context's diff directory. */
+interface DiffBranchesMessage {
+  type: "agentManager.diffBranches"
+  sessionId: string
+  branches: BranchListItem[]
+  defaultBranch: string
+  autoBase?: string
+  currentBase?: string
+  isAuto: boolean
+  currentBranch?: string
+}
+
 interface PRStatusOutMessage {
   type: "agentManager.prStatus"
   worktreeId: string
@@ -324,6 +342,7 @@ export type AgentManagerOutMessage =
   | WorktreeDiffMessage
   | WorktreeDiffFileMessage
   | RevertWorktreeFileResultMessage
+  | DiffBranchesMessage
   | PRStatusOutMessage
   | ActionOutMessage
   | RunStatusMessage
@@ -332,6 +351,7 @@ export type AgentManagerOutMessage =
   | TerminalErrorMessage
   | TerminalDestinationChangedMessage
   | TerminalFontChangedMessage
+  | ScriptTerminalsMessage
 
 // ---------------------------------------------------------------------------
 // Webview → Extension messages (onMessage)
@@ -398,6 +418,7 @@ interface ConfigureRunScriptIn {
 interface RunScriptIn {
   type: "agentManager.runScript"
   worktreeId: string
+  destination: TerminalDestination
 }
 
 interface StopRunScriptIn {
@@ -412,6 +433,11 @@ interface ShowTerminalIn {
 
 interface ShowLocalTerminalIn {
   type: "agentManager.showLocalTerminal"
+}
+
+interface ShowWorktreeTerminalIn {
+  type: "agentManager.showWorktreeTerminal"
+  worktreeId: string
 }
 
 interface OpenWorktreeIn {
@@ -512,6 +538,7 @@ interface ImportFromPRIn {
 interface RequestWorktreeDiffIn {
   type: "agentManager.requestWorktreeDiff"
   sessionId: string
+  scope?: string
 }
 
 interface ApplyWorktreeDiffIn {
@@ -524,11 +551,13 @@ interface RequestWorktreeDiffFileIn {
   type: "agentManager.requestWorktreeDiffFile"
   sessionId: string
   file: string
+  scope?: string
 }
 
 interface StartDiffWatchIn {
   type: "agentManager.startDiffWatch"
   sessionId: string
+  scope?: string
 }
 
 interface StopDiffWatchIn {
@@ -539,6 +568,20 @@ interface RevertWorktreeFileIn {
   type: "agentManager.revertWorktreeFile"
   sessionId: string
   file: string
+  scope?: string
+}
+
+interface RequestDiffBranchesIn {
+  type: "agentManager.requestDiffBranches"
+  sessionId: string
+  scope?: string
+}
+
+interface SetDiffBaseBranchIn {
+  type: "agentManager.setDiffBaseBranch"
+  sessionId: string
+  scope?: string
+  branch?: string
 }
 
 interface RefreshPRIn {
@@ -780,6 +823,7 @@ export type AgentManagerInMessage =
   | StopRunScriptIn
   | ShowTerminalIn
   | ShowLocalTerminalIn
+  | ShowWorktreeTerminalIn
   | OpenWorktreeIn
   | CopyToClipboardIn
   | ShowExistingLocalTerminalIn
@@ -803,6 +847,8 @@ export type AgentManagerInMessage =
   | StartDiffWatchIn
   | StopDiffWatchIn
   | RevertWorktreeFileIn
+  | RequestDiffBranchesIn
+  | SetDiffBaseBranchIn
   | RefreshPRIn
   | OpenPRIn
   | OpenSessionsIn

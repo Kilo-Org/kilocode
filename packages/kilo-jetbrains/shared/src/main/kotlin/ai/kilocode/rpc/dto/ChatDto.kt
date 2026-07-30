@@ -328,6 +328,8 @@ data class ToolRefDto(
 data class PermissionReplyDto(
     val reply: String,
     val message: String? = null,
+    // Set when a human answered the prompt; the CLI ignores machine approvals of skill-shell batches.
+    val interactive: Boolean = false,
 )
 
 @Serializable

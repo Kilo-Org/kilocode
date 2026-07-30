@@ -108,6 +108,7 @@ export type Event =
   | EventInteractiveTerminalData
   | EventInteractiveTerminalDeleted
   | EventSandboxStatusChanged
+  | EventLspClientDiagnostics
   | EventSuggestionShown
   | EventSuggestionAccepted
   | EventSuggestionDismissed
@@ -117,7 +118,6 @@ export type Event =
   | EventKilocodeNotebookRequested
   | EventKilocodeNotebookCancelled
   | EventKiloSessionsRemoteStatusChanged
-  | EventLspClientDiagnostics
   | EventMemoryStatus1
   | EventMemoryUpdated1
   | EventMemoryError1
@@ -1137,6 +1137,7 @@ export type GlobalEvent = {
     | EventInteractiveTerminalData
     | EventInteractiveTerminalDeleted
     | EventSandboxStatusChanged
+    | EventLspClientDiagnostics
     | EventSuggestionShown
     | EventSuggestionAccepted
     | EventSuggestionDismissed
@@ -1146,7 +1147,6 @@ export type GlobalEvent = {
     | EventKilocodeNotebookRequested
     | EventKilocodeNotebookCancelled
     | EventKiloSessionsRemoteStatusChanged
-    | EventLspClientDiagnostics
     | EventMemoryStatus
     | EventMemoryUpdated
     | EventMemoryError
@@ -2644,6 +2644,7 @@ export type Config = {
   tools?: {
     [key: string]: boolean
   }
+  web_search?: boolean
   attachment?: AttachmentConfig
   enterprise?: {
     url?: string
@@ -3048,6 +3049,7 @@ export type Command = {
   agent?: string
   model?: string
   source?: "command" | "mcp" | "skill"
+  trusted?: boolean
   template: string
   subtask?: boolean
   hints: Array<string>
@@ -4717,7 +4719,7 @@ export type EventSessionTurnClose = {
   properties: {
     sessionID: string
     parentID?: string
-    reason: "completed" | "error" | "interrupted"
+    reason: "completed" | "error" | "interrupted" | "superseded"
   }
 }
 
@@ -4824,6 +4826,15 @@ export type EventSandboxStatusChanged = {
   }
 }
 
+export type EventLspClientDiagnostics = {
+  id: string
+  type: "lsp.client.diagnostics"
+  properties: {
+    serverID: string
+    path: string
+  }
+}
+
 export type EventSuggestionShown = {
   id: string
   type: "suggestion.shown"
@@ -4920,15 +4931,6 @@ export type EventKiloSessionsRemoteStatusChanged = {
   properties: {
     enabled: boolean
     connected: boolean
-  }
-}
-
-export type EventLspClientDiagnostics = {
-  id: string
-  type: "lsp.client.diagnostics"
-  properties: {
-    serverID: string
-    path: string
   }
 }
 
@@ -11622,6 +11624,7 @@ export type AppSkillsResponses = {
     description?: string
     location: string
     content: string
+    trusted?: boolean
   }>
 }
 
@@ -12521,6 +12524,7 @@ export type PermissionReplyData = {
   body?: {
     reply: "once" | "always" | "reject"
     message?: string
+    interactive?: boolean
   }
   path: {
     requestID: string
@@ -20228,6 +20232,7 @@ export type V2PtyConnectData = {
     "location[workspace]"?: string
     cursor?: string
     ticket?: string
+    replayExited?: string
   }
   url: "/api/pty/{ptyID}/connect"
 }

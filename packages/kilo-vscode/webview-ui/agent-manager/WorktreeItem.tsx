@@ -167,6 +167,13 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
     props.onOpenPR?.()
   }
 
+  /** Worktree directory basename shown in the hover card (e.g. "decorous-taker"). */
+  const name = () => {
+    const p = props.worktree.path.replace(/[\\/]+$/, "")
+    const i = Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\"))
+    return i >= 0 ? p.slice(i + 1) : p
+  }
+
   return (
     <>
       <Show when={props.groupStart}>
@@ -386,6 +393,11 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
               <Show when={props.navHint}>
                 <span class="am-hover-card-keybind">{props.navHint}</span>
               </Show>
+            </div>
+            <div class="am-hover-card-divider" />
+            <div class="am-hover-card-row">
+              <span class="am-hover-card-row-label">{t("agentManager.hoverCard.worktree")}</span>
+              <span class="am-hover-card-row-value">{name()}</span>
             </div>
             <Show when={props.worktree.parentBranch}>
               <div class="am-hover-card-divider" />

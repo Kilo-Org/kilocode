@@ -20,6 +20,7 @@ export class Service extends ConfigService.Service<Service>()("@opencode/Runtime
   disableChannelDb: bool("KILO_DISABLE_CHANNEL_DB"), // kilocode_change
   disableEmbeddedWebUi: bool("KILO_DISABLE_EMBEDDED_WEB_UI"),
   disableExternalSkills: bool("KILO_DISABLE_EXTERNAL_SKILLS"),
+  disableSkillShell: bool("KILO_DISABLE_SKILL_SHELL"), // kilocode_change - disable shell injection in skill bodies
   disableLspDownload: bool("KILO_DISABLE_LSP_DOWNLOAD"),
   skipMigrations: bool("KILO_SKIP_MIGRATIONS"), // kilocode_change
   disableClaudeCodePrompt: Config.all({
