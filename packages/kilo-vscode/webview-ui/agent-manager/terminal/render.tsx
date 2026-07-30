@@ -48,6 +48,7 @@ export function renderTerminalTab(deps: TerminalTabRenderDeps): JSX.Element {
       id={deps.id}
       label={deps.terms.title(deps.id) ?? term.title}
       tooltip={deps.terms.title(deps.id) ?? term.title}
+      status={deps.terms.scriptStatus(deps.id)}
       keybind={isActive() ? "" : deps.keybind()}
       closeKeybind={deps.closeKeybind()}
       active={isActive()}

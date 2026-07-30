@@ -23,6 +23,7 @@ import type {
   AgentManagerWorktreeDiffMessage,
   AgentManagerWorktreeDiffFileMessage,
   AgentManagerWorktreeDiffLoadingMessage,
+  AgentManagerDiffBranchesMessage,
   AgentManagerApplyWorktreeDiffResultMessage,
   AgentManagerWorktreeStatsMessage,
   AgentManagerLocalStatsMessage,
@@ -38,6 +39,7 @@ import type {
   SessionInfo,
   SessionCreatedMessage,
   BranchInfo,
+  TerminalDestination,
 } from "../src/types/messages"
 import {
   DragDropProvider,
@@ -105,6 +107,7 @@ import {
   createTerminalMessageHandler,
   createSideTerminal,
   readSavedDestination,
+  resolveRunScriptRequest,
   resolveVscodeTerminalRequest,
 } from "./terminal"
 import { focusCurrentTab, renderTab, renderTerminalLayer, renderNewTabButton } from "./tab-rendering"
@@ -136,6 +139,9 @@ import {
 } from "./section-helpers"
 import { sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
+import { DiffScopeControls } from "../diff-viewer/DiffScopeControls"
+import { scopeCapabilities } from "./diff-scope-state"
+import { createDiffReviewScope } from "./diff-review-scope"
 import { initialMessage, seedInitialVariant } from "./initial-message"
 import { createMarkdownRender } from "./review-preferences"
 import { createSidebarCollapse } from "./sidebar-collapse"
@@ -398,20 +404,20 @@ const AgentManagerContent: Component = () => {
     vscode.postMessage({ type: "agentManager.openPR", worktreeId: sel })
   }
 
-  const runWorktree = (id: string) => {
+  const runWorktree = (id: string, destination: TerminalDestination) => {
     const state = runStatuses()[id]?.state ?? "idle"
     if (state === "running" || state === "stopping") {
       vscode.postMessage({ type: "agentManager.stopRunScript", worktreeId: id })
       return
     }
-    vscode.postMessage({ type: "agentManager.runScript", worktreeId: id })
+    vscode.postMessage(resolveRunScriptRequest(id, destination))
   }
 
   const configureRunScript = () => vscode.postMessage({ type: "agentManager.configureRunScript" })
 
   const runSelected = () => {
     const sel = selection()
-    if (sel) runWorktree(sel)
+    if (sel) runWorktree(sel, sideCtl.destination())
   }
 
   const isPending = (id: string) => id.startsWith(PENDING_PREFIX)
@@ -929,7 +935,7 @@ const AgentManagerContent: Component = () => {
           requestAnimationFrame(() => sidebarSearchMenu?.open())
         }
       } else if (msg.action === "showTerminal") {
-        sideCtl.openPreferred("keyboard_shortcut")
+        if (!sideCtl.echo()) sideCtl.openPreferred("keyboard_shortcut")
       } else if (msg.action === "toggleDiff") {
         if (reviewActive()) {
           closeReviewTab()
@@ -986,6 +992,13 @@ const AgentManagerContent: Component = () => {
       }
     }
     window.addEventListener("keydown", preventDefaults, true)
+
+    // Cmd/Ctrl+/ toggles the terminal even when VS Code's webview keybinding
+    // forwarding drops the key before it reaches the workbench (reported with
+    // the prompt input focused). When forwarding does work, the extension
+    // echoes the shortcut back as an action message and sideCtl dedupes it.
+    const shortcut = (e: KeyboardEvent) => sideCtl.press(e)
+    window.addEventListener("keydown", shortcut, true)
 
     // Delete/Backspace on a selected worktree triggers inline delete confirmation.
     // Pressing the key twice in a row (within the 2500ms window) confirms the delete.
@@ -1087,6 +1100,12 @@ const AgentManagerContent: Component = () => {
         // Focus only when the user is still looking at this panel —
         // a slow create landing after a mode switch must not steal it.
         if (sidePanel() === "terminal" && terms.sideKey() === contextKey) terms.requestFocus(terminalId)
+      },
+      onScriptRunning: (contextKey, terminalId) => {
+        if (terms.sideKey() !== contextKey) return
+        showSideTerminal()
+        terms.setSideActive(contextKey, terminalId)
+        terms.requestFocus(terminalId)
       },
       onDestinationChanged: (destination) => sideCtl.syncDefault(destination),
     })
@@ -1308,6 +1327,10 @@ const AgentManagerContent: Component = () => {
         diffs.onWorktreeDiffLoading(msg as AgentManagerWorktreeDiffLoadingMessage)
       }
 
+      if (msg.type === "agentManager.diffBranches") {
+        review.onBranches(msg as AgentManagerDiffBranchesMessage)
+      }
+
       if (msg.type === "agentManager.applyWorktreeDiffResult") {
         apply.onApplyResult(msg as AgentManagerApplyWorktreeDiffResultMessage)
       }
@@ -1336,6 +1359,7 @@ const AgentManagerContent: Component = () => {
     onCleanup(() => {
       window.removeEventListener("message", handler)
       window.removeEventListener("keydown", preventDefaults, true)
+      window.removeEventListener("keydown", shortcut, true)
       window.removeEventListener("keydown", deleteKeyHandler)
       window.removeEventListener("keydown", modTrack, true)
       window.removeEventListener("keyup", modTrack, true)
@@ -1379,15 +1403,47 @@ const AgentManagerContent: Component = () => {
 
   const currentDiffSessionId = createMemo(selectedDiffSessionId)
 
-  // Start/stop diff watch when panel opens/closes, review tab opens, or session changes
+  // Diff scope + base branch state, shared by the side panel and review tab.
+  const review = createDiffReviewScope({
+    ctx: currentDiffSessionId,
+    panelOpen: diffOpen,
+    reviewActive,
+    local: LOCAL,
+    vscode,
+  })
+  // The composite id (ctx#scope) the extension keys diff data by.
+  const diffScopeId = review.id
+
+  // Shared scope + base-picker controls for the side panel and review tab.
+  const diffScopeControls = (compact: boolean) => (
+    <DiffScopeControls
+      descriptors={review.descriptors()}
+      currentId={review.id()}
+      onSelectScope={review.select}
+      showBase={review.isBranch()}
+      branches={review.branches()}
+      branchesLoading={review.loading()}
+      defaultBranch={review.defaultBranch()}
+      autoBase={review.autoBase()}
+      currentBase={review.currentBase()}
+      isAuto={review.isAuto()}
+      currentBranch={review.currentBranch()}
+      onSelectBase={review.selectBase}
+      compact={compact}
+    />
+  )
+
+  // Start/stop diff watch when panel opens/closes, review tab opens, scope
+  // changes, or session changes.
   createEffect(() => {
     const panel = diffOpen()
-    const review = reviewActive()
+    const active = reviewActive()
+    const scope = review.scope()
 
-    if (panel || review) {
+    if (panel || active) {
       const id = currentDiffSessionId()
       if (id) {
-        vscode.postMessage({ type: "agentManager.startDiffWatch", sessionId: id })
+        vscode.postMessage({ type: "agentManager.startDiffWatch", sessionId: id, scope })
         return
       }
       vscode.postMessage({ type: "agentManager.stopDiffWatch" })
@@ -1432,33 +1488,17 @@ const AgentManagerContent: Component = () => {
     tabFocus.restore()
   }
 
-  // Data for the review tab: use local diff data for local context,
-  // current session for selected worktree context, or first available in that worktree.
+  // Data for the review tab / side panel: keyed by the composite diff id
+  // (ctx#scope) the extension pushes, so each scope keeps its own file set and
+  // switching back to a fetched scope is instant.
   const reviewDiffs = createMemo(() => {
     const data = diffDatas()
-    const sel = selection()
-    const id = session.currentSessionID()
-    if (sel === LOCAL) return data[LOCAL] ?? []
-    if (id && data[id]) {
-      const current = managedSessions().find((s) => s.id === id)
-      if (sel && current?.worktreeId === sel) return data[id]!
-    }
-    if (!sel) return []
-    const ids = managedSessions()
-      .filter((s) => s.worktreeId === sel)
-      .map((s) => s.id)
-    for (const sid of ids) {
-      if (data[sid]) return data[sid]!
-    }
-    return []
+    const key = diffScopeId()
+    if (!key) return []
+    return data[key] ?? []
   })
 
-  const diffSessionKey = createMemo(() => {
-    const sel = selection()
-    if (sel === LOCAL) return `local:${LOCAL}`
-    if (sel === null) return `session:${session.currentSessionID() ?? ""}`
-    return `worktree:${sel}`
-  })
+  const diffSessionKey = createMemo(() => diffScopeId() ?? "")
 
   const setSharedDiffStyle = (style: "unified" | "split") => {
     if (reviewDiffStyle() === style) return
@@ -1467,14 +1507,14 @@ const AgentManagerContent: Component = () => {
   }
 
   const requestDiffFile = (file: string) => {
-    const sessionId = currentDiffSessionId()
-    if (!sessionId) return
-    diffs.requestDiffFile(sessionId, file)
+    const id = diffScopeId()
+    if (!id) return
+    diffs.requestDiffFile(id, file)
   }
 
-  const diffFileLoadingForCurrent = createMemo(() => diffs.diffFileLoadingFor(currentDiffSessionId))
+  const diffFileLoadingForCurrent = createMemo(() => diffs.diffFileLoadingFor(diffScopeId))
 
-  const revertCtl = createRevertFile(currentDiffSessionId, vscode, showToast, t)
+  const revertCtl = createRevertFile(diffScopeId, currentDiffSessionId, () => review.scope(), vscode, showToast, t)
 
   const handleConfigureSetupScript = () => {
     vscode.postMessage({ type: "agentManager.configureSetupScript" })
@@ -2475,12 +2515,19 @@ const AgentManagerContent: Component = () => {
                               {t("agentManager.open.button")}
                             </Button>
                           </Tooltip>
-                          <Tooltip value={t("agentManager.apply.tooltip")} placement="bottom">
+                          <Tooltip
+                            value={
+                              review.scope() === "branch"
+                                ? t("agentManager.apply.tooltip")
+                                : t("agentManager.diff.applyBranchOnly")
+                            }
+                            placement="bottom"
+                          >
                             <Button
                               size="small"
                               variant="ghost"
                               onClick={openApplyDialog}
-                              disabled={!hasChanges() || applyBusy()}
+                              disabled={!hasChanges() || applyBusy() || review.scope() !== "branch"}
                             >
                               <Show when={applyBusy()}>
                                 <Spinner class="am-apply-spinner" />
@@ -2510,7 +2557,7 @@ const AgentManagerContent: Component = () => {
                                   onClick={metrics.click(
                                     "run_script",
                                     "tab_toolbar",
-                                    () => runWorktree(rid()),
+                                    () => runWorktree(rid(), sideCtl.destination()),
                                     () => ({
                                       action: active() ? "stop" : configured() ? "run" : "configure",
                                     }),
@@ -2782,6 +2829,8 @@ const AgentManagerContent: Component = () => {
                         loadingFiles={diffFileLoadingForCurrent()}
                         sessionId={currentDiffSessionId()}
                         sessionKey={diffSessionKey()}
+                        lead={diffScopeControls(true)}
+                        canRevert={scopeCapabilities(review.scope()).revert}
                         diffStyle={reviewDiffStyle()}
                         onDiffStyleChange={setSharedDiffStyle}
                         markdownRender={markdown.render()}
@@ -2829,6 +2878,9 @@ const AgentManagerContent: Component = () => {
                   loadingFiles={diffFileLoadingForCurrent()}
                   sessionId={currentDiffSessionId()}
                   sessionKey={diffSessionKey()}
+                  lead={diffScopeControls(false)}
+                  canRevert={scopeCapabilities(review.scope()).revert}
+                  canComment={scopeCapabilities(review.scope()).comments}
                   comments={reviewComments()}
                   onCommentsChange={setReviewCommentsForSelection}
                   composer={reviewComposer}

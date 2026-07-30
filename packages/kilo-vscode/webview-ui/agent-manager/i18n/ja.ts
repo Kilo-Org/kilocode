@@ -138,6 +138,8 @@ export const dict = {
   "agentManager.diff.revertFile": "ファイルを元に戻す",
   "agentManager.diff.revertSuccess": "ファイルを元に戻しました",
   "agentManager.diff.revertError": "元に戻せませんでした",
+  "agentManager.diff.applyBranchOnly":
+    "適用はブランチ全体の差分に対してのみ利用できます。適用するにはスコープを Branch に切り替えてください。",
   "agentManager.open.button": "開く",
   "agentManager.open.tooltip": "このWorktreeをVS Codeで開く",
   "agentManager.apply.globalButton": "適用",

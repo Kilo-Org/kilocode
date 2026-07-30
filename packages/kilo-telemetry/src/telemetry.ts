@@ -135,6 +135,12 @@ export namespace Telemetry {
     track(TelemetryEvent.CLI_START)
   }
 
+  // Upload queued events without blocking. Call after bootstrap so the flush
+  // overlaps with command execution and shutdown() stays fast (#10242).
+  export function flushInBackground() {
+    Client.flushInBackground()
+  }
+
   export function trackCliExit(exitCode?: number) {
     track(TelemetryEvent.CLI_EXIT, {
       duration: Date.now() - startTime,
