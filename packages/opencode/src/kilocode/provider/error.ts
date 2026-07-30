@@ -51,7 +51,7 @@ export function frame(body: unknown): Frame {
 const RETRYABLE = /rate.?limit|too.?many.?requests|rate increased too quickly|exhausted|overload|server|unavailable|timeout/i
 // Session.retryable only matched these phrases against free-form message
 // text; the wider pattern above is for structured code/type fields only
-const RETRYABLE_TEXT = /rate increased too quickly|rate limit|too many requests/i
+const RETRYABLE_TEXT = /rate increased too quickly|rate.?limit|too.?many.?requests/i
 
 // Must stay at least as permissive as the Session.retryable heuristics that
 // applied when these frames still surfaced as NamedError.Unknown, or

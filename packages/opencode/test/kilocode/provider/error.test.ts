@@ -226,6 +226,18 @@ describe("responses api terminal frames", () => {
     expect(result.data.isRetryable).toBe(false)
   })
 
+  test("retries hyphenated rate-limit prose", () => {
+    const payload = {
+      code: "upstream_error",
+      message: "openai/gpt-5.6-terra-pro is temporarily rate-limited upstream. Please retry shortly.",
+    }
+    const result = MessageV2.fromError(payload, { providerID: ProviderV2.ID.make("openai") })
+
+    expect(MessageV2.APIError.isInstance(result)).toBe(true)
+    if (!MessageV2.APIError.isInstance(result)) throw new Error("expected APIError")
+    expect(result.data.isRetryable).toBe(true)
+  })
+
   test("ignores response.failed frames without an error payload", () => {
     const payload = { type: "response.failed", response: { error: null, incomplete_details: null } }
     const result = MessageV2.fromError(payload, { providerID: ProviderV2.ID.make("openai") })
