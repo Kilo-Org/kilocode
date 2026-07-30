@@ -1047,10 +1047,15 @@ export function Prompt(props: PromptProps) {
     if (costAlert.handle(store.prompt.input.trim())) return true
     // kilocode_change end
     // kilocode_change start - switch agents without sending a command prompt
-    const target =
-      store.mode === "normal" && store.prompt.parts.length === 0 && editorContextLabelState() !== "pending"
-        ? silentAgent(store.prompt.input, sync.data.command)
-        : undefined
+    const target = silentAgent(
+      {
+        text: store.prompt.input,
+        mode: store.mode,
+        parts: store.prompt.parts.length,
+        editor: editorContextLabelState(),
+      },
+      sync.data.command,
+    )
     if (target) {
       local.agent.set(target)
       if (local.agent.current()?.name !== target) return false

@@ -17,16 +17,29 @@ describe("silent agent-switch commands", () => {
       silent: true,
     },
   ]
+  const input = {
+    text: "/code",
+    mode: "normal" as const,
+    parts: 0,
+    editor: "none" as const,
+  }
 
   test("resolves an exact silent agent-switch command", () => {
-    expect(silentAgent("/code", commands)).toBe("code")
-    expect(silentAgent("/code  ", commands)).toBe("code")
+    expect(silentAgent(input, commands)).toBe("code")
+    expect(silentAgent({ ...input, text: "/code  " }, commands)).toBe("code")
+    expect(silentAgent({ ...input, editor: "sent" }, commands)).toBe("code")
   })
 
   test("preserves commands with arguments or multiple lines for normal submission", () => {
-    expect(silentAgent("/code fix the login bug", commands)).toBeUndefined()
-    expect(silentAgent("/code\nfix the login bug", commands)).toBeUndefined()
-    expect(silentAgent("/code\n", commands)).toBeUndefined()
+    expect(silentAgent({ ...input, text: "/code fix the login bug" }, commands)).toBeUndefined()
+    expect(silentAgent({ ...input, text: "/code\nfix the login bug" }, commands)).toBeUndefined()
+    expect(silentAgent({ ...input, text: "/code\n" }, commands)).toBeUndefined()
+  })
+
+  test("preserves ineligible prompt states for normal submission", () => {
+    expect(silentAgent({ ...input, mode: "shell" }, commands)).toBeUndefined()
+    expect(silentAgent({ ...input, parts: 1 }, commands)).toBeUndefined()
+    expect(silentAgent({ ...input, editor: "pending" }, commands)).toBeUndefined()
   })
 
   it.live("exposes silent command frontmatter to clients", () =>
@@ -42,7 +55,7 @@ describe("silent agent-switch commands", () => {
             silent: true,
             source: "command",
           })
-          expect(silentAgent("/code", command ? [command] : [])).toBe("code")
+          expect(silentAgent(input, command ? [command] : [])).toBe("code")
         }),
       {
         git: true,
@@ -60,10 +73,10 @@ describe("silent agent-switch commands", () => {
   )
 
   test("ignores commands that are not explicit silent agent switches", () => {
-    expect(silentAgent("code", commands)).toBeUndefined()
-    expect(silentAgent("/plan", commands)).toBeUndefined()
-    expect(silentAgent("/code", [{ ...commands[0], silent: false }])).toBeUndefined()
-    expect(silentAgent("/code", [{ ...commands[0], agent: undefined }])).toBeUndefined()
-    expect(silentAgent("/code", [{ ...commands[0], source: "mcp" }])).toBeUndefined()
+    expect(silentAgent({ ...input, text: "code" }, commands)).toBeUndefined()
+    expect(silentAgent({ ...input, text: "/plan" }, commands)).toBeUndefined()
+    expect(silentAgent(input, [{ ...commands[0], silent: false }])).toBeUndefined()
+    expect(silentAgent(input, [{ ...commands[0], agent: undefined }])).toBeUndefined()
+    expect(silentAgent(input, [{ ...commands[0], source: "mcp" }])).toBeUndefined()
   })
 })
