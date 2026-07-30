@@ -14,11 +14,13 @@ export interface RunTaskConfig {
   env: Record<string, string>
 }
 
-interface TaskExit {
+export interface RunTaskExit {
   exitCode?: number
+  stopped?: boolean
+  error?: string
 }
 
-type StartTask = (config: RunTaskConfig, done: (exit: TaskExit) => void) => Promise<RunHandle>
+export type StartTask = (config: RunTaskConfig, done: (exit: RunTaskExit) => void) => Promise<RunHandle>
 
 interface Options {
   root: () => string | undefined
@@ -110,17 +112,17 @@ export class RunController {
 
     const start = () =>
       this.opts.start({ worktreeId, branch, command: script.command, args: script.args, cwd, env }, (exit) =>
-        this.manager.finish(worktreeId, { exitCode: exit.exitCode }),
+        this.manager.finish(worktreeId, exit),
       )
     await this.manager.start(worktreeId, start)
   }
 
   stop(worktreeId: string): void {
-    this.manager.stop(worktreeId)
+    void this.manager.stop(worktreeId)
   }
 
-  remove(worktreeId: string): void {
-    this.manager.remove(worktreeId)
+  remove(worktreeId: string): Promise<void> {
+    return this.manager.remove(worktreeId)
   }
 
   dispose(): void {

@@ -4,6 +4,7 @@ export interface RunStatus {
   worktreeId: string
   state: RunState
   exitCode?: number
+  stopped?: boolean
   signal?: string
   startedAt?: string
   finishedAt?: string
@@ -11,17 +12,19 @@ export interface RunStatus {
 }
 
 export interface RunHandle {
-  stop(): void
+  stop(): void | Promise<void>
   dispose?(): void
 }
 
 interface Entry {
   status: RunStatus
   handle?: RunHandle
+  task?: Promise<RunHandle>
 }
 
 interface FinishOptions {
   exitCode?: number
+  stopped?: boolean
   signal?: string
   error?: string
 }
@@ -42,6 +45,7 @@ export class RunScriptManager {
   ) {}
 
   async start(worktreeId: string, start: () => Promise<RunHandle>): Promise<boolean> {
+    this.removed.delete(worktreeId)
     const current = this.entries.get(worktreeId)
     if (current && current.status.state !== "idle") return false
 
@@ -56,21 +60,34 @@ export class RunScriptManager {
     this.emit(entry.status)
 
     try {
-      const handle = await start()
+      const task = start()
+      entry.task = task
+      const handle = await task
       const latest = this.entries.get(worktreeId)
       if (latest !== entry) {
+        if (this.removed.has(worktreeId)) {
+          try {
+            await handle.stop()
+          } catch (error) {
+            this.log(`Failed to stop removed run script for ${worktreeId}: ${message(error)}`)
+          }
+        }
         handle.dispose?.()
         return true
       }
       entry.handle = handle
-      if (entry.status.state === "stopping") handle.stop()
+      if (entry.status.state === "stopping") {
+        void Promise.resolve(handle.stop()).catch((error) => {
+          this.log(`Failed to stop run script for ${worktreeId}: ${message(error)}`)
+        })
+      }
     } catch (error) {
       this.finish(worktreeId, { error: message(error) })
     }
     return true
   }
 
-  stop(worktreeId: string): void {
+  async stop(worktreeId: string): Promise<void> {
     const entry = this.entries.get(worktreeId)
     if (!entry || entry.status.state === "idle" || entry.status.state === "stopping") return
 
@@ -82,7 +99,7 @@ export class RunScriptManager {
 
     if (!entry.handle) return
     try {
-      entry.handle.stop()
+      await entry.handle.stop()
     } catch (error) {
       this.log(`Failed to stop run script for ${worktreeId}: ${message(error)}`)
     }
@@ -100,6 +117,7 @@ export class RunScriptManager {
     }
     if (entry?.status.startedAt) status.startedAt = entry.status.startedAt
     if (opts.exitCode !== undefined) status.exitCode = opts.exitCode
+    if (opts.stopped) status.stopped = true
     if (opts.signal) status.signal = opts.signal
     if (opts.error) status.error = opts.error
 
@@ -115,18 +133,36 @@ export class RunScriptManager {
     return [...this.entries.values()].map((entry) => entry.status)
   }
 
-  remove(worktreeId: string): void {
+  async remove(worktreeId: string): Promise<void> {
     const entry = this.entries.get(worktreeId)
-    if (entry?.status.state !== "idle") this.stop(worktreeId)
-    this.entries.delete(worktreeId)
     this.removed.add(worktreeId)
+    this.entries.delete(worktreeId)
+    const handle =
+      entry?.handle ??
+      (entry?.task
+        ? await entry.task.catch((error) => {
+            this.log(`Failed to start removed run script for ${worktreeId}: ${message(error)}`)
+            return undefined
+          })
+        : undefined)
+    if (entry?.status.state !== "idle" && handle) {
+      try {
+        await handle.stop()
+      } catch (error) {
+        this.log(`Failed to stop removed run script for ${worktreeId}: ${message(error)}`)
+      }
+    }
+    handle?.dispose?.()
   }
 
   dispose(): void {
-    for (const entry of this.entries.values()) {
+    for (const [id, entry] of this.entries) {
+      this.removed.add(id)
       if (entry.status.state !== "idle") {
         try {
-          entry.handle?.stop()
+          void Promise.resolve(entry.handle?.stop()).catch((error) => {
+            this.log(`Failed to stop run script during dispose: ${message(error)}`)
+          })
         } catch (error) {
           this.log(`Failed to stop run script during dispose: ${message(error)}`)
         }

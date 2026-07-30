@@ -60,6 +60,7 @@ const IMPORTER_FILE = path.join(ROOT, "src/agent-manager/worktree-importer.ts")
 const SETUP_SCRIPT_RUNNER_FILE = path.join(ROOT, "src/agent-manager/SetupScriptRunner.ts")
 const RUN_MESSAGE_FILE = path.join(ROOT, "src/agent-manager/run/message.ts")
 const TERMINAL_ROUTING_FILE = path.join(ROOT, "src/agent-manager/terminal-routing.ts")
+const SCRIPT_TERMINAL_FILE = path.join(ROOT, "src/agent-manager/ScriptTerminalManager.ts")
 
 function readAllCss(): string {
   return CSS_FILES.map((f) => fs.readFileSync(f, "utf-8")).join("\n")
@@ -454,6 +455,29 @@ describe("Agent Manager Provider — onMessage routing", () => {
     expect(text).not.toContain("agentManager.requestState")
   })
 
+  it("routes script terminal close and resize messages before user terminals", () => {
+    const text = body("onMessage")
+    expect(text.indexOf("this.scripts.intercept(m)")).toBeLessThan(text.indexOf("this.terminalRouter.handle(m)"))
+  })
+
+  it("runs scripts through the vscode-free canonical PTY manager", () => {
+    const text = fs.readFileSync(SCRIPT_TERMINAL_FILE, "utf-8")
+    expect(text).toMatch(/client\.v2\.pty\s*\.create/)
+    expect(text).toContain("client.v2.pty.get")
+    expect(text).toContain("client.v2.pty.update")
+    expect(text).toContain("client.v2.pty.remove")
+    expect(text).not.toContain("vscode")
+    expect(provider()).not.toContain("startVscodeRunTask")
+  })
+
+  it("clears retained Run terminals before removing worktree state", () => {
+    for (const name of ["onDeleteWorktree", "onRemoveStaleWorktree"]) {
+      const text = body(name)
+      expect(text).toContain('this.scripts.clear("run", worktreeId)')
+      expect(text.indexOf('this.scripts.clear("run", worktreeId)')).toBeLessThan(text.indexOf("state.removeWorktree"))
+    }
+  })
+
   // -- onDeleteWorktree invariants -------------------------------------------
 
   /**
@@ -790,9 +814,6 @@ const VSCODE_ALLOWED: Record<string, { note: string }> = {
   // Thin adapter: wraps vscode.tasks API behind RunTask callback
   "task-runner.ts": {
     note: "vscode adapter for SetupScriptRunner",
-  },
-  "run/task.ts": {
-    note: "vscode adapter for Agent Manager run scripts",
   },
   // Reads terminal.integrated.* and editor.font* config for xterm font settings
   "terminal-font.ts": {

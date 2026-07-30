@@ -86,7 +86,7 @@ describe("RunScriptManager", () => {
     let stopped = 0
     await ctx.manager.start("wt-1", async () => ({ stop: () => stopped++ }))
 
-    ctx.manager.remove("wt-1")
+    await ctx.manager.remove("wt-1")
 
     expect(stopped).toBe(1)
     expect(ctx.manager.all()).toEqual([])
@@ -123,7 +123,7 @@ describe("RunScriptManager", () => {
   it("finish after remove does not resurrect stale state", async () => {
     const ctx = createManager()
     await ctx.manager.start("wt-1", async () => ({ stop: () => {} }))
-    ctx.manager.remove("wt-1")
+    await ctx.manager.remove("wt-1")
     ctx.manager.finish("wt-1", { exitCode: 0 })
 
     expect(ctx.manager.all()).toEqual([])

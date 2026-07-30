@@ -22,9 +22,10 @@ import { SessionTerminalManager } from "./SessionTerminalManager"
 import { createTerminalHost } from "./terminal-host"
 import { TerminalRouter } from "./terminal-routing"
 import { executeVscodeTask } from "./task-runner"
-import { startVscodeRunTask } from "./run/task"
 import { RunController } from "./run/controller"
 import { handleRunMessage } from "./run/message"
+import { ScriptTerminalManager } from "./ScriptTerminalManager"
+import { buildScriptTerminalWsUrl } from "./script-terminal-url"
 import { forkSession } from "./fork-session"
 import { AgentManagerVisiblePresence } from "./am-visible-presence"
 import { continueInWorktree } from "./continue-in-worktree"
@@ -64,6 +65,7 @@ export class AgentManagerProvider implements Disposable {
   private importer: WorktreeImporter
   private terminalManager: SessionTerminalManager
   private terminalRouter: TerminalRouter
+  private scripts: ScriptTerminalManager
   private run: RunController
   private stateReady: Promise<void> | undefined
   private statsPoller: GitStatsPoller
@@ -80,6 +82,8 @@ export class AgentManagerProvider implements Disposable {
   private unsubStatus: (() => void) | undefined
   private unsubFont: (() => void) | undefined
   private unsubDestination: (() => void) | undefined
+  private unsubScript: (() => void) | undefined
+  private unsubConnection: (() => void) | undefined
   private closing: Promise<void> | undefined
   private onVisibilityChange: ((visible: boolean) => void) | undefined
   // Tracks sessions owned by this panel until they are explicitly closed.
@@ -111,8 +115,29 @@ export class AgentManagerProvider implements Disposable {
       post: (msg) => this.postToWebview(msg),
       getTerminalFont: () => readTerminalFont(),
     })
+    this.scripts = new ScriptTerminalManager({
+      getClient: () => this.connectionService.getClient(),
+      getClientAsync: (directory) => this.connectionService.getClientAsync(directory),
+      buildWsUrl: (ptyID, cwd) => {
+        const config = this.connectionService.getServerConfig()
+        if (!config) throw new Error("Not connected to CLI backend")
+        return buildScriptTerminalWsUrl(config, ptyID, cwd)
+      },
+      getTerminalFont: () => readTerminalFont(),
+      emit: (terminals) => this.postToWebview({ type: "agentManager.scriptTerminals", terminals }),
+      closed: (terminalId) => this.postToWebview({ type: "agentManager.terminal.closed", terminalId }),
+      log: (msg) => this.outputChannel.appendLine(`[RunScript] ${msg}`),
+    })
+    this.unsubScript = this.connectionService.onEvent((event) => {
+      if (event.type === "pty.exited") this.scripts.exited(event.properties.id, event.properties.exitCode)
+      if (event.type === "pty.deleted") this.scripts.deleted(event.properties.id)
+    })
+    this.unsubConnection = this.connectionService.onStateChange((state) => {
+      if (state === "connected") void this.scripts.sync()
+    })
     this.unsubFont = watchTerminalFont((font) => {
       this.postToWebview({ type: "agentManager.terminal.fontChanged", font })
+      this.scripts.snapshot()
     })
     this.unsubDestination = watchTerminalDestination((destination) => {
       this.postToWebview({ type: "agentManager.terminal.destinationChanged", destination })
@@ -121,7 +146,10 @@ export class AgentManagerProvider implements Disposable {
       root: () => this.getRoot(),
       state: () => this.getStateManager(),
       open: (file) => this.host.openDocument(file),
-      start: startVscodeRunTask,
+      start: async (config, done) => {
+        if (!this.host.isTrusted()) throw new Error("Trust the workspace before running scripts")
+        return this.scripts.start("run", config, done)
+      },
       post: (status) => this.postToWebview({ type: "agentManager.runStatus", ...status }),
       error: (message) => this.postToWebview({ type: "error", message }),
       log: (msg) => this.outputChannel.appendLine(`[RunScript] ${msg}`),
@@ -412,6 +440,7 @@ export class AgentManagerProvider implements Disposable {
     if (diff !== undefined) return diff
     const bridge = this.onBridgeMessage(m)
     if (bridge !== undefined) return bridge
+    if (this.scripts.intercept(m)) return null
     if (this.terminalRouter.handle(m)) return null
 
     return msg
@@ -732,6 +761,7 @@ export class AgentManagerProvider implements Disposable {
     // the panel itself is disposed. In-flight creates from the dying
     // instance are reaped by the router's generation guard.
     void this.terminalRouter.dispose()
+    this.scripts.snapshot()
     void this.stateReady
       ?.then(() => {
         // When the folder is not a git repo (or has no folder open),
@@ -1023,11 +1053,15 @@ export class AgentManagerProvider implements Disposable {
       this.log(`Worktree ${worktreeId} not found in state`)
       return null
     }
+    await this.run.remove(worktreeId)
+    if (!(await this.scripts.clear("run", worktreeId))) {
+      this.postToWebview({ type: "error", message: "Failed to stop the Run script before deleting the worktree" })
+      return null
+    }
     // Remove from state BEFORE disk removal so pollers immediately stop targeting this worktree.
     // Pre-emptive skip covers any in-flight poll that already captured getWorktrees().
     this.statsPoller.skipWorktree(worktreeId)
     this.prBridge.remove(worktreeId)
-    this.run.remove(worktreeId)
     this.naming.forget(worktreeId)
     const orphaned = state.removeWorktree(worktreeId)
     if (this.diffs.shouldStopForWorktree(worktree.path, orphaned)) {
@@ -1062,6 +1096,11 @@ export class AgentManagerProvider implements Disposable {
       return null
     }
 
+    await this.run.remove(worktreeId)
+    if (!(await this.scripts.clear("run", worktreeId))) {
+      this.postToWebview({ type: "error", message: "Failed to stop the Run script before removing the worktree" })
+      return null
+    }
     this.naming.forget(worktreeId)
     const orphaned = state.removeWorktree(worktreeId)
     if (this.diffs.shouldStopForWorktree(worktree.path, orphaned)) {
@@ -1924,6 +1963,9 @@ export class AgentManagerProvider implements Disposable {
     this.unsubStatus?.()
     this.unsubFont?.()
     this.unsubDestination?.()
+    this.unsubScript?.()
+    this.unsubConnection?.()
+    await this.scripts.dispose()
     this.orchestration.dispose()
     this.visiblePresence.clear()
     this.diffs.stop()

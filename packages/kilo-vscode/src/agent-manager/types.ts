@@ -16,6 +16,7 @@ import type { BranchListItem, WorktreeSetupErrorCode } from "./git-import"
 import type { RunStatus } from "./run/manager"
 import type { TerminalFont } from "./terminal-font"
 import type { TerminalDestination } from "./terminal-destination"
+import type { ScriptTerminalView } from "./ScriptTerminalManager"
 
 export type { TerminalFont }
 
@@ -177,6 +178,11 @@ interface TerminalFontChangedMessage {
   font: TerminalFont
 }
 
+interface ScriptTerminalsMessage {
+  type: "agentManager.scriptTerminals"
+  terminals: ScriptTerminalView[]
+}
+
 interface ErrorOutMessage {
   type: "error"
   message: string
@@ -332,6 +338,7 @@ export type AgentManagerOutMessage =
   | TerminalErrorMessage
   | TerminalDestinationChangedMessage
   | TerminalFontChangedMessage
+  | ScriptTerminalsMessage
 
 // ---------------------------------------------------------------------------
 // Webview → Extension messages (onMessage)
