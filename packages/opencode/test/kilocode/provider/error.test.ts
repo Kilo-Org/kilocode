@@ -150,12 +150,40 @@ describe("responses api terminal frames", () => {
   })
 
   test("marks numeric 429 and 5xx error codes retryable", () => {
-    const payload = { code: 429, message: "too many requests" }
+    for (const payload of [
+      { code: 429, message: "too many requests" },
+      { code: 503, message: "service unavailable" },
+    ]) {
+      const result = MessageV2.fromError(payload, { providerID: ProviderV2.ID.make("openai") })
+
+      expect(MessageV2.APIError.isInstance(result)).toBe(true)
+      if (!MessageV2.APIError.isInstance(result)) throw new Error("expected APIError")
+      expect(result.data.message).toBe(payload.message)
+      expect(result.data.isRetryable).toBe(true)
+    }
+  })
+
+  test("retries exhausted and anthropic rate-limit shapes like the old heuristics", () => {
+    const exhausted = { code: "resource_exhausted", message: "quota exceeded for the day" }
+    const anthropic = {
+      type: "error",
+      error: { type: "rate_limit_error", message: "request has exceeded your per-minute rate limit" },
+    }
+    for (const payload of [exhausted, anthropic]) {
+      const result = MessageV2.fromError(payload, { providerID: ProviderV2.ID.make("openai") })
+
+      expect(MessageV2.APIError.isInstance(result)).toBe(true)
+      if (!MessageV2.APIError.isInstance(result)) throw new Error("expected APIError")
+      expect(result.data.isRetryable).toBe(true)
+    }
+  })
+
+  test("marks numeric-string error codes retryable", () => {
+    const payload = { code: "429", message: "slow down" }
     const result = MessageV2.fromError(payload, { providerID: ProviderV2.ID.make("openai") })
 
     expect(MessageV2.APIError.isInstance(result)).toBe(true)
     if (!MessageV2.APIError.isInstance(result)) throw new Error("expected APIError")
-    expect(result.data.message).toBe("too many requests")
     expect(result.data.isRetryable).toBe(true)
   })
 

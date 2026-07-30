@@ -48,23 +48,34 @@ export function frame(body: unknown): Frame {
   return { ...body, error: isRecord(body.error) ? body.error : undefined }
 }
 
-const RETRYABLE = /rate.?limit|overload|server|unavailable|timeout/i
+const RETRYABLE = /rate.?limit|too.?many.?requests|rate increased too quickly|exhausted|overload|server|unavailable|timeout/i
+
+// Must stay at least as permissive as the Session.retryable heuristics that
+// applied when these frames still surfaced as NamedError.Unknown, or
+// previously-retried provider errors silently become terminal
+function retryable(error: Frame["error"], message: string) {
+  const code = error?.code
+  const numeric = typeof code === "number" ? code : typeof code === "string" && code.trim() !== "" ? Number(code) : NaN
+  if (!Number.isNaN(numeric)) {
+    if (numeric === 429 || (numeric >= 500 && numeric < 600)) return true
+  } else if (typeof code === "string" && RETRYABLE.test(code)) {
+    return true
+  }
+  const type = error?.type
+  if (typeof type === "string" && RETRYABLE.test(type)) return true
+  return RETRYABLE.test(message)
+}
 
 /**
  * Terminal handler for normalized frames whose error code is not listed in
  * ProviderError.parseStreamError: surface the provider message instead of
  * falling back to a raw JSON dump. Retryable only for rate-limit and
- * 5xx-style codes.
+ * 5xx-style signals in the code, type, or message.
  */
 export function fallback(body: Frame, responseBody: string) {
   const message = body.error?.message
   if (typeof message !== "string" || !message.trim()) return
-  const code = body.error?.code
-  const retryable =
-    typeof code === "number"
-      ? code === 429 || (code >= 500 && code < 600)
-      : typeof code === "string" && RETRYABLE.test(code)
-  return { type: "api_error" as const, message, isRetryable: retryable, responseBody }
+  return { type: "api_error" as const, message, isRetryable: retryable(body.error, message), responseBody }
 }
 
 const AUTH_ERROR =
