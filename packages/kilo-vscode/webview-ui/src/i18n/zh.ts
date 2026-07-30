@@ -857,6 +857,9 @@ export const dict = {
     "启用 SWE-Pruner：根据智能体提供的聚焦问题，对读取、搜索和 shell 工具的大型输出进行任务感知裁剪",
   "settings.experimental.swePrunerModel.title": "SWE-Pruner 模型",
   "settings.experimental.swePrunerModel.description": "用于裁剪工具输出的模型;默认为已配置的小模型",
+  "settings.experimental.multiProject.title": "多项目 Agent Manager",
+  "settings.experimental.multiProject.description":
+    "在 Agent Manager 中启用跨多个仓库的会话和工作树管理。当前工作区仓库始终是默认项目。",
   "settings.experimental.mcpTimeout.title": "MCP 超时（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 服务器请求的超时时间（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",

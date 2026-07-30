@@ -13,7 +13,11 @@ export function SourcesRoute() {
           <ConfigToolbar
             title="Load Order"
             description="Load order and editability without exposing secret values."
-            meta={<Tag>{data().overlay.targets.active ?? "Read only"}</Tag>}
+            meta={
+              <Tag>
+                {data().overlay.targets.active.writable ? data().overlay.targets.active.scope : "Read only"}
+              </Tag>
+            }
           />
 
           <div class="table" role="table" aria-label="Config sources">

@@ -4,6 +4,11 @@ export const dict = {
   "agentManager.sidebar.expand": "Kenar çubuğunu göster",
   "agentManager.section.worktrees": "WORKTREE'LER",
   "agentManager.section.sessions": "OTURUMLAR",
+  "agentManager.projects": "PROJELER",
+  "agentManager.project.add": "Proje ekle",
+  "agentManager.project.remove": "Agent Manager'dan kaldır",
+  "agentManager.project.trust": "Güven",
+  "agentManager.project.missing": "Depo bulunamadı",
   "agentManager.notGitRepo": "Bir git deposu değil",
 
   "agentManager.worktree.settings": "Worktree ayarları",

@@ -4,6 +4,11 @@ export const dict = {
   "agentManager.sidebar.expand": "Zijbalk tonen",
   "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "SESSIES",
+  "agentManager.projects": "PROJECTEN",
+  "agentManager.project.add": "Project toevoegen",
+  "agentManager.project.remove": "Verwijderen uit Agent Manager",
+  "agentManager.project.trust": "Vertrouwen",
+  "agentManager.project.missing": "Repository niet gevonden",
   "agentManager.notGitRepo": "Geen git repository",
 
   "agentManager.worktree.settings": "Worktree instellingen",

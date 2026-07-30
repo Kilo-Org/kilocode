@@ -4,6 +4,11 @@ export const dict = {
   "agentManager.sidebar.expand": "Показати бічну панель",
   "agentManager.section.worktrees": "РОБОЧІ ДЕРЕВА",
   "agentManager.section.sessions": "СЕСІЇ",
+  "agentManager.projects": "ПРОЄКТИ",
+  "agentManager.project.add": "Додати проєкт",
+  "agentManager.project.remove": "Видалити з Agent Manager",
+  "agentManager.project.trust": "Довіряти",
+  "agentManager.project.missing": "Репозиторій не знайдено",
   "agentManager.notGitRepo": "Не є git-репозиторієм",
 
   "agentManager.worktree.settings": "Налаштування робочого дерева",

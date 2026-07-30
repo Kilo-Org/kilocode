@@ -1,0 +1,35 @@
+/**
+ * Messages that mutate or read a project's persisted state and therefore must
+ * wait for that project's state to load before dispatch.
+ */
+export const STATE_GATED = new Set<string>([
+  "agentManager.createWorktree",
+  "agentManager.promoteSession",
+  "agentManager.createMultiVersion",
+  "agentManager.deleteWorktree",
+  "agentManager.removeStaleWorktree",
+  "agentManager.openLocally",
+  "agentManager.addSessionToWorktree",
+  "agentManager.closeSession",
+  "agentManager.persistSession",
+  "agentManager.forgetSession",
+  "agentManager.renameWorktree",
+  "agentManager.requestBranches",
+  "agentManager.importFromBranch",
+  "agentManager.importFromPR",
+  "agentManager.importExternalWorktree",
+  "agentManager.importAllExternalWorktrees",
+  "agentManager.setTabOrder",
+  "agentManager.setWorktreeOrder",
+  "agentManager.setSessionsCollapsed",
+  "agentManager.setSidebarCollapsed",
+  "agentManager.setReviewDiffStyle",
+  "agentManager.setDefaultBaseBranch",
+  "agentManager.createSection",
+  "agentManager.renameSection",
+  "agentManager.deleteSection",
+  "agentManager.setSectionColor",
+  "agentManager.toggleSectionCollapsed",
+  "agentManager.moveToSection",
+  "agentManager.moveSection",
+])

@@ -278,6 +278,7 @@ export function createApplyToLocal(opts: ApplyToLocalOptions) {
   }
 
   return {
+    applyStateForSelection,
     applyBusyForSelection,
     openApplyDialog,
     onApplyResult,

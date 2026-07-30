@@ -8,11 +8,13 @@ import type {
   CloudSessionInfo,
   Message,
   MessageLoadMode,
+  ProjectSessionInfo,
   SessionCloseReason,
   SessionInfo,
   SessionModelUsage,
   SessionUpdate,
 } from "./sessions"
+import type { AgentManagerSidebarTarget } from "./webview-messages"
 import type { PermissionRequest } from "./permissions"
 import type { AnacondaDesktopExtensionMessage } from "../../../../src/shared/anaconda-desktop-messages"
 import type { QuestionRequest, SuggestionRequest, TodoItem } from "./questions"
@@ -351,12 +353,16 @@ export interface NavigateMessage {
 export interface IndexingStatusLoadedMessage {
   type: "indexingStatusLoaded"
   status: IndexingStatus
+  projectId?: string
 }
 
 export interface IndexingSettingsLoadedMessage {
   type: "indexingSettingsLoaded"
   settings: {
     showButtonWhenDisabled: boolean
+    consent: boolean
+    projects: Array<{ id: string; root: string; label: string }>
+    projectId?: string
   }
 }
 
@@ -569,7 +575,22 @@ export interface ClaudeCompatSettingLoadedMessage {
 
 export interface ExtensionSettings {
   maxCost?: number
+  multiProject?: boolean
   [key: string]: unknown
+}
+
+export interface SettingsConfigBinding {
+  id: string
+  scope: "global" | "project"
+  target: {
+    scope: "global" | "project"
+    path: string
+    revision: string
+    exists: boolean
+    writable: boolean
+    raw: Record<string, unknown>
+  }
+  project?: { id: string; root: string; generation: number; pinned: boolean }
 }
 
 export interface ConfigLoadedMessage {
@@ -577,6 +598,7 @@ export interface ConfigLoadedMessage {
   config: Config
   globalConfig?: Config
   projectConfig?: Config
+  bindings?: { global?: SettingsConfigBinding; project?: SettingsConfigBinding }
   collections?: ConfigCollections
   settings?: ExtensionSettings
   features: FeatureFlags
@@ -587,6 +609,7 @@ export interface ConfigUpdatedMessage {
   config: Config
   globalConfig?: Config
   projectConfig?: Config
+  bindings?: { global?: SettingsConfigBinding; project?: SettingsConfigBinding }
   collections?: ConfigCollections
   settings?: ExtensionSettings
   features: FeatureFlags
@@ -596,6 +619,16 @@ export interface ConfigUpdateFailedMessage {
   type: "configUpdateFailed"
   message: string
   details?: string
+  completedScopes?: Array<"global" | "project">
+  config?: Config
+  globalConfig?: Config
+  projectConfig?: Config
+  bindings?: { global?: SettingsConfigBinding; project?: SettingsConfigBinding }
+}
+
+export interface ConfigBindingExpiredMessage {
+  type: "configBindingExpired"
+  reason: "project-changed" | "reconnected"
 }
 
 export interface GlobalConfigLoadedMessage {
@@ -699,7 +732,42 @@ export interface AgentManagerStateMessage {
   runStatuses?: RunStatus[]
   runScriptConfigured?: boolean
   runScriptPath?: string
+  /** Owning project for this state payload. Absent in legacy single-project payloads. */
+  projectId?: string
+  /** Last selected sidebar target for seamless project-switch restore. */
+  activeTarget?: AgentManagerSidebarTarget
   terminalDestination?: TerminalDestination
+}
+
+// A registered Agent Manager project as shown in the sidebar
+export interface AgentProjectSnapshot {
+  id: string
+  root: string
+  label: string
+  pinned: boolean
+  active: boolean
+  expanded: boolean
+  initialized: boolean
+  trusted: boolean
+  missing: boolean
+}
+
+// Project catalog push from extension to webview
+export interface AgentManagerProjectsMessage {
+  type: "agentManager.projects"
+  multiProject: boolean
+  projects: AgentProjectSnapshot[]
+}
+
+export interface AgentManagerSelectionActivatedMessage {
+  type: "agentManager.selectionActivated"
+  target: AgentManagerSidebarTarget
+}
+
+export interface AgentManagerProjectSessionsMessage {
+  type: "agentManager.projectSessions"
+  projectId: string
+  sessions: ProjectSessionInfo[]
 }
 
 // ---------------------------------------------------------------------------
@@ -847,6 +915,7 @@ export interface ModelSelectionsLoadedMessage {
 
 export interface AgentManagerBranchesMessage {
   type: "agentManager.branches"
+  projectId?: string
   branches: BranchInfo[]
   defaultBranch: string
 }
@@ -912,18 +981,24 @@ export interface AgentManagerDiffBranchesMessage {
 // Agent Manager: Worktree git stats push (extension → webview)
 export interface AgentManagerWorktreeStatsMessage {
   type: "agentManager.worktreeStats"
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
   stats: WorktreeGitStats[]
 }
 
 // Agent Manager: Local workspace git stats push (extension → webview)
 export interface AgentManagerLocalStatsMessage {
   type: "agentManager.localStats"
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
   stats: LocalGitStats
 }
 
 // Agent Manager: PR status push (extension → webview)
 export interface AgentManagerPRStatusMessage {
   type: "agentManager.prStatus"
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
   worktreeId: string
   pr: PRStatus | null
   error?: "gh_missing" | "gh_auth" | "fetch_failed"
@@ -1236,6 +1311,7 @@ export type ExtensionMessage =
   | ConfigLoadedMessage
   | ConfigUpdatedMessage
   | ConfigUpdateFailedMessage
+  | ConfigBindingExpiredMessage
   | GlobalConfigLoadedMessage
   | NotificationSettingsLoadedMessage
   | TimelineSettingLoadedMessage
@@ -1250,6 +1326,9 @@ export type ExtensionMessage =
   | AgentManagerSessionForkedMessage
   | AgentManagerSessionClosedMessage
   | AgentManagerStateMessage
+  | AgentManagerProjectsMessage
+  | AgentManagerSelectionActivatedMessage
+  | AgentManagerProjectSessionsMessage
   | AgentManagerRunStatusMessage
   | AgentManagerKeybindingsMessage
   | AutoApproveStateMessage

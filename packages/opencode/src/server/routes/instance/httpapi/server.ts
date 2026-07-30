@@ -3,6 +3,7 @@ import { HttpApiBuilder, OpenApi } from "effect/unstable/httpapi"
 import { HttpClient, HttpMiddleware, HttpRouter, HttpServer, HttpServerResponse } from "effect/unstable/http"
 import * as Socket from "effect/unstable/socket/Socket"
 import { FSUtil } from "@opencode-ai/core/fs-util"
+import { EffectFlock } from "@opencode-ai/core/util/effect-flock" // kilocode_change
 import * as Observability from "@opencode-ai/core/observability"
 import { Account } from "@/account/account"
 import { Agent } from "@/agent/agent"
@@ -308,6 +309,7 @@ export function createRoutes(
       KiloViewers.defaultLayer,
       SyncEvent.defaultLayer,
       // kilocode_change end
+      EffectFlock.defaultLayer, // kilocode_change
       HttpServer.layerServices,
     ]),
     Layer.provide(LayerNode.buildLayer(app)),
@@ -318,9 +320,15 @@ export function createRoutes(
 
 // kilocode_change start - keep listener routes local while application services come from AppRuntime
 export function createListenerRoutes(corsOptions?: CorsOptions) {
-  return Layer.mergeAll(rootApiRoutes, eventApiRoutes, ptyConnectApiRoutes, instanceRoutes, serverRoutes, docRoute, uiRoute).pipe(
-    provideKiloListenerRoutes(corsOptions),
-  )
+  return Layer.mergeAll(
+    rootApiRoutes,
+    eventApiRoutes,
+    ptyConnectApiRoutes,
+    instanceRoutes,
+    serverRoutes,
+    docRoute,
+    uiRoute,
+  ).pipe(provideKiloListenerRoutes(corsOptions))
 }
 // kilocode_change end
 

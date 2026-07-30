@@ -4,6 +4,11 @@ export const dict = {
   "agentManager.sidebar.expand": "نمایش نوار کناری",
   "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "SESSIONS",
+  "agentManager.projects": "PROJECTS",
+  "agentManager.project.add": "افزودن پروژه",
+  "agentManager.project.remove": "حذف از Agent Manager",
+  "agentManager.project.trust": "اعتماد",
+  "agentManager.project.missing": "مخزن یافت نشد",
   "agentManager.notGitRepo": "این یک مخزن git نیست",
 
   "agentManager.worktree.settings": "تنظیمات Worktree",
