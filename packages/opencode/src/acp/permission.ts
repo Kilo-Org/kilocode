@@ -5,6 +5,7 @@ import { exists, readText } from "@/util/filesystem"
 import type { ACPSession } from "./session"
 import { toLocations, toToolKind, type ToolInput } from "./tool"
 import { Effect } from "effect"
+import { SkillShellPrompt } from "@/kilocode/acp/permission" // kilocode_change
 
 type PermissionEvent = Extract<Event, { type: "permission.asked" }>
 type Reply = "once" | "always" | "reject"
@@ -15,17 +16,6 @@ const permissionOptions: PermissionOption[] = [
   { optionId: "always", kind: "allow_always", name: "Always allow" },
   { optionId: "reject", kind: "reject_once", name: "Reject" },
 ]
-
-// kilocode_change start - skill shell batches list their commands and are never persisted, so no "Always allow"
-const skillShellOptions: PermissionOption[] = [
-  { optionId: "once", kind: "allow_once", name: "Allow" },
-  { optionId: "reject", kind: "reject_once", name: "Reject" },
-]
-
-function isSkillShell(metadata: PermissionEvent["properties"]["metadata"]) {
-  return (metadata as { skillShell?: unknown })?.skillShell === true
-}
-// kilocode_change end
 
 export class Handler {
   private readonly queues = new Map<string, Promise<void>>()
@@ -62,19 +52,19 @@ export class Handler {
       return
     }
 
-    const skillShell = isSkillShell(permission.metadata) // kilocode_change - skill batches list commands and never persist
+    const skillShell = SkillShellPrompt.is(permission.metadata) // kilocode_change - skill batches list commands and never persist
     const result = await this.input.connection
       .requestPermission({
         sessionId: permission.sessionID,
         toolCall: {
           toolCallId: permission.tool?.callID ?? permission.id,
           status: "pending",
-          title: skillShell ? "Run skill shell commands" : permission.permission, // kilocode_change
+          title: skillShell ? SkillShellPrompt.title : permission.permission, // kilocode_change
           rawInput: permission.metadata, // kilocode_change - metadata.commands carries the verbatim command list
           kind: toToolKind(permission.permission),
           locations: toLocations(permission.permission, permission.metadata),
         },
-        options: skillShell ? skillShellOptions : permissionOptions, // kilocode_change
+        options: skillShell ? SkillShellPrompt.options : permissionOptions, // kilocode_change
       })
       .catch(async () => {
         await this.reply(permission.id, "reject", session.cwd)
