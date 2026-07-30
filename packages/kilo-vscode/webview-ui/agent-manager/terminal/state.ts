@@ -377,7 +377,16 @@ export function createTerminalState(selection: Accessor<string | null>): Termina
       if (view.exitCode !== undefined) status.exitCode = view.exitCode
       states[view.terminalId] = status
     }
-    setScripts(states)
+    setScripts((prev) => {
+      const keys = Object.keys(states)
+      if (keys.length !== Object.keys(prev).length) return states
+      for (const id of keys) {
+        const before = prev[id]
+        const after = states[id]
+        if (before?.state !== after?.state || before?.exitCode !== after?.exitCode) return states
+      }
+      return prev
+    })
 
     if (removed.length > 0) {
       const removedIds = new Set(removed.map((term) => term.id))

@@ -157,7 +157,7 @@ export const layer = Layer.effect(
       if (session.info.status === "running") await KiloPtyTermination.terminate(session.process)
       for (const listener of session.listeners) listener.dispose()
       session.listeners.length = 0
-      notifyEnd(session, {})
+      notifyEnd(session, session.info.status === "exited" ? { exitCode: session.info.exitCode } : {})
     }
     // kilocode_change end
 

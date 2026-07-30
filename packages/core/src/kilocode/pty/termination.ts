@@ -5,12 +5,17 @@ import { Log } from "../../util/log"
 
 const log = Log.create({ service: "pty.termination" })
 const GRACE_MS = 200
+const SPAWN_TIMEOUT_MS = 5_000
 
 export type Process = Pick<Proc, "pid" | "onExit" | "kill">
 
 export type Runtime = {
   readonly platform: NodeJS.Platform
-  readonly taskkill: (file: string, args: string[], opts: { stdio: "ignore"; windowsHide: true }) => Promise<boolean>
+  readonly taskkill: (
+    file: string,
+    args: string[],
+    opts: { stdio: "ignore"; windowsHide: true; timeout: number },
+  ) => Promise<boolean>
   readonly tree: () => Promise<Array<{ pid: number; parent: number }>>
   readonly alive: (pid: number) => boolean
   readonly signal: (pid: number, signal: "SIGTERM" | "SIGKILL") => void
@@ -87,7 +92,12 @@ function signal(proc: Process, pids: number[], value: "SIGTERM" | "SIGKILL", inp
 async function tree(file: string = "ps", args: string[] = ["-axo", "pid=,ppid="]) {
   return await new Promise<Array<{ pid: number; parent: number }>>((resolve) => {
     try {
-      const child = spawn(file, args, { stdio: ["ignore", "pipe", "ignore"], windowsHide: true })
+      const child = spawn(file, args, {
+        stdio: ["ignore", "pipe", "ignore"],
+        windowsHide: true,
+        timeout: SPAWN_TIMEOUT_MS,
+        killSignal: "SIGKILL",
+      })
       const chunks: Buffer[] = []
       child.stdout?.on("data", (chunk: Buffer) => chunks.push(chunk))
       child.once("error", () => resolve([]))
@@ -109,7 +119,11 @@ async function tree(file: string = "ps", args: string[] = ["-axo", "pid=,ppid="]
   })
 }
 
-async function taskkill(file: string, args: string[], opts: { stdio: "ignore"; windowsHide: true }) {
+async function taskkill(
+  file: string,
+  args: string[],
+  opts: { stdio: "ignore"; windowsHide: true; timeout: number },
+) {
   return await new Promise<boolean>((resolve) => {
     try {
       const child = spawn(file, args, opts)
@@ -141,6 +155,7 @@ export async function terminate(proc: Process, input: Runtime = runtime): Promis
       const killed = await input.taskkill("taskkill", ["/pid", String(proc.pid), "/f", "/t"], {
         stdio: "ignore",
         windowsHide: true,
+        timeout: SPAWN_TIMEOUT_MS,
       })
       if (!killed && !state.exited) direct(proc)
       if (!state.exited) await input.sleep(GRACE_MS)

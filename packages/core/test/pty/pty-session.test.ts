@@ -256,6 +256,7 @@ describe("pty", () => {
       expect(attachment.replay).toContain("replayed")
 
       attachment.write("ignored")
+      yield* pty.remove(info.id)
       attachment.activate()
       expect(yield* Deferred.await(ended).pipe(Effect.timeout("5 seconds"))).toEqual({ exitCode: 7 })
       attachment.detach()

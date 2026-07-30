@@ -168,6 +168,7 @@ describe("ScriptTerminalManager", () => {
     expect(url.pathname).toBe("/api/pty/pty%20%2F%201/connect")
     expect(url.searchParams.get("location[directory]")).toBe("/repo/worktree")
     expect(url.searchParams.get("cursor")).toBe("0")
+    expect(url.searchParams.get("replayExited")).toBe("1")
     expect(url.searchParams.get("auth_token")).toBe(Buffer.from("kilo:secret").toString("base64"))
   })
 
@@ -204,19 +205,37 @@ describe("ScriptTerminalManager", () => {
     expect(ctx.snapshots.at(-1)).toEqual([expect.objectContaining({ state: "exited", exitCode: 7 })])
   })
 
-  it("queues an exit event that arrives before create registration", async () => {
+  it("reconciles an exit event that arrives before create registration", async () => {
     const gate = deferred<PtyResponse>()
-    const ctx = harness({ create: async () => gate.promise })
+    let state = info()
+    const ctx = harness({
+      create: async () => gate.promise,
+      get: async () => ({ data: { location: { directory: config.cwd }, data: state } }),
+    })
     const done: unknown[] = []
     const started = ctx.manager.start("run", config, (exit) => done.push(exit))
 
     await wait()
+    state = info("exited", 9)
     ctx.manager.exited("pty-1", 9)
     gate.resolve({ data: { location: { directory: config.cwd }, data: info() } })
     await started
 
     expect(done).toEqual([{ exitCode: 9 }])
     expect(ctx.snapshots.at(-1)).toEqual([expect.objectContaining({ state: "exited", exitCode: 9 })])
+  })
+
+  it("treats an already removed backend PTY as a successful close", async () => {
+    const ctx = harness({ remove: async () => ({ error: { _tag: "PtyNotFoundError", status: 404 } }) })
+    const done: unknown[] = []
+
+    await ctx.manager.start("run", config, (exit) => done.push(exit))
+    const terminalId = ctx.snapshots.at(-1)?.[0]?.terminalId
+    if (!terminalId) throw new Error("missing Run terminal")
+
+    expect(await ctx.manager.close(terminalId)).toBe(true)
+    expect(done).toEqual([{ stopped: true }])
+    expect(ctx.snapshots.at(-1)).toEqual([])
   })
 
   it("stops a PTY when stop races startup", async () => {

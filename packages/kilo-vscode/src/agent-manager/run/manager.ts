@@ -20,6 +20,8 @@ interface Entry {
   status: RunStatus
   handle?: RunHandle
   task?: Promise<RunHandle>
+  released?: boolean
+  stopping?: Promise<void>
 }
 
 interface FinishOptions {
@@ -65,21 +67,12 @@ export class RunScriptManager {
       const handle = await task
       const latest = this.entries.get(worktreeId)
       if (latest !== entry) {
-        if (this.removed.has(worktreeId)) {
-          try {
-            await handle.stop()
-          } catch (error) {
-            this.log(`Failed to stop removed run script for ${worktreeId}: ${message(error)}`)
-          }
-        }
-        handle.dispose?.()
+        await this.release(worktreeId, entry, handle, this.removed.has(worktreeId))
         return true
       }
       entry.handle = handle
       if (entry.status.state === "stopping") {
-        void Promise.resolve(handle.stop()).catch((error) => {
-          this.log(`Failed to stop run script for ${worktreeId}: ${message(error)}`)
-        })
+        void this.halt(worktreeId, entry, handle)
       }
     } catch (error) {
       this.finish(worktreeId, { error: message(error) })
@@ -98,11 +91,7 @@ export class RunScriptManager {
     this.emit(entry.status)
 
     if (!entry.handle) return
-    try {
-      await entry.handle.stop()
-    } catch (error) {
-      this.log(`Failed to stop run script for ${worktreeId}: ${message(error)}`)
-    }
+    await this.halt(worktreeId, entry, entry.handle)
   }
 
   finish(worktreeId: string, opts: FinishOptions = {}): void {
@@ -145,30 +134,45 @@ export class RunScriptManager {
             return undefined
           })
         : undefined)
-    if (entry?.status.state !== "idle" && handle) {
-      try {
-        await handle.stop()
-      } catch (error) {
-        this.log(`Failed to stop removed run script for ${worktreeId}: ${message(error)}`)
-      }
+    if (!entry || !handle) return
+    if (entry.status.state !== "idle") {
+      await this.release(worktreeId, entry, handle, true)
+      return
     }
-    handle?.dispose?.()
+    await this.release(worktreeId, entry, handle, false)
   }
 
   dispose(): void {
     for (const [id, entry] of this.entries) {
       this.removed.add(id)
-      if (entry.status.state !== "idle") {
-        try {
-          void Promise.resolve(entry.handle?.stop()).catch((error) => {
-            this.log(`Failed to stop run script during dispose: ${message(error)}`)
-          })
-        } catch (error) {
-          this.log(`Failed to stop run script during dispose: ${message(error)}`)
-        }
-      }
-      entry.handle?.dispose?.()
+      if (!entry.handle || entry.released) continue
+      entry.released = true
+      if (entry.status.state !== "idle") void this.halt(id, entry, entry.handle)
+      entry.handle.dispose?.()
     }
     this.entries.clear()
+  }
+
+  private async release(worktreeId: string, entry: Entry, handle: RunHandle, stop: boolean): Promise<void> {
+    if (entry.released) return
+    entry.released = true
+    if (stop) await this.halt(worktreeId, entry, handle)
+    handle.dispose?.()
+  }
+
+  private halt(worktreeId: string, entry: Entry, handle: RunHandle): Promise<void> {
+    if (entry.stopping) return entry.stopping
+    const task = (() => {
+      try {
+        return Promise.resolve(handle.stop())
+          .then(() => undefined)
+          .catch((error) => this.log(`Failed to stop run script for ${worktreeId}: ${message(error)}`))
+      } catch (error) {
+        this.log(`Failed to stop run script for ${worktreeId}: ${message(error)}`)
+        return Promise.resolve()
+      }
+    })()
+    entry.stopping = task
+    return task
   }
 }

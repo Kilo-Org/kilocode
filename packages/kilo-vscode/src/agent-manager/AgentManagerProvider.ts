@@ -130,10 +130,14 @@ export class AgentManagerProvider implements Disposable {
       closed: (terminalId) => this.postToWebview({ type: "agentManager.terminal.closed", terminalId }),
       log: (msg) => this.outputChannel.appendLine(`[RunScript] ${msg}`),
     })
-    this.unsubScript = this.connectionService.onEvent((event) => {
-      if (event.type === "pty.exited") this.scripts.exited(event.properties.id, event.properties.exitCode)
-      if (event.type === "pty.deleted") this.scripts.deleted(event.properties.id)
-    })
+    this.unsubScript = this.connectionService.onEventFiltered(
+      (event) =>
+        (event.type === "pty.exited" || event.type === "pty.deleted") && this.scripts.owns(event.properties.id),
+      (event) => {
+        if (event.type === "pty.exited") this.scripts.exited(event.properties.id, event.properties.exitCode)
+        if (event.type === "pty.deleted") this.scripts.deleted(event.properties.id)
+      },
+    )
     this.unsubConnection = this.connectionService.onStateChange((state) => {
       if (state === "connected") void this.scripts.sync()
     })
@@ -1060,14 +1064,15 @@ export class AgentManagerProvider implements Disposable {
       this.log(`Worktree ${worktreeId} not found in state`)
       return null
     }
+    this.statsPoller.skipWorktree(worktreeId)
     await this.run.remove(worktreeId)
     if (!(await this.scripts.clear("run", worktreeId))) {
+      this.statsPoller.unskipWorktree(worktreeId)
       this.postToWebview({ type: "error", message: "Failed to stop the Run script before deleting the worktree" })
       return null
     }
     // Remove from state BEFORE disk removal so pollers immediately stop targeting this worktree.
     // Pre-emptive skip covers any in-flight poll that already captured getWorktrees().
-    this.statsPoller.skipWorktree(worktreeId)
     this.prBridge.remove(worktreeId)
     this.naming.forget(worktreeId)
     const orphaned = state.removeWorktree(worktreeId)

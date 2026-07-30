@@ -68,6 +68,15 @@ function message(error: unknown): string {
   return String(error)
 }
 
+function missing(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false
+  const value = error as Record<string, unknown>
+  if (value.status === 404 || value._tag === "PtyNotFoundError") return true
+  if (!value.data || typeof value.data !== "object") return false
+  const data = value.data as Record<string, unknown>
+  return data.status === 404 || data._tag === "PtyNotFoundError"
+}
+
 function key(kind: ScriptTerminalKind, worktreeId: string): string {
   return `${kind}:${worktreeId}`
 }
@@ -84,7 +93,6 @@ export class ScriptTerminalManager {
   private readonly entries = new Map<string, Entry>()
   private readonly terminals = new Map<string, Entry>()
   private readonly ptys = new Map<string, Entry>()
-  private readonly early = new Map<string, number>()
 
   constructor(private readonly deps: ScriptTerminalDeps) {}
 
@@ -145,11 +153,6 @@ export class ScriptTerminalManager {
     this.ptys.set(entry.ptyID, entry)
     this.emit()
 
-    const exit = this.early.get(entry.ptyID)
-    if (exit !== undefined) {
-      this.early.delete(entry.ptyID)
-      this.finishExited(entry, exit)
-    }
     await this.reconcile(entry, client)
 
     return {
@@ -175,19 +178,11 @@ export class ScriptTerminalManager {
 
   exited(ptyID: string, exitCode: number): void {
     const entry = this.ptys.get(ptyID)
-    if (!entry) {
-      if (this.early.size >= 100) {
-        const first = this.early.keys().next().value
-        if (typeof first === "string") this.early.delete(first)
-      }
-      this.early.set(ptyID, exitCode)
-      return
-    }
+    if (!entry) return
     this.finishExited(entry, exitCode)
   }
 
   deleted(ptyID: string): void {
-    this.early.delete(ptyID)
     const entry = this.ptys.get(ptyID)
     if (!entry) return
     const state = entry.state
@@ -202,6 +197,10 @@ export class ScriptTerminalManager {
 
   snapshot(): void {
     this.emit()
+  }
+
+  owns(ptyID: string): boolean {
+    return this.ptys.has(ptyID)
   }
 
   async sync(): Promise<void> {
@@ -303,6 +302,12 @@ export class ScriptTerminalManager {
       const client = await this.deps.getClientAsync(entry.cwd)
       const result = await client.v2.pty.remove({ ptyID: entry.ptyID, location: { directory: entry.cwd } })
       if (result.error) {
+        if (missing(result.error)) {
+          this.drop(entry)
+          this.emit()
+          if (stopped) this.done(entry, { stopped: true })
+          return
+        }
         this.failed(entry, `Failed to remove Run terminal: ${message(result.error)}`)
         return
       }

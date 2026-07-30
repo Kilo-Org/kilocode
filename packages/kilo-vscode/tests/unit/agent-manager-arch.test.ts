@@ -495,6 +495,8 @@ describe("Agent Manager Provider — onMessage routing", () => {
       expect(text).toContain('this.scripts.clear("run", worktreeId)')
       expect(text.indexOf('this.scripts.clear("run", worktreeId)')).toBeLessThan(text.indexOf("state.removeWorktree"))
     }
+    const deleted = body("onDeleteWorktree")
+    expect(deleted.indexOf("statsPoller.skipWorktree")).toBeLessThan(deleted.indexOf("this.run.remove"))
   })
 
   // -- onDeleteWorktree invariants -------------------------------------------

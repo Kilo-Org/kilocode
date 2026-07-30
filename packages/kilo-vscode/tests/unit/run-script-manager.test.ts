@@ -129,6 +129,22 @@ describe("RunScriptManager", () => {
     expect(ctx.manager.all()).toEqual([])
   })
 
+  it("stops and disposes once when removal races startup", async () => {
+    const ctx = createManager()
+    const gate = deferred<RunHandle>()
+    let stopped = 0
+    let disposed = 0
+    const started = ctx.manager.start("wt-1", () => gate.promise)
+    const removed = ctx.manager.remove("wt-1")
+
+    gate.resolve({ stop: () => stopped++, dispose: () => disposed++ })
+    await Promise.all([started, removed])
+
+    expect(stopped).toBe(1)
+    expect(disposed).toBe(1)
+    expect(ctx.manager.all()).toEqual([])
+  })
+
   it("dispose tolerates handles that throw on stop", async () => {
     const ctx = createManager()
     await ctx.manager.start("wt-1", async () => ({

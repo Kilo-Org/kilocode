@@ -10,6 +10,7 @@ export function buildScriptTerminalWsUrl(config: PtyServerConfig, ptyID: string,
   const query = new URLSearchParams({
     "location[directory]": cwd,
     cursor: "0",
+    replayExited: "1",
     auth_token: token,
   })
   return `${base}/api/pty/${encodeURIComponent(ptyID)}/connect?${query.toString()}`

@@ -19,7 +19,11 @@ function runtime(
     tree?: Array<{ pid: number; parent: number }>
   } = {},
 ) {
-  const tasks: Array<{ file: string; args: string[]; opts: { stdio: "ignore"; windowsHide: true } }> = []
+  const tasks: Array<{
+    file: string
+    args: string[]
+    opts: { stdio: "ignore"; windowsHide: true; timeout: number }
+  }> = []
   const signals: Array<{ pid: number; signal: "SIGTERM" | "SIGKILL" }> = []
   const sleeps: number[] = []
   const value: KiloPtyTermination.Runtime = {
@@ -52,7 +56,7 @@ describe("pty process-tree termination", () => {
       {
         file: "taskkill",
         args: ["/pid", "42", "/f", "/t"],
-        opts: { stdio: "ignore", windowsHide: true },
+        opts: { stdio: "ignore", windowsHide: true, timeout: 5_000 },
       },
     ])
     expect(input.signals).toEqual([])
