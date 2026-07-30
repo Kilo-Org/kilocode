@@ -582,7 +582,7 @@ This section covers only the Kotlin/runtime integration side:
 - **Reuse platform icons**: browse at https://intellij-icons.jetbrains.design. Access via `AllIcons.*` constants.
 - Custom icons: SVG files in `resources/icons/`. Load via `IconLoader.getIcon("/icons/foo.svg", MyClass::class.java)`.
 - Organize in an `icons` package or a `*Icons` object with `@JvmField` on each constant.
-- **Sizing, dark variants, and New UI support**: see the `icon-jetbrains` skill for the authoritative Icon roles table, canvas sizes, filename patterns, dark variant conventions, `expui/` placement, and `*IconMappings.json` wiring. Do not duplicate sizing or palette values here.
+- **Sizing, dark variants, and filename patterns**: see the `icon-jetbrains` skill for the authoritative Icon roles table, canvas sizes, filename patterns, and dark variant conventions. Do not duplicate sizing or palette values here.
 
 IntelliJ does not theme SVG icons with `currentColor`, CSS classes, CSS variables, `<style>` blocks, or inherited styles. `SVGLoader` patches icon colors by matching literal hex values in `fill` and `stroke` attributes against the active theme palette. Use hardcoded palette hex values in SVG assets and provide dark variants. This exception applies to icon asset files only; runtime Swing UI code must still derive colors from theme APIs.
 
