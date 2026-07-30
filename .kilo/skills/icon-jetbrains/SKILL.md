@@ -5,7 +5,7 @@ description: Create or review IntelliJ New UI SVG icons, theme variants, sizes, 
 
 # IntelliJ Platform New UI Icons
 
-Guidance for authoring SVG icons for the New UI.
+Guidance for authoring SVG icons for the New UI. This skill is the single source of truth for icon sizing, palette, dark variants, composition rules, and placement. Other docs (including `packages/kilo-jetbrains/AGENTS.md`) defer here for SVG authoring details.
 
 Background: the IDE maintains Classic UI and New UI in parallel. Code branches with `ExperimentalUI.isNewUI()`; icons follow the same split. Old icons stay in their original resource folders for Classic-UI compatibility. New-UI icons live under `expui/` folders and are substituted for the old ones at runtime by icon mappers.
 
