@@ -11,7 +11,7 @@
 import { createContext, useContext, createSignal, createMemo, onCleanup } from "solid-js"
 import type { ParentComponent, Accessor } from "solid-js"
 import { useVSCode } from "./vscode"
-import type { Config, ExtensionMessage, FeatureFlags } from "../types/messages"
+import type { Config, ConfigCollections, ExtensionMessage, FeatureFlags } from "../types/messages"
 import {
   configUnsetPaths,
   deepMerge,
@@ -35,6 +35,7 @@ interface ConfigContextValue {
   config: Accessor<Config>
   globalConfig: Accessor<Config>
   projectConfig: Accessor<Config>
+  collections: Accessor<ConfigCollections>
   settings: Accessor<Record<string, unknown>>
   features: Accessor<FeatureFlags>
   loading: Accessor<boolean>
@@ -57,6 +58,7 @@ export const ConfigProvider: ParentComponent = (props) => {
   const [config, setConfig] = createSignal<Config>({})
   const [globalConfig, setGlobalConfig] = createSignal<Config>({})
   const [projectConfig, setProjectConfig] = createSignal<Config>({})
+  const [collections, setCollections] = createSignal<ConfigCollections>({})
   const [settings, setSettings] = createSignal<Record<string, unknown>>({})
   const [features, setFeatures] = createSignal<FeatureFlags>({ indexing: false, sandboxControls: false })
   const [loading, setLoading] = createSignal(true)
@@ -82,6 +84,9 @@ export const ConfigProvider: ParentComponent = (props) => {
   // Error from the most recent saveConfig() attempt, or null if no error.
   // Cleared when the user edits the draft again or starts a new save.
   const [saveError, setSaveError] = createSignal<SaveError | null>(null)
+  const updateCollections = (next: ConfigCollections | undefined) => {
+    if (next !== undefined) setCollections(next)
+  }
 
   // Register handler immediately (not in onMount) so we never miss
   // a configLoaded message that arrives before the DOM mount.
@@ -108,6 +113,16 @@ export const ConfigProvider: ParentComponent = (props) => {
       })
       return
     }
+    if (message.type === "throughputSettingLoaded") {
+      // Seed settings() so the DisplayTab Switch reflects persisted state on
+      // first open. DisplayProvider also reads this message to drive
+      // throughputVisible() for the per-message badge; both signals update
+      // from the same backend message without conflict.
+      mergeSettings({
+        showTokenThroughput: message.visible,
+      })
+      return
+    }
     if (message.type === "configLoaded") {
       // Skip if a save is in-flight — a stale configLoaded must not overwrite
       // the optimistically-updated state while the write is being confirmed.
@@ -126,6 +141,7 @@ export const ConfigProvider: ParentComponent = (props) => {
         setProjectConfig(mergeScopedConfig(message.projectConfig, projectDraft()))
         setSavedProject(message.projectConfig)
       }
+      updateCollections(message.collections)
       setLoading(false)
       return
     }
@@ -153,6 +169,7 @@ export const ConfigProvider: ParentComponent = (props) => {
           setProjectConfig(message.projectConfig)
           setSavedProject(message.projectConfig)
         }
+        updateCollections(message.collections)
         setFeatures(message.features)
       } else {
         // configUpdated from a different source (e.g. PermissionDock save).
@@ -166,6 +183,7 @@ export const ConfigProvider: ParentComponent = (props) => {
           setProjectConfig(mergeScopedConfig(message.projectConfig, projectDraft()))
           setSavedProject(message.projectConfig)
         }
+        updateCollections(message.collections)
         setFeatures(message.features)
       }
       if (message.settings) mergeSettings(message.settings)
@@ -303,6 +321,7 @@ export const ConfigProvider: ParentComponent = (props) => {
     config,
     globalConfig,
     projectConfig,
+    collections,
     settings,
     features,
     loading,

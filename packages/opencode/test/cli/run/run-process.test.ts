@@ -47,19 +47,75 @@ describe("opencode run (non-interactive subprocess)", () => {
   // kilocode_change end
 
   // kilocode_change start
-  // Locks in the current behavior: when the LLM stream errors mid-response
-  // (the prompt was accepted, then the upstream provider failed), opencode
-  // emits a session.error event and the process exits 0 today.
-  //
-  // This is debatable — a future cleanup might flip it to exit 1. If you're
-  // changing this expectation, do it deliberately and say so in the PR.
+  // Was: "mid-stream LLM error still exits 0 today (contract lock-in)" using
+  // llm.fail(...). That fixture never published a session.error the CLI
+  // consumed (stream failure recovered as incomplete; idle with error unset),
+  // so the lock-in was locking in a false premise. Contract change: a run
+  // whose session actually errored mid-stream must exit non-zero with a
+  // stderr diagnostic naming the cause — callers (docs-sync) cannot otherwise
+  // distinguish success from a dead run and had to stop trusting exit codes.
   cliIt.live(
-    "mid-stream LLM error still exits 0 today (contract lock-in)",
+    "mid-stream session error exits nonzero with a stderr diagnostic",
     ({ llm, opencode }) =>
       Effect.gen(function* () {
-        yield* llm.fail("upstream provider exploded mid-stream")
+        yield* llm.error(400, { error: { message: "upstream provider exploded mid-stream" } })
         const result = yield* opencode.run("trigger midstream error", { timeoutMs: 30_000 })
-        expect(result.exitCode).toBe(0)
+        opencode.expectExit(result, 1)
+        expect(result.stderr).toContain("upstream provider exploded mid-stream")
+      }),
+    60_000,
+  )
+
+  cliIt.live(
+    "mid-stream session error exits nonzero with stderr diagnostic under --format json",
+    ({ llm, opencode }) =>
+      Effect.gen(function* () {
+        yield* llm.error(400, { error: { message: "upstream provider exploded mid-stream" } })
+        const result = yield* opencode.run("trigger midstream error", {
+          format: "json",
+          timeoutMs: 30_000,
+        })
+        opencode.expectExit(result, 1)
+        expect(result.stderr).toContain("upstream provider exploded mid-stream")
+        const events = opencode.parseJsonEvents(result.stdout)
+        expect(events.some((event) => event.type === "error")).toBe(true)
+      }),
+    60_000,
+  )
+
+  // Plain headless run (no --auto): CLI auto-rejects bash asks under the
+  // harness's isolated config. Any auto-reject ⇒ non-zero, even if idle.
+  cliIt.live(
+    "auto-rejected permission in plain headless run exits nonzero",
+    ({ llm, opencode }) =>
+      Effect.gen(function* () {
+        yield* llm.tool("bash", { command: "sed -n 1,5p README.md" })
+        const result = yield* opencode.run("run sed on readme", { timeoutMs: 45_000 })
+        opencode.expectExit(result, 1)
+        expect(result.stderr).toContain("permission requested: bash")
+        expect(result.stderr).toContain("auto-rejecting")
+        expect(result.stderr).toContain(
+          "run ended with an auto-rejected permission; pass --auto for autonomous use",
+        )
+      }),
+    60_000,
+  )
+
+  cliIt.live(
+    "auto-rejected permission exits nonzero with stderr diagnostic under --format json",
+    ({ llm, opencode }) =>
+      Effect.gen(function* () {
+        yield* llm.tool("bash", { command: "sed -n 1,5p README.md" })
+        const result = yield* opencode.run("run sed on readme", {
+          format: "json",
+          timeoutMs: 45_000,
+        })
+        opencode.expectExit(result, 1)
+        expect(result.stderr).toContain(
+          "run ended with an auto-rejected permission; pass --auto for autonomous use",
+        )
+        const events = opencode.parseJsonEvents(result.stdout)
+        expect(events.some((event) => event.type === "error")).toBe(true)
       }),
     60_000,
   )
@@ -74,8 +130,9 @@ describe("opencode run (non-interactive subprocess)", () => {
     ({ llm, opencode }) =>
       Effect.gen(function* () {
         yield* llm.text("structured output")
-        const result = yield* opencode.run("say hi", { format: "json" })
+        const result = yield* opencode.run("say hi", { format: "json", extraArgs: ["--auto"] })
         opencode.expectExit(result, 0)
+        expect(result.stdout).not.toContain("auto-rejected permission")
 
         const events = opencode.parseJsonEvents(result.stdout)
         expect(events.length).toBeGreaterThan(0)
@@ -83,9 +140,25 @@ describe("opencode run (non-interactive subprocess)", () => {
           expect(typeof evt.type).toBe("string")
           expect(typeof evt.sessionID).toBe("string")
         }
-        // At least one `text` event should appear with the LLM's response.
-        const text = events.find((e) => e.type === "text")
-        expect(text).toBeDefined()
+        expect(events.filter((event) => event.type === "step_start")).toHaveLength(1)
+        expect(events.filter((event) => event.type === "text")).toHaveLength(1)
+        expect(events.filter((event) => event.type === "step_finish")).toHaveLength(1)
+      }),
+    60_000,
+  )
+
+  cliIt.live(
+    "--format json emits each completed tool once",
+    ({ llm, opencode }) =>
+      Effect.gen(function* () {
+        yield* llm.tool("glob", { pattern: "package.json" })
+        yield* llm.text("tool complete")
+        const result = yield* opencode.run("find package.json", { format: "json", extraArgs: ["--auto"] })
+        opencode.expectExit(result, 0)
+
+        const events = opencode.parseJsonEvents(result.stdout)
+        expect(events.filter((event) => event.type === "tool_use")).toHaveLength(1)
+        expect(events.filter((event) => event.type === "text")).toHaveLength(1)
       }),
     60_000,
   )

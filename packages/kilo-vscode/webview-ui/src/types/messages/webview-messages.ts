@@ -4,7 +4,7 @@ import type { MessageLoadMode } from "./sessions"
 import type { PermissionFileDiff } from "./permissions"
 import type { ModelSelection, ProviderConfig } from "./providers"
 import type { Config } from "./config"
-import type { ModelAllocation, ReviewComment } from "./agent-manager"
+import type { ModelAllocation, ReviewComment, TerminalPlacement } from "./agent-manager"
 import type { ReviewMessageData } from "../../../../src/shared/review-comments"
 import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type { AnacondaDesktopWebviewMessage } from "../../../../src/shared/anaconda-desktop-messages"
@@ -52,6 +52,12 @@ export interface RevertSessionRequest {
 export interface UnrevertSessionRequest {
   type: "unrevertSession"
   sessionID: string
+}
+
+export interface DeleteMessageRequest {
+  type: "deleteMessage"
+  sessionID: string
+  messageID: string
 }
 
 export interface PermissionResponseRequest {
@@ -167,6 +173,11 @@ export interface SetOrganizationRequest {
 
 export interface WebviewReadyRequest {
   type: "webviewReady"
+}
+
+export interface WebviewFocusChangedRequest {
+  type: "webviewFocusChanged"
+  focused: boolean
 }
 
 export interface SelectSourceRequest {
@@ -401,6 +412,12 @@ export interface RequestFileSearchMessage {
   sessionID?: string
 }
 
+export interface RequestSessionSearchMessage {
+  type: "requestSessionSearch"
+  requestId: string
+  sessionID?: string
+}
+
 export interface RequestFilePickerMessage {
   type: "requestFilePicker"
   requestId: string
@@ -431,6 +448,10 @@ export interface UpdateSettingRequest {
 
 export interface RequestTimelineSettingMessage {
   type: "requestTimelineSetting"
+}
+
+export interface RequestThroughputSettingMessage {
+  type: "requestThroughputSetting"
 }
 
 export interface RequestWorkStyleMessage {
@@ -674,6 +695,12 @@ export interface ShowLocalTerminalRequest {
   type: "agentManager.showLocalTerminal"
 }
 
+// Show a terminal rooted at a worktree directory (worktree has no session)
+export interface ShowWorktreeTerminalRequest {
+  type: "agentManager.showWorktreeTerminal"
+  worktreeId: string
+}
+
 // Open a worktree directory in VS Code
 export interface OpenWorktreeRequest {
   type: "agentManager.openWorktree"
@@ -682,7 +709,8 @@ export interface OpenWorktreeRequest {
 
 // Copy text to the system clipboard via the extension host
 export interface CopyToClipboardRequest {
-  type: "agentManager.copyToClipboard"
+  type: "copyToClipboard"
+  id: string
   text: string
 }
 
@@ -691,9 +719,12 @@ export interface ShowExistingLocalTerminalRequest {
   type: "agentManager.showExistingLocalTerminal"
 }
 
-// Create a new xterm terminal tab in the given worktree context (null = local)
+// Create a new xterm terminal in the given worktree context (null = workspace root)
 export interface AgentManagerTerminalCreateRequest {
   type: "agentManager.terminal.create"
+  /** Webview-generated correlation id, echoed back in created/error. */
+  createId: string
+  placement: TerminalPlacement
   worktreeId: string | null
 }
 
@@ -783,10 +814,6 @@ export interface RequestBranchesMessage {
   type: "agentManager.requestBranches"
 }
 
-export interface RequestExternalWorktreesMessage {
-  type: "agentManager.requestExternalWorktrees"
-}
-
 export interface ImportFromBranchRequest {
   type: "agentManager.importFromBranch"
   branch: string
@@ -795,16 +822,6 @@ export interface ImportFromBranchRequest {
 export interface ImportFromPRRequest {
   type: "agentManager.importFromPR"
   url: string
-}
-
-export interface ImportExternalWorktreeRequest {
-  type: "agentManager.importExternalWorktree"
-  path: string
-  branch: string
-}
-
-export interface ImportAllExternalWorktreesRequest {
-  type: "agentManager.importAllExternalWorktrees"
 }
 
 // Agent Manager: Request one-shot diff fetch (webview → extension)
@@ -1216,6 +1233,7 @@ export type WebviewMessage =
   | AbortRequest
   | RevertSessionRequest
   | UnrevertSessionRequest
+  | DeleteMessageRequest
   | PermissionResponseRequest
   | CreateSessionRequest
   | ClearSessionRequest
@@ -1240,6 +1258,7 @@ export type WebviewMessage =
   | CancelLoginRequest
   | SetOrganizationRequest
   | WebviewReadyRequest
+  | WebviewFocusChangedRequest
   | SelectSourceRequest
   | RequestProvidersMessage
   | CompactRequest
@@ -1271,12 +1290,14 @@ export type WebviewMessage =
   | SpeechToTextStopMessage
   | SpeechToTextCancelMessage
   | RequestFileSearchMessage
+  | RequestSessionSearchMessage
   | RequestFilePickerMessage
   | RequestTerminalContextMessage
   | RequestGitChangesContextMessage
   | ChatCompletionAcceptedMessage
   | UpdateSettingRequest
   | RequestTimelineSettingMessage
+  | RequestThroughputSettingMessage
   | RequestWorkStyleMessage
   | SetWorkStyleMessage
   | ApplyWorkStyleMessage
@@ -1321,6 +1342,7 @@ export type WebviewMessage =
   | StopRunScriptRequest
   | ShowTerminalRequest
   | ShowLocalTerminalRequest
+  | ShowWorktreeTerminalRequest
   | OpenWorktreeRequest
   | CopyToClipboardRequest
   | ShowExistingLocalTerminalRequest
@@ -1337,11 +1359,8 @@ export type WebviewMessage =
   | RequestCloudSessionDataMessage
   | ImportAndSendMessage
   | RequestBranchesMessage
-  | RequestExternalWorktreesMessage
   | ImportFromBranchRequest
   | ImportFromPRRequest
-  | ImportExternalWorktreeRequest
-  | ImportAllExternalWorktreesRequest
   | RequestWorktreeDiffMessage
   | RequestWorktreeDiffFileMessage
   | StartDiffWatchMessage

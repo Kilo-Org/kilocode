@@ -4,6 +4,34 @@
 
 ### Minor Changes
 
+- [#12518](https://github.com/Kilo-Org/kilocode/pull/12518) [`452d0eb`](https://github.com/Kilo-Org/kilocode/commit/452d0eb55f740e951cfd906375e22cf97250144c) - Publish a signed GitHub-hosted JetBrains plugin build with the CLI bundled for offline installation.
+
+### Patch Changes
+
+- [#12571](https://github.com/Kilo-Org/kilocode/pull/12571) [`9950739`](https://github.com/Kilo-Org/kilocode/commit/9950739e36b40a682c0a25173e62f5236e60f81a) - Allow sending prompts while a session is busy and show queued prompts with a remove action.
+
+## 7.4.16
+
+### Patch Changes
+
+- [#12491](https://github.com/Kilo-Org/kilocode/pull/12491) [`2b13e7d`](https://github.com/Kilo-Org/kilocode/commit/2b13e7da2a6a776baeb2d797cd5aaeb07a526c0b) - Improve JetBrains diff previews by hiding hunk headers and adding full-path tooltips to clickable file links.
+
+- [#12491](https://github.com/Kilo-Org/kilocode/pull/12491) [`5c526f1`](https://github.com/Kilo-Org/kilocode/commit/5c526f140b78b13608ad3855532f5215c0b29675) - Render edit tool results with a clickable file target and a highlighted, simplified diff view.
+
+- [#12491](https://github.com/Kilo-Org/kilocode/pull/12491) [`73942c3`](https://github.com/Kilo-Org/kilocode/commit/73942c3f262dda53030d748e6c08f84db2384253) - Open edit tool file links directly when multiple files share the same name.
+
+- [#12491](https://github.com/Kilo-Org/kilocode/pull/12491) [`dd31044`](https://github.com/Kilo-Org/kilocode/commit/dd3104400840e1b4641097bf892e25dfccfd592d) - Render multi-file apply_patch edits as a "Patch" with a file-count tag and one section per file, each showing a clickable filename link and its own changes badge aligned with the diff.
+
+- [#12491](https://github.com/Kilo-Org/kilocode/pull/12491) [`79e606e`](https://github.com/Kilo-Org/kilocode/commit/79e606ebcbb15d20b5fde29d614f07270b1c0b3d) - Smooth out chat scrolling in large JetBrains sessions by only refreshing hover state for the message under the pointer.
+
+- [#12491](https://github.com/Kilo-Org/kilocode/pull/12491) [`95ae0e0`](https://github.com/Kilo-Org/kilocode/commit/95ae0e0b3b066ec5ab60c36b7bcffb973a942872) - Improve chat scrolling performance in large JetBrains sessions.
+
+- [#12491](https://github.com/Kilo-Org/kilocode/pull/12491) [`b2a3a8d`](https://github.com/Kilo-Org/kilocode/commit/b2a3a8dc10d5f579396e1bd76e16a0eef696bede) - Size edit and shell preview popovers to their content with a wider maximum width.
+
+## 7.5.0
+
+### Minor Changes
+
 - [#12437](https://github.com/Kilo-Org/kilocode/pull/12437) [`af33ede`](https://github.com/Kilo-Org/kilocode/commit/af33eded9e4ac1988d218e911b5ff0d4e1b9d8b1) - Add Rules settings for instruction files and Claude Code compatibility. Fix cloud session history import failing with an HTTP 400 error.
 
 - [#12416](https://github.com/Kilo-Org/kilocode/pull/12416) [`a9a9b78`](https://github.com/Kilo-Org/kilocode/commit/a9a9b78b97290e855cda3dd7118a429503802396) - Support viewing, opening, editing, deleting, and configuring JetBrains skill sources.
@@ -83,6 +111,56 @@
 - [#12059](https://github.com/Kilo-Org/kilocode/pull/12059) [`8ea3f10`](https://github.com/Kilo-Org/kilocode/commit/8ea3f10495e28c8a131b805d51f8f7524895148b) - Increase spacing before non-initial user prompts in the JetBrains session transcript.
 
 ## [Unreleased]
+
+## [7.0.12-rc.2] - 2026-07-27
+
+### Added
+
+### Fixed
+
+- Fix the GitHub-hosted bundled JetBrains plugin build so signing uses certificate and private-key files during verification.
+
+### Changed
+
+## [7.0.12-rc.1] - 2026-07-27
+
+### Added
+
+- Support sending another JetBrains prompt while a session is still running. Queued prompts now appear in the conversation and can be removed before Kilo starts processing them.
+
+## [7.0.11] - 2026-07-27
+
+### Added
+
+- Add a signed GitHub-hosted bundled JetBrains plugin build that includes the Kilo CLI for offline or restricted-network installs.
+
+### Fixed
+
+- Load global skills reliably from JetBrains projects that are not inside a Git repository.
+- Support adaptive thinking for Claude Opus and Sonnet 5+ model identifiers across Anthropic, AI Gateway, and Bedrock providers.
+- Flush pending cloud session updates when the Kilo Core runtime shuts down, reducing cases where the final assistant message is missing when a session is reopened elsewhere.
+- Prune stale bundled CLI versions after upgrading bundled JetBrains installs.
+
+### Changed
+
+- Update the JetBrains CLI pin from Kilo Core 7.4.15 to 7.4.16.
+
+## [7.0.10] - 2026-07-24
+
+## [7.0.10] - 2026-07-24
+
+### Added
+
+- Render edit, write, and apply-patch tool results as expandable diff previews with clickable file links, change counts, syntax-highlighted diffs, and clearer multi-file patch sections.
+
+### Fixed
+
+- Improve session performance for large transcripts.
+- Fix Kilo Core failures caused by strict OpenAI-compatible compaction requests, unexpected provider finish reasons, read-only database files at startup, AWS profile credentials, and config files being rewritten just by reading them.
+
+### Changed
+
+- Update the JetBrains CLI pin from Kilo Core 7.4.13 to 7.4.15.
 
 ## [7.0.9] - 2026-07-21
 

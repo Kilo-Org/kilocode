@@ -6,6 +6,9 @@ export type ClientOptions = {
 
 export type Event =
   | EventServerInstanceDisposed
+  | EventSessionTurnOpen
+  | EventSessionTurnClose
+  | EventSessionQueueChanged
   | EventSessionNetworkAsked
   | EventSessionNetworkReplied
   | EventSessionNetworkRejected
@@ -15,8 +18,6 @@ export type Event =
   | EventInteractiveTerminalUpdated
   | EventInteractiveTerminalData
   | EventInteractiveTerminalDeleted
-  | EventSessionTurnOpen
-  | EventSessionTurnClose
   | EventSandboxStatusChanged
   | EventSuggestionShown
   | EventSuggestionAccepted
@@ -26,8 +27,8 @@ export type Event =
   | EventKilocodeAgentManagerCancelled
   | EventKilocodeNotebookRequested
   | EventKilocodeNotebookCancelled
-  | EventLspClientDiagnostics
   | EventKiloSessionsRemoteStatusChanged
+  | EventLspClientDiagnostics
   | EventMemoryStatus1
   | EventMemoryUpdated1
   | EventMemoryError1
@@ -37,7 +38,8 @@ export type Event =
   | EventGlobalDisposed
   | EventGlobalConfigUpdated
   | EventPluginAdded
-  | EventCatalogModelUpdated
+  | EventIntegrationUpdated
+  | EventCatalogUpdated
   | EventSessionCreated
   | EventSessionUpdated
   | EventSessionDeleted
@@ -94,7 +96,6 @@ export type Event =
   | EventPermissionAsked
   | EventPermissionReplied
   | EventReferenceUpdated
-  | EventIntegrationUpdated
   | EventPermissionV2Asked
   | EventPermissionV2Replied
   | EventProjectDirectoriesUpdated
@@ -113,8 +114,8 @@ export type Event =
   | EventSessionCompacted
   | EventCommandExecuted
   | EventProjectUpdated
-  | EventLspUpdated
   | EventVcsBranchUpdated
+  | EventLspUpdated
   | EventWorkspaceReady
   | EventWorkspaceFailed
   | EventWorkspaceStatus
@@ -766,6 +767,9 @@ export type StepStartPart = {
   messageID: string
   type: "step-start"
   snapshot?: string
+  time?: {
+    start: number
+  }
 }
 
 export type StepFinishPart = {
@@ -778,6 +782,18 @@ export type StepFinishPart = {
   model?: {
     providerID: string
     modelID: string
+  }
+  generationID?: string
+  vercelID?: string
+  metrics?: {
+    prompt?: number
+    generation?: number
+    source: "provider" | "computed"
+  }
+  time?: {
+    start: number
+    end: number
+    elapsed: number
   }
   cost: number
   tokens: {
@@ -991,6 +1007,7 @@ export type Pty = {
   cwd: string
   status: "running" | "exited"
   pid: number
+  exitCode?: number
   sessionID?: string | null
 }
 
@@ -1042,6 +1059,9 @@ export type GlobalEvent = {
   workspace?: string
   payload:
     | EventServerInstanceDisposed
+    | EventSessionTurnOpen
+    | EventSessionTurnClose
+    | EventSessionQueueChanged
     | EventSessionNetworkAsked
     | EventSessionNetworkReplied
     | EventSessionNetworkRejected
@@ -1051,8 +1071,6 @@ export type GlobalEvent = {
     | EventInteractiveTerminalUpdated
     | EventInteractiveTerminalData
     | EventInteractiveTerminalDeleted
-    | EventSessionTurnOpen
-    | EventSessionTurnClose
     | EventSandboxStatusChanged
     | EventSuggestionShown
     | EventSuggestionAccepted
@@ -1062,8 +1080,8 @@ export type GlobalEvent = {
     | EventKilocodeAgentManagerCancelled
     | EventKilocodeNotebookRequested
     | EventKilocodeNotebookCancelled
-    | EventLspClientDiagnostics
     | EventKiloSessionsRemoteStatusChanged
+    | EventLspClientDiagnostics
     | EventMemoryStatus
     | EventMemoryUpdated
     | EventMemoryError
@@ -1073,7 +1091,8 @@ export type GlobalEvent = {
     | EventGlobalDisposed
     | EventGlobalConfigUpdated
     | EventPluginAdded
-    | EventCatalogModelUpdated
+    | EventIntegrationUpdated
+    | EventCatalogUpdated
     | EventSessionCreated
     | EventSessionUpdated
     | EventSessionDeleted
@@ -1130,7 +1149,6 @@ export type GlobalEvent = {
     | EventPermissionAsked
     | EventPermissionReplied
     | EventReferenceUpdated
-    | EventIntegrationUpdated
     | EventPermissionV2Asked
     | EventPermissionV2Replied
     | EventProjectDirectoriesUpdated
@@ -1149,8 +1167,8 @@ export type GlobalEvent = {
     | EventSessionCompacted
     | EventCommandExecuted
     | EventProjectUpdated
-    | EventLspUpdated
     | EventVcsBranchUpdated
+    | EventLspUpdated
     | EventWorkspaceReady
     | EventWorkspaceFailed
     | EventWorkspaceStatus
@@ -1394,11 +1412,8 @@ export type ProviderConfig = {
      * Timeout in milliseconds to wait for response headers. Provider integrations may set defaults. Set to false to disable timeout.
      */
     headerTimeout?: number | false
-    /**
-     * Timeout in milliseconds between streamed SSE chunks for this provider. If no chunk arrives within this window, the request is aborted. Set to false to disable the idle watchdog.
-     */
-    chunkTimeout?: number | false
-    [key: string]: unknown | string | boolean | number | false | number | false | number | false | undefined
+    chunkTimeout?: number
+    [key: string]: unknown | string | boolean | number | false | number | false | number | undefined
   }
   models?: {
     [key: string]: {
@@ -1841,6 +1856,10 @@ export type Provider = {
   models: {
     [key: string]: Model
   }
+}
+
+export type ExperimentalCapabilities = {
+  backgroundSubagents: boolean
 }
 
 export type ConsoleState = {
@@ -3475,6 +3494,11 @@ export type ProviderNotFoundError = {
   message: string
 }
 
+export type ForbiddenError = {
+  _tag: "ForbiddenError"
+  message: string
+}
+
 export type ProjectCopyError = {
   name: "ProjectCopyError"
   data: {
@@ -3516,6 +3540,33 @@ export type EventServerInstanceDisposed = {
   type: "server.instance.disposed"
   properties: {
     directory: string
+  }
+}
+
+export type EventSessionTurnOpen = {
+  id: string
+  type: "session.turn.open"
+  properties: {
+    sessionID: string
+  }
+}
+
+export type EventSessionTurnClose = {
+  id: string
+  type: "session.turn.close"
+  properties: {
+    sessionID: string
+    parentID?: string
+    reason: "completed" | "error" | "interrupted" | "superseded"
+  }
+}
+
+export type EventSessionQueueChanged = {
+  id: string
+  type: "session.queue.changed"
+  properties: {
+    sessionID: string
+    queued: Array<string>
   }
 }
 
@@ -3597,24 +3648,6 @@ export type EventInteractiveTerminalDeleted = {
   properties: {
     terminalID: string
     sessionID: string
-  }
-}
-
-export type EventSessionTurnOpen = {
-  id: string
-  type: "session.turn.open"
-  properties: {
-    sessionID: string
-  }
-}
-
-export type EventSessionTurnClose = {
-  id: string
-  type: "session.turn.close"
-  properties: {
-    sessionID: string
-    parentID?: string
-    reason: "completed" | "error" | "interrupted"
   }
 }
 
@@ -3721,21 +3754,21 @@ export type EventKilocodeNotebookCancelled = {
   }
 }
 
-export type EventLspClientDiagnostics = {
-  id: string
-  type: "lsp.client.diagnostics"
-  properties: {
-    serverID: string
-    path: string
-  }
-}
-
 export type EventKiloSessionsRemoteStatusChanged = {
   id: string
   type: "kilo-sessions.remote-status-changed"
   properties: {
     enabled: boolean
     connected: boolean
+  }
+}
+
+export type EventLspClientDiagnostics = {
+  id: string
+  type: "lsp.client.diagnostics"
+  properties: {
+    serverID: string
+    path: string
   }
 }
 
@@ -3896,107 +3929,19 @@ export type EventPluginAdded = {
   }
 }
 
-export type ModelV2Info = {
+export type EventIntegrationUpdated = {
   id: string
-  providerID: string
-  family?: string
-  name: string
-  api:
-    | {
-        id: string
-        type: "aisdk"
-        package: string
-        url?: string
-        settings?: {
-          [key: string]: unknown
-        }
-      }
-    | {
-        id: string
-        type: "native"
-        url?: string
-        settings: {
-          [key: string]: unknown
-        }
-      }
-  capabilities: {
-    tools: boolean
-    input: Array<string>
-    output: Array<string>
-  }
-  request: {
-    headers: {
-      [key: string]: string
-    }
-    body: {
-      [key: string]: unknown
-    }
-    generation?: {
-      maxTokens?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      temperature?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      topP?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      topK?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      frequencyPenalty?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      presencePenalty?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      seed?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      stop?: Array<string>
-    }
-    options?: {
-      [key: string]: unknown
-    }
-    variant?: string
-  }
-  variants: Array<{
-    id: string
-    headers: {
-      [key: string]: string
-    }
-    body: {
-      [key: string]: unknown
-    }
-    generation?: {
-      maxTokens?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      temperature?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      topP?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      topK?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      frequencyPenalty?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      presencePenalty?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      seed?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      stop?: Array<string>
-    }
-    options?: {
-      [key: string]: unknown
-    }
-  }>
-  time: {
-    released: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-  }
-  cost: Array<{
-    tier?: {
-      type: "context"
-      size: number
-    }
-    input: number
-    output: number
-    cache: {
-      read: number
-      write: number
-    }
-  }>
-  status: "alpha" | "beta" | "deprecated" | "active"
-  enabled: boolean
-  limit: {
-    context: number
-    input?: number
-    output: number
+  type: "integration.updated"
+  properties: {
+    [key: string]: unknown
   }
 }
 
-export type EventCatalogModelUpdated = {
+export type EventCatalogUpdated = {
   id: string
-  type: "catalog.model.updated"
+  type: "catalog.updated"
   properties: {
-    model: ModelV2Info
+    [key: string]: unknown
   }
 }
 
@@ -4694,14 +4639,6 @@ export type EventReferenceUpdated = {
   }
 }
 
-export type EventIntegrationUpdated = {
-  id: string
-  type: "integration.updated"
-  properties: {
-    [key: string]: unknown
-  }
-}
-
 export type PermissionV2Source = {
   type: "tool"
   messageID: string
@@ -4935,19 +4872,19 @@ export type EventProjectUpdated = {
   }
 }
 
-export type EventLspUpdated = {
-  id: string
-  type: "lsp.updated"
-  properties: {
-    [key: string]: unknown
-  }
-}
-
 export type EventVcsBranchUpdated = {
   id: string
   type: "vcs.branch.updated"
   properties: {
     branch?: string
+  }
+}
+
+export type EventLspUpdated = {
+  id: string
+  type: "lsp.updated"
+  properties: {
+    [key: string]: unknown
   }
 }
 
@@ -5964,26 +5901,106 @@ export type SessionMessage =
   | SessionMessageAssistant
   | SessionMessageCompaction
 
-export type ProviderV2Info = {
+export type ModelV2Info = {
   id: string
+  providerID: string
+  family?: string
   name: string
-  enabled:
-    | false
+  api:
     | {
-        via: "env"
-        name: string
-      }
-    | {
-        via: "credential"
-        credentialID: string
-      }
-    | {
-        via: "custom"
-        data: {
+        id: string
+        type: "aisdk"
+        package: string
+        url?: string
+        settings?: {
           [key: string]: unknown
         }
       }
-  env: Array<string>
+    | {
+        id: string
+        type: "native"
+        url?: string
+        settings: {
+          [key: string]: unknown
+        }
+      }
+  capabilities: {
+    tools: boolean
+    input: Array<string>
+    output: Array<string>
+  }
+  request: {
+    headers: {
+      [key: string]: string
+    }
+    body: {
+      [key: string]: unknown
+    }
+    generation?: {
+      maxTokens?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      temperature?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      topP?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      topK?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      frequencyPenalty?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      presencePenalty?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      seed?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      stop?: Array<string>
+    }
+    options?: {
+      [key: string]: unknown
+    }
+    variant?: string
+  }
+  variants: Array<{
+    id: string
+    headers: {
+      [key: string]: string
+    }
+    body: {
+      [key: string]: unknown
+    }
+    generation?: {
+      maxTokens?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      temperature?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      topP?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      topK?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      frequencyPenalty?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      presencePenalty?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      seed?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      stop?: Array<string>
+    }
+    options?: {
+      [key: string]: unknown
+    }
+  }>
+  time: {
+    released: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+  }
+  cost: Array<{
+    tier?: {
+      type: "context"
+      size: number
+    }
+    input: number
+    output: number
+    cache: {
+      read: number
+      write: number
+    }
+  }>
+  status: "alpha" | "beta" | "deprecated" | "active"
+  enabled: boolean
+  limit: {
+    context: number
+    input?: number
+    output: number
+  }
+}
+
+export type ProviderV2Info = {
+  id: string
+  name: string
+  disabled?: boolean
   api:
     | {
         type: "aisdk"
@@ -6282,102 +6299,6 @@ export type EventMemoryError1 = {
       sources?: Array<string>
       files?: Array<string>
     }
-  }
-}
-
-export type ModelV2Info1 = {
-  id: string
-  providerID: string
-  family?: string
-  name: string
-  api:
-    | {
-        id: string
-        type: "aisdk"
-        package: string
-        url?: string
-        settings?: {
-          [key: string]: unknown
-        }
-      }
-    | {
-        id: string
-        type: "native"
-        url?: string
-        settings: {
-          [key: string]: unknown
-        }
-      }
-  capabilities: {
-    tools: boolean
-    input: Array<string>
-    output: Array<string>
-  }
-  request: {
-    headers: {
-      [key: string]: string
-    }
-    body: {
-      [key: string]: unknown
-    }
-    generation?: {
-      maxTokens?: number | "NaN" | "Infinity" | "-Infinity"
-      temperature?: number | "NaN" | "Infinity" | "-Infinity"
-      topP?: number | "NaN" | "Infinity" | "-Infinity"
-      topK?: number | "NaN" | "Infinity" | "-Infinity"
-      frequencyPenalty?: number | "NaN" | "Infinity" | "-Infinity"
-      presencePenalty?: number | "NaN" | "Infinity" | "-Infinity"
-      seed?: number | "NaN" | "Infinity" | "-Infinity"
-      stop?: Array<string>
-    }
-    options?: {
-      [key: string]: unknown
-    }
-    variant?: string
-  }
-  variants: Array<{
-    id: string
-    headers: {
-      [key: string]: string
-    }
-    body: {
-      [key: string]: unknown
-    }
-    generation?: {
-      maxTokens?: number | "NaN" | "Infinity" | "-Infinity"
-      temperature?: number | "NaN" | "Infinity" | "-Infinity"
-      topP?: number | "NaN" | "Infinity" | "-Infinity"
-      topK?: number | "NaN" | "Infinity" | "-Infinity"
-      frequencyPenalty?: number | "NaN" | "Infinity" | "-Infinity"
-      presencePenalty?: number | "NaN" | "Infinity" | "-Infinity"
-      seed?: number | "NaN" | "Infinity" | "-Infinity"
-      stop?: Array<string>
-    }
-    options?: {
-      [key: string]: unknown
-    }
-  }>
-  time: {
-    released: number | "NaN" | "Infinity" | "-Infinity"
-  }
-  cost: Array<{
-    tier?: {
-      type: "context"
-      size: number
-    }
-    input: number
-    output: number
-    cache: {
-      read: number
-      write: number
-    }
-  }>
-  status: "alpha" | "beta" | "deprecated" | "active"
-  enabled: boolean
-  limit: {
-    context: number
-    input?: number
-    output: number
   }
 }
 
@@ -6831,6 +6752,36 @@ export type ConfigProvidersResponses = {
 }
 
 export type ConfigProvidersResponse = ConfigProvidersResponses[keyof ConfigProvidersResponses]
+
+export type ExperimentalCapabilitiesGetData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/capabilities"
+}
+
+export type ExperimentalCapabilitiesGetErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type ExperimentalCapabilitiesGetError =
+  ExperimentalCapabilitiesGetErrors[keyof ExperimentalCapabilitiesGetErrors]
+
+export type ExperimentalCapabilitiesGetResponses = {
+  /**
+   * Experimental capabilities
+   */
+  200: ExperimentalCapabilities
+}
+
+export type ExperimentalCapabilitiesGetResponse =
+  ExperimentalCapabilitiesGetResponses[keyof ExperimentalCapabilitiesGetResponses]
 
 export type ExperimentalConsoleGetData = {
   body?: never
@@ -15216,7 +15167,12 @@ export type V2CredentialRemoveData = {
   path: {
     credentialID: string
   }
-  query?: never
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
   url: "/api/credential/{credentialID}"
 }
 
@@ -15249,7 +15205,12 @@ export type V2CredentialUpdateData = {
   path: {
     credentialID: string
   }
-  query?: never
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
   url: "/api/credential/{credentialID}"
 }
 
@@ -15673,6 +15634,315 @@ export type V2EventSubscribeResponses = {
 }
 
 export type V2EventSubscribeResponse = V2EventSubscribeResponses[keyof V2EventSubscribeResponses]
+
+export type V2PtyListData = {
+  body?: never
+  path?: never
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
+  url: "/api/pty"
+}
+
+export type V2PtyListErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+}
+
+export type V2PtyListError = V2PtyListErrors[keyof V2PtyListErrors]
+
+export type V2PtyListResponses = {
+  /**
+   * Success
+   */
+  200: {
+    location: LocationInfo
+    data: Array<Pty>
+  }
+}
+
+export type V2PtyListResponse = V2PtyListResponses[keyof V2PtyListResponses]
+
+export type V2PtyCreateData = {
+  body: {
+    command?: string
+    args?: Array<string>
+    cwd?: string
+    title?: string
+    env?: {
+      [key: string]: string
+    }
+  }
+  path?: never
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
+  url: "/api/pty"
+}
+
+export type V2PtyCreateErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+}
+
+export type V2PtyCreateError = V2PtyCreateErrors[keyof V2PtyCreateErrors]
+
+export type V2PtyCreateResponses = {
+  /**
+   * Success
+   */
+  200: {
+    location: LocationInfo
+    data: Pty
+  }
+}
+
+export type V2PtyCreateResponse = V2PtyCreateResponses[keyof V2PtyCreateResponses]
+
+export type V2PtyRemoveData = {
+  body?: never
+  path: {
+    ptyID: string
+  }
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
+  url: "/api/pty/{ptyID}"
+}
+
+export type V2PtyRemoveErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+  /**
+   * PtyNotFoundError
+   */
+  404: PtyNotFoundError
+}
+
+export type V2PtyRemoveError = V2PtyRemoveErrors[keyof V2PtyRemoveErrors]
+
+export type V2PtyRemoveResponses = {
+  /**
+   * <No Content>
+   */
+  204: void
+}
+
+export type V2PtyRemoveResponse = V2PtyRemoveResponses[keyof V2PtyRemoveResponses]
+
+export type V2PtyGetData = {
+  body?: never
+  path: {
+    ptyID: string
+  }
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
+  url: "/api/pty/{ptyID}"
+}
+
+export type V2PtyGetErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+  /**
+   * PtyNotFoundError
+   */
+  404: PtyNotFoundError
+}
+
+export type V2PtyGetError = V2PtyGetErrors[keyof V2PtyGetErrors]
+
+export type V2PtyGetResponses = {
+  /**
+   * Success
+   */
+  200: {
+    location: LocationInfo
+    data: Pty
+  }
+}
+
+export type V2PtyGetResponse = V2PtyGetResponses[keyof V2PtyGetResponses]
+
+export type V2PtyUpdateData = {
+  body: {
+    title?: string
+    sessionID?: string
+    size?: {
+      rows: number
+      cols: number
+    }
+  }
+  path: {
+    ptyID: string
+  }
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
+  url: "/api/pty/{ptyID}"
+}
+
+export type V2PtyUpdateErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+  /**
+   * PtyNotFoundError
+   */
+  404: PtyNotFoundError
+}
+
+export type V2PtyUpdateError = V2PtyUpdateErrors[keyof V2PtyUpdateErrors]
+
+export type V2PtyUpdateResponses = {
+  /**
+   * Success
+   */
+  200: {
+    location: LocationInfo
+    data: Pty
+  }
+}
+
+export type V2PtyUpdateResponse = V2PtyUpdateResponses[keyof V2PtyUpdateResponses]
+
+export type V2PtyConnectTokenData = {
+  body?: never
+  path: {
+    ptyID: string
+  }
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
+  url: "/api/pty/{ptyID}/connect-token"
+}
+
+export type V2PtyConnectTokenErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+  /**
+   * ForbiddenError
+   */
+  403: ForbiddenError
+  /**
+   * PtyNotFoundError
+   */
+  404: PtyNotFoundError
+}
+
+export type V2PtyConnectTokenError = V2PtyConnectTokenErrors[keyof V2PtyConnectTokenErrors]
+
+export type V2PtyConnectTokenResponses = {
+  /**
+   * Success
+   */
+  200: {
+    location: LocationInfo
+    data: {
+      ticket: string
+      expires_in: number
+    }
+  }
+}
+
+export type V2PtyConnectTokenResponse = V2PtyConnectTokenResponses[keyof V2PtyConnectTokenResponses]
+
+export type V2PtyConnectData = {
+  body?: never
+  path: {
+    ptyID: string
+  }
+  query?: {
+    "location[directory]"?: string
+    "location[workspace]"?: string
+    cursor?: string
+    ticket?: string
+  }
+  url: "/api/pty/{ptyID}/connect"
+}
+
+export type V2PtyConnectErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+  /**
+   * ForbiddenError
+   */
+  403: ForbiddenError
+  /**
+   * PtyNotFoundError
+   */
+  404: PtyNotFoundError
+}
+
+export type V2PtyConnectError = V2PtyConnectErrors[keyof V2PtyConnectErrors]
+
+export type V2PtyConnectResponses = {
+  /**
+   * Success
+   */
+  200: boolean
+}
+
+export type V2PtyConnectResponse = V2PtyConnectResponses[keyof V2PtyConnectResponses]
 
 export type V2QuestionRequestListData = {
   body?: never

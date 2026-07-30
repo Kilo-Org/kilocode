@@ -1,7 +1,6 @@
 import type { ProviderAuthAuthorization, ProviderAuthMethod } from "@kilocode/sdk/v2/client"
 import type { DiffSourceCapabilities, DiffSourceDescriptor } from "../../../../src/diff/sources/types"
 import type { PartBatch, PartRemove, PartUpdate } from "../../../../src/shared/stream-messages"
-import type { SessionMode } from "../../context/worktree-mode"
 import type { MarketplaceItem, MarketplaceInstalledMetadata, MarketplaceRelevanceMetadata } from "../marketplace"
 import type { ConnectionState, ServerInfo, SessionStatus } from "./connection"
 import type { FileAttachment, Part } from "./parts"
@@ -19,7 +18,14 @@ import type { AnacondaDesktopExtensionMessage } from "../../../../src/shared/ana
 import type { QuestionRequest, SuggestionRequest, TodoItem } from "./questions"
 import type { ModelSelection, Provider, ProviderAuthState } from "./providers"
 import type { AgentInfo, AgentRequirementResult, SkillInfo, SlashCommandInfo } from "./agents"
-import type { BrowserSettings, Config, FeatureFlags, IndexingStatus, KiloEmbeddingModelCatalog } from "./config"
+import type {
+  BrowserSettings,
+  Config,
+  ConfigCollections,
+  FeatureFlags,
+  IndexingStatus,
+  KiloEmbeddingModelCatalog,
+} from "./config"
 import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type { KilocodeNotification, ProfileData } from "./profile"
 import type {
@@ -27,14 +33,15 @@ import type {
   AgentManagerApplyWorktreeDiffStatus,
   BranchInfo,
   ContinueInWorktreeStatus,
-  ExternalWorktreeInfo,
   LocalGitStats,
   ManagedSessionState,
   PRStatus,
   ReviewComment,
   RunStatus,
   SectionState,
+  TerminalDestination,
   TerminalFont,
+  TerminalPlacement,
   WorktreeErrorCode,
   WorktreeFileDiff,
   WorktreeGitStats,
@@ -168,6 +175,7 @@ export interface SessionCreatedMessage {
   type: "sessionCreated"
   session: SessionInfo
   draftID?: string
+  activate?: boolean
 }
 
 export interface SessionForkedMessage {
@@ -282,6 +290,8 @@ export interface SetChatBoxMessage {
    * mention from a truncated prefix when the real path contains a space.
    */
   paths?: string[]
+  /** Past chats referenced by the restored message, seeded the same way as paths. */
+  sessions?: SessionSearchItem[]
 }
 
 export interface AppendChatBoxMessage {
@@ -458,6 +468,18 @@ export interface FileSearchResultMessage {
   requestId: string
 }
 
+export interface SessionSearchItem {
+  id: string
+  title: string
+  updated: number
+}
+
+export interface SessionSearchResultMessage {
+  type: "sessionSearchResult"
+  sessions: SessionSearchItem[]
+  requestId: string
+}
+
 export interface FilePickerResultMessage {
   type: "filePickerResult"
   path: string
@@ -553,6 +575,7 @@ export interface ConfigLoadedMessage {
   config: Config
   globalConfig?: Config
   projectConfig?: Config
+  collections?: ConfigCollections
   settings?: ExtensionSettings
   features: FeatureFlags
 }
@@ -562,6 +585,7 @@ export interface ConfigUpdatedMessage {
   config: Config
   globalConfig?: Config
   projectConfig?: Config
+  collections?: ConfigCollections
   settings?: ExtensionSettings
   features: FeatureFlags
 }
@@ -590,6 +614,11 @@ export interface TimelineSettingLoadedMessage {
   visible: boolean
 }
 
+export interface ThroughputSettingLoadedMessage {
+  type: "throughputSettingLoaded"
+  visible: boolean
+}
+
 export interface WorkStyleLoadedMessage {
   type: "workStyleLoaded"
   style: WorkStyleState
@@ -610,16 +639,6 @@ export interface NotificationsLoadedMessage {
   type: "notificationsLoaded"
   notifications: KilocodeNotification[]
   dismissedIds: string[]
-}
-
-// Agent Manager worktree session metadata
-export interface AgentManagerSessionMetaMessage {
-  type: "agentManager.sessionMeta"
-  sessionId: string
-  mode: SessionMode
-  branch?: string
-  path?: string
-  parentBranch?: string
 }
 
 // Agent Manager repo info (current branch of the main workspace)
@@ -678,6 +697,7 @@ export interface AgentManagerStateMessage {
   runStatuses?: RunStatus[]
   runScriptConfigured?: boolean
   runScriptPath?: string
+  terminalDestination?: TerminalDestination
 }
 
 // ---------------------------------------------------------------------------
@@ -686,6 +706,11 @@ export interface AgentManagerStateMessage {
 
 export interface AgentManagerTerminalCreatedMessage {
   type: "agentManager.terminal.created"
+  /** Correlates with the create request; lets the webview spot stale
+   *  creates. Deliberately not named `requestId`: that field name is the
+   *  generic webview request/response correlation channel. */
+  createId: string
+  placement: TerminalPlacement
   /** null for LOCAL, worktree id otherwise */
   worktreeId: string | null
   terminalId: string
@@ -707,7 +732,14 @@ export interface AgentManagerTerminalClosedMessage {
 export interface AgentManagerTerminalErrorMessage {
   type: "agentManager.terminal.error"
   terminalId?: string
+  /** Set when the error answers a specific create request. */
+  createId?: string
   message: string
+}
+
+export interface AgentManagerTerminalDestinationChangedMessage {
+  type: "agentManager.terminal.destinationChanged"
+  destination: TerminalDestination
 }
 
 export interface AgentManagerRunStatusMessage extends RunStatus {
@@ -797,11 +829,6 @@ export interface AgentManagerBranchesMessage {
   type: "agentManager.branches"
   branches: BranchInfo[]
   defaultBranch: string
-}
-
-export interface AgentManagerExternalWorktreesMessage {
-  type: "agentManager.externalWorktrees"
-  worktrees: ExternalWorktreeInfo[]
 }
 
 // Agent Manager Import tab: result feedback (extension → webview)
@@ -1096,6 +1123,13 @@ export interface ValidateFilesResultMessage {
   existing: string[]
 }
 
+export interface ClipboardWriteResultMessage {
+  type: "clipboardWriteResult"
+  id: string
+  ok: boolean
+  error?: string
+}
+
 export type ExtensionMessage =
   | ReadyMessage
   | FontSizeChangedMessage
@@ -1151,6 +1185,7 @@ export type ExtensionMessage =
   | SpeechToTextResultMessage
   | SpeechToTextErrorMessage
   | FileSearchResultMessage
+  | SessionSearchResultMessage
   | FilePickerResultMessage
   | TerminalContextResultMessage
   | TerminalContextErrorMessage
@@ -1172,11 +1207,11 @@ export type ExtensionMessage =
   | GlobalConfigLoadedMessage
   | NotificationSettingsLoadedMessage
   | TimelineSettingLoadedMessage
+  | ThroughputSettingLoadedMessage
   | WorkStyleLoadedMessage
   | WorkStyleAppliedMessage
   | WorkStyleApplyFailedMessage
   | NotificationsLoadedMessage
-  | AgentManagerSessionMetaMessage
   | AgentManagerRepoInfoMessage
   | AgentManagerWorktreeSetupMessage
   | AgentManagerSessionAddedMessage
@@ -1204,7 +1239,6 @@ export type ExtensionMessage =
   | OpenCloudSessionMessage
   | SelectKiloModelMessage
   | AgentManagerBranchesMessage
-  | AgentManagerExternalWorktreesMessage
   | AgentManagerImportResultMessage
   | WorkspaceDirectoryChangedMessage
   | AgentManagerWorktreeDiffMessage
@@ -1219,6 +1253,7 @@ export type ExtensionMessage =
   | AgentManagerTerminalFontChangedMessage
   | AgentManagerTerminalClosedMessage
   | AgentManagerTerminalErrorMessage
+  | AgentManagerTerminalDestinationChangedMessage
   // legacy-migration start
   | MigrationStateMessage
   | MigrationDataMessage
@@ -1261,6 +1296,7 @@ export type ExtensionMessage =
   | TelemetryStateMessage
   | RemoteStatusMessage
   | ValidateFilesResultMessage
+  | ClipboardWriteResultMessage
   | MemoryLoadedMessage
   | MemoryEventMessage
   | MemoryOperationResultMessage

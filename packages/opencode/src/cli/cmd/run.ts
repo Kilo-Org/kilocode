@@ -28,7 +28,6 @@ import { Agent } from "@/agent/agent"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { FormatError, FormatUnknownError } from "../error"
 import { INTERACTIVE_INPUT_ERROR, resolveInteractiveStdin } from "./run/runtime.stdin"
-import { event as normalizeEvent } from "./run/event"
 import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
 import { KiloRunAuto } from "@/kilocode/cli/run-auto" // kilocode_change
 import { KiloHeadless } from "@/kilocode/permission/headless" // kilocode_change
@@ -727,10 +726,11 @@ export const RunCommand = effectCmd({
           const MAX_RETRIES = 3 // kilocode_change
           let retries = 0 // kilocode_change
           let error: string | undefined
+          let autoRejected = false // kilocode_change - plain headless auto-reject must fail the run
 
-          for await (const payload of events.stream) {
-            const event = normalizeEvent(payload)
-            if (!event) continue
+          // kilocode_change start - revert to upstream: consume native events without normalizing sync copies
+          for await (const event of events.stream) {
+            // kilocode_change end
 
             if (
               event.type === "message.updated" &&
@@ -817,8 +817,10 @@ export const RunCommand = effectCmd({
                 err = String(props.error.data.message)
               }
               error = error ? error + EOL + err : err
-              if (emit("error", { error: props.error })) continue
+              // kilocode_change start - stderr first so --format json still surfaces the diagnostic
               UI.error(err)
+              emit("error", { error: props.error })
+              // kilocode_change end
             }
 
             // kilocode_change start - reset retry budget only after resumed work becomes busy
@@ -869,6 +871,7 @@ export const RunCommand = effectCmd({
                   UI.Style.TEXT_NORMAL +
                     `subagent permission requested: ${permission.permission} (${permission.patterns.join(", ")}); auto-rejecting`,
                 )
+                autoRejected = true // kilocode_change
                 await client.permission.reply({
                   requestID: permission.id,
                   reply: "reject",
@@ -890,6 +893,7 @@ export const RunCommand = effectCmd({
                   UI.Style.TEXT_NORMAL +
                     `permission requested: ${permission.permission} (${permission.patterns.join(", ")}); auto-rejecting`,
                 )
+                autoRejected = true // kilocode_change
                 await client.permission.reply({
                   requestID: permission.id,
                   reply: "reject",
@@ -916,6 +920,14 @@ export const RunCommand = effectCmd({
             }
             // kilocode_change end
           }
+          // kilocode_change start - idle must not clear an auto-rejected headless run
+          if (autoRejected) {
+            const msg = "run ended with an auto-rejected permission; pass --auto for autonomous use"
+            error = error ? error + EOL + msg : msg
+            UI.error(msg)
+            emit("error", { error: msg })
+          }
+          // kilocode_change end
           return error
         }
         const cwd = args.attach ? (directory ?? sess.directory ?? (await current(sdk))) : (directory ?? root)

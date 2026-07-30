@@ -255,6 +255,13 @@ sealed class ChatEventDto {
     ) : ChatEventDto()
 
     @Serializable
+    @SerialName("session.queue.changed")
+    data class SessionQueueChanged(
+        val sessionID: String,
+        val queued: List<String> = emptyList(),
+    ) : ChatEventDto()
+
+    @Serializable
     @SerialName("session.compacted")
     data class SessionCompacted(
         val sessionID: String,

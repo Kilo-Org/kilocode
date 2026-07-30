@@ -125,9 +125,6 @@ export interface Host {
   /** Read extension keybinding metadata. */
   extensionKeybindings(): Array<{ command: string; key?: string; mac?: string }>
 
-  /** Get the CLI server port (for webview CSP). */
-  serverPort(): number | undefined
-
   /** Copy text to the system clipboard. */
   copyToClipboard(text: string): void
 
