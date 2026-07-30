@@ -2,4 +2,4 @@
 "@kilocode/cli": minor
 ---
 
-Support silent agent-switch slash commands with `silent: true` frontmatter.
+Support terminal TUI silent agent-switch slash commands with `agent` and `silent: true` frontmatter.

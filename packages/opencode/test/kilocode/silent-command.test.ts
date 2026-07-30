@@ -18,9 +18,15 @@ describe("silent agent-switch commands", () => {
     },
   ]
 
-  test("resolves the configured agent without using the command body", () => {
+  test("resolves an exact silent agent-switch command", () => {
     expect(silentAgent("/code", commands)).toBe("code")
-    expect(silentAgent("/code ignored arguments", commands)).toBe("code")
+    expect(silentAgent("/code  ", commands)).toBe("code")
+  })
+
+  test("preserves commands with arguments or multiple lines for normal submission", () => {
+    expect(silentAgent("/code fix the login bug", commands)).toBeUndefined()
+    expect(silentAgent("/code\nfix the login bug", commands)).toBeUndefined()
+    expect(silentAgent("/code\n", commands)).toBeUndefined()
   })
 
   it.live("exposes silent command frontmatter to clients", () =>

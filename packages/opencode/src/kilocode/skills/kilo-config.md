@@ -14,7 +14,7 @@ description: Run tests # optional, shown in command list
 agent: code # optional, route to a specific agent
 model: anthropic/claude-sonnet # optional, override model
 subtask: true # optional, run as subtask
-silent: true # optional, switch to agent without sending a prompt
+silent: true # optional in terminal TUI; requires agent
 ---
 Run all tests in $1 and fix failures.
 Use $ARGUMENTS for the full arg string.
@@ -22,6 +22,8 @@ Reference files with @file and shell output with !`cmd`.
 ```
 
 Template variables: `$1`-`$N` (positional args), `$ARGUMENTS` (full string), `@file` (file contents), `` !`cmd` `` (shell output).
+
+`silent: true` switches agents without sending a prompt only in the terminal TUI and only when `agent` is also configured. The input must be the exact slash command with no arguments, additional lines, attached parts, or pending editor context. Other inputs and clients execute the command template normally.
 
 ### Finding a named command
 
