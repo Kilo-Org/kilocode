@@ -954,16 +954,10 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
           dialog.clear()
         },
       },
-      {
-        name: "permission.mode",
-        title:
-          local.permission.mode === "auto" ? "Disable auto-approve permissions" : "Enable auto-approve permissions",
-        category: "System",
-        run: () => {
-          local.permission.toggle()
-          dialog.clear()
-        },
-      },
+      // kilocode_change - upstream's in-memory auto-approve toggle is not mounted: Kilo ships
+      // `permission.allow_everything` (kilocode/cli/cmd/tui/app.tsx), which persists through
+      // permission.allowEverything. Two near-identical System entries with different persistence
+      // semantics is user-visible confusion.
     ].map((command) => ({
       namespace: "palette",
       ...command,

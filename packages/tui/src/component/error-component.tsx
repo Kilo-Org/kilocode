@@ -23,6 +23,7 @@ export function ErrorComponent(props: { error: Error; reset: () => void; mode?: 
   const term = tryUseTerminalDimensions()
   const width = () => term?.().width ?? process.stdout.columns ?? 80
   const height = () => term?.().height ?? process.stdout.rows ?? 24
+  // kilocode_change end
   const exit = useExit()
   const clipboard = useClipboard()
 
@@ -118,13 +119,7 @@ export function ErrorComponent(props: { error: Error; reset: () => void; mode?: 
   const showFooter = () => height() >= 20
 
   return (
-    <box
-      width={width()}
-      height={height()}
-      backgroundColor={colors.bg}
-      flexDirection="column"
-      alignItems="center"
-    >
+    <box width={width()} height={height()} backgroundColor={colors.bg} flexDirection="column" alignItems="center">
       <box width={contentWidth()} flexGrow={1} flexDirection="column" paddingTop={1} paddingBottom={1} gap={1}>
         {/* Headline */}
         <box flexDirection="column" alignItems="center" flexShrink={0}>

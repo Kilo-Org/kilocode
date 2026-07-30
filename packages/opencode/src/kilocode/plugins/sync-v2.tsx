@@ -10,7 +10,6 @@ import type {
 import { createStore, produce, reconcile } from "solid-js/store"
 import { createSimpleContext } from "@tui/context/helper"
 import { useSDK } from "@tui/context/sdk"
-import { normalizeToolContent } from "@/kilocode/session/tool-content"
 
 function activeAssistant(messages: SessionMessage[]) {
   const index = messages.findIndex((message) => message.type === "assistant" && !message.time.completed)
@@ -318,7 +317,7 @@ export const { use: useSyncV2, provider: SyncProviderV2 } = createSimpleContext(
             )
             if (match?.state.status !== "running") return
             match.state.structured = event.properties.structured
-            match.state.content = normalizeToolContent(event.properties.content)
+            match.state.content = event.properties.content
           })
           break
         case "session.next.tool.success":
@@ -332,7 +331,7 @@ export const { use: useSyncV2, provider: SyncProviderV2 } = createSimpleContext(
               status: "completed",
               input: match.state.input,
               structured: event.properties.structured,
-              content: normalizeToolContent(event.properties.content),
+              content: event.properties.content,
               result: event.properties.result,
             }
             match.provider = {

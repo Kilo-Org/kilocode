@@ -1292,7 +1292,6 @@ describe("session.compaction.process", () => {
         yield* Deferred.await(ready).pipe(Effect.timeout("5 seconds"))
         yield* Fiber.interrupt(fiber)
         const exit = yield* Fiber.await(fiber)
-        // kilocode_change end
 
         expect(Exit.isFailure(exit)).toBe(true)
         if (Exit.isFailure(exit)) {

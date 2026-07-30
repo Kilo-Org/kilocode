@@ -3,7 +3,7 @@ export * as SessionEvent from "./session-event"
 import { Schema } from "effect"
 import { optional } from "./schema"
 import { Event } from "./event"
-import { ProviderMetadata, StoredToolContent, ToolContent } from "./llm" // kilocode_change - durable events decode released content
+import { ProviderMetadata, ToolContent } from "./llm"
 import { Delivery } from "./session-delivery"
 import { Model } from "./model"
 import { DateTimeUtcFromMillis, NonNegativeInt, RelativePath } from "./schema"
@@ -334,7 +334,7 @@ export namespace Tool {
     schema: {
       ...ToolBase,
       structured: Schema.Record(Schema.String, Schema.Unknown),
-      content: Schema.Array(StoredToolContent), // kilocode_change
+      content: Schema.Array(ToolContent),
     },
   })
   export type Progress = typeof Progress.Type
@@ -345,7 +345,7 @@ export namespace Tool {
     schema: {
       ...ToolBase,
       structured: Schema.Record(Schema.String, Schema.Unknown),
-      content: Schema.Array(StoredToolContent), // kilocode_change
+      content: Schema.Array(ToolContent),
       outputPaths: Schema.Array(Schema.String).pipe(optional),
       result: Schema.Unknown.pipe(optional),
       provider: Schema.Struct({

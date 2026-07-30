@@ -4431,7 +4431,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/Pty1"
+                    "$ref": "#/components/schemas/Pty"
                   },
                   "description": "List of sessions"
                 }
@@ -4485,7 +4485,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Pty2"
+                  "$ref": "#/components/schemas/Pty"
                 }
               }
             }
@@ -4588,7 +4588,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Pty3"
+                  "$ref": "#/components/schemas/Pty"
                 }
               }
             }
@@ -4659,7 +4659,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Pty4"
+                  "$ref": "#/components/schemas/Pty"
                 }
               }
             }
@@ -19794,7 +19794,7 @@
     },
     "/api/health": {
       "get": {
-        "tags": ["opencode HttpApi"],
+        "tags": ["Kilo HttpApi"],
         "operationId": "v2.health.get",
         "parameters": [],
         "security": [],
@@ -19850,7 +19850,7 @@
     },
     "/api/location": {
       "get": {
-        "tags": ["opencode HttpApi"],
+        "tags": ["Kilo HttpApi"],
         "operationId": "v2.location.get",
         "parameters": [
           {
@@ -19918,7 +19918,7 @@
     },
     "/api/agent": {
       "get": {
-        "tags": ["opencode HttpApi"],
+        "tags": ["Kilo HttpApi"],
         "operationId": "v2.agent.list",
         "parameters": [
           {
@@ -22590,7 +22590,7 @@
     },
     "/api/credential/{credentialID}": {
       "patch": {
-        "tags": ["opencode HttpApi"],
+        "tags": ["Kilo HttpApi"],
         "operationId": "v2.credential.update",
         "parameters": [
           {
@@ -22674,7 +22674,7 @@
         ]
       },
       "delete": {
-        "tags": ["opencode HttpApi"],
+        "tags": ["Kilo HttpApi"],
         "operationId": "v2.credential.remove",
         "parameters": [
           {
@@ -28293,6 +28293,17 @@
           "exitCode": {
             "type": "integer",
             "minimum": 0
+          },
+          "sessionID": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": ["id", "title", "command", "args", "cwd", "status", "pid"],
@@ -35003,132 +35014,6 @@
         "required": ["_tag", "projectID", "message"],
         "additionalProperties": false
       },
-      "Pty1": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^pty"
-          },
-          "title": {
-            "type": "string"
-          },
-          "command": {
-            "type": "string"
-          },
-          "args": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "cwd": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string",
-            "enum": ["running", "exited"]
-          },
-          "pid": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "exitCode": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "sessionID": {
-            "type": "string",
-            "pattern": "^ses"
-          }
-        },
-        "required": ["id", "title", "command", "args", "cwd", "status", "pid"],
-        "additionalProperties": false
-      },
-      "Pty2": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^pty"
-          },
-          "title": {
-            "type": "string"
-          },
-          "command": {
-            "type": "string"
-          },
-          "args": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "cwd": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string",
-            "enum": ["running", "exited"]
-          },
-          "pid": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "exitCode": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "sessionID": {
-            "type": "string",
-            "pattern": "^ses"
-          }
-        },
-        "required": ["id", "title", "command", "args", "cwd", "status", "pid"],
-        "additionalProperties": false
-      },
-      "Pty3": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^pty"
-          },
-          "title": {
-            "type": "string"
-          },
-          "command": {
-            "type": "string"
-          },
-          "args": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "cwd": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string",
-            "enum": ["running", "exited"]
-          },
-          "pid": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "exitCode": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "sessionID": {
-            "type": "string",
-            "pattern": "^ses"
-          }
-        },
-        "required": ["id", "title", "command", "args", "cwd", "status", "pid"],
-        "additionalProperties": false
-      },
       "PtyNotFoundError": {
         "type": "object",
         "properties": {
@@ -35144,48 +35029,6 @@
           }
         },
         "required": ["_tag", "ptyID", "message"],
-        "additionalProperties": false
-      },
-      "Pty4": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^pty"
-          },
-          "title": {
-            "type": "string"
-          },
-          "command": {
-            "type": "string"
-          },
-          "args": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "cwd": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string",
-            "enum": ["running", "exited"]
-          },
-          "pid": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "exitCode": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "sessionID": {
-            "type": "string",
-            "pattern": "^ses"
-          }
-        },
-        "required": ["id", "title", "command", "args", "cwd", "status", "pid"],
         "additionalProperties": false
       },
       "PtyForbiddenError": {
@@ -58145,15 +57988,15 @@
       "description": "Kilo memory routes."
     },
     {
-      "name": "opencode HttpApi",
+      "name": "Kilo HttpApi",
       "description": "Experimental HttpApi surface for selected instance routes."
     },
     {
-      "name": "opencode HttpApi",
+      "name": "Kilo HttpApi",
       "description": "Experimental HttpApi surface for selected instance routes."
     },
     {
-      "name": "opencode HttpApi",
+      "name": "Kilo HttpApi",
       "description": "Experimental HttpApi surface for selected instance routes."
     },
     {
@@ -58177,7 +58020,7 @@
       "description": "Integration discovery and authentication routes."
     },
     {
-      "name": "opencode HttpApi",
+      "name": "Kilo HttpApi",
       "description": "Experimental HttpApi surface for selected instance routes."
     },
     {

@@ -6,6 +6,7 @@ import type { Data, Definition, Payload } from "@opencode-ai/schema/event"
 import { and, asc, eq, gt, inArray } from "drizzle-orm"
 import { Database } from "./database/database"
 import { EventSequenceTable, EventTable } from "./event/sql"
+import * as EventStorage from "./kilocode/event-storage" // kilocode_change - released tool content shapes
 import { Location } from "./location"
 import { makeGlobalNode } from "./effect/app-node"
 import { isDeepStrictEqual } from "node:util"
@@ -56,7 +57,7 @@ const decodeSerializedEvent = (event: SerializedEvent): Payload => {
     id: event.id,
     type: definition.type,
     durable: { aggregateID: event.aggregateID, seq: event.seq, version: definition.durable.version },
-    data: Schema.decodeUnknownSync(definition.data)(event.data),
+    data: Schema.decodeUnknownSync(definition.data)(EventStorage.decode(definition.type, event.data)), // kilocode_change
   }
 }
 
@@ -89,18 +90,19 @@ export const readAggregate = Effect.fn("EventV2.readAggregate")(function* <A>(
     .pipe(Effect.orDie)
   const page = rows.slice(0, input.limit)
   const decode = Schema.decodeUnknownSync(input.manifest.schema)
-  const events = page.map((event) =>
-    decode({
+  const events = page.map((event) => {
+    const type = input.manifest.definitions.get(event.type)?.type ?? event.type
+    return decode({
       id: event.id,
-      type: input.manifest.definitions.get(event.type)?.type ?? event.type,
+      type,
       durable: {
         aggregateID: event.aggregate_id,
         seq: event.seq,
         version: input.manifest.definitions.get(event.type)?.durable?.version,
       },
-      data: event.data,
-    }),
-  )
+      data: EventStorage.decode(type, event.data), // kilocode_change
+    })
+  })
   return {
     events,
     hasMore: rows.length > input.limit,
@@ -247,10 +249,11 @@ export const layerWith = (options?: LayerOptions) =>
                             .get()
                             .pipe(Effect.orDie)
                           const latest = row?.seq ?? -1
-                          const encoded = Schema.encodeUnknownSync(definition.data)(event.data) as Record<
-                            string,
-                            unknown
-                          >
+                          // kilocode_change - persist tool content in the released shape
+                          const encoded = EventStorage.encode(
+                            definition.type,
+                            Schema.encodeUnknownSync(definition.data)(event.data),
+                          ) as Record<string, unknown>
                           if (input?.strictOwner && row?.ownerID && row.ownerID !== input.ownerID) {
                             yield* Effect.die(
                               new InvalidDurableEventError({
@@ -452,7 +455,7 @@ export const layerWith = (options?: LayerOptions) =>
             const payload = {
               id: event.id,
               type: definition.type,
-              data: Schema.decodeUnknownSync(definition.data)(event.data),
+              data: Schema.decodeUnknownSync(definition.data)(EventStorage.decode(definition.type, event.data)), // kilocode_change
             } as Payload
             const committed = yield* commitDurableEvent(definition, payload, {
               seq: event.seq,

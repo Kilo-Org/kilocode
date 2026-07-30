@@ -64,36 +64,6 @@ export function eventLocation(metadata: { directory: string; workspace?: string 
 }
 // kilocode_change end
 
-// kilocode_change start - released rows persist legacy tool content shapes; normalize them for the store
-function toolContent(items: readonly unknown[]): SessionMessageToolStateCompleted["content"] {
-  return items.map((item) => {
-    const value = item as Record<string, any>
-    if (value.type === "media")
-      return {
-        type: "file" as const,
-        uri: String(value.data).startsWith("data:") ? value.data : `data:${value.mediaType};base64,${value.data}`,
-        mime: value.mediaType,
-        ...(value.filename === undefined ? {} : { name: value.filename }),
-      }
-    if (value.type === "file" && value.source !== undefined) {
-      const source = value.source
-      return {
-        type: "file" as const,
-        uri:
-          source.type === "data"
-            ? `data:${value.mime};base64,${source.data}`
-            : source.type === "url"
-              ? source.url
-              : source.uri,
-        mime: value.mime,
-        ...(value.name === undefined ? {} : { name: value.name }),
-      }
-    }
-    return value
-  }) as SessionMessageToolStateCompleted["content"]
-}
-// kilocode_change end
-
 export const { use: useData, provider: DataProvider } = createSimpleContext({
   name: "Data",
   init: () => {
@@ -340,7 +310,7 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
             const match = message.latestTool(message.assistant(draft, event.data.assistantMessageID), event.data.callID)
             if (match?.state.status !== "running") return
             match.state.structured = event.data.structured
-            match.state.content = toolContent(event.data.content) // kilocode_change
+            match.state.content = event.data.content
           })
           break
         case "session.next.tool.success":
@@ -351,7 +321,7 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
               status: "completed",
               input: match.state.input,
               structured: event.data.structured,
-              content: toolContent(event.data.content), // kilocode_change
+              content: event.data.content,
               result: event.data.result,
             }
             match.provider = {

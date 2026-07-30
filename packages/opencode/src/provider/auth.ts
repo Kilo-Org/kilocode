@@ -117,8 +117,7 @@ const layer: Layer.Layer<Service, never, Auth.Service | Plugin.Service | ModelCa
   Effect.gen(function* () {
     const auth = yield* Auth.Service
     const plugin = yield* Plugin.Service
-    const cache = yield* ModelCache.Service
-    // kilocode_change end
+    const cache = yield* ModelCache.Service // kilocode_change
     const state = yield* InstanceState.make<State>(
       Effect.fn("ProviderAuth.state")(function* () {
         const plugins = yield* plugin.list()

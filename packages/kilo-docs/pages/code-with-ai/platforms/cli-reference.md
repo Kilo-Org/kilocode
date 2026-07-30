@@ -200,7 +200,7 @@ Options:
       --variant      model variant (provider-specific reasoning effort, e.g., high, max, minimal)  [string]
       --thinking     show thinking blocks  [boolean]
   -i, --interactive  run in direct interactive split-footer mode  [boolean] [default: false]
-      --auto         auto-approve all permissions (for autonomous/pipeline usage)  [boolean] [default: false]
+      --auto         auto-approve permissions that are not explicitly denied (dangerous!)  [boolean] [default: false]
 ```
 
 ## kilo debug
