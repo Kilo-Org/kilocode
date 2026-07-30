@@ -1,5 +1,29 @@
 import type { APICallError } from "ai"
 import { ProviderV2 } from "@opencode-ai/core/provider"
+import { isRecord } from "@/util/record"
+
+export type Frame = {
+  type?: unknown
+  error?: Record<string, unknown>
+} & Record<string, unknown>
+
+/**
+ * Normalize provider stream error frames that arrive without the
+ * `{ type: "error" }` envelope expected by ProviderError.parseStreamError:
+ * OpenAI Responses API terminal frames forwarded by @ai-sdk/openai >= 3.0.82
+ * (`{ type: "response.failed", response: { error } }`) and bare
+ * chat-completions error objects (`{ code, message }`).
+ */
+export function frame(body: unknown): Frame {
+  if (!isRecord(body)) return {}
+  if (body.type === "response.failed" && isRecord(body.response) && isRecord(body.response.error)) {
+    return { type: "error", error: body.response.error }
+  }
+  if (body.type === undefined && typeof body.message === "string" && body.code !== undefined) {
+    return { ...body, type: "error", error: body }
+  }
+  return { ...body, error: isRecord(body.error) ? body.error : undefined }
+}
 
 const AUTH_ERROR =
   "Request had invalid authentication credentials. Expected OAuth 2 access token, login cookie or other valid authentication credential. See https://developers.google.com/identity/sign-in/web/devconsole-project."

@@ -78,6 +78,48 @@ describe("provider stream errors", () => {
   })
 })
 
+describe("responses api terminal frames", () => {
+  test("surfaces the provider message from a response.failed frame", () => {
+    const payload = {
+      type: "response.failed",
+      sequence_number: 8,
+      response: {
+        error: {
+          code: "rate_limit_exceeded",
+          message:
+            "openai/gpt-5.6-terra-pro is temporarily rate-limited upstream. Please retry shortly, or add your own key to accumulate your rate limits: https://openrouter.ai/settings/integrations",
+        },
+        incomplete_details: null,
+        service_tier: "auto",
+      },
+    }
+    const result = MessageV2.fromError(payload, { providerID: ProviderV2.ID.make("openai") })
+
+    expect(MessageV2.APIError.isInstance(result)).toBe(true)
+    if (!MessageV2.APIError.isInstance(result)) throw new Error("expected APIError")
+    expect(result.data.message).toBe(payload.response.error.message)
+    expect(result.data.isRetryable).toBe(true)
+    expect(result.data.responseBody).toBe(JSON.stringify(payload))
+  })
+
+  test("unwraps bare chat-completions error objects", () => {
+    const payload = { code: "rate_limit_exceeded", message: "Try again in 30 seconds." }
+    const result = MessageV2.fromError(payload, { providerID: ProviderV2.ID.make("openai") })
+
+    expect(MessageV2.APIError.isInstance(result)).toBe(true)
+    if (!MessageV2.APIError.isInstance(result)) throw new Error("expected APIError")
+    expect(result.data.message).toBe(payload.message)
+    expect(result.data.isRetryable).toBe(true)
+  })
+
+  test("ignores response.failed frames without an error payload", () => {
+    const payload = { type: "response.failed", response: { error: null, incomplete_details: null } }
+    const result = MessageV2.fromError(payload, { providerID: ProviderV2.ID.make("openai") })
+
+    expect(MessageV2.APIError.isInstance(result)).toBe(false)
+  })
+})
+
 describe("Google Gemini authentication errors", () => {
   test("explains how to troubleshoot the rejected API key", () => {
     const error = apiError(googleAuthError, "ACCESS_TOKEN_TYPE_UNSUPPORTED")

@@ -109,10 +109,11 @@ export type ParsedStreamError =
 
 export function parseStreamError(input: unknown): ParsedStreamError | undefined {
   const raw = json(input)
-  const body = typeof raw?.message === "string" ? (json(raw.message) ?? raw) : raw
-  if (!body) return
+  const original = typeof raw?.message === "string" ? (json(raw.message) ?? raw) : raw
+  if (!original) return
 
-  const responseBody = JSON.stringify(body)
+  const responseBody = JSON.stringify(original)
+  const body = KiloError.frame(original) // kilocode_change - unwrap response.failed frames and bare { code, message } errors
   if (body.type !== "error") return
 
   switch (body?.error?.code) {
