@@ -104,6 +104,9 @@ export interface Host {
   /** Get the workspace/project root path. */
   workspacePath(): string | undefined
 
+  /** Whether the workspace permits executing configured scripts. */
+  isTrusted(): boolean
+
   /** Read the user's automatic branch naming preferences. */
   autoBranchNaming(): { enabled: boolean; prefix: string }
 
@@ -124,9 +127,6 @@ export interface Host {
 
   /** Read extension keybinding metadata. */
   extensionKeybindings(): Array<{ command: string; key?: string; mac?: string }>
-
-  /** Get the CLI server port (for webview CSP). */
-  serverPort(): number | undefined
 
   /** Copy text to the system clipboard. */
   copyToClipboard(text: string): void

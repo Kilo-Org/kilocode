@@ -201,6 +201,42 @@ describe("config overlay routes", () => {
     })
   })
 
+  test.serial("resolves and reverts project websearch overrides", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    await setGlobal(global.path, { web_search: true })
+
+    await json(
+      await req(project.path, "/config/overlay", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ scope: "project", set: { web_search: false } }),
+      }),
+    )
+    const overridden = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))
+    expect(overridden.fields.web_search).toMatchObject({
+      source: "project",
+      inherited: false,
+      overridden: true,
+      value: false,
+    })
+
+    await json(
+      await req(project.path, "/config/overlay", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ scope: "project", unset: [["web_search"]] }),
+      }),
+    )
+    const inherited = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))
+    expect(inherited.fields.web_search).toMatchObject({
+      source: "global",
+      inherited: true,
+      overridden: false,
+      value: true,
+    })
+  })
+
   test.serial("marks global indexing values inherited in project scope", async () => {
     await using global = await tmpdir()
     await using project = await tmpdir()

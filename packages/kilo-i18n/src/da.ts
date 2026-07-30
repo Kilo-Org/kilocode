@@ -1,12 +1,5 @@
 export const dict = {
   // Kilo Gateway provider translations
-  "provider.connect.kiloGateway.line1":
-    "Kilo Gateway giver dig adgang til et udvalgt sæt pålidelige, optimerede modeller til kodningsagenter.",
-  "provider.connect.kiloGateway.line2":
-    "Med en enkelt API-nøgle får du adgang til modeller som Claude, GPT, Gemini, GLM og flere.",
-  "provider.connect.kiloGateway.visit.prefix": "Besøg ",
-  "provider.connect.kiloGateway.visit.link": "kilo.ai",
-  "provider.connect.kiloGateway.visit.suffix": " for at hente din API-nøgle.",
   "provider.connect.kiloGateway.byok.prefix": "For flere brugsstatistikker, brug ",
   "provider.connect.kiloGateway.byok.link": "BYOK via Kilo's Gateway",
   "provider.connect.kiloGateway.byok.suffix": ".",
@@ -24,14 +17,9 @@ export const dict = {
   "settings.providers.note.vercel": "Samlet adgang til AI-modeller med smart routing",
 
   // Reasoning block label
-  "ui.permission.run": "Kør",
   "ui.reasoning.label": "Ræsonnement",
 
   // Marketplace
-  "marketplace.tab.skills": "Skills",
-  "marketplace.tab.mcpServers": "MCP-servere",
-  "marketplace.category.all": "Alle",
-  "marketplace.placeholder": "Skal implementeres",
   "marketplace.card.installed": "Installeret",
   "marketplace.card.install": "Installer",
   "marketplace.card.remove": "Fjern",
@@ -44,8 +32,7 @@ export const dict = {
   "marketplace.install.scope.global": "Global",
   "marketplace.install.scope.project.description":
     "Kun dette projekt. De installerede filer kan føjes til versionsstyring og deles med dit team.",
-  "marketplace.install.scope.global.description":
-    "Alle projekter på denne maskine. Gemmes i din brugerkonfiguration.",
+  "marketplace.install.scope.global.description": "Alle projekter på denne maskine. Gemmes i din brugerkonfiguration.",
   "marketplace.install.destination": "Installationsplacering",
   "marketplace.install.about.mcp":
     "En MCP-server giver Kilo yderligere værktøjer til at arbejde med eksterne tjenester eller lokale programmer.",
@@ -73,8 +60,6 @@ export const dict = {
     "Er du sikker på, at du vil fjerne denne {{type}}? Dette vil fjerne den fra din {{scope}} konfiguration.",
   "marketplace.remove.cancel": "Annuller",
   "marketplace.remove.confirm.button": "Fjern",
-  "marketplace.tab.mcp": "MCP",
-  "marketplace.tab.agents": "Agenter",
   "marketplace.search": "Søg...",
   "marketplace.filter.all": "Alle elementer",
   "marketplace.filter.notInstalled": "Ikke installeret",
@@ -82,12 +67,10 @@ export const dict = {
   "marketplace.empty": "Ingen elementer fundet",
   "marketplace.empty.relevant": "Der blev ikke fundet relevante marketplace-elementer for dette arbejdsområde.",
   "marketplace.badge.mcpServer": "MCP-server",
-  "marketplace.badge.mode": "Tilstand",
   "marketplace.card.by": "af {{author}}",
   "marketplace.install.method": "Installationsmetode",
   "marketplace.install.parameters": "Parametre",
   "marketplace.install.optional": "(valgfrit)",
-  "marketplace.install.required": "{{name}} er påkrævet",
   "marketplace.scope.project": "projekt",
   "marketplace.scope.global": "global",
   "marketplace.remove.type.mcp": "MCP-server",
@@ -129,8 +112,6 @@ export const dict = {
 
   // Edit-tool header and shell-tool section labels
   "ui.messagePart.openInDiffViewer": "Åbn i Diff-visning",
-  "ui.messagePart.shell.command": "Kommando",
-  "ui.messagePart.shell.output": "Output",
   "ui.messagePart.openInEditor": "Åbn i editor",
 
   // Message feedback (thumbs up/down per assistant response)

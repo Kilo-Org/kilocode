@@ -4,7 +4,7 @@ import type { MessageLoadMode } from "./sessions"
 import type { PermissionFileDiff } from "./permissions"
 import type { ModelSelection, ProviderConfig } from "./providers"
 import type { Config } from "./config"
-import type { ModelAllocation, ReviewComment } from "./agent-manager"
+import type { ModelAllocation, ReviewComment, TerminalDestination, TerminalPlacement } from "./agent-manager"
 import type { ReviewMessageData } from "../../../../src/shared/review-comments"
 import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type { AnacondaDesktopWebviewMessage } from "../../../../src/shared/anaconda-desktop-messages"
@@ -173,6 +173,11 @@ export interface SetOrganizationRequest {
 
 export interface WebviewReadyRequest {
   type: "webviewReady"
+}
+
+export interface WebviewFocusChangedRequest {
+  type: "webviewFocusChanged"
+  focused: boolean
 }
 
 export interface SelectSourceRequest {
@@ -672,6 +677,7 @@ export interface ConfigureRunScriptRequest {
 export interface RunScriptRequest {
   type: "agentManager.runScript"
   worktreeId: string
+  destination: TerminalDestination
 }
 
 export interface StopRunScriptRequest {
@@ -690,6 +696,12 @@ export interface ShowLocalTerminalRequest {
   type: "agentManager.showLocalTerminal"
 }
 
+// Show a terminal rooted at a worktree directory (worktree has no session)
+export interface ShowWorktreeTerminalRequest {
+  type: "agentManager.showWorktreeTerminal"
+  worktreeId: string
+}
+
 // Open a worktree directory in VS Code
 export interface OpenWorktreeRequest {
   type: "agentManager.openWorktree"
@@ -698,7 +710,8 @@ export interface OpenWorktreeRequest {
 
 // Copy text to the system clipboard via the extension host
 export interface CopyToClipboardRequest {
-  type: "agentManager.copyToClipboard"
+  type: "copyToClipboard"
+  id: string
   text: string
 }
 
@@ -707,9 +720,12 @@ export interface ShowExistingLocalTerminalRequest {
   type: "agentManager.showExistingLocalTerminal"
 }
 
-// Create a new xterm terminal tab in the given worktree context (null = local)
+// Create a new xterm terminal in the given worktree context (null = workspace root)
 export interface AgentManagerTerminalCreateRequest {
   type: "agentManager.terminal.create"
+  /** Webview-generated correlation id, echoed back in created/error. */
+  createId: string
+  placement: TerminalPlacement
   worktreeId: string | null
 }
 
@@ -799,10 +815,6 @@ export interface RequestBranchesMessage {
   type: "agentManager.requestBranches"
 }
 
-export interface RequestExternalWorktreesMessage {
-  type: "agentManager.requestExternalWorktrees"
-}
-
 export interface ImportFromBranchRequest {
   type: "agentManager.importFromBranch"
   branch: string
@@ -813,37 +825,45 @@ export interface ImportFromPRRequest {
   url: string
 }
 
-export interface ImportExternalWorktreeRequest {
-  type: "agentManager.importExternalWorktree"
-  path: string
-  branch: string
-}
-
-export interface ImportAllExternalWorktreesRequest {
-  type: "agentManager.importAllExternalWorktrees"
-}
-
 // Agent Manager: Request one-shot diff fetch (webview → extension)
 export interface RequestWorktreeDiffMessage {
   type: "agentManager.requestWorktreeDiff"
   sessionId: string
+  scope?: string
 }
 
 export interface RequestWorktreeDiffFileMessage {
   type: "agentManager.requestWorktreeDiffFile"
   sessionId: string
   file: string
+  scope?: string
 }
 
 // Agent Manager: Start polling for live diff updates (webview → extension)
 export interface StartDiffWatchMessage {
   type: "agentManager.startDiffWatch"
   sessionId: string
+  scope?: string
 }
 
 // Agent Manager: Stop polling for diff updates (webview → extension)
 export interface StopDiffWatchMessage {
   type: "agentManager.stopDiffWatch"
+}
+
+// Agent Manager: Request branch picker data for a diff context (webview → extension)
+export interface RequestDiffBranchesMessage {
+  type: "agentManager.requestDiffBranches"
+  sessionId: string
+  scope?: string
+}
+
+// Agent Manager: Set or clear the base branch override for a diff context (webview → extension)
+export interface SetDiffBaseBranchMessage {
+  type: "agentManager.setDiffBaseBranch"
+  sessionId: string
+  scope?: string
+  branch?: string
 }
 
 // Agent Manager: PR messages (webview → extension)
@@ -868,6 +888,7 @@ export interface RevertWorktreeFileMessage {
   type: "agentManager.revertWorktreeFile"
   sessionId: string
   file: string
+  scope?: string
 }
 
 // Variant persistence (webview → extension)
@@ -1257,6 +1278,7 @@ export type WebviewMessage =
   | CancelLoginRequest
   | SetOrganizationRequest
   | WebviewReadyRequest
+  | WebviewFocusChangedRequest
   | SelectSourceRequest
   | RequestProvidersMessage
   | CompactRequest
@@ -1340,6 +1362,7 @@ export type WebviewMessage =
   | StopRunScriptRequest
   | ShowTerminalRequest
   | ShowLocalTerminalRequest
+  | ShowWorktreeTerminalRequest
   | OpenWorktreeRequest
   | CopyToClipboardRequest
   | ShowExistingLocalTerminalRequest
@@ -1356,15 +1379,14 @@ export type WebviewMessage =
   | RequestCloudSessionDataMessage
   | ImportAndSendMessage
   | RequestBranchesMessage
-  | RequestExternalWorktreesMessage
   | ImportFromBranchRequest
   | ImportFromPRRequest
-  | ImportExternalWorktreeRequest
-  | ImportAllExternalWorktreesRequest
   | RequestWorktreeDiffMessage
   | RequestWorktreeDiffFileMessage
   | StartDiffWatchMessage
   | StopDiffWatchMessage
+  | RequestDiffBranchesMessage
+  | SetDiffBaseBranchMessage
   | RefreshPRMessage
   | OpenPRMessage
   // legacy-migration start
