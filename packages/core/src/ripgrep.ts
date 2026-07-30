@@ -165,11 +165,13 @@ export const layer = Layer.effect(
       )
       const abortable = input.signal ? program.pipe(Effect.raceFirst(waitForAbort(input.signal))) : program
       return abortable.pipe(
-        Effect.mapError((cause) =>
-          cause instanceof Error || cause instanceof InvalidPatternError
-            ? cause
-            : failure("ripgrep execution failed", cause),
-        ),
+        // kilocode_change start - surface the underlying reason instead of a bare wrapper message
+        Effect.mapError((cause) => {
+          if (cause instanceof Error || cause instanceof InvalidPatternError) return cause
+          const detail = cause instanceof globalThis.Error && cause.message.trim() ? `: ${cause.message.trim()}` : ""
+          return failure(`ripgrep execution failed${detail}`, cause)
+        }),
+        // kilocode_change end
       )
     }
 

@@ -433,7 +433,24 @@ export const ShellPermission = Effect.gen(function* () {
     )
   })
 
-  return { ask: check, resolve }
+  // kilocode_change start - expose the tree-sitter scan (sub-command patterns + external-dir globs) for skill-shell batching
+  const dirGlob = (dir: string) =>
+    process.platform === "win32" ? FSUtil.normalizePathPattern(path.join(dir, "*")) : path.join(dir, "*")
+  const decompose = Effect.fn("ShellTool.decompose")(function* (input: { command: string; cwd: string; shell: string }) {
+    const instance = yield* InstanceState.context
+    const ps = Shell.ps(input.shell)
+    return yield* Effect.scoped(
+      Effect.gen(function* () {
+        const tree = yield* Effect.acquireRelease(parse(input.command, ps), (tree) => Effect.sync(() => tree.delete()))
+        const scan = yield* collect(tree.rootNode, input.cwd, ps, input.shell, instance)
+        if (!containsPath(input.cwd, instance)) scan.dirs.add(input.cwd)
+        return { patterns: Array.from(scan.patterns), dirs: Array.from(scan.dirs, dirGlob) }
+      }),
+    )
+  })
+  // kilocode_change end
+
+  return { ask: check, resolve, decompose } // kilocode_change - decompose for skill-shell
 })
 // kilocode_change end
 
