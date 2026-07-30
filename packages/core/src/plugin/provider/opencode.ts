@@ -19,23 +19,26 @@ import { ProviderV2 } from "../../provider"
 export const OpencodePlugin = define({
   id: "opencode",
   effect: Effect.fn(function* (ctx) {
-    // A connection (env method, service-account key, ...) counts as credentials, exactly as before the merge.
-    const connected = (yield* ctx.integration.connection.active("opencode")) !== undefined
-    yield* ctx.catalog.transform((catalog) => {
-      const item = catalog.provider.get(ProviderV2.ID.opencode)
-      if (!item) return
-      const hasKey = Boolean(process.env.OPENCODE_API_KEY || connected || item.provider.request.body.apiKey)
-      catalog.provider.update(item.provider.id, (provider) => {
-        if (!hasKey) provider.request.body.apiKey = "public"
-      })
-      if (hasKey) return
-      for (const model of item.models.values()) {
-        if (!model.cost.some((cost) => cost.input > 0)) continue
-        catalog.model.update(item.provider.id, model.id, (draft) => {
-          draft.enabled = false
+    yield* ctx.catalog.transform(
+      Effect.fn(function* (catalog) {
+        const item = catalog.provider.get(ProviderV2.ID.opencode)
+        if (!item) return
+        // Read inside the transform so catalog reloads see current credentials, not a boot-time snapshot.
+        // A connection (env method, service-account key, ...) counts as credentials, exactly as before the merge.
+        const connected = (yield* ctx.integration.connection.active("opencode")) !== undefined
+        const hasKey = Boolean(process.env.OPENCODE_API_KEY || connected || item.provider.request.body.apiKey)
+        catalog.provider.update(item.provider.id, (provider) => {
+          if (!hasKey) provider.request.body.apiKey = "public"
         })
-      }
-    })
+        if (hasKey) return
+        for (const model of item.models.values()) {
+          if (!model.cost.some((cost) => cost.input > 0)) continue
+          catalog.model.update(item.provider.id, model.id, (draft) => {
+            draft.enabled = false
+          })
+        }
+      }),
+    )
   }),
 })
 // kilocode_change end

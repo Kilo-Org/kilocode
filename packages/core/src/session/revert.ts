@@ -8,6 +8,7 @@ import { RelativePath } from "../schema"
 import { Snapshot } from "../snapshot"
 import { SessionEvent } from "./event"
 import { SessionMessage } from "./message"
+import * as StoredMessage from "../kilocode/session-message" // kilocode_change
 import { SessionSchema } from "./schema"
 import { SessionMessageTable } from "./sql"
 
@@ -50,7 +51,9 @@ const plan = Effect.fn("SessionRevert.plan")(function* (input: BoundaryInput) {
   const decode = Schema.decodeUnknownEffect(SessionMessage.Message)
   const files = new Map<RelativePath, Snapshot.ID>()
   for (const row of rows) {
-    const message = yield* decode({ ...row.data, id: row.id, type: row.type }).pipe(Effect.orDie)
+    const message = yield* decode(StoredMessage.normalize({ ...row.data, id: row.id, type: row.type })).pipe(
+      Effect.orDie,
+    ) // kilocode_change - released rows persist legacy tool content
     if (message.type !== "assistant" || !message.snapshot?.start) continue
     for (const file of message.snapshot.files ?? [])
       if (!files.has(file)) files.set(file, Snapshot.ID.make(message.snapshot.start))

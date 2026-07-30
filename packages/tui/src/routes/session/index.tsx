@@ -1611,11 +1611,7 @@ function UserMessage(props: {
   )
 }
 
-function AssistantMessage(props: {
-  message: AssistantMessage
-  parts: Part[]
-  last: boolean
-}) {
+function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; last: boolean }) {
   const ctx = use()
   const local = useLocal()
   const { theme } = useTheme()
@@ -2347,18 +2343,22 @@ function BlockTool(props: {
         props.onClick?.()
       }}
     >
-      <Show
-        when={props.spinner}
-        fallback={
-          <text paddingLeft={3} fg={theme.textMuted}>
-            {props.title}
-            {/* kilocode_change start */}
-            <RoutedModelMeta.View id={props.part?.id} />
-            {/* kilocode_change end */}
-          </text>
-        }
-      >
-        <Spinner color={theme.textMuted}>{props.title?.replace(/^# /, "") ?? ""}</Spinner>
+      <Show when={props.title}>
+        {(title) => (
+          <Show
+            when={props.spinner}
+            fallback={
+              <text paddingLeft={3} fg={theme.textMuted}>
+                {title()}
+                {/* kilocode_change start */}
+                <RoutedModelMeta.View id={props.part?.id} />
+                {/* kilocode_change end */}
+              </text>
+            }
+          >
+            <Spinner color={theme.textMuted}>{title().replace(/^# /, "")}</Spinner>
+          </Show>
+        )}
       </Show>
       {props.children}
       <Show when={error()}>

@@ -20,9 +20,15 @@ ensureProcessMetadata("worker") // kilocode_change - retain worker role and pare
 await KiloLog.init() // kilocode_change - keep compatibility logs off the TUI terminal
 Heap.start()
 
-const onUnhandledRejection = (_error: unknown) => {}
+// kilocode_change start - keep upstream's keep-alive intent but never swallow the error silently
+const onUnhandledRejection = (error: unknown) => {
+  console.error("worker unhandledRejection", error)
+}
 
-const onUncaughtException = (_error: Error) => {}
+const onUncaughtException = (error: Error) => {
+  console.error("worker uncaughtException", error)
+}
+// kilocode_change end
 
 process.on("unhandledRejection", onUnhandledRejection)
 process.on("uncaughtException", onUncaughtException)

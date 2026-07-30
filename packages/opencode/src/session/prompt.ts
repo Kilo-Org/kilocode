@@ -1666,11 +1666,12 @@ export const layer = Layer.effect(
           // kilocode_change end
 
           // kilocode_change start - persistently prune stale tool outputs when payload is already large
-          const [skills, env, mem, instructions] = yield* Effect.all([
+          const [skills, env, mem, instructions, mcpInstructions] = yield* Effect.all([
             sys.skills(agent),
             sys.environment(model, lastUser.editorContext), // kilocode_change
             KiloSessionPrompt.memoryInject({ ctx, sessionID, record: step === 1, cache: memoryCache }), // kilocode_change
             instruction.system().pipe(Effect.orDie),
+            sys.mcp(agent, session.permission),
           ])
           let modelMsgs = yield* MessageV2.toModelMessagesEffect(msgs, model).pipe(
             Effect.provideService(Database.Service, database),
@@ -1694,7 +1695,13 @@ export const layer = Layer.effect(
               yield* Effect.logWarning("payload still large after pruning", { "session.id": sessionID, size: nextSize })
           }
           // kilocode_change end
-          const system = [...env, ...mem, ...instructions, ...(skills ? [skills] : [])] // kilocode_change
+          const system = [
+            ...env,
+            ...mem, // kilocode_change
+            ...instructions,
+            ...(mcpInstructions ? [mcpInstructions] : []),
+            ...(skills ? [skills] : []),
+          ]
           const format = lastUser.format ?? { type: "text" as const }
           if (format.type === "json_schema") system.push(STRUCTURED_OUTPUT_SYSTEM_PROMPT)
           const result = yield* handle.process({

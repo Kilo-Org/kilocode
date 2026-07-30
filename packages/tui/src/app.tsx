@@ -954,10 +954,20 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
           dialog.clear()
         },
       },
-      // kilocode_change - upstream's in-memory auto-approve toggle is not mounted: Kilo ships
-      // `permission.allow_everything` (kilocode/cli/cmd/tui/app.tsx), which persists through
-      // permission.allowEverything. Two near-identical System entries with different persistence
-      // semantics is user-visible confusion.
+      // kilocode_change - this toggles the in-memory mode that `--auto`/`--yolo` seed, and is the
+      // only way to leave it mid-session. Kilo also ships `permission.allow_everything`
+      // (kilocode/cli/cmd/tui/app.tsx), which persists a server-side allow rule instead. Two
+      // entries with different scope is confusing and should be consolidated onto the Kilo one.
+      {
+        name: "permission.mode",
+        title:
+          local.permission.mode === "auto" ? "Disable auto-approve permissions" : "Enable auto-approve permissions",
+        category: "System",
+        run: () => {
+          local.permission.toggle()
+          dialog.clear()
+        },
+      },
     ].map((command) => ({
       namespace: "palette",
       ...command,

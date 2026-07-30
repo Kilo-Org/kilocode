@@ -292,7 +292,7 @@ export const RunCommand = effectCmd({
     yield* Effect.promise(async () => {
       const rawMessage = [...args.message, ...(args["--"] || [])].join(" ")
       const interactive = args.mini || args.interactive // kilocode_change - retain `kilo run --interactive`
-      const auto = args.auto || args.yolo || args["dangerously-skip-permissions"]
+      const skipPermissions = args.yolo || args["dangerously-skip-permissions"] // kilocode_change - --auto is answered by the tracked-session block below
       const thinking = interactive ? (args.thinking ?? true) : (args.thinking ?? false)
       const die = (message: string): never => {
         UI.error(message)
@@ -952,7 +952,7 @@ export const RunCommand = effectCmd({
 
               if (permission.sessionID !== sessionID) continue
 
-              if (auto) {
+              if (skipPermissions) {
                 await client.permission.reply({
                   requestID: permission.id,
                   reply: "once",

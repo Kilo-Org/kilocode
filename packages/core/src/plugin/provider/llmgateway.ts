@@ -17,12 +17,12 @@ export const LLMGatewayPlugin = define({
           if (item.provider.id !== ProviderV2.ID.make("llmgateway")) continue // kilocode_change
           if (!(yield* integrations.get(Integration.ID.make(item.provider.id)))) continue
           evt.provider.update(item.provider.id, (provider) => {
-          provider.request.headers["HTTP-Referer"] = "https://kilo.ai/"
-          // kilocode_change start
-          provider.request.headers["X-Title"] = "Kilo Code"
-          provider.request.headers["X-Source"] = "kilo"
-          // kilocode_change end
-        })
+            provider.request.headers["HTTP-Referer"] = "https://kilo.ai/"
+            // kilocode_change start
+            provider.request.headers["X-Title"] = "Kilo Code"
+            provider.request.headers["X-Source"] = "kilo"
+            // kilocode_change end
+          })
         }
       }),
     )

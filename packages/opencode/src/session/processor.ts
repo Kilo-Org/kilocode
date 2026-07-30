@@ -13,6 +13,7 @@ import { Session } from "./session"
 import { LLM } from "./llm"
 import { MessageV2 } from "./message-v2"
 import { isOverflow } from "./overflow"
+import { RuntimeFlags } from "@/effect/runtime-flags" // kilocode_change - configured output token ceiling
 import { PartID } from "./schema"
 import type { SessionID } from "./schema"
 import { SessionRetry } from "./retry"
@@ -120,6 +121,7 @@ const layer = Layer.effect(
     const image = yield* Image.Service
     const events = yield* EventV2Bridge.Service
     const database = yield* Database.Service
+    const flags = yield* RuntimeFlags.Service // kilocode_change
 
     const create = Effect.fn("SessionProcessor.create")(function* (input: Input) {
       // Pre-capture snapshot before the LLM stream starts. The AI SDK
@@ -435,14 +437,16 @@ const layer = Layer.effect(
             yield* ensureToolCall(value)
             return
 
+          // kilocode_change start - late input must not resurrect a settled call as a pending part
           case "tool-input-delta":
-            yield* ensureToolCall(value)
+            yield* readToolCall(value.id)
             return
 
           case "tool-input-end": {
-            yield* ensureToolCall(value)
+            yield* readToolCall(value.id)
             return
           }
+          // kilocode_change end
 
           case "tool-call": {
             if (ctx.assistantMessage.summary) {
@@ -617,9 +621,7 @@ const layer = Layer.effect(
             // ctx.stepStart is 0 until `start-step` fires, which would feed a
             // huge bogus `elapsed` into telemetry. Fall back to now().
             const endDate = Date.now()
-            const elapsedMs = Math.round(
-              performance.now() - (ctx.stepStart || performance.now()),
-            )
+            const elapsedMs = Math.round(performance.now() - (ctx.stepStart || performance.now()))
             const startDate = ctx.stepStartDate ?? (Number.isFinite(elapsedMs) ? endDate - elapsedMs : endDate)
             const metrics = KiloSessionProcessor.computeMetrics({
               providerMetadata: value.providerMetadata,
@@ -705,6 +707,7 @@ const layer = Layer.effect(
                 cfg: yield* config.get(),
                 tokens: usage.tokens,
                 model: ctx.model,
+                outputTokenMax: flags.outputTokenMax,
               })
               // kilocode_change end
             ) {
@@ -1020,10 +1023,7 @@ const layer = Layer.effect(
             })
           }
 
-          yield* recover().pipe(
-            Effect.catch(halt),
-            Effect.ensuring(cleanup()),
-          )
+          yield* recover().pipe(Effect.catch(halt), Effect.ensuring(cleanup()))
           // kilocode_change end
 
           if (ctx.needsCompaction) return "compact"
@@ -1064,6 +1064,7 @@ export const node = LayerNode.make({
     Image.node,
     EventV2Bridge.node,
     Database.node,
+    RuntimeFlags.node, // kilocode_change
   ],
 })
 

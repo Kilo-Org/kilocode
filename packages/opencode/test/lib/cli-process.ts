@@ -290,7 +290,8 @@ export function withCliFixture<A, E>(
       const options = runOpts(opts)
       const proc = yield* Effect.acquireRelease(
         Effect.sync(() =>
-          Bun.spawn(["bun", "run", "--conditions=browser", cliEntry, ...runArgs(message, opts)], {
+          Bun.spawn(["bun", ...cliArgs, ...runArgs(message, opts)], {
+            // kilocode_change - cliArgs carries the solid preload
             cwd: home,
             env: { ...process.env, ...env, ...options?.env },
             stdin: "ignore",

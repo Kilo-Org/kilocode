@@ -135,6 +135,8 @@ export const layer: Layer.Layer<Service, never, Requirements> =
 
           const ignore = Effect.fnUntraced(function* (files: string[]) {
             if (!files.length) return new Set<string>()
+            // check-ignore treats a leading colon as pathspec magic but accepts and echoes a protective ./ prefix.
+            const checkIgnorePaths = files.map((item) => (item.startsWith(":") ? `./${item}` : item))
             const check = yield* git(
               [
                 ...quote,
@@ -148,12 +150,18 @@ export const layer: Layer.Layer<Service, never, Requirements> =
                 "-z",
               ],
               {
-                cwd: state.directory,
-                stdin: feed(files),
+                // ls-files --full-name emits worktree-relative candidates, so resolve them from the worktree root
+                cwd: state.worktree,
+                stdin: feed(checkIgnorePaths),
               },
             )
             if (check.code !== 0 && check.code !== 1) return new Set<string>()
-            return new Set(check.text.split("\0").filter(Boolean))
+            return new Set(
+              check.text
+                .split("\0")
+                .filter(Boolean)
+                .map((item) => (item.startsWith("./:") ? item.slice(2) : item)),
+            )
           })
 
           const drop = Effect.fnUntraced(function* (files: string[]) {
@@ -164,7 +172,8 @@ export const layer: Layer.Layer<Service, never, Requirements> =
                 ...args(["rm", "--cached", "-f", "--ignore-unmatch", "--pathspec-from-file=-", "--pathspec-file-nul"]),
               ],
               {
-                cwd: state.directory,
+                // :(top,literal) pathspecs and --full-name candidates are both worktree-relative
+                cwd: state.worktree,
                 stdin: literal(files),
               },
             )

@@ -423,19 +423,8 @@ export const TuiThreadCommand = cmd({
             events: createEventSource(client),
           }
 
-      try {
-        await validateSession({
-          url: transport.url,
-          sessionID: args.session,
-          directory: cwd,
-          fetch: transport.fetch,
-          headers: transport.headers, // kilocode_change
-        })
-      } catch (error) {
-        UI.error(errorMessage(error))
-        process.exitCode = 1
-        return
-      }
+      // kilocode_change - upstream validates here, but --cloud-fork's session id is only local after
+      // the import below; the guarded validateSession further down covers both paths.
       setTimeout(() => {
         client.call("checkUpgrade", { directory: cwd }).catch((err) => console.error("Upgrade check failed", err))
       }, 1000).unref?.()
