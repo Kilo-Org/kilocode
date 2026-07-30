@@ -666,13 +666,11 @@ export const dict = {
   "settings.agentBehaviour.title": "Comportamento do Agente",
   "settings.autoApprove.title": "Aprovação Automática",
   "settings.webTools.title": "Ferramentas da Web",
-  "settings.webTools.description":
-    "Configure a pesquisa na web e a automação do navegador. As solicitações de pesquisa se conectam diretamente ao Exa ou Parallel.",
+  "settings.webTools.description": "Configure a pesquisa na web e a automação do navegador.",
   "settings.webTools.webSearch.enable": "Ativar para todos os provedores",
   "settings.webTools.browserAutomation": "Automação do navegador",
   "settings.webTools.webSearch.title": "Pesquisa na Web",
-  "settings.webTools.webSearch.description":
-    "Disponibilize a pesquisa na web para modelos de todos os provedores. As pesquisas se conectam diretamente ao Exa ou Parallel.",
+  "settings.webTools.webSearch.description": "Disponibilize a pesquisa na web para modelos de todos os provedores.",
   "settings.checkpoints.title": "Pontos de Verificação",
   "settings.display.title": "Exibição",
   "settings.autocomplete.title": "Autocompletar",

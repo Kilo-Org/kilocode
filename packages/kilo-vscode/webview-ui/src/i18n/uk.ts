@@ -656,13 +656,11 @@ export const dict = {
   "settings.agentBehaviour.title": "Поведінка агента",
   "settings.autoApprove.title": "Автоматичне схвалення",
   "settings.webTools.title": "Вебінструменти",
-  "settings.webTools.description":
-    "Налаштуйте вебпошук і автоматизацію браузера. Пошукові запити надсилаються безпосередньо до Exa або Parallel.",
+  "settings.webTools.description": "Налаштуйте вебпошук і автоматизацію браузера.",
   "settings.webTools.webSearch.enable": "Увімкнути для всіх постачальників",
   "settings.webTools.browserAutomation": "Автоматизація браузера",
   "settings.webTools.webSearch.title": "Вебпошук",
-  "settings.webTools.webSearch.description":
-    "Зробіть вебпошук доступним для моделей усіх постачальників. Пошукові запити надсилаються безпосередньо до Exa або Parallel.",
+  "settings.webTools.webSearch.description": "Зробіть вебпошук доступним для моделей усіх постачальників.",
   "settings.checkpoints.title": "Контрольні точки",
   "settings.display.title": "Відображення",
   "settings.autocomplete.title": "Автодоповнення",

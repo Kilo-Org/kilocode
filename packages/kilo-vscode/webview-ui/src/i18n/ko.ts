@@ -658,13 +658,11 @@ export const dict = {
   "settings.agentBehaviour.title": "에이전트 동작",
   "settings.autoApprove.title": "자동 승인",
   "settings.webTools.title": "웹 도구",
-  "settings.webTools.description":
-    "웹 검색 및 브라우저 자동화를 구성합니다. 검색 요청은 Exa 또는 Parallel에 직접 연결됩니다.",
+  "settings.webTools.description": "웹 검색 및 브라우저 자동화를 구성합니다.",
   "settings.webTools.webSearch.enable": "모든 제공업체에 사용",
   "settings.webTools.browserAutomation": "브라우저 자동화",
   "settings.webTools.webSearch.title": "웹 검색",
-  "settings.webTools.webSearch.description":
-    "모든 제공업체의 모델에서 웹 검색을 사용할 수 있도록 합니다. 검색은 Exa 또는 Parallel에 직접 연결됩니다.",
+  "settings.webTools.webSearch.description": "모든 제공업체의 모델에서 웹 검색을 사용할 수 있도록 합니다.",
   "settings.checkpoints.title": "체크포인트",
   "settings.display.title": "디스플레이",
   "settings.autocomplete.title": "자동 완성",

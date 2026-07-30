@@ -666,13 +666,11 @@ export const dict = {
   "settings.agentBehaviour.title": "Agentoppførsel",
   "settings.autoApprove.title": "Automatisk godkjenning",
   "settings.webTools.title": "Nettverktøy",
-  "settings.webTools.description":
-    "Konfigurer nettsøk og nettleserautomatisering. Søk sendes direkte til Exa eller Parallel.",
+  "settings.webTools.description": "Konfigurer nettsøk og nettleserautomatisering.",
   "settings.webTools.webSearch.enable": "Aktiver for alle leverandører",
   "settings.webTools.browserAutomation": "Nettleserautomatisering",
   "settings.webTools.webSearch.title": "Nettsøk",
-  "settings.webTools.webSearch.description":
-    "Gjør nettsøk tilgjengelig for modeller fra alle leverandører. Søk sendes direkte til Exa eller Parallel.",
+  "settings.webTools.webSearch.description": "Gjør nettsøk tilgjengelig for modeller fra alle leverandører.",
   "settings.checkpoints.title": "Kontrollpunkter",
   "settings.display.title": "Visning",
   "settings.autocomplete.title": "Autofullfør",

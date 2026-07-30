@@ -83,7 +83,7 @@ export function ToolsRoute() {
               >
                 <span>
                   <strong>Enable for all providers</strong>
-                  <small>Search requests connect directly to Exa or Parallel.</small>
+                  <small>Search requests use Exa or Parallel.</small>
                   <Show when={websearch()?.reason}>{(reason) => <small>{reason()}</small>}</Show>
                 </span>
                 <span class="tags">

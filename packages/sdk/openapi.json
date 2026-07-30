@@ -29194,10 +29194,6 @@
           "hide_prompt_training_models": {
             "type": "boolean"
           },
-          "web_search": {
-            "type": "boolean",
-            "description": "Make web search available to models from all providers (default: false)"
-          },
           "sandbox": {
             "type": "object",
             "properties": {
@@ -29455,6 +29451,9 @@
             "additionalProperties": {
               "type": "boolean"
             }
+          },
+          "web_search": {
+            "type": "boolean"
           },
           "attachment": {
             "$ref": "#/components/schemas/AttachmentConfig"

@@ -654,13 +654,12 @@ export const dict = {
   "settings.agentBehaviour.title": "Ajan Davranışı",
   "settings.autoApprove.title": "Otomatik Onay",
   "settings.webTools.title": "Web Araçları",
-  "settings.webTools.description":
-    "Web aramasını ve tarayıcı otomasyonunu yapılandırın. Arama istekleri doğrudan Exa veya Parallel'e bağlanır.",
+  "settings.webTools.description": "Web aramasını ve tarayıcı otomasyonunu yapılandırın.",
   "settings.webTools.webSearch.enable": "Tüm Sağlayıcılar İçin Etkinleştir",
   "settings.webTools.browserAutomation": "Tarayıcı Otomasyonu",
   "settings.webTools.webSearch.title": "Web Araması",
   "settings.webTools.webSearch.description":
-    "Web aramasını tüm sağlayıcıların modelleri için kullanılabilir hale getirin. Aramalar doğrudan Exa veya Parallel'e bağlanır.",
+    "Web aramasını tüm sağlayıcıların modelleri için kullanılabilir hale getirin.",
   "settings.checkpoints.title": "Kontrol Noktaları",
   "settings.display.title": "Görünüm",
   "settings.autocomplete.title": "Otomatik Tamamlama",

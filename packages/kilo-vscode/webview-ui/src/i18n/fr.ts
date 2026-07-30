@@ -717,13 +717,12 @@ export const dict = {
   "settings.agentBehaviour.title": "Comportement de l'agent",
   "settings.autoApprove.title": "Approbation automatique",
   "settings.webTools.title": "Outils web",
-  "settings.webTools.description":
-    "Configurez la recherche web et l’automatisation du navigateur. Les requêtes de recherche se connectent directement à Exa ou Parallel.",
+  "settings.webTools.description": "Configurez la recherche web et l’automatisation du navigateur.",
   "settings.webTools.webSearch.enable": "Activer pour tous les fournisseurs",
   "settings.webTools.browserAutomation": "Automatisation du navigateur",
   "settings.webTools.webSearch.title": "Recherche web",
   "settings.webTools.webSearch.description":
-    "Rendez la recherche web disponible pour les modèles de tous les fournisseurs. Les recherches se connectent directement à Exa ou Parallel.",
+    "Rendez la recherche web disponible pour les modèles de tous les fournisseurs.",
   "settings.checkpoints.title": "Points de contrôle",
   "settings.display.title": "Affichage",
   "settings.autocomplete.title": "Autocomplétion",
