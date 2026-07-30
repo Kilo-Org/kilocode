@@ -224,6 +224,14 @@ function active(event: Event, sessionID: string): boolean {
     return false
   }
 
+  // kilocode_change start - session.updated fires for any session in the instance and at
+  // prompt intake before the assistant starts streaming; treating it as turn activity
+  // would let the 250ms idle poll complete the turn before any assistant work runs.
+  if (event.type === "session.updated") {
+    return false
+  }
+  // kilocode_change end
+
   if (event.type !== "session.status") {
     return true
   }
