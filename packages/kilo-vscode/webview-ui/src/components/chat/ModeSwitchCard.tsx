@@ -2,13 +2,14 @@ import { type Component, createEffect, createSignal, onCleanup, Show } from "sol
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import type { PermissionRequest } from "../../types/messages"
+import { useLanguage } from "../../context/language"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 import { MODE_SWITCH_TRANSITION_ICON, type ModeSwitchDetails } from "./mode-switch-ui"
-import { dict as enDict } from "../../i18n/en"
 
 const focusPrompt = () => requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
 
 function Transition(props: { details: ModeSwitchDetails }) {
+  const language = useLanguage()
   return (
     <>
       <div data-slot="mode-switch-transition" aria-label={`${props.details.source} to ${props.details.target}`}>
@@ -19,7 +20,7 @@ function Transition(props: { details: ModeSwitchDetails }) {
         </span>
       </div>
       <div data-slot="mode-switch-reason">
-        <span data-slot="mode-switch-label">Reason</span>
+        <span data-slot="mode-switch-label">{language.t("ui.permission.modeSwitch.reason")}</span>
         <span>{props.details.reason}</span>
       </div>
     </>
@@ -34,6 +35,7 @@ export const ModeSwitchPermissionCard: Component<{
 }> = (props) => {
   const [choice, setChoice] = createSignal<"switch" | "stay">()
   let root!: HTMLDivElement
+  const language = useLanguage()
 
   const pending = () => props.responding || choice() !== undefined
 
@@ -80,28 +82,34 @@ export const ModeSwitchPermissionCard: Component<{
       aria-labelledby={`mode-switch-title-${props.request.id}`}
     >
       <div data-slot="mode-switch-header">
-        <span id={`mode-switch-title-${props.request.id}`}>Agent requests a mode change</span>
+        <span id={`mode-switch-title-${props.request.id}`}>{language.t("ui.permission.modeSwitch.heading")}</span>
       </div>
       <Transition details={props.details} />
-      <p data-slot="mode-switch-reassurance">Your task, files, and conversation continue unchanged.</p>
+      <p data-slot="mode-switch-reassurance">{language.t("ui.permission.modeSwitch.reassurance")}</p>
       <span class="sr-only" data-slot="mode-switch-aria-prompt">
-        {enDict["ui.permission.modeSwitch.prompt"]
-          .replace("{{source}}", props.details.source)
-          .replace("{{target}}", props.details.target)
-          .replace("{{reason}}", props.details.reason)}
+        {language.t("ui.permission.modeSwitch.prompt", {
+          source: props.details.source,
+          target: props.details.target,
+          reason: props.details.reason,
+        })}
       </span>
       <div data-slot="mode-switch-actions">
         <Button variant="primary" size="small" disabled={pending()} onClick={() => decide("switch")}>
-          <Show when={pending() && choice() !== "stay"} fallback={`Switch to ${props.details.target}`}>
-            Switching to {props.details.target}…
+          <Show
+            when={pending() && choice() !== "stay"}
+            fallback={language.t("ui.permission.modeSwitch.switch", { target: props.details.target })}
+          >
+            {language.t("ui.permission.modeSwitch.switching", { target: props.details.target })}
           </Show>
         </Button>
         <Button variant="ghost" size="small" disabled={pending()} onClick={() => decide("stay")}>
-          Stay in {props.details.source}
+          {language.t("ui.permission.modeSwitch.stay", { source: props.details.source })}
         </Button>
       </div>
       <div data-slot="mode-switch-live" role="status" aria-live="polite">
-        <Show when={pending() && choice() !== "stay"}>Switching to {props.details.target}…</Show>
+        <Show when={pending() && choice() !== "stay"}>
+          {language.t("ui.permission.modeSwitch.switching", { target: props.details.target })}
+        </Show>
       </div>
     </div>
   )

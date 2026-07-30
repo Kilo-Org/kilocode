@@ -1300,6 +1300,12 @@ export const dict = {
   "chat.search.searchingHistory": "Pretraživanje ranijih poruka…",
   "ui.permission.toolLabel.modeSwitch": "Promijeni način",
   "ui.permission.modeSwitch.prompt": "Promijeni način sa {{source}} na {{target}} — Razlog: {{reason}}",
+  "ui.permission.modeSwitch.heading": "Agent requests a mode change",
+  "ui.permission.modeSwitch.reason": "Reason",
+  "ui.permission.modeSwitch.reassurance": "Your task, files, and conversation continue unchanged.",
+  "ui.permission.modeSwitch.switch": "Switch to {{target}}",
+  "ui.permission.modeSwitch.switching": "Switching to {{target}}…",
+  "ui.permission.modeSwitch.stay": "Stay in {{source}}",
   "settings.agentBehaviour.modeSwitchReject.title": "Kada se promjena načina otkaže",
   "settings.agentBehaviour.modeSwitchReject.description":
     "Odaberite hoće li se trenutni zadatak nastaviti u postojećem načinu ili zaustaviti.",

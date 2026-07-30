@@ -1290,6 +1290,12 @@ export const dict = {
   "chat.search.searchingHistory": "Søker i tidligere meldinger…",
   "ui.permission.toolLabel.modeSwitch": "Bytt modus",
   "ui.permission.modeSwitch.prompt": "Bytt modus fra {{source}} til {{target}} — Årsak: {{reason}}",
+  "ui.permission.modeSwitch.heading": "Agent requests a mode change",
+  "ui.permission.modeSwitch.reason": "Reason",
+  "ui.permission.modeSwitch.reassurance": "Your task, files, and conversation continue unchanged.",
+  "ui.permission.modeSwitch.switch": "Switch to {{target}}",
+  "ui.permission.modeSwitch.switching": "Switching to {{target}}…",
+  "ui.permission.modeSwitch.stay": "Stay in {{source}}",
   "settings.agentBehaviour.modeSwitchReject.title": "Når et modusbytte avbrytes",
   "settings.agentBehaviour.modeSwitchReject.description":
     "Velg om den gjeldende oppgaven skal fortsette i eksisterende modus eller stoppes.",

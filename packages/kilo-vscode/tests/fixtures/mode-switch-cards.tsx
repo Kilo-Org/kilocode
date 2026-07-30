@@ -13,10 +13,19 @@ Object.assign(globalThis, {
     callback(0)
     return 0
   },
+  // Stub the VS Code webview API so LanguageProvider can resolve its VSCodeContext
+  // without a real extension host.
+  acquireVsCodeApi: () => ({
+    postMessage: () => undefined,
+    getState: () => undefined,
+    setState: () => undefined,
+  }),
 })
 
 const { render } = await import("solid-js/web")
 const { ModeSwitchPermissionCard } = await import("../../webview-ui/src/components/chat/ModeSwitchCard")
+const { VSCodeProvider } = await import("../../webview-ui/src/context/vscode")
+const { LanguageProvider } = await import("../../webview-ui/src/context/language")
 const { ToolRegistry } = await import("@kilocode/kilo-ui/message-part")
 const { registerVscodeToolOverrides } = await import("../../webview-ui/src/components/chat/VscodeToolOverrides")
 
@@ -41,12 +50,16 @@ function permissionDecision(label: string) {
   const calls: unknown[][] = []
   const dispose = render(
     () => (
-      <ModeSwitchPermissionCard
-        request={permission}
-        details={details}
-        responding={false}
-        onDecide={(...args) => calls.push(args)}
-      />
+      <VSCodeProvider>
+        <LanguageProvider>
+          <ModeSwitchPermissionCard
+            request={permission}
+            details={details}
+            responding={false}
+            onDecide={(...args) => calls.push(args)}
+          />
+        </LanguageProvider>
+      </VSCodeProvider>
     ),
     root,
   )
@@ -78,14 +91,18 @@ if (JSON.stringify(stay.calls) !== JSON.stringify([["reject", [], []]]) || !stay
   document.body.append(root)
   const dispose = render(
     () => (
-      <ModeSwitchPermissionCard
-        request={permission}
-        details={details}
-        responding
-        onDecide={() => {
-          throw new Error("Responding card accepted a duplicate action")
-        }}
-      />
+      <VSCodeProvider>
+        <LanguageProvider>
+          <ModeSwitchPermissionCard
+            request={permission}
+            details={details}
+            responding
+            onDecide={() => {
+              throw new Error("Responding card accepted a duplicate action")
+            }}
+          />
+        </LanguageProvider>
+      </VSCodeProvider>
     ),
     root,
   )

@@ -1297,6 +1297,12 @@ export const dict = {
   "chat.search.searchingHistory": "در حال جستجو در پیام‌های قبلی…",
   "ui.permission.toolLabel.modeSwitch": "تغییر حالت",
   "ui.permission.modeSwitch.prompt": "تغییر حالت از {{source}} به {{target}} — دلیل: {{reason}}",
+  "ui.permission.modeSwitch.heading": "Agent requests a mode change",
+  "ui.permission.modeSwitch.reason": "Reason",
+  "ui.permission.modeSwitch.reassurance": "Your task, files, and conversation continue unchanged.",
+  "ui.permission.modeSwitch.switch": "Switch to {{target}}",
+  "ui.permission.modeSwitch.switching": "Switching to {{target}}…",
+  "ui.permission.modeSwitch.stay": "Stay in {{source}}",
   "settings.agentBehaviour.modeSwitchReject.title": "هنگام لغو تغییر حالت",
   "settings.agentBehaviour.modeSwitchReject.description":
     "انتخاب کنید که وظیفه فعلی در حالت موجود ادامه یابد یا متوقف شود.",

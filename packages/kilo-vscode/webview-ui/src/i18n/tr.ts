@@ -1311,6 +1311,12 @@ export const dict = {
   "chat.search.searchingHistory": "Önceki mesajlarda aranıyor…",
   "ui.permission.toolLabel.modeSwitch": "Mod değiştir",
   "ui.permission.modeSwitch.prompt": "Modu {{source}} modundan {{target}} moduna değiştir — Neden: {{reason}}",
+  "ui.permission.modeSwitch.heading": "Agent requests a mode change",
+  "ui.permission.modeSwitch.reason": "Reason",
+  "ui.permission.modeSwitch.reassurance": "Your task, files, and conversation continue unchanged.",
+  "ui.permission.modeSwitch.switch": "Switch to {{target}}",
+  "ui.permission.modeSwitch.switching": "Switching to {{target}}…",
+  "ui.permission.modeSwitch.stay": "Stay in {{source}}",
   "settings.agentBehaviour.modeSwitchReject.title": "Mod değişikliği iptal edildiğinde",
   "settings.agentBehaviour.modeSwitchReject.description":
     "Mevcut görevin geçerli modunda devam mı edeceğini yoksa duracağını mı seçin.",

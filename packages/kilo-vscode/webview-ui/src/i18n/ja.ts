@@ -1287,6 +1287,12 @@ export const dict = {
   "chat.search.searchingHistory": "以前のメッセージを検索しています…",
   "ui.permission.toolLabel.modeSwitch": "モードを切り替え",
   "ui.permission.modeSwitch.prompt": "モードを{{source}}から{{target}}に切り替え — 理由: {{reason}}",
+  "ui.permission.modeSwitch.heading": "Agent requests a mode change",
+  "ui.permission.modeSwitch.reason": "Reason",
+  "ui.permission.modeSwitch.reassurance": "Your task, files, and conversation continue unchanged.",
+  "ui.permission.modeSwitch.switch": "Switch to {{target}}",
+  "ui.permission.modeSwitch.switching": "Switching to {{target}}…",
+  "ui.permission.modeSwitch.stay": "Stay in {{source}}",
   "settings.agentBehaviour.modeSwitchReject.title": "モード切り替えがキャンセルされた場合",
   "settings.agentBehaviour.modeSwitchReject.description":
     "現在のタスクを既存のモードで続行するか、停止するかを選択します。",

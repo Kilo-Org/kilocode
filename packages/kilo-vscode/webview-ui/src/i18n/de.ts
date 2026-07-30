@@ -1326,6 +1326,12 @@ export const dict = {
   "chat.search.searchingHistory": "Frühere Nachrichten werden durchsucht…",
   "ui.permission.toolLabel.modeSwitch": "Modus wechseln",
   "ui.permission.modeSwitch.prompt": "Modus von {{source}} zu {{target}} wechseln — Grund: {{reason}}",
+  "ui.permission.modeSwitch.heading": "Agent requests a mode change",
+  "ui.permission.modeSwitch.reason": "Reason",
+  "ui.permission.modeSwitch.reassurance": "Your task, files, and conversation continue unchanged.",
+  "ui.permission.modeSwitch.switch": "Switch to {{target}}",
+  "ui.permission.modeSwitch.switching": "Switching to {{target}}…",
+  "ui.permission.modeSwitch.stay": "Stay in {{source}}",
   "settings.agentBehaviour.modeSwitchReject.title": "Wenn ein Moduswechsel abgebrochen wird",
   "settings.agentBehaviour.modeSwitchReject.description":
     "Wählen Sie, ob die aktuelle Aufgabe im bisherigen Modus fortgesetzt oder beendet wird.",

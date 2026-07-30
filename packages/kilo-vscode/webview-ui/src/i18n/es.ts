@@ -1313,6 +1313,12 @@ export const dict = {
   "chat.search.searchingHistory": "Buscando en mensajes anteriores…",
   "ui.permission.toolLabel.modeSwitch": "Cambiar modo",
   "ui.permission.modeSwitch.prompt": "Cambiar modo de {{source}} a {{target}} — Motivo: {{reason}}",
+  "ui.permission.modeSwitch.heading": "Agent requests a mode change",
+  "ui.permission.modeSwitch.reason": "Reason",
+  "ui.permission.modeSwitch.reassurance": "Your task, files, and conversation continue unchanged.",
+  "ui.permission.modeSwitch.switch": "Switch to {{target}}",
+  "ui.permission.modeSwitch.switching": "Switching to {{target}}…",
+  "ui.permission.modeSwitch.stay": "Stay in {{source}}",
   "settings.agentBehaviour.modeSwitchReject.title": "Cuando se cancela un cambio de modo",
   "settings.agentBehaviour.modeSwitchReject.description":
     "Elige si la tarea actual continúa en su modo existente o se detiene.",

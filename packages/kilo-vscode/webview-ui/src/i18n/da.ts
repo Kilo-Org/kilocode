@@ -1297,6 +1297,12 @@ export const dict = {
   "chat.search.searchingHistory": "Søger i tidligere beskeder…",
   "ui.permission.toolLabel.modeSwitch": "Skift tilstand",
   "ui.permission.modeSwitch.prompt": "Skift tilstand fra {{source}} til {{target}} — Årsag: {{reason}}",
+  "ui.permission.modeSwitch.heading": "Agent requests a mode change",
+  "ui.permission.modeSwitch.reason": "Reason",
+  "ui.permission.modeSwitch.reassurance": "Your task, files, and conversation continue unchanged.",
+  "ui.permission.modeSwitch.switch": "Switch to {{target}}",
+  "ui.permission.modeSwitch.switching": "Switching to {{target}}…",
+  "ui.permission.modeSwitch.stay": "Stay in {{source}}",
   "settings.agentBehaviour.modeSwitchReject.title": "Når et tilstandsskift annulleres",
   "settings.agentBehaviour.modeSwitchReject.description":
     "Vælg, om den aktuelle opgave skal fortsætte i sin nuværende tilstand eller stoppe.",
