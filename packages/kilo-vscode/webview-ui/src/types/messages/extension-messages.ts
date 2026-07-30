@@ -18,7 +18,14 @@ import type { AnacondaDesktopExtensionMessage } from "../../../../src/shared/ana
 import type { QuestionRequest, SuggestionRequest, TodoItem } from "./questions"
 import type { ModelSelection, Provider, ProviderAuthState } from "./providers"
 import type { AgentInfo, AgentRequirementResult, SkillInfo, SlashCommandInfo } from "./agents"
-import type { BrowserSettings, Config, FeatureFlags, IndexingStatus, KiloEmbeddingModelCatalog } from "./config"
+import type {
+  BrowserSettings,
+  Config,
+  ConfigCollections,
+  FeatureFlags,
+  IndexingStatus,
+  KiloEmbeddingModelCatalog,
+} from "./config"
 import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type { KilocodeNotification, ProfileData } from "./profile"
 import type {
@@ -568,6 +575,7 @@ export interface ConfigLoadedMessage {
   config: Config
   globalConfig?: Config
   projectConfig?: Config
+  collections?: ConfigCollections
   settings?: ExtensionSettings
   features: FeatureFlags
 }
@@ -577,6 +585,7 @@ export interface ConfigUpdatedMessage {
   config: Config
   globalConfig?: Config
   projectConfig?: Config
+  collections?: ConfigCollections
   settings?: ExtensionSettings
   features: FeatureFlags
 }
@@ -866,6 +875,18 @@ export interface AgentManagerRevertWorktreeFileResultMessage {
   file: string
   status: "success" | "error"
   message: string
+}
+
+// Agent Manager: Branch picker data for a diff context (extension → webview)
+export interface AgentManagerDiffBranchesMessage {
+  type: "agentManager.diffBranches"
+  sessionId: string
+  branches: BranchInfo[]
+  defaultBranch: string
+  autoBase?: string
+  currentBase?: string
+  isAuto: boolean
+  currentBranch?: string
 }
 
 // Agent Manager: Worktree git stats push (extension → webview)
@@ -1237,6 +1258,7 @@ export type ExtensionMessage =
   | AgentManagerWorktreeDiffLoadingMessage
   | AgentManagerApplyWorktreeDiffResultMessage
   | AgentManagerRevertWorktreeFileResultMessage
+  | AgentManagerDiffBranchesMessage
   | AgentManagerWorktreeStatsMessage
   | AgentManagerLocalStatsMessage
   | AgentManagerPRStatusMessage

@@ -302,7 +302,6 @@ export const dict = {
 
   "session.tab.review": "İnceleme",
   "session.review.filesChanged": "{{count}} Dosya Değişti",
-  "session.review.change.other": "Değişiklik",
   "session.review.loadingChanges": "Değişiklikler yükleniyor...",
   "session.review.noChanges": "Değişiklik yok",
 
@@ -707,6 +706,13 @@ export const dict = {
   "session.messages.scrollToBottom": "En alta kaydır",
   "session.messages.initializing": "Başlatılıyor...",
   "session.messages.taskStarting": "Başlıyor...",
+  "session.prompts.navLabel": "Komut gezgini",
+  "session.prompts.tick": "Komut {{index}} / {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "Henüz yanıt yok",
+  "session.prompts.queued": "Sırada",
+  "session.prompts.first": "İlk istem",
+  "session.prompts.latest": "En son istem",
+  "session.prompts.overflow": "{{count}} önceki istem",
   "session.status.writingResponse": "Yanıt yazılıyor...",
   "session.status.retry": "Yeniden deneniyor…",
   "session.status.working": "Çalışıyor...",
@@ -733,7 +739,8 @@ export const dict = {
   "dialog.model.noProviders": "Sağlayıcı yok",
 
   "prompt.placeholder.connecting": "Sunucuya bağlanılıyor...",
-  "prompt.placeholder.default": "Bir mesaj yazın... (Göndermek için Enter, yeni satır için Shift+Enter)",
+  "prompt.placeholder.default":
+    "Bir mesaj yazın, dosyaları belirtmek için @ kullanın... (Göndermek için Enter, yeni satır için Shift+Enter)",
   "prompt.placeholder.error": "Bağlantı başarısız. Çıktı panelini kontrol edin veya uzantıyı yeniden başlatın.",
 
   "context.usage.sessionCost": "Oturum maliyeti",

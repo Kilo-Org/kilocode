@@ -310,7 +310,6 @@ export const dict = {
 
   "session.tab.review": "Gjennomgang",
   "session.review.filesChanged": "{{count}} filer endret",
-  "session.review.change.other": "Endringer",
   "session.review.loadingChanges": "Laster endringer...",
   "session.review.noChanges": "Ingen endringer",
   "session.messages.loadingEarlier": "Laster inn tidligere meldinger...",
@@ -683,6 +682,13 @@ export const dict = {
   "session.messages.scrollToBottom": "Rull til bunnen",
   "session.messages.initializing": "Initialiserer...",
   "session.messages.taskStarting": "Starter...",
+  "session.prompts.navLabel": "Ledetekstnavigering",
+  "session.prompts.tick": "Ledetekst {{index}} av {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "Ingen svar ennå",
+  "session.prompts.queued": "I kø",
+  "session.prompts.first": "Første ledetekst",
+  "session.prompts.latest": "Siste ledetekst",
+  "session.prompts.overflow": "{{count}} tidligere ledetekster",
   "session.status.writingResponse": "Skriver svar…",
   "session.status.retry": "Prøver på nytt…",
   "session.status.working": "Arbeider…",
@@ -710,7 +716,8 @@ export const dict = {
 
   "prompt.placeholder.connecting": "Kobler til server...",
   "prompt.placeholder.error": "Tilkobling mislyktes. Sjekk utdatapanelet eller start utvidelsen på nytt.",
-  "prompt.placeholder.default": "Skriv en melding... (Enter for å sende, Shift+Enter for ny linje)",
+  "prompt.placeholder.default":
+    "Skriv en melding, @ for å nevne filer... (Enter for å sende, Shift+Enter for ny linje)",
 
   "context.usage.sessionCost": "Sesjonskostnad",
   "context.usage.olderSessions": "{{count}} eldre sesjoner",

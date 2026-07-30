@@ -312,7 +312,6 @@ export const dict = {
 
   "session.tab.review": "Überprüfung",
   "session.review.filesChanged": "{{count}} Dateien geändert",
-  "session.review.change.other": "Änderungen",
   "session.review.loadingChanges": "Lade Änderungen...",
   "session.review.noChanges": "Keine Änderungen",
   "session.messages.loadingEarlier": "Lade frühere Nachrichten...",
@@ -734,6 +733,13 @@ export const dict = {
   "session.messages.scrollToBottom": "Nach unten scrollen",
   "session.messages.initializing": "Initialisierung...",
   "session.messages.taskStarting": "Wird gestartet...",
+  "session.prompts.navLabel": "Prompt-Navigation",
+  "session.prompts.tick": "Prompt {{index}} von {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "Noch keine Antwort",
+  "session.prompts.queued": "In Warteschlange",
+  "session.prompts.first": "Erster Prompt",
+  "session.prompts.latest": "Neuester Prompt",
+  "session.prompts.overflow": "{{count}} frühere Prompts",
   "session.status.writingResponse": "Antwort wird geschrieben…",
   "session.status.retry": "Erneuter Versuch…",
   "session.status.working": "Wird bearbeitet…",
@@ -762,7 +768,8 @@ export const dict = {
   "prompt.placeholder.connecting": "Verbindung zum Server wird hergestellt...",
   "prompt.placeholder.error":
     "Verbindung fehlgeschlagen. Überprüfen Sie das Ausgabepanel oder starten Sie die Erweiterung neu.",
-  "prompt.placeholder.default": "Nachricht eingeben... (Enter zum Senden, Shift+Enter für neue Zeile)",
+  "prompt.placeholder.default":
+    "Nachricht eingeben, @ um Dateien zu erwähnen... (Enter zum Senden, Shift+Enter für neue Zeile)",
 
   "context.usage.sessionCost": "Sitzungskosten",
   "context.usage.olderSessions": "{{count}} ältere Sitzungen",

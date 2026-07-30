@@ -301,7 +301,6 @@ export const dict = {
 
   "session.tab.review": "ตรวจสอบ",
   "session.review.filesChanged": "{{count}} ไฟล์ที่เปลี่ยนแปลง",
-  "session.review.change.other": "การเปลี่ยนแปลง",
   "session.review.loadingChanges": "กำลังโหลดการเปลี่ยนแปลง...",
   "session.review.noChanges": "ไม่มีการเปลี่ยนแปลง",
 
@@ -712,6 +711,13 @@ export const dict = {
   "session.messages.scrollToBottom": "เลื่อนไปด้านล่าง",
   "session.messages.initializing": "กำลังเริ่มต้น...",
   "session.messages.taskStarting": "กำลังเริ่มทำงาน...",
+  "session.prompts.navLabel": "ตัวนำทางพรอมต์",
+  "session.prompts.tick": "พรอมต์ {{index}} จาก {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "ยังไม่มีการตอบกลับ",
+  "session.prompts.queued": "อยู่ในคิว",
+  "session.prompts.first": "พรอมต์แรก",
+  "session.prompts.latest": "พรอมต์ล่าสุด",
+  "session.prompts.overflow": "พรอมต์ก่อนหน้า {{count}} รายการ",
   "session.status.writingResponse": "กำลังเขียนคำตอบ...",
   "session.status.retry": "กำลังลองใหม่…",
   "session.status.working": "กำลังทำงาน...",
@@ -739,7 +745,7 @@ export const dict = {
 
   "prompt.placeholder.connecting": "กำลังเชื่อมต่อกับเซิร์ฟเวอร์...",
   "prompt.placeholder.error": "การเชื่อมต่อล้มเหลว ตรวจสอบแผงเอาต์พุตหรือรีสตาร์ทส่วนขยาย",
-  "prompt.placeholder.default": "พิมพ์ข้อความ... (Enter เพื่อส่ง, Shift+Enter เพื่อขึ้นบรรทัดใหม่)",
+  "prompt.placeholder.default": "พิมพ์ข้อความ, @ เพื่ออ้างถึงไฟล์... (Enter เพื่อส่ง, Shift+Enter เพื่อขึ้นบรรทัดใหม่)",
 
   "context.usage.sessionCost": "ค่าใช้จ่ายเซสชัน",
   "context.usage.olderSessions": "{{count}} เซสชันก่อนหน้า",

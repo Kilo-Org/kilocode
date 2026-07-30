@@ -4,10 +4,12 @@ import type { KiloClient, Session } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { getErrorMessage } from "../kilo-provider-utils"
 import { resolveLocalDiffTarget } from "../diff/shared/target"
+import { DiffSourceCatalog } from "../diff/sources/catalog"
 import { getDiffMarkdownRender, setDiffMarkdownRender } from "../review-settings"
 import { isAbsolutePath } from "../path-utils"
 import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
 import { remoteRef, WorktreeStateManager, type Worktree } from "./WorktreeStateManager"
+import { composeDiffId, normalizeScope } from "./diff-scope"
 import { handleSection } from "./section-handler"
 import { normalizeBaseBranch } from "./base-branch"
 import { GitStatsPoller, type LocalStats, type WorktreePresenceResult, type WorktreeStats } from "./GitStatsPoller"
@@ -71,6 +73,7 @@ export class AgentManagerProvider implements Disposable {
   private orchestration: AgentManagerOrchestrationBridge
   private gitOps: GitOps
   private diffs: WorktreeDiffController
+  private diffCatalog: DiffSourceCatalog
   private naming: BranchNamingController
   private staleWorktreeIds = new Set<string>()
   private toolRequests = new Set<string>()
@@ -103,6 +106,7 @@ export class AgentManagerProvider implements Disposable {
     )
     this.terminalRouter = new TerminalRouter({
       getClient: () => this.connectionService.getClient(),
+      getClientAsync: () => this.connectionService.getClientAsync(this.getRoot()),
       getServerConfig: () => this.connectionService.getServerConfig() ?? undefined,
       getRoot: () => this.getRoot(),
       getWorktreePath: (id) => this.getStateManager()?.getWorktree(id)?.path,
@@ -148,12 +152,13 @@ export class AgentManagerProvider implements Disposable {
       log: (msg) => this.log(msg),
     })
     const local = createLocalDiff(this.gitOps, (...args) => this.log(...args))
+    this.diffCatalog = new DiffSourceCatalog(this.connectionService)
     this.diffs = new WorktreeDiffController({
       getState: () => this.getStateManager(),
       getRoot: () => this.getRoot(),
       getStateReady: () => this.stateReady,
+      catalog: this.diffCatalog,
       git: this.gitOps,
-      localDiff: local.summary,
       localDiffFile: local.file,
       post: (msg) => this.postToWebview(msg),
       log: (...args) => this.log(...args),
@@ -593,6 +598,10 @@ export class AgentManagerProvider implements Disposable {
       this.terminalManager.showLocalTerminal()
       return null
     }
+    if (m.type === "agentManager.showWorktreeTerminal") {
+      this.terminalManager.showWorktreeTerminal(m.worktreeId, this.state)
+      return null
+    }
     if (m.type === "agentManager.openWorktree") {
       this.openWorktreeDirectory(m.worktreeId)
       return null
@@ -679,11 +688,11 @@ export class AgentManagerProvider implements Disposable {
 
   private onDiffMessage(m: AgentManagerInMessage): Record<string, unknown> | null | undefined {
     if (m.type === "agentManager.requestWorktreeDiff") {
-      void this.diffs.request(m.sessionId)
+      void this.diffs.request(composeDiffId(m.sessionId, normalizeScope(m.scope)))
       return null
     }
     if (m.type === "agentManager.requestWorktreeDiffFile") {
-      void this.diffs.requestFile(m.sessionId, m.file)
+      void this.diffs.requestFile(composeDiffId(m.sessionId, normalizeScope(m.scope)), m.file)
       return null
     }
     if (m.type === "agentManager.applyWorktreeDiff") {
@@ -691,21 +700,50 @@ export class AgentManagerProvider implements Disposable {
       return null
     }
     if (m.type === "agentManager.revertWorktreeFile") {
-      void this.diffs.revert(m.sessionId, m.file)
+      void this.diffs.revert(composeDiffId(m.sessionId, normalizeScope(m.scope)), m.file)
       return null
     }
     if (m.type === "agentManager.startDiffWatch") {
-      this.diffs.start(m.sessionId)
+      this.diffs.start(composeDiffId(m.sessionId, normalizeScope(m.scope)))
       return null
     }
     if (m.type === "agentManager.stopDiffWatch") {
       this.diffs.stop()
       return null
     }
+    if (m.type === "agentManager.requestDiffBranches") {
+      void this.sendDiffBranches(m.sessionId, m.scope)
+      return null
+    }
+    if (m.type === "agentManager.setDiffBaseBranch") {
+      void this.diffs.setBase(composeDiffId(m.sessionId, normalizeScope(m.scope)), m.branch).then(() => {
+        void this.sendDiffBranches(m.sessionId, m.scope)
+      })
+      return null
+    }
     if (m.type === "agentManager.openFile") {
       this.openWorktreeFile(m.sessionId, m.filePath, m.line, m.column)
       return null
     }
+  }
+
+  private async sendDiffBranches(sessionId: string, scope?: string): Promise<void> {
+    const id = composeDiffId(sessionId, normalizeScope(scope))
+    const result = await this.diffs.branches(id).catch((err) => {
+      this.log("Failed to list diff branches:", err instanceof Error ? err.message : String(err))
+      return undefined
+    })
+    if (!result) return
+    this.postToWebview({
+      type: "agentManager.diffBranches",
+      sessionId: id,
+      branches: result.branches,
+      defaultBranch: result.defaultBranch,
+      autoBase: result.autoBase,
+      currentBase: result.currentBase,
+      isAuto: result.isAuto,
+      currentBranch: result.currentBranch,
+    })
   }
 
   private onBridgeMessage(m: AgentManagerInMessage): Record<string, unknown> | null | undefined {
@@ -720,6 +758,13 @@ export class AgentManagerProvider implements Disposable {
   }
 
   private onRequestState(): void {
+    // requestState fires from the webview's onMount, and a freshly mounted
+    // webview has no terminal records — any PTYs the router still tracks
+    // belong to a previous webview instance (reload or crash) and are
+    // unreachable orphans. Kill them here rather than leaking shells until
+    // the panel itself is disposed. In-flight creates from the dying
+    // instance are reaped by the router's generation guard.
+    void this.terminalRouter.dispose()
     void this.stateReady
       ?.then(() => {
         // When the folder is not a git repo (or has no folder open),
@@ -906,8 +951,9 @@ export class AgentManagerProvider implements Disposable {
       case "agentManager.toggleSectionCollapsed":
       case "agentManager.moveToSection":
       case "agentManager.moveSection":
-      case "agentManager.terminal.create":
         return true
+      case "agentManager.terminal.create":
+        return m.worktreeId !== null
       default:
         return false
     }
@@ -1914,6 +1960,7 @@ export class AgentManagerProvider implements Disposable {
     this.orchestration.dispose()
     this.visiblePresence.clear()
     this.diffs.stop()
+    this.diffCatalog.dispose()
     this.naming.dispose()
     this.statsPoller.stop()
     this.gitOps.dispose()

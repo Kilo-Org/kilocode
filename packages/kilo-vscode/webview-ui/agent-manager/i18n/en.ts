@@ -32,6 +32,7 @@ export const dict = {
   "agentManager.section.moveDown": "Move Down",
 
   "agentManager.hoverCard.branch": "BRANCH",
+  "agentManager.hoverCard.worktree": "Worktree",
   "agentManager.hoverCard.base": "Base",
   "agentManager.hoverCard.sessions": "Sessions",
   "agentManager.hoverCard.files": "Files",
@@ -60,9 +61,9 @@ export const dict = {
   "agentManager.sidebarSearch.contexts": "LOCAL & WORKTREES",
 
   "agentManager.terminal.new": "New Terminal Tab",
+  "agentManager.terminal.add": "New terminal",
   "agentManager.terminal.ended": "terminal ended — close tab to dismiss",
   "agentManager.terminal.connectionError": "terminal connection error",
-  "agentManager.terminal.kill": "Kill terminal",
   "agentManager.terminal.empty": "No terminal here yet",
   "agentManager.terminal.start": "Start terminal",
   "agentManager.terminal.destination": "Choose what the terminal button opens",
@@ -142,6 +143,7 @@ export const dict = {
   "agentManager.diff.revertFile": "Revert file",
   "agentManager.diff.revertSuccess": "File reverted",
   "agentManager.diff.revertError": "Revert failed",
+  "agentManager.diff.applyBranchOnly": "Apply works on the full branch diff. Switch to the Branch scope to apply.",
   "agentManager.open.button": "Open",
   "agentManager.open.tooltip": "Open this worktree in VS Code",
   "agentManager.apply.globalButton": "Apply",

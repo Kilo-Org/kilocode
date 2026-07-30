@@ -304,7 +304,6 @@ export const dict = {
 
   "session.tab.review": "Przegląd",
   "session.review.filesChanged": "Zmieniono {{count}} plików",
-  "session.review.change.other": "Zmiany",
   "session.review.loadingChanges": "Ładowanie zmian...",
   "session.review.noChanges": "Brak zmian",
   "session.messages.loadingEarlier": "Ładowanie wcześniejszych wiadomości...",
@@ -679,6 +678,13 @@ export const dict = {
   "session.messages.scrollToBottom": "Przewiń na dół",
   "session.messages.initializing": "Inicjalizacja...",
   "session.messages.taskStarting": "Uruchamianie...",
+  "session.prompts.navLabel": "Nawigator promptów",
+  "session.prompts.tick": "Prompt {{index}} z {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "Jeszcze brak odpowiedzi",
+  "session.prompts.queued": "W kolejce",
+  "session.prompts.first": "Pierwszy prompt",
+  "session.prompts.latest": "Ostatni prompt",
+  "session.prompts.overflow": "{{count}} wcześniejszych promptów",
   "session.status.writingResponse": "Pisanie odpowiedzi…",
   "session.status.retry": "Ponawianie…",
   "session.status.working": "Pracuję…",
@@ -706,7 +712,8 @@ export const dict = {
 
   "prompt.placeholder.connecting": "Łączenie z serwerem...",
   "prompt.placeholder.error": "Połączenie nie powiodło się. Sprawdź panel wyjściowy lub uruchom ponownie rozszerzenie.",
-  "prompt.placeholder.default": "Wpisz wiadomość... (Enter, aby wysłać, Shift+Enter dla nowej linii)",
+  "prompt.placeholder.default":
+    "Wpisz wiadomość, @ aby wspomnieć pliki... (Enter, aby wysłać, Shift+Enter dla nowej linii)",
 
   "context.usage.sessionCost": "Koszt sesji",
   "context.usage.olderSessions": "{{count}} starszych sesji",

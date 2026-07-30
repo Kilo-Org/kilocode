@@ -306,7 +306,6 @@ export const dict = {
 
   "session.tab.review": "Revue",
   "session.review.filesChanged": "{{count}} fichiers modifiés",
-  "session.review.change.other": "Modifications",
   "session.review.loadingChanges": "Chargement des modifications...",
   "session.review.noChanges": "Aucune modification",
   "session.messages.loadingEarlier": "Chargement des messages précédents...",
@@ -734,6 +733,13 @@ export const dict = {
   "session.messages.scrollToBottom": "Défiler vers le bas",
   "session.messages.initializing": "Initialisation...",
   "session.messages.taskStarting": "Démarrage...",
+  "session.prompts.navLabel": "Navigateur de prompts",
+  "session.prompts.tick": "Prompt {{index}} sur {{total}} : {{prompt}}",
+  "session.prompts.noAnswer": "Pas encore de réponse",
+  "session.prompts.queued": "En attente",
+  "session.prompts.first": "Premier prompt",
+  "session.prompts.latest": "Dernier prompt",
+  "session.prompts.overflow": "{{count}} prompts précédents",
   "session.status.writingResponse": "Rédaction de la réponse…",
   "session.status.retry": "Nouvelle tentative…",
   "session.status.working": "En cours…",
@@ -761,7 +767,8 @@ export const dict = {
 
   "prompt.placeholder.connecting": "Connexion au serveur...",
   "prompt.placeholder.error": "Échec de la connexion. Vérifiez le panneau de sortie ou redémarrez l'extension.",
-  "prompt.placeholder.default": "Tapez un message... (Entrée pour envoyer, Maj+Entrée pour un saut de ligne)",
+  "prompt.placeholder.default":
+    "Tapez un message, @ pour mentionner des fichiers... (Entrée pour envoyer, Maj+Entrée pour un saut de ligne)",
 
   "context.usage.sessionCost": "Coût de la session",
   "context.usage.olderSessions": "{{count}} sessions précédentes",

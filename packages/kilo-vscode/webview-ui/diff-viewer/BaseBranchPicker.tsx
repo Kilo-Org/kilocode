@@ -96,7 +96,7 @@ export const BaseBranchPicker: Component<BaseBranchPickerProps> = (props) => {
         placement="bottom-start"
         flip
         trigger={
-          <button class="am-selector-trigger diff-base-trigger" type="button">
+          <button class="am-selector-trigger diff-inline-trigger" type="button" title={triggerLabel()}>
             <span class="am-selector-left">
               <Show when={!props.currentBranch}>
                 <Icon name="branch" size="small" />

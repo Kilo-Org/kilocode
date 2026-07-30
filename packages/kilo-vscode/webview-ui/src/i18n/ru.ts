@@ -302,7 +302,6 @@ export const dict = {
 
   "session.tab.review": "Обзор",
   "session.review.filesChanged": "{{count}} файлов изменено",
-  "session.review.change.other": "Изменения",
   "session.review.loadingChanges": "Загрузка изменений...",
   "session.review.noChanges": "Нет изменений",
   "session.messages.loadingEarlier": "Загрузка предыдущих сообщений...",
@@ -720,6 +719,13 @@ export const dict = {
   "session.messages.scrollToBottom": "Прокрутить вниз",
   "session.messages.initializing": "Инициализация...",
   "session.messages.taskStarting": "Запуск...",
+  "session.prompts.navLabel": "Навигатор промптов",
+  "session.prompts.tick": "Промпт {{index}} из {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "Ответа пока нет",
+  "session.prompts.queued": "В очереди",
+  "session.prompts.first": "Первый запрос",
+  "session.prompts.latest": "Последний запрос",
+  "session.prompts.overflow": "{{count}} предыдущих запросов",
   "session.status.writingResponse": "Пишу ответ…",
   "session.status.retry": "Повторная попытка…",
   "session.status.working": "Работаю…",
@@ -747,7 +753,8 @@ export const dict = {
 
   "prompt.placeholder.connecting": "Подключение к серверу...",
   "prompt.placeholder.error": "Не удалось подключиться. Проверьте панель вывода или перезапустите расширение.",
-  "prompt.placeholder.default": "Введите сообщение... (Enter для отправки, Shift+Enter для новой строки)",
+  "prompt.placeholder.default":
+    "Введите сообщение, @ чтобы упомянуть файлы... (Enter для отправки, Shift+Enter для новой строки)",
 
   "context.usage.sessionCost": "Стоимость сессии",
   "context.usage.olderSessions": "{{count}} предыдущих сессий",

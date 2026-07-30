@@ -32,6 +32,7 @@ export const dict = {
   "agentManager.section.moveDown": "Перемістити вниз",
 
   "agentManager.hoverCard.branch": "ГІЛКА",
+  "agentManager.hoverCard.worktree": "Worktree",
   "agentManager.hoverCard.base": "База",
   "agentManager.hoverCard.sessions": "Сесії",
   "agentManager.hoverCard.files": "Файли",
@@ -63,7 +64,7 @@ export const dict = {
   "agentManager.terminal.new": "Нова вкладка термінала",
   "agentManager.terminal.ended": "термінал завершено — закрийте вкладку, щоб відхилити",
   "agentManager.terminal.connectionError": "помилка з'єднання термінала",
-  "agentManager.terminal.kill": "Завершити термінал",
+  "agentManager.terminal.add": "Новий термінал",
   "agentManager.terminal.empty": "Тут ще немає термінала",
   "agentManager.terminal.start": "Запустити термінал",
   "agentManager.terminal.destination": "Виберіть, що відкриватиме кнопка термінала",
@@ -145,6 +146,8 @@ export const dict = {
   "agentManager.diff.revertFile": "Скасувати зміни файлу",
   "agentManager.diff.revertSuccess": "Файл відновлено",
   "agentManager.diff.revertError": "Не вдалося відновити",
+  "agentManager.diff.applyBranchOnly":
+    "Застосування працює лише з повним diff гілки. Щоб застосувати зміни, перемкніться на область Branch.",
   "agentManager.open.button": "Відкрити",
   "agentManager.open.tooltip": "Відкрити це робоче дерево у VS Code",
   "agentManager.apply.globalButton": "Застосувати",
