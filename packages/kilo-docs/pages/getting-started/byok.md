@@ -88,12 +88,6 @@ Your IAM user or role must have the following permissions:
 - `bedrock:InvokeModel`
 - `bedrock:InvokeModelWithResponseStream`
 
-### NVIDIA configuration
-
-Create an API key in the [NVIDIA API Catalog](https://build.nvidia.com/settings/api-keys), then add it as the NVIDIA provider.
-
-Models that do not support tool calling are excluded, as they are unlikely to provide useful results.
-
 ## How Bring Your Own Key works
 
 - When you use the **Kilo Gateway** provider, Kilo checks if there's a BYOK key for the selected model's provider.
