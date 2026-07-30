@@ -18,10 +18,12 @@ export function revertTitleKind(title) {
  * Returns [{ repo, number, url }] with url = `https://github.com/${repo}/pull/${number}`.
  * Handles the conventional trailer form: a line starting with `Reverts` (case-insensitive),
  * e.g. `Reverts #12249 and #12481.`, `Reverts Kilo-Org/cloud#42.`, comma-separated lists,
- * and several such lines in one body.
+ * several such lines in one body, and bulleted/quoted single-line trailers
+ * (`- Reverts #12249`, `> Reverts #12249`).
  * NOT handled (documented limitation): `This reverts commit <sha>.` (no PR number),
  * mid-sentence forms (`This reverts #5.`), narrative mentions (`Revert the fix in #99999`
- * is prose, not a trailer — must NOT produce a target), and multi-line lists
+ * is prose, not a trailer — must NOT produce a target), `Revertsomething #5` (prose glued
+ * to the word — `\b` word boundary makes it inert), and multi-line lists
  * (`Reverts:\n- #1\n- #2`).
  */
 export function parseRevertTargets(body, defaultRepo) {
@@ -29,7 +31,7 @@ export function parseRevertTargets(body, defaultRepo) {
   const repoDefault = String(defaultRepo ?? "")
   const seen = new Set()
   const out = []
-  const lineRe = /^reverts[ \t:]*([^\n]*)/gim
+  const lineRe = /^[ \t>*-]*reverts\b[ \t:]*([^\n]*)/gim
   let lineMatch
   while ((lineMatch = lineRe.exec(text)) !== null) {
     const capture = lineMatch[1] ?? ""
@@ -51,6 +53,7 @@ export function parseRevertTargets(body, defaultRepo) {
 /**
  * revertSignals: [{ url, merged_at, targets: [{ repo, number, url }] }]
  * Returns Map<targetUrl, { url, merged_at }> — the annotation for each reverted PR.
+ * Map keys are lowercased target urls; values keep signal.url as authored.
  * Revert-of-revert: a signal whose own url is itself a target of another signal is
  * dropped entirely (a re-land: net effect zero — one set lookup, no chain walking).
  */
@@ -59,15 +62,15 @@ export function computeRevertAnnotations(revertSignals) {
   const revertedUrls = new Set()
   for (const signal of signals) {
     for (const t of signal?.targets ?? []) {
-      if (t?.url) revertedUrls.add(t.url)
+      if (t?.url) revertedUrls.add(t.url.toLowerCase())
     }
   }
   const annotations = new Map()
   for (const signal of signals) {
-    if (!signal?.url || revertedUrls.has(signal.url)) continue
+    if (!signal?.url || revertedUrls.has(signal.url.toLowerCase())) continue
     for (const t of signal.targets ?? []) {
       if (!t?.url) continue
-      annotations.set(t.url, { url: signal.url, merged_at: signal.merged_at })
+      annotations.set(t.url.toLowerCase(), { url: signal.url, merged_at: signal.merged_at })
     }
   }
   return annotations
@@ -76,13 +79,15 @@ export function computeRevertAnnotations(revertSignals) {
 /**
  * Applies computeRevertAnnotations to digest entries in place: an entry whose url
  * was reverted gains `reverted_by: { url, merged_at }` (the reverter).
+ * Lookup is case-insensitive; applied pairs still report entry.url (canonical).
  * Returns applied [targetUrl, reverterUrl] pairs (digest entries only) for reporting.
  */
 export function applyRevertAnnotations(digest, revertSignals) {
   const annotations = computeRevertAnnotations(revertSignals)
   const applied = []
   for (const entry of digest ?? []) {
-    const ann = annotations.get(entry?.url)
+    if (!entry?.url) continue
+    const ann = annotations.get(entry.url.toLowerCase())
     if (!ann) continue
     entry.reverted_by = { url: ann.url, merged_at: ann.merged_at }
     applied.push([entry.url, ann.url])

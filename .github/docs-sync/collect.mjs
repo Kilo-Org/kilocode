@@ -132,6 +132,8 @@ for (const fullRepo of SOURCE_REPOS) {
 }
 
 const applied = applyRevertAnnotations(digest, reverts)
+const annotatedTargets = new Set(applied.map(([target]) => target.toLowerCase()))
+const silentReverts = reverts.filter((r) => !r.targets.some((t) => annotatedTargets.has(t.url.toLowerCase())))
 
 digest.sort((a, b) => new Date(a.merged_at) - new Date(b.merged_at))
 
@@ -160,5 +162,16 @@ const summaryLines = [
 ]
 if (applied.length > 0) {
   summaryLines.push("", "**revert annotations:**", ...applied.map(([target, reverter]) => `- ${target} — reverted by ${reverter}`))
+}
+if (silentReverts.length > 0) {
+  summaryLines.push(
+    "",
+    "**reverts intercepted (no in-window annotation):**",
+    ...silentReverts.map((r) =>
+      r.targets.length > 0
+        ? `- ${r.url} (targets: ${r.targets.map((t) => t.url).join(", ")})`
+        : `- ${r.url} (no parseable targets)`,
+    ),
+  )
 }
 appendSummary(summaryLines.join("\n"))

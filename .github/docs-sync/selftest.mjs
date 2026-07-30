@@ -1482,7 +1482,22 @@ Reverts #12249 and #12481.
   assert.deepEqual(parseRevertTargets("This reverts #5.", defaultRepo), [])
   assert.deepEqual(parseRevertTargets("No revert trailer here at all.", defaultRepo), [])
 
+  // bulleted / quoted single-line trailers
+  {
+    const targets = parseRevertTargets("- Reverts #7.", defaultRepo)
+    assert.equal(targets.length, 1)
+    assert.equal(targets[0].number, 7)
+  }
+  {
+    const targets = parseRevertTargets("> Reverts #8.", defaultRepo)
+    assert.equal(targets.length, 1)
+    assert.equal(targets[0].number, 8)
+  }
+  // word-boundary: prose glued to "Reverts" is not a trailer
+  assert.deepEqual(parseRevertTargets("Revertsomething #5", defaultRepo), [])
+
   // --- computeRevertAnnotations ---
+  // Map keys are lowercased; lookups must use .toLowerCase()
   const fUrl = "https://github.com/Kilo-Org/kilocode/pull/100"
   const r1Url = "https://github.com/Kilo-Org/kilocode/pull/200"
   const r2Url = "https://github.com/Kilo-Org/kilocode/pull/300"
@@ -1499,7 +1514,7 @@ Reverts #12249 and #12481.
       },
     ])
     assert.equal(annotations.size, 1)
-    assert.deepEqual(annotations.get(fUrl), { url: r1Url, merged_at: mergedAt })
+    assert.deepEqual(annotations.get(fUrl.toLowerCase()), { url: r1Url, merged_at: mergedAt })
   }
 
   {
@@ -1515,8 +1530,8 @@ Reverts #12249 and #12481.
       },
     ])
     assert.equal(annotations.size, 2)
-    assert.deepEqual(annotations.get(fUrl), { url: r1Url, merged_at: mergedAt })
-    assert.deepEqual(annotations.get(f2Url), { url: r1Url, merged_at: mergedAt })
+    assert.deepEqual(annotations.get(fUrl.toLowerCase()), { url: r1Url, merged_at: mergedAt })
+    assert.deepEqual(annotations.get(f2Url.toLowerCase()), { url: r1Url, merged_at: mergedAt })
   }
 
   {
@@ -1533,8 +1548,8 @@ Reverts #12249 and #12481.
         targets: [{ repo: "Kilo-Org/kilocode", number: 200, url: r1Url }],
       },
     ])
-    assert.equal(annotations.has(fUrl), false)
-    assert.deepEqual(annotations.get(r1Url), { url: r2Url, merged_at: mergedAt2 })
+    assert.equal(annotations.has(fUrl.toLowerCase()), false)
+    assert.deepEqual(annotations.get(r1Url.toLowerCase()), { url: r2Url, merged_at: mergedAt2 })
   }
 
   {
@@ -1577,6 +1592,23 @@ Reverts #12249 and #12481.
     ])
     assert.equal(digest[0].reverted_by, undefined)
     assert.deepEqual(applied, [])
+  }
+
+  {
+    // case-insensitive url matching: lowercase signal target vs canonical digest entry
+    const canonical = "https://github.com/Kilo-Org/kilocode/pull/12249"
+    const lowerTarget = "https://github.com/kilo-org/kilocode/pull/12249"
+    const reverter = "https://github.com/Kilo-Org/kilocode/pull/12497"
+    const digest = [{ url: canonical, title: "feat stream" }]
+    const applied = applyRevertAnnotations(digest, [
+      {
+        url: reverter,
+        merged_at: mergedAt,
+        targets: [{ repo: "kilo-org/kilocode", number: 12249, url: lowerTarget }],
+      },
+    ])
+    assert.deepEqual(digest[0].reverted_by, { url: reverter, merged_at: mergedAt })
+    assert.deepEqual(applied, [[canonical, reverter]])
   }
 
   // --- source-order guards (case-5 style) ---
