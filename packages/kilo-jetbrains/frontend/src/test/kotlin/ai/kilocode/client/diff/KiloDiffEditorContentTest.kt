@@ -3,6 +3,7 @@ package ai.kilocode.client.diff
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.DiffStatBadge
 import ai.kilocode.rpc.dto.DiffFileDto
+import com.intellij.openapi.actionSystem.ActionToolbar
 import com.intellij.openapi.actionSystem.Separator
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
@@ -174,12 +175,17 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test tree toolbar action order`() {
+    fun `test tree toolbar installs actions in order`() {
         val parent = Disposer.newDisposable()
         try {
+            // Assert against the toolbar the view actually installs (not a freshly built group), so
+            // this guards the real regression: the tree toolbar losing or rewiring its actions.
             val view = view(files(), parent)
             val tree = components(view).filterIsInstance<Tree>().single()
-            val actions = treeToolbarGroup(tree) {}.getChildren(null).toList()
+            val scroll = SwingUtilities.getAncestorOfClass(JBScrollPane::class.java, tree) as JBScrollPane
+            val row = (scroll.parent.layout as BorderLayout).getLayoutComponent(BorderLayout.NORTH) as Container
+            val toolbar = (row.layout as BorderLayout).getLayoutComponent(BorderLayout.WEST) as ActionToolbar
+            val actions = toolbar.actionGroup.getChildren(null).toList()
             assertEquals(KiloBundle.message("diff.editor.refresh"), actions[0].templatePresentation.text)
             assertTrue(actions[1] is Separator)
             assertEquals(KiloBundle.message("diff.editor.tree.expandAll"), actions[2].templatePresentation.text)
