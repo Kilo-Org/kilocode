@@ -156,6 +156,32 @@ describe("ScriptTerminalManager", () => {
     expect(ctx.snapshots.at(-1)?.[0]?.worktreeId).toBeNull()
   })
 
+  it("keeps identical worktree script terminals independent across projects", async () => {
+    let id = 0
+    const ctx = harness({
+      create: async () => ({
+        data: { location: { directory: config.cwd }, data: { ...info(), id: `pty-${++id}` } },
+      }),
+      get: async () => ({
+        data: { location: { directory: config.cwd }, data: { ...info(), id: `pty-${id}` } },
+      }),
+    })
+
+    await ctx.manager.start("setup", { ...config, projectId: "prj-a" }, () => undefined)
+    await ctx.manager.start("setup", { ...config, projectId: "prj-b" }, () => undefined)
+
+    expect(ctx.snapshots.at(-1)).toEqual([
+      expect.objectContaining({ projectId: "prj-a", worktreeId: "wt-1", kind: "setup" }),
+      expect.objectContaining({ projectId: "prj-b", worktreeId: "wt-1", kind: "setup" }),
+    ])
+    expect(ctx.manager.active("setup", "wt-1", "prj-a")).toBe(true)
+    expect(ctx.manager.active("setup", "wt-1", "prj-b")).toBe(true)
+
+    await ctx.manager.clear("setup", "wt-1", "prj-a")
+    expect(ctx.manager.active("setup", "wt-1", "prj-a")).toBe(false)
+    expect(ctx.manager.active("setup", "wt-1", "prj-b")).toBe(true)
+  })
+
   it("builds canonical authenticated replay URLs", () => {
     const value = buildScriptTerminalWsUrl(
       { baseUrl: "http://127.0.0.1:4096", password: "secret" },
@@ -353,5 +379,114 @@ describe("ScriptTerminalManager", () => {
     ctx.manager.snapshot()
 
     expect(ctx.snapshots.at(-1)).toEqual(first)
+  })
+})
+
+describe("ScriptTerminalManager Setup kind", () => {
+  it("creates a Setup PTY labeled Setup and tracks its kind", async () => {
+    const ctx = harness()
+
+    await ctx.manager.start("setup", config, () => undefined)
+
+    expect(ctx.calls.create[0]?.title).toBe("Setup")
+    expect(ctx.snapshots.at(-1)).toEqual([expect.objectContaining({ kind: "setup", title: "Setup", state: "running" })])
+    expect(ctx.manager.active("setup", "wt-1")).toBe(true)
+    expect(ctx.manager.active("run", "wt-1")).toBe(false)
+  })
+
+  it("ignores a user close while Setup is running", async () => {
+    const ctx = harness()
+    const done: unknown[] = []
+
+    await ctx.manager.start("setup", config, (exit) => done.push(exit))
+    const terminalId = ctx.snapshots.at(-1)?.[0]?.terminalId
+    if (!terminalId) throw new Error("missing Setup terminal")
+
+    expect(ctx.manager.intercept({ type: "agentManager.terminal.close", terminalId })).toBe(true)
+    await wait()
+
+    expect(ctx.calls.remove).toEqual([])
+    expect(ctx.closed).toEqual([])
+    expect(done).toEqual([])
+    expect(ctx.snapshots.at(-1)).toEqual([expect.objectContaining({ terminalId, state: "running" })])
+    expect(ctx.logs.some((msg) => msg.includes("Ignored close"))).toBe(true)
+  })
+
+  it("force-stops a running Setup when the worktree is cleared", async () => {
+    const ctx = harness()
+    const done: unknown[] = []
+
+    await ctx.manager.start("setup", config, (exit) => done.push(exit))
+
+    expect(await ctx.manager.clear("setup", "wt-1")).toBe(true)
+    expect(ctx.calls.remove).toEqual([{ ptyID: "pty-1", location: { directory: "/repo/worktree" } }])
+    expect(done).toEqual([{ stopped: true }])
+    expect(ctx.snapshots.at(-1)).toEqual([])
+    expect(ctx.manager.active("setup", "wt-1")).toBe(false)
+  })
+
+  it("closes an exited Setup terminal and reports inactive", async () => {
+    const ctx = harness()
+    const done: unknown[] = []
+
+    await ctx.manager.start("setup", config, (exit) => done.push(exit))
+    const terminalId = ctx.snapshots.at(-1)?.[0]?.terminalId
+    if (!terminalId) throw new Error("missing Setup terminal")
+    ctx.manager.exited("pty-1", 0)
+
+    expect(ctx.manager.active("setup", "wt-1")).toBe(false)
+    expect(await ctx.manager.close(terminalId)).toBe(true)
+    expect(done).toEqual([{ exitCode: 0 }])
+    expect(ctx.snapshots.at(-1)).toEqual([])
+  })
+
+  it("retains the tab as failed when killed, and survives the backend deleted event", async () => {
+    let removes = 0
+    const ctx = harness({
+      remove: async () => {
+        removes += 1
+        // The first remove (the kill itself) succeeds; the PTY is gone for
+        // any later remove, which must still close the retained tab.
+        return removes > 1 ? { error: { _tag: "PtyNotFoundError" } } : { data: undefined }
+      },
+    })
+    const done: unknown[] = []
+
+    const handle = await ctx.manager.start("setup", config, (exit) => done.push(exit))
+    const terminalId = ctx.snapshots.at(-1)?.[0]?.terminalId
+    if (!terminalId) throw new Error("missing Setup terminal")
+
+    handle.kill?.("Setup script timed out after 5 minutes")
+    await wait()
+
+    // The process tree is killed but the tab keeps its partial output.
+    expect(ctx.calls.remove).toEqual([{ ptyID: "pty-1", location: { directory: "/repo/worktree" } }])
+    expect(done).toEqual([{ error: "Setup script timed out after 5 minutes" }])
+    expect(ctx.snapshots.at(-1)).toEqual([expect.objectContaining({ terminalId, state: "failed" })])
+
+    // The backend confirming the deletion must not drop the retained tab.
+    ctx.manager.deleted("pty-1")
+    expect(ctx.snapshots.at(-1)).toEqual([expect.objectContaining({ terminalId, state: "failed" })])
+
+    // Closing the retained tab still works when the PTY is already gone.
+    expect(await ctx.manager.close(terminalId)).toBe(true)
+    expect(ctx.snapshots.at(-1)).toEqual([])
+  })
+
+  it("stops a running Setup when the user deliberately stops it", async () => {
+    const ctx = harness()
+    const done: unknown[] = []
+
+    await ctx.manager.start("setup", config, (exit) => done.push(exit))
+    const terminalId = ctx.snapshots.at(-1)?.[0]?.terminalId
+    if (!terminalId) throw new Error("missing Setup terminal")
+
+    expect(ctx.manager.intercept({ type: "agentManager.terminal.stop", terminalId })).toBe(true)
+    await wait()
+
+    expect(ctx.calls.remove).toEqual([{ ptyID: "pty-1", location: { directory: "/repo/worktree" } }])
+    expect(done).toEqual([{ stopped: true }])
+    expect(ctx.closed).toEqual([terminalId])
+    expect(ctx.snapshots.at(-1)).toEqual([])
   })
 })
