@@ -637,7 +637,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "رفتار عامل",
   "settings.autoApprove.title": "تأیید خودکار",
-  "settings.browser.title": "مرورگر",
+  "settings.webTools.title": "ابزارهای وب",
+  "settings.webTools.description": "جستجوی وب و اتوماسیون مرورگر را پیکربندی کنید.",
+  "settings.webTools.webSearch.enable": "فعال‌سازی برای همه ارائه‌دهندگان",
+  "settings.webTools.browserAutomation": "اتوماسیون مرورگر",
+  "settings.webTools.webSearch.title": "جستجوی وب",
+  "settings.webTools.webSearch.description": "جستجوی وب را برای مدل‌های همه ارائه‌دهندگان در دسترس قرار دهید.",
   "settings.checkpoints.title": "نقاط بازیابی",
   "settings.display.title": "نمایش",
   "settings.autocomplete.title": "تکمیل خودکار",

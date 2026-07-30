@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test"
 import {
   createSideTerminal,
   readSavedDestination,
+  resolveRunScriptRequest,
   resolveVscodeTerminalRequest,
 } from "../../webview-ui/agent-manager/terminal/side"
 
@@ -98,6 +99,35 @@ describe("Agent Manager side terminal controller", () => {
     expect(panelFirst.calls.openVscode).toBe(0)
   })
 
+  it("handles Cmd/Ctrl+/ presses locally and dedupes the extension echo", () => {
+    const press = (key: string, opts: Partial<KeyboardEvent> = {}) =>
+      ({ key, metaKey: true, ctrlKey: false, shiftKey: false, altKey: false, ...opts }) as KeyboardEvent
+
+    const item = scene({ destination: "agentManager" })
+    expect(item.ctl.press(press("/"))).toBe(true)
+    expect(item.calls.requestSide).toBe(1)
+    // The extension echoes the same keypress back as an action message;
+    // it must be ignored so the panel does not toggle twice.
+    expect(item.ctl.echo()).toBe(true)
+
+    // Unrelated keys and modifier combinations are not the shortcut.
+    const other = scene({ destination: "agentManager" })
+    expect(other.ctl.press(press("?"))).toBe(false)
+    expect(other.ctl.press(press("/", { shiftKey: true }))).toBe(false)
+    expect(other.ctl.press(press("/", { altKey: true }))).toBe(false)
+    expect(other.ctl.press(press("/", { metaKey: false }))).toBe(false)
+    expect(other.ctl.press(press("/", { metaKey: false, ctrlKey: true }))).toBe(true)
+    expect(other.calls.requestSide).toBe(1)
+  })
+
+  it("stops deduping after the echo window passes", async () => {
+    const item = scene({ destination: "agentManager" })
+    item.ctl.press({ key: "/", metaKey: true } as KeyboardEvent)
+    expect(item.ctl.echo()).toBe(true)
+    await new Promise((resolve) => setTimeout(resolve, 550))
+    expect(item.ctl.echo()).toBe(false)
+  })
+
   it("persists the picked destination with a section-relative settings key", () => {
     const item = scene()
     item.ctl.choose("agentManager")
@@ -144,6 +174,21 @@ describe("readSavedDestination", () => {
     expect(readSavedDestination({ terminalDestination: "bogus" })).toBeUndefined()
     expect(readSavedDestination({})).toBeUndefined()
     expect(readSavedDestination(undefined)).toBeUndefined()
+  })
+})
+
+describe("resolveRunScriptRequest", () => {
+  it("carries the current panel dropdown destination with every Run request", () => {
+    expect(resolveRunScriptRequest("wt-1", "agentManager")).toEqual({
+      type: "agentManager.runScript",
+      worktreeId: "wt-1",
+      destination: "agentManager",
+    })
+    expect(resolveRunScriptRequest("local", "vscode")).toEqual({
+      type: "agentManager.runScript",
+      worktreeId: "local",
+      destination: "vscode",
+    })
   })
 })
 
