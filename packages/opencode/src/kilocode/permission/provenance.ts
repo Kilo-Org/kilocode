@@ -98,4 +98,17 @@ export namespace PermissionProvenance {
       rule: { permission: rule.permission, pattern: rule.pattern, action: rule.action },
     }
   }
+
+  /**
+   * Classify why a tool call was denied, from the `ruleset` a `DeniedError` carries.
+   *
+   * `DeniedError.ruleset` is untyped (`Schema.Any`) but is always the tagged ruleset `askPermission`
+   * built, filtered to the request's permission. The last `deny` rule in it is the one that decided.
+   */
+  export function classifyDenial(input: { ruleset: unknown; agent: string; origins: Origins }): Approval {
+    const rule = Array.isArray(input.ruleset)
+      ? (input.ruleset as Permission.Rule[]).findLast((rule) => rule.action === "deny")
+      : undefined
+    return classify({ rule, agent: input.agent, origins: input.origins })
+  }
 }
