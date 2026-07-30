@@ -90,7 +90,7 @@ type RunFooterViewProps = {
   tuiConfig: RunTuiConfig
   backgroundSubagents: boolean
   history?: RunPrompt[]
-  agent: string
+  agent: () => string // kilocode_change - reactive so the footer repaints after an in-flight mode switch
   onSubmit: (input: RunPrompt) => boolean
   onPermissionReply: (input: PermissionReply) => void | Promise<void>
   onQuestionReply: (input: QuestionReply) => void | Promise<void>

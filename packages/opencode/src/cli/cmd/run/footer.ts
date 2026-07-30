@@ -192,6 +192,10 @@ export class RunFooter implements FooterApi {
   private setProviders: Setter<RunProvider[] | undefined>
   private currentModel: Accessor<RunInput["model"]>
   private setCurrentModel: Setter<RunInput["model"]>
+  // kilocode_change start - reactive agent label so the footer repaints after an in-flight mode switch
+  private agentLabel: Accessor<string>
+  private setAgentLabel: Setter<string>
+  // kilocode_change end
   private variants: Accessor<string[]>
   private setVariants: Setter<string[]>
   private currentVariant: Accessor<string | undefined>
@@ -271,6 +275,11 @@ export class RunFooter implements FooterApi {
     const [currentModel, setCurrentModel] = createSignal<RunInput["model"]>(options.model)
     this.currentModel = currentModel
     this.setCurrentModel = setCurrentModel
+    // kilocode_change start - reactive agent label so the footer repaints after an in-flight mode switch
+    const [agentLabel, setAgentLabel] = createSignal(options.agentLabel)
+    this.agentLabel = agentLabel
+    this.setAgentLabel = setAgentLabel
+    // kilocode_change end
     const [variants, setVariants] = createSignal<string[]>([])
     this.variants = variants
     this.setVariants = setVariants
@@ -326,7 +335,7 @@ export class RunFooter implements FooterApi {
               tuiConfig: options.tuiConfig,
               backgroundSubagents: options.backgroundSubagents,
               history: options.history,
-              agent: options.agentLabel,
+              agent: footer.agentLabel, // kilocode_change - reactive so the footer repaints after a mode switch
               onSubmit: footer.handlePrompt,
               onPermissionReply: footer.handlePermissionReply,
               onQuestionReply: footer.handleQuestionReply,
@@ -397,20 +406,13 @@ export class RunFooter implements FooterApi {
   }
 
   public event(next: FooterEvent): void {
-    // kilocode_change start
-    if (next.type === "agent") {
-      this.options.agentLabel = next.agent
-      return
-    }
-    // kilocode_change end
-
     if (next.type === "turn.duration") {
       const current = this.currentModel()
       this.flush()
       this.flushing = this.flushing
         .then(() =>
           this.scrollback.writeTurnSummary({
-            agent: this.options.agentLabel,
+            agent: this.agentLabel(), // kilocode_change - read the reactive label instead of the captured options value
             model: current ? modelInfo(this.providers(), current).model : this.state().model,
             duration: next.duration,
           }),
@@ -420,6 +422,13 @@ export class RunFooter implements FooterApi {
         })
       return
     }
+
+    // kilocode_change start - update the reactive agent label so the live footer repaints after a mode switch
+    if (next.type === "agent") {
+      this.setAgentLabel(next.agent)
+      return
+    }
+    // kilocode_change end
 
     if (next.type === "catalog") {
       if (this.isGone) {
