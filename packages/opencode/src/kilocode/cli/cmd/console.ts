@@ -85,7 +85,7 @@ const OpenCommand = cmd({
 
 export const KiloConsoleCommand = cmd({
   command: "console",
-  describe: "open or stop the deprecated local Kilo Console",
+  describe: "open or stop the local Kilo Console (deprecated)",
   builder: (yargs: Argv) => yargs.command(OpenCommand).command(StopCommand).demandCommand(),
   handler: async () => {},
 })

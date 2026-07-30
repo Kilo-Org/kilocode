@@ -33,7 +33,7 @@ One `kilo serve` process can host several local runtime instances. Directory-key
 ## Command entry points
 
 {% callout type="warning" title="Kilo Console is deprecated" %}
-The `kilo console` command and the browser interface described on this page are deprecated. They remain documented here while the implementation is still present.
+The `kilo console` command and the browser interface described on this page are deprecated and will be removed in an upcoming release.
 {% /callout %}
 
 | Entry point | Command or caller | Runtime model |
@@ -283,7 +283,7 @@ Both streams send initial `server.connected` event and heartbeat every 10 second
 
 ## Kilo Console
 
-**Deprecated.** The Kilo Console browser interface and its `kilo console` launcher may be removed in a future release.
+**Deprecated.** The Kilo Console browser interface and its `kilo console` launcher will be removed in a future release.
 
 `kilo console` starts or reuses daemon, opens `/console`, and prints Console launch URL. Browser launch URL embeds daemon Basic credentials so initial request authenticates.
 

@@ -66,7 +66,7 @@ Or use npm:
 For detailed help on every command and subcommand, see the [CLI Command Reference](/docs/code-with-ai/platforms/cli-reference).
 
 {% callout type="warning" title="Kilo Console is deprecated" %}
-The `kilo console` command and its browser interface are deprecated and may be removed in a future release. Use the CLI TUI, VS Code extension, or JetBrains plugin to run sessions. Edit Kilo configuration files directly to manage settings.
+The `kilo console` command and its browser interface are deprecated and will be removed in a future release. Use the CLI TUI, VS Code extension, or JetBrains plugin to run sessions. Use the CLI slash commands, other extensions, or edit Kilo configuration files directly to manage settings.
 {% /callout %}
 
 ### Global Options
@@ -165,7 +165,7 @@ Configuration is managed through:
 
 ## CLI Notifications and Sounds
 
-CLI attention alerts are disabled by default. Enable and configure them in either of these ways:
+Enable and configure them by editing the TUI configuration:
 
 - Edit `~/.config/kilo/tui.jsonc` (or `tui.json`) for global settings.
 - Edit `.kilo/tui.json` (or `tui.jsonc`) for project settings.
