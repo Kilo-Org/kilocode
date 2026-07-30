@@ -422,15 +422,7 @@ private fun buildFileModel(files: List<DiffFileDto>): DefaultTreeModel {
 private fun buildTreePanel(tree: Tree, files: List<DiffFileDto>, badge: DiffStatBadge, target: JComponent, refresh: () -> Unit): JComponent {
     val toolbar = ActionManager.getInstance().createActionToolbar(
         ActionPlaces.TOOLBAR,
-        DefaultActionGroup(
-            ActionManager.getInstance().getAction(IdeActions.ACTION_PREVIOUS_DIFF),
-            ActionManager.getInstance().getAction(IdeActions.ACTION_NEXT_DIFF),
-            Separator.getInstance(),
-            TreeAction(KiloBundle.message("diff.editor.tree.expandAll"), AllIcons.Actions.Expandall) { expandAll(tree) },
-            TreeAction(KiloBundle.message("diff.editor.tree.collapseAll"), AllIcons.Actions.Collapseall) { collapseAll(tree) },
-            Separator.getInstance(),
-            TreeAction(KiloBundle.message("diff.editor.refresh"), AllIcons.Actions.Refresh, refresh),
-        ),
+        treeToolbarGroup(tree, refresh),
         true,
     )
     toolbar.targetComponent = target
@@ -465,6 +457,13 @@ private fun buildTreePanel(tree: Tree, files: List<DiffFileDto>, badge: DiffStat
         )
     }
 }
+
+internal fun treeToolbarGroup(tree: Tree, refresh: () -> Unit) = DefaultActionGroup(
+    TreeAction(KiloBundle.message("diff.editor.refresh"), AllIcons.Actions.Refresh, refresh),
+    Separator.getInstance(),
+    TreeAction(KiloBundle.message("diff.editor.tree.expandAll"), AllIcons.Actions.Expandall) { expandAll(tree) },
+    TreeAction(KiloBundle.message("diff.editor.tree.collapseAll"), AllIcons.Actions.Collapseall) { collapseAll(tree) },
+)
 
 private fun fileCount(count: Int): String = KiloBundle.message(
     if (count == 1) "session.changes.count.one" else "session.changes.count.other",

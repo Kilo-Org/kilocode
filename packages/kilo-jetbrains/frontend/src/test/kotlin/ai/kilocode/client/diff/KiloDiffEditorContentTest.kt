@@ -1,7 +1,9 @@
 package ai.kilocode.client.diff
 
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.DiffStatBadge
 import ai.kilocode.rpc.dto.DiffFileDto
+import com.intellij.openapi.actionSystem.Separator
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.FileDocumentManager
@@ -167,6 +169,22 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
             assertEquals(0, scroll.viewportBorder.getBorderInsets(scroll).left)
             assertEquals(0, scroll.viewportBorder.getBorderInsets(scroll).bottom)
             assertEquals(0, scroll.viewportBorder.getBorderInsets(scroll).right)
+        } finally {
+            Disposer.dispose(parent)
+        }
+    }
+
+    fun `test tree toolbar action order`() {
+        val parent = Disposer.newDisposable()
+        try {
+            val view = view(files(), parent)
+            val tree = components(view).filterIsInstance<Tree>().single()
+            val actions = treeToolbarGroup(tree) {}.getChildren(null).toList()
+            assertEquals(KiloBundle.message("diff.editor.refresh"), actions[0].templatePresentation.text)
+            assertTrue(actions[1] is Separator)
+            assertEquals(KiloBundle.message("diff.editor.tree.expandAll"), actions[2].templatePresentation.text)
+            assertEquals(KiloBundle.message("diff.editor.tree.collapseAll"), actions[3].templatePresentation.text)
+            assertEquals(4, actions.size)
         } finally {
             Disposer.dispose(parent)
         }
