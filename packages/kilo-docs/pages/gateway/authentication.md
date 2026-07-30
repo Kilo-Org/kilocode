@@ -97,7 +97,6 @@ BYOK lets you use your own provider API keys with the Kilo AI Gateway. When a BY
 | Kimi Code | `kimi-coding` |
 | Martian | `martian` |
 | MiniMax Coding Plan (minimax.io) | `minimax-coding-plan` |
-| MiniMax Coding Plan (minimaxi.com) | `minimax-cn-coding-plan` |
 | Neuralwatt | `neuralwatt` |
 | Ollama Cloud | `ollama-cloud` |
 | OpenCode Go | `opencode-go` |

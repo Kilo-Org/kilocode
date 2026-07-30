@@ -48,7 +48,6 @@ These providers offer coding-focused subscriptions or dedicated endpoints. Bring
 - Kimi Code
 - Martian
 - MiniMax Coding Plan (minimax.io)
-- MiniMax Coding Plan (minimaxi.com)
 - Mistral Codestral
 - Neuralwatt
 - Ollama Cloud
