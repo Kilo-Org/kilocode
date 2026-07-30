@@ -43,17 +43,13 @@ export default [
   },
   {
     files: ["webview-ui/agent-manager/AgentManagerApp.tsx"],
-    // Raised from 3100 → 3200 for the experimental terminal tabs feature.
-    // ~600 lines of terminal logic were extracted to ./terminal/* and
-    // ./tab-rendering.tsx; the remaining ~75 lines are signal bindings,
-    // a stacking-container wrapper required by the hydration invariant
-    // (canvases must never leave the paint tree — see render.tsx), and
-    // render-call wiring that must live at the top of
-    // `AgentManagerContent` alongside the existing selection/session state.
-    // Raised from 3200 → 3210 for the per-message feedback `FeedbackProvider`
-    // wiring, which sits inside the provider chain and cannot be extracted
-    // without adding an intermediate wrapper component.
-    rules: { complexity: ["error", 74], "max-lines": ["error", 3210] },
+    // Complexity stays exempt: the top of `AgentManagerContent` wires many
+    // selection/session handlers that can't be split without threading shared
+    // reactive state. Line count needs no override — the apply-to-local
+    // workflow is extracted to ./apply-to-local.tsx, keeping the file under
+    // the global 3000-line default. Do not add a max-lines override back;
+    // extract cohesive domains out of the file instead.
+    rules: { complexity: ["error", 74] },
   },
   {
     files: ["src/agent-manager/AgentManagerProvider.ts"],

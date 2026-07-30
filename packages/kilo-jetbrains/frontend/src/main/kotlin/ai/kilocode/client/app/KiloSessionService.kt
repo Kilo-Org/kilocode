@@ -202,6 +202,9 @@ class KiloSessionService internal constructor(
         log.info("${ChatLogSummary.sid(id)} kind=revert ok=true")
     }
 
+    suspend fun deleteMessage(id: String, dir: String, message: String): Boolean =
+        call { deleteMessage(id, dir, message) }
+
     suspend fun unrevert(id: String, dir: String) {
         call { unrevert(id, dir) }
     }

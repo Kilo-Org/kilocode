@@ -5,6 +5,12 @@ export interface TerminalFont {
   fontSize: number
 }
 
+/** Where the terminal button / Focus Terminal shortcut opens a terminal. */
+export type TerminalDestination = "vscode" | "agentManager"
+
+/** Where a terminal lives: main tab strip or right-side inspector panel. */
+export type TerminalPlacement = "tab" | "side"
+
 // Agent Manager worktree state types (mirrored from WorktreeStateManager)
 export interface WorktreeState {
   id: string
@@ -115,12 +121,6 @@ export interface BranchInfo {
   isDefault: boolean
   lastCommitDate?: string
   isCheckedOut?: boolean
-}
-
-// Agent Manager Import tab: external worktrees (extension → webview)
-export interface ExternalWorktreeInfo {
-  path: string
-  branch: string
 }
 
 export type DiffImageError = "too-large" | "unreadable"

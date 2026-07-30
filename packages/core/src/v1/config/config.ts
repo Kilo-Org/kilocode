@@ -229,6 +229,9 @@ export const Info = Schema.Struct({
   layout: Schema.optional(ConfigLayoutV1.Layout).annotate({ description: "@deprecated Always uses stretch layout." }),
   permission: Schema.optional(ConfigPermissionV1.Info),
   tools: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)),
+  web_search: Schema.optional(Schema.Boolean).annotate({
+    description: "Make web search available to models from all providers (default: false)",
+  }), // kilocode_change
   attachment: Schema.optional(ConfigAttachmentV1.Info).annotate({
     description: "Attachment processing configuration, including image size limits and resizing behavior",
   }),

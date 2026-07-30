@@ -5,6 +5,7 @@ import { Cause } from "effect"
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js"
 import { UnauthorizedError } from "@modelcontextprotocol/sdk/client/auth.js"
+import { LATEST_PROTOCOL_VERSION } from "@modelcontextprotocol/sdk/types.js"
 import * as prompts from "@clack/prompts"
 import { UI } from "../ui"
 import { MCP } from "../../mcp"
@@ -17,7 +18,7 @@ import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import path from "path"
 import { Global } from "@opencode-ai/core/global"
 import { modify, applyEdits } from "jsonc-parser"
-import { KilocodeMcpConfig } from "@/kilocode/cli/cmd/mcp" // kilocode_change
+// kilocode_change - KilocodeMcpConfig is dynamically imported in addMcpToConfig to keep startup fast
 import { Filesystem } from "@/util/filesystem"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { EventV2 } from "@opencode-ai/core/event"
@@ -446,7 +447,10 @@ async function addMcpToConfig(name: string, mcpConfig: ConfigMCPV1.Info, configP
   const edits = modify(text, ["mcp", name], mcpConfig, {
     formattingOptions: { tabSize: 2, insertSpaces: true },
   })
-  const result = KilocodeMcpConfig.format(configPath, applyEdits(text, edits)) // kilocode_change
+  // kilocode_change start - lazy import keeps the CLI startup graph light
+  const { KilocodeMcpConfig } = await import("@/kilocode/cli/cmd/mcp")
+  const result = KilocodeMcpConfig.format(configPath, applyEdits(text, edits))
+  // kilocode_change end
 
   await Filesystem.write(configPath, result)
 
@@ -770,7 +774,7 @@ export const McpDebugCommand = effectCmd({
             jsonrpc: "2.0",
             method: "initialize",
             params: {
-              protocolVersion: "2024-11-05",
+              protocolVersion: LATEST_PROTOCOL_VERSION,
               capabilities: {},
               clientInfo: { name: "kilo-debug", version: InstallationVersion }, // kilocode_change
             },

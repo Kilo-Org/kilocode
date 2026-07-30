@@ -13,6 +13,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import { Auth } from "@/auth"
 import { makeRuntime } from "@/effect/run-service"
 import { IngestQueue } from "@/kilo-sessions/ingest-queue"
+import { IngestDrain } from "@/kilo-sessions/ingest-drain"
 import { clearInFlightCache, withInFlightCache } from "@/kilo-sessions/inflight-cache"
 import type * as SDK from "@kilocode/sdk/v2"
 import z from "zod"
@@ -221,6 +222,18 @@ export namespace KiloSessions {
       clearCache()
     },
   })
+
+  // Process-level once-guard: overlapping shutdown paths must not double-POST.
+  // Do not call from per-directory instance finalizers — wrong granularity.
+  // Never-reject: serve/worker await this unguarded before dispose/stop.
+  const drainIngest = IngestDrain.create(
+    () => ingest.drain(),
+    (err) => log.warn("ingest drain failed", { err }),
+  )
+
+  export async function drainIngestForShutdown() {
+    await drainIngest()
+  }
 
   const remoteEnabled = process.env["KILO_REMOTE"] === "1"
   let remote: { conn: RemoteWS.Connection; sender: RemoteSender.Sender } | undefined

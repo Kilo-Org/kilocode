@@ -2,8 +2,6 @@ import { Effect } from "effect"
 import { effectCmd } from "../effect-cmd"
 import { withNetworkOptions, resolveNetworkOptions } from "../network"
 import { Flag } from "@opencode-ai/core/flag/flag"
-import { InstanceRuntime } from "../../project/instance-runtime" // kilocode_change
-import { startParentWatchdog } from "../../kilocode/parent-watchdog" // kilocode_change
 
 export const ServeCommand = effectCmd({
   command: "serve",
@@ -30,6 +28,9 @@ export const ServeCommand = effectCmd({
 
     // kilocode_change start - graceful signal shutdown
     // yield* Effect.never
+    const { InstanceRuntime } = yield* Effect.promise(() => import("../../project/instance-runtime"))
+    const { startParentWatchdog } = yield* Effect.promise(() => import("../../kilocode/parent-watchdog"))
+    const { KiloSessions } = yield* Effect.promise(() => import("@/kilo-sessions/kilo-sessions"))
     yield* Effect.promise(
       () =>
         new Promise<void>((resolve) => {
@@ -38,6 +39,7 @@ export const ServeCommand = effectCmd({
           const shutdown = async () => {
             stopWatchdog()
             try {
+              await KiloSessions.drainIngestForShutdown() // kilocode_change
               await InstanceRuntime.disposeAllInstances()
               await server.stop(true)
             } finally {
