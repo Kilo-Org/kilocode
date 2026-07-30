@@ -935,7 +935,7 @@ const AgentManagerContent: Component = () => {
           requestAnimationFrame(() => sidebarSearchMenu?.open())
         }
       } else if (msg.action === "showTerminal") {
-        sideCtl.openPreferred("keyboard_shortcut")
+        if (!sideCtl.echo()) sideCtl.openPreferred("keyboard_shortcut")
       } else if (msg.action === "toggleDiff") {
         if (reviewActive()) {
           closeReviewTab()
@@ -992,6 +992,13 @@ const AgentManagerContent: Component = () => {
       }
     }
     window.addEventListener("keydown", preventDefaults, true)
+
+    // Cmd/Ctrl+/ toggles the terminal even when VS Code's webview keybinding
+    // forwarding drops the key before it reaches the workbench (reported with
+    // the prompt input focused). When forwarding does work, the extension
+    // echoes the shortcut back as an action message and sideCtl dedupes it.
+    const shortcut = (e: KeyboardEvent) => sideCtl.press(e)
+    window.addEventListener("keydown", shortcut, true)
 
     // Delete/Backspace on a selected worktree triggers inline delete confirmation.
     // Pressing the key twice in a row (within the 2500ms window) confirms the delete.
@@ -1352,6 +1359,7 @@ const AgentManagerContent: Component = () => {
     onCleanup(() => {
       window.removeEventListener("message", handler)
       window.removeEventListener("keydown", preventDefaults, true)
+      window.removeEventListener("keydown", shortcut, true)
       window.removeEventListener("keydown", deleteKeyHandler)
       window.removeEventListener("keydown", modTrack, true)
       window.removeEventListener("keyup", modTrack, true)

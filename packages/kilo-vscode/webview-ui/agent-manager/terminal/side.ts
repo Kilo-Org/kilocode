@@ -159,5 +159,26 @@ export function createSideTerminal(deps: SideTerminalDeps) {
     setDestination(target)
   }
 
-  return { destination, syncDefault, toggle, close, openPreferred, choose }
+  /**
+   * Cmd/Ctrl+/ pressed while the webview holds DOM focus. VS Code normally
+   * forwards the keybinding to the workbench too, and the extension echoes
+   * it back as a showTerminal action message; `echo()` lets the action
+   * handler skip that duplicate so one keypress never toggles twice.
+   * Handling the key locally keeps the shortcut working when the
+   * forwarding path drops it (e.g. the chat prompt input is focused).
+   */
+  let lastPress = 0
+  const ECHO_MS = 500
+
+  const press = (e: KeyboardEvent): boolean => {
+    if (e.key !== "/" || !(e.metaKey || e.ctrlKey) || e.shiftKey || e.altKey) return false
+    lastPress = Date.now()
+    openPreferred("keyboard_shortcut")
+    return true
+  }
+
+  /** True while an incoming showTerminal action is the echo of `press`. */
+  const echo = () => Date.now() - lastPress < ECHO_MS
+
+  return { destination, syncDefault, toggle, close, openPreferred, choose, press, echo }
 }
