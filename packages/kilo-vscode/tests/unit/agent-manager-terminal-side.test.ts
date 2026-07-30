@@ -77,6 +77,16 @@ describe("Agent Manager side terminal controller", () => {
     expect(hidden.calls.hide).toBe(0)
   })
 
+  it("opens a scoped side terminal without toggling an already visible panel closed", () => {
+    const item = scene({ destination: "agentManager", visible: true, focusedId: "terminal:side" })
+
+    item.ctl.open()
+
+    expect(item.calls.requestSide).toBe(1)
+    expect(item.calls.hide).toBe(0)
+    expect(item.calls.refocus).toBe(0)
+  })
+
   it("ensures an open terminal panel has a terminal after switching contexts", async () => {
     const visible = scene({ visible: true })
     visible.ctl.syncContext("wt-2", "wt-1")

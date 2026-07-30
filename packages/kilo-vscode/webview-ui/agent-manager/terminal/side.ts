@@ -114,6 +114,11 @@ export function createSideTerminal(deps: SideTerminalDeps) {
     deps.handlers.requestSide()
   }
 
+  /** Reveal and focus the current context's side terminal without toggling it closed. */
+  const open = () => {
+    deps.handlers.requestSide()
+  }
+
   /** Keep an open terminal panel useful when its worktree context changes. */
   const syncContext = (key: string, previous: string | undefined) => {
     if (key === previous || !deps.visible()) return
@@ -212,5 +217,5 @@ export function createSideTerminal(deps: SideTerminalDeps) {
     return true
   }
 
-  return { destination, syncDefault, syncContext, toggle, close, openPreferred, choose, press, echo }
+  return { destination, syncDefault, syncContext, toggle, open, close, openPreferred, choose, press, echo }
 }
