@@ -195,8 +195,13 @@ export class WorktreeDiffController {
     const { ctx } = parseDiffId(id)
     if (branch) this.baseOverrides.set(ctx, branch)
     else this.baseOverrides.delete(ctx)
-    this.target = undefined
-    await this.controller.reactivate()
+    // Nothing to rebuild when the context isn't active; the override is
+    // picked up the next time start()/request() resolves it.
+    if (this.controller.currentId !== id) return
+    // Route through activate() so the base is re-resolved and pushed via
+    // setContext() — SourceController.reactivate() alone would rebuild the
+    // source against the stale context captured by the last activate().
+    await this.activate(id, this.controller.isPolling, true)
   }
 
   /** Branch picker data for a context's directory, using any active override. */
