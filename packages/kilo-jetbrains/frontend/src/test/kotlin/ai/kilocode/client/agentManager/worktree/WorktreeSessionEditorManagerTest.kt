@@ -320,7 +320,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
                 }
             },
             resolve = { workspaces.workspace(it) },
-            status = { sessions.activity() },
+            status = { sessions.activitySnapshot() },
             timers = timers,
             request = { requested += it },
             notify = { title, content -> notified += title to content },

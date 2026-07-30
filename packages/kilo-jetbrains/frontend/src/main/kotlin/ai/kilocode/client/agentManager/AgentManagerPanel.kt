@@ -9,8 +9,10 @@ import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.ensureWorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.list.ActiveList
+import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListCell
 import ai.kilocode.client.ui.list.ActiveListDeleteOptions
 import ai.kilocode.client.ui.list.ActiveListItem
@@ -90,6 +92,7 @@ class AgentManagerPanel(
         }
         controller.onCreateFailure = { err -> notifyCreateFailed(err) }
         controller.onRemoveSuccess = { item -> close(item) }
+        controller.onActivityChanged = { sync() }
         // Reflect names adopted or renamed in a worktree session editor tab in the list live.
         service<WorktreeNameCache>().addListener(this) { path, name -> controller.applyName(path, name) }
         ActionManager.getInstance().getAction("RenameElement")?.shortcutSet?.let { set ->
@@ -239,7 +242,7 @@ class AgentManagerPanel(
         list.update(
             (0 until controller.model.size).map {
                 val item = controller.model.getElementAt(it)
-                WorktreeRow(item, controller.isPending(item.id), controller.isDeleting(item.id))
+                WorktreeRow(item, controller.isPending(item.id), controller.isDeleting(item.id), controller.kind(item.path))
             },
             ActiveListSelection.PreserveNoScroll,
         )
@@ -267,6 +270,7 @@ class AgentManagerPanel(
         controller.onSelect = null
         controller.onCreateFailure = null
         controller.onRemoveSuccess = null
+        controller.onActivityChanged = null
     }
 
     override fun uiDataSnapshot(sink: DataSink) {
@@ -306,13 +310,23 @@ class AgentManagerPanel(
         }
     }
 
-    private data class WorktreeRow(val dto: WorktreeDto, val pending: Boolean, override val deleting: Boolean) : ActiveListItem {
+    private data class WorktreeRow(
+        val dto: WorktreeDto,
+        val pending: Boolean,
+        override val deleting: Boolean,
+        val kind: SessionActivityKind?,
+    ) : ActiveListItem {
         override val key: String get() = dto.id
         override val title: String get() = dto.name
         override val description: String get() = dto.path.trimEnd('/').substringAfterLast('/')
         override val tooltip: String get() = dto.path
         override val icon = WorktreeIcons.forRow(dto.locked, pending)
         override val search: String get() = listOfNotNull(dto.name, dto.branch, dto.path, dto.lockReason).joinToString(" ")
+        override val badges: List<ActiveListBadge>
+            get() {
+                if (pending || deleting) return emptyList()
+                return listOfNotNull(kind?.let { ActiveListBadge(it.label(), it.style()) })
+            }
         override val cells: List<ActiveListCell>
             get() = if (dto.main || pending) emptyList() else listOf(
                 ActiveListCell(

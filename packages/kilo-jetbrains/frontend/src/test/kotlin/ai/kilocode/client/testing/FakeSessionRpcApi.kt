@@ -15,6 +15,7 @@ import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.SessionActivityDto
 import ai.kilocode.rpc.dto.SessionListDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.SessionTimeDto
@@ -69,6 +70,9 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
 
     /** Push status updates here. */
     val statuses = MutableStateFlow<Map<String, SessionStatusDto>>(emptyMap())
+
+    /** Push activity updates here. */
+    val activity = MutableStateFlow<Map<String, SessionActivityDto>>(emptyMap())
 
     /** Pending permissions returned by [pendingPermissions]. */
     val pendingPermissionList = mutableListOf<PermissionRequestDto>()
@@ -187,6 +191,11 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     override suspend fun statuses(): Flow<Map<String, SessionStatusDto>> {
         assertNotEdt("statuses")
         return statuses
+    }
+
+    override suspend fun activity(): Flow<Map<String, SessionActivityDto>> {
+        assertNotEdt("activity")
+        return activity
     }
 
     override suspend fun setDirectory(id: String, directory: String) {

@@ -5,17 +5,21 @@ import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
 import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.WorktreeNameCache
 import ai.kilocode.client.agentManager.worktree.WorktreeNames
+import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
+import ai.kilocode.rpc.dto.SessionActivityDto
+import ai.kilocode.rpc.dto.SessionActivityKindDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.MutableStateFlow
 
 @Suppress("UnstableApiUsage")
 class WorktreeControllerTest : BasePlatformTestCase() {
@@ -331,6 +335,21 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertSame(before, controller.model.getElementAt(0))
     }
 
+    fun `test activity flow updates worktree kind and notifies on EDT`() {
+        val activity = MutableStateFlow<Map<String, SessionActivityDto>>(emptyMap())
+        val controller = controller(activity)
+        val calls = mutableListOf<Boolean>()
+        controller.onActivityChanged = { calls.add(ApplicationManager.getApplication().isDispatchThread) }
+
+        activity.value = mapOf("ses_1" to SessionActivityDto("/repo/wt/", SessionActivityKindDto.RUNNING))
+        flush()
+
+        assertEquals(SessionActivityKind.RUNNING, controller.kind("/repo/wt"))
+        assertEquals(SessionActivityKind.RUNNING, controller.kind("/repo/wt/"))
+        assertTrue(calls.isNotEmpty())
+        assertTrue(calls.all { it })
+    }
+
     fun `test cache notifies on single put and remove but not on bulk sync`() {
         val cache = cache()
         val events = mutableListOf<Pair<String, String?>>()
@@ -347,8 +366,8 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertEquals(listOf("/wt" to "Name", "/wt" to null), events)
     }
 
-    private fun controller() =
-        WorktreeController(service, "/test", coroutines.scope)
+    private fun controller(activity: MutableStateFlow<Map<String, SessionActivityDto>> = MutableStateFlow(emptyMap())) =
+        WorktreeController(service, "/test", coroutines.scope, activity = activity)
 
     private fun flush() = coroutines.drain(::pump)
 

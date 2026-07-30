@@ -162,7 +162,7 @@ class HistoryControllerTest : BasePlatformTestCase() {
         )
         flush()
 
-        val activity = sessions.activity()
+        val activity = sessions.activitySnapshot()
 
         assertEquals(mapOf("ses_busy" to SessionActivityKind.RUNNING), activity)
     }
@@ -269,7 +269,7 @@ class HistoryControllerTest : BasePlatformTestCase() {
             override fun newSession() {}
             override fun showHistory() {}
             override fun openSession(ref: SessionRef) {}
-            override fun activity() = sessions.activity() + kind?.let { mapOf("ses_1" to it) }.orEmpty()
+            override fun activity() = sessions.activitySnapshot() + kind?.let { mapOf("ses_1" to it) }.orEmpty()
         })
         rpc.statuses.value = mapOf("ses_1" to SessionStatusDto("busy"))
         flush()

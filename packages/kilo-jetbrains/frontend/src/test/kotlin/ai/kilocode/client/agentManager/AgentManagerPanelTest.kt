@@ -8,6 +8,8 @@ import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.fire
+import ai.kilocode.client.session.SessionActivityKind
+import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.activeListToolWindowBackground
 import ai.kilocode.client.vfs.KiloPath
@@ -15,6 +17,8 @@ import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.client.vfs.KiloVirtualFile
 import ai.kilocode.client.vfs.KiloVirtualFileSystem
 import ai.kilocode.rpc.dto.WorktreeDto
+import ai.kilocode.rpc.dto.SessionActivityDto
+import ai.kilocode.rpc.dto.SessionActivityKindDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileEditorManager
@@ -27,6 +31,7 @@ import java.awt.event.MouseEvent
 import javax.swing.JComponent
 import javax.swing.SwingUtilities
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.MutableStateFlow
 
 @Suppress("UnstableApiUsage")
 class AgentManagerPanelTest : BasePlatformTestCase() {
@@ -207,6 +212,40 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertNull(KiloVirtualFileSystem.getInstance().cached(path))
     }
 
+    fun `test worktree row shows activity badge for matching directory`() {
+        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val activity = MutableStateFlow(mapOf(
+            "ses_1" to SessionActivityDto(item.path, SessionActivityKindDto.QUESTION),
+        ))
+        rpc.listed += item
+        val controller = WorktreeController(service, "/test", coroutines.scope, activity = activity)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller) }
+        edt { controller.reload() }
+        flush()
+
+        val row = row(panel, 0)
+        assertEquals(listOf(ActiveListBadge(SessionActivityKind.QUESTION.label(), SessionActivityKind.QUESTION.style())), row.badges)
+    }
+
+    fun `test worktree row hides badge while pending or deleting`() {
+        val path = "feature/y"
+        val activity = MutableStateFlow(mapOf(
+            "ses_1" to SessionActivityDto(path, SessionActivityKindDto.RUNNING),
+        ))
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeCreate = { gate.await() }
+        val controller = WorktreeController(service, "/test", coroutines.scope, activity = activity)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller) }
+
+        edt { controller.create("feature/y", null) }
+        flush()
+
+        val pending = row(panel, 0)
+        assertEquals(emptyList<ActiveListBadge>(), pending.badges)
+        gate.complete(Unit)
+        flush()
+    }
+
     private fun <T> edt(block: () -> T): T {
         val out = arrayOfNulls<Any?>(1)
         ApplicationManager.getApplication().invokeAndWait { out[0] = block() }
@@ -215,6 +254,11 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     }
 
     private fun flush() = coroutines.drain(::pump)
+
+    private fun row(panel: AgentManagerPanel, idx: Int): ActiveListItem {
+        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        return edt { list.model.getElementAt(idx) as ActiveListItem }
+    }
 
     private fun pump() {
         ApplicationManager.getApplication().invokeAndWait { UIUtil.dispatchAllInvocationEvents() }

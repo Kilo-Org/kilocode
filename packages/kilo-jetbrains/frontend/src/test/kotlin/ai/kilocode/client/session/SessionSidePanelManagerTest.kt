@@ -699,7 +699,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
                 }
             },
             resolve = { workspaces.workspace(it) },
-            status = { sessions.activity() },
+            status = { sessions.activitySnapshot() },
             history = history,
             timers = timers,
             request = request,

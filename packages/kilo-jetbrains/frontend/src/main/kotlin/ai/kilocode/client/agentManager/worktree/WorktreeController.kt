@@ -1,14 +1,18 @@
 package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.telemetry.Telemetry
+import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
+import ai.kilocode.rpc.dto.SessionActivityDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.ui.CollectionListModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.util.Collections
 
@@ -20,6 +24,7 @@ class WorktreeController(
     private val service: KiloWorktreeService,
     private val directory: String,
     private val cs: CoroutineScope,
+    activity: StateFlow<Map<String, SessionActivityDto>> = MutableStateFlow(emptyMap()),
     private val telemetry: (String, Map<String, String>) -> Unit = { event, props -> Telemetry.send(event, props) },
 ) {
     val model = CollectionListModel<WorktreeDto>()
@@ -28,6 +33,21 @@ class WorktreeController(
     var onSelect: ((String) -> Unit)? = null
     var onCreateFailure: ((String?) -> Unit)? = null
     var onRemoveSuccess: ((WorktreeDto) -> Unit)? = null
+    var onActivityChanged: (() -> Unit)? = null
+
+    @Volatile
+    private var kinds: Map<String, SessionActivityKind> = emptyMap()
+
+    init {
+        cs.launch {
+            activity.collect { snap ->
+                edt {
+                    kinds = aggregateWorktreeActivity(snap)
+                    onActivityChanged?.invoke()
+                }
+            }
+        }
+    }
 
     /** Branch checked out in the main worktree; used as the base for quick worktree creation. */
     @Volatile
@@ -46,6 +66,8 @@ class WorktreeController(
     fun isPending(id: String): Boolean = id in pending
 
     fun isDeleting(id: String): Boolean = id in deleting
+
+    fun kind(path: String): SessionActivityKind? = kinds[normalizeWorktreePath(path)]
 
     fun reload() {
         cs.launch {

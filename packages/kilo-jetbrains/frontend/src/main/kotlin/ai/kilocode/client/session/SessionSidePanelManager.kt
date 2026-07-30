@@ -29,7 +29,7 @@ class SessionSidePanelManager(
             service<SessionUiFactory>().create(project, workspace, manager, ref, timers)
         },
     resolve: (String) -> Workspace = { dir -> service<KiloWorkspaceService>().workspace(dir) },
-    status: () -> Map<String, SessionActivityKind> = { project.service<KiloSessionService>().activity() },
+    status: () -> Map<String, SessionActivityKind> = { project.service<KiloSessionService>().activitySnapshot() },
     private val history: ((Disposable, (SessionRef) -> Unit, (String) -> Unit) -> JComponent)? = null,
     timers: UiTimerSource = UiTimers,
     request: (JComponent) -> Unit = { focus ->

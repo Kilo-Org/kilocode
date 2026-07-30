@@ -43,7 +43,7 @@ open class WorktreeSessionEditorManager(
             service<SessionUiFactory>().create(project, workspace, manager, ref, timers)
         },
     resolve: (String) -> Workspace = { dir -> service<KiloWorkspaceService>().workspace(dir) },
-    status: () -> Map<String, SessionActivityKind> = { project.service<KiloSessionService>().activity() },
+    status: () -> Map<String, SessionActivityKind> = { project.service<KiloSessionService>().activitySnapshot() },
     timers: UiTimerSource = UiTimers,
     request: (JComponent) -> Unit = { focus ->
         ApplicationManager.getApplication().invokeLater({

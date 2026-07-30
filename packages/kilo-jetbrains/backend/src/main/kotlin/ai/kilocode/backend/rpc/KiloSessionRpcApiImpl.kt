@@ -3,6 +3,7 @@
 package ai.kilocode.backend.rpc
 
 import ai.kilocode.backend.app.KiloBackendAppService
+import ai.kilocode.backend.app.KiloBackendActivityManager
 import ai.kilocode.backend.app.KiloBackendChatManager
 import ai.kilocode.backend.app.KiloBackendSessionManager
 import ai.kilocode.backend.workspace.KiloBackendWorkspaceManager
@@ -21,6 +22,7 @@ import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.SessionActivityDto
 import ai.kilocode.rpc.dto.SessionListDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import com.intellij.openapi.components.service
@@ -57,6 +59,9 @@ class KiloSessionRpcApiImpl internal constructor(
 
     private val chat: KiloBackendChatManager
         get() = app.chat
+
+    private val activity: KiloBackendActivityManager
+        get() = app.activity
 
     private val app: KiloBackendAppService
         get() = appOverride ?: service()
@@ -102,6 +107,9 @@ class KiloSessionRpcApiImpl internal constructor(
 
     override suspend fun statuses(): Flow<Map<String, SessionStatusDto>> =
         sessions.statuses
+
+    override suspend fun activity(): Flow<Map<String, SessionActivityDto>> =
+        activity.activity
 
     override suspend fun setDirectory(id: String, directory: String) =
         sessions.setDirectory(id, directory)

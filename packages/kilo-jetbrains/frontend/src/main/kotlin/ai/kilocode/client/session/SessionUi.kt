@@ -509,7 +509,7 @@ class SessionUi(
                         controller,
                         event.recents,
                         history = { manager?.showHistory() },
-                        activity = { manager?.activity() ?: sessions.activity() },
+                        activity = { manager?.activity() ?: sessions.activitySnapshot() },
                         titles = { manager?.titles().orEmpty() },
                         timers = timers,
                     )

@@ -2,6 +2,7 @@ package ai.kilocode.client
 
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
+import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionSidePanelManager
 import ai.kilocode.client.telemetry.Telemetry
@@ -88,7 +89,12 @@ internal class KiloToolWindowSetupService(
         try {
             val manager = SessionSidePanelManager(project, workspace)
 
-            val worktrees = WorktreeController(service<KiloWorktreeService>(), workspace.directory, cs)
+            val worktrees = WorktreeController(
+                service<KiloWorktreeService>(),
+                workspace.directory,
+                cs,
+                activity = project.service<KiloSessionService>().activity,
+            )
             val agentManagerPanel = AgentManagerPanel(manager, worktrees, project)
 
             val chat = object : JPanel(BorderLayout()), DataProvider {
