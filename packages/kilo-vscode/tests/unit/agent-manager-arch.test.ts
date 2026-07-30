@@ -61,6 +61,7 @@ const SETUP_SCRIPT_RUNNER_FILE = path.join(ROOT, "src/agent-manager/SetupScriptR
 const RUN_MESSAGE_FILE = path.join(ROOT, "src/agent-manager/run/message.ts")
 const TERMINAL_ROUTING_FILE = path.join(ROOT, "src/agent-manager/terminal-routing.ts")
 const SCRIPT_TERMINAL_FILE = path.join(ROOT, "src/agent-manager/ScriptTerminalManager.ts")
+const SCRIPT_TERMINAL_RUNTIME_FILE = path.join(ROOT, "src/agent-manager/script-terminal-runtime.ts")
 const RUN_TASK_FILE = path.join(ROOT, "src/agent-manager/run/task.ts")
 const RUN_DESTINATION_FILE = path.join(ROOT, "src/agent-manager/run/destination.ts")
 
@@ -459,7 +460,9 @@ describe("Agent Manager Provider — onMessage routing", () => {
 
   it("routes script terminal close and resize messages before user terminals", () => {
     const text = body("onMessage")
-    expect(text.indexOf("this.scripts.intercept(m)")).toBeLessThan(text.indexOf("this.terminalRouter.handle(m)"))
+    expect(text.indexOf("this.scripts.manager.intercept(m)")).toBeLessThan(
+      text.indexOf("this.terminalRouter.handle(m)"),
+    )
   })
 
   it("runs scripts through the vscode-free canonical PTY manager", () => {
@@ -472,11 +475,11 @@ describe("Agent Manager Provider — onMessage routing", () => {
   })
 
   it("selects the Run adapter from the panel dropdown message", () => {
-    const text = provider()
+    const text = fs.readFileSync(SCRIPT_TERMINAL_RUNTIME_FILE, "utf-8")
     expect(text).toContain("pickRunStart")
     expect(text).toContain("config.destination")
     expect(text).not.toContain("readRunTerminalDestination")
-    expect(text.indexOf("pickRunStart")).toBeLessThan(text.indexOf("start(config, done)"))
+    expect(text.indexOf("pickRunStart")).toBeLessThan(text.indexOf("config.destination"))
   })
 
   it("keeps the legacy integrated Run adapter isolated and removable", () => {
@@ -492,8 +495,10 @@ describe("Agent Manager Provider — onMessage routing", () => {
   it("clears retained Run terminals before removing worktree state", () => {
     for (const name of ["onDeleteWorktree", "onRemoveStaleWorktree"]) {
       const text = body(name)
-      expect(text).toContain('this.scripts.clear("run", worktreeId)')
-      expect(text.indexOf('this.scripts.clear("run", worktreeId)')).toBeLessThan(text.indexOf("state.removeWorktree"))
+      expect(text).toContain('this.scripts.manager.clear("run", worktreeId)')
+      expect(text.indexOf('this.scripts.manager.clear("run", worktreeId)')).toBeLessThan(
+        text.indexOf("state.removeWorktree"),
+      )
     }
     const deleted = body("onDeleteWorktree")
     expect(deleted.indexOf("statsPoller.skipWorktree")).toBeLessThan(deleted.indexOf("this.run.remove"))

@@ -24,10 +24,7 @@ import { TerminalRouter } from "./terminal-routing"
 import { executeVscodeTask } from "./task-runner"
 import { RunController } from "./run/controller"
 import { handleRunMessage } from "./run/message"
-import { startVscodeRunTask } from "./run/task"
-import { pickRunStart } from "./run/destination"
-import { ScriptTerminalManager } from "./ScriptTerminalManager"
-import { buildScriptTerminalWsUrl } from "./script-terminal-url"
+import { createRunController, createScriptTerminalRuntime } from "./script-terminal-runtime"
 import { forkSession } from "./fork-session"
 import { AgentManagerVisiblePresence } from "./am-visible-presence"
 import { continueInWorktree } from "./continue-in-worktree"
@@ -67,7 +64,7 @@ export class AgentManagerProvider implements Disposable {
   private importer: WorktreeImporter
   private terminalManager: SessionTerminalManager
   private terminalRouter: TerminalRouter
-  private scripts: ScriptTerminalManager
+  private scripts: ReturnType<typeof createScriptTerminalRuntime>
   private run: RunController
   private stateReady: Promise<void> | undefined
   private statsPoller: GitStatsPoller
@@ -84,8 +81,6 @@ export class AgentManagerProvider implements Disposable {
   private unsubStatus: (() => void) | undefined
   private unsubFont: (() => void) | undefined
   private unsubDestination: (() => void) | undefined
-  private unsubScript: (() => void) | undefined
-  private unsubConnection: (() => void) | undefined
   private closing: Promise<void> | undefined
   private onVisibilityChange: ((visible: boolean) => void) | undefined
   // Tracks sessions owned by this panel until they are explicitly closed.
@@ -117,52 +112,25 @@ export class AgentManagerProvider implements Disposable {
       post: (msg) => this.postToWebview(msg),
       getTerminalFont: () => readTerminalFont(),
     })
-    this.scripts = new ScriptTerminalManager({
-      getClient: () => this.connectionService.getClient(),
-      getClientAsync: (directory) => this.connectionService.getClientAsync(directory),
-      buildWsUrl: (ptyID, cwd) => {
-        const config = this.connectionService.getServerConfig()
-        if (!config) throw new Error("Not connected to CLI backend")
-        return buildScriptTerminalWsUrl(config, ptyID, cwd)
-      },
-      getTerminalFont: () => readTerminalFont(),
-      emit: (terminals) => this.postToWebview({ type: "agentManager.scriptTerminals", terminals }),
-      closed: (terminalId) => this.postToWebview({ type: "agentManager.terminal.closed", terminalId }),
-      log: (msg) => this.outputChannel.appendLine(`[RunScript] ${msg}`),
-    })
-    this.unsubScript = this.connectionService.onEventFiltered(
-      (event) =>
-        (event.type === "pty.exited" || event.type === "pty.deleted") && this.scripts.owns(event.properties.id),
-      (event) => {
-        if (event.type === "pty.exited") this.scripts.exited(event.properties.id, event.properties.exitCode)
-        if (event.type === "pty.deleted") this.scripts.deleted(event.properties.id)
-      },
-    )
-    this.unsubConnection = this.connectionService.onStateChange((state) => {
-      if (state === "connected") void this.scripts.sync()
+    this.scripts = createScriptTerminalRuntime({
+      connection: this.connectionService,
+      output: this.outputChannel,
+      post: (message) => this.postToWebview(message),
     })
     this.unsubFont = watchTerminalFont((font) => {
       this.postToWebview({ type: "agentManager.terminal.fontChanged", font })
-      this.scripts.snapshot()
+      this.scripts.manager.snapshot()
     })
     this.unsubDestination = watchTerminalDestination((destination) => {
       this.postToWebview({ type: "agentManager.terminal.destinationChanged", destination })
     })
-    this.run = new RunController({
+    this.run = createRunController({
+      manager: this.scripts.manager,
       root: () => this.getRoot(),
       state: () => this.getStateManager(),
       open: (file) => this.host.openDocument(file),
-      start: async (config, done) => {
-        if (!this.host.isTrusted()) throw new Error("Trust the workspace before running scripts")
-        const start = pickRunStart(
-          config.destination,
-          (cfg, cb) => this.scripts.start("run", cfg, cb),
-          startVscodeRunTask,
-        )
-        return start(config, done)
-      },
-      post: (status) => this.postToWebview({ type: "agentManager.runStatus", ...status }),
-      error: (message) => this.postToWebview({ type: "error", message }),
+      trusted: () => this.host.isTrusted(),
+      post: (message) => this.postToWebview(message),
       log: (msg) => this.outputChannel.appendLine(`[RunScript] ${msg}`),
       refresh: () => this.pushState(),
     })
@@ -451,7 +419,7 @@ export class AgentManagerProvider implements Disposable {
     if (diff !== undefined) return diff
     const bridge = this.onBridgeMessage(m)
     if (bridge !== undefined) return bridge
-    if (this.scripts.intercept(m)) return null
+    if (this.scripts.manager.intercept(m)) return null
     if (this.terminalRouter.handle(m)) return null
 
     return msg
@@ -772,7 +740,7 @@ export class AgentManagerProvider implements Disposable {
     // the panel itself is disposed. In-flight creates from the dying
     // instance are reaped by the router's generation guard.
     void this.terminalRouter.dispose()
-    this.scripts.snapshot()
+    this.scripts.manager.snapshot()
     void this.stateReady
       ?.then(() => {
         // When the folder is not a git repo (or has no folder open),
@@ -1066,7 +1034,7 @@ export class AgentManagerProvider implements Disposable {
     }
     this.statsPoller.skipWorktree(worktreeId)
     await this.run.remove(worktreeId)
-    if (!(await this.scripts.clear("run", worktreeId))) {
+    if (!(await this.scripts.manager.clear("run", worktreeId))) {
       this.statsPoller.unskipWorktree(worktreeId)
       this.postToWebview({ type: "error", message: "Failed to stop the Run script before deleting the worktree" })
       return null
@@ -1109,7 +1077,7 @@ export class AgentManagerProvider implements Disposable {
     }
 
     await this.run.remove(worktreeId)
-    if (!(await this.scripts.clear("run", worktreeId))) {
+    if (!(await this.scripts.manager.clear("run", worktreeId))) {
       this.postToWebview({ type: "error", message: "Failed to stop the Run script before removing the worktree" })
       return null
     }
@@ -1975,8 +1943,6 @@ export class AgentManagerProvider implements Disposable {
     this.unsubStatus?.()
     this.unsubFont?.()
     this.unsubDestination?.()
-    this.unsubScript?.()
-    this.unsubConnection?.()
     await this.scripts.dispose()
     this.orchestration.dispose()
     this.visiblePresence.clear()
