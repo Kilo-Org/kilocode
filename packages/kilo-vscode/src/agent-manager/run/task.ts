@@ -1,9 +1,10 @@
 /**
  * Legacy integrated terminal Run adapter.
  *
- * Kept while `kilo-code.new.agentManager.runTerminalDestination` offers the
- * "vscode" option so both execution paths can be compared. Remove this file
- * together with the "vscode" option and the `pickRunStart` integrated branch.
+ * Kept while the Agent Manager terminal dropdown offers the "VS Code
+ * terminal" option so both execution paths can be compared. Remove this
+ * file together with that dropdown option and the integrated `pickRunStart`
+ * branch.
  */
 import * as vscode from "vscode"
 import type { RunHandle } from "./manager"

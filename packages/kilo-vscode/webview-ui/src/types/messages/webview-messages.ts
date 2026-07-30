@@ -4,7 +4,7 @@ import type { MessageLoadMode } from "./sessions"
 import type { PermissionFileDiff } from "./permissions"
 import type { ModelSelection, ProviderConfig } from "./providers"
 import type { Config } from "./config"
-import type { ModelAllocation, ReviewComment, TerminalPlacement } from "./agent-manager"
+import type { ModelAllocation, ReviewComment, TerminalDestination, TerminalPlacement } from "./agent-manager"
 import type { ReviewMessageData } from "../../../../src/shared/review-comments"
 import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type { AnacondaDesktopWebviewMessage } from "../../../../src/shared/anaconda-desktop-messages"
@@ -677,6 +677,7 @@ export interface ConfigureRunScriptRequest {
 export interface RunScriptRequest {
   type: "agentManager.runScript"
   worktreeId: string
+  destination: TerminalDestination
 }
 
 export interface StopRunScriptRequest {

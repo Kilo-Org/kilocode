@@ -405,6 +405,7 @@ interface ConfigureRunScriptIn {
 interface RunScriptIn {
   type: "agentManager.runScript"
   worktreeId: string
+  destination: TerminalDestination
 }
 
 interface StopRunScriptIn {

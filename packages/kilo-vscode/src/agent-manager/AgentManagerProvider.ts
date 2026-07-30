@@ -49,7 +49,7 @@ import { pruneSubagents } from "./prune-subagents"
 
 import { startSession } from "./mcp-warmup"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
-import { readRunTerminalDestination, readTerminalDestination, watchTerminalDestination } from "./terminal-destination"
+import { readTerminalDestination, watchTerminalDestination } from "./terminal-destination"
 import { buildKeybindingMap } from "./format-keybinding"
 import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from "./multi-version"
 import { ensureSandbox } from "./sandbox-bootstrap"
@@ -151,7 +151,7 @@ export class AgentManagerProvider implements Disposable {
       start: async (config, done) => {
         if (!this.host.isTrusted()) throw new Error("Trust the workspace before running scripts")
         const start = pickRunStart(
-          readRunTerminalDestination(),
+          config.destination,
           (cfg, cb) => this.scripts.start("run", cfg, cb),
           startVscodeRunTask,
         )

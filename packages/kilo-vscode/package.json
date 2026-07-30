@@ -1030,20 +1030,6 @@
           ],
           "description": "Default destination for the Agent Manager terminal button and Focus Terminal keyboard shortcut. The terminal button's dropdown remembers its own choice per Agent Manager panel; this setting only applies to panels that never picked one."
         },
-        "kilo-code.new.agentManager.runTerminalDestination": {
-          "type": "string",
-          "scope": "application",
-          "default": "agentManager",
-          "enum": [
-            "agentManager",
-            "vscode"
-          ],
-          "enumDescriptions": [
-            "Run the script in an embedded terminal in the Agent Manager side panel.",
-            "Run the script as a VS Code task in the integrated terminal."
-          ],
-          "description": "Where the Agent Manager Run button executes .kilo/run-script. The integrated terminal option is kept for comparison and will be removed in a future release."
-        },
         "kilo-code.new.indexing.showButtonWhenDisabled": {
           "type": "boolean",
           "default": true,

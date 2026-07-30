@@ -471,21 +471,22 @@ describe("Agent Manager Provider — onMessage routing", () => {
     expect(text).not.toContain("vscode")
   })
 
-  it("selects the Run adapter through the destination setting", () => {
+  it("selects the Run adapter from the panel dropdown message", () => {
     const text = provider()
     expect(text).toContain("pickRunStart")
-    expect(text).toContain("readRunTerminalDestination")
+    expect(text).toContain("config.destination")
+    expect(text).not.toContain("readRunTerminalDestination")
     expect(text.indexOf("pickRunStart")).toBeLessThan(text.indexOf("start(config, done)"))
   })
 
   it("keeps the legacy integrated Run adapter isolated and removable", () => {
     const task = fs.readFileSync(RUN_TASK_FILE, "utf-8")
     expect(task).toContain("vscode.tasks.executeTask")
-    expect(task).toContain("Remove this file")
+    expect(task).toContain("Remove this")
     const dest = fs.readFileSync(RUN_DESTINATION_FILE, "utf-8")
     expect(dest).not.toContain('from "vscode"')
     expect(dest).toContain("pickRunStart")
-    expect(dest).toContain("resolveRunTerminalDestination")
+    expect(dest).not.toContain("getConfiguration")
   })
 
   it("clears retained Run terminals before removing worktree state", () => {

@@ -40,14 +40,14 @@ This plan addresses only the terminal/output part of #11083. Setup remains await
 
 ## Product Decisions
 
-### Run destination is a setting while both paths exist
+### Run follows the terminal dropdown while both paths exist
 
-The `kilo-code.new.agentManager.runTerminalDestination` setting decides where Run executes:
+The existing terminal destination dropdown decides where Run executes for that Agent Manager panel:
 
 - `agentManager` (default): the named `Run` side-panel terminal through the canonical PTY service
 - `vscode`: the legacy VS Code Task in the integrated bottom terminal
 
-The integrated option is application-scoped, kept for comparison while the embedded path proves itself, and slated for removal together with `run/task.ts` and the integrated `pickRunStart` branch. Setup scripts always use Agent Manager once migrated; they get no such toggle.
+The panel sends its current selection with each Run request. The integrated option is kept for comparison while the embedded path proves itself, and is slated for removal together with `run/task.ts` and the integrated `pickRunStart` branch. Setup scripts always use Agent Manager once migrated; they get no separate toggle.
 
 They do not follow `kilo-code.new.agentManager.terminalButtonDestination`. That setting continues to control only where an ordinary user-requested interactive shell opens.
 
