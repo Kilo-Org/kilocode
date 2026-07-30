@@ -24,7 +24,7 @@ import { EventV2Bridge } from "../../../src/event-v2-bridge"
 import { Format } from "../../../src/format"
 import { Git } from "../../../src/git"
 import { Image } from "../../../src/image/image"
-import { consumeAutoTitle } from "../../../src/kilo-sessions/rename-adoptions"
+import { clearAll as clearRenameMarks, consumeAutoTitle, markAutoTitle } from "../../../src/kilo-sessions/rename-adoptions"
 import { KiloSessions } from "../../../src/kilo-sessions/kilo-sessions"
 import { LSP } from "../../../src/lsp/lsp"
 import { MCP } from "../../../src/mcp"
@@ -158,7 +158,10 @@ const sessionWrapped = Layer.effect(
         Effect.gen(function* () {
           hooks.setTitleCalls.push(input)
           if (hooks.failSetTitle) {
-            // Die so ensureTitle's Effect.catchCause clears the auto-title mark.
+            // Mark must already be present (mark-before-write). Consume proves it,
+            // then re-mark so ensureTitle's catchCause still has something to clear.
+            expect(consumeAutoTitle(input.sessionID, input.title)).toBe(true)
+            markAutoTitle(input.sessionID, input.title)
             return yield* Effect.die(new Error("setTitle failed for test"))
           }
           return yield* inner.setTitle(input)
@@ -293,6 +296,7 @@ function resetHooks() {
   hooks.titleStreamEntered = false
   hooks.failSetTitle = false
   hooks.setTitleCalls = []
+  clearRenameMarks()
 }
 
 /** Match prompt.test.ts: turn a Deferred into a thenable for TestLLMServer.hold. */
@@ -406,6 +410,7 @@ it.instance(
       const final = yield* sessions.get(chat.id)
       expect(Session.isDefaultTitle(final.title)).toBe(true)
       expect(hooks.setTitleCalls.length).toBeGreaterThanOrEqual(1)
+      // Production catch must have cleared the re-mark left inside the failing setTitle.
       for (const call of hooks.setTitleCalls) {
         expect(consumeAutoTitle(chat.id, call.title)).toBe(false)
       }

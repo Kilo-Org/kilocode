@@ -85,8 +85,6 @@ import { SessionReminders } from "./reminders"
 import { SessionTools } from "./tools"
 import { LLMEvent } from "@opencode-ai/llm"
 import { RepositoryCache } from "@opencode-ai/core/repository-cache" // kilocode_change
-import { markAutoTitle, consumeAutoTitle } from "@/kilo-sessions/rename-adoptions" // kilocode_change
-
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
 
@@ -317,15 +315,20 @@ export const layer = Layer.effect(
         .find((line) => line.length > 0)
       if (!cleaned) return
       const t = cleaned.length > 100 ? cleaned.substring(0, 97) + "..." : cleaned
-      // kilocode_change start - re-check default title + mark auto-title before setTitle
-      // so a mid-generation rename is not clobbered, and kilo-sessions can label the
-      // title POST as generated:true (mark before write — Updated publishes inside setTitle).
+      // kilocode_change start - auto-title mark/re-check owned by KiloSessionPrompt
       const fresh = yield* sessions.get(input.session.id).pipe(Effect.orElseSucceed(() => null))
-      if (!fresh || !Session.isDefaultTitle(fresh.title)) return
-      markAutoTitle(input.session.id, t)
+      if (
+        !KiloSessionPrompt.prepareAutoTitle({
+          sessionID: input.session.id,
+          title: t,
+          fresh,
+          isDefaultTitle: Session.isDefaultTitle,
+        })
+      )
+        return
       yield* sessions.setTitle({ sessionID: input.session.id, title: t }).pipe(
         Effect.catchCause((cause) => {
-          consumeAutoTitle(input.session.id, t)
+          KiloSessionPrompt.clearAutoTitleMark(input.session.id, t)
           return Effect.logError("failed to generate title", { error: Cause.squash(cause) })
         }),
       )

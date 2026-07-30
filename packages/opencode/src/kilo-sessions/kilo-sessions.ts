@@ -29,7 +29,7 @@ import { RemoteSender } from "@/kilo-sessions/remote-sender"
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
 import { buildInstanceAdvertisement } from "@/kilo-sessions/instance-advertisement"
 import { AttachedState } from "@/kilo-sessions/attached-state"
-import { consumeAutoTitle, consumeRenameAdoption } from "@/kilo-sessions/rename-adoptions"
+import { clear as clearRenameMarks, consumeAutoTitle, consumeRenameAdoption } from "@/kilo-sessions/rename-adoptions"
 import { SessionStatus } from "@/session/status"
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Question } from "@/question"
@@ -321,6 +321,15 @@ export namespace KiloSessions {
     Effect.gen(function* () {
       const config = yield* Config.Service
       const sessions = yield* Session.Service
+
+      const reportSessionTitle = Effect.fn("KiloSessions.reportSessionTitle")(function* (
+        sessionID: string,
+        title: string,
+        opts: { generated: boolean },
+      ) {
+        return yield* Effect.promise(() => reportTitleChange(sessionID, title, opts.generated))
+      })
+
       const state = yield* InstanceState.make(
         Effect.fn("KiloSessions.state")(function* (ctx) {
           if (ingestDisabled) return
@@ -377,7 +386,13 @@ export namespace KiloSessions {
             if (prev === undefined) return
             if (consumeRenameAdoption(sessionID, session.title)) return
             const generated = consumeAutoTitle(sessionID, session.title)
-            await reportTitleChange(sessionID, session.title, generated)
+            // Production path goes through the Interface method (not private helper).
+            await Effect.runPromise(reportSessionTitle(sessionID, session.title, { generated }))
+          })
+          watch(Session.Event.Deleted, (evt) => {
+            const sessionID = evt.properties.sessionID
+            knownTitles.delete(sessionID)
+            clearRenameMarks(sessionID)
           })
           watch(MessageV2.Event.Updated, async (evt) => {
             await ingest.sync(evt.properties.info.sessionID, [{ type: "message", data: evt.properties.info }])
@@ -503,14 +518,6 @@ export namespace KiloSessions {
         return yield* Effect.promise(() =>
           postAgentNotification(sessionID, readiness.ingestPath, readiness.client, input),
         )
-      })
-
-      const reportSessionTitle = Effect.fn("KiloSessions.reportSessionTitle")(function* (
-        sessionID: string,
-        title: string,
-        opts: { generated: boolean },
-      ) {
-        return yield* Effect.promise(() => reportTitleChange(sessionID, title, opts.generated))
       })
 
       return Service.of({ init, sendAgentNotification, reportSessionTitle })
@@ -1178,7 +1185,7 @@ export namespace KiloSessions {
     await ingest.sync(sessionId, [
       {
         type: "kilo_meta",
-        data: await meta(sessionId),
+        data: await meta(sessionId, session),
       },
       {
         type: "session",
@@ -1263,7 +1270,7 @@ export namespace KiloSessions {
     }
   }
 
-  /** Test seam: exercise meta()/getOrgId without a preloaded Session.Info (get-failure fallback). */
+  /** Test seam: meta() without preloaded info (Session.get failure → env/auth fallback). */
   export async function _metaForTests(sessionId?: string, info?: Session.Info | null) {
     return meta(sessionId, info)
   }

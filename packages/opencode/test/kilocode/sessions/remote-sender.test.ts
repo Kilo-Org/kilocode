@@ -3861,11 +3861,8 @@ describe("RemoteSender slash commands", () => {
     const titles: { sessionID: string; title: string }[] = []
     const warnings: unknown[][] = []
     const sid = SessionID.make("ses_renamed")
-    const { markRenameAdopted: _mark, consumeRenameAdoption } = await import(
-      "../../../src/kilo-sessions/rename-adoptions"
-    )
-    // Clear any leftover mark from prior tests by consuming a non-match then ensuring clean.
-    consumeRenameAdoption(sid, "__none__")
+    const { clear, consumeRenameAdoption } = await import("../../../src/kilo-sessions/rename-adoptions")
+    clear(sid)
 
     const sender = RemoteSender.create({
       conn,
@@ -3968,9 +3965,12 @@ describe("RemoteSender slash commands", () => {
   test("system session.renamed clears adoption mark when setTitle fails", async () => {
     const { conn } = fakeConn()
     const sid = SessionID.make("ses_rename_fail")
-    const { consumeRenameAdoption } = await import("../../../src/kilo-sessions/rename-adoptions")
-    consumeRenameAdoption(sid, "__none__")
+    const { clear, consumeRenameAdoption, markRenameAdopted } = await import(
+      "../../../src/kilo-sessions/rename-adoptions"
+    )
+    clear(sid)
 
+    let sawMarkInsideSetTitle = false
     const sender = RemoteSender.create({
       conn,
       directory: "/tmp",
@@ -3984,6 +3984,11 @@ describe("RemoteSender slash commands", () => {
         },
         children: async () => [],
         setTitle: async () => {
+          // Mark must already be present (mark-before-write). Consume proves it,
+          // then re-mark so the production catch path still has something to clear.
+          expect(consumeRenameAdoption(sid, "Cloud title")).toBe(true)
+          sawMarkInsideSetTitle = true
+          markRenameAdopted(sid, "Cloud title")
           throw new Error("setTitle boom")
         },
       },
@@ -3998,7 +4003,8 @@ describe("RemoteSender slash commands", () => {
     await Promise.resolve()
     await Promise.resolve()
 
-    // Mark must be cleared so a later local write to the same title is not skipped.
+    expect(sawMarkInsideSetTitle).toBe(true)
+    // Production catch must clear the re-mark so a later local write is not skipped.
     expect(consumeRenameAdoption(sid, "Cloud title")).toBe(false)
   })
 })
