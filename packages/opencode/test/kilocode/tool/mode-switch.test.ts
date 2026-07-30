@@ -129,6 +129,29 @@ test("automatic approval persists the destination and resumes the active user ta
   expect(item.switched).toEqual(["debug"])
 })
 
+test("automatic approval rewrites the user message with the destination mode's model", async () => {
+  const item = fixture({
+    available: [
+      mode("code", {
+        model: { providerID: ProviderV2.ID.make("source-provider"), modelID: ModelV2.ID.make("source-model") },
+      }),
+      mode("debug", {
+        model: { providerID: ProviderV2.ID.make("target-provider"), modelID: ModelV2.ID.make("target-model") },
+        variant: "xhigh",
+      }),
+    ],
+  })
+  await item.run()
+  const updated = item.updated.find(
+    (msg): msg is SessionV1.User => msg.role === "user" && msg.agent === "debug",
+  )
+  expect(updated?.model).toMatchObject({
+    providerID: ProviderV2.ID.make("target-provider"),
+    modelID: ModelV2.ID.make("target-model"),
+    variant: "xhigh",
+  })
+})
+
 test("legacy build target switches to the canonical code mode", async () => {
   const item = fixture({
     source: "plan",

@@ -137,10 +137,25 @@ export const execute = Effect.fn("ModeSwitch.execute")(function* (
   }
 
   const current = user(ctx.messages)
+  // The role check is needed both as a safety guard and to narrow `info` from
+  // `User | Assistant` to `User` for the model/variant rewrite below.
   if (!current || current.info.role !== "user")
     return yield* Effect.die(new Error("Mode switch has no active user task"))
-  yield* deps.sessions.updateMessage({ ...current.info, agent: target.name })
+  // kilocode_change start - carry the destination mode's configured model/variant so the
+  // resumed turn uses them (prompt.ts re-reads the last user message's model on every step).
+  const nextModel = target.model
+    ? {
+        ...current.info.model,
+        providerID: target.model.providerID,
+        modelID: target.model.modelID,
+        ...(target.variant ? { variant: target.variant } : {}),
+      }
+    : target.variant
+      ? { ...current.info.model, variant: target.variant }
+      : current.info.model
+  yield* deps.sessions.updateMessage({ ...current.info, agent: target.name, model: nextModel })
   yield* deps.switched({ sessionID: ctx.sessionID, agent: target.name })
+  // kilocode_change end
 
   return {
     title: `Mode switched: ${source} → ${target.name}`,
