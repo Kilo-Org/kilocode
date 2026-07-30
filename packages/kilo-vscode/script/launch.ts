@@ -112,7 +112,7 @@ const shouldBuild = opts["build"] !== false
 const mode = typeof opts["mode"] === "string" ? opts["mode"] : "dev"
 const workspace = typeof opts["workspace"] === "string" && opts["workspace"].trim() ? expand(opts["workspace"]) : repo
 const insiders = opts["insiders"] === true
-const explicit = typeof opts["app-path"] === "string" ? opts["app-path"] : undefined
+const explicit = typeof opts["app-path"] === "string" ? expand(opts["app-path"]) : undefined
 const blocking = opts["wait"] === true
 const clean = opts["clean"] === true
 const preserve = opts["preserve-settings"] === true
