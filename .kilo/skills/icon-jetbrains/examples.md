@@ -2,6 +2,8 @@
 
 Each example below is paired with a dark variant and a short note on the pattern it represents. Use these as templates when generating new icons.
 
+The `expui/<role>/...` names below are the upstream IntelliJ Community source paths the examples were copied from (consult via `$INTELLIJ_REPO`, see `packages/kilo-jetbrains/AGENTS.md`) — they are not paths in this repo. In this repo, place generated icons flat into `packages/kilo-jetbrains/frontend/src/main/resources/icons/`.
+
 ---
 
 ## 1. Single-color action (16×16) — primary gray stroke + filled glyph

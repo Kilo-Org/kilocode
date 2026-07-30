@@ -7,7 +7,7 @@ description: Create or review IntelliJ New UI SVG icons, theme variants, sizes, 
 
 Guidance for authoring SVG icons for the New UI. This skill is the single source of truth for icon sizing, palette, dark variants, composition rules, and placement. Other docs (including `packages/kilo-jetbrains/AGENTS.md`) defer here for SVG authoring details.
 
-Background: the IDE maintains Classic UI and New UI in parallel. Code branches with `ExperimentalUI.isNewUI()`; icons follow the same split. Old icons stay in their original resource folders for Classic-UI compatibility. New-UI icons live under `expui/` folders and are substituted for the old ones at runtime by icon mappers.
+Background: the IDE maintains Classic UI and New UI in parallel. Code branches with `ExperimentalUI.isNewUI()`; icons follow the same split. In upstream IntelliJ Community sources, old icons stay in their original resource folders for Classic-UI compatibility and New-UI icons live under `expui/` folders, substituted for the old ones at runtime by icon mappers. **In this repo there is no `expui/` tree or `*IconMappings.json` file** — see [Where the SVGs live](#where-the-svgs-live) for where icons actually go.
 
 ## Golden rules
 
@@ -23,7 +23,9 @@ Background: the IDE maintains Classic UI and New UI in parallel. Code branches w
 
 ## Icon roles
 
-| Role | Canvas | Filename pattern | Reference dir |
+All roles land flat in this repo's `packages/kilo-jetbrains/frontend/src/main/resources/icons/` (no subfolders — see [Where the SVGs live](#where-the-svgs-live)). The "Upstream reference dir" column below is where the same role lives in the IntelliJ Community sources (`$INTELLIJ_REPO`), useful when you need to look up an existing icon's conventions or geometry — it is not a path in this repo.
+
+| Role | Canvas | Filename pattern | Upstream reference dir (`$INTELLIJ_REPO`) |
 |---|---|---|---|
 | Action icons (menus, popups, toolbars) | **16×16** | `name.svg` + `name_dark.svg` | `expui/actions/`, `expui/general/` |
 | Tree node icons (PSI, structure view) | **16×16** | `name.svg` + `name_dark.svg` | `expui/nodes/` |
@@ -36,16 +38,20 @@ Background: the IDE maintains Classic UI and New UI in parallel. Code branches w
 | Run-config tags & disclosure chevrons | **16×16** (`chevron*.svg` may be 9×9 to 16×16) | `name.svg` + `name_dark.svg` | `expui/run/`, `expui/general/` |
 | Welcome/onboarding & logos (system) | **16, 20, 28, 48** (per surface) | `name.svg` + `name_dark.svg` | `expui/ide/`, `expui/welcome/` |
 
-When in doubt, find a sibling icon in the same folder and copy its `width` / `height` / `viewBox`.
+When in doubt, find a sibling icon of the same role in this repo's flat icons folder (or, if none exists, the upstream reference dir via `$INTELLIJ_REPO`) and copy its `width` / `height` / `viewBox`.
 
 ## Where the SVGs live
 
-Two placements exist and both are valid — pick based on whether a Classic-UI icon already exists:
+**In this repo**, all plugin icons — regardless of role — go flat into `packages/kilo-jetbrains/frontend/src/main/resources/icons/`. There is no `expui/` subfolder structure and no `*IconMappings.json` file here; the plugin loads icons directly from that flat folder via `IconLoader`. Place both the light SVG and its `_dark` sibling there and reference them from the plugin's icon-holder class.
 
-- **Only New UI needed** → put the SVG (and its `_dark` sibling) under an `expui/<role>/` resource root. Callers reference it directly through the plugin's generated `<Plugin>Icons` class.
-- **Replacing an existing Classic-UI icon** → keep the Classic file at its old path, put the New UI SVG under the matching `expui/<role>/` path, and add a mapping entry to the nearest `*IconMappings.json`. At runtime, when `ExperimentalUI.isNewUI()` is true, the mapper substitutes the New UI file for the Classic one so no caller has to change its icon reference.
+The rest of this section describes how the **upstream IntelliJ Community** sources (reachable via `$INTELLIJ_REPO` — see `packages/kilo-jetbrains/AGENTS.md`) organize the same icons. That structure is useful when consulting or copying conventions from an existing platform icon, but it is not a path that exists in this repo.
 
-Mapping-file shape:
+Upstream, two placements exist and both are valid — chosen based on whether a Classic-UI icon already exists:
+
+- **Only New UI needed** → the SVG (and its `_dark` sibling) sits under an `expui/<role>/` resource root. Callers reference it directly through the plugin's generated `<Plugin>Icons` class.
+- **Replacing an existing Classic-UI icon** → the Classic file stays at its old path, the New UI SVG sits under the matching `expui/<role>/` path, and a mapping entry is added to the nearest `*IconMappings.json`. At runtime, when `ExperimentalUI.isNewUI()` is true, the mapper substitutes the New UI file for the Classic one so no caller has to change its icon reference.
+
+Upstream mapping-file shape (for reference only — no equivalent file exists in this repo):
 
 ```json
 {
@@ -114,14 +120,12 @@ Do not use plain `#000000` or off-the-palette grays.
 
 ## Generation workflow
 
-1. **Pick the role and canvas size** from the table above. For source lookup, follow the IntelliJ repository guidance in `packages/kilo-jetbrains/AGENTS.md`; use that AGENTS file alongside this skill when generating or reviewing plugin icons. Find at least two visually similar sibling icons and mirror their stroke/fill mix.
+1. **Pick the role and canvas size** from the table above. For source lookup — including the upstream `expui/<role>/` reference dirs — follow the `$INTELLIJ_REPO` guidance in `packages/kilo-jetbrains/AGENTS.md`; use that AGENTS file alongside this skill when generating or reviewing plugin icons. Find at least two visually similar sibling icons (in this repo's flat icons folder, or upstream via `$INTELLIJ_REPO`) and mirror their stroke/fill mix.
 2. **Lay out geometry on the pixel grid** (whole-pixel fills, half-pixel stroke centers). Optical-center the glyph.
 3. **Apply the canonical light palette** from [palette.md](./palette.md). Never invent colors.
 4. **Save the light SVG** with `width`/`height`/`viewBox` matching the role and `fill="none"` on `<svg>`.
 5. **Duplicate to the `_dark` filename** and swap each color for its dark-theme partner from the palette mapping. Keep paths byte-identical otherwise.
-6. **Place and wire the file**:
-   - **Fresh New UI icon** → drop into the matching `expui/<role>/` resource folder; reference it from the plugin's `<Plugin>Icons` class.
-   - **Replacement for a Classic icon** → keep the Classic file untouched, add the New UI file under `expui/<role>/`, add a mapping entry to the nearest `*IconMappings.json`. Callers keep referencing the old path.
+6. **Place and wire the file** → drop both files flat into `packages/kilo-jetbrains/frontend/src/main/resources/icons/` (no `expui/` or role subfolder — this repo has no such structure and no `*IconMappings.json`); reference the icon from the plugin's icon-holder class. The upstream `expui/<role>/` placement and `*IconMappings.json` mapping described in [Where the SVGs live](#where-the-svgs-live) apply only to the IntelliJ Community sources under `$INTELLIJ_REPO`, not to this repo.
 7. **Verify visually** in both themes via the image preview in the IDE, or run the IDE and toggle *View ▸ Appearance ▸ New UI* to compare. Check selection states for stripe icons.
 
 ## Common mistakes
@@ -132,11 +136,12 @@ Do not use plain `#000000` or off-the-palette grays.
 - Using `currentColor`, CSS, or `<style>` blocks. The IntelliJ icon loader requires explicit colors on every shape so it can do palette-based recoloring.
 - Forgetting the `_dark` variant. The icon will look fine in Light theme then turn invisible in Dark.
 - Pure-black (`#000`) or pure-white (`#FFF`) fills outside the status-badge glyph pattern. They break under accent recoloring.
-- Adding a New UI SVG without a `*IconMappings.json` entry when replacing a Classic icon — the Classic icon will keep showing in New UI mode.
+- (Upstream IntelliJ Community sources only — not applicable in this repo) Adding a New UI SVG without a `*IconMappings.json` entry when replacing a Classic icon — the Classic icon will keep showing in New UI mode.
 
 ## References
 
 - [palette.md](./palette.md) — full color palette with light↔dark mapping.
 - [examples.md](./examples.md) — annotated SVG snippets for each icon role, copied from the live icon set.
-- `packages/kilo-jetbrains/AGENTS.md` — repository-specific JetBrains plugin constraints; use it together with this skill for icon work.
+- `packages/kilo-jetbrains/AGENTS.md` — repository-specific JetBrains plugin constraints, including how to set up `$INTELLIJ_REPO` for consulting upstream IntelliJ Community sources (used above for the `expui/<role>/` reference dirs); use it together with this skill for icon work.
 - Repo-level `Icons guidelines.svg` is a design sheet (visual reference only; not machine-readable). When it disagrees with the folder, trust the folder.
+- `packages/kilo-jetbrains/frontend/src/main/resources/icons/` — the actual flat resource folder in this repo where plugin icons live; this is the ground truth for placement, not any `expui/` path.
