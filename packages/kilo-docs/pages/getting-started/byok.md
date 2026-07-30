@@ -94,10 +94,6 @@ Create an API key in the [NVIDIA API Catalog](https://build.nvidia.com/settings/
 
 Models that do not support tool calling are excluded, as they are unlikely to provide useful results.
 
-{% callout type="warning" title="NVIDIA API Catalog terms" %}
-NVIDIA limits Developer Program endpoints to prototyping, research, development, and testing. Serving production end users may require NVIDIA AI Enterprise licensing. Your prompts and model outputs are sent to NVIDIA under your NVIDIA agreement. Review the [API Catalog quickstart](https://docs.api.nvidia.com/nim/docs/api-quickstart) and the [NVIDIA API Trial Terms of Service](https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf).
-{% /callout %}
-
 ## How Bring Your Own Key works
 
 - When you use the **Kilo Gateway** provider, Kilo checks if there's a BYOK key for the selected model's provider.
