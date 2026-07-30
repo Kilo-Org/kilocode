@@ -187,6 +187,45 @@ describe("responses api terminal frames", () => {
     expect(result.data.isRetryable).toBe(true)
   })
 
+  test("normalizes error objects with explicit null fields", () => {
+    const payload = {
+      error: {
+        message: "The server had an error while processing your request",
+        type: "server_error",
+        param: null,
+        code: null,
+      },
+    }
+    const result = MessageV2.fromError(payload, { providerID: ProviderV2.ID.make("openai") })
+
+    expect(MessageV2.APIError.isInstance(result)).toBe(true)
+    if (!MessageV2.APIError.isInstance(result)) throw new Error("expected APIError")
+    expect(result.data.message).toBe(payload.error.message)
+    expect(result.data.isRetryable).toBe(true)
+  })
+
+  test("normalizes response.failed frames with a null error code", () => {
+    const payload = {
+      type: "response.failed",
+      response: { error: { code: null, message: "mid-stream failure" }, incomplete_details: null },
+    }
+    const result = MessageV2.fromError(payload, { providerID: ProviderV2.ID.make("openai") })
+
+    expect(MessageV2.APIError.isInstance(result)).toBe(true)
+    if (!MessageV2.APIError.isInstance(result)) throw new Error("expected APIError")
+    expect(result.data.message).toBe("mid-stream failure")
+    expect(result.data.isRetryable).toBe(false)
+  })
+
+  test("does not retry terminal errors that merely mention availability", () => {
+    const payload = { code: "invalid_request", message: "The model is unavailable in your region" }
+    const result = MessageV2.fromError(payload, { providerID: ProviderV2.ID.make("openai") })
+
+    expect(MessageV2.APIError.isInstance(result)).toBe(true)
+    if (!MessageV2.APIError.isInstance(result)) throw new Error("expected APIError")
+    expect(result.data.isRetryable).toBe(false)
+  })
+
   test("ignores response.failed frames without an error payload", () => {
     const payload = { type: "response.failed", response: { error: null, incomplete_details: null } }
     const result = MessageV2.fromError(payload, { providerID: ProviderV2.ID.make("openai") })

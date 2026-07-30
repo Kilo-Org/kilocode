@@ -9,8 +9,8 @@ export type Frame = {
 } & Record<string, unknown>
 
 const payload = z.looseObject({
-  code: z.union([z.string(), z.number()]).optional(),
-  message: z.string().optional(),
+  code: z.union([z.string(), z.number()]).nullish(),
+  message: z.string().nullish(),
 })
 
 // OpenAI Responses API terminal frame forwarded by @ai-sdk/openai >= 3.0.82
@@ -29,7 +29,7 @@ const wrapper = z.looseObject({
 // fields so gateway wrappers keep the specific inner code
 const bare = z.looseObject({
   type: z.undefined().optional(),
-  code: z.union([z.string(), z.number()]),
+  code: z.union([z.string(), z.number(), z.null()]),
   message: z.string(),
 })
 
@@ -49,6 +49,9 @@ export function frame(body: unknown): Frame {
 }
 
 const RETRYABLE = /rate.?limit|too.?many.?requests|rate increased too quickly|exhausted|overload|server|unavailable|timeout/i
+// Session.retryable only matched these phrases against free-form message
+// text; the wider pattern above is for structured code/type fields only
+const RETRYABLE_TEXT = /rate increased too quickly|rate limit|too many requests/i
 
 // Must stay at least as permissive as the Session.retryable heuristics that
 // applied when these frames still surfaced as NamedError.Unknown, or
@@ -63,7 +66,7 @@ function retryable(error: Frame["error"], message: string) {
   }
   const type = error?.type
   if (typeof type === "string" && RETRYABLE.test(type)) return true
-  return RETRYABLE.test(message)
+  return RETRYABLE_TEXT.test(message)
 }
 
 /**
