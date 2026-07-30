@@ -25,6 +25,7 @@ import type {
   AgentManagerWorktreeDiffMessage,
   AgentManagerWorktreeDiffFileMessage,
   AgentManagerWorktreeDiffLoadingMessage,
+  AgentManagerWorktreeDiffNoticeMessage,
   AgentManagerDiffBranchesMessage,
   AgentManagerApplyWorktreeDiffResultMessage,
   AgentManagerWorktreeStatsMessage,
@@ -139,7 +140,7 @@ import { DiffPanel } from "./DiffPanel"
 import { createRevertFile } from "./revert-file"
 import { FullScreenDiffView } from "../diff-viewer/FullScreenDiffView"
 import { createApplyToLocal } from "./apply-to-local"
-import { createWorktreeDiffs } from "./worktree-diffs"
+import { createWorktreeDiffs, wireDiffId } from "./worktree-diffs"
 import type { ReviewComment } from "../diff-viewer/review-comments"
 import { clearReviewComposer, createReviewComposer } from "../diff-viewer/review-annotations"
 import type { SidebarSearchMenuRef } from "./SidebarSearchMenu"
@@ -304,6 +305,7 @@ const AgentManagerContent: Component = () => {
   const diffDatas = diffs.diffDatas
   const diffLoading = diffs.diffLoading
   const setDiffLoading = diffs.setDiffLoading
+  const diffNotices = diffs.diffNotices
   // The diff and terminal panels each remember their own width: a diff
   // benefits from half the window, a terminal only needs about a third.
   const TERMINAL_MIN_WIDTH = 360
@@ -419,15 +421,6 @@ const AgentManagerContent: Component = () => {
     setReviewCommentsByContext((prev) => ({ ...prev, [sel]: comments }))
   }
 
-  const resolveWorktreeSessionId = (worktreeId: string) => {
-    const id = session.currentSessionID()
-    if (id) {
-      const current = managedSessions().find((entry) => entry.id === id)
-      if (current?.worktreeId === worktreeId) return id
-    }
-    return managedSessions().find((entry) => entry.worktreeId === worktreeId)?.id
-  }
-
   const apply = createApplyToLocal({
     vscode,
     dialog,
@@ -437,7 +430,6 @@ const AgentManagerContent: Component = () => {
     worktrees,
     diffDatas,
     diffLoading,
-    resolveWorktreeSessionId,
     track: metrics.track,
   })
   const openApplyDialog = apply.openApplyDialog
@@ -1408,6 +1400,10 @@ const AgentManagerContent: Component = () => {
         diffs.onWorktreeDiffLoading(msg as AgentManagerWorktreeDiffLoadingMessage)
       }
 
+      if (msg.type === "agentManager.worktreeDiffNotice") {
+        diffs.onWorktreeDiffNotice(msg as AgentManagerWorktreeDiffNoticeMessage)
+      }
+
       if (msg.type === "agentManager.diffBranches") {
         review.onBranches(msg as AgentManagerDiffBranchesMessage)
       }
@@ -1470,28 +1466,33 @@ const AgentManagerContent: Component = () => {
     }
   })
 
-  const selectedDiffSessionId = () => {
-    const sel = selection()
-    if (sel === LOCAL) return LOCAL
-    if (!sel) return undefined
+  // Diff context = sidebar selection (worktree id or LOCAL), stable across
+  // session tab switches inside the context so the git scopes don't refetch.
+  const diffCtx = createMemo(() => selection() ?? undefined)
 
+  // Active session within the diff context. The Session scope follows it, so
+  // switching session tabs swaps only the session diff.
+  const activeDiffSession = createMemo(() => {
+    const sel = selection()
+    if (!sel) return undefined
     const current = session.currentSessionID()
+    if (sel === LOCAL) {
+      if (current && localSessionIDs().includes(current) && !isPending(current)) return current
+      return localSessionIDs().find((id) => !isPending(id))
+    }
     if (current) {
       const item = managedSessions().find((entry) => entry.id === current)
       if (item?.worktreeId === sel) return current
     }
-
     return managedSessions().find((entry) => entry.worktreeId === sel)?.id
-  }
-
-  const currentDiffSessionId = createMemo(selectedDiffSessionId)
+  })
 
   // Diff scope + base branch state, shared by the side panel and review tab.
   const review = createDiffReviewScope({
-    ctx: currentDiffSessionId,
+    ctx: diffCtx,
+    session: activeDiffSession,
     panelOpen: diffOpen,
     reviewActive,
-    local: LOCAL,
     vscode,
   })
   // The composite id (ctx#scope) the extension keys diff data by.
@@ -1516,21 +1517,15 @@ const AgentManagerContent: Component = () => {
     />
   )
 
-  // Start/stop diff watch when panel opens/closes, review tab opens, scope
-  // changes, or session changes.
+  // Start/stop diff watch when the panel opens/closes, the review tab opens,
+  // or the composite id (context, scope, active session) changes.
   createEffect(() => {
     const panel = diffOpen()
     const active = reviewActive()
-    const scope = review.scope()
+    const id = review.id()
 
-    if (panel || active) {
-      const id = currentDiffSessionId()
-      if (id) {
-        vscode.postMessage({ type: "agentManager.startDiffWatch", sessionId: id, scope })
-        return
-      }
-      vscode.postMessage({ type: "agentManager.stopDiffWatch" })
-      setDiffLoading(false)
+    if ((panel || active) && id) {
+      vscode.postMessage({ type: "agentManager.startDiffWatch", ...wireDiffId(id) })
       return
     }
 
@@ -1583,6 +1578,14 @@ const AgentManagerContent: Component = () => {
 
   const diffSessionKey = createMemo(() => diffScopeId() ?? "")
 
+  // Source-level notice for the active composite id (e.g. snapshots disabled
+  // for the Session scope), shown as a banner instead of the empty state.
+  const diffNotice = createMemo(() => {
+    const key = diffScopeId()
+    if (!key) return undefined
+    return diffNotices()[key]
+  })
+
   const setSharedDiffStyle = (style: "unified" | "split") => {
     if (reviewDiffStyle() === style) return
     setReviewDiffStyle(style)
@@ -1597,7 +1600,7 @@ const AgentManagerContent: Component = () => {
 
   const diffFileLoadingForCurrent = createMemo(() => diffs.diffFileLoadingFor(diffScopeId))
 
-  const revertCtl = createRevertFile(diffScopeId, currentDiffSessionId, () => review.scope(), vscode, showToast, t)
+  const revertCtl = createRevertFile(diffScopeId, diffCtx, () => review.scope(), vscode, showToast, t)
 
   const handleConfigureSetupScript = () => {
     vscode.postMessage({ type: "agentManager.configureSetupScript" })
@@ -2476,8 +2479,9 @@ const AgentManagerContent: Component = () => {
                         diffs={reviewDiffs()}
                         loading={diffLoading()}
                         loadingFiles={diffFileLoadingForCurrent()}
-                        sessionId={currentDiffSessionId()}
+                        sessionId={activeDiffSession()}
                         sessionKey={diffSessionKey()}
+                        notice={diffNotice()}
                         lead={diffScopeControls(true)}
                         canRevert={scopeCapabilities(review.scope()).revert}
                         diffStyle={reviewDiffStyle()}
@@ -2496,10 +2500,9 @@ const AgentManagerContent: Component = () => {
                         }
                         onRequestDiff={requestDiffFile}
                         onOpenFile={(file, line) => {
-                          const id = currentDiffSessionId()
+                          const id = diffCtx()
                           if (id)
                             vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file, line })
-                          else if (selection() === LOCAL) vscode.postMessage({ type: "openFile", filePath: file, line })
                         }}
                         onRevertFile={metrics.use("revert_file", "side_review", revertCtl.revert)}
                         revertingFiles={revertCtl.reverting()}
@@ -2526,8 +2529,9 @@ const AgentManagerContent: Component = () => {
                   diffs={reviewDiffs()}
                   loading={diffLoading()}
                   loadingFiles={diffFileLoadingForCurrent()}
-                  sessionId={currentDiffSessionId()}
+                  sessionId={activeDiffSession()}
                   sessionKey={diffSessionKey()}
+                  notice={diffNotice()}
                   lead={diffScopeControls(false)}
                   canRevert={scopeCapabilities(review.scope()).revert}
                   canComment={scopeCapabilities(review.scope()).comments}
@@ -2542,9 +2546,8 @@ const AgentManagerContent: Component = () => {
                   onMarkdownRenderChange={markdown.update}
                   onRequestDiff={requestDiffFile}
                   onOpenFile={(file, line) => {
-                    const id = currentDiffSessionId()
+                    const id = diffCtx()
                     if (id) vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file, line })
-                    else if (selection() === LOCAL) vscode.postMessage({ type: "openFile", filePath: file, line })
                   }}
                   onRevertFile={metrics.use("revert_file", "fullscreen_review", revertCtl.revert)}
                   revertingFiles={revertCtl.reverting()}

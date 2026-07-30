@@ -50,6 +50,11 @@ export class WorktreeDiffController {
           sessionId: source.descriptor.id,
           loading,
         }),
+        notice: (source, notice) => ({
+          type: "agentManager.worktreeDiffNotice",
+          sessionId: source.descriptor.id,
+          notice,
+        }),
         diffs: (source, diffs) => ({
           type: "agentManager.worktreeDiff",
           sessionId: source.descriptor.id,
@@ -81,8 +86,8 @@ export class WorktreeDiffController {
   }
 
   public shouldStopForWorktree(path: string, sessions: ManagedSession[]): boolean {
-    // Pass the parsed context id, not the composite id, so the orphaned-session
-    // check matches real session ids.
+    // The parsed context id is a worktree id (or `local`), so the
+    // orphaned-session check matches sessions of the deleted worktree.
     const current = this.controller.currentId
     const ctxId = current ? parseDiffId(current).ctx : undefined
     return shouldStopDiffPolling(path, sessions, this.target, ctxId)
@@ -225,6 +230,9 @@ export class WorktreeDiffController {
     const { ctx } = parseDiffId(id)
     const resolved = await this.resolve(ctx)
     this.target = resolved ? { sessionId: id, ...resolved } : undefined
+    // Clear any stale source notice up front; sources only push a notice when
+    // one is active, so a swap away from a noticing source must reset it.
+    this.ctx.post({ type: "agentManager.worktreeDiffNotice", sessionId: id, notice: undefined })
     this.controller.setContext({
       workspaceRoot: this.ctx.getRoot(),
       dir: resolved?.directory,
@@ -250,21 +258,11 @@ export class WorktreeDiffController {
       return undefined
     }
 
-    const session = state.getSession(ctxId)
-    if (!session) {
-      this.ctx.log(
-        `resolveDiffTarget: session ${ctxId} not found in state (${state.getSessions().length} total sessions)`,
-      )
-      return undefined
-    }
-    if (!session.worktreeId) {
-      this.ctx.log(`resolveDiffTarget: session ${ctxId} has no worktreeId (local session)`)
-      return undefined
-    }
-
-    const worktree = state.getWorktree(session.worktreeId)
+    // The context is the worktree itself (the sidebar selection), not one of
+    // its sessions — resolution survives session churn inside the worktree.
+    const worktree = state.getWorktree(ctxId)
     if (!worktree) {
-      this.ctx.log(`resolveDiffTarget: worktree ${session.worktreeId} not found for session ${ctxId}`)
+      this.ctx.log(`resolveDiffTarget: worktree ${ctxId} not found`)
       return undefined
     }
     const base = this.baseOverrides.get(ctxId) ?? remoteRef(worktree)
@@ -287,13 +285,14 @@ export class WorktreeDiffController {
 
   /**
    * Build the active source for a composite id by delegating to the catalog.
-   * The composite id (ctx#scope) is preserved as the descriptor id so the
-   * webview keys diff data by context+scope. Context resolution (dir/base)
-   * already happened in activate() and is carried by the PanelContext.
+   * The composite id (`ctx#scope`, or `ctx#session:<sid>` for the session
+   * scope) is preserved as the descriptor id so the webview keys diff data by
+   * context+scope. Context resolution (dir/base) already happened in
+   * activate() and is carried by the PanelContext.
    */
   private source(id: string, panelCtx: PanelContext): DiffSource {
-    const { ctx, scope } = parseDiffId(id)
-    const built = this.ctx.catalog.build(scopeToSourceId(scope, ctx), panelCtx)
+    const { ctx, scope, sessionId } = parseDiffId(id)
+    const built = this.ctx.catalog.build(scopeToSourceId(scope, ctx, sessionId), panelCtx)
     return {
       ...built,
       descriptor: { ...built.descriptor, id },

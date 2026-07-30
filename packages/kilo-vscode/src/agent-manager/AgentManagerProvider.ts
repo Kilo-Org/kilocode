@@ -781,7 +781,7 @@ export class AgentManagerProvider implements Disposable {
       return null
     }
     if (m.type === "agentManager.requestWorktreeDiffFile") {
-      void this.diffs.requestFile(composeDiffId(m.sessionId, normalizeScope(m.scope)), m.file)
+      void this.diffs.requestFile(composeDiffId(m.sessionId, normalizeScope(m.scope), m.diffSessionId), m.file)
       return null
     }
     if (m.type === "agentManager.applyWorktreeDiff") {
@@ -793,7 +793,7 @@ export class AgentManagerProvider implements Disposable {
       return null
     }
     if (m.type === "agentManager.startDiffWatch") {
-      this.diffs.start(composeDiffId(m.sessionId, normalizeScope(m.scope)))
+      this.diffs.start(composeDiffId(m.sessionId, normalizeScope(m.scope), m.diffSessionId))
       return null
     }
     if (m.type === "agentManager.stopDiffWatch") {
@@ -1577,18 +1577,19 @@ export class AgentManagerProvider implements Disposable {
   }
 
   /** Open a file from a worktree or local session in the VS Code editor.
-   * Absolute paths (Unix `/…` or Windows `C:\…`) are opened directly.
-   * Relative paths are resolved against the session's worktree directory
-   * (or repo root for local sessions) with symlink-traversal protection. */
-  private openWorktreeFile(sessionId: string, filePath: string, line?: number, column?: number): void {
+   * Absolute paths are opened directly; relative paths resolve against the
+   * context's worktree directory (repo root for local) with symlink-traversal
+   * protection. The id may be a worktree id, session id, or `local`. */
+  private openWorktreeFile(id: string, filePath: string, line?: number, column?: number): void {
     if (isAbsolutePath(filePath)) {
       this.host.openFile(filePath, line, column)
       return
     }
     const state = this.getStateManager()
     if (!state) return
-    const session = state.getSession(sessionId)
-    const base = session?.worktreeId ? state.getWorktree(session.worktreeId)?.path : this.getRoot()
+    const worktree = state.getWorktree(id)
+    const session = worktree ? undefined : state.getSession(id)
+    const base = worktree?.path ?? (session?.worktreeId ? state.getWorktree(session.worktreeId)?.path : this.getRoot())
     if (!base) return
     // Resolve real paths to prevent symlink traversal and normalize for
     // consistent comparison on both Unix and Windows.

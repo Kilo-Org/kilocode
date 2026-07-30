@@ -9,28 +9,34 @@
 
 import { createEffect, createMemo, createSignal, type Accessor } from "solid-js"
 import type { BranchInfo } from "../src/types/messages"
-import { createDiffScope, isDiffScope, scopeDescriptors, type DiffScope } from "./diff-scope-state"
+import { composeDiffId, createDiffScope, isDiffScope, scopeDescriptors } from "./diff-scope-state"
 
 interface VsCode {
   postMessage(msg: unknown): void
 }
 
 export interface DiffReviewScopeOptions {
-  /** Current diff context (worktree session id or the LOCAL pseudo-id). */
+  /** Current diff context (worktree id or the LOCAL pseudo-id). */
   ctx: Accessor<string | undefined>
+  /** Active session inside the context; the Session scope follows it. */
+  session: Accessor<string | undefined>
   /** Whether the diff side panel is open. */
   panelOpen: Accessor<boolean>
   /** Whether the full-screen review tab is active. */
   reviewActive: Accessor<boolean>
-  /** The id that marks the local pseudo-context (omits the Session scope). */
-  local: string
   vscode: VsCode
 }
 
 export function createDiffReviewScope(opts: DiffReviewScopeOptions) {
   const scope = createDiffScope(opts.ctx)
-  // The composite id (ctx#scope) the extension keys diff data by.
-  const id = createMemo(() => scope.id())
+  // The composite id (ctx#scope, or ctx#session:<sid>) the extension keys
+  // diff data by. Rebuilds when the active session changes while the Session
+  // scope is active, so a session tab switch refetches that session's diff.
+  const id = createMemo(() => {
+    const ctx = opts.ctx()
+    if (!ctx) return undefined
+    return composeDiffId(ctx, scope.scope(), scope.scope() === "session" ? opts.session() : undefined)
+  })
 
   // Branch picker state for the active context (Branch scope only).
   const [branches, setBranches] = createSignal<BranchInfo[]>([])
@@ -41,12 +47,20 @@ export function createDiffReviewScope(opts: DiffReviewScopeOptions) {
   const [isAuto, setIsAuto] = createSignal(true)
   const [currentBranch, setCurrentBranch] = createSignal<string | undefined>(undefined)
 
-  // Scope descriptors for the current context. The `local` pseudo-context and
-  // contexts without a real session omit the Session scope.
+  // Scope descriptors for the current context. The Session scope only exists
+  // when the context has an active session to diff.
   const descriptors = createMemo(() => {
     const ctx = opts.ctx()
     if (!ctx) return []
-    return scopeDescriptors(ctx, ctx !== opts.local)
+    return scopeDescriptors(ctx, opts.session())
+  })
+
+  // Fall back to Branch when the active session disappears (tab closed,
+  // session deleted) while the Session scope is selected.
+  createEffect(() => {
+    const ctx = opts.ctx()
+    if (!ctx) return
+    if (scope.scope() === "session" && !opts.session()) scope.setScope("branch")
   })
 
   const isBranch = () => scope.scope() === "branch"
@@ -55,6 +69,10 @@ export function createDiffReviewScope(opts: DiffReviewScopeOptions) {
     const ctx = opts.ctx()
     if (!ctx) return
     const value = next.slice(ctx.length + 1)
+    if (value.startsWith("session")) {
+      scope.setScope("session")
+      return
+    }
     scope.setScope(isDiffScope(value) ? value : "branch")
   }
 
