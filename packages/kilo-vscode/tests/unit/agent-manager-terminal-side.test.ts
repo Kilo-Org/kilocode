@@ -16,6 +16,7 @@ function scene(
 ) {
   const calls = {
     requestSide: 0,
+    ensureSide: 0,
     closed: [] as string[],
     hide: 0,
     refocus: 0,
@@ -32,6 +33,7 @@ function scene(
         calls.requestSide++
         visible = true
       },
+      ensureSide: () => calls.ensureSide++,
       closeSide: (terminalId) => {
         calls.closed.push(terminalId)
         focusedId = undefined
@@ -71,6 +73,29 @@ describe("Agent Manager side terminal controller", () => {
     hidden.ctl.toggle()
     expect(hidden.calls.requestSide).toBe(1)
     expect(hidden.calls.hide).toBe(0)
+  })
+
+  it("ensures an open terminal panel has a terminal after switching contexts", async () => {
+    const visible = scene({ visible: true })
+    visible.ctl.syncContext("wt-2", "wt-1")
+    await Promise.resolve()
+    expect(visible.calls.ensureSide).toBe(1)
+
+    visible.ctl.syncContext("wt-2", "wt-2")
+    visible.ctl.syncContext("wt-2", undefined)
+    await Promise.resolve()
+    expect(visible.calls.ensureSide).toBe(2)
+    expect(visible.calls.requestSide).toBe(0)
+
+    const hidden = scene()
+    hidden.ctl.syncContext("wt-2", "wt-1")
+    expect(hidden.calls.ensureSide).toBe(0)
+
+    const closed = scene({ visible: true })
+    closed.ctl.syncContext("wt-2", "wt-1")
+    closed.ctl.toggle()
+    await Promise.resolve()
+    expect(closed.calls.ensureSide).toBe(0)
   })
 
   it("kills the focused terminal and refocuses the chat", () => {

@@ -61,6 +61,7 @@ export function resolveVscodeTerminalRequest(
 
 interface Handlers {
   requestSide(): void
+  ensureSide(): void
   closeSide(terminalId: string): boolean
 }
 
@@ -107,6 +108,14 @@ export function createSideTerminal(deps: SideTerminalDeps) {
       return
     }
     deps.handlers.requestSide()
+  }
+
+  /** Keep an open terminal panel useful when its worktree context changes. */
+  const syncContext = (key: string, previous: string | undefined) => {
+    if (key === previous || !deps.visible()) return
+    queueMicrotask(() => {
+      if (deps.visible()) deps.handlers.ensureSide()
+    })
   }
 
   /** Kill the focused side terminal (Cmd/Ctrl+W). The panel stays open
@@ -180,5 +189,5 @@ export function createSideTerminal(deps: SideTerminalDeps) {
   /** True while an incoming showTerminal action is the echo of `press`. */
   const echo = () => Date.now() - lastPress < ECHO_MS
 
-  return { destination, syncDefault, toggle, close, openPreferred, choose, press, echo }
+  return { destination, syncDefault, syncContext, toggle, close, openPreferred, choose, press, echo }
 }

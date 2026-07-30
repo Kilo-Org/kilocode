@@ -618,14 +618,8 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
     })
   }
 
-  /**
-   * Always create a fresh side terminal for the current context (the
-   * panel's `+` action and empty state). Multiple creates may be in
-   * flight at once; each lands as its own tab in the panel strip.
-   */
-  const addSide = () => {
+  const createSide = () => {
     const key = deps.state.sideKey()
-    deps.onShowSide(key)
     const id = newId()
     deps.state.beginSide(key, id)
     deps.postMessage({
@@ -634,6 +628,23 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
       placement: "side",
       worktreeId: key === deps.LOCAL ? null : key,
     })
+  }
+
+  /**
+   * Always create a fresh side terminal for the current context (the
+   * panel's `+` action and empty state). Multiple creates may be in
+   * flight at once; each lands as its own tab in the panel strip.
+   */
+  const addSide = () => {
+    deps.onShowSide(deps.state.sideKey())
+    createSide()
+  }
+
+  /** Ensure the current context has a terminal without changing panel mode. */
+  const ensureSide = () => {
+    const key = deps.state.sideKey()
+    if (deps.state.sidesForContext(key).length > 0 || deps.state.pendingSide(key)) return
+    createSide()
   }
 
   /**
@@ -651,8 +662,7 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
       deps.state.requestFocus(active)
       return
     }
-    if (deps.state.pendingSide(key)) return
-    addSide()
+    ensureSide()
   }
 
   const closeTerminal = (terminalId: string) => {
@@ -746,6 +756,7 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
     deactivate,
     requestNew,
     requestSide,
+    ensureSide,
     addSide,
     closeActive,
   }
