@@ -154,6 +154,7 @@ export function renderSideTerminalLayer(props: {
                 active={active()}
                 focusSerial={focusSerial(props.state, term.id)}
                 font={term.font}
+                status={() => props.state.scriptStatus(term.id)}
                 onFocusChange={(focused) => props.state.setFocusedId(focused ? term.id : undefined)}
                 onTitleChange={(title) => props.state.setTitle(term.id, title)}
               />

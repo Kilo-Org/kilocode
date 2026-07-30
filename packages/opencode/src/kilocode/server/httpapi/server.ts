@@ -6,6 +6,8 @@ import { corsVaryFix } from "@/server/routes/instance/httpapi/middleware/cors-va
 import { errorLayer } from "@/server/routes/instance/httpapi/middleware/error"
 import { fenceLayer } from "@/server/routes/instance/httpapi/middleware/fence"
 import * as AnacondaDesktop from "@/kilocode/anaconda-desktop/service"
+import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
+import { AppNodeBuilderV1 } from "@/effect/app-node-builder-v1" // kilocode_change - defaultLayer aliases are gone
 
 import { KiloViewers } from "@/kilocode/presence/service" // kilocode_change
 import { agentBuilderHandlers } from "./handlers/agent-builder"
@@ -65,6 +67,7 @@ export function provideListener(opts?: CorsOptions) {
     fenceLayer,
     cors,
     KiloViewers.defaultLayer, // kilocode_change
+    AppNodeBuilderV1.build(EffectFlock.node),
     FetchHttpClient.layer,
     HttpServer.layerServices,
     Layer.succeed(CorsConfig)(opts),

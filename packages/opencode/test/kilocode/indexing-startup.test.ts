@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test"
+import { $ } from "bun"
 import { Effect } from "effect"
 import fs from "node:fs/promises"
 import path from "node:path"
@@ -79,6 +80,7 @@ const staleKilo: Partial<Config.Info> = {
 }
 const configDir = process.env["KILO_CONFIG_DIR"]
 const disabled = process.env["KILO_DISABLE_CODEBASE_INDEXING"]
+const platform = process.env["KILO_PLATFORM"]
 const error = new Error("test indexing initialization failed")
 
 function inline(directory: string, root: string, hooks: IndexingWorker.Hooks): IndexingWorker.Driver {
@@ -118,6 +120,7 @@ async function called(init: ReturnType<typeof spyOn<CodeIndexManager, "initializ
 }
 
 beforeEach(() => {
+  process.env["KILO_PLATFORM"] = "cli"
   IndexingWorker.override(inline)
 })
 
@@ -127,6 +130,8 @@ afterEach(async () => {
   else process.env["KILO_CONFIG_DIR"] = configDir
   if (disabled === undefined) delete process.env["KILO_DISABLE_CODEBASE_INDEXING"]
   else process.env["KILO_DISABLE_CODEBASE_INDEXING"] = disabled
+  if (platform === undefined) delete process.env["KILO_PLATFORM"]
+  else process.env["KILO_PLATFORM"] = platform
   global.fetch = fetch
   await disposeAllInstances()
 })
@@ -388,14 +393,17 @@ describe("indexing startup degradation", () => {
         },
       })
       expect(config.status).toBe(200)
-      await called(init)
 
-      const status = await app.request("/indexing/status", {
+      const status = await app.request("/indexing/consent", {
+        method: "PUT",
         headers: {
+          "content-type": "application/json",
           "x-kilo-directory": tmp.path,
         },
+        body: JSON.stringify({ enabled: true }),
       })
       expect(status.status).toBe(200)
+      await called(init)
 
       const body = await status.json()
       expect(body).toMatchObject({
@@ -628,6 +636,99 @@ describe("indexing startup degradation", () => {
       },
     })
   })
+
+  test("requires explicit VS Code consent even when repository config enables indexing", async () => {
+    const created: string[] = []
+    IndexingWorker.override((directory) => {
+      created.push(directory)
+      return inline(directory, "/index", {
+        status() {},
+        telemetry() {},
+        warning() {},
+        log() {},
+        failure() {},
+      })
+    })
+
+    await using tmp = await tmpdir({ git: true, config: cfg })
+    process.env["KILO_CONFIG_DIR"] = tmp.path
+    process.env["KILO_PLATFORM"] = "vscode"
+
+    try {
+      await provideTestInstance({
+        directory: tmp.path,
+        init: Effect.promise(() => KiloIndexing.setConsent(false)),
+        fn: async () => {
+          const status = await KiloIndexing.current()
+          expect(status.state).toBe("Disabled")
+          expect(status.message).toContain("enable it for this project")
+          expect(created).toEqual([])
+        },
+      })
+    } finally {
+      process.env["KILO_PLATFORM"] = "cli"
+    }
+  })
+
+  test("shares consent across linked worktrees and revokes every project worker", async () => {
+    const created: string[] = []
+    const disposed: string[] = []
+    IndexingWorker.override((directory) => {
+      created.push(directory)
+      return {
+        async init() {
+          return {
+            state: "Standby",
+            message: "Indexing paused.",
+            processedFiles: 0,
+            totalFiles: 0,
+            percent: 0,
+          }
+        },
+        async search() {
+          return []
+        },
+        async dispose() {
+          disposed.push(directory)
+        },
+      }
+    })
+
+    await using tmp = await tmpdir({ git: true, config: cfg })
+    const worktree = path.join(path.dirname(tmp.path), `indexing-worktree-${Date.now()}`)
+    await $`git worktree add --quiet -b indexing-consent-${Date.now()} ${worktree} HEAD`.cwd(tmp.path)
+    process.env["KILO_CONFIG_DIR"] = tmp.path
+    process.env["KILO_PLATFORM"] = "vscode"
+
+    try {
+      await withTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          await KiloIndexing.setConsent(true)
+          await wait(() => KiloIndexing.current(), "Standby")
+        },
+      })
+      await withTestInstance({
+        directory: worktree,
+        fn: async () => expect((await wait(() => KiloIndexing.current(), "Standby")).state).toBe("Standby"),
+      })
+      expect(new Set(created)).toEqual(new Set([tmp.path, worktree]))
+
+      await withTestInstance({
+        directory: tmp.path,
+        fn: () => KiloIndexing.setConsent(false),
+      })
+
+      expect(new Set(disposed)).toEqual(new Set([tmp.path, worktree]))
+      await withTestInstance({
+        directory: worktree,
+        fn: async () => expect((await KiloIndexing.current()).state).toBe("Disabled"),
+      })
+    } finally {
+      process.env["KILO_PLATFORM"] = "cli"
+      await $`git worktree remove --force ${worktree}`.cwd(tmp.path).quiet()
+    }
+  }, 15_000)
 
   test("enriches Kilo provider config from env auth", async () => {
     global.fetch = (() =>

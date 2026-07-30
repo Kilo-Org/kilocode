@@ -3910,9 +3910,36 @@ export type ConfigOverlayResponse = {
     reason?: string
   }>
   targets: {
-    global?: string
-    project?: string
-    active?: string
+    global: {
+      scope: "global" | "project"
+      path: string
+      revision: string
+      exists: boolean
+      writable: boolean
+      raw: {
+        [key: string]: unknown
+      }
+    }
+    project: {
+      scope: "global" | "project"
+      path: string
+      revision: string
+      exists: boolean
+      writable: boolean
+      raw: {
+        [key: string]: unknown
+      }
+    }
+    active: {
+      scope: "global" | "project"
+      path: string
+      revision: string
+      exists: boolean
+      writable: boolean
+      raw: {
+        [key: string]: unknown
+      }
+    }
   }
   fields: {
     [key: string]: {
@@ -3956,6 +3983,21 @@ export type ConfigSourcesResponse = {
     editable: boolean
     reason?: string
   }>
+}
+
+export type ConfigOverlayConflictError = {
+  code: "target-changed" | "revision-conflict"
+  message: string
+  target: {
+    scope: "global" | "project"
+    path: string
+    revision: string
+    exists: boolean
+    writable: boolean
+    raw: {
+      [key: string]: unknown
+    }
+  }
 }
 
 export type ConfigRulesResponse = {
@@ -15019,11 +15061,15 @@ export type ConfigOverlayResponse2 = ConfigOverlayResponses[keyof ConfigOverlayR
 
 export type ConfigOverlayUpdateData = {
   body?: {
-    scope?: "global" | "project"
+    scope: "global" | "project"
     set?: {
       [key: string]: unknown
     }
     unset?: Array<Array<string>>
+    expected?: {
+      path: string
+      revision: string
+    }
   }
   path?: never
   query?: {
@@ -15038,15 +15084,19 @@ export type ConfigOverlayUpdateErrors = {
    * Bad request
    */
   400: BadRequestError
+  /**
+   * ConfigOverlayConflictError
+   */
+  409: ConfigOverlayConflictError
 }
 
 export type ConfigOverlayUpdateError = ConfigOverlayUpdateErrors[keyof ConfigOverlayUpdateErrors]
 
 export type ConfigOverlayUpdateResponses = {
   /**
-   * Effective configuration after patch
+   * Resolved config overlay after patch
    */
-  200: Config
+  200: ConfigOverlayResponse
 }
 
 export type ConfigOverlayUpdateResponse = ConfigOverlayUpdateResponses[keyof ConfigOverlayUpdateResponses]
@@ -15465,6 +15515,36 @@ export type IndexingModelsResponses = {
 }
 
 export type IndexingModelsResponse = IndexingModelsResponses[keyof IndexingModelsResponses]
+
+export type IndexingConsentData = {
+  body?: {
+    enabled: boolean
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/indexing/consent"
+}
+
+export type IndexingConsentErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type IndexingConsentError = IndexingConsentErrors[keyof IndexingConsentErrors]
+
+export type IndexingConsentResponses = {
+  /**
+   * Indexing status
+   */
+  200: IndexingStatus
+}
+
+export type IndexingConsentResponse = IndexingConsentResponses[keyof IndexingConsentResponses]
 
 export type InstanceReloadData = {
   body?: never

@@ -3,6 +3,7 @@ import { Auth } from "@/auth"
 import { Config } from "@/config/config"
 import * as InstanceState from "@/effect/instance-state"
 import { KilocodeConfigOverlay } from "@/kilocode/config/overlay"
+import { KilocodeConfigWriter } from "@/kilocode/config/writer"
 import { KilocodeConfigSources } from "@/kilocode/config/sources"
 import { KilocodeModelState } from "@/kilocode/config/model-state"
 import { ConfigRules } from "@/kilocode/server/routes/config-rules"
@@ -11,10 +12,13 @@ import { KilocodeTuiConfig } from "@/kilocode/tui/config"
 import { disposeAllInstancesAndEmitGlobalDisposed } from "@/server/global-lifecycle"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
 import { markInstanceForDisposal } from "@/server/routes/instance/httpapi/lifecycle"
+import { InvalidRequestError } from "@/server/routes/instance/httpapi/errors"
 import { Effect, Option } from "effect"
+import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import {
   ConfigModelStatePatch,
+  ConfigOverlayConflictError,
   ConfigOverlayPatch,
   ConfigOverlayQuery,
   ConfigRulesPatch,
@@ -27,6 +31,7 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
     const config = yield* Config.Service
     const auth = yield* Auth.Service
     const account = yield* Account.Service
+    const flock = yield* EffectFlock.Service
 
     const overlay = Effect.fn("ConfigConsoleHttpApi.overlay")(function* (ctx: {
       query: typeof ConfigOverlayQuery.Type
@@ -69,28 +74,78 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
     }) {
       const body = {
         ...ctx.payload,
-        scope: ctx.payload.scope ?? "project",
         set: ctx.payload.set ? { ...ctx.payload.set } : undefined,
         unset: ctx.payload.unset?.map((item) => [...item]),
       }
-      const patch = KilocodeConfigOverlay.patch(body)
-      if (Object.keys(patch).length === 0) {
-        if (body.scope === "global") return yield* config.getGlobal()
-        return yield* config.get()
-      }
-      if (body.scope === "global") {
-        const hot = Object.keys(patch).every((key) => key === "console")
-        const result = yield* config.updateGlobal(patch, hot ? { dispose: false } : undefined)
-        if (result.changed && !hot) {
-          yield* disposeAllInstancesAndEmitGlobalDisposed({ swallowErrors: true }).pipe(
-            Effect.catchCause(() => Effect.void),
+      const expected = body.expected ? { ...body.expected } : undefined
+      const instance = yield* InstanceState.context
+      const result = yield* flock
+        .withLock(
+          Effect.promise(() =>
+            KilocodeConfigWriter.write({
+              ...body,
+              directory: instance.directory,
+              worktree: instance.worktree,
+              expected,
+            }),
+          ),
+          `config:${body.scope}:${expected?.path ?? "target"}`,
+        )
+        .pipe(Effect.orDie)
+      if (!result.ok) {
+        if (result.code === "target-not-writable") {
+          return yield* Effect.fail(
+            new InvalidRequestError({ message: result.message, kind: result.code, field: result.target.path }),
           )
         }
-        return result.info
+        return yield* Effect.fail(
+          new ConfigOverlayConflictError({ code: result.code, message: result.message, target: result.target }),
+        )
       }
-      yield* config.update(patch)
-      yield* markInstanceForDisposal(yield* InstanceState.context)
-      return yield* config.get()
+      const patch = KilocodeConfigOverlay.patch(body)
+      const hot = body.scope === "global" && Object.keys(patch).every((key) => key === "console")
+      if (body.scope === "global") {
+        yield* config.invalidate()
+      } else {
+        yield* config.update({})
+        yield* markInstanceForDisposal(instance)
+      }
+      const all = yield* auth.all().pipe(Effect.orElseSucceed(() => ({})))
+      const active = yield* account.active().pipe(
+        Effect.map(Option.getOrUndefined),
+        Effect.orElseSucceed(() => undefined),
+      )
+      const [base, global, sources] = yield* Effect.all(
+        [
+          config.get(),
+          config.getGlobal(),
+          Effect.promise(() =>
+            KilocodeConfigSources.list({
+              directory: instance.directory,
+              worktree: instance.worktree,
+              auth: all,
+              account: active,
+            }),
+          ),
+        ],
+        { concurrency: 3 },
+      )
+      const output = yield* Effect.promise(() =>
+        KilocodeConfigOverlay.resolve({
+          directory: instance.directory,
+          worktree: instance.worktree,
+          scope: body.scope,
+          effective: base,
+          global,
+          sources: sources.sources,
+        }),
+      )
+      if (body.scope === "global" && !hot) {
+        yield* disposeAllInstancesAndEmitGlobalDisposed({ swallowErrors: true }).pipe(
+          Effect.catchCause(() => Effect.void),
+        )
+      }
+      return output
     })
 
     const sources = Effect.fn("ConfigConsoleHttpApi.sources")(function* () {

@@ -218,6 +218,11 @@ export const kiloScenarios: Scenario[] = [
   http.protected.get("/indexing/status", "indexing.status").json(200, object),
   http.protected.get("/indexing/models", "indexing.models").json(200, object),
   http.protected.get("/indexing/warnings", "indexing.warnings").json(200, array),
+  http.protected
+    .put("/indexing/consent", "indexing.consent")
+    .mutating()
+    .at((ctx) => ({ path: "/indexing/consent", headers: ctx.headers(), body: { enabled: false } }))
+    .json(200, object),
   http.protected.get("/memory/status", "memory.status").json(200, (body) => {
     object(body)
     object(body.state)
@@ -553,14 +558,8 @@ export const kiloScenarios: Scenario[] = [
         check(body === true, "skill removal should return true")
         const location = path.join(directory(ctx), ".kilo/skill/httpapi-remove/SKILL.md")
         const sentinel = path.join(directory(ctx), ".kilo/skill/httpapi-remove/KEEP.txt")
-        check(
-          !(yield* Effect.promise(() => Bun.file(location).exists())),
-          "removed skill should not remain on disk",
-        )
-        check(
-          yield* Effect.promise(() => Bun.file(sentinel).exists()),
-          "skill removal should preserve sibling files",
-        )
+        check(!(yield* Effect.promise(() => Bun.file(location).exists())), "removed skill should not remain on disk")
+        check(yield* Effect.promise(() => Bun.file(sentinel).exists()), "skill removal should preserve sibling files")
       }),
     ),
   http.protected

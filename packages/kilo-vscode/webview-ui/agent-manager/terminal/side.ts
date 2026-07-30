@@ -92,6 +92,7 @@ export interface SideTerminalDeps {
 export function createSideTerminal(deps: SideTerminalDeps) {
   const [local, setLocal] = createSignal<TerminalDestination | undefined>(deps.saved)
   const [destination, setDestination] = createSignal<TerminalDestination>(deps.saved ?? "vscode")
+  if (deps.saved) deps.postMessage({ type: "agentManager.terminal.destinationSelected", destination: deps.saved })
 
   /**
    * Hiding while the terminal holds focus would strand the cursor on
@@ -147,17 +148,15 @@ export function createSideTerminal(deps: SideTerminalDeps) {
    * Dropdown pick. The choice is panel-local and sticky: it is kept in
    * webview state and beats later `terminal.destinationChanged` echoes
    * caused by other windows rewriting the shared application-scoped
-   * setting. The setting is still written so it stays the default for
-   * panels that never picked a destination (and new panels).
-   * The key is relative to the `kilo-code.new` section, matching every
-   * other `updateSetting` sender.
+   * setting. The provider still persists it as the default for new panels,
+   * while setup uses this panel-local value immediately.
    */
   const choose = (target: TerminalDestination) => {
     deps.track("terminal_destination", "tab_toolbar", { destination: target })
     setLocal(target)
     setDestination(target)
     deps.save(target)
-    deps.postMessage({ type: "updateSetting", key: "agentManager.terminalButtonDestination", value: target })
+    deps.postMessage({ type: "agentManager.terminal.destinationSelected", destination: target })
   }
 
   /**
