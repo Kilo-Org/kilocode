@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.views.base
 
+import ai.kilocode.client.session.ui.style.SessionUiStyle.View.Header
 import ai.kilocode.client.ui.DiffBars
 import ai.kilocode.client.ui.HoverIcon
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -26,6 +27,21 @@ class PartHeaderTest : BasePlatformTestCase() {
         assertNear(mid, centerY(header, title))
         assertNear(mid, centerY(header, icon))
         assertNear(mid, centerY(header, bars))
+    }
+
+    fun `test leading uses icon gap and universal gap between elements`() {
+        val glyph = JBLabel("g")
+        val title = JBLabel("Edit")
+        val extra = JBLabel("x")
+        val header = PartHeader().apply {
+            leading(glyph)
+            left(title, extra)
+        }
+
+        sized(header, 400)
+
+        assertEquals(Header.icon(), title.x - (glyph.x + glyph.width))
+        assertEquals(Header.gap(), extra.x - (title.x + title.width))
     }
 
     fun `test right group hugs the trailing edge`() {

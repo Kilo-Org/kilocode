@@ -825,13 +825,19 @@ class SessionUi(
     }
 
     private fun openInlineDiff(files: List<DiffFileDto>, title: String, key: String) {
-        ensureDiffEditorKind()
-        project.service<KiloInlineDiffStore>().put(key, files)
-        project.service<KiloVfsManager>().open(
-            KiloDiffEditorKind.ID,
-            diffParams("inline", workspace.directory, controller.id, title, token = key),
-        )
-        Telemetry.send("Diff Editor Opened", mapOf("source" to "inline"))
+        cs.launch {
+            val branch = workspaces.branchName(workspace.directory)
+            val label = branch?.let { KiloBundle.message("diff.editor.session.title.named", it) } ?: title
+            withContext(Dispatchers.Main) {
+                ensureDiffEditorKind()
+                project.service<KiloInlineDiffStore>().put(key, files)
+                project.service<KiloVfsManager>().open(
+                    KiloDiffEditorKind.ID,
+                    diffParams("inline", workspace.directory, controller.id, label, token = key),
+                )
+                Telemetry.send("Diff Editor Opened", mapOf("source" to "inline"))
+            }
+        }
     }
 
     private fun openAttachment(messageId: String, item: FileAttachment) {

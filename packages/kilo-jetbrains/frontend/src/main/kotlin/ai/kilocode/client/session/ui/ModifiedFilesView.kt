@@ -155,7 +155,8 @@ class ModifiedFilesView private constructor(
         val bars = DiffBars(0, 0)
         // Glyph, title, count, and the open-diff action on the left; diff bars hug the right edge.
         val panel = PartHeader().apply {
-            left(glyph, title, count, PartHeader.centered(diff))
+            leading(glyph)
+            left(title, count, PartHeader.centered(diff))
             right(PartHeader.centered(bars))
         }
 

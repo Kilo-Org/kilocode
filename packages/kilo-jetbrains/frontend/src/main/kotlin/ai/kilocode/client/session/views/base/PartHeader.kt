@@ -1,11 +1,10 @@
 package ai.kilocode.client.session.views.base
 
-import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.ui.style.SessionUiStyle.View.Header
 import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
-import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.Component
 import javax.swing.JComponent
@@ -20,19 +19,25 @@ import javax.swing.JPanel
  * right of this header, so together they realise the west (left) / center (right
  * group) / east (arrow) layout.
  *
- * Every child is stretched to the full header height by the [left]/[right] [Stack]s.
- * Text labels center vertically by default, so add them directly. Fixed-size controls
- * (icons, badges, diff bars) must be added via [centered] so they keep their preferred
- * size and stay centered instead of stretching to the full height.
+ * All spacing comes from [Header]: [leading] applies the icon-to-title gap, while every
+ * other element is separated by the universal [Header.gap]. Text labels center vertically
+ * by default, so add them directly. Fixed-size controls (icons, badges, diff bars) must be
+ * added via [centered] so they keep their preferred size and stay centered.
  */
-class PartHeader : JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.Layout.GAP), 0)) {
-    val left = Stack.horizontal(JBUI.scale(SessionUiStyle.View.Layout.GAP))
-    val right = Stack.horizontal(JBUI.scale(SessionUiStyle.View.Layout.GAP))
+class PartHeader : JPanel(BorderLayout(Header.gap(), 0)) {
+    val left = Stack.horizontal(Header.gap())
+    val right = Stack.horizontal(Header.gap())
 
     init {
         isOpaque = false
         add(left, BorderLayout.WEST)
         add(right, BorderLayout.EAST)
+    }
+
+    /** Adds the leading glyph and reserves the tighter icon-to-title gap before the title. */
+    fun leading(icon: Component): PartHeader {
+        left.next(icon).gap(Header.icon())
+        return this
     }
 
     fun left(vararg items: Component): PartHeader {

@@ -195,23 +195,23 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
     }
 
     fun `test diff params includes inline token`() {
-        val params = diffParams("inline", "/repo", "ses_1", "Kilo changes", token = "tool:ses_1:p1")
+        val params = diffParams("inline", "/repo", "ses_1", "Session Changes", token = "tool:ses_1:p1")
 
         assertEquals("inline", params["source"])
         assertEquals("/repo", params["directory"])
         assertEquals("ses_1", params["sessionId"])
-        assertEquals("Kilo changes", params["title"])
+        assertEquals("Session Changes", params["title"])
         assertEquals("tool:ses_1:p1", params["token"])
     }
 
     fun `test inline params require directory and token`() {
-        assertTrue(KiloDiffEditorKind.isValid(diffParams("inline", "/repo", null, "Kilo changes", token = "turn:ses_1:u1")))
-        assertFalse(KiloDiffEditorKind.isValid(mapOf("source" to "inline", "directory" to "/repo", "title" to "Kilo changes")))
-        assertFalse(KiloDiffEditorKind.isValid(mapOf("source" to "inline", "token" to "turn:ses_1:u1", "title" to "Kilo changes")))
+        assertTrue(KiloDiffEditorKind.isValid(diffParams("inline", "/repo", null, "Session Changes", token = "turn:ses_1:u1")))
+        assertFalse(KiloDiffEditorKind.isValid(mapOf("source" to "inline", "directory" to "/repo", "title" to "Session Changes")))
+        assertFalse(KiloDiffEditorKind.isValid(mapOf("source" to "inline", "token" to "turn:ses_1:u1", "title" to "Session Changes")))
     }
 
     fun `test inline editor title uses params title`() {
-        assertEquals("Kilo changes", KiloDiffEditorKind.title(diffParams("inline", "/repo", null, "Kilo changes", token = "token")))
+        assertEquals("Session Changes", KiloDiffEditorKind.title(diffParams("inline", "/repo", null, "Session Changes", token = "token")))
     }
 
     fun `test reload updates aggregate badge`() {

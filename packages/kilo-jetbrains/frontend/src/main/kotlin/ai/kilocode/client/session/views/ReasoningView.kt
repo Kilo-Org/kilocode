@@ -72,7 +72,9 @@ class ReasoningView(
     init {
         row.border = JBUI.Borders.empty(
             JBUI.scale(SessionUiStyle.View.Reasoning.HEADER_VERTICAL_PADDING),
-            JBUI.scale(SessionUiStyle.View.Layout.HORIZONTAL_PADDING),
+            SessionUiStyle.View.Header.left(),
+            JBUI.scale(SessionUiStyle.View.Reasoning.HEADER_VERTICAL_PADDING),
+            SessionUiStyle.View.Header.right(),
         )
         bindHeader(parts.title, parts.icon)
         applyStyle(style)
@@ -386,7 +388,10 @@ class ReasoningBody(
 private fun reasoningParts(selection: SessionSelection? = null): ReasoningParts {
     val title = JBLabel(KiloBundle.message("session.part.reasoning")).apply { foreground = UiStyle.Colors.weak() }
     val icon = JBLabel(SessionViewIcons.brain).apply { foreground = UiStyle.Colors.weak() }
-    val header = PartHeader().apply { left(icon, title) }
+    val header = PartHeader().apply {
+        leading(icon)
+        left(title)
+    }
     return ReasoningParts(header, title, icon, selection)
 }
 

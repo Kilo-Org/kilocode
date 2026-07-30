@@ -37,6 +37,24 @@ object SessionUiStyle {
             const val BODY_EXTRA_HEIGHT = 16
         }
 
+        /**
+         * Single source of truth for the spacing of every session-card header (see `PartHeader`).
+         * Keep header gaps here so all cards stay aligned; do not hardcode header spacing elsewhere.
+         */
+        object Header {
+            /** Leading inset from the card edge to the first header element. */
+            fun left() = JBUI.scale(Layout.HORIZONTAL_PADDING)
+
+            /** Trailing inset from the collapse/expand arrow to the card edge. */
+            fun right() = JBUI.scale(Layout.HORIZONTAL_PADDING)
+
+            /** Gap between the leading glyph icon and the title. */
+            fun icon() = UiStyle.Gap.sm()
+
+            /** Universal gap: title to every trailing element, and between all elements. */
+            fun gap() = JBUI.scale(Layout.GAP)
+        }
+
         object Popup {
             const val MAX_WIDTH = 350
             const val WIDE_MAX_WIDTH = MAX_WIDTH * 2
