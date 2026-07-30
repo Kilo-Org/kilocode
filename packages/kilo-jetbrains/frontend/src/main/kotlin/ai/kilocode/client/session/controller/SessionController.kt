@@ -1615,6 +1615,9 @@ class SessionController(
                 val current = model.state
                 if (current is SessionState.LoginRequired || current is SessionState.Reverting) return
                 purgePending(sid)
+                // purgePending may promote a still-queued permission from another (unpurged) child
+                // session; mirror idle() and leave that card in place rather than clobbering it with Idle.
+                if (model.state is SessionState.AwaitingPermission) return
                 SessionState.Idle
             }
             "busy" -> {

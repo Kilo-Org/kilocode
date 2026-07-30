@@ -6,10 +6,12 @@ import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
+import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
 import ai.kilocode.rpc.dto.QuestionInfoDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
+import ai.kilocode.rpc.dto.SessionStatusDto
 
 class PermissionQueueTest : SessionControllerTestBase() {
 
@@ -125,6 +127,43 @@ class PermissionQueueTest : SessionControllerTestBase() {
 
         assertPermission(m, "perm1")
     }
+
+    fun `test status idle keeps a promoted child permission instead of clobbering to idle`() {
+        // A root card in front of a queued child permission: when the root session reports idle,
+        // purgePending clears the root card and promotes the child's still-live permission. The
+        // status handler must leave that promotion in place rather than overwriting it with Idle.
+        val (m, _, _) = prompted()
+
+        emit(ChatEventDto.PermissionAsked("ses_test", permission("perm1")))
+        emit(taskPart("ses_child"), flush = false)
+        emit(ChatEventDto.PermissionAsked("ses_child", childPermission("child_perm1")))
+        assertPermission(m, "perm1")
+
+        emit(ChatEventDto.SessionStatusChanged("ses_test", SessionStatusDto("idle")))
+
+        assertPermission(m, "child_perm1")
+    }
+
+    private fun taskPart(child: String) = ChatEventDto.PartUpdated(
+        sessionID = "ses_test",
+        part = PartDto(
+            id = "part_task",
+            sessionID = "ses_test",
+            messageID = "msg1",
+            type = "tool",
+            tool = "task",
+            metadata = mapOf("sessionId" to child),
+            input = mapOf("subagent_type" to "explore", "description" to "Find files"),
+        ),
+    )
+
+    private fun childPermission(id: String) = PermissionRequestDto(
+        id = id,
+        sessionID = "ses_child",
+        permission = "edit",
+        patterns = listOf("*.kt"),
+        always = emptyList(),
+    )
 
     private fun assertPermission(c: SessionController, id: String, name: String = "edit") {
         val state = c.model.state as? SessionState.AwaitingPermission ?: error("Expected AwaitingPermission")
