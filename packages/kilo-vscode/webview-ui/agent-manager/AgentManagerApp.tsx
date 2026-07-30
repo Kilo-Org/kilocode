@@ -131,6 +131,7 @@ import {
   createSideTerminal,
   createAmbientSetup,
   hasSetupTerminal,
+  showTerminalStack,
   readSavedDestination,
   resolveRunScriptRequest,
   resolveVscodeTerminalRequest,
@@ -678,10 +679,7 @@ const AgentManagerContent: Component = () => {
     return false
   })
 
-  // The empty state now lives inside this stack so the side terminal can
-  // render beside it during setup. Only the unassigned/history views are
-  // exclusive; every selected context keeps the stack mounted.
-  const showDetailStack = createMemo(() => !history() && selection() !== null)
+  const showDetailStack = createMemo(() => showTerminalStack(history(), selection()))
 
   const overlay = createMemo((): SetupState | null => {
     const state = setup()

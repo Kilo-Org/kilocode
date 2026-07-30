@@ -12,6 +12,7 @@
 
 import { createEffect, createSignal, type Accessor } from "solid-js"
 import type { ScriptTerminalStatus, TerminalStateControls } from "./state"
+import type { TerminalTabStateWithContext } from "./state"
 
 interface AmbientSetupDeps {
   terms: TerminalStateControls
@@ -21,6 +22,16 @@ interface AmbientSetupDeps {
 }
 
 export type AmbientDecision = "wait" | "hide" | "keep"
+
+/** Selected contexts own the detail stack; history/unassigned are exclusive. */
+export function showTerminalStack(history: boolean, selection: string | null): boolean {
+  return !history && selection !== null
+}
+
+/** Setup output owns progress/error presentation when its terminal exists. */
+export function hasSetupTerminal(selection: string | null, terminals: TerminalTabStateWithContext[]): boolean {
+  return selection !== null && terminals.some((term) => term.contextKey === selection && term.kind === "setup")
+}
 
 /**
  * What happens to an ambiently revealed panel when the setup status
