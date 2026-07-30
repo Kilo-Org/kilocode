@@ -161,6 +161,7 @@ import { AnacondaDesktopBridge } from "./anaconda-desktop/bridge"
 import { fetchOpenAIModels, FetchModelsError } from "./shared/fetch-models"
 import type { Agent } from "@kilocode/sdk/v2/client"
 import { configFeatures } from "./features"
+import { fetchSnapshot } from "./kilo-provider/config-snapshot"
 import { createAutoApproveBridge } from "./kilo-provider/auto-approve"
 import type { KiloProviderOptions } from "./kilo-provider/options"
 import { fetchKiloEmbeddingModelCatalog } from "@kilocode/kilo-gateway"
@@ -2562,24 +2563,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     try {
-      const workspaceDir = this.getWorkspaceDirectory()
-      const [{ data: config }, { data: global }, { data: overlay }] = await Promise.all([
-        retry(() => this.client!.config.get({ directory: workspaceDir }, { throwOnError: true })),
-        this.client.global.config.get({ throwOnError: true }),
-        this.client.config.overlay({ directory: workspaceDir, scope: "project" }, { throwOnError: true }),
-      ])
-      this.cachedGlobalConfig = global ?? null
-
-      const message = {
-        type: "configLoaded",
-        config,
-        globalConfig: global,
-        projectConfig: overlay?.project,
-        settings: { maxCost: this.maxCostSetting(), languageCommitMessage: this.commitMessageLanguageSetting() },
-        features: configFeatures(config),
-      }
-      this.cachedConfigMessage = message
-      this.postMessage(message)
+      await this.refreshConfig("configLoaded")
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to fetch config:", error)
     }
@@ -2673,29 +2657,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private async fetchAndSendConfigUpdated(): Promise<void> {
     if (!this.client || this.connectionState !== "connected") return
     try {
-      const dir = this.getWorkspaceDirectory()
-      const [{ data: config }, { data: global }, { data: overlay }] = await Promise.all([
-        retry(() => this.client!.config.get({ directory: dir }, { throwOnError: true })),
-        this.client.global.config.get({ throwOnError: true }),
-        this.client.config.overlay({ directory: dir, scope: "project" }, { throwOnError: true }),
-      ])
-      this.cachedGlobalConfig = global ?? null
-      this.cachedConfigMessage = {
-        type: "configLoaded",
-        config,
-        globalConfig: global,
-        projectConfig: overlay?.project,
-        settings: { maxCost: this.maxCostSetting(), languageCommitMessage: this.commitMessageLanguageSetting() },
-        features: configFeatures(config),
-      }
-      this.postMessage({
-        type: "configUpdated",
-        config,
-        globalConfig: global,
-        projectConfig: overlay?.project,
-        settings: { maxCost: this.maxCostSetting(), languageCommitMessage: this.commitMessageLanguageSetting() },
-        features: configFeatures(config),
-      })
+      await this.refreshConfig("configUpdated")
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to fetch config after update:", error)
     }
@@ -3064,28 +3026,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     try {
-      const [{ data: merged }, { data: global }, { data: overlay }] = await Promise.all([
-        retry(() => this.client!.config.get({ directory: dir }, { throwOnError: true })),
-        this.client.global.config.get({ throwOnError: true }),
-        this.client.config.overlay({ directory: dir, scope: "project" }, { throwOnError: true }),
-      ])
-      this.cachedGlobalConfig = global ?? null
-      this.cachedConfigMessage = {
-        type: "configLoaded",
-        config: merged,
-        globalConfig: global,
-        projectConfig: overlay?.project,
-        settings: { maxCost: this.maxCostSetting(), languageCommitMessage: this.commitMessageLanguageSetting() },
-        features: configFeatures(merged),
-      }
-      this.postMessage({
-        type: "configUpdated",
-        config: merged,
-        globalConfig: global,
-        projectConfig: overlay?.project,
-        settings: { maxCost: this.maxCostSetting(), languageCommitMessage: this.commitMessageLanguageSetting() },
-        features: configFeatures(merged),
-      })
+      await this.refreshConfig("configUpdated", dir)
       this.requirements.clear()
       await Promise.all([
         refreshProviders ? this.fetchAndSendProviders() : Promise.resolve(),
@@ -3113,6 +3054,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.pending--
     }
   }
+
+  private async refreshConfig(type: "configLoaded" | "configUpdated", dir = this.getWorkspaceDirectory()) {
+    const snapshot = await fetchSnapshot(this.client!, dir, () => ({
+      maxCost: this.maxCostSetting(),
+      languageCommitMessage: this.commitMessageLanguageSetting(),
+    }))
+    this.cachedGlobalConfig = snapshot.globalConfig ?? null
+    this.cachedConfigMessage = { type: "configLoaded", ...snapshot }
+    this.postMessage({ type, ...snapshot })
+  }
+
   private postConfigFailure(error: unknown): void {
     console.error("[Kilo New] KiloProvider: Failed to update config:", error)
     this.postMessage({

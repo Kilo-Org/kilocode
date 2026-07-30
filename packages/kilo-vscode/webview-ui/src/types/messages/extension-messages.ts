@@ -18,7 +18,14 @@ import type { AnacondaDesktopExtensionMessage } from "../../../../src/shared/ana
 import type { QuestionRequest, SuggestionRequest, TodoItem } from "./questions"
 import type { ModelSelection, Provider, ProviderAuthState } from "./providers"
 import type { AgentInfo, AgentRequirementResult, SkillInfo, SlashCommandInfo } from "./agents"
-import type { BrowserSettings, Config, FeatureFlags, IndexingStatus, KiloEmbeddingModelCatalog } from "./config"
+import type {
+  BrowserSettings,
+  Config,
+  ConfigCollections,
+  FeatureFlags,
+  IndexingStatus,
+  KiloEmbeddingModelCatalog,
+} from "./config"
 import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type { KilocodeNotification, ProfileData } from "./profile"
 import type {
@@ -568,6 +575,7 @@ export interface ConfigLoadedMessage {
   config: Config
   globalConfig?: Config
   projectConfig?: Config
+  collections?: ConfigCollections
   settings?: ExtensionSettings
   features: FeatureFlags
 }
@@ -577,6 +585,7 @@ export interface ConfigUpdatedMessage {
   config: Config
   globalConfig?: Config
   projectConfig?: Config
+  collections?: ConfigCollections
   settings?: ExtensionSettings
   features: FeatureFlags
 }

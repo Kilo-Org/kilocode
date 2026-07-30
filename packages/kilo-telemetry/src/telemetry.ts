@@ -1,3 +1,4 @@
+import { release } from "node:os"
 import { Client } from "./client.js"
 import { Identity } from "./identity.js"
 import { TelemetryEvent } from "./events.js"
@@ -6,6 +7,9 @@ export interface TelemetryProperties {
   appName: string
   appVersion: string
   platform: string
+  os_name: string
+  os_version: string
+  os_arch: string
   editorName?: string
   vscodeVersion?: string
 }
@@ -58,6 +62,9 @@ export namespace Telemetry {
     appName: "kilo-cli",
     appVersion: "unknown",
     platform: process.platform,
+    os_name: process.platform,
+    os_version: release(),
+    os_arch: process.arch,
   }
 
   export async function init(options: { dataPath: string; version: string; enabled: boolean }): Promise<void> {
@@ -109,6 +116,9 @@ export namespace Telemetry {
         appName: props.appName,
         appVersion: props.appVersion,
         platform: props.platform,
+        os_name: props.os_name,
+        os_version: props.os_version,
+        os_arch: props.os_arch,
       })
 
       // Link the anonymous machineId to the authenticated email

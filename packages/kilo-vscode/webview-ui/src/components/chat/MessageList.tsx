@@ -71,7 +71,7 @@ import {
   type TranscriptRow,
 } from "../../context/transcript-rows"
 import { PromptRail } from "./PromptRail"
-import { capacity, promptItems, railItems, type PromptRailItem } from "./prompt-rail"
+import { capacity, historyAction, promptItems, railEntries, type PromptRailItem } from "./prompt-rail"
 import { onTimelineHighlight, type TimelineHighlight } from "../../utils/timeline/highlight"
 import { useTranscriptSearch, type SearchMatch } from "../../context/transcript-search"
 import { applyTranscriptHighlights, clearTranscriptHighlights } from "./transcript-search-highlight"
@@ -909,8 +909,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
         // entirely to the precise per-occurrence check in paintHighlights,
         // which only scrolls when the exact match actually needs it.
         if (!mounted) {
-          const index = keys().indexOf(match.key)
-          if (index >= 0) {
+          const index = indexes().get(match.key)
+          if (index !== undefined) {
             virtualizer()?.scrollToIndex(index, { align: "center" })
           }
         }
@@ -946,22 +946,64 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const tail = createMemo(() => partition().direct.map((row) => row.key))
   const lookup = createMemo(() => new Map(partition().direct.map((row) => [row.key, row])))
   const keys = createMemo(() => partition().virtual.map((row) => row.key))
+  const indexes = createMemo(() => new Map(keys().map((key, index) => [key, index])))
   const fingerprint = createMemo(() => rowFingerprint(keys()))
+
+  const [pending, setPending] = createSignal<{ sid: string; key: string }>()
 
   // Scrolls the transcript to a row by key. Virtualized rows jump through
   // the virtualizer; direct/live/queued rows are mounted, so they use
   // scrollIntoView. Pauses auto-follow first so the jump isn't snapped back.
   const jump = (key: string) => {
     autoScroll.pause()
-    const index = keys().indexOf(key)
-    if (index >= 0) {
-      virtualizer()?.scrollToIndex(index, { align: "start" })
+    const index = indexes().get(key)
+    if (index !== undefined) {
+      const handle = virtualizer()
+      if (handle) {
+        setPending(undefined)
+        handle.scrollToIndex(index, { align: "start" })
+        return
+      }
+      const sid = session.currentSessionID()
+      if (sid) setPending({ sid, key })
       return
     }
     const el = scrollEl()
     const target = el?.querySelector<HTMLElement>(`[data-row-key="${CSS.escape(key)}"]`)
-    target?.scrollIntoView({ block: "start" })
+    if (target) {
+      setPending(undefined)
+      target.scrollIntoView({ block: "start" })
+      return
+    }
+    const sid = session.currentSessionID()
+    if (sid) setPending({ sid, key })
   }
+
+  // Keep unresolved targets by stable row key. Virtual rows resolve once
+  // Virtua installs its handle; direct/live rows resolve once Solid mounts
+  // their DOM node.
+  createEffect(() => {
+    const target = pending()
+    if (!target) return
+    if (target.sid !== session.currentSessionID()) {
+      setPending(undefined)
+      return
+    }
+    const index = indexes().get(target.key)
+    const handle = virtualizer()
+    if (index !== undefined && handle) {
+      setPending(undefined)
+      autoScroll.pause()
+      handle.scrollToIndex(index, { align: "start" })
+      return
+    }
+    const el = scrollEl()
+    const row = el?.querySelector<HTMLElement>(`[data-row-key="${CSS.escape(target.key)}"]`)
+    if (!row) return
+    setPending(undefined)
+    autoScroll.pause()
+    row.scrollIntoView({ block: "start" })
+  })
 
   // Clicking a bar in the task timeline scrolls the transcript to that message.
   // Jumps land instantly (no smooth animation): while pinned at the bottom, a
@@ -985,17 +1027,77 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const items = createMemo(() => promptItems(rows()))
   // Until the transcript is measured there is no height to cap against, and
   // rendering every prompt would spill ticks past the rail on long sessions.
-  const shown = createMemo(() => railItems(items(), capacity(height())))
+  const entries = createMemo(() => railEntries(items(), capacity(height()), session.hasOlderMessages()))
   const [activeTurn, setActiveTurn] = createSignal<string>()
-  const railActiveKey = createMemo(() => shown().find((item) => item.turn === activeTurn())?.key)
+  const railActiveKey = createMemo(() => items().find((item) => item.turn === activeTurn())?.key)
+
+  const [seek, setSeek] = createSignal<{ sid: string; count: number }>()
+  let paging = false
+
+  const first = () => {
+    const item = items()[0]
+    if (!session.hasOlderMessages()) {
+      if (item) jump(item.key)
+      return
+    }
+    const sid = session.currentSessionID()
+    if (!sid || session.loadingOlderMessages()) return
+    setSeek({ sid, count: session.messages().length })
+    if (!session.loadOlderMessages()) setSeek(undefined)
+  }
+
+  // Loading the first prompt is deliberate and progressive: each completed
+  // prepend advances the existing page cursor, while hover/open remains free
+  // of network and full-history work. Stop if a request makes no progress so
+  // backend failures cannot turn into a retry loop.
+  createEffect(() => {
+    const loading = session.loadingOlderMessages()
+    const target = seek()
+    if (!target) {
+      paging = loading
+      return
+    }
+    if (target.sid !== session.currentSessionID()) {
+      paging = false
+      setSeek(undefined)
+      return
+    }
+    if (loading) {
+      paging = true
+      return
+    }
+    if (!paging) return
+    paging = false
+    const count = session.messages().length
+    const action = historyAction(target.count, count, session.hasOlderMessages())
+    if (action === "stop") {
+      const item = items()[0]
+      setSeek(undefined)
+      if (item) jump(item.key)
+      return
+    }
+    if (action === "load") {
+      setSeek({ sid: target.sid, count })
+      if (!session.loadOlderMessages()) setSeek(undefined)
+      return
+    }
+    const item = items()[0]
+    setSeek(undefined)
+    if (item) jump(item.key)
+  })
 
   const trackActive = () => {
-    const list = shown()
+    const list = items()
     if (list.length === 0) return setActiveTurn(undefined)
     const handle = virtualizer()
     const offset = handle?.scrollOffset
     if (handle && offset !== undefined && offset > 1) {
       const row = partition().virtual[handle.findItemIndex(offset)]
+      if (row) return setActiveTurn(row.turn)
+    }
+    const el = scrollEl()
+    if (handle && el && el.scrollHeight > el.clientHeight + 1) {
+      const row = partition().virtual[0]
       if (row) return setActiveTurn(row.turn)
     }
     setActiveTurn(list.at(-1)?.turn)
@@ -1014,7 +1116,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
   // Re-derive the active turn whenever the transcript changes so the rail
   // reflects a newly started turn even before any scrolling happens.
   createEffect(() => {
-    shown()
+    items()
     partition()
     scheduleActive()
   })
@@ -1263,14 +1365,25 @@ export const MessageList: Component<MessageListProps> = (props) => {
       </div>
 
       <PromptRail
-        items={shown}
+        entries={entries}
+        items={items}
         active={() => railActiveKey()}
         onSelect={(item: PromptRailItem) => jump(item.key)}
+        onFirst={first}
+        onLatest={() => {
+          const item = items().at(-1)
+          if (item) jump(item.key)
+        }}
+        onLoadOlder={() => session.loadOlderMessages()}
         onWheel={(deltaY: number) => {
           const el = scrollEl()
           if (el) el.scrollTop += deltaY
         }}
         height={height}
+        hasOlder={session.hasOlderMessages}
+        loadingOlder={session.loadingOlderMessages}
+        prepending={() => session.messageMutation() === "prepend"}
+        seeking={() => Boolean(seek())}
       />
 
       <Show when={autoScroll.userScrolled()}>

@@ -40,7 +40,6 @@ import type {
   SessionCreatedMessage,
   BranchInfo,
 } from "../src/types/messages"
-import { IndexingProvider } from "../src/context/indexing"
 import {
   DragDropProvider,
   DragDropSensors,
@@ -50,43 +49,24 @@ import {
   createSortable,
 } from "@thisbeyond/solid-dnd"
 import type { DragEvent } from "@thisbeyond/solid-dnd"
-import { ThemeProvider } from "@kilocode/kilo-ui/theme"
-import { DialogProvider, useDialog } from "@kilocode/kilo-ui/context/dialog"
+import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { DropdownMenu } from "@kilocode/kilo-ui/dropdown-menu"
-import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
-import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
-import { DiffComponentProvider } from "@kilocode/kilo-ui/context/diff"
-import { FileComponentProvider } from "@kilocode/kilo-ui/context/file"
-import { Code } from "@kilocode/kilo-ui/code"
-import { Diff } from "@kilocode/kilo-ui/diff"
-import { File } from "@kilocode/kilo-ui/file"
-import { Toast, showToast } from "@kilocode/kilo-ui/toast"
+import { showToast } from "@kilocode/kilo-ui/toast"
 import { ResizeHandle } from "@kilocode/kilo-ui/resize-handle"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
-import { VSCodeProvider, useVSCode } from "../src/context/vscode"
-import { ServerProvider } from "../src/context/server"
-import { ProviderProvider } from "../src/context/provider"
-import { ConfigProvider } from "../src/context/config"
-import { DisplayProvider } from "../src/context/display"
-import { KiloEmbeddingModelsProvider } from "../src/context/kilo-embedding-models"
-import { ImageModelsProvider } from "../src/context/image-models"
-import { NotificationsProvider } from "../src/context/notifications"
-import { FeedbackProvider } from "../src/context/feedback"
-import { MemoryProvider } from "../src/context/memory"
-import { SessionProvider, useSession } from "../src/context/session"
-import { AgentRequirementsProvider } from "../src/context/agent-requirements"
+import { useVSCode } from "../src/context/vscode"
+import { useSession } from "../src/context/session"
 import { WorktreeModeProvider } from "../src/context/worktree-mode"
+import { ProviderShell } from "../src/context/provider-shell"
 import { ChatView } from "../src/components/chat"
-import { SpeechToTextPrewarm } from "../src/components/speech-to-text/SpeechToTextPrewarm"
 import HistoryView from "../src/components/history/HistoryView"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
-import { DataBridge, MermaidDownloadBridge } from "../src/App"
-import { LanguageBridge } from "../src/context/language-bridge"
+import { DataBridge } from "../src/App"
 import { useLanguage } from "../src/context/language"
 import { createTabFocus } from "../src/utils/tab-navigation"
 import {
@@ -2916,53 +2896,16 @@ const AgentManagerContent: Component = () => {
 
 export const AgentManagerApp: Component = () => {
   return (
-    <ThemeProvider defaultTheme="kilo-vscode">
-      <DialogProvider>
-        <VSCodeProvider>
-          <MermaidDownloadBridge />
-          <ServerProvider>
-            <LanguageBridge>
-              <MarkedProvider>
-                <DiffComponentProvider component={Diff}>
-                  <CodeComponentProvider component={Code}>
-                    <FileComponentProvider component={File}>
-                      <ProviderProvider>
-                        <ConfigProvider>
-                          <SpeechToTextPrewarm />
-                          <DisplayProvider>
-                            <IndexingProvider>
-                              <KiloEmbeddingModelsProvider>
-                                <ImageModelsProvider>
-                                  <NotificationsProvider>
-                                    <SessionProvider>
-                                      <AgentRequirementsProvider>
-                                        <MemoryProvider>
-                                          <FeedbackProvider>
-                                            <WorktreeModeProvider>
-                                              <DataBridge>
-                                                <AgentManagerContent />
-                                              </DataBridge>
-                                            </WorktreeModeProvider>
-                                          </FeedbackProvider>
-                                        </MemoryProvider>
-                                      </AgentRequirementsProvider>
-                                    </SessionProvider>
-                                  </NotificationsProvider>
-                                </ImageModelsProvider>
-                              </KiloEmbeddingModelsProvider>
-                            </IndexingProvider>
-                          </DisplayProvider>
-                        </ConfigProvider>
-                      </ProviderProvider>
-                    </FileComponentProvider>
-                  </CodeComponentProvider>
-                </DiffComponentProvider>
-              </MarkedProvider>
-            </LanguageBridge>
-          </ServerProvider>
-        </VSCodeProvider>
-        <Toast.Region />
-      </DialogProvider>
-    </ThemeProvider>
+    <ProviderShell.Root>
+      <ProviderShell.Session>
+        <ProviderShell.Chat>
+          <WorktreeModeProvider>
+            <DataBridge>
+              <AgentManagerContent />
+            </DataBridge>
+          </WorktreeModeProvider>
+        </ProviderShell.Chat>
+      </ProviderShell.Session>
+    </ProviderShell.Root>
   )
 }
