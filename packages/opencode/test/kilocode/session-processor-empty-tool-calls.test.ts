@@ -1,6 +1,6 @@
 import { NodeFileSystem } from "@effect/platform-node"
 import { describe, expect } from "bun:test"
-import { Context, Effect, Layer } from "effect"
+import { Context, Deferred, Effect, Layer } from "effect"
 import * as Stream from "effect/Stream"
 import { LLMEvent, type LLMEvent as Event } from "@opencode-ai/llm"
 import { Database } from "@opencode-ai/core/database/database"
@@ -496,6 +496,17 @@ describe("session processor empty tool-calls", () => {
       (dir) =>
         Effect.gen(function* () {
           const state = yield* setup(dir)
+          const events = yield* EventV2Bridge.Service
+          const updated = yield* Deferred.make<MessageV2.ToolPart["state"]["input"]>()
+          const unsubscribe = yield* events.listen((event) => {
+            if (event.type !== MessageV2.Event.PartUpdated.type) return Effect.void
+            const data = event.data as typeof MessageV2.Event.PartUpdated.data.Type
+            const part = data.part
+            if (part.type !== "tool" || part.callID !== "call_1" || part.state.status !== "running") return Effect.void
+            return Deferred.succeed(updated, part.state.input).pipe(Effect.asVoid)
+          })
+          yield* Effect.addFinalizer(() => unsubscribe)
+
           yield* state.test.reply(
             LLMEvent.stepStart({ index: 0 }),
             LLMEvent.toolCall({ id: "call_1", name: "test_tool", input: undefined }),
@@ -504,10 +515,9 @@ describe("session processor empty tool-calls", () => {
           )
 
           yield* state.handle.process(state.input)
-          const parts = yield* MessageV2.parts(state.handle.message.id)
-          const tool = parts.find((part) => part.type === "tool")
+          const input = yield* Deferred.await(updated)
 
-          expect(tool?.state.input).toEqual({})
+          expect(input).toStrictEqual({})
         }),
       { git: true },
     ),

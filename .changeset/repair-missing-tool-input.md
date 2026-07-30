@@ -3,4 +3,4 @@
 "kilo-code": patch
 ---
 
-Recover tool execution when a provider omits tool arguments.
+Normalize omitted tool-call input to an empty object before publishing tool-part updates.
