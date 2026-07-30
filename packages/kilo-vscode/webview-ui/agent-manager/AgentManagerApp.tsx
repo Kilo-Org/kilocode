@@ -1870,6 +1870,7 @@ const AgentManagerContent: Component = () => {
         ) as never,
       ),
   })
+  createEffect(on(terms.sideKey, (key, previous) => sideCtl.syncContext(key, previous), { defer: true }))
 
   const handleReviewTabMouseDown = (e: MouseEvent) => {
     if (e.button !== 1) return

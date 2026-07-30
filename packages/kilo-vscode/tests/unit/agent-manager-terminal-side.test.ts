@@ -73,6 +73,20 @@ describe("Agent Manager side terminal controller", () => {
     expect(hidden.calls.hide).toBe(0)
   })
 
+  it("ensures an open terminal panel has a terminal after switching contexts", () => {
+    const visible = scene({ visible: true })
+    visible.ctl.syncContext("wt-2", "wt-1")
+    expect(visible.calls.requestSide).toBe(1)
+
+    visible.ctl.syncContext("wt-2", "wt-2")
+    visible.ctl.syncContext("wt-2", undefined)
+    expect(visible.calls.requestSide).toBe(1)
+
+    const hidden = scene()
+    hidden.ctl.syncContext("wt-2", "wt-1")
+    expect(hidden.calls.requestSide).toBe(0)
+  })
+
   it("kills the focused terminal and refocuses the chat", () => {
     const focused = scene({ focusedId: "terminal:two" })
     expect(focused.ctl.close()).toBe(true)

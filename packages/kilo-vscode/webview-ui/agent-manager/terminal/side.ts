@@ -109,6 +109,12 @@ export function createSideTerminal(deps: SideTerminalDeps) {
     deps.handlers.requestSide()
   }
 
+  /** Keep an open terminal panel useful when its worktree context changes. */
+  const syncContext = (key: string, previous: string | undefined) => {
+    if (!previous || key === previous || !deps.visible()) return
+    deps.handlers.requestSide()
+  }
+
   /** Kill the focused side terminal (Cmd/Ctrl+W). The panel stays open
    *  on the remaining terminals, or on the empty state when this was
    *  the last one. */
@@ -159,5 +165,5 @@ export function createSideTerminal(deps: SideTerminalDeps) {
     setDestination(target)
   }
 
-  return { destination, syncDefault, toggle, close, openPreferred, choose }
+  return { destination, syncDefault, syncContext, toggle, close, openPreferred, choose }
 }
