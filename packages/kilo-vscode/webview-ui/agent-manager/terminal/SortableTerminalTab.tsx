@@ -4,9 +4,9 @@
  * `TerminalTabChrome` is the shared visual tab: console icon, title,
  * tooltip/keybinding hints, and the X close button — the same
  * `am-tab*` structure the session tabs use. `SortableTerminalTab`
- * wraps it with drag-and-drop and a right-click context menu for the
- * top tab bar; the side terminal panel uses the chrome directly so
- * both surfaces render identical terminal tabs.
+ * wraps it with drag-and-drop and a right-click context menu; both the
+ * top tab bar and the side terminal panel render that wrapper, so a
+ * terminal tab behaves identically in either surface.
  */
 
 import { Component, Show, type JSX } from "solid-js"

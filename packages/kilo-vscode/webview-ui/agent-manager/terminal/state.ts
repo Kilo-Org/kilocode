@@ -725,6 +725,22 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
     return true
   }
 
+  /**
+   * Kill every side terminal of a context except one, and make the
+   * survivor the visible tab: the side-strip counterpart of the tab
+   * bar's "Close Others".
+   */
+  const closeSideOthers = (terminalId: string) => {
+    const key = deps.state.contextFor(terminalId)
+    if (!key) return
+    for (const term of deps.state.sidesForContext(key)) {
+      if (term.id === terminalId) continue
+      closeSide(term.id)
+    }
+    deps.state.setSideActive(key, terminalId)
+    deps.state.requestFocus(terminalId)
+  }
+
   /** Make a side terminal the visible one in its panel and focus it. */
   const selectSide = (terminalId: string) => {
     const key = deps.state.contextFor(terminalId)
@@ -750,6 +766,7 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
   return {
     closeTerminal,
     closeSide,
+    closeSideOthers,
     selectSide,
     middleClick,
     activate,
