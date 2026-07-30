@@ -196,37 +196,39 @@ it.instance("meta org precedence: session metadata > KILO_ORG_ID > auth accountI
       expires: Date.now() + 60_000,
       accountId: ORG_AUTH,
     })
-    yield* kilo.init()
+    // Failure-safe: remove oauth even when an assertion fails mid-test (auth is
+    // not restored by afterEach — only fetch/env/rename marks are).
+    yield* Effect.gen(function* () {
+      yield* kilo.init()
 
-    // 1) metadata wins over env
-    const withMeta = yield* sessions.create({ metadata: { orgId: ORG_META } })
-    yield* Effect.promise(() => KiloSessions.bootstrap(withMeta.id))
-    requests.length = 0
-    emitUpdated(instance.directory, withMeta.id, withMeta.title)
-    yield* drainIngest
-    expect(metaItems(requests).some((m) => m.orgId === ORG_META)).toBe(true)
+      // 1) metadata wins over env
+      const withMeta = yield* sessions.create({ metadata: { orgId: ORG_META } })
+      yield* Effect.promise(() => KiloSessions.bootstrap(withMeta.id))
+      requests.length = 0
+      emitUpdated(instance.directory, withMeta.id, withMeta.title)
+      yield* drainIngest
+      expect(metaItems(requests).some((m) => m.orgId === ORG_META)).toBe(true)
 
-    // 2) env wins when metadata absent
-    requests.length = 0
-    const plain = yield* sessions.create({})
-    yield* Effect.promise(() => KiloSessions.bootstrap(plain.id))
-    requests.length = 0
-    emitUpdated(instance.directory, plain.id, plain.title)
-    yield* drainIngest
-    expect(metaItems(requests).some((m) => m.orgId === ORG_ENV)).toBe(true)
+      // 2) env wins when metadata absent
+      requests.length = 0
+      const plain = yield* sessions.create({})
+      yield* Effect.promise(() => KiloSessions.bootstrap(plain.id))
+      requests.length = 0
+      emitUpdated(instance.directory, plain.id, plain.title)
+      yield* drainIngest
+      expect(metaItems(requests).some((m) => m.orgId === ORG_ENV)).toBe(true)
 
-    // 3) auth accountId when env cleared
-    delete process.env.KILO_ORG_ID
-    clearInFlightCache("kilo-sessions:org")
-    requests.length = 0
-    const authOnly = yield* sessions.create({})
-    yield* Effect.promise(() => KiloSessions.bootstrap(authOnly.id))
-    requests.length = 0
-    emitUpdated(instance.directory, authOnly.id, authOnly.title)
-    yield* drainIngest
-    expect(metaItems(requests).some((m) => m.orgId === ORG_AUTH)).toBe(true)
-
-    yield* auth.remove("kilo").pipe(Effect.orDie)
+      // 3) auth accountId when env cleared
+      delete process.env.KILO_ORG_ID
+      clearInFlightCache("kilo-sessions:org")
+      requests.length = 0
+      const authOnly = yield* sessions.create({})
+      yield* Effect.promise(() => KiloSessions.bootstrap(authOnly.id))
+      requests.length = 0
+      emitUpdated(instance.directory, authOnly.id, authOnly.title)
+      yield* drainIngest
+      expect(metaItems(requests).some((m) => m.orgId === ORG_AUTH)).toBe(true)
+    }).pipe(Effect.ensuring(auth.remove("kilo").pipe(Effect.orDie)))
   }).pipe(Effect.provide(layer()))
 })
 

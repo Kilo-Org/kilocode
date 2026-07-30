@@ -368,26 +368,29 @@ export namespace KiloSessions {
             const sessionID = evt.properties.sessionID
             const session = await Effect.runPromise(sessions.get(sessionID).pipe(Effect.orElseSucceed(() => null)))
             if (!session) return
-            await ingest.sync(sessionID, [
-              { type: "kilo_meta", data: await meta(sessionID, session) },
-              { type: "session", data: transport(session) },
-            ])
+            // Consume rename/auto-title marks before await ingest.sync so the 60s TTL
+            // spans only the in-process hop, not token resolution + network queueing.
             const prev = knownTitles.get(sessionID)
             knownTitles.set(sessionID, session.title)
             // Same-title Updated (setTitle no-op / double session.renamed): still
             // consume a matching rename adoption so the mark cannot stick and
             // swallow a later real local rename (Decision 8 last-write-wins).
+            let titleReport: { generated: boolean } | undefined
             if (prev === session.title) {
               consumeRenameAdoption(sessionID, session.title)
-              return
+            } else if (prev !== undefined && !consumeRenameAdoption(sessionID, session.title)) {
+              // Unseeded first sight (race before Created): record only, do not POST.
+              // After Created/list seed, any title change is a real change and POSTs.
+              titleReport = { generated: consumeAutoTitle(sessionID, session.title) }
             }
-            // Unseeded first sight (race before Created): record only, do not POST.
-            // After Created/list seed, any title change is a real change and POSTs.
-            if (prev === undefined) return
-            if (consumeRenameAdoption(sessionID, session.title)) return
-            const generated = consumeAutoTitle(sessionID, session.title)
+            await ingest.sync(sessionID, [
+              { type: "kilo_meta", data: await meta(sessionID, session) },
+              { type: "session", data: transport(session) },
+            ])
+            if (!titleReport) return
             // Production path goes through the Interface method (not private helper).
-            await Effect.runPromise(reportSessionTitle(sessionID, session.title, { generated }))
+            const { AppRuntime } = await import("@/effect/app-runtime")
+            await AppRuntime.runPromise(reportSessionTitle(sessionID, session.title, titleReport))
           })
           watch(Session.Event.Deleted, (evt) => {
             const sessionID = evt.properties.sessionID

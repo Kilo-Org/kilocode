@@ -85,6 +85,7 @@ import { SessionReminders } from "./reminders"
 import { SessionTools } from "./tools"
 import { LLMEvent } from "@opencode-ai/llm"
 import { RepositoryCache } from "@opencode-ai/core/repository-cache" // kilocode_change
+
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
 
