@@ -119,6 +119,26 @@ bun run extension        # Build + launch in dev mode
 
 This auto-detects VS Code on macOS, Linux, and Windows. Override with `--app-path PATH` or `VSCODE_EXEC_PATH`. Use `--insiders` to prefer Insiders, `--workspace PATH` to open a specific folder, or `--clean` to reset cached state.
 
+The launcher is isolated from your normal VS Code profile. It uses a repo-specific user-data and extensions directory under the OS temp directory, disables the installed Marketplace Kilo extension, and opens this checkout through `--extensionDevelopmentPath`. Isolation means testing does not reuse your normal VS Code settings, extension list, or Kilo extension install. It also keeps Kilo dev runtime state separate from your everyday Kilo usage.
+
+Use a clean-isolated launch when you need to reproduce first-run behavior, onboarding, migration prompts, auth/setup flows, or anything that depends on persisted extension state:
+
+```bash
+bun run extension -- --workspace ../sample-project          # isolated, preserving previous dev state
+bun run extension -- --clean --workspace ../sample-project  # isolated, wiping previous dev state first
+```
+
+The repository also includes VS Code Run and Debug configurations:
+
+| Configuration | What it does |
+|---|---|
+| `VSCode - Run Extension` | Runs the extension development host with the normal VS Code profile disabled for other extensions. |
+| `VSCode - Run Extension (Local Backend)` | Same as above, but points `KILO_API_URL` at `http://localhost:3000`. |
+| `VSCode - Run Extension (Isolated)` | Runs with VS Code user data, extension installs, and Kilo runtime state under `<repo>/.kilo-dev/`. |
+| `VSCode - Run Extension (Isolated Clean)` | Deletes `<repo>/.kilo-dev/`, then runs the isolated configuration from a blank state. |
+
+Prefer `bun run extension` for scripted/manual CLI launches and agent-driven testing. Use the Run and Debug configurations when actively debugging in VS Code and you want breakpoints attached to the extension host.
+
 ### Developing the JetBrains Plugin
 
 Requires Java 21 (see [Prerequisites](#prerequisites)). From `packages/kilo-jetbrains/`:

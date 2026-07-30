@@ -66,6 +66,8 @@ bun run format           # Run formatter (do this before committing to avoid sty
 
 The `extension` commands also work from the repo root. Pass `--insiders` to prefer VS Code Insiders, `--workspace PATH` to open a different folder, `--clean` to wipe cached state, or `--wait` to block until VS Code closes. VS Code is auto-detected on macOS, Linux, and Windows; override with `--app-path` or `VSCODE_EXEC_PATH`.
 
+The checked-in VS Code debug configurations include `VSCode - Run Extension (Isolated)` and `VSCode - Run Extension (Isolated Clean)`. Those are UI equivalents for humans; agents should use the CLI launcher instead. Use `bun run extension -- --workspace <path>` for an isolated run and `bun run extension -- --clean --workspace <path>` for a clean-isolated run. The CLI launcher keeps VS Code state under an OS temp directory, while the debug configs keep it under `<repo>/.kilo-dev/`; both avoid the developer's normal VS Code profile and installed extensions.
+
 Single test: `bun run test -- --grep "test name"`
 
 ## CLI Binary

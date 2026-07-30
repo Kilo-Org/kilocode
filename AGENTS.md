@@ -11,7 +11,8 @@ Kilo CLI is an open source AI coding agent that generates code from natural lang
 
 - **Dev**: `bun run dev` (runs from root) or `bun run --cwd packages/opencode --conditions=browser src/index.ts`
 - **Dev with params**: `bun dev -- help`
-- **Extension**: `bun run extension` (build + launch VS Code with the extension in dev mode). Pass `--no-build` to skip the build.
+- **Extension**: `bun run extension` (build + launch VS Code with the extension in dev mode). Pass `--no-build` to skip the build. The launcher uses an isolated VS Code user-data/extensions dir under the OS temp dir so it does not use the developer's normal VS Code profile or installed Kilo extension. Use `--workspace <path>` to open a test project and `--clean` to wipe that isolated state before launch.
+- **Extension debug configs**: `.vscode/launch.json` also has `VSCode - Run Extension (Isolated)` and `VSCode - Run Extension (Isolated Clean)`. They store dev state under `<repo>/.kilo-dev/`; the clean variant deletes `.kilo-dev` before launching. When a user asks an agent to run the isolated or clean-isolated extension, use the CLI launcher from repo root (`bun run extension -- --workspace <path>` or `bun run extension -- --clean --workspace <path>`) rather than trying to click VS Code's Run and Debug dropdown.
 - **Typecheck**: `bun turbo typecheck` (uses `tsgo`, not `tsc`). Includes the JetBrains plugin and requires Java 21; do not run `java -version` as a routine preflight. Only check Java when a Gradle/Java command fails with a Java-version or missing-Java error. If missing, install via SDKMAN: `sdk install java 21-tem && sdk use java 21-tem`. If SDKMAN is not installed, see https://sdkman.io/install.
 - **Test**: `bun test` from `packages/opencode/` (NOT from root -- root blocks tests)
 - **Single test**: `bun test ./test/tool/tool-define.test.ts` from `packages/opencode/`

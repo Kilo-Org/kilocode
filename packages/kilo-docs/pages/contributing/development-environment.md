@@ -107,7 +107,7 @@ To run the extension in development mode:
 bun run extension
 ```
 
-This will build and launch the extension in an isolated VS Code instance.
+This builds the extension and launches it in an isolated VS Code instance. The launched window uses repo-specific user data and extension directories instead of your normal VS Code profile, disables the installed Marketplace Kilo extension, and loads this checkout through `--extensionDevelopmentPath`. That keeps local extension testing separate from your everyday VS Code settings, installed extensions, and Kilo runtime state.
 
 The command auto-detects VS Code on macOS, Linux, and Windows. Use these options when the default launch target is not the one you need:
 
@@ -120,11 +120,28 @@ The command auto-detects VS Code on macOS, Linux, and Windows. Use these options
 | `--workspace <path>` | Open a specific workspace folder |
 | `--clean` | Reset cached extension state before launch |
 
-For example, to test the extension against a sample workspace:
+For example, to test the extension against a sample workspace while preserving the previous isolated dev state:
 
 ```bash
 bun run extension --workspace ../sample-project
 ```
+
+Use a clean-isolated run when you need to reproduce first-run behavior, onboarding, migration prompts, auth/setup flows, or any behavior that depends on stored extension state:
+
+```bash
+bun run extension --clean --workspace ../sample-project
+```
+
+The repository also includes VS Code Run and Debug configurations for extension-host debugging:
+
+| Configuration | What it does |
+|---|---|
+| `VSCode - Run Extension` | Runs the extension development host with the normal VS Code profile disabled for other extensions. |
+| `VSCode - Run Extension (Local Backend)` | Same as above, but points `KILO_API_URL` at `http://localhost:3000`. |
+| `VSCode - Run Extension (Isolated)` | Runs with VS Code user data, extension installs, and Kilo runtime state under `<repo>/.kilo-dev/`. |
+| `VSCode - Run Extension (Isolated Clean)` | Deletes `<repo>/.kilo-dev/`, then runs the isolated configuration from a blank state. |
+
+Use the CLI launcher (`bun run extension ...`) for repeatable manual testing and scripts. Use the Run and Debug configurations when you want VS Code breakpoints attached to the extension host.
 
 To set the executable through an environment variable, use the syntax for your shell:
 
