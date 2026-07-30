@@ -262,7 +262,7 @@ export function mockSessionValue(overrides?: {
     createSession: noop,
     clearCurrentSession: noop,
     loadSessions: noop,
-    loadOlderMessages: noop,
+    loadOlderMessages: () => false,
     selectSession: noop,
     deleteSession: noop,
     renameSession: noop,
