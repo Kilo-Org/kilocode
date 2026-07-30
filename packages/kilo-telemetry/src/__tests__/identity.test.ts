@@ -45,7 +45,8 @@ describe("Identity.updateFromKiloAuth profile cache", () => {
     expect(cache.email).toBe("user-token-a@example.com")
     expect(cache.token).not.toBe("token-a")
     // The cache stores an email and a token verifier, so it must be owner-only.
-    expect(statSync(file).mode & 0o777).toBe(0o600)
+    // POSIX only: Windows reports default mode bits and enforces access via ACLs.
+    if (process.platform !== "win32") expect(statSync(file).mode & 0o777).toBe(0o600)
   })
 
   test("uses cached email without a network request on later invocations", async () => {
