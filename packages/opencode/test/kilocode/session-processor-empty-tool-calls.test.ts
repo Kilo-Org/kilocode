@@ -29,7 +29,7 @@ import { KiloSessionProcessor } from "../../src/kilocode/session/processor"
 import * as Log from "@opencode-ai/core/util/log"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { provideTmpdirProject } from "../fixture/fixture"
-import { testEffect } from "../lib/effect"
+import { awaitWithTimeout, testEffect } from "../lib/effect"
 
 Log.init({ print: false })
 
@@ -515,7 +515,10 @@ describe("session processor empty tool-calls", () => {
           )
 
           yield* state.handle.process(state.input)
-          const input = yield* Deferred.await(updated)
+          const input = yield* awaitWithTimeout(
+            Deferred.await(updated),
+            "running tool PartUpdated event was not published",
+          )
 
           expect(input).toStrictEqual({})
         }),
