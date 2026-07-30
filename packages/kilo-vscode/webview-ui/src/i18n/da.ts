@@ -167,7 +167,7 @@ export const dict = {
   "model.routing.preview.maxOutput": "Maks. output",
   "model.routing.preview.cacheRead": "Cachelæsning",
   "model.routing.preview.cacheWrite": "Cacheskrivning",
-  "model.routing.preview.uptime": "Oppetid (30 min.)",
+  "model.routing.preview.uptime": "Tilgængelighed (30 min.)",
   "model.routing.preview.autoDescription": "Gatewayen vælger dynamisk en udbyder, når hver anmodning sendes.",
   "model.routing.unavailable": "Ikke tilgængelig i øjeblikket",
   "model.routing.projectOverride":

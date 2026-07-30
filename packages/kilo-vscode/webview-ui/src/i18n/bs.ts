@@ -172,7 +172,7 @@ export const dict = {
   "model.routing.preview.autoDescription": "Gateway dinamički bira provajdera prilikom slanja svakog zahtjeva.",
   "model.routing.unavailable": "Trenutno nedostupno",
   "model.routing.projectOverride":
-    "Rutiranje provajdera za ovaj model postavljeno je u kilo.json projekta i nadjačava ovaj izbor.",
+    "Usmjeravanje provajdera za ovaj model postavljeno je u kilo.json projekta i nadjačava ovaj izbor.",
   "model.group.auto": "Automatski modeli",
   "model.group.recommended": "Preporučeno",
   "model.group.favorites": "Favoriti",
@@ -473,7 +473,7 @@ export const dict = {
     "Sakrij Kilo Gateway modele čiji pružaoci mogu koristiti vaše promptove za treniranje.",
   "settings.models.providerRouting.title": "Usmjeravanje provajdera",
   "settings.models.providerRouting.description":
-    "Pri usmjeravanju kroz Kilo Gateway vežite zadani model za određenog provajdera. U automatskom načinu Kilo Gateway bira provajdera.",
+    "Pri usmjeravanju kroz Kilo Gateway vežite zadani model za određenog provajdera za inferencu. U automatskom načinu Kilo Gateway bira provajdera.",
   "settings.providers.modeModels": "Model po režimu",
   "settings.providers.modeModels.description":
     "Zamijenite podrazumijevani model za određene režime. Ako nije postavljeno, koristi se globalni podrazumijevani model.",

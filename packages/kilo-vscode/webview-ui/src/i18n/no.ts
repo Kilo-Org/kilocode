@@ -170,7 +170,7 @@ export const dict = {
   "model.routing.preview.maxOutput": "Maks. utdata",
   "model.routing.preview.cacheRead": "Cachelesing",
   "model.routing.preview.cacheWrite": "Cacheskriving",
-  "model.routing.preview.uptime": "Oppetid (30 min)",
+  "model.routing.preview.uptime": "Tilgjengelighet (30 min)",
   "model.routing.preview.autoDescription": "Gatewayen velger en leverandør dynamisk når hver forespørsel sendes.",
   "model.routing.unavailable": "Utilgjengelig for øyeblikket",
   "model.routing.projectOverride":
@@ -435,7 +435,7 @@ export const dict = {
     "Skjul Kilo Gateway-modeller der leverandørene kan bruke ledetekstene dine til trening.",
   "settings.models.providerRouting.title": "Leverandørruting",
   "settings.models.providerRouting.description":
-    "Knytt standardmodellen til en bestemt leverandør når den rutes gjennom Kilo Gateway. Med Automatisk velger gatewayen.",
+    "Knytt standardmodellen til en bestemt inferens-leverandør når den rutes gjennom Kilo Gateway. Med Automatisk velger gatewayen.",
   "settings.providers.modeModels": "Modell per modus",
   "settings.providers.modeModels.description":
     "Overstyr standardmodellen for bestemte moduser. Hvis ikke angitt, brukes den globale standardmodellen.",

@@ -167,7 +167,7 @@ export const dict = {
   "model.routing.preview.autoDescription": "تختار البوابة موفرًا ديناميكيًا عند إرسال كل طلب.",
   "model.routing.unavailable": "غير متاح حاليًا",
   "model.routing.projectOverride":
-    "توجيه المزوّد لهذا النموذج محدَّد في ملف kilo.json الخاص بالمشروع ويتجاوز هذا الاختيار.",
+    "توجيه الموفر لهذا النموذج محدَّد في ملف kilo.json الخاص بالمشروع ويتجاوز هذا الاختيار.",
   "model.group.auto": "النماذج التلقائية",
   "model.group.recommended": "موصى به",
   "model.group.favorites": "المفضلة",

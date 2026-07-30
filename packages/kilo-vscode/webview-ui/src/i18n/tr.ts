@@ -167,7 +167,7 @@ export const dict = {
   "model.routing.preview.maxOutput": "Maks. çıktı",
   "model.routing.preview.cacheRead": "Önbellek okuma",
   "model.routing.preview.cacheWrite": "Önbellek yazma",
-  "model.routing.preview.uptime": "Çalışma süresi (30 dk.)",
+  "model.routing.preview.uptime": "Erişilebilirlik (30 dk.)",
   "model.routing.preview.autoDescription": "Ağ geçidi, her istek gönderilirken dinamik olarak bir sağlayıcı seçer.",
   "model.routing.unavailable": "Şu anda kullanılamıyor",
   "model.routing.projectOverride":

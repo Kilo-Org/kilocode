@@ -1128,7 +1128,7 @@ export const dict = {
     "Verberg Kilo Gateway-modellen waarvan providers je prompts mogelijk voor training gebruiken.",
   "settings.models.providerRouting.title": "Providerroutering",
   "settings.models.providerRouting.description":
-    "Koppel het standaardmodel aan een specifieke provider wanneer het via Kilo Gateway wordt gerouteerd. Met Auto kiest de gateway.",
+    "Koppel het standaardmodel aan een specifieke inference-provider wanneer het via Kilo Gateway wordt gerouteerd. Met Auto kiest de gateway.",
   "settings.providers.modeModels": "Model per Modus",
   "settings.providers.modeModels.description":
     "Overschrijf het standaard model voor specifieke modi. Indien niet ingesteld, wordt het globale standaard model gebruikt.",

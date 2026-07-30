@@ -163,7 +163,7 @@ export const dict = {
   "model.routing.preview.maxOutput": "最大输出",
   "model.routing.preview.cacheRead": "缓存读取",
   "model.routing.preview.cacheWrite": "缓存写入",
-  "model.routing.preview.uptime": "正常运行时间（30 分钟）",
+  "model.routing.preview.uptime": "可用率（30 分钟）",
   "model.routing.preview.autoDescription": "网关会在发送每个请求时动态选择提供商。",
   "model.routing.unavailable": "当前不可用",
   "model.routing.projectOverride": "该模型的提供商路由已在项目的 kilo.json 中设置，会覆盖此处的选择。",

@@ -171,7 +171,7 @@ export const dict = {
   "model.routing.preview.maxOutput": "최대 출력",
   "model.routing.preview.cacheRead": "캐시 읽기",
   "model.routing.preview.cacheWrite": "캐시 쓰기",
-  "model.routing.preview.uptime": "가동 시간(30분)",
+  "model.routing.preview.uptime": "가동률(30분)",
   "model.routing.preview.autoDescription": "게이트웨이는 각 요청을 전송할 때 공급자를 동적으로 선택합니다.",
   "model.routing.unavailable": "현재 사용할 수 없음",
   "model.routing.projectOverride":

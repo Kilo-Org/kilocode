@@ -158,7 +158,7 @@ export const dict = {
 
   "model.tag.free": "ฟรี",
   "model.tag.dataCollected": "ข้อมูลอาจถูกนำไปใช้ในการฝึก",
-  "model.routing.label": "การเลือกผู้ให้บริการ",
+  "model.routing.label": "การกำหนดเส้นทางผู้ให้บริการ",
   "model.routing.auto": "อัตโนมัติ",
   "model.routing.loading": "กำลังโหลดผู้ให้บริการ…",
   "model.routing.empty": "ไม่มีรายการผู้ให้บริการสำหรับโมเดลนี้",
@@ -166,7 +166,7 @@ export const dict = {
   "model.routing.preview.maxOutput": "เอาต์พุตสูงสุด",
   "model.routing.preview.cacheRead": "การอ่านแคช",
   "model.routing.preview.cacheWrite": "การเขียนแคช",
-  "model.routing.preview.uptime": "ระยะเวลาทำงาน (30 นาที)",
+  "model.routing.preview.uptime": "ความพร้อมใช้งาน (30 นาที)",
   "model.routing.preview.autoDescription": "เกตเวย์จะเลือกผู้ให้บริการแบบไดนามิกเมื่อส่งคำขอแต่ละครั้ง",
   "model.routing.unavailable": "ไม่พร้อมใช้งานในขณะนี้",
   "model.routing.projectOverride":
