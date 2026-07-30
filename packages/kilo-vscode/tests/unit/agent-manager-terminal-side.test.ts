@@ -16,6 +16,7 @@ function scene(
 ) {
   const calls = {
     requestSide: 0,
+    ensureSide: 0,
     closed: [] as string[],
     hide: 0,
     refocus: 0,
@@ -32,6 +33,7 @@ function scene(
         calls.requestSide++
         visible = true
       },
+      ensureSide: () => calls.ensureSide++,
       closeSide: (terminalId) => {
         calls.closed.push(terminalId)
         focusedId = undefined
@@ -73,18 +75,27 @@ describe("Agent Manager side terminal controller", () => {
     expect(hidden.calls.hide).toBe(0)
   })
 
-  it("ensures an open terminal panel has a terminal after switching contexts", () => {
+  it("ensures an open terminal panel has a terminal after switching contexts", async () => {
     const visible = scene({ visible: true })
     visible.ctl.syncContext("wt-2", "wt-1")
-    expect(visible.calls.requestSide).toBe(1)
+    await Promise.resolve()
+    expect(visible.calls.ensureSide).toBe(1)
 
     visible.ctl.syncContext("wt-2", "wt-2")
     visible.ctl.syncContext("wt-2", undefined)
-    expect(visible.calls.requestSide).toBe(1)
+    await Promise.resolve()
+    expect(visible.calls.ensureSide).toBe(2)
+    expect(visible.calls.requestSide).toBe(0)
 
     const hidden = scene()
     hidden.ctl.syncContext("wt-2", "wt-1")
-    expect(hidden.calls.requestSide).toBe(0)
+    expect(hidden.calls.ensureSide).toBe(0)
+
+    const closed = scene({ visible: true })
+    closed.ctl.syncContext("wt-2", "wt-1")
+    closed.ctl.toggle()
+    await Promise.resolve()
+    expect(closed.calls.ensureSide).toBe(0)
   })
 
   it("kills the focused terminal and refocuses the chat", () => {
@@ -111,6 +122,35 @@ describe("Agent Manager side terminal controller", () => {
     panelFirst.ctl.openPreferred("keyboard_shortcut")
     expect(panelFirst.calls.requestSide).toBe(1)
     expect(panelFirst.calls.openVscode).toBe(0)
+  })
+
+  it("handles Cmd/Ctrl+/ presses locally and dedupes the extension echo", () => {
+    const press = (key: string, opts: Partial<KeyboardEvent> = {}) =>
+      ({ key, metaKey: true, ctrlKey: false, shiftKey: false, altKey: false, ...opts }) as KeyboardEvent
+
+    const item = scene({ destination: "agentManager" })
+    expect(item.ctl.press(press("/"))).toBe(true)
+    expect(item.calls.requestSide).toBe(1)
+    // The extension echoes the same keypress back as an action message;
+    // it must be ignored so the panel does not toggle twice.
+    expect(item.ctl.echo()).toBe(true)
+
+    // Unrelated keys and modifier combinations are not the shortcut.
+    const other = scene({ destination: "agentManager" })
+    expect(other.ctl.press(press("?"))).toBe(false)
+    expect(other.ctl.press(press("/", { shiftKey: true }))).toBe(false)
+    expect(other.ctl.press(press("/", { altKey: true }))).toBe(false)
+    expect(other.ctl.press(press("/", { metaKey: false }))).toBe(false)
+    expect(other.ctl.press(press("/", { metaKey: false, ctrlKey: true }))).toBe(true)
+    expect(other.calls.requestSide).toBe(1)
+  })
+
+  it("stops deduping after the echo window passes", async () => {
+    const item = scene({ destination: "agentManager" })
+    item.ctl.press({ key: "/", metaKey: true } as KeyboardEvent)
+    expect(item.ctl.echo()).toBe(true)
+    await new Promise((resolve) => setTimeout(resolve, 550))
+    expect(item.ctl.echo()).toBe(false)
   })
 
   it("persists the picked destination with a section-relative settings key", () => {

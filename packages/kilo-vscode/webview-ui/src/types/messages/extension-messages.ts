@@ -472,6 +472,8 @@ export interface SessionSearchItem {
   id: string
   title: string
   updated: number
+  /** Name of the worktree the session runs in, when listed across the worktree family. */
+  worktreeName?: string
 }
 
 export interface SessionSearchResultMessage {

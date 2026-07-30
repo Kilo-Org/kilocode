@@ -186,6 +186,23 @@ describe("Agent Manager terminal state", () => {
     })
   })
 
+  it("ensures a side terminal without revealing the panel", () => {
+    createRoot((dispose) => {
+      const item = scene("wt-1")
+      item.handlers.ensureSide()
+      item.handlers.ensureSide()
+
+      expect(item.events.shown).toEqual([])
+      expect(item.posted).toHaveLength(1)
+      expect(item.posted[0]).toMatchObject({
+        type: "agentManager.terminal.create",
+        placement: "side",
+        worktreeId: "wt-1",
+      })
+      dispose()
+    })
+  })
+
   it("supports several side terminals per context with newest active", () => {
     createRoot((dispose) => {
       const item = scene()
