@@ -63,6 +63,7 @@ import { Toast, useToast } from "../../ui/toast"
 import { useKV } from "../../context/kv.tsx"
 import stripAnsi from "strip-ansi"
 import { usePromptRef } from "../../context/prompt"
+import { ApprovalNote, describeApproval, stateMetadata } from "../../kilocode/tool-approval" // kilocode_change
 import { useEpilogue } from "../../context/epilogue"
 import { normalizePath } from "../../util/path"
 import { PermissionPrompt } from "./permission"
@@ -2204,6 +2205,8 @@ function InlineTool(props: {
 
   const failed = createMemo(() => Boolean(error() && !denied()))
   const clickable = createMemo(() => Boolean(props.onClick || failed()))
+  // kilocode_change - explain why the call was auto-approved or denied
+  const approvalNote = createMemo(() => describeApproval(stateMetadata(props.part.state)))
   const fg = createMemo(() => {
     if (props.color) return props.color
     if (permission()) return theme.warning
@@ -2228,6 +2231,8 @@ function InlineTool(props: {
       failure={props.failure}
       spinner={props.spinner}
       separate={props.separate}
+      note={approvalNote()} // kilocode_change
+      noteColor={theme.textMuted} // kilocode_change
       onMouseOver={() => clickable() && setHover(true)}
       onMouseOut={() => setHover(false)}
       onMouseUp={() => {
@@ -2258,6 +2263,8 @@ export function InlineToolRow(props: {
   failure?: string
   spinner?: boolean
   separate?: boolean
+  note?: string // kilocode_change - why the call was auto-approved or denied
+  noteColor?: RGBA // kilocode_change
   children: JSX.Element
   onMouseOver?: () => void
   onMouseOut?: () => void
@@ -2320,6 +2327,12 @@ export function InlineToolRow(props: {
           <text fg={props.errorColor}>{props.error}</text>
         </box>
       </Show>
+      {/* kilocode_change - explain why the call was auto-approved or denied */}
+      <ApprovalNote
+        note={props.note && (props.complete || props.failed) ? props.note : undefined}
+        color={props.noteColor}
+        paddingLeft={INLINE_TOOL_ICON_WIDTH}
+      />
     </box>
   )
 }
@@ -2330,11 +2343,14 @@ function BlockTool(props: {
   onClick?: () => void
   part?: ToolPart
   spinner?: boolean
+  hideApproval?: boolean // kilocode_change - suppress the auto-approval note (e.g. todowrite)
 }) {
   const { theme } = useTheme()
   const renderer = useRenderer()
   const [hover, setHover] = createSignal(false)
   const error = createMemo(() => (props.part?.state.status === "error" ? props.part.state.error : undefined))
+  // kilocode_change - explain why the call was auto-approved or denied
+  const approvalNote = createMemo(() => (props.hideApproval ? undefined : describeApproval(stateMetadata(props.part?.state))))
   return (
     <box
       ref={(el: BoxRenderable) => alwaysSeparate.add(el)}
@@ -2368,6 +2384,8 @@ function BlockTool(props: {
         <Spinner color={theme.textMuted}>{props.title.replace(/^# /, "")}</Spinner>
       </Show>
       {props.children}
+      {/* kilocode_change - explain why the call was auto-approved or denied */}
+      <ApprovalNote note={approvalNote()} color={theme.textMuted} paddingLeft={3} />
       <Show when={error()}>
         <text fg={theme.error}>{error()}</text>
       </Show>
@@ -2825,7 +2843,8 @@ function TodoWrite(props: ToolProps) {
   return (
     <Switch>
       <Match when={parseTodos(props.metadata.todos).length}>
-        <BlockTool title="# Todos" part={props.part}>
+        {/* kilocode_change - todo writes are orchestration, not a mutating action to explain */}
+        <BlockTool title="# Todos" part={props.part} hideApproval>
           <box>
             <For each={todos()}>{(todo) => <TodoItem status={todo.status} content={todo.content} />}</For>
           </box>
