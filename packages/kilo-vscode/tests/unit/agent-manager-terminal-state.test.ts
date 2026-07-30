@@ -186,6 +186,23 @@ describe("Agent Manager terminal state", () => {
     })
   })
 
+  it("ensures a side terminal without revealing the panel", () => {
+    createRoot((dispose) => {
+      const item = scene("wt-1")
+      item.handlers.ensureSide()
+      item.handlers.ensureSide()
+
+      expect(item.events.shown).toEqual([])
+      expect(item.posted).toHaveLength(1)
+      expect(item.posted[0]).toMatchObject({
+        type: "agentManager.terminal.create",
+        placement: "side",
+        worktreeId: "wt-1",
+      })
+      dispose()
+    })
+  })
+
   it("supports several side terminals per context with newest active", () => {
     createRoot((dispose) => {
       const item = scene()
@@ -238,6 +255,30 @@ describe("Agent Manager terminal state", () => {
       // Closing an unknown or non-side id is a no-op.
       expect(item.handlers.closeSide("terminal:gone")).toBe(false)
       expect(item.posted).toHaveLength(2)
+      dispose()
+    })
+  })
+
+  it("keeps only the target side terminal on close others", () => {
+    createRoot((dispose) => {
+      const item = scene()
+      item.state.add(null, { id: "terminal:one", title: "Terminal 1", wsUrl: "ws://one", font, placement: "side" })
+      item.state.add(null, { id: "terminal:two", title: "Terminal 2", wsUrl: "ws://two", font, placement: "side" })
+      item.state.add(null, { id: "terminal:three", title: "Terminal 3", wsUrl: "ws://three", font, placement: "side" })
+      // Another context must survive untouched: "others" is per context.
+      item.state.add("wt-1", { id: "terminal:other", title: "Other", wsUrl: "ws://other", font, placement: "side" })
+      item.state.setSideActive(LOCAL, "terminal:one")
+
+      item.handlers.closeSideOthers("terminal:two")
+      expect(item.state.sidesForContext(LOCAL).map((term) => term.id)).toEqual(["terminal:two"])
+      expect(item.state.sidesForContext("wt-1").map((term) => term.id)).toEqual(["terminal:other"])
+      // The survivor becomes visible and focused, like selecting its tab.
+      expect(item.state.sideActiveFor(LOCAL)).toBe("terminal:two")
+      expect(item.state.focusRequest()?.id).toBe("terminal:two")
+      expect(item.posted).toEqual([
+        { type: "agentManager.terminal.close", terminalId: "terminal:one" },
+        { type: "agentManager.terminal.close", terminalId: "terminal:three" },
+      ])
       dispose()
     })
   })

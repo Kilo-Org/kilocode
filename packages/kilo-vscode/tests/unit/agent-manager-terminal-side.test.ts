@@ -12,10 +12,12 @@ function scene(
     saved?: "vscode" | "agentManager"
     visible?: boolean
     focusedId?: string
+    mac?: boolean
   } = {},
 ) {
   const calls = {
     requestSide: 0,
+    ensureSide: 0,
     closed: [] as string[],
     hide: 0,
     refocus: 0,
@@ -32,6 +34,7 @@ function scene(
         calls.requestSide++
         visible = true
       },
+      ensureSide: () => calls.ensureSide++,
       closeSide: (terminalId) => {
         calls.closed.push(terminalId)
         focusedId = undefined
@@ -50,6 +53,7 @@ function scene(
     openVscode: () => calls.openVscode++,
     saved: opts.saved,
     save: (destination) => calls.persisted.push(destination),
+    mac: opts.mac,
   })
   if (opts.destination) ctl.syncDefault(opts.destination)
   return { ctl, calls }
@@ -71,6 +75,29 @@ describe("Agent Manager side terminal controller", () => {
     hidden.ctl.toggle()
     expect(hidden.calls.requestSide).toBe(1)
     expect(hidden.calls.hide).toBe(0)
+  })
+
+  it("ensures an open terminal panel has a terminal after switching contexts", async () => {
+    const visible = scene({ visible: true })
+    visible.ctl.syncContext("wt-2", "wt-1")
+    await Promise.resolve()
+    expect(visible.calls.ensureSide).toBe(1)
+
+    visible.ctl.syncContext("wt-2", "wt-2")
+    visible.ctl.syncContext("wt-2", undefined)
+    await Promise.resolve()
+    expect(visible.calls.ensureSide).toBe(2)
+    expect(visible.calls.requestSide).toBe(0)
+
+    const hidden = scene()
+    hidden.ctl.syncContext("wt-2", "wt-1")
+    expect(hidden.calls.ensureSide).toBe(0)
+
+    const closed = scene({ visible: true })
+    closed.ctl.syncContext("wt-2", "wt-1")
+    closed.ctl.toggle()
+    await Promise.resolve()
+    expect(closed.calls.ensureSide).toBe(0)
   })
 
   it("kills the focused terminal and refocuses the chat", () => {
@@ -99,32 +126,67 @@ describe("Agent Manager side terminal controller", () => {
     expect(panelFirst.calls.openVscode).toBe(0)
   })
 
-  it("handles Cmd/Ctrl+/ presses locally and dedupes the extension echo", () => {
-    const press = (key: string, opts: Partial<KeyboardEvent> = {}) =>
-      ({ key, metaKey: true, ctrlKey: false, shiftKey: false, altKey: false, ...opts }) as KeyboardEvent
+  it("handles the platform terminal shortcut locally and dedupes the extension echo", () => {
+    const press = (opts: Partial<KeyboardEvent> = {}) =>
+      ({ key: "/", metaKey: false, ctrlKey: false, shiftKey: false, altKey: false, ...opts }) as KeyboardEvent
 
-    const item = scene({ destination: "agentManager" })
-    expect(item.ctl.press(press("/"))).toBe(true)
-    expect(item.calls.requestSide).toBe(1)
-    // The extension echoes the same keypress back as an action message;
-    // it must be ignored so the panel does not toggle twice.
-    expect(item.ctl.echo()).toBe(true)
+    // macOS: the workbench binding is Cmd+/, so only Cmd is accepted.
+    const mac = scene({ destination: "agentManager", mac: true })
+    expect(mac.ctl.press(press({ metaKey: true }))).toBe(true)
+    expect(mac.calls.requestSide).toBe(1)
+    expect(mac.ctl.press(press({ ctrlKey: true }))).toBe(false)
+    expect(mac.ctl.press(press({ metaKey: true, ctrlKey: true }))).toBe(false)
+    expect(mac.calls.requestSide).toBe(1)
+
+    // Windows/Linux: the workbench binding is Ctrl+/, so only Ctrl is accepted.
+    const win = scene({ destination: "agentManager", mac: false })
+    expect(win.ctl.press(press({ ctrlKey: true }))).toBe(true)
+    expect(win.calls.requestSide).toBe(1)
+    expect(win.ctl.press(press({ metaKey: true }))).toBe(false)
+    expect(win.calls.requestSide).toBe(1)
 
     // Unrelated keys and modifier combinations are not the shortcut.
-    const other = scene({ destination: "agentManager" })
-    expect(other.ctl.press(press("?"))).toBe(false)
-    expect(other.ctl.press(press("/", { shiftKey: true }))).toBe(false)
-    expect(other.ctl.press(press("/", { altKey: true }))).toBe(false)
-    expect(other.ctl.press(press("/", { metaKey: false }))).toBe(false)
-    expect(other.ctl.press(press("/", { metaKey: false, ctrlKey: true }))).toBe(true)
-    expect(other.calls.requestSide).toBe(1)
+    expect(win.ctl.press(press({ key: "?" }))).toBe(false)
+    expect(win.ctl.press(press({ ctrlKey: true, shiftKey: true }))).toBe(false)
+    expect(win.ctl.press(press({ ctrlKey: true, altKey: true }))).toBe(false)
+    expect(win.calls.requestSide).toBe(1)
+
+    // The extension echoes each locally handled keypress back as an action
+    // message; one echo is consumed per press, then invocations run again.
+    expect(mac.ctl.echo()).toBe(true)
+    expect(mac.ctl.echo()).toBe(false)
   })
 
-  it("stops deduping after the echo window passes", async () => {
-    const item = scene({ destination: "agentManager" })
+  it("consumes one echo per press, even for rapid repeated presses", () => {
+    const item = scene({ destination: "agentManager", mac: true })
+    const press = () => item.ctl.press({ key: "/", metaKey: true } as KeyboardEvent)
+    press()
+    press()
+    // Two presses toggled the panel open and closed again; both echoes
+    // must still be consumed so neither press toggles a third time.
+    expect(item.calls.requestSide).toBe(1)
+    expect(item.calls.hide).toBe(1)
+    expect(item.ctl.echo()).toBe(true)
+    expect(item.ctl.echo()).toBe(true)
+    expect(item.ctl.echo()).toBe(false)
+  })
+
+  it("drops a never-arriving echo after the timeout safety valve", async () => {
+    const item = scene({ destination: "agentManager", mac: true })
+    item.ctl.press({ key: "/", metaKey: true } as KeyboardEvent)
+    await new Promise((resolve) => setTimeout(resolve, 550))
+    expect(item.ctl.echo()).toBe(false)
+    expect(item.ctl.echo()).toBe(false)
+  })
+
+  it("expires a dropped echo's backlog at the next spaced press", async () => {
+    const item = scene({ destination: "agentManager", mac: true })
+    // First press's echo never arrives (dropped forwarding); its backlog
+    // must not outlive the echo window into the next press.
+    item.ctl.press({ key: "/", metaKey: true } as KeyboardEvent)
+    await new Promise((resolve) => setTimeout(resolve, 550))
     item.ctl.press({ key: "/", metaKey: true } as KeyboardEvent)
     expect(item.ctl.echo()).toBe(true)
-    await new Promise((resolve) => setTimeout(resolve, 550))
     expect(item.ctl.echo()).toBe(false)
   })
 
