@@ -104,6 +104,53 @@ class DiffPatchReconstructTest {
     }
 
     @Test
+    fun `multi hunk partial context patch is not renderable`() {
+        val dto = DiffFileDto(
+            file = "src/A.kt",
+            additions = 2,
+            deletions = 2,
+            patch = """
+                diff --git a/src/A.kt b/src/A.kt
+                --- a/src/A.kt
+                +++ b/src/A.kt
+                @@ -1,3 +1,3 @@
+                 one
+                -two
+                +TWO
+                @@ -20,3 +20,3 @@
+                 twenty
+                -x
+                +X
+            """.trimIndent(),
+        )
+
+        val sides = DiffPatchReconstruct.sides(dto)
+
+        assertFalse(sides.renderable)
+        assertEquals("", sides.before)
+        assertEquals("", sides.after)
+    }
+
+    @Test
+    fun `single hunk with mismatched header length is not renderable`() {
+        // header claims 3 old / 3 new lines but the body only carries 2 of each (context elided).
+        val dto = DiffFileDto(
+            file = "src/A.kt",
+            additions = 1,
+            deletions = 1,
+            patch = """
+                --- a/src/A.kt
+                +++ b/src/A.kt
+                @@ -1,3 +1,3 @@
+                -two
+                +TWO
+            """.trimIndent(),
+        )
+
+        assertFalse(DiffPatchReconstruct.sides(dto).renderable)
+    }
+
+    @Test
     fun `binary and blank patches are not renderable`() {
         assertFalse(DiffPatchReconstruct.sides(DiffFileDto("a.bin", 0, 0, "Binary files a/a.bin and b/a.bin differ")).renderable)
         assertFalse(DiffPatchReconstruct.sides(DiffFileDto("a.kt", 0, 0, "")).renderable)

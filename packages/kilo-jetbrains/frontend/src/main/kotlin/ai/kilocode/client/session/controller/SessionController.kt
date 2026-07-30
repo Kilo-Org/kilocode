@@ -1141,6 +1141,9 @@ class SessionController(
         if (child in childParts.values) return
         childIds.remove(child)
         childJobs.remove(child)?.cancel()
+        // A sub-agent that finished/was cancelled with an unanswered permission would otherwise leave
+        // a queue entry that a later promote() surfaces as a live card for a session that no longer exists.
+        purgePending(child)
     }
 
     @RequiresEdt
@@ -1346,6 +1349,9 @@ class SessionController(
                     revertDeferred = SessionState.Idle
                     return
                 }
+                // The turn is done, so any still-queued permission for it is a ghost the CLI abandoned
+                // server-side without a reply event — drop it before deciding whether to keep a card.
+                purgePending(event.sessionID)
                 // Keep pending questions visible for follow-up flows that arrive just before close.
                 val current = model.state
                 if (current is SessionState.AwaitingQuestion) return
@@ -1547,6 +1553,24 @@ class SessionController(
         model.setState(SessionState.AwaitingPermission(perm))
     }
 
+    /**
+     * Drop queued permissions for [session] and clear/re-promote the visible card when it belonged to
+     * one of them. The CLI deletes an outstanding permission server-side on turn interruption without
+     * emitting permission.replied (`Permission.ask` cleans up in `Effect.ensuring`), so on TurnClose /
+     * idle / child untrack a still-queued entry is a ghost that would otherwise resurface on the next
+     * promote() and fail to reply with NotFoundError.
+     */
+    @RequiresEdt
+    private fun purgePending(session: String?) {
+        if (session == null) return
+        val removed = pending.entries.removeIf { it.value.sessionId == session }
+        if (!removed) return
+        val current = model.state
+        if (current is SessionState.AwaitingPermission && current.permission.sessionId == session) {
+            model.setState(afterResolve(idle = true))
+        }
+    }
+
     private fun status(dto: SessionStatusDto) {
         if (revertOp != null) {
             revertDeferred = when (dto.type) {
@@ -1562,6 +1586,7 @@ class SessionController(
             "idle" -> {
                 val current = model.state
                 if (current is SessionState.LoginRequired || current is SessionState.Reverting) return
+                purgePending(sid)
                 SessionState.Idle
             }
             "busy" -> {
@@ -1663,6 +1688,9 @@ class SessionController(
             revertDeferred = SessionState.Idle
             return
         }
+        // An idle session cannot have a live permission outstanding — purge any ghost left by an
+        // abort/error that originated on the server or another client (local abort() already clears).
+        purgePending(sid)
         // Treat session.idle as an explicit signal to return to Idle.
         // Only apply if we're not in a more specific non-terminal state.
         val current = model.state

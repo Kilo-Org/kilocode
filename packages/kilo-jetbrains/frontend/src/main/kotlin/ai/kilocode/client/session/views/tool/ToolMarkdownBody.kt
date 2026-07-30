@@ -39,11 +39,13 @@ class ToolMarkdownBody(
 ) : EditBody {
     override var parent: Disposable? = null
     private var view: MdView? = null
+    private var item: Tool? = null
 
     /** Builds the body on first call, wiring it into [parent]'s disposable tree, then returns it. */
     @RequiresEdt
     override fun mount(tool: Tool): JComponent {
         view?.let { return it.component }
+        item = tool
         val owner = parent ?: error("Tool markdown body has no parent")
         val md = MdViewFactory.create(SessionEditorStyle.current(), selection, MdCodeBlockFactory.default(opts))
         Disposer.register(owner, md)
@@ -65,6 +67,7 @@ class ToolMarkdownBody(
 
     @RequiresEdt
     override fun update(tool: Tool): Boolean {
+        item = tool
         val md = view ?: return false
         val value = render(tool)
         if (md.markdown() == value) return false
@@ -86,6 +89,10 @@ class ToolMarkdownBody(
         md.codeFont = style.editorFamily
         md.component.border = JBUI.Borders.empty()
         chrome(md)
+        // EditorTextField drops its editor in removeNotify, so collapse/re-expand yields a fresh
+        // editor with no annotation provider. Re-install the gutter here (as PatchBody.applyMd does)
+        // so the old/new line-number gutter survives a re-expansion, not just the first mount.
+        item?.let(::syncGutter)
         return before != md.font
     }
 

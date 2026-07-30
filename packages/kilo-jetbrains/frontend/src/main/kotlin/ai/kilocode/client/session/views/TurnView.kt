@@ -88,9 +88,11 @@ class TurnView(
         return view
     }
 
+    /** Returns true when the modified-files card was created or its content changed. */
     @RequiresEdt
-    fun setDiffs(diffs: List<DiffFileDto>) {
-        val card = modified ?: if (diffs.isEmpty()) null else ModifiedFilesView(openFile, selection).also {
+    fun setDiffs(diffs: List<DiffFileDto>): Boolean {
+        val existing = modified
+        val card = existing ?: if (diffs.isEmpty()) null else ModifiedFilesView(openFile, selection).also {
             it.setDiffOpener(openDiff, sessionId, id)
             it.resize = resize
             it.hover = hover
@@ -98,8 +100,10 @@ class TurnView(
             modified = it
             add(it)
         }
-        card?.setDiffs(diffs)
-        if (card != null) revalidate()
+        val created = existing == null && card != null
+        val changed = card?.setDiffs(diffs) ?: false
+        if (created || changed) revalidate()
+        return created || changed
     }
 
     @RequiresEdt

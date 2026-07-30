@@ -160,16 +160,13 @@ class KiloWorkspaceService internal constructor(
         }
     }
 
-    suspend fun branchDiff(directory: String): List<DiffFileDto> {
-        return try {
-            call { branchDiff(directory) }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            LOG.warn("branch diff lookup failed for directory=$directory", e)
-            emptyList()
-        }
-    }
+    /**
+     * Committed branch changes vs the default-branch merge-base. Errors propagate so the diff editor
+     * can surface a retry (a swallowed failure is indistinguishable from "no changes"); pass
+     * [patches] = false on the badge path to fetch stats only and skip materializing patch text.
+     */
+    suspend fun branchDiff(directory: String, patches: Boolean = true): List<DiffFileDto> =
+        call { branchDiff(directory, patches) }
 
     suspend fun branchName(directory: String): String? {
         return try {

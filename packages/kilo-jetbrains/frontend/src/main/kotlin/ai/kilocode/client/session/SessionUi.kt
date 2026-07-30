@@ -87,10 +87,10 @@ import com.intellij.openapi.util.registry.Registry
 import com.intellij.openapi.wm.IdeFocusManager
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import java.util.function.Predicate
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
@@ -210,8 +210,10 @@ class SessionUi(
     private var editorTheme = style.editorScheme
     private var colorTheme = UIManager.getLookAndFeel()
     private var wasBusy = false
-    private var branchStarted = false
-    private var branchJob: Job? = null
+    // Kept separate so a background stat refresh (turn end / revert) can supersede another refresh
+    // but never cancel an in-flight user-initiated open.
+    private var refreshJob: Job? = null
+    private var openJob: Job? = null
     private var disposed = false
 
     init {
@@ -224,7 +226,7 @@ class SessionUi(
         bindStyle()
         bindMigration()
         onStateChanged(controller.model.state)
-        computeInitialBranchChanges()
+        refreshBranchChanges()
         loaded?.let(::finishOpen)
     }
 
@@ -384,7 +386,7 @@ class SessionUi(
             it.setDiffOpener(::openInlineDiff, controller.id)
             it.onHover = { view, on -> if (on) popup.show(view) else popup.notifyExit(view) }
         }
-        header = SessionHeaderPanel(controller, this) { computeBranchChanges(open = true) }
+        header = SessionHeaderPanel(controller, this) { openBranchChanges() }
 
         scroll = SessionScroll(root, sessionContent, messageBody, blankBody)
         scroll.onScroll = {
@@ -562,8 +564,7 @@ class SessionUi(
                 is SessionModelEvent.TurnUpdated,
                 is SessionModelEvent.ContentAdded,
                 is SessionModelEvent.ContentDelta,
-                is SessionModelEvent.HistoryLoaded -> computeInitialBranchChanges()
-
+                is SessionModelEvent.HistoryLoaded,
                 is SessionModelEvent.TurnRemoved,
                 is SessionModelEvent.MessageAdded,
                 is SessionModelEvent.MessageUpdated,
@@ -729,7 +730,7 @@ class SessionUi(
 
     @RequiresEdt
     private fun onRevertChanged(revert: SessionRevertDto?) {
-        computeBranchChanges(open = false)
+        refreshBranchChanges()
         syncPromptRevert()
         val rollback = pendingRollback
         if (rollback != null) {
@@ -834,39 +835,54 @@ class SessionUi(
         }
     }
 
-    private fun computeBranchChanges(open: Boolean) {
-        val prev = branchJob
-        prev?.cancel()
-        branchJob = cs.launch {
-            if (open) prev?.cancelAndJoin()
-            val dir = workspace.directory
-            val files = workspaces.branchDiff(dir)
-            val branch = if (open) workspaces.branchName(dir) else null
+    /** Badge-only refresh: fetches stats (no patch text) and updates the header count. */
+    private fun refreshBranchChanges() {
+        refreshJob?.cancel()
+        refreshJob = cs.launch {
+            val files = runCatching { workspaces.branchDiff(workspace.directory, patches = false) }
+                .getOrElse {
+                    if (it is CancellationException) throw it
+                    LOG.warn("branch changes badge refresh failed dir=${workspace.directory}", it)
+                    return@launch
+                }
             withContext(Dispatchers.Main) {
                 if (disposed || project.isDisposed) return@withContext
                 header.setBranchChanges(files)
-                if (open) openBranchDiff(files, branch)
             }
         }
     }
 
-    private fun computeInitialBranchChanges() {
-        if (branchStarted) return
-        branchStarted = true
-        computeBranchChanges(open = false)
+    /** User clicked the badge: opens the branch diff editor. Never cancelled by a background refresh. */
+    private fun openBranchChanges() {
+        openJob?.cancel()
+        openJob = cs.launch {
+            val dir = workspace.directory
+            val branch = workspaces.branchName(dir)
+            val files = runCatching { workspaces.branchDiff(dir, patches = false) }
+                .getOrElse {
+                    if (it is CancellationException) throw it
+                    LOG.warn("branch changes open failed dir=$dir", it)
+                    emptyList()
+                }
+            withContext(Dispatchers.Main) {
+                if (disposed || project.isDisposed) return@withContext
+                header.setBranchChanges(files)
+                openBranchDiff(branch)
+            }
+        }
     }
 
     @RequiresEdt
-    private fun openBranchDiff(files: List<DiffFileDto>, branch: String?) {
+    private fun openBranchDiff(branch: String?) {
+        // No store seeding: the diff editor's fetch recomputes branchDiff authoritatively, so a
+        // re-open or Refresh always reflects the current worktree (and nothing is retained for its life).
         ensureDiffEditorKind()
         val dir = workspace.directory
-        val token = "branch:$dir"
         val title = branch?.let { KiloBundle.message("diff.editor.branch.title.named", it) }
             ?: KiloBundle.message("diff.editor.branch.title")
-        project.service<KiloInlineDiffStore>().put(token, files)
         project.service<KiloVfsManager>().open(
             KiloDiffEditorKind.ID,
-            diffParams("branch", dir, null, title, branch, token = token),
+            diffParams("branch", dir, null, title, branch),
         )
         Telemetry.send("Diff Editor Opened", mapOf("source" to "branch"))
     }
@@ -922,7 +938,7 @@ class SessionUi(
     private fun onStateChanged(state: SessionState) {
         if (disposed) return
         val busy = state.isBusy()
-        if (wasBusy && state is SessionState.Idle) computeBranchChanges(open = false)
+        if (wasBusy && state is SessionState.Idle) refreshBranchChanges()
         wasBusy = busy
         if (state is SessionState.Reverting) overlay.clear()
         if (state is SessionState.Error) {
@@ -997,7 +1013,8 @@ class SessionUi(
 
     override fun dispose() {
         disposed = true
-        branchJob?.cancel()
+        refreshJob?.cancel()
+        openJob?.cancel()
         hide.stop()
         popup.hideAll()
         modalFocus = null

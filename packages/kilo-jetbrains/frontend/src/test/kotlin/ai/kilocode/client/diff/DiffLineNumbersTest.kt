@@ -49,6 +49,28 @@ class DiffLineNumbersTest : BasePlatformTestCase() {
         )
     }
 
+    fun `test in-hunk header-shaped lines stay content`() {
+        // A deleted "-- foo" comment renders as "--- foo" and an added "++ bar" as "+++ bar";
+        // both are hunk content, so they keep incrementing the counters instead of being dropped.
+        val patch = """
+            --- a/q.sql
+            +++ b/q.sql
+            @@ -1,2 +1,2 @@
+            --- old comment
+            +++ new comment
+             keep
+        """.trimIndent()
+
+        assertEquals(
+            listOf(
+                DiffLineNumbers.Row(1, null),
+                DiffLineNumbers.Row(null, 1),
+                DiffLineNumbers.Row(2, 2),
+            ),
+            DiffLineNumbers.rows(patch),
+        )
+    }
+
     fun `test no newline marker emits empty row`() {
         val patch = """
             @@ -1 +1 @@
@@ -93,5 +115,13 @@ class DiffLineNumbersTest : BasePlatformTestCase() {
             -two
         """.trimIndent(),
         "@@ -1 +1 @@\r\n-old\r\n+new\r\n",
+        """
+            --- a/q.sql
+            +++ b/q.sql
+            @@ -1,2 +1,2 @@
+            --- old comment
+            +++ new comment
+             keep
+        """.trimIndent(),
     )
 }

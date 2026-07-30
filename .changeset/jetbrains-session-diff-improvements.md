@@ -2,4 +2,4 @@
 "@kilocode/kilo-jetbrains": minor
 ---
 
-Improve JetBrains session change tracking with modified-files summaries, inline and branch diff views, refreshable diff navigation, and clearer session header change badges.
+Improve JetBrains session change tracking: show the files each assistant turn modified with expandable per-file diffs, open inline and branch diffs in a refreshable diff viewer, and surface branch changes in the session header.

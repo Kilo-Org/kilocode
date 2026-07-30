@@ -23,6 +23,7 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.Centerizer
 import com.intellij.util.ui.JBUI
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
@@ -117,6 +118,7 @@ internal class KiloDiffEditorService(
             }
             val data = runCatching { fetch(params) }
                 .getOrElse {
+                    if (it is CancellationException) throw it
                     LOG.warn("diff editor load failed source=${params["source"]} dir=${params["directory"]}", it)
                     DiffEditorData.Error(it.message ?: it::class.java.simpleName)
                 }
@@ -133,6 +135,7 @@ internal class KiloDiffEditorService(
     fun refresh(params: Map<String, String>, done: (DiffEditorData) -> Unit) = cs.launch {
         val data = runCatching { fetch(params) }
             .getOrElse {
+                if (it is CancellationException) throw it
                 LOG.warn("diff editor refresh failed source=${params["source"]} dir=${params["directory"]}", it)
                 DiffEditorData.Error(it.message ?: it::class.java.simpleName)
             }
@@ -148,7 +151,9 @@ internal class KiloDiffEditorService(
         val workspace = service<KiloWorkspaceService>()
         val store = project.service<KiloInlineDiffStore>()
         val files = when (params["source"]) {
-            "branch" -> store.pop(params["token"].orEmpty()).orEmpty().ifEmpty { workspace.branchDiff(dir) }
+            // branch is authoritative here (no store seeding): recompute on every load/refresh so a
+            // re-open or Refresh always reflects the current worktree instead of a stale click seed.
+            "branch" -> workspace.branchDiff(dir)
             "inline" -> store.get(params["token"].orEmpty()).orEmpty()
             else -> project.service<KiloSessionService>().diff(params["sessionId"].orEmpty(), dir)
         }

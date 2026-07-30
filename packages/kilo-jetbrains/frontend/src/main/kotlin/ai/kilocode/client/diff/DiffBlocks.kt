@@ -26,7 +26,7 @@ internal fun diffRequest(
     val right = when {
         DiffPatchReconstruct.deleted(dto.patch) -> factory.createEmpty()
         sides.renderable -> factory.create(project, sides.after, type)
-        else -> factory.create(project, dto.patch ?: "diff unavailable", type)
+        else -> factory.create(project, dto.patch ?: KiloBundle.message("diff.editor.patch.unavailable"), type)
     }
     return SimpleDiffRequest(diffTitle(dto.file, branch), left, right, labels.first, labels.second).also {
         it.putUserData(DiffUserDataKeys.FORCE_READ_ONLY, true)

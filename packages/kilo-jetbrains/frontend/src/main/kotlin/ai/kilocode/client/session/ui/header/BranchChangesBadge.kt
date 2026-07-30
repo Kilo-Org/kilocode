@@ -13,9 +13,14 @@ import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.RenderingHints
+import java.awt.event.ActionEvent
+import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import javax.swing.AbstractAction
+import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.KeyStroke
 
 internal class BranchChangesBadge(
     private val open: () -> Unit,
@@ -31,6 +36,7 @@ internal class BranchChangesBadge(
     init {
         isOpaque = false
         isVisible = false
+        isFocusable = true
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         toolTipText = KiloBundle.message("diff.editor.branch.tooltip")
         getAccessibleContext().accessibleName = KiloBundle.message("diff.editor.branch.tooltip")
@@ -39,8 +45,22 @@ internal class BranchChangesBadge(
         addMouseListener(object : MouseAdapter() {
             override fun mouseEntered(event: MouseEvent) = hover(true)
             override fun mouseExited(event: MouseEvent) = hover(false)
-            override fun mouseClicked(event: MouseEvent) = open()
+            override fun mouseClicked(event: MouseEvent) = activate()
         })
+        // Keep the action reachable without a mouse (the HoverIcon this replaced was an
+        // AbstractButton). Enter/Space fire the same guarded action as a click.
+        val action = object : AbstractAction() {
+            override fun actionPerformed(e: ActionEvent) = activate()
+        }
+        getInputMap(JComponent.WHEN_FOCUSED).apply {
+            put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), ACTIVATE)
+            put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), ACTIVATE)
+        }
+        actionMap.put(ACTIVATE, action)
+    }
+
+    private fun activate() {
+        if (isEnabled) open()
     }
 
     fun applyStyle(style: SessionEditorStyle) {
@@ -110,5 +130,9 @@ internal class BranchChangesBadge(
         } finally {
             g2.dispose()
         }
+    }
+
+    private companion object {
+        const val ACTIVATE = "kilo.branch.changes.activate"
     }
 }

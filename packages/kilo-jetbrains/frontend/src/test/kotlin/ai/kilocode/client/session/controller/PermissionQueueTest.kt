@@ -83,6 +83,35 @@ class PermissionQueueTest : SessionControllerTestBase() {
         assertTrue(m.model.state is SessionState.Idle)
     }
 
+    fun `test turn close purges outstanding permission ghost`() {
+        val (m, _, _) = prompted()
+
+        emit(ChatEventDto.PermissionAsked("ses_test", permission("perm1")))
+        assertPermission(m, "perm1")
+
+        // The CLI abandons an outstanding permission server-side when a turn is interrupted, without
+        // emitting permission.replied, so TurnClose must drop the ghost instead of leaving it shown.
+        emit(ChatEventDto.TurnClose("ses_test", "aborted"))
+        assertTrue(m.model.state is SessionState.Idle)
+
+        // The next request surfaces itself rather than the purged ghost (which would fail to reply).
+        emit(ChatEventDto.PermissionAsked("ses_test", permission("perm2")))
+        assertPermission(m, "perm2")
+    }
+
+    fun `test session idle purges outstanding permission ghost`() {
+        val (m, _, _) = prompted()
+
+        emit(ChatEventDto.PermissionAsked("ses_test", permission("perm1")))
+        assertPermission(m, "perm1")
+
+        emit(ChatEventDto.SessionIdle("ses_test"))
+        assertTrue(m.model.state is SessionState.Idle)
+
+        emit(ChatEventDto.PermissionAsked("ses_test", permission("perm2")))
+        assertPermission(m, "perm2")
+    }
+
     fun `test replying active question shows queued permission`() {
         val (m, _, _) = prompted()
 

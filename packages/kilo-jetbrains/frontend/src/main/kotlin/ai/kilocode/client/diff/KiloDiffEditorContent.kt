@@ -119,6 +119,7 @@ internal class DiffEditorView(
     private var branch = branch
     private var syncing = false
     private var requested: String? = initial.firstOrNull()?.file
+    private var refreshJob: Job? = null
     private var processor = processor(initial, selected(initial.firstOrNull()?.file))
     private val openFileAction = object : DumbAwareAction(
         KiloBundle.message("diff.editor.openFile"),
@@ -151,7 +152,10 @@ internal class DiffEditorView(
         }
         openFileAction.registerCustomShortcutSet(CommonShortcuts.getEditSource(), tree)
         installMenu()
-        processor.addListener(DiffRequestProcessorListener { syncTree() }, parent)
+        // Tie the listener to the processor it observes, not to the long-lived parent: applyFiles
+        // disposes the old processor on each refresh, and registering under parent would leak a
+        // removal hook (holding the dead processor) for every refresh across the editor's lifetime.
+        processor.addListener(DiffRequestProcessorListener { syncTree() }, processor)
         splitter.firstComponent = buildTreePanel(tree, initial, badge, processor.component, ::refresh)
         splitter.secondComponent = processor.component
         processor.updateRequest()
@@ -162,6 +166,11 @@ internal class DiffEditorView(
 
     override fun dispose() {
         disposed.set(true)
+        // Bind the refresh coroutine to this view's lifecycle (load already does so via `parent`): an
+        // in-flight refresh started just before the editor closes would otherwise keep running on the
+        // project scope, holding the `done` closure and through it this view, its tree, and processor.
+        refreshJob?.cancel()
+        refreshJob = null
     }
 
     @RequiresEdt
@@ -177,7 +186,7 @@ internal class DiffEditorView(
         expandAll(tree)
         processor = processor(next, index)
         Disposer.register(parent, processor)
-        processor.addListener(DiffRequestProcessorListener { syncTree() }, parent)
+        processor.addListener(DiffRequestProcessorListener { syncTree() }, processor)
         splitter.firstComponent = buildTreePanel(tree, next, badge, processor.component, ::refresh)
         splitter.secondComponent = processor.component
         processor.updateRequest()
@@ -197,7 +206,8 @@ internal class DiffEditorView(
         banner.isVisible = false
         root.revalidate()
         root.repaint()
-        load { data ->
+        refreshJob?.cancel()
+        refreshJob = load { data ->
             refreshing.set(false)
             if (!disposed.get() && !project.isDisposed) {
                 if (data is DiffEditorData.Files) applyFiles(data.files, data.branch)
@@ -312,10 +322,14 @@ internal class DiffEditorView(
     private fun path(file: DiffFileDto): String? {
         if (fileStatus(file) == FileStatus.DELETED) return null
         val dir = params["directory"] ?: return null
+        val root = clean(dir) ?: return null
         return try {
             val raw = Path.of(file.file)
-            val path = if (raw.isAbsolute) raw else Path.of(dir).resolve(raw)
-            path.normalize().toString()
+            val path = (if (raw.isAbsolute) raw else root.resolve(raw)).normalize()
+            // Constrain "open file" to the diff's directory: reject a server-supplied entry that
+            // escapes via `..` or an absolute path outside the base rather than opening it blindly.
+            if (!path.startsWith(root)) return null
+            path.toString()
         } catch (_: InvalidPathException) {
             null
         }

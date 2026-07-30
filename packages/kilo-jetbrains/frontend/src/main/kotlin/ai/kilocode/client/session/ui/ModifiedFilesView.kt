@@ -69,18 +69,19 @@ class ModifiedFilesView private constructor(
         this.turnId = turnId
     }
 
+    /** Returns true when anything visible changed, so the parent only relayouts on a real change. */
     @RequiresEdt
-    fun setDiffs(diffs: List<DiffFileDto>) {
+    fun setDiffs(diffs: List<DiffFileDto>): Boolean {
         val next = diffs.map(::file)
         this.diffs = diffs
         if (files == next) {
             val visible = next.isNotEmpty()
             parts.diff.isEnabled = visible
-            if (isVisible == visible) return
+            if (isVisible == visible) return false
             isVisible = visible
             revalidate()
             repaint()
-            return
+            return true
         }
         files = next
         val visible = files.isNotEmpty()
@@ -93,6 +94,7 @@ class ModifiedFilesView private constructor(
         if (isExpanded()) body.updateFiles(files)
         revalidate()
         repaint()
+        return true
     }
 
     @RequiresEdt

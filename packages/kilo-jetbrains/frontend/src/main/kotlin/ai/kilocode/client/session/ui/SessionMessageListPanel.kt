@@ -167,8 +167,12 @@ class SessionMessageListPanel(
                 is SessionModelEvent.Compacted -> Unit
 
                 is SessionModelEvent.MessageUpdated -> {
-                    turnViews[event.info.info.id]?.setDiffs(event.info.info.summary?.diffs.orEmpty())
-                    refresh()
+                    // message.updated fires on every streamed metadata delta (time/tokens/cost). Only
+                    // relayout the transcript when the turn's modified-files card actually changed,
+                    // not on each delta or when this message isn't a turn anchor.
+                    if (turnViews[event.info.info.id]?.setDiffs(event.info.info.summary?.diffs.orEmpty()) == true) {
+                        refresh()
+                    }
                 }
 
                 is SessionModelEvent.DiffUpdated -> {

@@ -1,6 +1,5 @@
 package ai.kilocode.client.diff
 
-import ai.kilocode.client.session.views.tool.diffMeta
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.TextAnnotationGutterProvider
@@ -20,14 +19,17 @@ object DiffLineNumbers {
         var new = 0
         var hunk = false
         patch.lineSequence().forEach { line ->
-            val match = HUNK.find(line)
-            if (match != null) {
-                old = match.groupValues[1].toInt()
-                new = match.groupValues[2].toInt()
+            // Hunk headers (and any pre-hunk file/VCS headers) are the only lines stripped, matching
+            // pureDiff's hunk-aware body. In-hunk lines are kept verbatim even when they look like a
+            // header (e.g. a deleted "-- " comment renders as "--- ..."), so the counters stay aligned.
+            if (line.startsWith("@@")) {
+                HUNK.find(line)?.let { match ->
+                    old = match.groupValues[1].toInt()
+                    new = match.groupValues[2].toInt()
+                }
                 hunk = true
                 return@forEach
             }
-            if (diffMeta(line)) return@forEach
             if (!hunk) return@forEach
             when {
                 line.startsWith("+") -> rows.add(line to Row(null, new++))
@@ -40,9 +42,11 @@ object DiffLineNumbers {
     }
 
     private fun List<Pair<String, Row>>.trimBlankEdges(): List<Pair<String, Row>> {
-        val start = indexOfFirst { it.first.isNotBlank() }
+        // isNotEmpty (not isNotBlank) mirrors pureDiff's trim('\n'): a blank context line renders as
+        // a single space that survives the body trim, so an empty-string edge is the only one dropped.
+        val start = indexOfFirst { it.first.isNotEmpty() }
         if (start < 0) return emptyList()
-        val end = indexOfLast { it.first.isNotBlank() }
+        val end = indexOfLast { it.first.isNotEmpty() }
         return subList(start, end + 1)
     }
 }

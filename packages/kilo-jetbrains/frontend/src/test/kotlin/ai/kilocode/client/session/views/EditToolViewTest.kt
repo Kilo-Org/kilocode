@@ -143,7 +143,8 @@ class EditToolViewTest : BasePlatformTestCase() {
         assertTrue(editButton.isEnabled)
         editButton.doClick()
         assertEquals(1, edit.single().size)
-        assertEquals("Edit", titles.single())
+        // Single-file edit keeps the file name so its diff tab is identifiable (not a generic "Edit").
+        assertEquals("App.kt", titles.single())
 
         val patch = mutableListOf<List<DiffFileDto>>()
         val patchView = track(EditToolView(tool().also {
@@ -272,6 +273,8 @@ class EditToolViewTest : BasePlatformTestCase() {
         click(link, 0)
 
         assertEquals(listOf("/repo/src/App.kt"), opened)
+        // The link is not bound for toggling, so opening the file must not also collapse the card.
+        assertTrue(view.isExpanded())
     }
 
     fun `test metadata only patch falls back to raw text`() {

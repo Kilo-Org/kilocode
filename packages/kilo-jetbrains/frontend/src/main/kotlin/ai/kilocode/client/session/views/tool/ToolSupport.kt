@@ -838,11 +838,25 @@ internal fun diffStat(tool: Tool): Pair<Int, Int> {
     return added to removed
 }
 
-/** Display-only diff body without VCS/file metadata headers (Index, diff --git, ---, +++, etc.). */
-internal fun pureDiff(diff: String): String = diff.lineSequence()
-    .filterNot(::diffMeta)
-    .joinToString("\n")
-    .trim('\n')
+/**
+ * Display-only diff body. Strips the pre-hunk file/VCS headers (Index, diff --git, ---, +++, etc.)
+ * and the `@@` hunk markers, but keeps every in-hunk line verbatim — a deleted `-- ` comment that
+ * renders as `--- ...` is diff content, not a header, so it must survive here and in
+ * [ai.kilocode.client.diff.DiffLineNumbers.rows] for the gutter line numbers to stay aligned.
+ */
+internal fun pureDiff(diff: String): String {
+    val out = StringBuilder()
+    var hunk = false
+    diff.lineSequence().forEach { line ->
+        if (line.startsWith("@@")) {
+            hunk = true
+            return@forEach
+        }
+        if (!hunk && diffMeta(line)) return@forEach
+        out.append(line).append('\n')
+    }
+    return out.toString().trim('\n')
+}
 
 internal fun diffMeta(line: String): Boolean = line.startsWith("Index:") ||
     line.startsWith("====") ||

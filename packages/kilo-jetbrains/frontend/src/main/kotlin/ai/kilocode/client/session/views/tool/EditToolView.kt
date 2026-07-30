@@ -75,7 +75,10 @@ class EditToolView(
         parts.left.next(filesTag)
         parts.left.next(PartHeader.centered(badge))
         parts.left.next(PartHeader.centered(diffAnchor))
-        bindHeader(parts.glyph, parts.title, parts.sub, parts.link, parts.state, parts.left, parts.right, parts.slot, filesTag, badge, diffAnchor)
+        // parts.link is intentionally omitted: FileLinkLabel installs its own click handler that opens
+        // the file, and binding it here would also toggle the card on the same click (see ReadToolView,
+        // which likewise omits it). Header toggling still works via parts.left/row.
+        bindHeader(parts.glyph, parts.title, parts.sub, parts.state, parts.left, parts.right, parts.slot, filesTag, badge, diffAnchor)
         applyStyle(style)
         sync()
     }
@@ -229,14 +232,16 @@ class EditToolView(
         changed = setForeground(parts.link, UiStyle.Colors.fg()) || changed
         changed = setText(parts.state, stateText(item)) || changed
         changed = setForeground(parts.state, color(item)) || changed
-        syncDiffAction()
+        syncDiffAction(count)
         changed = syncFilesTag(count) || changed
         changed = syncBadge() || changed
         return changed
     }
 
-    private fun syncDiffAction() {
-        val show = toDiffFiles(item).isNotEmpty()
+    private fun syncDiffAction(count: Int) {
+        // Mirrors toDiffFiles(item).isNotEmpty() without re-parsing the metadata JSON or allocating a
+        // DiffFileDto per file on every streaming delta: files present, else a single-file patch.
+        val show = count > 0 || editDiff(item).isNotBlank()
         if (canDiff == show && diff.isEnabled == show) return
         canDiff = show
         diff.isEnabled = show
@@ -292,9 +297,10 @@ private fun toDiffFiles(tool: Tool): List<DiffFileDto> {
     return listOf(DiffFileDto(editPath(tool), stat.first, stat.second, patch))
 }
 
-private fun diffTitle(tool: Tool): String = KiloBundle.message(
-    if (editFiles(tool).size > 1) "session.part.tool.patch" else "session.part.tool.edit",
-)
+private fun diffTitle(tool: Tool): String =
+    // Keep the file name for a single-file edit so each per-tool diff tab is identifiable
+    // (SessionUi decorates it into "<name> (branch)"); reserve the generic label for multi-file patches.
+    if (editFiles(tool).size > 1) KiloBundle.message("session.part.tool.patch") else tail(editPath(tool))
 
 /** Picks the multi-file patch body for apply_patch spanning several files, else the single diff. */
 private fun editBody(tool: Tool, selection: SessionSelection?, openFile: SessionFileOpener): EditBody =

@@ -215,14 +215,9 @@ class KiloSessionService internal constructor(
         call { messages(id, dir) }
             .also { log.debug { "${ChatLogSummary.sid(id)} ${ChatLogSummary.history(it)} ${ChatLogSummary.dir(dir)}" } }
 
-    suspend fun diff(id: String, dir: String): List<DiffFileDto> = try {
+    // Errors propagate so the diff editor can distinguish a real failure (retry link) from "no changes".
+    suspend fun diff(id: String, dir: String): List<DiffFileDto> =
         call { diff(id, dir) }
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: Exception) {
-        log.warn("${ChatLogSummary.sid(id)} kind=session-diff ${ChatLogSummary.dir(dir)} failed message=${e.message}", e)
-        emptyList()
-    }
 
     suspend fun attachmentPart(id: String, dir: String, message: String, part: String, key: String?): PartDto? =
         call { attachmentPart(id, dir, message, part, key) }

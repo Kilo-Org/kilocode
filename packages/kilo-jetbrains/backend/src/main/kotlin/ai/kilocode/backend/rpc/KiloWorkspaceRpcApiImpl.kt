@@ -253,20 +253,36 @@ class KiloWorkspaceRpcApiImpl internal constructor(
         text.takeIf { it.isNotBlank() }?.take(DIFF_CAP)
     }
 
-    override suspend fun branchDiff(directory: String): List<DiffFileDto> = withContext(Dispatchers.IO) {
+    override suspend fun branchDiff(directory: String, patches: Boolean): List<DiffFileDto> = withContext(Dispatchers.IO) {
         val base = file(clean(directory) ?: directory) ?: return@withContext emptyList()
         if (!gitAvailable(base)) return@withContext emptyList()
-        val ref = defaultBranch(base)
-        val anc = ref?.let { git(base, "merge-base", it, "HEAD").trim().ifBlank { null } } ?: "HEAD"
-        val numstat = git(base, "-c", "core.quotepath=false", "diff", "--numstat", "--no-color", "--no-renames", anc)
-        val names = git(base, "-c", "core.quotepath=false", "diff", "--name-status", "--no-color", "--no-renames", anc)
-        val patch = git(base, "-c", "core.quotepath=false", "diff", "--no-color", "--no-ext-diff", "--no-renames", "--unified=2147483647", anc)
-        val untracked = git(base, "-c", "core.quotepath=false", "ls-files", "--others", "--exclude-standard")
+        val anc = mergeBase(base)
+        // --relative scopes diff output to the opened directory and emits project-relative paths, so
+        // tracked entries match the untracked list (ls-files is already cwd-relative) in monorepos.
+        val stats = parseNumstat(git(base, "-c", "core.quotepath=false", "diff", "--numstat", "--relative", "--no-color", "--no-renames", anc))
+        val status = parseNameStatus(git(base, "-c", "core.quotepath=false", "diff", "--name-status", "--relative", "--no-color", "--no-renames", anc))
+        val untrackedPaths = git(base, "-c", "core.quotepath=false", "ls-files", "--others", "--exclude-standard")
             .lineSequence()
             .filter { it.isNotBlank() }
-            .map { untracked(base, it) }
             .toList()
-        buildBranchDiff(numstat, patch, untracked, parseNameStatus(names), DIFF_CAP)
+        if (!patches) {
+            val tracked = stats.map { DiffFileDto(it.path, it.additions, it.deletions, "", status[it.path] ?: "modified") }
+            return@withContext tracked + untrackedPaths.map { untracked(base, it, withPatch = false) }
+        }
+        // Fetch patches per file and stop once the running total reaches DIFF_CAP, rather than
+        // materializing the whole repository's full-context diff into one string up front.
+        var used = 0
+        val tracked = stats.map { stat ->
+            val text = if (used < DIFF_CAP) fileDiff(base, anc, stat.path) else ""
+            val next = if (text.isNotBlank() && used + text.length <= DIFF_CAP) { used += text.length; text } else ""
+            DiffFileDto(stat.path, stat.additions, stat.deletions, next, status[stat.path] ?: "modified")
+        }
+        val untracked = untrackedPaths.map { rel ->
+            val dto = untracked(base, rel, withPatch = used < DIFF_CAP)
+            val text = dto.patch.orEmpty()
+            if (text.isNotBlank() && used + text.length <= DIFF_CAP) { used += text.length; dto } else dto.copy(patch = "")
+        }
+        tracked + untracked
     }
 
     override suspend fun branchName(directory: String): String? = withContext(Dispatchers.IO) {
@@ -397,11 +413,35 @@ class KiloWorkspaceRpcApiImpl internal constructor(
         return runWorkspaceGit(base, *args)
     }
 
-    private fun defaultBranch(base: Path): String? = listOf("main", "master").firstOrNull { ref ->
-        git(base, "rev-parse", "--verify", ref).isNotBlank()
+    /** Merge-base of the resolved default branch and HEAD, or HEAD when no base can be determined. */
+    private fun mergeBase(base: Path): String {
+        val ref = defaultBranch(base) ?: return "HEAD"
+        return git(base, "merge-base", ref, "HEAD").trim().ifBlank { "HEAD" }
     }
 
-    private fun untracked(base: Path, rel: String): DiffFileDto {
+    /**
+     * Resolve the base branch ref, preferring the remote's declared default (origin HEAD), then the
+     * common origin and local main or master branches, so repos whose default is develop or trunk —
+     * or worktrees where only the remote branch exists locally — still resolve. Fully-qualified refs
+     * are used so a tag named "main" can't be mistaken for the branch.
+     */
+    private fun defaultBranch(base: Path): String? {
+        git(base, "symbolic-ref", "--quiet", "refs/remotes/origin/HEAD").trim()
+            .removePrefix("refs/remotes/")
+            .takeIf { it.isNotBlank() }
+            ?.let { return it }
+        return listOf(
+            "refs/remotes/origin/main" to "origin/main",
+            "refs/remotes/origin/master" to "origin/master",
+            "refs/heads/main" to "main",
+            "refs/heads/master" to "master",
+        ).firstOrNull { git(base, "rev-parse", "--verify", "--quiet", it.first).isNotBlank() }?.second
+    }
+
+    private fun fileDiff(base: Path, anc: String, path: String): String =
+        git(base, "-c", "core.quotepath=false", "diff", "--relative", "--no-color", "--no-ext-diff", "--no-renames", "--unified=2147483647", anc, "--", path)
+
+    private fun untracked(base: Path, rel: String, withPatch: Boolean): DiffFileDto {
         return runCatching {
             val path = base.resolve(rel).normalize()
             if (!path.startsWith(base) || !path.isRegularFile() || path.fileSize() > LARGE_FILE) return@runCatching DiffFileDto(rel, 0, 0, "", "untracked")
@@ -409,7 +449,8 @@ class KiloWorkspaceRpcApiImpl internal constructor(
             if (bytes.any { it == 0.toByte() }) return@runCatching DiffFileDto(rel, 0, 0, "", "untracked")
             val text = bytes.toString(StandardCharsets.UTF_8)
             val additions = lines(text).size
-            DiffFileDto(rel, additions, 0, untrackedPatch(rel, text, additions), "untracked")
+            val patch = if (withPatch) untrackedPatch(rel, text, additions) else ""
+            DiffFileDto(rel, additions, 0, patch, "untracked")
         }.getOrElse { err ->
             LOG.debug { "Failed to read untracked file for branch diff: $rel (${err.message})" }
             DiffFileDto(rel, 0, 0, "", "untracked")
