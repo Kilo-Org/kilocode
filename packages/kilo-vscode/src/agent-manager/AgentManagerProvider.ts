@@ -4,10 +4,12 @@ import type { KiloClient, Session } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { getErrorMessage } from "../kilo-provider-utils"
 import { resolveLocalDiffTarget } from "../diff/shared/target"
+import { DiffSourceCatalog } from "../diff/sources/catalog"
 import { getDiffMarkdownRender, setDiffMarkdownRender } from "../review-settings"
 import { isAbsolutePath } from "../path-utils"
 import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
 import { remoteRef, WorktreeStateManager, type Worktree } from "./WorktreeStateManager"
+import { composeDiffId, normalizeScope } from "./diff-scope"
 import { handleSection } from "./section-handler"
 import { normalizeBaseBranch } from "./base-branch"
 import { GitStatsPoller, type LocalStats, type WorktreePresenceResult, type WorktreeStats } from "./GitStatsPoller"
@@ -22,9 +24,9 @@ import { SessionTerminalManager } from "./SessionTerminalManager"
 import { createTerminalHost } from "./terminal-host"
 import { TerminalRouter } from "./terminal-routing"
 import { executeVscodeTask } from "./task-runner"
-import { startVscodeRunTask } from "./run/task"
 import { RunController } from "./run/controller"
 import { handleRunMessage } from "./run/message"
+import { createRunController, createScriptTerminalRuntime } from "./script-terminal-runtime"
 import { forkSession } from "./fork-session"
 import { AgentManagerVisiblePresence } from "./am-visible-presence"
 import { continueInWorktree } from "./continue-in-worktree"
@@ -64,6 +66,7 @@ export class AgentManagerProvider implements Disposable {
   private importer: WorktreeImporter
   private terminalManager: SessionTerminalManager
   private terminalRouter: TerminalRouter
+  private scripts: ReturnType<typeof createScriptTerminalRuntime>
   private run: RunController
   private stateReady: Promise<void> | undefined
   private statsPoller: GitStatsPoller
@@ -71,6 +74,7 @@ export class AgentManagerProvider implements Disposable {
   private orchestration: AgentManagerOrchestrationBridge
   private gitOps: GitOps
   private diffs: WorktreeDiffController
+  private diffCatalog: DiffSourceCatalog
   private naming: BranchNamingController
   private staleWorktreeIds = new Set<string>()
   private toolRequests = new Set<string>()
@@ -111,19 +115,25 @@ export class AgentManagerProvider implements Disposable {
       post: (msg) => this.postToWebview(msg),
       getTerminalFont: () => readTerminalFont(),
     })
+    this.scripts = createScriptTerminalRuntime({
+      connection: this.connectionService,
+      output: this.outputChannel,
+      post: (message) => this.postToWebview(message),
+    })
     this.unsubFont = watchTerminalFont((font) => {
       this.postToWebview({ type: "agentManager.terminal.fontChanged", font })
+      this.scripts.manager.snapshot()
     })
     this.unsubDestination = watchTerminalDestination((destination) => {
       this.postToWebview({ type: "agentManager.terminal.destinationChanged", destination })
     })
-    this.run = new RunController({
+    this.run = createRunController({
+      manager: this.scripts.manager,
       root: () => this.getRoot(),
       state: () => this.getStateManager(),
       open: (file) => this.host.openDocument(file),
-      start: startVscodeRunTask,
-      post: (status) => this.postToWebview({ type: "agentManager.runStatus", ...status }),
-      error: (message) => this.postToWebview({ type: "error", message }),
+      trusted: () => this.host.isTrusted(),
+      post: (message) => this.postToWebview(message),
       log: (msg) => this.outputChannel.appendLine(`[RunScript] ${msg}`),
       refresh: () => this.pushState(),
     })
@@ -149,12 +159,13 @@ export class AgentManagerProvider implements Disposable {
       log: (msg) => this.log(msg),
     })
     const local = createLocalDiff(this.gitOps, (...args) => this.log(...args))
+    this.diffCatalog = new DiffSourceCatalog(this.connectionService)
     this.diffs = new WorktreeDiffController({
       getState: () => this.getStateManager(),
       getRoot: () => this.getRoot(),
       getStateReady: () => this.stateReady,
+      catalog: this.diffCatalog,
       git: this.gitOps,
-      localDiff: local.summary,
       localDiffFile: local.file,
       post: (msg) => this.postToWebview(msg),
       log: (...args) => this.log(...args),
@@ -412,6 +423,7 @@ export class AgentManagerProvider implements Disposable {
     if (diff !== undefined) return diff
     const bridge = this.onBridgeMessage(m)
     if (bridge !== undefined) return bridge
+    if (this.scripts.manager.intercept(m)) return null
     if (this.terminalRouter.handle(m)) return null
 
     return msg
@@ -684,11 +696,11 @@ export class AgentManagerProvider implements Disposable {
 
   private onDiffMessage(m: AgentManagerInMessage): Record<string, unknown> | null | undefined {
     if (m.type === "agentManager.requestWorktreeDiff") {
-      void this.diffs.request(m.sessionId)
+      void this.diffs.request(composeDiffId(m.sessionId, normalizeScope(m.scope)))
       return null
     }
     if (m.type === "agentManager.requestWorktreeDiffFile") {
-      void this.diffs.requestFile(m.sessionId, m.file)
+      void this.diffs.requestFile(composeDiffId(m.sessionId, normalizeScope(m.scope)), m.file)
       return null
     }
     if (m.type === "agentManager.applyWorktreeDiff") {
@@ -696,21 +708,50 @@ export class AgentManagerProvider implements Disposable {
       return null
     }
     if (m.type === "agentManager.revertWorktreeFile") {
-      void this.diffs.revert(m.sessionId, m.file)
+      void this.diffs.revert(composeDiffId(m.sessionId, normalizeScope(m.scope)), m.file)
       return null
     }
     if (m.type === "agentManager.startDiffWatch") {
-      this.diffs.start(m.sessionId)
+      this.diffs.start(composeDiffId(m.sessionId, normalizeScope(m.scope)))
       return null
     }
     if (m.type === "agentManager.stopDiffWatch") {
       this.diffs.stop()
       return null
     }
+    if (m.type === "agentManager.requestDiffBranches") {
+      void this.sendDiffBranches(m.sessionId, m.scope)
+      return null
+    }
+    if (m.type === "agentManager.setDiffBaseBranch") {
+      void this.diffs.setBase(composeDiffId(m.sessionId, normalizeScope(m.scope)), m.branch).then(() => {
+        void this.sendDiffBranches(m.sessionId, m.scope)
+      })
+      return null
+    }
     if (m.type === "agentManager.openFile") {
       this.openWorktreeFile(m.sessionId, m.filePath, m.line, m.column)
       return null
     }
+  }
+
+  private async sendDiffBranches(sessionId: string, scope?: string): Promise<void> {
+    const id = composeDiffId(sessionId, normalizeScope(scope))
+    const result = await this.diffs.branches(id).catch((err) => {
+      this.log("Failed to list diff branches:", err instanceof Error ? err.message : String(err))
+      return undefined
+    })
+    if (!result) return
+    this.postToWebview({
+      type: "agentManager.diffBranches",
+      sessionId: id,
+      branches: result.branches,
+      defaultBranch: result.defaultBranch,
+      autoBase: result.autoBase,
+      currentBase: result.currentBase,
+      isAuto: result.isAuto,
+      currentBranch: result.currentBranch,
+    })
   }
 
   private onBridgeMessage(m: AgentManagerInMessage): Record<string, unknown> | null | undefined {
@@ -732,6 +773,7 @@ export class AgentManagerProvider implements Disposable {
     // the panel itself is disposed. In-flight creates from the dying
     // instance are reaped by the router's generation guard.
     void this.terminalRouter.dispose()
+    this.scripts.manager.snapshot()
     void this.stateReady
       ?.then(() => {
         // When the folder is not a git repo (or has no folder open),
@@ -1023,11 +1065,16 @@ export class AgentManagerProvider implements Disposable {
       this.log(`Worktree ${worktreeId} not found in state`)
       return null
     }
+    this.statsPoller.skipWorktree(worktreeId)
+    await this.run.remove(worktreeId)
+    if (!(await this.scripts.manager.clear("run", worktreeId))) {
+      this.statsPoller.unskipWorktree(worktreeId)
+      this.postToWebview({ type: "error", message: "Failed to stop the Run script before deleting the worktree" })
+      return null
+    }
     // Remove from state BEFORE disk removal so pollers immediately stop targeting this worktree.
     // Pre-emptive skip covers any in-flight poll that already captured getWorktrees().
-    this.statsPoller.skipWorktree(worktreeId)
     this.prBridge.remove(worktreeId)
-    this.run.remove(worktreeId)
     this.naming.forget(worktreeId)
     const orphaned = state.removeWorktree(worktreeId)
     if (this.diffs.shouldStopForWorktree(worktree.path, orphaned)) {
@@ -1062,6 +1109,11 @@ export class AgentManagerProvider implements Disposable {
       return null
     }
 
+    await this.run.remove(worktreeId)
+    if (!(await this.scripts.manager.clear("run", worktreeId))) {
+      this.postToWebview({ type: "error", message: "Failed to stop the Run script before removing the worktree" })
+      return null
+    }
     this.naming.forget(worktreeId)
     const orphaned = state.removeWorktree(worktreeId)
     if (this.diffs.shouldStopForWorktree(worktree.path, orphaned)) {
@@ -1924,9 +1976,11 @@ export class AgentManagerProvider implements Disposable {
     this.unsubStatus?.()
     this.unsubFont?.()
     this.unsubDestination?.()
+    await this.scripts.dispose()
     this.orchestration.dispose()
     this.visiblePresence.clear()
     this.diffs.stop()
+    this.diffCatalog.dispose()
     this.naming.dispose()
     this.statsPoller.stop()
     this.gitOps.dispose()

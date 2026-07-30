@@ -2,7 +2,11 @@ import type { Argv } from "yargs"
 import { Effect } from "effect"
 import { cmd } from "@/cli/cmd/cmd"
 import { effectCmd } from "@/cli/effect-cmd"
-import { CloudCommands } from "@/kilocode/cloud/commands"
+
+// Keep the top-level import graph light: this module is registered eagerly at CLI
+// startup, so the cloud implementation is imported inside handlers (same deferral
+// pattern as upstream opencode#30453).
+const cloud = Effect.promise(() => import("@/kilocode/cloud/commands").then((m) => m.CloudCommands))
 
 export const CloudStartCommand = effectCmd({
   command: "start",
@@ -44,6 +48,7 @@ export const CloudStartCommand = effectCmd({
         describe: "connect to the WebSocket stream and print events as JSONL",
       }),
   handler: Effect.fn("Cli.cloud.start")(function* (args) {
+    const CloudCommands = yield* cloud
     yield* CloudCommands.start({
       prompt: args.prompt,
       ...(args.repo === undefined ? {} : { repo: args.repo }),
@@ -74,6 +79,7 @@ export const CloudSendCommand = effectCmd({
         describe: "follow-up prompt for the Cloud Agent",
       }),
   handler: Effect.fn("Cli.cloud.send")(function* (args) {
+    const CloudCommands = yield* cloud
     yield* CloudCommands.send({ sessionID: args.sessionId, prompt: args.prompt })
   }),
 })
@@ -95,6 +101,7 @@ export const CloudStatusCommand = effectCmd({
         describe: "Cloud Agent message ID",
       }),
   handler: Effect.fn("Cli.cloud.status")(function* (args) {
+    const CloudCommands = yield* cloud
     yield* CloudCommands.status({ sessionID: args.sessionId, messageID: args.messageId })
   }),
 })
@@ -116,6 +123,7 @@ export const CloudResultCommand = effectCmd({
         describe: "Cloud Agent message ID",
       }),
   handler: Effect.fn("Cli.cloud.result")(function* (args) {
+    const CloudCommands = yield* cloud
     yield* CloudCommands.result({ sessionID: args.sessionId, messageID: args.messageId })
   }),
 })

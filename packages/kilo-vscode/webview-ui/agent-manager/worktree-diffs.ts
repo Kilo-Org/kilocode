@@ -9,6 +9,7 @@
 
 import { createSignal, type Accessor } from "solid-js"
 import { mergeWorktreeDiffs } from "../diff-viewer/diff-state"
+import { parseDiffId } from "./diff-scope-state"
 import type { useVSCode } from "../src/context/vscode"
 import type {
   AgentManagerWorktreeDiffFileMessage,
@@ -16,6 +17,16 @@ import type {
   AgentManagerWorktreeDiffMessage,
   WorktreeFileDiff,
 } from "../src/types/messages"
+
+/**
+ * Decompose a composite diff id (`ctx#scope`) into the wire fields the
+ * extension expects. Bare ids (no scope separator) parse to the default
+ * branch scope.
+ */
+function wire(id: string) {
+  const { ctx, scope } = parseDiffId(id)
+  return { sessionId: ctx, scope }
+}
 
 export function createWorktreeDiffs(vscode: ReturnType<typeof useVSCode>) {
   const [diffDatas, setDiffDatas] = createSignal<Record<string, WorktreeFileDiff[]>>({})
@@ -48,20 +59,20 @@ export function createWorktreeDiffs(vscode: ReturnType<typeof useVSCode>) {
     })
   }
 
-  /** Lazily load a single file's full diff for the current session. */
-  const requestDiffFile = (sessionId: string, file: string) => {
-    if (diffFileLoading()[sessionId]?.[file]) return
-    setDiffFilePending(sessionId, file, true)
-    vscode.postMessage({ type: "agentManager.requestWorktreeDiffFile", sessionId, file })
+  /** Lazily load a single file's full diff for the given composite diff id. */
+  const requestDiffFile = (id: string, file: string) => {
+    if (diffFileLoading()[id]?.[file]) return
+    setDiffFilePending(id, file, true)
+    vscode.postMessage({ type: "agentManager.requestWorktreeDiffFile", file, ...wire(id) })
   }
 
   /** Files the backend flagged as stale in a merged update need a fresh fetch. */
-  const refreshStaleDiffs = (sessionId: string, files: Set<string>) => {
-    const loading = diffFileLoading()[sessionId] ?? {}
+  const refreshStaleDiffs = (id: string, files: Set<string>) => {
+    const loading = diffFileLoading()[id] ?? {}
     for (const file of files) {
       if (loading[file]) continue
-      setDiffFilePending(sessionId, file, true)
-      vscode.postMessage({ type: "agentManager.requestWorktreeDiffFile", sessionId, file })
+      setDiffFilePending(id, file, true)
+      vscode.postMessage({ type: "agentManager.requestWorktreeDiffFile", file, ...wire(id) })
     }
   }
 
