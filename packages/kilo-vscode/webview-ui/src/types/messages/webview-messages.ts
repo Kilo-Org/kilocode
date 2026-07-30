@@ -808,6 +808,17 @@ export interface AgentManagerTerminalCloseRequest {
   terminalId: string
 }
 
+// Deliberately stop a running script terminal (kills its process tree)
+export interface AgentManagerTerminalStopRequest {
+  type: "agentManager.terminal.stop"
+  terminalId: string
+}
+
+export interface AgentManagerTerminalDestinationSelectedRequest {
+  type: "agentManager.terminal.destinationSelected"
+  destination: TerminalDestination
+}
+
 // Notify the extension of an xterm resize so it can update the backend PTY dimensions
 export interface AgentManagerTerminalResizeRequest {
   type: "agentManager.terminal.resize"
@@ -1559,6 +1570,8 @@ export type WebviewMessage =
   | OpenContentRequest
   | AgentManagerTerminalCreateRequest
   | AgentManagerTerminalCloseRequest
+  | AgentManagerTerminalStopRequest
+  | AgentManagerTerminalDestinationSelectedRequest
   | AgentManagerTerminalResizeRequest
   | RequestImageModelsMessage
 

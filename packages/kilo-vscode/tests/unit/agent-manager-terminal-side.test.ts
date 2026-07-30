@@ -195,7 +195,7 @@ describe("Agent Manager side terminal controller", () => {
     item.ctl.choose("agentManager")
     expect(item.ctl.destination()).toBe("agentManager")
     expect(item.calls.posted).toEqual([
-      { type: "updateSetting", key: "agentManager.terminalButtonDestination", value: "agentManager" },
+      { type: "agentManager.terminal.destinationSelected", destination: "agentManager" },
     ])
     expect(item.calls.persisted).toEqual(["agentManager"])
   })
@@ -224,6 +224,9 @@ describe("Agent Manager side terminal controller", () => {
   it("restores a saved panel choice and ignores remote defaults", () => {
     const item = scene({ saved: "agentManager" })
     expect(item.ctl.destination()).toBe("agentManager")
+    expect(item.calls.posted).toEqual([
+      { type: "agentManager.terminal.destinationSelected", destination: "agentManager" },
+    ])
     item.ctl.syncDefault("vscode")
     expect(item.ctl.destination()).toBe("agentManager")
   })

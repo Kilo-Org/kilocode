@@ -550,7 +550,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
     expect(dest).not.toContain("getConfiguration")
   })
 
-  it("clears retained Run terminals before removing worktree state", () => {
+  it("clears retained script terminals before removing worktree state", () => {
     for (const name of ["onDeleteWorktree", "onRemoveStaleWorktree"]) {
       const text = body(name)
       expect(text).toContain("host.clearRun(worktreeId)")
@@ -558,6 +558,9 @@ describe("Agent Manager Provider — onMessage routing", () => {
     }
     const deleted = body("onDeleteWorktree")
     expect(deleted.indexOf("host.skipStats")).toBeLessThan(deleted.indexOf("host.removeRun"))
+    const helper = fs.readFileSync(path.join(ROOT, "src/agent-manager/script-terminal-runtime.ts"), "utf-8")
+    expect(helper).toContain('manager.clear("run", worktreeId, projectId)')
+    expect(helper).toContain('manager.clear("setup", worktreeId, projectId)')
   })
 
   // -- onDeleteWorktree invariants -------------------------------------------

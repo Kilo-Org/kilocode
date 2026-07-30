@@ -686,6 +686,8 @@ export interface AgentManagerRepoInfoMessage {
 // Agent Manager worktree setup progress
 export interface AgentManagerWorktreeSetupMessage {
   type: "agentManager.worktreeSetup"
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
   status: "creating" | "starting" | "ready" | "error"
   message: string
   sessionId?: string
@@ -812,13 +814,17 @@ export interface AgentManagerTerminalDestinationChangedMessage {
   destination: TerminalDestination
 }
 
-/** Provider-owned Run script terminal. Full snapshots replace only this terminal kind. */
+/** Provider-owned script terminal (Run/Setup). Full snapshots replace only these terminal kinds. */
+export type ScriptTerminalKind = "run" | "setup"
+
 export interface ScriptTerminalView {
   terminalId: string
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
   /** null for LOCAL, worktree id otherwise */
   worktreeId: string | null
-  kind: "run"
-  title: "Run"
+  kind: ScriptTerminalKind
+  title: "Run" | "Setup"
   wsUrl: string
   state: "running" | "stopping" | "exited" | "failed"
   exitCode?: number

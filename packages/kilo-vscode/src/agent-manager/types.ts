@@ -115,6 +115,8 @@ interface LocalStatsMessage {
 
 interface WorktreeSetupMessage {
   type: "agentManager.worktreeSetup"
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
   status: "creating" | "starting" | "ready" | "error"
   message: string
   sessionId?: string
@@ -919,11 +921,21 @@ interface TerminalCloseIn {
   terminalId: string
 }
 
+interface TerminalStopIn {
+  type: "agentManager.terminal.stop"
+  terminalId: string
+}
+
 interface TerminalResizeIn {
   type: "agentManager.terminal.resize"
   terminalId: string
   cols: number
   rows: number
+}
+
+interface TerminalDestinationSelectedIn {
+  type: "agentManager.terminal.destinationSelected"
+  destination: TerminalDestination
 }
 
 /** All messages the Agent Manager expects from the webview (onMessage input). */
@@ -1006,4 +1018,6 @@ export type AgentManagerInMessage =
   | MoveSectionIn
   | TerminalCreateIn
   | TerminalCloseIn
+  | TerminalStopIn
   | TerminalResizeIn
+  | TerminalDestinationSelectedIn

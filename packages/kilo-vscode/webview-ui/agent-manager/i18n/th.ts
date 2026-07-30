@@ -63,6 +63,9 @@ export const dict = {
 
   "agentManager.terminal.new": "แท็บเทอร์มินัลใหม่",
   "agentManager.terminal.ended": "เทอร์มินัลสิ้นสุด — ปิดแท็บเพื่อยกเลิก",
+  "agentManager.terminal.setupFailed": "สคริปต์ติดตั้งล้มเหลว",
+  "agentManager.terminal.setupFailedCode": "สคริปต์ติดตั้งล้มเหลวด้วยรหัสออก",
+  "agentManager.terminal.stopSetup": "หยุดสคริปต์ติดตั้ง",
   "agentManager.terminal.connectionError": "ข้อผิดพลาดการเชื่อมต่อเทอร์มินัล",
   "agentManager.terminal.add": "เทอร์มินัลใหม่",
   "agentManager.terminal.empty": "ยังไม่มีเทอร์มินัลที่นี่",

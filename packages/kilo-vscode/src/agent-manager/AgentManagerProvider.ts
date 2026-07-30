@@ -30,15 +30,15 @@ import { GitOps } from "./GitOps"
 import { versionedName } from "./branch-name"
 import { BranchNamingController } from "./branch-naming"
 import { SetupScriptService } from "./SetupScriptService"
-import { SetupScriptRunner } from "./SetupScriptRunner"
 import { copyEnvFiles } from "./env-copy"
 import { SessionTerminalManager } from "./SessionTerminalManager"
 import { createTerminalHost } from "./terminal-host"
 import { TerminalRouter } from "./terminal-routing"
 import { executeVscodeTask } from "./task-runner"
+import { runWorktreeSetupScript } from "./setup-script-task"
 import { RunController } from "./run/controller"
 import { handleRunMessage } from "./run/message"
-import { createRunController, createScriptTerminalRuntime } from "./script-terminal-runtime"
+import { createRunController, createScriptTerminalRuntime, clearScriptTerminals } from "./script-terminal-runtime"
 import { forkSession } from "./fork-session"
 import { AgentManagerVisiblePresence } from "./am-visible-presence"
 import { continueInWorktree } from "./continue-in-worktree"
@@ -58,7 +58,7 @@ import { pruneSubagents } from "./prune-subagents"
 
 import { startSession } from "./mcp-warmup"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
-import { readTerminalDestination, watchTerminalDestination } from "./terminal-destination"
+import { DestinationState, handleDestination, watchTerminalDestination } from "./terminal-destination"
 import { buildKeybindingMap } from "./format-keybinding"
 import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from "./multi-version"
 import { ensureSandbox } from "./sandbox-bootstrap"
@@ -107,6 +107,7 @@ export class AgentManagerProvider implements Disposable {
   /** Scratch set returned when no active context exists; mutations are discarded. */
   private readonly staleScratch = new Set<string>()
   private unsubDestination: (() => void) | undefined
+  private destination = new DestinationState()
   private closing: Promise<void> | undefined
   private onVisibilityChange: ((visible: boolean) => void) | undefined
   // Tracks sessions owned by this panel until they are explicitly closed.
@@ -148,12 +149,14 @@ export class AgentManagerProvider implements Disposable {
       this.scripts.manager.snapshot()
     })
     this.unsubDestination = watchTerminalDestination((destination) => {
+      this.destination.sync(destination)
       this.postToWebview({ type: "agentManager.terminal.destinationChanged", destination })
     })
     this.run = createRunController({
       manager: this.scripts.manager,
       root: () => this.getRoot(),
       state: () => this.getStateManager(),
+      project: (id) => this.projectForScript(id),
       open: (file) => this.host.openDocument(file),
       trusted: () => this.host.isTrusted(),
       post: (message) => this.postRunMessage(message),
@@ -674,6 +677,7 @@ export class AgentManagerProvider implements Disposable {
       void this.configureSetupScript()
       return null
     }
+    if (handleDestination(this.destination, m, (msg) => this.log("[XTerm]", msg))) return null
     if (handleRunMessage(this.run, m, (id) => this.runKey(id))) return null
     if (m.type === "agentManager.showTerminal") {
       this.terminalManager.showTerminal(m.sessionId, this.state)
@@ -1193,21 +1197,21 @@ export class AgentManagerProvider implements Disposable {
     await copyEnvFiles(root, worktreePath, (msg) => this.outputChannel.appendLine(`[EnvCopy] ${msg}`))
 
     try {
-      const service = this.getSetupScriptService()
-      if (!service || !service.hasScript()) return
-      this.postToWebview({
-        type: "agentManager.worktreeSetup",
-        status: "creating",
-        message: "Running setup script...",
-        branch,
-        worktreeId,
-      })
-      const runner = new SetupScriptRunner(
-        (msg) => this.outputChannel.appendLine(`[SetupScriptRunner] ${msg}`),
-        service,
-        executeVscodeTask,
+      await runWorktreeSetupScript(
+        {
+          service: this.getSetupScriptService(),
+          destination: this.destination.value(),
+          projectId: this.context?.id,
+          worktreeId,
+          branch,
+          trusted: () => this.host.isTrusted(),
+          manager: this.scripts.manager,
+          vscode: executeVscodeTask,
+          log: (msg) => this.outputChannel.appendLine(`[SetupScript] ${msg}`),
+          post: (message) => this.postToWebview(message),
+        },
+        { worktreePath, repoPath: root },
       )
-      await runner.runIfConfigured({ worktreePath, repoPath: root })
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
       this.outputChannel.appendLine(`[AgentManager] Setup script error: ${msg}`)
@@ -1215,6 +1219,7 @@ export class AgentManagerProvider implements Disposable {
         type: "agentManager.worktreeSetup",
         status: "error",
         message: `Setup script failed: ${msg}`,
+        projectId: this.context?.id,
         branch,
         worktreeId,
       })
@@ -1367,7 +1372,7 @@ export class AgentManagerProvider implements Disposable {
       sidebarCollapsed: state.getSidebarCollapsed(),
       reviewDiffStyle: state.getReviewDiffStyle(),
       reviewMarkdownRender: getDiffMarkdownRender(),
-      terminalDestination: readTerminalDestination(),
+      terminalDestination: this.destination.value(),
       isGitRepo: true,
       defaultBaseBranch: state.getDefaultBaseBranch(),
       activeTarget: state.getActiveTarget(),
@@ -1393,7 +1398,7 @@ export class AgentManagerProvider implements Disposable {
       staleWorktreeIds: [],
       reviewDiffStyle: "unified",
       reviewMarkdownRender: getDiffMarkdownRender(),
-      terminalDestination: readTerminalDestination(),
+      terminalDestination: this.destination.value(),
       isGitRepo: false,
       runStatuses: [],
       runScriptConfigured: false,
@@ -1421,7 +1426,7 @@ export class AgentManagerProvider implements Disposable {
       unskipStats: (id) => this.statsPoller.unskipWorktree(id),
       removePR: (id) => this.prBridge.remove(id),
       removeRun: (id) => this.run.remove(id),
-      clearRun: (id) => this.scripts.manager.clear("run", id),
+      clearRun: (id) => clearScriptTerminals(this.scripts.manager, id, this.context?.id),
       forgetName: (id) => this.naming.forget(id),
       stopDiffs: (path, orphaned) => {
         if (this.diffs.shouldStopForWorktree(path, orphaned)) this.diffs.stop()
@@ -1489,6 +1494,12 @@ export class AgentManagerProvider implements Disposable {
     const ctx = this.context
     if (!ctx) return worktreeId
     return `${ctx.id}:local`
+  }
+
+  /** Resolve the project bucket that owns a provider-wide script key. */
+  private projectForScript(worktreeId: string): string | undefined {
+    if (worktreeId.endsWith(":local") && worktreeId !== "local") return worktreeId.slice(0, -":local".length)
+    return this.contexts.byWorktree(worktreeId)?.id ?? this.context?.id
   }
 
   /** Run state for one project's payload: its worktrees and its own local key, un-namespaced. */
@@ -1606,7 +1617,11 @@ export class AgentManagerProvider implements Disposable {
   }
 
   private postToWebview(message: AgentManagerOutMessage): void {
-    this.panel?.postMessage(message)
+    if (message.type !== "agentManager.worktreeSetup" || message.projectId) {
+      this.panel?.postMessage(message)
+      return
+    }
+    this.panel?.postMessage({ ...message, projectId: this.context?.id })
   }
 
   /**
