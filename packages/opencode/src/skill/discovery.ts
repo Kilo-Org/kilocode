@@ -1,4 +1,3 @@
-import { posix, win32 } from "node:path" // kilocode_change - pure segment/path validation helpers
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { httpClient, path } from "@opencode-ai/core/effect/layer-node-platform"
 import { NodePath } from "@effect/platform-node"
@@ -7,48 +6,10 @@ import { FetchHttpClient, HttpClient, HttpClientRequest, HttpClientResponse } fr
 import { withTransientReadRetry } from "@/util/effect-http-client"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Global } from "@opencode-ai/core/global"
+import { isSafeSegment, isSafeRelativePath } from "@/kilocode/skill/discovery-validate" // kilocode_change
 
 const skillConcurrency = 4
 const fileConcurrency = 8
-
-// kilocode_change start - segment/relative-path validation mirrors core v2 SkillDiscovery so a remote
-// index cannot smuggle traversal, absolute paths, URLs, or null bytes into a cache write target.
-function isSafeSegment(value: string) {
-  return (
-    value.length > 0 && value !== "." && value !== ".." && !value.includes("/") && !value.includes("\\") && !value.includes("\0")
-  )
-}
-
-function isSafeRelativePath(value: string) {
-  const segments = value.split("/")
-  return (
-    value.length > 0 &&
-    !value.includes("\\") &&
-    !value.includes("\0") &&
-    !value.includes("?") &&
-    !value.includes("#") &&
-    !URL.canParse(value) &&
-    !posix.isAbsolute(value) &&
-    !win32.isAbsolute(value) &&
-    segments.every((segment) => {
-      try {
-        const decoded = decodeURIComponent(segment)
-        return (
-          decoded.length > 0 &&
-          decoded !== "." &&
-          decoded !== ".." &&
-          !decoded.includes("/") &&
-          !decoded.includes("\\") &&
-          !decoded.includes("\0")
-        )
-      } catch {
-        return false
-      }
-    })
-  )
-}
-
-// kilocode_change end
 
 class IndexSkill extends Schema.Class<IndexSkill>("IndexSkill")({
   name: Schema.String,

@@ -305,7 +305,6 @@ export const dict = {
 
   "session.tab.review": "Pregled",
   "session.review.filesChanged": "Izmijenjeno {{count}} datoteka",
-  "session.review.change.other": "Izmjene",
   "session.review.loadingChanges": "Učitavanje izmjena...",
   "session.review.noChanges": "Nema izmjena",
 
@@ -706,7 +705,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "Ponašanje agenta",
   "settings.autoApprove.title": "Automatsko odobravanje",
-  "settings.browser.title": "Preglednik",
+  "settings.webTools.title": "Web alati",
+  "settings.webTools.description": "Konfigurišite web pretragu i automatizaciju preglednika.",
+  "settings.webTools.webSearch.enable": "Omogući za sve pružaoce",
+  "settings.webTools.browserAutomation": "Automatizacija preglednika",
+  "settings.webTools.webSearch.title": "Web pretraga",
+  "settings.webTools.webSearch.description": "Omogućite web pretragu modelima svih pružalaca.",
   "settings.checkpoints.title": "Kontrolne tačke",
   "settings.display.title": "Prikaz",
   "settings.autocomplete.title": "Automatsko dovršavanje",
@@ -728,6 +732,9 @@ export const dict = {
   "session.prompts.tick": "Upit {{index}} od {{total}}: {{prompt}}",
   "session.prompts.noAnswer": "Još nema odgovora",
   "session.prompts.queued": "Na čekanju",
+  "session.prompts.first": "Prvi upit",
+  "session.prompts.latest": "Najnoviji upit",
+  "session.prompts.overflow": "{{count}} ranijih upita",
   "session.status.writingResponse": "Pisanje odgovora…",
   "session.status.retry": "Ponovni pokušaj…",
   "session.status.working": "Radim…",

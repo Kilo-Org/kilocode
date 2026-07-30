@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { displayCommand } from "@/kilocode/skills/display"
+import { displayCommand, skillShellPrompt } from "@/kilocode/skills/display"
 
 describe("displayCommand", () => {
   it("escapes control characters so a command cannot repaint the prompt", () => {
@@ -18,5 +18,26 @@ describe("displayCommand", () => {
 
   it("leaves ordinary commands unchanged", () => {
     expect(displayCommand("git status --short")).toBe("git status --short")
+  })
+})
+
+describe("skillShellPrompt", () => {
+  it("returns undefined when the request is not a skill-shell batch", () => {
+    expect(skillShellPrompt(undefined)).toBeUndefined()
+    expect(skillShellPrompt({ skillShell: false })).toBeUndefined()
+    expect(skillShellPrompt({})).toBeUndefined()
+  })
+
+  it("names the skill and returns verbatim, escaped commands", () => {
+    const out = skillShellPrompt({ skillShell: true, skill: "git-status", commands: ["git status", "echo \u202ex"] })
+    expect(out).toEqual({
+      title: 'Run shell commands from skill "git-status"?',
+      commands: ["git status", "echo \\u202ex"],
+    })
+  })
+
+  it("falls back to a generic title and drops non-string commands", () => {
+    const out = skillShellPrompt({ skillShell: true, commands: ["ok", 42, null] })
+    expect(out).toEqual({ title: "Run these skill commands?", commands: ["ok"] })
   })
 })

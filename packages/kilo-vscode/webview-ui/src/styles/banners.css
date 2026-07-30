@@ -169,6 +169,119 @@
   align-items: center;
   gap: 6px;
   min-width: 0;
+  flex-shrink: 1;
+}
+
+/* ============================================
+   Inline diff toolbar controls (scope, base, diff style)
+   ============================================
+
+   These sit inside a toolbar row next to ghost buttons and a radio group, so
+   they must not carry header-band margins and must match the small control
+   height. `.am-selector-trigger` is a 32px full-width input-style control;
+   everything below shrinks it to a toolbar-sized chip. */
+
+.diff-scope-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+/* Two-class selector on purpose: `.am-selector-trigger` (agent-manager.css) is
+   a 32px full-width input-style control and loads after this file, so a single
+   `.diff-inline-trigger` class would lose the cascade tie and keep the tall
+   size. */
+.am-selector-trigger.diff-inline-trigger {
+  width: auto;
+  height: 22px;
+  gap: 4px;
+  padding: 0 6px;
+  font-size: var(--kilo-font-size-12);
+  /* Tight line box: the inherited 19.5px line-height leaves no room inside a
+     22px chip and makes inline children look like they burst out of it. */
+  line-height: 20px;
+  /* Never squeeze: shrinking these to unreadable slivers looks broken. The
+     container queries below drop whole controls instead. */
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+/* The "Default" badge is sized for dropdown rows (19.5px line box + padding =
+   21.5px), which fills a 22px chip edge to edge. Shrink it so it reads as a
+   badge inside the control instead of overflowing it. */
+.am-selector-trigger.diff-inline-trigger .am-branch-badge {
+  padding: 0 4px;
+  line-height: 14px;
+  border-radius: 2px;
+}
+
+.am-selector-trigger.diff-inline-trigger .am-selector-right {
+  margin-left: 2px;
+}
+
+/* Long branch names ellipsize rather than pushing the row wider. The compact
+   variant (narrow side panel) caps tighter than the full-screen toolbar. */
+.am-selector-trigger.diff-inline-trigger .am-selector-value {
+  max-width: 160px;
+}
+
+.diff-scope-controls-compact .am-selector-trigger.diff-inline-trigger .am-selector-value {
+  max-width: 92px;
+}
+
+/* The shared `.am-dropdown` rule pins popover width to the anchor width, which
+   would make these narrow triggers open an unreadably narrow menu. */
+.diff-inline-menu[data-component="popover-content"] {
+  width: auto;
+  min-width: 200px;
+}
+
+.diff-inline-group {
+  padding: 6px 10px 2px;
+  font-size: var(--kilo-font-size-11);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-weaker);
+}
+
+/* Inline controls inside the two Agent Manager diff toolbars. They must not add
+   vertical margin: each toolbar's height is its own padding plus the tallest
+   control, so a header-band margin here would visibly grow the row (this is
+   why these rows do not reuse `[data-component="diff-picker-header"]`). */
+.am-review-toolbar-left > .diff-scope-controls,
+.am-diff-header-main > .diff-scope-controls {
+  margin: 0;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+/* ============================================
+   Narrow side panel: progressive disclosure
+   ============================================
+
+   The user can drag the diff side panel arbitrarily narrow. Flex shrinking
+   alone clips controls mid-glyph and slides them under the action buttons, so
+   whole controls are dropped instead, least important first. The scope select
+   always survives: it is the only way back out of an empty scope.
+
+   The container is declared on `.am-diff-header` in agent-manager.css (that
+   file only permits `am-`-prefixed selectors, so the `diff-`-prefixed rules
+   live here). */
+
+/* Diff style has a home in the full-screen review, so it goes before base. */
+@container am-diff-header (max-width: 470px) {
+  .am-diff-header-main .diff-style-select {
+    display: none;
+  }
+}
+
+@container am-diff-header (max-width: 390px) {
+  .am-diff-header-main .diff-base-picker {
+    display: none;
+  }
 }
 
 .diff-base-current {
@@ -191,12 +304,6 @@
   font-size: var(--kilo-font-size-12);
   color: var(--vscode-descriptionForeground, var(--vscode-foreground));
   line-height: 1;
-}
-
-.diff-base-trigger {
-  height: 24px;
-  font-size: var(--kilo-font-size-12);
-  padding: 0 8px;
 }
 
 /* ============================================

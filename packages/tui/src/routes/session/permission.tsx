@@ -19,7 +19,7 @@ import { ConfigProtection } from "@/kilocode/permission/config-paths"
 import { splitDiffHunks } from "@/kilocode/tui/diff"
 import { normalizeUrls } from "@/kilocode/util/url"
 import { MemoryPermissionRegistry } from "@/kilocode/cli/cmd/tui/routes/session/memory-permission"
-import { displayCommand } from "@/kilocode/skills/display"
+import { skillShellPrompt } from "@/kilocode/skills/display"
 // kilocode_change end
 import { KILO_BASE_MODE, useBindings, useCommandShortcut } from "../../keymap"
 import { usePathFormatter } from "../../context/path-format"
@@ -293,19 +293,15 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
             }
 
             if (permission === "bash") {
-              // kilocode_change start - skill shell batches display the verbatim commands that will execute (from
-              // metadata.commands, never the decomposed patterns, which drop cd segments and split pipelines),
-              // control-char-escaped so the displayed command cannot repaint the line to differ from what runs
-              if (props.request.metadata?.["skillShell"] === true) {
-                const verbatim = props.request.metadata?.["commands"]
-                const commands = (Array.isArray(verbatim) ? verbatim : []).filter((p): p is string => typeof p === "string")
-                const skill = typeof props.request.metadata?.["skill"] === "string" ? props.request.metadata["skill"] : undefined
+              // kilocode_change start - skill shell batches show the verbatim, escaped commands + skill title
+              const skillShell = skillShellPrompt(props.request.metadata)
+              if (skillShell) {
                 return {
                   icon: "#",
-                  title: skill ? `Run shell commands from skill "${skill}"?` : "Run these skill commands?",
+                  title: skillShell.title,
                   body: (
                     <box paddingLeft={1}>
-                      <For each={commands}>{(cmd) => <text fg={theme.text}>{"$ " + displayCommand(cmd)}</text>}</For>
+                      <For each={skillShell.commands}>{(cmd) => <text fg={theme.text}>{"$ " + cmd}</text>}</For>
                     </box>
                   ),
                 }
