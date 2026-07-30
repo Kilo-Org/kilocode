@@ -290,7 +290,6 @@ export const dict = {
 
   "session.tab.review": "審查",
   "session.review.filesChanged": "{{count}} 個檔案變更",
-  "session.review.change.other": "變更",
   "session.review.loadingChanges": "正在載入變更...",
   "session.review.noChanges": "沒有變更",
   "session.messages.loadingEarlier": "正在載入更早的訊息...",
@@ -660,6 +659,9 @@ export const dict = {
   "session.prompts.tick": "提示詞 {{index}}/{{total}}：{{prompt}}",
   "session.prompts.noAnswer": "尚無回應",
   "session.prompts.queued": "已排入佇列",
+  "session.prompts.first": "第一個提示",
+  "session.prompts.latest": "最新提示",
+  "session.prompts.overflow": "{{count}} 個較早的提示",
   "session.status.writingResponse": "正在撰寫回覆…",
   "session.status.retry": "正在重試…",
   "session.status.working": "處理中…",

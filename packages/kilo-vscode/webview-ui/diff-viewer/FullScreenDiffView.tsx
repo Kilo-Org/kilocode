@@ -1,4 +1,4 @@
-import { type Component, createSignal, createMemo, createEffect, on, onCleanup, Show } from "solid-js"
+import { type Component, createSignal, createMemo, createEffect, on, onCleanup, Show, type JSXElement } from "solid-js"
 import type { VirtualizerHandle } from "virtua/solid"
 // Styles are imported by the component so every consumer (sidebar diff viewer,
 // agent manager, storybook) picks them up automatically. Keep these imports here —
@@ -89,6 +89,8 @@ interface FullScreenDiffViewProps {
   canRevert?: boolean
   /** Defaults to true. Disables comment creation and "Send all" when false. */
   canComment?: boolean
+  /** Optional leading content rendered first in the toolbar's left group. */
+  lead?: JSXElement
   onClose: () => void
 }
 
@@ -541,6 +543,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
       {/* Toolbar */}
       <div class="am-review-toolbar">
         <div class="am-review-toolbar-left">
+          <Show when={props.lead}>{props.lead}</Show>
           <RadioGroup
             options={["unified", "split"] as const}
             current={props.diffStyle}

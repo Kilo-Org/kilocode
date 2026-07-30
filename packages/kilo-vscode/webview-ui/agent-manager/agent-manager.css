@@ -1717,35 +1717,58 @@ body.am-wt-dragging-active * {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 4px 4px 12px;
+  gap: 6px;
+  padding: 4px 4px 4px 8px;
   flex-shrink: 0;
   border-bottom: 1px solid var(--border-weak-base);
   position: relative;
   z-index: 20;
   background: var(--surface-base);
-}
-
-.am-diff-header-title {
-  font-size: var(--font-size-small);
-  font-weight: 500;
-  color: var(--text-weak);
+  /* Query container for the narrow-panel rules below and in banners.css. The
+     panel width is user-draggable, so the header adapts to its own width
+     rather than the viewport. */
+  container-type: inline-size;
+  container-name: am-diff-header;
 }
 
 .am-diff-header-main {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   flex: 1;
   min-width: 0;
+  overflow: hidden;
 }
 
 .am-diff-header-stats {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: 0 1 auto;
+  min-width: 0;
   font-size: var(--font-size-small);
   color: var(--text-weak);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Progressive disclosure, least important first. Thresholds are derived from the
+   measured control widths: scope 76px, base <=191px, diff style 76px, 6px gaps,
+   plus ~90px of action buttons and 12px padding. Each breakpoint fires while the
+   remaining set still fits, so nothing is ever clipped under the buttons.
+   The collapsed-files hint goes before the totals; both are also shown on the
+   worktree row and the diff toggle button, so no information is lost. */
+@container am-diff-header (max-width: 560px) {
+  .am-diff-header-collapsed {
+    display: none;
+  }
+}
+
+@container am-diff-header (max-width: 520px) {
+  .am-diff-header-stats {
+    display: none;
+  }
 }
 
 .am-diff-header-adds {

@@ -138,6 +138,7 @@ export const dict = {
   "agentManager.diff.revertFile": "Tilbakestill fil",
   "agentManager.diff.revertSuccess": "Fil tilbakestilt",
   "agentManager.diff.revertError": "Tilbakestilling feilet",
+  "agentManager.diff.applyBranchOnly": "Bruk fungerer kun på hele Branch-diffen. Bytt til Branch-omfanget for å bruke.",
   "agentManager.open.button": "Åpne",
   "agentManager.open.tooltip": "Åpne dette Worktree-et i VS Code",
   "agentManager.apply.globalButton": "Bruk",

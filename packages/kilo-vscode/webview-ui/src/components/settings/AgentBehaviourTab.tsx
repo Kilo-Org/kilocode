@@ -17,7 +17,7 @@ import ModeEditView from "./ModeEditView"
 import ModeCreateView from "./ModeCreateView"
 import McpEditView from "./McpEditView"
 import WorkflowsTab from "./agent-behaviour/WorkflowsTab"
-import { selectedDefaultAgentValue } from "./agent-behaviour-patches"
+import { mcpConfigScope, mcpEnabledPatch, selectedDefaultAgentValue } from "./agent-behaviour-patches"
 import { parseImport, MAX_IMPORT_SIZE } from "./mode-io"
 import type { ImportError } from "./mode-io"
 
@@ -50,7 +50,7 @@ type AgentView = "list" | "create" | "edit"
 
 const AgentBehaviourTab: Component = () => {
   const language = useLanguage()
-  const { config, updateConfig } = useConfig()
+  const { config, collections, updateConfig, updateGlobalConfig, updateProjectConfig } = useConfig()
   const session = useSession()
   const dialog = useDialog()
   const vscode = useVSCode()
@@ -675,12 +675,17 @@ const AgentBehaviourTab: Component = () => {
                           <Switch
                             checked={isConnected(name)}
                             disabled={session.mcpLoading() === name}
-                            onChange={() => {
-                              if (isConnected(name)) {
-                                session.disconnectMcp(name)
-                              } else {
-                                session.connectMcp(name)
+                            onChange={(enabled: boolean) => {
+                              const scope = mcpConfigScope(name, collections())
+                              if (scope) {
+                                const update = scope === "project" ? updateProjectConfig : updateGlobalConfig
+                                update(mcpEnabledPatch(name, enabled))
                               }
+                              if (!enabled) {
+                                session.disconnectMcp(name)
+                                return
+                              }
+                              session.connectMcp(name)
                             }}
                             hideLabel
                           >

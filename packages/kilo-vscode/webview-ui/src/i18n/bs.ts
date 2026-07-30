@@ -304,7 +304,6 @@ export const dict = {
 
   "session.tab.review": "Pregled",
   "session.review.filesChanged": "Izmijenjeno {{count}} datoteka",
-  "session.review.change.other": "Izmjene",
   "session.review.loadingChanges": "Učitavanje izmjena...",
   "session.review.noChanges": "Nema izmjena",
 
@@ -727,6 +726,9 @@ export const dict = {
   "session.prompts.tick": "Upit {{index}} od {{total}}: {{prompt}}",
   "session.prompts.noAnswer": "Još nema odgovora",
   "session.prompts.queued": "Na čekanju",
+  "session.prompts.first": "Prvi upit",
+  "session.prompts.latest": "Najnoviji upit",
+  "session.prompts.overflow": "{{count}} ranijih upita",
   "session.status.writingResponse": "Pisanje odgovora…",
   "session.status.retry": "Ponovni pokušaj…",
   "session.status.working": "Radim…",
