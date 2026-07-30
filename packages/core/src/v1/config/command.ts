@@ -9,5 +9,6 @@ export const Info = Schema.Struct({
   model: Schema.optional(Schema.String),
   variant: Schema.optional(Schema.String),
   subtask: Schema.optional(Schema.Boolean),
+  silent: Schema.optional(Schema.Boolean), // kilocode_change
 })
 export type Info = Schema.Schema.Type<typeof Info>

@@ -1019,6 +1019,8 @@ it.instance("loads commands from .kilo/command (singular)", () =>
       path.join(test.directory, ".kilo", "command", "hello.md"), // kilocode_change
       `---
 description: Test command
+agent: code
+silent: true
 ---
 Hello from singular command`,
     )
@@ -1035,6 +1037,8 @@ Nested command template`,
 
     expect(config.command?.["hello"]).toEqual({
       description: "Test command",
+      agent: "code",
+      silent: true,
       template: "Hello from singular command",
     })
 

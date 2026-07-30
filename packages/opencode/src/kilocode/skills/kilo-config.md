@@ -14,6 +14,7 @@ description: Run tests # optional, shown in command list
 agent: code # optional, route to a specific agent
 model: anthropic/claude-sonnet # optional, override model
 subtask: true # optional, run as subtask
+silent: true # optional, switch to agent without sending a prompt
 ---
 Run all tests in $1 and fix failures.
 Use $ARGUMENTS for the full arg string.

@@ -29132,6 +29132,9 @@
                 },
                 "subtask": {
                   "type": "boolean"
+                },
+                "silent": {
+                  "type": "boolean"
                 }
               },
               "required": ["template"],
@@ -30791,6 +30794,9 @@
             "type": "string"
           },
           "subtask": {
+            "type": "boolean"
+          },
+          "silent": {
             "type": "boolean"
           },
           "hints": {
@@ -44358,6 +44364,9 @@
             "additionalProperties": false
           },
           "subtask": {
+            "type": "boolean"
+          },
+          "silent": {
             "type": "boolean"
           }
         },

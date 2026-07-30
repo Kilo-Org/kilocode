@@ -9,4 +9,5 @@ export class Info extends Schema.Class<Info>("ConfigV2.Command")({
   model: Schema.String.pipe(Schema.optional),
   variant: Schema.String.pipe(Schema.optional),
   subtask: Schema.Boolean.pipe(Schema.optional),
+  silent: Schema.Boolean.pipe(Schema.optional), // kilocode_change
 }) {}

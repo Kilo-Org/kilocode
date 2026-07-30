@@ -1549,6 +1549,7 @@ export type Config = {
       model?: string
       variant?: string
       subtask?: boolean
+      silent?: boolean
     }
   }
   skills?: {
@@ -2106,6 +2107,7 @@ export type Command = {
   trusted?: boolean
   template: string
   subtask?: boolean
+  silent?: boolean
   hints: Array<string>
 }
 
@@ -6181,6 +6183,7 @@ export type CommandV2Info = {
     variant?: string
   }
   subtask?: boolean
+  silent?: boolean
 }
 
 export type SkillV2Info = {
