@@ -61,6 +61,8 @@ import { EventV2Bridge } from "@/event-v2-bridge"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { AppNodeBuilderV1 } from "./app-node-builder-v1"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
+import { MoveSession } from "@opencode-ai/core/control-plane/move-session" // kilocode_change
+import { PtyTicket } from "@opencode-ai/core/pty/ticket" // kilocode_change
 
 // kilocode_change start - retain Kilo runtime services in the upstream node graph
 const memory = LayerNode.make({ service: MemoryService.Service, layer: MemoryService.layer, deps: [] })
@@ -118,6 +120,11 @@ export const AppLayer = AppNodeBuilderV1.build(
     Installation.node,
     ShareNext.node,
     SessionShare.node,
+    // kilocode_change start - the app runtime must provide these; the control-plane handler and
+    // pty ticket resolve them outside the server's own layer list
+    MoveSession.node,
+    PtyTicket.node,
+    // kilocode_change end
   ]),
 ).pipe(Layer.provideMerge(AppNodeBuilderV1.build(Ripgrep.node)), Layer.provideMerge(Observability.layer))
 

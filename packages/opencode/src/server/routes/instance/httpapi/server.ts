@@ -341,6 +341,8 @@ export function createRoutes(
 
 // kilocode_change start - keep listener routes local while application services come from AppRuntime
 export function createListenerRoutes(corsOptions?: CorsOptions) {
+  const locationServiceMapV2 = buildLocationServiceMap()
+
   return Layer.mergeAll(
     rootApiRoutes,
     eventApiRoutes,
@@ -349,7 +351,24 @@ export function createListenerRoutes(corsOptions?: CorsOptions) {
     serverRoutes,
     docRoute,
     uiRoute,
-  ).pipe(provideKiloListenerRoutes(corsOptions))
+  ).pipe(
+    provideKiloListenerRoutes(corsOptions),
+    // Upstream's v2 ServerApi groups declare location/session middleware and services that must be
+    // satisfied when the layer is built, not at request time, so the listener needs the same chain
+    // createRoutes uses. Application services still come from AppRuntime.
+    Layer.provide(sessionLocationLayer),
+    Layer.provide(locationLayer),
+    Layer.provide(PtyEnvironment.layer),
+    Layer.provide(
+      AppNodeBuilderV1.build(SessionV2.node, [
+        [LocationServiceMap.node, locationServiceMapV2],
+        [SessionExecution.node, SessionExecutionLocal.node],
+      ]),
+    ),
+    Layer.provide(AppNodeBuilderV1.build(MoveSession.node, [[LocationServiceMap.node, locationServiceMapV2]])),
+    Layer.provide(locationServiceMapV2),
+    Layer.provide(AppNodeBuilderV1.build(app)),
+  )
 }
 // kilocode_change end
 
