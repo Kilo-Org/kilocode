@@ -18,3 +18,18 @@ export function displayCommand(command: string) {
     return code <= 0xff ? "\\x" + code.toString(16).padStart(2, "0") : "\\u" + code.toString(16).padStart(4, "0")
   })
 }
+
+// Presentation for a skill-shell permission prompt: the title (naming the skill when known)
+// and the verbatim, escaped commands to show. Reads metadata.commands (never the decomposed
+// patterns, which drop `cd` segments and split pipelines) so the display matches what executes.
+// Returns undefined when the request is not a skill-shell batch.
+export function skillShellPrompt(metadata: Record<string, unknown> | undefined) {
+  if (metadata?.["skillShell"] !== true) return undefined
+  const raw = metadata["commands"]
+  const commands = (Array.isArray(raw) ? raw : []).filter((c): c is string => typeof c === "string").map(displayCommand)
+  const skill = typeof metadata["skill"] === "string" ? metadata["skill"] : undefined
+  return {
+    title: skill ? `Run shell commands from skill "${skill}"?` : "Run these skill commands?",
+    commands,
+  }
+}
