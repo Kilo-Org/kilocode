@@ -4,23 +4,27 @@
  * `TerminalTabChrome` is the shared visual tab: console icon, title,
  * tooltip/keybinding hints, and the X close button — the same
  * `am-tab*` structure the session tabs use. `SortableTerminalTab`
- * wraps it with drag-and-drop and a right-click context menu for the
- * top tab bar; the side terminal panel uses the chrome directly so
- * both surfaces render identical terminal tabs.
+ * wraps it with drag-and-drop and a right-click context menu; both the
+ * top tab bar and the side terminal panel render that wrapper, so a
+ * terminal tab behaves identically in either surface.
  */
 
 import { Component, Show, type JSX } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { useLanguage } from "../../src/context/language"
 import { SortableTabContainer } from "../../src/components/chat/TabDnd"
 import { parseBindingTokens } from "../keybind-tokens"
+import { terminalChrome } from "./chrome"
+import type { ScriptTerminalStatus } from "./state"
 
 export const TerminalTabChrome: Component<{
   label: string
   tooltip: string
+  status?: ScriptTerminalStatus
   keybind?: string
   closeKeybind?: string
   active: boolean
@@ -33,19 +37,27 @@ export const TerminalTabChrome: Component<{
   onClose: (e: MouseEvent) => void
 }> = (props) => {
   const { t } = useLanguage()
+  const chrome = () => terminalChrome(props.tooltip, props.status)
+  const icon = () => {
+    const kind = chrome().icon
+    if (kind === "success") return "check-small"
+    if (kind === "failure") return "warning"
+    return "console"
+  }
   return (
     <div class={`am-tab am-tab-terminal ${props.active ? "am-tab-active" : ""}`}>
       <div
         class="am-tab-target"
         role={props.role}
         aria-selected={props.selected}
+        aria-label={chrome().tooltip}
         tabIndex={props.tabIndex}
         onClick={props.onSelect}
         onMouseDown={props.onMiddleClick}
         onKeyDown={props.onKeyDown}
       >
         <TooltipKeybind
-          title={props.tooltip}
+          title={chrome().tooltip}
           keybind={props.keybind ?? ""}
           placement="bottom"
           gutter={8}
@@ -53,8 +65,10 @@ export const TerminalTabChrome: Component<{
           openDelay={0}
         >
           <span class="am-tab-title">
-            <span class="am-tab-icon">
-              <Icon name="console" size="small" />
+            <span class="am-tab-icon" data-run-status={chrome().icon}>
+              <Show when={chrome().icon === "spinner"} fallback={<Icon name={icon()} size="small" />}>
+                <Spinner class="am-terminal-tab-spinner" />
+              </Show>
             </span>
             <span class="am-tab-label">{props.label}</span>
           </span>
@@ -86,6 +100,7 @@ export const SortableTerminalTab: Component<{
   id: string
   label: string
   tooltip: string
+  status?: ScriptTerminalStatus
   keybind?: string
   closeKeybind?: string
   active: boolean
@@ -106,6 +121,7 @@ export const SortableTerminalTab: Component<{
           <TerminalTabChrome
             label={props.label}
             tooltip={props.tooltip}
+            status={props.status}
             keybind={props.keybind}
             closeKeybind={props.closeKeybind}
             active={props.active}

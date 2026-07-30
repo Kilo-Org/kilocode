@@ -341,9 +341,11 @@ Two extra variables are injected into the script's environment:
 
 ### Using the run button
 
-- **Run:** Click the play button in the toolbar or press `Cmd+E` (macOS) / `Ctrl+E` (Windows/Linux). Output appears in a dedicated VS Code task panel.
+- **Run:** Click the play button in the toolbar or press `Cmd+E` (macOS) / `Ctrl+E` (Windows/Linux). Output appears in a named `Run` tab in the Agent Manager terminal panel and remains available after the script exits.
 - **Stop:** Click the stop button (same position) or press `Cmd+E` again while running.
 - **Configure:** Click the dropdown arrow next to the run button and select "Configure run script" to open the script in your editor.
+
+The terminal destination dropdown in the Agent Manager toolbar also controls where the script runs. **Agent Manager panel** uses the named side terminal, while **VS Code terminal** runs it as a task in the integrated terminal. The integrated terminal option is kept for comparison and will be removed in a future release.
 
 ## Session State and Persistence
 

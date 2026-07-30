@@ -472,6 +472,8 @@ export interface SessionSearchItem {
   id: string
   title: string
   updated: number
+  /** Name of the worktree the session runs in, when listed across the worktree family. */
+  worktreeName?: string
 }
 
 export interface SessionSearchResultMessage {
@@ -742,6 +744,24 @@ export interface AgentManagerTerminalDestinationChangedMessage {
   destination: TerminalDestination
 }
 
+/** Provider-owned Run script terminal. Full snapshots replace only this terminal kind. */
+export interface ScriptTerminalView {
+  terminalId: string
+  /** null for LOCAL, worktree id otherwise */
+  worktreeId: string | null
+  kind: "run"
+  title: "Run"
+  wsUrl: string
+  state: "running" | "stopping" | "exited" | "failed"
+  exitCode?: number
+  font: TerminalFont
+}
+
+export interface AgentManagerScriptTerminalsMessage {
+  type: "agentManager.scriptTerminals"
+  terminals: ScriptTerminalView[]
+}
+
 export interface AgentManagerRunStatusMessage extends RunStatus {
   type: "agentManager.runStatus"
 }
@@ -875,6 +895,18 @@ export interface AgentManagerRevertWorktreeFileResultMessage {
   file: string
   status: "success" | "error"
   message: string
+}
+
+// Agent Manager: Branch picker data for a diff context (extension → webview)
+export interface AgentManagerDiffBranchesMessage {
+  type: "agentManager.diffBranches"
+  sessionId: string
+  branches: BranchInfo[]
+  defaultBranch: string
+  autoBase?: string
+  currentBase?: string
+  isAuto: boolean
+  currentBranch?: string
 }
 
 // Agent Manager: Worktree git stats push (extension → webview)
@@ -1246,6 +1278,7 @@ export type ExtensionMessage =
   | AgentManagerWorktreeDiffLoadingMessage
   | AgentManagerApplyWorktreeDiffResultMessage
   | AgentManagerRevertWorktreeFileResultMessage
+  | AgentManagerDiffBranchesMessage
   | AgentManagerWorktreeStatsMessage
   | AgentManagerLocalStatsMessage
   | AgentManagerPRStatusMessage
@@ -1254,6 +1287,7 @@ export type ExtensionMessage =
   | AgentManagerTerminalClosedMessage
   | AgentManagerTerminalErrorMessage
   | AgentManagerTerminalDestinationChangedMessage
+  | AgentManagerScriptTerminalsMessage
   // legacy-migration start
   | MigrationStateMessage
   | MigrationDataMessage
