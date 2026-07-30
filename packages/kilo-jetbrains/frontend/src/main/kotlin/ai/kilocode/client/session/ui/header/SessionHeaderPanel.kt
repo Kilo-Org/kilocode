@@ -147,8 +147,6 @@ class SessionHeaderPanel(
                 changes.setBounds(ins.left + titleW + gap, ins.top + (availH - badgeH) / 2, badgeW, badgeH)
             }
         }
-    }.apply {
-        border = JBUI.Borders.empty(0, UiStyle.Gap.sm(), 0, 0)
     }
     private val right = Stack.horizontal()
         .next(cost)
