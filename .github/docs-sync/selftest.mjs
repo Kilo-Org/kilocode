@@ -24,6 +24,12 @@ import {
   renderBody,
   extractSectionRows,
 } from "./upsert-pr.mjs"
+import {
+  revertTitleKind,
+  parseRevertTargets,
+  computeRevertAnnotations,
+  applyRevertAnnotations,
+} from "./reverts.mjs"
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const EDIT_SCRIPT = path.join(HERE, "edit.mjs")
@@ -1404,6 +1410,216 @@ function case8_triage() {
 }
 
 // ---------------------------------------------------------------------------
+// Case 9 — revert interception (title/body/annotations + source-order guards)
+// ---------------------------------------------------------------------------
+function case9_reverts() {
+  console.log("case 9: revert interception")
+
+  // --- revertTitleKind ---
+  assert.equal(revertTitleKind('revert(cli): restore opt-in stream idle timeouts'), "conventional")
+  assert.equal(revertTitleKind('Revert "feat(cli): default stream watchdog"'), "github-native")
+  assert.equal(revertTitleKind("REVERT: all of it"), "conventional")
+  assert.equal(revertTitleKind("feat(cli): add x"), null)
+  assert.equal(revertTitleKind("docs: update y"), null)
+  assert.equal(revertTitleKind("Reverted behavior docs"), null)
+
+  // --- parseRevertTargets ---
+  const defaultRepo = "Kilo-Org/kilocode"
+  const body12497 = `The default stream inactivity watchdog introduced by #12249 aborts requests based only on the absence of normalized AI SDK events. That signal cannot distinguish a dead provider stream from long prompt processing, reasoning, buffering, or transport behavior, and the follow-up in #12481 reduces false positives without resolving that ambiguity.
+
+Revert both changes and restore the previous opt-in contract: Kilo does not impose a stream idle timeout unless the provider configuration explicitly sets \`chunkTimeout\`. Explicit provider timeouts continue to use the existing AI SDK and SSE timeout paths. This removes the global heuristic while the underlying stalled-stream source and the required transport-level observability are investigated.
+
+This deliberately restores the possibility that an unconfigured provider stream can remain open indefinitely. A default watchdog should be reintroduced only with evidence that its liveness signal and threshold do not terminate healthy responses.
+
+Reverts #12249 and #12481.
+`
+  {
+    const targets = parseRevertTargets(body12497, defaultRepo)
+    assert.equal(targets.length, 2)
+    assert.deepEqual(
+      targets.map((t) => ({ repo: t.repo, number: t.number, url: t.url })),
+      [
+        {
+          repo: "Kilo-Org/kilocode",
+          number: 12249,
+          url: "https://github.com/Kilo-Org/kilocode/pull/12249",
+        },
+        {
+          repo: "Kilo-Org/kilocode",
+          number: 12481,
+          url: "https://github.com/Kilo-Org/kilocode/pull/12481",
+        },
+      ],
+    )
+  }
+
+  {
+    const narrative = "Revert the mistaken fix in #99999 because it broke streams.\n\nReverts #12249."
+    const targets = parseRevertTargets(narrative, defaultRepo)
+    assert.equal(targets.length, 1)
+    assert.equal(targets[0].number, 12249)
+    assert.ok(!targets.some((t) => t.number === 99999))
+  }
+
+  {
+    const targets = parseRevertTargets("Reverts Kilo-Org/cloud#42.", defaultRepo)
+    assert.equal(targets.length, 1)
+    assert.equal(targets[0].repo, "Kilo-Org/cloud")
+    assert.equal(targets[0].number, 42)
+    assert.equal(targets[0].url, "https://github.com/Kilo-Org/cloud/pull/42")
+  }
+
+  {
+    const targets = parseRevertTargets("Reverts #1, #2.", defaultRepo)
+    assert.equal(targets.length, 2)
+    assert.deepEqual(
+      targets.map((t) => t.number),
+      [1, 2],
+    )
+  }
+
+  assert.deepEqual(parseRevertTargets("This reverts commit deadbeefcafe.", defaultRepo), [])
+  assert.deepEqual(parseRevertTargets("This reverts #5.", defaultRepo), [])
+  assert.deepEqual(parseRevertTargets("No revert trailer here at all.", defaultRepo), [])
+
+  // --- computeRevertAnnotations ---
+  const fUrl = "https://github.com/Kilo-Org/kilocode/pull/100"
+  const r1Url = "https://github.com/Kilo-Org/kilocode/pull/200"
+  const r2Url = "https://github.com/Kilo-Org/kilocode/pull/300"
+  const f2Url = "https://github.com/Kilo-Org/kilocode/pull/101"
+  const mergedAt = "2026-07-20T12:00:00.000Z"
+  const mergedAt2 = "2026-07-21T12:00:00.000Z"
+
+  {
+    const annotations = computeRevertAnnotations([
+      {
+        url: r1Url,
+        merged_at: mergedAt,
+        targets: [{ repo: "Kilo-Org/kilocode", number: 100, url: fUrl }],
+      },
+    ])
+    assert.equal(annotations.size, 1)
+    assert.deepEqual(annotations.get(fUrl), { url: r1Url, merged_at: mergedAt })
+  }
+
+  {
+    // two-target signal (#12497-shaped)
+    const annotations = computeRevertAnnotations([
+      {
+        url: r1Url,
+        merged_at: mergedAt,
+        targets: [
+          { repo: "Kilo-Org/kilocode", number: 100, url: fUrl },
+          { repo: "Kilo-Org/kilocode", number: 101, url: f2Url },
+        ],
+      },
+    ])
+    assert.equal(annotations.size, 2)
+    assert.deepEqual(annotations.get(fUrl), { url: r1Url, merged_at: mergedAt })
+    assert.deepEqual(annotations.get(f2Url), { url: r1Url, merged_at: mergedAt })
+  }
+
+  {
+    // revert-of-revert: R1 reverts F, R2 reverts R1 → F not annotated; R1 gets R2
+    const annotations = computeRevertAnnotations([
+      {
+        url: r1Url,
+        merged_at: mergedAt,
+        targets: [{ repo: "Kilo-Org/kilocode", number: 100, url: fUrl }],
+      },
+      {
+        url: r2Url,
+        merged_at: mergedAt2,
+        targets: [{ repo: "Kilo-Org/kilocode", number: 200, url: r1Url }],
+      },
+    ])
+    assert.equal(annotations.has(fUrl), false)
+    assert.deepEqual(annotations.get(r1Url), { url: r2Url, merged_at: mergedAt2 })
+  }
+
+  {
+    const annotations = computeRevertAnnotations([{ url: r1Url, merged_at: mergedAt, targets: [] }])
+    assert.equal(annotations.size, 0)
+  }
+
+  // --- applyRevertAnnotations ---
+  {
+    const digest = [
+      { url: fUrl, title: "feat F" },
+      { url: "https://github.com/Kilo-Org/kilocode/pull/999", title: "untouched" },
+    ]
+    const applied = applyRevertAnnotations(digest, [
+      {
+        url: r1Url,
+        merged_at: mergedAt,
+        targets: [{ repo: "Kilo-Org/kilocode", number: 100, url: fUrl }],
+      },
+    ])
+    assert.deepEqual(digest[0].reverted_by, { url: r1Url, merged_at: mergedAt })
+    assert.equal(digest[1].reverted_by, undefined)
+    assert.deepEqual(applied, [[fUrl, r1Url]])
+  }
+
+  {
+    // end-to-end revert-of-revert: F must not gain reverted_by
+    const digest = [{ url: fUrl, title: "feat F" }]
+    const applied = applyRevertAnnotations(digest, [
+      {
+        url: r1Url,
+        merged_at: mergedAt,
+        targets: [{ repo: "Kilo-Org/kilocode", number: 100, url: fUrl }],
+      },
+      {
+        url: r2Url,
+        merged_at: mergedAt2,
+        targets: [{ repo: "Kilo-Org/kilocode", number: 200, url: r1Url }],
+      },
+    ])
+    assert.equal(digest[0].reverted_by, undefined)
+    assert.deepEqual(applied, [])
+  }
+
+  // --- source-order guards (case-5 style) ---
+  {
+    const collectSrc = fs.readFileSync(COLLECT_SCRIPT, "utf8")
+    assert.ok(collectSrc.includes("./reverts.mjs"), "collect.mjs must import ./reverts.mjs")
+    const kindIdx = collectSrc.indexOf("revertTitleKind(item.title")
+    const dropIdx = collectSrc.indexOf("DROP_TITLE.test")
+    assert.ok(kindIdx >= 0, "revertTitleKind(item.title call missing")
+    assert.ok(dropIdx >= 0, "DROP_TITLE.test missing")
+    assert.ok(kindIdx < dropIdx, "revert interception must run before DROP_TITLE")
+
+    const applyIdx = collectSrc.indexOf("applyRevertAnnotations(digest")
+    const fullIdx = collectSrc.indexOf("digest-full.json")
+    assert.ok(applyIdx >= 0, "applyRevertAnnotations(digest call missing")
+    assert.ok(fullIdx >= 0, "digest-full.json write missing")
+    assert.ok(applyIdx < fullIdx, "annotations must be applied before digests are written")
+
+    assert.ok(
+      collectSrc.includes('if (revertTitleKind(item.title ?? "")) {'),
+      'collect must use exact intercept line if (revertTitleKind(item.title ?? "")) {',
+    )
+  }
+
+  // --- prompt-text guards ---
+  {
+    const triagePrompt = fs.readFileSync(path.join(HERE, "triage-prompt.md"), "utf8")
+    assert.ok(triagePrompt.includes("reverted_by"), "triage-prompt must mention reverted_by")
+    assert.ok(triagePrompt.includes("stream-liveness"), "triage-prompt must mention stream-liveness")
+    assert.ok(
+      triagePrompt.includes("reverted by https://github.com/Kilo-Org/kilocode/pull/12497"),
+      "triage-prompt must contain exact cite example",
+    )
+
+    const editPrompt = fs.readFileSync(path.join(HERE, "edit-prompt.md"), "utf8")
+    assert.ok(editPrompt.includes("reverted_by"), "edit-prompt must mention reverted_by")
+    assert.ok(editPrompt.includes("current source tree"), "edit-prompt must mention current source tree")
+    assert.ok(editPrompt.includes("Skipping is a normal outcome"), "edit-prompt must mention skipping outcome")
+    assert.ok(editPrompt.includes("Existence alone is not enough"), "edit-prompt must mention existence guard")
+  }
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 function main() {
@@ -1424,6 +1640,7 @@ function main() {
     case6_budgets,
     case7_cap,
     case8_triage,
+    case9_reverts,
   ]
   let failed = 0
   for (const fn of cases) {
