@@ -108,7 +108,7 @@ class EmptySessionPanel(
         layout = BorderLayout(0, gap)
 
         val logo = JBLabel(
-            IconLoader.getIcon("/icons/kilo-content.svg", EmptySessionPanel::class.java),
+            IconLoader.getIcon("/icons/kiloContent.svg", EmptySessionPanel::class.java),
         ).apply {
             horizontalAlignment = JBLabel.CENTER
         }

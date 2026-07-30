@@ -55,7 +55,7 @@ internal class LoggedInProfileUi(
         foreground = UiStyle.Colors.weak()
         setCopyable(true)
     }
-    private val logoLabel = JBLabel(IconLoader.getIcon("/icons/kilo-profile.svg", LoggedInProfileUi::class.java)).apply {
+    private val logoLabel = JBLabel(IconLoader.getIcon("/icons/kiloProfile.svg", LoggedInProfileUi::class.java)).apply {
         name = "kilo.profile.logo.loggedIn"
         accessibleContext.accessibleName = KiloBundle.message("settings.kilo.displayName")
     }

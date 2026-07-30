@@ -44,8 +44,8 @@ class SessionHeaderPanel(
 
     companion object {
         private val COMPRESS_ICON: Icon = IconLoader.getIcon("/icons/compress.svg", SessionHeaderPanel::class.java)
-        private val UP_ICON: Icon = IconLoader.getIcon("/icons/arrow-up.svg", SessionHeaderPanel::class.java)
-        private val DOWN_ICON: Icon = IconLoader.getIcon("/icons/arrow-down-to-line.svg", SessionHeaderPanel::class.java)
+        private val UP_ICON: Icon = IconLoader.getIcon("/icons/arrowUp.svg", SessionHeaderPanel::class.java)
+        private val DOWN_ICON: Icon = IconLoader.getIcon("/icons/arrowDownToLine.svg", SessionHeaderPanel::class.java)
         private const val TOUCH_BEGIN = 2
         private const val TOUCH_UPDATE = 3
         private const val TOUCH_END = 4

@@ -40,7 +40,7 @@ internal class ModelPickerRenderer private constructor(
     ) : this(model, active, favorites, Parts.create())
 
     companion object {
-        val DATA_COLLECTED: Icon = IconLoader.getIcon("/icons/book-open-check.svg", ModelPickerRenderer::class.java)
+        val DATA_COLLECTED: Icon = IconLoader.getIcon("/icons/bookOpenCheck.svg", ModelPickerRenderer::class.java)
         val checked: Icon = PickerListRenderer.checkedIcon
         val empty: Icon = PickerListRenderer.emptyIcon
 

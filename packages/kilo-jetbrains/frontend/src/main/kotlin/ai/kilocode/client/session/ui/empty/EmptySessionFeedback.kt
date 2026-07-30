@@ -81,7 +81,7 @@ internal class EmptySessionFeedback(
     companion object {
         @RequiresEdt
         fun content(open: (String) -> Unit): JComponent {
-            val logo = JBLabel(IconLoader.getIcon("/icons/kilo-content.svg", EmptySessionPanel::class.java)).apply {
+            val logo = JBLabel(IconLoader.getIcon("/icons/kiloContent.svg", EmptySessionPanel::class.java)).apply {
                 horizontalAlignment = JBLabel.CENTER
                 cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
                 addMouseListener(object : MouseAdapter() {

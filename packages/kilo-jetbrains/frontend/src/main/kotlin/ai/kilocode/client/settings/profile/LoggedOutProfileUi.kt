@@ -68,7 +68,7 @@ internal class LoggedOutProfileUi(
 
     private val initiatingIcon = AsyncProcessIcon("KiloInitiating").also { it.suspend() }
 
-    private val logoLabel = JBLabel(IconLoader.getIcon("/icons/kilo-profile.svg", LoggedOutProfileUi::class.java)).apply {
+    private val logoLabel = JBLabel(IconLoader.getIcon("/icons/kiloProfile.svg", LoggedOutProfileUi::class.java)).apply {
         name = "kilo.profile.logo.loggedOut"
         horizontalAlignment = SwingConstants.CENTER
         accessibleContext.accessibleName = KiloBundle.message("settings.kilo.displayName")

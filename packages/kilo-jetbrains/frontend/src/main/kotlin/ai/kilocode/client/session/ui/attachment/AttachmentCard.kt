@@ -262,7 +262,7 @@ open class AttachmentCard(
 
     companion object {
         private val REMOVE_ICON: Icon = IconLoader.getIcon("/icons/remove.svg", AttachmentCard::class.java)
-        private val REMOVE_HOVER_ICON: Icon = IconLoader.getIcon("/icons/remove-hover.svg", AttachmentCard::class.java)
+        private val REMOVE_HOVER_ICON: Icon = IconLoader.getIcon("/icons/removeHover.svg", AttachmentCard::class.java)
     }
 }
 

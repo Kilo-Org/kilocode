@@ -119,8 +119,8 @@ class PromptPanel(
         private val SEND_ICON: Icon = IconLoader.getIcon("/icons/send.svg", PromptPanel::class.java)
         private val STOP_ICON: Icon = AllIcons.Actions.Suspend
         private val SHIELD_ICON: Icon = IconLoader.getIcon("/icons/shield.svg", PromptPanel::class.java)
-        private val SHIELD_FILLED_ICON: Icon = IconLoader.getIcon("/icons/shield-filled.svg", PromptPanel::class.java)
-        private val WAND_ICON: Icon = IconLoader.getIcon("/icons/wand-sparkles.svg", PromptPanel::class.java)
+        private val SHIELD_FILLED_ICON: Icon = IconLoader.getIcon("/icons/shieldFilled.svg", PromptPanel::class.java)
+        private val WAND_ICON: Icon = IconLoader.getIcon("/icons/wandSparkles.svg", PromptPanel::class.java)
         private val MENTION_KEY = DefaultLanguageHighlighterColors.METADATA
         private val COMMAND_KEY = DefaultLanguageHighlighterColors.KEYWORD
         private val INVALID_KEY = CodeInsightColors.WRONG_REFERENCES_ATTRIBUTES
