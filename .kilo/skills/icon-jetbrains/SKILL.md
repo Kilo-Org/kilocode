@@ -19,7 +19,7 @@ Background: the IDE maintains Classic UI and New UI in parallel. Code branches w
 5. **Use `fill="none"` on the root `<svg>`** and set `fill` / `stroke` explicitly per shape — never rely on CSS or `currentColor`.
 6. **Strokes use `stroke-width="1"`, `stroke-linecap="round"`, `stroke-linejoin="round"`** (or `stroke-miterlimit="10"` for hard joins). Heavier strokes are reserved for hero glyphs inside a circle badge (e.g. status checkmarks) and use `stroke-width="1.5"` or `"2"`.
 7. **Pixel-grid align**: keep stroke axes on half-pixel centers (`x.5`) and fills on whole pixels so the icon stays crisp at 1× rendering.
-8. **File names use camelCase** (e.g. `addFile.svg`, `addFile_dark.svg`, `toolWindowChat.svg`) matching the action/node ID and stay ASCII-only, matching upstream IntelliJ icon naming. See [PR #12713](https://github.com/Kilo-Org/kilocode/pull/12713) for the follow-up renaming all existing plugin icons to camelCase to conform with this rule.
+8. **File names use camelCase** (e.g. `arrowDownToLine.svg`, `bookOpenCheck.svg`, `toolWindowChat.svg`) matching the action/node ID and stay ASCII-only. This matches the naming convention used by all icons in `packages/kilo-jetbrains/frontend/src/main/resources/icons/`. See [PR #12713](https://github.com/Kilo-Org/kilocode/pull/12713) for the follow-up renaming all existing plugin icons to camelCase to conform with this rule.
 
 ## Icon roles
 
