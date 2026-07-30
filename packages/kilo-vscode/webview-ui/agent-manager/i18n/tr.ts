@@ -68,6 +68,9 @@ export const dict = {
 
   "agentManager.terminal.new": "Yeni Terminal Sekmesi",
   "agentManager.terminal.ended": "terminal sona erdi — kapatmak için sekmeyi kapatın",
+  "agentManager.terminal.setupFailed": "kurulum betiği başarısız oldu",
+  "agentManager.terminal.setupFailedCode": "kurulum betiği çıkış koduyla başarısız oldu",
+  "agentManager.terminal.stopSetup": "Kurulum betiğini durdur",
   "agentManager.terminal.connectionError": "terminal bağlantı hatası",
   "agentManager.terminal.add": "Yeni terminal",
   "agentManager.terminal.empty": "Burada henüz terminal yok",

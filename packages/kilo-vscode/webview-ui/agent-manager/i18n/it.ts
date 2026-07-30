@@ -68,6 +68,9 @@ export const dict = {
 
   "agentManager.terminal.new": "Nuova scheda terminale",
   "agentManager.terminal.ended": "terminale terminato - chiudi la scheda per nasconderlo",
+  "agentManager.terminal.setupFailed": "script di configurazione non riuscito",
+  "agentManager.terminal.setupFailedCode": "script di configurazione non riuscito con codice di uscita",
+  "agentManager.terminal.stopSetup": "Interrompi lo script di configurazione",
   "agentManager.terminal.connectionError": "errore di connessione del terminale",
   "agentManager.terminal.add": "Nuovo terminale",
   "agentManager.terminal.empty": "Qui non c'è ancora un terminale",

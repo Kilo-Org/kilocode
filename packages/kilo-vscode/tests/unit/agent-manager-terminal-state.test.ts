@@ -132,7 +132,7 @@ describe("Agent Manager terminal state", () => {
       const run = item.state.sidesForContext(LOCAL).find((term) => term.id === "script:run")
       expect(run).toMatchObject({ title: "Run", placement: "side", kind: "run", contextKey: LOCAL })
       expect(item.events.running).toEqual([{ contextKey: LOCAL, terminalId: "script:run" }])
-      expect(item.state.scriptStatus("script:run")).toEqual({ state: "running" })
+      expect(item.state.scriptStatus("script:run")).toEqual({ state: "running", kind: "run" })
       expect(isTerminalTabId("script:run")).toBe(true)
 
       item.state.setTitle("script:run", "npm test")
@@ -140,7 +140,7 @@ describe("Agent Manager terminal state", () => {
 
       item.dispatch(script("script:run", "exited", 0))
       expect(item.state.sidesForContext(LOCAL).find((term) => term.id === "script:run")).toBe(run)
-      expect(item.state.scriptStatus("script:run")).toEqual({ state: "exited", exitCode: 0 })
+      expect(item.state.scriptStatus("script:run")).toEqual({ state: "exited", exitCode: 0, kind: "run" })
       expect(item.state.sidesForContext(LOCAL).find((term) => term.id === "terminal:user")).toBe(user)
       // Existing snapshots update status only; they do not re-open the inspector.
       expect(item.events.running).toEqual([{ contextKey: LOCAL, terminalId: "script:run" }])
@@ -159,6 +159,151 @@ describe("Agent Manager terminal state", () => {
 
       expect(item.state.sidesForContext(LOCAL)[0]).toMatchObject({ id: "script:exit", contextKey: LOCAL })
       expect(item.events.running).toEqual([])
+      dispose()
+    })
+  })
+
+  it("hydrates Setup snapshots with their semantic title and kind", () => {
+    createRoot((dispose) => {
+      const item = scene()
+      item.dispatch({
+        type: "agentManager.scriptTerminals",
+        terminals: [
+          {
+            terminalId: "script:setup",
+            worktreeId: "wt-1",
+            kind: "setup",
+            title: "Setup",
+            wsUrl: "ws://script:setup",
+            state: "running",
+            font,
+          },
+        ],
+      } satisfies ExtensionMessage)
+
+      const setup = item.state.sidesForContext("wt-1").find((term) => term.id === "script:setup")
+      expect(setup).toMatchObject({ title: "Setup", placement: "side", kind: "setup", contextKey: "wt-1" })
+      expect(item.events.running).toEqual([{ contextKey: "wt-1", terminalId: "script:setup" }])
+      expect(item.state.scriptStatus("script:setup")).toEqual({ state: "running", kind: "setup" })
+      expect(item.state.isScript("script:setup")).toBe(true)
+
+      item.state.setTitle("script:setup", "bash")
+      expect(item.state.title("script:setup")).toBe("Setup")
+
+      item.dispatch({ type: "agentManager.scriptTerminals", terminals: [] } satisfies ExtensionMessage)
+      expect(item.state.sidesForContext("wt-1")).toEqual([])
+      expect(item.state.scriptStatus("script:setup")).toBeUndefined()
+      dispose()
+    })
+  })
+
+  it("hydrates script terminals into independent project contexts", () => {
+    createRoot((dispose) => {
+      const item = scene()
+      item.dispatch({
+        type: "agentManager.scriptTerminals",
+        terminals: [
+          {
+            terminalId: "script:setup-a",
+            projectId: "prj-a",
+            worktreeId: "wt-1",
+            kind: "setup",
+            title: "Setup",
+            wsUrl: "ws://script:setup-a",
+            state: "running",
+            font,
+          },
+          {
+            terminalId: "script:setup-b",
+            projectId: "prj-b",
+            worktreeId: "wt-1",
+            kind: "setup",
+            title: "Setup",
+            wsUrl: "ws://script:setup-b",
+            state: "running",
+            font,
+          },
+        ],
+      } satisfies ExtensionMessage)
+
+      expect(item.state.sidesForContext("prj-a:wt-1").map((term) => term.id)).toEqual(["script:setup-a"])
+      expect(item.state.sidesForContext("prj-b:wt-1").map((term) => term.id)).toEqual(["script:setup-b"])
+      expect(item.events.running).toEqual([
+        { contextKey: "prj-a:wt-1", terminalId: "script:setup-a" },
+        { contextKey: "prj-b:wt-1", terminalId: "script:setup-b" },
+      ])
+      dispose()
+    })
+  })
+
+  it("activates a Setup terminal that hydrates before its worktree is selected", () => {
+    createRoot((dispose) => {
+      const item = scene(LOCAL)
+      item.dispatch({
+        type: "agentManager.scriptTerminals",
+        terminals: [
+          {
+            terminalId: "script:setup-background",
+            worktreeId: "wt-background",
+            kind: "setup",
+            title: "Setup",
+            wsUrl: "ws://script:setup-background",
+            state: "running",
+            font,
+          },
+        ],
+      } satisfies ExtensionMessage)
+
+      expect(item.state.sideActiveFor("wt-background")).toBe("script:setup-background")
+      expect(item.events.running).toEqual([{ contextKey: "wt-background", terminalId: "script:setup-background" }])
+      dispose()
+    })
+  })
+
+  it("does not replace an existing side-terminal selection during background hydration", () => {
+    createRoot((dispose) => {
+      const item = scene(LOCAL)
+      item.dispatch({
+        type: "agentManager.scriptTerminals",
+        terminals: [
+          {
+            terminalId: "script:run-background",
+            worktreeId: "wt-background",
+            kind: "run",
+            title: "Run",
+            wsUrl: "ws://script:run-background",
+            state: "running",
+            font,
+          },
+        ],
+      } satisfies ExtensionMessage)
+      item.state.setSideActive("wt-background", "script:run-background")
+
+      item.dispatch({
+        type: "agentManager.scriptTerminals",
+        terminals: [
+          {
+            terminalId: "script:run-background",
+            worktreeId: "wt-background",
+            kind: "run",
+            title: "Run",
+            wsUrl: "ws://script:run-background",
+            state: "running",
+            font,
+          },
+          {
+            terminalId: "script:setup-background",
+            worktreeId: "wt-background",
+            kind: "setup",
+            title: "Setup",
+            wsUrl: "ws://script:setup-background",
+            state: "running",
+            font,
+          },
+        ],
+      } satisfies ExtensionMessage)
+
+      expect(item.state.sideActiveFor("wt-background")).toBe("script:run-background")
       dispose()
     })
   })

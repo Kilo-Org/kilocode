@@ -63,6 +63,9 @@ export const dict = {
 
   "agentManager.terminal.new": "新增終端分頁",
   "agentManager.terminal.ended": "終端已結束 — 關閉分頁以消除",
+  "agentManager.terminal.setupFailed": "設定腳本失敗",
+  "agentManager.terminal.setupFailedCode": "設定腳本失敗，退出代碼為",
+  "agentManager.terminal.stopSetup": "停止設定腳本",
   "agentManager.terminal.connectionError": "終端連線錯誤",
   "agentManager.terminal.add": "新增終端機",
   "agentManager.terminal.empty": "此處尚無終端機",

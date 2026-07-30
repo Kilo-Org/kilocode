@@ -64,6 +64,9 @@ export const dict = {
 
   "agentManager.terminal.new": "Nouvel onglet de terminal",
   "agentManager.terminal.ended": "terminal terminé — fermez l'onglet pour ignorer",
+  "agentManager.terminal.setupFailed": "échec du script de configuration",
+  "agentManager.terminal.setupFailedCode": "échec du script de configuration avec le code de sortie",
+  "agentManager.terminal.stopSetup": "Arrêter le script de configuration",
   "agentManager.terminal.connectionError": "erreur de connexion du terminal",
   "agentManager.terminal.add": "Nouveau terminal",
   "agentManager.terminal.empty": "Aucun terminal ici pour l'instant",

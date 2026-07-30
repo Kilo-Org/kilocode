@@ -130,6 +130,9 @@ import {
   createTerminalHandlers,
   createTerminalMessageHandler,
   createSideTerminal,
+  createAmbientSetup,
+  hasSetupTerminal,
+  showTerminalStack,
   readSavedDestination,
   resolveRunScriptRequest,
   resolveVscodeTerminalRequest,
@@ -374,6 +377,18 @@ const AgentManagerContent: Component = () => {
     const sel = selection()
     return sel === null ? null : nsKey(sel)
   })
+
+  // Ambient setup reveal restores the panel after success unless the user engaged.
+  const ambientSetup = createAmbientSetup({
+    terms,
+    selection: () => {
+      const sel = selection()
+      return sel === null ? null : nsKey(sel)
+    },
+    sidePanel,
+    setSidePanel,
+  })
+  const cancelAmbientSetup = ambientSetup.cancel
 
   // Inline delete confirmation: tracks which worktree is awaiting a second click/press
   const [pendingDelete, setPendingDelete] = createSignal<string | null>(null)
@@ -656,9 +671,14 @@ const AgentManagerContent: Component = () => {
     return false
   })
 
+  const showDetailStack = createMemo(() => showTerminalStack(history(), selection()))
+
   const overlay = createMemo((): SetupState | null => {
     const state = setup()
     const sel = selection()
+    // A live Setup script terminal shows progress and failures on its own
+    // tab; never cover it with the blocking overlay.
+    if (typeof sel === "string" && sel !== LOCAL && hasSetupTerminal(nsKey(sel), terms.sides())) return null
     if (state.active && (!state.worktreeId || sel === state.worktreeId)) return state
     if (typeof sel !== "string" || sel === LOCAL) return null
     const busy = busyWorktrees().get(sel)
@@ -669,6 +689,15 @@ const AgentManagerContent: Component = () => {
       message: busy.message ?? "",
       branch: busy.branch ?? tree?.branch,
     }
+  })
+
+  /** The selected worktree is provisioning: block session CTAs, keep selection put. */
+  const settingUpSelection = createMemo(() => {
+    const sel = selection()
+    if (typeof sel !== "string" || sel === LOCAL) return undefined
+    const busy = busyWorktrees().get(sel)
+    if (busy?.reason !== "setting-up") return undefined
+    return busy
   })
 
   createEffect(() => {
@@ -990,7 +1019,7 @@ const AgentManagerContent: Component = () => {
     }
     markdown.setRender(state.reviewMarkdownRender === true)
     const current = session.currentSessionID()
-    if (current) {
+    if (current && !settingUpSelection()) {
       const ms = state.sessions.find((s) => s.id === current)
       if (ms?.worktreeId) setSelection(ms.worktreeId)
     }
@@ -1230,6 +1259,14 @@ const AgentManagerContent: Component = () => {
       },
       onScriptRunning: (contextKey, terminalId) => {
         if (terms.sideKey() !== contextKey) return
+        // Setup output is informational: reveal without stealing focus, and
+        // remember an ambient reveal so the panel can restore itself later.
+        if (terms.scriptStatus(terminalId)?.kind === "setup") {
+          ambientSetup.reveal(contextKey, terminalId)
+          showSideTerminal()
+          terms.setSideActive(contextKey, terminalId)
+          return
+        }
         showSideTerminal()
         terms.setSideActive(contextKey, terminalId)
         terms.requestFocus(terminalId)
@@ -1249,9 +1286,12 @@ const AgentManagerContent: Component = () => {
 
       if (msg.type === "agentManager.worktreeSetup") {
         const ev = msg as AgentManagerWorktreeSetupMessage
+        const store = ev.projectId ? registry.ensure(ev.projectId) : registry.active()
+        const updateBusy: Setter<Map<string, WorktreeBusyState>> = (value) => store.setBusy(value)
         if (ev.status === "ready" || ev.status === "error") {
           const error = ev.status === "error"
-          if (ev.worktreeId) setBusyWorktrees((prev) => new Map([...prev].filter(([k]) => k !== ev.worktreeId)))
+          if (ev.worktreeId) updateBusy((prev) => new Map([...prev].filter(([k]) => k !== ev.worktreeId)))
+          if (!isActivePayload(ev.projectId)) return
           setSetup({
             active: true,
             message: ev.message,
@@ -1270,14 +1310,17 @@ const AgentManagerContent: Component = () => {
         } else {
           // Track this worktree as setting up and auto-select it in the sidebar
           if (ev.worktreeId) {
-            setBusyWorktrees(
+            updateBusy(
               (prev) =>
                 new Map([...prev, [ev.worktreeId!, { reason: "setting-up", message: ev.message, branch: ev.branch }]]),
             )
+            if (!isActivePayload(ev.projectId)) return
             setSelection(ev.worktreeId)
           }
-          // Close diff/review panels — nothing to show during setup
-          setSidePanel(null)
+          if (!isActivePayload(ev.projectId)) return
+          // Close diff/review panels — nothing to show during setup.
+          // Terminal panels keep live setup output, so they stay open.
+          if (sidePanel() === "diff") setSidePanel(null)
           setReviewActive(false)
           setSetup({ active: true, message: ev.message, branch: ev.branch, worktreeId: ev.worktreeId })
         }
@@ -1857,6 +1900,8 @@ const AgentManagerContent: Component = () => {
 
   const handleAddSession = () => {
     const sel = selection()
+    // Setup is still provisioning this worktree; the Setup tab shows progress.
+    if (settingUpSelection()) return
     expandSidebar()
     if (sel === LOCAL) return addPendingTab()
     if (sel) {
@@ -1948,7 +1993,10 @@ const AgentManagerContent: Component = () => {
     handlers: termHandlers,
     visible: () => sidePanel() === "terminal" && !history() && !reviewActive(),
     focusedId: () => terms.sideFocusedId(),
-    hide: () => setSidePanel(null),
+    hide: () => {
+      cancelAmbientSetup()
+      setSidePanel(null)
+    },
     refocus: () => window.dispatchEvent(new Event("focusPrompt")),
     postMessage: (msg) => vscode.postMessage(msg as never),
     track: (button, surface, properties) => metrics.track(button, surface, properties),
@@ -2313,7 +2361,10 @@ const AgentManagerContent: Component = () => {
           terminalDestination={sideCtl.destination}
           terminalDestinationActive={() => sidePanel() === "terminal"}
           terminalKeybind={() => kb().showTerminal ?? ""}
-          onTerminalDestinationOpen={() => sideCtl.openPreferred("tab_toolbar")}
+          onTerminalDestinationOpen={() => {
+            cancelAmbientSetup()
+            sideCtl.openPreferred("tab_toolbar")
+          }}
           onTerminalDestinationChoose={sideCtl.choose}
           track={metrics.click}
         />
@@ -2379,7 +2430,7 @@ const AgentManagerContent: Component = () => {
             worktreeSessionIds={activeWorktreeSessionIds}
           />
         </Show>
-        <Show when={!contextEmpty() && !history()}>
+        <Show when={showDetailStack()}>
           {/* Terminal overlay is scoped to the main pane so it does not cover the tab bar or side panel. */}
           <div class="am-detail-stack">
             {/* Chat/terminal + side diff panel. Keep it mounted under the
@@ -2390,68 +2441,97 @@ const AgentManagerContent: Component = () => {
               <div class={`am-main-pane ${terms.activeId() ? "am-main-pane-terminal-active" : ""}`}>
                 {/* Keep terminal tabs mounted so output streams across worktree switches. */}
                 {renderTerminalLayer({ state: terms })}
-                <div class="am-chat-wrapper">
-                  <ChatView
-                    onSelectSession={(id) => {
-                      if (addSessionToCurrentWorktree(id)) return
-                      if (localSessionIDs().includes(id)) {
-                        session.selectSession(id)
-                        if (selection() === null) setSelection(LOCAL)
-                        return
+                {/* Session-less context (e.g. a worktree mid-provisioning): the
+                    empty state lives in the main pane so the side terminal
+                    panel can render next to it. */}
+                <Show when={contextEmpty()}>
+                  <div class="am-empty-state">
+                    <Show
+                      when={!settingUpSelection()}
+                      fallback={
+                        <>
+                          <Spinner class="am-setup-spinner" />
+                          <div class="am-empty-state-text">
+                            {settingUpSelection()?.message ?? t("agentManager.setup.settingUp")}
+                          </div>
+                        </>
                       }
-                      // Navigate to owning worktree instead of forcing into local mode
-                      if (worktreeSessionIds().has(id)) {
-                        const ms = managedSessions().find((s) => s.id === id)
-                        if (ms?.worktreeId) {
-                          selectWorktree(ms.worktreeId)
+                    >
+                      <div class="am-empty-state-icon">
+                        <Icon name="branch" size="large" />
+                      </div>
+                      <div class="am-empty-state-text">{t("agentManager.session.noSessions")}</div>
+                      <Button variant="primary" size="small" onClick={handleAddSession}>
+                        {t("agentManager.session.new")}
+                        <span class="am-shortcut-hint">{kb().newTab ?? ""}</span>
+                      </Button>
+                    </Show>
+                  </div>
+                </Show>
+                <Show when={!contextEmpty()}>
+                  <div class="am-chat-wrapper">
+                    <ChatView
+                      onSelectSession={(id) => {
+                        if (addSessionToCurrentWorktree(id)) return
+                        if (localSessionIDs().includes(id)) {
                           session.selectSession(id)
-                          setReviewActive(false)
+                          if (selection() === null) setSelection(LOCAL)
                           return
                         }
-                      }
-                      openLocally(id)
-                    }}
-                    onShowHistory={() => setHistory(true)}
-                    onForkMessage={readOnly() ? undefined : handleForkSession}
-                    onForkSession={readOnly() ? undefined : handleForkSession}
-                    readonly={readOnly()}
-                    continueInWorktree={selection() === LOCAL}
-                    promptBoxId={`agent-manager:${selection() ?? "unassigned"}`}
-                    pendingSessionID={selection() === LOCAL ? activePendingId() : undefined}
-                  />
-                  <Show when={readOnly()}>
-                    <div class="am-readonly-banner">
-                      <Icon name="branch" size="small" />
-                      <span class="am-readonly-text">{t("agentManager.session.readonly")}</span>
-                      <Button
-                        variant="secondary"
-                        size="small"
-                        onClick={() => {
-                          if (!loaded()) return
-                          const sid = session.currentSessionID()
-                          if (!sid) return
-                          metrics.track("open_session_locally", "readonly_banner")
-                          openLocally(sid)
-                        }}
-                      >
-                        {t("agentManager.session.openLocally")}
-                      </Button>
-                      <Button
-                        variant="primary"
-                        size="small"
-                        onClick={() => {
-                          if (!loaded()) return
-                          const sid = session.currentSessionID()
-                          if (!sid) return
-                          metrics.track("promote_session", "readonly_banner")
-                          vscode.postMessage({ type: "agentManager.promoteSession", sessionId: sid })
-                        }}
-                      >
-                        {t("agentManager.session.openInWorktree")}
-                      </Button>
-                    </div>
-                  </Show>
-                </div>
+                        // Navigate to owning worktree instead of forcing into local mode
+                        if (worktreeSessionIds().has(id)) {
+                          const ms = managedSessions().find((s) => s.id === id)
+                          if (ms?.worktreeId) {
+                            selectWorktree(ms.worktreeId)
+                            session.selectSession(id)
+                            setReviewActive(false)
+                            return
+                          }
+                        }
+                        openLocally(id)
+                      }}
+                      onShowHistory={() => setHistory(true)}
+                      onForkMessage={readOnly() ? undefined : handleForkSession}
+                      onForkSession={readOnly() ? undefined : handleForkSession}
+                      readonly={readOnly()}
+                      continueInWorktree={selection() === LOCAL}
+                      promptBoxId={`agent-manager:${selection() ?? "unassigned"}`}
+                      pendingSessionID={selection() === LOCAL ? activePendingId() : undefined}
+                    />
+                    <Show when={readOnly()}>
+                      <div class="am-readonly-banner">
+                        <Icon name="branch" size="small" />
+                        <span class="am-readonly-text">{t("agentManager.session.readonly")}</span>
+                        <Button
+                          variant="secondary"
+                          size="small"
+                          onClick={() => {
+                            if (!loaded()) return
+                            const sid = session.currentSessionID()
+                            if (!sid) return
+                            metrics.track("open_session_locally", "readonly_banner")
+                            openLocally(sid)
+                          }}
+                        >
+                          {t("agentManager.session.openLocally")}
+                        </Button>
+                        <Button
+                          variant="primary"
+                          size="small"
+                          onClick={() => {
+                            if (!loaded()) return
+                            const sid = session.currentSessionID()
+                            if (!sid) return
+                            metrics.track("promote_session", "readonly_banner")
+                            vscode.postMessage({ type: "agentManager.promoteSession", sessionId: sid })
+                          }}
+                        >
+                          {t("agentManager.session.openInWorktree")}
+                        </Button>
+                      </div>
+                    </Show>
+                  </div>
+                </Show>
               </div>
               {/* One inspector host for all right-side modes. It stays
                   mounted while a side terminal is alive — hidden via
@@ -2514,9 +2594,22 @@ const AgentManagerContent: Component = () => {
                       contextKey={terms.sideKey}
                       visible={() => sidePanel() === "terminal"}
                       onSelect={(id) => termHandlers.selectSide(id)}
-                      onClose={(id) => termHandlers.closeSide(id)}
-                      onCloseOthers={(id) => termHandlers.closeSideOthers(id)}
-                      onStart={() => termHandlers.addSide()}
+                      onClose={(id) => {
+                        cancelAmbientSetup()
+                        termHandlers.closeSide(id)
+                      }}
+                      onCloseOthers={(id) => {
+                        cancelAmbientSetup()
+                        termHandlers.closeSideOthers(id)
+                      }}
+                      onStart={() => {
+                        cancelAmbientSetup()
+                        termHandlers.addSide()
+                      }}
+                      onStop={(id) => {
+                        cancelAmbientSetup()
+                        termHandlers.stopSide(id)
+                      }}
                     />
                   </div>
                 </div>
