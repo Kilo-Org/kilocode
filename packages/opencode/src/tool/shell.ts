@@ -629,6 +629,7 @@ export const ShellTool = Tool.define(
             // kilocode_change start - signal termination has no numeric exit code; settle it as failure
             // instead of leaving raceAll waiting for the abort or timeout branches.
             handle.exitCode.pipe(
+              Effect.tapError((error) => Effect.logWarning("failed to read shell exit code", { error })),
               Effect.catch(() => Effect.succeed(1)),
               Effect.map((code) => ({ kind: "exit" as const, code })),
             ),
