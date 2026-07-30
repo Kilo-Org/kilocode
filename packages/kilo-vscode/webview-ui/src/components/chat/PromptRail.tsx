@@ -2,49 +2,83 @@
 
 /**
  * PromptRail component
- * Thin vertical tick rail on the left edge of the transcript, one tick per
- * user prompt. Hovering/focusing the rail opens a floating card listing the
- * prompts with a short answer preview each; clicking jumps the transcript.
+ * Thin vertical summary rail on the left edge of the transcript. Hovering or
+ * focusing opens a bounded navigator for every loaded prompt; clicking jumps
+ * the virtualized transcript without mounting the intervening rows.
  */
 
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import { Spinner } from "@kilocode/kilo-ui/spinner"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { For, Show, createEffect, createMemo, createSignal, onCleanup, type Accessor } from "solid-js"
 import { Portal } from "solid-js/web"
+import { VList, type VListHandle } from "virtua/solid"
 import { useLanguage } from "../../context/language"
-import { RAIL_INSET, ROW_HEIGHT, type PromptRailItem } from "./prompt-rail"
+import { RAIL_INSET, ROW_HEIGHT, TICK_MIN, TICK_STEP, type PromptRailEntry, type PromptRailItem } from "./prompt-rail"
 
 interface PromptRailProps {
+  entries: Accessor<PromptRailEntry[]>
   items: Accessor<PromptRailItem[]>
   /** Row key of the item whose turn is currently at the top of the transcript. */
   active: Accessor<string | undefined>
   onSelect: (item: PromptRailItem) => void
+  onFirst: () => void
+  onLatest: () => void
+  onLoadOlder: () => void
   /** Forwards wheel events so scrolling over a tick scrolls the transcript. */
   onWheel: (deltaY: number) => void
   /** Transcript height, used to spread the ticks. */
   height: Accessor<number>
+  hasOlder: Accessor<boolean>
+  loadingOlder: Accessor<boolean>
+  prepending: Accessor<boolean>
+  seeking: Accessor<boolean>
 }
 
 const CLOSE_DELAY = 120
-const TICK_STEP = 14
 const EDGE = 12
 const GAP = 8
+const VIRTUAL_LIMIT = 30
+const CARD_CHROME = 44
+const NEAR_TOP = 200
 
 export function PromptRail(props: PromptRailProps) {
   const language = useLanguage()
   const [open, setOpen] = createSignal(false)
-  const [hover, setHover] = createSignal<number>()
-  const [anchor, setAnchor] = createSignal<{ top: number; left: number }>()
+  const [hover, setHover] = createSignal<string>()
+  const [focused, setFocused] = createSignal<number>()
+  const [anchor, setAnchor] = createSignal<{ top: number; left: number; height: number }>()
   let rail: HTMLElement | undefined
   let card: HTMLDivElement | undefined
+  let list: VListHandle | undefined
   let timer: ReturnType<typeof setTimeout> | undefined
+  let frame: number | undefined
+  let revealing = false
 
   const items = createMemo(() => props.items())
+  const entries = createMemo(() => props.entries())
+  const virtualized = createMemo(() => items().length > VIRTUAL_LIMIT)
   // Ticks are spread over the available height, tightening as prompts pile up
-  // but never growing past their natural step.
+  // but never growing past their natural step nor packing tighter than a tick
+  // can still be aimed at.
   const step = createMemo(() => {
-    const count = items().length
+    const count = entries().length
     if (count === 0) return TICK_STEP
-    return Math.min(TICK_STEP, Math.floor((props.height() - RAIL_INSET) / count))
+    return Math.max(TICK_MIN, Math.min(TICK_STEP, Math.floor((props.height() - RAIL_INSET) / count)))
   })
+
+  // Reaching the top of the navigator pages older history in, the same way the
+  // transcript itself loads earlier messages when scrolled near its top. Opening
+  // the card scrolls the hovered prompt into view, which would otherwise look
+  // like a scroll to the top and fetch on hover, so programmatic reveals are
+  // excluded and only scrolling the user drove pages.
+  const offset = () => (virtualized() ? (list?.scrollOffset ?? 0) : (card?.scrollTop ?? 0))
+
+  const page = (value: number) => {
+    if (revealing || value > NEAR_TOP) return
+    if (!props.hasOlder() || props.loadingOlder() || props.seeking()) return
+    props.onLoadOlder()
+  }
 
   // Centers the card on the tick group so each row sits beside its own tick,
   // then keeps it inside the transcript and the viewport. The rail spans the
@@ -55,13 +89,17 @@ export function PromptRail(props: PromptRailProps) {
   const place = () => {
     if (!rail) return
     const rect = rail.getBoundingClientRect()
-    const height = card?.offsetHeight ?? Math.min(items().length * ROW_HEIGHT + EDGE, rect.height)
+    const limit = Math.max(0, Math.min(window.innerHeight - EDGE * 2, rect.height - 8))
+    if (limit === 0) return
+    const estimate = Math.min(items().length * ROW_HEIGHT + CARD_CHROME, limit)
+    const height = virtualized() ? limit : (card?.offsetHeight ?? estimate)
     const min = Math.max(EDGE, rect.top + 4)
     const max = Math.min(window.innerHeight - EDGE, rect.bottom - 4) - height
     const center = rect.top + rect.height / 2 - height / 2
     setAnchor({
       top: max < min ? min : Math.min(Math.max(center, min), max),
       left: rect.right + GAP,
+      height: limit,
     })
   }
 
@@ -70,11 +108,35 @@ export function PromptRail(props: PromptRailProps) {
     timer = undefined
   }
 
+  const reveal = (index: number) => {
+    if (frame !== undefined) cancelAnimationFrame(frame)
+    revealing = true
+    frame = requestAnimationFrame(() => {
+      frame = undefined
+      if (virtualized()) {
+        list?.scrollToIndex(index, { align: "center" })
+        return
+      }
+      const row = card?.querySelector<HTMLElement>(`[data-prompt-index="${index}"]`)
+      if (!row || !card) return
+      card.scrollTop = Math.max(0, row.offsetTop - card.clientHeight / 2 + row.offsetHeight / 2)
+    })
+  }
+
+  const entryItem = (entry: PromptRailEntry) => {
+    if (entry.type === "prompt") return entry.item
+    return items()[entry.type === "overflow" ? entry.index : 0]
+  }
+
   const openCard = (index: number) => {
     cancelClose()
-    setHover(index)
+    const entry = entries()[index]
+    const item = entry && entryItem(entry)
+    setFocused(index)
+    setHover(item?.key)
     place()
     setOpen(true)
+    if (item) reveal(items().findIndex((candidate) => candidate.key === item.key))
   }
 
   const closeCard = () => {
@@ -86,6 +148,9 @@ export function PromptRail(props: PromptRailProps) {
   }
 
   onCleanup(cancelClose)
+  onCleanup(() => {
+    if (frame !== undefined) cancelAnimationFrame(frame)
+  })
 
   // Resizing the panel moves the rail out from under an open card.
   createEffect(() => {
@@ -103,9 +168,20 @@ export function PromptRail(props: PromptRailProps) {
     onCleanup(() => cancelAnimationFrame(frame))
   })
 
+  let seeking = false
+  createEffect(() => {
+    const next = props.seeking()
+    if (seeking && !next && !props.hasOlder()) {
+      const item = items()[0]
+      setHover(item?.key)
+      if (item) reveal(0)
+    }
+    seeking = next
+  })
+
   const onKeyDown = (event: KeyboardEvent) => {
-    const list = items()
-    const current = hover() ?? 0
+    const values = entries()
+    const current = focused() ?? 0
     if (event.key === "Escape") {
       event.preventDefault()
       cancelClose()
@@ -115,19 +191,22 @@ export function PromptRail(props: PromptRailProps) {
     }
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault()
-      const item = list[current]
-      if (item) props.onSelect(item)
+      const entry = values[current]
+      if (!entry) return
+      if (entry.type === "prompt") props.onSelect(entry.item)
+      if (entry.type === "history") props.onFirst()
+      if (entry.type === "overflow") openCard(current)
       return
     }
     const next =
       event.key === "ArrowDown"
-        ? Math.min(list.length - 1, current + 1)
+        ? Math.min(values.length - 1, current + 1)
         : event.key === "ArrowUp"
           ? Math.max(0, current - 1)
           : event.key === "Home"
             ? 0
             : event.key === "End"
-              ? list.length - 1
+              ? values.length - 1
               : undefined
     if (next === undefined) return
     event.preventDefault()
@@ -139,8 +218,58 @@ export function PromptRail(props: PromptRailProps) {
   const label = (item: PromptRailItem, index: number) =>
     language.t("session.prompts.tick", { index: index + 1, total: items().length, prompt: item.prompt })
 
+  const entryLabel = (entry: PromptRailEntry) => {
+    if (entry.type === "prompt") return label(entry.item, entry.index)
+    if (entry.type === "history") return language.t("session.prompts.first")
+    return language.t("session.prompts.overflow", { count: entry.count })
+  }
+
+  const entryActive = (entry: PromptRailEntry) => {
+    if (entry.type === "prompt") return entry.item.key === props.active()
+    if (entry.type === "history") return false
+    const index = items().findIndex((item) => item.key === props.active())
+    return index >= entry.index && index < entry.index + entry.count
+  }
+
+  const selectFirst = () => {
+    const item = items()[0]
+    setHover(item?.key)
+    if (item) reveal(0)
+    props.onFirst()
+  }
+
+  const selectLatest = () => {
+    const index = items().length - 1
+    const item = items()[index]
+    setHover(item?.key)
+    if (item) reveal(index)
+    props.onLatest()
+  }
+
+  const row = (item: PromptRailItem, index: Accessor<number>) => (
+    <button
+      type="button"
+      class="prompt-rail-row"
+      classList={{ "prompt-rail-row--hover": item.key === hover() }}
+      data-prompt-index={index()}
+      aria-label={label(item, index())}
+      onMouseEnter={() => setHover(item.key)}
+      onClick={() => props.onSelect(item)}
+    >
+      <span class="prompt-rail-row-prompt" data-queued={item.queued || undefined}>
+        <Show when={item.queued}>
+          <span class="prompt-rail-row-status">{language.t("session.prompts.queued")} · </span>
+        </Show>
+        {item.prompt}
+      </span>
+      <Show when={item.answer || !item.prompt}>
+        <span class="prompt-rail-row-answer">{item.answer || language.t("session.prompts.noAnswer")}</span>
+      </Show>
+    </button>
+  )
+
   return (
-    <Show when={items().length >= 2}>
+    <Show when={entries().length >= 2}>
       <nav
         ref={rail}
         class="prompt-rail"
@@ -157,21 +286,26 @@ export function PromptRail(props: PromptRailProps) {
           props.onWheel(event.deltaY)
         }}
       >
-        <For each={items()}>
-          {(item, index) => (
+        <For each={entries()}>
+          {(entry, index) => (
             <button
               type="button"
               class="prompt-rail-tick"
               classList={{
-                "prompt-rail-tick--active": item.key === props.active(),
-                "prompt-rail-tick--open": open() && index() === hover(),
+                "prompt-rail-tick--active": entryActive(entry),
+                "prompt-rail-tick--open": open() && index() === focused(),
+                "prompt-rail-tick--overflow": entry.type !== "prompt",
               }}
-              data-queued={item.queued || undefined}
-              aria-label={label(item, index())}
-              tabIndex={index() === (hover() ?? 0) ? 0 : -1}
+              data-queued={(entry.type === "prompt" && entry.item.queued) || undefined}
+              aria-label={entryLabel(entry)}
+              tabIndex={index() === (focused() ?? 0) ? 0 : -1}
               onMouseEnter={() => openCard(index())}
               onFocus={() => openCard(index())}
-              onClick={() => props.onSelect(item)}
+              onClick={() => {
+                if (entry.type === "prompt") props.onSelect(entry.item)
+                if (entry.type === "history") selectFirst()
+                if (entry.type === "overflow") openCard(index())
+              }}
             >
               <span class="prompt-rail-tick-line" />
             </button>
@@ -185,35 +319,84 @@ export function PromptRail(props: PromptRailProps) {
             <div
               ref={card}
               class="prompt-rail-card"
+              data-virtualized={virtualized() || undefined}
               role="dialog"
               aria-label={language.t("session.prompts.navLabel")}
-              style={{ top: `${position().top}px`, left: `${position().left}px` }}
+              style={{
+                top: `${position().top}px`,
+                left: `${position().left}px`,
+                "--prompt-rail-card-height": `${position().height}px`,
+              }}
               onMouseEnter={cancelClose}
               onMouseLeave={closeCard}
+              onWheel={(event) => {
+                // A reveal placed the list here, so any wheel from now on is the
+                // user's. Scrolling up at the very top emits no scroll event, so
+                // the intent to go further back has to be read from the wheel.
+                revealing = false
+                if (event.deltaY < 0) page(offset())
+              }}
+              onScroll={() => {
+                if (card && !virtualized()) page(card.scrollTop)
+              }}
             >
-              <For each={items()}>
-                {(item, index) => (
-                  <button
-                    type="button"
-                    class="prompt-rail-row"
-                    classList={{ "prompt-rail-row--hover": index() === hover() }}
-                    onMouseEnter={() => setHover(index())}
-                    onClick={() => props.onSelect(item)}
-                  >
-                    <span class="prompt-rail-row-prompt" data-queued={item.queued || undefined}>
-                      <Show when={item.queued}>
-                        <span class="prompt-rail-row-status">{language.t("session.prompts.queued")} · </span>
-                      </Show>
-                      {item.prompt}
-                    </span>
-                    <Show when={item.answer || !item.prompt}>
-                      <span class="prompt-rail-row-answer">
-                        {item.answer || language.t("session.prompts.noAnswer")}
-                      </span>
-                    </Show>
-                  </button>
-                )}
-              </For>
+              <div class="prompt-rail-card-header">
+                <span class="prompt-rail-card-title">{language.t("session.prompts.navLabel")}</span>
+                <div class="prompt-rail-card-actions">
+                  <Tooltip value={language.t("session.prompts.first")} placement="top">
+                    <IconButton
+                      icon="arrow-up"
+                      label={language.t("session.prompts.first")}
+                      aria-label={language.t("session.prompts.first")}
+                      variant="ghost"
+                      size="small"
+                      disabled={props.seeking() || props.loadingOlder()}
+                      onClick={selectFirst}
+                    />
+                  </Tooltip>
+                  <Tooltip value={language.t("session.prompts.latest")} placement="top">
+                    <IconButton
+                      icon="arrow-down-to-line"
+                      label={language.t("session.prompts.latest")}
+                      aria-label={language.t("session.prompts.latest")}
+                      variant="ghost"
+                      size="small"
+                      onClick={selectLatest}
+                    />
+                  </Tooltip>
+                </div>
+              </div>
+              <Show when={props.loadingOlder() || props.seeking()}>
+                <div class="prompt-rail-loading" role="status">
+                  <Spinner />
+                  <span>{language.t("session.messages.loadingEarlier")}</span>
+                </div>
+              </Show>
+              <Show
+                when={virtualized()}
+                fallback={
+                  <div class="prompt-rail-list-static">
+                    <For each={items()}>{row}</For>
+                  </div>
+                }
+              >
+                <VList
+                  ref={(handle) => {
+                    list = handle
+                  }}
+                  class="prompt-rail-list"
+                  data={items()}
+                  itemSize={ROW_HEIGHT}
+                  bufferSize={ROW_HEIGHT * 3}
+                  shift={props.prepending()}
+                  onScroll={page}
+                  onScrollEnd={() => {
+                    revealing = false
+                  }}
+                >
+                  {row}
+                </VList>
+              </Show>
             </div>
           </Portal>
         )}

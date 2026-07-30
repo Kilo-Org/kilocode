@@ -906,23 +906,41 @@ export interface ImportFromPRRequest {
 export interface RequestWorktreeDiffMessage {
   type: "agentManager.requestWorktreeDiff"
   sessionId: string
+  scope?: string
 }
 
 export interface RequestWorktreeDiffFileMessage {
   type: "agentManager.requestWorktreeDiffFile"
   sessionId: string
   file: string
+  scope?: string
 }
 
 // Agent Manager: Start polling for live diff updates (webview → extension)
 export interface StartDiffWatchMessage {
   type: "agentManager.startDiffWatch"
   sessionId: string
+  scope?: string
 }
 
 // Agent Manager: Stop polling for diff updates (webview → extension)
 export interface StopDiffWatchMessage {
   type: "agentManager.stopDiffWatch"
+}
+
+// Agent Manager: Request branch picker data for a diff context (webview → extension)
+export interface RequestDiffBranchesMessage {
+  type: "agentManager.requestDiffBranches"
+  sessionId: string
+  scope?: string
+}
+
+// Agent Manager: Set or clear the base branch override for a diff context (webview → extension)
+export interface SetDiffBaseBranchMessage {
+  type: "agentManager.setDiffBaseBranch"
+  sessionId: string
+  scope?: string
+  branch?: string
 }
 
 // Agent Manager: PR messages (webview → extension)
@@ -948,6 +966,7 @@ export interface RevertWorktreeFileMessage {
   type: "agentManager.revertWorktreeFile"
   sessionId: string
   file: string
+  scope?: string
 }
 
 // Variant persistence (webview → extension)
@@ -1461,6 +1480,8 @@ export type WebviewMessage =
   | RequestWorktreeDiffFileMessage
   | StartDiffWatchMessage
   | StopDiffWatchMessage
+  | RequestDiffBranchesMessage
+  | SetDiffBaseBranchMessage
   | RefreshPRMessage
   | OpenPRMessage
   // legacy-migration start

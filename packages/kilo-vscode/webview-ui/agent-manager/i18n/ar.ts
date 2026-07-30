@@ -141,6 +141,8 @@ export const dict = {
   "agentManager.diff.revertFile": "استعادة الملف",
   "agentManager.diff.revertSuccess": "تم استعادة الملف",
   "agentManager.diff.revertError": "فشل الاستعادة",
+  "agentManager.diff.applyBranchOnly":
+    "لا يعمل تطبيق التغييرات إلا على فرق الفرع الكامل. انتقل إلى نطاق Branch لتطبيقها.",
   "agentManager.open.button": "فتح",
   "agentManager.open.tooltip": "فتح Worktree هذا في VS Code",
   "agentManager.apply.globalButton": "تطبيق",

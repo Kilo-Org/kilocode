@@ -149,6 +149,8 @@ export const dict = {
   "agentManager.diff.revertFile": "Bestand terugzetten",
   "agentManager.diff.revertSuccess": "Bestand teruggezet",
   "agentManager.diff.revertError": "Terugzetten mislukt",
+  "agentManager.diff.applyBranchOnly":
+    "Toepassen werkt alleen op de volledige branch-diff. Schakel naar het bereik Branch om toe te passen.",
   "agentManager.open.button": "Openen",
   "agentManager.open.tooltip": "Open deze worktree in VS Code",
   "agentManager.apply.globalButton": "Toepassen",

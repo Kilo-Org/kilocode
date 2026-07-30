@@ -144,6 +144,8 @@ export const dict = {
   "agentManager.diff.revertFile": "Откатить файл",
   "agentManager.diff.revertSuccess": "Файл откатан",
   "agentManager.diff.revertError": "Ошибка отката",
+  "agentManager.diff.applyBranchOnly":
+    "Применение работает только с полным diff ветки. Чтобы применить изменения, переключитесь на область Branch.",
   "agentManager.open.button": "Открыть",
   "agentManager.open.tooltip": "Открыть этот Worktree в VS Code",
   "agentManager.apply.globalButton": "Применить",

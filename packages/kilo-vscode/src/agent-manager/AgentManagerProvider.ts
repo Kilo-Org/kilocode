@@ -5,10 +5,12 @@ import type { KiloConnectionService } from "../services/cli-backend"
 import { getErrorMessage, sessionToWebview } from "../kilo-provider-utils"
 import { samePath } from "./project/paths"
 import { resolveLocalDiffTarget } from "../diff/shared/target"
+import { DiffSourceCatalog } from "../diff/sources/catalog"
 import { getDiffMarkdownRender, setDiffMarkdownRender } from "../review-settings"
 import { isAbsolutePath } from "../path-utils"
 import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
 import { remoteRef, WorktreeStateManager, type Worktree } from "./WorktreeStateManager"
+import { composeDiffId, normalizeScope } from "./diff-scope"
 import { handleSection } from "./section-handler"
 import { STATE_GATED } from "./project/state-gate"
 import {
@@ -65,6 +67,7 @@ import { PLATFORM } from "./constants"
 import { ProjectRegistry } from "./project/registry"
 import type { ProjectContext } from "./project/context"
 import { ProjectContexts } from "./project/contexts"
+import { createMultiVersion, type MultiVersionHost } from "./provider-multi-version"
 import { handleProjectMessage, type ProjectMessageDeps } from "./project/messages"
 import { createProjectWiring } from "./project/wiring"
 import { ProjectScope } from "./project/scope"
@@ -90,6 +93,7 @@ export class AgentManagerProvider implements Disposable {
   private orchestration: AgentManagerOrchestrationBridge
   private gitOps: GitOps
   private diffs: WorktreeDiffController
+  private diffCatalog: DiffSourceCatalog
   private naming: BranchNamingController
   private toolRequests = new Set<string>()
   private cachedWorktreeStats: { type: "agentManager.worktreeStats"; stats: WorktreeStats[] } | undefined
@@ -188,12 +192,13 @@ export class AgentManagerProvider implements Disposable {
       log: (msg) => this.log(msg),
     })
     const local = createLocalDiff(this.gitOps, (...args) => this.log(...args))
+    this.diffCatalog = new DiffSourceCatalog(this.connectionService)
     this.diffs = new WorktreeDiffController({
       getState: () => this.getStateManager(),
       getRoot: () => this.getRoot(),
       getStateReady: () => this.stateReady,
+      catalog: this.diffCatalog,
       git: this.gitOps,
-      localDiff: local.summary,
       localDiffFile: local.file,
       post: (msg) => this.postToWebview(msg),
       log: (...args) => this.log(...args),
@@ -764,11 +769,11 @@ export class AgentManagerProvider implements Disposable {
 
   private onDiffMessage(m: AgentManagerInMessage): Record<string, unknown> | null | undefined {
     if (m.type === "agentManager.requestWorktreeDiff") {
-      void this.diffs.request(m.sessionId)
+      void this.diffs.request(composeDiffId(m.sessionId, normalizeScope(m.scope)))
       return null
     }
     if (m.type === "agentManager.requestWorktreeDiffFile") {
-      void this.diffs.requestFile(m.sessionId, m.file)
+      void this.diffs.requestFile(composeDiffId(m.sessionId, normalizeScope(m.scope)), m.file)
       return null
     }
     if (m.type === "agentManager.applyWorktreeDiff") {
@@ -776,21 +781,50 @@ export class AgentManagerProvider implements Disposable {
       return null
     }
     if (m.type === "agentManager.revertWorktreeFile") {
-      void this.diffs.revert(m.sessionId, m.file)
+      void this.diffs.revert(composeDiffId(m.sessionId, normalizeScope(m.scope)), m.file)
       return null
     }
     if (m.type === "agentManager.startDiffWatch") {
-      this.diffs.start(m.sessionId)
+      this.diffs.start(composeDiffId(m.sessionId, normalizeScope(m.scope)))
       return null
     }
     if (m.type === "agentManager.stopDiffWatch") {
       this.diffs.stop()
       return null
     }
+    if (m.type === "agentManager.requestDiffBranches") {
+      void this.sendDiffBranches(m.sessionId, m.scope)
+      return null
+    }
+    if (m.type === "agentManager.setDiffBaseBranch") {
+      void this.diffs.setBase(composeDiffId(m.sessionId, normalizeScope(m.scope)), m.branch).then(() => {
+        void this.sendDiffBranches(m.sessionId, m.scope)
+      })
+      return null
+    }
     if (m.type === "agentManager.openFile") {
       this.openWorktreeFile(m.sessionId, m.filePath, m.line, m.column)
       return null
     }
+  }
+
+  private async sendDiffBranches(sessionId: string, scope?: string): Promise<void> {
+    const id = composeDiffId(sessionId, normalizeScope(scope))
+    const result = await this.diffs.branches(id).catch((err) => {
+      this.log("Failed to list diff branches:", err instanceof Error ? err.message : String(err))
+      return undefined
+    })
+    if (!result) return
+    this.postToWebview({
+      type: "agentManager.diffBranches",
+      sessionId: id,
+      branches: result.branches,
+      defaultBranch: result.defaultBranch,
+      autoBase: result.autoBase,
+      currentBase: result.currentBase,
+      isAuto: result.isAuto,
+      currentBranch: result.currentBranch,
+    })
   }
 
   private onBridgeMessage(m: AgentManagerInMessage): Record<string, unknown> | null | undefined {
@@ -1111,179 +1145,9 @@ export class AgentManagerProvider implements Disposable {
     msg: Extract<AgentManagerInMessage, { type: "agentManager.createMultiVersion" }>,
   ): Promise<null> {
     await this.waitForStateReady("onCreateMultiVersion")
-    const text = msg.text?.trim() || undefined
-
-    const worktreeName = msg.name?.trim() || undefined
-    const agent = msg.agent
-    const files = msg.files
-    const baseBranch = msg.baseBranch
-    const branchName = msg.branchName?.trim() || undefined
-
-    const fallback = msg.providerID && msg.modelID ? { providerID: msg.providerID, modelID: msg.modelID } : undefined
-    const resolved = resolveVersionModels(msg.modelAllocations, fallback, Number(msg.versions) || 1)
-    const { models, versions, providerID, modelID } = resolved
-
-    // Generate a shared group ID for multi-version worktrees
-    const groupId = versions > 1 ? `grp-${Date.now()}` : undefined
-
-    this.log(
-      `Creating ${versions} worktrees${models.length > 0 ? " (model comparison)" : ""}${text ? ` for: ${text.slice(0, 60)}` : ""}${groupId ? ` (group=${groupId})` : ""}`,
-    )
-
-    // Notify webview that multi-version creation has started
-    this.postToWebview({
-      type: "agentManager.multiVersionProgress",
-      status: "creating",
-      total: versions,
-      completed: 0,
-      groupId,
-    })
-
-    // Phase 1: Create all worktrees + sessions first
-    const created: CreatedVersion[] = []
-
-    for (let i = 0; i < versions; i++) {
-      this.log(`Creating worktree ${i + 1}/${versions}`)
-
-      const version = versionedName(branchName || worktreeName, i, versions)
-      const wt = await this.createWorktreeOnDisk({
-        groupId,
-        baseBranch,
-        branchName: version.branch,
-        name: version.branch,
-        label: version.label,
-      })
-      if (!wt) {
-        this.log(`Failed to create worktree for version ${i + 1}`)
-        continue
-      }
-
-      await this.runSetupScriptForWorktree(wt.result.path, wt.result.branch, wt.worktree.id)
-
-      const session = await this.createSessionInWorktree(wt.result.path, wt.result.branch, wt.worktree.id)
-      if (!session) {
-        const state = this.getStateManager()
-        const manager = this.getWorktreeManager()
-        state?.removeWorktree(wt.worktree.id)
-        await manager?.removeWorktree(wt.result.path)
-        this.log(`Failed to create session for version ${i + 1}`)
-        continue
-      }
-
-      const state = this.getStateManager()!
-      state.addSession(session.id, wt.worktree.id)
-      if (!branchName && !worktreeName && this.host.autoBranchNaming().enabled) {
-        state.armAutoName(wt.worktree.id, session.id)
-      }
-
-      // Sandbox must match the user's choice before this session is exposed or
-      // receives its initial prompt. A failed reconciliation aborts this version.
-      if (msg.sandbox !== undefined) {
-        try {
-          await ensureSandbox(this.connectionService.getClient(), session.id, wt.result.path, msg.sandbox)
-        } catch (error) {
-          const err = getErrorMessage(error)
-          this.log(`Failed to configure sandbox for ${session.id}: ${err}`)
-          this.postToWebview({
-            type: "agentManager.worktreeSetup",
-            status: "error",
-            message: `Failed to configure sandbox: ${err}`,
-            worktreeId: wt.worktree.id,
-          })
-          this.host.capture("Agent Manager Session Error", {
-            source: PLATFORM,
-            error: err,
-            context: "configureSandbox",
-          })
-          await this.discardWorktree(wt.worktree.id, wt.result.path, wt.result.branch, session.id)
-          continue
-        }
-      }
-
-      this.registerWorktreeSession(session.id, wt.result.path)
-      this.notifyWorktreeReady(session.id, wt.result, wt.worktree.id)
-      this.panel?.sessions.registerSession(session)
-
-      // Set the per-version model immediately so the UI selector reflects
-      // the correct model as soon as the worktree appears, before Phase 2.
-      // Uses a dedicated message type to avoid clearing the busy state.
-      const versionModel = models[i]
-      const earlyProviderID = versionModel?.providerID ?? providerID
-      const earlyModelID = versionModel?.modelID ?? modelID
-      if (earlyProviderID && earlyModelID) {
-        this.postToWebview({
-          type: "agentManager.setSessionModel",
-          sessionId: session.id,
-          providerID: earlyProviderID,
-          modelID: earlyModelID,
-        })
-      }
-
-      created.push({
-        worktreeId: wt.worktree.id,
-        sessionId: session.id,
-        path: wt.result.path,
-        branch: wt.result.branch,
-        parentBranch: wt.result.parentBranch,
-        versionIndex: i,
-      })
-
-      this.host.capture("Agent Manager Session Started", {
-        source: PLATFORM,
-        sessionId: session.id,
-        worktreeId: wt.worktree.id,
-        branch: wt.result.branch,
-        multiVersion: true,
-        version: i + 1,
-        totalVersions: versions,
-        groupId,
-      })
-      this.log(`Version ${i + 1} worktree ready: session=${session.id}`)
-
-      // Update progress
-      this.postToWebview({
-        type: "agentManager.multiVersionProgress",
-        status: "creating",
-        total: versions,
-        completed: created.length,
-        groupId,
-      })
-    }
-
-    // Phase 2: Send the initial prompt to all sessions, or clear busy state if no text.
-    const messages = buildInitialMessages(created, models, { providerID, modelID }, text, agent, msg.variant, files)
-    for (let i = 0; i < messages.length; i++) {
-      const msg = messages[i]!
-      if (text) {
-        this.log(`Sending initial message to version ${i + 1} (session=${msg.sessionId})`)
-        this.naming.prompt({
-          sessionID: msg.sessionId,
-          text,
-          providerID: msg.providerID,
-          modelID: msg.modelID,
-        })
-      }
-      this.postToWebview({ type: "agentManager.sendInitialMessage", ...msg })
-      if (text && i < messages.length - 1) {
-        await new Promise((resolve) => setTimeout(resolve, 300))
-      }
-    }
-
-    // Notify completion
-    this.postToWebview({
-      type: "agentManager.multiVersionProgress",
-      status: "done",
-      total: versions,
-      completed: created.length,
-      groupId,
-    })
-
-    if (created.length === 0) {
-      this.host.showError(`Failed to create any of the ${versions} multi-version worktrees.`)
-    }
-
-    this.log(`Multi-version creation complete: ${created.length}/${versions} versions`)
-    return null
+    const ctx = this.context
+    if (!ctx) return null
+    return createMultiVersion(ctx, this.multiVersionHost, msg)
   }
 
   private sendKeybindings(): void {
@@ -1556,6 +1420,15 @@ export class AgentManagerProvider implements Disposable {
       metadata: (client, dir) => sandboxSessionMetadata(this.connectionService.sandboxPreference, client, dir),
       post: (msg) => this.postToWebview(msg),
       log: (...args) => this.log(...args),
+    }
+  }
+
+  private get multiVersionHost(): MultiVersionHost {
+    return {
+      ...this.lifecycleHost,
+      discard: (id, dir, branch, sessionId) => this.discardWorktree(id, dir, branch, sessionId),
+      promptName: (input) => this.naming.prompt(input),
+      error: (message) => this.host.showError(message),
     }
   }
 
@@ -1873,6 +1746,7 @@ export class AgentManagerProvider implements Disposable {
     this.orchestration.dispose()
     this.visiblePresence.clear()
     this.diffs.stop()
+    this.diffCatalog.dispose()
     this.naming.dispose()
     this.statsPoller.stop()
     this.projectPollers.dispose()

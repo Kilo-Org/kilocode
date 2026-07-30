@@ -423,15 +423,17 @@ describe("Agent Manager Provider — onMessage routing", () => {
     const method = cls.getMethod(name)
     expect(method, `method ${name} not found`).toBeTruthy()
     const text = method!.getText()
-    // Follow one-line delegations into the extracted lifecycle module so the
+    // Follow one-line delegations into the extracted handler modules so the
     // assertions keep covering the real handler logic.
-    const delegated = text.match(/return (\w+Lifecycle\w+)\(/)
+    const delegated = text.match(/return (\w+Lifecycle\w+|createMultiVersion)\(/)
     if (!delegated) return text
-    const lifecycle = source
-      .getProject()
-      .addSourceFileAtPath(path.join(ROOT, "src/agent-manager/provider-lifecycle.ts"))
+    const module = delegated[1] === "createMultiVersion" ? "provider-multi-version.ts" : "provider-lifecycle.ts"
+    const lifecycle = source.getProject().addSourceFileAtPath(path.join(ROOT, "src/agent-manager", module))
     const fn = lifecycle.getFunction(delegated[1]!)
-    expect(fn, `delegated function ${delegated[1]} not found in provider-lifecycle`).toBeTruthy()
+    expect(fn, `delegated function ${delegated[1]} not found in ${module}`).toBeTruthy()
+    // The multi-version flow spans phase helpers (createVersion, sendInitialPrompts),
+    // so ordering assertions need the whole module, not just the orchestrator.
+    if (delegated[1] === "createMultiVersion") return lifecycle.getText()
     return fn!.getText()
   }
 
@@ -551,8 +553,8 @@ describe("Agent Manager Provider — onMessage routing", () => {
 
   it("multi-version creation registers each session after publishing its worktree mapping", () => {
     const text = body("onCreateMultiVersion")
-    const ready = text.indexOf("this.notifyWorktreeReady(session.id, wt.result, wt.worktree.id)")
-    const register = text.indexOf("this.panel?.sessions.registerSession(session)")
+    const ready = text.indexOf("host.notifyReady(session.id, wt.result, wt.worktree.id)")
+    const register = text.indexOf("host.sessions.register(session)")
     const initial = text.indexOf("agentManager.sendInitialMessage")
 
     expect(ready, "multi-version path must publish ready state").toBeGreaterThan(-1)
@@ -627,7 +629,9 @@ describe("Agent Manager Provider — onMessage routing", () => {
     expect(text).toContain("class WorktreeDiffController")
     expect(text).toContain("buildWorktreePatch")
     expect(text).toContain("revertFile")
-    expect(text).toContain("diffSummary")
+    // Summary/detail diff data comes from the shared DiffSourceCatalog sources
+    // (workspace/staged/unstaged/session), not a bespoke in-controller pipeline.
+    expect(text).toContain("catalog.build")
     expect(text).toContain("shouldStopDiffPolling")
     expect(providerText).toContain("this.diffs")
   })

@@ -71,8 +71,13 @@ function triageChunk(chunk, index, budgetDeadline) {
       break
     }
 
+    // Headless `kilo run` auto-rejects every permission ask; without --auto the
+    // agent cannot run shell commands. SECURITY: --auto grants unrestricted bash
+    // to an agent steered by external PR content. Hardening deferred: a scoped
+    // permission.bash map via KILO_CONFIG_CONTENT should replace --auto once the
+    // required shell patterns are stable (see PR #12605 review thread).
     const result = runKilo({
-      args: ["run", prompt, "-m", model, "--dir", process.cwd(), "-f", chunkFile],
+      args: ["run", "--auto", prompt, "-m", model, "--dir", process.cwd(), "-f", chunkFile],
       timeoutMs: Math.min(CHUNK_TIMEOUT_MS, left),
       streamStdout: false,
       label: `triage chunk ${index} attempt ${attempt}`,

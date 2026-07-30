@@ -3186,6 +3186,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       globalConfig,
       projectConfig,
       bindings,
+      collections: snapshot.collections,
       settings: snapshot.settings,
       features: snapshot.features,
     }
@@ -3195,6 +3196,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       globalConfig,
       projectConfig,
       bindings,
+      collections: snapshot.collections,
       settings: snapshot.settings,
       features: snapshot.features,
     })

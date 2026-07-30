@@ -11,7 +11,7 @@
 import { createContext, useContext, createSignal, createMemo, onCleanup } from "solid-js"
 import type { ParentComponent, Accessor } from "solid-js"
 import { useVSCode } from "./vscode"
-import type { Config, ExtensionMessage, FeatureFlags, SettingsConfigBinding } from "../types/messages"
+import type { Config, ConfigCollections, ExtensionMessage, FeatureFlags, SettingsConfigBinding } from "../types/messages"
 import {
   configUnsetPaths,
   deepMerge,
@@ -35,6 +35,7 @@ interface ConfigContextValue {
   config: Accessor<Config>
   globalConfig: Accessor<Config>
   projectConfig: Accessor<Config>
+  collections: Accessor<ConfigCollections>
   settings: Accessor<Record<string, unknown>>
   features: Accessor<FeatureFlags>
   loading: Accessor<boolean>
@@ -77,6 +78,7 @@ export const ConfigProvider: ParentComponent = (props) => {
   const [config, setConfig] = createSignal<Config>({})
   const [globalConfig, setGlobalConfig] = createSignal<Config>({})
   const [projectConfig, setProjectConfig] = createSignal<Config>({})
+  const [collections, setCollections] = createSignal<ConfigCollections>({})
   const [settings, setSettings] = createSignal<Record<string, unknown>>({})
   const [features, setFeatures] = createSignal<FeatureFlags>({ indexing: false, sandboxControls: false })
   const [loading, setLoading] = createSignal(true)
@@ -103,6 +105,9 @@ export const ConfigProvider: ParentComponent = (props) => {
   // Error from the most recent saveConfig() attempt, or null if no error.
   // Cleared when the user edits the draft again or starts a new save.
   const [saveError, setSaveError] = createSignal<SaveError | null>(null)
+  const updateCollections = (next: ConfigCollections | undefined) => {
+    if (next !== undefined) setCollections(next)
+  }
 
   // Register handler immediately (not in onMount) so we never miss
   // a configLoaded message that arrives before the DOM mount.
@@ -128,6 +133,7 @@ export const ConfigProvider: ParentComponent = (props) => {
         setProjectConfig(mergeScopedConfig(message.projectConfig, projectDraft()))
         setSavedProject(message.projectConfig)
       }
+      updateCollections(message.collections)
       setLoading(false)
       return
     }
@@ -155,6 +161,7 @@ export const ConfigProvider: ParentComponent = (props) => {
           setProjectConfig(message.projectConfig)
           setSavedProject(message.projectConfig)
         }
+        updateCollections(message.collections)
         setFeatures(message.features)
         setBindings(message.bindings ?? bindings())
       } else {
@@ -169,6 +176,7 @@ export const ConfigProvider: ParentComponent = (props) => {
           setProjectConfig(mergeScopedConfig(message.projectConfig, projectDraft()))
           setSavedProject(message.projectConfig)
         }
+        updateCollections(message.collections)
         setFeatures(message.features)
         setBindings(message.bindings ?? bindings())
       }
@@ -384,6 +392,7 @@ export const ConfigProvider: ParentComponent = (props) => {
     config,
     globalConfig,
     projectConfig,
+    collections,
     settings,
     features,
     loading,

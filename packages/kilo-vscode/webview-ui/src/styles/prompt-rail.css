@@ -70,6 +70,17 @@
   opacity: 0.5;
 }
 
+.prompt-rail-tick--overflow .prompt-rail-tick-line {
+  width: 6px;
+  background: repeating-linear-gradient(
+    to right,
+    var(--icon-weaker) 0,
+    var(--icon-weaker) 2px,
+    transparent 2px,
+    transparent 4px
+  );
+}
+
 /* Scroll position: subtle, always-on cue. */
 .prompt-rail-tick--active .prompt-rail-tick-line {
   width: 13px;
@@ -103,7 +114,7 @@
   z-index: 1000;
   box-sizing: border-box;
   width: min(360px, calc(100vw - var(--prompt-rail-width, 16px) - 40px));
-  max-height: calc(100vh - 24px);
+  max-height: min(calc(100vh - 24px), var(--prompt-rail-card-height, calc(100vh - 24px)));
   overflow-y: auto;
   padding: 6px;
   border-radius: 12px;
@@ -120,7 +131,79 @@
     0 12px 32px -8px rgba(0, 0, 0, 0.4);
   animation: prompt-rail-in 0.22s var(--prompt-rail-ease, cubic-bezier(0.22, 1, 0.36, 1));
   transform-origin: left center;
-  scrollbar-width: thin;
+}
+
+.prompt-rail-card[data-virtualized] {
+  display: flex;
+  flex-direction: column;
+  height: min(calc(100vh - 24px), var(--prompt-rail-card-height));
+  overflow: hidden;
+  background: var(--surface-float-base);
+}
+
+.prompt-rail-card-header {
+  position: sticky;
+  top: -6px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 32px;
+  padding: 4px 5px 4px 11px;
+  background: color-mix(in srgb, var(--surface-float-base) 88%, transparent);
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+}
+
+.prompt-rail-card-title {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-11);
+  font-weight: var(--font-weight-medium, 500);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.prompt-rail-card-actions {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: 2px;
+}
+
+.prompt-rail-loading {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 0 8px;
+  color: var(--text-weaker);
+  font-size: var(--kilo-font-size-12);
+}
+
+.prompt-rail-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.prompt-rail-list-static {
+  min-width: 0;
+}
+
+/* A floating popover should not paint an OS scrollbar over its own glass; the
+   rail already shows where you are in the session. */
+.prompt-rail-card,
+.prompt-rail-list {
+  scrollbar-width: none;
+}
+
+.prompt-rail-card::-webkit-scrollbar,
+.prompt-rail-list::-webkit-scrollbar {
+  display: none;
 }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {

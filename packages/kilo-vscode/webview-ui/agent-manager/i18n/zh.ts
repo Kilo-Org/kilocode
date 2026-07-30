@@ -138,6 +138,7 @@ export const dict = {
   "agentManager.diff.revertFile": "还原文件",
   "agentManager.diff.revertSuccess": "文件已还原",
   "agentManager.diff.revertError": "还原失败",
+  "agentManager.diff.applyBranchOnly": "应用仅适用于完整的分支差异。请切换到 Branch 范围后再应用。",
   "agentManager.open.button": "打开",
   "agentManager.open.tooltip": "在 VS Code 中打开此 Worktree",
   "agentManager.apply.globalButton": "应用",

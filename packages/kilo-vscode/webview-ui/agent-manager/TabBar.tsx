@@ -19,6 +19,7 @@ import { LOCAL } from "./navigate"
 import { ConstrainDragYAxis } from "../src/components/chat/TabDnd"
 import type { tracker } from "./telemetry"
 import { SidebarToggleButton } from "./SidebarToggleButton"
+import type { DiffScope } from "./diff-scope-state"
 import { TerminalDestinationButton } from "./terminal/TerminalDestinationButton"
 import type { TerminalDestination } from "../src/types/messages/agent-manager"
 
@@ -42,6 +43,8 @@ export interface TabBarProps {
   localStats: () => LocalGitStats | undefined
   worktreeStats: () => Record<string, WorktreeGitStats>
   applyState: () => { status: string } | undefined
+  /** Active diff scope; applying to local is only possible from the branch scope. */
+  reviewScope: () => DiffScope
   onOpen: () => void
   onApply: () => void
   runStatuses: () => Record<string, RunStatus>
@@ -133,12 +136,19 @@ export const TabBar: Component<TabBarProps> = (props) => (
                         {props.t("agentManager.open.button")}
                       </Button>
                     </Tooltip>
-                    <Tooltip value={props.t("agentManager.apply.tooltip")} placement="bottom">
+                    <Tooltip
+                      value={
+                        props.reviewScope() === "branch"
+                          ? props.t("agentManager.apply.tooltip")
+                          : props.t("agentManager.diff.applyBranchOnly")
+                      }
+                      placement="bottom"
+                    >
                       <Button
                         size="small"
                         variant="ghost"
                         onClick={props.onApply}
-                        disabled={!hasChanges() || applyBusy()}
+                        disabled={!hasChanges() || applyBusy() || props.reviewScope() !== "branch"}
                       >
                         <Show when={applyBusy()}>
                           <Spinner class="am-apply-spinner" />
