@@ -156,6 +156,32 @@ describe("ScriptTerminalManager", () => {
     expect(ctx.snapshots.at(-1)?.[0]?.worktreeId).toBeNull()
   })
 
+  it("keeps identical worktree script terminals independent across projects", async () => {
+    let id = 0
+    const ctx = harness({
+      create: async () => ({
+        data: { location: { directory: config.cwd }, data: { ...info(), id: `pty-${++id}` } },
+      }),
+      get: async () => ({
+        data: { location: { directory: config.cwd }, data: { ...info(), id: `pty-${id}` } },
+      }),
+    })
+
+    await ctx.manager.start("setup", { ...config, projectId: "prj-a" }, () => undefined)
+    await ctx.manager.start("setup", { ...config, projectId: "prj-b" }, () => undefined)
+
+    expect(ctx.snapshots.at(-1)).toEqual([
+      expect.objectContaining({ projectId: "prj-a", worktreeId: "wt-1", kind: "setup" }),
+      expect.objectContaining({ projectId: "prj-b", worktreeId: "wt-1", kind: "setup" }),
+    ])
+    expect(ctx.manager.active("setup", "wt-1", "prj-a")).toBe(true)
+    expect(ctx.manager.active("setup", "wt-1", "prj-b")).toBe(true)
+
+    await ctx.manager.clear("setup", "wt-1", "prj-a")
+    expect(ctx.manager.active("setup", "wt-1", "prj-a")).toBe(false)
+    expect(ctx.manager.active("setup", "wt-1", "prj-b")).toBe(true)
+  })
+
   it("builds canonical authenticated replay URLs", () => {
     const value = buildScriptTerminalWsUrl(
       { baseUrl: "http://127.0.0.1:4096", password: "secret" },

@@ -2358,10 +2358,10 @@ const AgentManagerContent: Component = () => {
           terminalDestination={sideCtl.destination}
           terminalDestinationActive={() => sidePanel() === "terminal"}
           terminalKeybind={() => kb().showTerminal ?? ""}
-      onTerminalDestinationOpen={() => {
-        cancelAmbientSetup()
-        sideCtl.openPreferred("tab_toolbar")
-      }}
+          onTerminalDestinationOpen={() => {
+            cancelAmbientSetup()
+            sideCtl.openPreferred("tab_toolbar")
+          }}
           onTerminalDestinationChoose={sideCtl.choose}
           track={metrics.click}
         />

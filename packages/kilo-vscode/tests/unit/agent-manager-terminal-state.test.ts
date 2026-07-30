@@ -197,6 +197,45 @@ describe("Agent Manager terminal state", () => {
     })
   })
 
+  it("hydrates script terminals into independent project contexts", () => {
+    createRoot((dispose) => {
+      const item = scene()
+      item.dispatch({
+        type: "agentManager.scriptTerminals",
+        terminals: [
+          {
+            terminalId: "script:setup-a",
+            projectId: "prj-a",
+            worktreeId: "wt-1",
+            kind: "setup",
+            title: "Setup",
+            wsUrl: "ws://script:setup-a",
+            state: "running",
+            font,
+          },
+          {
+            terminalId: "script:setup-b",
+            projectId: "prj-b",
+            worktreeId: "wt-1",
+            kind: "setup",
+            title: "Setup",
+            wsUrl: "ws://script:setup-b",
+            state: "running",
+            font,
+          },
+        ],
+      } satisfies ExtensionMessage)
+
+      expect(item.state.sidesForContext("prj-a:wt-1").map((term) => term.id)).toEqual(["script:setup-a"])
+      expect(item.state.sidesForContext("prj-b:wt-1").map((term) => term.id)).toEqual(["script:setup-b"])
+      expect(item.events.running).toEqual([
+        { contextKey: "prj-a:wt-1", terminalId: "script:setup-a" },
+        { contextKey: "prj-b:wt-1", terminalId: "script:setup-b" },
+      ])
+      dispose()
+    })
+  })
+
   it("activates a Setup terminal that hydrates before its worktree is selected", () => {
     createRoot((dispose) => {
       const item = scene(LOCAL)

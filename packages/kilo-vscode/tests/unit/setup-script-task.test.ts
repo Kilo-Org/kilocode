@@ -312,7 +312,10 @@ describe("runWorktreeSetupScript", () => {
     return dir
   }
 
-  function flow(script: boolean, opts?: { destination?: "vscode" | "agentManager"; code?: number }) {
+  function flow(
+    script: boolean,
+    opts?: { destination?: "vscode" | "agentManager"; code?: number; projectId?: string },
+  ) {
     const posted: AgentManagerOutMessage[] = []
     const runs: string[] = []
     const ctx = harness()
@@ -323,6 +326,7 @@ describe("runWorktreeSetupScript", () => {
     const input = {
       service: new SetupScriptService(root(script)),
       destination: opts?.destination ?? ("vscode" as const),
+      projectId: opts?.projectId,
       worktreeId: "wt-1",
       trusted: () => true,
       manager: ctx.manager,
@@ -347,6 +351,17 @@ describe("runWorktreeSetupScript", () => {
       },
     ])
     expect(scene.runs).toEqual(["/repo/worktree"])
+  })
+
+  it("stamps progress and embedded terminals with the owning project", async () => {
+    const scene = flow(true, { destination: "agentManager", projectId: "prj-a" })
+    const result = runWorktreeSetupScript(scene.input, { worktreePath: "/repo/worktree", repoPath: "/repo" })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(scene.posted[0]).toMatchObject({ projectId: "prj-a", worktreeId: "wt-1" })
+    expect(scene.ctx.starts[0]?.config).toMatchObject({ projectId: "prj-a", worktreeId: "wt-1" })
+    scene.ctx.starts[0]?.done({ exitCode: 0 })
+    await result
   })
 
   it("stays silent when no setup script is configured", async () => {
