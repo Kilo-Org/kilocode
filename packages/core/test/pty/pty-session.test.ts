@@ -139,6 +139,16 @@ describe("pty", () => {
     }),
   )
 
+  // (script terminals forward raw output to xterm without transcoding).
+  ptyTest("round-trips non-ASCII output byte-identically", () =>
+    Effect.gen(function* () {
+      const pty = yield* Pty.Service
+      const marker = "café-über-北京-🚀"
+      const info = yield* createPty("sh", ["-c", `printf '${marker}\\n'`])
+      const attached = yield* attachCollecting(info.id)
+      expect(yield* waitForOutput(attached.output, marker)).toContain(marker)
+    }),
+  )
   ptyTest("terminates background descendants outside the shell process group", () =>
     Effect.gen(function* () {
       const pty = yield* Pty.Service

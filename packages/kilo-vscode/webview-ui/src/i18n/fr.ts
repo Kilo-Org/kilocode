@@ -916,9 +916,13 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "Modèle SWE-Pruner",
   "settings.experimental.swePrunerModel.description":
     "Modèle utilisé pour élaguer les sorties d'outils ; par défaut, le small model configuré",
+
   "settings.experimental.smoothScrolling.title": "Smooth Scrolling",
   "settings.experimental.smoothScrolling.description":
     "Animate scroll positions in the chat (tab strip, question dock, reasoning panel). Turn off for instant scrolling. Mouse wheel inertia is controlled by your OS / VS Code and is not affected.",
+  "settings.experimental.multiProject.title": "Agent Manager Multi-Projet",
+  "settings.experimental.multiProject.description":
+    "Activer la gestion des sessions et worktrees sur plusieurs dépôts dans Agent Manager. Le dépôt de l'espace de travail actuel est toujours le projet par défaut.",
   "settings.experimental.mcpTimeout.title": "Délai MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Délai des requêtes du serveur MCP en millisecondes",
   "settings.experimental.remote.title": "Contrôle Remote",

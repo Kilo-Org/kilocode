@@ -132,3 +132,96 @@ export function focusChatSearch(reset: { history(v: boolean): void; review(v: bo
   reset.terminal()
   window.dispatchEvent(new CustomEvent("focusTranscriptSearch"))
 }
+
+/**
+ * Multi-project navigation.
+ *
+ * In multi-project mode the sidebar shows an accordion of projects; each
+ * expanded project renders its own Local item, worktrees (sections first,
+ * then ungrouped), and an unassigned-sessions list. Keyboard previous/next
+ * and numeric shortcuts must traverse every expanded project in visual
+ * order, not just the active one.
+ *
+ * Targets are project-qualified so a raw worktree/session ID never identifies
+ * an item on its own — the composite id carries the owning project.
+ */
+
+export type NavTarget =
+  | { projectId: string; kind: "local" }
+  | { projectId: string; kind: "worktree"; worktreeId: string }
+  | { projectId: string; kind: "session"; sessionId: string }
+
+export interface NavEntry {
+  /** Stable project-qualified composite id. */
+  id: string
+  target: NavTarget
+}
+
+export interface ProjectNavInput {
+  id: string
+  expanded: boolean
+  worktrees: { id: string; sectionId?: string }[]
+  sections: { id: string; collapsed: boolean }[]
+  sessionsCollapsed: boolean
+  /** Visible unassigned (root, no worktree) sessions in render order. */
+  unassigned: { id: string }[]
+}
+
+export const localNavId = (projectId: string) => `${projectId}:local`
+export const worktreeNavId = (projectId: string, worktreeId: string) => `${projectId}:wt:${worktreeId}`
+export const sessionNavId = (projectId: string, sessionId: string) => `${projectId}:sess:${sessionId}`
+
+/**
+ * Build one global visual order across expanded projects.
+ *
+ * For each expanded project (in input order): Local, then worktrees in the
+ * order the multi-project body renders them (each non-collapsed section's
+ * members, then ungrouped), then visible unassigned sessions (when the
+ * sessions section is not collapsed). Collapsed projects contribute nothing.
+ */
+export function buildProjectNavOrder(projects: ProjectNavInput[]): NavEntry[] {
+  const order: NavEntry[] = []
+  for (const p of projects) {
+    if (!p.expanded) continue
+    const pid = p.id
+    order.push({ id: localNavId(pid), target: { projectId: pid, kind: "local" } })
+    for (const sec of p.sections) {
+      if (sec.collapsed) continue
+      for (const w of p.worktrees) {
+        if (w.sectionId === sec.id) {
+          order.push({ id: worktreeNavId(pid, w.id), target: { projectId: pid, kind: "worktree", worktreeId: w.id } })
+        }
+      }
+    }
+    for (const w of p.worktrees) {
+      if (!w.sectionId) {
+        order.push({ id: worktreeNavId(pid, w.id), target: { projectId: pid, kind: "worktree", worktreeId: w.id } })
+      }
+    }
+    if (!p.sessionsCollapsed) {
+      for (const s of p.unassigned) {
+        order.push({ id: sessionNavId(pid, s.id), target: { projectId: pid, kind: "session", sessionId: s.id } })
+      }
+    }
+  }
+  return order
+}
+
+/**
+ * Resolve a previous/next step within a global nav order.
+ *
+ * `currentId` is the composite id of the active item, or undefined when
+ * nothing in the order is active. Returns the entry to activate, or
+ * undefined at the boundaries (no wrapping, matching single-project behavior).
+ */
+export function resolveProjectNav(
+  direction: "up" | "down",
+  currentId: string | undefined,
+  order: NavEntry[],
+): NavEntry | undefined {
+  if (order.length === 0) return undefined
+  const idx = currentId ? order.findIndex((e) => e.id === currentId) : -1
+  const next = direction === "up" ? idx - 1 : idx + 1
+  if (next < 0 || next >= order.length) return undefined
+  return order[next]
+}

@@ -155,6 +155,7 @@ function subset(permission: string, ruleset: Ruleset) {
 
 function covered(entry: PendingEntry, approved: Ruleset, local: Ruleset) {
   if (ConfigProtection.isRequest(entry.info)) return false
+  if (entry.info.metadata?.["skillShell"] === true) return false // kilocode_change - skill batch needs an explicit reply
   return entry.info.patterns.every((pattern) => {
     if (veto(entry.info.permission, pattern, entry.hardRuleset)) return false
     return resolve(entry.info.permission, pattern, entry.ruleset, approved, local).action === "allow"
@@ -221,6 +222,7 @@ export const layer = Layer.effect(
         : false
       // kilocode_change end
 
+      const forceAsk = request.metadata?.["skillShell"] === true // kilocode_change
       for (const pattern of request.patterns) {
         const rule = resolve(request.permission, pattern, ruleset, approved, local) // kilocode_change — include session-scoped rules
         yield* Effect.logInfo("evaluated", { permission: request.permission, pattern, action: rule })
@@ -234,6 +236,12 @@ export const layer = Layer.effect(
             ruleset: subset(request.permission, ruleset), // kilocode_change
           })
         }
+        // kilocode_change start - skill shell forces a prompt instead of honoring an allow/auto-approve rule
+        if (forceAsk) {
+          needsAsk = true
+          continue
+        }
+        // kilocode_change end
         // kilocode_change start - override "allow" to "ask" for protected config paths
         if (rule.action === "allow" && (!isProtected || trusted)) {
           approvedRule = rule // remember the winning rule so callers can explain the auto-approval
@@ -289,6 +297,18 @@ export const layer = Layer.effect(
       const { approved, pending } = yield* InstanceState.get(state)
       const existing = pending.get(input.requestID)
       if (!existing) return yield* new PermissionV1.NotFoundError({ requestID: input.requestID })
+
+      // kilocode_change start - skill-shell batches must be answered by a human; ignore machine approvals
+      // (auto-approve/YOLO clients omit `interactive`) so the prompt stays pending for a real decision.
+      // Log rather than fail silently: a genuine human client sets `interactive`, so a refused reply here
+      // means an auto-approver tried to answer — the request intentionally stays pending for a human.
+      if (existing.info.metadata?.["skillShell"] === true && input.reply !== "reject" && input.interactive !== true) {
+        yield* Effect.logWarning("skill shell approval refused: requires an interactive human reply", {
+          id: input.requestID,
+        })
+        return
+      }
+      // kilocode_change end
 
       pending.delete(input.requestID)
       yield* events.publish(Event.Replied, {

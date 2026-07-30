@@ -4,6 +4,11 @@ export const dict = {
   "agentManager.sidebar.expand": "Показати бічну панель",
   "agentManager.section.worktrees": "РОБОЧІ ДЕРЕВА",
   "agentManager.section.sessions": "СЕСІЇ",
+  "agentManager.projects": "ПРОЄКТИ",
+  "agentManager.project.add": "Додати проєкт",
+  "agentManager.project.remove": "Видалити з Agent Manager",
+  "agentManager.project.trust": "Довіряти",
+  "agentManager.project.missing": "Репозиторій не знайдено",
   "agentManager.notGitRepo": "Не є git-репозиторієм",
 
   "agentManager.worktree.settings": "Налаштування робочого дерева",
@@ -63,6 +68,9 @@ export const dict = {
 
   "agentManager.terminal.new": "Нова вкладка термінала",
   "agentManager.terminal.ended": "термінал завершено — закрийте вкладку, щоб відхилити",
+  "agentManager.terminal.setupFailed": "помилка скрипта налаштування",
+  "agentManager.terminal.setupFailedCode": "помилка скрипта налаштування з кодом виходу",
+  "agentManager.terminal.stopSetup": "Зупинити скрипт налаштування",
   "agentManager.terminal.connectionError": "помилка з'єднання термінала",
   "agentManager.terminal.add": "Новий термінал",
   "agentManager.terminal.empty": "Тут ще немає термінала",
