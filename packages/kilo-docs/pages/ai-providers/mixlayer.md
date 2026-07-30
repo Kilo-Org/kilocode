@@ -76,4 +76,4 @@ Tool calling and reasoning are supported across the model line. See the [Mixlaye
 
 - **Model list:** Kilo Code auto-detects available models from Mixlayer's `/v1/models` endpoint, so the picker stays current with your account.
 - **Pricing:** See the [Mixlayer console](https://console.mixlayer.com/) for current per-model pricing.
-- **Reasoning:** Qwen models support a thinking mode; reasoning tokens count against the output budget, so allow enough `limit.output` when reasoning is enabled.
+- **Reasoning:** Qwen models support a thinking mode; reasoning tokens count against the output budget, so give responses enough room when reasoning is enabled.
