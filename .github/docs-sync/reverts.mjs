@@ -94,3 +94,45 @@ export function applyRevertAnnotations(digest, revertSignals) {
   }
   return applied
 }
+
+/**
+ * Reports intercepted reverts whose targets received no digest annotation, for the
+ * step summary. `signals` is the same shape as computeRevertAnnotations takes;
+ * `appliedPairs` is applyRevertAnnotations' return ([targetUrl, reverterUrl]).
+ * Returns { missed: [{ url, targets: [targetUrl, ...] }], unparsed: [url, ...] }:
+ * - missed: one entry per signal with at least one unannotated target, listing exactly
+ *   the targets that missed (a partially-covered revert still surfaces its uncovered
+ *   targets).
+ * - unparsed: urls of signals with zero targets (they already warn at intercept time).
+ * Excluded by design: signals whose own url is a target of another signal
+ * (revert-of-revert cancellation — annotating nothing is correct), and target urls
+ * that are themselves intercepted reverts (re-land chain links — the target was never
+ * digest-eligible). All url comparisons are case-insensitive.
+ */
+export function unannotatedRevertSignals(signals, appliedPairs) {
+  const list = Array.isArray(signals) ? signals : []
+  const annotated = new Set((appliedPairs ?? []).map(([target]) => String(target ?? "").toLowerCase()))
+  const signalUrls = new Set(list.map((s) => String(s?.url ?? "").toLowerCase()))
+  const cancelledUrls = new Set()
+  for (const s of list) {
+    for (const t of s?.targets ?? []) {
+      if (t?.url) cancelledUrls.add(t.url.toLowerCase())
+    }
+  }
+  const missed = []
+  const unparsed = []
+  for (const s of list) {
+    const url = s?.url
+    if (!url || cancelledUrls.has(url.toLowerCase())) continue
+    const targets = s.targets ?? []
+    if (targets.length === 0) {
+      unparsed.push(url)
+      continue
+    }
+    const missing = targets
+      .map((t) => t?.url)
+      .filter((u) => u && !annotated.has(u.toLowerCase()) && !signalUrls.has(u.toLowerCase()))
+    if (missing.length > 0) missed.push({ url, targets: missing })
+  }
+  return { missed, unparsed }
+}

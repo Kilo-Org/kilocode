@@ -20,7 +20,7 @@
 
 import fs from "node:fs"
 import { api, appendOutput, appendSummary, listPrFiles, searchIssues } from "./lib.mjs"
-import { revertTitleKind, parseRevertTargets, applyRevertAnnotations } from "./reverts.mjs"
+import { revertTitleKind, parseRevertTargets, applyRevertAnnotations, unannotatedRevertSignals } from "./reverts.mjs"
 
 const SOURCE_REPOS = ["Kilo-Org/cloud", "Kilo-Org/kilocode"]
 const OUT_DIR = "docs-sync-out"
@@ -132,8 +132,7 @@ for (const fullRepo of SOURCE_REPOS) {
 }
 
 const applied = applyRevertAnnotations(digest, reverts)
-const annotatedTargets = new Set(applied.map(([target]) => target.toLowerCase()))
-const silentReverts = reverts.filter((r) => !r.targets.some((t) => annotatedTargets.has(t.url.toLowerCase())))
+const unannotated = unannotatedRevertSignals(reverts, applied)
 
 digest.sort((a, b) => new Date(a.merged_at) - new Date(b.merged_at))
 
@@ -163,15 +162,13 @@ const summaryLines = [
 if (applied.length > 0) {
   summaryLines.push("", "**revert annotations:**", ...applied.map(([target, reverter]) => `- ${target} — reverted by ${reverter}`))
 }
-if (silentReverts.length > 0) {
-  summaryLines.push(
-    "",
-    "**reverts intercepted (no in-window annotation):**",
-    ...silentReverts.map((r) =>
-      r.targets.length > 0
-        ? `- ${r.url} (targets: ${r.targets.map((t) => t.url).join(", ")})`
-        : `- ${r.url} (no parseable targets)`,
-    ),
-  )
+if (unannotated.missed.length > 0 || unannotated.unparsed.length > 0) {
+  summaryLines.push("", "**revert targets with no in-window annotation:**")
+  for (const m of unannotated.missed) {
+    summaryLines.push(`- ${m.url} — unannotated targets: ${m.targets.join(", ")}`)
+  }
+  for (const url of unannotated.unparsed) {
+    summaryLines.push(`- ${url} (no parseable targets)`)
+  }
 }
 appendSummary(summaryLines.join("\n"))

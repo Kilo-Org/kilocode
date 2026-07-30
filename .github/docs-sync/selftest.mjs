@@ -29,6 +29,7 @@ import {
   parseRevertTargets,
   computeRevertAnnotations,
   applyRevertAnnotations,
+  unannotatedRevertSignals,
 } from "./reverts.mjs"
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
@@ -1609,6 +1610,107 @@ Reverts #12249 and #12481.
     ])
     assert.deepEqual(digest[0].reverted_by, { url: reverter, merged_at: mergedAt })
     assert.deepEqual(applied, [[canonical, reverter]])
+  }
+
+  // --- unannotatedRevertSignals ---
+  {
+    // partial coverage: F in-digest, G pre-window → only G missed
+    const sUrl = "https://github.com/Kilo-Org/kilocode/pull/500"
+    const gUrl = "https://github.com/Kilo-Org/kilocode/pull/102"
+    const signals = [
+      {
+        url: sUrl,
+        merged_at: mergedAt,
+        targets: [
+          { repo: "Kilo-Org/kilocode", number: 100, url: fUrl },
+          { repo: "Kilo-Org/kilocode", number: 102, url: gUrl },
+        ],
+      },
+    ]
+    const result = unannotatedRevertSignals(signals, [[fUrl, sUrl]])
+    assert.deepEqual(result, { missed: [{ url: sUrl, targets: [gUrl] }], unparsed: [] })
+  }
+
+  {
+    // fully covered signal → missed empty
+    const signals = [
+      {
+        url: r1Url,
+        merged_at: mergedAt,
+        targets: [
+          { repo: "Kilo-Org/kilocode", number: 100, url: fUrl },
+          { repo: "Kilo-Org/kilocode", number: 101, url: f2Url },
+        ],
+      },
+    ]
+    const result = unannotatedRevertSignals(signals, [
+      [fUrl, r1Url],
+      [f2Url, r1Url],
+    ])
+    assert.deepEqual(result, { missed: [], unparsed: [] })
+  }
+
+  {
+    // cancelled re-land (#4709/#4759 shape): R1→F, R2→R1, empty applied → nothing missed
+    const signals = [
+      {
+        url: r1Url,
+        merged_at: mergedAt,
+        targets: [{ repo: "Kilo-Org/kilocode", number: 100, url: fUrl }],
+      },
+      {
+        url: r2Url,
+        merged_at: mergedAt2,
+        targets: [{ repo: "Kilo-Org/kilocode", number: 200, url: r1Url }],
+      },
+    ]
+    const result = unannotatedRevertSignals(signals, [])
+    assert.deepEqual(result, { missed: [], unparsed: [] })
+  }
+
+  {
+    // zero-target signal → unparsed, not missed
+    const emptyUrl = "https://github.com/Kilo-Org/kilocode/pull/400"
+    const result = unannotatedRevertSignals([{ url: emptyUrl, merged_at: mergedAt, targets: [] }], [])
+    assert.deepEqual(result, { missed: [], unparsed: [emptyUrl] })
+  }
+
+  {
+    // case-insensitivity: annotated set matches target urls differing only by case
+    const signalUrl = "https://github.com/Kilo-Org/kilocode/pull/600"
+    const targetMixed = "https://github.com/Kilo-Org/kilocode/pull/700"
+    const targetLower = "https://github.com/kilo-org/kilocode/pull/700"
+    const signals = [
+      {
+        url: signalUrl,
+        merged_at: mergedAt,
+        targets: [{ repo: "Kilo-Org/kilocode", number: 700, url: targetMixed }],
+      },
+    ]
+    const result = unannotatedRevertSignals(signals, [[targetLower, signalUrl]])
+    assert.deepEqual(result, { missed: [], unparsed: [] })
+  }
+
+  {
+    // live-window lock: #12497-shaped signal with both targets covered
+    const s12497 = "https://github.com/Kilo-Org/kilocode/pull/12497"
+    const t12249 = "https://github.com/Kilo-Org/kilocode/pull/12249"
+    const t12481 = "https://github.com/Kilo-Org/kilocode/pull/12481"
+    const signals = [
+      {
+        url: s12497,
+        merged_at: mergedAt,
+        targets: [
+          { repo: "Kilo-Org/kilocode", number: 12249, url: t12249 },
+          { repo: "Kilo-Org/kilocode", number: 12481, url: t12481 },
+        ],
+      },
+    ]
+    const result = unannotatedRevertSignals(signals, [
+      [t12249, s12497],
+      [t12481, s12497],
+    ])
+    assert.deepEqual(result, { missed: [], unparsed: [] })
   }
 
   // --- source-order guards (case-5 style) ---
