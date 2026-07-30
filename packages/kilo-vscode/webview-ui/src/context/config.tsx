@@ -11,7 +11,13 @@
 import { createContext, useContext, createSignal, createMemo, onCleanup } from "solid-js"
 import type { ParentComponent, Accessor } from "solid-js"
 import { useVSCode } from "./vscode"
-import type { Config, ConfigCollections, ExtensionMessage, FeatureFlags, SettingsConfigBinding } from "../types/messages"
+import type {
+  Config,
+  ConfigCollections,
+  ExtensionMessage,
+  FeatureFlags,
+  SettingsConfigBinding,
+} from "../types/messages"
 import {
   configUnsetPaths,
   deepMerge,
