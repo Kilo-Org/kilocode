@@ -11,8 +11,8 @@ import { randomUUID } from "crypto"
 // SDK) are imported lazily (same deferral pattern as upstream opencode#30453).
 // Resolved once per process: roll-call's per-model path must not re-await import
 // resolution for every model.
-let cache: ReturnType<typeof load> | undefined
-function load() {
+let cache: ReturnType<typeof loadDeps> | undefined
+function loadDeps() {
   return Promise.all([
     import("../../../effect/app-runtime"),
     import("../../../provider/provider"),
@@ -26,7 +26,7 @@ function load() {
   }))
 }
 function deps() {
-  cache ??= load()
+  cache ??= loadDeps()
   return cache
 }
 

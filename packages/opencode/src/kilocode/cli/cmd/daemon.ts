@@ -1,7 +1,8 @@
 import type { Argv } from "yargs"
 import type { Daemon } from "@/kilocode/daemon/daemon"
+import type { resolveNetworkOptions } from "@/cli/network"
 import { cmd } from "@/cli/cmd/cmd"
-import { explicitNetworkOptions, withNetworkOptions, resolveNetworkOptions } from "@/cli/network"
+import { explicitNetworkOptions, withNetworkOptions } from "@/cli/network"
 
 // Keep the top-level import graph light: this module is registered eagerly at CLI
 // startup, so implementation dependencies are imported inside handlers (same

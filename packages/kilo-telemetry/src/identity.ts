@@ -1,6 +1,6 @@
 import * as path from "path"
 import { createHash } from "crypto"
-import { writeFile, chmod } from "fs/promises"
+import { writeFile, chmod, rename, rm } from "fs/promises"
 import { fetchProfile } from "@kilocode/kilo-gateway"
 
 export namespace Identity {
@@ -12,7 +12,9 @@ export namespace Identity {
   // Cache the email resolved from the auth token so CLI startup does not block on
   // a profile request for every invocation. Keyed by token hash; refreshed when
   // the token changes. Stale entries (older than a week) are still used for the
-  // current run and refreshed in the background for the next one.
+  // current run and refreshed on a best-effort basis for a later run: the
+  // background refresh is not awaited, so short-lived invocations may exit before
+  // it completes and simply retry next time.
   const CACHE_FILE = "telemetry-profile.json"
   const CACHE_TTL = 7 * 24 * 60 * 60 * 1000
 
@@ -85,11 +87,19 @@ export namespace Identity {
     const filepath = path.join(dataPath, CACHE_FILE)
     // The cache stores the user's email and a token verifier, so keep it
     // readable only by the owner, including when replacing an existing file.
-    await writeFile(filepath, JSON.stringify(cache), { mode: 0o600 })
-      .then(() => chmod(filepath, 0o600))
-      .catch((err) => {
-        if (process.env.KILO_PRINT_LOGS) console.warn("telemetry profile cache write failed", err)
+    // Write to a temp file and rename so concurrent invocations or a mid-write
+    // kill cannot leave a truncated cache behind (POSIX rename is atomic).
+    const tmp = `${filepath}.${process.pid}.tmp`
+    try {
+      await writeFile(tmp, JSON.stringify(cache), { mode: 0o600 })
+      await chmod(tmp, 0o600)
+      await rename(tmp, filepath)
+    } catch (err) {
+      await rm(tmp, { force: true }).catch((rmErr) => {
+        if (process.env.KILO_PRINT_LOGS) console.warn("telemetry profile cache temp cleanup failed", rmErr)
       })
+      if (process.env.KILO_PRINT_LOGS) console.warn("telemetry profile cache write failed", err)
+    }
   }
 
   async function refresh(token: string, tokenHash: string): Promise<void> {
