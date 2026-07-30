@@ -20,6 +20,7 @@ import { primaryPaths } from "../kilocode/primary-worktree" // kilocode_change
 import { Git } from "@/git" // kilocode_change
 import { isRecord } from "@/util/record"
 import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
+import { trustedInProject } from "../kilocode/skill/trust" // kilocode_change
 
 const CLAUDE_EXTERNAL_DIR = ".claude"
 const AGENTS_EXTERNAL_DIR = ".agents"
@@ -35,6 +36,7 @@ export const Info = Schema.Struct({
   description: Schema.optional(Schema.String),
   location: Schema.String,
   content: Schema.String,
+  trusted: Schema.optional(Schema.Boolean), // kilocode_change - gate skill shell injection to trusted sources
 })
 export type Info = Schema.Schema.Type<typeof Info>
 
@@ -151,6 +153,7 @@ const add = Effect.fnUntraced(function* (state: State, match: Match, events: Eve
     description: md.data.description,
     location: match.path, // kilocode_change
     content: md.content,
+    trusted: match.trusted, // kilocode_change
   }
 })
 
@@ -158,7 +161,7 @@ const scan = Effect.fnUntraced(function* (
   state: ScanState,
   root: string,
   pattern: string,
-  opts?: { dot?: boolean; scope?: string; trusted?: boolean; root?: string; sourceRoot?: string }, // kilocode_change
+  opts?: { dot?: boolean; scope?: string; trusted?: boolean; root?: string; sourceRoot?: string; projectRoot?: string }, // kilocode_change
 ) {
   const matches = yield* Effect.tryPromise({
     try: () =>
@@ -180,12 +183,14 @@ const scan = Effect.fnUntraced(function* (
   )
 
   for (const match of matches) {
-    // kilocode_change start
+    // kilocode_change start - a trusted match whose realpath resolves inside the project (e.g. a
+    // symlink from ~/.agents/skills into the repo) must not mint trust for project-controlled content
+    const trusted = (opts?.trusted ?? false) && !trustedInProject(match, opts?.projectRoot)
     state.matches.set(match, {
       path: match,
-      trusted: opts?.trusted ?? false,
-      root: opts?.root,
-      sourceRoot: opts?.sourceRoot,
+      trusted,
+      root: trusted ? opts?.root : (opts?.root ?? opts?.projectRoot),
+      sourceRoot: trusted ? opts?.sourceRoot : (opts?.sourceRoot ?? opts?.projectRoot),
     })
     // kilocode_change end
     state.dirs.add(path.dirname(match))
@@ -213,7 +218,7 @@ const discoverSkills = Effect.fnUntraced(function* (
     for (const dir of externalDirs) {
       const root = path.join(global.home, dir)
       if (!(yield* fsys.isDir(root))) continue
-      yield* scan(state, root, EXTERNAL_SKILL_PATTERN, { dot: true, scope: "global", trusted: true }) // kilocode_change
+      yield* scan(state, root, EXTERNAL_SKILL_PATTERN, { dot: true, scope: "global", trusted: true, projectRoot }) // kilocode_change
     }
 
     // kilocode_change start
@@ -250,6 +255,7 @@ const discoverSkills = Effect.fnUntraced(function* (
       trusted,
       root: trusted ? undefined : projectRoot,
       sourceRoot: trusted ? undefined : sourceRoot,
+      projectRoot,
     })
     // kilocode_change end
   }
@@ -266,7 +272,11 @@ const discoverSkills = Effect.fnUntraced(function* (
     // kilocode_change start - trust follows the config source that declared the path, never the selected path.
     const origin = cfg.skill_path_origins?.[item]
     const trusted = origin?.trusted === true && path.isAbsolute(expanded)
-    yield* scan(state, dir, SKILL_PATTERN, { trusted, root: trusted ? undefined : (origin?.root ?? projectRoot) })
+    yield* scan(state, dir, SKILL_PATTERN, {
+      trusted,
+      root: trusted ? undefined : (origin?.root ?? projectRoot),
+      projectRoot,
+    })
     // kilocode_change end
   }
 
@@ -295,6 +305,7 @@ const loadSkills = Effect.fnUntraced(function* (
       description: skill.description,
       location: BUILTIN_LOCATION,
       content: skill.content,
+      trusted: true, // kilocode_change - builtin skills ship in the binary
     }
   }
   // kilocode_change end

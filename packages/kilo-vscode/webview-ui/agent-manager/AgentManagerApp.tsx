@@ -1233,7 +1233,9 @@ const AgentManagerContent: Component = () => {
       onSideCreated: (contextKey, terminalId) => {
         // Focus only when the user is still looking at this panel —
         // a slow create landing after a mode switch must not steal it.
-        if (sidePanel() === "terminal" && terms.sideKey() === contextKey) terms.requestFocus(terminalId)
+        if (sidePanel() === "terminal" && !history() && !reviewActive() && terms.sideKey() === contextKey) {
+          terms.requestFocus(terminalId)
+        }
       },
       onScriptRunning: (contextKey, terminalId) => {
         if (terms.sideKey() !== contextKey) return
@@ -1942,7 +1944,7 @@ const AgentManagerContent: Component = () => {
 
   const sideCtl = createSideTerminal({
     handlers: termHandlers,
-    visible: () => sidePanel() === "terminal",
+    visible: () => sidePanel() === "terminal" && !history() && !reviewActive(),
     focusedId: () => terms.sideFocusedId(),
     hide: () => setSidePanel(null),
     refocus: () => window.dispatchEvent(new Event("focusPrompt")),
@@ -1960,6 +1962,7 @@ const AgentManagerContent: Component = () => {
         ) as never,
       ),
   })
+  createEffect(on(terms.sideKey, (key, previous) => sideCtl.syncContext(key, previous), { defer: true }))
 
   const handleReviewTabMouseDown = (e: MouseEvent) => {
     if (e.button !== 1) return
@@ -2510,6 +2513,7 @@ const AgentManagerContent: Component = () => {
                       visible={() => sidePanel() === "terminal"}
                       onSelect={(id) => termHandlers.selectSide(id)}
                       onClose={(id) => termHandlers.closeSide(id)}
+                      onCloseOthers={(id) => termHandlers.closeSideOthers(id)}
                       onStart={() => termHandlers.addSide()}
                     />
                   </div>

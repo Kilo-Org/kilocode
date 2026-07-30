@@ -805,9 +805,10 @@ export class AgentManagerProvider implements Disposable {
       return null
     }
     if (m.type === "agentManager.setDiffBaseBranch") {
-      void this.diffs.setBase(composeDiffId(m.sessionId, normalizeScope(m.scope)), m.branch).then(() => {
-        void this.sendDiffBranches(m.sessionId, m.scope)
-      })
+      void this.diffs
+        .setBase(composeDiffId(m.sessionId, normalizeScope(m.scope)), m.branch)
+        .catch((err) => this.log("Failed to set diff base:", err instanceof Error ? err.message : String(err)))
+        .then(() => void this.sendDiffBranches(m.sessionId, m.scope))
       return null
     }
     if (m.type === "agentManager.openFile") {

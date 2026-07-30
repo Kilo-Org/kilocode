@@ -955,6 +955,7 @@ export const SideTerminalPanelEmpty: Story = {
                   visible={() => true}
                   onSelect={() => undefined}
                   onClose={() => undefined}
+                  onCloseOthers={() => undefined}
                   onStart={() => undefined}
                 />
               </div>
@@ -995,6 +996,7 @@ export const SideTerminalPanelTabs: Story = {
                   visible={() => true}
                   onSelect={(id) => state.setSideActive(LOCAL, id)}
                   onClose={() => undefined}
+                  onCloseOthers={() => undefined}
                   onStart={() => undefined}
                 />
               </div>
