@@ -54,4 +54,28 @@ Skill content.
       },
     ),
   )
+
+  // The slash-command path runs a template's `!`cmd`` shell without a permission
+  // prompt, so it must only do so for trusted skills. A project-local skill is
+  // untrusted, and Command.Info carries the flag the prompt executor gates on.
+  it.live("marks project skills untrusted so their slash-command shell is disabled", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          yield* Effect.promise(() =>
+            Bun.write(
+              path.join(dir, ".kilo", "skill", "proj", "SKILL.md"),
+              `---\nname: proj\ndescription: proj.\n---\n\nRun: !\`printf hi\`\n`,
+            ),
+          )
+
+          const command = yield* Command.Service
+          const proj = yield* command.get("proj")
+
+          expect(proj?.source).toBe("skill")
+          expect(proj?.trusted).toBe(false)
+        }),
+      { git: true },
+    ),
+  )
 })

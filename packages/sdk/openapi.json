@@ -3137,6 +3137,9 @@
                       },
                       "content": {
                         "type": "string"
+                      },
+                      "trusted": {
+                        "type": "boolean"
                       }
                     },
                     "required": ["name", "location", "content"],
@@ -5312,6 +5315,9 @@
                   },
                   "message": {
                     "type": "string"
+                  },
+                  "interactive": {
+                    "type": "boolean"
                   }
                 },
                 "required": ["reply"],
@@ -30684,6 +30690,9 @@
           "source": {
             "type": "string",
             "enum": ["command", "mcp", "skill"]
+          },
+          "trusted": {
+            "type": "boolean"
           },
           "template": {
             "type": "string"

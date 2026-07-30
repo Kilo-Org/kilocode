@@ -38,6 +38,9 @@ const PermissionData = z.object({
   requestID: z.string(),
   reply: z.enum(["once", "always", "reject"]),
   message: z.string().optional(),
+  // Set by a remote human client; threads through to permission.reply so the server
+  // accepts a human approval of a skill-shell batch (non-interactive ones are refused).
+  interactive: z.boolean().optional(),
 })
 
 const SuggestionData = z.object({

@@ -33,6 +33,7 @@ export const Info = Schema.Struct({
   agent: Schema.optional(Schema.String),
   model: Schema.optional(Schema.String),
   source: Schema.optional(Schema.Literals(["command", "mcp", "skill"])),
+  trusted: Schema.optional(Schema.Boolean), // kilocode_change - skill-sourced templates only run `!`cmd`` shell when trusted
   // Some command templates are lazy promises from MCP prompt resolution.
   template: Schema.Unknown,
   subtask: Schema.optional(Schema.Boolean),
@@ -67,6 +68,7 @@ function fromSkill(item: Skill.Info): Info {
     name: item.name,
     description: item.description,
     source: "skill",
+    trusted: item.trusted === true,
     get template() {
       return item.content
     },

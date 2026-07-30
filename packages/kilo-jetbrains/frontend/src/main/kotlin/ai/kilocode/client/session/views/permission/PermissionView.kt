@@ -356,7 +356,7 @@ class PermissionView(
         card.setActionEnabled(ID_RUN, false)
         card.setActionEnabled(ID_DENY, false)
         rules.setControlsEnabled(false)
-        reply(id, PermissionReplyDto(reply = "once"), rulePayload())
+        reply(id, PermissionReplyDto(reply = "once", interactive = true), rulePayload())
     }
 
     @RequiresEdt

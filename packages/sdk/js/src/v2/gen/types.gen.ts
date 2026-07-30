@@ -2103,6 +2103,7 @@ export type Command = {
   agent?: string
   model?: string
   source?: "command" | "mcp" | "skill"
+  trusted?: boolean
   template: string
   subtask?: boolean
   hints: Array<string>
@@ -7718,6 +7719,7 @@ export type AppSkillsResponses = {
     description?: string
     location: string
     content: string
+    trusted?: boolean
   }>
 }
 
@@ -8629,6 +8631,7 @@ export type PermissionReplyData = {
   body?: {
     reply: "once" | "always" | "reject"
     message?: string
+    interactive?: boolean
   }
   path: {
     requestID: string
