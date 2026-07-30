@@ -86,6 +86,7 @@ import { createProjectRegistry, type PersistedProjectTabs } from "./project/regi
 import type { WorktreeBusyState } from "./project/store"
 import { rememberTarget, restoreProjectTarget } from "./project/restore"
 import { createProjectStateRouter } from "./project/state"
+import { applyRunStatus } from "./project/run-status"
 import { selectLocalAction, selectWorktreeAction } from "./selection-actions"
 import { DataBridge } from "../src/App"
 import { LanguageBridge } from "../src/context/language-bridge"
@@ -1213,11 +1214,9 @@ const AgentManagerContent: Component = () => {
       if (msg.type === "sessionsLoaded" && !sessionsLoaded()) setSessionsLoaded(true)
       if (msg.type === "agentManager.sessionClosed") handleCloseTab(msg.sessionId, false)
     })
-    const unsubRun = vscode.onMessage((msg) => {
-      if (msg.type !== "agentManager.runStatus") return
-      const ev = msg as RunStatus
-      setRunStatuses((prev) => ({ ...prev, [ev.worktreeId]: ev }))
-    })
+    const unsubRun = vscode.onMessage((msg) =>
+      applyRunStatus(msg, { ensure: (id) => registry.ensure(id), active: () => registry.active() }),
+    )
     const unsubProjects = vscode.onMessage((msg) => applyProjects(msg))
 
     // Terminal messages have their own subscription to keep main-handler complexity in check.

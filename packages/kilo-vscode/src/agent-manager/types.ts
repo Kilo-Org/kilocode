@@ -360,6 +360,8 @@ interface ActionOutMessage {
 
 interface RunStatusMessage extends RunStatus {
   type: "agentManager.runStatus"
+  /** Owning project for this status. Absent in legacy single-project mode. */
+  projectId?: string
 }
 
 /** All messages the Agent Manager extension sends to the webview. */

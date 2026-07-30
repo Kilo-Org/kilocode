@@ -109,6 +109,14 @@ export class ProjectContexts {
     return undefined
   }
 
+  /** The context whose state owns the worktree id. */
+  byWorktree(id: string): ProjectContext | undefined {
+    for (const ctx of this.contexts.values()) {
+      if (ctx.peekState()?.getWorktree(id)) return ctx
+    }
+    return undefined
+  }
+
   /** The context whose live session list contains the session. */
   byLiveSession(id: string): ProjectContext | undefined {
     for (const ctx of this.contexts.values()) {

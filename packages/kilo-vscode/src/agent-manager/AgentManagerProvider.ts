@@ -156,7 +156,7 @@ export class AgentManagerProvider implements Disposable {
       state: () => this.getStateManager(),
       open: (file) => this.host.openDocument(file),
       trusted: () => this.host.isTrusted(),
-      post: (message) => this.postToWebview(message),
+      post: (message) => this.postRunMessage(message),
       log: (msg) => this.outputChannel.appendLine(`[RunScript] ${msg}`),
       refresh: () => this.pushState(),
     })
@@ -674,7 +674,7 @@ export class AgentManagerProvider implements Disposable {
       void this.configureSetupScript()
       return null
     }
-    if (handleRunMessage(this.run, m)) return null
+    if (handleRunMessage(this.run, m, (id) => this.runKey(id))) return null
     if (m.type === "agentManager.showTerminal") {
       this.terminalManager.showTerminal(m.sessionId, this.state)
       return null
@@ -1370,7 +1370,7 @@ export class AgentManagerProvider implements Disposable {
       isGitRepo: true,
       defaultBaseBranch: state.getDefaultBaseBranch(),
       activeTarget: state.getActiveTarget(),
-      ...(active ? this.run.state() : {}),
+      ...(active ? this.runStateFor(target) : {}),
     })
     void pushProjectSessions(target, this.panel?.sessions, (message) => this.postToWebview(message))
     if (!active) return
@@ -1476,6 +1476,49 @@ export class AgentManagerProvider implements Disposable {
 
   private get staleWorktreeIds(): Set<string> {
     return this.context?.stale ?? this.staleScratch
+  }
+
+  /**
+   * Namespace the shared "local" run key with the owning project id so two
+   * projects' local run scripts do not collide in the provider-wide manager.
+   */
+  private runKey(worktreeId: string): string {
+    if (worktreeId !== "local") return worktreeId
+    if (!this.host.multiProject()) return worktreeId
+    const ctx = this.context
+    if (!ctx) return worktreeId
+    return `${ctx.id}:local`
+  }
+
+  /** Run state for one project's payload: its worktrees and its own local key, un-namespaced. */
+  private runStateFor(ctx: ProjectContext): ReturnType<RunController["state"]> {
+    const state = this.run.state()
+    const ids = new Set((ctx.peekState()?.getWorktrees() ?? []).map((wt) => wt.id))
+    const localKey = `${ctx.id}:local`
+    const runStatuses = state.runStatuses
+      .filter(
+        (status) =>
+          ids.has(status.worktreeId) || status.worktreeId === localKey || (status.worktreeId === "local" && ctx.pinned),
+      )
+      .map((status) => (status.worktreeId === localKey ? { ...status, worktreeId: "local" } : status))
+    return { ...state, runStatuses }
+  }
+
+  /** Route run status emissions to the owning project and un-namespace the local key. */
+  private postRunMessage(message: AgentManagerOutMessage): void {
+    if (message.type !== "agentManager.runStatus") {
+      this.postToWebview(message)
+      return
+    }
+    const qualified = message.worktreeId.endsWith(":local") && message.worktreeId !== "local"
+    const owner = qualified
+      ? this.contexts.resolve(message.worktreeId.slice(0, -":local".length))
+      : this.contexts.byWorktree(message.worktreeId)
+    this.postToWebview({
+      ...message,
+      worktreeId: qualified ? "local" : message.worktreeId,
+      ...(owner ? { projectId: owner.id } : {}),
+    })
   }
 
   private messageProject(m: AgentManagerInMessage): ProjectContext | undefined {
