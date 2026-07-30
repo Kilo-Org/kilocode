@@ -20,6 +20,13 @@ ensureProcessMetadata("worker") // kilocode_change - retain worker role and pare
 await KiloLog.init() // kilocode_change - keep compatibility logs off the TUI terminal
 Heap.start()
 
+const onUnhandledRejection = (_error: unknown) => {}
+
+const onUncaughtException = (_error: Error) => {}
+
+process.on("unhandledRejection", onUnhandledRejection)
+process.on("uncaughtException", onUncaughtException)
+
 // Subscribe to global events and forward them via RPC
 GlobalBus.on("event", (event) => {
   Rpc.emit("global.event", event)
@@ -33,6 +40,8 @@ const runShutdown = createWorkerShutdown({
   dispose: () => InstanceRuntime.disposeAllInstances(),
   stopServer: async () => {
     if (server) await server.stop(true)
+    process.off("unhandledRejection", onUnhandledRejection)
+    process.off("uncaughtException", onUncaughtException)
   },
 })
 // kilocode_change end

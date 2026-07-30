@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect, test } from "bun:test"
 import { Effect, Layer, ManagedRuntime } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
@@ -49,9 +50,9 @@ const providers = {
 
 const runtime = ManagedRuntime.make(
   Layer.mergeAll(
-    Truncate.defaultLayer,
-    Agent.defaultLayer,
-    CrossSpawnSpawner.defaultLayer,
+    AppNodeBuilder.build(Truncate.node),
+    AppNodeBuilder.build(Agent.node),
+    AppNodeBuilder.build(CrossSpawnSpawner.node),
     Layer.mock(Provider.Service, { list: () => Effect.succeed(providers) }),
   ),
 )

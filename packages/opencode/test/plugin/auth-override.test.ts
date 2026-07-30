@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect, test } from "bun:test"
 import path from "path"
 import { pathToFileURL } from "url"
@@ -16,15 +17,15 @@ import { testEffect } from "../lib/effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 
-const it = testEffect(Layer.mergeAll(CrossSpawnSpawner.defaultLayer, FSUtil.defaultLayer))
+const it = testEffect(Layer.mergeAll(AppNodeBuilder.build(CrossSpawnSpawner.node), AppNodeBuilder.build(FSUtil.node)))
 
 function layer(directory: string, plugins: string[]) {
-  return ProviderAuth.layer.pipe(
-    Layer.provide(Auth.defaultLayer),
-    Layer.provide(ModelCache.defaultLayer), // kilocode_change
+  return AppNodeBuilder.build(ProviderAuth.node).pipe(
+    Layer.provide(AppNodeBuilder.build(Auth.node)),
+    Layer.provide(AppNodeBuilder.build(ModelCache.node)), // kilocode_change
     Layer.provide(
-      Plugin.layer.pipe(
-        Layer.provide(EventV2Bridge.defaultLayer),
+      AppNodeBuilder.build(Plugin.node).pipe(
+        Layer.provide(AppNodeBuilder.build(EventV2Bridge.node)),
         Layer.provide(RuntimeFlags.layer()),
         Layer.provide(
           TestConfig.layer({

@@ -2,6 +2,7 @@
 // Ensures Kilo's post-filterCompacted trim and post-summary media strip are
 // applied before messages are serialized for the provider request.
 
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { NodeFileSystem } from "@effect/platform-node"
 import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
@@ -88,6 +89,8 @@ const mcp = Layer.succeed(
     tools: () => Effect.succeed({}),
     prompts: () => Effect.succeed({}),
     resources: () => Effect.succeed({}),
+    instructions: () => Effect.succeed([]),
+    resourceTemplates: () => Effect.succeed({}),
     add: () => Effect.succeed({ status: { status: "disabled" as const } }),
     connect: () => Effect.void,
     disconnect: () => Effect.void,
@@ -123,62 +126,47 @@ const lsp = Layer.succeed(
   }),
 )
 
-const status = Layer.mergeAll(SessionStatus.defaultLayer, Bus.layer)
+const status = Layer.mergeAll(AppNodeBuilder.build(SessionStatus.node), Bus.layer)
 const run = SessionRunState.layer.pipe(Layer.provide(status))
-const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLayer)
+const infra = Layer.mergeAll(NodeFileSystem.layer, AppNodeBuilder.build(CrossSpawnSpawner.node))
 
 function makeHttp() {
   const deps = Layer.mergeAll(
-    Session.defaultLayer,
-    BackgroundJob.defaultLayer,
-    Snapshot.defaultLayer,
-    LLM.defaultLayer,
-    Env.defaultLayer,
-    AgentSvc.defaultLayer,
-    Command.defaultLayer,
-    Permission.defaultLayer,
+    AppNodeBuilder.build(Session.node),
+    AppNodeBuilder.build(BackgroundJob.node),
+    AppNodeBuilder.build(Snapshot.node),
+    AppNodeBuilder.build(LLM.node),
+    AppNodeBuilder.build(Env.node),
+    AppNodeBuilder.build(AgentSvc.node),
+    AppNodeBuilder.build(Command.node),
+    AppNodeBuilder.build(Permission.node),
     plugin,
-    Config.defaultLayer,
+    AppNodeBuilder.build(Config.node),
     RuntimeFlags.layer(),
-    ProviderSvc.defaultLayer,
+    AppNodeBuilder.build(ProviderSvc.node),
     lsp,
     mcp,
-    FSUtil.defaultLayer,
+    AppNodeBuilder.build(FSUtil.node),
     SyncEvent.defaultLayer,
-    EventV2Bridge.defaultLayer,
-    Database.defaultLayer,
+    AppNodeBuilder.build(EventV2Bridge.node),
+    AppNodeBuilder.build(Database.node),
     status,
     MemoryService.layer,
   ).pipe(Layer.provideMerge(infra))
   const question = Question.layer.pipe(Layer.provideMerge(deps))
   const todo = Todo.layer.pipe(Layer.provideMerge(deps))
-  const registry = ToolRegistry.layer.pipe(
-    Layer.provide(Skill.defaultLayer),
-    Layer.provide(FetchHttpClient.layer),
-    Layer.provide(CrossSpawnSpawner.defaultLayer),
-    Layer.provide(RepositoryCache.defaultLayer),
-    Layer.provide(Ripgrep.defaultLayer),
-    Layer.provide(Format.defaultLayer),
-    Layer.provide(Git.defaultLayer),
-    Layer.provide(Command.defaultLayer),
-    Layer.provide(Auth.defaultLayer),
-    Layer.provide(KiloSessions.testLayer),
-    Layer.provideMerge(todo),
-    Layer.provideMerge(question),
-    Layer.provideMerge(deps),
-  )
-  const trunc = Truncate.layer.pipe(Layer.provideMerge(deps))
-  const proc = SessionProcessor.layer.pipe(
-    Layer.provide(summary),
-    Layer.provide(Image.defaultLayer),
-    Layer.provideMerge(deps),
-  )
-  const compact = SessionCompaction.layer.pipe(Layer.provideMerge(proc), Layer.provideMerge(deps))
+  const registry = AppNodeBuilder.build(ToolRegistry.node, [[KiloSessions.node, KiloSessions.testLayer]])
+  const trunc = AppNodeBuilder.build(Truncate.node)
+  const proc = AppNodeBuilder.build(SessionProcessor.node, [[SessionSummary.node, summary]])
+  const compact = AppNodeBuilder.build(SessionCompaction.node, [
+    [SessionProcessor.node, proc],
+    [SessionSummary.node, summary],
+  ])
   return Layer.mergeAll(
     TestLLMServer.layer,
     SessionPrompt.layer.pipe(
-      Layer.provide(SessionRevert.defaultLayer),
-      Layer.provide(Image.defaultLayer),
+      Layer.provide(AppNodeBuilder.build(SessionRevert.node)),
+      Layer.provide(AppNodeBuilder.build(Image.node)),
       Layer.provide(summary),
       Layer.provideMerge(run),
       Layer.provideMerge(compact),
@@ -186,8 +174,8 @@ function makeHttp() {
       Layer.provideMerge(registry),
       Layer.provideMerge(trunc),
       Layer.provideMerge(question),
-      Layer.provide(Instruction.defaultLayer),
-      Layer.provide(SystemPrompt.defaultLayer),
+      Layer.provide(AppNodeBuilder.build(Instruction.node)),
+      Layer.provide(AppNodeBuilder.build(SystemPrompt.node)),
       Layer.provideMerge(deps),
     ),
   ).pipe(
@@ -195,12 +183,12 @@ function makeHttp() {
       Layer.mergeAll(
         summary,
         deps,
-        Config.defaultLayer,
+        AppNodeBuilder.build(Config.node),
         RuntimeFlags.layer(),
-        BackgroundJob.defaultLayer,
+        AppNodeBuilder.build(BackgroundJob.node),
         Bus.layer,
         infra,
-        Storage.defaultLayer,
+        AppNodeBuilder.build(Storage.node),
       ),
     ),
   )

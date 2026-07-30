@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
@@ -9,7 +10,7 @@ import { MessageID, PartID, SessionID } from "@/session/schema"
 import { provideTmpdirInstance } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
 
-const env = Layer.mergeAll(Session.defaultLayer, CrossSpawnSpawner.defaultLayer)
+const env = Layer.mergeAll(AppNodeBuilder.build(Session.node), AppNodeBuilder.build(CrossSpawnSpawner.node))
 const it = testEffect(env)
 
 const providerID = ProviderV2.ID.make("test")

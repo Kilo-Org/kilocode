@@ -10,6 +10,7 @@ import type {
 import { createStore, produce, reconcile } from "solid-js/store"
 import { createSimpleContext } from "@tui/context/helper"
 import { useSDK } from "@tui/context/sdk"
+import { normalizeToolContent } from "@/kilocode/session/tool-content"
 
 function activeAssistant(messages: SessionMessage[]) {
   const index = messages.findIndex((message) => message.type === "assistant" && !message.time.completed)
@@ -160,18 +161,8 @@ export const { use: useSyncV2, provider: SyncProviderV2 } = createSimpleContext(
           break
         }
         case "session.next.prompt.admitted":
-          break
-        case "session.next.prompt.promoted":
-          update(event.properties.sessionID, (draft) => {
-            prepend(draft, {
-              id: event.properties.messageID,
-              type: "user",
-              text: event.properties.prompt.text,
-              files: event.properties.prompt.files,
-              agents: event.properties.prompt.agents,
-              time: { created: event.properties.timeCreated },
-            })
-          })
+          // upstream removed session.next.prompt.promoted (#33443); promotion now emits session.next.prompted,
+          // which the case above already projects into a user message
           break
         case "session.next.context.updated":
           update(event.properties.sessionID, (draft) => {
@@ -327,7 +318,7 @@ export const { use: useSyncV2, provider: SyncProviderV2 } = createSimpleContext(
             )
             if (match?.state.status !== "running") return
             match.state.structured = event.properties.structured
-            match.state.content = [...event.properties.content]
+            match.state.content = normalizeToolContent(event.properties.content)
           })
           break
         case "session.next.tool.success":
@@ -341,7 +332,7 @@ export const { use: useSyncV2, provider: SyncProviderV2 } = createSimpleContext(
               status: "completed",
               input: match.state.input,
               structured: event.properties.structured,
-              content: [...event.properties.content],
+              content: normalizeToolContent(event.properties.content),
               result: event.properties.result,
             }
             match.provider = {

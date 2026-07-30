@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect, test } from "bun:test"
 import { Effect, Layer, ManagedRuntime } from "effect"
 import path from "path"
@@ -14,7 +15,7 @@ import { Tool } from "../../src/tool/tool"
 import { Truncate } from "../../src/tool/truncate"
 import { tmpdir } from "../fixture/fixture"
 
-const rt = ManagedRuntime.make(Layer.mergeAll(Agent.defaultLayer, Session.defaultLayer, Truncate.defaultLayer))
+const rt = ManagedRuntime.make(Layer.mergeAll(AppNodeBuilder.build(Agent.node), AppNodeBuilder.build(Session.node), AppNodeBuilder.build(Truncate.node)))
 
 async function init() {
   return rt.runPromise(

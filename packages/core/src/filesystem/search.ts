@@ -1,5 +1,6 @@
 export * as FileSystemSearch from "./search"
 
+import { makeLocationNode } from "../effect/app-node"
 import path from "path"
 import { Context, Effect, Layer, Scope } from "effect"
 import { Fff } from "#fff"
@@ -77,12 +78,11 @@ export const ripgrepLayer = Layer.effect(
             })
             .pipe(
               Effect.map((result) =>
-                result.items.map( // kilocode_change
-                  (entry) =>
-                    new FileSystem.Entry({
-                      ...entry,
-                      path: RelativePath.make(path.relative(location.directory, path.resolve(cwd, entry.path))),
-                    }),
+                result.items.map((entry) => // kilocode_change - validate wraps results in SearchResult
+                  FileSystem.Entry.make({
+                    ...entry,
+                    path: RelativePath.make(path.relative(location.directory, path.resolve(cwd, entry.path))),
+                  }),
                 ),
               ),
               Effect.orDie,
@@ -105,15 +105,14 @@ export const ripgrepLayer = Layer.effect(
             })
             .pipe(
               Effect.map((result) =>
-                result.items.map( // kilocode_change
-                  (match) =>
-                    new FileSystem.Match({
-                      ...match,
-                      entry: new FileSystem.Entry({
-                        ...match.entry,
-                        path: RelativePath.make(path.relative(location.directory, path.resolve(cwd, match.entry.path))),
-                      }),
+                result.items.map((match) => // kilocode_change - validate wraps results in SearchResult
+                  FileSystem.Match.make({
+                    ...match,
+                    entry: FileSystem.Entry.make({
+                      ...match.entry,
+                      path: RelativePath.make(path.relative(location.directory, path.resolve(cwd, match.entry.path))),
                     }),
+                  }),
                 ),
               ),
               Effect.orDie,
@@ -130,12 +129,9 @@ export const ripgrepLayer = Layer.effect(
           return fuzzysort.go(input.query, items, { limit: input.limit ?? 50 }).map((item) => {
             const relative = item.target
             const type = relative.endsWith(path.sep) ? ("directory" as const) : ("file" as const)
-            const clean = type === "directory" ? relative.slice(0, -path.sep.length) : relative
-            const absolute = path.resolve(location.directory, clean)
-            return new FileSystem.Entry({
+            return FileSystem.Entry.make({
               path: RelativePath.make(relative),
               type,
-              mime: type === "directory" ? "application/x-directory" : FSUtil.mimeType(absolute),
             })
           })
         }),
@@ -174,8 +170,17 @@ export const fffLayer = Layer.effect(
           ...scanning(location.directory), // kilocode_change - permit broad scanning only at the exact boundary.
         }),
       catch: (cause) => cause,
-    }).pipe(Effect.orDie)
-    if (!result.ok) return yield* Effect.die(result.error)
+    }).pipe(
+      Effect.catch((error) => Effect.logWarning("failed to initialize fff", { error }).pipe(Effect.as(undefined))),
+    )
+    if (!result?.ok) {
+      if (result) yield* Effect.logWarning("failed to initialize fff", { error: result.error })
+      return Service.of({
+        find: () => Effect.succeed([]),
+        glob: () => Effect.succeed([]),
+        grep: () => Effect.succeed([]),
+      })
+    }
     yield* Effect.addFinalizer(() => Effect.sync(() => result.value.destroy()).pipe(Effect.ignore))
     return Service.of({
       glob: (input) =>
@@ -196,15 +201,13 @@ export const fffLayer = Layer.effect(
           // kilocode_change start
           yield* SearchTarget.validate(fs, target).pipe(Effect.orDie)
           const items = yield* Effect.filter(found.value.items, (item) => safe(root, item.relativePath))
-          return items.map((item) => {
-          // kilocode_change end
-            const absolute = path.resolve(location.directory, item.relativePath)
-            return new FileSystem.Entry({
+          return items.map((item) =>
+            FileSystem.Entry.make({
               path: RelativePath.make(item.relativePath.replaceAll("\\", "/")),
               type: "file",
-              mime: FSUtil.mimeType(absolute),
-            })
-          })
+            }),
+          )
+          // kilocode_change end
         }),
       grep: (input) =>
         // kilocode_change start
@@ -227,13 +230,11 @@ export const fffLayer = Layer.effect(
           yield* SearchTarget.validate(fs, target).pipe(Effect.orDie)
           const items = yield* Effect.filter(found.value.items, (item) => safe(root, item.relativePath))
           return items.map((match) => {
-          // kilocode_change end
             const bytes = Buffer.from(match.lineContent)
-            return new FileSystem.Match({
-              entry: new FileSystem.Entry({
+            return FileSystem.Match.make({
+              entry: FileSystem.Entry.make({
                 path: RelativePath.make(match.relativePath.replaceAll("\\", "/")),
                 type: "file",
-                mime: FSUtil.mimeType(match.relativePath),
               }),
               line: match.lineNumber,
               offset: match.byteOffset,
@@ -245,6 +246,7 @@ export const fffLayer = Layer.effect(
               })),
             })
           })
+          // kilocode_change end
         }),
       find: (input) =>
         Effect.sync(() => {
@@ -280,11 +282,9 @@ export const fffLayer = Layer.effect(
             .sort((a, b) => b.score - a.score || a.path.length - b.path.length)
             .map((item) => {
               const relative = item.path.replaceAll("\\", "/").replace(/\/$/, "")
-              const absolute = path.resolve(location.directory, relative)
-              return new FileSystem.Entry({
+              return FileSystem.Entry.make({
                 path: RelativePath.make(relative + (item.type === "directory" ? path.sep : "")),
                 type: item.type,
-                mime: item.type === "directory" ? "application/x-directory" : FSUtil.mimeType(absolute),
               })
             })
         }),
@@ -292,6 +292,8 @@ export const fffLayer = Layer.effect(
   }),
 )
 
-export const defaultLayer = Layer.unwrap(
-  Effect.sync(() => (Flag.KILO_DISABLE_FFF || !Fff.available() ? ripgrepLayer : fffLayer)),
-)
+const layer = Layer.unwrap(Effect.sync(() => (Flag.KILO_DISABLE_FFF || !Fff.available() ? ripgrepLayer : fffLayer)))
+
+export const locationLayer = layer
+
+export const node = makeLocationNode({ service: Service, layer, deps: [FSUtil.node, Location.node, Ripgrep.node] })

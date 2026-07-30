@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { NodeFileSystem } from "@effect/platform-node"
 import { describe, expect, spyOn } from "bun:test"
 import { APICallError } from "ai"
@@ -140,25 +141,25 @@ const llm = Layer.unwrap(
 const reference = Layer.mock(Reference.Service, {
   list: () => Effect.succeed([]),
 })
-const status = Layer.mergeAll(SessionStatus.defaultLayer, Bus.layer)
-const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLayer)
+const status = Layer.mergeAll(AppNodeBuilder.build(SessionStatus.node), Bus.layer)
+const infra = Layer.mergeAll(NodeFileSystem.layer, AppNodeBuilder.build(CrossSpawnSpawner.node))
 const env = (event = false) =>
-  SessionProcessor.layer.pipe(
+  AppNodeBuilder.build(SessionProcessor.node).pipe(
     Layer.provideMerge(
       Layer.mergeAll(
-        Session.defaultLayer,
-        Snapshot.defaultLayer,
-        AgentSvc.defaultLayer,
-        Permission.defaultLayer,
-        Plugin.defaultLayer,
-        Config.defaultLayer,
+        AppNodeBuilder.build(Session.node),
+        AppNodeBuilder.build(Snapshot.node),
+        AppNodeBuilder.build(AgentSvc.node),
+        AppNodeBuilder.build(Permission.node),
+        AppNodeBuilder.build(Plugin.node),
+        AppNodeBuilder.build(Config.node),
         RuntimeFlags.layer({ experimentalEventSystem: event }),
         reference,
-        SessionSummary.defaultLayer,
-        Image.defaultLayer,
+        AppNodeBuilder.build(SessionSummary.node),
+        AppNodeBuilder.build(Image.node),
         SyncEvent.defaultLayer,
-        EventV2Bridge.defaultLayer,
-        Database.defaultLayer,
+        AppNodeBuilder.build(EventV2Bridge.node),
+        AppNodeBuilder.build(Database.node),
         status,
         llm,
       ).pipe(Layer.provideMerge(infra)),

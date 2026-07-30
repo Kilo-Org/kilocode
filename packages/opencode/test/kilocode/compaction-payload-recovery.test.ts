@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterEach, describe, expect, mock, test } from "bun:test"
 import { APICallError } from "ai"
 import { Effect, Layer, ManagedRuntime, Scope } from "effect"
@@ -154,32 +155,30 @@ function reply(
 
 const scope = Layer.effect(Scope.Scope, Scope.make())
 
-function runtime(layer: Layer.Layer<LLM.Service>, config = Config.defaultLayer) {
+function runtime(layer: Layer.Layer<LLM.Service>, config = AppNodeBuilder.build(Config.node)) {
   const bus = Bus.layer
-  const status = SessionStatus.layer.pipe(Layer.provide(bus))
-  const processor = SessionProcessorModule.SessionProcessor.layer.pipe(
-    Layer.provide(summary),
-    Layer.provide(Image.defaultLayer),
-    Layer.provide(SyncEvent.defaultLayer),
-  )
+  const status = AppNodeBuilder.build(SessionStatus.node)
+  const processor = AppNodeBuilder.build(SessionProcessorModule.SessionProcessor.node, [
+    [SessionSummary.node, summary],
+  ])
   const model = ProviderTest.model({ providerID, id: modelID, limit: { context: 100_000, output: 32_000 } })
   return ManagedRuntime.make(
-    Layer.mergeAll(SessionCompaction.layer.pipe(Layer.provide(processor)), processor, bus, status).pipe(
+    Layer.mergeAll(AppNodeBuilder.build(SessionCompaction.node, [[SessionProcessorModule.SessionProcessor.node, processor], [SessionSummary.node, summary]]), processor, bus, status).pipe(
       Layer.provide(ProviderTest.fake({ model }).layer),
-      Layer.provideMerge(SessionNs.defaultLayer),
-      Layer.provide(Snapshot.defaultLayer),
+      Layer.provideMerge(AppNodeBuilder.build(SessionNs.node)),
+      Layer.provide(AppNodeBuilder.build(Snapshot.node)),
       Layer.provide(layer),
-      Layer.provide(Permission.defaultLayer),
-      Layer.provide(Agent.defaultLayer),
-      Layer.provide(Plugin.defaultLayer),
+      Layer.provide(AppNodeBuilder.build(Permission.node)),
+      Layer.provide(AppNodeBuilder.build(Agent.node)),
+      Layer.provide(AppNodeBuilder.build(Plugin.node)),
       Layer.provide(status),
       Layer.provide(bus),
       Layer.provide(config),
       Layer.provide(RuntimeFlags.layer()),
       Layer.provide(scope),
       Layer.provide(SyncEvent.defaultLayer),
-      Layer.provide(EventV2Bridge.defaultLayer),
-      Layer.provide(Database.defaultLayer),
+      Layer.provide(AppNodeBuilder.build(EventV2Bridge.node)),
+      Layer.provide(AppNodeBuilder.build(Database.node)),
     ),
   )
 }
@@ -296,7 +295,7 @@ describe("KiloCompactionPayloadRecovery", () => {
     await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
-        const rt = runtime(stub.layer, Config.defaultLayer)
+        const rt = runtime(stub.layer, AppNodeBuilder.build(Config.node))
         const svc = service(rt)
         const session = await svc.create({})
         const old = await user(svc, session.id, "old image turn")

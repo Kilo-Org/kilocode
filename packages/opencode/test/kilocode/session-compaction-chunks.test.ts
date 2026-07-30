@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterAll, afterEach, beforeAll, describe, expect, mock, test } from "bun:test"
 import { Effect, Layer, ManagedRuntime } from "effect"
 import fs from "fs/promises"
@@ -35,6 +36,8 @@ import { tmpdir } from "../fixture/fixture"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { AppRuntime } from "../../src/effect/app-runtime"
 import { remove as cleanup } from "./cleanup"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { Provider } from "../../src/provider/provider"
 
 const providerID = ProviderV2.ID.make("test")
 const modelID = ModelV2.ID.make("test-model")
@@ -58,7 +61,7 @@ afterAll(async () => {
 })
 
 function run<A, E>(fx: Effect.Effect<A, E, SessionNs.Service>) {
-  return Effect.runPromise(fx.pipe(Effect.provide(SessionNs.defaultLayer)))
+  return Effect.runPromise(fx.pipe(Effect.provide(AppNodeBuilder.build(SessionNs.node))))
 }
 
 const store = {
@@ -226,22 +229,18 @@ function fakeRuntime(outputTokenMax?: number, error?: MessageV2.Assistant["error
     calls,
     outputs,
     rt: ManagedRuntime.make(
-      Layer.mergeAll(SessionCompaction.layer.pipe(Layer.provide(processor)), processor, bus).pipe(
-        Layer.provide(ProviderTest.fake({ model }).layer),
-        Layer.provide(SessionNs.defaultLayer),
-        Layer.provide(agents),
-        Layer.provide(Plugin.defaultLayer),
-        Layer.provide(SyncEvent.defaultLayer),
-        Layer.provide(EventV2Bridge.defaultLayer),
-        Layer.provide(Database.defaultLayer),
-        Layer.provide(RuntimeFlags.layer({ outputTokenMax })),
-        Layer.provide(bus),
-        Layer.provide(
+      AppNodeBuilder.build(LayerNode.group([SessionCompaction.node, Bus.node]), [
+        [SessionProcessorModule.SessionProcessor.node, processor],
+        [Provider.node, ProviderTest.fake({ model }).layer],
+        [Agent.node, agents],
+        [RuntimeFlags.node, RuntimeFlags.layer({ outputTokenMax })],
+        [
+          Config.node,
           Layer.mock(Config.Service)({
             get: () => Effect.succeed({ ...{}, compaction: { reserved: 1_000 } }),
           }),
-        ),
-      ),
+        ],
+      ]),
     ),
   }
 }
@@ -289,34 +288,22 @@ async function failure(error?: MessageV2.Assistant["error"], empty = false) {
 }
 
 function liveRuntime(layer: Layer.Layer<LLM.Service>, context = 10_000) {
-  const bus = Bus.layer
-  const status = SessionStatus.layer.pipe(Layer.provide(bus), Layer.provide(EventV2Bridge.defaultLayer))
-  const processor = SessionProcessorModule.SessionProcessor.layer.pipe(
-    Layer.provide(summary),
-    Layer.provide(Image.defaultLayer),
-    Layer.provide(SyncEvent.defaultLayer),
-  )
   const model = ProviderTest.model({ providerID, id: modelID, limit: { context, output: 1_000 } })
   return ManagedRuntime.make(
-    Layer.mergeAll(SessionCompaction.layer.pipe(Layer.provide(processor)), processor, bus, status).pipe(
-      Layer.provide(ProviderTest.fake({ model }).layer),
-      Layer.provide(SessionNs.defaultLayer),
-      Layer.provide(Snapshot.defaultLayer),
-      Layer.provide(layer),
-      Layer.provide(Permission.defaultLayer),
-      Layer.provide(Agent.defaultLayer),
-      Layer.provide(Plugin.defaultLayer),
-      Layer.provide(SyncEvent.defaultLayer),
-      Layer.provide(EventV2Bridge.defaultLayer),
-      Layer.provide(Database.defaultLayer),
-      Layer.provide(RuntimeFlags.layer()),
-      Layer.provide(status),
-      Layer.provide(bus),
-      Layer.provide(
-        Layer.mock(Config.Service)({
-          get: () => Effect.succeed({ ...{}, compaction: { reserved: 1_000 } }),
-        }),
-      ),
+    AppNodeBuilder.build(
+      LayerNode.group([SessionCompaction.node, SessionProcessorModule.SessionProcessor.node, Bus.node, SessionStatus.node]),
+      [
+        [SessionSummary.node, summary],
+        [Provider.node, ProviderTest.fake({ model }).layer],
+        [LLM.node, layer],
+        [RuntimeFlags.node, RuntimeFlags.layer()],
+        [
+          Config.node,
+          Layer.mock(Config.Service)({
+            get: () => Effect.succeed({ ...{}, compaction: { reserved: 1_000 } }),
+          }),
+        ],
+      ],
     ),
   )
 }
@@ -785,22 +772,18 @@ describe("KiloCompactionChunks", () => {
           })
           const outputTokenMax = 512
           const rt = ManagedRuntime.make(
-            Layer.mergeAll(SessionCompaction.layer.pipe(Layer.provide(processor)), processor, bus).pipe(
-              Layer.provide(ProviderTest.fake({ model }).layer),
-              Layer.provide(SessionNs.defaultLayer),
-              Layer.provide(agents),
-              Layer.provide(Plugin.defaultLayer),
-              Layer.provide(SyncEvent.defaultLayer),
-              Layer.provide(EventV2Bridge.defaultLayer),
-              Layer.provide(Database.defaultLayer),
-              Layer.provide(RuntimeFlags.layer({ outputTokenMax })),
-              Layer.provide(bus),
-              Layer.provide(
+            AppNodeBuilder.build(LayerNode.group([SessionCompaction.node, Bus.node]), [
+              [SessionProcessorModule.SessionProcessor.node, processor],
+              [Provider.node, ProviderTest.fake({ model }).layer],
+              [Agent.node, agents],
+              [RuntimeFlags.node, RuntimeFlags.layer({ outputTokenMax })],
+              [
+                Config.node,
                 Layer.mock(Config.Service)({
                   get: () => Effect.succeed({ ...{}, compaction: { reserved: 1_000 } }),
                 }),
-              ),
-            ),
+              ],
+            ]),
           )
 
           try {

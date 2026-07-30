@@ -3,6 +3,7 @@
 // tool propagates each child session's total cost up to the parent's
 // tool-wrapper assistant message (#6321).
 
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { Database } from "@opencode-ai/core/database/database"
@@ -17,7 +18,7 @@ import { testEffect } from "../lib/effect"
 
 void Log.init({ print: false })
 
-const it = testEffect(Layer.mergeAll(Session.defaultLayer, Database.defaultLayer))
+const it = testEffect(Layer.mergeAll(AppNodeBuilder.build(Session.node), AppNodeBuilder.build(Database.node)))
 
 const ref = {
   providerID: ProviderV2.ID.make("test"),

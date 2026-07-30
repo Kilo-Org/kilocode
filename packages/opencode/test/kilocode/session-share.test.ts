@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { expect, spyOn } from "bun:test"
 import { Effect, Layer } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
@@ -11,13 +12,11 @@ import { SyncEvent } from "../../src/sync"
 import { testEffect } from "../lib/effect"
 
 const it = testEffect(
-  Layer.mergeAll(Auth.defaultLayer, Storage.defaultLayer, CrossSpawnSpawner.defaultLayer, RuntimeFlags.layer()),
+  Layer.mergeAll(AppNodeBuilder.build(Auth.node), AppNodeBuilder.build(Storage.node), AppNodeBuilder.build(CrossSpawnSpawner.node), RuntimeFlags.layer()),
 )
 
-const layer = SessionShare.layer.pipe(
-  Layer.provideMerge(Session.defaultLayer),
-  Layer.provide(Config.defaultLayer),
-  Layer.provide(SyncEvent.defaultLayer),
+const layer = AppNodeBuilder.build(SessionShare.node).pipe(
+  Layer.provideMerge(AppNodeBuilder.build(Session.node)),
 )
 
 it.instance("shares and unshares sessions through Kilo public URLs", () => {

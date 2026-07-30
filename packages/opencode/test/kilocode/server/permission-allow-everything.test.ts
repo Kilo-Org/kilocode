@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterEach, describe, expect, test } from "bun:test"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Cause, Effect, Exit, Fiber, Layer } from "effect"
@@ -17,15 +18,11 @@ import { testEffect } from "../../lib/effect"
 
 const bus = Bus.layer
 const env = Layer.mergeAll(
-  Permission.layer.pipe(
-    Layer.provide(EventV2Bridge.defaultLayer),
-    Layer.provide(Config.defaultLayer),
-    Layer.provide(Database.defaultLayer),
-  ),
-  Config.defaultLayer,
-  Session.defaultLayer,
+  AppNodeBuilder.build(Permission.node),
+  AppNodeBuilder.build(Config.node),
+  AppNodeBuilder.build(Session.node),
   bus,
-  CrossSpawnSpawner.defaultLayer,
+  AppNodeBuilder.build(CrossSpawnSpawner.node),
 )
 const it = testEffect(env)
 const original = {

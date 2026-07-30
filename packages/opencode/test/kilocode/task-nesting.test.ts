@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterEach, describe, expect, test } from "bun:test"
 import { Effect, Exit, Layer } from "effect"
 import { Database } from "@opencode-ai/core/database/database"
@@ -35,19 +36,19 @@ const ref = {
 
 const it = testEffect(
   Layer.mergeAll(
-    Agent.defaultLayer,
-    BackgroundJob.defaultLayer,
-    Bus.defaultLayer,
-    Config.defaultLayer,
+    AppNodeBuilder.build(Agent.node),
+    AppNodeBuilder.build(BackgroundJob.node),
+    AppNodeBuilder.build(Bus.node),
+    AppNodeBuilder.build(Config.node),
     RuntimeFlags.layer(),
-    SessionRunState.defaultLayer,
-    SessionStatus.defaultLayer,
-    CrossSpawnSpawner.defaultLayer,
-    Session.defaultLayer,
-    Truncate.defaultLayer,
-    Provider.defaultLayer,
-    ToolRegistry.defaultLayer,
-    Database.defaultLayer,
+    AppNodeBuilder.build(SessionRunState.node),
+    AppNodeBuilder.build(SessionStatus.node),
+    AppNodeBuilder.build(CrossSpawnSpawner.node),
+    AppNodeBuilder.build(Session.node),
+    AppNodeBuilder.build(Truncate.node),
+    AppNodeBuilder.build(Provider.node),
+    AppNodeBuilder.build(ToolRegistry.node),
+    AppNodeBuilder.build(Database.node),
   ),
 )
 

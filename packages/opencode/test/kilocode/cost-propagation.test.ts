@@ -2,6 +2,7 @@
 // the same parent assistant message. Without the internal lock, parallel
 // subagent completions race on read-modify-write and lose deltas (#6321).
 
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterEach, describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { Bus } from "../../src/bus"
@@ -30,7 +31,7 @@ const ref = {
 }
 
 const it = testEffect(
-  Layer.mergeAll(Session.defaultLayer, Bus.layer, Database.defaultLayer, CrossSpawnSpawner.defaultLayer),
+  Layer.mergeAll(AppNodeBuilder.build(Session.node), Bus.layer, AppNodeBuilder.build(Database.node), AppNodeBuilder.build(CrossSpawnSpawner.node)),
 )
 
 const seed = Effect.fn("CostPropagationTest.seed")(function* () {

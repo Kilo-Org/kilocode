@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { RecallSearch } from "../../src/kilocode/session/recall-search"
@@ -15,7 +16,7 @@ import { testEffect } from "../lib/effect"
 
 type Stored<T> = T extends unknown ? Omit<T, "id" | "sessionID" | "messageID"> : never
 
-const it = testEffect(Layer.mergeAll(Session.defaultLayer, Database.defaultLayer))
+const it = testEffect(Layer.mergeAll(AppNodeBuilder.build(Session.node), AppNodeBuilder.build(Database.node)))
 
 const add = Effect.fn("RecallSearchTest.add")(function* (
   sessionID: SessionID,

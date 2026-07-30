@@ -1,7 +1,9 @@
-import { NodeFileSystem } from "@effect/platform-node"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
+import { NodeFileSystem } from "@effect/platform-node"
 import { Database } from "@opencode-ai/core/database/database"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { eq } from "drizzle-orm"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { Bus } from "@/bus"
@@ -65,6 +67,7 @@ import { MemoryService } from "@kilocode/kilo-memory/effect/service"
 import { RepositoryCache } from "@opencode-ai/core/repository-cache"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
+import { LocationServiceMap, locationServiceMapLayer } from "@opencode-ai/core/location-services"
 
 const summary = Layer.succeed(
   SessionSummary.Service,
@@ -117,28 +120,32 @@ function errorTool(parts: SessionV1.Part[]) {
   return part?.state.status === "error" ? (part as ErrorToolPart) : undefined
 }
 
-const mcp = Layer.succeed(
-  MCP.Service,
-  MCP.Service.of({
-    status: () => Effect.succeed({}),
-    clients: () => Effect.succeed({}),
-    tools: () => Effect.succeed({}),
-    prompts: () => Effect.succeed({}),
-    resources: () => Effect.succeed({}),
-    add: () => Effect.succeed({ status: { status: "disabled" as const } }),
-    connect: () => Effect.void,
-    disconnect: () => Effect.void,
-    getPrompt: () => Effect.succeed(undefined),
-    readResource: () => Effect.succeed(undefined),
-    startAuth: () => Effect.die("unexpected MCP auth in prompt-effect tests"),
-    authenticate: () => Effect.die("unexpected MCP auth in prompt-effect tests"),
-    finishAuth: () => Effect.die("unexpected MCP auth in prompt-effect tests"),
-    removeAuth: () => Effect.void,
-    supportsOAuth: () => Effect.succeed(false),
-    hasStoredTokens: () => Effect.succeed(false),
-    getAuthStatus: () => Effect.succeed("not_authenticated" as const),
-  }),
-)
+function makeMcp(instructions: MCP.ServerInstructions[] = []) {
+  return Layer.succeed(
+    MCP.Service,
+    MCP.Service.of({
+      status: () => Effect.succeed({}),
+      clients: () => Effect.succeed({}),
+      instructions: () => Effect.succeed(instructions),
+      tools: () => Effect.succeed({}),
+      prompts: () => Effect.succeed({}),
+      resources: () => Effect.succeed({}),
+      resourceTemplates: () => Effect.succeed({}),
+      add: () => Effect.succeed({ status: { status: "disabled" as const } }),
+      connect: () => Effect.void,
+      disconnect: () => Effect.void,
+      getPrompt: () => Effect.succeed(undefined),
+      readResource: () => Effect.succeed(undefined),
+      startAuth: () => Effect.die("unexpected MCP auth in prompt-effect tests"),
+      authenticate: () => Effect.die("unexpected MCP auth in prompt-effect tests"),
+      finishAuth: () => Effect.die("unexpected MCP auth in prompt-effect tests"),
+      removeAuth: () => Effect.void,
+      supportsOAuth: () => Effect.succeed(false),
+      hasStoredTokens: () => Effect.succeed(false),
+      getAuthStatus: () => Effect.succeed("not_authenticated" as const),
+    }),
+  )
+}
 
 const lsp = Layer.succeed(
   LSP.Service,
@@ -160,9 +167,9 @@ const lsp = Layer.succeed(
   }),
 )
 
-const status = SessionStatus.layer.pipe(Layer.provideMerge(EventV2Bridge.defaultLayer))
+const status = SessionStatus.layer.pipe(Layer.provideMerge(AppNodeBuilder.build(EventV2Bridge.node)))
 const run = SessionRunState.layer.pipe(Layer.provide(status))
-const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLayer)
+const infra = Layer.mergeAll(NodeFileSystem.layer, AppNodeBuilder.build(CrossSpawnSpawner.node))
 
 const agent: AgentSvc.Info = {
   name: "build",
@@ -195,61 +202,48 @@ const blockingProcessor = Layer.succeed(
 
 function makePrompt(input?: { processor?: "blocking" }) {
   const deps = Layer.mergeAll(
-    Session.defaultLayer,
-    Snapshot.defaultLayer,
-    LLM.defaultLayer,
-    Env.defaultLayer,
-    input?.processor === "blocking" ? fastAgents : AgentSvc.defaultLayer,
-    Command.defaultLayer,
-    Permission.defaultLayer,
-    Plugin.defaultLayer,
-    Config.defaultLayer,
-    ProviderSvc.defaultLayer,
+    AppNodeBuilder.build(Session.node),
+    AppNodeBuilder.build(Snapshot.node),
+    AppNodeBuilder.build(LLM.node),
+    AppNodeBuilder.build(Env.node),
+    input?.processor === "blocking" ? fastAgents : AppNodeBuilder.build(AgentSvc.node),
+    AppNodeBuilder.build(Command.node),
+    AppNodeBuilder.build(Permission.node),
+    AppNodeBuilder.build(Plugin.node),
+    AppNodeBuilder.build(Config.node),
+    AppNodeBuilder.build(ProviderSvc.node),
     lsp,
-    mcp,
-    FSUtil.defaultLayer,
-    BackgroundJob.defaultLayer,
+    makeMcp(),
+    AppNodeBuilder.build(FSUtil.node),
+    AppNodeBuilder.build(BackgroundJob.node),
     status,
-    Database.defaultLayer,
-    EventV2Bridge.defaultLayer,
+    AppNodeBuilder.build(Database.node),
+    AppNodeBuilder.build(EventV2Bridge.node),
     Bus.layer,
     MemoryService.layer,
   ).pipe(Layer.provideMerge(infra))
   const question = Question.layer.pipe(Layer.provideMerge(deps))
   const todo = Todo.layer.pipe(Layer.provideMerge(deps))
-  const registry = ToolRegistry.layer.pipe(
-    Layer.provide(Skill.defaultLayer),
-    Layer.provide(FetchHttpClient.layer),
-    Layer.provide(CrossSpawnSpawner.defaultLayer),
-    Layer.provide(Git.defaultLayer),
-    Layer.provide(Ripgrep.defaultLayer),
-    Layer.provide(RepositoryCache.defaultLayer),
-    Layer.provide(Format.defaultLayer),
-    Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })),
-    Layer.provide(Auth.defaultLayer),
-    Layer.provide(KiloSessions.testLayer),
-    Layer.provideMerge(todo),
-    Layer.provideMerge(question),
-    Layer.provideMerge(deps),
-  )
-  const trunc = Truncate.layer.pipe(Layer.provideMerge(deps))
+  const registry = AppNodeBuilder.build(ToolRegistry.node, [
+    [KiloSessions.node, KiloSessions.testLayer],
+    [RuntimeFlags.node, RuntimeFlags.layer({ experimentalEventSystem: true })],
+  ])
+  const trunc = AppNodeBuilder.build(Truncate.node)
   const proc =
     input?.processor === "blocking"
       ? blockingProcessor
-      : SessionProcessor.layer.pipe(
-          Layer.provide(summary),
-          Layer.provide(Image.defaultLayer),
-          Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })),
-          Layer.provideMerge(deps),
-        )
-  const compact = SessionCompaction.layer.pipe(
-    Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })),
-    Layer.provideMerge(proc),
-    Layer.provideMerge(deps),
-  )
+      : AppNodeBuilder.build(SessionProcessor.node, [
+          [SessionSummary.node, summary],
+          [RuntimeFlags.node, RuntimeFlags.layer({ experimentalEventSystem: true })],
+        ])
+  const compact = AppNodeBuilder.build(SessionCompaction.node, [
+    [SessionProcessor.node, proc],
+    [SessionSummary.node, summary],
+    [RuntimeFlags.node, RuntimeFlags.layer({ experimentalEventSystem: true })],
+  ])
   return SessionPrompt.layer.pipe(
-    Layer.provide(SessionRevert.defaultLayer),
-    Layer.provide(Image.defaultLayer),
+    Layer.provide(AppNodeBuilder.build(SessionRevert.node)),
+    Layer.provide(AppNodeBuilder.build(Image.node)),
     Layer.provide(summary),
     Layer.provideMerge(run),
     Layer.provideMerge(compact),
@@ -257,8 +251,8 @@ function makePrompt(input?: { processor?: "blocking" }) {
     Layer.provideMerge(registry),
     Layer.provideMerge(trunc),
     Layer.provideMerge(question),
-    Layer.provide(Instruction.defaultLayer),
-    Layer.provide(SystemPrompt.defaultLayer),
+    Layer.provide(AppNodeBuilder.build(Instruction.node)),
+    Layer.provide(AppNodeBuilder.build(SystemPrompt.node)),
     Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })),
     Layer.provideMerge(deps),
     Layer.provide(summary),
@@ -784,8 +778,12 @@ noLLMServer.instance.skip(
       })
 
       const messages = yield* SessionV2.Service.use((session) => session.messages({ sessionID: chat.id })).pipe(
-        Effect.provide(SessionExecution.noopLayer),
-        Effect.provide(SessionV2.defaultLayer),
+        Effect.provide(
+          LayerNode.compile(SessionV2.node, [
+            [SessionExecution.node, SessionExecution.noopLayer],
+            [LocationServiceMap.node, locationServiceMapLayer],
+          ]),
+        ),
       )
       const { db } = yield* Database.Service
       const row = yield* db
@@ -1259,6 +1257,7 @@ unix(
 
       const fiber = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
       yield* llm.wait(1)
+      yield* waitForBusy(chat.id)
       yield* prompt.cancel(chat.id)
       const exit = yield* Fiber.await(fiber)
       expect(Exit.isSuccess(exit)).toBe(true)
@@ -1576,78 +1575,77 @@ it.instance(
   10_000,
 )
 
-it.instance(
-  "prompt submitted during an active run is included in the next LLM input",
-  () =>
-    Effect.gen(function* () {
-      const { llm } = yield* useServerConfig(providerCfg)
-      const gate = yield* Deferred.make<void>()
-      const prompt = yield* SessionPrompt.Service
-      const sessions = yield* Session.Service
-      const chat = yield* sessions.create({ title: "Pinned" })
+it.instance("prompt submitted during an active run is included in the next LLM input", () =>
+  Effect.gen(function* () {
+    const { llm } = yield* useServerConfig(providerCfg)
+    const gate = yield* Deferred.make<void>()
+    const prompt = yield* SessionPrompt.Service
+    const sessions = yield* Session.Service
+    const chat = yield* sessions.create({ title: "Pinned" })
 
-      yield* llm.hold("first", deferredAsPromise(gate))
-      yield* llm.text("second")
+    yield* llm.hold("first", deferredAsPromise(gate))
+    yield* llm.text("second")
 
-      const a = yield* prompt
-        .prompt({
-          sessionID: chat.id,
-          agent: "build",
-          model: ref,
-          parts: [{ type: "text", text: "first" }],
-        })
-        .pipe(Effect.forkChild)
-
-      yield* llm.wait(1)
-
-      const id = MessageID.ascending()
-      const b = yield* prompt
-        .prompt({
-          sessionID: chat.id,
-          messageID: id,
-          agent: "build",
-          model: ref,
-          parts: [{ type: "text", text: "second" }],
-        })
-        .pipe(Effect.forkChild)
-
-      yield* pollWithTimeout(
-        sessions
-          .messages({ sessionID: chat.id })
-          .pipe(
-            Effect.map((msgs) =>
-              msgs.some((msg) => msg.info.role === "user" && msg.info.id === id) ? true : undefined,
-            ),
-          ),
-        "timed out waiting for second prompt to save",
-      )
-
-      yield* Deferred.succeed(gate, void 0)
-
-      const [ea, eb] = yield* Effect.all([Fiber.await(a), Fiber.await(b)])
-      expect(Exit.isSuccess(ea)).toBe(true)
-      expect(Exit.isSuccess(eb)).toBe(true)
-      expect(yield* llm.calls).toBe(2)
-
-      const msgs = yield* sessions.messages({ sessionID: chat.id })
-      const assistants = msgs.filter((msg) => msg.info.role === "assistant")
-      expect(assistants).toHaveLength(2)
-      const last = assistants.at(-1)
-      if (!last || last.info.role !== "assistant") throw new Error("expected second assistant")
-      expect(last.info.parentID).toBe(id)
-      expect(last.parts.some((part) => part.type === "text" && part.text === "second")).toBe(true)
-
-      const inputs = yield* llm.inputs
-      expect(inputs).toHaveLength(2)
-      const messages = inputs.at(-1)?.messages
-      if (!Array.isArray(messages)) throw new Error("expected LLM messages")
-      // kilocode_change start - Kilo appends environment details to queued user prompts
-      expect(messages.at(-1)).toMatchObject({
-        role: "user",
-        content: expect.arrayContaining([{ type: "text", text: "second" }]),
+    const a = yield* prompt
+      .prompt({
+        sessionID: chat.id,
+        agent: "build",
+        model: ref,
+        parts: [{ type: "text", text: "first" }],
       })
-      // kilocode_change end
-    }),
+      .pipe(Effect.forkChild)
+
+    yield* llm.wait(1)
+    yield* waitForBusy(chat.id)
+
+    const id = MessageID.ascending()
+    const b = yield* prompt
+      .prompt({
+        sessionID: chat.id,
+        messageID: id,
+        agent: "build",
+        model: ref,
+        parts: [{ type: "text", text: "second" }],
+      })
+      .pipe(Effect.forkChild)
+
+    yield* pollWithTimeout(
+      sessions
+        .messages({ sessionID: chat.id })
+        .pipe(
+          Effect.map((msgs) =>
+            msgs.some((msg) => msg.info.role === "user" && msg.info.id === id) ? true : undefined,
+          ),
+        ),
+      "timed out waiting for second prompt to save",
+    )
+
+    yield* Deferred.succeed(gate, void 0)
+
+    const [ea, eb] = yield* Effect.all([Fiber.await(a), Fiber.await(b)])
+    expect(Exit.isSuccess(ea)).toBe(true)
+    expect(Exit.isSuccess(eb)).toBe(true)
+    expect(yield* llm.calls).toBe(2)
+
+    const msgs = yield* sessions.messages({ sessionID: chat.id })
+    const assistants = msgs.filter((msg) => msg.info.role === "assistant")
+    expect(assistants).toHaveLength(2)
+    const last = assistants.at(-1)
+    if (!last || last.info.role !== "assistant") throw new Error("expected second assistant")
+    expect(last.info.parentID).toBe(id)
+    expect(last.parts.some((part) => part.type === "text" && part.text === "second")).toBe(true)
+
+    const inputs = yield* llm.inputs
+    expect(inputs).toHaveLength(2)
+    const messages = inputs.at(-1)?.messages
+    if (!Array.isArray(messages)) throw new Error("expected LLM messages")
+    // kilocode_change start - Kilo appends environment details to queued user prompts
+    expect(messages.at(-1)).toMatchObject({
+      role: "user",
+      content: expect.arrayContaining([{ type: "text", text: "second" }]),
+    })
+    // kilocode_change end
+  }),
   10_000,
 )
 
@@ -1706,6 +1704,7 @@ it.instance(
 
       const fiber = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
       yield* llm.wait(1)
+      yield* waitForBusy(chat.id)
 
       const exit = yield* prompt.shell({ sessionID: chat.id, agent: "build", command: "echo hi" }).pipe(Effect.exit)
       expect(Exit.isFailure(exit)).toBe(true)
@@ -1831,7 +1830,7 @@ unixNoLLMServer(
       if (!tool) return
 
       const messages = yield* SessionV2.Service.use((session) => session.messages({ sessionID: chat.id })).pipe(
-        Effect.provide(SessionV2.defaultLayer),
+        Effect.provide(AppNodeBuilder.build(SessionV2.node)),
       )
       const shell = messages.find((message) => message.type === "shell")
 
@@ -2038,11 +2037,17 @@ unixNoLLMServer(
     withSh(() =>
       Effect.gen(function* () {
         const { prompt, run, chat } = yield* boot()
+        const { directory: dir } = yield* TestInstance
+        const afs = yield* FSUtil.Service
+        const ready = path.join(dir, ".shell-ready")
 
         const sh = yield* prompt
-          .shell({ sessionID: chat.id, agent: "build", command: "sleep 30" })
+          .shell({ sessionID: chat.id, agent: "build", command: ": > '.shell-ready'; sleep 30" })
           .pipe(Effect.forkChild)
-        yield* waitForBusy(chat.id)
+        yield* pollWithTimeout(
+          afs.existsSafe(ready).pipe(Effect.map((exists) => (exists ? (true as const) : undefined))),
+          "shell never created readiness marker",
+        )
 
         yield* prompt.cancel(chat.id)
 
@@ -2132,7 +2137,6 @@ unix(
       yield* llm.tool("bash", {
         command:
           'i=0; while [ "$i" -lt 4000 ]; do printf "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx %05d\\n" "$i"; i=$((i + 1)); done; printf truncation-ready; sleep 30',
-        description: "Print many lines",
         timeout: 30_000,
         workdir: path.resolve(dir),
       })
@@ -2626,6 +2630,7 @@ it.instance(
         .pipe(Effect.forkChild)
 
       yield* llm.wait(1)
+      yield* waitForBusy(session.id)
       yield* prompt.cancel(session.id)
 
       const exit = yield* Fiber.await(fiber)

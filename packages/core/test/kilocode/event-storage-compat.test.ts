@@ -8,10 +8,13 @@ import { testEffect } from "../lib/effect"
 import { EventTable } from "@opencode-ai/core/event/sql"
 import { SessionMessage } from "@opencode-ai/core/session/message"
 import * as StoredMessage from "@opencode-ai/core/kilocode/session-message"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 
 const database = Database.layerFromPath(":memory:")
-const events = EventV2.layer.pipe(Layer.provide(database))
-const it = testEffect(Layer.mergeAll(events, database))
+const it = testEffect(
+  AppNodeBuilder.build(LayerNode.group([EventV2.node, Database.node]), [[Database.node, database]]),
+)
 
 it.effect("decodes legacy durable tool content without exposing it to consumers", () =>
   Effect.gen(function* () {
@@ -34,10 +37,10 @@ it.effect("decodes legacy durable tool content without exposing it to consumers"
       },
     })
 
-    const stored = yield* events.aggregateEvents({ aggregateID: sessionID }).pipe(Stream.take(1), Stream.runHead)
+    const stored = yield* events.durable({ aggregateID: sessionID }).pipe(Stream.take(1), Stream.runHead)
     expect(stored._tag).toBe("Some")
     if (stored._tag === "None") return
-    expect(stored.value.event.data).toMatchObject({
+    expect(stored.value.data).toMatchObject({
       content: [
         {
           type: "file",

@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import path from "path"
@@ -14,7 +15,7 @@ import { AbsolutePath } from "@opencode-ai/core/schema"
 import * as Log from "@opencode-ai/core/util/log"
 
 Log.init({ print: false })
-const layer = Layer.mergeAll(Session.defaultLayer, Database.defaultLayer)
+const layer = Layer.mergeAll(AppNodeBuilder.build(Session.node), AppNodeBuilder.build(Database.node))
 const it = testEffect(layer)
 
 describe("Kilo Session.list", () => {

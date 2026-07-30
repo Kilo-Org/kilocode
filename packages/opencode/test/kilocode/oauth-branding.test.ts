@@ -14,14 +14,15 @@ describe("Kilo OAuth branding", () => {
     expect(src).not.toContain("return to OpenCode")
   })
 
-  test("extracted core OAuth browser flow uses Kilo branding", async () => {
-    const src = await Bun.file(path.join(root, "..", "core", "src", "plugin", "provider", "openai-auth.ts")).text()
+  test("core OAuth browser flow uses Kilo branding", async () => {
+    const src = await Bun.file(path.join(root, "..", "core", "src", "plugin", "provider", "openai.ts")).text()
+    const page = await Bun.file(path.join(root, "..", "core", "src", "kilocode", "oauth", "page.ts")).text()
 
     expect(src).toContain('originator: "kilo"')
     expect(src).toContain('"User-Agent": `kilo/${InstallationVersion}`')
-    expect(src).toContain("<title>Kilo</title>")
+    expect(src).toContain("KiloOauthCallbackPage")
+    expect(page).toContain('.replaceAll("OpenCode", "Kilo")')
     expect(src).not.toContain('originator: "opencode"')
-    expect(src).not.toContain("<title>OpenCode</title>")
   })
 
   test("MCP OAuth callback page uses Kilo branding", async () => {

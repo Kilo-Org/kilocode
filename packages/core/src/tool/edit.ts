@@ -9,11 +9,15 @@
 export * as EditTool from "./edit"
 
 import { ToolFailure } from "@opencode-ai/llm"
+import { FileDiff } from "@opencode-ai/schema/file-diff"
+import { createTwoFilesPatch, diffLines } from "diff"
 import { Effect, Layer, Schema } from "effect"
+import { makeLocationNode } from "../effect/app-node"
 import { FileMutation } from "../file-mutation"
 import { FSUtil } from "../fs-util"
 import { LocationMutation } from "../location-mutation"
 import { PermissionV2 } from "../permission"
+import { ToolRegistry } from "./registry"
 import { Tool } from "./tool"
 import { Tools } from "./tools"
 
@@ -32,10 +36,7 @@ export const Input = Schema.Struct({
 })
 
 export const Output = Schema.Struct({
-  operation: Schema.Literal("write"),
-  target: Schema.String,
-  resource: Schema.String,
-  existed: Schema.Boolean,
+  files: Schema.Array(FileDiff.Info),
   replacements: Schema.Number,
 })
 export type Output = typeof Output.Type
@@ -73,7 +74,7 @@ const previewLines = (value: string, prefix: "+" | "-") => {
 
 export const toModelOutput = (output: Output, oldString: string, newString: string) =>
   [
-    `Edited file successfully: ${output.resource}`,
+    `Edited file successfully: ${output.files[0]?.file}`,
     `Replacements: ${output.replacements}`,
     "```diff",
     ...previewLines(oldString, "-"),
@@ -88,7 +89,7 @@ export const toModelOutput = (output: Output, oldString: string, newString: stri
 // TODO: Add snapshots / undo after design exists.
 // TODO: Add LSP notification and diagnostics after V2 LSP runtime exists.
 
-export const layer = Layer.effectDiscard(
+const layer = Layer.effectDiscard(
   Effect.gen(function* () {
     const tools = yield* Tools.Service
     const mutation = yield* LocationMutation.Service
@@ -181,6 +182,13 @@ export const layer = Layer.effectDiscard(
                   input.replaceAll === true
                     ? source.text.replaceAll(oldString, newString)
                     : source.text.replace(oldString, newString)
+                const counts = diffLines(source.text, replaced).reduce(
+                  (result, item) => ({
+                    additions: result.additions + (item.added ? (item.count ?? 0) : 0),
+                    deletions: result.deletions + (item.removed ? (item.count ?? 0) : 0),
+                  }),
+                  { additions: 0, deletions: 0 },
+                )
                 const next = splitBom(replaced)
                 const result = yield* unableToEdit(
                   files.writeIfUnchanged({
@@ -189,7 +197,17 @@ export const layer = Layer.effectDiscard(
                     content: joinBom(next.text, source.bom || next.bom),
                   }),
                 )
-                return { ...result, replacements } satisfies Output
+                return {
+                  files: [
+                    {
+                      file: result.resource,
+                      patch: createTwoFilesPatch(result.resource, result.resource, source.text, replaced),
+                      status: "modified" as const,
+                      ...counts,
+                    },
+                  ],
+                  replacements,
+                } satisfies Output
               })
             },
           }),
@@ -199,3 +217,9 @@ export const layer = Layer.effectDiscard(
       .pipe(Effect.orDie)
   }),
 )
+
+export const node = makeLocationNode({
+  name: "tool/edit",
+  layer,
+  deps: [ToolRegistry.node, LocationMutation.node, FileMutation.node, FSUtil.node, PermissionV2.node],
+})

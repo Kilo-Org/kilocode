@@ -316,7 +316,7 @@ const ask = Effect.fn("ShellTool.ask")(function* (
     permission: ShellID.ToolID,
     patterns: Array.from(scan.patterns),
     always: Array.from(scan.always),
-    metadata: { command: normalizeUrls(command), ...(description ? { description } : {}), ...metadata }, // kilocode_change
+    metadata: { command: normalizeUrls(command), ...(description ? { description } : {}), ...metadata, }, // kilocode_change
   })
 })
 
@@ -514,7 +514,6 @@ export const ShellTool = Tool.define(
         cwd: string
         env: NodeJS.ProcessEnv
         timeout: number
-        description: string
       },
       ctx: Tool.Context,
     ) {
@@ -558,7 +557,6 @@ export const ShellTool = Tool.define(
       yield* ctx.metadata({
         metadata: {
           output: "",
-          description: input.description,
         },
       })
 
@@ -599,7 +597,6 @@ export const ShellTool = Tool.define(
                       ctx.metadata({
                         metadata: {
                           output: last,
-                          description: input.description,
                         },
                       }),
                     ),
@@ -610,7 +607,6 @@ export const ShellTool = Tool.define(
               return ctx.metadata({
                 metadata: {
                   output: last,
-                  description: input.description,
                 },
               })
             }),
@@ -678,11 +674,10 @@ export const ShellTool = Tool.define(
         output += "\n\n<shell_metadata>\n" + meta.join("\n") + "\n</shell_metadata>"
       }
       return {
-        title: input.description,
+        title: input.command,
         metadata: {
           output: last || preview(output),
           exit: code,
-          description: input.description,
           truncated: cut,
           ...(cut && file ? { outputPath: file } : {}),
         },
@@ -721,7 +716,6 @@ export const ShellTool = Tool.define(
                   cwd,
                   env: yield* shellEnv(ctx, cwd),
                   timeout,
-                  description: params.description ?? params.command, // kilocode_change
                 },
                 ctx,
               )

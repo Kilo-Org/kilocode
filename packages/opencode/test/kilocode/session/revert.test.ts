@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect } from "bun:test"
 import { Effect, Exit, Layer } from "effect"
 import fs from "node:fs/promises"
@@ -15,10 +16,10 @@ import { provideInstance, provideTmpdirInstance } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
 
 const env = Layer.mergeAll(
-  Session.defaultLayer,
-  SessionRevert.defaultLayer,
-  Snapshot.defaultLayer,
-  CrossSpawnSpawner.defaultLayer,
+  AppNodeBuilder.build(Session.node),
+  AppNodeBuilder.build(SessionRevert.node),
+  AppNodeBuilder.build(Snapshot.node),
+  AppNodeBuilder.build(CrossSpawnSpawner.node),
 )
 const it = testEffect(env)
 const guarded = process.platform === "win32" ? it.live.skip : it.live

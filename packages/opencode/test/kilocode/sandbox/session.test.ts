@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import fs from "node:fs/promises"
 import path from "node:path"
 import { $ } from "bun"
@@ -30,22 +31,22 @@ const it = testEffect(
   Layer.mergeAll(
     Session.layer.pipe(
       Layer.provide(Bus.layer),
-      Layer.provide(Storage.defaultLayer),
+      Layer.provide(AppNodeBuilder.build(Storage.node)),
       Layer.provide(SyncEvent.defaultLayer),
       Layer.provide(RuntimeFlags.layer({ experimentalWorkspaces: false })),
-      Layer.provide(BackgroundJob.defaultLayer),
-      Layer.provide(Database.defaultLayer),
-      Layer.provide(EventV2Bridge.defaultLayer),
-      Layer.provide(SessionV2.defaultLayer),
+      Layer.provide(AppNodeBuilder.build(BackgroundJob.node)),
+      Layer.provide(AppNodeBuilder.build(Database.node)),
+      Layer.provide(AppNodeBuilder.build(EventV2Bridge.node)),
+      Layer.provide(AppNodeBuilder.build(SessionV2.node)),
     ),
-    BackgroundJob.defaultLayer,
+    AppNodeBuilder.build(BackgroundJob.node),
     Bus.layer,
-    Config.defaultLayer,
-    Database.defaultLayer,
-    CrossSpawnSpawner.defaultLayer,
+    AppNodeBuilder.build(Config.node),
+    AppNodeBuilder.build(Database.node),
+    AppNodeBuilder.build(CrossSpawnSpawner.node),
     testInstanceStoreLayer,
-    Notebook.defaultLayer,
-    SessionStatus.defaultLayer,
+    AppNodeBuilder.build(Notebook.node),
+    AppNodeBuilder.build(SessionStatus.node),
   ),
 )
 

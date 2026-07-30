@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { NodeFileSystem } from "@effect/platform-node"
 import { describe, expect, spyOn } from "bun:test"
 import { Context, Effect, Layer } from "effect"
@@ -97,25 +98,25 @@ const llm = Layer.unwrap(
   }),
 )
 
-const status = Layer.mergeAll(SessionStatus.defaultLayer, Bus.layer)
-const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLayer)
+const status = Layer.mergeAll(AppNodeBuilder.build(SessionStatus.node), Bus.layer)
+const infra = Layer.mergeAll(NodeFileSystem.layer, AppNodeBuilder.build(CrossSpawnSpawner.node))
 const deps = Layer.mergeAll(
-  Session.defaultLayer,
-  Snapshot.defaultLayer,
-  AgentSvc.defaultLayer,
-  Permission.defaultLayer,
-  Plugin.defaultLayer,
-  Config.defaultLayer,
+  AppNodeBuilder.build(Session.node),
+  AppNodeBuilder.build(Snapshot.node),
+  AppNodeBuilder.build(AgentSvc.node),
+  AppNodeBuilder.build(Permission.node),
+  AppNodeBuilder.build(Plugin.node),
+  AppNodeBuilder.build(Config.node),
   RuntimeFlags.layer(),
-  SessionSummary.defaultLayer,
-  Image.defaultLayer,
+  AppNodeBuilder.build(SessionSummary.node),
+  AppNodeBuilder.build(Image.node),
   SyncEvent.defaultLayer,
-  EventV2Bridge.defaultLayer,
-  Database.defaultLayer,
+  AppNodeBuilder.build(EventV2Bridge.node),
+  AppNodeBuilder.build(Database.node),
   status,
   llm,
 ).pipe(Layer.provideMerge(infra))
-const env = SessionProcessor.layer.pipe(Layer.provideMerge(deps))
+const env = AppNodeBuilder.build(SessionProcessor.node).pipe(Layer.provideMerge(deps))
 
 const it = testEffect(env)
 

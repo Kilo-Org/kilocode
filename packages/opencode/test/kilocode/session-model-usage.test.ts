@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { ModelUsage } from "@/kilocode/session/model-usage"
@@ -15,7 +16,7 @@ import { eq } from "drizzle-orm"
 import { TestInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
-const it = testEffect(Layer.mergeAll(Session.defaultLayer, Database.defaultLayer))
+const it = testEffect(Layer.mergeAll(AppNodeBuilder.build(Session.node), AppNodeBuilder.build(Database.node)))
 
 const ref = (providerID: string, modelID: string) => ({
   providerID: ProviderV2.ID.make(providerID),

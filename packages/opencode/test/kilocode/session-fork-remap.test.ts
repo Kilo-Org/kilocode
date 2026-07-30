@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test"
 import { Effect } from "effect"
 import { HttpRouter } from "effect/unstable/http"
@@ -43,14 +44,14 @@ afterAll(async () => {
 
 const sessions = {
   create: (input?: Parameters<Session.Interface["create"]>[0]) =>
-    Effect.runPromise(Session.Service.use((svc) => svc.create(input)).pipe(Effect.provide(Session.defaultLayer))),
-  list: () => Effect.runPromise(Session.Service.use((svc) => svc.list()).pipe(Effect.provide(Session.defaultLayer))),
+    Effect.runPromise(Session.Service.use((svc) => svc.create(input)).pipe(Effect.provide(AppNodeBuilder.build(Session.node)))),
+  list: () => Effect.runPromise(Session.Service.use((svc) => svc.list()).pipe(Effect.provide(AppNodeBuilder.build(Session.node)))),
   messages: (input: Parameters<Session.Interface["messages"]>[0]) =>
-    Effect.runPromise(Session.Service.use((svc) => svc.messages(input)).pipe(Effect.provide(Session.defaultLayer))),
+    Effect.runPromise(Session.Service.use((svc) => svc.messages(input)).pipe(Effect.provide(AppNodeBuilder.build(Session.node)))),
   updateMessage: <T extends MessageV2.Info>(msg: T) =>
-    Effect.runPromise(Session.Service.use((svc) => svc.updateMessage(msg)).pipe(Effect.provide(Session.defaultLayer))),
+    Effect.runPromise(Session.Service.use((svc) => svc.updateMessage(msg)).pipe(Effect.provide(AppNodeBuilder.build(Session.node)))),
   updatePart: <T extends MessageV2.Part>(part: T) =>
-    Effect.runPromise(Session.Service.use((svc) => svc.updatePart(part)).pipe(Effect.provide(Session.defaultLayer))),
+    Effect.runPromise(Session.Service.use((svc) => svc.updatePart(part)).pipe(Effect.provide(AppNodeBuilder.build(Session.node)))),
 }
 
 afterEach(async () => {
@@ -74,7 +75,7 @@ async function instance<R>(input: { directory: string; fn: () => R }) {
         .onConflictDoNothing()
         .run()
         .pipe(Effect.orDie)
-    }).pipe(Effect.provide(CoreDatabase.defaultLayer)),
+    }).pipe(Effect.provide(AppNodeBuilder.build(CoreDatabase.node))),
   })
 }
 
@@ -391,7 +392,7 @@ describe("Session.fork task detachment", () => {
                     .get()
                     .pipe(Effect.orDie),
                 ])
-              }).pipe(Effect.provide(CoreDatabase.defaultLayer)),
+              }).pipe(Effect.provide(AppNodeBuilder.build(CoreDatabase.node))),
             )
 
             expect(rows).toEqual([
