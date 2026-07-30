@@ -148,6 +148,8 @@ drops routes the other still needs.
 
 ### 4.1 Two sidebar implementations — Arch 1.1
 
+Tracked as #12685 (section parity) and #12686 (sidebar drag-and-drop).
+
 `AgentManagerApp` keeps the legacy `renderBody` (now `SidebarBody.tsx`) and
 `ProjectSidebarBody.tsx` as a reduced reimplementation. The reimplementation already
 caused one full outage of multi-project mode (missing `DragDropProvider` crashed the
