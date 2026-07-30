@@ -310,7 +310,6 @@ export const dict = {
 
   "session.tab.review": "Gjennomgang",
   "session.review.filesChanged": "{{count}} filer endret",
-  "session.review.change.other": "Endringer",
   "session.review.loadingChanges": "Laster endringer...",
   "session.review.noChanges": "Ingen endringer",
   "session.messages.loadingEarlier": "Laster inn tidligere meldinger...",
@@ -665,7 +664,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "Agentoppførsel",
   "settings.autoApprove.title": "Automatisk godkjenning",
-  "settings.browser.title": "Nettleser",
+  "settings.webTools.title": "Nettverktøy",
+  "settings.webTools.description": "Konfigurer nettsøk og nettleserautomatisering.",
+  "settings.webTools.webSearch.enable": "Aktiver for alle leverandører",
+  "settings.webTools.browserAutomation": "Nettleserautomatisering",
+  "settings.webTools.webSearch.title": "Nettsøk",
+  "settings.webTools.webSearch.description": "Gjør nettsøk tilgjengelig for modeller fra alle leverandører.",
   "settings.checkpoints.title": "Kontrollpunkter",
   "settings.display.title": "Visning",
   "settings.autocomplete.title": "Autofullfør",
@@ -687,6 +691,9 @@ export const dict = {
   "session.prompts.tick": "Ledetekst {{index}} av {{total}}: {{prompt}}",
   "session.prompts.noAnswer": "Ingen svar ennå",
   "session.prompts.queued": "I kø",
+  "session.prompts.first": "Første ledetekst",
+  "session.prompts.latest": "Siste ledetekst",
+  "session.prompts.overflow": "{{count}} tidligere ledetekster",
   "session.status.writingResponse": "Skriver svar…",
   "session.status.retry": "Prøver på nytt…",
   "session.status.working": "Arbeider…",
@@ -847,6 +854,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "SWE-Pruner-modell",
   "settings.experimental.swePrunerModel.description":
     "Modell som brukes til å beskjære verktøyutdata; som standard den konfigurerte lille modellen",
+  "settings.experimental.multiProject.title": "Multi-prosjekt Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Aktiver administrering av økter og worktrees på tvers av flere repositories i Agent Manager. Det nåværende workspace-repositoryet er alltid standardprosjektet.",
   "settings.experimental.mcpTimeout.title": "MCP-tidsavbrudd (ms)",
   "settings.experimental.mcpTimeout.description": "Tidsavbrudd for MCP-serverforespørsler i millisekunder",
   "settings.experimental.remote.title": "Remote-kontroll",

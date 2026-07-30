@@ -301,7 +301,6 @@ export const dict = {
 
   "session.tab.review": "Review",
   "session.review.filesChanged": "{{count}} Files Changed",
-  "session.review.change.other": "Changes",
   "session.review.loadingChanges": "Loading changes...",
   "session.review.noChanges": "No changes",
 
@@ -622,7 +621,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "Agent Behaviour",
   "settings.autoApprove.title": "Auto-Approve",
-  "settings.browser.title": "Browser",
+  "settings.webTools.title": "Web Tools",
+  "settings.webTools.description": "Configure web search and browser automation.",
+  "settings.webTools.webSearch.enable": "Enable for All Providers",
+  "settings.webTools.browserAutomation": "Browser Automation",
+  "settings.webTools.webSearch.title": "Web Search",
+  "settings.webTools.webSearch.description": "Make web search available to models from all providers.",
   "settings.checkpoints.title": "Checkpoints",
   "settings.display.title": "Display",
   "settings.autocomplete.title": "Autocomplete",
@@ -679,6 +683,9 @@ export const dict = {
   "session.prompts.tick": "Prompt {{index}} of {{total}}: {{prompt}}",
   "session.prompts.noAnswer": "No response yet",
   "session.prompts.queued": "Queued",
+  "session.prompts.first": "First prompt",
+  "session.prompts.latest": "Latest prompt",
+  "session.prompts.overflow": "{{count}} earlier prompts",
   "session.status.writingResponse": "Writing response...",
   "session.status.retry": "Retrying…",
   "session.status.working": "Working...",
@@ -866,6 +873,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "SWE-Pruner Model",
   "settings.experimental.swePrunerModel.description":
     "Model used to skim tool outputs; defaults to the configured small model",
+  "settings.experimental.multiProject.title": "Multi-Project Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Enable managing sessions and worktrees across multiple repositories in Agent Manager. The current workspace repository is always the default project.",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout for MCP server requests in milliseconds",
   "settings.experimental.remote.title": "Remote Control",

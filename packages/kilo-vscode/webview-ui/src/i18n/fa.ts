@@ -624,7 +624,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "رفتار عامل",
   "settings.autoApprove.title": "تأیید خودکار",
-  "settings.browser.title": "مرورگر",
+  "settings.webTools.title": "ابزارهای وب",
+  "settings.webTools.description": "جستجوی وب و اتوماسیون مرورگر را پیکربندی کنید.",
+  "settings.webTools.webSearch.enable": "فعال‌سازی برای همه ارائه‌دهندگان",
+  "settings.webTools.browserAutomation": "اتوماسیون مرورگر",
+  "settings.webTools.webSearch.title": "جستجوی وب",
+  "settings.webTools.webSearch.description": "جستجوی وب را برای مدل‌های همه ارائه‌دهندگان در دسترس قرار دهید.",
   "settings.checkpoints.title": "نقاط بازیابی",
   "settings.display.title": "نمایش",
   "settings.autocomplete.title": "تکمیل خودکار",
@@ -683,6 +688,9 @@ export const dict = {
   "session.prompts.tick": "پرامپت {{index}} از {{total}}: {{prompt}}",
   "session.prompts.noAnswer": "هنوز پاسخی وجود ندارد",
   "session.prompts.queued": "در صف انتظار",
+  "session.prompts.first": "اولین پرامپت",
+  "session.prompts.latest": "آخرین پرامپت",
+  "session.prompts.overflow": "{{count}} پرامپت قبلی",
   "session.status.writingResponse": "در حال نوشتن پاسخ...",
   "session.status.retry": "در حال تلاش مجدد…",
   "session.status.working": "در حال پردازش...",
@@ -872,6 +880,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "مدل SWE-Pruner",
   "settings.experimental.swePrunerModel.description":
     "مدل مورد استفاده برای مرور سریع خروجی‌های ابزار؛ به‌طور پیش‌فرض از مدل کوچک پیکربندی‌شده استفاده می‌کند",
+  "settings.experimental.multiProject.title": "مدیر agent چندپروژه‌ای",
+  "settings.experimental.multiProject.description":
+    "مدیریت sessionها و worktreeها را در چند مخزن در Agent Manager فعال می‌کند. مخزن فضای کاری فعلی همیشه پروژه پیش‌فرض است.",
   "settings.experimental.mcpTimeout.title": "زمان‌وقفه MCP (میلی‌ثانیه)",
   "settings.experimental.mcpTimeout.description": "زمان‌وقفه برای درخواست‌های سرور MCP بر حسب میلی‌ثانیه",
   "settings.experimental.remote.title": "کنترل از راه دور",

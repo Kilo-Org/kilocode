@@ -1,4 +1,5 @@
 import * as path from "path"
+import { existsSync } from "fs"
 import * as vscode from "vscode"
 import type {
   KiloClient,
@@ -164,6 +165,8 @@ import { configFeatures } from "./features"
 import { fetchSnapshot } from "./kilo-provider/config-snapshot"
 import { createAutoApproveBridge } from "./kilo-provider/auto-approve"
 import type { KiloProviderOptions } from "./kilo-provider/options"
+import type { ProjectRef, SessionRef, WorktreeRef } from "./agent-manager/project/route"
+import { indexingConsentStore, registeredProjects } from "./indexing-consent"
 import { fetchKiloEmbeddingModelCatalog } from "@kilocode/kilo-gateway"
 import { fetchImageModels } from "./image-generation/models"
 import { stopSessionProcesses } from "./kilo-provider/background-process"
@@ -173,7 +176,14 @@ import {
   validIndexingSetting,
   watchIndexingConfig,
 } from "./kilo-provider/indexing-settings"
-import { buildChatSettingsMessage, validChatSetting, watchChatConfig } from "./kilo-provider/chat-settings"
+import {
+  ConfigBindings,
+  type ConfigBinding,
+  type ConfigProject,
+  type ConfigTarget,
+} from "./kilo-provider/config-bindings"
+import { canonicalizePath, projectIdFor, samePath } from "./agent-manager/project/paths"
+import { validChatSetting, watchChatConfig } from "./kilo-provider/chat-settings"
 import { buildThroughputSettingMessage, watchThroughputConfig } from "./kilo-provider/throughput-settings"
 
 let maxCost = 0
@@ -189,6 +199,10 @@ type SandboxSupportClient = {
     parameters: { directory?: string },
     options: { throwOnError: true },
   ) => Promise<{ data: { available: boolean; reason?: string } }>
+}
+type ConfigSnapshot = {
+  effective: Config
+  targets: { global: ConfigTarget; project: ConfigTarget }
 }
 
 function sandboxClient(client: KiloClient | null) {
@@ -332,6 +346,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private cachedCommandsMessage: unknown = null
   /** Cached configLoaded payload so requestConfig can be served before client is ready */
   private cachedConfigMessage: unknown = null
+  private readonly configBindings = new ConfigBindings()
   private cachedGlobalConfig: Config | null = null
   /** Cached indexingStatusLoaded payload so requestIndexingStatus can be served before client is ready */
   private cachedIndexingStatusMessage: unknown = null
@@ -413,6 +428,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private ignoreControllerDir: string | null = null
   private chatAutocomplete: ChatTextAreaAutocomplete | null = null
   private projectDirectory: string | null | undefined
+  private indexingProjectId: string | undefined
+  private indexingSettingsRequest = 0
+  private indexingStatusRequest = 0
   private slimEditMetadata = true
 
   private pendingFollowup: Followup | null = null
@@ -537,7 +555,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   public setProjectDirectory(directory: string | null): void {
     if (this.projectDirectory === directory) return
     this.projectDirectory = directory
+    this.configBindings.clear()
+    this.cachedConfigMessage = null
     this.postMessage({ type: "workspaceDirectoryChanged", directory: directory ?? "" })
+    this.postMessage({ type: "configBindingExpired", reason: "project-changed" })
     this.requirements.clear()
   }
 
@@ -800,14 +821,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * When set, all operations for this session use this directory instead of the workspace root.
    */
   public setSessionDirectory(sessionId: string, directory: string): void {
-    this.aborts.preserve(sessionId, this.sessionStatusMap.get(sessionId), this.getWorkspaceDirectory(sessionId))
+    const current = this.sessionDirectories.get(sessionId) ?? this.getRootDirectory()
+    this.aborts.preserve(sessionId, this.sessionStatusMap.get(sessionId), current)
     this.sessionDirectories.set(sessionId, directory)
     this.requirements.clear()
     if (this.connectionState === "connected") void this.fetchAndSendSandboxStatus(sessionId)
   }
 
   public clearSessionDirectory(sessionId: string): void {
-    this.aborts.preserve(sessionId, this.sessionStatusMap.get(sessionId), this.getWorkspaceDirectory(sessionId))
+    const current = this.sessionDirectories.get(sessionId) ?? this.getRootDirectory()
+    this.aborts.preserve(sessionId, this.sessionStatusMap.get(sessionId), current)
     this.sessionDirectories.delete(sessionId)
     this.requirements.clear()
     if (this.connectionState === "connected") void this.fetchAndSendSandboxStatus(sessionId)
@@ -818,11 +841,53 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return this.sessionDirectories
   }
 
+  /** Register a project root with the shared Agent Manager route service. */
+  public registerProjectRoute(ref: ProjectRef, root: string, generation: number): void {
+    this.opts.routeService?.registerProject(ref.projectId, root, generation)
+  }
+
+  /** Drop a project and all its session/worktree routes from the route service. */
+  public unregisterProjectRoute(projectId: string): void {
+    this.opts.routeService?.unregisterProject(projectId)
+  }
+
+  /** Register a worktree directory under a project. */
+  public registerWorktreeRoute(ref: WorktreeRef, directory: string, generation: number): void {
+    this.opts.routeService?.registerWorktree(ref, directory, generation)
+  }
+
+  /** Register a session directory under a project (exact routing). */
+  public registerSessionRoute(ref: SessionRef, directory: string, generation: number): void {
+    this.opts.routeService?.registerSession(ref, directory, generation)
+  }
+
+  /** Drop one session route, keeping the raw ambiguity index consistent. */
+  public unregisterSessionRoute(ref: SessionRef): void {
+    this.opts.routeService?.unregisterSession(ref)
+  }
+
+  /** Whether a raw session id is known to be ambiguous across projects. */
+  public isSessionRouteAmbiguous(sessionId: string): boolean {
+    return this.opts.routeService?.isSessionAmbiguous(sessionId) ?? false
+  }
+
+  /** Exact directory for a project-qualified session ref, or undefined. */
+  public routeSessionDirectoryFor(ref: SessionRef): string | undefined {
+    return this.opts.routeService?.trySessionDirectoryFor(ref)
+  }
+
   public async getSessionInfo(sessionId: string): Promise<Session | undefined> {
     await this.initializeConnection()
     const client = this.client
     if (!client) return
-    const directory = this.getWorkspaceDirectory(sessionId)
+    // Agent Manager: never query an ambiguous raw session id against the
+    // active root. The same id may exist in two projects, and the
+    // sessionDirectories map can only hold one entry per raw id, so falling
+    // back to the active root would silently resolve the wrong project's
+    // session. Require an exact route (qualified or unambiguous) instead.
+    const routed = this.routeSessionDirectory(sessionId)
+    if (routed === null) return undefined
+    const directory = routed ?? this.getWorkspaceDirectory(sessionId)
     return retry(() => client.session.get({ sessionID: sessionId, directory }, { throwOnError: true }))
       .then((result) => result.data)
       .catch((error: unknown) => {
@@ -928,7 +993,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.autocompleteConfigDisposable?.dispose()
     this.autocompleteConfigDisposable = watchAutocompleteConfig((msg) => this.postMessage(msg))
     this.indexingConfigDisposable?.dispose()
-    this.indexingConfigDisposable = watchIndexingConfig((msg) => this.postMessage(msg))
+    this.indexingConfigDisposable = watchIndexingConfig(() => void this.sendIndexingSettings())
     this.chatConfigDisposable?.dispose()
     this.chatConfigDisposable = watchChatConfig((msg) => this.postMessage(msg))
     this.throughputConfigDisposable?.dispose()
@@ -952,6 +1017,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           connection: this.connectionService,
           dir: this.getWorkspaceDirectory(this.currentSession?.id),
           post: (msg) => this.postMessage(msg),
+          browserSettings: () => this.sendBrowserSettings(),
           exportTranscript: (sessionID) => this.handleExportSessionTranscript(sessionID),
           copy: (text) => vscode.env.clipboard.writeText(text),
           openSessions: (ids) => this.trackOpenSessions(ids),
@@ -1272,11 +1338,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             console.error("[Kilo New] fetchAndSendIndexingStatus failed:", e),
           )
           break
-        case "requestIndexingSettings":
-          this.postMessage(buildIndexingSettingsMessage())
+        case "requestIndexingSettings": {
+          const project = await this.sendIndexingSettings(message.projectId)
+          if (message.projectId && project) await this.fetchAndSendIndexingStatus(project.root, project.id)
           break
-        case "requestChatSettings":
-          this.postMessage(buildChatSettingsMessage())
+        }
+        case "setIndexingConsent":
+          await this.setIndexingConsent(message.projectId, message.enabled)
           break
         case "requestKiloEmbeddingModels":
           this.fetchAndSendKiloEmbeddingModels().catch((e) =>
@@ -1292,6 +1360,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.projectConfig,
             message.globalUnset,
             message.projectUnset,
+            message.globalBindingId,
+            message.projectBindingId,
           )
           break
         case "openSettingsTab":
@@ -1346,9 +1416,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "updateSetting":
           await this.handleUpdateSetting(message.key, message.value)
           break
-        case "requestBrowserSettings":
-          this.sendBrowserSettings()
-          break
         case "requestClaudeCompatSetting":
           this.sendClaudeCompatSetting()
           break
@@ -1360,9 +1427,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "requestTimelineSetting":
           this.sendTimelineSetting()
-          break
-        case "requestThroughputSetting":
-          this.postMessage(buildThroughputSettingMessage())
           break
         case "requestNotifications":
           this.fetchAndSendNotifications().catch((e) =>
@@ -1573,6 +1637,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     this.connectionState = "connecting"
     this.connectionGeneration++
+    this.configBindings.clear()
     this.postMessage({ type: "connectionState", state: "connecting" })
 
     // Clean up any existing subscriptions (e.g., sidebar re-shown)
@@ -1587,7 +1652,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.unsubscribeDirectoryProvider?.()
 
     try {
-      const workspaceDir = this.getWorkspaceDirectory()
+      const workspaceDir = this.settingsDirectory()
 
       // Connect the shared service (no-op if already connected)
       await this.connectionService.connect(workspaceDir)
@@ -1638,7 +1703,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       // Subscribe to connection state changes
       this.unsubscribeState = this.connectionService.onStateChange(async (state, error) => {
-        if (this.connectionState !== state) this.connectionGeneration++
+        if (this.connectionState !== state) {
+          this.connectionGeneration++
+          this.configBindings.clear()
+        }
         this.connectionState = state
         this.postConnectionState(error)
 
@@ -2581,8 +2649,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
-  private async fetchAndSendIndexingStatus(): Promise<void> {
-    if (!this.client) {
+  private async fetchAndSendIndexingStatus(directory?: string, projectId?: string): Promise<void> {
+    if (!this.client || !this.extensionContext) {
       if (this.cachedIndexingStatusMessage) {
         this.postMessage(this.cachedIndexingStatusMessage)
       }
@@ -2591,21 +2659,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     const config = this.connectionService.getServerConfig()
     if (!config) return
+    const request = ++this.indexingStatusRequest
 
     try {
-      const dir = this.getWorkspaceDirectory(this.currentSession?.id)
-      const auth = Buffer.from(`kilo:${config.password}`).toString("base64")
-      const res = await fetch(`${config.baseUrl}/indexing/status`, {
-        headers: {
-          Authorization: `Basic ${auth}`,
-          ...(dir ? { "x-kilo-directory": dir } : {}),
-        },
-      })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const status = (await res.json()) as IndexingStatus
+      const dir = directory ?? this.getWorkspaceDirectory(this.currentSession?.id)
+      if (!dir) return
+      const store = indexingConsentStore(this.extensionContext)
+      const project = await store.project(dir)
+      const status = await this.syncIndexingConsent(project.root, store.enabled(project.id), config)
+      if (request !== this.indexingStatusRequest) return
       const message = {
         type: "indexingStatusLoaded",
         status,
+        projectId,
       }
       this.cachedIndexingStatusMessage = message
       this.postMessage(message)
@@ -2983,6 +3049,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     project: Partial<Config> = {},
     globalUnset: string[][] = [],
     projectUnset: string[][] = [],
+    globalBindingId?: string,
+    projectBindingId?: string,
   ): Promise<void> {
     if (!this.client || this.connectionState !== "connected") {
       this.postMessage({ type: "configUpdateFailed", message: "Not connected to CLI backend" })
@@ -3001,90 +3069,188 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       project.agent !== undefined
     const hasGlobal = Object.keys(partial).length > 0 || globalUnset.length > 0
     const hasProject = Object.keys(project).length > 0 || projectUnset.length > 0
+    if (!hasGlobal && !hasProject) return
+
+    const globalBinding = hasGlobal
+      ? this.configBindings.get(globalBindingId, this.connectionGeneration, (project) =>
+          this.validConfigProject(project),
+        )
+      : undefined
+    const projectBinding = hasProject
+      ? this.configBindings.get(projectBindingId, this.connectionGeneration, (project) =>
+          this.validConfigProject(project),
+        )
+      : undefined
+    if ((hasGlobal && !globalBinding) || (hasProject && !projectBinding)) {
+      this.postMessage({ type: "configUpdateFailed", message: "Settings changed or expired. Reload before saving." })
+      return
+    }
 
     this.pending++
-    const dir = this.getWorkspaceDirectory()
+    const dir = projectBinding?.directory ?? globalBinding?.directory ?? this.settingsDirectory()
+    const completed: Array<"global" | "project"> = []
+    let snapshot: ConfigSnapshot | undefined
 
     try {
       await this.connectionService.drainPendingPrompts()
       if (hasGlobal) {
-        await this.client.config.overlayUpdate(
-          { scope: "global", set: partial, unset: globalUnset, directory: dir },
+        const result = await this.client.config.overlayUpdate(
+          {
+            scope: "global",
+            set: partial,
+            unset: globalUnset,
+            directory: globalBinding!.directory,
+            expected: {
+              path: globalBinding!.target.path,
+              revision: globalBinding!.target.revision,
+            },
+          },
           { throwOnError: true },
         )
+        snapshot = result.data as ConfigSnapshot
+        completed.push("global")
       }
       if (hasProject) {
-        await this.client.config.overlayUpdate(
-          { scope: "project", set: project, unset: projectUnset, directory: dir },
+        const result = await this.client.config.overlayUpdate(
+          {
+            scope: "project",
+            set: project,
+            unset: projectUnset,
+            directory: projectBinding!.directory,
+            expected: {
+              path: projectBinding!.target.path,
+              revision: projectBinding!.target.revision,
+            },
+          },
           { throwOnError: true },
         )
+        snapshot = result.data as ConfigSnapshot
+        completed.push("project")
       }
     } catch (error) {
-      this.postConfigFailure(error)
+      if (completed.length > 0) {
+        if (globalBinding) this.configBindings.consume(globalBinding.id)
+        if (projectBinding) this.configBindings.consume(projectBinding.id)
+      }
+      this.postConfigFailure(error, completed, snapshot, dir)
       this.pending--
       return
     }
+    if (globalBinding) this.configBindings.consume(globalBinding.id)
+    if (projectBinding) this.configBindings.consume(projectBinding.id)
 
     try {
-      await this.refreshConfig("configUpdated", dir)
+      if (!snapshot) throw new Error("Config update returned no authoritative snapshot")
+      const bindings = this.bindingsFor(dir, snapshot.targets)
+      const global = snapshot.targets.global.raw as Config
+      const projectConfig = bindings.project ? (snapshot.targets.project.raw as Config) : undefined
+      this.cachedGlobalConfig = global
+      this.cachedConfigMessage = {
+        type: "configLoaded",
+        config: snapshot.effective,
+        globalConfig: global,
+        projectConfig,
+        bindings,
+        settings: this.configSettings(),
+        features: configFeatures(snapshot.effective),
+      }
+      this.postMessage({
+        type: "configUpdated",
+        config: snapshot.effective,
+        globalConfig: global,
+        projectConfig,
+        bindings,
+        settings: this.configSettings(),
+        features: configFeatures(snapshot.effective),
+      })
       this.requirements.clear()
       await Promise.all([
         refreshProviders ? this.fetchAndSendProviders() : Promise.resolve(),
         refreshAgents ? this.fetchAndSendAgents() : Promise.resolve(),
-      ])
+      ]).catch((error) => console.error("[Kilo New] KiloProvider: Post-config refresh failed:", error))
     } catch (error) {
-      console.error("[Kilo New] KiloProvider: Config write succeeded but post-write refresh failed:", error)
-      const patch =
-        partial.indexing === undefined && project.indexing === undefined
-          ? { ...partial, ...project }
-          : { ...partial, ...project, indexing: { ...(partial.indexing ?? {}), ...(project.indexing ?? {}) } }
-      const cached = (this.cachedConfigMessage as { config?: unknown } | null)?.config
-      const features = (this.cachedConfigMessage as { features?: unknown } | null)?.features
-      const optimistic =
-        cached && typeof cached === "object" ? { ...(cached as Record<string, unknown>), ...patch } : patch
-      this.postMessage({
-        type: "configUpdated",
-        config: optimistic,
-        globalConfig: this.cachedGlobalConfig ?? undefined,
-        settings: { maxCost: this.maxCostSetting(), languageCommitMessage: this.commitMessageLanguageSetting() },
-        features: features ?? configFeatures(optimistic as Config),
-      })
-      this.requirements.clear()
+      this.postConfigFailure(error, completed, snapshot, dir)
     } finally {
       this.pending--
     }
   }
-
-  private async refreshConfig(type: "configLoaded" | "configUpdated", dir = this.getWorkspaceDirectory()) {
-    const snapshot = await fetchSnapshot(this.client!, dir, () => ({
-      maxCost: this.maxCostSetting(),
-      languageCommitMessage: this.commitMessageLanguageSetting(),
-    }))
-    this.cachedGlobalConfig = snapshot.globalConfig ?? null
-    this.cachedConfigMessage = { type: "configLoaded", ...snapshot }
-    this.postMessage({ type, ...snapshot })
+  private async refreshConfig(type: "configLoaded" | "configUpdated", dir = this.settingsDirectory()) {
+    const snapshot = await fetchSnapshot(this.client!, dir, () => this.configSettings())
+    const bindings = this.bindingsFor(dir, snapshot.targets)
+    const globalConfig = (snapshot.targets?.global.raw ?? snapshot.globalConfig) as Config
+    const projectConfig = bindings.project ? (snapshot.targets?.project.raw as Config) : undefined
+    this.cachedGlobalConfig = globalConfig ?? null
+    this.cachedConfigMessage = {
+      type: "configLoaded",
+      config: snapshot.config,
+      globalConfig,
+      projectConfig,
+      bindings,
+      collections: snapshot.collections,
+      settings: snapshot.settings,
+      features: snapshot.features,
+    }
+    this.postMessage({
+      type,
+      config: snapshot.config,
+      globalConfig,
+      projectConfig,
+      bindings,
+      collections: snapshot.collections,
+      settings: snapshot.settings,
+      features: snapshot.features,
+    })
   }
 
-  private postConfigFailure(error: unknown): void {
+  private postConfigFailure(
+    error: unknown,
+    completed: Array<"global" | "project"> = [],
+    snapshot?: ConfigSnapshot,
+    directory?: string,
+  ): void {
     console.error("[Kilo New] KiloProvider: Failed to update config:", error)
+    const bindings = snapshot && directory ? this.bindingsFor(directory, snapshot.targets) : undefined
     this.postMessage({
       type: "configUpdateFailed",
       message: getErrorMessage(error) || "Failed to update config",
       details: getConfigErrorDetails(error),
+      completedScopes: completed,
+      config: snapshot?.effective,
+      globalConfig: snapshot?.targets.global.raw,
+      projectConfig: bindings?.project ? snapshot?.targets.project.raw : undefined,
+      bindings,
     })
   }
   private async resolveSession(sessionID?: string, draftID?: string, context?: string, contextDirectory?: string) {
     if (!this.client) return undefined
 
-    const dir = resolveNewSessionDirectory({
-      sessionID,
-      currentSessionID: this.currentSession?.id,
-      contextSessionID: this.contextSessionID,
-      agentManagerContext: context,
-      contextDirectory,
-      sessionDirectories: this.sessionDirectories,
-      workspaceDirectory: this.getRootDirectory(),
-    })
+    // Agent Manager: consult the shared route service for an exact directory
+    // before the legacy sessionDirectories/workspace-root resolution. When a
+    // raw session id is ambiguous across projects, refuse to resolve rather
+    // than fall back to the active root or a stale single-entry map — share,
+    // unshare, send, and other command paths route through here. A project
+    // qualifier (when configured) disambiguates to the exact directory.
+    let routedDir: string | null | undefined = undefined
+    if (sessionID) {
+      routedDir = this.routeSessionDirectory(sessionID)
+      if (routedDir === null) {
+        throw new Error(
+          `Session ${sessionID} is ambiguous across projects; cannot resolve a directory without a project qualifier.`,
+        )
+      }
+    }
+
+    const dir =
+      routedDir ??
+      resolveNewSessionDirectory({
+        sessionID,
+        currentSessionID: this.currentSession?.id,
+        contextSessionID: this.contextSessionID,
+        agentManagerContext: context,
+        contextDirectory,
+        sessionDirectories: this.sessionDirectories,
+        workspaceDirectory: this.getRootDirectory(),
+      })
 
     const key = `${draftID ?? context ?? "new"}\0${dir}`
     const now = Date.now()
@@ -3226,6 +3392,134 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private commitMessageLanguageSetting(): string {
     return vscode.workspace.getConfiguration("kilo-code.new").get<string>("languageCommitMessage", "sync")
+  }
+
+  private multiProjectSetting(): boolean {
+    return vscode.workspace.getConfiguration("kilo-code.new.experimental").get<boolean>("multiProject", false)
+  }
+
+  private async sendIndexingSettings(projectId?: string) {
+    if (!this.extensionContext) {
+      this.postMessage(buildIndexingSettingsMessage())
+      return undefined
+    }
+    const request = ++this.indexingSettingsRequest
+    const store = indexingConsentStore(this.extensionContext)
+    const projects = await store.list(this.getRootDirectory(), registeredProjects(this.extensionContext))
+    if (request !== this.indexingSettingsRequest) return undefined
+    const id = projects.some((project) => project.id === projectId)
+      ? projectId
+      : projects.some((project) => project.id === this.indexingProjectId)
+        ? this.indexingProjectId
+        : projects[0]?.id
+    this.indexingProjectId = id
+    this.postMessage(buildIndexingSettingsMessage(id ? store.enabled(id) : false, projects, id))
+    return projects.find((project) => project.id === id)
+  }
+
+  private async setIndexingConsent(projectId: string, enabled: boolean): Promise<void> {
+    if (!this.extensionContext) return
+    const store = indexingConsentStore(this.extensionContext)
+    const projects = await store.list(this.getRootDirectory(), registeredProjects(this.extensionContext))
+    const project = projects.find((item) => item.id === projectId)
+    if (!project) return
+    await store.set(project.id, enabled)
+    this.indexingProjectId = project.id
+    await this.sendIndexingSettings(project.id)
+    const config = this.connectionService.getServerConfig()
+    if (!config) return
+    const request = ++this.indexingStatusRequest
+    const status = await this.syncIndexingConsent(project.root, enabled, config)
+    if (request !== this.indexingStatusRequest || this.indexingProjectId !== project.id) return
+    const message = { type: "indexingStatusLoaded", status, projectId: project.id }
+    this.cachedIndexingStatusMessage = message
+    this.postMessage(message)
+  }
+
+  private async syncIndexingConsent(
+    dir: string,
+    enabled: boolean,
+    config: { baseUrl: string; password: string },
+  ): Promise<IndexingStatus> {
+    const auth = Buffer.from(`kilo:${config.password}`).toString("base64")
+    const res = await fetch(`${config.baseUrl}/indexing/consent`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Basic ${auth}`,
+        "Content-Type": "application/json",
+        "x-kilo-directory": dir,
+      },
+      body: JSON.stringify({ enabled }),
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    return (await res.json()) as IndexingStatus
+  }
+
+  private configSettings() {
+    return {
+      maxCost: this.maxCostSetting(),
+      languageCommitMessage: this.commitMessageLanguageSetting(),
+      multiProject: this.multiProjectSetting(),
+    }
+  }
+
+  private settingsDirectory(): string {
+    return this.projectDirectory ?? this.getRootDirectory()
+  }
+
+  private bindingsFor(
+    directory: string,
+    targets:
+      | {
+          global: ConfigTarget
+          project: ConfigTarget
+        }
+      | undefined,
+  ): { global?: ConfigBinding; project?: ConfigBinding } {
+    if (!targets) return {}
+    const project = this.configProject(directory)
+    return {
+      global: this.configBindings.create({
+        connection: this.connectionGeneration,
+        scope: "global",
+        directory,
+        target: this.configTarget(targets.global),
+      }),
+      project: project
+        ? this.configBindings.create({
+            connection: this.connectionGeneration,
+            scope: "project",
+            directory: project.root,
+            target: this.configTarget(targets.project),
+            project,
+          })
+        : undefined,
+    }
+  }
+
+  private configTarget(target: ConfigTarget): ConfigTarget {
+    return { ...target, raw: { ...target.raw } }
+  }
+
+  private configProject(directory: string): ConfigProject | undefined {
+    const root = canonicalizePath(directory)
+    const pinned = canonicalizePath(this.getRootDirectory())
+    if (samePath(root, pinned)) {
+      return { id: projectIdFor(root), root, generation: 0, pinned: true }
+    }
+    if (!this.extensionContext) return undefined
+    const project = registeredProjects(this.extensionContext).find((item) => samePath(item.root, root))
+    if (!project?.trusted || !existsSync(project.root)) return undefined
+    return { id: project.id, root: project.root, generation: 0, pinned: false }
+  }
+
+  private validConfigProject(project: ConfigProject): boolean {
+    if (project.pinned) {
+      return samePath(project.root, canonicalizePath(this.getRootDirectory())) && existsSync(project.root)
+    }
+    if (!this.extensionContext) return false
+    const current = registeredProjects(this.extensionContext).find((item) => item.id === project.id)
+    return !!current?.trusted && samePath(current.root, project.root) && existsSync(current.root)
   }
 
   private setMaxCost(value: unknown): number {
@@ -3747,7 +4041,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     // Re-send all settings to the webview so the UI reflects the reset
     this.postMessage(buildAutocompleteSettingsMessage())
-    this.postMessage(buildIndexingSettingsMessage())
+    await this.sendIndexingSettings()
     this.sendBrowserSettings()
     this.sendNotificationSettings()
     this.sendTimelineSetting()
@@ -4378,6 +4672,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private getWorkspaceDirectory(sessionId?: string): string {
+    const routed = this.routeSessionDirectory(sessionId ?? undefined)
+    // Ambiguous ids degrade to the legacy resolution instead of throwing: this
+    // runs eagerly per webview message, where a throw would drop the message.
+    if (routed === null)
+      console.warn(`[Kilo New] KiloProvider: session ${sessionId} is ambiguous across projects, using workspace root`)
+    if (routed) return routed
     return resolveWorkspaceDirectory({
       sessionID: sessionId,
       sessionDirectories: this.sessionDirectories,
@@ -4386,7 +4686,42 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private getSessionDirectory(sessionId: string, session?: Session): string {
+    const routed = this.routeSessionDirectory(sessionId)
+    if (routed === null)
+      console.warn(
+        `[Kilo New] KiloProvider: session ${sessionId} is ambiguous across projects, using tracked directory`,
+      )
+    if (routed) return routed
     return this.sessionDirectories.get(sessionId) ?? session?.directory ?? this.getRootDirectory()
+  }
+
+  /**
+   * Resolve a session directory through the Agent Manager route service.
+   *
+   * Returns the exact directory when the route service knows the id and it is
+   * unambiguous (or a project qualifier disambiguates it). Returns `undefined`
+   * when no route service is configured or the id is unknown — callers then
+   * fall through to the legacy sessionDirectories/workspace-root path, which
+   * preserves non-Agent-Manager behavior. Returns `null` when the id is
+   * ambiguous and cannot be qualified: callers must NOT fall back to an
+   * arbitrary root in that case, because doing so would silently target the
+   * wrong project.
+   */
+  private routeSessionDirectory(sessionId: string | undefined): string | null | undefined {
+    const routes = this.opts.routeService
+    if (!routes || !sessionId) return undefined
+    const exact = routes.trySessionDirectory(sessionId)
+    if (exact) return exact
+    if (routes.isSessionAmbiguous(sessionId)) {
+      const qualifier = this.opts.projectQualifier?.()
+      if (qualifier) {
+        const ref: SessionRef = { projectId: qualifier.projectId, sessionId }
+        const dir = routes.trySessionDirectoryFor(ref)
+        if (dir) return dir
+      }
+      return null
+    }
+    return undefined
   }
 
   private getContextDirectory(): string {
@@ -4399,6 +4734,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private getRootDirectory(): string {
+    const override = this.opts.rootDirectory?.()
+    if (override) return override
     const workspaceFolders = vscode.workspace.workspaceFolders
     if (workspaceFolders && workspaceFolders.length > 0) {
       return workspaceFolders[0]!.uri.fsPath
@@ -4407,10 +4744,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private trackDirectory(sessionId: string, dir: string) {
-    if (path.resolve(dir) === path.resolve(this.getRootDirectory())) {
-      this.sessionDirectories.delete(sessionId)
-      return
-    }
+    // Agent Manager Local sessions must retain their explicit project root.
+    // Removing same-root entries would silently retarget them after switching
+    // the panel's active project.
     this.sessionDirectories.set(sessionId, dir)
   }
 

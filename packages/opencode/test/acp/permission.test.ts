@@ -162,7 +162,11 @@ describe("acp permissions", () => {
         { optionId: "reject", kind: "reject_once", name: "Reject" },
       ],
     })
-    expect(harness.replies).toEqual([{ requestID: "perm_1", reply: "once", directory: "/workspace" }])
+    // kilocode_change start - human selections are marked interactive
+    expect(harness.replies).toEqual([
+      { requestID: "perm_1", reply: "once", directory: "/workspace", interactive: true },
+    ])
+    // kilocode_change end
   })
 
   it("forwards external_directory metadata and locations to requestPermission", async () => {
@@ -200,6 +204,39 @@ describe("acp permissions", () => {
       },
     })
   })
+
+  // kilocode_change start - skill shell batches surface their command list and cannot be persisted
+  it("forwards skill shell commands and omits the persist option", async () => {
+    const harness = createHarness()
+    await createSession(harness.session, "ses_a")
+
+    harness.subscription.handle(
+      permissionAsked("ses_a", "perm_skill", {
+        permission: "bash",
+        // metadata.commands carries the verbatim command list the injector sends
+        metadata: { skillShell: true, commands: ["git status", "printf hi"] },
+        tool: { messageID: "msg_1", callID: "call_1" },
+      }),
+    )
+
+    await pollUntil(() => harness.replies.length === 1, "skill shell permission was never replied")
+
+    expect(harness.requests[0]).toMatchObject({
+      toolCall: {
+        title: "Run skill shell commands",
+        rawInput: { skillShell: true, commands: ["git status", "printf hi"] },
+      },
+      // no allow_always: skill shell is never persisted
+      options: [
+        { optionId: "once", kind: "allow_once", name: "Allow" },
+        { optionId: "reject", kind: "reject_once", name: "Reject" },
+      ],
+    })
+    expect(harness.requests[0].options.some((o) => o.kind === "allow_always")).toBe(false)
+    // the human selection is marked interactive so the server accepts the approval
+    expect(harness.replies[0]).toMatchObject({ requestID: "perm_skill", reply: "once", interactive: true })
+  })
+  // kilocode_change end
 
   it("rejects non-selected outcomes", async () => {
     const harness = createHarness(() => Promise.resolve({ outcome: { outcome: "cancelled" } }))
