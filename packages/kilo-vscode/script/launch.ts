@@ -42,6 +42,8 @@ const repo = resolve(root, "..", "..")
 // Argument parsing
 // ---------------------------------------------------------------------------
 
+const valued = new Set(["workspace", "mode", "app-path", "state-dir", "kilo-storage-dir"])
+
 function parse(argv: string[]) {
   const result: Record<string, string | boolean> = {}
   const values: string[] = []
@@ -67,7 +69,7 @@ function parse(argv: string[]) {
     }
 
     const next = argv[i + 1]
-    if (!next || next.startsWith("--")) {
+    if (!valued.has(key) || !next || next.startsWith("--")) {
       result[key] = true
       continue
     }
@@ -80,7 +82,7 @@ function parse(argv: string[]) {
   return result
 }
 
-function path(input: string) {
+function expand(input: string) {
   const value = input.trim()
   if (value === "~") return homedir()
   if (value.startsWith(`~${process.platform === "win32" ? "\\" : "/"}`)) return join(homedir(), value.slice(2))
@@ -97,19 +99,20 @@ const dev = join(repo, ".kilo-dev")
 const hash = createHash("sha256").update(repo).digest("hex").slice(0, 12)
 const base =
   typeof opts["state-dir"] === "string"
-    ? path(opts["state-dir"])
+    ? expand(opts["state-dir"])
     : isolated
       ? join(dev, "vscode")
       : join(tmpdir(), `kilo-vscode-dev-${hash}`)
 const userDir = join(base, "user-data")
 const extDir = join(base, "extensions")
-const kilo = typeof opts["kilo-storage-dir"] === "string" ? path(opts["kilo-storage-dir"]) : isolated ? dev : undefined
+const kilo =
+  typeof opts["kilo-storage-dir"] === "string" ? expand(opts["kilo-storage-dir"]) : isolated ? dev : undefined
 
 const shouldBuild = opts["build"] !== false
-const mode = (opts["mode"] as string) ?? "dev"
-const workspace = typeof opts["workspace"] === "string" && opts["workspace"].trim() ? path(opts["workspace"]) : repo
+const mode = typeof opts["mode"] === "string" ? opts["mode"] : "dev"
+const workspace = typeof opts["workspace"] === "string" && opts["workspace"].trim() ? expand(opts["workspace"]) : repo
 const insiders = opts["insiders"] === true
-const explicit = opts["app-path"] as string | undefined
+const explicit = typeof opts["app-path"] === "string" ? opts["app-path"] : undefined
 const blocking = opts["wait"] === true
 const clean = opts["clean"] === true
 const preserve = opts["preserve-settings"] === true
