@@ -387,8 +387,6 @@ const IndexingTab: Component = () => {
     subscriptions.clear()
   })
 
-  const saveEnabled = (enabled: boolean) => {
-    if (enabled && !cfg().provider && kiloAvailable()) {
   /** Machine-local consent for the selected project; never written to config. */
   const saveConsent = (granted: boolean) => {
     const id = projectId()
