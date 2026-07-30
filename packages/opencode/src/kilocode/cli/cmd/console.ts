@@ -38,7 +38,7 @@ async function launch(url: string) {
 
 const OpenCommand = cmd({
   command: "$0",
-  describe: "open the local Kilo Console",
+  describe: "open the local Kilo Console (deprecated)",
   builder: (yargs) =>
     withNetworkOptions(yargs).option("foreground", {
       alias: "f",
@@ -85,7 +85,7 @@ const OpenCommand = cmd({
 
 export const KiloConsoleCommand = cmd({
   command: "console",
-  describe: "open or stop the local Kilo Console",
+  describe: "open or stop the deprecated local Kilo Console",
   builder: (yargs: Argv) => yargs.command(OpenCommand).command(StopCommand).demandCommand(),
   handler: async () => {},
 })
