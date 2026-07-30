@@ -30,4 +30,14 @@ interface KiloWorktreeRpcApi : RemoteApi<Unit> {
     suspend fun create(directory: String, request: CreateWorktreeRequestDto): CreateWorktreeResultDto
     suspend fun remove(directory: String, path: String, branch: String? = null, force: Boolean = false): RemoveWorktreeResultDto
     suspend fun rename(directory: String, path: String, name: String): RenameWorktreeResultDto
+
+    /**
+     * Sets the worktree's stored display name to [name] only when it still has the default name
+     * (no custom name recorded yet). Used to let the first agent-generated session title flow onto
+     * the worktree header without ever overriding a name the user chose.
+     *
+     * Returns the updated worktree when the name was adopted, or a result with a null worktree and
+     * null error when it was skipped because a custom name already exists.
+     */
+    suspend fun adopt(directory: String, path: String, name: String): RenameWorktreeResultDto
 }

@@ -302,6 +302,51 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertTrue(worktreeDeletable(child, pending = false))
     }
 
+    fun `test applyName updates the matching row so an adopted name shows live`() {
+        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        rpc.listed += item
+        val controller = controller()
+        controller.reload()
+        flush()
+
+        ApplicationManager.getApplication().invokeAndWait { controller.applyName(item.path, "Repository overview request") }
+
+        assertEquals("Repository overview request", controller.model.getElementAt(0).name)
+    }
+
+    fun `test applyName ignores unknown paths, identical names, and blanks`() {
+        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        rpc.listed += item
+        val controller = controller()
+        controller.reload()
+        flush()
+        val before = controller.model.getElementAt(0)
+
+        ApplicationManager.getApplication().invokeAndWait {
+            controller.applyName("/repo/.kilo/worktrees/other", "Ignored")
+            controller.applyName(item.path, "feature-x")
+            controller.applyName(item.path, null)
+        }
+
+        assertSame(before, controller.model.getElementAt(0))
+    }
+
+    fun `test cache notifies on single put and remove but not on bulk sync`() {
+        val cache = cache()
+        val events = mutableListOf<Pair<String, String?>>()
+        cache.addListener(testRootDisposable) { path, name -> events += path to name }
+
+        ApplicationManager.getApplication().invokeAndWait {
+            cache.put("/wt", "Name")
+            cache.put("/wt", "Name")
+            cache.putAll(listOf(WorktreeDto("/wt2", "Two", "b", "/wt2")))
+            cache.remove("/wt")
+            cache.remove("/wt")
+        }
+
+        assertEquals(listOf("/wt" to "Name", "/wt" to null), events)
+    }
+
     private fun controller() =
         WorktreeController(service, "/test", coroutines.scope)
 

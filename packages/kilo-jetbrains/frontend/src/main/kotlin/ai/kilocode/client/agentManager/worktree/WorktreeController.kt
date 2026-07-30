@@ -177,6 +177,19 @@ class WorktreeController(
         }
     }
 
+    /**
+     * Applies a name recorded elsewhere (e.g. adopted from a session title in an editor tab) to the
+     * matching row, so the worktree list reflects it live. No-ops when the path is not in this list
+     * or the name already matches, which also makes it safe against the cache echoing our own writes.
+     */
+    fun applyName(path: String, name: String?) {
+        if (name.isNullOrBlank()) return
+        val idx = (0 until model.size).firstOrNull { model.getElementAt(it).path == path } ?: return
+        val row = model.getElementAt(idx)
+        if (row.name == name) return
+        model.setElementAt(row.copy(name = name), idx)
+    }
+
     private fun refresh(dto: WorktreeDto) {
         val idx = model.getElementIndex(dto)
         if (idx >= 0) model.setElementAt(dto, idx)

@@ -15,6 +15,7 @@ import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.activeListSectionTitle
 import ai.kilocode.client.ui.list.activeListToolWindowBackground
+import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import com.intellij.openapi.actionSystem.DataKey
@@ -146,6 +147,21 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         assertEquals(listOf(ActiveListBadge(SessionActivityKind.RUNNING.label(), SessionActivityKind.RUNNING.style())), row.badges)
         assertNull(row.trailing)
         assertEquals(HistoryTime.title(HistoryTime.section(LocalHistoryItem(session))), row.section)
+    }
+
+    fun `test session row shows the live agent title over the listed placeholder`() {
+        rpc.listed += session("ses_1", nowSeconds()).copy(title = "New session - 2026-07-30T19:01:40.945Z")
+        edt { controller.reload() }
+        flush()
+
+        // The listed snapshot is still the CLI placeholder, shown as a friendly "New session".
+        assertEquals("New session", row("ses_1").title)
+
+        // The agent names the open session; the live title wins immediately on the next sync.
+        manager.live = mapOf("ses_1" to "Repository overview request")
+        edt { manager.onListChanged?.invoke() }
+
+        assertEquals("Repository overview request", row("ses_1").title)
     }
 
     fun `test deleting row shows deleting state`() {
@@ -423,10 +439,13 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         controller,
         create = { _, _, _, _, _ -> error("unused") },
         request = {},
+        cs = coroutines.scope,
+        adopt = { _, _, _ -> RenameWorktreeResultDto() },
     ) {
         var newCount = 0
         var pending = false
         var kinds = emptyMap<String, SessionActivityKind>()
+        var live = emptyMap<String, String>()
         val deletingIds = mutableSetOf<String>()
         val refs = mutableListOf<String>()
         val focuses = mutableListOf<Boolean>()
@@ -436,6 +455,8 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         override fun hasPendingNew(): Boolean = pending
 
         override fun activity(): Map<String, SessionActivityKind> = kinds
+
+        override fun titles(): Map<String, String> = live
 
         override fun deleting(): Set<String> = deletingIds
 

@@ -15,7 +15,10 @@ import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.session.history.LocalHistoryItem
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
+import ai.kilocode.client.vfs.KiloVfsManager
+import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
@@ -24,6 +27,8 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.IdeFocusManager
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import java.awt.BorderLayout
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -46,11 +51,23 @@ open class WorktreeSessionEditorManager(
         }, ModalityState.defaultModalityState())
     },
     private val notify: (String, String?) -> Unit = { title, content -> KiloNotifications.error(project, title, content) },
+    private val cs: CoroutineScope = service<SessionUiFactory>().scope(),
+    private val adopt: suspend (String, String, String) -> RenameWorktreeResultDto = { dir, path, name ->
+        service<KiloWorktreeService>().adopt(dir, path, name)
+    },
+    private val onAdopted: (WorktreeDto) -> Unit = { updated ->
+        service<WorktreeNameCache>().put(updated)
+        if (!project.isDisposed) {
+            project.service<KiloVfsManager>().updatePresentation(WorktreeSessionEditorKind.ID, worktreeSessionParams(updated))
+        }
+    },
 ) : SessionHost(project, worktree, create, resolve, status, timers, request) {
     private val right = JPanel(BorderLayout())
     private val deleting = linkedSetOf<String>()
     private var last: String? = null
     private var pending = false
+    private var adopted = false
+    private var adopting = false
     var onPresent: ((String?) -> Unit)? = null
     var onListChanged: (() -> Unit)? = null
 
@@ -102,11 +119,58 @@ open class WorktreeSessionEditorManager(
         val id = currentUi()?.id
         if (last == null && id != null) {
             last = id
-            list.reload { onListChanged?.invoke() }
+            list.reload { onListChanged?.invoke(); maybeAdoptName() }
             return
         }
         last = id
         onListChanged?.invoke()
+        maybeAdoptName()
+    }
+
+    /**
+     * When the first session in this worktree receives an agent-generated title, hand that title to
+     * the worktree so its header stops showing the default branch name. The backend only applies it
+     * while the worktree is still default, so a name the user chose is never overwritten. Runs at
+     * most once per manager — a resolved adopt (applied or skipped) latches [adopted].
+     */
+    @RequiresEdt
+    private fun maybeAdoptName() {
+        if (adopted || adopting) return
+        val title = adoptTitle() ?: return
+        adopting = true
+        val path = worktree.directory
+        cs.launch {
+            val result = adopt(path, path, title)
+            edt {
+                adopting = false
+                val updated = result.worktree
+                when {
+                    updated != null -> {
+                        adopted = true
+                        onAdopted(updated)
+                    }
+                    result.error == null -> adopted = true // already has a custom name; stop trying
+                }
+            }
+        }
+    }
+
+    /**
+     * Title of the earliest-created session that already has an agent-generated name, preferring
+     * live open sessions over the last listed snapshot. Sessions start with a "New session - <ISO>"
+     * placeholder ([isDefaultSessionTitle]); those are skipped so the worktree adopts the real title
+     * the agent produces, not the placeholder.
+     */
+    @RequiresEdt
+    private fun adoptTitle(): String? {
+        val live = titles()
+        return (0 until list.model.size)
+            .map { list.model.getElementAt(it) }
+            .sortedBy { it.time.created }
+            .firstNotNullOfOrNull { s ->
+                (live[s.id]?.takeIf { it.isNotBlank() } ?: s.title.takeIf { it.isNotBlank() })
+                    ?.takeUnless(::isDefaultSessionTitle)
+            }
     }
 
     @RequiresEdt
@@ -157,7 +221,7 @@ open class WorktreeSessionEditorManager(
 
     @RequiresEdt
     override fun onSessionsChanged() {
-        list.reload { onListChanged?.invoke() }
+        list.reload { onListChanged?.invoke(); maybeAdoptName() }
     }
 
     @RequiresEdt
@@ -188,3 +252,15 @@ open class WorktreeSessionEditorManager(
             ?: KiloBundle.message("worktree.session.untitled")
     }
 }
+
+private fun edt(block: () -> Unit) {
+    val app = ApplicationManager.getApplication()
+    if (app.isDispatchThread) block() else app.invokeLater(block)
+}
+
+// Mirrors the CLI's Session.isDefaultTitle (packages/opencode/src/session/session.ts): a session
+// keeps a "New session - <ISO>" / "Child session - <ISO>" placeholder until the agent names it.
+private val DEFAULT_SESSION_TITLE =
+    Regex("^(New session - |Child session - )\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$")
+
+internal fun isDefaultSessionTitle(title: String): Boolean = DEFAULT_SESSION_TITLE.matches(title)

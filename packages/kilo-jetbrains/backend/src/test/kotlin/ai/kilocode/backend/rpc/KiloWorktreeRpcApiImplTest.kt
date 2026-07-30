@@ -201,6 +201,48 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `adopt names a default worktree and list overlays the adopted name`() = runBlocking {
+        initRepo()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+
+        val adopted = api.adopt(repo.toString(), created.path, "Fix login bug")
+
+        assertNull(adopted.error)
+        assertEquals("Fix login bug", assertNotNull(adopted.worktree).name)
+        val listed = api.list(repo.toString()).worktrees.single { it.path == created.path }
+        assertEquals("Fix login bug", listed.name)
+        assertEquals(mapOf(created.path to "Fix login bug"), readWorktreeNames(repo.resolve(".kilo").resolve("worktree-names.json")))
+    }
+
+    @Test
+    fun `adopt leaves a worktree that already has a custom name untouched`() = runBlocking {
+        initRepo()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+        assertNotNull(api.rename(repo.toString(), created.path, "Chosen Name").worktree)
+
+        val adopted = api.adopt(repo.toString(), created.path, "Agent Title")
+
+        assertNull(adopted.error, "a skipped adopt is a no-op, not a failure")
+        assertNull(adopted.worktree, "a worktree with a custom name should not be adopted")
+        val listed = api.list(repo.toString()).worktrees.single { it.path == created.path }
+        assertEquals("Chosen Name", listed.name, "the user's name must be preserved")
+    }
+
+    @Test
+    fun `adopt works when addressed from within the worktree directory`() = runBlocking {
+        initRepo()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+
+        // The session editor only knows the worktree path, so it passes that as both directory and path.
+        val adopted = api.adopt(created.path, created.path, "Fix login bug")
+
+        assertNull(adopted.error)
+        assertEquals("Fix login bug", assertNotNull(adopted.worktree).name)
+        val listed = api.list(repo.toString()).worktrees.single { it.path == created.path }
+        assertEquals("Fix login bug", listed.name)
+    }
+
+    @Test
     fun `remove reports failure when git cannot remove the worktree`() = runBlocking {
         initRepo()
 

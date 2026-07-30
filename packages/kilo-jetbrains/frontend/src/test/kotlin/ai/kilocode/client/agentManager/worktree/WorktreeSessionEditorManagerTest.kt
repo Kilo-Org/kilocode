@@ -19,8 +19,10 @@ import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
+import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionTimeDto
+import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.openapi.ui.TestDialog
 import com.intellij.openapi.ui.TestDialogManager
 import com.intellij.openapi.util.Disposer
@@ -230,7 +232,65 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         assertEquals(listOf("Failed to rename session \"Renamed Session\"" to "rename unavailable"), notified)
     }
 
-    private fun manager(controller: WorktreeSessionListController = WorktreeSessionListController(sessions, DIR, coroutines.scope)): WorktreeSessionEditorManager {
+    fun `test placeholder session title is not adopted as the worktree name`() {
+        rpc.listed += session("ses_1", updated = 1.0).copy(title = "New session - 2026-07-30T19:01:40.945Z")
+        val calls = mutableListOf<String>()
+        val manager = manager(
+            adopt = { _, _, name ->
+                calls += name
+                RenameWorktreeResultDto(worktree = WorktreeDto(DIR, name, "feature-x", DIR))
+            },
+        )
+
+        edt { manager.start() }
+        flush()
+
+        assertTrue("the CLI placeholder title must not be adopted", calls.isEmpty())
+    }
+
+    fun `test first named session adopts the worktree name`() {
+        rpc.listed += session("ses_1", updated = 1.0).copy(title = "Fix login bug")
+        val calls = mutableListOf<Triple<String, String, String>>()
+        val adoptedNames = mutableListOf<String>()
+        val manager = manager(
+            adopt = { dir, path, name ->
+                calls += Triple(dir, path, name)
+                RenameWorktreeResultDto(worktree = WorktreeDto(path, name, "feature-x", path))
+            },
+            onAdopted = { adoptedNames += it.name },
+        )
+
+        edt { manager.start() }
+        waitUntil { calls.isNotEmpty() }
+
+        assertEquals(listOf(Triple(DIR, DIR, "Fix login bug")), calls)
+        assertEquals(listOf("Fix login bug"), adoptedNames)
+    }
+
+    fun `test skipped adoption keeps the default name and stops retrying`() {
+        rpc.listed += session("ses_1", updated = 1.0).copy(title = "Fix login bug")
+        rpc.session = session("ses_2", updated = 5.0).copy(title = "Another task")
+        val calls = mutableListOf<String>()
+        val adoptedNames = mutableListOf<String>()
+        val manager = manager(
+            adopt = { _, _, name -> calls += name; RenameWorktreeResultDto() },
+            onAdopted = { adoptedNames += it.name },
+        )
+
+        edt { manager.start() }
+        waitUntil { calls.isNotEmpty() }
+        edt { manager.newSession() }
+        flush()
+
+        assertEquals(listOf("Fix login bug"), calls)
+        assertTrue(adoptedNames.isEmpty())
+    }
+
+    private fun manager(
+        controller: WorktreeSessionListController = WorktreeSessionListController(sessions, DIR, coroutines.scope),
+        adopt: suspend (String, String, String) -> RenameWorktreeResultDto = { _, _, _ -> RenameWorktreeResultDto() },
+        onAdopted: (WorktreeDto) -> Unit = {},
+    ): WorktreeSessionEditorManager {
         return WorktreeSessionEditorManager(
             parent = testRootDisposable,
             project = project,
@@ -264,6 +324,9 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
             timers = timers,
             request = { requested += it },
             notify = { title, content -> notified += title to content },
+            cs = coroutines.scope,
+            adopt = adopt,
+            onAdopted = onAdopted,
         )
     }
 

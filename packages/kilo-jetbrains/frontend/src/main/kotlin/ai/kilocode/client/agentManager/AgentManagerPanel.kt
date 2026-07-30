@@ -4,6 +4,7 @@ import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.agentManager.worktree.ConfigureWorktreeDialog
 import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.WorktreeIcons
+import ai.kilocode.client.agentManager.worktree.WorktreeNameCache
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.ensureWorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
@@ -89,6 +90,8 @@ class AgentManagerPanel(
         }
         controller.onCreateFailure = { err -> notifyCreateFailed(err) }
         controller.onRemoveSuccess = { item -> close(item) }
+        // Reflect names adopted or renamed in a worktree session editor tab in the list live.
+        service<WorktreeNameCache>().addListener(this) { path, name -> controller.applyName(path, name) }
         ActionManager.getInstance().getAction("RenameElement")?.shortcutSet?.let { set ->
             edit.registerCustomShortcutSet(set, list, this)
         }

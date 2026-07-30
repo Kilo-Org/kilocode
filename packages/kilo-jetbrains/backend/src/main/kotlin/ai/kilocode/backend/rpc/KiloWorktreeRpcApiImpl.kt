@@ -120,6 +120,33 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             }
         }
 
+    override suspend fun adopt(directory: String, path: String, name: String): RenameWorktreeResultDto =
+        withContext(Dispatchers.IO) {
+            val title = name.trim()
+            if (title.isEmpty()) return@withContext RenameWorktreeResultDto()
+            val base = Path.of(directory).normalize()
+            val res = runGit(base, "worktree", "list", "--porcelain")
+            if (!res.ok) return@withContext RenameWorktreeResultDto(error = res.stderr.ifBlank { "git worktree list failed" })
+            val items = managedWorktrees(parseWorktreeList(res.stdout))
+            val store = worktreeNameStore(items)
+                ?: return@withContext RenameWorktreeResultDto(error = "Main worktree not found")
+            val target = items.firstOrNull { samePath(it.path, path) && !it.main }
+                ?: return@withContext RenameWorktreeResultDto(error = "Worktree not found")
+            return@withContext try {
+                val names = readWorktreeNames(store).toMutableMap()
+                // Only adopt while the worktree is still default. A recorded name means the user (or a
+                // prior adoption) already titled it, so leave it untouched and report a no-op.
+                if (!names[target.path].isNullOrBlank()) return@withContext RenameWorktreeResultDto()
+                names[target.path] = title
+                writeWorktreeNames(store, names)
+                LOG.info("worktree name adopted: path=$path name=$title")
+                RenameWorktreeResultDto(worktree = target.copy(name = title))
+            } catch (e: Exception) {
+                LOG.warn("worktree adopt failed: path=$path message=${e.message}", e)
+                RenameWorktreeResultDto(error = e.message ?: "worktree adopt failed")
+            }
+        }
+
     private data class GitResult(val exit: Int, val stdout: String, val stderr: String) {
         val ok get() = exit == 0
     }

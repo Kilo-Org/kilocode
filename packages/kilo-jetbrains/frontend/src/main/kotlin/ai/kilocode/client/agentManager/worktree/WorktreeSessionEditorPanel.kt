@@ -202,10 +202,11 @@ class WorktreeSessionEditorPanel(
         val key = manager.currentKey()
         val pending = manager.hasPendingNew()
         val kinds = manager.activity()
+        val titles = manager.titles()
         val deleting = manager.deleting()
         if (pending || key == SessionHost.NEW) rows += NewRow
         rows += HistoryTime.sorted((0 until controller.model.size).map { LocalHistoryItem(controller.model.getElementAt(it)) })
-            .map { SessionRow(it.session, kinds[it.id], deleting = it.id in deleting) }
+            .map { SessionRow(it.session, kinds[it.id], deleting = it.id in deleting, live = titles[it.id]) }
         list.update(rows, ActiveListSelection.PreserveNoScroll)
         select(if (pending) SessionHost.NEW else key)
     }
@@ -318,11 +319,19 @@ class WorktreeSessionEditorPanel(
         val session: SessionDto,
         val kind: SessionActivityKind?,
         override val deleting: Boolean = false,
+        // Live title of the open session, if any; reflects the agent-generated name as it streams in
+        // before the listed snapshot catches up.
+        private val live: String? = null,
     ) : ActiveListItem {
         private val item = LocalHistoryItem(session)
         override val key: String get() = session.id
-        override val title: String get() = session.title.takeIf { it.isNotBlank() }
-            ?: KiloBundle.message("worktree.session.untitled")
+        override val title: String get() {
+            val name = live?.takeIf { it.isNotBlank() } ?: session.title
+            if (name.isBlank()) return KiloBundle.message("worktree.session.untitled")
+            // Show the placeholder as a friendly "New session" until the agent names the session.
+            if (isDefaultSessionTitle(name)) return KiloBundle.message("worktree.session.new")
+            return name
+        }
         override val tooltip: String get() = title
         override val badges: List<ActiveListBadge> get() = listOfNotNull(kind?.let { ActiveListBadge(it.label(), it.style()) })
         override val section: String get() = HistoryTime.title(HistoryTime.section(item))

@@ -66,4 +66,11 @@ class KiloWorktreeService internal constructor(
         LOG.warn("worktree rename failed for $path", e)
         RenameWorktreeResultDto(error = e.message ?: "worktree rename failed")
     }
+
+    suspend fun adopt(directory: String, path: String, name: String): RenameWorktreeResultDto = try {
+        call { adopt(directory, path, name) }
+    } catch (e: Exception) {
+        LOG.warn("worktree adopt failed for $path", e)
+        RenameWorktreeResultDto(error = e.message ?: "worktree adopt failed")
+    }
 }
