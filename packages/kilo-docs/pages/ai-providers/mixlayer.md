@@ -17,62 +17,44 @@ Mixlayer is an inference platform for open models such as GLM and Qwen, with a s
 
 ## Configuration in Kilo Code
 
-Mixlayer's API is OpenAI-compatible, with the base URL `https://models.mixlayer.ai/v1`. Configure it through Kilo Code's **OpenAI Compatible** provider.
+Mixlayer is available as a **built-in provider** in Kilo Code, so you can connect it directly — no custom provider setup needed.
 
 {% tabs %}
 {% tab label="VSCode" %}
 
 1. Open **Settings** (gear icon) and go to the **Providers** tab.
-2. Scroll to the bottom and click **Custom provider**.
-3. Fill in the dialog:
-   - **Provider ID** — `mixlayer`
-   - **Display name** — `Mixlayer`
-   - **Provider API** — **OpenAI Compatible**
-   - **Base URL** — `https://models.mixlayer.ai/v1`
-   - **API key** — your Mixlayer API key
-4. Kilo Code auto-fetches the available models from Mixlayer's `/v1/models` endpoint, so you can pick a model directly from the list. Click **Submit** to save.
+2. Click **Connect provider**, search for **Mixlayer**, and select it.
+3. Enter your Mixlayer API key.
+4. Pick a model — Kilo Code fetches the available models automatically.
 
 {% /tab %}
 {% tab label="CLI" %}
 
-Set the API key as an environment variable and define an OpenAI-compatible provider in your `kilo.json` config file (`~/.config/kilo/kilo.json` or `./kilo.json`):
+**Method 1 — `/connect` (recommended)**
 
-**Environment variable:**
+Run `kilo`, then use the `/connect` command, select **Mixlayer**, and paste your API key when prompted:
+
+```bash
+kilo
+# then, inside Kilo, run:
+/connect
+```
+
+**Method 2 — config file**
+
+Set your API key and add Mixlayer in your `kilo.json` config file (`~/.config/kilo/kilo.json` or `./kilo.json`):
 
 ```bash
 export MIXLAYER_API_KEY="your-api-key"
 ```
 
-**Config file:**
-
 ```jsonc
 {
   "provider": {
     "mixlayer": {
-      "npm": "@ai-sdk/openai-compatible",
       "env": ["MIXLAYER_API_KEY"],
-      "options": {
-        "baseURL": "https://models.mixlayer.ai/v1",
-      },
-      "models": {
-        "z-ai/glm-5.2": {
-          "name": "GLM-5.2",
-          "limit": { "context": 262144, "output": 262144 },
-        },
-        "qwen/qwen3.5-397b-a17b": {
-          "name": "Qwen3.5 397B A17B",
-          "limit": { "context": 131072, "output": 131072 },
-        },
-      },
     },
   },
-}
-```
-
-Then set your default model using the `provider-id/model-id` format:
-
-```jsonc
-{
   "model": "mixlayer/z-ai/glm-5.2",
 }
 ```
