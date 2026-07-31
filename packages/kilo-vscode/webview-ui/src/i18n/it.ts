@@ -182,6 +182,7 @@ export const dict = {
   "error.promotionLimit.action": "Registrati",
   "notification.permission.title": "Autorizzazione richiesta",
   "notification.permission.titleSubagent": "Autorizzazione richiesta (sub-agent)",
+  "notification.permission.titleSkillShell": "Eseguire i comandi shell della skill “{{skill}}”?",
   "ui.permission.manageAutoApprove": "Gestisci regole approvazione automatica",
   "ui.permission.doomLoop.prompt": "Rilevato un potenziale ciclo nello strumento {{tool}}. Continuare l'esecuzione?",
   "ui.permission.doomLoop.rule": "Continua le chiamate a {{tool}}",
