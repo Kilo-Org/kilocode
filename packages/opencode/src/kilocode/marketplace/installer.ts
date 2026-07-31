@@ -222,7 +222,8 @@ function installSkill(item: SkillMarketplaceItem, scope: Scope, directory: strin
 
     await mkdir(base, { recursive: true })
     const staging = await mkdtemp(path.join(base, `.staging-${item.id}-`))
-    const tarball = path.join(os.tmpdir(), `kilo-skill-${item.id}-${randomUUID()}.tar.gz`)
+    const archive = `kilo-skill-${item.id}-${randomUUID()}.tar.gz`
+    const tarball = path.join(os.tmpdir(), archive)
     const inline = item.content.startsWith("data:")
     const data = inline ? item.content.match(/^data:[^,]*;base64,(.*)$/) : null
 
@@ -237,7 +238,9 @@ function installSkill(item: SkillMarketplaceItem, scope: Scope, directory: strin
         if (!response.ok) return { success: false, slug: item.id, error: `Download failed: ${response.status}` }
         await Bun.write(tarball, Buffer.from(await response.arrayBuffer()))
       }
-      await Process.run(["tar", "-xzf", tarball, "--strip-components=1", "-C", staging])
+      // Pass the archive as a bare filename with cwd at its directory: GNU tar (on Windows)
+      // otherwise misreads a `C:\...` archive path as a remote `host:path` and fails to extract.
+      await Process.run(["tar", "-xzf", archive, "--strip-components=1", "-C", staging], { cwd: os.tmpdir() })
 
       const escaped = await findEscapedPaths(staging)
       if (escaped.length > 0) return { success: false, slug: item.id, error: "Skill archive contains unsafe paths" }

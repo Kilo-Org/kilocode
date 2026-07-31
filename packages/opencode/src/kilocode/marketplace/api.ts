@@ -1,8 +1,14 @@
 import { parse as parseYaml } from "yaml"
 import * as Log from "@opencode-ai/core/util/log"
-import type { AgentMarketplaceItem, McpMarketplaceItem, MarketplaceItem, RawSkill, SkillMarketplaceItem } from "./schema"
+import type {
+  AgentMarketplaceItem,
+  McpMarketplaceItem,
+  MarketplaceItem,
+  RawSkill,
+  SkillMarketplaceItem,
+} from "./schema"
 
-const BASE_URL = "https://api.kilo.ai/api/marketplace"
+const DEFAULT_BASE_URL = "https://api.kilo.ai/api/marketplace"
 const CACHE_TTL = 300_000
 const MAX_RETRIES = 3
 const TIMEOUT = 10_000
@@ -22,6 +28,12 @@ export type FetchOptions = {
 }
 
 const cache = new Map<string, CacheEntry>()
+
+// Read the base URL per call (not at module load) so a test/enterprise override via
+// KILO_MARKETPLACE_BASE_URL is honored regardless of import order.
+function baseUrl(opts: FetchOptions) {
+  return opts.baseUrl ?? process.env["KILO_MARKETPLACE_BASE_URL"] ?? DEFAULT_BASE_URL
+}
 
 export function kebabToTitleCase(str: string): string {
   return str
@@ -92,14 +104,15 @@ async function fetchText(url: string, kind: string, fetcher: Fetch, attempt = 0)
 }
 
 async function fetchKind<T>(kind: string, path: string, map: (item: Record<string, unknown>) => T, opts: FetchOptions) {
-  const key = `${opts.baseUrl ?? BASE_URL}:${kind}`
+  const root = baseUrl(opts)
+  const key = `${root}:${kind}`
   const hit = cached(key)
   if (hit) {
     log.info("catalog cache hit", { kind })
     return hit as T[]
   }
 
-  const url = `${opts.baseUrl ?? BASE_URL}/${path}`
+  const url = `${root}/${path}`
   const text = await fetchText(url, kind, opts.fetch ?? fetch)
   const parsed = parseResponse(text) as { items?: unknown[] }
   const items = (parsed.items ?? []) as Array<Record<string, unknown>>

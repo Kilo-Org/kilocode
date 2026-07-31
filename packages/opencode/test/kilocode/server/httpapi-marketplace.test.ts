@@ -51,14 +51,15 @@ async function tarball(root: string) {
   const base = path.join(root, "archive")
   const source = path.join(base, "source")
   const skill = path.join(source, "skill")
-  const file = path.join(base, "skill.tar.gz")
+  const file = path.join(source, "skill.tar.gz")
   await mkdir(skill, { recursive: true })
   await writeFile(
     path.join(skill, "SKILL.md"),
     "---\nname: marketplace-skill\ndescription: Marketplace skill\n---\n\n# Skill\n",
   )
-  // Spawn tar directly (no shell) with a relative cwd so Windows paths are not mangled by Bun.$.
-  const proc = Bun.spawnSync(["tar", "-czf", file, "skill"], { cwd: source })
+  // Spawn tar directly (no shell) with cwd at the archive directory and bare relative names, so
+  // GNU tar on Windows does not misread a `C:\...` path as a remote host.
+  const proc = Bun.spawnSync(["tar", "-czf", "skill.tar.gz", "skill"], { cwd: source })
   if (proc.exitCode !== 0) throw new Error(`tar failed (${proc.exitCode}): ${proc.stderr.toString()}`)
   return `data:application/gzip;base64,${Buffer.from(await readFile(file)).toString("base64")}`
 }
@@ -142,9 +143,9 @@ describe("marketplace HTTP API", () => {
     expect(await Bun.file(path.join(tmp.path, ".kilo", "agents", "reviewer.md")).exists()).toBe(false)
   })
 
-  // The skill install/remove path shells out to `tar`; the Windows CI runner ships GNU tar,
-  // which misreads the `C:\` archive path as a remote host. Exercise the tar flow on POSIX only.
-  test.skipIf(process.platform === "win32")("installs, removes, and reinstalls a marketplace skill", async () => {
+  // The skill install/remove path shells out to `tar`; both the fixture and installer invoke tar
+  // with a relative archive name + cwd so GNU tar on Windows does not misread the `C:\` path as a host.
+  test("installs, removes, and reinstalls a marketplace skill", async () => {
     await using tmp = await tmpdir({ config: { formatter: false, lsp: false } })
     const json = harness(tmp.path)
     const manifest = path.join(tmp.path, ".kilo", "skills", "marketplace-skill", "SKILL.md")
