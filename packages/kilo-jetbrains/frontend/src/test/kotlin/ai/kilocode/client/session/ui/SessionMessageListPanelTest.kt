@@ -241,6 +241,25 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertTrue("streaming reflow must settle in the pass window, was $reflows", reflows in 1..10)
     }
 
+    fun `test non-streaming active state keeps the reflow settle window`() {
+        var reflows = 0
+        panel.onReflow = { reflows++ }
+        // Retry is isBusy() == true but not SessionState.Busy: no deltas arrive, so a moving height
+        // means the panes are still settling and the window must keep restarting toward the idle
+        // budget rather than collapsing to REFLOW_PASSES. recoverPending() can seed this right after
+        // load, and it is the only case that tells `is SessionState.Busy` apart from `isBusy()`.
+        model.loadHistory(listOf(MessageWithPartsDto(msg("u1", "user"), emptyList())))
+        model.setState(SessionState.Retry("retrying", 1, 0L))
+        panel.add(EverGrowing(), 0)
+        panel.setSize(600, 400)
+
+        UIUtil.dispatchAllInvocationEvents()
+
+        // Reaches the idle budget region (~25), not the streaming window (~7). Reverting the gate to
+        // isBusy() would collapse this to REFLOW_PASSES and fail here.
+        assertTrue("non-streaming state must keep re-measuring, was $reflows", reflows in 11..30)
+    }
+
     fun `test apply style drops cached panel measurements`() {
         val child = Growing(20)
         panel.add(child, 0)
