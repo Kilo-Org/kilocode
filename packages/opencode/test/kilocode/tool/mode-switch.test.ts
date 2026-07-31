@@ -45,7 +45,11 @@ function mode(name: string, input: Partial<Agent.Info> = {}): Agent.Info {
   }
 }
 
-function message(agent: string): SessionV1.WithParts {
+function message(
+  agent: string,
+  variant?: string,
+  model?: { providerID: ProviderV2.ID; modelID: ModelV2.ID },
+): SessionV1.WithParts {
   return {
     info: {
       id: messageID,
@@ -54,8 +58,9 @@ function message(agent: string): SessionV1.WithParts {
       time: { created: 1 },
       agent,
       model: {
-        providerID: ProviderV2.ID.make("test"),
-        modelID: ModelV2.ID.make("test"),
+        providerID: model?.providerID ?? ProviderV2.ID.make("test"),
+        modelID: model?.modelID ?? ModelV2.ID.make("test"),
+        ...(variant ? { variant } : {}),
       },
     },
     parts: [
@@ -76,6 +81,8 @@ function fixture(input: {
   ask?: () => Effect.Effect<void>
   action?: "continue" | "stop"
   available?: Agent.Info[]
+  sourceVariant?: string
+  sourceModel?: { providerID: ProviderV2.ID; modelID: ModelV2.ID }
   provider?: (
     providerID: ProviderV2.ID,
     modelID: ModelV2.ID,
@@ -93,7 +100,7 @@ function fixture(input: {
     messageID,
     callID: "call_mode_switch",
     agent: source,
-    messages: [message(source)],
+    messages: [message(source, input.sourceVariant, input.sourceModel)],
   }
   const providerGet = input.provider ?? ((pid, mid) => Effect.succeed(fakeModel(pid, mid)))
   const deps = {
@@ -197,6 +204,28 @@ test("automatic approval rewrites the user message with the destination mode's m
   ])
 })
 
+test("does not publish ModelSwitched when the destination model and variant match the source", async () => {
+  const item = fixture({
+    available: [
+      mode("code", {
+        model: { providerID: ProviderV2.ID.make("source-provider"), modelID: ModelV2.ID.make("source-model") },
+      }),
+      mode("debug", {
+        // Destination mode configures the same provider/model AND variant as the source.
+        model: { providerID: ProviderV2.ID.make("source-provider"), modelID: ModelV2.ID.make("source-model") },
+        variant: "xhigh",
+      }),
+    ],
+    sourceVariant: "xhigh",
+    sourceModel: { providerID: ProviderV2.ID.make("source-provider"), modelID: ModelV2.ID.make("source-model") },
+    provider: (pid, mid) => Effect.succeed(fakeModel(pid, mid, { xhigh: {} })),
+  })
+  await item.run()
+  // The destination mode resolves to the same provider/model/variant as the source
+  // user message; nothing actually changed, so ModelSwitched must not fire.
+  expect(item.switchedModels).toEqual([])
+})
+
 test("drops an inherited variant when the destination model changes and that variant does not exist on it", async () => {
   const item = fixture({
     available: [
@@ -204,20 +233,25 @@ test("drops an inherited variant when the destination model changes and that var
         model: { providerID: ProviderV2.ID.make("source-provider"), modelID: ModelV2.ID.make("source-model") },
       }),
       mode("debug", {
+        // Destination mode configures a model but no variant. The destination model only
+        // exposes "yhigh"; the source user message already carries "xhigh". The rewrite
+        // must not silently apply "xhigh" to the destination model.
         model: { providerID: ProviderV2.ID.make("target-provider"), modelID: ModelV2.ID.make("target-model") },
       }),
     ],
+    sourceVariant: "xhigh",
     provider: (pid, mid) =>
       Effect.succeed(
         fakeModel(pid, mid, mid === "source-model" ? { xhigh: {} } : { yhigh: {} }),
       ),
   })
-  // Source user message carries variant "xhigh" picked from the source model.
   await item.run()
   const updated = item.updated.find(
     (msg): msg is SessionV1.User => msg.role === "user" && msg.agent === "debug",
   )
-  // The destination model exposes only "yhigh", so the inherited "xhigh" must be dropped.
+  // The destination mode does not specify a variant and the source variant belongs to the
+  // source model only; the rewrite must drop "xhigh" instead of carrying it onto the
+  // destination model.
   expect(updated?.model).toEqual({
     providerID: ProviderV2.ID.make("target-provider"),
     modelID: ModelV2.ID.make("target-model"),

@@ -178,66 +178,80 @@ export const execute = Effect.fn("ModeSwitch.execute")(function* (
   // tool with a clean error instead of poisoning the persisted user message and
   // aborting the in-flight turn when getModel dies in the prompt loop.
   const baseModel = current.info.model
-  let nextProviderID = baseModel.providerID
-  let nextModelID = baseModel.modelID
-  let nextVariant: string | undefined = baseModel.variant
-  let switchedModel: false | { providerID: ProviderV2.ID; id: ModelV2.ID; variant?: ModelV2.VariantID } = false
-
-  if (target.model) {
-    const exit = yield* deps.provider.getModel(target.model.providerID, target.model.modelID).pipe(Effect.exit)
-    if (Exit.isFailure(exit)) {
-      const err = Cause.squash(exit.cause)
-      if (Provider.ModelNotFoundError.isInstance(err)) {
-        const hint = err.suggestions?.length ? `Did you mean: ${err.suggestions.join(", ")}?` : undefined
-        return yield* new UnresolvableModelError({
-          target: target.name,
-          providerID: err.providerID,
-          modelID: err.modelID,
-          hint,
-        })
-      }
-      return yield* Effect.die(err)
-    }
-    const resolved = exit.value
-    nextProviderID = resolved.providerID
-    nextModelID = resolved.id
-    // The previous variant was chosen for the source model and may not exist on the
-    // destination; clear it whenever the provider/model actually changes.
-    const modelChanged =
-      resolved.providerID !== baseModel.providerID || resolved.id !== baseModel.modelID
-    if (modelChanged) nextVariant = pickVariant(resolved.variants, target.variant)
-    else nextVariant = pickVariant(resolved.variants, target.variant) ?? baseModel.variant
-    switchedModel = {
-      providerID: resolved.providerID,
-      id: resolved.id,
-      ...(nextVariant ? { variant: nextVariant as ModelV2.VariantID } : {}),
-    }
-  } else if (target.variant) {
-    const exit = yield* deps.provider
-      .getModel(baseModel.providerID, baseModel.modelID)
-      .pipe(Effect.exit)
-    if (Exit.isSuccess(exit)) {
-      const valid = pickVariant(exit.value.variants, target.variant)
-      if (valid) {
-        nextVariant = valid
-        switchedModel = {
-          providerID: baseModel.providerID,
-          id: baseModel.modelID,
-          variant: valid as ModelV2.VariantID,
+  type NextModel = { providerID: ProviderV2.ID; modelID: ModelV2.ID; variant?: string }
+  type SwitchModel = { providerID: ProviderV2.ID; id: ModelV2.ID; variant?: ModelV2.VariantID }
+  const next = yield* (function (): Effect.Effect<
+    { model: NextModel; switchModel: false | SwitchModel },
+    UnresolvableModelError
+  > {
+    return Effect.gen(function* () {
+      if (target.model) {
+        const exit = yield* Effect.exit(
+          deps.provider.getModel(target.model.providerID, target.model.modelID),
+        )
+        if (Exit.isFailure(exit)) {
+          const err = Cause.squash(exit.cause)
+          if (Provider.ModelNotFoundError.isInstance(err)) {
+            const hint = err.suggestions?.length ? `Did you mean: ${err.suggestions.join(", ")}?` : undefined
+            return yield* Effect.fail(
+              new UnresolvableModelError({
+                target: target.name,
+                providerID: err.providerID,
+                modelID: err.modelID,
+                hint,
+              }),
+            )
+          }
+          return yield* Effect.die(err)
+        }
+        const resolved = exit.value
+        const modelChanged =
+          resolved.providerID !== baseModel.providerID || resolved.id !== baseModel.modelID
+        // The previous variant was chosen for the source model and may not exist on the
+        // destination; clear it whenever the provider/model actually changes.
+        const nextVariant = modelChanged
+          ? pickVariant(resolved.variants, target.variant)
+          : (pickVariant(resolved.variants, target.variant) ?? baseModel.variant)
+        const variantChanged = nextVariant !== undefined && nextVariant !== (baseModel.variant ?? undefined)
+        return {
+          model: {
+            providerID: resolved.providerID,
+            modelID: resolved.id,
+            ...(nextVariant ? { variant: nextVariant } : {}),
+          },
+          switchModel:
+            modelChanged || variantChanged
+              ? {
+                  providerID: resolved.providerID,
+                  id: resolved.id,
+                  ...(nextVariant ? { variant: nextVariant as ModelV2.VariantID } : {}),
+                }
+              : false,
         }
       }
-    }
-  }
-
-  const nextModel = {
-    providerID: nextProviderID,
-    modelID: nextModelID,
-    ...(nextVariant ? { variant: nextVariant } : {}),
-  }
-  yield* deps.sessions.updateMessage({ ...current.info, agent: target.name, model: nextModel })
+      if (target.variant) {
+        const exit = yield* Effect.exit(deps.provider.getModel(baseModel.providerID, baseModel.modelID))
+        if (Exit.isSuccess(exit)) {
+          const valid = pickVariant(exit.value.variants, target.variant)
+          if (valid && valid !== baseModel.variant) {
+            return {
+              model: { providerID: baseModel.providerID, modelID: baseModel.modelID, variant: valid },
+              switchModel: {
+                providerID: baseModel.providerID,
+                id: baseModel.modelID,
+                variant: valid as ModelV2.VariantID,
+              },
+            }
+          }
+        }
+      }
+      return { model: baseModel, switchModel: false }
+    })
+  })()
+  yield* deps.sessions.updateMessage({ ...current.info, agent: target.name, model: next.model })
   yield* deps.switched({ sessionID: ctx.sessionID, agent: target.name })
-  if (switchedModel) {
-    yield* deps.modelSwitched({ sessionID: ctx.sessionID, model: switchedModel })
+  if (next.switchModel) {
+    yield* deps.modelSwitched({ sessionID: ctx.sessionID, model: next.switchModel })
   }
   // kilocode_change end
 
