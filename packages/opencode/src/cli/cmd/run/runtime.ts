@@ -505,8 +505,25 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
           state.agent = agent
           footer.event({ type: "agent", agent: Locale.titlecase(agent) })
         },
-        onModelChange: (model) => {
-          state.model = { providerID: model.providerID, modelID: model.id }
+        // Mirror state.model, variants, activeVariant, and the footer model label so
+        // an in-flight model switch from mode_switch survives through to the next
+        // interactive prompt in kilo run.
+onModelChange: (model) => {
+          // kilocode_change start - mirror state.model, variants, activeVariant, and the
+          // footer model label so an in-flight model switch from mode_switch survives
+          // through to the next interactive prompt in kilo run.
+          const next = { providerID: model.providerID, modelID: model.id, variant: model.variant }
+          state.model = next
+          const variants = variantsFor(state.providers, next)
+          state.variants = variants
+          // Only adopt the destination variant when the resolved variant list
+          // actually contains it; otherwise the source variant would silently
+          // sneak back onto the destination model.
+          state.activeVariant =
+            model.variant && variants.includes(model.variant) ? model.variant : undefined
+          footer.event({ type: "model", model: formatModelLabel(next, state.activeVariant, state.providers) })
+          footer.event({ type: "model.switch", model: next })
+          // kilocode_change end
         },
         // kilocode_change end
         trace: log,
