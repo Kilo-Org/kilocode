@@ -29,7 +29,13 @@ import { RemoteSender } from "@/kilo-sessions/remote-sender"
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
 import { buildInstanceAdvertisement } from "@/kilo-sessions/instance-advertisement"
 import { AttachedState } from "@/kilo-sessions/attached-state"
-import { clear as clearRenameMarks, consumeAutoTitle, consumeRenameAdoption } from "@/kilo-sessions/rename-adoptions"
+import {
+  clear as clearRenameMarks,
+  consumeAutoTitle,
+  consumeRenameAdoption,
+  markAutoTitle,
+  markRenameAdopted,
+} from "@/kilo-sessions/rename-adoptions"
 import { SessionStatus } from "@/session/status"
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Question } from "@/question"
@@ -368,29 +374,45 @@ export namespace KiloSessions {
             const sessionID = evt.properties.sessionID
             const session = await Effect.runPromise(sessions.get(sessionID).pipe(Effect.orElseSucceed(() => null)))
             if (!session) return
-            // Consume rename/auto-title marks before await ingest.sync so the 60s TTL
-            // spans only the in-process hop, not token resolution + network queueing.
+            // Consume marks before the network hop so the 60s TTL does not span
+            // token resolution + ingest.sync. Advance knownTitles only after a
+            // successful sync so a rejected meta/sync leaves prev intact and the
+            // next Updated re-derives the POST. Restore consumed marks on failure
+            // so a cloud rename cannot echo and an auto-title keeps generated.
             const prev = knownTitles.get(sessionID)
-            knownTitles.set(sessionID, session.title)
+            const sameTitle = prev === session.title
             // Same-title Updated (setTitle no-op / double session.renamed): still
-            // consume a matching rename adoption so the mark cannot stick and
-            // swallow a later real local rename (Decision 8 last-write-wins).
-            let titleReport: { generated: boolean } | undefined
-            if (prev === session.title) {
-              consumeRenameAdoption(sessionID, session.title)
-            } else if (prev !== undefined && !consumeRenameAdoption(sessionID, session.title)) {
-              // Unseeded first sight (race before Created): record only, do not POST.
-              // After Created/list seed, any title change is a real change and POSTs.
-              titleReport = { generated: consumeAutoTitle(sessionID, session.title) }
+            // consume a matching rename adoption after sync so the mark cannot
+            // stick and swallow a later real local rename (Decision 8).
+            const outcome = (():
+              | { kind: "same" }
+              | { kind: "seed" }
+              | { kind: "adopted" }
+              | { kind: "report"; generated: boolean } => {
+              if (sameTitle) return { kind: "same" }
+              if (prev === undefined) return { kind: "seed" }
+              if (consumeRenameAdoption(sessionID, session.title)) return { kind: "adopted" }
+              return { kind: "report", generated: consumeAutoTitle(sessionID, session.title) }
+            })()
+            try {
+              await ingest.sync(sessionID, [
+                { type: "kilo_meta", data: await meta(sessionID, session) },
+                { type: "session", data: transport(session) },
+              ])
+            } catch (error) {
+              if (outcome.kind === "adopted") markRenameAdopted(sessionID, session.title)
+              else if (outcome.kind === "report" && outcome.generated) markAutoTitle(sessionID, session.title)
+              log.error("session updated ingest failed", { sessionID, error })
+              return
             }
-            await ingest.sync(sessionID, [
-              { type: "kilo_meta", data: await meta(sessionID, session) },
-              { type: "session", data: transport(session) },
-            ])
-            if (!titleReport) return
+            if (outcome.kind === "same") consumeRenameAdoption(sessionID, session.title)
+            knownTitles.set(sessionID, session.title)
+            if (outcome.kind !== "report") return
             // Production path goes through the Interface method (not private helper).
             const { AppRuntime } = await import("@/effect/app-runtime")
-            await AppRuntime.runPromise(reportSessionTitle(sessionID, session.title, titleReport))
+            await AppRuntime.runPromise(
+              reportSessionTitle(sessionID, session.title, { generated: outcome.generated }),
+            )
           })
           watch(Session.Event.Deleted, (evt) => {
             const sessionID = evt.properties.sessionID
