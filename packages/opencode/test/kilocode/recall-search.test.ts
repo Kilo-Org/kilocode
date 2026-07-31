@@ -9,7 +9,7 @@ import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { MessageID, PartID, type SessionID } from "../../src/session/schema"
 import { Database } from "@opencode-ai/core/database/database"
-import { eq } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import { seedProject } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
@@ -68,6 +68,61 @@ function run(query: string, signal?: AbortSignal) {
     signal,
   })
 }
+it.instance(
+  "uses the recall covering index when available",
+  () =>
+    Effect.gen(function* () {
+      yield* seedProject
+      const sessions = yield* Session.Service
+      const session = yield* sessions.create({ title: "Planner" })
+      const { db } = yield* Database.Service
+      const plan = yield* db
+        .all<{
+          detail: string
+        }>(sql`EXPLAIN QUERY PLAN ${RecallSearch.query([session.id], ["needle"], { sessionID: "", partID: "" })}`)
+        .pipe(Effect.orDie)
+      expect(plan.some((row) => row.detail.includes("recall_part_search_idx"))).toBe(true)
+    }),
+  { git: true },
+)
+
+it.instance(
+  "recreates the recall index lazily after it is missing",
+  () =>
+    Effect.gen(function* () {
+      yield* seedProject
+      const sessions = yield* Session.Service
+      const session = yield* sessions.create({ title: "Lazy index" })
+      yield* add(session.id, "user", { type: "text", text: "lazy index needle" })
+      const { db } = yield* Database.Service
+      yield* db.run(sql`DROP INDEX recall_part_search_idx`).pipe(Effect.orDie)
+      expect(
+        yield* db.get(sql`SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'recall_part_search_idx'`),
+      ).toBeUndefined()
+      expect((yield* run("lazy index needle")).results.map((item) => item.id)).toEqual([session.id])
+      expect(
+        yield* db.get(sql`SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'recall_part_search_idx'`),
+      ).toEqual({ name: "recall_part_search_idx" })
+    }),
+  { git: true },
+)
+
+it.instance(
+  "continues searching when lazy index creation fails",
+  () =>
+    Effect.gen(function* () {
+      yield* seedProject
+      const sessions = yield* Session.Service
+      const session = yield* sessions.create({ title: "Unavailable index" })
+      yield* add(session.id, "user", { type: "text", text: "fallback needle" })
+      const { db } = yield* Database.Service
+      yield* db.run(sql`DROP INDEX recall_part_search_idx`).pipe(Effect.orDie)
+      yield* db.run(sql`PRAGMA query_only = ON`).pipe(Effect.orDie)
+      expect((yield* run("fallback needle")).results.map((item) => item.id)).toEqual([session.id])
+    }),
+  { git: true },
+)
+
 it.instance(
   "searches titles and terms distributed across transcript messages",
   () =>

@@ -2,6 +2,7 @@ import path from "path"
 import { eq, inArray, sql } from "drizzle-orm"
 import { Effect } from "effect"
 import { Database } from "@opencode-ai/core/database/database"
+import { RecallPartIndex } from "@opencode-ai/core/kilocode/session/recall-part-index"
 import type { MessageV2 } from "@/session/message-v2"
 import { SessionTable } from "@opencode-ai/core/session/sql"
 import type { MessageID, PartID, SessionID } from "@/session/schema"
@@ -19,6 +20,7 @@ export namespace RecallSearch {
   const SNIPPET_CHARS = 360
   const SNIPPET_CONTEXT = 120
   const segmenter = new Intl.Segmenter("en", { granularity: "grapheme" })
+  const ready = new WeakSet<object>()
 
   const TEXT_SQL = `CASE
       WHEN json_extract(p.data, '$.type') = 'text' THEN coalesce(json_extract(p.data, '$.text'), '')
@@ -45,7 +47,7 @@ export namespace RecallSearch {
         AND json_extract(p.data, '$.state.status') = 'error')
     )`
 
-  const searchSql = (
+  export const query = (
     ids: SessionID[],
     terms: string[],
     cursor: { sessionID: SessionID | ""; partID: PartID | "" },
@@ -72,6 +74,15 @@ export namespace RecallSearch {
       )
     ORDER BY p.session_id, p.id
     LIMIT ${PAGE_SIZE}`
+
+  const ensure = (db: Database.Interface["db"]) =>
+    Effect.gen(function* () {
+      if (ready.has(db)) return
+      yield* db.run(sql.raw(RecallPartIndex.createSql)).pipe(
+        Effect.tap(() => Effect.sync(() => ready.add(db))),
+        Effect.catch((error) => Effect.logWarning("recall index unavailable", { error })),
+      )
+    })
 
   const messageSql = (ids: MessageID[]) => sql`
     SELECT
@@ -192,8 +203,9 @@ export namespace RecallSearch {
     }
     yield* abort(input.signal)
     if (items.size === 0) return { results: [], sessions: 0, candidates: 0 }
+    yield* ensure(db)
 
-    const ids = [...items.keys()]
+    const ids = [...items.keys()].sort()
     const excludeSessionID = input.excludeSessionID ?? ""
     const excludeFromMessageID = input.excludeFromMessageID ?? ""
     let candidates = 0
@@ -222,7 +234,9 @@ export namespace RecallSearch {
       const batch = ids.slice(index, index + BATCH)
       let cursor = { sessionID: "" as SessionID | "", partID: "" as PartID | "" }
       while (true) {
-        const found = yield* db.all<Row>(searchSql(batch, parsed.terms, cursor)).pipe(Effect.orDie)
+        const live = cursor.sessionID ? batch.filter((id) => id >= cursor.sessionID) : batch
+        if (live.length === 0) break
+        const found = yield* db.all<Row>(query(live, parsed.terms, cursor)).pipe(Effect.orDie)
         if (found.length === 0) break
         candidates += found.length
         const hits: Hit[] = []
