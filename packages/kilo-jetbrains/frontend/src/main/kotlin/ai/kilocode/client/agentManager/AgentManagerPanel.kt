@@ -7,6 +7,7 @@ import ai.kilocode.client.agentManager.worktree.WorktreeIcons
 import ai.kilocode.client.agentManager.worktree.WorktreeNameCache
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.ensureWorktreeSessionEditorKind
+import ai.kilocode.client.agentManager.worktree.worktreeActivityBadge
 import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionActivityKind
@@ -325,7 +326,7 @@ class AgentManagerPanel(
         override val badges: List<ActiveListBadge>
             get() {
                 if (pending || deleting) return emptyList()
-                return listOfNotNull(kind?.let { ActiveListBadge(it.label(), it.style()) })
+                return listOfNotNull(kind?.let(::worktreeActivityBadge))
             }
         override val cells: List<ActiveListCell>
             get() = if (dto.main || pending) emptyList() else listOf(

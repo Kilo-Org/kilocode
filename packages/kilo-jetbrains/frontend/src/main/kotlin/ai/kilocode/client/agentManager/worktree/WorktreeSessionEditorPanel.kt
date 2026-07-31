@@ -333,7 +333,7 @@ class WorktreeSessionEditorPanel(
             return name
         }
         override val tooltip: String get() = title
-        override val badges: List<ActiveListBadge> get() = listOfNotNull(kind?.let { ActiveListBadge(it.label(), it.style()) })
+        override val badges: List<ActiveListBadge> get() = listOfNotNull(kind?.let(::worktreeActivityBadge))
         override val section: String get() = HistoryTime.title(HistoryTime.section(item))
         override val search: String get() = listOf(session.title, session.id, session.directory).joinToString(" ")
         override val cells: List<ActiveListCell>

@@ -38,12 +38,15 @@ internal class ActiveListRenderer(
     private val mark = icon.align(HAlign.CENTER, VAlign.CENTER)
     private val title = SimpleColoredComponent()
     private val badges = Stack.horizontal()
-    // Title in CENTER clips when the row is narrow; trailing tags in EAST keep their full
+    // Title in CENTER clips when the group is narrow; trailing tags in EAST keep their full
     // preferred width. A squeezed row sacrifices the title text but never drops the tags.
-    private val header = JPanel(BorderLayout(UiStyle.Gap.xs(), 0)).apply {
+    private val titleGroup = JPanel(BorderLayout(UiStyle.Gap.xs(), 0)).apply {
         add(title, BorderLayout.CENTER)
         add(badges, BorderLayout.EAST)
     }
+    // Pin the title+badges group to the leading edge so badges trail the title text directly
+    // instead of drifting to the far right of the row.
+    private val header = titleGroup.align(HAlign.LEFT, VAlign.CENTER)
     private val desc = JBLabel()
     private val text = Stack.vertical().next(header).next(desc)
     private val textPane = text.align(HAlign.TRACK, VAlign.CENTER)
@@ -63,7 +66,7 @@ internal class ActiveListRenderer(
     init {
         isOpaque = true
         top.isOpaque = true
-        UiStyle.Components.transparent(row, mark, icon, title, badges, header, text, textPane, desc, trail, trailPane, cells, cellPane, actions)
+        UiStyle.Components.transparent(row, mark, icon, title, badges, titleGroup, header, text, textPane, desc, trail, trailPane, cells, cellPane, actions)
         row.border = JBUI.Borders.empty(
             UiStyle.Gap.md(),
             0,

@@ -1,6 +1,7 @@
 package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.session.SessionActivityKind
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.rpc.dto.SessionActivityDto
 import ai.kilocode.rpc.dto.SessionActivityKindDto
 import kotlin.test.Test
@@ -39,5 +40,13 @@ class WorktreeActivityTest {
 
         assertEquals(mapOf("/repo/wt" to SessionActivityKind.RUNNING), result)
         assertEquals("/repo/wt", normalizeWorktreePath("/repo/wt/"))
+    }
+
+    @Test
+    fun `running badge uses the subtle secondary pill while actionable kinds stay prominent`() {
+        assertEquals(UiStyle.Badge.Secondary, worktreeActivityBadge(SessionActivityKind.RUNNING).style)
+        assertEquals(SessionActivityKind.QUESTION.style(), worktreeActivityBadge(SessionActivityKind.QUESTION).style)
+        assertEquals(SessionActivityKind.PERMISSION.style(), worktreeActivityBadge(SessionActivityKind.PERMISSION).style)
+        assertEquals(SessionActivityKind.RUNNING.label(), worktreeActivityBadge(SessionActivityKind.RUNNING).text)
     }
 }

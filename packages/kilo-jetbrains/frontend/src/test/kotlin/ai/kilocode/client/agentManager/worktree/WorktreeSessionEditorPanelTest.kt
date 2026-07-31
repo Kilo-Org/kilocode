@@ -11,6 +11,7 @@ import ai.kilocode.client.session.history.LocalHistoryItem
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.fire
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.activeListSectionTitle
@@ -144,7 +145,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         assertEquals("Session ses_1", row.title)
         assertNull(row.icon)
         assertNull(row.description)
-        assertEquals(listOf(ActiveListBadge(SessionActivityKind.RUNNING.label(), SessionActivityKind.RUNNING.style())), row.badges)
+        assertEquals(listOf(ActiveListBadge(SessionActivityKind.RUNNING.label(), UiStyle.Badge.Secondary)), row.badges)
         assertNull(row.trailing)
         assertEquals(HistoryTime.title(HistoryTime.section(LocalHistoryItem(session))), row.section)
     }
