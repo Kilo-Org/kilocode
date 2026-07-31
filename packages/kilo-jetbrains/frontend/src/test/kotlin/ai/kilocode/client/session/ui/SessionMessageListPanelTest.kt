@@ -32,6 +32,7 @@ import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageDto
+import ai.kilocode.rpc.dto.MessageSummaryDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.PartDto
@@ -61,6 +62,16 @@ import javax.swing.JPanel
 import javax.swing.RepaintManager
 import javax.swing.SwingUtilities
 import javax.swing.border.Border
+
+private val PATCH = """
+    diff --git a/src/A.kt b/src/A.kt
+    --- a/src/A.kt
+    +++ b/src/A.kt
+    @@ -1,1 +1,2 @@
+    -old
+    +new
+    +more
+""".trimIndent()
 
 /**
  * Tests for [SessionMessageListPanel] — structural and index integrity.
@@ -97,6 +108,28 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
     fun `test empty panel has no turns`() {
         assertEquals(0, panel.turnCount())
         assertEquals("", panel.dump())
+    }
+
+    fun `test modified files card follows turn anchor summary`() {
+        model.upsertMessage(msg("u1", "user").copy(summary = summary("src/A.kt")))
+
+        val turn = panel.findTurn("u1")!!
+        val card = components(turn).filterIsInstance<ModifiedFilesView>().single()
+
+        assertSame(card, turn.components.last())
+        assertTrue(card.isVisible)
+        assertEquals("1 file", card.countText())
+    }
+
+    fun `test message updated summary updates modified files card`() {
+        model.upsertMessage(msg("u1", "user"))
+        assertTrue(components(panel.findTurn("u1")!!).filterIsInstance<ModifiedFilesView>().isEmpty())
+
+        model.upsertMessage(msg("u1", "user").copy(summary = summary("src/A.kt")))
+
+        val card = components(panel.findTurn("u1")!!).filterIsInstance<ModifiedFilesView>().single()
+        assertTrue(card.isVisible)
+        assertEquals("1 file", card.countText())
     }
 
     fun `test transcript content has symmetric side padding`() {
@@ -1258,6 +1291,10 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
 
     private fun msg(id: String, role: String) = MessageDto(
         id = id, sessionID = "ses", role = role, time = MessageTimeDto(0.0),
+    )
+
+    private fun summary(path: String) = MessageSummaryDto(
+        diffs = listOf(DiffFileDto(path, 2, 1, PATCH)),
     )
 
     private fun part(id: String, mid: String, type: String, text: String? = null) = PartDto(
