@@ -83,6 +83,7 @@ export namespace KilocodeConfigWriter {
   function patchJsonc(input: string, patch: unknown, parts: string[] = []): string {
     if (!isRecord(patch)) {
       if (patch === null) {
+        // jsonc-parser cannot delete a nested path when its parent is absent.
         const tree = parseTree(input)
         if (!tree || !findNodeAtLocation(tree, parts)) return input
       }
