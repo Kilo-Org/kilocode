@@ -17,8 +17,10 @@ import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.session.views.TurnView
 import ai.kilocode.client.session.views.base.PartView
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import java.awt.Insets
 import javax.swing.JComponent
 
@@ -82,8 +84,12 @@ class SessionMessageListPanel(
     private var revertingMessage: String? = null
     private var openDiff: SessionDiffOpener = { _, _, _ -> }
     private var sessionId: String? = null
+    private var seq = 0
+    private var stable = -1
+    private var dead = false
 
     var onHover: ((PartView, Boolean) -> Unit)? = null
+    var onReflow: ((Boolean) -> Unit)? = null
 
     /** Progress footer — always the last child inside the scroll. */
     val progress = ProgressPanel(model, parent)
@@ -170,7 +176,9 @@ class SessionMessageListPanel(
                     // message.updated fires on every streamed metadata delta (time/tokens/cost). Only
                     // relayout the transcript when the turn's modified-files card actually changed,
                     // not on each delta or when this message isn't a turn anchor.
-                    if (turnViews[event.info.info.id]?.setDiffs(event.info.info.summary?.diffs.orEmpty()) == true) {
+                    val view = turnViews[event.info.info.id]
+                    if (view?.setDiffs(event.info.info.summary?.diffs.orEmpty()) == true) {
+                        (layout as? SessionLayout)?.forget(view)
                         refresh()
                     }
                 }
@@ -184,6 +192,11 @@ class SessionMessageListPanel(
 
         // Populate from any turns already present (e.g. existing session opened before panel was created)
         rebuild()
+    }
+
+    override fun addNotify() {
+        super.addNotify()
+        scheduleReflow()
     }
 
     fun setDiffOpener(openDiff: SessionDiffOpener, sessionId: String?) {
@@ -236,6 +249,17 @@ class SessionMessageListPanel(
             }
         }
     }.trimEnd()
+
+    @RequiresEdt
+    internal fun reflow(): Boolean {
+        val before = preferredSize.height
+        (layout as? SessionLayout)?.forgetAll()
+        revalidate()
+        if (width > 0) doLayout()
+        val after = preferredSize.height
+        repaint()
+        return after != before
+    }
 
     // ------ private event handlers ------
 
@@ -331,6 +355,7 @@ class SessionMessageListPanel(
         syncReverting(model.state)
         banner?.update()
         anchorFooter()
+        scheduleReflow()
         refresh()
     }
 
@@ -344,6 +369,8 @@ class SessionMessageListPanel(
     }
 
     private fun clear() {
+        seq++
+        stable = -1
         clearHover()
         turnViews.values.forEach {
             remove(it)
@@ -360,6 +387,7 @@ class SessionMessageListPanel(
         syncReverting(model.state)
         banner?.update()
         anchorFooter()
+        scheduleReflow()
         refresh()
     }
 
@@ -473,6 +501,34 @@ class SessionMessageListPanel(
         repaint()
     }
 
+    private fun scheduleReflow() {
+        if (dead) return
+        if (turnViews.isEmpty()) return
+        stable = -1
+        val id = ++seq
+        ApplicationManager.getApplication().invokeLater {
+            reflowPass(id, REFLOW_PASSES)
+        }
+    }
+
+    @RequiresEdt
+    private fun reflowPass(id: Int, remaining: Int) {
+        if (dead || id != seq) return
+        if (turnViews.isEmpty()) return
+        val changed = reflow()
+        if (changed) onReflow?.invoke(true)
+        if (remaining <= 0) {
+            stable = -1
+            return
+        }
+        val height = preferredSize.height
+        val left = if (height == stable) remaining - 1 else REFLOW_PASSES
+        stable = height
+        ApplicationManager.getApplication().invokeLater {
+            reflowPass(id, left)
+        }
+    }
+
     /**
      * Handle a content mutation that changed an already-rendered message: sync the turn's copy
      * toolbars, forget its cached height, then relayout. [forgetTurn] is essential when the update
@@ -522,10 +578,13 @@ class SessionMessageListPanel(
         login?.applyStyle(style)
         banner?.applyStyle(style)
         progress.applyStyle(style)
+        reflow()
         refresh()
     }
 
     override fun dispose() {
+        dead = true
+        seq++
         clearHover()
         question?.hideView()
         permission?.hideView()
@@ -539,6 +598,11 @@ class SessionMessageListPanel(
         msgToView.clear()
         revertingMessage = null
         onHover = null
+        onReflow = null
         removeAll()
+    }
+
+    private companion object {
+        const val REFLOW_PASSES = 6
     }
 }

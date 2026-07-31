@@ -144,6 +144,33 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertEquals(right, left)
     }
 
+    fun `test reflow drops cached panel measurements`() {
+        val child = Growing(20)
+        panel.add(child, 0)
+        panel.setSize(600, 400)
+        layout(panel)
+        child.markValid()
+        child.size = 80
+
+        panel.reflow()
+
+        assertEquals(80, child.height)
+    }
+
+    fun `test apply style drops cached panel measurements`() {
+        val child = Growing(20)
+        panel.add(child, 0)
+        panel.setSize(600, 400)
+        layout(panel)
+        child.markValid()
+        child.size = 80
+
+        panel.applyStyle(SessionEditorStyle.current())
+        layout(panel)
+
+        assertEquals(80, child.height)
+    }
+
     fun `test top level user turns use prompt gap after previous turn`() {
         model.upsertMessage(msg("u1", "user"))
         model.updateContent("u1", part("p1", "u1", "text", text = "first"))
@@ -1414,5 +1441,22 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
             if (invalidComponent in watched) invalid.add(invalidComponent)
             super.addInvalidComponent(invalidComponent)
         }
+    }
+
+    private class Growing(var size: Int) : JPanel() {
+        private var valid = false
+
+        override fun isValid() = valid
+
+        override fun invalidate() {
+            valid = false
+            super.invalidate()
+        }
+
+        fun markValid() {
+            valid = true
+        }
+
+        override fun getPreferredSize() = java.awt.Dimension(0, size)
     }
 }
