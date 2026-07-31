@@ -446,8 +446,29 @@ private fun buildFileTree(files: List<DiffFileDto>): Tree {
 private fun buildFileModel(files: List<DiffFileDto>): DefaultTreeModel {
     val root = DefaultMutableTreeNode(Node("", "", true, null))
     for (file in files) addFile(root, file)
+    compact(root)
     updateStats(root)
     return DefaultTreeModel(root)
+}
+
+// Collapse chains of single-child directories into one node (e.g. "pkg/ui/list") so the tree
+// doesn't nest through directories that never branch, mirroring the IDE's compact directories.
+private fun compact(node: DefaultMutableTreeNode) {
+    val item = node.userObject as? Node
+    if (item != null && item.file == null && item.path.isNotEmpty()) {
+        while (node.childCount == 1) {
+            val parent = node.userObject as? Node ?: break
+            val child = node.getChildAt(0) as? DefaultMutableTreeNode ?: break
+            val kid = child.userObject as? Node ?: break
+            if (kid.file != null) break
+            node.userObject = Node("${parent.name}/${kid.name}", kid.path, true, null)
+            node.removeAllChildren()
+            while (child.childCount > 0) node.add(child.getChildAt(0) as DefaultMutableTreeNode)
+        }
+    }
+    for (i in 0 until node.childCount) {
+        compact(node.getChildAt(i) as? DefaultMutableTreeNode ?: continue)
+    }
 }
 
 private fun buildTreePanel(tree: Tree, files: List<DiffFileDto>, badge: DiffStatBadge, target: JComponent, refresh: () -> Unit): JComponent {

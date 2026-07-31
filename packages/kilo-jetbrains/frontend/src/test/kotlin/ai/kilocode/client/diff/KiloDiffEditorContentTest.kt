@@ -246,13 +246,44 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
             val tree = components(view).filterIsInstance<Tree>().single()
             val root = tree.model.root as DefaultMutableTreeNode
             val top = root.getChildAt(0) as DefaultMutableTreeNode
-            val ui = top.getChildAt(0) as DefaultMutableTreeNode
-            val list = ui.getChildAt(0) as DefaultMutableTreeNode
-            val leaf = list.getChildAt(0) as DefaultMutableTreeNode
+            val leaf = top.getChildAt(0) as DefaultMutableTreeNode
 
-            assertEquals("pkg", text(tree, top))
+            assertEquals("pkg/ui/list", text(tree, top))
             assertEquals("ActiveListRenderer.kt", text(tree, leaf))
-            assertEquals(4, tree.rowCount)
+            assertEquals(2, tree.rowCount)
+        } finally {
+            Disposer.dispose(parent)
+        }
+    }
+
+    fun `test tree compacts single-child directory chains`() {
+        val parent = Disposer.newDisposable()
+        try {
+            val view = view(listOf(file("a/b/c/One.kt", 1, 0), file("a/b/c/Two.kt", 2, 0)), parent)
+            val tree = components(view).filterIsInstance<Tree>().single()
+            val root = tree.model.root as DefaultMutableTreeNode
+            val top = root.getChildAt(0) as DefaultMutableTreeNode
+
+            assertEquals("a/b/c", text(tree, top))
+            assertEquals("One.kt", text(tree, top.getChildAt(0) as DefaultMutableTreeNode))
+            assertEquals("Two.kt", text(tree, top.getChildAt(1) as DefaultMutableTreeNode))
+            assertEquals(3, tree.rowCount)
+        } finally {
+            Disposer.dispose(parent)
+        }
+    }
+
+    fun `test tree stops compacting at branch`() {
+        val parent = Disposer.newDisposable()
+        try {
+            val view = view(listOf(file("a/b/c/One.kt", 1, 0), file("a/x/Two.kt", 2, 0)), parent)
+            val tree = components(view).filterIsInstance<Tree>().single()
+            val root = tree.model.root as DefaultMutableTreeNode
+            val a = root.getChildAt(0) as DefaultMutableTreeNode
+
+            assertEquals("a", text(tree, a))
+            assertEquals("b/c", text(tree, a.getChildAt(0) as DefaultMutableTreeNode))
+            assertEquals("x", text(tree, a.getChildAt(1) as DefaultMutableTreeNode))
         } finally {
             Disposer.dispose(parent)
         }
