@@ -15,7 +15,14 @@ function getThemeColors() {
     textWeak: get("--text-weak", "#A3A3A3"),
     border: get("--border-weak-base", "#FFFFFF1A"),
     surface: get("--surface-raised-base", "#202020"),
-    series: ["#3B82F6", "#00BAA9", "#22C55E", "#F97316", "#A855F7", "#EF4444"],
+    series: [
+      get("--vscode-charts-blue", "#3B82F6"),
+      get("--vscode-charts-green", "#22C55E"),
+      get("--vscode-charts-purple", "#A855F7"),
+      get("--vscode-charts-orange", "#F97316"),
+      get("--vscode-charts-red", "#EF4444"),
+      get("--vscode-charts-yellow", "#EAB308"),
+    ],
   }
 }
 
