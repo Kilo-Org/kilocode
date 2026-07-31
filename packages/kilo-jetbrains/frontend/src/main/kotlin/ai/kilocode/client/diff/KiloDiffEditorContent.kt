@@ -446,12 +446,16 @@ private fun buildFileTree(files: List<DiffFileDto>): Tree {
     // expansion state. JTree only invalidates cached path bounds on model changes, not on
     // expand/collapse, so a collapsed folder would keep its narrower expanded-state bounds and the
     // re-shown badge would squeeze the name until an unrelated re-measure. Invalidate the layout
-    // cache on toggle so the row re-measures immediately.
-    tree.addTreeExpansionListener(object : TreeExpansionListener {
-        override fun treeExpanded(event: TreeExpansionEvent) = TreeUtil.invalidateCacheAndRepaint(tree.ui)
-        override fun treeCollapsed(event: TreeExpansionEvent) = TreeUtil.invalidateCacheAndRepaint(tree.ui)
-    })
+    // cache on a user toggle so the row re-measures. invalidateCacheAndRepaint is UI-scoped (whole
+    // tree), so [bulkToggle] suppresses this during expand/collapse-all and invalidates once at the
+    // end — otherwise a bulk op would re-measure the whole tree per row. Registered after the initial
+    // expandAll (already fully expanded, nothing to re-measure).
     expandAll(tree)
+    tree.addTreeExpansionListener(object : TreeExpansionListener {
+        override fun treeExpanded(event: TreeExpansionEvent) = onToggle()
+        override fun treeCollapsed(event: TreeExpansionEvent) = onToggle()
+        private fun onToggle() { if (!tree.bulk) TreeUtil.invalidateCacheAndRepaint(tree.ui) }
+    })
     return tree
 }
 
@@ -534,7 +538,7 @@ private fun fileCount(count: Int): String = KiloBundle.message(
     count,
 )
 
-private fun expandAll(tree: Tree) {
+private fun expandAll(tree: Tree) = bulkToggle(tree) {
     var i = 0
     while (i < tree.rowCount) {
         tree.expandRow(i)
@@ -542,8 +546,24 @@ private fun expandAll(tree: Tree) {
     }
 }
 
-private fun collapseAll(tree: Tree) {
+private fun collapseAll(tree: Tree) = bulkToggle(tree) {
     for (i in tree.rowCount - 1 downTo 0) tree.collapseRow(i)
+}
+
+/**
+ * Run a bulk expand/collapse without firing the per-row layout-cache invalidation. Each toggle would
+ * otherwise invalidate the whole tree (invalidateCacheAndRepaint is UI-scoped), making a bulk op
+ * O(rows^2) to re-measure. Suppress the toggle listener for the loop and invalidate once at the end.
+ */
+private fun bulkToggle(tree: Tree, action: () -> Unit) {
+    val diff = tree as? DiffTree
+    diff?.bulk = true
+    try {
+        action()
+    } finally {
+        diff?.bulk = false
+    }
+    TreeUtil.invalidateCacheAndRepaint(tree.ui)
 }
 
 private fun addFile(root: DefaultMutableTreeNode, file: DiffFileDto) {
@@ -600,6 +620,9 @@ private class Node(val name: String, val path: String, val dir: Boolean, val fil
 }
 
 private class DiffTree(model: TreeModel) : Tree(model) {
+    /** Set while a bulk expand/collapse runs so the toggle listener skips its per-row invalidation. */
+    var bulk = false
+
     override fun getBackground(): Color = JBUI.CurrentTheme.ToolWindow.background()
 
     override fun getScrollableTracksViewportHeight(): Boolean {
