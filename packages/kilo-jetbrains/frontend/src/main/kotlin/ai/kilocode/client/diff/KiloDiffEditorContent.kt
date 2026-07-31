@@ -98,10 +98,11 @@ internal class DiffEditorView(
     private val load: ((DiffEditorData) -> Unit) -> Job,
     private val replace: (DiffEditorData) -> Unit,
 ) : Disposable {
+    private val start = normalize(initial)
     private val disposed = AtomicBoolean(false)
     private val outdated = AtomicBoolean(false)
     private val refreshing = AtomicBoolean(false)
-    private val tree = buildFileTree(initial)
+    private val tree = buildFileTree(start)
     private val badge = DiffStatBadge(0, 0, inset = UiStyle.Gap.pad())
     private val splitter = OnePixelSplitter(false, 0.25f)
     private val select = Debouncer<Int>(scope, parent) { show(it) }
@@ -114,12 +115,12 @@ internal class DiffEditorView(
         add(banner, BorderLayout.NORTH)
         add(splitter, BorderLayout.CENTER)
     }
-    private var files = initial
+    private var files = start
     private var branch = branch
     private var syncing = false
-    private var requested: String? = initial.firstOrNull()?.file
+    private var requested: String? = start.firstOrNull()?.file
     private var refreshJob: Job? = null
-    private var processor = processor(initial, selected(initial.firstOrNull()?.file))
+    private var processor = processor(start, selected(start.firstOrNull()?.file))
     private val openFileAction = object : DumbAwareAction(
         KiloBundle.message("diff.editor.openFile"),
         KiloBundle.message("diff.editor.openFile"),
@@ -155,11 +156,11 @@ internal class DiffEditorView(
         // disposes the old processor on each refresh, and registering under parent would leak a
         // removal hook (holding the dead processor) for every refresh across the editor's lifetime.
         processor.addListener(DiffRequestProcessorListener { syncTree() }, processor)
-        splitter.firstComponent = buildTreePanel(tree, initial, badge, processor.component, ::refresh)
+        splitter.firstComponent = buildTreePanel(tree, start, badge, processor.component, ::refresh)
         splitter.secondComponent = processor.component
         processor.updateRequest()
-        applyBadge(initial)
-        select(initial.firstOrNull()?.file)
+        applyBadge(start)
+        select(start.firstOrNull()?.file)
         listen()
     }
 
@@ -174,24 +175,25 @@ internal class DiffEditorView(
 
     @RequiresEdt
     fun applyFiles(next: List<DiffFileDto>, nextBranch: String? = branch) {
-        if (same(files, next) && branch == nextBranch) return
+        val items = normalize(next)
+        if (same(files, items) && branch == nextBranch) return
         val path = selectedFile()?.file ?: activePath() ?: files.firstOrNull()?.file
-        val index = selected(path, next)
+        val index = selected(path, items)
         val old = processor
-        files = next
+        files = items
         branch = nextBranch
-        requested = next.getOrNull(index)?.file
-        tree.model = buildFileModel(next)
+        requested = items.getOrNull(index)?.file
+        tree.model = buildFileModel(items)
         expandAll(tree)
-        processor = processor(next, index)
+        processor = processor(items, index)
         Disposer.register(parent, processor)
         processor.addListener(DiffRequestProcessorListener { syncTree() }, processor)
-        splitter.firstComponent = buildTreePanel(tree, next, badge, processor.component, ::refresh)
+        splitter.firstComponent = buildTreePanel(tree, items, badge, processor.component, ::refresh)
         splitter.secondComponent = processor.component
         processor.updateRequest()
         Disposer.dispose(old)
-        applyBadge(next)
-        select(next.getOrNull(index)?.file)
+        applyBadge(items)
+        select(items.getOrNull(index)?.file)
         root.revalidate()
         root.repaint()
     }
@@ -359,6 +361,22 @@ internal class DiffEditorView(
     }
 
     private fun same(a: List<DiffFileDto>, b: List<DiffFileDto>): Boolean = a == b
+
+    private fun normalize(files: List<DiffFileDto>): List<DiffFileDto> = files.map { file -> file.copy(file = display(file.file)) }
+
+    private fun display(file: String): String {
+        val dir = params["directory"] ?: return file
+        val root = clean(dir) ?: return file
+        return try {
+            val raw = Path.of(file)
+            if (!raw.isAbsolute) return file
+            val path = raw.normalize()
+            if (!path.startsWith(root)) return file
+            root.relativize(path).toString().replace('\\', '/')
+        } catch (_: InvalidPathException) {
+            file
+        }
+    }
 
     private fun clean(dir: String): Path? = try {
         Path.of(dir).normalize()
