@@ -1,5 +1,5 @@
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
-import { Effect, Schema, SchemaIssue } from "effect" // kilocode_change
+import { Effect, Schema } from "effect"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import type { JSONSchema7 } from "@ai-sdk/provider"
 import type { MessageV2 } from "../session/message-v2"
@@ -7,6 +7,7 @@ import type { Permission } from "../permission"
 import type { SessionID, MessageID } from "../session/schema"
 import * as Truncate from "./truncate"
 import { Agent } from "@/agent/agent"
+import { format } from "@/kilocode/tool/tool" // kilocode_change
 
 interface Metadata {
   [key: string]: any
@@ -32,41 +33,6 @@ export class InvalidArgumentsError extends Schema.TaggedErrorClass<InvalidArgume
     return `The ${this.tool} tool was called with invalid arguments: ${this.detail}.\nPlease rewrite the input so it satisfies the expected schema.`
   }
 }
-
-// kilocode_change start
-const formatter = SchemaIssue.makeFormatterStandardSchemaV1()
-
-function format(error: unknown) {
-  if (!Schema.isSchemaError(error)) {
-    return String(error)
-  }
-  const result = formatter(error.issue)
-  if (result.issues.length === 0) {
-    return "The input did not match the expected schema. Please rewrite the arguments so they satisfy it."
-  }
-  return result.issues.map((issue) => `${path(issue.path)}: ${reason(issue.message)}`).join("\n")
-}
-
-function path(keys: ReadonlyArray<unknown> | undefined) {
-  const value = (keys ?? [])
-    .map((key) => {
-      const segment = typeof key === "object" && key !== null && "key" in key ? key.key : key
-      return typeof segment === "number" ? `[${segment}]` : `[${JSON.stringify(String(segment))}]`
-    })
-    .join("")
-  return value || "input"
-}
-
-function reason(message: string) {
-  if (message.toLowerCase().includes("required")) {
-    return message
-  }
-  if (message.toLowerCase().includes("missing key")) {
-    return "is missing and is required"
-  }
-  return message
-}
-// kilocode_change end
 
 export type Context<M extends Metadata = Metadata> = {
   sessionID: SessionID
@@ -153,7 +119,10 @@ function wrap<Parameters extends Schema.Decoder<unknown>, Result extends Metadat
           ...(ctx.callID ? { "tool.call_id": ctx.callID } : {}),
         }
         return Effect.gen(function* () {
-          const decoded = yield* decode(args, { errors: "all" }).pipe( // kilocode_change
+          const decoded = yield* decode(
+            args,
+            { errors: "all" }, // kilocode_change
+          ).pipe(
             Effect.mapError(
               (error) =>
                 new InvalidArgumentsError({
