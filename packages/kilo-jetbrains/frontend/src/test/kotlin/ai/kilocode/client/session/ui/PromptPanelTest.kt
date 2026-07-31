@@ -1052,8 +1052,8 @@ class PromptPanelTest : BasePlatformTestCase() {
     }
 
     fun `test send icon matches scroll button theme colors`() {
-        assertTrue(resource("/icons/send.svg").contains("fill=\"#0066B8\""))
-        assertTrue(resource("/icons/send_dark.svg").contains("fill=\"#0A7BD8\""))
+        assertTrue(resource("/icons/send.svg").contains("fill=\"#3574F0\""))
+        assertTrue(resource("/icons/send_dark.svg").contains("fill=\"#548AF7\""))
     }
 
     fun `test busy allows sending draft`() {
