@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.ui
 
+import ai.kilocode.client.session.SessionDiffOpener
 import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionModelEvent
@@ -79,6 +80,8 @@ class SessionMessageListPanel(
     private var hiddenTool: ToolCallRef? = null
     private var hovered: PartView? = null
     private var revertingMessage: String? = null
+    private var openDiff: SessionDiffOpener = { _, _, _ -> }
+    private var sessionId: String? = null
 
     var onHover: ((PartView, Boolean) -> Unit)? = null
 
@@ -157,12 +160,20 @@ class SessionMessageListPanel(
 
                 // Message events: structural changes are handled via turn events above.
                 is SessionModelEvent.MessageAdded,
-                is SessionModelEvent.MessageUpdated,
                 is SessionModelEvent.MessageRemoved,
                 is SessionModelEvent.TodosUpdated,
                 is SessionModelEvent.SessionUpdated,
                 is SessionModelEvent.HeaderUpdated,
                 is SessionModelEvent.Compacted -> Unit
+
+                is SessionModelEvent.MessageUpdated -> {
+                    // message.updated fires on every streamed metadata delta (time/tokens/cost). Only
+                    // relayout the transcript when the turn's modified-files card actually changed,
+                    // not on each delta or when this message isn't a turn anchor.
+                    if (turnViews[event.info.info.id]?.setDiffs(event.info.info.summary?.diffs.orEmpty()) == true) {
+                        refresh()
+                    }
+                }
 
                 is SessionModelEvent.DiffUpdated -> {
                     banner?.update()
@@ -173,6 +184,12 @@ class SessionMessageListPanel(
 
         // Populate from any turns already present (e.g. existing session opened before panel was created)
         rebuild()
+    }
+
+    fun setDiffOpener(openDiff: SessionDiffOpener, sessionId: String?) {
+        this.openDiff = openDiff
+        this.sessionId = sessionId
+        turnViews.values.forEach { it.setDiffOpener(openDiff, sessionId) }
     }
 
     // ------ public lookup API ------
@@ -223,13 +240,16 @@ class SessionMessageListPanel(
     // ------ private event handlers ------
 
     private fun onTurnAdded(turn: ai.kilocode.client.session.model.Turn) {
-        val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, deleteQueued)
+        val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, deleteQueued).also {
+            it.setDiffOpener(openDiff, sessionId)
+        }
         turnViews[turn.id] = tv
         for (msgId in turn.messageIds) {
             val msg = model.message(msgId) ?: continue
             val mv = tv.addMessage(msg)
             register(msgId, tv, mv)
         }
+        tv.setDiffs(diffsOf(turn))
         tv.syncCopyToolbars()
         syncQueued(tv)
         syncReverted()
@@ -258,6 +278,7 @@ class SessionMessageListPanel(
             val mv = tv.addMessage(msg)
             register(id, tv, mv)
         }
+        tv.setDiffs(diffsOf(turn))
         tv.syncCopyToolbars()
         syncQueued(tv)
         syncReverted()
@@ -288,13 +309,16 @@ class SessionMessageListPanel(
         removeAll()
 
         for (turn in model.turns()) {
-            val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, deleteQueued)
+            val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, deleteQueued).also {
+                it.setDiffOpener(openDiff, sessionId)
+            }
             turnViews[turn.id] = tv
             for (msgId in turn.messageIds) {
                 val msg = model.message(msgId) ?: continue
                 val mv = tv.addMessage(msg)
                 register(msgId, tv, mv)
             }
+            tv.setDiffs(diffsOf(turn))
             tv.syncCopyToolbars()
             syncQueued(tv)
             add(tv)
@@ -428,6 +452,9 @@ class SessionMessageListPanel(
         if (banner != null) add(banner)
         add(progress)
     }
+
+    private fun diffsOf(turn: ai.kilocode.client.session.model.Turn) =
+        model.message(turn.id)?.info?.summary?.diffs.orEmpty()
 
     private fun register(msgId: String, tv: TurnView, mv: MessageView) {
         msgToTurn[msgId] = tv

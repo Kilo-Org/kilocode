@@ -279,6 +279,7 @@ export const dict = {
 
   "notification.permission.title": "권한 필요",
   "notification.permission.titleSubagent": "권한 필요 (서브에이전트)",
+  "notification.permission.titleSkillShell": '스킬 "{{skill}}"의 셸 명령을 실행할까요?',
   "ui.permission.manageAutoApprove": "자동 승인 규칙 관리",
   "ui.permission.doomLoop.prompt": "{{tool}} 도구에서 잠재적인 반복 실행이 감지되었습니다. 계속 실행하시겠습니까?",
   "ui.permission.doomLoop.rule": "{{tool}} 호출 계속",
@@ -899,6 +900,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "SWE-Pruner 모델",
   "settings.experimental.swePrunerModel.description":
     "도구 출력을 정리하는 데 사용하는 모델. 기본값은 구성된 소형 모델입니다",
+  "settings.experimental.multiProject.title": "멀티 프로젝트 Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Agent Manager에서 여러 저장소에 걸친 세션과 워크트리 관리를 활성화합니다. 현재 워크스페이스 저장소는 항상 기본 프로젝트입니다.",
   "settings.experimental.mcpTimeout.title": "MCP 타임아웃 (ms)",
   "settings.experimental.mcpTimeout.description": "MCP 서버 요청의 타임아웃 시간 (밀리초)",
   "settings.experimental.remote.title": "Remote 제어",

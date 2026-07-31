@@ -45,6 +45,8 @@ export type Reply = typeof Reply.Type
 export const ReplyBody = Schema.Struct({
   reply: Reply,
   message: Schema.String.pipe(Schema.optional),
+  // kilocode_change - set by clients when a human answered the prompt; the server refuses machine approvals of skill-shell batches
+  interactive: Schema.Boolean.pipe(Schema.optional),
 }).annotate({ identifier: "PermissionReplyBody" })
 export type ReplyBody = typeof ReplyBody.Type
 

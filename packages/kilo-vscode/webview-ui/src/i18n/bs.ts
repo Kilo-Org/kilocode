@@ -279,6 +279,7 @@ export const dict = {
 
   "notification.permission.title": "Potrebna dozvola",
   "notification.permission.titleSubagent": "Potrebna dozvola (podagent)",
+  "notification.permission.titleSkillShell": "Pokrenuti shell komande iz vještine „{{skill}}”?",
   "ui.permission.manageAutoApprove": "Upravljanje pravilima automatskog odobravanja",
   "ui.permission.doomLoop.prompt": "Otkrivena je moguća petlja za alat {{tool}}. Nastaviti izvršavanje?",
   "ui.permission.doomLoop.rule": "Nastavi pozive alata {{tool}}",
@@ -910,6 +911,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "SWE-Pruner model",
   "settings.experimental.swePrunerModel.description":
     "Model koji se koristi za orezivanje izlaza alata; podrazumijevano konfigurisani mali model",
+  "settings.experimental.multiProject.title": "Višeprojektni Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Omogući upravljanje sesijama i worktree-ima kroz više repozitorija u Agent Manager-u. Trenutni workspace repozitorij je uvijek zadani projekat.",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",
   "settings.experimental.mcpTimeout.description": "Istek vremena za MCP server zahtjeve u milisekundama",
   "settings.experimental.remote.title": "Remote kontrola",

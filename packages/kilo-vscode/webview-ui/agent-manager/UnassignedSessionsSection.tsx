@@ -16,6 +16,7 @@ interface Props {
   onSelect: (id: string) => void
   onPromote: (id: string) => void
   onOpen: (id: string) => void
+  sidebarId?: (id: string) => string
 }
 
 export const UnassignedSessionsSection: Component<Props> = (props) => {
@@ -61,7 +62,7 @@ export const UnassignedSessionsSection: Component<Props> = (props) => {
                   <ContextMenu.Trigger as="div" style={{ display: "contents" }}>
                     <button
                       class={`am-item ${session.id === props.active() ? "am-item-active" : ""}`}
-                      data-sidebar-id={session.id}
+                      data-sidebar-id={props.sidebarId?.(session.id) ?? session.id}
                       onClick={() => props.onSelect(session.id)}
                     >
                       <span class="am-item-title" dir="auto">
