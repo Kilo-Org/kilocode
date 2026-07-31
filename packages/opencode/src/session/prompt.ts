@@ -391,6 +391,19 @@ export const layer = Layer.effect(
         throw error
       }
 
+      // kilocode_change start - distinguish explicit workflow model selection from the effective subtask model
+      const workflow = yield* Effect.gen(function* () {
+        if (!task.command) return undefined
+        const command = yield* commands.get(task.command)
+        if (!command) return undefined
+        if (!command.model && !command.variant && !(command.agent && taskAgent.model)) return undefined
+        return {
+          model: task.model ?? { providerID: taskModel.providerID, modelID: taskModel.id },
+          variant: task.variant,
+        }
+      })
+      // kilocode_change end
+
       let error: Error | undefined
       const taskAbort = new AbortController()
       // kilocode_change start - shared reader for the child session id written by task.ts ctx.metadata (#6321)
@@ -410,7 +423,7 @@ export const layer = Layer.effect(
           extra: {
             bypassAgentCheck: true,
             promptOps,
-            workflow: task.model ? { model: task.model, variant: task.variant } : undefined,
+            workflow, // kilocode_change
           },
           // kilocode_change end
           messages: msgs,

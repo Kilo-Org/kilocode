@@ -12,7 +12,7 @@ import type { CommandConfig } from "../../../types/messages"
 
 const WorkflowsTab: Component = () => {
   const language = useLanguage()
-  const { config, globalConfig, updateGlobalConfig } = useConfig()
+  const { config, globalConfig, globalDraft, updateGlobalConfig } = useConfig()
   const provider = useProvider()
 
   const cmds = createMemo(() => Object.entries(config().command ?? {}))
@@ -26,13 +26,21 @@ const WorkflowsTab: Component = () => {
     updateGlobalConfig({ command: { [name]: patch } })
   }
 
+  const scoped = (cmd: CommandConfig, name: string) => ({
+    ...cmd,
+    ...globalConfig().command?.[name],
+    ...globalDraft().command?.[name],
+  })
+
   const model = (cmd: CommandConfig, name: string) => {
-    const override = globalConfig().command?.[name]?.model
-    return parseModelString(override ?? cmd.model ?? undefined)
+    const value = scoped(cmd, name).model
+    return value === null ? null : parseModelString(value ?? undefined)
   }
 
-  const variant = (cmd: CommandConfig, name: string) =>
-    globalConfig().command?.[name]?.variant ?? cmd.variant ?? undefined
+  const variant = (cmd: CommandConfig, name: string) => {
+    const value = scoped(cmd, name).variant
+    return value === null ? undefined : (value ?? undefined)
+  }
 
   const variants = (cmd: CommandConfig, name: string) =>
     Object.keys(provider.findModel(model(cmd, name))?.variants ?? {})

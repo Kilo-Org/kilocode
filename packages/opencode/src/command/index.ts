@@ -8,7 +8,7 @@ import { Config } from "@/config/config"
 import { MCP } from "../mcp"
 import { Skill } from "../skill"
 import { legacyReviewCommand, reviewCommand } from "@/kilocode/review/command" // kilocode_change
-import { apply as applyOverride } from "@/kilocode/command/override" // kilocode_change
+import { apply as applyOverride, type Override } from "@/kilocode/command/override" // kilocode_change
 import { EventV2 } from "@opencode-ai/core/event"
 import PROMPT_INITIALIZE from "./template/initialize.txt"
 
@@ -116,8 +116,9 @@ export const layer = Layer.effect(
       commands["local-review-uncommitted"] = legacyReviewCommand("local-review-uncommitted")!
       // kilocode_change end
 
+      const overrides: Array<{ name: string; command: Override }> = []
       for (const [name, command] of Object.entries(cfg.command ?? {})) {
-        applyOverride(commands, name, command, hints) // kilocode_change
+        if (!applyOverride(commands, name, command, hints)) overrides.push({ name, command }) // kilocode_change
       }
 
       for (const [name, prompt] of Object.entries(yield* mcp.prompts())) {
@@ -154,6 +155,25 @@ export const layer = Layer.effect(
         commands[item.name] = fromSkill(item) // kilocode_change
       }
 
+      for (const item of overrides) {
+        const target = skillName(item.name)
+        if (target) {
+          const found = yield* skill.get(target)
+          if (found) {
+            commands[item.name] = fromSkill(found)
+            applyOverride(commands, item.name, item.command, hints) // kilocode_change
+          }
+          continue
+        }
+        const name = mcpName(item.name) ?? item.name
+        const command = commands[name]
+        if (command?.source === "skill" || command?.source === "mcp") {
+          applyOverride(commands, name, item.command, hints) // kilocode_change
+          continue
+        }
+        applyOverride(commands, name, item.command, hints) // kilocode_change
+      }
+
       return {
         commands,
       }
@@ -171,6 +191,8 @@ export const layer = Layer.effect(
       // kilocode_change start
       const target = skillName(name)
       if (target) {
+        const exact = s.commands[target]
+        if (exact?.source === "skill") return exact
         const item = yield* skill.get(target)
         if (item) return fromSkill(item)
         return undefined

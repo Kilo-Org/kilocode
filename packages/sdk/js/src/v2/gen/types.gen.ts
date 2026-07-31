@@ -6183,6 +6183,7 @@ export type CommandV2Info = {
     providerID: string
     variant?: string
   }
+  variant?: string
   subtask?: boolean
 }
 

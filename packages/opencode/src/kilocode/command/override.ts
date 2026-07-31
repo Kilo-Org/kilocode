@@ -12,7 +12,7 @@ type Existing = {
   hints: readonly string[]
 }
 
-type Override = {
+export type Override = {
   template?: string
   description?: string
   agent?: string
@@ -26,16 +26,13 @@ type Hints = (template: string) => string[]
 export function apply(commands: Record<string, Existing>, name: string, command: Override, hints: Hints) {
   const existing = commands[name]
   if (command.template === undefined) {
-    if (!existing) return
-    commands[name] = {
-      ...existing,
-      ...(command.description !== undefined ? { description: command.description } : {}),
-      ...(command.agent !== undefined ? { agent: command.agent } : {}),
-      ...(command.model !== undefined ? { model: command.model } : {}),
-      ...(command.variant !== undefined ? { variant: command.variant } : {}),
-      ...(command.subtask !== undefined ? { subtask: command.subtask } : {}),
-    }
-    return
+    if (!existing) return false
+    if (command.description !== undefined) existing.description = command.description
+    if (command.agent !== undefined) existing.agent = command.agent
+    if (command.model !== undefined) existing.model = command.model
+    if (command.variant !== undefined) existing.variant = command.variant
+    if (command.subtask !== undefined) existing.subtask = command.subtask
+    return true
   }
 
   const template = command.template
@@ -52,4 +49,5 @@ export function apply(commands: Record<string, Existing>, name: string, command:
     subtask: command.subtask,
     hints: hints(template),
   }
+  return true
 }

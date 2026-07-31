@@ -78,4 +78,65 @@ Skill content.
       { git: true },
     ),
   )
+
+  it.live("applies a partial override to a skill command", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          yield* Effect.promise(() =>
+            Bun.write(
+              path.join(dir, ".kilo", "skill", "proj", "SKILL.md"),
+              "---\nname: proj\ndescription: Project skill.\n---\n\nReview files.\n",
+            ),
+          )
+
+          const command = yield* Command.Service
+          const skill = yield* command.get("proj:skill")
+
+          expect(skill?.source).toBe("skill")
+          expect(skill?.model).toBe("anthropic/claude-sonnet")
+          expect(skill?.variant).toBe("high")
+        }),
+      {
+        git: true,
+        config: {
+          command: {
+            proj: {
+              model: "anthropic/claude-sonnet",
+              variant: "high",
+            },
+          },
+        },
+      },
+    ),
+  )
+
+  it.live("applies a skill alias override when a command has the same name", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          yield* Effect.promise(() =>
+            Bun.write(
+              path.join(dir, ".kilo", "skill", "review", "SKILL.md"),
+              "---\nname: review\ndescription: Review skill.\n---\n\nReview files.\n",
+            ),
+          )
+
+          const command = yield* Command.Service
+          const skill = yield* command.get("review:skill")
+
+          expect(skill?.source).toBe("skill")
+          expect(skill?.model).toBe("anthropic/claude-sonnet")
+        }),
+      {
+        git: true,
+        config: {
+          command: {
+            "review:skill": { model: "anthropic/claude-sonnet" },
+            review: { template: "Command content." },
+          },
+        },
+      },
+    ),
+  )
 })

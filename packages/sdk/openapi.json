@@ -44365,6 +44365,9 @@
             "required": ["id", "providerID"],
             "additionalProperties": false
           },
+          "variant": {
+            "type": "string"
+          },
           "subtask": {
             "type": "boolean"
           }

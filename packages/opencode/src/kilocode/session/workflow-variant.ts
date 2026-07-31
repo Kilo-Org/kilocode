@@ -21,7 +21,12 @@ export function resolve(input: {
     return input.agent.variant
   }
 
-  if (!input.command.model && !input.command.agent && input.input && input.selected.variants?.[input.input]) {
+  if (
+    !input.command.model &&
+    (!input.command.agent || !input.agent.model) &&
+    input.input &&
+    input.selected.variants?.[input.input]
+  ) {
     return input.input
   }
 

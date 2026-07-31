@@ -39,7 +39,7 @@ describe("workflow variant resolution", () => {
     ).toBeUndefined()
   })
 
-  test("uses chat variant only when the workflow has no model or agent", () => {
+  test("uses chat variant when an agent does not select a model", () => {
     expect(
       resolve({
         command: { model: undefined, agent: undefined, variant: undefined },
@@ -59,5 +59,15 @@ describe("workflow variant resolution", () => {
         input: "high",
       }),
     ).toBeUndefined()
+
+    expect(
+      resolve({
+        command: { model: undefined, agent: "reviewer", variant: undefined },
+        agent: { model: undefined, variant: undefined },
+        model,
+        selected,
+        input: "high",
+      }),
+    ).toBe("high")
   })
 })

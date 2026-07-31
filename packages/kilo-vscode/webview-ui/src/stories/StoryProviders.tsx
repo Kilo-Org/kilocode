@@ -335,6 +335,7 @@ const ConfigWrapper: ParentComponent<{
     const value = {
       config: createMemo(() => cfg()),
       globalConfig: createMemo(() => (scoped ? global() : cfg())),
+      globalDraft: () => ({}),
       projectConfig: createMemo(() => (scoped ? project() : cfg())),
       collections: () => ({}),
       settings,
