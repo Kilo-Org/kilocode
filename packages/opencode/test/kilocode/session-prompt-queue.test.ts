@@ -778,21 +778,27 @@ describe("session prompt queue", () => {
               }),
             )
 
-            // Wait until follow-ups are actually queued behind the in-flight turn
-            // (not a fixed sleep) so cancel proves the queued-drop path.
+            // Wait until both follow-ups are on the waiting list (hasFollowup alone
+            // flips true when only the second is queued).
             await Effect.runPromise(
               pollWithTimeout(
-                Effect.sync(() => (KiloSessionPromptQueue.hasFollowup(session.id) ? (true as const) : undefined)),
-                "follow-up prompts never queued behind the in-flight turn",
+                Effect.sync(() =>
+                  KiloSessionPromptQueue.snapshot(session.id).length >= 2 ? (true as const) : undefined,
+                ),
+                "both follow-up prompts never queued behind the in-flight turn",
                 "3 seconds",
               ),
             )
             expect(calls).toHaveLength(1)
 
             await Effect.runPromise(prompt.cancel(session.id))
-            // Cancel interrupts the in-flight Effect fibers; settle so interrupt
-            // does not surface as an unhandled rejection between tests.
-            await Promise.allSettled([first, second, third])
+            // Cancel interrupts in-flight Effect fibers; settle so interrupt does
+            // not leak as an unhandled rejection, but still require rejects to be
+            // interrupt-shaped (not an unrelated provider/session failure).
+            const settled = await Promise.allSettled([first, second, third])
+            for (const r of settled) {
+              if (r.status === "rejected") expect(String(r.reason)).toMatch(/interrupt/i)
+            }
 
             // The queued prompts must never reach the LLM once cancel flushes the queue.
             expect(calls).toHaveLength(1)
