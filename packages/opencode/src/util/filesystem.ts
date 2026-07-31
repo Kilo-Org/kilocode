@@ -66,6 +66,21 @@ function isEnoent(e: unknown): e is { code: "ENOENT" } {
   return typeof e === "object" && e !== null && "code" in e && (e as { code: string }).code === "ENOENT"
 }
 
+// kilocode_change start - Windows transient locked-file errors on atomic rename
+// Defender/indexer and concurrent writers (e.g. background plugin install) can
+// briefly hold the temp file, making MoveFileEx fail with EPERM/EACCES/EBUSY.
+// Retry with a short backoff instead of surfacing a 500; POSIX renames are atomic
+// so the retry path only fires under contention and never changes success semantics.
+function isLocked(e: unknown): boolean {
+  return (
+    typeof e === "object" &&
+    e !== null &&
+    "code" in e &&
+    ["EBUSY", "EACCES", "EPERM"].includes(String((e as { code: string }).code))
+  )
+}
+// kilocode_change end
+
 export async function write(p: string, content: string | Buffer | Uint8Array, mode?: number): Promise<void> {
   // kilocode_change start - atomic write via temp-file + rename to avoid partial reads on concurrent saves
   // Include a random suffix so that concurrent writes to the same path never share a temp file,
@@ -79,15 +94,23 @@ export async function write(p: string, content: string | Buffer | Uint8Array, mo
     }
     await rename(tmp, p)
   }
-  try {
-    await doWrite()
-  } catch (e) {
-    if (isEnoent(e)) {
-      await mkdir(dirname(p), { recursive: true })
+  const attempts = process.platform === "win32" ? 8 : 1
+  for (let attempt = 1; ; attempt++) {
+    try {
       await doWrite()
       return
+    } catch (e) {
+      if (isEnoent(e)) {
+        await mkdir(dirname(p), { recursive: true })
+        await doWrite()
+        return
+      }
+      if (isLocked(e) && attempt < attempts) {
+        await Bun.sleep(50 * attempt)
+        continue
+      }
+      throw e
     }
-    throw e
   }
   // kilocode_change end
 }

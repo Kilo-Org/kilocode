@@ -156,7 +156,22 @@ if (shard && shard.total > candidates.length) {
   console.error(`Test shard count ${shard.total} exceeds selected file count ${candidates.length}`)
   process.exit(2)
 }
-const weight = (file: string) => Bun.file(path.join(root, "test", file)).size
+const size = (file: string) => Bun.file(path.join(root, "test", file)).size
+// kilocode_change start - balance shards by measured runtime instead of file
+// size. Size-weighted LPT concentrated the slow spawn/FS-heavy files into one
+// Windows shard (~612s vs ~356s siblings) and the resulting contention forced
+// whole-file retries. Runtime weights (seeded from CI junit in
+// script/kilocode/test-timings.json) collapse that spread to ~20s and spread
+// the contention-prone files across shards. Platforms without a manifest entry
+// fall back to size weighting (prior behavior).
+type Timings = { windows?: Record<string, number>; linux?: Record<string, number>; macos?: Record<string, number> }
+const osKey = process.platform === "win32" ? "windows" : process.platform === "darwin" ? "macos" : "linux"
+const timingsFile = (await Bun.file(path.join(import.meta.dir, "kilocode/test-timings.json")).json().catch(() => undefined)) as
+  | Timings
+  | undefined
+const osTimings = timingsFile?.[osKey]
+const weight = TestShard.timedWeight(osTimings, size)
+// kilocode_change end
 const files = shard ? TestShard.split(candidates, weight, shard.total)[shard.index - 1] : candidates
 
 if (files.length === 0) {
@@ -435,6 +450,7 @@ function report(result: Result) {
 
 console.log(`\nRunning ${bold(String(files.length))} test files with concurrency ${bold(String(concurrency))}`)
 if (shard) console.log(`Using balanced test shard ${shard.index}/${shard.total}`)
+if (shard && osTimings) console.log(dim(`Sharding by measured ${osKey} runtime (${Object.keys(osTimings).length} files in test-timings.json)`)) // kilocode_change
 if (dots) console.log(dim(legend))
 console.log()
 
