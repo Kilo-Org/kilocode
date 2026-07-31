@@ -2511,6 +2511,7 @@ private fun toPermission(dto: PermissionRequestDto): Permission {
             fileDiff = diffs.firstOrNull(),
             fileDiffs = diffs,
             raw = dto.metadata,
+            skillCommands = dto.skillCommands,
         ),
         message = dto.message ?: dto.metadata["message"],
         tool = ref,

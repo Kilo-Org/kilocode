@@ -52,12 +52,15 @@ function app(input?: { password?: string; username?: string }) {
   const handler = HttpRouter.toWebHandler(
     HttpApiApp.routes.pipe(
       Layer.provide(
+        // kilocode_change start - keep the filewatcher-disable flag visible (see httpapi-instance-route-auth.test.ts)
         ConfigProvider.layer(
           ConfigProvider.fromUnknown({
             KILO_SERVER_PASSWORD: input?.password,
             KILO_SERVER_USERNAME: input?.username,
+            KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: process.env.KILO_EXPERIMENTAL_DISABLE_FILEWATCHER ?? "true",
           }),
         ),
+        // kilocode_change end
       ),
     ),
     { disableLogger: true },
@@ -100,12 +103,15 @@ function uiApp(input?: {
         input?.client ?? httpClient(new Response("ui")),
         RuntimeFlags.layer({ disableEmbeddedWebUi: input?.disableEmbeddedWebUi ?? false }),
         HttpServer.layerServices,
+        // kilocode_change start - keep the filewatcher-disable flag visible (see httpapi-instance-route-auth.test.ts)
         ConfigProvider.layer(
           ConfigProvider.fromUnknown({
             KILO_SERVER_PASSWORD: input?.password,
             KILO_SERVER_USERNAME: input?.username,
+            KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: process.env.KILO_EXPERIMENTAL_DISABLE_FILEWATCHER ?? "true",
           }),
         ),
+        // kilocode_change end
       ]),
     ),
     { disableLogger: true },
