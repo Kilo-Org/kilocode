@@ -103,6 +103,18 @@ describe("config overlay routes", () => {
     expect(await Bun.file(target.path).text()).toContain('"model": "test/model"')
   })
 
+  test("ignores a nested unset path when the project target is missing", async () => {
+    await using project = await tmpdir()
+    const response = await req(project.path, "/config/overlay", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ scope: "project", unset: [["agent", "explore", "model"]] }),
+    })
+
+    expect(response.status).toBe(200)
+    expect(await Bun.file(path.join(project.path, ".kilo", "kilo.jsonc")).exists()).toBe(false)
+  })
+
   test("returns exact raw target data and a stable missing-file revision", async () => {
     await using project = await tmpdir()
     const first = await KilocodeConfigOverlay.target({ scope: "project", directory: project.path })

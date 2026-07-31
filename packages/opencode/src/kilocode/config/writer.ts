@@ -82,6 +82,10 @@ export namespace KilocodeConfigWriter {
 
   function patchJsonc(input: string, patch: unknown, parts: string[] = []): string {
     if (!isRecord(patch)) {
+      if (patch === null) {
+        const tree = parseTree(input)
+        if (!tree || !findNodeAtLocation(tree, parts)) return input
+      }
       return applyEdits(
         input,
         modify(input, parts, patch === null ? undefined : patch, {
