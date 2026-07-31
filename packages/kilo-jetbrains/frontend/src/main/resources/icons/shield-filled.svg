@@ -2,5 +2,5 @@
   <path d="M7.9995 1.6656L13.6662 3.499V7.9405C13.6662 11.2555 10.6662 12.999 7.9995 14.4376C5.3328 12.999 2.3328 11.2555 2.3328 7.9405V3.499L7.9995 1.6656Z" fill="#6C707E"/>
   <path d="M5.9995 7.499L7.3328 8.8323L9.9995 6.1656" stroke="#FFFFFF" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
   <circle cx="12" cy="12" r="2" fill="#55A76A"/>
-  <circle cx="12" cy="12" r="2.4" stroke="#FFFFFF"/>
+  <circle cx="12" cy="12" r="2.4" stroke="#FFFFFF" stroke-width="0.8"/>
 </svg>
