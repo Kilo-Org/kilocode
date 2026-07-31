@@ -528,7 +528,12 @@ export const dict = {
   "profile.action.logout": "Esci",
   "settings.agentBehaviour.title": "Comportamento agente",
   "settings.autoApprove.title": "Approvazione automatica",
-  "settings.browser.title": "Browser",
+  "settings.webTools.title": "Strumenti web",
+  "settings.webTools.description": "Configura la ricerca web e l'automazione del browser.",
+  "settings.webTools.webSearch.enable": "Abilita per tutti i provider",
+  "settings.webTools.browserAutomation": "Automazione del browser",
+  "settings.webTools.webSearch.title": "Ricerca web",
+  "settings.webTools.webSearch.description": "Rendi disponibile la ricerca web ai modelli di tutti i provider.",
   "settings.checkpoints.title": "Checkpoint",
   "settings.display.title": "Visualizzazione",
   "settings.autocomplete.title": "Autocompletamento",
@@ -738,6 +743,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "Modello SWE-Pruner",
   "settings.experimental.swePrunerModel.description":
     "Modello usato per potare le uscite degli strumenti; per impostazione predefinita, il modello piccolo configurato",
+  "settings.experimental.multiProject.title": "Agent Manager Multi-Progetto",
+  "settings.experimental.multiProject.description":
+    "Abilita la gestione di sessioni e worktree su più repository in Agent Manager. Il repository dell'area di lavoro corrente è sempre il progetto predefinito.",
   "settings.experimental.mcpTimeout.title": "Timeout MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout per richieste server MCP in millisecondi",
   "settings.experimental.remote.title": "Controllo remoto",

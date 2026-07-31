@@ -702,7 +702,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "Agentadfærd",
   "settings.autoApprove.title": "Automatisk godkendelse",
-  "settings.browser.title": "Browser",
+  "settings.webTools.title": "Webværktøjer",
+  "settings.webTools.description": "Konfigurer websøgning og browserautomatisering.",
+  "settings.webTools.webSearch.enable": "Aktivér for alle udbydere",
+  "settings.webTools.browserAutomation": "Browserautomatisering",
+  "settings.webTools.webSearch.title": "Websøgning",
+  "settings.webTools.webSearch.description": "Gør websøgning tilgængelig for modeller fra alle udbydere.",
   "settings.checkpoints.title": "Kontrolpunkter",
   "settings.display.title": "Visning",
   "settings.autocomplete.title": "Autofuldførelse",
@@ -888,6 +893,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "SWE-Pruner-model",
   "settings.experimental.swePrunerModel.description":
     "Model til beskæring af værktøjsoutput; som standard den konfigurerede lille model",
+  "settings.experimental.multiProject.title": "Multi-projekt Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Aktivér styring af sessioner og worktrees på tværs af flere repositories i Agent Manager. Det nuværende workspace-repository er altid standardprojektet.",
   "settings.experimental.mcpTimeout.title": "MCP-timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout for MCP-serveranmodninger i millisekunder",
   "settings.experimental.remote.title": "Remote-styring",

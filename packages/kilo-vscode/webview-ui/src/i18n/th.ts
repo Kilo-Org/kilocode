@@ -694,7 +694,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "พฤติกรรมของเอเจนต์",
   "settings.autoApprove.title": "อนุมัติอัตโนมัติ",
-  "settings.browser.title": "เบราว์เซอร์",
+  "settings.webTools.title": "เครื่องมือเว็บ",
+  "settings.webTools.description": "กำหนดค่าการค้นหาเว็บและระบบอัตโนมัติของเบราว์เซอร์",
+  "settings.webTools.webSearch.enable": "เปิดใช้สำหรับผู้ให้บริการทั้งหมด",
+  "settings.webTools.browserAutomation": "ระบบอัตโนมัติของเบราว์เซอร์",
+  "settings.webTools.webSearch.title": "ค้นหาเว็บ",
+  "settings.webTools.webSearch.description": "ทำให้โมเดลจากผู้ให้บริการทั้งหมดใช้การค้นหาเว็บได้",
   "settings.checkpoints.title": "จุดตรวจสอบ",
   "settings.display.title": "การแสดงผล",
   "settings.autocomplete.title": "เติมข้อความอัตโนมัติ",
@@ -874,6 +879,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "โมเดล SWE-Pruner",
   "settings.experimental.swePrunerModel.description":
     "โมเดลที่ใช้ตัดทอนผลลัพธ์ของเครื่องมือ ค่าเริ่มต้นคือโมเดลขนาดเล็กที่กำหนดไว้",
+  "settings.experimental.multiProject.title": "Agent Manager หลายโปรเจกต์",
+  "settings.experimental.multiProject.description":
+    "เปิดใช้งานการจัดการเซสชันและเวิร์กทรีข้ามหลาย Repository ใน Agent Manager Repository ของ workspace ปัจจุบันเป็นโปรเจกต์เริ่มต้นเสมอ",
   "settings.experimental.mcpTimeout.title": "หมดเวลา MCP (มิลลิวินาที)",
   "settings.experimental.mcpTimeout.description": "หมดเวลาสำหรับคำขอเซิร์ฟเวอร์ MCP เป็นมิลลิวินาที",
   "settings.experimental.remote.title": "การควบคุม Remote",

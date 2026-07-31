@@ -36,6 +36,11 @@ export type VscodeTerminalRequest =
   | { type: "agentManager.showWorktreeTerminal"; worktreeId: string }
   | { type: "agentManager.showLocalTerminal" }
 
+/** Carry the panel-local dropdown choice with every Run click. */
+export function resolveRunScriptRequest(worktreeId: string, destination: TerminalDestination) {
+  return { type: "agentManager.runScript" as const, worktreeId, destination }
+}
+
 /**
  * Pick the message the terminal button / Focus Terminal shortcut sends
  * when the destination is the VS Code integrated terminal. The fallback
@@ -56,6 +61,7 @@ export function resolveVscodeTerminalRequest(
 
 interface Handlers {
   requestSide(): void
+  ensureSide(): void
   closeSide(terminalId: string): boolean
 }
 
@@ -78,11 +84,15 @@ export interface SideTerminalDeps {
   saved: TerminalDestination | undefined
   /** Persist the panel-local choice so it survives webview reloads. */
   save: (destination: TerminalDestination) => void
+  /** Platform override for tests; the workbench keybinding is Cmd on
+   *  macOS and Ctrl elsewhere, and the local fallback must match it. */
+  mac?: boolean
 }
 
 export function createSideTerminal(deps: SideTerminalDeps) {
   const [local, setLocal] = createSignal<TerminalDestination | undefined>(deps.saved)
   const [destination, setDestination] = createSignal<TerminalDestination>(deps.saved ?? "vscode")
+  if (deps.saved) deps.postMessage({ type: "agentManager.terminal.destinationSelected", destination: deps.saved })
 
   /**
    * Hiding while the terminal holds focus would strand the cursor on
@@ -102,6 +112,14 @@ export function createSideTerminal(deps: SideTerminalDeps) {
       return
     }
     deps.handlers.requestSide()
+  }
+
+  /** Keep an open terminal panel useful when its worktree context changes. */
+  const syncContext = (key: string, previous: string | undefined) => {
+    if (key === previous || !deps.visible()) return
+    queueMicrotask(() => {
+      if (deps.visible()) deps.handlers.ensureSide()
+    })
   }
 
   /** Kill the focused side terminal (Cmd/Ctrl+W). The panel stays open
@@ -130,17 +148,15 @@ export function createSideTerminal(deps: SideTerminalDeps) {
    * Dropdown pick. The choice is panel-local and sticky: it is kept in
    * webview state and beats later `terminal.destinationChanged` echoes
    * caused by other windows rewriting the shared application-scoped
-   * setting. The setting is still written so it stays the default for
-   * panels that never picked a destination (and new panels).
-   * The key is relative to the `kilo-code.new` section, matching every
-   * other `updateSetting` sender.
+   * setting. The provider still persists it as the default for new panels,
+   * while setup uses this panel-local value immediately.
    */
   const choose = (target: TerminalDestination) => {
     deps.track("terminal_destination", "tab_toolbar", { destination: target })
     setLocal(target)
     setDestination(target)
     deps.save(target)
-    deps.postMessage({ type: "updateSetting", key: "agentManager.terminalButtonDestination", value: target })
+    deps.postMessage({ type: "agentManager.terminal.destinationSelected", destination: target })
   }
 
   /**
@@ -154,5 +170,47 @@ export function createSideTerminal(deps: SideTerminalDeps) {
     setDestination(target)
   }
 
-  return { destination, syncDefault, toggle, close, openPreferred, choose }
+  /**
+   * Cmd/Ctrl+/ pressed while the webview holds DOM focus. VS Code normally
+   * forwards the keybinding to the workbench too, and the extension echoes
+   * it back as a showTerminal action message; `echo()` consumes one pending
+   * echo per press so one keypress never toggles twice while an unrelated
+   * invocation (command palette, terminal-focused press) still runs.
+   * Handling the key locally keeps the shortcut working when the
+   * forwarding path drops it (e.g. the chat prompt input is focused).
+   * The modifier matches the declared keybinding: Cmd on macOS, Ctrl
+   * elsewhere — accepting both would hijack the other platform's combo
+   * (and any user keybinding on it) without a matching workbench binding.
+   */
+  const mac = deps.mac ?? (typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent))
+  let pending = 0
+  let lastPress = 0
+  const ECHO_MS = 500
+
+  const press = (e: KeyboardEvent): boolean => {
+    const mod = mac ? e.metaKey && !e.ctrlKey : e.ctrlKey && !e.metaKey
+    if (e.key !== "/" || e.shiftKey || e.altKey || !mod) return false
+    // An echo either arrives promptly or never; drop the backlog of a
+    // dropped echo so it cannot swallow a later unrelated invocation.
+    if (Date.now() - lastPress > ECHO_MS) pending = 0
+    pending++
+    lastPress = Date.now()
+    openPreferred("keyboard_shortcut")
+    return true
+  }
+
+  /** Consumes one pending extension echo of a local `press`. The timeout is
+   *  only a safety valve for an echo that never arrives; an echo that
+   *  outlasts it is indistinguishable from a real invocation and must run. */
+  const echo = () => {
+    if (pending === 0) return false
+    if (Date.now() - lastPress > ECHO_MS) {
+      pending = 0
+      return false
+    }
+    pending--
+    return true
+  }
+
+  return { destination, syncDefault, syncContext, toggle, close, openPreferred, choose, press, echo }
 }

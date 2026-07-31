@@ -4,13 +4,16 @@ Before writing anything:
 
 1. Read `packages/kilo-docs/AGENTS.md` and `packages/kilo-docs/STYLE_GUIDE.md` and follow them exactly: Markdoc custom tags, the `/docs` prefix in image paths, navigation files under `lib/nav/`, redirect rules, and the generated-screenshot policy.
 2. Read the attached batch files: the full-details file (PR title, body, file list, `patch_excerpt` diffs) and the triage file (docs-worthiness verdicts, target sections, priorities).
+3. Verify facts against the current source tree — for Kilo-Org/kilocode PRs. This checkout reflects current kilocode main: before documenting a command, flag, setting, default, or behavior from a kilocode PR, confirm it exists in the current source. Existence alone is not enough: defaults, whether an option is required or optional, and on-by-default behavior must also match the current tree — a symbol that still exists as opt-in does not justify documenting default-on behavior. When the merged diff and the current tree disagree, the current tree wins — the change may have been reverted or superseded; skip it and record why. For Kilo-Org/cloud PRs the source is not in this checkout: rely on the PR diff and body, and on the `reverted_by` field below. Reading any file in the checkout for verification is expected; the hard rule against touching anything outside `packages/kilo-docs/` applies to writing only.
 
-For each PR in the batch, in priority order:
+For each PR in the batch, in priority order, first decide whether it needs documentation at all — skipping is a first-class outcome. For each one that does:
 
 - Find the most relevant existing docs page(s) and make minimal, precise updates in the style of the surrounding content.
 - Create a new page only when no existing page fits; then add it to the matching nav file in `packages/kilo-docs/lib/nav/`.
-- Document only behavior that is actually present in the merged diff. If the PR body or diff shows the feature is behind a flag or otherwise not user-visible yet, skip it and record why.
+- Document only behavior that is actually present in the merged diff and still present in the product now (step 3 above: when they disagree, the current state wins). If the PR body or diff shows the feature is behind a flag or otherwise not user-visible yet, skip it and record why.
 - If a PR turns out not to need documentation, skip it and record why. Trust evidence over the triage verdict.
+- A batch PR with a `reverted_by` field was reverted by that PR; skip it unless there is clear evidence the change is present now — for kilocode PRs verify it in the current source tree (re-land); for cloud PRs require explicit re-land evidence in the entry itself.
+- Skipping is a normal outcome: a batch where every PR is skipped is a valid result. Never write docs just to have something to show.
 
 Hard rules:
 

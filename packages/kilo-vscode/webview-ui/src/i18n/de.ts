@@ -715,7 +715,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "Agentenverhalten",
   "settings.autoApprove.title": "Automatisch genehmigen",
-  "settings.browser.title": "Browser",
+  "settings.webTools.title": "Web-Tools",
+  "settings.webTools.description": "Konfigurieren Sie Websuche und Browserautomatisierung.",
+  "settings.webTools.webSearch.enable": "Für alle Anbieter aktivieren",
+  "settings.webTools.browserAutomation": "Browserautomatisierung",
+  "settings.webTools.webSearch.title": "Websuche",
+  "settings.webTools.webSearch.description": "Machen Sie die Websuche für Modelle aller Anbieter verfügbar.",
   "settings.checkpoints.title": "Prüfpunkte",
   "settings.display.title": "Anzeige",
   "settings.autocomplete.title": "Autovervollständigung",
@@ -910,6 +915,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "SWE-Pruner-Modell",
   "settings.experimental.swePrunerModel.description":
     "Modell zum Kürzen von Tool-Ausgaben; standardmäßig das konfigurierte Small Model",
+  "settings.experimental.multiProject.title": "Multi-Projekt Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Aktivieren Sie die Verwaltung von Sitzungen und Worktrees über mehrere Repositories im Agent Manager. Das aktuelle Workspace-Repository ist immer das Standardprojekt.",
   "settings.experimental.mcpTimeout.title": "MCP-Zeitlimit (ms)",
   "settings.experimental.mcpTimeout.description": "Zeitlimit für MCP-Server-Anfragen in Millisekunden",
   "settings.experimental.remote.title": "Remote-Steuerung",

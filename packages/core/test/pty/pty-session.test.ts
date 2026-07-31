@@ -127,6 +127,53 @@ describe("pty", () => {
     }),
   )
 
+  // kilocode_change start - explicit commands must not acquire implicit login-shell arguments.
+  ptyTest("preserves explicit command arguments", () =>
+    Effect.gen(function* () {
+      const args = ["-c", 'printf "<%s>" "$0"; sleep 5']
+      const info = yield* createPty("sh", args)
+      expect(info.args).toEqual(args)
+
+      const attached = yield* attachCollecting(info.id)
+      expect(yield* waitForOutput(attached.output, "<sh>")).toContain("<sh>")
+    }),
+  )
+
+  // (script terminals forward raw output to xterm without transcoding).
+  ptyTest("round-trips non-ASCII output byte-identically", () =>
+    Effect.gen(function* () {
+      const pty = yield* Pty.Service
+      const marker = "café-über-北京-🚀"
+      const info = yield* createPty("sh", ["-c", `printf '${marker}\\n'`])
+      const attached = yield* attachCollecting(info.id)
+      expect(yield* waitForOutput(attached.output, marker)).toContain(marker)
+    }),
+  )
+  ptyTest("terminates background descendants outside the shell process group", () =>
+    Effect.gen(function* () {
+      const pty = yield* Pty.Service
+      const info = yield* createPty("sh", ["-c", 'sleep 30 & printf "<CHILD:%s>" "$!"; wait'])
+      const attached = yield* attachCollecting(info.id)
+      const output = yield* waitForOutput(attached.output, ">")
+      const match = output.match(/<CHILD:(\d+)>/)
+      expect(match?.[1]).toBeDefined()
+      const pid = Number(match?.[1])
+
+      yield* pty.remove(info.id)
+      yield* Effect.sleep("100 millis")
+      const alive = yield* Effect.sync(() => {
+        try {
+          process.kill(pid, 0)
+          return true
+        } catch {
+          return false
+        }
+      })
+      expect(alive).toBe(false)
+    }),
+  )
+  // kilocode_change end
+
   ptyTest("replays buffered output and streams live output to attachments", () =>
     Effect.gen(function* () {
       const pty = yield* Pty.Service
@@ -201,6 +248,31 @@ describe("pty", () => {
         expect(Cause.squash(result.cause)).toMatchObject({ _tag: "Pty.ExitedError", ptyID: info.id })
     }),
   )
+
+  // kilocode_change start - canonical attachments replay retained exited output, then end without accepting input.
+  ptyTest("replays exited output and ends when enabled", () =>
+    Effect.gen(function* () {
+      const pty = yield* Pty.Service
+      const events = yield* subscribePtyEvents()
+      const info = yield* createPty("sh", ["-c", 'printf "replayed"; exit 7'])
+      expect(yield* waitForEvents(events, info.id, 2)).toEqual(["created", "exited"])
+
+      const ended = yield* Deferred.make<{ exitCode?: number }>()
+      const attachment = yield* pty.attach(info.id, {
+        allowExited: true,
+        onData: () => {},
+        onEnd: (event) => Deferred.doneUnsafe(ended, Effect.succeed(event)),
+      })
+      expect(attachment.replay).toContain("replayed")
+
+      attachment.write("ignored")
+      yield* pty.remove(info.id)
+      attachment.activate()
+      expect(yield* Deferred.await(ended).pipe(Effect.timeout("5 seconds"))).toEqual({ exitCode: 7 })
+      attachment.detach()
+    }),
+  )
+  // kilocode_change end
 })
 
 const configuredShell = process.platform === "win32" ? undefined : Bun.which("bash")

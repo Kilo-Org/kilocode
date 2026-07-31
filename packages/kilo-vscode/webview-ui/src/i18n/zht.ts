@@ -638,7 +638,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "Agent 行為",
   "settings.autoApprove.title": "自動核准",
-  "settings.browser.title": "瀏覽器",
+  "settings.webTools.title": "網路工具",
+  "settings.webTools.description": "設定網頁搜尋和瀏覽器自動化。",
+  "settings.webTools.webSearch.enable": "為所有供應商啟用",
+  "settings.webTools.browserAutomation": "瀏覽器自動化",
+  "settings.webTools.webSearch.title": "網頁搜尋",
+  "settings.webTools.webSearch.description": "讓所有供應商的模型都可使用網頁搜尋。",
   "settings.checkpoints.title": "檢查點",
   "settings.display.title": "顯示",
   "settings.autocomplete.title": "自動完成",
@@ -812,6 +817,9 @@ export const dict = {
     "啟用 SWE-Pruner：根據智能體提供的聚焦問題，對讀取、搜尋與 shell 工具的大型輸出進行任務感知裁剪",
   "settings.experimental.swePrunerModel.title": "SWE-Pruner 模型",
   "settings.experimental.swePrunerModel.description": "用於裁剪工具輸出的模型;預設為已設定的小模型",
+  "settings.experimental.multiProject.title": "多專案 Agent Manager",
+  "settings.experimental.multiProject.description":
+    "在 Agent Manager 中啟用跨多個儲存庫的工作階段和工作樹管理。當前工作區儲存庫始終是預設專案。",
   "settings.experimental.mcpTimeout.title": "MCP 逾時（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 伺服器請求的逾時時間（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",

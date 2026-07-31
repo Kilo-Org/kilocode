@@ -652,7 +652,13 @@ export const dict = {
 
   "settings.agentBehaviour.title": "Ajan Davranışı",
   "settings.autoApprove.title": "Otomatik Onay",
-  "settings.browser.title": "Tarayıcı",
+  "settings.webTools.title": "Web Araçları",
+  "settings.webTools.description": "Web aramasını ve tarayıcı otomasyonunu yapılandırın.",
+  "settings.webTools.webSearch.enable": "Tüm Sağlayıcılar İçin Etkinleştir",
+  "settings.webTools.browserAutomation": "Tarayıcı Otomasyonu",
+  "settings.webTools.webSearch.title": "Web Araması",
+  "settings.webTools.webSearch.description":
+    "Web aramasını tüm sağlayıcıların modelleri için kullanılabilir hale getirin.",
   "settings.checkpoints.title": "Kontrol Noktaları",
   "settings.display.title": "Görünüm",
   "settings.autocomplete.title": "Otomatik Tamamlama",
@@ -877,6 +883,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "SWE-Pruner Modeli",
   "settings.experimental.swePrunerModel.description":
     "Araç çıktılarını budamak için kullanılan model; varsayılan olarak yapılandırılmış küçük model",
+  "settings.experimental.multiProject.title": "Çoklu Proje Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Agent Manager'da birden fazla depo genelinde oturum ve worktree yönetimini etkinleştirin. Mevcut çalışma alanı deposu her zaman varsayılan projedir.",
   "settings.experimental.mcpTimeout.title": "MCP Zaman Aşımı (ms)",
   "settings.experimental.mcpTimeout.description": "MCP sunucu istekleri için milisaniye cinsinden zaman aşımı",
   "settings.experimental.remote.title": "Remote Kontrolü",

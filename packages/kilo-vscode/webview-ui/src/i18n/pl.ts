@@ -660,7 +660,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "Zachowanie agenta",
   "settings.autoApprove.title": "Automatyczne zatwierdzanie",
-  "settings.browser.title": "Przeglądarka",
+  "settings.webTools.title": "Narzędzia internetowe",
+  "settings.webTools.description": "Skonfiguruj wyszukiwanie w sieci i automatyzację przeglądarki.",
+  "settings.webTools.webSearch.enable": "Włącz dla wszystkich dostawców",
+  "settings.webTools.browserAutomation": "Automatyzacja przeglądarki",
+  "settings.webTools.webSearch.title": "Wyszukiwanie w sieci",
+  "settings.webTools.webSearch.description": "Udostępnij wyszukiwanie w sieci modelom wszystkich dostawców.",
   "settings.checkpoints.title": "Punkty kontrolne",
   "settings.display.title": "Wyświetlanie",
   "settings.autocomplete.title": "Autouzupełnianie",
@@ -846,6 +851,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "Model SWE-Pruner",
   "settings.experimental.swePrunerModel.description":
     "Model używany do przycinania wyników narzędzi; domyślnie skonfigurowany mały model",
+  "settings.experimental.multiProject.title": "Wieloprojektowy Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Włącz zarządzanie sesjami i worktree w wielu repozytoriach w Agent Managerze. Bieżące repozytorium obszaru roboczego jest zawsze projektem domyślnym.",
   "settings.experimental.mcpTimeout.title": "Limit czasu MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Limit czasu żądań serwera MCP w milisekundach",
   "settings.experimental.remote.title": "Sterowanie Remote",

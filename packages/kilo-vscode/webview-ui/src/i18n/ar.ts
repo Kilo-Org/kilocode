@@ -648,7 +648,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "سلوك الوكيل",
   "settings.autoApprove.title": "الموافقة التلقائية",
-  "settings.browser.title": "المتصفح",
+  "settings.webTools.title": "أدوات الويب",
+  "settings.webTools.description": "اضبط البحث على الويب وأتمتة المتصفح.",
+  "settings.webTools.webSearch.enable": "تمكين لجميع المزوّدين",
+  "settings.webTools.browserAutomation": "أتمتة المتصفح",
+  "settings.webTools.webSearch.title": "البحث على الويب",
+  "settings.webTools.webSearch.description": "اجعل البحث على الويب متاحًا لنماذج جميع المزوّدين.",
   "settings.checkpoints.title": "نقاط التحقق",
   "settings.display.title": "العرض",
   "settings.autocomplete.title": "الإكمال التلقائي",
@@ -865,6 +870,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "نموذج SWE-Pruner",
   "settings.experimental.swePrunerModel.description":
     "النموذج المستخدم لتقليم مخرجات الأدوات؛ افتراضيًا النموذج الصغير المكوَّن",
+  "settings.experimental.multiProject.title": "إدارة متعددة المشاريع",
+  "settings.experimental.multiProject.description":
+    "تفعيل إدارة الجلسات وأشجار العمل عبر مستودعات متعددة في Agent Manager. المستودع الحالي هو دائمًا المشروع الافتراضي.",
   "settings.experimental.mcpTimeout.title": "مهلة MCP (مللي ثانية)",
   "settings.experimental.mcpTimeout.description": "مهلة طلبات خادم MCP بالمللي ثانية",
   "settings.experimental.remote.title": "التحكم Remote",

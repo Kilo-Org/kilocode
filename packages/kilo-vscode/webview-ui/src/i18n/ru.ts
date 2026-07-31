@@ -701,7 +701,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "Поведение агента",
   "settings.autoApprove.title": "Автоодобрение",
-  "settings.browser.title": "Браузер",
+  "settings.webTools.title": "Веб-инструменты",
+  "settings.webTools.description": "Настройте веб-поиск и автоматизацию браузера.",
+  "settings.webTools.webSearch.enable": "Включить для всех провайдеров",
+  "settings.webTools.browserAutomation": "Автоматизация браузера",
+  "settings.webTools.webSearch.title": "Веб-поиск",
+  "settings.webTools.webSearch.description": "Сделайте веб-поиск доступным для моделей всех провайдеров.",
   "settings.checkpoints.title": "Контрольные точки",
   "settings.display.title": "Отображение",
   "settings.autocomplete.title": "Автодополнение",
@@ -885,6 +890,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "Модель SWE-Pruner",
   "settings.experimental.swePrunerModel.description":
     "Модель для обрезки вывода инструментов; по умолчанию — настроенная малая модель",
+  "settings.experimental.multiProject.title": "Мультипроектный Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Включите управление сессиями и рабочими деревьями в нескольких репозиториях в Agent Manager. Текущий репозиторий рабочего пространства всегда является проектом по умолчанию.",
   "settings.experimental.mcpTimeout.title": "Таймаут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Таймаут запросов MCP-сервера в миллисекундах",
   "settings.experimental.remote.title": "Управление Remote",

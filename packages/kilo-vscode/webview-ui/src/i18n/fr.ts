@@ -715,7 +715,13 @@ export const dict = {
 
   "settings.agentBehaviour.title": "Comportement de l'agent",
   "settings.autoApprove.title": "Approbation automatique",
-  "settings.browser.title": "Navigateur",
+  "settings.webTools.title": "Outils web",
+  "settings.webTools.description": "Configurez la recherche web et l’automatisation du navigateur.",
+  "settings.webTools.webSearch.enable": "Activer pour tous les fournisseurs",
+  "settings.webTools.browserAutomation": "Automatisation du navigateur",
+  "settings.webTools.webSearch.title": "Recherche web",
+  "settings.webTools.webSearch.description":
+    "Rendez la recherche web disponible pour les modèles de tous les fournisseurs.",
   "settings.checkpoints.title": "Points de contrôle",
   "settings.display.title": "Affichage",
   "settings.autocomplete.title": "Autocomplétion",
@@ -910,6 +916,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "Modèle SWE-Pruner",
   "settings.experimental.swePrunerModel.description":
     "Modèle utilisé pour élaguer les sorties d'outils ; par défaut, le small model configuré",
+  "settings.experimental.multiProject.title": "Agent Manager Multi-Projet",
+  "settings.experimental.multiProject.description":
+    "Activer la gestion des sessions et worktrees sur plusieurs dépôts dans Agent Manager. Le dépôt de l'espace de travail actuel est toujours le projet par défaut.",
   "settings.experimental.mcpTimeout.title": "Délai MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Délai des requêtes du serveur MCP en millisecondes",
   "settings.experimental.remote.title": "Contrôle Remote",
