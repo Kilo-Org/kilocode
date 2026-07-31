@@ -883,6 +883,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "SWE-Pruner Modeli",
   "settings.experimental.swePrunerModel.description":
     "Araç çıktılarını budamak için kullanılan model; varsayılan olarak yapılandırılmış küçük model",
+  "settings.experimental.multiProject.title": "Çoklu Proje Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Agent Manager'da birden fazla depo genelinde oturum ve worktree yönetimini etkinleştirin. Mevcut çalışma alanı deposu her zaman varsayılan projedir.",
   "settings.experimental.mcpTimeout.title": "MCP Zaman Aşımı (ms)",
   "settings.experimental.mcpTimeout.description": "MCP sunucu istekleri için milisaniye cinsinden zaman aşımı",
   "settings.experimental.remote.title": "Remote Kontrolü",

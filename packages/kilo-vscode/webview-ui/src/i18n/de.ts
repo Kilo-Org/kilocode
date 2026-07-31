@@ -915,6 +915,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "SWE-Pruner-Modell",
   "settings.experimental.swePrunerModel.description":
     "Modell zum Kürzen von Tool-Ausgaben; standardmäßig das konfigurierte Small Model",
+  "settings.experimental.multiProject.title": "Multi-Projekt Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Aktivieren Sie die Verwaltung von Sitzungen und Worktrees über mehrere Repositories im Agent Manager. Das aktuelle Workspace-Repository ist immer das Standardprojekt.",
   "settings.experimental.mcpTimeout.title": "MCP-Zeitlimit (ms)",
   "settings.experimental.mcpTimeout.description": "Zeitlimit für MCP-Server-Anfragen in Millisekunden",
   "settings.experimental.remote.title": "Remote-Steuerung",

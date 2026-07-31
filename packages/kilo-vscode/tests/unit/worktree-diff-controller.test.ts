@@ -9,6 +9,7 @@ import type { WorktreeStateManager } from "../../src/agent-manager/WorktreeState
 // Records every PanelContext handed to catalog.build so tests can assert which
 // base branch the active source was (re)built with. The controller, scope
 // resolution, and SourceController lifecycle under test are all real.
+// Contexts are worktree ids (the sidebar selection), not session ids.
 function make(onFetch?: (n: number) => Promise<void>) {
   const builds: { id: string; ctx: PanelContext }[] = []
   let fetches = 0
@@ -57,18 +58,18 @@ async function waitFor(cond: () => boolean): Promise<void> {
 describe("WorktreeDiffController.setBase", () => {
   it("rebuilds the active source against the overridden base branch", async () => {
     const { controller, builds } = make()
-    controller.start("s1#branch")
+    controller.start("w1#branch")
     await waitFor(() => builds.length === 1)
     expect(builds[0]!.ctx.dir).toBe("/wt")
     expect(builds[0]!.ctx.baseBranch).toBe("origin/main")
 
-    await controller.setBase("s1#branch", "feature-x")
+    await controller.setBase("w1#branch", "feature-x")
     expect(builds.length).toBe(2)
     expect(builds[1]!.ctx.dir).toBe("/wt")
     expect(builds[1]!.ctx.baseBranch).toBe("feature-x")
 
     // Clearing the override falls back to the recorded parent ref.
-    await controller.setBase("s1#branch", undefined)
+    await controller.setBase("w1#branch", undefined)
     expect(builds.length).toBe(3)
     expect(builds[2]!.ctx.baseBranch).toBe("origin/main")
 
@@ -78,11 +79,11 @@ describe("WorktreeDiffController.setBase", () => {
   it("stores the override without rebuilding when the context isn't active", async () => {
     const { controller, builds } = make()
 
-    await controller.setBase("s1#branch", "feature-x")
+    await controller.setBase("w1#branch", "feature-x")
     expect(builds.length).toBe(0)
 
     // The next activation of that context resolves the stored override.
-    controller.start("s1#branch")
+    controller.start("w1#branch")
     await waitFor(() => builds.length === 1)
     expect(builds[0]!.ctx.baseBranch).toBe("feature-x")
 
@@ -99,10 +100,10 @@ describe("WorktreeDiffController.setBase", () => {
       if (n === 1) await gate
     })
 
-    controller.start("s1#branch")
+    controller.start("w1#branch")
     await waitFor(() => builds.length === 1)
 
-    const change = controller.setBase("s1#branch", "feature-x")
+    const change = controller.setBase("w1#branch", "feature-x")
     release()
     await change
     expect(builds.length).toBe(2)
@@ -110,7 +111,7 @@ describe("WorktreeDiffController.setBase", () => {
 
     // Polling survives: start() early-returns for an id that is already
     // watched. A downgraded one-shot panel would re-activate and rebuild here.
-    controller.start("s1#branch")
+    controller.start("w1#branch")
     await tick()
     expect(builds.length).toBe(2)
 

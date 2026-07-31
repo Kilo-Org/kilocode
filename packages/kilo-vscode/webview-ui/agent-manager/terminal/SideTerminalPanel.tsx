@@ -57,6 +57,8 @@ interface Props {
   onCloseOthers: (terminalId: string) => void
   /** Create a new side terminal for this context. */
   onStart: () => void
+  /** Deliberately stop a running script terminal. */
+  onStop: (terminalId: string) => void
 }
 
 export const SideTerminalPanel: Component<Props> = (props) => {
@@ -185,6 +187,10 @@ export const SideTerminalPanel: Component<Props> = (props) => {
                           close(term.id)
                         }}
                         onCloseOthers={() => props.onCloseOthers(term.id)}
+                        onStop={(e: MouseEvent) => {
+                          e.stopPropagation()
+                          props.onStop(term.id)
+                        }}
                       />
                     )}
                   </For>

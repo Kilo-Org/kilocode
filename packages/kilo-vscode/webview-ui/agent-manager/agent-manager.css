@@ -204,6 +204,155 @@ html[data-theme="kilo-vscode"]
   gap: 2px;
 }
 
+/* Projects Section */
+
+.am-projects {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.am-projects-list {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.am-projects-tools,
+.am-project-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.am-project {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border-weak-base);
+}
+
+.am-project:last-child {
+  border-bottom: 0;
+}
+
+.am-project::before {
+  content: "";
+  position: absolute;
+  inset: 6px auto 6px 0;
+  width: 2px;
+  border-radius: 0 2px 2px 0;
+  background: transparent;
+}
+
+.am-project-active::before {
+  background: var(--border-interactive-base);
+}
+
+.am-project-item {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 34px;
+  padding: 6px 8px 6px 12px;
+  box-sizing: border-box;
+}
+
+.am-project-item:hover {
+  background: var(--surface-inset-base-hover);
+}
+
+.am-project-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  font-family: inherit;
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.am-project-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.am-project-count {
+  flex-shrink: 0;
+  font-size: var(--font-size-small);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-weak);
+}
+
+.am-project-trust {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  font-size: var(--font-size-small);
+  color: var(--text-weak);
+}
+
+.am-project-chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-weak);
+  cursor: pointer;
+  padding: 0;
+}
+
+.am-project-chevron:hover {
+  background: var(--surface-inset-base-hover);
+  color: var(--text-base);
+}
+
+.am-project-chevron:disabled {
+  cursor: default;
+}
+
+.am-project-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0 6px;
+}
+
+.am-project-body > .am-local-item {
+  margin: 0 0 2px;
+}
+
+.am-project-body .am-worktree-list {
+  overflow: visible;
+  max-height: none;
+}
+
+.am-project-loading {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0;
+}
+
 /* Collapsible section toggle */
 
 button.am-section-toggle {
