@@ -103,16 +103,21 @@ export async function start(input: StartInput) {
   // Kilo's full agent system prompt easily exceeds the OS command-line length
   // limit (hits `ENAMETOOLONG` from uv_spawn on Windows with `--system-prompt`
   // directly), so it goes through a temp file instead of an argv value.
+  // Both temp files get `mode: 0o600`: on a shared multi-user /tmp (Linux),
+  // the default mode would leave them world-readable — meaningful for the
+  // mcp config below (it carries the bridge's bearer token), and applied to
+  // the system prompt too for consistency.
   const systemPromptFile = input.system ? path.join(tmpdir(), `kilo-claude-code-system-${randomUUID()}.txt`) : undefined
-  const writeSystemPrompt = systemPromptFile ? writeFile(systemPromptFile, input.system!, "utf8") : Promise.resolve()
+  const writeSystemPrompt = systemPromptFile
+    ? writeFile(systemPromptFile, input.system!, { encoding: "utf8", mode: 0o600 })
+    : Promise.resolve()
 
-  // The bridge's bearer token must not appear in argv: a process's own
-  // command line is readable by any other local process/user (e.g.
+  // The bridge's bearer token must not appear in argv either: a process's
+  // own command line is readable by any other local process/user (e.g.
   // `/proc/<pid>/cmdline` on Linux, or Process Explorer/WMI on Windows),
-  // which would defeat the token's whole purpose. Route it through a temp
-  // file instead, same as the system prompt above.
+  // which would defeat the token's whole purpose.
   const mcpConfigFile = path.join(tmpdir(), `kilo-claude-code-mcp-${randomUUID()}.json`)
-  const writeMcpConfig = writeFile(mcpConfigFile, mcp, "utf8")
+  const writeMcpConfig = writeFile(mcpConfigFile, mcp, { encoding: "utf8", mode: 0o600 })
 
   const args = [
     "--print",
@@ -148,7 +153,12 @@ export async function start(input: StartInput) {
     "--no-session-persistence",
   ]
 
-  await Promise.all([writeSystemPrompt, writeMcpConfig])
+  // A write failure here must not leave the bridge's HTTP listener orphaned
+  // — nothing else would ever close it once `start()` rejects.
+  await Promise.all([writeSystemPrompt, writeMcpConfig]).catch(async (err) => {
+    await bridge.close()
+    throw err
+  })
 
   const child: ChildProcessWithoutNullStreams = spawn(input.bin, args, {
     cwd: input.cwd,
@@ -213,11 +223,17 @@ export async function start(input: StartInput) {
     if (event?.type === "system" && event.subtype === "init") {
       // `--tools ""` is the only thing standing between `bypassPermissions`
       // and the CLI reading/writing files or running shell commands on its
-      // own. Defense in depth: if a native (non-bridge) tool ever shows up
-      // here — a CLI update changing `--tools ""` semantics, for example —
-      // fail loudly instead of silently running with native tools enabled.
+      // own. Defense in depth: if a native (non-MCP) tool ever shows up here
+      // — a CLI update changing `--tools ""` semantics, for example — fail
+      // loudly instead of silently running with native tools enabled.
+      //
+      // Checked against the generic `mcp__` namespace prefix, not our own
+      // server's specific `mcp__kilo__` prefix: a future CLI version could
+      // add other benign MCP-protocol-level plumbing tools under a different
+      // namespace, and only bare (non-`mcp__`-prefixed) names ever correspond
+      // to genuine native built-in tools like Bash/Read/Edit.
       const leaked = Array.isArray(event.tools)
-        ? event.tools.filter((name: unknown) => typeof name === "string" && !name.startsWith(Bridge.TOOL_PREFIX))
+        ? event.tools.filter((name: unknown) => typeof name === "string" && !name.startsWith("mcp__"))
         : []
       if (leaked.length) {
         events.push({

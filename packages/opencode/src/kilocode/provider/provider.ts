@@ -209,25 +209,28 @@ export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> 
       // two sequential subprocess spawns (each with its own timeout) — a
       // slow or hung CLI would otherwise stall `kilo models`/the Providers
       // page's first load. Fire-and-forget; nothing downstream reads the
-      // result synchronously.
-      void probeClaudeCode(bin).then((status) => {
-        if (!status?.loggedIn) {
-          claudeCodeLog.warn("Claude Code CLI found but not signed in", { bin })
-          return
-        }
-        if (status.authMethod !== "claude.ai") {
-          // `claude.ai` is the genuine Pro/Max/Team/Enterprise subscription
-          // login. Anything else (an env-set ANTHROPIC_API_KEY, a Console
-          // pay-as-you-go account, or a custom ANTHROPIC_BASE_URL/AUTH_TOKEN
-          // gateway in the user's own settings.json) means usage will not
-          // actually be billed against a Claude subscription.
-          claudeCodeLog.warn("Claude Code CLI is not authenticated via a Claude subscription", {
-            authMethod: status.authMethod,
-          })
-          return
-        }
-        claudeCodeLog.info("Claude Code CLI signed in via Claude subscription", { version: status.version })
-      })
+      // result synchronously. `.catch` guards against an unhandled rejection
+      // for what is, again, only ever used for a log line.
+      probeClaudeCode(bin)
+        .then((status) => {
+          if (!status?.loggedIn) {
+            claudeCodeLog.warn("Claude Code CLI found but not signed in", { bin })
+            return
+          }
+          if (status.authMethod !== "claude.ai") {
+            // `claude.ai` is the genuine Pro/Max/Team/Enterprise subscription
+            // login. Anything else (an env-set ANTHROPIC_API_KEY, a Console
+            // pay-as-you-go account, or a custom ANTHROPIC_BASE_URL/AUTH_TOKEN
+            // gateway in the user's own settings.json) means usage will not
+            // actually be billed against a Claude subscription.
+            claudeCodeLog.warn("Claude Code CLI is not authenticated via a Claude subscription", {
+              authMethod: status.authMethod,
+            })
+            return
+          }
+          claudeCodeLog.info("Claude Code CLI signed in via Claude subscription", { version: status.version })
+        })
+        .catch((err) => claudeCodeLog.warn("Claude Code CLI probe failed", { err }))
 
       return Effect.succeed({ autoload: true, options: { bin } })
     },
