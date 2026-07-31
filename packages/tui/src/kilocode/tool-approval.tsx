@@ -52,13 +52,15 @@ export function describeApproval(metadata: Record<string, unknown> | undefined):
   return source ? `${decision} ${source}${ruleText}` : decision
 }
 
-/** The muted "why" row rendered under a completed/failed inline or block tool. */
-export function ApprovalNote(props: { note: string | undefined; color?: RGBA; paddingLeft: number }) {
+/**
+ * The muted "why" annotation appended inline after a tool's title/summary text, matching the
+ * `RoutedModelMeta.Badge` convention. Rendered on the header line (not after the tool's own
+ * output) so it reads as metadata about the call rather than part of the output itself.
+ */
+export function ApprovalBadge(props: { note: string | undefined; color?: RGBA }) {
   return (
     <Show when={props.note}>
-      <box paddingLeft={props.paddingLeft}>
-        <text fg={props.color}>{props.note}</text>
-      </box>
+      <span style={{ fg: props.color }}> · {props.note}</span>
     </Show>
   )
 }

@@ -63,7 +63,7 @@ import { Toast, useToast } from "../../ui/toast"
 import { useKV } from "../../context/kv.tsx"
 import stripAnsi from "strip-ansi"
 import { usePromptRef } from "../../context/prompt"
-import { ApprovalNote, describeApproval, stateMetadata } from "../../kilocode/tool-approval" // kilocode_change
+import { ApprovalBadge, describeApproval, stateMetadata } from "../../kilocode/tool-approval" // kilocode_change
 import { useEpilogue } from "../../context/epilogue"
 import { normalizePath } from "../../util/path"
 import { PermissionPrompt } from "./permission"
@@ -2317,6 +2317,8 @@ export function InlineToolRow(props: {
                 attributes={props.denied ? TextAttributes.STRIKETHROUGH : undefined}
               >
                 {props.failed && !props.complete ? (props.failure ?? props.children) : props.children}
+                {/* kilocode_change - explain why the call was auto-approved or denied, inline on the header */}
+                <ApprovalBadge note={props.note} color={props.noteColor} />
               </text>
             </box>
           </Show>
@@ -2327,12 +2329,6 @@ export function InlineToolRow(props: {
           <text fg={props.errorColor}>{props.error}</text>
         </box>
       </Show>
-      {/* kilocode_change - explain why the call was auto-approved or denied */}
-      <ApprovalNote
-        note={props.note && (props.complete || props.failed) ? props.note : undefined}
-        color={props.noteColor}
-        paddingLeft={INLINE_TOOL_ICON_WIDTH}
-      />
     </box>
   )
 }
@@ -2377,6 +2373,8 @@ function BlockTool(props: {
             {props.title}
             {/* kilocode_change start */}
             <RoutedModelMeta.View id={props.part?.id} />
+            {/* explain why the call was auto-approved or denied, inline on the title */}
+            <ApprovalBadge note={approvalNote()} color={theme.textMuted} />
             {/* kilocode_change end */}
           </text>
         }
@@ -2384,8 +2382,6 @@ function BlockTool(props: {
         <Spinner color={theme.textMuted}>{props.title.replace(/^# /, "")}</Spinner>
       </Show>
       {props.children}
-      {/* kilocode_change - explain why the call was auto-approved or denied */}
-      <ApprovalNote note={approvalNote()} color={theme.textMuted} paddingLeft={3} />
       <Show when={error()}>
         <text fg={theme.error}>{error()}</text>
       </Show>
