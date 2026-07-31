@@ -57,6 +57,7 @@ describe("Agent Manager terminal font", () => {
         getServerConfig: () => ({ baseUrl: "http://127.0.0.1:4096", password: "secret" }),
         getRoot: () => "/workspace",
         getWorktreePath: () => undefined,
+        getProjectId: () => "prj-1",
         log: () => undefined,
         post: resolve,
         getTerminalFont: () => font,

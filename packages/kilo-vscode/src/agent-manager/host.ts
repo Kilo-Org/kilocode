@@ -9,6 +9,7 @@
  */
 
 import type { Session } from "@kilocode/sdk/v2/client"
+import type { ProjectRef, SessionRef, WorktreeRef } from "./project/route"
 
 // ---------------------------------------------------------------------------
 // Primitives
@@ -36,6 +37,8 @@ export interface SessionProvider {
   clearSessionDirectory(id: string): void
   getSessionDirectories(): ReadonlyMap<string, string>
   getSessionInfo?(id: string): Promise<Session | undefined>
+  /** List root sessions (no parent) whose directory exactly matches `dir`. */
+  listSessions?(dir: string): Promise<Session[]>
   trackSession(id: string): void
   refreshSessions(): void
   registerSession(session: Session): void
@@ -49,6 +52,20 @@ export interface SessionProvider {
   abortSessions(ids: readonly string[]): Promise<void>
   showMemory(sessionID?: string): Promise<void>
   toggleMemory(sessionID?: string): Promise<void>
+  /** Register a project root with the shared route service. */
+  registerProjectRoute?(ref: ProjectRef, root: string, generation: number): void
+  /** Drop a project and all its session/worktree routes. */
+  unregisterProjectRoute?(projectId: string): void
+  /** Register a worktree directory under a project. */
+  registerWorktreeRoute?(ref: WorktreeRef, directory: string, generation: number): void
+  /** Register a session directory under a project (exact routing). */
+  registerSessionRoute?(ref: SessionRef, directory: string, generation: number): void
+  /** Drop one session route (keeps the raw ambiguity index consistent). */
+  unregisterSessionRoute?(ref: SessionRef): void
+  /** Whether a raw session id is known to be ambiguous across projects. */
+  isSessionRouteAmbiguous?(sessionId: string): boolean
+  /** Exact directory for a project-qualified session ref, or undefined. */
+  routeSessionDirectoryFor?(ref: SessionRef): string | undefined
   dispose(): void
 }
 
@@ -99,10 +116,35 @@ export interface Host {
   openPanel(opts: {
     onBeforeMessage: (msg: Record<string, unknown>) => Promise<Record<string, unknown> | null>
     worktreeDirectories?: () => string[]
+    /** Dynamic root directory for the panel's session provider (follows the active project). */
+    workspaceRoot?: () => string | undefined
+    projectId?: () => string | undefined
   }): PanelContext
 
   /** Get the workspace/project root path. */
   workspacePath(): string | undefined
+
+  /** Show a folder picker and return the selected path, or undefined when cancelled. */
+  pickFolder(): Promise<string | undefined>
+
+  /** Whether the experimental multi-project Agent Manager mode is enabled. */
+  multiProject(): boolean
+
+  /** Read the persisted additional-project registry payload. */
+  readProjects(): unknown
+
+  /** Persist the additional-project registry payload. */
+  writeProjects(value: unknown): Promise<void>
+
+  unregisterProjectRoutes(projectId: string): void
+
+  /** Subscribe to workspace folder changes (pinned project re-derivation). */
+  onDidChangeWorkspaceFolders(cb: () => void): Disposable
+
+  /** Subscribe to multi-project flag changes. */
+  onDidChangeMultiProject(cb: (enabled: boolean) => void): Disposable
+  /** Whether the workspace permits executing configured scripts. */
+  isTrusted(): boolean
 
   /** Read the user's automatic branch naming preferences. */
   autoBranchNaming(): { enabled: boolean; prefix: string }

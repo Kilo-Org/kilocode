@@ -72,12 +72,10 @@ export const typedSchema = z
   })
   .strict()
 
-export const digestSchema = z
-  .object({
-    topic: z.string().max(160).default(""),
-    summary: z.string().max(64_000).default(""),
-  })
-  .strict()
+export const digestSchema = z.object({
+  topic: z.string().max(160).default(""),
+  summary: z.string().max(64_000).default(""),
+})
 
 export type CaptureSkip = z.infer<typeof typedSchema>["skipped"][number]
 export type CaptureDigest = z.infer<typeof digestSchema>

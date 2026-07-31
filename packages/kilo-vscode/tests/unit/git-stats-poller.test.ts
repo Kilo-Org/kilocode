@@ -83,6 +83,54 @@ describe("GitOps", () => {
 })
 
 describe("GitStatsPoller", () => {
+  it("keeps mutual exclusion when a stale fetch finishes after a restart", async () => {
+    let calls = 0
+    let running = 0
+    let max = 0
+    let gate: (() => void) | undefined
+    const gated = new Promise<void>((resolve) => {
+      gate = resolve
+    })
+    const localDiff = async () => {
+      calls += 1
+      running += 1
+      max = Math.max(max, running)
+      if (calls === 1) await gated
+      running -= 1
+      return [{ ...diff(1, 0)[0], stamp: `s${calls}` }]
+    }
+    const poller = new GitStatsPoller({
+      getWorktrees: () => [],
+      getWorkspaceRoot: () => "/tmp",
+      localDiff,
+      onStats: () => undefined,
+      onLocalStats: () => undefined,
+      log: () => undefined,
+      intervalMs: 5,
+      git: gitOps(async (args) => {
+        if (args[0] === "rev-parse" && args[2] === "HEAD") return "main"
+        if (args[0] === "symbolic-ref") return "origin/main"
+        if (args[0] === "rev-list") return "0	0"
+        return ""
+      }),
+    })
+
+    poller.setEnabled(true)
+    await waitFor(() => calls === 1)
+    // Restart while the first fetch is in flight, then let it finish. The
+    // stale finally must not clear the busy flag owned by the new poll.
+    poller.stop()
+    poller.setEnabled(true)
+    await waitFor(() => calls === 2)
+    gate?.()
+    await waitFor(() => calls >= 3)
+    poller.stop()
+
+    // The gated first fetch and the restarted poll overlapped by
+    // construction; no further overlap may occur after the restart.
+    expect(max).toBeLessThanOrEqual(2)
+  })
+
   it("does not overlap polling runs", async () => {
     let running = 0
     let max = 0
@@ -276,6 +324,57 @@ describe("GitStatsPoller", () => {
       ],
       degraded: false,
     })
+    expect(emitted[0]?.map((item) => item.worktreeId)).toEqual(["a"])
+  })
+
+  it("treats symlink-aliased worktree paths as present via realpath canonicalization", async () => {
+    // git worktree list --porcelain realpath-resolves worktree registration, so
+    // a worktree registered through a symlink alias (e.g. /tmp -> /private/tmp
+    // on macOS) is reported under its realpath. The probe must canonicalize the
+    // session's lexical alias the same way, or a real worktree is marked missing
+    // and its stats are excluded.
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gsp-symlink-"))
+    const real = fs.mkdtempSync(path.join(os.tmpdir(), "gsp-symlink-real-"))
+    const alias = path.join(root, "alias")
+    fs.symlinkSync(real, alias)
+
+    const presence: WorktreePresenceResult[] = []
+    const calls: string[] = []
+    const emitted: Array<Array<{ worktreeId: string; additions: number; deletions: number }>> = []
+
+    const poller = new GitStatsPoller({
+      getWorktrees: () => [{ ...worktree("a"), path: alias }],
+      getWorkspaceRoot: () => root,
+      localDiff: async (dir) => {
+        calls.push(dir)
+        return diff(3, 2)
+      },
+      onStats: (stats) => emitted.push(stats),
+      onLocalStats: () => undefined,
+      onWorktreePresence: (result) => presence.push(result),
+      log: () => undefined,
+      intervalMs: 5,
+      git: gitOps(async (args) => {
+        if (args[0] === "worktree") {
+          return `worktree ${real}\nbranch refs/heads/branch-a\n`
+        }
+        if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "origin/main"
+        if (args[0] === "rev-list") return "1"
+        return ""
+      }),
+    })
+
+    poller.setEnabled(true)
+    await waitFor(() => presence.length >= 1 && emitted.length >= 1)
+    poller.stop()
+    fs.rmSync(root, { recursive: true, force: true })
+    fs.rmSync(real, { recursive: true, force: true })
+
+    expect(presence[0]).toEqual({
+      worktrees: [{ worktreeId: "a", missing: false, branch: "branch-a" }],
+      degraded: false,
+    })
+    expect(calls.some((dir) => dir === alias)).toBe(true)
     expect(emitted[0]?.map((item) => item.worktreeId)).toEqual(["a"])
   })
 

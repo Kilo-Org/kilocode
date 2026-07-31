@@ -89,6 +89,11 @@ export class PRStatusBridge {
   remove(worktreeId: string): void {
     this.cache.delete(worktreeId)
   }
+
+  reset(): void {
+    this.poller.stop()
+    this.cache.clear()
+  }
 }
 
 /** Build PRStatusPoller options that forward events through the bridge cache. */

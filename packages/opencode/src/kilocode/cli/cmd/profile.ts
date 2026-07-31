@@ -1,11 +1,23 @@
 import type { Argv } from "yargs"
+import type { Info as AuthInfo } from "../../../auth"
+import type { KilocodeBalance, KilocodeProfile } from "@kilocode/kilo-gateway"
 import { cmd } from "../../../cli/cmd/cmd"
 import { UI } from "../../../cli/ui"
-import { Auth, type Info as AuthInfo } from "../../../auth"
-import { makeRuntime } from "../../../effect/run-service"
-import { fetchBalance, fetchProfile, type KilocodeBalance, type KilocodeProfile } from "@kilocode/kilo-gateway"
 
-const runtime = makeRuntime(Auth.Service, Auth.defaultLayer)
+// Keep the top-level import graph light: this module is registered eagerly at CLI
+// startup, so the auth runtime and gateway fetches happen inside the handler (same
+// deferral pattern as upstream opencode#30453). The runtime is created lazily on
+// first use rather than at module load.
+let runtime: Awaited<ReturnType<typeof load>> | undefined
+async function load() {
+  const { Auth } = await import("../../../auth")
+  const { makeRuntime } = await import("../../../effect/run-service")
+  return makeRuntime(Auth.Service, Auth.defaultLayer)
+}
+async function stored(providerID: string) {
+  runtime ??= await load()
+  return runtime.runPromise((svc) => svc.get(providerID))
+}
 
 interface Info {
   name: string | null
@@ -64,7 +76,7 @@ export const ProfileCommand = cmd({
 })
 
 export async function handle(args: Args) {
-  const get = args.getAuth ?? ((id: string) => runtime.runPromise((svc) => svc.get(id)))
+  const get = args.getAuth ?? stored
   const auth = await get("kilo")
   const error = args.error ?? UI.error
   const exit = args.exit ?? ((code: number) => (process.exitCode = code))
@@ -75,6 +87,7 @@ export async function handle(args: Args) {
     return
   }
 
+  const { fetchBalance, fetchProfile } = await import("@kilocode/kilo-gateway")
   const org = auth.accountId ?? null
   const result = await (async () => {
     try {
