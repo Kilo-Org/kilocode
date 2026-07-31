@@ -623,9 +623,12 @@ private class Renderer : JPanel(BorderLayout()), TreeCellRenderer {
         val name = item?.name?.ifBlank { item.path }.orEmpty()
         val color = item?.file?.let(::fileStatus)?.color
         if (color == null) text.append(name) else text.append(name, SimpleTextAttributes(SimpleTextAttributes.STYLE_PLAIN, color))
-        val changed = item != null && (item.additions != 0 || item.deletions != 0)
-        badge.isVisible = changed
-        if (changed) badge.update(item.additions, item.deletions)
+        // A folder's badge rolls up its descendants' stats, which is only meaningful while the
+        // folder is collapsed. Once expanded the child rows carry their own badges, so hide the
+        // folder aggregate to avoid duplicating the numbers. Leaf files always show their badge.
+        val show = item != null && (item.additions != 0 || item.deletions != 0) && !(item.dir && expanded)
+        badge.isVisible = show
+        if (show) badge.update(item.additions, item.deletions)
         return this
     }
 }

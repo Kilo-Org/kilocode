@@ -127,6 +127,36 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test folder badge shows only while collapsed`() {
+        val parent = Disposer.newDisposable()
+        try {
+            val view = view(files(), parent)
+            val tree = components(view).filterIsInstance<Tree>().single()
+            val folder = folder(tree)
+
+            tree.expandPath(TreePath(folder.path))
+            assertFalse("expanded folder hides its rolled-up badge", rowBadge(renderer(tree, folder)).isVisible)
+
+            tree.collapsePath(TreePath(folder.path))
+            assertTrue("collapsed folder shows its rolled-up badge", rowBadge(renderer(tree, folder)).isVisible)
+        } finally {
+            Disposer.dispose(parent)
+        }
+    }
+
+    fun `test leaf badge stays visible while its folder is expanded`() {
+        val parent = Disposer.newDisposable()
+        try {
+            val view = view(files(), parent)
+            val tree = components(view).filterIsInstance<Tree>().single()
+            tree.expandPath(TreePath(folder(tree).path))
+
+            assertTrue(rowBadge(renderer(tree, leaf(tree))).isVisible)
+        } finally {
+            Disposer.dispose(parent)
+        }
+    }
+
     fun `test row badge hidden when node has no changes`() {
         val parent = Disposer.newDisposable()
         try {
@@ -442,11 +472,13 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
             false,
         )
 
-    private fun leaf(tree: Tree): DefaultMutableTreeNode {
+    private fun folder(tree: Tree): DefaultMutableTreeNode {
         val root = tree.model.root as DefaultMutableTreeNode
-        val src = root.getChildAt(0) as DefaultMutableTreeNode
-        return src.getChildAt(0) as DefaultMutableTreeNode
+        return root.getChildAt(0) as DefaultMutableTreeNode
     }
+
+    private fun leaf(tree: Tree): DefaultMutableTreeNode =
+        folder(tree).getChildAt(0) as DefaultMutableTreeNode
 
     private fun rowBadge(row: Component): DiffStatBadge = components(row).filterIsInstance<DiffStatBadge>().single()
 
