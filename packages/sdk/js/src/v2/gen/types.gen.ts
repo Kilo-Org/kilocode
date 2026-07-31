@@ -9290,6 +9290,9 @@ export type SessionPromptData = {
     tools?: {
       [key: string]: boolean
     }
+    ephemeralTools?: {
+      [key: string]: boolean
+    }
     format?: OutputFormat
     system?: string
     variant?: string
@@ -9644,6 +9647,9 @@ export type SessionPromptAsyncData = {
     tools?: {
       [key: string]: boolean
     }
+    ephemeralTools?: {
+      [key: string]: boolean
+    }
     format?: OutputFormat
     system?: string
     variant?: string
@@ -9696,6 +9702,9 @@ export type SessionCommandData = {
     arguments: string
     command: string
     variant?: string
+    ephemeralTools?: {
+      [key: string]: boolean
+    }
     snapshotInitialization?: "wait"
     parts?: Array<{
       id?: string

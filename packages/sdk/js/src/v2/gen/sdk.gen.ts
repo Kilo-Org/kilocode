@@ -4484,6 +4484,9 @@ export class Session2 extends HeyApiClient {
       tools?: {
         [key: string]: boolean
       }
+      ephemeralTools?: {
+        [key: string]: boolean
+      }
       format?: OutputFormat
       system?: string
       variant?: string
@@ -4511,6 +4514,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "agent" },
             { in: "body", key: "noReply" },
             { in: "body", key: "tools" },
+            { in: "body", key: "ephemeralTools" },
             { in: "body", key: "format" },
             { in: "body", key: "system" },
             { in: "body", key: "variant" },
@@ -4846,6 +4850,9 @@ export class Session2 extends HeyApiClient {
       tools?: {
         [key: string]: boolean
       }
+      ephemeralTools?: {
+        [key: string]: boolean
+      }
       format?: OutputFormat
       system?: string
       variant?: string
@@ -4873,6 +4880,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "agent" },
             { in: "body", key: "noReply" },
             { in: "body", key: "tools" },
+            { in: "body", key: "ephemeralTools" },
             { in: "body", key: "format" },
             { in: "body", key: "system" },
             { in: "body", key: "variant" },
@@ -4911,6 +4919,9 @@ export class Session2 extends HeyApiClient {
       arguments?: string
       command?: string
       variant?: string
+      ephemeralTools?: {
+        [key: string]: boolean
+      }
       snapshotInitialization?: "wait"
       parts?: Array<{
         id?: string
@@ -4937,6 +4948,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "arguments" },
             { in: "body", key: "command" },
             { in: "body", key: "variant" },
+            { in: "body", key: "ephemeralTools" },
             { in: "body", key: "snapshotInitialization" },
             { in: "body", key: "parts" },
           ],

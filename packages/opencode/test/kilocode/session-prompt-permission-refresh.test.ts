@@ -262,6 +262,31 @@ function providerCfg(url: string) {
   }
 }
 
+it.live("ephemeral prompt tools do not persist session restrictions", () =>
+  provideTmpdirServer(
+    Effect.fnUntraced(function* () {
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const session = yield* sessions.create({ title: "Ephemeral prompt tools" })
+
+      const message = yield* prompt.prompt({
+        sessionID: session.id,
+        agent: "build",
+        noReply: true,
+        ephemeralTools: { question: false, suggest: false },
+        parts: [{ type: "text", text: "headless" }],
+      })
+
+      expect(message.info.role).toBe("user")
+      if (message.info.role !== "user") throw new Error("expected a user message")
+      expect(message.info.tools).toEqual({ question: false, suggest: false })
+      const reloaded = yield* sessions.get(session.id)
+      expect(reloaded.permission).toBeUndefined()
+    }),
+    { config: (url) => providerCfg(url) },
+  ),
+)
+
 it.live(
   "blocks @file content denied by .kilocodeignore",
   () =>

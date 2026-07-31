@@ -2122,6 +2122,7 @@ export const layer = Layer.effect(
         agent: userAgent,
         parts,
         variant: input.variant,
+        ephemeralTools: input.ephemeralTools, // kilocode_change - retain non-persistent caller restrictions
         snapshotInitialization: input.snapshotInitialization, // kilocode_change
       })
       yield* events.publish(Command.Event.Executed, {
@@ -2200,6 +2201,11 @@ export const PromptInput = Schema.Struct({
     description:
       "@deprecated tools and permissions have been merged, you can set permissions on the session itself now",
   }),
+  // kilocode_change start - expose non-persistent tool restrictions to SDK callers
+  ephemeralTools: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)).annotate({
+    description: "Tool availability overrides for this prompt only; these do not update session permissions.",
+  }),
+  // kilocode_change end
   format: Schema.optional(SessionV1.Format),
   system: Schema.optional(Schema.String),
   variant: Schema.optional(Schema.String),
@@ -2233,7 +2239,6 @@ type PartInputUnion =
 export type PromptInput = Omit<Schema.Schema.Type<typeof PromptInput>, "parts" | "editorContext"> & {
   parts: PartInputUnion[]
   editorContext?: MessageV2.EditorContext
-  ephemeralTools?: Record<string, boolean>
 }
 // kilocode_change end
 
@@ -2261,6 +2266,11 @@ export const CommandInput = Schema.Struct({
   arguments: Schema.String,
   command: Schema.String,
   variant: Schema.optional(Schema.String),
+  // kilocode_change start - expose non-persistent tool restrictions to SDK callers
+  ephemeralTools: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)).annotate({
+    description: "Tool availability overrides for this command only; these do not update session permissions.",
+  }),
+  // kilocode_change end
   // kilocode_change start - managed product slow-snapshot policy
   snapshotInitialization: Schema.optional(Schema.Literal("wait")).annotate({
     description: "Wait silently if snapshot initialization is slow instead of asking the user.",

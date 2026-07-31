@@ -958,6 +958,7 @@ export const RunCommand = effectCmd({
         await share(client, sessionID)
 
         if (!args.interactive) {
+          const disabled = { question: false, suggest: false } // kilocode_change - headless runs cannot answer UI tools
           const events = await client.event.subscribe()
           const completed = loop(client, events).catch((e) => {
             console.error(e)
@@ -988,6 +989,7 @@ export const RunCommand = effectCmd({
               command: args.command,
               arguments: message,
               variant: args.variant,
+              ephemeralTools: disabled, // kilocode_change
             })
             if (result.error) {
               if (!emit("error", { error: result.error })) UI.error(formatRunError(result.error))
@@ -1004,6 +1006,7 @@ export const RunCommand = effectCmd({
             agent,
             model,
             variant: args.variant,
+            ephemeralTools: disabled, // kilocode_change
             parts: [...files, { type: "text", text: message }],
           })
           if (result.error) {

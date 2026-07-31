@@ -6888,6 +6888,12 @@
                       "type": "boolean"
                     }
                   },
+                  "ephemeralTools": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "boolean"
+                    }
+                  },
                   "format": {
                     "$ref": "#/components/schemas/OutputFormat"
                   },
@@ -7798,6 +7804,12 @@
                       "type": "boolean"
                     }
                   },
+                  "ephemeralTools": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "boolean"
+                    }
+                  },
                   "format": {
                     "$ref": "#/components/schemas/OutputFormat"
                   },
@@ -7806,6 +7818,12 @@
                   },
                   "variant": {
                     "type": "string"
+                  },
+                  "ephemeralTools": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "boolean"
+                    }
                   },
                   "snapshotInitialization": {
                     "type": "string",

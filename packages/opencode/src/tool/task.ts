@@ -202,6 +202,13 @@ export const TaskTool = Tool.define(
         Effect.orDie,
       )
       if (msg.info.role !== "assistant") return yield* Effect.fail(new Error("Not an assistant message"))
+      // kilocode_change start - retain headless tool restrictions in subagent turns and background follow-ups
+      const user = yield* MessageV2.get({ sessionID: ctx.sessionID, messageID: msg.info.parentID }).pipe(
+        Effect.provideService(Database.Service, database),
+        Effect.orDie,
+      )
+      const restrictions = KiloTask.restrictions(user.info.role === "user" ? user.info.tools : undefined)
+      // kilocode_change end
 
       // kilocode_change start — prefer valid subagent overrides, safely inheriting when overrides go stale
       const selected = yield* KiloTask.resolveModel({
@@ -247,6 +254,7 @@ export const TaskTool = Tool.define(
             },
             variant, // kilocode_change
             agent: next.name,
+            ephemeralTools: restrictions, // kilocode_change - inherit request-scoped tool denials
             tools: {
               question: false, // kilocode_change - subagents cannot prompt the user directly
               interactive_terminal: false, // kilocode_change - subagents cannot take over the user's terminal
@@ -278,6 +286,7 @@ export const TaskTool = Tool.define(
             sessionID: ctx.sessionID,
             agent: currentParent.agent ?? ctx.agent,
             variant,
+            ephemeralTools: restrictions, // kilocode_change - keep headless background follow-ups non-interactive
             parts: [
               {
                 type: "text",

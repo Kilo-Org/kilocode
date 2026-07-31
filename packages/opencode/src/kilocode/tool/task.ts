@@ -42,6 +42,11 @@ export namespace KiloTask {
     return false
   }
 
+  /** Carry request-scoped tool denials into child and follow-up prompts. */
+  export function restrictions(tools?: Record<string, boolean>) {
+    return Object.fromEntries(Object.entries(tools ?? {}).filter(([, enabled]) => !enabled))
+  }
+
   /**
    * Build inherited permission ceilings from the calling agent.
    * Merges the static agent definition with the session's accumulated permissions

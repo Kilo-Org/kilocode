@@ -140,6 +140,7 @@ describe("cli run auto permissions", () => {
   test("auto approves tracked subagent permissions and ignores unrelated sessions", async () => {
     const q = feed<Event>()
     const calls: Array<{ requestID: string; reply: string }> = []
+    const prompts: Array<Record<string, unknown>> = []
     const done = Promise.withResolvers<void>()
 
     const sdk = {
@@ -160,7 +161,8 @@ describe("cli run auto permissions", () => {
         get: async (input: { sessionID: string }) => ({
           data: { id: input.sessionID, directory: "/tmp/project" },
         }),
-        prompt: async () => {
+        prompt: async (input: Record<string, unknown>) => {
+          prompts.push(input)
           q.push(task("ses_child"))
           q.push(permission("perm_other", "ses_other"))
           q.push(permission("perm_child", "ses_child"))
@@ -175,5 +177,6 @@ describe("cli run auto permissions", () => {
     await run(sdk)
 
     expect(calls).toEqual([{ requestID: "perm_child", reply: "once" }])
+    expect(prompts[0]?.ephemeralTools).toEqual({ question: false, suggest: false })
   })
 })

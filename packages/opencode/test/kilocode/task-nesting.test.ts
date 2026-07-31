@@ -55,7 +55,7 @@ afterEach(async () => {
   await disposeAllInstances()
 })
 
-const seed = Effect.fn("NestedTaskToolTest.seed")(function* () {
+const seed = Effect.fn("NestedTaskToolTest.seed")(function* (tools?: Record<string, boolean>) {
   const sessions = yield* Session.Service
   const chat = yield* sessions.create({ title: "Parent" })
   const user = yield* sessions.updateMessage({
@@ -64,6 +64,7 @@ const seed = Effect.fn("NestedTaskToolTest.seed")(function* () {
     sessionID: chat.id,
     agent: "build",
     model: ref,
+    tools,
     time: { created: Date.now() },
   })
   const assistant: MessageV2.Assistant = {
@@ -172,6 +173,37 @@ describe("Kilo task nesting", () => {
         expect(kids[0]?.parentID).toBe(chat.id)
         expect(seen?.sessionID).toBe(result.metadata.sessionId)
         expect(seen?.agent).toBe("explore")
+      }),
+    ),
+  )
+
+  it.live("propagates request-scoped tool restrictions to subagents", () =>
+    provideTmpdirInstance(() =>
+      Effect.gen(function* () {
+        const { chat, assistant } = yield* seed({ question: false, suggest: false })
+        const tool = yield* TaskTool
+        const def = yield* tool.init()
+        let seen: SessionPrompt.PromptInput | undefined
+
+        yield* def.execute(
+          {
+            description: "inspect bug",
+            prompt: "look into the cache key path",
+            subagent_type: "explore",
+          },
+          {
+            sessionID: chat.id,
+            messageID: assistant.id,
+            agent: "build",
+            abort: new AbortController().signal,
+            extra: { promptOps: stubOps({ onPrompt: (input) => (seen = input) }) },
+            messages: [],
+            metadata: () => Effect.void,
+            ask: () => Effect.void,
+          },
+        )
+
+        expect(seen?.ephemeralTools).toEqual({ question: false, suggest: false })
       }),
     ),
   )
