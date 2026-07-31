@@ -15138,7 +15138,24 @@
                                   "vscode_extension": {
                                     "type": "array",
                                     "items": {
-                                      "type": "string"
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "name": {
+                                              "type": "string"
+                                            },
+                                            "id": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": ["name", "id"],
+                                          "additionalProperties": false
+                                        }
+                                      ]
                                     }
                                   }
                                 },
@@ -15267,7 +15284,24 @@
                                   "vscode_extension": {
                                     "type": "array",
                                     "items": {
-                                      "type": "string"
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "name": {
+                                              "type": "string"
+                                            },
+                                            "id": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": ["name", "id"],
+                                          "additionalProperties": false
+                                        }
+                                      ]
                                     }
                                   }
                                 },
@@ -15377,7 +15411,24 @@
                                   "vscode_extension": {
                                     "type": "array",
                                     "items": {
-                                      "type": "string"
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "name": {
+                                              "type": "string"
+                                            },
+                                            "id": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": ["name", "id"],
+                                          "additionalProperties": false
+                                        }
+                                      ]
                                     }
                                   }
                                 },
@@ -15624,7 +15675,24 @@
                               "vscode_extension": {
                                 "type": "array",
                                 "items": {
-                                  "type": "string"
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "name": {
+                                          "type": "string"
+                                        },
+                                        "id": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": ["name", "id"],
+                                      "additionalProperties": false
+                                    }
+                                  ]
                                 }
                               }
                             },
@@ -15753,7 +15821,24 @@
                               "vscode_extension": {
                                 "type": "array",
                                 "items": {
-                                  "type": "string"
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "name": {
+                                          "type": "string"
+                                        },
+                                        "id": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": ["name", "id"],
+                                      "additionalProperties": false
+                                    }
+                                  ]
                                 }
                               }
                             },
@@ -15863,7 +15948,24 @@
                               "vscode_extension": {
                                 "type": "array",
                                 "items": {
-                                  "type": "string"
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "name": {
+                                          "type": "string"
+                                        },
+                                        "id": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": ["name", "id"],
+                                      "additionalProperties": false
+                                    }
+                                  ]
                                 }
                               }
                             },

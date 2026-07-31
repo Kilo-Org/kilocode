@@ -12609,7 +12609,13 @@ export type KilocodeMarketplaceListResponses = {
           prerequisites?: Array<string>
           suggest_for?: {
             filename?: Array<string>
-            vscode_extension?: Array<string>
+            vscode_extension?: Array<
+              | string
+              | {
+                  name: string
+                  id: string
+                }
+            >
           }
           type: "mcp"
           url: string
@@ -12643,7 +12649,13 @@ export type KilocodeMarketplaceListResponses = {
           prerequisites?: Array<string>
           suggest_for?: {
             filename?: Array<string>
-            vscode_extension?: Array<string>
+            vscode_extension?: Array<
+              | string
+              | {
+                  name: string
+                  id: string
+                }
+            >
           }
           type: "agent"
           content: {
@@ -12676,7 +12688,13 @@ export type KilocodeMarketplaceListResponses = {
           prerequisites?: Array<string>
           suggest_for?: {
             filename?: Array<string>
-            vscode_extension?: Array<string>
+            vscode_extension?: Array<
+              | string
+              | {
+                  name: string
+                  id: string
+                }
+            >
           }
           type: "skill"
           githubUrl: string
@@ -12716,7 +12734,13 @@ export type KilocodeMarketplaceInstallData = {
           prerequisites?: Array<string>
           suggest_for?: {
             filename?: Array<string>
-            vscode_extension?: Array<string>
+            vscode_extension?: Array<
+              | string
+              | {
+                  name: string
+                  id: string
+                }
+            >
           }
           type: "mcp"
           url: string
@@ -12750,7 +12774,13 @@ export type KilocodeMarketplaceInstallData = {
           prerequisites?: Array<string>
           suggest_for?: {
             filename?: Array<string>
-            vscode_extension?: Array<string>
+            vscode_extension?: Array<
+              | string
+              | {
+                  name: string
+                  id: string
+                }
+            >
           }
           type: "agent"
           content: {
@@ -12783,7 +12813,13 @@ export type KilocodeMarketplaceInstallData = {
           prerequisites?: Array<string>
           suggest_for?: {
             filename?: Array<string>
-            vscode_extension?: Array<string>
+            vscode_extension?: Array<
+              | string
+              | {
+                  name: string
+                  id: string
+                }
+            >
           }
           type: "skill"
           githubUrl: string

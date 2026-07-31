@@ -558,14 +558,8 @@ export const kiloScenarios: Scenario[] = [
         check(body === true, "skill removal should return true")
         const location = path.join(directory(ctx), ".kilo/skill/httpapi-remove/SKILL.md")
         const sentinel = path.join(directory(ctx), ".kilo/skill/httpapi-remove/KEEP.txt")
-        check(
-          !(yield* Effect.promise(() => Bun.file(location).exists())),
-          "removed skill should not remain on disk",
-        )
-        check(
-          yield* Effect.promise(() => Bun.file(sentinel).exists()),
-          "skill removal should preserve sibling files",
-        )
+        check(!(yield* Effect.promise(() => Bun.file(location).exists())), "removed skill should not remain on disk")
+        check(yield* Effect.promise(() => Bun.file(sentinel).exists()), "skill removal should preserve sibling files")
       }),
     ),
   http.protected
@@ -584,6 +578,49 @@ export const kiloScenarios: Scenario[] = [
     .post("/kilocode/agent/remove", "kilocode.removeAgent")
     .at((ctx) => ({ path: "/kilocode/agent/remove", headers: ctx.headers(), body: { name: "httpapi-missing" } }))
     .status(400),
+  http.protected.get("/kilocode/marketplace", "kilocode.marketplace.list").json(200, (body) => {
+    object(body)
+    // The catalog fetch degrades to an empty list on failure, so only the shape is asserted.
+    array(body.items)
+    object(body.installed)
+  }),
+  http.protected
+    .post("/kilocode/marketplace/install", "kilocode.marketplace.install")
+    .inProject({ git: true })
+    .mutating()
+    .at((ctx) => ({
+      path: "/kilocode/marketplace/install",
+      headers: ctx.headers(),
+      body: {
+        target: "project",
+        item: {
+          type: "mcp",
+          id: "httpapi-marketplace",
+          name: "HTTP API Marketplace",
+          description: "HTTP API marketplace fixture",
+          category: "development",
+          url: "https://example.com",
+          content: JSON.stringify({ command: "npx", args: ["server"] }),
+        },
+      },
+    }))
+    .json(200, (body) => {
+      object(body)
+      check(body.success === true, "marketplace install should succeed")
+    }),
+  http.protected
+    .post("/kilocode/marketplace/remove", "kilocode.marketplace.remove")
+    .inProject({ git: true })
+    .mutating()
+    .at((ctx) => ({
+      path: "/kilocode/marketplace/remove",
+      headers: ctx.headers(),
+      body: { scope: "project", item: { id: "httpapi-marketplace", type: "mcp" } },
+    }))
+    .json(200, (body) => {
+      object(body)
+      check(body.success === true, "marketplace remove should succeed")
+    }),
   http.protected
     .post("/kilocode/session-import/project", "kilocode.sessionImport.project")
     .mutating()

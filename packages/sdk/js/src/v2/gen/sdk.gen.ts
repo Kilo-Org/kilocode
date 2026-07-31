@@ -7433,7 +7433,13 @@ export class Marketplace extends HeyApiClient {
             prerequisites?: Array<string>
             suggest_for?: {
               filename?: Array<string>
-              vscode_extension?: Array<string>
+              vscode_extension?: Array<
+                | string
+                | {
+                    name: string
+                    id: string
+                  }
+              >
             }
             type: "mcp"
             url: string
@@ -7467,7 +7473,13 @@ export class Marketplace extends HeyApiClient {
             prerequisites?: Array<string>
             suggest_for?: {
               filename?: Array<string>
-              vscode_extension?: Array<string>
+              vscode_extension?: Array<
+                | string
+                | {
+                    name: string
+                    id: string
+                  }
+              >
             }
             type: "agent"
             content: {
@@ -7500,7 +7512,13 @@ export class Marketplace extends HeyApiClient {
             prerequisites?: Array<string>
             suggest_for?: {
               filename?: Array<string>
-              vscode_extension?: Array<string>
+              vscode_extension?: Array<
+                | string
+                | {
+                    name: string
+                    id: string
+                  }
+              >
             }
             type: "skill"
             githubUrl: string

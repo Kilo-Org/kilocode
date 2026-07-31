@@ -22,9 +22,17 @@ export const McpInstallationMethod = Schema.Struct({
 })
 export type McpInstallationMethod = typeof McpInstallationMethod.Type
 
+// The live catalog ships vscode_extension either as a bare extension id string or
+// as a { name, id } object, so accept both to avoid rejecting valid catalog data.
+export const VscodeExtensionRef = Schema.Union([
+  Schema.String,
+  Schema.Struct({ name: Schema.String, id: Schema.String }),
+])
+export type VscodeExtensionRef = typeof VscodeExtensionRef.Type
+
 export const MarketplaceSuggestFor = Schema.Struct({
   filename: Schema.optional(Schema.Array(Schema.String)),
-  vscode_extension: Schema.optional(Schema.Array(Schema.String)),
+  vscode_extension: Schema.optional(Schema.Array(VscodeExtensionRef)),
 })
 export type MarketplaceSuggestFor = typeof MarketplaceSuggestFor.Type
 

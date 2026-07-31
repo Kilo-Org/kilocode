@@ -49,14 +49,17 @@ async function config(dir: string) {
 
 async function tarball(root: string) {
   const base = path.join(root, "archive")
-  const skill = path.join(base, "source", "skill")
+  const source = path.join(base, "source")
+  const skill = path.join(source, "skill")
   const file = path.join(base, "skill.tar.gz")
   await mkdir(skill, { recursive: true })
   await writeFile(
     path.join(skill, "SKILL.md"),
     "---\nname: marketplace-skill\ndescription: Marketplace skill\n---\n\n# Skill\n",
   )
-  await Bun.$`tar -czf ${file} -C ${path.join(base, "source")} skill`
+  // Spawn tar directly (no shell) with a relative cwd so Windows paths are not mangled by Bun.$.
+  const proc = Bun.spawnSync(["tar", "-czf", file, "skill"], { cwd: source })
+  if (proc.exitCode !== 0) throw new Error(`tar failed (${proc.exitCode}): ${proc.stderr.toString()}`)
   return `data:application/gzip;base64,${Buffer.from(await readFile(file)).toString("base64")}`
 }
 
