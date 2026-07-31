@@ -64,7 +64,7 @@ When you connect the mobile app to a `kilo remote` CLI session, you can share fi
 
 ### Sending files from your phone to the CLI
 
-Attach up to **5 files** (each up to **20 MB**) from your phone to the remote session. The CLI automatically processes them:
+Attach up to **5 files** (each up to **20 MiB**) from your phone to the remote session. The CLI automatically processes them:
 
 - **Text, images, and PDFs** — the file content is converted to a `data:` URL and handed directly to the model as a file part. The model sees the content as if you had loaded it locally.
 - **Other file types** (binaries, archives, etc.) — the file is saved to a per-session scratch directory on the CLI machine. The session transcript shows the saved path, filename, file size, and MIME type. The agent can inspect the file with the `read` tool for text content or shell utilities for binary content.
@@ -74,8 +74,6 @@ Attaching files from the phone is the mobile flow — this is separate from `kil
 ### Receiving files from the CLI on your phone
 
 While the CLI is connected, the agent can deliver a file to your phone with the `send_file` tool (up to **4 MiB**, remote sessions only). The file appears as a chip on the tool card — tap the chip to open the share sheet and save or forward the file. This tool works only when `kilo remote` is actively connected; it is not available in Cloud Agent sessions.
-
-
 
 ## Reviewing GitHub pull requests
 

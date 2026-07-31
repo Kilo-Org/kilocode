@@ -84,7 +84,7 @@ export const SendFileTool = Tool.define<typeof Params, {}, FSUtil.Service, "send
               try: (signal) => bound.sample(SAMPLE_BYTES, AbortSignal.any([ctx.abort, signal])),
               catch: (err) => (err instanceof Error ? err : new Error(String(err))),
             })
-            const mime = sniffAttachmentMime(sample, FSUtil.mimeType(params.path))
+            const mime = sniffAttachmentMime(sample, FSUtil.mimeType(requested))
 
             const bytes = yield* Effect.tryPromise({
               try: (signal) => bound.read(SEND_FILE_MAX_BYTES + 1, AbortSignal.any([ctx.abort, signal])),
@@ -100,7 +100,7 @@ export const SendFileTool = Tool.define<typeof Params, {}, FSUtil.Service, "send
 
             return {
               title: `Sent file: ${basename}`,
-              output: `File ${basename} (${file.stat.size} bytes, ${mime}) delivered to the user's Kilo app. Older app builds ignore non-image file attachments — make sure the user has an up-to-date app to see the delivery.`,
+              output: `File ${basename} (${bytes.byteLength} bytes, ${mime}) delivered to the user's Kilo app. Older app builds ignore non-image file attachments — make sure the user has an up-to-date app to see the delivery.`,
               metadata: {},
               attachments: [
                 {
