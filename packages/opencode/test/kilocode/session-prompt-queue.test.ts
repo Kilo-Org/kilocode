@@ -778,12 +778,21 @@ describe("session prompt queue", () => {
               }),
             )
 
-            // Let msg2/msg3's enqueue capture the current version before cancel bumps it.
-            await Bun.sleep(20)
+            // Wait until follow-ups are actually queued behind the in-flight turn
+            // (not a fixed sleep) so cancel proves the queued-drop path.
+            await Effect.runPromise(
+              pollWithTimeout(
+                Effect.sync(() => (KiloSessionPromptQueue.hasFollowup(session.id) ? (true as const) : undefined)),
+                "follow-up prompts never queued behind the in-flight turn",
+                "3 seconds",
+              ),
+            )
             expect(calls).toHaveLength(1)
 
             await Effect.runPromise(prompt.cancel(session.id))
-            await Promise.all([first, second, third])
+            // Cancel interrupts the in-flight Effect fibers; settle so interrupt
+            // does not surface as an unhandled rejection between tests.
+            await Promise.allSettled([first, second, third])
 
             // The queued prompts must never reach the LLM once cancel flushes the queue.
             expect(calls).toHaveLength(1)
