@@ -1325,12 +1325,6 @@ export const dict = {
   "chat.search.searchingHistory": "Eerdere berichten doorzoeken…",
   "ui.permission.toolLabel.modeSwitch": "Modus wisselen",
   "ui.permission.modeSwitch.prompt": "Modus wisselen van {{source}} naar {{target}} — Reden: {{reason}}",
-  "ui.permission.modeSwitch.heading": "Agent requests a mode change",
-  "ui.permission.modeSwitch.reason": "Reason",
-  "ui.permission.modeSwitch.reassurance": "Your task, files, and conversation continue unchanged.",
-  "ui.permission.modeSwitch.switch": "Switch to {{target}}",
-  "ui.permission.modeSwitch.switching": "Switching to {{target}}…",
-  "ui.permission.modeSwitch.stay": "Stay in {{source}}",
   "settings.agentBehaviour.modeSwitchReject.title": "Wanneer een moduswissel wordt geannuleerd",
   "settings.agentBehaviour.modeSwitchReject.description":
     "Kies of de huidige taak doorgaat in de bestaande modus of stopt.",

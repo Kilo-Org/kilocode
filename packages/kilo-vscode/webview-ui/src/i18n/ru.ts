@@ -1294,12 +1294,6 @@ export const dict = {
   "chat.search.searchingHistory": "Поиск в более ранних сообщениях…",
   "ui.permission.toolLabel.modeSwitch": "Переключить режим",
   "ui.permission.modeSwitch.prompt": "Переключить режим с {{source}} на {{target}} — Причина: {{reason}}",
-  "ui.permission.modeSwitch.heading": "Agent requests a mode change",
-  "ui.permission.modeSwitch.reason": "Reason",
-  "ui.permission.modeSwitch.reassurance": "Your task, files, and conversation continue unchanged.",
-  "ui.permission.modeSwitch.switch": "Switch to {{target}}",
-  "ui.permission.modeSwitch.switching": "Switching to {{target}}…",
-  "ui.permission.modeSwitch.stay": "Stay in {{source}}",
   "settings.agentBehaviour.modeSwitchReject.title": "При отмене переключения режима",
   "settings.agentBehaviour.modeSwitchReject.description":
     "Выберите, продолжить ли текущую задачу в прежнем режиме или остановить её.",
