@@ -789,7 +789,7 @@ it.instance(
     })
     reset("test-token")
 
-    const mockSessionLayer = unseededMockSessionLayer("Renamed Title")
+    const mockSessionLayer = unseededMockSessionLayer("Renamed Title", "ses_unseeded_rename")
     const customLayer = KiloSessions.layer.pipe(
       Layer.provideMerge(Bus.layer),
       Layer.provideMerge(mockSessionLayer),
@@ -820,9 +820,9 @@ it.instance(
 )
 
 // Helper: build a mock Session.Service layer with list() → empty, get() → session
-// with `title`. create() returns a bogus session; setTitle() is a no-op. Used for
-// unseeded-session tests where knownTitles has no entry for the session.
-function unseededMockSessionLayer(title: string) {
+// with `title`. create() returns a session with a unique `id` per test so
+// Storage session_share records do not couple tests. setTitle() is a no-op.
+function unseededMockSessionLayer(title: string, id: string) {
   return Layer.mock(Session.Service, {
     list: () => Effect.succeed([]),
     get: (sid: SessionID) =>
@@ -838,7 +838,7 @@ function unseededMockSessionLayer(title: string) {
       } as Session.Info),
     create: () =>
       Effect.succeed({
-        id: SessionID.make("ses_unseeded"),
+        id: SessionID.make(id),
         title: "Default Title",
         slug: "slug-unseeded",
         projectID: ProjectV2.ID.make("proj-unseeded"),
@@ -864,7 +864,7 @@ it.instance(
     reset("test-token")
 
     const title = "Cloud Rename"
-    const mockSessionLayer = unseededMockSessionLayer(title)
+    const mockSessionLayer = unseededMockSessionLayer(title, "ses_unseeded_adopt")
     const customLayer = KiloSessions.layer.pipe(
       Layer.provideMerge(Bus.layer),
       Layer.provideMerge(mockSessionLayer),
@@ -907,7 +907,7 @@ it.instance(
     reset("test-token")
 
     const title = "Auto Title"
-    const mockSessionLayer = unseededMockSessionLayer(title)
+    const mockSessionLayer = unseededMockSessionLayer(title, "ses_unseeded_auto")
     const customLayer = KiloSessions.layer.pipe(
       Layer.provideMerge(Bus.layer),
       Layer.provideMerge(mockSessionLayer),
