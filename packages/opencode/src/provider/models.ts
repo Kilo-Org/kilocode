@@ -68,8 +68,23 @@ export const layer: Layer.Layer<Service, never, Core.Service | Config.Service | 
             yield* cache.refresh("apertis", aptOpts).pipe(Effect.ignore, Effect.forkDetach)
         })
 
+        // Perplexity Agent ships as an OpenAI-compatible endpoint whose model list
+        // is stale in the models.dev snapshot. Override it with a live fetch when a
+        // configured API key is available; otherwise keep the bundled snapshot.
+        const addPerplexity = Effect.fnUntraced(function* () {
+          const item = providers["perplexity-agent"]
+          if (!item) return
+          const models = yield* cache.fetch("perplexity-agent").pipe(Effect.catch(() => Effect.succeed({})))
+          if (Object.keys(models).length === 0) {
+            yield* cache.refresh("perplexity-agent").pipe(Effect.ignore, Effect.forkDetach)
+            return
+          }
+          providers["perplexity-agent"] = { ...item, models }
+        })
+
         if (!allowed) {
           yield* addApertis()
+          yield* addPerplexity()
           return providers
         }
 
@@ -92,6 +107,7 @@ export const layer: Layer.Layer<Service, never, Core.Service | Config.Service | 
         }
         if (Object.keys(models).length === 0) yield* cache.refresh("kilo", fetch).pipe(Effect.ignore, Effect.forkDetach)
         yield* addApertis()
+        yield* addPerplexity()
         return providers
       })
 

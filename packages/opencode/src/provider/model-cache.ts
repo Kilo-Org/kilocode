@@ -51,6 +51,7 @@ export class Service extends Context.Service<Service, Interface>()("@kilocode/Mo
 const log = Log.create({ service: "model-cache" })
 const ttl = Duration.minutes(5)
 const APERTIS_BASE_URL = "https://api.apertis.ai/v1"
+const PERPLEXITY_BASE_URL = "https://api.perplexity.ai/v1"
 const ApertisItem = Schema.Struct({ id: Schema.String, owned_by: Schema.optional(Schema.String) })
 const ApertisResponse = Schema.Struct({ data: Schema.optional(Schema.Array(ApertisItem)) })
 type ApertisItem = Schema.Schema.Type<typeof ApertisItem>
@@ -94,22 +95,22 @@ export const layer: Layer.Layer<
       modalities: { input: ["text", "image"], output: ["text"] },
     })
 
-    const fetchApertisModels = Effect.fn("ModelCache.fetchApertisModels")(function* (options: Options) {
-      const baseURL = options.baseURL ?? APERTIS_BASE_URL
-      if (!options.apiKey) {
-        log.debug("no API key for apertis, skipping model fetch")
-        return {}
-      }
-
+    const fetchOpenAICompatibleModels = Effect.fn("ModelCache.fetchOpenAICompatibleModels")(function* ({
+      baseURL,
+      apiKey,
+    }: {
+      readonly baseURL: string
+      readonly apiKey: string
+    }) {
       const url = `${baseURL.replace(/\/+$/, "")}/models`
       const response = yield* HttpClientRequest.get(url).pipe(
         HttpClientRequest.acceptJson,
-        HttpClientRequest.bearerToken(options.apiKey),
+        HttpClientRequest.bearerToken(apiKey),
         http.execute,
         Effect.timeout("10 seconds"),
       )
       if (response.status < 200 || response.status >= 300) {
-        log.error("apertis model fetch failed", { status: response.status })
+        log.error("openai-compatible model fetch failed", { status: response.status })
         return {}
       }
 
@@ -117,8 +118,26 @@ export const layer: Layer.Layer<
       return Object.fromEntries((json.data ?? []).map((item) => [item.id, aperture(item)]))
     })
 
+    const fetchApertisModels = Effect.fn("ModelCache.fetchApertisModels")(function* (options: Options) {
+      const baseURL = options.baseURL ?? APERTIS_BASE_URL
+      if (!options.apiKey) {
+        log.debug("no API key for apertis, skipping model fetch")
+        return {}
+      }
+      return yield* fetchOpenAICompatibleModels({ baseURL, apiKey: options.apiKey })
+    })
+
+    const fetchPerplexityModels = Effect.fn("ModelCache.fetchPerplexityModels")(function* (options: Options) {
+      const baseURL = options.baseURL ?? PERPLEXITY_BASE_URL
+      if (!options.apiKey) {
+        log.debug("no API key for perplexity-agent, skipping model fetch")
+        return {}
+      }
+      return yield* fetchOpenAICompatibleModels({ baseURL, apiKey: options.apiKey })
+    })
+
     const authOptions = Effect.fn("ModelCache.authOptions")(function* (providerID: string) {
-      if (providerID !== "kilo" && providerID !== "apertis") return {}
+      if (providerID !== "kilo" && providerID !== "apertis" && providerID !== "perplexity-agent") return {}
       const config = yield* cfg.get()
       const options: Options = {}
 
@@ -159,12 +178,30 @@ export const layer: Layer.Layer<
         })
       }
 
+      if (providerID === "perplexity-agent") {
+        const item = config.provider?.[providerID]
+        if (item?.options?.apiKey) options.apiKey = item.options.apiKey
+        if (item?.options?.baseURL) options.baseURL = item.options.baseURL
+
+        const info = yield* auth.get(providerID)
+        if (info?.type === "api") options.apiKey = info.key
+        if (process.env.PERPLEXITY_API_KEY) options.apiKey = process.env.PERPLEXITY_API_KEY
+        if (process.env.PERPLEXITY_BASE_URL) options.baseURL = process.env.PERPLEXITY_BASE_URL
+        log.debug("perplexity-agent auth options resolved", {
+          providerID,
+          hasKey: !!options.apiKey,
+          hasBaseURL: !!options.baseURL,
+        })
+      }
+
       return options
     })
 
     const fetchModels = (providerID: string, options: Options): Effect.Effect<Result, unknown> => {
       if (providerID === "kilo") return kilo.fetch(options)
       if (providerID === "apertis") return fetchApertisModels(options).pipe(Effect.map((models) => ({ models })))
+      if (providerID === "perplexity-agent")
+        return fetchPerplexityModels(options).pipe(Effect.map((models) => ({ models })))
       log.debug("provider not implemented", { providerID })
       return Effect.succeed({ models: {} })
     }
@@ -186,6 +223,7 @@ export const layer: Layer.Layer<
         return JSON.stringify([providerID, options?.baseURL, options?.kilocodeOrganizationId, options?.kilocodeToken])
       }
       if (providerID === "apertis") return JSON.stringify([providerID, options?.baseURL, options?.apiKey])
+      if (providerID === "perplexity-agent") return JSON.stringify([providerID, options?.baseURL, options?.apiKey])
       return providerID
     }
 

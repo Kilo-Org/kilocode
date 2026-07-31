@@ -19,7 +19,11 @@ function layer(
   hits: Ref.Ref<Hit[]>,
   cfg = TestConfig.layer(),
   access = auth,
-  gates?: { readonly started: Deferred.Deferred<void>; readonly wait: Deferred.Deferred<void>; readonly count?: number },
+  gates?: {
+    readonly started: Deferred.Deferred<void>
+    readonly wait: Deferred.Deferred<void>
+    readonly count?: number
+  },
   fail?: number,
 ) {
   const http = HttpClient.make((request) =>
@@ -307,6 +311,30 @@ it.live("does not resolve auth or config for unsupported providers", () =>
     expect(models).toEqual({})
     expect(yield* Ref.get(configs)).toBe(0)
     expect(yield* Ref.get(auths)).toBe(0)
+    expect(yield* Ref.get(hits)).toEqual([])
+  }),
+)
+
+it.live("fetches Perplexity Agent models through the injected HttpClient", () =>
+  Effect.gen(function* () {
+    const hits = yield* Ref.make<Hit[]>([])
+    const models = yield* ModelCache.Service.use((cache) =>
+      cache.fetch("perplexity-agent", { apiKey: "test-key", baseURL: "https://perplexity.test/v1" }),
+    ).pipe(Effect.provide(layer(hits)))
+
+    expect(Object.keys(models).length).toBe(1)
+    expect((yield* Ref.get(hits)).map((hit) => hit.url)).toEqual(["https://perplexity.test/v1/models"])
+  }),
+)
+
+it.live("skips the Perplexity Agent model fetch when no API key is configured", () =>
+  Effect.gen(function* () {
+    const hits = yield* Ref.make<Hit[]>([])
+    const models = yield* ModelCache.Service.use((cache) => cache.fetch("perplexity-agent")).pipe(
+      Effect.provide(layer(hits)),
+    )
+
+    expect(models).toEqual({})
     expect(yield* Ref.get(hits)).toEqual([])
   }),
 )
