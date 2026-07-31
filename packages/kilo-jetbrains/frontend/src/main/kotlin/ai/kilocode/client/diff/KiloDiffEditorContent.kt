@@ -503,7 +503,7 @@ private fun buildTreePanel(tree: Tree, files: List<DiffFileDto>, badge: DiffStat
             JBScrollPane(tree).apply {
                 border = JBUI.Borders.empty()
                 viewportBorder = JBUI.Borders.empty()
-                horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+                horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED
             },
             BorderLayout.CENTER,
         )
