@@ -577,9 +577,13 @@ describe("run stream transport", () => {
   })
 
   test("does not buffer session.updated for sessions it never tracks", async () => {
-    // Regression: session.updated fires for every session in the instance (title,
-    // touch, revert). Routing it through sid() used to push it into `buffered`
-    // where it would accumulate indefinitely for sessions the run never tracked.
+    // Smoke test: session.updated fires for every session in the instance (title,
+    // touch, revert). The transport's `buffered` queue is private, but a missing
+    // onAgentChange call for an untracked session is the observable signal that
+    // the event was at least not processed. The growth fix is verified at the
+    // gate level (the test above); this case exists so a future refactor that
+    // reintroduces unconditional buffering for untracked sessions is at least
+    // called out by a test.
     const src = globalFeed()
     const agents: string[] = []
     const transport = await createSessionTransport({
@@ -612,8 +616,6 @@ describe("run stream transport", () => {
         } satisfies SdkEvent),
       )
       await Bun.sleep(20)
-      // Nothing reaches onAgentChange: the event is for a different session AND
-      // it must not be queued for later replay either (it is per-session noise).
       expect(agents).toEqual([])
     } finally {
       src.close()

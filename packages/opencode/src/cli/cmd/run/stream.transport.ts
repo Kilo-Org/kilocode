@@ -1211,8 +1211,10 @@ function createLayer(input: StreamInput) {
                     input.trace?.write("recv.event", event)
                     // kilocode_change start - session.updated fires for every session in the
                     // instance (title, touch, revert) and would otherwise pile up in buffered
-                    // for the process lifetime for any session we never track.
-                    if (event.type !== "session.updated") {
+                    // for the process lifetime for any session we never track. Keep
+                    // buffering for tracked sessions so main-session updates still
+                    // reach applyEvent once the run leaves the booting/replaying phase.
+                    if (event.type !== "session.updated" || tracked(sessionID)) {
                       buffered.push(event)
                     }
                     // kilocode_change end
