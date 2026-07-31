@@ -68,21 +68,23 @@ afterEach(async () => {
   await resetDatabase()
 })
 
+function harness(dir: string) {
+  const api = app()
+  return async (method: string, route: string, body?: unknown) => {
+    const response = await api.request(route, {
+      method,
+      headers: { "content-type": "application/json", "x-kilo-directory": dir },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    })
+    expect(response.status).toBe(200)
+    return rec(await response.json())
+  }
+}
+
 describe("marketplace HTTP API", () => {
-  test("installs, lists, and removes project marketplace items", async () => {
+  test("installs, lists, and removes project MCP and agent items", async () => {
     await using tmp = await tmpdir({ config: { formatter: false, lsp: false } })
-    const api = app()
-    const send = (method: string, route: string, body?: unknown) =>
-      api.request(route, {
-        method,
-        headers: { "content-type": "application/json", "x-kilo-directory": tmp.path },
-        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-      })
-    const json = async (method: string, route: string, body?: unknown) => {
-      const response = await send(method, route, body)
-      expect(response.status).toBe(200)
-      return rec(await response.json())
-    }
+    const json = harness(tmp.path)
 
     const mcp = {
       type: "mcp",
@@ -112,29 +114,12 @@ describe("marketplace HTTP API", () => {
     )
     expect(await Bun.file(path.join(tmp.path, ".kilo", "agents", "reviewer.md")).exists()).toBe(true)
 
-    const skill = {
-      type: "skill",
-      id: "marketplace-skill",
-      name: "Marketplace Skill",
-      displayName: "Marketplace Skill",
-      description: "A skill",
-      category: "development",
-      displayCategory: "Development",
-      githubUrl: "https://example.com",
-      content: await tarball(tmp.path),
-    }
-    expect((await json("POST", KilocodePaths.marketplaceInstall, { item: skill, target: "project" })).success).toBe(
-      true,
-    )
-    expect(await Bun.file(path.join(tmp.path, ".kilo", "skills", "marketplace-skill", "SKILL.md")).exists()).toBe(true)
-
     const original = globalThis.fetch
     globalThis.fetch = (async () => new Response('{"items":[]}')) as unknown as typeof fetch
     try {
       const listed = await json("GET", KilocodePaths.marketplaceList)
       expect(rec(rec(listed.installed).project)["mcp:memory"]).toEqual({ type: "mcp" })
       expect(rec(rec(listed.installed).project)["agent:reviewer"]).toEqual({ type: "agent" })
-      expect(rec(rec(listed.installed).project)["skill:marketplace-skill"]).toEqual({ type: "skill" })
     } finally {
       globalThis.fetch = original
     }
@@ -151,6 +136,44 @@ describe("marketplace HTTP API", () => {
         })
       ).success,
     ).toBe(true)
+
+    const removed = await config(tmp.path)
+    expect(removed.mcp?.memory).toBeUndefined()
+    expect(await Bun.file(path.join(tmp.path, ".kilo", "agents", "reviewer.md")).exists()).toBe(false)
+  })
+
+  // The skill install/remove path shells out to `tar`; the Windows CI runner ships GNU tar,
+  // which misreads the `C:\` archive path as a remote host. Exercise the tar flow on POSIX only.
+  test.skipIf(process.platform === "win32")("installs, removes, and reinstalls a marketplace skill", async () => {
+    await using tmp = await tmpdir({ config: { formatter: false, lsp: false } })
+    const json = harness(tmp.path)
+    const manifest = path.join(tmp.path, ".kilo", "skills", "marketplace-skill", "SKILL.md")
+
+    const skill = {
+      type: "skill",
+      id: "marketplace-skill",
+      name: "Marketplace Skill",
+      displayName: "Marketplace Skill",
+      description: "A skill",
+      category: "development",
+      displayCategory: "Development",
+      githubUrl: "https://example.com",
+      content: await tarball(tmp.path),
+    }
+    expect((await json("POST", KilocodePaths.marketplaceInstall, { item: skill, target: "project" })).success).toBe(
+      true,
+    )
+    expect(await Bun.file(manifest).exists()).toBe(true)
+
+    const original = globalThis.fetch
+    globalThis.fetch = (async () => new Response('{"items":[]}')) as unknown as typeof fetch
+    try {
+      const listed = await json("GET", KilocodePaths.marketplaceList)
+      expect(rec(rec(listed.installed).project)["skill:marketplace-skill"]).toEqual({ type: "skill" })
+    } finally {
+      globalThis.fetch = original
+    }
+
     expect(
       (
         await json("POST", KilocodePaths.marketplaceRemove, {
@@ -159,17 +182,13 @@ describe("marketplace HTTP API", () => {
         })
       ).success,
     ).toBe(true)
-
-    const removed = await config(tmp.path)
-    expect(removed.mcp?.memory).toBeUndefined()
-    expect(await Bun.file(path.join(tmp.path, ".kilo", "agents", "reviewer.md")).exists()).toBe(false)
-    expect(await Bun.file(path.join(tmp.path, ".kilo", "skills", "marketplace-skill", "SKILL.md")).exists()).toBe(false)
+    expect(await Bun.file(manifest).exists()).toBe(false)
 
     // Skill removal must delete the whole install directory, not just SKILL.md;
     // otherwise the leftover directory permanently blocks reinstalling the skill.
     expect((await json("POST", KilocodePaths.marketplaceInstall, { item: skill, target: "project" })).success).toBe(
       true,
     )
-    expect(await Bun.file(path.join(tmp.path, ".kilo", "skills", "marketplace-skill", "SKILL.md")).exists()).toBe(true)
+    expect(await Bun.file(manifest).exists()).toBe(true)
   })
 })
