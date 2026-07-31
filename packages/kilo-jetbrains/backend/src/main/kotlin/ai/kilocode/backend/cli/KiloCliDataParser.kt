@@ -1237,6 +1237,7 @@ object KiloCliDataParser {
             ruleDecisions = rawRules.ifEmpty { always.map { PermissionRuleDecisionDto(it) } },
             filePath = path,
             fileDiffs = diffs,
+            skillCommands = metaObj.skillCommands(),
         )
     }
 
@@ -1651,6 +1652,13 @@ private fun JsonElement?.arr(): JsonArray? = runCatching { this?.jsonArray }.get
 private fun JsonObject?.path(): String? {
     if (this == null) return null
     return str("filepath") ?: str("filePath") ?: str("file") ?: str("path")
+}
+
+// metadata.commands is the verbatim skill-shell command list; the flat meta map loses the
+// array, so read it as a list for the prompt to display.
+private fun JsonObject?.skillCommands(): List<String> {
+    if (this == null) return emptyList()
+    return this["commands"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
 }
 
 private fun JsonObject?.ruleDecisions(): List<PermissionRuleDecisionDto> {
