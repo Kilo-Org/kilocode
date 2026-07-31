@@ -23,9 +23,12 @@ interface AmbientSetupDeps {
 
 export type AmbientDecision = "wait" | "hide" | "keep"
 
-/** Selected contexts own the detail stack; history/unassigned are exclusive. */
-export function showTerminalStack(history: boolean, selection: string | null): boolean {
-  return !history && selection !== null
+/** The detail stack hosts chat, terminals, and the read-only banner.
+ *  It shows for any selected context (local/worktree) and for an
+ *  unassigned session, where `selection` is null but the context is not
+ *  empty (a live session is showing). The history view is exclusive. */
+export function showTerminalStack(history: boolean, selection: string | null, contextEmpty: boolean): boolean {
+  return !history && (selection !== null || !contextEmpty)
 }
 
 /** Setup output owns progress/error presentation when its terminal exists. */
