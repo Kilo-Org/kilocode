@@ -2299,6 +2299,21 @@ class KiloCliDataParserTest {
             assertTrue(result.contains(""""message":"approved""""))
         }
 
+        @Test
+        fun `buildPermissionReplyJson - interactive reply serializes interactive true`() {
+            // Wire contract the CLI server checks (permission/index.ts requires interactive
+            // === true to accept a non-reject reply to a skill-shell batch); a serialization
+            // regression here would silently break the entire approval flow.
+            val result = KiloCliDataParser.buildPermissionReplyJson(PermissionReplyDto(reply = "once", interactive = true))
+            assertEquals("""{"reply":"once","interactive":true}""", result)
+        }
+
+        @Test
+        fun `buildPermissionReplyJson - non-interactive reply omits the interactive field`() {
+            val result = KiloCliDataParser.buildPermissionReplyJson(PermissionReplyDto(reply = "once", interactive = false))
+            assertFalse(result.contains("interactive"), "interactive must be omitted for a machine (non-interactive) reply, got: $result")
+        }
+
         // ---- buildPermissionAlwaysRulesJson ----
 
         @Test
@@ -2433,6 +2448,30 @@ class KiloCliDataParserTest {
         val asked = result as? ChatEventDto.PermissionAsked ?: error("Expected PermissionAsked")
         assertEquals("git status --short", asked.request.command)
         assertEquals("git status --short", asked.request.metadata["command"])
+    }
+
+    @Test
+    fun `parsePermissionRequest - skill shell commands and skill name extracted`() {
+        val data = globalEvent("""
+            "type": "permission.asked",
+            "properties": {
+                "id": "perm_skill",
+                "sessionID": "ses_1",
+                "permission": "bash",
+                "patterns": ["git status"],
+                "always": [],
+                "metadata": {"skillShell": true, "skill": "git-status", "commands": ["git status", "printf hi"]}
+            }
+        """)
+
+        val result = KiloCliDataParser.parseChatEvent("permission.asked", data)
+        assertNotNull(result)
+        val asked = result as? ChatEventDto.PermissionAsked ?: error("Expected PermissionAsked")
+        // verbatim commands are parsed as a list for the prompt to display
+        assertEquals(listOf("git status", "printf hi"), asked.request.skillCommands)
+        // skillShell + skill name survive the flat metadata map for card attribution
+        assertEquals("true", asked.request.metadata["skillShell"])
+        assertEquals("git-status", asked.request.metadata["skill"])
     }
 
     @Test

@@ -309,6 +309,8 @@ data class PermissionRequestDto(
     val ruleDecisions: List<PermissionRuleDecisionDto> = emptyList(),
     val filePath: String? = null,
     val fileDiffs: List<PermissionFileDiffDto> = emptyList(),
+    // Verbatim skill-shell commands (metadata.commands) the prompt must display; empty for non-skill requests.
+    val skillCommands: List<String> = emptyList(),
 )
 
 @Serializable
