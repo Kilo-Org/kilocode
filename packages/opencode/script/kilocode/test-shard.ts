@@ -52,16 +52,16 @@ export namespace TestShard {
     size: (file: string) => number,
   ): (file: string) => number {
     if (!timings) return size
+    // Accumulate the time/byte ratio from files that have both a positive
+    // measured duration and a non-zero on-disk size. Bun.file().size returns 0
+    // (never throws) for missing paths, so stale manifest entries would otherwise
+    // add their time to totalT with zero size, inflating the scale factor.
     let totalT = 0
     let totalS = 0
     for (const [file, t] of Object.entries(timings)) {
       if (t <= 0) continue
-      let s: number
-      try {
-        s = size(file)
-      } catch {
-        continue
-      }
+      const s = size(file)
+      if (s <= 0) continue
       totalT += t
       totalS += s
     }
