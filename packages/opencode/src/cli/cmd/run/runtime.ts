@@ -505,6 +505,9 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
           state.agent = agent
           footer.event({ type: "agent", agent: Locale.titlecase(agent) })
         },
+        onModelChange: (model) => {
+          state.model = { providerID: model.providerID, modelID: model.id }
+        },
         // kilocode_change end
         trace: log,
       })

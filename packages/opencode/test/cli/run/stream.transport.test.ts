@@ -576,6 +576,45 @@ describe("run stream transport", () => {
     }
   })
 
+  test("updates the active CLI model from session.next.model.switched", async () => {
+    const src = globalFeed()
+    const models: Array<{ providerID: string; id: string; variant?: string }> = []
+    const transport = await createSessionTransport({
+      sdk: sdk({ globalStream: src.stream }),
+      sessionID: "session-1",
+      thinking: true,
+      limits: () => ({}),
+      footer: footer().api,
+      onModelChange: (model) => models.push(model),
+    })
+
+    try {
+      src.push(
+        globalEvent({
+          id: "evt-modelswitch",
+          type: "session.next.model.switched",
+          properties: {
+            sessionID: "session-1",
+            messageID: "msg-1",
+            timestamp: 1,
+            model: {
+              providerID: "kilocode",
+              id: "anthropic/claude-sonnet-4",
+              variant: "xhigh",
+            },
+          },
+        } satisfies SdkEvent),
+      )
+      await waitFor(() => models[0])
+      expect(models).toEqual([
+        { providerID: "kilocode", id: "anthropic/claude-sonnet-4", variant: "xhigh" },
+      ])
+    } finally {
+      src.close()
+      await transport.close()
+    }
+  })
+
   test("ignores the sync copy of a native message event", async () => {
     const src = globalFeed()
     const ui = footer()

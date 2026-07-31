@@ -16,6 +16,8 @@
 // We also re-check live session status before resolving an idle event so a
 // delayed idle from an older turn cannot complete a newer busy turn.
 import type { Event, GlobalEvent, KiloClient } from "@kilocode/sdk/v2" // kilocode_change - revert to upstream native Event type
+import { ProviderV2 } from "@opencode-ai/core/provider" // kilocode_change - model change callback payload
+import { ModelV2 } from "@opencode-ai/core/model" // kilocode_change - model change callback payload
 import { Context, Deferred, Effect, Exit, Layer, Scope, Stream } from "effect"
 import { makeRuntime } from "@/effect/run-service"
 import {
@@ -77,6 +79,7 @@ type StreamInput = {
   providers?: () => RunProvider[]
   footer: FooterApi
   onAgentChange?: (agent: string) => void // kilocode_change
+  onModelChange?: (model: { providerID: ProviderV2.ID; id: ModelV2.ID; variant?: string }) => void // kilocode_change
   trace?: Trace
   signal?: AbortSignal
 }
@@ -154,6 +157,7 @@ function sid(event: Event): string | undefined {
     event.type === "session.next.shell.started" ||
     event.type === "session.next.shell.ended" ||
     event.type === "session.next.agent.switched" || // kilocode_change - keeps mid-turn agent switches in scope
+    event.type === "session.next.model.switched" || // kilocode_change - keeps mid-turn model switches in scope
     event.type === "permission.asked" ||
     event.type === "permission.replied" ||
     event.type === "question.asked" ||
@@ -228,9 +232,14 @@ function active(event: Event, sessionID: string): boolean {
   // kilocode_change start - session.updated fires for any session in the instance and at
   // prompt intake before the assistant starts streaming; treating it as turn activity
   // would let the 250ms idle poll complete the turn before any assistant work runs.
-  // session.next.agent.switched is published mid-turn and must not arm turn completion
-  // either; the turn is still active while the destination mode continues the task.
-  if (event.type === "session.updated" || event.type === "session.next.agent.switched") {
+  // session.next.{agent,model}.switched are published mid-turn and must not arm turn
+  // completion either; the turn is still active while the destination mode continues
+  // the task.
+  if (
+    event.type === "session.updated" ||
+    event.type === "session.next.agent.switched" ||
+    event.type === "session.next.model.switched"
+  ) {
     return false
   }
   // kilocode_change end
@@ -907,11 +916,21 @@ function createLayer(input: StreamInput) {
         const applyEvent = Effect.fn("RunStreamTransport.applyEvent")(function* (event: Event) {
           // kilocode_change start - session.updated only fires at prompt intake / post-turn,
           // so an approved mid-turn mode switch never reaches onAgentChange. Also watch the
-          // V2 session.next.agent.switched event so the footer label and state.agent
-          // stay in sync with the destination mode.
+          // V2 session.next.{agent,model}.switched events so the footer label and
+          // state.model stay in sync with the destination mode mid-turn.
           if (event.type === "session.next.agent.switched") {
             if (event.properties.sessionID === input.sessionID) {
               input.onAgentChange?.(event.properties.agent)
+            }
+          } else if (event.type === "session.next.model.switched") {
+            if (event.properties.sessionID === input.sessionID) {
+              input.onModelChange?.({
+                providerID: ProviderV2.ID.make(event.properties.model.providerID),
+                id: ModelV2.ID.make(event.properties.model.id),
+                ...(event.properties.model.variant
+                  ? { variant: event.properties.model.variant }
+                  : {}),
+              })
             }
           } else if (
             event.type === "session.updated" &&
