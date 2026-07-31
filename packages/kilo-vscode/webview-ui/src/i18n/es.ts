@@ -307,7 +307,6 @@ export const dict = {
 
   "session.tab.review": "Revisión",
   "session.review.filesChanged": "{{count}} Archivos Cambiados",
-  "session.review.change.other": "Cambios",
   "session.review.loadingChanges": "Cargando cambios...",
   "session.review.noChanges": "Sin cambios",
   "session.messages.loadingEarlier": "Cargando mensajes anteriores...",
@@ -710,7 +709,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "Comportamiento del agente",
   "settings.autoApprove.title": "Aprobación automática",
-  "settings.browser.title": "Navegador",
+  "settings.webTools.title": "Herramientas web",
+  "settings.webTools.description": "Configura la búsqueda web y la automatización del navegador.",
+  "settings.webTools.webSearch.enable": "Habilitar para todos los proveedores",
+  "settings.webTools.browserAutomation": "Automatización del navegador",
+  "settings.webTools.webSearch.title": "Búsqueda web",
+  "settings.webTools.webSearch.description": "Permite que los modelos de todos los proveedores usen la búsqueda web.",
   "settings.checkpoints.title": "Puntos de control",
   "settings.display.title": "Pantalla",
   "settings.autocomplete.title": "Autocompletado",
@@ -732,6 +736,9 @@ export const dict = {
   "session.prompts.tick": "Prompt {{index}} de {{total}}: {{prompt}}",
   "session.prompts.noAnswer": "Aún no hay respuesta",
   "session.prompts.queued": "En cola",
+  "session.prompts.first": "Primera solicitud",
+  "session.prompts.latest": "Última solicitud",
+  "session.prompts.overflow": "{{count}} solicitudes anteriores",
   "session.status.writingResponse": "Escribiendo respuesta…",
   "session.status.retry": "Reintentando…",
   "session.status.working": "Trabajando…",
@@ -897,6 +904,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "Modelo de SWE-Pruner",
   "settings.experimental.swePrunerModel.description":
     "Modelo usado para podar las salidas de herramientas; por defecto, el modelo pequeño configurado",
+  "settings.experimental.multiProject.title": "Agent Manager Multi-Proyecto",
+  "settings.experimental.multiProject.description":
+    "Habilitar la gestión de sesiones y worktrees en múltiples repositorios en Agent Manager. El repositorio del workspace actual es siempre el proyecto predeterminado.",
   "settings.experimental.mcpTimeout.title": "Tiempo de espera MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Tiempo de espera para solicitudes del servidor MCP en milisegundos",
   "settings.experimental.remote.title": "Control Remote",

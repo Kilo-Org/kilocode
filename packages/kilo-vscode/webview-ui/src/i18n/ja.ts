@@ -303,7 +303,6 @@ export const dict = {
 
   "session.tab.review": "レビュー",
   "session.review.filesChanged": "{{count}} ファイル変更",
-  "session.review.change.other": "変更",
   "session.review.loadingChanges": "変更を読み込み中...",
   "session.review.noChanges": "変更なし",
   "session.messages.loadingEarlier": "以前のメッセージを読み込み中...",
@@ -697,7 +696,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "エージェントの動作",
   "settings.autoApprove.title": "自動承認",
-  "settings.browser.title": "ブラウザ",
+  "settings.webTools.title": "ウェブツール",
+  "settings.webTools.description": "ウェブ検索とブラウザ自動化を設定します。",
+  "settings.webTools.webSearch.enable": "すべてのプロバイダーで有効化",
+  "settings.webTools.browserAutomation": "ブラウザ自動化",
+  "settings.webTools.webSearch.title": "ウェブ検索",
+  "settings.webTools.webSearch.description": "すべてのプロバイダーのモデルでウェブ検索を利用できるようにします。",
   "settings.checkpoints.title": "チェックポイント",
   "settings.display.title": "表示",
   "settings.autocomplete.title": "オートコンプリート",
@@ -719,6 +723,9 @@ export const dict = {
   "session.prompts.tick": "プロンプト {{index}}/{{total}}: {{prompt}}",
   "session.prompts.noAnswer": "まだ応答がありません",
   "session.prompts.queued": "キューに追加済み",
+  "session.prompts.first": "最初のプロンプト",
+  "session.prompts.latest": "最新のプロンプト",
+  "session.prompts.overflow": "{{count}} 件前のプロンプト",
   "session.status.writingResponse": "応答を作成中…",
   "session.status.retry": "再試行中…",
   "session.status.working": "作業中…",
@@ -879,6 +886,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "SWE-Pruner モデル",
   "settings.experimental.swePrunerModel.description":
     "ツール出力の剪定に使用するモデル。既定では設定済みのスモールモデルを使用します",
+  "settings.experimental.multiProject.title": "マルチプロジェクト Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Agent Managerで複数のリポジトリにまたがるセッションとワークツリーの管理を有効にします。現在のワークスペースリポジトリは常にデフォルトプロジェクトです。",
   "settings.experimental.mcpTimeout.title": "MCPタイムアウト（ミリ秒）",
   "settings.experimental.mcpTimeout.description": "MCPサーバーリクエストのタイムアウト（ミリ秒）",
   "settings.experimental.remote.title": "Remote コントロール",

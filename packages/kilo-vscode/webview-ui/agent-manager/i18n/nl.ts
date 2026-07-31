@@ -4,6 +4,11 @@ export const dict = {
   "agentManager.sidebar.expand": "Zijbalk tonen",
   "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "SESSIES",
+  "agentManager.projects": "PROJECTEN",
+  "agentManager.project.add": "Project toevoegen",
+  "agentManager.project.remove": "Verwijderen uit Agent Manager",
+  "agentManager.project.trust": "Vertrouwen",
+  "agentManager.project.missing": "Repository niet gevonden",
   "agentManager.notGitRepo": "Geen git repository",
 
   "agentManager.worktree.settings": "Worktree instellingen",
@@ -62,6 +67,9 @@ export const dict = {
 
   "agentManager.terminal.new": "Nieuw terminaltabblad",
   "agentManager.terminal.ended": "terminal beëindigd — sluit tabblad om te negeren",
+  "agentManager.terminal.setupFailed": "installatiescript mislukt",
+  "agentManager.terminal.setupFailedCode": "installatiescript mislukt met exitcode",
+  "agentManager.terminal.stopSetup": "Installatiescript stoppen",
   "agentManager.terminal.connectionError": "terminalverbindingsfout",
   "agentManager.terminal.add": "Nieuwe terminal",
   "agentManager.terminal.empty": "Hier is nog geen terminal",
@@ -144,6 +152,8 @@ export const dict = {
   "agentManager.diff.revertFile": "Bestand terugzetten",
   "agentManager.diff.revertSuccess": "Bestand teruggezet",
   "agentManager.diff.revertError": "Terugzetten mislukt",
+  "agentManager.diff.applyBranchOnly":
+    "Toepassen werkt alleen op de volledige branch-diff. Schakel naar het bereik Branch om toe te passen.",
   "agentManager.open.button": "Openen",
   "agentManager.open.tooltip": "Open deze worktree in VS Code",
   "agentManager.apply.globalButton": "Toepassen",

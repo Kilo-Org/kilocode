@@ -25,8 +25,15 @@ Type `@` in the chat input to get autocomplete suggestions. You can mention:
 | **File** | Attach a file's contents to your message | `@src/utils.ts` |
 | **Terminal** | Include your active VS Code terminal output | `@terminal` |
 | **Git Changes** | Attach uncommitted working-tree diffs and new files | `@git-changes` |
+| **Past chats** | Attach a previous session's transcript as context | `@` → **Past chats** → pick a session |
 
 Selecting a suggestion inserts the mention and highlights it in the input. File contents, terminal output, and git changes are attached as context when you send the message.
+
+### Referencing Past Chats
+
+Choosing **Past chats** from the `@` menu opens a searchable picker of your previous sessions in the current workspace, ordered by recency. Selecting a session inserts a highlighted mention token; when you send the message, that session's current transcript is attached as context so the agent can build on the earlier conversation. Clicking the mention token opens the referenced session.
+
+Very long transcripts are truncated, keeping the beginning and end, so a single mention cannot fill the context window.
 
 ### Drag and Drop
 
@@ -70,6 +77,7 @@ This means the agent can explore your entire project as needed, rather than bein
 | **Mention files when helpful** | If you know the exact file, mention its path to save the agent a search step |
 | **Keep editor tabs relevant** | Open tabs are passed as context, so keep relevant files open |
 | **Trust the agent's tools** | The agent can search, read, and explore your codebase — let it do the discovery work |
+| **Reference a past chat** | Type `@` and choose **Past chats** to open a searchable picker of previous sessions in the current workspace. Selecting a session attaches its current transcript as context when you send the message. |
 
 {% /tab %}
 {% tab label="CLI" %}
