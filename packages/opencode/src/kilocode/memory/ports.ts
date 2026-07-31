@@ -6,7 +6,7 @@ import type { MemoryPorts } from "@kilocode/kilo-memory/effect/ports"
 import { MemoryRedact } from "@kilocode/kilo-memory/redact"
 import { MemoryShared } from "@kilocode/kilo-memory/shared"
 import * as Log from "@opencode-ai/core/util/log"
-import type { LanguageModelV3 } from "@ai-sdk/provider"
+import { APICallError, JSONParseError, type LanguageModelV3 } from "@ai-sdk/provider"
 import { Provider } from "@/provider/provider"
 import { ProviderTransform } from "@/provider/transform"
 import type { MessageV2 } from "@/session/message-v2"
@@ -166,6 +166,25 @@ function consolidationPrompt(input: { model: Provider.Model; options: Record<str
   }
 }
 
+async function consumeStream(common: Parameters<typeof streamText>[0]) {
+  const result = streamText(common)
+  const text: string[] = []
+  let usage: unknown
+  for await (const part of result.fullStream) {
+    if (part.type === "text-delta" && part.text) text.push(part.text)
+    if (part.type === "finish-step") usage = part.usage
+    if (part.type === "finish") usage = part.totalUsage
+    if (part.type === "error") throw part.error
+  }
+  return { text: text.join(""), usage }
+}
+
+const streamNeeded = new Set<string>()
+
+export function resetStreamNeeded() {
+  streamNeeded.clear()
+}
+
 async function memoryText(input: {
   source: Provider.Model
   language: LanguageModelV3
@@ -181,7 +200,6 @@ async function memoryText(input: {
   const ctl = new AbortController()
   const ms = Math.max(1, input.timeoutMs)
   const params = consolidationPrompt({ model: input.source, options: input.options, system: input.system })
-  const openai = input.source.providerID === "openai" && input.source.api.npm === "@ai-sdk/openai"
   const common = {
     model: input.language,
     ...(params.system ? { system: params.system } : {}),
@@ -192,19 +210,23 @@ async function memoryText(input: {
     topP: input.topP,
     topK: input.topK,
   }
+  const native = input.source.providerID === "openai" && input.source.api.npm === "@ai-sdk/openai"
+  const compat = input.source.api.npm === "@ai-sdk/openai-compatible"
+  const key = `${input.source.providerID}/${input.source.id}`
   const work = async () => {
-    if (!openai) return generateText(common)
-
-    const result = streamText(common)
-    const text: string[] = []
-    let usage: unknown
-    for await (const part of result.fullStream) {
-      if (part.type === "text-delta" && part.text) text.push(part.text)
-      if (part.type === "finish-step") usage = part.usage
-      if (part.type === "finish") usage = part.totalUsage
-      if (part.type === "error") throw part.error
+    if (native) return consumeStream(common)
+    if (!compat) return generateText(common)
+    if (streamNeeded.has(key)) return consumeStream(common)
+    try {
+      return await generateText(common)
+    } catch (err) {
+      if (JSONParseError.isInstance(err) || (APICallError.isInstance(err) && JSONParseError.isInstance(err.cause))) {
+        const out = await consumeStream(common)
+        streamNeeded.add(key)
+        return out
+      }
+      throw err
     }
-    return { text: text.join(""), usage }
   }
   let timer: ReturnType<typeof setTimeout> | undefined
   const timeout = new Promise<never>((_, reject) => {
