@@ -55,13 +55,28 @@ function send(res: ServerResponse, status: number, body?: unknown): void {
 function body(req: IncomingMessage): Promise<unknown> {
   return new Promise((resolve, reject) => {
     let raw = ""
+    let settled = false
     req.on("data", (chunk) => {
+      if (settled) return
       raw += chunk
-      // Defensive cap: the CLI only ever posts small JSON-RPC frames.
-      if (raw.length > 8_000_000) reject(new Error("payload too large"))
+      // Defensive cap: the CLI only ever posts small JSON-RPC frames. Destroy
+      // the request once exceeded — rejecting alone doesn't stop `data` from
+      // continuing to arrive and grow `raw`, so the cap wouldn't actually
+      // bound memory.
+      if (raw.length > 8_000_000) {
+        settled = true
+        req.destroy()
+        reject(new Error("payload too large"))
+      }
     })
-    req.on("error", reject)
+    req.on("error", (err) => {
+      if (settled) return
+      settled = true
+      reject(err)
+    })
     req.on("end", () => {
+      if (settled) return
+      settled = true
       try {
         resolve(raw ? JSON.parse(raw) : undefined)
       } catch (cause) {

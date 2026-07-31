@@ -200,33 +200,37 @@ export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> 
     // Autoload is gated purely on the CLI binary being present, not on login
     // status: a not-signed-in user should still see the provider (and the
     // clear "not found"/CLI-surfaced error on first use) rather than have it
-    // silently disappear. `probe()` runs here only to surface real auth
-    // status into logs/options for diagnostics — it never blocks autoload.
-    [CLAUDE_CODE_PROVIDER_ID]: Effect.fnUntraced(function* () {
+    // silently disappear.
+    [CLAUDE_CODE_PROVIDER_ID]: () => {
       const bin = resolveClaudeCodeBin()
-      if (!bin) return { autoload: false, options: {} }
+      if (!bin) return Effect.succeed({ autoload: false, options: {} })
 
-      const status = yield* Effect.promise(() => probeClaudeCode(bin))
-      if (!status?.loggedIn) {
-        claudeCodeLog.warn("Claude Code CLI found but not signed in", { bin })
-      } else if (status.authMethod !== "claude.ai") {
-        // `claude.ai` is the genuine Pro/Max/Team/Enterprise subscription
-        // login. Anything else (an env-set ANTHROPIC_API_KEY, a Console
-        // pay-as-you-go account, or a custom ANTHROPIC_BASE_URL/AUTH_TOKEN
-        // gateway in the user's own settings.json) means usage will not
-        // actually be billed against a Claude subscription.
-        claudeCodeLog.warn("Claude Code CLI is not authenticated via a Claude subscription", {
-          authMethod: status.authMethod,
-        })
-      } else {
+      // Diagnostics only, so this must not block provider init on `probe()`'s
+      // two sequential subprocess spawns (each with its own timeout) — a
+      // slow or hung CLI would otherwise stall `kilo models`/the Providers
+      // page's first load. Fire-and-forget; nothing downstream reads the
+      // result synchronously.
+      void probeClaudeCode(bin).then((status) => {
+        if (!status?.loggedIn) {
+          claudeCodeLog.warn("Claude Code CLI found but not signed in", { bin })
+          return
+        }
+        if (status.authMethod !== "claude.ai") {
+          // `claude.ai` is the genuine Pro/Max/Team/Enterprise subscription
+          // login. Anything else (an env-set ANTHROPIC_API_KEY, a Console
+          // pay-as-you-go account, or a custom ANTHROPIC_BASE_URL/AUTH_TOKEN
+          // gateway in the user's own settings.json) means usage will not
+          // actually be billed against a Claude subscription.
+          claudeCodeLog.warn("Claude Code CLI is not authenticated via a Claude subscription", {
+            authMethod: status.authMethod,
+          })
+          return
+        }
         claudeCodeLog.info("Claude Code CLI signed in via Claude subscription", { version: status.version })
-      }
+      })
 
-      return {
-        autoload: true,
-        options: { bin, loggedIn: status?.loggedIn ?? false, authMethod: status?.authMethod },
-      }
-    }),
+      return Effect.succeed({ autoload: true, options: { bin } })
+    },
   }
 }
 

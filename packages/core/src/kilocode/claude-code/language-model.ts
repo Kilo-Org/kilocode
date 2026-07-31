@@ -267,7 +267,6 @@ export class ClaudeCodeLanguageModel implements LanguageModelV3 {
     options.abortSignal?.addEventListener("abort", abort, { once: true })
 
     const iterator = entry.session.stream
-    const self = this
 
     return {
       stream: new ReadableStream<LanguageModelV3StreamPart>({
@@ -374,7 +373,6 @@ export class ClaudeCodeLanguageModel implements LanguageModelV3 {
           }
           controller.enqueue({ type: "finish", finishReason: finish(reason), usage: usage(totals) })
           controller.close()
-          void self
         },
         cancel() {
           reap(id)

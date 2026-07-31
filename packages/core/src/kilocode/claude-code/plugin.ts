@@ -3,7 +3,7 @@ import { ModelV2 } from "../../model"
 import { PluginV2 } from "../../plugin"
 import { ProviderV2 } from "../../provider"
 import { resolveBin } from "./cli"
-import { createClaudeCode } from "./provider"
+import { createClaudeCode, MODELS } from "./provider"
 
 const id = ProviderV2.ID.make("claude-code")
 
@@ -11,15 +11,6 @@ const id = ProviderV2.ID.make("claude-code")
 // `aisdk.sdk` hook. Claiming it here keeps DynamicProviderPlugin (which would
 // otherwise try to npm-install the name) from ever seeing it.
 const PACKAGE = "@kilocode/claude-code"
-
-// Aliases rather than dated ids: the CLI resolves `opus`/`sonnet`/`haiku` to
-// whatever the account's plan currently entitles, so the catalog never goes
-// stale when Anthropic ships a new snapshot.
-const MODELS = [
-  { id: "sonnet", name: "Claude Sonnet (Claude Code)", context: 200_000, output: 64_000 },
-  { id: "opus", name: "Claude Opus (Claude Code)", context: 200_000, output: 32_000 },
-  { id: "haiku", name: "Claude Haiku (Claude Code)", context: 200_000, output: 32_000 },
-]
 
 export const ClaudeCodePlugin = PluginV2.define({
   id: PluginV2.ID.make("claude-code"),
@@ -34,7 +25,7 @@ export const ClaudeCodePlugin = PluginV2.define({
           return
         }
         evt.provider.update(id, (provider) => {
-          provider.name = "Claude Code (subscription)"
+          provider.name = "Claude Code"
           provider.api = { type: "aisdk", package: PACKAGE }
           provider.disabled = false
           // Auth lives inside the CLI (subscription OAuth in the user's own
@@ -49,7 +40,17 @@ export const ClaudeCodePlugin = PluginV2.define({
             model.name = item.name
             // Leave `model.api` untouched so Catalog.resolve inherits the
             // provider's aisdk api with this model's id.
-            model.capabilities = { tools: true, input: ["text"], output: ["text"] }
+            //
+            // Image input is real (verified live against the CLI, not a
+            // placeholder — see the comment on MODELS in ./provider.ts).
+            // ModelV2's Capabilities schema (packages/core/src/model.ts) has
+            // no reasoning-effort/variants concept at all, unlike the v1
+            // Provider.Model type — so unlike the v1 catalog
+            // (packages/opencode/src/kilocode/claude-code/provider.ts), this
+            // v2 registration cannot express the effort-tiering
+            // ProviderTransform.variants() computes for v1. That's a
+            // structural gap in v2, not an oversight here.
+            model.capabilities = { tools: true, input: ["text", "image"], output: ["text"] }
             model.limit = { context: item.context, output: item.output }
             // Usage is billed against the Claude subscription, not per-token
             // API spend, so an empty cost table keeps Kilo from reporting a

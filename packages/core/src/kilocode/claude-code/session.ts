@@ -81,7 +81,6 @@ export type StartInput = {
   effort?: string
   cwd?: string
   tools: () => Bridge.ToolSpec[]
-  maxOutputTokens?: number
   /** Extra environment for the child (tests inject fixtures through this). */
   env?: Record<string, string>
 }
@@ -107,6 +106,14 @@ export async function start(input: StartInput) {
   const systemPromptFile = input.system ? path.join(tmpdir(), `kilo-claude-code-system-${randomUUID()}.txt`) : undefined
   const writeSystemPrompt = systemPromptFile ? writeFile(systemPromptFile, input.system!, "utf8") : Promise.resolve()
 
+  // The bridge's bearer token must not appear in argv: a process's own
+  // command line is readable by any other local process/user (e.g.
+  // `/proc/<pid>/cmdline` on Linux, or Process Explorer/WMI on Windows),
+  // which would defeat the token's whole purpose. Route it through a temp
+  // file instead, same as the system prompt above.
+  const mcpConfigFile = path.join(tmpdir(), `kilo-claude-code-mcp-${randomUUID()}.json`)
+  const writeMcpConfig = writeFile(mcpConfigFile, mcp, "utf8")
+
   const args = [
     "--print",
     "--verbose",
@@ -126,7 +133,7 @@ export async function start(input: StartInput) {
     "--tools",
     "",
     "--mcp-config",
-    mcp,
+    mcpConfigFile,
     // Without this the user's personal MCP servers are also loaded, which both
     // leaks unrelated tools into the turn and costs tokens.
     "--strict-mcp-config",
@@ -141,7 +148,7 @@ export async function start(input: StartInput) {
     "--no-session-persistence",
   ]
 
-  await writeSystemPrompt
+  await Promise.all([writeSystemPrompt, writeMcpConfig])
 
   const child: ChildProcessWithoutNullStreams = spawn(input.bin, args, {
     cwd: input.cwd,
@@ -172,23 +179,25 @@ export async function start(input: StartInput) {
     }
   })
 
-  const cleanupSystemPromptFile = () => {
-    if (!systemPromptFile) return
-    void rm(systemPromptFile, { force: true }).catch(() => {
-      // Best-effort: an OS temp dir sweep will eventually reclaim this file
-      // even if the process couldn't remove it here.
-    })
+  const cleanupTempFiles = () => {
+    for (const file of [systemPromptFile, mcpConfigFile]) {
+      if (!file) continue
+      void rm(file, { force: true }).catch(() => {
+        // Best-effort: an OS temp dir sweep will eventually reclaim this file
+        // even if the process couldn't remove it here.
+      })
+    }
   }
 
   let closed = false
   child.on("error", (error) => {
-    cleanupSystemPromptFile()
+    cleanupTempFiles()
     events.push({ type: "done", reason: "error", message: error.message })
     events.end()
   })
   child.on("close", (code) => {
     closed = true
-    cleanupSystemPromptFile()
+    cleanupTempFiles()
     bridge.failAll("Claude Code session ended before the tool result was used.")
     if (code !== 0) {
       events.push({
@@ -201,6 +210,26 @@ export async function start(input: StartInput) {
   })
 
   function handle(event: any): void {
+    if (event?.type === "system" && event.subtype === "init") {
+      // `--tools ""` is the only thing standing between `bypassPermissions`
+      // and the CLI reading/writing files or running shell commands on its
+      // own. Defense in depth: if a native (non-bridge) tool ever shows up
+      // here — a CLI update changing `--tools ""` semantics, for example —
+      // fail loudly instead of silently running with native tools enabled.
+      const leaked = Array.isArray(event.tools)
+        ? event.tools.filter((name: unknown) => typeof name === "string" && !name.startsWith(Bridge.TOOL_PREFIX))
+        : []
+      if (leaked.length) {
+        events.push({
+          type: "done",
+          reason: "error",
+          message: `Claude Code CLI reported native tools despite --tools "": ${leaked.join(", ")}`,
+        })
+        events.end()
+        child.kill()
+      }
+      return
+    }
     if (event?.type === "stream_event") {
       const inner = event.event
       if (inner?.type === "content_block_delta") {
@@ -263,7 +292,14 @@ export async function start(input: StartInput) {
       } catch {
         // stdin may already be torn down when the child exited on its own.
       }
-      child.kill()
+      if (!child.killed && child.exitCode === null) {
+        child.kill()
+        // A child that ignores SIGTERM (blocked I/O, defunct state, etc.)
+        // would otherwise outlive the session indefinitely. Escalate once.
+        setTimeout(() => {
+          if (child.exitCode === null) child.kill("SIGKILL")
+        }, 3_000).unref()
+      }
       await bridge.close()
       events.end()
     },
