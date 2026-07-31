@@ -890,6 +890,7 @@ const AgentManagerContent: Component = () => {
     post: (msg: unknown) => vscode.postMessage(msg as never),
     tabMemory,
     terms,
+    nsKey,
     activateTerminal: (id: string) => termHandlers.activate(id),
     setActivePendingId,
     selectSession: session.selectSession,
@@ -2066,9 +2067,11 @@ const AgentManagerContent: Component = () => {
       setLocalSessionIDs(sessionSubset)
     }
     // Mirror the order into the terminal state so `terms.current()`
-    // (the source for renderTerminalLayer's slot order) matches.
+    // (the source for renderTerminalLayer's slot order) matches. The
+    // terminal state is keyed by namespaced context, not the plain
+    // tab-order key.
     const terminalSubset = reordered.filter(isTerminalTabId)
-    if (terminalSubset.length > 0) terms.reorder(key, terminalSubset)
+    if (terminalSubset.length > 0) terms.reorder(nsKey(key), terminalSubset)
   }
 
   const handleDragEnd = () => {
