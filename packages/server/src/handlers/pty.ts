@@ -9,7 +9,12 @@ import * as Socket from "effect/unstable/socket/Socket"
 import { Api } from "../api"
 import { CorsConfig, isAllowedRequestOrigin } from "../cors"
 import { ForbiddenError, PtyNotFoundError } from "../errors"
-import { PTY_CONNECT_TICKET_QUERY, PTY_CONNECT_TOKEN_HEADER, PTY_CONNECT_TOKEN_HEADER_VALUE } from "../groups/pty"
+import {
+  PTY_CONNECT_TICKET_QUERY,
+  PTY_CONNECT_TOKEN_HEADER,
+  PTY_CONNECT_TOKEN_HEADER_VALUE,
+  PTY_REPLAY_EXITED_QUERY,
+} from "../groups/pty"
 import { response } from "../groups/location"
 import { PtyEnvironment } from "../pty-environment"
 
@@ -178,6 +183,7 @@ export const PtyHandler = HttpApiBuilder.group(Api, "server.pty", (handlers) =>
               cursor,
               onData: (chunk) => Queue.offerUnsafe(outbox, chunk),
               onEnd: () => Queue.offerUnsafe(outbox, new Socket.CloseEvent(1000)),
+              allowExited: url.searchParams.get(PTY_REPLAY_EXITED_QUERY) === "1", // kilocode_change
             })
             .pipe(
               Effect.catchTags({

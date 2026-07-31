@@ -1,4 +1,4 @@
-import { type Component, createSignal, createMemo, Show, createEffect, on } from "solid-js"
+import { type Component, createSignal, createMemo, Show, createEffect, on, type JSXElement } from "solid-js"
 import type { VirtualizerHandle } from "virtua/solid"
 import { Diff } from "@kilocode/kilo-ui/diff"
 import { Accordion } from "@kilocode/kilo-ui/accordion"
@@ -7,7 +7,6 @@ import { FileIcon } from "@kilocode/kilo-ui/file-icon"
 import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Button } from "@kilocode/kilo-ui/button"
-import { RadioGroup } from "@kilocode/kilo-ui/radio-group"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
@@ -15,6 +14,7 @@ import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pie
 import type { WorktreeFileDiff } from "../src/types/messages"
 import { KILO_FILE_PATH_MIME } from "../src/utils/path-mentions"
 import { useLanguage } from "../src/context/language"
+import { DiffStyleSelect } from "../diff-viewer/InlineSelect"
 import { useVSCode } from "../src/context/vscode"
 import { useServer } from "../src/context/server"
 import { useProvider } from "../src/context/provider"
@@ -64,12 +64,19 @@ import { createDiffRequests } from "../diff-viewer/diff-requests"
 
 // --- Data model ---
 
+/** Well-known diff source notices → i18n keys (mirrors the standalone viewer). */
+const DIFF_NOTICE_KEYS: Record<string, string> = {
+  "snapshots-disabled": "diffViewer.notice.snapshotsDisabled",
+}
+
 interface DiffPanelProps {
   diffs: WorktreeFileDiff[]
   loading: boolean
   loadingFiles?: Set<string>
   sessionId?: string
   sessionKey?: string
+  /** Well-known source notice kind (e.g. "snapshots-disabled"), shown as a banner. */
+  notice?: string
   diffStyle?: "unified" | "split"
   onDiffStyleChange?: (style: "unified" | "split") => void
   markdownRender?: boolean
@@ -86,10 +93,19 @@ interface DiffPanelProps {
   onRevertFile?: (file: string) => void
   revertingFiles?: Set<string>
   activeTerminalId?: string
+  /** Optional leading row rendered under the header (e.g. the scope selector). */
+  lead?: JSXElement
+  /** Defaults to true. Hides the per-file Revert action when false. */
+  canRevert?: boolean
 }
 
 export const DiffPanel: Component<DiffPanelProps> = (props) => {
   const { t } = useLanguage()
+  const noticeText = () => {
+    const n = props.notice
+    if (!n) return ""
+    return t(DIFF_NOTICE_KEYS[n] ?? n)
+  }
   const vscode = useVSCode()
   const server = useServer()
   const provider = useProvider()
@@ -475,21 +491,18 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     <div class="am-diff-panel" onKeyDown={handleKeyDown} onMouseDown={handleRootMouseDown} tabIndex={-1} ref={rootRef}>
       <div class="am-diff-header">
         <div class="am-diff-header-main">
-          <span class="am-diff-header-title">{t("session.review.change.other")}</span>
+          {/* Scope + base picker replace the static "Changes" title: it names
+              what you're looking at and is the primary control. Always shown,
+              so an empty scope can still be switched away from. */}
+          <Show when={props.lead}>{props.lead}</Show>
           <Show when={props.diffs.length > 0}>
             <>
-              <RadioGroup
-                options={["unified", "split"] as const}
-                current={props.diffStyle ?? "unified"}
-                size="small"
-                value={(style) => style}
-                label={(style) =>
-                  style === "unified" ? t("ui.sessionReview.diffStyle.unified") : t("ui.sessionReview.diffStyle.split")
-                }
-                onSelect={(style) => {
-                  if (!style) return
-                  props.onDiffStyleChange?.(style)
-                }}
+              <DiffStyleSelect
+                value={props.diffStyle ?? "unified"}
+                onSelect={(style) => props.onDiffStyleChange?.(style)}
+                unifiedLabel={t("ui.sessionReview.diffStyle.unified")}
+                splitLabel={t("ui.sessionReview.diffStyle.split")}
+                title={t("ui.sessionReview.diffStyle.unified")}
               />
               <span class="am-diff-header-stats">
                 <span>{t("session.review.filesChanged", { count: totals().files })}</span>
@@ -536,6 +549,15 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
         </div>
       </div>
 
+      <Show when={noticeText()}>
+        <div class="diff-viewer-notice" role="status">
+          <span class="diff-viewer-notice-icon">
+            <Icon name="warning" size="small" />
+          </span>
+          <span class="diff-viewer-notice-text">{noticeText()}</span>
+        </div>
+      </Show>
+
       <Show when={props.loading && props.diffs.length === 0}>
         <div class="am-diff-loading">
           <Spinner />
@@ -543,7 +565,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
         </div>
       </Show>
 
-      <Show when={!props.loading && props.diffs.length === 0}>
+      <Show when={!props.loading && props.diffs.length === 0 && !noticeText()}>
         <div class="am-diff-empty">
           <span>{t("session.review.noChanges")}</span>
         </div>
@@ -636,7 +658,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                                 />
                               </Tooltip>
                             </Show>
-                            <Show when={props.onRevertFile}>
+                            <Show when={props.onRevertFile && props.canRevert !== false}>
                               <Tooltip value={t("agentManager.diff.revertFile")} placement="top">
                                 <IconButton
                                   icon="discard"

@@ -6,6 +6,7 @@ import { FetchHttpClient, HttpClient, HttpClientRequest, HttpClientResponse } fr
 import { withTransientReadRetry } from "@/util/effect-http-client"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Global } from "@opencode-ai/core/global"
+import { isSafeSegment, isSafeRelativePath } from "@/kilocode/skill/discovery-validate" // kilocode_change
 
 const skillConcurrency = 4
 const fileConcurrency = 8
@@ -47,8 +48,10 @@ export const layer: Layer.Layer<Service, never, FSUtil.Service | Path.Path | Htt
 
     const pull = Effect.fn("Discovery.pull")(function* (url: string) {
       const base = url.endsWith("/") ? url : `${url}/`
-      const index = new URL("index.json", base).href
-      const host = base.slice(0, -1)
+      // kilocode_change start - resolve the index origin so file downloads can be pinned to it
+      const source = new URL(base)
+      const index = new URL("index.json", source).href
+      // kilocode_change end
 
       yield* Effect.logInfo("fetching index", { url: index })
 
@@ -63,33 +66,52 @@ export const layer: Layer.Layer<Service, never, FSUtil.Service | Path.Path | Htt
 
       if (!data) return []
 
-      const missing = data.skills.filter((skill) => !skill.files.includes("SKILL.md"))
-      yield* Effect.forEach(
-        missing,
-        (skill) => Effect.logWarning("skill entry missing SKILL.md", { url: index, skill: skill.name }),
-        { discard: true },
-      )
-      const list = data.skills.filter((skill) => skill.files.includes("SKILL.md"))
+      // kilocode_change start - the remote index controls skill.name and file, so validate every segment,
+      // pin file downloads to the index origin, and confine writes to the cache (mirrors core v2 SkillDiscovery)
+      const contained = (parent: string, child: string) => {
+        const rel = path.relative(parent, child)
+        return rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel)
+      }
+      const plan = (skill: IndexSkill) => {
+        if (!skill.files.includes("SKILL.md")) return "skill entry missing SKILL.md"
+        if (!isSafeSegment(skill.name)) return "skipping skill with unsafe name"
+        const root = path.join(cache, skill.name)
+        if (!contained(cache, root)) return "skipping skill with unsafe name"
+        const skillUrl = new URL(`${encodeURIComponent(skill.name)}/`, source)
+        const files: { url: string; dest: string }[] = []
+        for (const file of skill.files) {
+          if (!isSafeRelativePath(file)) return "skipping skill with unsafe file path"
+          const resource = URL.parse(file, skillUrl) ?? undefined
+          if (!resource || resource.origin !== source.origin) return "skipping skill with cross-origin file"
+          const dest = path.join(root, file)
+          if (!contained(root, dest)) return "skipping skill with unsafe file path"
+          files.push({ url: resource.href, dest })
+        }
+        return { root, files }
+      }
 
+      const planned: { root: string; files: { url: string; dest: string }[] }[] = []
+      for (const skill of data.skills) {
+        const result = plan(skill)
+        if (typeof result === "string") yield* Effect.logWarning(result, { url: index, skill: skill.name })
+        else planned.push(result)
+      }
+      // kilocode_change end
+
+      // kilocode_change start - download each validated, origin-pinned, cache-confined plan
       const dirs = yield* Effect.forEach(
-        list,
+        planned,
         (skill) =>
           Effect.gen(function* () {
-            const root = path.join(cache, skill.name)
-
-            yield* Effect.forEach(
-              skill.files,
-              (file) => download(new URL(file, `${host}/${skill.name}/`).href, path.join(root, file)),
-              {
-                concurrency: fileConcurrency,
-              },
-            )
-
-            const md = path.join(root, "SKILL.md")
-            return (yield* fs.exists(md).pipe(Effect.orDie)) ? root : null
+            yield* Effect.forEach(skill.files, (file) => download(file.url, file.dest), {
+              concurrency: fileConcurrency,
+            })
+            const md = path.join(skill.root, "SKILL.md")
+            return (yield* fs.exists(md).pipe(Effect.orDie)) ? skill.root : null
           }),
         { concurrency: skillConcurrency },
       )
+      // kilocode_change end
 
       return dirs.filter((dir): dir is string => dir !== null)
     })

@@ -4,6 +4,7 @@ import path from "path"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import os from "os"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
+import { SKILL_SHELL_DISABLED, SKILL_SHELL_UNTRUSTED } from "@/kilocode/skills/display" // kilocode_change
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
 import { KiloSession } from "@/kilocode/session" // kilocode_change
@@ -1848,9 +1849,11 @@ export const layer = Layer.effect(
           // kilocode_change start — break out so a newer queued prompt can take over
           // instead of starting another LLM step for the now-superseded turn. The
           // current handle.process has fully drained (tokens + inline tool calls) by
-          // the time we get here, so nothing is cut off.
+          // the time we get here, so nothing is cut off. The close reason is
+          // "superseded", not "interrupted": this is a deliberate queue handoff,
+          // not a premature stop, so clients must not flash an interruption warning.
           if (KiloSessionPromptQueue.hasFollowup(sessionID)) {
-            closeReasons.set(sessionID, "interrupted")
+            closeReasons.set(sessionID, "superseded")
             return "break" as const
           }
           // kilocode_change end
@@ -2033,7 +2036,15 @@ export const layer = Layer.effect(
       }
 
       const shellMatches = ConfigMarkdown.shell(template)
-      if (shellMatches.length > 0) {
+      // kilocode_change start - skill templates run !`cmd`` only when trusted and the kill-switch is off,
+      // mirroring the skill tool's gate (the slash-command path is user-initiated, so it is not prompted).
+      const skillTemplate = cmd.source === "skill"
+      const skillShellBlocked = skillTemplate && (cmd.trusted !== true || flags.disableSkillShell)
+      if (shellMatches.length > 0 && skillShellBlocked) {
+        const note = cmd.trusted !== true ? SKILL_SHELL_UNTRUSTED : SKILL_SHELL_DISABLED
+        template = template.replace(bashRegex, () => note)
+      } else if (shellMatches.length > 0) {
+        // kilocode_change end
         const cfg = yield* config.get()
         const sh = Shell.preferred(cfg.shell)
         // kilocode_change start

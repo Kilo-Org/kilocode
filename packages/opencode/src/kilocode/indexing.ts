@@ -22,15 +22,18 @@ import { WorkspaceContext } from "@/control-plane/workspace-context"
 import { Event as IndexingEvent, Warning as IndexingWarningEvent } from "./indexing-event"
 import { indexingWarningKey, type IndexingWarning } from "./indexing-warning"
 import { IndexingWorker } from "./indexing-worker-client"
-import { LanceDBRuntime } from "./lancedb" // kilocode_change
-import { indexingWithKiloDefault, resolveKiloIndexingAuth, type KiloIndexingAuth } from "./indexing-auth" // kilocode_change
+import { LanceDBRuntime } from "./lancedb"
+import { indexingWithKiloDefault, resolveKiloIndexingAuth, type KiloIndexingAuth } from "./indexing-auth"
 import { primaryWorktree } from "./primary-worktree"
 
 const log = Log.create({ service: "kilocode-indexing" })
 const auth = makeRuntime(Auth.Service, Auth.defaultLayer)
+const consent = new Map<string, boolean>()
 const missing = () => disabledIndexingStatus("Indexing plugin is not enabled for this workspace.")
 const noWorkspace = () =>
   disabledIndexingStatus("Codebase indexing is disabled because no workspace folder is open in VS Code.")
+const noConsent = () =>
+  disabledIndexingStatus("Codebase indexing is disabled until you enable it for this project in Kilo Settings.")
 
 export const IndexingModelError = NamedError.create("IndexingModelError", {
   model: Schema.String,
@@ -236,6 +239,7 @@ export namespace KiloIndexing {
   export const Warning = IndexingWarningEvent
 
   const cache = new Map<string, Cache>()
+  const projects = new Map<string, string>()
 
   const inert = async (current: () => Status): Promise<Entry> => {
     const publish = async () => {
@@ -269,8 +273,13 @@ export namespace KiloIndexing {
     )
     const baseline = startup.baseline
     const cfg = startup.cfg
+    const project = (await AppRuntime.runPromise(primaryWorktree(dir))) ?? dir
+    projects.set(dir, project)
     if (process.env["KILO_DISABLE_CODEBASE_INDEXING"] === "vscode-no-workspace") {
       return track(hit, await inert(() => noWorkspace()))
+    }
+    if (process.env["KILO_PLATFORM"] === "vscode" && !consent.get(project)) {
+      return track(hit, await inert(() => noConsent()))
     }
     if (!hasIndexingPlugin(cfg.plugin)) {
       return track(hit, await inert(() => missing()))
@@ -281,10 +290,16 @@ export namespace KiloIndexing {
     const auth = await kiloAuth(cfg)
     const globalConfig = await AppRuntime.runPromise(Config.Service.use((svc) => svc.getGlobal()))
     const global = globalConfig.indexing
-    const merged = indexingWithKiloDefault({ ...global, ...cfg.indexing }, auth)
+    const merged = indexingWithKiloDefault({ ...global, ...cfg.indexing }, auth) ?? {}
     let cfgInput: Awaited<ReturnType<typeof model>>
     try {
-      cfgInput = await model(enrichKilo(input(merged, global), auth), auth)
+      cfgInput = await model(
+        enrichKilo(
+          input({ ...merged, enabled: process.env["KILO_PLATFORM"] === "vscode" ? true : merged.enabled }, global),
+          auth,
+        ),
+        auth,
+      )
     } catch (err) {
       log.warn("indexing model resolution failed", { err })
       return track(hit, await inert(() => failed(err)))
@@ -478,6 +493,7 @@ export namespace KiloIndexing {
   registerDisposer(async (dir) => {
     const hit = cache.get(dir)
     cache.delete(dir)
+    projects.delete(dir)
     if (hit) hit.disposed = true
     if (hit?.entry) {
       await hit.entry.dispose()
@@ -491,6 +507,22 @@ export namespace KiloIndexing {
       log.error("failed to initialize indexing", { err })
     })
     await current.ready
+  }
+
+  /** VS Code supplies machine-local project consent before indexing can start. */
+  export async function setConsent(enabled: boolean) {
+    if (process.env["KILO_PLATFORM"] !== "vscode") return
+    const dir = Instance.directory
+    const project = (await AppRuntime.runPromise(primaryWorktree(dir))) ?? dir
+    if (consent.get(project) === enabled) return
+    consent.set(project, enabled)
+    const hits = [...cache.entries()].filter(([path]) => (projects.get(path) ?? path) === project)
+    for (const [path, hit] of hits) {
+      cache.delete(path)
+      projects.delete(path)
+      hit.disposed = true
+      await hit.entry?.dispose()
+    }
   }
 
   export async function current(): Promise<Status> {

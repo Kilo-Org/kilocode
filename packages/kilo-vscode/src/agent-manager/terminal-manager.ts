@@ -113,6 +113,16 @@ export class TerminalManager {
     }
   }
 
+  /** Titles of every live terminal in a context — used by the router to
+   *  pick the lowest free "Terminal N" ordinal. */
+  titles(worktreeId: string | null): string[] {
+    const out: string[] = []
+    for (const entry of this.entries.values()) {
+      if (entry.worktreeId === worktreeId) out.push(entry.title)
+    }
+    return out
+  }
+
   /** Kill a single terminal. Best-effort — we always drop our bookkeeping.
    *  The SDK's `pty.remove` returns `{ data, error }` without throwing
    *  on 4xx/5xx, so we have to check `error` ourselves; otherwise a

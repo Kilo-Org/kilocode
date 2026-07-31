@@ -29,6 +29,20 @@ describe("memory capture parsing", () => {
     expect(parsed).toEqual({ topic: "repo setup", summary: "Run package tests." })
   })
 
+  test("ignores additional digest fields from model output", () => {
+    const parsed = parseJson(
+      digestSchema,
+      JSON.stringify({
+        topic: "repo setup",
+        summary: "Run package tests.",
+        next_step: "Open a pull request.",
+        blockers: [],
+      }),
+    )
+
+    expect(parsed).toEqual({ topic: "repo setup", summary: "Run package tests." })
+  })
+
   test("maps consolidation operation names into deterministic memory operations", () => {
     const parsed = parseJson(
       typedSchema,
