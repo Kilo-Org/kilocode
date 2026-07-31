@@ -577,13 +577,12 @@ describe("run stream transport", () => {
   })
 
   test("does not buffer session.updated for sessions it never tracks", async () => {
-    // Smoke test: session.updated fires for every session in the instance (title,
-    // touch, revert). The transport's `buffered` queue is private, but a missing
-    // onAgentChange call for an untracked session is the observable signal that
-    // the event was at least not processed. The growth fix is verified at the
-    // gate level (the test above); this case exists so a future refactor that
-    // reintroduces unconditional buffering for untracked sessions is at least
-    // called out by a test.
+    // Smoke test: an untracked session.updated must not invoke onAgentChange. The
+    // transport's `buffered` queue is private, so the unbounded-growth aspect of
+    // the fix (session.updated dropped instead of requeued in drainBuffered) cannot
+    // be observed directly without exposing the queue. This case catches the
+    // adjacent regression where an untracked event is processed through the
+    // tracked branch and fires onAgentChange.
     const src = globalFeed()
     const agents: string[] = []
     const transport = await createSessionTransport({
