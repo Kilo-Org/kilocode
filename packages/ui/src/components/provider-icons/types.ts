@@ -102,6 +102,7 @@ export const iconNames = [
   "cloudflare-workers-ai",
   "cloudflare-ai-gateway",
   "cloudferro-sherlock",
+  "claude-code", // kilocode_change
   "clarifai",
   "chutes",
   "cerebras",

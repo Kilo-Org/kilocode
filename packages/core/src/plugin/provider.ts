@@ -3,6 +3,7 @@ import { AmazonBedrockPlugin } from "./provider/amazon-bedrock"
 import { AnthropicPlugin } from "./provider/anthropic"
 import { AzureCognitiveServicesPlugin, AzurePlugin } from "./provider/azure"
 import { CerebrasPlugin } from "./provider/cerebras"
+import { ClaudeCodePlugin } from "../kilocode/claude-code/plugin" // kilocode_change
 import { CloudflareAIGatewayPlugin } from "./provider/cloudflare-ai-gateway"
 import { CloudflareWorkersAIPlugin } from "./provider/cloudflare-workers-ai"
 import { CoherePlugin } from "./provider/cohere"
@@ -38,6 +39,7 @@ export const ProviderPlugins = [
   AzureCognitiveServicesPlugin,
   AzurePlugin,
   CerebrasPlugin,
+  ClaudeCodePlugin, // kilocode_change
   CloudflareAIGatewayPlugin,
   CloudflareWorkersAIPlugin,
   CoherePlugin,

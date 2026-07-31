@@ -698,6 +698,29 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
 
   if (!model.capabilities.reasoning) return {}
 
+  // kilocode_change start - Claude Code CLI subscription: `--effort` is a
+  // direct CLI flag (confirmed via `claude --help`), not an AI SDK provider
+  // option, so language-model.ts only reads the plain `.effort` string out of
+  // this map — the `thinking`/`budgetTokens` shapes real Anthropic models use
+  // are meaningless to the CLI and are intentionally dropped here. The LABEL
+  // SET per model reuses the exact same tiering as the real "@ai-sdk/anthropic"
+  // case below (anthropicAdaptiveEfforts, then the opus-4-5 check, then the
+  // high/max fallback), so the picker looks and behaves identically to the
+  // equivalent anthropic/* model — Claude Code uses real, non-aliased model
+  // ids (e.g. "claude-opus-4-7"), so this tiering tracks Anthropic's model
+  // catalog the same way it would for any other Anthropic-backed provider.
+  if (model.api.npm === "@kilocode/claude-code") {
+    const claudeCodeAdaptiveEfforts = anthropicAdaptiveEfforts(model.api.id)
+    if (claudeCodeAdaptiveEfforts) {
+      return Object.fromEntries(claudeCodeAdaptiveEfforts.map((effort) => [effort, { effort }]))
+    }
+    if (["opus-4-5", "opus-4.5"].some((v) => model.api.id.includes(v))) {
+      return Object.fromEntries(WIDELY_SUPPORTED_EFFORTS.map((effort) => [effort, { effort }]))
+    }
+    return { high: { effort: "high" }, max: { effort: "max" } }
+  }
+  // kilocode_change end
+
   const id = model.id.toLowerCase()
   const glm52 = ["glm-5.2", "glm-5-2", "glm-5p2"].some(
     (name) => id.includes(name) || model.api.id.toLowerCase().includes(name),
@@ -1216,9 +1239,7 @@ export function options(input: {
   // kilocode_change start
   if (
     input.providerOptions?.setCacheKey !== false &&
-    (input.model.providerID === "openai" ||
-      input.model.api.npm === "@ai-sdk/xai" ||
-      input.providerOptions?.setCacheKey)
+    (input.model.providerID === "openai" || input.model.api.npm === "@ai-sdk/xai" || input.providerOptions?.setCacheKey)
   ) {
     result["promptCacheKey"] = input.sessionID
   }

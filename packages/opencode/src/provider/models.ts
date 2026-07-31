@@ -6,6 +6,7 @@ import * as Core from "@opencode-ai/core/models-dev"
 import { Context, Effect, Layer } from "effect"
 import { AI_SDK_PROVIDERS, KILO_OPENROUTER_BASE, PROMPTS } from "@kilocode/kilo-gateway"
 import { overlay } from "@/kilocode/anaconda-desktop/provider"
+import { overlay as overlayClaudeCode } from "@/kilocode/claude-code/provider"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 
 export const Model = Core.Model
@@ -42,7 +43,7 @@ export const layer: Layer.Layer<Service, never, Core.Service | Config.Service | 
       const cache = yield* ModelCache.Service
 
       const get = Effect.fn("ModelsDev.get")(function* () {
-        const providers = overlay(yield* core.get())
+        const providers = overlayClaudeCode(overlay(yield* core.get()))
         delete providers.kilo
 
         const cfg = yield* config.get()

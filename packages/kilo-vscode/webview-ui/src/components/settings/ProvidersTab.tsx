@@ -73,7 +73,7 @@ const ProvidersTab: Component = () => {
   }
 
   function sourceTag(item: Provider) {
-    if (item.id === "anaconda-desktop") return language.t("settings.providers.tag.local")
+    if (item.id === "anaconda-desktop" || item.id === "claude-code") return language.t("settings.providers.tag.local")
     const current = source(item)
     if (current === "env") return language.t("settings.providers.tag.environment")
     if (current === "api") return language.t("provider.connect.method.apiKey")

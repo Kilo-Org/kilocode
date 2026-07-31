@@ -404,7 +404,15 @@ export async function disconnectProvider(
     // Config-sourced built-in providers stay "connected" after auth.remove
     // because the server rebuilds state from config. Add to disabled_providers
     // so the server excludes them while preserving config for re-enable.
-    if (configured && !oauth && !custom) {
+    //
+    // claude-code is detected purely by CLI binary presence (no auth-store
+    // entry, no config.provider block), so removeAuth() above is a no-op for
+    // it and it would otherwise reappear as connected on the next refresh.
+    // The "Disabled providers" list is also its only "reconnect" affordance,
+    // since there is no credential dialog to re-enter for it.
+    const binOnly = id === "claude-code"
+
+    if ((configured && !oauth && !custom) || binOnly) {
       await disableConfigured(ctx, id, config.global)
     }
 
@@ -412,7 +420,7 @@ export async function disconnectProvider(
       await enableConfigured(ctx, id, config.global)
     }
 
-    if (configured) await refreshConfig(ctx, setCachedConfig)
+    if (configured || binOnly) await refreshConfig(ctx, setCachedConfig)
 
     await ctx.disposeGlobal(`provider disconnect (${id})`)
     await ctx.fetchAndSendProviders()

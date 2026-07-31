@@ -15,6 +15,15 @@ import { ProviderError } from "@/provider/error"
 import { Effect, Schema } from "effect"
 import type { LanguageModelV3 } from "@ai-sdk/provider"
 import { mapValues, omit, pickBy } from "remeda"
+import { createClaudeCode } from "@opencode-ai/core/kilocode/claude-code/provider"
+import {
+  resolveBin as resolveClaudeCodeBin,
+  probe as probeClaudeCode,
+} from "@opencode-ai/core/kilocode/claude-code/cli"
+import { PACKAGE as CLAUDE_CODE_PACKAGE, PROVIDER_ID as CLAUDE_CODE_PROVIDER_ID } from "@/kilocode/claude-code/provider"
+import * as Log from "@opencode-ai/core/util/log"
+
+const claudeCodeLog = Log.create({ service: "kilocode.claude-code" })
 
 /** Default timeout (ms) for provider HTTP requests (connection phase). */
 export const REQUEST_TIMEOUT_MS = 300_000 // 5 minutes
@@ -27,6 +36,7 @@ type BundledSDK = { languageModel(modelId: string): LanguageModelV3 }
 
 export const KILO_BUNDLED_PROVIDERS: Record<string, () => Promise<(options: any) => BundledSDK>> = {
   "@kilocode/kilo-gateway": async () => createKilo as unknown as (options: any) => BundledSDK,
+  [CLAUDE_CODE_PACKAGE]: async () => createClaudeCode as unknown as (options: any) => BundledSDK,
 }
 
 // ---------------------------------------------------------------------------
@@ -186,6 +196,37 @@ export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> 
         autoload: false,
         options: { headers: DEFAULT_HEADERS },
       }),
+
+    // Autoload is gated purely on the CLI binary being present, not on login
+    // status: a not-signed-in user should still see the provider (and the
+    // clear "not found"/CLI-surfaced error on first use) rather than have it
+    // silently disappear. `probe()` runs here only to surface real auth
+    // status into logs/options for diagnostics — it never blocks autoload.
+    [CLAUDE_CODE_PROVIDER_ID]: Effect.fnUntraced(function* () {
+      const bin = resolveClaudeCodeBin()
+      if (!bin) return { autoload: false, options: {} }
+
+      const status = yield* Effect.promise(() => probeClaudeCode(bin))
+      if (!status?.loggedIn) {
+        claudeCodeLog.warn("Claude Code CLI found but not signed in", { bin })
+      } else if (status.authMethod !== "claude.ai") {
+        // `claude.ai` is the genuine Pro/Max/Team/Enterprise subscription
+        // login. Anything else (an env-set ANTHROPIC_API_KEY, a Console
+        // pay-as-you-go account, or a custom ANTHROPIC_BASE_URL/AUTH_TOKEN
+        // gateway in the user's own settings.json) means usage will not
+        // actually be billed against a Claude subscription.
+        claudeCodeLog.warn("Claude Code CLI is not authenticated via a Claude subscription", {
+          authMethod: status.authMethod,
+        })
+      } else {
+        claudeCodeLog.info("Claude Code CLI signed in via Claude subscription", { version: status.version })
+      }
+
+      return {
+        autoload: true,
+        options: { bin, loggedIn: status?.loggedIn ?? false, authMethod: status?.authMethod },
+      }
+    }),
   }
 }
 
