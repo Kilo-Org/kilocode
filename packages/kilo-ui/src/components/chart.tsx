@@ -53,8 +53,9 @@ export function ChartTool(props: ToolProps) {
         return
       }
       config = parsed
-    } catch {
-      // not valid JSON (e.g. mermaid or error string) — skip silently
+    } catch (e) {
+      // output is not valid JSON — model likely passed an unsupported type
+      console.warn("Chart: could not parse output as JSON", e)
       return
     }
 
