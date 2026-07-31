@@ -9,6 +9,7 @@ export function kiloProviderOptions(options: { [x: string]: any }) {
   const result: Record<string, any> = {}
   const openrouter = options as OpenRouterProviderOptions & {
     verbosity?: "high" | "medium" | "low"
+    promptCacheKey?: string
   }
   result.openrouter = openrouter
   result.openai = {
@@ -17,6 +18,7 @@ export function kiloProviderOptions(options: { [x: string]: any }) {
     textVerbosity: openrouter.verbosity,
     store: false,
     forceReasoning: openrouter.reasoning?.enabled,
+    promptCacheKey: openrouter.promptCacheKey,
   } satisfies OpenAIResponsesProviderOptions
   result.anthropic = {
     thinking: { type: openrouter.reasoning?.enabled ? "adaptive" : "disabled" },

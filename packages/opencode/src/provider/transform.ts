@@ -1218,6 +1218,7 @@ export function options(input: {
     input.providerOptions?.setCacheKey !== false &&
     (input.model.providerID === "openai" ||
       input.model.api.npm === "@ai-sdk/xai" ||
+      input.model.api.npm === "@kilocode/kilo-gateway" ||
       input.providerOptions?.setCacheKey)
   ) {
     result["promptCacheKey"] = input.sessionID
