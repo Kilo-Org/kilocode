@@ -520,12 +520,16 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
             model.variant && variants.includes(model.variant) ? model.variant : undefined
           footer.event({ type: "model", model: formatModelLabel(next, state.activeVariant, state.providers) })
           footer.event({ type: "model.switch", model: next })
+          // Mirror variants + activeVariant into the footer's signals (and the
+          // statusline/picker) so the destination's variant list replaces the
+          // source's after an in-flight model switch.
+          footer.event({ type: "variants", variants: state.variants, current: state.activeVariant })
         },
         // kilocode_change end
-        trace: log, // kilocode_change - retains the upstream branch trace hook now that the block ends below it
-      }) // kilocode_change - block extends to cover the post-trace closing brace added by the onModelChange expansion
-      if (footer.isClosed) { // kilocode_change
-        await handle.close() // kilocode_change - keeps the inline marker consistent with the post-expansion block
+        trace: log,
+      })
+      if (footer.isClosed) {
+        await handle.close()
         throw new Error("runtime closed")
       }
 
