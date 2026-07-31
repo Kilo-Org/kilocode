@@ -300,8 +300,9 @@ it.instance(
         type: "text",
         text: `terminal ${"x".repeat(20_000)} terminal needle ${"y".repeat(20_000)}`,
       })
+      // Large histories are dominated by parts that recall intentionally excludes.
       for (let index = 0; index < 1_100; index++) {
-        yield* add(session.id, "user", { type: "text", text: `noise ${index}` })
+        yield* add(session.id, "assistant", { type: "reasoning", text: `noise ${index}`, time: { start: index } })
       }
 
       expect((yield* run("job_id 100%")).results.map((item) => item.id)).toEqual([session.id])

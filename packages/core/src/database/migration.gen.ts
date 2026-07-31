@@ -38,5 +38,6 @@ export const migrations = (
     import("./migration/20260611192811_lush_chimera"),
     import("./migration/20260612174303_project_dir_strategy"),
     import("./migration/20260714141136_session-message-legacy-writer-compat"),
+    import("./migration/20260731102142_recall-part-index"),
   ])
 ).map((module) => module.default) satisfies DatabaseMigration.Migration[]

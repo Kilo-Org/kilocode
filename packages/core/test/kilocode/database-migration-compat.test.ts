@@ -4,6 +4,7 @@ import { EffectDrizzleSqlite } from "@opencode-ai/effect-drizzle-sqlite"
 import { DatabaseMigration } from "@opencode-ai/core/database/migration"
 import { migrations } from "@opencode-ai/core/database/migration.gen"
 import legacyWriterMigration from "@opencode-ai/core/database/migration/20260714141136_session-message-legacy-writer-compat"
+import recallPartIndexMigration from "@opencode-ai/core/database/migration/20260731102142_recall-part-index"
 import { Effect } from "effect"
 import type { SqlClient as SqlClientService } from "effect/unstable/sql/SqlClient"
 import { sql } from "drizzle-orm"
@@ -19,6 +20,23 @@ const run = <A, E>(effect: Effect.Effect<A, E, SqlClientService>) =>
   )
 
 describe("database migration compatibility", () => {
+  test("adds the local recall covering index", async () => {
+    await run(
+      Effect.gen(function* () {
+        const db = yield* make
+        yield* db.run(
+          sql`CREATE TABLE part (id text PRIMARY KEY, message_id text NOT NULL, session_id text NOT NULL, data text NOT NULL)`,
+        )
+        yield* db.run(sql`INSERT INTO part VALUES ('broken', 'message', 'session', 'invalid json')`)
+        yield* DatabaseMigration.applyOnly(db, [recallPartIndexMigration])
+        expect(
+          yield* db.get(sql`SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'recall_part_search_idx'`),
+        ).toEqual({ name: "recall_part_search_idx" })
+        expect(yield* db.get(sql`SELECT id FROM part WHERE id = 'broken'`)).toEqual({ id: "broken" })
+      }),
+    )
+  })
+
   test("accepts released v7.4.7 session message writes after current migrations", async () => {
     await run(
       Effect.gen(function* () {
