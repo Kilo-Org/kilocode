@@ -175,6 +175,33 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertEquals(80, child.height)
     }
 
+    fun `test deferred reflow re-arms on first real width layout`() {
+        val child = Growing(20)
+        panel.add(child, 0)
+        // A real turn makes turnViews non-empty, so a zero-width reflow latches pendingReflow instead
+        // of no-opping the way the turnless zero-width test above does.
+        model.upsertMessage(msg("u1", "user"))
+        panel.setSize(0, 400)
+        layout(panel)
+        assertFalse(panel.reflow())
+
+        // The first layout at a real width consumes the parked reflow and schedules a pass.
+        panel.setSize(600, 400)
+        panel.doLayout()
+
+        // Simulate an HTML pane that only reports its settled height after the first layout: the child
+        // stays valid at the same width, so a plain layout keeps the cached height and only the
+        // re-armed forgetAll() reflow re-measures it.
+        child.markValid()
+        child.size = 80
+
+        // Draining the EDT runs the scheduled reflow. Without the doLayout re-arm nothing is queued
+        // and the child would stay at its stale cached height.
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertEquals(80, child.height)
+    }
+
     fun `test apply style drops cached panel measurements`() {
         val child = Growing(20)
         panel.add(child, 0)

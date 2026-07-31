@@ -529,12 +529,12 @@ class SessionMessageListPanel(
         stable = -1
         val id = ++seq
         ApplicationManager.getApplication().invokeLater {
-            reflowPass(id, REFLOW_PASSES)
+            reflowPass(id, REFLOW_PASSES, REFLOW_BUDGET)
         }
     }
 
     @RequiresEdt
-    private fun reflowPass(id: Int, remaining: Int) {
+    private fun reflowPass(id: Int, remaining: Int, budget: Int) {
         if (dead || id != seq) return
         if (turnViews.isEmpty()) return
         if (width <= 0) {
@@ -545,7 +545,12 @@ class SessionMessageListPanel(
         }
         val changed = reflow()
         if (changed) onReflow?.invoke(true)
-        if (remaining <= 0) {
+        // [remaining] restarts whenever the height is still moving, so the chain keeps re-measuring
+        // until the layout settles for REFLOW_PASSES consecutive passes. [budget] never resets: a
+        // session that keeps streaming changes its height every EDT cycle, which would otherwise
+        // reset [remaining] forever and hold the panel in a perpetual forgetAll()/re-measure loop.
+        // The hard budget caps total passes so streaming can't defeat the width-keyed height cache.
+        if (remaining <= 0 || budget <= 0) {
             stable = -1
             return
         }
@@ -553,7 +558,7 @@ class SessionMessageListPanel(
         val left = if (height == stable) remaining - 1 else REFLOW_PASSES
         stable = height
         ApplicationManager.getApplication().invokeLater {
-            reflowPass(id, left)
+            reflowPass(id, left, budget - 1)
         }
     }
 
@@ -633,5 +638,10 @@ class SessionMessageListPanel(
 
     private companion object {
         const val REFLOW_PASSES = 6
+
+        // Hard ceiling on total reflow passes per schedule, independent of height stability. Lets the
+        // layout settle across several height changes (HTML panes reflow asynchronously) while capping
+        // the work a streaming session can trigger, since its height never stabilizes.
+        const val REFLOW_BUDGET = REFLOW_PASSES * 4
     }
 }
