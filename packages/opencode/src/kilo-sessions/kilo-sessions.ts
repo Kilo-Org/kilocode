@@ -1327,19 +1327,16 @@ export namespace KiloSessions {
     })
   }
 
-  async function resolveSessionOrg(
-    sessionId?: string,
-    info?: Session.Info | null,
-  ): Promise<Uuid | undefined> {
+  async function resolveSessionOrg(sessionId?: string, info?: Session.Info | null): Promise<Uuid | undefined> {
     if (!sessionId) return undefined
     const resolved =
       info !== undefined
         ? info
         : await (async () => {
             const { AppRuntime } = await import("@/effect/app-runtime")
-            return AppRuntime.runPromise(
-              Session.Service.use((svc) => svc.get(SessionID.make(sessionId))),
-            ).catch(() => null)
+            return AppRuntime.runPromise(Session.Service.use((svc) => svc.get(SessionID.make(sessionId)))).catch(
+              () => null,
+            )
           })()
     if (!resolved) return undefined
     const raw = resolved.metadata?.orgId
