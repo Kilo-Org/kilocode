@@ -79,6 +79,21 @@ data class PartDto(
     val filename: String? = null,
     val synthetic: Boolean? = null,
     val source: PartSourceDto? = null,
+    val approval: ApprovalDto? = null,
+)
+
+@Serializable
+data class ApprovalDto(
+    val source: String,
+    val agent: String? = null,
+    val rule: ApprovalRuleDto? = null,
+)
+
+@Serializable
+data class ApprovalRuleDto(
+    val permission: String,
+    val pattern: String,
+    val action: String,
 )
 
 @Serializable

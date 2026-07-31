@@ -97,6 +97,7 @@ class TaskToolView(
         changed = setFont(parts.title, style.boldEditorFont) || changed
         changed = setFont(parts.sub, style.smallEditorFont) || changed
         changed = setFont(parts.state, style.smallEditorFont) || changed
+        changed = setFont(parts.approval, style.smallEditorFont) || changed
         for (row in rows.values) changed = row.applyStyle(style) || changed
         if (changed) refresh()
     }
@@ -120,6 +121,7 @@ class TaskToolView(
         changed = setForeground(parts.title, titleColor(item)) || changed
         changed = setText(parts.state, stateText(item)) || changed
         changed = setForeground(parts.state, color(item)) || changed
+        changed = syncApproval(parts, item) || changed
         return changed
     }
 

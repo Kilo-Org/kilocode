@@ -95,6 +95,12 @@ class ToolView(
     @RequiresEdt
     internal fun stateFont() = parts.state.font
     @RequiresEdt
+    internal fun approvalText(): String = toolApprovalText(item)
+    @RequiresEdt
+    internal fun approvalVisible() = parts.approval.isVisible
+    @RequiresEdt
+    internal fun approvalFont() = parts.approval.font
+    @RequiresEdt
     internal fun bodyEditable() = parts.content?.editable ?: false
     @RequiresEdt
     internal fun bodyCaretVisible() = parts.content?.caretVisible ?: false
@@ -123,6 +129,7 @@ class ToolView(
         changed = setFont(parts.sub, style.smallEditorFont) || changed
         changed = setFont(parts.link, style.smallEditorFont) || changed
         changed = setFont(parts.state, style.smallEditorFont) || changed
+        changed = setFont(parts.approval, style.smallEditorFont) || changed
         changed = applyBodyStyle() || changed
         if (changed) refresh()
     }
@@ -150,6 +157,7 @@ class ToolView(
         changed = setForeground(parts.title, titleColor(item)) || changed
         changed = setText(parts.state, stateText(item)) || changed
         changed = setForeground(parts.state, color(item)) || changed
+        changed = syncApproval(parts, item) || changed
         return changed
     }
 

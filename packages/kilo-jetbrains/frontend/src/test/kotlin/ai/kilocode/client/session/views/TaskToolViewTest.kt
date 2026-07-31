@@ -8,6 +8,8 @@ import ai.kilocode.client.session.views.base.SecondarySessionPartView
 import ai.kilocode.client.session.views.tool.TaskToolView
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.rpc.dto.ApprovalDto
+import ai.kilocode.rpc.dto.ApprovalRuleDto
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBLabel
@@ -46,6 +48,17 @@ class TaskToolViewTest : BasePlatformTestCase() {
         assertTrue(view.dumpLabel().contains("Find files (2)"))
         assertEquals(2, rows(view).size)
         assertTrue(view.isExpanded())
+    }
+
+    fun `test task approval renders in header area`() {
+        val view = view(task().also {
+            it.approval = ApprovalDto(
+                source = "blocked",
+                rule = ApprovalRuleDto(permission = "task", pattern = "*", action = "deny"),
+            )
+        })
+
+        assertTrue(headerText(view).contains("Blocked · matched task rule *"))
     }
 
     fun `test update adds child row without replacing existing rows`() {
@@ -178,6 +191,11 @@ class TaskToolViewTest : BasePlatformTestCase() {
         val stack = descendants(body(view)).filterIsInstance<Stack>().singleOrNull() ?: return emptyList()
         return stack.components.toList()
     }
+
+    private fun headerText(view: TaskToolView) = descendants(view)
+        .filterIsInstance<JBLabel>()
+        .mapNotNull { label -> label.text.takeIf { it.isNotBlank() } }
+        .joinToString(" ")
 
     private fun rowText(view: TaskToolView) = rows(view).map { row ->
         descendants(row).filterIsInstance<JBLabel>().mapNotNull { label -> label.text.takeIf { it.isNotBlank() } }.joinToString(" ")

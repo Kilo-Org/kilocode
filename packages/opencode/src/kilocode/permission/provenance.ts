@@ -1,4 +1,5 @@
 import type { Permission } from "@/permission"
+import { Wildcard } from "@opencode-ai/core/util/wildcard"
 
 /**
  * Explains *why* a tool call was allowed so clients can surface auto-approval to users.
@@ -10,7 +11,7 @@ import type { Permission } from "@/permission"
  */
 export namespace PermissionProvenance {
   /** Where the deciding rule came from. */
-  export type Source = "agent" | "global" | "project" | "yolo" | "session" | "manual" | "default"
+  export type Source = "agent" | "global" | "project" | "yolo" | "session" | "manual" | "default" | "blocked" | "blocked-hard"
 
   /** A rule optionally carrying its origin. `source` is runtime-only, never persisted. */
   export type SourcedRule = Permission.Rule & { source?: Source }
@@ -96,6 +97,33 @@ export namespace PermissionProvenance {
       source,
       ...(source === "agent" ? { agent: input.agent } : {}),
       rule: { permission: rule.permission, pattern: rule.pattern, action: rule.action },
+    }
+  }
+
+  export type Denied = Permission.DeniedError & { rule?: Permission.Rule; hard?: boolean }
+
+  export function classifyDenied(input: {
+    error: Permission.DeniedError
+    permission: string
+    patterns: readonly string[]
+  }): Approval {
+    const error = input.error as Denied
+    const rules = Array.isArray(error.ruleset) ? (error.ruleset as Permission.Ruleset) : []
+    const rule =
+      error.rule ??
+      input.patterns
+        .map((pattern) =>
+          rules.findLast(
+            (rule) =>
+              rule.action === "deny" &&
+              Wildcard.match(input.permission, rule.permission) &&
+              Wildcard.match(pattern, rule.pattern),
+          ),
+        )
+        .find((rule) => rule !== undefined)
+    return {
+      source: error.hard ? "blocked-hard" : "blocked",
+      ...(rule ? { rule: { permission: rule.permission, pattern: rule.pattern, action: rule.action } } : {}),
     }
   }
 }

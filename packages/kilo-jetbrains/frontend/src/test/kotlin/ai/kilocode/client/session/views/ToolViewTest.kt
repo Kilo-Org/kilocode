@@ -9,6 +9,8 @@ import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.base.SecondarySessionPartView
 import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.rpc.dto.ApprovalDto
+import ai.kilocode.rpc.dto.ApprovalRuleDto
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -277,6 +279,52 @@ class ToolViewTest : BasePlatformTestCase() {
         assertTrue(view.titleFont().isBold)
         assertSmallEditorFont(view.subtitleFont(), style)
         assertSmallEditorFont(view.stateFont(), style)
+    }
+
+    fun `test tool approval shows agent auto approval and rule`() {
+        val view = track(ToolView(tool("p1", "bash", ToolExecState.COMPLETED).also {
+            it.approval = ApprovalDto(
+                source = "agent",
+                agent = "build",
+                rule = ApprovalRuleDto(permission = "bash", pattern = "git status", action = "allow"),
+            )
+        }))
+
+        assertTrue(view.approvalVisible())
+        assertEquals("Auto-approved by build agent · matched bash rule git status", view.approvalText())
+    }
+
+    fun `test tool approval shows manual approval without rule`() {
+        val view = track(ToolView(tool("p1", "bash", ToolExecState.COMPLETED).also {
+            it.approval = ApprovalDto(source = "manual")
+        }))
+
+        assertTrue(view.approvalVisible())
+        assertEquals("Approved by you", view.approvalText())
+    }
+
+    fun `test tool approval shows blocked rule`() {
+        val view = track(ToolView(tool("p1", "bash", ToolExecState.ERROR).also {
+            it.approval = ApprovalDto(
+                source = "blocked",
+                rule = ApprovalRuleDto(permission = "bash", pattern = "git push", action = "deny"),
+            )
+        }))
+
+        assertTrue(view.approvalVisible())
+        assertEquals("Blocked · matched bash rule git push", view.approvalText())
+    }
+
+    fun `test tool approval suppresses catch all rule fragment`() {
+        val view = track(ToolView(tool("p1", "bash", ToolExecState.COMPLETED).also {
+            it.approval = ApprovalDto(
+                source = "yolo",
+                rule = ApprovalRuleDto(permission = "*", pattern = "*", action = "allow"),
+            )
+        }))
+
+        assertTrue(view.approvalVisible())
+        assertEquals("Auto-approved by auto-approve mode", view.approvalText())
     }
 
     fun `test tool header title subtitle gap uses standard medium gap`() {

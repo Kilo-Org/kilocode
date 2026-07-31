@@ -1,6 +1,8 @@
 package ai.kilocode.backend.cli
 
 import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.ApprovalDto
+import ai.kilocode.rpc.dto.ApprovalRuleDto
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageErrorDto
 import ai.kilocode.rpc.dto.MessageTimeDto
@@ -214,6 +216,26 @@ class ChatDtoSerializationTest {
         assertEquals("failed", decoded.error)
         assertEquals(1.0, decoded.time?.start)
         assertEquals(2.0, decoded.time?.end)
+    }
+
+    @Test
+    fun `PartDto approval is preserved in round-trip`() {
+        val part = PartDto(
+            id = "p1", sessionID = "s1", messageID = "m1",
+            type = "tool", tool = "bash",
+            approval = ApprovalDto(
+                source = "blocked",
+                rule = ApprovalRuleDto(permission = "bash", pattern = "git push", action = "deny"),
+            ),
+        )
+
+        val encoded = json.encodeToString(PartDto.serializer(), part)
+        val decoded = json.decodeFromString(PartDto.serializer(), encoded)
+
+        assertEquals("blocked", decoded.approval?.source)
+        assertEquals("bash", decoded.approval?.rule?.permission)
+        assertEquals("git push", decoded.approval?.rule?.pattern)
+        assertEquals("deny", decoded.approval?.rule?.action)
     }
 
     @Test

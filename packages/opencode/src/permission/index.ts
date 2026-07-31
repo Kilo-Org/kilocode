@@ -145,13 +145,23 @@ export function resolve(permission: string, pattern: string, ruleset: Ruleset, .
 }
 
 function veto(permission: string, pattern: string, ruleset?: Ruleset) {
-  if (!ruleset) return false
-  return ExternalDirectoryPermission.evaluate(permission, pattern, ruleset).action === "deny"
+  if (!ruleset) return
+  const rule = ExternalDirectoryPermission.evaluate(permission, pattern, ruleset)
+  if (rule.action === "deny") return rule
 }
 
 function subset(permission: string, ruleset: Ruleset) {
   return ruleset.filter((rule) => Wildcard.match(permission, rule.permission))
 }
+
+// kilocode_change start - carry the deciding deny rule so clients can explain blocked tools
+function denied(input: { ruleset: Ruleset; rule?: Rule; hard?: boolean }) {
+  const err = new DeniedError({ ruleset: input.ruleset }) as DeniedError & { rule?: Rule; hard?: boolean }
+  if (input.rule) err.rule = input.rule
+  if (input.hard) err.hard = true
+  return err
+}
+// kilocode_change end
 
 function covered(entry: PendingEntry, approved: Ruleset, local: Ruleset) {
   if (ConfigProtection.isRequest(entry.info)) return false
@@ -227,13 +237,15 @@ export const layer = Layer.effect(
         const rule = resolve(request.permission, pattern, ruleset, approved, local) // kilocode_change — include session-scoped rules
         yield* Effect.logInfo("evaluated", { permission: request.permission, pattern, action: rule })
         // kilocode_change start — saved/session approvals cannot override hard Ask/Plan denials
-        if (veto(request.permission, pattern, hardRuleset)) {
-          return yield* new DeniedError({ ruleset: subset(request.permission, hardRuleset ?? []) })
+        const hard = veto(request.permission, pattern, hardRuleset)
+        if (hard) {
+          return yield* denied({ ruleset: subset(request.permission, hardRuleset ?? []), rule: hard, hard: true })
         }
         // kilocode_change end
         if (rule.action === "deny") {
-          return yield* new DeniedError({
+          return yield* denied({ // kilocode_change
             ruleset: subset(request.permission, ruleset), // kilocode_change
+            rule, // kilocode_change
           })
         }
         // kilocode_change start - skill shell forces a prompt instead of honoring an allow/auto-approve rule
@@ -255,7 +267,7 @@ export const layer = Layer.effect(
 
       // kilocode_change start - headless subagent asks fail instead of queuing for a reply that never comes (#11903)
       if (yield* KiloHeadless.denies(request.sessionID).pipe(Effect.provideService(Database.Service, database))) {
-        return yield* new DeniedError({ ruleset: subset(request.permission, ruleset) })
+        return yield* denied({ ruleset: subset(request.permission, ruleset) })
       }
       // kilocode_change end
 

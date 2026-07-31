@@ -61,6 +61,29 @@ describe("PermissionProvenance", () => {
     expect(PermissionProvenance.classify({ agent: "build", origins: undefined })).toEqual({ source: "default" })
   })
 
+  test("classifyDenied reports a normal blocked rule", () => {
+    const err = new Permission.DeniedError({
+      ruleset: [
+        { permission: "bash", pattern: "git *", action: "ask" },
+        { permission: "bash", pattern: "git push", action: "deny" },
+      ],
+    })
+    expect(PermissionProvenance.classifyDenied({ error: err, permission: "bash", patterns: ["git push"] })).toEqual({
+      source: "blocked",
+      rule: { permission: "bash", pattern: "git push", action: "deny" },
+    })
+  })
+
+  test("classifyDenied preserves a hard-ruleset veto", () => {
+    const err = new Permission.DeniedError({ ruleset: [{ permission: "edit", pattern: "*", action: "deny" }] }) as PermissionProvenance.Denied
+    err.rule = { permission: "edit", pattern: "*", action: "deny" }
+    err.hard = true
+    expect(PermissionProvenance.classifyDenied({ error: err, permission: "edit", patterns: ["src/index.ts"] })).toEqual({
+      source: "blocked-hard",
+      rule: { permission: "edit", pattern: "*", action: "deny" },
+    })
+  })
+
   test("tagAgent stamps each rule by permission + pattern, defaulting to agent", () => {
     const tagged = PermissionProvenance.tagAgent(
       [

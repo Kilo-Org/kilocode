@@ -26,6 +26,7 @@ import { ModelV2 } from "@opencode-ai/core/model"
 // kilocode_change start
 import { SwePruner } from "@/kilocode/swe-pruner"
 import { Config } from "@/config/config"
+import { PermissionProvenance } from "@/kilocode/permission/provenance"
 // kilocode_change end
 
 export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
@@ -66,25 +67,40 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
     messages: input.messages,
     // kilocode_change start
     metadata: (val) => input.processor.metadata(options.toolCallId, val),
-    ask: (req) =>
-      KiloSessionPrompt.askPermission({
+    ask: (req) => {
+      const request = {
+        ...req,
+        sessionID: input.session.id,
+        tool: { messageID: input.processor.message.id, callID: options.toolCallId },
+      }
+      return KiloSessionPrompt.askPermission({
         permission,
         agents,
         sessions,
         origins: permissionOrigins,
         agent: input.agent,
         session: input.session,
-        request: {
-          ...req,
-          sessionID: input.session.id,
-          tool: { messageID: input.processor.message.id, callID: options.toolCallId },
-        },
+        request,
       }).pipe(
         // record why the call was allowed onto the tool part, then discard the outcome for the tool-facing ask
         Effect.tap((approval) => input.processor.metadata(options.toolCallId, { metadata: { approval } })),
+        Effect.catchTag("PermissionDeniedError", (error) =>
+          input.processor
+            .metadata(options.toolCallId, {
+              metadata: {
+                approval: PermissionProvenance.classifyDenied({
+                  error,
+                  permission: request.permission,
+                  patterns: request.patterns,
+                }),
+              },
+            })
+            .pipe(Effect.andThen(Effect.fail(error))),
+        ),
         Effect.asVoid,
         Effect.orDie,
-      ),
+      )
+    },
   })
   // kilocode_change end
 

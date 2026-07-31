@@ -349,6 +349,41 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `parseChatEvent - tool part decodes typed approval metadata`() {
+            val data = globalEvent("""
+                "type": "message.part.updated",
+                "properties": {
+                    "sessionID": "ses_1",
+                    "part": {
+                        "id": "part_bash",
+                        "sessionID": "ses_1",
+                        "messageID": "msg_1",
+                        "type": "tool",
+                        "tool": "bash",
+                        "state": {
+                            "status": "error",
+                            "metadata": {
+                                "approval": {
+                                    "source": "blocked",
+                                    "rule": { "permission": "bash", "pattern": "git push", "action": "deny" }
+                                }
+                            }
+                        }
+                    }
+                }
+            """)
+
+            val result = KiloCliDataParser.parseChatEvent("message.part.updated", data)
+
+            assertIs<ChatEventDto.PartUpdated>(result)
+            assertEquals("blocked", result.part.approval?.source)
+            assertEquals("bash", result.part.approval?.rule?.permission)
+            assertEquals("git push", result.part.approval?.rule?.pattern)
+            assertEquals("deny", result.part.approval?.rule?.action)
+            assertTrue(result.part.metadata["approval"]?.contains("blocked") == true)
+        }
+
+        @Test
         fun `parseChatEvent - todowrite part parses typed todo metadata`() {
             val data = globalEvent("""
                 "type": "message.part.updated",
