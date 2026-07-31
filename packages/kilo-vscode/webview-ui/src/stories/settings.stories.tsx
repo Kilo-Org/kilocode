@@ -417,7 +417,7 @@ export const AgentBehaviourSkillsOverflow: Story = {
       >
         <SessionContext.Provider value={session as any}>
           <div style={{ width: "320px", height: "700px", overflow: "auto" }}>
-            <AgentBehaviourTab />
+            <SubtabWrapper tab="skills" />
           </div>
         </SessionContext.Provider>
       </StoryProviders>
