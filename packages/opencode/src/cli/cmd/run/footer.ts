@@ -335,7 +335,7 @@ export class RunFooter implements FooterApi {
               tuiConfig: options.tuiConfig,
               backgroundSubagents: options.backgroundSubagents,
               history: options.history,
-              agent: footer.agentLabel, // kilocode_change - reactive so the footer repaints after a mode switch
+              agent: options.agentLabel,
               onSubmit: footer.handlePrompt,
               onPermissionReply: footer.handlePermissionReply,
               onQuestionReply: footer.handleQuestionReply,

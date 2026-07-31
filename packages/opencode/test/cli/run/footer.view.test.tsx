@@ -199,7 +199,7 @@ async function renderFooter(
           theme={input.theme ?? (() => RUN_THEME_FALLBACK)}
           tuiConfig={config}
           backgroundSubagents={input.backgroundSubagents ?? true}
-          agent={() => "opencode"} // kilocode_change - reactive label
+          agent="opencode"
           onSubmit={input.onSubmit ?? (() => true)}
           onPermissionReply={() => {}}
           onQuestionReply={() => {}}
@@ -953,7 +953,7 @@ test("direct footer shows editable prompts and additional queued work while runn
           theme={() => RUN_THEME_FALLBACK}
           tuiConfig={tuiConfig}
           backgroundSubagents={true}
-          agent={() => "opencode"} // kilocode_change - reactive label
+          agent="opencode"
           onSubmit={() => true}
           onPermissionReply={() => {}}
           onQuestionReply={() => {}}
