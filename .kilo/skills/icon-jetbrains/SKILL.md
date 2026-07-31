@@ -17,7 +17,7 @@ Icons follow IntelliJ New UI conventions: a fixed canvas per role, a strict ligh
 3. **One canvas size per icon role.** See [Icon roles](#icon-roles). Do not invent new sizes or pad with empty space — IntelliJ scales the canvas as a single unit.
 4. **No raster, no gradients, no filters, no embedded fonts.** Path geometry only (`<path>`, `<rect>`, `<circle>`, `<line>`, `<polyline>`, `<polygon>`). Text must be converted to outlines.
 5. **Use `fill="none"` on the root `<svg>`** and set `fill` / `stroke` explicitly per shape — never rely on CSS or `currentColor`.
-6. **Strokes use `stroke-width="1"`, `stroke-linecap="round"`, `stroke-linejoin="round"`** (or `stroke-miterlimit="10"` for hard joins). Heavier strokes are reserved for hero glyphs inside a circle badge (e.g. status checkmarks) and use `stroke-width="1.5"` or `"2"`.
+6. **Strokes use `stroke-width="1"`, `stroke-linecap="round"`, `stroke-linejoin="round"`** (or `stroke-miterlimit="10"` for hard joins). Heavier strokes are reserved for hero glyphs inside a circle badge (e.g. status checkmarks) and use `stroke-width="1.5"` or `"2"`. The `1` applies to the **primary glyph stroke** — do not force *every* stroke to 1. Hairline/decorative strokes (e.g. a thin stroke used to fatten a filled dot) and strokes whose width is coupled to geometry (e.g. a badge ring meant to sit flush with a fill edge) must keep their intended weight (scale with the artwork), or they fatten and misalign.
 7. **Pixel-grid align**: keep stroke axes on half-pixel centers (`x.5`) and fills on whole pixels so the icon stays crisp at 1× rendering. Getting the base grid right also keeps it crisp on HiDPI/Retina; fine sub-pixel detail blurs at fractional scales (125%/150%), so keep geometry simple rather than chasing detail that won't survive scaling. SVGs are resolution-independent — ship one vector per theme, never `@2x` raster variants.
 8. **File names use kebab-case and stay ASCII-only** (e.g. `arrow-down-to-line.svg`, `book-open-check.svg`, `kilo@20x20.svg`), matching every existing icon in `packages/kilo-jetbrains/frontend/src/main/resources/icons/`.
 
@@ -59,6 +59,7 @@ The dark variant is the same file with light-palette colors swapped for their da
 - **One semantic meaning per icon.** A status badge, an accent dot, or a "+" overlay is fine; two unrelated glyphs in one icon is not.
 - **Optical centering, not geometric.** Plus/arrow/refresh glyphs sit slightly above center; round badges (class, method, status) are centered on `(cx=8, cy=8)` for 16×16 and `(cx=10, cy=10)` for 20×20.
 - **Outer keep-out**: leave at least **1 px** of empty padding on each side of a 16×16 icon (so meaningful geometry lives within `1..15`). For 20×20 use **2 px** of padding. Stripe icons must stay visually balanced inside their 20×20 cell.
+- **Round caps overshoot the endpoint.** A round `stroke-linecap`/`stroke-linejoin` extends **half the stroke width past the endpoint**, so a 1px round-capped stroke ending at `0` or `16` is clipped by the canvas. Keep stroke endpoints within `0.5..15.5` (this is stricter than the fill keep-out).
 - **Stroke + fill pairing for node-style icons** (class/method nodes): a light-tinted fill at radius 6.5 with a stroke in the accent color, plus a glyph filled with the same accent.
   - Light: `<circle cx="8" cy="8" r="6.5" fill="<accent-bg-light>" stroke="<accent-light>"/>` then glyph `fill="<accent-light>"`.
   - Dark: same circle with `fill="<accent-bg-dark>" stroke="<accent-dark>"` and glyph filled with `<accent-dark>`.
@@ -106,6 +107,17 @@ Do not use plain `#000000` or off-the-palette grays.
 6. **Place and wire the file** → drop both files into `packages/kilo-jetbrains/frontend/src/main/resources/icons/` (action icons, tool-window icons) or `icons/views/` (in-view chat/session icons), then reference the icon from the plugin's icon-holder class.
 7. **Verify visually** in both themes via the image preview in the IDE, or run the IDE and toggle *View ▸ Appearance ▸ New UI* to compare. Check selection states for stripe icons.
 
+## Adapting or rescaling an existing icon
+
+Importing a Lucide/Codicon-style icon (often drawn on a 20- or 24-unit grid) or moving one onto the 16×16 grid is not a blanket "set everything to the 16 defaults" operation:
+
+1. **Scale geometry *and* every `stroke-width`** by the same factor (`16 ÷ source size`). This keeps the render faithful before you change anything intentionally.
+2. **Only then re-weight the primary glyph stroke** to `1` if it wasn't already ~1px effective. Leave hairlines and geometry-coupled strokes at their scaled value (see rule 6).
+3. **Re-check what scaling breaks:**
+   - Round caps clipping at the edge → nudge stroke endpoints into `0.5..15.5`.
+   - Strokes that were flush with a fill edge (e.g. a badge ring around a status dot) → the stroke must still straddle the fill boundary after scaling; scale its width too.
+4. **Crispness is a separate pass.** Scaling rarely lands coordinates on the pixel grid, so the result is faithful but not automatically crisp; the pixel-grid snap (rule 7) is manual and per-icon.
+
 ## Common mistakes
 
 - Off-palette colors (e.g. importing from Figma without remapping). They will not theme correctly and reviewers will reject the PR.
@@ -114,6 +126,8 @@ Do not use plain `#000000` or off-the-palette grays.
 - Using `currentColor`, CSS, or `<style>` blocks. The IntelliJ icon loader requires explicit colors on every shape so it can do palette-based recoloring.
 - Forgetting the `_dark` variant. The icon will look fine in Light theme then turn invisible in Dark.
 - Pure-black (`#000`) or pure-white (`#FFF`) fills outside the status-badge glyph pattern. They break under accent recoloring.
+- Blanket-setting every `stroke-width` to `1` when rescaling. Only the primary glyph stroke is 1px; hairlines and fill-coupled/ring strokes must scale with the geometry or they fatten and misalign.
+- Round caps at the canvas edge. A round cap overshoots its endpoint by half the stroke width, so an endpoint at `0` or `16` clips — keep stroke endpoints within `0.5..15.5`.
 
 ## References
 
