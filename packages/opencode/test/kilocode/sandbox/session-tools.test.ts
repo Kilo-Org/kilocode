@@ -365,7 +365,7 @@ it.live("records why a denied tool call was refused on the tool part's metadata"
     const overrides = Layer.mergeAll(
       TestConfig.layer({ get: () => Effect.succeed({ sandbox: { enabled: false } }) }),
       Layer.mock(Permission.Service)({
-        ask: () => Effect.fail(new Permission.DeniedError({ ruleset: { rule: deniedRule, matches: [deniedRule] } })),
+        ask: () => Effect.fail(new Permission.DeniedError({ ruleset: deniedRule })),
       }),
     )
     const tools = yield* resolve(dirs.ctx, metadataCalls).pipe(Effect.provide(overrides))

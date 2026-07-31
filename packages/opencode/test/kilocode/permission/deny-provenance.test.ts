@@ -72,14 +72,15 @@ describe("Permission.ask denial provenance", () => {
       ),
   )
 
-  test("a denial with no rule in the carried ruleset is still reported as denied, not as an ambiguous default approval", () => {
-    // Some denials carry no `rule` at all (e.g. the headless-subagent policy denial in
-    // Permission.ask, which isn't decided by any ruleset match). classify({ rule: undefined })
-    // reports { source: "default" } — the same shape the *approval* fallback produces for "no
-    // rule matched" — so without a synthesized deny rule, a refusal would render (and export)
-    // as an auto-approval.
+  test("a denial with no specific rule (e.g. a headless-subagent policy denial) is still reported as denied, not as an ambiguous default approval", () => {
+    // Some denial paths don't carry a specific rule -- Permission.ask's headless-subagent policy
+    // denial, for instance, still sets `ruleset` to the plain deny-permission subset (an array,
+    // with no `.action`/`.pattern` of its own). classify({ rule: undefined }) reports
+    // { source: "default" } -- the same shape the *approval* fallback produces for "no rule
+    // matched" -- so without a synthesized deny rule, a refusal would render (and export) as an
+    // auto-approval.
     const approval = PermissionProvenance.classifyDenial({
-      ruleset: { matches: [] },
+      ruleset: [{ permission: "bash", pattern: "*", action: "ask" as const }],
       permission: "bash",
       patterns: ["rm -rf /"],
       agent: "build",
