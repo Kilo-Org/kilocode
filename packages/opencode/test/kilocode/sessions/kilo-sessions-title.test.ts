@@ -789,37 +789,7 @@ it.instance(
     })
     reset("test-token")
 
-    // Mock Session.Service: list() returns empty (simulates session beyond the
-    // default 100-row limit after restart). get() returns the session with a
-    // title that differs from any previous seed, so prev === undefined triggers
-    // a report with generated:false instead of the old silent seed/no-op.
-    const mockSessionLayer = Layer.mock(Session.Service, {
-      list: () => Effect.succeed([]),
-      get: (sid: SessionID) =>
-        Effect.succeed({
-          id: sid,
-          title: "Renamed Title",
-          slug: "slug-unseeded",
-          projectID: ProjectV2.ID.make("proj-unseeded"),
-          directory: "/tmp/unseeded-test",
-          version: "test",
-          permission: {},
-          time: { created: 0, updated: 0 },
-        } as Session.Info),
-      create: () =>
-        Effect.succeed({
-          id: SessionID.make("ses_unseeded_title_test"),
-          title: "Default Title",
-          slug: "slug-unseeded",
-          projectID: ProjectV2.ID.make("proj-unseeded"),
-          directory: "/tmp/unseeded-test",
-          version: "test",
-          permission: {},
-          time: { created: 0, updated: 0 },
-        } as Session.Info),
-      setTitle: () => Effect.void,
-    })
-
+    const mockSessionLayer = unseededMockSessionLayer("Renamed Title")
     const customLayer = KiloSessions.layer.pipe(
       Layer.provideMerge(Bus.layer),
       Layer.provideMerge(mockSessionLayer),
@@ -844,6 +814,125 @@ it.instance(
       emitUpdated(instance.directory, created.id, "Renamed Title")
       const posts = yield* waitTitlePosts(requests, 1, "title POST never fired for unseeded session")
       expect(posts[posts.length - 1].body).toEqual({ title: "Renamed Title", generated: false })
+    }).pipe(Effect.provide(customLayer))
+  },
+  15_000,
+)
+
+// Helper: build a mock Session.Service layer with list() → empty, get() → session
+// with `title`. create() returns a bogus session; setTitle() is a no-op. Used for
+// unseeded-session tests where knownTitles has no entry for the session.
+function unseededMockSessionLayer(title: string) {
+  return Layer.mock(Session.Service, {
+    list: () => Effect.succeed([]),
+    get: (sid: SessionID) =>
+      Effect.succeed({
+        id: sid,
+        title,
+        slug: "slug-unseeded",
+        projectID: ProjectV2.ID.make("proj-unseeded"),
+        directory: "/tmp/unseeded-test",
+        version: "test",
+        permission: {},
+        time: { created: 0, updated: 0 },
+      } as Session.Info),
+    create: () =>
+      Effect.succeed({
+        id: SessionID.make("ses_unseeded"),
+        title: "Default Title",
+        slug: "slug-unseeded",
+        projectID: ProjectV2.ID.make("proj-unseeded"),
+        directory: "/tmp/unseeded-test",
+        version: "test",
+        permission: {},
+        time: { created: 0, updated: 0 },
+      } as Session.Info),
+    setTitle: () => Effect.void,
+  })
+}
+
+it.instance(
+  "title report: unseeded session consumes rename mark → adopted, no POST",
+  () => {
+    const requests: Req[] = []
+    installFetch(mockFetch(requests))
+    patchEnv({
+      KILO_API_KEY: "test-token",
+      KILO_SESSION_INGEST_URL: "https://ingest.kilosessions.ai",
+      KILO_AGENT_NOTIFICATION_TIMEOUT_MS: "5000",
+    })
+    reset("test-token")
+
+    const title = "Cloud Rename"
+    const mockSessionLayer = unseededMockSessionLayer(title)
+    const customLayer = KiloSessions.layer.pipe(
+      Layer.provideMerge(Bus.layer),
+      Layer.provideMerge(mockSessionLayer),
+      Layer.provide(TestConfig.layer({})),
+    )
+
+    return Effect.gen(function* () {
+      const instance = yield* TestInstance
+      const sessions = yield* Session.Service
+      const kilo = yield* KiloSessions.Service
+      yield* kilo.init()
+
+      const created = yield* sessions.create({})
+      yield* Effect.promise(() => KiloSessions.bootstrap(created.id))
+      yield* Effect.sleep(50)
+      requests.length = 0
+
+      // Mark a rename adoption before the Update so the handler consumes it
+      // instead of falling through to a generated:false POST.
+      markRenameAdopted(created.id, title)
+
+      emitUpdated(instance.directory, created.id, title)
+      yield* holdTitlePosts(requests, 0)
+      expect(consumeRenameAdoption(created.id, title)).toBe(false)
+    }).pipe(Effect.provide(customLayer))
+  },
+  15_000,
+)
+
+it.instance(
+  "title report: unseeded session consumes auto-title mark → POST with generated:true",
+  () => {
+    const requests: Req[] = []
+    installFetch(mockFetch(requests))
+    patchEnv({
+      KILO_API_KEY: "test-token",
+      KILO_SESSION_INGEST_URL: "https://ingest.kilosessions.ai",
+      KILO_AGENT_NOTIFICATION_TIMEOUT_MS: "5000",
+    })
+    reset("test-token")
+
+    const title = "Auto Title"
+    const mockSessionLayer = unseededMockSessionLayer(title)
+    const customLayer = KiloSessions.layer.pipe(
+      Layer.provideMerge(Bus.layer),
+      Layer.provideMerge(mockSessionLayer),
+      Layer.provide(TestConfig.layer({})),
+    )
+
+    return Effect.gen(function* () {
+      const instance = yield* TestInstance
+      const sessions = yield* Session.Service
+      const kilo = yield* KiloSessions.Service
+      yield* kilo.init()
+
+      const created = yield* sessions.create({})
+      yield* Effect.promise(() => KiloSessions.bootstrap(created.id))
+      yield* Effect.sleep(50)
+      requests.length = 0
+
+      // Mark an auto-title before the Update so the handler consumes it and
+      // reports generated:true.
+      markAutoTitle(created.id, title)
+
+      emitUpdated(instance.directory, created.id, title)
+      const posts = yield* waitTitlePosts(requests, 1, "auto-title POST never fired for unseeded session")
+      expect(posts[posts.length - 1].body).toEqual({ title, generated: true })
+      expect(consumeAutoTitle(created.id, title)).toBe(false)
     }).pipe(Effect.provide(customLayer))
   },
   15_000,
