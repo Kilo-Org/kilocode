@@ -221,6 +221,26 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertTrue("reflow passes must be bounded by the budget, was $reflows", reflows in 1..30)
     }
 
+    fun `test streaming session settles reflow within the pass window`() {
+        var reflows = 0
+        panel.onReflow = { reflows++ }
+        // Same ever-growing child, but a streaming (Busy) session: a moving height is incoming
+        // content, not the layout still settling, so the chain must count its passes down and stop
+        // after REFLOW_PASSES instead of restarting the settle window and draining the full budget
+        // the idle case relies on. recoverPending()'s non-Busy states (awaiting-permission, retry,
+        // offline) intentionally keep the idle settle behavior and are not gated here.
+        model.loadHistory(listOf(MessageWithPartsDto(msg("u1", "user"), emptyList())))
+        model.setState(SessionState.Busy("thinking"))
+        panel.add(EverGrowing(), 0)
+        panel.setSize(600, 400)
+
+        UIUtil.dispatchAllInvocationEvents()
+
+        // A handful of passes (~REFLOW_PASSES), well short of the idle budget (~25). Dropping or
+        // inverting the Busy term restarts the window every pass and blows past this bound.
+        assertTrue("streaming reflow must settle in the pass window, was $reflows", reflows in 1..10)
+    }
+
     fun `test apply style drops cached panel measurements`() {
         val child = Growing(20)
         panel.add(child, 0)

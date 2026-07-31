@@ -553,12 +553,14 @@ class SessionMessageListPanel(
             return
         }
         val height = preferredSize.height
-        // A moving height means the layout is still settling only while the session is idle. During
-        // streaming it just tracks incoming content, so restarting the settle window on every delta
-        // was the runaway that pinned the panel in a perpetual forgetAll()/re-measure loop. Count the
-        // pass down while busy so streaming settles in REFLOW_PASSES and hands off to the per-turn
-        // forgetTurn path; [budget] still caps the idle case if a pane never converges.
-        val left = if (height == stable || model.state.isBusy()) remaining - 1 else REFLOW_PASSES
+        // A moving height only means the layout is still settling when nothing is streaming in. While
+        // [SessionState.Busy] deltas land every EDT cycle, so restarting the settle window on each one
+        // was the runaway that pinned the panel in a perpetual forgetAll()/re-measure loop — count the
+        // pass down instead so streaming settles in REFLOW_PASSES and hands off to the per-turn
+        // forgetTurn path. Every other state (idle, awaiting-permission/question, retry, offline —
+        // which recoverPending() can seed right after load) has no deltas arriving, so a moving height
+        // is genuine convergence and must keep restarting; [budget] caps that if a pane never settles.
+        val left = if (height == stable || model.state is SessionState.Busy) remaining - 1 else REFLOW_PASSES
         stable = height
         ApplicationManager.getApplication().invokeLater {
             reflowPass(id, left, budget - 1)
