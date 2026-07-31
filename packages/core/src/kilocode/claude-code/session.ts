@@ -11,6 +11,9 @@ import { rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import * as Bridge from "./bridge"
+import * as Log from "../../util/log"
+
+const log = Log.create({ service: "kilocode.claude-code" })
 
 export type Event =
   | { type: "text"; text: string }
@@ -166,14 +169,25 @@ export async function start(input: StartInput) {
   // A write failure here must not leave the bridge's HTTP listener orphaned
   // (nothing else would ever close it once `start()` rejects), nor a temp
   // file that *did* write successfully — including the token-bearing mcp
-  // config if only the system prompt write failed, or vice versa. Swallow
-  // (rather than propagate) any error from `bridge.close()` itself so it
-  // can't replace the original write error.
-  await Promise.all([writeSystemPrompt, writeMcpConfig]).catch(async (err) => {
+  // config if only the system prompt write failed, or vice versa.
+  //
+  // `allSettled`, not `all`: `all` rejects as soon as the first write fails
+  // while the other may still be in flight, so `cleanupTempFiles()` could
+  // `rm` a path before it exists, only for the still-pending write to
+  // recreate it afterward — with no child process ever spawned, nothing
+  // would clean that up. Waiting for both to settle first closes that
+  // window.
+  const writes = await Promise.allSettled([writeSystemPrompt, writeMcpConfig])
+  const failed = writes.find((r): r is PromiseRejectedResult => r.status === "rejected")
+  if (failed) {
     cleanupTempFiles()
-    await bridge.close().catch(() => {})
-    throw err
-  })
+    // Logged, not silently swallowed: a listener that fails to close leaves
+    // a bound loopback port for the rest of the process's lifetime, which
+    // is worth a trace even though the write failure below is the error
+    // that actually propagates.
+    await bridge.close().catch((err) => log.warn("failed to close bridge after a temp-file write failure", { err }))
+    throw failed.reason
+  }
 
   const child: ChildProcessWithoutNullStreams = spawn(input.bin, args, {
     cwd: input.cwd,
@@ -246,7 +260,7 @@ export async function start(input: StartInput) {
         events.push({
           type: "done",
           reason: "error",
-          message: `Claude Code CLI reported native tools despite --tools "": ${leaked.join(", ")}`,
+          message: `Claude Code CLI reported tools outside Kilo's own MCP bridge: ${leaked.join(", ")}`,
         })
         events.end()
         child.kill()
