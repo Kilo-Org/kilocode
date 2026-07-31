@@ -93,6 +93,18 @@ export namespace KiloSessions {
 
   const ttlMs = 10_000
 
+  /**
+   * Classify an `http_<status>` reason as a permanent (non-retryable) failure.
+   * 4xx client errors are permanent except 408 (Request Timeout) and 429
+   * (Too Many Requests), which are transient and should be retried.
+   */
+  function isPermanentHttpStatus(reason: string): boolean {
+    const match = reason.match(/^http_(\d+)$/)
+    if (!match) return false
+    const status = parseInt(match[1], 10)
+    return status >= 400 && status < 500 && status !== 408 && status !== 429
+  }
+
   function agentNotificationTimeoutMs(): number {
     const value = process.env["KILO_AGENT_NOTIFICATION_TIMEOUT_MS"]
     return value ? Number(value) : 10_000
@@ -395,8 +407,13 @@ export namespace KiloSessions {
               return { kind: "report", generated: consumeAutoTitle(sessionID, session.title) }
             })()
             const restoreTitleState = () => {
-              if (prev === undefined) knownTitles.delete(sessionID)
-              else knownTitles.set(sessionID, prev)
+              // Only restore if this handler still owns the knownTitles slot.
+              // A concurrent handler may have advanced it to a newer title; in
+              // that case do not clobber it with this handler's stale prev.
+              if (knownTitles.get(sessionID) === session.title) {
+                if (prev === undefined) knownTitles.delete(sessionID)
+                else knownTitles.set(sessionID, prev)
+              }
               if (outcome.kind === "adopted") markRenameAdopted(sessionID, session.title)
               else if (outcome.kind === "report" && outcome.generated) markAutoTitle(sessionID, session.title)
             }
@@ -419,11 +436,24 @@ export namespace KiloSessions {
               reportSessionTitle(sessionID, session.title, { generated: outcome.generated }),
             )
             if (!reported.ok) {
-              restoreTitleState()
-              log.warn("session title report failed; will retry on next Updated", {
-                sessionID,
-                reason: reported.reason,
-              })
+              // Permanent failures (non-retryable 4xx client errors) mean the
+              // server rejected this title definitively; keep the new title so
+              // the next same-title Updated is a no-op instead of retrying
+              // forever. Transient failures (5xx, 408, 429, network errors,
+              // not_connected) still restore + retry.
+              const isPermanent = isPermanentHttpStatus(reported.reason)
+              if (!isPermanent) restoreTitleState()
+              if (isPermanent) {
+                log.warn("session title report permanent failure; title preserved", {
+                  sessionID,
+                  reason: reported.reason,
+                })
+              } else {
+                log.warn("session title report failed; will retry on next Updated", {
+                  sessionID,
+                  reason: reported.reason,
+                })
+              }
             }
           })
           watch(Session.Event.Deleted, (evt) => {

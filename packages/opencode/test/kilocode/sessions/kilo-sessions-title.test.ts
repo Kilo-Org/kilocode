@@ -517,3 +517,299 @@ it.instance("reportSessionTitle reports not_connected when unauthenticated", () 
     expect(result).toEqual({ ok: false, reason: "not_connected" })
   }).pipe(Effect.provide(layer()))
 })
+
+it.instance(
+  "title report: permanent 4xx failure preserves title so same-title Updated does not re-POST",
+  () => {
+    const requests: Req[] = []
+    const titleStatuses = new Map<string, number>()
+    const fetch: typeof globalThis.fetch = Object.assign(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input)
+        const path = new URL(url).pathname
+        if (url.endsWith("/api/user")) return new Response("{}", { status: 200 })
+        if (url.endsWith("/api/session")) {
+          requests.push({ method: "POST", path })
+          return Response.json({ id: "remote-4xx", ingestPath: "/api/session/remote-4xx/ingest" })
+        }
+        if (path.endsWith("/ingest")) return new Response("{}", { status: 200 })
+        if (path.endsWith("/title")) {
+          const sid = path.split("/api/session/")[1]?.split("/title")[0]
+          const status = titleStatuses.get(sid ?? "") ?? 200
+          requests.push({ method: "POST", path, body: init?.body ? JSON.parse(init.body as string) : undefined })
+          return new Response(status === 200 ? '{"ok":true}' : "fail", { status })
+        }
+        return new Response("{}", { status: 200 })
+      },
+      { preconnect: globalThis.fetch.preconnect },
+    )
+    installFetch(fetch)
+    patchEnv({
+      KILO_API_KEY: "test-token",
+      KILO_SESSION_INGEST_URL: "https://ingest.kilosessions.ai",
+      KILO_AGENT_NOTIFICATION_TIMEOUT_MS: "5000",
+    })
+    reset("test-token")
+
+    return Effect.gen(function* () {
+      const instance = yield* TestInstance
+      const kilo = yield* KiloSessions.Service
+      const sessions = yield* Session.Service
+      yield* kilo.init()
+
+      const created = yield* sessions.create({})
+      const id = created.id
+      yield* Effect.promise(() => KiloSessions.bootstrap(id))
+      yield* Effect.sleep(50)
+      requests.length = 0
+
+      // First rename: server returns 4xx (permanent failure).
+      titleStatuses.set(id, 400)
+      yield* sessions.setTitle({ sessionID: id, title: "Custom Rename" })
+      const post1 = yield* waitTitlePosts(requests, 1, "first title POST never fired")
+      expect(post1[0].body).toEqual({ title: "Custom Rename", generated: false })
+
+      // Same title again: should NOT re-POST (knownTitles preserved the title
+      // because 4xx is permanent, so sameTitle is true).
+      requests.length = 0
+      yield* sessions.setTitle({ sessionID: id, title: "Custom Rename" })
+      yield* holdTitlePosts(requests, 0)
+
+      // Different title: should POST again (title changed).
+      titleStatuses.set(id, 200)
+      requests.length = 0
+      yield* sessions.setTitle({ sessionID: id, title: "Second Rename" })
+      const post2 = yield* waitTitlePosts(requests, 1, "second title POST never fired")
+      expect(post2[0].body).toEqual({ title: "Second Rename", generated: false })
+    }).pipe(Effect.provide(layer()))
+  },
+)
+
+it.instance(
+  "title report: transient 5xx failure restores title so same-title Updated retries",
+  () => {
+    const requests: Req[] = []
+    const titleStatuses = new Map<string, number>()
+    const fetch: typeof globalThis.fetch = Object.assign(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input)
+        const path = new URL(url).pathname
+        if (url.endsWith("/api/user")) return new Response("{}", { status: 200 })
+        if (url.endsWith("/api/session")) {
+          requests.push({ method: "POST", path })
+          return Response.json({ id: "remote-5xx", ingestPath: "/api/session/remote-5xx/ingest" })
+        }
+        if (path.endsWith("/ingest")) return new Response("{}", { status: 200 })
+        if (path.endsWith("/title")) {
+          const sid = path.split("/api/session/")[1]?.split("/title")[0]
+          const status = titleStatuses.get(sid ?? "") ?? 200
+          requests.push({ method: "POST", path, body: init?.body ? JSON.parse(init.body as string) : undefined })
+          return new Response(status === 200 ? '{"ok":true}' : "fail", { status })
+        }
+        return new Response("{}", { status: 200 })
+      },
+      { preconnect: globalThis.fetch.preconnect },
+    )
+    installFetch(fetch)
+    patchEnv({
+      KILO_API_KEY: "test-token",
+      KILO_SESSION_INGEST_URL: "https://ingest.kilosessions.ai",
+      KILO_AGENT_NOTIFICATION_TIMEOUT_MS: "5000",
+    })
+    reset("test-token")
+
+    return Effect.gen(function* () {
+      const instance = yield* TestInstance
+      const kilo = yield* KiloSessions.Service
+      const sessions = yield* Session.Service
+      yield* kilo.init()
+
+      const created = yield* sessions.create({})
+      const id = created.id
+      yield* Effect.promise(() => KiloSessions.bootstrap(id))
+      yield* Effect.sleep(50)
+      requests.length = 0
+
+      // First rename: server returns 5xx (transient failure).
+      titleStatuses.set(id, 500)
+      yield* sessions.setTitle({ sessionID: id, title: "Will retry" })
+      const post1 = yield* waitTitlePosts(requests, 1, "first title POST never fired")
+      expect(post1[0].body).toEqual({ title: "Will retry", generated: false })
+
+      // Same title again: SHOULD re-POST because 5xx is transient (title was
+      // rolled back, so the watcher treats this as a new title change).
+      requests.length = 0
+      yield* sessions.setTitle({ sessionID: id, title: "Will retry" })
+      const post2 = yield* waitTitlePosts(requests, 1, "retry POST never fired")
+      expect(post2[0].body).toEqual({ title: "Will retry", generated: false })
+
+      // Now succeed.
+      titleStatuses.set(id, 200)
+      requests.length = 0
+      yield* sessions.setTitle({ sessionID: id, title: "Will retry" })
+      const post3 = yield* waitTitlePosts(requests, 1, "success POST never fired")
+      expect(post3[0].body).toEqual({ title: "Will retry", generated: false })
+    }).pipe(Effect.provide(layer()))
+  },
+)
+
+it.instance(
+  "title report: transient 408/429 restores title so same-title Updated retries",
+  () => {
+    const requests: Req[] = []
+    const titleStatuses = new Map<string, number>()
+    const fetch: typeof globalThis.fetch = Object.assign(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input)
+        const path = new URL(url).pathname
+        if (url.endsWith("/api/user")) return new Response("{}", { status: 200 })
+        if (url.endsWith("/api/session")) {
+          requests.push({ method: "POST", path })
+          return Response.json({ id: "remote-4xxr", ingestPath: "/api/session/remote-4xxr/ingest" })
+        }
+        if (path.endsWith("/ingest")) return new Response("{}", { status: 200 })
+        if (path.endsWith("/title")) {
+          const sid = path.split("/api/session/")[1]?.split("/title")[0]
+          const status = titleStatuses.get(sid ?? "") ?? 200
+          requests.push({ method: "POST", path, body: init?.body ? JSON.parse(init.body as string) : undefined })
+          return new Response(status === 200 ? '{"ok":true}' : "fail", { status })
+        }
+        return new Response("{}", { status: 200 })
+      },
+      { preconnect: globalThis.fetch.preconnect },
+    )
+    installFetch(fetch)
+    patchEnv({
+      KILO_API_KEY: "test-token",
+      KILO_SESSION_INGEST_URL: "https://ingest.kilosessions.ai",
+      KILO_AGENT_NOTIFICATION_TIMEOUT_MS: "5000",
+    })
+    reset("test-token")
+
+    return Effect.gen(function* () {
+      const instance = yield* TestInstance
+      const kilo = yield* KiloSessions.Service
+      const sessions = yield* Session.Service
+      yield* kilo.init()
+
+      const created = yield* sessions.create({})
+      const id = created.id
+      yield* Effect.promise(() => KiloSessions.bootstrap(id))
+      yield* Effect.sleep(50)
+      requests.length = 0
+
+      // 408 Request Timeout — transient, must restore + retry.
+      titleStatuses.set(id, 408)
+      yield* sessions.setTitle({ sessionID: id, title: "Retry 408" })
+      const post408 = yield* waitTitlePosts(requests, 1, "408 title POST never fired")
+      expect(post408[0].body).toEqual({ title: "Retry 408", generated: false })
+
+      requests.length = 0
+      yield* sessions.setTitle({ sessionID: id, title: "Retry 408" })
+      const post408b = yield* waitTitlePosts(requests, 1, "408 retry POST never fired")
+      expect(post408b[0].body).toEqual({ title: "Retry 408", generated: false })
+
+      // 429 Too Many Requests — transient, must restore + retry.
+      titleStatuses.set(id, 429)
+      requests.length = 0
+      yield* sessions.setTitle({ sessionID: id, title: "Retry 429" })
+      const post429 = yield* waitTitlePosts(requests, 1, "429 title POST never fired")
+      expect(post429[0].body).toEqual({ title: "Retry 429", generated: false })
+
+      requests.length = 0
+      yield* sessions.setTitle({ sessionID: id, title: "Retry 429" })
+      const post429b = yield* waitTitlePosts(requests, 1, "429 retry POST never fired")
+      expect(post429b[0].body).toEqual({ title: "Retry 429", generated: false })
+    }).pipe(Effect.provide(layer()))
+  },
+)
+
+it.instance(
+  "title report: stale handler A does not clobber handler B's knownTitles advance on A's POST failure",
+  () => {
+    const requests: Req[] = []
+    let releaseBlockedPost: (() => void) | undefined
+    let postCount = 0
+    const titleStatuses = new Map<string, number>()
+    const fetch: typeof globalThis.fetch = Object.assign(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input)
+        const path = new URL(url).pathname
+        if (url.endsWith("/api/user")) return new Response("{}", { status: 200 })
+        if (url.endsWith("/api/session")) {
+          requests.push({ method: "POST", path })
+          return Response.json({ id: "remote-race", ingestPath: "/api/session/remote-race/ingest" })
+        }
+        if (path.endsWith("/ingest")) return new Response("{}", { status: 200 })
+        if (path.endsWith("/title")) {
+          postCount++
+          const sid = path.split("/api/session/")[1]?.split("/title")[0]
+          const status = titleStatuses.get(sid ?? "") ?? 200
+          const body = init?.body ? JSON.parse(init.body as string) : undefined
+          requests.push({ method: "POST", path, body })
+          // Block the first title POST (handler A) on a promise gate.
+          // Second POST (handler B) proceeds immediately.
+          if (postCount === 1) {
+            await new Promise<void>((resolve) => {
+              releaseBlockedPost = resolve
+            })
+          }
+          return new Response(status === 200 ? '{"ok":true}' : "fail", { status })
+        }
+        return new Response("{}", { status: 200 })
+      },
+      { preconnect: globalThis.fetch.preconnect },
+    )
+    installFetch(fetch)
+    patchEnv({
+      KILO_API_KEY: "test-token",
+      KILO_SESSION_INGEST_URL: "https://ingest.kilosessions.ai",
+      KILO_AGENT_NOTIFICATION_TIMEOUT_MS: "5000",
+    })
+    reset("test-token")
+
+    return Effect.gen(function* () {
+      const instance = yield* TestInstance
+      const kilo = yield* KiloSessions.Service
+      const sessions = yield* Session.Service
+      yield* kilo.init()
+
+      const created = yield* sessions.create({})
+      const id = created.id
+      yield* Effect.promise(() => KiloSessions.bootstrap(id))
+      yield* Effect.sleep(50)
+      requests.length = 0
+
+      // Handler A: setTitle("Title A") — POST blocks on the promise gate.
+      // knownTitles advances to "Title A" synchronously before the gate.
+      titleStatuses.set(id, 500) // A's POST will fail after release
+      yield* sessions.setTitle({ sessionID: id, title: "Title A" })
+
+      // Wait for handler A's POST to hit the blocked gate (its request is already pushed).
+      yield* waitTitlePosts(requests, 1, "title A POST never appeared")
+
+      // Handler B: setTitle("Title B") — knownTitles advances to "Title B",
+      // ingest.sync yields between knownTitles.set and the fetch call, letting
+      // B interleave. B's POST (postCount=2) proceeds unblocked.
+      titleStatuses.set(id, 200) // B's POST succeeds
+      yield* sessions.setTitle({ sessionID: id, title: "Title B" })
+
+      // Wait for B's unblocked POST.
+      yield* waitTitlePosts(requests, 2, "title B POST never appeared")
+      expect(requests.some((r) => r.path.endsWith("/title") && r.body?.title === "Title B")).toBe(true)
+
+      // Release handler A's blocked POST → returns 500.
+      // restoreTitleState guard: knownTitles.get(id) === "Title B" !== "Title A"
+      // (the session.title in A's closure), so no clobbering occurs.
+      releaseBlockedPost?.()
+      yield* Effect.sleep(200)
+
+      // Verify: same-title Updated for "Title B" should NOT re-POST
+      // because knownTitles still has "Title B" and was not clobbered.
+      requests.length = 0
+      yield* sessions.setTitle({ sessionID: id, title: "Title B" })
+      yield* holdTitlePosts(requests, 0)
+    }).pipe(Effect.provide(layer()))
+  },
+  15_000,
+)
