@@ -211,6 +211,16 @@ class KiloPromptCompletionProviderTest : BasePlatformTestCase() {
         assertSame(AllIcons.Nodes.Folder, icon("src"))
     }
 
+    fun `test mention completion renders filename before parent path`() {
+        rpc.searchResult = FileSearchResultDto(files = listOf(file("src/foo/Bar.kt")))
+
+        complete("@bar<caret>")
+
+        val view = LookupElementPresentation().also { item("src/foo/Bar.kt").renderElement(it) }
+        assertEquals("@Bar.kt", view.itemText)
+        assertEquals("  src/foo", view.tailText)
+    }
+
     fun `test highlights known slash command at start`() {
         assertEquals(
             listOf(KiloPromptCompletionProvider.Highlight(0, 4, KiloPromptCompletionProvider.HighlightKind.COMMAND)),
