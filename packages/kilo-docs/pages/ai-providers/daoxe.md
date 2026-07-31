@@ -6,7 +6,7 @@ sidebar_label: DaoXE
 
 # Using DaoXE With Kilo Code
 
-[DaoXE](https://daoxe.com) is a multi-model API gateway you can use in Kilo Code to reach multiple models through one API key and base URL. Kilo Code uses the `daoxe` provider ID and reads your API key from `DAOXE_API_KEY`.
+[DaoXE](https://daoxe.com) is an AI gateway with native Claude protocol, verifiable routing, and one-key access to Claude, GPT, Gemini, and more. Kilo Code uses the `daoxe` provider ID and reads your API key from `DAOXE_API_KEY`.
 
 {% callout type="warning" %}
 DaoXE is not available in mainland China. Requests from mainland China may be blocked or rejected.
