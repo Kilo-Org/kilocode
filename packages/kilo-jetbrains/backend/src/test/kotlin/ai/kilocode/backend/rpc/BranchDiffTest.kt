@@ -20,9 +20,7 @@ class BranchDiffTest {
     }
 
     @Test
-    fun `capDiff stops fetching once a patch overflows the cap`() {
-        // Regression guard: a single oversized patch must not leave the budget open so that every
-        // remaining file still triggers a fetch (a git subprocess per file in production).
+    fun `capDiff skips one oversized patch and keeps later small patches`() {
         val fetched = mutableListOf<String>()
         val files = listOf(stat("big.txt"), stat("small.txt"), stat("tiny.txt"))
 
@@ -31,8 +29,22 @@ class BranchDiffTest {
             if (file.file == "big.txt") "0123456789" else "x"
         }
 
-        assertEquals(listOf("big.txt"), fetched)
-        assertEquals(listOf("", "", ""), diff.map { it.patch })
+        assertEquals(listOf("big.txt", "small.txt", "tiny.txt"), fetched)
+        assertEquals(listOf("", "x", "x"), diff.map { it.patch })
+    }
+
+    @Test
+    fun `capDiff stops fetching after bounded oversized misses`() {
+        val fetched = mutableListOf<String>()
+        val files = listOf(stat("big1.txt"), stat("big2.txt"), stat("big3.txt"), stat("later.txt"))
+
+        val diff = capDiff(files, cap = 4) { file ->
+            fetched += file.file
+            "0123456789"
+        }
+
+        assertEquals(listOf("big1.txt", "big2.txt", "big3.txt"), fetched)
+        assertEquals(listOf("", "", "", ""), diff.map { it.patch })
     }
 
     @Test

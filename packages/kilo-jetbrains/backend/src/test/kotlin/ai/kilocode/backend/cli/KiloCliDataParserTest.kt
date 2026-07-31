@@ -1374,7 +1374,7 @@ class KiloCliDataParserTest {
                     "parts": [{ "id": "p1", "sessionID": "s1", "messageID": "m1", "type": "text", "text": "Hello" }]
                 },
                 {
-                    "info": { "id": "m2", "sessionID": "s1", "role": "assistant", "time": { "created": 2.0 } },
+                    "info": { "id": "m2", "sessionID": "s1", "role": "assistant", "time": { "created": 2.0 }, "summary": true },
                     "parts": [{ "id": "p2", "sessionID": "s1", "messageID": "m2", "type": "text", "text": "Hi there" }]
                 }
             ]"""

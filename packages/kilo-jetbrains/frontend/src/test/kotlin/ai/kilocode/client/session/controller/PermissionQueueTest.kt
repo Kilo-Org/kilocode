@@ -114,6 +114,47 @@ class PermissionQueueTest : SessionControllerTestBase() {
         assertPermission(m, "perm2")
     }
 
+    fun `test stop purges outstanding permission ghost`() {
+        val (m, _, _) = prompted()
+
+        emit(ChatEventDto.PermissionAsked("ses_test", permission("perm1")))
+        assertPermission(m, "perm1")
+
+        edt { m.abort() }
+        flush()
+        assertTrue(m.model.state is SessionState.Idle)
+
+        emit(ChatEventDto.PermissionAsked("ses_test", permission("perm2")))
+        assertPermission(m, "perm2")
+    }
+
+    fun `test auto approve skill shell permissions stay queued in FIFO order`() {
+        edt { KiloPluginSettings.setAutoApprove(true) }
+        val (m, _, _) = prompted()
+
+        emit(ChatEventDto.PermissionAsked("ses_test", skillPermission("perm1")))
+        emit(ChatEventDto.PermissionAsked("ses_test", skillPermission("perm2")))
+
+        assertPermission(m, "perm1")
+
+        emit(ChatEventDto.PermissionReplied("ses_test", "perm1"))
+        assertPermission(m, "perm2")
+    }
+
+    fun `test auto approve drain queues multiple skill shell permissions`() {
+        rpc.pendingPermissionList.add(skillPermission("perm1"))
+        rpc.pendingPermissionList.add(skillPermission("perm2"))
+        val (m, _, _) = prompted()
+
+        edt { m.setAutoApprove(true) }
+        flush()
+
+        assertPermission(m, "perm1")
+
+        emit(ChatEventDto.PermissionReplied("ses_test", "perm1"))
+        assertPermission(m, "perm2")
+    }
+
     fun `test replying active question shows queued permission`() {
         val (m, _, _) = prompted()
 
@@ -178,6 +219,8 @@ class PermissionQueueTest : SessionControllerTestBase() {
         patterns = listOf("*.kt"),
         always = emptyList(),
     )
+
+    private fun skillPermission(id: String) = permission(id).copy(metadata = mapOf("skillShell" to "true"))
 
     private fun question(id: String) = QuestionRequestDto(
         id = id,

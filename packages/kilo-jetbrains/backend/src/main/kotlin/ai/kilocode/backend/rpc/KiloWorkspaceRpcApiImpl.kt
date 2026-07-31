@@ -516,25 +516,36 @@ internal fun resolveProjectDirectoryHint(hint: String, bases: List<String>): Str
 }
 
 /**
- * Assemble capped diff DTOs. [fetch] lazily produces each file's full-context patch and is skipped
- * once the running patch total would exceed [cap] (or an earlier patch already overflowed), so a
- * branch with hundreds of changed files doesn't run a git subprocess (or read a file) per entry
- * only to discard the output. Files past the cap keep their stats but carry an empty patch, which
- * the client renders from stats alone.
+ * Assemble capped diff DTOs. [fetch] lazily produces each file's full-context patch. Oversized
+ * patches are skipped, but a single generated/large file should not blank every later small file;
+ * after a bounded number of misses, stop fetching so large branches still don't run a git subprocess
+ * (or read a file) per entry only to discard the output. Files past the cap keep their stats but
+ * carry an empty patch, which the client renders from stats alone.
  */
 internal fun capDiff(files: List<DiffFileDto>, cap: Int, fetch: (DiffFileDto) -> String): List<DiffFileDto> {
     var used = 0
+    var misses = 0
     var full = false
     return files.map { file ->
         if (full) return@map file.copy(patch = "")
         val text = fetch(file)
         when {
             text.isBlank() -> file.copy(patch = "")
-            used + text.length <= cap -> { used += text.length; file.copy(patch = text) }
-            else -> { full = true; file.copy(patch = "") }
+            used + text.length <= cap -> {
+                used += text.length
+                if (used >= cap) full = true
+                file.copy(patch = text)
+            }
+            else -> {
+                misses++
+                full = misses >= MAX_OVERSIZED_PATCHES || used >= cap
+                file.copy(patch = "")
+            }
         }
     }
 }
+
+private const val MAX_OVERSIZED_PATCHES = 3
 
 private fun untrackedPatch(path: String, text: String, additions: Int): String = buildString {
     appendLine("diff --git a/$path b/$path")

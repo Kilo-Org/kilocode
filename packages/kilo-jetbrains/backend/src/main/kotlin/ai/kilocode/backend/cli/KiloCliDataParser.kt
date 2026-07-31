@@ -1039,7 +1039,7 @@ object KiloCliDataParser {
         val time = obj["time"]?.jsonObject
         val tokens = obj["tokens"]?.jsonObject
         val error = obj["error"]?.jsonObject
-        val raw = obj["summary"]?.jsonObject?.get("diffs")
+        val raw = obj["summary"].obj()?.get("diffs")
         val summary = if (raw == null) null else MessageSummaryDto(parseDiffs(raw))
 
         return MessageDto(

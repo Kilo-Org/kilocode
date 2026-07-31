@@ -364,7 +364,7 @@ class SessionController(
             return
         }
         val id = sid ?: return
-        pending.clear()
+        (childIds + id).forEach(::purgePending)
         capture("Session Stop Clicked", sessionProps(id))
         cs.launch {
             try {
@@ -731,7 +731,10 @@ class SessionController(
                 if (!autoApprove || restore().meta.raw["skillShell"] == "true") {
                     edt {
                         if (disposed) return@edt
-                        model.setState(SessionState.AwaitingPermission(restore()))
+                        enqueue(restore())
+                        if (model.state !is SessionState.AwaitingPermission && model.state !is SessionState.AwaitingQuestion) {
+                            promote()
+                        }
                     }
                     return@launch
                 }
@@ -765,14 +768,19 @@ class SessionController(
             try {
                 val permissions = sessions.pendingPermissions(directory).filter { it.sessionID in ids && it.id !in skip }
                 val count = replyAll(permissions)
-                // Skill-shell requests are skipped by replyAll; surface one as a card so it
-                // isn't stranded (never machine-approved, never shown).
-                val card = skillShellCard(permissions)?.let { toPermission(it) }
-                if (count == 0 && card == null) return@launch
+                // Skill-shell requests are skipped by replyAll; queue all of them so they aren't
+                // stranded (never machine-approved, never shown) or overwritten by later cards.
+                val cards = permissions.filter { it.metadata["skillShell"] == "true" }.map(::toPermission)
+                if (count == 0 && cards.isEmpty()) return@launch
                 runEdt {
                     if (disposed) return@runEdt
-                    if (card != null) {
-                        updateModel { model.setState(SessionState.AwaitingPermission(card)) }
+                    if (cards.isNotEmpty()) {
+                        updateModel {
+                            cards.forEach(::enqueue)
+                            if (model.state !is SessionState.AwaitingPermission && model.state !is SessionState.AwaitingQuestion) {
+                                promote()
+                            }
+                        }
                         return@runEdt
                     }
                     val current = model.state
