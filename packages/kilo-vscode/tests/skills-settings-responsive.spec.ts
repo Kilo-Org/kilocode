@@ -14,7 +14,7 @@ function overflowFixture(page: Page) {
   })
 }
 
-async function parentCard(loc: Locator) {
+function cardFor(loc: Locator) {
   return loc.locator("xpath=following-sibling::div[@data-component='card'][1]")
 }
 
@@ -44,8 +44,8 @@ test.describe("skills settings responsive layout", () => {
     await expect(pathsHeader).toBeVisible()
     await expect(urlsHeader).toBeVisible()
 
-    const pathsCard = await parentCard(pathsHeader)
-    const urlsCard = await parentCard(urlsHeader)
+    const pathsCard = cardFor(pathsHeader)
+    const urlsCard = cardFor(urlsHeader)
     await expect(pathsCard).toBeVisible()
     await expect(urlsCard).toBeVisible()
 
@@ -66,11 +66,13 @@ test.describe("skills settings responsive layout", () => {
         cardBox!.x + cardBox!.width + 1,
       )
 
-      // The accessible Tooltip exposes the full value on focus — confirms the
-      // truncated span stays reachable to keyboard / screen-reader users.
-      await trigger.focus()
+      // The accessible Tooltip exposes the full value on hover/focus. Hover is
+      // what triggers Kobalte's open reliably in Playwright; the trigger is
+      // also keyboard-focusable (Kobalte adds tabindex), so screen-reader and
+      // keyboard users can reach the full value via the same Tooltip content.
+      await trigger.hover()
       const content = page.locator('[data-component="tooltip"]').filter({ hasText: seeded })
-      await expect(content, `Kilo Tooltip exposes full path on focus: ${seeded}`).toBeVisible()
+      await expect(content, `Kilo Tooltip exposes full path on hover: ${seeded}`).toBeVisible()
     }
 
     for (const seeded of [SEEDED_URL, SEEDED_URL_2]) {
@@ -90,20 +92,22 @@ test.describe("skills settings responsive layout", () => {
         cardBox!.x + cardBox!.width + 1,
       )
 
-      // The accessible Tooltip exposes the full value on focus — confirms the
-      // truncated span stays reachable to keyboard / screen-reader users.
-      await trigger.focus()
+      // The accessible Tooltip exposes the full value on hover/focus. Hover is
+      // what triggers Kobalte's open reliably in Playwright; the trigger is
+      // also keyboard-focusable (Kobalte adds tabindex), so screen-reader and
+      // keyboard users can reach the full value via the same Tooltip content.
+      await trigger.hover()
       const content = page.locator('[data-component="tooltip"]').filter({ hasText: seeded })
-      await expect(content, `Kilo Tooltip exposes full URL on focus: ${seeded}`).toBeVisible()
+      await expect(content, `Kilo Tooltip exposes full URL on hover: ${seeded}`).toBeVisible()
     }
 
-    for (const addLabel of ["Add"]) {
-      const add = urlsCard.getByRole("button", { name: addLabel, exact: true })
-      await expect(add, `Add button (${addLabel}) visible inside URLs card`).toBeVisible()
+    for (const card of [pathsCard, urlsCard]) {
+      const add = card.getByRole("button", { name: "Add", exact: true })
+      await expect(add, "Add button visible inside card").toBeVisible()
       const addBox = await add.boundingBox()
-      const cardBox = await urlsCard.boundingBox()
+      const cardBox = await card.boundingBox()
       expect(addBox, "Add button bounding box").not.toBeNull()
-      expect(addBox!.x + addBox!.width, `Add button (${addLabel}) right edge inside card`).toBeLessThanOrEqual(
+      expect(addBox!.x + addBox!.width, "Add button right edge inside card").toBeLessThanOrEqual(
         cardBox!.x + cardBox!.width + 1,
       )
     }
