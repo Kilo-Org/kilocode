@@ -428,6 +428,15 @@ export class RunFooter implements FooterApi {
       this.setAgentLabel(next.agent)
       return
     }
+
+    // Update the reactive current model so the next turn summary reflects an
+    // in-flight model switch from mode_switch. The live footer label is already
+    // updated via the `model` patch event above; this keeps `currentModel` in
+    // sync so writeTurnSummary picks up the destination model on the next idle.
+    if (next.type === "model.switch") {
+      this.setCurrentModel(next.model)
+      return
+    }
     // kilocode_change end
 
     if (next.type === "catalog") {
