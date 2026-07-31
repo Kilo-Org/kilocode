@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm"
 import { Effect } from "effect"
 import type { SessionID } from "@/session/schema"
-import { SessionTable } from "@/session/session.sql"
-import { Database } from "@/storage/db"
+import { SessionTable } from "@opencode-ai/core/session/sql"
+import { Database } from "@opencode-ai/core/database/database"
 
 export const key = "kilocode.sandbox"
 
@@ -37,47 +37,55 @@ export function remove(metadata: Record<string, unknown> | null | undefined) {
   return next
 }
 
-export const read = Effect.fn("SandboxState.read")((sessionID: SessionID) =>
-  Effect.sync(() =>
-    Database.use((db) =>
-      parse(
-        db.select({ metadata: SessionTable.metadata }).from(SessionTable).where(eq(SessionTable.id, sessionID)).get()
-          ?.metadata,
-      ),
-    ),
-  ),
-)
+export const read = Effect.fn("SandboxState.read")(function* (sessionID: SessionID) {
+  const { db } = yield* Database.Service
+  const row = yield* db
+    .select({ metadata: SessionTable.metadata })
+    .from(SessionTable)
+    .where(eq(SessionTable.id, sessionID))
+    .get()
+    .pipe(Effect.orDie)
+  return parse(row?.metadata)
+})
 
-export const write = Effect.fn("SandboxState.write")((sessionID: SessionID, value: Value) =>
-  Effect.sync(() =>
-    Database.use((db) => {
-      const row = db
+export const write = Effect.fn("SandboxState.write")(function* (sessionID: SessionID, value: Value) {
+  const { db } = yield* Database.Service
+  yield* db
+    .transaction((tx) =>
+      Effect.gen(function* () {
+        const row = yield* tx
+          .select({ metadata: SessionTable.metadata })
+          .from(SessionTable)
+          .where(eq(SessionTable.id, sessionID))
+          .get()
+        if (!row) return
+        yield* tx
+          .update(SessionTable)
+          .set({ metadata: merge(row.metadata, value), time_updated: Date.now() })
+          .where(eq(SessionTable.id, sessionID))
+          .run()
+      }),
+    )
+    .pipe(Effect.orDie)
+})
+
+export const clear = Effect.fn("SandboxState.clear")(function* (sessionID: SessionID) {
+  const { db } = yield* Database.Service
+  yield* db
+    .transaction((tx) =>
+      Effect.gen(function* () {
+        const row = yield* tx
         .select({ metadata: SessionTable.metadata })
         .from(SessionTable)
         .where(eq(SessionTable.id, sessionID))
         .get()
-      if (!row) return
-      db.update(SessionTable)
-        .set({ metadata: merge(row.metadata, value), time_updated: Date.now() })
-        .where(eq(SessionTable.id, sessionID))
-        .run()
-    }),
-  ),
-)
-
-export const clear = Effect.fn("SandboxState.clear")((sessionID: SessionID) =>
-  Effect.sync(() =>
-    Database.use((db) => {
-      const row = db
-        .select({ metadata: SessionTable.metadata })
-        .from(SessionTable)
-        .where(eq(SessionTable.id, sessionID))
-        .get()
-      if (!row) return
-      db.update(SessionTable)
-        .set({ metadata: remove(row.metadata), time_updated: Date.now() })
-        .where(eq(SessionTable.id, sessionID))
-        .run()
-    }),
-  ),
-)
+        if (!row) return
+        yield* tx
+          .update(SessionTable)
+          .set({ metadata: remove(row.metadata), time_updated: Date.now() })
+          .where(eq(SessionTable.id, sessionID))
+          .run()
+      }),
+    )
+    .pipe(Effect.orDie)
+})

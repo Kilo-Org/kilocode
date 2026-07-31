@@ -24,7 +24,7 @@ export const TranscriptSearch: Component = () => {
   }
 
   const close = () => {
-    search.setActive(false)
+    search.closeSearch()
     search.setQuery("")
     search.setCount(0)
     search.setIndex(0)

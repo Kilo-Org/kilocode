@@ -1,4 +1,4 @@
-import { BusEvent } from "@/bus/bus-event"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { InstanceState } from "@/effect/instance-state"
 import { EffectBridge } from "@/effect/bridge"
 import type { InstanceContext } from "@/project/instance-context"
@@ -8,6 +8,7 @@ import { Config } from "@/config/config"
 import { MCP } from "../mcp"
 import { Skill } from "../skill"
 import { legacyReviewCommand, reviewCommand } from "@/kilocode/review/command" // kilocode_change
+import { EventV2 } from "@opencode-ai/core/event"
 import PROMPT_INITIALIZE from "./template/initialize.txt"
 
 type State = {
@@ -15,15 +16,15 @@ type State = {
 }
 
 export const Event = {
-  Executed: BusEvent.define(
-    "command.executed",
-    Schema.Struct({
+  Executed: EventV2.define({
+    type: "command.executed",
+    schema: {
       name: Schema.String,
       sessionID: SessionID,
       arguments: Schema.String,
       messageID: MessageID,
-    }),
-  ),
+    },
+  }),
 }
 
 export const Info = Schema.Struct({
@@ -32,6 +33,7 @@ export const Info = Schema.Struct({
   agent: Schema.optional(Schema.String),
   model: Schema.optional(Schema.String),
   source: Schema.optional(Schema.Literals(["command", "mcp", "skill"])),
+  trusted: Schema.optional(Schema.Boolean), // kilocode_change - skill-sourced templates only run `!`cmd`` shell when trusted
   // Some command templates are lazy promises from MCP prompt resolution.
   template: Schema.Unknown,
   subtask: Schema.optional(Schema.Boolean),
@@ -66,6 +68,7 @@ function fromSkill(item: Skill.Info): Info {
     name: item.name,
     description: item.description,
     source: "skill",
+    trusted: item.trusted === true,
     get template() {
       return item.content
     },
@@ -214,5 +217,7 @@ export const defaultLayer = layer.pipe(
   Layer.provide(MCP.defaultLayer),
   Layer.provide(Skill.defaultLayer),
 )
+
+export const node = LayerNode.make(layer, [Config.node, MCP.node, Skill.node])
 
 export * as Command from "."

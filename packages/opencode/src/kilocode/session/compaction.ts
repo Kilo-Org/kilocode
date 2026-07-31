@@ -1,5 +1,6 @@
 import { Effect } from "effect"
-import type { ModelID, ProviderID } from "@/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import type { MessageV2 } from "@/session/message-v2"
 import { MessageID, PartID, type SessionID } from "@/session/schema"
 import { KiloSessionPromptQueue } from "./prompt-queue"
@@ -14,7 +15,7 @@ export namespace KiloSessionCompaction {
     session: Store
     sessionID: SessionID
     agent: string
-    model: { providerID: ProviderID; modelID: ModelID }
+    model: { providerID: ProviderV2.ID; modelID: ModelV2.ID }
     auto: boolean
     overflow?: boolean
   }) {

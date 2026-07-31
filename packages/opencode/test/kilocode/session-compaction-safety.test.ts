@@ -6,14 +6,15 @@ import { describe, expect, test } from "bun:test"
 import { KiloSessionPrompt } from "../../src/kilocode/session/prompt"
 import { KiloSessionMessageOrder } from "../../src/kilocode/session/message-order"
 import { MessageV2 } from "../../src/session/message-v2"
-import { ModelID, ProviderID } from "../../src/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import type { Provider } from "../../src/provider/provider"
 
 const sessionID = SessionID.make("ses_safety")
 const model = {
-  id: ModelID.make("test"),
-  providerID: ProviderID.make("test"),
+  id: ModelV2.ID.make("test"),
+  providerID: ProviderV2.ID.make("test"),
   api: { id: "test", npm: "@ai-sdk/openai" },
 } as Provider.Model
 
@@ -24,7 +25,7 @@ function userInfo(id: string): MessageV2.User {
     role: "user",
     time: { created: 0 },
     agent: "test",
-    model: { providerID: ProviderID.make("test"), modelID: ModelID.make("test") },
+    model: { providerID: ProviderV2.ID.make("test"), modelID: ModelV2.ID.make("test") },
     tools: {},
     mode: "",
   } as unknown as MessageV2.User
@@ -41,8 +42,8 @@ function assistantInfo(
     role: "assistant",
     time: { created: 0 },
     parentID: MessageID.make(parentID),
-    modelID: ModelID.make("test"),
-    providerID: ProviderID.make("test"),
+    modelID: ModelV2.ID.make("test"),
+    providerID: ProviderV2.ID.make("test"),
     mode: "",
     agent: "test",
     path: { cwd: "/", root: "/" },

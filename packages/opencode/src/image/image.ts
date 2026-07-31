@@ -1,6 +1,7 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Config } from "@/config/config"
+import { SessionV1 } from "@opencode-ai/core/v1/session"
 import type { MessageV2 } from "@/session/message-v2"
-import * as Log from "@opencode-ai/core/util/log"
 import photonWasm from "@silvia-odwyer/photon-node/photon_rs_bg.wasm" with { type: "file" }
 import { Context, Effect, Layer, Schema } from "effect"
 import path from "node:path"
@@ -11,8 +12,6 @@ const MAX_WIDTH = 2000
 const MAX_HEIGHT = 2000
 const AUTO_RESIZE = true
 const JPEG_QUALITIES = [80, 85, 70, 55, 40]
-const log = Log.create({ service: "image" })
-
 // kilocode_change start - preserve valid in-limit images when Photon is unavailable
 function dimensions(mime: string, data: Buffer) {
   if (
@@ -97,7 +96,6 @@ export function fallback(
   return input
 }
 // kilocode_change end
-
 export class ResizerUnavailableError extends Schema.TaggedErrorClass<ResizerUnavailableError>()(
   "ImageResizerUnavailableError",
   {},
@@ -137,7 +135,7 @@ export class SizeError extends Schema.TaggedErrorClass<SizeError>()("ImageSizeEr
 export type Error = ResizerUnavailableError | InvalidDataUrlError | DecodeError | SizeError
 
 export interface Interface {
-  readonly normalize: (input: MessageV2.FilePart) => Effect.Effect<MessageV2.FilePart, Error>
+  readonly normalize: (input: SessionV1.FilePart) => Effect.Effect<SessionV1.FilePart, Error>
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/Image") {}
@@ -153,12 +151,12 @@ export const layer = Layer.effect(
         ;(globalThis as typeof globalThis & { __KILOCODE_PHOTON_WASM_PATH?: string }).__KILOCODE_PHOTON_WASM_PATH = wasm
       }).pipe(
         Effect.andThen(() => Effect.tryPromise(() => import("@silvia-odwyer/photon-node"))),
-        Effect.tapError((error) => Effect.sync(() => log.warn("failed to load photon", { error }))),
+        Effect.tapError((error) => Effect.logWarning("failed to load photon", { error })),
         Effect.mapError(() => new ResizerUnavailableError()),
       ),
     )
 
-    const normalize = Effect.fn("Image.normalize")(function* (input: MessageV2.FilePart) {
+    const normalize = Effect.fn("Image.normalize")(function* (input: SessionV1.FilePart) {
       const image = (yield* config.get()).attachment?.image
       const info = {
         autoResize: image?.auto_resize ?? AUTO_RESIZE,
@@ -185,11 +183,8 @@ export const layer = Layer.effect(
 
       const decoded = yield* Effect.try({
         try: () => photon.PhotonImage.new_from_byteslice(Buffer.from(base64, "base64")),
-        catch: (error) => {
-          log.warn("failed to decode image", { error })
-          return new DecodeError()
-        },
-      })
+        catch: () => new DecodeError(),
+      }).pipe(Effect.tapError((error) => Effect.logWarning("failed to decode image", { error })))
 
       try {
         const originalWidth = decoded.get_width()
@@ -234,7 +229,7 @@ export const layer = Layer.effect(
           resized.free()
 
           if (candidate) {
-            log.info("using resized image", {
+            yield* Effect.logInfo("using resized image", {
               from_mime: input.mime,
               to_mime: candidate.mime,
               from: `${originalWidth}x${originalHeight}`,
@@ -266,5 +261,7 @@ export const layer = Layer.effect(
 )
 
 export const defaultLayer = layer.pipe(Layer.provide(Config.defaultLayer))
+
+export const node = LayerNode.make(layer, [Config.node])
 
 export * as Image from "./image"

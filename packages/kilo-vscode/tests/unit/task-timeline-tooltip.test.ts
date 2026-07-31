@@ -30,9 +30,28 @@ describe("TaskTimeline delegated tooltip contract", () => {
   it("keeps accessibility and bar overlays bounded", () => {
     expect(src).toMatch(/data-timeline-count=\{bars\(\)\.length\}/)
     expect(src).toMatch(/tabIndex=\{0\}/)
-    expect(src).toMatch(/aria-label=\{aria\(\)\}/)
+    expect(src).toMatch(/role="slider"/)
+    expect(src).toMatch(/aria-valuenow=\{value\(\)\}/)
+    expect(src).toMatch(/aria-valuetext=\{aria\(\)\}/)
     expect(src).toMatch(/<For each=\{layout\(\)\.paths\}>/)
     expect(src).not.toMatch(/<Index\b/)
     expect(src).not.toMatch(/data-tip=/)
+  })
+
+  it("only collects parts with matching transcript content", () => {
+    expect(src).toMatch(/const revert = session\.revert\(\) \?\? undefined/)
+    expect(src).toMatch(/visibleParts\(m\.id, session\.getParts\(m\.id\), revert\)/)
+    expect(src).toMatch(/isRenderable\(part as SDKPart, m as SDKAssistantMessage\)/)
+    expect(src).toMatch(/item\.tool\?\.callID === call && item\.tool\?\.messageID === m\.id/)
+  })
+
+  it("keeps selected bars highlighted after click and keyboard activation", () => {
+    expect(src).toMatch(/const select = \(idx: number\) => \{[\s\S]*showTip\(idx\)/)
+    expect(src).toMatch(/select\(selected\(\)\)/)
+  })
+
+  it("preserves a hovered part across streaming updates", () => {
+    expect(src).toMatch(/if \(idx < 0 \|\| same\(previous\?\.\[idx\], next\[idx\]\)\) return/)
+    expect(src).toMatch(/if \(same\(previous, next\)\) return previous/)
   })
 })

@@ -23,7 +23,7 @@ const original = {
   diagnostics: api.languages.getDiagnostics,
 }
 
-function setup(active = false) {
+function setup(active = false, agentReady = true) {
   const commands = new Map<string, Command>()
   const executed: unknown[][] = []
   const events: string[] = []
@@ -45,6 +45,11 @@ function setup(active = false) {
     postMessage: (msg: unknown) => {
       events.push("post")
       posts.push(msg)
+    },
+    waitForReady: async () => {
+      events.push("wait")
+      waits.push("agent")
+      return agentReady
     },
   }
 
@@ -103,14 +108,41 @@ describe("registerCodeActions", () => {
 
     await state.commands.get("kilo-code.new.addToContext")?.()
 
-    expect(state.events).toEqual(["post"])
+    expect(state.events).toEqual(["wait", "post"])
     expect(state.executed).toEqual([])
-    expect(state.waits).toEqual([])
+    expect(state.waits).toEqual(["agent"])
     expect(state.posts).toEqual([
       {
         type: "appendChatBoxMessage",
         text: "src/file.ts:3-5\n```\nconst value = 1\n```",
       },
     ])
+  })
+
+  it("does not post to the Agent Manager when its readiness wait is cancelled", async () => {
+    const state = setup(true, false)
+
+    await state.commands.get("kilo-code.new.addToContext")?.()
+
+    expect(state.events).toEqual(["wait"])
+    expect(state.posts).toEqual([])
+  })
+
+  it("toggles chat search on the active Agent Manager once it is ready", async () => {
+    const state = setup(true)
+
+    await state.commands.get("kilo-code.new.toggleChatSearch")?.()
+
+    expect(state.events).toEqual(["wait", "post"])
+    expect(state.posts).toEqual([{ type: "action", action: "focusSearch" }])
+  })
+
+  it("does not toggle chat search when Agent Manager readiness is cancelled", async () => {
+    const state = setup(true, false)
+
+    await state.commands.get("kilo-code.new.toggleChatSearch")?.()
+
+    expect(state.events).toEqual(["wait"])
+    expect(state.posts).toEqual([])
   })
 })

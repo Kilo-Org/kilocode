@@ -1,6 +1,6 @@
 import { $ } from "bun"
 import { afterEach, describe, expect } from "bun:test"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Global } from "@opencode-ai/core/global"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Effect, Layer } from "effect"
@@ -8,10 +8,11 @@ import path from "path"
 import { Bus } from "../../src/bus"
 import { Config } from "../../src/config/config"
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
+import { EventV2Bridge } from "../../src/event-v2-bridge"
 import { Git } from "../../src/git"
 import { Skill } from "../../src/skill"
 import { Discovery } from "../../src/skill/discovery"
-import { disposeAllInstances, provideInstance, tmpdirScoped } from "../fixture/fixture"
+import { disposeAllInstances, provideInstance, testInstanceStoreLayer, tmpdirScoped } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
 const layer = Skill.layer.pipe(
@@ -19,11 +20,12 @@ const layer = Skill.layer.pipe(
   Layer.provide(Discovery.defaultLayer),
   Layer.provide(Config.defaultLayer),
   Layer.provide(Bus.layer),
-  Layer.provide(AppFileSystem.defaultLayer),
+  Layer.provide(FSUtil.defaultLayer),
   Layer.provide(Global.layer),
   Layer.provide(RuntimeFlags.layer({ disableExternalSkills: false, disableClaudeCodeSkills: false })),
+  Layer.provide(EventV2Bridge.defaultLayer),
 )
-const it = testEffect(Layer.mergeAll(layer, CrossSpawnSpawner.defaultLayer))
+const it = testEffect(Layer.mergeAll(layer, CrossSpawnSpawner.defaultLayer, testInstanceStoreLayer))
 
 afterEach(() => disposeAllInstances())
 

@@ -10,21 +10,23 @@ import { EditTool } from "../../src/tool/edit"
 import { provideTestInstance } from "../fixture/fixture"
 import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 import { LSP } from "../../src/lsp/lsp"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Format } from "../../src/format"
 import { Agent } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
+import { EventV2Bridge } from "../../src/event-v2-bridge"
 import { Truncate } from "../../src/tool/truncate"
 import { SessionID, MessageID } from "../../src/session/schema"
 
 const runtime = ManagedRuntime.make(
   Layer.mergeAll(
     LSP.defaultLayer,
-    AppFileSystem.defaultLayer,
+    FSUtil.defaultLayer,
     Format.defaultLayer,
     Bus.layer,
     Truncate.defaultLayer,
     Agent.defaultLayer,
+    EventV2Bridge.defaultLayer,
   ),
 )
 

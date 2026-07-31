@@ -40,7 +40,15 @@ export function callAuthProbe(scenario: ActiveScenario, credentials: "missing" |
   })
 }
 
-const appCache: Partial<Record<string, BackendApp>> = {}
+type CachedApp = BackendApp & { readonly dispose: () => Promise<void> }
+
+const appCache: Partial<Record<string, CachedApp>> = {}
+
+export async function disposeApps() {
+  const apps = Object.values(appCache)
+  for (const key of Object.keys(appCache)) delete appCache[key]
+  await Promise.all(apps.flatMap((app) => (app === undefined ? [] : [app.dispose()])))
+}
 
 function app(modules: Runtime, options: CallOptions) {
   const username = options.auth?.username
@@ -48,19 +56,26 @@ function app(modules: Runtime, options: CallOptions) {
   const cacheKey = `${username ?? ""}:${password ?? ""}`
   if (appCache[cacheKey]) return appCache[cacheKey]
 
-  const handler = HttpRouter.toWebHandler(
+  const web = HttpRouter.toWebHandler(
     modules.HttpApiApp.routes.pipe(
       Layer.provide(
+        // kilocode_change start - keep the filewatcher-disable flag visible (see httpapi-instance-route-auth.test.ts)
         ConfigProvider.layer(
-          ConfigProvider.fromUnknown({ KILO_SERVER_PASSWORD: password, KILO_SERVER_USERNAME: username }),
+          ConfigProvider.fromUnknown({
+            KILO_SERVER_PASSWORD: password,
+            KILO_SERVER_USERNAME: username,
+            KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: process.env.KILO_EXPERIMENTAL_DISABLE_FILEWATCHER ?? "true",
+          }),
         ),
+        // kilocode_change end
       ),
     ),
-    { disableLogger: true },
-  ).handler
+    { disableLogger: true, memoMap: modules.memoMap },
+  )
   return (appCache[cacheKey] = {
+    dispose: web.dispose,
     request(input: string | URL | Request, init?: RequestInit) {
-      return handler(
+      return web.handler(
         input instanceof Request ? input : new Request(new URL(input, "http://localhost"), init),
         modules.HttpApiApp.context,
       )

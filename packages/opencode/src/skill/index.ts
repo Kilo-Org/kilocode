@@ -1,26 +1,27 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import path from "path"
 import { pathToFileURL } from "url"
 import { Effect, Layer, Context, Schema } from "effect"
 import { NamedError } from "@opencode-ai/core/util/error"
 import type { Agent } from "@/agent/agent"
-import { Bus } from "@/bus"
+import { EventV2Bridge } from "@/event-v2-bridge"
 import { InstanceState } from "@/effect/instance-state"
 import { Global } from "@opencode-ai/core/global"
 import { Permission } from "@/permission"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Config } from "@/config/config"
+import { FrontmatterError } from "@opencode-ai/core/v1/config/error"
 import { ConfigMarkdown } from "@/config/markdown"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Glob } from "@opencode-ai/core/util/glob"
-import * as Log from "@opencode-ai/core/util/log"
 import { Discovery } from "./discovery"
 import { BUILTIN_SKILLS } from "../kilocode/skills/builtin" // kilocode_change
 import { primaryPaths } from "../kilocode/primary-worktree" // kilocode_change
 import { Git } from "@/git" // kilocode_change
 import { isRecord } from "@/util/record"
 import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
+import { trustedInProject } from "../kilocode/skill/trust" // kilocode_change
 
-const log = Log.create({ service: "skill" })
 const CLAUDE_EXTERNAL_DIR = ".claude"
 const AGENTS_EXTERNAL_DIR = ".agents"
 // kilocode_change start
@@ -35,6 +36,7 @@ export const Info = Schema.Struct({
   description: Schema.optional(Schema.String),
   location: Schema.String,
   content: Schema.String,
+  trusted: Schema.optional(Schema.Boolean), // kilocode_change - gate skill shell injection to trusted sources
 })
 export type Info = Schema.Schema.Type<typeof Info>
 
@@ -108,7 +110,7 @@ export interface Interface {
 }
 
 // kilocode_change start
-const add = Effect.fnUntraced(function* (state: State, match: Match, bus: Bus.Interface) {
+const add = Effect.fnUntraced(function* (state: State, match: Match, events: EventV2Bridge.Service["Service"]) {
   const source = match.sourceRoot ?? match.root
   // kilocode_change end
   const md = yield* Effect.tryPromise({
@@ -124,12 +126,10 @@ const add = Effect.fnUntraced(function* (state: State, match: Match, bus: Bus.In
   }).pipe(
     Effect.catch(
       Effect.fnUntraced(function* (err) {
-        const message = ConfigMarkdown.FrontmatterError.isInstance(err)
-          ? err.data.message
-          : `Failed to parse skill ${match.path}` // kilocode_change
+        const message = FrontmatterError.isInstance(err) ? err.data.message : `Failed to parse skill ${match.path}` // kilocode_change
         const { Session } = yield* Effect.promise(() => import("@/session/session"))
-        yield* bus.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
-        log.error("failed to load skill", { skill: match.path, err }) // kilocode_change
+        yield* events.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
+        yield* Effect.logError("failed to load skill", { skill: match.path, error: err }) // kilocode_change
         return undefined
       }),
     ),
@@ -140,7 +140,7 @@ const add = Effect.fnUntraced(function* (state: State, match: Match, bus: Bus.In
   if (!isSkillFrontmatter(md.data)) return
 
   if (state.skills[md.data.name]) {
-    log.warn("duplicate skill name", {
+    yield* Effect.logWarning("duplicate skill name", {
       name: md.data.name,
       existing: state.skills[md.data.name].location,
       duplicate: match.path, // kilocode_change
@@ -153,6 +153,7 @@ const add = Effect.fnUntraced(function* (state: State, match: Match, bus: Bus.In
     description: md.data.description,
     location: match.path, // kilocode_change
     content: md.content,
+    trusted: match.trusted, // kilocode_change
   }
 })
 
@@ -160,7 +161,7 @@ const scan = Effect.fnUntraced(function* (
   state: ScanState,
   root: string,
   pattern: string,
-  opts?: { dot?: boolean; scope?: string; trusted?: boolean; root?: string; sourceRoot?: string }, // kilocode_change
+  opts?: { dot?: boolean; scope?: string; trusted?: boolean; root?: string; sourceRoot?: string; projectRoot?: string }, // kilocode_change
 ) {
   const matches = yield* Effect.tryPromise({
     try: () =>
@@ -175,18 +176,21 @@ const scan = Effect.fnUntraced(function* (
   }).pipe(
     Effect.catch((error) => {
       if (!opts?.scope) return Effect.die(error)
-      log.error(`failed to scan ${opts.scope} skills`, { dir: root, error })
-      return Effect.succeed([] as string[])
+      return Effect.logError(`failed to scan ${opts.scope} skills`, { dir: root, error: error }).pipe(
+        Effect.as([] as string[]),
+      )
     }),
   )
 
   for (const match of matches) {
-    // kilocode_change start
+    // kilocode_change start - a trusted match whose realpath resolves inside the project (e.g. a
+    // symlink from ~/.agents/skills into the repo) must not mint trust for project-controlled content
+    const trusted = (opts?.trusted ?? false) && !trustedInProject(match, opts?.projectRoot)
     state.matches.set(match, {
       path: match,
-      trusted: opts?.trusted ?? false,
-      root: opts?.root,
-      sourceRoot: opts?.sourceRoot,
+      trusted,
+      root: trusted ? opts?.root : (opts?.root ?? opts?.projectRoot),
+      sourceRoot: trusted ? opts?.sourceRoot : (opts?.sourceRoot ?? opts?.projectRoot),
     })
     // kilocode_change end
     state.dirs.add(path.dirname(match))
@@ -196,7 +200,7 @@ const scan = Effect.fnUntraced(function* (
 const discoverSkills = Effect.fnUntraced(function* (
   config: Config.Interface,
   discovery: Discovery.Interface,
-  fsys: AppFileSystem.Interface,
+  fsys: FSUtil.Interface,
   global: Global.Interface,
   disableExternalSkills: boolean,
   disableClaudeCodeSkills: boolean,
@@ -214,12 +218,12 @@ const discoverSkills = Effect.fnUntraced(function* (
     for (const dir of externalDirs) {
       const root = path.join(global.home, dir)
       if (!(yield* fsys.isDir(root))) continue
-      yield* scan(state, root, EXTERNAL_SKILL_PATTERN, { dot: true, scope: "global", trusted: true }) // kilocode_change
+      yield* scan(state, root, EXTERNAL_SKILL_PATTERN, { dot: true, scope: "global", trusted: true, projectRoot }) // kilocode_change
     }
 
     // kilocode_change start
     const local = yield* fsys
-      .up({ targets: externalDirs, start: directory, stop: worktree })
+      .up({ targets: externalDirs, start: directory, stop: projectRoot })
       .pipe(Effect.catch(() => Effect.succeed([] as string[])))
     const fallbacks = yield* primaryPaths(directory, worktree, externalDirs) // kilocode_change
     const upDirs = [...fallbacks, ...local]
@@ -251,6 +255,7 @@ const discoverSkills = Effect.fnUntraced(function* (
       trusted,
       root: trusted ? undefined : projectRoot,
       sourceRoot: trusted ? undefined : sourceRoot,
+      projectRoot,
     })
     // kilocode_change end
   }
@@ -260,14 +265,18 @@ const discoverSkills = Effect.fnUntraced(function* (
     const expanded = item.startsWith("~/") ? path.join(global.home, item.slice(2)) : item
     const dir = path.isAbsolute(expanded) ? expanded : path.join(directory, expanded)
     if (!(yield* fsys.isDir(dir))) {
-      log.warn("skill path not found", { path: dir })
+      yield* Effect.logWarning("skill path not found", { path: dir })
       continue
     }
 
     // kilocode_change start - trust follows the config source that declared the path, never the selected path.
     const origin = cfg.skill_path_origins?.[item]
     const trusted = origin?.trusted === true && path.isAbsolute(expanded)
-    yield* scan(state, dir, SKILL_PATTERN, { trusted, root: trusted ? undefined : (origin?.root ?? projectRoot) })
+    yield* scan(state, dir, SKILL_PATTERN, {
+      trusted,
+      root: trusted ? undefined : (origin?.root ?? projectRoot),
+      projectRoot,
+    })
     // kilocode_change end
   }
 
@@ -284,7 +293,11 @@ const discoverSkills = Effect.fnUntraced(function* (
   }
 })
 
-const loadSkills = Effect.fnUntraced(function* (state: State, discovered: DiscoveryState, bus: Bus.Interface) {
+const loadSkills = Effect.fnUntraced(function* (
+  state: State,
+  discovered: DiscoveryState,
+  events: EventV2Bridge.Service["Service"],
+) {
   // kilocode_change start - seed built-in skills before discovery so user skills can override
   for (const skill of BUILTIN_SKILLS) {
     state.skills[skill.name] = {
@@ -292,13 +305,14 @@ const loadSkills = Effect.fnUntraced(function* (state: State, discovered: Discov
       description: skill.description,
       location: BUILTIN_LOCATION,
       content: skill.content,
+      trusted: true, // kilocode_change - builtin skills ship in the binary
     }
   }
   // kilocode_change end
 
-  for (const match of discovered.matches) yield* add(state, match, bus) // kilocode_change
+  for (const match of discovered.matches) yield* add(state, match, events) // kilocode_change
 
-  log.info("init", { count: Object.keys(state.skills).length })
+  yield* Effect.logInfo("init", { count: Object.keys(state.skills).length })
 })
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/Skill") {}
@@ -308,8 +322,8 @@ export const layer = Layer.effect(
   Effect.gen(function* () {
     const discovery = yield* Discovery.Service
     const config = yield* Config.Service
-    const bus = yield* Bus.Service
-    const fsys = yield* AppFileSystem.Service
+    const events = yield* EventV2Bridge.Service
+    const fsys = yield* FSUtil.Service
     const global = yield* Global.Service
     const flags = yield* RuntimeFlags.Service
     const git = yield* Git.Service // kilocode_change
@@ -330,7 +344,7 @@ export const layer = Layer.effect(
     const state = yield* InstanceState.make(
       Effect.fn("Skill.state")(function* () {
         const s: State = { skills: {}, dirs: new Set() }
-        yield* loadSkills(s, yield* InstanceState.get(discovered), bus)
+        yield* loadSkills(s, yield* InstanceState.get(discovered), events)
         return s
       }),
     )
@@ -367,12 +381,14 @@ export const layer = Layer.effect(
   }),
 )
 
-export const defaultLayer = layer.pipe(
+// kilocode_change start - preserve the concrete layer type across Kilo's Agent/Skill cycle
+export const defaultLayer: Layer.Layer<Service> = layer.pipe(
+  // kilocode_change end
   Layer.provide(Git.defaultLayer), // kilocode_change
   Layer.provide(Discovery.defaultLayer),
   Layer.provide(Config.defaultLayer),
-  Layer.provide(Bus.layer),
-  Layer.provide(AppFileSystem.defaultLayer),
+  Layer.provide(EventV2Bridge.defaultLayer),
+  Layer.provide(FSUtil.defaultLayer),
   Layer.provide(Global.layer),
   Layer.provide(RuntimeFlags.defaultLayer),
 )
@@ -403,5 +419,15 @@ export function fmt(list: Info[], opts: { verbose: boolean }) {
       .map((skill) => `- **${skill.name}**: ${skill.description}`),
   ].join("\n")
 }
+
+export const node = LayerNode.make(layer, [
+  Discovery.node,
+  Config.node,
+  EventV2Bridge.node,
+  FSUtil.node,
+  Global.node,
+  RuntimeFlags.node,
+  Git.node, // kilocode_change
+])
 
 export * as Skill from "."

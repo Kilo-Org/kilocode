@@ -50,6 +50,12 @@
   white-space: nowrap;
 }
 
+@media (max-width: 360px) {
+  [data-component="task-header"] {
+    padding-inline: 8px;
+  }
+}
+
 /* ============================================
    Task Header Todos
    ============================================ */
@@ -465,42 +471,6 @@
   color: var(--vscode-descriptionForeground);
   font-size: var(--kilo-font-size-11);
   font-variant-numeric: tabular-nums;
-}
-
-[data-slot="task-header-memory"] {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 8px;
-  font-size: var(--kilo-font-size-11);
-  color: var(--vscode-descriptionForeground);
-  min-width: 0;
-}
-
-/* Passed to the shared Tooltip via its `class` prop (no data-slot API), so the trigger stretches. */
-.task-header-memory-tooltip {
-  display: inline-flex;
-  flex: 1;
-  min-width: 0;
-}
-
-[data-slot="task-header-memory-status"] {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--vscode-foreground);
-}
-
-[data-slot="task-header-memory-actions"] {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  flex-shrink: 0;
 }
 
 /* Expand toggle */

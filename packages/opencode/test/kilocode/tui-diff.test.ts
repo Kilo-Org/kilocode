@@ -13,6 +13,13 @@ describe("splitDiffHunks", () => {
     expect(splitDiffHunks(diff)).toEqual([diff])
   })
 
+  test("handles a large single hunk without rebuilding the accumulator per line", () => {
+    const body = Array.from({ length: 10_000 }, (_, index) => ` line ${index}`)
+    const diff = ["--- a/file.ts", "+++ b/file.ts", "@@ -1,10000 +1,10000 @@", ...body].join("\n")
+
+    expect(splitDiffHunks(diff)).toEqual([diff])
+  })
+
   test("ignores header-like content lines inside a hunk", () => {
     const diff = [
       "--- a/file.ts",

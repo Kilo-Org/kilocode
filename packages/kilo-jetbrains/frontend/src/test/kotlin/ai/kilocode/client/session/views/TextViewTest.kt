@@ -38,6 +38,17 @@ class TextViewTest : BasePlatformTestCase() {
         assertEquals("", view.markdown())
     }
 
+    fun `test empty text view does not reserve transcript height`() {
+        val view = TextView(Text("p1"))
+        view.setSize(260, 1)
+
+        assertEquals(0, view.preferredSize.height)
+
+        view.appendDelta("hello")
+
+        assertTrue(view.preferredSize.height > 0)
+    }
+
     fun `test Text with content sets initial markdown`() {
         val text = Text("p1").also { it.content.append("hello **world**") }
         val view = TextView(text)

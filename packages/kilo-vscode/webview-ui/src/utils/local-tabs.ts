@@ -11,6 +11,34 @@ export type ApplyLocalTabOrder = (items: { id: string }[], order: string[]) => {
 export interface LocalTabInventory {
   local: readonly string[]
   external?: ReadonlySet<string>
+  unresolved?: ReadonlySet<string>
+  rejected?: ReadonlySet<string>
+}
+
+type TrackedSession = { id: string; worktreeId: string | null }
+type LoadedSession = { id: string; parentID?: string | null }
+
+export function trackedSessionInventory(managed: TrackedSession[], loaded: LoadedSession[]): LocalTabInventory {
+  const lookup = new Map(loaded.map((item) => [item.id, item]))
+  const root = (id: string) => {
+    const info = lookup.get(id)
+    return !info || info.parentID === null
+  }
+  const unresolved = new Set(loaded.filter((item) => item.parentID === undefined).map((item) => item.id))
+  const rejected = new Set(
+    managed
+      .filter((item) => {
+        const info = lookup.get(item.id)
+        return info?.parentID !== undefined && info.parentID !== null
+      })
+      .map((item) => item.id),
+  )
+  return {
+    local: managed.filter((item) => !item.worktreeId && root(item.id)).map((item) => item.id),
+    external: new Set(managed.filter((item) => item.worktreeId && root(item.id)).map((item) => item.id)),
+    unresolved,
+    rejected,
+  }
 }
 
 export interface LocalTabReconcileResult {
@@ -81,6 +109,22 @@ export function pendingTabForCreated(
   return ids.includes(draft) && check(draft) ? draft : undefined
 }
 
+// Tab outcome for a created session: explicit activation opens it in the
+// foreground, otherwise only a matching pending draft promotes into it.
+// Callers never combine activate with a draftID; activation wins if they do.
+export function tabsForCreatedSession(
+  state: LocalTabState,
+  id: string,
+  draftID: string | undefined,
+  activate: boolean | undefined,
+  check: PendingTabCheck = isPendingTab,
+): LocalTabState | undefined {
+  if (activate) return openSessionTab(state, id)
+  const draft = pendingTabForCreated(state.ids, draftID, check)
+  if (!draft) return undefined
+  return replacePendingTab(state, draft, id)
+}
+
 export function nextTabAfterClose(ids: readonly string[], id: string): string | undefined {
   const index = ids.indexOf(id)
   if (index === -1) return undefined
@@ -123,8 +167,8 @@ export function restoreTrackedTabs(
   apply: ApplyLocalTabOrder,
 ): string[] | undefined {
   const locals = [...inventory.local]
-  const external = inventory.external
-  const evict = (ids: string[]) => (external?.size ? ids.filter((id) => !external.has(id)) : ids)
+  const evict = (ids: string[]) =>
+    ids.filter((id) => !inventory.external?.has(id) && !inventory.unresolved?.has(id) && !inventory.rejected?.has(id))
   const real = current.filter((id) => !check(id))
 
   if (locals.length > 0 && real.length === 0) {
@@ -158,23 +202,22 @@ export function reconcileTrackedTabs(
 ): LocalTabReconcileResult | undefined {
   const seen = new Set(loaded)
   const local = new Set(inventory.local)
-  const external = inventory.external
   const ids: string[] = []
-  const forget: string[] = []
+  const forget = new Set(inventory.rejected)
 
   for (const id of current) {
     if (check(id)) {
       ids.push(id)
       continue
     }
-    if (external?.has(id)) continue
+    if (inventory.external?.has(id) || inventory.unresolved?.has(id) || inventory.rejected?.has(id)) continue
     if (seen.has(id) || local.has(id)) {
       ids.push(id)
       continue
     }
-    forget.push(id)
+    forget.add(id)
   }
 
-  if (ids.length === current.length && forget.length === 0) return undefined
-  return { ids, forget }
+  if (ids.length === current.length && forget.size === 0) return undefined
+  return { ids, forget: [...forget] }
 }

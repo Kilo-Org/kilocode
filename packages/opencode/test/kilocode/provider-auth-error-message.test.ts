@@ -1,5 +1,5 @@
 import { expect } from "bun:test"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Effect, Layer } from "effect"
 import path from "path"
 import * as Log from "@opencode-ai/core/util/log"
@@ -9,7 +9,7 @@ import { TestInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { preparePluginDependencies } from "./plugin-dependencies"
 
-Log.init({ print: false })
+void Log.init({ print: false })
 
 const state = Layer.effectDiscard(
   Effect.acquireRelease(
@@ -18,11 +18,11 @@ const state = Layer.effectDiscard(
   ),
 )
 
-const it = testEffect(Layer.mergeAll(state, AppFileSystem.defaultLayer))
+const it = testEffect(Layer.mergeAll(state, FSUtil.defaultLayer))
 
 function writePlugin(dir: string) {
   return Effect.gen(function* () {
-    const fs = yield* AppFileSystem.Service
+    const fs = yield* FSUtil.Service
     yield* Effect.promise(() => preparePluginDependencies(dir))
 
     yield* fs.writeWithDirs(

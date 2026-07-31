@@ -30,6 +30,7 @@ export interface CodeIndexConfig {
   searchMaxResults?: number
   embeddingBatchSize?: number
   scannerMaxBatchRetries?: number
+  fileExtensions: string[]
 }
 
 export type PreviousConfigSnapshot = {
@@ -57,4 +58,5 @@ export type PreviousConfigSnapshot = {
   voyageApiKey?: string
   qdrantUrl?: string
   qdrantApiKey?: string
+  fileExtensions: string[]
 }

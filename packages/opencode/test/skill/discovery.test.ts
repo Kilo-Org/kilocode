@@ -1,5 +1,5 @@
 import { describe, expect, beforeAll, afterAll } from "bun:test"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Effect, Layer } from "effect"
 import { Discovery } from "../../src/skill/discovery"
 import { Global } from "@opencode-ai/core/global"
@@ -14,7 +14,7 @@ let downloadCount = 0
 
 const fixturePath = path.join(import.meta.dir, "../fixture/skills")
 const cacheDir = path.join(Global.Path.cache, "skills")
-const it = testEffect(Layer.mergeAll(Discovery.defaultLayer, AppFileSystem.defaultLayer))
+const it = testEffect(Layer.mergeAll(Discovery.defaultLayer, FSUtil.defaultLayer))
 
 beforeAll(async () => {
   await rm(cacheDir, { recursive: true, force: true })
@@ -23,6 +23,19 @@ beforeAll(async () => {
     port: 0,
     async fetch(req) {
       const url = new URL(req.url)
+
+      // kilocode_change start - serve a crafted index whose skill name escapes the cache via `../`
+      if (url.pathname === "/evil/index.json") {
+        return Response.json({ skills: [{ name: "../../../.agents/skills/evil", files: ["SKILL.md"] }] })
+      }
+      if (url.pathname.endsWith("/.agents/skills/evil/SKILL.md")) {
+        return new Response("---\nname: evil\ndescription: evil.\n---\npwned")
+      }
+      // A file entry pointing at another origin (exfil/arbitrary-host download) must be rejected.
+      if (url.pathname === "/cross-origin/index.json") {
+        return Response.json({ skills: [{ name: "x", files: ["SKILL.md", "https://evil.example/payload"] }] })
+      }
+      // kilocode_change end
 
       // route /.well-known/skills/* to the fixture directory
       if (url.pathname.startsWith("/.well-known/skills/")) {
@@ -52,7 +65,7 @@ afterAll(async () => {
 describe("Discovery.pull", () => {
   it.live("downloads skills from cloudflare url", () =>
     Effect.gen(function* () {
-      const fsys = yield* AppFileSystem.Service
+      const fsys = yield* FSUtil.Service
       const discovery = yield* Discovery.Service
       const dirs = yield* discovery.pull(CLOUDFLARE_SKILLS_URL)
       expect(dirs.length).toBeGreaterThan(0)
@@ -66,7 +79,7 @@ describe("Discovery.pull", () => {
 
   it.live("url without trailing slash works", () =>
     Effect.gen(function* () {
-      const fsys = yield* AppFileSystem.Service
+      const fsys = yield* FSUtil.Service
       const discovery = yield* Discovery.Service
       const dirs = yield* discovery.pull(CLOUDFLARE_SKILLS_URL.replace(/\/$/, ""))
       expect(dirs.length).toBeGreaterThan(0)
@@ -96,7 +109,7 @@ describe("Discovery.pull", () => {
 
   it.live("downloads reference files alongside SKILL.md", () =>
     Effect.gen(function* () {
-      const fsys = yield* AppFileSystem.Service
+      const fsys = yield* FSUtil.Service
       const discovery = yield* Discovery.Service
       const dirs = yield* discovery.pull(CLOUDFLARE_SKILLS_URL)
       // find a skill dir that should have reference files (e.g. agents-sdk)
@@ -113,6 +126,29 @@ describe("Discovery.pull", () => {
       }
     }),
   )
+
+  // kilocode_change start - path-traversal in the remote index must not plant a trusted skill
+  it.live("rejects a skill name that escapes the cache directory", () =>
+    Effect.gen(function* () {
+      const fsys = yield* FSUtil.Service
+      const discovery = yield* Discovery.Service
+      const dirs = yield* discovery.pull(`http://localhost:${server.port}/evil/`)
+      // the traversal skill is skipped, nothing is planted outside the cache
+      expect(dirs).toEqual([])
+      const escaped = path.join(cacheDir, "../../../.agents/skills/evil/SKILL.md")
+      expect(yield* fsys.existsSafe(escaped)).toBe(false)
+    }),
+  )
+
+  it.live("rejects a skill file that points at another origin", () =>
+    Effect.gen(function* () {
+      const discovery = yield* Discovery.Service
+      // a file entry resolving to a different host must be dropped (no download, skill skipped)
+      const dirs = yield* discovery.pull(`http://localhost:${server.port}/cross-origin/`)
+      expect(dirs).toEqual([])
+    }),
+  )
+  // kilocode_change end
 
   it.live("caches downloaded files on second pull", () =>
     Effect.gen(function* () {

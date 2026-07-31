@@ -122,7 +122,9 @@ export function activate(context: vscode.ExtensionContext) {
   }
 
   // Create the provider with shared service
-  const provider = new KiloProvider(context.extensionUri, connectionService, context)
+  const provider = new KiloProvider(context.extensionUri, connectionService, context, {
+    focusContext: "kilo-code.new.sidebarFocused",
+  })
   provider.setRemoteService(remoteService)
 
   // Register the webview view provider for the sidebar.
@@ -201,6 +203,8 @@ export function activate(context: vscode.ExtensionContext) {
         const ctx = agentManagerHost.wrapExistingPanel(panel, {
           onBeforeMessage: (msg) => agentManagerProvider.handleMessage(msg),
           worktreeDirectories: () => agentManagerProvider.getWorktreeDirectories(),
+          workspaceRoot: () => agentManagerProvider.workspaceRoot(),
+          projectId: () => agentManagerProvider.projectId(),
         })
         agentManagerProvider.deserializePanel(ctx)
         return Promise.resolve()
@@ -498,6 +502,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.agentManager.newWorktree", () => {
       agentManagerProvider.postMessage({ type: "action", action: "newWorktree" })
     }),
+    vscode.commands.registerCommand("kilo-code.new.agentManager.quickWorktree", () => {
+      agentManagerProvider.postMessage({ type: "action", action: "quickWorktree" })
+    }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.openWorktree", () => {
       agentManagerProvider.postMessage({ type: "action", action: "openWorktree" })
     }),
@@ -557,7 +564,7 @@ export function activate(context: vscode.ExtensionContext) {
   )
 
   // Register code actions (editor context menus, terminal context menus, keyboard shortcuts)
-  registerCodeActions(context, provider, agentManagerProvider)
+  registerCodeActions(context, provider, agentManagerProvider, activeTabProvider)
   registerTerminalActions(context, provider, agentManagerProvider)
 
   // Register CodeActionProvider (lightbulb quick fixes)
@@ -589,7 +596,7 @@ export async function deactivate() {
   TelemetryProxy.getInstance().shutdown()
 }
 
-async function openKiloInNewTab(
+function openKiloInNewTab(
   context: vscode.ExtensionContext,
   connectionService: KiloConnectionService,
   agentManagerProvider: AgentManagerProvider,
@@ -598,20 +605,16 @@ async function openKiloInNewTab(
   remoteService: RemoteStatusService,
   autoApprove: ReturnType<typeof registerToggleAutoApprove>,
 ) {
-  const lastCol = Math.max(...vscode.window.visibleTextEditors.map((e) => e.viewColumn || 0), 0)
-  const hasVisibleEditors = vscode.window.visibleTextEditors.length > 0
-
-  if (!hasVisibleEditors) {
-    await vscode.commands.executeCommand("workbench.action.newGroupRight")
-  }
-
-  const targetCol = hasVisibleEditors ? Math.max(lastCol + 1, 1) : vscode.ViewColumn.Two
-
-  const panel = vscode.window.createWebviewPanel("kilo-code.new.TabPanel", EXTENSION_DISPLAY_NAME, targetCol, {
-    enableScripts: true,
-    retainContextWhenHidden: true,
-    localResourceRoots: [context.extensionUri],
-  })
+  const panel = vscode.window.createWebviewPanel(
+    "kilo-code.new.TabPanel",
+    EXTENSION_DISPLAY_NAME,
+    vscode.ViewColumn.Active,
+    {
+      enableScripts: true,
+      retainContextWhenHidden: true,
+      localResourceRoots: [context.extensionUri],
+    },
+  )
 
   panel.iconPath = {
     light: vscode.Uri.joinPath(context.extensionUri, "assets", "icons", "kilo-light.svg"),
@@ -632,11 +635,6 @@ async function openKiloInNewTab(
   tabProvider.setDiffVirtualProvider(diffVirtualProvider)
   tabProvider.resolveWebviewPanel(panel)
   tabPanels.set(panel, tabProvider)
-
-  // Wait for the new panel to become active before locking the editor group.
-  // This avoids the race where VS Code hasn't switched focus yet.
-  await waitForWebviewPanelToBeActive(panel)
-  await vscode.commands.executeCommand("workbench.action.lockEditorGroup")
 
   panel.onDidDispose(
     () => {
@@ -667,20 +665,4 @@ function ensureCommandsSkipShell(commands: string[]): void {
   const missing = commands.filter((cmd) => !existing.includes(cmd))
   if (missing.length === 0) return
   config.update("commandsToSkipShell", [...existing, ...missing], target)
-}
-
-function waitForWebviewPanelToBeActive(panel: vscode.WebviewPanel): Promise<void> {
-  if (panel.active) {
-    return Promise.resolve()
-  }
-
-  return new Promise((resolve) => {
-    const disposable = panel.onDidChangeViewState((event) => {
-      if (!event.webviewPanel.active) {
-        return
-      }
-      disposable.dispose()
-      resolve()
-    })
-  })
 }

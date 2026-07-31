@@ -4,10 +4,11 @@ import { Effect } from "effect"
 import { Config } from "../../src/config/config"
 import { SwePruner } from "../../src/kilocode/swe-pruner"
 import { Provider } from "../../src/provider/provider"
-import { ModelID, ProviderID } from "../../src/provider/schema"
+import { ModelV2 } from "@opencode-ai/core/model"
+import { ProviderV2 } from "@opencode-ai/core/provider"
 
-const pid = ProviderID.make("test")
-const mid = ModelID.make("swe-pruner-test")
+const pid = ProviderV2.ID.make("test")
+const mid = ModelV2.ID.make("swe-pruner-test")
 
 function model(): Provider.Model {
   return {

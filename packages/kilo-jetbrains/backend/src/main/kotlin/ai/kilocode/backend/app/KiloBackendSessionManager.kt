@@ -86,6 +86,10 @@ class KiloBackendSessionManager(
     }
 
     fun stop() {
+        val active = _statuses.value.filterValues { it.type != "idle" }
+        if (active.isNotEmpty()) {
+            log.warn("Session manager stopping with active sessions count=${active.size} statuses=${active.values.map { it.type }.distinct()}")
+        }
         watcher?.cancel()
         watcher = null
         client = null
@@ -264,55 +268,83 @@ class KiloBackendSessionManager(
 
     // ------ mapping (generated API model → DTO) ------
 
-    private fun dto(s: ai.kilocode.jetbrains.api.model.Session) = SessionDto(
+    private fun dto(s: ai.kilocode.jetbrains.api.model.Session) = dto(
         id = s.id,
-        projectID = s.projectID,
-        directory = s.directory,
-        parentID = s.parentID,
+        project = s.projectID,
+        dir = s.directory,
+        parent = s.parentID,
         title = s.title,
         version = s.version,
-        time = SessionTimeDto(
-            created = time(s.id, "created", s.time.created),
-            updated = time(s.id, "updated", s.time.updated),
-            archived = s.time.archived,
-        ),
-        summary = s.summary?.let {
-            SessionSummaryDto(
-                additions = it.additions.safeInt(),
-                deletions = it.deletions.safeInt(),
-                files = it.files.safeInt(),
-            )
-        },
+        created = s.time.created,
+        updated = s.time.updated,
+        archived = s.time.archived,
+        summary = s.summary?.let { summary(it.additions, it.deletions, it.files) },
         revert = revertDto(s.revert),
     )
 
-    private fun dto(s: GlobalSession) = SessionDto(
+    private fun dto(s: ai.kilocode.jetbrains.api.model.Session1) = dto(
         id = s.id,
-        projectID = s.projectID,
-        directory = s.directory,
-        parentID = s.parentID,
+        project = s.projectID,
+        dir = s.directory,
+        parent = s.parentID,
         title = s.title,
         version = s.version,
-        time = SessionTimeDto(
-            created = time(s.id, "created", s.time.created),
-            updated = time(s.id, "updated", s.time.updated),
-            archived = s.time.archived,
-        ),
-        summary = s.summary?.let {
-            SessionSummaryDto(
-                additions = it.additions?.safeInt() ?: 0,
-                deletions = it.deletions?.safeInt() ?: 0,
-                files = it.files?.safeInt() ?: 0,
-            )
-        },
+        created = s.time.created,
+        updated = s.time.updated,
+        archived = s.time.archived,
+        summary = s.summary?.let { summary(it.additions, it.deletions, it.files) },
         revert = revertDto(s.revert),
+    )
+
+    private fun dto(s: GlobalSession) = dto(
+        id = s.id,
+        project = s.projectID,
+        dir = s.directory,
+        parent = s.parentID,
+        title = s.title,
+        version = s.version,
+        created = s.time.created,
+        updated = s.time.updated,
+        archived = s.time.archived,
+        summary = s.summary?.let { summary(it.additions, it.deletions, it.files) },
+        revert = revertDto(s.revert),
+    )
+
+    private fun dto(
+        id: String,
+        project: String,
+        dir: String,
+        parent: String?,
+        title: String,
+        version: String,
+        created: Number?,
+        updated: Number?,
+        archived: Double?,
+        summary: SessionSummaryDto?,
+        revert: SessionRevertDto?,
+    ) = SessionDto(
+        id = id,
+        projectID = project,
+        directory = dir,
+        parentID = parent,
+        title = title,
+        version = version,
+        time = SessionTimeDto(
+            created = time(id, "created", created),
+            updated = time(id, "updated", updated),
+            archived = archived,
+        ),
+        summary = summary,
+        revert = revert,
+    )
+
+    private fun summary(add: Double?, del: Double?, files: Double?) = SessionSummaryDto(
+        additions = count(add),
+        deletions = count(del),
+        files = count(files),
     )
 
     private fun revertDto(s: ai.kilocode.jetbrains.api.model.SessionRevert?) = s?.let {
-        revertDto(it.messageID, it.partID, it.snapshot, it.diff)
-    }
-
-    private fun revertDto(s: ai.kilocode.jetbrains.api.model.GlobalSessionRevert?) = s?.let {
         revertDto(it.messageID, it.partID, it.snapshot, it.diff)
     }
 
@@ -333,6 +365,8 @@ class KiloBackendSessionManager(
     )
 
     private fun encode(value: String) = java.net.URLEncoder.encode(value, Charsets.UTF_8)
+
+    private fun count(value: Double?) = value?.safeInt() ?: 0
 
     private fun time(id: String, field: String, value: Number?): Double {
         if (value != null) return value.toDouble()

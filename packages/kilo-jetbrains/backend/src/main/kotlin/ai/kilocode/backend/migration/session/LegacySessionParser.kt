@@ -38,9 +38,35 @@ object LegacySessionParser {
         val conversation = parseConversation(conversationRaw)
         val messages = LegacySessionMessages.parseMessages(conversation, id, workspace, effectiveItem)
         val parts = LegacySessionParts.parseParts(conversation, id, effectiveItem)
+        val referenced = parts.mapNotNull { it["messageID"]?.jsonPrimitive?.content }.toSet()
+        val kept = relink(keep(messages, referenced), referenced)
 
-        return NormalizedSession(project = project, session = session, messages = messages, parts = parts)
+        return NormalizedSession(project = project, session = session, messages = kept, parts = parts)
     }
+
+    private fun keep(messages: List<JsonObject>, referenced: Set<String>): List<JsonObject> = messages.filterIndexed { index, msg ->
+        val id = msg["id"]?.jsonPrimitive?.content ?: return@filterIndexed false
+        if (id in referenced) return@filterIndexed true
+        if (role(msg) != "user") return@filterIndexed false
+        val next = messages.getOrNull(index + 1) ?: return@filterIndexed false
+        role(next) == "assistant" && next["id"]?.jsonPrimitive?.content in referenced
+    }
+
+    private fun relink(messages: List<JsonObject>, referenced: Set<String>): List<JsonObject> = messages.mapIndexed { index, msg ->
+        val data = msg["data"] as? JsonObject ?: return@mapIndexed msg
+        if (role(msg) != "assistant") return@mapIndexed msg
+        val parent = messages.take(index).lastOrNull {
+            val id = it["id"]?.jsonPrimitive?.content
+            role(it) == "user" && id != null && id in referenced
+        }?.get("id")?.jsonPrimitive?.content
+            ?: msg["id"]?.jsonPrimitive?.content
+        parent ?: return@mapIndexed msg
+        JsonObject(msg.toMutableMap().also {
+            it["data"] = JsonObject(data.toMutableMap().also { body -> body["parentID"] = JsonPrimitive(parent) })
+        })
+    }
+
+    private fun role(msg: JsonObject): String? = (msg["data"] as? JsonObject)?.get("role")?.jsonPrimitive?.content
 
     // -----------------------------------------------------------------------
     // Project payload

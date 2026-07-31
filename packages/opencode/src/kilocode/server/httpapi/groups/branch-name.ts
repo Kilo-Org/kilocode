@@ -1,4 +1,5 @@
-import { ModelID, ProviderID } from "@/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { SessionID } from "@/session/schema"
 import { Authorization } from "@/server/routes/instance/httpapi/middleware/authorization"
 import { InstanceContextMiddleware } from "@/server/routes/instance/httpapi/middleware/instance-context"
@@ -16,8 +17,8 @@ export const BranchNamePaths = {
 
 export const BranchNamePayload = Schema.Struct({
   prompt: Schema.String,
-  providerID: Schema.optional(ProviderID),
-  modelID: Schema.optional(ModelID),
+  providerID: Schema.optional(ProviderV2.ID),
+  modelID: Schema.optional(ModelV2.ID),
 })
 
 const BranchNameResponse = Schema.Struct({

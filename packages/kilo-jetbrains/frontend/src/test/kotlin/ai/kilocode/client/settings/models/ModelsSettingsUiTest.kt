@@ -373,8 +373,8 @@ class ModelsSettingsUiTest : BasePlatformTestCase() {
     }
 
     private fun flushUntil(done: () -> Boolean) = runBlocking {
-        repeat(20) {
-            delay(100)
+        repeat(200) {
+            delay(10)
             edt { UIUtil.dispatchAllInvocationEvents() }
             if (done()) return@runBlocking
         }

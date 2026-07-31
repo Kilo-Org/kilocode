@@ -6,14 +6,17 @@ import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
-import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
+import ai.kilocode.client.util.UiTimerSource
+import ai.kilocode.client.util.UiTimers
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.util.Disposer
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.components.BorderLayoutPanel
 
 /**
  * Progress footer rendered at the bottom of the session transcript while the
@@ -31,28 +34,39 @@ import com.intellij.util.ui.JBUI
 class ProgressPanel(
     model: SessionModel,
     parent: Disposable,
-) : Stack(StackAxis.HORIZONTAL, UiStyle.Gap.md()), SessionEditorStyleTarget {
+    private val clock: UiTimerSource = UiTimers,
+) : BorderLayoutPanel(), SessionEditorStyleTarget {
 
     private var style = SessionEditorStyle.current()
     private var state: SessionState = SessionState.Idle
+    private var began = 0L
     private val label = JBLabel().apply {
         foreground = style.editorForeground
     }
+    private val elapsed = JBLabel().apply {
+        foreground = UiStyle.Colors.weak()
+    }
     private val spinner = JBLabel(AnimatedIcon.Default())
+    private val tick = clock.timer(1000) { syncElapsed() }
 
     init {
         isOpaque = false
         isVisible = false
         border = JBUI.Borders.empty(
             UiStyle.Gap.sm(),
-            JBUI.scale(SessionUiStyle.View.Layout.HORIZONTAL_PADDING),
+            0,
             0,
             0,
         )
         applyStyle(SessionEditorStyle.current())
 
-        next(spinner)
-        next(label)
+        addToLeft(
+            Stack(StackAxis.HORIZONTAL, UiStyle.Gap.md())
+                .next(spinner)
+                .next(label),
+        )
+        addToRight(elapsed)
+        Disposer.register(parent) { tick.stop() }
 
         model.addListener(parent) { event ->
             if (event is SessionModelEvent.StateChanged) onState(event.state)
@@ -61,6 +75,9 @@ class ProgressPanel(
 
     /** Exposed for test assertions. */
     fun labelText(): String = label.text
+
+    /** Exposed for test assertions. */
+    fun elapsedText(): String = elapsed.text
 
     /** Exposed for test assertions. */
     fun labelForeground() = label.foreground
@@ -72,22 +89,42 @@ class ProgressPanel(
                 spinner.isVisible = true
                 label.text = state.text
                 label.foreground = style.editorForeground
-                isVisible = true
+                showProgress()
             }
             is SessionState.Retry -> {
                 spinner.isVisible = true
                 label.text = retryText(state)
                 label.foreground = UiStyle.Colors.warningLabelForeground()
-                isVisible = true
+                showProgress()
             }
             is SessionState.Offline -> {
                 spinner.isVisible = false
                 label.text = state.message.ifBlank { KiloBundle.message("session.status.offline") }
                 label.foreground = UiStyle.Colors.errorLabelForeground()
-                isVisible = true
+                showProgress()
             }
-            else -> isVisible = false
+            else -> hideProgress()
         }
+        revalidate()
+        repaint()
+    }
+
+    private fun showProgress() {
+        if (!isVisible) {
+            began = clock.now()
+            syncElapsed()
+        }
+        if (!tick.isRunning()) tick.start()
+        isVisible = true
+    }
+
+    private fun hideProgress() {
+        tick.stop()
+        isVisible = false
+    }
+
+    private fun syncElapsed() {
+        elapsed.text = elapsedText((clock.now() - began).coerceAtLeast(0))
         revalidate()
         repaint()
     }
@@ -102,8 +139,20 @@ class ProgressPanel(
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
         label.font = style.regularFont
+        elapsed.font = style.regularFont
+        elapsed.foreground = UiStyle.Colors.weak()
         if (state is SessionState.Busy) label.foreground = style.editorForeground
         revalidate()
         repaint()
+    }
+
+    private fun elapsedText(ms: Long): String {
+        val total = ms / 1000
+        val sec = total % 60
+        val min = (total / 60) % 60
+        val hour = total / 3600
+        if (hour > 0) return "${hour}h ${min}m ${sec}s"
+        if (min > 0) return "${min}m ${sec}s"
+        return "${sec}s"
     }
 }

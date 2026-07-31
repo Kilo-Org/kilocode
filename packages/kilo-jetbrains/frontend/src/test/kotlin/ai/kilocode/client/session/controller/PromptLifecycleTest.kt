@@ -4,6 +4,7 @@ import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.model.PermissionFileDiff
 import ai.kilocode.client.session.model.PermissionMeta
+import ai.kilocode.client.session.model.PermissionRuleDecision
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.rpc.dto.AgentDto
@@ -20,6 +21,7 @@ import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionFileDiffDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
+import ai.kilocode.rpc.dto.PermissionRuleDecisionDto
 import ai.kilocode.rpc.dto.ProviderDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.QuestionInfoDto
@@ -98,6 +100,46 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         assertEquals("1", message.properties["resourceMentionCount"])
         assertFalse(message.properties.containsValue("@git-changes"))
         assertFalse(message.properties.containsValue("git-changes"))
+    }
+
+    fun `test session queue changed updates queued set`() {
+        val (c, _, modelEvents) = prompted()
+
+        emit(ChatEventDto.SessionQueueChanged("ses_test", listOf("u2")))
+
+        assertEquals(setOf("u2"), c.model.queued)
+        assertModelEvents(
+            """
+            QueueChanged [u2]
+            """,
+            modelEvents,
+        )
+
+        emit(ChatEventDto.SessionQueueChanged("ses_test", emptyList()))
+
+        assertEquals(emptySet<String>(), c.model.queued)
+    }
+
+    fun `test delete queued message delegates to RPC`() {
+        val (c, _, _) = prompted()
+
+        edt { c.deleteQueuedMessage("u2") }
+        flush()
+
+        assertEquals(listOf(ai.kilocode.client.testing.FakeSessionRpcApi.MessageDeleteCall("ses_test", "/test", "u2")), rpc.messageDeletes)
+        assertTrue(appRpc.telemetry.any { it.event == "Conversation Queued Message Removed" })
+    }
+
+    fun `test delete queued message miss captures error`() {
+        val (c, _, _) = prompted()
+        rpc.messageDeleteResult = false
+
+        edt { c.deleteQueuedMessage("u2") }
+        flush()
+
+        assertEquals(listOf(ai.kilocode.client.testing.FakeSessionRpcApi.MessageDeleteCall("ses_test", "/test", "u2")), rpc.messageDeletes)
+        assertFalse(appRpc.telemetry.any { it.event == "Conversation Queued Message Removed" })
+        assertTrue(appRpc.telemetry.any { it.event == "Session Error" && it.properties["context"] == "delete-message" })
     }
 
     fun `test PermissionAsked moves state to AwaitingPermission`() {
@@ -212,6 +254,23 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         )
     }
 
+    fun `test auto approve does not machine-reply a skill shell batch`() {
+        val (m, _, _) = prompted()
+
+        edt { m.setAutoApprove(true) }
+        // skill-shell batches must be answered by a human; auto-approve must show the card
+        // instead of sending a non-interactive reply the server would refuse.
+        emit(
+            ChatEventDto.PermissionAsked(
+                "ses_test",
+                permission("perm1").copy(metadata = mapOf("skillShell" to "true")),
+            ),
+        )
+
+        assertTrue(rpc.permissionReplies.isEmpty())
+        assertTrue(m.model.state is SessionState.AwaitingPermission)
+    }
+
     fun `test disabling auto approve before reply restores awaiting permission`() {
         val (m, _, _) = prompted()
 
@@ -266,6 +325,31 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         assertEquals(1, rpc.permissionReplies.size)
         assertEquals("perm_pending", rpc.permissionReplies[0].first)
         assertEquals("once", rpc.permissionReplies[0].third.reply)
+    }
+
+    fun `test enabling auto approve surfaces a pending skill shell as a card`() {
+        val (m, _, _) = prompted()
+        rpc.pendingPermissionList.add(permission("perm_skill").copy(metadata = mapOf("skillShell" to "true")))
+
+        edt { m.setAutoApprove(true) }
+        flush()
+
+        // skill-shell must not be machine-approved; it surfaces as a human card instead
+        assertTrue(rpc.permissionReplies.isEmpty())
+        assertTrue(m.model.state is SessionState.AwaitingPermission)
+    }
+
+    fun `test recovery surfaces a pending skill shell as a card under auto approve`() {
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        rpc.pendingPermissionList.add(permission("perm_skill").copy(metadata = mapOf("skillShell" to "true")))
+        edt { KiloPluginSettings.setAutoApprove(true) }
+
+        val m = controller("ses_test")
+        flush()
+
+        assertTrue(rpc.permissionReplies.isEmpty())
+        assertTrue(m.model.state is SessionState.AwaitingPermission)
     }
 
     fun `test auto approve drains pending permissions during recovery`() {
@@ -335,6 +419,32 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         assertEquals(1, rpc.permissionRulesSaved.size)
         assertEquals("perm1", rpc.permissionRulesSaved[0].first)
         assertEquals(1, rpc.permissionReplies.size)
+        assertEquals(listOf("/test"), projectRpc.refreshedConfigs.toList())
+    }
+
+    fun `test permission request maps rule decisions into model`() {
+        val (m, _, _) = prompted()
+        val request = permission("perm1").copy(
+            rules = listOf("git *", "git add *", "git add ."),
+            ruleDecisions = listOf(
+                PermissionRuleDecisionDto("git *", "approved", "ask"),
+                PermissionRuleDecisionDto("git add *", "denied", "allow"),
+                PermissionRuleDecisionDto("git add ."),
+            ),
+        )
+
+        emit(ChatEventDto.PermissionAsked("ses_test", request))
+
+        val state = m.model.state as? SessionState.AwaitingPermission ?: error("Expected AwaitingPermission")
+        assertEquals(listOf("git *", "git add *", "git add ."), state.permission.meta.rules)
+        assertEquals(
+            listOf(PermissionRuleDecision.APPROVED, PermissionRuleDecision.DENIED, PermissionRuleDecision.PENDING),
+            state.permission.meta.ruleDecisions.map { it.decision },
+        )
+        assertEquals(
+            listOf(PermissionRuleDecision.PENDING, PermissionRuleDecision.APPROVED, PermissionRuleDecision.PENDING),
+            state.permission.meta.ruleDecisions.map { it.defaultDecision },
+        )
     }
 
     fun `test replyQuestion calls RPC`() {
@@ -535,6 +645,7 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         flush()
 
         assertTrue(rpc.permissionRulesSaved.isEmpty())
+        assertTrue(projectRpc.refreshedConfigs.isEmpty())
         assertEquals(1, rpc.permissionReplies.size)
     }
 

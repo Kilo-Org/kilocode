@@ -3,13 +3,13 @@ import { Effect, Layer } from "effect"
 import { Skill } from "../../src/skill"
 import { Discovery } from "../../src/skill/discovery"
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
-import { Bus } from "../../src/bus"
+import { EventV2Bridge } from "../../src/event-v2-bridge"
 import { Config } from "../../src/config/config"
 import { Git } from "../../src/git" // kilocode_change
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Global } from "@opencode-ai/core/global"
-import { provideInstance, provideTmpdirInstance, tmpdir } from "../fixture/fixture"
+import { provideInstance, provideTmpdirInstance, testInstanceStoreLayer, tmpdir } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import path from "path"
 import fs from "fs/promises"
@@ -21,15 +21,15 @@ const skills = (disableExternalSkills: boolean, disableClaudeCodeSkills: boolean
     Layer.provide(Git.defaultLayer), // kilocode_change
     Layer.provide(Discovery.defaultLayer),
     Layer.provide(Config.defaultLayer),
-    Layer.provide(Bus.layer),
-    Layer.provide(AppFileSystem.defaultLayer),
+    Layer.provide(EventV2Bridge.defaultLayer),
+    Layer.provide(FSUtil.defaultLayer),
     Layer.provide(Global.layer),
     Layer.provide(RuntimeFlags.layer({ disableExternalSkills, disableClaudeCodeSkills })),
   )
 
-const it = testEffect(Layer.mergeAll(skills(false, false), node))
-const itWithoutExternalSkills = testEffect(Layer.mergeAll(skills(true, false), node))
-const itWithoutClaudeCodeSkills = testEffect(Layer.mergeAll(skills(false, true), node)) // kilocode_change
+const it = testEffect(Layer.mergeAll(skills(false, false), node, testInstanceStoreLayer))
+const itWithoutExternalSkills = testEffect(Layer.mergeAll(skills(true, false), node, testInstanceStoreLayer))
+const itWithoutClaudeCodeSkills = testEffect(Layer.mergeAll(skills(false, true), node, testInstanceStoreLayer)) // kilocode_change
 
 async function createGlobalSkill(homeDir: string) {
   const skillDir = path.join(homeDir, ".claude", "skills", "global-test-skill")

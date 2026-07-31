@@ -1,3 +1,4 @@
+import type { PermissionV1 } from "@opencode-ai/core/v1/permission"
 // kilocode_change start - use Kilo CLI branding
 // CLI entry point for `kilo run`.
 //
@@ -19,24 +20,16 @@ import { pathToFileURL } from "url"
 import { Effect } from "effect"
 import { UI } from "../ui"
 import { effectCmd } from "../effect-cmd"
-import { ServerAuth } from "@/server/auth"
-import { buildRunMessage } from "@/kilocode/cli/cmd/run-message" // kilocode_change
 import { EOL } from "os"
 import { Filesystem } from "@/util/filesystem"
-import { createKiloClient, type KiloClient, type Session, type ToolPart } from "@kilocode/sdk/v2"
-import { Agent } from "@/agent/agent"
-import { Permission } from "@/permission"
-import { RuntimeFlags } from "@/effect/runtime-flags"
-import { InstanceRef } from "@/effect/instance-ref"
+import type { KiloClient, Session, ToolPart } from "@kilocode/sdk/v2"
 import { FormatError, FormatUnknownError } from "../error"
 import { INTERACTIVE_INPUT_ERROR, resolveInteractiveStdin } from "./run/runtime.stdin"
-import { event as normalizeEvent } from "./run/event"
-import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
-import { KiloRunAuto } from "@/kilocode/cli/run-auto" // kilocode_change
-import { KiloHeadless } from "@/kilocode/permission/headless" // kilocode_change
-import { KiloRun, KiloRunDaemon } from "@/kilocode/cli/cmd/run" // kilocode_change
+// kilocode_change start - Kilo implementations (createKiloClient, run-message,
+// cloud-session, run-auto, headless, KiloRun) are dynamically imported inside the
+// handler so other CLI commands don't pay their module cost at startup.
+// kilocode_change end
 
-const runtimeTask = import("./run/runtime")
 type ModelInput = Parameters<KiloClient["session"]["prompt"]>[0]["model"]
 
 function pick(value: string | undefined): ModelInput | undefined {
@@ -235,8 +228,8 @@ export const RunCommand = effectCmd({
       })
       .option("replay", {
         type: "boolean",
-        default: false,
-        describe: "replay visible session history on interactive resume",
+        default: true,
+        describe: "replay interactive session history on resume and after resize (use --no-replay to disable)",
       })
       .option("replay-limit", {
         type: "number",
@@ -266,6 +259,18 @@ export const RunCommand = effectCmd({
         describe: "enable direct interactive demo slash commands; pass one as the message to run it immediately",
       }),
   handler: Effect.fn("Cli.run")(function* (args) {
+    const { Agent } = yield* Effect.promise(() => import("@/agent/agent"))
+    const { RuntimeFlags } = yield* Effect.promise(() => import("@/effect/runtime-flags"))
+    const { InstanceRef } = yield* Effect.promise(() => import("@/effect/instance-ref"))
+    const { ServerAuth } = yield* Effect.promise(() => import("@/server/auth"))
+    // kilocode_change start - lazy Kilo implementations (see top-of-file note)
+    const { createKiloClient } = yield* Effect.promise(() => import("@kilocode/sdk/v2"))
+    const { buildRunMessage } = yield* Effect.promise(() => import("@/kilocode/cli/cmd/run-message"))
+    const { importCloudSession, validateCloudFork } = yield* Effect.promise(() => import("@/kilocode/cloud-session"))
+    const { KiloRunAuto } = yield* Effect.promise(() => import("@/kilocode/cli/run-auto"))
+    const { KiloHeadless } = yield* Effect.promise(() => import("@/kilocode/permission/headless"))
+    const { KiloRun, KiloRunDaemon } = yield* Effect.promise(() => import("@/kilocode/cli/cmd/run"))
+    // kilocode_change end
     const agentSvc = yield* Agent.Service
     const flags = yield* RuntimeFlags.Service
     const localInstance = yield* InstanceRef
@@ -296,10 +301,6 @@ export const RunCommand = effectCmd({
 
       if (args.interactive && args.format === "json") {
         die("--interactive cannot be used with --format json")
-      }
-
-      if (args.replay && !args.interactive) {
-        die("--replay requires --interactive")
       }
 
       if (args["replay-limit"] !== undefined && !args.interactive) {
@@ -405,7 +406,7 @@ export const RunCommand = effectCmd({
       }
       // kilocode_change end
 
-      const rules: Permission.Ruleset = args.interactive
+      const rules: PermissionV1.Ruleset = args.interactive
         ? []
         : [
             {
@@ -730,10 +731,11 @@ export const RunCommand = effectCmd({
           const MAX_RETRIES = 3 // kilocode_change
           let retries = 0 // kilocode_change
           let error: string | undefined
+          let autoRejected = false // kilocode_change - plain headless auto-reject must fail the run
 
-          for await (const payload of events.stream) {
-            const event = normalizeEvent(payload)
-            if (!event) continue
+          // kilocode_change start - revert to upstream: consume native events without normalizing sync copies
+          for await (const event of events.stream) {
+            // kilocode_change end
 
             if (
               event.type === "message.updated" &&
@@ -820,8 +822,10 @@ export const RunCommand = effectCmd({
                 err = String(props.error.data.message)
               }
               error = error ? error + EOL + err : err
-              if (emit("error", { error: props.error })) continue
+              // kilocode_change start - stderr first so --format json still surfaces the diagnostic
               UI.error(err)
+              emit("error", { error: props.error })
+              // kilocode_change end
             }
 
             // kilocode_change start - reset retry budget only after resumed work becomes busy
@@ -844,6 +848,13 @@ export const RunCommand = effectCmd({
 
             if (event.type === "permission.asked") {
               const permission = event.properties
+              // kilocode_change start - skill shell batches need an interactive human decision. The server ignores
+              // non-interactive approvals, so headless runs must reject explicitly rather than leave them pending.
+              if (permission.metadata?.["skillShell"] === true) {
+                await client.permission.reply({ requestID: permission.id, reply: "reject" })
+                continue
+              }
+              // kilocode_change end
               // kilocode_change start - approve root and tracked Task child permissions in auto mode
               if (args.auto) {
                 if (!KiloRunAuto.allowed(auto, permission.sessionID)) continue
@@ -872,6 +883,7 @@ export const RunCommand = effectCmd({
                   UI.Style.TEXT_NORMAL +
                     `subagent permission requested: ${permission.permission} (${permission.patterns.join(", ")}); auto-rejecting`,
                 )
+                autoRejected = true // kilocode_change
                 await client.permission.reply({
                   requestID: permission.id,
                   reply: "reject",
@@ -893,6 +905,7 @@ export const RunCommand = effectCmd({
                   UI.Style.TEXT_NORMAL +
                     `permission requested: ${permission.permission} (${permission.patterns.join(", ")}); auto-rejecting`,
                 )
+                autoRejected = true // kilocode_change
                 await client.permission.reply({
                   requestID: permission.id,
                   reply: "reject",
@@ -919,6 +932,14 @@ export const RunCommand = effectCmd({
             }
             // kilocode_change end
           }
+          // kilocode_change start - idle must not clear an auto-rejected headless run
+          if (autoRejected) {
+            const msg = "run ended with an auto-rejected permission; pass --auto for autonomous use"
+            error = error ? error + EOL + msg : msg
+            UI.error(msg)
+            emit("error", { error: msg })
+          }
+          // kilocode_change end
           return error
         }
         const cwd = args.attach ? (directory ?? sess.directory ?? (await current(sdk))) : (directory ?? root)
@@ -938,10 +959,15 @@ export const RunCommand = effectCmd({
 
         if (!args.interactive) {
           const events = await client.event.subscribe()
-          loop(client, events).catch((e) => {
+          const completed = loop(client, events).catch((e) => {
             console.error(e)
-            process.exit(1)
+            process.exitCode = 1
           })
+          async function finish() {
+            if (args.attach) return
+            const error = await completed
+            if (error) process.exitCode = 1
+          }
 
           // kilocode_change start - handle built-in session commands
           if (builtin) {
@@ -966,7 +992,9 @@ export const RunCommand = effectCmd({
             if (result.error) {
               if (!emit("error", { error: result.error })) UI.error(formatRunError(result.error))
               process.exitCode = 1
+              return
             }
+            await finish()
             return
           }
 
@@ -981,12 +1009,14 @@ export const RunCommand = effectCmd({
           if (result.error) {
             if (!emit("error", { error: result.error })) UI.error(formatRunError(result.error))
             process.exitCode = 1
+            return
           }
+          await finish()
           return
         }
 
         const model = pick(args.model)
-        const { runInteractiveMode } = await runtimeTask
+        const { runInteractiveMode } = await import("./run/runtime")
         try {
           await runInteractiveMode({
             sdk: client,
@@ -1003,6 +1033,7 @@ export const RunCommand = effectCmd({
             initialInput: input.initial,
             createSession: createFreshSession,
             thinking,
+            backgroundSubagents: flags.experimentalBackgroundSubagents,
             demo: args.demo,
           })
         } catch (error) {
@@ -1014,11 +1045,14 @@ export const RunCommand = effectCmd({
       if (args.interactive && !args.attach && !args.session && !args.continue) {
         await loadInput() // kilocode_change - interactive local mode still consumes its initial input
         const model = pick(args.model)
-        const { runInteractiveLocalMode } = await runtimeTask
+        const { runInteractiveLocalMode } = await import("./run/runtime")
         const fetchFn = (async (input: RequestInfo | URL, init?: RequestInit) => {
           const { Server } = await import("@/server/server")
           const request = new Request(input, init)
-          return Server.Default().app.fetch(request)
+          const headers = new Headers(request.headers)
+          const auth = ServerAuth.header()
+          if (auth) headers.set("Authorization", auth)
+          return Server.Default().app.fetch(new Request(request, { headers }))
         }) as typeof globalThis.fetch
 
         try {
@@ -1037,6 +1071,7 @@ export const RunCommand = effectCmd({
             files,
             initialInput: input.initial,
             thinking,
+            backgroundSubagents: flags.experimentalBackgroundSubagents,
             demo: args.demo,
           })
         } catch (error) {
@@ -1054,7 +1089,10 @@ export const RunCommand = effectCmd({
       const fetchFn = (async (input: RequestInfo | URL, init?: RequestInit) => {
         const { Server } = await import("@/server/server")
         const request = new Request(input, init)
-        return Server.Default().app.fetch(request)
+        const headers = new Headers(request.headers)
+        const auth = ServerAuth.header()
+        if (auth) headers.set("Authorization", auth)
+        return Server.Default().app.fetch(new Request(request, { headers }))
       }) as typeof globalThis.fetch
       const sdk = createKiloClient({
         baseUrl: "http://kilo.internal",

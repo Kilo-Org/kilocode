@@ -173,6 +173,7 @@ export const dict: Record<string, string> = {
   "ui.message.collapse": "Bericht inklappen",
   "ui.message.copy": "Kopiëren",
   "ui.message.copyMessage": "Bericht kopiëren",
+  "ui.message.deleteQueued": "Bericht in wachtrij verwijderen", // kilocode_change
   "ui.message.copyResponse": "Antwoord kopiëren",
   "ui.message.copied": "Gekopieerd",
   "ui.message.forkMessage": "Fork to new session",

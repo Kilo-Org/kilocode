@@ -95,7 +95,6 @@ function dropSet(prev: Set<string>, ids: Iterable<string>): Set<string> {
 type MessageMutation = Exclude<MessageLoadMode, "focus"> | "append" | "update"
 
 interface MessagePageState {
-  initialLoaded: boolean
   loadingInitial: boolean
   loadingOlder: boolean
   before?: string
@@ -104,7 +103,6 @@ interface MessagePageState {
 }
 
 const emptyPageState: MessagePageState = {
-  initialLoaded: false,
   loadingInitial: false,
   loadingOlder: false,
   hasMore: false,
@@ -211,7 +209,6 @@ interface SessionContextValue {
   costBreakdown: Accessor<Array<{ label: string; cost: number }>>
   contextUsage: Accessor<ContextUsage | undefined>
   modelUsage: Accessor<SessionModelUsage | undefined>
-  refreshModelUsage: () => void
 
   // Skills loaded from the CLI backend
   skills: Accessor<SkillInfo[]>
@@ -230,11 +227,9 @@ interface SessionContextValue {
   connectMcp: (name: string) => void
   disconnectMcp: (name: string) => void
   authenticateMcp: (name: string) => void
-  refreshMcpStatus: () => void
   selectedAgent: (sessionID?: string) => string
   selectAgent: (name: string, sessionID?: string) => void
   getSessionAgent: (sessionID: string) => string
-  getSessionModel: (sessionID: string) => ModelSelection | null
   setSessionModel: (sessionID: string, providerID: string, modelID: string) => void
   setSessionAgent: (sessionID: string, name: string) => void
   setSessionVariant: (sessionID: string, providerID: string, modelID: string, value: string, agent?: string) => void
@@ -259,6 +254,7 @@ interface SessionContextValue {
   // Actions
   revertSession: (messageID: string, partID?: string) => void
   unrevertSession: () => void
+  deleteQueuedMessage: (sessionID: string, messageID: string) => void
   sendMessage: (
     text: string,
     providerID?: string,
@@ -295,7 +291,7 @@ interface SessionContextValue {
   createSession: () => void
   clearCurrentSession: () => void
   loadSessions: () => void
-  loadOlderMessages: () => void
+  loadOlderMessages: () => boolean
   selectSession: (id: string) => void
   deleteSession: (id: string) => void
   renameSession: (id: string, title: string) => void
@@ -450,10 +446,6 @@ export const SessionProvider: ParentComponent = (props) => {
     if (!server.isConnected()) return
     setMcpLoading(name)
     vscode.postMessage({ type: "authenticateMcp", name })
-  }
-
-  const refreshMcpStatus = () => {
-    vscode.postMessage({ type: "requestMcpStatus" })
   }
 
   // Pending agent selection for before a session exists
@@ -1084,6 +1076,7 @@ export const SessionProvider: ParentComponent = (props) => {
     if (handleModelUsageMessage(message)) return
     refreshModelUsageForMessage(message)
     if (handleStreamMessage(message)) return
+    handleCommandCompletion(message)
     cah.handleMessage(message)
     switch (message.type) {
       case "sessionCreated":
@@ -1292,7 +1285,7 @@ export const SessionProvider: ParentComponent = (props) => {
           next.add(session.id)
           return next
         })
-        patchPage(session.id, { initialLoaded: true, lastMutation: "append" })
+        patchPage(session.id, { lastMutation: "append" })
         setPages(
           produce((state) => {
             delete state[draftID]
@@ -1471,7 +1464,7 @@ export const SessionProvider: ParentComponent = (props) => {
         if (store.parts[msg.id]) delete parts[msg.id]
       }
       rebuildToolParts(sessionID, messages, parts)
-      patchPage(sessionID, { initialLoaded: true, lastMutation: "update" })
+      patchPage(sessionID, { lastMutation: "update" })
       return
     }
 
@@ -1527,10 +1520,9 @@ export const SessionProvider: ParentComponent = (props) => {
       // preserve the existing pagination cursor/hasMore so "load earlier"
       // keeps working.
       if (mode === "reconcile") {
-        patchPage(sessionID, { initialLoaded: true, lastMutation: "update" })
+        patchPage(sessionID, { lastMutation: "update" })
       } else {
         setPages(sessionID, {
-          initialLoaded: true,
           loadingInitial: false,
           loadingOlder: false,
           before: input.cursor,
@@ -1591,7 +1583,7 @@ export const SessionProvider: ParentComponent = (props) => {
       }
       return [...msgs, message]
     })
-    patchPage(message.sessionID, { initialLoaded: true, lastMutation: exists ? "update" : "append" })
+    patchPage(message.sessionID, { lastMutation: exists ? "update" : "append" })
 
     recoverPrefs(message.sessionID, [message])
 
@@ -1600,6 +1592,10 @@ export const SessionProvider: ParentComponent = (props) => {
       setStore("parts", message.id, message.parts)
     }
     rebuildToolParts(message.sessionID, store.messages[message.sessionID] ?? [])
+  }
+
+  function handleCommandCompletion(message: ExtensionMessage): void {
+    if (message.type === "sessionCommandCompleted") finishSubmission(message.messageID)
   }
 
   function handlePartUpdated(
@@ -2089,7 +2085,7 @@ export const SessionProvider: ParentComponent = (props) => {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       })
-      patchPage(key, { initialLoaded: true, hasMore: false, lastMutation: "replace" })
+      patchPage(key, { hasMore: false, lastMutation: "replace" })
       setStore("messages", key, messages)
       for (const msg of messages) {
         if (msg.parts && msg.parts.length > 0) {
@@ -2236,7 +2232,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
     setStore("messages", sid, (msgs = []) => [...msgs, temp])
     setStore("parts", messageID, parts)
-    patchPage(sid, { initialLoaded: true, lastMutation: "append" })
+    patchPage(sid, { lastMutation: "append" })
     queueMicrotask(() => window.dispatchEvent(new CustomEvent("resumeAutoScroll")))
   }
 
@@ -2564,9 +2560,9 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function loadOlderMessages() {
     const id = currentSessionID()
-    if (!id || !server.isConnected()) return
+    if (!id || !server.isConnected()) return false
     const page = pages[id] ?? emptyPageState
-    if (!page.hasMore || page.loadingOlder || page.loadingInitial || !page.before) return
+    if (!page.hasMore || page.loadingOlder || page.loadingInitial || !page.before) return false
     patchPage(id, { loadingOlder: true })
     vscode.postMessage({
       type: "loadMessages",
@@ -2575,6 +2571,7 @@ export const SessionProvider: ParentComponent = (props) => {
       before: page.before,
       limit: MESSAGE_PAGE_LIMIT,
     })
+    return true
   }
 
   // Session whose message fetch was deferred because the backend was offline at
@@ -2781,7 +2778,23 @@ export const SessionProvider: ParentComponent = (props) => {
         .filter((p) => p.type === "text" && !(p as { synthetic?: boolean }).synthetic)
         .map((p) => (p as { text: string }).text ?? "")
         .join("")
-      if (text) window.postMessage({ type: "setChatBoxMessage", text }, "*")
+      // Pass the original attachments' exact paths alongside the restored text
+      // so PromptInput can seed them directly rather than re-deriving mentions
+      // from the text via regex, which truncates at the first space in a
+      // filename (see PromptInput's setChatBoxMessage handler).
+      const paths = parts
+        .filter((p): p is Extract<Part, { type: "file" }> => p.type === "file")
+        .map((p) => p.source?.path)
+        .filter((p): p is string => !!p && !p.startsWith("session:"))
+      const sessions = parts
+        .filter((p): p is Extract<Part, { type: "file" }> => p.type === "file")
+        .filter((p) => p.url.startsWith("session:"))
+        .map((p) => ({
+          id: p.url.slice("session:".length),
+          title: p.source?.text?.value.replace(/^@/, "") ?? p.filename ?? p.url,
+          updated: 0,
+        }))
+      if (text) window.postMessage({ type: "setChatBoxMessage", text, paths, sessions }, "*")
     }
     vscode.postMessage({ type: "revertSession", sessionID: id, messageID, partID })
   }
@@ -2792,6 +2805,15 @@ export const SessionProvider: ParentComponent = (props) => {
     // Clear the prompt input on full redo (matching TUI/desktop behavior)
     window.postMessage({ type: "setChatBoxMessage", text: "" }, "*")
     vscode.postMessage({ type: "unrevertSession", sessionID: id })
+  }
+
+  // Clear local send bookkeeping and request deletion. The message stays visible
+  // until messageRemoved confirms deletion; a false response leaves it in place.
+  function deleteQueuedMessage(sessionID: string, messageID: string) {
+    if (!server.isConnected()) return
+    pendingOptimistic.get(sessionID)?.delete(messageID)
+    finishSubmission(messageID)
+    vscode.postMessage({ type: "deleteMessage", sessionID, messageID })
   }
 
   function syncSession(sessionID: string) {
@@ -2931,7 +2953,6 @@ export const SessionProvider: ParentComponent = (props) => {
     costBreakdown,
     contextUsage,
     modelUsage,
-    refreshModelUsage,
     agents,
     allAgents,
     skills,
@@ -2944,19 +2965,12 @@ export const SessionProvider: ParentComponent = (props) => {
     connectMcp,
     disconnectMcp,
     authenticateMcp,
-    refreshMcpStatus,
     selectedAgent: agentForScope,
     selectAgent,
     getSessionAgent: (sessionID: string) => store.agentSelections[sessionID] ?? defaultAgent(),
-    getSessionModel: (sessionID: string) => {
-      const override = store.sessionOverrides[sessionID]
-      if (override) return override
-      const agentName = store.agentSelections[sessionID] ?? defaultAgent()
-      return resolveModel(agentName, store.modelSelections[agentName])
-    },
     setSessionModel: (sessionID: string, providerID: string, modelID: string) => {
       // Only write per-session override — do NOT touch global modelSelections or
-      // userSetAgents.  The override is what selected()/getSessionModel() actually
+      // userSetAgents.  The override is what selected() actually
       // reads, and mutating the global map here is both redundant and harmful: the
       // agent may not yet be assigned (sendInitialMessage calls setSessionModel
       // before setSessionAgent), so the write would land on defaultAgent() and
@@ -2986,6 +3000,7 @@ export const SessionProvider: ParentComponent = (props) => {
     worktreeStats,
     revertSession,
     unrevertSession,
+    deleteQueuedMessage,
     sendMessage,
     sendCommand,
     abort,

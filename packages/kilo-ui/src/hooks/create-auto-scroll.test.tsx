@@ -77,12 +77,12 @@ globalThis.WheelEvent = FakeWheelEvent as unknown as typeof WheelEvent
 
 const { createAutoScroll } = await import("./create-auto-scroll")
 
-function setup(options?: { interacted?: () => void }) {
+function setup(options?: { interacted?: () => void; working?: boolean }) {
   const el = new FakeElement()
   const root = createRoot((dispose) => ({
     dispose,
     scroll: createAutoScroll({
-      working: () => false,
+      working: () => options?.working ?? false,
       onUserInteracted: options?.interacted,
     }),
   }))
@@ -158,15 +158,48 @@ describe("createAutoScroll non-scrollable layouts", () => {
     ctx.dispose()
   })
 
-  test("does not pause for an upward wheel on short content", () => {
+  test("does not pause when content overflows after an upward wheel on short content", () => {
     let interactions = 0
-    const ctx = setup({ interacted: () => interactions++ })
+    const ctx = setup({ interacted: () => interactions++, working: true })
     const event = new FakeWheelEvent(-20, ctx.el)
+
+    ctx.el.fire("wheel", event as unknown as Event)
+    ctx.el.scrollHeight = 300
+    ctx.resize()
+
+    expect(ctx.scroll.userScrolled()).toBe(false)
+    expect(ctx.el.scrollTop).toBe(300)
+    expect(interactions).toBe(0)
+    ctx.dispose()
+  })
+
+  test("does not pause for an upward wheel at the top", () => {
+    const ctx = setup()
+    ctx.el.scrollHeight = 300
+    const event = new FakeWheelEvent(-5, ctx.el)
 
     ctx.el.fire("wheel", event as unknown as Event)
 
     expect(ctx.scroll.userScrolled()).toBe(false)
-    expect(interactions).toBe(0)
+    ctx.dispose()
+  })
+
+  test("does not reattach after an upward wheel within the bottom threshold", () => {
+    const ctx = setup()
+    ctx.el.scrollHeight = 300
+    ctx.el.scrollTop = 195
+    const event = new FakeWheelEvent(-5, ctx.el)
+
+    ctx.el.fire("wheel", event as unknown as Event)
+    ctx.scroll.handleScroll()
+
+    expect(ctx.scroll.userScrolled()).toBe(true)
+    expect(ctx.el.scrollTop).toBe(195)
+
+    ctx.el.scrollTop = 200
+    ctx.scroll.handleScroll()
+
+    expect(ctx.scroll.userScrolled()).toBe(false)
     ctx.dispose()
   })
 

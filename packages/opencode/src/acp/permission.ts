@@ -1,13 +1,11 @@
 import type { AgentSideConnection, PermissionOption, RequestPermissionResponse } from "@agentclientprotocol/sdk"
-import * as Log from "@opencode-ai/core/util/log"
 import type { Event, KiloClient } from "@kilocode/sdk/v2"
 import { applyPatch } from "diff"
 import { exists, readText } from "@/util/filesystem"
 import type { ACPSession } from "./session"
 import { toLocations, toToolKind, type ToolInput } from "./tool"
 import { Effect } from "effect"
-
-const log = Log.create({ service: "acp-permission" })
+import { SkillShellPrompt } from "@/kilocode/acp/permission" // kilocode_change
 
 type PermissionEvent = Extract<Event, { type: "permission.asked" }>
 type Reply = "once" | "always" | "reject"
@@ -35,9 +33,7 @@ export class Handler {
     const previous = this.queues.get(permission.sessionID) ?? Promise.resolve()
     const next = previous
       .then(() => this.process(event))
-      .catch((error: unknown) => {
-        log.error("failed to handle permission", { error, permissionID: permission.id })
-      })
+      .catch(() => {})
       .finally(() => {
         if (this.queues.get(permission.sessionID) === next) {
           this.queues.delete(permission.sessionID)
@@ -52,33 +48,25 @@ export class Handler {
     if (!session) return
 
     if (!this.input.connection.requestPermission) {
-      log.error("ACP connection cannot request permission", {
-        permissionID: permission.id,
-        sessionID: permission.sessionID,
-      })
       await this.reply(permission.id, "reject", session.cwd)
       return
     }
 
+    const skillShell = SkillShellPrompt.is(permission.metadata) // kilocode_change - skill batches list commands and never persist
     const result = await this.input.connection
       .requestPermission({
         sessionId: permission.sessionID,
         toolCall: {
           toolCallId: permission.tool?.callID ?? permission.id,
           status: "pending",
-          title: permission.permission,
-          rawInput: permission.metadata,
+          title: skillShell ? SkillShellPrompt.title : permission.permission, // kilocode_change
+          rawInput: permission.metadata, // kilocode_change - metadata.commands carries the verbatim command list
           kind: toToolKind(permission.permission),
           locations: toLocations(permission.permission, permission.metadata),
         },
-        options: permissionOptions,
+        options: skillShell ? SkillShellPrompt.options : permissionOptions, // kilocode_change
       })
-      .catch(async (error: unknown) => {
-        log.error("failed to request permission from ACP", {
-          error,
-          permissionID: permission.id,
-          sessionID: permission.sessionID,
-        })
+      .catch(async () => {
         await this.reply(permission.id, "reject", session.cwd)
         return undefined
       })
@@ -92,23 +80,18 @@ export class Handler {
     }
 
     if (permission.permission === "edit") {
-      await this.writeProposedEdit(session.id, permission.metadata).catch((error: unknown) => {
-        log.error("failed to write proposed edit through ACP", {
-          error,
-          permissionID: permission.id,
-          sessionID: permission.sessionID,
-        })
-      })
+      await this.writeProposedEdit(session.id, permission.metadata).catch(() => {})
     }
 
-    await this.reply(permission.id, reply, session.cwd)
+    await this.reply(permission.id, reply, session.cwd, true) // kilocode_change - human selected via requestPermission
   }
 
-  private async reply(requestID: string, reply: Reply, directory: string) {
+  private async reply(requestID: string, reply: Reply, directory: string, interactive = false) { // kilocode_change - interactive param
     await this.input.sdk.permission.reply({
       requestID,
       reply,
       directory,
+      interactive, // kilocode_change
     })
   }
 
@@ -120,7 +103,6 @@ export class Handler {
     const content = (await exists(filepath)) ? await readText(filepath) : ""
     const next = applyPatch(content, diff)
     if (next === false) {
-      log.error("Failed to apply unified diff (context mismatch)")
       return
     }
 

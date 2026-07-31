@@ -1,5 +1,6 @@
-import { Database, eq } from "@/storage/db"
-import { SessionTable } from "@/session/session.sql"
+import { Database } from "@opencode-ai/core/database/database"
+import { Effect } from "effect"
+import { sql } from "drizzle-orm"
 import type { SessionID } from "@/session/schema"
 
 /**
@@ -23,23 +24,26 @@ export namespace KiloHeadless {
   }
 
   /** True when `id` is a subagent session whose root run has no attached human. */
-  export function denies(id: string): boolean {
+  export const denies = Effect.fn("KiloHeadless.denies")(function* (id: string) {
     if (roots.size === 0) return false
     if (roots.has(id)) return false
-    for (let parent = lookup(id); parent; parent = lookup(parent)) {
-      if (roots.has(parent)) return true
-    }
-    return false
-  }
+    const { db } = yield* Database.Service
+    const ancestors = yield* db
+      .all<{ id: SessionID }>(sql`
+        WITH RECURSIVE ancestor(id) AS (
+          SELECT parent_id
+          FROM session
+          WHERE id = ${id} AND parent_id IS NOT NULL
 
-  function lookup(id: string) {
-    const row = Database.use((db) =>
-      db
-        .select({ parent: SessionTable.parent_id })
-        .from(SessionTable)
-        .where(eq(SessionTable.id, id as SessionID))
-        .get(),
-    )
-    return row?.parent ?? undefined
-  }
+          UNION
+
+          SELECT session.parent_id
+          FROM session
+          JOIN ancestor ON session.id = ancestor.id
+          WHERE session.parent_id IS NOT NULL
+        )
+        SELECT id FROM ancestor`)
+      .pipe(Effect.orDie)
+    return ancestors.some((item) => roots.has(item.id))
+  })
 }

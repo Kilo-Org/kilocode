@@ -21,6 +21,7 @@ const CHATVIEW_FILE = path.join(ROOT, "webview-ui/src/components/chat/ChatView.t
 const PROMPT_UTILS_FILE = path.join(ROOT, "webview-ui/src/components/chat/prompt-input-utils.ts")
 const PROMPT_FILE = path.join(ROOT, "webview-ui/src/components/chat/PromptInput.tsx")
 const KILOPROVIDER_FILE = path.join(ROOT, "src/KiloProvider.ts")
+const CLOUD_SESSION_FILE = path.join(ROOT, "src/kilo-provider/handlers/cloud-session.ts")
 const CONNECTION_SERVICE_FILE = path.join(ROOT, "src/services/cli-backend/connection-service.ts")
 
 function readFile(filePath: string): string {
@@ -76,6 +77,32 @@ describe("sendCommand dismisses pending tool requests", () => {
 
   it("rejects questions before sending", () => {
     expect(body).toContain("dismissQuestion")
+  })
+})
+
+describe("static command completion contract", () => {
+  const source = readFile(SESSION_FILE)
+
+  it("finishes only the acknowledged command submission", () => {
+    const body = extractFunctionBody(source, "handleCommandCompletion")
+    expect(body).toMatch(/message\.type === "sessionCommandCompleted"\) finishSubmission\(message\.messageID\)/)
+  })
+
+  it("acknowledges aliases after direct and cloud command confirmation", () => {
+    const provider = readFile(KILOPROVIDER_FILE)
+    const cloud = readFile(CLOUD_SESSION_FILE)
+    expect(provider).toMatch(
+      /await runWithMessageConfirmation[\s\S]*?if \(messageID && completesWithoutStatus\(command\)\)[\s\S]*?sessionCommandCompleted/,
+    )
+    expect(cloud).toMatch(
+      /await run\(messageID, "Cloud import send"[\s\S]*?if \(messageID && command && completesWithoutStatus\(command\)\)[\s\S]*?sessionCommandCompleted/,
+    )
+  })
+
+  it("does not clear every session submission or active abort", () => {
+    const body = extractFunctionBody(source, "handleCommandCompletion")
+    expect(body).not.toContain("confirmSubmissions")
+    expect(body).not.toContain("aborts.clear")
   })
 })
 
@@ -194,9 +221,9 @@ describe("KiloProvider pruneDeletedSession contract", () => {
   })
 
   it("unfocuses the streams when the deleted id matches the focused session", () => {
-    // Without this, connectionService.focused still reports the deleted id to
-    // the backend (viewed.focused), and focusSession() never calls
-    // unregisterFocused for this instance.
+    // Without this, connectionService still reports the deleted id to the
+    // backend as visible, and focusSession() never clears the visible
+    // registration for this instance.
     const match = source.match(/pruneDeletedSession\(sessionID: string\): void \{([\s\S]*?)\n  \}/)
     expect(match).not.toBeNull()
     expect(match![1]).toMatch(/if \(this\.streams\.focused === sessionID\) this\.focusSession\(undefined\)/)
@@ -309,6 +336,20 @@ describe("PromptInput send origin contract", () => {
   it("passes the captured origin to message and command sends", () => {
     expect(source).toMatch(/session\.sendMessage\([\s\S]*origin \?\? null\)/)
     expect(source).toMatch(/session\.sendCommand\([\s\S]*origin \?\? null\)/)
+  })
+
+  it("records sent prompts before a pending session key change can return", () => {
+    const start = source.indexOf("const handleSend = async () =>")
+    const end = source.indexOf("\n  return (", start)
+    const body = source.slice(start, end)
+    const send = Math.max(body.indexOf("session.sendMessage("), body.indexOf("session.sendCommand("))
+    const append = body.lastIndexOf("history.append(draft)")
+    const guard = body.indexOf("if (draftKey() !== key) return")
+
+    expect(send).toBeGreaterThan(-1)
+    expect(append).toBeGreaterThan(send)
+    expect(append).toBeLessThan(guard)
+    expect(body.indexOf('setText("")', guard)).toBeGreaterThan(guard)
   })
 })
 
@@ -542,15 +583,15 @@ describe("Cloud import parts cleanup contract", () => {
 describe("KiloConnectionService pruneSession contract", () => {
   const source = readFile(CONNECTION_SERVICE_FILE)
 
-  it("drops the deleted session from focused and opened Maps", () => {
+  it("drops the deleted session from attached and visible Maps", () => {
     // KiloProvider's pruneDeletedSession calls connectionService.pruneSession.
-    // Without clearing focused/opened entries whose value is the deleted id,
-    // the backend keeps receiving viewed.focused with the dead session id and
-    // any background tab opener stays registered for it.
+    // Without clearing attached/visible entries whose value is the deleted id,
+    // the backend keeps receiving the dead session id and any background tab
+    // opener stays registered for it.
     const match = source.match(/pruneSession\(sessionId: string\): void \{([\s\S]*?)\n  \}/)
     expect(match).not.toBeNull()
-    expect(match![1]).toMatch(/this\.focused\.delete\(key\)/)
-    expect(match![1]).toMatch(/this\.opened\.(?:set|delete)/)
+    expect(match![1]).toMatch(/this\.attached\.(?:set|delete)/)
+    expect(match![1]).toMatch(/this\.visible\.(?:set|delete)/)
     expect(match![1]).toMatch(/this\.flushViewed\(\)/)
   })
 })

@@ -1,4 +1,31 @@
+import { createSignal } from "solid-js"
 import type { QuestionOption } from "../../types/messages"
+
+// Which page (question index) of a pending multi-question is currently
+// mounted in the DOM, keyed by request id. QuestionDock only ever mounts
+// `store.tab`, and nothing else observes which page that is — chat search
+// needs it to index exactly the visible page instead of guessing it's
+// always the first one (true only right after initial mount, not once the
+// user has navigated).
+const [activeQuestionTabs, setActiveQuestionTabs] = createSignal<Record<string, number>>({})
+
+export function setActiveQuestionTab(requestId: string, tab: number): void {
+  setActiveQuestionTabs((prev) => (prev[requestId] === tab ? prev : { ...prev, [requestId]: tab }))
+}
+
+export function clearActiveQuestionTab(requestId: string): void {
+  setActiveQuestionTabs((prev) => {
+    if (!(requestId in prev)) return prev
+    const next = { ...prev }
+    delete next[requestId]
+    return next
+  })
+}
+
+/** Returns the currently-mounted page for a request, defaulting to the first page. */
+export function activeQuestionTab(requestId: string): number {
+  return activeQuestionTabs()[requestId] ?? 0
+}
 
 /**
  * Translate a backend-provided i18n key, falling back to the canonical label when no key is

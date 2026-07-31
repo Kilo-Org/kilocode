@@ -90,11 +90,24 @@ export function scanScope(scope: HTMLElement, pattern: RegExp): Range[] {
  * actually found in the DOM, so a data/DOM count mismatch (e.g. content the
  * renderer collapses or reformats) still always highlights *something* in
  * the active row rather than silently highlighting nothing.
+ *
+ * `matchedParts` maps a row key to the part ids MessageList's data model
+ * could attribute a match to there. A row with **no entry** has zero
+ * data-level matches, so nothing in it is scanned at all — otherwise some
+ * unindexed text (a static button label, a different non-matching part in
+ * the same message) could get highlighted despite never being counted. A
+ * row *with* an entry (even one with an empty part-id set, e.g. an
+ * error/diff row with no per-part attribution) always has SOME genuine
+ * match, so scanning falls back to the whole row whenever the part-scoped
+ * DOM lookup doesn't resolve to anything mounted (a part id with no
+ * `[data-part-id]` marker at all — e.g. user messages — or not yet
+ * expanded) — that's a lookup failure, not a signal to scan nothing.
  */
 export function applyTranscriptHighlights(
   root: HTMLElement,
   pattern: RegExp | undefined,
   active: { key: string; occurrence: number } | undefined,
+  matchedParts?: Map<string, Set<string>>,
 ): Range | undefined {
   const api = highlightApi()
   if (!api) return undefined
@@ -107,7 +120,13 @@ export function applyTranscriptHighlights(
   const current: Range[] = []
   let currentRange: Range | undefined
   for (const scope of scopes) {
-    const ranges = scanScope(scope, pattern)
+    // Every search scope within a row contributes to ONE combined range
+    // list before the active-occurrence index is resolved — clamping it
+    // per search-scope instead would treat `active.occurrence` as local to
+    // whichever part happened to be scanned first, misattributing which
+    // occurrence is "current" for any row with more than one contributing
+    // part (e.g. a reasoning block followed by a tool call).
+    const ranges = resolveSearchScopes(scope, matchedParts).flatMap((searchScope) => scanScope(searchScope, pattern))
     if (ranges.length === 0) continue
     const isActiveRow = !!active && scope.dataset.rowKey === active.key
     const activeIdx = isActiveRow ? Math.min(active!.occurrence, ranges.length - 1) : -1
@@ -123,6 +142,28 @@ export function applyTranscriptHighlights(
   if (rest.length > 0) api.registry.set(MATCH_NAME, new api.ctor(...rest))
   if (current.length > 0) api.registry.set(ACTIVE_NAME, new api.ctor(...current))
   return currentRange
+}
+
+/**
+ * Decides which element(s) within a row to actually scan for text. A row
+ * with no entry in `matchedParts` has zero data-level matches, so it's
+ * skipped entirely. A row with an entry scans just its known parts' DOM
+ * subtrees when they're mounted, and falls back to the whole row whenever
+ * that lookup comes up empty — whether because a match couldn't be
+ * attributed to a specific part at all, or because the part it WAS
+ * attributed to has no `[data-part-id]` marker (or isn't mounted yet) — a
+ * row with a real match should never end up scanning nothing.
+ */
+function resolveSearchScopes(scope: HTMLElement, matchedParts: Map<string, Set<string>> | undefined): HTMLElement[] {
+  const rowKey = scope.dataset.rowKey
+  const partIds = rowKey ? matchedParts?.get(rowKey) : undefined
+  if (matchedParts && !partIds) return []
+  const partScopes = partIds
+    ? Array.from(partIds)
+        .map((id) => scope.querySelector<HTMLElement>(`[data-part-id="${CSS.escape(id)}"]`))
+        .filter((el): el is HTMLElement => !!el)
+    : []
+  return partScopes.length > 0 ? partScopes : [scope]
 }
 
 export function clearTranscriptHighlights(): void {

@@ -30,11 +30,7 @@ import java.util.zip.ZipInputStream
 import kotlin.math.roundToInt
 
 class KiloCliDownloader(
-    private val http: OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(120, TimeUnit.SECONDS)
-        .writeTimeout(120, TimeUnit.SECONDS)
-        .build(),
+    private val http: OkHttpClient = KiloBackendHttpClients.cliDownload(),
     private val log: KiloLog = KiloLog.create(KiloCliDownloader::class.java),
     private val root: File = File(PathManager.getSystemPath(), "kilo/cli"),
     private val baseUrl: String = "https://github.com/Kilo-Org/kilocode/releases/download",

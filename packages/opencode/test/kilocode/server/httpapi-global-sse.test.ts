@@ -11,14 +11,16 @@ import { ServerAuth } from "../../../src/server/auth"
 import { RootHttpApi } from "../../../src/server/routes/instance/httpapi/api"
 import { GlobalPaths } from "../../../src/server/routes/instance/httpapi/groups/global"
 import { controlHandlers } from "../../../src/server/routes/instance/httpapi/handlers/control"
+import { controlPlaneHandlers } from "../../../src/server/routes/instance/httpapi/handlers/control-plane"
 import { globalHandlers } from "../../../src/server/routes/instance/httpapi/handlers/global"
 import { authorizationLayer } from "../../../src/server/routes/instance/httpapi/middleware/authorization"
 import { schemaErrorLayer } from "../../../src/server/routes/instance/httpapi/middleware/schema-error"
+import { MoveSession } from "@opencode-ai/core/control-plane/move-session"
 import { pollWithTimeout, testEffect } from "../../lib/effect"
 
 const apiLayer = HttpRouter.serve(
   HttpApiBuilder.layer(RootHttpApi).pipe(
-    Layer.provide([controlHandlers, globalHandlers]),
+    Layer.provide([controlHandlers, controlPlaneHandlers, globalHandlers]),
     Layer.provide([authorizationLayer, schemaErrorLayer]),
   ),
   { disableListenLog: true, disableLogger: true },
@@ -26,6 +28,7 @@ const apiLayer = HttpRouter.serve(
   Layer.provideMerge(NodeHttpServer.layerTest),
   Layer.provide(Layer.mock(Auth.Service)({})),
   Layer.provide(Layer.mock(Config.Service)({})),
+  Layer.provide(Layer.mock(MoveSession.Service)({})),
   Layer.provide(
     Layer.mock(Installation.Service)({
       method: () => Effect.succeed("npm"),

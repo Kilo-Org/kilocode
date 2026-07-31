@@ -35,3 +35,7 @@ packages/kilo-i18n/src/de.ts linguist-generated=false
 # Auto-generated CLI reference docs
 packages/kilo-docs/markdoc/partials/cli-commands-table.md linguist-generated=true
 packages/kilo-docs/pages/code-with-ai/platforms/cli-reference.md linguist-generated=true
+
+# Upstream generated migration artifacts
+packages/core/migration/**/snapshot.json linguist-generated
+packages/core/src/database/migration.gen.ts linguist-generated

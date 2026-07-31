@@ -1,6 +1,8 @@
-Start Agent Manager sessions in the VS Code extension.
+Inspect and orchestrate Agent Manager sessions, or start new sessions, in the VS Code extension.
 
-Use this tool when the user explicitly asks you to fan out work into Agent Manager, create Agent Manager worktrees, or start multiple Agent Manager sessions for independent tasks.
+Use `action: "list"` to inspect the compact Agent Manager overview, `action: "prompt"` to send one instruction to one existing managed session, and `action: "stop"` to stop and remove one managed session. List results include user-defined sections, ungrouped worktrees, and managed local sessions. Optional filters can narrow by section ID or by `idle`, `busy`, `retry`, `offline`, or `waiting` state. Prompting and stopping are targeted only: they do not broadcast or create sessions, and prompting does not wait for the target to finish.
+
+To start sessions, keep using the existing `mode` and `tasks` input without an action. Use start mode when the user explicitly asks you to fan out work into Agent Manager, create Agent Manager worktrees, or start multiple Agent Manager sessions for independent tasks.
 
 Modes:
 - `worktree`: creates a new Agent Manager git worktree for each task, like the New Worktree dialog.

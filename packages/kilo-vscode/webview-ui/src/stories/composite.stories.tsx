@@ -300,6 +300,22 @@ const dockPermission: PermissionRequest = {
   // No `tool` field — this is a non-tool (dock) permission
 }
 
+const skillShellPermission: PermissionRequest = {
+  id: "perm-skill-shell-001",
+  sessionID: SESSION_ID,
+  toolName: "bash",
+  // patterns are the decomposed sub-commands (for authorization); the prompt displays the
+  // verbatim per-placeholder commands from args.commands, and names the skill via args.skill.
+  patterns: ["git rev-parse --abbrev-ref HEAD", "printf INJECTED_OK"],
+  always: [],
+  args: {
+    skillShell: true,
+    skill: "git-status",
+    commands: ["git rev-parse --abbrev-ref HEAD", "printf INJECTED_OK"],
+  },
+  tool: { messageID: ASST_MSG_ID, callID: "call-skill-shell-001" },
+}
+
 // ---------------------------------------------------------------------------
 // Question fixtures
 // ---------------------------------------------------------------------------
@@ -568,6 +584,30 @@ export const BashWithPermission: Story = {
 }
 
 // ---------------------------------------------------------------------------
+// 2b. Permission dock — skill shell batch (command list, Allow/Reject, no rules)
+// ---------------------------------------------------------------------------
+
+export const PermissionDockSkillShell: Story = {
+  name: "Permission Dock — skill shell commands",
+  render: () => {
+    const perms = [skillShellPermission]
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy", permissions: perms }),
+      messages: () => [{ id: "msg-001" }] as any[],
+    }
+    return (
+      <StoryProviders permissions={perms} sessionID={SESSION_ID} status="busy" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "100%", height: "300px", display: "flex", "flex-direction": "column" }}>
+            <ChatView />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+// ---------------------------------------------------------------------------
 // 3. Permission dock — write with file patterns (above chatbox)
 // ---------------------------------------------------------------------------
 
@@ -650,6 +690,25 @@ export const ToolCards: Story = {
     return (
       <StoryProviders data={data} sessionID={SESSION_ID}>
         <AssistantMessage message={baseAssistantMessage} />
+      </StoryProviders>
+    )
+  },
+}
+
+export const TimelineHighlightedTool: Story = {
+  name: "Task Timeline — highlighted tool",
+  render: () => {
+    const data = dataWith([readCompleted])
+    return (
+      <StoryProviders data={data} sessionID={SESSION_ID}>
+        <div class="vscode-session-turn" data-row="assistant">
+          <div class="vscode-session-turn-assistant">
+            <AssistantMessage
+              message={baseAssistantMessage}
+              highlight={() => ({ msgId: ASST_MSG_ID, partId: readCompleted.id })}
+            />
+          </div>
+        </div>
       </StoryProviders>
     )
   },
@@ -1180,6 +1239,7 @@ print(f"Entries with audio_file set: {found_audio}")
 print(f"Missing audio_file: {len(expected) - found_audio}")
 EOF`,
     rules: ["python3 *"],
+    heredoc: true,
   },
   tool: { messageID: ASST_MSG_ID, callID: "call-heredoc-001" },
 }

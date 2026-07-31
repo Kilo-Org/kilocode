@@ -36,10 +36,28 @@ async function openStory(page: Page) {
   return first
 }
 
+async function showTarget(page: Page) {
+  const target = page.locator('[data-file-path="src/target.ts"]')
+  await page.locator(".am-review-diff").evaluate((el) => {
+    el.scrollTop = el.scrollHeight
+  })
+  await expect(target).toBeAttached()
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+  return target
+}
+
+async function alignTarget(page: Page) {
+  await page.locator(".am-review-diff").evaluate((el) => {
+    const target = el.querySelector('[data-file-path="src/target.ts"]')
+    if (!(target instanceof HTMLElement)) throw new Error("Target diff row not found")
+    el.scrollTop += target.getBoundingClientRect().top - el.getBoundingClientRect().top - 24
+  })
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+}
+
 test("preserves diff scroll position while an agent edit refreshes a file", async ({ page }) => {
   const first = await openStory(page)
   const scroller = page.locator(".am-review-diff")
-  const target = page.locator('[data-file-path="src/target.ts"]')
 
   // The initial tall diff rendered eagerly. Restore the real observer before
   // moving it offscreen so an unfixed row remount takes the deferred path.
@@ -52,11 +70,10 @@ test("preserves diff scroll position while an agent edit refreshes a file", asyn
     })
   })
 
-  await scroller.evaluate((el) => {
-    const target = el.querySelector('[data-file-path="src/target.ts"]')
-    if (!(target instanceof HTMLElement)) throw new Error("Target diff row not found")
-    el.scrollTop += target.getBoundingClientRect().top - el.getBoundingClientRect().top - 24
-  })
+  const target = await showTarget(page)
+
+  await alignTarget(page)
+  await alignTarget(page)
 
   const before = await scroller.evaluate((el) => el.scrollTop)
   const top = await target.evaluate((el) => el.getBoundingClientRect().top)
@@ -76,18 +93,10 @@ test("preserves diff scroll position while an agent edit refreshes a file", asyn
 test("preserves scroll while adding and editing a review comment", async ({ page }) => {
   await openStory(page)
   const scroller = page.locator(".am-review-diff")
-  const target = page.locator('[data-file-path="src/target.ts"]')
+  const target = await showTarget(page)
 
-  const align = async () => {
-    await scroller.evaluate((el) => {
-      const target = el.querySelector('[data-file-path="src/target.ts"]')
-      if (!(target instanceof HTMLElement)) throw new Error("Target diff row not found")
-      el.scrollTop += target.getBoundingClientRect().top - el.getBoundingClientRect().top - 24
-    })
-    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
-  }
-  await align()
-  await align()
+  await alignTarget(page)
+  await alignTarget(page)
 
   const line = target.locator('[data-line="1"]').last()
   await line.hover()
