@@ -7,6 +7,7 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { Switch } from "@kilocode/kilo-ui/switch"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 
 import { useConfig } from "../../context/config"
 import { useSession } from "../../context/session"
@@ -897,20 +898,20 @@ const AgentBehaviourTab: Component = () => {
                 "border-bottom": index() < skillPaths().length - 1 ? "1px solid var(--border-weak-base)" : "none",
               }}
             >
-              <span
-                style={{
-                  flex: 1,
-                  "min-width": 0,
-                  "font-family": "var(--vscode-editor-font-family, monospace)",
-                  "font-size": "var(--kilo-font-size-12)",
-                  overflow: "hidden",
-                  "text-overflow": "ellipsis",
-                  "white-space": "nowrap",
-                }}
-                title={path}
-              >
-                {path}
-              </span>
+              <Tooltip value={path} class="settings-skills-row-trigger">
+                <span
+                  style={{
+                    width: "100%",
+                    "font-family": "var(--vscode-editor-font-family, monospace)",
+                    "font-size": "var(--kilo-font-size-12)",
+                    overflow: "hidden",
+                    "text-overflow": "ellipsis",
+                    "white-space": "nowrap",
+                  }}
+                >
+                  {path}
+                </span>
+              </Tooltip>
               <IconButton size="small" variant="ghost" icon="close" onClick={() => removeSkillPath(index())} />
             </div>
           )}
@@ -954,20 +955,20 @@ const AgentBehaviourTab: Component = () => {
                 "border-bottom": index() < skillUrls().length - 1 ? "1px solid var(--border-weak-base)" : "none",
               }}
             >
-              <span
-                style={{
-                  flex: 1,
-                  "min-width": 0,
-                  "font-family": "var(--vscode-editor-font-family, monospace)",
-                  "font-size": "var(--kilo-font-size-12)",
-                  overflow: "hidden",
-                  "text-overflow": "ellipsis",
-                  "white-space": "nowrap",
-                }}
-                title={url}
-              >
-                {url}
-              </span>
+              <Tooltip value={url} class="settings-skills-row-trigger">
+                <span
+                  style={{
+                    width: "100%",
+                    "font-family": "var(--vscode-editor-font-family, monospace)",
+                    "font-size": "var(--kilo-font-size-12)",
+                    overflow: "hidden",
+                    "text-overflow": "ellipsis",
+                    "white-space": "nowrap",
+                  }}
+                >
+                  {url}
+                </span>
+              </Tooltip>
               <IconButton size="small" variant="ghost" icon="close" onClick={() => removeSkillUrl(index())} />
             </div>
           )}

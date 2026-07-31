@@ -52,7 +52,9 @@ test.describe("skills settings responsive layout", () => {
     for (const seeded of [SEEDED_PATH, SEEDED_PATH_2]) {
       const span = page.getByText(seeded, { exact: true })
       await expect(span, `path value visible: ${seeded}`).toBeVisible()
-      const row = span.locator("xpath=parent::div")
+      const trigger = span.locator("xpath=ancestor::div[@data-component='tooltip-trigger'][1]")
+      await expect(trigger, `path Tooltip trigger wraps the value: ${seeded}`).toBeVisible()
+      const row = trigger.locator("xpath=parent::div")
       await assertRowContained(row, pathsCard, `Skill Folder Paths row "${seeded}"`)
 
       const closeButton = row.locator('[data-icon="close"]')
@@ -63,12 +65,20 @@ test.describe("skills settings responsive layout", () => {
       expect(btnBox!.x + btnBox!.width, "× button right edge inside card (not pushed off-screen)").toBeLessThanOrEqual(
         cardBox!.x + cardBox!.width + 1,
       )
+
+      // The accessible Tooltip exposes the full value on focus — confirms the
+      // truncated span stays reachable to keyboard / screen-reader users.
+      await trigger.focus()
+      const content = page.locator('[data-component="tooltip"]').filter({ hasText: seeded })
+      await expect(content, `Kilo Tooltip exposes full path on focus: ${seeded}`).toBeVisible()
     }
 
     for (const seeded of [SEEDED_URL, SEEDED_URL_2]) {
       const span = page.getByText(seeded, { exact: true })
       await expect(span, `URL value visible: ${seeded}`).toBeVisible()
-      const row = span.locator("xpath=parent::div")
+      const trigger = span.locator("xpath=ancestor::div[@data-component='tooltip-trigger'][1]")
+      await expect(trigger, `URL Tooltip trigger wraps the value: ${seeded}`).toBeVisible()
+      const row = trigger.locator("xpath=parent::div")
       await assertRowContained(row, urlsCard, `Skill URLs row "${seeded}"`)
 
       const closeButton = row.locator('[data-icon="close"]')
@@ -79,6 +89,12 @@ test.describe("skills settings responsive layout", () => {
       expect(btnBox!.x + btnBox!.width, "× button right edge inside card (not pushed off-screen)").toBeLessThanOrEqual(
         cardBox!.x + cardBox!.width + 1,
       )
+
+      // The accessible Tooltip exposes the full value on focus — confirms the
+      // truncated span stays reachable to keyboard / screen-reader users.
+      await trigger.focus()
+      const content = page.locator('[data-component="tooltip"]').filter({ hasText: seeded })
+      await expect(content, `Kilo Tooltip exposes full URL on focus: ${seeded}`).toBeVisible()
     }
 
     for (const addLabel of ["Add"]) {
