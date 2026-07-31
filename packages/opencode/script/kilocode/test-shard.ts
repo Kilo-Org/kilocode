@@ -40,36 +40,4 @@ export namespace TestShard {
     }
     return groups.map((group) => group.files)
   }
-
-  // Build a runtime-weighted sharding function from measured per-file durations
-  // (seconds). Files with a positive measured duration use it directly; unknown
-  // or sub-resolution files are estimated from their byte size scaled to the
-  // measured set, floored so LPT never clusters zero-weight files into one shard.
-  // Returns a plain size weight when no timings are supplied (preserves prior
-  // behavior on platforms without a timings manifest).
-  export function timedWeight(
-    timings: Record<string, number> | undefined,
-    size: (file: string) => number,
-  ): (file: string) => number {
-    if (!timings) return size
-    // Accumulate the time/byte ratio from files that have both a positive
-    // measured duration and a non-zero on-disk size. Bun.file().size returns 0
-    // (never throws) for missing paths, so stale manifest entries would otherwise
-    // add their time to totalT with zero size, inflating the scale factor.
-    let totalT = 0
-    let totalS = 0
-    for (const [file, t] of Object.entries(timings)) {
-      if (t <= 0) continue
-      const s = size(file)
-      if (s <= 0) continue
-      totalT += t
-      totalS += s
-    }
-    if (totalS <= 0) return size
-    const scale = totalT / totalS
-    return (file: string) => {
-      const t = timings[file]
-      return t != null && t > 0 ? t : Math.max(size(file) * scale, 0.5)
-    }
-  }
 }
