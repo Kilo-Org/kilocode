@@ -574,29 +574,23 @@ child.align(HAlign.TRACK, VAlign.TRACK)   // fill all available space
 
 ### Icons and SVG Assets
 
-Official references:
-- [IntelliJ Platform UI Guidelines](https://jetbrains.design/intellij/)
-- [User Interface Components](https://plugins.jetbrains.com/docs/intellij/user-interface-components.html)
-- [UI FAQ (colors, borders, icons)](https://plugins.jetbrains.com/docs/intellij/ui-faq.html)
+The `icon-jetbrains` skill (`.kilo/skills/icon-jetbrains/SKILL.md`) is the single source of truth for SVG icon authoring: canvas sizes, palette colors, dark variants, composition rules, placement, and validation. Always load that skill when creating, modifying, or reviewing icon assets. Do not duplicate its guidance here.
+
+This section covers only the Kotlin/runtime integration side:
 
 - For compact icon-only actions, use `ai.kilocode.client.ui.HoverIcon` so the control gets the standard 24×24 hover treatment. Do not create `JButton(icon)` or wrap a bare icon in a button just to make it clickable.
 - **Reuse platform icons**: browse at https://intellij-icons.jetbrains.design. Access via `AllIcons.*` constants.
 - Custom icons: SVG files in `resources/icons/`. Load via `IconLoader.getIcon("/icons/foo.svg", MyClass::class.java)`.
 - Organize in an `icons` package or a `*Icons` object with `@JvmField` on each constant.
-- **Sizing**: actions/nodes = 16×16, tool window = 13×13 (classic) or 20×20 + 16×16 compact (New UI), editor gutter = 12×12 (classic) / 14×14 (New UI).
-- **Dark variants**: `icon.svg` + `icon_dark.svg`. HiDPI: `icon@2x.svg` + `icon@2x_dark.svg`.
-- **New UI support**: place New UI icons in `expui/` directory, create `*IconMappings.json`, register via `com.intellij.iconMapper` extension point. New UI icon colors: light `#6C707E`, dark `#CED0D6`.
+- **Sizing, dark variants, and filename patterns**: see the `icon-jetbrains` skill for the authoritative Icon roles table, canvas sizes, filename patterns, and dark variant conventions. Do not duplicate sizing or palette values here.
 
 IntelliJ does not theme SVG icons with `currentColor`, CSS classes, CSS variables, `<style>` blocks, or inherited styles. `SVGLoader` patches icon colors by matching literal hex values in `fill` and `stroke` attributes against the active theme palette. Use hardcoded palette hex values in SVG assets and provide dark variants. This exception applies to icon asset files only; runtime Swing UI code must still derive colors from theme APIs.
 
-| Do | Do not |
-|---|---|
-| `fill="#6E6E6E"` | `fill="currentColor"` |
-| `stroke="#3574F0"` | CSS variables or classes |
-| `icon.svg` plus `icon_dark.svg` | `<style>` blocks for theming |
-| `fill-opacity="0.5"` | Inherited styling |
-
 Themes can override palette colors through `icons.ColorPalette` in the theme JSON.
+
+Official references:
+- [IntelliJ Platform UI Guidelines](https://jetbrains.design/intellij/)
+- [UI FAQ (colors, borders, icons)](https://plugins.jetbrains.com/docs/intellij/ui-faq.html)
 
 ### Before Returning UI Code
 
