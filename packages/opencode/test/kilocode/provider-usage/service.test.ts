@@ -246,7 +246,6 @@ it.instance("loads each personal Cloud procedure once and isolates managed enric
         "user.getAutoTopUpPaymentMethod": {
           enabled: true,
           amountCents: 5000,
-          thresholdCents: 500,
           paymentMethod: {
             type: "card",
             brand: "visa",

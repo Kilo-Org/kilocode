@@ -88,7 +88,6 @@ describe("Cloud tRPC client", () => {
     expect(state).toEqual({
       enabled: true,
       amountCents: 5000,
-      thresholdCents: 500,
       paymentMethod: { type: "card", brand: "visa", last4: "4242" },
     })
 

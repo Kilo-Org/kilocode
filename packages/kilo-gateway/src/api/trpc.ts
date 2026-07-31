@@ -8,7 +8,6 @@ const limit = 512 * 1024
 const AutoTopUpStateSchema = z.object({
   enabled: z.boolean(),
   amountCents: z.number().int().nonnegative(),
-  thresholdCents: z.number().int().nonnegative(),
   paymentMethod: z
     .object({
       type: z.string(),

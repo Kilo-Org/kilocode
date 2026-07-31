@@ -45,6 +45,9 @@ function base() {
 
 const error = (code: string, message: string) => ({ code, message, retryable: true })
 
+// Cloud does not expose the auto-top-up trigger; mirror its fixed $5 threshold for display.
+const AUTO_TOP_UP_THRESHOLD_CENTS = 500
+
 export function billing(state: CloudState): KiloBilling {
   const url = base()
   return {
@@ -55,7 +58,7 @@ export function billing(state: CloudState): KiloBilling {
           autoTopUp: {
             enabled: state.topup.value.enabled,
             amountCents: state.topup.value.amountCents,
-            thresholdCents: state.topup.value.thresholdCents,
+            thresholdCents: AUTO_TOP_UP_THRESHOLD_CENTS,
             ...(state.topup.value.paymentMethod?.type && { paymentType: state.topup.value.paymentMethod.type }),
             ...(state.topup.value.paymentMethod?.brand && { paymentBrand: state.topup.value.paymentMethod.brand }),
             ...(state.topup.value.paymentMethod?.last4 && { paymentLast4: state.topup.value.paymentMethod.last4 }),
