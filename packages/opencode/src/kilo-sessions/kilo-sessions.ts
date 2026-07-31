@@ -401,7 +401,9 @@ export namespace KiloSessions {
               | { kind: "adopted" }
               | { kind: "report"; generated: boolean } => {
               if (sameTitle) return { kind: "same" }
-              if (prev === undefined) return { kind: "report", generated: false }
+              // Consume marks before the network hop so the 60s TTL does not span
+              // token resolution + ingest.sync. Checks run even when prev is
+              // unknown — an unseeded mark must not leak past this handler.
               if (consumeRenameAdoption(sessionID, session.title)) return { kind: "adopted" }
               return { kind: "report", generated: consumeAutoTitle(sessionID, session.title) }
             })()
