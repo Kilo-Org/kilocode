@@ -576,6 +576,51 @@ describe("run stream transport", () => {
     }
   })
 
+  test("does not buffer session.updated for sessions it never tracks", async () => {
+    // Regression: session.updated fires for every session in the instance (title,
+    // touch, revert). Routing it through sid() used to push it into `buffered`
+    // where it would accumulate indefinitely for sessions the run never tracked.
+    const src = globalFeed()
+    const agents: string[] = []
+    const transport = await createSessionTransport({
+      sdk: sdk({ globalStream: src.stream }),
+      sessionID: "session-1",
+      thinking: true,
+      limits: () => ({}),
+      footer: footer().api,
+      onAgentChange: (agent) => agents.push(agent),
+    })
+
+    try {
+      src.push(
+        globalEvent({
+          id: "evt-session-2-update",
+          type: "session.updated",
+          properties: {
+            sessionID: "session-2",
+            info: {
+              id: "session-2",
+              slug: "session-2",
+              projectID: "project-2",
+              directory: "/tmp",
+              title: "Other",
+              version: "1",
+              agent: "debug",
+              time: { created: 1, updated: 2 },
+            },
+          },
+        } satisfies SdkEvent),
+      )
+      await Bun.sleep(20)
+      // Nothing reaches onAgentChange: the event is for a different session AND
+      // it must not be queued for later replay either (it is per-session noise).
+      expect(agents).toEqual([])
+    } finally {
+      src.close()
+      await transport.close()
+    }
+  })
+
   test("updates the active CLI model from session.next.model.switched", async () => {
     const src = globalFeed()
     const models: Array<{ providerID: string; id: string; variant?: string }> = []

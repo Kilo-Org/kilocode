@@ -16,8 +16,6 @@
 // We also re-check live session status before resolving an idle event so a
 // delayed idle from an older turn cannot complete a newer busy turn.
 import type { Event, GlobalEvent, KiloClient } from "@kilocode/sdk/v2" // kilocode_change - revert to upstream native Event type
-import { ProviderV2 } from "@opencode-ai/core/provider" // kilocode_change - model change callback payload
-import { ModelV2 } from "@opencode-ai/core/model" // kilocode_change - model change callback payload
 import { Context, Deferred, Effect, Exit, Layer, Scope, Stream } from "effect"
 import { makeRuntime } from "@/effect/run-service"
 import {
@@ -79,7 +77,7 @@ type StreamInput = {
   providers?: () => RunProvider[]
   footer: FooterApi
   onAgentChange?: (agent: string) => void // kilocode_change
-  onModelChange?: (model: { providerID: ProviderV2.ID; id: ModelV2.ID; variant?: string }) => void // kilocode_change
+  onModelChange?: (model: { providerID: string; id: string; variant?: string }) => void // kilocode_change
   trace?: Trace
   signal?: AbortSignal
 }
@@ -925,8 +923,8 @@ function createLayer(input: StreamInput) {
           } else if (event.type === "session.next.model.switched") {
             if (event.properties.sessionID === input.sessionID) {
               input.onModelChange?.({
-                providerID: ProviderV2.ID.make(event.properties.model.providerID),
-                id: ModelV2.ID.make(event.properties.model.id),
+                providerID: event.properties.model.providerID,
+                id: event.properties.model.id,
                 ...(event.properties.model.variant
                   ? { variant: event.properties.model.variant }
                   : {}),
@@ -1211,7 +1209,13 @@ function createLayer(input: StreamInput) {
                 if (booting || replaying) {
                   if (sessionID) {
                     input.trace?.write("recv.event", event)
-                    buffered.push(event)
+                    // kilocode_change start - session.updated fires for every session in the
+                    // instance (title, touch, revert) and would otherwise pile up in buffered
+                    // for the process lifetime for any session we never track.
+                    if (event.type !== "session.updated") {
+                      buffered.push(event)
+                    }
+                    // kilocode_change end
                   }
                   return
                 }
@@ -1219,7 +1223,13 @@ function createLayer(input: StreamInput) {
                 if (!tracked(sessionID)) {
                   if (sessionID) {
                     input.trace?.write("recv.event", event)
-                    buffered.push(event)
+                    // kilocode_change start - session.updated fires for every session in the
+                    // instance (title, touch, revert) and would otherwise pile up in buffered
+                    // for the process lifetime for any session we never track.
+                    if (event.type !== "session.updated") {
+                      buffered.push(event)
+                    }
+                    // kilocode_change end
                   }
                   return
                 }
