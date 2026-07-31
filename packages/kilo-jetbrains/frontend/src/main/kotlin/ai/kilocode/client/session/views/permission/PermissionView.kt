@@ -116,15 +116,32 @@ class PermissionView(
         val prev = requestId
         requestId = permission.id
 
-        card.setHeader(KiloBundle.message("session.permission.title"))
+        val skillShell = permission.meta.raw["skillShell"] == "true"
+        val skill = permission.meta.raw["skill"]
+        card.setHeader(
+            if (skillShell && !skill.isNullOrBlank())
+                // skill is the untrusted SKILL.md frontmatter name; escape it the same way as
+                // the command list so it can't reorder/repaint the header.
+                KiloBundle.message("session.permission.skillShell.title", escapeControl(skill))
+            else KiloBundle.message("session.permission.title"),
+        )
         syncDescription(description(permission))
 
         val tool = permission.name
-        val target = if (tool == "bash") permission.meta.command else resolveTarget(permission)
+        // A skill-shell bash batch shows the verbatim command list (control-char-escaped so the
+        // displayed command can't repaint the line). Its external_directory sibling still shows
+        // directories via resolveTarget; only the header carries the skill attribution.
+        val target = when {
+            skillShell && tool == "bash" -> permission.meta.skillCommands.joinToString("\n") { escapeControl(it) }
+            tool == "bash" -> permission.meta.command
+            else -> resolveTarget(permission)
+        }
         syncCode(tool, target)
         syncDiffs(permission.meta.fileDiffs)
         responding = permission.state == PermissionRequestState.RESPONDING || permission.state == PermissionRequestState.RESOLVED
-        rules.update(permission.meta.ruleDecisions, reset = prev != permission.id)
+        // Skill-shell approvals are never persisted, so no auto-approve rule toggles even if a
+        // future backend change starts sending candidates for this batch.
+        rules.update(if (skillShell) emptyList() else permission.meta.ruleDecisions, reset = prev != permission.id)
         syncState(permission)
         syncPrimaryText()
 
@@ -264,6 +281,31 @@ class PermissionView(
         view.codeFont = style.editorFamily
         view.component.border = JBUI.Borders.empty()
     }
+
+    // Escape control chars (CR/LF/ESC/etc.) and bidi/format characters so a skill command can't
+    // repaint the prompt or use Trojan-Source reordering to make the displayed text differ from
+    // what executes; newlines become a visible marker. Mirrors displayCommand in the CLI
+    // (packages/opencode/src/kilocode/skills/display.ts); keep the ranges in sync.
+    private fun escapeControl(command: String): String = buildString {
+        for (ch in command) {
+            val code = ch.code
+            when {
+                ch == '\n' -> append("\\n")
+                ch == '\r' -> append("\\r")
+                ch == '\t' -> append("\\t")
+                isEscapedControlOrFormat(code) -> append(if (code <= 0xff) "\\x%02x".format(code) else "\\u%04x".format(code))
+                else -> append(ch)
+            }
+        }
+    }
+
+    private fun isEscapedControlOrFormat(code: Int): Boolean =
+        code < 0x20 ||
+            code in 0x7f..0x9f ||
+            code in 0x200e..0x200f ||
+            code in 0x2028..0x2029 ||
+            code in 0x202a..0x202e ||
+            code in 0x2066..0x2069
 
     private fun description(permission: Permission): String = if (permission.name == "bash") {
         permission.meta.raw["description"] ?: toolLabel(permission.name)

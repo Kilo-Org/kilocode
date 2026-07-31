@@ -2,11 +2,9 @@ Find code snippets by semantic meaning and return ranked matches with file paths
 
 ## When to use
 
-- Explore an unfamiliar code area before you know exact identifiers
-- Find related implementations of a concept or behavior across the workspace
-- Search by intent such as authentication, caching, or session resume logic
-- Narrow a large codebase before following up with `Read` or `Grep`
-- Limit semantic search to one subdirectory with `path`
+Use early for open-ended exploration when you know the intent
+but not the exact identifiers or the semantics. Once likely files or symbols are found,
+follow up with Grep and Read. Prefer Grep directly when exact terms are already known.
 
 ## When NOT to use
 
@@ -25,4 +23,5 @@ Find code snippets by semantic meaning and return ranked matches with file paths
 ## Constraints
 
 - Write the query in English.
-- Use `path` only for subdirectories inside the current workspace.
+- Searches the entire current workspace by default. Limit semantic search to one subdirectory with `path`.
+- Cannot search outside the current workspace. Use other tools if this functionality is needed.

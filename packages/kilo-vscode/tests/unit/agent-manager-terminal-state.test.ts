@@ -561,4 +561,102 @@ describe("Agent Manager terminal state", () => {
       dispose()
     })
   })
+
+  // Multi-project regression: AgentManagerApp feeds createTerminalState a
+  // project-namespaced selection accessor (`${projectId}:${sel}`) so ids
+  // from different projects never collide. The wire protocol still speaks
+  // plain worktree ids, and `terminal.created` carries the owning
+  // `projectId` so the answer lands back in the namespaced context.
+  function nsScene(initial: string | null = LOCAL, pid = "prj-1") {
+    const [selection, setSelection] = createSignal<string | null>(initial)
+    const ns = (sel: string) => `${pid}:${sel}`
+    const state = createTerminalState(() => {
+      const sel = selection()
+      return sel === null ? null : ns(sel)
+    })
+    const posted: Array<Record<string, unknown>> = []
+    const events = { activated: [] as string[], selected: [] as string[], created: [] as string[] }
+    const handlers = createTerminalHandlers({
+      state,
+      tabIds: () => state.current().map((term) => term.id),
+      selectReview: () => undefined,
+      selectSessionTab: () => undefined,
+      clearSession: () => undefined,
+      resetOthers: () => undefined,
+      isPendingId: () => false,
+      findTab: () => undefined,
+      postMessage: (message) => posted.push(message as Record<string, unknown>),
+      onShowSide: () => undefined,
+      getSelection: selection,
+      LOCAL,
+      REVIEW_TAB_ID: "review",
+    })
+    const dispatch = createTerminalMessageHandler({
+      state,
+      activate: (id) => events.activated.push(id),
+      saveTabMemory: () => undefined,
+      setSelection: (value) => events.selected.push(value),
+      showError: () => undefined,
+      postMessage: (message) => posted.push(message as Record<string, unknown>),
+      onCreated: (contextKey) => events.created.push(contextKey),
+    })
+    return { state, posted, events, handlers, dispatch, ns }
+  }
+
+  it("keeps the namespaced state key out of side creates and buckets project-stamped answers", () => {
+    createRoot((dispose) => {
+      const item = nsScene(LOCAL)
+      item.handlers.requestSide()
+
+      expect(item.posted).toHaveLength(1)
+      const request = item.posted[0]!
+      expect(request).toMatchObject({ type: "agentManager.terminal.create", placement: "side", worktreeId: null })
+      expect(item.dispatch({ ...createdSide(String(request.createId), "terminal:side"), projectId: "prj-1" })).toBe(
+        true,
+      )
+      expect(item.state.sideKey()).toBe("prj-1:local")
+      expect(item.state.sides().map((term) => term.id)).toEqual(["terminal:side"])
+      expect(item.state.sideActiveFor("prj-1:local")).toBe("terminal:side")
+
+      // A worktree context sends its plain worktree id, not "prj-1:wt-1".
+      const wt = nsScene("wt-1")
+      wt.handlers.addSide()
+      expect(wt.posted[0]).toMatchObject({
+        type: "agentManager.terminal.create",
+        placement: "side",
+        worktreeId: "wt-1",
+      })
+      dispose()
+    })
+  })
+
+  it("buckets project-stamped tab terminals under the namespaced context", () => {
+    createRoot((dispose) => {
+      const item = nsScene(LOCAL)
+      item.handlers.requestNew()
+      expect(item.posted[0]).toMatchObject({
+        type: "agentManager.terminal.create",
+        placement: "tab",
+        worktreeId: null,
+      })
+      const created: ExtensionMessage = {
+        type: "agentManager.terminal.created",
+        createId: String(item.posted[0]!.createId),
+        placement: "tab",
+        worktreeId: null,
+        projectId: "prj-1",
+        terminalId: "terminal:tab",
+        title: "Terminal 1",
+        wsUrl: "ws://tab",
+        font,
+      }
+      expect(item.dispatch(created)).toBe(true)
+      expect(item.state.current().map((term) => term.id)).toEqual(["terminal:tab"])
+      // Selection and tab order stay on the plain protocol id.
+      expect(item.events.selected).toEqual([LOCAL])
+      expect(item.events.created).toEqual([LOCAL])
+      expect(item.events.activated).toEqual(["terminal:tab"])
+      dispose()
+    })
+  })
 })

@@ -639,13 +639,16 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
 
   const createSide = () => {
     const key = deps.state.sideKey()
+    // The wire protocol speaks plain worktree ids; `sideKey` is the
+    // project-namespaced state key and must not leak into the message.
+    const sel = deps.getSelection()
     const id = newId()
     deps.state.beginSide(key, id)
     deps.postMessage({
       type: "agentManager.terminal.create",
       createId: id,
       placement: "side",
-      worktreeId: key === deps.LOCAL ? null : key,
+      worktreeId: sel === null || sel === deps.LOCAL ? null : sel,
     })
   }
 
@@ -838,7 +841,10 @@ type CreatedMessage = Extract<ExtensionMessage, { type: "agentManager.terminal.c
 type ScriptTerminalsMessage = Extract<ExtensionMessage, { type: "agentManager.scriptTerminals" }>
 
 function handleCreated(deps: TerminalMessageHandlerDeps, msg: CreatedMessage) {
-  const contextKey = msg.worktreeId === null ? LOCAL : msg.worktreeId
+  // `target` is the plain protocol id (selection/tab-order keys); `key` is
+  // the project-namespaced terminal-state key (same shape as syncScripts).
+  const target = msg.worktreeId === null ? LOCAL : msg.worktreeId
+  const key = msg.projectId ? `${msg.projectId}:${target}` : target
   const term = {
     id: msg.terminalId,
     title: msg.title,
@@ -852,20 +858,20 @@ function handleCreated(deps: TerminalMessageHandlerDeps, msg: CreatedMessage) {
     // reloaded (or the context is gone) — close the PTY again instead
     // of leaking it.
     const request = deps.state.completeSide(msg.createId)
-    if (!request || request.contextKey !== contextKey) {
+    if (!request || request.contextKey !== key) {
       deps.postMessage({ type: "agentManager.terminal.close", terminalId: msg.terminalId })
       return
     }
-    deps.state.add(msg.worktreeId, term)
+    deps.state.add(key === LOCAL ? null : key, term)
     // The newest terminal becomes the visible one in its panel.
-    deps.state.setSideActive(contextKey, msg.terminalId)
-    deps.onSideCreated?.(contextKey, msg.terminalId)
+    deps.state.setSideActive(key, msg.terminalId)
+    deps.onSideCreated?.(key, msg.terminalId)
     return
   }
-  deps.state.add(msg.worktreeId, term)
-  deps.onCreated?.(contextKey, msg.terminalId)
+  deps.state.add(key === LOCAL ? null : key, term)
+  deps.onCreated?.(target, msg.terminalId)
   deps.saveTabMemory()
-  deps.setSelection(contextKey)
+  deps.setSelection(target)
   deps.activate(msg.terminalId)
 }
 

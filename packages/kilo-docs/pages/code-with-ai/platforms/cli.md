@@ -65,6 +65,10 @@ Or use npm:
 
 For detailed help on every command and subcommand, see the [CLI Command Reference](/docs/code-with-ai/platforms/cli-reference).
 
+{% callout type="warning" title="Kilo Console is deprecated" %}
+The `kilo console` command and its browser interface are deprecated and will be removed in a future release. Use the CLI TUI, VS Code extension, or JetBrains plugin to run sessions. Use the CLI slash commands, other extensions, or edit Kilo configuration files directly to manage settings.
+{% /callout %}
+
 ### Global Options
 
 | Flag | Description |
@@ -161,12 +165,12 @@ Configuration is managed through:
 
 ## CLI Notifications and Sounds
 
-CLI attention alerts are disabled by default. Enable and configure them in either of these ways:
+CLI attention alerts are disabled by default. Enable and configure them by editing the TUI configuration:
 
-- Run `kilo console`, open your project, then go to **Settings > CLI > Notifications**.
-- Edit the TUI configuration directly. Use `~/.config/kilo/tui.jsonc` (or `tui.json`) for global settings, or `.kilo/tui.json` (or `tui.jsonc`) for project settings.
+- Edit `~/.config/kilo/tui.jsonc` (or `tui.json`) for global settings.
+- Edit `.kilo/tui.json` (or `tui.jsonc`) for project settings.
 
-The Console exposes the attention, desktop notification, sound, and volume controls. The equivalent TUI configuration is:
+Use the following configuration for attention, desktop notification, sound, and volume controls:
 
 ```json
 {
@@ -208,7 +212,7 @@ Supported sound names are `default`, `question`, `permission`, `error`, `done`, 
 
 The `attention.sound_pack` setting selects a sound pack registered by a TUI plugin. Setting an arbitrary pack name does not install or load a pack. Per-event file overrides remain the simplest way to customize sounds without a plugin.
 
-There is no notification slash command or command-palette toggle. Use Kilo Console or `tui.json` / `tui.jsonc` so all attention behavior is controlled by the same configuration.
+There is no notification slash command or command-palette toggle. Use `tui.json` or `tui.jsonc` so all attention behavior is controlled by the same configuration.
 
 ## Slash Commands
 
