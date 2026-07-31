@@ -375,10 +375,10 @@ export namespace KiloSessions {
             const session = await Effect.runPromise(sessions.get(sessionID).pipe(Effect.orElseSucceed(() => null)))
             if (!session) return
             // Consume marks before the network hop so the 60s TTL does not span
-            // token resolution + ingest.sync. Advance knownTitles only after a
-            // successful sync so a rejected meta/sync leaves prev intact and the
-            // next Updated re-derives the POST. Restore consumed marks on failure
-            // so a cloud rename cannot echo and an auto-title keeps generated.
+            // token resolution + ingest.sync. Advance knownTitles optimistically
+            // so a concurrent Updated sees sameTitle (no duplicate POST with a
+            // wrong generated flag). On ingest or title-POST failure restore
+            // prev + consumed marks so the next Updated re-derives and retries.
             const prev = knownTitles.get(sessionID)
             const sameTitle = prev === session.title
             // Same-title Updated (setTitle no-op / double session.renamed): still
@@ -394,25 +394,37 @@ export namespace KiloSessions {
               if (consumeRenameAdoption(sessionID, session.title)) return { kind: "adopted" }
               return { kind: "report", generated: consumeAutoTitle(sessionID, session.title) }
             })()
+            const restoreTitleState = () => {
+              if (prev === undefined) knownTitles.delete(sessionID)
+              else knownTitles.set(sessionID, prev)
+              if (outcome.kind === "adopted") markRenameAdopted(sessionID, session.title)
+              else if (outcome.kind === "report" && outcome.generated) markAutoTitle(sessionID, session.title)
+            }
+            knownTitles.set(sessionID, session.title)
             try {
               await ingest.sync(sessionID, [
                 { type: "kilo_meta", data: await meta(sessionID, session) },
                 { type: "session", data: transport(session) },
               ])
             } catch (error) {
-              if (outcome.kind === "adopted") markRenameAdopted(sessionID, session.title)
-              else if (outcome.kind === "report" && outcome.generated) markAutoTitle(sessionID, session.title)
+              restoreTitleState()
               log.error("session updated ingest failed", { sessionID, error })
               return
             }
             if (outcome.kind === "same") consumeRenameAdoption(sessionID, session.title)
-            knownTitles.set(sessionID, session.title)
             if (outcome.kind !== "report") return
             // Production path goes through the Interface method (not private helper).
             const { AppRuntime } = await import("@/effect/app-runtime")
-            await AppRuntime.runPromise(
+            const reported = await AppRuntime.runPromise(
               reportSessionTitle(sessionID, session.title, { generated: outcome.generated }),
             )
+            if (!reported.ok) {
+              restoreTitleState()
+              log.warn("session title report failed; will retry on next Updated", {
+                sessionID,
+                reason: reported.reason,
+              })
+            }
           })
           watch(Session.Event.Deleted, (evt) => {
             const sessionID = evt.properties.sessionID
