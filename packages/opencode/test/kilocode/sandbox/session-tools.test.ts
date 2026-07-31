@@ -361,11 +361,11 @@ it.live("records why a denied tool call was refused on the tool part's metadata"
   Effect.gen(function* () {
     const dirs = yield* fixture()
     const metadataCalls: { toolCallID: string; value: Record<string, any> }[] = []
-    const deniedRuleset = [{ permission: "bash", pattern: "*", action: "deny" as const, source: "project" as const }]
+    const deniedRule = { permission: "bash", pattern: "*", action: "deny" as const, source: "project" as const }
     const overrides = Layer.mergeAll(
       TestConfig.layer({ get: () => Effect.succeed({ sandbox: { enabled: false } }) }),
       Layer.mock(Permission.Service)({
-        ask: () => Effect.fail(new Permission.DeniedError({ ruleset: deniedRuleset })),
+        ask: () => Effect.fail(new Permission.DeniedError({ ruleset: { rule: deniedRule, matches: [deniedRule] } })),
       }),
     )
     const tools = yield* resolve(dirs.ctx, metadataCalls).pipe(Effect.provide(overrides))

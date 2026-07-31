@@ -89,6 +89,8 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
             metadata: {
               approval: PermissionProvenance.classifyDenial({
                 ruleset: err.ruleset,
+                permission: req.permission,
+                patterns: req.patterns,
                 agent: input.agent.name,
                 origins: permissionOrigins,
               }),

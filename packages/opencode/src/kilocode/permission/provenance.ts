@@ -102,13 +102,33 @@ export namespace PermissionProvenance {
   /**
    * Classify why a tool call was denied, from the `ruleset` a `DeniedError` carries.
    *
-   * `DeniedError.ruleset` is untyped (`Schema.Any`) but is always the tagged ruleset `askPermission`
-   * built, filtered to the request's permission. The last `deny` rule in it is the one that decided.
+   * `DeniedError.ruleset` is untyped (`Schema.Any`); `Permission.ask` shapes it as
+   * `{ rule, matches }`, where `rule` is the exact rule `resolve()` matched against the
+   * request's pattern (via `Wildcard.match`), not merely the last `deny` rule for the
+   * permission. Two deny rules for different patterns under the same permission (e.g.
+   * `bash: { "git push *": deny, "rm -rf *": deny }`) would otherwise be indistinguishable by
+   * permission alone, misattributing the denial to whichever rule happens to sort last.
+   *
+   * Some denials carry no `rule` at all — e.g. the headless-subagent policy denial in
+   * `Permission.ask`, which isn't decided by any rule. `classify({ rule: undefined })` reports
+   * `{ source: "default" }`, the exact same shape as the *approval* fallback for "no rule
+   * matched", so a denial with no rule would otherwise render (and export) as an auto-approval.
+   * Synthesize a `deny` rule for the request's permission/pattern in that case so `rule.action`
+   * always reflects the real outcome.
    */
-  export function classifyDenial(input: { ruleset: unknown; agent: string; origins: Origins }): Approval {
-    const rule = Array.isArray(input.ruleset)
-      ? (input.ruleset as Permission.Rule[]).findLast((rule) => rule.action === "deny")
-      : undefined
+  export function classifyDenial(input: {
+    ruleset: unknown
+    permission: string
+    patterns: readonly string[]
+    agent: string
+    origins: Origins
+  }): Approval {
+    const denial = input.ruleset as { rule?: Permission.Rule } | undefined
+    const rule = denial?.rule ?? {
+      permission: input.permission,
+      pattern: input.patterns[0] ?? "*",
+      action: "deny" as const,
+    }
     return classify({ rule, agent: input.agent, origins: input.origins })
   }
 }

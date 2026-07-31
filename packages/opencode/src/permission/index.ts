@@ -226,14 +226,21 @@ export const layer = Layer.effect(
       for (const pattern of request.patterns) {
         const rule = resolve(request.permission, pattern, ruleset, approved, local) // kilocode_change — include session-scoped rules
         yield* Effect.logInfo("evaluated", { permission: request.permission, pattern, action: rule })
-        // kilocode_change start — saved/session approvals cannot override hard Ask/Plan denials
-        if (veto(request.permission, pattern, hardRuleset)) {
-          return yield* new DeniedError({ ruleset: subset(request.permission, hardRuleset ?? []) })
+        // kilocode_change start — saved/session approvals cannot override hard Ask/Plan denials.
+        // Report the exact hard rule that matched this pattern (not just the deny-permission
+        // subset) so provenance attributes the denial to the right rule, not just any deny rule.
+        const hardRule = hardRuleset && ExternalDirectoryPermission.evaluate(request.permission, pattern, hardRuleset)
+        if (hardRule?.action === "deny") {
+          return yield* new DeniedError({
+            ruleset: { rule: hardRule, matches: subset(request.permission, hardRuleset ?? []) },
+          })
         }
         // kilocode_change end
         if (rule.action === "deny") {
+          // kilocode_change - carry the exact matched `rule` (not just the deny-permission subset)
+          // so provenance can attribute the denial to the pattern that actually decided it.
           return yield* new DeniedError({
-            ruleset: subset(request.permission, ruleset), // kilocode_change
+            ruleset: { rule, matches: subset(request.permission, ruleset) },
           })
         }
         // kilocode_change start - skill shell forces a prompt instead of honoring an allow/auto-approve rule
@@ -255,7 +262,8 @@ export const layer = Layer.effect(
 
       // kilocode_change start - headless subagent asks fail instead of queuing for a reply that never comes (#11903)
       if (yield* KiloHeadless.denies(request.sessionID).pipe(Effect.provideService(Database.Service, database))) {
-        return yield* new DeniedError({ ruleset: subset(request.permission, ruleset) })
+        // no single rule decided this — it's a headless policy denial, not a ruleset match
+        return yield* new DeniedError({ ruleset: { matches: subset(request.permission, ruleset) } })
       }
       // kilocode_change end
 
