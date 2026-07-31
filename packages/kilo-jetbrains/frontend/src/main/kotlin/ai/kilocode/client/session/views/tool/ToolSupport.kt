@@ -777,6 +777,16 @@ internal data class EditFileChange(
     val patch: String,
 )
 
+/**
+ * Cheap upper-bound line count of a unified patch, used to gate large-diff rendering before any
+ * editor is built. Counts raw patch lines (including hunk/file headers) so it slightly over-counts
+ * the rendered body — a conservative gate is fine, and it avoids parsing the diff twice.
+ */
+internal fun patchLineCount(patch: String): Int = if (patch.isEmpty()) 0 else patch.count { it == '\n' } + 1
+
+/** Total diff line count across the files touched by a multi-file apply_patch. */
+internal fun patchLineCount(files: List<EditFileChange>): Int = files.sumOf { patchLineCount(it.patch) }
+
 /** Per-file changes from an apply_patch tool; empty for single-file edit/write tools (`filediff`). */
 internal fun editFiles(tool: Tool): List<EditFileChange> =
     parseJsonArray(tool.metadata["files"])?.mapNotNull { element ->
