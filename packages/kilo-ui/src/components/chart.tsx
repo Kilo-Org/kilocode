@@ -55,7 +55,7 @@ export function ChartTool(props: ToolProps) {
       config = parsed
     } catch (e) {
       // output is not valid JSON — model likely passed an unsupported type
-      console.warn("Chart: could not parse output as JSON", e)
+      console.warn("[Kilo Chart]: could not parse output as JSON", e)
       return
     }
 
