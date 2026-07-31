@@ -364,7 +364,7 @@ class SessionController(
             return
         }
         val id = sid ?: return
-        (childIds + id).forEach(::purgePending)
+        updateModel { (childIds + id).forEach(::purgePending) }
         capture("Session Stop Clicked", sessionProps(id))
         cs.launch {
             try {
@@ -723,36 +723,29 @@ class SessionController(
     private fun approve(id: String, restore: () -> Permission) {
         assertEdt()
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=permission-auto rid=$id" }
+        // Skill-shell batches must be answered by a human: the server refuses non-interactive
+        // approvals, so show the card (its manual reply sets interactive=true) rather than send a
+        // machine reply. Decide and enqueue synchronously on the EDT so back-to-back asks keep
+        // arrival (FIFO) order, matching asked()'s non-auto path; only the RPC needs a coroutine.
+        if (!autoApprove || restore().meta.raw["skillShell"] == "true") {
+            show(restore())
+            return
+        }
+        updateModel { model.setState(SessionState.Busy(KiloBundle.message("session.status.considering"))) }
         cs.launch {
             try {
-                // Skill-shell batches must be answered by a human: the server refuses
-                // non-interactive approvals, so auto-approve must show the card (whose
-                // manual reply sets interactive=true) rather than send a machine reply.
-                if (!autoApprove || restore().meta.raw["skillShell"] == "true") {
-                    edt {
-                        if (disposed) return@edt
-                        enqueue(restore())
-                        if (model.state !is SessionState.AwaitingPermission && model.state !is SessionState.AwaitingQuestion) {
-                            promote()
-                        }
-                    }
-                    return@launch
-                }
-                edt {
-                    if (disposed) return@edt
-                    model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
-                }
                 sessions.replyPermission(id, directory, PermissionReplyDto("once"))
                 capture("Permission Auto Approved", sessionProps() + mapOf("tool" to restore().name, "source" to "single"))
                 LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=permission-auto rid=$id ok=true" }
             } catch (e: Exception) {
                 LOG.warn("${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=permission-auto rid=$id dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
                 edt {
-                    if (disposed) return@edt
-                    model.setState(SessionState.AwaitingPermission(restore().copy(
+                    // Queue the error card too, so pending stays the single source of truth and a
+                    // later Stop / TurnClose / idle purge can clear it instead of stranding it.
+                    show(restore().copy(
                         state = PermissionRequestState.ERROR,
                         message = e.message ?: KiloBundle.message("session.permission.error"),
-                    )))
+                    ))
                 }
             }
         }
@@ -1535,11 +1528,7 @@ class SessionController(
             approve(event.request)
             return
         }
-        val perm = toPermission(event.request)
-        enqueue(perm)
-        if (model.state !is SessionState.AwaitingPermission && model.state !is SessionState.AwaitingQuestion) {
-            promote()
-        }
+        show(toPermission(event.request))
     }
 
     private fun replied(event: ChatEventDto.PermissionReplied) {
@@ -1587,6 +1576,19 @@ class SessionController(
     private fun promote() {
         val perm = pending.values.firstOrNull() ?: return
         model.setState(SessionState.AwaitingPermission(perm))
+    }
+
+    /**
+     * Queue [perm] and surface it if no card/question is already up. Wrapped in updateModel so the
+     * transcript's bottom-follow is preserved (permission cards live inside the scroll pane), and
+     * kept synchronous so callers on the EDT enqueue in arrival (FIFO) order.
+     */
+    @RequiresEdt
+    private fun show(perm: Permission) = updateModel {
+        enqueue(perm)
+        if (model.state !is SessionState.AwaitingPermission && model.state !is SessionState.AwaitingQuestion) {
+            promote()
+        }
     }
 
     /**

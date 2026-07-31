@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.controller
 
 import ai.kilocode.client.plugin.KiloPluginSettings
+import ai.kilocode.client.session.model.PermissionRequestState
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigDto
@@ -139,6 +140,24 @@ class PermissionQueueTest : SessionControllerTestBase() {
 
         emit(ChatEventDto.PermissionReplied("ses_test", "perm1"))
         assertPermission(m, "perm2")
+    }
+
+    fun `test auto approve failure card is queued and purged by stop`() {
+        edt { KiloPluginSettings.setAutoApprove(true) }
+        rpc.replyPermissionThrows = RuntimeException("boom")
+        val (m, _, _) = prompted()
+
+        emit(ChatEventDto.PermissionAsked("ses_test", permission("perm1")))
+        flush()
+
+        // The failed auto-approval surfaces as an error card; it must be in the queue so purge sees it.
+        val state = m.model.state as? SessionState.AwaitingPermission ?: error("Expected error card")
+        assertEquals("perm1", state.permission.id)
+        assertEquals(PermissionRequestState.ERROR, state.permission.state)
+
+        edt { m.abort() }
+        flush()
+        assertTrue(m.model.state is SessionState.Idle)
     }
 
     fun `test auto approve drain queues multiple skill shell permissions`() {

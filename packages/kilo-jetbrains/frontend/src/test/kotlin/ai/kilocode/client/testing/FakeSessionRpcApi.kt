@@ -283,8 +283,11 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
         configs.add(directory to config)
     }
 
+    var replyPermissionThrows: Exception? = null
+
     override suspend fun replyPermission(requestId: String, directory: String, reply: PermissionReplyDto) {
         assertNotEdt("replyPermission")
+        replyPermissionThrows?.let { throw it }
         permissionReplies.add(Triple(requestId, directory, reply))
     }
 
