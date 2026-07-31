@@ -45,18 +45,23 @@ export namespace RecallSearch {
         AND json_extract(p.data, '$.state.status') = 'error')
     )`
 
-  const searchSql = (ids: SessionID[], terms: string[]) => sql`
+  const searchSql = (
+    ids: SessionID[],
+    terms: string[],
+    cursor: { sessionID: SessionID | ""; partID: PartID | "" },
+  ) => sql`
     SELECT
       p.id AS partID,
       p.message_id AS messageID,
       p.session_id AS sessionID,
       json_extract(p.data, '$.type') AS kind,
       ${sql.raw(TEXT_SQL)} AS text
-    FROM part AS p INDEXED BY recall_part_search_idx
+    FROM part AS p
     WHERE p.session_id IN (${sql.join(
       ids.map((id) => sql`${id}`),
       sql`,`,
     )})
+      AND (p.session_id > ${cursor.sessionID} OR (p.session_id = ${cursor.sessionID} AND p.id > ${cursor.partID}))
       AND (${sql.raw(PART_FILTER_SQL)})
       AND (
         ${sql.join(
@@ -64,7 +69,9 @@ export namespace RecallSearch {
           sql` OR `,
         )}
         OR ${sql.raw(TEXT_SQL)} GLOB ('*[^' || char(1) || '-' || char(127) || ']*')
-      )`
+      )
+    ORDER BY p.session_id, p.id
+    LIMIT ${PAGE_SIZE}`
 
   const messageSql = (ids: MessageID[]) => sql`
     SELECT
@@ -76,15 +83,6 @@ export namespace RecallSearch {
       ids.map((id) => sql`${id}`),
       sql`,`,
     )})`
-
-  const countSql = (ids: SessionID[]) => sql`
-    SELECT count(*) AS parts
-    FROM part AS p INDEXED BY recall_part_search_idx
-    WHERE session_id IN (${sql.join(
-      ids.map((id) => sql`${id}`),
-      sql`,`,
-    )})
-      AND (${sql.raw(PART_FILTER_SQL)})`
 
   export type Source = "user" | "assistant" | "reference" | "error"
 
@@ -105,7 +103,7 @@ export namespace RecallSearch {
   export type Output = {
     results: Result[]
     sessions: number
-    parts: number
+    candidates: number
   }
 
   type Candidate = Match & {
@@ -156,7 +154,7 @@ export namespace RecallSearch {
     }
 
     const roots = [...new Set(input.directories.map(Filesystem.resolve))]
-    if (roots.length === 0) return { results: [], sessions: 0, parts: 0 }
+    if (roots.length === 0) return { results: [], sessions: 0, candidates: 0 }
 
     yield* abort(input.signal)
     const { db } = yield* Database.Service
@@ -193,12 +191,12 @@ export namespace RecallSearch {
       })
     }
     yield* abort(input.signal)
-    if (items.size === 0) return { results: [], sessions: 0, parts: 0 }
+    if (items.size === 0) return { results: [], sessions: 0, candidates: 0 }
 
     const ids = [...items.keys()]
     const excludeSessionID = input.excludeSessionID ?? ""
     const excludeFromMessageID = input.excludeFromMessageID ?? ""
-    let parts = 0
+    let candidates = 0
 
     const consume = (row: Hit, source: Source) => {
       const item = items.get(row.sessionID)
@@ -222,39 +220,46 @@ export namespace RecallSearch {
     for (let index = 0; index < ids.length; index += BATCH) {
       yield* abort(input.signal)
       const batch = ids.slice(index, index + BATCH)
-      parts += (yield* db.get<{ parts: number }>(countSql(batch)).pipe(Effect.orDie))?.parts ?? 0
-      const found = yield* db.all<Row>(searchSql(batch, parsed.terms)).pipe(Effect.orDie)
-      const hits: Hit[] = []
-      for (let offset = 0; offset < found.length; offset += PAGE_SIZE) {
-        for (const row of found.slice(offset, offset + PAGE_SIZE)) {
+      let cursor = { sessionID: "" as SessionID | "", partID: "" as PartID | "" }
+      while (true) {
+        const found = yield* db.all<Row>(searchSql(batch, parsed.terms, cursor)).pipe(Effect.orDie)
+        if (found.length === 0) break
+        candidates += found.length
+        const hits: Hit[] = []
+        for (const row of found) {
           if (!row.text) continue
           const normalized = fold(row.text)
           const matched = mask(normalized, parsed.terms)
           if (matched === 0) continue
           hits.push({ ...row, mask: matched, phrase: normalized.includes(parsed.phrase) })
         }
+        const messages = new Map<MessageID, MessageRow>()
+        const messageIDs = [...new Set(hits.map((row) => row.messageID))]
+        for (let offset = 0; offset < messageIDs.length; offset += BATCH) {
+          const rows = yield* db
+            .all<MessageRow>(messageSql(messageIDs.slice(offset, offset + BATCH)))
+            .pipe(Effect.orDie)
+          for (const row of rows) messages.set(row.id, row)
+        }
+        for (const row of hits) {
+          const message = messages.get(row.messageID)
+          if (!message) continue
+          if (row.sessionID === excludeSessionID) {
+            if (message.role === "user" && message.id >= excludeFromMessageID) continue
+            if (message.role === "assistant" && message.parentID >= excludeFromMessageID) continue
+          }
+          if (row.kind === "text") {
+            if (message.role !== "user" && message.role !== "assistant") continue
+            consume(row, message.role)
+            continue
+          }
+          consume(row, row.kind === "file" ? "reference" : "error")
+        }
+        const last = found.at(-1)!
+        cursor = { sessionID: last.sessionID, partID: last.partID }
         yield* pause
         yield* abort(input.signal)
-      }
-      const messages = new Map<MessageID, MessageRow>()
-      const messageIDs = [...new Set(hits.map((row) => row.messageID))]
-      for (let offset = 0; offset < messageIDs.length; offset += BATCH) {
-        const rows = yield* db.all<MessageRow>(messageSql(messageIDs.slice(offset, offset + BATCH))).pipe(Effect.orDie)
-        for (const row of rows) messages.set(row.id, row)
-      }
-      for (const row of hits) {
-        const message = messages.get(row.messageID)
-        if (!message) continue
-        if (row.sessionID === excludeSessionID) {
-          if (message.role === "user" && message.id >= excludeFromMessageID) continue
-          if (message.role === "assistant" && message.parentID >= excludeFromMessageID) continue
-        }
-        if (row.kind === "text") {
-          if (message.role !== "user" && message.role !== "assistant") continue
-          consume(row, message.role)
-          continue
-        }
-        consume(row, row.kind === "file" ? "reference" : "error")
+        if (found.length < PAGE_SIZE) break
       }
     }
     yield* pause
@@ -276,7 +281,7 @@ export namespace RecallSearch {
           item,
       ),
       sessions: items.size,
-      parts,
+      candidates,
     }
   })
 

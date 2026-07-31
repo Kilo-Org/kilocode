@@ -282,7 +282,7 @@ it.instance(
       const result = yield* run("last-session-needle")
       expect(result.results).toHaveLength(1)
       expect(result.sessions).toBe(143)
-      expect(result.parts).toBe(1_102)
+      expect(result.candidates).toBe(1)
     }),
   { git: true },
 )
@@ -300,9 +300,8 @@ it.instance(
         type: "text",
         text: `terminal ${"x".repeat(20_000)} terminal needle ${"y".repeat(20_000)}`,
       })
-      // Large histories are dominated by parts that recall intentionally excludes.
       for (let index = 0; index < 1_100; index++) {
-        yield* add(session.id, "assistant", { type: "reasoning", text: `noise ${index}`, time: { start: index } })
+        yield* add(session.id, "user", { type: "text", text: `paged noise ${index}` })
       }
 
       expect((yield* run("job_id 100%")).results.map((item) => item.id)).toEqual([session.id])
@@ -312,11 +311,12 @@ it.instance(
       const snippet = (yield* run("terminal needle")).results[0]?.matches[0]?.text ?? ""
       expect(snippet).toContain("terminal needle")
       expect(snippet.length).toBeLessThan(370)
+      expect((yield* run("paged noise")).results.map((item) => item.id)).toEqual([session.id])
 
       const database = yield* Database.Service
       const controller = new AbortController()
       const pending = Effect.runPromise(
-        run("absent-needle", controller.signal).pipe(Effect.provideService(Database.Service, database)),
+        run("paged noise", controller.signal).pipe(Effect.provideService(Database.Service, database)),
       )
       queueMicrotask(() => controller.abort(new Error("cancelled recall search")))
       const error = yield* Effect.promise(() => pending.catch((value: unknown) => value))
