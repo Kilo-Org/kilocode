@@ -671,7 +671,7 @@ const AgentManagerContent: Component = () => {
     return false
   })
 
-  const showDetailStack = createMemo(() => showTerminalStack(history(), selection()))
+  const showDetailStack = createMemo(() => showTerminalStack(history(), selection(), contextEmpty()))
 
   const overlay = createMemo((): SetupState | null => {
     const state = setup()
