@@ -88,8 +88,9 @@ internal fun activeListCellGap() = JBUI.scale(CELL_GAP)
  *
  * The rectangles are read back from the actual rendered component tree instead of being
  * re-derived by hand. This keeps the click targets identical to what the [ActiveListRenderer]
- * draws — including the horizontal insets the platform's [com.intellij.ui.popup.list.SelectablePanel]
- * adds in the New UI, which a hand-computed layout would miss.
+ * draws — including the action-cell overlay layer and the horizontal insets the platform's
+ * [com.intellij.ui.popup.list.SelectablePanel] adds in the New UI, which a hand-computed layout
+ * would miss.
  */
 internal fun activeListCellBounds(
     list: JList<*>,

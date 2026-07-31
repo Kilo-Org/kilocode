@@ -3,6 +3,7 @@ package ai.kilocode.client.ui.list
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.PickerRow
 import ai.kilocode.client.ui.FilledBadgeIcon
+import ai.kilocode.client.ui.LayeredOverlayPanel
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
@@ -17,6 +18,7 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
 import java.awt.Dimension
+import java.awt.Rectangle
 import javax.swing.JList
 import javax.swing.JPanel
 import javax.swing.ListCellRenderer
@@ -54,26 +56,58 @@ internal class ActiveListRenderer(
     private val trailPane = trail.align(HAlign.RIGHT, VAlign.CENTER)
     private val cells = Stack.horizontal(activeListCellGap())
     private val cellPane = cells.align(HAlign.RIGHT, VAlign.CENTER)
-    private val actions = Stack.horizontal(UiStyle.Gap.md()).next(trailPane).next(cellPane)
+    private val pill = JPanel(BorderLayout()).apply {
+        border = JBUI.Borders.empty(UiStyle.Gap.sm())
+        add(cellPane, BorderLayout.CENTER)
+    }
     private val row = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
         add(mark, BorderLayout.WEST)
         add(textPane, BorderLayout.CENTER)
-        add(actions, BorderLayout.EAST)
+        add(trailPane, BorderLayout.EAST)
     }
+    private val layers = LayeredOverlayPanel(
+        content = JPanel(BorderLayout()).apply { add(row, BorderLayout.CENTER) },
+    )
     private val wrap = PickerRow()
     private var bodyHeight: Int? = null
 
     init {
         isOpaque = true
         top.isOpaque = true
-        UiStyle.Components.transparent(row, mark, icon, title, badges, titleGroup, header, text, textPane, desc, trail, trailPane, cells, cellPane, actions)
+        UiStyle.Components.transparent(
+            layers,
+            layers.content,
+            row,
+            mark,
+            icon,
+            title,
+            badges,
+            titleGroup,
+            header,
+            text,
+            textPane,
+            desc,
+            trail,
+            trailPane,
+            cells,
+            cellPane,
+        )
         row.border = JBUI.Borders.empty(
             UiStyle.Gap.md(),
             0,
             UiStyle.Gap.md(),
             UiStyle.Gap.pad(),
         )
-        wrap.setContent(row)
+        layers.addOverlay(pill) { host, child ->
+            val size = child.preferredSize
+            Rectangle(
+                (host.width - size.width - UiStyle.Gap.pad()).coerceAtLeast(0),
+                ((host.height - size.height) / 2).coerceAtLeast(0),
+                size.width.coerceAtMost(host.width),
+                size.height.coerceAtMost(host.height),
+            )
+        }
+        wrap.setContent(layers)
         add(top, BorderLayout.NORTH)
         add(wrap, BorderLayout.CENTER)
     }
@@ -129,7 +163,8 @@ internal class ActiveListRenderer(
         // visible (list focused, or an owned popup is active). An unfocused list hides them.
         syncCells(value, active && list.isEnabled, list.isEnabled)
         cellPane.isVisible = cells.isVisible
-        actions.isVisible = trail.isVisible || cellPane.isVisible
+        pill.isVisible = cells.isVisible
+        pill.background = if (active && list.isEnabled) UIUtil.getListBackground(true, true) else list.background
         val height = bodyHeight
         wrap.setPreferredSize(height?.let { Dimension(0, it) })
         top.invalidate()

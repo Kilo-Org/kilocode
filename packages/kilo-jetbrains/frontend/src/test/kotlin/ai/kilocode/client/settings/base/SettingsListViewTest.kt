@@ -3,6 +3,7 @@ package ai.kilocode.client.settings.base
 import ai.kilocode.client.testing.fire
 import ai.kilocode.client.session.ui.PickerRow
 import ai.kilocode.client.ui.FilledBadgeIcon
+import ai.kilocode.client.ui.LayeredOverlayPanel
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.list.ActiveListActionCell
 import ai.kilocode.client.ui.list.ActiveListBadge
@@ -26,11 +27,14 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.UIUtil
+import java.awt.BorderLayout
 import java.awt.Container
 import java.awt.Dimension
 import java.awt.Point
 import java.awt.event.InputEvent
 import java.awt.event.MouseEvent
+import javax.swing.JLayeredPane
+import javax.swing.JPanel
 import javax.swing.ListSelectionModel
 import javax.swing.Scrollable
 import javax.swing.SwingConstants
@@ -302,6 +306,70 @@ class SettingsListViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test action cells render from overlay layer`() {
+        edt {
+            val row = item("with", "Alpha", null, ActiveListCell("edit", "Edit"))
+            val model = CollectionListModel<ActiveListItem>(listOf(row))
+            val list = JBList(model)
+            val renderer = ActiveListRenderer(model, ActiveListConfig.Equal)
+
+            renderer.getListCellRendererComponent(list, row, 0, true, true)
+            renderer.setSize(320, renderer.preferredSize.height)
+            layout(renderer)
+
+            val layers = components(renderer).filterIsInstance<LayeredOverlayPanel>().single()
+            val cell = actionCells(renderer).single()
+            val pane = SwingUtilities.getAncestorOfClass(LayeredOverlayPanel.Overlay::class.java, cell)
+
+            assertSame(layers.overlay, pane)
+            assertEquals(JLayeredPane.DEFAULT_LAYER, layers.getLayer(layers.content))
+            assertEquals(JLayeredPane.PALETTE_LAYER, layers.getLayer(layers.overlay))
+            assertTrue(layers.getLayer(layers.overlay) > layers.getLayer(layers.content))
+        }
+    }
+
+    fun `test action overlay background blends with row surface`() {
+        edt {
+            val first = item("selected", "Alpha", null, ActiveListCell("edit", "Edit"))
+            val second = item("plain", "Beta", null, ActiveListCell("level", "Allow", alwaysVisible = true))
+            val model = CollectionListModel<ActiveListItem>(listOf(first, second))
+            val list = JBList(model)
+            val renderer = ActiveListRenderer(model, ActiveListConfig.Equal)
+
+            renderer.getListCellRendererComponent(list, first, 0, true, true)
+            val selected = actionPill(renderer).background
+
+            renderer.getListCellRendererComponent(list, second, 1, false, false)
+            val plain = actionPill(renderer).background
+
+            assertEquals(UIUtil.getListBackground(true, true), selected)
+            assertEquals(list.background, plain)
+        }
+    }
+
+    fun `test action cells do not reserve row east space`() {
+        edt {
+            val row = item("with", "Alpha", null, ActiveListCell("edit", "Edit"))
+            val model = CollectionListModel<ActiveListItem>(listOf(row))
+            val list = JBList(model)
+            val renderer = ActiveListRenderer(model, ActiveListConfig.Equal)
+
+            renderer.getListCellRendererComponent(list, row, 0, true, true)
+            renderer.setSize(320, renderer.preferredSize.height)
+            layout(renderer)
+
+            val layers = components(renderer).filterIsInstance<LayeredOverlayPanel>().single()
+            val rowPanel = layers.content.getComponent(0) as JPanel
+            val text = (rowPanel.layout as BorderLayout).getLayoutComponent(BorderLayout.CENTER)
+            val cell = actionCells(renderer).single()
+            val start = SwingUtilities.convertPoint(text.parent, text.location, renderer).x
+            val cellStart = SwingUtilities.convertPoint(cell.parent, cell.location, renderer).x
+
+            assertTrue(text.width > start)
+            assertTrue(start + text.width > cellStart)
+        }
+    }
+
     fun `test action hit test ignores stale indexes`() {
         edt {
             val view = ActiveListView("Empty") { _, _ -> }
@@ -420,6 +488,65 @@ class SettingsListViewTest : BasePlatformTestCase() {
             renderer.getListCellRendererComponent(list, row, 0, true, false)
 
             assertEquals(listOf("level"), actionCells(renderer).filter { it.isVisible }.map { it.cellId })
+        }
+    }
+
+    fun `test renderer reuses action cells across updates`() {
+        edt {
+            val first = item(
+                "first",
+                "Alpha",
+                null,
+                ActiveListCell("edit", "Edit"),
+                ActiveListCell("delete", "Delete", enabled = false),
+            )
+            val second = item(
+                "second",
+                "Beta",
+                null,
+                ActiveListCell("connect", "Connect"),
+                ActiveListCell("remove", "Remove", enabled = false),
+            )
+            val model = CollectionListModel<ActiveListItem>(listOf(first, second))
+            val list = JBList(model)
+            val renderer = ActiveListRenderer(model, ActiveListConfig.Equal)
+
+            renderer.getListCellRendererComponent(list, first, 0, true, true)
+            val cells = actionCells(renderer)
+
+            renderer.getListCellRendererComponent(list, second, 1, true, true)
+            val updated = actionCells(renderer)
+
+            assertEquals(2, updated.size)
+            assertSame(cells[0], updated[0])
+            assertSame(cells[1], updated[1])
+            assertEquals(listOf("connect", "remove"), updated.map { it.cellId })
+            assertEquals(listOf("Connect", "Remove"), updated.map { it.text })
+            assertEquals(listOf(true, false), updated.map { it.isEnabled })
+        }
+    }
+
+    fun `test renderer action component tree stays bounded`() {
+        edt {
+            val row = item(
+                "with",
+                "Alpha",
+                null,
+                ActiveListCell("edit", "Edit"),
+                ActiveListCell("delete", "Delete"),
+            )
+            val model = CollectionListModel<ActiveListItem>(listOf(row))
+            val list = JBList(model)
+            val renderer = ActiveListRenderer(model, ActiveListConfig.Equal)
+
+            renderer.getListCellRendererComponent(list, row, 0, true, true)
+            val count = components(renderer).size
+            val cells = actionCells(renderer).size
+
+            repeat(20) { renderer.getListCellRendererComponent(list, row, 0, true, true) }
+
+            assertEquals(count, components(renderer).size)
+            assertEquals(cells, actionCells(renderer).size)
         }
     }
 
@@ -546,6 +673,11 @@ class SettingsListViewTest : BasePlatformTestCase() {
 
     private fun actionCells(root: java.awt.Component): List<ActiveListActionCell> =
         components(root).filterIsInstance<ActiveListActionCell>()
+
+    private fun actionPill(root: java.awt.Component): JPanel {
+        val cell = actionCells(root).single()
+        return cell.parent.parent.parent as JPanel
+    }
 
     private fun components(root: java.awt.Component): List<java.awt.Component> {
         val out = mutableListOf<java.awt.Component>()
