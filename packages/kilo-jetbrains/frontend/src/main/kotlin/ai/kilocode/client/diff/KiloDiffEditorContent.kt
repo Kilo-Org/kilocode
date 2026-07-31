@@ -49,6 +49,7 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.tree.TreeUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -67,6 +68,8 @@ import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
 import javax.swing.JViewport
 import javax.swing.JTree
+import javax.swing.event.TreeExpansionEvent
+import javax.swing.event.TreeExpansionListener
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.DefaultTreeModel
 import javax.swing.tree.TreeCellRenderer
@@ -439,6 +442,15 @@ private fun buildFileTree(files: List<DiffFileDto>): Tree {
         val node = path.lastPathComponent as? DefaultMutableTreeNode
         (node?.userObject as? Node)?.name.orEmpty()
     }
+    // A folder row hides its rolled-up badge while expanded, so its preferred width depends on
+    // expansion state. JTree only invalidates cached path bounds on model changes, not on
+    // expand/collapse, so a collapsed folder would keep its narrower expanded-state bounds and the
+    // re-shown badge would squeeze the name until an unrelated re-measure. Invalidate the layout
+    // cache on toggle so the row re-measures immediately.
+    tree.addTreeExpansionListener(object : TreeExpansionListener {
+        override fun treeExpanded(event: TreeExpansionEvent) = TreeUtil.invalidateCacheAndRepaint(tree.ui)
+        override fun treeCollapsed(event: TreeExpansionEvent) = TreeUtil.invalidateCacheAndRepaint(tree.ui)
+    })
     expandAll(tree)
     return tree
 }

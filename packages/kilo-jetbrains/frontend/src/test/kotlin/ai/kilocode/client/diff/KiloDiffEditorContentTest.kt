@@ -144,6 +144,29 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test folder row width tracks its badge visibility`() {
+        val parent = Disposer.newDisposable()
+        try {
+            val view = view(files(), parent)
+            val tree = components(view).filterIsInstance<Tree>().single()
+            val path = TreePath(folder(tree).path)
+
+            tree.expandPath(path)
+            val expanded = tree.getPathBounds(path)!!.width
+
+            // Collapsing re-shows the rolled-up badge, so the folder row's measured width must grow.
+            // This expansion-dependent width is why buildFileTree invalidates JTree's layout cache on
+            // toggle: a displayed tree caches path bounds across expand/collapse and would otherwise
+            // paint the row at its stale narrower width, squeezing the name.
+            tree.collapsePath(path)
+            val collapsed = tree.getPathBounds(path)!!.width
+
+            assertTrue("collapsed folder row must be wider to fit its badge", collapsed > expanded)
+        } finally {
+            Disposer.dispose(parent)
+        }
+    }
+
     fun `test leaf badge stays visible while its folder is expanded`() {
         val parent = Disposer.newDisposable()
         try {
