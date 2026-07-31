@@ -157,6 +157,24 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertEquals(80, child.height)
     }
 
+    fun `test reflow is skipped until the panel has a width`() {
+        val child = Growing(20)
+        panel.add(child, 0)
+        panel.setSize(0, 400)
+        layout(panel)
+        child.markValid()
+        child.size = 80
+
+        // At zero width an HTML pane collapses to a one-char column, so reflow must report no
+        // change instead of locking the transcript height in against that bogus measurement.
+        assertFalse(panel.reflow())
+
+        // Once the panel is laid out with a real width the child measures to its true height.
+        panel.setSize(600, 400)
+        layout(panel)
+        assertEquals(80, child.height)
+    }
+
     fun `test apply style drops cached panel measurements`() {
         val child = Growing(20)
         panel.add(child, 0)

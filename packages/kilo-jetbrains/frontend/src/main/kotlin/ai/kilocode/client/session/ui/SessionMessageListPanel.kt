@@ -86,6 +86,7 @@ class SessionMessageListPanel(
     private var sessionId: String? = null
     private var seq = 0
     private var stable = -1
+    private var pendingReflow = false
     private var dead = false
 
     var onHover: ((PartView, Boolean) -> Unit)? = null
@@ -199,6 +200,17 @@ class SessionMessageListPanel(
         scheduleReflow()
     }
 
+    override fun doLayout() {
+        super.doLayout()
+        // A reflow scheduled before the panel had a width parks itself in [pendingReflow]. The first
+        // layout that gives us a real width re-arms it, so the transcript is always measured on-screen
+        // instead of against the zero-width state a resize used to be the only escape from. Cheap and
+        // inert on the streaming path: pendingReflow is only set by a rebuild/clear that ran too early.
+        if (!pendingReflow || dead || width <= 0 || turnViews.isEmpty()) return
+        pendingReflow = false
+        scheduleReflow()
+    }
+
     fun setDiffOpener(openDiff: SessionDiffOpener, sessionId: String?) {
         this.openDiff = openDiff
         this.sessionId = sessionId
@@ -252,10 +264,17 @@ class SessionMessageListPanel(
 
     @RequiresEdt
     internal fun reflow(): Boolean {
+        // Measuring at zero width reflows every HTML pane to a 1-char column and yields a bogus
+        // height. Defer until the panel has a real width (see doLayout) so a pass can never
+        // "stabilize" the transcript against a zero-width measurement.
+        if (width <= 0) {
+            pendingReflow = turnViews.isNotEmpty()
+            return false
+        }
         val before = preferredSize.height
         (layout as? SessionLayout)?.forgetAll()
         revalidate()
-        if (width > 0) doLayout()
+        doLayout()
         val after = preferredSize.height
         repaint()
         return after != before
@@ -503,7 +522,10 @@ class SessionMessageListPanel(
 
     private fun scheduleReflow() {
         if (dead) return
-        if (turnViews.isEmpty()) return
+        if (turnViews.isEmpty()) {
+            pendingReflow = false
+            return
+        }
         stable = -1
         val id = ++seq
         ApplicationManager.getApplication().invokeLater {
@@ -515,6 +537,12 @@ class SessionMessageListPanel(
     private fun reflowPass(id: Int, remaining: Int) {
         if (dead || id != seq) return
         if (turnViews.isEmpty()) return
+        if (width <= 0) {
+            // Not laid out yet. Stop polling and let doLayout re-arm once a real width arrives,
+            // rather than draining the pass budget against a zero-width height.
+            pendingReflow = true
+            return
+        }
         val changed = reflow()
         if (changed) onReflow?.invoke(true)
         if (remaining <= 0) {
@@ -585,6 +613,7 @@ class SessionMessageListPanel(
     override fun dispose() {
         dead = true
         seq++
+        pendingReflow = false
         clearHover()
         question?.hideView()
         permission?.hideView()
