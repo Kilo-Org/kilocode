@@ -153,10 +153,25 @@ export async function start(input: StartInput) {
     "--no-session-persistence",
   ]
 
+  const cleanupTempFiles = () => {
+    for (const file of [systemPromptFile, mcpConfigFile]) {
+      if (!file) continue
+      void rm(file, { force: true }).catch(() => {
+        // Best-effort: an OS temp dir sweep will eventually reclaim this file
+        // even if the process couldn't remove it here.
+      })
+    }
+  }
+
   // A write failure here must not leave the bridge's HTTP listener orphaned
-  // — nothing else would ever close it once `start()` rejects.
+  // (nothing else would ever close it once `start()` rejects), nor a temp
+  // file that *did* write successfully — including the token-bearing mcp
+  // config if only the system prompt write failed, or vice versa. Swallow
+  // (rather than propagate) any error from `bridge.close()` itself so it
+  // can't replace the original write error.
   await Promise.all([writeSystemPrompt, writeMcpConfig]).catch(async (err) => {
-    await bridge.close()
+    cleanupTempFiles()
+    await bridge.close().catch(() => {})
     throw err
   })
 
@@ -189,16 +204,6 @@ export async function start(input: StartInput) {
     }
   })
 
-  const cleanupTempFiles = () => {
-    for (const file of [systemPromptFile, mcpConfigFile]) {
-      if (!file) continue
-      void rm(file, { force: true }).catch(() => {
-        // Best-effort: an OS temp dir sweep will eventually reclaim this file
-        // even if the process couldn't remove it here.
-      })
-    }
-  }
-
   let closed = false
   child.on("error", (error) => {
     cleanupTempFiles()
@@ -223,17 +228,19 @@ export async function start(input: StartInput) {
     if (event?.type === "system" && event.subtype === "init") {
       // `--tools ""` is the only thing standing between `bypassPermissions`
       // and the CLI reading/writing files or running shell commands on its
-      // own. Defense in depth: if a native (non-MCP) tool ever shows up here
-      // — a CLI update changing `--tools ""` semantics, for example — fail
-      // loudly instead of silently running with native tools enabled.
+      // own. Defense in depth: if a native (non-bridge) tool ever shows up
+      // here — a CLI update changing `--tools ""` semantics, for example —
+      // fail loudly instead of silently running with native tools enabled.
       //
-      // Checked against the generic `mcp__` namespace prefix, not our own
-      // server's specific `mcp__kilo__` prefix: a future CLI version could
-      // add other benign MCP-protocol-level plumbing tools under a different
-      // namespace, and only bare (non-`mcp__`-prefixed) names ever correspond
-      // to genuine native built-in tools like Bash/Read/Edit.
+      // Checked against our own server's specific `mcp__kilo__` prefix, not
+      // a generic `mcp__` one: Claude Code can auto-activate its own
+      // IDE-integration MCP tools (e.g. `mcp__ide__executeCode`, which can
+      // execute code) outside `--mcp-config`/`--strict-mcp-config` entirely
+      // — the child inherits the full parent environment, so this is a real
+      // risk, not hypothetical, if Kilo itself is running inside a
+      // Claude-Code-aware IDE. Anything not from our own bridge is untrusted.
       const leaked = Array.isArray(event.tools)
-        ? event.tools.filter((name: unknown) => typeof name === "string" && !name.startsWith("mcp__"))
+        ? event.tools.filter((name: unknown) => typeof name === "string" && !name.startsWith(Bridge.TOOL_PREFIX))
         : []
       if (leaked.length) {
         events.push({
