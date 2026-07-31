@@ -1,8 +1,11 @@
 /** @jsxImportSource solid-js */
 import { createEffect, createSignal, onCleanup } from "solid-js"
+import { Chart, registerables } from "chart.js"
 import { BasicTool } from "./basic-tool"
 import type { ToolProps } from "./message-part"
 import { busy } from "./tool-utils"
+
+Chart.register(...registerables)
 
 function getThemeColors() {
   const style = getComputedStyle(document.documentElement)
@@ -77,10 +80,13 @@ export function ChartTool(props: ToolProps) {
       }
     })
 
-    import("chart.js").then(({ Chart, registerables }) => {
-      if (!el.isConnected) return
-      Chart.register(...registerables)
-      const chart = new Chart(el, {
+    let chart: Chart | undefined
+    onCleanup(() => chart?.destroy())
+
+    if (!el.isConnected) return
+
+    try {
+      chart = new Chart(el, {
         type: config.type as any,
         data: { ...config.data, datasets } as any,
         options: {
@@ -106,10 +112,9 @@ export function ChartTool(props: ToolProps) {
           ...config.options,
         },
       })
-      onCleanup(() => chart.destroy())
-    }).catch((e: unknown) => {
+    } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to render chart")
-    })
+    }
   })
 
   return (
