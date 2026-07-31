@@ -510,6 +510,72 @@ describe("run stream transport", () => {
     }
   })
 
+  test("updates the active CLI agent from session.next.agent.switched", async () => {
+    const src = globalFeed()
+    const agents: string[] = []
+    const transport = await createSessionTransport({
+      sdk: sdk({ globalStream: src.stream }),
+      sessionID: "session-1",
+      thinking: true,
+      limits: () => ({}),
+      footer: footer().api,
+      onAgentChange: (agent) => agents.push(agent),
+    })
+
+    try {
+      src.push(
+        globalEvent({
+          id: "evt-agentswitch",
+          type: "session.next.agent.switched",
+          properties: {
+            sessionID: "session-1",
+            messageID: "msg-1",
+            timestamp: 1,
+            agent: "debug",
+          },
+        } satisfies SdkEvent),
+      )
+      await waitFor(() => agents[0])
+      expect(agents).toEqual(["debug"])
+    } finally {
+      src.close()
+      await transport.close()
+    }
+  })
+
+  test("ignores session.next.agent.switched for other sessions", async () => {
+    const src = globalFeed()
+    const agents: string[] = []
+    const transport = await createSessionTransport({
+      sdk: sdk({ globalStream: src.stream }),
+      sessionID: "session-1",
+      thinking: true,
+      limits: () => ({}),
+      footer: footer().api,
+      onAgentChange: (agent) => agents.push(agent),
+    })
+
+    try {
+      src.push(
+        globalEvent({
+          id: "evt-agentswitch-other",
+          type: "session.next.agent.switched",
+          properties: {
+            sessionID: "session-2",
+            messageID: "msg-1",
+            timestamp: 1,
+            agent: "debug",
+          },
+        } satisfies SdkEvent),
+      )
+      await Bun.sleep(20)
+      expect(agents).toEqual([])
+    } finally {
+      src.close()
+      await transport.close()
+    }
+  })
+
   test("ignores the sync copy of a native message event", async () => {
     const src = globalFeed()
     const ui = footer()

@@ -153,6 +153,7 @@ function sid(event: Event): string | undefined {
   if (
     event.type === "session.next.shell.started" ||
     event.type === "session.next.shell.ended" ||
+    event.type === "session.next.agent.switched" || // kilocode_change - keeps mid-turn agent switches in scope
     event.type === "permission.asked" ||
     event.type === "permission.replied" ||
     event.type === "question.asked" ||
@@ -227,7 +228,9 @@ function active(event: Event, sessionID: string): boolean {
   // kilocode_change start - session.updated fires for any session in the instance and at
   // prompt intake before the assistant starts streaming; treating it as turn activity
   // would let the 250ms idle poll complete the turn before any assistant work runs.
-  if (event.type === "session.updated") {
+  // session.next.agent.switched is published mid-turn and must not arm turn completion
+  // either; the turn is still active while the destination mode continues the task.
+  if (event.type === "session.updated" || event.type === "session.next.agent.switched") {
     return false
   }
   // kilocode_change end
@@ -902,8 +905,15 @@ function createLayer(input: StreamInput) {
         }
 
         const applyEvent = Effect.fn("RunStreamTransport.applyEvent")(function* (event: Event) {
-          // kilocode_change start
-          if (
+          // kilocode_change start - session.updated only fires at prompt intake / post-turn,
+          // so an approved mid-turn mode switch never reaches onAgentChange. Also watch the
+          // V2 session.next.agent.switched event so the footer label and state.agent
+          // stay in sync with the destination mode.
+          if (event.type === "session.next.agent.switched") {
+            if (event.properties.sessionID === input.sessionID) {
+              input.onAgentChange?.(event.properties.agent)
+            }
+          } else if (
             event.type === "session.updated" &&
             event.properties.sessionID === input.sessionID &&
             typeof event.properties.info.agent === "string"
