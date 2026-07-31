@@ -59,7 +59,13 @@ export function ChartTool(props: ToolProps) {
       return
     }
 
-    rendered = true
+    let chart: Chart | undefined
+    onCleanup(() => {
+      chart?.destroy()
+      rendered = false
+    })
+
+    if (!el.isConnected) return
 
     const colors = getThemeColors()
     const isPolar = config.type === "pie" || config.type === "doughnut" || config.type === "polarArea"
@@ -80,11 +86,6 @@ export function ChartTool(props: ToolProps) {
         ...dataset,
       }
     })
-
-    let chart: Chart | undefined
-    onCleanup(() => chart?.destroy())
-
-    if (!el.isConnected) return
 
     try {
       chart = new Chart(el, {
@@ -113,6 +114,7 @@ export function ChartTool(props: ToolProps) {
           ...config.options,
         },
       })
+      rendered = true
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to render chart")
     }
