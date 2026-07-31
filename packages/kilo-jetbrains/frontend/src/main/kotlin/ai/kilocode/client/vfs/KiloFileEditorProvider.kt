@@ -1,6 +1,7 @@
 package ai.kilocode.client.vfs
 
 import ai.kilocode.client.agentManager.worktree.ensureWorktreeSessionEditorKind
+import ai.kilocode.client.diff.ensureDiffEditorKind
 import ai.kilocode.client.session.ui.attachment.ensureAttachmentEditorKind
 import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileEditor
@@ -40,6 +41,7 @@ class KiloFileEditorProvider : FileEditorProvider, DumbAware {
 
         private fun ensureKinds() {
             ensureAttachmentEditorKind()
+            ensureDiffEditorKind()
             ensureWorktreeSessionEditorKind()
         }
 

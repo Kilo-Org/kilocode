@@ -59,7 +59,8 @@ type PluginSpec = string | [string, Record<string, unknown>]
 // Merged English dictionary (same merge order as the real LanguageProvider)
 const dict: Record<string, string> = { ...appEn, ...amEn, ...uiEn, ...kiloEn }
 
-function t(key: string, params?: Record<string, string | number | boolean | undefined>) {
+/** Story-local translator. Usable outside the provider tree, unlike useLanguage. */
+export function t(key: string, params?: Record<string, string | number | boolean | undefined>) {
   return resolveTemplate(dict[key] ?? key, params)
 }
 
@@ -375,6 +376,9 @@ const ConfigWrapper: ParentComponent<{
       updateSetting: (key: string, value: unknown) => {
         setSettings((prev) => ({ ...prev, [key]: value }))
         setDirty(true)
+      },
+      applySetting: (key: string, value: unknown, _writeKey?: string) => {
+        setSettings((prev) => ({ ...prev, [key]: value }))
       },
       saveConfig: () => setDirty(false),
       discardConfig: () => setDirty(false),

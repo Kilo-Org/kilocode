@@ -18,7 +18,7 @@ import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { useLanguage } from "../../src/context/language"
 import { SortableTabContainer } from "../../src/components/chat/TabDnd"
 import { parseBindingTokens } from "../keybind-tokens"
-import { terminalChrome } from "./chrome"
+import { terminalChrome, terminalClosable, terminalStoppable } from "./chrome"
 import type { ScriptTerminalStatus } from "./state"
 
 export const TerminalTabChrome: Component<{
@@ -35,6 +35,7 @@ export const TerminalTabChrome: Component<{
   onSelect: () => void
   onMiddleClick?: (e: MouseEvent) => void
   onClose: (e: MouseEvent) => void
+  onStop?: (e: MouseEvent) => void
 }> = (props) => {
   const { t } = useLanguage()
   const chrome = () => terminalChrome(props.tooltip, props.status)
@@ -74,24 +75,46 @@ export const TerminalTabChrome: Component<{
           </span>
         </TooltipKeybind>
       </div>
-      <TooltipKeybind
-        title={t("agentManager.tab.close")}
-        keybind={props.closeKeybind ?? ""}
-        placement="top"
-        gutter={8}
-        class="am-tab-close-wrap"
-        openDelay={0}
-      >
-        <IconButton
-          icon="close-small"
-          size="small"
-          variant="ghost"
-          aria-label={t("agentManager.tab.closeTab")}
-          tabIndex={props.active ? 0 : -1}
-          class="am-tab-close"
-          onClick={props.onClose}
-        />
-      </TooltipKeybind>
+      <Show when={terminalStoppable(props.status) && props.onStop}>
+        <TooltipKeybind
+          title={t("agentManager.terminal.stopSetup")}
+          keybind=""
+          placement="top"
+          gutter={8}
+          class="am-tab-close-wrap"
+          openDelay={0}
+        >
+          <IconButton
+            icon="stop"
+            size="small"
+            variant="ghost"
+            aria-label={t("agentManager.terminal.stopSetup")}
+            tabIndex={props.active ? 0 : -1}
+            class="am-tab-close"
+            onClick={props.onStop}
+          />
+        </TooltipKeybind>
+      </Show>
+      <Show when={terminalClosable(props.status)}>
+        <TooltipKeybind
+          title={t("agentManager.tab.close")}
+          keybind={props.closeKeybind ?? ""}
+          placement="top"
+          gutter={8}
+          class="am-tab-close-wrap"
+          openDelay={0}
+        >
+          <IconButton
+            icon="close-small"
+            size="small"
+            variant="ghost"
+            aria-label={t("agentManager.tab.closeTab")}
+            tabIndex={props.active ? 0 : -1}
+            class="am-tab-close"
+            onClick={props.onClose}
+          />
+        </TooltipKeybind>
+      </Show>
     </div>
   )
 }
@@ -112,6 +135,7 @@ export const SortableTerminalTab: Component<{
   onMiddleClick: (e: MouseEvent) => void
   onClose: (e: MouseEvent) => void
   onCloseOthers: () => void
+  onStop?: (e: MouseEvent) => void
 }> = (props) => {
   const { t } = useLanguage()
   return (
@@ -132,6 +156,7 @@ export const SortableTerminalTab: Component<{
             onSelect={props.onSelect}
             onMiddleClick={props.onMiddleClick}
             onClose={props.onClose}
+            onStop={props.onStop}
           />
         </ContextMenu.Trigger>
         <ContextMenu.Portal>

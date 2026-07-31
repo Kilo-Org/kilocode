@@ -11,7 +11,13 @@
 import { createContext, useContext, createSignal, createMemo, onCleanup } from "solid-js"
 import type { ParentComponent, Accessor } from "solid-js"
 import { useVSCode } from "./vscode"
-import type { Config, ConfigCollections, ExtensionMessage, FeatureFlags } from "../types/messages"
+import type {
+  Config,
+  ConfigCollections,
+  ExtensionMessage,
+  FeatureFlags,
+  SettingsConfigBinding,
+} from "../types/messages"
 import {
   configUnsetPaths,
   deepMerge,
@@ -46,11 +52,31 @@ interface ConfigContextValue {
   updateGlobalConfig: (partial: Partial<Config>) => void
   updateProjectConfig: (partial: Partial<Config>) => void
   updateSetting: (key: string, value: unknown) => void
+  applySetting: (key: string, value: unknown, writeKey?: string) => void
   saveConfig: () => void
   discardConfig: () => void
 }
 
 export const ConfigContext = createContext<ConfigContextValue>()
+
+function loadedSettings(message: ExtensionMessage): Record<string, unknown> | undefined {
+  if (message.type === "autocompleteSettingsLoaded") {
+    return {
+      "autocomplete.enableAutoTrigger": message.settings.enableAutoTrigger,
+      "autocomplete.enableSmartInlineTaskKeybinding": message.settings.enableSmartInlineTaskKeybinding,
+      "autocomplete.enableChatAutocomplete": message.settings.enableChatAutocomplete,
+      "autocomplete.provider": message.settings.provider,
+      "autocomplete.model": message.settings.model,
+    }
+  }
+  if (message.type === "indexingSettingsLoaded") {
+    return { "indexing.showButtonWhenDisabled": message.settings.showButtonWhenDisabled }
+  }
+  if (message.type === "chatSettingsLoaded") {
+    return { "chat.shiftTabCyclesVariant": message.settings.shiftTabCyclesVariant }
+  }
+  if (message.type === "throughputSettingLoaded") return { showTokenThroughput: message.visible }
+}
 
 export const ConfigProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
@@ -66,6 +92,7 @@ export const ConfigProvider: ParentComponent = (props) => {
   const [globalDraft, setGlobalDraft] = createSignal<Partial<Config>>({})
   const [projectDraft, setProjectDraft] = createSignal<Partial<Config>>({})
   const [settingsDraft, setSettingsDraft] = createSignal<Record<string, unknown>>({})
+  const [bindings, setBindings] = createSignal<{ global?: SettingsConfigBinding; project?: SettingsConfigBinding }>({})
   const isDirty = createMemo(
     () =>
       has(draft() as Record<string, unknown>) ||
@@ -91,38 +118,8 @@ export const ConfigProvider: ParentComponent = (props) => {
   // Register handler immediately (not in onMount) so we never miss
   // a configLoaded message that arrives before the DOM mount.
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
-    if (message.type === "autocompleteSettingsLoaded") {
-      mergeSettings({
-        "autocomplete.enableAutoTrigger": message.settings.enableAutoTrigger,
-        "autocomplete.enableSmartInlineTaskKeybinding": message.settings.enableSmartInlineTaskKeybinding,
-        "autocomplete.enableChatAutocomplete": message.settings.enableChatAutocomplete,
-        "autocomplete.provider": message.settings.provider,
-        "autocomplete.model": message.settings.model,
-      })
-      return
-    }
-    if (message.type === "indexingSettingsLoaded") {
-      mergeSettings({
-        "indexing.showButtonWhenDisabled": message.settings.showButtonWhenDisabled,
-      })
-      return
-    }
-    if (message.type === "chatSettingsLoaded") {
-      mergeSettings({
-        "chat.shiftTabCyclesVariant": message.settings.shiftTabCyclesVariant,
-      })
-      return
-    }
-    if (message.type === "throughputSettingLoaded") {
-      // Seed settings() so the DisplayTab Switch reflects persisted state on
-      // first open. DisplayProvider also reads this message to drive
-      // throughputVisible() for the per-message badge; both signals update
-      // from the same backend message without conflict.
-      mergeSettings({
-        showTokenThroughput: message.visible,
-      })
-      return
-    }
+    const patch = loadedSettings(message)
+    if (patch) return mergeSettings(patch)
     if (message.type === "configLoaded") {
       // Skip if a save is in-flight — a stale configLoaded must not overwrite
       // the optimistically-updated state while the write is being confirmed.
@@ -132,6 +129,7 @@ export const ConfigProvider: ParentComponent = (props) => {
       setConfig(resolveConfig(message.config, draft(), has(draft() as Record<string, unknown>)))
       setFeatures(message.features)
       setSaved(message.config)
+      setBindings(message.bindings ?? bindings())
       if (message.settings) mergeSettings(message.settings)
       if (message.globalConfig !== undefined) {
         setGlobalConfig(mergeScopedConfig(message.globalConfig, globalDraft()))
@@ -171,6 +169,7 @@ export const ConfigProvider: ParentComponent = (props) => {
         }
         updateCollections(message.collections)
         setFeatures(message.features)
+        setBindings(message.bindings ?? bindings())
       } else {
         // configUpdated from a different source (e.g. PermissionDock save).
         // Re-apply the draft on top so pending settings changes are preserved.
@@ -185,21 +184,78 @@ export const ConfigProvider: ParentComponent = (props) => {
         }
         updateCollections(message.collections)
         setFeatures(message.features)
+        setBindings(message.bindings ?? bindings())
       }
       if (message.settings) mergeSettings(message.settings)
       setSaved(message.config)
       return
     }
-    if (message.type === "configUpdateFailed") {
-      // The write was rejected (e.g. schema validation) — surface the error
-      // and keep the draft + isDirty so the user can correct and retry.
-      setSaving(false)
-      setSaveError({ message: message.message, details: message.details })
+  })
+  const unsubscribeExpired = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type !== "configBindingExpired") return
+    setBindings({})
+    if (isDirty()) {
+      setSaveError({ message: "The Settings project changed. Discard or reload before saving." })
       return
     }
+    vscode.postMessage({ type: "requestConfig" })
+  })
+  const unsubscribeFailure = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type !== "configUpdateFailed") return
+    setSaving(false)
+    if (message.completedScopes?.length) {
+      const split = splitConfigByScope(draft())
+      const remaining = message.completedScopes.includes("global")
+        ? split.project
+        : message.completedScopes.includes("project")
+          ? split.global
+          : draft()
+      setDraft(message.completedScopes.length === 2 ? {} : remaining)
+    }
+    if (message.completedScopes?.includes("global")) {
+      setGlobalDraft({})
+      if (message.globalConfig) {
+        setGlobalConfig(message.globalConfig)
+        setSavedGlobal(message.globalConfig)
+      }
+    }
+    if (message.completedScopes?.includes("project")) {
+      setProjectDraft({})
+      if (message.projectConfig) {
+        setProjectConfig(message.projectConfig)
+        setSavedProject(message.projectConfig)
+      }
+    }
+    if (message.config) {
+      setConfig(resolveConfig(message.config, draft(), has(draft() as Record<string, unknown>)))
+      setSaved(message.config)
+    }
+    if (message.bindings) setBindings(message.bindings)
+    setSaveError({ message: message.message, details: message.details })
+  })
+  const unsubscribeIndexing = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type !== "indexingSettingsLoaded") return
+    mergeSettings({
+      "indexing.showButtonWhenDisabled": message.settings.showButtonWhenDisabled,
+      "indexing.consent": message.settings.consent,
+      "indexing.projects": message.settings.projects,
+      "indexing.projectId": message.settings.projectId,
+    })
+  })
+  const unsubscribeChat = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type !== "chatSettingsLoaded") return
+    mergeSettings({
+      "chat.shiftTabCyclesVariant": message.settings.shiftTabCyclesVariant,
+    })
   })
 
-  onCleanup(unsubscribe)
+  onCleanup(() => {
+    unsubscribe()
+    unsubscribeExpired()
+    unsubscribeFailure()
+    unsubscribeIndexing()
+    unsubscribeChat()
+  })
 
   function mergeSettings(patch: Record<string, unknown>) {
     setSavedSettings((prev) => ({ ...prev, ...patch }))
@@ -265,6 +321,25 @@ export const ConfigProvider: ParentComponent = (props) => {
     setSaveError(null)
   }
 
+  /**
+   * Write a VS Code setting immediately, bypassing the save-bar draft.
+   * For app-level feature gates whose effect lives outside the settings page,
+   * where staging the change would make the control feel unresponsive.
+   * `key` is the local settings() property; `writeKey` is the VS Code
+   * configuration key when the two differ (e.g. namespaced experimental keys).
+   */
+  function applySetting(key: string, value: unknown, writeKey?: string) {
+    setSavedSettings((prev) => ({ ...prev, [key]: value }))
+    setSettings((prev) => ({ ...prev, [key]: value }))
+    setSettingsDraft((prev) => {
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
+    setSaveError(null)
+    vscode.postMessage({ type: "updateSetting", key: writeKey ?? key, value })
+  }
+
   function saveConfig() {
     const changes = draft()
     const globals = globalDraft()
@@ -302,6 +377,8 @@ export const ConfigProvider: ParentComponent = (props) => {
       projectConfig: pruneConfigSet(project) as Config,
       globalUnset: configUnsetPaths(next),
       projectUnset: configUnsetPaths(project),
+      globalBindingId: bindings().global?.id,
+      projectBindingId: bindings().project?.id,
     })
   }
 
@@ -332,6 +409,7 @@ export const ConfigProvider: ParentComponent = (props) => {
     updateGlobalConfig,
     updateProjectConfig,
     updateSetting,
+    applySetting,
     saveConfig,
     discardConfig,
   }
