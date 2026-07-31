@@ -251,6 +251,28 @@ class PermissionViewTest : BasePlatformTestCase() {
         assertFalse("Raw control char must not reach the label", label.text.contains("\u202e"))
     }
 
+    fun `test skill-shell header escapes control and bidi characters in the skill name`() {
+        view.show(
+            Permission(
+                id = "perm_skill_name_escape",
+                sessionId = "ses",
+                name = "bash",
+                patterns = listOf("printf hi"),
+                always = emptyList(),
+                meta = PermissionMeta(
+                    // The skill name is untrusted SKILL.md frontmatter; a bidi override here
+                    // must not be able to reorder the header's attribution text.
+                    raw = mapOf("skillShell" to "true", "skill" to "git-status\u202e"),
+                    skillCommands = listOf("printf hi"),
+                ),
+            )
+        )
+
+        val text = allText(view)
+        assertTrue("Expected escaped RLO in header, got: $text", text.contains("git-status\\u202e"))
+        assertFalse("Raw control char must not reach the header, got: $text", text.contains("git-status\u202e"))
+    }
+
     fun `test skill-shell permission never shows auto-approve rule toggles`() {
         view.show(
             Permission(

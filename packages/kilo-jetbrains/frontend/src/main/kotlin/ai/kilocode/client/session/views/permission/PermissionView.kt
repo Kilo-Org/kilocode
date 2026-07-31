@@ -120,7 +120,9 @@ class PermissionView(
         val skill = permission.meta.raw["skill"]
         card.setHeader(
             if (skillShell && !skill.isNullOrBlank())
-                KiloBundle.message("session.permission.skillShell.title", skill)
+                // skill is the untrusted SKILL.md frontmatter name; escape it the same way as
+                // the command list so it can't reorder/repaint the header.
+                KiloBundle.message("session.permission.skillShell.title", escapeControl(skill))
             else KiloBundle.message("session.permission.title"),
         )
         syncDescription(description(permission))
