@@ -8,9 +8,28 @@ import type * as Tool from "@/tool/tool"
 import type { SessionV1 } from "@opencode-ai/core/v1/session"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderV2 } from "@opencode-ai/core/provider"
-import { Cause, Effect, Exit } from "effect"
+import { Cause, Effect, Exit, Option } from "effect"
 import { permissionInfo } from "@/cli/cmd/run/permission.shared"
 import type { PermissionRequest } from "@kilocode/sdk/v2"
+import { Provider } from "@/provider/provider"
+
+function fakeModel(providerID: string, modelID: string, variants: Record<string, unknown> = {}): Provider.Model {
+  return {
+    id: ModelV2.ID.make(modelID),
+    providerID: ProviderV2.ID.make(providerID),
+    api: { id: providerID, npm: "@ai-sdk/openai-compatible", url: "" },
+    name: modelID,
+    family: undefined,
+    capabilities: { input: { text: true }, output: { text: true } },
+    cost: { input: 0, output: 0, cache: { read: 0, write: 0 } },
+    limit: { context: 0, input: 0, output: 0 },
+    status: "alpha",
+    options: {},
+    headers: {},
+    release_date: "1970-01-01",
+    variants,
+  } as Provider.Model
+}
 
 const sessionID = SessionID.make("ses_mode_switch")
 const messageID = MessageID.make("msg_mode_switch")
@@ -57,11 +76,16 @@ function fixture(input: {
   ask?: () => Effect.Effect<void>
   action?: "continue" | "stop"
   available?: Agent.Info[]
+  provider?: (
+    providerID: ProviderV2.ID,
+    modelID: ModelV2.ID,
+  ) => Effect.Effect<Provider.Model, Provider.ModelNotFoundError>
 }) {
   const source = input.source ?? "code"
   const target = input.target ?? "debug"
   const updated: SessionV1.Info[] = []
   const switched: string[] = []
+  const switchedModels: Array<{ providerID: ProviderV2.ID; id: ModelV2.ID; variant?: string }> = []
   const requests: Array<{ permission: string; metadata: Record<string, unknown> }> = []
   const available = input.available ?? [mode("code"), mode("debug"), mode("ask"), mode("plan")]
   const ctx = {
@@ -71,6 +95,7 @@ function fixture(input: {
     agent: source,
     messages: [message(source)],
   }
+  const providerGet = input.provider ?? ((pid, mid) => Effect.succeed(fakeModel(pid, mid)))
   const deps = {
     agents: {
       list: () => Effect.succeed(available),
@@ -78,6 +103,9 @@ function fixture(input: {
     },
     config: {
       get: () => Effect.succeed({ mode_switch_on_reject: input.action }),
+    },
+    provider: {
+      getModel: (pid: ProviderV2.ID, mid: ModelV2.ID) => providerGet(pid, mid),
     },
     sessions: {
       updateMessage: <T extends SessionV1.Info>(msg: T) =>
@@ -95,12 +123,17 @@ function fixture(input: {
       Effect.sync(() => {
         switched.push(event.agent)
       }),
+    modelSwitched: (input: { sessionID: SessionID; model: { providerID: ProviderV2.ID; id: ModelV2.ID; variant?: string } }) =>
+      Effect.sync(() => {
+        switchedModels.push(input.model)
+      }),
   }
   return {
     source,
     target,
     updated,
     switched,
+    switchedModels,
     requests,
     run: (params: Params = { target, reason: "The task needs debugging." }) =>
       Effect.runPromise(execute(params, ctx, deps)),
@@ -140,6 +173,11 @@ test("automatic approval rewrites the user message with the destination mode's m
         variant: "xhigh",
       }),
     ],
+    provider: (pid, mid) => {
+      const id = `${pid}/${mid}`
+      const variants: Record<string, unknown> = id === "target-provider/target-model" ? { xhigh: {} } : {}
+      return Effect.succeed(fakeModel(pid, mid, variants))
+    },
   })
   await item.run()
   const updated = item.updated.find(
@@ -150,6 +188,71 @@ test("automatic approval rewrites the user message with the destination mode's m
     modelID: ModelV2.ID.make("target-model"),
     variant: "xhigh",
   })
+  expect(item.switchedModels).toEqual([
+    {
+      providerID: ProviderV2.ID.make("target-provider"),
+      id: ModelV2.ID.make("target-model"),
+      variant: "xhigh",
+    },
+  ])
+})
+
+test("drops an inherited variant when the destination model changes and that variant does not exist on it", async () => {
+  const item = fixture({
+    available: [
+      mode("code", {
+        model: { providerID: ProviderV2.ID.make("source-provider"), modelID: ModelV2.ID.make("source-model") },
+      }),
+      mode("debug", {
+        model: { providerID: ProviderV2.ID.make("target-provider"), modelID: ModelV2.ID.make("target-model") },
+      }),
+    ],
+    provider: (pid, mid) =>
+      Effect.succeed(
+        fakeModel(pid, mid, mid === "source-model" ? { xhigh: {} } : { yhigh: {} }),
+      ),
+  })
+  // Source user message carries variant "xhigh" picked from the source model.
+  await item.run()
+  const updated = item.updated.find(
+    (msg): msg is SessionV1.User => msg.role === "user" && msg.agent === "debug",
+  )
+  // The destination model exposes only "yhigh", so the inherited "xhigh" must be dropped.
+  expect(updated?.model).toEqual({
+    providerID: ProviderV2.ID.make("target-provider"),
+    modelID: ModelV2.ID.make("target-model"),
+  })
+})
+
+test("returns UnresolvableModelError when the destination mode's model is unknown", async () => {
+  const item = fixture({
+    available: [
+      mode("code"),
+      mode("debug", {
+        model: { providerID: ProviderV2.ID.make("unknown-provider"), modelID: ModelV2.ID.make("unknown-model") },
+      }),
+    ],
+    provider: () =>
+      Effect.fail(
+        new Provider.ModelNotFoundError({
+          providerID: ProviderV2.ID.make("unknown-provider"),
+          modelID: ModelV2.ID.make("unknown-model"),
+          suggestions: [],
+          modelsEmpty: false,
+        }),
+      ),
+  })
+  const exit = await item.exit()
+  expect(Exit.isFailure(exit)).toBe(true)
+  if (!Exit.isFailure(exit)) throw new Error("expected failure")
+  const err = Cause.findErrorOption(exit.cause)
+  expect(Option.isSome(err)).toBe(true)
+  if (Option.isSome(err)) {
+    const tag = (err.value as { _tag?: unknown })._tag
+    expect(tag).toBe("ModeSwitchUnresolvableModelError")
+  }
+  // Persisted user message must be untouched on failure.
+  expect(item.updated).toHaveLength(0)
 })
 
 test("legacy build target switches to the canonical code mode", async () => {

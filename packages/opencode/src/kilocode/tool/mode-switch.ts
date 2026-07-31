@@ -3,6 +3,7 @@ import { Config } from "@/config/config"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import * as KiloAgent from "@/kilocode/agent"
 import { Permission } from "@/permission"
+import { Provider } from "@/provider/provider"
 import { MessageV2 } from "@/session/message-v2"
 import { Session } from "@/session/session"
 import { SessionID } from "@/session/schema"
@@ -10,6 +11,8 @@ import { ToolJsonSchema } from "@/tool/json-schema"
 import { Tool } from "@/tool/tool"
 import { SessionEvent } from "@opencode-ai/core/session/event"
 import { SessionMessage } from "@opencode-ai/core/session/message"
+import { ModelV2 } from "@opencode-ai/core/model"
+import { ProviderV2 } from "@opencode-ai/core/provider"
 import { Cause, Effect, Exit, Schema } from "effect"
 import * as DateTime from "effect/DateTime"
 
@@ -34,9 +37,14 @@ type Meta = {
 type Deps = {
   agents: Pick<Agent.Interface, "list" | "guardRequirements">
   config: Pick<Config.Interface, "get">
+  provider: Pick<Provider.Interface, "getModel">
   sessions: Pick<Session.Interface, "updateMessage">
   ask: Tool.Context["ask"]
   switched: (input: { sessionID: SessionID; agent: string }) => Effect.Effect<void>
+  modelSwitched: (input: {
+    sessionID: SessionID
+    model: { providerID: ProviderV2.ID; id: ModelV2.ID; variant?: string }
+  }) => Effect.Effect<void>
 }
 
 export class UnavailableError extends Schema.TaggedErrorClass<UnavailableError>()("ModeSwitchUnavailableError", {
@@ -54,6 +62,20 @@ export class ActiveError extends Schema.TaggedErrorClass<ActiveError>()("ModeSwi
 }) {
   override get message() {
     return `Mode "${this.target}" is already active. Choose a different mode: ${this.available.join(", ")}`
+  }
+}
+
+export class UnresolvableModelError extends Schema.TaggedErrorClass<UnresolvableModelError>()(
+  "ModeSwitchUnresolvableModelError",
+  {
+    target: Schema.String,
+    providerID: Schema.String,
+    modelID: Schema.String,
+    hint: Schema.optional(Schema.String),
+  },
+) {
+  override get message() {
+    return `Mode "${this.target}" is configured with model ${this.providerID}/${this.modelID}, which is not currently available.${this.hint ? ` ${this.hint}` : ""}`
   }
 }
 
@@ -87,6 +109,15 @@ function denied(err: unknown) {
 
 function user(messages: MessageV2.WithParts[]) {
   return messages.findLast((item) => item.info.role === "user")
+}
+
+// kilocode_change start - mirror prompt.ts: only apply target.variant when the
+// resolved destination model actually exposes it; an inherited variant that
+// belongs to the previous model would be silently dropped by llm/request.ts.
+function pickVariant(variants: Record<string, unknown> | undefined, candidate: string | undefined): string | undefined {
+  if (!candidate) return undefined
+  if (variants && candidate in variants) return candidate
+  return undefined
 }
 
 export const execute = Effect.fn("ModeSwitch.execute")(function* (
@@ -143,18 +174,71 @@ export const execute = Effect.fn("ModeSwitch.execute")(function* (
     return yield* Effect.die(new Error("Mode switch has no active user task"))
   // kilocode_change start - carry the destination mode's configured model/variant so the
   // resumed turn uses them (prompt.ts re-reads the last user message's model on every step).
-  const nextModel = target.model
-    ? {
-        ...current.info.model,
-        providerID: target.model.providerID,
-        modelID: target.model.modelID,
-        ...(target.variant ? { variant: target.variant } : {}),
+  // Validate the destination model first so an unknown/unavailable one fails the
+  // tool with a clean error instead of poisoning the persisted user message and
+  // aborting the in-flight turn when getModel dies in the prompt loop.
+  const baseModel = current.info.model
+  let nextProviderID = baseModel.providerID
+  let nextModelID = baseModel.modelID
+  let nextVariant: string | undefined = baseModel.variant
+  let switchedModel: false | { providerID: ProviderV2.ID; id: ModelV2.ID; variant?: ModelV2.VariantID } = false
+
+  if (target.model) {
+    const exit = yield* deps.provider.getModel(target.model.providerID, target.model.modelID).pipe(Effect.exit)
+    if (Exit.isFailure(exit)) {
+      const err = Cause.squash(exit.cause)
+      if (Provider.ModelNotFoundError.isInstance(err)) {
+        const hint = err.suggestions?.length ? `Did you mean: ${err.suggestions.join(", ")}?` : undefined
+        return yield* new UnresolvableModelError({
+          target: target.name,
+          providerID: err.providerID,
+          modelID: err.modelID,
+          hint,
+        })
       }
-    : target.variant
-      ? { ...current.info.model, variant: target.variant }
-      : current.info.model
+      return yield* Effect.die(err)
+    }
+    const resolved = exit.value
+    nextProviderID = resolved.providerID
+    nextModelID = resolved.id
+    // The previous variant was chosen for the source model and may not exist on the
+    // destination; clear it whenever the provider/model actually changes.
+    const modelChanged =
+      resolved.providerID !== baseModel.providerID || resolved.id !== baseModel.modelID
+    if (modelChanged) nextVariant = pickVariant(resolved.variants, target.variant)
+    else nextVariant = pickVariant(resolved.variants, target.variant) ?? baseModel.variant
+    switchedModel = {
+      providerID: resolved.providerID,
+      id: resolved.id,
+      ...(nextVariant ? { variant: nextVariant as ModelV2.VariantID } : {}),
+    }
+  } else if (target.variant) {
+    const exit = yield* deps.provider
+      .getModel(baseModel.providerID, baseModel.modelID)
+      .pipe(Effect.exit)
+    if (Exit.isSuccess(exit)) {
+      const valid = pickVariant(exit.value.variants, target.variant)
+      if (valid) {
+        nextVariant = valid
+        switchedModel = {
+          providerID: baseModel.providerID,
+          id: baseModel.modelID,
+          variant: valid as ModelV2.VariantID,
+        }
+      }
+    }
+  }
+
+  const nextModel = {
+    providerID: nextProviderID,
+    modelID: nextModelID,
+    ...(nextVariant ? { variant: nextVariant } : {}),
+  }
   yield* deps.sessions.updateMessage({ ...current.info, agent: target.name, model: nextModel })
   yield* deps.switched({ sessionID: ctx.sessionID, agent: target.name })
+  if (switchedModel) {
+    yield* deps.modelSwitched({ sessionID: ctx.sessionID, model: switchedModel })
+  }
   // kilocode_change end
 
   return {
@@ -167,13 +251,14 @@ export const execute = Effect.fn("ModeSwitch.execute")(function* (
 export const ModeSwitchTool = Tool.define<
   typeof Params,
   Meta,
-  Agent.Service | Config.Service | Session.Service | EventV2Bridge.Service,
+  Agent.Service | Config.Service | Provider.Service | Session.Service | EventV2Bridge.Service,
   "mode_switch"
 >(
   "mode_switch",
   Effect.gen(function* () {
     const agents = yield* Agent.Service
     const config = yield* Config.Service
+    const provider = yield* Provider.Service
     const sessions = yield* Session.Service
     const events = yield* EventV2Bridge.Service
     return {
@@ -184,6 +269,7 @@ export const ModeSwitchTool = Tool.define<
         execute(params, ctx, {
           agents,
           config,
+          provider,
           sessions,
           ask: ctx.ask,
           switched: (input) =>
@@ -192,6 +278,19 @@ export const ModeSwitchTool = Tool.define<
               messageID: SessionMessage.ID.create(),
               timestamp: DateTime.makeUnsafe(Date.now()),
               agent: input.agent,
+            }),
+          modelSwitched: (input) =>
+            events.publish(SessionEvent.ModelSwitched, {
+              sessionID: input.sessionID,
+              messageID: SessionMessage.ID.create(),
+              timestamp: DateTime.makeUnsafe(Date.now()),
+              model: {
+                providerID: input.model.providerID,
+                id: input.model.id,
+                ...(input.model.variant
+                  ? { variant: ModelV2.VariantID.make(input.model.variant) }
+                  : {}),
+              },
             }),
         }).pipe(Effect.orDie),
     }
