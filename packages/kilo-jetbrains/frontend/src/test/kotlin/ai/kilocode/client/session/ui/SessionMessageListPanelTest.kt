@@ -202,6 +202,25 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertEquals(80, child.height)
     }
 
+    fun `test reflow budget terminates when height never settles`() {
+        var reflows = 0
+        panel.onReflow = { reflows++ }
+        // loadHistory rebuilds the transcript (and schedules the reflow chain) after wiping existing
+        // children, so add the ever-growing child afterwards — it grows on every measurement, so the
+        // idle chain restarts its settle window on every pass. Without the hard budget the invokeLater
+        // chain would repost forever and this drain would spin; the budget bounds it.
+        model.loadHistory(listOf(MessageWithPartsDto(msg("u1", "user"), emptyList())))
+        panel.add(EverGrowing(), 0)
+        panel.setSize(600, 400)
+
+        UIUtil.dispatchAllInvocationEvents()
+
+        // Reaching this line proves the chain terminated. The pass count is bounded by the hard
+        // budget (REFLOW_PASSES * 4), so a regression that reset it alongside `remaining` would
+        // either hang here or blow past this bound.
+        assertTrue("reflow passes must be bounded by the budget, was $reflows", reflows in 1..30)
+    }
+
     fun `test apply style drops cached panel measurements`() {
         val child = Growing(20)
         panel.add(child, 0)
@@ -1503,5 +1522,15 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         }
 
         override fun getPreferredSize() = java.awt.Dimension(0, size)
+    }
+
+    /** Reports a taller preferred height on every measurement, so a reflow chain never stabilizes. */
+    private class EverGrowing : JPanel() {
+        private var size = 10
+
+        override fun getPreferredSize(): java.awt.Dimension {
+            size += 10
+            return java.awt.Dimension(0, size)
+        }
     }
 }

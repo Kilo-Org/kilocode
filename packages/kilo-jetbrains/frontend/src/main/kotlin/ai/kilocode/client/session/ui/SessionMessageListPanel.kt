@@ -545,17 +545,20 @@ class SessionMessageListPanel(
         }
         val changed = reflow()
         if (changed) onReflow?.invoke(true)
-        // [remaining] restarts whenever the height is still moving, so the chain keeps re-measuring
-        // until the layout settles for REFLOW_PASSES consecutive passes. [budget] never resets: a
-        // session that keeps streaming changes its height every EDT cycle, which would otherwise
-        // reset [remaining] forever and hold the panel in a perpetual forgetAll()/re-measure loop.
-        // The hard budget caps total passes so streaming can't defeat the width-keyed height cache.
+        // [remaining] restarts while the height is still settling so the chain keeps re-measuring
+        // until it holds steady for REFLOW_PASSES consecutive passes. [budget] never resets and is
+        // the hard backstop that guarantees termination. See below for why both are needed.
         if (remaining <= 0 || budget <= 0) {
             stable = -1
             return
         }
         val height = preferredSize.height
-        val left = if (height == stable) remaining - 1 else REFLOW_PASSES
+        // A moving height means the layout is still settling only while the session is idle. During
+        // streaming it just tracks incoming content, so restarting the settle window on every delta
+        // was the runaway that pinned the panel in a perpetual forgetAll()/re-measure loop. Count the
+        // pass down while busy so streaming settles in REFLOW_PASSES and hands off to the per-turn
+        // forgetTurn path; [budget] still caps the idle case if a pane never converges.
+        val left = if (height == stable || model.state.isBusy()) remaining - 1 else REFLOW_PASSES
         stable = height
         ApplicationManager.getApplication().invokeLater {
             reflowPass(id, left, budget - 1)
