@@ -508,10 +508,7 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
         // Mirror state.model, variants, activeVariant, and the footer model label so
         // an in-flight model switch from mode_switch survives through to the next
         // interactive prompt in kilo run.
-onModelChange: (model) => {
-          // kilocode_change start - mirror state.model, variants, activeVariant, and the
-          // footer model label so an in-flight model switch from mode_switch survives
-          // through to the next interactive prompt in kilo run.
+        onModelChange: (model) => {
           const next = { providerID: model.providerID, modelID: model.id, variant: model.variant }
           state.model = next
           const variants = variantsFor(state.providers, next)
@@ -523,13 +520,12 @@ onModelChange: (model) => {
             model.variant && variants.includes(model.variant) ? model.variant : undefined
           footer.event({ type: "model", model: formatModelLabel(next, state.activeVariant, state.providers) })
           footer.event({ type: "model.switch", model: next })
-          // kilocode_change end
         },
         // kilocode_change end
-        trace: log,
-      })
-      if (footer.isClosed) {
-        await handle.close()
+        trace: log, // kilocode_change - retains the upstream branch trace hook now that the block ends below it
+      }) // kilocode_change - block extends to cover the post-trace closing brace added by the onModelChange expansion
+      if (footer.isClosed) { // kilocode_change
+        await handle.close() // kilocode_change - keeps the inline marker consistent with the post-expansion block
         throw new Error("runtime closed")
       }
 
