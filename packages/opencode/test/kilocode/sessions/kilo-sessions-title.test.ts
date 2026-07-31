@@ -14,6 +14,8 @@ import {
   markRenameAdopted,
 } from "../../../src/kilo-sessions/rename-adoptions"
 import { Session } from "../../../src/session/session"
+import { SessionID } from "../../../src/session/schema"
+import { ProjectV2 } from "@opencode-ai/core/project"
 import { TestConfig } from "../../fixture/config"
 import { pollWithTimeout, testEffect } from "../../lib/effect"
 import { TestInstance } from "../../fixture/fixture"
@@ -771,6 +773,78 @@ it.instance(
       yield* sessions.setTitle({ sessionID: id, title: "Title B" })
       yield* holdTitlePosts(requests, 0)
     }).pipe(Effect.provide(layer()))
+  },
+  15_000,
+)
+
+it.instance(
+  "title report: unseeded session (sessions.list() misses it, prev undefined) reports rename with generated:false",
+  () => {
+    const requests: Req[] = []
+    installFetch(mockFetch(requests))
+    patchEnv({
+      KILO_API_KEY: "test-token",
+      KILO_SESSION_INGEST_URL: "https://ingest.kilosessions.ai",
+      KILO_AGENT_NOTIFICATION_TIMEOUT_MS: "5000",
+    })
+    reset("test-token")
+
+    // Mock Session.Service: list() returns empty (simulates session beyond the
+    // default 100-row limit after restart). get() returns the session with a
+    // title that differs from any previous seed, so prev === undefined triggers
+    // a report with generated:false instead of the old silent seed/no-op.
+    const mockSessionLayer = Layer.mock(Session.Service, {
+      list: () => Effect.succeed([]),
+      get: (sid: SessionID) =>
+        Effect.succeed({
+          id: sid,
+          title: "Renamed Title",
+          slug: "slug-unseeded",
+          projectID: ProjectV2.ID.make("proj-unseeded"),
+          directory: "/tmp/unseeded-test",
+          version: "test",
+          permission: {},
+          time: { created: 0, updated: 0 },
+        } as Session.Info),
+      create: () =>
+        Effect.succeed({
+          id: SessionID.make("ses_unseeded_title_test"),
+          title: "Default Title",
+          slug: "slug-unseeded",
+          projectID: ProjectV2.ID.make("proj-unseeded"),
+          directory: "/tmp/unseeded-test",
+          version: "test",
+          permission: {},
+          time: { created: 0, updated: 0 },
+        } as Session.Info),
+      setTitle: () => Effect.void,
+    })
+
+    const customLayer = KiloSessions.layer.pipe(
+      Layer.provideMerge(Bus.layer),
+      Layer.provideMerge(mockSessionLayer),
+      Layer.provide(TestConfig.layer({})),
+    )
+
+    return Effect.gen(function* () {
+      const instance = yield* TestInstance
+      const sessions = yield* Session.Service
+      const kilo = yield* KiloSessions.Service
+      yield* kilo.init()
+
+      // Mock create() does not fire Session.Event.Created, so knownTitles is
+      // never seeded for this session. list() returns empty as well.
+      const created = yield* sessions.create({})
+      yield* Effect.promise(() => KiloSessions.bootstrap(created.id))
+      yield* Effect.sleep(50)
+      requests.length = 0
+
+      // Emit Updated — handler calls sessions.get(id) which returns "Renamed Title".
+      // knownTitles has no entry → prev === undefined → report, generated:false.
+      emitUpdated(instance.directory, created.id, "Renamed Title")
+      const posts = yield* waitTitlePosts(requests, 1, "title POST never fired for unseeded session")
+      expect(posts[posts.length - 1].body).toEqual({ title: "Renamed Title", generated: false })
+    }).pipe(Effect.provide(customLayer))
   },
   15_000,
 )

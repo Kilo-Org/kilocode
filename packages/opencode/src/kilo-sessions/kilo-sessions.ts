@@ -398,11 +398,10 @@ export namespace KiloSessions {
             // stick and swallow a later real local rename (Decision 8).
             const outcome = (():
               | { kind: "same" }
-              | { kind: "seed" }
               | { kind: "adopted" }
               | { kind: "report"; generated: boolean } => {
               if (sameTitle) return { kind: "same" }
-              if (prev === undefined) return { kind: "seed" }
+              if (prev === undefined) return { kind: "report", generated: false }
               if (consumeRenameAdoption(sessionID, session.title)) return { kind: "adopted" }
               return { kind: "report", generated: consumeAutoTitle(sessionID, session.title) }
             })()
