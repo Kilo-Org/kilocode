@@ -320,6 +320,7 @@ describe("cli run network retries", () => {
         command: "compact",
         arguments: "argument\nfrom stdin",
         variant: undefined,
+        ephemeralTools: { question: false, suggest: false },
       },
     ])
   })

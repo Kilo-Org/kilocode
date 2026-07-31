@@ -44,7 +44,10 @@ export namespace KiloTask {
 
   /** Carry request-scoped tool denials into child and follow-up prompts. */
   export function restrictions(tools?: Record<string, boolean>) {
-    return Object.fromEntries(Object.entries(tools ?? {}).filter(([, enabled]) => !enabled))
+    return {
+      ...(tools?.question === false ? { question: false } : {}),
+      ...(tools?.suggest === false ? { suggest: false } : {}),
+    }
   }
 
   /**

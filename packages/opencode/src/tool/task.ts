@@ -203,11 +203,8 @@ export const TaskTool = Tool.define(
       )
       if (msg.info.role !== "assistant") return yield* Effect.fail(new Error("Not an assistant message"))
       // kilocode_change start - retain headless tool restrictions in subagent turns and background follow-ups
-      const user = yield* MessageV2.get({ sessionID: ctx.sessionID, messageID: msg.info.parentID }).pipe(
-        Effect.provideService(Database.Service, database),
-        Effect.orDie,
-      )
-      const restrictions = KiloTask.restrictions(user.info.role === "user" ? user.info.tools : undefined)
+      const user = ctx.messages.findLast((item) => item.info.role === "user")
+      const restrictions = KiloTask.restrictions(user?.info.role === "user" ? user.info.tools : undefined)
       // kilocode_change end
 
       // kilocode_change start — prefer valid subagent overrides, safely inheriting when overrides go stale

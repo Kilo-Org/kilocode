@@ -7819,12 +7819,6 @@
                   "variant": {
                     "type": "string"
                   },
-                  "ephemeralTools": {
-                    "type": "object",
-                    "additionalProperties": {
-                      "type": "boolean"
-                    }
-                  },
                   "snapshotInitialization": {
                     "type": "string",
                     "enum": ["wait"]
@@ -7995,6 +7989,12 @@
                   },
                   "variant": {
                     "type": "string"
+                  },
+                  "ephemeralTools": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "boolean"
+                    }
                   },
                   "snapshotInitialization": {
                     "type": "string",

@@ -180,9 +180,11 @@ describe("Kilo task nesting", () => {
   it.live("propagates request-scoped tool restrictions to subagents", () =>
     provideTmpdirInstance(() =>
       Effect.gen(function* () {
-        const { chat, assistant } = yield* seed({ question: false, suggest: false })
+        const sessions = yield* Session.Service
+        const { chat, assistant } = yield* seed({ question: false, suggest: false, read: false })
         const tool = yield* TaskTool
         const def = yield* tool.init()
+        const messages = yield* sessions.messages({ sessionID: chat.id })
         let seen: SessionPrompt.PromptInput | undefined
 
         yield* def.execute(
@@ -197,7 +199,7 @@ describe("Kilo task nesting", () => {
             agent: "build",
             abort: new AbortController().signal,
             extra: { promptOps: stubOps({ onPrompt: (input) => (seen = input) }) },
-            messages: [],
+            messages,
             metadata: () => Effect.void,
             ask: () => Effect.void,
           },
