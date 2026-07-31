@@ -58,7 +58,6 @@ import { pruneSubagents } from "./prune-subagents"
 import { startSession } from "./mcp-warmup"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
 import { DestinationState, handleDestination, watchTerminalDestination } from "./terminal-destination"
-import { routeSessionTerminal } from "./session-terminal-routing"
 import { buildKeybindingMap } from "./format-keybinding"
 import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from "./multi-version"
 import { ensureSandbox } from "./sandbox-bootstrap"
@@ -635,7 +634,7 @@ export class AgentManagerProvider implements Disposable {
 
     if (m.type === "loadMessages") {
       this.activeSessionId = m.sessionID
-      this.terminalManager.syncOnSessionSwitch(m.sessionID)
+      if (this.destination.value() === "vscode") this.terminalManager.syncOnSessionSwitch(m.sessionID)
       this.prBridge.poller.setActiveWorktreeId(this.state?.getSession(m.sessionID)?.worktreeId ?? undefined)
       return msg
     }
@@ -679,14 +678,16 @@ export class AgentManagerProvider implements Disposable {
     }
     if (handleDestination(this.destination, m, (msg) => this.log("[XTerm]", msg))) return null
     if (handleRunMessage(this.run, m, (id) => this.runKey(id))) return null
-    if (
-      routeSessionTerminal(m, {
-        destination: this.destination.value(),
-        state: this.state,
-        terminals: this.terminalManager,
-        openSide: () => this.postToWebview({ type: "action", action: "showSideTerminal" }),
-      })
-    ) {
+    if (m.type === "agentManager.showTerminal") {
+      this.terminalManager.showTerminal(m.sessionId, this.state)
+      return null
+    }
+    if (m.type === "agentManager.showLocalTerminal") {
+      this.terminalManager.showLocalTerminal()
+      return null
+    }
+    if (m.type === "agentManager.showWorktreeTerminal") {
+      this.terminalManager.showWorktreeTerminal(m.worktreeId, this.state)
       return null
     }
     if (m.type === "agentManager.openWorktree") {
@@ -700,7 +701,7 @@ export class AgentManagerProvider implements Disposable {
     if (m.type === "previewImage") return msg
     if (m.type === "saveImage") return msg
     if (m.type === "agentManager.showExistingLocalTerminal") {
-      this.terminalManager.syncLocalOnSessionSwitch()
+      if (this.destination.value() === "vscode") this.terminalManager.syncLocalOnSessionSwitch()
       return null
     }
     if (m.type === "agentManager.requestRepoInfo") {

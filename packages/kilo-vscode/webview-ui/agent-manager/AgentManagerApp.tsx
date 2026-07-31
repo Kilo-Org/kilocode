@@ -1091,8 +1091,6 @@ const AgentManagerContent: Component = () => {
         }
       } else if (msg.action === "showTerminal") {
         if (!sideCtl.echo()) sideCtl.openPreferred("keyboard_shortcut")
-      } else if (msg.action === "showSideTerminal") {
-        sideCtl.open()
       } else if (msg.action === "toggleDiff") {
         if (reviewActive()) {
           closeReviewTab()
