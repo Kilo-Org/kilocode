@@ -164,6 +164,139 @@ class PermissionViewTest : BasePlatformTestCase() {
         assertFalse("Should not show state message for PENDING, got: $text", text.contains("Run this command?"))
     }
 
+    fun `test skill-shell bash permission shows skill-named header and verbatim commands`() {
+        view.show(
+            Permission(
+                id = "perm_skill",
+                sessionId = "ses",
+                name = "bash",
+                patterns = listOf("git status"),
+                always = emptyList(),
+                meta = PermissionMeta(
+                    raw = mapOf("skillShell" to "true", "skill" to "git-status"),
+                    skillCommands = listOf("git status", "printf hi"),
+                ),
+            )
+        )
+
+        val text = allText(view)
+        assertTrue("Expected skill-named header, got: $text", text.contains("Run shell commands from skill \"git-status\"?"))
+        assertFalse("Should not show generic header, got: $text", text.contains("Permission required"))
+        val label = view.codeLabelsForTest().single()
+        assertTrue("Expected first verbatim command, got: ${label.text}", label.text.contains("git status"))
+        assertTrue("Expected second verbatim command, got: ${label.text}", label.text.contains("printf hi"))
+    }
+
+    fun `test skill-shell permission without a skill name falls back to the generic header`() {
+        view.show(
+            Permission(
+                id = "perm_skill_noname",
+                sessionId = "ses",
+                name = "bash",
+                patterns = listOf("printf hi"),
+                always = emptyList(),
+                meta = PermissionMeta(
+                    raw = mapOf("skillShell" to "true"),
+                    skillCommands = listOf("printf hi"),
+                ),
+            )
+        )
+
+        val text = allText(view)
+        assertTrue("Expected fallback header, got: $text", text.contains("Permission required"))
+    }
+
+    fun `test skill-shell external_directory sibling shows the directory target, not the command list`() {
+        view.show(
+            Permission(
+                id = "perm_skill_dir",
+                sessionId = "ses",
+                name = "external_directory",
+                patterns = listOf("/tmp/*"),
+                always = emptyList(),
+                meta = PermissionMeta(
+                    raw = mapOf("skillShell" to "true", "skill" to "git-status"),
+                    skillCommands = listOf("cd /tmp && pwd"),
+                ),
+            )
+        )
+
+        val text = allText(view)
+        // The header still names the skill — both asks in the batch carry the same metadata.
+        assertTrue("Expected skill-named header, got: $text", text.contains("Run shell commands from skill \"git-status\"?"))
+        val label = view.codeLabelsForTest().single()
+        assertEquals("/tmp/*", label.text)
+        assertFalse("Should not show the verbatim command list, got: ${label.text}", label.text.contains("cd /tmp"))
+    }
+
+    fun `test skill-shell commands are escaped for control and bidi characters`() {
+        view.show(
+            Permission(
+                id = "perm_skill_escape",
+                sessionId = "ses",
+                name = "bash",
+                patterns = listOf("printf hi"),
+                always = emptyList(),
+                meta = PermissionMeta(
+                    raw = mapOf("skillShell" to "true", "skill" to "git-status"),
+                    // \u202e (RLO) would otherwise reverse the trailing text in the prompt.
+                    skillCommands = listOf("rm \u202etxt.exe", "a\nb"),
+                ),
+            )
+        )
+
+        val label = view.codeLabelsForTest().single()
+        assertTrue("Expected escaped RLO, got: ${label.text}", label.text.contains("rm \\u202etxt.exe"))
+        assertTrue("Expected escaped newline, got: ${label.text}", label.text.contains("a\\nb"))
+        assertFalse("Raw control char must not reach the label", label.text.contains("\u202e"))
+    }
+
+    fun `test skill-shell header escapes control and bidi characters in the skill name`() {
+        view.show(
+            Permission(
+                id = "perm_skill_name_escape",
+                sessionId = "ses",
+                name = "bash",
+                patterns = listOf("printf hi"),
+                always = emptyList(),
+                meta = PermissionMeta(
+                    // The skill name is untrusted SKILL.md frontmatter; a bidi override here
+                    // must not be able to reorder the header's attribution text.
+                    raw = mapOf("skillShell" to "true", "skill" to "git-status\u202e"),
+                    skillCommands = listOf("printf hi"),
+                ),
+            )
+        )
+
+        val text = allText(view)
+        assertTrue("Expected escaped RLO in header, got: $text", text.contains("git-status\\u202e"))
+        assertFalse("Raw control char must not reach the header, got: $text", text.contains("git-status\u202e"))
+    }
+
+    fun `test skill-shell permission never shows auto-approve rule toggles`() {
+        view.show(
+            Permission(
+                id = "perm_skill_norules",
+                sessionId = "ses",
+                name = "bash",
+                patterns = listOf("git status"),
+                always = listOf("git status"),
+                meta = PermissionMeta(
+                    raw = mapOf("skillShell" to "true", "skill" to "git-status"),
+                    skillCommands = listOf("git status"),
+                    // Simulates a future backend sending rule candidates alongside skillShell
+                    // metadata; approvals must still never be persisted for a skill batch.
+                    ruleDecisions = listOf(PermissionRuleCandidate("git status")),
+                ),
+            )
+        )
+
+        val text = allText(view)
+        assertFalse("Should not contain rules title, got: $text", text.contains("Auto-approve Rules"))
+        assertFalse(view.rulesForTest().isVisible)
+        assertEquals("Allow once", view.runButtonForTest().text)
+    }
+
     fun `test non-bash patterns show action and path in editor`() {
         view.show(
             Permission(
