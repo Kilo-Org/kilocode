@@ -162,6 +162,7 @@ class SessionController(
     // then reconciled when the operation releases so an underlying server turn is not lost.
     private var revertDeferred: SessionState? = null
     private var creating: CompletableDeferred<String?>? = null
+    private val pending = LinkedHashMap<String, Permission>()
     private val childJobs: MutableMap<String, Job> = mutableMapOf()
     private val childIds: MutableSet<String> = mutableSetOf()
     private val childParts: MutableMap<PartKey, String> = mutableMapOf()
@@ -363,6 +364,7 @@ class SessionController(
             return
         }
         val id = sid ?: return
+        updateModel { (childIds + id).forEach(::purgePending) }
         capture("Session Stop Clicked", sessionProps(id))
         cs.launch {
             try {
@@ -386,6 +388,11 @@ class SessionController(
             return
         }
         val current = model.state
+        // Clear the local queue before re-surfacing the visible card. approve() may synchronously
+        // re-enqueue a skill-shell card via show() (skill-shell asks always need a human), so that
+        // enqueue must be the last writer — otherwise a trailing clear() would drop it and leave a
+        // ghost card that is not in pending, which a later Stop/idle purge could not clear.
+        pending.clear()
         val skip = if (current is SessionState.AwaitingPermission) {
             approve(current.permission)
             setOf(current.permission.id)
@@ -720,33 +727,29 @@ class SessionController(
     private fun approve(id: String, restore: () -> Permission) {
         assertEdt()
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=permission-auto rid=$id" }
+        // Skill-shell batches must be answered by a human: the server refuses non-interactive
+        // approvals, so show the card (its manual reply sets interactive=true) rather than send a
+        // machine reply. Decide and enqueue synchronously on the EDT so back-to-back asks keep
+        // arrival (FIFO) order, matching asked()'s non-auto path; only the RPC needs a coroutine.
+        if (!autoApprove || restore().meta.raw["skillShell"] == "true") {
+            show(restore())
+            return
+        }
+        updateModel { model.setState(SessionState.Busy(KiloBundle.message("session.status.considering"))) }
         cs.launch {
             try {
-                // Skill-shell batches must be answered by a human: the server refuses
-                // non-interactive approvals, so auto-approve must show the card (whose
-                // manual reply sets interactive=true) rather than send a machine reply.
-                if (!autoApprove || restore().meta.raw["skillShell"] == "true") {
-                    edt {
-                        if (disposed) return@edt
-                        model.setState(SessionState.AwaitingPermission(restore()))
-                    }
-                    return@launch
-                }
-                edt {
-                    if (disposed) return@edt
-                    model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
-                }
                 sessions.replyPermission(id, directory, PermissionReplyDto("once"))
                 capture("Permission Auto Approved", sessionProps() + mapOf("tool" to restore().name, "source" to "single"))
                 LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=permission-auto rid=$id ok=true" }
             } catch (e: Exception) {
                 LOG.warn("${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=permission-auto rid=$id dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
                 edt {
-                    if (disposed) return@edt
-                    model.setState(SessionState.AwaitingPermission(restore().copy(
+                    // Queue the error card too, so pending stays the single source of truth and a
+                    // later Stop / TurnClose / idle purge can clear it instead of stranding it.
+                    show(restore().copy(
                         state = PermissionRequestState.ERROR,
                         message = e.message ?: KiloBundle.message("session.permission.error"),
-                    )))
+                    ))
                 }
             }
         }
@@ -762,18 +765,30 @@ class SessionController(
             try {
                 val permissions = sessions.pendingPermissions(directory).filter { it.sessionID in ids && it.id !in skip }
                 val count = replyAll(permissions)
-                // Skill-shell requests are skipped by replyAll; surface one as a card so it
-                // isn't stranded (never machine-approved, never shown).
-                val card = skillShellCard(permissions)?.let { toPermission(it) }
-                if (count == 0 && card == null) return@launch
+                // Skill-shell requests are skipped by replyAll; queue all of them so they aren't
+                // stranded (never machine-approved, never shown) or overwritten by later cards.
+                val cards = permissions.filter { it.metadata["skillShell"] == "true" }.map(::toPermission)
+                if (count == 0 && cards.isEmpty()) return@launch
                 runEdt {
                     if (disposed) return@runEdt
-                    if (card != null) {
-                        updateModel { model.setState(SessionState.AwaitingPermission(card)) }
+                    if (cards.isNotEmpty()) {
+                        updateModel {
+                            cards.forEach(::enqueue)
+                            if (model.state !is SessionState.AwaitingPermission && model.state !is SessionState.AwaitingQuestion) {
+                                promote()
+                            }
+                        }
                         return@runEdt
                     }
                     val current = model.state
-                    if (current is SessionState.AwaitingPermission && current.permission.sessionId in ids) {
+                    // A card in `skip` was handled synchronously by the caller (approve() either
+                    // replied to it — already Busy — or re-showed a skill-shell card we must keep).
+                    // Never transition it to Busy here or the preserved skill-shell card vanishes
+                    // with no reply path left.
+                    if (current is SessionState.AwaitingPermission &&
+                        current.permission.sessionId in ids &&
+                        current.permission.id !in skip
+                    ) {
                         model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
                     }
                 }
@@ -803,6 +818,12 @@ class SessionController(
 
     private fun updatePermission(id: String, state: PermissionRequestState, message: String? = null) {
         assertEdt()
+        pending[id]?.let { perm ->
+            pending[id] = perm.copy(
+                state = state,
+                message = message ?: perm.message,
+            )
+        }
         val current = model.state
         if (current !is SessionState.AwaitingPermission) return
         if (current.permission.id != id) return
@@ -1149,6 +1170,9 @@ class SessionController(
         if (child in childParts.values) return
         childIds.remove(child)
         childJobs.remove(child)?.cancel()
+        // A sub-agent that finished/was cancelled with an unanswered permission would otherwise leave
+        // a queue entry that a later promote() surfaces as a live card for a session that no longer exists.
+        purgePending(child)
     }
 
     @RequiresEdt
@@ -1166,6 +1190,7 @@ class SessionController(
         childJobs.clear()
         childIds.clear()
         childParts.clear()
+        pending.clear()
     }
 
     private suspend fun recoverChildPermissions(child: String) {
@@ -1173,21 +1198,23 @@ class SessionController(
             val permissions = sessions.pendingPermissions(directory).filter { it.sessionID == child }
             if (permissions.isEmpty()) return
             LOG.debug { "${ChatLogSummary.sid(sid ?: "pending")} kind=child-recovery child=$child permissions=${permissions.size}" }
-            // A skill-shell request must surface as a card even under auto-approve (replyAll
-            // skips it); prefer it over the last pending so a human can answer.
-            val show = if (autoApprove) {
+            // Under auto-approve, replyAll approves the ordinary permissions and skips skill-shell
+            // ones (they need a human); queue only those. Otherwise queue every pending permission.
+            val queue = if (autoApprove) {
                 replyAll(permissions)
-                skillShellCard(permissions) ?: return
+                permissions.filter { it.metadata["skillShell"] == "true" }
             } else {
-                skillShellCard(permissions) ?: permissions.last()
+                permissions
             }
-            val last = toPermission(show)
+            if (queue.isEmpty()) return
+            val items = queue.map(::toPermission)
             runEdt {
                 if (disposed) return@runEdt
                 if (child !in childIds) return@runEdt
-                // Do not overwrite an existing root or other child AwaitingPermission state
-                if (model.state is SessionState.AwaitingPermission) return@runEdt
-                updateModel { model.setState(SessionState.AwaitingPermission(last)) }
+                items.forEach(::enqueue)
+                if (model.state !is SessionState.AwaitingPermission && model.state !is SessionState.AwaitingQuestion) {
+                    updateModel { promote() }
+                }
             }
         } catch (e: Exception) {
             LOG.warn("${ChatLogSummary.sid(sid ?: "pending")} kind=child-recovery child=$child dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
@@ -1236,6 +1263,9 @@ class SessionController(
                     return
                 }
             }
+            // After auto-approve only skill-shell permissions still need a human card; queue those.
+            // Otherwise queue the whole pending set so each request is resolved in turn.
+            val queue = if (autoApprove) permissions.filter { it.metadata["skillShell"] == "true" } else permissions
             val branch = when {
                 permissions.isNotEmpty() -> "permission"
                 questions.isNotEmpty() -> "question"
@@ -1249,9 +1279,10 @@ class SessionController(
                 if (disposed) return@runEdt
                 if (sid != id) return@runEdt
                 updateModel {
-                    if (permissions.isNotEmpty()) {
-                        // Prefer a skill-shell request (needs a human) over the last pending.
-                        model.setState(SessionState.AwaitingPermission(toPermission(skillCard ?: permissions.last())))
+                    pending.entries.removeIf { it.value.sessionId == id }
+                    if (queue.isNotEmpty()) {
+                        queue.map(::toPermission).forEach(::enqueue)
+                        promote()
                     } else if (questions.isNotEmpty()) {
                         model.setState(SessionState.AwaitingQuestion(toQuestion(questions.last())))
                     } else if (status != null) {
@@ -1358,9 +1389,13 @@ class SessionController(
                     revertDeferred = SessionState.Idle
                     return
                 }
+                // The turn is done, so any still-queued permission for it is a ghost the CLI abandoned
+                // server-side without a reply event — drop it before deciding whether to keep a card.
+                purgePending(event.sessionID)
                 // Keep pending questions visible for follow-up flows that arrive just before close.
                 val current = model.state
                 if (current is SessionState.AwaitingQuestion) return
+                if (current is SessionState.AwaitingPermission) return
                 val clobberOk = event.reason == "completed"
                     || current is SessionState.Busy
                     || current is SessionState.Retry
@@ -1504,15 +1539,22 @@ class SessionController(
             approve(event.request)
             return
         }
-        val perm = toPermission(event.request)
-        model.setState(SessionState.AwaitingPermission(perm))
+        show(toPermission(event.request))
     }
 
     private fun replied(event: ChatEventDto.PermissionReplied) {
         val current = model.state
-        if (current is SessionState.AwaitingPermission && current.permission.id == event.requestID) {
-            model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
+        val front = current is SessionState.AwaitingPermission && current.permission.id == event.requestID
+        pending.remove(event.requestID)
+        // Front card resolved: advance to the next queued permission, else resume Busy.
+        if (front) {
+            model.setState(afterResolve())
+            return
         }
+        // A queued (non-front) permission or an unrelated prompt is active: leave it in place.
+        if (current is SessionState.AwaitingPermission || current is SessionState.AwaitingQuestion) return
+        // Otherwise (busy/idle/etc.) only surface a still-queued permission; never force Busy.
+        promote()
     }
 
     private fun asked(event: ChatEventDto.QuestionAsked) {
@@ -1522,14 +1564,59 @@ class SessionController(
     private fun replied(event: ChatEventDto.QuestionReplied) {
         val current = model.state
         if (current is SessionState.AwaitingQuestion && current.question.id == event.requestID) {
-            model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
+            model.setState(afterResolve())
         }
     }
 
     private fun rejected(event: ChatEventDto.QuestionRejected) {
         val current = model.state
         if (current is SessionState.AwaitingQuestion && current.question.id == event.requestID) {
-            model.setState(SessionState.Idle)
+            model.setState(afterResolve(idle = true))
+        }
+    }
+
+    private fun afterResolve(idle: Boolean = false): SessionState {
+        return pending.values.firstOrNull()?.let { SessionState.AwaitingPermission(it) }
+            ?: if (idle) SessionState.Idle else SessionState.Busy(KiloBundle.message("session.status.considering"))
+    }
+
+    private fun enqueue(perm: Permission) {
+        pending[perm.id] = perm
+    }
+
+    private fun promote() {
+        val perm = pending.values.firstOrNull() ?: return
+        model.setState(SessionState.AwaitingPermission(perm))
+    }
+
+    /**
+     * Queue [perm] and surface it if no card/question is already up. Wrapped in updateModel so the
+     * transcript's bottom-follow is preserved (permission cards live inside the scroll pane), and
+     * kept synchronous so callers on the EDT enqueue in arrival (FIFO) order.
+     */
+    @RequiresEdt
+    private fun show(perm: Permission) = updateModel {
+        enqueue(perm)
+        if (model.state !is SessionState.AwaitingPermission && model.state !is SessionState.AwaitingQuestion) {
+            promote()
+        }
+    }
+
+    /**
+     * Drop queued permissions for [session] and clear/re-promote the visible card when it belonged to
+     * one of them. The CLI deletes an outstanding permission server-side on turn interruption without
+     * emitting permission.replied (`Permission.ask` cleans up in `Effect.ensuring`), so on TurnClose /
+     * idle / child untrack a still-queued entry is a ghost that would otherwise resurface on the next
+     * promote() and fail to reply with NotFoundError.
+     */
+    @RequiresEdt
+    private fun purgePending(session: String?) {
+        if (session == null) return
+        val removed = pending.entries.removeIf { it.value.sessionId == session }
+        if (!removed) return
+        val current = model.state
+        if (current is SessionState.AwaitingPermission && current.permission.sessionId == session) {
+            model.setState(afterResolve(idle = true))
         }
     }
 
@@ -1548,6 +1635,10 @@ class SessionController(
             "idle" -> {
                 val current = model.state
                 if (current is SessionState.LoginRequired || current is SessionState.Reverting) return
+                purgePending(sid)
+                // purgePending may promote a still-queued permission from another (unpurged) child
+                // session; mirror idle() and leave that card in place rather than clobbering it with Idle.
+                if (model.state is SessionState.AwaitingPermission) return
                 SessionState.Idle
             }
             "busy" -> {
@@ -1649,6 +1740,9 @@ class SessionController(
             revertDeferred = SessionState.Idle
             return
         }
+        // An idle session cannot have a live permission outstanding — purge any ghost left by an
+        // abort/error that originated on the server or another client (local abort() already clears).
+        purgePending(sid)
         // Treat session.idle as an explicit signal to return to Idle.
         // Only apply if we're not in a more specific non-terminal state.
         val current = model.state
@@ -2511,6 +2605,7 @@ private fun toPermission(dto: PermissionRequestDto): Permission {
             fileDiff = diffs.firstOrNull(),
             fileDiffs = diffs,
             raw = dto.metadata,
+            skillCommands = dto.skillCommands,
         ),
         message = dto.message ?: dto.metadata["message"],
         tool = ref,

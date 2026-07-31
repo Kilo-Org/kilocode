@@ -940,10 +940,10 @@ Options:
 ## kilo console
 
 ```
-open or stop the local Kilo Console
+open or stop the local Kilo Console (deprecated)
 
 Commands:
-  kilo console       open the local Kilo Console  [default]
+  kilo console       open the local Kilo Console (deprecated)  [default]
   kilo console stop  stop the local kilo daemon
 
 Options:

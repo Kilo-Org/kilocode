@@ -162,6 +162,32 @@ describe("skill shell injection", () => {
     }),
   )
 
+  unix("asks external_directory (same metadata) before bash when a command leaves the project", () =>
+    Effect.gen(function* () {
+      // `cd` is a path-taking command for decomposition purposes, so a target outside the
+      // project (here /tmp, never inside the test instance's tmpdir) populates the decomposed
+      // dirs set and must raise a second, up-front external_directory ask before the bash ask —
+      // both carrying the same skillShell/skill/commands metadata as the batch they gate.
+      yield* writeGlobalSkill("outside-shell", "Out: !`cd /tmp && pwd`")
+
+      const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
+      yield* loadSkill("outside-shell", (req) =>
+        Effect.sync(() => {
+          requests.push(req)
+        }),
+      )
+
+      const skillRequests = requests.filter((r) => r.metadata?.["skillShell"] === true)
+      expect(skillRequests.map((r) => r.permission)).toEqual(["external_directory", "bash"])
+
+      const [dirAsk, bashAsk] = skillRequests
+      expect(dirAsk.patterns).toEqual(["/tmp/*"])
+      expect(dirAsk.metadata).toEqual(bashAsk.metadata)
+      expect(dirAsk.metadata?.["skill"]).toBe("outside-shell")
+      expect(dirAsk.metadata?.["commands"]).toEqual(["cd /tmp && pwd"])
+    }),
+  )
+
   unix("aborts the entire skill load when the batch is rejected", () =>
     Effect.gen(function* () {
       yield* writeGlobalSkill("denied-shell", "Secret: !`printf leaked`")

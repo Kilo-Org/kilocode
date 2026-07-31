@@ -3,8 +3,10 @@ package ai.kilocode.client.session.controller
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.rpc.dto.AgentDto
 import ai.kilocode.rpc.dto.ConfigDto
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
+import ai.kilocode.rpc.dto.MessageSummaryDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ModelDto
@@ -13,7 +15,9 @@ import ai.kilocode.rpc.dto.ProviderDto
 class HistoryLoadingTest : SessionControllerTestBase() {
 
     fun `test existing session loads history on init`() {
-        val m = msg("msg1", "ses_test", "user")
+        val m = msg("msg1", "ses_test", "user").copy(
+            summary = MessageSummaryDto(listOf(DiffFileDto("src/A.kt", 2, 1, "@@ patch"))),
+        )
         val part = part("prt1", "ses_test", "msg1", "text", text = "hello")
         rpc.history.add(MessageWithPartsDto(m, listOf(part)))
 
@@ -30,6 +34,7 @@ class HistoryLoadingTest : SessionControllerTestBase() {
             """,
             c,
         )
+        assertEquals("src/A.kt", c.model.message("msg1")?.info?.summary?.diffs?.single()?.file)
     }
 
     fun `test non-empty history shows messages view`() {

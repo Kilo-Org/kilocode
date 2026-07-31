@@ -12,6 +12,7 @@ import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.base.PartHeader
 import ai.kilocode.client.session.views.base.SecondarySessionPartView
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.UiStyle
@@ -71,7 +72,9 @@ class ReasoningView(
     init {
         row.border = JBUI.Borders.empty(
             JBUI.scale(SessionUiStyle.View.Reasoning.HEADER_VERTICAL_PADDING),
-            JBUI.scale(SessionUiStyle.View.Layout.HORIZONTAL_PADDING),
+            SessionUiStyle.View.Header.left(),
+            JBUI.scale(SessionUiStyle.View.Reasoning.HEADER_VERTICAL_PADDING),
+            SessionUiStyle.View.Header.right(),
         )
         bindHeader(parts.title, parts.icon)
         applyStyle(style)
@@ -281,6 +284,8 @@ class ReasoningView(
         md.background = style.editorBackground
         md.component.border = JBUI.Borders.empty()
         md.set(text)
+        // The shared popup wrapper (HeaderPopupBody) provides the scroll pane, so pass the content
+        // panel directly instead of nesting a second scroll pane here.
         val panel = TrackPanel().apply {
             isOpaque = true
             background = style.editorBackground
@@ -290,15 +295,7 @@ class ReasoningView(
             )
             add(md.component, BorderLayout.CENTER)
         }
-        val scroll = JBScrollPane(panel).apply {
-            border = JBUI.Borders.empty()
-            isOpaque = true
-            background = style.editorBackground
-            viewport.background = style.editorBackground
-            horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
-            verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
-        }
-        return HeaderPopupBody(scroll, md, style.editorBackground)
+        return HeaderPopupBody(panel, md, style.editorBackground)
     }
 
     private fun bodyMaxHeight(): Int {
@@ -336,7 +333,7 @@ class ReasoningView(
 }
 
 class ReasoningParts(
-    val header: JPanel,
+    val header: PartHeader,
     val title: JBLabel,
     val icon: JBLabel,
     private val selection: SessionSelection?,
@@ -391,10 +388,9 @@ class ReasoningBody(
 private fun reasoningParts(selection: SessionSelection? = null): ReasoningParts {
     val title = JBLabel(KiloBundle.message("session.part.reasoning")).apply { foreground = UiStyle.Colors.weak() }
     val icon = JBLabel(SessionViewIcons.brain).apply { foreground = UiStyle.Colors.weak() }
-    val header = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.Layout.GAP), 0)).apply {
-        isOpaque = false
-        add(icon, BorderLayout.WEST)
-        add(title, BorderLayout.CENTER)
+    val header = PartHeader().apply {
+        leading(icon)
+        left(title)
     }
     return ReasoningParts(header, title, icon, selection)
 }

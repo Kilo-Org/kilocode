@@ -27,6 +27,7 @@ import ai.kilocode.rpc.dto.CustomProviderSaveDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageErrorDto
+import ai.kilocode.rpc.dto.MessageSummaryDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.McpConfigDto
@@ -261,16 +262,7 @@ object KiloCliDataParser {
 
             "session.diff" -> {
                 val sid = props.str("sessionID") ?: return null
-                val diffs = props["diff"]?.jsonArray?.mapNotNull { elem ->
-                    val d = elem.jsonObject
-                    val file = d.str("file") ?: return@mapNotNull null
-                    DiffFileDto(
-                        file = file,
-                        additions = d.long("additions")?.safeInt() ?: 0,
-                        deletions = d.long("deletions")?.safeInt() ?: 0,
-                        patch = d.str("patch"),
-                    )
-                } ?: emptyList()
+                val diffs = parseDiffs(props["diff"])
                 ChatEventDto.SessionDiffChanged(sid, diffs)
             }
 
@@ -1047,6 +1039,8 @@ object KiloCliDataParser {
         val time = obj["time"]?.jsonObject
         val tokens = obj["tokens"]?.jsonObject
         val error = obj["error"]?.jsonObject
+        val raw = obj["summary"].obj()?.get("diffs")
+        val summary = if (raw == null) null else MessageSummaryDto(parseDiffs(raw))
 
         return MessageDto(
             id = obj.str("id") ?: "",
@@ -1063,7 +1057,23 @@ object KiloCliDataParser {
             cost = obj.num("cost"),
             tokens = tokens?.let(::parseTokens),
             error = error?.let { parseError(it) },
+            summary = summary,
         )
+    }
+
+    private fun parseDiffs(raw: JsonElement?): List<DiffFileDto> {
+        val arr = raw.arr() ?: return emptyList()
+        return arr.mapNotNull { elem ->
+            val item = elem.obj() ?: return@mapNotNull null
+            val file = item.str("file") ?: return@mapNotNull null
+            DiffFileDto(
+                file = file,
+                additions = item.long("additions")?.safeInt() ?: 0,
+                deletions = item.long("deletions")?.safeInt() ?: 0,
+                patch = item.str("patch"),
+                status = item.str("status"),
+            )
+        }
     }
 
     internal fun parsePart(obj: JsonObject): PartDto {
@@ -1237,6 +1247,7 @@ object KiloCliDataParser {
             ruleDecisions = rawRules.ifEmpty { always.map { PermissionRuleDecisionDto(it) } },
             filePath = path,
             fileDiffs = diffs,
+            skillCommands = metaObj.skillCommands(),
         )
     }
 
@@ -1651,6 +1662,13 @@ private fun JsonElement?.arr(): JsonArray? = runCatching { this?.jsonArray }.get
 private fun JsonObject?.path(): String? {
     if (this == null) return null
     return str("filepath") ?: str("filePath") ?: str("file") ?: str("path")
+}
+
+// metadata.commands is the verbatim skill-shell command list; the flat meta map loses the
+// array, so read it as a list for the prompt to display.
+private fun JsonObject?.skillCommands(): List<String> {
+    if (this == null) return emptyList()
+    return this["commands"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
 }
 
 private fun JsonObject?.ruleDecisions(): List<PermissionRuleDecisionDto> {
