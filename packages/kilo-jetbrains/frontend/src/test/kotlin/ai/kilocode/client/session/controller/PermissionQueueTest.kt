@@ -174,6 +174,48 @@ class PermissionQueueTest : SessionControllerTestBase() {
         assertPermission(m, "perm2")
     }
 
+    fun `test toggling auto approve on keeps a visible skill shell card queued for purge`() {
+        // A skill-shell card is up while auto-approve is off; enabling auto-approve must not strand it.
+        // Skill-shell asks always need a human, so setAutoApprove re-shows the card via show(); that
+        // enqueue has to survive pending.clear() (be the last writer) or the card becomes a ghost that
+        // is no longer in pending, which a later Stop could not purge and answering would NotFoundError.
+        val (m, _, _) = prompted()
+
+        emit(ChatEventDto.PermissionAsked("ses_test", skillPermission("perm1")))
+        assertPermission(m, "perm1")
+
+        edt { m.setAutoApprove(true) }
+        flush()
+
+        // Still shown, and still tracked in pending — so Stop can clear it.
+        assertPermission(m, "perm1")
+
+        edt { m.abort() }
+        flush()
+        assertTrue(m.model.state is SessionState.Idle)
+    }
+
+    fun `test toggling auto approve on keeps skill shell card while draining other permissions`() {
+        // Visible skill-shell card plus another auto-approvable permission on the server. Enabling
+        // auto-approve drains/replies the other one, but the drain must not flip the preserved
+        // skill-shell card to Busy — that would hide it with no reply path left.
+        rpc.pendingPermissionList.add(permission("perm2"))
+        val (m, _, _) = prompted()
+
+        emit(ChatEventDto.PermissionAsked("ses_test", skillPermission("perm1")))
+        assertPermission(m, "perm1")
+
+        edt { m.setAutoApprove(true) }
+        flush()
+
+        assertTrue(rpc.permissionReplies.any { it.first == "perm2" })
+        assertPermission(m, "perm1")
+
+        edt { m.abort() }
+        flush()
+        assertTrue(m.model.state is SessionState.Idle)
+    }
+
     fun `test replying active question shows queued permission`() {
         val (m, _, _) = prompted()
 

@@ -388,13 +388,17 @@ class SessionController(
             return
         }
         val current = model.state
+        // Clear the local queue before re-surfacing the visible card. approve() may synchronously
+        // re-enqueue a skill-shell card via show() (skill-shell asks always need a human), so that
+        // enqueue must be the last writer — otherwise a trailing clear() would drop it and leave a
+        // ghost card that is not in pending, which a later Stop/idle purge could not clear.
+        pending.clear()
         val skip = if (current is SessionState.AwaitingPermission) {
             approve(current.permission)
             setOf(current.permission.id)
         } else {
             emptySet()
         }
-        pending.clear()
         drainAutoApprove(skip)
     }
 
@@ -777,7 +781,14 @@ class SessionController(
                         return@runEdt
                     }
                     val current = model.state
-                    if (current is SessionState.AwaitingPermission && current.permission.sessionId in ids) {
+                    // A card in `skip` was handled synchronously by the caller (approve() either
+                    // replied to it — already Busy — or re-showed a skill-shell card we must keep).
+                    // Never transition it to Busy here or the preserved skill-shell card vanishes
+                    // with no reply path left.
+                    if (current is SessionState.AwaitingPermission &&
+                        current.permission.sessionId in ids &&
+                        current.permission.id !in skip
+                    ) {
                         model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
                     }
                 }
