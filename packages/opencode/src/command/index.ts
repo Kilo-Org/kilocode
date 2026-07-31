@@ -8,6 +8,7 @@ import { Config } from "@/config/config"
 import { MCP } from "../mcp"
 import { Skill } from "../skill"
 import { legacyReviewCommand, reviewCommand } from "@/kilocode/review/command" // kilocode_change
+import { apply as applyOverride } from "@/kilocode/command/override" // kilocode_change
 import { EventV2 } from "@opencode-ai/core/event"
 import PROMPT_INITIALIZE from "./template/initialize.txt"
 
@@ -32,6 +33,7 @@ export const Info = Schema.Struct({
   description: Schema.optional(Schema.String),
   agent: Schema.optional(Schema.String),
   model: Schema.optional(Schema.String),
+  variant: Schema.optional(Schema.String), // kilocode_change
   source: Schema.optional(Schema.Literals(["command", "mcp", "skill"])),
   trusted: Schema.optional(Schema.Boolean), // kilocode_change - skill-sourced templates only run `!`cmd`` shell when trusted
   // Some command templates are lazy promises from MCP prompt resolution.
@@ -115,18 +117,7 @@ export const layer = Layer.effect(
       // kilocode_change end
 
       for (const [name, command] of Object.entries(cfg.command ?? {})) {
-        commands[name] = {
-          name,
-          agent: command.agent,
-          model: command.model,
-          description: command.description,
-          source: "command",
-          get template() {
-            return command.template
-          },
-          subtask: command.subtask,
-          hints: hints(command.template),
-        }
+        applyOverride(commands, name, command, hints) // kilocode_change
       }
 
       for (const [name, prompt] of Object.entries(yield* mcp.prompts())) {

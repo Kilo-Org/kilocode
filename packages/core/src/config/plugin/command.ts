@@ -31,8 +31,9 @@ export const Plugin = PluginV2.define({
     yield* transform((editor) => {
       for (const document of documents) {
         for (const [name, command] of Object.entries(document.commands ?? {})) {
+          if (command.template === undefined && !editor.get(name)) continue // kilocode_change
           editor.update(name, (item) => {
-            item.template = command.template
+            if (command.template !== undefined) item.template = command.template
             if (command.description !== undefined) item.description = command.description
             if (command.agent !== undefined) item.agent = command.agent
             if (command.model !== undefined) {
