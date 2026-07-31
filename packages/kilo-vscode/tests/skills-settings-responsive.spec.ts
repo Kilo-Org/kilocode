@@ -15,7 +15,7 @@ function overflowFixture(page: Page) {
 }
 
 async function parentCard(loc: Locator) {
-  return loc.locator("xpath=ancestor::div[@data-component='card'][1]")
+  return loc.locator("xpath=following-sibling::div[@data-component='card'][1]")
 }
 
 async function assertRowContained(row: Locator, card: Locator, label: string) {
