@@ -442,13 +442,13 @@ export namespace KiloSessions {
               // forever. Transient failures (5xx, 408, 429, network errors,
               // not_connected) still restore + retry.
               const isPermanent = isPermanentHttpStatus(reported.reason)
-              if (!isPermanent) restoreTitleState()
               if (isPermanent) {
                 log.warn("session title report permanent failure; title preserved", {
                   sessionID,
                   reason: reported.reason,
                 })
               } else {
+                restoreTitleState()
                 log.warn("session title report failed; will retry on next Updated", {
                   sessionID,
                   reason: reported.reason,
