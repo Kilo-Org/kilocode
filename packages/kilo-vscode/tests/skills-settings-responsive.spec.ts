@@ -68,8 +68,8 @@ test.describe("skills settings responsive layout", () => {
 
       // The accessible Tooltip exposes the full value on hover/focus. Hover is
       // what triggers Kobalte's open reliably in Playwright; the trigger is
-      // also keyboard-focusable (Kobalte adds tabindex), so screen-reader and
-      // keyboard users can reach the full value via the same Tooltip content.
+      // keyboard-focusable (tabindex={0} via Tooltip's tabindex prop), so
+      // screen-reader and keyboard users can reach the full value.
       await trigger.hover()
       const content = page.locator('[data-component="tooltip"]').filter({ hasText: seeded })
       await expect(content, `Kilo Tooltip exposes full path on hover: ${seeded}`).toBeVisible()
@@ -98,8 +98,8 @@ test.describe("skills settings responsive layout", () => {
 
       // The accessible Tooltip exposes the full value on hover/focus. Hover is
       // what triggers Kobalte's open reliably in Playwright; the trigger is
-      // also keyboard-focusable (Kobalte adds tabindex), so screen-reader and
-      // keyboard users can reach the full value via the same Tooltip content.
+      // keyboard-focusable (tabindex={0} via Tooltip's tabindex prop), so
+      // screen-reader and keyboard users can reach the full value.
       await trigger.hover()
       const content = page.locator('[data-component="tooltip"]').filter({ hasText: seeded })
       await expect(content, `Kilo Tooltip exposes full URL on hover: ${seeded}`).toBeVisible()
