@@ -778,12 +778,27 @@ describe("session prompt queue", () => {
               }),
             )
 
-            // Let msg2/msg3's enqueue capture the current version before cancel bumps it.
-            await Bun.sleep(20)
+            // Wait until both follow-ups are on the waiting list (hasFollowup alone
+            // flips true when only the second is queued).
+            await Effect.runPromise(
+              pollWithTimeout(
+                Effect.sync(() =>
+                  KiloSessionPromptQueue.snapshot(session.id).length >= 2 ? (true as const) : undefined,
+                ),
+                "both follow-up prompts never queued behind the in-flight turn",
+                "3 seconds",
+              ),
+            )
             expect(calls).toHaveLength(1)
 
             await Effect.runPromise(prompt.cancel(session.id))
-            await Promise.all([first, second, third])
+            // Cancel interrupts in-flight Effect fibers; settle so interrupt does
+            // not leak as an unhandled rejection, but still require rejects to be
+            // interrupt-shaped (not an unrelated provider/session failure).
+            const settled = await Promise.allSettled([first, second, third])
+            for (const r of settled) {
+              if (r.status === "rejected") expect(String(r.reason)).toMatch(/interrupt/i)
+            }
 
             // The queued prompts must never reach the LLM once cancel flushes the queue.
             expect(calls).toHaveLength(1)
