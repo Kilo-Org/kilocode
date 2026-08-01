@@ -203,6 +203,13 @@ export function Diff<T>(props: DiffProps<T>) {
 
   const mobile = createMediaQuery("(max-width: 640px)")
   const [visible, setVisible] = createSignal(local.visible === true)
+  const [displayVersion, setDisplayVersion] = createSignal(0)
+
+  const diffSyntaxTheme = () => {
+    displayVersion()
+    if (typeof window === "undefined") return "Kilo"
+    return getComputedStyle(document.documentElement).getPropertyValue("--kilo-diff-shiki-theme").trim() || "Kilo"
+  }
 
   const before = createMemo(() => {
     if (local.fileDiff) return local.fileDiff.deletionLines.join("")
@@ -244,7 +251,7 @@ export function Diff<T>(props: DiffProps<T>) {
 
   const options = createMemo<FileDiffOptions<T>>(() => {
     const base = {
-      ...createDefaultOptions(props.diffStyle),
+      ...createDefaultOptions(props.diffStyle, diffSyntaxTheme()),
       ...others,
     }
 
@@ -274,6 +281,15 @@ export function Diff<T>(props: DiffProps<T>) {
   createEffect(() => {
     if (visible()) return
     container.style.minHeight = `${reserved(local.sizeKey, container.clientWidth) ?? estimate()}px`
+  })
+
+  createEffect(() => {
+    if (typeof window === "undefined") return
+
+    const updateDisplay = () => setDisplayVersion((version) => version + 1)
+    window.addEventListener("kilo-display-settings-changed", updateDisplay)
+
+    onCleanup(() => window.removeEventListener("kilo-display-settings-changed", updateDisplay))
   })
 
   createEffect(() => {

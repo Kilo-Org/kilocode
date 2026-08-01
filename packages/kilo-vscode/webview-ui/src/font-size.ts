@@ -1,5 +1,9 @@
 const DEFAULT_SIZE = 13
 const SIZES = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
+interface DisplaySettings {
+  diffFontSize: number
+  diffSyntaxTheme: string
+}
 
 export function clampFontSize(size: number) {
   if (!Number.isFinite(size)) return DEFAULT_SIZE
@@ -24,4 +28,20 @@ export function applyFontSize(size: number) {
   root.style.setProperty("--font-size-small", "var(--kilo-font-size-11)")
   root.style.setProperty("--font-size-base", "var(--kilo-font-size-13)")
   root.style.setProperty("--font-size-large", "var(--kilo-font-size-16)")
+}
+
+function shikiTheme(theme: string): string {
+  return theme === "kilo" ? "Kilo" : theme
+}
+
+export function applyDisplaySettings(settings: DisplaySettings) {
+  const diffFontSize = clampFontSize(settings.diffFontSize)
+  const root = document.documentElement
+  const theme = shikiTheme(settings.diffSyntaxTheme)
+  const previous = getComputedStyle(root).getPropertyValue("--kilo-diff-shiki-theme").trim()
+  root.style.setProperty("--kilo-diff-font-size", `${diffFontSize}px`)
+  root.style.setProperty("--kilo-diff-line-height", `${Math.round(diffFontSize * 1.65)}px`)
+  root.style.setProperty("--kilo-diff-shiki-theme", theme)
+
+  if (previous !== theme) window.dispatchEvent(new CustomEvent("kilo-display-settings-changed", { detail: settings }))
 }

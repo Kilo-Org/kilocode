@@ -6,9 +6,13 @@ import {
   type SelectedLineRange,
 } from "@pierre/diffs"
 import { ComponentProps } from "solid-js"
-import { createDefaultOptions as defaults, styleVariables } from "@opencode-ai/ui/pierre"
+import { createDefaultOptions as defaults, styleVariables as base } from "@opencode-ai/ui/pierre"
 
-export { styleVariables }
+export const styleVariables = {
+  ...base,
+  "--diffs-font-size": "var(--kilo-diff-font-size, var(--font-size-small))",
+  "--diffs-line-height": "var(--kilo-diff-line-height, 24px)",
+}
 
 // Character matching fragments inserted identifiers when they share letters with
 // existing symbols. Word-alt keeps those logical additions visually intact.
@@ -35,10 +39,11 @@ const css = `
 }
 `
 
-export function createDefaultOptions<T>(style: FileDiffOptions<T>["diffStyle"]) {
+export function createDefaultOptions<T>(style: FileDiffOptions<T>["diffStyle"], theme?: string) {
   const opts = defaults<T>(style)
   return {
     ...opts,
+    theme: theme ?? opts.theme,
     lineDiffType: LINE_DIFF_TYPE,
     unsafeCSS: `${opts.unsafeCSS}\n${css}`,
   }

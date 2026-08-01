@@ -7,6 +7,76 @@ function getNonce(): string {
 }
 
 const SIZES = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
+const SHIKI_DIFF_THEMES = [
+  "andromeeda",
+  "aurora-x",
+  "ayu-dark",
+  "catppuccin-frappe",
+  "catppuccin-latte",
+  "catppuccin-macchiato",
+  "catppuccin-mocha",
+  "dark-plus",
+  "dracula",
+  "dracula-soft",
+  "everforest-dark",
+  "everforest-light",
+  "github-dark",
+  "github-dark-default",
+  "github-dark-dimmed",
+  "github-dark-high-contrast",
+  "github-light",
+  "github-light-default",
+  "github-light-high-contrast",
+  "gruvbox-dark-hard",
+  "gruvbox-dark-medium",
+  "gruvbox-dark-soft",
+  "gruvbox-light-hard",
+  "gruvbox-light-medium",
+  "gruvbox-light-soft",
+  "houston",
+  "kanagawa-dragon",
+  "kanagawa-lotus",
+  "kanagawa-wave",
+  "laserwave",
+  "light-plus",
+  "material-theme",
+  "material-theme-darker",
+  "material-theme-lighter",
+  "material-theme-ocean",
+  "material-theme-palenight",
+  "min-dark",
+  "min-light",
+  "monokai",
+  "night-owl",
+  "nord",
+  "one-dark-pro",
+  "one-light",
+  "plastic",
+  "poimandres",
+  "red",
+  "rose-pine",
+  "rose-pine-dawn",
+  "rose-pine-moon",
+  "slack-dark",
+  "slack-ochin",
+  "snazzy-light",
+  "solarized-dark",
+  "solarized-light",
+  "synthwave-84",
+  "tokyo-night",
+  "vesper",
+  "vitesse-black",
+  "vitesse-dark",
+  "vitesse-light",
+] as const
+const DIFF_SYNTAX_THEMES = ["kilo", ...SHIKI_DIFF_THEMES] as const
+
+export type DiffSyntaxTheme = (typeof DIFF_SYNTAX_THEMES)[number]
+
+export interface WebviewDisplaySettings {
+  diffFontSize: number
+  diffSyntaxTheme: DiffSyntaxTheme
+}
 
 function clamp(size: number) {
   if (!Number.isFinite(size)) return 13
@@ -39,7 +109,32 @@ export function isCursorHost(): boolean {
   return vscode.env.appName.toLowerCase().includes("cursor")
 }
 
-function fontStyle(): string {
+function getDiffSyntaxTheme(): DiffSyntaxTheme {
+  const raw = vscode.workspace.getConfiguration("kilo-code.new").get<string>("diffSyntaxTheme", "kilo")
+  return DIFF_SYNTAX_THEMES.includes(raw as DiffSyntaxTheme) ? (raw as DiffSyntaxTheme) : "kilo"
+}
+
+function shikiTheme(theme: DiffSyntaxTheme): string {
+  return theme === "kilo" ? "Kilo" : theme
+}
+
+export function getWebviewDisplaySettings(): WebviewDisplaySettings {
+  const config = vscode.workspace.getConfiguration("kilo-code.new")
+
+  return {
+    diffFontSize: clamp(config.get<number>("diffFontSize", 13)),
+    diffSyntaxTheme: getDiffSyntaxTheme(),
+  }
+}
+
+function displayStyle(settings: WebviewDisplaySettings): string {
+  return `
+      --kilo-diff-font-size: ${settings.diffFontSize}px;
+      --kilo-diff-line-height: ${Math.round(settings.diffFontSize * 1.65)}px;
+      --kilo-diff-shiki-theme: ${shikiTheme(settings.diffSyntaxTheme)};`
+}
+
+function fontStyle(settings: WebviewDisplaySettings): string {
   const base = getWebviewFontSize()
   const vars = SIZES.map((size) => `--kilo-font-size-${size}: ${(base * size) / 13}px;`).join("\n      ")
   return `:root {
@@ -49,6 +144,7 @@ function fontStyle(): string {
       --font-size-small: var(--kilo-font-size-11);
       --font-size-base: var(--kilo-font-size-13);
       --font-size-large: var(--kilo-font-size-16);
+      ${displayStyle(settings)}
     }`
 }
 
@@ -72,6 +168,7 @@ export function buildWebviewHtml(
   const nonce = getNonce()
   const csp = buildCspString(webview.cspSource, nonce, opts.port)
   const markdownWorkerUri = opts.workerUri.toString().replace(/shiki-worker\.js$/, "markdown-shiki-worker.js")
+  const settings = getWebviewDisplaySettings()
 
   return `<!DOCTYPE html>
 <html lang="en" data-theme="kilo-vscode" data-sidebar="${opts.sidebar ?? ""}">
@@ -82,7 +179,7 @@ export function buildWebviewHtml(
   <link rel="stylesheet" href="${opts.styleUri}">
   <title>${opts.title}</title>
   <style>
-    ${fontStyle()}
+    ${fontStyle(settings)}
     html {
       scrollbar-color: auto;
 

@@ -232,11 +232,12 @@ export function Diff<T>(props: SSRDiffProps<T>) {
     }
 
     const virtualizer = local.virtualized === false ? undefined : getVirtualizer()
+    const diffSyntaxTheme = getComputedStyle(container).getPropertyValue("--kilo-diff-shiki-theme").trim() || "Kilo"
 
     fileDiffInstance = virtualizer
       ? new VirtualizedFileDiff<T>(
           {
-            ...createDefaultOptions(props.diffStyle),
+            ...createDefaultOptions(props.diffStyle, diffSyntaxTheme),
             ...others,
             ...props.preloadedDiff,
           },
@@ -246,7 +247,7 @@ export function Diff<T>(props: SSRDiffProps<T>) {
         )
       : new FileDiff<T>(
           {
-            ...createDefaultOptions(props.diffStyle),
+            ...createDefaultOptions(props.diffStyle, diffSyntaxTheme),
             ...others,
             ...props.preloadedDiff,
           },
