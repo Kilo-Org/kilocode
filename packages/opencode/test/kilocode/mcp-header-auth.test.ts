@@ -52,3 +52,37 @@ it.effect("describes how to fix rejected header credentials", () =>
     expect(message).not.toContain("mcp auth")
   }),
 )
+
+it.instance(
+  "reports a real 401 for a static Authorization header without retrying over SSE",
+  () =>
+    Effect.gen(function* () {
+      const mcp = yield* MCP.Service
+      let requests = 0
+      const server = Bun.serve({
+        port: 0,
+        hostname: "127.0.0.1",
+        fetch() {
+          requests++
+          return new Response("Unauthorized", { status: 401 })
+        },
+      })
+
+      yield* Effect.addFinalizer(() => Effect.sync(() => server.stop(true)))
+
+      const result = yield* mcp.add("header", {
+        type: "remote",
+        url: `http://127.0.0.1:${server.port}/mcp`,
+        headers: { Authorization: "Bearer rejected" },
+      })
+      const status = "header" in result.status ? result.status.header : result.status
+
+      expect(status).toEqual({
+        status: "failed",
+        error:
+          'Server "header" rejected the configured Authorization header. Check its value and any referenced environment variables.',
+      })
+      expect(requests).toBe(1)
+    }),
+  { config: { mcp: {} } },
+)

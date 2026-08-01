@@ -14,7 +14,7 @@ import { type Tool } from "ai"
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
 import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import { Client, type ClientOptions } from "@modelcontextprotocol/sdk/client/index.js"
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js"
+import { StreamableHTTPClientTransport, StreamableHTTPError } from "@modelcontextprotocol/sdk/client/streamableHttp.js" // kilocode_change
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js"
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { UnauthorizedError } from "@modelcontextprotocol/sdk/client/auth.js"
@@ -297,6 +297,7 @@ export const layer = Layer.effect(
 
       const connectTimeout = mcp.timeout ?? DEFAULT_TIMEOUT
       let lastStatus: Status | undefined
+      let stopTransportFallback = false // kilocode_change - avoid retrying rejected header credentials over SSE
 
       for (const { name, transport } of transports) {
         const result = yield* connectTransport(transport, connectTimeout).pipe(
@@ -307,9 +308,14 @@ export const layer = Layer.effect(
               error instanceof UnauthorizedError || (authProvider && lastError.message.includes("OAuth"))
 
             // kilocode_change start - static Authorization headers are not OAuth credentials
-            if (error instanceof UnauthorizedError && McpAuthMode.header(mcp) && !McpAuthMode.oauth(mcp)) {
+            const headerAuthRejected =
+              McpAuthMode.header(mcp) &&
+              !McpAuthMode.oauth(mcp) &&
+              ((error instanceof StreamableHTTPError && error.code === 401) || /\bHTTP 401\b/.test(lastError.message))
+            if (headerAuthRejected) {
               const message = McpAuthMode.failure(key)
               lastStatus = { status: "failed" as const, error: message }
+              stopTransportFallback = true
               return events
                 .publish(TuiEvent.ToastShow, {
                   title: "MCP Header Authentication Failed",
@@ -355,7 +361,14 @@ export const layer = Layer.effect(
         )
         if (result) return { client: result.client, status: { status: "connected" } as Status }
         // If this was an auth error, stop trying other transports
-        if (lastStatus?.status === "needs_auth" || lastStatus?.status === "needs_client_registration") break
+        // kilocode_change start
+        if (
+          stopTransportFallback ||
+          lastStatus?.status === "needs_auth" ||
+          lastStatus?.status === "needs_client_registration"
+        )
+          break
+        // kilocode_change end
       }
 
       return {

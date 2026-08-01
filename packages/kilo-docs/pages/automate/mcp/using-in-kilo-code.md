@@ -71,7 +71,7 @@ MCP servers are configured under the `mcp` key in `kilo.jsonc`:
 }
 ```
 
-Remote servers support OAuth 2.0 authentication. If the server supports it, Kilo Code will automatically start the OAuth flow when you connect. You can also disable OAuth with `"oauth": false`.
+Remote servers support OAuth 2.0 authentication. If the server supports it, Kilo Code automatically starts the OAuth flow when you connect. Configuring an `Authorization` header uses that header without starting OAuth; add `"oauth": {}` to explicitly enable OAuth alongside the header. You can also disable OAuth with `"oauth": false`.
 
 {% /tab %}
 {% tab label="CLI" %}

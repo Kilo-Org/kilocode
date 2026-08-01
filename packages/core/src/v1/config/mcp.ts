@@ -87,7 +87,8 @@ export const Remote = Schema.Struct({
     description: "Headers to send with the request",
   }),
   oauth: Schema.optional(Schema.Union([OAuth, Schema.Literal(false)])).annotate({
-    description: "OAuth authentication configuration for the MCP server. Set to false to disable OAuth auto-detection.",
+    description:
+      "OAuth authentication configuration for the MCP server. OAuth is auto-detected unless an Authorization header is configured; set to {} to opt in with that header, or false to disable OAuth.", // kilocode_change
   }),
   timeout: Schema.optional(PositiveInt).annotate({
     description: "Timeout in ms for MCP server requests. Defaults to 5000 (5 seconds) if not specified.",
