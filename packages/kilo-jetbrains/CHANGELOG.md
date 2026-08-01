@@ -118,6 +118,35 @@
 
 ## [Unreleased]
 
+## [7.0.12] - 2026-08-01
+
+### Added
+
+- Support sending another JetBrains prompt while a session is still running. Queued prompts now appear in the conversation and can be removed before Kilo starts processing them.
+- Show verbatim skill commands and the skill name in JetBrains permission prompts so approvals are easier to review.
+- Add improved session changes and diff review, including branch changes in the session header, richer diff navigation, and full-context file diffs.
+- Support executing commands from skill context with batch approval.
+
+### Fixed
+
+- Keep JetBrains permission prompts deterministic, including queued permissions, compacted summaries, escaped skill names, and auto-approve transitions.
+- Improve JetBrains diff review reliability by restoring toolbar actions, aligning file headers, bounding branch-diff patch loading, and preserving promoted permissions.
+- Improve large branch diff performance by capping huge inline diff previews, compacting diff tree paths, and allowing horizontal scrolling for long file names.
+- Reflow existing long chat sessions after they load so transcripts lay out at the correct width without needing to resize the tool window.
+- Keep the prompt send/stop button synchronized when attachments are added, removed, or cleared while a session is busy.
+- Reduce transcript restyling work during streaming so large sessions remain responsive.
+- Prevent CLI agent loops from freezing when a provider stalls after response headers.
+- Enforce permissions for shell commands that cannot be scanned by the parser, and fail closed for untrusted or malformed skill command batches.
+- Keep session reverts atomic and make snapshot diffs more resilient on Windows.
+- Surface provider stream error details more clearly and keep retry handling consistent for rate limits and response stream failures.
+- Handle missing nested config unsets and remove unset config keys from layered config files.
+- Reduce CLI startup time by deferring Kilo module loading and telemetry work.
+
+### Changed
+
+- Bump the JetBrains CLI pin to Kilo CLI v7.4.17.
+- Include upstream OpenCode updates through v1.17.9.
+
 ## [7.0.12-rc.4] - 2026-08-01
 
 ### Fixed
