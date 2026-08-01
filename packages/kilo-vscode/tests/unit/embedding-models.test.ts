@@ -67,19 +67,32 @@ describe("embedding model discovery", () => {
       if (new URL(request.url).pathname !== "/api/v1/models") return new Response(null, { status: 404 })
       return Response.json({
         models: [
-          { id: "chat", type: "llm", max_context_length: 4096 },
+          { id: "chat", type: "llm" },
           {
             key: "qwen",
             display_name: "Qwen Embedding",
             type: "embedding",
-            max_context_length: 32768,
           },
         ],
       })
     })
 
     expect(await discoverEmbeddingModels({ runtime: "openai-compatible", baseURL: `${url}/v1` })).toEqual([
-      { id: "qwen", name: "Qwen Embedding", embedding: "supported", maxTokens: 32768 },
+      { id: "qwen", name: "Qwen Embedding", embedding: "supported" },
+    ])
+  })
+
+  it("falls back when native metadata has no embedding models", async () => {
+    const url = serve((request) => {
+      const path = new URL(request.url).pathname
+      if (path === "/api/v1/models") return Response.json({ models: [{ id: "chat", type: "llm" }] })
+      if (path === "/api/v0/models") return new Response(null, { status: 404 })
+      if (path === "/v1/models") return Response.json({ data: [{ id: "embed", name: "Embedding model" }] })
+      return new Response(null, { status: 404 })
+    })
+
+    expect(await discoverEmbeddingModels({ runtime: "openai-compatible", baseURL: `${url}/v1` })).toEqual([
+      { id: "embed", name: "Embedding model", embedding: "unknown" },
     ])
   })
 
@@ -94,5 +107,18 @@ describe("embedding model discovery", () => {
       dimension: 2,
       batchSize: 2,
     })
+  })
+
+  it("reports non-batch probe failures without retrying", async () => {
+    let calls = 0
+    const url = serve(() => {
+      calls += 1
+      return new Response("invalid key", { status: 401 })
+    })
+
+    await expect(probeEmbeddingModel({ runtime: "ollama", baseURL: url, model: "qwen" })).rejects.toThrow(
+      'Model "qwen" embedding probe failed: HTTP 401: invalid key',
+    )
+    expect(calls).toBe(1)
   })
 })

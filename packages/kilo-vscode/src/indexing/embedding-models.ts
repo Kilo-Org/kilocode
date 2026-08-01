@@ -7,7 +7,6 @@ export type EmbeddingModel = {
   name: string
   embedding: "supported" | "unsupported" | "unknown"
   dimension?: number
-  maxTokens?: number
   batchSize?: number
 }
 
@@ -33,7 +32,6 @@ type LmModel = {
   key?: string
   display_name?: string
   type?: string
-  max_context_length?: number
 }
 
 class RequestError extends Error {
@@ -70,12 +68,6 @@ function dimension(info: Record<string, unknown> | undefined) {
   return entry ? Number(entry[1]) : undefined
 }
 
-function context(info: Record<string, unknown> | undefined) {
-  if (!info) return undefined
-  const entry = Object.entries(info).find(([key, value]) => key.endsWith(".context_length") && Number(value) > 0)
-  return entry ? Number(entry[1]) : undefined
-}
-
 async function discoverOllama(baseURL: string): Promise<EmbeddingModel[]> {
   const base = baseURL.replace(/\/+$/, "")
   const response = await request(`${base}/api/tags`)
@@ -99,17 +91,24 @@ async function discoverOllama(baseURL: string): Promise<EmbeddingModel[]> {
           ? ("unsupported" as const)
           : ("unknown" as const)
       const size = embedding === "unsupported" ? undefined : dimension(show.model_info)
-      const max = embedding === "unsupported" ? undefined : context(show.model_info)
       return {
         id,
         name: id,
         embedding,
         ...(size ? { dimension: size } : {}),
-        ...(max ? { maxTokens: max } : {}),
       }
     }),
   )
   return models.filter((model): model is EmbeddingModel => !!model).sort((a, b) => a.id.localeCompare(b.id))
+}
+
+function isLoopback(url: string) {
+  try {
+    const host = new URL(url).hostname.toLowerCase()
+    return host === "localhost" || host === "127.0.0.1" || host === "::1" || host === "[::1]"
+  } catch {
+    return false
+  }
 }
 
 async function discoverOpenAI(baseURL: string, apiKey?: string): Promise<EmbeddingModel[]> {
@@ -123,9 +122,9 @@ async function discoverOpenAI(baseURL: string, apiKey?: string): Promise<Embeddi
     const body = (await response.json()) as { data?: LmModel[]; models?: LmModel[] }
     return Array.isArray(body.models) ? body.models : body.data
   }
-  const local = await native(endpoints)
+  const local = isLoopback(baseURL) ? await native(endpoints) : undefined
   if (local) {
-    return local
+    const models = local
       .filter((model) => (model.type === "embedding" || model.type === "embeddings") && (model.key || model.id))
       .map((model) => {
         const id = model.key || model.id!
@@ -133,10 +132,10 @@ async function discoverOpenAI(baseURL: string, apiKey?: string): Promise<Embeddi
           id,
           name: model.display_name || id,
           embedding: "supported" as const,
-          ...(model.max_context_length ? { maxTokens: model.max_context_length } : {}),
         }
       })
       .sort((a, b) => a.id.localeCompare(b.id))
+    if (models.length > 0) return models
   }
   const models = await fetchOpenAIModels({ baseURL, apiKey })
   return models.map((model) => ({ ...model, embedding: "unknown" }))
@@ -211,22 +210,35 @@ export async function probeEmbeddingModel(options: Options): Promise<EmbeddingMo
     }
     return dimension
   }
-  const check = async (remaining: number[]): Promise<{ size: number; dimension: number } | undefined> => {
+  const check = async (
+    remaining: number[],
+    first?: unknown,
+  ): Promise<{ profile?: { size: number; dimension: number }; error?: unknown }> => {
     const size = remaining[0]
-    if (!size) return undefined
-    const dimension = await attempt(size).catch(() => undefined)
-    if (dimension) return { size, dimension }
-    return check(remaining.slice(1))
+    if (!size) return { error: first }
+    try {
+      return { profile: { size, dimension: await attempt(size) } }
+    } catch (err) {
+      if (!(err instanceof RequestError && (err.status === 413 || (err.status >= 500 && err.status < 600)))) {
+        return { error: err }
+      }
+      const next = await check(remaining.slice(1), first ?? err)
+      return next.profile ? next : { error: next.error ?? first ?? err }
+    }
   }
-  const profile = await check(sizes)
-  if (!profile?.dimension) {
+  const result = await check(sizes)
+  if (result.error) {
+    const message = result.error instanceof Error ? result.error.message : String(result.error)
+    throw new Error(`Model "${options.model}" embedding probe failed: ${message}`)
+  }
+  if (!result.profile?.dimension) {
     throw new Error(`Model "${options.model}" did not pass the embedding compatibility check`)
   }
   return {
     id: options.model,
     name: options.model,
     embedding: "supported",
-    dimension: profile.dimension,
-    batchSize: profile.size,
+    dimension: result.profile.dimension,
+    batchSize: result.profile.size,
   }
 }

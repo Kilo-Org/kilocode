@@ -128,6 +128,16 @@ function isLMStudio(url: string | undefined) {
   }
 }
 
+function isLoopback(url: string | undefined) {
+  if (!url) return false
+  try {
+    const host = new URL(url).hostname.toLowerCase()
+    return host === "localhost" || host === "127.0.0.1" || host === "::1" || host === "[::1]"
+  } catch {
+    return false
+  }
+}
+
 function localActionLabel(active: boolean, action: "connect" | "validate") {
   if (active) return action === "connect" ? "Connecting…" : "Validating…"
   return action === "connect" ? "Connect" : "Select a model"
@@ -250,9 +260,9 @@ const IndexingTab: Component = () => {
     setScope(next)
   }
 
-  const updateIndexing = (partial: IndexingConfig) => {
-    const patch = { indexing: indexingUpdate(scope(), globalCfg(), projectCfg(), partial) }
-    if (scope() === "global") {
+  const updateIndexing = (partial: IndexingConfig, target = scope()) => {
+    const patch = { indexing: indexingUpdate(target, globalCfg(), projectCfg(), partial) }
+    if (target === "global") {
       updateGlobalConfig(patch)
       return
     }
@@ -293,7 +303,9 @@ const IndexingTab: Component = () => {
         dimension: null,
         "openai-compatible": {
           ...raw()["openai-compatible"],
-          baseUrl: "http://localhost:1234/v1",
+          baseUrl: isLoopback(cfg()["openai-compatible"]?.baseUrl)
+            ? cfg()["openai-compatible"]?.baseUrl
+            : "http://localhost:1234/v1",
         },
       })
       return
@@ -334,6 +346,8 @@ const IndexingTab: Component = () => {
   }
 
   const requestModels = (model?: string) => {
+    const target = scope()
+    const savedBatchSize = cfg().embeddingBatchSize
     const options = localOptions()
     if (!options?.baseURL) {
       setModelError("Enter a base URL before discovering models.")
@@ -357,8 +371,12 @@ const IndexingTab: Component = () => {
         updateIndexing({
           model: message.model.id,
           dimension: message.model.dimension,
-          ...(cfg().embeddingBatchSize ? {} : { embeddingBatchSize: message.model.batchSize }),
-        })
+          ...(savedBatchSize === undefined &&
+          message.model.batchSize !== undefined &&
+          message.model.batchSize < 8
+            ? { embeddingBatchSize: message.model.batchSize }
+            : {}),
+        }, target)
         setModels((items) =>
           items.map((item) => (item.id === message.model?.id ? { ...item, ...message.model } : item)),
         )

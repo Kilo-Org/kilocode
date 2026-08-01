@@ -1224,7 +1224,6 @@ export interface IndexingModelsFetchedMessage {
     name: string
     embedding: "supported" | "unsupported" | "unknown"
     dimension?: number
-    maxTokens?: number
     batchSize?: number
   }>
   model?: {
@@ -1232,7 +1231,6 @@ export interface IndexingModelsFetchedMessage {
     name: string
     embedding: "supported"
     dimension: number
-    maxTokens?: number
     batchSize?: number
   }
   error?: string
