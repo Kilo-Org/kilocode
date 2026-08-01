@@ -263,6 +263,7 @@ export const dict = {
 
   "notification.permission.title": "Permission required",
   "notification.permission.titleSubagent": "Permission required (subagent)",
+  "notification.permission.titleSkillShell": 'Run shell commands from skill "{{skill}}"?',
   "ui.permission.manageAutoApprove": "Manage Auto-Approve Rules",
   "ui.permission.doomLoop.prompt": "Potential loop detected for the {{tool}} tool. Continue running?",
   "ui.permission.doomLoop.rule": "Continue {{tool}} calls",

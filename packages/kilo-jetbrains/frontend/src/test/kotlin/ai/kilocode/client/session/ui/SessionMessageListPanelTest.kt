@@ -32,6 +32,7 @@ import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageDto
+import ai.kilocode.rpc.dto.MessageSummaryDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.PartDto
@@ -61,6 +62,16 @@ import javax.swing.JPanel
 import javax.swing.RepaintManager
 import javax.swing.SwingUtilities
 import javax.swing.border.Border
+
+private val PATCH = """
+    diff --git a/src/A.kt b/src/A.kt
+    --- a/src/A.kt
+    +++ b/src/A.kt
+    @@ -1,1 +1,2 @@
+    -old
+    +new
+    +more
+""".trimIndent()
 
 /**
  * Tests for [SessionMessageListPanel] — structural and index integrity.
@@ -99,6 +110,28 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertEquals("", panel.dump())
     }
 
+    fun `test modified files card follows turn anchor summary`() {
+        model.upsertMessage(msg("u1", "user").copy(summary = summary("src/A.kt")))
+
+        val turn = panel.findTurn("u1")!!
+        val card = components(turn).filterIsInstance<ModifiedFilesView>().single()
+
+        assertSame(card, turn.components.last())
+        assertTrue(card.isVisible)
+        assertEquals("1 file", card.countText())
+    }
+
+    fun `test message updated summary updates modified files card`() {
+        model.upsertMessage(msg("u1", "user"))
+        assertTrue(components(panel.findTurn("u1")!!).filterIsInstance<ModifiedFilesView>().isEmpty())
+
+        model.upsertMessage(msg("u1", "user").copy(summary = summary("src/A.kt")))
+
+        val card = components(panel.findTurn("u1")!!).filterIsInstance<ModifiedFilesView>().single()
+        assertTrue(card.isVisible)
+        assertEquals("1 file", card.countText())
+    }
+
     fun `test transcript content has symmetric side padding`() {
         model.upsertMessage(msg("a1", "assistant"))
 
@@ -109,6 +142,136 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         val right = panel.width - turn.x - turn.width
 
         assertEquals(right, left)
+    }
+
+    fun `test reflow drops cached panel measurements`() {
+        val child = Growing(20)
+        panel.add(child, 0)
+        panel.setSize(600, 400)
+        layout(panel)
+        child.markValid()
+        child.size = 80
+
+        panel.reflow()
+
+        assertEquals(80, child.height)
+    }
+
+    fun `test reflow is skipped until the panel has a width`() {
+        val child = Growing(20)
+        panel.add(child, 0)
+        panel.setSize(0, 400)
+        layout(panel)
+        child.markValid()
+        child.size = 80
+
+        // At zero width an HTML pane collapses to a one-char column, so reflow must report no
+        // change instead of locking the transcript height in against that bogus measurement.
+        assertFalse(panel.reflow())
+
+        // Once the panel is laid out with a real width the child measures to its true height.
+        panel.setSize(600, 400)
+        layout(panel)
+        assertEquals(80, child.height)
+    }
+
+    fun `test deferred reflow re-arms on first real width layout`() {
+        val child = Growing(20)
+        panel.add(child, 0)
+        // A real turn makes turnViews non-empty, so a zero-width reflow latches pendingReflow instead
+        // of no-opping the way the turnless zero-width test above does.
+        model.upsertMessage(msg("u1", "user"))
+        panel.setSize(0, 400)
+        layout(panel)
+        assertFalse(panel.reflow())
+
+        // The first layout at a real width consumes the parked reflow and schedules a pass.
+        panel.setSize(600, 400)
+        panel.doLayout()
+
+        // Simulate an HTML pane that only reports its settled height after the first layout: the child
+        // stays valid at the same width, so a plain layout keeps the cached height and only the
+        // re-armed forgetAll() reflow re-measures it.
+        child.markValid()
+        child.size = 80
+
+        // Draining the EDT runs the scheduled reflow. Without the doLayout re-arm nothing is queued
+        // and the child would stay at its stale cached height.
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertEquals(80, child.height)
+    }
+
+    fun `test reflow budget terminates when height never settles`() {
+        var reflows = 0
+        panel.onReflow = { reflows++ }
+        // loadHistory rebuilds the transcript (and schedules the reflow chain) after wiping existing
+        // children, so add the ever-growing child afterwards — it grows on every measurement, so the
+        // idle chain restarts its settle window on every pass. Without the hard budget the invokeLater
+        // chain would repost forever and this drain would spin; the budget bounds it.
+        model.loadHistory(listOf(MessageWithPartsDto(msg("u1", "user"), emptyList())))
+        panel.add(EverGrowing(), 0)
+        panel.setSize(600, 400)
+
+        UIUtil.dispatchAllInvocationEvents()
+
+        // Reaching this line proves the chain terminated. The pass count is bounded by the hard
+        // budget (REFLOW_PASSES * 4), so a regression that reset it alongside `remaining` would
+        // either hang here or blow past this bound.
+        assertTrue("reflow passes must be bounded by the budget, was $reflows", reflows in 1..30)
+    }
+
+    fun `test streaming session settles reflow within the pass window`() {
+        var reflows = 0
+        panel.onReflow = { reflows++ }
+        // Same ever-growing child, but a streaming (Busy) session: a moving height is incoming
+        // content, not the layout still settling, so the chain must count its passes down and stop
+        // after REFLOW_PASSES instead of restarting the settle window and draining the full budget
+        // the idle case relies on. recoverPending()'s non-Busy states (awaiting-permission, retry,
+        // offline) intentionally keep the idle settle behavior and are not gated here.
+        model.loadHistory(listOf(MessageWithPartsDto(msg("u1", "user"), emptyList())))
+        model.setState(SessionState.Busy("thinking"))
+        panel.add(EverGrowing(), 0)
+        panel.setSize(600, 400)
+
+        UIUtil.dispatchAllInvocationEvents()
+
+        // A handful of passes (~REFLOW_PASSES), well short of the idle budget (~25). Dropping or
+        // inverting the Busy term restarts the window every pass and blows past this bound.
+        assertTrue("streaming reflow must settle in the pass window, was $reflows", reflows in 1..10)
+    }
+
+    fun `test non-streaming active state keeps the reflow settle window`() {
+        var reflows = 0
+        panel.onReflow = { reflows++ }
+        // Retry is isBusy() == true but not SessionState.Busy: no deltas arrive, so a moving height
+        // means the panes are still settling and the window must keep restarting toward the idle
+        // budget rather than collapsing to REFLOW_PASSES. recoverPending() can seed this right after
+        // load, and it is the only case that tells `is SessionState.Busy` apart from `isBusy()`.
+        model.loadHistory(listOf(MessageWithPartsDto(msg("u1", "user"), emptyList())))
+        model.setState(SessionState.Retry("retrying", 1, 0L))
+        panel.add(EverGrowing(), 0)
+        panel.setSize(600, 400)
+
+        UIUtil.dispatchAllInvocationEvents()
+
+        // Reaches the idle budget region (~25), not the streaming window (~7). Reverting the gate to
+        // isBusy() would collapse this to REFLOW_PASSES and fail here.
+        assertTrue("non-streaming state must keep re-measuring, was $reflows", reflows in 11..30)
+    }
+
+    fun `test apply style drops cached panel measurements`() {
+        val child = Growing(20)
+        panel.add(child, 0)
+        panel.setSize(600, 400)
+        layout(panel)
+        child.markValid()
+        child.size = 80
+
+        panel.applyStyle(SessionEditorStyle.current())
+        layout(panel)
+
+        assertEquals(80, child.height)
     }
 
     fun `test top level user turns use prompt gap after previous turn`() {
@@ -1260,6 +1423,10 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         id = id, sessionID = "ses", role = role, time = MessageTimeDto(0.0),
     )
 
+    private fun summary(path: String) = MessageSummaryDto(
+        diffs = listOf(DiffFileDto(path, 2, 1, PATCH)),
+    )
+
     private fun part(id: String, mid: String, type: String, text: String? = null) = PartDto(
         id = id, sessionID = "ses", messageID = mid, type = type, text = text,
     )
@@ -1376,6 +1543,33 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         override fun addInvalidComponent(invalidComponent: JComponent) {
             if (invalidComponent in watched) invalid.add(invalidComponent)
             super.addInvalidComponent(invalidComponent)
+        }
+    }
+
+    private class Growing(var size: Int) : JPanel() {
+        private var valid = false
+
+        override fun isValid() = valid
+
+        override fun invalidate() {
+            valid = false
+            super.invalidate()
+        }
+
+        fun markValid() {
+            valid = true
+        }
+
+        override fun getPreferredSize() = java.awt.Dimension(0, size)
+    }
+
+    /** Reports a taller preferred height on every measurement, so a reflow chain never stabilizes. */
+    private class EverGrowing : JPanel() {
+        private var size = 10
+
+        override fun getPreferredSize(): java.awt.Dimension {
+            size += 10
+            return java.awt.Dimension(0, size)
         }
     }
 }
