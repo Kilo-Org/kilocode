@@ -43,13 +43,10 @@ export default [
   },
   {
     files: ["webview-ui/agent-manager/AgentManagerApp.tsx"],
-    // Complexity stays exempt: the top of `AgentManagerContent` wires many
-    // selection/session handlers that can't be split without threading shared
-    // reactive state. Line count needs no override — the apply-to-local
-    // workflow is extracted to ./apply-to-local.tsx, keeping the file under
-    // the global 3000-line default. Do not add a max-lines override back;
-    // extract cohesive domains out of the file instead.
-    rules: { complexity: ["error", 74] },
+    // Lowered 3210 → 2800 after extracting the sidebar body (SidebarBody.tsx)
+    // and the tab bar (TabBar.tsx) into components. Keep shrinking as more
+    // logic moves out; do not raise.
+    rules: { complexity: ["error", 74], "max-lines": ["error", 2800] },
   },
   {
     files: ["src/agent-manager/AgentManagerProvider.ts"],

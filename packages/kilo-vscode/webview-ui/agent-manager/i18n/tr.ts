@@ -4,6 +4,11 @@ export const dict = {
   "agentManager.sidebar.expand": "Kenar çubuğunu göster",
   "agentManager.section.worktrees": "WORKTREE'LER",
   "agentManager.section.sessions": "OTURUMLAR",
+  "agentManager.projects": "PROJELER",
+  "agentManager.project.add": "Proje ekle",
+  "agentManager.project.remove": "Agent Manager'dan kaldır",
+  "agentManager.project.trust": "Güven",
+  "agentManager.project.missing": "Depo bulunamadı",
   "agentManager.notGitRepo": "Bir git deposu değil",
 
   "agentManager.worktree.settings": "Worktree ayarları",
@@ -63,6 +68,9 @@ export const dict = {
 
   "agentManager.terminal.new": "Yeni Terminal Sekmesi",
   "agentManager.terminal.ended": "terminal sona erdi — kapatmak için sekmeyi kapatın",
+  "agentManager.terminal.setupFailed": "kurulum betiği başarısız oldu",
+  "agentManager.terminal.setupFailedCode": "kurulum betiği çıkış koduyla başarısız oldu",
+  "agentManager.terminal.stopSetup": "Kurulum betiğini durdur",
   "agentManager.terminal.connectionError": "terminal bağlantı hatası",
   "agentManager.terminal.add": "Yeni terminal",
   "agentManager.terminal.empty": "Burada henüz terminal yok",
@@ -145,6 +153,8 @@ export const dict = {
   "agentManager.diff.revertFile": "Dosyayı geri al",
   "agentManager.diff.revertSuccess": "Dosya geri alındı",
   "agentManager.diff.revertError": "Geri alma başarısız",
+  "agentManager.diff.applyBranchOnly":
+    "Uygula yalnızca tam Branch diff'inde çalışır. Uygulamak için Branch kapsamına geçin.",
   "agentManager.open.button": "Aç",
   "agentManager.open.tooltip": "Bu worktree'yi VS Code'da aç",
   "agentManager.apply.globalButton": "Uygula",

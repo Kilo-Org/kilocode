@@ -86,7 +86,10 @@ class KiloCliDataParserTest {
                             "id": "msg_1",
                             "sessionID": "ses_123",
                             "role": "assistant",
-                            "time": { "created": 1000.0 }
+                            "time": { "created": 1000.0 },
+                            "summary": {
+                                "diffs": [{"file": "src/A.kt", "additions": 3, "deletions": 1, "patch": "@@ ..."}]
+                            }
                         }
                     }
                 }
@@ -98,6 +101,11 @@ class KiloCliDataParserTest {
             assertEquals("ses_123", result.sessionID)
             assertEquals("msg_1", result.info.id)
             assertEquals("assistant", result.info.role)
+            val diff = result.info.summary?.diffs?.single()
+            assertEquals("src/A.kt", diff?.file)
+            assertEquals(3, diff?.additions)
+            assertEquals(1, diff?.deletions)
+            assertEquals("@@ ...", diff?.patch)
         }
 
         @Test
@@ -120,6 +128,7 @@ class KiloCliDataParserTest {
             assertTrue(result is ChatEventDto.MessageUpdated)
             assertEquals("ses_456", result.sessionID)
             assertEquals("user", result.info.role)
+            assertNull(result.info.summary)
         }
 
         // ---- parseChatEvent — specific event types ----
@@ -1358,11 +1367,14 @@ class KiloCliDataParserTest {
         fun `parseMessages - user and assistant messages`() {
             val raw = """[
                 {
-                    "info": { "id": "m1", "sessionID": "s1", "role": "user", "time": { "created": 1.0 } },
+                    "info": {
+                        "id": "m1", "sessionID": "s1", "role": "user", "time": { "created": 1.0 },
+                        "summary": { "diffs": [{"file": "src/A.kt", "additions": 2, "deletions": 1, "patch": "@@ patch"}] }
+                    },
                     "parts": [{ "id": "p1", "sessionID": "s1", "messageID": "m1", "type": "text", "text": "Hello" }]
                 },
                 {
-                    "info": { "id": "m2", "sessionID": "s1", "role": "assistant", "time": { "created": 2.0 } },
+                    "info": { "id": "m2", "sessionID": "s1", "role": "assistant", "time": { "created": 2.0 }, "summary": true },
                     "parts": [{ "id": "p2", "sessionID": "s1", "messageID": "m2", "type": "text", "text": "Hi there" }]
                 }
             ]"""
@@ -1370,8 +1382,11 @@ class KiloCliDataParserTest {
             val result = KiloCliDataParser.parseMessages(raw)
             assertEquals(2, result.size)
             assertEquals("user", result[0].info.role)
+            assertEquals("src/A.kt", result[0].info.summary?.diffs?.single()?.file)
+            assertEquals("@@ patch", result[0].info.summary?.diffs?.single()?.patch)
             assertEquals("Hello", result[0].parts[0].text)
             assertEquals("assistant", result[1].info.role)
+            assertNull(result[1].info.summary)
             assertEquals("Hi there", result[1].parts[0].text)
         }
 
@@ -2299,6 +2314,21 @@ class KiloCliDataParserTest {
             assertTrue(result.contains(""""message":"approved""""))
         }
 
+        @Test
+        fun `buildPermissionReplyJson - interactive reply serializes interactive true`() {
+            // Wire contract the CLI server checks (permission/index.ts requires interactive
+            // === true to accept a non-reject reply to a skill-shell batch); a serialization
+            // regression here would silently break the entire approval flow.
+            val result = KiloCliDataParser.buildPermissionReplyJson(PermissionReplyDto(reply = "once", interactive = true))
+            assertEquals("""{"reply":"once","interactive":true}""", result)
+        }
+
+        @Test
+        fun `buildPermissionReplyJson - non-interactive reply omits the interactive field`() {
+            val result = KiloCliDataParser.buildPermissionReplyJson(PermissionReplyDto(reply = "once", interactive = false))
+            assertFalse(result.contains("interactive"), "interactive must be omitted for a machine (non-interactive) reply, got: $result")
+        }
+
         // ---- buildPermissionAlwaysRulesJson ----
 
         @Test
@@ -2433,6 +2463,30 @@ class KiloCliDataParserTest {
         val asked = result as? ChatEventDto.PermissionAsked ?: error("Expected PermissionAsked")
         assertEquals("git status --short", asked.request.command)
         assertEquals("git status --short", asked.request.metadata["command"])
+    }
+
+    @Test
+    fun `parsePermissionRequest - skill shell commands and skill name extracted`() {
+        val data = globalEvent("""
+            "type": "permission.asked",
+            "properties": {
+                "id": "perm_skill",
+                "sessionID": "ses_1",
+                "permission": "bash",
+                "patterns": ["git status"],
+                "always": [],
+                "metadata": {"skillShell": true, "skill": "git-status", "commands": ["git status", "printf hi"]}
+            }
+        """)
+
+        val result = KiloCliDataParser.parseChatEvent("permission.asked", data)
+        assertNotNull(result)
+        val asked = result as? ChatEventDto.PermissionAsked ?: error("Expected PermissionAsked")
+        // verbatim commands are parsed as a list for the prompt to display
+        assertEquals(listOf("git status", "printf hi"), asked.request.skillCommands)
+        // skillShell + skill name survive the flat metadata map for card attribution
+        assertEquals("true", asked.request.metadata["skillShell"])
+        assertEquals("git-status", asked.request.metadata["skill"])
     }
 
     @Test

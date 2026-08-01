@@ -1,0 +1,6 @@
+<!-- Copyright 2026 Kilo Code contributors. Use of this source code is governed by the Apache 2.0 license. -->
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M6.5 4.5H3.5C2.94772 4.5 2.5 4.94772 2.5 5.5V12.5C2.5 13.0523 2.94772 13.5 3.5 13.5H10.5C11.0523 13.5 11.5 13.0523 11.5 12.5V9.5" stroke="#6C707E" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M9.5 2.5H13.5V6.5" stroke="#6C707E" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M8.5 7.5L13.5 2.5" stroke="#6C707E" stroke-linecap="round"/>
+</svg>

@@ -23,6 +23,20 @@
       "env": {
         "KILO_API_URL": "http://localhost:3000"
       }
+    },
+    {
+      "name": "VSCode - Run Extension (Isolated)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "bun script/launch.ts --isolated --workspace \"${workspaceFolder}\"",
+      "cwd": "${workspaceFolder}/packages/kilo-vscode"
+    },
+    {
+      "name": "VSCode - Run Extension (Isolated Clean)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "bun script/launch.ts --isolated --clean --workspace \"${workspaceFolder}\"",
+      "cwd": "${workspaceFolder}/packages/kilo-vscode"
     }
   ]
 }

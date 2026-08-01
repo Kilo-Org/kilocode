@@ -1,4 +1,5 @@
-import { describe, it, expect } from "bun:test"
+import { describe, it, expect, beforeEach, afterEach } from "bun:test"
+import { createRoot } from "solid-js"
 import {
   resolveNavigation,
   validateLocalSession,
@@ -6,8 +7,21 @@ import {
   canOpenRootSession,
   filterUnassignedSessions,
   remoteSessions,
+  buildProjectNavOrder,
+  resolveProjectNav,
+  localNavId,
+  worktreeNavId,
+  sessionNavId,
+  type ProjectNavInput,
   LOCAL,
 } from "../../webview-ui/agent-manager/navigate"
+import { createProjectNav, type NavTarget } from "../../webview-ui/agent-manager/project-nav"
+import type { SidebarItem } from "../../webview-ui/agent-manager/section-helpers"
+import type {
+  AgentManagerStateMessage,
+  AgentProjectSnapshot,
+  ProjectSessionInfo,
+} from "../../webview-ui/src/types/messages"
 
 const ids = ["a", "b", "c", "d"]
 
@@ -320,5 +334,393 @@ describe("remoteSessions", () => {
 
   it("returns an empty list without open sessions", () => {
     expect(remoteSessions([], [], pending)).toEqual([])
+  })
+})
+
+describe("buildProjectNavOrder", () => {
+  const project = (
+    p: Omit<ProjectNavInput, "sessionsCollapsed"> & { sessionsCollapsed?: boolean },
+  ): ProjectNavInput => ({
+    ...p,
+    sessionsCollapsed: p.sessionsCollapsed ?? false,
+  })
+
+  it("builds A Local -> A worktree -> B Local -> B worktree -> B session across expanded projects", () => {
+    const order = buildProjectNavOrder([
+      project({ id: "A", expanded: true, worktrees: [{ id: "aw1" }], sections: [], unassigned: [] }),
+      project({ id: "B", expanded: true, worktrees: [{ id: "bw1" }], sections: [], unassigned: [{ id: "bs1" }] }),
+    ])
+
+    expect(order.map((e) => e.id)).toEqual([
+      localNavId("A"),
+      worktreeNavId("A", "aw1"),
+      localNavId("B"),
+      worktreeNavId("B", "bw1"),
+      sessionNavId("B", "bs1"),
+    ])
+    expect(order.map((e) => e.target)).toEqual([
+      { projectId: "A", kind: "local" },
+      { projectId: "A", kind: "worktree", worktreeId: "aw1" },
+      { projectId: "B", kind: "local" },
+      { projectId: "B", kind: "worktree", worktreeId: "bw1" },
+      { projectId: "B", kind: "session", sessionId: "bs1" },
+    ])
+  })
+
+  it("uses project-qualified composite ids, never raw worktree/session ids", () => {
+    const order = buildProjectNavOrder([
+      project({ id: "A", expanded: true, worktrees: [{ id: "aw1" }], sections: [], unassigned: [{ id: "as1" }] }),
+    ])
+    const ids = order.map((e) => e.id)
+    expect(ids).not.toContain("aw1")
+    expect(ids).not.toContain("as1")
+    expect(ids).toContain("A:local")
+    expect(ids).toContain("A:wt:aw1")
+    expect(ids).toContain("A:sess:as1")
+  })
+
+  it("excludes collapsed projects entirely", () => {
+    const order = buildProjectNavOrder([
+      project({ id: "A", expanded: true, worktrees: [{ id: "aw1" }], sections: [], unassigned: [] }),
+      project({ id: "C", expanded: false, worktrees: [{ id: "cw1" }], sections: [], unassigned: [{ id: "cs1" }] }),
+    ])
+    expect(order.map((e) => e.id)).toEqual([localNavId("A"), worktreeNavId("A", "aw1")])
+    expect(order.some((e) => e.target.kind === "worktree" && e.target.worktreeId === "cw1")).toBe(false)
+  })
+
+  it("excludes worktrees inside collapsed sections but keeps ungrouped ones", () => {
+    const order = buildProjectNavOrder([
+      project({
+        id: "A",
+        expanded: true,
+        worktrees: [{ id: "aw1", sectionId: "s1" }, { id: "aw2" }],
+        sections: [{ id: "s1", collapsed: true }],
+        unassigned: [],
+      }),
+    ])
+    expect(order.map((e) => e.id)).toEqual([localNavId("A"), worktreeNavId("A", "aw2")])
+  })
+
+  it("renders section members before ungrouped worktrees (matching the project body)", () => {
+    const order = buildProjectNavOrder([
+      project({
+        id: "A",
+        expanded: true,
+        worktrees: [{ id: "aw1", sectionId: "s1" }, { id: "aw2" }],
+        sections: [{ id: "s1", collapsed: false }],
+        unassigned: [],
+      }),
+    ])
+    expect(order.map((e) => e.id)).toEqual([localNavId("A"), worktreeNavId("A", "aw1"), worktreeNavId("A", "aw2")])
+  })
+
+  it("excludes unassigned sessions when the sessions section is collapsed", () => {
+    const order = buildProjectNavOrder([
+      project({
+        id: "A",
+        expanded: true,
+        worktrees: [{ id: "aw1" }],
+        sections: [],
+        sessionsCollapsed: true,
+        unassigned: [{ id: "as1" }, { id: "as2" }],
+      }),
+    ])
+    expect(order.map((e) => e.id)).toEqual([localNavId("A"), worktreeNavId("A", "aw1")])
+  })
+
+  it("returns an empty order when every project is collapsed", () => {
+    const order = buildProjectNavOrder([
+      project({ id: "A", expanded: false, worktrees: [{ id: "aw1" }], sections: [], unassigned: [] }),
+    ])
+    expect(order).toEqual([])
+  })
+})
+
+describe("resolveProjectNav", () => {
+  // A Local -> A worktree -> B Local -> B worktree -> B session
+  const inputs: ProjectNavInput[] = [
+    { id: "A", expanded: true, worktrees: [{ id: "aw1" }], sections: [], sessionsCollapsed: false, unassigned: [] },
+    {
+      id: "B",
+      expanded: true,
+      worktrees: [{ id: "bw1" }],
+      sections: [],
+      sessionsCollapsed: false,
+      unassigned: [{ id: "bs1" }],
+    },
+  ]
+  const order = buildProjectNavOrder(inputs)
+  // Collapsed project C must not appear in the order
+  const withCollapsed = buildProjectNavOrder([
+    ...inputs,
+    { id: "C", expanded: false, worktrees: [{ id: "cw1" }], sections: [], sessionsCollapsed: false, unassigned: [] },
+  ])
+
+  it("walks forward A Local -> A worktree -> B Local -> B worktree -> B session", () => {
+    let current: string | undefined = undefined
+    const trail: string[] = []
+    for (let i = 0; i < 6; i++) {
+      const entry = resolveProjectNav("down", current, order)
+      if (!entry) break
+      current = entry.id
+      trail.push(entry.id)
+    }
+    expect(trail).toEqual([
+      localNavId("A"),
+      worktreeNavId("A", "aw1"),
+      localNavId("B"),
+      worktreeNavId("B", "bw1"),
+      sessionNavId("B", "bs1"),
+    ])
+  })
+
+  it("walks in reverse B session -> B worktree -> B Local -> A worktree -> A Local", () => {
+    let current: string | undefined = sessionNavId("B", "bs1")
+    const trail: string[] = [current]
+    for (let i = 0; i < 6; i++) {
+      const entry = resolveProjectNav("up", current, order)
+      if (!entry) break
+      current = entry.id
+      trail.push(current)
+    }
+    expect(trail).toEqual([
+      sessionNavId("B", "bs1"),
+      worktreeNavId("B", "bw1"),
+      localNavId("B"),
+      worktreeNavId("A", "aw1"),
+      localNavId("A"),
+    ])
+  })
+
+  it("returns undefined at the top boundary (up from first)", () => {
+    expect(resolveProjectNav("up", localNavId("A"), order)).toBeUndefined()
+  })
+
+  it("returns undefined at the bottom boundary (down from last)", () => {
+    expect(resolveProjectNav("down", sessionNavId("B", "bs1"), order)).toBeUndefined()
+  })
+
+  it("does not wrap around", () => {
+    expect(resolveProjectNav("up", localNavId("A"), order)).toBeUndefined()
+    expect(resolveProjectNav("down", sessionNavId("B", "bs1"), order)).toBeUndefined()
+  })
+
+  it("treats an unknown current as before-first (down -> first, up -> undefined)", () => {
+    expect(resolveProjectNav("down", "unknown", order)?.id).toBe(localNavId("A"))
+    expect(resolveProjectNav("up", "unknown", order)).toBeUndefined()
+  })
+
+  it("treats undefined current as before-first", () => {
+    expect(resolveProjectNav("down", undefined, order)?.id).toBe(localNavId("A"))
+    expect(resolveProjectNav("up", undefined, order)).toBeUndefined()
+  })
+
+  it("returns undefined for an empty order", () => {
+    expect(resolveProjectNav("down", localNavId("A"), [])).toBeUndefined()
+    expect(resolveProjectNav("up", undefined, [])).toBeUndefined()
+  })
+
+  it("collapsed project C is excluded from the order", () => {
+    expect(withCollapsed.length).toBe(order.length)
+    expect(withCollapsed.some((e) => e.id === worktreeNavId("C", "cw1"))).toBe(false)
+    // Forward walk still ends at B session, never reaching C
+    let current: string | undefined = undefined
+    let last: string | undefined
+    for (let i = 0; i < 10; i++) {
+      const entry = resolveProjectNav("down", current, withCollapsed)
+      if (!entry) break
+      current = entry.id
+      last = entry.id
+    }
+    expect(last).toBe(sessionNavId("B", "bs1"))
+  })
+})
+
+describe("createProjectNav", () => {
+  // activate() schedules a DOM scroll via requestAnimationFrame; bun:test has
+  // no DOM/rAF, so stub rAF to a no-op. The atomic `post` callback fires before
+  // rAF, so targets are still observable. (solid-js resolves to its server
+  // build under bun, where createMemo is one-shot, so each helper below builds
+  // a fresh controller per call — mirroring one activation per keypress.)
+  let raf: typeof globalThis.requestAnimationFrame | undefined
+  beforeEach(() => {
+    raf = globalThis.requestAnimationFrame
+    globalThis.requestAnimationFrame = (() => 0) as never
+  })
+  afterEach(() => {
+    globalThis.requestAnimationFrame = raf
+  })
+
+  const project = (id: string, expanded: boolean): AgentProjectSnapshot =>
+    ({
+      id,
+      root: `/${id}`,
+      label: id,
+      pinned: false,
+      active: id === "A",
+      expanded,
+      initialized: true,
+      trusted: true,
+      missing: false,
+    }) as AgentProjectSnapshot
+
+  const state = (
+    worktrees: { id: string; sectionId?: string }[],
+    sessions: { id: string; worktreeId: string | null }[],
+    sections: { id: string; collapsed: boolean }[] = [],
+    sessionsCollapsed = false,
+  ): AgentManagerStateMessage =>
+    ({
+      type: "agentManager.state",
+      worktrees: worktrees as never,
+      sessions: sessions as never,
+      sections,
+      sessionsCollapsed,
+    }) as AgentManagerStateMessage
+
+  const session = (id: string): ProjectSessionInfo => ({
+    id,
+    title: id,
+    createdAt: "",
+    updatedAt: "",
+    worktreeId: null,
+  })
+
+  // A (expanded): worktree aw1. B (expanded): worktree bw1 + unassigned bs1.
+  // C (collapsed): worktree cw1 — must never be reached.
+  const projects = () => [project("A", true), project("B", true), project("C", false)]
+  const states = () => ({
+    A: state([{ id: "aw1" }], []),
+    B: state([{ id: "bw1" }], [{ id: "bs1", worktreeId: null }]),
+    C: state([{ id: "cw1" }], []),
+  })
+  const sessions = () => ({ A: [], B: [session("bs1")], C: [] })
+
+  const run = (
+    fn: (nav: ReturnType<typeof createProjectNav>) => void,
+    selection: typeof LOCAL | string | null,
+    activeProjectId: string | undefined,
+    currentSessionID: string | undefined,
+    post: (t: NavTarget) => void = () => {},
+    focus: (item: SidebarItem) => void = () => {},
+    multiProject = true,
+    sidebarOrder: () => SidebarItem[] = () => [],
+  ) =>
+    createRoot((dispose) => {
+      fn(
+        createProjectNav(
+          {
+            multiProject: () => multiProject,
+            sidebarOrder,
+            focus,
+            projects,
+            states,
+            sessions,
+            activeProjectId: () => activeProjectId,
+            selection: () => selection,
+            currentSessionID: () => currentSessionID,
+          },
+          post,
+          () => {},
+        ),
+      )
+      dispose()
+    })
+
+  const stepOnce = (
+    direction: "up" | "down",
+    selection: typeof LOCAL | string | null,
+    activeProjectId: string | undefined,
+    currentSessionID: string | undefined,
+  ): NavTarget | undefined => {
+    let posted: NavTarget | undefined
+    run(
+      (nav) => nav.step(direction),
+      selection,
+      activeProjectId,
+      currentSessionID,
+      (t) => (posted = t),
+    )
+    return posted
+  }
+
+  const jumpOnce = (index: number): NavTarget | undefined => {
+    let posted: NavTarget | undefined
+    run(
+      (nav) => nav.jump(index),
+      LOCAL,
+      "A",
+      undefined,
+      (t) => (posted = t),
+    )
+    return posted
+  }
+
+  it("multi-project step traverses A Local -> A worktree -> B Local -> B worktree -> B session", () => {
+    expect(stepOnce("down", LOCAL, "A", undefined)).toEqual({ projectId: "A", kind: "worktree", worktreeId: "aw1" })
+    expect(stepOnce("down", "aw1", "A", undefined)).toEqual({ projectId: "B", kind: "local" })
+    expect(stepOnce("down", LOCAL, "B", undefined)).toEqual({ projectId: "B", kind: "worktree", worktreeId: "bw1" })
+    expect(stepOnce("down", "bw1", "B", undefined)).toEqual({ projectId: "B", kind: "session", sessionId: "bs1" })
+    expect(stepOnce("down", null, "B", "bs1")).toBeUndefined()
+  })
+
+  it("multi-project step reverses B session -> B worktree -> B Local -> A worktree -> A Local", () => {
+    expect(stepOnce("up", null, "B", "bs1")).toEqual({ projectId: "B", kind: "worktree", worktreeId: "bw1" })
+    expect(stepOnce("up", "bw1", "B", undefined)).toEqual({ projectId: "B", kind: "local" })
+    expect(stepOnce("up", LOCAL, "B", undefined)).toEqual({ projectId: "A", kind: "worktree", worktreeId: "aw1" })
+    expect(stepOnce("up", "aw1", "A", undefined)).toEqual({ projectId: "A", kind: "local" })
+    expect(stepOnce("up", LOCAL, "A", undefined)).toBeUndefined()
+  })
+
+  it("collapsed project C is never reached via jump", () => {
+    // Global order: A:local(0), A:aw1(1), B:local(2), B:bw1(3), B:bs1(4).
+    expect(jumpOnce(0)).toEqual({ projectId: "A", kind: "local" })
+    expect(jumpOnce(1)).toEqual({ projectId: "A", kind: "worktree", worktreeId: "aw1" })
+    expect(jumpOnce(2)).toEqual({ projectId: "B", kind: "local" })
+    expect(jumpOnce(3)).toEqual({ projectId: "B", kind: "worktree", worktreeId: "bw1" })
+    expect(jumpOnce(4)).toEqual({ projectId: "B", kind: "session", sessionId: "bs1" })
+    // Past the end — and C's collapsed worktree is never reachable by any index.
+    expect(jumpOnce(5)).toBeUndefined()
+    expect(jumpOnce(99)).toBeUndefined()
+  })
+
+  it("multi-project jump targets the global order by index (⌘3 = B Local)", () => {
+    expect(jumpOnce(2)).toEqual({ projectId: "B", kind: "local" })
+  })
+
+  it("single-project mode keeps the legacy in-process traversal and never posts activateSelection", () => {
+    const order: SidebarItem[] = [
+      { type: "local", id: "local" },
+      { type: "wt", id: "w1" },
+      { type: "session", id: "s1" },
+    ]
+    const focused: SidebarItem[] = []
+    const posted: NavTarget[] = []
+    const focus = (item: SidebarItem) => focused.push(item)
+    const post = (t: NavTarget) => posted.push(t)
+    run(
+      (nav) => nav.step("down"),
+      LOCAL,
+      "A",
+      undefined,
+      post,
+      focus,
+      false,
+      () => order,
+    )
+    expect(focused.pop()).toEqual({ type: "wt", id: "w1" })
+    run(
+      (nav) => nav.jump(2),
+      "w1",
+      "A",
+      undefined,
+      post,
+      focus,
+      false,
+      () => order,
+    )
+    expect(focused.pop()).toEqual({ type: "session", id: "s1" })
+    // Legacy path never dispatches the multi-project activation message.
+    expect(posted).toEqual([])
   })
 })
