@@ -8,6 +8,7 @@ import com.intellij.diff.requests.SimpleDiffRequest
 import com.intellij.diff.util.DiffUserDataKeys
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vcs.FileStatus
 
 internal fun diffRequest(
     project: Project,
@@ -18,15 +19,20 @@ internal fun diffRequest(
     val sides = DiffPatchReconstruct.sides(dto)
     val type = FileTypeManager.getInstance().getFileTypeByFileName(dto.file)
     val factory = DiffContentFactory.getInstance()
+    val status = fileStatus(dto)
+    val patch = dto.patch?.takeIf { it.isNotBlank() }
+    val fallback = patch ?: KiloBundle.message("diff.editor.patch.unavailable")
     val left = when {
         DiffPatchReconstruct.added(dto.patch) -> factory.createEmpty()
         sides.renderable -> factory.create(project, sides.before, type)
+        status == FileStatus.DELETED -> factory.create(project, fallback, type)
         else -> factory.createEmpty()
     }
     val right = when {
         DiffPatchReconstruct.deleted(dto.patch) -> factory.createEmpty()
         sides.renderable -> factory.create(project, sides.after, type)
-        else -> factory.create(project, dto.patch ?: KiloBundle.message("diff.editor.patch.unavailable"), type)
+        status == FileStatus.DELETED -> factory.createEmpty()
+        else -> factory.create(project, fallback, type)
     }
     return SimpleDiffRequest(diffTitle(dto.file, branch), left, right, labels.first, labels.second).also {
         it.putUserData(DiffUserDataKeys.FORCE_READ_ONLY, true)
