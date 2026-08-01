@@ -342,6 +342,23 @@ it.live("fetches Perplexity Agent models through the injected HttpClient", () =>
 
     expect(Object.keys(models).length).toBe(1)
     expect((yield* Ref.get(hits)).map((hit) => hit.url)).toEqual(["https://perplexity.test/v1/models"])
+    const entry = models["apertis-1"]
+    expect(entry.attachment).toBe(false)
+    expect(entry.modalities?.input).toEqual(["text"])
+  }),
+)
+
+it.live("keeps the permissive placeholder metadata for Apertis models", () =>
+  Effect.gen(function* () {
+    const hits = yield* Ref.make<Hit[]>([])
+    const models = yield* ModelCache.Service.use((cache) =>
+      cache.fetch("apertis", { apiKey: "test-key", baseURL: "https://apertis.test/v1" }),
+    ).pipe(Effect.provide(layer(hits)))
+
+    expect(Object.keys(models).length).toBe(1)
+    const entry = models["apertis-1"]
+    expect(entry.attachment).toBe(true)
+    expect(entry.modalities?.input).toEqual(["text", "image"])
   }),
 )
 

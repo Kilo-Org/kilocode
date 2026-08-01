@@ -81,23 +81,32 @@ export const layer: Layer.Layer<
       return [...failures.keys()]
     })
 
-    // Placeholder metadata for models returned by a live /models endpoint that
-    // the bundled snapshot has not seen yet. Kept conservative on purpose: unknown
-    // models must not advertise image attachments or image/pdf inputs, and their
-    // cost is omitted rather than fabricated. The snapshot refreshes hourly, so
-    // these entries are short-lived stand-ins until real metadata is bundled.
-    const aperture = (item: ApertisItem): Models[string] => ({
-      id: item.id,
-      name: item.id,
-      family: item.owned_by ?? "",
-      release_date: "",
-      attachment: false,
-      reasoning: false,
-      temperature: true,
-      tool_call: true,
-      limit: { context: 128000, output: 4096 },
-      modalities: { input: ["text"], output: ["text"] },
-    })
+    // Placeholder metadata for the ids a live /models endpoint returns that the
+    // bundled models.dev snapshot has not seen yet. Apertis builds its whole
+    // provider from this fetch and supports text+image models, so it keeps the
+    // original permissive defaults. Perplexity Agent merges over a snapshot that
+    // already carries real metadata for known ids, so only genuinely new ids fall
+    // back to these placeholders; for those we stay conservative and must not
+    // advertise image attachments or image/pdf inputs. Cost/limit for unknown ids
+    // are placeholders shown until the hourly snapshot refresh bundles the real
+    // values (a missing cost reports as $0 downstream either way).
+    const aperture = (providerID: "apertis" | "perplexity-agent", item: ApertisItem): Models[string] => {
+      const conservative = providerID === "perplexity-agent"
+      return {
+        id: item.id,
+        name: item.id,
+        family: item.owned_by ?? "",
+        release_date: "",
+        attachment: !conservative,
+        reasoning: false,
+        temperature: true,
+        tool_call: true,
+        limit: { context: 128000, output: 4096 },
+        modalities: conservative
+          ? { input: ["text"], output: ["text"] }
+          : { input: ["text", "image"], output: ["text"] },
+      }
+    }
 
     const fetchOpenAICompatibleModels = Effect.fn("ModelCache.fetchOpenAICompatibleModels")(function* (
       providerID: "apertis" | "perplexity-agent",
@@ -121,7 +130,7 @@ export const layer: Layer.Layer<
       }
 
       const json = yield* HttpClientResponse.schemaBodyJson(ApertisResponse)(response)
-      return Object.fromEntries((json.data ?? []).map((item) => [item.id, aperture(item)]))
+      return Object.fromEntries((json.data ?? []).map((item) => [item.id, aperture(providerID, item)]))
     })
 
     const authOptions = Effect.fn("ModelCache.authOptions")(function* (providerID: string) {
