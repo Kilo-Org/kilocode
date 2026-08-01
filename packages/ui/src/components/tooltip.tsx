@@ -10,7 +10,6 @@ export interface TooltipProps extends ComponentProps<typeof KobalteTooltip> {
   contentStyle?: JSX.CSSProperties
   inactive?: boolean
   forceOpen?: boolean
-  tabindex?: number // kilocode_change - make the trigger focusable for keyboard users
 }
 
 export interface TooltipKeybindProps extends Omit<TooltipProps, "value"> {
@@ -48,7 +47,6 @@ export function Tooltip(props: TooltipProps) {
     "inactive",
     "forceOpen",
     "ignoreSafeArea",
-    "tabindex", // kilocode_change - forwarded to the trigger so non-interactive triggers stay keyboard-accessible
     "value",
   ])
 
@@ -128,7 +126,6 @@ export function Tooltip(props: TooltipProps) {
             as={"div"}
             data-component="tooltip-trigger"
             class={local.class}
-            tabindex={local.tabindex} // kilocode_change - makes a div trigger focusable for keyboard users
             onPointerDownCapture={arm}
             onKeyDownCapture={(event: KeyboardEvent) => {
               if (event.key !== "Enter" && event.key !== " ") return

@@ -66,17 +66,13 @@ test.describe("skills settings responsive layout", () => {
         cardBox!.x + cardBox!.width + 1,
       )
 
-      // The accessible Tooltip exposes the full value on hover/focus. Hover is
-      // what triggers Kobalte's open reliably in Playwright; the trigger is
-      // keyboard-focusable (tabindex={0} via Tooltip's tabindex prop), so
-      // screen-reader and keyboard users can reach the full value.
+      // The full path is always in the DOM — the ellipsis is visual-only, so
+      // screen readers read the complete value without any interaction. The
+      // Tooltip still adds a hover affordance for mouse users so the full
+      // path is visible without resizing.
       await trigger.hover()
       const content = page.locator('[data-component="tooltip"]').filter({ hasText: seeded })
       await expect(content, `Kilo Tooltip exposes full path on hover: ${seeded}`).toBeVisible()
-
-      // Assert keyboard reachability directly: the trigger must accept focus.
-      await trigger.focus()
-      await expect(trigger, `path trigger is keyboard-focusable: ${seeded}`).toBeFocused()
     }
 
     for (const seeded of [SEEDED_URL, SEEDED_URL_2]) {
@@ -96,17 +92,13 @@ test.describe("skills settings responsive layout", () => {
         cardBox!.x + cardBox!.width + 1,
       )
 
-      // The accessible Tooltip exposes the full value on hover/focus. Hover is
-      // what triggers Kobalte's open reliably in Playwright; the trigger is
-      // keyboard-focusable (tabindex={0} via Tooltip's tabindex prop), so
-      // screen-reader and keyboard users can reach the full value.
+      // The full URL is always in the DOM — the ellipsis is visual-only, so
+      // screen readers read the complete value without any interaction. The
+      // Tooltip still adds a hover affordance for mouse users so the full
+      // URL is visible without resizing.
       await trigger.hover()
       const content = page.locator('[data-component="tooltip"]').filter({ hasText: seeded })
       await expect(content, `Kilo Tooltip exposes full URL on hover: ${seeded}`).toBeVisible()
-
-      // Assert keyboard reachability directly: the trigger must accept focus.
-      await trigger.focus()
-      await expect(trigger, `URL trigger is keyboard-focusable: ${seeded}`).toBeFocused()
     }
 
     for (const [label, card] of [
