@@ -58,6 +58,7 @@ function infos() {
     image: info("generate_image"),
     notify: info("notify_user"),
     send: info("send_file"),
+    world: info("world"),
     notebookRead: info("notebook_read"),
     notebookEdit: info("notebook_edit"),
     notebookExecute: info("notebook_execute"),

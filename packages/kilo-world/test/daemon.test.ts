@@ -83,7 +83,7 @@ describe("world daemon", () => {
         verb: "status",
         args: [],
         auth: handshake!.token,
-        config: { browser: { executablePath: "/tmp/browser" } },
+        config: { browser: { unknown: true } },
       }),
     })
     expect(unsafe.status).toBe(400)

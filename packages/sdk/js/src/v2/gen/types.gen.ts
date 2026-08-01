@@ -1723,6 +1723,20 @@ export type Config = {
     max_lines?: number
     max_bytes?: number
   }
+  world?: {
+    browser?: {
+      headless?: boolean
+      anti_detect?: boolean
+      timeout_ms?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      viewport?: {
+        width: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+        height: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      }
+      executable_path?: string
+      use_system_chrome?: boolean
+      args?: Array<string>
+    }
+  }
   compaction?: {
     auto?: boolean
     /**
@@ -1744,6 +1758,7 @@ export type Config = {
     native_notebook_tools?: boolean
     speech_to_text_model?: string
     openTelemetry?: boolean
+    world_browser?: boolean
     primary_tools?: Array<string>
     continue_loop_on_deny?: boolean
     sandbox?: boolean

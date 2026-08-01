@@ -86,11 +86,17 @@ function config(value: unknown): value is DaemonConfig {
   if (Object.keys(value).some((key) => key !== "browser")) return false
   if (value.browser === undefined) return true
   if (!record(value.browser)) return false
-  const keys = ["headless", "antiDetect", "timeoutMs", "viewport", "useSystemChrome"]
+  const keys = ["headless", "antiDetect", "timeoutMs", "viewport", "executablePath", "useSystemChrome", "args"]
   if (Object.keys(value.browser).some((key) => !keys.includes(key))) return false
   if (value.browser.headless !== undefined && typeof value.browser.headless !== "boolean") return false
   if (value.browser.antiDetect !== undefined && typeof value.browser.antiDetect !== "boolean") return false
   if (value.browser.useSystemChrome !== undefined && typeof value.browser.useSystemChrome !== "boolean") return false
+  if (value.browser.executablePath !== undefined && typeof value.browser.executablePath !== "string") return false
+  if (
+    value.browser.args !== undefined &&
+    (!Array.isArray(value.browser.args) || !value.browser.args.every((item) => typeof item === "string"))
+  )
+    return false
   if (value.browser.timeoutMs !== undefined && typeof value.browser.timeoutMs !== "number") return false
   if (value.browser.viewport === undefined) return true
   if (!record(value.browser.viewport)) return false

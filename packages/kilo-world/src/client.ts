@@ -1,4 +1,4 @@
-export { defaultConfig, ensureHome, getConfig, setConfig } from "./config"
+export { defaultConfig, ensureHome, getConfig, hasDisplay, setConfig } from "./config"
 export { DaemonClient } from "./daemon/client"
 export { parseScript } from "./script-parser"
 export { resolvePath } from "./path"

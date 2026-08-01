@@ -1,10 +1,10 @@
-import { defaultConfig, ensureHome, getConfig, setConfig } from "./config"
+import { defaultConfig, ensureHome, getConfig, hasDisplay, setConfig } from "./config"
 import { DaemonClient } from "./daemon/client"
 import { dispatch } from "./daemon/dispatch"
 import { parseScript as parseScriptFn } from "./script-parser"
 import type { Action, RunOptions, RunResult, WorldConfig, WorldConfigPatch } from "./types"
 
-export { defaultConfig, ensureHome, getConfig, setConfig }
+export { defaultConfig, ensureHome, getConfig, hasDisplay, setConfig }
 export { DaemonClient }
 export { parseScript } from "./script-parser"
 export { resolvePath } from "./path"

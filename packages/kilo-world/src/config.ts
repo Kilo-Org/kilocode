@@ -7,12 +7,16 @@ const DEFAULT_HOME = join(process.env["XDG_STATE_HOME"] ?? join(homedir(), ".loc
 
 let cached: WorldConfig | null = null
 
+export function hasDisplay(): boolean {
+  return (
+    process.platform === "darwin" ||
+    process.platform === "win32" ||
+    Boolean(process.env["DISPLAY"] || process.env["WAYLAND_DISPLAY"])
+  )
+}
+
 export function defaultConfig(): WorldConfig {
-  const display = process.env["DISPLAY"]
-  const wayland = process.env["WAYLAND_DISPLAY"]
-  const desktop = process.platform === "darwin" || process.platform === "win32"
-  const displayServer = desktop || Boolean(display || wayland)
-  const headless = !displayServer || process.env["KILO_WORLD_HEADED"] !== "1"
+  const headless = !hasDisplay() || process.env["KILO_WORLD_HEADED"] !== "1"
   return {
     browser: {
       headless,

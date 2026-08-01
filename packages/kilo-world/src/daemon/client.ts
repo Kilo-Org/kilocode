@@ -482,7 +482,9 @@ function daemonConfig(cfg: WorldConfig): DaemonConfig {
       antiDetect: cfg.browser.antiDetect,
       timeoutMs: cfg.browser.timeoutMs,
       viewport: cfg.browser.viewport,
+      executablePath: cfg.browser.executablePath,
       useSystemChrome: cfg.browser.useSystemChrome ?? false,
+      args: [...cfg.browser.args],
     },
   }
 }
