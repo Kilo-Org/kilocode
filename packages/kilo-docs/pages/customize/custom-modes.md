@@ -169,7 +169,7 @@ Known permission types include: `read`, `edit`, `bash`, `glob`, `grep`, `task`, 
 
 ### `skills`
 
-An optional glob pattern allow-list of skills for the agent. Only skills whose name matches the list are injected into the agent's system prompt, and the agent cannot load excluded skills via the skill tool. When unset or empty, all skills are available.
+An optional glob pattern allow-list of skills for the agent. Only skills whose name matches the list are allowed — every other skill is hidden from the agent's system prompt and rejected by the skill tool. When unset or empty, all skills are available.
 
 Patterns use glob syntax (e.g. `skill-*`). A pattern prefixed with `!` excludes matching skills, and the last matching pattern wins:
 
@@ -179,13 +179,15 @@ skills:
   - "!skill-excluded-*"
 ```
 
-This example exposes only skills starting with `skill-`, except those starting with `skill-excluded-`. To allow every skill except a few, combine a catch-all with negations:
+This example exposes only skills starting with `skill-`, except those starting with `skill-excluded-`. A list containing only negations (e.g. `["!skill-a"]`) rejects every skill — with no positive pattern there is nothing to allow. To allow every skill except a few, always pair `!` patterns with the catch-all `"*"`:
 
 ```yaml
 skills:
   - "*"
   - "!skill-internal"
 ```
+
+Matching is case-sensitive, so `"skill-*"` does not match a skill named `Skill-A`.
 
 The allow-list is per-agent: the same skill can be available to one agent and hidden from another, restoring mode-specific skill behavior without mode-specific skill directories.
 
@@ -428,7 +430,7 @@ Known permission types include: `read`, `edit`, `bash`, `glob`, `grep`, `task`, 
 
 ### `skills`
 
-An optional glob pattern allow-list of skills for the agent. Only skills whose name matches the list are injected into the agent's system prompt, and the agent cannot load excluded skills via the skill tool. When unset or empty, all skills are available.
+An optional glob pattern allow-list of skills for the agent. Only skills whose name matches the list are allowed — every other skill is hidden from the agent's system prompt and rejected by the skill tool. When unset or empty, all skills are available.
 
 Patterns use glob syntax (e.g. `skill-*`). A pattern prefixed with `!` excludes matching skills, and the last matching pattern wins:
 
@@ -438,13 +440,15 @@ skills:
   - "!skill-excluded-*"
 ```
 
-This example exposes only skills starting with `skill-`, except those starting with `skill-excluded-`. To allow every skill except a few, combine a catch-all with negations:
+This example exposes only skills starting with `skill-`, except those starting with `skill-excluded-`. A list containing only negations (e.g. `["!skill-a"]`) rejects every skill — with no positive pattern there is nothing to allow. To allow every skill except a few, always pair `!` patterns with the catch-all `"*"`:
 
 ```yaml
 skills:
   - "*"
   - "!skill-internal"
 ```
+
+Matching is case-sensitive, so `"skill-*"` does not match a skill named `Skill-A`.
 
 The allow-list is per-agent: the same skill can be available to one agent and hidden from another, restoring mode-specific skill behavior without mode-specific skill directories.
 

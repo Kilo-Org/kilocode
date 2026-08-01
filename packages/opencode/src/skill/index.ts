@@ -402,12 +402,10 @@ export const defaultLayer: Layer.Layer<Service> = layer.pipe(
 export function allowed(agent: Agent.Info, name: string): boolean {
   const patterns = agent.skills
   if (!patterns?.length) return true
-  let match = false
-  for (const pattern of patterns) {
+  return patterns.reduce((match, pattern) => {
     const negated = pattern.startsWith("!")
-    if (Glob.match(negated ? pattern.slice(1) : pattern, name)) match = !negated
-  }
-  return match
+    return Glob.match(negated ? pattern.slice(1) : pattern, name) ? !negated : match
+  }, false)
 }
 // kilocode_change end
 

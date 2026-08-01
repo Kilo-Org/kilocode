@@ -112,7 +112,7 @@ const AgentSchema = Schema.StructWithRest(
     // kilocode_change start - per-agent skill allow-list
     skills: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
       description:
-        "Glob pattern allow-list of skills for this agent. Only matching skills are injected into the system prompt and loadable via the skill tool; patterns prefixed with `!` exclude matching skills (last matching pattern wins). Unset or empty means all skills are available.",
+        "Glob pattern allow-list of skills for this agent. Only skills matching the patterns are injected into the system prompt and loadable via the skill tool; a `!`-prefixed pattern excludes matching skills and the last matching pattern wins. A negation-only list (e.g. [\"!skill-a\"]) rejects every skill — use \"*\" together with `!` patterns to allow all but a few. Matching is case-sensitive. Unset or empty means all skills are available.",
     }),
     // kilocode_change end
   }),
