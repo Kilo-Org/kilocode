@@ -4,12 +4,21 @@ export namespace MemoryLog {
   export type Fn = (message: string, meta?: Record<string, unknown>) => void
 
   let warnFn: Fn = () => {}
+  let debugFn: Fn = () => {}
 
   export function setWarn(fn: Fn) {
     warnFn = fn
   }
 
+  export function setDebug(fn: Fn) {
+    debugFn = fn
+  }
+
   export function warn(message: string, meta?: Record<string, unknown>) {
     warnFn(message, meta)
+  }
+
+  export function debug(message: string, meta?: Record<string, unknown>) {
+    debugFn(message, meta)
   }
 }

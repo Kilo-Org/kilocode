@@ -302,7 +302,7 @@ export namespace MemoryCapture {
                 yield* fail("digest parse_error")
                 yield* memory.append({
                   root,
-                  text: `digest parse_error=${MemoryShared.brief(reason, 160)} fallback=1`,
+                  text: `digest parse_error=${MemoryShared.brief(reason, 160)} full=${result.result.text} fallback=1`,
                 })
                 return undefined
               }),
@@ -427,7 +427,7 @@ export namespace MemoryCapture {
               Effect.gen(function* () {
                 const reason = MemoryRedact.text(errorReason(err))
                 yield* fail("consolidate parse_error")
-                yield* memory.append({ root, text: `consolidate parse_error=${MemoryShared.brief(reason, 160)}` })
+                yield* memory.append({ root, text: `consolidate parse_error=${MemoryShared.brief(reason, 160)} full=${result.result.text}` })
                 return undefined
               }),
             ),

@@ -19,5 +19,6 @@ export function installMemoryRuntime() {
   MemoryPaths.configure(() => ({ data: Global.Path.data }))
   MemoryInstance.setBinder((fn) => bind(fn))
   MemoryLog.setWarn((message, meta) => log.warn(message, meta))
+  MemoryLog.setDebug((message, meta) => log.debug(message, meta))
   MemoryEvents.install()
 }
