@@ -19,6 +19,7 @@ export type Event =
   | EventInteractiveTerminalData
   | EventInteractiveTerminalDeleted
   | EventSandboxStatusChanged
+  | EventLspClientDiagnostics
   | EventSuggestionShown
   | EventSuggestionAccepted
   | EventSuggestionDismissed
@@ -28,17 +29,18 @@ export type Event =
   | EventKilocodeNotebookRequested
   | EventKilocodeNotebookCancelled
   | EventKiloSessionsRemoteStatusChanged
-  | EventLspClientDiagnostics
   | EventMemoryStatus1
   | EventMemoryUpdated1
   | EventMemoryError1
   | EventIndexingStatus
   | EventIndexingWarning
+  | EventModelsDevRefreshed
   | EventServerConnected
   | EventGlobalDisposed
   | EventGlobalConfigUpdated
   | EventPluginAdded
-  | EventCatalogModelUpdated
+  | EventIntegrationUpdated
+  | EventCatalogUpdated
   | EventSessionCreated
   | EventSessionUpdated
   | EventSessionDeleted
@@ -89,17 +91,13 @@ export type Event =
   | EventMessagePartDelta
   | EventSessionDiff
   | EventSessionError
-  | EventModelsDevRefreshed
   | EventInstallationUpdated
   | EventInstallationUpdateAvailable
-  | EventPermissionAsked
-  | EventPermissionReplied
-  | EventReferenceUpdated
-  | EventIntegrationUpdated
+  | EventFileEdited
   | EventPermissionV2Asked
   | EventPermissionV2Replied
+  | EventReferenceUpdated
   | EventProjectDirectoriesUpdated
-  | EventFileEdited
   | EventFileWatcherUpdated
   | EventPtyCreated
   | EventPtyUpdated
@@ -109,13 +107,15 @@ export type Event =
   | EventQuestionV2Replied
   | EventQuestionV2Rejected
   | EventTodoUpdated
+  | EventLspUpdated
+  | EventPermissionAsked
+  | EventPermissionReplied
   | EventSessionStatus
   | EventSessionIdle
   | EventSessionCompacted
   | EventCommandExecuted
   | EventProjectUpdated
   | EventVcsBranchUpdated
-  | EventLspUpdated
   | EventWorkspaceReady
   | EventWorkspaceFailed
   | EventWorkspaceStatus
@@ -1007,6 +1007,7 @@ export type Pty = {
   cwd: string
   status: "running" | "exited"
   pid: number
+  exitCode?: number
   sessionID?: string | null
 }
 
@@ -1071,6 +1072,7 @@ export type GlobalEvent = {
     | EventInteractiveTerminalData
     | EventInteractiveTerminalDeleted
     | EventSandboxStatusChanged
+    | EventLspClientDiagnostics
     | EventSuggestionShown
     | EventSuggestionAccepted
     | EventSuggestionDismissed
@@ -1080,17 +1082,18 @@ export type GlobalEvent = {
     | EventKilocodeNotebookRequested
     | EventKilocodeNotebookCancelled
     | EventKiloSessionsRemoteStatusChanged
-    | EventLspClientDiagnostics
     | EventMemoryStatus
     | EventMemoryUpdated
     | EventMemoryError
     | EventIndexingStatus
     | EventIndexingWarning
+    | EventModelsDevRefreshed
     | EventServerConnected
     | EventGlobalDisposed
     | EventGlobalConfigUpdated
     | EventPluginAdded
-    | EventCatalogModelUpdated
+    | EventIntegrationUpdated
+    | EventCatalogUpdated
     | EventSessionCreated
     | EventSessionUpdated
     | EventSessionDeleted
@@ -1141,17 +1144,13 @@ export type GlobalEvent = {
     | EventMessagePartDelta
     | EventSessionDiff
     | EventSessionError
-    | EventModelsDevRefreshed
     | EventInstallationUpdated
     | EventInstallationUpdateAvailable
-    | EventPermissionAsked
-    | EventPermissionReplied
-    | EventReferenceUpdated
-    | EventIntegrationUpdated
+    | EventFileEdited
     | EventPermissionV2Asked
     | EventPermissionV2Replied
+    | EventReferenceUpdated
     | EventProjectDirectoriesUpdated
-    | EventFileEdited
     | EventFileWatcherUpdated
     | EventPtyCreated
     | EventPtyUpdated
@@ -1161,13 +1160,15 @@ export type GlobalEvent = {
     | EventQuestionV2Replied
     | EventQuestionV2Rejected
     | EventTodoUpdated
+    | EventLspUpdated
+    | EventPermissionAsked
+    | EventPermissionReplied
     | EventSessionStatus
     | EventSessionIdle
     | EventSessionCompacted
     | EventCommandExecuted
     | EventProjectUpdated
     | EventVcsBranchUpdated
-    | EventLspUpdated
     | EventWorkspaceReady
     | EventWorkspaceFailed
     | EventWorkspaceStatus
@@ -1697,6 +1698,7 @@ export type Config = {
   tools?: {
     [key: string]: boolean
   }
+  web_search?: boolean
   attachment?: AttachmentConfig
   enterprise?: {
     url?: string
@@ -1855,6 +1857,10 @@ export type Provider = {
   models: {
     [key: string]: Model
   }
+}
+
+export type ExperimentalCapabilities = {
+  backgroundSubagents: boolean
 }
 
 export type ConsoleState = {
@@ -2097,6 +2103,7 @@ export type Command = {
   agent?: string
   model?: string
   source?: "command" | "mcp" | "skill"
+  trusted?: boolean
   template: string
   subtask?: boolean
   hints: Array<string>
@@ -2970,9 +2977,36 @@ export type ConfigOverlayResponse = {
     reason?: string
   }>
   targets: {
-    global?: string
-    project?: string
-    active?: string
+    global: {
+      scope: "global" | "project"
+      path: string
+      revision: string
+      exists: boolean
+      writable: boolean
+      raw: {
+        [key: string]: unknown
+      }
+    }
+    project: {
+      scope: "global" | "project"
+      path: string
+      revision: string
+      exists: boolean
+      writable: boolean
+      raw: {
+        [key: string]: unknown
+      }
+    }
+    active: {
+      scope: "global" | "project"
+      path: string
+      revision: string
+      exists: boolean
+      writable: boolean
+      raw: {
+        [key: string]: unknown
+      }
+    }
   }
   fields: {
     [key: string]: {
@@ -3016,6 +3050,21 @@ export type ConfigSourcesResponse = {
     editable: boolean
     reason?: string
   }>
+}
+
+export type ConfigOverlayConflictError = {
+  code: "target-changed" | "revision-conflict"
+  message: string
+  target: {
+    scope: "global" | "project"
+    path: string
+    revision: string
+    exists: boolean
+    writable: boolean
+    raw: {
+      [key: string]: unknown
+    }
+  }
 }
 
 export type ConfigRulesResponse = {
@@ -3489,6 +3538,11 @@ export type ProviderNotFoundError = {
   message: string
 }
 
+export type ForbiddenError = {
+  _tag: "ForbiddenError"
+  message: string
+}
+
 export type ProjectCopyError = {
   name: "ProjectCopyError"
   data: {
@@ -3547,7 +3601,7 @@ export type EventSessionTurnClose = {
   properties: {
     sessionID: string
     parentID?: string
-    reason: "completed" | "error" | "interrupted"
+    reason: "completed" | "error" | "interrupted" | "superseded"
   }
 }
 
@@ -3654,6 +3708,15 @@ export type EventSandboxStatusChanged = {
   }
 }
 
+export type EventLspClientDiagnostics = {
+  id: string
+  type: "lsp.client.diagnostics"
+  properties: {
+    serverID: string
+    path: string
+  }
+}
+
 export type EventSuggestionShown = {
   id: string
   type: "suggestion.shown"
@@ -3750,15 +3813,6 @@ export type EventKiloSessionsRemoteStatusChanged = {
   properties: {
     enabled: boolean
     connected: boolean
-  }
-}
-
-export type EventLspClientDiagnostics = {
-  id: string
-  type: "lsp.client.diagnostics"
-  properties: {
-    serverID: string
-    path: string
   }
 }
 
@@ -3887,6 +3941,14 @@ export type EventIndexingWarning = {
   properties: IndexingWarning
 }
 
+export type EventModelsDevRefreshed = {
+  id: string
+  type: "models-dev.refreshed"
+  properties: {
+    [key: string]: unknown
+  }
+}
+
 export type EventServerConnected = {
   id: string
   type: "server.connected"
@@ -3919,107 +3981,19 @@ export type EventPluginAdded = {
   }
 }
 
-export type ModelV2Info = {
+export type EventIntegrationUpdated = {
   id: string
-  providerID: string
-  family?: string
-  name: string
-  api:
-    | {
-        id: string
-        type: "aisdk"
-        package: string
-        url?: string
-        settings?: {
-          [key: string]: unknown
-        }
-      }
-    | {
-        id: string
-        type: "native"
-        url?: string
-        settings: {
-          [key: string]: unknown
-        }
-      }
-  capabilities: {
-    tools: boolean
-    input: Array<string>
-    output: Array<string>
-  }
-  request: {
-    headers: {
-      [key: string]: string
-    }
-    body: {
-      [key: string]: unknown
-    }
-    generation?: {
-      maxTokens?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      temperature?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      topP?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      topK?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      frequencyPenalty?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      presencePenalty?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      seed?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      stop?: Array<string>
-    }
-    options?: {
-      [key: string]: unknown
-    }
-    variant?: string
-  }
-  variants: Array<{
-    id: string
-    headers: {
-      [key: string]: string
-    }
-    body: {
-      [key: string]: unknown
-    }
-    generation?: {
-      maxTokens?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      temperature?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      topP?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      topK?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      frequencyPenalty?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      presencePenalty?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      seed?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      stop?: Array<string>
-    }
-    options?: {
-      [key: string]: unknown
-    }
-  }>
-  time: {
-    released: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-  }
-  cost: Array<{
-    tier?: {
-      type: "context"
-      size: number
-    }
-    input: number
-    output: number
-    cache: {
-      read: number
-      write: number
-    }
-  }>
-  status: "alpha" | "beta" | "deprecated" | "active"
-  enabled: boolean
-  limit: {
-    context: number
-    input?: number
-    output: number
+  type: "integration.updated"
+  properties: {
+    [key: string]: unknown
   }
 }
 
-export type EventCatalogModelUpdated = {
+export type EventCatalogUpdated = {
   id: string
-  type: "catalog.model.updated"
+  type: "catalog.updated"
   properties: {
-    model: ModelV2Info
+    [key: string]: unknown
   }
 }
 
@@ -4656,14 +4630,6 @@ export type EventSessionError = {
   }
 }
 
-export type EventModelsDevRefreshed = {
-  id: string
-  type: "models-dev.refreshed"
-  properties: {
-    [key: string]: unknown
-  }
-}
-
 export type EventInstallationUpdated = {
   id: string
   type: "installation.updated"
@@ -4680,48 +4646,11 @@ export type EventInstallationUpdateAvailable = {
   }
 }
 
-export type EventPermissionAsked = {
+export type EventFileEdited = {
   id: string
-  type: "permission.asked"
+  type: "file.edited"
   properties: {
-    id: string
-    sessionID: string
-    permission: string
-    patterns: Array<string>
-    metadata: {
-      [key: string]: unknown
-    }
-    always: Array<string>
-    tool?: {
-      messageID: string
-      callID: string
-    }
-  }
-}
-
-export type EventPermissionReplied = {
-  id: string
-  type: "permission.replied"
-  properties: {
-    sessionID: string
-    requestID: string
-    reply: "once" | "always" | "reject"
-  }
-}
-
-export type EventReferenceUpdated = {
-  id: string
-  type: "reference.updated"
-  properties: {
-    [key: string]: unknown
-  }
-}
-
-export type EventIntegrationUpdated = {
-  id: string
-  type: "integration.updated"
-  properties: {
-    [key: string]: unknown
+    file: string
   }
 }
 
@@ -4759,19 +4688,19 @@ export type EventPermissionV2Replied = {
   }
 }
 
+export type EventReferenceUpdated = {
+  id: string
+  type: "reference.updated"
+  properties: {
+    [key: string]: unknown
+  }
+}
+
 export type EventProjectDirectoriesUpdated = {
   id: string
   type: "project.directories.updated"
   properties: {
     projectID: string
-  }
-}
-
-export type EventFileEdited = {
-  id: string
-  type: "file.edited"
-  properties: {
-    file: string
   }
 }
 
@@ -4894,6 +4823,43 @@ export type EventTodoUpdated = {
   }
 }
 
+export type EventLspUpdated = {
+  id: string
+  type: "lsp.updated"
+  properties: {
+    [key: string]: unknown
+  }
+}
+
+export type EventPermissionAsked = {
+  id: string
+  type: "permission.asked"
+  properties: {
+    id: string
+    sessionID: string
+    permission: string
+    patterns: Array<string>
+    metadata: {
+      [key: string]: unknown
+    }
+    always: Array<string>
+    tool?: {
+      messageID: string
+      callID: string
+    }
+  }
+}
+
+export type EventPermissionReplied = {
+  id: string
+  type: "permission.replied"
+  properties: {
+    sessionID: string
+    requestID: string
+    reply: "once" | "always" | "reject"
+  }
+}
+
 export type EventSessionStatus = {
   id: string
   type: "session.status"
@@ -4963,14 +4929,6 @@ export type EventVcsBranchUpdated = {
   type: "vcs.branch.updated"
   properties: {
     branch?: string
-  }
-}
-
-export type EventLspUpdated = {
-  id: string
-  type: "lsp.updated"
-  properties: {
-    [key: string]: unknown
   }
 }
 
@@ -5987,26 +5945,106 @@ export type SessionMessage =
   | SessionMessageAssistant
   | SessionMessageCompaction
 
-export type ProviderV2Info = {
+export type ModelV2Info = {
   id: string
+  providerID: string
+  family?: string
   name: string
-  enabled:
-    | false
+  api:
     | {
-        via: "env"
-        name: string
-      }
-    | {
-        via: "credential"
-        credentialID: string
-      }
-    | {
-        via: "custom"
-        data: {
+        id: string
+        type: "aisdk"
+        package: string
+        url?: string
+        settings?: {
           [key: string]: unknown
         }
       }
-  env: Array<string>
+    | {
+        id: string
+        type: "native"
+        url?: string
+        settings: {
+          [key: string]: unknown
+        }
+      }
+  capabilities: {
+    tools: boolean
+    input: Array<string>
+    output: Array<string>
+  }
+  request: {
+    headers: {
+      [key: string]: string
+    }
+    body: {
+      [key: string]: unknown
+    }
+    generation?: {
+      maxTokens?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      temperature?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      topP?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      topK?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      frequencyPenalty?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      presencePenalty?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      seed?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      stop?: Array<string>
+    }
+    options?: {
+      [key: string]: unknown
+    }
+    variant?: string
+  }
+  variants: Array<{
+    id: string
+    headers: {
+      [key: string]: string
+    }
+    body: {
+      [key: string]: unknown
+    }
+    generation?: {
+      maxTokens?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      temperature?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      topP?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      topK?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      frequencyPenalty?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      presencePenalty?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      seed?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      stop?: Array<string>
+    }
+    options?: {
+      [key: string]: unknown
+    }
+  }>
+  time: {
+    released: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+  }
+  cost: Array<{
+    tier?: {
+      type: "context"
+      size: number
+    }
+    input: number
+    output: number
+    cache: {
+      read: number
+      write: number
+    }
+  }>
+  status: "alpha" | "beta" | "deprecated" | "active"
+  enabled: boolean
+  limit: {
+    context: number
+    input?: number
+    output: number
+  }
+}
+
+export type ProviderV2Info = {
+  id: string
+  name: string
+  disabled?: boolean
   api:
     | {
         type: "aisdk"
@@ -6305,102 +6343,6 @@ export type EventMemoryError1 = {
       sources?: Array<string>
       files?: Array<string>
     }
-  }
-}
-
-export type ModelV2Info1 = {
-  id: string
-  providerID: string
-  family?: string
-  name: string
-  api:
-    | {
-        id: string
-        type: "aisdk"
-        package: string
-        url?: string
-        settings?: {
-          [key: string]: unknown
-        }
-      }
-    | {
-        id: string
-        type: "native"
-        url?: string
-        settings: {
-          [key: string]: unknown
-        }
-      }
-  capabilities: {
-    tools: boolean
-    input: Array<string>
-    output: Array<string>
-  }
-  request: {
-    headers: {
-      [key: string]: string
-    }
-    body: {
-      [key: string]: unknown
-    }
-    generation?: {
-      maxTokens?: number | "NaN" | "Infinity" | "-Infinity"
-      temperature?: number | "NaN" | "Infinity" | "-Infinity"
-      topP?: number | "NaN" | "Infinity" | "-Infinity"
-      topK?: number | "NaN" | "Infinity" | "-Infinity"
-      frequencyPenalty?: number | "NaN" | "Infinity" | "-Infinity"
-      presencePenalty?: number | "NaN" | "Infinity" | "-Infinity"
-      seed?: number | "NaN" | "Infinity" | "-Infinity"
-      stop?: Array<string>
-    }
-    options?: {
-      [key: string]: unknown
-    }
-    variant?: string
-  }
-  variants: Array<{
-    id: string
-    headers: {
-      [key: string]: string
-    }
-    body: {
-      [key: string]: unknown
-    }
-    generation?: {
-      maxTokens?: number | "NaN" | "Infinity" | "-Infinity"
-      temperature?: number | "NaN" | "Infinity" | "-Infinity"
-      topP?: number | "NaN" | "Infinity" | "-Infinity"
-      topK?: number | "NaN" | "Infinity" | "-Infinity"
-      frequencyPenalty?: number | "NaN" | "Infinity" | "-Infinity"
-      presencePenalty?: number | "NaN" | "Infinity" | "-Infinity"
-      seed?: number | "NaN" | "Infinity" | "-Infinity"
-      stop?: Array<string>
-    }
-    options?: {
-      [key: string]: unknown
-    }
-  }>
-  time: {
-    released: number | "NaN" | "Infinity" | "-Infinity"
-  }
-  cost: Array<{
-    tier?: {
-      type: "context"
-      size: number
-    }
-    input: number
-    output: number
-    cache: {
-      read: number
-      write: number
-    }
-  }>
-  status: "alpha" | "beta" | "deprecated" | "active"
-  enabled: boolean
-  limit: {
-    context: number
-    input?: number
-    output: number
   }
 }
 
@@ -6854,6 +6796,36 @@ export type ConfigProvidersResponses = {
 }
 
 export type ConfigProvidersResponse = ConfigProvidersResponses[keyof ConfigProvidersResponses]
+
+export type ExperimentalCapabilitiesGetData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/capabilities"
+}
+
+export type ExperimentalCapabilitiesGetErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type ExperimentalCapabilitiesGetError =
+  ExperimentalCapabilitiesGetErrors[keyof ExperimentalCapabilitiesGetErrors]
+
+export type ExperimentalCapabilitiesGetResponses = {
+  /**
+   * Experimental capabilities
+   */
+  200: ExperimentalCapabilities
+}
+
+export type ExperimentalCapabilitiesGetResponse =
+  ExperimentalCapabilitiesGetResponses[keyof ExperimentalCapabilitiesGetResponses]
 
 export type ExperimentalConsoleGetData = {
   body?: never
@@ -7789,6 +7761,7 @@ export type AppSkillsResponses = {
     description?: string
     location: string
     content: string
+    trusted?: boolean
   }>
 }
 
@@ -8700,6 +8673,7 @@ export type PermissionReplyData = {
   body?: {
     reply: "once" | "always" | "reject"
     message?: string
+    interactive?: boolean
   }
   path: {
     requestID: string
@@ -11193,11 +11167,15 @@ export type ConfigOverlayResponse2 = ConfigOverlayResponses[keyof ConfigOverlayR
 
 export type ConfigOverlayUpdateData = {
   body?: {
-    scope?: "global" | "project"
+    scope: "global" | "project"
     set?: {
       [key: string]: unknown
     }
     unset?: Array<Array<string>>
+    expected?: {
+      path: string
+      revision: string
+    }
   }
   path?: never
   query?: {
@@ -11212,15 +11190,19 @@ export type ConfigOverlayUpdateErrors = {
    * Bad request
    */
   400: BadRequestError
+  /**
+   * ConfigOverlayConflictError
+   */
+  409: ConfigOverlayConflictError
 }
 
 export type ConfigOverlayUpdateError = ConfigOverlayUpdateErrors[keyof ConfigOverlayUpdateErrors]
 
 export type ConfigOverlayUpdateResponses = {
   /**
-   * Effective configuration after patch
+   * Resolved config overlay after patch
    */
-  200: Config
+  200: ConfigOverlayResponse
 }
 
 export type ConfigOverlayUpdateResponse = ConfigOverlayUpdateResponses[keyof ConfigOverlayUpdateResponses]
@@ -11639,6 +11621,36 @@ export type IndexingModelsResponses = {
 }
 
 export type IndexingModelsResponse = IndexingModelsResponses[keyof IndexingModelsResponses]
+
+export type IndexingConsentData = {
+  body?: {
+    enabled: boolean
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/indexing/consent"
+}
+
+export type IndexingConsentErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type IndexingConsentError = IndexingConsentErrors[keyof IndexingConsentErrors]
+
+export type IndexingConsentResponses = {
+  /**
+   * Indexing status
+   */
+  200: IndexingStatus
+}
+
+export type IndexingConsentResponse = IndexingConsentResponses[keyof IndexingConsentResponses]
 
 export type InstanceReloadData = {
   body?: never
@@ -15239,7 +15251,12 @@ export type V2CredentialRemoveData = {
   path: {
     credentialID: string
   }
-  query?: never
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
   url: "/api/credential/{credentialID}"
 }
 
@@ -15272,7 +15289,12 @@ export type V2CredentialUpdateData = {
   path: {
     credentialID: string
   }
-  query?: never
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
   url: "/api/credential/{credentialID}"
 }
 
@@ -15696,6 +15718,316 @@ export type V2EventSubscribeResponses = {
 }
 
 export type V2EventSubscribeResponse = V2EventSubscribeResponses[keyof V2EventSubscribeResponses]
+
+export type V2PtyListData = {
+  body?: never
+  path?: never
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
+  url: "/api/pty"
+}
+
+export type V2PtyListErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+}
+
+export type V2PtyListError = V2PtyListErrors[keyof V2PtyListErrors]
+
+export type V2PtyListResponses = {
+  /**
+   * Success
+   */
+  200: {
+    location: LocationInfo
+    data: Array<Pty>
+  }
+}
+
+export type V2PtyListResponse = V2PtyListResponses[keyof V2PtyListResponses]
+
+export type V2PtyCreateData = {
+  body: {
+    command?: string
+    args?: Array<string>
+    cwd?: string
+    title?: string
+    env?: {
+      [key: string]: string
+    }
+  }
+  path?: never
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
+  url: "/api/pty"
+}
+
+export type V2PtyCreateErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+}
+
+export type V2PtyCreateError = V2PtyCreateErrors[keyof V2PtyCreateErrors]
+
+export type V2PtyCreateResponses = {
+  /**
+   * Success
+   */
+  200: {
+    location: LocationInfo
+    data: Pty
+  }
+}
+
+export type V2PtyCreateResponse = V2PtyCreateResponses[keyof V2PtyCreateResponses]
+
+export type V2PtyRemoveData = {
+  body?: never
+  path: {
+    ptyID: string
+  }
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
+  url: "/api/pty/{ptyID}"
+}
+
+export type V2PtyRemoveErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+  /**
+   * PtyNotFoundError
+   */
+  404: PtyNotFoundError
+}
+
+export type V2PtyRemoveError = V2PtyRemoveErrors[keyof V2PtyRemoveErrors]
+
+export type V2PtyRemoveResponses = {
+  /**
+   * <No Content>
+   */
+  204: void
+}
+
+export type V2PtyRemoveResponse = V2PtyRemoveResponses[keyof V2PtyRemoveResponses]
+
+export type V2PtyGetData = {
+  body?: never
+  path: {
+    ptyID: string
+  }
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
+  url: "/api/pty/{ptyID}"
+}
+
+export type V2PtyGetErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+  /**
+   * PtyNotFoundError
+   */
+  404: PtyNotFoundError
+}
+
+export type V2PtyGetError = V2PtyGetErrors[keyof V2PtyGetErrors]
+
+export type V2PtyGetResponses = {
+  /**
+   * Success
+   */
+  200: {
+    location: LocationInfo
+    data: Pty
+  }
+}
+
+export type V2PtyGetResponse = V2PtyGetResponses[keyof V2PtyGetResponses]
+
+export type V2PtyUpdateData = {
+  body: {
+    title?: string
+    sessionID?: string
+    size?: {
+      rows: number
+      cols: number
+    }
+  }
+  path: {
+    ptyID: string
+  }
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
+  url: "/api/pty/{ptyID}"
+}
+
+export type V2PtyUpdateErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+  /**
+   * PtyNotFoundError
+   */
+  404: PtyNotFoundError
+}
+
+export type V2PtyUpdateError = V2PtyUpdateErrors[keyof V2PtyUpdateErrors]
+
+export type V2PtyUpdateResponses = {
+  /**
+   * Success
+   */
+  200: {
+    location: LocationInfo
+    data: Pty
+  }
+}
+
+export type V2PtyUpdateResponse = V2PtyUpdateResponses[keyof V2PtyUpdateResponses]
+
+export type V2PtyConnectTokenData = {
+  body?: never
+  path: {
+    ptyID: string
+  }
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
+  url: "/api/pty/{ptyID}/connect-token"
+}
+
+export type V2PtyConnectTokenErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+  /**
+   * ForbiddenError
+   */
+  403: ForbiddenError
+  /**
+   * PtyNotFoundError
+   */
+  404: PtyNotFoundError
+}
+
+export type V2PtyConnectTokenError = V2PtyConnectTokenErrors[keyof V2PtyConnectTokenErrors]
+
+export type V2PtyConnectTokenResponses = {
+  /**
+   * Success
+   */
+  200: {
+    location: LocationInfo
+    data: {
+      ticket: string
+      expires_in: number
+    }
+  }
+}
+
+export type V2PtyConnectTokenResponse = V2PtyConnectTokenResponses[keyof V2PtyConnectTokenResponses]
+
+export type V2PtyConnectData = {
+  body?: never
+  path: {
+    ptyID: string
+  }
+  query?: {
+    "location[directory]"?: string
+    "location[workspace]"?: string
+    cursor?: string
+    ticket?: string
+    replayExited?: string
+  }
+  url: "/api/pty/{ptyID}/connect"
+}
+
+export type V2PtyConnectErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+  /**
+   * ForbiddenError
+   */
+  403: ForbiddenError
+  /**
+   * PtyNotFoundError
+   */
+  404: PtyNotFoundError
+}
+
+export type V2PtyConnectError = V2PtyConnectErrors[keyof V2PtyConnectErrors]
+
+export type V2PtyConnectResponses = {
+  /**
+   * Success
+   */
+  200: boolean
+}
+
+export type V2PtyConnectResponse = V2PtyConnectResponses[keyof V2PtyConnectResponses]
 
 export type V2QuestionRequestListData = {
   body?: never

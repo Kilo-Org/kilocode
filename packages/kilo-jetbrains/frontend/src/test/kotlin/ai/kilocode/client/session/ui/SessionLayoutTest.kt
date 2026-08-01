@@ -342,6 +342,25 @@ class SessionLayoutTest : BasePlatformTestCase() {
         assertEquals(count + 1, child.count)
     }
 
+    fun `test forget all re-measures all valid children`() {
+        val p = panel(width = 300)
+        val first = probe(height = 20)
+        val second = probe(height = 30)
+        p.add(first)
+        p.add(second)
+        p.doLayout()
+        first.markValid()
+        second.markValid()
+        val fCount = first.count
+        val sCount = second.count
+
+        (p.layout as SessionLayout).forgetAll()
+        p.doLayout()
+
+        assertEquals(fCount + 1, first.count)
+        assertEquals(sCount + 1, second.count)
+    }
+
     // ---- helpers ------
 
     /** A fixed-height JLabel. The width is reported as 0 until layout sets it. */

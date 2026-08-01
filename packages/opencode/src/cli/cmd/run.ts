@@ -20,18 +20,15 @@ import { pathToFileURL } from "url"
 import { Effect } from "effect"
 import { UI } from "../ui"
 import { effectCmd } from "../effect-cmd"
-import { buildRunMessage } from "@/kilocode/cli/cmd/run-message" // kilocode_change
 import { EOL } from "os"
 import { Filesystem } from "@/util/filesystem"
-import { createKiloClient, type KiloClient, type Session, type ToolPart } from "@kilocode/sdk/v2"
-import { Agent } from "@/agent/agent"
-import { RuntimeFlags } from "@/effect/runtime-flags"
+import type { KiloClient, Session, ToolPart } from "@kilocode/sdk/v2"
 import { FormatError, FormatUnknownError } from "../error"
 import { INTERACTIVE_INPUT_ERROR, resolveInteractiveStdin } from "./run/runtime.stdin"
-import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
-import { KiloRunAuto } from "@/kilocode/cli/run-auto" // kilocode_change
-import { KiloHeadless } from "@/kilocode/permission/headless" // kilocode_change
-import { KiloRun, KiloRunDaemon } from "@/kilocode/cli/cmd/run" // kilocode_change
+// kilocode_change start - Kilo implementations (createKiloClient, run-message,
+// cloud-session, run-auto, headless, KiloRun) are dynamically imported inside the
+// handler so other CLI commands don't pay their module cost at startup.
+// kilocode_change end
 
 type ModelInput = Parameters<KiloClient["session"]["prompt"]>[0]["model"]
 
@@ -266,6 +263,14 @@ export const RunCommand = effectCmd({
     const { RuntimeFlags } = yield* Effect.promise(() => import("@/effect/runtime-flags"))
     const { InstanceRef } = yield* Effect.promise(() => import("@/effect/instance-ref"))
     const { ServerAuth } = yield* Effect.promise(() => import("@/server/auth"))
+    // kilocode_change start - lazy Kilo implementations (see top-of-file note)
+    const { createKiloClient } = yield* Effect.promise(() => import("@kilocode/sdk/v2"))
+    const { buildRunMessage } = yield* Effect.promise(() => import("@/kilocode/cli/cmd/run-message"))
+    const { importCloudSession, validateCloudFork } = yield* Effect.promise(() => import("@/kilocode/cloud-session"))
+    const { KiloRunAuto } = yield* Effect.promise(() => import("@/kilocode/cli/run-auto"))
+    const { KiloHeadless } = yield* Effect.promise(() => import("@/kilocode/permission/headless"))
+    const { KiloRun, KiloRunDaemon } = yield* Effect.promise(() => import("@/kilocode/cli/cmd/run"))
+    // kilocode_change end
     const agentSvc = yield* Agent.Service
     const flags = yield* RuntimeFlags.Service
     const localInstance = yield* InstanceRef
@@ -726,6 +731,7 @@ export const RunCommand = effectCmd({
           const MAX_RETRIES = 3 // kilocode_change
           let retries = 0 // kilocode_change
           let error: string | undefined
+          let autoRejected = false // kilocode_change - plain headless auto-reject must fail the run
 
           // kilocode_change start - revert to upstream: consume native events without normalizing sync copies
           for await (const event of events.stream) {
@@ -816,8 +822,10 @@ export const RunCommand = effectCmd({
                 err = String(props.error.data.message)
               }
               error = error ? error + EOL + err : err
-              if (emit("error", { error: props.error })) continue
+              // kilocode_change start - stderr first so --format json still surfaces the diagnostic
               UI.error(err)
+              emit("error", { error: props.error })
+              // kilocode_change end
             }
 
             // kilocode_change start - reset retry budget only after resumed work becomes busy
@@ -840,6 +848,13 @@ export const RunCommand = effectCmd({
 
             if (event.type === "permission.asked") {
               const permission = event.properties
+              // kilocode_change start - skill shell batches need an interactive human decision. The server ignores
+              // non-interactive approvals, so headless runs must reject explicitly rather than leave them pending.
+              if (permission.metadata?.["skillShell"] === true) {
+                await client.permission.reply({ requestID: permission.id, reply: "reject" })
+                continue
+              }
+              // kilocode_change end
               // kilocode_change start - approve root and tracked Task child permissions in auto mode
               if (args.auto) {
                 if (!KiloRunAuto.allowed(auto, permission.sessionID)) continue
@@ -868,6 +883,7 @@ export const RunCommand = effectCmd({
                   UI.Style.TEXT_NORMAL +
                     `subagent permission requested: ${permission.permission} (${permission.patterns.join(", ")}); auto-rejecting`,
                 )
+                autoRejected = true // kilocode_change
                 await client.permission.reply({
                   requestID: permission.id,
                   reply: "reject",
@@ -889,6 +905,7 @@ export const RunCommand = effectCmd({
                   UI.Style.TEXT_NORMAL +
                     `permission requested: ${permission.permission} (${permission.patterns.join(", ")}); auto-rejecting`,
                 )
+                autoRejected = true // kilocode_change
                 await client.permission.reply({
                   requestID: permission.id,
                   reply: "reject",
@@ -915,6 +932,14 @@ export const RunCommand = effectCmd({
             }
             // kilocode_change end
           }
+          // kilocode_change start - idle must not clear an auto-rejected headless run
+          if (autoRejected) {
+            const msg = "run ended with an auto-rejected permission; pass --auto for autonomous use"
+            error = error ? error + EOL + msg : msg
+            UI.error(msg)
+            emit("error", { error: msg })
+          }
+          // kilocode_change end
           return error
         }
         const cwd = args.attach ? (directory ?? sess.directory ?? (await current(sdk))) : (directory ?? root)

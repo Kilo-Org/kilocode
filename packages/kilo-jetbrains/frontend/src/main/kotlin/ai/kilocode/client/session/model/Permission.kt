@@ -27,6 +27,8 @@ data class PermissionMeta(
     val fileDiff: PermissionFileDiff? = null,
     val fileDiffs: List<PermissionFileDiff> = emptyList(),
     val raw: Map<String, String> = emptyMap(),
+    // Verbatim skill-shell commands to display when raw["skillShell"] == "true".
+    val skillCommands: List<String> = emptyList(),
 )
 
 data class PermissionRuleCandidate(

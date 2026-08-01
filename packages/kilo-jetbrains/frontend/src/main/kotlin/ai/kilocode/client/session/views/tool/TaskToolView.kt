@@ -42,7 +42,7 @@ class TaskToolView(
     private var collapsed = false
 
     init {
-        bindHeader(parts.glyph, parts.title, parts.sub, parts.state, parts.center, parts.controls, parts.slot)
+        bindHeader(parts.glyph, parts.title, parts.sub, parts.state, parts.left, parts.right, parts.slot)
         applyStyle(style)
         sync()
         if (item.childTools.isNotEmpty()) expand()

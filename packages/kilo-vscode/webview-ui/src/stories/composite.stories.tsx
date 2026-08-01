@@ -300,6 +300,22 @@ const dockPermission: PermissionRequest = {
   // No `tool` field — this is a non-tool (dock) permission
 }
 
+const skillShellPermission: PermissionRequest = {
+  id: "perm-skill-shell-001",
+  sessionID: SESSION_ID,
+  toolName: "bash",
+  // patterns are the decomposed sub-commands (for authorization); the prompt displays the
+  // verbatim per-placeholder commands from args.commands, and names the skill via args.skill.
+  patterns: ["git rev-parse --abbrev-ref HEAD", "printf INJECTED_OK"],
+  always: [],
+  args: {
+    skillShell: true,
+    skill: "git-status",
+    commands: ["git rev-parse --abbrev-ref HEAD", "printf INJECTED_OK"],
+  },
+  tool: { messageID: ASST_MSG_ID, callID: "call-skill-shell-001" },
+}
+
 // ---------------------------------------------------------------------------
 // Question fixtures
 // ---------------------------------------------------------------------------
@@ -551,6 +567,30 @@ export const BashWithPermission: Story = {
   name: "Permission Dock — bash above chatbox",
   render: () => {
     const perms = [bashPermission]
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy", permissions: perms }),
+      messages: () => [{ id: "msg-001" }] as any[],
+    }
+    return (
+      <StoryProviders permissions={perms} sessionID={SESSION_ID} status="busy" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "100%", height: "300px", display: "flex", "flex-direction": "column" }}>
+            <ChatView />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+// ---------------------------------------------------------------------------
+// 2b. Permission dock — skill shell batch (command list, Allow/Reject, no rules)
+// ---------------------------------------------------------------------------
+
+export const PermissionDockSkillShell: Story = {
+  name: "Permission Dock — skill shell commands",
+  render: () => {
+    const perms = [skillShellPermission]
     const session = {
       ...mockSessionValue({ id: SESSION_ID, status: "busy", permissions: perms }),
       messages: () => [{ id: "msg-001" }] as any[],

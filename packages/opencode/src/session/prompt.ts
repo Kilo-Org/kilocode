@@ -4,6 +4,7 @@ import path from "path"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import os from "os"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
+import { SKILL_SHELL_DISABLED, SKILL_SHELL_UNTRUSTED } from "@/kilocode/skills/display" // kilocode_change
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
 import { KiloSession } from "@/kilocode/session" // kilocode_change
@@ -36,7 +37,7 @@ import { SessionCompaction } from "./compaction"
 import { SystemPrompt } from "./system"
 import { Instruction } from "./instruction"
 import { Plugin } from "../plugin"
-import MAX_STEPS from "../session/prompt/max-steps.txt"
+import { MAX_STEPS_PROMPT } from "@opencode-ai/core/session/runner/max-steps"
 import { ToolRegistry } from "@/tool/registry"
 import { MCP } from "../mcp"
 import { LSP } from "@/lsp/lsp"
@@ -55,7 +56,7 @@ import { Tool } from "@/tool/tool"
 import { Permission } from "@/permission"
 import { SessionStatus } from "./status"
 import { LLM } from "./llm"
-import { Shell } from "@/shell/shell"
+import { Shell } from "@opencode-ai/core/shell"
 import { ShellID } from "@/tool/shell/id"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Truncate } from "@/tool/truncate"
@@ -316,9 +317,24 @@ export const layer = Layer.effect(
         .find((line) => line.length > 0)
       if (!cleaned) return
       const t = cleaned.length > 100 ? cleaned.substring(0, 97) + "..." : cleaned
-      yield* sessions
-        .setTitle({ sessionID: input.session.id, title: t })
-        .pipe(Effect.catchCause((cause) => Effect.logError("failed to generate title", { error: Cause.squash(cause) })))
+      // kilocode_change start - auto-title mark/re-check owned by KiloSessionPrompt
+      const fresh = yield* sessions.get(input.session.id).pipe(Effect.orElseSucceed(() => null))
+      if (
+        !KiloSessionPrompt.prepareAutoTitle({
+          sessionID: input.session.id,
+          title: t,
+          fresh,
+          isDefaultTitle: Session.isDefaultTitle,
+        })
+      )
+        return
+      yield* sessions.setTitle({ sessionID: input.session.id, title: t }).pipe(
+        Effect.catchCause((cause) => {
+          KiloSessionPrompt.clearAutoTitleMark(input.session.id, t)
+          return Effect.logError("failed to generate title", { error: Cause.squash(cause) })
+        }),
+      )
+      // kilocode_change end
     })
 
     const handleSubtask = Effect.fn("SessionPrompt.handleSubtask")(function* (input: {
@@ -755,7 +771,7 @@ export const layer = Layer.effect(
 
     const createUserMessage = Effect.fn("SessionPrompt.createUserMessage")(function* (input: PromptInput) {
       const agentName = input.agent
-      const ag = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo() // kilocode_change
+      const ag = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo()
       if (!ag) {
         const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
         const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
@@ -1095,7 +1111,7 @@ export const layer = Layer.effect(
 
               if (mime === "application/x-directory") {
                 const args = { filePath: filepath }
-                const exit = yield* execRead(args).pipe(Effect.exit) // kilocode_change - list only; child bytes need separate reads
+                const exit = yield* execRead(args).pipe(Effect.exit)
                 if (Exit.isFailure(exit)) {
                   const error = Cause.squash(exit.cause)
                   yield* Effect.logError("failed to read directory", { error, filepath })
@@ -1412,17 +1428,17 @@ export const layer = Layer.effect(
           // kilocode_change end
         }
 
-        // kilocode_change start — unblock tools waiting on user input so any in-flight
-        // handle.process can return. Adding a new user message is the signal that any
-        // pending tool prompt is superseded, so we dismiss even on the noReply path.
-        // Critically we never cancel the in-flight fiber here — that would abort the
-        // streamText call mid-tokens and cut off the assistant reply. The enqueue call
-        // below serializes this prompt after the current turn's current LLM step, and
-        // runLoop checks hasFollowup between steps to break out once it has been
-        // enqueued during the turn.
-        yield* Effect.promise(() => Suggestion.dismissAll(input.sessionID))
-        yield* question.dismissAll(input.sessionID)
-        if (input.noReply === true) return message
+        // kilocode_change start — register the queued follow-up before dismissing blockers.
+        // Otherwise the old turn can resume from a dismissed question and start another
+        // LLM step before hasFollowup observes the replacement prompt.
+        const dismiss = Effect.gen(function* () {
+          yield* Effect.promise(() => Suggestion.dismissAll(input.sessionID)).pipe(Effect.orDie)
+          yield* question.dismissAll(input.sessionID)
+        })
+        if (input.noReply === true) {
+          yield* dismiss
+          return message
+        }
         // Queue tails and runner fibers can resume outside the HTTP request's
         // ambient instance context; bridge both Effect refs and legacy ALS.
         const bridge = yield* EffectBridge.make()
@@ -1435,6 +1451,7 @@ export const layer = Layer.effect(
             ),
           ), // kilocode_change
           bridge.run(lastAssistant(input.sessionID)),
+          dismiss,
         )
         // kilocode_change end
       },
@@ -1707,28 +1724,6 @@ export const layer = Layer.effect(
           if (step === 1)
             yield* summary.summarize({ sessionID, messageID: lastUser.id }).pipe(Effect.ignore, Effect.forkIn(scope))
 
-          if (step > 1 && lastFinished) {
-            for (const m of msgs) {
-              // kilocode_change start - compare chronology, not generated IDs
-              const finishedBeforeMessage =
-                latest.finishedMessage && KiloSessionMessageOrder.compare(latest.finishedMessage, m) < 0
-              if (m.info.role !== "user" || !finishedBeforeMessage) continue
-              // kilocode_change end
-              for (const p of m.parts) {
-                if (p.type !== "text" || p.ignored || p.synthetic) continue
-                if (!p.text.trim()) continue
-                p.text = [
-                  "<system-reminder>",
-                  "The user sent the following message:",
-                  p.text,
-                  "",
-                  "Please address this message and continue with your tasks.",
-                  "</system-reminder>",
-                ].join("\n")
-              }
-            }
-          }
-
           yield* plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs })
 
           // kilocode_change start — ephemeral context injection + post-summary
@@ -1779,7 +1774,7 @@ export const layer = Layer.effect(
             sessionID,
             parentSessionID: session.parentID,
             system,
-            messages: [...modelMsgs, ...(isLastStep ? [{ role: "assistant" as const, content: MAX_STEPS }] : [])],
+            messages: [...modelMsgs, ...(isLastStep ? [{ role: "assistant" as const, content: MAX_STEPS_PROMPT }] : [])],
             tools,
             model,
             toolChoice: format.type === "json_schema" ? "required" : undefined,
@@ -1869,9 +1864,11 @@ export const layer = Layer.effect(
           // kilocode_change start — break out so a newer queued prompt can take over
           // instead of starting another LLM step for the now-superseded turn. The
           // current handle.process has fully drained (tokens + inline tool calls) by
-          // the time we get here, so nothing is cut off.
+          // the time we get here, so nothing is cut off. The close reason is
+          // "superseded", not "interrupted": this is a deliberate queue handoff,
+          // not a premature stop, so clients must not flash an interruption warning.
           if (KiloSessionPromptQueue.hasFollowup(sessionID)) {
-            closeReasons.set(sessionID, "interrupted")
+            closeReasons.set(sessionID, "superseded")
             return "break" as const
           }
           // kilocode_change end
@@ -2054,7 +2051,15 @@ export const layer = Layer.effect(
       }
 
       const shellMatches = ConfigMarkdown.shell(template)
-      if (shellMatches.length > 0) {
+      // kilocode_change start - skill templates run !`cmd`` only when trusted and the kill-switch is off,
+      // mirroring the skill tool's gate (the slash-command path is user-initiated, so it is not prompted).
+      const skillTemplate = cmd.source === "skill"
+      const skillShellBlocked = skillTemplate && (cmd.trusted !== true || flags.disableSkillShell)
+      if (shellMatches.length > 0 && skillShellBlocked) {
+        const note = cmd.trusted !== true ? SKILL_SHELL_UNTRUSTED : SKILL_SHELL_DISABLED
+        template = template.replace(bashRegex, () => note)
+      } else if (shellMatches.length > 0) {
+        // kilocode_change end
         const cfg = yield* config.get()
         const sh = Shell.preferred(cfg.shell)
         // kilocode_change start
@@ -2080,7 +2085,7 @@ export const layer = Layer.effect(
 
       yield* getModel(taskModel.providerID, taskModel.modelID, input.sessionID)
 
-      const agent = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo() // kilocode_change
+      const agent = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo()
       if (!agent) {
         const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
         const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
@@ -2210,11 +2215,9 @@ export const PromptInput = Schema.Struct({
     description:
       "@deprecated tools and permissions have been merged, you can set permissions on the session itself now",
   }),
-  // kilocode_change start - keep internal ephemeral tool controls out of the public prompt schema
   format: Schema.optional(SessionV1.Format),
   system: Schema.optional(Schema.String),
   variant: Schema.optional(Schema.String),
-  // kilocode_change end
   // kilocode_change start - managed product slow-snapshot policy
   snapshotInitialization: Schema.optional(Schema.Literal("wait")).annotate({
     description: "Wait silently if snapshot initialization is slow instead of asking the user.",

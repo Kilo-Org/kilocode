@@ -3,6 +3,7 @@ import { HttpApiBuilder, OpenApi } from "effect/unstable/httpapi"
 import { HttpClient, HttpMiddleware, HttpRouter, HttpServer, HttpServerResponse } from "effect/unstable/http"
 import * as Socket from "effect/unstable/socket/Socket"
 import { FSUtil } from "@opencode-ai/core/fs-util"
+import { EffectFlock } from "@opencode-ai/core/util/effect-flock" // kilocode_change
 import * as Observability from "@opencode-ai/core/observability"
 import { Account } from "@/account/account"
 import { Agent } from "@/agent/agent"
@@ -21,6 +22,7 @@ import { MCP } from "@/mcp"
 import { McpAuth } from "@/mcp/auth"
 import { Permission } from "@/permission"
 import { Plugin } from "@/plugin"
+import { PluginPtyEnvironment } from "@/plugin/pty-environment"
 import { InstanceStore } from "@/project/instance-store"
 import { Project } from "@/project/project"
 import { Vcs } from "@/project/vcs"
@@ -70,7 +72,7 @@ import { PtyTicket } from "@opencode-ai/core/pty/ticket"
 import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { lazy } from "@/util/lazy"
-import { CorsConfig, isAllowedCorsOrigin, type CorsOptions } from "@/server/cors"
+import { CorsConfig, isAllowedCorsOrigin, type CorsOptions } from "@opencode-ai/server/cors"
 import { serveUIEffect } from "@/server/shared/ui"
 import { ServerAuth } from "@/server/auth"
 import { InstanceHttpApi, RootHttpApi } from "./api"
@@ -188,6 +190,7 @@ const serverRoutes = HttpApiBuilder.layer(Api).pipe(
   // kilocode_change start - effective references must be ready before any V2 location consumer runs
   Layer.provide(handlers.pipe(Layer.provide(locationServiceMapLayer), Layer.provide(referenceReconcilerLayer))),
   // kilocode_change end
+  Layer.provide(PluginPtyEnvironment.layer),
   Layer.provide([serverHttpApiAuthLayer, v2SchemaErrorLayer]),
 )
 
@@ -306,6 +309,7 @@ export function createRoutes(
       KiloViewers.defaultLayer,
       SyncEvent.defaultLayer,
       // kilocode_change end
+      EffectFlock.defaultLayer, // kilocode_change
       HttpServer.layerServices,
     ]),
     Layer.provide(LayerNode.buildLayer(app)),
@@ -316,9 +320,15 @@ export function createRoutes(
 
 // kilocode_change start - keep listener routes local while application services come from AppRuntime
 export function createListenerRoutes(corsOptions?: CorsOptions) {
-  return Layer.mergeAll(rootApiRoutes, eventApiRoutes, ptyConnectApiRoutes, instanceRoutes, serverRoutes, docRoute, uiRoute).pipe(
-    provideKiloListenerRoutes(corsOptions),
-  )
+  return Layer.mergeAll(
+    rootApiRoutes,
+    eventApiRoutes,
+    ptyConnectApiRoutes,
+    instanceRoutes,
+    serverRoutes,
+    docRoute,
+    uiRoute,
+  ).pipe(provideKiloListenerRoutes(corsOptions))
 }
 // kilocode_change end
 

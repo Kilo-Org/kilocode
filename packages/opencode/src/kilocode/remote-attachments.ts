@@ -66,7 +66,6 @@ export namespace RemoteAttachments {
     sql: "text/plain",
   }
   export const BINARY_MIME = "application/octet-stream"
-  export const TEXT_PLAIN = "text/plain"
   // Hard cap on attachment bytes (5 MB + 1 byte so the helper aborts
   // strictly when the body exceeds the agreed ceiling).
   export const MAX_BYTES = 5 * 1024 * 1024 + 1

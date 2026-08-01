@@ -1056,7 +1056,7 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(resource("/icons/send_dark.svg").contains("fill=\"#0A7BD8\""))
     }
 
-    fun `test busy disables send button`() {
+    fun `test busy allows sending draft`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         panel.setReady(true)
         ApplicationManager.getApplication().invokeAndWait { panel.setText("hello") }
@@ -1065,8 +1065,38 @@ class PromptPanelTest : BasePlatformTestCase() {
 
         panel.setBusy(true)
 
+        assertTrue(panel.isSendEnabled)
+        assertTrue(panel.isStopEnabled)
+        assertNotSame(AllIcons.Actions.Suspend, panel.buttonForTest().icon)
+    }
+
+    fun `test busy attachment changes sync send and stop button state`() {
+        val item = PromptAttachment("a", "a.png", "image/png", "file:///tmp/a.png")
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        panel.setReady(true)
+        panel.setBusy(true)
+
+        assertSame(AllIcons.Actions.Suspend, panel.buttonForTest().icon)
+
+        panel.addAttachmentForTest(item)
+
+        assertTrue(panel.isSendEnabled)
+        assertTrue(panel.isStopEnabled)
+        assertNotSame(AllIcons.Actions.Suspend, panel.buttonForTest().icon)
+
+        attachmentRemoveButton(panel, item).doClick()
+
+        assertFalse(panel.isSendEnabled)
+        assertSame(AllIcons.Actions.Suspend, panel.buttonForTest().icon)
+
+        panel.addAttachmentForTest(item)
+        assertNotSame(AllIcons.Actions.Suspend, panel.buttonForTest().icon)
+
+        panel.clear()
+
         assertFalse(panel.isSendEnabled)
         assertTrue(panel.isStopEnabled)
+        assertSame(AllIcons.Actions.Suspend, panel.buttonForTest().icon)
     }
 
     fun `test auto approve button toggles and updates tooltip`() {
