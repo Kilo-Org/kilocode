@@ -1,5 +1,5 @@
 // kilocode_change - new file
-import { expect } from "bun:test"
+import { expect, test } from "bun:test"
 import { Cause, Effect, Exit, Layer } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Ripgrep } from "@opencode-ai/core/ripgrep"
@@ -10,6 +10,9 @@ import { SkillTool } from "../../src/tool/skill"
 import { ToolRegistry } from "@/tool/registry"
 import type { Tool } from "@/tool/tool"
 import { SessionID, MessageID } from "../../src/session/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
+import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { provideTmpdirInstance, TestInstance } from "../fixture/fixture"
 import { InstanceStore } from "@/project/instance-store"
 import { testEffect } from "../lib/effect"
@@ -17,13 +20,26 @@ import { testEffect } from "../lib/effect"
 const it = testEffect(Layer.mergeAll(Agent.defaultLayer, Skill.defaultLayer, CrossSpawnSpawner.defaultLayer))
 const toolIt = testEffect(Layer.mergeAll(ToolRegistry.defaultLayer, CrossSpawnSpawner.defaultLayer).pipe(Layer.provide(Ripgrep.defaultLayer)))
 
-function agent(skills?: string[]) {
+function agent(skills?: string[], rules?: PermissionV1.Rule[]) {
   return {
     name: "code",
     mode: "primary" as const,
-    permission: [],
+    permission: rules ?? [],
     options: {},
     ...(skills ? { skills } : {}),
+  }
+}
+
+function toolCtx(name: string): Tool.Context {
+  return {
+    sessionID: SessionID.make("ses_test"),
+    messageID: MessageID.make("msg_test"),
+    callID: "",
+    agent: name,
+    abort: AbortSignal.any([]),
+    messages: [],
+    metadata: () => Effect.void,
+    ask: () => Effect.void,
   }
 }
 
@@ -47,6 +63,30 @@ const USER_SKILLS = ["skill-a", "skill-b", "excluded-1", "frontend-design"]
 function userSkills(dir: string) {
   return Effect.all(USER_SKILLS.map((name) => Effect.promise(() => writeSkill(dir, name))))
 }
+
+test("allowed returns true when allow-list is unset or empty", () => {
+  expect(Skill.allowed(agent(), "skill-a")).toBe(true)
+  expect(Skill.allowed(agent([]), "skill-a")).toBe(true)
+})
+
+test("allowed rejects everything with a negation-only list", () => {
+  expect(Skill.allowed(agent(["!skill-a"]), "skill-a")).toBe(false)
+  expect(Skill.allowed(agent(["!skill-a"]), "skill-b")).toBe(false)
+})
+
+test("allowed last matching pattern wins", () => {
+  expect(Skill.allowed(agent(["!x", "*"]), "x")).toBe(true)
+  expect(Skill.allowed(agent(["*", "!x"]), "x")).toBe(false)
+})
+
+test("allowed rejects skills matching no pattern", () => {
+  expect(Skill.allowed(agent(["nomatch-*"]), "skill-a")).toBe(false)
+})
+
+test("allowed matching is case-sensitive", () => {
+  expect(Skill.allowed(agent(["skill-a"]), "SKILL-A")).toBe(false)
+  expect(Skill.allowed(agent(["SKILL-*"]), "skill-a")).toBe(false)
+})
 
 it.instance("all skills visible when agent has no skills allow-list", () =>
   Effect.gen(function* () {
@@ -141,22 +181,13 @@ toolIt.instance("skill tool rejects skills outside the agent allow-list", () =>
 
     const registry = yield* ToolRegistry.Service
     const tool = (yield* registry.tools({
-      providerID: "opencode" as never,
-      modelID: "gpt-5" as never,
+      providerID: ProviderV2.ID.make("opencode"),
+      modelID: ModelV2.ID.make("gpt-5"),
       agent: agent(["skill-a"]),
     })).find((item) => item.id === SkillTool.id)
     if (!tool) throw new Error("Skill tool not found")
 
-    const ctx: Tool.Context = {
-      sessionID: SessionID.make("ses_test"),
-      messageID: MessageID.make("msg_test"),
-      callID: "",
-      agent: "code",
-      abort: AbortSignal.any([]),
-      messages: [],
-      metadata: () => Effect.void,
-      ask: () => Effect.void,
-    }
+    const ctx = toolCtx("code")
 
     const allowed = yield* tool.execute({ name: "skill-a" }, ctx)
     expect(allowed.output).toContain(`<skill_content name="skill-a">`)
@@ -170,4 +201,103 @@ toolIt.instance("skill tool rejects skills outside the agent allow-list", () =>
     }
   }),
   { git: true, config: { agent: { code: { skills: ["skill-a"] } } } },
+)
+
+toolIt.instance("skill tool honors last-matching-pattern negation", () =>
+  Effect.gen(function* () {
+    const dir = (yield* TestInstance).directory
+    yield* userSkills(dir)
+
+    const registry = yield* ToolRegistry.Service
+    const tool = (yield* registry.tools({
+      providerID: ProviderV2.ID.make("opencode"),
+      modelID: ModelV2.ID.make("gpt-5"),
+      agent: agent(["skill-*", "!skill-b"]),
+    })).find((item) => item.id === SkillTool.id)
+    if (!tool) throw new Error("Skill tool not found")
+
+    const ctx = toolCtx("code")
+
+    const allowed = yield* tool.execute({ name: "skill-a" }, ctx)
+    expect(allowed.output).toContain(`<skill_content name="skill-a">`)
+
+    const denied = yield* tool.execute({ name: "skill-b" }, ctx).pipe(Effect.exit)
+    expect(Exit.isFailure(denied)).toBe(true)
+    if (Exit.isFailure(denied)) {
+      const error = Cause.squash(denied.cause)
+      expect(error).toBeInstanceOf(Error)
+      if (error instanceof Error) expect(error.message).toContain('Skill "skill-b" is not allowed')
+    }
+  }),
+  { git: true, config: { agent: { code: { skills: ["skill-*", "!skill-b"] } } } },
+)
+
+toolIt.instance("skill tool allows every skill with an empty allow-list", () =>
+  Effect.gen(function* () {
+    const dir = (yield* TestInstance).directory
+    yield* userSkills(dir)
+
+    const registry = yield* ToolRegistry.Service
+    const tool = (yield* registry.tools({
+      providerID: ProviderV2.ID.make("opencode"),
+      modelID: ModelV2.ID.make("gpt-5"),
+      agent: agent([]),
+    })).find((item) => item.id === SkillTool.id)
+    if (!tool) throw new Error("Skill tool not found")
+
+    const ctx = toolCtx("code")
+
+    for (const name of ["skill-a", "skill-b"]) {
+      const result = yield* tool.execute({ name }, ctx)
+      expect(result.output).toContain(`<skill_content name="${name}">`)
+    }
+  }),
+  { git: true, config: { agent: { code: { skills: [] } } } },
+)
+
+toolIt.instance("skill tool skips the gate for agents absent from the registry", () =>
+  Effect.gen(function* () {
+    const dir = (yield* TestInstance).directory
+    yield* userSkills(dir)
+
+    const registry = yield* ToolRegistry.Service
+    const tool = (yield* registry.tools({
+      providerID: ProviderV2.ID.make("opencode"),
+      modelID: ModelV2.ID.make("gpt-5"),
+      agent: agent(["skill-a"]),
+    })).find((item) => item.id === SkillTool.id)
+    if (!tool) throw new Error("Skill tool not found")
+
+    const result = yield* tool.execute({ name: "skill-b" }, toolCtx("ghost"))
+    expect(result.output).toContain(`<skill_content name="skill-b">`)
+  }),
+  { git: true, config: { agent: { code: { skills: ["skill-a"] } } } },
+)
+
+it.instance("permission.skill deny hides allow-listed skills", () =>
+  Effect.gen(function* () {
+    const dir = (yield* TestInstance).directory
+    yield* userSkills(dir)
+
+    const skill = yield* Skill.Service
+    const list = yield* skill.available(
+      agent(["skill-a", "skill-b"], [{ permission: "skill", pattern: "*", action: "deny" }]),
+    )
+    expect(list).toEqual([])
+  }),
+  { git: true },
+)
+
+it.instance("allow-list hides skills allowed by permission.skill", () =>
+  Effect.gen(function* () {
+    const dir = (yield* TestInstance).directory
+    yield* userSkills(dir)
+
+    const skill = yield* Skill.Service
+    const list = yield* skill.available(
+      agent(["skill-a"], [{ permission: "skill", pattern: "*", action: "allow" }]),
+    )
+    expect(list.map((item) => item.name).toSorted()).toEqual(["skill-a"])
+  }),
+  { git: true },
 )
