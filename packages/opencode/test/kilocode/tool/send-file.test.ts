@@ -179,24 +179,87 @@ describe("send_file tool", () => {
     }
   })
 
-  test("rejects missing file via KiloReadObject", async () => {
+  // kilocode_change start — send_file now authorizes missing files with external_directory + read
+  // before returning a structured fail() result, matching the read.ts security sequence.
+  test("authorizes missing file before returning fail result", async () => {
     const dir = await tmpdir()
     try {
-      await expect(runSendTool({ path: "nope.txt" }, dir)).rejects.toThrow()
+      const asks: any[] = []
+      const askCtx: Tool.Context = {
+        ...ctx,
+        ask: (req) =>
+          Effect.sync(() => {
+            asks.push(req)
+          }),
+      }
+      const layer = Layer.mergeAll(
+        Layer.succeed(InstanceRef, { directory: dir, worktree: dir, project: {} as any }),
+        Layer.succeed(Agent.Service, agents),
+        Layer.succeed(Truncate.Service, truncate),
+        Layer.succeed(FSUtil.Service, fsService),
+      )
+      const result = await Effect.runPromise(
+        Effect.gen(function* () {
+          const info = yield* SendFileTool
+          const tool = yield* info.init()
+          return yield* tool.execute({ path: "nope.txt" }, askCtx)
+        }).pipe(Effect.provide(layer)),
+      )
+      expect(result.title).toBe("Send file failed")
+      expect(result.output).toContain("File not found")
+      expect(result.output).toContain("nope.txt")
+      // Authorization must run before the failure: expect read permission.
+      // external_directory is only required for paths outside worktree —
+      // a missing file inside worktree only triggers read permission.
+      const read = asks.find((a: any) => a.permission === "read")
+      expect(read).toBeDefined()
+      expect(read?.always).toEqual(["*"])
     } finally {
       await fs.rm(dir, { recursive: true, force: true })
     }
   })
+  // kilocode_change end
 
-  test("rejects a directory via KiloReadObject", async () => {
+  // kilocode_change start — send_file now authorizes directories before returning a
+  // structured fail() result.
+  test("authorizes directory before returning fail result", async () => {
     const dir = await tmpdir()
     try {
       await fs.mkdir(path.join(dir, "mydir"))
-      await expect(runSendTool({ path: "mydir" }, dir)).rejects.toThrow()
+      const asks: any[] = []
+      const askCtx: Tool.Context = {
+        ...ctx,
+        ask: (req) =>
+          Effect.sync(() => {
+            asks.push(req)
+          }),
+      }
+      const layer = Layer.mergeAll(
+        Layer.succeed(InstanceRef, { directory: dir, worktree: dir, project: {} as any }),
+        Layer.succeed(Agent.Service, agents),
+        Layer.succeed(Truncate.Service, truncate),
+        Layer.succeed(FSUtil.Service, fsService),
+      )
+      const result = await Effect.runPromise(
+        Effect.gen(function* () {
+          const info = yield* SendFileTool
+          const tool = yield* info.init()
+          return yield* tool.execute({ path: "mydir" }, askCtx)
+        }).pipe(Effect.provide(layer)),
+      )
+      expect(result.title).toBe("Send file failed")
+      expect(result.output).toContain("is a directory")
+      // Authorization must run before the failure.
+      const ext = asks.find((a: any) => a.permission === "external_directory")
+      expect(ext).toBeUndefined() // inside worktree
+      const read = asks.find((a: any) => a.permission === "read")
+      expect(read).toBeDefined()
+      expect(read?.always).toEqual(["*"])
     } finally {
       await fs.rm(dir, { recursive: true, force: true })
     }
   })
+  // kilocode_change end
 
   test("rejects file larger than 4 MiB before reading", async () => {
     const dir = await tmpdir()
@@ -408,10 +471,25 @@ describe("send_file tool", () => {
     expect(ids).toContain("send_file")
   })
 })
+// kilocode_change start — fsService mock now includes stat + realPath for the
+// missing/directory authorization sequence that runs before KiloReadObject.file().
 const fsService = FSUtil.Service.of({
+  stat: (candidate: string) =>
+    Effect.tryPromise({
+      try: async () => {
+        const info = await fs.stat(candidate)
+        return { type: info.isFile() ? "File" : info.isDirectory() ? "Directory" : "Other" }
+      },
+      catch: (cause) => {
+        const err = new Error() as any
+        err.reason = { _tag: "NotFound" }
+        return err
+      },
+    }) as any,
   realPath: (candidate: string) =>
     Effect.try({
       try: () => realpathSync(candidate),
       catch: (cause) => cause,
     }),
 } as FSUtil.Interface)
+// kilocode_change end

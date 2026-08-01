@@ -49,10 +49,51 @@ export const SendFileTool = Tool.define<typeof Params, {}, FSUtil.Service, "send
         const requested = path.resolve(inst.directory, params.path)
         const basename = path.basename(requested)
 
-        // 1. Resolve via KiloReadObject.file (same auth as read.ts:299)
+        // kilocode_change start — authorize missing and directory paths with the same
+        // security sequence as read.ts before any file inspection via KiloReadObject.
+        // Route absent targets through a read-style authorized failure, and produce a
+        // structured fail() for directories. This prevents access-pattern leakage where
+        // missing vs directory vs external-directory errors differ before permission
+        // checks.
+        const info = yield* fs.stat(requested).pipe(Effect.catch(() => Effect.succeed(undefined)))
+        if (!info) {
+          const dir = path.dirname(requested)
+          const parent = yield* fs.realPath(dir).pipe(Effect.option)
+          if (parent._tag === "None") return fail(`File not found: ${basename}`)
+          yield* assertExternalDirectoryEffect(ctx, parent.value, { bypass: false, kind: "directory" })
+          yield* ctx.ask({
+            permission: "read",
+            patterns: [...new Set([requested, parent.value].map((item) => path.relative(inst.worktree, item)))],
+            always: ["*"],
+            metadata: {},
+          })
+          return fail(`File not found: ${basename}`)
+        }
+        if (info.type === "Directory") {
+          const resolved = yield* fs.realPath(requested)
+          const target = process.platform === "win32" ? FSUtil.normalizePath(resolved) : resolved
+          const explicit =
+            typeof ctx.extra?.["referenceRoot"] === "string"
+              ? yield* KiloReference.path(fs, ctx.extra["referenceRoot"], target).pipe(
+                  Effect.option,
+                  Effect.map((result) => result._tag === "Some" && result.value),
+                )
+              : false
+          yield* assertExternalDirectoryEffect(ctx, target, { bypass: explicit, kind: "directory" })
+          yield* ctx.ask({
+            permission: "read",
+            patterns: [...new Set([requested, target].map((item) => path.relative(inst.worktree, item)))],
+            always: ["*"],
+            metadata: {},
+          })
+          return fail(`Cannot send: ${basename} is a directory.`)
+        }
+        // kilocode_change end
+
+        // 1. Resolve via KiloReadObject.file (same authorization sequence as read.ts)
         const file = yield* KiloReadObject.file(requested)
 
-        // 2. Authorization — same pattern as read.ts:298-312
+        // 2. Authorization — same pattern as read.ts
         const explicit =
           typeof ctx.extra?.["referenceRoot"] === "string"
             ? yield* KiloReference.path(fs, ctx.extra["referenceRoot"], file.target).pipe(
@@ -77,7 +118,7 @@ export const SendFileTool = Tool.define<typeof Params, {}, FSUtil.Service, "send
           }
         }
 
-        // 4. Open and read with TOCTOU safety (same pattern as read.ts:313-336)
+        // 4. Open and read with TOCTOU safety (same pattern as read.ts)
         return yield* KiloReadObject.use(file, (bound) =>
           Effect.gen(function* () {
             const sample = yield* Effect.tryPromise({
@@ -113,7 +154,10 @@ export const SendFileTool = Tool.define<typeof Params, {}, FSUtil.Service, "send
             }
           }),
         )
-        }).pipe(Effect.orDie),
+        }).pipe(
+          Effect.catch((error) => Effect.succeed(fail(error instanceof Error ? error.message : String(error)))),
+          Effect.orDie,
+        ),
     }
   }),
 )
