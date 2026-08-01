@@ -1,5 +1,49 @@
 # @kilocode/cli
 
+## 7.4.18
+
+### Minor Changes
+
+- [#12704](https://github.com/Kilo-Org/kilocode/pull/12704) [`ace509d`](https://github.com/Kilo-Org/kilocode/commit/ace509dc60ac4e25aa81fbd6e6f569d0f47367a6) - Remote CLI session lifecycle: create_session accepts optional agent, model, and orgId (org claim rides session metadata); CLI adopts backend renames via system session.renamed and POSTs local title changes (generation-aware) to the ingest title route so auto-titles and explicit renames stay in sync.
+
+- [#12604](https://github.com/Kilo-Org/kilocode/pull/12604) [`2d784a0`](https://github.com/Kilo-Org/kilocode/commit/2d784a0e3162818afdb89b2c2352e45fdaaa8c6d) Thanks [@bagatao-anaconda](https://github.com/bagatao-anaconda)! - Support executing shell commands embedded in skill files. Commands written as `` !`command` `` in a SKILL.md run and their output is inlined into the skill. Only trusted skills can run commands and `KILO_DISABLE_SKILL_SHELL` disables the behavior; when the model loads a skill, the commands are shown in a single up-front approval before running.
+
+### Patch Changes
+
+- [#12682](https://github.com/Kilo-Org/kilocode/pull/12682) [`ed9e132`](https://github.com/Kilo-Org/kilocode/commit/ed9e132bd89557af41df19ea6b82936d098f0140) - Reduce CLI startup time by deferring Kilo-specific module loading until commands actually run, caching the telemetry profile lookup across invocations, and uploading telemetry in the background so process exit is not delayed by a network round trip
+
+- [#12687](https://github.com/Kilo-Org/kilocode/pull/12687) [`624b589`](https://github.com/Kilo-Org/kilocode/commit/624b5890f10bc0f60c50a191cd7bc82fac9574d0) - Fix settings snapping back to their previous value after being cleared to "Not set" when multiple config files exist (e.g. both `kilo.json` and `kilo.jsonc`)
+
+- [#12701](https://github.com/Kilo-Org/kilocode/pull/12701) [`89caab9`](https://github.com/Kilo-Org/kilocode/commit/89caab9e0cf65b33c73542e9eaae986583952563) - Mark Kilo Console as deprecated and direct users to supported session and settings workflows.
+
+- [#12369](https://github.com/Kilo-Org/kilocode/pull/12369) [`44f1373`](https://github.com/Kilo-Org/kilocode/commit/44f13738a30668483a2cc5c22c6ba82a718cdb90) - Allow users to enable web search for models from all providers through Kilo configuration, VS Code settings, and Kilo Console settings.
+
+- [#12647](https://github.com/Kilo-Org/kilocode/pull/12647) [`5ad8b2f`](https://github.com/Kilo-Org/kilocode/commit/5ad8b2f1261a920354c1c79371300cca7ecc3b66) - Keep RC installations up to date when a newer stable CLI release is published.
+
+- [#12698](https://github.com/Kilo-Org/kilocode/pull/12698) [`1d1630b`](https://github.com/Kilo-Org/kilocode/commit/1d1630b3462caa16716af608deaff14ea0e155a5) - Report Bash commands terminated by a signal with the conventional 128 + signum exit code (e.g. 139 for SIGSEGV) instead of hanging until the command timeout.
+
+- [#12605](https://github.com/Kilo-Org/kilocode/pull/12605) [`d579774`](https://github.com/Kilo-Org/kilocode/commit/d5797749608bd2824b24774a04fe7fadfd47b6d6) - Non-interactive `kilo run` no longer reports success for runs that did not complete. A plain
+  headless run (neither `--auto` nor `--dangerously-skip-permissions`) in which the CLI
+  auto-rejected at least one permission ask now exits 1 with a stderr diagnostic naming the cause,
+  and a run whose session errors mid-stream now prints that diagnostic to stderr under
+  `--format json` as well (previously the JSON branch swallowed it). Runs that complete their turn
+  with no auto-rejected permission still exit 0. Under `--format json` the auto-reject path adds a
+  new `error` event to the stream; existing event shapes are unchanged. The same exit-1 rule applies
+  to a plain non-interactive `--attach` run that auto-rejects an ask (that run was equally crippled);
+  interactive mode is untouched.
+
+- [#12727](https://github.com/Kilo-Org/kilocode/pull/12727) [`1a34037`](https://github.com/Kilo-Org/kilocode/commit/1a340371f4038a6dcb6e98389a6e2c20755de6bd) - Allow clearing a nested project setting when no project config file exists yet.
+
+- [#12700](https://github.com/Kilo-Org/kilocode/pull/12700) [`f695425`](https://github.com/Kilo-Org/kilocode/commit/f6954253284c0eccb72f2011b11dbb2136511a82) - Show the provider's actual error message when an OpenAI or Azure Responses API stream fails (for example an upstream rate limit) instead of a generic retry notice.
+
+- [#12684](https://github.com/Kilo-Org/kilocode/pull/12684) [`d7f8da9`](https://github.com/Kilo-Org/kilocode/commit/d7f8da917eeeead9e26234edaf45eb419ad27fce) - Include the underlying reason in search execution failures instead of showing a bare "ripgrep execution failed" message.
+
+- [#12723](https://github.com/Kilo-Org/kilocode/pull/12723) [`a1ad65e`](https://github.com/Kilo-Org/kilocode/commit/a1ad65e5229156bfa7d404fcbaa98ad70462197f) - Retry transient locked-file errors (EPERM/EACCES/EBUSY) on Windows when atomically saving config and other files. Background plugin installs and Windows Defender/indexer can briefly hold the temp file during the rename step, which previously surfaced as a 500 error. A short backoff now retries the rename so config writes succeed without surfacing the contention.
+
+- Updated dependencies [[`ed9e132`](https://github.com/Kilo-Org/kilocode/commit/ed9e132bd89557af41df19ea6b82936d098f0140), [`0d923d0`](https://github.com/Kilo-Org/kilocode/commit/0d923d0ef56d42cd7eb6d1e2d5fc58c7b508a80b), [`304c75e`](https://github.com/Kilo-Org/kilocode/commit/304c75e600cfbb0ec52b9c11e60b5782e4af5a37)]:
+  - @kilocode/kilo-telemetry@7.4.18
+  - @kilocode/kilo-memory@7.4.18
+
 ## 7.4.17
 
 ### Patch Changes

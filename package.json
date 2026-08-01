@@ -19,6 +19,8 @@
     "sso": "aws sso login --sso-session=opencode --no-browser",
     "test": "echo 'do not run tests from root' && exit 1",
     "extension": "bun --cwd packages/kilo-vscode script/launch.ts",
+    "extension:isolated": "bun --cwd packages/kilo-vscode script/launch.ts --isolated",
+    "extension:isolated:clean": "bun --cwd packages/kilo-vscode script/launch.ts --isolated --clean",
     "dev-setup": "bun run --cwd packages/opencode --conditions=browser src/index.ts dev-setup"
   },
   "workspaces": {
@@ -171,6 +173,6 @@
     "pacote@21.5.1": "patches/pacote@21.5.1.patch",
     "mammoth@1.12.0": "patches/mammoth@1.12.0.patch"
   },
-  "version": "7.4.17",
+  "version": "7.4.18",
   "peerDependencies": {}
 }

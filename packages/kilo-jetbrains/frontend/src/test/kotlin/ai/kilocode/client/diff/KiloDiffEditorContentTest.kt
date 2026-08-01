@@ -3,6 +3,9 @@ package ai.kilocode.client.diff
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.DiffStatBadge
 import ai.kilocode.rpc.dto.DiffFileDto
+import com.intellij.diff.contents.DiffContent
+import com.intellij.diff.contents.DocumentContent
+import com.intellij.diff.requests.SimpleDiffRequest
 import com.intellij.openapi.actionSystem.ActionToolbar
 import com.intellij.openapi.actionSystem.Separator
 import com.intellij.openapi.Disposable
@@ -124,6 +127,59 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test folder badge shows only while collapsed`() {
+        val parent = Disposer.newDisposable()
+        try {
+            val view = view(files(), parent)
+            val tree = components(view).filterIsInstance<Tree>().single()
+            val folder = folder(tree)
+
+            tree.expandPath(TreePath(folder.path))
+            assertFalse("expanded folder hides its rolled-up badge", rowBadge(renderer(tree, folder)).isVisible)
+
+            tree.collapsePath(TreePath(folder.path))
+            assertTrue("collapsed folder shows its rolled-up badge", rowBadge(renderer(tree, folder)).isVisible)
+        } finally {
+            Disposer.dispose(parent)
+        }
+    }
+
+    fun `test folder row width tracks its badge visibility`() {
+        val parent = Disposer.newDisposable()
+        try {
+            val view = view(files(), parent)
+            val tree = components(view).filterIsInstance<Tree>().single()
+            val path = TreePath(folder(tree).path)
+
+            tree.expandPath(path)
+            val expanded = tree.getPathBounds(path)!!.width
+
+            // Collapsing re-shows the rolled-up badge, so the folder row's measured width must grow.
+            // This expansion-dependent width is why buildFileTree invalidates JTree's layout cache on
+            // toggle: a displayed tree caches path bounds across expand/collapse and would otherwise
+            // paint the row at its stale narrower width, squeezing the name.
+            tree.collapsePath(path)
+            val collapsed = tree.getPathBounds(path)!!.width
+
+            assertTrue("collapsed folder row must be wider to fit its badge", collapsed > expanded)
+        } finally {
+            Disposer.dispose(parent)
+        }
+    }
+
+    fun `test leaf badge stays visible while its folder is expanded`() {
+        val parent = Disposer.newDisposable()
+        try {
+            val view = view(files(), parent)
+            val tree = components(view).filterIsInstance<Tree>().single()
+            tree.expandPath(TreePath(folder(tree).path))
+
+            assertTrue(rowBadge(renderer(tree, leaf(tree))).isVisible)
+        } finally {
+            Disposer.dispose(parent)
+        }
+    }
+
     fun `test row badge hidden when node has no changes`() {
         val parent = Disposer.newDisposable()
         try {
@@ -216,6 +272,74 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
         val request = diffRequest(project, file("src/App.kt", 1, 1), "feature/test")
 
         assertEquals("src/App.kt (feature/test)", request.title)
+    }
+
+    fun `test diff request shows placeholder for blank added patch`() {
+        val request = diffRequest(project, file("src/New.kt", 1, 0, patch = "", status = "added")) as SimpleDiffRequest
+        val contents = request.contents.map(::content)
+
+        assertEquals("", contents[0])
+        assertEquals(KiloBundle.message("diff.editor.patch.unavailable"), contents[1])
+    }
+
+    fun `test diff request reconstructs added patch content`() {
+        val patch = "--- src/New.kt\n+++ src/New.kt\n@@ -0,0 +1,2 @@\n+hello\n+world"
+        val request = diffRequest(project, file("src/New.kt", 2, 0, patch = patch, status = "added")) as SimpleDiffRequest
+        val contents = request.contents.map(::content)
+
+        assertEquals("", contents[0])
+        assertEquals("hello\nworld", contents[1])
+    }
+
+    fun `test tree displays absolute files relative to workspace`() {
+        val parent = Disposer.newDisposable()
+        try {
+            val dir = project.basePath.orEmpty()
+            val view = view(listOf(file("$dir/pkg/ui/list/ActiveListRenderer.kt", 4, 1)), parent, dir)
+            val tree = components(view).filterIsInstance<Tree>().single()
+            val root = tree.model.root as DefaultMutableTreeNode
+            val top = root.getChildAt(0) as DefaultMutableTreeNode
+            val leaf = top.getChildAt(0) as DefaultMutableTreeNode
+
+            assertEquals("pkg/ui/list", text(tree, top))
+            assertEquals("ActiveListRenderer.kt", text(tree, leaf))
+            assertEquals(2, tree.rowCount)
+        } finally {
+            Disposer.dispose(parent)
+        }
+    }
+
+    fun `test tree compacts single-child directory chains`() {
+        val parent = Disposer.newDisposable()
+        try {
+            val view = view(listOf(file("a/b/c/One.kt", 1, 0), file("a/b/c/Two.kt", 2, 0)), parent)
+            val tree = components(view).filterIsInstance<Tree>().single()
+            val root = tree.model.root as DefaultMutableTreeNode
+            val top = root.getChildAt(0) as DefaultMutableTreeNode
+
+            assertEquals("a/b/c", text(tree, top))
+            assertEquals("One.kt", text(tree, top.getChildAt(0) as DefaultMutableTreeNode))
+            assertEquals("Two.kt", text(tree, top.getChildAt(1) as DefaultMutableTreeNode))
+            assertEquals(3, tree.rowCount)
+        } finally {
+            Disposer.dispose(parent)
+        }
+    }
+
+    fun `test tree stops compacting at branch`() {
+        val parent = Disposer.newDisposable()
+        try {
+            val view = view(listOf(file("a/b/c/One.kt", 1, 0), file("a/x/Two.kt", 2, 0)), parent)
+            val tree = components(view).filterIsInstance<Tree>().single()
+            val root = tree.model.root as DefaultMutableTreeNode
+            val a = root.getChildAt(0) as DefaultMutableTreeNode
+
+            assertEquals("a", text(tree, a))
+            assertEquals("b/c", text(tree, a.getChildAt(0) as DefaultMutableTreeNode))
+            assertEquals("x", text(tree, a.getChildAt(1) as DefaultMutableTreeNode))
+        } finally {
+            Disposer.dispose(parent)
+        }
     }
 
     fun `test diff params includes inline token`() {
@@ -371,11 +495,13 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
             false,
         )
 
-    private fun leaf(tree: Tree): DefaultMutableTreeNode {
+    private fun folder(tree: Tree): DefaultMutableTreeNode {
         val root = tree.model.root as DefaultMutableTreeNode
-        val src = root.getChildAt(0) as DefaultMutableTreeNode
-        return src.getChildAt(0) as DefaultMutableTreeNode
+        return root.getChildAt(0) as DefaultMutableTreeNode
     }
+
+    private fun leaf(tree: Tree): DefaultMutableTreeNode =
+        folder(tree).getChildAt(0) as DefaultMutableTreeNode
 
     private fun rowBadge(row: Component): DiffStatBadge = components(row).filterIsInstance<DiffStatBadge>().single()
 
@@ -383,7 +509,18 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
         .filterIsInstance<EditorNotificationPanel>()
         .single()
 
-    private fun view(files: List<DiffFileDto>, parent: Disposable): Component = editor(files, parent).component
+    private fun text(tree: Tree, node: DefaultMutableTreeNode): String {
+        val row = renderer(tree, node)
+        val text = components(row).filterIsInstance<SimpleColoredComponent>().single()
+        val iter = text.iterator()
+        if (!iter.hasNext()) return ""
+        iter.next()
+        return iter.fragment
+    }
+
+    private fun content(content: DiffContent): String = (content as? DocumentContent)?.document?.text.orEmpty()
+
+    private fun view(files: List<DiffFileDto>, parent: Disposable, dir: String = project.basePath.orEmpty()): Component = editor(files, parent, dir).component
 
     private fun editor(
         files: List<DiffFileDto>,

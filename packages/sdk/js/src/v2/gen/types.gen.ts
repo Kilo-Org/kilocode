@@ -19,6 +19,7 @@ export type Event =
   | EventInteractiveTerminalData
   | EventInteractiveTerminalDeleted
   | EventSandboxStatusChanged
+  | EventLspClientDiagnostics
   | EventSuggestionShown
   | EventSuggestionAccepted
   | EventSuggestionDismissed
@@ -28,12 +29,12 @@ export type Event =
   | EventKilocodeNotebookRequested
   | EventKilocodeNotebookCancelled
   | EventKiloSessionsRemoteStatusChanged
-  | EventLspClientDiagnostics
   | EventMemoryStatus1
   | EventMemoryUpdated1
   | EventMemoryError1
   | EventIndexingStatus
   | EventIndexingWarning
+  | EventModelsDevRefreshed
   | EventServerConnected
   | EventGlobalDisposed
   | EventGlobalConfigUpdated
@@ -90,16 +91,13 @@ export type Event =
   | EventMessagePartDelta
   | EventSessionDiff
   | EventSessionError
-  | EventModelsDevRefreshed
   | EventInstallationUpdated
   | EventInstallationUpdateAvailable
-  | EventPermissionAsked
-  | EventPermissionReplied
-  | EventReferenceUpdated
+  | EventFileEdited
   | EventPermissionV2Asked
   | EventPermissionV2Replied
+  | EventReferenceUpdated
   | EventProjectDirectoriesUpdated
-  | EventFileEdited
   | EventFileWatcherUpdated
   | EventPtyCreated
   | EventPtyUpdated
@@ -109,13 +107,15 @@ export type Event =
   | EventQuestionV2Replied
   | EventQuestionV2Rejected
   | EventTodoUpdated
+  | EventLspUpdated
+  | EventPermissionAsked
+  | EventPermissionReplied
   | EventSessionStatus
   | EventSessionIdle
   | EventSessionCompacted
   | EventCommandExecuted
   | EventProjectUpdated
   | EventVcsBranchUpdated
-  | EventLspUpdated
   | EventWorkspaceReady
   | EventWorkspaceFailed
   | EventWorkspaceStatus
@@ -1072,6 +1072,7 @@ export type GlobalEvent = {
     | EventInteractiveTerminalData
     | EventInteractiveTerminalDeleted
     | EventSandboxStatusChanged
+    | EventLspClientDiagnostics
     | EventSuggestionShown
     | EventSuggestionAccepted
     | EventSuggestionDismissed
@@ -1081,12 +1082,12 @@ export type GlobalEvent = {
     | EventKilocodeNotebookRequested
     | EventKilocodeNotebookCancelled
     | EventKiloSessionsRemoteStatusChanged
-    | EventLspClientDiagnostics
     | EventMemoryStatus
     | EventMemoryUpdated
     | EventMemoryError
     | EventIndexingStatus
     | EventIndexingWarning
+    | EventModelsDevRefreshed
     | EventServerConnected
     | EventGlobalDisposed
     | EventGlobalConfigUpdated
@@ -1143,16 +1144,13 @@ export type GlobalEvent = {
     | EventMessagePartDelta
     | EventSessionDiff
     | EventSessionError
-    | EventModelsDevRefreshed
     | EventInstallationUpdated
     | EventInstallationUpdateAvailable
-    | EventPermissionAsked
-    | EventPermissionReplied
-    | EventReferenceUpdated
+    | EventFileEdited
     | EventPermissionV2Asked
     | EventPermissionV2Replied
+    | EventReferenceUpdated
     | EventProjectDirectoriesUpdated
-    | EventFileEdited
     | EventFileWatcherUpdated
     | EventPtyCreated
     | EventPtyUpdated
@@ -1162,13 +1160,15 @@ export type GlobalEvent = {
     | EventQuestionV2Replied
     | EventQuestionV2Rejected
     | EventTodoUpdated
+    | EventLspUpdated
+    | EventPermissionAsked
+    | EventPermissionReplied
     | EventSessionStatus
     | EventSessionIdle
     | EventSessionCompacted
     | EventCommandExecuted
     | EventProjectUpdated
     | EventVcsBranchUpdated
-    | EventLspUpdated
     | EventWorkspaceReady
     | EventWorkspaceFailed
     | EventWorkspaceStatus
@@ -3708,6 +3708,15 @@ export type EventSandboxStatusChanged = {
   }
 }
 
+export type EventLspClientDiagnostics = {
+  id: string
+  type: "lsp.client.diagnostics"
+  properties: {
+    serverID: string
+    path: string
+  }
+}
+
 export type EventSuggestionShown = {
   id: string
   type: "suggestion.shown"
@@ -3804,15 +3813,6 @@ export type EventKiloSessionsRemoteStatusChanged = {
   properties: {
     enabled: boolean
     connected: boolean
-  }
-}
-
-export type EventLspClientDiagnostics = {
-  id: string
-  type: "lsp.client.diagnostics"
-  properties: {
-    serverID: string
-    path: string
   }
 }
 
@@ -3939,6 +3939,14 @@ export type EventIndexingWarning = {
   id: string
   type: "indexing.warning"
   properties: IndexingWarning
+}
+
+export type EventModelsDevRefreshed = {
+  id: string
+  type: "models-dev.refreshed"
+  properties: {
+    [key: string]: unknown
+  }
 }
 
 export type EventServerConnected = {
@@ -4622,14 +4630,6 @@ export type EventSessionError = {
   }
 }
 
-export type EventModelsDevRefreshed = {
-  id: string
-  type: "models-dev.refreshed"
-  properties: {
-    [key: string]: unknown
-  }
-}
-
 export type EventInstallationUpdated = {
   id: string
   type: "installation.updated"
@@ -4646,40 +4646,11 @@ export type EventInstallationUpdateAvailable = {
   }
 }
 
-export type EventPermissionAsked = {
+export type EventFileEdited = {
   id: string
-  type: "permission.asked"
+  type: "file.edited"
   properties: {
-    id: string
-    sessionID: string
-    permission: string
-    patterns: Array<string>
-    metadata: {
-      [key: string]: unknown
-    }
-    always: Array<string>
-    tool?: {
-      messageID: string
-      callID: string
-    }
-  }
-}
-
-export type EventPermissionReplied = {
-  id: string
-  type: "permission.replied"
-  properties: {
-    sessionID: string
-    requestID: string
-    reply: "once" | "always" | "reject"
-  }
-}
-
-export type EventReferenceUpdated = {
-  id: string
-  type: "reference.updated"
-  properties: {
-    [key: string]: unknown
+    file: string
   }
 }
 
@@ -4717,19 +4688,19 @@ export type EventPermissionV2Replied = {
   }
 }
 
+export type EventReferenceUpdated = {
+  id: string
+  type: "reference.updated"
+  properties: {
+    [key: string]: unknown
+  }
+}
+
 export type EventProjectDirectoriesUpdated = {
   id: string
   type: "project.directories.updated"
   properties: {
     projectID: string
-  }
-}
-
-export type EventFileEdited = {
-  id: string
-  type: "file.edited"
-  properties: {
-    file: string
   }
 }
 
@@ -4852,6 +4823,43 @@ export type EventTodoUpdated = {
   }
 }
 
+export type EventLspUpdated = {
+  id: string
+  type: "lsp.updated"
+  properties: {
+    [key: string]: unknown
+  }
+}
+
+export type EventPermissionAsked = {
+  id: string
+  type: "permission.asked"
+  properties: {
+    id: string
+    sessionID: string
+    permission: string
+    patterns: Array<string>
+    metadata: {
+      [key: string]: unknown
+    }
+    always: Array<string>
+    tool?: {
+      messageID: string
+      callID: string
+    }
+  }
+}
+
+export type EventPermissionReplied = {
+  id: string
+  type: "permission.replied"
+  properties: {
+    sessionID: string
+    requestID: string
+    reply: "once" | "always" | "reject"
+  }
+}
+
 export type EventSessionStatus = {
   id: string
   type: "session.status"
@@ -4921,14 +4929,6 @@ export type EventVcsBranchUpdated = {
   type: "vcs.branch.updated"
   properties: {
     branch?: string
-  }
-}
-
-export type EventLspUpdated = {
-  id: string
-  type: "lsp.updated"
-  properties: {
-    [key: string]: unknown
   }
 }
 
@@ -15994,6 +15994,7 @@ export type V2PtyConnectData = {
     "location[workspace]"?: string
     cursor?: string
     ticket?: string
+    replayExited?: string
   }
   url: "/api/pty/{ptyID}/connect"
 }

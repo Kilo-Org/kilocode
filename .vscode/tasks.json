@@ -95,6 +95,29 @@
       "problemMatcher": ["$tsc", "$eslint-stylish"]
     },
     {
+      "label": "VSCode - Clear Isolated State",
+      "type": "process",
+      "command": "bun",
+      "args": [
+        "-e",
+        "const fs = require(\"node:fs\"); const dir = process.argv[1]; if (!dir) { console.error(\"Isolated state path argument is required\"); process.exit(1); } fs.rmSync(dir, { recursive: true, force: true }); console.log(\"Cleared \" + dir)",
+        "${workspaceFolder}/.kilo-dev"
+      ],
+      "presentation": {
+        "reveal": "always"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "VSCode - Compile (Clean Isolated)",
+      "dependsOn": ["VSCode - Clear Isolated State", "VSCode - Compile"],
+      "dependsOrder": "sequence",
+      "problemMatcher": []
+    },
+    {
       "label": "VSCode - Tests",
       "type": "shell",
       "command": "bun",

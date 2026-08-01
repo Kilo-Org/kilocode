@@ -35,6 +35,13 @@ import javax.swing.ScrollPaneConstants
 interface EditBody {
     var parent: Disposable?
 
+    /**
+     * When set and the diff exceeds [SessionUiStyle.View.Tool.DIFF_MAX_LINES], the body renders an
+     * "open in a diff tab" placeholder instead of building embedded editors, and invokes this to open
+     * the full diff in a background-backed tab. Null leaves the body uncapped (non-diff bodies).
+     */
+    var overflow: (() -> Unit)?
+
     @RequiresEdt fun mount(tool: Tool): JComponent
     @RequiresEdt fun created(): Boolean
     @RequiresEdt fun panel(): JComponent?
@@ -58,6 +65,7 @@ class PatchBody(
     private val opts: MdCodeBlockOptions = DIFF_OPTS,
 ) : EditBody {
     override var parent: Disposable? = null
+    override var overflow: (() -> Unit)? = null
 
     private var root: Stack? = null
     private var owner: Disposable? = null
@@ -144,19 +152,26 @@ class PatchBody(
         val disposable = Disposer.newDisposable("Patch body")
         Disposer.register(parent, disposable)
         owner = disposable
-        files.filter { it.patch.isNotBlank() }.forEachIndexed { index, file ->
-            if (index > 0) panel.gap(JBUI.scale(SessionUiStyle.View.Code.BLOCK_GAP))
-            panel.next(header(file))
-            panel.gap(UiStyle.Gap.sm())
-            val md = MdViewFactory.create(style, selection, MdCodeBlockFactory.default(opts))
-            Disposer.register(disposable, md)
-            applyMd(md)
-            md.set(patchMarkdown(file.patch))
-            val nums = DiffLineNumbers.rows(file.patch)
-            rows.add(nums)
-            installGutter(md, nums)
-            views.add(md)
-            panel.next(md.component)
+        val open = overflow
+        if (open != null && patchLineCount(files) > SessionUiStyle.View.Tool.DIFF_MAX_LINES) {
+            // Building one editor per file for a very large aggregate diff walks every line on the EDT
+            // (gutter reinit) and freezes; defer to the diff tab, which streams diffs off the EDT.
+            panel.next(diffOverflowPanel(open))
+        } else {
+            files.filter { it.patch.isNotBlank() }.forEachIndexed { index, file ->
+                if (index > 0) panel.gap(JBUI.scale(SessionUiStyle.View.Code.BLOCK_GAP))
+                panel.next(header(file))
+                panel.gap(UiStyle.Gap.sm())
+                val md = MdViewFactory.create(style, selection, MdCodeBlockFactory.default(opts))
+                Disposer.register(disposable, md)
+                applyMd(md)
+                md.set(patchMarkdown(file.patch))
+                val nums = DiffLineNumbers.rows(file.patch)
+                rows.add(nums)
+                installGutter(md, nums)
+                views.add(md)
+                panel.next(md.component)
+            }
         }
         signature = signatureOf(files)
         panel.revalidate()
