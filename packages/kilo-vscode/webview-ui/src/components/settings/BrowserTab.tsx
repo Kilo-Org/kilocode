@@ -1,10 +1,8 @@
-import { Component, Show, createSignal, onCleanup, onMount } from "solid-js"
+import { Component, Show } from "solid-js"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { Card } from "@kilocode/kilo-ui/card"
-import { useVSCode } from "../../context/vscode"
-import { useLanguage } from "../../context/language"
 import { useConfig } from "../../context/config"
-import type { BrowserSettings } from "../../types/messages"
+import { useLanguage } from "../../context/language"
 import SettingsRow from "./SettingsRow"
 
 const Header: Component<{ title: string }> = (props) => (
@@ -24,31 +22,24 @@ const Header: Component<{ title: string }> = (props) => (
 )
 
 const BrowserTab: Component = () => {
-  const { postMessage, onMessage } = useVSCode()
+  const { config, globalConfig, projectConfig, updateConfig, updateGlobalConfig } = useConfig()
   const { t } = useLanguage()
-  const { globalConfig, projectConfig, updateGlobalConfig } = useConfig()
+  const enabled = () => config().experimental?.world_browser !== false
+  const headless = () => config().world?.browser?.headless ?? true
+  const chrome = () => config().world?.browser?.use_system_chrome ?? false
 
-  const [settings, setSettings] = createSignal<BrowserSettings>({
-    enabled: false,
-    useSystemChrome: true,
-    headless: false,
-  })
+  const setEnabled = (value: boolean) => {
+    updateConfig({ experimental: { ...config().experimental, world_browser: value } })
+  }
 
-  onMount(() => {
-    postMessage({ type: "requestBrowserSettings" })
-  })
+  const setHeadless = (value: boolean) => {
+    updateConfig({ world: { ...config().world, browser: { ...config().world?.browser, headless: value } } })
+  }
 
-  // Subscribe outside onMount to catch early pushes (per AGENTS.md pattern)
-  const unsubscribe = onMessage((msg) => {
-    if (msg.type === "browserSettingsLoaded") {
-      setSettings(msg.settings)
-    }
-  })
-  onCleanup(unsubscribe)
-
-  const update = (key: keyof BrowserSettings, value: boolean) => {
-    setSettings((prev) => ({ ...prev, [key]: value }))
-    postMessage({ type: "updateSetting", key: `browserAutomation.${key}`, value })
+  const setChrome = (value: boolean) => {
+    updateConfig({
+      world: { ...config().world, browser: { ...config().world?.browser, use_system_chrome: value } },
+    })
   }
 
   const updateWebsearch = (checked: boolean) => {
@@ -120,42 +111,31 @@ const BrowserTab: Component = () => {
           {t("settings.browser.description")}
         </p>
         <Card>
-          {/* Enable toggle */}
           <SettingsRow
             title={t("settings.browser.enable.title")}
             description={t("settings.browser.enable.description")}
           >
-            <Switch checked={settings().enabled} onChange={(checked: boolean) => update("enabled", checked)} hideLabel>
+            <Switch checked={enabled()} onChange={setEnabled} hideLabel>
               {t("settings.browser.enable.title")}
             </Switch>
           </SettingsRow>
 
-          {/* Use System Chrome */}
-          <SettingsRow
-            title={t("settings.browser.systemChrome.title")}
-            description={t("settings.browser.systemChrome.description")}
-          >
-            <Switch
-              checked={settings().useSystemChrome}
-              onChange={(checked: boolean) => update("useSystemChrome", checked)}
-              hideLabel
-            >
-              {t("settings.browser.systemChrome.title")}
-            </Switch>
-          </SettingsRow>
-
-          {/* Headless mode */}
           <SettingsRow
             title={t("settings.browser.headless.title")}
             description={t("settings.browser.headless.description")}
+          >
+            <Switch checked={headless()} onChange={setHeadless} hideLabel>
+              {t("settings.browser.headless.title")}
+            </Switch>
+          </SettingsRow>
+
+          <SettingsRow
+            title={t("settings.browser.systemChrome.title")}
+            description={t("settings.browser.systemChrome.description")}
             last
           >
-            <Switch
-              checked={settings().headless}
-              onChange={(checked: boolean) => update("headless", checked)}
-              hideLabel
-            >
-              {t("settings.browser.headless.title")}
+            <Switch checked={chrome()} onChange={setChrome} hideLabel>
+              {t("settings.browser.systemChrome.title")}
             </Switch>
           </SettingsRow>
         </Card>

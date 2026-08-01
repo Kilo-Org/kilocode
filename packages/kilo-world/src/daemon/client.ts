@@ -1,4 +1,5 @@
 import { closeSync, constants, existsSync, openSync, readFileSync } from "node:fs"
+import { createHash } from "node:crypto"
 import { spawn, type ChildProcess } from "node:child_process"
 import { fileURLToPath } from "node:url"
 import { dirname, join } from "node:path"
@@ -12,9 +13,14 @@ import { BUILD_TIMEOUT_MS, ENTRY, fingerprint, fresh, MANIFEST } from "./build"
 const SCRIPT_HEAD_TIMEOUT_MS = 30_000
 const BUILD_OUTPUT_MAX = 16_384
 const BUILD_FAILURE_COOLDOWN_MS = 30_000
+const PING_TIMEOUT_MS = 2000
 const starts = new Map<string, Promise<void>>()
+const configs = new Map<string, Promise<void>>()
+const children = new Map<string, ChildProcess>()
 let building: { key: string; task: Promise<void> } | null = null
 let failed: { key: string; err: Error; at: number } | null = null
+
+type LaunchConfig = Pick<WorldConfig["browser"], "executablePath" | "useSystemChrome" | "args">
 
 function root(): string {
   const here = dirname(fileURLToPath(import.meta.url))
@@ -136,30 +142,50 @@ export namespace DaemonClient {
     startedAt: number
     url: string
     token: string
+    launchKey?: string
   } | null {
     const path = DaemonServer.handshakePath(sessionID)
     if (!existsSync(path)) return null
     try {
       const data: unknown = JSON.parse(readFileSync(path, "utf8"))
       if (!isHandshake(data)) return null
-      return { pid: data.pid, startedAt: data.startedAt ?? 0, url: data.url, token: data.token }
+      return {
+        pid: data.pid,
+        startedAt: data.startedAt ?? 0,
+        url: data.url,
+        token: data.token,
+        ...(data.launchKey ? { launchKey: data.launchKey } : {}),
+      }
     } catch {
       return null
     }
   }
 
   export async function ensureRunning(sessionID: string, opts: CallOptions & { idleMs?: number } = {}): Promise<void> {
+    if (await responsive(sessionID)) return
+    if (isRunning(sessionID)) {
+      await terminate(sessionID, DaemonServer.shutdownTimeoutMs)
+      if (isRunning(sessionID)) throw new Error(`kilo-world daemon for session ${sessionID} is not responding`)
+    }
+    return ensure(sessionID, opts, launchConfig(getConfig()))
+  }
+
+  async function ensure(sessionID: string, opts: CallOptions & { idleMs?: number }, cfg: LaunchConfig): Promise<void> {
     if (await ping(sessionID)) return
     const current = starts.get(sessionID)
     if (current) return current
-    const pending = launch(sessionID, opts).finally(() => {
+    const pending = launch(sessionID, opts, cfg).finally(() => {
       if (starts.get(sessionID) === pending) starts.delete(sessionID)
     })
     starts.set(sessionID, pending)
     return pending
   }
 
-  async function launch(sessionID: string, opts: CallOptions & { idleMs?: number }): Promise<void> {
+  async function launch(
+    sessionID: string,
+    opts: CallOptions & { idleMs?: number },
+    launch: LaunchConfig,
+  ): Promise<void> {
     const file = await entry(opts)
     const bin = runtime()
     if (process.env["KILO_WORLD_NODE"] && /[\\/]/.test(bin) && !existsSync(bin)) {
@@ -176,8 +202,13 @@ export namespace DaemonClient {
       KILO_WORLD_DAEMON_SESSION: sessionID,
       KILO_WORLD_PARENT_PID: String(process.pid),
       KILO_WORLD_HOME: cfg.home,
-      ...(process.versions.electron ? { ELECTRON_RUN_AS_NODE: "1" } : {}),
-      ...(cfg.browser.executablePath ? { KILO_WORLD_CHROMIUM: cfg.browser.executablePath } : {}),
+      ...(process.versions.electron || process.env["KILO_WORLD_NODE_ELECTRON"] === "1"
+        ? { ELECTRON_RUN_AS_NODE: "1" }
+        : {}),
+      ...(launch.executablePath ? { KILO_WORLD_CHROMIUM: launch.executablePath } : {}),
+      KILO_WORLD_ARGS: JSON.stringify(launch.args),
+      KILO_WORLD_SYSTEM_CHROME: launch.useSystemChrome ? "1" : "0",
+      KILO_WORLD_LAUNCH_KEY: launchKey(launch),
       ...(opts.idleMs !== undefined ? { KILO_WORLD_DAEMON_IDLE_MS: String(opts.idleMs) } : {}),
     }
     const args = [file, `--session=${sessionID}`, ...(opts.idleMs !== undefined ? [`--idle=${opts.idleMs}`] : [])]
@@ -196,6 +227,10 @@ export namespace DaemonClient {
     })()
     child.once("error", (err) => {
       state.err = err
+    })
+    children.set(sessionID, child)
+    child.once("close", () => {
+      if (children.get(sessionID) === child) children.delete(sessionID)
     })
     child.unref()
     const start = Date.now()
@@ -223,12 +258,21 @@ export namespace DaemonClient {
     )
   }
 
-  async function ping(sessionID: string): Promise<boolean> {
+  async function responsive(sessionID: string): Promise<boolean> {
+    if (await ping(sessionID)) return true
+    for (const _ of [0, 1]) {
+      if (!isRunning(sessionID)) return false
+      if (await ping(sessionID, PING_TIMEOUT_MS)) return true
+    }
+    return false
+  }
+
+  async function ping(sessionID: string, timeout = 500): Promise<boolean> {
     if (!isRunning(sessionID)) return false
     const hs = handshake(sessionID)
     if (!hs) return false
     const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 500)
+    const timer = setTimeout(() => controller.abort(), timeout)
     return fetch(`${hs.url}/call`, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -262,10 +306,14 @@ export namespace DaemonClient {
   export async function stop(sessionID: string, opts: CallOptions = {}): Promise<boolean> {
     if (!isRunning(sessionID)) return false
     try {
-      const resp = await call(
+      const resp = await send(
         sessionID,
         { id: randomId(), verb: "__shutdown__", args: [] },
-        { ...opts, timeoutMs: opts.timeoutMs ?? 5000, silent: true },
+        {
+          ...opts,
+          timeoutMs: opts.timeoutMs ?? 5000,
+          silent: true,
+        },
       )
       return resp.ok
     } catch {
@@ -432,6 +480,9 @@ export namespace DaemonClient {
     const segments = parseScript(script)
     const startedAt = Date.now()
     const results: RunResult["results"] = []
+    opts.signal?.throwIfAborted()
+    const cfg = opts.config ?? getConfig()
+    await configured(sessionID, cfg, opts)
 
     for (const seg of segments) {
       if (opts.signal?.aborted) throw new Error("world script aborted")
@@ -441,7 +492,7 @@ export namespace DaemonClient {
         results.push({ ok: true, verb: seg.verb, args: seg.args, data, durationMs: 0 })
         continue
       }
-      const response = await call(
+      const response = await send(
         sessionID,
         {
           id: randomId(),
@@ -459,6 +510,115 @@ export namespace DaemonClient {
     }
 
     return { ok: results.every((r) => r.ok), durationMs: Date.now() - startedAt, results }
+  }
+
+  async function configured(sessionID: string, cfg: WorldConfig, opts: CallOptions): Promise<void> {
+    const previous = configs.get(sessionID) ?? Promise.resolve()
+    const pending = previous.catch(() => undefined).then(() => apply(sessionID, cfg, opts))
+    configs.set(sessionID, pending)
+    await pending.finally(() => {
+      if (configs.get(sessionID) === pending) configs.delete(sessionID)
+    })
+  }
+
+  async function apply(sessionID: string, cfg: WorldConfig, opts: CallOptions): Promise<void> {
+    const launch = launchConfig(cfg)
+    const key = launchKey(launch)
+    const healthy = await responsive(sessionID)
+    if (runningWith(sessionID, key) && healthy) return
+    if (isRunning(sessionID)) {
+      if (healthy) {
+        await stop(sessionID, { timeoutMs: DaemonServer.shutdownTimeoutMs, silent: true })
+        await gone(sessionID, DaemonServer.shutdownTimeoutMs)
+      }
+      if (isRunning(sessionID)) await terminate(sessionID, DaemonServer.shutdownTimeoutMs)
+      if (isRunning(sessionID)) throw new Error(`kilo-world daemon for session ${sessionID} did not stop`)
+    }
+    await ensure(sessionID, opts, launch)
+  }
+
+  function runningWith(sessionID: string, key: string): boolean {
+    if (!isRunning(sessionID)) return false
+    const hs = handshake(sessionID)
+    return hs?.launchKey === key
+  }
+}
+
+function launchConfig(cfg: WorldConfig): LaunchConfig {
+  return {
+    ...(cfg.browser.executablePath ? { executablePath: cfg.browser.executablePath } : {}),
+    useSystemChrome: cfg.browser.useSystemChrome ?? false,
+    args: [...cfg.browser.args],
+  }
+}
+
+function launchKey(cfg: LaunchConfig): string {
+  return createHash("sha256").update(JSON.stringify(cfg)).digest("hex")
+}
+
+async function gone(sessionID: string, timeout: number): Promise<void> {
+  const start = Date.now()
+  while (DaemonClient.isRunning(sessionID) && Date.now() - start < timeout) {
+    await new Promise((resolve) => setTimeout(resolve, 25))
+  }
+}
+
+async function terminate(sessionID: string, timeout: number): Promise<void> {
+  const hs = DaemonClient.handshake(sessionID)
+  if (!hs) return
+  const child = children.get(sessionID)
+  if (child?.pid !== hs.pid && !(await attributable(hs.pid, hs.startedAt))) return
+  const current = DaemonClient.handshake(sessionID)
+  if (!current || current.pid !== hs.pid || current.startedAt !== hs.startedAt || current.token !== hs.token) return
+  signal(hs.pid, "SIGTERM")
+  await gone(sessionID, timeout)
+  if (!DaemonClient.isRunning(sessionID)) {
+    DaemonServer.clear(sessionID, hs.pid)
+    return
+  }
+  const latest = DaemonClient.handshake(sessionID)
+  if (!latest || latest.pid !== hs.pid || latest.startedAt !== hs.startedAt || latest.token !== hs.token) return
+  signal(hs.pid, "SIGKILL")
+  await gone(sessionID, 1000)
+  if (!DaemonClient.isRunning(sessionID)) DaemonServer.clear(sessionID, hs.pid)
+}
+
+async function attributable(pid: number, expected: number): Promise<boolean> {
+  const actual = await started(pid)
+  return actual !== null && Math.abs(actual - expected) < 5000
+}
+
+function started(pid: number): Promise<number | null> {
+  const bin = process.platform === "win32" ? "powershell.exe" : "ps"
+  const args =
+    process.platform === "win32"
+      ? [
+          "-NoProfile",
+          "-NonInteractive",
+          "-Command",
+          `(Get-Process -Id ${pid} -ErrorAction Stop).StartTime.ToUniversalTime().ToString('o')`,
+        ]
+      : ["-o", "lstart=", "-p", String(pid)]
+  return new Promise((resolve) => {
+    const child = spawn(bin, args, { stdio: ["ignore", "pipe", "ignore"], windowsHide: true })
+    const output: Buffer[] = []
+    child.stdout?.on("data", (data: Buffer) => output.push(data))
+    child.once("error", () => resolve(null))
+    child.once("close", (code) => {
+      if (code !== 0) return resolve(null)
+      const value = Date.parse(Buffer.concat(output).toString().trim())
+      resolve(Number.isFinite(value) ? value : null)
+    })
+  })
+}
+
+function signal(pid: number, name: NodeJS.Signals): void {
+  try {
+    process.kill(process.platform === "win32" ? pid : -pid, name)
+  } catch (err) {
+    if (!(err instanceof Error) || !("code" in err) || err.code !== "ESRCH") {
+      process.stderr.write(`failed to signal world daemon ${pid}: ${String(err)}\n`)
+    }
   }
 }
 
@@ -482,9 +642,6 @@ function daemonConfig(cfg: WorldConfig): DaemonConfig {
       antiDetect: cfg.browser.antiDetect,
       timeoutMs: cfg.browser.timeoutMs,
       viewport: cfg.browser.viewport,
-      executablePath: cfg.browser.executablePath,
-      useSystemChrome: cfg.browser.useSystemChrome ?? false,
-      args: [...cfg.browser.args],
     },
   }
 }

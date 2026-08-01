@@ -813,14 +813,15 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Skills",
 
   "settings.browser.description":
-    "Indien ingeschakeld kan de AI agent interactie hebben met webpagina's — navigeren, klikken, typen en screenshots maken. Er wordt een Chrome-venster geopend zodat je de agent aan het werk kunt zien.",
+    "Bestuur een headless browser om te navigeren, klikken, typen en screenshots te maken. De browser draait standaard zonder zichtbaar venster, maar toont na elke visuele actie een afbeelding van de pagina.",
   "settings.browser.enable.title": "Browserautomatisering inschakelen",
-  "settings.browser.enable.description": "Registreer de Playwright MCP-server bij de CLI backend.",
+  "settings.browser.enable.description": "Schakel de World-tool voor browserautomatisering in.",
   "settings.browser.systemChrome.title": "Gebruik Systeem Chrome",
   "settings.browser.systemChrome.description":
-    "Gebruik je geïnstalleerde Chrome-browser in plaats van een aparte Chromium-instantie.",
+    "Gebruik geïnstalleerde Chrome in plaats van een aparte Chromium-instantie. Valt terug op Chromium als Chrome niet wordt gevonden.",
   "settings.browser.headless.title": "Headless Modus",
-  "settings.browser.headless.description": "Draai in headless modus (geen zichtbaar browservenster).",
+  "settings.browser.headless.description":
+    "Draai zonder zichtbaar browservenster. Schakel uit om een zichtbaar Chrome-venster te openen.",
 
   "settings.language.description": 'Kies de taal voor de Kilo Code UI. "Auto" gebruikt je VS Code schermtaal.',
   "settings.language.auto": "Auto (VS Code taal)",
@@ -864,6 +865,9 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Codebase Zoeken",
   "settings.experimental.codebaseSearch.description":
     "Schakel AI-aangedreven zoeken in natuurlijke taal door je codebase in",
+  "settings.experimental.worldBrowser.title": "World-browser",
+  "settings.experimental.worldBrowser.description":
+    "Schakel de World-browsertool in. Deze draait standaard headless en geeft na elke visuele actie een afbeelding terug. Schakel uit om browsermogelijkheden voor de agent te verbergen.",
   "settings.experimental.imageGeneration.title": "Afbeeldingsgeneratie",
   "settings.experimental.imageGeneration.description": "AI-afbeeldingsgeneratie inschakelen",
   "settings.experimental.imageGenerationModel.title": "Afbeeldingsmodel",

@@ -46,6 +46,8 @@ function remove(file: string): void {
 }
 
 export namespace DaemonServer {
+  export const shutdownTimeoutMs = SERVER_CLOSE_TIMEOUT_MS + BROWSER_CLOSE_TIMEOUT_MS + 1000
+
   export type Options = {
     sessionID: string
     idleTimeoutMs?: number
@@ -72,6 +74,7 @@ export namespace DaemonServer {
     pid: number
     startedAt: number
     sessionID?: string
+    launchKey?: string
     url: string
     token: string
   } | null {
@@ -84,6 +87,7 @@ export namespace DaemonServer {
         pid: data.pid,
         startedAt: data.startedAt ?? 0,
         ...(data.sessionID ? { sessionID: data.sessionID } : {}),
+        ...(data.launchKey ? { launchKey: data.launchKey } : {}),
         url: data.url,
         token: data.token,
       }
@@ -455,6 +459,7 @@ export namespace DaemonServer {
       startedAt: Date.now(),
       idleTimeoutMs,
       sessionID,
+      ...(process.env["KILO_WORLD_LAUNCH_KEY"] ? { launchKey: process.env["KILO_WORLD_LAUNCH_KEY"] } : {}),
       url,
       token: currentAuthToken,
     }

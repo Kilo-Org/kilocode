@@ -787,13 +787,14 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "技能",
 
   "settings.browser.description":
-    "启用后，AI 代理可以与网页交互 — 导航、点击、输入和截取屏幕截图。Chrome 窗口将打开，以便您观察代理的工作。",
+    "控制无头浏览器进行导航、点击、输入和截图。浏览器默认在没有可见窗口的情况下运行，但会在每次可视操作后显示页面图像。",
   "settings.browser.enable.title": "启用浏览器自动化",
-  "settings.browser.enable.description": "将 Playwright MCP 服务器注册到 CLI 后端。",
+  "settings.browser.enable.description": "启用用于浏览器自动化的 World 工具。",
   "settings.browser.systemChrome.title": "使用系统 Chrome",
-  "settings.browser.systemChrome.description": "使用已安装的 Chrome 浏览器，而不是单独的 Chromium 实例。",
+  "settings.browser.systemChrome.description":
+    "使用已安装的 Chrome，而不是单独的 Chromium。如果找不到 Chrome，则使用 Chromium。",
   "settings.browser.headless.title": "无头模式",
-  "settings.browser.headless.description": "以无头模式运行（无可见浏览器窗口）。",
+  "settings.browser.headless.description": "在没有可见浏览器窗口的情况下运行。关闭后可打开便于观察的 Chrome 窗口。",
 
   "settings.language.description": '"自动"将使用 VS Code 的显示语言。选择 Kilo Code 界面的语言。',
   "settings.language.auto": "自动（VS Code 语言）",
@@ -829,6 +830,9 @@ export const dict = {
   "settings.experimental.batch.description": "启用多个工具调用的批处理",
   "settings.experimental.codebaseSearch.title": "代码库搜索",
   "settings.experimental.codebaseSearch.description": "启用 AI 驱动的自然语言代码库搜索",
+  "settings.experimental.worldBrowser.title": "World 浏览器",
+  "settings.experimental.worldBrowser.description":
+    "启用 World 浏览器工具。它默认以无头模式运行，并在每次可视操作后返回图像。禁用后可对代理隐藏浏览器功能。",
   "settings.experimental.imageGeneration.title": "图像生成",
   "settings.experimental.imageGeneration.description": "启用 AI 图像生成",
   "settings.experimental.imageGenerationModel.title": "图像模型",

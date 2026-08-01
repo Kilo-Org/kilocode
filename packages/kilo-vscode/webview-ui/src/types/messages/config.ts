@@ -61,6 +61,7 @@ export interface ExperimentalConfig {
   mcp_timeout?: number
   swe_pruner?: boolean
   swe_pruner_model?: string
+  world_browser?: boolean
 }
 
 export interface SandboxConfig {
@@ -127,14 +128,20 @@ export type KiloEmbeddingModelCatalog = {
 
 export type IndexingStatus = SdkIndexingStatus
 
-export interface BrowserSettings {
-  enabled: boolean
-  useSystemChrome: boolean
-  headless: boolean
-}
-
 export type TerminalCommandDisplay = "expanded" | "collapsed"
 export type CodeEditDisplay = "expanded" | "collapsed"
+
+export interface WorldConfig {
+  browser?: {
+    headless?: boolean
+    anti_detect?: boolean
+    timeout_ms?: number
+    viewport?: { width: number; height: number }
+    executable_path?: string
+    use_system_chrome?: boolean
+    args?: string[]
+  }
+}
 
 export interface Config {
   permission?: PermissionConfig
@@ -168,6 +175,7 @@ export interface Config {
   web_search?: boolean
   auto_collapse_reasoning?: boolean
   experimental?: ExperimentalConfig
+  world?: WorldConfig
   sandbox?: SandboxConfig
   indexing?: IndexingConfig
 }

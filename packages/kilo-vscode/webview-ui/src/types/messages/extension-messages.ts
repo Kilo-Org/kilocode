@@ -20,14 +20,7 @@ import type { AnacondaDesktopExtensionMessage } from "../../../../src/shared/ana
 import type { QuestionRequest, SuggestionRequest, TodoItem } from "./questions"
 import type { ModelSelection, Provider, ProviderAuthState } from "./providers"
 import type { AgentInfo, AgentRequirementResult, SkillInfo, SlashCommandInfo } from "./agents"
-import type {
-  BrowserSettings,
-  Config,
-  ConfigCollections,
-  FeatureFlags,
-  IndexingStatus,
-  KiloEmbeddingModelCatalog,
-} from "./config"
+import type { Config, ConfigCollections, FeatureFlags, IndexingStatus, KiloEmbeddingModelCatalog } from "./config"
 import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type { KilocodeNotification, ProfileData } from "./profile"
 import type {
@@ -561,11 +554,6 @@ export interface SuggestionResolvedMessage {
 export interface SuggestionErrorMessage {
   type: "suggestionError"
   requestID: string
-}
-
-export interface BrowserSettingsLoadedMessage {
-  type: "browserSettingsLoaded"
-  settings: BrowserSettings
 }
 
 export interface ClaudeCompatSettingLoadedMessage {
@@ -1328,7 +1316,6 @@ export type ExtensionMessage =
   | SuggestionRequestMessage
   | SuggestionResolvedMessage
   | SuggestionErrorMessage
-  | BrowserSettingsLoadedMessage
   | ClaudeCompatSettingLoadedMessage
   | ConfigLoadedMessage
   | ConfigUpdatedMessage

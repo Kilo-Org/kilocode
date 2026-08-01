@@ -827,14 +827,15 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Habilidades",
 
   "settings.browser.description":
-    "Cuando está activado, el agente de IA puede interactuar con páginas web: navegar, hacer clic, escribir y capturar pantallas. Se abrirá una ventana de Chrome para que puedas ver al agente trabajar.",
+    "Controla un navegador sin interfaz para navegar, hacer clic, escribir y capturar pantallas. El navegador se ejecuta sin una ventana visible de forma predeterminada, pero muestra una imagen de la página después de cada acción visual.",
   "settings.browser.enable.title": "Activar automatización del navegador",
-  "settings.browser.enable.description": "Registrar el servidor Playwright MCP con el backend CLI.",
+  "settings.browser.enable.description": "Activa la herramienta World para automatizar el navegador.",
   "settings.browser.systemChrome.title": "Usar Chrome del sistema",
   "settings.browser.systemChrome.description":
-    "Usar el navegador Chrome instalado en lugar de una instancia separada de Chromium.",
+    "Usa Chrome instalado en lugar de una instancia separada de Chromium. Si no se encuentra Chrome, usa Chromium.",
   "settings.browser.headless.title": "Modo headless",
-  "settings.browser.headless.description": "Ejecutar en modo headless (sin ventana de navegador visible).",
+  "settings.browser.headless.description":
+    "Ejecuta sin una ventana visible. Desactívalo para abrir una ventana de Chrome que puedas observar.",
 
   "settings.language.description":
     'Elige el idioma de la interfaz de Kilo Code. "Auto" utiliza el idioma de visualización de VS Code.',
@@ -874,6 +875,9 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Búsqueda de código",
   "settings.experimental.codebaseSearch.description":
     "Habilitar búsqueda por lenguaje natural con IA en toda la base de código",
+  "settings.experimental.worldBrowser.title": "Navegador World",
+  "settings.experimental.worldBrowser.description":
+    "Activa la herramienta de navegador World. Se ejecuta sin interfaz de forma predeterminada y devuelve una imagen después de cada acción visual. Desactívala para ocultar las capacidades del navegador al agente.",
   "settings.experimental.imageGeneration.title": "Generación de imágenes",
   "settings.experimental.imageGeneration.description": "Habilitar generación de imágenes con IA",
   "settings.experimental.imageGenerationModel.title": "Modelo de imagen",

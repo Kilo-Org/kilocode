@@ -405,6 +405,7 @@ describe("kilocode tool registry indexing", () => {
           "recall",
           "chart",
           "background_process",
+          "world",
           "agent_manager_models",
           "agent_manager",
           "notify_user",
@@ -423,6 +424,7 @@ describe("kilocode tool registry indexing", () => {
         "recall",
         "chart",
         "background_process",
+        "world",
         "agent_manager_models",
         "agent_manager",
         "notebook_read",
@@ -437,12 +439,12 @@ describe("kilocode tool registry indexing", () => {
         "recall",
         "chart",
         "background_process",
+        "world",
         "agent_manager_models",
         "agent_manager",
         "notify_user",
         "send_file",
       ])
-
       process.env["KILO_CLIENT"] = "desktop"
       expect(KiloToolRegistry.extra(tools, {}).map((tool) => tool.id)).toEqual([
         "semantic_search",

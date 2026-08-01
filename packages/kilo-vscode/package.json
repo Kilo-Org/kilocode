@@ -1074,21 +1074,6 @@
           "maximum": 24,
           "description": "Font size in pixels for the Kilo Code webview UI."
         },
-        "kilo-code.new.browserAutomation.enabled": {
-          "type": "boolean",
-          "default": false,
-          "description": "Enable browser automation powered by Playwright. When enabled, the AI agent can interact with web pages in a visible Chrome window."
-        },
-        "kilo-code.new.browserAutomation.useSystemChrome": {
-          "type": "boolean",
-          "default": true,
-          "description": "Use your system's installed Chrome browser instead of downloading a separate Chromium instance."
-        },
-        "kilo-code.new.browserAutomation.headless": {
-          "type": "boolean",
-          "default": false,
-          "description": "Run browser automation in headless mode (no visible window). When disabled, you can watch the agent interact with the browser."
-        },
         "kilo-code.new.attention.enabled": {
           "type": "boolean",
           "default": false,

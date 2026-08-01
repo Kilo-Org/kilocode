@@ -83,7 +83,7 @@ describe("world daemon", () => {
         verb: "status",
         args: [],
         auth: handshake!.token,
-        config: { browser: { unknown: true } },
+        config: { browser: { executablePath: "/tmp/browser", args: ["--load-extension=/tmp/unsafe"] } },
       }),
     })
     expect(unsafe.status).toBe(400)
@@ -123,6 +123,24 @@ describe("world daemon", () => {
       capability: expect.not.objectContaining({ chromiumVersion: expect.anything() }),
     })
     expect(await World.daemonStatus(session)).toMatchObject({ runtime: "node", runtimeVersion: expect.any(String) })
+  })
+
+  test("pins trusted launch settings at startup and restarts when they change", async () => {
+    const before = DaemonClient.handshake(session)
+    const current = World.currentConfig()
+    const result = await World.runForSession(session, "status", {
+      config: {
+        ...current,
+        browser: { ...current.browser, args: [...current.browser.args, "--disable-notifications"] },
+      },
+    })
+    const after = DaemonClient.handshake(session)
+
+    expect(result.ok).toBe(true)
+    expect(before?.launchKey).toBeString()
+    expect(after?.launchKey).toBeString()
+    expect(after?.launchKey).not.toBe(before?.launchKey)
+    expect(after?.pid).not.toBe(before?.pid)
   })
 
   test.skipIf(!available)("isolates browser state and processes between sessions", async () => {

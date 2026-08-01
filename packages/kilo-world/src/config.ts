@@ -17,16 +17,30 @@ export function hasDisplay(): boolean {
 
 export function defaultConfig(): WorldConfig {
   const headless = !hasDisplay() || process.env["KILO_WORLD_HEADED"] !== "1"
+  const args = parse()
   return {
     browser: {
       headless,
       antiDetect: process.env["KILO_WORLD_ANTI_DETECT"] === "1",
       timeoutMs: 30_000,
       viewport: { width: 1280, height: 720 },
-      args: [],
+      args,
       ...(process.env["KILO_WORLD_CHROMIUM"] ? { executablePath: process.env["KILO_WORLD_CHROMIUM"] } : {}),
+      ...(process.env["KILO_WORLD_SYSTEM_CHROME"] === "1" ? { useSystemChrome: true } : {}),
     },
     home: process.env["KILO_WORLD_HOME"] ?? DEFAULT_HOME,
+  }
+}
+
+function parse(): string[] {
+  const raw = process.env["KILO_WORLD_ARGS"]
+  if (!raw) return []
+  try {
+    const value: unknown = JSON.parse(raw)
+    if (Array.isArray(value) && value.every((item) => typeof item === "string")) return value
+    return []
+  } catch {
+    return []
   }
 }
 

@@ -806,13 +806,15 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Beceriler",
 
   "settings.browser.description":
-    "Etkinleştirildiğinde, yapay zeka ajanı web sayfalarıyla etkileşime girebilir — gezinme, tıklama, yazma ve ekran görüntüsü alma. Ajanın çalışmasını izleyebilmeniz için bir Chrome penceresi açılacak.",
+    "Gezinmek, tıklamak, yazmak ve ekran görüntüsü almak için başsız bir tarayıcıyı kontrol edin. Tarayıcı varsayılan olarak görünür bir pencere olmadan çalışır, ancak her görsel işlemden sonra sayfanın bir görüntüsünü gösterir.",
   "settings.browser.enable.title": "Tarayıcı Otomasyonunu Etkinleştir",
-  "settings.browser.enable.description": "Playwright MCP sunucusunu CLI arka ucuyla kaydet.",
+  "settings.browser.enable.description": "Tarayıcı otomasyonu için World aracını etkinleştirin.",
   "settings.browser.systemChrome.title": "Sistem Chrome'unu Kullan",
-  "settings.browser.systemChrome.description": "Ayrı bir Chromium örneği yerine yüklü Chrome tarayıcınızı kullanın.",
+  "settings.browser.systemChrome.description":
+    "Ayrı bir Chromium yerine yüklü Chrome'u kullanın. Chrome bulunamazsa Chromium kullanılır.",
   "settings.browser.headless.title": "Başsız Mod",
-  "settings.browser.headless.description": "Başsız modda çalıştır (görünür tarayıcı penceresi yok).",
+  "settings.browser.headless.description":
+    "Görünür tarayıcı penceresi olmadan çalıştırın. İzleyebileceğiniz bir Chrome penceresi açmak için kapatın.",
 
   "settings.language.description":
     '"Otomatik" VS Code görüntüleme dilinizi kullanır. Kilo Code arayüzü için dil seçin.',
@@ -854,6 +856,9 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Kod Tabanı Araması",
   "settings.experimental.codebaseSearch.description":
     "Kod tabanınız genelinde yapay zeka destekli doğal dil aramasını etkinleştir",
+  "settings.experimental.worldBrowser.title": "World Tarayıcısı",
+  "settings.experimental.worldBrowser.description":
+    "World tarayıcı aracını etkinleştirin. Varsayılan olarak başsız çalışır ve her görsel işlemden sonra bir görüntü döndürür. Tarayıcı özelliklerini ajandan gizlemek için devre dışı bırakın.",
   "settings.experimental.imageGeneration.title": "Görüntü oluşturma",
   "settings.experimental.imageGeneration.description": "AI görüntü oluşturmayı etkinleştir",
   "settings.experimental.imageGenerationModel.title": "Görüntü modeli",

@@ -10,10 +10,14 @@ import {
   copyKiloSandboxWorker,
   copySandboxResources,
   copyTreeSitterResources,
+  copyWorldDaemon,
+  hasWorldDaemon,
   resolveTreeSitterEnv,
   kiloSandboxWorkerForBinary,
   treeSitterDirForBinary,
   treeSitterDirForExtension,
+  worldDaemonForBinary,
+  worldDaemonManifestForBinary,
 } from "../../src/services/cli-backend/cli-resources"
 import * as fs from "fs/promises"
 import * as os from "os"
@@ -63,7 +67,7 @@ describe("parseServerPort", () => {
   })
 })
 
-describe("cli tree-sitter resources", () => {
+describe("CLI companion resources", () => {
   it("resolves resources next to the VS Code bundled CLI", () => {
     const root = "/Users/test/.vscode/extensions/kilocode.kilo-code-7.2.50-darwin-arm64"
     const bin = `${root}/bin/kilo`
@@ -71,6 +75,8 @@ describe("cli tree-sitter resources", () => {
     expect(treeSitterDirForBinary(bin)).toBe(`${root}/bin/tree-sitter`)
     expect(treeSitterDirForExtension(root)).toBe(`${root}/bin/tree-sitter`)
     expect(kiloSandboxWorkerForBinary(bin)).toBe(`${root}/bin/kilo-sandbox-mutation-worker.js`)
+    expect(worldDaemonForBinary(bin)).toBe(`${root}/bin/world-daemon.cjs`)
+    expect(worldDaemonManifestForBinary(bin)).toBe(`${root}/bin/world-daemon.assets.json`)
     expect(resolveTreeSitterEnv(root)).toEqual({ KILO_TREE_SITTER_WASM_DIR: `${root}/bin/tree-sitter` })
   })
 
@@ -81,6 +87,8 @@ describe("cli tree-sitter resources", () => {
     expect(treeSitterDirForBinary(bin)).toBe(String.raw`${root}\bin\tree-sitter`)
     expect(treeSitterDirForExtension(root)).toBe(String.raw`${root}\bin\tree-sitter`)
     expect(kiloSandboxWorkerForBinary(bin)).toBe(String.raw`${root}\bin\kilo-sandbox-mutation-worker.js`)
+    expect(worldDaemonForBinary(bin)).toBe(String.raw`${root}\bin\world-daemon.cjs`)
+    expect(worldDaemonManifestForBinary(bin)).toBe(String.raw`${root}\bin\world-daemon.assets.json`)
     expect(resolveTreeSitterEnv(root)).toEqual({
       KILO_TREE_SITTER_WASM_DIR: String.raw`${root}\bin\tree-sitter`,
     })
@@ -98,6 +106,45 @@ describe("cli tree-sitter resources", () => {
       await copyKiloSandboxWorker(source, target)
 
       expect(await fs.readFile(kiloSandboxWorkerForBinary(target), "utf8")).toBe("worker")
+    } finally {
+      await fs.rm(root, { recursive: true, force: true })
+    }
+  })
+
+  it("copies the world daemon with the packaged CLI binary", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-vscode-world-daemon-"))
+    try {
+      const source = path.join(root, "dist", "@kilocode", "cli-darwin-arm64", "bin", "kilo")
+      const target = path.join(root, "extension", "bin", "kilo")
+      await fs.mkdir(path.dirname(source), { recursive: true })
+      await fs.mkdir(path.dirname(target), { recursive: true })
+      await fs.writeFile(worldDaemonForBinary(source), "daemon")
+      await fs.writeFile(path.join(path.dirname(source), "appIcon-test.png"), "icon")
+      await fs.writeFile(worldDaemonManifestForBinary(source), JSON.stringify(["world-daemon.cjs", "appIcon-test.png"]))
+
+      await copyWorldDaemon(source, target)
+
+      expect(hasWorldDaemon(target)).toBe(true)
+      expect(await fs.readFile(worldDaemonForBinary(target), "utf8")).toBe("daemon")
+      expect(await fs.readFile(path.join(path.dirname(target), "appIcon-test.png"), "utf8")).toBe("icon")
+      expect(JSON.parse(await fs.readFile(worldDaemonManifestForBinary(target), "utf8"))).toEqual([
+        "world-daemon.cjs",
+        "appIcon-test.png",
+      ])
+    } finally {
+      await fs.rm(root, { recursive: true, force: true })
+    }
+  })
+
+  it("rejects a packaged CLI without the world daemon", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-vscode-world-daemon-missing-"))
+    try {
+      const source = path.join(root, "dist", "bin", "kilo")
+      const target = path.join(root, "extension", "bin", "kilo")
+      await fs.mkdir(path.dirname(source), { recursive: true })
+      await fs.mkdir(path.dirname(target), { recursive: true })
+
+      await expect(copyWorldDaemon(source, target)).rejects.toThrow("Kilo world daemon manifest not found")
     } finally {
       await fs.rm(root, { recursive: true, force: true })
     }
@@ -316,9 +363,29 @@ describe("server workspace helpers", () => {
   })
 
   it("uses the shared database for the managed backend while preserving the environment", () => {
-    expect(resolveManagedServerEnv({ PATH: "/usr/bin", KILO_DISABLE_CHANNEL_DB: "false" })).toEqual({
+    expect(
+      resolveManagedServerEnv({ PATH: "/usr/bin", KILO_DISABLE_CHANNEL_DB: "false" }, "/Applications/Code"),
+    ).toEqual({
       PATH: "/usr/bin",
       KILO_DISABLE_CHANNEL_DB: "true",
+      KILO_WORLD_NODE: "/Applications/Code",
+      KILO_WORLD_NODE_ELECTRON: "1",
     })
+  })
+
+  it("preserves an explicit world Node runtime", () => {
+    expect(resolveManagedServerEnv({ KILO_WORLD_NODE: "/custom/node" }, "/Applications/Code")).toMatchObject({
+      KILO_WORLD_NODE: "/custom/node",
+      KILO_WORLD_NODE_ELECTRON: "0",
+    })
+  })
+
+  it("does not overwrite an explicit world runtime kind", () => {
+    expect(
+      resolveManagedServerEnv(
+        { KILO_WORLD_NODE: "/custom/electron", KILO_WORLD_NODE_ELECTRON: "1" },
+        "/Applications/Code",
+      ),
+    ).toMatchObject({ KILO_WORLD_NODE: "/custom/electron", KILO_WORLD_NODE_ELECTRON: "1" })
   })
 })

@@ -800,14 +800,15 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "مهارت‌ها",
 
   "settings.browser.description":
-    "وقتی فعال است، عامل هوش مصنوعی می‌تواند با صفحات وب تعامل داشته باشد — پیمایش، کلیک، تایپ و گرفتن اسکرین‌شات. یک پنجره Chrome باز می‌شود تا بتوانید عملکرد عامل را مشاهده کنید.",
+    "یک مرورگر بدون رابط را برای پیمایش، کلیک، تایپ و گرفتن اسکرین‌شات هدایت کنید. مرورگر به‌طور پیش‌فرض بدون پنجرهٔ قابل مشاهده اجرا می‌شود، اما پس از هر اقدام تصویری یک تصویر درون‌خطی از صفحه خواهید دید.",
   "settings.browser.enable.title": "فعال‌سازی اتوماسیون مرورگر",
-  "settings.browser.enable.description": "سرور Playwright MCP را با بک‌اند CLI ثبت کنید.",
+  "settings.browser.enable.description": "ابزار World را برای اتوماسیون مرورگر فعال کنید.",
   "settings.browser.systemChrome.title": "استفاده از Chrome سیستم",
   "settings.browser.systemChrome.description":
-    "به جای یک نمونه Chromium جداگانه، از مرورگر Chrome نصب‌شده شما استفاده کنید.",
+    "به جای یک نمونه Chromium جداگانه، از مرورگر Chrome نصب‌شدهٔ شما استفاده کنید. اگر Chrome پیدا نشود، از Chromium استفاده می‌شود.",
   "settings.browser.headless.title": "حالت Headless",
-  "settings.browser.headless.description": "در حالت headless اجرا شود (بدون پنجره مرورگر قابل مشاهده).",
+  "settings.browser.headless.description":
+    "در حالت بدون رابط اجرا شود (بدون پنجرهٔ مرورگر قابل مشاهده). برای باز کردن پنجرهٔ Chrome قابل مشاهده، آن را خاموش کنید.",
 
   "settings.language.description":
     "زبان رابط کاربری Kilo Code را انتخاب کنید. «Auto» از زبان نمایشی VS Code شما استفاده می‌کند.",
@@ -849,6 +850,9 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "جستجوی پایگاه کد",
   "settings.experimental.codebaseSearch.description":
     "فعال‌سازی جستجوی زبان طبیعی مبتنی بر هوش مصنوعی در سراسر پایگاه کد",
+  "settings.experimental.worldBrowser.title": "مرورگر World",
+  "settings.experimental.worldBrowser.description":
+    "ابزار مرورگر World را فعال کنید. مرورگر به‌طور پیش‌فرض بدون رابط اجرا می‌شود و پس از هر اقدام تصویری یک تصویر درون‌خطی برمی‌گرداند. برای پنهان کردن قابلیت‌های مرورگر از عامل، آن را غیرفعال کنید.",
   "settings.experimental.imageGeneration.title": "تولید تصویر",
   "settings.experimental.imageGeneration.description": "فعال‌سازی تولید تصویر با هوش مصنوعی",
   "settings.experimental.imageGenerationModel.title": "مدل تصویر",

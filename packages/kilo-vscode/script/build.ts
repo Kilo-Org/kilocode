@@ -6,6 +6,7 @@ import {
   copyKiloSandboxWorker,
   copySandboxResources,
   copyTreeSitterResources,
+  copyWorldDaemon,
 } from "../src/services/cli-backend/cli-resources"
 import { ensureFfmpegForTarget } from "./ffmpeg-helper"
 
@@ -83,6 +84,7 @@ for (const config of targets) {
   await copyTreeSitterResources(sourceBinary, targetBinary)
   await copySandboxResources(sourceBinary, targetBinary)
   await copyKiloSandboxWorker(sourceBinary, targetBinary)
+  await copyWorldDaemon(sourceBinary, targetBinary)
 
   if (config.binary !== "kilo.exe") {
     chmodSync(targetBinary, 0o755)

@@ -836,14 +836,15 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Compétences",
 
   "settings.browser.description":
-    "Lorsqu'il est activé, l'agent IA peut interagir avec les pages web — naviguer, cliquer, saisir du texte et prendre des captures d'écran. Une fenêtre Chrome s'ouvrira pour que vous puissiez observer l'agent travailler.",
+    "Pilotez un navigateur headless pour naviguer, cliquer, saisir du texte et prendre des captures d'écran. Par défaut, le navigateur fonctionne sans fenêtre visible, mais affiche une image intégrée après chaque action visuelle.",
   "settings.browser.enable.title": "Activer l'automatisation du navigateur",
-  "settings.browser.enable.description": "Enregistrer le serveur Playwright MCP auprès du backend CLI.",
+  "settings.browser.enable.description": "Activer l'outil World pour automatiser le navigateur.",
   "settings.browser.systemChrome.title": "Utiliser le Chrome système",
   "settings.browser.systemChrome.description":
-    "Utiliser votre navigateur Chrome installé au lieu d'une instance Chromium séparée.",
+    "Utiliser le navigateur Chrome installé au lieu d'une instance Chromium séparée. Utilise Chromium si Chrome est introuvable.",
   "settings.browser.headless.title": "Mode headless",
-  "settings.browser.headless.description": "Exécuter en mode headless (sans fenêtre de navigateur visible).",
+  "settings.browser.headless.description":
+    "Exécuter sans fenêtre visible. Désactivez cette option pour ouvrir une fenêtre Chrome observable.",
 
   "settings.language.description":
     "Choisissez la langue de l'interface de Kilo Code. \"Auto\" utilise la langue d'affichage de VS Code.",
@@ -885,6 +886,9 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Recherche de code",
   "settings.experimental.codebaseSearch.description":
     "Activer la recherche en langage naturel par IA dans toute la base de code",
+  "settings.experimental.worldBrowser.title": "Navigateur World",
+  "settings.experimental.worldBrowser.description":
+    "Activer l'outil de navigation World. Il fonctionne en mode headless par défaut et renvoie une image après chaque action visuelle. Désactivez-le pour masquer les fonctions de navigation à l'agent.",
   "settings.experimental.imageGeneration.title": "Génération d'images",
   "settings.experimental.imageGeneration.description": "Activer la génération d'images par IA",
   "settings.experimental.imageGenerationModel.title": "Modèle d'image",

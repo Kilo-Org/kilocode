@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test"
 import { Launch } from "../src/core/browser/launch"
 import { findSystemChrome } from "../src/core/browser/chrome"
+import { defaultConfig } from "../src/config"
 import type { WorldConfig } from "../src/types"
 
 afterAll(() => {})
@@ -20,6 +21,19 @@ function cfg(patch: Partial<WorldConfig["browser"]>): WorldConfig {
 }
 
 describe("Launch.fromConfig", () => {
+  test("ignores malformed daemon browser arguments", () => {
+    const current = process.env["KILO_WORLD_ARGS"]
+    try {
+      process.env["KILO_WORLD_ARGS"] = "not-json"
+      expect(defaultConfig().browser.args).toEqual([])
+      process.env["KILO_WORLD_ARGS"] = JSON.stringify(["--valid", 1])
+      expect(defaultConfig().browser.args).toEqual([])
+    } finally {
+      if (current === undefined) delete process.env["KILO_WORLD_ARGS"]
+      else process.env["KILO_WORLD_ARGS"] = current
+    }
+  })
+
   test("uses executablePath when explicitly set", () => {
     const out = Launch.fromConfig(cfg({ executablePath: "/custom/chrome" }))
     expect(out.executablePath).toBe("/custom/chrome")

@@ -6,11 +6,14 @@ import {
   copyKiloSandboxWorker,
   copySandboxResources,
   copyTreeSitterResources,
+  copyWorldDaemon,
   hasKiloSandboxWorker,
   hasTreeSitterResources,
+  hasWorldDaemon,
   kiloSandboxWorkerForBinary,
   sanitizeSandboxResources,
 } from "../src/services/cli-backend/cli-resources"
+import { WorldDaemon } from "../../kilo-world/script/daemon"
 import { currentBwrapTarget, ensureBwrapForTarget } from "./bwrap-helper"
 import { currentFfmpegTarget, ensureFfmpegForTarget } from "./ffmpeg-helper"
 
@@ -36,6 +39,7 @@ const coreDir = join(packagesDir, "core")
 const gatewayDir = join(packagesDir, "kilo-gateway")
 const indexingDir = join(packagesDir, "kilo-indexing")
 const sandboxDir = join(packagesDir, "kilo-sandbox")
+const worldDir = join(packagesDir, "kilo-world")
 
 const targetBinDir = join(kiloVscodeDir, "bin")
 const binName = process.platform === "win32" ? "kilo.exe" : "kilo"
@@ -53,7 +57,8 @@ async function cliSourceHash(): Promise<string | null> {
     const gatewayResult = await $`git log -1 --format=%H -- .`.cwd(gatewayDir).quiet()
     const indexingResult = await $`git log -1 --format=%H -- .`.cwd(indexingDir).quiet()
     const sandboxResult = await $`git log -1 --format=%H -- .`.cwd(sandboxDir).quiet()
-    return `${opencodeResult.text().trim()}-${coreResult.text().trim()}-${gatewayResult.text().trim()}-${indexingResult.text().trim()}-${sandboxResult.text().trim()}`
+    const worldResult = await $`git log -1 --format=%H -- .`.cwd(worldDir).quiet()
+    return `${opencodeResult.text().trim()}-${coreResult.text().trim()}-${gatewayResult.text().trim()}-${indexingResult.text().trim()}-${sandboxResult.text().trim()}-${worldResult.text().trim()}`
   } catch {
     return null
   }
@@ -66,12 +71,14 @@ async function isDirty(): Promise<boolean> {
     const gatewayResult = await $`git status --porcelain -- .`.cwd(gatewayDir).quiet()
     const indexingResult = await $`git status --porcelain -- .`.cwd(indexingDir).quiet()
     const sandboxResult = await $`git status --porcelain -- .`.cwd(sandboxDir).quiet()
+    const worldResult = await $`git status --porcelain -- .`.cwd(worldDir).quiet()
     return (
       opencodeResult.text().trim().length > 0 ||
       coreResult.text().trim().length > 0 ||
       gatewayResult.text().trim().length > 0 ||
       indexingResult.text().trim().length > 0 ||
-      sandboxResult.text().trim().length > 0
+      sandboxResult.text().trim().length > 0 ||
+      worldResult.text().trim().length > 0
     )
   } catch {
     return false
@@ -109,7 +116,8 @@ async function findKiloBinaryInOpencodeDist(): Promise<string | null> {
   const preferred = join(distDir, `@kilocode`, tag, "bin", binName)
   try {
     statSync(preferred)
-    if (!hasTreeSitterResources(preferred) || !hasKiloSandboxWorker(preferred)) return null
+    if (!hasTreeSitterResources(preferred) || !hasKiloSandboxWorker(preferred) || !hasWorldDaemon(preferred))
+      return null
     return preferred
   } catch {
     // fall through to generic search
@@ -135,7 +143,7 @@ async function findKiloBinaryInOpencodeDist(): Promise<string | null> {
         continue
       }
       if (e.isFile() && (e.name === "kilo" || e.name === "kilo.exe") && basename(dirname(p)) === "bin") {
-        if (!hasTreeSitterResources(p) || !hasKiloSandboxWorker(p)) continue
+        if (!hasTreeSitterResources(p) || !hasKiloSandboxWorker(p) || !hasWorldDaemon(p)) continue
         return p
       }
     }
@@ -212,6 +220,7 @@ async function writeSourceWrapper() {
   )
   chmodSync(targetBinPath, 0o755)
   await bundleKiloSandboxWorker()
+  await WorldDaemon.copy(await WorldDaemon.bundle(), targetBinDir)
   await ensureLocalHelpers()
 
   const hash = await cliSourceHash()
@@ -224,7 +233,11 @@ async function writeSourceWrapper() {
 async function main() {
   const targetFile = Bun.file(targetBinPath)
   const exists = await targetFile.exists()
-  const ready = exists && hasTreeSitterResources(targetBinPath) && hasKiloSandboxWorker(targetBinPath)
+  const ready =
+    exists &&
+    hasTreeSitterResources(targetBinPath) &&
+    hasKiloSandboxWorker(targetBinPath) &&
+    hasWorldDaemon(targetBinPath)
 
   const stale = ready && !forceRebuild && (await isStale())
   const rebuild = forceRebuild || stale || !ready
@@ -267,6 +280,7 @@ async function main() {
   await copyTreeSitterResources(sourceBinPath, targetBinPath)
   await copySandboxResources(sourceBinPath, targetBinPath)
   await copyKiloSandboxWorker(sourceBinPath, targetBinPath)
+  await copyWorldDaemon(sourceBinPath, targetBinPath)
   chmodSync(targetBinPath, 0o755)
   await ensureLocalHelpers()
 

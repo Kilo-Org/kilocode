@@ -28,8 +28,13 @@ export function resolveIndexingEnv(folders: readonly WorkspaceFolderLike[] | und
   return { KILO_DISABLE_CODEBASE_INDEXING: "vscode-no-workspace" }
 }
 
-export function resolveManagedServerEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
-  return { ...env, KILO_DISABLE_CHANNEL_DB: "true" }
+export function resolveManagedServerEnv(env: NodeJS.ProcessEnv, runtime = process.execPath): NodeJS.ProcessEnv {
+  return {
+    ...env,
+    KILO_DISABLE_CHANNEL_DB: "true",
+    KILO_WORLD_NODE: env.KILO_WORLD_NODE ?? runtime,
+    KILO_WORLD_NODE_ELECTRON: env.KILO_WORLD_NODE_ELECTRON ?? (env.KILO_WORLD_NODE ? "0" : "1"),
+  }
 }
 
 export class ServerManager {

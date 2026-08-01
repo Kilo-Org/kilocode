@@ -85,10 +85,7 @@ export type WorldConfigPatch = Omit<Partial<WorldConfig>, "browser"> & {
 }
 
 export type DaemonConfig = {
-  browser?: Pick<
-    BrowserConfig,
-    "headless" | "antiDetect" | "timeoutMs" | "viewport" | "executablePath" | "useSystemChrome" | "args"
-  >
+  browser?: Pick<BrowserConfig, "headless" | "antiDetect" | "timeoutMs" | "viewport">
 }
 
 export type Action = {

@@ -817,14 +817,15 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Навыки",
 
   "settings.browser.description":
-    "При включении ИИ-агент может взаимодействовать с веб-страницами — переходить по ссылкам, нажимать, вводить текст и делать скриншоты. Откроется окно Chrome, чтобы вы могли наблюдать за работой агента.",
+    "Управляйте браузером в фоновом режиме: переходите по страницам, нажимайте, вводите текст и делайте снимки экрана. По умолчанию браузер работает без видимого окна, но показывает изображение страницы после каждого визуального действия.",
   "settings.browser.enable.title": "Включить автоматизацию браузера",
-  "settings.browser.enable.description": "Зарегистрировать сервер Playwright MCP в CLI-бэкенде.",
+  "settings.browser.enable.description": "Включить инструмент World для автоматизации браузера.",
   "settings.browser.systemChrome.title": "Использовать системный Chrome",
   "settings.browser.systemChrome.description":
-    "Использовать установленный браузер Chrome вместо отдельного экземпляра Chromium.",
+    "Использовать установленный Chrome вместо отдельного Chromium. Если Chrome не найден, используется Chromium.",
   "settings.browser.headless.title": "Безголовый режим",
-  "settings.browser.headless.description": "Запуск в безголовом режиме (без видимого окна браузера).",
+  "settings.browser.headless.description":
+    "Запускать без видимого окна. Отключите, чтобы открыть наблюдаемое окно Chrome.",
 
   "settings.language.description": "Выберите язык интерфейса Kilo Code. «Авто» использует язык отображения VS Code.",
   "settings.language.auto": "Авто (язык VS Code)",
@@ -861,6 +862,9 @@ export const dict = {
   "settings.experimental.batch.description": "Включить пакетную обработку вызовов инструментов",
   "settings.experimental.codebaseSearch.title": "Поиск по коду",
   "settings.experimental.codebaseSearch.description": "Включить поиск на естественном языке с ИИ по всей кодовой базе",
+  "settings.experimental.worldBrowser.title": "Браузер World",
+  "settings.experimental.worldBrowser.description":
+    "Включить браузерный инструмент World. По умолчанию он работает без окна и возвращает изображение после каждого визуального действия. Отключите, чтобы скрыть возможности браузера от агента.",
   "settings.experimental.imageGeneration.title": "Генерация изображений",
   "settings.experimental.imageGeneration.description": "Включить генерацию изображений с помощью ИИ",
   "settings.experimental.imageGenerationModel.title": "Модель изображений",

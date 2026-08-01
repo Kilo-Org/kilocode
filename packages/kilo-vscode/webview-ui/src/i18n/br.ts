@@ -823,14 +823,15 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Habilidades",
 
   "settings.browser.description":
-    "Quando ativado, o agente de IA pode interagir com páginas da web — navegar, clicar, digitar e capturar telas. Uma janela do Chrome será aberta para que você possa acompanhar o trabalho do agente.",
+    "Controle um navegador headless para navegar, clicar, digitar e capturar telas. Por padrão, o navegador roda sem uma janela visível, mas mostra uma imagem da página após cada ação visual.",
   "settings.browser.enable.title": "Ativar Automação do Navegador",
-  "settings.browser.enable.description": "Registrar o servidor Playwright MCP no backend CLI.",
+  "settings.browser.enable.description": "Ative a ferramenta World para automação do navegador.",
   "settings.browser.systemChrome.title": "Usar Chrome do Sistema",
   "settings.browser.systemChrome.description":
-    "Usar o navegador Chrome instalado em vez de uma instância separada do Chromium.",
+    "Use o Chrome instalado em vez de uma instância separada do Chromium. Usa o Chromium se o Chrome não for encontrado.",
   "settings.browser.headless.title": "Modo Headless",
-  "settings.browser.headless.description": "Executar em modo headless (sem janela do navegador visível).",
+  "settings.browser.headless.description":
+    "Execute sem uma janela visível. Desative para abrir uma janela do Chrome que você possa acompanhar.",
 
   "settings.language.description":
     'Escolha o idioma da interface do Kilo Code. "Auto" usa o idioma de exibição do VS Code.',
@@ -871,6 +872,9 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Pesquisa de código",
   "settings.experimental.codebaseSearch.description":
     "Ativar pesquisa por linguagem natural com IA em toda a base de código",
+  "settings.experimental.worldBrowser.title": "Navegador World",
+  "settings.experimental.worldBrowser.description":
+    "Ative a ferramenta de navegador World. Ela roda em modo headless por padrão e retorna uma imagem após cada ação visual. Desative para ocultar os recursos de navegador do agente.",
   "settings.experimental.imageGeneration.title": "Geração de imagens",
   "settings.experimental.imageGeneration.description": "Ativar geração de imagens por IA",
   "settings.experimental.imageGenerationModel.title": "Modelo de imagem",
