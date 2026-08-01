@@ -319,10 +319,10 @@ toolIt.instance("skill tool malformed args surface InvalidArgumentsError, not a 
       agent: agent(["skill-a"]),
     })).find((item) => item.id === SkillTool.id)
     if (!tool) throw new Error("Skill tool not found")
-    const execute = tool.execute as unknown as (args: unknown, ctx: Tool.Context) => Effect.Effect<Tool.ExecuteResult>
 
     for (const args of [{}, { name: 123 }]) {
-      const exit = yield* execute(args, toolCtx("code")).pipe(Effect.exit)
+      // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion
+      const exit = yield* tool.execute(args as never, toolCtx("code")).pipe(Effect.exit)
       expect(Exit.isFailure(exit)).toBe(true)
       if (Exit.isFailure(exit)) {
         const die = exit.cause.reasons.find(Cause.isDieReason)
@@ -330,6 +330,32 @@ toolIt.instance("skill tool malformed args surface InvalidArgumentsError, not a 
         expect(error).toBeInstanceOf(Tool.InvalidArgumentsError)
         expect(error).not.toBeInstanceOf(TypeError)
       }
+    }
+  }),
+  { git: true, config: { agent: { code: { skills: ["skill-a"] } } } },
+)
+
+toolIt.instance("skill tool null args surface InvalidArgumentsError, not a TypeError defect", () =>
+  Effect.gen(function* () {
+    const dir = (yield* TestInstance).directory
+    yield* userSkills(dir)
+
+    const registry = yield* ToolRegistry.Service
+    const tool = (yield* registry.tools({
+      providerID: ProviderV2.ID.make("opencode"),
+      modelID: ModelV2.ID.make("gpt-5"),
+      agent: agent(["skill-a"]),
+    })).find((item) => item.id === SkillTool.id)
+    if (!tool) throw new Error("Skill tool not found")
+
+    // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion
+    const exit = yield* tool.execute(null as never, toolCtx("code")).pipe(Effect.exit)
+    expect(Exit.isFailure(exit)).toBe(true)
+    if (Exit.isFailure(exit)) {
+      const die = exit.cause.reasons.find(Cause.isDieReason)
+      const error = die?.defect
+      expect(error).toBeInstanceOf(Tool.InvalidArgumentsError)
+      expect(error).not.toBeInstanceOf(TypeError)
     }
   }),
   { git: true, config: { agent: { code: { skills: ["skill-a"] } } } },
