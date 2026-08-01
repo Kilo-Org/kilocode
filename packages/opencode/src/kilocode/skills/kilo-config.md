@@ -145,6 +145,28 @@ Actions: `"allow"`, `"ask"`, `"deny"`. Set `null` to delete an inherited key.
 
 Tool permissions: `read`, `edit`, `glob`, `grep`, `list`, `bash`, `task`, `webfetch`, `websearch`, `semantic_search`, `kilo_memory_save`, `kilo_memory_recall`, `lsp`, `skill`, `external_directory`, `todowrite`, `todoread`, `question`, `doom_loop`.
 
+### Per-Agent Skill Scoping
+
+Use an agent's `permission.skill` rules to control which discovered skills appear in its prompt and Skill tool inventory:
+
+```jsonc
+{
+  "agent": {
+    "guide": {
+      "permission": {
+        "skill": {
+          "*": "deny",
+          "skill-creator": "allow",
+          "subagent-creator": "allow"
+        }
+      }
+    }
+  }
+}
+```
+
+Permission rules use glob patterns and the last matching rule wins, so place the wildcard denial before specific allowances. Denied skills cannot be invoked through the Skill tool. To prevent direct file access to a skill directory, add matching `read` rules too.
+
 ## MCP Servers
 
 ```jsonc
