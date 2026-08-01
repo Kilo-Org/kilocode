@@ -1,0 +1,173 @@
+// kilocode_change - new file
+import { expect } from "bun:test"
+import { Cause, Effect, Exit, Layer } from "effect"
+import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { Ripgrep } from "@opencode-ai/core/ripgrep"
+import path from "path"
+import { Agent } from "../../src/agent/agent"
+import { Skill } from "../../src/skill"
+import { SkillTool } from "../../src/tool/skill"
+import { ToolRegistry } from "@/tool/registry"
+import type { Tool } from "@/tool/tool"
+import { SessionID, MessageID } from "../../src/session/schema"
+import { provideTmpdirInstance, TestInstance } from "../fixture/fixture"
+import { InstanceStore } from "@/project/instance-store"
+import { testEffect } from "../lib/effect"
+
+const it = testEffect(Layer.mergeAll(Agent.defaultLayer, Skill.defaultLayer, CrossSpawnSpawner.defaultLayer))
+const toolIt = testEffect(Layer.mergeAll(ToolRegistry.defaultLayer, CrossSpawnSpawner.defaultLayer).pipe(Layer.provide(Ripgrep.defaultLayer)))
+
+function agent(skills?: string[]) {
+  return {
+    name: "code",
+    mode: "primary" as const,
+    permission: [],
+    options: {},
+    ...(skills ? { skills } : {}),
+  }
+}
+
+function writeSkill(dir: string, name: string) {
+  return Bun.write(
+    path.join(dir, ".kilo", "skill", name, "SKILL.md"),
+    `---
+name: ${name}
+description: ${name} description.
+---
+
+# ${name}
+
+Body of ${name}.
+`,
+  )
+}
+
+const USER_SKILLS = ["skill-a", "skill-b", "excluded-1", "frontend-design"]
+
+function userSkills(dir: string) {
+  return Effect.all(USER_SKILLS.map((name) => Effect.promise(() => writeSkill(dir, name))))
+}
+
+it.instance("all skills visible when agent has no skills allow-list", () =>
+  Effect.gen(function* () {
+    const dir = (yield* TestInstance).directory
+    yield* userSkills(dir)
+
+    const skill = yield* Skill.Service
+    const list = yield* skill.available(agent())
+    expect(list.map((item) => item.name).toSorted()).toEqual([
+      "excluded-1",
+      "frontend-design",
+      "kilo-config",
+      "skill-a",
+      "skill-b",
+    ])
+  }),
+  { git: true },
+)
+
+it.instance("only matching skills visible with allow-list", () =>
+  Effect.gen(function* () {
+    const dir = (yield* TestInstance).directory
+    yield* userSkills(dir)
+
+    const skill = yield* Skill.Service
+    const list = yield* skill.available(agent(["skill-*"]))
+    expect(list.map((item) => item.name).toSorted()).toEqual(["skill-a", "skill-b"])
+  }),
+  { git: true },
+)
+
+it.instance("glob negation excludes matching skills", () =>
+  Effect.gen(function* () {
+    const dir = (yield* TestInstance).directory
+    yield* userSkills(dir)
+
+    const skill = yield* Skill.Service
+    const list = yield* skill.available(agent(["*", "!excluded-1"]))
+    expect(list.map((item) => item.name).toSorted()).toEqual([
+      "frontend-design",
+      "kilo-config",
+      "skill-a",
+      "skill-b",
+    ])
+  }),
+  { git: true },
+)
+
+it.instance("config agent skills propagate to Agent.Info", () =>
+  Effect.gen(function* () {
+    const svc = yield* Agent.Service
+    const item = yield* svc.get("guide")
+    expect(item.skills).toEqual(["skill-a"])
+    expect(item.options.skills).toBeUndefined()
+  }),
+  { git: true, config: { agent: { guide: { description: "Guide agent", skills: ["skill-a"] } } } },
+)
+
+it.live("agent markdown frontmatter skills load", () =>
+  provideTmpdirInstance(
+    (dir) =>
+      Effect.gen(function* () {
+        yield* Effect.promise(() =>
+          Bun.write(
+            path.join(dir, ".kilo", "agent", "guide.md"),
+            `---
+description: Guide agent
+skills:
+  - skill-a
+---
+
+You are a guide.
+`,
+          ),
+        )
+        const store = yield* InstanceStore.Service
+        yield* store.reload({ directory: dir })
+
+        const svc = yield* Agent.Service
+        const item = yield* svc.get("guide")
+        expect(item.skills).toEqual(["skill-a"])
+        expect(item.options.skills).toBeUndefined()
+      }),
+    { git: true },
+  ),
+)
+
+toolIt.instance("skill tool rejects skills outside the agent allow-list", () =>
+  Effect.gen(function* () {
+    const dir = (yield* TestInstance).directory
+    yield* userSkills(dir)
+
+    const registry = yield* ToolRegistry.Service
+    const tool = (yield* registry.tools({
+      providerID: "opencode" as never,
+      modelID: "gpt-5" as never,
+      agent: agent(["skill-a"]),
+    })).find((item) => item.id === SkillTool.id)
+    if (!tool) throw new Error("Skill tool not found")
+
+    const ctx: Tool.Context = {
+      sessionID: SessionID.make("ses_test"),
+      messageID: MessageID.make("msg_test"),
+      callID: "",
+      agent: "code",
+      abort: AbortSignal.any([]),
+      messages: [],
+      metadata: () => Effect.void,
+      ask: () => Effect.void,
+    }
+
+    const allowed = yield* tool.execute({ name: "skill-a" }, ctx)
+    expect(allowed.output).toContain(`<skill_content name="skill-a">`)
+
+    const denied = yield* tool.execute({ name: "skill-b" }, ctx).pipe(Effect.exit)
+    expect(Exit.isFailure(denied)).toBe(true)
+    if (Exit.isFailure(denied)) {
+      const error = Cause.squash(denied.cause)
+      expect(error).toBeInstanceOf(Error)
+      if (error instanceof Error) expect(error.message).toContain('Skill "skill-b" is not allowed')
+    }
+  }),
+  { git: true, config: { agent: { code: { skills: ["skill-a"] } } } },
+)

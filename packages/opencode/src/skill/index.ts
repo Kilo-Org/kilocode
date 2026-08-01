@@ -374,7 +374,10 @@ export const layer = Layer.effect(
       const s = yield* InstanceState.get(state)
       const list = Object.values(s.skills).toSorted((a, b) => a.name.localeCompare(b.name))
       if (!agent) return list
-      return list.filter((skill) => Permission.evaluate("skill", skill.name, agent.permission).action !== "deny")
+      return list.filter((skill) => {
+        if (Permission.evaluate("skill", skill.name, agent.permission).action === "deny") return false // kilocode_change
+        return allowed(agent, skill.name) // kilocode_change
+      })
     })
 
     return Service.of({ get, require, all, dirs, available })
@@ -392,6 +395,21 @@ export const defaultLayer: Layer.Layer<Service> = layer.pipe(
   Layer.provide(Global.layer),
   Layer.provide(RuntimeFlags.defaultLayer),
 )
+
+// kilocode_change start - per-agent skill allow-list (AgentConfig.skills)
+// Glob patterns matched against skill names; the last matching pattern wins and a
+// `!` prefix negates it. Unset (or empty) means every skill is allowed.
+export function allowed(agent: Agent.Info, name: string): boolean {
+  const patterns = agent.skills
+  if (!patterns?.length) return true
+  let match = false
+  for (const pattern of patterns) {
+    const negated = pattern.startsWith("!")
+    if (Glob.match(negated ? pattern.slice(1) : pattern, name)) match = !negated
+  }
+  return match
+}
+// kilocode_change end
 
 export function fmt(list: Info[], opts: { verbose: boolean }) {
   const described = list.filter((skill) => skill.description !== undefined)
