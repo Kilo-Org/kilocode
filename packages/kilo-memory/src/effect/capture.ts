@@ -302,7 +302,7 @@ export namespace MemoryCapture {
                 yield* fail("digest parse_error")
                 yield* memory.append({
                   root,
-                  text: `digest parse_error=${MemoryShared.brief(reason, 160)} full=${result.result.text} fallback=1`,
+                  text: `digest parse_error=${MemoryShared.brief(reason, 160)} full=${MemoryShared.brief(MemoryRedact.text(result.result.text), 2000)} fallback=1`,
                 })
                 return undefined
               }),
