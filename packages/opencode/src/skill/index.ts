@@ -374,10 +374,12 @@ export const layer = Layer.effect(
       const s = yield* InstanceState.get(state)
       const list = Object.values(s.skills).toSorted((a, b) => a.name.localeCompare(b.name))
       if (!agent) return list
+      // kilocode_change start - filter skills by permission deny and agent allow-list
       return list.filter((skill) => {
         if (Permission.evaluate("skill", skill.name, agent.permission).action === "deny") return false // kilocode_change
         return allowed(agent, skill.name) // kilocode_change
       })
+      // kilocode_change end
     })
 
     return Service.of({ get, require, all, dirs, available })

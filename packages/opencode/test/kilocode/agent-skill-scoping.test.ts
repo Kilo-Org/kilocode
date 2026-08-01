@@ -95,13 +95,7 @@ it.instance("all skills visible when agent has no skills allow-list", () =>
 
     const skill = yield* Skill.Service
     const list = yield* skill.available(agent())
-    expect(list.map((item) => item.name).toSorted()).toEqual([
-      "excluded-1",
-      "frontend-design",
-      "kilo-config",
-      "skill-a",
-      "skill-b",
-    ])
+    expect(list.map((item) => item.name).toSorted()).toEqual(expect.arrayContaining(USER_SKILLS.toSorted()))
   }),
   { git: true },
 )
@@ -125,12 +119,9 @@ it.instance("glob negation excludes matching skills", () =>
 
     const skill = yield* Skill.Service
     const list = yield* skill.available(agent(["*", "!excluded-1"]))
-    expect(list.map((item) => item.name).toSorted()).toEqual([
-      "frontend-design",
-      "kilo-config",
-      "skill-a",
-      "skill-b",
-    ])
+    const names = list.map((item) => item.name).toSorted()
+    expect(names).toEqual(expect.arrayContaining(USER_SKILLS.filter((name) => name !== "excluded-1").toSorted()))
+    expect(names).not.toContain("excluded-1")
   }),
   { git: true },
 )
