@@ -9,7 +9,7 @@ import { Skill } from "../../src/skill"
 import { allowed } from "../../src/kilocode/skill/allow-list"
 import { SkillTool } from "../../src/tool/skill"
 import { ToolRegistry } from "@/tool/registry"
-import type { Tool } from "@/tool/tool"
+import { Tool } from "@/tool/tool"
 import { SessionID, MessageID } from "../../src/session/schema"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
@@ -305,6 +305,34 @@ toolIt.instance("renamed agents without skills keep every skill", () =>
     }
   }),
   { git: true, config: { agent: { reviewer: { name: "docs" } } } },
+)
+
+toolIt.instance("skill tool malformed args surface InvalidArgumentsError, not a TypeError defect", () =>
+  Effect.gen(function* () {
+    const dir = (yield* TestInstance).directory
+    yield* userSkills(dir)
+
+    const registry = yield* ToolRegistry.Service
+    const tool = (yield* registry.tools({
+      providerID: ProviderV2.ID.make("opencode"),
+      modelID: ModelV2.ID.make("gpt-5"),
+      agent: agent(["skill-a"]),
+    })).find((item) => item.id === SkillTool.id)
+    if (!tool) throw new Error("Skill tool not found")
+    const execute = tool.execute as unknown as (args: unknown, ctx: Tool.Context) => Effect.Effect<Tool.ExecuteResult>
+
+    for (const args of [{}, { name: 123 }]) {
+      const exit = yield* execute(args, toolCtx("code")).pipe(Effect.exit)
+      expect(Exit.isFailure(exit)).toBe(true)
+      if (Exit.isFailure(exit)) {
+        const die = exit.cause.reasons.find(Cause.isDieReason)
+        const error = die?.defect
+        expect(error).toBeInstanceOf(Tool.InvalidArgumentsError)
+        expect(error).not.toBeInstanceOf(TypeError)
+      }
+    }
+  }),
+  { git: true, config: { agent: { code: { skills: ["skill-a"] } } } },
 )
 
 it.instance("permission.skill deny hides allow-listed skills", () =>
