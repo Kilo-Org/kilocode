@@ -76,6 +76,16 @@ class BranchDiffTest {
     }
 
     @Test
+    fun `capDiff keeps all patches under a large budget`() {
+        val files = (1..110).map { i -> stat("src/File$i.kt") }
+
+        val diff = capDiff(files, cap = 8 * 1024 * 1024) { file -> "patch-${file.file}\n".repeat(30) }
+
+        assertEquals(files.map { it.file }, diff.map { it.file })
+        assertEquals(files.map { file -> "patch-${file.file}\n".repeat(30) }, diff.map { it.patch })
+    }
+
+    @Test
     fun `parses git numstat output`() {
         val stats = parseNumstat("1\t2\tsrc/A.kt\n0\t3\tsrc/B.kt\n-\t-\tbin.png\n")
 

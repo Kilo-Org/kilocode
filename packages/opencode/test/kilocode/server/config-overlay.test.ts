@@ -653,7 +653,6 @@ describe("config overlay routes", () => {
         overridden: true,
       })
     },
-    15_000,
   )
 
   test.serial("refreshes agent permissions after global permission update", async () => {
