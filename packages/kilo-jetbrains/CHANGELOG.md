@@ -118,6 +118,15 @@
 
 ## [Unreleased]
 
+## [7.0.12-rc.4] - 2026-08-01
+
+### Fixed
+- Improve large branch diff performance by capping huge inline diff previews, compacting diff tree paths, and allowing horizontal scrolling for long file names.
+- Reflow existing long chat sessions after they load so transcripts lay out at the correct width without needing to resize the tool window.
+- Keep the prompt send/stop button synchronized when attachments are added, removed, or cleared while a session is busy.
+- Reduce transcript restyling work during streaming so large sessions remain responsive.
+- Hide expanded diff folder badges and refresh diff tree layout correctly when folders are toggled.
+
 ## [7.0.12-rc.3] - 2026-07-31
 
 ### Added
