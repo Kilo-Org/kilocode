@@ -368,15 +368,16 @@ const IndexingTab: Component = () => {
         return
       }
       if (message.model) {
-        updateIndexing({
-          model: message.model.id,
-          dimension: message.model.dimension,
-          ...(savedBatchSize === undefined &&
-          message.model.batchSize !== undefined &&
-          message.model.batchSize < 8
-            ? { embeddingBatchSize: message.model.batchSize }
-            : {}),
-        }, target)
+        updateIndexing(
+          {
+            model: message.model.id,
+            dimension: message.model.dimension,
+            ...(savedBatchSize === undefined && message.model.batchSize !== undefined && message.model.batchSize < 8
+              ? { embeddingBatchSize: message.model.batchSize }
+              : {}),
+          },
+          target,
+        )
         setModels((items) =>
           items.map((item) => (item.id === message.model?.id ? { ...item, ...message.model } : item)),
         )
