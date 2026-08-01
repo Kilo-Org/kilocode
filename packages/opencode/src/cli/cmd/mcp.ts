@@ -731,6 +731,8 @@ export const McpDebugCommand = effectCmd({
       // kilocode_change start - header-auth servers still need the general HTTP diagnostics below
       if (McpAuthMode.header(serverConfig) && !McpAuthMode.oauth(serverConfig)) {
         prompts.log.info(`MCP server ${serverName} uses its configured Authorization header instead of OAuth`)
+      } else if (serverConfig.oauth === false) {
+        prompts.log.warn(`MCP server ${serverName} has OAuth explicitly disabled and no Authorization header configured`)
       }
       // kilocode_change end
 
