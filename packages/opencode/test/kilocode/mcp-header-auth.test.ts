@@ -15,6 +15,7 @@ it.instance(
       expect(yield* mcp.supportsOAuth("header")).toBe(false)
       expect(yield* mcp.supportsOAuth("oauth")).toBe(true)
       expect(yield* mcp.supportsOAuth("custom")).toBe(true)
+      expect(yield* mcp.supportsOAuth("disabled")).toBe(false)
     }),
   {
     config: {
@@ -37,6 +38,12 @@ it.instance(
           url: "https://mcp.example.com",
           enabled: false,
           headers: { "X-Organization": "example" },
+        },
+        disabled: {
+          type: "remote",
+          url: "https://mcp.example.com",
+          enabled: false,
+          oauth: false,
         },
       },
     },

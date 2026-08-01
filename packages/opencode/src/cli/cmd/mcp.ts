@@ -729,7 +729,7 @@ export const McpDebugCommand = effectCmd({
       }
 
       // kilocode_change start - header-auth servers still need the general HTTP diagnostics below
-      if (!McpAuthMode.oauth(serverConfig)) {
+      if (McpAuthMode.header(serverConfig) && !McpAuthMode.oauth(serverConfig)) {
         prompts.log.info(`MCP server ${serverName} uses its configured Authorization header instead of OAuth`)
       }
       // kilocode_change end
@@ -801,10 +801,10 @@ export const McpDebugCommand = effectCmd({
           prompts.log.warn("Server returned 401 Unauthorized")
 
           // kilocode_change start - retain the HTTP probe for header-auth diagnostics without starting OAuth
-          if (!McpAuthMode.oauth(serverConfig)) {
+          if (McpAuthMode.header(serverConfig) && !McpAuthMode.oauth(serverConfig)) {
             prompts.log.warn(McpAuthMode.failure(serverName))
             prompts.log.info('To use OAuth as well, set "oauth": {} for this server.')
-          } else {
+          } else if (McpAuthMode.oauth(serverConfig)) {
             // Try to discover OAuth metadata
             const oauthConfig = typeof serverConfig.oauth === "object" ? serverConfig.oauth : undefined
             const authProvider = new McpOAuthProvider(
