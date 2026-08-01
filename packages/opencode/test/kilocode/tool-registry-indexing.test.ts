@@ -471,6 +471,7 @@ describe("kilocode tool registry indexing", () => {
       KiloSessions.Service.of({
         init: () => Effect.sync(() => calls.push("sessions")),
         sendAgentNotification: () => Effect.succeed({ ok: false as const, reason: "not_connected" }),
+        reportSessionTitle: () => Effect.succeed({ ok: false as const, reason: "not_connected" }),
       }),
     )
     const bus = Layer.succeed(

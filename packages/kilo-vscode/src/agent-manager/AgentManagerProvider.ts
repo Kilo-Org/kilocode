@@ -134,6 +134,7 @@ export class AgentManagerProvider implements Disposable {
       getServerConfig: () => this.connectionService.getServerConfig() ?? undefined,
       getRoot: () => this.getRoot(),
       getWorktreePath: (id) => this.getStateManager()?.getWorktree(id)?.path,
+      getProjectId: () => this.projectScope.current()?.id ?? this.contexts.active()?.id,
       log: (...args) => this.log("[XTerm]", ...args),
       post: (msg) => this.postToWebview(msg),
       getTerminalFont: () => readTerminalFont(),

@@ -266,6 +266,7 @@ export const dict = {
 
   "notification.permission.title": "권한 필요",
   "notification.permission.titleSubagent": "권한 필요 (서브에이전트)",
+  "notification.permission.titleSkillShell": '스킬 "{{skill}}"의 셸 명령을 실행할까요?',
   "ui.permission.manageAutoApprove": "자동 승인 규칙 관리",
   "ui.permission.doomLoop.prompt": "{{tool}} 도구에서 잠재적인 반복 실행이 감지되었습니다. 계속 실행하시겠습니까?",
   "ui.permission.doomLoop.rule": "{{tool}} 호출 계속",

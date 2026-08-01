@@ -1,5 +1,54 @@
 # kilo-code
 
+## 7.4.18
+
+### Minor Changes
+
+- [#12681](https://github.com/Kilo-Org/kilocode/pull/12681) [`3ab1122`](https://github.com/Kilo-Org/kilocode/commit/3ab1122e0fbbff5c6821acb21df7d3d93f52955f) - Add a scope selector and base branch picker to the Agent Manager diff review. The side panel and full-screen review now let you switch between Branch, Staged, Unstaged, and Session scopes for the selected worktree, and the Branch scope's base branch can be overridden from a picker next to it. Branch stays the default, so existing review behavior is unchanged.
+
+- [#12566](https://github.com/Kilo-Org/kilocode/pull/12566) [`46b7e55`](https://github.com/Kilo-Org/kilocode/commit/46b7e55f8d8f1e4b0722076b09d4a56bf8031939) - Add an experimental multi-project foundation for Agent Manager behind the Multi-Project Agent Manager toggle in Kilo Settings > Experimental. A persistent project registry catalogs additional Git repositories across restarts while the current workspace repository stays the pinned default project, and all repository-bound services (state, worktrees, setup scripts, stale tracking, polling) are now owned by immutable per-project contexts that can be activated, expanded, and switched through new project protocol messages. Every expanded project runs its own git stats and PR pollers, so all visible project accordions show live data at the same time; switching projects keeps previously visited projects expanded and restores the exact worktree or session that was open there. Sessions created anywhere (sidebar, another window, the CLI) appear in the owning project's list immediately, and open tabs stay private to the project they were opened in. Single-project behavior is unchanged when the experiment is disabled.
+
+- [#12709](https://github.com/Kilo-Org/kilocode/pull/12709) [`5c140b1`](https://github.com/Kilo-Org/kilocode/commit/5c140b12cf54d883e3a31329e07dbdd2d4b38829) - Make the Agent Manager diff review follow the sidebar selection instead of a single session. Switching session tabs inside a worktree no longer refetches the Branch, Staged, and Unstaged scopes, the Session scope now swaps to the active session's changes on tab switch, and the Local tab gains the Session scope so sessions running in the workspace can be reviewed on their own. The Session scope shows a notice when snapshots are disabled instead of a blank list, worktrees without an open session now still show their branch diff, and the Apply dialog lists the worktree's changes again.
+
+- [#12680](https://github.com/Kilo-Org/kilocode/pull/12680) [`49223b3`](https://github.com/Kilo-Org/kilocode/commit/49223b3adecb891b185d7a21bac8d4993d3bee65) - Run Agent Manager project scripts in the terminal selected by the existing toolbar dropdown. Agent Manager panel uses the named side terminal, while VS Code terminal retains the integrated task flow.
+
+- [#12424](https://github.com/Kilo-Org/kilocode/pull/12424) [`d6380b2`](https://github.com/Kilo-Org/kilocode/commit/d6380b246b0d0ad99e5cf2084d97e381f1bc94e3) Thanks [@bsflasher](https://github.com/bsflasher)! - Add Persian (Farsi) as a UI language, including right-to-left layout. Contributed by Babak Safabahar.
+
+- [#12606](https://github.com/Kilo-Org/kilocode/pull/12606) [`286b672`](https://github.com/Kilo-Org/kilocode/commit/286b67265f6be79b14bb3ca4051880339c695c3f) Thanks [@bagatao-anaconda](https://github.com/bagatao-anaconda)! - Show skill shell commands in the permission prompt. When a skill runs embedded shell commands, the approval dialog now lists every command with Allow / Reject.
+
+- [#12703](https://github.com/Kilo-Org/kilocode/pull/12703) [`5076b62`](https://github.com/Kilo-Org/kilocode/commit/5076b629741e4cae71277405470f7c382f800bb3) - Run Agent Manager worktree setup scripts in the terminal selected by the toolbar dropdown. Agent Manager panel shows live setup output in a named `Setup` side tab that reveals itself while provisioning and hides again on success unless you engaged with the panel, while VS Code terminal retains the integrated task flow.
+
+### Patch Changes
+
+- [#12696](https://github.com/Kilo-Org/kilocode/pull/12696) [`a2b22d0`](https://github.com/Kilo-Org/kilocode/commit/a2b22d07c2b773dcbcc71b8e6999a9bd1c118b91) - Apply the Agent Manager base branch picker selection to the active diff immediately. Changing the base branch now refreshes the diff against the new base instead of keeping the previous comparison until the scope or session changed.
+
+- [#12720](https://github.com/Kilo-Org/kilocode/pull/12720) [`57a9a60`](https://github.com/Kilo-Org/kilocode/commit/57a9a6012c7eac98a7a0704443f671101935a795) - Fix Agent Manager embedded terminals not opening in the side panel or as a tab.
+
+- [#12691](https://github.com/Kilo-Org/kilocode/pull/12691) [`301c14e`](https://github.com/Kilo-Org/kilocode/commit/301c14e558caf1deb4510be847f6ba3fba804a5d) - Make Cmd/Ctrl+/ toggle the Agent Manager terminal even when the webview keybinding forwarding drops the key while the prompt input is focused, and stop it from triggering the Agent Manager terminal while the Kilo sidebar is focused.
+
+- [#12694](https://github.com/Kilo-Org/kilocode/pull/12694) [`af6bb00`](https://github.com/Kilo-Org/kilocode/commit/af6bb00eed3fec25429bb459db95709667761909) - Match the Agent Manager terminal shortcut fallback to the platform modifier (Cmd on macOS, Ctrl elsewhere) and consume the extension echo once per keypress so unrelated invocations are no longer swallowed.
+
+- [#12722](https://github.com/Kilo-Org/kilocode/pull/12722) [`5678c09`](https://github.com/Kilo-Org/kilocode/commit/5678c09cf54ed73e4d712a87bca730ee0d64001d) - Fix the Agent Manager detail pane blanking when an unassigned session is selected. Clicking a session that belongs to no worktree now renders the chat and read-only banner again instead of an empty content area, and live terminal tabs stay mounted across the switch.
+
+- [#12658](https://github.com/Kilo-Org/kilocode/pull/12658) [`dbcd582`](https://github.com/Kilo-Org/kilocode/commit/dbcd5825da6a3253015f6c38e55a7faf5d1715b8) - Keep the Agent Manager terminal cursor visible on the bottom row.
+
+- [#12369](https://github.com/Kilo-Org/kilocode/pull/12369) [`44f1373`](https://github.com/Kilo-Org/kilocode/commit/44f13738a30668483a2cc5c22c6ba82a718cdb90) - Allow users to enable web search for models from all providers through Kilo configuration, VS Code settings, and Kilo Console settings.
+
+- [#12624](https://github.com/Kilo-Org/kilocode/pull/12624) [`af4cb42`](https://github.com/Kilo-Org/kilocode/commit/af4cb422038538643fe0303674ceeb43b6d7185b) Thanks [@Hardik180704](https://github.com/Hardik180704)! - Persist MCP server enable and disable changes from VS Code settings across window reloads.
+
+- [#12656](https://github.com/Kilo-Org/kilocode/pull/12656) [`f0d2c8f`](https://github.com/Kilo-Org/kilocode/commit/f0d2c8ffc801ae964bb3821500ed4b116de5bccd) - Navigate long conversations from a compact prompt rail that loads earlier history as you scroll.
+
+- [#12692](https://github.com/Kilo-Org/kilocode/pull/12692) [`faf0236`](https://github.com/Kilo-Org/kilocode/commit/faf0236ca4208ac798407fe70f86845a1de0b510) - Fix the `@` "Past chats" picker in Agent Manager showing only the current session's directory. It now lists previous sessions across the whole worktree family — the local workspace and every Agent Manager worktree — each labeled with its worktree name, matching the Agent Manager session search. Any listed session can be attached as context, including chats from other worktrees of the same repository.
+
+- [#12689](https://github.com/Kilo-Org/kilocode/pull/12689) [`1cd81a9`](https://github.com/Kilo-Org/kilocode/commit/1cd81a9e1f973574271cc3cee1051ed37e22422f) - Open an embedded terminal automatically when switching to a worktree without one.
+
+- [#12693](https://github.com/Kilo-Org/kilocode/pull/12693) [`1e2a7f1`](https://github.com/Kilo-Org/kilocode/commit/1e2a7f17d7242ce48eb46e7268ebcdefed8b8336) - Make Agent Manager panel terminals behave like session tabs: right-click Close and Close Others, arrow-key tab navigation, overflow scrolling with edge fades, and stable tab widths while closing. The new-terminal button now sits directly next to the last terminal tab instead of the far edge of the panel.
+
+- [#12738](https://github.com/Kilo-Org/kilocode/pull/12738) [`84b8b96`](https://github.com/Kilo-Org/kilocode/commit/84b8b9676a3912793f8bf38208b38760f6e79b17) - Show a write-aware cache hit rate in the VS Code session usage bar.
+
+- Updated dependencies [[`0d923d0`](https://github.com/Kilo-Org/kilocode/commit/0d923d0ef56d42cd7eb6d1e2d5fc58c7b508a80b)]:
+  - @kilocode/kilo-memory@7.4.18
+
 ## 7.4.17
 
 ### Minor Changes
