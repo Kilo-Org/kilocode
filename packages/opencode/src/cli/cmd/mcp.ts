@@ -24,6 +24,7 @@ import { EventV2Bridge } from "@/event-v2-bridge"
 import { EventV2 } from "@opencode-ai/core/event"
 import { Effect } from "effect"
 import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
+import { McpAuthMode } from "@/kilocode/mcp/auth-mode" // kilocode_change
 
 function getAuthStatusIcon(status: MCP.AuthStatus): string {
   switch (status) {
@@ -65,7 +66,7 @@ function configuredServers(config: ConfigV1.Info) {
 
 function oauthServers(config: ConfigV1.Info) {
   return configuredServers(config).filter(
-    (entry): entry is [string, McpRemote] => isMcpRemote(entry[1]) && entry[1].oauth !== false,
+    (entry): entry is [string, McpRemote] => isMcpRemote(entry[1]) && McpAuthMode.oauth(entry[1]), // kilocode_change
   )
 }
 
@@ -235,11 +236,13 @@ export const McpAuthCommand = effectCmd({
       return
     }
 
-    if (!isMcpRemote(serverConfig) || serverConfig.oauth === false) {
+    // kilocode_change start
+    if (!isMcpRemote(serverConfig) || !McpAuthMode.oauth(serverConfig)) {
       prompts.log.error(`MCP server ${serverName} is not an OAuth-capable remote server`)
       prompts.outro("Done")
       return
     }
+    // kilocode_change end
 
     // Check if already authenticated
     const authStatus = auth[serverName] ?? (yield* MCP.Service.use((mcp) => mcp.getAuthStatus(serverName)))
@@ -721,11 +724,13 @@ export const McpDebugCommand = effectCmd({
         return
       }
 
-      if (serverConfig.oauth === false) {
-        prompts.log.warn(`MCP server ${serverName} has OAuth explicitly disabled`)
+      // kilocode_change start
+      if (!McpAuthMode.oauth(serverConfig)) {
+        prompts.log.warn(`MCP server ${serverName} is not configured to use OAuth`)
         prompts.outro("Done")
         return
       }
+      // kilocode_change end
 
       prompts.log.info(`Server: ${serverName}`)
       prompts.log.info(`URL: ${serverConfig.url}`)

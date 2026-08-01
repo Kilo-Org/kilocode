@@ -44,6 +44,7 @@ import { InstanceState } from "@/effect/instance-state"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import * as SandboxNetwork from "@/kilocode/sandbox/network" // kilocode_change
+import { McpAuthMode } from "@/kilocode/mcp/auth-mode" // kilocode_change
 import { McpCatalog } from "./catalog"
 
 const DEFAULT_TIMEOUT = 30_000
@@ -248,7 +249,7 @@ export const layer = Layer.effect(
       key: string,
       mcp: ConfigMCPV1.Info & { type: "remote" },
     ) {
-      const oauthDisabled = mcp.oauth === false
+      const oauthDisabled = !McpAuthMode.oauth(mcp) // kilocode_change
       const oauthConfig = typeof mcp.oauth === "object" ? mcp.oauth : undefined
       const url = remoteURL(mcp.url)
       if (!url) {
@@ -304,6 +305,21 @@ export const layer = Layer.effect(
             const lastError = error instanceof Error ? error : new Error(String(error))
             const isAuthError =
               error instanceof UnauthorizedError || (authProvider && lastError.message.includes("OAuth"))
+
+            // kilocode_change start - static Authorization headers are not OAuth credentials
+            if (error instanceof UnauthorizedError && McpAuthMode.header(mcp) && !McpAuthMode.oauth(mcp)) {
+              const message = McpAuthMode.failure(key)
+              lastStatus = { status: "failed" as const, error: message }
+              return events
+                .publish(TuiEvent.ToastShow, {
+                  title: "MCP Header Authentication Failed",
+                  message,
+                  variant: "warning",
+                  duration: 8000,
+                })
+                .pipe(Effect.ignore, Effect.as(undefined))
+            }
+            // kilocode_change end
 
             if (isAuthError) {
               if (lastError.message.includes("registration") || lastError.message.includes("client_id")) {
@@ -786,7 +802,9 @@ export const layer = Layer.effect(
       // kilocode_change end
       const mcpConfig = yield* requireMcpConfig(mcpName)
       if (mcpConfig.type !== "remote") throw new Error(`MCP server ${mcpName} is not a remote server`)
-      if (mcpConfig.oauth === false) throw new Error(`MCP server ${mcpName} has OAuth explicitly disabled`)
+      // kilocode_change start
+      if (!McpAuthMode.oauth(mcpConfig)) throw new Error(`MCP server ${mcpName} is not configured to use OAuth`)
+      // kilocode_change end
       const url = remoteURL(mcpConfig.url)
       if (!url) throw new Error(`Invalid MCP URL for "${mcpName}"`)
 
@@ -973,7 +991,7 @@ export const layer = Layer.effect(
 
     const supportsOAuth = Effect.fn("MCP.supportsOAuth")(function* (mcpName: string) {
       const mcpConfig = yield* requireMcpConfig(mcpName)
-      return mcpConfig.type === "remote" && mcpConfig.oauth !== false
+      return mcpConfig.type === "remote" && McpAuthMode.oauth(mcpConfig) // kilocode_change
     })
 
     const hasStoredTokens = Effect.fn("MCP.hasStoredTokens")(function* (mcpName: string) {
