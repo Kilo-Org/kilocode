@@ -361,7 +361,7 @@ const IndexingTab: Component = () => {
           {
             model: message.model.id,
             dimension: message.model.dimension,
-            ...(savedBatchSize === undefined && message.model.batchSize !== undefined && message.model.batchSize < 8
+            ...(savedBatchSize === undefined && message.model.batchSize !== undefined
               ? { embeddingBatchSize: message.model.batchSize }
               : {}),
           },

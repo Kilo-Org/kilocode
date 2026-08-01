@@ -245,6 +245,6 @@ export async function probeEmbeddingModel(options: Options): Promise<EmbeddingMo
     name: options.model,
     embedding: "supported",
     dimension: result.profile.dimension,
-    batchSize: result.profile.size,
+    ...(result.profile.size === sizes[0] ? {} : { batchSize: result.profile.size }),
   }
 }

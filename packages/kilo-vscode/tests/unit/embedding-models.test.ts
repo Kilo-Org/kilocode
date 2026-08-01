@@ -58,7 +58,6 @@ describe("embedding model discovery", () => {
       name: "embed",
       embedding: "supported",
       dimension: 3,
-      batchSize: 8,
     })
   })
 
@@ -116,7 +115,6 @@ describe("embedding model discovery", () => {
       const size = body.input.length
       sizes.push(size)
       if (size === 8) return Response.json({ error: "batch input is unsupported" }, { status: 400 })
-      if (size > 1) return Response.json({ embeddings: [[0.1, 0.2]] })
       return Response.json({ embeddings: [[0.1, 0.2]] })
     })
 
