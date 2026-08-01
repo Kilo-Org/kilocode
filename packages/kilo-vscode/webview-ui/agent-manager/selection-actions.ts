@@ -24,6 +24,9 @@ export interface SelectionActionDeps<T extends SessionLike> {
   post: (msg: unknown) => void
   tabMemory: () => Record<string, string>
   terms: TermState
+  /** Terminal state is keyed by project-namespaced context; map a plain
+   *  selection ("local" or a worktree id) to its terminal-state key. */
+  nsKey: (sel: string) => string
   activateTerminal: (id: string) => void
   setActivePendingId: (id: string | undefined) => void
   selectSession: (id: string) => void
@@ -40,7 +43,7 @@ export function selectLocalAction<T extends SessionLike>(deps: SelectionActionDe
   deps.setSelection(LOCAL)
   deps.post({ type: "agentManager.requestRepoInfo" })
   const remembered = deps.tabMemory()[LOCAL]
-  if (deps.terms.hasRemembered(LOCAL, remembered)) return deps.activateTerminal(remembered!)
+  if (deps.terms.hasRemembered(deps.nsKey(LOCAL), remembered)) return deps.activateTerminal(remembered!)
   deps.terms.setActiveId(undefined)
   const target = remembered ? locals.find((s) => s.id === remembered) : undefined
   const fallback = target ?? locals[0]
@@ -64,7 +67,7 @@ export function selectWorktreeAction<T extends SessionLike>(
   deps.saveTabMemory()
   deps.setSelection(worktreeId)
   const remembered = deps.tabMemory()[worktreeId]
-  if (deps.terms.hasRemembered(worktreeId, remembered)) return deps.activateTerminal(remembered!)
+  if (deps.terms.hasRemembered(deps.nsKey(worktreeId), remembered)) return deps.activateTerminal(remembered!)
   deps.terms.setActiveId(undefined)
   const target = remembered ? sessions.find((s) => s.id === remembered) : undefined
   const fallback = target ?? sessions[0]

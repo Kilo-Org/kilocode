@@ -1,8 +1,10 @@
 package ai.kilocode.client.session.views
 
+import ai.kilocode.client.session.SessionDiffOpener
 import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.session.model.Message
+import ai.kilocode.client.session.ui.ModifiedFilesView
 import ai.kilocode.client.session.ui.SessionLayoutPanel
 import ai.kilocode.client.session.ui.SessionView
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
@@ -10,6 +12,7 @@ import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.base.PartView
+import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.registry.Registry
@@ -40,7 +43,10 @@ class TurnView(
 ) : SessionLayoutPanel(SessionUiStyle.SessionLayout.GAP), Disposable, SessionEditorStyleTarget, SessionView {
 
     private val messages = LinkedHashMap<String, MessageView>()
+    private var modified: ModifiedFilesView? = null
     private var settled = true
+    private var openDiff: SessionDiffOpener = { _, _, _ -> }
+    private var sessionId: String? = null
 
     override val sessionViewKind = SessionView.Kind.Default
 
@@ -49,6 +55,13 @@ class TurnView(
 
     init {
         isOpaque = false
+    }
+
+    fun setDiffOpener(openDiff: SessionDiffOpener, sessionId: String?) {
+        this.openDiff = openDiff
+        this.sessionId = sessionId
+        modified?.setDiffOpener(openDiff, sessionId, id)
+        messages.values.forEach { it.setDiffOpener(openDiff, sessionId) }
     }
 
     @RequiresEdt
@@ -64,12 +77,33 @@ class TurnView(
 
     /** Add a new [MessageView] for [msg] at the end of this turn. */
     fun addMessage(msg: Message): MessageView {
-        val view = MessageView(msg, openFile, style, openUrl, selection, openAttachment, resize, repo, hover, revert)
+        val view = MessageView(msg, openFile, style, openUrl, selection, openAttachment, resize, repo, hover, revert).also {
+            it.setDiffOpener(openDiff, sessionId)
+        }
         messages[msg.info.id] = view
-        add(view)
+        val idx = modified?.let { components.indexOf(it) } ?: componentCount
+        add(view, idx)
         syncCopyToolbars()
         revalidate()
         return view
+    }
+
+    /** Returns true when the modified-files card was created or its content changed. */
+    @RequiresEdt
+    fun setDiffs(diffs: List<DiffFileDto>): Boolean {
+        val existing = modified
+        val card = existing ?: if (diffs.isEmpty()) null else ModifiedFilesView(openFile, selection).also {
+            it.setDiffOpener(openDiff, sessionId, id)
+            it.resize = resize
+            it.hover = hover
+            it.applyStyle(style)
+            modified = it
+            add(it)
+        }
+        val created = existing == null && card != null
+        val changed = card?.setDiffs(diffs) ?: false
+        if (created || changed) revalidate()
+        return created || changed
     }
 
     @RequiresEdt
@@ -111,6 +145,7 @@ class TurnView(
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
         for (view in messages.values) view.applyStyle(style)
+        modified?.applyStyle(style)
         syncCopyToolbars()
         revalidate()
         repaint()
@@ -121,6 +156,11 @@ class TurnView(
             remove(it)
             Disposer.dispose(it)
         }
+        modified?.let {
+            remove(it)
+            Disposer.dispose(it)
+        }
+        modified = null
         messages.clear()
     }
 }

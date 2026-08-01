@@ -317,9 +317,24 @@ export const layer = Layer.effect(
         .find((line) => line.length > 0)
       if (!cleaned) return
       const t = cleaned.length > 100 ? cleaned.substring(0, 97) + "..." : cleaned
-      yield* sessions
-        .setTitle({ sessionID: input.session.id, title: t })
-        .pipe(Effect.catchCause((cause) => Effect.logError("failed to generate title", { error: Cause.squash(cause) })))
+      // kilocode_change start - auto-title mark/re-check owned by KiloSessionPrompt
+      const fresh = yield* sessions.get(input.session.id).pipe(Effect.orElseSucceed(() => null))
+      if (
+        !KiloSessionPrompt.prepareAutoTitle({
+          sessionID: input.session.id,
+          title: t,
+          fresh,
+          isDefaultTitle: Session.isDefaultTitle,
+        })
+      )
+        return
+      yield* sessions.setTitle({ sessionID: input.session.id, title: t }).pipe(
+        Effect.catchCause((cause) => {
+          KiloSessionPrompt.clearAutoTitleMark(input.session.id, t)
+          return Effect.logError("failed to generate title", { error: Cause.squash(cause) })
+        }),
+      )
+      // kilocode_change end
     })
 
     const handleSubtask = Effect.fn("SessionPrompt.handleSubtask")(function* (input: {

@@ -138,6 +138,10 @@ JetBrains Kotlin toolchain is Java 21. Gradle commands report missing or incompa
 
 Run `Plugin DevKit | Code | Frontend and Backend API Usage` inspection when moving code across split boundary.
 
+## Icon skill
+
+For plugin icon creation, modification, or review, use the `icon-jetbrains` skill at `.kilo/skills/icon-jetbrains/SKILL.md` together with `packages/kilo-jetbrains/AGENTS.md`. The skill covers IntelliJ New UI SVG roles, sizing, palette, dark variants, and icon validation guidance.
+
 ## Source map
 
 Paths below are relative to [`Kilo-Org/kilocode`](https://github.com/Kilo-Org/kilocode).

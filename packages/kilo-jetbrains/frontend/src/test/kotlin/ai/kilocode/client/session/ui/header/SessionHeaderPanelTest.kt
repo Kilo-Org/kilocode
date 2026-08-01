@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.ui.header
 
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.model.StepFinish
 import ai.kilocode.client.session.model.Tool
@@ -19,12 +20,15 @@ import ai.kilocode.rpc.dto.TodoDto
 import ai.kilocode.rpc.dto.TokensDto
 import com.intellij.icons.AllIcons
 import com.intellij.ide.util.PropertiesComponent
+import ai.kilocode.rpc.dto.DiffFileDto
 import java.awt.Cursor
 import java.awt.Color
 import java.awt.Point
 import java.awt.event.MouseEvent
 import java.awt.event.MouseWheelEvent
 import java.awt.image.BufferedImage
+import javax.swing.JComponent
+import javax.swing.RepaintManager
 import javax.swing.UIManager
 
 class SessionHeaderPanelTest : SessionControllerTestBase() {
@@ -120,6 +124,96 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
         panel.compactButton().doClick()
         flush()
         assertEquals(1, rpc.compacts.size)
+    }
+
+    fun `test branch changes badge shows count stats and hides when empty`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+
+        assertFalse(panel.changesVisible())
+
+        panel.setBranchChanges(listOf(
+            DiffFileDto("src/A.kt", 2, 1),
+            DiffFileDto("src/B.kt", 0, 3),
+            DiffFileDto("src/C.kt", 5, 0),
+        ))
+
+        assertTrue(panel.changesVisible())
+        assertEquals("3 files", panel.changesText())
+        assertEquals(7 to 4, panel.changesStat())
+
+        panel.setBranchChanges(emptyList())
+
+        assertFalse(panel.changesVisible())
+    }
+
+    fun `test branch changes badge invokes callback when clicked`() {
+        val c = promptedHeader()
+        var opened = 0
+        val panel = SessionHeaderPanel(c, parent) { opened++ }
+        val badge = panel.changesBadge()
+
+        panel.setBranchChanges(listOf(DiffFileDto("src/A.kt", 2, 1)))
+
+        assertTrue(badge.isVisible)
+        assertEquals(KiloBundle.message("diff.editor.branch.tooltip"), badge.toolTipText)
+        assertEquals(KiloBundle.message("diff.editor.branch.tooltip"), badge.accessibleContext.accessibleName)
+
+        click(badge)
+
+        assertEquals(1, opened)
+    }
+
+    fun `test branch changes badge is hidden without files even with callback`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent) {}
+
+        assertFalse(panel.changesVisible())
+    }
+
+    fun `test branch changes badge no-op update does not repaint`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+        val files = listOf(DiffFileDto("src/A.kt", 2, 1))
+        panel.setBranchChanges(files)
+        val prev = RepaintManager.currentManager(panel)
+        val tracker = TrackingRepaintManager(panel.changesBadge())
+
+        try {
+            RepaintManager.setCurrentManager(tracker)
+            panel.setBranchChanges(files)
+
+            assertTrue(tracker.dirty.isEmpty())
+            assertTrue(tracker.invalid.isEmpty())
+        } finally {
+            RepaintManager.setCurrentManager(prev)
+        }
+    }
+
+    fun `test clicking session title toggles expansion`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+
+        assertFalse(panel.isExpanded())
+
+        click(panel.titleLabel())
+        assertTrue(panel.isExpanded())
+
+        click(panel.titleLabel())
+        assertFalse(panel.isExpanded())
+    }
+
+    fun `test top row places expand center group and right controls`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+        val top = panel.expandButton().parent
+        val layout = top.layout as java.awt.BorderLayout
+
+        assertSame(panel.expandButton(), layout.getLayoutComponent(java.awt.BorderLayout.WEST))
+        assertSame(panel.centerGroupPanel(), layout.getLayoutComponent(java.awt.BorderLayout.CENTER))
+        assertSame(panel.rightPanel(), layout.getLayoutComponent(java.awt.BorderLayout.EAST))
+        assertSame(panel.centerGroupPanel(), panel.changesBadge().parent)
+        assertSame(panel.rightPanel(), panel.compactButton().parent)
     }
 
     fun `test todo list starts collapsed and toggles independently`() {
@@ -676,5 +770,20 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
 
     private fun reset() {
         PropertiesComponent.getInstance().unsetValue(SessionHeaderPanel.EXPANDED_KEY)
+    }
+
+    private class TrackingRepaintManager(private val watched: JComponent) : RepaintManager() {
+        val dirty = mutableListOf<JComponent>()
+        val invalid = mutableListOf<JComponent>()
+
+        override fun addDirtyRegion(c: JComponent, x: Int, y: Int, w: Int, h: Int) {
+            if (c === watched) dirty.add(c)
+            super.addDirtyRegion(c, x, y, w, h)
+        }
+
+        override fun addInvalidComponent(invalidComponent: JComponent) {
+            if (invalidComponent === watched) invalid.add(invalidComponent)
+            super.addInvalidComponent(invalidComponent)
+        }
     }
 }

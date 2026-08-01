@@ -1,8 +1,37 @@
 import { describe, expect, it } from "bun:test"
 import { createRoot, createSignal } from "solid-js"
 import { LOCAL } from "../../webview-ui/agent-manager/navigate"
-import { ambientDecision, createAmbientSetup } from "../../webview-ui/agent-manager/terminal/ambient"
+import { ambientDecision, createAmbientSetup, showTerminalStack } from "../../webview-ui/agent-manager/terminal/ambient"
 import { createTerminalState } from "../../webview-ui/agent-manager/terminal/state"
+
+describe("showTerminalStack", () => {
+  it("hides the detail stack while the history view is open", () => {
+    expect(showTerminalStack(true, "wt-1", false)).toBe(false)
+    expect(showTerminalStack(true, null, false)).toBe(false)
+  })
+
+  it("shows the detail stack for a selected context with sessions", () => {
+    expect(showTerminalStack(false, "wt-1", false)).toBe(true)
+    expect(showTerminalStack(false, LOCAL, false)).toBe(true)
+  })
+
+  it("keeps the detail stack for a provisioning worktree with no sessions", () => {
+    // The side terminal hosts the live Setup tab next to the empty state,
+    // so the stack must render even when the context is empty.
+    expect(showTerminalStack(false, "wt-1", true)).toBe(true)
+  })
+
+  it("shows the detail stack for an unassigned session", () => {
+    // selection === null with a live session: contextEmpty is false, and
+    // the stack hosts the read-only banner / chat. The old gate rendered
+    // here; dropping this case blanks the pane and unmounts live xterms.
+    expect(showTerminalStack(false, null, false)).toBe(true)
+  })
+
+  it("hides the detail stack when nothing is selected and the context is empty", () => {
+    expect(showTerminalStack(false, null, true)).toBe(false)
+  })
+})
 
 describe("ambientDecision", () => {
   it("waits while setup is still running", () => {

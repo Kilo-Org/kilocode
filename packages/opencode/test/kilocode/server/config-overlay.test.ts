@@ -103,6 +103,41 @@ describe("config overlay routes", () => {
     expect(await Bun.file(target.path).text()).toContain('"model": "test/model"')
   })
 
+  test("ignores a nested unset path when the project target is missing", async () => {
+    await using project = await tmpdir()
+    const response = await req(project.path, "/config/overlay", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ scope: "project", unset: [["agent", "explore", "model"]] }),
+    })
+
+    expect(response.status).toBe(200)
+    expect(await Bun.file(path.join(project.path, ".kilo", "kilo.jsonc")).exists()).toBe(false)
+  })
+
+  test("removes an existing nested unset path", async () => {
+    await using project = await tmpdir()
+    const file = path.join(project.path, ".kilo", "kilo.jsonc")
+    await Filesystem.write(
+      file,
+      '{\n  "$schema": "https://app.kilo.ai/config.json",\n  "indexing": {\n    "enabled": false,\n    "provider": "ollama",\n    "ollama": { "baseUrl": "http://127.0.0.1:11434" }\n  }\n}\n',
+    )
+
+    const response = await req(project.path, "/config/overlay", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ scope: "project", unset: [["indexing", "enabled"]] }),
+    })
+    expect(response.status).toBe(200)
+
+    const saved = (await Bun.file(file).json()) as {
+      indexing: { enabled?: boolean; provider: string; ollama: { baseUrl: string } }
+    }
+    expect(saved.indexing.enabled).toBeUndefined()
+    expect(saved.indexing.provider).toBe("ollama")
+    expect(saved.indexing.ollama.baseUrl).toBe("http://127.0.0.1:11434")
+  })
+
   test("returns exact raw target data and a stable missing-file revision", async () => {
     await using project = await tmpdir()
     const first = await KilocodeConfigOverlay.target({ scope: "project", directory: project.path })
@@ -618,7 +653,6 @@ describe("config overlay routes", () => {
         overridden: true,
       })
     },
-    15_000,
   )
 
   test.serial("refreshes agent permissions after global permission update", async () => {

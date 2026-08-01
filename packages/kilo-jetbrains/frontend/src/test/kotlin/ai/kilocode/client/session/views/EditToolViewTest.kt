@@ -9,10 +9,13 @@ import ai.kilocode.client.session.views.tool.EditToolView
 import ai.kilocode.client.session.views.tool.ReadToolView
 import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.client.ui.DiffStatBadge
+import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.openapi.diff.DiffColors
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.EditorTextField
+import com.intellij.ui.HyperlinkLabel
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
@@ -23,6 +26,7 @@ import kotlinx.serialization.json.put
 import java.awt.Component
 import java.awt.Container
 import java.awt.event.MouseEvent
+import javax.swing.AbstractButton
 
 @Suppress("UnstableApiUsage")
 class EditToolViewTest : BasePlatformTestCase() {
@@ -130,6 +134,55 @@ class EditToolViewTest : BasePlatformTestCase() {
         assertEquals(listOf("src/A.kt"), opened)
     }
 
+    fun `test open in diff action fires for edit and patch`() {
+        val edit = mutableListOf<List<DiffFileDto>>()
+        val titles = mutableListOf<String>()
+        val editView = track(EditToolView(tool(), { _, _ -> }, null, { files, title, _ ->
+            edit.add(files)
+            titles.add(title)
+        }, "ses"))
+        val editButton = openDiffButton(editView)
+        assertTrue(editButton.isEnabled)
+        editButton.doClick()
+        assertEquals(1, edit.single().size)
+        // Single-file edit keeps the file name so its diff tab is identifiable (not a generic "Edit").
+        assertEquals("App.kt", titles.single())
+
+        val patch = mutableListOf<List<DiffFileDto>>()
+        val patchView = track(EditToolView(tool().also {
+            it.input = emptyMap()
+            it.metadata = mapOf("files" to filesMeta(
+                FileChange("src/A.kt", 2, 0, ADD_HUNK),
+                FileChange("src/B.kt", 1, 1, UPDATE_HUNK),
+            ))
+        }, { _, _ -> }, null, { files, title, _ ->
+            patch.add(files)
+            titles.add(title)
+        }, "ses"))
+        val patchButton = openDiffButton(patchView)
+        assertTrue(patchButton.isEnabled)
+        patchButton.doClick()
+        assertEquals(2, patch.single().size)
+        assertEquals("Patch", titles.last())
+    }
+
+    fun `test open in diff uses a late-bound opener`() {
+        // Mirrors the real wiring: the view is built before the session-level opener is known, then
+        // MessageView rebinds it. Without late binding the button click is a no-op.
+        val fired = mutableListOf<List<DiffFileDto>>()
+        val view = track(EditToolView(tool()))
+        val button = openDiffButton(view)
+        assertTrue(button.isEnabled)
+
+        button.doClick()
+        assertTrue(fired.isEmpty())
+
+        view.setDiffOpener({ files, _, _ -> fired.add(files) }, "ses")
+        button.doClick()
+
+        assertEquals(1, fired.single().size)
+    }
+
     fun `test single file apply_patch keeps link and hides count tag`() {
         val view = track(EditToolView(tool().also {
             it.input = emptyMap()
@@ -222,6 +275,8 @@ class EditToolViewTest : BasePlatformTestCase() {
         click(link, 0)
 
         assertEquals(listOf("/repo/src/App.kt"), opened)
+        // The link is not bound for toggling, so opening the file must not also collapse the card.
+        assertTrue(view.isExpanded())
     }
 
     fun `test metadata only patch falls back to raw text`() {
@@ -319,6 +374,59 @@ class EditToolViewTest : BasePlatformTestCase() {
         assertNull(view.headerPopup())
     }
 
+    fun `test large single-file edit shows overflow placeholder instead of editors`() {
+        val fired = mutableListOf<List<DiffFileDto>>()
+        val view = track(EditToolView(tool().also {
+            it.metadata = mapOf("filediff" to fileDiff(2100, 0, bigPatch(2100)))
+        }))
+        view.setDiffOpener({ files, _, _ -> fired.add(files) }, "ses")
+
+        view.toggle()
+
+        assertTrue(view.isExpanded())
+        // The large diff is not rendered as an embedded editor; a placeholder link opens the diff tab.
+        assertTrue(view.codeEditors().isEmpty())
+        hyperlinks(view).single().doClick()
+        assertEquals(1, fired.single().size)
+        // Copy still yields the full diff even though it is not previewed inline.
+        assertTrue(view.markdown().contains("+line0"))
+    }
+
+    fun `test large single-file edit popup defers to the diff tab`() {
+        val fired = mutableListOf<List<DiffFileDto>>()
+        val view = track(EditToolView(tool().also {
+            it.metadata = mapOf("filediff" to fileDiff(2100, 0, bigPatch(2100)))
+        }, { _, _ -> }, null, { files, _, _ -> fired.add(files) }, "ses"))
+        val body = view.headerPopup()!!.build()
+
+        try {
+            assertTrue(editors(body.component).isEmpty())
+            hyperlinks(body.component).single().doClick()
+            assertEquals(1, fired.single().size)
+        } finally {
+            Disposer.dispose(body.disposable)
+        }
+    }
+
+    fun `test large multi-file patch shows overflow placeholder instead of editors`() {
+        val fired = mutableListOf<List<DiffFileDto>>()
+        val view = track(EditToolView(tool().also {
+            it.input = emptyMap()
+            it.metadata = mapOf("files" to filesMeta(
+                FileChange("src/A.kt", 1100, 0, bigHunk(1100)),
+                FileChange("src/B.kt", 1100, 0, bigHunk(1100)),
+            ))
+        }))
+        view.setDiffOpener({ files, _, _ -> fired.add(files) }, "ses")
+
+        view.toggle()
+
+        assertTrue(view.isExpanded())
+        assertTrue(view.codeEditors().isEmpty())
+        hyperlinks(view).single().doClick()
+        assertEquals(2, fired.single().size)
+    }
+
     fun `test view factory routes write tools to edit tool view`() {
         assertTrue(ViewFactory.create(tool(), openFile = { _, _ -> }) is EditToolView)
         assertTrue(ViewFactory.create(write("write"), openFile = { _, _ -> }) is EditToolView)
@@ -396,6 +504,32 @@ class EditToolViewTest : BasePlatformTestCase() {
         val nested = if (child is Container) badges(child) else emptyList()
         if (child is DiffStatBadge) nested + child else nested
     }
+
+    private fun hyperlinks(root: Container): List<HyperlinkLabel> = root.components.flatMap { child ->
+        val nested = if (child is Container) hyperlinks(child) else emptyList()
+        if (child is HyperlinkLabel) nested + child else nested
+    }
+
+    private fun editors(root: Container): List<EditorTextField> = root.components.flatMap { child ->
+        val nested = if (child is Container) editors(child) else emptyList()
+        if (child is EditorTextField) nested + child else nested
+    }
+
+    // Patches whose line count clears SessionUiStyle.View.Tool.DIFF_MAX_LINES so the body overflows.
+    private fun bigPatch(lines: Int): String = buildString {
+        append("--- src/App.kt\n")
+        append("+++ src/App.kt\n")
+        append("@@ -0,0 +1,").append(lines).append(" @@\n")
+        repeat(lines) { append("+line").append(it).append('\n') }
+    }
+
+    private fun bigHunk(lines: Int): String = buildString {
+        append("@@ -0,0 +1,").append(lines).append(" @@\n")
+        repeat(lines) { append("+x").append(it).append('\n') }
+    }
+
+    private fun openDiffButton(view: EditToolView): AbstractButton =
+        view.copyToolbar as AbstractButton
 
     private fun tool() = Tool("p1", "edit", toolKind("edit")).also {
         it.state = ToolExecState.COMPLETED

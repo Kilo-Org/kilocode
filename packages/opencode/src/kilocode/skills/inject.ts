@@ -16,10 +16,12 @@ import type * as Tool from "@/tool/tool"
 //      entirely, matching Claude's disableSkillShellExecution.
 //   3. Batch approval: every command in the file is decomposed with the same
 //      tree-sitter scan the bash tool uses (per sub-command patterns plus any
-//      out-of-project directories), then presented once, up front, in a single
-//      permission prompt. The `skillShell` marker forces this prompt regardless
-//      of any allow/auto-approve rule; a deny rule or plan-mode veto on any
-//      sub-command still blocks. Approve runs the batch; reject aborts the load.
+//      out-of-project directories), then presented once, up front, as a single
+//      bash permission prompt naming every command — plus a separate, preceding
+//      external_directory prompt if any command touches a directory outside the
+//      project. The `skillShell` marker forces both prompts regardless of any
+//      allow/auto-approve rule; a deny rule or plan-mode veto on any sub-command
+//      still blocks. Approving both runs the batch; rejecting either aborts the load.
 //
 // Trust and the kill-switch also gate the slash-command path (`/skill`, session/prompt.ts),
 // which is user-initiated. Batch approval (control 3) is specific to this model-initiated
@@ -97,12 +99,13 @@ export namespace SkillInject {
     // unreachable — but abort rather than risk a silent, unprompted execution.
     if (patterns.size === 0) return yield* Effect.die(new Error("skill shell produced no authorizable commands"))
 
-    // Single up-front approval. `patterns` are the decomposed sub-commands used for
-    // rule matching; `metadata.commands` is the verbatim per-placeholder list the
-    // prompt displays, so what is shown is exactly what runs (decomposition drops
-    // cd/set-location segments and splits pipelines, which must not hide from the
-    // user). `skillShell` forces the prompt over allow/YOLO rules; a deny/veto on
-    // any sub-command propagates as a defect and aborts.
+    // Up-front approval before any command runs: a bash ask naming every command, preceded
+    // by a separate external_directory ask when a sub-command touches a directory outside the
+    // project (below). `patterns` are the decomposed sub-commands used for rule matching;
+    // `metadata.commands` is the verbatim per-placeholder list the prompt displays, so what is
+    // shown is exactly what runs (decomposition drops cd/set-location segments and splits
+    // pipelines, which must not hide from the user). `skillShell` forces both prompts over
+    // allow/YOLO rules; a deny/veto on any sub-command propagates as a defect and aborts.
     const metadata = { skillShell: true, skill: opts.skill, commands }
     if (dirs.size > 0) {
       yield* opts.ctx.ask({

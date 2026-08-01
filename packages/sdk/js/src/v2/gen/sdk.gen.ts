@@ -10517,6 +10517,7 @@ export class Pty2 extends HeyApiClient {
       "location[workspace]"?: string
       cursor?: string
       ticket?: string
+      replayExited?: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -10530,6 +10531,7 @@ export class Pty2 extends HeyApiClient {
             { in: "query", key: "location[workspace]" },
             { in: "query", key: "cursor" },
             { in: "query", key: "ticket" },
+            { in: "query", key: "replayExited" },
           ],
         },
       ],
