@@ -576,17 +576,23 @@ describe("run stream transport", () => {
     }
   })
 
-  test("does not buffer session.updated for sessions it never tracks", async () => {
-    // Smoke test: an untracked session.updated must not invoke onAgentChange. The
-    // transport's `buffered` queue is private, so the unbounded-growth aspect of
-    // the fix (session.updated dropped instead of requeued in drainBuffered) cannot
-    // be observed directly without exposing the queue. This case catches the
-    // adjacent regression where an untracked event is processed through the
-    // tracked branch and fires onAgentChange.
+  test("replays tracked session.updated events received during bootstrap", async () => {
     const src = globalFeed()
+    const started = defer<void>()
+    const ready = defer<void>()
     const agents: string[] = []
-    const transport = await createSessionTransport({
-      sdk: sdk({ globalStream: src.stream }),
+    const task = createSessionTransport({
+      sdk: sdk({
+        globalStream: src.stream,
+        globalEvent: () => {
+          started.resolve()
+          return globalSse(src.stream)
+        },
+        messages: async () => {
+          await ready.promise
+          return ok([])
+        },
+      }),
       sessionID: "session-1",
       thinking: true,
       limits: () => ({}),
@@ -594,28 +600,14 @@ describe("run stream transport", () => {
       onAgentChange: (agent) => agents.push(agent),
     })
 
+    await started.promise
+    src.push(globalEvent(sessionUpdated("debug")))
+    ready.resolve()
+    const transport = await task
+
     try {
-      src.push(
-        globalEvent({
-          id: "evt-session-2-update",
-          type: "session.updated",
-          properties: {
-            sessionID: "session-2",
-            info: {
-              id: "session-2",
-              slug: "session-2",
-              projectID: "project-2",
-              directory: "/tmp",
-              title: "Other",
-              version: "1",
-              agent: "debug",
-              time: { created: 1, updated: 2 },
-            },
-          },
-        } satisfies SdkEvent),
-      )
-      await Bun.sleep(20)
-      expect(agents).toEqual([])
+      await waitFor(() => agents[0])
+      expect(agents).toEqual(["debug"])
     } finally {
       src.close()
       await transport.close()
@@ -652,9 +644,7 @@ describe("run stream transport", () => {
         } satisfies SdkEvent),
       )
       await waitFor(() => models[0])
-      expect(models).toEqual([
-        { providerID: "kilocode", id: "anthropic/claude-sonnet-4", variant: "xhigh" },
-      ])
+      expect(models).toEqual([{ providerID: "kilocode", id: "anthropic/claude-sonnet-4", variant: "xhigh" }])
     } finally {
       src.close()
       await transport.close()
