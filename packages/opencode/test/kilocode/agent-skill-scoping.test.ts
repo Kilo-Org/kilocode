@@ -19,7 +19,7 @@ import { InstanceStore } from "@/project/instance-store"
 import { testEffect } from "../lib/effect"
 
 const it = testEffect(Layer.mergeAll(Agent.defaultLayer, Skill.defaultLayer, CrossSpawnSpawner.defaultLayer))
-const toolIt = testEffect(Layer.mergeAll(ToolRegistry.defaultLayer, CrossSpawnSpawner.defaultLayer).pipe(Layer.provide(Ripgrep.defaultLayer)))
+const toolIt = testEffect(Layer.mergeAll(ToolRegistry.defaultLayer, Agent.defaultLayer, CrossSpawnSpawner.defaultLayer).pipe(Layer.provide(Ripgrep.defaultLayer)))
 
 function agent(skills?: string[], rules?: PermissionV1.Rule[]) {
   return {
@@ -247,28 +247,64 @@ toolIt.instance("skill tool allows every skill with an empty allow-list", () =>
   { git: true, config: { agent: { code: { skills: [] } } } },
 )
 
-toolIt.instance("skill tool fails closed for agents absent from the registry", () =>
+toolIt.instance("renamed agents keep the skill tool; allow-list applies to the resolved agent", () =>
   Effect.gen(function* () {
     const dir = (yield* TestInstance).directory
     yield* userSkills(dir)
+
+    const svc = yield* Agent.Service
+    const renamed = yield* svc.get("reviewer")
+    expect(renamed.name).toBe("docs")
+    expect(renamed.skills).toEqual(["skill-a"])
 
     const registry = yield* ToolRegistry.Service
     const tool = (yield* registry.tools({
       providerID: ProviderV2.ID.make("opencode"),
       modelID: ModelV2.ID.make("gpt-5"),
-      agent: agent(["skill-a"]),
+      agent: renamed,
     })).find((item) => item.id === SkillTool.id)
     if (!tool) throw new Error("Skill tool not found")
 
-    const denied = yield* tool.execute({ name: "skill-a" }, toolCtx("ghost")).pipe(Effect.exit)
+    const ctx = toolCtx("docs")
+
+    const allowed = yield* tool.execute({ name: "skill-a" }, ctx)
+    expect(allowed.output).toContain(`<skill_content name="skill-a">`)
+
+    const denied = yield* tool.execute({ name: "skill-b" }, ctx).pipe(Effect.exit)
     expect(Exit.isFailure(denied)).toBe(true)
     if (Exit.isFailure(denied)) {
       const error = Cause.squash(denied.cause)
       expect(error).toBeInstanceOf(Error)
-      if (error instanceof Error) expect(error.message).toContain('Skill "skill-a" is not allowed')
+      if (error instanceof Error) expect(error.message).toContain('Skill "skill-b" is not allowed')
     }
   }),
-  { git: true, config: { agent: { code: { skills: ["skill-a"] } } } },
+  { git: true, config: { agent: { reviewer: { name: "docs", skills: ["skill-a"] } } } },
+)
+
+toolIt.instance("renamed agents without skills keep every skill", () =>
+  Effect.gen(function* () {
+    const dir = (yield* TestInstance).directory
+    yield* userSkills(dir)
+
+    const svc = yield* Agent.Service
+    const renamed = yield* svc.get("reviewer")
+    expect(renamed.name).toBe("docs")
+    expect(renamed.skills).toBeUndefined()
+
+    const registry = yield* ToolRegistry.Service
+    const tool = (yield* registry.tools({
+      providerID: ProviderV2.ID.make("opencode"),
+      modelID: ModelV2.ID.make("gpt-5"),
+      agent: renamed,
+    })).find((item) => item.id === SkillTool.id)
+    if (!tool) throw new Error("Skill tool not found")
+
+    for (const name of ["skill-a", "skill-b"]) {
+      const result = yield* tool.execute({ name }, toolCtx("docs"))
+      expect(result.output).toContain(`<skill_content name="${name}">`)
+    }
+  }),
+  { git: true, config: { agent: { reviewer: { name: "docs" } } } },
 )
 
 it.instance("permission.skill deny hides allow-listed skills", () =>

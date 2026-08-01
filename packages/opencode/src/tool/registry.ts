@@ -6,6 +6,7 @@ import { QuestionTool } from "./question"
 // kilocode_change start
 import { SuggestTool } from "../kilocode/suggestion/tool"
 import { Command } from "@/command"
+import { allowed } from "@/kilocode/skill/allow-list"
 // kilocode_change end
 import { ShellTool } from "./shell"
 import { EditTool } from "./edit"
@@ -18,7 +19,7 @@ import { TodoWriteTool } from "./todo"
 import { WebFetchTool } from "./webfetch"
 import { WriteTool } from "./write"
 import { InvalidTool } from "./invalid"
-import { SkillTool } from "./skill"
+import { SkillTool, Parameters as SkillParameters } from "./skill" // kilocode_change
 import * as Tool from "./tool"
 import { Config } from "@/config/config"
 import { type ToolContext as PluginToolContext, type ToolDefinition } from "@kilocode/plugin"
@@ -375,7 +376,27 @@ export const layer = Layer.effect(
               .join("\n"),
             parameters: output.parameters,
             jsonSchema,
-            execute: tool.execute,
+            execute:
+              tool.id === SkillTool.id
+                ? (params: Schema.Schema.Type<typeof SkillParameters>, ctx: Tool.Context) =>
+                    Effect.gen(function* () {
+                      // input.agent is the resolved Agent.Info, so renamed agents keep their
+                      // skill tool; the !input.agent branch is defense-only and rejects
+                      const agent = input.agent
+                      if (!agent) {
+                        yield* Effect.logWarning(`Skill "${params.name}" denied: no agent context.`)
+                        return yield* Effect.fail(
+                          new Error(`Skill "${params.name}" is not allowed without an agent context.`),
+                        )
+                      }
+                      if (!allowed(agent, params.name)) {
+                        return yield* Effect.fail(
+                          new Error(`Skill "${params.name}" is not allowed for agent "${agent.name}".`),
+                        )
+                      }
+                      return yield* tool.execute(params, ctx)
+                    }).pipe(Effect.orDie)
+                : tool.execute,
             formatValidationError: tool.formatValidationError,
           }
           return ToolNetwork.isBuiltin(tool) ? ToolNetwork.builtin(result) : result

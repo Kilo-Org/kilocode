@@ -6,14 +6,12 @@ import { Skill } from "../skill"
 import * as Tool from "./tool"
 import DESCRIPTION from "./skill.txt"
 // kilocode_change start - gate + run shell injection in skill bodies
-import { Agent } from "@/agent/agent"
 import { Config } from "@/config/config"
 import { Shell } from "@opencode-ai/core/shell"
 import { InstanceState } from "@/effect/instance-state"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { ShellPermission } from "./shell"
 import { SkillInject } from "@/kilocode/skills/inject"
-import { allowed } from "@/kilocode/skill/allow-list" // kilocode_change
 // kilocode_change end
 
 export const Parameters = Schema.Struct({
@@ -24,7 +22,6 @@ export const SkillTool = Tool.define(
   "skill",
   Effect.gen(function* () {
     const skill = yield* Skill.Service
-    const agents = yield* Agent.Service // kilocode_change
     const ripgrep = yield* Ripgrep.Service
     const flags = yield* RuntimeFlags.Service // kilocode_change
     const permission = yield* ShellPermission // kilocode_change - decompose skill commands like the bash tool
@@ -35,21 +32,6 @@ export const SkillTool = Tool.define(
       parameters: Parameters,
       execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
         Effect.gen(function* () {
-          // kilocode_change start - honor the agent's skill allow-list before loading; fail closed when the agent is unknown
-          const agent = yield* agents.get(ctx.agent)
-          if (!agent) {
-            yield* Effect.logWarning(`Skill "${params.name}" denied: agent "${ctx.agent}" is not in the registry.`)
-            return yield* Effect.die(
-              new Error(`Skill "${params.name}" is not allowed for agent "${ctx.agent}".`),
-            )
-          }
-          if (!allowed(agent, params.name)) {
-            return yield* Effect.die(
-              new Error(`Skill "${params.name}" is not allowed for agent "${ctx.agent}".`),
-            )
-          }
-          // kilocode_change end
-
           const info = yield* skill
             .require(params.name)
             .pipe(Effect.catchTag("Skill.NotFoundError", (error) => Effect.die(new Error(error.message))))
