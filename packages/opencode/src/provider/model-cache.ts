@@ -95,46 +95,25 @@ export const layer: Layer.Layer<
       modalities: { input: ["text", "image"], output: ["text"] },
     })
 
-    const fetchOpenAICompatibleModels = Effect.fn("ModelCache.fetchOpenAICompatibleModels")(function* ({
-      baseURL,
-      apiKey,
-    }: {
-      readonly baseURL: string
-      readonly apiKey: string
-    }) {
-      const url = `${baseURL.replace(/\/+$/, "")}/models`
-      const response = yield* HttpClientRequest.get(url).pipe(
-        HttpClientRequest.acceptJson,
-        HttpClientRequest.bearerToken(apiKey),
-        http.execute,
-        Effect.timeout("10 seconds"),
-      )
-      if (response.status < 200 || response.status >= 300) {
-        log.error("openai-compatible model fetch failed", { status: response.status })
-        return {}
-      }
+    const fetchOpenAICompatibleModels = (options: Options, fallbackBaseURL: string) =>
+      Effect.gen(function* () {
+        const baseURL = options.baseURL ?? fallbackBaseURL
+        if (!options.apiKey) return {}
+        const url = `${baseURL.replace(/\/+$/, "")}/models`
+        const response = yield* HttpClientRequest.get(url).pipe(
+          HttpClientRequest.acceptJson,
+          HttpClientRequest.bearerToken(options.apiKey),
+          http.execute,
+          Effect.timeout("10 seconds"),
+        )
+        if (response.status < 200 || response.status >= 300) {
+          log.error("openai-compatible model fetch failed", { status: response.status })
+          return {}
+        }
 
-      const json = yield* HttpClientResponse.schemaBodyJson(ApertisResponse)(response)
-      return Object.fromEntries((json.data ?? []).map((item) => [item.id, aperture(item)]))
-    })
-
-    const fetchApertisModels = Effect.fn("ModelCache.fetchApertisModels")(function* (options: Options) {
-      const baseURL = options.baseURL ?? APERTIS_BASE_URL
-      if (!options.apiKey) {
-        log.debug("no API key for apertis, skipping model fetch")
-        return {}
-      }
-      return yield* fetchOpenAICompatibleModels({ baseURL, apiKey: options.apiKey })
-    })
-
-    const fetchPerplexityModels = Effect.fn("ModelCache.fetchPerplexityModels")(function* (options: Options) {
-      const baseURL = options.baseURL ?? PERPLEXITY_BASE_URL
-      if (!options.apiKey) {
-        log.debug("no API key for perplexity-agent, skipping model fetch")
-        return {}
-      }
-      return yield* fetchOpenAICompatibleModels({ baseURL, apiKey: options.apiKey })
-    })
+        const json = yield* HttpClientResponse.schemaBodyJson(ApertisResponse)(response)
+        return Object.fromEntries((json.data ?? []).map((item) => [item.id, aperture(item)]))
+      })
 
     const authOptions = Effect.fn("ModelCache.authOptions")(function* (providerID: string) {
       if (providerID !== "kilo" && providerID !== "apertis" && providerID !== "perplexity-agent") return {}
@@ -199,9 +178,10 @@ export const layer: Layer.Layer<
 
     const fetchModels = (providerID: string, options: Options): Effect.Effect<Result, unknown> => {
       if (providerID === "kilo") return kilo.fetch(options)
-      if (providerID === "apertis") return fetchApertisModels(options).pipe(Effect.map((models) => ({ models })))
+      if (providerID === "apertis")
+        return fetchOpenAICompatibleModels(options, APERTIS_BASE_URL).pipe(Effect.map((models) => ({ models })))
       if (providerID === "perplexity-agent")
-        return fetchPerplexityModels(options).pipe(Effect.map((models) => ({ models })))
+        return fetchOpenAICompatibleModels(options, PERPLEXITY_BASE_URL).pipe(Effect.map((models) => ({ models })))
       log.debug("provider not implemented", { providerID })
       return Effect.succeed({ models: {} })
     }
