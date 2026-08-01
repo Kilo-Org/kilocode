@@ -583,7 +583,6 @@ describe("run stream transport", () => {
     const agents: string[] = []
     const task = createSessionTransport({
       sdk: sdk({
-        globalStream: src.stream,
         globalEvent: () => {
           started.resolve()
           return globalSse(src.stream)
@@ -602,6 +601,8 @@ describe("run stream transport", () => {
 
     await started.promise
     src.push(globalEvent(sessionUpdated("debug")))
+    await Bun.sleep(20)
+    expect(agents).toEqual([])
     ready.resolve()
     const transport = await task
 
