@@ -1283,13 +1283,14 @@ itSendFileDelivery.live("session.processor preserves send_file delivery attachme
       })
       const parts = yield* MessageV2.parts(msg.id)
       const toolPart = parts.find(
-        (part): part is Extract<SessionV1.Part, { type: "tool" }> =>
-          part.type === "tool" && part.tool === "send_file" && part.state.status === "completed",
+        (part): part is Extract<SessionV1.Part, { type: "tool" }> => part.type === "tool" && part.tool === "send_file",
       )
-      expect(toolPart).toBeDefined()
-      expect(toolPart?.state.output).not.toContain("omitted")
-      expect(toolPart?.state.attachments).toHaveLength(1)
-      expect(toolPart?.state.attachments?.[0]).toMatchObject({
+      if (!toolPart || toolPart.state.status !== "completed") {
+        return yield* Effect.fail(new Error("expected completed send_file tool part"))
+      }
+      expect(toolPart.state.output).not.toContain("omitted")
+      expect(toolPart.state.attachments).toHaveLength(1)
+      expect(toolPart.state.attachments?.[0]).toMatchObject({
         mime: "image/png",
         filename: "big.png",
         url: `data:image/png;base64,${"x".repeat(6 * 1024 * 1024)}`,
