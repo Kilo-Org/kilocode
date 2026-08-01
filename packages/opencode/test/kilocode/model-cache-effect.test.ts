@@ -315,16 +315,26 @@ it.live("does not resolve auth or config for unsupported providers", () =>
   }),
 )
 
+const clearPerplexityEnv = Effect.sync(() => {
+  const key = process.env.PERPLEXITY_API_KEY
+  const url = process.env.PERPLEXITY_BASE_URL
+  delete process.env.PERPLEXITY_API_KEY
+  delete process.env.PERPLEXITY_BASE_URL
+  return { key, url }
+})
+
+const restorePerplexityEnv = (saved: { key?: string; url?: string }) =>
+  Effect.sync(() => {
+    if (saved.key === undefined) delete process.env.PERPLEXITY_API_KEY
+    else process.env.PERPLEXITY_API_KEY = saved.key
+    if (saved.url === undefined) delete process.env.PERPLEXITY_BASE_URL
+    else process.env.PERPLEXITY_BASE_URL = saved.url
+  })
+
 it.live("fetches Perplexity Agent models through the injected HttpClient", () =>
   Effect.gen(function* () {
-    const saved = { ...process.env }
-    delete process.env.PERPLEXITY_API_KEY
-    delete process.env.PERPLEXITY_BASE_URL
-    yield* Effect.addFinalizer(() =>
-      Effect.sync(() => {
-        process.env = { ...saved }
-      }),
-    )
+    const saved = yield* clearPerplexityEnv
+    yield* Effect.addFinalizer(() => restorePerplexityEnv(saved))
     const hits = yield* Ref.make<Hit[]>([])
     const models = yield* ModelCache.Service.use((cache) =>
       cache.fetch("perplexity-agent", { apiKey: "test-key", baseURL: "https://perplexity.test/v1" }),
@@ -337,14 +347,8 @@ it.live("fetches Perplexity Agent models through the injected HttpClient", () =>
 
 it.live("skips the Perplexity Agent model fetch when no API key is configured", () =>
   Effect.gen(function* () {
-    const saved = { ...process.env }
-    delete process.env.PERPLEXITY_API_KEY
-    delete process.env.PERPLEXITY_BASE_URL
-    yield* Effect.addFinalizer(() =>
-      Effect.sync(() => {
-        process.env = { ...saved }
-      }),
-    )
+    const saved = yield* clearPerplexityEnv
+    yield* Effect.addFinalizer(() => restorePerplexityEnv(saved))
     const hits = yield* Ref.make<Hit[]>([])
     const models = yield* ModelCache.Service.use((cache) => cache.fetch("perplexity-agent")).pipe(
       Effect.provide(layer(hits)),
