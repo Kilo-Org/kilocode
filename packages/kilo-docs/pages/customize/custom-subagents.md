@@ -248,6 +248,8 @@ You are a documentation reviewer. Use your skills to verify the docs.
 
 The allow-list is per-agent: the same skill can be available to one agent and hidden from another. See [Custom Modes](/docs/customize/custom-modes) for the full property reference.
 
+The allow-list governs system-prompt injection and loading through the skill tool. It does not filter the `/skill-name` command path, which users can invoke directly — the same behavior as `permission.skill`.
+
 ## Using Custom Subagents
 
 Once configured, subagents can be used in two ways:

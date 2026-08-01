@@ -21,6 +21,7 @@ import { Git } from "@/git" // kilocode_change
 import { isRecord } from "@/util/record"
 import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
 import { trustedInProject } from "../kilocode/skill/trust" // kilocode_change
+import { allowed } from "../kilocode/skill/allow-list" // kilocode_change
 
 const CLAUDE_EXTERNAL_DIR = ".claude"
 const AGENTS_EXTERNAL_DIR = ".agents"
@@ -375,10 +376,7 @@ export const layer = Layer.effect(
       const list = Object.values(s.skills).toSorted((a, b) => a.name.localeCompare(b.name))
       if (!agent) return list
       // kilocode_change start - filter skills by permission deny and agent allow-list
-      return list.filter((skill) => {
-        if (Permission.evaluate("skill", skill.name, agent.permission).action === "deny") return false // kilocode_change
-        return allowed(agent, skill.name) // kilocode_change
-      })
+      return list.filter((skill) => Permission.evaluate("skill", skill.name, agent.permission).action !== "deny" && allowed(agent, skill.name)) // kilocode_change
       // kilocode_change end
     })
 
@@ -397,19 +395,6 @@ export const defaultLayer: Layer.Layer<Service> = layer.pipe(
   Layer.provide(Global.layer),
   Layer.provide(RuntimeFlags.defaultLayer),
 )
-
-// kilocode_change start - per-agent skill allow-list (AgentConfig.skills)
-// Glob patterns matched against skill names; the last matching pattern wins and a
-// `!` prefix negates it. Unset (or empty) means every skill is allowed.
-export function allowed(agent: Agent.Info, name: string): boolean {
-  const patterns = agent.skills
-  if (!patterns?.length) return true
-  return patterns.reduce((match, pattern) => {
-    const negated = pattern.startsWith("!")
-    return Glob.match(negated ? pattern.slice(1) : pattern, name) ? !negated : match
-  }, false)
-}
-// kilocode_change end
 
 export function fmt(list: Info[], opts: { verbose: boolean }) {
   const described = list.filter((skill) => skill.description !== undefined)

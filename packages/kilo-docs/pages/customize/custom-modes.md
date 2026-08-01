@@ -191,6 +191,8 @@ Matching is case-sensitive, so `"skill-*"` does not match a skill named `Skill-A
 
 The allow-list is per-agent: the same skill can be available to one agent and hidden from another, restoring mode-specific skill behavior without mode-specific skill directories.
 
+The allow-list governs system-prompt injection and loading through the skill tool. It does not filter the `/skill-name` command path, which users can invoke directly — the same behavior as `permission.skill`.
+
 ### `model`
 
 Pin a specific model using the `provider/model` format:
@@ -451,6 +453,8 @@ skills:
 Matching is case-sensitive, so `"skill-*"` does not match a skill named `Skill-A`.
 
 The allow-list is per-agent: the same skill can be available to one agent and hidden from another, restoring mode-specific skill behavior without mode-specific skill directories.
+
+The allow-list governs system-prompt injection and loading through the skill tool. It does not filter the `/skill-name` command path, which users can invoke directly — the same behavior as `permission.skill`.
 
 ### `model`
 

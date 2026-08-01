@@ -6,6 +6,7 @@ import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import path from "path"
 import { Agent } from "../../src/agent/agent"
 import { Skill } from "../../src/skill"
+import { allowed } from "../../src/kilocode/skill/allow-list"
 import { SkillTool } from "../../src/tool/skill"
 import { ToolRegistry } from "@/tool/registry"
 import type { Tool } from "@/tool/tool"
@@ -65,27 +66,27 @@ function userSkills(dir: string) {
 }
 
 test("allowed returns true when allow-list is unset or empty", () => {
-  expect(Skill.allowed(agent(), "skill-a")).toBe(true)
-  expect(Skill.allowed(agent([]), "skill-a")).toBe(true)
+  expect(allowed(agent(), "skill-a")).toBe(true)
+  expect(allowed(agent([]), "skill-a")).toBe(true)
 })
 
 test("allowed rejects everything with a negation-only list", () => {
-  expect(Skill.allowed(agent(["!skill-a"]), "skill-a")).toBe(false)
-  expect(Skill.allowed(agent(["!skill-a"]), "skill-b")).toBe(false)
+  expect(allowed(agent(["!skill-a"]), "skill-a")).toBe(false)
+  expect(allowed(agent(["!skill-a"]), "skill-b")).toBe(false)
 })
 
 test("allowed last matching pattern wins", () => {
-  expect(Skill.allowed(agent(["!x", "*"]), "x")).toBe(true)
-  expect(Skill.allowed(agent(["*", "!x"]), "x")).toBe(false)
+  expect(allowed(agent(["!x", "*"]), "x")).toBe(true)
+  expect(allowed(agent(["*", "!x"]), "x")).toBe(false)
 })
 
 test("allowed rejects skills matching no pattern", () => {
-  expect(Skill.allowed(agent(["nomatch-*"]), "skill-a")).toBe(false)
+  expect(allowed(agent(["nomatch-*"]), "skill-a")).toBe(false)
 })
 
 test("allowed matching is case-sensitive", () => {
-  expect(Skill.allowed(agent(["skill-a"]), "SKILL-A")).toBe(false)
-  expect(Skill.allowed(agent(["SKILL-*"]), "skill-a")).toBe(false)
+  expect(allowed(agent(["skill-a"]), "SKILL-A")).toBe(false)
+  expect(allowed(agent(["SKILL-*"]), "skill-a")).toBe(false)
 })
 
 it.instance("all skills visible when agent has no skills allow-list", () =>
@@ -246,7 +247,7 @@ toolIt.instance("skill tool allows every skill with an empty allow-list", () =>
   { git: true, config: { agent: { code: { skills: [] } } } },
 )
 
-toolIt.instance("skill tool skips the gate for agents absent from the registry", () =>
+toolIt.instance("skill tool fails closed for agents absent from the registry", () =>
   Effect.gen(function* () {
     const dir = (yield* TestInstance).directory
     yield* userSkills(dir)
@@ -259,8 +260,13 @@ toolIt.instance("skill tool skips the gate for agents absent from the registry",
     })).find((item) => item.id === SkillTool.id)
     if (!tool) throw new Error("Skill tool not found")
 
-    const result = yield* tool.execute({ name: "skill-b" }, toolCtx("ghost"))
-    expect(result.output).toContain(`<skill_content name="skill-b">`)
+    const denied = yield* tool.execute({ name: "skill-a" }, toolCtx("ghost")).pipe(Effect.exit)
+    expect(Exit.isFailure(denied)).toBe(true)
+    if (Exit.isFailure(denied)) {
+      const error = Cause.squash(denied.cause)
+      expect(error).toBeInstanceOf(Error)
+      if (error instanceof Error) expect(error.message).toContain('Skill "skill-a" is not allowed')
+    }
   }),
   { git: true, config: { agent: { code: { skills: ["skill-a"] } } } },
 )
