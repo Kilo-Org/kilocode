@@ -1,5 +1,3 @@
-import path from "node:path"
-
 export default async (input: { directory: string }) => ({
   config: async (cfg: { skills?: { paths?: string[] } }) => {
     cfg.skills = cfg.skills ?? {}

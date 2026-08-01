@@ -3,6 +3,7 @@ import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Global } from "@opencode-ai/core/global"
 import { Effect, Layer } from "effect"
 import { FetchHttpClient } from "effect/unstable/http"
+import fs from "node:fs/promises"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 import { AccountTest } from "../fake/account"
@@ -59,10 +60,13 @@ it.instance(
   {
     config: { plugin: [plugin] },
     init: (dir) =>
-      Effect.promise(async () => {
-        await Bun.write(
-          path.join(`${dir}-plugin-skills`, "example", "SKILL.md"),
-          `---
+      Effect.gen(function* () {
+        const root = `${dir}-plugin-skills`
+        yield* Effect.addFinalizer(() => Effect.promise(() => fs.rm(root, { recursive: true, force: true })))
+        yield* Effect.promise(() =>
+          Bun.write(
+            path.join(root, "example", "SKILL.md"),
+            `---
 name: plugin-skill
 description: Registered by a plugin config hook.
 ---
@@ -71,8 +75,9 @@ description: Registered by a plugin config hook.
 
 {file:../payload.txt}
 `,
+          ),
         )
-        await Bun.write(path.join(`${dir}-plugin-skills`, "payload.txt"), "plugin payload")
+        yield* Effect.promise(() => Bun.write(path.join(root, "payload.txt"), "plugin payload"))
       }),
   },
 )

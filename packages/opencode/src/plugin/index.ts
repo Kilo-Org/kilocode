@@ -248,7 +248,7 @@ export const layer = Layer.effect(
         }
 
         // Notify plugins of current config
-        const configuredSkillPaths = new Set(cfg.skills?.paths ?? []) // kilocode_change
+        const before = new Set(cfg.skills?.paths ?? []) // kilocode_change
         for (const hook of hooks) {
           yield* Effect.tryPromise({
             try: () => Promise.resolve((hook as any).config?.(cfg)),
@@ -258,7 +258,7 @@ export const layer = Layer.effect(
             Effect.ignore,
           )
         }
-        PluginSkillOrigins.mark(cfg, configuredSkillPaths) // kilocode_change - retain provenance for skill paths added by config hooks
+        PluginSkillOrigins.mark(cfg, before) // kilocode_change - retain provenance for skill paths added by config hooks
 
         const unsubscribe = yield* events.listen((event) => {
           if (event.location?.directory !== ctx.directory) return Effect.void
