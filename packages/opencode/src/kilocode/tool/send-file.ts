@@ -41,123 +41,127 @@ export const SendFileTool = Tool.define<typeof Params, {}, FSUtil.Service, "send
       parameters: Params,
       execute: (params, ctx) =>
         Effect.gen(function* () {
-        if (!KiloSessions.remoteStatus().connected) {
-          return fail("Cannot send files: this session is not connected to Kilo cloud. Delivery needs an active link.")
-        }
+          if (!KiloSessions.remoteStatus().connected) {
+            return fail(
+              "Cannot send files: this session is not connected to Kilo cloud. Delivery needs an active link.",
+            )
+          }
 
-        const inst = yield* InstanceState.context
-        const requested = path.resolve(inst.directory, params.path)
-        const basename = path.basename(requested)
+          const inst = yield* InstanceState.context
+          const requested = path.resolve(inst.directory, params.path)
+          const basename = path.basename(requested)
 
-        // kilocode_change start — authorize missing and directory paths with the same
-        // security sequence as read.ts before any file inspection via KiloReadObject.
-        // Route absent targets through a read-style authorized failure, and produce a
-        // structured fail() for directories. This prevents access-pattern leakage where
-        // missing vs directory vs external-directory errors differ before permission
-        // checks.
-        const info = yield* fs.stat(requested).pipe(Effect.catch(() => Effect.succeed(undefined)))
-        if (!info) {
-          const dir = path.dirname(requested)
-          const parent = yield* fs.realPath(dir).pipe(Effect.option)
-          if (parent._tag === "None") return fail(`File not found: ${basename}`)
-          yield* assertExternalDirectoryEffect(ctx, parent.value, { bypass: false, kind: "directory" })
-          yield* ctx.ask({
-            permission: "read",
-            patterns: [...new Set([requested, parent.value].map((item) => path.relative(inst.worktree, item)))],
-            always: ["*"],
-            metadata: {},
-          })
-          return fail(`File not found: ${basename}`)
-        }
-        if (info.type === "Directory") {
-          const resolved = yield* fs.realPath(requested)
-          const target = process.platform === "win32" ? FSUtil.normalizePath(resolved) : resolved
+          // kilocode_change start — authorize missing and directory paths with the same
+          // security sequence as read.ts before any file inspection via KiloReadObject.
+          // Route absent targets through a read-style authorized failure, and produce a
+          // structured fail() for directories. This prevents access-pattern leakage where
+          // missing vs directory vs external-directory errors differ before permission
+          // checks.
+          const info = yield* fs.stat(requested).pipe(
+            Effect.catchIf(
+              (err) => "reason" in err && err.reason._tag === "NotFound",
+              () => Effect.succeed(undefined),
+            ),
+          )
+          if (!info) {
+            const dir = path.dirname(requested)
+            const parent = yield* fs.realPath(dir).pipe(Effect.option)
+            if (parent._tag === "None") return fail(`File not found: ${basename}`)
+            yield* assertExternalDirectoryEffect(ctx, parent.value, { bypass: false, kind: "directory" })
+            yield* ctx.ask({
+              permission: "read",
+              patterns: [...new Set([requested, parent.value].map((item) => path.relative(inst.worktree, item)))],
+              always: ["*"],
+              metadata: {},
+            })
+            return fail(`File not found: ${basename}`)
+          }
+          if (info.type === "Directory") {
+            const resolved = yield* fs.realPath(requested)
+            const target = process.platform === "win32" ? FSUtil.normalizePath(resolved) : resolved
+            const explicit =
+              typeof ctx.extra?.["referenceRoot"] === "string"
+                ? yield* KiloReference.path(fs, ctx.extra["referenceRoot"], target).pipe(
+                    Effect.option,
+                    Effect.map((result) => result._tag === "Some" && result.value),
+                  )
+                : false
+            yield* assertExternalDirectoryEffect(ctx, target, { bypass: explicit, kind: "directory" })
+            yield* ctx.ask({
+              permission: "read",
+              patterns: [...new Set([requested, target].map((item) => path.relative(inst.worktree, item)))],
+              always: ["*"],
+              metadata: {},
+            })
+            return fail(`Cannot send: ${basename} is a directory.`)
+          }
+          // kilocode_change end
+
+          // 1. Resolve via KiloReadObject.file (same authorization sequence as read.ts)
+          const file = yield* KiloReadObject.file(requested)
+
+          // 2. Authorization — same pattern as read.ts
           const explicit =
             typeof ctx.extra?.["referenceRoot"] === "string"
-              ? yield* KiloReference.path(fs, ctx.extra["referenceRoot"], target).pipe(
+              ? yield* KiloReference.path(fs, ctx.extra["referenceRoot"], file.target).pipe(
                   Effect.option,
                   Effect.map((result) => result._tag === "Some" && result.value),
                 )
               : false
-          yield* assertExternalDirectoryEffect(ctx, target, { bypass: explicit, kind: "directory" })
+          yield* assertExternalDirectoryEffect(ctx, file.target, { bypass: explicit, kind: "file" })
           yield* ctx.ask({
             permission: "read",
-            patterns: [...new Set([requested, target].map((item) => path.relative(inst.worktree, item)))],
+            patterns: [...new Set([requested, file.target].map((item) => path.relative(inst.worktree, item)))],
             always: ["*"],
             metadata: {},
           })
-          return fail(`Cannot send: ${basename} is a directory.`)
-        }
-        // kilocode_change end
 
-        // 1. Resolve via KiloReadObject.file (same authorization sequence as read.ts)
-        const file = yield* KiloReadObject.file(requested)
-
-        // 2. Authorization — same pattern as read.ts
-        const explicit =
-          typeof ctx.extra?.["referenceRoot"] === "string"
-            ? yield* KiloReference.path(fs, ctx.extra["referenceRoot"], file.target).pipe(
-                Effect.option,
-                Effect.map((result) => result._tag === "Some" && result.value),
-              )
-            : false
-        yield* assertExternalDirectoryEffect(ctx, file.target, { bypass: explicit, kind: "file" })
-        yield* ctx.ask({
-          permission: "read",
-          patterns: [...new Set([requested, file.target].map((item) => path.relative(inst.worktree, item)))],
-          always: ["*"],
-          metadata: {},
-        })
-
-        // 3. Size check before reading content
-        if (Number(file.stat.size) > SEND_FILE_MAX_BYTES) {
-          return {
-            title: "Send file too large",
-            output: `Cannot send: ${basename} is ${file.stat.size} bytes, which exceeds the ${SEND_FILE_MAX_BYTES / (1024 * 1024)} MiB limit. For larger files, give the user the workspace path instead.`,
-            metadata: {},
-          }
-        }
-
-        // 4. Open and read with TOCTOU safety (same pattern as read.ts)
-        return yield* KiloReadObject.use(file, (bound) =>
-          Effect.gen(function* () {
-            const sample = yield* Effect.tryPromise({
-              try: (signal) => bound.sample(SAMPLE_BYTES, AbortSignal.any([ctx.abort, signal])),
-              catch: (err) => (err instanceof Error ? err : new Error(String(err))),
-            })
-            const mime = sniffAttachmentMime(sample, FSUtil.mimeType(requested))
-
-            const bytes = yield* Effect.tryPromise({
-              try: (signal) => bound.read(SEND_FILE_MAX_BYTES + 1, AbortSignal.any([ctx.abort, signal])),
-              catch: (err) => (err instanceof Error ? err : new Error(String(err))),
-            })
-            if (bytes.byteLength > SEND_FILE_MAX_BYTES) {
-              return {
-                title: "Send file too large",
-                output: `Cannot send: ${basename} exceeds the ${SEND_FILE_MAX_BYTES / (1024 * 1024)} MiB limit. For larger files, give the user the workspace path instead.`,
-                metadata: {},
-              }
-            }
-
+          // 3. Size check before reading content
+          if (Number(file.stat.size) > SEND_FILE_MAX_BYTES) {
             return {
-              title: `Sent file: ${basename}`,
-              output: `File ${basename} (${bytes.byteLength} bytes, ${mime}) delivered to the user's Kilo app. Older app builds ignore non-image file attachments — make sure the user has an up-to-date app to see the delivery.`,
+              title: "Send file too large",
+              output: `Cannot send: ${basename} is ${file.stat.size} bytes, which exceeds the ${SEND_FILE_MAX_BYTES / (1024 * 1024)} MiB limit. For larger files, give the user the workspace path instead.`,
               metadata: {},
-              attachments: [
-                {
-                  type: "file" as const,
-                  mime,
-                  filename: basename,
-                  url: `data:${mime};base64,${bytes.toString("base64")}`,
-                },
-              ],
             }
-          }),
-        )
-        }).pipe(
-          Effect.catch((error) => Effect.succeed(fail(error instanceof Error ? error.message : String(error)))),
-          Effect.orDie,
-        ),
+          }
+
+          // 4. Open and read with TOCTOU safety (same pattern as read.ts)
+          return yield* KiloReadObject.use(file, (bound) =>
+            Effect.gen(function* () {
+              const sample = yield* Effect.tryPromise({
+                try: (signal) => bound.sample(SAMPLE_BYTES, AbortSignal.any([ctx.abort, signal])),
+                catch: (err) => (err instanceof Error ? err : new Error(String(err))),
+              })
+              const mime = sniffAttachmentMime(sample, FSUtil.mimeType(requested))
+
+              const bytes = yield* Effect.tryPromise({
+                try: (signal) => bound.read(SEND_FILE_MAX_BYTES + 1, AbortSignal.any([ctx.abort, signal])),
+                catch: (err) => (err instanceof Error ? err : new Error(String(err))),
+              })
+              if (bytes.byteLength > SEND_FILE_MAX_BYTES) {
+                return {
+                  title: "Send file too large",
+                  output: `Cannot send: ${basename} exceeds the ${SEND_FILE_MAX_BYTES / (1024 * 1024)} MiB limit. For larger files, give the user the workspace path instead.`,
+                  metadata: {},
+                }
+              }
+
+              return {
+                title: `Sent file: ${basename}`,
+                output: `File ${basename} (${bytes.byteLength} bytes, ${mime}) delivered to the user's Kilo app. Older app builds ignore non-image file attachments — make sure the user has an up-to-date app to see the delivery.`,
+                metadata: {},
+                attachments: [
+                  {
+                    type: "file" as const,
+                    mime,
+                    filename: basename,
+                    url: `data:${mime};base64,${bytes.toString("base64")}`,
+                  },
+                ],
+              }
+            }),
+          )
+        }).pipe(Effect.orDie),
     }
   }),
 )

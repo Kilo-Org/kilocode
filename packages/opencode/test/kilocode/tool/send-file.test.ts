@@ -470,9 +470,47 @@ describe("send_file tool", () => {
     const ids = extra.map((t) => t.id)
     expect(ids).toContain("send_file")
   })
+
+  test("non-NotFound stat failure propagates as an error", async () => {
+    const dir = await tmpdir()
+    try {
+      const permError: any = new Error("Permission denied")
+      permError.code = "EPERM"
+      permError.reason = { _tag: "PermissionDenied" }
+
+      const failingFs = FSUtil.Service.of({
+        stat: () => Effect.fail(permError) as any,
+        realPath: (candidate: string) =>
+          Effect.try({
+            try: () => realpathSync(candidate),
+            catch: (cause) => cause,
+          }),
+      } as unknown as FSUtil.Interface)
+
+      const layer = Layer.mergeAll(
+        Layer.succeed(InstanceRef, { directory: dir, worktree: dir, project: {} as any }),
+        Layer.succeed(Agent.Service, agents),
+        Layer.succeed(Truncate.Service, truncate),
+        Layer.succeed(FSUtil.Service, failingFs),
+      )
+
+      const promise = Effect.runPromise(
+        Effect.gen(function* () {
+          const info = yield* SendFileTool
+          const tool = yield* info.init()
+          return yield* tool.execute({ path: "anything.txt" }, ctx)
+        }).pipe(Effect.provide(layer)),
+      )
+
+      await expect(promise).rejects.toThrow()
+    } finally {
+      await fs.rm(dir, { recursive: true, force: true })
+    }
+  })
 })
 // kilocode_change start — fsService mock now includes stat + realPath for the
 // missing/directory authorization sequence that runs before KiloReadObject.file().
+// stat only fabricates NotFound for ENOENT; other errors propagate.
 const fsService = FSUtil.Service.of({
   stat: (candidate: string) =>
     Effect.tryPromise({
@@ -481,9 +519,17 @@ const fsService = FSUtil.Service.of({
         return { type: info.isFile() ? "File" : info.isDirectory() ? "Directory" : "Other" }
       },
       catch: (cause) => {
-        const err = new Error() as any
-        err.reason = { _tag: "NotFound" }
-        return err
+        if (
+          cause != null &&
+          typeof cause === "object" &&
+          "code" in cause &&
+          (cause as NodeJS.ErrnoException).code === "ENOENT"
+        ) {
+          const err = new Error() as any
+          err.reason = { _tag: "NotFound" }
+          return err
+        }
+        return cause
       },
     }) as any,
   realPath: (candidate: string) =>
