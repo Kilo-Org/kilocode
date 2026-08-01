@@ -43,11 +43,19 @@ class RequestError extends Error {
   }
 }
 
+class BatchSizeError extends Error {}
+
 function headers(key?: string) {
   return {
     "Content-Type": "application/json",
     ...(key ? { Authorization: `Bearer ${key}` } : {}),
   }
+}
+
+function isBatchError(err: unknown) {
+  if (err instanceof BatchSizeError) return true
+  if (!(err instanceof RequestError)) return false
+  return err.status === 400 || err.status === 413 || err.status === 422 || (err.status >= 500 && err.status < 600)
 }
 
 async function request(url: string, init?: RequestInit, timeout = 30_000) {
@@ -196,7 +204,7 @@ export async function probeEmbeddingModel(options: Options): Promise<EmbeddingMo
         ? await probeOllama(options.baseURL, options.model!, input)
         : await probeOpenAI(options.baseURL, options.apiKey, options.model!, input)
     if (!vectors || vectors.length !== size) {
-      throw new Error(`expected ${size} embeddings, got ${vectors?.length ?? 0}`)
+      throw new BatchSizeError(`expected ${size} embeddings, got ${vectors?.length ?? 0}`)
     }
     const dimension = vectors[0]?.length ?? 0
     if (
@@ -219,9 +227,7 @@ export async function probeEmbeddingModel(options: Options): Promise<EmbeddingMo
     try {
       return { profile: { size, dimension: await attempt(size) } }
     } catch (err) {
-      if (!(err instanceof RequestError && (err.status === 413 || (err.status >= 500 && err.status < 600)))) {
-        return { error: err }
-      }
+      if (!isBatchError(err)) return { error: err }
       const next = await check(remaining.slice(1), first ?? err)
       return next.profile ? next : { error: next.error ?? first ?? err }
     }

@@ -109,6 +109,24 @@ describe("embedding model discovery", () => {
     })
   })
 
+  it("falls back for batch-shaped errors and incomplete responses", async () => {
+    const sizes: number[] = []
+    const url = serve(async (request) => {
+      const body = (await request.json()) as { input: string[] }
+      const size = body.input.length
+      sizes.push(size)
+      if (size === 8) return Response.json({ error: "batch input is unsupported" }, { status: 400 })
+      if (size > 1) return Response.json({ embeddings: [[0.1, 0.2]] })
+      return Response.json({ embeddings: [[0.1, 0.2]] })
+    })
+
+    await expect(probeEmbeddingModel({ runtime: "ollama", baseURL: url, model: "qwen" })).resolves.toMatchObject({
+      dimension: 2,
+      batchSize: 1,
+    })
+    expect(sizes).toEqual([8, 4, 2, 1])
+  })
+
   it("reports non-batch probe failures without retrying", async () => {
     let calls = 0
     const url = serve(() => {

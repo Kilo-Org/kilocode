@@ -128,16 +128,6 @@ function isLMStudio(url: string | undefined) {
   }
 }
 
-function isLoopback(url: string | undefined) {
-  if (!url) return false
-  try {
-    const host = new URL(url).hostname.toLowerCase()
-    return host === "localhost" || host === "127.0.0.1" || host === "::1" || host === "[::1]"
-  } catch {
-    return false
-  }
-}
-
 function localActionLabel(active: boolean, action: "connect" | "validate") {
   if (active) return action === "connect" ? "Connecting…" : "Validating…"
   return action === "connect" ? "Connect" : "Select a model"
@@ -297,15 +287,14 @@ const IndexingTab: Component = () => {
     setModels([])
     setModelError(undefined)
     if (next === "lmstudio") {
+      const base = cfg()["openai-compatible"]?.baseUrl
       updateIndexing({
         provider: "openai-compatible",
         model: null,
         dimension: null,
         "openai-compatible": {
           ...raw()["openai-compatible"],
-          baseUrl: isLoopback(cfg()["openai-compatible"]?.baseUrl)
-            ? cfg()["openai-compatible"]?.baseUrl
-            : "http://localhost:1234/v1",
+          baseUrl: isLMStudio(base) ? base : "http://localhost:1234/v1",
         },
       })
       return
