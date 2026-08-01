@@ -118,6 +118,21 @@
 
 ## [Unreleased]
 
+## [7.0.12-rc.4] - 2026-08-01
+
+### Added
+- feat(opencode): remote create_session fields, org metadata, rename/title sync, cancel proof by @iscekic in https://github.com/Kilo-Org/kilocode/pull/12704
+
+### Fixed
+- fix(jetbrains): improve diff performance and session layout by @kirillk in https://github.com/Kilo-Org/kilocode/pull/12746
+
+### Changed
+- release(jetbrains): v7.0.12-rc.3 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/12742
+- docs: add icon-jetbrains skill for authoring JetBrains plugin icons by @kirillk in https://github.com/Kilo-Org/kilocode/pull/12711
+- chore(vscode): add isolated extension dev launches by @kirillk in https://github.com/Kilo-Org/kilocode/pull/12672
+- docs: add DaoXE provider guide by @seven7763 in https://github.com/Kilo-Org/kilocode/pull/12173
+
+
 ## [7.0.12-rc.3] - 2026-07-31
 
 ### Added
