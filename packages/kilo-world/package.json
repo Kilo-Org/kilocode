@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@kilocode/world",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "private": true,
+  "description": "Browser-automation library backing the kilo world agent tool.",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts",
+    "./daemon": "./src/daemon/runtime.ts",
+    "./runner": "./src/core/browser/runner.ts",
+    "./types": "./src/types.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "typecheck": "tsgo --noEmit",
+    "build": "bun build src/index.ts --target bun --external electron --external chromium-bidi --outdir dist --entry-naming index.js && bun run build:daemon",
+    "build:daemon": "bun run script/build-daemon.ts",
+    "test": "bun test --timeout 30000",
+    "test:ci": "bunx playwright install chromium && mkdir -p .artifacts/unit && bun test --timeout 30000 --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml"
+  },
+  "dependencies": {
+    "playwright": "catalog:"
+  },
+  "devDependencies": {
+    "@tsconfig/bun": "catalog:",
+    "@types/bun": "catalog:",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "typescript": "catalog:"
+  }
+}
