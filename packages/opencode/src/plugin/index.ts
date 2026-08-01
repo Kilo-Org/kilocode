@@ -248,7 +248,7 @@ export const layer = Layer.effect(
         }
 
         // Notify plugins of current config
-        const configuredSkillPaths = new Set(cfg.skills?.paths ?? [])
+        const configuredSkillPaths = new Set(cfg.skills?.paths ?? []) // kilocode_change
         for (const hook of hooks) {
           yield* Effect.tryPromise({
             try: () => Promise.resolve((hook as any).config?.(cfg)),
