@@ -494,6 +494,7 @@ describe("session.message-v2.toModelMessage", () => {
     })
   })
 
+  // kilocode_change start — send_file delivery attachments must not be replayed to the model
   test("strips send_file delivery attachments from model context", async () => {
     const userID = "m-user-sendfile"
     const assistantID = "m-assistant-sendfile"
@@ -551,6 +552,7 @@ describe("session.message-v2.toModelMessage", () => {
       value: "File example.log (50 bytes, text/plain) delivered to the user's Kilo app.",
     })
   })
+  // kilocode_change end
 
   test("moves bedrock pdf tool-result media into a separate user message", async () => {
     const bedrockModel: Provider.Model = {
