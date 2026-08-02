@@ -1743,6 +1743,7 @@ export const layer = Layer.effect(
             ...options["headers"],
             ...model.headers,
           }
+        delete options["llamaCppToolSchema"] // kilocode_change - consumed by tool schema sanitization
 
         const key = Hash.fast(
           JSON.stringify({

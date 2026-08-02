@@ -59,9 +59,31 @@ function reference(input: unknown, danger = false): boolean {
 }
 
 function llama(input?: { id: string; options?: Record<string, unknown> }) {
-  if (input?.options?.llamaCppToolSchema === true) return true
+  if (input?.options?.llamaCppToolSchema !== undefined) return input.options.llamaCppToolSchema === true
   const id = input?.id.toLowerCase().replaceAll(/[^a-z0-9]/g, "") ?? ""
   return id.includes("llamacpp") || id.includes("llamaserver")
+}
+
+function merge(target: Record<string, unknown>, input: unknown) {
+  const groups = new Map<string, unknown[]>()
+  const branches = Array.isArray(input) ? input : [input]
+  for (const branch of branches) {
+    if (!record(branch) || !record(branch.properties)) continue
+    for (const [name, schema] of Object.entries(branch.properties)) {
+      const items = groups.get(name) ?? []
+      items.push(schema)
+      groups.set(name, items)
+    }
+  }
+  if (groups.size === 0) return
+  const current = record(target.properties) ? target.properties : {}
+  const additions = Object.fromEntries(
+    [...groups].flatMap(([name, schemas]) => {
+      if (name in current) return []
+      return [[name, schemas.length === 1 ? schemas[0] : { anyOf: schemas }]]
+    }),
+  )
+  target.properties = { ...additions, ...current }
 }
 
 function walk(
@@ -133,6 +155,8 @@ function walk(
     const result = walk(input[key], strict)
     if (result.changed && result.semantic) next[key] = result.value
     if (result.changed && !result.semantic) {
+      if (key === "oneOf") merge(next, result.value)
+      if (key === "if") merge(next, [next.then, next.else])
       delete next[key]
       if (key === "if") {
         delete next.then
@@ -166,7 +190,7 @@ export async function sanitize(
       const result = walk(original, strict)
       if (!result.changed) return { name, tool: item, changed: false }
       // Tool inputs are object-root schemas. Complex widening falls back to accepting any object.
-      const fallback = result.dynamic || result.hazard || (result.semantic && reference(original))
+      const fallback = result.dynamic || result.hazard || reference(original)
       const schema = fallback ? { type: "object" as const, additionalProperties: true } : result.value
       return {
         name,

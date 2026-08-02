@@ -138,7 +138,39 @@ describe("provider tool schema sanitization", () => {
 
     expect(result).toEqual({
       type: "object",
-      properties: { shared: { type: "string", description: "Preserved metadata" } },
+      properties: {
+        x: { type: "string" },
+        y: { type: "string" },
+        shared: { type: "string", description: "Preserved metadata" },
+      },
+    })
+  })
+
+  test("keeps conditional branch properties visible when widening an incompatible condition", async () => {
+    const schema: JSONSchema7 = {
+      type: "object",
+      properties: { kind: { type: "string" } },
+      if: { properties: { kind: { pattern: "special" } } },
+      else: { properties: { regular: { type: "number", description: "Regular value" } } },
+    }
+    // oxlint-disable-next-line unicorn/no-thenable -- `then` is a JSON Schema conditional keyword
+    schema.then = { properties: { special: { type: "string", description: "Special value" } } }
+    const input = {
+      choose: tool({
+        inputSchema: jsonSchema(schema),
+      }),
+    }
+
+    const output = await KiloToolSchema.sanitize(input, { id: "llama-server" })
+    const result = await asSchema(output.choose.inputSchema).jsonSchema
+
+    expect(result).toEqual({
+      type: "object",
+      properties: {
+        special: { type: "string", description: "Special value" },
+        regular: { type: "number", description: "Regular value" },
+        kind: { type: "string" },
+      },
     })
   })
 
@@ -181,6 +213,38 @@ describe("provider tool schema sanitization", () => {
     const result = await asSchema(output.agent.inputSchema).jsonSchema
 
     expect(result).toEqual({ type: "object", properties: { prompt: {} } })
+  })
+
+  test("allows provider options to disable automatic llama.cpp compatibility", async () => {
+    const input = {
+      agent: tool({ inputSchema: jsonSchema({ type: "object", properties: { prompt: { pattern: "\\S" } } }) }),
+    }
+
+    expect(
+      await KiloToolSchema.sanitize(input, {
+        id: "llama-server",
+        options: { llamaCppToolSchema: false },
+      }),
+    ).toBe(input)
+  })
+
+  test("falls back safely when a dangerous reference reaches a widened definition", async () => {
+    const input = {
+      path: tool({
+        inputSchema: jsonSchema({
+          type: "object",
+          $defs: { rejected: { type: "string", pattern: "\\.\\." } },
+          properties: {
+            path: { type: "string", not: { $ref: "#/$defs/rejected" } },
+          },
+        }),
+      }),
+    }
+
+    const output = await KiloToolSchema.sanitize(input, { id: "llama.cpp" })
+    const result = await asSchema(output.path.inputSchema).jsonSchema
+
+    expect(result).toEqual({ type: "object", additionalProperties: true })
   })
 
   test("removes unanchored pattern property keys for llama.cpp", async () => {
