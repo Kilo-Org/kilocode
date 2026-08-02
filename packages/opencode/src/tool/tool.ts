@@ -119,18 +119,20 @@ function wrap<Parameters extends Schema.Decoder<unknown>, Result extends Metadat
           ...(ctx.callID ? { "tool.call_id": ctx.callID } : {}),
         }
         return Effect.gen(function* () {
+          // kilocode_change start
           const decoded = yield* decode(
             args,
-            { errors: "all" }, // kilocode_change
+            { errors: "all" },
           ).pipe(
             Effect.mapError(
               (error) =>
                 new InvalidArgumentsError({
                   tool: id,
-                  detail: toolInfo.formatValidationError ? toolInfo.formatValidationError(error) : format(error), // kilocode_change
+                  detail: toolInfo.formatValidationError ? toolInfo.formatValidationError(error) : format(error),
                 }),
             ),
           )
+          // kilocode_change end
           const result = yield* execute(decoded as Schema.Schema.Type<Parameters>, ctx)
           if (result.metadata.truncated !== undefined) {
             return result
