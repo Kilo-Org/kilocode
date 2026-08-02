@@ -579,6 +579,37 @@ describe("tool.read loaded instructions", () => {
       expect(result.output).toContain("Test Instructions")
       expect(result.metadata.loaded).toBeDefined()
       expect(result.metadata.loaded).toContain(path.join(dir, "subdir", "AGENTS.md"))
+      expect(result.metadata.instructionReminderTruncated).toBe(false)
+    }),
+  )
+
+  it.live("caps large AGENTS.md reminders without obscuring the requested file range", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped()
+      const target = path.join(dir, "subdir", "nested", "large.txt")
+      const instructions = Array.from({ length: 6_000 }, (_, i) => `AGENT_LINE_${i + 1}`).join("\n")
+      const lines = Array.from({ length: 12_000 }, (_, i) => `TARGET_LINE_${i + 1}`).join("\n")
+      yield* put(path.join(dir, "subdir", "AGENTS.md"), instructions)
+      yield* put(target, lines)
+
+      const result = yield* exec(dir, { filePath: target, offset: 11_098, limit: 30 })
+
+      expect(result.output).toContain("11098: TARGET_LINE_11098")
+      expect(result.output).toContain("11127: TARGET_LINE_11127")
+      expect(result.output).not.toMatch(/(^|\n)1: TARGET_LINE_1(\n|$)/)
+      expect(result.output).toContain("Additional instructions were truncated")
+      expect(result.output).not.toContain("AGENT_LINE_6000")
+      expect(Buffer.byteLength(result.output, "utf-8")).toBeLessThan(20 * 1024)
+      expect(result.metadata.loaded).toContain(path.join(dir, "subdir", "AGENTS.md"))
+      expect(result.metadata.instructionReminderTruncated).toBe(true)
+      expect(result.metadata.display).toMatchObject({
+        type: "file",
+        path: target,
+        lineStart: 11_098,
+        lineEnd: 11_127,
+        totalLines: 12_000,
+        truncated: true,
+      })
     }),
   )
 })

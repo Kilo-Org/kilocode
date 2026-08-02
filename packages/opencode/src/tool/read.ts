@@ -28,10 +28,13 @@ const suffix = (length: number) => `... (line truncated to ${length} chars)`
 // kilocode_change end
 const MAX_BYTES = 50 * 1024
 const MAX_BYTES_LABEL = `${MAX_BYTES / 1024} KB`
+// Keep appended instructions bounded so the requested file slice remains the primary Read payload.
+const MAX_INSTRUCTION_REMINDER_BYTES = 8 * 1024
+const MAX_INSTRUCTION_REMINDER_BYTES_LABEL = `${MAX_INSTRUCTION_REMINDER_BYTES / 1024} KB`
 const SAMPLE_BYTES = 4096
 const SUPPORTED_IMAGE_MIMES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"])
 
-// `offset` and `limit` were originally `z.coerce.number()` — the runtime
+// offset and limit were originally z.coerce.number() - the runtime
 // coercion was useful when the tool was called from a shell but serves no
 // purpose in the LLM tool-call path (the model emits typed JSON). The JSON
 // Schema output is identical (`type: "number"`), so the LLM view is
@@ -69,6 +72,7 @@ type Metadata = {
   preview: string
   truncated: boolean
   loaded: string[]
+  instructionReminderTruncated?: boolean
   display?: Display
 }
 
@@ -365,9 +369,8 @@ export const ReadTool = Tool.define<
           }
           output += "\n</content>"
           yield* warm(bound.target)
-          if (loaded.length > 0) {
-            output += `\n\n<system-reminder>\n${loaded.map((item) => item.content).join("\n\n")}\n</system-reminder>`
-          }
+          const reminder = formatInstructionReminder(loaded)
+          output += reminder.output
           return {
             title,
             output,
@@ -375,6 +378,7 @@ export const ReadTool = Tool.define<
               preview: file.raw.slice(0, 20).join("\n"),
               truncated,
               loaded: loaded.map((item) => item.filepath),
+              instructionReminderTruncated: reminder.truncated,
               display: {
                 type: "file" as const,
                 path: bound.target,
@@ -436,4 +440,29 @@ async function collect(stream: Readable, opts: { limit: number; offset: number }
     stream.destroy()
   }
   return { raw, count, cut, more, offset: opts.offset }
+}
+
+function formatInstructionReminder(loaded: { filepath: string; content: string }[]) {
+  if (loaded.length === 0) return { output: "", truncated: false }
+
+  const content = loaded.map((item) => item.content).join("\n\n")
+  const full = `\n\n<system-reminder>\n${content}\n</system-reminder>`
+  if (Buffer.byteLength(full, "utf-8") <= MAX_INSTRUCTION_REMINDER_BYTES) {
+    return { output: full, truncated: false }
+  }
+
+  const prefix = "\n\n<system-reminder>\n"
+  const suffix = [
+    "\n\n[Additional instructions were truncated to ",
+    MAX_INSTRUCTION_REMINDER_BYTES_LABEL,
+    ". Loaded instruction file paths are available in metadata.]\n</system-reminder>",
+  ].join("")
+  const budget = MAX_INSTRUCTION_REMINDER_BYTES - Buffer.byteLength(prefix + suffix, "utf-8")
+  if (budget <= 0) return { output: prefix + suffix.trimStart(), truncated: true }
+
+  let snippet = TextStream.safeSlice(content, budget)
+  while (Buffer.byteLength(snippet, "utf-8") > budget) {
+    snippet = TextStream.safeSlice(snippet, Math.max(0, snippet.length - 100))
+  }
+  return { output: prefix + snippet.trimEnd() + suffix, truncated: true }
 }
