@@ -628,11 +628,11 @@ function anthropicClaude5(apiId: string) {
 // kilocode_change start - kimi-k3 reasoning effort variants (always-on thinking)
 function isKimiK3(model: Provider.Model) {
   // Token-bounded so kimi-k30 / kimi-k3x / kimi-k3.5 (future sibling) are NOT matched.
-  // Trailing class keeps /@- for Vertex snapshots (name@date), OpenRouter slugs/suffixes
-  // (e.g. :free / :nitro handled via the leading / separator), and dated IDs (kimi-k3-20260715).
+  // Trailing class keeps /:@- for Vertex snapshots (name@date), OpenRouter variant
+  // suffixes (kimi-k3:free / :nitro / :floor / :exacto), and dated IDs (kimi-k3-20260715).
   const apiId = model.api.id.toLowerCase()
   const fullId = model.id.toLowerCase()
-  return /(?:^|[/.-])kimi-k3(?:[/@-]|$)/.test(apiId) || /(?:^|[/.-])kimi-k3(?:[/@-]|$)/.test(fullId)
+  return /(?:^|[/.-])kimi-k3(?:[/:@-]|$)/.test(apiId) || /(?:^|[/.-])kimi-k3(?:[/:@-]|$)/.test(fullId)
 }
 // kilocode_change end
 

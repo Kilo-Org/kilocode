@@ -3491,6 +3491,23 @@ describe("ProviderTransform.variants", () => {
     })
   })
 
+  test("kimi-k3 OpenRouter variant suffixes (kimi-k3:free) still match the kimi-k3 predicate", () => {
+    const model = createMockModel({
+      id: "openrouter/moonshotai/kimi-k3:free",
+      providerID: "openrouter",
+      api: {
+        id: "moonshotai/kimi-k3:free",
+        url: "https://openrouter.ai/api/v1",
+        npm: "@openrouter/ai-sdk-provider",
+      },
+    })
+    expect(ProviderTransform.variants(model)).toEqual({
+      low: { reasoning: { effort: "low" } },
+      high: { reasoning: { effort: "high" } },
+      max: { reasoning: { effort: "max" } },
+    })
+  })
+
   test("kimi-k2.5 still gets instant/thinking variants on kilo-gateway (regression guard)", () => {
     const model = createMockModel({
       id: "kilo/moonshotai/kimi-k2.5",
