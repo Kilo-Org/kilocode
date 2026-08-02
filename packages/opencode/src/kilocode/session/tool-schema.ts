@@ -58,7 +58,10 @@ function reference(input: unknown, danger = false): boolean {
   return Object.entries(input).some(([key, value]) => reference(value, danger || DANGERS.includes(key)))
 }
 
-function walk(input: unknown, strict = false): { value: unknown; changed: boolean; dynamic: boolean; hazard: boolean } {
+function walk(
+  input: unknown,
+  strict = false,
+): { value: unknown; changed: boolean; dynamic: boolean; hazard: boolean; semantic: boolean } {
   if (Array.isArray(input)) {
     const items = input.map((item) => walk(item, strict))
     const changed = items.some((item) => item.changed)
@@ -67,14 +70,16 @@ function walk(input: unknown, strict = false): { value: unknown; changed: boolea
       changed,
       dynamic: items.some((item) => item.dynamic),
       hazard: items.some((item) => item.hazard),
+      semantic: items.some((item) => item.semantic),
     }
   }
-  if (!record(input)) return { value: input, changed: false, dynamic: false, hazard: false }
+  if (!record(input)) return { value: input, changed: false, dynamic: false, hazard: false, semantic: false }
 
   const next = { ...input }
-  const found =
-    typeof input.pattern === "string" &&
-    (lookaround(input.pattern) || (strict && !(input.pattern.startsWith("^") && input.pattern.endsWith("$"))))
+  const pattern = typeof input.pattern === "string" ? input.pattern : undefined
+  const unsupported = pattern !== undefined && lookaround(pattern)
+  const incompatible = pattern !== undefined && strict && !(pattern.startsWith("^") && pattern.endsWith("$"))
+  const found = unsupported || incompatible
   if (found) delete next.pattern
 
   const maps = MAPS.reduce(
@@ -84,11 +89,14 @@ function walk(input: unknown, strict = false): { value: unknown; changed: boolea
 
       const items = Object.entries(value).map(([name, item]) => {
         const result = walk(item, strict)
-        const removed = key === "patternProperties" && lookaround(name)
+        const unsupportedKey = key === "patternProperties" && lookaround(name)
+        const incompatibleKey = key === "patternProperties" && strict && !(name.startsWith("^") && name.endsWith("$"))
+        const removed = unsupportedKey || incompatibleKey
         return {
           changed: removed || result.changed,
           dynamic: removed || result.dynamic,
           hazard: result.hazard,
+          semantic: unsupportedKey || result.semantic,
           entry: removed ? undefined : ([name, result.value] as const),
         }
       })
@@ -98,9 +106,10 @@ function walk(input: unknown, strict = false): { value: unknown; changed: boolea
         changed: changed || state.changed,
         dynamic: items.some((item) => item.dynamic) || state.dynamic,
         hazard: items.some((item) => item.hazard) || state.hazard,
+        semantic: items.some((item) => item.semantic) || state.semantic,
       }
     },
-    { changed: found, dynamic: false, hazard: false },
+    { changed: found, dynamic: false, hazard: false, semantic: unsupported },
   )
 
   const nodes = NODES.reduce((state, key) => {
@@ -110,6 +119,7 @@ function walk(input: unknown, strict = false): { value: unknown; changed: boolea
       changed: result.changed || state.changed,
       dynamic: result.dynamic || state.dynamic,
       hazard: result.hazard || state.hazard,
+      semantic: result.semantic || state.semantic,
     }
   }, maps)
 
@@ -119,7 +129,8 @@ function walk(input: unknown, strict = false): { value: unknown; changed: boolea
     return {
       changed: result.changed || state.changed,
       dynamic: result.dynamic || state.dynamic,
-      hazard: result.changed || result.hazard || state.hazard,
+      hazard: result.semantic || result.hazard || state.hazard,
+      semantic: result.semantic || state.semantic,
     }
   }, nodes)
   return { value: dangers.changed ? next : input, ...dangers }
@@ -127,9 +138,9 @@ function walk(input: unknown, strict = false): { value: unknown; changed: boolea
 
 export async function sanitize(
   input: Record<string, Tool>,
-  model?: { api: { npm: string } },
+  model?: { providerID: string },
 ): Promise<Record<string, Tool>> {
-  const strict = model?.api.npm === "@ai-sdk/openai-compatible"
+  const strict = model?.providerID.toLowerCase().replaceAll(/[^a-z0-9]/g, "") === "llamacpp"
   const items = await Promise.all(
     Object.entries(input).map(async ([name, item]) => {
       if (item.type === "provider") return { name, tool: item, changed: false }
@@ -138,7 +149,7 @@ export async function sanitize(
       const result = walk(original, strict)
       if (!result.changed) return { name, tool: item, changed: false }
       // Tool inputs are object-root schemas. Complex widening falls back to accepting any object.
-      const fallback = result.dynamic || result.hazard || reference(original)
+      const fallback = result.dynamic || result.hazard || (result.semantic && reference(original))
       const schema = fallback ? { type: "object" as const, additionalProperties: true } : result.value
       return {
         name,

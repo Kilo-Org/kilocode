@@ -71,7 +71,7 @@ describe("provider tool schema sanitization", () => {
     expect(await KiloToolSchema.sanitize(input)).toBe(input)
   })
 
-  test("removes unanchored patterns for OpenAI-compatible servers while preserving local validation", async () => {
+  test("removes unanchored patterns for llama.cpp while preserving local validation", async () => {
     const seen: unknown[] = []
     const schema: JSONSchema7 = {
       type: "object",
@@ -88,7 +88,7 @@ describe("provider tool schema sanitization", () => {
       agent: tool({ inputSchema: jsonSchema(schema, { validate }) }),
     }
 
-    const output = await KiloToolSchema.sanitize(input, { api: { npm: "@ai-sdk/openai-compatible" } })
+    const output = await KiloToolSchema.sanitize(input, { providerID: "llama-cpp" })
     const result = await asSchema(output.agent.inputSchema).jsonSchema
     const properties = result.properties
     if (!properties || typeof properties.prompt !== "object" || typeof properties.slug !== "object") {
@@ -101,6 +101,67 @@ describe("provider tool schema sanitization", () => {
 
     await asSchema(output.agent.inputSchema).validate?.({ prompt: "hello", slug: "valid-slug" })
     expect(seen).toEqual([{ prompt: "hello", slug: "valid-slug" }])
+  })
+
+  test("keeps unanchored patterns for other OpenAI-compatible providers", async () => {
+    const input = {
+      agent: tool({ inputSchema: jsonSchema({ type: "object", properties: { prompt: { pattern: "\\S" } } }) }),
+    }
+
+    expect(await KiloToolSchema.sanitize(input, { providerID: "custom-openai" })).toBe(input)
+  })
+
+  test("keeps a composed schema when only llama.cpp-incompatible patterns are removed", async () => {
+    const input = {
+      choose: tool({
+        inputSchema: jsonSchema({
+          type: "object",
+          oneOf: [
+            {
+              type: "object",
+              properties: { x: { type: "string", pattern: "\\S" } },
+              required: ["x"],
+            },
+            {
+              type: "object",
+              properties: { y: { type: "string" } },
+              required: ["y"],
+            },
+          ],
+        }),
+      }),
+    }
+
+    const output = await KiloToolSchema.sanitize(input, { providerID: "llama.cpp" })
+    const result = await asSchema(output.choose.inputSchema).jsonSchema
+
+    expect(result).toEqual({
+      type: "object",
+      oneOf: [
+        { type: "object", properties: { x: { type: "string" } }, required: ["x"] },
+        { type: "object", properties: { y: { type: "string" } }, required: ["y"] },
+      ],
+    })
+  })
+
+  test("removes unanchored pattern property keys for llama.cpp", async () => {
+    const input = {
+      dynamic: tool({
+        inputSchema: jsonSchema({
+          type: "object",
+          patternProperties: {
+            "^safe-[a-z]+$": { type: "string" },
+            "unsafe-[a-z]+": { type: "number" },
+          },
+          additionalProperties: false,
+        }),
+      }),
+    }
+
+    const output = await KiloToolSchema.sanitize(input, { providerID: "llama_cpp" })
+    const result = await asSchema(output.dynamic.inputSchema).jsonSchema
+
+    expect(result).toEqual({ type: "object", additionalProperties: true })
   })
 
   test("keeps strict dynamic properties available when their key pattern is removed", async () => {
