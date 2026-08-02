@@ -58,9 +58,9 @@ function reference(input: unknown, danger = false): boolean {
   return Object.entries(input).some(([key, value]) => reference(value, danger || DANGERS.includes(key)))
 }
 
-function walk(input: unknown): { value: unknown; changed: boolean; dynamic: boolean; hazard: boolean } {
+function walk(input: unknown, strict = false): { value: unknown; changed: boolean; dynamic: boolean; hazard: boolean } {
   if (Array.isArray(input)) {
-    const items = input.map(walk)
+    const items = input.map((item) => walk(item, strict))
     const changed = items.some((item) => item.changed)
     return {
       value: changed ? items.map((item) => item.value) : input,
@@ -72,7 +72,9 @@ function walk(input: unknown): { value: unknown; changed: boolean; dynamic: bool
   if (!record(input)) return { value: input, changed: false, dynamic: false, hazard: false }
 
   const next = { ...input }
-  const found = typeof input.pattern === "string" && lookaround(input.pattern)
+  const found =
+    typeof input.pattern === "string" &&
+    (lookaround(input.pattern) || (strict && !(input.pattern.startsWith("^") && input.pattern.endsWith("$"))))
   if (found) delete next.pattern
 
   const maps = MAPS.reduce(
@@ -81,7 +83,7 @@ function walk(input: unknown): { value: unknown; changed: boolean; dynamic: bool
       if (!record(value)) return state
 
       const items = Object.entries(value).map(([name, item]) => {
-        const result = walk(item)
+        const result = walk(item, strict)
         const removed = key === "patternProperties" && lookaround(name)
         return {
           changed: removed || result.changed,
@@ -102,7 +104,7 @@ function walk(input: unknown): { value: unknown; changed: boolean; dynamic: bool
   )
 
   const nodes = NODES.reduce((state, key) => {
-    const result = walk(input[key])
+    const result = walk(input[key], strict)
     if (result.changed) next[key] = result.value
     return {
       changed: result.changed || state.changed,
@@ -112,7 +114,7 @@ function walk(input: unknown): { value: unknown; changed: boolean; dynamic: bool
   }, maps)
 
   const dangers = DANGERS.reduce((state, key) => {
-    const result = walk(input[key])
+    const result = walk(input[key], strict)
     if (result.changed) next[key] = result.value
     return {
       changed: result.changed || state.changed,
@@ -123,13 +125,17 @@ function walk(input: unknown): { value: unknown; changed: boolean; dynamic: bool
   return { value: dangers.changed ? next : input, ...dangers }
 }
 
-export async function sanitize(input: Record<string, Tool>): Promise<Record<string, Tool>> {
+export async function sanitize(
+  input: Record<string, Tool>,
+  model?: { api: { npm: string } },
+): Promise<Record<string, Tool>> {
+  const strict = model?.api.npm === "@ai-sdk/openai-compatible"
   const items = await Promise.all(
     Object.entries(input).map(async ([name, item]) => {
       if (item.type === "provider") return { name, tool: item, changed: false }
       const source = asSchema(item.inputSchema)
       const original = await source.jsonSchema
-      const result = walk(original)
+      const result = walk(original, strict)
       if (!result.changed) return { name, tool: item, changed: false }
       // Tool inputs are object-root schemas. Complex widening falls back to accepting any object.
       const fallback = result.dynamic || result.hazard || reference(original)

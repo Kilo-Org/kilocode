@@ -71,6 +71,38 @@ describe("provider tool schema sanitization", () => {
     expect(await KiloToolSchema.sanitize(input)).toBe(input)
   })
 
+  test("removes unanchored patterns for OpenAI-compatible servers while preserving local validation", async () => {
+    const seen: unknown[] = []
+    const schema: JSONSchema7 = {
+      type: "object",
+      properties: {
+        prompt: { type: "string", pattern: "\\S" },
+        slug: { type: "string", pattern: "^[a-z0-9-]+$" },
+      },
+    }
+    const validate = (value: unknown) => {
+      seen.push(value)
+      return { success: true as const, value }
+    }
+    const input = {
+      agent: tool({ inputSchema: jsonSchema(schema, { validate }) }),
+    }
+
+    const output = await KiloToolSchema.sanitize(input, { api: { npm: "@ai-sdk/openai-compatible" } })
+    const result = await asSchema(output.agent.inputSchema).jsonSchema
+    const properties = result.properties
+    if (!properties || typeof properties.prompt !== "object" || typeof properties.slug !== "object") {
+      throw new Error("Expected object properties")
+    }
+
+    expect(properties.prompt.pattern).toBeUndefined()
+    expect(properties.slug.pattern).toBe("^[a-z0-9-]+$")
+    expect(schema.properties?.prompt).toEqual({ type: "string", pattern: "\\S" })
+
+    await asSchema(output.agent.inputSchema).validate?.({ prompt: "hello", slug: "valid-slug" })
+    expect(seen).toEqual([{ prompt: "hello", slug: "valid-slug" }])
+  })
+
   test("keeps strict dynamic properties available when their key pattern is removed", async () => {
     const schema: JSONSchema7 = {
       type: "object",
