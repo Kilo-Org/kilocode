@@ -3443,23 +3443,52 @@ describe("ProviderTransform.variants", () => {
   })
 
   test("kimi-k30 does not match the kimi-k3 predicate", () => {
-    const ids = ["kimi-k30", "kimi-k3x", "moonshotai/kimi-k300", "kimi-k3.5", "kimi-k3.5-instruct", "kimi-k3-20260715"]
+    const ids = ["kimi-k30", "kimi-k3x", "moonshotai/kimi-k300", "kimi-k3.5", "kimi-k3.5-instruct"]
     for (const id of ids) {
       const model = createMockModel({
         id: `test/${id}`,
         api: { id, url: "https://api.moonshot.ai/v1", npm: "@ai-sdk/openai-compatible" },
       })
       // Falls through to the generic WIDELY_SUPPORTED_EFFORTS branch (low/medium/high)
-      const result = ProviderTransform.variants(model)
-      const keys = Object.keys(result)
-      // kimi-k3-20260715 (dated snapshot) should STILL match kimi-k3; the others should NOT.
-      if (id === "kimi-k3-20260715") {
-        expect(keys).toEqual(["low", "high", "max"])
-      } else {
-        expect(keys).toContain("medium")
-        expect(keys).not.toContain("max")
-      }
+      const keys = Object.keys(ProviderTransform.variants(model))
+      expect(keys).toContain("medium")
+      expect(keys).not.toContain("max")
     }
+  })
+
+  test("kimi-k3 dated snapshots (e.g. kimi-k3-20260715) still match the kimi-k3 predicate", () => {
+    const model = createMockModel({
+      id: "moonshotai/kimi-k3-20260715",
+      api: {
+        id: "kimi-k3-20260715",
+        url: "https://api.moonshot.ai/v1",
+        npm: "@ai-sdk/openai-compatible",
+      },
+    })
+    expect(ProviderTransform.variants(model)).toEqual({
+      low: { reasoningEffort: "low" },
+      high: { reasoningEffort: "high" },
+      max: { reasoningEffort: "max" },
+    })
+  })
+
+  test("kimi-k3 Vertex-style snapshots (kimi-k3@20260715) still match the kimi-k3 predicate", () => {
+    const model = createMockModel({
+      id: "kimi-k3@20260715",
+      providerID: "moonshotai",
+      api: {
+        id: "kimi-k3@20260715",
+        url: "https://api.moonshot.ai/vertex",
+        npm: "@ai-sdk/google-vertex/anthropic",
+      },
+    })
+    expect(ProviderTransform.variants(model)).toEqual({
+      low: { thinking: { type: "adaptive", display: "summarized" }, effort: "low" },
+      medium: { thinking: { type: "adaptive", display: "summarized" }, effort: "medium" },
+      high: { thinking: { type: "adaptive", display: "summarized" }, effort: "high" },
+      xhigh: { thinking: { type: "adaptive", display: "summarized" }, effort: "xhigh" },
+      max: { thinking: { type: "adaptive", display: "summarized" }, effort: "max" },
+    })
   })
 
   test("kimi-k2.5 still gets instant/thinking variants on kilo-gateway (regression guard)", () => {
