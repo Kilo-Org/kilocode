@@ -207,6 +207,13 @@ function globalConfigFile() {
 
 function patchJsonc(input: string, patch: unknown, path: string[] = []): string {
   if (!isRecord(patch)) {
+    // kilocode_change start - jsonc-parser throws when deleting a path whose
+    // parent does not exist in the document; absent keys are already "unset"
+    if (patch === null) {
+      const tree = parseTree(input)
+      if (!tree || !findNodeAtLocation(tree, path)) return input
+    }
+    // kilocode_change end
     const edits = modify(input, path, patch === null ? undefined : patch, {
       // kilocode_change
       formattingOptions: {
@@ -483,6 +490,7 @@ export const layer = Layer.effect(
           result = mergeConfigConcatArrays(result, { agent: orgModes.agents })
         }
         warnings.push(...orgModes.warnings)
+        let configuredAgents = { ...(result.agent ?? {}) }
         // kilocode_change end
 
         const authEnv: Record<string, string> = {}
@@ -542,6 +550,7 @@ export const layer = Layer.effect(
           const trusted = sourceTrusted ?? scope === "global"
           const scoped = KilocodeConfig.scopeIndexing(SandboxConfig.scope(next, scope), scope)
           result = mergeConfigConcatArrays(result, scoped)
+          if (scoped.agent) configuredAgents = mergeDeep(configuredAgents, scoped.agent)
           if (next.instructions?.length) {
             result.instruction_origins = origins(result.instruction_origins, next.instructions, trusted, source)
           }
@@ -758,13 +767,15 @@ export const layer = Layer.effect(
             result.command ?? {},
             yield* Effect.promise(() => ConfigCommand.load(dir, warnings, dirTrusted, dirFileScope, dirSourceScope)),
           )
-          result.agent = mergeDeep(
+          result.agent = KilocodeConfig.mergeAgentMarkdown(
             result.agent ?? {},
             yield* Effect.promise(() => ConfigAgent.load(dir, warnings, dirTrusted, dirFileScope, dirSourceScope)),
+            configuredAgents,
           )
-          result.agent = mergeDeep(
+          result.agent = KilocodeConfig.mergeAgentMarkdown(
             result.agent ?? {},
             yield* Effect.promise(() => ConfigAgent.loadMode(dir, warnings, dirTrusted, dirFileScope, dirSourceScope)),
+            configuredAgents,
           )
           // kilocode_change end
           // kilocode_change - Auto-discovered plugins under config directories are already local files, so ConfigPlugin.load
@@ -1015,20 +1026,28 @@ export const layer = Layer.effect(
           Effect.gen(function* () {
             const before = (yield* readConfigFile(file)) ?? "{}"
             const patch = writableGlobal(config)
+            // Reads merge every global config file, so delete sentinels must be
+            // removed from all of them, not just the primary write target.
+            const propagated = yield* KilocodeConfig.propagateUnset({
+              fs,
+              files: KilocodeConfig.GLOBAL_CONFIG_FILES.map((name) => path.join(Global.Path.config, name)),
+              exclude: file,
+              patch,
+            })
 
             if (!file.endsWith(".jsonc")) {
               const existing = ConfigParse.schema(ConfigV1.Info, ConfigParse.jsonc(before, file), file)
               const next = KilocodeConfig.mergeConfig(writable(existing), patch)
               const serialized = JSON.stringify(next, null, 2)
-              const changed = serialized !== before
-              if (changed) yield* fs.writeFileString(file, serialized).pipe(Effect.orDie)
+              const changed = serialized !== before || propagated
+              if (serialized !== before) yield* fs.writeFileString(file, serialized).pipe(Effect.orDie)
               return { next, changed }
             }
 
             const updated = patchJsonc(before, patch)
             const next = ConfigParse.schema(ConfigV1.Info, ConfigParse.jsonc(updated, file), file)
-            const changed = updated !== before
-            if (changed) yield* fs.writeFileString(file, updated).pipe(Effect.orDie)
+            const changed = updated !== before || propagated
+            if (updated !== before) yield* fs.writeFileString(file, updated).pipe(Effect.orDie)
             return { next, changed }
           }),
           `config:global:${path.resolve(Global.Path.config)}`,

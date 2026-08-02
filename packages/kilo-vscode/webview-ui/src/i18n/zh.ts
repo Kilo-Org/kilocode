@@ -254,6 +254,7 @@ export const dict = {
 
   "notification.permission.title": "需要权限",
   "notification.permission.titleSubagent": "需要权限（子代理）",
+  "notification.permission.titleSkillShell": "要执行技能「{{skill}}」的 shell 命令吗？",
   "ui.permission.manageAutoApprove": "管理自动审批规则",
   "ui.permission.doomLoop.prompt": "检测到 {{tool}} 工具可能陷入循环。是否继续运行？",
   "ui.permission.doomLoop.rule": "继续调用 {{tool}}",
@@ -292,7 +293,6 @@ export const dict = {
 
   "session.tab.review": "审查",
   "session.review.filesChanged": "{{count}} 个文件变更",
-  "session.review.change.other": "更改",
   "session.review.loadingChanges": "正在加载更改...",
   "session.review.noChanges": "无更改",
   "session.messages.loadingEarlier": "正在加载更早的消息...",
@@ -679,7 +679,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "智能体行为",
   "settings.autoApprove.title": "自动审批",
-  "settings.browser.title": "浏览器",
+  "settings.webTools.title": "网络工具",
+  "settings.webTools.description": "配置网页搜索和浏览器自动化。",
+  "settings.webTools.webSearch.enable": "为所有提供商启用",
+  "settings.webTools.browserAutomation": "浏览器自动化",
+  "settings.webTools.webSearch.title": "网页搜索",
+  "settings.webTools.webSearch.description": "让所有提供商的模型都可使用网页搜索。",
   "settings.checkpoints.title": "检查点",
   "settings.display.title": "显示",
   "settings.autocomplete.title": "自动补全",
@@ -696,6 +701,13 @@ export const dict = {
   "session.messages.scrollToBottom": "滚动到底部",
   "session.messages.initializing": "初始化中...",
   "session.messages.taskStarting": "启动中...",
+  "session.prompts.navLabel": "提示词导航",
+  "session.prompts.tick": "提示词 {{index}}/{{total}}：{{prompt}}",
+  "session.prompts.noAnswer": "暂无响应",
+  "session.prompts.queued": "已排队",
+  "session.prompts.first": "首个提示",
+  "session.prompts.latest": "最新提示",
+  "session.prompts.overflow": "{{count}} 个更早的提示",
   "session.status.writingResponse": "正在撰写回复…",
   "session.status.retry": "正在重试…",
   "session.status.working": "处理中…",
@@ -722,7 +734,7 @@ export const dict = {
 
   "prompt.placeholder.connecting": "正在连接服务器...",
   "prompt.placeholder.error": "连接失败。请检查输出面板或重启扩展。",
-  "prompt.placeholder.default": "输入消息... (Enter 发送，Shift+Enter 换行)",
+  "prompt.placeholder.default": "输入消息，用 @ 提及文件... (Enter 发送，Shift+Enter 换行)",
 
   "context.usage.sessionCost": "会话费用",
   "context.usage.olderSessions": "{{count}} 个较早的会话",
@@ -846,6 +858,9 @@ export const dict = {
     "启用 SWE-Pruner：根据智能体提供的聚焦问题，对读取、搜索和 shell 工具的大型输出进行任务感知裁剪",
   "settings.experimental.swePrunerModel.title": "SWE-Pruner 模型",
   "settings.experimental.swePrunerModel.description": "用于裁剪工具输出的模型;默认为已配置的小模型",
+  "settings.experimental.multiProject.title": "多项目 Agent Manager",
+  "settings.experimental.multiProject.description":
+    "在 Agent Manager 中启用跨多个仓库的会话和工作树管理。当前工作区仓库始终是默认项目。",
   "settings.experimental.mcpTimeout.title": "MCP 超时（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 服务器请求的超时时间（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",

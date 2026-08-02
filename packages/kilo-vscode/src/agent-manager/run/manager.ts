@@ -4,6 +4,7 @@ export interface RunStatus {
   worktreeId: string
   state: RunState
   exitCode?: number
+  stopped?: boolean
   signal?: string
   startedAt?: string
   finishedAt?: string
@@ -11,17 +12,27 @@ export interface RunStatus {
 }
 
 export interface RunHandle {
-  stop(): void
+  stop(): void | Promise<void>
+  /**
+   * Kill the process but retain the terminal as failed with its output,
+   * instead of dropping it (stop). Used for timeouts, where the partial
+   * output must stay reviewable.
+   */
+  kill?(reason: string): void
   dispose?(): void
 }
 
 interface Entry {
   status: RunStatus
   handle?: RunHandle
+  task?: Promise<RunHandle>
+  released?: boolean
+  stopping?: Promise<void>
 }
 
 interface FinishOptions {
   exitCode?: number
+  stopped?: boolean
   signal?: string
   error?: string
 }
@@ -42,6 +53,7 @@ export class RunScriptManager {
   ) {}
 
   async start(worktreeId: string, start: () => Promise<RunHandle>): Promise<boolean> {
+    this.removed.delete(worktreeId)
     const current = this.entries.get(worktreeId)
     if (current && current.status.state !== "idle") return false
 
@@ -56,21 +68,25 @@ export class RunScriptManager {
     this.emit(entry.status)
 
     try {
-      const handle = await start()
+      const task = start()
+      entry.task = task
+      const handle = await task
       const latest = this.entries.get(worktreeId)
       if (latest !== entry) {
-        handle.dispose?.()
+        await this.release(worktreeId, entry, handle, this.removed.has(worktreeId))
         return true
       }
       entry.handle = handle
-      if (entry.status.state === "stopping") handle.stop()
+      if (entry.status.state === "stopping") {
+        void this.halt(worktreeId, entry, handle)
+      }
     } catch (error) {
       this.finish(worktreeId, { error: message(error) })
     }
     return true
   }
 
-  stop(worktreeId: string): void {
+  async stop(worktreeId: string): Promise<void> {
     const entry = this.entries.get(worktreeId)
     if (!entry || entry.status.state === "idle" || entry.status.state === "stopping") return
 
@@ -81,11 +97,7 @@ export class RunScriptManager {
     this.emit(entry.status)
 
     if (!entry.handle) return
-    try {
-      entry.handle.stop()
-    } catch (error) {
-      this.log(`Failed to stop run script for ${worktreeId}: ${message(error)}`)
-    }
+    await this.halt(worktreeId, entry, entry.handle)
   }
 
   finish(worktreeId: string, opts: FinishOptions = {}): void {
@@ -100,6 +112,7 @@ export class RunScriptManager {
     }
     if (entry?.status.startedAt) status.startedAt = entry.status.startedAt
     if (opts.exitCode !== undefined) status.exitCode = opts.exitCode
+    if (opts.stopped) status.stopped = true
     if (opts.signal) status.signal = opts.signal
     if (opts.error) status.error = opts.error
 
@@ -115,24 +128,57 @@ export class RunScriptManager {
     return [...this.entries.values()].map((entry) => entry.status)
   }
 
-  remove(worktreeId: string): void {
+  async remove(worktreeId: string): Promise<void> {
     const entry = this.entries.get(worktreeId)
-    if (entry?.status.state !== "idle") this.stop(worktreeId)
-    this.entries.delete(worktreeId)
     this.removed.add(worktreeId)
+    this.entries.delete(worktreeId)
+    const handle =
+      entry?.handle ??
+      (entry?.task
+        ? await entry.task.catch((error) => {
+            this.log(`Failed to start removed run script for ${worktreeId}: ${message(error)}`)
+            return undefined
+          })
+        : undefined)
+    if (!entry || !handle) return
+    if (entry.status.state !== "idle") {
+      await this.release(worktreeId, entry, handle, true)
+      return
+    }
+    await this.release(worktreeId, entry, handle, false)
   }
 
   dispose(): void {
-    for (const entry of this.entries.values()) {
-      if (entry.status.state !== "idle") {
-        try {
-          entry.handle?.stop()
-        } catch (error) {
-          this.log(`Failed to stop run script during dispose: ${message(error)}`)
-        }
-      }
-      entry.handle?.dispose?.()
+    for (const [id, entry] of this.entries) {
+      this.removed.add(id)
+      if (!entry.handle || entry.released) continue
+      entry.released = true
+      if (entry.status.state !== "idle") void this.halt(id, entry, entry.handle)
+      entry.handle.dispose?.()
     }
     this.entries.clear()
+  }
+
+  private async release(worktreeId: string, entry: Entry, handle: RunHandle, stop: boolean): Promise<void> {
+    if (entry.released) return
+    entry.released = true
+    if (stop) await this.halt(worktreeId, entry, handle)
+    handle.dispose?.()
+  }
+
+  private halt(worktreeId: string, entry: Entry, handle: RunHandle): Promise<void> {
+    if (entry.stopping) return entry.stopping
+    const task = (() => {
+      try {
+        return Promise.resolve(handle.stop())
+          .then(() => undefined)
+          .catch((error) => this.log(`Failed to stop run script for ${worktreeId}: ${message(error)}`))
+      } catch (error) {
+        this.log(`Failed to stop run script for ${worktreeId}: ${message(error)}`)
+        return Promise.resolve()
+      }
+    })()
+    entry.stopping = task
+    return task
   }
 }
