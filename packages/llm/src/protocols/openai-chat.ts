@@ -159,8 +159,16 @@ const OpenAIChatCompletionEvent = Schema.Struct({
 // example `billing.summary`) in the same SSE stream. Those payloads are not
 // chat-completion chunks and should be ignored by the parser.
 const OpenAIChatIgnoredEvent = Schema.Union([
-  Schema.Struct({ object: Schema.String }),
-  Schema.Struct({ type: Schema.String }),
+  Schema.Struct({ object: Schema.String }).check(
+    Schema.makeFilter(
+      ({ object }) => object !== "chat.completion" && object !== "chat.completion.chunk" && object !== "error",
+    ),
+  ),
+  Schema.Struct({ type: Schema.String }).check(
+    Schema.makeFilter(
+      ({ type }) => type !== "chat.completion" && type !== "chat.completion.chunk" && type !== "error",
+    ),
+  ),
 ])
 const OpenAIChatEvent = Schema.Union([OpenAIChatCompletionEvent, OpenAIChatIgnoredEvent])
 type OpenAIChatEvent = Schema.Schema.Type<typeof OpenAIChatEvent>
