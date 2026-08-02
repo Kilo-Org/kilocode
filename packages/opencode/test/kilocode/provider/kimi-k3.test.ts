@@ -41,12 +41,31 @@ describe("Kimi K3 reasoning efforts", () => {
     })
   })
 
-  test("uses router reasoning options when catalog variants are unavailable", () => {
-    expect(ProviderTransform.variants(model("moonshotai/kimi-k3", "@kilocode/kilo-gateway"))).toEqual({
-      low: { reasoning: { enabled: true, effort: "low" } },
-      high: { reasoning: { enabled: true, effort: "high" } },
-      max: { reasoning: { enabled: true, effort: "max" } },
+  test("preserves the existing router thinking toggles", () => {
+    for (const npm of ["@kilocode/kilo-gateway", "@openrouter/ai-sdk-provider"]) {
+      expect(ProviderTransform.variants(model("moonshotai/kimi-k3", npm))).toEqual({
+        instant: { reasoning: { enabled: false } },
+        thinking: { reasoning: { enabled: true } },
+      })
+    }
+  })
+
+  test("rewrites Groq's reasoning-effort variants without a provider allowlist", () => {
+    expect(ProviderTransform.variants(model("moonshotai/kimi-k3", "@ai-sdk/groq"))).toEqual({
+      low: { reasoningEffort: "low" },
+      high: { reasoningEffort: "high" },
+      max: { reasoningEffort: "max" },
     })
+  })
+
+  test("preserves explicit catalog variants", () => {
+    const item = model("moonshotai/kimi-k3", "@kilocode/kilo-gateway")
+    item.variants = {
+      instant: { reasoning: { enabled: false } },
+      thinking: { reasoning: { enabled: true } },
+    }
+
+    expect(ProviderTransform.variants(item)).toEqual(item.variants)
   })
 
   test("matches a Kimi K3 API id behind a custom model alias", () => {

@@ -686,21 +686,8 @@ function googleThinkingVariants(model: Provider.Model): Record<string, Record<st
   )
 }
 
-export function variants(model: Provider.Model): Record<string, Record<string, any>> {
-  // kilocode_change start
-  if (
-    ["@kilocode/kilo-gateway", "@ai-sdk/openai-compatible"].includes(model.api.npm) &&
-    model.variants &&
-    Object.keys(model.variants).length > 0
-  ) {
-    return model.variants
-  }
-  // kilocode_change end
-
+function defaultVariants(model: Provider.Model): Record<string, Record<string, any>> {
   if (!model.capabilities.reasoning) return {}
-
-  const kimi = kimiK3Variants(model) // kilocode_change
-  if (kimi) return kimi // kilocode_change
 
   const id = model.id.toLowerCase()
   const glm52 = ["glm-5.2", "glm-5-2", "glm-5p2"].some(
@@ -1156,6 +1143,20 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
     }
   }
   return {}
+}
+
+export function variants(model: Provider.Model): Record<string, Record<string, any>> {
+  // kilocode_change start
+  // Explicit catalog/config variants have higher precedence than inferred Kimi K3 efforts.
+  if (
+    ["@kilocode/kilo-gateway", "@ai-sdk/openai-compatible"].includes(model.api.npm) &&
+    model.variants &&
+    Object.keys(model.variants).length > 0
+  ) {
+    return model.variants
+  }
+  return kimiK3Variants(model, defaultVariants(model))
+  // kilocode_change end
 }
 
 export function options(input: {
