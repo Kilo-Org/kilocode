@@ -77,6 +77,14 @@ export const TranscriptRowView: Component<TranscriptRowViewProps> = (props) => {
                     }
                   : undefined
               }
+              onEdit={
+                row().answered
+                  ? () => {
+                      if (session.status() !== "idle") return
+                      session.revertSession(row().message.id)
+                    }
+                  : undefined
+              }
             />
           </div>
         )}

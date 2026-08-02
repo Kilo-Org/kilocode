@@ -11,6 +11,7 @@ interface VscodeUserMessageProps {
   queued?: boolean
   onDelete?: () => void
   onFork?: () => void
+  onEdit?: () => void
   onRevert?: () => void
 }
 
@@ -38,6 +39,7 @@ export const VscodeUserMessage: Component<VscodeUserMessageProps> = (props) => {
       queued={props.queued}
       onDelete={props.onDelete}
       onFork={props.onFork}
+      onEdit={props.onEdit}
       onRevert={props.onRevert}
     />
   )

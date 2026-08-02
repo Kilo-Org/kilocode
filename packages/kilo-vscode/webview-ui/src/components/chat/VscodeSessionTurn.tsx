@@ -144,6 +144,14 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
                       }
                     : undefined
                 }
+                onEdit={
+                  assistantMessages().length > 0
+                    ? () => {
+                        if (session.status() !== "idle") return
+                        session.revertSession(msg().id)
+                      }
+                    : undefined
+                }
               />
             </div>
           </Show>

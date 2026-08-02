@@ -749,6 +749,7 @@ export function UserMessageDisplay(props: {
   header?: JSX.Element
   onDelete?: () => void
   onFork?: () => void
+  onEdit?: () => void
   onRevert?: () => void
 }) {
   const data = useData()
@@ -932,6 +933,21 @@ export function UserMessageDisplay(props: {
                       props.onFork?.()
                     }}
                     aria-label={i18n.t("ui.message.forkMessage")}
+                  />
+                </Tooltip>
+              </Show>
+              <Show when={props.onEdit}>
+                <Tooltip value={i18n.t("ui.message.editMessage")} placement="right" gutter={4}>
+                  <IconButton
+                    icon="edit"
+                    size="normal"
+                    variant="ghost"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      props.onEdit?.()
+                    }}
+                    aria-label={i18n.t("ui.message.editMessage")}
                   />
                 </Tooltip>
               </Show>
