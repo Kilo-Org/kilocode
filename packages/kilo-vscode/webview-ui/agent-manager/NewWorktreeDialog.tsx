@@ -74,7 +74,9 @@ function sanitizeBranchName(name: string): string {
     .join("/")
 }
 
-export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBranch?: string }> = (props) => {
+export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBranch?: string; projectId?: string }> = (
+  props,
+) => {
   const { t } = useLanguage()
   const vscode = useVSCode()
   const server = useServer()
@@ -250,7 +252,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
 
   onMount(() => {
     setBranchesLoading(true)
-    vscode.postMessage({ type: "agentManager.requestBranches" })
+    vscode.postMessage({ type: "agentManager.requestBranches", projectId: props.projectId })
     // Resize textarea if restoring a cached prompt
     if (prompt()) adjustHeight()
     const focus = () => {
@@ -302,6 +304,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
 
     vscode.postMessage({
       type: "agentManager.createMultiVersion",
+      projectId: props.projectId,
       text,
       name: name().trim() || undefined,
       versions: count,
@@ -470,7 +473,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
     const url = prUrl().trim()
     if (!url || isPending()) return
     setPrPending(true)
-    vscode.postMessage({ type: "agentManager.importFromPR", url })
+    vscode.postMessage({ type: "agentManager.importFromPR", projectId: props.projectId, url })
   }
 
   const handleBranchSelect = (name: string) => {
@@ -479,7 +482,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
     setImportPending(true)
     setBranchOpen(false)
     setBranchSearch("")
-    vscode.postMessage({ type: "agentManager.importFromBranch", branch: name })
+    vscode.postMessage({ type: "agentManager.importFromBranch", projectId: props.projectId, branch: name })
   }
 
   return (

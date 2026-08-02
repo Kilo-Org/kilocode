@@ -3,7 +3,6 @@ import { UI } from "../ui"
 import { effectCmd } from "../effect-cmd"
 import { withNetworkOptions, resolveNetworkOptions } from "../network"
 import { Flag } from "@opencode-ai/core/flag/flag"
-import { InstanceRuntime } from "../../project/instance-runtime" // kilocode_change
 import open from "open"
 
 export const WebCommand = effectCmd({
@@ -33,17 +32,14 @@ export const WebCommand = effectCmd({
     }
 
     if (opts.mdns) {
-      UI.println(
-        UI.Style.TEXT_INFO_BOLD + "  mDNS:    ",
-        UI.Style.TEXT_NORMAL,
-        `${opts.mdnsDomain}:${server.port}`,
-      )
+      UI.println(UI.Style.TEXT_INFO_BOLD + "  mDNS:    ", UI.Style.TEXT_NORMAL, `${opts.mdnsDomain}:${server.port}`)
     }
 
     open(urls.local).catch(() => {})
     // kilocode_change end
 
     // kilocode_change start - graceful signal shutdown
+    const { InstanceRuntime } = yield* Effect.promise(() => import("../../project/instance-runtime"))
     yield* Effect.promise(
       () =>
         new Promise<void>((resolve) => {

@@ -30,7 +30,9 @@ export const SuggestBar: Component<{ request: SuggestionRequest }> = (props) => 
         <span data-slot="suggest-bar-icon">
           <Icon name="brain" size="small" />
         </span>
-        <span data-slot="suggest-bar-text">{props.request.text}</span>
+        <span data-slot="suggest-bar-text" dir="auto">
+          {props.request.text}
+        </span>
       </div>
       <Show when={error()}>
         <div data-slot="suggest-bar-error">

@@ -14,7 +14,16 @@ type Json = Record<string, unknown>
 
 function app() {
   const handler = HttpRouter.toWebHandler(
-    HttpApiServer.routes.pipe(Layer.provide(ConfigProvider.layer(ConfigProvider.fromUnknown({})))),
+    // kilocode_change - keep the filewatcher-disable flag visible (see httpapi-instance-route-auth.test.ts)
+    HttpApiServer.routes.pipe(
+      Layer.provide(
+        ConfigProvider.layer(
+          ConfigProvider.fromUnknown({
+            KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: process.env.KILO_EXPERIMENTAL_DISABLE_FILEWATCHER ?? "true",
+          }),
+        ),
+      ),
+    ),
     { disableLogger: true },
   ).handler
 
