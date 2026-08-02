@@ -7,6 +7,7 @@ import { iife } from "@/util/iife"
 import { kiloProviderOptions } from "@/kilocode/provider-options"
 import { isLing } from "@/kilocode/model-match" // kilocode_change
 import { reasoningSummary } from "@/kilocode/provider/reasoning-summary" // kilocode_change
+import { kimiK3Variants } from "@/kilocode/provider/kimi-k3" // kilocode_change
 
 type Modality = NonNullable<ModelsDev.Model["modalities"]>["input"][number]
 
@@ -697,6 +698,9 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
   // kilocode_change end
 
   if (!model.capabilities.reasoning) return {}
+
+  const kimi = kimiK3Variants(model) // kilocode_change
+  if (kimi) return kimi // kilocode_change
 
   const id = model.id.toLowerCase()
   const glm52 = ["glm-5.2", "glm-5-2", "glm-5p2"].some(
