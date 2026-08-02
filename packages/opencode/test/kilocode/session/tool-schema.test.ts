@@ -139,8 +139,8 @@ describe("provider tool schema sanitization", () => {
     expect(result).toEqual({
       type: "object",
       properties: {
-        x: { type: "string" },
-        y: { type: "string" },
+        x: { anyOf: [{ type: "string" }, {}] },
+        y: { anyOf: [{ type: "string" }, {}] },
         shared: { type: "string", description: "Preserved metadata" },
       },
     })
@@ -167,8 +167,8 @@ describe("provider tool schema sanitization", () => {
     expect(result).toEqual({
       type: "object",
       properties: {
-        special: { type: "string", description: "Special value" },
-        regular: { type: "number", description: "Regular value" },
+        special: { anyOf: [{ type: "string", description: "Special value" }, {}] },
+        regular: { anyOf: [{ type: "number", description: "Regular value" }, {}] },
         kind: { type: "string" },
       },
     })

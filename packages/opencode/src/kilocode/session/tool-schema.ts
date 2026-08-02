@@ -80,7 +80,8 @@ function merge(target: Record<string, unknown>, input: unknown) {
   const additions = Object.fromEntries(
     [...groups].flatMap(([name, schemas]) => {
       if (name in current) return []
-      return [[name, schemas.length === 1 ? schemas[0] : { anyOf: schemas }]]
+      const relaxed = schemas.length === branches.length ? schemas : [...schemas, {}]
+      return [[name, relaxed.length === 1 ? relaxed[0] : { anyOf: relaxed }]]
     }),
   )
   target.properties = { ...additions, ...current }
