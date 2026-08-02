@@ -490,6 +490,7 @@ export const layer = Layer.effect(
           result = mergeConfigConcatArrays(result, { agent: orgModes.agents })
         }
         warnings.push(...orgModes.warnings)
+        let configuredAgents = { ...(result.agent ?? {}) }
         // kilocode_change end
 
         const authEnv: Record<string, string> = {}
@@ -549,6 +550,7 @@ export const layer = Layer.effect(
           const trusted = sourceTrusted ?? scope === "global"
           const scoped = KilocodeConfig.scopeIndexing(SandboxConfig.scope(next, scope), scope)
           result = mergeConfigConcatArrays(result, scoped)
+          if (scoped.agent) configuredAgents = mergeDeep(configuredAgents, scoped.agent)
           if (next.instructions?.length) {
             result.instruction_origins = origins(result.instruction_origins, next.instructions, trusted, source)
           }
@@ -765,13 +767,15 @@ export const layer = Layer.effect(
             result.command ?? {},
             yield* Effect.promise(() => ConfigCommand.load(dir, warnings, dirTrusted, dirFileScope, dirSourceScope)),
           )
-          result.agent = mergeDeep(
+          result.agent = KilocodeConfig.mergeAgentMarkdown(
             result.agent ?? {},
             yield* Effect.promise(() => ConfigAgent.load(dir, warnings, dirTrusted, dirFileScope, dirSourceScope)),
+            configuredAgents,
           )
-          result.agent = mergeDeep(
+          result.agent = KilocodeConfig.mergeAgentMarkdown(
             result.agent ?? {},
             yield* Effect.promise(() => ConfigAgent.loadMode(dir, warnings, dirTrusted, dirFileScope, dirSourceScope)),
+            configuredAgents,
           )
           // kilocode_change end
           // kilocode_change - Auto-discovered plugins under config directories are already local files, so ConfigPlugin.load
