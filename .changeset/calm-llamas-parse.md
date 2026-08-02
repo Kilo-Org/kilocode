@@ -2,4 +2,4 @@
 "@kilocode/cli": patch
 ---
 
-Support tool calling with llama.cpp servers that reject unanchored JSON Schema patterns.
+Support tool calling with llama.cpp servers that reject unanchored JSON Schema patterns. Providers with custom IDs can opt in with `options.llamaCppToolSchema`.

@@ -58,6 +58,12 @@ function reference(input: unknown, danger = false): boolean {
   return Object.entries(input).some(([key, value]) => reference(value, danger || DANGERS.includes(key)))
 }
 
+function llama(input?: { id: string; options?: Record<string, unknown> }) {
+  if (input?.options?.llamaCppToolSchema === true) return true
+  const id = input?.id.toLowerCase().replaceAll(/[^a-z0-9]/g, "") ?? ""
+  return id.includes("llamacpp") || id.includes("llamaserver")
+}
+
 function walk(
   input: unknown,
   strict = false,
@@ -125,7 +131,18 @@ function walk(
 
   const dangers = DANGERS.reduce((state, key) => {
     const result = walk(input[key], strict)
-    if (result.changed) next[key] = result.value
+    if (result.changed && result.semantic) next[key] = result.value
+    if (result.changed && !result.semantic) {
+      delete next[key]
+      if (key === "if") {
+        delete next.then
+        delete next.else
+      }
+      if (key === "contains") {
+        delete next.minContains
+        delete next.maxContains
+      }
+    }
     return {
       changed: result.changed || state.changed,
       dynamic: result.dynamic || state.dynamic,
@@ -138,9 +155,9 @@ function walk(
 
 export async function sanitize(
   input: Record<string, Tool>,
-  model?: { providerID: string },
+  provider?: { id: string; options?: Record<string, unknown> },
 ): Promise<Record<string, Tool>> {
-  const strict = model?.providerID.toLowerCase().replaceAll(/[^a-z0-9]/g, "") === "llamacpp"
+  const strict = llama(provider)
   const items = await Promise.all(
     Object.entries(input).map(async ([name, item]) => {
       if (item.type === "provider") return { name, tool: item, changed: false }
