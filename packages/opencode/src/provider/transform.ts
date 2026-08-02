@@ -627,10 +627,11 @@ function anthropicClaude5(apiId: string) {
 
 // kilocode_change start - kimi-k3 reasoning effort variants (always-on thinking)
 function isKimiK3(model: Provider.Model) {
-  // Token-bounded so kimi-k30 / kimi-k3x are NOT matched.
+  // Token-bounded so kimi-k30 / kimi-k3x / kimi-k3.5 (future sibling) are NOT matched.
+  // Trailing class keeps /- for snapshot IDs like kimi-k3-20260715 and namespaces, drops . .
   const apiId = model.api.id.toLowerCase()
   const fullId = model.id.toLowerCase()
-  return /(?:^|[/.-])kimi-k3(?:[/.@-]|$)/.test(apiId) || /(?:^|[/.-])kimi-k3(?:[/.@-]|$)/.test(fullId)
+  return /(?:^|[/.-])kimi-k3(?:[/-]|$)/.test(apiId) || /(?:^|[/.-])kimi-k3(?:[/-]|$)/.test(fullId)
 }
 // kilocode_change end
 

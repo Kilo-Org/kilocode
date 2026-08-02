@@ -3443,16 +3443,22 @@ describe("ProviderTransform.variants", () => {
   })
 
   test("kimi-k30 does not match the kimi-k3 predicate", () => {
-    const ids = ["kimi-k30", "kimi-k3x", "moonshotai/kimi-k300"]
+    const ids = ["kimi-k30", "kimi-k3x", "moonshotai/kimi-k300", "kimi-k3.5", "kimi-k3.5-instruct", "kimi-k3-20260715"]
     for (const id of ids) {
       const model = createMockModel({
         id: `test/${id}`,
         api: { id, url: "https://api.moonshot.ai/v1", npm: "@ai-sdk/openai-compatible" },
       })
       // Falls through to the generic WIDELY_SUPPORTED_EFFORTS branch (low/medium/high)
-      const keys = Object.keys(ProviderTransform.variants(model))
-      expect(keys).toContain("medium")
-      expect(keys).not.toContain("max")
+      const result = ProviderTransform.variants(model)
+      const keys = Object.keys(result)
+      // kimi-k3-20260715 (dated snapshot) should STILL match kimi-k3; the others should NOT.
+      if (id === "kimi-k3-20260715") {
+        expect(keys).toEqual(["low", "high", "max"])
+      } else {
+        expect(keys).toContain("medium")
+        expect(keys).not.toContain("max")
+      }
     }
   })
 
