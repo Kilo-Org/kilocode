@@ -625,6 +625,15 @@ function anthropicClaude5(apiId: string) {
 }
 // kilocode_change end
 
+// kilocode_change start - kimi-k3 reasoning effort variants (always-on thinking)
+function isKimiK3(model: Provider.Model) {
+  // Token-bounded so kimi-k30 / kimi-k3x are NOT matched.
+  const apiId = model.api.id.toLowerCase()
+  const fullId = model.id.toLowerCase()
+  return /(?:^|[/.-])kimi-k3(?:[/.@-]|$)/.test(apiId) || /(?:^|[/.-])kimi-k3(?:[/.@-]|$)/.test(fullId)
+}
+// kilocode_change end
+
 function anthropicAdaptiveEfforts(apiId: string): string[] | null {
   // kilocode_change start - include Claude 5+ models
   if (anthropicOpus47OrLater(apiId) || anthropicClaude5(apiId)) {
@@ -732,6 +741,31 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
       max: { effort: "max" },
     }
   }
+  // kilocode_change start - kimi-k3 always reasons; only effort is selectable.
+  // Native Moonshot + OpenRouter transports accept kimi's low/high/max directly.
+  // The Anthropic-compatible transport accepts Anthropic's low/medium/high/xhigh/max
+  // and Moonshot maps them internally (low→low, medium/high→high, xhigh/max→max).
+  if (
+    isKimiK3(model) &&
+    (model.api.npm === "@kilocode/kilo-gateway" || model.api.npm === "@openrouter/ai-sdk-provider")
+  ) {
+    return Object.fromEntries(["low", "high", "max"].map((e) => [e, { reasoning: { effort: e } }]))
+  }
+  if (isKimiK3(model) && model.api.npm === "@ai-sdk/openai-compatible") {
+    return Object.fromEntries(["low", "high", "max"].map((e) => [e, { reasoningEffort: e }]))
+  }
+  if (
+    isKimiK3(model) &&
+    (model.api.npm === "@ai-sdk/anthropic" || model.api.npm === "@ai-sdk/google-vertex/anthropic")
+  ) {
+    return Object.fromEntries(
+      ["low", "medium", "high", "xhigh", "max"].map((e) => [
+        e,
+        { thinking: { type: "adaptive", display: "summarized" }, effort: e },
+      ]),
+    )
+  }
+  // kilocode_change end
   if (
     id.includes("deepseek-chat") ||
     id.includes("deepseek-reasoner") ||
@@ -1240,6 +1274,19 @@ export function options(input: {
   if (modelId.includes("minimax-m3") && input.model.api.npm === "@ai-sdk/anthropic") {
     result["thinking"] = { type: "adaptive" }
   }
+
+  // kilocode_change start - kimi-k3 on anthropic transport: adaptive + summarized display, default effort high.
+  // Moonshot's anthropic-compatible endpoint implements Anthropic's adaptive thinking contract.
+  // Requesting summarized display preserves reasoning content for replay on subsequent turns.
+  if (
+    (input.model.api.npm === "@ai-sdk/anthropic" || input.model.api.npm === "@ai-sdk/google-vertex/anthropic") &&
+    isKimiK3(input.model) &&
+    input.model.capabilities.reasoning
+  ) {
+    result["thinking"] = { type: "adaptive", display: "summarized" }
+    result["effort"] = "high"
+  }
+  // kilocode_change end
 
   // Enable thinking by default for kimi models using anthropic SDK
   if (
