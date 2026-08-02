@@ -502,7 +502,7 @@ describe("send_file tool", () => {
         }).pipe(Effect.provide(layer)),
       )
 
-      await expect(promise).rejects.toThrow()
+      await expect(promise).rejects.toMatchObject({ code: "EPERM" })
     } finally {
       await fs.rm(dir, { recursive: true, force: true })
     }
