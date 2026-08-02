@@ -260,6 +260,82 @@ describe("ProviderTransform.options - minimax m3 thinking", () => {
   })
 })
 
+// kilocode_change start - kimi-k3 anthropic adaptive thinking default
+describe("ProviderTransform.options - kimi-k3 adaptive thinking", () => {
+  const createModel = (overrides: Record<string, any> = {}) =>
+    ({
+      id: "moonshotai/kimi-k3",
+      providerID: "moonshotai",
+      api: {
+        id: "kimi-k3",
+        url: "https://api.moonshot.ai/anthropic",
+        npm: "@ai-sdk/anthropic",
+      },
+      name: "Kimi K3",
+      capabilities: {
+        temperature: true,
+        reasoning: true,
+        attachment: false,
+        toolcall: true,
+        input: { text: true, audio: false, image: false, video: false, pdf: false },
+        output: { text: true, audio: false, image: false, video: false, pdf: false },
+        interleaved: false,
+      },
+      cost: { input: 0.001, output: 0.002, cache: { read: 0.0001, write: 0.0002 } },
+      limit: { context: 262144, output: 262144 },
+      status: "active",
+      options: {},
+      headers: {},
+      ...overrides,
+    }) as any
+
+  test("uses adaptive thinking with effort instead of budget tokens", () => {
+    const result = ProviderTransform.options({ model: createModel(), sessionID: "s1", providerOptions: {} })
+    expect(result.thinking).toEqual({ type: "adaptive", display: "summarized" })
+    expect(result.effort).toBe("high")
+    expect(JSON.stringify(result)).not.toContain("budgetTokens")
+  })
+
+  test("uses adaptive thinking through Google Vertex Anthropic", () => {
+    const model = createModel()
+    model.api.npm = "@ai-sdk/google-vertex/anthropic"
+    const result = ProviderTransform.options({ model, sessionID: "s1", providerOptions: {} })
+    expect(result.thinking).toEqual({ type: "adaptive", display: "summarized" })
+    expect(result.effort).toBe("high")
+  })
+
+  test("does not enable thinking for kimi-k3 without reasoning capability", () => {
+    const model = createModel()
+    model.capabilities.reasoning = false
+    const result = ProviderTransform.options({ model, sessionID: "s1", providerOptions: {} })
+    expect(result.thinking).toBeUndefined()
+    expect(result.effort).toBeUndefined()
+  })
+
+  test("does not set adaptive thinking for kimi-k3 on openai-compatible", () => {
+    const model = createModel()
+    model.api = {
+      id: "kimi-k3",
+      url: "https://api.moonshot.ai/v1",
+      npm: "@ai-sdk/openai-compatible",
+    }
+    const result = ProviderTransform.options({ model, sessionID: "s1", providerOptions: {} })
+    expect(result.thinking).toBeUndefined()
+    expect(result.effort).toBeUndefined()
+  })
+
+  test("kimi-k2.5 anthropic budget tokens block still applies (regression guard)", () => {
+    const model = createModel({
+      id: "moonshotai/kimi-k2.5",
+      api: { id: "kimi-k2.5", url: "https://api.moonshot.ai/anthropic", npm: "@ai-sdk/anthropic" },
+    })
+    const result = ProviderTransform.options({ model, sessionID: "s1", providerOptions: {} })
+    expect(result.thinking).toEqual({ type: "enabled", budgetTokens: 16_000 })
+    expect(result.effort).toBeUndefined()
+  })
+})
+// kilocode_change end
+
 describe("ProviderTransform.options - google thinkingConfig gating", () => {
   const sessionID = "test-session-123"
 
@@ -3241,6 +3317,157 @@ describe("ProviderTransform.variants", () => {
       high: { reasoningConfig: { type: "enabled", maxReasoningEffort: "high" } },
     })
   })
+
+  // kilocode_change start - kimi-k3 reasoning effort variants
+  test("kimi-k3 returns native effort variants for openai-compatible providers", () => {
+    const model = createMockModel({
+      id: "moonshotai/kimi-k3",
+      providerID: "moonshotai",
+      api: {
+        id: "kimi-k3",
+        url: "https://api.moonshot.ai/v1",
+        npm: "@ai-sdk/openai-compatible",
+      },
+    })
+    expect(ProviderTransform.variants(model)).toEqual({
+      low: { reasoningEffort: "low" },
+      high: { reasoningEffort: "high" },
+      max: { reasoningEffort: "max" },
+    })
+  })
+
+  test("recognizes kimi-k3 from various provider model IDs", () => {
+    for (const id of ["moonshotai/kimi-k3", "kimi-k3", "moonshotai/kimi-k3-thinking"]) {
+      const model = createMockModel({
+        id: `test/${id}`,
+        api: {
+          id,
+          url: "https://api.moonshot.ai/v1",
+          npm: "@ai-sdk/openai-compatible",
+        },
+      })
+      expect(ProviderTransform.variants(model)).toEqual({
+        low: { reasoningEffort: "low" },
+        high: { reasoningEffort: "high" },
+        max: { reasoningEffort: "max" },
+      })
+    }
+  })
+
+  test("recognizes kimi-k3 from the API ID when the configured model ID is an alias", () => {
+    const model = createMockModel({
+      id: "custom/my-kimi",
+      api: {
+        id: "moonshotai/kimi-k3",
+        url: "https://api.moonshot.ai/v1",
+        npm: "@ai-sdk/openai-compatible",
+      },
+    })
+    expect(ProviderTransform.variants(model)).toEqual({
+      low: { reasoningEffort: "low" },
+      high: { reasoningEffort: "high" },
+      max: { reasoningEffort: "max" },
+    })
+  })
+
+  test("kimi-k3 returns openrouter effort variants for kilo gateway", () => {
+    const model = createMockModel({
+      id: "kilo/moonshotai/kimi-k3",
+      providerID: "kilo",
+      api: {
+        id: "moonshotai/kimi-k3",
+        url: "https://gateway.kilo.ai/v1",
+        npm: "@kilocode/kilo-gateway",
+      },
+    })
+    expect(ProviderTransform.variants(model)).toEqual({
+      low: { reasoning: { effort: "low" } },
+      high: { reasoning: { effort: "high" } },
+      max: { reasoning: { effort: "max" } },
+    })
+  })
+
+  test("kimi-k3 returns openrouter effort variants for openrouter", () => {
+    const model = createMockModel({
+      id: "openrouter/moonshotai/kimi-k3",
+      providerID: "openrouter",
+      api: {
+        id: "moonshotai/kimi-k3",
+        url: "https://openrouter.ai/api/v1",
+        npm: "@openrouter/ai-sdk-provider",
+      },
+    })
+    expect(ProviderTransform.variants(model)).toEqual({
+      low: { reasoning: { effort: "low" } },
+      high: { reasoning: { effort: "high" } },
+      max: { reasoning: { effort: "max" } },
+    })
+  })
+
+  test("kimi-k3 returns adaptive effort variants for anthropic-compatible providers", () => {
+    const model = createMockModel({
+      id: "moonshotai/kimi-k3",
+      providerID: "moonshotai",
+      api: {
+        id: "kimi-k3",
+        url: "https://api.moonshot.ai/anthropic",
+        npm: "@ai-sdk/anthropic",
+      },
+    })
+    expect(ProviderTransform.variants(model)).toEqual({
+      low: { thinking: { type: "adaptive", display: "summarized" }, effort: "low" },
+      medium: { thinking: { type: "adaptive", display: "summarized" }, effort: "medium" },
+      high: { thinking: { type: "adaptive", display: "summarized" }, effort: "high" },
+      xhigh: { thinking: { type: "adaptive", display: "summarized" }, effort: "xhigh" },
+      max: { thinking: { type: "adaptive", display: "summarized" }, effort: "max" },
+    })
+  })
+
+  test("kimi-k3 returns adaptive effort variants for Google Vertex Anthropic", () => {
+    const model = createMockModel({
+      id: "moonshotai/kimi-k3",
+      providerID: "moonshotai",
+      api: {
+        id: "kimi-k3",
+        url: "https://api.moonshot.ai/vertex",
+        npm: "@ai-sdk/google-vertex/anthropic",
+      },
+    })
+    expect(ProviderTransform.variants(model)).toEqual({
+      low: { thinking: { type: "adaptive", display: "summarized" }, effort: "low" },
+      medium: { thinking: { type: "adaptive", display: "summarized" }, effort: "medium" },
+      high: { thinking: { type: "adaptive", display: "summarized" }, effort: "high" },
+      xhigh: { thinking: { type: "adaptive", display: "summarized" }, effort: "xhigh" },
+      max: { thinking: { type: "adaptive", display: "summarized" }, effort: "max" },
+    })
+  })
+
+  test("kimi-k30 does not match the kimi-k3 predicate", () => {
+    const ids = ["kimi-k30", "kimi-k3x", "moonshotai/kimi-k300"]
+    for (const id of ids) {
+      const model = createMockModel({
+        id: `test/${id}`,
+        api: { id, url: "https://api.moonshot.ai/v1", npm: "@ai-sdk/openai-compatible" },
+      })
+      // Falls through to the generic WIDELY_SUPPORTED_EFFORTS branch (low/medium/high)
+      const keys = Object.keys(ProviderTransform.variants(model))
+      expect(keys).toContain("medium")
+      expect(keys).not.toContain("max")
+    }
+  })
+
+  test("kimi-k2.5 still gets instant/thinking variants on kilo-gateway (regression guard)", () => {
+    const model = createMockModel({
+      id: "kilo/moonshotai/kimi-k2.5",
+      providerID: "kilo",
+      api: { id: "moonshotai/kimi-k2.5", url: "", npm: "@kilocode/kilo-gateway" },
+    })
+    const result = ProviderTransform.variants(model)
+    expect(Object.keys(result).sort()).toEqual(["instant", "thinking"])
+    expect(result.instant).toEqual({ reasoning: { enabled: false } })
+    expect(result.thinking).toEqual({ reasoning: { enabled: true } })
+  })
+  // kilocode_change end
 
   test("mistral models with reasoning support return variants", () => {
     const model = createMockModel({
