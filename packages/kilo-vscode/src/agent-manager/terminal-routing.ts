@@ -34,6 +34,10 @@ export interface TerminalRoutingDeps {
   getRoot(): string | undefined
   /** Resolve a worktree id to its on-disk path, or undefined if unknown. */
   getWorktreePath(worktreeId: string): string | undefined
+  /** Project the current message is dispatched for; stamped onto
+   *  `terminal.created` so the webview can namespace its per-project
+   *  terminal state (worktree ids collide across projects). */
+  getProjectId(): string | undefined
   /** Output channel log — prefixed by the caller. */
   log(...args: unknown[]): void
   /** Send a message back to the webview. */
@@ -45,7 +49,10 @@ export interface TerminalRoutingDeps {
 /** True iff the message belongs to the terminal-tab subsystem. */
 function isTerminalMessage(
   m: AgentManagerInMessage,
-): m is Extract<AgentManagerInMessage, { type: `agentManager.terminal.${string}` }> {
+): m is Exclude<
+  Extract<AgentManagerInMessage, { type: `agentManager.terminal.${string}` }>,
+  { type: "agentManager.terminal.stop" | "agentManager.terminal.destinationSelected" }
+> {
   return (
     m.type === "agentManager.terminal.create" ||
     m.type === "agentManager.terminal.close" ||
@@ -112,6 +119,9 @@ export class TerminalRouter {
     const generation = this.generation
     const manager = this.manager
     const cwd = this.resolveCwd(worktreeId)
+    // Captured synchronously: the project scope is only current while the
+    // dispatch runs, not when the async create settles.
+    const pid = this.deps.getProjectId()
     if (!cwd) {
       this.deps.post({
         type: "agentManager.terminal.error",
@@ -138,6 +148,7 @@ export class TerminalRouter {
         createId,
         placement,
         worktreeId: created.worktreeId,
+        ...(pid ? { projectId: pid } : {}),
         terminalId: created.terminalId,
         title: created.title,
         wsUrl: created.wsUrl,

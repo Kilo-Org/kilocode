@@ -28,8 +28,8 @@ dependencies {
     implementation(libs.zxing.core)
 
     testImplementation(kotlin("test"))
-    testImplementation("junit:junit:4.13.2")
-    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.11.4")
+    testImplementation(libs.junit)
+    testRuntimeOnly(libs.junit.vintage.engine)
 }
 
 val providerIcons = tasks.register<Copy>("generateProviderIcons") {

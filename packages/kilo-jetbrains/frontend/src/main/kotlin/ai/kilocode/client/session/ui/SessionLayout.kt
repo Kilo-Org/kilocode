@@ -91,6 +91,11 @@ class SessionLayout(
         cache.remove(comp)
     }
 
+    /** Drop every cached measurement so the next layout pass re-measures all children. */
+    fun forgetAll() {
+        cache.clear()
+    }
+
     private fun measure(comp: Component, width: Int): Int {
         val hit = cache[comp]
         if (comp.isValid && hit?.width == width) return hit.height

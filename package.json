@@ -19,6 +19,8 @@
     "sso": "aws sso login --sso-session=opencode --no-browser",
     "test": "echo 'do not run tests from root' && exit 1",
     "extension": "bun --cwd packages/kilo-vscode script/launch.ts",
+    "extension:isolated": "bun --cwd packages/kilo-vscode script/launch.ts --isolated",
+    "extension:isolated:clean": "bun --cwd packages/kilo-vscode script/launch.ts --isolated --clean",
     "dev-setup": "bun run --cwd packages/opencode --conditions=browser src/index.ts dev-setup"
   },
   "workspaces": {
@@ -54,7 +56,7 @@
       "drizzle-kit": "1.0.0-rc.2",
       "drizzle-orm": "1.0.0-rc.2",
       "effect": "4.0.0-beta.74",
-      "ai": "6.0.168",
+      "ai": "6.0.235",
       "cross-spawn": "7.0.6",
       "hono": "4.12.12",
       "hono-openapi": "1.1.2",
@@ -171,6 +173,6 @@
     "pacote@21.5.1": "patches/pacote@21.5.1.patch",
     "mammoth@1.12.0": "patches/mammoth@1.12.0.patch"
   },
-  "version": "7.4.16",
+  "version": "7.4.18",
   "peerDependencies": {}
 }

@@ -36,6 +36,16 @@ Before using Cloud Agents:
 
 Your work is always pushed to GitHub, ensuring nothing is lost.
 
+## Starting Tasks from the CLI
+
+Use the `kilo cloud` command to run Cloud Agent tasks without opening the browser:
+
+```bash
+kilo cloud start --prompt "Fix the flaky login test" --repo Kilo-Org/kilocode
+```
+
+`kilo cloud` can start tasks, send follow-up prompts, and check task status and results. Repository, branch, model, mode, and organization are inferred from your local checkout and CLI defaults unless you pass the matching flags. Add `--stream` to `kilo cloud start` to print task events as JSONL until the task completes. See the [CLI reference](/docs/code-with-ai/platforms/cli-reference#kilo-cloud) for all commands and options.
+
 ## How Cloud Agents Work
 
 - Each user receives an **isolated Linux container** with common dev tools preinstalled (Node.js, git, gh CLI, glab CLI, etc.).
@@ -96,7 +106,7 @@ You can customize each Cloud Agent session by also defining env vars and startup
 
 ## Skills
 
-Cloud Agents support project-level [skills](/docs/code-with-ai/platforms/cli#skills) stored in your repository. When your repo is cloned, any skills in `.kilocode/skills/` are automatically available.
+Cloud Agents support project-level [skills](/docs/code-with-ai/platforms/cli#skills) stored in your repository. When your repo is cloned, any skills in `.kilocode/skills/` are automatically available. Skill folders are uploaded as `.zip` archives, with up to 40 companion files per skill.
 
 {% callout type="note" %}
 Global skills (`~/.kilocode/skills/`) are not available in Cloud Agents since there is no persistent user home directory.

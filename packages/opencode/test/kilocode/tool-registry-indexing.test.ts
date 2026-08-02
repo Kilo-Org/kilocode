@@ -461,6 +461,8 @@ describe("kilocode tool registry indexing", () => {
   })
 
   test("logs indexing bootstrap failures without blocking session bootstrap", async () => {
+    const platform = process.env["KILO_PLATFORM"]
+    process.env["KILO_PLATFORM"] = "cli"
     const logger = Log.create({ service: "kilocode-bootstrap" })
     const err = new Error("indexing init failed")
     const calls: string[] = []
@@ -469,6 +471,7 @@ describe("kilocode tool registry indexing", () => {
       KiloSessions.Service.of({
         init: () => Effect.sync(() => calls.push("sessions")),
         sendAgentNotification: () => Effect.succeed({ ok: false as const, reason: "not_connected" }),
+        reportSessionTitle: () => Effect.succeed({ ok: false as const, reason: "not_connected" }),
       }),
     )
     const bus = Layer.succeed(
@@ -504,6 +507,8 @@ describe("kilocode tool registry indexing", () => {
       expect(indexing).toHaveBeenCalledTimes(1)
       expect(warn).toHaveBeenCalledWith("indexing bootstrap failed", { err })
     } finally {
+      if (platform === undefined) delete process.env["KILO_PLATFORM"]
+      else process.env["KILO_PLATFORM"] = platform
       indexing.mockRestore()
       warn.mockRestore()
     }
