@@ -266,6 +266,7 @@ export const dict = {
 
   "notification.permission.title": "권한 필요",
   "notification.permission.titleSubagent": "권한 필요 (서브에이전트)",
+  "notification.permission.titleSkillShell": '스킬 "{{skill}}"의 셸 명령을 실행할까요?',
   "ui.permission.manageAutoApprove": "자동 승인 규칙 관리",
   "ui.permission.doomLoop.prompt": "{{tool}} 도구에서 잠재적인 반복 실행이 감지되었습니다. 계속 실행하시겠습니까?",
   "ui.permission.doomLoop.rule": "{{tool}} 호출 계속",
@@ -304,7 +305,6 @@ export const dict = {
 
   "session.tab.review": "검토",
   "session.review.filesChanged": "{{count}}개 파일 변경됨",
-  "session.review.change.other": "변경",
   "session.review.loadingChanges": "변경 사항 로드 중...",
   "session.review.noChanges": "변경 없음",
   "session.messages.loadingEarlier": "이전 메시지 로드 중...",
@@ -657,7 +657,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "에이전트 동작",
   "settings.autoApprove.title": "자동 승인",
-  "settings.browser.title": "브라우저",
+  "settings.webTools.title": "웹 도구",
+  "settings.webTools.description": "웹 검색 및 브라우저 자동화를 구성합니다.",
+  "settings.webTools.webSearch.enable": "모든 제공업체에 사용",
+  "settings.webTools.browserAutomation": "브라우저 자동화",
+  "settings.webTools.webSearch.title": "웹 검색",
+  "settings.webTools.webSearch.description": "모든 제공업체의 모델에서 웹 검색을 사용할 수 있도록 합니다.",
   "settings.checkpoints.title": "체크포인트",
   "settings.display.title": "디스플레이",
   "settings.autocomplete.title": "자동 완성",
@@ -720,6 +725,9 @@ export const dict = {
   "session.prompts.tick": "프롬프트 {{index}}/{{total}}: {{prompt}}",
   "session.prompts.noAnswer": "아직 응답이 없습니다",
   "session.prompts.queued": "대기 중",
+  "session.prompts.first": "첫 번째 프롬프트",
+  "session.prompts.latest": "최신 프롬프트",
+  "session.prompts.overflow": "{{count}}개 이전 프롬프트",
   "session.status.writingResponse": "응답 작성 중...",
   "session.status.retry": "재시도 중…",
   "session.status.working": "작업 중...",
@@ -746,7 +754,7 @@ export const dict = {
 
   "prompt.placeholder.connecting": "서버에 연결 중...",
   "prompt.placeholder.error": "연결에 실패했습니다. 출력 패널을 확인하거나 확장 프로그램을 다시 시작하세요.",
-  "prompt.placeholder.default": "메시지를 입력하세요... (Enter로 전송, Shift+Enter로 줄 바꿈)",
+  "prompt.placeholder.default": "메시지를 입력하세요, @로 파일 언급... (Enter로 전송, Shift+Enter로 줄 바꿈)",
 
   "context.usage.sessionCost": "세션 비용",
   "context.usage.olderSessions": "{{count}}개의 이전 세션",
@@ -876,6 +884,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "SWE-Pruner 모델",
   "settings.experimental.swePrunerModel.description":
     "도구 출력을 정리하는 데 사용하는 모델. 기본값은 구성된 소형 모델입니다",
+  "settings.experimental.multiProject.title": "멀티 프로젝트 Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Agent Manager에서 여러 저장소에 걸친 세션과 워크트리 관리를 활성화합니다. 현재 워크스페이스 저장소는 항상 기본 프로젝트입니다.",
   "settings.experimental.mcpTimeout.title": "MCP 타임아웃 (ms)",
   "settings.experimental.mcpTimeout.description": "MCP 서버 요청의 타임아웃 시간 (밀리초)",
   "settings.experimental.remote.title": "Remote 제어",

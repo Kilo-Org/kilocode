@@ -509,6 +509,8 @@ class PromptPanel(
         strip.clear()
         syncEditorHeight()
         syncHighlights()
+        syncButton()
+        syncTooltip()
     }
 
     @RequiresEdt
@@ -737,6 +739,8 @@ class PromptPanel(
         strip.add(item)
         LOG.debug { "kind=prompt-attachment add name=${item.name} mime=${item.mime} count=${attachments.size}" }
         syncEditorHeight()
+        syncButton()
+        syncTooltip()
         onChange()
     }
 
@@ -745,6 +749,8 @@ class PromptPanel(
         if (!attachments.removeIf { it.id == item.id }) return
         strip.remove(item)
         syncEditorHeight()
+        syncButton()
+        syncTooltip()
         onChange()
     }
 

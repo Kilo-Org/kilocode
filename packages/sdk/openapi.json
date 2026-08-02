@@ -3137,6 +3137,9 @@
                       },
                       "content": {
                         "type": "string"
+                      },
+                      "trusted": {
+                        "type": "boolean"
                       }
                     },
                     "required": ["name", "location", "content"],
@@ -5312,6 +5315,9 @@
                   },
                   "message": {
                     "type": "string"
+                  },
+                  "interactive": {
+                    "type": "boolean"
                   }
                 },
                 "required": ["reply"],
@@ -11549,11 +11555,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Effective configuration after patch",
+            "description": "Resolved config overlay after patch",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Config"
+                  "$ref": "#/components/schemas/ConfigOverlayResponse"
                 }
               }
             }
@@ -11564,6 +11570,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ConfigOverlayConflictError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigOverlayConflictError"
                 }
               }
             }
@@ -11579,8 +11595,7 @@
                 "properties": {
                   "scope": {
                     "type": "string",
-                    "enum": ["global", "project"],
-                    "default": "project"
+                    "enum": ["global", "project"]
                   },
                   "set": {
                     "type": "object"
@@ -11593,8 +11608,22 @@
                         "type": "string"
                       }
                     }
+                  },
+                  "expected": {
+                    "type": "object",
+                    "properties": {
+                      "path": {
+                        "type": "string"
+                      },
+                      "revision": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["path", "revision"],
+                    "additionalProperties": false
                   }
                 },
+                "required": ["scope"],
                 "additionalProperties": false
               }
             }
@@ -12549,6 +12578,76 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.indexing.models({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/indexing/consent": {
+      "put": {
+        "tags": ["indexing"],
+        "operationId": "indexing.consent",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Indexing status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndexingStatus"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Set machine-local code indexing consent for the active project.",
+        "summary": "Set indexing consent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  }
+                },
+                "required": ["enabled"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.indexing.consent({\n  ...\n})"
           }
         ]
       }
@@ -24497,6 +24596,15 @@
             "$ref": "#/components/schemas/EventServerInstanceDisposed"
           },
           {
+            "$ref": "#/components/schemas/EventSessionTurnOpen"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionTurnClose"
+          },
+          {
+            "$ref": "#/components/schemas/EventSessionQueueChanged"
+          },
+          {
             "$ref": "#/components/schemas/EventSessionNetworkAsked"
           },
           {
@@ -24522,12 +24630,6 @@
           },
           {
             "$ref": "#/components/schemas/EventInteractive_terminalDeleted"
-          },
-          {
-            "$ref": "#/components/schemas/EventSessionTurnOpen"
-          },
-          {
-            "$ref": "#/components/schemas/EventSessionTurnClose"
           },
           {
             "$ref": "#/components/schemas/EventSandboxStatusChanged"
@@ -24557,10 +24659,10 @@
             "$ref": "#/components/schemas/EventKilocodeNotebookCancelled"
           },
           {
-            "$ref": "#/components/schemas/EventLspClientDiagnostics"
+            "$ref": "#/components/schemas/EventKilo-sessionsRemote-status-changed"
           },
           {
-            "$ref": "#/components/schemas/EventKilo-sessionsRemote-status-changed"
+            "$ref": "#/components/schemas/EventLspClientDiagnostics"
           },
           {
             "$ref": "#/components/schemas/EventMemoryStatus1"
@@ -24818,10 +24920,10 @@
             "$ref": "#/components/schemas/EventProjectUpdated"
           },
           {
-            "$ref": "#/components/schemas/EventLspUpdated"
+            "$ref": "#/components/schemas/EventVcsBranchUpdated"
           },
           {
-            "$ref": "#/components/schemas/EventVcsBranchUpdated"
+            "$ref": "#/components/schemas/EventLspUpdated"
           },
           {
             "$ref": "#/components/schemas/EventWorkspaceReady"
@@ -26838,7 +26940,7 @@
             "type": "object",
             "properties": {
               "start": {
-                "type": "number",
+                "type": "integer",
                 "minimum": 0
               }
             },
@@ -26914,11 +27016,11 @@
             "type": "object",
             "properties": {
               "start": {
-                "type": "number",
+                "type": "integer",
                 "minimum": 0
               },
               "end": {
-                "type": "number",
+                "type": "integer",
                 "minimum": 0
               },
               "elapsed": {
@@ -27687,6 +27789,15 @@
                 "$ref": "#/components/schemas/EventServerInstanceDisposed"
               },
               {
+                "$ref": "#/components/schemas/EventSessionTurnOpen"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionTurnClose"
+              },
+              {
+                "$ref": "#/components/schemas/EventSessionQueueChanged"
+              },
+              {
                 "$ref": "#/components/schemas/EventSessionNetworkAsked"
               },
               {
@@ -27712,12 +27823,6 @@
               },
               {
                 "$ref": "#/components/schemas/EventInteractive_terminalDeleted"
-              },
-              {
-                "$ref": "#/components/schemas/EventSessionTurnOpen"
-              },
-              {
-                "$ref": "#/components/schemas/EventSessionTurnClose"
               },
               {
                 "$ref": "#/components/schemas/EventSandboxStatusChanged"
@@ -27747,10 +27852,10 @@
                 "$ref": "#/components/schemas/EventKilocodeNotebookCancelled"
               },
               {
-                "$ref": "#/components/schemas/EventLspClientDiagnostics"
+                "$ref": "#/components/schemas/EventKilo-sessionsRemote-status-changed"
               },
               {
-                "$ref": "#/components/schemas/EventKilo-sessionsRemote-status-changed"
+                "$ref": "#/components/schemas/EventLspClientDiagnostics"
               },
               {
                 "$ref": "#/components/schemas/EventMemoryStatus"
@@ -28008,10 +28113,10 @@
                 "$ref": "#/components/schemas/EventProjectUpdated"
               },
               {
-                "$ref": "#/components/schemas/EventLspUpdated"
+                "$ref": "#/components/schemas/EventVcsBranchUpdated"
               },
               {
-                "$ref": "#/components/schemas/EventVcsBranchUpdated"
+                "$ref": "#/components/schemas/EventLspUpdated"
               },
               {
                 "$ref": "#/components/schemas/EventWorkspaceReady"
@@ -29446,6 +29551,9 @@
               "type": "boolean"
             }
           },
+          "web_search": {
+            "type": "boolean"
+          },
           "attachment": {
             "$ref": "#/components/schemas/AttachmentConfig"
           },
@@ -30675,6 +30783,9 @@
           "source": {
             "type": "string",
             "enum": ["command", "mcp", "skill"]
+          },
+          "trusted": {
+            "type": "boolean"
           },
           "template": {
             "type": "string"
@@ -33425,15 +33536,85 @@
             "type": "object",
             "properties": {
               "global": {
-                "type": "string"
+                "type": "object",
+                "properties": {
+                  "scope": {
+                    "type": "string",
+                    "enum": ["global", "project"]
+                  },
+                  "path": {
+                    "type": "string"
+                  },
+                  "revision": {
+                    "type": "string"
+                  },
+                  "exists": {
+                    "type": "boolean"
+                  },
+                  "writable": {
+                    "type": "boolean"
+                  },
+                  "raw": {
+                    "type": "object"
+                  }
+                },
+                "required": ["scope", "path", "revision", "exists", "writable", "raw"],
+                "additionalProperties": false
               },
               "project": {
-                "type": "string"
+                "type": "object",
+                "properties": {
+                  "scope": {
+                    "type": "string",
+                    "enum": ["global", "project"]
+                  },
+                  "path": {
+                    "type": "string"
+                  },
+                  "revision": {
+                    "type": "string"
+                  },
+                  "exists": {
+                    "type": "boolean"
+                  },
+                  "writable": {
+                    "type": "boolean"
+                  },
+                  "raw": {
+                    "type": "object"
+                  }
+                },
+                "required": ["scope", "path", "revision", "exists", "writable", "raw"],
+                "additionalProperties": false
               },
               "active": {
-                "type": "string"
+                "type": "object",
+                "properties": {
+                  "scope": {
+                    "type": "string",
+                    "enum": ["global", "project"]
+                  },
+                  "path": {
+                    "type": "string"
+                  },
+                  "revision": {
+                    "type": "string"
+                  },
+                  "exists": {
+                    "type": "boolean"
+                  },
+                  "writable": {
+                    "type": "boolean"
+                  },
+                  "raw": {
+                    "type": "object"
+                  }
+                },
+                "required": ["scope", "path", "revision", "exists", "writable", "raw"],
+                "additionalProperties": false
               }
             },
+            "required": ["global", "project", "active"],
             "additionalProperties": false
           },
           "fields": {
@@ -33581,6 +33762,46 @@
           }
         },
         "required": ["sources"],
+        "additionalProperties": false
+      },
+      "ConfigOverlayConflictError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": ["target-changed", "revision-conflict"]
+          },
+          "message": {
+            "type": "string"
+          },
+          "target": {
+            "type": "object",
+            "properties": {
+              "scope": {
+                "type": "string",
+                "enum": ["global", "project"]
+              },
+              "path": {
+                "type": "string"
+              },
+              "revision": {
+                "type": "string"
+              },
+              "exists": {
+                "type": "boolean"
+              },
+              "writable": {
+                "type": "boolean"
+              },
+              "raw": {
+                "type": "object"
+              }
+            },
+            "required": ["scope", "path", "revision", "exists", "writable", "raw"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["code", "message", "target"],
         "additionalProperties": false
       },
       "ConfigRulesResponse": {
@@ -35218,6 +35439,96 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
+      "EventSessionTurnOpen": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.turn.open"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              }
+            },
+            "required": ["sessionID"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventSessionTurnClose": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.turn.close"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "parentID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "reason": {
+                "type": "string",
+                "enum": ["completed", "error", "interrupted", "superseded"]
+              }
+            },
+            "required": ["sessionID", "reason"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventSessionQueueChanged": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.queue.changed"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "queued": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^msg"
+                }
+              }
+            },
+            "required": ["sessionID", "queued"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
       "EventSessionNetworkAsked": {
         "type": "object",
         "properties": {
@@ -35464,64 +35775,6 @@
               }
             },
             "required": ["terminalID", "sessionID"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
-      "EventSessionTurnOpen": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["session.turn.open"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "sessionID": {
-                "type": "string",
-                "pattern": "^ses"
-              }
-            },
-            "required": ["sessionID"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
-      "EventSessionTurnClose": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["session.turn.close"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "sessionID": {
-                "type": "string",
-                "pattern": "^ses"
-              },
-              "parentID": {
-                "type": "string",
-                "pattern": "^ses"
-              },
-              "reason": {
-                "type": "string",
-                "enum": ["completed", "error", "interrupted"]
-              }
-            },
-            "required": ["sessionID", "reason"],
             "additionalProperties": false
           }
         },
@@ -35837,33 +36090,6 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
-      "EventLspClientDiagnostics": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["lsp.client.diagnostics"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "serverID": {
-                "type": "string"
-              },
-              "path": {
-                "type": "string"
-              }
-            },
-            "required": ["serverID", "path"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
       "EventKilo-sessionsRemote-status-changed": {
         "type": "object",
         "properties": {
@@ -35885,6 +36111,33 @@
               }
             },
             "required": ["enabled", "connected"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventLspClientDiagnostics": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["lsp.client.diagnostics"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "serverID": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              }
+            },
+            "required": ["serverID", "path"],
             "additionalProperties": false
           }
         },
@@ -39854,24 +40107,6 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
-      "EventLspUpdated": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["lsp.updated"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {}
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
       "EventVcsBranchUpdated": {
         "type": "object",
         "properties": {
@@ -39890,6 +40125,24 @@
               }
             },
             "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventLspUpdated": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["lsp.updated"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {}
           }
         },
         "required": ["id", "type", "properties"],

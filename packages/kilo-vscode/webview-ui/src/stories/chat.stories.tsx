@@ -9,6 +9,7 @@
 
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import type { AssistantMessage } from "@kilocode/sdk/v2"
+import { batch, createSignal } from "solid-js"
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
 import { ChatView } from "../components/chat/ChatView"
 import { ErrorDisplay } from "../components/chat/ErrorDisplay"
@@ -698,6 +699,7 @@ const renderRailChat = (status: "idle" | "busy" = "idle") => {
     ...mockSessionValue({ id: SESSION_ID, status }),
     messages: () => railMessages,
     userMessages: () => railMessages.filter((msg) => msg.role === "user"),
+    getParts: (id: string) => railParts[id] ?? [],
   }
   return (
     <StoryProviders data={railData} sessionID={SESSION_ID} status={status} noPadding>
@@ -722,10 +724,11 @@ export const PromptRailSidebar: Story = {
 
 // Long session: more prompts than fit the transcript height, so the rail and
 // the card both cap to the newest ones that fit.
-const manyTurns = Array.from({ length: 40 }, (_, i) =>
+const manyTurns = Array.from({ length: 80 }, (_, i) =>
   railTurn(100 + i, `Prompt number ${i + 1} in a long running session`, `Answer number ${i + 1}.`),
 )
 const manyMessages = manyTurns.flatMap((turn) => turn.messages)
+const recentMessages = manyTurns.slice(-40).flatMap((turn) => turn.messages)
 const manyData = {
   ...defaultMockData,
   message: { [SESSION_ID]: manyMessages },
@@ -735,10 +738,34 @@ const manyData = {
 export const PromptRailManyPrompts: Story = {
   name: "PromptRail - long session caps to what fits",
   render: () => {
+    const [messages, setMessages] = createSignal(recentMessages)
+    const [older, setOlder] = createSignal(true)
+    const [loading, setLoading] = createSignal(false)
+    const [mutation, setMutation] = createSignal<"prepend">()
+    const load = () => {
+      if (!older() || loading()) return false
+      setLoading(true)
+      // Paging is a backend round trip, so the story keeps a short delay: the
+      // navigator's loading row is part of the behavior being shown.
+      setTimeout(() => {
+        batch(() => {
+          setMessages(manyMessages)
+          setOlder(false)
+          setMutation("prepend")
+          setLoading(false)
+        })
+      }, 300)
+      return true
+    }
     const session = {
       ...mockSessionValue({ id: SESSION_ID, status: "idle" }),
-      messages: () => manyMessages,
-      userMessages: () => manyMessages.filter((msg) => msg.role === "user"),
+      messages,
+      userMessages: () => messages().filter((msg) => msg.role === "user"),
+      getParts: (id: string) => manyData.part[id] ?? [],
+      hasOlderMessages: older,
+      loadingOlderMessages: loading,
+      messageMutation: mutation,
+      loadOlderMessages: load,
     }
     return (
       <StoryProviders data={manyData} sessionID={SESSION_ID} status="idle" noPadding>

@@ -20,6 +20,10 @@ The mobile app lets you:
 - Spawn Cloud Agents and code directly from the app.
 - Monitor and view all non-remote sessions in one place.
 - Create, onboard, and manage KiloClaw instances.
+- Send follow-up messages while a session is still running — they are queued and processed in order.
+- Run slash commands (like `/compact`) on connected remote CLI sessions, and start a new session in the same workspace with `/new`. Older CLI versions that do not support remote commands prompt you to upgrade.
+- Review GitHub pull requests end to end — diffs, checks, comments, and merging.
+- Start a new session on a connected `kilo remote` CLI instance with the **Run on** picker.
 
 ## Kilo Pass and Billing
 
@@ -38,6 +42,43 @@ For Kilo Pass pricing, billing, and account management details, use the [Kilo Pa
 
 {% image src="/docs/img/mobile-apps/session-filters.webp" alt="Kilo Code mobile session filter panel for Cloud Extension CLI Slack and other platforms" caption="Filter sessions by platform and project, including Cloud, Extension, CLI, Slack, and other sessions." /%}
 {% /imageGallery %}
+
+## Choosing where a session runs
+
+The new-session screen includes a **Run on** picker that chooses where your session runs:
+
+- **Cloud Agent** — the managed cloud environment (the default).
+- **A connected CLI instance** — a `kilo remote` CLI running on your own machine. The picker lists the instances currently connected to your account.
+
+Remote sessions use the CLI's own defaults, so the composer skips model, mode, and repository selection; you type your first prompt in the chat after the session starts. Sessions started in an organization context always run on the Cloud Agent, so the picker does not appear there.
+
+## Queueing follow-up messages
+
+The composer stays editable while the agent is working, so you don't have to wait for a session to finish before sending your next message. Type your follow-up and press **Send** to add it to the session's queue; queued messages are processed in order. While a session is streaming, **Stop** appears only when the composer is empty — with text entered, Send takes its place.
+
+A queued message shows a subtle **Queued** badge on its bubble. The badge clears when the message starts processing or when the queue drains or is cancelled. Queueing works for Cloud Agent sessions and for remote sessions on a connected `kilo remote` CLI instance.
+
+## Reviewing GitHub pull requests
+
+Open a pull request from a PR link to review it without leaving the app:
+
+- **Overview** — PR state and CI checks at a glance.
+- **Files** — syntax-highlighted diffs with line-level comments and a file navigator.
+- **Discussion** — review threads with replies, resolve/unresolve, and reactions.
+
+Comments you leave are collected into a pending review on your device and submitted to GitHub as a single review. When the PR is ready, you can merge it (merge, squash, or rebase), enable or disable auto-merge, or update the branch — all from the app.
+
+PR review uses your connected GitHub account; the app asks you to connect GitHub if you have not already.
+
+## Session cost and model details
+
+The app shows what each session cost and which models did the work:
+
+- **Session list** — a finished session with a recorded cost shows it in the row's meta line (for example, `$0.12 · 5m ago`). Sessions that are still running or have no cost show no cost.
+- **Cost breakdown** — open a session's Context usage sheet to see a Token usage section (input, output, reasoning, cache read, and cache write tokens, plus the cache hit rate) and a collapsible Models section with each model's name, provider, step count, and cost. A Subagents row covers any remaining spend, so the per-model costs always add up to the session total.
+- **Per-message model label** — assistant messages show a dimmed model label on the first assistant reply and whenever the model changes during the session. Turns routed by [Auto Model](/docs/code-with-ai/agents/auto-model) show the concrete model that handled the turn.
+
+Cost is recorded when a session closes; sessions that closed before this feature shipped do not show a cost.
 
 ## Android App
 

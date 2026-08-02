@@ -7,8 +7,12 @@
  *
  * Pre-filter drops (triage never sees these):
  *   - PRs labeled auto-docs (this bot's own rolling PRs)
- *   - chore/test/ci/build/docs/style/refactor/revert conventional titles
+ *   - chore/test/ci/build/docs/style/refactor conventional titles
  *   - PRs touching only docs/non-product paths
+ *
+ * Revert PRs (conventional `revert(...):` and GitHub-native `Revert "..."` titles)
+ * are intercepted as signals, never added to the digest; affected digest entries
+ * gain `reverted_by` so triage/edit can skip them.
  *
  * Bot-authored PRs are kept: release/dependency bots ship user-facing
  * changes too, and the label + docs-only guards above prevent loops.
@@ -16,6 +20,7 @@
 
 import fs from "node:fs"
 import { api, appendOutput, appendSummary, listPrFiles, searchIssues } from "./lib.mjs"
+import { revertTitleKind, parseRevertTargets, applyRevertAnnotations, unannotatedRevertSignals } from "./reverts.mjs"
 
 const SOURCE_REPOS = ["Kilo-Org/cloud", "Kilo-Org/kilocode"]
 const OUT_DIR = "docs-sync-out"
@@ -23,6 +28,7 @@ const BODY_LIMIT = 2000
 const SLIM_BODY_LIMIT = 300
 const PATCH_LIMIT = 8000
 const FILE_LIMIT = 30
+// Revert PRs (conventional AND GitHub-native) are intercepted below BEFORE this filter; the "revert" alternative here is unreachable and kept only to minimize diff.
 const DROP_TITLE = /^(chore|test|ci|build|docs|style|refactor|revert)(\(.+\))?!?:/i
 const DOCS_ONLY_PATH = /^(packages\/kilo-docs\/|\.github\/docs-sync\/|docs-sync-out\/|docs\/|[^/]+\.md$)/
 
@@ -44,7 +50,8 @@ const since = argSince()
 console.log(`collecting PRs merged since ${since.toISOString()}`)
 
 const digest = []
-const dropped = { label: 0, title: 0, docs_only: 0, fetch_error: 0 }
+const dropped = { label: 0, title: 0, docs_only: 0, fetch_error: 0, revert: 0 }
+const reverts = []
 
 for (const fullRepo of SOURCE_REPOS) {
   const prs = await mergedPrs(fullRepo, since)
@@ -54,6 +61,22 @@ for (const fullRepo of SOURCE_REPOS) {
     const author = item.user?.login ?? ""
     if ((item.labels ?? []).some((l) => l.name === "auto-docs")) {
       dropped.label++
+      continue
+    }
+    if (revertTitleKind(item.title ?? "")) {
+      try {
+        const pr = await api(`/repos/${fullRepo}/pulls/${item.number}`)
+        const targets = parseRevertTargets(pr.body ?? "", fullRepo)
+        reverts.push({ url: pr.html_url, merged_at: pr.merged_at, targets })
+        if (targets.length === 0) {
+          console.warn(`::warning::revert PR ${fullRepo}#${item.number} has no parseable targets`)
+        }
+        dropped.revert++
+      } catch (err) {
+        // One dead revert PR must not abort the run; its targets just go unannotated.
+        console.warn(`::warning::skipping revert ${fullRepo}#${item.number}: ${err.message}`)
+        dropped.fetch_error++
+      }
       continue
     }
     if (DROP_TITLE.test(item.title ?? "")) {
@@ -108,6 +131,9 @@ for (const fullRepo of SOURCE_REPOS) {
   }
 }
 
+const applied = applyRevertAnnotations(digest, reverts)
+const unannotated = unannotatedRevertSignals(reverts, applied)
+
 digest.sort((a, b) => new Date(a.merged_at) - new Date(b.merged_at))
 
 fs.mkdirSync(OUT_DIR, { recursive: true })
@@ -124,14 +150,31 @@ console.log(`kept ${digest.length} PRs, dropped:`, dropped)
 appendOutput("count", digest.length)
 appendOutput("digest", `${OUT_DIR}/digest.json`)
 
-appendSummary(
-  [
-    "### docs-sync collect",
-    "",
-    `- window: since \`${since.toISOString()}\``,
-    `- kept: **${digest.length}** PRs`,
-    `- dropped: ${dropped.label} auto-docs, ${dropped.title} title filter, ${dropped.docs_only} docs-only, ${dropped.fetch_error} fetch errors`,
-    "",
-    ...digest.map((d) => `- [${d.repo}#${d.number}](${d.url}) ${d.title}`),
-  ].join("\n"),
-)
+const summaryLines = [
+  "### docs-sync collect",
+  "",
+  `- window: since \`${since.toISOString()}\``,
+  `- kept: **${digest.length}** PRs`,
+  `- dropped: ${dropped.label} auto-docs, ${dropped.title} title filter, ${dropped.docs_only} docs-only, ${dropped.fetch_error} fetch errors, ${dropped.revert} reverts intercepted`,
+  "",
+  ...digest.map((d) => `- [${d.repo}#${d.number}](${d.url}) ${d.title}`),
+]
+if (applied.length > 0) {
+  summaryLines.push("", "**revert annotations:**", ...applied.map(([target, reverter]) => `- ${target} — reverted by ${reverter}`))
+}
+if (unannotated.missed.length > 0 || unannotated.unparsed.length > 0) {
+  summaryLines.push("", "**revert targets with no in-window annotation:**")
+  for (const m of unannotated.missed) {
+    summaryLines.push(`- ${m.url} — unannotated targets: ${m.targets.join(", ")}`)
+  }
+  for (const url of unannotated.unparsed) {
+    summaryLines.push(`- ${url} (no parseable targets)`)
+  }
+}
+if (unannotated.chains.length > 0) {
+  summaryLines.push("", "**revert chains (not annotated):**")
+  for (const c of unannotated.chains) {
+    summaryLines.push(`- ${c.url}${c.targets.length > 0 ? ` (targets: ${c.targets.join(", ")})` : ""}`)
+  }
+}
+appendSummary(summaryLines.join("\n"))

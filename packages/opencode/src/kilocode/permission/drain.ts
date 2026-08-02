@@ -33,6 +33,8 @@ export function drainCovered(
       // Never auto-resolve config file edit permissions
       const skill = ConfigProtection.globalSkillPattern(entry.info)
       if (ConfigProtection.isRequest(entry.info) && !skill) continue
+      // Never auto-resolve a skill shell batch; it must get an explicit reply.
+      if (entry.info.metadata?.["skillShell"] === true) continue
       const actions = entry.info.patterns.map((pattern: string) => {
         const rule = skill
           ? Permission.evaluate(entry.info.permission, skill, approved)
