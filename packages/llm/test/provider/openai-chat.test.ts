@@ -519,6 +519,21 @@ describe("OpenAI Chat route", () => {
     }),
   )
 
+  it.effect("ignores non-chat metadata events in compatible streams", () =>
+    Effect.gen(function* () {
+      const body = sseEvents(
+        { object: "billing.summary", billing: { request: { success: true } } },
+        deltaChunk({ role: "assistant", content: "Hello" }),
+        deltaChunk({}, "stop"),
+      )
+
+      const response = yield* LLMClient.generate(request).pipe(Effect.provide(fixedResponse(body)))
+
+      expect(response.text).toBe("Hello")
+      expect(response.events.at(-1)).toMatchObject({ type: "finish", reason: "stop" })
+    }),
+  )
+
   it.effect("parses OpenAI-compatible reasoning content deltas", () =>
     Effect.gen(function* () {
       const body = sseEvents(
