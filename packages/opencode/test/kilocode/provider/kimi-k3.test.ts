@@ -52,6 +52,7 @@ describe("Kimi K3 reasoning efforts", () => {
 
   test("rewrites Groq's reasoning-effort variants without a provider allowlist", () => {
     expect(ProviderTransform.variants(model("moonshotai/kimi-k3", "@ai-sdk/groq"))).toEqual({
+      none: { reasoningEffort: "none" },
       low: { reasoningEffort: "low" },
       high: { reasoningEffort: "high" },
       max: { reasoningEffort: "max" },

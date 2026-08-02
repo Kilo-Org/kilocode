@@ -1,6 +1,5 @@
 import type { Provider } from "@/provider/provider"
 
-const EFFORTS = ["low", "high", "max"] as const
 const MODEL = /(?:^|\/)kimi-k3(?:$|[-/:])/i
 
 export function kimiK3Variants(model: Provider.Model, variants: Record<string, Record<string, any>>) {
@@ -10,10 +9,9 @@ export function kimiK3Variants(model: Provider.Model, variants: Record<string, R
   const high = variants.high
   if (low?.reasoningEffort !== "low" || high?.reasoningEffort !== "high") return variants
 
-  return Object.fromEntries(
-    EFFORTS.map((effort) => [
-      effort,
-      { ...(effort === "low" ? low : (variants[effort] ?? high)), reasoningEffort: effort },
-    ]),
-  )
+  const { medium: _, ...supported } = variants
+  return {
+    ...supported,
+    max: { ...(variants.max ?? high), reasoningEffort: "max" },
+  }
 }
