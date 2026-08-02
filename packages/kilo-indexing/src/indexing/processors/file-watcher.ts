@@ -10,6 +10,7 @@ import {
   BATCH_SEGMENT_THRESHOLD,
   MAX_BATCH_RETRIES,
   INITIAL_RETRY_DELAY_MS,
+  WATCHER_READY_TIMEOUT_MS,
 } from "../constants"
 import { scannerExtensions } from "../shared/supported-extensions"
 import {
@@ -37,6 +38,53 @@ import type { IgnoreMatcher } from "../shared/load-ignore"
 import { isBinary } from "../shared/is-binary"
 
 const log = Log.create({ service: "file-watcher" })
+
+/**
+ * Minimal watcher surface needed to await readiness. Declaring our own narrow
+ * interface (rather than the full chokidar type) keeps {@link waitForWatcherReady}
+ * unit-testable without spinning up a real filesystem watcher.
+ */
+export interface WatcherReadySource {
+  once(event: "ready", listener: () => void): unknown
+  once(event: "error", listener: (error: unknown) => void): unknown
+}
+
+/**
+ * Waits for a chokidar watcher to finish its initial scan and emit "ready".
+ *
+ * Rejects if the watcher emits "error", or if neither "ready" nor "error"
+ * occurs within `timeoutMs`. The timeout is what prevents a silent, indefinite
+ * hang on very large workspaces (or when chokidar's native backend is
+ * unavailable and it falls back to a slow per-directory walk). The caller owns
+ * the watcher lifecycle and is responsible for closing it on failure.
+ */
+export function waitForWatcherReady(
+  watcher: WatcherReadySource,
+  workspacePath: string,
+  timeoutMs: number = WATCHER_READY_TIMEOUT_MS,
+): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(
+        new Error(
+          `File watcher did not become ready within ${Math.round(timeoutMs / 1000)}s for "${workspacePath}". ` +
+            `The workspace may be too large or contain problematic symlinks — scope indexing to a single ` +
+            `repository, or add .gitignore/.kilocodeignore patterns to exclude large directories.`,
+        ),
+      )
+    }, timeoutMs)
+    // Do not let the safety timeout keep the event loop alive on its own.
+    timer.unref()
+    watcher.once("ready", () => {
+      clearTimeout(timer)
+      resolve()
+    })
+    watcher.once("error", (error: unknown) => {
+      clearTimeout(timer)
+      reject(error instanceof Error ? error : new Error(String(error)))
+    })
+  })
+}
 
 /**
  * Implementation of the file watcher interface.
@@ -137,7 +185,7 @@ export class FileWatcher implements IFileWatcher {
 
     log.info("initializing file watcher", { workspacePath: this.workspacePath })
 
-    this.watcher = chokidarWatch(this.workspacePath, {
+    const watcher = chokidarWatch(this.workspacePath, {
       ignored: (filePath: string) => {
         const relativeFilePath = generateRelativeIgnorePath(filePath, this.workspacePath)
         if (!relativeFilePath) return false
@@ -146,16 +194,32 @@ export class FileWatcher implements IFileWatcher {
       },
       persistent: true,
       ignoreInitial: true,
+      // Match the scanner's glob (which does not traverse symlinks) and git's
+      // own semantics. Following symlinked directories can cause chokidar to
+      // re-walk/cycle through link targets, which on symlink-heavy trees can
+      // stall the initial scan so "ready" never fires.
+      followSymlinks: false,
     })
+    this.watcher = watcher
 
-    this.watcher.on("add", (filePath) => this.handleFileEvent(filePath, "create"))
-    this.watcher.on("change", (filePath) => this.handleFileEvent(filePath, "change"))
-    this.watcher.on("unlink", (filePath) => this.handleFileEvent(filePath, "delete"))
-    this.ready = new Promise((resolve, reject) => {
-      this.watcher?.once("ready", resolve)
-      this.watcher?.once("error", reject)
-    })
-    await this.ready
+    watcher.on("add", (filePath) => this.handleFileEvent(filePath, "create"))
+    watcher.on("change", (filePath) => this.handleFileEvent(filePath, "change"))
+    watcher.on("unlink", (filePath) => this.handleFileEvent(filePath, "delete"))
+
+    const ready = waitForWatcherReady(watcher, this.workspacePath)
+    this.ready = ready
+    try {
+      await ready
+    } catch (error) {
+      // The watcher never became ready (or emitted an error). Surface the
+      // failure instead of hanging the indexing pipeline forever, and reset
+      // state so a later initialize() can retry cleanly rather than re-awaiting
+      // this rejected promise.
+      if (this.ready === ready) this.ready = undefined
+      if (this.watcher === watcher) this.watcher = undefined
+      void watcher.close()
+      throw error
+    }
     log.info("file watcher ready", { workspacePath: this.workspacePath })
   }
 

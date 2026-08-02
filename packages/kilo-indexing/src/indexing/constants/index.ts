@@ -35,6 +35,12 @@ export const DEFAULT_MAX_SEARCH_RESULTS = CODEBASE_INDEX_DEFAULTS.DEFAULT_SEARCH
 /**File Watcher */
 export const QDRANT_CODE_BLOCK_NAMESPACE = "f47ac10b-58cc-4372-a567-0e02b2c3d479"
 export const MAX_FILE_SIZE_BYTES = 1 * 1024 * 1024 // 1MB
+// Maximum time to wait for chokidar to finish its initial scan and emit "ready".
+// On very large workspaces, or when chokidar's native fsevents backend is
+// unavailable (e.g. inside a bundled runtime) and it falls back to a slow
+// per-directory walk, "ready" may never fire. Without a bound this hangs the
+// entire indexing pipeline indefinitely with no surfaced error.
+export const WATCHER_READY_TIMEOUT_MS = 60_000
 
 /**Directory Scanner */
 export const MAX_LIST_FILES_LIMIT_CODE_INDEX = 50_000

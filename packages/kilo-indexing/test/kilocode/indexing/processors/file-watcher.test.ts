@@ -13,7 +13,11 @@ import type {
   PointStruct,
   VectorStoreSearchResult,
 } from "../../../../src/indexing/interfaces"
-import { FileWatcher } from "../../../../src/indexing/processors/file-watcher"
+import {
+  FileWatcher,
+  waitForWatcherReady,
+  type WatcherReadySource,
+} from "../../../../src/indexing/processors/file-watcher"
 import { CodeParser } from "../../../../src/indexing/processors/parser"
 import { loadIgnore } from "../../../../src/indexing/shared/load-ignore"
 import { WorktreeOverlay } from "../../../../src/indexing/worktree-overlay"
@@ -382,5 +386,45 @@ describe("FileWatcher", () => {
     } finally {
       await rm(root, { recursive: true, force: true })
     }
+  })
+})
+
+describe("waitForWatcherReady", () => {
+  type FakeWatcher = WatcherReadySource & { emit(event: string, arg?: unknown): void }
+
+  function createReadyWatcher(): FakeWatcher {
+    const handlers = new Map<string, (arg?: unknown) => void>()
+    return {
+      once(event: string, listener: (arg?: unknown) => void) {
+        handlers.set(event, listener)
+      },
+      emit(event: string, arg?: unknown) {
+        handlers.get(event)?.(arg)
+      },
+    }
+  }
+
+  test("resolves once the watcher emits ready", async () => {
+    const watcher = createReadyWatcher()
+    const ready = waitForWatcherReady(watcher, "/workspace", 1000)
+    watcher.emit("ready")
+    await expect(ready).resolves.toBeUndefined()
+  })
+
+  test("rejects with an actionable error when ready never fires within the timeout", async () => {
+    // A watcher that never emits "ready" simulates a very large tree or a
+    // missing native backend; this must fail fast instead of hanging forever.
+    const watcher = createReadyWatcher()
+    const ready = waitForWatcherReady(watcher, "/huge/workspace", 20)
+    await expect(ready).rejects.toThrow(/did not become ready/)
+    await expect(ready).rejects.toThrow(/scope indexing to a single/)
+    await expect(ready).rejects.toThrow(/\/huge\/workspace/)
+  })
+
+  test("rejects when the watcher emits an error", async () => {
+    const watcher = createReadyWatcher()
+    const ready = waitForWatcherReady(watcher, "/workspace", 1000)
+    watcher.emit("error", new Error("watch boom"))
+    await expect(ready).rejects.toThrow("watch boom")
   })
 })
