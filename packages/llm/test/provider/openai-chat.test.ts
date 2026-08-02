@@ -623,6 +623,15 @@ describe("OpenAI Chat route", () => {
 
   it.effect("fails on malformed stream events", () =>
     Effect.gen(function* () {
+      const body = sseEvents(deltaChunk({ content: 123 }))
+      const error = yield* LLMClient.generate(request).pipe(Effect.provide(fixedResponse(body)), Effect.flip)
+
+      expect(error.message).toContain("Invalid openai/openai-chat stream event")
+    }),
+  )
+
+  it.effect("fails on malformed labeled chat-completion chunks", () =>
+    Effect.gen(function* () {
       const body = sseEvents({ ...deltaChunk({ content: 123 }), object: "chat.completion.chunk" })
       const error = yield* LLMClient.generate(request).pipe(Effect.provide(fixedResponse(body)), Effect.flip)
 
