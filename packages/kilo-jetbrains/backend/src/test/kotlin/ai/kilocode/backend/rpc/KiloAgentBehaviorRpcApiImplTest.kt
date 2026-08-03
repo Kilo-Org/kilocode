@@ -157,7 +157,7 @@ class KiloAgentBehaviorRpcApiImplTest {
     fun `save commands validates known and new project command paths`() = runBlocking {
         val project = Files.createTempDirectory("kilo-command-project")
         val known = Files.createDirectories(project.resolve(".kilo/command")).resolve("known.md")
-        val added = project.resolve(".kilo/command/new.md")
+        val added = project.resolve(".kilo/commands/new.md")
         val other = Files.createTempFile("kilo-command-other", ".md")
         Files.writeString(known, "old")
         Files.writeString(other, "old")
@@ -173,6 +173,20 @@ class KiloAgentBehaviorRpcApiImplTest {
 
         assertFalse(rpc.saveCommands(project.toString(), mapOf(other.toString() to "nope")))
         assertEquals("old", Files.readString(other))
+    }
+
+    @Test
+    fun `save commands validates new global command paths`() = runBlocking {
+        val project = Files.createTempDirectory("kilo-command-project")
+        val config = Files.createTempDirectory("kilo-command-config")
+        val added = config.resolve("commands/global.md")
+        mock.path = """{"home":"/tmp","state":"/tmp","config":"$config","worktree":"$project","directory":"$project"}"""
+        val rpc = rpc()
+
+        assertTrue(rpc.saveCommands(project.toString(), mapOf(added.toString() to "global command")))
+
+        assertEquals("global command", Files.readString(added))
+        assertEquals(1, mock.requestCount("/path"))
     }
 
     @Test

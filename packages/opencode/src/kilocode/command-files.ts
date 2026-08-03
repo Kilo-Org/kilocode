@@ -1,6 +1,7 @@
-import { readdir, readFile, unlink } from "node:fs/promises"
+import { readFile, unlink } from "node:fs/promises"
 import path from "node:path"
 import { Global } from "@opencode-ai/core/global"
+import { Glob } from "@opencode-ai/core/util/glob"
 import { Schema } from "effect"
 import { Command } from "@/command"
 import { configEntryNameFromPath } from "@/config/entry-name"
@@ -33,18 +34,8 @@ const COMMAND_PREFIXES = ["command/", "commands/"]
 
 async function files(dir: string) {
   const result: File[] = []
-  for (const file of await scan(path.join(dir, "command"))) result.push(await command(dir, file))
-  for (const file of await scan(path.join(dir, "commands"))) result.push(await command(dir, file))
-  return result
-}
-
-async function scan(dir: string): Promise<string[]> {
-  const entries = await readdir(dir, { withFileTypes: true }).catch(() => [])
-  const result: string[] = []
-  for (const entry of entries) {
-    const next = path.join(dir, entry.name)
-    if (entry.isDirectory()) result.push(...(await scan(next)))
-    if (entry.isFile() && entry.name.endsWith(".md")) result.push(next)
+  for (const file of await Glob.scan("{command,commands}/**/*.md", { cwd: dir, absolute: true, dot: true, symlink: true })) {
+    result.push(await command(dir, file))
   }
   return result
 }
@@ -76,10 +67,10 @@ function literal(cmd: Command.Info) {
 
 export async function discover(input: { commands: readonly Command.Info[]; directories: readonly string[]; directory: string }) {
   const all = []
-  for (const dir of input.directories) all.push(...(await files(dir)))
   for (const item of await WorkflowsMigrator.discoverWorkflows(input.directory)) {
     all.push({ name: item.name, location: item.path, content: item.content })
   }
+  for (const dir of input.directories) all.push(...(await files(dir)))
   const by = precedence(all)
   return input.commands
     .filter((cmd) => cmd.source !== "skill")

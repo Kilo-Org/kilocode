@@ -372,7 +372,7 @@ class MockCliServer : AutoCloseable {
                     respond(output, organizationSetStatus, "true")
                 }
                 path == "/global/event" -> handleSse(output, latch)
-                path == "/path" -> respond(output, 200, this.path)
+                bare == "/path" -> respond(output, 200, this.path)
                 bare == "/provider" -> respond(output, providersStatus, providers)
                 bare == "/provider/auth" -> respond(output, providerAuthStatus, providerAuth)
                 bare == "/agent" -> respond(output, agentsStatus, agents)

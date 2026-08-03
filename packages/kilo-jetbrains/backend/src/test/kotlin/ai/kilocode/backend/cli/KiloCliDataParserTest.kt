@@ -1882,6 +1882,8 @@ class KiloCliDataParserTest {
         fun `parsePathState - extracts state from valid path response`() {
             val raw = """{"home":"/home/user","state":"/home/user/.local/state/kilo","config":"/home/user/.config/kilo","worktree":"/project","directory":"/project"}"""
             assertEquals("/home/user/.local/state/kilo", KiloCliDataParser.parsePathState(raw))
+            assertEquals("/home/user/.config/kilo", KiloCliDataParser.parsePathConfig(raw))
+            assertEquals("/home/user", KiloCliDataParser.parsePathHome(raw))
         }
 
         @Test

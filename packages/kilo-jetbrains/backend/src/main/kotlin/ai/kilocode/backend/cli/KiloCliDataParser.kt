@@ -743,6 +743,16 @@ object KiloCliDataParser {
         return if (prim.isString) prim.content else null
     }
 
+    fun parsePathConfig(raw: String): String? {
+        val prim = runCatching { tryParseObject(raw)?.get("config")?.jsonPrimitive }.getOrNull() ?: return null
+        return if (prim.isString) prim.content else null
+    }
+
+    fun parsePathHome(raw: String): String? {
+        val prim = runCatching { tryParseObject(raw)?.get("home")?.jsonPrimitive }.getOrNull() ?: return null
+        return if (prim.isString) prim.content else null
+    }
+
     fun parseModelState(raw: String): ModelStateDto {
         val obj = tryParseObject(raw) ?: return ModelStateDto()
         return ModelStateDto(
