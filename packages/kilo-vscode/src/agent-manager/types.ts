@@ -626,6 +626,7 @@ interface SetTabOrderIn {
 
 interface SetWorktreeOrderIn {
   type: "agentManager.setWorktreeOrder"
+  projectId?: string
   order: string[]
 }
 

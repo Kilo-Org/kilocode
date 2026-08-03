@@ -12,6 +12,8 @@ interface Props {
   children?: JSX.Element
   /** When true, auto-enter rename mode (e.g. after creation). */
   autoRename?: boolean
+  /** Scoped drop id used when multiple project DnD providers are mounted. */
+  dropId?: string
   onToggle: () => void
   onRename: (name: string) => void
   onDelete: () => void
@@ -59,7 +61,7 @@ const SectionHeader: Component<Props> = (props) => {
     props.onToggle()
   }
 
-  const droppable = createDroppable(props.section.id)
+  const droppable = createDroppable(props.dropId ?? props.section.id)
 
   return (
     <div

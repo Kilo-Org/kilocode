@@ -153,6 +153,7 @@ export function renderSideTerminalLayer(props: {
                 terminalId={term.id}
                 wsUrl={term.wsUrl}
                 active={active()}
+                focusOnActivate={false}
                 focusSerial={focusSerial(props.state, term.id)}
                 font={term.font}
                 status={() => props.state.scriptStatus(term.id)}
