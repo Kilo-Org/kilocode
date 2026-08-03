@@ -26696,6 +26696,9 @@
             "required": ["providerID", "modelID"],
             "additionalProperties": false
           },
+          "variant": {
+            "type": "string"
+          },
           "command": {
             "type": "string"
           }
@@ -29314,7 +29317,6 @@
                   "type": "boolean"
                 }
               },
-              "required": ["template"],
               "additionalProperties": false
             }
           },
@@ -30958,6 +30960,9 @@
             "type": "string"
           },
           "model": {
+            "type": "string"
+          },
+          "variant": {
             "type": "string"
           },
           "source": {
@@ -33006,6 +33011,9 @@
             },
             "required": ["providerID", "modelID"],
             "additionalProperties": false
+          },
+          "variant": {
+            "type": "string"
           },
           "command": {
             "type": "string"
@@ -44605,6 +44613,9 @@
             },
             "required": ["id", "providerID"],
             "additionalProperties": false
+          },
+          "variant": {
+            "type": "string"
           },
           "subtask": {
             "type": "boolean"

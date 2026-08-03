@@ -1019,6 +1019,9 @@ export const dict = {
     "カスタムコマンドが設定されていません。opencode.json にコマンドを追加するとここに表示されます。",
   "settings.agentBehaviour.workflows.detail.description": "説明",
   "settings.agentBehaviour.workflows.detail.template": "テンプレート",
+  "settings.agentBehaviour.workflows.model": "モデル",
+  "settings.agentBehaviour.workflows.variant": "バリアント",
+  "settings.agentBehaviour.workflows.modelDescription": "グローバルモデルの上書き",
   "settings.sandboxing.enabled.title": "サンドボックス",
   "settings.sandboxing.enabled.description":
     "エージェントのシェルコマンドを、プロジェクトおよびKiloの状態ディレクトリへの書き込みを制限するOSレベルのサンドボックス内で実行",

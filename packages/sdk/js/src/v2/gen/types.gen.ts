@@ -633,6 +633,7 @@ export type SubtaskPart = {
     providerID: string
     modelID: string
   }
+  variant?: string
   command?: string
 }
 
@@ -1555,7 +1556,7 @@ export type Config = {
   server?: ServerConfig
   command?: {
     [key: string]: {
-      template: string
+      template?: string
       description?: string
       agent?: string
       model?: string
@@ -2114,6 +2115,7 @@ export type Command = {
   description?: string
   agent?: string
   model?: string
+  variant?: string
   source?: "command" | "mcp" | "skill"
   trusted?: boolean
   template: string
@@ -2769,6 +2771,7 @@ export type SubtaskPartInput = {
     providerID: string
     modelID: string
   }
+  variant?: string
   command?: string
 }
 
@@ -6215,6 +6218,7 @@ export type CommandV2Info = {
     providerID: string
     variant?: string
   }
+  variant?: string
   subtask?: boolean
 }
 

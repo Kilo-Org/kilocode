@@ -971,6 +971,9 @@ export const dict = {
     "هیچ دستور سفارشی پیکربندی نشده است. دستورات را به opencode.json خود اضافه کنید تا اینجا نمایش داده شوند.",
   "settings.agentBehaviour.workflows.detail.description": "توضیحات",
   "settings.agentBehaviour.workflows.detail.template": "قالب",
+  "settings.agentBehaviour.workflows.model": "مدل",
+  "settings.agentBehaviour.workflows.variant": "گونه",
+  "settings.agentBehaviour.workflows.modelDescription": "بازنویسی مدل سراسری",
 
   "settings.agentBehaviour.createMode": "ایجاد حالت جدید",
   "settings.agentBehaviour.createMode.name": "نام",

@@ -963,6 +963,9 @@ export const dict = {
     "No custom commands configured. Add commands to your opencode.json to see them here.",
   "settings.agentBehaviour.workflows.detail.description": "Description",
   "settings.agentBehaviour.workflows.detail.template": "Template",
+  "settings.agentBehaviour.workflows.model": "model",
+  "settings.agentBehaviour.workflows.variant": "variant",
+  "settings.agentBehaviour.workflows.modelDescription": "Global model override",
 
   "settings.agentBehaviour.createMode": "Create New Mode",
   "settings.agentBehaviour.createMode.name": "Name",

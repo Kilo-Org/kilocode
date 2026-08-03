@@ -986,6 +986,9 @@ export const dict = {
     "Власних команд не налаштовано. Додайте команди до opencode.json, щоб вони з'явилися тут.",
   "settings.agentBehaviour.workflows.detail.description": "Опис",
   "settings.agentBehaviour.workflows.detail.template": "Шаблон",
+  "settings.agentBehaviour.workflows.model": "модель",
+  "settings.agentBehaviour.workflows.variant": "варіант",
+  "settings.agentBehaviour.workflows.modelDescription": "Глобальне перевизначення моделі",
 
   "settings.autoApprove.description":
     "Визначте, як виконуються інструменти. Більшість інструментів за замовчуванням — Дозволити. doom_loop та external_directory за замовчуванням — Запитувати.",
