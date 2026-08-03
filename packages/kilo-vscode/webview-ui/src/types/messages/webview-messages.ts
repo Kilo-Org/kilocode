@@ -876,6 +876,7 @@ export interface SetTabOrderRequest {
 // Persist sidebar worktree order
 export interface SetWorktreeOrderRequest {
   type: "agentManager.setWorktreeOrder"
+  projectId?: string
   order: string[]
 }
 

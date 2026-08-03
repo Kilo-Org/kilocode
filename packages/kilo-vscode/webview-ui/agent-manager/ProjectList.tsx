@@ -19,11 +19,13 @@ import type { SidebarSearchItem } from "./sidebar-search"
 import { LOCAL } from "./navigate"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
 import { ProjectBranchDialog } from "./ProjectBranchDialog"
+import type { ProjectStore } from "./project/store"
 import type { ModeRouter } from "./mode-router"
 
 interface Props {
   projects: AgentProjectSnapshot[]
   states: Record<string, AgentManagerStateMessage>
+  store?: (projectId: string) => ProjectStore
   stats: Record<string, Record<string, WorktreeGitStats>>
   local: Record<string, LocalGitStats>
   prs: Record<string, Record<string, PRStatus | null>>
@@ -208,6 +210,7 @@ export const ProjectList: Component<Props> = (props) => {
         <ProjectSidebarBody
           project={project}
           state={props.states[project.id]}
+          store={props.store?.(project.id)}
           stats={props.stats[project.id]}
           local={props.local[project.id]}
           prs={props.prs[project.id]}
