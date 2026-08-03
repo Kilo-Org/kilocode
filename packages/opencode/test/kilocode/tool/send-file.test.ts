@@ -460,6 +460,7 @@ describe("send_file tool", () => {
         save: tool,
         manager: tool,
         process: tool,
+        chart: tool,
         image: tool,
         notify: { id: "notify_user" } as Tool.Def,
         send: tool,

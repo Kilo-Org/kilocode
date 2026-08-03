@@ -1227,6 +1227,231 @@ export const SearchPreviews: Story = {
                 </div>
               </div>
             </section>
+            <section class="tool-call-lab-panel tool-call-lab-panel-wide">
+              <div class="tool-call-lab-panel-header">
+                <span class="tool-call-lab-panel-title">Chart renderers</span>
+                <span class="tool-call-lab-panel-note">
+                  Chart.js chart tool rendered with production ChartTool component.
+                </span>
+              </div>
+              <div class="tool-call-lab-stack">
+                <div class="tool-call-lab-example">
+                  <span class="tool-call-lab-example-label">Bar chart</span>
+                  <AssistantMessage
+                    message={base}
+                    parts={[
+                      done(
+                        "chart-bar-preview",
+                        "chart",
+                        { title: "Bar chart" },
+                        "Render chart",
+                        JSON.stringify({
+                          type: "bar",
+                          data: {
+                            labels: ["A", "B", "C", "D", "E"],
+                            datasets: [{ label: "Value", data: [28, 55, 43, 91, 81] }],
+                          },
+                        }),
+                      ),
+                    ]}
+                  />
+                </div>
+                <div class="tool-call-lab-example">
+                  <span class="tool-call-lab-example-label">Line plot</span>
+                  <AssistantMessage
+                    message={base}
+                    parts={[
+                      done(
+                        "chart-line-preview",
+                        "chart",
+                        { title: "Line plot" },
+                        "Render chart",
+                        JSON.stringify({
+                          type: "line",
+                          data: {
+                            labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"],
+                            datasets: [{ label: "Value", data: [12, 28, 19, 45, 38, 62, 55, 74], fill: false }],
+                          },
+                        }),
+                      ),
+                    ]}
+                  />
+                </div>
+                <div class="tool-call-lab-example">
+                  <span class="tool-call-lab-example-label">Scatter plot</span>
+                  <AssistantMessage
+                    message={base}
+                    parts={[
+                      done(
+                        "chart-scatter-preview",
+                        "chart",
+                        { title: "Scatter plot" },
+                        "Render chart",
+                        JSON.stringify({
+                          type: "scatter",
+                          data: {
+                            datasets: [
+                              {
+                                label: "Points",
+                                data: [
+                                  { x: 2, y: 14 },
+                                  { x: 5, y: 38 },
+                                  { x: 8, y: 22 },
+                                  { x: 11, y: 61 },
+                                  { x: 14, y: 44 },
+                                  { x: 17, y: 73 },
+                                  { x: 20, y: 55 },
+                                  { x: 23, y: 88 },
+                                  { x: 26, y: 67 },
+                                  { x: 29, y: 95 },
+                                ],
+                              },
+                            ],
+                          },
+                        }),
+                      ),
+                    ]}
+                  />
+                </div>
+                <div class="tool-call-lab-example">
+                  <span class="tool-call-lab-example-label">Temporal (time series)</span>
+                  <AssistantMessage
+                    message={base}
+                    parts={[
+                      done(
+                        "chart-temporal-preview",
+                        "chart",
+                        { title: "Time series" },
+                        "Render chart",
+                        JSON.stringify({
+                          type: "line",
+                          data: {
+                            labels: [
+                              "Jan",
+                              "Feb",
+                              "Mar",
+                              "Apr",
+                              "May",
+                              "Jun",
+                              "Jul",
+                              "Aug",
+                              "Sep",
+                              "Oct",
+                              "Nov",
+                              "Dec",
+                            ],
+                            datasets: [
+                              {
+                                label: "Value",
+                                data: [120, 145, 132, 178, 163, 201, 194, 223, 215, 248, 237, 271],
+                                fill: true,
+                              },
+                            ],
+                          },
+                        }),
+                      ),
+                    ]}
+                  />
+                </div>
+                <div class="tool-call-lab-example">
+                  <span class="tool-call-lab-example-label">Pie chart</span>
+                  <AssistantMessage
+                    message={base}
+                    parts={[
+                      done(
+                        "chart-pie-preview",
+                        "chart",
+                        { title: "Pie chart" },
+                        "Render chart",
+                        JSON.stringify({
+                          type: "pie",
+                          data: {
+                            labels: ["A", "B", "C", "D"],
+                            datasets: [{ data: [30, 50, 15, 5] }],
+                          },
+                        }),
+                      ),
+                    ]}
+                  />
+                </div>
+                <div class="tool-call-lab-example">
+                  <span class="tool-call-lab-example-label">Doughnut chart</span>
+                  <AssistantMessage
+                    message={base}
+                    parts={[
+                      done(
+                        "chart-doughnut-preview",
+                        "chart",
+                        { title: "Doughnut chart" },
+                        "Render chart",
+                        JSON.stringify({
+                          type: "doughnut",
+                          data: {
+                            labels: ["A", "B", "C", "D"],
+                            datasets: [{ data: [40, 25, 20, 15] }],
+                          },
+                        }),
+                      ),
+                    ]}
+                  />
+                </div>
+                <div class="tool-call-lab-example">
+                  <span class="tool-call-lab-example-label">Radar chart</span>
+                  <AssistantMessage
+                    message={base}
+                    parts={[
+                      done(
+                        "chart-radar-preview",
+                        "chart",
+                        { title: "Radar chart" },
+                        "Render chart",
+                        JSON.stringify({
+                          type: "radar",
+                          data: {
+                            labels: ["Speed", "Strength", "Agility", "Intelligence", "Endurance"],
+                            datasets: [
+                              { label: "Player A", data: [80, 60, 75, 90, 70] },
+                              { label: "Player B", data: [55, 85, 60, 65, 80] },
+                            ],
+                          },
+                        }),
+                      ),
+                    ]}
+                  />
+                </div>
+                <div class="tool-call-lab-example">
+                  <span class="tool-call-lab-example-label">Bubble chart</span>
+                  <AssistantMessage
+                    message={base}
+                    parts={[
+                      done(
+                        "chart-bubble-preview",
+                        "chart",
+                        { title: "Bubble chart" },
+                        "Render chart",
+                        JSON.stringify({
+                          type: "bubble",
+                          data: {
+                            datasets: [
+                              {
+                                label: "Dataset",
+                                data: [
+                                  { x: 5, y: 20, r: 10 },
+                                  { x: 15, y: 35, r: 20 },
+                                  { x: 25, y: 15, r: 8 },
+                                  { x: 35, y: 50, r: 15 },
+                                  { x: 45, y: 30, r: 25 },
+                                ],
+                              },
+                            ],
+                          },
+                        }),
+                      ),
+                    ]}
+                  />
+                </div>
+              </div>
+            </section>
           </div>
         </SessionContext.Provider>
       </StoryProviders>
