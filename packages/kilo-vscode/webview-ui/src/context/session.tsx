@@ -67,12 +67,13 @@ import {
 } from "./session-utils"
 import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
+import { getAgentModel } from "./session-model-store"
 import { resolveMessagePrefs } from "./session-preferences"
 import { errorIDs } from "./session-errors"
 import { PartStash } from "./part-stash"
 import { mergeParts, sameParts } from "./session-parts"
 import { state as todoState } from "./todo-revert"
-import { getVariant, sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
+import { getAgentVariant, getVariant, sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
 import { KILO_AUTO, KILO_PROVIDER_ID, parseModelString } from "../../../src/shared/provider-model"
 import { reviewMetadata, type ReviewMessageData } from "../../../src/shared/review-comments"
 import { visibleMessages as filterVisibleMessages } from "./session-queue"
@@ -201,6 +202,8 @@ interface SessionContextValue {
   // Model selection (global, extension-lifetime)
   selected: (sessionID?: string) => ModelSelection | null
   configModel: (sessionID?: string) => ModelSelection | null
+  modelForAgent: (agent: string) => ModelSelection | null
+  configModelForAgent: (agent: string) => ModelSelection | null
   selectModel: (providerID: string, modelID: string, sessionID?: string) => void
   hasModelOverride: (sessionID?: string) => boolean
   clearModelOverride: (sessionID?: string) => void
@@ -237,6 +240,7 @@ interface SessionContextValue {
   // Thinking variant for the selected model
   variantList: (sessionID?: string) => string[]
   currentVariant: (sessionID?: string) => string | undefined
+  variantForAgent: (agent: string, model: ModelSelection | null) => string | undefined
   selectVariant: (value: string, sessionID?: string) => void
 
   // Model favorites
@@ -735,6 +739,30 @@ export const SessionProvider: ParentComponent = (props) => {
     return resolveModel(agentName)
   }
 
+  function modelForAgent(agentName: string): ModelSelection | null {
+    return getAgentModel(
+      {
+        modelSelections: store.modelSelections,
+        sessionOverrides: store.sessionOverrides,
+        agentSelections: store.agentSelections,
+        recentModels: store.recentModels,
+      },
+      {
+        providers: provider.providers(),
+        connected: provider.connected(),
+        getModeModel,
+        getGlobalModel,
+        fallback: KILO_AUTO,
+      },
+      agentName,
+      userSetAgents()[agentName] === true,
+    )
+  }
+
+  function configModelForAgent(agentName: string): ModelSelection | null {
+    return resolveModel(agentName)
+  }
+
   /** True when the active model differs from what the config dictates. */
   function hasModelOverride(sessionID?: string) {
     const sel = selected(sessionID)
@@ -876,6 +904,12 @@ export const SessionProvider: ParentComponent = (props) => {
     const model = provider.findModel(sel)
     if (!model?.variants) return []
     return Object.keys(model.variants)
+  }
+
+  function variantForAgent(agentName: string, sel: ModelSelection | null) {
+    if (!sel) return undefined
+    const model = provider.findModel(sel)
+    return getAgentVariant(store.variantSelections, sel, model, agentName)
   }
 
   const currentVariant = (sessionID?: string) => {
@@ -2947,6 +2981,8 @@ export const SessionProvider: ParentComponent = (props) => {
     scopedSuggestions,
     selected,
     configModel,
+    modelForAgent,
+    configModelForAgent,
     selectModel,
     hasModelOverride,
     clearModelOverride,
@@ -2993,6 +3029,7 @@ export const SessionProvider: ParentComponent = (props) => {
     toggleFavorite,
     variantList,
     currentVariant,
+    variantForAgent,
     selectVariant,
     revert,
     revertedCount,
