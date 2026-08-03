@@ -3105,3 +3105,9 @@ ToolRegistry.register({
     )
   },
 })
+
+import { ChartTool } from "./chart"
+ToolRegistry.register({
+  name: "chart",
+  render: ChartTool,
+})
