@@ -38,6 +38,7 @@ export namespace SessionResume {
     id: string
     name: string
     input: unknown
+    status?: "failed" | "error" | "incomplete"
   }
 
   export type ToolResult = {
@@ -599,6 +600,7 @@ export namespace SessionResume {
       const unsupported = content.filter((item) => !isRecord(item) || item.type !== "text").length
       return { content: text.join("\n"), unsupported }
     }
+    if (isRecord(content)) return { content: JSON.stringify(content), unsupported: 0 }
     return { content: String(content ?? ""), unsupported: 0 }
   }
 
@@ -932,7 +934,7 @@ export namespace SessionResume {
 
   function mapAssistantParts(parts: Part[], msgID: string, sesID: string): { parts: Record<string, unknown>[]; dropped: string[] } {
     const now = Date.now()
-    const toolParts: Map<string, { part: Record<string, unknown>; index: number }> = new Map()
+    const toolParts: Map<string, { part: Record<string, unknown>; index: number; status?: ToolCall["status"] }> = new Map()
     const results: Part[] = []
     const out: Record<string, unknown>[] = []
     const dropped: string[] = []
@@ -957,7 +959,7 @@ export namespace SessionResume {
           },
         }
         out.push(p)
-        toolParts.set(part.id, { part: p, index: out.length - 1 })
+        toolParts.set(part.id, { part: p, index: out.length - 1, status: part.status })
       } else if (part.type === "tool_result") {
         results.push(part)
       } else if (part.type === "text") {
@@ -1007,7 +1009,7 @@ export namespace SessionResume {
         tp.state = {
           status: "error" as const,
           input: (tp.state as Record<string, unknown>).input,
-          error: "No result received for this tool call.",
+          error: entry.status ?? "No result received for this tool call.",
           time: { start: now, end: now },
         }
         out[entry.index] = tp

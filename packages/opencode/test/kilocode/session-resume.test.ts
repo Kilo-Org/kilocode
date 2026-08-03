@@ -128,6 +128,16 @@ describe("Claude parseLines", () => {
     expect(SessionResume.parseLines(text).steps[2]?.parts).toEqual([{ type: "text", text: "Continue" }])
   })
 
+  test("normalizes object tool results", () => {
+    const claude = [
+      '{"type":"user","version":"2.42.0","message":{"role":"user","content":[{"type":"text","text":"Start"}]}}',
+      '{"type":"assistant","version":"2.42.0","message":{"role":"assistant","content":[{"type":"tool_use","id":"tool","name":"read","input":{}}]}}',
+      '{"type":"user","version":"2.42.0","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tool","content":{"value":1}}]}}',
+    ].join("\n")
+    const claudeTool = SessionResume.parseLines(claude).steps[1]?.parts.find((part) => part.type === "tool_result")
+    expect(claudeTool).toMatchObject({ content: '{"value":1}' })
+  })
+
   test("reads version from real Claude envelope", () => {
     const text = [
       '{"type":"user","version":"2.42.0","isSidechain":false,"message":{"id":"msg_001","role":"user","content":[{"type":"text","text":"Hello"}]}}',
