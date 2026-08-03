@@ -385,10 +385,21 @@ const AgentManagerContent: Component = () => {
     const sessionID = session.currentSessionID() ?? activePendingId() ?? "new"
     return `${context}:${sessionID}`
   }
+  const forgetSessionFocus = (sessionID: string) => {
+    for (const key of focusMemory.keys()) if (key.endsWith(`:${sessionID}`)) focusMemory.delete(key)
+  }
+  const forgetContextFocus = (context: string) => {
+    for (const key of focusMemory.keys()) if (key.startsWith(`${context}:`)) focusMemory.delete(key)
+  }
+  const forgetTerminalFocus = (terminalID: string) => {
+    for (const [key, owner] of focusMemory) {
+      if (owner !== "prompt" && owner.terminal === terminalID) focusMemory.delete(key)
+    }
+  }
   const rememberPromptFocus = (focused: boolean) => {
     if (focused) focusMemory.set(focusKey(), "prompt")
   }
-  const focusPromptForSession = () =>
+  const focusOnDraftChange = () =>
     focusMemory.get(focusKey()) !== undefined ? focusMemory.get(focusKey()) === "prompt" : true
   const restoreFocus = () => {
     const owner = focusMemory.get(focusKey())
@@ -411,15 +422,6 @@ const AgentManagerContent: Component = () => {
         const key = terms.contextFor(id)
         if (!key || !terms.sidesForContext(key).some((term) => term.id === id)) return
         focusMemory.set(focusKey(), { terminal: id })
-      },
-      { defer: true },
-    ),
-  )
-  createEffect(
-    on(
-      focusKey,
-      (_key, previous) => {
-        if (previous !== undefined) queueMicrotask(restoreFocus)
       },
       { defer: true },
     ),
@@ -1289,7 +1291,10 @@ const AgentManagerContent: Component = () => {
     // Mark sessions loaded as soon as the session context receives data (even if empty)
     const unsubSessions = vscode.onMessage((msg) => {
       if (msg.type === "sessionsLoaded" && !sessionsLoaded()) setSessionsLoaded(true)
-      if (msg.type === "agentManager.sessionClosed") handleCloseTab(msg.sessionId, false)
+      if (msg.type === "agentManager.sessionClosed") {
+        forgetSessionFocus(msg.sessionId)
+        handleCloseTab(msg.sessionId, false)
+      }
     })
     const unsubRun = vscode.onMessage((msg) =>
       applyRunStatus(msg, { ensure: (id) => registry.ensure(id), active: () => registry.active() }),
@@ -1313,6 +1318,7 @@ const AgentManagerContent: Component = () => {
           terms.requestFocus(terminalId)
         }
       },
+      onSideClosed: (_contextKey, terminalId) => forgetTerminalFocus(terminalId),
       onScriptRunning: (contextKey, terminalId) => {
         if (terms.sideKey() !== contextKey) return
         // Setup output is informational: reveal without stealing focus, and
@@ -1855,6 +1861,7 @@ const AgentManagerContent: Component = () => {
     // Second press/click: execute the delete
     if (pendingDelete() === worktreeId) {
       cancelPendingDelete()
+      forgetContextFocus(nsKey(worktreeId))
       setBusyWorktrees((prev) => new Map([...prev, [wt.id, { reason: "deleting" as const }]]))
       vscode.postMessage({ type: "agentManager.deleteWorktree", worktreeId: wt.id })
       if (selection() === wt.id) {
@@ -1994,6 +2001,7 @@ const AgentManagerContent: Component = () => {
         session.clearCurrentSession()
       }
     }
+    forgetSessionFocus(sessionId)
     if (pending || localSet().has(sessionId)) {
       setLocalSessionIDs((prev) => prev.filter((id) => id !== sessionId))
     }
@@ -2555,8 +2563,8 @@ const AgentManagerContent: Component = () => {
                       continueInWorktree={selection() === LOCAL}
                       promptBoxId={`agent-manager:${selection() ?? "unassigned"}`}
                       pendingSessionID={selection() === LOCAL ? activePendingId() : undefined}
-                      focusOnSessionChange={focusPromptForSession}
-                      onPromptFocusChange={rememberPromptFocus}
+                      focusOnDraftChange={focusOnDraftChange}
+                      onFocusChange={rememberPromptFocus}
                     />
                     <Show when={readOnly()}>
                       <div class="am-readonly-banner">

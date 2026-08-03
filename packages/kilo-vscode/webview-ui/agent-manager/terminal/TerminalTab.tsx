@@ -386,7 +386,7 @@ export const TerminalTab: Component<Props> = (props) => {
       const now = props.active
       const serial = props.focusSerial ?? 0
       if (now && (!wasActive || serial !== focusSerial))
-        scheduleRepaint(serial !== focusSerial || props.focusOnActivate !== false)
+        scheduleRepaint((serial > 0 && serial !== focusSerial) || props.focusOnActivate !== false)
       if (!now && wasActive) term.blur()
       wasActive = now
       focusSerial = serial

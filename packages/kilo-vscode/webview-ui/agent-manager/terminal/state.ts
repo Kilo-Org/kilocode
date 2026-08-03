@@ -832,7 +832,7 @@ export interface TerminalMessageHandlerDeps {
   /** Side terminal create failed for a context. */
   onSideError?: (contextKey: string) => void
   /** Side terminal was closed (locally or by the extension). */
-  onSideClosed?: (contextKey: string) => void
+  onSideClosed?: (contextKey: string, terminalId: string) => void
   /** A newly hydrated running script terminal belongs to the selected context. */
   onScriptRunning?: (contextKey: string, terminalId: string) => void
   /** The destination setting changed (live settings sync). */
@@ -903,7 +903,7 @@ export function createTerminalMessageHandler(deps: TerminalMessageHandlerDeps) {
     if (msg.type === "agentManager.terminal.closed") {
       const removed = deps.state.remove(msg.terminalId)
       if (deps.state.activeId() === msg.terminalId) deps.state.setActiveId(undefined)
-      if (removed?.placement === "side") deps.onSideClosed?.(removed.contextKey)
+      if (removed?.placement === "side") deps.onSideClosed?.(removed.contextKey, msg.terminalId)
       return true
     }
     if (msg.type === "agentManager.terminal.error") {
