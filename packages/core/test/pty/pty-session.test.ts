@@ -61,7 +61,7 @@ const waitForEvents = (events: Queue.Queue<PtyEvent>, id: PtyID, count: number) 
     return picked
   }).pipe(
     Effect.timeoutOrElse({
-      duration: "5 seconds",
+      duration: PTY_TEST_TIMEOUT, // kilocode_change
       orElse: () => Effect.fail(new Error("timeout waiting for pty events")),
     }),
   )
@@ -75,15 +75,16 @@ const attachCollecting = Effect.fn("PtySessionTest.attachCollecting")(function* 
     onData: (chunk) => Queue.offerUnsafe(output, chunk),
     onEnd: (event) => Deferred.doneUnsafe(ended, Effect.succeed(event)),
   })
+  if (attachment.replay) Queue.offerUnsafe(output, attachment.replay)
   attachment.activate()
   return { attachment, output, ended }
 })
 
-const waitForOutput = (output: Queue.Queue<string>, text: string, received = "") =>
+const waitForOutput = (output: Queue.Queue<string>, text: string) =>
   Effect.gen(function* () {
-    let value = received
-    while (!value.includes(text)) value += yield* Queue.take(output)
-    return value
+    let received = ""
+    while (!received.includes(text)) received += yield* Queue.take(output)
+    return received
   }).pipe(
     Effect.timeoutOrElse({
       duration: PTY_TEST_TIMEOUT, // kilocode_change
@@ -156,7 +157,7 @@ describe("pty", () => {
       const pty = yield* Pty.Service
       const info = yield* createPty("sh", ["-c", 'sleep 30 & printf "<CHILD:%s>" "$!"; wait'])
       const attached = yield* attachCollecting(info.id)
-      const output = yield* waitForOutput(attached.output, ">", attached.attachment.replay)
+      const output = yield* waitForOutput(attached.output, ">")
       const match = output.match(/<CHILD:(\d+)>/)
       expect(match?.[1]).toBeDefined()
       const pid = Number(match?.[1])
