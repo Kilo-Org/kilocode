@@ -201,6 +201,8 @@ interface SessionContextValue {
   // Model selection (global, extension-lifetime)
   selected: (sessionID?: string) => ModelSelection | null
   configModel: (sessionID?: string) => ModelSelection | null
+  modelForAgent: (agent: string) => ModelSelection | null
+  configModelForAgent: (agent: string) => ModelSelection | null
   selectModel: (providerID: string, modelID: string, sessionID?: string) => void
   hasModelOverride: (sessionID?: string) => boolean
   clearModelOverride: (sessionID?: string) => void
@@ -237,6 +239,7 @@ interface SessionContextValue {
   // Thinking variant for the selected model
   variantList: (sessionID?: string) => string[]
   currentVariant: (sessionID?: string) => string | undefined
+  variantForAgent: (agent: string, model: ModelSelection | null) => string | undefined
   selectVariant: (value: string, sessionID?: string) => void
 
   // Model favorites
@@ -735,6 +738,15 @@ export const SessionProvider: ParentComponent = (props) => {
     return resolveModel(agentName)
   }
 
+  function modelForAgent(agentName: string): ModelSelection | null {
+    const override = shouldClearModeModelSelection(agentName) ? null : store.modelSelections[agentName]
+    return resolveModel(agentName, override)
+  }
+
+  function configModelForAgent(agentName: string): ModelSelection | null {
+    return resolveModel(agentName)
+  }
+
   /** True when the active model differs from what the config dictates. */
   function hasModelOverride(sessionID?: string) {
     const sel = selected(sessionID)
@@ -876,6 +888,13 @@ export const SessionProvider: ParentComponent = (props) => {
     const model = provider.findModel(sel)
     if (!model?.variants) return []
     return Object.keys(model.variants)
+  }
+
+  function variantForAgent(agentName: string, sel: ModelSelection | null) {
+    if (!sel) return undefined
+    const model = provider.findModel(sel)
+    if (!model?.variants) return undefined
+    return getVariant(store.variantSelections, sel, Object.keys(model.variants), agentName)
   }
 
   const currentVariant = (sessionID?: string) => {
@@ -2947,6 +2966,8 @@ export const SessionProvider: ParentComponent = (props) => {
     scopedSuggestions,
     selected,
     configModel,
+    modelForAgent,
+    configModelForAgent,
     selectModel,
     hasModelOverride,
     clearModelOverride,
@@ -2993,6 +3014,7 @@ export const SessionProvider: ParentComponent = (props) => {
     toggleFavorite,
     variantList,
     currentVariant,
+    variantForAgent,
     selectVariant,
     revert,
     revertedCount,

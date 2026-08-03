@@ -149,6 +149,16 @@ describe("per-session model selection", () => {
 })
 
 describe("per-mode model memory", () => {
+  it("resolves a specific mode's remembered model without a session", () => {
+    let store = emptyStore()
+    const e = env()
+
+    const result = applyModel(store, "ask", gpt, undefined)
+    store = { ...store, ...result }
+
+    expect(getSelected(store, e, undefined, "ask")).toEqual(gpt)
+  })
+
   it("applyModel in a session writes only to sessionOverrides", () => {
     const store = emptyStore()
     const result = applyModel(store, "code", claude, "session-a")
