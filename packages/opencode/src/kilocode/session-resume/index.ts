@@ -71,6 +71,7 @@ export namespace SessionResume {
     version: number
     steps: Step[]
     unsupported: number
+    sourceModel?: { providerID: string; modelID: string }
   }
 
   // ── Errors ────────────────────────────────────────────────────────
@@ -279,8 +280,9 @@ export namespace SessionResume {
       if (version !== SUPPORTED_CLAUDE_MAJOR) {
         throw new ParseError(`Unsupported Claude major version: ${version}`)
       }
+      const model = extractClaudeModel(objects)
       const { steps, unsupported } = parseClaudeSteps(objects)
-      return { format, version, steps, unsupported }
+      return { format, version, steps, unsupported, sourceModel: model }
     }
 
     const version = readCodexVersion(objects)
@@ -290,8 +292,9 @@ export namespace SessionResume {
     if (version !== SUPPORTED_CODEX_MAJOR) {
       throw new ParseError(`Unsupported Codex major version: ${version}`)
     }
+    const model = extractCodexModel(objects)
     const { steps, unsupported } = parseCodexSteps(objects)
-    return { format, version, steps, unsupported }
+    return { format, version, steps, unsupported, sourceModel: model }
   }
 
   // ── Version reading ───────────────────────────────────────────────
@@ -323,6 +326,45 @@ export namespace SessionResume {
       const major = parseInt(verStr.split(".")[0], 10)
       if (!isNaN(major)) return major
     }
+  }
+
+  function extractClaudeModel(objects: unknown[]): { providerID: string; modelID: string } | undefined {
+    for (const obj of objects) {
+      if (!isRecord(obj)) continue
+      const topType = obj.type
+      if (topType !== "user" && topType !== "assistant") continue
+      const message = obj.message
+      if (!isRecord(message)) continue
+      const model = message.model
+      if (typeof model === "string" && model.length > 0) {
+        return { providerID: "anthropic", modelID: model }
+      }
+    }
+  }
+
+  function extractCodexModel(objects: unknown[]): { providerID: string; modelID: string } | undefined {
+    let provider: string | undefined
+    let model: string | undefined
+
+    for (const obj of objects) {
+      if (!isRecord(obj)) continue
+
+      if (obj.type === "session_meta") {
+        const payload = obj.payload
+        if (!isRecord(payload)) continue
+        const mp = payload.model_provider
+        if (typeof mp === "string" && mp.length > 0) provider = mp
+      }
+
+      if (obj.type === "turn_context") {
+        const payload = obj.payload
+        if (!isRecord(payload)) continue
+        const m = payload.model
+        if (typeof m === "string" && m.length > 0) model = m
+      }
+    }
+
+    if (provider && model) return { providerID: provider, modelID: model }
   }
 
   // ── Tool call error marking ────────────────────────────────────────
@@ -758,5 +800,297 @@ export namespace SessionResume {
       .filter((c): c is Record<string, unknown> => isRecord(c) && c.type === "summary_text")
       .map((c) => String((c as Record<string, unknown>).text ?? ""))
       .join("")
+  }
+
+  // ── Mapping ────────────────────────────────────────────────────────
+
+  const IMPORT_NOTICE = "---\n*This conversation was imported from an external session. Some tool outputs and context may not be fully represented.*"
+
+  export type MappedMessage = {
+    info: Record<string, any>
+    parts: Record<string, any>[]
+  }
+
+  /**
+   * Map a parsed Transcript to ordered message info + part records ready for
+   * session write. Uses ascending IDs in transcript order.
+   */
+  export function mapTranscript(
+    transcript: Transcript,
+    opts: {
+      sessionID: string
+      agent: string
+      providerID: string
+      modelID: string
+      directory: string
+      worktree: string
+      sourceModel?: { providerID: string; modelID: string }
+    },
+  ): { messages: MappedMessage[]; dropped: string[] } {
+    idCounter = 0
+    const msgs: MappedMessage[] = []
+    const dropped: string[] = []
+
+    for (const step of transcript.steps) {
+      if (step.role === "user") {
+        const info = {
+          id: id("message"),
+          sessionID: opts.sessionID,
+          role: "user" as const,
+          time: { created: Date.now() },
+          agent: opts.agent,
+          model: { providerID: opts.providerID, modelID: opts.modelID },
+        }
+        const { parts, dropped: d } = mapUserParts(step.parts, info.id, opts.sessionID)
+        dropped.push(...d)
+        msgs.push({ info, parts })
+      } else {
+        // assistant
+        const parentID = lastUserID(msgs)
+        const src = opts.sourceModel ?? { providerID: opts.providerID, modelID: opts.modelID }
+        const now = Date.now()
+        const info = {
+          id: id("message"),
+          sessionID: opts.sessionID,
+          role: "assistant" as const,
+          parentID,
+          time: { created: now, completed: now },
+          mode: opts.agent,
+          agent: opts.agent,
+          cost: 0,
+          tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+          modelID: src.modelID,
+          providerID: src.providerID,
+          path: { cwd: opts.directory, root: opts.worktree },
+          finish: "stop" as const,
+        }
+        const { parts, dropped: d } = mapAssistantParts(step.parts, info.id, opts.sessionID)
+        dropped.push(...d)
+        msgs.push({ info, parts })
+      }
+    }
+
+    // Append the ignored import notice to the final assistant.
+    attachNotice(msgs, transcript.unsupported, dropped, opts)
+
+    return { messages: msgs, dropped }
+  }
+
+  let idCounter = 0
+  function id(prefix: "message" | "part"): string {
+    idCounter++
+    return `__resume_${prefix}_${idCounter}`
+  }
+
+  function lastUserID(msgs: MappedMessage[]): string {
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      const info = msgs[i].info
+      if (info.role === "user" && typeof info.id === "string") return info.id
+    }
+    return ""
+  }
+
+  function lastAssistantID(msgs: MappedMessage[]): string {
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      const info = msgs[i].info
+      if (info.role === "assistant" && typeof info.id === "string") return info.id
+    }
+    return ""
+  }
+
+  function mapUserParts(parts: Part[], msgID: string, sesID: string): { parts: Record<string, unknown>[]; dropped: string[] } {
+    const out: Record<string, unknown>[] = []
+    const dropped: string[] = []
+    for (const part of parts) {
+      const base = { id: id("part"), messageID: msgID, sessionID: sesID }
+      if (part.type === "text") {
+        out.push({ ...base, type: "text", text: part.text })
+      } else if (part.type === "tool_result") {
+        out.push({
+          ...base,
+          type: "text",
+          text: `Tool result for ${part.callID}: ${part.content}`,
+          synthetic: true,
+        })
+      } else if (part.type === "unsupported") {
+        dropped.push(part.reason)
+      } else if (part.type === "error") {
+        dropped.push(`error: ${part.message}`)
+      }
+      // reasoning, tool_call in user messages are ignored (should not happen)
+    }
+    return { parts: out, dropped }
+  }
+
+  function mapAssistantParts(parts: Part[], msgID: string, sesID: string): { parts: Record<string, unknown>[]; dropped: string[] } {
+    const now = Date.now()
+    const toolParts: Map<string, { part: Record<string, unknown>; index: number }> = new Map()
+    const results: Part[] = []
+    const out: Record<string, unknown>[] = []
+    const dropped: string[] = []
+    const base = (): { id: string; messageID: string; sessionID: string } => ({
+      id: id("part"),
+      messageID: msgID,
+      sessionID: sesID,
+    })
+
+    // Pass 1: collect tool calls + results, emit non-tool parts
+    for (const part of parts) {
+      if (part.type === "tool_call") {
+        const p = {
+          ...base(),
+          type: "tool",
+          callID: part.id || `tc_${toolParts.size}`,
+          tool: part.name,
+          state: {
+            status: "running" as const,
+            input: isRecord(part.input) ? part.input : { raw: part.input },
+            time: { start: now },
+          },
+        }
+        out.push(p)
+        toolParts.set(part.id, { part: p, index: out.length - 1 })
+      } else if (part.type === "tool_result") {
+        results.push(part)
+      } else if (part.type === "text") {
+        out.push({ ...base(), type: "text", text: part.text })
+      } else if (part.type === "reasoning") {
+        out.push({ ...base(), type: "reasoning", text: part.text, time: { start: now } })
+      } else if (part.type === "unsupported") {
+        dropped.push(part.reason)
+      } else if (part.type === "error") {
+        dropped.push(`error: ${part.message}`)
+      }
+    }
+
+    // Pass 2: pair results with tool calls
+    for (const item of results) {
+      const result = item as ToolResult
+      const entry = toolParts.get(result.callID)
+      if (entry) {
+        const tp = entry.part
+        if (result.error) {
+          tp.state = {
+            status: "error" as const,
+            input: (tp.state as Record<string, unknown>).input,
+            error: result.content || "Tool call returned an error.",
+            time: { start: now, end: now },
+          }
+        } else {
+          tp.state = {
+            status: "completed" as const,
+            input: (tp.state as Record<string, unknown>).input,
+            output: result.content,
+            title: (tp as Record<string, unknown>).tool as string,
+            metadata: {},
+            time: { start: now, end: now },
+          }
+        }
+        out[entry.index] = tp
+      } else {
+        out.push({ ...base(), type: "text", text: `Tool result: ${result.content}`, synthetic: true })
+      }
+    }
+
+    // Mark any still-running tool calls as error
+    for (const entry of toolParts.values()) {
+      const tp = entry.part
+      if ((tp.state as Record<string, unknown>).status === "running") {
+        tp.state = {
+          status: "error" as const,
+          input: (tp.state as Record<string, unknown>).input,
+          error: "No result received for this tool call.",
+          time: { start: now, end: now },
+        }
+        out[entry.index] = tp
+      }
+    }
+
+    return { parts: out, dropped }
+  }
+
+  function attachNotice(
+    msgs: MappedMessage[],
+    unsupported: number,
+    dropped: string[],
+    opts: {
+      sessionID: string
+      agent: string
+      providerID: string
+      modelID: string
+      directory: string
+      worktree: string
+    },
+  ) {
+    const lines: string[] = [IMPORT_NOTICE]
+    if (unsupported > 0) lines.push(`${unsupported} unsupported item(s) were skipped during import.`)
+    if (dropped.length > 0) {
+      const unique = [...new Set(dropped)]
+      lines.push(`Dropped unsupported content: ${unique.join(", ")}.`)
+    }
+    const text = lines.join("\n\n")
+
+    const last = msgs.at(-1)
+    if (last?.info.role === "assistant") {
+      // Append notice to the last assistant
+      last.parts.push({
+        id: id("part"),
+        messageID: last.info.id as string,
+        sessionID: opts.sessionID,
+        type: "text",
+        text,
+        synthetic: true,
+        ignored: true,
+      })
+      return
+    }
+
+    // No assistant yet — create a complete notice-only assistant after the last user
+    const parent = lastUserID(msgs)
+    const info = {
+      id: id("message"),
+      sessionID: opts.sessionID,
+      role: "assistant" as const,
+      parentID: parent,
+      time: { created: Date.now(), completed: Date.now() },
+      mode: opts.agent,
+      agent: opts.agent,
+      cost: 0,
+      tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+      modelID: opts.modelID,
+      providerID: opts.providerID,
+      path: { cwd: opts.directory, root: opts.worktree },
+      finish: "stop" as const,
+    }
+    const parts = [
+      {
+        id: id("part"),
+        messageID: info.id,
+        sessionID: opts.sessionID,
+        type: "text" as const,
+        text,
+        synthetic: true,
+        ignored: true,
+      },
+    ]
+    msgs.push({ info, parts })
+  }
+
+  // ── Command definitions ────────────────────────────────────────────
+
+  export const resumeClaude = {
+    name: "resume-claude",
+    description: "import a Claude Code session transcript",
+    source: "command" as const,
+    template: "",
+    hints: ["$ARGUMENTS"],
+  }
+
+  export const resumeCodex = {
+    name: "resume-codex",
+    description: "import an OpenAI Codex session transcript",
+    source: "command" as const,
+    template: "",
+    hints: ["$ARGUMENTS"],
   }
 }

@@ -1,6 +1,7 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import path from "path"
+import fs from "node:fs" // kilocode_change
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import os from "os"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
@@ -86,6 +87,7 @@ import { SessionReminders } from "./reminders"
 import { SessionTools } from "./tools"
 import { LLMEvent } from "@opencode-ai/llm"
 import { RepositoryCache } from "@opencode-ai/core/repository-cache" // kilocode_change
+import { SessionResume } from "@/kilocode/session-resume" // kilocode_change
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -1941,6 +1943,262 @@ export const layer = Layer.effect(
       )
     })
 
+    // kilocode_change start - resume command handler
+    const isResumeCommand = (name: string): SessionResume.Format | undefined => {
+      if (name === "resume-claude") return "claude"
+      if (name === "resume-codex") return "codex"
+      return undefined
+    }
+
+    const handleResume = Effect.fn("SessionPrompt.handleResume")(function* (input: {
+      cmdInput: CommandInput
+      format: SessionResume.Format
+    }) {
+      const ctx = yield* InstanceState.context
+      const session = yield* sessions.get(input.cmdInput.sessionID).pipe(Effect.orDie)
+
+      // Reject nonempty sessions
+      const msgs = yield* sessions.messages({ sessionID: input.cmdInput.sessionID }).pipe(Effect.orDie)
+      if (msgs.length > 0) {
+        const error = new NamedError.Unknown({
+          message: "Start a new Kilo session, then run the resume command again.",
+        })
+        yield* events.publish(Session.Event.Error, { sessionID: input.cmdInput.sessionID, error: error.toObject() })
+        throw error
+      }
+
+      // Resolve agent
+      const agentName = input.cmdInput.agent
+      const agent = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo()
+      if (!agent) {
+        const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
+        const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
+        const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` })
+        yield* events.publish(Session.Event.Error, { sessionID: input.cmdInput.sessionID, error: error.toObject() })
+        throw error
+      }
+      yield* agents.guardRequirements(agent)
+
+      // Resolve model
+      const model = yield* Effect.gen(function* () {
+        if (input.cmdInput.model) return Provider.parseModel(input.cmdInput.model)
+        if (agent.model) return agent.model
+        return yield* currentModel(input.cmdInput.sessionID)
+      })
+      yield* getModel(model.providerID, model.modelID, input.cmdInput.sessionID)
+
+      const trimmed = input.cmdInput.arguments.trim()
+      let uuid: string
+
+      if (trimmed.length === 0) {
+        // Show question picker: discover sessions of the requested format only
+        const cwd = ctx.directory
+        const claudeFiles = input.format === "claude"
+          ? (() => { try { return SessionResume.discoverClaude({ cwd }) } catch { return [] } })()
+          : []
+        const codexExit = input.format === "codex"
+          ? yield* Effect.exit(Effect.promise(() => SessionResume.discoverCodex({ cwd })))
+          : undefined
+        const codexFiles = (codexExit && Exit.isSuccess(codexExit)) ? codexExit.value : []
+
+        type Entry = { id: string; format: SessionResume.Format; mtime?: number }
+        const entries: Entry[] = []
+        for (const f of claudeFiles) {
+          const id = path.basename(f, ".jsonl")
+          let mtime: number | undefined
+          try { mtime = fs.statSync(f).mtimeMs } catch { /* unreadable */ }
+          entries.push({ id, format: "claude", mtime })
+        }
+        for (const f of codexFiles) {
+          const base = path.basename(f, ".jsonl")
+          // Derive UUID from final -<uuid> segment: rollout-YYYY-MM-DDTHH-MM-SS-<uuid>
+          const raw = base.slice("rollout-".length)
+          const id = raw.split("-").slice(-5).join("-")
+          let mtime: number | undefined
+          try { mtime = fs.statSync(f).mtimeMs } catch { /* unreadable */ }
+          entries.push({ id, format: "codex", mtime })
+        }
+
+        if (entries.length === 0) {
+          const error = new NamedError.Unknown({
+            message: "No session transcripts found in the current directory. Use /resume-claude <uuid> or /resume-codex <uuid> with an explicit UUID.",
+          })
+          yield* events.publish(Session.Event.Error, { sessionID: input.cmdInput.sessionID, error: error.toObject() })
+          throw error
+        }
+
+        // Limit and format labels: UUID only, ISO mtime as description
+        const display = entries.slice(0, 10)
+        const options = display.map((e) => {
+          const timeLabel = e.mtime ? new Date(e.mtime).toISOString() : "unknown time"
+          return {
+            label: e.id,
+            description: timeLabel,
+          }
+        })
+
+        const answers = yield* question.ask({
+          sessionID: input.cmdInput.sessionID,
+          questions: [
+            {
+              question: `Which recent ${input.format === "claude" ? "Claude Code" : "Codex"} session do you want to resume?`,
+              header: "Resume session",
+              options,
+              multiple: false,
+              custom: false,
+            },
+          ],
+          blocking: true,
+        })
+        const pickerAnswer = answers[0]?.[0]
+        if (pickerAnswer === undefined || pickerAnswer === "") {
+          throw new NamedError.Unknown({ message: "No session selected." })
+        }
+        const pickerIdx = options.findIndex((o) => o.label === pickerAnswer)
+        if (pickerIdx < 0 || pickerIdx >= display.length) {
+          const error = new NamedError.Unknown({
+            message: `Invalid selection: "${pickerAnswer}"`,
+          })
+          yield* events.publish(Session.Event.Error, { sessionID: input.cmdInput.sessionID, error: error.toObject() })
+          throw error
+        }
+        uuid = display[pickerIdx].id
+      } else {
+        uuid = trimmed
+      }
+
+      // Validate UUID
+      if (!SessionResume.isUUID(uuid)) {
+        const error = new NamedError.Unknown({
+          message: `Invalid UUID: ${uuid}`,
+        })
+        yield* events.publish(Session.Event.Error, { sessionID: input.cmdInput.sessionID, error: error.toObject() })
+        throw error
+      }
+
+      // Discover and parse
+      const cwd = ctx.directory
+      const codexExit = input.format === "codex"
+        ? yield* Effect.exit(Effect.promise(() => SessionResume.discoverCodex({ cwd, id: uuid })))
+        : undefined
+      const file = input.format === "claude"
+        ? (() => { try { return SessionResume.discoverClaude({ cwd, id: uuid })[0] } catch { return undefined } })()
+        : (codexExit && Exit.isSuccess(codexExit) ? codexExit.value[0] : undefined)
+
+      if (!file) {
+        const error = new NamedError.Unknown({
+          message: `No ${input.format === "claude" ? "Claude Code" : "OpenAI Codex"} session found with UUID: ${uuid}`,
+        })
+        yield* events.publish(Session.Event.Error, { sessionID: input.cmdInput.sessionID, error: error.toObject() })
+        throw error
+      }
+
+      const parseExit = yield* Effect.exit(
+        Effect.tryPromise({
+          try: () => SessionResume.parse(file),
+          catch: (err) => {
+            const msg = err instanceof Error ? err.message : String(err)
+            return new NamedError.Unknown({ message: `Failed to parse session transcript: ${msg}` })
+          },
+        }),
+      )
+
+      if (Exit.isFailure(parseExit)) {
+        const err = Cause.squash(parseExit.cause)
+        if (err instanceof NamedError.Unknown) {
+          yield* events.publish(Session.Event.Error, { sessionID: input.cmdInput.sessionID, error: err.toObject() })
+        }
+        return yield* Effect.failCause(parseExit.cause)
+      }
+
+      const transcript = parseExit.value
+
+      // Reject transcripts without a real user
+      const hasRealUser = transcript.steps.some(
+        (s) => s.role === "user" && s.parts.some((p) => p.type === "text" && p.text.trim().length > 0),
+      )
+      if (!hasRealUser) {
+        const error = new NamedError.Unknown({
+          message: "The transcript contains no user messages. Nothing was imported.",
+        })
+        yield* events.publish(Session.Event.Error, { sessionID: input.cmdInput.sessionID, error: error.toObject() })
+        throw error
+      }
+
+      // Map transcript to messages
+      const { messages: mapped } = SessionResume.mapTranscript(transcript, {
+        sessionID: input.cmdInput.sessionID,
+        agent: agent.name,
+        providerID: model.providerID,
+        modelID: model.modelID,
+        directory: ctx.directory,
+        worktree: ctx.worktree,
+        sourceModel: transcript.sourceModel,
+      })
+
+      // Reject every assistant before a real user parent before any write
+      if (mapped.length > 0 && mapped[0].info.role !== "user") {
+        const error = new NamedError.Unknown({
+          message: "Transcript starts with an assistant message. The first message must be from a user.",
+        })
+        yield* events.publish(Session.Event.Error, { sessionID: input.cmdInput.sessionID, error: error.toObject() })
+        throw error
+      }
+
+      // Write messages and parts in order with ascending IDs
+      const idMap = new Map<string, string>()
+
+      for (const item of mapped) {
+        const newID = MessageID.ascending()
+        idMap.set(item.info.id as string, newID)
+
+        const parentID = item.info.role === "assistant"
+          ? (typeof item.info.parentID === "string" ? idMap.get(item.info.parentID) : undefined)
+          : undefined
+
+        const info = {
+          ...item.info,
+          id: newID,
+          sessionID: input.cmdInput.sessionID,
+          ...(parentID && { parentID }),
+        } as SessionV1.Info
+
+        yield* sessions.updateMessage(info)
+
+        for (const part of item.parts) {
+          const partID = PartID.ascending()
+          const p = {
+            ...part,
+            id: partID,
+            messageID: newID,
+            sessionID: input.cmdInput.sessionID,
+          } as SessionV1.Part
+          yield* sessions.updatePart(p)
+        }
+      }
+
+      yield* sessions.touch(input.cmdInput.sessionID)
+
+      // Build result from the final assistant
+      const resultMsgs = yield* sessions.messages({ sessionID: input.cmdInput.sessionID }).pipe(Effect.orDie)
+      const last = resultMsgs.findLast((m) => m.info.role === "assistant")
+      if (!last) {
+        const error = new NamedError.Unknown({ message: "No assistant message found after resume import" })
+        yield* events.publish(Session.Event.Error, { sessionID: input.cmdInput.sessionID, error: error.toObject() })
+        return yield* Effect.die(error)
+      }
+
+      yield* events.publish(Command.Event.Executed, {
+        name: input.cmdInput.command,
+        sessionID: input.cmdInput.sessionID,
+        arguments: input.cmdInput.arguments,
+        messageID: last.info.id,
+      })
+
+      return last
+    })
+    // kilocode_change end
+
     const command = Effect.fn("SessionPrompt.command")(function* (input: CommandInput) {
       yield* Effect.logInfo("command", {
         "session.id": input.sessionID,
@@ -1958,6 +2216,12 @@ export const layer = Layer.effect(
         throw error
       }
       const agentName = cmd.agent ?? input.agent
+      // kilocode_change start - resume commands import external transcripts
+      const fmt = isResumeCommand(input.command)
+      if (fmt) {
+        return yield* handleResume({ cmdInput: input, format: fmt }).pipe(Effect.catch(Effect.die))
+      }
+      // kilocode_change end
       // kilocode_change start - deprecated review aliases should display a static notice without an LLM turn
       const legacy = legacyReviewMessage(input.command)
       if (legacy) {
