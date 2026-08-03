@@ -66,13 +66,13 @@ export namespace RemoteAttachments {
     sql: "text/plain",
   }
   export const BINARY_MIME = "application/octet-stream"
-  // Hard cap on attachment bytes (5 MB + 1 byte so the helper aborts
+  // Hard cap on attachment bytes (20 MB + 1 byte so the helper aborts
   // strictly when the body exceeds the agreed ceiling).
-  export const MAX_BYTES = 5 * 1024 * 1024 + 1
+  export const MAX_BYTES = 20 * 1024 * 1024 + 1
   // Per-attachment fetch budget. R2 presigned GETs in the same region
-  // complete in tens of ms; 15s is generous but bounded so a stalled
-  // connection can never hold the prompt open indefinitely.
-  export const FETCH_TIMEOUT_MS = 15_000
+  // complete quickly, but a 20 MB body may take a few seconds on slower
+  // mobile connections, so the budget is generous.
+  export const FETCH_TIMEOUT_MS = 60_000
   export const SCRATCH_DIRNAME = "remote-attachments"
 
   export type Fetcher = (input: string, init?: RequestInit) => Promise<Response>
@@ -194,7 +194,7 @@ export namespace RemoteAttachments {
    *   - HTTPS only
    *   - redirects rejected
    *   - no credentials forwarded
-   *   - body bounded to 5 MB + 1 byte
+   *   - body bounded to 20 MB + 1 byte
    *   - bounded timeout
    *   - non-2xx rejected
    */
@@ -338,7 +338,7 @@ export namespace RemoteAttachments {
               type: "text" as const,
               text:
                 `attachment saved to ${target} (filename: ${filename ?? basename}, mime: ${BINARY_MIME}, size: ${bytes.byteLength} bytes). ` +
-                `Use the read tool on that path to inspect it.`,
+                `Inspect it with the read tool (text content) or shell utilities (binary content).`,
             })
             continue
           }
