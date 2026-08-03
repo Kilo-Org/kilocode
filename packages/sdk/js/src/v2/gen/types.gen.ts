@@ -3231,6 +3231,17 @@ export type AgentRequirementResult = {
   }
 }
 
+export type CommandFile = {
+  name: string
+  description?: string
+  source?: string
+  builtin: boolean
+  location: string
+  editable: boolean
+  content?: string
+  hints: Array<string>
+}
+
 export type NotebookOutput = {
   mime: string
   text?: string
@@ -12537,6 +12548,64 @@ export type KilocodeAgentRequirementsResponses = {
 
 export type KilocodeAgentRequirementsResponse =
   KilocodeAgentRequirementsResponses[keyof KilocodeAgentRequirementsResponses]
+
+export type KilocodeCommandFilesData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/command/files"
+}
+
+export type KilocodeCommandFilesErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeCommandFilesError = KilocodeCommandFilesErrors[keyof KilocodeCommandFilesErrors]
+
+export type KilocodeCommandFilesResponses = {
+  /**
+   * Command files
+   */
+  200: Array<CommandFile>
+}
+
+export type KilocodeCommandFilesResponse = KilocodeCommandFilesResponses[keyof KilocodeCommandFilesResponses]
+
+export type KilocodeRemoveCommandData = {
+  body?: {
+    location: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/command/remove"
+}
+
+export type KilocodeRemoveCommandErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+}
+
+export type KilocodeRemoveCommandError = KilocodeRemoveCommandErrors[keyof KilocodeRemoveCommandErrors]
+
+export type KilocodeRemoveCommandResponses = {
+  /**
+   * Command removed
+   */
+  200: boolean
+}
+
+export type KilocodeRemoveCommandResponse = KilocodeRemoveCommandResponses[keyof KilocodeRemoveCommandResponses]
 
 export type KilocodeRemoveSkillData = {
   body?: {

@@ -17,6 +17,7 @@ import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.CommandDto
+import ai.kilocode.rpc.dto.CommandFileDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
@@ -665,6 +666,23 @@ object KiloCliDataParser {
                 source = obj.str("source"),
                 hints = obj["hints"].arr()?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
                 template = obj.str("template"),
+            )
+        }
+
+    fun parseAgentBehaviorCommandFiles(raw: String): List<CommandFileDto> =
+        raw.array().mapNotNull { item ->
+            val obj = item.obj() ?: return@mapNotNull null
+            val name = obj.str("name") ?: return@mapNotNull null
+            val location = obj.str("location") ?: return@mapNotNull null
+            CommandFileDto(
+                name = name,
+                description = obj.str("description"),
+                source = obj.str("source"),
+                builtin = obj.bool("builtin"),
+                location = location,
+                editable = obj.bool("editable"),
+                content = obj.str("content"),
+                hints = obj["hints"].arr()?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
             )
         }
 
