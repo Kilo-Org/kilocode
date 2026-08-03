@@ -29,6 +29,7 @@ import { ThinkingSelectorBase } from "../components/shared/ThinkingSelector"
 import { createSignal, onCleanup, onMount, type JSX } from "solid-js"
 import type { WorktreeFileDiff, WorktreeState, WorktreeGitStats, PRStatus } from "../types/messages"
 import type { ReviewComment } from "../../diff-viewer/review-comments"
+import { createModeRouter } from "../../agent-manager/mode-router"
 import "../../agent-manager/agent-manager.css"
 import "../../agent-manager/agent-manager-review.css"
 
@@ -1292,6 +1293,7 @@ export const MultiProjectSidebar: Story = {
       <StoryProviders noPadding>
         <div style={{ display: "flex", "flex-direction": "column", "max-height": "720px", overflow: "auto" }}>
           <ProjectList
+            mode={createModeRouter()}
             projects={[projectA, projectB]}
             states={{
               [projectA.id]: projectState(
