@@ -54,6 +54,7 @@ export interface FileWatchSubscription {
 export type FileWatchSubscribe = (
   directory: string,
   onEvents: (events: readonly FileWatchEvent[]) => void,
+  ignore: readonly string[],
 ) => Promise<FileWatchSubscription>
 
 function watcherBackend(): ParcelWatcher.BackendType | undefined {
@@ -85,8 +86,9 @@ function loadParcelWatcher(): typeof import("@parcel/watcher") | undefined {
   return parcelModule ?? undefined
 }
 
-// Prune the largest excluded directories from the native watch. Per-repo
-// .gitignore/.kilocodeignore are enforced in shouldIndex(), not pruned here.
+// Kilo's always-ignored infrastructure dirs as globs the native watcher prunes.
+// Per-repo .gitignore/.kilocodeignore dirs are unioned in initialize() from the
+// ignore matcher; correctness for indexed files stays in shouldIndex().
 function watcherIgnoreGlobs(): string[] {
   return FileIgnore.PATTERNS.map((pattern) => (pattern.includes("/") ? pattern : `**/${pattern}`))
 }
@@ -104,12 +106,22 @@ function withSubscribeTimeout(
     }, PARCEL_SUBSCRIBE_TIMEOUT_MS)
     timer.unref()
   })
-  // Tear down a subscription that only resolves after we have already given up.
-  void pending
-    .then((subscription) => (timedOut ? subscription.unsubscribe() : undefined))
-    .catch((err) => {
-      if (timedOut) log.warn("failed to tear down late file watcher subscription", { err, workspacePath: directory })
-    })
+  // Reconcile a subscription that only settles after we've already given up:
+  // tear a live one down, or note that the subscribe itself failed — without
+  // mislabeling one as the other.
+  void pending.then(
+    (subscription) => {
+      if (!timedOut) return
+      void subscription
+        .unsubscribe()
+        .catch((err) =>
+          log.warn("failed to tear down late file watcher subscription", { err, workspacePath: directory }),
+        )
+    },
+    (err) => {
+      if (timedOut) log.warn("file watcher subscribe failed after the timeout", { err, workspacePath: directory })
+    },
+  )
   return Promise.race([pending, timeout]).finally(() => {
     if (timer) clearTimeout(timer)
   })
@@ -117,7 +129,7 @@ function withSubscribeTimeout(
 
 // @parcel/watcher subscribes without a blocking initial walk (reporting only
 // future changes), so it does not stall startup the way chokidar did under bun.
-const parcelSubscribe: FileWatchSubscribe = (directory, onEvents) => {
+const parcelSubscribe: FileWatchSubscribe = (directory, onEvents, ignore) => {
   const parcel = loadParcelWatcher()
   if (!parcel) {
     return Promise.reject(new Error("native file watcher backend (@parcel/watcher) is unavailable"))
@@ -131,7 +143,7 @@ const parcelSubscribe: FileWatchSubscribe = (directory, onEvents) => {
       }
       onEvents(events)
     },
-    { ignore: watcherIgnoreGlobs(), backend: watcherBackend() },
+    { ignore: [...ignore], backend: watcherBackend() },
   )
   return withSubscribeTimeout(pending, directory)
 }
@@ -240,17 +252,39 @@ export class FileWatcher implements IFileWatcher {
 
     log.info("initializing file watcher", { workspacePath: this.workspacePath })
 
-    this.ready = this.subscribeFn(this.workspacePath, this.onWatchEvents)
-      .then((subscription) => {
+    // Prune Kilo's infra dirs plus (best-effort) the per-repo gitignored dirs
+    // from the native watch, so a large repo doesn't exhaust inotify descriptors
+    // (ENOSPC) watching trees we never index.
+    const ignore = [...new Set([...watcherIgnoreGlobs(), ...(this.ignoreInstance?.watchIgnoreGlobs?.() ?? [])])]
+
+    const ready = this.subscribeFn(this.workspacePath, this.onWatchEvents, ignore).then(
+      (subscription) => {
+        // If shutdown()/dispose() cleared this.ready, or a newer initialize()
+        // superseded us while subscribing, don't store this subscription — it
+        // would leak and keep feeding accumulatedEvents. Tear it down instead.
+        if (this.ready !== ready) {
+          void subscription
+            .unsubscribe()
+            .catch((err) =>
+              log.error("failed to unsubscribe superseded file watcher", { err, workspacePath: this.workspacePath }),
+            )
+          return
+        }
         this.subscription = subscription
         log.info("file watcher subscribed", { workspacePath: this.workspacePath })
-      })
-      .catch((error) => {
+      },
+      (error) => {
+        // The watcher only powers incremental updates, so degrade to a warning
+        // and let the full scan proceed. Clear this.ready (when still current)
+        // so a later run retries a transient failure such as inotify ENOSPC.
+        if (this.ready === ready) this.ready = undefined
         log.warn("file watcher unavailable; continuing without incremental updates", {
           workspacePath: this.workspacePath,
           err: error,
         })
-      })
+      },
+    )
+    this.ready = ready
     await this.ready
   }
 
