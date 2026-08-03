@@ -9,6 +9,8 @@ import { KilocodeConfigOverlay } from "../../../src/kilocode/config/overlay"
 import { KilocodeConfigWriter } from "../../../src/kilocode/config/writer"
 import { Permission } from "../../../src/permission"
 import { PtyPaths } from "../../../src/server/routes/instance/httpapi/groups/pty"
+import { SessionPaths } from "../../../src/server/routes/instance/httpapi/groups/session"
+import { SandboxStore } from "../../../src/kilocode/sandbox/store"
 import type { Session } from "../../../src/session/session"
 import { Filesystem } from "../../../src/util/filesystem"
 import { resetDatabase } from "../../fixture/db"
@@ -620,41 +622,38 @@ describe("config overlay routes", () => {
     expect(saved.mcp).toEqual({ shared: { enabled: false } })
   })
 
-  test.serial(
-    "refreshes effective config after project permission update",
-    async () => {
-      await using global = await tmpdir()
-      await using project = await tmpdir()
-      await setGlobal(global.path, { permission: { edit: "allow" } })
+  test.serial("refreshes effective config after project permission update", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    await setGlobal(global.path, { permission: { edit: "allow" } })
 
-      const before = await json<Agent[]>(await req(project.path, "/agent"))
-      expect(
-        Permission.evaluate("edit", "*", before.find((item) => item.name === "code")?.permission ?? []).action,
-      ).toBe("allow")
+    const before = await json<Agent[]>(await req(project.path, "/agent"))
+    expect(Permission.evaluate("edit", "*", before.find((item) => item.name === "code")?.permission ?? []).action).toBe(
+      "allow",
+    )
 
-      await json(
-        await req(project.path, "/config/overlay", {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ scope: "project", set: { permission: { edit: { "*": "ask" } } } }),
-        }),
-      )
-      const body = await json<Overlay & { effective: { permission: Record<string, string | Record<string, string>> } }>(
-        await req(project.path, "/config/overlay?scope=project"),
-      )
-      const edit = body.effective.permission.edit
-      const after = await json<Agent[]>(await req(project.path, "/agent"))
+    await json(
+      await req(project.path, "/config/overlay", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ scope: "project", set: { permission: { edit: { "*": "ask" } } } }),
+      }),
+    )
+    const body = await json<Overlay & { effective: { permission: Record<string, string | Record<string, string>> } }>(
+      await req(project.path, "/config/overlay?scope=project"),
+    )
+    const edit = body.effective.permission.edit
+    const after = await json<Agent[]>(await req(project.path, "/agent"))
 
-      expect(typeof edit === "string" ? edit : edit["*"]).toBe("ask")
-      expect(
-        Permission.evaluate("edit", "*", after.find((item) => item.name === "code")?.permission ?? []).action,
-      ).toBe("ask")
-      expect(body.collections.permission.find((item) => item.key === "edit")).toMatchObject({
-        source: "project",
-        overridden: true,
-      })
-    },
-  )
+    expect(typeof edit === "string" ? edit : edit["*"]).toBe("ask")
+    expect(Permission.evaluate("edit", "*", after.find((item) => item.name === "code")?.permission ?? []).action).toBe(
+      "ask",
+    )
+    expect(body.collections.permission.find((item) => item.key === "edit")).toMatchObject({
+      source: "project",
+      overridden: true,
+    })
+  })
 
   test.serial("refreshes agent permissions after global permission update", async () => {
     await using global = await tmpdir()
@@ -684,6 +683,53 @@ describe("config overlay routes", () => {
       "ask",
     )
   })
+
+  test.serial(
+    "applies saved global sandbox settings to initialized sessions",
+    async () => {
+      await using global = await tmpdir()
+      await using project = await tmpdir({ git: true })
+      await setGlobal(global.path, { sandbox: { enabled: true, network: "deny" } })
+      const session = await json<Session.Info>(
+        await req(project.path, SessionPaths.create, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: "{}",
+        }),
+      )
+      await json(await req(project.path, `/session/${session.id}/sandbox`))
+      expect(await SandboxStore.read(project.path, session.id)).toMatchObject({ mode: "deny", version: 0 })
+
+      await json(
+        await req(project.path, "/config/overlay", {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            scope: "global",
+            set: { sandbox: { enabled: true, network: "allow", writable_paths: [global.path] } },
+          }),
+        }),
+      )
+
+      // The global update disposes instances asynchronously. Poll the sandbox status
+      // until the reloaded instance applies the saved policy, mirroring how the
+      // extension re-checks status after saving settings.
+      for (let i = 0; i < 40; i++) {
+        await json(await req(project.path, `/session/${session.id}/sandbox`))
+        const snap = await SandboxStore.read(project.path, session.id)
+        if (snap && snap.mode === "allow" && snap.version === 1) break
+        await Bun.sleep(250)
+      }
+
+      expect(await SandboxStore.read(project.path, session.id)).toMatchObject({
+        enabled: true,
+        mode: "allow",
+        writablePaths: [global.path],
+        version: 1,
+      })
+    },
+    20_000,
+  )
 
   terminal("preserves active terminals after updating global console preferences", async () => {
     await using global = await tmpdir()
