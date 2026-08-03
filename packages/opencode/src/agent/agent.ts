@@ -32,6 +32,7 @@ import * as KiloAgent from "@/kilocode/agent"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import * as AgentRequirements from "@/kilocode/agent-requirements"
 import * as KiloReference from "@/kilocode/reference"
+import { KilocodeSystemPrompt } from "@/kilocode/system-prompt"
 import { MCP } from "@/mcp"
 // kilocode_change end
 import { ProviderV2 } from "@opencode-ai/core/provider"
@@ -309,7 +310,7 @@ export const layer = Layer.effect(
             options: {},
           },
           title: {
-            name: "title",
+            name: KilocodeSystemPrompt.agents.title, // kilocode_change
             mode: "primary",
             options: {},
             native: true,

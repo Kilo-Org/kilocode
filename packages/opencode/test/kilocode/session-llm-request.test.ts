@@ -9,6 +9,7 @@ import type { Auth } from "@/auth"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import type { Plugin } from "@/plugin"
 import type { Provider } from "@/provider/provider"
+import { KilocodeSystemPrompt } from "@/kilocode/system-prompt"
 import { LLMRequestPrep } from "@/session/llm/request"
 import { MessageID, SessionID } from "@/session/schema"
 import { SystemPrompt } from "@/session/system"
@@ -101,7 +102,7 @@ async function prepare(name: string, oauth = false) {
 }
 
 describe("Kilo persona in generated metadata requests", () => {
-  test.each(["title", "branch-name"])("omits the persona for %s generation", async (name) => {
+  test.each(Object.values(KilocodeSystemPrompt.agents))("omits the persona for %s generation", async (name) => {
     const result = await prepare(name)
 
     expect(result.system[0]).toContain(`${name} generation prompt`)
@@ -109,13 +110,16 @@ describe("Kilo persona in generated metadata requests", () => {
     expect(result.system[0]).not.toContain(SystemPrompt.soul())
   })
 
-  test.each(["title", "branch-name"])("omits the persona from OpenAI OAuth %s generation", async (name) => {
-    const result = await prepare(name, true)
+  test.each(Object.values(KilocodeSystemPrompt.agents))(
+    "omits the persona from OpenAI OAuth %s generation",
+    async (name) => {
+      const result = await prepare(name, true)
 
-    expect(result.params.options.instructions).toContain(`${name} generation prompt`)
-    expect(result.params.options.instructions).toContain("request-specific system text")
-    expect(result.params.options.instructions).not.toContain(SystemPrompt.soul())
-  })
+      expect(result.params.options.instructions).toContain(`${name} generation prompt`)
+      expect(result.params.options.instructions).toContain("request-specific system text")
+      expect(result.params.options.instructions).not.toContain(SystemPrompt.soul())
+    },
+  )
 
   test("keeps the persona for ordinary agent requests", async () => {
     const result = await prepare("code")

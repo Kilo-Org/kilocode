@@ -68,11 +68,11 @@ const mergeOptions = (target: Record<string, any>, source: Record<string, any> |
 
 export const prepare = Effect.fn("LLMRequestPrep.prepare")(function* (input: PrepareInput) {
   const isOpenaiOauth = input.provider.id === "openai" && input.auth?.type === "oauth"
-  const persona = KilocodeSystemPrompt.persona(input.agent.name) // kilocode_change
+  const includePersona = KilocodeSystemPrompt.shouldIncludePersona(input.agent.name) // kilocode_change
   const system = [
     [
       // kilocode_change start - soul defines core identity and personality
-      ...(isOpenaiOauth || !persona ? [] : [SystemPrompt.soul()]),
+      ...(isOpenaiOauth || !includePersona ? [] : [SystemPrompt.soul()]),
       // kilocode_change end
       ...(input.agent.prompt ? [input.agent.prompt] : SystemPrompt.provider(input.model)),
       ...input.system,
@@ -119,7 +119,7 @@ export const prepare = Effect.fn("LLMRequestPrep.prepare")(function* (input: Pre
   }
   if (isOpenaiOauth) {
     // kilocode_change start - prepend soul to instructions
-    options.instructions = [...(persona ? [SystemPrompt.soul()] : []), ...system].join("\n")
+    options.instructions = [...(includePersona ? [SystemPrompt.soul()] : []), ...system].join("\n")
     // kilocode_change end
   }
 
