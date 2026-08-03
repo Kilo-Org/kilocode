@@ -399,22 +399,24 @@ const AgentManagerContent: Component = () => {
   const rememberPromptFocus = (focused: boolean) => {
     if (focused) focusMemory.set(focusKey(), "prompt")
   }
-  const focusOnDraftChange = () =>
-    (() => {
-      const key = focusKey()
-      const owner = focusMemory.get(key)
-      if (!owner || owner === "prompt") return true
-      if (terms.sidesForContext(terms.sideKey()).some((term) => term.id === owner.terminal)) return false
+  const terminalVisible = () => sidePanel() === "terminal" && !history() && !reviewActive()
+  const focusOnDraftChange = () => {
+    const key = focusKey()
+    const owner = focusMemory.get(key)
+    if (!owner || owner === "prompt") return true
+    if (!terms.sidesForContext(terms.sideKey()).some((term) => term.id === owner.terminal)) {
       focusMemory.delete(key)
       return true
-    })()
+    }
+    return terminalVisible() ? false : true
+  }
   const restoreFocus = () => {
     const key = focusKey()
     const owner = focusMemory.get(key)
     if (owner && owner !== "prompt") {
       const context = terms.sideKey()
       const terminal = terms.sidesForContext(context).find((term) => term.id === owner.terminal)
-      if (terminal && sidePanel() === "terminal" && !history() && !reviewActive()) {
+      if (terminal && terminalVisible()) {
         terms.setSideActive(context, terminal.id)
         terms.requestFocus(terminal.id)
         return
