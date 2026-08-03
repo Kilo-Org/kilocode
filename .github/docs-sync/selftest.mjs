@@ -2886,7 +2886,6 @@ Just prose, not a rule line.
     fs.writeFileSync(path.join(dir, "packages", "kilo-docs", "pages", "x.md"), "# x\n")
     gitIn(dir, ["add", "packages/kilo-docs/pages/x.md"])
     gitIn(dir, ["commit", "-m", "docs update", "--author", `kiloconnect[bot] <${kiloconnectBotEmail}>`])
-    const source = `commit:${gitIn(dir, ["rev-parse", "HEAD"]).slice(0, 7)}`
 
     // DRY_RUN=true
     {
@@ -2897,18 +2896,7 @@ Just prose, not a rule line.
       })
 
       const kiloDir = makeStubKiloDir({ mode: "extraction-delta", callLog: path.join(cwd, "kilo-calls.log") })
-      writeExtractionDelta(cwd, {
-        add: [
-          {
-            id: "dry-run-rule",
-            rule: "Keep documentation accurate for released features.",
-            scope: "both",
-            source,
-            date: "2026-08-03",
-          },
-        ],
-        remove: [],
-      })
+      writeExtractionDelta(cwd, { add: [], remove: [] })
 
       const outputFile = path.join(cwd, "gh-output-q-dry")
       const result = runNodeScript(LEARN_SCRIPT, {
@@ -2929,9 +2917,10 @@ Just prose, not a rule line.
         const ghOut = fs.readFileSync(outputFile, "utf8")
         assert.ok(!ghOut.includes("learned_through="), "GITHUB_OUTPUT must not contain learned_through on DRY_RUN")
       }
+      assert.ok(result.stdout.includes("marker PATCH suppressed"), "stdout must log marker suppression for DRY_RUN")
       assert.ok(
-        result.stdout.includes("learned-through output suppressed"),
-        "stdout must log output suppression for DRY_RUN",
+        result.stdout.includes("would have written marker"),
+        "stdout must log the suppressed marker for DRY_RUN",
       )
     }
 
@@ -2944,18 +2933,7 @@ Just prose, not a rule line.
       })
 
       const kiloDir = makeStubKiloDir({ mode: "extraction-delta", callLog: path.join(cwd, "kilo-calls.log") })
-      writeExtractionDelta(cwd, {
-        add: [
-          {
-            id: "no-patch-rule",
-            rule: "Keep documentation accurate for released features.",
-            scope: "both",
-            source,
-            date: "2026-08-03",
-          },
-        ],
-        remove: [],
-      })
+      writeExtractionDelta(cwd, { add: [], remove: [] })
 
       const outputFile = path.join(cwd, "gh-output-q-nopatch")
       const result = runNodeScript(LEARN_SCRIPT, {
@@ -2980,8 +2958,12 @@ Just prose, not a rule line.
         )
       }
       assert.ok(
-        result.stdout.includes("learned-through output suppressed"),
-        "stdout must log output suppression for LEARNINGS_NO_PATCH",
+        result.stdout.includes("marker PATCH suppressed"),
+        "stdout must log marker suppression for LEARNINGS_NO_PATCH",
+      )
+      assert.ok(
+        result.stdout.includes("would have written marker"),
+        "stdout must log the suppressed marker for LEARNINGS_NO_PATCH",
       )
     }
   }
