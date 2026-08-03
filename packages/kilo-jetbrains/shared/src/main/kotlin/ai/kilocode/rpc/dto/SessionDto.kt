@@ -21,6 +21,7 @@ data class SessionRevertDto(
     val partID: String? = null,
     val snapshot: String? = null,
     val diff: String? = null,
+    val diffs: List<DiffFileDto> = emptyList(),
 )
 
 @Serializable

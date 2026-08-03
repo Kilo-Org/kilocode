@@ -1516,12 +1516,69 @@ object KiloCliDataParser {
     private fun parseRevert(obj: JsonObject?): SessionRevertDto? {
         if (obj == null) return null
         val message = obj.str("messageID") ?: return null
+        val diff = obj.str("diff")
         return SessionRevertDto(
             messageID = message,
             partID = obj.str("partID"),
             snapshot = obj.str("snapshot"),
-            diff = obj.str("diff"),
+            diff = diff,
+            diffs = parseUnifiedDiff(diff),
         )
+    }
+
+    private fun parseUnifiedDiff(diff: String?): List<DiffFileDto> {
+        if (diff.isNullOrBlank()) return emptyList()
+        val lines = diff.lines()
+        val starts = lines.mapIndexedNotNull { index, line -> if (line.startsWith("diff --git ")) index else null }
+        if (starts.isEmpty()) return emptyList()
+        return starts.mapIndexedNotNull { index, start ->
+            val end = starts.getOrNull(index + 1) ?: lines.size
+            parseUnifiedBlock(lines.subList(start, end).joinToString("\n"))
+        }
+    }
+
+    private fun parseUnifiedBlock(block: String): DiffFileDto? {
+        val lines = block.lines()
+        val file = unifiedFile(lines) ?: return null
+        return DiffFileDto(
+            file = file,
+            additions = lines.count { it.startsWith("+") && !it.startsWith("+++") },
+            deletions = lines.count { it.startsWith("-") && !it.startsWith("---") },
+            patch = block,
+            status = unifiedStatus(lines),
+        )
+    }
+
+    private fun unifiedFile(lines: List<String>): String? {
+        val next = lines.firstOrNull { it.startsWith("+++ ") }?.removePrefix("+++ ")
+        val prev = lines.firstOrNull { it.startsWith("--- ") }?.removePrefix("--- ")
+        val path = sequenceOf(next, prev)
+            .filterNotNull()
+            .firstOrNull { it != "/dev/null" }
+            ?: lines.firstOrNull()?.let(::gitDiffTarget)
+        return path?.let(::cleanDiffPath)
+    }
+
+    private fun unifiedStatus(lines: List<String>): String = when {
+        lines.any { it == "new file mode" || it.startsWith("new file mode ") } -> "added"
+        lines.any { it == "deleted file mode" || it.startsWith("deleted file mode ") } -> "deleted"
+        lines.any { it.startsWith("--- /dev/null") } -> "added"
+        lines.any { it.startsWith("+++ /dev/null") } -> "deleted"
+        else -> "modified"
+    }
+
+    private fun gitDiffTarget(line: String): String? {
+        val match = Regex("^diff --git a/(.*) b/(.*)$").find(line) ?: return null
+        return match.groupValues.getOrNull(2)
+    }
+
+    private fun cleanDiffPath(path: String): String {
+        val text = path.trim().trim('"')
+        return when {
+            text.startsWith("a/") -> text.removePrefix("a/")
+            text.startsWith("b/") -> text.removePrefix("b/")
+            else -> text
+        }
     }
 
     // ================================================================

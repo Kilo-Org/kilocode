@@ -1,22 +1,32 @@
 package ai.kilocode.client.session.ui
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.SessionDiffOpener
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.session.views.base.BaseQuestionView
+import ai.kilocode.client.session.views.base.PartHeader
 import ai.kilocode.client.ui.DiffStatBadge
+import ai.kilocode.client.ui.ToolbarButtonAction
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.client.ui.toolbarButton
+import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.icons.AllIcons
 import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBFont
+import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.BorderLayout
+import java.awt.Dimension
 import javax.swing.JPanel
+import javax.swing.ScrollPaneConstants
 
 class RevertBanner(
     private val model: SessionModel,
@@ -24,14 +34,53 @@ class RevertBanner(
     private val redoAllAction: () -> Unit,
     private val cancelAction: () -> Unit,
     focus: (() -> Unit)? = null,
+    private var openDiff: SessionDiffOpener = { _, _, _ -> },
+    private var sessionId: String? = null,
 ) : BorderLayoutPanel(), SessionView, SessionEditorStyleTarget {
     override val sessionViewKind = SessionView.Kind.Default
 
+    companion object {
+        /** Cap the reverted-file list to this many rows before scrolling. */
+        const val MAX_FILE_ROWS = 10
+    }
+
     private val card = BaseQuestionView(focus = focus)
+
+    private val title = JBLabel()
+
+    private val diff = toolbarButton(
+        ToolbarButtonAction(SessionViewIcons.openDiff, KiloBundle.message("session.part.tool.openDiff"), ::openDiffViewer),
+    ).apply {
+        isEnabled = false
+        isVisible = false
+    }
+
+    private val header = PartHeader().apply {
+        leading(JBLabel(AllIcons.Actions.Back))
+        left(title)
+        left(PartHeader.centered(diff))
+    }
 
     private val body = Stack.vertical(UiStyle.Gap.lg())
 
     private val files = Stack.vertical(UiStyle.Gap.xs())
+
+    private val scroll = object : JBScrollPane(
+        files,
+        ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+        ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED,
+    ) {
+        override fun getPreferredSize(): Dimension {
+            val size = super.getPreferredSize()
+            val cap = rowCap()
+            return Dimension(size.width, if (cap > 0) minOf(size.height, cap) else size.height)
+        }
+    }.apply {
+        border = JBUI.Borders.empty()
+        viewportBorder = JBUI.Borders.empty()
+        isOpaque = false
+        viewport.isOpaque = false
+    }
 
     private val rows = LinkedHashMap<String, Row>()
     private var progress: RevertProgress? = null
@@ -46,8 +95,8 @@ class RevertBanner(
 
     init {
         isOpaque = false
-        card.setHeaderIcon(AllIcons.Actions.Back, KiloBundle.message("revert.message.rollback"))
-        body.next(files).next(hint).next(notice)
+        card.setTopPanel(header)
+        body.next(scroll).next(hint).next(notice)
         card.setContent(body)
         card.setActions(listOf(
             BaseQuestionView.Action("redo", KiloBundle.message("revert.banner.redo"), primary = false) { redoAction() },
@@ -59,21 +108,32 @@ class RevertBanner(
     }
 
     @RequiresEdt
+    fun setDiffOpener(openDiff: SessionDiffOpener, sessionId: String?) {
+        this.openDiff = openDiff
+        this.sessionId = sessionId
+    }
+
+    @RequiresEdt
     fun update() {
         val revert = model.revert()
         isVisible = revert != null
         if (revert == null) return
         val total = model.revertedCount()
-        card.setHeader(KiloBundle.message(if (total == 1) "revert.banner.count.one" else "revert.banner.count.other", total))
+        title.text = KiloBundle.message(if (total == 1) "revert.banner.count.one" else "revert.banner.count.other", total)
         card.setActionVisible("all", total > 1)
         notice.isVisible = revert.snapshot == null
-        val keep = model.diff.mapTo(LinkedHashSet()) { it.file }
+        val diffs = resolveDiffs(revert)
+        val names = disambiguate(diffs.map { it.file })
+        diff.isVisible = diffs.isNotEmpty()
+        diff.isEnabled = diffs.isNotEmpty()
+        val keep = diffs.mapTo(LinkedHashSet()) { it.file }
         rows.entries.removeIf { it.key !in keep }
-        val order = model.diff.map { item ->
+        scroll.isVisible = diffs.isNotEmpty()
+        val order = diffs.map { item ->
             val row = rows.getOrPut(item.file) {
-                Row(item.file)
+                Row(item)
             }
-            row.update(item.file, item.additions, item.deletions)
+            row.update(item, names[item.file] ?: item.file)
             row.panel
         }
         if (files.components.toList() != order) {
@@ -105,15 +165,42 @@ class RevertBanner(
 
     override fun applyStyle(style: SessionEditorStyle) {
         card.applyStyle(style)
+        title.font = style.headerFont
+        title.foreground = UiStyle.Colors.fg()
         progress?.applyStyle(style)
         hint.foreground = UIUtil.getLabelForeground()
         notice.foreground = UIUtil.getContextHelpForeground()
         rows.values.forEach { it.applyStyle() }
     }
 
-    private class Row(file: String) {
-        private val label = JBLabel(file)
-        private val badge = DiffStatBadge(0, 0)
+    /**
+     * The rolled-back diff to render. Prefer the snapshot diff the CLI attaches to the revert; fall
+     * back to the session's current file diff when the pinned CLI doesn't provide it. Empty when no
+     * snapshot exists (files were not restored, so there is nothing to diff).
+     */
+    private fun resolveDiffs(revert: ai.kilocode.rpc.dto.SessionRevertDto): List<DiffFileDto> =
+        if (revert.snapshot == null) emptyList() else revert.diffs.ifEmpty { model.diff }
+
+    private fun openDiffViewer() {
+        val revert = model.revert() ?: return
+        val diffs = resolveDiffs(revert)
+        if (diffs.isEmpty()) return
+        openDiff(diffs, KiloBundle.message("revert.banner.openDiff.title"), "revert:${sessionId ?: "pending"}:${revert.messageID}")
+    }
+
+    /** Height that fits at most [MAX_FILE_ROWS] rows, or 0 when the list is short enough to show in full. */
+    private fun rowCap(): Int {
+        val comps = files.components
+        if (comps.size <= MAX_FILE_ROWS) return 0
+        val gap = UiStyle.Gap.xs()
+        return (0 until MAX_FILE_ROWS).sumOf { comps[it].preferredSize.height } + gap * (MAX_FILE_ROWS - 1)
+    }
+
+    private class Row(item: DiffFileDto) {
+        private val label = JBLabel(item.file).apply {
+            toolTipText = item.file
+        }
+        private val badge = DiffStatBadge(item.additions, item.deletions)
         val panel: JPanel = Stack.horizontal(UiStyle.Gap.sm())
             .next(label)
             .next(badge)
@@ -122,9 +209,10 @@ class RevertBanner(
             applyStyle()
         }
 
-        fun update(file: String, additions: Int, deletions: Int) {
-            if (label.text != file) label.text = file
-            badge.update(additions, deletions)
+        fun update(item: DiffFileDto, text: String) {
+            if (label.text != text) label.text = text
+            if (label.toolTipText != item.file) label.toolTipText = item.file
+            badge.update(item.additions, item.deletions)
         }
 
         fun applyStyle() {
@@ -132,3 +220,18 @@ class RevertBanner(
         }
     }
 }
+
+internal fun disambiguate(paths: List<String>): Map<String, String> {
+    val parts = paths.associateWith { split(it) }
+    return paths.groupBy { parts[it]?.lastOrNull().orEmpty() }.values.flatMap { group ->
+        if (group.size == 1) return@flatMap listOf(group.first() to (parts[group.first()]?.lastOrNull() ?: group.first()))
+        val depth = (1..(group.maxOf { parts[it]?.size ?: 1 })).firstOrNull { count ->
+            group.map { suffix(parts[it].orEmpty(), count) }.toSet().size == group.size
+        } ?: group.maxOf { parts[it]?.size ?: 1 }
+        group.map { it to suffix(parts[it].orEmpty(), depth) }
+    }.toMap()
+}
+
+private fun split(path: String): List<String> = path.split('/', '\\').filter { it.isNotEmpty() }
+
+private fun suffix(parts: List<String>, depth: Int): String = parts.takeLast(depth).joinToString("/")

@@ -691,7 +691,7 @@ class KiloCliDataParserTest {
                             "messageID": "msg_rollback",
                             "partID": "prt_rollback",
                             "snapshot": "snap_rollback",
-                            "diff": "diff --git a/file b/file"
+                            "diff": "diff --git a/src/A.kt b/src/A.kt\n--- a/src/A.kt\n+++ b/src/A.kt\n@@ -1 +1,2 @@\n-old\n+new\n+more\ndiff --git a/src/Old.kt b/src/Old.kt\ndeleted file mode 100644\n--- a/src/Old.kt\n+++ /dev/null\n@@ -1 +0,0 @@\n-gone"
                         }
                     }
                 }
@@ -705,6 +705,13 @@ class KiloCliDataParserTest {
             assertEquals(2, result.session.summary?.files)
             assertEquals("msg_rollback", result.session.revert?.messageID)
             assertEquals("prt_rollback", result.session.revert?.partID)
+            assertEquals(2, result.session.revert?.diffs?.size)
+            assertEquals("src/A.kt", result.session.revert?.diffs?.get(0)?.file)
+            assertEquals(2, result.session.revert?.diffs?.get(0)?.additions)
+            assertEquals(1, result.session.revert?.diffs?.get(0)?.deletions)
+            assertEquals("modified", result.session.revert?.diffs?.get(0)?.status)
+            assertEquals("src/Old.kt", result.session.revert?.diffs?.get(1)?.file)
+            assertEquals("deleted", result.session.revert?.diffs?.get(1)?.status)
         }
 
         @Test
