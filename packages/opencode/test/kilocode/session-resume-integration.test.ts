@@ -950,7 +950,7 @@ it.instance(
       expect(Exit.isFailure(exit)).toBe(true)
       if (Exit.isFailure(exit)) {
         const msg = JSON.stringify(exit.cause)
-        expect(msg).toContain("No Claude Code session found")
+        expect(msg).toContain("Unreadable Claude transcript")
       }
 
       // Assert no messages were written

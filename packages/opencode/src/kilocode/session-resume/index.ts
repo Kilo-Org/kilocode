@@ -166,7 +166,9 @@ export namespace SessionResume {
     if (input.id) {
       validateUUID(input.id)
       const file = path.join(directory, `${input.id}.jsonl`)
-      return fs.statSync(file).isFile() ? [file] : []
+      const stat = fs.statSync(file)
+      if (!stat.isFile()) throw new ParseError(`Unreadable Claude transcript: ${input.id}`)
+      return [file]
     }
     return discover(directory)
       .map((file) => ({ file, time: fs.statSync(file).mtimeMs }))
@@ -690,6 +692,8 @@ export namespace SessionResume {
         const input = parseCodexToolInput(riType, payload)
 
         const tc: ToolCall = { type: "tool_call", id: callID, name, input }
+        const status = payload.status
+        if (status === "failed" || status === "error" || status === "incomplete") tc.status = status
 
         if (pending && pending.role === "assistant") {
           pending.parts.push(tc)

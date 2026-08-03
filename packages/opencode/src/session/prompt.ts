@@ -2081,9 +2081,20 @@ export const layer = Layer.effect(
       const codexExit = input.format === "codex"
         ? yield* Effect.exit(Effect.promise(() => SessionResume.discoverCodex({ cwd, id: uuid })))
         : undefined
-      const file = input.format === "claude"
-        ? (() => { try { return SessionResume.discoverClaude({ cwd, id: uuid })[0] } catch { return undefined } })()
-        : (codexExit && Exit.isSuccess(codexExit) ? codexExit.value[0] : undefined)
+      let file: string | undefined
+      if (input.format === "claude") {
+        try {
+          file = SessionResume.discoverClaude({ cwd, id: uuid })[0]
+        } catch (cause) {
+          if (cause instanceof SessionResume.ParseError) {
+            const error = new NamedError.Unknown({ message: cause.message })
+            yield* events.publish(Session.Event.Error, { sessionID: input.cmdInput.sessionID, error: error.toObject() })
+            throw error
+          }
+        }
+      } else {
+        file = codexExit && Exit.isSuccess(codexExit) ? codexExit.value[0] : undefined
+      }
 
       if (!file) {
         const error = new NamedError.Unknown({
