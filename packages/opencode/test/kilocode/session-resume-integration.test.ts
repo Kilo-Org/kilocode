@@ -273,17 +273,16 @@ function makePromptWithAutoPick() {
     EventV2Bridge.defaultLayer,
     Bus.layer,
     MemoryService.layer,
-    Layer.mock(Question.Service, {
-      ask: (input) =>
-        Effect.gen(function* () {
-          const q = input.questions[0]
-          if (!q) return [] as readonly string[][]
-          const label = q.options?.[0]?.label ?? ""
-          return [[label]]
-        }),
-    }),
   ).pipe(Layer.provideMerge(infra))
-  const question = Question.layer.pipe(Layer.provideMerge(deps))
+  const question = Layer.mock(Question.Service, {
+    ask: (input) =>
+      Effect.gen(function* () {
+        const q = input.questions[0]
+        if (!q) return [] as readonly string[][]
+        const label = q.options?.[0]?.label ?? ""
+        return [[label]]
+      }),
+  })
   const todo = Todo.layer.pipe(Layer.provideMerge(deps))
   const registry = ToolRegistry.layer.pipe(
     Layer.provide(Skill.defaultLayer),

@@ -1993,9 +1993,19 @@ export const layer = Layer.effect(
       if (trimmed.length === 0) {
         // Show question picker: discover sessions of the requested format only
         const cwd = ctx.directory
-        const claudeFiles = input.format === "claude"
-          ? (() => { try { return SessionResume.discoverClaude({ cwd }) } catch { return [] } })()
-          : []
+        let claudeFiles: string[] = []
+        if (input.format === "claude") {
+          try {
+            claudeFiles = SessionResume.discoverClaude({ cwd })
+          } catch (cause) {
+            const code = typeof cause === "object" && cause !== null && "code" in cause ? cause.code : undefined
+            if (code !== "ENOENT") {
+              const error = new NamedError.Unknown({ message: "Unreadable Claude transcript directory" })
+              yield* events.publish(Session.Event.Error, { sessionID: input.cmdInput.sessionID, error: error.toObject() })
+              throw error
+            }
+          }
+        }
         const codexExit = input.format === "codex"
           ? yield* Effect.exit(Effect.promise(() => SessionResume.discoverCodex({ cwd })))
           : undefined
