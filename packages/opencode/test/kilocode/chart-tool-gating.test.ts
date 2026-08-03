@@ -16,6 +16,7 @@ const tools = {
   chart: stub("chart"),
   image: stub("image"),
   notify: stub("notify"),
+  send: stub("send_file"),
 }
 
 function ids(client: string) {
