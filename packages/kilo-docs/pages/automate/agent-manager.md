@@ -35,30 +35,6 @@ The panel opens as an editor tab and stays active across focus changes.
 - Use a git repository for worktree features
 - Open the main repository, not an existing worktree checkout, when creating new worktrees
 
-## Multiple Projects (Experimental)
-
-By default, Agent Manager operates on a single repository: the current workspace. Multi-project mode lets you manage sessions and worktrees across several repositories from one Agent Manager sidebar.
-
-Enable it under **Kilo Settings** > **Experimental** > **Multi-Project Agent Manager**, or set `kilo-code.new.experimental.multiProject` to `true` in your VS Code settings. When the experiment is off, Agent Manager behavior is unchanged.
-
-With multi-project mode enabled, the sidebar shows a **Projects** list:
-
-- The workspace repository is always the default project. It is pinned and cannot be removed.
-- Click the **+** button in the Projects header to add another repository. The folder you pick must be inside a Git repository. Added projects persist across restarts.
-- Click the chevron on a project row to expand or collapse it. Each expanded project shows its own worktrees, sections, sessions, git stats, and PR badges, all kept up to date by background polling.
-- Click a project name to make it the active project. Each project remembers the worktree or session you last had open and restores it when you switch back.
-- Sessions created anywhere — the sidebar, another VS Code window, or the CLI — appear in the owning project's list immediately.
-
-### Trusting Projects
-
-An added project must be trusted before Agent Manager loads its state or runs that repository's setup and run scripts. Click **Trust** on the project row to trust it. Trust is granted per project; the workspace project is always trusted.
-
-If a registered repository no longer exists on disk, its project row shows a warning icon with a "Repository not found" tooltip.
-
-### Removing a Project
-
-Click the **X** button on a project row (**Remove from Agent Manager**) to unregister it. The repository, its branches, and any worktree directories on disk are left untouched.
-
 ## Providers and Authentication
 
 Agent Manager uses the same sign-in, provider settings, models, BYOK keys, custom providers, MCP servers, and permission rules as the extension sidebar. Configure them from extension Settings and they apply to Agent Manager as well.
