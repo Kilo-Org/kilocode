@@ -38,6 +38,9 @@ interface Props {
    *  an xterm re-paint when the slot transitions back to visible after
    *  sitting behind an occluding layer. */
   active: boolean
+  /** Side terminals only repaint on activation; focus is restored explicitly
+   *  when that context's remembered focus owner is the terminal. */
+  focusOnActivate?: boolean
   /** Serial of the latest explicit focus request for this terminal
    *  (`state.focusRequest()`), consumed so re-requesting focus on an
    *  already-visible terminal still re-focuses it. */
@@ -479,7 +482,8 @@ export const TerminalTab: Component<Props> = (props) => {
     createEffect(() => {
       const now = props.active
       const serial = props.focusSerial ?? 0
-      if (now && (!wasActive || serial !== focusSerial)) scheduleRepaint(true)
+      if (now && (!wasActive || serial !== focusSerial))
+        scheduleRepaint((serial > 0 && serial !== focusSerial) || props.focusOnActivate !== false)
       if (!now && wasActive) term.blur()
       wasActive = now
       focusSerial = serial

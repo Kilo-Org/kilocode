@@ -114,16 +114,37 @@ exports[`tool parameters JSON Schema (wire shape) grep 1`] = `
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "properties": {
+    "context": {
+      "description": "Number of context lines to show before and after each match (default 0)",
+      "maximum": 9007199254740991,
+      "minimum": 0,
+      "type": "integer",
+    },
+    "ignoreCase": {
+      "description": "Match without regard to letter case (default false)",
+      "type": "boolean",
+    },
     "include": {
       "description": "File pattern to include in the search (e.g. "*.js", "*.{ts,tsx}")",
       "type": "string",
+    },
+    "limit": {
+      "description": "Maximum matching lines to return (default 100)",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991,
+      "minimum": -9007199254740991,
+      "type": "integer",
+    },
+    "literal": {
+      "description": "Treat pattern as plain text instead of a regex (default false)",
+      "type": "boolean",
     },
     "path": {
       "description": "The directory to search in. Defaults to the current working directory.",
       "type": "string",
     },
     "pattern": {
-      "description": "The regex pattern to search for in file contents",
+      "description": "Pattern to search for in file contents (regex by default)",
       "type": "string",
     },
   },
