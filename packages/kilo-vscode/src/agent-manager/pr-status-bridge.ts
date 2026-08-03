@@ -78,8 +78,8 @@ export class PRStatusBridge {
       return true
     }
     if (m.type === "agentManager.openPR") {
-      const wt = this.host.getWorktrees().find((w: Worktree) => w.id === m.worktreeId)
-      if (wt?.prUrl) this.host.openExternal(wt.prUrl)
+      const url = (m.url as string | undefined) ?? this.host.getWorktrees().find((w: Worktree) => w.id === m.worktreeId)?.prUrl
+      if (url) this.host.openExternal(url)
       return true
     }
     return false

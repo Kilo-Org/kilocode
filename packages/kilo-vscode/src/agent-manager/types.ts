@@ -739,6 +739,7 @@ interface OpenPRIn {
   type: "agentManager.openPR"
   projectId?: string
   worktreeId: string
+  url?: string
 }
 
 interface OpenSessionsIn {

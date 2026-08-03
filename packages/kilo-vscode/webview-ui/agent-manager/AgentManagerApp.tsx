@@ -2710,7 +2710,7 @@ const AgentManagerContent: Component = () => {
                           <PRPanel
                             pr={pr}
                             onClose={() => setSidePanel(null)}
-                            onOpenExternal={() => vscode.postMessage({ type: "agentManager.openPR", worktreeId: sel as string })}
+                            onOpenExternal={() => vscode.postMessage({ type: "agentManager.openPR", worktreeId: sel as string, url: pr.url })}
                           />
                         )
                       })()}
