@@ -21,4 +21,14 @@ test("completed Read exposes the exact high-offset output", async ({ page }) => 
   await expect(output).toContainText("11091: theorem challenge_two")
   await expect(output).toContainText("Showing lines 11091-11093")
   await expect(output.locator("path")).toHaveCount(0)
+
+  const pre = output.locator('[data-slot="read-tool-output"]')
+  await pre.evaluate((node) => {
+    node.textContent = `11092: ${"x".repeat(2000)}`
+  })
+
+  await expect(pre).toHaveCSS("margin-top", "0px")
+  await expect(pre).toHaveCSS("margin-bottom", "0px")
+  await expect(pre).toHaveCSS("white-space", "pre-wrap")
+  expect(await pre.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true)
 })

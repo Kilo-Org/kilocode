@@ -433,6 +433,12 @@ body.vscode-high-contrast-light [data-component="user-message"] [data-slot="user
   margin-bottom: 0px;
 }
 
+[data-slot="read-tool-output"] {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 [data-slot="tool-read-images"] {
   display: flex;
   flex-wrap: wrap;
