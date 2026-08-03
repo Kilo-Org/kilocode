@@ -5,7 +5,7 @@ description: "Configure Kilo Code and connect to your AI providers"
 
 # Authentication
 
-When you install Kilo Code, you'll be prompted to sign in or create a free account. This automatically configures everything you need to get started.
+When you install Kilo Code, you'll be prompted to sign in or create a free account. This automatically configures everything you need to get started. You can sign in with your email address, Google, Apple, GitHub, GitLab, Discord, LinkedIn, or Anaconda, or through your organization's single sign-on.
 
 ## Quick Start with Kilo Account
 

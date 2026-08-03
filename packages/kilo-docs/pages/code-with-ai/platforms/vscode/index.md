@@ -29,6 +29,7 @@ Key features include:
 - **[Workflows](/docs/customize/workflows)** — Repeatable prompt templates as `.md` files
 - **[Skills](/docs/customize/skills)** — Load specialized domain knowledge from SKILL.md files
 - **[Custom Subagents](/docs/customize/custom-subagents)** — Define specialized sub-agents for the `task` tool
+- **Charts** — Ask for a chart or plot and get an inline data visualization in the chat
 - **Open in Tab** — Pop the chat out into a full editor tab
 - **Transcript export:** Save complete local session transcripts as Markdown files
 - **Sub-Agent Viewer** — Read-only panels for viewing child agent sessions

@@ -66,6 +66,18 @@ To fill empty seats or remove members ahead of seat deletion, see the [team mana
 
 To fill empty seats or remove members ahead of seat deletion, see the [team management](/docs/collaborate/teams/team-management) page.
 
+## Kilo Pass for Organizations
+
+Organizations can subscribe to [Kilo Pass](https://kilo.ai/pricing/kilo-pass) at the organization level, pooling the subscription's credit capacity across the team instead of each member holding a personal Kilo Pass. Personal Kilo Pass subscriptions stay separate and are not affected.
+
+- **One pass per seat** — purchased capacity always matches your paid seat count and adjusts automatically as seats are added or removed.
+- **Pooled credits** — each service window's Kilo Pass credits are issued to the organization's pool rather than to individuals.
+- **Child organizations** — if your organization has direct child organizations, you can allocate part of the pooled capacity to each child. Anything not allocated stays with the parent organization.
+
+Organization owners and billing managers can purchase Kilo Pass, manage allocations, and cancel from your organization's **Subscriptions** page on the [Organization dashboard](https://app.kilo.ai). Cancellation takes effect at the end of the current paid period. Regular members do not see these controls.
+
+If a seat reduction leaves your allocations larger than the remaining capacity, the subscription becomes overallocated and the Subscriptions page walks you through reconciling it.
+
 ## Automatic Top-Up
 
 Ensure your team has uninterrupted access to Kilo Code by enabling [Automatic Top-Up](https://kilo.ai/features/auto-top-ups). This feature keeps your organization's balance funded so you never have to worry about manual recharges. Auto top-up is also available for individual accounts — see [Adding Credits](/docs/getting-started/adding-credits) for details.

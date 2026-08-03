@@ -125,6 +125,7 @@ When remote mode is enabled in the CLI, your active local sessions appear in the
 - **Permission requests** route to your active connection
 - **Full editing capabilities** work remotely
 - **Session renames** sync in both directions between the CLI and the web or mobile app
+- **File attachments** sync with the mobile app — send files from your phone to the CLI, and receive files the agent delivers back. See [Attachments in remote sessions](/docs/code-with-ai/platforms/mobile#attachments-in-remote-sessions)
 
 ### Enabling Remote Mode
 

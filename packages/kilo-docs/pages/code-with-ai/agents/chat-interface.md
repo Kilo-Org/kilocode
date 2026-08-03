@@ -110,6 +110,7 @@ Type `@` in the TUI to get file autocomplete suggestions, or mention file paths 
 - Messages → Expand/collapse details
 - Code blocks → Copy button appears
 - Mermaid code blocks → Fenced `mermaid` blocks render as diagrams after the message finishes streaming. The source remains copyable, and invalid Mermaid syntax stays visible in a contained error state.
+- Charts → In VS Code, asking for a chart, graph, or plot renders an inline chart in the conversation. Supported types include bar, line, scatter, pie, doughnut, radar, bubble, and polar area. Diagrams and flowcharts still render as Mermaid.
 
 **Status signals:**
 
