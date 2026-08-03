@@ -13,13 +13,8 @@ import * as Log from "@opencode-ai/core/util/log"
 const log = Log.create({ service: "kilocode.system-prompt" })
 
 export namespace KilocodeSystemPrompt {
-  export const agents = {
-    title: "title",
-    branch: "branch-name",
-  } as const
-
   export function shouldIncludePersona(agent: string) {
-    return agent !== agents.title && agent !== agents.branch
+    return agent !== "title" && agent !== "branch-name"
   }
 
   export function environment(input: { ctx: InstanceContext; model: Provider.Model; editor?: EditorContext }) {

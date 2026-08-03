@@ -6,7 +6,6 @@ import { Provider } from "@/provider/provider"
 import { LLM } from "@/session/llm"
 import { MessageV2 } from "@/session/message-v2"
 import { MessageID, SessionID } from "@/session/schema"
-import { KilocodeSystemPrompt } from "@/kilocode/system-prompt"
 import { Effect } from "effect"
 
 const LIMIT = 4
@@ -86,7 +85,7 @@ export const generate = Effect.fn("BranchName.generate")(function* (input: {
   const model =
     (yield* provider.getSmallModel(ref.providerID)) ?? (yield* provider.getModel(ref.providerID, ref.modelID))
   const agent: Agent.Info = {
-    name: KilocodeSystemPrompt.agents.branch,
+    name: "branch-name",
     mode: "primary",
     hidden: true,
     options: {},
