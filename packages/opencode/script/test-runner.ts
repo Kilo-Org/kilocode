@@ -73,7 +73,9 @@ const dots = !verbose && (ci || argv.includes("--dots"))
 // Cap concurrency at 4 even on bigger runners: the bottleneck is shared
 // resources (ports, global filesystem like ~/.local/share/kilo), not CPU.
 // Eight parallel processes was triggering port/FS races, not going faster.
-const concurrency = opt("concurrency", Math.min(4, os.cpus().length))
+// kilocode_change - KILO_TEST_CONCURRENCY lets CI override this cap per-OS
+const concurrencyEnv = Number(process.env.KILO_TEST_CONCURRENCY?.trim())
+const concurrency = opt("concurrency", Number.isSafeInteger(concurrencyEnv) && concurrencyEnv > 0 ? concurrencyEnv : Math.min(4, os.cpus().length))
 const timeout = opt("timeout", 60000)
 const deadline = opt("file-timeout", 300000)
 const retries = opt("retries", 1)
