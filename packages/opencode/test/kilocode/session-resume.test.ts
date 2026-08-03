@@ -766,6 +766,18 @@ describe("SessionResume discovery", () => {
       fs.rmSync(root, { recursive: true, force: true })
     }
   })
+
+  test("scans a Codex rollout stored at the sessions root", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "resume-codex-"))
+    try {
+      const expected = path.join(root, `rollout-2026-08-03T10-00-00-${id}.jsonl`)
+      fs.writeFileSync(expected, '{"type":"session_meta","payload":{"cwd":"/repo"}}\n')
+
+      await expect(SessionResume.discoverCodex({ codex: root, cwd: "/repo", id })).resolves.toEqual([expected])
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true })
+    }
+  })
 })
 
 // ── Full file parsing ────────────────────────────────────────────
