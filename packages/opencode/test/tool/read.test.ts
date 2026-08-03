@@ -6,7 +6,6 @@ import { Agent } from "../../src/agent/agent"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Global } from "@opencode-ai/core/global"
-import { Config } from "@/config/config"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { LSP } from "@/lsp/lsp"
@@ -25,6 +24,7 @@ import {
   tmpdirScoped,
 } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
+import { TestConfig } from "../fixture/config"
 
 const FIXTURES_DIR = path.join(import.meta.dir, "fixtures")
 
@@ -55,6 +55,8 @@ const readLayer = (flags: Partial<RuntimeFlags.Info> = {}) =>
   )
 
 const it = testEffect(Layer.mergeAll(readLayer(), testInstanceStoreLayer))
+const configuredIt = (cfg: { tool_output?: { max_bytes?: number; max_lines?: number } }) =>
+  testEffect(Layer.mergeAll(readLayer(), TestConfig.layer({ get: () => Effect.succeed(cfg) }), testInstanceStoreLayer))
 
 const init = Effect.fn("ReadToolTest.init")(function* () {
   const info = yield* ReadTool
@@ -322,7 +324,7 @@ describe("tool.read truncation", () => {
 
       const result = yield* run({ filePath: path.join(test.directory, "large.json") })
       expect(result.metadata.truncated).toBe(true)
-      expect(result.output).toContain("Output capped at")
+      expect(result.output).toContain("Read output capped at")
       expect(result.output).toContain("Use offset=")
     }),
   )
@@ -354,7 +356,7 @@ describe("tool.read truncation", () => {
       )
 
       expect(result.metadata.truncated).toBe(true)
-      expect(result.output).toContain("Output capped at")
+      expect(result.output).toContain("Read output capped at")
       expect(counter.bytes).toBeLessThan(Buffer.byteLength(content, "utf-8") / 2)
     }),
   )
@@ -433,11 +435,12 @@ describe("tool.read truncation", () => {
       expect(result.metadata.truncated).toBe(true)
       expect(result.metadata.display?.truncated).toBe(true)
       expect(result.output).toContain("1: COMPLETE_LINE_1")
-      expect(result.output).toContain("Output capped at")
+      expect(result.output).toContain("Read output capped at")
       expect(result.output).toContain("Use offset=")
       expect(result.output).not.toContain("1999: COMPLETE_LINE_1999")
       expect(result.output).not.toContain("The tool call succeeded but the output was truncated")
       expect(Buffer.byteLength(result.output, "utf-8")).toBeLessThanOrEqual(50 * 1024)
+      expect(result.metadata.display).toMatchObject({ type: "file", totalLines: 1_999 })
     }),
   )
   // kilocode_change end
@@ -469,6 +472,100 @@ describe("tool.read truncation", () => {
         lineStart: 11_098,
         lineEnd: 11_127,
         totalLines: 12_000,
+        truncated: true,
+      })
+    }),
+  )
+  // kilocode_change end
+
+  // kilocode_change start - configured byte caps are enforced by Read itself
+  const capIt = configuredIt({ tool_output: { max_bytes: 4096 } })
+  capIt.live("respects configured max_bytes for rendered Read output", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped()
+      const target = path.join(dir, "configured-large.txt")
+      const lines = Array.from({ length: 400 }, (_, i) => `CONFIG_LINE_${i + 1}_${"x".repeat(40)}`).join("\n")
+      yield* put(target, lines)
+
+      const result = yield* exec(
+        dir,
+        { filePath: target },
+        {
+          ...ctx,
+          extra: { includeInstructions: false },
+        },
+      )
+
+      expect(result.metadata.truncated).toBe(true)
+      expect(result.output).toContain("Read output capped at 4 KB")
+      expect(result.output).toContain("1: CONFIG_LINE_1")
+      expect(result.output).toMatch(/Use offset=\d+ to continue/)
+      expect(Buffer.byteLength(result.output, "utf-8")).toBeLessThanOrEqual(4096)
+      expect(result.metadata.display).toMatchObject({ type: "file", lineStart: 1, totalLines: 400, truncated: true })
+      expect(result.metadata.display?.type === "file" && result.metadata.display.lineEnd).toBeGreaterThanOrEqual(1)
+    }),
+  )
+
+  const tinyIt = configuredIt({ tool_output: { max_bytes: 1024 } })
+  tinyIt.live("returns a forward-moving slice with a tiny configured max_bytes", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped()
+      const target = path.join(dir, "tiny-budget.txt")
+      const lines = Array.from({ length: 12_000 }, (_, i) => `TARGET_LINE_${i + 1}_${"x".repeat(40)}`).join("\n")
+      yield* put(target, lines)
+
+      const result = yield* exec(
+        dir,
+        { filePath: target, offset: 11_098, limit: 30 },
+        {
+          ...ctx,
+          extra: { includeInstructions: false },
+        },
+      )
+
+      expect(result.metadata.truncated).toBe(true)
+      expect(result.output).toContain("Read output capped at 1 KB")
+      expect(result.output).toContain("11098: TARGET_LINE_11098")
+      expect(result.output).toMatch(/Showing lines 11098-\d+\. Use offset=\d+ to continue\./)
+      expect(result.output).not.toContain("Showing lines 11098-11097")
+      expect(Buffer.byteLength(result.output, "utf-8")).toBeLessThanOrEqual(1024)
+      expect(result.metadata.display).toMatchObject({
+        type: "file",
+        path: target,
+        lineStart: 11_098,
+        totalLines: 12_000,
+        truncated: true,
+      })
+      expect(result.metadata.display?.type === "file" && result.metadata.display.lineEnd).toBeGreaterThanOrEqual(11_098)
+    }),
+  )
+
+  tinyIt.live("truncates an oversized first line so the continuation advances", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped()
+      const target = path.join(dir, "long-line-budget.txt")
+      yield* put(target, ["a".repeat(5_000), "second line"].join("\n"))
+
+      const result = yield* exec(
+        dir,
+        { filePath: target, limit: 2 },
+        {
+          ...ctx,
+          extra: { includeInstructions: false },
+        },
+      )
+
+      expect(result.metadata.truncated).toBe(true)
+      expect(result.output).toContain("1: ")
+      expect(result.output).toContain("line truncated")
+      expect(result.output).toContain("Showing lines 1-1. Use offset=2 to continue.")
+      expect(Buffer.byteLength(result.output, "utf-8")).toBeLessThanOrEqual(1024)
+      expect(result.metadata.display).toMatchObject({
+        type: "file",
+        path: target,
+        lineStart: 1,
+        lineEnd: 1,
+        totalLines: 2,
         truncated: true,
       })
     }),
@@ -608,7 +705,6 @@ root_type Monster;`
     }),
   )
 
-  // kilocode_change start - unsupported image-like extensions fall back to text reads
   it.live("falls through unsupported image mime types to text", () =>
     Effect.gen(function* () {
       const dir = yield* tmpdirScoped()
@@ -626,11 +722,9 @@ root_type Monster;`
       }
     }),
   )
-  // kilocode_change end
-}) // kilocode_change
+})
 
 describe("tool.read loaded instructions", () => {
-  // kilocode_change
   // kilocode_change start - assert delivered instruction reminder metadata
   it.live("loads AGENTS.md from parent directory and includes in metadata", () =>
     Effect.gen(function* () {
@@ -669,6 +763,51 @@ describe("tool.read loaded instructions", () => {
       expect(result.metadata.instructionReminderTruncated).toBe(false)
     }),
   )
+
+  it.live("retries AGENTS.md delivery after a previous read omitted it", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped()
+      const parent = path.join(dir, "subdir", "AGENTS.md")
+      const nested = path.join(dir, "subdir", "nested", "AGENTS.md")
+      const large = path.join(dir, "subdir", "nested", "deeper", "large.txt")
+      const small = path.join(dir, "subdir", "nested", "deeper", "small.txt")
+      yield* put(parent, Array.from({ length: 2_200 }, (_, i) => `PARENT_LINE_${i + 1}`).join("\n"))
+      yield* put(nested, Array.from({ length: 2_200 }, (_, i) => `NESTED_LINE_${i + 1}`).join("\n"))
+      yield* put(large, Array.from({ length: 2_000 }, (_, i) => `TARGET_LINE_${i + 1}_${"x".repeat(40)}`).join("\n"))
+      yield* put(small, "small target")
+
+      const first = yield* exec(dir, { filePath: large })
+      const second = yield* exec(dir, { filePath: small })
+
+      expect(first.metadata.loaded).toContain(nested)
+      expect(first.metadata.loaded).not.toContain(parent)
+      expect(first.metadata.instructionReminderTruncated).toBe(true)
+      expect(second.output).toContain("PARENT_LINE_2200")
+      expect(second.metadata.loaded).toContain(parent)
+    }),
+  )
+
+  // kilocode_change start - attachment reads do not claim instructions they never render
+  it.live("does not claim AGENTS.md from image reads", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped()
+      const png = Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==",
+        "base64",
+      )
+      yield* put(path.join(dir, "subdir", "AGENTS.md"), "# Image Instructions")
+      yield* put(path.join(dir, "subdir", "nested", "image.png"), png)
+      yield* put(path.join(dir, "subdir", "nested", "text.txt"), "text content")
+
+      const first = yield* exec(dir, { filePath: path.join(dir, "subdir", "nested", "image.png") })
+      const second = yield* exec(dir, { filePath: path.join(dir, "subdir", "nested", "text.txt") })
+
+      expect(first.metadata.loaded).toEqual([])
+      expect(second.output).toContain("Image Instructions")
+      expect(second.metadata.loaded).toContain(path.join(dir, "subdir", "AGENTS.md"))
+    }),
+  )
+  // kilocode_change end
   it.live("caps large AGENTS.md reminders without obscuring the requested file range", () =>
     Effect.gen(function* () {
       const dir = yield* tmpdirScoped()

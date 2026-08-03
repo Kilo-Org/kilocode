@@ -28,9 +28,9 @@ const MAX_LINE_LENGTH = 2000
 const suffix = (length: number) => `... (line truncated to ${length} chars)`
 // kilocode_change end
 const MAX_BYTES = 50 * 1024
-const MAX_BYTES_LABEL = `${MAX_BYTES / 1024} KB`
 // kilocode_change - render configured output caps in user-visible Read continuation hints
 const bytesLabel = (bytes: number) => (bytes % 1024 === 0 ? `${bytes / 1024} KB` : `${bytes} bytes`) // kilocode_change
+const byteLength = (value: string) => Buffer.byteLength(value, "utf-8") // kilocode_change
 const SAMPLE_BYTES = 4096
 const SUPPORTED_IMAGE_MIMES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"])
 
@@ -223,7 +223,7 @@ export const ReadTool = Tool.define<
             worktree: instance.worktree,
           })
         : []
-      const maxOutputBytes = cfg?.tool_output?.max_bytes ?? MAX_BYTES
+      const budget = Math.min(MAX_BYTES, cfg?.tool_output?.max_bytes ?? MAX_BYTES)
       // kilocode_change end
       // kilocode_change start - fail before read authorization when the target is missing
       const info = yield* fs.stat(requested).pipe(
@@ -330,10 +330,11 @@ export const ReadTool = Tool.define<
               catch: (err) => (err instanceof Error ? err : new Error(String(err))),
             })
             const msg = isPdfAttachment(mime) ? "PDF read successfully" : "Image read successfully"
+            yield* instruction.unclaim(ctx.messageID, loaded.map((item) => item.filepath)) // kilocode_change
             return {
               title,
               output: msg,
-              metadata: { preview: msg, truncated: false, loaded: loaded.map((item) => item.filepath) },
+              metadata: { preview: msg, truncated: false, loaded: [] }, // kilocode_change
               attachments: [{ type: "file" as const, mime, url: `data:${mime};base64,${bytes.toString("base64")}` }],
             }
           }
@@ -342,13 +343,17 @@ export const ReadTool = Tool.define<
             return yield* Effect.fail(new Error(`Cannot read binary file: ${requested}`))
           }
           const outputHeader = [`<path>${bound.target}</path>`, `<type>file</type>`, "<content>\n"].join("\n")
+          const outputClose = "\n</content>" // kilocode_change
+          const reserve = formatInstructionReminder(loaded, {
+            maxBytes: Math.max(0, Math.floor(((budget - byteLength(outputHeader + outputClose) - 256) * 3) / 4)),
+          }) // kilocode_change
           // kilocode_change start - collect against rendered output budget, including line-number prefixes
           const file = yield* lines(
             bound,
             {
               limit: Math.max(1, params.limit ?? DEFAULT_READ_LIMIT),
               offset: params.offset || 1,
-              maxBytes: Math.max(1, maxOutputBytes - Buffer.byteLength(outputHeader, "utf-8") - 1024),
+              maxBytes: Math.max(1, budget - byteLength(outputHeader + outputClose + reserve.output) - 256),
             },
             ctx.abort,
           )
@@ -358,6 +363,9 @@ export const ReadTool = Tool.define<
               new Error(`Offset ${file.offset} is out of range for this file (${file.count} lines)`),
             )
           }
+          if (file.cut && file.raw.length === 0) {
+            return yield* Effect.fail(new Error(`tool_output.max_bytes is too small to render line ${file.offset}`))
+          }
 
           let output = outputHeader // kilocode_change
           output += file.raw.map((line, i) => `${i + file.offset}: ${line}`).join("\n")
@@ -365,18 +373,19 @@ export const ReadTool = Tool.define<
           const next = last + 1
           const truncated = file.more || file.cut
           if (file.cut) {
-            output += `\n\n(Output capped at ${bytesLabel(maxOutputBytes)}. Showing lines ${file.offset}-${last}. Use offset=${next} to continue.)` // kilocode_change
+            output += `\n\n(Read output capped at ${bytesLabel(budget)}. Showing lines ${file.offset}-${last}. Use offset=${next} to continue.)` // kilocode_change
           } else if (file.more) {
             output += `\n\n(Showing lines ${file.offset}-${last} of ${file.count}. Use offset=${next} to continue.)`
           } else {
             output += `\n\n(End of file - total ${file.count} lines)`
           }
-          output += "\n</content>"
+          output += outputClose // kilocode_change
           yield* warm(bound.target)
           // kilocode_change start - budget appended instructions against the model-facing Read output
           const reminder = formatInstructionReminder(loaded, {
-            maxBytes: Math.max(0, maxOutputBytes - Buffer.byteLength(output, "utf-8")),
+            maxBytes: Math.max(0, budget - byteLength(output)),
           })
+          yield* instruction.unclaim(ctx.messageID, reminder.omitted)
           // kilocode_change end
           output += reminder.output
           return {
@@ -414,6 +423,21 @@ export const ReadTool = Tool.define<
   }),
 )
 
+// kilocode_change start - fit the first rendered line into very small byte caps
+function byteslice(text: string, bytes: number) {
+  if (bytes <= 0) return ""
+  return new TextDecoder("utf-8").decode(Buffer.from(text, "utf-8").subarray(0, bytes)).replace(/\uFFFD$/, "")
+}
+
+function clip(text: string, bytes: number) {
+  if (byteLength(text) <= bytes) return text
+  const marker = suffix(0)
+  if (byteLength(marker) > bytes) return byteslice(text, bytes)
+  const first = byteslice(text, bytes - byteLength(marker))
+  const fitted = byteslice(text, bytes - byteLength(suffix(first.length)))
+  return fitted + suffix(fitted.length)
+}
+// kilocode_change end
 // kilocode_change start - extracted formats use native readers; ordinary text is supplied by FSUtil above
 async function collect(stream: Readable, opts: { limit: number; offset: number; maxBytes?: number }) {
   // kilocode_change end
@@ -437,14 +461,24 @@ async function collect(stream: Readable, opts: { limit: number; offset: number; 
       const line = text.length > MAX_LINE_LENGTH ? sliced + suffix(sliced.length) : text
       // kilocode_change end
       // kilocode_change start - count the model-facing numbered line, not only raw file text
+      const max = opts.maxBytes ?? MAX_BYTES
       const rendered = `${count}: ${line}`
-      const size = Buffer.byteLength(rendered, "utf-8") + (raw.length > 0 ? 1 : 0)
-      if (bytes + size > (opts.maxBytes ?? MAX_BYTES)) {
-        // kilocode_change end
+      const size = byteLength(rendered) + (raw.length > 0 ? 1 : 0)
+      if (bytes + size > max) {
         cut = true
         more = true
-        break
+        if (raw.length === 0) {
+          const prefix = `${count}: `
+          const fit = clip(line, max - byteLength(prefix))
+          if (fit) {
+            raw.push(fit)
+            bytes += byteLength(prefix + fit)
+          }
+        }
+        continue
+        // kilocode_change end
       }
+      if (cut) continue // kilocode_change - finish counting lines after a byte cap
       raw.push(line)
       bytes += size
     }

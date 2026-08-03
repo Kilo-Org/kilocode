@@ -38,6 +38,7 @@ export interface Interface {
   readonly systemPaths: () => Effect.Effect<Set<string>, FSUtil.Error>
   readonly system: () => Effect.Effect<string[], FSUtil.Error>
   readonly find: (dir: string) => Effect.Effect<string | undefined, FSUtil.Error>
+  readonly unclaim: (messageID: MessageID, paths: readonly string[]) => Effect.Effect<void> // kilocode_change
   readonly resolve: (
     messages: SessionV1.WithParts[],
     filepath: string,
@@ -214,6 +215,18 @@ export const layer: Layer.Layer<
       return undefined
     })
 
+    // kilocode_change start - allow Read to release instruction files it could not deliver in-band
+    const unclaim = Effect.fn("Instruction.unclaim")(function* (messageID: MessageID, paths: readonly string[]) {
+      const s = yield* InstanceState.get(state)
+      const set = s.claims.get(messageID)
+      if (!set) return
+      for (const path of paths) {
+        set.delete(path)
+      }
+      if (set.size === 0) s.claims.delete(messageID)
+    })
+    // kilocode_change end
+
     const resolve = Effect.fn("Instruction.resolve")(function* (
       messages: SessionV1.WithParts[],
       filepath: string,
@@ -258,7 +271,7 @@ export const layer: Layer.Layer<
       return results
     })
 
-    return Service.of({ clear, systemPaths, system, find, resolve })
+    return Service.of({ clear, systemPaths, system, find, unclaim, resolve }) // kilocode_change
   }),
 )
 
