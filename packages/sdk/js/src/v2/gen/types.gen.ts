@@ -281,7 +281,19 @@ export type AgentManagerStopRequest = {
   targetSessionID: string
 }
 
-export type AgentManagerRequest = AgentManagerOverviewRequest | AgentManagerPromptRequest | AgentManagerStopRequest
+export type AgentManagerMoveRequest = {
+  id: AgentManagerRequestId
+  sessionID: string
+  operation: "move"
+  targetSessionID: string
+  sectionID: string | null
+}
+
+export type AgentManagerRequest =
+  | AgentManagerOverviewRequest
+  | AgentManagerPromptRequest
+  | AgentManagerStopRequest
+  | AgentManagerMoveRequest
 
 export type NotebookRequestId = string
 
@@ -3390,7 +3402,18 @@ export type AgentManagerStopResult = {
   stopped: true
 }
 
-export type AgentManagerResult = AgentManagerOverviewResult | AgentManagerPromptResult | AgentManagerStopResult
+export type AgentManagerMoveResult = {
+  operation: "move"
+  sessionID: string
+  sectionID: string | null
+  moved: true
+}
+
+export type AgentManagerResult =
+  | AgentManagerOverviewResult
+  | AgentManagerPromptResult
+  | AgentManagerStopResult
+  | AgentManagerMoveResult
 
 export type AgentManagerFailure = {
   code:
@@ -3401,6 +3424,7 @@ export type AgentManagerFailure = {
     | "stale_session"
     | "timeout"
     | "unavailable_session"
+    | "unknown_section"
     | "unknown_session"
     | "workspace_unavailable"
   message: string

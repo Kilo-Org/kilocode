@@ -17,6 +17,7 @@ import { ConfigValidation } from "../kilocode/config-validation" // kilocode_cha
 import * as EncodedIO from "../kilocode/tool/encoded-io" // kilocode_change
 import { Format } from "../format"
 import * as Bom from "@/util/bom"
+import { assertMutablePath } from "../kilocode/agent-manager/protection" // kilocode_change
 
 export const Parameters = Schema.Struct({
   patchText: Schema.String.annotate({ description: "The full patch text that describes all changes to be made" }),
@@ -75,6 +76,7 @@ export const ApplyPatchTool = Tool.define(
 
       for (const hunk of hunks) {
         const filePath = path.resolve(instance.directory, hunk.path)
+        assertMutablePath(filePath) // kilocode_change
         yield* assertExternalDirectoryEffect(ctx, filePath)
 
         switch (hunk.type) {
