@@ -147,7 +147,7 @@ describe("pty", () => {
     Effect.gen(function* () {
       const pty = yield* Pty.Service
       const marker = "café-über-北京-🚀"
-      const info = yield* createPty("sh", ["-c", `printf '${marker}\\n'`])
+      const info = yield* createPty("sh", ["-c", "printf 'caf\\303\\251-\\303\\274ber-\\345\\214\\227\\344\\272\\254-\\360\\237\\232\\200\\n'"])
       const attached = yield* attachCollecting(info.id)
       expect(yield* waitForOutput(attached.output, marker)).toContain(marker)
     }),
