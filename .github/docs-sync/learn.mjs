@@ -205,6 +205,10 @@ export function validateDelta(delta, { existing, candidateSources, deletedInWind
   const valid = []
   const toRemove = []
   const existingIds = new Set(ex.map((e) => e.id))
+  // One model response can repeat an id or a rule. Both would render two lines for
+  // one id, so an accepted addition also blocks the next one.
+  const acceptedIds = new Set()
+  const acceptedRules = new Set()
 
   // Process remove first so toRemove is populated before the add loop checks
   // for id collisions with entries listed in remove (criterion 8).
@@ -237,6 +241,8 @@ export function validateDelta(delta, { existing, candidateSources, deletedInWind
       reason = `invalid id format: ${a.id}`
     } else if (existingIds.has(a.id) && !toRemove.includes(a.id)) {
       reason = `id ${a.id} collides with an existing entry not listed in remove`
+    } else if (acceptedIds.has(a.id)) {
+      reason = `id ${a.id} collides with an earlier addition in this delta`
     } else if (!/^\d{4}-\d{2}-\d{2}$/.test(a.date)) {
       reason = `invalid date format: ${a.date}`
     } else {
@@ -261,6 +267,13 @@ export function validateDelta(delta, { existing, candidateSources, deletedInWind
       continue
     }
 
+    // Duplicate of an earlier addition in the same response.
+    if (acceptedRules.has(n)) {
+      reason = `rule text is a duplicate of an earlier addition in this delta`
+      rejected.push({ entry: a, reason })
+      continue
+    }
+
     // Names a PR, URL, person, or docs page. The URL clause keeps docs-check-links.yml green.
     if (String(a.rule).match(/#\d{2,}|https?:\/\/|@[A-Za-z0-9-]|packages\/kilo-docs|\.md\b/)) {
       reason = "rule names a PR, URL, person, or docs page"
@@ -275,6 +288,8 @@ export function validateDelta(delta, { existing, candidateSources, deletedInWind
       continue
     }
 
+    acceptedIds.add(a.id)
+    acceptedRules.add(n)
     valid.push({
       id: a.id,
       rule: clean(String(a.rule)).replaceAll("\n", " "),
@@ -369,6 +384,13 @@ async function apply() {
 // --- extraction mode ---
 
 async function extract() {
+  // Step 0: seed the prompt artifacts from the checked-out file before any fallible
+  // work. Every later step can throw, the workflow step is continue-on-error, and
+  // triage and edit read only these two files. Without the seed one failed API call
+  // silently drops every learned rule for the whole run. Later steps replace them
+  // with the rolling-branch copy and then with the validated delta.
+  writePromptArtifacts(parseLearnings(readFileOrEmpty(LEARNINGS_FILE)))
+
   // Load fixture when DOCS_SYNC_FIXTURE is set.
   const fixturePath = process.env.DOCS_SYNC_FIXTURE
   let fixture = null
@@ -428,11 +450,7 @@ async function extract() {
   let existing = []
   let existingText = ""
   if (fixture) {
-    try {
-      existingText = fs.readFileSync(LEARNINGS_FILE, "utf8")
-    } catch {
-      // file absent
-    }
+    existingText = readFileOrEmpty(LEARNINGS_FILE)
     existing = parseLearnings(existingText)
   } else {
     try {
@@ -449,6 +467,10 @@ async function extract() {
     existing = parseLearnings(existingText)
   }
   log(`existing entries: ${existing.length}`)
+
+  // Replace the seed with the rolling-branch copy. Every step below can throw, and
+  // these two files are all triage and edit read.
+  writePromptArtifacts(existing)
 
   // Step 3: parse marker. Trust only when authored by github-actions[bot] (like watermark.mjs:35).
   let commitWm = null
@@ -785,11 +807,24 @@ function writeEmptyStateArtifacts(entries) {
   writePromptArtifacts(entries)
 }
 
+// A later call must be able to shrink a seeded block back to nothing, so an empty
+// block removes the file instead of leaving the earlier content in place.
 function writePromptArtifacts(entries) {
-  const triage = promptBlock(entries, "triage")
-  if (triage) fs.writeFileSync(`${OUT_DIR}/learnings-triage.md`, triage)
-  const edit = promptBlock(entries, "edit")
-  if (edit) fs.writeFileSync(`${OUT_DIR}/learnings-edit.md`, edit)
+  writeOrRemove(`${OUT_DIR}/learnings-triage.md`, promptBlock(entries, "triage"))
+  writeOrRemove(`${OUT_DIR}/learnings-edit.md`, promptBlock(entries, "edit"))
+}
+
+function writeOrRemove(file, text) {
+  if (text) fs.writeFileSync(file, text)
+  else fs.rmSync(file, { force: true })
+}
+
+function readFileOrEmpty(file) {
+  try {
+    return fs.readFileSync(file, "utf8")
+  } catch {
+    return ""
+  }
 }
 
 async function patchOrLogMarker({ prBody, prNumber, marker, fixture, patchFile }) {
@@ -811,8 +846,18 @@ async function patchOrLogMarker({ prBody, prNumber, marker, fixture, patchFile }
   }
 
   // Live PATCH: body-only, one line changed. The job already holds pull-requests: write.
+  // Re-read the body first. The body in hand was fetched before the extraction call, so
+  // patching that copy would drop any edit made in the minutes since. GitHub has no
+  // conditional update for a pull request body, so a short fetch-to-PATCH race remains.
   const { api, repo } = await import("./lib.mjs")
-  const newBody = patchMarkerIntoBody(prBody, marker)
+  let latestBody = prBody
+  try {
+    const fresh = await api(`/repos/${repo()}/pulls/${prNumber}`)
+    latestBody = fresh.body ?? ""
+  } catch (err) {
+    warn(`could not re-read PR #${prNumber} before the marker PATCH: ${err.message}. Using the earlier body.`)
+  }
+  const newBody = patchMarkerIntoBody(latestBody, marker)
   await api(`/repos/${repo()}/pulls/${prNumber}`, {
     method: "PATCH",
     body: { body: newBody },

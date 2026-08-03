@@ -7,12 +7,13 @@
  */
 
 import assert from "node:assert/strict"
-import { execFileSync, spawnSync } from "node:child_process"
+import { execFileSync, spawn, spawnSync } from "node:child_process"
 import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
+import { sleepSync } from "./lib.mjs"
 import { mergeOrFallback, DEFAULT_BRANCH } from "./prepare-branch.mjs"
 import { applyCap } from "./watermark.mjs"
 import {
@@ -3076,7 +3077,13 @@ Just prose, not a rule line.
       const kiloDir = makeStubKiloDir({ mode: "extraction-delta", callLog: path.join(cwd, "kilo-calls.log") })
       writeExtractionDelta(cwd, {
         add: [
-          { id: "dry-suppress", rule: "A rule suppressed under dry run.", scope: "both", source: tipSource, date: "2026-08-03" },
+          {
+            id: "dry-suppress",
+            rule: "A rule suppressed under dry run.",
+            scope: "both",
+            source: tipSource,
+            date: "2026-08-03",
+          },
         ],
         remove: [],
       })
@@ -3120,7 +3127,13 @@ Just prose, not a rule line.
       const kiloDir = makeStubKiloDir({ mode: "extraction-delta", callLog: path.join(cwd, "kilo-calls.log") })
       writeExtractionDelta(cwd, {
         add: [
-          { id: "nopatch-suppress", rule: "A rule suppressed under no-patch.", scope: "both", source: tipSource, date: "2026-08-03" },
+          {
+            id: "nopatch-suppress",
+            rule: "A rule suppressed under no-patch.",
+            scope: "both",
+            source: tipSource,
+            date: "2026-08-03",
+          },
         ],
         remove: [],
       })
@@ -3151,6 +3164,201 @@ Just prose, not a rule line.
         "stdout must log learned-through output suppression for LEARNINGS_NO_PATCH non-empty delta",
       )
     }
+  }
+
+  // 10s — a failed API call must not disable the existing learnings
+  // The learn step is continue-on-error, and triage and edit read only the two prompt
+  // artifacts. So learn.mjs must write them before the first call that can throw.
+  {
+    console.log("  10s — prompt artifacts survive an API failure")
+    const dir = mktemp("docs-sync-learn-s-")
+    const learningsPath = path.join(dir, "packages", "kilo-docs", "LEARNINGS.md")
+    fs.mkdirSync(path.dirname(learningsPath), { recursive: true })
+    const seeded = [
+      {
+        id: "seeded-rule",
+        rule: "Do not document features behind experimental flags.",
+        scope: "both",
+        source: "commit:aaaaaaa",
+        date: "2026-08-01",
+      },
+    ]
+    fs.writeFileSync(learningsPath, renderLearnings(seeded))
+
+    // No DOCS_SYNC_FIXTURE and an empty GITHUB_REPOSITORY: repo() throws inside
+    // extract(). It stands for any API failure before the artifacts exist.
+    const failEnv = {
+      TRIAGE_MODEL: "test/model",
+      GITHUB_REPOSITORY: "",
+      GITHUB_OUTPUT: path.join(dir, "gh-output-s"),
+      GITHUB_STEP_SUMMARY: path.join(dir, "gh-summary-s"),
+      DOCS_SYNC_BACKOFF_MS: "0",
+    }
+    const result = runNodeScript(LEARN_SCRIPT, { cwd: dir, env: failEnv })
+    assert.notEqual(result.status, 0, "extraction must fail without GITHUB_REPOSITORY")
+
+    const triagePath = path.join(dir, "docs-sync-out", "learnings-triage.md")
+    const editPath = path.join(dir, "docs-sync-out", "learnings-edit.md")
+    for (const f of [triagePath, editPath]) {
+      assert.ok(fs.existsSync(f), `${path.basename(f)} must survive the failure`)
+      assert.ok(
+        fs.readFileSync(f, "utf8").includes("Do not document features behind experimental flags."),
+        `${path.basename(f)} must carry the checked-out rule`,
+      )
+    }
+
+    // An empty file must clear the stale block, not leave the earlier rule in place.
+    fs.writeFileSync(learningsPath, renderLearnings([]))
+    runNodeScript(LEARN_SCRIPT, { cwd: dir, env: failEnv })
+    assert.ok(!fs.existsSync(triagePath), "an empty learnings file must remove learnings-triage.md")
+    assert.ok(!fs.existsSync(editPath), "an empty learnings file must remove learnings-edit.md")
+  }
+
+  // 10t — the direct marker PATCH must not overwrite a concurrent body edit
+  // The body read at step 1 predates the extraction call, so learn.mjs must re-read
+  // the body immediately before the PATCH.
+  {
+    console.log("  10t — marker PATCH preserves a concurrent body edit")
+    const dir = mktemp("docs-sync-learn-t-")
+    initRepoWithIdentity(dir)
+    fs.writeFileSync(path.join(dir, "base.txt"), "base\n")
+    gitIn(dir, ["add", "base.txt"])
+    gitIn(dir, ["commit", "-m", "base"])
+    gitIn(dir, ["checkout", "-b", "docs/auto-sync"])
+
+    // github-actions[bot] authored the only branch commit, so there is no candidate
+    // correction and no model call. The run goes straight to the direct marker PATCH.
+    const learningsPath = path.join(dir, "packages", "kilo-docs", "LEARNINGS.md")
+    fs.mkdirSync(path.dirname(learningsPath), { recursive: true })
+    fs.writeFileSync(learningsPath, renderLearnings([]))
+    gitIn(dir, ["add", "packages/kilo-docs/LEARNINGS.md"])
+    gitIn(dir, ["commit", "-m", "seed learnings", "--author", `github-actions[bot] <${githubBotEmail}>`])
+    gitIn(dir, ["remote", "add", "origin", dir]) // learn.mjs fetches origin itself
+    const cwd = setupLearnRepo(dir)
+    const tip = gitIn(dir, ["rev-parse", "HEAD"])
+
+    // Stub GitHub API. The second read of the pull request returns the maintainer edit.
+    const serverDir = mktemp("docs-sync-api-t-")
+    const portFile = path.join(serverDir, "port")
+    const patchFile = path.join(serverDir, "patch.json")
+    const serverScript = path.join(serverDir, "server.cjs")
+    fs.writeFileSync(
+      serverScript,
+      `const fs = require("node:fs")
+const http = require("node:http")
+let reads = 0
+const json = (res, data) => {
+  res.writeHead(200, { "content-type": "application/json" })
+  res.end(JSON.stringify(data))
+}
+const server = http.createServer((req, res) => {
+  let raw = ""
+  req.on("data", (c) => (raw += c))
+  req.on("end", () => {
+    if (req.method === "PATCH") return fs.writeFileSync(process.env.PATCH_FILE, raw), json(res, {})
+    if (req.url.startsWith("/search/issues")) return json(res, { items: [{ number: 1 }] })
+    if (req.url.includes("/comments")) return json(res, [])
+    if (req.url.includes("/pulls/1")) {
+      const body = reads++ === 0 ? process.env.BODY_BEFORE : process.env.BODY_AFTER
+      return json(res, {
+        number: 1,
+        body,
+        head: { ref: "docs/auto-sync" },
+        user: { login: "github-actions[bot]" },
+      })
+    }
+    json(res, {})
+  })
+})
+server.listen(0, "127.0.0.1", () => fs.writeFileSync(process.env.PORT_FILE, String(server.address().port)))
+`,
+    )
+
+    const bodyBefore = "Rolling PR body.\n<!-- docs-sync: learned-through commit=old comment=none -->\n"
+    const humanEdit = "A maintainer edited the body while extraction ran."
+    const child = spawn(process.execPath, [serverScript], {
+      stdio: "ignore",
+      env: {
+        ...process.env,
+        PORT_FILE: portFile,
+        PATCH_FILE: patchFile,
+        BODY_BEFORE: bodyBefore,
+        BODY_AFTER: bodyBefore + humanEdit + "\n",
+      },
+    })
+
+    try {
+      let port = ""
+      for (let i = 0; i < 100 && !port; i++) {
+        if (fs.existsSync(portFile)) port = fs.readFileSync(portFile, "utf8").trim()
+        else sleepSync(50)
+      }
+      assert.ok(port, "the stub API server must report a port")
+
+      const result = runNodeScript(LEARN_SCRIPT, {
+        cwd,
+        env: {
+          TRIAGE_MODEL: "test/model",
+          GITHUB_REPOSITORY: "acme/repo",
+          GH_TOKEN: "stub-token",
+          DOCS_SYNC_API_BASE: `http://127.0.0.1:${port}`,
+          GITHUB_OUTPUT: path.join(dir, "gh-output-t"),
+          GITHUB_STEP_SUMMARY: path.join(dir, "gh-summary-t"),
+          LEARNINGS_BUDGET_MINUTES: "1",
+          DOCS_SYNC_BACKOFF_MS: "0",
+        },
+      })
+      assert.equal(result.status, 0, `learn.mjs must succeed against the stub API: ${result.output}`)
+
+      assert.ok(fs.existsSync(patchFile), "the run must PATCH the pull request body")
+      const patchedBody = JSON.parse(fs.readFileSync(patchFile, "utf8")).body
+      assert.ok(patchedBody.includes(humanEdit), "the concurrent body edit must survive the marker PATCH")
+      assert.ok(patchedBody.includes(tip), "the PATCH must carry the new tip SHA")
+      assert.ok(!patchedBody.includes("commit=old"), "the old marker must be replaced")
+      assert.equal(
+        (patchedBody.match(/<!--\s*docs-sync:\s*learned-through/g) || []).length,
+        1,
+        "exactly one marker after the PATCH",
+      )
+    } finally {
+      child.kill()
+    }
+  }
+
+  // 10u — one model response cannot repeat an id or a rule
+  {
+    console.log("  10u — duplicates inside one delta")
+    const base = { scope: "both", source: "commit:aaaaaaa", date: "2026-08-03" }
+    const ctx = { existing: [], candidateSources: ["commit:aaaaaaa"], deletedInWindow: [] }
+
+    const dupId = validateDelta(
+      {
+        add: [
+          { ...base, id: "same-id", rule: "Do not document features behind experimental flags." },
+          { ...base, id: "same-id", rule: "Keep the release notes short." },
+        ],
+        remove: [],
+      },
+      ctx,
+    )
+    assert.equal(dupId.add.length, 1, "a repeated id must be rejected")
+    assert.equal(dupId.add[0].rule, "Do not document features behind experimental flags.")
+    assert.equal(dupId.rejected.length, 1)
+    assert.ok(dupId.rejected[0].reason.includes("earlier addition"), "the reason must name the earlier addition")
+
+    const dupText = validateDelta(
+      {
+        add: [
+          { ...base, id: "rule-one", rule: "Do not document features behind experimental flags." },
+          { ...base, id: "rule-two", rule: "Do not document features behind experimental flags!" },
+        ],
+        remove: [],
+      },
+      ctx,
+    )
+    assert.equal(dupText.add.length, 1, "a repeated rule text must be rejected")
+    assert.equal(dupText.rejected.length, 1)
+    assert.ok(dupText.rejected[0].reason.includes("earlier addition"), "the reason must name the earlier addition")
   }
 
   // Prompt block format
