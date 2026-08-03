@@ -276,11 +276,16 @@ export namespace SessionResume {
   async function readFirstJSONL(filepath: string): Promise<unknown> {
     const stream = fs.createReadStream(filepath, "utf-8")
     const rl = readline.createInterface({ input: stream, crlfDelay: Infinity })
-    for await (const raw of rl) {
-      const line = raw.trim()
-      if (line) return safeParse(line)
+    try {
+      for await (const raw of rl) {
+        const line = raw.trim()
+        if (line) return safeParse(line)
+      }
+      return undefined
+    } finally {
+      rl.close()
+      stream.destroy()
     }
-    return undefined
   }
 
   // ── Parse objects ─────────────────────────────────────────────────
@@ -698,9 +703,7 @@ export namespace SessionResume {
         pending = closeIfPaired(steps, pending)
 
         const callID = String(payload.call_id ?? "")
-        const name = riType === "function_call"
-          ? String(payload.name ?? "")
-          : String(payload.name ?? "")
+        const name = String(payload.name ?? "")
         const input = parseCodexToolInput(riType, payload)
 
         const tc: ToolCall = { type: "tool_call", id: callID, name, input }
@@ -912,14 +915,6 @@ export namespace SessionResume {
     for (let i = msgs.length - 1; i >= 0; i--) {
       const info = msgs[i].info
       if (info.role === "user" && typeof info.id === "string") return info.id
-    }
-    return ""
-  }
-
-  function lastAssistantID(msgs: MappedMessage[]): string {
-    for (let i = msgs.length - 1; i >= 0; i--) {
-      const info = msgs[i].info
-      if (info.role === "assistant" && typeof info.id === "string") return info.id
     }
     return ""
   }

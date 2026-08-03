@@ -125,10 +125,10 @@ export interface Interface {
   // kilocode_change end
   readonly loop: (input: LoopInput) => Effect.Effect<SessionV1.WithParts>
   readonly shell: (input: ShellInput) => Effect.Effect<SessionV1.WithParts, Session.BusyError>
-  // kilocode_change start - commands can fail on unmet agent requirements
+  // kilocode_change start - commands can fail on unmet agent requirements or resume errors
   readonly command: (
     input: CommandInput,
-  ) => Effect.Effect<SessionV1.WithParts, Image.Error | Agent.RequirementBlockedError>
+  ) => Effect.Effect<SessionV1.WithParts, Image.Error | Agent.RequirementBlockedError | Error>
   // kilocode_change end
   readonly resolvePromptParts: (template: string) => Effect.Effect<PromptInput["parts"]>
 }
@@ -1956,6 +1956,9 @@ export const layer = Layer.effect(
     }) {
       const ctx = yield* InstanceState.context
       const session = yield* sessions.get(input.cmdInput.sessionID).pipe(Effect.orDie)
+      // kilocode_change start - testable resume roots
+      const roots = (input.cmdInput.resumeRoots ?? {}) as SessionResume.HarnessRoots
+      // kilocode_change end
 
       // Reject nonempty sessions
       const msgs = yield* sessions.messages({ sessionID: input.cmdInput.sessionID }).pipe(Effect.orDie)
@@ -1996,7 +1999,7 @@ export const layer = Layer.effect(
         let claudeFiles: string[] = []
         if (input.format === "claude") {
           try {
-            claudeFiles = SessionResume.discoverClaude({ cwd })
+            claudeFiles = SessionResume.discoverClaude({ cwd, ...roots })
           } catch (cause) {
             const code = typeof cause === "object" && cause !== null && "code" in cause ? cause.code : undefined
             if (code !== "ENOENT") {
@@ -2007,7 +2010,7 @@ export const layer = Layer.effect(
           }
         }
         const codexExit = input.format === "codex"
-          ? yield* Effect.exit(Effect.promise(() => SessionResume.discoverCodex({ cwd })))
+          ? yield* Effect.exit(Effect.promise(() => SessionResume.discoverCodex({ cwd, ...roots })))
           : undefined
         const codexFiles = (codexExit && Exit.isSuccess(codexExit)) ? codexExit.value : []
 
@@ -2089,12 +2092,12 @@ export const layer = Layer.effect(
       // Discover and parse
       const cwd = ctx.directory
       const codexExit = input.format === "codex"
-        ? yield* Effect.exit(Effect.promise(() => SessionResume.discoverCodex({ cwd, id: uuid })))
+        ? yield* Effect.exit(Effect.promise(() => SessionResume.discoverCodex({ cwd, id: uuid, ...roots })))
         : undefined
       let file: string | undefined
       if (input.format === "claude") {
         try {
-          file = SessionResume.discoverClaude({ cwd, id: uuid })[0]
+          file = SessionResume.discoverClaude({ cwd, id: uuid, ...roots })[0]
         } catch (cause) {
           if (cause instanceof SessionResume.ParseError) {
             const error = new NamedError.Unknown({ message: cause.message })
@@ -2246,7 +2249,7 @@ export const layer = Layer.effect(
       // kilocode_change start - resume commands import external transcripts
       const fmt = isResumeCommand(input.command)
       if (fmt) {
-        return yield* handleResume({ cmdInput: input, format: fmt }).pipe(Effect.catch(Effect.die))
+        return yield* handleResume({ cmdInput: input, format: fmt })
       }
       // kilocode_change end
       // kilocode_change start - deprecated review aliases should display a static notice without an LLM turn
@@ -2572,7 +2575,13 @@ export const CommandInput = Schema.Struct({
     description: "Wait silently if snapshot initialization is slow instead of asking the user.",
   }),
   // kilocode_change end
+  // kilocode_change start - internal resume harness roots for testing
+  resumeRoots: Schema.optional(Schema.Unknown),
+  // kilocode_change end
   // Inlined (no identifier annotation) to keep the original SDK output — the
+
+
+
   // PromptInput call site below references FilePartInput by ref via the
   // Schema export in message-v2.ts.
   parts: Schema.optional(

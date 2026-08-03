@@ -854,23 +854,63 @@ it.instance(
 
 // ── Picker / no-ID import ─────────────────────────────────────────────────
 
+const tmpRoots = Effect.fn("test.tmpRoots")(function* () {
+  const test = yield* TestInstance
+  const claude = path.join(test.directory, "tmp-claude-projects")
+  const codex = path.join(test.directory, "tmp-codex-sessions")
+  return { claude, codex }
+})
+
+const withClaudeFixtureAt = (root: string, cwd: string, content: string, id: string) =>
+  Effect.acquireRelease(
+    Effect.gen(function* () {
+      const dir = path.join(root, claudeSlug(cwd))
+      const file = path.join(dir, `${id}.jsonl`)
+      yield* writeText(file, content)
+      return file
+    }),
+    (file) =>
+      Effect.gen(function* () {
+        try { fs.rmSync(path.dirname(file), { recursive: true, force: true }) } catch {}
+      }),
+  )
+
+const codexFixtureForCwdAt = (cwd: string) =>
+  Effect.gen(function* () {
+    const raw = yield* Effect.promise(() => codexFixture())
+    return raw.replace(/"cwd":"[^"]*"/, `"cwd":"${cwd}"`)
+  })
+
+const withCodexFixtureAt = (root: string, content: string, id: string) =>
+  Effect.acquireRelease(
+    Effect.gen(function* () {
+      const file = path.join(root, `rollout-${id}.jsonl`)
+      yield* writeText(file, content)
+      return file
+    }),
+    (file) =>
+      Effect.gen(function* () {
+        try { fs.rmSync(file, { force: true }) } catch {}
+      }),
+  )
+
 itPicker.instance(
   "Claude picker import discovers and imports the most recent session",
   () =>
     Effect.gen(function* () {
       const { dir } = yield* useServerConfig(providerCfg)
+      const roots = yield* tmpRoots()
       const { prompt, chat } = yield* boot()
       const content = yield* Effect.promise(() => claudeFixture())
 
-      // Write the fixture to the discovery directory
-      const file = path.join(os.homedir(), ".claude", "projects", claudeSlug(dir), `${fixtureUUID}.jsonl`)
-      yield* writeText(file, content)
+      yield* withClaudeFixtureAt(roots.claude, dir, content, fixtureUUID)
 
       yield* prompt.command({
         sessionID: chat.id,
         command: "resume-claude",
         arguments: "",
         agent: "build",
+        resumeRoots: { claude: roots.claude },
       })
 
       const msgs = yield* sessionMessages(chat.id)
@@ -881,9 +921,6 @@ itPicker.instance(
       expect(last.info.role).toBe("assistant")
       const text = last.parts.find((p) => p.type === "text")
       expect(text?.type === "text" && text.text).toContain("imported from an external session")
-
-      // Cleanup
-      try { fs.rmSync(path.dirname(file), { recursive: true, force: true }) } catch {}
     }),
   { config: cfg },
   30_000,
@@ -894,18 +931,18 @@ itPicker.instance(
   () =>
     Effect.gen(function* () {
       const { dir } = yield* useServerConfig(providerCfg)
+      const roots = yield* tmpRoots()
       const { prompt, chat } = yield* boot()
-      const content = yield* codexFixtureForCwd(dir)
+      const content = yield* codexFixtureForCwdAt(dir)
 
-      // Write the fixture to the Codex discovery path
-      const file = codexSessionFile("sessions", `rollout-${fixtureUUID}.jsonl`)
-      yield* writeText(file, content)
+      yield* withCodexFixtureAt(roots.codex, content, fixtureUUID)
 
       yield* prompt.command({
         sessionID: chat.id,
         command: "resume-codex",
         arguments: "",
         agent: "build",
+        resumeRoots: { codex: roots.codex },
       })
 
       const msgs = yield* sessionMessages(chat.id)
@@ -916,9 +953,6 @@ itPicker.instance(
       expect(last.info.role).toBe("assistant")
       const text = last.parts.find((p) => p.type === "text")
       expect(text?.type === "text" && text.text).toContain("imported from an external session")
-
-      // Cleanup
-      try { fs.rmSync(file, { force: true }) } catch {}
     }),
   { config: cfg },
   30_000,
