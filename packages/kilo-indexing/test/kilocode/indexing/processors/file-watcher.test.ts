@@ -15,8 +15,8 @@ import type {
 } from "../../../../src/indexing/interfaces"
 import {
   FileWatcher,
-  waitForWatcherReady,
-  type WatcherReadySource,
+  type FileWatchEvent,
+  type FileWatchSubscribe,
 } from "../../../../src/indexing/processors/file-watcher"
 import { CodeParser } from "../../../../src/indexing/processors/parser"
 import { loadIgnore } from "../../../../src/indexing/shared/load-ignore"
@@ -389,42 +389,122 @@ describe("FileWatcher", () => {
   })
 })
 
-describe("waitForWatcherReady", () => {
-  type FakeWatcher = WatcherReadySource & { emit(event: string, arg?: unknown): void }
-
-  function createReadyWatcher(): FakeWatcher {
-    const handlers = new Map<string, (arg?: unknown) => void>()
+describe("FileWatcher subscription", () => {
+  // Controllable fake watcher backend injected via the FileWatcher constructor,
+  // so the subscribe / event-mapping / retry / teardown paths are exercised
+  // without a real filesystem subscription.
+  function createFakeBackend() {
+    let onEvents: ((events: readonly FileWatchEvent[]) => void) | undefined
+    let subscribed = 0
+    let unsubscribed = 0
+    let failNext = 0
+    const subscribe: FileWatchSubscribe = async (_directory, cb) => {
+      subscribed += 1
+      if (failNext > 0) {
+        failNext -= 1
+        throw new Error("subscribe failed")
+      }
+      onEvents = cb
+      return {
+        unsubscribe: async () => {
+          unsubscribed += 1
+        },
+      }
+    }
     return {
-      once(event: string, listener: (arg?: unknown) => void) {
-        handlers.set(event, listener)
+      subscribe,
+      emit: (events: FileWatchEvent[]) => onEvents?.(events),
+      failOnce: () => {
+        failNext = 1
       },
-      emit(event: string, arg?: unknown) {
-        handlers.get(event)?.(arg)
+      get subscribed() {
+        return subscribed
+      },
+      get unsubscribed() {
+        return unsubscribed
       },
     }
   }
 
-  test("resolves once the watcher emits ready", async () => {
-    const watcher = createReadyWatcher()
-    const ready = waitForWatcherReady(watcher, "/workspace", 1000)
-    watcher.emit("ready")
-    await expect(ready).resolves.toBeUndefined()
+  async function makeWatcher(backend: ReturnType<typeof createFakeBackend>) {
+    const root = await mkdtemp(path.join(tmpdir(), "file-watcher-parcel-"))
+    const cacheDir = path.join(root, ".cache")
+    await mkdir(cacheDir, { recursive: true })
+    const cache = new CacheManager(cacheDir, root)
+    await cache.initialize()
+    const watcher = new FileWatcher(
+      root,
+      cache,
+      createEmbedder(),
+      new RetryStore(0),
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      backend.subscribe,
+    )
+    const internals = watcher as unknown as {
+      accumulatedEvents: Map<string, { path: string; type: "create" | "change" | "delete" }>
+    }
+    return { root, watcher, accumulated: internals.accumulatedEvents }
+  }
+
+  test("initialize subscribes once and maps parcel events (update -> change)", async () => {
+    const backend = createFakeBackend()
+    const { root, watcher, accumulated } = await makeWatcher(backend)
+    await watcher.initialize()
+    expect(backend.subscribed).toBe(1)
+
+    const created = path.join(root, "created.ts")
+    const changed = path.join(root, "changed.ts")
+    const deleted = path.join(root, "deleted.ts")
+    backend.emit([
+      { path: created, type: "create" },
+      { path: changed, type: "update" },
+      { path: deleted, type: "delete" },
+    ])
+
+    expect(accumulated.get(created)?.type).toBe("create")
+    expect(accumulated.get(changed)?.type).toBe("change")
+    expect(accumulated.get(deleted)?.type).toBe("delete")
+    await watcher.shutdown()
   })
 
-  test("rejects with an actionable error when ready never fires within the timeout", async () => {
-    // A watcher that never emits "ready" simulates a very large tree or a
-    // missing native backend; this must fail fast instead of hanging forever.
-    const watcher = createReadyWatcher()
-    const ready = waitForWatcherReady(watcher, "/huge/workspace", 20)
-    await expect(ready).rejects.toThrow(/did not become ready/)
-    await expect(ready).rejects.toThrow(/scope indexing to a single/)
-    await expect(ready).rejects.toThrow(/\/huge\/workspace/)
+  test("events for ignored or unsupported files are dropped", async () => {
+    const backend = createFakeBackend()
+    const { root, watcher, accumulated } = await makeWatcher(backend)
+    await watcher.initialize()
+
+    backend.emit([
+      { path: path.join(root, "node_modules/dep/index.ts"), type: "create" }, // ignored directory
+      { path: path.join(root, "image.png"), type: "create" }, // unsupported extension
+    ])
+
+    expect(accumulated.size).toBe(0)
+    await watcher.shutdown()
   })
 
-  test("rejects when the watcher emits an error", async () => {
-    const watcher = createReadyWatcher()
-    const ready = waitForWatcherReady(watcher, "/workspace", 1000)
-    watcher.emit("error", new Error("watch boom"))
-    await expect(ready).rejects.toThrow("watch boom")
+  test("a failed initialize resets state so a later initialize retries", async () => {
+    const backend = createFakeBackend()
+    backend.failOnce()
+    const { watcher } = await makeWatcher(backend)
+
+    await expect(watcher.initialize()).rejects.toThrow("subscribe failed")
+    // A stuck state would leave `this.ready` rejected and make every subsequent
+    // initialize() throw immediately; the reset must allow a clean re-subscribe.
+    await watcher.initialize()
+    expect(backend.subscribed).toBe(2)
+    await watcher.shutdown()
+  })
+
+  test("shutdown unsubscribes the watcher", async () => {
+    const backend = createFakeBackend()
+    const { watcher } = await makeWatcher(backend)
+    await watcher.initialize()
+    await watcher.shutdown()
+    expect(backend.unsubscribed).toBe(1)
   })
 })
