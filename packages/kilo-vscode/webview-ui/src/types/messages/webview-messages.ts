@@ -827,6 +827,13 @@ export interface AgentManagerTerminalResizeRequest {
   rows: number
 }
 
+export interface AgentManagerTerminalRestartRequest {
+  type: "agentManager.terminal.restart"
+  terminalId: string
+  cols?: number
+  rows?: number
+}
+
 // Open a file in the selected worktree for a specific session
 export interface AgentManagerOpenFileRequest {
   type: "agentManager.openFile"
@@ -1571,6 +1578,7 @@ export type WebviewMessage =
   | AgentManagerTerminalCreateRequest
   | AgentManagerTerminalCloseRequest
   | AgentManagerTerminalStopRequest
+  | AgentManagerTerminalRestartRequest
   | AgentManagerTerminalDestinationSelectedRequest
   | AgentManagerTerminalResizeRequest
   | RequestImageModelsMessage

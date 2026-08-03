@@ -238,6 +238,8 @@ export const dict = {
     "Klicken, um Schreibvorgänge im Dateisystem einzuschränken. Der Netzwerkzugriff bleibt gemäß deinen Sandbox-Einstellungen erlaubt.",
 
   "speechToText.tooltip.start": "Spracheingabe mit Kilo Gateway starten",
+  "speechToText.tooltip.shortcut":
+    "Tippe oder drücke Cmd/Ctrl+K, um die Aufnahme zu starten oder zu stoppen; halte beim Sprechen gedrückt und lasse los, um zu transkribieren und abzusenden.",
   "speechToText.tooltip.starting": "Mikrofon wird gestartet... Bitte noch nicht sprechen.",
   "speechToText.tooltip.stop": "Audioerfassung beenden",
   "speechToText.tooltip.transcribing": "Transkribieren... Zum Abbrechen klicken.",

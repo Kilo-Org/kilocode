@@ -63,6 +63,7 @@ export const dict = {
 
   "agentManager.terminal.new": "新建终端标签页",
   "agentManager.terminal.ended": "终端已结束 — 关闭标签页以消除",
+  "agentManager.terminal.endedRestartable": "终端已结束 - 输入以启动新 shell，或关闭标签页",
   "agentManager.terminal.setupFailed": "设置脚本失败",
   "agentManager.terminal.setupFailedCode": "设置脚本失败，退出代码为",
   "agentManager.terminal.stopSetup": "停止设置脚本",

@@ -233,6 +233,8 @@ export const dict = {
     "Klik om schrijfbewerkingen in het bestandssysteem te beperken. Netwerktoegang blijft toegestaan volgens je sandboxinstellingen.",
 
   "speechToText.tooltip.start": "Spraakinvoer starten met Kilo Gateway",
+  "speechToText.tooltip.shortcut":
+    "Tik of druk op Cmd/Ctrl+K om de opname te starten of te stoppen; houd de knop ingedrukt terwijl je spreekt en laat deze los om te transcriberen en te verzenden.",
   "speechToText.tooltip.starting": "Microfoon wordt gestart... Wacht nog even met spreken.",
   "speechToText.tooltip.stop": "Audio vastleggen stoppen",
   "speechToText.tooltip.transcribing": "Transcriberen... Klik om te annuleren.",

@@ -65,6 +65,7 @@ export const dict = {
 
   "agentManager.terminal.new": "Ny terminalfane",
   "agentManager.terminal.ended": "terminal afsluttet — luk fanen for at fjerne",
+  "agentManager.terminal.endedRestartable": "terminal afsluttet - skriv for at starte en ny shell, eller luk fanen",
   "agentManager.terminal.setupFailed": "opsætningsscript mislykkedes",
   "agentManager.terminal.setupFailedCode": "opsætningsscript mislykkedes med exitkode",
   "agentManager.terminal.stopSetup": "Stop opsætningsscript",

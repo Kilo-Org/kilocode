@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import { Window } from "happy-dom"
-import { focusQuestionOption } from "../../webview-ui/agent-manager/focus"
+import { focusQuestionOption, hasQuestionOption } from "../../webview-ui/agent-manager/focus"
 
 describe("Agent Manager focus", () => {
   it("focuses the first enabled question option", () => {
@@ -37,5 +37,20 @@ describe("Agent Manager focus", () => {
 
     expect(focusQuestionOption(root)).toBe(false)
     expect(root.ownerDocument.activeElement).not.toBe(option)
+  })
+
+  it("only reports enabled options outside inert bodies", () => {
+    const window = new Window()
+    const root = window.document.createElement("div")
+    const dock = window.document.createElement("div")
+    const option = window.document.createElement("button")
+    dock.setAttribute("data-component", "question-dock")
+    option.setAttribute("data-slot", "question-option")
+    dock.append(option)
+    root.append(dock)
+
+    expect(hasQuestionOption(root)).toBe(true)
+    dock.setAttribute("inert", "")
+    expect(hasQuestionOption(root)).toBe(false)
   })
 })
