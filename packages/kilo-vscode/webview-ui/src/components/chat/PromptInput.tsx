@@ -34,6 +34,7 @@ import { hasGitChangesMention } from "../../hooks/git-changes-context-utils"
 import { useSlashCommand } from "../../hooks/useSlashCommand"
 import { useGhostText } from "../../hooks/useGhostText"
 import { useSpeechToText } from "../speech-to-text/useSpeechToText"
+import { createSpeechShortcut } from "../speech-to-text/shortcut"
 import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageAttachments"
 import { convertToMentionPath } from "../../utils/path-mentions"
 import { SessionMentionPicker } from "./SessionMentionPicker"
@@ -110,6 +111,10 @@ interface PromptInputProps {
   questioning?: () => boolean
   boxId?: string
   pendingSessionID?: string
+  /** Agent Manager can suppress automatic prompt focus when this session last
+   *  used its side terminal instead. Other callers retain the old behavior. */
+  focusOnDraftChange?: () => boolean
+  onFocusChange?: (focused: boolean) => void
 }
 
 function MentionItemContent(props: { item: MentionResult }) {
@@ -381,7 +386,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         textareaRef.scrollTop = scroll
         if (highlightRef) highlightRef.scrollTop = scroll
       }
-      window.dispatchEvent(new Event("focusPrompt"))
+      if (props.focusOnDraftChange?.() ?? true) window.dispatchEvent(new Event("focusPrompt"))
     }),
   )
 
@@ -1024,6 +1029,32 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     })
   }
 
+  const shortcut = createSpeechShortcut({
+    speech,
+    disabled: () => !canUseSpeech() || isDisabled(),
+    start: startSpeech,
+    finish: (submit) => {
+      if (submit) {
+        transcribeAndSend()
+        return
+      }
+      speech.stop()
+    },
+  })
+  const speechDown = (e: KeyboardEvent): boolean => {
+    if (!shortcut.down(e)) return false
+    e.preventDefault()
+    e.stopPropagation()
+    return true
+  }
+  const speechUp = (e: KeyboardEvent): boolean => {
+    if (!shortcut.up(e)) return false
+    e.preventDefault()
+    e.stopPropagation()
+    return true
+  }
+  onCleanup(shortcut.reset)
+
   const handleSendClick = () => {
     if (speech.state() !== "recording" || !canSend()) {
       void handleSend()
@@ -1402,12 +1433,24 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             placeholder={placeholder()}
             value={text()}
             onInput={handleInput}
-            onKeyDown={handleKeyDown}
-            onKeyUp={syncGhost}
+            onKeyDown={(e) => {
+              if (speechDown(e)) return
+              handleKeyDown(e)
+            }}
+            onKeyUp={(e) => {
+              if (speechUp(e)) return
+              syncGhost()
+            }}
             onPaste={handlePaste}
             onClick={syncGhost}
-            onFocus={syncGhost}
-            onBlur={syncGhost}
+            onFocus={() => {
+              syncGhost()
+              props.onFocusChange?.(true)
+            }}
+            onBlur={() => {
+              syncGhost()
+              props.onFocusChange?.(false)
+            }}
             onSelect={() => {
               syncGhost()
               if (textareaRef) mention.snapSelection(textareaRef)

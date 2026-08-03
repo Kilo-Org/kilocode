@@ -229,6 +229,8 @@ export const dict = {
     "クリックすると、ファイルシステムへの書き込みを制限します。サンドボックス設定により、ネットワークアクセスは引き続き許可されます。",
 
   "speechToText.tooltip.start": "Kilo Gatewayで音声入力を開始",
+  "speechToText.tooltip.shortcut":
+    "タップまたは Cmd/Ctrl+K を押して録音を開始／停止し、話している間は押し続け、離すと文字起こしして送信します。",
   "speechToText.tooltip.starting": "マイクを起動中... まだ話さないでください。",
   "speechToText.tooltip.stop": "音声キャプチャを停止",
   "speechToText.tooltip.transcribing": "文字起こし中... クリックしてキャンセル。",
@@ -1017,6 +1019,9 @@ export const dict = {
     "カスタムコマンドが設定されていません。opencode.json にコマンドを追加するとここに表示されます。",
   "settings.agentBehaviour.workflows.detail.description": "説明",
   "settings.agentBehaviour.workflows.detail.template": "テンプレート",
+  "settings.agentBehaviour.workflows.model": "モデル",
+  "settings.agentBehaviour.workflows.variant": "バリアント",
+  "settings.agentBehaviour.workflows.modelDescription": "グローバルモデルの上書き",
   "settings.sandboxing.enabled.title": "サンドボックス",
   "settings.sandboxing.enabled.description":
     "エージェントのシェルコマンドを、プロジェクトおよびKiloの状態ディレクトリへの書き込みを制限するOSレベルのサンドボックス内で実行",

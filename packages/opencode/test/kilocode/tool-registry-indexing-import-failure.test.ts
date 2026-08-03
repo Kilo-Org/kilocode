@@ -45,6 +45,7 @@ function infos() {
     chart: info("chart"),
     image: info("generate_image"),
     notify: info("notify_user"),
+    send: info("send_file"),
     notebookRead: info("notebook_read"),
     notebookEdit: info("notebook_edit"),
     notebookExecute: info("notebook_execute"),

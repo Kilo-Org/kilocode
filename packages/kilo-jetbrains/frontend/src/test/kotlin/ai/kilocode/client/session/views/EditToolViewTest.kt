@@ -14,6 +14,8 @@ import com.intellij.openapi.diff.DiffColors
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.EditorTextField
+import com.intellij.ui.HyperlinkLabel
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
@@ -372,6 +374,59 @@ class EditToolViewTest : BasePlatformTestCase() {
         assertNull(view.headerPopup())
     }
 
+    fun `test large single-file edit shows overflow placeholder instead of editors`() {
+        val fired = mutableListOf<List<DiffFileDto>>()
+        val view = track(EditToolView(tool().also {
+            it.metadata = mapOf("filediff" to fileDiff(2100, 0, bigPatch(2100)))
+        }))
+        view.setDiffOpener({ files, _, _ -> fired.add(files) }, "ses")
+
+        view.toggle()
+
+        assertTrue(view.isExpanded())
+        // The large diff is not rendered as an embedded editor; a placeholder link opens the diff tab.
+        assertTrue(view.codeEditors().isEmpty())
+        hyperlinks(view).single().doClick()
+        assertEquals(1, fired.single().size)
+        // Copy still yields the full diff even though it is not previewed inline.
+        assertTrue(view.markdown().contains("+line0"))
+    }
+
+    fun `test large single-file edit popup defers to the diff tab`() {
+        val fired = mutableListOf<List<DiffFileDto>>()
+        val view = track(EditToolView(tool().also {
+            it.metadata = mapOf("filediff" to fileDiff(2100, 0, bigPatch(2100)))
+        }, { _, _ -> }, null, { files, _, _ -> fired.add(files) }, "ses"))
+        val body = view.headerPopup()!!.build()
+
+        try {
+            assertTrue(editors(body.component).isEmpty())
+            hyperlinks(body.component).single().doClick()
+            assertEquals(1, fired.single().size)
+        } finally {
+            Disposer.dispose(body.disposable)
+        }
+    }
+
+    fun `test large multi-file patch shows overflow placeholder instead of editors`() {
+        val fired = mutableListOf<List<DiffFileDto>>()
+        val view = track(EditToolView(tool().also {
+            it.input = emptyMap()
+            it.metadata = mapOf("files" to filesMeta(
+                FileChange("src/A.kt", 1100, 0, bigHunk(1100)),
+                FileChange("src/B.kt", 1100, 0, bigHunk(1100)),
+            ))
+        }))
+        view.setDiffOpener({ files, _, _ -> fired.add(files) }, "ses")
+
+        view.toggle()
+
+        assertTrue(view.isExpanded())
+        assertTrue(view.codeEditors().isEmpty())
+        hyperlinks(view).single().doClick()
+        assertEquals(2, fired.single().size)
+    }
+
     fun `test view factory routes write tools to edit tool view`() {
         assertTrue(ViewFactory.create(tool(), openFile = { _, _ -> }) is EditToolView)
         assertTrue(ViewFactory.create(write("write"), openFile = { _, _ -> }) is EditToolView)
@@ -448,6 +503,29 @@ class EditToolViewTest : BasePlatformTestCase() {
     private fun badges(root: Container): List<DiffStatBadge> = root.components.flatMap { child ->
         val nested = if (child is Container) badges(child) else emptyList()
         if (child is DiffStatBadge) nested + child else nested
+    }
+
+    private fun hyperlinks(root: Container): List<HyperlinkLabel> = root.components.flatMap { child ->
+        val nested = if (child is Container) hyperlinks(child) else emptyList()
+        if (child is HyperlinkLabel) nested + child else nested
+    }
+
+    private fun editors(root: Container): List<EditorTextField> = root.components.flatMap { child ->
+        val nested = if (child is Container) editors(child) else emptyList()
+        if (child is EditorTextField) nested + child else nested
+    }
+
+    // Patches whose line count clears SessionUiStyle.View.Tool.DIFF_MAX_LINES so the body overflows.
+    private fun bigPatch(lines: Int): String = buildString {
+        append("--- src/App.kt\n")
+        append("+++ src/App.kt\n")
+        append("@@ -0,0 +1,").append(lines).append(" @@\n")
+        repeat(lines) { append("+line").append(it).append('\n') }
+    }
+
+    private fun bigHunk(lines: Int): String = buildString {
+        append("@@ -0,0 +1,").append(lines).append(" @@\n")
+        repeat(lines) { append("+x").append(it).append('\n') }
     }
 
     private fun openDiffButton(view: EditToolView): AbstractButton =

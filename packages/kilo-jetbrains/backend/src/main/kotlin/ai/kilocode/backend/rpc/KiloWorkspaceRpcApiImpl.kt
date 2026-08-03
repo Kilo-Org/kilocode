@@ -81,6 +81,7 @@ class KiloWorkspaceRpcApiImpl internal constructor(
         private val GLOBAL = MODERN + LEGACY + "config.json"
         private val LOCAL_DIRS = listOf(".kilo", ".kilocode", ".opencode")
         private const val DIFF_CAP = 200_000
+        private const val BRANCH_DIFF_CAP = 8 * 1024 * 1024
         private const val LARGE_FILE = 2 * 1024 * 1024L
         private val JSON = Json { ignoreUnknownKeys = true }
         private val CONFIG = """{
@@ -271,9 +272,9 @@ class KiloWorkspaceRpcApiImpl internal constructor(
         val files = stats.map { DiffFileDto(it.path, it.additions, it.deletions, "", status[it.path] ?: "modified") } +
             untrackedPaths.map { untracked(base, it, withPatch = false) }
         if (!patches) return@withContext files
-        // Fetch patches lazily and stop once the running total reaches DIFF_CAP, so a branch with
+        // Fetch patches lazily and stop once the running total reaches BRANCH_DIFF_CAP, so a branch with
         // hundreds of changed files doesn't spawn a git subprocess (or read a file) per entry.
-        capDiff(files, DIFF_CAP) { file ->
+        capDiff(files, BRANCH_DIFF_CAP) { file ->
             if (file.status == "untracked") untracked(base, file.file, withPatch = true).patch.orEmpty()
             else fileDiff(base, anc, file.file)
         }

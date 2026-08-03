@@ -53,6 +53,7 @@ class ModifiedFilesView private constructor(
 
     init {
         body.parent = this
+        body.overflow = ::openDiffViewer
         parts.diff.addActionListener { openDiffViewer() }
         isVisible = false
         bindHeader(parts.glyph, parts.title, parts.count, parts.panel.left, parts.bars, parts.anchor)
@@ -149,7 +150,10 @@ class ModifiedFilesView private constructor(
     @RequiresEdt
     private fun buildPopup(files: List<EditFileChange>): HeaderPopupBody {
         val owner = Disposer.newDisposable("Modified files popup body")
-        val popup = PatchBody(selection, openFile, POPUP_OPTS).also { it.parent = owner }
+        val popup = PatchBody(selection, openFile, POPUP_OPTS).also {
+            it.parent = owner
+            it.overflow = ::openDiffViewer
+        }
         val panel = popup.mountFiles(files)
         popup.applyStyle(style)
         return HeaderPopupBody(panel, owner, style.editorBackground, SessionUiStyle.View.Popup.WIDE_MAX_WIDTH)

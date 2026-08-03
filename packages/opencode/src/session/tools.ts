@@ -26,6 +26,7 @@ import { ModelV2 } from "@opencode-ai/core/model"
 // kilocode_change start
 import { SwePruner } from "@/kilocode/swe-pruner"
 import { Config } from "@/config/config"
+import { PermissionProvenance } from "@/kilocode/permission/provenance"
 // kilocode_change end
 
 export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
@@ -82,6 +83,20 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
       }).pipe(
         // record why the call was allowed onto the tool part, then discard the outcome for the tool-facing ask
         Effect.tap((approval) => input.processor.metadata(options.toolCallId, { metadata: { approval } })),
+        // record why the call was denied too, so JSON exports and clients can explain the denial
+        Effect.tapErrorTag("PermissionDeniedError", (err) =>
+          input.processor.metadata(options.toolCallId, {
+            metadata: {
+              approval: PermissionProvenance.classifyDenial({
+                ruleset: err.ruleset,
+                permission: req.permission,
+                patterns: req.patterns,
+                agent: input.agent.name,
+                origins: permissionOrigins,
+              }),
+            },
+          }),
+        ),
         Effect.asVoid,
         Effect.orDie,
       ),

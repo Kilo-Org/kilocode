@@ -64,6 +64,8 @@ export const dict = {
 
   "agentManager.terminal.new": "Nueva pestaña de terminal",
   "agentManager.terminal.ended": "terminal finalizado — cierra la pestaña para descartar",
+  "agentManager.terminal.endedRestartable":
+    "terminal finalizado - escribe para iniciar un shell nuevo o cierra la pestaña",
   "agentManager.terminal.setupFailed": "el script de configuración falló",
   "agentManager.terminal.setupFailedCode": "el script de configuración falló con el código de salida",
   "agentManager.terminal.stopSetup": "Detener el script de configuración",

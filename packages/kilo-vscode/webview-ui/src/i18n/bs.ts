@@ -230,6 +230,8 @@ export const dict = {
     "Kliknite da ograničite pisanje u datotečni sistem. Pristup mreži ostaje dozvoljen prema vašim sandbox postavkama.",
 
   "speechToText.tooltip.start": "Započni glasovni unos sa Kilo Gateway",
+  "speechToText.tooltip.shortcut":
+    "Dodirnite dugme ili pritisnite Cmd/Ctrl+K da pokrenete ili zaustavite snimanje; držite dugme pritisnutim dok govorite, a zatim ga otpustite da biste pretvorili govor u tekst i poslali ga.",
   "speechToText.tooltip.starting": "Pokretanje mikrofona... Sačekajte prije nego što progovorite.",
   "speechToText.tooltip.stop": "Zaustavi hvatanje zvuka",
   "speechToText.tooltip.transcribing": "Prepisivanje... Kliknite da otkažete.",
@@ -1025,6 +1027,9 @@ export const dict = {
     "Nema konfiguriranih prilagođenih komandi. Dodajte komande u opencode.json da ih vidite ovdje.",
   "settings.agentBehaviour.workflows.detail.description": "Opis",
   "settings.agentBehaviour.workflows.detail.template": "Predložak",
+  "settings.agentBehaviour.workflows.model": "model",
+  "settings.agentBehaviour.workflows.variant": "varijanta",
+  "settings.agentBehaviour.workflows.modelDescription": "Globalno premošćivanje modela",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Pokrenite shell komande agenta unutar sandboxa na nivou operativnog sistema koji ograničava pisanje na direktorije stanja projekta i Kilo",
