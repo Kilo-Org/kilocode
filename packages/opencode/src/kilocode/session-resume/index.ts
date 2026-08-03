@@ -938,7 +938,7 @@ export namespace SessionResume {
 
   function mapAssistantParts(parts: Part[], msgID: string, sesID: string): { parts: Record<string, unknown>[]; dropped: string[] } {
     const now = Date.now()
-    const toolParts: Map<string, { part: Record<string, unknown>; index: number; status?: ToolCall["status"] }> = new Map()
+    const toolParts = new Map<string, Array<{ part: Record<string, unknown>; index: number; status?: ToolCall["status"] }>>()
     const results: Part[] = []
     const out: Record<string, unknown>[] = []
     const dropped: string[] = []
@@ -963,7 +963,9 @@ export namespace SessionResume {
           },
         }
         out.push(p)
-        toolParts.set(part.id, { part: p, index: out.length - 1, status: part.status })
+        const entries = toolParts.get(part.id) ?? []
+        entries.push({ part: p, index: out.length - 1, status: part.status })
+        toolParts.set(part.id, entries)
       } else if (part.type === "tool_result") {
         results.push(part)
       } else if (part.type === "text") {
@@ -980,7 +982,9 @@ export namespace SessionResume {
     // Pass 2: pair results with tool calls
     for (const item of results) {
       const result = item as ToolResult
-      const entry = toolParts.get(result.callID)
+        const entry = toolParts.get(result.callID)?.find(
+          (candidate) => (candidate.part.state as Record<string, unknown>).status === "running",
+        )
       if (entry) {
         const tp = entry.part
         if (result.error) {
@@ -1007,16 +1011,18 @@ export namespace SessionResume {
     }
 
     // Mark any still-running tool calls as error
-    for (const entry of toolParts.values()) {
-      const tp = entry.part
-      if ((tp.state as Record<string, unknown>).status === "running") {
-        tp.state = {
-          status: "error" as const,
-          input: (tp.state as Record<string, unknown>).input,
-          error: entry.status ?? "No result received for this tool call.",
-          time: { start: now, end: now },
+    for (const entries of toolParts.values()) {
+      for (const entry of entries) {
+        const tp = entry.part
+        if ((tp.state as Record<string, unknown>).status === "running") {
+          tp.state = {
+            status: "error" as const,
+            input: (tp.state as Record<string, unknown>).input,
+            error: entry.status ?? "No result received for this tool call.",
+            time: { start: now, end: now },
+          }
+          out[entry.index] = tp
         }
-        out[entry.index] = tp
       }
     }
 

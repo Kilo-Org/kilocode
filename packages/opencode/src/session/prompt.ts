@@ -2091,6 +2091,12 @@ export const layer = Layer.effect(
             yield* events.publish(Session.Event.Error, { sessionID: input.cmdInput.sessionID, error: error.toObject() })
             throw error
           }
+          const code = typeof cause === "object" && cause !== null && "code" in cause ? cause.code : undefined
+          if (code !== "ENOENT") {
+            const error = new NamedError.Unknown({ message: `Unreadable Claude transcript: ${uuid}` })
+            yield* events.publish(Session.Event.Error, { sessionID: input.cmdInput.sessionID, error: error.toObject() })
+            throw error
+          }
         }
       } else {
         file = codexExit && Exit.isSuccess(codexExit) ? codexExit.value[0] : undefined
