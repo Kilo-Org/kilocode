@@ -55,7 +55,7 @@ export interface TabBarProps {
   reviewActive: () => boolean
   onToggleDiff: () => void
   onToggleReview: () => void
-  prStatus: () => PRStatus | null | undefined
+  prStatus: () => PRStatus | undefined
   prOpen: () => boolean
   onTogglePR: () => void
   terminalDestination: () => TerminalDestination

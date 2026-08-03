@@ -90,14 +90,14 @@ export interface PRStatus {
     passed: number
     failed: number
     pending: number
-    items: PRCheck[]
+    checks: PRCheck[]
   }
   comments?: {
     total: number
     unresolved: number
-    items: PRComment[]
+    comments: PRComment[]
+    reviewers: PRReviewer[]
   }
-  reviewers?: PRReviewer[]
   additions: number
   deletions: number
   files: number

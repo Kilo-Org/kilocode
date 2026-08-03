@@ -45,32 +45,11 @@ export interface SectionState {
 }
 
 // ---------------------------------------------------------------------------
-// PR status types (mirrored from extension types.ts)
+// PR status types — sub-types live in agent-manager/pr/pr-types.ts
 // ---------------------------------------------------------------------------
 
-export type PRState = "open" | "draft" | "merged" | "closed"
-export type ReviewDecision = "approved" | "changes_requested" | "pending"
-export type CheckStatus = "success" | "failure" | "pending" | "skipped" | "cancelled"
-export type AggregateCheckStatus = "success" | "failure" | "pending" | "none"
-
-export interface PRCheck {
-  name: string
-  status: CheckStatus
-  url?: string
-  duration?: string
-}
-
-export interface PRComment {
-  id: string
-  author: string
-  avatar?: string
-  body: string
-  file?: string
-  line?: number
-  url?: string
-  resolved: boolean
-  createdAt?: number
-}
+import type { PRState, ReviewDecision, AggregateCheckStatus, PRCheck, PRComment, PRReviewer } from "../../../agent-manager/pr/pr-types"
+export type { PRState, ReviewDecision, CheckStatus, AggregateCheckStatus, PRCheck, PRComment, PRReviewer } from "../../../agent-manager/pr/pr-types"
 
 export interface PRStatus {
   number: number
@@ -85,23 +64,17 @@ export interface PRStatus {
     passed: number
     failed: number
     pending: number
-    items: PRCheck[]
+    checks: PRCheck[]
   }
   comments?: {
     total: number
     unresolved: number
-    items: PRComment[]
+    comments: PRComment[]
+    reviewers: PRReviewer[]
   }
-  reviewers?: PRReviewer[]
   additions: number
   deletions: number
   files: number
-}
-
-export interface PRReviewer {
-  login: string
-  avatar?: string
-  state: "approved" | "changes_requested" | "pending" | "commented"
 }
 
 export type RunState = "idle" | "running" | "stopping"

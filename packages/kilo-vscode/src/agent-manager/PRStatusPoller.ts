@@ -249,7 +249,9 @@ export class PRStatusPoller {
         state: pr.state,
         review: pr.review,
         checks,
-        ...(comments && { comments, reviewers: comments.reviewers }),
+        ...(comments && {
+          comments: { total: comments.total, unresolved: comments.unresolved, comments: comments.comments, reviewers: comments.reviewers },
+        }),
         additions: pr.additions,
         deletions: pr.deletions,
         files: pr.files,
@@ -367,7 +369,7 @@ export class PRStatusPoller {
     passed: number
     failed: number
     pending: number
-    items: PRCheck[]
+    checks: PRCheck[]
   }> {
     try {
       const { stdout } = await this.shell(
@@ -383,24 +385,24 @@ export class PRStatusPoller {
         completedAt?: string
       }>
 
-      const items: PRCheck[] = data.map((c) => ({
+      const checks: PRCheck[] = data.map((c) => ({
         name: c.name,
         status: mapCheckStatus(c.state),
         url: c.link,
         duration: formatCheckDuration(c.startedAt, c.completedAt),
       }))
 
-      const total = items.length
-      const passed = items.filter((c) => c.status === "success").length
-      const failed = items.filter((c) => c.status === "failure").length
-      const pending = items.filter((c) => c.status === "pending").length
+      const total = checks.length
+      const passed = checks.filter((c) => c.status === "success").length
+      const failed = checks.filter((c) => c.status === "failure").length
+      const pending = checks.filter((c) => c.status === "pending").length
 
       const status: AggregateCheckStatus =
         total === 0 ? "none" : failed > 0 ? "failure" : pending > 0 ? "pending" : "success"
 
-      return { status, total, passed, failed, pending, items }
+      return { status, total, passed, failed, pending, checks }
     } catch {
-      return { status: "none", total: 0, passed: 0, failed: 0, pending: 0, items: [] }
+      return { status: "none", total: 0, passed: 0, failed: 0, pending: 0, checks: [] }
     }
   }
 
@@ -421,7 +423,7 @@ export class PRStatusPoller {
   private async fetchComments(
     prNumber: number,
     cwd: string,
-  ): Promise<{ total: number; unresolved: number; items: PRComment[]; reviewers: PRReviewer[] }> {
+  ): Promise<{ total: number; unresolved: number; comments: PRComment[]; reviewers: PRReviewer[] }> {
     try {
       const repo = await this.getRepoInfo(cwd)
       const query = `query($owner: String!, $repo: String!, $number: Int!) {
@@ -458,12 +460,12 @@ export class PRStatusPoller {
         { cwd, timeout: 15_000 },
       )
       const pr = JSON.parse(stdout)?.data?.repository?.pullRequest
-      const items = parseComments(pr?.reviewThreads?.nodes ?? [])
+      const comments = parseComments(pr?.reviewThreads?.nodes ?? [])
       const reviewers = parseReviewers(pr?.reviewRequests?.nodes ?? [], pr?.reviews?.nodes ?? [])
-      return { total: items.length, unresolved: items.filter((c) => !c.resolved).length, items, reviewers }
+      return { total: comments.length, unresolved: comments.filter((c) => !c.resolved).length, comments, reviewers }
     } catch (err) {
       this.options.log("Failed to fetch PR comments:", err)
-      return { total: 0, unresolved: 0, items: [], reviewers: [] }
+      return { total: 0, unresolved: 0, comments: [], reviewers: [] }
     }
   }
 }

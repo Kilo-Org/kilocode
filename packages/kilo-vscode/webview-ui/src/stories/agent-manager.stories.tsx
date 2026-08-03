@@ -604,7 +604,7 @@ const basePR: PRStatus = {
   url: "https://github.com/org/repo/pull/8594",
   state: "open",
   review: null,
-  checks: { status: "success", total: 5, passed: 5, failed: 0, pending: 0, items: [] },
+  checks: { status: "success", total: 5, passed: 5, failed: 0, pending: 0, checks: [] },
   additions: 978,
   deletions: 202,
   files: 12,
