@@ -128,6 +128,19 @@ describe("Claude parseLines", () => {
     expect(SessionResume.parseLines(text).steps[2]?.parts).toEqual([{ type: "text", text: "Continue" }])
   })
 
+  test("keeps a partially paired tool step before a mixed later user turn", () => {
+    const text = [
+      '{"type":"user","version":"2.42.0","message":{"role":"user","content":"Start"}}',
+      '{"type":"assistant","version":"2.42.0","message":{"role":"assistant","content":[{"type":"tool_use","id":"first","name":"read","input":{}},{"type":"tool_use","id":"second","name":"edit","input":{}}]}}',
+      '{"type":"user","version":"2.42.0","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"first","content":"done"},{"type":"text","text":"Also say hi"}]}}',
+    ].join("\n")
+
+    const steps = SessionResume.parseLines(text).steps
+    expect(steps.map((step) => step.role)).toEqual(["user", "assistant", "user"])
+    expect(steps[1]?.parts.map((part) => part.type)).toEqual(["tool_call", "tool_call", "tool_result", "error"])
+    expect(steps[2]?.parts).toEqual([{ type: "text", text: "Also say hi" }])
+  })
+
   test("normalizes object tool results", () => {
     const claude = [
       '{"type":"user","version":"2.42.0","message":{"role":"user","content":[{"type":"text","text":"Start"}]}}',

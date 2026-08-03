@@ -495,6 +495,10 @@ export namespace SessionResume {
             (block) => !isRecord(block) || (block.type !== "tool_result" && block.type !== "server_tool_result"),
           )
           if (userBlocks.length > 0) {
+            if (pending) {
+              steps.push(markUnpaired(pending))
+              pending = undefined
+            }
             const parsed = parseClaudeBlocks(userBlocks, seenIDs)
             unsupported += parsed.unsupported
             steps.push({ role: "user", parts: parsed.parts })
