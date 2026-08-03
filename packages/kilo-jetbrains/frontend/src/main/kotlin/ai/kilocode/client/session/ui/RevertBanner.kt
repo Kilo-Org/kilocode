@@ -24,7 +24,11 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.BorderLayout
+import java.awt.Component
+import java.awt.Container
 import java.awt.Dimension
+import java.nio.file.Path
+import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
 
@@ -133,7 +137,7 @@ class RevertBanner(
             val row = rows.getOrPut(item.file) {
                 Row(item)
             }
-            row.update(item, names[item.file] ?: item.file)
+            row.update(item, names[item.file] ?: item.file, absolute(item.file))
             row.panel
         }
         if (files.components.toList() != order) {
@@ -188,6 +192,15 @@ class RevertBanner(
         openDiff(diffs, KiloBundle.message("revert.banner.openDiff.title"), "revert:${sessionId ?: "pending"}:${revert.messageID}")
     }
 
+    private fun absolute(file: String): String {
+        val path = runCatching { Path.of(file) }.getOrNull() ?: return file
+        if (path.isAbsolute) return path.normalize().toString()
+        val root = model.session?.directory
+            ?.takeIf { it.isNotBlank() }
+            ?.let { runCatching { Path.of(it) }.getOrNull() }
+        return (root?.resolve(path) ?: path.toAbsolutePath()).normalize().toString()
+    }
+
     /** Height that fits at most [MAX_FILE_ROWS] rows, or 0 when the list is short enough to show in full. */
     private fun rowCap(): Int {
         val comps = files.components
@@ -207,16 +220,26 @@ class RevertBanner(
 
         init {
             applyStyle()
+            tip(item.file)
         }
 
-        fun update(item: DiffFileDto, text: String) {
+        fun update(item: DiffFileDto, text: String, tip: String) {
             if (label.text != text) label.text = text
-            if (label.toolTipText != item.file) label.toolTipText = item.file
+            if (panel.toolTipText != tip) tip(tip)
             badge.update(item.additions, item.deletions)
         }
 
         fun applyStyle() {
             label.foreground = UIUtil.getLabelForeground()
+        }
+
+        private fun tip(text: String) {
+            tip(panel, text)
+        }
+
+        private fun tip(node: Component, text: String) {
+            if (node is JComponent && node.toolTipText != text) node.toolTipText = text
+            if (node is Container) node.components.forEach { tip(it, text) }
         }
     }
 }

@@ -39,6 +39,8 @@ import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.SessionRevertDto
+import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.SessionTimeDto
 import ai.kilocode.rpc.dto.TodoDto
 import com.intellij.ide.ui.laf.darcula.ui.DarculaButtonUI
 import com.intellij.openapi.Disposable
@@ -1159,6 +1161,31 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertTrue(labels.contains("main/src/App.kt" to "apps/main/src/App.kt"))
         assertTrue(labels.contains("ui/src/App.kt" to "packages/ui/src/App.kt"))
         assertTrue(labels.contains("Button.kt" to "packages/ui/src/Button.kt"))
+    }
+
+    fun `test rollback banner uses full path tooltip for entire file row`() {
+        val banner = RevertBanner(model, {}, {}, {})
+        model.setSession(SessionDto(
+            id = "ses",
+            projectID = "proj",
+            directory = "/workspace/root",
+            title = "Session",
+            version = "1",
+            time = SessionTimeDto(0.0, 0.0),
+        ))
+        model.upsertMessage(msg("u1", "user"))
+        model.setRevert(SessionRevertDto("u1", snapshot = "snap1"))
+        model.setDiff(listOf(
+            DiffFileDto("project/dir1/shared-alpha.txt", 0, 4),
+            DiffFileDto("project/dir2/shared-alpha.txt", 0, 4),
+        ))
+
+        banner.update()
+
+        val label = rowLabels(banner).first { it.text == "dir1/shared-alpha.txt" }
+        val row = label.parent as JComponent
+        assertEquals("/workspace/root/project/dir1/shared-alpha.txt", row.toolTipText)
+        assertTrue(components(row).filterIsInstance<JComponent>().all { it.toolTipText == "/workspace/root/project/dir1/shared-alpha.txt" })
     }
 
     fun `test rollback banner opens rolled back diff`() {
