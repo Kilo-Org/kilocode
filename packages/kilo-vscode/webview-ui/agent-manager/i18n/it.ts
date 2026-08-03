@@ -68,6 +68,8 @@ export const dict = {
 
   "agentManager.terminal.new": "Nuova scheda terminale",
   "agentManager.terminal.ended": "terminale terminato - chiudi la scheda per nasconderlo",
+  "agentManager.terminal.endedRestartable":
+    "terminale terminato - digita per avviare una nuova shell o chiudi la scheda",
   "agentManager.terminal.setupFailed": "script di configurazione non riuscito",
   "agentManager.terminal.setupFailedCode": "script di configurazione non riuscito con codice di uscita",
   "agentManager.terminal.stopSetup": "Interrompi lo script di configurazione",

@@ -108,6 +108,7 @@ export function renderTerminalLayer(props: { state: TerminalStateControls }): JS
                 <TerminalTab
                   terminalId={term.id}
                   wsUrl={term.wsUrl}
+                  restartable={term.kind === undefined}
                   active={visible()}
                   focusSerial={focusSerial(props.state, term.id)}
                   font={term.font}
@@ -155,6 +156,7 @@ export function renderSideTerminalLayer(props: {
                 focusSerial={focusSerial(props.state, term.id)}
                 font={term.font}
                 status={() => props.state.scriptStatus(term.id)}
+                restartable={term.kind === undefined}
                 onFocusChange={(focused) => props.state.setFocusedId(focused ? term.id : undefined)}
                 onTitleChange={(title) => props.state.setTitle(term.id, title)}
               />

@@ -64,6 +64,8 @@ export const dict = {
 
   "agentManager.terminal.new": "Nowa karta terminala",
   "agentManager.terminal.ended": "terminal zakończony — zamknij kartę, aby zamknąć",
+  "agentManager.terminal.endedRestartable":
+    "terminal zakończony - wpisz tekst, aby uruchomić nową powłokę, lub zamknij kartę",
   "agentManager.terminal.setupFailed": "skrypt konfiguracji nie powiódł się",
   "agentManager.terminal.setupFailedCode": "skrypt konfiguracji nie powiódł się z kodem wyjścia",
   "agentManager.terminal.stopSetup": "Zatrzymaj skrypt konfiguracji",
