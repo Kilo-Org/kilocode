@@ -116,7 +116,7 @@ class WorktreeControllerTest : BasePlatformTestCase() {
 
         var success = false
         val removed = mutableListOf<WorktreeDto>()
-        controller.onRemoveSuccess = { removed.add(it) }
+        controller.onRemoveSuccess = { dto, _ -> removed.add(dto) }
         controller.remove(controller.model.getElementAt(0), onSuccess = { success = true })
         flush()
 

@@ -99,7 +99,7 @@ class AgentManagerPanel(
             item(key)?.takeIf { !controller.isPending(it.id) }?.let { open(it, focus = false) }
         }
         controller.onCreateFailure = { err -> notifyCreateFailed(err) }
-        controller.onRemoveSuccess = { item -> close(item) }
+        controller.onRemoveSuccess = { item, index -> onRemoved(item, index) }
         controller.onActivityChanged = { sync() }
         bindEditorSelection()
         // Reflect names adopted or renamed in a worktree session editor tab in the list live.
@@ -169,7 +169,6 @@ class AgentManagerPanel(
     }
 
     private fun showDeletePopup(item: WorktreeDto, cell: String? = null) {
-        val idx = list.selectedIndex().takeIf { it >= 0 } ?: controller.model.getElementIndex(item)
         val opts = ActiveListDeleteOptions(
             message = KiloBundle.message("worktree.delete.confirm.message", item.name),
             detail = KiloBundle.message("worktree.delete.confirm.detail"),
@@ -179,7 +178,6 @@ class AgentManagerPanel(
             controller.remove(
                 item,
                 force,
-                onSuccess = { restoreFocus(idx) },
                 onFailure = { result -> notifyFailed(item, result, force) },
             )
         }
@@ -196,14 +194,44 @@ class AgentManagerPanel(
     }
 
     /**
-     * After a delete, move the selection to the row that took the deleted row's place (the next
-     * worktree) rather than letting the list reset to the top. [index] is the removed row's index,
-     * captured before removal, so the same index now points at the following row.
+     * Reacts to a confirmed deletion. When the removed worktree is the one on screen, advances the
+     * selection to the row that slid into its slot ([index] now points at the following row, or the
+     * last row when the removed row was last) and opens it before closing the deleted tab so the
+     * neighbour becomes the active editor. Deleting a background row leaves the selection untouched.
+     *
+     * The active editor is read before close(item) as the ground-truth "shown" signal; the
+     * `selected` field is unreliable here because the model rebuild in sync() transiently reselects
+     * row 0 through the list's onSelect hook.
      */
-    private fun restoreFocus(index: Int) {
+    private fun onRemoved(item: WorktreeDto, index: Int) {
+        if (currentEditorWorktree() == item.id) advance(neighbor(index))
+        close(item)
+    }
+
+    /**
+     * Moves the selection to [next] after the shown worktree was deleted, opening it before the
+     * deleted tab closes so it becomes the active editor. Clears the selection when nothing
+     * remains. Opening first stops the closing tab's incidental editor activation from dragging
+     * the selection somewhere unpredictable.
+     */
+    private fun advance(next: WorktreeDto?) {
+        selected = next?.id
+        if (next == null) {
+            list.clearSelection()
+            return
+        }
+        if (list.select(next.id)) list.focusList()
+        open(next, focus = false)
+    }
+
+    /**
+     * The row that slides into [index] after a removal: the following worktree, or the last row
+     * when the removed row was last. Null when the list is now empty.
+     */
+    private fun neighbor(index: Int): WorktreeDto? {
         val size = controller.model.size
-        if (size > 0) list.selectIndex(index.coerceIn(0, size - 1))
-        list.focusList()
+        if (size == 0) return null
+        return controller.model.getElementAt(index.coerceIn(0, size - 1))
     }
 
     private fun notifyCreateFailed(err: String?) {
@@ -276,8 +304,15 @@ class AgentManagerPanel(
     @RequiresEdt
     private fun track(file: VirtualFile?) {
         val key = project?.service<WorktreeEditorMatchers>()?.match(file)
-        selected = key
-        if (key != null && list.select(key, scroll = false)) return
+        if (key != null) {
+            selected = key
+            list.select(key, scroll = false)
+            return
+        }
+        // A null active editor is a transient state (e.g. a tab closing during a delete); keep the
+        // current selection. Only a real, non-worktree editor clears the worktree row selection.
+        if (file == null) return
+        selected = null
         list.clearSelection()
     }
 

@@ -32,7 +32,7 @@ class WorktreeController(
     private val deleting = Collections.synchronizedSet(LinkedHashSet<String>())
     var onSelect: ((String) -> Unit)? = null
     var onCreateFailure: ((String?) -> Unit)? = null
-    var onRemoveSuccess: ((WorktreeDto) -> Unit)? = null
+    var onRemoveSuccess: ((WorktreeDto, Int) -> Unit)? = null
     var onActivityChanged: (() -> Unit)? = null
 
     @Volatile
@@ -141,9 +141,10 @@ class WorktreeController(
             if (result.ok) {
                 edt {
                     deleting.remove(dto.id)
+                    val index = model.getElementIndex(dto)
                     model.remove(dto)
                     cache().remove(dto.path)
-                    onRemoveSuccess?.invoke(dto)
+                    onRemoveSuccess?.invoke(dto, index)
                     onSuccess()
                     telemetry("Worktree Deleted", mapOf("branch" to dto.branch, "force" to force.toString()))
                 }

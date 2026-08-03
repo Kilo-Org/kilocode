@@ -294,6 +294,86 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertNull(KiloVirtualFileSystem.getInstance().cached(path))
     }
 
+    fun `test deleting the shown worktree selects and opens the next row`() {
+        val a = WorktreeDto("/repo/.kilo/worktrees/a", "a", "a", "/repo/.kilo/worktrees/a")
+        val b = WorktreeDto("/repo/.kilo/worktrees/b", "b", "b", "/repo/.kilo/worktrees/b")
+        val c = WorktreeDto("/repo/.kilo/worktrees/c", "c", "c", "/repo/.kilo/worktrees/c")
+        rpc.listed += a
+        rpc.listed += b
+        rpc.listed += c
+        val controller = WorktreeController(service, "/test", coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+
+        edt {
+            ensureWorktreeSessionEditorKind()
+            project.service<KiloVfsManager>().open(WorktreeSessionEditorKind.ID, worktreeSessionParams(b), focus = true)
+        }
+        pump()
+        assertEquals(b.id, edt { (list.selectedValue as ActiveListItem).key })
+
+        edt { controller.remove(b) }
+        flush()
+
+        assertEquals(c.id, edt { (list.selectedValue as ActiveListItem).key })
+        val file = edt { FileEditorManager.getInstance(project).openFiles.single() as KiloVirtualFile }
+        assertEquals(c.path, file.path.params["path"])
+    }
+
+    fun `test deleting the last worktree selects and opens the previous row`() {
+        val a = WorktreeDto("/repo/.kilo/worktrees/a", "a", "a", "/repo/.kilo/worktrees/a")
+        val b = WorktreeDto("/repo/.kilo/worktrees/b", "b", "b", "/repo/.kilo/worktrees/b")
+        rpc.listed += a
+        rpc.listed += b
+        val controller = WorktreeController(service, "/test", coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+
+        edt {
+            ensureWorktreeSessionEditorKind()
+            project.service<KiloVfsManager>().open(WorktreeSessionEditorKind.ID, worktreeSessionParams(b), focus = true)
+        }
+        pump()
+        assertEquals(b.id, edt { (list.selectedValue as ActiveListItem).key })
+
+        edt { controller.remove(b) }
+        flush()
+
+        assertEquals(a.id, edt { (list.selectedValue as ActiveListItem).key })
+        val file = edt { FileEditorManager.getInstance(project).openFiles.single() as KiloVirtualFile }
+        assertEquals(a.path, file.path.params["path"])
+    }
+
+    fun `test deleting a background worktree keeps the shown selection`() {
+        val a = WorktreeDto("/repo/.kilo/worktrees/a", "a", "a", "/repo/.kilo/worktrees/a")
+        val b = WorktreeDto("/repo/.kilo/worktrees/b", "b", "b", "/repo/.kilo/worktrees/b")
+        rpc.listed += a
+        rpc.listed += b
+        val controller = WorktreeController(service, "/test", coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+
+        edt {
+            ensureWorktreeSessionEditorKind()
+            project.service<KiloVfsManager>().open(WorktreeSessionEditorKind.ID, worktreeSessionParams(a), focus = true)
+        }
+        pump()
+        assertEquals(a.id, edt { (list.selectedValue as ActiveListItem).key })
+
+        edt { controller.remove(b) }
+        flush()
+
+        assertEquals(a.id, edt { (list.selectedValue as ActiveListItem).key })
+        val file = edt { FileEditorManager.getInstance(project).openFiles.single() as KiloVirtualFile }
+        assertEquals(a.path, file.path.params["path"])
+    }
+
     fun `test worktree row shows activity badge for matching directory`() {
         val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
         val activity = MutableStateFlow(mapOf(
