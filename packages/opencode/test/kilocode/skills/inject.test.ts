@@ -298,6 +298,79 @@ describe("skill shell injection", () => {
     }),
   )
 
+  unix("does not execute a placeholder shown as a double-backtick inline code example", () =>
+    Effect.gen(function* () {
+      // `` !`cmd` `` is the standard CommonMark way to display the literal `!`cmd`` syntax
+      // as documentation; only the live placeholder must run.
+      yield* writeGlobalSkill(
+        "inline-example-shell",
+        "Live: !`printf LIVE`\n\nSyntax: `` !`cmd` `` runs a command.",
+      )
+
+      const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
+      const result = yield* loadSkill("inline-example-shell", (req) =>
+        Effect.sync(() => {
+          requests.push(req)
+        }),
+      )
+
+      expect(result.output).toContain("Live: LIVE")
+      expect(result.output).toContain("Syntax: `` !`cmd` `` runs a command.")
+      const bash = requests.filter((r) => r.permission === "bash")
+      expect(bash[0]?.patterns).toEqual(["printf LIVE"])
+    }),
+  )
+
+  unix("does not ask or run anything for a skill with only an inline code example", () =>
+    Effect.gen(function* () {
+      // This is the real-world trigger: kilo-config.md documents the placeholder syntax
+      // with `` !`cmd` `` outside any fence, which must never request permission or run.
+      yield* writeGlobalSkill("doc-only-shell", "Template variables include `` !`cmd` `` (shell output).")
+
+      const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
+      const result = yield* loadSkill("doc-only-shell", (req) =>
+        Effect.sync(() => {
+          requests.push(req)
+        }),
+      )
+
+      expect(result.output).toContain("Template variables include `` !`cmd` `` (shell output).")
+      expect(requests.some((r) => r.permission === "bash")).toBe(false)
+    }),
+  )
+
+  unix("does not let distant unrelated inline code spans merge into one inert range", () =>
+    Effect.gen(function* () {
+      // Code spans cannot cross a blank line. Stray double-backticks in an earlier paragraph
+      // and a later, unrelated (unclosed) one must not pair across the live placeholder that
+      // sits between them and silently swallow it — that would skip both its execution and
+      // the marker that would otherwise flag a rejected/untrusted command.
+      const body = [
+        "Use the C++ operator `` and note the ``literal`` form.",
+        "",
+        "## Step 2",
+        "",
+        "!`printf LIVE`",
+        "",
+        "Done, see the output above.",
+        "",
+        "Trailing note about `` quoting.",
+      ].join("\n")
+      yield* writeGlobalSkill("distant-spans-shell", body)
+
+      const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
+      const result = yield* loadSkill("distant-spans-shell", (req) =>
+        Effect.sync(() => {
+          requests.push(req)
+        }),
+      )
+
+      expect(result.output).toContain("LIVE")
+      const bash = requests.filter((r) => r.permission === "bash")
+      expect(bash[0]?.patterns).toEqual(["printf LIVE"])
+    }),
+  )
+
   unix("does not re-execute shell placeholders emitted by command output", () =>
     Effect.gen(function* () {
       // The command emits a literal placeholder `!<backtick>echo pwned<backtick>`
@@ -369,6 +442,18 @@ describe("SkillInject.render gating", () => {
     Effect.gen(function* () {
       const out = yield* Effect.promise(() => run({ trusted: false, disabled: false }))
       expect(out).toBe("Value: [skill shell execution disabled for untrusted skill]")
+    }),
+  )
+
+  it.effect("does not scale quadratically with fence and backtick-run count", () =>
+    Effect.gen(function* () {
+      // A pathological SKILL.md with many fences plus many short backtick runs previously
+      // took ~30s (O(runs x fences) fence lookups, O(runs^2) pairing). This content runs
+      // before the trust check, so it must stay bounded even for an untrusted skill.
+      const content = "```\n```\n".repeat(40000) + "`x ".repeat(120000) + "!`printf ran`"
+      const started = Date.now()
+      yield* Effect.promise(() => run({ trusted: false, disabled: false, content }))
+      expect(Date.now() - started).toBeLessThan(5000)
     }),
   )
 
