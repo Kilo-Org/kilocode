@@ -778,6 +778,20 @@ describe("SessionResume discovery", () => {
       fs.rmSync(root, { recursive: true, force: true })
     }
   })
+
+  test("no-ID discovery matches cwd with backslash-separated paths (Windows)", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "resume-codex-"))
+    try {
+      const cwd = "C:\\Users\\dev\\project"
+      const file = path.join(root, `rollout-2026-08-03T10-00-00-${id}.jsonl`)
+      // Escaped backslashes in JSON are valid on all platforms
+      fs.writeFileSync(file, '{"type":"session_meta","payload":{"cwd":"C:\\\\Users\\\\dev\\\\project"}}\n')
+
+      await expect(SessionResume.discoverCodex({ codex: root, cwd })).resolves.toEqual([file])
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true })
+    }
+  })
 })
 
 // ── Full file parsing ────────────────────────────────────────────

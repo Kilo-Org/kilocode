@@ -858,7 +858,9 @@ const withClaudeFixtureAt = (root: string, cwd: string, content: string, id: str
 const codexFixtureForCwdAt = (cwd: string) =>
   Effect.gen(function* () {
     const raw = yield* Effect.promise(() => codexFixture())
-    return raw.replace(/"cwd":"[^"]*"/, `"cwd":"${cwd}"`)
+    // Escape backslashes so the JSON stays valid on Windows paths.
+    const escaped = cwd.replace(/\\/g, "\\\\")
+    return raw.replace(/"cwd":"[^"]*"/, `"cwd":"${escaped}"`)
   })
 
 const withCodexFixtureAt = (root: string, content: string, id: string) =>
