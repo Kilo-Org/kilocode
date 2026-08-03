@@ -21,7 +21,9 @@ The mobile app lets you:
 - Monitor and view all non-remote sessions in one place.
 - Create, onboard, and manage KiloClaw instances.
 - Send follow-up messages while a session is still running — they are queued and processed in order.
-- Run slash commands (like `/compact`) on connected remote CLI sessions, and start a new session in the same workspace with `/new`. Older CLI versions that do not support remote commands prompt you to upgrade.
+- Run slash commands (like `/compact`) on connected remote CLI sessions, and start a new session in the same workspace with `/new`. The new session inherits the current session's mode and model. Older CLI versions that do not support remote commands prompt you to upgrade.
+- Clear the visible transcript of a remote CLI session with `/clear`. Clearing is client-side only, so it works on any CLI version; server history is kept and may reappear when you re-enter the session.
+- Rename a remote CLI session from the app or the CLI — renames sync in both directions.
 - Review GitHub pull requests end to end — diffs, checks, comments, and merging.
 - Start a new session on a connected `kilo remote` CLI instance with the **Run on** picker.
 
@@ -50,7 +52,7 @@ The new-session screen includes a **Run on** picker that chooses where your sess
 - **Cloud Agent** — the managed cloud environment (the default).
 - **A connected CLI instance** — a `kilo remote` CLI running on your own machine. The picker lists the instances currently connected to your account.
 
-Remote sessions use the CLI's own defaults, so the composer skips model, mode, and repository selection; you type your first prompt in the chat after the session starts. Sessions started in an organization context always run on the Cloud Agent, so the picker does not appear there.
+Remote sessions start with the mode and model selected on the new-session screen; older CLI versions that don't accept those fields fall back to their own defaults. The workspace is always the CLI's own checkout, so there is no repository selection — you type your first prompt in the chat after the session starts. The picker also appears in organization context, where the spawned session is attributed to the organization.
 
 ## Queueing follow-up messages
 

@@ -123,6 +123,7 @@ The `kilo console` command and its browser interface are deprecated and will be 
 | `/help` | - | Show help |
 | `/reload` | - | Reload config, skills, agents, and commands from disk |
 | `/editor` | - | Open external editor |
+| `/auto-approve` | `/autoapprove`, `/approve-all`, `/approveall` | Toggle auto-approve mode for all permission prompts (saved to global config) |
 | `/exit` | `/quit`, `/q` | Exit the app |
 
 #### Kilo Gateway Commands (when connected)
@@ -541,6 +542,8 @@ This instructs the AI to proceed without user input.
 - `0`: Success (task completed)
 - `124`: Timeout (task exceeded time limit)
 - `1`: Error (initialization or execution failure)
+
+Without `--auto`, a non-interactive run cannot prompt for approval and auto-rejects any permission request it receives. If a run auto-rejected at least one request, it exits `1` with a stderr diagnostic naming the cause, since the task likely did not complete. Pass `--auto` for autonomous use.
 
 ### Example CI/CD Integration
 
