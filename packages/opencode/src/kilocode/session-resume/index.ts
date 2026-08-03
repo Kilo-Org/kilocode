@@ -171,6 +171,7 @@ export namespace SessionResume {
       return [file]
     }
     return discover(directory)
+      .filter((file) => isUUID(path.basename(file, ".jsonl")))
       .map((file) => ({ file, time: fs.statSync(file).mtimeMs }))
       .sort((a, b) => b.time - a.time)
       .slice(0, 10)

@@ -706,6 +706,23 @@ describe("SessionResume discovery", () => {
     }
   })
 
+  test("lists only UUID Claude transcript names", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "resume-claude-"))
+    try {
+      const cwd = "/Users/test/project"
+      const directory = path.join(root, SessionResume.claudeProjectSlug(cwd))
+      fs.mkdirSync(directory, { recursive: true })
+      fs.writeFileSync(path.join(directory, "agent.jsonl"), "{}")
+      fs.writeFileSync(path.join(directory, "550e8400-e29b-41d4-a716-446655440000.jsonl"), "{}")
+
+      expect(SessionResume.discoverClaude({ claude: root, cwd }).map((file) => path.basename(file))).toEqual([
+        "550e8400-e29b-41d4-a716-446655440000.jsonl",
+      ])
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true })
+    }
+  })
+
   test("scans Codex rollouts from an injected root", async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "resume-codex-"))
     try {
