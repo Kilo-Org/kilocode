@@ -1322,7 +1322,9 @@ export function Prompt(props: PromptProps) {
     const pastedContent = normalizedText.trim()
     // kilocode_change start - a second identical paste expands the collapsed placeholder
     if (expandPastedPlaceholder(input, promptPartTypeId, store.extmarkToPartIndex, store.prompt.parts, pastedContent)) {
-      setStore("prompt", "input", input.plainText)
+      const value = input.plainText
+      setStore("prompt", "input", value)
+      auto()?.onInput(value)
       syncExtmarksWithPromptParts()
       return
     }
