@@ -133,9 +133,36 @@ class KiloWorktreeRpcApiImplTest {
         writeWorktreeNames(file, mapOf("/repo/.kilo/worktrees/feature-x" to "Feature Label", "/blank" to ""))
 
         assertEquals(mapOf("/repo/.kilo/worktrees/feature-x" to "Feature Label"), readWorktreeNames(file))
+        assertEquals(emptyList(), readWorktreeState(file).worktreeOrder)
 
         Files.writeString(file, "not json")
         assertTrue(readWorktreeNames(file).isEmpty())
+    }
+
+    @Test
+    fun `worktree state round trips and migrates legacy names`() {
+        val file = repo.resolve(".kilo").resolve("worktree-names.json")
+        val first = "/repo/.kilo/worktrees/zebra"
+        val second = "/repo/.kilo/worktrees/alpha"
+
+        writeWorktreeState(file, WorktreeState(mapOf(first to "Zebra", second to "Alpha"), listOf(first, second)))
+
+        assertEquals(WorktreeState(mapOf(first to "Zebra", second to "Alpha"), listOf(first, second)), readWorktreeState(file))
+
+        Files.writeString(file, """{"$second":"Alpha","$first":"Zebra","/blank":""}""")
+        assertEquals(WorktreeState(mapOf(second to "Alpha", first to "Zebra"), listOf(second, first)), readWorktreeState(file))
+    }
+
+    @Test
+    fun `orderWorktrees keeps main first and sorts worktrees by persisted order`() {
+        val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        val first = WorktreeDto("/repo/.kilo/worktrees/zebra", "zebra", "zebra", "/repo/.kilo/worktrees/zebra")
+        val second = WorktreeDto("/repo/.kilo/worktrees/alpha", "alpha", "alpha", "/repo/.kilo/worktrees/alpha")
+        val third = WorktreeDto("/repo/.kilo/worktrees/beta", "beta", "beta", "/repo/.kilo/worktrees/beta")
+
+        val out = orderWorktrees(listOf(main, second, third, first), listOf(first.path, second.path))
+
+        assertEquals(listOf(main.path, first.path, second.path, third.path), out.map { it.path })
     }
 
     @Test
@@ -184,6 +211,34 @@ class KiloWorktreeRpcApiImplTest {
         assertFalse(Files.exists(dir), "worktree directory should be removed")
         val after = api.list(repo.toString()).worktrees
         assertFalse(after.any { it.branch == "feature/x" }, "removed worktree should be gone")
+    }
+
+    @Test
+    fun `create records order so reload keeps creation order`() = runBlocking {
+        initRepo()
+
+        val first = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("zebra")).worktree)
+        val second = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("alpha")).worktree)
+
+        val listed = api.list(repo.toString()).worktrees.filter { !it.main }
+        assertEquals(listOf(first.path, second.path), listed.map { it.path })
+        assertEquals(listOf(first.path, second.path), readWorktreeState(repo.resolve(".kilo").resolve("worktree-names.json")).worktreeOrder)
+    }
+
+    @Test
+    fun `remove prunes names and order from worktree state`() = runBlocking {
+        initRepo()
+        val first = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("zebra")).worktree)
+        val second = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("alpha")).worktree)
+        assertNotNull(api.rename(repo.toString(), first.path, "First").worktree)
+        assertNotNull(api.rename(repo.toString(), second.path, "Second").worktree)
+
+        val removed = api.remove(repo.toString(), first.path, first.branch)
+
+        assertTrue(removed.ok, "remove should report success: ${removed.error}")
+        val state = readWorktreeState(repo.resolve(".kilo").resolve("worktree-names.json"))
+        assertEquals(mapOf(second.path to "Second"), state.names)
+        assertEquals(listOf(second.path), state.worktreeOrder)
     }
 
     @Test

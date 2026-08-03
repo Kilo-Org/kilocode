@@ -13,9 +13,12 @@ import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.CapturingProcessHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.decodeFromJsonElement
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
@@ -32,8 +35,9 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         if (!res.ok) return@withContext WorktreeListDto()
         val items = managedWorktrees(parseWorktreeList(res.stdout))
         val store = worktreeNameStore(items)
-        val names = store?.let(::readWorktreeNames).orEmpty()
-        WorktreeListDto(overlayWorktreeNames(items, names))
+        val state = store?.let { syncWorktreeState(it, worktreePaths(items)) } ?: WorktreeState()
+        val named = overlayWorktreeNames(items, state.names)
+        WorktreeListDto(orderWorktrees(named, state.worktreeOrder))
     }
 
     override suspend fun listBranches(directory: String): WorktreeBranchesDto = withContext(Dispatchers.IO) {
@@ -63,6 +67,11 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             } else {
                 LOG.info("worktree created: branch=$branch dir=$dir")
                 val path = dir.toRealPath().toString()
+                val list = runGit(base, "worktree", "list", "--porcelain")
+                val items = if (list.ok) managedWorktrees(parseWorktreeList(list.stdout)) else emptyList()
+                val store = worktreeNameStore(items) ?: base.resolve(".kilo").resolve(WORKTREE_NAMES_FILE)
+                val paths = worktreePaths(items).ifEmpty { listOf(path) }
+                appendWorktreeOrder(store, path, paths)
                 CreateWorktreeResultDto(
                     worktree = WorktreeDto(path, dir.fileName.toString(), branch, path),
                 )
@@ -73,6 +82,9 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         withContext(Dispatchers.IO) {
             val base = Path.of(directory).normalize()
             LOG.info("worktree remove requested: path=$path branch=${branch ?: "(none)"} force=$force base=$base")
+            val list = runGit(base, "worktree", "list", "--porcelain")
+            val store = (if (list.ok) worktreeNameStore(managedWorktrees(parseWorktreeList(list.stdout))) else null)
+                ?: base.resolve(".kilo").resolve(WORKTREE_NAMES_FILE)
             // Force means the user accepted removing a locked worktree; unlock first so the plain
             // remove succeeds. Unlock fails harmlessly when the tree isn't actually locked.
             if (force) {
@@ -94,6 +106,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
                 if (!del.ok) LOG.warn("worktree branch delete failed: branch=$it exit=${del.exit} stderr=${del.stderr.trim()}")
             }
             LOG.info("worktree removed: path=$path branch=${branch ?: "(none)"}")
+            removeWorktreeState(store, path)
             RemoveWorktreeResultDto(ok = true)
         }
 
@@ -110,9 +123,10 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             val target = items.firstOrNull { samePath(it.path, path) && !it.main }
                 ?: return@withContext RenameWorktreeResultDto(error = "Worktree not found")
             return@withContext try {
-                val names = readWorktreeNames(store).toMutableMap()
+                val state = readWorktreeState(store).reconcile(worktreePaths(items))
+                val names = state.names.toMutableMap()
                 names[target.path] = title
-                writeWorktreeNames(store, names)
+                writeWorktreeState(store, state.copy(names = names))
                 RenameWorktreeResultDto(worktree = target.copy(name = title))
             } catch (e: Exception) {
                 LOG.warn("worktree rename failed: path=$path message=${e.message}", e)
@@ -133,12 +147,13 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             val target = items.firstOrNull { samePath(it.path, path) && !it.main }
                 ?: return@withContext RenameWorktreeResultDto(error = "Worktree not found")
             return@withContext try {
-                val names = readWorktreeNames(store).toMutableMap()
+                val state = readWorktreeState(store).reconcile(worktreePaths(items))
+                val names = state.names.toMutableMap()
                 // Only adopt while the worktree is still default. A recorded name means the user (or a
                 // prior adoption) already titled it, so leave it untouched and report a no-op.
                 if (!names[target.path].isNullOrBlank()) return@withContext RenameWorktreeResultDto()
                 names[target.path] = title
-                writeWorktreeNames(store, names)
+                writeWorktreeState(store, state.copy(names = names))
                 LOG.info("worktree name adopted: path=$path name=$title")
                 RenameWorktreeResultDto(worktree = target.copy(name = title))
             } catch (e: Exception) {
@@ -162,9 +177,27 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
     }
 }
 
-private val json = Json { prettyPrint = true }
+private val json = Json { prettyPrint = true; ignoreUnknownKeys = true }
 private val codec = MapSerializer(String.serializer(), String.serializer())
 private const val WORKTREE_NAMES_FILE = "worktree-names.json"
+
+@Serializable
+private data class WorktreeNamesFile(
+    val names: Map<String, String> = emptyMap(),
+    val worktreeOrder: List<String> = emptyList(),
+)
+
+internal data class WorktreeState(
+    val names: Map<String, String> = emptyMap(),
+    val worktreeOrder: List<String> = emptyList(),
+) {
+    fun reconcile(paths: List<String>): WorktreeState {
+        val set = paths.toSet()
+        val order = (worktreeOrder.filter { it in set } + paths.filter { it !in worktreeOrder }).distinct()
+        val next = names.filterKeys { it in set }
+        return WorktreeState(next, order)
+    }
+}
 
 /** Parse `git worktree list --porcelain`. First entry is the main working tree. */
 internal fun parseWorktreeList(raw: String): List<WorktreeDto> {
@@ -218,24 +251,50 @@ internal fun overlayWorktreeNames(items: List<WorktreeDto>, names: Map<String, S
     }
 }
 
+internal fun orderWorktrees(items: List<WorktreeDto>, order: List<String>): List<WorktreeDto> {
+    if (order.isEmpty()) return items
+    val rank = order.withIndex().associate { it.value to it.index }
+    val main = items.filter { it.main }
+    val extra = items.filter { !it.main }
+        .sortedWith(compareBy<WorktreeDto> { rank[it.path] ?: Int.MAX_VALUE }.thenBy { it.path })
+    return main + extra
+}
+
 internal fun readWorktreeNames(file: Path): Map<String, String> {
-    if (!Files.exists(file)) return emptyMap()
+    return readWorktreeState(file).names
+}
+
+internal fun readWorktreeState(file: Path): WorktreeState {
+    if (!Files.exists(file)) return WorktreeState()
     return try {
         val raw = Files.readString(file)
-        json.decodeFromString(codec, raw)
-            .filterValues { it.isNotBlank() }
+        val element = json.parseToJsonElement(raw)
+        if (element is JsonObject && ("names" in element || "worktreeOrder" in element)) {
+            val data = json.decodeFromJsonElement<WorktreeNamesFile>(element)
+            return WorktreeState(data.names.filterValues { it.isNotBlank() }, data.worktreeOrder.filter { it.isNotBlank() })
+        }
+        val names = json.decodeFromJsonElement(codec, element).filterValues { it.isNotBlank() }
+        WorktreeState(names, names.keys.toList())
     } catch (e: Exception) {
         KiloWorktreeRpcApiImpl.LOG.warn("worktree names read failed: file=$file message=${e.message}", e)
-        emptyMap()
+        WorktreeState()
     }
 }
 
 internal fun writeWorktreeNames(file: Path, names: Map<String, String>) {
+    val order = readWorktreeState(file).worktreeOrder
+    writeWorktreeState(file, WorktreeState(names, order))
+}
+
+internal fun writeWorktreeState(file: Path, state: WorktreeState) {
     Files.createDirectories(file.parent)
-    val data = names.filterValues { it.isNotBlank() }
+    val data = WorktreeNamesFile(
+        names = state.names.filterValues { it.isNotBlank() },
+        worktreeOrder = state.worktreeOrder.filter { it.isNotBlank() }.distinct(),
+    )
     val tmp = Files.createTempFile(file.parent, ".worktree-names", ".tmp")
     try {
-        Files.writeString(tmp, json.encodeToString(codec, data))
+        Files.writeString(tmp, json.encodeToString(WorktreeNamesFile.serializer(), data))
         try {
             Files.move(tmp, file, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
         } catch (_: Exception) {
@@ -244,6 +303,39 @@ internal fun writeWorktreeNames(file: Path, names: Map<String, String>) {
     } finally {
         Files.deleteIfExists(tmp)
     }
+}
+
+private fun syncWorktreeState(file: Path, paths: List<String>): WorktreeState {
+    val state = readWorktreeState(file)
+    val next = state.reconcile(paths)
+    if (next == state) return next
+    try {
+        writeWorktreeState(file, next)
+    } catch (e: Exception) {
+        KiloWorktreeRpcApiImpl.LOG.warn("worktree state sync failed: file=$file message=${e.message}", e)
+    }
+    return next
+}
+
+private fun appendWorktreeOrder(file: Path, path: String, paths: List<String>) {
+    val state = readWorktreeState(file)
+    val set = paths.toSet()
+    val order = state.worktreeOrder.filter { it in set && !samePath(it, path) } +
+        paths.filter { it !in state.worktreeOrder && !samePath(it, path) } +
+        path
+    writeWorktreeState(file, state.copy(worktreeOrder = order.distinct()))
+}
+
+private fun removeWorktreeState(file: Path, path: String) {
+    val state = readWorktreeState(file)
+    val names = state.names.filterKeys { !samePath(it, path) }
+    val order = state.worktreeOrder.filter { !samePath(it, path) }
+    if (names == state.names && order == state.worktreeOrder) return
+    writeWorktreeState(file, state.copy(names = names, worktreeOrder = order))
+}
+
+private fun worktreePaths(items: List<WorktreeDto>): List<String> {
+    return items.filter { !it.main }.map { it.path }
 }
 
 private fun worktreeNameStore(items: List<WorktreeDto>): Path? {
