@@ -385,7 +385,8 @@ const AgentManagerContent: Component = () => {
       if (!force && document.activeElement?.matches('[role="tab"]')) return
       if (!force && document.activeElement?.closest('[data-component="question-dock"]')) return
       if (focusQuestionOption()) return
-      window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } }))
+      if (session.scopedQuestions(session.currentSessionID()).length > 0) return
+      window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true, deferFocusToQuestion: true } }))
     }
     queueMicrotask(focus)
     requestAnimationFrame(() => {
@@ -407,13 +408,18 @@ const AgentManagerContent: Component = () => {
           .join(",")}`
       },
       () => {
+        if (!document.hasFocus() || terms.activeId() || history() || reviewActive()) return
         if (document.activeElement?.matches('[role="tab"]')) return
         if (document.activeElement?.closest('[data-component="question-dock"]')) return
         requestAnimationFrame(() => {
+          if (!document.hasFocus() || terms.activeId() || history() || reviewActive()) return
           if (document.activeElement?.matches('[role="tab"]')) return
           if (document.activeElement?.closest('[data-component="question-dock"]')) return
           if (focusQuestionOption()) return
-          window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } }))
+          if (session.scopedQuestions(session.currentSessionID()).length > 0) return
+          window.dispatchEvent(
+            new CustomEvent("focusPrompt", { detail: { restore: true, deferFocusToQuestion: true } }),
+          )
         })
       },
       { defer: true },
@@ -2560,7 +2566,7 @@ const AgentManagerContent: Component = () => {
                       readonly={readOnly()}
                       continueInWorktree={selection() === LOCAL}
                       promptBoxId={`agent-manager:${selection() ?? "unassigned"}`}
-                      focusOnSwitch
+                      deferFocusToQuestion
                       pendingSessionID={selection() === LOCAL ? activePendingId() : undefined}
                     />
                     <Show when={readOnly()}>

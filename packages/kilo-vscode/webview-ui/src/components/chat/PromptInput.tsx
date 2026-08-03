@@ -108,8 +108,8 @@ interface PromptInputProps {
   suggesting?: () => boolean
   /** When true, session is busy only because a question is pending — treat as idle for input */
   questioning?: () => boolean
-  /** When true, do not autofocus the prompt while switching to a pending question */
-  focusOnSwitch?: boolean
+  /** When true, defer prompt focus while switching to a pending question */
+  deferFocusToQuestion?: boolean
   boxId?: string
   pendingSessionID?: string
 }
@@ -383,7 +383,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         textareaRef.scrollTop = scroll
         if (highlightRef) highlightRef.scrollTop = scroll
       }
-      if (!props.focusOnSwitch || session.scopedQuestions(sid()).length === 0) {
+      if (!props.deferFocusToQuestion || session.scopedQuestions(sid()).length === 0) {
         window.dispatchEvent(new Event("focusPrompt"))
       }
     }),
@@ -409,7 +409,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   // Focus textarea when any part of the app requests it
   const onFocusPrompt = (event: Event) => {
+    const defer = () =>
+      event instanceof CustomEvent && event.detail?.deferFocusToQuestion && session.scopedQuestions(sid()).length > 0
     const focus = () => {
+      if (defer()) return
       const ref = textareaRef
       if (!ref) return
       ref.focus({ preventScroll: true })
@@ -417,6 +420,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     focus()
     if (!(event instanceof CustomEvent) || !event.detail?.restore) return
     const restore = () => {
+      if (defer()) return
       window.focus()
       focus()
     }
