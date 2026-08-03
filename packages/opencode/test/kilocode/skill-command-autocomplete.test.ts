@@ -124,9 +124,11 @@ Skill content.
 
           const command = yield* Command.Service
           const skill = yield* command.get("review:skill")
+          const list = yield* command.list()
 
           expect(skill?.source).toBe("skill")
           expect(skill?.model).toBe("anthropic/claude-sonnet")
+          expect(list.filter((item) => item.source === "skill" && item.name === "review")).toHaveLength(1)
         }),
       {
         git: true,
@@ -134,6 +136,29 @@ Skill content.
           command: {
             "review:skill": { model: "anthropic/claude-sonnet" },
             review: { template: "Command content." },
+          },
+        },
+      },
+    ),
+  )
+
+  it.live("does not apply a missing MCP alias to a command with the same name", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const command = yield* Command.Service
+          const plain = yield* command.get("review")
+          const missing = yield* command.get("review:mcp")
+
+          expect(plain?.model).toBeUndefined()
+          expect(missing).toBeUndefined()
+        }),
+      {
+        git: true,
+        config: {
+          command: {
+            review: { template: "Command content." },
+            "review:mcp": { model: "anthropic/claude-sonnet" },
           },
         },
       },
