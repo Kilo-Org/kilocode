@@ -108,6 +108,8 @@ interface PromptInputProps {
   suggesting?: () => boolean
   /** When true, session is busy only because a question is pending — treat as idle for input */
   questioning?: () => boolean
+  /** When true, do not autofocus the prompt while switching to a pending question */
+  focusOnSwitch?: boolean
   boxId?: string
   pendingSessionID?: string
 }
@@ -381,7 +383,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         textareaRef.scrollTop = scroll
         if (highlightRef) highlightRef.scrollTop = scroll
       }
-      if (!props.boxId?.startsWith("agent-manager:") || session.scopedQuestions(sid()).length === 0) {
+      if (!props.focusOnSwitch || session.scopedQuestions(sid()).length === 0) {
         window.dispatchEvent(new Event("focusPrompt"))
       }
     }),

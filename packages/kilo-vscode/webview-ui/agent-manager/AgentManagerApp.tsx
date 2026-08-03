@@ -382,6 +382,8 @@ const AgentManagerContent: Component = () => {
   const requestChatFocus = (force = false) => {
     const focus = () => {
       if ((!force && !document.hasFocus()) || terms.activeId() || history() || reviewActive()) return
+      if (!force && document.activeElement?.matches('[role="tab"]')) return
+      if (!force && document.activeElement?.closest('[data-component="question-dock"]')) return
       if (focusQuestionOption()) return
       window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } }))
     }
@@ -395,13 +397,28 @@ const AgentManagerContent: Component = () => {
     })
   }
 
-  createEffect(() => {
-    if (session.scopedQuestions(session.currentSessionID()).length === 0) return
-    requestAnimationFrame(() => {
-      if (!document.hasFocus() || terms.activeId() || history() || reviewActive()) return
-      focusQuestionOption()
-    })
-  })
+  createEffect(
+    on(
+      () => {
+        const id = session.currentSessionID()
+        return `${id ?? ""}:${session
+          .scopedQuestions(id)
+          .map((question) => question.id)
+          .join(",")}`
+      },
+      () => {
+        if (document.activeElement?.matches('[role="tab"]')) return
+        if (document.activeElement?.closest('[data-component="question-dock"]')) return
+        requestAnimationFrame(() => {
+          if (document.activeElement?.matches('[role="tab"]')) return
+          if (document.activeElement?.closest('[data-component="question-dock"]')) return
+          if (focusQuestionOption()) return
+          window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } }))
+        })
+      },
+      { defer: true },
+    ),
+  )
 
   // Ambient setup reveal restores the panel after success unless the user engaged.
   const ambientSetup = createAmbientSetup({
@@ -908,6 +925,7 @@ const AgentManagerContent: Component = () => {
     const next = direction === "left" ? idx - 1 : idx + 1
     if (next < 0 || next >= ids.length) return
     focusTab(ids[next]!)
+    requestChatFocus(true)
   }
 
   const selectionDeps = {
@@ -1141,7 +1159,7 @@ const AgentManagerContent: Component = () => {
       else if (msg.action === "advancedWorktree") showNewWorktreeDialog()
       else if (msg.action === "closeWorktree") closeSelectedWorktree()
       else if (msg.action === "showShortcuts") handleShowKeyboardShortcuts()
-      else if (msg.action === "focusInput") requestChatFocus()
+      else if (msg.action === "focusInput") requestChatFocus(true)
       else if (msg.action === "focusSearch")
         focusChatSearch({ history: setHistory, review: setReviewActive, terminal: () => terms.setActiveId(undefined) })
       else if (msg.action === "newTerminal") termHandlers.requestNew()
@@ -1341,6 +1359,7 @@ const AgentManagerContent: Component = () => {
             const ms = managedSessions().find((s) => s.id === ev.sessionId)
             if (ms?.worktreeId) setSelection(ms.worktreeId)
             evictLocal(ev.sessionId)
+            requestChatFocus(true)
           }
         } else {
           // Track this worktree as setting up and auto-select it in the sidebar
@@ -1369,6 +1388,7 @@ const AgentManagerContent: Component = () => {
         evictLocal(ev.sessionId)
         drafts.apply(ev.worktreeId, ev.sessionId)
         session.selectSession(ev.sessionId)
+        requestChatFocus(true)
       }
 
       if (msg.type === "agentManager.sessionForked") {
@@ -1388,6 +1408,7 @@ const AgentManagerContent: Component = () => {
           evictLocal(ev.sessionId)
         }
         session.selectSession(ev.sessionId)
+        requestChatFocus(true)
       }
 
       if (msg.type === "agentManager.keybindings") {
@@ -2003,7 +2024,6 @@ const AgentManagerContent: Component = () => {
       setActivePendingId(undefined)
       session.selectSession(id)
     }
-    requestChatFocus(true)
   }
   const termHandlers = createTerminalHandlers({
     state: terms,
@@ -2146,7 +2166,6 @@ const AgentManagerContent: Component = () => {
       selectSession: session.selectSession,
       activateTerminal: termHandlers.activate,
     })
-    requestChatFocus(true)
   }
   const tabFocus = createTabFocus({ ids: () => tabIds(), select: focusTab })
 
@@ -2541,6 +2560,7 @@ const AgentManagerContent: Component = () => {
                       readonly={readOnly()}
                       continueInWorktree={selection() === LOCAL}
                       promptBoxId={`agent-manager:${selection() ?? "unassigned"}`}
+                      focusOnSwitch
                       pendingSessionID={selection() === LOCAL ? activePendingId() : undefined}
                     />
                     <Show when={readOnly()}>

@@ -39,6 +39,7 @@ interface ChatViewProps {
   /** When true, show the "Continue in Worktree" button. Defaults to true in the sidebar. */
   continueInWorktree?: boolean
   promptBoxId?: string
+  focusOnSwitch?: boolean
   pendingSessionID?: string
   emptyState?: () => JSX.Element
 }
@@ -384,6 +385,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                 suggesting={suggesting}
                 questioning={questioning}
                 boxId={props.promptBoxId}
+                focusOnSwitch={props.focusOnSwitch}
                 pendingSessionID={pendingSessionID()}
               />
             </Show>
