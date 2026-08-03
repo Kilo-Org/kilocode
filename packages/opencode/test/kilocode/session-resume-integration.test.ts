@@ -947,11 +947,23 @@ it.instance(
   () =>
     Effect.gen(function* () {
       const { dir } = yield* useServerConfig(providerCfg)
+      const test = yield* TestInstance
       const { prompt, chat } = yield* boot()
 
-      // Create a directory at the path where the session file is expected
-      const file = path.join(os.homedir(), ".claude", "projects", claudeSlug(dir), `${fixtureUUID}.jsonl`)
-      fs.mkdirSync(file, { recursive: true })
+      // Use a temp root instead of real home directory
+      const root = path.join(test.directory, "tmp-claude-projects")
+      const file = path.join(root, claudeSlug(dir), `${fixtureUUID}.jsonl`)
+
+      // acquireRelease: create a directory at the expected file path,
+      // clean up on scope exit even if assertion fails
+      yield* Effect.acquireRelease(
+        Effect.sync(() => {
+          fs.mkdirSync(file, { recursive: true })
+        }),
+        () => Effect.sync(() => {
+          fs.rmSync(path.dirname(file), { recursive: true, force: true })
+        }),
+      )
 
       const exit = yield* Effect.exit(
         prompt.command({
@@ -959,7 +971,9 @@ it.instance(
           command: "resume-claude",
           arguments: fixtureUUID,
           agent: "build",
-        }),
+        }).pipe(
+          Effect.provideService(SessionResume.ResumeRoots, { claude: root }),
+        ),
       )
 
       expect(Exit.isFailure(exit)).toBe(true)
@@ -971,9 +985,6 @@ it.instance(
       // Assert no messages were written
       const msgs = yield* sessionMessages(chat.id)
       expect(msgs.length).toBe(0)
-
-      // Cleanup
-      fs.rmSync(file, { recursive: true, force: true })
     }),
   { config: cfg },
   30_000,
