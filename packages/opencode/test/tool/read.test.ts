@@ -413,6 +413,34 @@ describe("tool.read truncation", () => {
     }),
   )
 
+  // kilocode_change start - keep complete Read output out of the generic wrapper truncator
+  it.live("does not generic-truncate complete high-line-count Read output", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped()
+      const target = path.join(dir, "complete-many-lines.txt")
+      const lines = Array.from({ length: 1_999 }, (_, i) => `COMPLETE_LINE_${i + 1}`).join("\n")
+      yield* put(target, lines)
+
+      const result = yield* exec(
+        dir,
+        { filePath: target },
+        {
+          ...ctx,
+          extra: { includeInstructions: false },
+        },
+      )
+
+      expect(result.metadata.truncated).toBe(false)
+      expect(result.metadata.display?.truncated).toBe(false)
+      expect(result.output).toContain("1: COMPLETE_LINE_1")
+      expect(result.output).toContain("1999: COMPLETE_LINE_1999")
+      expect(result.output).toContain("End of file - total 1999 lines")
+      expect(result.output).not.toContain("The tool call succeeded but the output was truncated")
+    }),
+  )
+  // kilocode_change end
+
+  // kilocode_change start - cover the reported high-offset large-file path without instruction reminders
   it.live("preserves high-offset slices in large files without AGENTS.md", () =>
     Effect.gen(function* () {
       const dir = yield* tmpdirScoped()
@@ -443,6 +471,7 @@ describe("tool.read truncation", () => {
       })
     }),
   )
+  // kilocode_change end
   it.live("throws when offset is beyond end of file", () =>
     Effect.gen(function* () {
       const dir = yield* tmpdirScoped()
@@ -577,6 +606,7 @@ root_type Monster;`
     }),
   )
 
+  // kilocode_change start - unsupported image-like extensions fall back to text reads
   it.live("falls through unsupported image mime types to text", () =>
     Effect.gen(function* () {
       const dir = yield* tmpdirScoped()
@@ -594,9 +624,11 @@ root_type Monster;`
       }
     }),
   )
-})
+  // kilocode_change end
+}) // kilocode_change
 
-describe("tool.read loaded instructions", () => {
+describe("tool.read loaded instructions", () => { // kilocode_change
+  // kilocode_change start - assert delivered instruction reminder metadata
   it.live("loads AGENTS.md from parent directory and includes in metadata", () =>
     Effect.gen(function* () {
       const dir = yield* tmpdirScoped()
@@ -613,6 +645,9 @@ describe("tool.read loaded instructions", () => {
     }),
   )
 
+  // kilocode_change end
+
+  // kilocode_change start - cover bounded instruction reminders alongside requested file slices
   it.live("delivers real-size AGENTS.md reminders when the requested file slice leaves room", () =>
     Effect.gen(function* () {
       const dir = yield* tmpdirScoped()
@@ -661,6 +696,7 @@ describe("tool.read loaded instructions", () => {
       })
     }),
   )
+  // kilocode_change end
 })
 
 describe("tool.read binary detection", () => {

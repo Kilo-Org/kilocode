@@ -32,7 +32,7 @@ const MAX_BYTES_LABEL = `${MAX_BYTES / 1024} KB`
 const SAMPLE_BYTES = 4096
 const SUPPORTED_IMAGE_MIMES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"])
 
-// `offset` and `limit` were originally `z.coerce.number()` — the runtime
+// `offset` and `limit` were originally `z.coerce.number()` — the runtime // kilocode_change
 // coercion was useful when the tool was called from a shell but serves no
 // purpose in the LLM tool-call path (the model emits typed JSON). The JSON
 // Schema output is identical (`type: "number"`), so the LLM view is
@@ -213,14 +213,15 @@ export const ReadTool = Tool.define<
       const title = path.relative(instance.worktree, requested)
       // kilocode_change start - resolve V1 configured references without introducing a Core location-layer dependency
       const config = yield* Effect.serviceOption(Config.Service)
-      const references =
-        config._tag === "Some"
-          ? KiloConfiguredReference.resolveAll({
-              references: (yield* config.value.get()).reference ?? {},
-              directory: instance.directory,
-              worktree: instance.worktree,
-            })
-          : []
+      const cfg = config._tag === "Some" ? yield* config.value.get() : undefined
+      const references = cfg
+        ? KiloConfiguredReference.resolveAll({
+            references: cfg.reference ?? {},
+            directory: instance.directory,
+            worktree: instance.worktree,
+          })
+        : []
+      const maxOutputBytes = cfg?.tool_output?.max_bytes ?? MAX_BYTES
       // kilocode_change end
       // kilocode_change start - fail before read authorization when the target is missing
       const info = yield* fs.stat(requested).pipe(
@@ -363,18 +364,22 @@ export const ReadTool = Tool.define<
           }
           output += "\n</content>"
           yield* warm(bound.target)
+          // kilocode_change start - budget appended instructions against the model-facing Read output
           const reminder = formatInstructionReminder(loaded, {
-            maxBytes: Math.max(2 * 1024, MAX_BYTES - Buffer.byteLength(output, "utf-8")),
+            maxBytes: Math.max(0, maxOutputBytes - Buffer.byteLength(output, "utf-8")),
           })
+          // kilocode_change end
           output += reminder.output
           return {
             title,
             output,
+            // kilocode_change start - expose delivered instruction reminder metadata
             metadata: {
               preview: file.raw.slice(0, 20).join("\n"),
               truncated,
               loaded: reminder.loaded,
               instructionReminderTruncated: reminder.truncated,
+              // kilocode_change end
               display: {
                 type: "file" as const,
                 path: bound.target,

@@ -6,7 +6,21 @@ import { Tool } from "@/tool/tool"
 import { Truncate } from "@/tool/truncate"
 import { testEffect } from "../lib/effect"
 
-const it = testEffect(Layer.mergeAll(Truncate.defaultLayer, Agent.defaultLayer))
+// kilocode_change start - provide an Agent service for wrapper truncation tests without loading repo config
+const agent = Layer.succeed(
+  Agent.Service,
+  Agent.Service.of({
+    get: () => Effect.succeed({ name: "build", mode: "primary", permission: [], options: {} } as Agent.Info),
+    list: () => Effect.succeed([]),
+    defaultInfo: () => Effect.succeed({ name: "build", mode: "primary", permission: [], options: {} } as Agent.Info),
+    defaultAgent: () => Effect.succeed("build"),
+    requirementStatus: () => Effect.succeed({ status: "ok" } as never),
+    guardRequirements: () => Effect.void,
+    generate: () => Effect.die("unused"),
+  }),
+)
+const it = testEffect(Layer.mergeAll(Truncate.defaultLayer, agent))
+// kilocode_change end
 
 const params = Schema.Struct({ input: Schema.String })
 
@@ -78,6 +92,7 @@ describe("Tool.define", () => {
     }),
   )
 
+  // kilocode_change start - cover decoded optional defaults with explicit bounded-output metadata
   it.effect("execute receives decoded parameters", () =>
     Effect.gen(function* () {
       const parameters = Schema.Struct({
@@ -105,7 +120,9 @@ describe("Tool.define", () => {
       expect(calls).toEqual([{ count: 5 }, { count: 7 }])
     }),
   )
+  // kilocode_change end
 
+  // kilocode_change start - cover wrapper bounding for oversized false reports
   it.effect("bounds oversized output when metadata declares truncated false", () =>
     Effect.gen(function* () {
       const output = "x".repeat(60 * 1024)
@@ -149,6 +166,7 @@ describe("Tool.define", () => {
       expect(result.metadata).toEqual({ truncated: true })
     }),
   )
+  // kilocode_change end
   // Regression for #28438: the wrap is the canonical "untyped → typed" boundary.
   // When the LLM emits a tool call with a payload that fails the parameter
   // schema, the wrap must surface a typed `Tool.InvalidArgumentsError` whose

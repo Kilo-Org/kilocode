@@ -1,5 +1,5 @@
-﻿---
+---
 "@kilocode/cli": patch
 ---
 
-Fix tool output bounding when tools report `truncated: false`, and keep Read large-file slices visible while bounding appended instruction reminders without marking omitted instructions as loaded.
+Keep Read output for large files correctly bounded and preserve requested slices when instruction reminders are attached.

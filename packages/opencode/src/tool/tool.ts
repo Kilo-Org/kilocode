@@ -128,6 +128,10 @@ function wrap<Parameters extends Schema.Decoder<unknown>, Result extends Metadat
             ),
           )
           const result = yield* execute(decoded as Schema.Schema.Type<Parameters>, ctx)
+          // kilocode_change start - keep self-bounded Read output intact while bounding oversized false reports
+          if (id === "read" && result.metadata.truncated !== undefined) {
+            return result
+          }
           if (result.metadata.truncated === true) {
             return result
           }
@@ -139,7 +143,8 @@ function wrap<Parameters extends Schema.Decoder<unknown>, Result extends Metadat
           ) {
             return result
           }
-          const agent = yield* agents.get(ctx.agent).pipe(Effect.catchCause(() => Effect.succeed(undefined)))
+          // kilocode_change end
+          const agent = yield* agents.get(ctx.agent)
           const truncated = yield* truncate.output(result.output, {}, agent)
           return {
             ...result,

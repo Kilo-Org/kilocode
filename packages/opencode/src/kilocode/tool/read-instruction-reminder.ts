@@ -15,11 +15,27 @@ const SEPARATOR = "\n\n"
 
 const byteLength = (value: string) => Buffer.byteLength(value, "utf-8")
 
-const takeUtf8Prefix = (value: string, maxBytes: number) =>
-  new TextDecoder("utf-8").decode(Buffer.from(value, "utf-8").subarray(0, Math.max(0, maxBytes))).replace(/\uFFFD$/, "")
-
 const omittedNote = (paths: readonly string[]) =>
   `[Additional instructions omitted because the Read output budget was exhausted. Full instruction files not delivered: ${paths.join(", ")}. Read those files directly if needed.]`
+
+const omittedSummary = (paths: readonly string[], maxBytes: number) => {
+  const prefix =
+    "[Additional instructions omitted because the Read output budget was exhausted. Full instruction files not delivered: "
+  const suffix = ". Read those files directly if needed.]"
+  if (byteLength(prefix + suffix) > maxBytes) return ""
+
+  const selected: string[] = []
+  for (const path of paths) {
+    const remaining = paths.length - selected.length - 1
+    const more = remaining > 0 ? `, and ${remaining} more` : ""
+    const candidate = prefix + [...selected, path].join(", ") + more + suffix
+    if (byteLength(candidate) > maxBytes) break
+    selected.push(path)
+  }
+  if (selected.length === 0) return ""
+  const remaining = paths.length - selected.length
+  return prefix + selected.join(", ") + (remaining > 0 ? `, and ${remaining} more` : "") + suffix
+}
 
 export function formatInstructionReminder(
   loaded: readonly LoadedInstruction[],
@@ -48,17 +64,9 @@ export function formatInstructionReminder(
 
   const notePrefix = body ? `${body}${SEPARATOR}` : ""
   const noteBudget = maxBytes - byteLength(PREFIX + notePrefix + CLOSE)
-  if (noteBudget <= 0) {
-    return {
-      output: body ? `${PREFIX}${body}${CLOSE}` : "",
-      loaded: delivered.map((item) => item.filepath),
-      truncated: true,
-    }
-  }
-
-  const note = takeUtf8Prefix(omittedNote(omitted), noteBudget)
+  const note = omittedSummary(omitted, noteBudget)
   return {
-    output: `${PREFIX}${notePrefix}${note}${CLOSE}`,
+    output: note ? `${PREFIX}${notePrefix}${note}${CLOSE}` : body ? `${PREFIX}${body}${CLOSE}` : "",
     loaded: delivered.map((item) => item.filepath),
     truncated: true,
   }
