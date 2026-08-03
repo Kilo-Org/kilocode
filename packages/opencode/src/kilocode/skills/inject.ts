@@ -4,15 +4,13 @@ import { Process } from "@/util/process"
 import { SKILL_SHELL_DISABLED, SKILL_SHELL_UNTRUSTED } from "@/kilocode/skills/display"
 import type * as Tool from "@/tool/tool"
 
-// Shell injection for skill bodies mirrors Claude's "dynamic context injection": a
-// `!`cmd`` placeholder in SKILL.md is replaced by the command's stdout before the
+// A `!`cmd`` placeholder in SKILL.md is replaced by the command's stdout before the
 // content reaches the model. Runs only for model-initiated skill loads (not the
-// user-initiated `/skill` path), gated by: trust (only global/builtin skills, never
-// project/downloaded ones), a kill-switch (KILO_DISABLE_SKILL_SHELL), and one batch
-// bash permission ask naming every command up front (`skillShell` forces the ask past
-// any allow/auto-approve rule; a preceding external_directory ask covers out-of-project
-// paths). Substitution runs once; output is never re-scanned, so a command can't emit
-// a placeholder that a later pass would execute.
+// user-initiated `/skill` path), gated by trust (only global/builtin skills), a
+// kill-switch (KILO_DISABLE_SKILL_SHELL), and one batch bash ask naming every command
+// up front (`skillShell` forces the ask past allow/auto-approve rules; a preceding
+// external_directory ask covers out-of-project paths). Substitution runs once; output
+// is never re-scanned, so a command can't emit a placeholder a later pass would run.
 
 // Execution bounds: model-initiated commands must not hang the load, blow up
 // context, or overrun the batch.
