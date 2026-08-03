@@ -43,6 +43,8 @@ export interface ThinkingSelectorBaseProps {
   globalTrigger?: boolean
   /** Show the Shift+Tab cycle hint in the trigger tooltip. */
   cycleHint?: boolean
+  /** Accessible name for the selector trigger. */
+  label?: string
 }
 
 export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props) => {
@@ -163,7 +165,7 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
           open={open()}
           onOpenChange={onOpen}
           triggerAs={Button}
-          triggerProps={{ variant: "ghost", size: "small" }}
+          triggerProps={{ variant: "ghost", size: "small", "aria-label": props.label }}
           trigger={
             <>
               <span class="thinking-selector-trigger-label">{display(props.value)}</span>

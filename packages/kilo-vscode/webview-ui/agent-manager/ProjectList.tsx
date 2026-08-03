@@ -20,6 +20,7 @@ import { LOCAL } from "./navigate"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
 import { ProjectBranchDialog } from "./ProjectBranchDialog"
 import type { ProjectStore } from "./project/store"
+import type { ModeRouter } from "./mode-router"
 
 interface Props {
   projects: AgentProjectSnapshot[]
@@ -32,6 +33,7 @@ interface Props {
   selectedProject?: string
   selection?: string
   currentSessionID?: () => string | undefined
+  mode: ModeRouter
   busy?: (id: string) => boolean
   bindings: Record<string, string>
   t: LanguageContextValue["t"]
@@ -133,6 +135,7 @@ export const ProjectList: Component<Props> = (props) => {
     dialog.show(() => (
       <NewWorktreeDialog
         projectId={projectId}
+        mode={props.mode}
         defaultBaseBranch={state?.defaultBaseBranch ?? props.local[projectId]?.branch}
         onClose={() => dialog.close()}
       />

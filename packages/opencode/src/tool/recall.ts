@@ -83,13 +83,13 @@ async function search(
     }),
   ) // kilocode_change
 
-  const coverage = `Searched ${found.sessions} sessions and ${found.parts} transcript parts.`
+  const coverage = `Searched ${found.sessions} sessions and evaluated ${found.candidates} transcript candidates.`
   const query = RecallSearch.inert(params.query)
   if (found.results.length === 0) {
     return {
       title: `Search: "${query}" (no results)`,
       output: RecallSearch.inert(`No sessions found matching "${params.query}". ${coverage}`),
-      metadata: { searchedSessions: found.sessions, searchedParts: found.parts },
+      metadata: { searchedSessions: found.sessions, candidateParts: found.candidates },
     }
   }
 
@@ -107,7 +107,7 @@ async function search(
   return {
     title: `Search: "${query}" (${found.results.length} results)`,
     output: RecallSearch.inert(lines.join("\n")),
-    metadata: { searchedSessions: found.sessions, searchedParts: found.parts },
+    metadata: { searchedSessions: found.sessions, candidateParts: found.candidates },
   }
 }
 

@@ -3283,11 +3283,11 @@ body.am-wt-dragging-active * {
 /* HoverCard popover for worktree items */
 
 .am-worktree-hover-card[data-expanded] {
-  animation-duration: 80ms;
+  animation: none;
 }
 
 .am-worktree-hover-card[data-closed] {
-  animation-duration: 60ms;
+  animation: none;
 }
 
 .am-hover-card {

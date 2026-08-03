@@ -6,6 +6,7 @@ import path from "path"
 import { LayerNode } from "./effect/layer-node"
 import { Entry, Match } from "./filesystem/schema"
 import { FSUtil } from "./fs-util"
+import * as KiloGrep from "./kilocode/ripgrep-grep" // kilocode_change
 import * as SpawnValidation from "./kilocode/spawn-validation" // kilocode_change
 import { AppProcess, collectStream, waitForAbort } from "./process"
 import { NonNegativeInt, PositiveInt, RelativePath } from "./schema"
@@ -23,7 +24,7 @@ const MAX_RECORD_BYTES = 64 * 1024
 const MAX_SUBMATCHES = 100
 
 const RawMatch = Schema.Struct({
-  type: Schema.Literal("match"),
+  type: Schema.Literals(["match", "context"]), // kilocode_change - retain requested context records
   data: Schema.Struct({
     path: Schema.Struct({ text: Schema.String }),
     lines: Schema.Struct({ text: Schema.String }),
@@ -39,7 +40,7 @@ const RawMatch = Schema.Struct({
   }),
 })
 
-type RawMatchData = (typeof RawMatch.Type)["data"]
+type RawMatchData = (typeof RawMatch.Type)["data"] & { readonly context: boolean } // kilocode_change
 
 export class Error extends Schema.TaggedErrorClass<Error>()("Ripgrep.Error", {
   message: Schema.String,
@@ -71,7 +72,8 @@ export interface GlobInput {
   readonly validate?: Effect.Effect<void, unknown> // kilocode_change - bind approved searches at spawn
 }
 
-export interface GrepInput {
+export interface GrepInput extends KiloGrep.Options {
+  // kilocode_change
   readonly cwd: string
   readonly pattern: string
   readonly file?: string
@@ -84,7 +86,7 @@ export interface GrepInput {
 export interface Interface {
   readonly find: (input: FindInput) => Effect.Effect<readonly Entry[], Error>
   readonly glob: (input: GlobInput) => Effect.Effect<SearchResult<Entry>, Error> // kilocode_change
-  readonly grep: (input: GrepInput) => Effect.Effect<SearchResult<Match>, Error | InvalidPatternError> // kilocode_change
+  readonly grep: (input: GrepInput) => Effect.Effect<SearchResult<KiloGrep.GrepMatch>, Error | InvalidPatternError> // kilocode_change
 }
 
 // kilocode_change start - retain truncation state through model-facing tools
@@ -116,6 +118,7 @@ export const layer = Layer.effect(
       readonly parse: (line: string) => Effect.Effect<A | undefined, Error>
       readonly pattern?: string
       readonly onItem?: (item: A) => Effect.Effect<void>
+      readonly stop?: (item: A) => boolean // kilocode_change - stop bounded searches at the overflow match
       readonly validate?: Effect.Effect<void, unknown> // kilocode_change - spawn-bound target validation
     }) => {
       const program = Effect.scoped(
@@ -136,6 +139,13 @@ export const layer = Layer.effect(
             Effect.forkScoped,
           )
           let observed = 0
+          let stopped = false // kilocode_change
+          const take = input.stop // kilocode_change start
+            ? Stream.takeUntil<A>((row) => {
+                stopped = input.stop?.(row) ?? false
+                return stopped
+              })
+            : Stream.take(input.limit + 1) // kilocode_change end
           const rows = yield* Stream.decodeText(handle.stdout).pipe(
             Stream.splitLines,
             Stream.filter((line) => line.length > 0),
@@ -145,11 +155,12 @@ export const layer = Layer.effect(
               if (!input.onItem || observed++ >= input.limit) return Effect.void
               return input.onItem(row)
             }),
-            Stream.take(input.limit + 1),
+            take, // kilocode_change
             Stream.runCollect,
             Effect.map((chunk) => [...chunk]),
           )
-          const truncated = rows.length > input.limit
+          if (stopped) return { items: rows, truncated: true, partial: false } // kilocode_change
+          const truncated = input.stop ? false : rows.length > input.limit // kilocode_change - custom stop predicates own truncation
           if (truncated) return { items: rows.slice(0, input.limit), truncated, partial: false }
 
           const code = yield* handle.exitCode
@@ -249,11 +260,13 @@ export const layer = Layer.effect(
       grep: (input) =>
         run<RawMatchData>({
           ...input,
+          stop: KiloGrep.stop(input.limit), // kilocode_change
           args: [
             "--no-config",
             "--json",
             "--hidden",
             "--no-messages",
+            ...KiloGrep.flags(input), // kilocode_change
             ...(input.include ? [`--glob=${input.include}`] : []),
             "--glob=!**/.git/**",
             "--",
@@ -269,13 +282,19 @@ export const layer = Layer.effect(
                 })
             ).pipe(
               Effect.flatMap((json) => {
-                if (!json || typeof json !== "object" || !("type" in json) || json.type !== "match")
+                if (
+                  !json ||
+                  typeof json !== "object" ||
+                  !("type" in json) ||
+                  (json.type !== "match" && json.type !== "context") // kilocode_change
+                )
                   return Effect.succeed(undefined)
                 return Schema.decodeUnknownEffect(RawMatch)(json).pipe(
                   Effect.map((match) => ({
                     ...match.data,
                     path: { text: match.data.path.text.replace(/^\.[\\/]/, "") },
                     submatches: match.data.submatches.slice(0, MAX_SUBMATCHES),
+                    context: match.type === "context", // kilocode_change
                   })),
                   Effect.mapError((cause) => failure("Invalid ripgrep match output", cause)),
                 )
@@ -285,13 +304,13 @@ export const layer = Layer.effect(
           // kilocode_change start - retain spawn metadata after mapping matches
           Effect.map((result) => ({
             ...result,
-            items: result.items.map((match) => {
+            items: KiloGrep.select(input, result.items).map((match) => {
               const relative = match.path.text
                 .replace(/^(?:\.[\\/])+/u, "")
                 .replace(/^[\\/]+/u, "")
                 .replaceAll("\\", "/")
               const absolute = path.resolve(input.cwd, relative)
-              return new Match({
+              const item = new Match({
                 entry: new Entry({
                   path: RelativePath.make(relative),
                   type: "file",
@@ -306,6 +325,7 @@ export const layer = Layer.effect(
                   end: submatch.end,
                 })),
               })
+              return KiloGrep.decorate(item, match.context, match.lines.text.length > 2_000)
             }),
           })),
           // kilocode_change end

@@ -199,6 +199,12 @@ interface TerminalCreatedMessage {
   font: TerminalFont
 }
 
+interface TerminalRestartedMessage {
+  type: "agentManager.terminal.restarted"
+  terminalId: string
+  wsUrl: string
+}
+
 interface TerminalClosedMessage {
   type: "agentManager.terminal.closed"
   terminalId: string
@@ -407,6 +413,7 @@ export type AgentManagerOutMessage =
   | ActionOutMessage
   | RunStatusMessage
   | TerminalCreatedMessage
+  | TerminalRestartedMessage
   | TerminalClosedMessage
   | TerminalErrorMessage
   | TerminalDestinationChangedMessage
@@ -949,6 +956,13 @@ interface TerminalResizeIn {
   rows: number
 }
 
+interface TerminalRestartIn {
+  type: "agentManager.terminal.restart"
+  terminalId: string
+  cols?: number
+  rows?: number
+}
+
 interface TerminalDestinationSelectedIn {
   type: "agentManager.terminal.destinationSelected"
   destination: TerminalDestination
@@ -1036,4 +1050,5 @@ export type AgentManagerInMessage =
   | TerminalCloseIn
   | TerminalStopIn
   | TerminalResizeIn
+  | TerminalRestartIn
   | TerminalDestinationSelectedIn
