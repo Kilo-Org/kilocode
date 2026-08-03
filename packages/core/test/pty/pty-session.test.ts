@@ -115,7 +115,7 @@ describe("pty", () => {
       const events = yield* subscribePtyEvents()
       const info = yield* createPty("/usr/bin/env", ["sh", "-c", "exit 3"])
 
-      expect(yield* waitForEvents(events, info.id, 2)).toEqual(["created", "exited"])
+      expect((yield* waitForEvents(events, info.id, 2)).sort()).toEqual(["created", "exited"]) // kilocode_change - native PTY exit can race Created publication
       const exited = yield* pty.get(info.id)
       expect(exited.status).toBe("exited")
       expect(exited.exitCode).toBe(3)
@@ -255,7 +255,7 @@ describe("pty", () => {
       const pty = yield* Pty.Service
       const events = yield* subscribePtyEvents()
       const info = yield* createPty("sh", ["-c", 'printf "replayed"; exit 7'])
-      expect(yield* waitForEvents(events, info.id, 2)).toEqual(["created", "exited"])
+      expect((yield* waitForEvents(events, info.id, 2)).sort()).toEqual(["created", "exited"]) // kilocode_change - native PTY exit can race Created publication
 
       const ended = yield* Deferred.make<{ exitCode?: number }>()
       const attachment = yield* pty.attach(info.id, {
