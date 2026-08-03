@@ -677,7 +677,7 @@ async function extract() {
 
   for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
     const left = Math.max(0, budgetDeadline - Date.now())
-    if (left < 60_000) {
+    if (left <= 0) {
       log("budget exhausted before extraction attempt")
       break
     }
@@ -738,7 +738,9 @@ async function extract() {
     const newEntries = applyDelta(existing, { add: validated.add, remove: validated.remove })
     fs.writeFileSync(`${OUT_DIR}/learnings.json`, JSON.stringify(newEntries, null, 2))
     const marker = renderLearnedThrough({ commit: tipSha, comment: maxCommentAt })
-    appendOutput("learned_through", marker)
+    const suppressed = process.env.DRY_RUN === "true" || process.env.LEARNINGS_NO_PATCH === "1"
+    if (!suppressed) appendOutput("learned_through", marker)
+    if (suppressed) log(`learned-through output suppressed: ${marker}`)
 
     const added = validated.add.length
     const removed = validated.remove.length
