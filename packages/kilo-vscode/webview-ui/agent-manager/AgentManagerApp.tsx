@@ -310,6 +310,13 @@ const AgentManagerContent: Component = () => {
   const [sidePanel, setSidePanel] = createSignal<SidePanel>(null)
   const diffOpen = () => sidePanel() === "diff"
   const prOpen = () => sidePanel() === "pr"
+  const activePR = createMemo(() => {
+    const selected = selection()
+    if (!selected || selected === LOCAL) return undefined
+    const pr = prStatuses()[selected]
+    if (!pr) return undefined
+    return { pr, selected, wt: worktrees().find((w) => w.id === selected) }
+  })
   const diffs = createWorktreeDiffs(vscode)
   const diffDatas = diffs.diffDatas
   const diffLoading = diffs.diffLoading
@@ -2456,11 +2463,7 @@ const AgentManagerContent: Component = () => {
           reviewActive={reviewActive}
           onToggleDiff={toggleDiffPanel}
           onToggleReview={metrics.click("fullscreen_review", "tab_toolbar", toggleReviewTab)}
-          prStatus={() => {
-            const sel = selection()
-            if (!sel || sel === LOCAL) return undefined
-            return prStatuses()[sel]
-          }}
+          prStatus={() => activePR()?.pr}
           prOpen={prOpen}
           onTogglePR={togglePRPanel}
           terminalDestination={sideCtl.destination}
@@ -2701,16 +2704,15 @@ const AgentManagerContent: Component = () => {
                         activeTerminalId={terms.activeId()}
                       />
                     </Show>
-                    <Show when={sidePanel() === "pr"}>
+                    <Show when={sidePanel() === "pr" && activePR()}>
                       {(() => {
-                        const sel = selection()
-                        const pr = sel && sel !== LOCAL ? prStatuses()[sel] : undefined
-                        if (!pr) return null
+                        const data = activePR()!
                         return (
                           <PRPanel
-                            pr={pr}
+                            pr={data.pr}
+                            worktree={data.wt}
                             onClose={() => setSidePanel(null)}
-                            onOpenExternal={() => vscode.postMessage({ type: "agentManager.openPR", worktreeId: sel as string, url: pr.url })}
+                            onOpenExternal={() => vscode.postMessage({ type: "agentManager.openPR", worktreeId: data.selected, url: data.pr.url })}
                           />
                         )
                       })()}

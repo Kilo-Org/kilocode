@@ -1,15 +1,16 @@
 /** @jsxImportSource solid-js */
-import { Component, For, Show } from "solid-js"
+import { Component, For, Show, createSignal } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Markdown } from "@kilocode/kilo-ui/markdown"
 import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
-import type { PRStatus, CheckStatus, PRReviewer } from "../src/types/messages"
+import type { PRStatus, CheckStatus, PRReviewer, WorktreeState } from "../src/types/messages"
 import { prAccentColor, prBadgeIndicator, prChecksRunning } from "./WorktreeItem"
 
 interface PRPanelProps {
   pr: PRStatus
+  worktree?: WorktreeState
   onClose: () => void
   onOpenExternal: () => void
 }
@@ -29,9 +30,9 @@ const REVIEW_LABEL: Partial<Record<NonNullable<PRStatus["review"]>, string>> = {
 
 const CHECK_ICON: Record<CheckStatus, string> = {
   success: "circle-check",
-  failure: "circle-x",
-  cancelled: "circle-x",
-  skipped: "circle-x",
+  failure: "circle-x-outline",
+  cancelled: "circle-x-outline",
+  skipped: "circle-x-outline",
   pending: "play",
 }
 
@@ -57,6 +58,26 @@ const REVIEWER_STATE_LABEL: Record<PRReviewer["state"], string> = {
   pending: "Awaiting",
 }
 
+function SectionHeading(props: {
+  title: string
+  open: boolean
+  onToggle: () => void
+  count?: string
+  countClass?: string
+}) {
+  return (
+    <button class="am-pr-panel-section-heading am-pr-panel-section-toggle" onClick={props.onToggle}>
+      <span class="am-pr-panel-section-heading-left">
+        <Icon name={props.open ? "chevron-down" : "chevron-right"} size="small" class="am-pr-section-chevron" />
+        {props.title}
+      </span>
+      <Show when={props.count}>
+        <span class={`am-pr-panel-section-count ${props.countClass ?? ""}`}>{props.count}</span>
+      </Show>
+    </button>
+  )
+}
+
 export const PRPanel: Component<PRPanelProps> = (props) => (
   <MarkedProvider>
     <PRPanelInner {...props} />
@@ -67,6 +88,11 @@ const PRPanelInner: Component<PRPanelProps> = (props) => {
   const accent = () => prAccentColor(props.pr)
   const indicator = () => prBadgeIndicator(props.pr)
   const pulsing = () => prChecksRunning(props.pr)
+
+  const [reviewersOpen, setReviewersOpen] = createSignal(true)
+  const [descOpen, setDescOpen] = createSignal(true)
+  const [checksOpen, setChecksOpen] = createSignal(true)
+  const [commentsOpen, setCommentsOpen] = createSignal(true)
 
   return (
     <div class="am-pr-panel">
@@ -100,9 +126,20 @@ const PRPanelInner: Component<PRPanelProps> = (props) => {
       </div>
 
       <div class="am-pr-panel-body">
-        {/* State + review */}
+        {/* Overview: branch→base + status */}
         <div class="am-pr-panel-section">
-          <div class="am-pr-panel-section-heading">Overview</div>
+          <Show when={props.worktree}>
+            {(wt) => (
+              <div class="am-pr-panel-row">
+                <span class="am-pr-panel-label">Branch</span>
+                <span class="am-pr-panel-value am-pr-panel-branch">
+                  <span class="am-pr-branch-name">{wt().branch}</span>
+                  <Icon name="arrow-right" size="small" class="am-pr-branch-arrow" />
+                  <span class="am-pr-branch-name">{wt().parentBranch}</span>
+                </span>
+              </div>
+            )}
+          </Show>
           <div class="am-pr-panel-row">
             <span class="am-pr-panel-label">Status</span>
             <span class="am-pr-panel-value" data-pr-state={props.pr.state}>{STATE_LABEL[props.pr.state]}</span>
@@ -121,18 +158,20 @@ const PRPanelInner: Component<PRPanelProps> = (props) => {
         <Show when={props.pr.reviewers && props.pr.reviewers.length > 0}>
           <div class="am-pr-panel-divider" />
           <div class="am-pr-panel-section">
-            <div class="am-pr-panel-section-heading">Reviewers</div>
-            <div class="am-pr-panel-reviewers">
-              <For each={props.pr.reviewers}>
-                {(reviewer) => (
-                  <div class="am-pr-panel-reviewer" data-state={reviewer.state}>
-                    <Icon name={REVIEWER_STATE_ICON[reviewer.state]} size="small" class="am-pr-reviewer-icon" />
-                    <span class="am-pr-reviewer-login">{reviewer.login}</span>
-                    <span class="am-pr-reviewer-state">{REVIEWER_STATE_LABEL[reviewer.state]}</span>
-                  </div>
-                )}
-              </For>
-            </div>
+            <SectionHeading title="Reviewers" open={reviewersOpen()} onToggle={() => setReviewersOpen((v) => !v)} />
+            <Show when={reviewersOpen()}>
+              <div class="am-pr-panel-reviewers">
+                <For each={props.pr.reviewers}>
+                  {(reviewer) => (
+                    <div class="am-pr-panel-reviewer" data-state={reviewer.state}>
+                      <Icon name={REVIEWER_STATE_ICON[reviewer.state]} size="small" class="am-pr-reviewer-icon" />
+                      <span class="am-pr-reviewer-login">{reviewer.login}</span>
+                      <span class="am-pr-reviewer-state">{REVIEWER_STATE_LABEL[reviewer.state]}</span>
+                    </div>
+                  )}
+                </For>
+              </div>
+            </Show>
           </div>
         </Show>
 
@@ -140,14 +179,16 @@ const PRPanelInner: Component<PRPanelProps> = (props) => {
         <Show when={props.pr.body}>
           <div class="am-pr-panel-divider" />
           <div class="am-pr-panel-section">
-            <div class="am-pr-panel-section-heading">Description</div>
-            <div class="am-pr-panel-description">
-              <Markdown text={props.pr.body!} />
-            </div>
+            <SectionHeading title="Description" open={descOpen()} onToggle={() => setDescOpen((v) => !v)} />
+            <Show when={descOpen()}>
+              <div class="am-pr-panel-description">
+                <Markdown text={props.pr.body!} />
+              </div>
+            </Show>
           </div>
         </Show>
 
-        {/* Diff stats */}
+        {/* File Changes */}
         <Show when={props.pr.files > 0 || props.pr.additions > 0 || props.pr.deletions > 0}>
           <div class="am-pr-panel-divider" />
           <div class="am-pr-panel-section">
@@ -172,31 +213,34 @@ const PRPanelInner: Component<PRPanelProps> = (props) => {
         <Show when={props.pr.checks.total > 0}>
           <div class="am-pr-panel-divider" />
           <div class="am-pr-panel-section">
-            <div class="am-pr-panel-section-heading">
-              Checks
-              <span class="am-pr-panel-section-count" data-checks={props.pr.checks.status}>
-                {props.pr.checks.passed}/{props.pr.checks.total} passed
-              </span>
-            </div>
-            <div class="am-pr-panel-checks">
-              <For each={props.pr.checks.items}>
-                {(check) => (
-                  <div class="am-pr-panel-check-item" data-status={check.status}>
-                    <Icon name={CHECK_ICON[check.status]} size="small" class="am-pr-check-icon" />
-                    <span class="am-pr-check-name">{check.name}</span>
-                    <span class="am-pr-check-status">{CHECK_LABEL[check.status]}</span>
-                    <Show when={check.duration}>
-                      <span class="am-pr-check-duration">{check.duration}</span>
-                    </Show>
-                    <Show when={check.url}>
-                      <a class="am-pr-check-link" href={check.url} onClick={(e) => e.preventDefault()}>
-                        <Icon name="link" size="small" />
-                      </a>
-                    </Show>
-                  </div>
-                )}
-              </For>
-            </div>
+            <SectionHeading
+              title="Checks"
+              open={checksOpen()}
+              onToggle={() => setChecksOpen((v) => !v)}
+              count={`${props.pr.checks.passed}/${props.pr.checks.total} passed`}
+              countClass={`am-pr-checks-count-${props.pr.checks.status}`}
+            />
+            <Show when={checksOpen()}>
+              <div class="am-pr-panel-checks">
+                <For each={props.pr.checks.items}>
+                  {(check) => (
+                    <div class="am-pr-panel-check-item" data-status={check.status}>
+                      <Icon name={CHECK_ICON[check.status]} size="small" class="am-pr-check-icon" />
+                      <span class="am-pr-check-name">{check.name}</span>
+                      <span class="am-pr-check-status">{CHECK_LABEL[check.status]}</span>
+                      <Show when={check.duration}>
+                        <span class="am-pr-check-duration">{check.duration}</span>
+                      </Show>
+                      <Show when={check.url}>
+                        <a class="am-pr-check-link" href={check.url} onClick={(e) => e.preventDefault()}>
+                          <Icon name="link" size="small" />
+                        </a>
+                      </Show>
+                    </div>
+                  )}
+                </For>
+              </div>
+            </Show>
           </div>
         </Show>
 
@@ -204,37 +248,38 @@ const PRPanelInner: Component<PRPanelProps> = (props) => {
         <Show when={props.pr.comments && props.pr.comments.total > 0}>
           <div class="am-pr-panel-divider" />
           <div class="am-pr-panel-section">
-            <div class="am-pr-panel-section-heading">
-              Comments
-              <Show when={props.pr.comments!.unresolved > 0}>
-                <span class="am-pr-panel-section-count am-pr-panel-unresolved">
-                  {props.pr.comments!.unresolved} unresolved
-                </span>
-              </Show>
-            </div>
-            <div class="am-pr-panel-comment-list">
-              <For each={props.pr.comments!.items}>
-                {(comment) => (
-                  <div class="am-pr-panel-comment" classList={{ "am-pr-panel-comment-resolved": comment.resolved }}>
-                    <div class="am-pr-panel-comment-header">
-                      <span class="am-pr-panel-comment-author">{comment.author}</span>
-                      <Show when={comment.file}>
-                        <span class="am-pr-panel-comment-file">
-                          {comment.file}
-                          <Show when={comment.line}>{`:${comment.line}`}</Show>
-                        </span>
-                      </Show>
-                      <Show when={comment.resolved}>
-                        <span class="am-pr-panel-comment-resolved-badge">Resolved</span>
-                      </Show>
+            <SectionHeading
+              title="Comments"
+              open={commentsOpen()}
+              onToggle={() => setCommentsOpen((v) => !v)}
+              count={props.pr.comments!.unresolved > 0 ? `${props.pr.comments!.unresolved} unresolved` : undefined}
+              countClass="am-pr-panel-unresolved"
+            />
+            <Show when={commentsOpen()}>
+              <div class="am-pr-panel-comment-list">
+                <For each={props.pr.comments!.items}>
+                  {(comment) => (
+                    <div class="am-pr-panel-comment" classList={{ "am-pr-panel-comment-resolved": comment.resolved }}>
+                      <div class="am-pr-panel-comment-header">
+                        <span class="am-pr-panel-comment-author">{comment.author}</span>
+                        <Show when={comment.file}>
+                          <span class="am-pr-panel-comment-file">
+                            {comment.file}
+                            <Show when={comment.line}>{`:${comment.line}`}</Show>
+                          </span>
+                        </Show>
+                        <Show when={comment.resolved}>
+                          <span class="am-pr-panel-comment-resolved-badge">Resolved</span>
+                        </Show>
+                      </div>
+                      <div class="am-pr-panel-comment-body">
+                        <Markdown text={comment.body} />
+                      </div>
                     </div>
-                    <div class="am-pr-panel-comment-body">
-                      <Markdown text={comment.body} />
-                    </div>
-                  </div>
-                )}
-              </For>
-            </div>
+                  )}
+                </For>
+              </div>
+            </Show>
           </div>
         </Show>
       </div>
