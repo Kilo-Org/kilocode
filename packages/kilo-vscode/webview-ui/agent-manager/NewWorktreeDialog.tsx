@@ -44,6 +44,8 @@ import { insertSpacedText } from "../src/components/chat/prompt-input-utils"
 import { WandSparkles } from "@kilocode/kilo-ui/lucide"
 import { BranchSelect, BranchSelectPopover } from "../src/components/shared/BranchSelect"
 import { tracker } from "./telemetry"
+import { cycleAgent } from "../src/context/session-agent"
+import type { ModeRouter } from "./mode-router"
 
 type VersionCount = 1 | 2 | 3 | 4
 const VERSION_OPTIONS: VersionCount[] = [1, 2, 3, 4]
@@ -74,9 +76,12 @@ function sanitizeBranchName(name: string): string {
     .join("/")
 }
 
-export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBranch?: string; projectId?: string }> = (
-  props,
-) => {
+export const NewWorktreeDialog: Component<{
+  onClose: () => void
+  defaultBaseBranch?: string
+  projectId?: string
+  mode: ModeRouter
+}> = (props) => {
   const { t } = useLanguage()
   const vscode = useVSCode()
   const server = useServer()
@@ -101,10 +106,12 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   const cached = vscode.getState<Record<string, unknown>>()
   const [prompt, setPrompt] = createSignal((cached?.advancedDialogPrompt as string) ?? "")
   const [versions, setVersions] = createSignal<VersionCount>(1)
-  const [model, setModel] = createSignal<{ providerID: string; modelID: string } | null>(session.configModel())
+  const initialAgent = session.selectedAgent()
+  const initialModel = session.modelForAgent(initialAgent)
+  const [model, setModel] = createSignal<{ providerID: string; modelID: string } | null>(initialModel)
   const [compareMode, setCompareMode] = createSignal(false)
   const [modelAllocations, setModelAllocations] = createSignal<ModelAllocations>(new Map())
-  const [agent, setAgent] = createSignal(session.selectedAgent())
+  const [agent, setAgent] = createSignal(initialAgent)
   const [starting, setStarting] = createSignal(false)
   const [enhancing, setEnhancing] = createSignal(false)
   const [showAdvanced, setShowAdvanced] = createSignal(false)
@@ -113,7 +120,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   const [baseBranchOpen, setBaseBranchOpen] = createSignal(false)
   const [compareOpen, setCompareOpen] = createSignal(false)
   const [highlightedIndex, setHighlightedIndex] = createSignal(0)
-  const [variant, setVariant] = createSignal<string | undefined>(session.currentVariant())
+  const [variant, setVariant] = createSignal<string | undefined>(session.variantForAgent(initialAgent, initialModel))
   const [sandbox, setSandbox] = createSignal<boolean | undefined>()
   const [sandboxDefault, setSandboxDefault] = createSignal<boolean | undefined>()
   const [sandboxOverride, setSandboxOverride] = createSignal<boolean | undefined>()
@@ -132,6 +139,34 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
     request = undefined
     setEnhancing(false)
   }
+
+  const selectAgent = (name: string) => {
+    setAgent(name)
+    const sel = session.modelForAgent(name)
+    setModel(sel)
+    setVariant(session.variantForAgent(name, sel))
+  }
+
+  const resetModel = () => {
+    const sel = session.configModelForAgent(agent())
+    setModel(sel)
+    setVariant(session.variantForAgent(agent(), sel))
+  }
+
+  const cycle = (direction: 1 | -1) => {
+    cycleAgent({
+      agents: session.agents(),
+      direction,
+      selected: () => agent(),
+      select: selectAgent,
+    })
+  }
+
+  createEffect(() => {
+    if (tab() !== "new") return
+    const dispose = props.mode.register(cycle)
+    onCleanup(dispose)
+  })
 
   // Variant list for the currently selected model
   const variants = createMemo(() => {
@@ -153,7 +188,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   // True when the user has changed the model from the session/config default
   const overridden = createMemo(() => {
     const sel = model()
-    const cfg = session.configModel()
+    const cfg = session.configModelForAgent(agent())
     if (!sel || !cfg) return false
     return sel.providerID !== cfg.providerID || sel.modelID !== cfg.modelID
   })
@@ -583,7 +618,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                     <ModeSwitcherBase
                       agents={session.agents()}
                       value={agent()}
-                      onSelect={setAgent}
+                      onSelect={selectAgent}
                       portal={false}
                       deferDismiss
                     />
@@ -611,7 +646,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                         <Button
                           variant="ghost"
                           size="small"
-                          onClick={() => setModel(session.configModel())}
+                          onClick={resetModel}
                           aria-label={t("prompt.action.resetModel")}
                         >
                           <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
