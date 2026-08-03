@@ -238,6 +238,18 @@ html[data-theme="kilo-vscode"] [data-component="tool-part-wrapper"][data-part-ty
       color: var(--text-weak);
     }
 
+    [data-slot="message-part-tool-changes"] {
+      display: inline-flex;
+      align-items: baseline;
+      flex-shrink: 0;
+    }
+
+    [data-slot="basic-tool-tool-subtitle"] + [data-slot="message-part-tool-changes"]::before {
+      content: "·";
+      margin-right: 6px;
+      color: var(--text-weak);
+    }
+
     [data-slot="basic-tool-tool-title"],
     [data-slot="basic-tool-tool-subtitle"],
     [data-slot="basic-tool-tool-arg"],
