@@ -187,7 +187,12 @@ export namespace SessionResume {
       if (input.id && !relative.endsWith(`-${input.id}.jsonl`)) continue
       const file = path.join(root, relative)
       if (!input.id) {
-        const first = await readFirstJSONL(file)
+        let first: unknown
+        try {
+          first = await readFirstJSONL(file)
+        } catch {
+          continue
+        }
         if (!isRecord(first) || first.type !== "session_meta" || !isRecord(first.payload)) continue
         if (first.payload.cwd !== input.cwd) continue
       }
@@ -668,10 +673,8 @@ export namespace SessionResume {
             const resultIDs = new Set(pendingResults.map((r) => r.callID))
             const allPaired = pendingCalls.length > 0 && pendingCalls.every((tc) => resultIDs.has(tc.id))
             if (allPaired) {
-              // Append trailing text to the closed step before emitting it
-              if (text.length > 0) pending.parts.push({ type: "text", text })
               steps.push(pending)
-              pending = undefined
+              pending = text.length > 0 ? { role: "assistant", parts: [{ type: "text", text }] } : undefined
             } else {
               // Pending has unpaired calls — merge text into it
               if (text.length > 0) pending.parts.push({ type: "text", text })

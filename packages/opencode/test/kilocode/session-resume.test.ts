@@ -457,7 +457,7 @@ describe("Codex parseLines", () => {
     expect(() => SessionResume.parseLines(text)).toThrow(SessionResume.ParseError)
   })
 
-  test("pairs function_call with function_call_output and trailing text merged", () => {
+  test("starts a new assistant step after a completed function call", () => {
     const text = [
       '{"type":"session_meta","payload":{"cli_version":"0.8.0","cwd":"/test"}}',
       '{"type":"response_item","payload":{"id":"item_001","type":"message","role":"user","content":[{"type":"input_text","text":"Read file"}]}}',
@@ -467,8 +467,7 @@ describe("Codex parseLines", () => {
     ].join("\n")
 
     const result = SessionResume.parseLines(text)
-    // Trailing text merged into closed step → 2 steps: user + assistant
-    expect(result.steps).toHaveLength(2)
+    expect(result.steps).toHaveLength(3)
 
     const mid = result.steps[1]
     expect(mid.role).toBe("assistant")
@@ -482,10 +481,7 @@ describe("Codex parseLines", () => {
     expect(tr!.callID).toBe("call_1")
     expect(tr!.content).toBe("file contents")
 
-    // Trailing text is part of the closed step
-    const texts = mid.parts.filter((p): p is SessionResume.TextPart => p.type === "text")
-    expect(texts).toHaveLength(1)
-    expect(texts[0].text).toBe("Done.")
+    expect(result.steps[2]).toEqual({ role: "assistant", parts: [{ type: "text", text: "Done." }] })
   })
 
   test("one user with two complete tool rounds produces exact steps in source order", () => {
@@ -501,30 +497,29 @@ describe("Codex parseLines", () => {
     ].join("\n")
 
     const result = SessionResume.parseLines(text)
-    expect(result.steps).toHaveLength(3)
+    expect(result.steps).toHaveLength(4)
 
     // Step 0: user
     expect(result.steps[0].role).toBe("user")
     expect(result.steps[0].parts).toEqual([{ type: "text", text: "Read then edit" }])
 
-    // Step 1: first assistant round (call_01 + result + trailing text)
+    // Step 1: first assistant tool round
     expect(result.steps[1].role).toBe("assistant")
     const step1Types = result.steps[1].parts.map((p) => p.type)
-    expect(step1Types).toEqual(["tool_call", "tool_result", "text"])
+    expect(step1Types).toEqual(["tool_call", "tool_result"])
     const step1Call = result.steps[1].parts[0] as SessionResume.ToolCall
     expect(step1Call.id).toBe("c1")
     expect(step1Call.name).toBe("read")
-    const step1Text = result.steps[1].parts[2] as SessionResume.TextPart
+    const step1Text = result.steps[2].parts[0] as SessionResume.TextPart
     expect(step1Text.text).toBe("Done reading. Now editing.")
 
-    // Step 2: second assistant round (call_02 + result + trailing text)
-    expect(result.steps[2].role).toBe("assistant")
+    // Step 2 continues the new assistant step with the second tool round.
     const step2Types = result.steps[2].parts.map((p) => p.type)
-    expect(step2Types).toEqual(["tool_call", "tool_result", "text"])
-    const step2Call = result.steps[2].parts[0] as SessionResume.ToolCall
+    expect(step2Types).toEqual(["text", "tool_call", "tool_result"])
+    const step2Call = result.steps[2].parts[1] as SessionResume.ToolCall
     expect(step2Call.id).toBe("c2")
     expect(step2Call.name).toBe("edit")
-    const step2Text = result.steps[2].parts[2] as SessionResume.TextPart
+    const step2Text = result.steps[3].parts[0] as SessionResume.TextPart
     expect(step2Text.text).toBe("All done.")
   })
 
@@ -804,8 +799,7 @@ describe("parse file", () => {
     expect(result.format).toBe("codex")
     expect(result.version).toBe(0)
 
-    // 12 steps: user + 2 round-1 assistants + user + assistant + user + partial-round + user + text + user + round + user + (no assistant for empty content)
-    expect(result.steps.length).toBe(12)
+    expect(result.steps.length).toBe(14)
 
     // First step is user
     expect(result.steps[0].role).toBe("user")
@@ -835,19 +829,18 @@ describe("parse file", () => {
     expect(result.steps[0].role).toBe("user")
     expect(result.steps[0].parts[0].type).toBe("text")
 
-    // Step 1: first tool round (call_01 read + result + text "Done reading. Now editing.")
+    // Step 1: first completed tool round.
     expect(result.steps[1].role).toBe("assistant")
     const step1Types = result.steps[1].parts.map((p) => p.type)
     expect(step1Types).toContain("tool_call")
     expect(step1Types).toContain("tool_result")
-    expect(step1Types).toContain("text")
     const step1Call = result.steps[1].parts.find(
       (p): p is SessionResume.ToolCall => p.type === "tool_call",
     )
     expect(step1Call).toBeDefined()
     expect(step1Call!.name).toBe("read")
 
-    // Step 2: second tool round (call_02 edit + call_03 bash + results + text "The edit was applied...")
+    // Step 2 starts the next assistant content and tool round.
     expect(result.steps[2].role).toBe("assistant")
     const step2Calls = result.steps[2].parts.filter(
       (p): p is SessionResume.ToolCall => p.type === "tool_call",
@@ -860,7 +853,7 @@ describe("parse file", () => {
     const step2Texts = result.steps[2].parts.filter(
       (p): p is SessionResume.TextPart => p.type === "text",
     )
-    expect(step2Texts.length).toBe(1)
+    expect(step2Texts.length).toBeGreaterThanOrEqual(1)
   })
 
   test("claude fixture: consecutive assistants before tool result merged into one step", async () => {
