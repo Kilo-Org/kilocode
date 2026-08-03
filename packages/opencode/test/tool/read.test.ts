@@ -413,12 +413,12 @@ describe("tool.read truncation", () => {
     }),
   )
 
-  // kilocode_change start - keep complete Read output out of the generic wrapper truncator
-  it.live("does not generic-truncate complete high-line-count Read output", () =>
+  // kilocode_change start - keep large rendered Read output out of the generic wrapper truncator
+  it.live("bounds high-line-count Read output internally", () =>
     Effect.gen(function* () {
       const dir = yield* tmpdirScoped()
       const target = path.join(dir, "complete-many-lines.txt")
-      const lines = Array.from({ length: 1_999 }, (_, i) => `COMPLETE_LINE_${i + 1}`).join("\n")
+      const lines = Array.from({ length: 1_999 }, (_, i) => `COMPLETE_LINE_${i + 1}_${"x".repeat(30)}`).join("\n")
       yield* put(target, lines)
 
       const result = yield* exec(
@@ -430,12 +430,14 @@ describe("tool.read truncation", () => {
         },
       )
 
-      expect(result.metadata.truncated).toBe(false)
-      expect(result.metadata.display?.truncated).toBe(false)
+      expect(result.metadata.truncated).toBe(true)
+      expect(result.metadata.display?.truncated).toBe(true)
       expect(result.output).toContain("1: COMPLETE_LINE_1")
-      expect(result.output).toContain("1999: COMPLETE_LINE_1999")
-      expect(result.output).toContain("End of file - total 1999 lines")
+      expect(result.output).toContain("Output capped at")
+      expect(result.output).toContain("Use offset=")
+      expect(result.output).not.toContain("1999: COMPLETE_LINE_1999")
       expect(result.output).not.toContain("The tool call succeeded but the output was truncated")
+      expect(Buffer.byteLength(result.output, "utf-8")).toBeLessThanOrEqual(50 * 1024)
     }),
   )
   // kilocode_change end
@@ -627,7 +629,8 @@ root_type Monster;`
   // kilocode_change end
 }) // kilocode_change
 
-describe("tool.read loaded instructions", () => { // kilocode_change
+describe("tool.read loaded instructions", () => {
+  // kilocode_change
   // kilocode_change start - assert delivered instruction reminder metadata
   it.live("loads AGENTS.md from parent directory and includes in metadata", () =>
     Effect.gen(function* () {

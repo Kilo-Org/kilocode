@@ -128,22 +128,9 @@ function wrap<Parameters extends Schema.Decoder<unknown>, Result extends Metadat
             ),
           )
           const result = yield* execute(decoded as Schema.Schema.Type<Parameters>, ctx)
-          // kilocode_change start - keep self-bounded Read output intact while bounding oversized false reports
-          if (id === "read" && result.metadata.truncated !== undefined) {
+          if (result.metadata.truncated !== undefined) {
             return result
           }
-          if (result.metadata.truncated === true) {
-            return result
-          }
-          const limits = yield* truncate.limits()
-          if (
-            result.metadata.truncated === false &&
-            result.output.split("\n").length <= limits.maxLines &&
-            Buffer.byteLength(result.output, "utf-8") <= limits.maxBytes
-          ) {
-            return result
-          }
-          // kilocode_change end
           const agent = yield* agents.get(ctx.agent)
           const truncated = yield* truncate.output(result.output, {}, agent)
           return {
