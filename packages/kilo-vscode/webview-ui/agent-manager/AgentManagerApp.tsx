@@ -359,7 +359,6 @@ const AgentManagerContent: Component = () => {
   // Per-worktree git stats (diff additions/deletions, commits missing from origin)
   const worktreeStats = () => registry.active().worktreeStats()
 
-  // Per-worktree PR status data
   const prStatuses = () => registry.active().prStatuses()
 
   const runStatuses = () => registry.active().runStatuses()
@@ -558,17 +557,17 @@ const AgentManagerContent: Component = () => {
   }
   const openWindow = metrics.click("open_worktree_window", "tab_toolbar", openWorktreeDirectory)
 
+  const togglePRPanel = () => {
+    setHistory(false)
+    setReviewActive(false)
+    setSidePanel((prev) => (prev === "pr" ? null : "pr"))
+  }
+
   const openSelectedPR = () => {
     const sel = selection()
     if (!sel || sel === LOCAL || !prStatuses()[sel]) return
     metrics.track("open_pull_request", "keyboard_shortcut")
     togglePRPanel()
-  }
-
-  const togglePRPanel = () => {
-    setHistory(false)
-    setReviewActive(false)
-    setSidePanel((prev) => (prev === "pr" ? null : "pr"))
   }
 
   const runWorktree = (id: string, destination: TerminalDestination) => {
