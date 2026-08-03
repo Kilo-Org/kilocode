@@ -494,6 +494,66 @@ describe("session.message-v2.toModelMessage", () => {
     })
   })
 
+  // kilocode_change start — send_file delivery attachments must not be replayed to the model
+  test("strips send_file delivery attachments from model context", async () => {
+    const userID = "m-user-sendfile"
+    const assistantID = "m-assistant-sendfile"
+
+    const input: SessionV1.WithParts[] = [
+      {
+        info: userInfo(userID),
+        parts: [
+          {
+            ...basePart(userID, "u1-sendfile"),
+            type: "text",
+            text: "send me the log",
+          },
+        ] as SessionV1.Part[],
+      },
+      {
+        info: assistantInfo(assistantID, userID),
+        parts: [
+          {
+            ...basePart(assistantID, "a1-sendfile"),
+            type: "tool",
+            callID: "call-sendfile-1",
+            tool: "send_file",
+            state: {
+              status: "completed",
+              input: { path: "/tmp/example.log" },
+              output: "File example.log (50 bytes, text/plain) delivered to the user's Kilo app.",
+              title: "Sent file: example.log",
+              metadata: {},
+              time: { start: 0, end: 1 },
+              attachments: [
+                {
+                  ...basePart(assistantID, "file-sendfile-1"),
+                  type: "file",
+                  mime: "text/plain",
+                  filename: "example.log",
+                  url: "data:text/plain;base64,aGVsbG8=",
+                },
+              ],
+            },
+          },
+        ] as SessionV1.Part[],
+      },
+    ]
+
+    const result = await MessageV2.toModelMessages(input, model)
+    // There should be a tool-result but NO media attachment in the output
+    expect(result).toHaveLength(3)
+    expect(result[2].role).toBe("tool")
+    const toolContent = result[2].content[0] as any
+    expect(toolContent.toolName).toBe("send_file")
+    // Output should be plain text — no attachments replayed to the model
+    expect(toolContent.output).toStrictEqual({
+      type: "text",
+      value: "File example.log (50 bytes, text/plain) delivered to the user's Kilo app.",
+    })
+  })
+  // kilocode_change end
+
   test("moves bedrock pdf tool-result media into a separate user message", async () => {
     const bedrockModel: Provider.Model = {
       ...model,
