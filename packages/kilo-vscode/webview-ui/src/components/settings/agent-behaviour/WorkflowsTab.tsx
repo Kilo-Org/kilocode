@@ -4,16 +4,54 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 
 import { useConfig } from "../../../context/config"
 import { useLanguage } from "../../../context/language"
+import { useProvider } from "../../../context/provider"
+import { ModelSelectorBase } from "../../shared/ModelSelector"
+import { ThinkingSelectorBase } from "../../shared/ThinkingSelector"
+import { parseModelString } from "../../../../../src/shared/provider-model"
+import type { CommandConfig } from "../../../types/messages"
 
 const WorkflowsTab: Component = () => {
   const language = useLanguage()
-  const { config } = useConfig()
+  const { config, globalConfig, globalDraft, updateGlobalConfig } = useConfig()
+  const provider = useProvider()
 
   const cmds = createMemo(() => Object.entries(config().command ?? {}))
   const [expanded, setExpanded] = createSignal<Record<string, boolean>>({})
 
   const toggle = (name: string) => {
     setExpanded((prev) => ({ ...prev, [name]: !prev[name] }))
+  }
+
+  const update = (name: string, patch: Partial<CommandConfig>) => {
+    updateGlobalConfig({ command: { [name]: patch } })
+  }
+
+  const scoped = (cmd: CommandConfig, name: string) => ({
+    ...cmd,
+    ...globalConfig().command?.[name],
+    ...globalDraft().command?.[name],
+  })
+
+  const model = (cmd: CommandConfig, name: string) => {
+    const value = scoped(cmd, name).model
+    return value === null ? null : parseModelString(value ?? undefined)
+  }
+
+  const variant = (cmd: CommandConfig, name: string) => {
+    const value = scoped(cmd, name).variant
+    return value === null ? undefined : (value ?? undefined)
+  }
+
+  const variants = (cmd: CommandConfig, name: string) =>
+    Object.keys(provider.findModel(model(cmd, name))?.variants ?? {})
+
+  const selectModel = (name: string, providerID: string, modelID: string) => {
+    const list = Object.keys(provider.findModel({ providerID, modelID })?.variants ?? {})
+    const current = variant(config().command?.[name] ?? {}, name)
+    update(name, {
+      model: providerID && modelID ? `${providerID}/${modelID}` : null,
+      ...(current && !list.includes(current) ? { variant: null } : {}),
+    })
   }
 
   return (
@@ -118,6 +156,38 @@ const WorkflowsTab: Component = () => {
                           {cmd.description}
                         </div>
                       </Show>
+                      <div
+                        style={{
+                          display: "flex",
+                          "flex-wrap": "wrap",
+                          gap: "8px",
+                          "margin-bottom": "8px",
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ModelSelectorBase
+                          value={model(cmd, name)}
+                          onSelect={(providerID, modelID) => selectModel(name, providerID, modelID)}
+                          placement="bottom-start"
+                          allowClear
+                          clearLabel={language.t("settings.providers.notSet")}
+                          label={`${name} ${language.t("settings.agentBehaviour.workflows.model")}`}
+                          description={language.t("settings.agentBehaviour.workflows.modelDescription")}
+                        />
+                        <Show when={variants(cmd, name).length > 0 || !!variant(cmd, name)}>
+                          <ThinkingSelectorBase
+                            variants={variants(cmd, name)}
+                            value={variant(cmd, name)}
+                            onSelect={(variant) => update(name, { variant })}
+                            onClear={() => update(name, { variant: null })}
+                            allowClear
+                            clearLabel={language.t("settings.providers.notSet")}
+                            placement="bottom-start"
+                            globalTrigger={false}
+                            label={`${name} ${language.t("settings.agentBehaviour.workflows.variant")}`}
+                          />
+                        </Show>
+                      </div>
                       <Show when={cmd.template}>
                         <div>
                           <span style={{ "font-weight": "500" }}>
