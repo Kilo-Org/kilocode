@@ -104,6 +104,30 @@ describe("Claude parseLines", () => {
     })
   })
 
+  test("accepts string user content and ignores transcript metadata", () => {
+    const text = [
+      '{"type":"permission-mode","sessionId":"session"}',
+      '{"type":"user","version":"2.42.0","message":{"role":"user","content":"Hello"}}',
+      '{"type":"assistant","version":"2.42.0","message":{"role":"assistant","content":[{"type":"text","text":"Hi"}]}}',
+    ].join("\n")
+
+    expect(SessionResume.parseLines(text).steps).toEqual([
+      { role: "user", parts: [{ type: "text", text: "Hello" }] },
+      { role: "assistant", parts: [{ type: "text", text: "Hi" }] },
+    ])
+  })
+
+  test("keeps a real user turn beside paired tool results", () => {
+    const text = [
+      '{"type":"user","version":"2.42.0","message":{"role":"user","content":[{"type":"text","text":"Start"}]}}',
+      '{"type":"assistant","version":"2.42.0","message":{"role":"assistant","content":[{"type":"tool_use","id":"tool","name":"read","input":{}}]}}',
+      '{"type":"user","version":"2.42.0","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tool","content":"done"},{"type":"text","text":"Continue"}]}}',
+    ].join("\n")
+
+    expect(SessionResume.parseLines(text).steps.map((step) => step.role)).toEqual(["user", "assistant", "user"])
+    expect(SessionResume.parseLines(text).steps[2]?.parts).toEqual([{ type: "text", text: "Continue" }])
+  })
+
   test("reads version from real Claude envelope", () => {
     const text = [
       '{"type":"user","version":"2.42.0","isSidechain":false,"message":{"id":"msg_001","role":"user","content":[{"type":"text","text":"Hello"}]}}',

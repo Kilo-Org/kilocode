@@ -115,7 +115,7 @@ export namespace SessionResume {
     // Claude: top-level type is "user" or "assistant" + message.{role,content}
     if ((type === "user" || type === "assistant") && isRecord(line.message)) {
       const msg = line.message as Record<string, unknown>
-      if (typeof msg.role === "string" && isArray(msg.content)) {
+      if (typeof msg.role === "string" && (isArray(msg.content) || typeof msg.content === "string")) {
         return "claude"
       }
     }
@@ -423,9 +423,7 @@ export namespace SessionResume {
       // Skip metadata records
       if (typeof topType === "string" && CLAUDE_META_TYPES.has(topType)) continue
 
-      if (topType !== "user" && topType !== "assistant") {
-        throw new ParseError(`Unexpected top-level type: ${String(topType)}`)
-      }
+      if (topType !== "user" && topType !== "assistant") continue
 
       // Skip sidechain records
       if (obj.isSidechain === true) continue
@@ -436,8 +434,10 @@ export namespace SessionResume {
       if (role !== "user" && role !== "assistant") {
         throw new ParseError(`Unexpected message role: ${String(role)}`)
       }
-      const content = message.content
-      if (!isArray(content)) throw new ParseError(`Expected content array for ${role}`)
+      const content = typeof message.content === "string"
+        ? [{ type: "text", text: message.content }]
+        : message.content
+      if (!isArray(content)) throw new ParseError(`Expected string or content array for ${role}`)
 
       if (role === "assistant") {
         // Merge consecutive assistants into the open step
@@ -477,6 +477,14 @@ export namespace SessionResume {
             // Close the step — result set complete
             steps.push(pending)
             pending = undefined
+          }
+          const userBlocks = content.filter(
+            (block) => !isRecord(block) || (block.type !== "tool_result" && block.type !== "server_tool_result"),
+          )
+          if (userBlocks.length > 0) {
+            const parsed = parseClaudeBlocks(userBlocks, seenIDs)
+            unsupported += parsed.unsupported
+            steps.push({ role: "user", parts: parsed.parts })
           }
         } else {
           // Non-tool-result user → close pending, start new user step
