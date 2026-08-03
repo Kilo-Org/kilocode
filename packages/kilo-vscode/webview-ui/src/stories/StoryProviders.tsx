@@ -97,14 +97,20 @@ const MOCK_PROVIDERS = {
 const MOCK_MODELS = flattenModels(MOCK_PROVIDERS as any)
 
 /** A synchronous mock ProviderContext — provides models without waiting for a postMessage round-trip. */
-const MockProviderProvider: ParentComponent<{ kiloAuth?: boolean }> = (props) => {
+const MockProviderProvider: ParentComponent<{ kiloAuth?: boolean; training?: boolean }> = (props) => {
+  const models = createMemo(() =>
+    MOCK_MODELS.map((model) => ({
+      ...model,
+      mayTrainOnYourPrompts: props.training === true,
+    })),
+  )
   const value = {
     providers: () => MOCK_PROVIDERS as any,
     connected: () => ["kilo"],
     defaults: () => ({}),
     defaultSelection: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
-    models: () => MOCK_MODELS,
-    findModel: (sel: any) => _findModel(MOCK_MODELS, sel),
+    models,
+    findModel: (sel: any) => _findModel(models(), sel),
     authMethods: () => ({}),
     authStates: () => (props.kiloAuth ? { kilo: "oauth" } : {}) as Record<string, ProviderAuthState>,
     isModelValid: () => true,
@@ -303,6 +309,7 @@ interface StoryProvidersProps {
   onOpenDiff?: OpenDiffFn
   onOpenFile?: OpenFileFn
   kiloAuth?: boolean
+  training?: boolean
   /** When true, renders children without the default 12px padding wrapper */
   noPadding?: boolean
 }
@@ -433,7 +440,7 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
             onProjectConfigChange={props.onProjectConfigChange}
           >
             <DisplayProvider>
-              <MockProviderProvider kiloAuth={props.kiloAuth}>
+              <MockProviderProvider kiloAuth={props.kiloAuth} training={props.training}>
                 <DialogProvider>
                   <LanguageContext.Provider
                     value={{
