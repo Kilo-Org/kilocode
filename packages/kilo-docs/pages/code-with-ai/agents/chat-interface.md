@@ -81,10 +81,6 @@ Double-click the current session title at the top of the chat to edit it inline.
 
 You can also rename local sessions from **History** using the edit button or the session's context menu.
 
-**Navigating long sessions:**
-
-A prompt rail runs along the left edge of the transcript, with one tick for each prompt you sent. Hover or focus the rail to open a navigator that lists your prompts with a short preview of each answer, and click an entry to jump straight to that turn. The rail also appears in Kilo editor tabs, the sub-agent viewer, and Agent Manager, and it never narrows the chat.
-
 {% /tab %}
 {% tab label="CLI" %}
 
