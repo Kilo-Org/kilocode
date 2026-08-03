@@ -141,6 +141,7 @@ import {
 import { focusCurrentTab, renderTab, renderTerminalLayer, renderNewTabButton } from "./tab-rendering"
 import { useTabScroll } from "./tab-scroll"
 import { DiffPanel } from "./DiffPanel"
+import { PRPanel } from "./PRPanel"
 import { createRevertFile } from "./revert-file"
 import { FullScreenDiffView } from "../diff-viewer/FullScreenDiffView"
 import { createApplyToLocal } from "./apply-to-local"
@@ -308,6 +309,7 @@ const AgentManagerContent: Component = () => {
   const [history, setHistory] = createSignal(false)
   const [sidePanel, setSidePanel] = createSignal<SidePanel>(null)
   const diffOpen = () => sidePanel() === "diff"
+  const prOpen = () => sidePanel() === "pr"
   const diffs = createWorktreeDiffs(vscode)
   const diffDatas = diffs.diffDatas
   const diffLoading = diffs.diffLoading
@@ -553,7 +555,13 @@ const AgentManagerContent: Component = () => {
     const sel = selection()
     if (!sel || sel === LOCAL || !prStatuses()[sel]) return
     metrics.track("open_pull_request", "keyboard_shortcut")
-    vscode.postMessage({ type: "agentManager.openPR", worktreeId: sel })
+    togglePRPanel()
+  }
+
+  const togglePRPanel = () => {
+    setHistory(false)
+    setReviewActive(false)
+    setSidePanel((prev) => (prev === "pr" ? null : "pr"))
   }
 
   const runWorktree = (id: string, destination: TerminalDestination) => {
@@ -2448,6 +2456,13 @@ const AgentManagerContent: Component = () => {
           reviewActive={reviewActive}
           onToggleDiff={toggleDiffPanel}
           onToggleReview={metrics.click("fullscreen_review", "tab_toolbar", toggleReviewTab)}
+          prStatus={() => {
+            const sel = selection()
+            if (!sel || sel === LOCAL) return undefined
+            return prStatuses()[sel]
+          }}
+          prOpen={prOpen}
+          onTogglePR={togglePRPanel}
           terminalDestination={sideCtl.destination}
           terminalDestinationActive={() => sidePanel() === "terminal"}
           terminalKeybind={() => kb().showTerminal ?? ""}
@@ -2685,6 +2700,20 @@ const AgentManagerContent: Component = () => {
                         revertingFiles={revertCtl.reverting()}
                         activeTerminalId={terms.activeId()}
                       />
+                    </Show>
+                    <Show when={sidePanel() === "pr"}>
+                      {(() => {
+                        const sel = selection()
+                        const pr = sel && sel !== LOCAL ? prStatuses()[sel] : undefined
+                        if (!pr) return null
+                        return (
+                          <PRPanel
+                            pr={pr}
+                            onClose={() => setSidePanel(null)}
+                            onOpenExternal={() => vscode.postMessage({ type: "agentManager.openPR", worktreeId: sel as string })}
+                          />
+                        )
+                      })()}
                     </Show>
                     <SideTerminalPanel
                       state={terms}

@@ -1,6 +1,6 @@
 import type { ExecFileOptionsWithStringEncoding } from "child_process"
 import type { Worktree } from "./WorktreeStateManager"
-import type { PRStatus, PRCheck, PRComment, CheckStatus, AggregateCheckStatus, PRState, ReviewDecision } from "./types"
+import type { PRStatus, PRCheck, PRComment, PRReviewer, CheckStatus, AggregateCheckStatus, PRState, ReviewDecision } from "./types"
 import { execWithShellEnv } from "./shell-env"
 import { classifyPRError } from "./git-import"
 import type { Semaphore } from "./semaphore"
@@ -244,11 +244,12 @@ export class PRStatusPoller {
       const status: PRStatus = {
         number: pr.number,
         title: pr.title,
+        body: pr.body,
         url: pr.url,
         state: pr.state,
         review: pr.review,
         checks,
-        ...(comments && { comments }),
+        ...(comments && { comments, reviewers: comments.reviewers }),
         additions: pr.additions,
         deletions: pr.deletions,
         files: pr.files,
@@ -283,7 +284,7 @@ export class PRStatusPoller {
   }
 
   private static readonly PR_JSON_FIELDS =
-    "number,title,url,state,isDraft,reviewDecision,additions,deletions,changedFiles,headRefName,headRefOid"
+    "number,title,body,url,state,isDraft,reviewDecision,additions,deletions,changedFiles,headRefName,headRefOid"
 
   /** Return a cached PR lookup if still fresh, otherwise fetch and cache.
    *  Keyed by branch name so multiple worktrees on the same branch share
@@ -420,10 +421,9 @@ export class PRStatusPoller {
   private async fetchComments(
     prNumber: number,
     cwd: string,
-  ): Promise<{ total: number; unresolved: number; items: PRComment[] }> {
+  ): Promise<{ total: number; unresolved: number; items: PRComment[]; reviewers: PRReviewer[] }> {
     try {
       const repo = await this.getRepoInfo(cwd)
-
       const query = `query($owner: String!, $repo: String!, $number: Int!) {
         repository(owner: $owner, name: $repo) {
           pullRequest(number: $number) {
@@ -443,52 +443,27 @@ export class PRStatusPoller {
                 }
               }
             }
+            reviewRequests(first: 20) {
+              nodes { requestedReviewer { ... on User { login avatarUrl } } }
+            }
+            reviews(first: 20, states: [APPROVED, CHANGES_REQUESTED, COMMENTED]) {
+              nodes { author { login avatarUrl } state }
+            }
           }
         }
       }`
-
       const { stdout } = await this.shell(
         "gh",
-        [
-          "api",
-          "graphql",
-          "-f",
-          `query=${query}`,
-          "-F",
-          `owner=${repo.owner}`,
-          "-F",
-          `repo=${repo.name}`,
-          "-F",
-          `number=${prNumber}`,
-        ],
+        ["api", "graphql", "-f", `query=${query}`, "-F", `owner=${repo.owner}`, "-F", `repo=${repo.name}`, "-F", `number=${prNumber}`],
         { cwd, timeout: 15_000 },
       )
-      const result = JSON.parse(stdout)
-      const threads = result?.data?.repository?.pullRequest?.reviewThreads?.nodes ?? []
-
-      const items: PRComment[] = []
-      for (const thread of threads) {
-        const first = thread.comments?.nodes?.[0]
-        if (!first) continue
-        items.push({
-          id: first.id,
-          author: first.author?.login ?? "unknown",
-          avatar: first.author?.avatarUrl,
-          body: first.body ?? "",
-          file: first.path,
-          line: first.line,
-          url: first.url,
-          resolved: thread.isResolved ?? false,
-          createdAt: first.createdAt ? new Date(first.createdAt).getTime() : undefined,
-        })
-      }
-
-      const total = items.length
-      const unresolved = items.filter((c) => !c.resolved).length
-      return { total, unresolved, items }
+      const pr = JSON.parse(stdout)?.data?.repository?.pullRequest
+      const items = parseComments(pr?.reviewThreads?.nodes ?? [])
+      const reviewers = parseReviewers(pr?.reviewRequests?.nodes ?? [], pr?.reviews?.nodes ?? [])
+      return { total: items.length, unresolved: items.filter((c) => !c.resolved).length, items, reviewers }
     } catch (err) {
       this.options.log("Failed to fetch PR comments:", err)
-      return { total: 0, unresolved: 0, items: [] }
+      return { total: 0, unresolved: 0, items: [], reviewers: [] }
     }
   }
 }
@@ -496,6 +471,7 @@ export class PRStatusPoller {
 interface PRResult {
   number: number
   title: string
+  body: string
   url: string
   state: PRState
   review: ReviewDecision | null
@@ -510,6 +486,7 @@ function parsePRResult(json: string): PRResult | null {
   return {
     number: data.number,
     title: data.title ?? "",
+    body: data.body ?? "",
     url: data.url ?? "",
     state: parsePRState(data.isDraft, data.state),
     review: parseReviewDecision(data.reviewDecision),
@@ -562,6 +539,57 @@ function formatCheckDuration(startedAt?: string, completedAt?: string): string |
   if (!startedAt || !completedAt) return undefined
   const secs = Math.round((new Date(completedAt).getTime() - new Date(startedAt).getTime()) / 1000)
   return secs < 60 ? `${secs}s` : `${Math.floor(secs / 60)}m ${secs % 60}s`
+}
+
+function parseComments(threads: Record<string, unknown>[]): PRComment[] {
+  const items: PRComment[] = []
+  for (const thread of threads) {
+    const nodes = (thread.comments as { nodes?: unknown[] } | undefined)?.nodes
+    const first = nodes?.[0] as Record<string, unknown> | undefined
+    if (!first) continue
+    const author = first.author as Record<string, unknown> | undefined
+    items.push({
+      id: first.id as string,
+      author: (author?.login as string) ?? "unknown",
+      avatar: author?.avatarUrl as string | undefined,
+      body: (first.body as string) ?? "",
+      file: first.path as string | undefined,
+      line: first.line as number | undefined,
+      url: first.url as string | undefined,
+      resolved: (thread.isResolved as boolean) ?? false,
+      createdAt: first.createdAt ? new Date(first.createdAt as string).getTime() : undefined,
+    })
+  }
+  return items
+}
+
+function parseReviewers(
+  requests: Record<string, unknown>[],
+  reviews: Record<string, unknown>[],
+): PRReviewer[] {
+  const map = new Map<string, PRReviewer>()
+  for (const node of requests) {
+    const user = node.requestedReviewer as Record<string, unknown> | undefined
+    if (!user?.login) continue
+    map.set(user.login as string, { login: user.login as string, avatar: user.avatarUrl as string | undefined, state: "pending" })
+  }
+  for (const node of reviews) {
+    const author = node.author as Record<string, unknown> | undefined
+    const login = author?.login as string | undefined
+    if (!login) continue
+    const state = REVIEWER_STATE[node.state as string] ?? "pending"
+    // Keep most significant: approved/changes_requested > commented > pending
+    if (!map.has(login) || state !== "commented") {
+      map.set(login, { login, avatar: author?.avatarUrl as string | undefined, state })
+    }
+  }
+  return [...map.values()]
+}
+
+const REVIEWER_STATE: Record<string, PRReviewer["state"]> = {
+  APPROVED: "approved",
+  CHANGES_REQUESTED: "changes_requested",
+  COMMENTED: "commented",
 }
 
 /** Run async thunks with bounded concurrency, returning settled results. */

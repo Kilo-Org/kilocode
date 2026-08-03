@@ -75,6 +75,7 @@ export interface PRComment {
 export interface PRStatus {
   number: number
   title: string
+  body?: string
   url: string
   state: PRState
   review: ReviewDecision | null
@@ -91,9 +92,16 @@ export interface PRStatus {
     unresolved: number
     items: PRComment[]
   }
+  reviewers?: PRReviewer[]
   additions: number
   deletions: number
   files: number
+}
+
+export interface PRReviewer {
+  login: string
+  avatar?: string
+  state: "approved" | "changes_requested" | "pending" | "commented"
 }
 
 export type RunState = "idle" | "running" | "stopping"

@@ -13,7 +13,7 @@ import {
   closestCenter,
   type DragEvent,
 } from "@thisbeyond/solid-dnd"
-import type { LocalGitStats, RunStatus, WorktreeGitStats } from "../src/types/messages"
+import type { LocalGitStats, RunStatus, WorktreeGitStats, PRStatus } from "../src/types/messages"
 import type { LanguageContextValue } from "../src/context/language"
 import { LOCAL } from "./navigate"
 import { ConstrainDragYAxis } from "../src/components/chat/TabDnd"
@@ -55,6 +55,9 @@ export interface TabBarProps {
   reviewActive: () => boolean
   onToggleDiff: () => void
   onToggleReview: () => void
+  prStatus: () => PRStatus | null | undefined
+  prOpen: () => boolean
+  onTogglePR: () => void
   terminalDestination: () => TerminalDestination
   terminalDestinationActive: () => boolean
   terminalKeybind: () => string
@@ -241,6 +244,20 @@ export const TabBar: Component<TabBarProps> = (props) => (
             )
           })()}
           <Show when={props.selection() !== null}>
+            <Show when={props.prStatus()}>
+              {(pr) => (
+                <Tooltip value={`PR #${pr().number}`} placement="bottom">
+                  <button
+                    class={`am-diff-toggle-btn ${props.prOpen() ? "am-tab-diff-btn-active" : ""}`}
+                    onClick={props.onTogglePR}
+                    title={`PR #${pr().number}`}
+                  >
+                    <Icon name="branch" size="small" />
+                    <span class="am-pr-toggle-number">#{pr().number}</span>
+                  </button>
+                </Tooltip>
+              )}
+            </Show>
             <Tooltip value={props.t("command.review.toggle")} placement="bottom">
               <IconButton
                 icon="expand"
