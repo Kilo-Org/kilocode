@@ -1,12 +1,9 @@
 /* PR Panel */
 .am-pr-panel {
-  display: flex;
-  flex-direction: column;
   height: 100%;
   overflow: hidden;
 }
 
-/* Shared flex utilities scoped to the PR panel */
 .am-pr-row { display: flex; align-items: center; }
 .am-pr-col { display: flex; flex-direction: column; }
 

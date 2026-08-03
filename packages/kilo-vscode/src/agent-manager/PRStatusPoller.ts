@@ -460,8 +460,8 @@ export class PRStatusPoller {
         { cwd, timeout: 15_000 },
       )
       const pr = JSON.parse(stdout)?.data?.repository?.pullRequest
-      const comments = parseComments(pr?.reviewThreads?.nodes ?? [])
-      const reviewers = parseReviewers(pr?.reviewRequests?.nodes ?? [], pr?.reviews?.nodes ?? [])
+      const comments = parseComments((pr?.reviewThreads?.nodes ?? []) as GQLThread[])
+      const reviewers = parseReviewers((pr?.reviewRequests?.nodes ?? []) as GQLReviewRequest[], (pr?.reviews?.nodes ?? []) as GQLReview[])
       return { total: comments.length, unresolved: comments.filter((c) => !c.resolved).length, comments, reviewers }
     } catch (err) {
       this.options.log("Failed to fetch PR comments:", err)
@@ -543,46 +543,45 @@ function formatCheckDuration(startedAt?: string, completedAt?: string): string |
   return secs < 60 ? `${secs}s` : `${Math.floor(secs / 60)}m ${secs % 60}s`
 }
 
-function parseComments(threads: Record<string, unknown>[]): PRComment[] {
+interface GQLAuthor { login?: string; avatarUrl?: string }
+interface GQLComment { id: string; author?: GQLAuthor; body?: string; path?: string; line?: number; url?: string; createdAt?: string }
+interface GQLThread { isResolved?: boolean; comments?: { nodes?: GQLComment[] } }
+interface GQLReviewRequest { requestedReviewer?: GQLAuthor }
+interface GQLReview { author?: GQLAuthor; state?: string }
+
+function parseComments(threads: GQLThread[]): PRComment[] {
   const items: PRComment[] = []
   for (const thread of threads) {
-    const nodes = (thread.comments as { nodes?: unknown[] } | undefined)?.nodes
-    const first = nodes?.[0] as Record<string, unknown> | undefined
+    const first = thread.comments?.nodes?.[0]
     if (!first) continue
-    const author = first.author as Record<string, unknown> | undefined
     items.push({
-      id: first.id as string,
-      author: (author?.login as string) ?? "unknown",
-      avatar: author?.avatarUrl as string | undefined,
-      body: (first.body as string) ?? "",
-      file: first.path as string | undefined,
-      line: first.line as number | undefined,
-      url: first.url as string | undefined,
-      resolved: (thread.isResolved as boolean) ?? false,
-      createdAt: first.createdAt ? new Date(first.createdAt as string).getTime() : undefined,
+      id: first.id,
+      author: first.author?.login ?? "unknown",
+      avatar: first.author?.avatarUrl,
+      body: first.body ?? "",
+      file: first.path,
+      line: first.line,
+      url: first.url,
+      resolved: thread.isResolved ?? false,
+      createdAt: first.createdAt ? new Date(first.createdAt).getTime() : undefined,
     })
   }
   return items
 }
 
-function parseReviewers(
-  requests: Record<string, unknown>[],
-  reviews: Record<string, unknown>[],
-): PRReviewer[] {
+function parseReviewers(requests: GQLReviewRequest[], reviews: GQLReview[]): PRReviewer[] {
   const map = new Map<string, PRReviewer>()
   for (const node of requests) {
-    const user = node.requestedReviewer as Record<string, unknown> | undefined
+    const user = node.requestedReviewer
     if (!user?.login) continue
-    map.set(user.login as string, { login: user.login as string, avatar: user.avatarUrl as string | undefined, state: "pending" })
+    map.set(user.login, { login: user.login, avatar: user.avatarUrl, state: "pending" })
   }
   for (const node of reviews) {
-    const author = node.author as Record<string, unknown> | undefined
-    const login = author?.login as string | undefined
+    const login = node.author?.login
     if (!login) continue
-    const state = REVIEWER_STATE[node.state as string] ?? "pending"
-    // Keep most significant: approved/changes_requested > commented > pending
+    const state = REVIEWER_STATE[node.state ?? ""] ?? "pending"
     if (!map.has(login) || state !== "commented") {
-      map.set(login, { login, avatar: author?.avatarUrl as string | undefined, state })
+      map.set(login, { login, avatar: node.author?.avatarUrl, state })
     }
   }
   return [...map.values()]

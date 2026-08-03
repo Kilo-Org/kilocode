@@ -23,7 +23,7 @@ interface PRPanelProps {
 
 export const PRPanel: Component<PRPanelProps> = (props) => (
   <MarkedProvider>
-    <div class="am-pr-panel">
+    <div class="am-pr-panel am-pr-col">
       <div class="am-pr-panel-header am-pr-row">
         <div class="am-pr-panel-title-row am-pr-row">
           <PRBadge pr={props.pr} />

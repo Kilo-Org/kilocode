@@ -6,11 +6,11 @@ import type { PRCheck, CheckStatus } from "./pr-types"
 import { SectionHeading } from "./SectionHeading"
 
 const CHECK: Record<CheckStatus, { icon: string; label: string }> = {
-  success:   { icon: "circle-check",    label: "Passed"    },
-  failure:   { icon: "circle-x-outline", label: "Failed"    },
+  success: { icon: "circle-check", label: "Passed" },
+  failure: { icon: "circle-x-outline", label: "Failed" },
   cancelled: { icon: "circle-x-outline", label: "Cancelled" },
-  skipped:   { icon: "circle-x-outline", label: "Skipped"   },
-  pending:   { icon: "play",             label: "Running"   },
+  skipped: { icon: "circle-x-outline", label: "Skipped" },
+  pending: { icon: "play", label: "Running" },
 }
 
 export function PRChecks(props: { checks: PRStatus["checks"] }) {
