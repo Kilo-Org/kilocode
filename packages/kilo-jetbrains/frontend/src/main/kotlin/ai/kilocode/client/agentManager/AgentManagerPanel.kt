@@ -5,6 +5,8 @@ import ai.kilocode.client.agentManager.worktree.ConfigureWorktreeDialog
 import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.WorktreeIcons
 import ai.kilocode.client.agentManager.worktree.WorktreeNameCache
+import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatchers
+import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorMatcher
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.ensureWorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.worktreeActivityBadge
@@ -21,7 +23,6 @@ import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.client.ui.list.ActiveListSurface
 import ai.kilocode.client.ui.list.activeListToolWindowBackground
 import ai.kilocode.client.vfs.KiloVfsManager
-import ai.kilocode.client.vfs.KiloVirtualFile
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.icons.AllIcons
@@ -39,8 +40,12 @@ import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.FileEditorManagerEvent
+import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.Color
@@ -94,6 +99,7 @@ class AgentManagerPanel(
         controller.onCreateFailure = { err -> notifyCreateFailed(err) }
         controller.onRemoveSuccess = { item -> close(item) }
         controller.onActivityChanged = { sync() }
+        bindEditorSelection()
         // Reflect names adopted or renamed in a worktree session editor tab in the list live.
         service<WorktreeNameCache>().addListener(this) { path, name -> controller.applyName(path, name) }
         ActionManager.getInstance().getAction("RenameElement")?.shortcutSet?.let { set ->
@@ -106,7 +112,7 @@ class AgentManagerPanel(
     override fun getBackground(): Color = activeListToolWindowBackground()
 
     fun refresh() {
-        selected = activeWorktreeKey() ?: selected
+        selected = currentEditorWorktree()
         controller.reload()
     }
 
@@ -226,6 +232,16 @@ class AgentManagerPanel(
         })
     }
 
+    private fun bindEditorSelection() {
+        val target = project ?: return
+        target.service<WorktreeEditorMatchers>().register(WorktreeSessionEditorMatcher)
+        val bus = target.messageBus.connect(this)
+        bus.subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER, object : FileEditorManagerListener {
+            override fun selectionChanged(event: FileEditorManagerEvent) = track(event.newFile)
+        })
+        track(FileEditorManager.getInstance(target).selectedFiles.firstOrNull())
+    }
+
     private fun bindModel() {
         val listener = object : ListDataListener {
             override fun intervalAdded(e: ListDataEvent) = sync()
@@ -247,18 +263,27 @@ class AgentManagerPanel(
             },
             ActiveListSelection.PreserveNoScroll,
         )
-        if (key != null) list.select(key, scroll = false)
+        if (key != null) {
+            if (!list.select(key, scroll = false)) list.clearSelection()
+            return
+        }
+        list.clearSelection()
+        selected = null
     }
 
-    private fun activeWorktreeKey(): String? {
+    @RequiresEdt
+    private fun track(file: VirtualFile?) {
+        val key = project?.service<WorktreeEditorMatchers>()?.match(file)
+        selected = key
+        if (key != null && list.select(key, scroll = false)) return
+        list.clearSelection()
+    }
+
+    @RequiresEdt
+    private fun currentEditorWorktree(): String? {
         val target = project ?: return null
-        return FileEditorManager.getInstance(target).selectedFiles
-            .filterIsInstance<KiloVirtualFile>()
-            .firstOrNull { it.path.kind == WorktreeSessionEditorKind.ID }
-            ?.path
-            ?.params
-            ?.get("path")
-            ?.takeIf { it.isNotBlank() }
+        val file = FileEditorManager.getInstance(target).selectedFiles.firstOrNull()
+        return target.service<WorktreeEditorMatchers>().match(file)
     }
 
     private fun item(key: String): WorktreeDto? {

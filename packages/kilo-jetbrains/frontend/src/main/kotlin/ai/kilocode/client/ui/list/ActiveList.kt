@@ -95,6 +95,9 @@ internal class ActiveList(
     fun selected(): ActiveListItem? = view.selected()
 
     @RequiresEdt
+    fun clearSelection() = view.clearSelection()
+
+    @RequiresEdt
     fun selectedItems(): List<ActiveListItem> = view.selectedItems()
 
     @RequiresEdt

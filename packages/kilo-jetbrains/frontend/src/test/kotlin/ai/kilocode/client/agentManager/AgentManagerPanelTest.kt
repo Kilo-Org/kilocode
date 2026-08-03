@@ -2,6 +2,8 @@ package ai.kilocode.client.agentManager
 
 import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
 import ai.kilocode.client.agentManager.worktree.WorktreeController
+import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatcher
+import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatchers
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.ensureWorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
@@ -22,6 +24,7 @@ import ai.kilocode.rpc.dto.SessionActivityKindDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.SearchTextField
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBList
@@ -186,6 +189,85 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         flush()
 
         assertEquals(second.id, edt { (list.selectedValue as ActiveListItem).key })
+    }
+
+    fun `test selecting worktree editor tab selects its worktree row`() {
+        val first = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val second = WorktreeDto("/repo/.kilo/worktrees/feature-y", "feature-y", "feature/y", "/repo/.kilo/worktrees/feature-y")
+        rpc.listed += first
+        rpc.listed += second
+        val controller = WorktreeController(service, "/test", coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+
+        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        edt {
+            ensureWorktreeSessionEditorKind()
+            project.service<KiloVfsManager>().open(WorktreeSessionEditorKind.ID, worktreeSessionParams(second), focus = true)
+        }
+        pump()
+
+        assertEquals(second.id, edt { (list.selectedValue as ActiveListItem).key })
+    }
+
+    fun `test selecting non worktree editor tab clears worktree row selection`() {
+        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        rpc.listed += item
+        val controller = WorktreeController(service, "/test", coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+
+        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        edt {
+            ensureWorktreeSessionEditorKind()
+            project.service<KiloVfsManager>().open(WorktreeSessionEditorKind.ID, worktreeSessionParams(item), focus = true)
+        }
+        pump()
+        assertEquals(item.id, edt { (list.selectedValue as ActiveListItem).key })
+
+        val file = myFixture.addFileToProject("src/Main.kt", "fun main() = Unit").virtualFile
+        edt { FileEditorManager.getInstance(project).openFile(file, true) }
+        pump()
+
+        assertEquals(-1, edt { list.selectedIndex })
+    }
+
+    fun `test panel starts with no selection when active editor tab is not worktree`() {
+        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        rpc.listed += item
+        val file = myFixture.addFileToProject("src/Current.kt", "fun current() = Unit").virtualFile
+        edt { FileEditorManager.getInstance(project).openFile(file, true) }
+        pump()
+        val controller = WorktreeController(service, "/test", coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+
+        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        assertEquals(-1, edt { list.selectedIndex })
+    }
+
+    fun `test custom worktree editor matcher can select a row for another editor kind`() {
+        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        rpc.listed += item
+        val controller = WorktreeController(service, "/test", coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        val file = myFixture.addFileToProject("src/Diff.kt", "fun diff() = Unit").virtualFile
+        edt {
+            project.service<WorktreeEditorMatchers>().register(WorktreeEditorMatcher { current: VirtualFile ->
+                if (current == file) item.path else null
+            })
+            controller.reload()
+        }
+        flush()
+
+        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        edt { FileEditorManager.getInstance(project).openFile(file, true) }
+        pump()
+
+        assertEquals(item.id, edt { (list.selectedValue as ActiveListItem).key })
     }
 
     fun `test deleting a worktree closes and releases its worktree session editor`() {

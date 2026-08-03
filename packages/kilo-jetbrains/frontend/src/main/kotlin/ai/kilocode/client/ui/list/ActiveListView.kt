@@ -170,6 +170,12 @@ internal class ActiveListView(
     }
 
     @RequiresEdt
+    fun clearSelection() {
+        checkEdt()
+        list.clearSelection()
+    }
+
+    @RequiresEdt
     fun selectedItems(): List<ActiveListItem> {
         checkEdt()
         return list.selectedValuesList
