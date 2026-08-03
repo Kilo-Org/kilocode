@@ -47,6 +47,11 @@ function Item(props: { item: ProviderUsageSnapshot }) {
       <text fg={props.item.fetchState === "ready" ? theme.textMuted : theme.warning}>
         {props.item.fetchState === "ready" ? props.item.planState : props.item.fetchState}
       </text>
+      <Show
+        when={props.item.windows.length === 0 && props.item.balances.length === 0 && props.item.credits.length === 0}
+      >
+        <text fg={theme.textMuted}>No usage details reported by provider for this plan.</text>
+      </Show>
       <For each={props.item.windows}>
         {(window) => (
           <box>

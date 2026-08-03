@@ -1220,6 +1220,7 @@ export const dict = {
   "profile.usage.description": "当前套餐额度和余额",
   "profile.usage.refresh": "刷新提供商用量",
   "profile.usage.empty": "未检测到提供商用量来源。",
+  "profile.usage.detailsUnavailable": "提供商未报告用量详情。",
   "profile.usage.source.viaKilo": "通过 Kilo",
   "profile.usage.source.direct": "直接",
   "profile.usage.source.chatgpt": "ChatGPT",

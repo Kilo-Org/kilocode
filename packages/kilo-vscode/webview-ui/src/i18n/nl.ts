@@ -1212,6 +1212,7 @@ export const dict = {
   "profile.usage.description": "Quota en saldi van het huidige abonnement",
   "profile.usage.refresh": "Providergebruik vernieuwen",
   "profile.usage.empty": "Geen bronnen voor providergebruik gedetecteerd.",
+  "profile.usage.detailsUnavailable": "De provider heeft geen gebruiksdetails gerapporteerd.",
   "profile.usage.source.viaKilo": "via Kilo",
   "profile.usage.source.direct": "Direct",
   "profile.usage.source.chatgpt": "ChatGPT",

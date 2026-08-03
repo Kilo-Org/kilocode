@@ -51,6 +51,8 @@
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/ProviderConnectDialog.tsx -->
 - <https://blog.kilo.ai/p/new-kilo-for-vs-code-is-live>
   <!-- packages/kilo-vscode/webview-ui/src/components/migration/MigrationWizard.tsx -->
+- <https://chatgpt.com/codex/settings/usage>
+  <!-- packages/opencode/src/kilocode/provider/codex/usage.ts -->
 - <https://chatgpt.com/explore/plus>
   <!-- packages/opencode/src/provider/error.ts -->
 - <https://cli.github.com/>

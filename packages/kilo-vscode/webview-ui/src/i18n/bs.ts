@@ -1259,6 +1259,7 @@ export const dict = {
   "profile.usage.description": "Kvota i stanja trenutnog plana",
   "profile.usage.refresh": "Osvježi korištenje provajdera",
   "profile.usage.empty": "Nisu otkriveni izvori korištenja provajdera.",
+  "profile.usage.detailsUnavailable": "Provajder nije prijavio detalje o korištenju.",
   "profile.usage.source.viaKilo": "putem Kilo",
   "profile.usage.source.direct": "Direktno",
   "profile.usage.source.chatgpt": "ChatGPT",

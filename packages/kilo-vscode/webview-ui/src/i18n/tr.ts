@@ -1209,6 +1209,7 @@ export const dict = {
   "profile.usage.description": "Mevcut plan kotası ve bakiyeleri",
   "profile.usage.refresh": "Sağlayıcı kullanımını yenile",
   "profile.usage.empty": "Hiçbir sağlayıcı kullanım kaynağı algılanmadı.",
+  "profile.usage.detailsUnavailable": "Sağlayıcı kullanım ayrıntılarını bildirmedi.",
   "profile.usage.source.viaKilo": "Kilo üzerinden",
   "profile.usage.source.direct": "Doğrudan",
   "profile.usage.source.chatgpt": "ChatGPT",

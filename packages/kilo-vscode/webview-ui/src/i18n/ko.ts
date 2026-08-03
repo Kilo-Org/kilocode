@@ -1204,6 +1204,7 @@ export const dict = {
   "profile.usage.description": "현재 요금제 할당량 및 잔액",
   "profile.usage.refresh": "공급자 사용량 새로고침",
   "profile.usage.empty": "감지된 공급자 사용량 소스가 없습니다.",
+  "profile.usage.detailsUnavailable": "공급자가 사용량 세부 정보를 보고하지 않았습니다.",
   "profile.usage.source.viaKilo": "Kilo 경유",
   "profile.usage.source.direct": "직접",
   "profile.usage.source.chatgpt": "ChatGPT",

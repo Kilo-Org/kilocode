@@ -1197,6 +1197,7 @@ export const dict = {
   "profile.usage.description": "حصة الخطة الحالية والأرصدة",
   "profile.usage.refresh": "تحديث استخدام مزودي الخدمة",
   "profile.usage.empty": "لم يتم اكتشاف أي مصادر لاستخدام مزودي الخدمة.",
+  "profile.usage.detailsUnavailable": "لم يبلّغ مزود الخدمة عن تفاصيل الاستخدام.",
   "profile.usage.source.viaKilo": "عبر Kilo",
   "profile.usage.source.direct": "مباشر",
   "profile.usage.source.chatgpt": "ChatGPT",

@@ -1240,6 +1240,7 @@ export const dict = {
   "profile.usage.description": "โควตาและยอดคงเหลือของแผนปัจจุบัน",
   "profile.usage.refresh": "รีเฟรชการใช้งานของผู้ให้บริการ",
   "profile.usage.empty": "ไม่พบแหล่งข้อมูลการใช้งานของผู้ให้บริการ",
+  "profile.usage.detailsUnavailable": "ผู้ให้บริการไม่ได้รายงานรายละเอียดการใช้งาน",
   "profile.usage.source.viaKilo": "ผ่าน Kilo",
   "profile.usage.source.direct": "โดยตรง",
   "profile.usage.source.chatgpt": "ChatGPT",

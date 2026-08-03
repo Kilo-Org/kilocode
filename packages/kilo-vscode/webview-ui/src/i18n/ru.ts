@@ -1258,6 +1258,7 @@ export const dict = {
   "profile.usage.description": "Квота и балансы текущего тарифа",
   "profile.usage.refresh": "Обновить данные об использовании провайдеров",
   "profile.usage.empty": "Источники данных об использовании провайдеров не обнаружены.",
+  "profile.usage.detailsUnavailable": "Провайдер не сообщил подробности использования.",
   "profile.usage.source.viaKilo": "через Kilo",
   "profile.usage.source.direct": "Напрямую",
   "profile.usage.source.chatgpt": "ChatGPT",

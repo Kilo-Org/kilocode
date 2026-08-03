@@ -89,75 +89,80 @@ const UsageCard: Component<{
       </p>
     </Show>
 
-    <div class="provider-usage-resources">
-      <For each={props.item.windows}>
-        {(window) => {
-          const progress = () => windowProgress(window)
-          return (
+    <Show
+      when={props.item.windows.length > 0 || props.item.balances.length > 0 || props.item.credits.length > 0}
+      fallback={<p class="provider-usage-meta">{props.language.t("profile.usage.detailsUnavailable")}</p>}
+    >
+      <div class="provider-usage-resources">
+        <For each={props.item.windows}>
+          {(window) => {
+            const progress = () => windowProgress(window)
+            return (
+              <div class="provider-usage-row">
+                <div class="provider-usage-row-heading">
+                  <span>{window.label}</span>
+                  <strong>{formatWindowValue(window, labels(props.language))}</strong>
+                </div>
+                <Show when={progress() !== undefined}>
+                  <Progress
+                    value={progress()}
+                    minValue={0}
+                    maxValue={100}
+                    aria-label={`${window.label}: ${formatWindowValue(window, labels(props.language))}`}
+                  />
+                </Show>
+                <Show when={window.resetAt}>
+                  {(reset) => (
+                    <span class="provider-usage-meta">
+                      {props.language.t("profile.usage.reset", { date: new Date(reset()).toLocaleString() })}
+                    </span>
+                  )}
+                </Show>
+              </div>
+            )
+          }}
+        </For>
+
+        <For each={props.item.balances}>
+          {(balance) => (
             <div class="provider-usage-row">
               <div class="provider-usage-row-heading">
-                <span>{window.label}</span>
-                <strong>{formatWindowValue(window, labels(props.language))}</strong>
+                <span>{balance.label}</span>
+                <strong>
+                  {balance.total} {balance.currency}
+                  {balance.available === false ? ` ${props.language.t("profile.usage.balance.unavailable")}` : ""}
+                </strong>
               </div>
-              <Show when={progress() !== undefined}>
-                <Progress
-                  value={progress()}
-                  minValue={0}
-                  maxValue={100}
-                  aria-label={`${window.label}: ${formatWindowValue(window, labels(props.language))}`}
-                />
-              </Show>
-              <Show when={window.resetAt}>
-                {(reset) => (
-                  <span class="provider-usage-meta">
-                    {props.language.t("profile.usage.reset", { date: new Date(reset()).toLocaleString() })}
-                  </span>
-                )}
+              <Show when={balance.granted !== undefined || balance.toppedUp !== undefined}>
+                <span class="provider-usage-meta">
+                  {props.language.t("profile.usage.balance.breakdown", {
+                    granted: balance.granted ?? props.language.t("profile.usage.status.unknown"),
+                    toppedUp: balance.toppedUp ?? props.language.t("profile.usage.status.unknown"),
+                  })}
+                </span>
               </Show>
             </div>
-          )
-        }}
-      </For>
+          )}
+        </For>
 
-      <For each={props.item.balances}>
-        {(balance) => (
-          <div class="provider-usage-row">
+        <For each={props.item.credits}>
+          {(credit) => (
             <div class="provider-usage-row-heading">
-              <span>{balance.label}</span>
+              <span>{credit.label}</span>
               <strong>
-                {balance.total} {balance.currency}
-                {balance.available === false ? ` ${props.language.t("profile.usage.balance.unavailable")}` : ""}
+                {credit.unlimited
+                  ? props.language.t("profile.usage.status.unlimited")
+                  : credit.balance !== undefined
+                    ? `${credit.balance}${credit.unit ? ` ${credit.unit}` : ""}`
+                    : credit.availableResets !== undefined
+                      ? props.language.t("profile.usage.credits.resets", { count: String(credit.availableResets) })
+                      : props.language.t("profile.usage.status.unknown")}
               </strong>
             </div>
-            <Show when={balance.granted !== undefined || balance.toppedUp !== undefined}>
-              <span class="provider-usage-meta">
-                {props.language.t("profile.usage.balance.breakdown", {
-                  granted: balance.granted ?? props.language.t("profile.usage.status.unknown"),
-                  toppedUp: balance.toppedUp ?? props.language.t("profile.usage.status.unknown"),
-                })}
-              </span>
-            </Show>
-          </div>
-        )}
-      </For>
-
-      <For each={props.item.credits}>
-        {(credit) => (
-          <div class="provider-usage-row-heading">
-            <span>{credit.label}</span>
-            <strong>
-              {credit.unlimited
-                ? props.language.t("profile.usage.status.unlimited")
-                : credit.balance !== undefined
-                  ? `${credit.balance}${credit.unit ? ` ${credit.unit}` : ""}`
-                  : credit.availableResets !== undefined
-                    ? props.language.t("profile.usage.credits.resets", { count: String(credit.availableResets) })
-                    : props.language.t("profile.usage.status.unknown")}
-            </strong>
-          </div>
-        )}
-      </For>
-    </div>
+          )}
+        </For>
+      </div>
+    </Show>
 
     <Show when={props.item.routingState !== "active" && props.item.routingState !== "not_applicable"}>
       <p class="provider-usage-notice">
