@@ -3,6 +3,7 @@ import {
   type ModelStore,
   type ResolveEnv,
   applyModel,
+  getAgentModel,
   getSessionModel,
   getSelected,
 } from "../../webview-ui/src/context/session-model-store"
@@ -149,14 +150,20 @@ describe("per-session model selection", () => {
 })
 
 describe("per-mode model memory", () => {
-  it("resolves a specific mode's remembered model without a session", () => {
-    let store = emptyStore()
-    const e = env()
+  it("uses remembered model selections for modes without configured models", () => {
+    const store = { ...emptyStore(), modelSelections: { ask: gpt } }
 
-    const result = applyModel(store, "ask", gpt, undefined)
-    store = { ...store, ...result }
+    expect(getAgentModel(store, env(), "ask")).toEqual(gpt)
+  })
 
-    expect(getSelected(store, e, undefined, "ask")).toEqual(gpt)
+  it("ignores stale remembered selections when a configured mode model is user-set", () => {
+    const configured: ResolveEnv = {
+      ...env(),
+      getModeModel: (name) => (name === "code" ? claude : null),
+    }
+    const store = { ...emptyStore(), modelSelections: { code: gpt } }
+
+    expect(getAgentModel(store, configured, "code", true)).toEqual(claude)
   })
 
   it("applyModel in a session writes only to sessionOverrides", () => {

@@ -67,12 +67,13 @@ import {
 } from "./session-utils"
 import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
+import { getAgentModel } from "./session-model-store"
 import { resolveMessagePrefs } from "./session-preferences"
 import { errorIDs } from "./session-errors"
 import { PartStash } from "./part-stash"
 import { mergeParts, sameParts } from "./session-parts"
 import { state as todoState } from "./todo-revert"
-import { getVariant, sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
+import { getAgentVariant, getVariant, sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
 import { KILO_AUTO, KILO_PROVIDER_ID, parseModelString } from "../../../src/shared/provider-model"
 import { reviewMetadata, type ReviewMessageData } from "../../../src/shared/review-comments"
 import { visibleMessages as filterVisibleMessages } from "./session-queue"
@@ -739,8 +740,23 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function modelForAgent(agentName: string): ModelSelection | null {
-    const override = shouldClearModeModelSelection(agentName) ? null : store.modelSelections[agentName]
-    return resolveModel(agentName, override)
+    return getAgentModel(
+      {
+        modelSelections: store.modelSelections,
+        sessionOverrides: store.sessionOverrides,
+        agentSelections: store.agentSelections,
+        recentModels: store.recentModels,
+      },
+      {
+        providers: provider.providers(),
+        connected: provider.connected(),
+        getModeModel,
+        getGlobalModel,
+        fallback: KILO_AUTO,
+      },
+      agentName,
+      userSetAgents()[agentName] === true,
+    )
   }
 
   function configModelForAgent(agentName: string): ModelSelection | null {
@@ -893,8 +909,7 @@ export const SessionProvider: ParentComponent = (props) => {
   function variantForAgent(agentName: string, sel: ModelSelection | null) {
     if (!sel) return undefined
     const model = provider.findModel(sel)
-    if (!model?.variants) return undefined
-    return getVariant(store.variantSelections, sel, Object.keys(model.variants), agentName)
+    return getAgentVariant(store.variantSelections, sel, model, agentName)
   }
 
   const currentVariant = (sessionID?: string) => {

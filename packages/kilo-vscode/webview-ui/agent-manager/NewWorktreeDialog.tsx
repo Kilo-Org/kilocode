@@ -107,7 +107,7 @@ export const NewWorktreeDialog: Component<{
   const [prompt, setPrompt] = createSignal((cached?.advancedDialogPrompt as string) ?? "")
   const [versions, setVersions] = createSignal<VersionCount>(1)
   const initialAgent = session.selectedAgent()
-  const initialModel = session.configModelForAgent(initialAgent)
+  const initialModel = session.modelForAgent(initialAgent)
   const [model, setModel] = createSignal<{ providerID: string; modelID: string } | null>(initialModel)
   const [compareMode, setCompareMode] = createSignal(false)
   const [modelAllocations, setModelAllocations] = createSignal<ModelAllocations>(new Map())
