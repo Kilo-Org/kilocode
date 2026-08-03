@@ -1,7 +1,5 @@
-import * as path from "path"
-
 export function assertMutablePath(filepath: string) {
-  const parts = filepath.split(path.sep)
+  const parts = filepath.split(/[\\/]/)
   const file = parts.at(-1)
   const dir = parts.at(-2)
   if (file !== "agent-manager.json" || ![".kilo", ".kilocode"].includes(dir ?? "")) return
