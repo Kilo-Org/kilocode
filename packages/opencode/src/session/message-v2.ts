@@ -428,7 +428,13 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
             const outputText = part.state.time.compacted
               ? "[Old tool result content cleared]"
               : truncateToolOutput(part.state.output, options?.toolOutputMaxChars)
-            const attachments = part.state.time.compacted || options?.stripMedia ? [] : (part.state.attachments ?? [])
+            // kilocode_change start — do not replay send_file delivery attachments to the model;
+            // they are mobile delivery artifacts (up to 4 MiB base64), not model context.
+            const attachments =
+              part.state.time.compacted || options?.stripMedia || part.tool === "send_file"
+                ? []
+                : (part.state.attachments ?? [])
+            // kilocode_change end
 
             // For providers that don't support media in tool results, extract media files
             // (images, PDFs) to be sent as a separate user message
