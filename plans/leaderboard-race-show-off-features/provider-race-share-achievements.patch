@@ -1,0 +1,1012 @@
+diff --git a/apps/web/src/app/api/public/leaderboard-provider-race/achievements/route.test.ts b/apps/web/src/app/api/public/leaderboard-provider-race/achievements/route.test.ts
+new file mode 100644
+index 0000000..eecf089
+--- /dev/null
++++ b/apps/web/src/app/api/public/leaderboard-provider-race/achievements/route.test.ts
+@@ -0,0 +1,86 @@
++import { describe, test, expect, jest } from '@jest/globals';
++import type { resolveSnowflakeConfig } from '@/lib/snowflake';
++import type { GET as RouteGet } from './route';
++
++jest.mock('@sentry/nextjs', () => ({ captureException: jest.fn() }));
++
++jest.mock('@/lib/redis', () => ({
++  redisClient: {
++    get: jest.fn<() => Promise<string | null>>().mockResolvedValue(null),
++    set: jest.fn<() => Promise<string>>().mockResolvedValue('OK'),
++  },
++}));
++
++jest.mock('@/lib/snowflake', () => ({
++  resolveSnowflakeConfig: jest.fn(),
++  executeSnowflakeStatement: jest.fn(),
++}));
++
++type SnowflakeConfig = ReturnType<typeof resolveSnowflakeConfig>;
++
++const FAKE_CONFIG = { accountHost: 'test.snowflakecomputing.com' } as SnowflakeConfig;
++
++// Both the provider-race route and this one build module-level in-process
++// caches at import time, so each test loads them in an isolated module
++// registry to keep those caches from leaking between cases.
++async function loadGet(opts: {
++  config?: SnowflakeConfig;
++  rows?: string[][];
++  statementError?: Error;
++}): Promise<typeof RouteGet> {
++  let GET!: typeof RouteGet;
++  await jest.isolateModulesAsync(async () => {
++    const snowflake = await import('@/lib/snowflake');
++    const config = opts.config === undefined ? FAKE_CONFIG : opts.config;
++    jest.mocked(snowflake.resolveSnowflakeConfig).mockReturnValue(config);
++    if (opts.statementError) {
++      jest.mocked(snowflake.executeSnowflakeStatement).mockRejectedValue(opts.statementError);
++    } else {
++      jest.mocked(snowflake.executeSnowflakeStatement).mockResolvedValue(opts.rows ?? []);
++    }
++    ({ GET } = await import('./route'));
++  });
++  return GET;
++}
++
++describe('GET /api/public/leaderboard-provider-race/achievements', () => {
++  test('returns 502 when the underlying provider race report is unavailable', async () => {
++    const GET = await loadGet({ config: null });
++
++    const response = await GET();
++
++    expect(response.status).toBe(502);
++    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
++  });
++
++  test('derives standings and highlights from the provider race rows', async () => {
++    const GET = await loadGet({
++      rows: [
++        ['2026-01-05', 'Anthropic', 'false', '100'],
++        ['2026-01-05', 'Google', 'false', '90'],
++        ['2026-01-12', 'Anthropic', 'false', '100'],
++        ['2026-01-12', 'Google', 'false', '200'],
++      ],
++    });
++
++    const response = await GET();
++    const body = await response.json();
++
++    expect(response.status).toBe(200);
++    expect(response.headers.get('Cache-Control')).toContain('public');
++    expect(body.standings[0]).toMatchObject({ provider: 'Google', currentRank: 1 });
++    expect(body.highlights.fastestClimber).toEqual({ provider: 'Google', positions: 1 });
++  });
++});
++
++describe('OPTIONS /api/public/leaderboard-provider-race/achievements', () => {
++  test('returns 204 with CORS headers', async () => {
++    const { OPTIONS } = await import('./route');
++
++    const response = OPTIONS();
++
++    expect(response.status).toBe(204);
++    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
++    expect(response.headers.get('Access-Control-Allow-Methods')).toBe('GET');
++  });
++});
+diff --git a/apps/web/src/app/api/public/leaderboard-provider-race/achievements/route.ts b/apps/web/src/app/api/public/leaderboard-provider-race/achievements/route.ts
+new file mode 100644
+index 0000000..53d9d8c
+--- /dev/null
++++ b/apps/web/src/app/api/public/leaderboard-provider-race/achievements/route.ts
+@@ -0,0 +1,49 @@
++import { NextResponse } from 'next/server';
++
++import { computeProviderRaceAchievements } from '@/lib/leaderboard/provider-race-achievements';
++import { publicSnowflakeReportOptions } from '@/lib/public-snowflake-report';
++
++import { GET as getProviderRace } from '../route';
++
++const CORS_HEADERS = {
++  'Access-Control-Allow-Origin': '*',
++  'Access-Control-Allow-Methods': 'GET',
++  'Access-Control-Allow-Headers': 'Content-Type',
++};
++
++// Same cache window as the underlying provider race report - this endpoint
++// only re-derives standings from that cached payload, it never queries
++// Snowflake itself.
++const CACHE_TTL_SECONDS = 3600;
++
++/**
++ * Shareable "show off" achievements for every model lab in the provider race
++ * (current rank, longest #1 reign, all-time usage champion, fastest climber,
++ * labs newly in the top 10, ...). Derived entirely from the same weekly
++ * token data as `/api/public/leaderboard-provider-race`, so it stays in sync
++ * with that report without a second Snowflake query.
++ */
++export async function GET(): Promise<NextResponse> {
++  const rows = await getProviderRace.getData();
++
++  if (rows === null) {
++    return NextResponse.json(
++      { error: 'Failed to fetch leaderboard provider race achievements' },
++      {
++        status: 502,
++        headers: { ...CORS_HEADERS, 'Cache-Control': 'no-store' },
++      }
++    );
++  }
++
++  const achievements = computeProviderRaceAchievements(rows);
++
++  return NextResponse.json(achievements, {
++    headers: {
++      ...CORS_HEADERS,
++      'Cache-Control': `public, s-maxage=${CACHE_TTL_SECONDS}, stale-while-revalidate=${CACHE_TTL_SECONDS}`,
++    },
++  });
++}
++
++export const OPTIONS = publicSnowflakeReportOptions;
+diff --git a/apps/web/src/app/api/public/leaderboard-provider-race/badge/route.test.ts b/apps/web/src/app/api/public/leaderboard-provider-race/badge/route.test.ts
+new file mode 100644
+index 0000000..92efede
+--- /dev/null
++++ b/apps/web/src/app/api/public/leaderboard-provider-race/badge/route.test.ts
+@@ -0,0 +1,86 @@
++import { describe, test, expect, jest } from '@jest/globals';
++import type { resolveSnowflakeConfig } from '@/lib/snowflake';
++import type { GET as RouteGet } from './route';
++
++jest.mock('@sentry/nextjs', () => ({ captureException: jest.fn() }));
++
++jest.mock('@/lib/redis', () => ({
++  redisClient: {
++    get: jest.fn<() => Promise<string | null>>().mockResolvedValue(null),
++    set: jest.fn<() => Promise<string>>().mockResolvedValue('OK'),
++  },
++}));
++
++jest.mock('@/lib/snowflake', () => ({
++  resolveSnowflakeConfig: jest.fn(),
++  executeSnowflakeStatement: jest.fn(),
++}));
++
++type SnowflakeConfig = ReturnType<typeof resolveSnowflakeConfig>;
++
++const FAKE_CONFIG = { accountHost: 'test.snowflakecomputing.com' } as SnowflakeConfig;
++
++async function loadGet(opts: {
++  config?: SnowflakeConfig;
++  rows?: string[][];
++  statementError?: Error;
++}): Promise<typeof RouteGet> {
++  let GET!: typeof RouteGet;
++  await jest.isolateModulesAsync(async () => {
++    const snowflake = await import('@/lib/snowflake');
++    const config = opts.config === undefined ? FAKE_CONFIG : opts.config;
++    jest.mocked(snowflake.resolveSnowflakeConfig).mockReturnValue(config);
++    if (opts.statementError) {
++      jest.mocked(snowflake.executeSnowflakeStatement).mockRejectedValue(opts.statementError);
++    } else {
++      jest.mocked(snowflake.executeSnowflakeStatement).mockResolvedValue(opts.rows ?? []);
++    }
++    ({ GET } = await import('./route'));
++  });
++  return GET;
++}
++
++function request(url: string): Request {
++  return new Request(url);
++}
++
++describe('GET /api/public/leaderboard-provider-race/badge', () => {
++  test('returns 400 when the provider query param is missing', async () => {
++    const GET = await loadGet({ rows: [] });
++
++    const response = await GET(request('https://kilo.ai/api/public/leaderboard-provider-race/badge'));
++
++    expect(response.status).toBe(400);
++    expect(response.headers.get('Content-Type')).toContain('image/svg+xml');
++  });
++
++  test('returns a 404 svg badge for a provider with no ranking', async () => {
++    const GET = await loadGet({ rows: [['2026-01-05', 'Anthropic', 'false', '100']] });
++
++    const response = await GET(
++      request('https://kilo.ai/api/public/leaderboard-provider-race/badge?provider=NoSuchLab')
++    );
++
++    expect(response.status).toBe(404);
++    expect(await response.text()).toContain('not ranked');
++  });
++
++  test('renders the current rank for a known provider, case-insensitively', async () => {
++    const GET = await loadGet({
++      rows: [
++        ['2026-01-05', 'Anthropic', 'false', '100'],
++        ['2026-01-05', 'Google', 'false', '50'],
++      ],
++    });
++
++    const response = await GET(
++      request('https://kilo.ai/api/public/leaderboard-provider-race/badge?provider=anthropic')
++    );
++    const svg = await response.text();
++
++    expect(response.status).toBe(200);
++    expect(response.headers.get('Cache-Control')).toContain('public');
++    expect(svg).toContain('Anthropic');
++    expect(svg).toContain('#1 this week');
++  });
++});
+diff --git a/apps/web/src/app/api/public/leaderboard-provider-race/badge/route.ts b/apps/web/src/app/api/public/leaderboard-provider-race/badge/route.ts
+new file mode 100644
+index 0000000..cd7af41
+--- /dev/null
++++ b/apps/web/src/app/api/public/leaderboard-provider-race/badge/route.ts
+@@ -0,0 +1,106 @@
++import { NextResponse } from 'next/server';
++
++import {
++  computeProviderRaceAchievements,
++  findProviderStanding,
++} from '@/lib/leaderboard/provider-race-achievements';
++import { publicSnowflakeReportOptions } from '@/lib/public-snowflake-report';
++
++import { GET as getProviderRace } from '../route';
++
++const CORS_HEADERS = {
++  'Access-Control-Allow-Origin': '*',
++  'Access-Control-Allow-Methods': 'GET',
++  'Access-Control-Allow-Headers': 'Content-Type',
++};
++
++const CACHE_TTL_SECONDS = 3600;
++
++// shields.io-style two-tone badge: dark label, colored value. Widths are
++// approximated from character count so text stays centered without a font
++// metrics dependency - this is a small embeddable widget, not pixel-perfect
++// brand artwork.
++const LABEL_COLOR = '#1f2430';
++const VALUE_COLOR = '#5b4dff';
++const CHAR_WIDTH = 6.4;
++const PADDING = 10;
++
++function escapeXml(value: string): string {
++  return value.replace(/[<>&"]/g, char => {
++    if (char === '<') return '&lt;';
++    if (char === '>') return '&gt;';
++    if (char === '&') return '&amp;';
++    return '&quot;';
++  });
++}
++
++function renderBadge(label: string, value: string): string {
++  const labelWidth = Math.round(label.length * CHAR_WIDTH + PADDING * 2);
++  const valueWidth = Math.round(value.length * CHAR_WIDTH + PADDING * 2);
++  const width = labelWidth + valueWidth;
++  const escapedLabel = escapeXml(label);
++  const escapedValue = escapeXml(value);
++
++  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="20" role="img" aria-label="${escapedLabel}: ${escapedValue}">
++  <linearGradient id="s" x2="0" y2="100%">
++    <stop offset="0" stop-color="#fff" stop-opacity=".1"/>
++    <stop offset="1" stop-opacity=".1"/>
++  </linearGradient>
++  <clipPath id="r">
++    <rect width="${width}" height="20" rx="3" fill="#fff"/>
++  </clipPath>
++  <g clip-path="url(#r)">
++    <rect width="${labelWidth}" height="20" fill="${LABEL_COLOR}"/>
++    <rect x="${labelWidth}" width="${valueWidth}" height="20" fill="${VALUE_COLOR}"/>
++    <rect width="${width}" height="20" fill="url(#s)"/>
++  </g>
++  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">
++    <text x="${labelWidth / 2}" y="14">${escapedLabel}</text>
++    <text x="${labelWidth + valueWidth / 2}" y="14">${escapedValue}</text>
++  </g>
++</svg>`;
++}
++
++function svgResponse(svg: string, status = 200): NextResponse {
++  return new NextResponse(svg, {
++    status,
++    headers: {
++      ...CORS_HEADERS,
++      'Content-Type': 'image/svg+xml; charset=utf-8',
++      'Cache-Control':
++        status === 200
++          ? `public, s-maxage=${CACHE_TTL_SECONDS}, stale-while-revalidate=${CACHE_TTL_SECONDS}`
++          : 'no-store',
++    },
++  });
++}
++
++/**
++ * Embeddable SVG badge for a single model lab's current position in the
++ * provider token race, e.g. for a lab to drop into their own README or site:
++ * `<img src="https://kilo.ai/api/public/leaderboard-provider-race/badge?provider=Anthropic">`.
++ * Falls back to a "not ranked" badge for unknown providers instead of an
++ * error status, since badges are meant to render inline wherever embedded.
++ */
++export async function GET(request: Request): Promise<NextResponse> {
++  const provider = new URL(request.url).searchParams.get('provider');
++  if (!provider) {
++    return svgResponse(renderBadge('kilo.ai token race', 'missing ?provider'), 400);
++  }
++
++  const rows = await getProviderRace.getData();
++  if (rows === null) {
++    return svgResponse(renderBadge('kilo.ai token race', 'unavailable'), 502);
++  }
++
++  const achievements = computeProviderRaceAchievements(rows);
++  const standing = findProviderStanding(achievements, provider);
++  if (!standing) {
++    return svgResponse(renderBadge('kilo.ai token race', 'not ranked'), 404);
++  }
++
++  const value = `#${standing.currentRank} this week`;
++  return svgResponse(renderBadge(`${standing.provider} · kilo.ai`, value));
++}
++
++export const OPTIONS = publicSnowflakeReportOptions;
+diff --git a/apps/web/src/app/api/public/leaderboard-provider-race/share-card/route.test.ts b/apps/web/src/app/api/public/leaderboard-provider-race/share-card/route.test.ts
+new file mode 100644
+index 0000000..7d82a9a
+--- /dev/null
++++ b/apps/web/src/app/api/public/leaderboard-provider-race/share-card/route.test.ts
+@@ -0,0 +1,88 @@
++import { describe, test, expect, jest } from '@jest/globals';
++import type { resolveSnowflakeConfig } from '@/lib/snowflake';
++import type { GET as RouteGet } from './route';
++
++jest.mock('@sentry/nextjs', () => ({ captureException: jest.fn() }));
++
++jest.mock('@/lib/redis', () => ({
++  redisClient: {
++    get: jest.fn<() => Promise<string | null>>().mockResolvedValue(null),
++    set: jest.fn<() => Promise<string>>().mockResolvedValue('OK'),
++  },
++}));
++
++jest.mock('@/lib/snowflake', () => ({
++  resolveSnowflakeConfig: jest.fn(),
++  executeSnowflakeStatement: jest.fn(),
++}));
++
++type SnowflakeConfig = ReturnType<typeof resolveSnowflakeConfig>;
++
++const FAKE_CONFIG = { accountHost: 'test.snowflakecomputing.com' } as SnowflakeConfig;
++
++async function loadGet(opts: {
++  config?: SnowflakeConfig;
++  rows?: string[][];
++  statementError?: Error;
++}): Promise<typeof RouteGet> {
++  let GET!: typeof RouteGet;
++  await jest.isolateModulesAsync(async () => {
++    const snowflake = await import('@/lib/snowflake');
++    const config = opts.config === undefined ? FAKE_CONFIG : opts.config;
++    jest.mocked(snowflake.resolveSnowflakeConfig).mockReturnValue(config);
++    if (opts.statementError) {
++      jest.mocked(snowflake.executeSnowflakeStatement).mockRejectedValue(opts.statementError);
++    } else {
++      jest.mocked(snowflake.executeSnowflakeStatement).mockResolvedValue(opts.rows ?? []);
++    }
++    ({ GET } = await import('./route'));
++  });
++  return GET;
++}
++
++function request(url: string): Request {
++  return new Request(url);
++}
++
++describe('GET /api/public/leaderboard-provider-race/share-card', () => {
++  test('renders a fallback image when the provider param is missing', async () => {
++    const GET = await loadGet({ rows: [] });
++
++    const response = await GET(
++      request('https://kilo.ai/api/public/leaderboard-provider-race/share-card')
++    );
++
++    expect(response.status).toBe(200);
++    expect(response.headers.get('Content-Type')).toContain('image/png');
++  });
++
++  test('renders a card for a ranked provider with cache headers', async () => {
++    const GET = await loadGet({
++      rows: [
++        ['2026-01-05', 'Anthropic', 'false', '100'],
++        ['2026-01-05', 'Google', 'false', '50'],
++      ],
++    });
++
++    const response = await GET(
++      request('https://kilo.ai/api/public/leaderboard-provider-race/share-card?provider=Anthropic')
++    );
++
++    expect(response.status).toBe(200);
++    expect(response.headers.get('Content-Type')).toContain('image/png');
++    expect(response.headers.get('Cache-Control')).toContain('public');
++  });
++
++  test('renders a fallback image for an unranked provider', async () => {
++    const GET = await loadGet({ rows: [['2026-01-05', 'Anthropic', 'false', '100']] });
++
++    const response = await GET(
++      request(
++        'https://kilo.ai/api/public/leaderboard-provider-race/share-card?provider=NoSuchLab'
++      )
++    );
++
++    expect(response.status).toBe(200);
++    expect(response.headers.get('Content-Type')).toContain('image/png');
++  });
++});
+diff --git a/apps/web/src/app/api/public/leaderboard-provider-race/share-card/route.tsx b/apps/web/src/app/api/public/leaderboard-provider-race/share-card/route.tsx
+new file mode 100644
+index 0000000..b0d327a
+--- /dev/null
++++ b/apps/web/src/app/api/public/leaderboard-provider-race/share-card/route.tsx
+@@ -0,0 +1,136 @@
++import { ImageResponse } from 'next/og';
++
++import {
++  computeProviderRaceAchievements,
++  findProviderStanding,
++  type ProviderRaceAchievements,
++  type ProviderStanding,
++} from '@/lib/leaderboard/provider-race-achievements';
++import { publicSnowflakeReportOptions } from '@/lib/public-snowflake-report';
++
++import { GET as getProviderRace } from '../route';
++
++// Stays on the default Node.js runtime (not edge) because it reuses the
++// provider race report's data path, which depends on Node-only APIs
++// (Snowflake JWT signing, Redis). `next/og`'s ImageResponse supports both.
++const CACHE_TTL_SECONDS = 3600;
++const WIDTH = 1200;
++const HEIGHT = 630;
++
++function callout(
++  achievements: ProviderRaceAchievements,
++  standing: ProviderStanding
++): string | null {
++  if (achievements.highlights.usageChampion?.provider === standing.provider) {
++    return 'Usage Champion · most tokens across every week';
++  }
++  if (achievements.highlights.longestReign?.provider === standing.provider) {
++    return `Longest reign at #1 · ${achievements.highlights.longestReign.weeks} weeks`;
++  }
++  if (standing.enteredTop10ThisWeek) {
++    return 'Just entered the top 10';
++  }
++  if (achievements.highlights.fastestClimber?.provider === standing.provider) {
++    return `Fastest climber this week · +${achievements.highlights.fastestClimber.positions} spots`;
++  }
++  if (standing.weeksAtRank1 > 0) {
++    return `${standing.weeksAtRank1} week${standing.weeksAtRank1 === 1 ? '' : 's'} at #1`;
++  }
++  return null;
++}
++
++function errorImage(message: string): ImageResponse {
++  return new ImageResponse(
++    (
++      <div
++        style={{
++          width: '100%',
++          height: '100%',
++          display: 'flex',
++          alignItems: 'center',
++          justifyContent: 'center',
++          background: '#0b0d14',
++          color: '#f5f5f7',
++          fontSize: 32,
++        }}
++      >
++        {message}
++      </div>
++    ),
++    { width: WIDTH, height: HEIGHT }
++  );
++}
++
++/**
++ * Shareable OG-image "achievement card" for a single model lab's standing in
++ * the provider token race, e.g. `?provider=Anthropic`. Meant to be dropped
++ * into a `<meta property="og:image">` tag or shared directly - the card
++ * surfaces the lab's current rank plus whichever callout applies (usage
++ * champion, longest #1 reign, fastest climber, new to the top 10).
++ */
++export async function GET(request: Request): Promise<Response> {
++  const provider = new URL(request.url).searchParams.get('provider');
++  if (!provider) {
++    return errorImage('Add ?provider=<lab name> to share a race card.');
++  }
++
++  const rows = await getProviderRace.getData();
++  if (rows === null) {
++    return errorImage('Provider race data is temporarily unavailable.');
++  }
++
++  const achievements = computeProviderRaceAchievements(rows);
++  const standing = findProviderStanding(achievements, provider);
++  if (!standing) {
++    return errorImage(`${provider} isn't ranked in the Kilo token race yet.`);
++  }
++
++  const label = callout(achievements, standing);
++
++  const response = new ImageResponse(
++    (
++      <div
++        style={{
++          width: '100%',
++          height: '100%',
++          display: 'flex',
++          flexDirection: 'column',
++          justifyContent: 'space-between',
++          padding: 72,
++          background: 'linear-gradient(135deg, #0b0d14 0%, #171a2b 100%)',
++          color: '#f5f5f7',
++          fontFamily: 'sans-serif',
++        }}
++      >
++        <div style={{ display: 'flex', fontSize: 28, color: '#9a9fb8', letterSpacing: 2 }}>
++          KILO.AI · AI PROVIDER TOKEN RACE
++        </div>
++        <div style={{ display: 'flex', flexDirection: 'column' }}>
++          <div style={{ display: 'flex', fontSize: 96, fontWeight: 700 }}>{standing.provider}</div>
++          <div style={{ display: 'flex', fontSize: 56, color: '#5b4dff', fontWeight: 700 }}>
++            #{standing.currentRank} this week
++          </div>
++          {label ? (
++            <div style={{ display: 'flex', fontSize: 34, color: '#f5f5f7', marginTop: 12 }}>
++              {label}
++            </div>
++          ) : null}
++        </div>
++        <div style={{ display: 'flex', fontSize: 24, color: '#9a9fb8' }}>
++          Ranked by real Kilo Code token usage · kilo.ai/leaderboard/race
++        </div>
++      </div>
++    ),
++    {
++      width: WIDTH,
++      height: HEIGHT,
++      headers: {
++        'Cache-Control': `public, s-maxage=${CACHE_TTL_SECONDS}, stale-while-revalidate=${CACHE_TTL_SECONDS}`,
++      },
++    }
++  );
++
++  return response;
++}
++
++export const OPTIONS = publicSnowflakeReportOptions;
+diff --git a/apps/web/src/lib/leaderboard/provider-race-achievements.test.ts b/apps/web/src/lib/leaderboard/provider-race-achievements.test.ts
+new file mode 100644
+index 0000000..11a48e4
+--- /dev/null
++++ b/apps/web/src/lib/leaderboard/provider-race-achievements.test.ts
+@@ -0,0 +1,124 @@
++import {
++  computeProviderRaceAchievements,
++  findProviderStanding,
++  type ProviderRaceRow,
++} from './provider-race-achievements';
++
++function row(
++  weekStart: string,
++  provider: string,
++  tokens: number,
++  isOpenWeights: boolean | null = null
++): ProviderRaceRow {
++  return { weekStart, provider, isOpenWeights, tokens };
++}
++
++describe('computeProviderRaceAchievements', () => {
++  it('returns an empty result for no rows', () => {
++    const achievements = computeProviderRaceAchievements([]);
++
++    expect(achievements.latestWeekStart).toBeNull();
++    expect(achievements.weekCount).toBe(0);
++    expect(achievements.standings).toEqual([]);
++    expect(achievements.highlights.usageChampion).toBeNull();
++  });
++
++  it('excludes the "other" bucket from ranking', () => {
++    const achievements = computeProviderRaceAchievements([
++      row('2026-01-05', 'Anthropic', 100),
++      row('2026-01-05', 'other', 1_000_000),
++    ]);
++
++    expect(achievements.standings.map(s => s.provider)).toEqual(['Anthropic']);
++  });
++
++  it('ranks providers within a week by combined open/closed-weight tokens', () => {
++    const achievements = computeProviderRaceAchievements([
++      row('2026-01-05', 'Anthropic', 50, true),
++      row('2026-01-05', 'Anthropic', 50, false),
++      row('2026-01-05', 'Google', 60, false),
++    ]);
++
++    const [first, second] = achievements.standings;
++    expect(first.provider).toBe('Anthropic');
++    expect(first.currentRank).toBe(1);
++    expect(first.currentTokens).toBe(100);
++    expect(second.provider).toBe('Google');
++    expect(second.currentRank).toBe(2);
++  });
++
++  it('tracks rank change and the fastest climber across two weeks', () => {
++    const achievements = computeProviderRaceAchievements([
++      row('2026-01-05', 'Anthropic', 100),
++      row('2026-01-05', 'Google', 90),
++      row('2026-01-05', 'DeepSeek', 10),
++      row('2026-01-12', 'Anthropic', 100),
++      row('2026-01-12', 'Google', 90),
++      row('2026-01-12', 'DeepSeek', 200),
++    ]);
++
++    const deepseek = findProviderStanding(achievements, 'DeepSeek');
++    expect(deepseek?.currentRank).toBe(1);
++    expect(deepseek?.rankChange).toBe(2);
++    expect(achievements.highlights.fastestClimber).toEqual({
++      provider: 'DeepSeek',
++      positions: 2,
++    });
++  });
++
++  it('finds the longest #1 streak, allowing gaps to reset it', () => {
++    const achievements = computeProviderRaceAchievements([
++      row('2026-01-05', 'Anthropic', 100),
++      row('2026-01-05', 'Google', 10),
++      row('2026-01-12', 'Anthropic', 100),
++      row('2026-01-12', 'Google', 10),
++      row('2026-01-19', 'Google', 100),
++      row('2026-01-19', 'Anthropic', 10),
++      row('2026-01-26', 'Anthropic', 100),
++      row('2026-01-26', 'Google', 10),
++    ]);
++
++    const anthropic = findProviderStanding(achievements, 'Anthropic');
++    expect(anthropic?.weeksAtRank1).toBe(3);
++    expect(anthropic?.longestRank1Streak).toBe(2);
++    expect(achievements.highlights.longestReign).toEqual({ provider: 'Anthropic', weeks: 2 });
++  });
++
++  it('flags providers entering the top 10 for the first time this week', () => {
++    const rows: ProviderRaceRow[] = [];
++    for (let i = 1; i <= 11; i++) {
++      rows.push(row('2026-01-05', `Lab${i}`, 1000 - i));
++    }
++    rows.push(row('2026-01-12', 'Lab11', 999));
++    for (let i = 1; i <= 10; i++) {
++      rows.push(row('2026-01-12', `Lab${i}`, 1000 - i));
++    }
++
++    const achievements = computeProviderRaceAchievements(rows);
++    const lab11 = findProviderStanding(achievements, 'Lab11');
++
++    expect(lab11?.enteredTop10ThisWeek).toBe(true);
++    expect(achievements.highlights.newToTop10).toEqual(['Lab11']);
++  });
++
++  it('picks the all-time usage champion by total tokens across every week', () => {
++    const achievements = computeProviderRaceAchievements([
++      row('2026-01-05', 'Anthropic', 100),
++      row('2026-01-05', 'Google', 50),
++      row('2026-01-12', 'Anthropic', 10),
++      row('2026-01-12', 'Google', 90),
++    ]);
++
++    // Anthropic: 110 total, Google: 140 total.
++    expect(achievements.highlights.usageChampion).toEqual({ provider: 'Google', tokens: 140 });
++  });
++});
++
++describe('findProviderStanding', () => {
++  it('matches provider names case-insensitively', () => {
++    const achievements = computeProviderRaceAchievements([row('2026-01-05', 'Anthropic', 100)]);
++
++    expect(findProviderStanding(achievements, 'anthropic')?.provider).toBe('Anthropic');
++    expect(findProviderStanding(achievements, 'unknown-lab')).toBeNull();
++  });
++});
+diff --git a/apps/web/src/lib/leaderboard/provider-race-achievements.ts b/apps/web/src/lib/leaderboard/provider-race-achievements.ts
+new file mode 100644
+index 0000000..f9d6a95
+--- /dev/null
++++ b/apps/web/src/lib/leaderboard/provider-race-achievements.ts
+@@ -0,0 +1,248 @@
++/**
++ * Derives shareable "show off" achievements from the same weekly
++ * provider x tokens data that powers the public provider race API
++ * (`/api/public/leaderboard-provider-race`). No new data source is
++ * introduced here: every stat below is computed purely from that
++ * payload so it stays consistent with the race chart labs already see.
++ *
++ * The `other` bucket (unmapped models, see the provider race query
++ * comment) is excluded from ranking - it is an aggregate of noise, not
++ * a lab that can claim an achievement.
++ */
++
++export type ProviderRaceRow = {
++  weekStart: string;
++  provider: string;
++  isOpenWeights: boolean | null;
++  tokens: number;
++};
++
++export type ProviderWeekStanding = {
++  provider: string;
++  rank: number;
++  tokens: number;
++  shareOfWeek: number;
++  rankChange: number | null;
++  enteredTop10ThisWeek: boolean;
++};
++
++export type ProviderStanding = {
++  provider: string;
++  currentRank: number;
++  currentTokens: number;
++  allTimeTokens: number;
++  allTimeRank: number;
++  weeksAtRank1: number;
++  longestRank1Streak: number;
++  weeksInTop3: number;
++  weeksInTop10: number;
++  rankChange: number | null;
++  enteredTop10ThisWeek: boolean;
++};
++
++export type ProviderRaceHighlights = {
++  usageChampion: { provider: string; tokens: number } | null;
++  longestReign: { provider: string; weeks: number } | null;
++  mostConsistent: { provider: string; weeksInTop3: number; weeksInTop10: number } | null;
++  fastestClimber: { provider: string; positions: number } | null;
++  newToTop10: string[];
++};
++
++export type ProviderRaceAchievements = {
++  latestWeekStart: string | null;
++  weekCount: number;
++  standings: ProviderStanding[];
++  highlights: ProviderRaceHighlights;
++};
++
++const OTHER_PROVIDER = 'other';
++
++/** Sums tokens for a provider within a week, collapsing the open/closed-weights split. */
++function tokensByWeekAndProvider(rows: ProviderRaceRow[]): Map<string, Map<string, number>> {
++  const byWeek = new Map<string, Map<string, number>>();
++
++  for (const row of rows) {
++    if (row.provider === OTHER_PROVIDER) continue;
++
++    const providers = byWeek.get(row.weekStart) ?? new Map<string, number>();
++    providers.set(row.provider, (providers.get(row.provider) ?? 0) + row.tokens);
++    byWeek.set(row.weekStart, providers);
++  }
++
++  return byWeek;
++}
++
++/** Ranks providers within a single week by tokens, highest first (rank 1 = most tokens). */
++function rankWeek(providers: Map<string, number>): ProviderWeekStanding[] {
++  const total = [...providers.values()].reduce((sum, tokens) => sum + tokens, 0);
++
++  return [...providers.entries()]
++    .sort((a, b) => b[1] - a[1])
++    .map(([provider, tokens], index) => ({
++      provider,
++      rank: index + 1,
++      tokens,
++      shareOfWeek: total > 0 ? tokens / total : 0,
++      rankChange: null,
++      enteredTop10ThisWeek: false,
++    }));
++}
++
++export function computeProviderRaceAchievements(rows: ProviderRaceRow[]): ProviderRaceAchievements {
++  const byWeek = tokensByWeekAndProvider(rows);
++  const weeks = [...byWeek.keys()].sort();
++
++  if (weeks.length === 0) {
++    return {
++      latestWeekStart: null,
++      weekCount: 0,
++      standings: [],
++      highlights: {
++        usageChampion: null,
++        longestReign: null,
++        mostConsistent: null,
++        fastestClimber: null,
++        newToTop10: [],
++      },
++    };
++  }
++
++  const rankedWeeks = weeks.map(week => rankWeek(byWeek.get(week) ?? new Map()));
++
++  const allTimeTokens = new Map<string, number>();
++  const weeksAtRank1 = new Map<string, number>();
++  const currentRank1Streak = new Map<string, number>();
++  const longestRank1Streak = new Map<string, number>();
++  const weeksInTop3 = new Map<string, number>();
++  const weeksInTop10 = new Map<string, number>();
++  const previousRankByProvider = new Map<string, number>();
++  const firstTop10WeekIndex = new Map<string, number>();
++
++  rankedWeeks.forEach((standings, weekIndex) => {
++    const seenThisWeek = new Set<string>();
++
++    for (const standing of standings) {
++      seenThisWeek.add(standing.provider);
++      allTimeTokens.set(
++        standing.provider,
++        (allTimeTokens.get(standing.provider) ?? 0) + standing.tokens
++      );
++
++      if (standing.rank === 1) {
++        weeksAtRank1.set(standing.provider, (weeksAtRank1.get(standing.provider) ?? 0) + 1);
++        const streak = (currentRank1Streak.get(standing.provider) ?? 0) + 1;
++        currentRank1Streak.set(standing.provider, streak);
++        longestRank1Streak.set(
++          standing.provider,
++          Math.max(longestRank1Streak.get(standing.provider) ?? 0, streak)
++        );
++      } else {
++        currentRank1Streak.set(standing.provider, 0);
++      }
++
++      if (standing.rank <= 3) {
++        weeksInTop3.set(standing.provider, (weeksInTop3.get(standing.provider) ?? 0) + 1);
++      }
++      if (standing.rank <= 10) {
++        weeksInTop10.set(standing.provider, (weeksInTop10.get(standing.provider) ?? 0) + 1);
++        if (!firstTop10WeekIndex.has(standing.provider)) {
++          firstTop10WeekIndex.set(standing.provider, weekIndex);
++        }
++      }
++
++      const previousRank = previousRankByProvider.get(standing.provider);
++      standing.rankChange = previousRank !== undefined ? previousRank - standing.rank : null;
++      standing.enteredTop10ThisWeek =
++        standing.rank <= 10 && (previousRank === undefined || previousRank > 10);
++    }
++
++    // Providers absent this week keep no streak - reset their rank-1 run.
++    for (const provider of currentRank1Streak.keys()) {
++      if (!seenThisWeek.has(provider)) {
++        currentRank1Streak.set(provider, 0);
++      }
++    }
++    for (const standing of standings) {
++      previousRankByProvider.set(standing.provider, standing.rank);
++    }
++  });
++
++  const latestWeek = rankedWeeks[rankedWeeks.length - 1];
++  const allTimeRanking = [...allTimeTokens.entries()].sort((a, b) => b[1] - a[1]);
++  const allTimeRankByProvider = new Map(allTimeRanking.map(([provider], i) => [provider, i + 1]));
++
++  const standings: ProviderStanding[] = latestWeek.map(standing => ({
++    provider: standing.provider,
++    currentRank: standing.rank,
++    currentTokens: standing.tokens,
++    allTimeTokens: allTimeTokens.get(standing.provider) ?? 0,
++    allTimeRank: allTimeRankByProvider.get(standing.provider) ?? standing.rank,
++    weeksAtRank1: weeksAtRank1.get(standing.provider) ?? 0,
++    longestRank1Streak: longestRank1Streak.get(standing.provider) ?? 0,
++    weeksInTop3: weeksInTop3.get(standing.provider) ?? 0,
++    weeksInTop10: weeksInTop10.get(standing.provider) ?? 0,
++    rankChange: standing.rankChange,
++    enteredTop10ThisWeek: standing.enteredTop10ThisWeek,
++  }));
++
++  const usageChampionEntry = allTimeRanking[0];
++  const usageChampion = usageChampionEntry
++    ? { provider: usageChampionEntry[0], tokens: usageChampionEntry[1] }
++    : null;
++
++  const longestReignEntry = [...longestRank1Streak.entries()]
++    .filter(([, weeks]) => weeks > 0)
++    .sort((a, b) => b[1] - a[1])[0];
++  const longestReign = longestReignEntry
++    ? { provider: longestReignEntry[0], weeks: longestReignEntry[1] }
++    : null;
++
++  const mostConsistentEntry = [...weeksInTop3.entries()]
++    .filter(([, weeks]) => weeks > 0)
++    .sort((a, b) => {
++      const top3Diff = b[1] - a[1];
++      if (top3Diff !== 0) return top3Diff;
++      return (weeksInTop10.get(b[0]) ?? 0) - (weeksInTop10.get(a[0]) ?? 0);
++    })[0];
++  const mostConsistent = mostConsistentEntry
++    ? {
++        provider: mostConsistentEntry[0],
++        weeksInTop3: mostConsistentEntry[1],
++        weeksInTop10: weeksInTop10.get(mostConsistentEntry[0]) ?? 0,
++      }
++    : null;
++
++  const fastestClimberEntry = standings
++    .filter(standing => standing.rankChange !== null && standing.rankChange > 0)
++    .sort((a, b) => (b.rankChange ?? 0) - (a.rankChange ?? 0))[0];
++  const fastestClimber = fastestClimberEntry
++    ? { provider: fastestClimberEntry.provider, positions: fastestClimberEntry.rankChange ?? 0 }
++    : null;
++
++  const newToTop10 = standings
++    .filter(standing => standing.enteredTop10ThisWeek)
++    .map(standing => standing.provider);
++
++  return {
++    latestWeekStart: weeks[weeks.length - 1],
++    weekCount: weeks.length,
++    standings: standings.sort((a, b) => a.currentRank - b.currentRank),
++    highlights: {
++      usageChampion,
++      longestReign,
++      mostConsistent,
++      fastestClimber,
++      newToTop10,
++    },
++  };
++}
++
++export function findProviderStanding(
++  achievements: ProviderRaceAchievements,
++  provider: string
++): ProviderStanding | null {
++  const normalized = provider.trim().toLowerCase();
++  return (
++    achievements.standings.find(standing => standing.provider.toLowerCase() === normalized) ?? null
++  );
++}
+diff --git a/apps/web/src/lib/public-snowflake-report.ts b/apps/web/src/lib/public-snowflake-report.ts
+index 6fd64be..0b108e9 100644
+--- a/apps/web/src/lib/public-snowflake-report.ts
++++ b/apps/web/src/lib/public-snowflake-report.ts
+@@ -97,14 +97,25 @@ async function fetchReport<Usage>(
+  * The in-process cache is created once per report (module scope) and stores
+  * pure data, so it is safe to share across requests.
+  */
+-export function createPublicSnowflakeReport<Usage>(options: PublicSnowflakeReportOptions<Usage>) {
++/**
++ * A public report's GET handler, extended with `getData` so other routes
++ * derived from the same underlying dataset (e.g. computed achievements) can
++ * reuse the same three-layer cache instead of issuing another Snowflake query.
++ */
++export type PublicSnowflakeReportHandler<Usage> = (() => Promise<NextResponse>) & {
++  getData: () => Promise<Usage | null>;
++};
++
++export function createPublicSnowflakeReport<Usage>(
++  options: PublicSnowflakeReportOptions<Usage>
++): PublicSnowflakeReportHandler<Usage> {
+   const getCachedReport = createCachedFetch<Usage | null>(
+     () => fetchReport(options),
+     IN_MEMORY_CACHE_TTL_MS,
+     null
+   );
+ 
+-  return async function GET(): Promise<NextResponse> {
++  const GET = async function GET(): Promise<NextResponse> {
+     if (!resolveSnowflakeConfig()) {
+       return NextResponse.json(
+         { error: 'Snowflake is not configured' },
+@@ -128,6 +139,8 @@ export function createPublicSnowflakeReport<Usage>(options: PublicSnowflakeRepor
+ 
+     return successResponse(usage);
+   };
++
++  return Object.assign(GET, { getData: getCachedReport });
+ }
+ 
+ export function publicSnowflakeReportOptions(): NextResponse {
