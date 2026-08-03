@@ -794,6 +794,12 @@ export interface AgentManagerTerminalCreatedMessage {
   font: TerminalFont
 }
 
+export interface AgentManagerTerminalRestartedMessage {
+  type: "agentManager.terminal.restarted"
+  terminalId: string
+  wsUrl: string
+}
+
 export interface AgentManagerTerminalFontChangedMessage {
   type: "agentManager.terminal.fontChanged"
   font: TerminalFont
@@ -1379,6 +1385,7 @@ export type ExtensionMessage =
   | AgentManagerLocalStatsMessage
   | AgentManagerPRStatusMessage
   | AgentManagerTerminalCreatedMessage
+  | AgentManagerTerminalRestartedMessage
   | AgentManagerTerminalFontChangedMessage
   | AgentManagerTerminalClosedMessage
   | AgentManagerTerminalErrorMessage

@@ -159,9 +159,9 @@ Each request can include 1-20 tasks. Each task must include at least one of `pro
 
 The companion `agent_manager_models` tool searches models and their supported reasoning variants on demand. Results are grouped by model name (with the offering providers listed for reference) and limited to 20 per call, so the full catalog is never added to the conversation context.
 
-The same tool also manages existing sessions. It can return a compact overview of sections, worktrees, and local sessions, send a prompt to one managed session, or stop a managed session. Stopping aborts the session's active work and removes it from the panel, just like closing the session tab.
+The same tool also manages existing sessions. It can return an overview of sections, worktrees, and local sessions, send a prompt to one managed session, stop a managed session, or move a session's worktree into a section. The overview includes section IDs, each section's assigned worktrees, worktree IDs, and session IDs. Use those exact IDs for a subsequent move. Moving accepts a section ID from the overview, or `null` to ungroup the worktree. Moving a session moves its whole worktree, including multi-version siblings. Local sessions cannot be assigned to a section. Stopping aborts the session's active work and removes it from the panel, just like closing the session tab.
 
-The tool uses the `agent_manager` permission. Approval prompts are scoped to the requested capability, so approving `worktree` does not automatically approve `local`, an overview, or a targeted prompt. Prompting an existing managed session requires an explicit `prompt` approval the first time, even if Agent Manager session creation was previously approved broadly. Stopping a session likewise requires an explicit `stop` approval.
+The tool uses the `agent_manager` permission. Approval prompts are scoped to the requested capability, so approving `worktree` does not automatically approve `local`, an overview, or a targeted prompt. Prompting an existing managed session requires an explicit `prompt` approval the first time, even if Agent Manager session creation was previously approved broadly. Stopping a session likewise requires an explicit `stop` approval, and moving a worktree requires an explicit `move` approval.
 
 ## Sections
 
@@ -217,11 +217,39 @@ Press `Cmd+D` (macOS) / `Ctrl+D` (Windows/Linux) to toggle the diff panel. It sh
 - Markdown files include an eye/code toggle in the file header to switch between rendered Markdown and the raw diff
 - **Drag file headers into chat** — drag a file header from the diff panel into the chat input to insert an `@file` mention, giving the agent context about specific changed files
 
+### Diff Scope
+
+A scope selector in the diff toolbar (both in the side panel and the full-screen review) chooses which changes the diff shows:
+
+- **Branch** (default) — the full worktree diff against its parent branch, matching the review behavior above
+- **Staged** — staged changes in the selected worktree
+- **Unstaged** — unstaged changes in the selected worktree
+- **Session** — changes from the selected session
+
+The Branch scope also has a base-branch picker next to it for overriding the comparison branch. **Apply to local** works only on the Branch scope — switch back to Branch to apply.
+
 See [Agent Manager Workflows](/docs/automate/agent-manager-workflows#merging-worktree-and-parent-branch) for the full integration story, including when to apply locally vs. merge directly vs. open a pull request.
 
 ## Terminals
 
-Each session has a dedicated integrated terminal rooted in the session's worktree directory. Press `Cmd+/` (macOS) / `Ctrl+/` (Windows/Linux) to focus the terminal for the active session.
+Each session has a dedicated terminal rooted in the session's worktree directory. Press `Cmd+/` (macOS) / `Ctrl+/` (Windows/Linux) to focus the terminal for the active session.
+
+### Choosing the Terminal Destination
+
+The toolbar's terminal button is a split button: click it to open a terminal, or use its dropdown to choose where terminals open:
+
+- **VS Code terminal** (default) — opens or focuses the VS Code integrated terminal at the bottom of the window
+- **Agent Manager panel** — opens an embedded terminal in the side panel that also hosts the diff view, so the shell stays inside the Agent Manager layout
+
+The dropdown choice is remembered per panel and becomes the default for new panels. You can also set the default directly with the `kilo-code.new.agentManager.terminalButtonDestination` setting (`vscode` or `agentManager`). The `Cmd+/` (macOS) / `Ctrl+/` (Windows/Linux) shortcut follows the same destination.
+
+With the **Agent Manager panel** destination, the terminal works like the diff panel: press `Cmd+/` to reveal it and press again to hide it. Hiding never stops the terminal — scrollback and running processes continue in the background, and focus returns to the chat input. A terminal stops only when you close its tab in the panel.
+
+### Multiple Terminals
+
+The side panel hosts multiple terminals per context (the local workspace or a worktree). The panel header is a tab strip: click a tab to switch, click **+** to open another terminal, and click **X** (or middle-click) to close a single terminal. Drag tabs to reorder them. Closing a terminal no longer hides the panel — closing the last one lands on the empty state. Pressing `Cmd+W` (macOS) / `Ctrl+W` (Windows/Linux) with a focused side terminal closes exactly that terminal.
+
+New terminals are named "Terminal N" using the lowest free number, and tabs pick up the live title from the shell or running program, so a dev server or editor names its own tab.
 
 ### Switching Between Terminal and Agent Manager
 
