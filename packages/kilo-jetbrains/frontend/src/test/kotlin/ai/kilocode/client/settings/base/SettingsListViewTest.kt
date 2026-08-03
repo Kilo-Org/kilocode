@@ -491,6 +491,110 @@ class SettingsListViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test hover alone does not reveal cells on unselected row`() {
+        edt {
+            val cfg = ActiveListConfig.Equal.copy(hoverActions = true)
+            val view = ActiveListView("Empty", cfg) { _, _ -> }
+            view.update(listOf(item("with", "Alpha", null, ActiveListCell("edit", "Edit"))))
+            layout(view)
+            view.list.clearSelection()
+
+            hover(view, center(view.list.getCellBounds(0, 0)))
+
+            assertTrue(renderedCells(view, 0).isEmpty())
+        }
+    }
+
+    fun `test selection alone does not reveal cells without hover`() {
+        edt {
+            val cfg = ActiveListConfig.Equal.copy(hoverActions = true)
+            val view = ActiveListView("Empty", cfg) { _, _ -> }
+            view.update(listOf(item("with", "Alpha", null, ActiveListCell("edit", "Edit"))))
+            layout(view)
+            view.list.selectedIndex = 0
+            exit(view)
+
+            assertTrue(renderedCells(view, 0).isEmpty())
+        }
+    }
+
+    fun `test hover reveals cells only on the selected hovered row`() {
+        edt {
+            val cfg = ActiveListConfig.Equal.copy(hoverActions = true)
+            val view = ActiveListView("Empty", cfg) { _, _ -> }
+            view.update(listOf(
+                item("a", "Alpha", null, ActiveListCell("edit", "Edit")),
+                item("b", "Beta", null, ActiveListCell("delete", "Delete")),
+            ))
+            layout(view)
+            view.list.selectedIndex = 0
+
+            hover(view, center(view.list.getCellBounds(0, 0)))
+            assertEquals(listOf("edit"), renderedCells(view, 0))
+            assertTrue(renderedCells(view, 1).isEmpty())
+
+            // Hovering the other, unselected row must not reveal its cells.
+            hover(view, center(view.list.getCellBounds(1, 1)))
+            assertTrue(renderedCells(view, 0).isEmpty())
+            assertTrue(renderedCells(view, 1).isEmpty())
+
+            exit(view)
+            assertTrue(renderedCells(view, 0).isEmpty())
+        }
+    }
+
+    fun `test selecting the hovered row reveals cells immediately`() {
+        edt {
+            val cfg = ActiveListConfig.Equal.copy(hoverActions = true)
+            val view = ActiveListView("Empty", cfg) { _, _ -> }
+            view.update(listOf(item("with", "Alpha", null, ActiveListCell("edit", "Edit"))))
+            layout(view)
+            view.list.clearSelection()
+            hover(view, center(view.list.getCellBounds(0, 0)))
+            assertTrue(renderedCells(view, 0).isEmpty())
+
+            view.list.selectedIndex = 0
+
+            assertEquals(listOf("edit"), renderedCells(view, 0))
+        }
+    }
+
+    fun `test hovered selected unfocused row uses unfocused selection background`() {
+        edt {
+            val cfg = ActiveListConfig.Equal.copy(hoverActions = true)
+            val row = item("with", "Alpha", null, ActiveListCell("edit", "Edit"))
+            val model = CollectionListModel<ActiveListItem>(listOf(row))
+            val list = object : JBList<ActiveListItem>(model), ActiveListActive {
+                override fun active(): Boolean = false
+
+                override fun hoveredIndex(): Int = 0
+            }
+            val renderer = ActiveListRenderer(model, cfg)
+
+            renderer.getListCellRendererComponent(list, row, 0, true, false)
+
+            assertEquals(listOf("edit"), actionCells(renderer).filter { it.isVisible }.map { it.cellId })
+            assertEquals(UIUtil.getListBackground(true, false), actionPill(renderer).background)
+        }
+    }
+
+    fun `test always visible action cells remain visible in hover action list`() {
+        edt {
+            val cfg = ActiveListConfig.Equal.copy(hoverActions = true)
+            val view = ActiveListView("Empty", cfg) { _, _ -> }
+            view.update(listOf(item(
+                "with",
+                "Alpha",
+                null,
+                ActiveListCell("level", "Allow", alwaysVisible = true),
+                ActiveListCell("edit", "Edit"),
+            )))
+            layout(view)
+
+            assertEquals(listOf("level"), renderedCells(view, 0))
+        }
+    }
+
     fun `test renderer reuses action cells across updates`() {
         edt {
             val first = item(
@@ -674,6 +778,21 @@ class SettingsListViewTest : BasePlatformTestCase() {
     private fun actionCells(root: java.awt.Component): List<ActiveListActionCell> =
         components(root).filterIsInstance<ActiveListActionCell>()
 
+    private fun renderedCells(view: ActiveListView, idx: Int): List<String> {
+        val value = view.list.model.getElementAt(idx)
+        val bounds = view.list.getCellBounds(idx, idx)
+        val comp = view.list.cellRenderer.getListCellRendererComponent(
+            view.list,
+            value,
+            idx,
+            view.list.isSelectedIndex(idx),
+            true,
+        )
+        comp.setBounds(0, 0, view.list.width, bounds.height)
+        layout(comp as Container)
+        return actionCells(comp).filter { it.isVisible }.map { it.cellId }
+    }
+
     private fun actionPill(root: java.awt.Component): JPanel {
         val cell = actionCells(root).single()
         return cell.parent.parent.parent as JPanel
@@ -704,6 +823,16 @@ class SettingsListViewTest : BasePlatformTestCase() {
         fire(view.list, mouse(view, MouseEvent.MOUSE_RELEASED, point))
     }
 
+    private fun hover(view: ActiveListView, point: Point) {
+        val event = event(view.list, point)
+        view.list.mouseMotionListeners.forEach { it.mouseMoved(event) }
+    }
+
+    private fun exit(view: ActiveListView) {
+        val event = event(view.list, Point(-1, -1), MouseEvent.MOUSE_EXITED)
+        view.list.mouseListeners.forEach { it.mouseExited(event) }
+    }
+
     private fun mouse(view: ActiveListView, id: Int, point: Point, count: Int = 1) = MouseEvent(
         view.list,
         id,
@@ -716,9 +845,9 @@ class SettingsListViewTest : BasePlatformTestCase() {
         MouseEvent.BUTTON1,
     )
 
-    private fun event(list: javax.swing.JList<*>, point: Point) = MouseEvent(
+    private fun event(list: javax.swing.JList<*>, point: Point, id: Int = MouseEvent.MOUSE_MOVED) = MouseEvent(
         list,
-        MouseEvent.MOUSE_MOVED,
+        id,
         System.currentTimeMillis(),
         0,
         point.x,

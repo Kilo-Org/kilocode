@@ -66,6 +66,7 @@ class WorktreeSessionEditorPanel(
             ActiveListRowHeight.EQUAL,
             description = false,
             selection = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION,
+            hoverActions = true,
         ),
         surface = ActiveListSurface.ToolWindow,
         showSearch = false,

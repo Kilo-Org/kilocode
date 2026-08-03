@@ -159,12 +159,14 @@ internal class ActiveListRenderer(
         trail.isVisible = end.isNotBlank()
         trail.foreground = weak
 
-        // In-place action buttons follow the selection highlight: only when the selection is
-        // visible (list focused, or an owned popup is active). An unfocused list hides them.
-        syncCells(value, active && list.isEnabled, list.isEnabled)
+        val hovered = (list as? ActiveListActive)?.hoveredIndex() == index
+        val show = if (cfg.hoverActions) list.isEnabled && selected && hovered else active && list.isEnabled
+        syncCells(value, show, list.isEnabled)
         cellPane.isVisible = cells.isVisible
         pill.isVisible = cells.isVisible
-        pill.background = if (active && list.isEnabled) UIUtil.getListBackground(true, true) else list.background
+        // Match the row's own background so the pill never paints a focused-selection highlight
+        // on a row that is not the focused selection (e.g. a hovered, unselected row).
+        pill.background = if (selected && list.isEnabled) UIUtil.getListBackground(true, active) else list.background
         val height = bodyHeight
         wrap.setPreferredSize(height?.let { Dimension(0, it) })
         top.invalidate()
@@ -223,6 +225,8 @@ internal class ActiveListRenderer(
 
 internal interface ActiveListActive {
     fun active(): Boolean
+
+    fun hoveredIndex(): Int = -1
 }
 
 internal class ActiveListActionCell : JBLabel() {

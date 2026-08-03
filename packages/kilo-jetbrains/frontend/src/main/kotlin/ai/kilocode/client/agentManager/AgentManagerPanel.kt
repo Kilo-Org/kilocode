@@ -17,6 +17,7 @@ import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListCell
+import ai.kilocode.client.ui.list.ActiveListConfig
 import ai.kilocode.client.ui.list.ActiveListDeleteOptions
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.ActiveListSelection
@@ -67,6 +68,7 @@ class AgentManagerPanel(
     private val edit = RenameAction()
     private val list = ActiveList(
         KiloBundle.message("worktree.empty"),
+        cfg = ActiveListConfig(hoverActions = true),
         surface = ActiveListSurface.ToolWindow,
         showSearch = false,
         onCell = { key, id ->

@@ -24,6 +24,7 @@ internal data class ActiveListConfig(
     val descriptionIndent: Boolean = true,
     val tooltip: Boolean = true,
     val selection: Int = ListSelectionModel.SINGLE_SELECTION,
+    val hoverActions: Boolean = false,
 ) {
     companion object {
         val Equal = ActiveListConfig(ActiveListRowHeight.EQUAL)

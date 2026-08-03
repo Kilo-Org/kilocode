@@ -50,6 +50,8 @@ internal class ActiveListView(
     internal val list: JBList<ActiveListItem> = object : JBList<ActiveListItem>(model), ActiveListActive {
         override fun active(): Boolean = popups > 0
 
+        override fun hoveredIndex(): Int = hovered
+
         override fun getBackground(): Color {
             if (surface == ActiveListSurface.ToolWindow) return activeListToolWindowBackground()
             return super.getBackground() ?: UIUtil.getListBackground(false, false)
@@ -84,6 +86,7 @@ internal class ActiveListView(
     private var filter = ""
     private var press: Press? = null
     private var popups = 0
+    private var hovered = -1
     internal var onSelect: (() -> Unit)? = null
 
     fun setEmptyText(text: String) {
@@ -106,7 +109,7 @@ internal class ActiveListView(
                 JComponent.WHEN_FOCUSED,
             )
         }
-        list.addMouseListener(object : MouseAdapter() {
+        val mouse = object : MouseAdapter() {
             override fun mousePressed(e: MouseEvent) {
                 if (!UIUtil.isActionClick(e, MouseEvent.MOUSE_PRESSED, true)) return
                 list.requestFocusInWindow()
@@ -150,8 +153,26 @@ internal class ActiveListView(
                 onCell(hit.item.key, down.id)
                 e.consume()
             }
-        })
+
+            override fun mouseMoved(e: MouseEvent) {
+                if (!cfg.hoverActions) return
+                val idx = list.locationToIndex(e.point)
+                    .takeIf { it >= 0 && list.getCellBounds(it, it)?.contains(e.point) == true }
+                    ?: -1
+                setHovered(idx)
+            }
+
+            override fun mouseExited(e: MouseEvent) {
+                if (!cfg.hoverActions) return
+                setHovered(-1)
+            }
+        }
+        list.addMouseListener(mouse)
+        if (cfg.hoverActions) list.addMouseMotionListener(mouse)
         list.addListSelectionListener { e: ListSelectionEvent ->
+            // Selection gates the hover-revealed action bar, so repaint the hovered row as soon as
+            // its selection flips instead of waiting for the next mouse move.
+            if (cfg.hoverActions) repaintRow(hovered)
             if (!e.valueIsAdjusting) onSelect?.invoke()
         }
         list.addFocusListener(object : FocusAdapter() {
@@ -270,6 +291,7 @@ internal class ActiveListView(
     @RequiresEdt
     fun setBusy(value: Boolean) {
         checkEdt()
+        if (value) setHovered(-1)
         list.setPaintBusy(value)
         if (list.isEnabled == !value) return
         list.isEnabled = !value
@@ -326,6 +348,7 @@ internal class ActiveListView(
     @RequiresEdt
     private fun sync(prefer: String? = list.selectedValue?.key, at: Int? = null, scroll: Boolean = true) {
         checkEdt()
+        setHovered(-1)
         val q = filter.trim()
         val rows = if (q.isBlank()) items else items.filter { matcher(q, it) }
         model.replaceAll(rows)
@@ -335,6 +358,23 @@ internal class ActiveListView(
             ?: rows.indices.firstOrNull()
             ?: -1
         if (idx >= 0) choose(idx, scroll) else list.clearSelection()
+    }
+
+    @RequiresEdt
+    private fun setHovered(idx: Int) {
+        checkEdt()
+        if (hovered == idx) return
+        val old = hovered
+        hovered = idx
+        repaintRow(old)
+        repaintRow(idx)
+    }
+
+    @RequiresEdt
+    private fun repaintRow(idx: Int) {
+        checkEdt()
+        if (idx < 0) return
+        list.getCellBounds(idx, idx)?.let { list.repaint(it) }
     }
 
     @RequiresEdt
