@@ -31,6 +31,7 @@ const OUT_DIR = "docs-sync-out"
 const ATTEMPTS = 2
 const LEARNINGS_BUDGET_MINUTES = Number(process.env.LEARNINGS_BUDGET_MINUTES) || 10
 const EXTRACTION_TIMEOUT_MS = LEARNINGS_BUDGET_MINUTES * 60 * 1000
+const COMMENT_BODY_CAP = 5000
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 
@@ -171,6 +172,13 @@ export function parseDelta(raw) {
     }
   }
   return null
+}
+
+/** Cap a review comment body so a single long comment cannot dominate extraction input. */
+function capBody(body) {
+  const b = String(body ?? "")
+  if (b.length <= COMMENT_BODY_CAP) return b
+  return b.slice(0, COMMENT_BODY_CAP) + " [truncated]"
 }
 
 /** Normalize rule text for duplicate comparison: lowercase, strip punctuation and whitespace runs. */
@@ -325,10 +333,6 @@ function git(args) {
   return execFileSync("git", args, { stdio: ["ignore", "pipe", "inherit"] })
     .toString()
     .trim()
-}
-
-function sorted(list) {
-  return [...list].sort()
 }
 
 // --- main ---
@@ -621,14 +625,14 @@ async function extract() {
       best.comment = {
         author_association: c.author_association,
         path: c.path,
-        body: c.body ?? "",
+        body: capBody(c.body),
       }
     } else {
       candidates.push({
         source: `comment:${c.id}`,
         date: (c.created_at ?? "").slice(0, 10),
         path: c.path,
-        body: c.body ?? "",
+        body: capBody(c.body),
         author_association: c.author_association,
       })
       candidateSources.push(`comment:${c.id}`)

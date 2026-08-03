@@ -2966,6 +2966,94 @@ Just prose, not a rule line.
         "stdout must log the suppressed marker for LEARNINGS_NO_PATCH",
       )
     }
+
+    // DRY_RUN=true with non-empty delta (suppresses learned_through output)
+    {
+      const cwd = setupLearnRepo(dir)
+      const tipSource = `commit:${gitIn(dir, ["rev-parse", "HEAD"]).slice(0, 7)}`
+      const fixturePath = writeFixture(cwd, {
+        pr: { number: 1, head: { ref: "docs/auto-sync" }, body: "", user: { login: "github-actions[bot]" } },
+        comments: [],
+      })
+
+      const kiloDir = makeStubKiloDir({ mode: "extraction-delta", callLog: path.join(cwd, "kilo-calls.log") })
+      writeExtractionDelta(cwd, {
+        add: [
+          { id: "dry-suppress", rule: "A rule suppressed under dry run.", scope: "both", source: tipSource, date: "2026-08-03" },
+        ],
+        remove: [],
+      })
+
+      const outputFile = path.join(cwd, "gh-output-q-dry-nonempty")
+      const result = runNodeScript(LEARN_SCRIPT, {
+        cwd,
+        kiloDir,
+        env: {
+          TRIAGE_MODEL: "test/model",
+          DOCS_SYNC_FIXTURE: fixturePath,
+          LEARNINGS_BUDGET_MINUTES: "1",
+          DOCS_SYNC_BACKOFF_MS: "0",
+          DRY_RUN: "true",
+          GITHUB_OUTPUT: outputFile,
+        },
+      })
+
+      if (fs.existsSync(outputFile)) {
+        const ghOut = fs.readFileSync(outputFile, "utf8")
+        assert.ok(
+          !ghOut.includes("learned_through="),
+          "GITHUB_OUTPUT must not contain learned_through on DRY_RUN non-empty delta",
+        )
+      }
+      assert.ok(
+        result.stdout.includes("learned-through output suppressed"),
+        "stdout must log learned-through output suppression for DRY_RUN non-empty delta",
+      )
+    }
+
+    // LEARNINGS_NO_PATCH=1 with non-empty delta
+    {
+      const cwd = setupLearnRepo(dir)
+      const tipSource = `commit:${gitIn(dir, ["rev-parse", "HEAD"]).slice(0, 7)}`
+      const fixturePath = writeFixture(cwd, {
+        pr: { number: 1, head: { ref: "docs/auto-sync" }, body: "", user: { login: "github-actions[bot]" } },
+        comments: [],
+      })
+
+      const kiloDir = makeStubKiloDir({ mode: "extraction-delta", callLog: path.join(cwd, "kilo-calls.log") })
+      writeExtractionDelta(cwd, {
+        add: [
+          { id: "nopatch-suppress", rule: "A rule suppressed under no-patch.", scope: "both", source: tipSource, date: "2026-08-03" },
+        ],
+        remove: [],
+      })
+
+      const outputFile = path.join(cwd, "gh-output-q-nopatch-nonempty")
+      const result = runNodeScript(LEARN_SCRIPT, {
+        cwd,
+        kiloDir,
+        env: {
+          TRIAGE_MODEL: "test/model",
+          DOCS_SYNC_FIXTURE: fixturePath,
+          LEARNINGS_BUDGET_MINUTES: "1",
+          DOCS_SYNC_BACKOFF_MS: "0",
+          LEARNINGS_NO_PATCH: "1",
+          GITHUB_OUTPUT: outputFile,
+        },
+      })
+
+      if (fs.existsSync(outputFile)) {
+        const ghOut = fs.readFileSync(outputFile, "utf8")
+        assert.ok(
+          !ghOut.includes("learned_through="),
+          "GITHUB_OUTPUT must not contain learned_through on LEARNINGS_NO_PATCH non-empty delta",
+        )
+      }
+      assert.ok(
+        result.stdout.includes("learned-through output suppressed"),
+        "stdout must log learned-through output suppression for LEARNINGS_NO_PATCH non-empty delta",
+      )
+    }
   }
 
   // Prompt block format
