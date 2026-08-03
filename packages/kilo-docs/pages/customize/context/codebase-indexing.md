@@ -51,6 +51,7 @@ You can also edit the `indexing` section in `kilo.jsonc` directly:
     "enabled": true,
     "provider": "openai",
     "model": "text-embedding-3-small",
+    "fileExtensions": [".php", ".js", ".css"],
     "vectorStore": "lancedb",
     "openai": { "apiKey": "sk-..." },
     "lancedb": {}
@@ -129,6 +130,7 @@ You can also edit the `indexing` section directly. This is the full shape of the
       "apiKey": "pa-..."
     },
     "lancedb": {},
+    "fileExtensions": [".php", ".js", ".css"],
     "searchMinScore": 0.4,
     "searchMaxResults": 50,
     "embeddingBatchSize": 60,
@@ -226,6 +228,18 @@ The interface shows real-time status:
   - Splits large functions intelligently
 
 ### Automatic File Filtering
+
+Set `indexing.fileExtensions` to a non-empty array to index only the listed file extensions. Values are case-insensitive and may be written with or without a leading dot. When this setting is omitted, Kilo uses its built-in language list. Configured text formats without a Tree-sitter parser use line-based fallback chunking.
+
+```json
+{
+  "indexing": {
+    "fileExtensions": [".php", ".js", ".css"]
+  }
+}
+```
+
+The configured list replaces the built-in defaults rather than adding to them. Clear the field in the settings UI to restore the defaults, or to inherit the global list from project scope.
 
 The indexer automatically excludes:
 

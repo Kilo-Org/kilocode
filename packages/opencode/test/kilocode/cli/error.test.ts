@@ -37,3 +37,16 @@ describe("model not found errors", () => {
     expect(error).not.toContain("No models are currently available.")
   })
 })
+
+describe("remote config authentication errors", () => {
+  test("uses the Kilo login command", () => {
+    const error = FormatError({
+      _tag: "ConfigRemoteAuthError",
+      url: "https://example.com/config.json",
+      remote: "team config",
+    })
+
+    expect(error).toContain("kilo auth login https://example.com/config.json")
+    expect(error).not.toContain("opencode auth login")
+  })
+})

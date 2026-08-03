@@ -2,14 +2,11 @@ import { describe, expect } from "bun:test"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Effect, Layer } from "effect"
 import path from "path"
-import * as Log from "@opencode-ai/core/util/log"
 import { resetDatabase } from "../fixture/db"
 import { TestInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { preparePluginDependencies } from "../kilocode/plugin-dependencies" // kilocode_change
 import { httpApiLayer, request } from "./httpapi-layer"
-
-void Log.init({ print: false })
 
 const testStateLayer = Layer.effectDiscard(
   Effect.acquireRelease(

@@ -51,6 +51,7 @@ export namespace MemorySchema {
     scope: "project"
     autoInject: boolean
     autoConsolidate: boolean
+    verbose: boolean
     capture: Capture
     limits: Limits
     stats: Stats
@@ -153,6 +154,7 @@ export namespace MemorySchema {
       scope: "project",
       autoInject: true,
       autoConsolidate: true,
+      verbose: false,
       capture: { ...capture },
       limits: { ...limits },
       stats: { ...stats },
@@ -170,6 +172,7 @@ export namespace MemorySchema {
       scope: input.scope,
       autoInject: input.autoInject,
       autoConsolidate: input.autoConsolidate,
+      verbose: input.verbose,
       capture: input.capture,
       stats: input.stats,
     }
@@ -190,6 +193,7 @@ export namespace MemorySchema {
       scope: "project",
       autoInject: true,
       autoConsolidate: bool(input.autoConsolidate, base.autoConsolidate),
+      verbose: bool(input.verbose, base.verbose),
       capture: {
         mode: "selective",
         turnClose: bool(cap.turnClose, base.capture.turnClose),

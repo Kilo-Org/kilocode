@@ -258,7 +258,7 @@ jobs:
     name: Validate CLI (windows-${{ matrix.arch }})
     needs: build-cli
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 20
+    timeout-minutes: 20 # kilocode_change
     strategy:
       fail-fast: false
       matrix:

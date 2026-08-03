@@ -11,6 +11,7 @@ export class Info extends Schema.Class<Info>("CommandV2.Info")({
   description: Schema.String.pipe(Schema.optional),
   agent: Schema.String.pipe(Schema.optional),
   model: ModelV2.Ref.pipe(Schema.optional),
+  variant: ModelV2.VariantID.pipe(Schema.optional), // kilocode_change - support variant-only command overrides
   subtask: Schema.Boolean.pipe(Schema.optional),
 }) {}
 
@@ -27,6 +28,7 @@ export type Editor = {
 
 export interface Interface {
   readonly transform: State.Interface<Data, Editor>["transform"]
+  readonly update: State.Interface<Data, Editor>["update"]
   readonly get: (name: string) => Effect.Effect<Info | undefined>
   readonly list: () => Effect.Effect<Info[]>
 }
@@ -54,6 +56,7 @@ export const layer = Layer.effect(
     })
 
     return Service.of({
+      update: state.update,
       transform: state.transform,
       get: Effect.fn("CommandV2.get")(function* (name) {
         return state.get().commands.get(name)

@@ -16,7 +16,6 @@ import { Plugin } from "../../src/plugin"
 import type { Provider } from "../../src/provider/provider"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
-import { Reference } from "../../src/reference/reference"
 import { Session } from "../../src/session/session"
 import { LLM } from "../../src/session/llm"
 import { MessageV2 } from "../../src/session/message-v2"
@@ -100,13 +99,6 @@ const llm = Layer.unwrap(
   }),
 )
 
-const reference = Layer.mock(Reference.Service)({
-  init: () => Effect.void,
-  list: () => Effect.succeed([]),
-  get: () => Effect.succeed(undefined),
-  ensure: () => Effect.void,
-  contains: () => Effect.succeed(false),
-})
 const status = Layer.mergeAll(SessionStatus.defaultLayer, Bus.layer)
 const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLayer)
 const deps = Layer.mergeAll(
@@ -117,7 +109,6 @@ const deps = Layer.mergeAll(
   Plugin.defaultLayer,
   Config.defaultLayer,
   RuntimeFlags.layer(),
-  reference,
   SessionSummary.defaultLayer,
   Image.defaultLayer,
   SyncEvent.defaultLayer,
@@ -126,7 +117,7 @@ const deps = Layer.mergeAll(
   status,
   llm,
 ).pipe(Layer.provideMerge(infra))
-const env = SessionProcessor.layer.pipe(Layer.provideMerge(deps), Layer.provide(reference))
+const env = SessionProcessor.layer.pipe(Layer.provideMerge(deps))
 
 const it = testEffect(env)
 
@@ -489,9 +480,7 @@ describe("session processor empty tool-calls", () => {
               LLMEvent.stepFinish({ index: 0, reason: "stop", usage: usage() }),
               LLMEvent.finish({ reason: "stop", usage: usage() }),
             ).pipe(
-              Stream.tap((event) =>
-                event.type === "step-finish" ? state.session.remove(state.chat.id) : Effect.void,
-              ),
+              Stream.tap((event) => (event.type === "step-finish" ? state.session.remove(state.chat.id) : Effect.void)),
             ),
           )
           const result = yield* state.handle.process(state.input)
@@ -586,11 +575,19 @@ describe("session processor empty tool-calls", () => {
             LLMEvent.stepStart({ index: 0 }),
             LLMEvent.stepFinish({
               index: 0,
-              reason: "stop",
+              reason: "other",
               usage: usage(),
-              providerMetadata: { kilocode: { routedModelID: "openai/gpt-5.5-20260423" } },
+              providerMetadata: {
+                kilocode: { routedModelID: "openai/gpt-5.5-20260423" },
+                kilo: { vercelID: "fra1::test" },
+                gateway: {
+                  generationId: "gen_test",
+                  routing: { finalProvider: "openai" },
+                  marketCost: "0.1",
+                },
+              },
             }),
-            LLMEvent.finish({ reason: "stop", usage: usage() }),
+            LLMEvent.finish({ reason: "other", usage: usage() }),
           )
 
           const chat = yield* session.create({})
@@ -643,6 +640,10 @@ describe("session processor empty tool-calls", () => {
             providerID: selection.providerID,
             modelID: ModelV2.ID.make("openai/gpt-5.5-20260423"),
           })
+          expect(part?.generationID).toBe("gen_test")
+          expect(part?.vercelID).toBe("fra1::test")
+          expect(part).not.toHaveProperty("providerMetadata")
+          expect(part).not.toHaveProperty("gateway")
         }),
       { git: true },
     ),

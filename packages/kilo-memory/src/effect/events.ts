@@ -27,6 +27,8 @@ export namespace MemoryEvents {
     duplicateOf: Schema.optional(Schema.String),
     tokens: Schema.optional(Schema.Number),
     operationCount: Schema.optional(Schema.Number),
+    added: Schema.optional(Schema.Number),
+    removed: Schema.optional(Schema.Number),
     skippedCount: Schema.optional(Schema.Number),
     sources: Schema.optional(Schema.Array(Schema.String)),
     files: Schema.optional(Schema.Array(Schema.String)),

@@ -21,7 +21,7 @@ import fuzzysort from "fuzzysort"
 import { Index, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js"
 import { createStore } from "solid-js/store"
 import { useTerminalDimensions } from "@opentui/solid"
-import { SplitBorder } from "@tui/component/border"
+import { SplitBorder } from "@tui/ui/border"
 import { useBindings, useOpencodeModeStack } from "@tui/keymap"
 import { selectedForeground, useTheme } from "@tui/context/theme"
 

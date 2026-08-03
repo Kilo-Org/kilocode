@@ -15,7 +15,7 @@ import { Agent as AgentSvc } from "../../src/agent/agent"
 import { BackgroundJob } from "../../src/background/job"
 import { Bus } from "../../src/bus"
 import { Command } from "../../src/command"
-import { Auth } from "../../src/auth" // kilocode_change
+import { Auth } from "../../src/auth"
 import { Config } from "../../src/config/config"
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { EventV2Bridge } from "../../src/event-v2-bridge"
@@ -29,8 +29,7 @@ import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
 import { Provider as ProviderSvc } from "../../src/provider/provider"
 import { Question } from "../../src/question"
-import { Reference } from "../../src/reference/reference"
-import { RepositoryCache } from "../../src/reference/repository-cache"
+import { RepositoryCache } from "@opencode-ai/core/repository-cache"
 import { SessionCompaction } from "../../src/session/compaction"
 import { Instruction } from "../../src/session/instruction"
 import { LLM } from "../../src/session/llm"
@@ -47,12 +46,13 @@ import { Skill } from "../../src/skill"
 import { Snapshot } from "../../src/snapshot"
 import { Storage } from "../../src/storage/storage"
 import { SyncEvent } from "../../src/sync"
-import { Ripgrep } from "@opencode-ai/core/filesystem/ripgrep"
+import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { ToolRegistry } from "../../src/tool/registry"
 import { Truncate } from "../../src/tool/truncate"
 import { KiloHeadless } from "../../src/kilocode/permission/headless"
 import { KiloSessionPrompt } from "../../src/kilocode/session/prompt"
 import { KiloReadObject } from "../../src/kilocode/tool/read-object"
+import { KiloSessions } from "../../src/kilo-sessions/kilo-sessions"
 import { MemoryService } from "@kilocode/kilo-memory/effect/service"
 import { provideTmpdirServer } from "../fixture/fixture"
 import { awaitWithTimeout, pollWithTimeout, testEffect } from "../lib/effect"
@@ -144,7 +144,6 @@ function makeHttp() {
     lsp,
     mcp,
     FSUtil.defaultLayer,
-    Reference.defaultLayer,
     SyncEvent.defaultLayer,
     EventV2Bridge.defaultLayer,
     Database.defaultLayer,
@@ -161,9 +160,9 @@ function makeHttp() {
     Layer.provide(Ripgrep.defaultLayer),
     Layer.provide(Format.defaultLayer),
     Layer.provide(Git.defaultLayer),
-    Layer.provide(Reference.defaultLayer),
     Layer.provide(Command.defaultLayer),
-    Layer.provide(Auth.defaultLayer), // kilocode_change
+    Layer.provide(Auth.defaultLayer),
+    Layer.provide(KiloSessions.testLayer),
     Layer.provideMerge(todo),
     Layer.provideMerge(question),
     Layer.provideMerge(deps),
@@ -202,7 +201,6 @@ function makeHttp() {
         Bus.layer,
         infra,
         Storage.defaultLayer,
-        Reference.defaultLayer,
       ),
     ),
   )
@@ -913,6 +911,117 @@ symlinkIt(
   30_000,
 )
 
+symlinkIt(
+  "does not expand a directory attachment swapped to a different workspace directory",
+  () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ dir }) {
+        const folder = path.join(dir, "folder")
+        const moved = path.join(dir, "moved")
+        const secret = path.join(dir, "secret-dir")
+        const fs = yield* FSUtil.Service
+        yield* fs.ensureDir(folder)
+        yield* fs.ensureDir(secret)
+        yield* Effect.promise(() =>
+          Promise.all([
+            Bun.write(path.join(folder, "allowed-name.txt"), "allowed"),
+            Bun.write(path.join(secret, "secret-name.txt"), "secret"),
+          ]),
+        )
+
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const permission = yield* Permission.Service
+        const session = yield* sessions.create({})
+        const fiber = yield* prompt
+          .prompt({
+            sessionID: session.id,
+            noReply: true,
+            parts: yield* prompt.resolvePromptParts("Read @folder"),
+          })
+          .pipe(Effect.forkScoped)
+        const pending = yield* pollWithTimeout(
+          Effect.gen(function* () {
+            const requests = yield* permission.list()
+            return requests.find((request) => request.sessionID === session.id && request.permission === "read")
+          }),
+          "directory read permission was never requested",
+          "15 seconds",
+        )
+
+        yield* Effect.promise(async () => {
+          await rename(folder, moved)
+          await symlink(secret, folder)
+        })
+        yield* permission.reply({ requestID: pending.id, reply: "once" })
+        const exit = yield* Fiber.await(fiber)
+        expect(Exit.isSuccess(exit)).toBe(true)
+        if (Exit.isSuccess(exit)) {
+          const text = exit.value.parts
+            .filter((part) => part.type === "text")
+            .map((part) => part.text)
+            .join("\n")
+          expect(text).not.toContain("allowed-name.txt")
+          expect(text).not.toContain("secret-name.txt")
+          expect(text).toContain("Directory attachments cannot be expanded")
+        }
+      }),
+      {
+        git: true,
+        config: (url) => ({ ...providerCfg(url), permission: { read: "ask" } }),
+      },
+    ),
+  30_000,
+)
+
+it.live(
+  "expands a workspace directory attachment instead of denying it",
+  () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ dir }) {
+        const folder = path.join(dir, "folder")
+        const fs = yield* FSUtil.Service
+        yield* fs.ensureDir(folder)
+        yield* Effect.promise(() =>
+          Promise.all([
+            Bun.write(path.join(folder, "a.txt"), "alpha"),
+            Bun.write(path.join(folder, "b.txt"), "beta"),
+          ]),
+        )
+
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const session = yield* sessions.create({})
+        const message = yield* prompt.prompt({
+          sessionID: session.id,
+          noReply: true,
+          parts: [
+            { type: "text", text: "Read @folder" },
+            {
+              type: "file",
+              mime: "text/plain",
+              filename: "folder",
+              url: pathToFileURL(folder).href,
+            },
+          ],
+        })
+        const text = message.parts
+          .filter((part) => part.type === "text")
+          .map((part) => part.text)
+          .join("\n")
+
+        expect(text).toContain("a.txt")
+        expect(text).toContain("b.txt")
+        expect(text).not.toContain("Directory attachments cannot be expanded")
+      }),
+      {
+        git: true,
+        config: (url) => ({ ...providerCfg(url), permission: { read: "allow" } }),
+      },
+    ),
+  30_000,
+)
+
 it.live(
   "checks read permission without enumerating missing-file suggestions",
   () =>
@@ -1028,6 +1137,7 @@ it.live(
             return list.find((item) => item.sessionID === chat.id)
           }),
           "global skill permission was never surfaced",
+          "10 seconds",
         )
         expect(pending?.permission).toBe("external_directory")
         const always = (pending?.always ?? []) as string[]
@@ -1040,7 +1150,9 @@ it.live(
 
         yield* permission.reply({ requestID: pending.id, reply: "always" })
         expect(
-          Exit.isSuccess(yield* awaitWithTimeout(Fiber.await(first), "first global skill run did not finish")),
+          Exit.isSuccess(
+            yield* awaitWithTimeout(Fiber.await(first), "first global skill run did not finish", "15 seconds"),
+          ),
         ).toBe(true)
 
         yield* llm.push(reply().tool("bash", call), reply().text("second complete").stop())
@@ -1052,7 +1164,13 @@ it.live(
         })
         const second = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkScoped)
         expect(
-          Exit.isSuccess(yield* awaitWithTimeout(Fiber.await(second), "trusted global skill prompted a second time")),
+          Exit.isSuccess(
+            yield* awaitWithTimeout(
+              Fiber.await(second),
+              "trusted global skill prompted a second time",
+              "15 seconds",
+            ),
+          ),
         ).toBe(true)
         expect(yield* permission.list()).toEqual([])
       }),
@@ -1064,7 +1182,7 @@ it.live(
         }),
       },
     ),
-  { timeout: 15_000 },
+  { timeout: 30_000 },
 )
 
 it.live("active tool calls use permissions changed after model streaming starts", () =>

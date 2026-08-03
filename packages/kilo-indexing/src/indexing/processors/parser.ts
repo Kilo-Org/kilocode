@@ -20,6 +20,11 @@ export class CodeParser implements ICodeParser {
   private pendingLoads: Map<string, Promise<LanguageParser>> = new Map()
   private failedParsers: Set<string> = new Set()
   private parserFallbackNotified: Set<string> = new Set()
+  private readonly extensions: ReadonlySet<string>
+
+  constructor(extensions: readonly string[] = scannerExtensions) {
+    this.extensions = new Set(extensions)
+  }
   // Markdown files are now supported using the custom markdown parser
   // which extracts headers and sections for semantic indexing
 
@@ -93,7 +98,7 @@ export class CodeParser implements ICodeParser {
    * @returns Boolean indicating if the language is supported
    */
   private isSupportedLanguage(extension: string): boolean {
-    return scannerExtensions.includes(extension)
+    return this.extensions.has(extension)
   }
 
   /**

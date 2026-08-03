@@ -27,6 +27,7 @@ class ScenarioBuilder<S = undefined> {
       seed: () => Effect.succeed(undefined as S),
       request: (ctx) => ({ path, headers: ctx.headers() }),
       authProbe: undefined,
+      validAuthProbe: true, // kilocode_change
       capture: "full",
       mutates: false,
       reset: true,
@@ -53,6 +54,12 @@ class ScenarioBuilder<S = undefined> {
   probe(authProbe: RequestSpec) {
     return this.clone({ authProbe })
   }
+
+  // kilocode_change start - blocking routes only prove they reject missing credentials so no valid request leaks into app disposal
+  skipValidAuthProbe() {
+    return this.clone({ validAuthProbe: false })
+  }
+  // kilocode_change end
 
   mutating() {
     return this.clone({ mutates: true })
@@ -158,6 +165,7 @@ class ScenarioBuilder<S = undefined> {
       project: state.project,
       seed: state.seed,
       authProbe: state.authProbe,
+      validAuthProbe: state.validAuthProbe, // kilocode_change
       // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- `.seeded(...)` preserves the paired request/state type inside the builder.
       request: (ctx, seeded) => state.request({ ...ctx, state: seeded as S }),
       // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- `.seeded(...)` preserves the paired assertion/state type inside the builder.

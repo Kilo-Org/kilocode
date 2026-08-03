@@ -11,13 +11,15 @@ export namespace MemoryMarker {
   export type Cache = {
     marker?: Info
     marked?: boolean
+    verbose?: boolean
   }
 
   export function fromBlocks(blocks: KiloMemory.Block[]): Info | undefined {
     return MemoryMarkerMeta.fromBlocks(blocks)
   }
 
-  export function startup(input: { marker?: Info; cache: Cache }) {
+  export function startup(input: { marker?: Info; cache: Cache; verbose: boolean }) {
+    input.cache.verbose = input.verbose
     if (input.cache.marker) return
     if (!input.marker || input.marker.count === 0) return
     input.cache.marker = input.marker
@@ -47,7 +49,7 @@ export namespace MemoryMarker {
       text: "",
       synthetic: true,
       ignored: true,
-      metadata: MemoryMarkerMeta.metadata(marker),
+      metadata: MemoryMarkerMeta.metadata(marker, input.cache.verbose),
     } satisfies MessageV2.TextPart
   }
 }

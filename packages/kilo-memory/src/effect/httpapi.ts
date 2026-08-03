@@ -48,6 +48,7 @@ export namespace MemoryContract {
     scope: Schema.Literal("project"),
     autoInject: Schema.Boolean,
     autoConsolidate: Schema.Boolean,
+    verbose: Schema.Boolean,
     capture: Capture,
     limits: Limits,
     stats: Stats,
@@ -150,6 +151,7 @@ export namespace MemoryContract {
 
   export const ConfigurePayload = Schema.Struct({
     autoConsolidate: Schema.optional(Schema.Boolean),
+    verbose: Schema.optional(Schema.Boolean),
   })
 
   export const PurgePayload = Schema.Struct({

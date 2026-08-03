@@ -2,13 +2,6 @@
 // Keys here will override any matching keys from upstream translations
 export const dict = {
   // Kilo Gateway provider translations
-  "provider.connect.kiloGateway.line1":
-    "Kilo Gateway geeft je toegang tot een gecureerde set van betrouwbare, geoptimaliseerde modellen voor coding agents.",
-  "provider.connect.kiloGateway.line2":
-    "Met één enkele API key krijg je toegang tot modellen zoals Claude, GPT, Gemini, GLM en meer.",
-  "provider.connect.kiloGateway.visit.prefix": "Bezoek ",
-  "provider.connect.kiloGateway.visit.link": "kilo.ai",
-  "provider.connect.kiloGateway.visit.suffix": " om je API key op te halen.",
   "provider.connect.kiloGateway.byok.prefix": "Voor meer gebruiksstatistieken, gebruik ",
   "provider.connect.kiloGateway.byok.link": "BYOK via Kilo's Gateway",
   "provider.connect.kiloGateway.byok.suffix": ".",
@@ -26,14 +19,9 @@ export const dict = {
   "settings.providers.note.vercel": "Geïntegreerde toegang tot AI-modellen met slimme routering",
 
   // Reasoning block label
-  "ui.permission.run": "Uitvoeren",
   "ui.reasoning.label": "Redenering",
 
   // Marketplace
-  "marketplace.tab.skills": "Skills",
-  "marketplace.tab.mcpServers": "MCP Servers",
-  "marketplace.category.all": "Alle",
-  "marketplace.placeholder": "Nog te implementeren",
   "marketplace.card.installed": "Geïnstalleerd",
   "marketplace.card.install": "Installeren",
   "marketplace.card.remove": "Verwijderen",
@@ -76,8 +64,6 @@ export const dict = {
     "Weet je zeker dat je deze {{type}} wilt verwijderen? Dit verwijdert het uit je {{scope}} configuratie.",
   "marketplace.remove.cancel": "Annuleren",
   "marketplace.remove.confirm.button": "Verwijderen",
-  "marketplace.tab.mcp": "MCP",
-  "marketplace.tab.agents": "Agenten",
   "marketplace.search": "Zoeken...",
   "marketplace.filter.all": "Alle items",
   "marketplace.filter.notInstalled": "Niet geïnstalleerd",
@@ -85,12 +71,10 @@ export const dict = {
   "marketplace.empty": "Geen items gevonden",
   "marketplace.empty.relevant": "Geen relevante marketplace-items gevonden voor deze werkruimte.",
   "marketplace.badge.mcpServer": "MCP Server",
-  "marketplace.badge.mode": "Modus",
   "marketplace.card.by": "door {{author}}",
   "marketplace.install.method": "Installatiemethode",
   "marketplace.install.parameters": "Parameters",
   "marketplace.install.optional": "(optioneel)",
-  "marketplace.install.required": "{{name}} is vereist",
   "marketplace.scope.project": "project",
   "marketplace.scope.global": "globaal",
   "marketplace.remove.type.mcp": "MCP server",
@@ -132,8 +116,6 @@ export const dict = {
 
   // Edit-tool header and shell-tool section labels
   "ui.messagePart.openInDiffViewer": "Openen in Diff-weergave",
-  "ui.messagePart.shell.command": "Opdracht",
-  "ui.messagePart.shell.output": "Uitvoer",
   "ui.messagePart.openInEditor": "Openen in editor",
 
   // Message feedback (thumbs up/down per assistant response)

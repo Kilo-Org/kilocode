@@ -2,6 +2,7 @@ import path from "path"
 import { eq, inArray, sql } from "drizzle-orm"
 import { Effect } from "effect"
 import { Database } from "@opencode-ai/core/database/database"
+import { RecallPartIndex } from "@opencode-ai/core/kilocode/session/recall-part-index"
 import type { MessageV2 } from "@/session/message-v2"
 import { SessionTable } from "@opencode-ai/core/session/sql"
 import type { MessageID, PartID, SessionID } from "@/session/schema"
@@ -11,6 +12,7 @@ import { ProjectV2 } from "@opencode-ai/core/project"
 import { AbsolutePath } from "@opencode-ai/core/schema"
 
 export namespace RecallSearch {
+  const BATCH = 8_192
   const PAGE_SIZE = 1_024
   const MAX_QUERY = 256
   const MAX_TERMS = 12
@@ -18,16 +20,9 @@ export namespace RecallSearch {
   const SNIPPET_CHARS = 360
   const SNIPPET_CONTEXT = 120
   const segmenter = new Intl.Segmenter("en", { granularity: "grapheme" })
+  const ready = new WeakSet<object>()
 
-  const FIELDS_SQL = `
-    p.id AS partID,
-    p.session_id AS sessionID,
-    CASE
-      WHEN json_extract(p.data, '$.type') = 'text' THEN json_extract(m.data, '$.role')
-      WHEN json_extract(p.data, '$.type') = 'file' THEN 'reference'
-      ELSE 'error'
-    END AS source,
-    CASE
+  const TEXT_SQL = `CASE
       WHEN json_extract(p.data, '$.type') = 'text' THEN coalesce(json_extract(p.data, '$.text'), '')
       WHEN json_extract(p.data, '$.type') = 'file' THEN trim(
         coalesce(json_extract(p.data, '$.filename'), '') || ' ' ||
@@ -40,39 +35,65 @@ export namespace RecallSearch {
         coalesce(json_extract(p.data, '$.source.clientName'), '')
       )
       ELSE coalesce(json_extract(p.data, '$.state.error'), '')
-    END AS text`
+    END`
 
-  const FILTER_SQL = `
-    (json_extract(p.data, '$.type') = 'text'
-      AND json_extract(m.data, '$.role') IN ('user', 'assistant')
-      AND coalesce(json_extract(p.data, '$.synthetic'), 0) = 0
-      AND coalesce(json_extract(p.data, '$.ignored'), 0) = 0)
-    OR json_extract(p.data, '$.type') = 'file'
-    OR (json_extract(p.data, '$.type') = 'tool'
-      AND json_extract(p.data, '$.state.status') = 'error')`
+  const PART_FILTER_SQL = `
+    json_valid(p.data) AND (
+      (json_extract(p.data, '$.type') = 'text'
+        AND coalesce(json_extract(p.data, '$.synthetic'), 0) = 0
+        AND coalesce(json_extract(p.data, '$.ignored'), 0) = 0)
+      OR json_extract(p.data, '$.type') = 'file'
+      OR (json_extract(p.data, '$.type') = 'tool'
+        AND json_extract(p.data, '$.state.status') = 'error')
+    )`
 
-  const searchSql = (ids: PartID[], sessionID: SessionID | "", messageID: MessageID | "") => sql`
-    SELECT ${sql.raw(FIELDS_SQL)}
-    FROM json_each(${JSON.stringify(ids)}) AS ids
-    CROSS JOIN part AS p
-    CROSS JOIN message AS m
-    WHERE p.id = ids.value
-      AND m.id = p.message_id
-      AND m.session_id = p.session_id
-      AND NOT (
-        m.session_id = ${sessionID} AND (
-          (json_extract(m.data, '$.role') = 'user' AND m.id >= ${messageID})
-          OR (json_extract(m.data, '$.role') = 'assistant' AND json_extract(m.data, '$.parentID') >= ${messageID})
-        )
+  export const query = (
+    ids: SessionID[],
+    terms: string[],
+    cursor: { sessionID: SessionID | ""; partID: PartID | "" },
+  ) => sql`
+    SELECT
+      p.id AS partID,
+      p.message_id AS messageID,
+      p.session_id AS sessionID,
+      json_extract(p.data, '$.type') AS kind,
+      ${sql.raw(TEXT_SQL)} AS text
+    FROM part AS p
+    WHERE p.session_id IN (${sql.join(
+      ids.map((id) => sql`${id}`),
+      sql`,`,
+    )})
+      AND (p.session_id > ${cursor.sessionID} OR (p.session_id = ${cursor.sessionID} AND p.id > ${cursor.partID}))
+      AND (${sql.raw(PART_FILTER_SQL)})
+      AND (
+        ${sql.join(
+          terms.map((term) => sql`instr(lower(${sql.raw(TEXT_SQL)}), ${term}) > 0`),
+          sql` OR `,
+        )}
+        OR ${sql.raw(TEXT_SQL)} GLOB ('*[^' || char(1) || '-' || char(127) || ']*')
       )
-      AND (${sql.raw(FILTER_SQL)})`
-
-  const pageSql = (sessionID: SessionID, cursor: number, rowid: number, partID: string) => sql`
-    SELECT p.rowid AS rowid, p.id AS partID
-    FROM part AS p INDEXED BY part_session_idx
-    WHERE p.session_id = ${sessionID} AND p.rowid > ${cursor} AND p.rowid <= ${rowid} AND p.id <= ${partID}
-    ORDER BY p.rowid
+    ORDER BY p.session_id, p.id
     LIMIT ${PAGE_SIZE}`
+
+  const ensure = (db: Database.Interface["db"]) =>
+    Effect.gen(function* () {
+      if (ready.has(db)) return
+      yield* db.run(sql.raw(RecallPartIndex.createSql)).pipe(
+        Effect.tap(() => Effect.sync(() => ready.add(db))),
+        Effect.catch((error) => Effect.logWarning("recall index unavailable", { error })),
+      )
+    })
+
+  const messageSql = (ids: MessageID[]) => sql`
+    SELECT
+      id,
+      json_extract(data, '$.role') AS role,
+      coalesce(json_extract(data, '$.parentID'), '') AS parentID
+    FROM message
+    WHERE id IN (${sql.join(
+      ids.map((id) => sql`${id}`),
+      sql`,`,
+    )})`
 
   export type Source = "user" | "assistant" | "reference" | "error"
 
@@ -93,7 +114,7 @@ export namespace RecallSearch {
   export type Output = {
     results: Result[]
     sessions: number
-    parts: number
+    candidates: number
   }
 
   type Candidate = Match & {
@@ -111,14 +132,21 @@ export namespace RecallSearch {
 
   type Row = {
     partID: PartID
+    messageID: MessageID
     sessionID: SessionID
-    source: Source
+    kind: "text" | "file" | "tool"
     text: string
   }
 
-  type PageRow = {
-    rowid: number
-    partID: PartID
+  type Hit = Row & {
+    mask: number
+    phrase: boolean
+  }
+
+  type MessageRow = {
+    id: MessageID
+    role: "user" | "assistant"
+    parentID: MessageID | ""
   }
 
   export const search = Effect.fn("RecallSearch.search")(function* (input: {
@@ -137,7 +165,7 @@ export namespace RecallSearch {
     }
 
     const roots = [...new Set(input.directories.map(Filesystem.resolve))]
-    if (roots.length === 0) return { results: [], sessions: 0, parts: 0 }
+    if (roots.length === 0) return { results: [], sessions: 0, candidates: 0 }
 
     yield* abort(input.signal)
     const { db } = yield* Database.Service
@@ -174,70 +202,79 @@ export namespace RecallSearch {
       })
     }
     yield* abort(input.signal)
-    if (items.size === 0) return { results: [], sessions: 0, parts: 0 }
+    if (items.size === 0) return { results: [], sessions: 0, candidates: 0 }
+    yield* ensure(db)
 
-    const ids = [...items.keys()]
-    const rowid =
-      (yield* db.get<{ rowid: number | null }>(sql`SELECT max(rowid) AS rowid FROM part`).pipe(Effect.orDie))?.rowid ??
-      0
-    const partID =
-      (yield* db.get<{ id: string | null }>(sql`SELECT max(id) AS id FROM part`).pipe(Effect.orDie))?.id ?? ""
+    const ids = [...items.keys()].sort()
     const excludeSessionID = input.excludeSessionID ?? ""
     const excludeFromMessageID = input.excludeFromMessageID ?? ""
-    let parts = 0
+    let candidates = 0
 
-    const consume = (row: Row) => {
+    const consume = (row: Hit, source: Source) => {
       const item = items.get(row.sessionID)
-      if (!item || !row.text) return
+      if (!item) return
 
-      const normalized = fold(row.text)
-      const matched = mask(normalized, parsed.terms)
-      if (matched === 0) return
-
-      item.mask |= matched
-      item.sourceMask[row.source] |= matched
-      const phrase = normalized.includes(parsed.phrase)
-      item.phrase = Math.max(item.phrase, phrase ? weight(row.source) : 0)
+      item.mask |= row.mask
+      item.sourceMask[source] |= row.mask
+      item.phrase = Math.max(item.phrase, row.phrase ? weight(source) : 0)
       candidate(
         item.candidates,
         {
-          source: row.source,
+          source,
           partID: row.partID,
-          mask: matched,
-          phrase,
+          mask: row.mask,
+          phrase: row.phrase,
         },
         () => excerpt(row.text, parsed),
       )
     }
 
-    for (let index = 0; index < ids.length; index++) {
+    for (let index = 0; index < ids.length; index += BATCH) {
       yield* abort(input.signal)
-      const sessionID = ids[index]
-      let cursor = 0
-      while (cursor < rowid) {
-        const rows = yield* db.all<PageRow>(pageSql(sessionID, cursor, rowid, partID)).pipe(Effect.orDie)
-        if (rows.length === 0) break
-        cursor = rows.at(-1)!.rowid
-        const found = yield* db
-          .all<Row>(
-            searchSql(
-              rows.map((entry) => entry.partID),
-              excludeSessionID,
-              excludeFromMessageID,
-            ),
-          )
-          .pipe(Effect.orDie)
+      const batch = ids.slice(index, index + BATCH)
+      let cursor = { sessionID: "" as SessionID | "", partID: "" as PartID | "" }
+      while (true) {
+        const live = cursor.sessionID ? batch.filter((id) => id >= cursor.sessionID) : batch
+        if (live.length === 0) break
+        const found = yield* db.all<Row>(query(live, parsed.terms, cursor)).pipe(Effect.orDie)
+        if (found.length === 0) break
+        candidates += found.length
+        const hits: Hit[] = []
         for (const row of found) {
-          consume(row)
+          if (!row.text) continue
+          const normalized = fold(row.text)
+          const matched = mask(normalized, parsed.terms)
+          if (matched === 0) continue
+          hits.push({ ...row, mask: matched, phrase: normalized.includes(parsed.phrase) })
         }
-        parts += rows.length
-        if (rows.length < PAGE_SIZE) break
+        const messages = new Map<MessageID, MessageRow>()
+        const messageIDs = [...new Set(hits.map((row) => row.messageID))]
+        for (let offset = 0; offset < messageIDs.length; offset += BATCH) {
+          const rows = yield* db
+            .all<MessageRow>(messageSql(messageIDs.slice(offset, offset + BATCH)))
+            .pipe(Effect.orDie)
+          for (const row of rows) messages.set(row.id, row)
+        }
+        for (const row of hits) {
+          const message = messages.get(row.messageID)
+          if (!message) continue
+          if (row.sessionID === excludeSessionID) {
+            if (message.role === "user" && message.id >= excludeFromMessageID) continue
+            if (message.role === "assistant" && message.parentID >= excludeFromMessageID) continue
+          }
+          if (row.kind === "text") {
+            if (message.role !== "user" && message.role !== "assistant") continue
+            consume(row, message.role)
+            continue
+          }
+          consume(row, row.kind === "file" ? "reference" : "error")
+        }
+        const last = found.at(-1)!
+        cursor = { sessionID: last.sessionID, partID: last.partID }
         yield* pause
         yield* abort(input.signal)
+        if (found.length < PAGE_SIZE) break
       }
-      if (index % 16 !== 15) continue
-      yield* pause
-      yield* abort(input.signal)
     }
     yield* pause
     yield* abort(input.signal)
@@ -258,7 +295,7 @@ export namespace RecallSearch {
           item,
       ),
       sessions: items.size,
-      parts,
+      candidates,
     }
   })
 

@@ -26,6 +26,7 @@ import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => {
   const session = useSession()
   const language = useLanguage()
+  const id = props.request.id
 
   const questions = createMemo(() => props.request.questions)
   const single = createMemo(() => questions().length === 1 && questions()[0]?.multiple !== true)
@@ -57,8 +58,8 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
   // Chat search indexes only the mounted page's options, and there's no
   // other signal exposing which page that is — publish it here so search
   // stays in sync as the user navigates instead of always assuming page 0.
-  createEffect(() => setActiveQuestionTab(props.request.id, store.tab))
-  onCleanup(() => clearActiveQuestionTab(props.request.id))
+  createEffect(() => setActiveQuestionTab(id, store.tab))
+  onCleanup(() => clearActiveQuestionTab(id))
 
   const question = createMemo(() => questions()[store.tab])
   const confirm = createMemo(() => !single() && store.tab === questions().length)
@@ -347,7 +348,9 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
         <div data-slot="question-dock-header-content">
           <div data-slot="question-header-title">{summary()}</div>
           <Show when={store.collapsed}>
-            <div data-slot="question-collapsed-preview">{questionText()}</div>
+            <div data-slot="question-collapsed-preview" dir="auto">
+              {questionText()}
+            </div>
           </Show>
         </div>
         <div data-slot="question-header-actions" onClick={(e: MouseEvent) => e.stopPropagation()}>
@@ -390,7 +393,9 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       <div data-slot="question-dock-body" inert={store.collapsed || undefined}>
         <div data-slot="question-dock-body-inner">
           <Show when={!confirm()}>
-            <div data-slot="question-text">{questionText()}</div>
+            <div data-slot="question-text" dir="auto">
+              {questionText()}
+            </div>
             <Show when={multi()} fallback={<div data-slot="question-hint">{language.t("ui.question.singleHint")}</div>}>
               <div data-slot="question-hint">{language.t("ui.question.multiHint")}</div>
             </Show>
@@ -418,9 +423,13 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
                         </span>
                       </span>
                       <span data-slot="question-option-main">
-                        <span data-slot="option-label">{localized.label()}</span>
+                        <span data-slot="option-label" dir="auto">
+                          {localized.label()}
+                        </span>
                         <Show when={localized.description()}>
-                          <span data-slot="option-description">{localized.description()}</span>
+                          <span data-slot="option-description" dir="auto">
+                            {localized.description()}
+                          </span>
                         </Show>
                       </span>
                     </button>
@@ -497,8 +506,10 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
                   const answered = () => Boolean(value())
                   return (
                     <div data-slot="review-item">
-                      <span data-slot="review-label">{tr(language.t, q.questionKey, q.question)}</span>
-                      <span data-slot="review-value" data-answered={answered()}>
+                      <span data-slot="review-label" dir="auto">
+                        {tr(language.t, q.questionKey, q.question)}
+                      </span>
+                      <span data-slot="review-value" data-answered={answered()} dir="auto">
                         {answered() ? value() : language.t("ui.question.review.notAnswered")}
                       </span>
                     </div>

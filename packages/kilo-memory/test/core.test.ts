@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, spyOn, test } from "bun:test"
 import { mkdir, mkdtemp, readdir, rm, symlink, utimes, writeFile } from "fs/promises"
 import os from "os"
 import path from "path"
@@ -10,6 +10,7 @@ import { MemoryOperations } from "../src/capture/operations"
 import { MemoryPaths } from "../src/storage/paths"
 import { MemoryRecall } from "../src/recall/recall"
 import { MemorySchema } from "../src/schema"
+import { KiloMemory } from "../src/effect/index"
 
 async function tmp() {
   const dir = await mkdtemp(path.join(os.tmpdir(), "kilo-memory-"))
@@ -43,18 +44,125 @@ describe("memory core package", () => {
       expect(shown.sources.corrections).toContain("## Corrections")
       expect(await Bun.file(path.join(t.root, ".gitignore")).text()).toBe("*\n!.gitignore\n")
       expect(shown.index).toBe("")
+      expect(shown.changes).toBe("")
+      expect(shown.decisions).toBe("")
+      expect(await Bun.file(path.join(t.root, "decisions.jsonl")).exists()).toBe(false)
+    })
+  })
+
+  test("prepare removes legacy decisions once from owned memory roots", async () => {
+    await use(async (t) => {
+      await Memory.enable({ root: t.root })
+      const legacy = path.join(t.root, "decisions.jsonl")
+      await writeFile(legacy, '{"kind":"log"}\n')
+
+      await KiloMemory.status({ root: t.root })
+      expect(await Bun.file(legacy).exists()).toBe(false)
+
+      await writeFile(legacy, '{"kind":"log"}\n')
+      await KiloMemory.status({ root: t.root })
+      expect(await Bun.file(legacy).exists()).toBe(true)
+
+      const other = path.join(t.dir, "unowned")
+      await mkdir(other)
+      const file = path.join(other, "decisions.jsonl")
+      await writeFile(file, '{"kind":"log"}\n')
+
+      await KiloMemory.status({ root: other })
+      expect(await Bun.file(file).exists()).toBe(true)
+    })
+  })
+
+  test("prepare ignores legacy decisions cleanup failures", async () => {
+    const clock = spyOn(Date, "now")
+    const now = Date.now()
+    clock.mockReturnValue(now)
+    try {
+      await use(async (t) => {
+        await Memory.enable({ root: t.root })
+        const legacy = path.join(t.root, "decisions.jsonl")
+        await mkdir(legacy)
+
+        const status = await KiloMemory.status({ root: t.root })
+        expect(status.state.enabled).toBe(true)
+
+        await rm(legacy, { recursive: true })
+        await writeFile(legacy, '{"kind":"log"}\n')
+        await KiloMemory.status({ root: t.root })
+        expect(await Bun.file(legacy).exists()).toBe(true)
+
+        clock.mockReturnValue(now + 60_001)
+        await KiloMemory.status({ root: t.root })
+        expect(await Bun.file(legacy).exists()).toBe(false)
+      })
+    } finally {
+      clock.mockRestore()
+    }
+  })
+
+  test("prepare ignores corrupt manifests during legacy cleanup", async () => {
+    const clock = spyOn(Date, "now")
+    const now = Date.now()
+    clock.mockReturnValue(now)
+    try {
+      await use(async (t) => {
+        await Memory.enable({ root: t.root })
+        const paths = MemoryPaths.files(t.root)
+        await writeFile(paths.manifest, "{")
+
+        const status = await KiloMemory.status({ root: t.root })
+        expect(status.state.enabled).toBe(true)
+
+        await writeFile(paths.manifest, '{"kind":"kilo-memory","version":1}\n')
+        await writeFile(paths.decisions, '{"kind":"log"}\n')
+        await KiloMemory.status({ root: t.root })
+        expect(await Bun.file(paths.decisions).exists()).toBe(true)
+
+        clock.mockReturnValue(now + 60_001)
+        await KiloMemory.status({ root: t.root })
+        expect(await Bun.file(paths.decisions).exists()).toBe(false)
+      })
+    } finally {
+      clock.mockRestore()
+    }
+  })
+
+  test("legacy cleanup cache evicts older roots", async () => {
+    await use(async (t) => {
+      const first = path.join(t.dir, "cache-0")
+      await mkdir(first)
+      await MemoryFiles.writeManifest(first)
+      await MemoryFiles.cleanup(first)
+      const legacy = MemoryPaths.files(first).decisions
+      await writeFile(legacy, '{"kind":"log"}\n')
+
+      for (let i = 1; i <= 128; i++) {
+        const root = path.join(t.dir, `cache-${i}`)
+        await mkdir(root)
+        await MemoryFiles.writeManifest(root)
+        await MemoryFiles.cleanup(root)
+      }
+
+      await MemoryFiles.cleanup(first)
+      expect(await Bun.file(legacy).exists()).toBe(false)
     })
   })
 
   test("enable preserves existing memory settings", async () => {
     await use(async (t) => {
       const enabled = await Memory.enable({ root: t.root })
-      await MemoryFiles.writeState(t.root, { ...enabled.state, autoInject: false, autoConsolidate: false })
+      await MemoryFiles.writeState(t.root, {
+        ...enabled.state,
+        autoInject: false,
+        autoConsolidate: false,
+        verbose: true,
+      })
 
       const next = await Memory.enable({ root: t.root })
 
       expect(next.state.autoInject).toBe(true)
       expect(next.state.autoConsolidate).toBe(false)
+      expect(next.state.verbose).toBe(true)
     })
   })
 
@@ -72,8 +180,10 @@ describe("memory core package", () => {
 
     expect(paused.autoInject).toBe(true)
     expect(paused.autoConsolidate).toBe(true)
+    expect(paused.verbose).toBe(false)
     expect(missing.enabled).toBe(false)
     expect(missing.autoConsolidate).toBe(true)
+    expect(missing.verbose).toBe(false)
     expect(state.limits.maxSessionFiles).toBe(20)
     expect(state.limits.maxRecentSessions).toBe(5)
     expect(state.limits.maxProjectIndexBytes).toBe(8192)
@@ -91,47 +201,24 @@ describe("memory core package", () => {
       const state = await MemoryFiles.readState(t.root)
 
       expect(raw.limits).toBeUndefined()
+      expect(raw.verbose).toBe(false)
       expect(state.limits.maxSessionLineChars).toBe(480)
     })
   })
 
-  test("decision and change audit records redact secret-like text in one log", async () => {
+  test("configures and persists verbose memory details", async () => {
     await use(async (t) => {
-      const secret = "sk-abcdefghijklmnopqrstuvwxyz123456"
       await Memory.enable({ root: t.root })
-      await MemoryFiles.decide(t.root, {
-        kind: "recall",
-        result: "skipped",
-        query: `check api_key=${secret}`,
-        skipped: [{ reason: "secret", text: `password=hunter2 ${secret}` }],
-      })
-      await MemoryFiles.append(t.root, `provider error "api_key": "${secret}"`)
-      const shown = await Memory.show({ root: t.root })
+      const result = await Memory.configure({ root: t.root, settings: { verbose: true } })
+      const raw = JSON.parse(await Bun.file(MemoryPaths.files(t.root).state).text())
 
-      expect(shown.decisions).toContain("[redacted]")
-      expect(shown.decisions).toContain('"kind":"log"')
-      expect(shown.decisions).not.toContain(secret)
-      expect(shown.decisions).not.toContain("hunter2")
-      expect(shown.changes).toContain("[redacted]")
-      expect(shown.decisions).toContain("provider error")
+      expect(result.state.verbose).toBe(true)
+      expect(raw.verbose).toBe(true)
+      expect((await MemoryFiles.readState(t.root)).verbose).toBe(true)
     })
   })
 
-  test("targeted recall redacts query before decision truncation", async () => {
-    await use(async (t) => {
-      const secret = "sk-" + "a".repeat(40)
-      await Memory.enable({ root: t.root })
-
-      await Memory.recall({ root: t.root, query: "x".repeat(220) + secret })
-      const shown = await Memory.show({ root: t.root })
-
-      expect(shown.decisions).toContain("[redacted]")
-      expect(shown.decisions).not.toContain(secret)
-      expect(shown.decisions).not.toContain(secret.slice(0, 20))
-    })
-  })
-
-  test("stale locks are stolen before appending audit records", async () => {
+  test("stale locks are stolen before applying memory", async () => {
     await use(async (t) => {
       await Memory.enable({ root: t.root })
       const lock = path.join(t.root, ".lock")
@@ -139,10 +226,10 @@ describe("memory core package", () => {
       await mkdir(lock)
       await utimes(lock, old, old)
 
-      await MemoryFiles.append(t.root, "after stale lock")
+      await Memory.apply({ root: t.root, ops: [{ action: "add", key: "after_lock", text: "Stale locks recover." }] })
       const shown = await Memory.show({ root: t.root })
 
-      expect(shown.changes).toContain("after stale lock")
+      expect(shown.sources.project).toContain("after_lock")
     })
   })
 
@@ -158,7 +245,6 @@ describe("memory core package", () => {
       expect(state.enabled).toBe(false)
       expect(files.some((file) => file.startsWith("state.json.bad-"))).toBe(true)
       expect(shown.inventory.items).toEqual({})
-      expect(shown.changes).toContain("recover state.json")
     })
   })
 
@@ -264,7 +350,6 @@ describe("memory core package", () => {
       const shown = await Memory.show({ root: t.root })
 
       expect(mixed.result.added).toBe(1)
-      // The skip record is redacted: it flows into the persistent decisions audit.
       expect(mixed.result.skipped).toContainEqual({ reason: "secret", text: "[redacted]" })
       expect(JSON.stringify(mixed.result.skipped)).not.toContain("sk-abcdefghijklmnopqrstuvwxyz")
       expect(shown.sources.project).toContain("safe_fact")
@@ -319,7 +404,6 @@ describe("memory core package", () => {
       ])
       expect(shown.sources.project).not.toContain("memory_echo")
       expect(shown.index).not.toContain("memory_echo")
-      expect(shown.decisions).toContain('"reason":"self_referential"')
     })
   })
 
@@ -356,17 +440,10 @@ describe("memory core package", () => {
       expect(shown.sources.project).not.toContain("Vim keybindings")
       expect(shown.index).toContain("repo_style")
       expect(shown.index).not.toContain("reply_style")
-      expect(shown.decisions).toContain('"reason":"out_of_scope"')
-      expect(shown.decisions).not.toContain("reply_style")
-      expect(shown.decisions).not.toContain("theme")
-      expect(shown.decisions).not.toContain("editor")
-      expect(shown.decisions).not.toContain("I prefer terse summaries")
-      expect(shown.decisions).not.toContain("dark mode")
-      expect(shown.decisions).not.toContain("Vim keybindings")
     })
   })
 
-  test("out-of-scope secret ops stay out of the operations audit", async () => {
+  test("out-of-scope secret ops stay out of memory", async () => {
     await use(async (t) => {
       await Memory.enable({ root: t.root })
 
@@ -377,9 +454,8 @@ describe("memory core package", () => {
       const shown = await Memory.show({ root: t.root })
 
       expect(result.result.skipped).toEqual([{ reason: "out_of_scope", text: "My preference is [redacted]" }])
-      expect(shown.decisions).toContain('"reason":"out_of_scope"')
-      expect(shown.decisions).not.toContain("private_pref")
-      expect(shown.decisions).not.toContain("password=hunter2")
+      expect(shown.sources.project).not.toContain("private_pref")
+      expect(shown.sources.project).not.toContain("password=hunter2")
     })
   })
 
@@ -462,7 +538,7 @@ describe("memory core package", () => {
     })
   })
 
-  test("targeted recall returns typed memory and audits matched files", async () => {
+  test("targeted recall returns typed memory and matched files", async () => {
     await use(async (t) => {
       await Memory.enable({ root: t.root })
       await Memory.remember({
@@ -474,12 +550,8 @@ describe("memory core package", () => {
       })
 
       const result = await Memory.recall({ root: t.root, query: "what command runs cli tests?" })
-      const shown = await Memory.show({ root: t.root })
-
       expect(result.result?.block).toContain("cli_tests")
       expect(result.files).toEqual(["environment.md"])
-      expect(shown.decisions).toContain('"kind":"recall"')
-      expect(shown.decisions).toContain('"result":"recalled"')
     })
   })
 
@@ -1280,6 +1352,7 @@ describe("memory core package", () => {
       const shown = await Memory.show({ root: t.root })
 
       expect(result.result.removed).toBe(1)
+      expect(result.detail).toMatchObject({ type: "saved", added: 0, removed: 1 })
       expect(shown.sources.project).not.toContain("Project tests")
       expect(shown.sources.environment).toContain("bun test")
     })

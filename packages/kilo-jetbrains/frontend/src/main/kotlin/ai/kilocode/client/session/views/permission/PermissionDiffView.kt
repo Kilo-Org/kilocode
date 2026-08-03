@@ -4,10 +4,9 @@ import ai.kilocode.client.session.model.PermissionFileDiff
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.ui.DiffStatBadge
-import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.layout.Stack
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
-import java.awt.FlowLayout
 
 /**
  * Renders a single [PermissionFileDiff] inside a permission card as a compact diff-stat badge.
@@ -35,9 +34,7 @@ class PermissionDiffView(
         isOpaque = false
         border = JBUI.Borders.empty()
 
-        val inner = object : javax.swing.JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)) {
-            init { isOpaque = false }
-        }
+        val inner = Stack.horizontal()
         inner.add(badge)
         addToCenter(inner)
     }

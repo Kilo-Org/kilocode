@@ -9,9 +9,9 @@
  * Kept separate from `tui-config.tsx` so the store factory has no SDK/event imports.
  */
 import { onCleanup, onMount } from "solid-js"
-import type { TuiConfig } from "@/cli/cmd/tui/config/tui"
-import { useSDK } from "@/cli/cmd/tui/context/sdk"
-import { useEvent } from "@/cli/cmd/tui/context/event"
+import type { TuiConfig } from "@tui/config"
+import { useSDK } from "@tui/context/sdk"
+import { useEvent } from "@tui/context/event"
 import { KiloTuiConfig } from "./tui-config"
 
 /**

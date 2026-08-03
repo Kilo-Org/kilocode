@@ -9,7 +9,7 @@ import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { MessageID, PartID, type SessionID } from "../../src/session/schema"
 import { Database } from "@opencode-ai/core/database/database"
-import { eq } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import { seedProject } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
@@ -68,6 +68,61 @@ function run(query: string, signal?: AbortSignal) {
     signal,
   })
 }
+it.instance(
+  "uses the recall covering index when available",
+  () =>
+    Effect.gen(function* () {
+      yield* seedProject
+      const sessions = yield* Session.Service
+      const session = yield* sessions.create({ title: "Planner" })
+      const { db } = yield* Database.Service
+      const plan = yield* db
+        .all<{
+          detail: string
+        }>(sql`EXPLAIN QUERY PLAN ${RecallSearch.query([session.id], ["needle"], { sessionID: "", partID: "" })}`)
+        .pipe(Effect.orDie)
+      expect(plan.some((row) => row.detail.includes("recall_part_search_idx"))).toBe(true)
+    }),
+  { git: true },
+)
+
+it.instance(
+  "recreates the recall index lazily after it is missing",
+  () =>
+    Effect.gen(function* () {
+      yield* seedProject
+      const sessions = yield* Session.Service
+      const session = yield* sessions.create({ title: "Lazy index" })
+      yield* add(session.id, "user", { type: "text", text: "lazy index needle" })
+      const { db } = yield* Database.Service
+      yield* db.run(sql`DROP INDEX recall_part_search_idx`).pipe(Effect.orDie)
+      expect(
+        yield* db.get(sql`SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'recall_part_search_idx'`),
+      ).toBeUndefined()
+      expect((yield* run("lazy index needle")).results.map((item) => item.id)).toEqual([session.id])
+      expect(
+        yield* db.get(sql`SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'recall_part_search_idx'`),
+      ).toEqual({ name: "recall_part_search_idx" })
+    }),
+  { git: true },
+)
+
+it.instance(
+  "continues searching when lazy index creation fails",
+  () =>
+    Effect.gen(function* () {
+      yield* seedProject
+      const sessions = yield* Session.Service
+      const session = yield* sessions.create({ title: "Unavailable index" })
+      yield* add(session.id, "user", { type: "text", text: "fallback needle" })
+      const { db } = yield* Database.Service
+      yield* db.run(sql`DROP INDEX recall_part_search_idx`).pipe(Effect.orDie)
+      yield* db.run(sql`PRAGMA query_only = ON`).pipe(Effect.orDie)
+      expect((yield* run("fallback needle")).results.map((item) => item.id)).toEqual([session.id])
+    }),
+  { git: true },
+)
+
 it.instance(
   "searches titles and terms distributed across transcript messages",
   () =>
@@ -247,7 +302,7 @@ it.instance(
 )
 
 it.instance(
-  "searches every page while respecting worktree scope",
+  "searches every page and batch while respecting worktree scope",
   () =>
     Effect.gen(function* () {
       yield* seedProject
@@ -258,12 +313,13 @@ it.instance(
       yield* add(child.id, "user", { type: "text", text: "archived-child-needle" })
 
       const broad = yield* sessions.create({ title: "Broad" })
-      for (let index = 0; index < 300; index++) {
-        yield* add(broad.id, "user", { type: "text", text: `page ${index}` })
+      for (let index = 0; index < 1_100; index++) {
+        const text = index === 1_099 ? "page-boundary-needle" : `page ${index}`
+        yield* add(broad.id, "user", { type: "text", text })
       }
-      for (let index = 0; index < 70; index++) {
+      for (let index = 0; index < 140; index++) {
         const session = yield* sessions.create({ title: `Batch ${index}` })
-        if (index === 69) yield* add(session.id, "user", { type: "text", text: "last-session-needle" })
+        if (index === 139) yield* add(session.id, "user", { type: "text", text: "last-session-needle" })
       }
 
       const outside = yield* sessions.create({ title: "Outside" })
@@ -277,10 +333,11 @@ it.instance(
         .pipe(Effect.orDie)
 
       expect((yield* run("archived-child-needle")).results.map((item) => item.id)).toEqual([child.id])
+      expect((yield* run("page-boundary-needle")).results.map((item) => item.id)).toEqual([broad.id])
       const result = yield* run("last-session-needle")
       expect(result.results).toHaveLength(1)
-      expect(result.sessions).toBe(73)
-      expect(result.parts).toBe(302)
+      expect(result.sessions).toBe(143)
+      expect(result.candidates).toBe(1)
     }),
   { git: true },
 )
@@ -298,8 +355,8 @@ it.instance(
         type: "text",
         text: `terminal ${"x".repeat(20_000)} terminal needle ${"y".repeat(20_000)}`,
       })
-      for (let index = 0; index < 300; index++) {
-        yield* add(session.id, "user", { type: "text", text: `noise ${index}` })
+      for (let index = 0; index < 1_100; index++) {
+        yield* add(session.id, "user", { type: "text", text: `paged noise ${index}` })
       }
 
       expect((yield* run("job_id 100%")).results.map((item) => item.id)).toEqual([session.id])
@@ -309,11 +366,12 @@ it.instance(
       const snippet = (yield* run("terminal needle")).results[0]?.matches[0]?.text ?? ""
       expect(snippet).toContain("terminal needle")
       expect(snippet.length).toBeLessThan(370)
+      expect((yield* run("paged noise")).results.map((item) => item.id)).toEqual([session.id])
 
       const database = yield* Database.Service
       const controller = new AbortController()
       const pending = Effect.runPromise(
-        run("absent-needle", controller.signal).pipe(Effect.provideService(Database.Service, database)),
+        run("paged noise", controller.signal).pipe(Effect.provideService(Database.Service, database)),
       )
       queueMicrotask(() => controller.abort(new Error("cancelled recall search")))
       const error = yield* Effect.promise(() => pending.catch((value: unknown) => value))

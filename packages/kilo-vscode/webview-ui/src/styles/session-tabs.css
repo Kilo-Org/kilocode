@@ -228,6 +228,75 @@
   color: var(--text-base);
 }
 
+.session-tab-switcher-wrap {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-inline-start: 4px;
+  padding-inline: 6px 4px;
+  border-inline-start: 1px solid var(--border-weak-base);
+}
+
+.session-tab-switcher-popover[data-component="popover-content"] {
+  max-height: min(420px, calc(100vh - 64px));
+}
+
+.session-tab-switcher [data-component="list"] {
+  max-height: min(390px, calc(100vh - 88px));
+}
+
+.session-tab-switcher [data-slot="list-scroll"] {
+  max-height: 320px;
+  padding: 0 4px 4px;
+}
+
+.session-tab-switcher [data-slot="list-item"] {
+  min-height: 42px;
+  padding-block: 6px;
+  padding-inline: 8px 36px;
+}
+
+.session-tab-switcher [data-slot="list-item-selected-icon"] {
+  display: none;
+}
+
+.session-tab-switcher-item {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.session-tab-switcher-meta {
+  color: var(--text-weak);
+}
+
+.session-tab-switcher-status {
+  color: var(--text-weak);
+  font-weight: 500;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.session-tab-switcher-close[data-component="icon-button"] {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: 4px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: opacity 100ms ease;
+}
+
+.session-tab-switcher-item:hover .session-tab-switcher-close[data-component="icon-button"],
+.session-tab-switcher-item:focus-within .session-tab-switcher-close[data-component="icon-button"] {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.session-tab-switcher-close[data-component="icon-button"] [data-slot="icon-svg"] {
+  color: var(--text-base);
+}
+
 /* Match tab context menus to dropdown-menu visuals on every tab surface. */
 .session-tab-menu {
   min-width: 210px;

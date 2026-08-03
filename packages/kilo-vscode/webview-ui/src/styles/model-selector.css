@@ -53,16 +53,6 @@
   position: relative;
 }
 
-.model-preview-empty {
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--vscode-descriptionForeground);
-  font-size: var(--kilo-font-size-12);
-  font-style: italic;
-}
-
 .model-preview-header {
   display: flex;
   flex-direction: column;
@@ -505,6 +495,11 @@
   align-items: center;
   color: var(--vscode-inputValidation-warningForeground, var(--vscode-descriptionForeground));
   flex-shrink: 0;
+}
+
+.model-selector-trigger-free-data [data-component="icon"] {
+  width: 14px;
+  height: 14px;
 }
 
 .model-selector-free-data {
