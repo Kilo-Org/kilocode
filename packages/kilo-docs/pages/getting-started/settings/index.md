@@ -107,15 +107,7 @@ Markdown files in Kilo diff viewers can be shown as rendered Markdown instead of
 
 ### Web Search
 
-Web search is available automatically with the Kilo provider. To make the `websearch` tool available to models from all providers, enable **Enable for All Providers** under the **Web Tools** tab in Settings, or set `web_search` in `kilo.jsonc`:
-
-```json
-{
-  "web_search": true
-}
-```
-
-The setting is off by default for third-party providers.
+See [Web Search Availability](/docs/automate/tools#web-search-availability) for how to enable the `websearch` tool for models from all providers.
 
 ### Export and Import
 
