@@ -611,12 +611,15 @@ async function extract() {
   // Step 7: correlate comments to commits.
   // A comment is a commit's trigger when c.path is in that commit's full file list
   // and c.created_at < commit date. The earliest such commit claims it.
+  // Compare parsed timestamps so different timezone offsets do not skew the ordering.
   for (const c of trustedComments) {
     let best = null
+    const cTime = Date.parse(c.created_at)
     for (const cc of candidates) {
       if (!Array.isArray(cc.files) || !cc.files.includes(c.path)) continue
-      if (c.created_at < cc.iso) {
-        if (!best || cc.iso < best.iso) {
+      const ccTime = Date.parse(cc.iso)
+      if (cTime < ccTime) {
+        if (!best || ccTime < Date.parse(best.iso)) {
           best = cc
         }
       }

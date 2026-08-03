@@ -1959,6 +1959,103 @@ function case10_learnings() {
     )
   }
 
+  // 10rz — timestamp correlation with different timezone offsets
+  // A comment must map to the chronologically earliest eligible commit even when
+  // timestamps use different timezone offsets (Z vs +05:00).
+  {
+    console.log("  10rz — timestamp correlation")
+    const dir = mktemp("docs-sync-learn-rz-")
+    initRepoWithIdentity(dir)
+    fs.writeFileSync(path.join(dir, "base.txt"), "base\n")
+    gitIn(dir, ["add", "base.txt"])
+    gitIn(dir, ["commit", "-m", "base"])
+
+    gitIn(dir, ["checkout", "-b", "docs/auto-sync"])
+
+    // Commit A: non-UTC offset, chronologically earliest (UTC 08:00)
+    // iso = 2026-08-03T13:00:00+05:00
+    fs.mkdirSync(path.join(dir, "packages", "kilo-docs", "pages"), { recursive: true })
+    fs.writeFileSync(path.join(dir, "packages", "kilo-docs", "pages", "x.md"), "# x\n")
+    gitIn(dir, ["add", "packages/kilo-docs/pages/x.md"])
+    gitIn(dir, ["commit", "-m", "first edit x", "--author", `kiloconnect[bot] <${kiloconnectBotEmail}>`], {
+      GIT_COMMITTER_DATE: "2026-08-03T13:00:00+05:00",
+    })
+    const shaA = gitIn(dir, ["rev-parse", "HEAD"])
+
+    // Commit B: UTC offset, chronologically later (UTC 09:00)
+    // iso = 2026-08-03T09:00:00Z — string comparison would pick this as "earlier" (09 < 13)
+    // but chronologically A is earlier (08:00 < 09:00)
+    fs.writeFileSync(path.join(dir, "packages", "kilo-docs", "pages", "x.md"), "# x\n## edit\n")
+    gitIn(dir, ["add", "packages/kilo-docs/pages/x.md"])
+    gitIn(dir, ["commit", "-m", "second edit x", "--author", `kiloconnect[bot] <${kiloconnectBotEmail}>`], {
+      GIT_COMMITTER_DATE: "2026-08-03T09:00:00Z",
+    })
+    const shaB = gitIn(dir, ["rev-parse", "HEAD"])
+
+    // Seed LEARNINGS.md so existing entries are non-empty but irrelevant
+    const existing = [
+      { id: "pre", rule: "Pre-existing rule.", scope: "both", source: "commit:0000000", date: "2026-01-01" },
+    ]
+    const learningsPath = path.join(dir, "packages", "kilo-docs", "LEARNINGS.md")
+    fs.mkdirSync(path.dirname(learningsPath), { recursive: true })
+    fs.writeFileSync(learningsPath, renderLearnings(existing))
+    gitIn(dir, ["add", "packages/kilo-docs/LEARNINGS.md"])
+    gitIn(dir, ["commit", "-m", "seed learnings", "--author", `kiloconnect[bot] <${kiloconnectBotEmail}>`])
+
+    const cwd = setupLearnRepo(dir)
+
+    // Comment at UTC 05:30 on x.md — before both commits chronologically.
+    // 05:30 < 08:00 (A) and 05:30 < 09:00 (B) → both eligible
+    // The chronologically earliest eligible commit is A (08:00).
+    const fixturePath = writeFixture(cwd, {
+      pr: { number: 1, head: { ref: "docs/auto-sync" }, body: "", user: { login: "github-actions[bot]" } },
+      comments: [
+        {
+          id: 101,
+          created_at: "2026-08-03T05:30:00Z",
+          path: "packages/kilo-docs/pages/x.md",
+          body: "Please fix the docs.",
+          author_association: "MEMBER",
+          user: { login: "maintainer" },
+        },
+      ],
+    })
+
+    const kiloDir = makeStubKiloDir({ mode: "extraction-delta", callLog: path.join(cwd, "kilo-calls.log") })
+    writeExtractionDelta(cwd, { add: [], remove: [] })
+
+    const result = runNodeScript(LEARN_SCRIPT, {
+      cwd,
+      kiloDir,
+      env: {
+        TRIAGE_MODEL: "test/model",
+        DOCS_SYNC_FIXTURE: fixturePath,
+        LEARNINGS_BUDGET_MINUTES: "1",
+        DOCS_SYNC_BACKOFF_MS: "0",
+      },
+    })
+
+    // Read learnings-input.json to inspect the correlation result
+    const inputFile = path.join(cwd, "docs-sync-out", "learnings-input.json")
+    assert.ok(fs.existsSync(inputFile), "learnings-input.json must exist")
+    const input = JSON.parse(fs.readFileSync(inputFile, "utf8"))
+
+    // Both commits must appear as corrections
+    const commitA = input.corrections.find((c) => c.source === `commit:${shaA.slice(0, 7)}`)
+    const commitB = input.corrections.find((c) => c.source === `commit:${shaB.slice(0, 7)}`)
+    assert.ok(commitA, "commit A must be in corrections")
+    assert.ok(commitB, "commit B must be in corrections")
+
+    // Comment must be associated with commit A (chronologically earliest)
+    assert.ok(commitA.comment, "commit A must have the comment associated")
+    assert.equal(commitA.comment.path, "packages/kilo-docs/pages/x.md")
+    assert.equal(commitB.comment, undefined, "commit B must not have the comment associated")
+
+    // No standalone comment candidate — the comment was correlated, not orphaned
+    const standalone = input.corrections.filter((c) => c.source && c.source.startsWith("comment:"))
+    assert.equal(standalone.length, 0, "comment must be associated, not standalone")
+  }
+
   // 10b — watermark suppression (no model call when marker covers all)
   {
     console.log("  10b — watermark suppression")
