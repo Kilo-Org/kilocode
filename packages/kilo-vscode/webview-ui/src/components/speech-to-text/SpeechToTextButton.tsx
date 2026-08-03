@@ -1,8 +1,9 @@
 import { Button } from "@kilocode/kilo-ui/button"
-import { Tooltip } from "@kilocode/kilo-ui/tooltip"
+import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { onCleanup, type Component } from "solid-js"
 import type { SpeechToText } from "./useSpeechToText"
+import { speechShortcutLabel, speechShortcutValue, toggleSpeech } from "./shortcut"
 
 type Props = {
   speech: SpeechToText
@@ -22,31 +23,16 @@ export const SpeechToTextButton: Component<Props> = (props) => {
     if (props.speech.state() === "error") return props.speech.error() || props.label("speechToText.tooltip.error")
     return props.label("speechToText.tooltip.start")
   }
+  const title = () => `${label()} ${props.label("speechToText.tooltip.shortcut")}`
 
-  const click = () => {
-    if (props.speech.state() === "starting") return
-    if (props.speech.state() === "recording") {
-      props.speech.stop()
-      return
-    }
-    if (props.speech.state() === "transcribing") {
-      props.speech.cancel()
-      return
-    }
-    if (props.speech.state() === "error") {
-      props.speech.clear()
-      return
-    }
-    if (unavailable()) return
-    props.start()
-  }
+  const click = () => toggleSpeech(props.speech, unavailable(), props.start)
 
   onCleanup(() => {
     if (props.speech.active()) props.speech.cancel()
   })
 
   return (
-    <Tooltip value={label()} placement="top" openDelay={0}>
+    <TooltipKeybind title={title()} keybind={speechShortcutLabel()} placement="top" openDelay={0}>
       <Button
         variant="ghost"
         size="small"
@@ -56,6 +42,7 @@ export const SpeechToTextButton: Component<Props> = (props) => {
         aria-disabled={locked()}
         aria-busy={busy()}
         aria-pressed={props.speech.state() === "recording"}
+        aria-keyshortcuts={speechShortcutValue()}
         class={`prompt-speech-button prompt-speech-button--${props.speech.state()}`}
       >
         {busy() ? (
@@ -77,6 +64,6 @@ export const SpeechToTextButton: Component<Props> = (props) => {
           </svg>
         )}
       </Button>
-    </Tooltip>
+    </TooltipKeybind>
   )
 }
