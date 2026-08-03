@@ -1,7 +1,7 @@
 /** @jsxImportSource solid-js */
 import { Icon } from "@kilocode/kilo-ui/icon"
 import type { PRStatus } from "../../src/types/messages"
-import { prBadgeAccent, prBadgeIndicator, prChecksRunning } from "../WorktreeItem"
+import { prBadgeIndicator, prChecksRunning } from "../WorktreeItem"
 
 const INDICATOR_ICON: Record<string, string> = {
   failure: "circle-x",
@@ -15,8 +15,14 @@ export function PRBadge(props: { pr: PRStatus }) {
   return (
     <span
       class="am-pr-panel-badge am-pr-row"
-      data-accent={prBadgeAccent(props.pr)}
-      classList={{ "am-pr-badge-pending": prChecksRunning(props.pr) }}
+      classList={{
+        "am-pr-accent-draft": props.pr.state === "draft",
+        "am-pr-accent-merged": props.pr.state === "merged",
+        "am-pr-accent-closed": props.pr.state === "closed",
+        "am-pr-accent-pending": props.pr.state === "open" && props.pr.checks.status === "pending",
+        "am-pr-accent-open": props.pr.state === "open" && props.pr.checks.status !== "pending",
+        "am-pr-badge-pending": prChecksRunning(props.pr),
+      }}
     >
       <Icon
         name={INDICATOR_ICON[indicator()]}

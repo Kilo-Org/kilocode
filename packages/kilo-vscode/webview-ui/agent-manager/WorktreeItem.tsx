@@ -95,15 +95,6 @@ const hasStats = (s: WorktreeGitStats | undefined): s is WorktreeGitStats =>
  * and review results are conveyed by a separate status icon (see prBadgeIndicator)
  * so a failing check is not mistaken for a closed PR.
  */
-/** Derive the badge accent key used as `data-accent` for CSS color styling. */
-export function prBadgeAccent(pr: PRStatus): "open" | "pending" | "draft" | "merged" | "closed" {
-  if (pr.state === "draft") return "draft"
-  if (pr.state === "merged") return "merged"
-  if (pr.state === "closed") return "closed"
-  if (pr.checks.status === "pending") return "pending"
-  return "open"
-}
-
 /** True while an open PR's checks are still running — drives the pulsing amber badge. */
 export function prChecksRunning(pr: PRStatus): boolean {
   return pr.state === "open" && pr.checks.status === "pending"
@@ -355,8 +346,14 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                         return (
                           <span
                             class="am-pr-badge"
-                            data-accent={prBadgeAccent(pr())}
-                            classList={{ "am-pr-badge-pending": prChecksRunning(pr()) }}
+                            classList={{
+                              "am-pr-accent-draft": pr().state === "draft",
+                              "am-pr-accent-merged": pr().state === "merged",
+                              "am-pr-accent-closed": pr().state === "closed",
+                              "am-pr-accent-pending": pr().state === "open" && pr().checks.status === "pending",
+                              "am-pr-accent-open": pr().state === "open" && pr().checks.status !== "pending",
+                              "am-pr-badge-pending": prChecksRunning(pr()),
+                            }}
                             onClick={handleOpenPR}
                           >
                             <Switch fallback={<Icon name="branch" size="small" />}>

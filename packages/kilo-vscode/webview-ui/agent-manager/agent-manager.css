@@ -845,18 +845,17 @@ button.am-section-toggle:hover .am-section-label {
   color: #f87171;
 }
 
-/* PR pill badge — second row inside am-wt-row2.
-   Uses data-accent attribute to derive all colors via CSS variables. */
-.am-pr-badge[data-accent="open"],
-.am-pr-panel-badge[data-accent="open"] { --pr-accent: var(--vscode-testing-iconPassed, #34d399); }
-.am-pr-badge[data-accent="pending"],
-.am-pr-panel-badge[data-accent="pending"] { --pr-accent: var(--vscode-charts-yellow, #fbbf24); }
-.am-pr-badge[data-accent="draft"],
-.am-pr-panel-badge[data-accent="draft"] { --pr-accent: var(--text-weaker); }
-.am-pr-badge[data-accent="merged"],
-.am-pr-panel-badge[data-accent="merged"] { --pr-accent: var(--vscode-charts-purple, #a78bfa); }
-.am-pr-badge[data-accent="closed"],
-.am-pr-panel-badge[data-accent="closed"] { --pr-accent: var(--vscode-testing-iconFailed, #f87171); }
+/* PR badge accent colors via classList */
+.am-pr-accent-open,
+.am-pr-panel-badge.am-pr-accent-open { --pr-accent: var(--vscode-testing-iconPassed, #34d399); }
+.am-pr-accent-pending,
+.am-pr-panel-badge.am-pr-accent-pending { --pr-accent: var(--vscode-charts-yellow, #fbbf24); }
+.am-pr-accent-draft,
+.am-pr-panel-badge.am-pr-accent-draft { --pr-accent: var(--text-weaker); }
+.am-pr-accent-merged,
+.am-pr-panel-badge.am-pr-accent-merged { --pr-accent: var(--vscode-charts-purple, #a78bfa); }
+.am-pr-accent-closed,
+.am-pr-panel-badge.am-pr-accent-closed { --pr-accent: var(--vscode-testing-iconFailed, #f87171); }
 
 .am-pr-badge {
   display: inline-flex;

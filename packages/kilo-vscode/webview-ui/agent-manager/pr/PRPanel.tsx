@@ -40,20 +40,18 @@ export const PRPanel: Component<PRPanelProps> = (props) => (
       </div>
       <div class="am-pr-panel-body">
         <PROverview pr={props.pr} worktree={props.worktree} />
-        <Show when={props.pr.comments?.reviewers?.length}>
-          <PRReviewers reviewers={props.pr.comments!.reviewers} />
+        <Show when={props.pr.comments?.reviewers?.length ? props.pr.comments : undefined}>
+          {(comments) => <PRReviewers reviewers={comments().reviewers} />}
         </Show>
         <Show when={props.pr.body}>
-          <PRDescription body={props.pr.body!} />
+          {(body) => <PRDescription body={body()} />}
         </Show>
-        <Show when={props.pr.files > 0 || props.pr.additions > 0 || props.pr.deletions > 0}>
-          <PRFileChanges files={props.pr.files} additions={props.pr.additions} deletions={props.pr.deletions} />
-        </Show>
+        <PRFileChanges files={props.pr.files} additions={props.pr.additions} deletions={props.pr.deletions} />
         <Show when={props.pr.checks.total > 0}>
           <PRChecks checks={props.pr.checks} />
         </Show>
-        <Show when={props.pr.comments && props.pr.comments.total > 0}>
-          <PRComments comments={props.pr.comments!} />
+        <Show when={props.pr.comments?.total ? props.pr.comments : undefined}>
+          {(comments) => <PRComments comments={comments()} />}
         </Show>
       </div>
     </div>
