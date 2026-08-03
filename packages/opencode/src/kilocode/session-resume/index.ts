@@ -245,6 +245,7 @@ export namespace SessionResume {
     const stream = fs.createReadStream(filepath, "utf-8")
     const rl = readline.createInterface({ input: stream, crlfDelay: Infinity })
     let lineNum = 0
+    let failure: ParseError | undefined
 
     return new Promise<unknown[]>((resolve, reject) => {
       rl.on("line", (raw: string) => {
@@ -253,13 +254,16 @@ export namespace SessionResume {
         if (line.length === 0) return
         const parsed = safeParse(line)
         if (parsed === undefined) {
+          failure = new ParseError(`Line ${lineNum}: invalid JSON`)
           rl.close()
-          reject(new ParseError(`Line ${lineNum}: invalid JSON`))
           return
         }
         objects.push(parsed)
       })
-      rl.on("close", () => resolve(objects))
+      rl.on("close", () => {
+        if (failure) reject(failure)
+        else resolve(objects)
+      })
       rl.on("error", (err) => reject(new ParseError("Failed to read file", err)))
     })
   }

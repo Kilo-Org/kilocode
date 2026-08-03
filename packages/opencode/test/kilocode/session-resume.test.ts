@@ -384,6 +384,25 @@ describe("Claude parseLines", () => {
       ),
     ).toThrow(SessionResume.ParseError)
   })
+
+  test("rejects a malformed JSON Lines file without returning partial history", async () => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), "resume-jsonl-"))
+    try {
+      const file = path.join(directory, "transcript.jsonl")
+      fs.writeFileSync(
+        file,
+        [
+          '{"type":"user","version":"2.42.0","message":{"role":"user","content":"Start"}}',
+          "invalid-json",
+          '{"type":"assistant","version":"2.42.0","message":{"role":"assistant","content":[{"type":"text","text":"Done"}]}}',
+        ].join("\n"),
+      )
+
+      await expect(SessionResume.parse(file)).rejects.toThrow("Line 2: invalid JSON")
+    } finally {
+      fs.rmSync(directory, { recursive: true, force: true })
+    }
+  })
 })
 
 // ── Codex parsing ────────────────────────────────────────────────────
