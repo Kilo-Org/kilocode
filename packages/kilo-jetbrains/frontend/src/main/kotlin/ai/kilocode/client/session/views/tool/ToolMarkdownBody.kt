@@ -38,6 +38,10 @@ class ToolMarkdownBody(
     private val chrome: (MdView) -> Unit = {},
 ) : EditBody {
     override var parent: Disposable? = null
+
+    // Single-file diffs over the cap are routed to OverflowBody by EditToolView, and non-diff bodies
+    // (shell/read) are never capped, so this body itself never renders the overflow placeholder.
+    override var overflow: (() -> Unit)? = null
     private var view: MdView? = null
     private var item: Tool? = null
 

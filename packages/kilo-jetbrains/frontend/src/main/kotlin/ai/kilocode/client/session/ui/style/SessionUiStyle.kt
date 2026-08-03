@@ -199,6 +199,15 @@ object SessionUiStyle {
             const val DIFF_LINES = 20
             const val PREVIEW_LIMIT = 20_000
 
+            /**
+             * Total unified-diff line count above which the hover popup and inline body stop building
+             * embedded editors and show an "open in a diff tab" placeholder instead. Each embedded
+             * editor holds the whole diff document, and reinitializing it walks every line on the EDT,
+             * so an uncapped large diff freezes the UI. Above this the platform diff viewer (which
+             * streams file diffs on background threads) handles it.
+             */
+            const val DIFF_MAX_LINES = 2_000
+
             fun pending(): Color = UiStyle.Colors.weak()
 
             fun running(): Color = UiStyle.Colors.fg()

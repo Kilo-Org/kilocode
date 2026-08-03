@@ -53,7 +53,7 @@ class EditToolView(
 
     private var item = tool
     private var style = SessionEditorStyle.current()
-    private var multi = editFiles(tool).size > 1
+    private var kind = bodyKind(tool)
     private var opener: SessionDiffOpener = { _, _, _ -> }
     private var sessionId: String? = null
     private var canDiff = false
@@ -70,6 +70,7 @@ class EditToolView(
 
     init {
         body.parent = this
+        body.overflow = ::openDiffViewer
         // Left-aligned header: icon, title, file name (single) or file count (multi), change badge, open-in-diff.
         parts.left.next(parts.link)
         parts.left.next(filesTag)
@@ -142,16 +143,19 @@ class EditToolView(
         if (changed) refresh()
     }
 
-    /** Rebuild the body delegate when a streaming tool crosses the single/multi-file boundary. */
+    /** Rebuild the body delegate when a streaming tool crosses a single/multi/overflow boundary. */
     @RequiresEdt
     private fun swapBody(): Boolean {
-        val next = editFiles(item).size > 1
-        if (next == multi) return false
-        multi = next
+        val next = bodyKind(item)
+        if (next == kind) return false
+        kind = next
         val expanded = isExpanded()
         discardBody()
         body.disposeBody()
-        body = editBody(item, selection, openFile).also { it.parent = this }
+        body = editBody(item, selection, openFile).also {
+            it.parent = this
+            it.overflow = ::openDiffViewer
+        }
         if (expanded) expand()
         return true
     }
@@ -273,7 +277,10 @@ class EditToolView(
     @RequiresEdt
     private fun buildPopupBody(): HeaderPopupBody {
         val owner = Disposer.newDisposable("Edit popup body")
-        val popup = popupBody(item, selection, openFile).also { it.parent = owner }
+        val popup = popupBody(item, selection, openFile).also {
+            it.parent = owner
+            it.overflow = ::openDiffViewer
+        }
         // mount() already renders the current item (ToolMarkdownBody.mount calls update; PatchBody.mount
         // calls rebuild and sets its signature), so a follow-up update() here would be a no-op.
         val panel = popup.mount(item)
@@ -302,12 +309,34 @@ private fun diffTitle(tool: Tool): String =
     // (SessionUi decorates it into "<name> (branch)"); reserve the generic label for multi-file patches.
     if (editFiles(tool).size > 1) KiloBundle.message("session.part.tool.patch") else tail(editPath(tool))
 
-/** Picks the multi-file patch body for apply_patch spanning several files, else the single diff. */
+/**
+ * Which body to build for the current diff. [PatchBody] renders (and self-caps) multi-file patches;
+ * [OverflowBody] shows the "open in a diff tab" placeholder for a single-file diff too large to
+ * preview; [ToolMarkdownBody] renders a normal single-file diff. Multi-file overflow stays [PATCH]
+ * because [PatchBody] caps itself internally.
+ */
+private enum class BodyKind { SINGLE, PATCH, OVERFLOW }
+
+private fun bodyKind(tool: Tool): BodyKind {
+    if (editFiles(tool).size > 1) return BodyKind.PATCH
+    if (patchLineCount(editDiff(tool)) > SessionUiStyle.View.Tool.DIFF_MAX_LINES) return BodyKind.OVERFLOW
+    return BodyKind.SINGLE
+}
+
+/** Picks the multi-file patch body, the large-diff placeholder, or the single-file diff. */
 private fun editBody(tool: Tool, selection: SessionSelection?, openFile: SessionFileOpener): EditBody =
-    if (editFiles(tool).size > 1) PatchBody(selection, openFile) else diffBody(selection)
+    when (bodyKind(tool)) {
+        BodyKind.PATCH -> PatchBody(selection, openFile)
+        BodyKind.OVERFLOW -> OverflowBody()
+        BodyKind.SINGLE -> diffBody(selection)
+    }
 
 private fun popupBody(tool: Tool, selection: SessionSelection?, openFile: SessionFileOpener): EditBody =
-    if (editFiles(tool).size > 1) PatchBody(selection, openFile, POPUP_OPTS) else popupDiffBody(selection)
+    when (bodyKind(tool)) {
+        BodyKind.PATCH -> PatchBody(selection, openFile, POPUP_OPTS)
+        BodyKind.OVERFLOW -> OverflowBody()
+        BodyKind.SINGLE -> popupDiffBody(selection)
+    }
 
 private fun diffBody(selection: SessionSelection?) = ToolMarkdownBody(
     MdCodeBlockOptions(
