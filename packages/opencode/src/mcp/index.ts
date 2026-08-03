@@ -40,6 +40,7 @@ import { TuiEvent } from "@/server/tui-event"
 import open from "open"
 import { Cause, Effect, Exit, Layer, Option, Context, Schema, Stream } from "effect"
 import { EffectBridge } from "@/effect/bridge"
+import { model as modelEnv } from "@/kilocode/process/env" // kilocode_change
 import { InstanceState } from "@/effect/instance-state"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
@@ -362,11 +363,12 @@ export const layer = Layer.effect(
         command: cmd,
         args: finalArgs, // kilocode_change
         cwd,
-        env: {
-          ...process.env,
+        // kilocode_change start - local MCPs must not inherit backend credentials
+        env: modelEnv({
           ...(cmd === "opencode" ? { BUN_BE_BUN: "1" } : {}),
           ...mcp.environment,
-        },
+        }),
+        // kilocode_change end
       })
       // kilocode_change start - a piped stderr stream must be consumed or verbose MCP servers can block
       transport.stderr?.on("data", (chunk: Buffer) => {

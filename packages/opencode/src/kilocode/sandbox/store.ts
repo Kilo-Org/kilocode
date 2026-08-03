@@ -7,7 +7,7 @@ import type { Profile } from "@kilocode/sandbox"
 import type { SessionID } from "@/session/schema"
 
 export namespace SandboxStore {
-  /** Session confinement authority captured independently from later configuration reloads. */
+  /** Persisted session confinement authority, refreshed from trusted settings between tool executions. */
   export type Snapshot = {
     enabled: boolean
     mode: Profile["network"]["mode"]
@@ -42,7 +42,8 @@ export namespace SandboxStore {
     if (state.allowedHosts !== undefined && !Array.isArray(state.allowedHosts)) return false
     if (state.writablePaths !== undefined && !Array.isArray(state.writablePaths)) return false
     if (Array.isArray(state.allowedHosts) && state.allowedHosts.some((value) => typeof value !== "string")) return false
-    if (Array.isArray(state.writablePaths) && state.writablePaths.some((value) => typeof value !== "string")) return false
+    if (Array.isArray(state.writablePaths) && state.writablePaths.some((value) => typeof value !== "string"))
+      return false
     if (state.mode === "proxy" && (!Array.isArray(state.allowedHosts) || state.allowedHosts.length === 0)) return false
     return true
   }

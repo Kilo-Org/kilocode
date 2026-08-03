@@ -12,6 +12,7 @@ import { FSUtil } from "@opencode-ai/core/fs-util"
 import { fileURLToPath } from "url"
 import { Config } from "@/config/config"
 import { RuntimeFlags } from "@/effect/runtime-flags"
+import { model as modelEnv } from "@/kilocode/process/env" // kilocode_change
 import { Shell } from "@opencode-ai/core/shell"
 import { ShellID } from "./shell/id"
 
@@ -518,10 +519,7 @@ export const ShellTool = Tool.define(
         { cwd, sessionID: ctx.sessionID, callID: ctx.callID },
         { env: {} },
       )
-      return {
-        ...process.env,
-        ...extra.env,
-      }
+      return modelEnv(extra.env) // kilocode_change - model shells must not inherit backend credentials
     })
 
     const run = Effect.fn("ShellTool.run")(function* (
@@ -584,7 +582,8 @@ export const ShellTool = Tool.define(
           yield* Effect.addFinalizer(closeSink)
           const handle = yield* spawner.spawn(cmd(input.shell, input.command, input.cwd, input.env))
 
-          const reader = yield* Effect.forkScoped( // kilocode_change - keep the fiber so trailing output can be drained
+          const reader = yield* Effect.forkScoped(
+            // kilocode_change - keep the fiber so trailing output can be drained
             Stream.runForEach(Stream.decodeText(handle.all), (chunk) => {
               const size = Buffer.byteLength(chunk, "utf-8")
               list.push({ text: chunk, size })
