@@ -378,6 +378,61 @@ const AgentManagerContent: Component = () => {
     return sel === null ? null : nsKey(sel)
   })
 
+  type FocusOwner = "prompt" | { terminal: string }
+  const focusMemory = new Map<string, FocusOwner>()
+  const focusKey = () => {
+    const context = terms.sideKey()
+    const sessionID = session.currentSessionID() ?? activePendingId() ?? "new"
+    return `${context}:${sessionID}`
+  }
+  const rememberPromptFocus = (focused: boolean) => {
+    if (focused) focusMemory.set(focusKey(), "prompt")
+  }
+  const focusPromptForSession = () =>
+    focusMemory.get(focusKey()) !== undefined ? focusMemory.get(focusKey()) === "prompt" : true
+  const restoreFocus = () => {
+    const owner = focusMemory.get(focusKey())
+    if (owner && owner !== "prompt") {
+      const key = terms.sideKey()
+      const terminal = terms.sidesForContext(key).find((term) => term.id === owner.terminal)
+      if (terminal && sidePanel() === "terminal" && !history() && !reviewActive()) {
+        terms.setSideActive(key, terminal.id)
+        terms.requestFocus(terminal.id)
+        return
+      }
+    }
+    window.dispatchEvent(new Event("focusPrompt"))
+  }
+  createEffect(
+    on(
+      () => terms.focusedId(),
+      (id) => {
+        if (!id) return
+        const key = terms.contextFor(id)
+        if (!key || !terms.sidesForContext(key).some((term) => term.id === id)) return
+        focusMemory.set(focusKey(), { terminal: id })
+      },
+      { defer: true },
+    ),
+  )
+  createEffect(
+    on(
+      focusKey,
+      (_key, previous) => {
+        if (previous !== undefined) queueMicrotask(restoreFocus)
+      },
+      { defer: true },
+    ),
+  )
+  createEffect(
+    on(
+      focusKey,
+      (_key, previous) => {
+        if (previous !== undefined) queueMicrotask(restoreFocus)
+      },
+      { defer: true },
+    ),
+  )
   // Ambient setup reveal restores the panel after success unless the user engaged.
   const ambientSetup = createAmbientSetup({
     terms,
@@ -1188,7 +1243,7 @@ const AgentManagerContent: Component = () => {
     const onWindowFocus = () => {
       document.body.style.pointerEvents = ""
       document.body.style.overflow = ""
-      window.dispatchEvent(new Event("focusPrompt"))
+      restoreFocus()
     }
     window.addEventListener("focus", onWindowFocus)
 
@@ -1251,10 +1306,10 @@ const AgentManagerContent: Component = () => {
         showToast({ variant: "error", title: t("agentManager.terminal.errorTitle"), description: message }),
       postMessage: (message) => vscode.postMessage(message as never),
       onCreated: (contextKey, terminalId) => appendToTabOrder(contextKey, terminalId),
-      onSideCreated: (contextKey, terminalId) => {
+      onSideCreated: (contextKey, terminalId, focus) => {
         // Focus only when the user is still looking at this panel —
         // a slow create landing after a mode switch must not steal it.
-        if (sidePanel() === "terminal" && !history() && !reviewActive() && terms.sideKey() === contextKey) {
+        if (focus && sidePanel() === "terminal" && !history() && !reviewActive() && terms.sideKey() === contextKey) {
           terms.requestFocus(terminalId)
         }
       },
@@ -2500,6 +2555,8 @@ const AgentManagerContent: Component = () => {
                       continueInWorktree={selection() === LOCAL}
                       promptBoxId={`agent-manager:${selection() ?? "unassigned"}`}
                       pendingSessionID={selection() === LOCAL ? activePendingId() : undefined}
+                      focusOnSessionChange={focusPromptForSession}
+                      onPromptFocusChange={rememberPromptFocus}
                     />
                     <Show when={readOnly()}>
                       <div class="am-readonly-banner">

@@ -22,6 +22,7 @@ function scene(initial: string | null = LOCAL) {
     shown: [] as string[],
     errors: 0,
     running: [] as Array<{ contextKey: string; terminalId: string }>,
+    sideFocus: [] as boolean[],
   }
   const tabs = () => state.current().map((term) => term.id)
   const handlers = createTerminalHandlers({
@@ -49,17 +50,18 @@ function scene(initial: string | null = LOCAL) {
     },
     showError: () => events.errors++,
     postMessage: (message) => posted.push(message as Record<string, unknown>),
+    onSideCreated: (_contextKey, _terminalId, focus) => events.sideFocus.push(focus),
     onScriptRunning: (contextKey, terminalId) => events.running.push({ contextKey, terminalId }),
   })
   return { state, selection, setSelection, posted, events, handlers, dispatch }
 }
 
-function createdSide(createId: string, terminalId: string, title = "Terminal 1") {
+function createdSide(createId: string, terminalId: string, title = "Terminal 1", worktreeId: string | null = null) {
   return {
     type: "agentManager.terminal.created",
     createId,
     placement: "side",
-    worktreeId: null,
+    worktreeId,
     terminalId,
     title,
     wsUrl: `ws://${terminalId}`,
@@ -344,6 +346,20 @@ describe("Agent Manager terminal state", () => {
         placement: "side",
         worktreeId: "wt-1",
       })
+      const createId = String(item.posted[0]!.createId)
+      expect(item.dispatch(createdSide(createId, "terminal:side", "Terminal 1", "wt-1"))).toBe(true)
+      expect(item.events.sideFocus).toEqual([false])
+      dispose()
+    })
+  })
+
+  it("focuses a side terminal only when the user explicitly opens it", () => {
+    createRoot((dispose) => {
+      const item = scene()
+      item.handlers.addSide()
+      const createId = String(item.posted[0]!.createId)
+      expect(item.dispatch(createdSide(createId, "terminal:side"))).toBe(true)
+      expect(item.events.sideFocus).toEqual([true])
       dispose()
     })
   })

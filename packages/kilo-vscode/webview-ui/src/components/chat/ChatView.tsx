@@ -40,6 +40,8 @@ interface ChatViewProps {
   continueInWorktree?: boolean
   promptBoxId?: string
   pendingSessionID?: string
+  focusOnSessionChange?: () => boolean
+  onPromptFocusChange?: (focused: boolean) => void
   emptyState?: () => JSX.Element
 }
 
@@ -385,6 +387,8 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                 questioning={questioning}
                 boxId={props.promptBoxId}
                 pendingSessionID={pendingSessionID()}
+                focusOnDraftChange={props.focusOnSessionChange}
+                onFocusChange={props.onPromptFocusChange}
               />
             </Show>
           </div>
