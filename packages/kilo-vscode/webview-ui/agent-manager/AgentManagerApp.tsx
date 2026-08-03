@@ -76,6 +76,7 @@ import { ProviderShell } from "../src/context/provider-shell"
 import { ChatView } from "../src/components/chat"
 import HistoryView from "../src/components/history/HistoryView"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
+import { createModeRouter } from "./mode-router"
 import { ProjectList } from "./ProjectList"
 import { SidebarBody } from "./SidebarBody"
 import { TabBar } from "./TabBar"
@@ -227,6 +228,7 @@ const AgentManagerContent: Component = () => {
   const session = useSession()
   const vscode = useVSCode()
   const dialog = useDialog()
+  const mode = createModeRouter()
   let sidebarSearchMenu: SidebarSearchMenuRef | undefined
 
   const [kb, setKb] = createSignal<Record<string, string>>(defaultBindings)
@@ -1111,9 +1113,11 @@ const AgentManagerContent: Component = () => {
       else if (msg.action === "focusSearch")
         focusChatSearch({ history: setHistory, review: setReviewActive, terminal: () => terms.setActiveId(undefined) })
       else if (msg.action === "newTerminal") termHandlers.requestNew()
-      else if (msg.action === "cycleAgentMode" && document.hasFocus()) cycleAgent(1)
-      else if (msg.action === "cyclePreviousAgentMode" && document.hasFocus()) cycleAgent(-1)
-      else {
+      else if (msg.action === "cycleAgentMode" && document.hasFocus()) {
+        if (!mode.dispatch(1)) cycleAgent(1)
+      } else if (msg.action === "cyclePreviousAgentMode" && document.hasFocus()) {
+        if (!mode.dispatch(-1)) cycleAgent(-1)
+      } else {
         // Handle jumpTo1 through jumpTo9
         const match = /^jumpTo([1-9])$/.exec(msg.action ?? "")
         if (match) projectNav.jump(parseInt(match[1]!) - 1)
@@ -1790,7 +1794,9 @@ const AgentManagerContent: Component = () => {
   const showNewWorktreeDialog = () => {
     if (!loaded()) return
     expandSidebar()
-    dialog.show(() => <NewWorktreeDialog onClose={() => dialog.close()} defaultBaseBranch={repoDefaultBranch()} />)
+    dialog.show(() => (
+      <NewWorktreeDialog mode={mode} onClose={() => dialog.close()} defaultBaseBranch={repoDefaultBranch()} />
+    ))
   }
 
   const confirmDeleteWorktree = (worktreeId: string) => {
@@ -2256,6 +2262,7 @@ const AgentManagerContent: Component = () => {
             selectedProject={activeProjectId()}
             selection={selection() ?? undefined}
             currentSessionID={session.currentSessionID}
+            mode={mode}
             bindings={kb()}
             t={t}
             onSearchRef={(ref) => (sidebarSearchMenu = ref)}
