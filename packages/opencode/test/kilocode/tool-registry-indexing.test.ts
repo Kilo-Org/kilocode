@@ -343,6 +343,7 @@ describe("kilocode tool registry indexing", () => {
       image: def("generate_image"),
       terminal: def("interactive_terminal"),
       notify: def("notify_user"),
+      send: def("send_file"),
       notebookRead: def("notebook_read"),
       notebookEdit: def("notebook_edit"),
       notebookExecute: def("notebook_execute"),
@@ -358,6 +359,7 @@ describe("kilocode tool registry indexing", () => {
         "background_process",
         "interactive_terminal",
         "notify_user",
+        "send_file",
       ])
       expect(KiloToolRegistry.extra(tools, { experimental: { codebase_search: true } }).map((tool) => tool.id)).toEqual(
         [
@@ -369,6 +371,7 @@ describe("kilocode tool registry indexing", () => {
           "background_process",
           "interactive_terminal",
           "notify_user",
+          "send_file",
         ],
       )
       expect(
@@ -385,6 +388,7 @@ describe("kilocode tool registry indexing", () => {
         "background_process",
         "interactive_terminal",
         "notify_user",
+        "send_file",
       ])
 
       process.env["KILO_CLIENT"] = "vscode"
@@ -400,6 +404,7 @@ describe("kilocode tool registry indexing", () => {
           "agent_manager_models",
           "agent_manager",
           "notify_user",
+          "send_file",
         ],
       )
       expect(
@@ -420,6 +425,7 @@ describe("kilocode tool registry indexing", () => {
         "notebook_edit",
         "notebook_execute",
         "notify_user",
+        "send_file",
       ])
       expect(KiloToolRegistry.extra({ ...tools, semantic: undefined }, {}).map((tool) => tool.id)).toEqual([
         "kilo_memory_recall",
@@ -430,6 +436,7 @@ describe("kilocode tool registry indexing", () => {
         "agent_manager_models",
         "agent_manager",
         "notify_user",
+        "send_file",
       ])
 
       process.env["KILO_CLIENT"] = "desktop"
@@ -439,6 +446,7 @@ describe("kilocode tool registry indexing", () => {
         "kilo_memory_save",
         "recall",
         "notify_user",
+        "send_file",
       ])
 
       process.env["KILO_CLIENT"] = "run"
@@ -448,6 +456,7 @@ describe("kilocode tool registry indexing", () => {
         "kilo_memory_save",
         "recall",
         "notify_user",
+        "send_file",
       ])
 
       process.env["KILO_CLIENT"] = "acp"
@@ -457,6 +466,7 @@ describe("kilocode tool registry indexing", () => {
         "kilo_memory_save",
         "recall",
         "notify_user",
+        "send_file",
       ])
     } finally {
       if (prev === undefined) delete process.env["KILO_CLIENT"]
