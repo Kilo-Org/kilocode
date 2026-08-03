@@ -11,6 +11,8 @@ import { testEffect } from "../lib/effect"
 
 type PtyEvent = { type: "created" | "exited" | "deleted"; id: PtyID }
 
+const PTY_TEST_TIMEOUT = "15 seconds" // kilocode_change - PTY startup can exceed the default test timeout on macOS CI
+
 const locationLayer = Layer.succeed(
   Location.Service,
   Location.Service.of(location({ directory: AbsolutePath.make("/tmp") })),
@@ -84,7 +86,7 @@ const waitForOutput = (output: Queue.Queue<string>, text: string) =>
     return received
   }).pipe(
     Effect.timeoutOrElse({
-      duration: "5 seconds",
+      duration: PTY_TEST_TIMEOUT, // kilocode_change
       orElse: () => Effect.fail(new Error(`timeout waiting for output containing ${JSON.stringify(text)}`)),
     }),
   )
@@ -268,7 +270,7 @@ describe("pty", () => {
       attachment.write("ignored")
       yield* pty.remove(info.id)
       attachment.activate()
-      expect(yield* Deferred.await(ended).pipe(Effect.timeout("5 seconds"))).toEqual({ exitCode: 7 })
+      expect(yield* Deferred.await(ended).pipe(Effect.timeout(PTY_TEST_TIMEOUT))).toEqual({ exitCode: 7 })
       attachment.detach()
     }),
   )
