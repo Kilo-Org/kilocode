@@ -78,9 +78,11 @@ export function createProjectStore(id: string, opts: { tabs?: string[] } = {}) {
     if ("defaultBaseBranch" in state) setDefaultBaseBranch(state.defaultBaseBranch || undefined)
     setRunScriptConfigured(state.runScriptConfigured === true)
     if (state.sessionsCollapsed !== undefined) setSessionsCollapsed(state.sessionsCollapsed)
-    const runs: Record<string, RunStatus> = {}
-    for (const item of state.runStatuses ?? []) runs[item.worktreeId] = item
-    setRunStatuses(runs)
+    if (state.runStatuses) {
+      const runs: Record<string, RunStatus> = {}
+      for (const item of state.runStatuses) runs[item.worktreeId] = item
+      setRunStatuses(runs)
+    }
     // Reconcile busy flags with the worktree list (deleted worktrees drop out).
     const ids = new Set(state.worktrees.map((wt) => wt.id))
     setBusy((prev) => {

@@ -159,6 +159,7 @@ import {
   isGrouped,
   isGroupStart,
   isGroupEnd,
+  sortWorktrees,
   type TopLevelItem,
 } from "./section-helpers"
 import {} from "./section-dnd"
@@ -867,39 +868,7 @@ const AgentManagerContent: Component = () => {
   const isSessionBusy = (id: string): boolean => isAnySessionBusy([id])
 
   /** Worktrees sorted so that grouped items are always adjacent, respecting custom order if set. */
-  const sortedWorktrees = createMemo(() => {
-    const ordered = applyTabOrder(worktrees(), sidebarWorktreeOrder())
-    if (ordered.length === 0) return []
-
-    // Collect grouped worktrees by groupId
-    const grouped = new Map<string, WorktreeState[]>()
-    for (const wt of ordered) {
-      if (!wt.groupId) continue
-      const list = grouped.get(wt.groupId) ?? []
-      list.push(wt)
-      grouped.set(wt.groupId, list)
-    }
-
-    // Build output: interleave groups at the position of their earliest member
-    const result: WorktreeState[] = []
-    const placed = new Set<string>()
-    for (const wt of ordered) {
-      if (placed.has(wt.id)) continue
-      if (wt.groupId) {
-        if (placed.has(wt.groupId)) continue
-        placed.add(wt.groupId)
-        const group = grouped.get(wt.groupId) ?? []
-        for (const g of group) {
-          result.push(g)
-          placed.add(g.id)
-        }
-      } else {
-        result.push(wt)
-        placed.add(wt.id)
-      }
-    }
-    return result
-  })
+  const sortedWorktrees = createMemo(() => sortWorktrees(worktrees(), sidebarWorktreeOrder()))
 
   const worktreesInSection = (id: string) => sortedWorktrees().filter((wt) => wt.sectionId === id)
   const ungrouped = createMemo(() => sortedWorktrees().filter((wt) => !wt.sectionId))
@@ -2365,6 +2334,7 @@ const AgentManagerContent: Component = () => {
           <ProjectList
             projects={projectList()}
             states={projectStates()}
+            store={(id) => registry.ensure(id)}
             stats={projectLive.stats()}
             local={projectLive.local()}
             prs={projectLive.prs()}
