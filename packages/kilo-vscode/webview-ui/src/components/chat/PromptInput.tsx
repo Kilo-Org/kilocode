@@ -381,7 +381,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         textareaRef.scrollTop = scroll
         if (highlightRef) highlightRef.scrollTop = scroll
       }
-      window.dispatchEvent(new Event("focusPrompt"))
+      if (!props.boxId?.startsWith("agent-manager:") || session.scopedQuestions(sid()).length === 0) {
+        window.dispatchEvent(new Event("focusPrompt"))
+      }
     }),
   )
 

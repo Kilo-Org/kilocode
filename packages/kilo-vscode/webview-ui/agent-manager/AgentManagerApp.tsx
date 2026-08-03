@@ -173,6 +173,7 @@ import { SidebarToggleButton } from "./SidebarToggleButton"
 import { setTabWidths } from "./tab-widths"
 import { buildShortcutCategories } from "./shortcuts"
 import { tracker } from "./telemetry"
+import { focusQuestionOption } from "./focus"
 import "./agent-manager.css"
 import "./agent-manager-review.css"
 import { cycleAgent as cycle } from "../src/context/session-agent"
@@ -376,6 +377,30 @@ const AgentManagerContent: Component = () => {
   const terms = createTerminalState(() => {
     const sel = selection()
     return sel === null ? null : nsKey(sel)
+  })
+
+  const requestChatFocus = (force = false) => {
+    const focus = () => {
+      if ((!force && !document.hasFocus()) || terms.activeId() || history() || reviewActive()) return
+      if (focusQuestionOption()) return
+      window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } }))
+    }
+    queueMicrotask(focus)
+    requestAnimationFrame(() => {
+      focus()
+      requestAnimationFrame(() => {
+        focus()
+        requestAnimationFrame(focus)
+      })
+    })
+  }
+
+  createEffect(() => {
+    if (session.scopedQuestions(session.currentSessionID()).length === 0) return
+    requestAnimationFrame(() => {
+      if (!document.hasFocus() || terms.activeId() || history() || reviewActive()) return
+      focusQuestionOption()
+    })
   })
 
   // Ambient setup reveal restores the panel after success unless the user engaged.
@@ -843,12 +868,14 @@ const AgentManagerContent: Component = () => {
     setSelection(null)
     setReviewActive(false)
     session.selectSession(id)
+    requestChatFocus(true)
   }
 
   const focusSidebarItem = (item: { type: string; id: string }) => {
     if (item.type === "local") selectLocal()
     else if (item.type === "wt") selectWorktree(item.id)
     else selectUnassigned(item.id)
+    requestChatFocus(true)
     const el = document.querySelector(`[data-sidebar-id="${item.id}"]`)
     if (el instanceof HTMLElement) scrollIntoView(el)
   }
@@ -901,10 +928,15 @@ const AgentManagerContent: Component = () => {
       remembered === REVIEW_TAB_ID && reviewOpenByContext()[sel] === true,
   }
 
-  const selectLocal = () => selectLocalAction(selectionDeps, localSessions())
+  const selectLocal = () => {
+    selectLocalAction(selectionDeps, localSessions())
+    requestChatFocus()
+  }
 
-  const selectWorktree = (worktreeId: string) =>
+  const selectWorktree = (worktreeId: string) => {
     selectWorktreeAction(selectionDeps, worktreeId, sessionsForWorktree(worktreeId))
+    requestChatFocus()
+  }
 
   const addSessionToCurrentWorktree = (sid: string) => {
     const sel = selection()
@@ -924,6 +956,7 @@ const AgentManagerContent: Component = () => {
     selectWorktree(worktreeId)
     setHistory(false)
     session.selectSession(sid)
+    requestChatFocus()
     return true
   }
 
@@ -1043,6 +1076,7 @@ const AgentManagerContent: Component = () => {
         setSelection,
         setActivePendingId,
       })
+      requestChatFocus()
     }
     // Recover sidebar collapsed state and mark hydrated so transitions enable
     sidebar.hydrate(state.sidebarCollapsed)
@@ -1107,7 +1141,7 @@ const AgentManagerContent: Component = () => {
       else if (msg.action === "advancedWorktree") showNewWorktreeDialog()
       else if (msg.action === "closeWorktree") closeSelectedWorktree()
       else if (msg.action === "showShortcuts") handleShowKeyboardShortcuts()
-      else if (msg.action === "focusInput") window.dispatchEvent(new Event("focusPrompt"))
+      else if (msg.action === "focusInput") requestChatFocus()
       else if (msg.action === "focusSearch")
         focusChatSearch({ history: setHistory, review: setReviewActive, terminal: () => terms.setActiveId(undefined) })
       else if (msg.action === "newTerminal") termHandlers.requestNew()
@@ -1188,7 +1222,7 @@ const AgentManagerContent: Component = () => {
     const onWindowFocus = () => {
       document.body.style.pointerEvents = ""
       document.body.style.overflow = ""
-      window.dispatchEvent(new Event("focusPrompt"))
+      requestChatFocus()
     }
     window.addEventListener("focus", onWindowFocus)
 
@@ -1891,6 +1925,7 @@ const AgentManagerContent: Component = () => {
     setSelection(LOCAL)
     setReviewActive(false)
     session.selectSession(sid)
+    requestChatFocus()
     vscode.postMessage({ type: "agentManager.openLocally", sessionId: sid })
   }
 
@@ -1968,6 +2003,7 @@ const AgentManagerContent: Component = () => {
       setActivePendingId(undefined)
       session.selectSession(id)
     }
+    requestChatFocus(true)
   }
   const termHandlers = createTerminalHandlers({
     state: terms,
@@ -1998,7 +2034,7 @@ const AgentManagerContent: Component = () => {
       cancelAmbientSetup()
       setSidePanel(null)
     },
-    refocus: () => window.dispatchEvent(new Event("focusPrompt")),
+    refocus: requestChatFocus,
     postMessage: (msg) => vscode.postMessage(msg as never),
     track: (button, surface, properties) => metrics.track(button, surface, properties),
     // Panel-local pick, immune to cross-window setting echoes (see side.ts).
@@ -2094,7 +2130,7 @@ const AgentManagerContent: Component = () => {
     return activeTabs().find((s) => s.id === id)
   })
 
-  const focusTab = (id: string) =>
+  const focusTab = (id: string) => {
     focusCurrentTab({
       id,
       terms,
@@ -2110,6 +2146,8 @@ const AgentManagerContent: Component = () => {
       selectSession: session.selectSession,
       activateTerminal: termHandlers.activate,
     })
+    requestChatFocus(true)
+  }
   const tabFocus = createTabFocus({ ids: () => tabIds(), select: focusTab })
 
   // Close the currently active tab via keyboard shortcut.
@@ -2418,6 +2456,7 @@ const AgentManagerContent: Component = () => {
                 saveTabMemory()
                 session.selectSession(id)
                 setSelection(LOCAL)
+                requestChatFocus(true)
                 return
               }
               const ms = worktreeSessionIds().has(id) ? managedSessions().find((s) => s.id === id) : undefined
@@ -2425,6 +2464,7 @@ const AgentManagerContent: Component = () => {
                 selectWorktree(ms.worktreeId)
                 session.selectSession(id)
                 setReviewActive(false)
+                requestChatFocus()
                 return
               }
               openLocally(id)
@@ -2479,6 +2519,7 @@ const AgentManagerContent: Component = () => {
                         if (localSessionIDs().includes(id)) {
                           session.selectSession(id)
                           if (selection() === null) setSelection(LOCAL)
+                          requestChatFocus()
                           return
                         }
                         // Navigate to owning worktree instead of forcing into local mode
@@ -2488,6 +2529,7 @@ const AgentManagerContent: Component = () => {
                             selectWorktree(ms.worktreeId)
                             session.selectSession(id)
                             setReviewActive(false)
+                            requestChatFocus()
                             return
                           }
                         }
