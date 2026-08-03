@@ -5,6 +5,7 @@ import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
 import { Instance } from "../kilocode/instance" // kilocode_change
 import { EventV2Bridge } from "@/event-v2-bridge" // kilocode_change
 import { TuiEvent } from "@/server/tui-event" // kilocode_change
+import { Ripgrep } from "@opencode-ai/core/ripgrep" // kilocode_change
 import DESCRIPTION from "./warpgrep.txt"
 
 // FREE_PERIOD_TODO: Remove KILO_WARPGREP_PROXY_URL constant and the proxy
@@ -22,6 +23,7 @@ export const CodebaseSearchTool = Tool.define(
   "codebase_search",
   Effect.gen(function* () {
     const events = yield* EventV2Bridge.Service // kilocode_change
+    const ripgrep = yield* Ripgrep.Service // kilocode_change - reuse Kilo's managed binary for Morph search
     return {
       description: DESCRIPTION,
       parameters: Parameters,
@@ -45,6 +47,7 @@ export const CodebaseSearchTool = Tool.define(
             timeout: 60_000,
           })
 
+          yield* ripgrep.filepath // kilocode_change - ensure Morph's replacement path exists before its first spawn
           const result = yield* Effect.promise(() =>
             client.execute({
               searchTerm: params.query,
