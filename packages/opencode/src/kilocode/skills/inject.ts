@@ -141,9 +141,8 @@ export namespace SkillInject {
     )
   }
 
-  // Predicate for offsets inside a fenced code block (``` or ~~~). `spans` comes out sorted
-  // and non-overlapping, so `within` can binary-search it.
-  function fences(content: string): (index: number) => boolean {
+  // Fenced code block spans (``` or ~~~), sorted and non-overlapping by construction.
+  function fenceSpans(content: string): Array<[number, number]> {
     const spans: Array<[number, number]> = []
     const fence = /^[ \t]*(`{3,}|~{3,})[^\n]*$/gm
     let open: { start: number; marker: string } | undefined
@@ -157,48 +156,67 @@ export namespace SkillInject {
       }
     }
     if (open) spans.push([open.start, content.length]) // unterminated fence runs to EOF
-    return within(spans)
+    return spans
   }
 
   // Also treats inline code spans of 2+ backticks as inert: a single-backtick span can't
   // contain a backtick, so a single-backtick pair nested in a longer run (e.g. `` !`cmd` ``)
-  // is always documentation, never a real placeholder. Pairing is scoped to one blank-line
-  // paragraph at a time — spans can't cross a blank line — so unrelated runs in different
-  // paragraphs can never merge into one range and swallow a real placeholder between them.
+  // is always documentation, never a real placeholder.
   function ranges(content: string): (index: number) => boolean {
-    const fenced = fences(content)
+    const fences = fenceSpans(content)
+    const fenced = within(fences)
     const spans: Array<[number, number]> = []
-    for (const para of paragraphs(content)) {
-      const pending = new Map<number, number>() // run length -> start of its unmatched opener
-      for (const m of para.text.matchAll(/`+/g)) {
-        const start = para.start + m.index
-        if (fenced(start)) continue
-        const len = m[0].length
-        if (len < 2) continue
-        const open = pending.get(len)
-        if (open === undefined) {
-          pending.set(len, start)
-          continue
-        }
-        spans.push([open, start + len])
-        pending.delete(len)
-      }
-    }
-    // Spans close in resolution order, not start order, so sort before binary search.
-    spans.sort((a, b) => a[0] - b[0])
+    // Neither a fence nor a blank line can be crossed by an inline span, so pair backtick
+    // runs one chunk at a time, split on both.
+    for (const chunk of chunks(content, fences)) spans.push(...pairs(chunk))
     return (index: number) => fenced(index) || within(spans)(index)
   }
 
-  // Splits content on blank lines, keeping each chunk's absolute start offset.
-  function paragraphs(content: string): Array<{ start: number; text: string }> {
+  // Splits content into the parts outside `cuts` (fenced spans), then further splits each
+  // part on blank lines, keeping each chunk's absolute start offset.
+  function chunks(content: string, cuts: Array<[number, number]>): Array<{ start: number; text: string }> {
     const out: Array<{ start: number; text: string }> = []
-    const blank = /\n[ \t]*\n/g
-    let start = 0
-    for (const m of content.matchAll(blank)) {
-      out.push({ start, text: content.slice(start, m.index) })
-      start = m.index + m[0].length
+    const push = (from: number, to: number) => {
+      const slice = content.slice(from, to)
+      const blank = /\n[ \t]*\n/g
+      let start = 0
+      for (const m of slice.matchAll(blank)) {
+        out.push({ start: from + start, text: slice.slice(start, m.index) })
+        start = m.index + m[0].length
+      }
+      out.push({ start: from + start, text: slice.slice(start) })
     }
-    out.push({ start, text: content.slice(start) })
+    let pos = 0
+    for (const [s, e] of cuts) {
+      if (s > pos) push(pos, s)
+      pos = e
+    }
+    if (pos < content.length) push(pos, content.length)
+    return out
+  }
+
+  // Pairs backtick runs within one chunk: an opener closes at the *next* run of equal length
+  // (CommonMark), and everything between is then consumed rather than rescanned, so spans
+  // never nest or overlap and come out in increasing order. An opener with no closer is left
+  // as literal text and doesn't affect later pairing.
+  function pairs(chunk: { start: number; text: string }): Array<[number, number]> {
+    const runs = Array.from(chunk.text.matchAll(/`+/g)).map((m) => ({ start: chunk.start + m.index, len: m[0].length }))
+    const next: number[] = new Array(runs.length).fill(-1)
+    const last = new Map<number, number>()
+    for (let i = runs.length - 1; i >= 0; i--) {
+      next[i] = last.get(runs[i].len) ?? -1
+      last.set(runs[i].len, i)
+    }
+    const out: Array<[number, number]> = []
+    for (let i = 0; i < runs.length; ) {
+      if (runs[i].len < 2 || next[i] < 0) {
+        i++
+        continue
+      }
+      const j = next[i]
+      out.push([runs[i].start, runs[j].start + runs[j].len])
+      i = j + 1
+    }
     return out
   }
 
