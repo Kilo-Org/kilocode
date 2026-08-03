@@ -380,6 +380,74 @@ const AgentManagerContent: Component = () => {
     return sel === null ? null : nsKey(sel)
   })
 
+  type FocusOwner = "prompt" | { terminal: string }
+  const focusMemory = new Map<string, FocusOwner>()
+  const focusKey = () => {
+    const context = terms.sideKey()
+    const sessionID = session.currentSessionID() ?? activePendingId() ?? "new"
+    return `${context}:${sessionID}`
+  }
+  const forgetSessionFocus = (sessionID: string) => {
+    for (const key of focusMemory.keys()) if (key.endsWith(`:${sessionID}`)) focusMemory.delete(key)
+  }
+  const forgetContextFocus = (context: string) => {
+    for (const key of focusMemory.keys()) if (key.startsWith(`${context}:`)) focusMemory.delete(key)
+  }
+  const forgetTerminalFocus = (terminalID: string) => {
+    for (const [key, owner] of focusMemory) {
+      if (owner !== "prompt" && owner.terminal === terminalID) focusMemory.delete(key)
+    }
+  }
+  const rememberPromptFocus = (focused: boolean) => {
+    if (focused) focusMemory.set(focusKey(), "prompt")
+  }
+  const terminalVisible = () => sidePanel() === "terminal" && !history() && !reviewActive()
+  const focusOnDraftChange = () => {
+    const key = focusKey()
+    const owner = focusMemory.get(key)
+    if (!owner || owner === "prompt") return true
+    if (!terms.sidesForContext(terms.sideKey()).some((term) => term.id === owner.terminal)) {
+      focusMemory.delete(key)
+      return true
+    }
+    return terminalVisible() ? false : true
+  }
+  const restoreFocus = () => {
+    const key = focusKey()
+    const owner = focusMemory.get(key)
+    if (owner && owner !== "prompt") {
+      const context = terms.sideKey()
+      const terminal = terms.sidesForContext(context).find((term) => term.id === owner.terminal)
+      if (terminal && terminalVisible()) {
+        terms.setSideActive(context, terminal.id)
+        terms.requestFocus(terminal.id)
+        return
+      }
+      if (!terminal) focusMemory.delete(key)
+    }
+    window.dispatchEvent(new Event("focusPrompt"))
+  }
+  createEffect(
+    on(
+      () => terms.focusedId(),
+      (id) => {
+        if (!id) return
+        const key = terms.contextFor(id)
+        if (!key || !terms.sidesForContext(key).some((term) => term.id === id)) return
+        focusMemory.set(focusKey(), { terminal: id })
+      },
+      { defer: true },
+    ),
+  )
+  createEffect(
+    on(
+      focusKey,
+      (_key, previous) => {
+        if (previous !== undefined) queueMicrotask(restoreFocus)
+      },
+      { defer: true },
+    ),
+  )
   // Ambient setup reveal restores the panel after success unless the user engaged.
   const ambientSetup = createAmbientSetup({
     terms,
@@ -1192,7 +1260,7 @@ const AgentManagerContent: Component = () => {
     const onWindowFocus = () => {
       document.body.style.pointerEvents = ""
       document.body.style.overflow = ""
-      window.dispatchEvent(new Event("focusPrompt"))
+      restoreFocus()
     }
     window.addEventListener("focus", onWindowFocus)
 
@@ -1238,7 +1306,9 @@ const AgentManagerContent: Component = () => {
     // Mark sessions loaded as soon as the session context receives data (even if empty)
     const unsubSessions = vscode.onMessage((msg) => {
       if (msg.type === "sessionsLoaded" && !sessionsLoaded()) setSessionsLoaded(true)
-      if (msg.type === "agentManager.sessionClosed") handleCloseTab(msg.sessionId, false)
+      if (msg.type === "agentManager.sessionClosed") {
+        handleCloseTab(msg.sessionId, false)
+      }
     })
     const unsubRun = vscode.onMessage((msg) =>
       applyRunStatus(msg, { ensure: (id) => registry.ensure(id), active: () => registry.active() }),
@@ -1255,13 +1325,14 @@ const AgentManagerContent: Component = () => {
         showToast({ variant: "error", title: t("agentManager.terminal.errorTitle"), description: message }),
       postMessage: (message) => vscode.postMessage(message as never),
       onCreated: (contextKey, terminalId) => appendToTabOrder(contextKey, terminalId),
-      onSideCreated: (contextKey, terminalId) => {
+      onSideCreated: (contextKey, terminalId, focus) => {
         // Focus only when the user is still looking at this panel —
         // a slow create landing after a mode switch must not steal it.
-        if (sidePanel() === "terminal" && !history() && !reviewActive() && terms.sideKey() === contextKey) {
+        if (focus && sidePanel() === "terminal" && !history() && !reviewActive() && terms.sideKey() === contextKey) {
           terms.requestFocus(terminalId)
         }
       },
+      onSideClosed: (_contextKey, terminalId) => forgetTerminalFocus(terminalId),
       onScriptRunning: (contextKey, terminalId) => {
         if (terms.sideKey() !== contextKey) return
         // Setup output is informational: reveal without stealing focus, and
@@ -1806,6 +1877,7 @@ const AgentManagerContent: Component = () => {
     // Second press/click: execute the delete
     if (pendingDelete() === worktreeId) {
       cancelPendingDelete()
+      forgetContextFocus(nsKey(worktreeId))
       setBusyWorktrees((prev) => new Map([...prev, [wt.id, { reason: "deleting" as const }]]))
       vscode.postMessage({ type: "agentManager.deleteWorktree", worktreeId: wt.id })
       if (selection() === wt.id) {
@@ -1945,6 +2017,7 @@ const AgentManagerContent: Component = () => {
         session.clearCurrentSession()
       }
     }
+    forgetSessionFocus(sessionId)
     if (pending || localSet().has(sessionId)) {
       setLocalSessionIDs((prev) => prev.filter((id) => id !== sessionId))
     }
@@ -2507,6 +2580,8 @@ const AgentManagerContent: Component = () => {
                       continueInWorktree={selection() === LOCAL}
                       promptBoxId={`agent-manager:${selection() ?? "unassigned"}`}
                       pendingSessionID={selection() === LOCAL ? activePendingId() : undefined}
+                      focusOnDraftChange={focusOnDraftChange}
+                      onFocusChange={rememberPromptFocus}
                     />
                     <Show when={readOnly()}>
                       <div class="am-readonly-banner">
