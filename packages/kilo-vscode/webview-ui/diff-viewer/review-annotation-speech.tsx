@@ -84,7 +84,7 @@ export function createReviewAnnotationSpeechRenderer(props: Props) {
       finish: (send) => speech.stop(send ? { done: submit } : undefined),
     })
 
-    const dispose = createRoot((root) => {
+    const root = createRoot((owner) => {
       const view = renderSolid(
         () => (
           <Show when={props.enabled()}>
@@ -99,12 +99,15 @@ export function createReviewAnnotationSpeechRenderer(props: Props) {
         host,
       )
       onCleanup(view)
-      return root
+      return owner
     })
 
     const node = {
       host,
-      dispose,
+      dispose: () => {
+        shortcut.reset()
+        root()
+      },
       setTextarea: (next: HTMLTextAreaElement) => {
         field = next
       },

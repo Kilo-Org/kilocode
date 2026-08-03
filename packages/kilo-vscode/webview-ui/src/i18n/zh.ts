@@ -221,6 +221,7 @@ export const dict = {
     "点击以限制文件系统写入。根据你的沙盒设置，网络访问仍然允许。",
 
   "speechToText.tooltip.start": "使用 Kilo Gateway 开始语音输入",
+  "speechToText.tooltip.shortcut": "点击或按下 Cmd/Ctrl+K 开始或停止录音；说话时按住，松开后即可转录并提交。",
   "speechToText.tooltip.starting": "正在启动麦克风... 请稍后再说。",
   "speechToText.tooltip.stop": "停止捕获音频",
   "speechToText.tooltip.transcribing": "正在转录... 点击取消。",

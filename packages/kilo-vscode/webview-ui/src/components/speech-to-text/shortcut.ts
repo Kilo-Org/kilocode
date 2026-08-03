@@ -55,7 +55,21 @@ export function createSpeechShortcut(opts: ShortcutOptions) {
   }
 
   const disarm = () => {
-    if (typeof window !== "undefined") window.removeEventListener("keyup", release, true)
+    if (typeof window === "undefined") return
+    window.removeEventListener("keyup", release, true)
+    window.removeEventListener("blur", loseFocus, true)
+    document.removeEventListener("visibilitychange", hide, true)
+  }
+
+  const loseFocus = () => {
+    if (!press) return
+    press = undefined
+    disarm()
+    opts.finish(false)
+  }
+
+  const hide = () => {
+    if (document.visibilityState === "hidden") loseFocus()
   }
 
   const down = (event: Press): boolean => {
@@ -67,7 +81,11 @@ export function createSpeechShortcut(opts: ShortcutOptions) {
     const state = opts.speech.state()
     if (state === "idle" && opts.disabled()) return false
     press = { state, time: event.timeStamp, mac }
-    if (typeof window !== "undefined") window.addEventListener("keyup", release, true)
+    if (typeof window !== "undefined") {
+      window.addEventListener("keyup", release, true)
+      window.addEventListener("blur", loseFocus, true)
+      document.addEventListener("visibilitychange", hide, true)
+    }
 
     if (state === "idle") opts.start()
     if (state === "transcribing" || state === "error") toggleSpeech(opts.speech, false, opts.start)
@@ -77,8 +95,8 @@ export function createSpeechShortcut(opts: ShortcutOptions) {
   const up = (event: Pick<KeyboardEvent, "key" | "timeStamp">): boolean => {
     if (!press) return false
     const key = event.key.toLowerCase()
-    const release = key === "k" || (press.mac ? key === "meta" : key === "control")
-    if (!release) return false
+    const ended = key === "k" || (press.mac ? key === "meta" : key === "control")
+    if (!ended) return false
     const current = press
     press = undefined
     disarm()

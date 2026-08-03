@@ -234,6 +234,8 @@ export const dict = {
     "Klikk for å begrense skrivetilgang til filsystemet. Nettverkstilgang er fortsatt tillatt av sandbox-innstillingene dine.",
 
   "speechToText.tooltip.start": "Start taleinndata med Kilo Gateway",
+  "speechToText.tooltip.shortcut":
+    "Trykk på knappen eller bruk Cmd/Ctrl+K for å starte eller stoppe opptaket; hold knappen inne mens du snakker, og slipp den for å transkribere og sende.",
   "speechToText.tooltip.starting": "Starter mikrofonen... Vent med å snakke.",
   "speechToText.tooltip.stop": "Stopp lydfangst",
   "speechToText.tooltip.transcribing": "Transkriberer... Klikk for å avbryte.",
