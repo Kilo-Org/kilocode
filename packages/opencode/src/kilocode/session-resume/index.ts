@@ -189,8 +189,14 @@ export namespace SessionResume {
     const root = roots(input).codex
     if (input.id) validateUUID(input.id)
     const files: { file: string; time: string }[] = []
-    const glob = new Bun.Glob("**/rollout-*.jsonl")
-    for await (const relative of glob.scan({ cwd: root, onlyFiles: true })) {
+    const matches = new Set<string>()
+    for await (const relative of new Bun.Glob("rollout-*.jsonl").scan({ cwd: root, onlyFiles: true })) {
+      matches.add(relative)
+    }
+    for await (const relative of new Bun.Glob("**/rollout-*.jsonl").scan({ cwd: root, onlyFiles: true })) {
+      matches.add(relative)
+    }
+    for (const relative of matches) {
       if (input.id && !relative.endsWith(`-${input.id}.jsonl`)) continue
       const file = path.join(root, relative)
       if (!input.id) {
