@@ -22,8 +22,12 @@ function cmd(input: Partial<Command.Info> & Pick<Command.Info, "name">): Command
   return {
     name: input.name,
     description: input.description,
+    agent: input.agent,
+    model: input.model,
+    variant: input.variant,
     source: input.source,
     template: input.template ?? "body",
+    subtask: input.subtask,
     hints: input.hints ?? [],
   }
 }
@@ -38,11 +42,31 @@ describe("CommandFiles", () => {
     const items = await CommandFiles.discover({
       directory: dir,
       directories: [path.join(dir, ".kilo")],
-      commands: [cmd({ name: "review", source: "command", hints: ["$ARGUMENTS"] }), cmd({ name: "init", source: "command" })],
+      commands: [
+        cmd({
+          name: "review",
+          source: "command",
+          agent: "reviewer",
+          model: "anthropic/claude-sonnet-4-6",
+          variant: "high",
+          subtask: true,
+          hints: ["$ARGUMENTS"],
+        }),
+        cmd({ name: "init", source: "command" }),
+      ],
     })
 
     expect(items.map((item) => item.name)).toEqual(["review", "init"])
-    expect(items[0]).toMatchObject({ name: "review", editable: true, builtin: false, location: file })
+    expect(items[0]).toMatchObject({
+      name: "review",
+      editable: true,
+      builtin: false,
+      location: file,
+      agent: "reviewer",
+      model: "anthropic/claude-sonnet-4-6",
+      variant: "high",
+      subtask: true,
+    })
     expect(items[0].content).toContain("Review $ARGUMENTS")
     expect(items[1]).toMatchObject({ name: "init", editable: false, builtin: true, location: "builtin" })
   })

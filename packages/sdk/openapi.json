@@ -34497,6 +34497,15 @@
           "description": {
             "type": "string"
           },
+          "agent": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "variant": {
+            "type": "string"
+          },
           "source": {
             "type": "string"
           },
@@ -34511,6 +34520,9 @@
           },
           "content": {
             "type": "string"
+          },
+          "subtask": {
+            "type": "boolean"
           },
           "hints": {
             "type": "array",

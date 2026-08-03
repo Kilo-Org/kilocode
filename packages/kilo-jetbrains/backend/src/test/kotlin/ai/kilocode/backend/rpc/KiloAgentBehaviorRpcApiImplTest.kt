@@ -125,7 +125,7 @@ class KiloAgentBehaviorRpcApiImplTest {
         val file = Files.createDirectories(dir.resolve("command")).resolve("review.md")
         Files.writeString(file, "---\ndescription: Review code\n---\n\nReview $" + "ARGUMENTS")
         mock.commandFiles = """[
-            {"name":"review","description":"Review code","source":"command","builtin":false,"location":"$file","editable":true,"content":"Review"},
+            {"name":"review","description":"Review code","agent":"reviewer","model":"anthropic/claude-sonnet-4-6","variant":"high","source":"command","builtin":false,"location":"$file","editable":true,"content":"Review","subtask":true},
             {"name":"init","source":"command","builtin":true,"location":"builtin","editable":false,"content":"Init"}
         ]""".trimIndent()
         val rpc = rpc()
@@ -133,6 +133,10 @@ class KiloAgentBehaviorRpcApiImplTest {
         val commands = rpc.commandFiles("/test project")
         assertEquals(listOf("review", "init"), commands.map { it.name })
         assertEquals(true, commands.single { it.name == "review" }.editable)
+        assertEquals("reviewer", commands.single { it.name == "review" }.agent)
+        assertEquals("anthropic/claude-sonnet-4-6", commands.single { it.name == "review" }.model)
+        assertEquals("high", commands.single { it.name == "review" }.variant)
+        assertEquals(true, commands.single { it.name == "review" }.subtask)
         assertEquals(false, commands.single { it.name == "init" }.editable)
 
         assertTrue(rpc.removeCommand("/test project", file.toString()))

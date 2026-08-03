@@ -3237,11 +3237,15 @@ export type AgentRequirementResult = {
 export type CommandFile = {
   name: string
   description?: string
+  agent?: string
+  model?: string
+  variant?: string
   source?: string
   builtin: boolean
   location: string
   editable: boolean
   content?: string
+  subtask?: boolean
   hints: Array<string>
 }
 

@@ -631,8 +631,12 @@ object KiloCliDataParser {
             CommandInfo(
                 name = obj.str("name") ?: "",
                 description = obj.str("description"),
+                agent = obj.str("agent"),
+                model = obj.str("model"),
+                variant = obj.str("variant"),
                 source = obj.str("source"),
                 hints = obj["hints"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
+                subtask = obj.flagOrNull("subtask"),
             )
         }
 
@@ -663,9 +667,13 @@ object KiloCliDataParser {
             CommandDto(
                 name = name,
                 description = obj.str("description"),
+                agent = obj.str("agent"),
+                model = obj.str("model"),
+                variant = obj.str("variant"),
                 source = obj.str("source"),
                 hints = obj["hints"].arr()?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
                 template = obj.str("template"),
+                subtask = obj.flagOrNull("subtask"),
             )
         }
 
@@ -677,11 +685,15 @@ object KiloCliDataParser {
             CommandFileDto(
                 name = name,
                 description = obj.str("description"),
+                agent = obj.str("agent"),
+                model = obj.str("model"),
+                variant = obj.str("variant"),
                 source = obj.str("source"),
                 builtin = obj.bool("builtin"),
                 location = location,
                 editable = obj.bool("editable"),
                 content = obj.str("content"),
+                subtask = obj.flagOrNull("subtask"),
                 hints = obj["hints"].arr()?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
             )
         }

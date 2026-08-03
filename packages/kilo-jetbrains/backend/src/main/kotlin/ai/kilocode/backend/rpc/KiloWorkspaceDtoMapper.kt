@@ -56,8 +56,12 @@ internal object KiloWorkspaceDtoMapper {
     fun command(c: CommandInfo) = CommandDto(
         name = c.name,
         description = c.description,
+        agent = c.agent,
+        model = c.model,
+        variant = c.variant,
         source = c.source,
         hints = c.hints,
+        subtask = c.subtask,
     )
 
     fun skill(s: SkillInfo) = SkillDto(

@@ -9,11 +9,15 @@ import { WorkflowsMigrator } from "@/kilocode/workflows-migrator"
 export const Info = Schema.Struct({
   name: Schema.String,
   description: Schema.optional(Schema.String),
+  agent: Schema.optional(Schema.String),
+  model: Schema.optional(Schema.String),
+  variant: Schema.optional(Schema.String),
   source: Schema.optional(Schema.String),
   builtin: Schema.Boolean,
   location: Schema.String,
   editable: Schema.Boolean,
   content: Schema.optional(Schema.String),
+  subtask: Schema.optional(Schema.Boolean),
   hints: Schema.Array(Schema.String),
 }).annotate({ identifier: "CommandFile" })
 
@@ -85,22 +89,30 @@ export async function discover(input: { commands: readonly Command.Info[]; direc
         return {
           name: cmd.name,
           description: description(cmd, file),
+          agent: cmd.agent,
+          model: cmd.model,
+          variant: cmd.variant,
           source: cmd.source,
           builtin: false,
           location: file.location,
           editable: true,
           content: file.content,
+          subtask: cmd.subtask,
           hints: cmd.hints,
         }
       }
       return {
         name: cmd.name,
         description: description(cmd),
+        agent: cmd.agent,
+        model: cmd.model,
+        variant: cmd.variant,
         source: cmd.source,
         builtin: true,
         location: "builtin",
         editable: false,
         content: literal(cmd),
+        subtask: cmd.subtask,
         hints: cmd.hints,
       }
     })
