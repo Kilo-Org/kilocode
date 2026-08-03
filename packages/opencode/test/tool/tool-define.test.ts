@@ -106,6 +106,49 @@ describe("Tool.define", () => {
     }),
   )
 
+  it.effect("bounds oversized output when metadata declares truncated false", () =>
+    Effect.gen(function* () {
+      const output = "x".repeat(60 * 1024)
+      const info = yield* Tool.define(
+        "large-untruncated",
+        Effect.succeed({
+          description: "test tool",
+          parameters: params,
+          execute() {
+            return Effect.succeed({ title: "test", output, metadata: { truncated: false } })
+          },
+        }),
+      )
+      const tool = yield* info.init()
+      const result = yield* tool.execute({ input: "ok" }, makeCtx())
+
+      expect(result.metadata.truncated).toBe(true)
+      expect((result.metadata as { outputPath?: string }).outputPath).toBeDefined()
+      expect(result.output).toContain("The tool call succeeded but the output was truncated")
+      expect(Buffer.byteLength(result.output, "utf-8")).toBeLessThan(Buffer.byteLength(output, "utf-8"))
+    }),
+  )
+
+  it.effect("trusts tools that already self-truncated their output", () =>
+    Effect.gen(function* () {
+      const output = "self-truncated"
+      const info = yield* Tool.define(
+        "self-truncated",
+        Effect.succeed({
+          description: "test tool",
+          parameters: params,
+          execute() {
+            return Effect.succeed({ title: "test", output, metadata: { truncated: true } })
+          },
+        }),
+      )
+      const tool = yield* info.init()
+      const result = yield* tool.execute({ input: "ok" }, makeCtx())
+
+      expect(result.output).toBe(output)
+      expect(result.metadata).toEqual({ truncated: true })
+    }),
+  )
   // Regression for #28438: the wrap is the canonical "untyped → typed" boundary.
   // When the LLM emits a tool call with a payload that fails the parameter
   // schema, the wrap must surface a typed `Tool.InvalidArgumentsError` whose

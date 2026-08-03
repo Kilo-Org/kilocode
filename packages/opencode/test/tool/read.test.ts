@@ -413,6 +413,36 @@ describe("tool.read truncation", () => {
     }),
   )
 
+  it.live("preserves high-offset slices in large files without AGENTS.md", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped()
+      const target = path.join(dir, "large.txt")
+      const lines = Array.from({ length: 12_000 }, (_, i) => `TARGET_LINE_${i + 1}`).join("\n")
+      yield* put(target, lines)
+
+      const result = yield* exec(
+        dir,
+        { filePath: target, offset: 11_098, limit: 30 },
+        {
+          ...ctx,
+          extra: { includeInstructions: false },
+        },
+      )
+
+      expect(result.output).toContain("11098: TARGET_LINE_11098")
+      expect(result.output).toContain("11127: TARGET_LINE_11127")
+      expect(result.output).not.toMatch(/(^|\n)1: TARGET_LINE_1(\n|$)/)
+      expect(result.output).not.toContain("system-reminder")
+      expect(result.metadata.display).toMatchObject({
+        type: "file",
+        path: target,
+        lineStart: 11_098,
+        lineEnd: 11_127,
+        totalLines: 12_000,
+        truncated: true,
+      })
+    }),
+  )
   it.live("throws when offset is beyond end of file", () =>
     Effect.gen(function* () {
       const dir = yield* tmpdirScoped()
@@ -583,6 +613,24 @@ describe("tool.read loaded instructions", () => {
     }),
   )
 
+  it.live("delivers real-size AGENTS.md reminders when the requested file slice leaves room", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped()
+      const target = path.join(dir, "subdir", "nested", "small.txt")
+      const instructions = Array.from({ length: 1_200 }, (_, i) => `AGENT_LINE_${i + 1}`).join("\n")
+      yield* put(path.join(dir, "subdir", "AGENTS.md"), instructions)
+      yield* put(target, "target content")
+
+      const result = yield* exec(dir, { filePath: target })
+
+      expect(result.output).toContain("target content")
+      expect(result.output).toContain("AGENT_LINE_1")
+      expect(result.output).toContain("AGENT_LINE_1200")
+      expect(result.output).not.toContain("Additional instructions omitted")
+      expect(result.metadata.loaded).toContain(path.join(dir, "subdir", "AGENTS.md"))
+      expect(result.metadata.instructionReminderTruncated).toBe(false)
+    }),
+  )
   it.live("caps large AGENTS.md reminders without obscuring the requested file range", () =>
     Effect.gen(function* () {
       const dir = yield* tmpdirScoped()
@@ -597,10 +645,11 @@ describe("tool.read loaded instructions", () => {
       expect(result.output).toContain("11098: TARGET_LINE_11098")
       expect(result.output).toContain("11127: TARGET_LINE_11127")
       expect(result.output).not.toMatch(/(^|\n)1: TARGET_LINE_1(\n|$)/)
-      expect(result.output).toContain("Additional instructions were truncated")
+      expect(result.output).toContain("Additional instructions omitted")
+      expect(result.output).toContain(path.join(dir, "subdir", "AGENTS.md"))
       expect(result.output).not.toContain("AGENT_LINE_6000")
       expect(Buffer.byteLength(result.output, "utf-8")).toBeLessThan(20 * 1024)
-      expect(result.metadata.loaded).toContain(path.join(dir, "subdir", "AGENTS.md"))
+      expect(result.metadata.loaded).not.toContain(path.join(dir, "subdir", "AGENTS.md"))
       expect(result.metadata.instructionReminderTruncated).toBe(true)
       expect(result.metadata.display).toMatchObject({
         type: "file",
