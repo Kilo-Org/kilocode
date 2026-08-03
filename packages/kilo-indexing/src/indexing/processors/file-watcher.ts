@@ -41,22 +41,16 @@ const log = Log.create({ service: "file-watcher" })
 
 declare const KILO_LIBC: string | undefined
 
-/** A future filesystem change reported by the native watcher. */
 export interface FileWatchEvent {
   path: string
   type: "create" | "update" | "delete"
 }
 
-/** Handle for tearing down a subscription created by {@link FileWatchSubscribe}. */
 export interface FileWatchSubscription {
   unsubscribe(): Promise<void>
 }
 
-/**
- * Subscribes to future filesystem changes under `directory`, invoking
- * `onEvents` for each batch. Injectable so tests (and alternative runtimes) can
- * supply a fake watcher without a real filesystem subscription.
- */
+// Injectable so tests can supply a fake watcher instead of a real subscription.
 export type FileWatchSubscribe = (
   directory: string,
   onEvents: (events: readonly FileWatchEvent[]) => void,
@@ -70,30 +64,20 @@ function watcherBackend(): ParcelWatcher.BackendType | undefined {
 }
 
 let parcelModule: typeof import("@parcel/watcher") | null | undefined
-/**
- * Loads @parcel/watcher's native binding directly, mirroring the workspace
- * watcher in @kilocode/core. Requiring the platform package + createWrapper —
- * rather than importing "@parcel/watcher" — is what works inside the bundled,
- * bun-compiled runtime where node-gyp-build's resolution is unavailable.
- */
 function loadParcelWatcher(): typeof import("@parcel/watcher") | undefined {
   if (parcelModule !== undefined) return parcelModule ?? undefined
-  // Preferred: load the platform binding directly. This is what works inside the
-  // bundled, bun-compiled runtime where @parcel/watcher's node-gyp-build
-  // resolution is unavailable (mirrors @kilocode/core's workspace watcher).
   try {
+    // Load the platform binding directly; this is what resolves inside the
+    // bundled bun-compiled runtime (mirrors @kilocode/core's workspace watcher).
     const libc = typeof KILO_LIBC === "undefined" ? undefined : KILO_LIBC
     const suffix = process.platform === "linux" ? `-${libc || "glibc"}` : ""
     // @ts-ignore - the wrapper subpath ships without type declarations
     const { createWrapper } = require("@parcel/watcher/wrapper")
     const binding = require(`@parcel/watcher-${process.platform}-${process.arch}${suffix}`)
     parcelModule = createWrapper(binding) as typeof import("@parcel/watcher")
-    return parcelModule
   } catch {
-    // Fallback for non-bundled runtimes (dev / CLI / tests): the main entry
-    // resolves its own native binding via node-gyp-build.
     try {
-      parcelModule = require("@parcel/watcher") as typeof import("@parcel/watcher")
+      parcelModule = require("@parcel/watcher") as typeof import("@parcel/watcher") // dev / CLI / test fallback
     } catch {
       parcelModule = null
     }
@@ -101,56 +85,42 @@ function loadParcelWatcher(): typeof import("@parcel/watcher") | undefined {
   return parcelModule ?? undefined
 }
 
-/**
- * Efficiency prune only: keep the native watcher from descending into large
- * excluded directories. Correctness filtering (per-repo .gitignore/.kilocodeignore
- * and the extension allowlist) still happens in FileWatcher.shouldIndex().
- */
+// Prune the largest excluded directories from the native watch. Per-repo
+// .gitignore/.kilocodeignore are enforced in shouldIndex(), not pruned here.
 function watcherIgnoreGlobs(): string[] {
   return FileIgnore.PATTERNS.map((pattern) => (pattern.includes("/") ? pattern : `**/${pattern}`))
 }
 
-async function withSubscribeTimeout(
+function withSubscribeTimeout(
   pending: Promise<FileWatchSubscription>,
   directory: string,
 ): Promise<FileWatchSubscription> {
+  let timedOut = false
   let timer: NodeJS.Timeout | undefined
   const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(
-      () => reject(new Error(`Timed out establishing the file watcher subscription for "${directory}".`)),
-      PARCEL_SUBSCRIBE_TIMEOUT_MS,
-    )
+    timer = setTimeout(() => {
+      timedOut = true
+      reject(new Error(`Timed out establishing the file watcher subscription for "${directory}".`))
+    }, PARCEL_SUBSCRIBE_TIMEOUT_MS)
     timer.unref()
   })
-  try {
-    return await Promise.race([pending, timeout])
-  } catch (error) {
-    // If the timeout won the race, ensure a late-arriving subscription is still
-    // torn down instead of leaking.
-    void pending.then((subscription) => subscription.unsubscribe()).catch(() => {})
-    throw error
-  } finally {
+  // Tear down a subscription that only resolves after we have already given up.
+  void pending
+    .then((subscription) => (timedOut ? subscription.unsubscribe() : undefined))
+    .catch((err) => {
+      if (timedOut) log.warn("failed to tear down late file watcher subscription", { err, workspacePath: directory })
+    })
+  return Promise.race([pending, timeout]).finally(() => {
     if (timer) clearTimeout(timer)
-  }
+  })
 }
 
-/**
- * Default subscription backed by @parcel/watcher's native, event-based backend.
- *
- * RATIONALE: the previous chokidar implementation blocked the event loop during
- * its initial recursive scan under the bundled bun runtime, so the watcher
- * never became "ready" and indexing hung at startup. @parcel/watcher subscribes
- * without an upfront JS-side walk (it reports only future changes) and is the
- * same backend the core workspace watcher already uses.
- */
+// @parcel/watcher subscribes without a blocking initial walk (reporting only
+// future changes), so it does not stall startup the way chokidar did under bun.
 const parcelSubscribe: FileWatchSubscribe = (directory, onEvents) => {
   const parcel = loadParcelWatcher()
   if (!parcel) {
-    return Promise.reject(
-      new Error(
-        "Native file watcher backend (@parcel/watcher) is unavailable; incremental index updates are disabled.",
-      ),
-    )
+    return Promise.reject(new Error("native file watcher backend (@parcel/watcher) is unavailable"))
   }
   const pending = parcel.subscribe(
     directory,
@@ -166,13 +136,7 @@ const parcelSubscribe: FileWatchSubscribe = (directory, onEvents) => {
   return withSubscribeTimeout(pending, directory)
 }
 
-/**
- * Implementation of the file watcher interface.
- *
- * RATIONALE: Uses @parcel/watcher's native backend (not VS Code's file system
- * watcher) so the watcher works outside VS Code (CLI, tests, headless) and,
- * unlike chokidar, does not block the event loop under the bundled bun runtime.
- */
+/** Watches the workspace via @parcel/watcher and feeds changes into the incremental indexer. */
 export class FileWatcher implements IFileWatcher {
   private ignoreInstance?: IgnoreMatcher
   private subscription?: FileWatchSubscription
@@ -197,10 +161,7 @@ export class FileWatcher implements IFileWatcher {
   }>()
   public readonly onDidFinishBatchProcessing = new Emitter<BatchProcessingSummary>()
 
-  /**
-   * Maps native watcher events onto the incremental-indexing pipeline.
-   * @parcel/watcher reports "update" where the pipeline expects "change".
-   */
+  // @parcel/watcher reports "update" where the pipeline expects "change".
   private readonly onWatchEvents = (events: readonly FileWatchEvent[]): void => {
     for (const event of events) {
       const type: "create" | "change" | "delete" =
@@ -266,11 +227,10 @@ export class FileWatcher implements IFileWatcher {
   }
 
   /**
-   * Establishes the native file-watcher subscription for incremental updates.
-   *
-   * RATIONALE: unlike the old chokidar path there is no blocking initial scan to
-   * await — @parcel/watcher reports only future changes — so this resolves
-   * promptly and never gates indexing startup on walking the whole workspace.
+   * Subscribes to the workspace for incremental updates. The watcher is only
+   * needed for incremental updates, so a subscription failure (missing native
+   * backend, inotify limits, ...) degrades to a warning and lets the full scan
+   * proceed rather than failing indexing.
    */
   async initialize(): Promise<void> {
     if (this.ready) {
@@ -280,19 +240,18 @@ export class FileWatcher implements IFileWatcher {
 
     log.info("initializing file watcher", { workspacePath: this.workspacePath })
 
-    const ready = this.subscribeFn(this.workspacePath, this.onWatchEvents).then((subscription) => {
-      this.subscription = subscription
-      log.info("file watcher subscribed", { workspacePath: this.workspacePath })
-    })
-    this.ready = ready
-    try {
-      await ready
-    } catch (error) {
-      // Subscription failed. Reset state so a later initialize() can retry
-      // cleanly rather than re-awaiting this rejected promise.
-      if (this.ready === ready) this.ready = undefined
-      throw error
-    }
+    this.ready = this.subscribeFn(this.workspacePath, this.onWatchEvents)
+      .then((subscription) => {
+        this.subscription = subscription
+        log.info("file watcher subscribed", { workspacePath: this.workspacePath })
+      })
+      .catch((error) => {
+        log.warn("file watcher unavailable; continuing without incremental updates", {
+          workspacePath: this.workspacePath,
+          err: error,
+        })
+      })
+    await this.ready
   }
 
   setOverlay(overlay?: WorktreeOverlay): void {

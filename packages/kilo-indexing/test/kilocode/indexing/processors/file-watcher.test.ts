@@ -390,9 +390,8 @@ describe("FileWatcher", () => {
 })
 
 describe("FileWatcher subscription", () => {
-  // Controllable fake watcher backend injected via the FileWatcher constructor,
-  // so the subscribe / event-mapping / retry / teardown paths are exercised
-  // without a real filesystem subscription.
+  // Injected fake backend so subscribe / event-mapping / degrade / teardown are
+  // exercised without a real filesystem subscription.
   function createFakeBackend() {
     let onEvents: ((events: readonly FileWatchEvent[]) => void) | undefined
     let subscribed = 0
@@ -487,17 +486,16 @@ describe("FileWatcher subscription", () => {
     await watcher.shutdown()
   })
 
-  test("a failed initialize resets state so a later initialize retries", async () => {
+  test("a failed subscribe degrades: initialize resolves without a subscription", async () => {
     const backend = createFakeBackend()
     backend.failOnce()
     const { watcher } = await makeWatcher(backend)
 
-    await expect(watcher.initialize()).rejects.toThrow("subscribe failed")
-    // A stuck state would leave `this.ready` rejected and make every subsequent
-    // initialize() throw immediately; the reset must allow a clean re-subscribe.
+    // Must not throw — the watcher is optional, so the full scan still runs.
     await watcher.initialize()
-    expect(backend.subscribed).toBe(2)
+    expect(backend.subscribed).toBe(1)
     await watcher.shutdown()
+    expect(backend.unsubscribed).toBe(0)
   })
 
   test("shutdown unsubscribes the watcher", async () => {

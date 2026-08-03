@@ -35,9 +35,7 @@ export const DEFAULT_MAX_SEARCH_RESULTS = CODEBASE_INDEX_DEFAULTS.DEFAULT_SEARCH
 /**File Watcher */
 export const QDRANT_CODE_BLOCK_NAMESPACE = "f47ac10b-58cc-4372-a567-0e02b2c3d479"
 export const MAX_FILE_SIZE_BYTES = 1 * 1024 * 1024 // 1MB
-// Defensive bound on establishing the native (@parcel/watcher) file-watcher
-// subscription. The event-based backend returns promptly; this only guards
-// against a pathological backend hanging indexing startup.
+// Defensive bound on establishing the native file-watcher subscription.
 export const PARCEL_SUBSCRIBE_TIMEOUT_MS = 10_000
 
 /**Directory Scanner */
