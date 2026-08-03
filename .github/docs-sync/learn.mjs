@@ -610,7 +610,7 @@ async function extract() {
   for (const c of trustedComments) {
     let best = null
     for (const cc of candidates) {
-      if (!cc.files.includes(c.path)) continue
+      if (!Array.isArray(cc.files) || !cc.files.includes(c.path)) continue
       if (c.created_at < cc.iso) {
         if (!best || cc.iso < best.iso) {
           best = cc
