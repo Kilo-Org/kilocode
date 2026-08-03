@@ -52,18 +52,12 @@ export const line = (
   return `  ${label}: ${row.text}`
 }
 
-export const notices = (input: {
-  readonly rows: readonly { readonly textTruncated: boolean }[]
-  readonly truncated: boolean
-  readonly limit: number
-}) => {
+export const limitNotice = (limit: number) =>
+  `${limit} matches limit reached. Use limit=${Math.min(Number.MAX_SAFE_INTEGER, limit * 2)} for more, or refine pattern.`
+
+export const notices = (rows: readonly { readonly textTruncated: boolean }[]) => {
   const output: string[] = []
-  if (input.truncated) {
-    output.push(
-      `${input.limit} matches limit reached. Use limit=${Math.min(Number.MAX_SAFE_INTEGER, input.limit * 2)} for more, or refine pattern.`,
-    )
-  }
-  if (input.rows.some((row) => row.textTruncated)) {
+  if (rows.some((row) => row.textTruncated)) {
     output.push("", "Some matching or context lines were truncated. Use read for full lines.")
   }
   return output

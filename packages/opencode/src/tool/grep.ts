@@ -108,9 +108,9 @@ export const GrepTool = Tool.define(
 
           if (truncated) {
             output.push("")
-            output.push("(Results truncated. Consider using a more specific path or pattern.)")
+            output.push(KiloGrep.limitNotice(limit)) // kilocode_change
           }
-          output.push(...KiloGrep.notices({ rows, truncated, limit })) // kilocode_change
+          output.push(...KiloGrep.notices(rows)) // kilocode_change
           if (result.partial) output.push("", "(Some paths were inaccessible.)") // kilocode_change
 
           return {

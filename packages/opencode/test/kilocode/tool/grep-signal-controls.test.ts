@@ -79,6 +79,7 @@ describe("Kilo grep signal-to-noise controls", () => {
       expect(result.metadata.matches).toBe(2)
       expect(result.metadata.truncated).toBe(true)
       expect(result.output).toContain("2 matches limit reached. Use limit=4 for more, or refine pattern.")
+      expect(result.output).not.toContain("(Results truncated")
       expect(result.output).not.toContain("Line 3: needle")
     }),
   )
@@ -123,6 +124,24 @@ describe("Kilo grep signal-to-noise controls", () => {
       expect(result.output).toContain("[context] Line 3: after")
       expect(result.output).not.toContain("Line 4: far")
       expect(result.output).not.toContain("later needle")
+    }),
+  )
+
+  it.instance("does not count context lines toward the match limit", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const content = Array.from(
+        { length: 35 },
+        (_, index) => `before-${index}\nneedle-${index}\nafter-${index}\ngap-${index}`,
+      ).join("\n")
+      yield* Effect.promise(() => Bun.write(file(test, "context-limit.txt"), `${content}\n`))
+      const grep = yield* init
+      const result = yield* grep.execute({ pattern: "needle", path: test.directory, context: 1, limit: 100 }, ctx)
+
+      expect(result.metadata.matches).toBe(35)
+      expect(result.metadata.truncated).toBe(false)
+      expect(result.output).toContain("needle-34")
+      expect(result.output).not.toContain("matches limit reached")
     }),
   )
 

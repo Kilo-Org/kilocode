@@ -160,7 +160,7 @@ export const layer = Layer.effect(
             Effect.map((chunk) => [...chunk]),
           )
           if (stopped) return { items: rows, truncated: true, partial: false } // kilocode_change
-          const truncated = rows.length > input.limit
+          const truncated = input.stop ? false : rows.length > input.limit // kilocode_change - custom stop predicates own truncation
           if (truncated) return { items: rows.slice(0, input.limit), truncated, partial: false }
 
           const code = yield* handle.exitCode
