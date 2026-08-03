@@ -3221,6 +3221,28 @@ Just prose, not a rule line.
   }
 }
 
+// Case 11 — the created rolling PR gets an assignee and a review request
+function case11_prOwner() {
+  console.log("case 11 — created PR assignee and reviewer")
+  const src = fs.readFileSync(path.join(HERE, "upsert-pr.mjs"), "utf8")
+
+  assert.ok(/const DOCS_OWNER = "\S+"/.test(src), "DOCS_OWNER must be a module constant")
+  assert.ok(src.includes("/assignees`, {"), "created PR must POST assignees")
+  assert.ok(src.includes("/requested_reviewers`, {"), "created PR must POST requested_reviewers")
+
+  // Both calls belong to the create arm, after the PR exists.
+  const createIdx = src.indexOf("const pr = await api(`/repos/${repo()}/pulls`")
+  assert.ok(createIdx >= 0, "create-PR call must exist")
+  assert.ok(src.indexOf("/assignees`, {") > createIdx, "assignees POST must follow PR creation")
+  assert.ok(src.indexOf("/requested_reviewers`, {") > createIdx, "reviewer POST must follow PR creation")
+
+  // A failure here must not fail the run — the PR is already open.
+  const ownerIdx = src.indexOf("/assignees`, {")
+  const tryIdx = src.lastIndexOf("try {", ownerIdx)
+  const catchIdx = src.indexOf("} catch", ownerIdx)
+  assert.ok(tryIdx >= 0 && catchIdx > src.indexOf("/requested_reviewers`, {"), "both POSTs must sit in one try/catch")
+}
+
 // ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
@@ -3244,6 +3266,7 @@ function main() {
     case8_triage,
     case9_reverts,
     case10_learnings,
+    case11_prOwner,
   ]
   let failed = 0
   for (const fn of cases) {

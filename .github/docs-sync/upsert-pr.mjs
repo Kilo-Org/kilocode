@@ -27,6 +27,8 @@ const FILE_CAP = 15
 const ROW_CAP = 150
 const PENDING_DISPLAY_CAP = 60
 const SUMMARY_FILE = ".docs-sync-summary.json"
+// Owner of the rolling docs PR: assigned and asked for review on creation.
+const DOCS_OWNER = "emilieschario"
 const DOCS_PATH = "packages/kilo-docs"
 export const LEARNINGS_FILE = "packages/kilo-docs/LEARNINGS.md"
 
@@ -506,6 +508,20 @@ async function main() {
     prNumber = pr.number
     prUrl = pr.html_url
     await api(`/repos/${repo()}/issues/${prNumber}/labels`, { method: "POST", body: { labels: ["auto-docs"] } })
+    // Best effort: the PR already exists here, so a non-collaborator or a
+    // revoked account must not fail the run.
+    try {
+      await api(`/repos/${repo()}/issues/${prNumber}/assignees`, {
+        method: "POST",
+        body: { assignees: [DOCS_OWNER] },
+      })
+      await api(`/repos/${repo()}/pulls/${prNumber}/requested_reviewers`, {
+        method: "POST",
+        body: { reviewers: [DOCS_OWNER] },
+      })
+    } catch (err) {
+      console.warn(`::warning::docs-sync: could not assign or request review from ${DOCS_OWNER}: ${err.message}`)
+    }
     if (mode === "conflict" && existingPr) {
       await api(`/repos/${repo()}/issues/${existingPr}/comments`, {
         method: "POST",
