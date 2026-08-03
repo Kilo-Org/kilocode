@@ -69,8 +69,17 @@ function session(dir: string) {
   const query = `directory=${encodeURIComponent(dir)}`
 
   const json = async (route: string, init?: RequestInit) => {
-    const res = await app.request(route, { headers, ...init })
-    return await res.json()
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const res = await app.request(route, { headers, ...init })
+      const body = await res.text()
+      try {
+        return JSON.parse(body)
+      } catch (error) {
+        if (attempt === 4) throw error
+        await sleep(100)
+      }
+    }
+    throw new Error(`failed to read JSON response from ${route}`)
   }
 
   return {
