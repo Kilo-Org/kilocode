@@ -190,8 +190,8 @@ export namespace SessionResume {
     if (input.id) validateUUID(input.id)
     const files: { file: string; time: string }[] = []
     const matches = new Set<string>()
-    for await (const relative of new Bun.Glob("rollout-*.jsonl").scan({ cwd: root, onlyFiles: true })) {
-      matches.add(relative)
+    for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+      if (entry.isFile() && entry.name.startsWith("rollout-") && entry.name.endsWith(".jsonl")) matches.add(entry.name)
     }
     for await (const relative of new Bun.Glob("**/rollout-*.jsonl").scan({ cwd: root, onlyFiles: true })) {
       matches.add(relative)
