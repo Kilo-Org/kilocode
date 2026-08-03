@@ -1,5 +1,4 @@
 import { Button } from "@kilocode/kilo-ui/button"
-import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { onCleanup, Show, type Component } from "solid-js"
@@ -67,17 +66,19 @@ export const SpeechToTextButton: Component<Props> = (props) => {
   )
 
   return (
-    <Show
-      when={props.speech.state() === "idle"}
-      fallback={
-        <Tooltip value={label()} placement="top" openDelay={0}>
-          {button()}
-        </Tooltip>
+    <Tooltip
+      value={
+        <Show when={props.speech.state() === "idle"} fallback={<span>{label()}</span>}>
+          <div data-slot="tooltip-keybind">
+            <span>{title()}</span>
+            <span data-slot="tooltip-keybind-key">{speechShortcutLabel()}</span>
+          </div>
+        </Show>
       }
+      placement="top"
+      openDelay={0}
     >
-      <TooltipKeybind title={title()} keybind={speechShortcutLabel()} placement="top" openDelay={0}>
-        {button()}
-      </TooltipKeybind>
-    </Show>
+      {button()}
+    </Tooltip>
   )
 }

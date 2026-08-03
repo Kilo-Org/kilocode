@@ -57,7 +57,7 @@ export function createSpeechShortcut(opts: ShortcutOptions) {
   const disarm = () => {
     if (typeof window === "undefined") return
     window.removeEventListener("keyup", release, true)
-    window.removeEventListener("blur", loseFocus, true)
+    window.removeEventListener("blur", loseFocus)
     document.removeEventListener("visibilitychange", hide, true)
   }
 
@@ -83,7 +83,7 @@ export function createSpeechShortcut(opts: ShortcutOptions) {
     press = { state, time: event.timeStamp, mac }
     if (typeof window !== "undefined") {
       window.addEventListener("keyup", release, true)
-      window.addEventListener("blur", loseFocus, true)
+      window.addEventListener("blur", loseFocus)
       document.addEventListener("visibilitychange", hide, true)
     }
 
