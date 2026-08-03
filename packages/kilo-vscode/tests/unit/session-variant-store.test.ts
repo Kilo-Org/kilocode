@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test"
 import {
   cycleVariant,
+  getAgentVariant,
   getVariant,
   sessionVariantKeys,
   sessionVariants,
@@ -41,6 +42,13 @@ describe("per-session variant selection", () => {
 
     expect(getVariant(store, model, variants, "code")).toBe("medium")
     expect(getVariant(store, model, variants, "ask")).toBe("high")
+  })
+
+  it("resolves the effective variant for a mode and model", () => {
+    const store: Record<string, string> = {}
+    store[variantKey(model, "ask")] = "high"
+
+    expect(getAgentVariant(store, model, { variants: { low: {}, high: {} } }, "ask")).toBe("high")
   })
 
   it("carries the pre-submit agent variant into a newly created session", () => {

@@ -38,6 +38,9 @@ interface Props {
    *  an xterm re-paint when the slot transitions back to visible after
    *  sitting behind an occluding layer. */
   active: boolean
+  /** Side terminals only repaint on activation; focus is restored explicitly
+   *  when that context's remembered focus owner is the terminal. */
+  focusOnActivate?: boolean
   /** Serial of the latest explicit focus request for this terminal
    *  (`state.focusRequest()`), consumed so re-requesting focus on an
    *  already-visible terminal still re-focuses it. */
@@ -54,6 +57,7 @@ interface Props {
   /** Provider-owned script status (Run/Setup), used to annotate the
    *  output when a script ends in failure. */
   status?: () => ScriptTerminalStatus | undefined
+  restartable?: boolean
 }
 
 /** How long the ResizeObserver waits after the last size change before
@@ -219,17 +223,22 @@ export const TerminalTab: Component<Props> = (props) => {
     // strips these itself, so this only fires for real title codes.
     const disposeTitle = term.onTitleChange((title) => props.onTitleChange?.(title))
 
-    const ws = new WebSocket(props.wsUrl)
-    ws.binaryType = "arraybuffer"
+    let ws: WebSocket | undefined
     let closed = false
+    let pending = ""
+    let restartRequested = false
+    let disconnected = false
+    let readyTimer: ReturnType<typeof setTimeout> | undefined
+    let fallbackTimer: ReturnType<typeof setTimeout> | undefined
     let streamed = false
+    let socketEnded = false
     // The failure line must not depend on event ordering: the stream can
     // close before the exited snapshot lands (fast failures), or stay open
     // when a background child outlives the script. Write it exactly once,
     // from whichever signal arrives first.
     let failureWritten = false
     const noteFailure = () => {
-      if (failureWritten || (!streamed && !closed)) return
+      if (failureWritten || (!streamed && !socketEnded)) return
       const status = props.status?.()
       if (status?.kind !== "setup") return
       if (status.state === "failed") {
@@ -246,32 +255,111 @@ export const TerminalTab: Component<Props> = (props) => {
       props.status?.()
       noteFailure()
     })
-    const disposeData = term.onData((data) => {
-      if (ws.readyState === WebSocket.OPEN) ws.send(data)
-    })
-    ws.onmessage = (event) => {
-      streamed = true
-      // Text frames carry PTY output; binary frames starting with 0x00
-      // are control metadata (cursor position). See pty/index.ts:46.
-      if (typeof event.data === "string") {
-        term.write(event.data)
+    const requestRestart = () => {
+      if (restartRequested) return
+      restartRequested = true
+      vscode.postMessage({
+        type: "agentManager.terminal.restart",
+        terminalId: props.terminalId,
+        cols: term.cols,
+        rows: term.rows,
+      })
+    }
+    const send = (data: string) => {
+      if (disconnected && props.restartable) {
+        pending += data
+        if (pending.length > 256 * 1024) pending = pending.slice(-256 * 1024)
+        requestRestart()
         return
       }
-      if (event.data instanceof ArrayBuffer) {
-        const bytes = new Uint8Array(event.data)
-        if (bytes.length > 0 && bytes[0] === 0x00) return
-        term.write(bytes)
+      if (ws?.readyState === WebSocket.OPEN) {
+        ws.send(data)
+        return
       }
     }
-    ws.onerror = () => {
-      if (closed) return
-      term.writeln(`\r\n\x1b[90m[${t("agentManager.terminal.connectionError")}]\x1b[0m`)
+    const flush = () => {
+      if (ws?.readyState !== WebSocket.OPEN) return
+      if (readyTimer) {
+        clearTimeout(readyTimer)
+        readyTimer = undefined
+      }
+      if (fallbackTimer) {
+        clearTimeout(fallbackTimer)
+        fallbackTimer = undefined
+      }
+      const data = pending
+      pending = ""
+      if (data && /[^\r\n]/.test(data)) ws.send(data)
+      disconnected = false
+      restartRequested = false
     }
-    ws.onclose = () => {
-      if (closed) return
-      closed = true
-      noteFailure()
-      term.writeln(`\r\n\x1b[90m[${t("agentManager.terminal.ended")}]\x1b[0m`)
+    const scheduleFlush = () => {
+      if (!disconnected) return
+      if (readyTimer) clearTimeout(readyTimer)
+      readyTimer = setTimeout(() => {
+        readyTimer = undefined
+        flush()
+      }, 100)
+    }
+    const open = (url: string) => {
+      if (closed || !url) return
+      const next = new WebSocket(url)
+      next.binaryType = "arraybuffer"
+      ws = next
+      next.onopen = () => {
+        if (closed || ws !== next) return
+        socketEnded = false
+        if (props.restartable && disconnected) {
+          fallbackTimer = setTimeout(() => {
+            fallbackTimer = undefined
+            flush()
+          }, 1_000)
+        }
+      }
+      next.onmessage = (event) => {
+        if (closed || ws !== next) return
+        streamed = true
+        if (typeof event.data === "string") {
+          term.write(event.data)
+          scheduleFlush()
+          return
+        }
+        if (event.data instanceof ArrayBuffer) {
+          const bytes = new Uint8Array(event.data)
+          if (bytes.length > 0 && bytes[0] === 0x00) return
+          term.write(bytes)
+          scheduleFlush()
+        }
+      }
+      next.onerror = () => {
+        if (closed || ws !== next) return
+        term.writeln(`\r\n\x1b[90m[${t("agentManager.terminal.connectionError")}]\x1b[0m`)
+      }
+      next.onclose = () => {
+        if (closed || ws !== next) return
+        ws = undefined
+        if (readyTimer) {
+          clearTimeout(readyTimer)
+          readyTimer = undefined
+        }
+        if (fallbackTimer) {
+          clearTimeout(fallbackTimer)
+          fallbackTimer = undefined
+        }
+        socketEnded = true
+        noteFailure()
+        if (props.restartable) {
+          disconnected = true
+          restartRequested = false
+        }
+        const key = props.restartable ? "agentManager.terminal.endedRestartable" : "agentManager.terminal.ended"
+        term.writeln(`\r\n\x1b[90m[${t(key)}]\x1b[0m`)
+      }
+    }
+    const disposeData = term.onData(send)
+    open(props.wsUrl)
+    const restarted = (url: string) => {
+      open(url)
     }
 
     // Resize: fit on any host size change and forward new cols/rows to
@@ -301,6 +389,8 @@ export const TerminalTab: Component<Props> = (props) => {
         return
       }
       clearTimeout(resizeTimer)
+      if (readyTimer) clearTimeout(readyTimer)
+      if (fallbackTimer) clearTimeout(fallbackTimer)
       resizeTimer = setTimeout(syncSize, RESIZE_DEBOUNCE_MS)
     })
     ro.observe(host)
@@ -357,6 +447,16 @@ export const TerminalTab: Component<Props> = (props) => {
         return
       }
 
+      if (message.type === "agentManager.terminal.restarted") {
+        if (message.terminalId === props.terminalId) restarted(message.wsUrl)
+        return
+      }
+
+      if (message.type === "agentManager.terminal.error" && message.terminalId === props.terminalId) {
+        restartRequested = false
+        return
+      }
+
       if (message.type === "agentManager.terminal.fontChanged") {
         term.options.fontFamily = message.font.fontFamily
         term.options.fontSize = message.font.fontSize
@@ -382,7 +482,8 @@ export const TerminalTab: Component<Props> = (props) => {
     createEffect(() => {
       const now = props.active
       const serial = props.focusSerial ?? 0
-      if (now && (!wasActive || serial !== focusSerial)) scheduleRepaint(true)
+      if (now && (!wasActive || serial !== focusSerial))
+        scheduleRepaint((serial > 0 && serial !== focusSerial) || props.focusOnActivate !== false)
       if (!now && wasActive) term.blur()
       wasActive = now
       focusSerial = serial
@@ -422,6 +523,7 @@ export const TerminalTab: Component<Props> = (props) => {
     themeObserver.observe(document.body, { attributes: true, attributeFilter: ["class"] })
 
     onCleanup(() => {
+      closed = true
       if (pendingFrame !== null) cancelAnimationFrame(pendingFrame)
       document.removeEventListener("visibilitychange", onVisibilityChange)
       window.removeEventListener("focus", onWindowFocus)
@@ -434,7 +536,7 @@ export const TerminalTab: Component<Props> = (props) => {
       disposeData.dispose()
       disposeTitle.dispose()
       try {
-        ws.close()
+        ws?.close()
       } catch (err) {
         // Already closed (ws.close on a closed socket is a no-op in
         // most browsers; the throw is defensive). Logged so unexpected

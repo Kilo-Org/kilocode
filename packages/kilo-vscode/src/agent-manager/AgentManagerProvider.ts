@@ -242,6 +242,7 @@ export class AgentManagerProvider implements Disposable {
       },
       stats: (refresh) => this.statsPoller.snapshot(refresh),
       prs: () => this.prBridge.snapshot(),
+      push: () => this.pushState(),
       managed: (id) => this.panelSessions.has(id) || !!this.state?.getSession(id),
       close: async (id) => {
         await this.onCloseSession(id)
@@ -733,7 +734,11 @@ export class AgentManagerProvider implements Disposable {
       return null
     }
     if (m.type === "agentManager.setWorktreeOrder") {
-      this.state?.setWorktreeOrder(m.order)
+      const state = this.getStateManager()
+      if (state) {
+        state.setWorktreeOrder(m.order)
+        this.pushState()
+      }
       return null
     }
     if (m.type === "agentManager.setSessionsCollapsed") {

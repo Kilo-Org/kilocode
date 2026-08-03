@@ -1209,3 +1209,94 @@ itFragmentFailure.live("session.processor effect tests flush partial v2 fragment
     { config: cfg },
   ),
 )
+// kilocode_change start — send_file delivery attachments must skip image normalization.
+// An image near the 4 MiB tool cap base64-encodes to ~5.5 MiB, exceeding the 5 MiB
+// normalization limit. If normalized, the attachment would be omitted or rewritten
+// after send_file reports success. The processor must preserve send_file attachments
+// byte-for-byte.
+const sendFileDeliveryLLM = Layer.succeed(
+  LLM.Service,
+  LLM.Service.of({
+    stream: () => {
+      const largeBase64 = "x".repeat(6 * 1024 * 1024) // 6 MiB exceeds 5 MiB MAX_BASE64_BYTES
+      const attachment = {
+        type: "file" as const,
+        id: PartID.ascending(),
+        sessionID: SessionID.make("ses_test"),
+        messageID: MessageID.make("msg_test"),
+        mime: "image/png",
+        filename: "big.png",
+        url: `data:image/png;base64,${largeBase64}`,
+      }
+      return Stream.make(
+        LLMEvent.stepStart({ index: 0 }),
+        LLMEvent.toolInputStart({ id: "call-1", name: "send_file" }),
+        LLMEvent.toolInputEnd({ id: "call-1", name: "send_file" }),
+        LLMEvent.toolCall({ id: "call-1", name: "send_file", input: { path: "big.png" }, providerExecuted: true }),
+        LLMEvent.toolResult({
+          id: "call-1",
+          name: "send_file",
+          result: { type: "json", value: { output: "delivered", attachments: [attachment] } },
+          output: { structured: { output: "delivered", attachments: [attachment] }, content: [] },
+          providerExecuted: true,
+        }),
+        LLMEvent.stepFinish({ index: 0, reason: "stop" }),
+        LLMEvent.finish({ reason: "stop" }),
+      )
+    },
+  }),
+)
+const sendFileDeliveryEnv = LayerNode.buildLayer(LayerNode.group([root, LayerNode.make(TestLLMServer.layer, [])]), {
+  replacements: [...replacements, LayerNode.replace(LLM.node, sendFileDeliveryLLM)],
+})
+const itSendFileDelivery = testEffect(sendFileDeliveryEnv)
+
+itSendFileDelivery.live("session.processor preserves send_file delivery attachments without normalization", () =>
+  provideTmpdirServer(
+    ({ dir }) =>
+    Effect.gen(function* () {
+      const { processors, session, provider } = yield* boot()
+      const chat = yield* session.create({})
+      const parent = yield* user(chat.id, "send file")
+      const msg = yield* assistant(chat.id, parent.id, path.resolve(dir))
+      const mdl = yield* provider.getModel(ref.providerID, ref.modelID)
+      const handle = yield* processors.create({
+        assistantMessage: msg,
+        sessionID: chat.id,
+        model: mdl,
+      })
+      yield* handle.process({
+        user: {
+          id: parent.id,
+          sessionID: chat.id,
+          role: "user",
+          time: parent.time,
+          agent: parent.agent,
+          model: { providerID: ref.providerID, modelID: ref.modelID },
+        } satisfies SessionV1.User,
+        sessionID: chat.id,
+        model: mdl,
+        agent: agent(),
+        system: [],
+        messages: [{ role: "user", content: "send file" }],
+        tools: {},
+      })
+      const parts = yield* MessageV2.parts(msg.id)
+      const toolPart = parts.find(
+        (part): part is Extract<SessionV1.Part, { type: "tool" }> => part.type === "tool" && part.tool === "send_file",
+      )
+      if (!toolPart || toolPart.state.status !== "completed") {
+        return yield* Effect.fail(new Error("expected completed send_file tool part"))
+      }
+      expect(toolPart.state.output).not.toContain("omitted")
+      expect(toolPart.state.attachments).toHaveLength(1)
+      expect(toolPart.state.attachments?.[0]).toMatchObject({
+        mime: "image/png",
+        filename: "big.png",
+        url: `data:image/png;base64,${"x".repeat(6 * 1024 * 1024)}`,
+      })
+    }),
+    { config: (url: string) => providerCfg(url) },
+  ),
+)
+// kilocode_change end

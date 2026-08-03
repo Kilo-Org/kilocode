@@ -8,6 +8,7 @@ import { Config } from "@/config/config"
 import { MCP } from "../mcp"
 import { Skill } from "../skill"
 import { legacyReviewCommand, reviewCommand } from "@/kilocode/review/command" // kilocode_change
+import { apply as applyOverride, type Override } from "@/kilocode/command/override" // kilocode_change
 import { EventV2 } from "@opencode-ai/core/event"
 import PROMPT_INITIALIZE from "./template/initialize.txt"
 
@@ -32,6 +33,7 @@ export const Info = Schema.Struct({
   description: Schema.optional(Schema.String),
   agent: Schema.optional(Schema.String),
   model: Schema.optional(Schema.String),
+  variant: Schema.optional(Schema.String), // kilocode_change
   source: Schema.optional(Schema.Literals(["command", "mcp", "skill"])),
   trusted: Schema.optional(Schema.Boolean), // kilocode_change - skill-sourced templates only run `!`cmd`` shell when trusted
   // Some command templates are lazy promises from MCP prompt resolution.
@@ -114,20 +116,12 @@ export const layer = Layer.effect(
       commands["local-review-uncommitted"] = legacyReviewCommand("local-review-uncommitted")!
       // kilocode_change end
 
+      // kilocode_change start - defer partial overrides until all command sources are registered
+      const overrides: Array<{ name: string; command: Override }> = []
       for (const [name, command] of Object.entries(cfg.command ?? {})) {
-        commands[name] = {
-          name,
-          agent: command.agent,
-          model: command.model,
-          description: command.description,
-          source: "command",
-          get template() {
-            return command.template
-          },
-          subtask: command.subtask,
-          hints: hints(command.template),
-        }
+        if (!applyOverride(commands, name, command, hints)) overrides.push({ name, command }) // kilocode_change
       }
+      // kilocode_change end
 
       for (const [name, prompt] of Object.entries(yield* mcp.prompts())) {
         commands[name] = {
@@ -163,6 +157,31 @@ export const layer = Layer.effect(
         commands[item.name] = fromSkill(item) // kilocode_change
       }
 
+      // kilocode_change start - apply deferred overrides to their registered source
+      for (const item of overrides) {
+        const skillTarget = skillName(item.name)
+        if (skillTarget) {
+          const found = yield* skill.get(skillTarget)
+          if (found) {
+            if (commands[skillTarget]?.source !== "skill") {
+              commands[item.name] = fromSkill(found)
+              applyOverride(commands, item.name, item.command, hints) // kilocode_change
+            } else {
+              applyOverride(commands, skillTarget, item.command, hints) // kilocode_change
+            }
+          }
+          continue
+        }
+        const mcpTarget = mcpName(item.name)
+        if (mcpTarget) {
+          if (commands[mcpTarget]?.source !== "mcp") continue
+          applyOverride(commands, mcpTarget, item.command, hints) // kilocode_change
+          continue
+        }
+        applyOverride(commands, item.name, item.command, hints) // kilocode_change
+      }
+      // kilocode_change end
+
       return {
         commands,
       }
@@ -180,6 +199,8 @@ export const layer = Layer.effect(
       // kilocode_change start
       const target = skillName(name)
       if (target) {
+        const exact = s.commands[target]
+        if (exact?.source === "skill") return exact
         const item = yield* skill.get(target)
         if (item) return fromSkill(item)
         return undefined
@@ -201,7 +222,7 @@ export const layer = Layer.effect(
       const result = Object.values(s.commands)
       const names = new Set(result.map((item) => item.name))
       for (const item of yield* skill.all()) {
-        if (s.commands[item.name]?.source === "skill") continue
+        if (s.commands[item.name]?.source === "skill" || s.commands[`${item.name}:skill`]?.source === "skill") continue
         if (names.has(item.name)) result.push(fromSkill(item))
       }
       return result
