@@ -79,11 +79,11 @@ const attachCollecting = Effect.fn("PtySessionTest.attachCollecting")(function* 
   return { attachment, output, ended }
 })
 
-const waitForOutput = (output: Queue.Queue<string>, text: string) =>
+const waitForOutput = (output: Queue.Queue<string>, text: string, received = "") =>
   Effect.gen(function* () {
-    let received = ""
-    while (!received.includes(text)) received += yield* Queue.take(output)
-    return received
+    let value = received
+    while (!value.includes(text)) value += yield* Queue.take(output)
+    return value
   }).pipe(
     Effect.timeoutOrElse({
       duration: PTY_TEST_TIMEOUT, // kilocode_change
@@ -156,7 +156,7 @@ describe("pty", () => {
       const pty = yield* Pty.Service
       const info = yield* createPty("sh", ["-c", 'sleep 30 & printf "<CHILD:%s>" "$!"; wait'])
       const attached = yield* attachCollecting(info.id)
-      const output = yield* waitForOutput(attached.output, ">")
+      const output = yield* waitForOutput(attached.output, ">", attached.attachment.replay)
       const match = output.match(/<CHILD:(\d+)>/)
       expect(match?.[1]).toBeDefined()
       const pid = Number(match?.[1])
