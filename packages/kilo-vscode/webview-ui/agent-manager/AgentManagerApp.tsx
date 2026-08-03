@@ -400,17 +400,26 @@ const AgentManagerContent: Component = () => {
     if (focused) focusMemory.set(focusKey(), "prompt")
   }
   const focusOnDraftChange = () =>
-    focusMemory.get(focusKey()) !== undefined ? focusMemory.get(focusKey()) === "prompt" : true
+    (() => {
+      const key = focusKey()
+      const owner = focusMemory.get(key)
+      if (!owner || owner === "prompt") return true
+      if (terms.sidesForContext(terms.sideKey()).some((term) => term.id === owner.terminal)) return false
+      focusMemory.delete(key)
+      return true
+    })()
   const restoreFocus = () => {
-    const owner = focusMemory.get(focusKey())
+    const key = focusKey()
+    const owner = focusMemory.get(key)
     if (owner && owner !== "prompt") {
-      const key = terms.sideKey()
-      const terminal = terms.sidesForContext(key).find((term) => term.id === owner.terminal)
+      const context = terms.sideKey()
+      const terminal = terms.sidesForContext(context).find((term) => term.id === owner.terminal)
       if (terminal && sidePanel() === "terminal" && !history() && !reviewActive()) {
-        terms.setSideActive(key, terminal.id)
+        terms.setSideActive(context, terminal.id)
         terms.requestFocus(terminal.id)
         return
       }
+      if (!terminal) focusMemory.delete(key)
     }
     window.dispatchEvent(new Event("focusPrompt"))
   }
@@ -1292,7 +1301,6 @@ const AgentManagerContent: Component = () => {
     const unsubSessions = vscode.onMessage((msg) => {
       if (msg.type === "sessionsLoaded" && !sessionsLoaded()) setSessionsLoaded(true)
       if (msg.type === "agentManager.sessionClosed") {
-        forgetSessionFocus(msg.sessionId)
         handleCloseTab(msg.sessionId, false)
       }
     })
