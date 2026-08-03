@@ -219,6 +219,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed": "點擊以限制檔案系統寫入。沙盒設定仍允許網路存取。",
 
   "speechToText.tooltip.start": "使用 Kilo Gateway 開始語音輸入",
+  "speechToText.tooltip.shortcut": "點擊或按下 Cmd/Ctrl+K 開始或停止錄音；說話時按住，放開後即可轉錄並提交。",
   "speechToText.tooltip.starting": "正在啟動麥克風... 請稍後再說。",
   "speechToText.tooltip.stop": "停止擷取音訊",
   "speechToText.tooltip.transcribing": "正在轉錄... 點擊取消。",

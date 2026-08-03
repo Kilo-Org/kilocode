@@ -222,6 +222,8 @@ export const dict = {
     "انقر لتقييد الكتابة في نظام الملفات. يظل الوصول إلى الشبكة مسموحًا وفق إعدادات sandbox.",
 
   "speechToText.tooltip.start": "بدء الإدخال الصوتي باستخدام Kilo Gateway",
+  "speechToText.tooltip.shortcut":
+    "انقر أو اضغط على Cmd/Ctrl+K لبدء التسجيل أو إيقافه؛ اضغط باستمرار أثناء التحدث ثم اتركه لتحويل الكلام إلى نص وإرساله.",
   "speechToText.tooltip.starting": "جارٍ تشغيل الميكروفون... يُرجى الانتظار قبل التحدث.",
   "speechToText.tooltip.stop": "إيقاف التقاط الصوت",
   "speechToText.tooltip.transcribing": "جاري تحويل الصوت إلى نص... انقر للإلغاء.",
