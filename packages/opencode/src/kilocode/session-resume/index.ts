@@ -2,12 +2,24 @@ import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import * as readline from "node:readline"
+import { Context } from "effect"
 
 export namespace SessionResume {
   export const SUPPORTED_CLAUDE_MAJOR = 2
   export const SUPPORTED_CODEX_MAJOR = 0
 
   export type Format = "claude" | "codex"
+
+  // ── Test-only resume roots ──────────────────────────────────────────
+
+  export type HarnessRoots = {
+    claude?: string
+    codex?: string
+  }
+
+  /** Test-only seam to redirect transcript discovery roots.
+   *  Not available through the public command API. */
+  export class ResumeRoots extends Context.Service<ResumeRoots, HarnessRoots>()("SessionResume.ResumeRoots") {}
 
   // ── UUID ───────────────────────────────────────────────────────────
 
@@ -137,11 +149,6 @@ export namespace SessionResume {
     return entries
       .filter((e) => e.isFile() && e.name.endsWith(".jsonl"))
       .map((e) => path.join(dir, e.name))
-  }
-
-  export type HarnessRoots = {
-    claude?: string
-    codex?: string
   }
 
   export type DiscoveryInput = HarnessRoots & {

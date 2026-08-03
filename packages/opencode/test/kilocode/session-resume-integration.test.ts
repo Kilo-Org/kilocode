@@ -395,12 +395,7 @@ const withClaudeFixture = (cwd: string, content: string, id: string) =>
     }),
     (file) =>
       Effect.gen(function* () {
-        const dir = path.dirname(file)
-        try {
-          fs.rmSync(dir, { recursive: true, force: true })
-        } catch {
-          // cleanup may fail if the directory is already gone
-        }
+        fs.rmSync(path.dirname(file), { recursive: true, force: true })
       }),
   )
 
@@ -728,17 +723,6 @@ it.instance(
 const codexFixture = () =>
   Bun.file(path.join(__dirname, "fixture/session-resume/codex.jsonl")).text()
 
-const codexFixtureForCwd = (cwd: string) =>
-  Effect.gen(function* () {
-    const raw = yield* Effect.promise(() => codexFixture())
-    // Replace the cwd in the session_meta line so discovery matches
-    return raw.replace(/"cwd":"[^"]*"/, `"cwd":"${cwd}"`)
-  })
-
-function codexSessionFile(type: "sessions" | "projects", fileName: string) {
-  return path.join(os.homedir(), ".codex", type, fileName)
-}
-
 const withCodexFixture = (content: string, id: string) =>
   Effect.acquireRelease(
     Effect.gen(function* () {
@@ -749,11 +733,7 @@ const withCodexFixture = (content: string, id: string) =>
     }),
     (file) =>
       Effect.gen(function* () {
-        try {
-          fs.rmSync(file, { force: true })
-        } catch {
-          // cleanup may fail
-        }
+        fs.rmSync(file, { force: true })
       }),
   )
 
@@ -871,7 +851,7 @@ const withClaudeFixtureAt = (root: string, cwd: string, content: string, id: str
     }),
     (file) =>
       Effect.gen(function* () {
-        try { fs.rmSync(path.dirname(file), { recursive: true, force: true }) } catch {}
+        fs.rmSync(path.dirname(file), { recursive: true, force: true })
       }),
   )
 
@@ -890,7 +870,7 @@ const withCodexFixtureAt = (root: string, content: string, id: string) =>
     }),
     (file) =>
       Effect.gen(function* () {
-        try { fs.rmSync(file, { force: true }) } catch {}
+        fs.rmSync(file, { force: true })
       }),
   )
 
@@ -910,8 +890,9 @@ itPicker.instance(
         command: "resume-claude",
         arguments: "",
         agent: "build",
-        resumeRoots: { claude: roots.claude },
-      })
+      }).pipe(
+        Effect.provideService(SessionResume.ResumeRoots, { claude: roots.claude }),
+      )
 
       const msgs = yield* sessionMessages(chat.id)
       expect(msgs.length).toBeGreaterThanOrEqual(10)
@@ -942,8 +923,9 @@ itPicker.instance(
         command: "resume-codex",
         arguments: "",
         agent: "build",
-        resumeRoots: { codex: roots.codex },
-      })
+      }).pipe(
+        Effect.provideService(SessionResume.ResumeRoots, { codex: roots.codex }),
+      )
 
       const msgs = yield* sessionMessages(chat.id)
       expect(msgs.length).toBeGreaterThanOrEqual(8)
@@ -991,7 +973,7 @@ it.instance(
       expect(msgs.length).toBe(0)
 
       // Cleanup
-      try { fs.rmSync(file, { recursive: true, force: true }) } catch {}
+      fs.rmSync(file, { recursive: true, force: true })
     }),
   { config: cfg },
   30_000,

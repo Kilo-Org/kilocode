@@ -1956,8 +1956,9 @@ export const layer = Layer.effect(
     }) {
       const ctx = yield* InstanceState.context
       const session = yield* sessions.get(input.cmdInput.sessionID).pipe(Effect.orDie)
-      // kilocode_change start - testable resume roots
-      const roots = (input.cmdInput.resumeRoots ?? {}) as SessionResume.HarnessRoots
+      // kilocode_change start - test-only resume roots via Context.Service
+      const opt = yield* Effect.serviceOption(SessionResume.ResumeRoots)
+      const roots = Option.getOrUndefined(opt) ?? {}
       // kilocode_change end
 
       // Reject nonempty sessions
@@ -1967,7 +1968,7 @@ export const layer = Layer.effect(
           message: "Start a new Kilo session, then run the resume command again.",
         })
         yield* events.publish(Session.Event.Error, { sessionID: input.cmdInput.sessionID, error: error.toObject() })
-        throw error
+        return yield* Effect.fail(error)
       }
 
       // Resolve agent
@@ -1978,7 +1979,7 @@ export const layer = Layer.effect(
         const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
         const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` })
         yield* events.publish(Session.Event.Error, { sessionID: input.cmdInput.sessionID, error: error.toObject() })
-        throw error
+        return yield* Effect.fail(error)
       }
       yield* agents.guardRequirements(agent)
 
@@ -2005,7 +2006,7 @@ export const layer = Layer.effect(
             if (code !== "ENOENT") {
               const error = new NamedError.Unknown({ message: "Unreadable Claude transcript directory" })
               yield* events.publish(Session.Event.Error, { sessionID: input.cmdInput.sessionID, error: error.toObject() })
-              throw error
+              return yield* Effect.fail(error)
             }
           }
         }
@@ -2019,7 +2020,7 @@ export const layer = Layer.effect(
         for (const f of claudeFiles) {
           const id = path.basename(f, ".jsonl")
           let mtime: number | undefined
-          try { mtime = fs.statSync(f).mtimeMs } catch { /* unreadable */ }
+          try { mtime = fs.statSync(f).mtimeMs } catch { mtime = undefined }
           entries.push({ id, format: "claude", mtime })
         }
         for (const f of codexFiles) {
@@ -2028,7 +2029,7 @@ export const layer = Layer.effect(
           const raw = base.slice("rollout-".length)
           const id = raw.split("-").slice(-5).join("-")
           let mtime: number | undefined
-          try { mtime = fs.statSync(f).mtimeMs } catch { /* unreadable */ }
+          try { mtime = fs.statSync(f).mtimeMs } catch { mtime = undefined }
           entries.push({ id, format: "codex", mtime })
         }
 
@@ -2037,7 +2038,7 @@ export const layer = Layer.effect(
             message: "No session transcripts found in the current directory. Use /resume-claude <uuid> or /resume-codex <uuid> with an explicit UUID.",
           })
           yield* events.publish(Session.Event.Error, { sessionID: input.cmdInput.sessionID, error: error.toObject() })
-          throw error
+          return yield* Effect.fail(error)
         }
 
         // Limit and format labels: UUID only, ISO mtime as description
@@ -2065,7 +2066,7 @@ export const layer = Layer.effect(
         })
         const pickerAnswer = answers[0]?.[0]
         if (pickerAnswer === undefined || pickerAnswer === "") {
-          throw new NamedError.Unknown({ message: "No session selected." })
+          return yield* Effect.fail(new NamedError.Unknown({ message: "No session selected." }))
         }
         const pickerIdx = options.findIndex((o) => o.label === pickerAnswer)
         if (pickerIdx < 0 || pickerIdx >= display.length) {
@@ -2073,7 +2074,7 @@ export const layer = Layer.effect(
             message: `Invalid selection: "${pickerAnswer}"`,
           })
           yield* events.publish(Session.Event.Error, { sessionID: input.cmdInput.sessionID, error: error.toObject() })
-          throw error
+          return yield* Effect.fail(error)
         }
         uuid = display[pickerIdx].id
       } else {
@@ -2086,7 +2087,7 @@ export const layer = Layer.effect(
           message: `Invalid UUID: ${uuid}`,
         })
         yield* events.publish(Session.Event.Error, { sessionID: input.cmdInput.sessionID, error: error.toObject() })
-        throw error
+        return yield* Effect.fail(error)
       }
 
       // Discover and parse
@@ -2102,13 +2103,13 @@ export const layer = Layer.effect(
           if (cause instanceof SessionResume.ParseError) {
             const error = new NamedError.Unknown({ message: cause.message })
             yield* events.publish(Session.Event.Error, { sessionID: input.cmdInput.sessionID, error: error.toObject() })
-            throw error
+            return yield* Effect.fail(error)
           }
           const code = typeof cause === "object" && cause !== null && "code" in cause ? cause.code : undefined
           if (code !== "ENOENT") {
             const error = new NamedError.Unknown({ message: `Unreadable Claude transcript: ${uuid}` })
             yield* events.publish(Session.Event.Error, { sessionID: input.cmdInput.sessionID, error: error.toObject() })
-            throw error
+            return yield* Effect.fail(error)
           }
         }
       } else {
@@ -2120,7 +2121,7 @@ export const layer = Layer.effect(
           message: `No ${input.format === "claude" ? "Claude Code" : "OpenAI Codex"} session found with UUID: ${uuid}`,
         })
         yield* events.publish(Session.Event.Error, { sessionID: input.cmdInput.sessionID, error: error.toObject() })
-        throw error
+        return yield* Effect.fail(error)
       }
 
       const parseExit = yield* Effect.exit(
@@ -2152,7 +2153,7 @@ export const layer = Layer.effect(
           message: "The transcript contains no user messages. Nothing was imported.",
         })
         yield* events.publish(Session.Event.Error, { sessionID: input.cmdInput.sessionID, error: error.toObject() })
-        throw error
+        return yield* Effect.fail(error)
       }
 
       // Map transcript to messages
@@ -2172,7 +2173,7 @@ export const layer = Layer.effect(
           message: "Transcript starts with an assistant message. The first message must be from a user.",
         })
         yield* events.publish(Session.Event.Error, { sessionID: input.cmdInput.sessionID, error: error.toObject() })
-        throw error
+        return yield* Effect.fail(error)
       }
 
       // Write messages and parts in order with ascending IDs
@@ -2215,7 +2216,7 @@ export const layer = Layer.effect(
       if (!last) {
         const error = new NamedError.Unknown({ message: "No assistant message found after resume import" })
         yield* events.publish(Session.Event.Error, { sessionID: input.cmdInput.sessionID, error: error.toObject() })
-        return yield* Effect.die(error)
+        return yield* Effect.fail(error)
       }
 
       yield* events.publish(Command.Event.Executed, {
@@ -2575,13 +2576,7 @@ export const CommandInput = Schema.Struct({
     description: "Wait silently if snapshot initialization is slow instead of asking the user.",
   }),
   // kilocode_change end
-  // kilocode_change start - internal resume harness roots for testing
-  resumeRoots: Schema.optional(Schema.Unknown),
-  // kilocode_change end
   // Inlined (no identifier annotation) to keep the original SDK output — the
-
-
-
   // PromptInput call site below references FilePartInput by ref via the
   // Schema export in message-v2.ts.
   parts: Schema.optional(
