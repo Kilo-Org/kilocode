@@ -174,6 +174,7 @@ import { SidebarToggleButton } from "./SidebarToggleButton"
 import { setTabWidths } from "./tab-widths"
 import { buildShortcutCategories } from "./shortcuts"
 import { tracker } from "./telemetry"
+import { createChatFocus, hasQuestionOption } from "./focus"
 import "./agent-manager.css"
 import "./agent-manager-review.css"
 import { cycleAgent as cycle } from "../src/context/session-agent"
@@ -379,6 +380,27 @@ const AgentManagerContent: Component = () => {
     const sel = selection()
     return sel === null ? null : nsKey(sel)
   })
+  const requestChatFocus = createChatFocus({
+    term: () => terms.activeId(),
+    history,
+    review: reviewActive,
+  })
+
+  createEffect(
+    on(
+      () => {
+        const id = session.currentSessionID()
+        return `${id ?? ""}:${session
+          .scopedQuestions(id)
+          .map((question) => question.id)
+          .join(",")}`
+      },
+      () => {
+        requestChatFocus()
+      },
+      { defer: true },
+    ),
+  )
 
   type FocusOwner = "prompt" | { terminal: string }
   const focusMemory = new Map<string, FocusOwner>()
@@ -425,7 +447,7 @@ const AgentManagerContent: Component = () => {
       }
       if (!terminal) focusMemory.delete(key)
     }
-    window.dispatchEvent(new Event("focusPrompt"))
+    requestChatFocus()
   }
   createEffect(
     on(
@@ -913,12 +935,14 @@ const AgentManagerContent: Component = () => {
     setSelection(null)
     setReviewActive(false)
     session.selectSession(id)
+    requestChatFocus(true)
   }
 
   const focusSidebarItem = (item: { type: string; id: string }) => {
     if (item.type === "local") selectLocal()
     else if (item.type === "wt") selectWorktree(item.id)
     else selectUnassigned(item.id)
+    requestChatFocus(true)
     const el = document.querySelector(`[data-sidebar-id="${item.id}"]`)
     if (el instanceof HTMLElement) scrollIntoView(el)
   }
@@ -951,6 +975,7 @@ const AgentManagerContent: Component = () => {
     const next = direction === "left" ? idx - 1 : idx + 1
     if (next < 0 || next >= ids.length) return
     focusTab(ids[next]!)
+    requestChatFocus(true)
   }
 
   const selectionDeps = {
@@ -971,10 +996,15 @@ const AgentManagerContent: Component = () => {
       remembered === REVIEW_TAB_ID && reviewOpenByContext()[sel] === true,
   }
 
-  const selectLocal = () => selectLocalAction(selectionDeps, localSessions())
+  const selectLocal = () => {
+    selectLocalAction(selectionDeps, localSessions())
+    requestChatFocus()
+  }
 
-  const selectWorktree = (worktreeId: string) =>
+  const selectWorktree = (worktreeId: string) => {
     selectWorktreeAction(selectionDeps, worktreeId, sessionsForWorktree(worktreeId))
+    requestChatFocus()
+  }
 
   const addSessionToCurrentWorktree = (sid: string) => {
     const sel = selection()
@@ -994,6 +1024,7 @@ const AgentManagerContent: Component = () => {
     selectWorktree(worktreeId)
     setHistory(false)
     session.selectSession(sid)
+    requestChatFocus()
     return true
   }
 
@@ -1113,6 +1144,7 @@ const AgentManagerContent: Component = () => {
         setSelection,
         setActivePendingId,
       })
+      requestChatFocus()
     }
     // Recover sidebar collapsed state and mark hydrated so transitions enable
     sidebar.hydrate(state.sidebarCollapsed)
@@ -1177,7 +1209,7 @@ const AgentManagerContent: Component = () => {
       else if (msg.action === "advancedWorktree") showNewWorktreeDialog()
       else if (msg.action === "closeWorktree") closeSelectedWorktree()
       else if (msg.action === "showShortcuts") handleShowKeyboardShortcuts()
-      else if (msg.action === "focusInput") window.dispatchEvent(new Event("focusPrompt"))
+      else if (msg.action === "focusInput") requestChatFocus(true)
       else if (msg.action === "focusSearch")
         focusChatSearch({ history: setHistory, review: setReviewActive, terminal: () => terms.setActiveId(undefined) })
       else if (msg.action === "newTerminal") termHandlers.requestNew()
@@ -1382,6 +1414,7 @@ const AgentManagerContent: Component = () => {
             const ms = managedSessions().find((s) => s.id === ev.sessionId)
             if (ms?.worktreeId) setSelection(ms.worktreeId)
             evictLocal(ev.sessionId)
+            requestChatFocus(true)
           }
         } else {
           // Track this worktree as setting up and auto-select it in the sidebar
@@ -1410,6 +1443,7 @@ const AgentManagerContent: Component = () => {
         evictLocal(ev.sessionId)
         drafts.apply(ev.worktreeId, ev.sessionId)
         session.selectSession(ev.sessionId)
+        requestChatFocus(true)
       }
 
       if (msg.type === "agentManager.sessionForked") {
@@ -1429,6 +1463,7 @@ const AgentManagerContent: Component = () => {
           evictLocal(ev.sessionId)
         }
         session.selectSession(ev.sessionId)
+        requestChatFocus(true)
       }
 
       if (msg.type === "agentManager.keybindings") {
@@ -1969,6 +2004,7 @@ const AgentManagerContent: Component = () => {
     setSelection(LOCAL)
     setReviewActive(false)
     session.selectSession(sid)
+    requestChatFocus()
     vscode.postMessage({ type: "agentManager.openLocally", sessionId: sid })
   }
 
@@ -2077,7 +2113,7 @@ const AgentManagerContent: Component = () => {
       cancelAmbientSetup()
       setSidePanel(null)
     },
-    refocus: () => window.dispatchEvent(new Event("focusPrompt")),
+    refocus: requestChatFocus,
     postMessage: (msg) => vscode.postMessage(msg as never),
     track: (button, surface, properties) => metrics.track(button, surface, properties),
     // Panel-local pick, immune to cross-window setting echoes (see side.ts).
@@ -2173,7 +2209,7 @@ const AgentManagerContent: Component = () => {
     return activeTabs().find((s) => s.id === id)
   })
 
-  const focusTab = (id: string) =>
+  const focusTab = (id: string) => {
     focusCurrentTab({
       id,
       terms,
@@ -2189,6 +2225,7 @@ const AgentManagerContent: Component = () => {
       selectSession: session.selectSession,
       activateTerminal: termHandlers.activate,
     })
+  }
   const tabFocus = createTabFocus({ ids: () => tabIds(), select: focusTab })
 
   // Close the currently active tab via keyboard shortcut.
@@ -2498,6 +2535,7 @@ const AgentManagerContent: Component = () => {
                 saveTabMemory()
                 session.selectSession(id)
                 setSelection(LOCAL)
+                requestChatFocus(true)
                 return
               }
               const ms = worktreeSessionIds().has(id) ? managedSessions().find((s) => s.id === id) : undefined
@@ -2505,6 +2543,7 @@ const AgentManagerContent: Component = () => {
                 selectWorktree(ms.worktreeId)
                 session.selectSession(id)
                 setReviewActive(false)
+                requestChatFocus()
                 return
               }
               openLocally(id)
@@ -2559,6 +2598,7 @@ const AgentManagerContent: Component = () => {
                         if (localSessionIDs().includes(id)) {
                           session.selectSession(id)
                           if (selection() === null) setSelection(LOCAL)
+                          requestChatFocus()
                           return
                         }
                         // Navigate to owning worktree instead of forcing into local mode
@@ -2568,6 +2608,7 @@ const AgentManagerContent: Component = () => {
                             selectWorktree(ms.worktreeId)
                             session.selectSession(id)
                             setReviewActive(false)
+                            requestChatFocus()
                             return
                           }
                         }
@@ -2579,6 +2620,7 @@ const AgentManagerContent: Component = () => {
                       readonly={readOnly()}
                       continueInWorktree={selection() === LOCAL}
                       promptBoxId={`agent-manager:${selection() ?? "unassigned"}`}
+                      deferFocusToQuestion={hasQuestionOption}
                       pendingSessionID={selection() === LOCAL ? activePendingId() : undefined}
                       focusOnDraftChange={focusOnDraftChange}
                       onFocusChange={rememberPromptFocus}
