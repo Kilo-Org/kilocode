@@ -12,6 +12,7 @@ export class Info extends Schema.Class<Info>("CommandV2.Info")({
   agent: Schema.String.pipe(Schema.optional),
   model: ModelV2.Ref.pipe(Schema.optional),
   subtask: Schema.Boolean.pipe(Schema.optional),
+  silent: Schema.Boolean.pipe(Schema.optional), // kilocode_change
 }) {}
 
 export type Data = {

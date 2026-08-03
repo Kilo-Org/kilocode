@@ -58,6 +58,7 @@ import { slashMatches } from "@/kilocode/cli/cmd/command-display"
 import * as AgentRequirements from "@/kilocode/cli/agent-requirements"
 import { createCostAlertController } from "@/kilocode/cli/cmd/tui/cost-alert"
 import { MemoryPrompt } from "@/kilocode/cli/cmd/tui/component/memory-prompt"
+import { silentAgent } from "@/kilocode/cli/cmd/silent-command"
 // kilocode_change end
 import { KILO_BASE_MODE, useBindings, useCommandShortcut, useLeaderActive, useOpencodeKeymap } from "../../keymap"
 import { useTuiConfig } from "../../config"
@@ -1044,6 +1045,23 @@ export function Prompt(props: PromptProps) {
     if (!store.prompt.input) return false
     // kilocode_change start - in-memory cost alert command
     if (costAlert.handle(store.prompt.input.trim())) return true
+    // kilocode_change end
+    // kilocode_change start - switch agents without sending a command prompt
+    const target = silentAgent(
+      {
+        text: store.prompt.input,
+        mode: store.mode,
+        parts: store.prompt.parts.length,
+        editor: editorContextLabelState(),
+      },
+      sync.data.command,
+    )
+    if (target) {
+      local.agent.set(target)
+      if (local.agent.current()?.name !== target) return false
+      clearPrompt()
+      return true
+    }
     // kilocode_change end
     const agent = local.agent.current()
     if (!agent) return false

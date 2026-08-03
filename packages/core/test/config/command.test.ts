@@ -33,6 +33,7 @@ agent: reviewer
 model: anthropic/claude
 variant: high
 subtask: true
+silent: true # kilocode_change
 ---
 Review files`,
             )
@@ -70,6 +71,7 @@ Review files`,
                 variant: ModelV2.VariantID.make("high"),
               },
               subtask: true,
+              silent: true, // kilocode_change
             }),
             new CommandV2.Info({ name: "empty", template: "" }),
             new CommandV2.Info({ name: "nested/docs", template: "Write docs" }),

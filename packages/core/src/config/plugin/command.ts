@@ -43,6 +43,7 @@ export const Plugin = PluginV2.define({
               item.model.variant = ModelV2.VariantID.make(command.variant)
             }
             if (command.subtask !== undefined) item.subtask = command.subtask
+            if (command.silent !== undefined) item.silent = command.silent // kilocode_change
           })
         }
       }
