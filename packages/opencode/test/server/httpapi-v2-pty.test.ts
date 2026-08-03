@@ -14,6 +14,11 @@ import { resetDatabase } from "../fixture/db"
 import { disposeAllInstances, tmpdir, tmpdirScoped } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
+// kilocode_change start - PTY route tests do not need an indexing worker per temp project;
+// detached indexing startup races PTY setup and can exhaust the Darwin test deadline.
+process.env.KILO_DISABLE_CODEBASE_INDEXING = "vscode-no-workspace"
+// kilocode_change end
+
 const context = Context.empty() as Context.Context<unknown>
 const testPty = process.platform === "win32" ? test.skip : test
 
@@ -279,6 +284,6 @@ describe("v2 pty HttpApi", () => {
         yield* write(new Socket.CloseEvent(1000, "done")).pipe(Effect.catch(() => Effect.void))
         yield* HttpClientRequest.delete(`/api/pty/${info.id}`).pipe(directoryHeader(dir), HttpClient.execute)
       }),
-    60_000, // kilocode_change - plugin loading and PTY setup exceed 30s under the Darwin profile
+    30_000, // kilocode_change - external plugin loading and websocket setup can exceed Bun's 5s default
   )
 })
