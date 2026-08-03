@@ -1,5 +1,6 @@
 package ai.kilocode.client.ui.picker
 
+import ai.kilocode.client.util.edtWait
 import com.intellij.CommonBundle
 import com.intellij.ide.ui.laf.darcula.ui.DarculaButtonUI
 import com.intellij.openapi.application.ApplicationManager
@@ -69,12 +70,7 @@ class PickerPopupTest : BasePlatformTestCase() {
         return out
     }
 
-    private fun <T> edt(block: () -> T): T {
-        var result: T? = null
-        ApplicationManager.getApplication().invokeAndWait { result = block() }
-        @Suppress("UNCHECKED_CAST")
-        return result as T
-    }
+    private fun <T> edt(block: () -> T): T = edtWait(block)
 
     private class TestRenderer(model: CollectionListModel<String>) : PickerListRenderer<String>(
         model = model,

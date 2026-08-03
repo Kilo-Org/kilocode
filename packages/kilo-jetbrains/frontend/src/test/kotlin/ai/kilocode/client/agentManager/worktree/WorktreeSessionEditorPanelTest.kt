@@ -1,5 +1,6 @@
 package ai.kilocode.client.agentManager.worktree
 
+import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.session.SessionActivityKind
@@ -405,12 +406,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         }
     }
 
-    private fun <T> edt(block: () -> T): T {
-        val out = arrayOfNulls<Any?>(1)
-        com.intellij.openapi.application.ApplicationManager.getApplication().invokeAndWait { out[0] = block() }
-        @Suppress("UNCHECKED_CAST")
-        return out[0] as T
-    }
+    private fun <T> edt(block: () -> T): T = edtWait(block)
 
     private fun components(root: java.awt.Component): List<java.awt.Component> {
         val out = mutableListOf<java.awt.Component>()

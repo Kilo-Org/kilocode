@@ -1,5 +1,6 @@
 package ai.kilocode.client.settings.providers
 
+import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.app.KiloProviderService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.testing.FakeProviderRpcApi
@@ -1290,12 +1291,7 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         return out.joinToString("\n")
     }
 
-    private fun <T> edt(block: () -> T): T {
-        var result: T? = null
-        ApplicationManager.getApplication().invokeAndWait { result = block() }
-        @Suppress("UNCHECKED_CAST")
-        return result as T
-    }
+    private fun <T> edt(block: () -> T): T = edtWait(block)
 
     private fun flushUntil(done: () -> Boolean) = runBlocking {
         repeat(200) {

@@ -2,9 +2,9 @@ package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.telemetry.Telemetry
+import ai.kilocode.client.util.edt
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.SessionDto
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.ui.CollectionListModel
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import kotlinx.coroutines.CoroutineScope
@@ -124,13 +124,4 @@ class WorktreeSessionListController(
     private fun index(id: String): Int {
         return (0 until model.size).firstOrNull { model.getElementAt(it).id == id } ?: -1
     }
-}
-
-private fun edt(block: () -> Unit) {
-    val app = ApplicationManager.getApplication()
-    if (app.isDispatchThread) {
-        block()
-        return
-    }
-    app.invokeLater(block)
 }

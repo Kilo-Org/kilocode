@@ -1,5 +1,6 @@
 package ai.kilocode.client.agentManager
 
+import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
 import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatcher
@@ -408,12 +409,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         flush()
     }
 
-    private fun <T> edt(block: () -> T): T {
-        val out = arrayOfNulls<Any?>(1)
-        ApplicationManager.getApplication().invokeAndWait { out[0] = block() }
-        @Suppress("UNCHECKED_CAST")
-        return out[0] as T
-    }
+    private fun <T> edt(block: () -> T): T = edtWait(block)
 
     private fun flush() = coroutines.drain(::pump)
 

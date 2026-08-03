@@ -87,6 +87,7 @@ internal class ActiveListView(
     private var press: Press? = null
     private var popups = 0
     private var hovered = -1
+    private var heightKey: ActiveListHeightKey? = null
     internal var onSelect: (() -> Unit)? = null
 
     fun setEmptyText(text: String) {
@@ -271,6 +272,7 @@ internal class ActiveListView(
     @RequiresEdt
     fun update(items: List<ActiveListItem>, selection: ActiveListSelection = ActiveListSelection.Preserve) {
         checkEdt()
+        if (this.items != items) heightKey = null
         this.items = items
         val key = when (selection) {
             is ActiveListSelection.Key -> selection.key
@@ -301,40 +303,13 @@ internal class ActiveListView(
     @RequiresEdt
     fun trackPopup(popup: JBPopup) {
         checkEdt()
-        var tracked = false
-        fun activate() {
-            if (tracked) return
-            tracked = true
-            popups++
-            list.repaint()
-        }
-        popup.addListener(object : JBPopupListener {
-            override fun beforeShown(event: LightweightWindowEvent) = activate()
-
-            override fun onClosed(event: LightweightWindowEvent) {
-                if (!tracked) return
-                tracked = false
-                popups = maxOf(0, popups - 1)
-                list.repaint()
-            }
-        })
-        if (popup.isVisible) activate()
+        trackPopupState(popup.isVisible) { listener -> popup.addListener(listener) }
     }
 
     @RequiresEdt
     fun trackBalloon(balloon: Balloon) {
         checkEdt()
-        var tracked = true
-        popups++
-        list.repaint()
-        balloon.addListener(object : JBPopupListener {
-            override fun onClosed(event: LightweightWindowEvent) {
-                if (!tracked) return
-                tracked = false
-                popups = maxOf(0, popups - 1)
-                list.repaint()
-            }
-        })
+        trackPopupState(true) { listener -> balloon.addListener(listener) }
     }
 
     @RequiresEdt
@@ -380,6 +355,9 @@ internal class ActiveListView(
     @RequiresEdt
     private fun syncCellHeight(rows: List<ActiveListItem>) {
         checkEdt()
+        val key = ActiveListHeightKey(cfg, list.width, rows.map(::activeListHeightRow))
+        if (heightKey == key) return
+        heightKey = key
         renderer.setBodyHeight(null)
         if (cfg.height == ActiveListRowHeight.PREFERRED) {
             if (list.fixedCellHeight == -1) return
@@ -503,6 +481,27 @@ internal class ActiveListView(
         return Hit(item, id)
     }
 
+    private fun trackPopupState(visible: Boolean, add: (JBPopupListener) -> Unit) {
+        var tracked = false
+        fun activate() {
+            if (tracked) return
+            tracked = true
+            popups++
+            list.repaint()
+        }
+        add(object : JBPopupListener {
+            override fun beforeShown(event: LightweightWindowEvent) = activate()
+
+            override fun onClosed(event: LightweightWindowEvent) {
+                if (!tracked) return
+                tracked = false
+                popups = maxOf(0, popups - 1)
+                list.repaint()
+            }
+        })
+        if (visible) activate()
+    }
+
     private fun checkEdt() {
         check(ApplicationManager.getApplication().isDispatchThread) { "Active list updates must run on EDT" }
     }
@@ -546,6 +545,42 @@ internal class ActiveListView(
 
     private data class Press(val key: String, val id: String)
 
+    private data class ActiveListHeightKey(
+        val cfg: ActiveListConfig,
+        val width: Int,
+        val rows: List<ActiveListHeightRow>,
+    )
+
+}
+
+private data class ActiveListHeightRow(
+    val key: String,
+    val title: String,
+    val note: String?,
+    val description: String?,
+    val icon: Any?,
+    val section: String?,
+    val badges: List<ActiveListBadge>,
+    val trailing: String?,
+    val cells: List<ActiveListCell>,
+    val disabled: Boolean,
+    val deleting: Boolean,
+)
+
+private fun activeListHeightRow(item: ActiveListItem): ActiveListHeightRow {
+    return ActiveListHeightRow(
+        item.key,
+        item.title,
+        item.note,
+        item.description,
+        item.icon,
+        item.section,
+        item.badges,
+        item.trailing,
+        item.cells,
+        item.disabled,
+        item.deleting,
+    )
 }
 
 private fun activeListIndex(items: List<ActiveListItem>, key: String?): Int {
@@ -582,9 +617,11 @@ private fun activeListTextMatches(query: String, text: String): Boolean {
 
 private fun activeListAcronym(text: String, query: String): Boolean {
     val words = activeListWords(text)
+    val seen = HashSet<Pair<Int, Int>>()
     fun attempt(wi: Int, qi: Int): Boolean {
         if (qi == query.length) return true
         if (wi >= words.size) return false
+        if (!seen.add(wi to qi)) return false
         val word = words[wi]
         var count = 0
         while (qi + count < query.length && count < word.length && word[count] == query[qi + count]) {

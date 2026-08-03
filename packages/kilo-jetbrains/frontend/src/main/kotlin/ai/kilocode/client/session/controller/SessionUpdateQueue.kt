@@ -1,10 +1,10 @@
 package ai.kilocode.client.session.controller
 
+import ai.kilocode.client.util.edt
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.ChatEventDto
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.util.Disposer
 import java.awt.Component
 import java.awt.event.HierarchyEvent
@@ -33,7 +33,6 @@ internal class SessionUpdateQueue(
         private val LOG = KiloLog.create(SessionUpdateQueue::class.java)
     }
 
-    private val app = ApplicationManager.getApplication()
     private val condenser = SessionQueueCondenser()
     private val pending = mutableListOf<ChatEventDto>()
     private val lock = Any()
@@ -58,7 +57,7 @@ internal class SessionUpdateQueue(
 
     init {
         Disposer.register(parent, this)
-        if (comp != null && watch != null) edt {
+        if (comp != null && watch != null) run {
             visible.set(comp.isShowing)
             comp.addHierarchyListener(watch)
         }
@@ -81,7 +80,7 @@ internal class SessionUpdateQueue(
 
     fun holdFlush(hold: Boolean) {
         if (disposed.get()) return
-        edt {
+        run {
             LOG.debug { "${ChatLogSummary.sid(sid())} hold=$hold" }
             this.hold = hold
         }
@@ -90,7 +89,7 @@ internal class SessionUpdateQueue(
     fun requestFlush(forced: Boolean, source: String = "api") {
         if (disposed.get()) return
         if (!forced && !visible.get()) return
-        edt { flushNow(forced, source) }
+        run { flushNow(forced, source) }
     }
 
     override fun dispose() {
@@ -102,7 +101,7 @@ internal class SessionUpdateQueue(
             if (comp != null && watch != null) comp.removeHierarchyListener(watch)
             synchronized(lock) { pending.clear() }
         }
-        if (app.isDispatchThread) cleanup() else app.invokeLater(cleanup)
+        edt(cleanup)
     }
 
     private fun flushNow(forced: Boolean, source: String) {
@@ -133,15 +132,5 @@ internal class SessionUpdateQueue(
         requestFlush(true, "visible")
     }
 
-    private fun edt(block: () -> Unit) {
-        if (disposed.get()) return
-        if (app.isDispatchThread) {
-            block()
-            return
-        }
-        app.invokeLater {
-            if (disposed.get()) return@invokeLater
-            block()
-        }
-    }
+    private fun run(block: () -> Unit) = edt({ !disposed.get() }, block)
 }

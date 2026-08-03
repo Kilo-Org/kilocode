@@ -1,5 +1,6 @@
 package ai.kilocode.client.settings
 
+import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.settings.profile.UserProfileConfigurable
 import ai.kilocode.client.settings.context.ContextConfigurable
 import ai.kilocode.client.settings.models.ModelsConfigurable
@@ -141,12 +142,7 @@ class KiloSettingsConfigurableTest : BasePlatformTestCase() {
 
     // -- helpers --
 
-    private fun <T> edt(block: () -> T): T {
-        var result: T? = null
-        ApplicationManager.getApplication().invokeAndWait { result = block() }
-        @Suppress("UNCHECKED_CAST")
-        return result as T
-    }
+    private fun <T> edt(block: () -> T): T = edtWait(block)
 
     private fun links(root: Container): List<ActionLink> = buildList {
         for (comp in root.components) {

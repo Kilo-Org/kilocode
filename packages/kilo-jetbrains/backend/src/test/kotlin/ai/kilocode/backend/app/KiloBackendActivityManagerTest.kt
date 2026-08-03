@@ -103,6 +103,23 @@ class KiloBackendActivityManagerTest {
         assertFalse("ses_unknown" in snap)
     }
 
+    @Test
+    fun `start rebinds collectors to the latest flows`() = runBlocking {
+        val nextStatuses = MutableStateFlow<Map<String, SessionStatusDto>>(emptyMap())
+        val nextEvents = MutableSharedFlow<ChatEventDto>(extraBufferCapacity = 16)
+        directories["ses_old"] = "/repo/old"
+        directories["ses_new"] = "/repo/new"
+        start()
+
+        manager.start(nextStatuses, { directories[it] }, nextEvents)
+        statuses.value = mapOf("ses_old" to SessionStatusDto("busy"))
+        nextStatuses.value = mapOf("ses_new" to SessionStatusDto("busy"))
+
+        val snap = await("ses_new", SessionActivityKindDto.RUNNING)
+        assertFalse("ses_old" in snap)
+        assertEquals("/repo/new", snap["ses_new"]?.directory)
+    }
+
     private suspend fun await(id: String, kind: SessionActivityKindDto) = withTimeout(5_000) {
         manager.activity.first { it[id]?.kind == kind }
     }

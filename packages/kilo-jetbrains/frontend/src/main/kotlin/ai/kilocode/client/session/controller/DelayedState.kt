@@ -2,8 +2,8 @@ package ai.kilocode.client.session.controller
 
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
+import ai.kilocode.client.util.edt
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.application.ApplicationManager
 
 internal class DelayedState(
     private val ms: Long,
@@ -60,15 +60,6 @@ internal class DelayedState(
     private fun due(): Long {
         val now = timers.now()
         return now + ms.coerceAtMost(Long.MAX_VALUE - now)
-    }
-
-    private fun edt(block: () -> Unit) {
-        val app = ApplicationManager.getApplication()
-        if (app.isDispatchThread) {
-            block()
-            return
-        }
-        app.invokeLater(block)
     }
 
     override fun dispose() {

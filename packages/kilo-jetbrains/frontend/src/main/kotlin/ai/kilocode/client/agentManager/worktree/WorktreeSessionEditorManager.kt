@@ -15,6 +15,7 @@ import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.session.history.LocalHistoryItem
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
+import ai.kilocode.client.util.edt
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.SessionDto
@@ -251,11 +252,6 @@ open class WorktreeSessionEditorManager(
             ?.takeIf { it.isNotBlank() }
             ?: KiloBundle.message("worktree.session.untitled")
     }
-}
-
-private fun edt(block: () -> Unit) {
-    val app = ApplicationManager.getApplication()
-    if (app.isDispatchThread) block() else app.invokeLater(block)
 }
 
 // Mirrors the CLI's Session.isDefaultTitle (packages/opencode/src/session/session.ts): a session

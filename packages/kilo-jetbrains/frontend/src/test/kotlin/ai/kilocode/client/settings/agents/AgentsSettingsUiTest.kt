@@ -1,5 +1,6 @@
 package ai.kilocode.client.settings.agents
 
+import ai.kilocode.client.util.edtWait
 import ai.kilocode.cli.KiloCliParser
 import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
@@ -498,12 +499,7 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
         MouseEvent.BUTTON1,
     )
 
-    private fun <T> edt(block: () -> T): T {
-        var result: T? = null
-        ApplicationManager.getApplication().invokeAndWait { result = block() }
-        @Suppress("UNCHECKED_CAST")
-        return result as T
-    }
+    private fun <T> edt(block: () -> T): T = edtWait(block)
 
     private fun flushUntil(done: () -> Boolean) = runBlocking {
         repeat(300) {

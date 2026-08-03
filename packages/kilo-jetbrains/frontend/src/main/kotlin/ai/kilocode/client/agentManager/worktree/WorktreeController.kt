@@ -1,6 +1,7 @@
 package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.telemetry.Telemetry
+import ai.kilocode.client.util.edt
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
@@ -225,13 +226,4 @@ class WorktreeController(
     private fun cache(): WorktreeNameCache {
         return ApplicationManager.getApplication().service()
     }
-}
-
-private fun edt(block: () -> Unit) {
-    val app = ApplicationManager.getApplication()
-    if (app.isDispatchThread) {
-        block()
-        return
-    }
-    app.invokeLater(block)
 }

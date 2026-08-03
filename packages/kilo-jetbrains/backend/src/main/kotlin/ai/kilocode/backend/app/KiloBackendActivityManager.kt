@@ -45,9 +45,9 @@ class KiloBackendActivityManager(
         directory: (String) -> String?,
         chatEvents: SharedFlow<ChatEventDto>,
     ) {
+        if (status?.isActive == true || events?.isActive == true) stop()
         this.statuses = statuses
         this.directory = directory
-        if (status?.isActive == true || events?.isActive == true) return
         status = cs.launch {
             statuses.collect { synchronized(lock) { recompute() } }
         }

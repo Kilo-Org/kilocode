@@ -16,6 +16,7 @@ class WorktreeNameCache {
     private val names = linkedMapOf<String, String>()
     private val listeners = mutableListOf<(String, String?) -> Unit>()
 
+    @RequiresEdt
     fun get(path: String): String? = names[path]
 
     @RequiresEdt
@@ -33,6 +34,7 @@ class WorktreeNameCache {
         if (names.remove(path) != null) fire(path, null)
     }
 
+    @RequiresEdt
     fun clear() {
         names.clear()
     }
@@ -41,10 +43,12 @@ class WorktreeNameCache {
      * Bulk sync from a worktree list reload. Does not notify: it mirrors the list model that
      * triggered it, so notifying would only echo back into that same list.
      */
+    @RequiresEdt
     fun putAll(items: List<WorktreeDto>) {
         items.forEach { names[it.path] = it.name }
     }
 
+    @RequiresEdt
     fun addListener(parent: Disposable, listener: (path: String, name: String?) -> Unit) {
         listeners.add(listener)
         Disposer.register(parent) { listeners.remove(listener) }

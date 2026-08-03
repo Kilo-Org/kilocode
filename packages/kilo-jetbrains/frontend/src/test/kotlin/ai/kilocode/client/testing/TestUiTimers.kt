@@ -1,5 +1,6 @@
 package ai.kilocode.client.testing
 
+import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.util.UiTimer
 import ai.kilocode.client.util.UiTimerSource
 import com.intellij.openapi.application.ApplicationManager
@@ -28,14 +29,7 @@ class TestUiTimers : UiTimerSource {
         }
     }
 
-    private fun edt(action: () -> Unit) {
-        val app = ApplicationManager.getApplication()
-        if (app.isDispatchThread) {
-            action()
-            return
-        }
-        app.invokeAndWait(action)
-    }
+    private fun edt(action: () -> Unit) = edtWait(action)
 
     private inner class TestTimer(
         private val ms: Int,
