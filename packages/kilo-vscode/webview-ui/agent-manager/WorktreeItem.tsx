@@ -187,8 +187,8 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
       <ContextMenu>
         <HoverCard
           class="am-worktree-hover-card"
-          openDelay={50}
-          closeDelay={50}
+          openDelay={0}
+          closeDelay={0}
           placement="right-start"
           gutter={8}
           open={hovered() && !overClose() && !props.pendingDelete}
