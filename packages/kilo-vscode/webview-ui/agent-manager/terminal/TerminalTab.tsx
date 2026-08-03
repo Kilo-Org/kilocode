@@ -284,8 +284,9 @@ export const TerminalTab: Component<Props> = (props) => {
         clearTimeout(fallbackTimer)
         fallbackTimer = undefined
       }
-      if (pending) ws.send(pending)
+      const data = pending
       pending = ""
+      if (data && /[^\r\n]/.test(data)) ws.send(data)
       disconnected = false
       restartRequested = false
     }
@@ -355,7 +356,6 @@ export const TerminalTab: Component<Props> = (props) => {
     const disposeData = term.onData(send)
     open(props.wsUrl)
     const restarted = (url: string) => {
-      term.writeln("\r\n\x1b[90m----------------------------------------\x1b[0m")
       open(url)
     }
 
