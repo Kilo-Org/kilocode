@@ -553,6 +553,24 @@ describe("FileWatcher subscription", () => {
     }
   })
 
+  test("skips derived prunes for ignore files inside glob-metachar directories", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "file-watcher-meta-"))
+    try {
+      // A .gitignore inside a Next.js-style [slug] route: emitting a raw glob for it
+      // (e.g. app/[slug]/**/generated) would prune the wrong tree, so no prune glob
+      // may be derived from it. A normal dir's prune still works.
+      await mkdir(path.join(root, "app", "[slug]"), { recursive: true })
+      await writeFile(path.join(root, "app", "[slug]", ".gitignore"), "generated\n")
+      await writeFile(path.join(root, ".gitignore"), ".venv/\n")
+
+      const globs = (await loadIgnore(root)).watchIgnoreGlobs?.() ?? []
+      expect(globs).toContain("**/.venv")
+      expect(globs.some((g) => g.includes("[slug]") || g.includes("generated"))).toBe(false)
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
   test("a subscription resolving after shutdown is torn down, not stored", async () => {
     let unsubscribed = 0
     let release: (() => void) | undefined

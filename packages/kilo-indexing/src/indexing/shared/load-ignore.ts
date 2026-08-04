@@ -112,11 +112,20 @@ type PruneCandidate = { segment: string; glob: string; scoped: boolean }
 // are emitted, and any candidate a re-include (!) could reach is dropped: parcel's
 // ignore cannot honor negation, so an over-prune would silently stop indexing a
 // re-included file. Under-pruning only costs a few watch descriptors.
+//
+// parcel matches glob entries (those containing `*`) against paths relative to the
+// subscribed root and resolves plain entries to absolute paths, so both the
+// `**/name` / `dir/**/name` globs and the anchored plain forms prune correctly.
 function pruneGlobs(entries: Entry[]): string[] {
   const negated: string[] = []
   const candidates: PruneCandidate[] = []
 
   for (const entry of entries) {
+    // The ignore file's own directory is interpolated raw into the emitted globs.
+    // If it contains glob metacharacters (e.g. a Next.js `[slug]` route), that glob
+    // would prune the wrong tree — skip emitting for it (shouldIndex() still filters
+    // those paths). Negations are still collected below for shadow-safety.
+    const dirHasMeta = !!entry.dir && GLOB_META.test(entry.dir)
     for (const line of (entry.txt ?? "").split(/\r?\n/)) {
       const trimmed = line.trim()
       if (!trimmed || trimmed.startsWith("#")) {
@@ -137,7 +146,7 @@ function pruneGlobs(entries: Entry[]): string[] {
         negated.push(scoped)
         continue
       }
-      if (GLOB_META.test(body)) {
+      if (GLOB_META.test(body) || dirHasMeta) {
         continue
       }
 
