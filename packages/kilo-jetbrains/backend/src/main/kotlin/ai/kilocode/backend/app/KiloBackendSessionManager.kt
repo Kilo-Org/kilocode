@@ -5,6 +5,7 @@ import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.log.KiloLog
 import ai.kilocode.jetbrains.api.client.DefaultApi
 import ai.kilocode.jetbrains.api.model.GlobalSession
+import ai.kilocode.jetbrains.api.model.GlobalSessionRevert
 import ai.kilocode.jetbrains.api.model.SessionStatus
 import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.SessionDto
@@ -345,6 +346,10 @@ class KiloBackendSessionManager(
     )
 
     private fun revertDto(s: ai.kilocode.jetbrains.api.model.SessionRevert?) = s?.let {
+        revertDto(it.messageID, it.partID, it.snapshot, it.diff)
+    }
+
+    private fun revertDto(s: GlobalSessionRevert?) = s?.let {
         revertDto(it.messageID, it.partID, it.snapshot, it.diff)
     }
 
