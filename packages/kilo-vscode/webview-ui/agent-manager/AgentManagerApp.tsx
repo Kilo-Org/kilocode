@@ -89,6 +89,7 @@ import type { WorktreeBusyState } from "./project/store"
 import { rememberTarget, restoreProjectTarget } from "./project/restore"
 import { createProjectStateRouter } from "./project/state"
 import { applyRunStatus } from "./project/run-status"
+import { clearMultiVersionBusy, markMultiVersionBusy } from "./project/progress"
 import { selectLocalAction, selectWorktreeAction } from "./selection-actions"
 import { DataBridge } from "../src/App"
 import { LanguageBridge } from "../src/context/language-bridge"
@@ -103,7 +104,7 @@ import {
   focusChatSearch,
   LOCAL,
 } from "./navigate"
-import { createProjectNav } from "./project-nav"
+import { buildProjectNavEntries, createProjectNav } from "./project-nav"
 import {
   addPendingTab as addLocalPendingTab,
   nextTabAfterClose,
@@ -173,6 +174,7 @@ import { createMarkdownRender } from "./review-preferences"
 import { createSidebarCollapse } from "./sidebar-collapse"
 import { SidebarToggleButton } from "./SidebarToggleButton"
 import { setTabWidths } from "./tab-widths"
+import { clampPanelWidth, maxPanelWidth, minPanelWidth } from "./side-panel-layout"
 import { buildShortcutCategories } from "./shortcuts"
 import { tracker } from "./telemetry"
 import { createChatFocus, hasQuestionOption } from "./focus"
@@ -273,7 +275,7 @@ const AgentManagerContent: Component = () => {
   const MAX_SIDEBAR_WIDTH_RATIO = 0.4
 
   // Recover persisted local session IDs from webview state
-  const persisted = vscode.getState<PersistedProjectTabs & { sidebarWidth?: number }>()
+  const persisted = vscode.getState<PersistedProjectTabs & { sidebarWidth?: number; sidePanelWidth?: number }>()
   const registry = createProjectRegistry({
     persisted: persisted ?? {},
     activeId: () => currentProjectId() ?? "single",
@@ -313,26 +315,15 @@ const AgentManagerContent: Component = () => {
   const diffLoading = diffs.diffLoading
   const setDiffLoading = diffs.setDiffLoading
   const diffNotices = diffs.diffNotices
-  // The diff and terminal panels each remember their own width: a diff
-  // benefits from half the window, a terminal only needs about a third.
-  const TERMINAL_MIN_WIDTH = 360
-  const TERMINAL_MAX_WIDTH = 640
-  const [diffWidth, setDiffWidth] = createSignal(Math.round(window.innerWidth * 0.5))
-  const [terminalWidth, setTerminalWidth] = createSignal(
-    Math.min(TERMINAL_MAX_WIDTH, Math.max(TERMINAL_MIN_WIDTH, Math.round(window.innerWidth / 3))),
-  )
-  // The hidden-but-mounted host still fits the terminal, so pick the
-  // terminal's width whenever one is alive and no other mode is showing.
-  const widthMode = () => sidePanel() ?? (terms.sides().length > 0 ? "terminal" : null)
-  const hostWidth = () => (widthMode() === "terminal" ? terminalWidth() : diffWidth())
-  const sideMin = () => (widthMode() === "terminal" ? TERMINAL_MIN_WIDTH : 200)
+  // Diff and terminal views share one inspector width, restored from webview
+  // state so the user's divider position survives panel reloads.
+  const [panelWidth, setPanelWidth] = createSignal(clampPanelWidth(persisted?.sidePanelWidth, window.innerWidth))
   const resizeSide = (width: number) => {
-    pendingSideWidth = Math.max(sideMin(), Math.min(width, window.innerWidth * 0.8))
+    pendingSideWidth = clampPanelWidth(width, window.innerWidth)
     if (sideRaf !== undefined) return
     sideRaf = requestAnimationFrame(() => {
       sideRaf = undefined
-      if (widthMode() === "terminal") setTerminalWidth(pendingSideWidth!)
-      else setDiffWidth(pendingSideWidth!)
+      setPanelWidth(pendingSideWidth!)
     })
   }
   const showSideTerminal = () => {
@@ -642,6 +633,7 @@ const AgentManagerContent: Component = () => {
     },
     key: () => registry.active().id,
     width: sidebarWidth,
+    panelWidth,
     get: () => vscode.getState<Record<string, unknown>>(),
     set: (value) => vscode.setState(value),
   })
@@ -865,6 +857,16 @@ const AgentManagerContent: Component = () => {
   /** True when a local session is actively working. */
   const isLocalBusy = (): boolean => isAnySessionBusy(localSessionIDs())
 
+  const projectBusy = (projectId: string, worktreeId: string | null): boolean => {
+    if (projectId === activeProjectId()) {
+      return worktreeId === null ? isLocalBusy() : isAgentBusy(worktreeId)
+    }
+    const ids = (projectSessionsLive()[projectId] ?? [])
+      .filter((item) => item.worktreeId === worktreeId)
+      .map((item) => item.id)
+    return isAnySessionBusy(ids)
+  }
+
   const isSessionBusy = (id: string): boolean => isAnySessionBusy([id])
 
   /** Worktrees sorted so that grouped items are always adjacent, respecting custom order if set. */
@@ -882,6 +884,11 @@ const AgentManagerContent: Component = () => {
   )
   /** Map from sidebar item id → 1-based shortcut number (⌘1 for LOCAL, ⌘2 for first worktree, etc.) */
   const shortcutMap = createMemo(() => buildShortcutMap(sidebarOrder()))
+  const projectShortcutMap = createMemo(() =>
+    buildShortcutMap(
+      buildProjectNavEntries(projectList(), projectStates(), projectLive.sessions()).map((entry) => ({ id: entry.id })),
+    ),
+  )
 
   const moveToSection = (ids: string[], sec: string | null) =>
     vscode.postMessage({ type: "agentManager.moveToSection", worktreeIds: ids, sectionId: sec })
@@ -1447,13 +1454,8 @@ const AgentManagerContent: Component = () => {
         const ev = msg as unknown as AgentManagerMultiVersionProgressMessage
         if (ev.status === "done" && ev.groupId) {
           // Clear busy state for all worktrees in this group
-          setBusyWorktrees((prev) => {
-            const next = new Map(prev)
-            for (const wt of worktrees()) {
-              if (wt.groupId === ev.groupId) next.delete(wt.id)
-            }
-            return next
-          })
+          const store = ev.projectId ? registry.ensure(ev.projectId) : registry.active()
+          clearMultiVersionBusy(store, ev.groupId)
         }
       }
 
@@ -1462,11 +1464,8 @@ const AgentManagerContent: Component = () => {
       if (msg.type === "agentManager.worktreeSetup") {
         const ev = msg as AgentManagerWorktreeSetupMessage
         if (ev.status === "ready" && ev.sessionId) {
-          const ms = managedSessions().find((s) => s.id === ev.sessionId)
-          const wt = ms?.worktreeId ? worktrees().find((w) => w.id === ms.worktreeId) : undefined
-          if (wt?.groupId) {
-            setBusyWorktrees((prev) => new Map([...prev, [wt.id, { reason: "setting-up" as const }]]))
-          }
+          const store = ev.projectId ? registry.ensure(ev.projectId) : registry.active()
+          markMultiVersionBusy(store, ev.sessionId)
         }
       }
 
@@ -1503,7 +1502,8 @@ const AgentManagerContent: Component = () => {
         // Clear busy state — use worktreeId from the message directly
         // to avoid race condition where managedSessions() hasn't updated yet
         if (ev.worktreeId) {
-          setBusyWorktrees((prev) => {
+          const store = ev.projectId ? registry.ensure(ev.projectId) : registry.active()
+          store.setBusy((prev) => {
             const next = new Map(prev)
             next.delete(ev.worktreeId)
             return next
@@ -2335,6 +2335,9 @@ const AgentManagerContent: Component = () => {
             projects={projectList()}
             states={projectStates()}
             store={(id) => registry.ensure(id)}
+            busy={(projectId, id) => registry.ensure(projectId).busy().has(id)}
+            working={(projectId, id) => projectBusy(projectId, id)}
+            localBusy={(projectId) => projectBusy(projectId, null)}
             stats={projectLive.stats()}
             local={projectLive.local()}
             prs={projectLive.prs()}
@@ -2347,6 +2350,7 @@ const AgentManagerContent: Component = () => {
             t={t}
             onSearchRef={(ref) => (sidebarSearchMenu = ref)}
             onShortcuts={handleShowKeyboardShortcuts}
+            shortcutMap={projectShortcutMap}
           />
         </Show>
         <Show when={!multiProject()}>
@@ -2458,20 +2462,6 @@ const AgentManagerContent: Component = () => {
           onTerminalDestinationChoose={sideCtl.choose}
           track={metrics.click}
         />
-
-        {/* Empty worktree state */}
-        <Show when={contextEmpty()}>
-          <div class="am-empty-state">
-            <div class="am-empty-state-icon">
-              <Icon name="branch" size="large" />
-            </div>
-            <div class="am-empty-state-text">{t("agentManager.session.noSessions")}</div>
-            <Button variant="primary" size="small" onClick={handleAddSession}>
-              {t("agentManager.session.new")}
-              <span class="am-shortcut-hint">{kb().newTab ?? ""}</span>
-            </Button>
-          </div>
-        </Show>
 
         <Show when={overlay()}>
           {(state) => (
@@ -2637,16 +2627,16 @@ const AgentManagerContent: Component = () => {
               <Show when={sidePanel() !== null || terms.sides().length > 0}>
                 <div
                   class={`am-diff-resize ${sidePanel() === null ? "am-side-host-hidden" : ""}`}
-                  style={{ width: `${hostWidth()}px` }}
+                  style={{ width: `${panelWidth()}px` }}
                   inert={sidePanel() === null}
                 >
                   <Show when={sidePanel() !== null}>
                     <ResizeHandle
                       direction="horizontal"
                       edge="start"
-                      size={hostWidth()}
-                      min={sideMin()}
-                      max={Math.round(window.innerWidth * 0.8)}
+                      size={panelWidth()}
+                      min={minPanelWidth(window.innerWidth)}
+                      max={maxPanelWidth(window.innerWidth)}
                       onResize={resizeSide}
                     />
                   </Show>

@@ -47,6 +47,7 @@ import { Git } from "@/git"
 import { KilocodeDefaultPlugins } from "@/kilocode/config/default-plugins"
 import { KilocodeGlobalConfigStamp } from "@/kilocode/config/global-stamp"
 import { SandboxConfig } from "@/kilocode/sandbox/config"
+import { ExternalMarkdown } from "@/kilocode/config/external-markdown"
 import type { KilocodeMarkdown } from "@/kilocode/config/markdown"
 import {
   IndexingConfig as KiloIndexingConfig,
@@ -763,13 +764,26 @@ export const layer = Layer.effect(
           deps.push(dep)
 
           // kilocode_change start - propagate parse errors to the Warning accumulator
+          const sourceScopes = (names: readonly string[]) => [
+            ...(dirSourceScope ? [dirSourceScope] : []),
+            ...ExternalMarkdown.scopes({
+              dir,
+              names,
+              permission: result.permission,
+              origins: result.permission_origins,
+            }),
+          ]
           result.command = mergeDeep(
             result.command ?? {},
-            yield* Effect.promise(() => ConfigCommand.load(dir, warnings, dirTrusted, dirFileScope, dirSourceScope)),
+            yield* Effect.promise(() =>
+              ConfigCommand.load(dir, warnings, dirTrusted, dirFileScope, sourceScopes(["command", "commands"])),
+            ),
           )
           result.agent = KilocodeConfig.mergeAgentMarkdown(
             result.agent ?? {},
-            yield* Effect.promise(() => ConfigAgent.load(dir, warnings, dirTrusted, dirFileScope, dirSourceScope)),
+            yield* Effect.promise(() =>
+              ConfigAgent.load(dir, warnings, dirTrusted, dirFileScope, sourceScopes(["agent", "agents"])),
+            ),
             configuredAgents,
           )
           result.agent = KilocodeConfig.mergeAgentMarkdown(

@@ -169,6 +169,8 @@ import type { ProjectRef, SessionRef, WorktreeRef } from "./agent-manager/projec
 import { indexingConsentStore, registeredProjects } from "./indexing-consent"
 import { fetchKiloEmbeddingModelCatalog } from "@kilocode/kilo-gateway"
 import { fetchImageModels } from "./image-generation/models"
+import { fetchSpeechToTextModels } from "./speech-to-text/catalog"
+import { SPEECH_TO_TEXT_MODELS } from "./speech-to-text/models"
 import { stopSessionProcesses } from "./kilo-provider/background-process"
 import { sandboxDefault, sandboxSessionMetadata } from "./shared/sandbox-session"
 import {
@@ -1021,6 +1023,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           exportTranscript: (sessionID) => this.handleExportSessionTranscript(sessionID),
           copy: (text) => vscode.env.clipboard.writeText(text),
           openSessions: (ids) => this.trackOpenSessions(ids),
+          speechToTextModels: () => this.fetchAndSendSpeechToTextModels(),
         })
       ) {
         return
@@ -2701,6 +2704,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.postMessage(message)
   }
 
+  private async fetchAndSendSpeechToTextModels(): Promise<void> {
+    const result = await fetchSpeechToTextModels(this.connectionService, this.getWorkspaceDirectory())
+    if (!result.ok) {
+      this.postMessage({ type: "speechToTextModelsLoaded" as const, models: [...SPEECH_TO_TEXT_MODELS] })
+      return
+    }
+    this.postMessage({ type: "speechToTextModelsLoaded" as const, models: result.models })
+  }
+
   /**
    * Seed sessionStatusMap with current session statuses on connect.
    * Without this, the Settings panel (which has no tracked sessions) would see
@@ -3944,6 +3956,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       disposeGlobal: () => this.disposeGlobal(),
       fetchAndSendProviders: () => this.fetchAndSendProviders(),
       fetchAndSendAgents: () => this.fetchAndSendAgents(),
+      fetchAndSendSpeechToTextModels: () => this.fetchAndSendSpeechToTextModels(),
     }
   }
 

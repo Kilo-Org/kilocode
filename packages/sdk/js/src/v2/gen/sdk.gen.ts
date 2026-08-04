@@ -211,6 +211,8 @@ import type {
   KiloFimResponses,
   KiloModelsImagesErrors,
   KiloModelsImagesResponses,
+  KiloModelsTranscriptionsErrors,
+  KiloModelsTranscriptionsResponses,
   KiloModesErrors,
   KiloModesResponses,
   KiloNotificationsErrors,
@@ -6851,6 +6853,40 @@ export class Models extends HeyApiClient {
     )
     return (options?.client ?? this.client).get<KiloModelsImagesResponses, KiloModelsImagesErrors, ThrowOnError>({
       url: "/kilo/models/images",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Speech-to-text models
+   *
+   * List transcription-capable models from the Kilo Gateway catalog
+   */
+  public transcriptions<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      KiloModelsTranscriptionsResponses,
+      KiloModelsTranscriptionsErrors,
+      ThrowOnError
+    >({
+      url: "/kilo/models/transcriptions",
       ...options,
       ...params,
     })

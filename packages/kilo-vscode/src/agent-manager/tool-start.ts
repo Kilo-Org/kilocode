@@ -19,6 +19,7 @@ export interface ToolTask {
 
 export interface ToolRequest {
   requestID: string
+  projectId?: string
   sessionID?: string
   directory?: string
   sandboxInheritanceToken?: string
@@ -234,7 +235,14 @@ export async function startFromTool(deps: ToolDeps, req: ToolRequest): Promise<v
   const state = { ok: 0 }
   const source = { sandboxInheritanceToken: req.sandboxInheritanceToken }
 
-  deps.post({ type: "agentManager.multiVersionProgress", status: "creating", total, completed: 0, groupId })
+  deps.post({
+    type: "agentManager.multiVersionProgress",
+    projectId: req.projectId,
+    status: "creating",
+    total,
+    completed: 0,
+    groupId,
+  })
   for (let i = 0; i < req.tasks.length; i++) {
     const task = req.tasks[i]!
     try {
@@ -248,10 +256,24 @@ export async function startFromTool(deps: ToolDeps, req: ToolRequest): Promise<v
       deps.log("Agent Manager tool task failed", msg)
       deps.post({ type: "error", message: `Agent Manager tool task failed: ${msg}` })
     }
-    deps.post({ type: "agentManager.multiVersionProgress", status: "creating", total, completed: state.ok, groupId })
+    deps.post({
+      type: "agentManager.multiVersionProgress",
+      projectId: req.projectId,
+      status: "creating",
+      total,
+      completed: state.ok,
+      groupId,
+    })
   }
 
-  deps.post({ type: "agentManager.multiVersionProgress", status: "done", total, completed: state.ok, groupId })
+  deps.post({
+    type: "agentManager.multiVersionProgress",
+    projectId: req.projectId,
+    status: "done",
+    total,
+    completed: state.ok,
+    groupId,
+  })
   if (state.ok === 0) deps.error(`Failed to start any Agent Manager sessions for request ${req.requestID}.`)
   deps.log(`Agent Manager tool request ${req.requestID} complete: ${state.ok}/${total}`)
 }
@@ -299,6 +321,7 @@ export function parseToolRequest(value: unknown): ToolRequest | undefined {
   if (parsed.length !== limited.length) return undefined
   return {
     requestID: typeof value.requestID === "string" ? value.requestID : `am-${Date.now()}`,
+    projectId: typeof value.projectId === "string" ? value.projectId : undefined,
     sessionID: typeof value.sessionID === "string" ? value.sessionID : undefined,
     directory: typeof value.directory === "string" ? value.directory : undefined,
     sandboxInheritanceToken:
