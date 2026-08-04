@@ -373,8 +373,7 @@ const AgentManagerContent: Component = () => {
   const closedDrafts = new Set<string>()
   const [activePendingId, setActivePendingId] = createSignal<string | undefined>()
   const [terminalFont, setTerminalFont] = createSignal<TerminalFont>({
-    fontFamily:
-      getComputedStyle(document.documentElement).getPropertyValue("--vscode-editor-font-family") || "monospace",
+    fontFamily: getComputedStyle(document.documentElement).getPropertyValue("--vscode-editor-font-family").trim(),
     fontSize: readFontSize(),
   })
 
