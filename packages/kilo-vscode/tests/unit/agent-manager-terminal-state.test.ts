@@ -11,9 +11,9 @@ import type { ExtensionMessage } from "../../webview-ui/src/types/messages/exten
 
 const font = { fontFamily: "Menlo", fontSize: 12 }
 
-function scene(initial: string | null = LOCAL) {
+function scene(initial: string | null = LOCAL, context?: () => string | null) {
   const [selection, setSelection] = createSignal<string | null>(initial)
-  const state = createTerminalState(selection)
+  const state = createTerminalState(context ?? selection)
   const posted: Array<Record<string, unknown>> = []
   const events = {
     activated: [] as string[],
@@ -482,6 +482,62 @@ describe("Agent Manager terminal state", () => {
         placement: "side",
         worktreeId: "wt-1",
       })
+      dispose()
+    })
+  })
+
+  it("routes a namespaced Local side context to the project root", () => {
+    createRoot((dispose) => {
+      const item = scene(LOCAL, () => "project-a:local")
+      item.handlers.addSide()
+
+      expect(item.events.shown).toEqual(["project-a:local"])
+      expect(item.posted[0]).toMatchObject({
+        type: "agentManager.terminal.create",
+        placement: "side",
+        worktreeId: null,
+      })
+      const createId = String(item.posted[0]!.createId)
+      item.dispatch(createdSide(createId, "terminal:project-local"))
+      expect(item.state.sidesForContext("project-a:local").map((term) => term.id)).toEqual(["terminal:project-local"])
+      expect(item.posted).toHaveLength(1)
+      dispose()
+    })
+  })
+
+  it("routes an unassigned Local side context to the project root", () => {
+    createRoot((dispose) => {
+      const item = scene(null)
+      item.handlers.addSide()
+
+      expect(item.events.shown).toEqual([LOCAL])
+      expect(item.posted[0]).toMatchObject({
+        type: "agentManager.terminal.create",
+        placement: "side",
+        worktreeId: null,
+      })
+      dispose()
+    })
+  })
+
+  it("routes a namespaced side context with the raw worktree id", () => {
+    createRoot((dispose) => {
+      const item = scene("wt-1", () => "project-a:wt-1")
+      item.handlers.addSide()
+
+      expect(item.events.shown).toEqual(["project-a:wt-1"])
+      expect(item.posted[0]).toMatchObject({
+        type: "agentManager.terminal.create",
+        placement: "side",
+        worktreeId: "wt-1",
+      })
+      const createId = String(item.posted[0]!.createId)
+      item.dispatch({
+        ...createdSide(createId, "terminal:project-worktree"),
+        worktreeId: "wt-1",
+      } satisfies ExtensionMessage)
+      expect(item.state.sidesForContext("project-a:wt-1").map((term) => term.id)).toEqual(["terminal:project-worktree"])
+      expect(item.posted).toHaveLength(1)
       dispose()
     })
   })

@@ -68,7 +68,7 @@ interface SideRequest {
 
 export interface TerminalStateControls {
   /** Record received from `terminal.created`. */
-  add(worktreeId: string | null, term: TerminalTabState): void
+  add(worktreeId: string | null, term: TerminalTabState, contextKey?: string): void
   /** Drop a terminal from its context (location resolved automatically).
    *  Returns the removed record so callers can react to placement. */
   remove(terminalId: string): TerminalTabStateWithContext | undefined
@@ -288,8 +288,8 @@ export function createTerminalState(selection: Accessor<string | null>): Termina
     return (terminalsByContext()[key] ?? []).filter((t) => t.placement === "tab")
   }
 
-  const add = (worktreeId: string | null, term: TerminalTabState) => {
-    const key = worktreeId === null ? LOCAL : worktreeId
+  const add = (worktreeId: string | null, term: TerminalTabState, contextKey?: string) => {
+    const key = contextKey ?? (worktreeId === null ? LOCAL : worktreeId)
     setTerminalsByContext((prev) => {
       const list = prev[key] ?? []
       if (list.some((t) => t.id === term.id)) return prev
@@ -638,6 +638,7 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
   }
 
   const createSide = () => {
+    const sel = deps.getSelection()
     const key = deps.state.sideKey()
     const id = newId()
     deps.state.beginSide(key, id)
@@ -645,7 +646,10 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
       type: "agentManager.terminal.create",
       createId: id,
       placement: "side",
-      worktreeId: key === deps.LOCAL ? null : key,
+      // `key` is namespaced by project for webview state isolation. The
+      // provider routes against the raw sidebar selection in the active
+      // project, so never send the namespaced UI key as a worktree id.
+      worktreeId: sel === null || sel === deps.LOCAL ? null : sel,
     })
   }
 
@@ -848,18 +852,19 @@ function handleCreated(deps: TerminalMessageHandlerDeps, msg: CreatedMessage) {
   }
   if (msg.placement === "side") {
     // Side terminals are answered to a specific pending request. A
-    // missing or context-mismatched request means the webview was
-    // reloaded (or the context is gone) — close the PTY again instead
-    // of leaking it.
+    // missing request means the webview was reloaded — close the PTY again
+    // instead of leaking it. The request's context key is authoritative:
+    // provider messages carry raw worktree ids while UI state is namespaced
+    // by project, and the create id already correlates the two safely.
     const request = deps.state.completeSide(msg.createId)
-    if (!request || request.contextKey !== contextKey) {
+    if (!request) {
       deps.postMessage({ type: "agentManager.terminal.close", terminalId: msg.terminalId })
       return
     }
-    deps.state.add(msg.worktreeId, term)
+    deps.state.add(msg.worktreeId, term, request.contextKey)
     // The newest terminal becomes the visible one in its panel.
-    deps.state.setSideActive(contextKey, msg.terminalId)
-    deps.onSideCreated?.(contextKey, msg.terminalId)
+    deps.state.setSideActive(request.contextKey, msg.terminalId)
+    deps.onSideCreated?.(request.contextKey, msg.terminalId)
     return
   }
   deps.state.add(msg.worktreeId, term)
