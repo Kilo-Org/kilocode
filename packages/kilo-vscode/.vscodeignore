@@ -29,6 +29,7 @@ AGENTS.md
 # not ship in the VSIX, otherwise production installs are detected as local
 # builds and may inject a dev-only bwrap fallback (see ServerManager.localCli).
 bin/.cli-version
+bin/.ffmpeg-target
 
 # Include WAV assets used by extension-host notification playback
 !audio-wav/**

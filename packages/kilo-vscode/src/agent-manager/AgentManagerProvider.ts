@@ -1555,7 +1555,11 @@ export class AgentManagerProvider implements Disposable {
     void this.sendRepoInfo()
     if (!reactivateProject(ctx, this.panel?.sessions, (c) => this.pushState(c)))
       this.stateReady = this.initializeState()
-    else this.projectPollers.sync(this.contexts)
+    else {
+      this.panel?.sessions.refreshSessions()
+      this.projectPollers.sync(this.contexts)
+    }
+    this.panel?.sessions.refreshGitStatus?.()
   }
   private onWorkspaceChanged(): void {
     if (this.contexts.syncPinned()) {
