@@ -64,12 +64,20 @@ function isFilePath(line: string): boolean {
  */
 export const KILO_FILE_PATH_MIME = "application/x-kilo-file-path"
 
+function extractUriListPaths(dt: DataTransfer, mimeType: string): string[] | null {
+  const uri = dt.getData(mimeType)
+  if (!uri) return null
+  const paths = uri.split(/\r?\n/).filter((line) => line.trim() !== "")
+  return paths.length > 0 ? paths : null
+}
+
 /**
  * Extract file paths from a drop's DataTransfer.
  * Checks (in order):
  * 1. Internal relative-path drag (application/x-kilo-file-path)
  * 2. VS Code URI-list (application/vnd.code.uri-list)
- * 3. text/plain — only when every line looks like an absolute file path
+ * 3. Standard URI-list (text/uri-list) — Finder and other OS file drags
+ * 4. text/plain — only when every line looks like an absolute file path
  *
  * Returns null if no file paths are found.
  */
@@ -82,11 +90,12 @@ export function extractDropPaths(dt: DataTransfer): string[] | null {
   }
 
   // VS Code-specific URI list (explorer, editor tabs)
-  const uri = dt.getData("application/vnd.code.uri-list")
-  if (uri) {
-    const paths = uri.split(/\r?\n/).filter((line) => line.trim() !== "")
-    if (paths.length > 0) return paths
-  }
+  const vscodeUri = extractUriListPaths(dt, "application/vnd.code.uri-list")
+  if (vscodeUri) return vscodeUri
+
+  // Standard URI list (Finder and other OS file drags)
+  const standardUri = extractUriListPaths(dt, "text/uri-list")
+  if (standardUri) return standardUri
 
   // Fall back to text/plain only if every line is a recognizable file path
   const text = dt.getData("text")

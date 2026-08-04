@@ -12,14 +12,23 @@ export interface ImageAttachment {
 /** Callback for handling text/URI file path drops. */
 export type FilePathDropHandler = (paths: string[]) => void
 
+/** Callback when dropped files are not images and no path mention was extracted. */
+export type UnsupportedDropHandler = () => void
+
 export function useImageAttachments() {
   const [images, setImages] = createSignal<ImageAttachment[]>([])
   const [dragging, setDragging] = createSignal(false)
   let onFilePaths: FilePathDropHandler | undefined
+  let onUnsupportedDrop: UnsupportedDropHandler | undefined
 
   /** Register a handler for file path drops (text/URI-list). */
   const setFilePathDropHandler = (handler: FilePathDropHandler) => {
     onFilePaths = handler
+  }
+
+  /** Register a handler for unsupported file drops (non-image OS drags without a URI list). */
+  const setUnsupportedDropHandler = (handler: UnsupportedDropHandler) => {
+    onUnsupportedDrop = handler
   }
 
   const add = (file: File) => {
@@ -62,7 +71,10 @@ export function useImageAttachments() {
     // Accept file drops, VS Code URI-list drops, and internal file-path drags.
     // Do NOT accept bare text/plain here — that would intercept normal text drags.
     const acceptable =
-      types.includes("Files") || types.includes("application/vnd.code.uri-list") || types.includes(KILO_FILE_PATH_MIME)
+      types.includes("Files") ||
+      types.includes("application/vnd.code.uri-list") ||
+      types.includes("text/uri-list") ||
+      types.includes(KILO_FILE_PATH_MIME)
     if (!acceptable) return
     event.preventDefault()
     setDragging(true)
@@ -89,8 +101,15 @@ export function useImageAttachments() {
 
     // Second: fall through to image file drops
     const files = dt.files
-    if (!files) return
-    for (const file of Array.from(files)) add(file)
+    if (!files || files.length === 0) return
+
+    let added = false
+    for (const file of Array.from(files)) {
+      if (!isAcceptedImageType(file.type)) continue
+      add(file)
+      added = true
+    }
+    if (!added && onUnsupportedDrop) onUnsupportedDrop()
   }
 
   return {
@@ -105,5 +124,6 @@ export function useImageAttachments() {
     handleDragLeave,
     handleDrop,
     setFilePathDropHandler,
+    setUnsupportedDropHandler,
   }
 }
