@@ -48,7 +48,7 @@ export const ProjectsSection: Component<ProjectsSectionProps> = (props) => (
         {(id) => {
           const project = () => props.projects.find((item) => item.id === id)!
           return (
-            <div class="am-project" classList={{ "am-project-active": project().active }}>
+            <div class="am-project">
               <div class="am-project-item" data-project-id={project().id}>
                 <button
                   class="am-project-main"
