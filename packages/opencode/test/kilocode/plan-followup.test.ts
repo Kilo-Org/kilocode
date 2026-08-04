@@ -11,6 +11,8 @@ import { SessionID, MessageID, PartID } from "../../src/session/schema"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { EventV2 } from "@opencode-ai/core/event"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { formatTodos, generateHandover, PlanFollowup, PlanFollowupRuntime } from "../../src/kilocode/plan-followup"
 import { Instance } from "../../src/kilocode/instance"
 import * as KiloInstance from "../../src/kilocode/instance"
@@ -67,7 +69,10 @@ const todo = {
   },
 }
 
-const session = makeRuntime(Session.Service, Session.defaultLayer)
+const session = makeRuntime(
+  Session.Service,
+  LayerNode.compile(LayerNode.group([Session.node, SessionProjector.node])),
+)
 const store = {
   create: (input?: Parameters<Session.Interface["create"]>[0]) => session.runPromise((svc) => svc.create(input)),
   get: (id: SessionID) => session.runPromise((svc) => svc.get(id)),

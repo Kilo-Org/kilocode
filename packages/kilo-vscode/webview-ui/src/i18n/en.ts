@@ -227,6 +227,8 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.",
   "speechToText.tooltip.start": "Start voice input with Kilo Gateway",
+  "speechToText.tooltip.shortcut":
+    "Tap to start or stop recording. Hold while speaking, then release to transcribe and submit.",
   "speechToText.tooltip.starting": "Starting microphone... Wait to speak.",
   "speechToText.tooltip.stop": "Recording. Click to stop.",
   "speechToText.tooltip.transcribing": "Transcribing... Click to cancel.",
@@ -263,6 +265,7 @@ export const dict = {
 
   "notification.permission.title": "Permission required",
   "notification.permission.titleSubagent": "Permission required (subagent)",
+  "notification.permission.titleSkillShell": 'Run shell commands from skill "{{skill}}"?',
   "ui.permission.manageAutoApprove": "Manage Auto-Approve Rules",
   "ui.permission.doomLoop.prompt": "Potential loop detected for the {{tool}} tool. Continue running?",
   "ui.permission.doomLoop.rule": "Continue {{tool}} calls",
@@ -301,7 +304,6 @@ export const dict = {
 
   "session.tab.review": "Review",
   "session.review.filesChanged": "{{count}} Files Changed",
-  "session.review.change.other": "Changes",
   "session.review.loadingChanges": "Loading changes...",
   "session.review.noChanges": "No changes",
 
@@ -622,7 +624,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "Agent Behaviour",
   "settings.autoApprove.title": "Auto-Approve",
-  "settings.browser.title": "Browser",
+  "settings.webTools.title": "Web Tools",
+  "settings.webTools.description": "Configure web search and browser automation.",
+  "settings.webTools.webSearch.enable": "Enable for All Providers",
+  "settings.webTools.browserAutomation": "Browser Automation",
+  "settings.webTools.webSearch.title": "Web Search",
+  "settings.webTools.webSearch.description": "Make web search available to models from all providers.",
   "settings.checkpoints.title": "Checkpoints",
   "settings.display.title": "Display",
   "settings.autocomplete.title": "Autocomplete",
@@ -675,6 +682,13 @@ export const dict = {
   "session.messages.scrollToBottom": "Scroll to bottom",
   "session.messages.initializing": "Initializing...",
   "session.messages.taskStarting": "Starting...",
+  "session.prompts.navLabel": "Prompt navigator",
+  "session.prompts.tick": "Prompt {{index}} of {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "No response yet",
+  "session.prompts.queued": "Queued",
+  "session.prompts.first": "First prompt",
+  "session.prompts.latest": "Latest prompt",
+  "session.prompts.overflow": "{{count}} earlier prompts",
   "session.status.writingResponse": "Writing response...",
   "session.status.retry": "Retrying…",
   "session.status.working": "Working...",
@@ -724,7 +738,7 @@ export const dict = {
   "dialog.model.noProviders": "No providers",
 
   "prompt.placeholder.connecting": "Connecting to server...",
-  "prompt.placeholder.default": "Type a message... (Enter to send, Shift+Enter for new line)",
+  "prompt.placeholder.default": "Type a message, @ to mention files... (Enter to send, Shift+Enter for new line)",
   "prompt.placeholder.error": "Connection failed. Check the output panel or restart the extension.",
 
   "context.usage.sessionCost": "Session cost",
@@ -862,6 +876,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "SWE-Pruner Model",
   "settings.experimental.swePrunerModel.description":
     "Model used to skim tool outputs; defaults to the configured small model",
+  "settings.experimental.multiProject.title": "Multi-Project Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Enable managing sessions and worktrees across multiple repositories in Agent Manager. The current workspace repository is always the default project.",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout for MCP server requests in milliseconds",
   "settings.experimental.remote.title": "Remote Control",
@@ -946,6 +963,9 @@ export const dict = {
     "No custom commands configured. Add commands to your opencode.json to see them here.",
   "settings.agentBehaviour.workflows.detail.description": "Description",
   "settings.agentBehaviour.workflows.detail.template": "Template",
+  "settings.agentBehaviour.workflows.model": "model",
+  "settings.agentBehaviour.workflows.variant": "variant",
+  "settings.agentBehaviour.workflows.modelDescription": "Global model override",
 
   "settings.agentBehaviour.createMode": "Create New Mode",
   "settings.agentBehaviour.createMode.name": "Name",

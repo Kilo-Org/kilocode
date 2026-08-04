@@ -230,6 +230,8 @@ export const dict = {
     "Kliknite da ograničite pisanje u datotečni sistem. Pristup mreži ostaje dozvoljen prema vašim sandbox postavkama.",
 
   "speechToText.tooltip.start": "Započni glasovni unos sa Kilo Gateway",
+  "speechToText.tooltip.shortcut":
+    "Dodirnite dugme ili pritisnite Cmd/Ctrl+K da pokrenete ili zaustavite snimanje; držite dugme pritisnutim dok govorite, a zatim ga otpustite da biste pretvorili govor u tekst i poslali ga.",
   "speechToText.tooltip.starting": "Pokretanje mikrofona... Sačekajte prije nego što progovorite.",
   "speechToText.tooltip.stop": "Zaustavi hvatanje zvuka",
   "speechToText.tooltip.transcribing": "Prepisivanje... Kliknite da otkažete.",
@@ -266,6 +268,7 @@ export const dict = {
 
   "notification.permission.title": "Potrebna dozvola",
   "notification.permission.titleSubagent": "Potrebna dozvola (podagent)",
+  "notification.permission.titleSkillShell": "Pokrenuti shell komande iz vještine „{{skill}}”?",
   "ui.permission.manageAutoApprove": "Upravljanje pravilima automatskog odobravanja",
   "ui.permission.doomLoop.prompt": "Otkrivena je moguća petlja za alat {{tool}}. Nastaviti izvršavanje?",
   "ui.permission.doomLoop.rule": "Nastavi pozive alata {{tool}}",
@@ -304,7 +307,6 @@ export const dict = {
 
   "session.tab.review": "Pregled",
   "session.review.filesChanged": "Izmijenjeno {{count}} datoteka",
-  "session.review.change.other": "Izmjene",
   "session.review.loadingChanges": "Učitavanje izmjena...",
   "session.review.noChanges": "Nema izmjena",
 
@@ -705,7 +707,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "Ponašanje agenta",
   "settings.autoApprove.title": "Automatsko odobravanje",
-  "settings.browser.title": "Preglednik",
+  "settings.webTools.title": "Web alati",
+  "settings.webTools.description": "Konfigurišite web pretragu i automatizaciju preglednika.",
+  "settings.webTools.webSearch.enable": "Omogući za sve pružaoce",
+  "settings.webTools.browserAutomation": "Automatizacija preglednika",
+  "settings.webTools.webSearch.title": "Web pretraga",
+  "settings.webTools.webSearch.description": "Omogućite web pretragu modelima svih pružalaca.",
   "settings.checkpoints.title": "Kontrolne tačke",
   "settings.display.title": "Prikaz",
   "settings.autocomplete.title": "Automatsko dovršavanje",
@@ -723,6 +730,13 @@ export const dict = {
   "session.messages.scrollToBottom": "Pomakni se na dno",
   "session.messages.initializing": "Inicijalizacija...",
   "session.messages.taskStarting": "Pokretanje...",
+  "session.prompts.navLabel": "Navigator upita",
+  "session.prompts.tick": "Upit {{index}} od {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "Još nema odgovora",
+  "session.prompts.queued": "Na čekanju",
+  "session.prompts.first": "Prvi upit",
+  "session.prompts.latest": "Najnoviji upit",
+  "session.prompts.overflow": "{{count}} ranijih upita",
   "session.status.writingResponse": "Pisanje odgovora…",
   "session.status.retry": "Ponovni pokušaj…",
   "session.status.working": "Radim…",
@@ -750,7 +764,8 @@ export const dict = {
 
   "prompt.placeholder.connecting": "Povezivanje na server...",
   "prompt.placeholder.error": "Povezivanje nije uspjelo. Provjerite panel za izlaz ili ponovo pokrenite ekstenziju.",
-  "prompt.placeholder.default": "Unesite poruku... (Enter za slanje, Shift+Enter za novi red)",
+  "prompt.placeholder.default":
+    "Unesite poruku, @ za spominjanje datoteka... (Enter za slanje, Shift+Enter za novi red)",
 
   "context.usage.sessionCost": "Cijena sesije",
   "context.usage.olderSessions": "{{count}} starijih sesija",
@@ -882,6 +897,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "SWE-Pruner model",
   "settings.experimental.swePrunerModel.description":
     "Model koji se koristi za orezivanje izlaza alata; podrazumijevano konfigurisani mali model",
+  "settings.experimental.multiProject.title": "Višeprojektni Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Omogući upravljanje sesijama i worktree-ima kroz više repozitorija u Agent Manager-u. Trenutni workspace repozitorij je uvijek zadani projekat.",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",
   "settings.experimental.mcpTimeout.description": "Istek vremena za MCP server zahtjeve u milisekundama",
   "settings.experimental.remote.title": "Remote kontrola",
@@ -1009,6 +1027,9 @@ export const dict = {
     "Nema konfiguriranih prilagođenih komandi. Dodajte komande u opencode.json da ih vidite ovdje.",
   "settings.agentBehaviour.workflows.detail.description": "Opis",
   "settings.agentBehaviour.workflows.detail.template": "Predložak",
+  "settings.agentBehaviour.workflows.model": "model",
+  "settings.agentBehaviour.workflows.variant": "varijanta",
+  "settings.agentBehaviour.workflows.modelDescription": "Globalno premošćivanje modela",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Pokrenite shell komande agenta unutar sandboxa na nivou operativnog sistema koji ograničava pisanje na direktorije stanja projekta i Kilo",

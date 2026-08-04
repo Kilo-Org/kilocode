@@ -20,6 +20,14 @@ const TuiScoped = TuiScope.annotate({ default: "project" })
 const ProjectScope = Schema.Literal("project").annotate({ default: "project" })
 const Origin = Schema.Literals(["project", "global", "system", "default"])
 const UnknownRecord = Schema.Record(Schema.String, Schema.Unknown)
+const ConfigTarget = Schema.Struct({
+  scope: Scope,
+  path: Schema.String,
+  revision: Schema.String,
+  exists: Schema.Boolean,
+  writable: Schema.Boolean,
+  raw: UnknownRecord,
+})
 const ModelRef = Schema.Struct({ providerID: Schema.String, modelID: Schema.String })
 const Resolved = Schema.Struct({
   key: Schema.String,
@@ -50,10 +58,23 @@ export const ConfigOverlayQuery = Schema.Struct({
   scope: Schema.optional(Scoped),
 })
 export const ConfigOverlayPatch = Schema.Struct({
-  scope: Schema.optional(Scoped),
+  scope: Scope,
   set: Schema.optional(UnknownRecord),
   unset: Schema.optional(Schema.Array(Schema.Array(Schema.String))),
+  // Optional: clients that did not read a revision (anything but the settings
+  // page) still write unconditionally instead of failing the request.
+  expected: Schema.optional(Schema.Struct({ path: Schema.String, revision: Schema.String })),
 })
+export class ConfigOverlayConflictError extends Schema.ErrorClass<ConfigOverlayConflictError>(
+  "ConfigOverlayConflictError",
+)(
+  {
+    code: Schema.Literals(["target-changed", "revision-conflict"]),
+    message: Schema.String,
+    target: ConfigTarget,
+  },
+  { httpApiStatus: 409 },
+) {}
 export const ConfigRulesQuery = Schema.Struct({
   ...WorkspaceRoutingQueryFields,
   scope: Schema.optional(ProjectScope),
@@ -81,9 +102,9 @@ export const ConfigOverlayResponse = Schema.Struct({
   project: Config.Info,
   sources: Schema.Array(Source),
   targets: Schema.Struct({
-    global: Schema.optional(Schema.String),
-    project: Schema.optional(Schema.String),
-    active: Schema.optional(Schema.String),
+    global: ConfigTarget,
+    project: ConfigTarget,
+    active: ConfigTarget,
   }),
   fields: Schema.Record(Schema.String, Resolved),
   collections: Schema.Record(Schema.String, Schema.Array(Resolved)),
@@ -177,7 +198,8 @@ export const ConfigConsoleApi = HttpApi.make("config-console")
         HttpApiEndpoint.patch("overlayUpdate", ConfigConsolePaths.overlay, {
           query: WorkspaceRoutingQuery,
           payload: ConfigOverlayPatch,
-          success: described(Config.Info, "Effective configuration after patch"),
+          success: described(ConfigOverlayResponse, "Resolved config overlay after patch"),
+          error: ConfigOverlayConflictError,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "config.overlayUpdate",

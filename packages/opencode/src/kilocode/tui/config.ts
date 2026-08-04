@@ -12,6 +12,7 @@ import { Filesystem } from "@/util/filesystem"
 import { isRecord } from "@/util/record"
 import { GlobalBus } from "@/bus/global"
 import { Event } from "@/server/event"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 
 export namespace KilocodeTuiConfig {
   export const Scope = z.enum(["project", "global"])
@@ -28,7 +29,9 @@ export namespace KilocodeTuiConfig {
     const cfg = await Effect.runPromise(
       TuiConfig.Service.use((svc) => svc.info()).pipe(
         Effect.provide(
-          TuiConfig.defaultLayer.pipe(Layer.provide(Layer.succeed(CurrentWorkingDirectory, input.directory))),
+          AppNodeBuilder.build(TuiConfig.node).pipe(
+            Layer.provide(Layer.succeed(CurrentWorkingDirectory, input.directory)),
+          ),
         ),
       ),
     )

@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterEach, describe, expect, test } from "bun:test"
 import { Effect, Layer } from "effect"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
@@ -9,8 +10,8 @@ import { ToolRegistry } from "../../src/tool/registry"
 import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
-const node = CrossSpawnSpawner.defaultLayer
-const it = testEffect(Layer.mergeAll(Agent.defaultLayer, ToolRegistry.defaultLayer, node))
+const node = AppNodeBuilder.build(CrossSpawnSpawner.node)
+const it = testEffect(Layer.mergeAll(AppNodeBuilder.build(Agent.node), AppNodeBuilder.build(ToolRegistry.node), node))
 
 afterEach(async () => {
   await disposeAllInstances()

@@ -7,6 +7,7 @@ import type { PRStatus } from "./types"
 import type { WorktreeStateManager } from "./WorktreeStateManager"
 import {
   OrchestrationError,
+  move,
   overview,
   prompt,
   sameManagedDirectory,
@@ -26,11 +27,13 @@ type Request =
   | (RequestBase & { operation: "overview"; filter?: OverviewFilter })
   | (RequestBase & { operation: "prompt"; targetSessionID: string; prompt: string })
   | (RequestBase & { operation: "stop"; targetSessionID: string })
+  | (RequestBase & { operation: "move"; targetSessionID: string; sectionID: string | null })
 
 type Result =
   | { operation: "overview"; overview: Overview }
   | { operation: "prompt"; sessionID: string; delivered: true }
   | { operation: "stop"; sessionID: string; stopped: true }
+  | { operation: "move"; sessionID: string; sectionID: string | null; moved: true }
 
 interface Failure {
   code: FailureCode | "cancelled" | "disconnected" | "timeout"
@@ -43,6 +46,7 @@ interface Options {
   state(): WorktreeStateManager | undefined
   stats(refresh?: boolean): Promise<{ worktrees: WorktreeStats[]; local?: LocalStats }>
   prs(): Map<string, PRStatus>
+  push(): void
   managed(sessionID: string): boolean
   close(sessionID: string): Promise<void>
   log(...args: unknown[]): void
@@ -278,6 +282,19 @@ export class AgentManagerOrchestrationBridge {
         })
         if (this.disposed || active.cancelled) return
         return { result: { operation: "prompt", sessionID: request.targetSessionID, delivered: true } }
+      }
+      if (request.operation === "move") {
+        move({ state, sessionID: request.targetSessionID, sectionID: request.sectionID })
+        this.options.push()
+        if (this.disposed || active.cancelled) return
+        return {
+          result: {
+            operation: "move",
+            sessionID: request.targetSessionID,
+            sectionID: request.sectionID,
+            moved: true,
+          },
+        }
       }
       if (!this.options.managed(request.targetSessionID)) {
         throw new OrchestrationError("unknown_session", "The session is not managed by this Agent Manager workspace")

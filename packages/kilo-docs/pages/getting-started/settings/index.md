@@ -29,6 +29,8 @@ This is especially useful for complex configuration like custom model definition
 
 Kilo reads JSONC config from a **global** location (`~/.config/kilo/kilo.jsonc`) and from your **project** (`kilo.jsonc`, or `.kilo/kilo.jsonc`). All clients — CLI, VS Code, and JetBrains — read the same files.
 
+If `kilo.json` or the legacy `opencode.json`, `opencode.jsonc`, or `config.json` files exist in the same locations, Kilo reads and deep-merges them as well. Clearing a setting in the Settings UI (for example, setting a model back to "Not set") removes it from every config file that contains it.
+
 {% callout type="warning" %}
 **Migrating from opencode?** Kilo no longer falls back to opencode configuration stored in `.opencode` directories (such as `~/.config/opencode` or a project `./.opencode/`). To keep using it, move your global config into `~/.config/kilo/` and any project config into `./.kilo/`.
 {% /callout %}
@@ -102,6 +104,10 @@ Valid values are `expanded` and `collapsed`.
 ### Markdown Diff Rendering
 
 Markdown files in Kilo diff viewers can be shown as rendered Markdown instead of a raw text diff. Use the eye/code toggle in a Markdown file header, or set `kilo-code.new.diff.renderMarkdown` to `true` to render Markdown files by default.
+
+### Web Search
+
+See [Web Search Availability](/docs/automate/tools#web-search-availability) for how to enable the `websearch` tool for models from all providers.
 
 ### Export and Import
 

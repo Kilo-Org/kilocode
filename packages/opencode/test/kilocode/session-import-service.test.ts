@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { Database } from "@opencode-ai/core/database/database"
 import { ProjectTable } from "@opencode-ai/core/project/sql"
@@ -14,7 +15,7 @@ import { tmpdir } from "../fixture/fixture"
 
 const projectID = ProjectV2.ID.make("proj_test")
 
-const runtime = makeRuntime(Database.Service, Database.defaultLayer)
+const runtime = makeRuntime(Database.Service, AppNodeBuilder.build(Database.node))
 const db = <A, E>(effect: Effect.Effect<A, E, Database.Service>) => runtime.runPromise(() => effect)
 
 async function prepare() {

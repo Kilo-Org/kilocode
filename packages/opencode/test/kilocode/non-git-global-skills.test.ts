@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import path from "path"
@@ -15,17 +16,12 @@ import { provideInstance, testInstanceStoreLayer, tmpdir } from "../fixture/fixt
 import { testEffect } from "../lib/effect"
 
 const skills = (home: string) =>
-  Skill.layer.pipe(
-    Layer.provide(Git.defaultLayer),
-    Layer.provide(Discovery.defaultLayer),
-    Layer.provide(Config.defaultLayer),
-    Layer.provide(EventV2Bridge.defaultLayer),
-    Layer.provide(FSUtil.defaultLayer),
-    Layer.provide(Global.layerWith({ home })),
-    Layer.provide(RuntimeFlags.layer({ disableExternalSkills: false, disableClaudeCodeSkills: false })),
-  )
+  AppNodeBuilder.build(Skill.node, [
+    [Global.node, Global.layerWith({ home })],
+    [RuntimeFlags.node, RuntimeFlags.layer({ disableExternalSkills: false, disableClaudeCodeSkills: false })],
+  ])
 
-const it = testEffect(Layer.mergeAll(CrossSpawnSpawner.defaultLayer, testInstanceStoreLayer))
+const it = testEffect(Layer.mergeAll(AppNodeBuilder.build(CrossSpawnSpawner.node), testInstanceStoreLayer))
 
 describe("non-Git global skills", () => {
   it.live("loads global skills when the project is below the home directory", () =>

@@ -218,6 +218,11 @@ export const kiloScenarios: Scenario[] = [
   http.protected.get("/indexing/status", "indexing.status").json(200, object),
   http.protected.get("/indexing/models", "indexing.models").json(200, object),
   http.protected.get("/indexing/warnings", "indexing.warnings").json(200, array),
+  http.protected
+    .put("/indexing/consent", "indexing.consent")
+    .mutating()
+    .at((ctx) => ({ path: "/indexing/consent", headers: ctx.headers(), body: { enabled: false } }))
+    .json(200, object),
   http.protected.get("/memory/status", "memory.status").json(200, (body) => {
     object(body)
     object(body.state)
@@ -384,6 +389,7 @@ export const kiloScenarios: Scenario[] = [
     .status(401),
   http.protected.get("/kilo/notifications", "kilo.notifications").json(200, array),
   http.protected.get("/kilo/models/images", "kilo.models.images").probe({ path: "/path" }).status(401),
+  http.protected.get("/kilo/models/transcriptions", "kilo.models.transcriptions").probe({ path: "/path" }).status(401),
   http.protected
     .post("/kilo/organization", "kilo.organization.set")
     .at((ctx) => ({ path: "/kilo/organization", headers: ctx.headers(), body: { organizationId: null } }))
@@ -553,14 +559,8 @@ export const kiloScenarios: Scenario[] = [
         check(body === true, "skill removal should return true")
         const location = path.join(directory(ctx), ".kilo/skill/httpapi-remove/SKILL.md")
         const sentinel = path.join(directory(ctx), ".kilo/skill/httpapi-remove/KEEP.txt")
-        check(
-          !(yield* Effect.promise(() => Bun.file(location).exists())),
-          "removed skill should not remain on disk",
-        )
-        check(
-          yield* Effect.promise(() => Bun.file(sentinel).exists()),
-          "skill removal should preserve sibling files",
-        )
+        check(!(yield* Effect.promise(() => Bun.file(location).exists())), "removed skill should not remain on disk")
+        check(yield* Effect.promise(() => Bun.file(sentinel).exists()), "skill removal should preserve sibling files")
       }),
     ),
   http.protected
@@ -751,6 +751,7 @@ export const kiloScenarios: Scenario[] = [
     .json(200, (body) => check(body === true, "telemetry enabled update should return true")),
   http.protected
     .post("/instance/reload", "instance.reload")
+    .skipValidAuthProbe()
     .mutating()
     .seeded((ctx) => ctx.session({ title: "Reload" }))
     .at((ctx) => ({

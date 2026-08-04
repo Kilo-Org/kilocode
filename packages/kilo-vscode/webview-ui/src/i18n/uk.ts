@@ -229,6 +229,8 @@ export const dict = {
     "Натисніть, щоб обмежити запис у файлову систему. Доступ до мережі залишиться дозволеним відповідно до налаштувань пісочниці.",
 
   "speechToText.tooltip.start": "Почати голосове введення з Kilo Gateway",
+  "speechToText.tooltip.shortcut":
+    "Торкніться кнопки або натисніть Cmd/Ctrl+K, щоб почати чи зупинити запис; утримуйте кнопку під час мовлення, а потім відпустіть її, щоб транскрибувати й надіслати.",
   "speechToText.tooltip.starting": "Запуск мікрофона... Поки що не говоріть.",
   "speechToText.tooltip.stop": "Зупинити захоплення звуку",
   "speechToText.tooltip.transcribing": "Транскрибування... Натисніть, щоб скасувати.",
@@ -267,6 +269,7 @@ export const dict = {
 
   "notification.permission.title": "Потрібен дозвіл",
   "notification.permission.titleSubagent": "Потрібен дозвіл (підагент)",
+  "notification.permission.titleSkillShell": "Виконати команди оболонки з навички «{{skill}}»?",
   "ui.permission.manageAutoApprove": "Керувати правилами автоматичного схвалення",
   "ui.permission.doomLoop.prompt":
     "Виявлено потенційний цикл під час роботи інструмента {{tool}}. Продовжити виконання?",
@@ -306,7 +309,6 @@ export const dict = {
 
   "session.tab.review": "Огляд",
   "session.review.filesChanged": "{{count}} файлів змінено",
-  "session.review.change.other": "Змін",
   "session.review.loadingChanges": "Завантаження змін...",
   "session.review.noChanges": "Змін немає",
 
@@ -655,7 +657,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "Поведінка агента",
   "settings.autoApprove.title": "Автоматичне схвалення",
-  "settings.browser.title": "Браузер",
+  "settings.webTools.title": "Вебінструменти",
+  "settings.webTools.description": "Налаштуйте вебпошук і автоматизацію браузера.",
+  "settings.webTools.webSearch.enable": "Увімкнути для всіх постачальників",
+  "settings.webTools.browserAutomation": "Автоматизація браузера",
+  "settings.webTools.webSearch.title": "Вебпошук",
+  "settings.webTools.webSearch.description": "Зробіть вебпошук доступним для моделей усіх постачальників.",
   "settings.checkpoints.title": "Контрольні точки",
   "settings.display.title": "Відображення",
   "settings.autocomplete.title": "Автодоповнення",
@@ -709,6 +716,13 @@ export const dict = {
   "session.messages.scrollToBottom": "Прокрутити до низу",
   "session.messages.initializing": "Ініціалізація...",
   "session.messages.taskStarting": "Запуск...",
+  "session.prompts.navLabel": "Навігатор запитів",
+  "session.prompts.tick": "Запит {{index}} з {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "Відповіді ще немає",
+  "session.prompts.queued": "У черзі",
+  "session.prompts.first": "Перший запит",
+  "session.prompts.latest": "Останній запит",
+  "session.prompts.overflow": "{{count}} попередніх запитів",
   "session.status.writingResponse": "Пишу відповідь...",
   "session.status.retry": "Повторна спроба…",
   "session.status.working": "Працює...",
@@ -735,7 +749,8 @@ export const dict = {
   "dialog.model.noProviders": "Немає провайдерів",
 
   "prompt.placeholder.connecting": "Підключення до сервера...",
-  "prompt.placeholder.default": "Напишіть повідомлення... (Enter для надсилання, Shift+Enter для нового рядка)",
+  "prompt.placeholder.default":
+    "Напишіть повідомлення, @ щоб згадати файли... (Enter для надсилання, Shift+Enter для нового рядка)",
   "prompt.placeholder.error": "Підключення не вдалося. Перевірте панель виводу або перезапустіть розширення.",
 
   "context.usage.sessionCost": "Вартість сесії",
@@ -873,6 +888,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "Модель SWE-Pruner",
   "settings.experimental.swePrunerModel.description":
     "Модель для обрізання виводу інструментів; за замовчуванням — налаштована мала модель",
+  "settings.experimental.multiProject.title": "Мультипроєктний Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Увімкніть керування сеансами та робочими деревами в кількох репозиторіях в Agent Manager. Поточний репозиторій робочого простору завжди є проєктом за замовчуванням.",
   "settings.experimental.mcpTimeout.title": "Тайм-аут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Тайм-аут у мілісекундах для запитів до MCP-сервера",
   "settings.experimental.remote.title": "Керування Remote",
@@ -968,6 +986,9 @@ export const dict = {
     "Власних команд не налаштовано. Додайте команди до opencode.json, щоб вони з'явилися тут.",
   "settings.agentBehaviour.workflows.detail.description": "Опис",
   "settings.agentBehaviour.workflows.detail.template": "Шаблон",
+  "settings.agentBehaviour.workflows.model": "модель",
+  "settings.agentBehaviour.workflows.variant": "варіант",
+  "settings.agentBehaviour.workflows.modelDescription": "Глобальне перевизначення моделі",
 
   "settings.autoApprove.description":
     "Визначте, як виконуються інструменти. Більшість інструментів за замовчуванням — Дозволити. doom_loop та external_directory за замовчуванням — Запитувати.",

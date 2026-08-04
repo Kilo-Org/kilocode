@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import fs from "node:fs/promises"
 import path from "node:path"
 import { $ } from "bun"
@@ -6,6 +7,7 @@ import { Deferred, Effect, Exit, Layer } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Database } from "@opencode-ai/core/database/database"
 import { SessionV2 } from "@opencode-ai/core/session"
+import { SessionExecution } from "@opencode-ai/core/session/execution"
 import { BackgroundJob } from "@/background/job"
 import { Bus } from "@/bus"
 import { Config } from "@/config/config"
@@ -30,22 +32,22 @@ const it = testEffect(
   Layer.mergeAll(
     Session.layer.pipe(
       Layer.provide(Bus.layer),
-      Layer.provide(Storage.defaultLayer),
+      Layer.provide(AppNodeBuilder.build(Storage.node)),
       Layer.provide(SyncEvent.defaultLayer),
       Layer.provide(RuntimeFlags.layer({ experimentalWorkspaces: false })),
-      Layer.provide(BackgroundJob.defaultLayer),
-      Layer.provide(Database.defaultLayer),
-      Layer.provide(EventV2Bridge.defaultLayer),
-      Layer.provide(SessionV2.defaultLayer),
+      Layer.provide(AppNodeBuilder.build(BackgroundJob.node)),
+      Layer.provide(AppNodeBuilder.build(Database.node)),
+      Layer.provide(AppNodeBuilder.build(EventV2Bridge.node)),
+      Layer.provide(AppNodeBuilder.build(SessionV2.node, [[SessionExecution.node, SessionExecution.noopLayer]])), // kilocode_change
     ),
-    BackgroundJob.defaultLayer,
+    AppNodeBuilder.build(BackgroundJob.node),
     Bus.layer,
-    Config.defaultLayer,
-    Database.defaultLayer,
-    CrossSpawnSpawner.defaultLayer,
+    AppNodeBuilder.build(Config.node),
+    AppNodeBuilder.build(Database.node),
+    AppNodeBuilder.build(CrossSpawnSpawner.node),
     testInstanceStoreLayer,
-    Notebook.defaultLayer,
-    SessionStatus.defaultLayer,
+    AppNodeBuilder.build(Notebook.node),
+    AppNodeBuilder.build(SessionStatus.node),
   ),
 )
 
@@ -137,7 +139,9 @@ describe("sandbox session cleanup", () => {
       if (!status.available) return
       const token = SandboxInheritance.issue({ sessionID: source.id, directory: dir, count: 1 })
 
-      const child = yield* provideInstance(worktree)(sessions.create({ title: "sandbox-child", sandboxInheritanceToken: token }))
+      const child = yield* provideInstance(worktree)(
+        sessions.create({ title: "sandbox-child", sandboxInheritanceToken: token }),
+      )
       expect((yield* provideInstance(worktree)(SandboxPolicy.status(child.id))).enabled).toBe(true)
 
       yield* provideInstance(dir)(SandboxPolicy.toggle(source.id))

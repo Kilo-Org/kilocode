@@ -2,7 +2,7 @@ import path from "path"
 import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { eq } from "drizzle-orm"
-import { IntegrationSchema } from "@opencode-ai/core/integration/schema"
+import { Integration } from "@opencode-ai/core/integration"
 import { Credential } from "@opencode-ai/core/credential"
 import { Database } from "@opencode-ai/core/database/database"
 import { EventV2 } from "@opencode-ai/core/event"
@@ -12,6 +12,7 @@ import { DataMigrationTable } from "@opencode-ai/core/data-migration.sql"
 import { CredentialTable } from "@opencode-ai/core/credential/sql"
 import { tmpdir } from "../fixture/tmpdir"
 import { it } from "../lib/effect"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 
 function layer(dir: string) {
   const database = Database.layerFromPath(path.join(dir, "credential.db")).pipe(Layer.fresh)
@@ -22,7 +23,7 @@ function layer(dir: string) {
   )
   return Credential.layer.pipe(
     Layer.provide(database),
-    Layer.provide(EventV2.defaultLayer),
+    Layer.provide(AppNodeBuilder.build(EventV2.node)),
     Layer.provideMerge(importer),
   )
 }
@@ -86,7 +87,7 @@ describe("Credential auth-v2 migration", () => {
                 const credentials = yield* Credential.Service
                 return {
                   all: yield* credentials.all(),
-                  list: yield* credentials.list(IntegrationSchema.ID.make("kilo")),
+                  list: yield* credentials.list(Integration.ID.make("kilo")),
                 }
               }).pipe(Effect.provide(layer(tmp.path)))
 
@@ -114,10 +115,10 @@ describe("Credential auth-v2 migration", () => {
         auth.pipe(
           Effect.flatMap(() =>
             Effect.gen(function* () {
-              const integration = IntegrationSchema.ID.make("kilo")
-              const active = new Credential.OAuth({
+              const integration = Integration.ID.make("kilo")
+              const active = Credential.OAuth.make({
                 type: "oauth",
-                methodID: IntegrationSchema.MethodID.make("oauth"),
+                methodID: Integration.MethodID.make("oauth"),
                 refresh: "refresh-second",
                 access: "access-second",
                 expires: 2,

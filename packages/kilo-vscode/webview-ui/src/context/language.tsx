@@ -49,6 +49,7 @@ import { dict as appTr } from "../i18n/tr"
 import { dict as appNl } from "../i18n/nl"
 import { dict as appUk } from "../i18n/uk"
 import { dict as appIt } from "../i18n/it"
+import { dict as appFa } from "../i18n/fa"
 import { dict as amEn } from "../../agent-manager/i18n/en"
 import { dict as amZh } from "../../agent-manager/i18n/zh"
 import { dict as amZht } from "../../agent-manager/i18n/zht"
@@ -69,6 +70,7 @@ import { dict as amTr } from "../../agent-manager/i18n/tr"
 import { dict as amNl } from "../../agent-manager/i18n/nl"
 import { dict as amUk } from "../../agent-manager/i18n/uk"
 import { dict as amIt } from "../../agent-manager/i18n/it"
+import { dict as amFa } from "../../agent-manager/i18n/fa"
 import { dict as kiloEn } from "@kilocode/kilo-i18n/en"
 import { dict as kiloZh } from "@kilocode/kilo-i18n/zh"
 import { dict as kiloZht } from "@kilocode/kilo-i18n/zht"
@@ -118,6 +120,7 @@ export const LOCALE_LABELS: Record<Locale, string> = {
   nl: "Nederlands",
   uk: "Українська",
   it: "Italiano",
+  fa: "فارسی",
 }
 
 // Merge 4 dict layers: app + ui + kilo + agent manager (kilo and agent manager override last)
@@ -143,6 +146,9 @@ const dicts: Record<Locale, Record<string, string>> = {
   nl: { ...base, ...appNl, ...uiNl, ...kiloNl, ...amEn, ...amNl },
   uk: { ...base, ...appUk, ...uiUk, ...kiloUk, ...amEn, ...amUk },
   it: { ...base, ...appIt, ...uiIt, ...kiloIt, ...amEn, ...amIt },
+  // Persian (Kilo fork addition). Only app + agent-manager layers are localized;
+  // the upstream ui/kilo layers fall back to English via `base`.
+  fa: { ...base, ...appFa, ...amEn, ...amFa },
 }
 
 function normalizeLocale(lang: string): Locale {

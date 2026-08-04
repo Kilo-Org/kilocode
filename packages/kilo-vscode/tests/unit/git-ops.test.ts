@@ -58,6 +58,23 @@ describe("GitOps", () => {
     })
   })
 
+  describe("root", () => {
+    it("resolves the nearest enclosing repository", async () => {
+      const git = ops(async (args) => {
+        if (args[0] === "rev-parse" && args[1] === "--show-toplevel") return "/workspace/frontend"
+        return ""
+      })
+      expect(await git.root("/workspace/frontend/src")).toBe("/workspace/frontend")
+    })
+
+    it("returns undefined outside a repository", async () => {
+      const git = ops(async () => {
+        throw new Error("not a git repo")
+      })
+      expect(await git.root("/workspace")).toBeUndefined()
+    })
+  })
+
   describe("resolveRemote", () => {
     it("uses upstream remote when upstream is configured", async () => {
       const git = ops(async (args) => {
