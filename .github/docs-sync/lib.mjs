@@ -9,7 +9,9 @@
 import { spawnSync } from "node:child_process"
 import fs from "node:fs"
 
-const API = "https://api.github.com"
+// Test hook: DOCS_SYNC_API_BASE points the API at a local stub server. The workflow
+// never sets it — only selftests do.
+const API = process.env.DOCS_SYNC_API_BASE || "https://api.github.com"
 const MAX_RETRIES = 3
 
 export function token() {
