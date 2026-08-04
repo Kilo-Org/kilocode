@@ -119,6 +119,33 @@ class KiloCliDownloaderTest {
     }
 
     @Test
+    fun `falls back to github metadata when bundled checksum is malformed`() = runBlocking {
+        MockWebServer().use { server ->
+            val bytes = archive()
+            server.enqueue(metadata(bytes))
+            server.enqueue(MockResponse().setResponseCode(200).setBody(Buffer().write(bytes)))
+            val log = TestLog()
+
+            val cli = KiloCliDownloader(
+                log = log,
+                root = dir,
+                baseUrl = server.url("/release").toString(),
+                api = server.url("/api").toString(),
+                digests = mapOf(KiloCliPlatform.current() to "not-a-digest"),
+            ).resolve("1.2.3")
+
+            assertTrue(cli.isFile)
+            assertContains(
+                log.messages,
+                "WARN: Ignoring malformed bundled Kilo CLI checksum for ${KiloCliPlatform.current()}: not-a-digest"
+            )
+            assertEquals("/api/v1.2.3", server.takeRequest().path)
+            assertEquals("/release/v1.2.3/kilo-${KiloCliPlatform.current()}.${KiloCliPlatform.archive()}", server.takeRequest().path)
+            assertEquals(2, server.requestCount)
+        }
+    }
+
+    @Test
     fun `prunes stale versions and removes the extracted archive`() = runBlocking {
         MockWebServer().use { server ->
             val stale = File(File(dir, "0.0.1"), KiloCliPlatform.current())

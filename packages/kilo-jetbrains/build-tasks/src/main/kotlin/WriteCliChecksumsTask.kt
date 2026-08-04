@@ -20,6 +20,7 @@ abstract class WriteCliChecksumsTask : DefaultTask() {
         private val DIGEST = Regex("^sha256:[a-f0-9]{64}$")
         private val JSON = Json { ignoreUnknownKeys = true }
         private const val API = "https://api.github.com/repos/Kilo-Org/kilocode/releases/tags"
+        // Keep in sync with KiloCliPlatform.current() and StageBundledCliTask.PLATFORMS.
         private val PLATFORMS = listOf(
             "darwin-arm64",
             "darwin-x64",
