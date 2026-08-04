@@ -1,10 +1,51 @@
 import { describe, expect, it } from "bun:test"
 import {
+  mcpConfigScope,
+  mcpEnabledPatch,
   selectedAgentNumberOverrideValue,
   selectedAgentTextOverrideValue,
   selectedDefaultAgentValue,
   shouldClearDefaultAgentWhenAgentBecomesUnavailable,
 } from "../../webview-ui/src/components/settings/agent-behaviour-patches"
+
+describe("mcpEnabledPatch", () => {
+  it("returns only the enabled-state patch", () => {
+    expect(mcpEnabledPatch("docs", false)).toEqual({
+      mcp: {
+        docs: {
+          enabled: false,
+        },
+      },
+    })
+  })
+
+  it("routes project-defined servers to project config", () => {
+    expect(
+      mcpConfigScope("docs", {
+        mcp: [{ key: "docs", source: "project" }],
+      }),
+    ).toBe("project")
+  })
+
+  it("routes global servers to global config", () => {
+    const collections = {
+      mcp: [{ key: "docs", source: "global" as const }],
+    }
+    expect(mcpConfigScope("docs", collections)).toBe("global")
+  })
+
+  it("keeps system, default, and unknown servers runtime-only", () => {
+    const collections = {
+      mcp: [
+        { key: "legacy", source: "system" as const },
+        { key: "builtin", source: "default" as const },
+      ],
+    }
+    expect(mcpConfigScope("legacy", collections)).toBeUndefined()
+    expect(mcpConfigScope("builtin", collections)).toBeUndefined()
+    expect(mcpConfigScope("unknown", collections)).toBeUndefined()
+  })
+})
 
 describe("selectedAgentTextOverrideValue", () => {
   it("maps an empty text field value to a null delete sentinel", () => {

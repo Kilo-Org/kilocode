@@ -22,7 +22,6 @@ import { KiloCompactionChunks } from "../../src/kilocode/session/compaction-chun
 import { KiloSessionCompaction } from "../../src/kilocode/session/compaction"
 import { LLM } from "../../src/session/llm"
 import { MessageV2 } from "../../src/session/message-v2"
-import { Reference } from "../../src/reference/reference"
 import { SessionCompaction } from "../../src/session/compaction"
 import * as SessionProcessorModule from "../../src/session/processor"
 import type { SessionProcessor } from "../../src/session/processor"
@@ -40,6 +39,9 @@ import { remove as cleanup } from "./cleanup"
 const providerID = ProviderV2.ID.make("test")
 const modelID = ModelV2.ID.make("test-model")
 const ref = { providerID, modelID }
+const agents = Layer.mock(Agent.Service)({
+  get: () => Effect.succeed({ name: "compaction", mode: "primary", permission: [], options: {} } satisfies Agent.Info),
+})
 const previous = Flag.KILO_DB
 const dbfile = path.join(os.tmpdir(), `kilo-compaction-chunks-${process.pid}-${crypto.randomUUID()}.db`)
 
@@ -227,13 +229,12 @@ function fakeRuntime(outputTokenMax?: number, error?: MessageV2.Assistant["error
       Layer.mergeAll(SessionCompaction.layer.pipe(Layer.provide(processor)), processor, bus).pipe(
         Layer.provide(ProviderTest.fake({ model }).layer),
         Layer.provide(SessionNs.defaultLayer),
-        Layer.provide(Agent.defaultLayer),
+        Layer.provide(agents),
         Layer.provide(Plugin.defaultLayer),
         Layer.provide(SyncEvent.defaultLayer),
         Layer.provide(EventV2Bridge.defaultLayer),
         Layer.provide(Database.defaultLayer),
         Layer.provide(RuntimeFlags.layer({ outputTokenMax })),
-        Layer.provide(Reference.defaultLayer),
         Layer.provide(bus),
         Layer.provide(
           Layer.mock(Config.Service)({
@@ -309,7 +310,6 @@ function liveRuntime(layer: Layer.Layer<LLM.Service>, context = 10_000) {
       Layer.provide(EventV2Bridge.defaultLayer),
       Layer.provide(Database.defaultLayer),
       Layer.provide(RuntimeFlags.layer()),
-      Layer.provide(Reference.defaultLayer),
       Layer.provide(status),
       Layer.provide(bus),
       Layer.provide(
@@ -710,4 +710,137 @@ describe("KiloCompactionChunks", () => {
       },
     })
   })
+
+  test(
+    "compaction must not leak maxOutputTokens into agent options",
+    async () => {
+      await using tmp = await tmpdir()
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          const session = await svc.create({})
+          const first = await user(session.id, "first " + "a".repeat(20_000))
+          await assistant(session.id, first.id, tmp.path, "reply " + "b".repeat(20_000))
+          const second = await user(session.id, "second " + "c".repeat(20_000))
+          await assistant(session.id, second.id, tmp.path, "reply " + "d".repeat(20_000))
+          await Effect.runPromise(
+            KiloSessionCompaction.create({
+              session: store,
+              sessionID: session.id,
+              agent: "build",
+              model: ref,
+              auto: false,
+            }),
+          )
+
+          const captured: Array<{ opts: Record<string, unknown>; modelLimitOutput: number }> = []
+          const bus = Bus.layer
+          const processor = Layer.effect(
+            SessionProcessorModule.SessionProcessor.Service,
+            Effect.gen(function* () {
+              const sessions = yield* SessionNs.Service
+              return SessionProcessorModule.SessionProcessor.Service.of({
+                create: Effect.fn("TestSessionProcessorLeak.create")((input) =>
+                  Effect.succeed({
+                    get message() {
+                      return input.assistantMessage
+                    },
+                    updateToolCall: Effect.fn("TestSessionProcessorLeak.updateToolCall")(() =>
+                      Effect.succeed(undefined),
+                    ),
+                    metadata: Effect.fn("TestSessionProcessorLeak.metadata")(() => Effect.void),
+                    completeToolCall: Effect.fn("TestSessionProcessorLeak.completeToolCall")(() => Effect.void),
+                    process: Effect.fn("TestSessionProcessorLeak.process")((stream: LLM.StreamInput) =>
+                      Effect.gen(function* () {
+                        captured.push({
+                          opts: stream.agent.options as Record<string, unknown>,
+                          modelLimitOutput: stream.model.limit.output,
+                        })
+                        const text = stream.messages.some((msg) =>
+                          JSON.stringify(msg).includes("Create a new anchored summary"),
+                        )
+                          ? "final summary"
+                          : "chunk summary"
+                        yield* sessions.updatePart({
+                          id: PartID.ascending(),
+                          messageID: input.assistantMessage.id,
+                          sessionID: input.sessionID,
+                          type: "text",
+                          text,
+                        })
+                        input.assistantMessage.finish = "stop"
+                        return "continue" as const
+                      }),
+                    ),
+                  } satisfies SessionProcessor.Handle),
+                ),
+              })
+            }),
+          )
+
+          const model = ProviderTest.model({
+            providerID,
+            id: modelID,
+            limit: { context: 10_000, output: 1_000 },
+          })
+          const outputTokenMax = 512
+          const rt = ManagedRuntime.make(
+            Layer.mergeAll(SessionCompaction.layer.pipe(Layer.provide(processor)), processor, bus).pipe(
+              Layer.provide(ProviderTest.fake({ model }).layer),
+              Layer.provide(SessionNs.defaultLayer),
+              Layer.provide(agents),
+              Layer.provide(Plugin.defaultLayer),
+              Layer.provide(SyncEvent.defaultLayer),
+              Layer.provide(EventV2Bridge.defaultLayer),
+              Layer.provide(Database.defaultLayer),
+              Layer.provide(RuntimeFlags.layer({ outputTokenMax })),
+              Layer.provide(bus),
+              Layer.provide(
+                Layer.mock(Config.Service)({
+                  get: () => Effect.succeed({ ...{}, compaction: { reserved: 1_000 } }),
+                }),
+              ),
+            ),
+          )
+
+          try {
+            const msgs = await svc.messages({ sessionID: session.id })
+            const parent = msgs.at(-1)?.info.id
+            expect(parent).toBeTruthy()
+            const result = await rt.runPromise(
+              SessionCompaction.Service.use((svc) =>
+                svc.process({
+                  parentID: parent!,
+                  messages: msgs,
+                  sessionID: session.id,
+                  auto: false,
+                }),
+              ),
+            )
+
+            expect(result).toBe("continue")
+            expect(captured.length).toBeGreaterThan(0)
+            // Negative assertion (the bug surfacing):
+            // maxOutputTokens must not appear in agent.options that the
+            // worker hands to the LLM. Today a strict OpenAI-compatible
+            // upstream rejects that field with
+            // Unsupported parameter(s): maxOutputTokens`.
+            for (const c of captured) {
+              expect(c.opts.maxOutputTokens).toBeUndefined()
+            }
+            // Positive assertion (budget preserved through an independent path):
+            // the constrained model still threads a tightened output limit
+            // through to every worker. If a future "fix" accidentally severs
+            // the only budget source along with the leak, this fails.
+            for (const c of captured) {
+              expect(c.modelLimitOutput).toBeLessThanOrEqual(outputTokenMax)
+            }
+          } finally {
+            await rt.dispose()
+          }
+        },
+      })
+    },
+    30_000,
+  )
 })

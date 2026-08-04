@@ -9,6 +9,7 @@ export function initialMessage(ev: AgentManagerSendInitialMessage): SendMessageR
   if (!ev.text) return undefined
   return {
     type: "sendMessage",
+    ...(ev.projectId ? { projectId: ev.projectId } : {}),
     text: ev.text,
     sessionID: ev.sessionId,
     providerID: ev.providerID,

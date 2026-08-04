@@ -41,6 +41,9 @@ export {
   fetchKiloImageModels,
   type KiloImageModel,
   type KiloImageModelsResult,
+  fetchKiloTranscriptionModels,
+  type KiloTranscriptionModel,
+  type KiloTranscriptionModelsResult,
 } from "./api/models.js"
 export {
   EMPTY_KILO_EMBEDDING_MODEL_CATALOG,
@@ -69,7 +72,7 @@ export {
 export { fetchKilocodeNotifications, type KilocodeNotification } from "./api/notifications.js"
 export {
   CloudTrpcError,
-  MiniMaxNativeUsageSchema,
+  CodingPlanUsageSchema,
   getAutoTopUpState,
   getCodingPlanUsage,
   listByokEntries,
@@ -77,10 +80,16 @@ export {
   type AutoTopUpState,
   type ByokEntry,
   type CodingPlanSubscription,
+  type CodingPlanQuotaWindow,
   type CodingPlanUsage,
-  type MiniMaxNativeUsage,
 } from "./api/trpc.js"
-export { fetchCloudSession, fetchCloudSessionForImport, importSessionToDb } from "./cloud-sessions.js"
+export {
+  fetchCloudSession,
+  fetchCloudSessionForImport,
+  SessionImportValidationError,
+  prepareSessionImport,
+  importSessionToDb,
+} from "./cloud-sessions.js"
 
 // ============================================================================
 // Server Routes (optional - requires hono and OpenCode dependencies)

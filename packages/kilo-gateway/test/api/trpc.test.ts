@@ -102,21 +102,31 @@ describe("Cloud tRPC client", () => {
   test("validates every supported procedure projection", async () => {
     const payloads: Record<string, unknown> = {
       "codingPlans.getUsage": {
-        subscriptionId: "plan",
-        providerId: "minimax",
-        region: "global",
+        schemaVersion: 1,
         fetchedAt: "2026-06-19T00:00:00.000Z",
-        native: {
-          base_resp: { status_code: 0, status_msg: "stripped" },
-          model_remains: [
+        subscription: {
+          id: "plan",
+          planId: "minimax-token-plan-plus",
+          planName: "Token Plan Plus",
+          providerId: "minimax",
+          providerName: "MiniMax",
+          windows: [
             {
-              model_name: "general",
-              current_interval_remaining_percent: 80,
-              current_interval_status: 1,
-              end_time: 1_781_280_000_000,
+              id: "short_term",
+              remainingPercent: 80,
+              resetsAt: "2026-06-19T05:00:00.000Z",
+              period: { unit: "hour", value: 5 },
+              providerPrivate: "stripped",
+            },
+            {
+              id: "weekly",
+              remainingPercent: 150,
+              resetsAt: "2026-06-26T00:00:00.000Z",
+              period: { unit: "week", value: 1 },
             },
           ],
         },
+        additive: "stripped",
       },
     }
     global.fetch = mock((input: string | URL | Request) => {
@@ -125,7 +135,31 @@ describe("Cloud tRPC client", () => {
     }) as unknown as typeof fetch
 
     const usage = await getCodingPlanUsage("token", "plan")
-    expect(usage.native.base_resp).toEqual({ status_code: 0 })
+    expect(usage).toEqual({
+      schemaVersion: 1,
+      fetchedAt: "2026-06-19T00:00:00.000Z",
+      subscription: {
+        id: "plan",
+        planId: "minimax-token-plan-plus",
+        planName: "Token Plan Plus",
+        providerId: "minimax",
+        providerName: "MiniMax",
+        windows: [
+          {
+            id: "short_term",
+            remainingPercent: 80,
+            resetsAt: "2026-06-19T05:00:00.000Z",
+            period: { unit: "hour", value: 5 },
+          },
+          {
+            id: "weekly",
+            remainingPercent: 150,
+            resetsAt: "2026-06-26T00:00:00.000Z",
+            period: { unit: "week", value: 1 },
+          },
+        ],
+      },
+    })
     const call = (global.fetch as unknown as { mock: { calls: Array<[string]> } }).mock.calls[0]
     expect(JSON.parse(new URL(call[0]).searchParams.get("input") ?? "null")).toEqual({ subscriptionId: "plan" })
   })
@@ -148,9 +182,80 @@ describe("Cloud tRPC client", () => {
     global.fetch = mock(() => Promise.resolve(new Response("not-json"))) as unknown as typeof fetch
     await expect(getAutoTopUpState("token")).rejects.toMatchObject({ kind: "protocol" })
 
-    global.fetch = mock(() =>
-      Promise.resolve(result({ enabled: "unknown" })),
-    ) as unknown as typeof fetch
+    global.fetch = mock(() => Promise.resolve(result({ enabled: "unknown" }))) as unknown as typeof fetch
     await expect(getAutoTopUpState("token")).rejects.toMatchObject({ kind: "schema" })
+  })
+
+  test.each([
+    ["unknown version", { schemaVersion: 2 }],
+    [
+      "mismatched subscription",
+      {
+        schemaVersion: 1,
+        fetchedAt: "2026-06-19T00:00:00.000Z",
+        subscription: {
+          id: "other",
+          planId: "plan",
+          planName: "Plan",
+          providerId: "provider",
+          providerName: "Provider",
+          windows: [
+            {
+              id: "weekly",
+              remainingPercent: 50,
+              resetsAt: "2026-06-26T00:00:00.000Z",
+              period: { unit: "week", value: 1 },
+            },
+          ],
+        },
+      },
+    ],
+    [
+      "duplicate windows",
+      {
+        schemaVersion: 1,
+        fetchedAt: "2026-06-19T00:00:00.000Z",
+        subscription: {
+          id: "plan",
+          planId: "plan",
+          planName: "Plan",
+          providerId: "provider",
+          providerName: "Provider",
+          windows: [
+            {
+              id: "weekly",
+              remainingPercent: 50,
+              resetsAt: "2026-06-26T00:00:00.000Z",
+              period: { unit: "week", value: 1 },
+            },
+            {
+              id: "weekly",
+              remainingPercent: 40,
+              resetsAt: "2026-07-03T00:00:00.000Z",
+              period: { unit: "week", value: 1 },
+            },
+          ],
+        },
+      },
+    ],
+    [
+      "missing period",
+      {
+        schemaVersion: 1,
+        fetchedAt: "2026-06-19T00:00:00.000Z",
+        subscription: {
+          id: "plan",
+          planId: "plan",
+          planName: "Plan",
+          providerId: "provider",
+          providerName: "Provider",
+          windows: [{ id: "weekly", remainingPercent: 50, resetsAt: "2026-06-26T00:00:00.000Z" }],
+        },
+      },
+    ],
+  ])("rejects %s usage payloads", async (_description, payload) => {
+    global.fetch = mock(() => Promise.resolve(result(payload))) as unknown as typeof fetch
+
+    await expect(getCodingPlanUsage("token", "plan")).rejects.toMatchObject({ kind: "schema" })
   })
 })

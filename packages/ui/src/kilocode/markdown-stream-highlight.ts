@@ -29,8 +29,9 @@ async function source(lang: string, code: string) {
   }
 }
 
-function update(pre: HTMLPreElement, html: string, code: string) {
+export function update(pre: HTMLPreElement, html: string, code: string) {
   if (!pre.isConnected) return
+  const dir = pre.getAttribute("dir") ?? "auto"
   const temp = document.createElement("div")
   temp.innerHTML = html
   const next = temp.firstElementChild
@@ -42,6 +43,7 @@ function update(pre: HTMLPreElement, html: string, code: string) {
   for (const attr of next.attributes) {
     pre.setAttribute(attr.name, attr.value)
   }
+  pre.setAttribute("dir", dir)
   pre.setAttribute("data-source-hash", fnv1a(code))
   pre.replaceChildren(...Array.from(next.childNodes))
   pre.scrollLeft = x

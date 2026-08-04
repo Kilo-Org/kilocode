@@ -150,7 +150,7 @@ internal class ProvidersSettingsUi(
     private var oauth: DeviceOAuthPanel? = null
 
     init {
-        content.add(header(), BorderLayout.NORTH)
+        setHeader(header())
         setContent(view)
         reload()
     }

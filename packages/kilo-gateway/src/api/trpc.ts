@@ -45,41 +45,46 @@ const ByokEntrySchema = z.object({
   is_enabled: z.boolean(),
 })
 
-const NativeNumberSchema = z.number().finite()
-const NativeIntegerSchema = z.number().int().safe()
-const MiniMaxModelRemainsSchema = z.object({
-  model_name: z.string(),
-  current_interval_total_count: NativeIntegerSchema.nonnegative().optional(),
-  current_interval_usage_count: NativeIntegerSchema.nonnegative().optional(),
-  start_time: NativeIntegerSchema.nonnegative().optional(),
-  end_time: NativeIntegerSchema.nonnegative().optional(),
-  remains_time: NativeIntegerSchema.nonnegative().optional(),
-  interval_boost_permill: NativeIntegerSchema.nonnegative().optional(),
-  interval_boost_permille: NativeIntegerSchema.nonnegative().optional(),
-  current_interval_remaining_percent: NativeNumberSchema.optional(),
-  current_interval_status: NativeIntegerSchema.optional(),
-  current_weekly_total_count: NativeIntegerSchema.nonnegative().optional(),
-  current_weekly_usage_count: NativeIntegerSchema.nonnegative().optional(),
-  weekly_start_time: NativeIntegerSchema.nonnegative().optional(),
-  weekly_end_time: NativeIntegerSchema.nonnegative().optional(),
-  weekly_remains_time: NativeIntegerSchema.nonnegative().optional(),
-  weekly_boost_permill: NativeIntegerSchema.nonnegative().optional(),
-  weekly_boost_permille: NativeIntegerSchema.nonnegative().optional(),
-  current_weekly_remaining_percent: NativeNumberSchema.optional(),
-  current_weekly_status: NativeIntegerSchema.optional(),
+const CodingPlanQuotaWindowSchema = z.object({
+  id: z
+    .string()
+    .min(1)
+    .max(64)
+    .regex(/^[a-z][a-z0-9_]*$/),
+  remainingPercent: z.number().finite().nonnegative(),
+  resetsAt: z.iso.datetime(),
+  startsAt: z.iso.datetime().optional(),
+  period: z.object({
+    unit: z.enum(["hour", "day", "week", "month"]),
+    value: z.number().int().positive(),
+  }),
 })
 
-export const MiniMaxNativeUsageSchema = z.object({
-  base_resp: z.object({ status_code: NativeIntegerSchema }),
-  model_remains: z.array(MiniMaxModelRemainsSchema),
-})
+const CodingPlanQuotaWindowsSchema = z
+  .array(CodingPlanQuotaWindowSchema)
+  .min(1)
+  .max(16)
+  .superRefine((windows, ctx) => {
+    const ids = new Set<string>()
+    for (const [index, window] of windows.entries()) {
+      if (ids.has(window.id)) {
+        ctx.addIssue({ code: "custom", message: "Quota window IDs must be unique.", path: [index, "id"] })
+      }
+      ids.add(window.id)
+    }
+  })
 
-const CodingPlanUsageSchema = z.object({
-  subscriptionId: z.string(),
-  providerId: z.literal("minimax"),
-  region: z.literal("global"),
-  fetchedAt: z.string(),
-  native: MiniMaxNativeUsageSchema,
+export const CodingPlanUsageSchema = z.object({
+  schemaVersion: z.literal(1),
+  fetchedAt: z.iso.datetime(),
+  subscription: z.object({
+    id: z.string(),
+    planId: z.string(),
+    planName: z.string().min(1),
+    providerId: z.string().min(1),
+    providerName: z.string().min(1),
+    windows: CodingPlanQuotaWindowsSchema,
+  }),
 })
 
 const envelope = z.object({
@@ -91,7 +96,7 @@ export type AutoTopUpState = z.infer<typeof AutoTopUpStateSchema>
 export type CodingPlanSubscription = z.infer<typeof CodingPlanSubscriptionSchema>
 export type ByokEntry = z.infer<typeof ByokEntrySchema>
 export type CodingPlanUsage = z.infer<typeof CodingPlanUsageSchema>
-export type MiniMaxNativeUsage = z.infer<typeof MiniMaxNativeUsageSchema>
+export type CodingPlanQuotaWindow = z.infer<typeof CodingPlanQuotaWindowSchema>
 
 async function read(response: Response) {
   const declared = Number(response.headers.get("content-length"))
@@ -190,6 +195,8 @@ export function listByokEntries(token: string) {
   return query("byok.list", token, z.array(ByokEntrySchema), {})
 }
 
-export function getCodingPlanUsage(token: string, subscriptionId: string) {
-  return query("codingPlans.getUsage", token, CodingPlanUsageSchema, { subscriptionId })
+export async function getCodingPlanUsage(token: string, subscriptionId: string) {
+  const usage = await query("codingPlans.getUsage", token, CodingPlanUsageSchema, { subscriptionId })
+  if (usage.subscription.id !== subscriptionId) throw new CloudTrpcError("schema")
+  return usage
 }

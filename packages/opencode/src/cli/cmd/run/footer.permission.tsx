@@ -29,6 +29,7 @@ import {
   permissionShift,
   type PermissionOption,
 } from "./permission.shared"
+import { footerWidthPolicy } from "./footer.width"
 import { toolFiletype } from "./tool"
 import { transparent, type RunBlockTheme, type RunFooterTheme } from "./theme"
 import type { PermissionReply, RunDiffStyle } from "./types"
@@ -95,7 +96,6 @@ export function RejectField(props: {
 
   return (
     <textarea
-      id="run-direct-footer-permission-reject"
       width="100%"
       minHeight={1}
       maxHeight={3}
@@ -140,8 +140,9 @@ export function RunPermissionBody(props: {
   const [state, setState] = createSignal(createPermissionBodyState(props.request.id))
   const info = createMemo(() => permissionInfo(props.request))
   const ft = createMemo(() => toolFiletype(info().file))
-  const narrow = createMemo(() => dims().width < 80)
-  const opts = createMemo(() => permissionOptions(state().stage))
+  const narrow = createMemo(() => footerWidthPolicy(dims().width).dialog.narrow)
+  const skillShell = createMemo(() => props.request.metadata?.["skillShell"] === true) // kilocode_change
+  const opts = createMemo(() => permissionOptions(state().stage, skillShell())) // kilocode_change - skillShell-aware options
   const busy = createMemo(() => state().submitting)
   const title = createMemo(() => {
     if (state().stage === "always") {
@@ -165,7 +166,7 @@ export function RunPermissionBody(props: {
   })
 
   const shift = (dir: -1 | 1) => {
-    setState((prev) => permissionShift(prev, dir))
+    setState((prev) => permissionShift(prev, dir, skillShell())) // kilocode_change - skillShell-aware options
   }
 
   const submit = async (next: PermissionReply) => {
@@ -257,9 +258,8 @@ export function RunPermissionBody(props: {
   })
 
   return (
-    <box id="run-direct-footer-permission-body" width="100%" height="100%" flexDirection="column">
+    <box width="100%" height="100%" flexDirection="column" backgroundColor={props.theme.surface}>
       <box
-        id="run-direct-footer-permission-head"
         flexDirection="column"
         gap={1}
         paddingLeft={1}
@@ -296,7 +296,6 @@ export function RunPermissionBody(props: {
         fallback={
           <box width="100%" flexGrow={1} flexShrink={1} justifyContent="flex-end">
             <box
-              id="run-direct-footer-permission-reject-bar"
               flexDirection={narrow() ? "column" : "row"}
               flexShrink={0}
               backgroundColor={props.theme.line}
@@ -426,7 +425,6 @@ export function RunPermissionBody(props: {
         </box>
 
         <box
-          id="run-direct-footer-permission-actions"
           flexDirection={narrow() ? "column" : "row"}
           flexShrink={0}
           backgroundColor={props.theme.pane}

@@ -28,6 +28,8 @@ interface QuestionRecovery {
   readonly complete: boolean
 }
 
+type QuestionRoute = { kind: "retry"; dir: string } | { kind: "stale" } | { kind: "failed" }
+
 function isNotFoundError(error: unknown): boolean {
   const record = (value: unknown) =>
     value && typeof value === "object" ? (value as Record<string, unknown>) : undefined
@@ -41,18 +43,18 @@ function isNotFoundError(error: unknown): boolean {
   )
 }
 
-function stale(ctx: QuestionContext, requestID: string): void {
+async function recover(ctx: QuestionContext, requestID: string): Promise<QuestionRoute> {
+  const result = await fetchAndSendPendingQuestions(ctx, requestID)
+  if (!result) return { kind: "failed" }
+  if (result.seen.has(requestID)) {
+    const dir = ctx.getQuestionDirectory(requestID)
+    return dir ? { kind: "retry", dir } : { kind: "failed" }
+  }
+  // Absence only proves staleness when every directory was scanned.
+  if (!result.complete) return { kind: "failed" }
   ctx.clearQuestionDirectory(requestID)
   ctx.postMessage({ type: "questionResolved", requestID })
-  void fetchAndSendPendingQuestions(ctx)
-}
-
-async function recover(ctx: QuestionContext, requestID: string): Promise<boolean> {
-  const result = await fetchAndSendPendingQuestions(ctx)
-  if (!result?.complete || result.seen.has(requestID)) return false
-  ctx.clearQuestionDirectory(requestID)
-  ctx.postMessage({ type: "questionResolved", requestID })
-  return true
+  return { kind: "stale" }
 }
 
 /**
@@ -61,7 +63,10 @@ async function recover(ctx: QuestionContext, requestID: string): Promise<boolean
  * called after child-session sync and after SSE reconnects so missed
  * question.asked events don't leave the server blocked indefinitely.
  */
-export async function fetchAndSendPendingQuestions(ctx: QuestionContext): Promise<QuestionRecovery | undefined> {
+export async function fetchAndSendPendingQuestions(
+  ctx: QuestionContext,
+  omit?: string,
+): Promise<QuestionRecovery | undefined> {
   if (!ctx.client) return
   try {
     for (;;) {
@@ -94,6 +99,9 @@ export async function fetchAndSendPendingQuestions(ctx: QuestionContext): Promis
       if (ctx.getQuestionRevision() !== revision) continue
       for (const item of pending) {
         ctx.recordQuestionDirectory(item.question.id, item.dir)
+        // The omitted request is mid-reply; its card is still visible, so
+        // reposting it would only churn the webview.
+        if (item.question.id === omit) continue
         ctx.postMessage({
           type: "questionRequest",
           question: {
@@ -126,19 +134,26 @@ export async function handleQuestionReply(
   }
 
   const sid = sessionID ?? ctx.currentSessionId
-  const origin = ctx.getQuestionDirectory(requestID)
-  const dir = origin ?? ctx.getWorkspaceDirectory(sid)
+  const dir = ctx.getQuestionDirectory(requestID) ?? ctx.getWorkspaceDirectory(sid)
 
   try {
     await ctx.client.question.reply({ requestID, answers, directory: dir }, { throwOnError: true })
     ctx.clearQuestionDirectory(requestID)
     return true
   } catch (error) {
-    if (isNotFoundError(error) && origin) {
-      stale(ctx, requestID)
-      return false
+    const route = isNotFoundError(error) ? await recover(ctx, requestID) : undefined
+    if (route?.kind === "stale") return false
+    if (route?.kind === "retry" && route.dir !== dir) {
+      try {
+        await ctx.client.question.reply({ requestID, answers, directory: route.dir }, { throwOnError: true })
+        ctx.clearQuestionDirectory(requestID)
+        return true
+      } catch (retry) {
+        console.error("[Kilo New] KiloProvider: Failed to reply to recovered question:", retry)
+        ctx.postMessage({ type: "questionError", requestID })
+        return false
+      }
     }
-    if (isNotFoundError(error) && (await recover(ctx, requestID))) return false
     console.error("[Kilo New] KiloProvider: Failed to reply to question:", error)
     ctx.postMessage({ type: "questionError", requestID })
     return false
@@ -157,19 +172,26 @@ export async function handleQuestionReject(
   }
 
   const sid = sessionID ?? ctx.currentSessionId
-  const origin = ctx.getQuestionDirectory(requestID)
-  const dir = origin ?? ctx.getWorkspaceDirectory(sid)
+  const dir = ctx.getQuestionDirectory(requestID) ?? ctx.getWorkspaceDirectory(sid)
 
   try {
     await ctx.client.question.reject({ requestID, directory: dir }, { throwOnError: true })
     ctx.clearQuestionDirectory(requestID)
     return true
   } catch (error) {
-    if (isNotFoundError(error) && origin) {
-      stale(ctx, requestID)
-      return false
+    const route = isNotFoundError(error) ? await recover(ctx, requestID) : undefined
+    if (route?.kind === "stale") return false
+    if (route?.kind === "retry" && route.dir !== dir) {
+      try {
+        await ctx.client.question.reject({ requestID, directory: route.dir }, { throwOnError: true })
+        ctx.clearQuestionDirectory(requestID)
+        return true
+      } catch (retry) {
+        console.error("[Kilo New] KiloProvider: Failed to reject recovered question:", retry)
+        ctx.postMessage({ type: "questionError", requestID })
+        return false
+      }
     }
-    if (isNotFoundError(error) && (await recover(ctx, requestID))) return false
     console.error("[Kilo New] KiloProvider: Failed to reject question:", error)
     ctx.postMessage({ type: "questionError", requestID })
     return false

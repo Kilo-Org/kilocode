@@ -49,6 +49,7 @@ These providers offer coding-focused subscriptions or dedicated endpoints. Bring
 - Martian
 - Mistral Codestral
 - Neuralwatt
+- NVIDIA
 - Ollama Cloud
 - OpenCode Go
 - OrcaRouter

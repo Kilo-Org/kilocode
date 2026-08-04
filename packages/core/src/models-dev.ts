@@ -9,6 +9,8 @@ import { FSUtil } from "./fs-util"
 import { InstallationChannel, InstallationVersion } from "./installation/version"
 import * as ModelsRefresh from "./kilocode/models-refresh" // kilocode_change
 import { EventV2 } from "./event"
+import { LayerNode } from "./effect/layer-node"
+import { httpClient } from "./effect/layer-node-platform"
 
 export const CatalogModelStatus = Schema.Literals(["alpha", "beta", "deprecated"])
 export type CatalogModelStatus = typeof CatalogModelStatus.Type
@@ -42,6 +44,24 @@ const Cost = Schema.Struct({
   ),
 })
 
+// kilocode_change start - models.dev reasoning_options (snatched from upstream
+// v1.18.11, #36624): effort tiers, thinking toggles, and token budgets.
+const ReasoningOption = Schema.Union([
+  Schema.Struct({
+    type: Schema.Literal("effort"),
+    values: Schema.Array(Schema.NullOr(Schema.String)),
+  }),
+  Schema.Struct({
+    type: Schema.Literal("toggle"),
+  }),
+  Schema.Struct({
+    type: Schema.Literal("budget_tokens"),
+    min: Schema.optional(Schema.Finite),
+    max: Schema.optional(Schema.Finite),
+  }),
+])
+// kilocode_change end
+
 export const Model = Schema.Struct({
   id: Schema.String,
   name: Schema.String,
@@ -49,13 +69,14 @@ export const Model = Schema.Struct({
   release_date: Schema.String,
   attachment: Schema.Boolean,
   reasoning: Schema.Boolean,
+  reasoning_options: Schema.optional(Schema.Array(ReasoningOption)), // kilocode_change
   temperature: Schema.Boolean,
   tool_call: Schema.Boolean,
   interleaved: Schema.optional(
     Schema.Union([
       Schema.Literal(true),
       Schema.Struct({
-        field: Schema.Literals(["reasoning_content", "reasoning_details"]),
+        field: Schema.Literals(["reasoning", "reasoning_content", "reasoning_details"]),
       }),
     ]),
   ),
@@ -208,13 +229,19 @@ export const layer = Layer.effect(
       if (snapshot) return snapshot
       if (Flag.KILO_DISABLE_MODELS_FETCH) return {}
       // Flock is cross-process: concurrent opencode CLIs can race on this cache file.
-      const text = yield* Effect.scoped(
+      return yield* Effect.scoped(
         Effect.gen(function* () {
           yield* Flock.effect(lockKey)
-          return yield* fetchAndWrite()
+          // kilocode_change start - re-read under the lock: a concurrent refresh
+          // may already have recovered the corrupted cache while we waited, and
+          // fetching again here would duplicate the network call.
+          const rechecked = yield* loadFromDisk
+          if (rechecked) return rechecked
+          // kilocode_change end
+          const text = yield* fetchAndWrite()
+          return JSON.parse(text) as Record<string, Provider>
         }),
       )
-      return JSON.parse(text) as Record<string, Provider>
     }).pipe(Effect.withSpan("ModelsDev.populate"), Effect.orDie)
 
     const [cachedGet, invalidate] = yield* Effect.cachedInvalidateWithTTL(populate, Duration.infinity)
@@ -235,9 +262,7 @@ export const layer = Layer.effect(
           yield* events.publish(Event.Refreshed, {})
         }),
       ).pipe(
-        Effect.tapCause((cause) =>
-          Effect.logError("Failed to fetch models.dev").pipe(Effect.annotateLogs("cause", cause)),
-        ),
+        Effect.tapCause((cause) => Effect.logError("Failed to fetch models.dev", { cause: cause })),
         Effect.ignore,
       )
     })
@@ -256,5 +281,6 @@ export const defaultLayer = layer.pipe(
   Layer.provide(FSUtil.defaultLayer),
   Layer.provide(EventV2.defaultLayer),
 )
+export const node = LayerNode.make(layer, [FSUtil.node, EventV2.node, httpClient])
 
 export * as ModelsDev from "./models-dev"

@@ -79,7 +79,6 @@ const WithSessions: ParentComponent<{ sessions?: typeof mockSessions }> = (props
     selectedAgent: () => "code",
     selectAgent: noop,
     getSessionAgent: () => "code",
-    getSessionModel: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     setSessionModel: noop,
     setSessionAgent: noop,
     setSessionVariant: noop,
@@ -184,4 +183,25 @@ export const Sources: Story = {
       </div>
     </WithSessions>
   ),
+}
+
+const WorktreeSourcesDemo = () => {
+  const [selected, setSelected] = createSignal("")
+  const ids = new Set(["s1", "s3"])
+
+  return (
+    <WithSessions sessions={mockSessions as any}>
+      <div style={{ height: "500px" }}>
+        <HistoryView onSelectSession={setSelected} onBack={noop} worktreeSessionIds={() => ids} />
+        <output class="sr-only" data-slot="selected-session">
+          {selected()}
+        </output>
+      </div>
+    </WithSessions>
+  )
+}
+
+export const WorktreeSources: Story = {
+  name: "Current worktree source",
+  render: () => <WorktreeSourcesDemo />,
 }

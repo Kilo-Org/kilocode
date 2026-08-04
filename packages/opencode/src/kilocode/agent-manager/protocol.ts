@@ -99,7 +99,20 @@ export const PromptRequest = Schema.Struct({
   prompt: Prompt,
 }).annotate({ identifier: "AgentManagerPromptRequest" })
 
-export const Request = Schema.Union([OverviewRequest, PromptRequest]).annotate({
+export const StopRequest = Schema.Struct({
+  ...Base,
+  operation: Schema.Literal("stop"),
+  targetSessionID: SessionID,
+}).annotate({ identifier: "AgentManagerStopRequest" })
+
+export const MoveRequest = Schema.Struct({
+  ...Base,
+  operation: Schema.Literal("move"),
+  targetSessionID: SessionID,
+  sectionID: Schema.NullOr(ID),
+}).annotate({ identifier: "AgentManagerMoveRequest" })
+
+export const Request = Schema.Union([OverviewRequest, PromptRequest, StopRequest, MoveRequest]).annotate({
   identifier: "AgentManagerRequest",
 })
 export type Request = Schema.Schema.Type<typeof Request>
@@ -115,7 +128,20 @@ export const PromptResult = Schema.Struct({
   delivered: Schema.Literal(true),
 }).annotate({ identifier: "AgentManagerPromptResult" })
 
-export const Result = Schema.Union([OverviewResult, PromptResult]).annotate({
+export const StopResult = Schema.Struct({
+  operation: Schema.Literal("stop"),
+  sessionID: SessionID,
+  stopped: Schema.Literal(true),
+}).annotate({ identifier: "AgentManagerStopResult" })
+
+export const MoveResult = Schema.Struct({
+  operation: Schema.Literal("move"),
+  sessionID: SessionID,
+  sectionID: Schema.NullOr(ID),
+  moved: Schema.Literal(true),
+}).annotate({ identifier: "AgentManagerMoveResult" })
+
+export const Result = Schema.Union([OverviewResult, PromptResult, StopResult, MoveResult]).annotate({
   identifier: "AgentManagerResult",
 })
 export type Result = Schema.Schema.Type<typeof Result>
@@ -128,6 +154,7 @@ export const ErrorCode = Schema.Literals([
   "stale_session",
   "timeout",
   "unavailable_session",
+  "unknown_section",
   "unknown_session",
   "workspace_unavailable",
 ])

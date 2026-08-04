@@ -3,6 +3,8 @@ import { NodeFileSystem, NodeSink, NodeStream } from "@effect/platform-node"
 import * as NodePath from "@effect/platform-node/NodePath"
 import { prepareCommand as prepareSandbox } from "@kilocode/sandbox" // kilocode_change
 import { tap as tapStdio, tapped } from "./kilocode/stdio-tap" // kilocode_change - Bun drops buffered stdio on close
+import * as SpawnValidation from "./kilocode/spawn-validation" // kilocode_change
+import { settle } from "./kilocode/exit-code" // kilocode_change - settle signal termination as 128 + signum
 import * as Deferred from "effect/Deferred"
 import * as Effect from "effect/Effect"
 import * as Exit from "effect/Exit"
@@ -26,6 +28,8 @@ import {
 import * as NodeChildProcess from "node:child_process"
 import { PassThrough } from "node:stream"
 import launch from "cross-spawn"
+import { LayerNode } from "./effect/layer-node"
+import { filesystem, path } from "./effect/layer-node-platform"
 
 const toError = (err: unknown): Error => (err instanceof globalThis.Error ? err : new globalThis.Error(String(err)))
 
@@ -365,6 +369,7 @@ export const make = Effect.gen(function* () {
     function* (command) {
       switch (command._tag) {
         case "StandardCommand": {
+          const validation = SpawnValidation.take(command) // kilocode_change - retain target validation through preparation
           const dir = yield* cwd(command.options)
           // kilocode_change start - prepare agent-scoped commands through the selected sandbox backend
           const target = yield* prepareSandbox(command, dir, env(command.options))
@@ -372,6 +377,21 @@ export const make = Effect.gen(function* () {
           const sout = stdio(target.options, "stdout")
           const serr = stdio(target.options, "stderr")
           const extra = fds(target.options)
+          // kilocode_change end
+
+          // kilocode_change start - close target-swap races at the raw spawn boundary
+          if (validation)
+            yield* validation.pipe(
+              Effect.mapError((cause) =>
+                PlatformError.systemError({
+                  _tag: "Unknown",
+                  module: "ChildProcess",
+                  method: "validate",
+                  pathOrDescriptor: command.command,
+                  cause,
+                }),
+              ),
+            )
           // kilocode_change end
 
           const [proc, signal] = yield* Effect.acquireRelease(
@@ -422,16 +442,7 @@ export const make = Effect.gen(function* () {
             getInputFd: fd.getInputFd,
             getOutputFd: fd.getOutputFd,
             isRunning: Effect.map(Deferred.isDone(signal), (done) => !done),
-            exitCode: Effect.flatMap(Deferred.await(signal), ([code, signal]) => {
-              if (Predicate.isNotNull(code)) return Effect.succeed(ExitCode(code))
-              return Effect.fail(
-                toPlatformError(
-                  "exitCode",
-                  new Error(`Process interrupted due to receipt of signal: '${signal}'`),
-                  command,
-                ),
-              )
-            }),
+            exitCode: Effect.flatMap(Deferred.await(signal), settle), // kilocode_change - signal termination settles as 128 + signum
             kill: (opts?: ChildProcess.KillOptions) => {
               const sig = opts?.killSignal ?? "SIGTERM"
               const send = (s: NodeJS.Signals) =>
@@ -511,5 +522,6 @@ export const layer: Layer.Layer<ChildProcessSpawner, never, FileSystem.FileSyste
 )
 
 export const defaultLayer = layer.pipe(Layer.provide(NodeFileSystem.layer), Layer.provide(NodePath.layer))
+export const node = LayerNode.make(layer, [filesystem, path])
 
 export * as CrossSpawnSpawner from "./cross-spawn-spawner"

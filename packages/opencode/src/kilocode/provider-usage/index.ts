@@ -1,4 +1,5 @@
 import { Context, Effect, Layer, Schema } from "effect"
+import { createHash } from "node:crypto"
 import * as Auth from "@/auth"
 import { InstanceState } from "@/effect/instance-state"
 import * as Provider from "@/provider/provider"
@@ -14,9 +15,10 @@ export interface AdapterContext {
   auth: Auth.Info | undefined
   cloud: (() => Promise<Cloud.CloudState>) | undefined
   token: string | undefined
+  cloudIdentity: string | undefined
   fetch: typeof fetch
-  source(id: string, load: () => Promise<UsageSnapshot>): Promise<UsageSnapshot>
-  preserve(prefix: string): UsageSnapshot[]
+  source(id: string, load: () => Promise<UsageSnapshot>, identity?: string): Promise<UsageSnapshot>
+  preserve(prefix: string, identity?: string): UsageSnapshot[]
   prune(prefix: string, keep: string[]): void
 }
 
@@ -29,6 +31,7 @@ export interface ProviderUsageAdapter {
   id: string
   providerIDs: readonly string[]
   cachePrefixes: readonly string[]
+  cloudScoped?: boolean
   run(ctx: AdapterContext): Promise<AdapterResult>
 }
 
@@ -44,21 +47,25 @@ const billing: ProviderUsageAdapter = {
 }
 
 const managed: ProviderUsageAdapter = {
-  id: "kilo-managed-minimax",
-  providerIDs: ["kilo", "minimax"],
-  cachePrefixes: ["kilo-managed-minimax:"],
+  id: "kilo-managed-subscriptions",
+  providerIDs: ["kilo"],
+  cachePrefixes: ["kilo-managed:"],
+  cloudScoped: true,
   async run(ctx) {
-    if (!ctx.cloud || !ctx.token) return { items: [] }
+    if (!ctx.cloud || !ctx.token || !ctx.cloudIdentity) return { items: [] }
     const state = await ctx.cloud()
-    if (!state.plans.ok) return { items: ctx.preserve("kilo-managed-minimax:") }
+    if (!state.plans.ok || !state.byok.ok) {
+      return { items: ctx.preserve("kilo-managed:", ctx.cloudIdentity) }
+    }
     const token = ctx.token
+    const identity = ctx.cloudIdentity
     const detected = Cloud.plans(state)
-    const ids = detected.map((subscription) => `kilo-managed-minimax:${subscription.id}`)
-    ctx.prune("kilo-managed-minimax:", ids)
+    const ids = detected.map((subscription) => `kilo-managed:${subscription.id}`)
+    ctx.prune("kilo-managed:", ids)
     return {
       items: await Promise.all(
         detected.map((subscription) =>
-          ctx.source(`kilo-managed-minimax:${subscription.id}`, () => Cloud.managed(token, subscription)),
+          ctx.source(`kilo-managed:${subscription.id}`, () => Cloud.managed(token, subscription), identity),
         ),
       ),
     }
@@ -86,6 +93,7 @@ export class ServiceError extends Schema.TaggedErrorClass<ServiceError>()("Provi
 }) {}
 
 interface SourceCell {
+  identity?: string
   value?: UsageSnapshot
   expires: number
   updatedAt?: string
@@ -102,6 +110,20 @@ interface CloudCell {
 interface State {
   sources: Map<string, SourceCell>
   cloud: CloudCell
+  cloudIdentity?: string
+}
+
+function fingerprint(value: string) {
+  return createHash("sha256").update(value).digest("hex")
+}
+
+function scopeCloudCache(state: State, token: string | undefined) {
+  const identity = token ? fingerprint(token) : undefined
+  if (state.cloudIdentity === identity) return identity
+  state.cloudIdentity = identity
+  state.cloud = { expires: 0 }
+  prune(state, "kilo-managed:", [])
+  return identity
 }
 
 function stale(next: UsageSnapshot, previous: UsageSnapshot | undefined) {
@@ -117,8 +139,9 @@ function stale(next: UsageSnapshot, previous: UsageSnapshot | undefined) {
   }
 }
 
-function source(state: State, id: string, force: boolean, load: () => Promise<UsageSnapshot>) {
-  const cell = state.sources.get(id) ?? { expires: 0 }
+function source(state: State, id: string, force: boolean, load: () => Promise<UsageSnapshot>, identity?: string) {
+  const existing = state.sources.get(id)
+  const cell: SourceCell = existing && existing.identity === identity ? existing : { expires: 0, identity }
   state.sources.set(id, cell)
   if (!force && cell.value && cell.expires > Date.now()) return Promise.resolve(cell.value)
   if (cell.inflight) return cell.inflight
@@ -126,6 +149,7 @@ function source(state: State, id: string, force: boolean, load: () => Promise<Us
   const task = load()
     .then((item) => {
       const value = stale(item, cell.value)
+      if (identity !== undefined && state.cloudIdentity !== identity) return value
       cell.value = value
       cell.updatedAt = new Date().toISOString()
       cell.expires = Date.now() + (value.fetchState === "ready" ? successTtl : errorTtl)
@@ -138,10 +162,10 @@ function source(state: State, id: string, force: boolean, load: () => Promise<Us
   return task
 }
 
-function preserve(state: State, prefix: string) {
+function preserve(state: State, prefix: string, identity?: string) {
   const items: UsageSnapshot[] = []
   for (const [id, cell] of state.sources) {
-    if (!id.startsWith(prefix) || !cell.value) continue
+    if (!id.startsWith(prefix) || cell.identity !== identity || !cell.value) continue
     const value = {
       ...cell.value,
       fetchState: "stale" as const,
@@ -167,13 +191,15 @@ function prune(state: State, prefix: string, keep: string[]) {
   }
 }
 
-function cloud(state: State, token: string, force: boolean) {
+function cloud(state: State, token: string, identity: string, force: boolean) {
+  if (state.cloudIdentity !== identity) return Cloud.load(token)
   const cell = state.cloud
   if (!force && cell.value && cell.expires > Date.now()) return Promise.resolve(cell.value)
   if (cell.inflight) return cell.inflight
 
   const task = Cloud.load(token)
     .then((value) => {
+      if (state.cloudIdentity !== identity) return value
       const failed = Object.values(value).some((result) => !result.ok)
       cell.value = value
       cell.updatedAt = new Date().toISOString()
@@ -207,22 +233,28 @@ export const layer = Layer.effect(
         .pipe(Effect.mapError(() => new ServiceError({ message: "Unable to read provider authentication." })))
       const providers = yield* provider.list()
       const token = info?.type === "oauth" && !info.accountId && info.access ? info.access : undefined
+      const cloudIdentity = scopeCloudCache(current, token)
       const ctx: AdapterContext = {
         providers,
         auth: info,
-        cloud: token ? () => cloud(current, token, force) : undefined,
+        cloud: token && cloudIdentity ? () => cloud(current, token, cloudIdentity, force) : undefined,
         token,
+        cloudIdentity,
         fetch,
-        source: (id, load) => source(current, id, force, load),
-        preserve: (prefix) => preserve(current, prefix),
+        source: (id, load, identity) => source(current, id, force, load, identity),
+        preserve: (prefix, identity) => preserve(current, prefix, identity),
         prune: (prefix, keep) => prune(current, prefix, keep),
       }
       const results = yield* Effect.promise(() =>
         Promise.all(
           registry.map((adapter) =>
-            adapter
-              .run(ctx)
-              .catch((): AdapterResult => ({ items: adapter.cachePrefixes.flatMap((prefix) => ctx.preserve(prefix)) })),
+            adapter.run(ctx).catch(
+              (): AdapterResult => ({
+                items: adapter.cachePrefixes.flatMap((prefix) =>
+                  ctx.preserve(prefix, adapter.cloudScoped ? ctx.cloudIdentity : undefined),
+                ),
+              }),
+            ),
           ),
         ),
       )

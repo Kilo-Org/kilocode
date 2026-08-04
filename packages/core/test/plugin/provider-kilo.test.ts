@@ -150,20 +150,18 @@ describe("KiloPlugin", () => {
         const transform = yield* catalog.transform()
         yield* transform((catalog) => {
           const item = provider("kilo", {
-            enabled: { via: "account", service: "kilo" },
             request: {
               headers: {},
               body: { apiKey: "authenticated-token", kilocodeOrganizationId: "authenticated-org" },
             },
           })
           catalog.provider.update(item.id, (draft) => {
-            draft.enabled = item.enabled
             draft.request = item.request
           })
         })
         const result = yield* catalog.provider.get(ProviderV2.ID.make("kilo"))
 
-        expect(result.enabled).toEqual({ via: "account", service: "kilo" })
+        expect(result.request.body.apiKey).toBe("authenticated-token")
         expect(result.request.body.kilocodeToken).toBe("authenticated-token")
         expect(result.request.body.kilocodeOrganizationId).toBe("environment-org")
       }),
@@ -180,7 +178,10 @@ describe("KiloPlugin", () => {
         yield* transform((catalog) => catalog.provider.update(ProviderV2.ID.make("kilo"), () => {}))
         const result = yield* catalog.provider.get(ProviderV2.ID.make("kilo"))
 
-        expect(result.enabled).toEqual({ via: "custom", data: { anonymous: true } })
+        expect((yield* catalog.provider.available()).map((provider) => provider.id)).toContain(
+          ProviderV2.ID.make("kilo"),
+        )
+        expect(result.request.body.apiKey).toBe("anonymous")
         expect(result.request.body.kilocodeToken).toBe("anonymous")
       }),
     ),

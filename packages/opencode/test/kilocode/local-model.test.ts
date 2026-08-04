@@ -74,6 +74,9 @@ const realArgs = await import("@tui/context/args")
 const realSdk = await import("@tui/context/sdk")
 const realProject = await import("@tui/context/project")
 const realToast = await import("@tui/ui/toast")
+const realEvent = await import("@tui/context/event")
+const realRoute = await import("@tui/context/route")
+const realRuntime = await import("@tui/context/runtime")
 
 let capturedInit: (() => any) | undefined
 
@@ -156,13 +159,33 @@ mock.module("@tui/ui/toast", () => ({
   useToast: () => toastMock,
 }))
 
-// ── Import under test (after mocks) ────────────────────────────────────────
+mock.module("@tui/context/event", () => ({
+  ...realEvent,
+  useEvent: () => ({ onSync: () => () => {} }),
+}))
 
-await import("@tui/context/local")
+mock.module("@tui/context/route", () => ({
+  ...realRoute,
+  useRoute: () => ({ data: { type: "home" }, navigate: () => {} }),
+}))
 
 // Import the real Global to get the state path (set by test preload via XDG_STATE_HOME)
 const { Global } = await import("@opencode-ai/core/global")
 const modelJsonPath = path.join(Global.Path.state, "model.json")
+
+mock.module("@tui/context/runtime", () => ({
+  ...realRuntime,
+  useTuiPaths: () => ({
+    cwd: process.cwd(),
+    home: Global.Path.home,
+    state: Global.Path.state,
+    worktree: process.cwd(),
+  }),
+}))
+
+// ── Import under test (after mocks) ────────────────────────────────────────
+
+await import("@tui/context/local")
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 

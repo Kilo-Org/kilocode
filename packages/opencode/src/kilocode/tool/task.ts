@@ -64,10 +64,15 @@ export namespace KiloTask {
     const rules = Permission.merge(input.caller.permission ?? [], input.session.permission ?? [])
     const prefixes = Object.keys(input.mcp ?? {}).map((k) => k.replace(/[^a-zA-Z0-9_-]/g, "_") + "_")
     const isMcp = (p: string) => prefixes.some((prefix) => p.startsWith(prefix))
-    return rules.filter(
-      (r: Permission.Rule) =>
-        r.action === "deny" && (r.permission === "edit" || r.permission === "bash" || isMcp(r.permission)),
+    const mutation = new Set(["edit", "bash", "notebook_edit", "notebook_execute"])
+    const inherited = rules.filter(
+      (r: Permission.Rule) => r.action === "deny" && (mutation.has(r.permission) || isMcp(r.permission)),
     )
+    for (const permission of mutation) {
+      if (Permission.evaluate(permission, "*", rules).action !== "deny") continue
+      inherited.push({ permission, pattern: "*", action: "deny" })
+    }
+    return merge(inherited)
   }
 
   /** Extra permission rules appended to subagent sessions */
@@ -95,6 +100,7 @@ export namespace KiloTask {
   type Model = { providerID: ProviderV2.ID; modelID: ModelV2.ID }
   type Saved = Model & { variant?: string }
   type Choice = { model: Model; variant?: string; sticky?: boolean; direct?: boolean }
+  type Workflow = { model: Model; variant?: string }
 
   function key(model: Model) {
     return `${model.providerID}/${model.modelID}`
@@ -136,12 +142,14 @@ export namespace KiloTask {
     config: Pick<Config.Info, "subagent_model" | "subagent_variant" | "subagent_variant_overrides">
     parent: Model
     variant?: string
+    workflow?: Workflow
     provider: Provider.Interface
   }) {
     const state = yield* saved(input.name)
     const cfg = parse(input.config.subagent_model)
     const override = (model: Model) => input.config.subagent_variant_overrides?.[key(model)] ?? undefined
     const choices: Array<Choice | undefined> = [
+      input.workflow ? { ...input.workflow, direct: true } : undefined,
       state
         ? {
             model: { providerID: state.providerID, modelID: state.modelID },
@@ -192,4 +200,20 @@ export namespace KiloTask {
     const variant = full?.variants?.[value] ? value : input.variant
     return { model: input.parent, variant }
   })
+
+  export function workflow(value: unknown): Workflow | undefined {
+    if (!value || typeof value !== "object") return undefined
+    const item = (value as { workflow?: unknown }).workflow
+    if (!item || typeof item !== "object") return undefined
+    const model = (item as { model?: unknown }).model
+    if (!model || typeof model !== "object") return undefined
+    const providerID = (model as { providerID?: unknown }).providerID
+    const modelID = (model as { modelID?: unknown }).modelID
+    if (typeof providerID !== "string" || typeof modelID !== "string") return undefined
+    const variant = (item as { variant?: unknown }).variant
+    return {
+      model: { providerID: ProviderV2.ID.make(providerID), modelID: ModelV2.ID.make(modelID) },
+      variant: typeof variant === "string" ? variant : undefined,
+    }
+  }
 }

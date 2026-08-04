@@ -1,7 +1,7 @@
 /** @jsxImportSource @opentui/solid */
 
 import { createMemo, Match, Show, Switch, type JSX } from "solid-js"
-import { useTheme } from "../../../cli/cmd/tui/context/theme"
+import { useTheme } from "@tui/context/theme"
 import type { SuggestionRequest, ToolPart as MessageToolPart } from "@kilocode/sdk/v2"
 import { SuggestBar } from "./bar"
 

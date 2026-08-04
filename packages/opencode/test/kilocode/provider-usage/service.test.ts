@@ -79,6 +79,26 @@ it.effect("only includes managed plans with an installed managed key", () =>
     expect(Cloud.plans(state({ management_source: "coding_plan", is_enabled: false }))).toEqual([])
     expect(Cloud.plans(state({ management_source: "coding_plan", is_enabled: true }))).toEqual([subscription])
     expect(Cloud.plans({ ...state(), byok: { ok: false } })).toEqual([])
+
+    const alibaba = {
+      ...subscription,
+      id: "alibaba-plan",
+      planId: "alibaba-coding-plan",
+      planName: "Alibaba Coding Plan",
+      providerName: "Alibaba",
+      providerId: "alibaba",
+    }
+    const generic = state({ management_source: "coding_plan", is_enabled: true })
+    expect(
+      Cloud.plans({
+        ...generic,
+        plans: { ok: true, value: [alibaba] },
+        byok: {
+          ok: true,
+          value: generic.byok.value.map((item) => ({ ...item, provider_id: "alibaba" })),
+        },
+      }),
+    ).toEqual([alibaba])
   }),
 )
 
@@ -288,13 +308,34 @@ it.instance("loads each personal Cloud procedure once and isolates managed enric
           },
         ],
         "codingPlans.getUsage": {
-          subscriptionId: "plan",
-          providerId: "minimax",
-          region: "global",
+          schemaVersion: 1,
           fetchedAt: "2026-06-19T00:00:00.000Z",
-          native: {
-            base_resp: { status_code: 0 },
-            model_remains: [{ model_name: "general", current_interval_remaining_percent: 80 }],
+          subscription: {
+            id: "plan",
+            planId: "minimax-token-plan-plus",
+            planName: "Token Plan Plus",
+            providerId: "minimax",
+            providerName: "MiniMax",
+            windows: [
+              {
+                id: "short_term",
+                remainingPercent: 80,
+                resetsAt: "2026-06-19T05:00:00.000Z",
+                period: { unit: "hour", value: 5 },
+              },
+              {
+                id: "weekly",
+                remainingPercent: 150,
+                resetsAt: "2026-06-26T00:00:00.000Z",
+                period: { unit: "week", value: 1 },
+              },
+              {
+                id: "billing_cycle",
+                remainingPercent: 60,
+                resetsAt: "2026-07-19T00:00:00.000Z",
+                period: { unit: "month", value: 1 },
+              },
+            ],
           },
         },
       }
@@ -322,11 +363,210 @@ it.instance("loads each personal Cloud procedure once and isolates managed enric
       "byok.list",
       "codingPlans.getUsage",
     ])
-    expect(result.items.map((item) => item.id)).toEqual(["kilo-managed-minimax:plan"])
-    expect(result.items[0]).toMatchObject({ routingState: "active", fetchState: "ready" })
+    expect(result.items.map((item) => item.id)).toEqual(["kilo-managed:plan"])
+    expect(result.items[0]).toMatchObject({
+      providerID: "minimax",
+      providerLabel: "MiniMax",
+      planLabel: "Token Plan Plus",
+      routingState: "active",
+      fetchState: "ready",
+      windows: [
+        {
+          id: "plan:short_term",
+          label: "5-hour quota",
+          remaining: 80,
+          limit: 100,
+          durationMs: 18_000_000,
+          resetAt: "2026-06-19T05:00:00.000Z",
+        },
+        {
+          id: "plan:weekly",
+          label: "Weekly quota",
+          remaining: 150,
+          limit: 100,
+          durationMs: 604_800_000,
+          resetAt: "2026-06-26T00:00:00.000Z",
+        },
+        {
+          id: "plan:billing_cycle",
+          label: "Monthly quota",
+          remaining: 60,
+          limit: 100,
+          resetAt: "2026-07-19T00:00:00.000Z",
+        },
+      ],
+    })
+    expect(result.items[0]?.windows[2]).not.toHaveProperty("durationMs")
     expect(result.kiloBilling?.autoTopUp).toMatchObject({ paymentBrand: "visa", paymentLast4: "4242" })
     expect(JSON.stringify(result)).not.toContain("pm_private")
     expect(JSON.stringify(result)).not.toContain("kilo-private-token")
+  }),
+)
+
+it.instance("does not reuse personal Cloud data after the bearer identity changes", () =>
+  Effect.gen(function* () {
+    const original = global.fetch
+    let currentAuth: Auth.Info | undefined = {
+      type: "oauth",
+      access: "token-one",
+      refresh: "refresh-one",
+      expires: Date.now() + 60_000,
+    }
+    const calls: string[] = []
+    const ok = (value: unknown) => Response.json({ result: { data: { json: value } } })
+    global.fetch = ((input: string | URL | Request, init?: RequestInit) => {
+      const procedure = new URL(String(input)).pathname.split("/").at(-1) ?? ""
+      const token = new Headers(init?.headers).get("authorization")?.replace("Bearer ", "")
+      const second = token === "token-two"
+      calls.push(`${token}:${procedure}`)
+      if (procedure === "user.getAutoTopUpPaymentMethod") {
+        return Promise.resolve(
+          ok({
+            enabled: second,
+            amountCents: second ? 10_000 : 5_000,
+            thresholdCents: 500,
+            paymentMethod: {
+              type: "card",
+              brand: "visa",
+              last4: second ? "2222" : "1111",
+            },
+          }),
+        )
+      }
+      if (procedure === "codingPlans.listSubscriptions") return Promise.resolve(ok([subscription]))
+      if (procedure === "byok.list") {
+        return Promise.resolve(
+          ok([{ id: "managed-minimax", provider_id: "minimax", management_source: "coding_plan", is_enabled: true }]),
+        )
+      }
+      return Promise.resolve(
+        ok({
+          schemaVersion: 1,
+          fetchedAt: "2026-06-19T00:00:00.000Z",
+          subscription: {
+            id: subscription.id,
+            planId: subscription.planId,
+            planName: subscription.planName,
+            providerId: subscription.providerId,
+            providerName: subscription.providerName,
+            windows: [
+              {
+                id: "short_term",
+                remainingPercent: second ? 20 : 80,
+                resetsAt: "2026-06-19T05:00:00.000Z",
+                period: { unit: "hour", value: 5 },
+              },
+            ],
+          },
+        }),
+      )
+    }) as unknown as typeof fetch
+
+    const access = Layer.mock(Auth.Service)({ get: () => Effect.sync(() => currentAuth) })
+    const catalog = Layer.mock(Provider.Service)({ list: () => Effect.succeed({}) })
+    const usageLayer = Layer.fresh(ProviderUsage.defaultLayer).pipe(Layer.provide(access), Layer.provide(catalog))
+    const output = yield* Effect.gen(function* () {
+      const usage = yield* ProviderUsage.Service
+      const first = yield* usage.get()
+      currentAuth = {
+        type: "oauth",
+        access: "token-two",
+        refresh: "refresh-two",
+        expires: Date.now() + 60_000,
+      }
+      const second = yield* usage.get()
+      return { first, second }
+    }).pipe(Effect.provide(usageLayer))
+    global.fetch = original
+
+    expect(output.first.kiloBilling?.autoTopUp).toMatchObject({ amountCents: 5_000, paymentLast4: "1111" })
+    expect(output.second.kiloBilling?.autoTopUp).toMatchObject({ amountCents: 10_000, paymentLast4: "2222" })
+    expect(output.first.items[0]?.windows[0]?.remaining).toBe(80)
+    expect(output.second.items[0]?.windows[0]?.remaining).toBe(20)
+    expect(calls).toEqual([
+      "token-one:user.getAutoTopUpPaymentMethod",
+      "token-one:codingPlans.listSubscriptions",
+      "token-one:byok.list",
+      "token-one:codingPlans.getUsage",
+      "token-two:user.getAutoTopUpPaymentMethod",
+      "token-two:codingPlans.listSubscriptions",
+      "token-two:byok.list",
+      "token-two:codingPlans.getUsage",
+    ])
+  }),
+)
+
+it.instance("preserves managed usage as stale when the BYOK lookup fails", () =>
+  Effect.gen(function* () {
+    const original = global.fetch
+    let byokCalls = 0
+    let usageCalls = 0
+    const ok = (value: unknown) => Response.json({ result: { data: { json: value } } })
+    global.fetch = ((input: string | URL | Request) => {
+      const procedure = new URL(String(input)).pathname.split("/").at(-1) ?? ""
+      if (procedure === "user.getAutoTopUpPaymentMethod") {
+        return Promise.resolve(ok({ enabled: false, amountCents: 5_000, thresholdCents: 500, paymentMethod: null }))
+      }
+      if (procedure === "codingPlans.listSubscriptions") return Promise.resolve(ok([subscription]))
+      if (procedure === "byok.list") {
+        byokCalls++
+        if (byokCalls > 1) return Promise.resolve(Response.json({ error: {} }))
+        return Promise.resolve(
+          ok([{ id: "managed-minimax", provider_id: "minimax", management_source: "coding_plan", is_enabled: true }]),
+        )
+      }
+      usageCalls++
+      return Promise.resolve(
+        ok({
+          schemaVersion: 1,
+          fetchedAt: "2026-06-19T00:00:00.000Z",
+          subscription: {
+            id: subscription.id,
+            planId: subscription.planId,
+            planName: subscription.planName,
+            providerId: subscription.providerId,
+            providerName: subscription.providerName,
+            windows: [
+              {
+                id: "short_term",
+                remainingPercent: 80,
+                resetsAt: "2026-06-19T05:00:00.000Z",
+                period: { unit: "hour", value: 5 },
+              },
+            ],
+          },
+        }),
+      )
+    }) as unknown as typeof fetch
+
+    const output = yield* Effect.gen(function* () {
+      const usage = yield* ProviderUsage.Service
+      const first = yield* usage.get()
+      const second = yield* usage.refresh()
+      return { first, second }
+    }).pipe(
+      Effect.provide(
+        layer(
+          {
+            type: "oauth",
+            access: "kilo-private-token",
+            refresh: "refresh-private-token",
+            expires: Date.now() + 60_000,
+          },
+          {},
+        ),
+      ),
+    )
+    global.fetch = original
+
+    expect(usageCalls).toBe(1)
+    expect(output.first.items[0]).toMatchObject({ fetchState: "ready", id: "kilo-managed:plan" })
+    expect(output.second.items[0]).toMatchObject({
+      fetchState: "stale",
+      id: "kilo-managed:plan",
+      error: { code: "source_refresh_unavailable" },
+    })
+    expect(output.second.items[0]?.windows).toEqual(output.first.items[0]?.windows)
   }),
 )
 

@@ -3,6 +3,7 @@ import { DateTime, Effect, Layer, Schema } from "effect"
 import { asc, eq } from "drizzle-orm"
 import { Database } from "@opencode-ai/core/database/database"
 import { EventV2 } from "@opencode-ai/core/event"
+import { EventTable } from "@opencode-ai/core/event/sql"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { Project } from "@opencode-ai/core/project"
 import { ProjectTable } from "@opencode-ai/core/project/sql"
@@ -18,6 +19,7 @@ import { SessionExecution } from "@opencode-ai/core/session/execution"
 import { SessionInput } from "@opencode-ai/core/session/input"
 import { SessionStore } from "@opencode-ai/core/session/store"
 import { SessionInputTable, SessionMessageTable, SessionTable } from "@opencode-ai/core/session/sql"
+import * as StoredMessage from "@opencode-ai/core/kilocode/session-message" // kilocode_change
 import { testEffect } from "./lib/effect"
 
 const database = Database.layerFromPath(":memory:")
@@ -199,6 +201,48 @@ describe("SessionProjector", () => {
         timestamp: created,
         model,
       })
+      // kilocode_change start
+      const assistantID = SessionMessage.ID.create()
+      yield* events.publish(SessionEvent.Step.Started, {
+        sessionID,
+        assistantMessageID: assistantID,
+        timestamp: created,
+        agent: "build",
+        model,
+      })
+      yield* events.publish(SessionEvent.Tool.Input.Started, {
+        sessionID,
+        assistantMessageID: assistantID,
+        timestamp: created,
+        callID: "call-read",
+        name: "read",
+      })
+      yield* events.publish(SessionEvent.Tool.Input.Ended, {
+        sessionID,
+        assistantMessageID: assistantID,
+        timestamp: created,
+        callID: "call-read",
+        text: '{"path":"pixel.png"}',
+      })
+      yield* events.publish(SessionEvent.Tool.Called, {
+        sessionID,
+        assistantMessageID: assistantID,
+        timestamp: created,
+        callID: "call-read",
+        tool: "read",
+        input: { path: "pixel.png" },
+        provider: { executed: false },
+      })
+      yield* events.publish(SessionEvent.Tool.Success, {
+        sessionID,
+        assistantMessageID: assistantID,
+        timestamp: DateTime.makeUnsafe(1),
+        callID: "call-read",
+        structured: {},
+        content: [{ type: "file", uri: "data:image/png;base64,AAAA", mime: "image/png", name: "pixel.png" }],
+        provider: { executed: false },
+      })
+      // kilocode_change end
       yield* events.publish(SessionEvent.Synthetic, {
         sessionID,
         messageID: SessionMessage.ID.create(),
@@ -218,18 +262,42 @@ describe("SessionProjector", () => {
         callID: "shell-1",
         output: "/project",
       })
+      const compactionID = SessionMessage.ID.create()
       yield* events.publish(SessionEvent.Compaction.Started, {
         sessionID,
-        messageID: SessionMessage.ID.create(),
+        messageID: compactionID,
         timestamp: created,
         reason: "manual",
       })
-      yield* events.publish(SessionEvent.Compaction.Delta, { sessionID, timestamp: created, text: "partial" })
+      yield* events.publish(SessionEvent.Compaction.Delta, {
+        sessionID,
+        messageID: compactionID,
+        timestamp: created,
+        text: "partial",
+      })
+      expect(
+        yield* db
+          .select({ id: EventTable.id })
+          .from(EventTable)
+          .where(eq(EventTable.type, SessionEvent.Compaction.Delta.type))
+          .all()
+          .pipe(Effect.orDie),
+      ).toEqual([])
+      expect(
+        yield* db
+          .select({ id: SessionMessageTable.id })
+          .from(SessionMessageTable)
+          .where(eq(SessionMessageTable.type, "compaction"))
+          .all()
+          .pipe(Effect.orDie),
+      ).toEqual([])
       yield* events.publish(SessionEvent.Compaction.Ended, {
         sessionID,
+        messageID: compactionID,
         timestamp: DateTime.makeUnsafe(1),
+        reason: "manual",
         text: "summary",
-        include: "msg-1",
+        recent: "recent context",
       })
 
       const rows = yield* db
@@ -239,13 +307,68 @@ describe("SessionProjector", () => {
         .orderBy(asc(SessionMessageTable.seq))
         .all()
         .pipe(Effect.orDie)
+      // kilocode_change start - assert the projector itself writes the released-reader compaction shape.
+      const compaction = rows.find((row) => row.type === "compaction")
+      expect(compaction?.data).toMatchObject({
+        summary: "summary\n\nRecent context:\nrecent context",
+        kilo_summary: "summary",
+        recent: "recent context",
+      })
+      const released = Schema.decodeUnknownSync(
+        Schema.Struct({ type: Schema.Literal("compaction"), summary: Schema.String }),
+      )({ ...compaction?.data, type: compaction?.type })
+      expect(released.summary).toBe("summary\n\nRecent context:\nrecent context")
+      const assistant = rows.find((row) => row.id === assistantID)
+      expect(assistant?.data).toMatchObject({
+        content: [
+          {
+            type: "tool",
+            state: {
+              content: [
+                {
+                  type: "file",
+                  source: { type: "data", data: "AAAA" },
+                  mime: "image/png",
+                  name: "pixel.png",
+                },
+              ],
+            },
+          },
+        ],
+      })
+      Schema.decodeUnknownSync(
+        Schema.Struct({
+          type: Schema.Literal("assistant"),
+          content: Schema.Array(
+            Schema.Struct({
+              type: Schema.Literal("tool"),
+              state: Schema.Struct({
+                content: Schema.Array(
+                  Schema.Struct({
+                    type: Schema.Literal("file"),
+                    source: Schema.Struct({ type: Schema.Literal("data"), data: Schema.String }),
+                    mime: Schema.String,
+                    name: Schema.String,
+                  }),
+                ),
+              }),
+            }),
+          ),
+        }),
+      )({ ...assistant?.data, type: assistant?.type })
+      // kilocode_change end
       const messages = rows.map((row) =>
-        Schema.decodeUnknownSync(SessionMessage.Message)({ ...row.data, id: row.id, type: row.type }),
+        // kilocode_change start
+        Schema.decodeUnknownSync(SessionMessage.Message)(
+          StoredMessage.normalize({ ...row.data, id: row.id, type: row.type }),
+        ),
+        // kilocode_change end
       )
 
       expect(messages.map((message) => message.type)).toEqual([
         "agent-switched",
         "model-switched",
+        "assistant", // kilocode_change
         "synthetic",
         "shell",
         "compaction",
@@ -256,7 +379,7 @@ describe("SessionProjector", () => {
       })
       expect(messages.find((message) => message.type === "compaction")).toMatchObject({
         summary: "summary",
-        include: "msg-1",
+        recent: "recent context",
       })
       expect(
         yield* db.select().from(SessionTable).where(eq(SessionTable.id, sessionID)).get().pipe(Effect.orDie),

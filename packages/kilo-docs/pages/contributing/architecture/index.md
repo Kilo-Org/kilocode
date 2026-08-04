@@ -25,6 +25,10 @@ Choose the path closest to the change you are making:
 
 ## Repository boundaries
 
+{% callout type="warning" title="Kilo Console is deprecated" %}
+References to Kilo Console and `kilo console` on the architecture pages describe a browser interface that is deprecated and will be removed in a future release.
+{% /callout %}
+
 Architecture pages cross two repositories:
 
 | Repository | Contents |
@@ -163,7 +167,7 @@ These local surfaces live in [`Kilo-Org/kilocode`](https://github.com/Kilo-Org/k
 | Kilo CLI TUI | `packages/opencode/` | Interactive local client with daemon attach and worker-backed fallback paths |
 | `kilo run` | `packages/opencode/` | Headless prompt execution through explicit attach, daemon attach, or embedded fallback |
 | `kilo serve` | `packages/opencode/` | Local HTTP + SSE server for local clients |
-| Kilo Console | `packages/kilo-console/`{% linebreak /%}`packages/opencode/` | Browser UI served at `/console` by a started or reused local daemon |
+| Kilo Console (deprecated) | `packages/kilo-console/`{% linebreak /%}`packages/opencode/` | Deprecated browser UI served at `/console` by a started or reused local daemon |
 | VS Code extension | `packages/kilo-vscode/` | Extension host starts one shared editor-owned `kilo serve` server and routes webviews through HTTP + global SSE; SDK directory selects local runtime instance |
 | JetBrains plugin | `packages/kilo-jetbrains/` | Split-mode Swing plugin; backend module starts one editor-owned `kilo serve` server and caches workspace clients by directory |
 
@@ -189,7 +193,7 @@ These supporting packages also live in [`Kilo-Org/kilocode`](https://github.com/
 | `packages/kilo-indexing/` | Per-directory asynchronous codebase indexing engine behind Kilo CLI bridge |
 | `packages/sdk/js/` | Generated JavaScript client and handwritten wrapper for local server APIs |
 | `packages/kilo-gateway/` | Local Kilo Gateway client integration used by Kilo CLI runtime |
-| `packages/kilo-console/` | Browser UI served by local daemon at `/console` |
+| `packages/kilo-console/` | Deprecated browser UI served by local daemon at `/console` |
 
 ## Architecture pages
 

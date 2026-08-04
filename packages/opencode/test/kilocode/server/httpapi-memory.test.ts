@@ -14,7 +14,16 @@ type Json = Record<string, unknown>
 
 function app() {
   const handler = HttpRouter.toWebHandler(
-    HttpApiServer.routes.pipe(Layer.provide(ConfigProvider.layer(ConfigProvider.fromUnknown({})))),
+    // kilocode_change - keep the filewatcher-disable flag visible (see httpapi-instance-route-auth.test.ts)
+    HttpApiServer.routes.pipe(
+      Layer.provide(
+        ConfigProvider.layer(
+          ConfigProvider.fromUnknown({
+            KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: process.env.KILO_EXPERIMENTAL_DISABLE_FILEWATCHER ?? "true",
+          }),
+        ),
+      ),
+    ),
     { disableLogger: true },
   ).handler
 
@@ -151,8 +160,8 @@ describe("HttpApi memory", () => {
     expect(String(show.index)).toContain("httpapi_memory")
     expect(String(show.items)).toContain("httpapi_memory")
     expect(String(rec(show.sources).project)).toContain("httpapi_memory")
-    expect(typeof show.decisions).toBe("string")
-    expect(String(show.decisions)).toContain('"sessionID":"ses_http_memory"')
+    expect(show.changes).toBe("")
+    expect(show.decisions).toBe("")
 
     const forgotten = await json("POST", MemoryPaths.forget, { query: "httpapi_memory" })
     expectOperation(forgotten)

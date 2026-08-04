@@ -2,13 +2,6 @@
 // Keys here will override any matching keys from upstream translations
 export const dict = {
   // Kilo Gateway provider translations
-  "provider.connect.kiloGateway.line1":
-    "Kilo Gateway gives you access to a curated set of reliable optimized models for coding agents.",
-  "provider.connect.kiloGateway.line2":
-    "With a single API key you'll get access to models such as Claude, GPT, Gemini, GLM and more.",
-  "provider.connect.kiloGateway.visit.prefix": "Visit ",
-  "provider.connect.kiloGateway.visit.link": "kilo.ai",
-  "provider.connect.kiloGateway.visit.suffix": " to collect your API key.",
   "provider.connect.kiloGateway.byok.prefix": "For more usage stats, ",
   "provider.connect.kiloGateway.byok.link": "BYOK via Kilo's Gateway",
   "provider.connect.kiloGateway.byok.suffix": ".",
@@ -26,14 +19,9 @@ export const dict = {
   "settings.providers.note.vercel": "Unified access to AI models with smart routing",
 
   // Reasoning block label
-  "ui.permission.run": "Run",
   "ui.reasoning.label": "Reasoning",
 
   // Marketplace
-  "marketplace.tab.skills": "Skills",
-  "marketplace.tab.mcpServers": "MCP Servers",
-  "marketplace.category.all": "All",
-  "marketplace.placeholder": "To be implemented",
   "marketplace.card.installed": "Installed",
   "marketplace.card.install": "Install",
   "marketplace.card.remove": "Remove",
@@ -51,7 +39,8 @@ export const dict = {
   "marketplace.install.about.mcp":
     "An MCP server gives Kilo additional tools for working with external services or local programs.",
   "marketplace.install.about.agent": "An agent adds a reusable role with its own instructions and permissions.",
-  "marketplace.install.about.skill": "A skill adds task-specific instructions and resources that Kilo can load when needed.",
+  "marketplace.install.about.skill":
+    "A skill adds task-specific instructions and resources that Kilo can load when needed.",
   "marketplace.install.mcp.warning":
     "MCP servers can run local commands or connect to external services. Kilo will ask for permission before using their tools unless your permissions allow them automatically.",
   "marketplace.install.project.warning":
@@ -73,8 +62,6 @@ export const dict = {
     "Are you sure you want to remove this {{type}}? This will remove it from your {{scope}} configuration.",
   "marketplace.remove.cancel": "Cancel",
   "marketplace.remove.confirm.button": "Remove",
-  "marketplace.tab.mcp": "MCP",
-  "marketplace.tab.agents": "Agents",
   "marketplace.search": "Search...",
   "marketplace.filter.all": "All Items",
   "marketplace.filter.notInstalled": "Not Installed",
@@ -82,12 +69,10 @@ export const dict = {
   "marketplace.empty": "No items found",
   "marketplace.empty.relevant": "No relevant marketplace items found for this workspace.",
   "marketplace.badge.mcpServer": "MCP Server",
-  "marketplace.badge.mode": "Mode",
   "marketplace.card.by": "by {{author}}",
   "marketplace.install.method": "Installation Method",
   "marketplace.install.parameters": "Parameters",
   "marketplace.install.optional": "(optional)",
-  "marketplace.install.required": "{{name}} is required",
   "marketplace.scope.project": "project",
   "marketplace.scope.global": "global",
   "marketplace.remove.type.mcp": "MCP server",
@@ -134,8 +119,6 @@ export const dict = {
   // Edit-tool header: hover-revealed action opening the diff in a full tab.
   "ui.messagePart.openInDiffViewer": "Open in Diff Viewer",
   // Shell-tool section labels and actions.
-  "ui.messagePart.shell.command": "Command",
-  "ui.messagePart.shell.output": "Output",
   "ui.messagePart.openInEditor": "Open in Editor",
 
   // Message feedback (thumbs up/down per assistant response)

@@ -52,11 +52,27 @@ const provider = {
 }
 
 describe("Config", () => {
+  it.effect("returns the latest defined scalar from priority-ordered documents", () =>
+    Effect.sync(() => {
+      const entries = [
+        new Config.Document({ type: "document", info: new Config.Info({ model: "openrouter/openai/gpt-5" }) }),
+        new Config.Directory({ type: "directory", path: AbsolutePath.make("/skills") }),
+        new Config.Document({ type: "document", info: new Config.Info({}) }),
+        new Config.Document({ type: "document", info: new Config.Info({ model: "openrouter/openai/gpt-5.5" }) }),
+      ]
+
+      expect(Config.latest(entries, "model")).toBe("openrouter/openai/gpt-5.5")
+      expect(Config.latest(entries, "default_agent")).toBeUndefined()
+    }),
+  )
+
   it.effect("detects v1 configuration from any v1-only top-level key", () =>
     Effect.sync(() => {
       expect(ConfigMigrateV1.isV1({ snapshot: false })).toBe(true)
       expect(ConfigMigrateV1.isV1({ snapshot: false, agents: {} })).toBe(true)
+      expect(ConfigMigrateV1.isV1({ reference: {} })).toBe(true)
       expect(ConfigMigrateV1.isV1({ shell: "/bin/zsh", model: "anthropic/claude" })).toBe(false)
+      expect(ConfigMigrateV1.isV1({ references: {} })).toBe(false)
     }),
   )
 
@@ -145,6 +161,45 @@ describe("Config", () => {
       ),
     ),
   )
+
+  // kilocode_change start
+  it.live("skips project configuration when project discovery is disabled", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const project = path.join(tmp.path, "project")
+          const global = path.join(tmp.path, "global")
+          yield* Effect.promise(async () => {
+            await Promise.all([fs.mkdir(project, { recursive: true }), fs.mkdir(global, { recursive: true })])
+            await Promise.all([
+              fs.writeFile(path.join(project, "kilo.json"), JSON.stringify({ model: "project/model" })),
+              fs.writeFile(path.join(global, "kilo.json"), JSON.stringify({ model: "global/model" })),
+            ])
+          })
+
+          const prior = process.env.KILO_DISABLE_PROJECT_CONFIG
+          process.env.KILO_DISABLE_PROJECT_CONFIG = "1"
+          yield* Effect.addFinalizer(() =>
+            Effect.sync(() => {
+              if (prior === undefined) delete process.env.KILO_DISABLE_PROJECT_CONFIG
+              else process.env.KILO_DISABLE_PROJECT_CONFIG = prior
+            }),
+          )
+
+          return yield* Effect.gen(function* () {
+            const config = yield* Config.Service
+            const documents = (yield* config.entries()).filter((entry) => entry.type === "document")
+
+            expect(documents.map((document) => document.info.model)).toEqual(["global/model"])
+          }).pipe(Effect.provide(testLayer(project, global, project)))
+        }),
+      ),
+    ),
+  )
+            // kilocode_change end
 
   it.live("loads JSON and JSONC files from lowest to highest priority", () =>
     Effect.acquireRelease(
@@ -304,7 +359,7 @@ describe("Config", () => {
                 compaction: {
                   auto: true,
                   prune: false,
-                  keep: { turns: 3, tokens: 2000 },
+                  keep: { tokens: 2000 },
                   buffer: 10000,
                 },
                 skills: ["./skills", "~/shared-skills", "https://example.com/.well-known/skills/"],
@@ -389,7 +444,7 @@ describe("Config", () => {
             expect(documents[0]?.info.compaction).toEqual({
               auto: true,
               prune: false,
-              keep: { turns: 3, tokens: 2000 },
+              keep: { tokens: 2000 },
               buffer: 10000,
             })
             expect(documents[0]?.info.skills).toEqual([
@@ -417,6 +472,42 @@ describe("Config", () => {
     ),
   )
 
+  it.live("migrates the deprecated reference key into references", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          yield* Effect.promise(() =>
+            fs.writeFile(
+              path.join(tmp.path, "opencode.json"),
+              JSON.stringify({
+                reference: {
+                  local: { path: "../library" },
+                  sdk: { repository: "github.com/example/sdk", branch: "main" },
+                  shorthand: "github.com/example/docs",
+                },
+              }),
+            ),
+          )
+
+          return yield* Effect.gen(function* () {
+            const config = yield* Config.Service
+            const documents = (yield* config.entries()).filter((entry) => entry.type === "document")
+
+            expect(documents).toHaveLength(1)
+            expect(documents[0]?.info.references).toEqual({
+              local: { path: "../library" },
+              sdk: { repository: "github.com/example/sdk", branch: "main" },
+              shorthand: "github.com/example/docs",
+            })
+          }).pipe(Effect.provide(testLayer(tmp.path)))
+        }),
+      ),
+    ),
+  )
+
   it.live("migrates v1 configuration when a v1-only key is present", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
@@ -435,6 +526,7 @@ describe("Config", () => {
                 permission: {
                   bash: "ask",
                   edit: { "*.md": "allow", "*": "deny" },
+                  question: "deny",
                 },
                 agent: {
                   reviewer: {
@@ -449,7 +541,9 @@ describe("Config", () => {
                   ["@my-org/audit-plugin", { endpoint: "https://audit.example.com" }],
                 ],
                 skills: { paths: ["./skills"], urls: ["https://example.com/.well-known/skills/"] },
-                reference: { docs: { path: "../docs" } },
+                references: {
+                  docs: { path: "../docs", description: "Use for product documentation", hidden: true },
+                },
                 attachment: { image: { auto_resize: false, max_width: 1200 } },
                 provider: {
                   custom: {
@@ -465,7 +559,22 @@ describe("Config", () => {
                     npm: "@ai-sdk/openai",
                     options: { apiKey: "secret", organization: "org" },
                     models: {
-                      model: { options: { reasoningEffort: "high", serviceTier: "priority" } },
+                      model: {
+                        options: { temperature: 0.3, reasoningEffort: "high", serviceTier: "priority" },
+                        variants: { high: { reasoningEffort: "high", reasoningSummary: "auto" } },
+                      },
+                    },
+                  },
+                  anthropic: {
+                    npm: "@ai-sdk/anthropic",
+                    models: {
+                      model: {
+                        options: {
+                          effort: "high",
+                          taskBudget: 4096,
+                          metadata: { userId: "user-1" },
+                        },
+                      },
                     },
                   },
                 },
@@ -497,6 +606,7 @@ describe("Config", () => {
               { action: "bash", resource: "*", effect: "ask" },
               { action: "edit", resource: "*.md", effect: "allow" },
               { action: "edit", resource: "*", effect: "deny" },
+              { action: "question", resource: "*", effect: "deny" },
             ])
             expect(documents[0]?.info.agents?.reviewer).toMatchObject({
               system: "Review changes.",
@@ -509,7 +619,9 @@ describe("Config", () => {
               { package: "@my-org/audit-plugin", options: { endpoint: "https://audit.example.com" } },
             ])
             expect(documents[0]?.info.skills).toEqual(["./skills", "https://example.com/.well-known/skills/"])
-            expect(documents[0]?.info.references).toEqual({ docs: { path: "../docs" } })
+            expect(documents[0]?.info.references).toEqual({
+              docs: { path: "../docs", description: "Use for product documentation", hidden: true },
+            })
             expect(documents[0]?.info.attachments).toEqual({ image: { auto_resize: false, max_width: 1200 } })
             expect(documents[0]?.info.providers?.custom).toMatchObject({
               request: { body: { apiKey: "secret" } },
@@ -523,12 +635,31 @@ describe("Config", () => {
             expect(documents[0]?.info.providers?.openai).toMatchObject({
               api: { settings: {} },
               request: { headers: { Authorization: "Bearer secret", "OpenAI-Organization": "org" } },
-              models: { model: { request: { body: { reasoning_effort: "high", service_tier: "priority" } } } },
+              models: {
+                model: {
+                  request: {
+                    body: { temperature: 0.3, reasoningEffort: "high", serviceTier: "priority" },
+                  },
+                  variants: [{ id: "high", body: { reasoningEffort: "high", reasoningSummary: "auto" } }],
+                },
+              },
+            })
+            expect(documents[0]?.info.providers?.anthropic).toMatchObject({
+              models: {
+                model: {
+                  request: {
+                    body: {
+                      output_config: { effort: "high", task_budget: 4096 },
+                      metadata: { user_id: "user-1" },
+                    },
+                  },
+                },
+              },
             })
             expect(documents[0]?.info.compaction).toEqual({
               auto: true,
               prune: undefined,
-              keep: { turns: 3, tokens: 2000 },
+              keep: { tokens: 2000 },
               buffer: 10000,
             })
             expect(documents[0]?.info.mcp).toMatchObject({
@@ -607,7 +738,8 @@ describe("Config", () => {
     ),
   )
 
-  it.live("loads global, ancestor, and .opencode configuration up to the project boundary", () =>
+  // kilocode_change start - V2 config discovery follows Kilo roots and precedence
+  it.live("loads Kilo configuration roots up to the project boundary", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
@@ -621,19 +753,25 @@ describe("Config", () => {
           yield* Effect.promise(async () => {
             await fs.mkdir(global, { recursive: true })
             await fs.mkdir(directory, { recursive: true })
-            await fs.mkdir(path.join(root, ".opencode"), { recursive: true })
-            await fs.mkdir(path.join(directory, ".opencode"), { recursive: true })
+            await Promise.all(
+              [root, directory].flatMap((dir) =>
+                [".kilocode", ".kilo", ".opencode"].map((name) => fs.mkdir(path.join(dir, name), { recursive: true })),
+              ),
+            )
             await Promise.all([
               fs.writeFile(path.join(tmp.path, "opencode.json"), JSON.stringify({ $schema: "outside" })),
-              fs.writeFile(path.join(global, "opencode.json"), JSON.stringify({ $schema: "global" })),
-              fs.writeFile(path.join(root, "opencode.json"), JSON.stringify({ $schema: "root" })),
+              fs.writeFile(path.join(global, "kilo.json"), JSON.stringify({ $schema: "global" })),
+              fs.writeFile(path.join(root, "kilo.json"), JSON.stringify({ $schema: "root" })),
               fs.writeFile(path.join(parent, "opencode.jsonc"), JSON.stringify({ $schema: "parent" })),
               fs.writeFile(path.join(directory, "config.json"), JSON.stringify({ $schema: "directory" })),
-              fs.writeFile(path.join(root, ".opencode", "opencode.json"), JSON.stringify({ $schema: "root-dot" })),
+              fs.writeFile(path.join(root, ".kilocode", "opencode.json"), JSON.stringify({ $schema: "root-kilocode" })),
+              fs.writeFile(path.join(root, ".kilo", "kilo.json"), JSON.stringify({ $schema: "root-kilo" })),
               fs.writeFile(
-                path.join(directory, ".opencode", "opencode.jsonc"),
-                JSON.stringify({ $schema: "directory-dot" }),
+                path.join(directory, ".kilocode", "opencode.jsonc"),
+                JSON.stringify({ $schema: "directory-kilocode" }),
               ),
+              fs.writeFile(path.join(directory, ".kilo", "kilo.jsonc"), JSON.stringify({ $schema: "directory-kilo" })),
+              fs.writeFile(path.join(root, ".opencode", "opencode.json"), JSON.stringify({ $schema: "ignored" })),
             ])
           })
 
@@ -644,27 +782,36 @@ describe("Config", () => {
 
             expect(entries.filter((entry) => entry.type === "directory").map((entry) => entry.path)).toEqual([
               AbsolutePath.make(global),
-              AbsolutePath.make(path.join(root, ".opencode")),
-              AbsolutePath.make(path.join(directory, ".opencode")),
+              AbsolutePath.make(path.join(root, ".kilocode")),
+              AbsolutePath.make(path.join(root, ".kilo")),
+              AbsolutePath.make(path.join(directory, ".kilocode")),
+              AbsolutePath.make(path.join(directory, ".kilo")),
             ])
             expect(documents.map((document) => document.info.$schema)).toEqual([
               "global",
               "root",
               "parent",
               "directory",
-              "root-dot",
-              "directory-dot",
+              "root-kilocode",
+              "root-kilo",
+              "directory-kilocode",
+              "directory-kilo",
             ])
+            expect(Config.latest(entries, "$schema")).toBe("directory-kilo")
             expect(entries.map((entry) => (entry.type === "document" ? entry.info.$schema : entry.path))).toEqual([
               "global",
               AbsolutePath.make(global),
               "root",
               "parent",
               "directory",
-              "root-dot",
-              AbsolutePath.make(path.join(root, ".opencode")),
-              "directory-dot",
-              AbsolutePath.make(path.join(directory, ".opencode")),
+              "root-kilocode",
+              AbsolutePath.make(path.join(root, ".kilocode")),
+              "root-kilo",
+              AbsolutePath.make(path.join(root, ".kilo")),
+              "directory-kilocode",
+              AbsolutePath.make(path.join(directory, ".kilocode")),
+              "directory-kilo",
+              AbsolutePath.make(path.join(directory, ".kilo")),
             ])
           }).pipe(
             Effect.provide(
@@ -678,4 +825,5 @@ describe("Config", () => {
       }),
     ),
   )
+  // kilocode_change end
 })

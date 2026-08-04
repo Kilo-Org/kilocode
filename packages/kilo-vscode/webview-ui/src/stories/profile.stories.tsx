@@ -50,7 +50,7 @@ const usage: ProviderUsageData = {
   generatedAt: "2026-06-19T12:00:00.000Z",
   items: [
     {
-      id: "kilo-managed-minimax:plan",
+      id: "kilo-managed:plan",
       providerID: "minimax",
       sourceKind: "kilo_managed",
       providerLabel: "MiniMax",

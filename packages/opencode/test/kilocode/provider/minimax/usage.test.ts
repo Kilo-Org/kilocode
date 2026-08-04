@@ -36,7 +36,7 @@ const response = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } })
 
 describe("MiniMax usage normalization", () => {
-  test("managed and direct native payloads normalize identically", () => {
+  test("normalizes direct native percentage payloads", () => {
     const payload = native({
       current_interval_total_count: 1500,
       current_interval_usage_count: 1,
@@ -47,9 +47,6 @@ describe("MiniMax usage normalization", () => {
     })
 
     const direct = normalize(payload, options)
-    const managed = normalize(payload, { ...options, sourceKind: "kilo_managed", sourceLabel: "via Kilo" })
-
-    expect(managed.windows).toEqual(direct.windows)
     expect(direct.windows[0]).toMatchObject({
       orientation: "remaining_percent",
       remaining: 80,
@@ -84,16 +81,14 @@ describe("MiniMax usage normalization", () => {
       ],
     })
     const direct = normalize(value, options)
-    const managed = normalize(value, { ...options, sourceKind: "kilo_managed", planID: "minimax-token-plan-plus" })
 
     expect(direct.windows.some((window) => window.resource === "video")).toBe(false)
-    expect(managed.windows.some((window) => window.resource === "video")).toBe(false)
     expect(direct.windows.find((window) => window.id === "image-interval")).toMatchObject({
       resource: "image",
       remaining: 70,
       state: "active",
     })
-    expect(managed.windows.find((window) => window.id === "image-weekly")?.state).toBe("not_in_plan")
+    expect(direct.windows.find((window) => window.id === "image-weekly")?.state).toBe("not_in_plan")
     expect(direct.windows.find((window) => window.id === "general-interval")?.state).toBe("unknown")
   })
 

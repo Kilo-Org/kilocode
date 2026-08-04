@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto"
 import { describe, expect } from "bun:test"
 import { Flag } from "@opencode-ai/core/flag/flag"
-import * as Log from "@opencode-ai/core/util/log"
 import { ConfigProvider, Effect, Layer } from "effect"
 import {
   HttpClient,
@@ -18,8 +17,6 @@ import { authorizationRouterMiddleware } from "../../src/server/routes/instance/
 import { HttpApiApp } from "../../src/server/routes/instance/httpapi/server"
 import { serveEmbeddedUIEffect, serveUIEffect } from "../../src/server/shared/ui"
 import { testEffect } from "../lib/effect"
-
-void Log.init({ print: false })
 
 const testStateLayer = Layer.effectDiscard(
   Effect.gen(function* () {
@@ -55,12 +52,15 @@ function app(input?: { password?: string; username?: string }) {
   const handler = HttpRouter.toWebHandler(
     HttpApiApp.routes.pipe(
       Layer.provide(
+        // kilocode_change start - keep the filewatcher-disable flag visible (see httpapi-instance-route-auth.test.ts)
         ConfigProvider.layer(
           ConfigProvider.fromUnknown({
             KILO_SERVER_PASSWORD: input?.password,
             KILO_SERVER_USERNAME: input?.username,
+            KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: process.env.KILO_EXPERIMENTAL_DISABLE_FILEWATCHER ?? "true",
           }),
         ),
+        // kilocode_change end
       ),
     ),
     { disableLogger: true },
@@ -103,12 +103,15 @@ function uiApp(input?: {
         input?.client ?? httpClient(new Response("ui")),
         RuntimeFlags.layer({ disableEmbeddedWebUi: input?.disableEmbeddedWebUi ?? false }),
         HttpServer.layerServices,
+        // kilocode_change start - keep the filewatcher-disable flag visible (see httpapi-instance-route-auth.test.ts)
         ConfigProvider.layer(
           ConfigProvider.fromUnknown({
             KILO_SERVER_PASSWORD: input?.password,
             KILO_SERVER_USERNAME: input?.username,
+            KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: process.env.KILO_EXPERIMENTAL_DISABLE_FILEWATCHER ?? "true",
           }),
         ),
+        // kilocode_change end
       ]),
     ),
     { disableLogger: true },

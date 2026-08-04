@@ -10,6 +10,7 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { showToast } from "@kilocode/kilo-ui/toast"
+import { isTextControl } from "../../utils/focus"
 import { useSession } from "../../context/session"
 import { useLocalTabs } from "../../context/local-tabs"
 import { useServer } from "../../context/server"
@@ -26,6 +27,7 @@ import { SpeechToTextButton } from "../speech-to-text/SpeechToTextButton"
 import { canUseSpeechToText, selectedSpeechToTextModel } from "../speech-to-text/availability"
 import { ThinkingSelector } from "../shared/ThinkingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
+import type { MentionResult } from "../../hooks/file-mention-utils"
 import { useTerminalContext } from "../../hooks/useTerminalContext"
 import { useGitChangesContext } from "../../hooks/useGitChangesContext"
 import { hasTerminalMention } from "../../hooks/terminal-context-utils"
@@ -33,9 +35,13 @@ import { hasGitChangesMention } from "../../hooks/git-changes-context-utils"
 import { useSlashCommand } from "../../hooks/useSlashCommand"
 import { useGhostText } from "../../hooks/useGhostText"
 import { useSpeechToText } from "../speech-to-text/useSpeechToText"
+import { useSpeechToTextModels } from "../../context/speech-to-text-models"
+import { createSpeechShortcut } from "../speech-to-text/shortcut"
 import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageAttachments"
 import { convertToMentionPath } from "../../utils/path-mentions"
+import { SessionMentionPicker } from "./SessionMentionPicker"
 import { usePromptHistory } from "../../hooks/usePromptHistory"
+import { cycleVariant } from "../../context/session-variant-store"
 import { WandSparkles } from "@kilocode/kilo-ui/lucide"
 import {
   fileName,
@@ -74,7 +80,7 @@ import {
 import { ReviewComments } from "./ReviewComments"
 import { partReview, reviewBody } from "../../../../src/shared/review-comments"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
-import { MEMORY_USAGE, parseMemoryCommand } from "../../utils/memory-command"
+import { parseMemoryCommand } from "../../utils/memory-command"
 import { useMemory } from "../../context/memory"
 
 function mergeReviewComments(current: ReviewComment[], incoming: ReviewComment[]): ReviewComment[] {
@@ -105,8 +111,62 @@ interface PromptInputProps {
   suggesting?: () => boolean
   /** When true, session is busy only because a question is pending — treat as idle for input */
   questioning?: () => boolean
+  /** When true, defer prompt focus while switching to a pending question */
+  deferFocusToQuestion?: () => boolean
   boxId?: string
   pendingSessionID?: string
+  /** Agent Manager can suppress automatic prompt focus when this session last
+   *  used its side terminal instead. Other callers retain the old behavior. */
+  focusOnDraftChange?: () => boolean
+  onFocusChange?: (focused: boolean) => void
+}
+
+function MentionItemContent(props: { item: MentionResult }) {
+  const item = props.item
+  if (item.type === "terminal")
+    return (
+      <>
+        <Icon name="console" class="file-mention-icon" />
+        <span class="file-mention-name">{item.label}</span>
+        <span class="file-mention-dir">{item.description}</span>
+      </>
+    )
+  if (item.type === "git-changes")
+    return (
+      <>
+        <Icon name="branch" class="file-mention-icon" />
+        <span class="file-mention-name">{item.label}</span>
+        <span class="file-mention-dir">{item.description}</span>
+      </>
+    )
+  if (item.type === "past-chats")
+    return (
+      <>
+        <Icon name="history" class="file-mention-icon" />
+        <span class="file-mention-name">{item.label}</span>
+        <span class="file-mention-dir">{item.description}</span>
+      </>
+    )
+  if (item.type === "file-picker")
+    return (
+      <>
+        <Icon name="folder" class="file-mention-icon" />
+        <span class="file-mention-name">{item.label}</span>
+        <span class="file-mention-dir">{item.description}</span>
+      </>
+    )
+  return (
+    <>
+      <FileIcon
+        node={{ path: item.value, type: item.type === "folder" ? "directory" : "file" }}
+        class="file-mention-icon"
+      />
+      <span class="file-mention-name">
+        {item.type === "folder" ? `${fileName(item.value)}/` : fileName(item.value)}
+      </span>
+      <span class="file-mention-dir">{dirName(item.value)}</span>
+    </>
+  )
 }
 
 export const PromptInput: Component<PromptInputProps> = (props) => {
@@ -290,6 +350,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   const ghost = useGhostText(vscode, text, () => server.isConnected())
   const speech = useSpeechToText(vscode, server, language)
+  const speechModels = useSpeechToTextModels()
 
   const replaceReviewComments = (next: ReviewComment[]) => {
     setReviewComments(next)
@@ -330,7 +391,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         textareaRef.scrollTop = scroll
         if (highlightRef) highlightRef.scrollTop = scroll
       }
-      window.dispatchEvent(new Event("focusPrompt"))
+      if (!props.deferFocusToQuestion?.() && (props.focusOnDraftChange?.() ?? true)) {
+        window.dispatchEvent(new Event("focusPrompt"))
+      }
     }),
   )
 
@@ -354,7 +417,14 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   // Focus textarea when any part of the app requests it
   const onFocusPrompt = (event: Event) => {
+    const defer = () =>
+      event instanceof CustomEvent && event.detail?.deferFocusToQuestion && props.deferFocusToQuestion?.()
+    const ownsFocus = () => {
+      const active = document.activeElement
+      return active !== textareaRef && isTextControl(active)
+    }
     const focus = () => {
+      if (defer() || ownsFocus()) return
       const ref = textareaRef
       if (!ref) return
       ref.focus({ preventScroll: true })
@@ -362,6 +432,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     focus()
     if (!(event instanceof CustomEvent) || !event.detail?.restore) return
     const restore = () => {
+      if (defer() || ownsFocus()) return
       window.focus()
       focus()
     }
@@ -447,7 +518,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     )
   const isDisabled = () => !server.isConnected()
   const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates())
-  const speechModel = () => selectedSpeechToTextModel(config())
+  const speechModel = () => selectedSpeechToTextModel(config(), speechModels.models())
   const hasInput = () => text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0
   const canSend = () =>
     !isDisabled() &&
@@ -467,6 +538,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     textareaRef ? atEnd(textareaRef.selectionStart, textareaRef.selectionEnd, textareaRef.value.length) : false
   const highlightMentions = () => {
     const paths = new Set(mention.mentionedPaths())
+    for (const token of mention.mentionedSessions().keys()) paths.add(token)
     if (hasTerminalMention(text())) paths.add("terminal")
     if (hasGit() && hasGitChangesMention(text())) paths.add("git-changes")
     return paths
@@ -635,6 +707,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       // filename and cannot be relied on to reconstruct spaced paths correctly.
       if (message.paths?.length) mention.seedFromParts(message.paths, message.text)
       else mention.seedFromText(message.text)
+      if (message.sessions?.length) mention.seedSessions(message.sessions, message.text)
       if (textareaRef) {
         textareaRef.value = message.text
         adjustHeight()
@@ -863,7 +936,20 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       }
     }
 
-    if (e.key === "Tab" && ghost.text()) {
+    // Shift+Tab cycles reasoning effort variants (setting: chat.shiftTabCyclesVariant).
+    // When disabled or no variants exist, fall through to default focus navigation.
+    if (e.key === "Tab" && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (settings()["chat.shiftTabCyclesVariant"] === false) return
+      const list = session.variantList(sid())
+      if (list.length === 0) return
+      const next = cycleVariant(session.currentVariant(sid()), list)
+      if (!next) return
+      e.preventDefault()
+      session.selectVariant(next, sid())
+      return
+    }
+
+    if (e.key === "Tab" && !e.shiftKey && ghost.text()) {
       if (!isAtEnd()) return
       e.preventDefault()
       acceptSuggestion()
@@ -958,6 +1044,32 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     })
   }
 
+  const shortcut = createSpeechShortcut({
+    speech,
+    disabled: () => !canUseSpeech() || isDisabled(),
+    start: startSpeech,
+    finish: (submit) => {
+      if (submit) {
+        transcribeAndSend()
+        return
+      }
+      speech.stop()
+    },
+  })
+  const speechDown = (e: KeyboardEvent): boolean => {
+    if (!shortcut.down(e)) return false
+    e.preventDefault()
+    e.stopPropagation()
+    return true
+  }
+  const speechUp = (e: KeyboardEvent): boolean => {
+    if (!shortcut.up(e)) return false
+    e.preventDefault()
+    e.stopPropagation()
+    return true
+  }
+  onCleanup(shortcut.reset)
+
   const handleSendClick = () => {
     if (speech.state() !== "recording" || !canSend()) {
       void handleSend()
@@ -972,8 +1084,16 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       return false
     }
     if (memory.kind === "help") {
-      showToast({ variant: "default", title: "/memory", description: MEMORY_USAGE })
-      return true
+      const value = "/memory "
+      setText(value)
+      if (textareaRef) {
+        textareaRef.value = value
+        textareaRef.setSelectionRange(value.length, value.length)
+        textareaRef.focus()
+      }
+      slash.onInput(value, value.length)
+      adjustHeight()
+      return false
     }
     if (isDisabled() || speech.active() || terminal.pending() || git.pending() || props.blocked?.()) return false
     const status = projectMemory.status()
@@ -986,13 +1106,17 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       showToast({ variant: "error", title: language.t("chat.memory.project.disabled") })
       return false
     }
-    if (memory.kind === "show") vscode.postMessage({ type: "memoryShow", sessionID: sid() })
+    if (memory.kind === "show") vscode.postMessage({ type: "memoryShow", mode: "show", sessionID: sid() })
     if (memory.kind === "operation") {
+      if (memory.operation === "status") {
+        vscode.postMessage({ type: "memoryShow", mode: "status", sessionID: sid() })
+        return true
+      }
       vscode.postMessage({
         type: "memoryOperation",
         operation: memory.operation,
         sessionID: sid(),
-        ...(memory.operation === "auto" || memory.operation === "verbose" ? { mode: memory.mode } : {}),
+        ...(memory.operation === "auto" ? { mode: memory.mode } : {}),
         ...(memory.operation === "purge" ? { confirm: memory.confirm } : {}),
         ...(memory.operation === "remember" || memory.operation === "correct" ? { text: memory.text } : {}),
         ...(memory.operation === "forget" ? { query: memory.query } : {}),
@@ -1156,58 +1280,45 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       <Show when={mention.showMention()}>
         <div class="file-mention-dropdown" ref={dropdownRef}>
           <Show
-            when={mention.mentionResults().length > 0}
-            fallback={<div class="file-mention-empty">No files or folders found</div>}
+            when={!mention.sessionPicker()}
+            fallback={
+              <SessionMentionPicker
+                sessions={mention.sessionCandidates()}
+                onSelect={(picked) => {
+                  if (textareaRef) mention.selectSession(picked, textareaRef, setText, adjustHeight)
+                }}
+                onClose={() => {
+                  mention.closeMention()
+                  textareaRef?.focus()
+                }}
+              />
+            }
           >
-            <For each={mention.mentionResults()}>
-              {(item, index) => (
-                <>
-                  <div
-                    class="file-mention-item"
-                    classList={{ "file-mention-item--active": index() === mention.mentionIndex() }}
-                    onMouseDown={(e) => {
-                      e.preventDefault()
-                      if (textareaRef) mention.selectMention(item, textareaRef, setText, adjustHeight)
-                    }}
-                    onMouseEnter={() => mention.setMentionIndex(index())}
-                  >
-                    {item.type === "terminal" ? (
-                      <>
-                        <Icon name="console" class="file-mention-icon" />
-                        <span class="file-mention-name">{item.label}</span>
-                        <span class="file-mention-dir">{item.description}</span>
-                      </>
-                    ) : item.type === "git-changes" ? (
-                      <>
-                        <Icon name="branch" class="file-mention-icon" />
-                        <span class="file-mention-name">{item.label}</span>
-                        <span class="file-mention-dir">{item.description}</span>
-                      </>
-                    ) : item.type === "file-picker" ? (
-                      <>
-                        <Icon name="folder" class="file-mention-icon" />
-                        <span class="file-mention-name">{item.label}</span>
-                        <span class="file-mention-dir">{item.description}</span>
-                      </>
-                    ) : (
-                      <>
-                        <FileIcon
-                          node={{ path: item.value, type: item.type === "folder" ? "directory" : "file" }}
-                          class="file-mention-icon"
-                        />
-                        <span class="file-mention-name">
-                          {item.type === "folder" ? `${fileName(item.value)}/` : fileName(item.value)}
-                        </span>
-                        <span class="file-mention-dir">{dirName(item.value)}</span>
-                      </>
-                    )}
-                  </div>
-                  <Show when={item.type === "file-picker" && index() < mention.mentionResults().length - 1}>
-                    <div class="file-mention-separator" />
-                  </Show>
-                </>
-              )}
-            </For>
+            <Show
+              when={mention.mentionResults().length > 0}
+              fallback={<div class="file-mention-empty">No files or folders found</div>}
+            >
+              <For each={mention.mentionResults()}>
+                {(item, index) => (
+                  <>
+                    <div
+                      class="file-mention-item"
+                      classList={{ "file-mention-item--active": index() === mention.mentionIndex() }}
+                      onMouseDown={(e) => {
+                        e.preventDefault()
+                        if (textareaRef) mention.selectMention(item, textareaRef, setText, adjustHeight)
+                      }}
+                      onMouseEnter={() => mention.setMentionIndex(index())}
+                    >
+                      <MentionItemContent item={item} />
+                    </div>
+                    <Show when={item.type === "file-picker" && index() < mention.mentionResults().length - 1}>
+                      <div class="file-mention-separator" />
+                    </Show>
+                  </>
+                )}
+              </For>
+            </Show>
           </Show>
         </div>
       </Show>
@@ -1309,6 +1420,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                     classList={{ "prompt-input-file-mention--file": isPathMention(seg().text) }}
                     onClick={(e) => {
                       if (!isPathMention(seg().text)) return
+                      if (mention.mentionedSessions().has(seg().text.replace(/^@/, ""))) return
                       e.preventDefault()
                       e.stopPropagation()
                       vscode.postMessage({ type: "openFile", filePath: seg().text.replace(/^@/, "") })
@@ -1336,12 +1448,24 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             placeholder={placeholder()}
             value={text()}
             onInput={handleInput}
-            onKeyDown={handleKeyDown}
-            onKeyUp={syncGhost}
+            onKeyDown={(e) => {
+              if (speechDown(e)) return
+              handleKeyDown(e)
+            }}
+            onKeyUp={(e) => {
+              if (speechUp(e)) return
+              syncGhost()
+            }}
             onPaste={handlePaste}
             onClick={syncGhost}
-            onFocus={syncGhost}
-            onBlur={syncGhost}
+            onFocus={() => {
+              syncGhost()
+              props.onFocusChange?.(true)
+            }}
+            onBlur={() => {
+              syncGhost()
+              props.onFocusChange?.(false)
+            }}
             onSelect={() => {
               syncGhost()
               if (textareaRef) mention.snapSelection(textareaRef)
@@ -1367,7 +1491,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           <ModelSelector sessionID={sid} />
           <ThinkingSelector sessionID={sid} />
           <Show when={session.hasModelOverride(sid())}>
-            <Tooltip value={language.t("prompt.action.resetModel")} placement="top">
+            <Tooltip value={language.t("prompt.action.resetModel")} placement="top" openDelay={0}>
               <Button
                 variant="ghost"
                 size="small"
@@ -1383,7 +1507,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         </div>
         <div class="prompt-input-hint-actions">
           <Show when={showIndexing()}>
-            <Tooltip value={indexing.status().message || indexing.label()} placement="top">
+            <Tooltip value={indexing.status().message || indexing.label()} placement="top" openDelay={0}>
               <Button
                 variant="ghost"
                 size="small"
@@ -1415,6 +1539,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                 : language.t("prompt.action.autoApprove.disabled")
             }
             placement="top"
+            openDelay={0}
           >
             <Button
               variant="ghost"
@@ -1442,7 +1567,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
               onToggle={toggleSandbox}
             />
           </Show>
-          <Tooltip value={language.t("prompt.action.enhance")} placement="top">
+          <Tooltip value={language.t("prompt.action.enhance")} placement="top" openDelay={0}>
             <Button
               variant="ghost"
               size="small"
@@ -1459,7 +1584,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           <Show
             when={showStop()}
             fallback={
-              <Tooltip value={sendLabel()} placement="top">
+              <Tooltip value={sendLabel()} placement="top" openDelay={0}>
                 <Button
                   variant="ghost"
                   size="small"
@@ -1475,7 +1600,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
               </Tooltip>
             }
           >
-            <Tooltip value={language.t("prompt.action.stop")} placement="top">
+            <Tooltip value={language.t("prompt.action.stop")} placement="top" openDelay={0}>
               <Button
                 variant="ghost"
                 size="small"

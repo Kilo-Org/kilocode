@@ -270,4 +270,13 @@ describe("Kilo PublicApi OpenAPI contract", () => {
       expect(fields, forbidden).not.toContain(forbidden)
     }
   })
+
+  test("documents the transcription model catalog route", () => {
+    const spec = OpenApi.fromApi(PublicApi)
+    const route = spec.paths[KiloGatewayPaths.transcriptionModels]?.get
+    const query = (route?.parameters as Parameter[] | undefined)?.map((item) => item.name)
+
+    expect(query).toEqual(["directory", "workspace"])
+    expect(route?.responses?.["200"]?.content?.["application/json"]?.schema).toMatchObject({ type: "array" })
+  })
 })

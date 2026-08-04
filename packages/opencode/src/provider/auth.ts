@@ -1,3 +1,4 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import type { AuthOAuthResult, Hooks } from "@kilocode/plugin"
 import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import { Auth } from "@/auth"
@@ -259,5 +260,7 @@ export const defaultLayer = Layer.suspend(() =>
   ),
 )
 // kilocode_change end
+
+export const node = LayerNode.make(layer, [Auth.node, Plugin.node, ModelCache.node]) // kilocode_change
 
 export * as ProviderAuth from "./auth"

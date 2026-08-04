@@ -5,11 +5,10 @@ import {
   listCodingPlanSubscriptions,
   type AutoTopUpState,
   type ByokEntry,
+  type CodingPlanQuotaWindow,
   type CodingPlanSubscription,
 } from "@kilocode/kilo-gateway"
-import type { KiloBilling, UsageSnapshot } from "./schema"
-import { decode } from "@/kilocode/provider/minimax/native"
-import { normalize } from "@/kilocode/provider/minimax/usage"
+import type { KiloBilling, UsageSnapshot, UsageWindow } from "./schema"
 
 export interface CloudState {
   topup: Result<AutoTopUpState>
@@ -71,57 +70,91 @@ export function billing(state: CloudState): KiloBilling {
 function installed(subscription: CodingPlanSubscription, state: Result<ByokEntry[]>) {
   if (!state.ok || !subscription.hasInstalledByokKey) return false
   return state.value.some(
-    (item) => item.provider_id === subscription.providerId && item.management_source === "coding_plan" && item.is_enabled,
+    (item) =>
+      item.provider_id === subscription.providerId && item.management_source === "coding_plan" && item.is_enabled,
   )
 }
 
 export function plans(state: CloudState) {
   if (!state.plans.ok) return []
   return state.plans.value
-    .filter(
-      (item) =>
-        item.planId.startsWith("minimax-token-plan-") &&
-        item.providerId === "minimax" &&
-        (item.status === "active" || item.status === "past_due") &&
-        installed(item, state.byok),
-    )
+    .filter((item) => (item.status === "active" || item.status === "past_due") && installed(item, state.byok))
     .sort((a, b) => a.id.localeCompare(b.id))
 }
 
-export async function managed(
-  token: string,
-  subscription: CodingPlanSubscription,
-): Promise<UsageSnapshot> {
+function durationMs(period: CodingPlanQuotaWindow["period"]) {
+  const multipliers = {
+    hour: 60 * 60 * 1000,
+    day: 24 * 60 * 60 * 1000,
+    week: 7 * 24 * 60 * 60 * 1000,
+  } as const
+  if (period.unit === "month") return undefined
+  return period.value * multipliers[period.unit]
+}
+
+function periodLabel(period: CodingPlanQuotaWindow["period"]) {
+  const singular = period.value === 1
+  if (period.unit === "hour") return `${period.value}-hour quota`
+  if (period.unit === "day") return singular ? "Daily quota" : `${period.value}-day quota`
+  if (period.unit === "week") return singular ? "Weekly quota" : `${period.value}-week quota`
+  return singular ? "Monthly quota" : `${period.value}-month quota`
+}
+
+function window(subscriptionId: string, value: CodingPlanQuotaWindow): UsageWindow {
+  const remaining = value.remainingPercent
+  const duration = durationMs(value.period)
+  return {
+    id: `${subscriptionId}:${value.id}`,
+    label: periodLabel(value.period),
+    resource: "subscription",
+    kind: "quota",
+    unit: "percent",
+    orientation: "remaining_percent",
+    used: Math.max(0, 100 - remaining),
+    remaining,
+    limit: 100,
+    ...(duration !== undefined ? { durationMs: duration } : {}),
+    resetAt: value.resetsAt,
+    state: remaining <= 0 ? "exhausted" : "active",
+  }
+}
+
+export async function managed(token: string, subscription: CodingPlanSubscription): Promise<UsageSnapshot> {
   const fetchedAt = new Date().toISOString()
   const planState = subscription.cancelAtPeriodEnd
     ? "canceling"
     : subscription.status === "past_due"
       ? "past_due"
       : "active"
-  const id = `kilo-managed-minimax:${subscription.id}`
+  const id = `kilo-managed:${subscription.id}`
   const managementUrl = `${base()}/subscriptions/coding-plans/${subscription.id}`
 
   return getCodingPlanUsage(token, subscription.id)
     .then((usage) => {
-      const native = decode(usage.native)
-      if (native.base_resp.status_code !== 0) throw new Error("MiniMax application error")
-      return normalize(native, {
+      const windows = usage.subscription.windows.map((item) => window(usage.subscription.id, item))
+      return {
         id,
-        providerID: "minimax",
+        providerID: usage.subscription.providerId,
         sourceKind: "kilo_managed",
-        providerLabel: subscription.providerName,
-        planLabel: subscription.planName,
+        providerLabel: usage.subscription.providerName,
+        planLabel: usage.subscription.planName,
         sourceLabel: "via Kilo",
-        managementUrl,
-        fetchedAt: usage.fetchedAt,
-        planID: subscription.planId,
-        routingState: "active",
+        fetchState: "ready",
         planState,
-      })
+        routingState: "active",
+        availabilityState: windows.some((item) => item.state === "active") ? "available" : "exhausted",
+        fetchedAt: usage.fetchedAt,
+        confidence: "high",
+        source: "cloud",
+        managementUrl,
+        windows,
+        balances: [],
+        credits: [],
+      } satisfies UsageSnapshot
     })
     .catch(() => ({
       id,
-      providerID: "minimax",
+      providerID: subscription.providerId,
       sourceKind: "kilo_managed",
       providerLabel: subscription.providerName,
       planLabel: subscription.planName,
@@ -137,6 +170,6 @@ export async function managed(
       windows: [],
       balances: [],
       credits: [],
-      error: error("managed_minimax_unavailable", "Usage unavailable."),
+      error: error("managed_subscription_unavailable", "Usage unavailable."),
     }))
 }

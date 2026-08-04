@@ -23,4 +23,22 @@ describe("parseMessageFiles", () => {
   it("rejects unsupported URLs", () => {
     expect(parseMessageFiles([{ mime: "text/plain", url: "https://example.com/file.txt" }])).toBeUndefined()
   })
+
+  it("accepts past-chat session attachments", () => {
+    const files = parseMessageFiles([
+      {
+        mime: "text/plain",
+        url: "session:ses_07c08a2ddffeXample",
+        filename: "fix-auth-bug.md",
+        source: {
+          type: "file",
+          path: "session:ses_07c08a2ddffeXample",
+          text: { value: "@Fix auth bug", start: 0, end: 13 },
+        },
+      },
+    ])
+
+    expect(files?.[0]?.url).toBe("session:ses_07c08a2ddffeXample")
+    expect(files?.[0]?.filename).toBe("fix-auth-bug.md")
+  })
 })
