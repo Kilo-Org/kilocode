@@ -191,13 +191,17 @@ export function buildProjectNavOrder(projects: ProjectNavInput[]): NavEntry[] {
     order.push({ id: localNavId(pid), target: { projectId: pid, kind: "local" } })
     const worktrees = sortWorktrees(p.worktrees, p.worktreeOrder ?? [])
     const rank = new Map((p.worktreeOrder ?? []).map((id, index) => [id, index] as const))
+    const ungrouped = worktrees.filter((w) => !w.sectionId)
+    if (p.sections.length > 0) {
+      ungrouped.sort(
+        (a, b) => (rank.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (rank.get(b.id) ?? Number.MAX_SAFE_INTEGER),
+      )
+    }
     const secs = [...p.sections].sort(
       (a, b) => (rank.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (rank.get(b.id) ?? Number.MAX_SAFE_INTEGER),
     )
-    for (const w of worktrees) {
-      if (!w.sectionId) {
-        order.push({ id: worktreeNavId(pid, w.id), target: { projectId: pid, kind: "worktree", worktreeId: w.id } })
-      }
+    for (const w of ungrouped) {
+      order.push({ id: worktreeNavId(pid, w.id), target: { projectId: pid, kind: "worktree", worktreeId: w.id } })
     }
     for (const sec of secs) {
       if (sec.collapsed) continue

@@ -457,6 +457,32 @@ describe("buildProjectNavOrder", () => {
     ])
   })
 
+  it("matches raw ungrouped order when sections are present", () => {
+    const order = buildProjectNavOrder([
+      project({
+        id: "A",
+        expanded: true,
+        worktrees: [
+          { id: "aw1", groupId: "g" },
+          { id: "aw2" },
+          { id: "aw3", groupId: "g" },
+          { id: "aw4", sectionId: "s1" },
+        ],
+        worktreeOrder: ["aw1", "aw2", "aw3", "s1", "aw4"],
+        sections: [{ id: "s1", collapsed: false }],
+        unassigned: [],
+      }),
+    ])
+
+    expect(order.map((e) => e.id)).toEqual([
+      localNavId("A"),
+      worktreeNavId("A", "aw1"),
+      worktreeNavId("A", "aw2"),
+      worktreeNavId("A", "aw3"),
+      worktreeNavId("A", "aw4"),
+    ])
+  })
+
   it("excludes unassigned sessions when the sessions section is collapsed", () => {
     const order = buildProjectNavOrder([
       project({
