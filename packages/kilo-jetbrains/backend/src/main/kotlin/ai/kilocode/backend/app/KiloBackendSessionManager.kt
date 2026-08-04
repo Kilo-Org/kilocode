@@ -5,7 +5,6 @@ import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.log.KiloLog
 import ai.kilocode.jetbrains.api.client.DefaultApi
 import ai.kilocode.jetbrains.api.model.GlobalSession
-import ai.kilocode.jetbrains.api.model.GlobalSessionRevert
 import ai.kilocode.jetbrains.api.model.SessionStatus
 import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.SessionDto
@@ -345,12 +344,15 @@ class KiloBackendSessionManager(
         files = count(files),
     )
 
-    private fun revertDto(s: ai.kilocode.jetbrains.api.model.SessionRevert?) = s?.let {
-        revertDto(it.messageID, it.partID, it.snapshot, it.diff)
-    }
-
-    private fun revertDto(s: GlobalSessionRevert?) = s?.let {
-        revertDto(it.messageID, it.partID, it.snapshot, it.diff)
+    private fun revertDto(s: Any?) = when (s) {
+        null -> null
+        is ai.kilocode.jetbrains.api.model.SessionRevert -> revertDto(s.messageID, s.partID, s.snapshot, s.diff)
+        else -> runCatching {
+            val cls = s.javaClass
+            fun str(name: String) = cls.methods.firstOrNull { it.name == name && it.parameterCount == 0 }?.invoke(s) as? String
+            val message = str("getMessageID") ?: return@runCatching null
+            revertDto(message, str("getPartID"), str("getSnapshot"), str("getDiff"))
+        }.getOrNull()
     }
 
     private fun revertDto(message: String, part: String?, snapshot: String?, diff: String?) =
