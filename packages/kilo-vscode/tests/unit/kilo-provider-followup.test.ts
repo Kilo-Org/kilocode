@@ -181,6 +181,7 @@ describe("KiloProvider follow-up sessions", () => {
           sessionID,
           part: {
             type: "tool",
+            state: { status: "completed" },
             metadata: { filepath: "/workspace/frontend/src/app.ts" },
           },
         },
@@ -189,6 +190,39 @@ describe("KiloProvider follow-up sessions", () => {
     )
 
     expect(dirs).toEqual(["/workspace/frontend/src"])
+  })
+
+  it("ignores completed tool paths outside the active project", () => {
+    const service = connection()
+    const provider = new KiloProvider({} as never, service as never, undefined, {
+      rootDirectory: () => "/workspace",
+      projectQualifier: () => ({ projectId: "workspace" }),
+    })
+    const internal = provider as unknown as Internals
+    const dirs: string[] = []
+    const sessionID = "ses-external-edit"
+    internal.currentSession = info({ id: sessionID, projectID: "backend-workspace", directory: "/workspace" })
+    internal.trackedSessionIds.add(sessionID)
+    internal.refreshGitStatus = async (directory) => {
+      if (directory) dirs.push(directory)
+    }
+
+    internal.handleEvent(
+      {
+        type: "message.part.updated",
+        properties: {
+          sessionID,
+          part: {
+            type: "tool",
+            state: { status: "completed" },
+            metadata: { filepath: "/other-repo/src/app.ts" },
+          },
+        },
+      } as Event,
+      "/workspace",
+    )
+
+    expect(dirs).toEqual([])
   })
 
   it("ignores subagents before adopting pending follow-up sessions", async () => {

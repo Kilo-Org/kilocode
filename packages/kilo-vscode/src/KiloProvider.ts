@@ -4765,16 +4765,28 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const part = event.properties.part as {
       type?: string
       metadata?: Record<string, unknown>
-      state?: { input?: Record<string, unknown>; metadata?: Record<string, unknown> }
+      state?: { status?: string; input?: Record<string, unknown>; metadata?: Record<string, unknown> }
     }
-    if (part.type !== "tool") return
+    if (part.type !== "tool" || part.state?.status !== "completed") return
     const values = [part.metadata?.filepath, part.state?.metadata?.filepath, part.state?.input?.filePath]
     const file = values.find((value): value is string => typeof value === "string" && value.length > 0)
     if (!file) return
     const base = this.getWorkspaceDirectory(sessionID)
     const value = file.split(",")[0].trim()
     const pathName = path.isAbsolute(value) ? value : path.resolve(base, value)
-    void this.refreshGitStatus(path.dirname(pathName))
+    const directory = path.dirname(pathName)
+    if (!this.isCurrentProjectGitDirectory(directory, sessionID)) return
+    void this.refreshGitStatus(directory)
+  }
+
+  private isCurrentProjectGitDirectory(directory: string, sessionID?: string): boolean {
+    const roots = this.opts.projectQualifier?.()
+      ? [this.getRootDirectory(), ...(this.opts.worktreeDirectories?.() ?? [])]
+      : [this.getWorkspaceDirectory(sessionID)]
+    return roots.some((root) => {
+      const rel = path.relative(canonicalizePath(root), canonicalizePath(directory))
+      return rel === "" || (!path.isAbsolute(rel) && rel !== ".." && !rel.startsWith(`..${path.sep}`))
+    })
   }
 
   public async refreshGitStatus(directory = this.getWorkspaceDirectory()): Promise<void> {
