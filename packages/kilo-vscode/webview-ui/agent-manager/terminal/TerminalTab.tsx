@@ -158,39 +158,6 @@ export const TerminalTab: Component<Props> = (props) => {
     })
     const fit = new FitAddon()
     term.loadAddon(fit)
-    // Clickable URLs in terminal output (Cmd/Ctrl+click to open).
-    // WebLinksAddon's default handler calls `window.open`, which VS Code
-    // webviews intercept and silently drop — so we pass an explicit
-    // handler that posts an `openExternal` message. The message falls
-    // through `AgentManagerProvider.onMessage` to the underlying
-    // `KiloProvider.handleWebviewMessage` path which already calls
-    // `vscode.env.openExternal` for sidebar + settings links.
-    term.loadAddon(
-      new WebLinksAddon((_event, url) => {
-        vscode.postMessage({ type: "openExternal", url })
-      }),
-    )
-    // OSC 52 clipboard support — lets shell programs (tmux, neovim, etc.)
-    // copy to the system clipboard via escape sequences. Writes always
-    // work in the webview; reads require the clipboard-read permission,
-    // which VS Code does not grant by default, so paste-from-escape
-    // silently falls back to no-op. Acceptable trade-off.
-    term.loadAddon(new ClipboardAddon())
-    // Unicode 15 grapheme-aware width tables. Fixes cell width for
-    // emoji introduced in Unicode 12-15 (🫠 melting face, 🫡 salute,
-    // 🧌 troll, and ~400 others) plus ZWJ grapheme sequences like
-    // 👨‍👩‍👧‍👦 and 🏳️‍🌈. The older `@xterm/addon-unicode11` (which VS
-    // Code's integrated terminal still uses) stops at Unicode 11
-    // (2018), leaving all post-2020 emoji rendered with wrong width —
-    // the canvas cuts them off in the DOM renderer and cursor math
-    // drifts by one cell per emoji. VS Code hides this visually with
-    // WebGL; in a webview we don't have that fallback, so we fix it
-    // at the buffer-width layer instead. Addon is marked
-    // "experimental" in its README but has been stable on npm since
-    // 2023, is shipped by the same maintainer as the core xterm.js
-    // package, and has no open bugs as of v0.4.0.
-    term.loadAddon(new UnicodeGraphemesAddon())
-    term.unicode.activeVersion = "15-graphemes"
     term.open(host)
     // Fit on the next frame — `host` might still have 0px dimensions
     // during the initial layout pass otherwise.
@@ -232,6 +199,8 @@ export const TerminalTab: Component<Props> = (props) => {
     let fallbackTimer: ReturnType<typeof setTimeout> | undefined
     let streamed = false
     let socketEnded = false
+    let frame: number | undefined
+    let deferred: number | undefined
     // The failure line must not depend on event ordering: the stream can
     // close before the exited snapshot lands (fast failures), or stay open
     // when a background child outlives the script. Write it exactly once,
@@ -358,6 +327,34 @@ export const TerminalTab: Component<Props> = (props) => {
     }
     const disposeData = term.onData(send)
     open(props.wsUrl)
+
+    // These addons are not needed to paint the initial prompt. Defer them
+    // until after the first frame so their startup work, especially the
+    // Unicode 15 width tables, does not delay the shell connection.
+    const loadAddons = () => {
+      deferred = undefined
+      if (closed) return
+
+      // Clickable URLs in terminal output (Cmd/Ctrl+click to open).
+      // WebLinksAddon's default handler calls `window.open`, which VS Code
+      // webviews intercept and silently drop, so post an explicit message.
+      term.loadAddon(
+        new WebLinksAddon((_event, url) => {
+          vscode.postMessage({ type: "openExternal", url })
+        }),
+      )
+      // OSC 52 clipboard support for shell programs such as tmux and neovim.
+      term.loadAddon(new ClipboardAddon())
+      // Use grapheme-aware width tables for newer emoji and ZWJ sequences.
+      term.loadAddon(new UnicodeGraphemesAddon())
+      term.unicode.activeVersion = "15-graphemes"
+      term.refresh(0, Math.max(0, term.rows - 1))
+    }
+    frame = requestAnimationFrame(() => {
+      frame = undefined
+      deferred = requestAnimationFrame(loadAddons)
+    })
+
     const restarted = (url: string) => {
       open(url)
     }
@@ -525,6 +522,8 @@ export const TerminalTab: Component<Props> = (props) => {
     onCleanup(() => {
       closed = true
       if (pendingFrame !== null) cancelAnimationFrame(pendingFrame)
+      if (frame !== undefined) cancelAnimationFrame(frame)
+      if (deferred !== undefined) cancelAnimationFrame(deferred)
       document.removeEventListener("visibilitychange", onVisibilityChange)
       window.removeEventListener("focus", onWindowFocus)
       host.removeEventListener("focusin", onFocusIn)
