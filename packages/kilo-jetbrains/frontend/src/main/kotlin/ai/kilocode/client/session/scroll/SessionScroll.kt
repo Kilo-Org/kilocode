@@ -183,7 +183,7 @@ internal class SessionScroll(
         } finally {
             auto = false
         }
-        tail = atBottom()
+        tail = near()
         syncValue()
         updateJump()
         if (tail) {

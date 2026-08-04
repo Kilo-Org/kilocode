@@ -21,7 +21,9 @@ The mobile app lets you:
 - Monitor and view all non-remote sessions in one place.
 - Create, onboard, and manage KiloClaw instances.
 - Send follow-up messages while a session is still running — they are queued and processed in order.
-- Run slash commands (like `/compact`) on connected remote CLI sessions, and start a new session in the same workspace with `/new`. Older CLI versions that do not support remote commands prompt you to upgrade.
+- Run slash commands (like `/compact`) on connected remote CLI sessions, and start a new session in the same workspace with `/new`. The new session inherits the current session's mode and model. Older CLI versions that do not support remote commands prompt you to upgrade.
+- Clear the visible transcript of a remote CLI session with `/clear`. Clearing is client-side only, so it works on any CLI version; server history is kept and may reappear when you re-enter the session.
+- Rename a remote CLI session from the app or the CLI — renames sync in both directions.
 - Review GitHub pull requests end to end — diffs, checks, comments, and merging.
 - Start a new session on a connected `kilo remote` CLI instance with the **Run on** picker.
 
@@ -50,13 +52,30 @@ The new-session screen includes a **Run on** picker that chooses where your sess
 - **Cloud Agent** — the managed cloud environment (the default).
 - **A connected CLI instance** — a `kilo remote` CLI running on your own machine. The picker lists the instances currently connected to your account.
 
-Remote sessions use the CLI's own defaults, so the composer skips model, mode, and repository selection; you type your first prompt in the chat after the session starts. Sessions started in an organization context always run on the Cloud Agent, so the picker does not appear there.
+Remote sessions start with the mode and model selected on the new-session screen; older CLI versions that don't accept those fields fall back to their own defaults. The workspace is always the CLI's own checkout, so there is no repository selection — you type your first prompt in the chat after the session starts. The picker also appears in organization context, where the spawned session is attributed to the organization.
 
 ## Queueing follow-up messages
 
 The composer stays editable while the agent is working, so you don't have to wait for a session to finish before sending your next message. Type your follow-up and press **Send** to add it to the session's queue; queued messages are processed in order. While a session is streaming, **Stop** appears only when the composer is empty — with text entered, Send takes its place.
 
 A queued message shows a subtle **Queued** badge on its bubble. The badge clears when the message starts processing or when the queue drains or is cancelled. Queueing works for Cloud Agent sessions and for remote sessions on a connected `kilo remote` CLI instance.
+
+## Attachments in remote sessions
+
+When you connect the mobile app to a `kilo remote` CLI session, you can share files in both directions.
+
+### Sending files from your phone to the CLI
+
+Attach up to **5 files** (each up to **20 MiB**) from your phone to the remote session. The CLI automatically processes them:
+
+- **Text, images, and PDFs** — the file content is converted to a `data:` URL and handed directly to the model as a file part. The model sees the content as if you had loaded it locally.
+- **Other file types** (binaries, archives, etc.) — the file is saved to a per-session scratch directory on the CLI machine. The session transcript shows the saved path, filename, file size, and MIME type. The agent can inspect the file with the `read` tool for text content or shell utilities for binary content.
+
+Attaching files from the phone is the mobile flow — this is separate from `kilo run --file <path>`, which attaches local files to a local prompt.
+
+### Receiving files from the CLI on your phone
+
+While the CLI is connected, the agent can deliver a file to your phone with the `send_file` tool (up to **4 MiB**, remote sessions only). The file appears as a chip on the tool card — tap the chip to open the share sheet and save or forward the file. This tool works only when `kilo remote` is actively connected; it is not available in Cloud Agent sessions.
 
 ## Reviewing GitHub pull requests
 

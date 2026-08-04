@@ -7,6 +7,7 @@ import {
   isGrouped,
   isGroupStart,
   isGroupEnd,
+  sortWorktrees,
 } from "../../webview-ui/agent-manager/section-helpers"
 import type { WorktreeState, SectionState } from "../../webview-ui/src/types/messages"
 
@@ -109,6 +110,23 @@ describe("isGrouped", () => {
 
   it("returns false when groupId is empty string", () => {
     expect(isGrouped(wt("a", { groupId: "" }))).toBe(false)
+  })
+})
+
+describe("sortWorktrees", () => {
+  it("applies persisted order", () => {
+    const all = [wt("a"), wt("b"), wt("c")]
+    expect(sortWorktrees(all, ["c", "a", "b"]).map((item) => item.id)).toEqual(["c", "a", "b"])
+  })
+
+  it("keeps multi-version siblings adjacent at the first group position", () => {
+    const all = [wt("a", { groupId: "g" }), wt("b"), wt("c", { groupId: "g" })]
+    expect(sortWorktrees(all, ["b", "c", "a"]).map((item) => item.id)).toEqual(["b", "c", "a"])
+  })
+
+  it("appends worktrees missing from persisted order", () => {
+    const all = [wt("a"), wt("b"), wt("c")]
+    expect(sortWorktrees(all, ["b"]).map((item) => item.id)).toEqual(["b", "a", "c"])
   })
 })
 
