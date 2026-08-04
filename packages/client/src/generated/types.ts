@@ -8,10 +8,6 @@ export type JsonValue =
   | ReadonlyArray<JsonValue>
   | { readonly [key: string]: JsonValue }
 
-export type UnauthorizedError = { readonly _tag: "UnauthorizedError"; readonly message: string }
-export const isUnauthorizedError = (value: unknown): value is UnauthorizedError =>
-  typeof value === "object" && value !== null && "_tag" in value && value["_tag"] === "UnauthorizedError"
-
 export type InvalidRequestError = {
   readonly _tag: "InvalidRequestError"
   readonly message: string
@@ -20,6 +16,10 @@ export type InvalidRequestError = {
 }
 export const isInvalidRequestError = (value: unknown): value is InvalidRequestError =>
   typeof value === "object" && value !== null && "_tag" in value && value["_tag"] === "InvalidRequestError"
+
+export type UnauthorizedError = { readonly _tag: "UnauthorizedError"; readonly message: string }
+export const isUnauthorizedError = (value: unknown): value is UnauthorizedError =>
+  typeof value === "object" && value !== null && "_tag" in value && value["_tag"] === "UnauthorizedError"
 
 export type InvalidCursorError = { readonly _tag: "InvalidCursorError"; readonly message: string }
 export const isInvalidCursorError = (value: unknown): value is InvalidCursorError =>
@@ -1133,6 +1133,33 @@ export type SessionsHistoryOutput = {
         readonly location?: { readonly directory: string; readonly workspaceID?: string }
         readonly data: { readonly timestamp: number; readonly sessionID: string; readonly messageID: string }
       }
+    | {
+        readonly id: string
+        readonly metadata?: { readonly [x: string]: JsonValue }
+        readonly type: "session.next.prompt.promoted"
+        readonly durable?: { readonly aggregateID: string; readonly seq: number; readonly version: number }
+        readonly location?: { readonly directory: string; readonly workspaceID?: string }
+        readonly data: {
+          readonly timestamp: number
+          readonly sessionID: string
+          readonly messageID: string
+          readonly prompt: {
+            readonly text: string
+            readonly files?: ReadonlyArray<{
+              readonly uri: string
+              readonly mime: string
+              readonly name?: string
+              readonly description?: string
+              readonly source?: { readonly start: number; readonly end: number; readonly text: string }
+            }>
+            readonly agents?: ReadonlyArray<{
+              readonly name: string
+              readonly source?: { readonly start: number; readonly end: number; readonly text: string }
+            }>
+          }
+          readonly timeCreated: number
+        }
+      }
   >
   readonly hasMore: boolean
 }
@@ -1591,6 +1618,33 @@ export type SessionsEventsOutput =
       readonly durable?: { readonly aggregateID: string; readonly seq: number; readonly version: number }
       readonly location?: { readonly directory: string; readonly workspaceID?: string }
       readonly data: { readonly timestamp: number; readonly sessionID: string; readonly messageID: string }
+    }
+  | {
+      readonly id: string
+      readonly metadata?: { readonly [x: string]: unknown }
+      readonly type: "session.next.prompt.promoted"
+      readonly durable?: { readonly aggregateID: string; readonly seq: number; readonly version: number }
+      readonly location?: { readonly directory: string; readonly workspaceID?: string }
+      readonly data: {
+        readonly timestamp: number
+        readonly sessionID: string
+        readonly messageID: string
+        readonly prompt: {
+          readonly text: string
+          readonly files?: ReadonlyArray<{
+            readonly uri: string
+            readonly mime: string
+            readonly name?: string
+            readonly description?: string
+            readonly source?: { readonly start: number; readonly end: number; readonly text: string }
+          }>
+          readonly agents?: ReadonlyArray<{
+            readonly name: string
+            readonly source?: { readonly start: number; readonly end: number; readonly text: string }
+          }>
+        }
+        readonly timeCreated: number
+      }
     }
 
 export type SessionsInterruptInput = { readonly sessionID: { readonly sessionID: string }["sessionID"] }

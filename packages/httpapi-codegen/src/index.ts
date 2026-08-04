@@ -111,6 +111,11 @@ export function compile<Id extends string, Groups extends HttpApiGroup.Any>(
       const errorSchemas = Array.from(errors).flatMap(([status, schemas]) =>
         schemas.map((schema) => ({ status, ...normalizeTransport(schema, "error", endpoint, name)! })),
       )
+      errorSchemas.sort((a, b) => {
+        const left = SchemaAST.resolveIdentifier(a.schema.ast) ?? ""
+        const right = SchemaAST.resolveIdentifier(b.schema.ast) ?? ""
+        return a.status - b.status || (left < right ? -1 : left > right ? 1 : 0)
+      })
       const inputs = [
         ...inputFields(params?.schema, "params", name),
         ...inputFields(query?.schema, "query", name),

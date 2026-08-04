@@ -4531,6 +4531,7 @@ export type SessionDurableEvent =
   | SessionNextRevertStaged
   | SessionNextRevertCleared
   | SessionNextRevertCommitted
+  | SessionNextPromptPromoted
 
 export type SessionHistory = {
   data: Array<SessionDurableEvent>
@@ -7767,6 +7768,27 @@ export type SessionNextRevertCommitted = {
     timestamp: number
     sessionID: string
     messageID: string
+  }
+}
+
+export type SessionNextPromptPromoted = {
+  id: string
+  metadata?: {
+    [key: string]: unknown
+  }
+  type: "session.next.prompt.promoted"
+  durable?: {
+    aggregateID: string
+    seq: number
+    version: number
+  }
+  location?: LocationRef
+  data: {
+    timestamp: number
+    sessionID: string
+    messageID: string
+    prompt: Prompt
+    timeCreated: number
   }
 }
 

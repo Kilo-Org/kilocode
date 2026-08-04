@@ -122,8 +122,7 @@ await import(`../packages/sdk/js/script/publish.ts`)
 console.log("\n=== plugin ===\n")
 await import(`../packages/plugin/script/publish.ts`)
 
-console.log("\n=== ui ===\n")
-await $`bun ./packages/ui/script/publish.ts`
+// kilocode_change - Kilo does not publish the upstream-owned @opencode-ai/ui package
 
 // kilocode_change start
 console.log("\n=== vscode ===\n")

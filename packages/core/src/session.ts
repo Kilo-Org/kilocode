@@ -37,7 +37,7 @@ import { Snapshot } from "./snapshot"
 import { SessionRevert } from "./session/revert"
 import { Revert } from "@opencode-ai/schema/revert"
 import { FSUtil } from "./fs-util"
-import { SessionDurable } from "@opencode-ai/schema/durable-event-manifest"
+import { SessionDurable, type SessionDurableEvent } from "@opencode-ai/schema/durable-event-manifest" // kilocode_change
 
 export const RevertState = Revert.State
 export type RevertState = Revert.State
@@ -134,12 +134,12 @@ export interface Interface {
   readonly events: (input: {
     sessionID: SessionSchema.ID
     after?: number
-  }) => Stream.Stream<SessionEvent.DurableEvent, NotFoundError>
+  }) => Stream.Stream<SessionDurableEvent, NotFoundError> // kilocode_change - released durable event compatibility
   readonly history: (input: {
     sessionID: SessionSchema.ID
     after?: number
     limit: number
-  }) => Effect.Effect<{ events: ReadonlyArray<SessionEvent.DurableEvent>; hasMore: boolean }, NotFoundError>
+  }) => Effect.Effect<{ events: ReadonlyArray<SessionDurableEvent>; hasMore: boolean }, NotFoundError> // kilocode_change
   readonly switchAgent: (input: { sessionID: SessionSchema.ID; agent: string }) => Effect.Effect<void, NotFoundError>
   readonly switchModel: (input: {
     sessionID: SessionSchema.ID
@@ -193,7 +193,7 @@ const layer = Layer.effect(
     const store = yield* SessionStore.Service
     const locations = yield* LocationServiceMap.Service
     const decodeMessage = Schema.decodeUnknownEffect(SessionMessage.Message)
-    const isDurableSessionEvent = Schema.is(SessionEvent.Durable)
+    const isDurableSessionEvent = Schema.is(SessionDurable.schema) // kilocode_change - include released storage keys
     const decode = (row: typeof SessionMessageTable.$inferSelect) =>
       decodeMessage(normalize({ ...row.data, id: row.id, type: row.type })).pipe(
         // kilocode_change - normalize released tool content on paginated reads
@@ -356,7 +356,7 @@ const layer = Layer.effect(
           result
             .get(input.sessionID)
             .pipe(Effect.as(events.durable({ aggregateID: input.sessionID, after: input.after }))),
-        ).pipe(Stream.filter((event): event is SessionEvent.DurableEvent => isDurableSessionEvent(event))),
+        ).pipe(Stream.filter((event): event is SessionDurableEvent => isDurableSessionEvent(event))), // kilocode_change
       history: Effect.fn("V2Session.history")(function* (input) {
         yield* result.get(input.sessionID)
         return yield* EventV2.readAggregate(db, {

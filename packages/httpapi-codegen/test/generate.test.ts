@@ -25,6 +25,21 @@ function compile<Id extends string, Groups extends HttpApiGroup.Any>(source: Htt
 }
 
 describe("HttpApiCodegen.generate", () => {
+  test("orders endpoint errors deterministically", () => {
+    class Alpha extends Schema.TaggedErrorClass<Alpha>()("Alpha", {}) {}
+    class Beta extends Schema.TaggedErrorClass<Beta>()("Beta", {}) {}
+    const endpoint = (errors: readonly [typeof Alpha, typeof Beta] | readonly [typeof Beta, typeof Alpha]) =>
+      HttpApiEndpoint.get("get", "/session", {
+        success: Schema.String,
+        error: errors.map((error) => error.pipe(HttpApiSchema.status(400))),
+      })
+
+    const alpha = compileContract(api(endpoint([Alpha, Beta])))
+    const beta = compileContract(api(endpoint([Beta, Alpha])))
+
+    expect(emitPromise(alpha)).toEqual(emitPromise(beta))
+  })
+
   test("compiles one contract for Promise and Effect emitters", () => {
     const contract = compileContract(
       api(

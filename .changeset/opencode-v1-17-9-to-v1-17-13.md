@@ -17,6 +17,7 @@ Changes from opencode v1.17.9 to v1.17.13 upstream:
 - Core Bugfixes: MCP tool results prefer content over structured output, and denied resource template tools stay hidden.
 - Core Bugfixes: Stale GitHub Copilot Responses item IDs are no longer replayed, and OpenAI reasoning variants are forced where required.
 - Core Bugfixes: Adaptive thinking is enabled for Claude Sonnet 5, and expired promos were removed from the zen catalog.
+- Core Bugfixes: Preserve released prompt history during database replay and keep native event streams connected for all supported Kilo events.
 - Core Bugfixes: Remote skills refresh atomically with version pinning, and skill base directories are emitted as filesystem paths.
 - CLI Improvements: `kilo run --mini` provides a compact interactive mode, and ports increment from the default when busy.
 - CLI Improvements: Use `--auto` to start the TUI in a run-scoped auto-approve mode, and leave the mode mid-session from the command palette.

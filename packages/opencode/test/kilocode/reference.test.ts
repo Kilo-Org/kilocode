@@ -105,6 +105,31 @@ describe("configured references", () => {
     expect(updates).toEqual(["reference.updated"])
   })
 
+  test("sync replaces stale effective references", async () => {
+    const cache = Layer.mock(RepositoryCache.Service, {
+      ensure: () => Effect.die("unexpected Git materialization"),
+    })
+    const events = Layer.mock(EventV2.Service)({
+      publish: (definition, data) =>
+        Effect.succeed({ id: EventV2.ID.make("evt_reference_replace"), type: definition.type, data }),
+    })
+    const layer = AppNodeBuilder.build(CoreReference.node, [
+      [RepositoryCache.node, cache],
+      [EventV2.node, events],
+    ])
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        yield* Reference.sync({ references: { stale: "./stale" }, directory: "/workspace", worktree: "/workspace" })
+        yield* Reference.sync({ references: { current: "./current" }, directory: "/workspace", worktree: "/workspace" })
+        return yield* (yield* CoreReference.Service).list()
+      }).pipe(Effect.provide(layer), Effect.scoped),
+    )
+
+    expect(result.map((item) => item.name)).toEqual(["current"])
+    expect(result[0]?.path).toBe(AbsolutePath.make(path.resolve("/workspace", "current")))
+  })
+
   test("initializes effective references before exposing location services", async () => {
     await using tmp = await tmpdir({
       config: {
@@ -115,7 +140,10 @@ describe("configured references", () => {
         },
       },
     })
-    const layer = locations.pipe(Layer.provide(AppNodeBuilder.build(Config.node)), Layer.provide(testInstanceStoreLayer))
+    const layer = locations.pipe(
+      Layer.provide(AppNodeBuilder.build(Config.node)),
+      Layer.provide(testInstanceStoreLayer),
+    )
 
     const result = await Effect.runPromise(
       Effect.gen(function* () {

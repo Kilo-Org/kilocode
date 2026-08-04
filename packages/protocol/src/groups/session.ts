@@ -21,6 +21,7 @@ import { Model } from "@opencode-ai/schema/model"
 import { Location } from "@opencode-ai/schema/location"
 import { Revert } from "@opencode-ai/schema/revert"
 import { SessionEvent } from "@opencode-ai/schema/session-event"
+import { SessionDurable } from "@opencode-ai/schema/durable-event-manifest" // kilocode_change - released history keys
 
 const SessionsQueryFields = {
   workspace: Workspace.ID.pipe(Schema.optional),
@@ -318,7 +319,7 @@ export const makeSessionGroup = <
         params: { sessionID: Session.ID },
         query: SessionHistoryQuery,
         success: Schema.Struct({
-          data: Schema.Array(SessionEvent.Durable),
+          data: Schema.Array(SessionDurable.schema), // kilocode_change
           hasMore: Schema.Boolean,
         }).annotate({ identifier: "SessionHistory" }),
         error: SessionNotFoundError,
@@ -339,7 +340,7 @@ export const makeSessionGroup = <
         query: {
           after: Schema.NumberFromString.pipe(Schema.decodeTo(NonNegativeInt), Schema.optional),
         },
-        success: HttpApiSchema.StreamSse({ data: SessionEvent.Durable }),
+        success: HttpApiSchema.StreamSse({ data: SessionDurable.schema }), // kilocode_change
         error: SessionNotFoundError,
       })
         .middleware(sessionLocationMiddleware)

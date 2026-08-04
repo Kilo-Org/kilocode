@@ -39495,6 +39495,9 @@
           },
           {
             "$ref": "#/components/schemas/SessionNextRevertCommitted"
+          },
+          {
+            "$ref": "#/components/schemas/SessionNextPromptPromoted"
           }
         ]
       },
@@ -50016,6 +50019,67 @@
               }
             },
             "required": ["timestamp", "sessionID", "messageID"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "data"],
+        "additionalProperties": false
+      },
+      "SessionNextPromptPromoted": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.next.prompt.promoted"]
+          },
+          "durable": {
+            "type": "object",
+            "properties": {
+              "aggregateID": {
+                "type": "string"
+              },
+              "seq": {
+                "type": "integer"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": ["aggregateID", "seq", "version"],
+            "additionalProperties": false
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationRef"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "timestamp": {
+                "type": "number"
+              },
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "messageID": {
+                "type": "string",
+                "pattern": "^msg_"
+              },
+              "prompt": {
+                "$ref": "#/components/schemas/Prompt"
+              },
+              "timeCreated": {
+                "type": "number"
+              }
+            },
+            "required": ["timestamp", "sessionID", "messageID", "prompt", "timeCreated"],
             "additionalProperties": false
           }
         },

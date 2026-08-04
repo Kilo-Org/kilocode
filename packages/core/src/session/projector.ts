@@ -16,6 +16,7 @@ import { WorkspaceV2 } from "../workspace"
 import { SessionContextEpoch } from "./context-epoch"
 import { MessageTable, PartTable, SessionInputTable, SessionMessageTable, SessionTable } from "./sql"
 import type { DeepMutable } from "../schema"
+import * as PromptCompat from "../kilocode/session/prompt-promoted" // kilocode_change - released replay key
 
 type DatabaseService = Database.Interface["db"]
 
@@ -393,6 +394,7 @@ const layer = Layer.effectDiscard(
         })
       }),
     )
+    yield* events.project(PromptCompat.definition, (event) => PromptCompat.project(db, event, (next) => run(db, next))) // kilocode_change - replay released two-step promotions
     yield* events.project(SessionEvent.ContextUpdated, (event) => run(db, event))
     yield* events.project(SessionEvent.Synthetic, (event) => run(db, event))
     yield* events.project(SessionEvent.Shell.Started, (event) => run(db, event))

@@ -128,11 +128,23 @@ describe("v2 location HttpApi", () => {
 
     const created = await request("/session", publisher.path, { method: "POST" })
     expect(created.status).toBe(200)
+
+    // kilocode_change start - the native handler must encode Kilo events omitted from upstream's narrower manifest
+    const session = (await created.json()) as { id: string }
     expect(await readEventType(reader, "session.created")).toMatchObject({
       type: "session.created",
       location: { directory: publisher.path },
-      data: { sessionID: expect.any(String) },
+      data: { sessionID: session.id },
     })
+
+    const aborted = await request(`/session/${session.id}/abort`, publisher.path, { method: "POST" })
+    expect(aborted.status).toBe(200)
+    expect(await readEventType(reader, "session.status")).toMatchObject({
+      type: "session.status",
+      location: { directory: publisher.path },
+      data: { sessionID: session.id, status: { type: "idle" } },
+    })
+    // kilocode_change end
     await reader.return(undefined)
   })
 })
