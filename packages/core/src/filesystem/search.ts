@@ -77,7 +77,8 @@ export const ripgrepLayer = Layer.effect(
             })
             .pipe(
               Effect.map((result) =>
-                result.items.map( // kilocode_change
+                result.items.map(
+                  // kilocode_change
                   (entry) =>
                     new FileSystem.Entry({
                       ...entry,
@@ -105,7 +106,8 @@ export const ripgrepLayer = Layer.effect(
             })
             .pipe(
               Effect.map((result) =>
-                result.items.map( // kilocode_change
+                result.items.map(
+                  // kilocode_change
                   (match) =>
                     new FileSystem.Match({
                       ...match,
@@ -182,6 +184,8 @@ export const fffLayer = Layer.effect(
           catch: (cause) => cause,
         }).pipe(Effect.orDie)
         if (!result.ok) return yield* Effect.die(result.error)
+        const scan = yield* Effect.promise(() => result.value.waitForScan()).pipe(Effect.orDie)
+        if (!scan.ok || !scan.value) return yield* Effect.die(new Error("FFF initial scan did not complete"))
         yield* Scope.addFinalizer(scope, Effect.sync(() => result.value.destroy()).pipe(Effect.ignore))
         return result
       }),
@@ -193,7 +197,7 @@ export const fffLayer = Layer.effect(
         Effect.gen(function* () {
           const { root, target } = yield* inspect(input.path)
           const result = yield* load
-        // kilocode_change end
+          // kilocode_change end
           const prefix = input.path?.replaceAll("\\", "/").replace(/\/$/, "")
           // kilocode_change start
           const found = yield* Effect.sync(() =>
@@ -208,7 +212,7 @@ export const fffLayer = Layer.effect(
           yield* SearchTarget.validate(fs, target).pipe(Effect.orDie)
           const items = yield* Effect.filter(found.value.items, (item) => safe(root, item.relativePath))
           return items.map((item) => {
-          // kilocode_change end
+            // kilocode_change end
             const absolute = path.resolve(location.directory, item.relativePath)
             return new FileSystem.Entry({
               path: RelativePath.make(item.relativePath.replaceAll("\\", "/")),
@@ -222,24 +226,25 @@ export const fffLayer = Layer.effect(
         Effect.gen(function* () {
           const { root, target } = yield* inspect(input.path)
           const result = yield* load
-        // kilocode_change end
+          // kilocode_change end
           const prefix = input.path?.replaceAll("\\", "/").replace(/\/$/, "")
           // kilocode_change start
-          const found = yield* Effect.sync(() =>
-            result.value.grep(
-              [prefix ? `${prefix}/**` : undefined, input.include, input.pattern]
-                .filter((value) => value !== undefined)
-                .join(" "),
-              { mode: "regex", pageSize: input.limit, timeBudgetMs: 1_500 },
-            ),
-          // kilocode_change end
+          const found = yield* Effect.sync(
+            () =>
+              result.value.grep(
+                [prefix ? `${prefix}/**` : undefined, input.include, input.pattern]
+                  .filter((value) => value !== undefined)
+                  .join(" "),
+                { mode: "regex", pageSize: input.limit, timeBudgetMs: 1_500 },
+              ),
+            // kilocode_change end
           )
           if (!found.ok) throw found.error
           // kilocode_change start
           yield* SearchTarget.validate(fs, target).pipe(Effect.orDie)
           const items = yield* Effect.filter(found.value.items, (item) => safe(root, item.relativePath))
           return items.map((match) => {
-          // kilocode_change end
+            // kilocode_change end
             const bytes = Buffer.from(match.lineContent)
             return new FileSystem.Match({
               entry: new FileSystem.Entry({
@@ -259,7 +264,8 @@ export const fffLayer = Layer.effect(
           })
         }),
       find: (input) =>
-        Effect.gen(function* () { // kilocode_change - load the native index only for an actual search.
+        Effect.gen(function* () {
+          // kilocode_change - load the native index only for an actual search.
           const result = yield* load // kilocode_change
           const options = { pageIndex: 0, pageSize: input.limit ?? 50 }
           const items = (() => {
