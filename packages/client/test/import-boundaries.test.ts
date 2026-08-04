@@ -1,10 +1,8 @@
 import { describe, expect, test } from "bun:test"
-import { realpathSync } from "node:fs"
 import { mkdtemp, rm } from "node:fs/promises"
 import { join, resolve, sep } from "node:path"
 
 const directory = resolve(import.meta.dir, "..")
-const effect = realpathSync(resolve(import.meta.dir, "../node_modules/effect"))
 const schema = resolve(import.meta.dir, "../../schema")
 const protocol = resolve(import.meta.dir, "../../protocol")
 const core = resolve(import.meta.dir, "../../core")
@@ -14,7 +12,7 @@ describe("public import boundaries", () => {
   test("isolates each public entrypoint", async () => {
     const root = await bundleInputs("@opencode-ai/client", "browser")
 
-    expect(within(root, effect)).toEqual([])
+    expect(dependency(root, "effect")).toEqual([]) // kilocode_change
     expect(within(root, schema)).toEqual([])
     expect(within(root, protocol)).toEqual([])
     expect(within(root, core)).toEqual([])
@@ -22,7 +20,7 @@ describe("public import boundaries", () => {
 
     const network = await bundleInputs("@opencode-ai/client/effect", "browser")
 
-    expect(within(network, effect).length).toBeGreaterThan(0)
+    expect(dependency(network, "effect").length).toBeGreaterThan(0) // kilocode_change
     expect(within(network, schema).length).toBeGreaterThan(0)
     expect(within(network, protocol).length).toBeGreaterThan(0)
     expect(within(network, core)).toEqual([])
@@ -66,3 +64,9 @@ function within(inputs: ReadonlyArray<string>, directory: string) {
   const prefix = directory.endsWith(sep) ? directory : directory + sep
   return inputs.filter((input) => input === directory || input.startsWith(prefix))
 }
+
+// kilocode_change start - support hoisted dependencies in Windows workspace installs
+function dependency(inputs: ReadonlyArray<string>, name: string) {
+  return inputs.filter((input) => input.replaceAll("\\", "/").includes(`/node_modules/${name}/`))
+}
+// kilocode_change end

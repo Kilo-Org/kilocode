@@ -145,6 +145,8 @@ jobs:
       - name: Run non-CLI unit tests
         if: matrix.settings.run && matrix.settings.packages
         run: bun turbo test:ci --output-logs=errors-only --log-order=grouped --log-prefix=task --filter='!@kilocode/cli' --filter='!@kilocode/kilo-jetbrains'
+        env:
+          KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: "true" # kilocode_change - non-CLI tests use the watcher-free unit-test profile
       # kilocode_change end
 
       # kilocode_change start - ensure the Darwin profile cannot suppress its own validation

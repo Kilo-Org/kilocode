@@ -6,6 +6,20 @@ import { Flag } from "@opencode-ai/core/flag/flag"
 import { Deferred, Effect, Latch, Option, Schema, Stream } from "effect"
 import type { OpenCodeEvent } from "../src"
 
+// kilocode_change start - retry Windows SQLite locks until GC finalizers release them
+const cleanup = async (dir: string, retries = 30): Promise<void> => {
+  try {
+    await rm(dir, { recursive: true, force: true })
+  } catch (error) {
+    if (retries === 0 || !error || typeof error !== "object" || !("code" in error) || error.code !== "EBUSY")
+      throw error
+    Bun.gc(true)
+    await Bun.sleep(100)
+    return cleanup(dir, retries - 1)
+  }
+}
+// kilocode_change end
+
 test("embedded client uses the real router and handlers", async () => {
   const directory = await mkdtemp(join(tmpdir(), "opencode-embedded-"))
   const database = Flag.KILO_DB
@@ -100,7 +114,7 @@ test("embedded client uses the real router and handlers", async () => {
     await Effect.runPromise(Effect.scoped(program))
   } finally {
     Flag.KILO_DB = database
-    await rm(directory, { recursive: true, force: true })
+    await cleanup(directory) // kilocode_change
   }
 })
 
@@ -139,7 +153,7 @@ test("Location-owned runner events reach the ready global client", async () => {
     await Effect.runPromise(Effect.scoped(program))
   } finally {
     Flag.KILO_DB = database
-    await rm(directory, { recursive: true, force: true })
+    await cleanup(directory) // kilocode_change
   }
 }, 10_000)
 
@@ -182,7 +196,7 @@ test("independent embedded hosts do not share live notifications", async () => {
     await Effect.runPromise(Effect.scoped(program))
   } finally {
     Flag.KILO_DB = database
-    await rm(directory, { recursive: true, force: true })
+    await cleanup(directory) // kilocode_change
   }
 }, 10_000)
 
@@ -207,6 +221,6 @@ test("embedded client is available as a Layer service", async () => {
     expect(created.id).toBe(sessionID)
   } finally {
     Flag.KILO_DB = database
-    await rm(directory, { recursive: true, force: true })
+    await cleanup(directory) // kilocode_change
   }
 })
