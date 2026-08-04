@@ -3,6 +3,7 @@ import { render as renderSolid } from "solid-js/web"
 import { SpeechToTextButton } from "../src/components/speech-to-text/SpeechToTextButton"
 import { insertSpacedText } from "../src/components/chat/prompt-input-utils"
 import type { SpeechState, SpeechToText } from "../src/components/speech-to-text/useSpeechToText"
+import { createSpeechShortcut } from "../src/components/speech-to-text/shortcut"
 import { reviewAnnotationSpeechKey, type AnnotationMeta } from "./review-annotations"
 
 type Props = {
@@ -13,10 +14,14 @@ type Props = {
   keys: Accessor<Set<string>>
 }
 
+type Event = Pick<KeyboardEvent, "key" | "altKey" | "ctrlKey" | "metaKey" | "shiftKey" | "repeat" | "timeStamp">
+
 type Node = {
   host: HTMLDivElement
   dispose: VoidFunction
   setTextarea: (textarea: HTMLTextAreaElement) => void
+  down: (event: Event, submit: () => void) => boolean
+  up: (event: Pick<KeyboardEvent, "key" | "timeStamp">) => boolean
 }
 
 function insertReviewSpeechText(textarea: HTMLTextAreaElement, value: string): void {
@@ -55,9 +60,9 @@ export function createReviewAnnotationSpeechRenderer(props: Props) {
       error: () => (mine() ? props.speech.error() : undefined),
       active: () => mine() && props.speech.active(),
       start: (opts) => start(opts.model),
-      stop: () => {
+      stop: (opts) => {
         if (!mine()) return
-        props.speech.stop()
+        props.speech.stop(opts)
       },
       cancel: () => {
         if (!mine()) return
@@ -71,6 +76,13 @@ export function createReviewAnnotationSpeechRenderer(props: Props) {
       },
     }
     const blocked = () => props.speech.active() && !mine()
+    let submit = () => {}
+    const shortcut = createSpeechShortcut({
+      speech,
+      disabled: () => !props.enabled() || blocked(),
+      start: () => start(props.model()),
+      finish: (send) => speech.stop(send ? { done: submit } : undefined),
+    })
 
     const dispose = createRoot((root) => {
       const view = renderSolid(
@@ -92,10 +104,18 @@ export function createReviewAnnotationSpeechRenderer(props: Props) {
 
     const node = {
       host,
-      dispose,
+      dispose: () => {
+        shortcut.reset()
+        dispose()
+      },
       setTextarea: (next: HTMLTextAreaElement) => {
         field = next
       },
+      down: (event: Event, next: () => void) => {
+        submit = next
+        return shortcut.down(event)
+      },
+      up: shortcut.up,
     }
     nodes.set(key, node)
     return node
@@ -134,6 +154,16 @@ export function createReviewAnnotationSpeechRenderer(props: Props) {
 
   return {
     active: props.speech.active,
+    down: (meta: AnnotationMeta, event: Event, submit: () => void) => {
+      const key = reviewAnnotationSpeechKey(meta)
+      if (!key) return false
+      return nodes.get(key)?.down(event, submit) ?? false
+    },
+    up: (meta: AnnotationMeta, event: Pick<KeyboardEvent, "key" | "timeStamp">) => {
+      const key = reviewAnnotationSpeechKey(meta)
+      if (!key) return false
+      return nodes.get(key)?.up(event) ?? false
+    },
     render,
   }
 }

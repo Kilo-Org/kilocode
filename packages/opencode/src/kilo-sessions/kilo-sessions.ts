@@ -13,6 +13,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import { Auth } from "@/auth"
 import { makeRuntime } from "@/effect/run-service"
 import { IngestQueue } from "@/kilo-sessions/ingest-queue"
+import { IngestDrain } from "@/kilo-sessions/ingest-drain"
 import { clearInFlightCache, withInFlightCache } from "@/kilo-sessions/inflight-cache"
 import type * as SDK from "@kilocode/sdk/v2"
 import z from "zod"
@@ -26,7 +27,15 @@ import simpleGit from "simple-git"
 import { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { RemoteSender } from "@/kilo-sessions/remote-sender"
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
+import { buildInstanceAdvertisement } from "@/kilo-sessions/instance-advertisement"
 import { AttachedState } from "@/kilo-sessions/attached-state"
+import {
+  clear as clearRenameMarks,
+  consumeAutoTitle,
+  consumeRenameAdoption,
+  markAutoTitle,
+  markRenameAdopted,
+} from "@/kilo-sessions/rename-adoptions"
 import { SessionStatus } from "@/session/status"
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Question } from "@/question"
@@ -58,6 +67,11 @@ export namespace KiloSessions {
       sessionID: string,
       input: { id: string; message: string },
     ) => Effect.Effect<{ ok: true } | { ok: false; reason: string }, never>
+    readonly reportSessionTitle: (
+      sessionID: string,
+      title: string,
+      opts: { generated: boolean },
+    ) => Effect.Effect<{ ok: true } | { ok: false; reason: string }, never>
   }
 
   export class Service extends Context.Service<Service, Interface>()("@kilocode/KiloSessions") {}
@@ -78,6 +92,18 @@ export namespace KiloSessions {
   const gitUrlKeyPrefix = "kilo-sessions:git-url:"
 
   const ttlMs = 10_000
+
+  /**
+   * Classify an `http_<status>` reason as a permanent (non-retryable) failure.
+   * 4xx client errors are permanent except 408 (Request Timeout) and 429
+   * (Too Many Requests), which are transient and should be retried.
+   */
+  function isPermanentHttpStatus(reason: string): boolean {
+    const match = reason.match(/^http_(\d+)$/)
+    if (!match) return false
+    const status = parseInt(match[1], 10)
+    return status >= 400 && status < 500 && status !== 408 && status !== 429
+  }
 
   function agentNotificationTimeoutMs(): number {
     const value = process.env["KILO_AGENT_NOTIFICATION_TIMEOUT_MS"]
@@ -221,6 +247,18 @@ export namespace KiloSessions {
     },
   })
 
+  // Process-level once-guard: overlapping shutdown paths must not double-POST.
+  // Do not call from per-directory instance finalizers — wrong granularity.
+  // Never-reject: serve/worker await this unguarded before dispose/stop.
+  const drainIngest = IngestDrain.create(
+    () => ingest.drain(),
+    (err) => log.warn("ingest drain failed", { err }),
+  )
+
+  export async function drainIngestForShutdown() {
+    await drainIngest()
+  }
+
   const remoteEnabled = process.env["KILO_REMOTE"] === "1"
   let remote: { conn: RemoteWS.Connection; sender: RemoteSender.Sender } | undefined
   let enabling: Promise<void> | undefined
@@ -246,7 +284,25 @@ export namespace KiloSessions {
   const statusSyncs = new Map<string, { running: boolean; dirty: boolean }>()
   const STATUS_TIMEOUT_MS = 3_000
 
-  async function deriveStatus(sessionID: string): Promise<"idle" | "busy" | "question" | "permission" | "retry"> {
+  // Shared attention/status resolution for ingest sync and the remote heartbeat.
+  // Precedence: permission > question > SessionStatus (offline maps to retry).
+  type DerivedSessionStatus = "idle" | "busy" | "question" | "permission" | "retry"
+
+  function resolveDerivedSessionStatus(input: {
+    hasPermission: boolean
+    hasQuestion: boolean
+    statusType: SessionStatus.Info["type"] | undefined
+  }): DerivedSessionStatus {
+    if (input.hasPermission) return "permission"
+    if (input.hasQuestion) return "question"
+    if (input.statusType === "offline") return "retry"
+    if (input.statusType === "busy" || input.statusType === "retry" || input.statusType === "idle") {
+      return input.statusType
+    }
+    return "idle"
+  }
+
+  async function deriveStatus(sessionID: string): Promise<DerivedSessionStatus> {
     const { AppRuntime } = await import("@/effect/app-runtime")
     const permissions = (await AppRuntime.runPromise(Permission.Service.use((svc) => svc.list()))).filter(
       (p) => p.sessionID === sessionID,
@@ -259,8 +315,11 @@ export namespace KiloSessions {
     if (questions.length > 0) return "question"
 
     const status = await AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.get(SessionID.make(sessionID))))
-    if (status.type === "offline") return "retry"
-    return status.type
+    return resolveDerivedSessionStatus({
+      hasPermission: false,
+      hasQuestion: false,
+      statusType: status.type,
+    })
   }
 
   async function deriveAndSyncStatus(sessionID: string) {
@@ -280,6 +339,15 @@ export namespace KiloSessions {
     Effect.gen(function* () {
       const config = yield* Config.Service
       const sessions = yield* Session.Service
+
+      const reportSessionTitle = Effect.fn("KiloSessions.reportSessionTitle")(function* (
+        sessionID: string,
+        title: string,
+        opts: { generated: boolean },
+      ) {
+        return yield* Effect.promise(() => reportTitleChange(sessionID, title, opts.generated))
+      })
+
       const state = yield* InstanceState.make(
         Effect.fn("KiloSessions.state")(function* (ctx) {
           if (ingestDisabled) return
@@ -297,18 +365,102 @@ export namespace KiloSessions {
             handlers.set(def.type, fn)
           }
 
+          // Last-known title per session so we only POST on actual title changes.
+          // Seed on Created and from existing rows at bootstrap so the first real
+          // rename (rename-before-prompt, or first rename after process restart)
+          // is not treated as a seed-only sighting and dropped (Decision 8).
+          const knownTitles = new Map<string, string>()
+          yield* sessions.list().pipe(
+            Effect.map((list) => {
+              for (const s of list) knownTitles.set(s.id, s.title)
+            }),
+            Effect.orElseSucceed(() => undefined),
+          )
           watch(Session.Event.Created, (evt) => {
-            const sessionID = evt.properties.info.id
+            const info = evt.properties.info
+            const sessionID = info.id
+            if (typeof info.title === "string") knownTitles.set(sessionID, info.title)
             return create(sessionID).catch((error) => log.error("share init create failed", { sessionID, error }))
           })
           watch(Session.Event.Updated, async (evt) => {
             const sessionID = evt.properties.sessionID
             const session = await Effect.runPromise(sessions.get(sessionID).pipe(Effect.orElseSucceed(() => null)))
             if (!session) return
-            await ingest.sync(sessionID, [
-              { type: "kilo_meta", data: await meta(sessionID) },
-              { type: "session", data: transport(session) },
-            ])
+            // Consume marks before the network hop so the 60s TTL does not span
+            // token resolution + ingest.sync. Advance knownTitles optimistically
+            // so a concurrent Updated sees sameTitle (no duplicate POST with a
+            // wrong generated flag). On ingest or title-POST failure restore
+            // prev + consumed marks so the next Updated re-derives and retries.
+            const prev = knownTitles.get(sessionID)
+            const sameTitle = prev === session.title
+            // Same-title Updated (setTitle no-op / double session.renamed): still
+            // consume a matching rename adoption after sync so the mark cannot
+            // stick and swallow a later real local rename (Decision 8).
+            const outcome = (():
+              | { kind: "same" }
+              | { kind: "adopted" }
+              | { kind: "report"; generated: boolean } => {
+              if (sameTitle) return { kind: "same" }
+              // Consume marks before the network hop so the 60s TTL does not span
+              // token resolution + ingest.sync. Checks run even when prev is
+              // unknown — an unseeded mark must not leak past this handler.
+              if (consumeRenameAdoption(sessionID, session.title)) return { kind: "adopted" }
+              return { kind: "report", generated: consumeAutoTitle(sessionID, session.title) }
+            })()
+            const restoreTitleState = () => {
+              // Only restore if this handler still owns the knownTitles slot.
+              // A concurrent handler may have advanced it to a newer title; in
+              // that case do not clobber it with this handler's stale prev.
+              if (knownTitles.get(sessionID) === session.title) {
+                if (prev === undefined) knownTitles.delete(sessionID)
+                else knownTitles.set(sessionID, prev)
+              }
+              if (outcome.kind === "adopted") markRenameAdopted(sessionID, session.title)
+              else if (outcome.kind === "report" && outcome.generated) markAutoTitle(sessionID, session.title)
+            }
+            knownTitles.set(sessionID, session.title)
+            try {
+              await ingest.sync(sessionID, [
+                { type: "kilo_meta", data: await meta(sessionID, session) },
+                { type: "session", data: transport(session) },
+              ])
+            } catch (error) {
+              restoreTitleState()
+              log.error("session updated ingest failed", { sessionID, error })
+              return
+            }
+            if (outcome.kind === "same") consumeRenameAdoption(sessionID, session.title)
+            if (outcome.kind !== "report") return
+            // Production path goes through the Interface method (not private helper).
+            const { AppRuntime } = await import("@/effect/app-runtime")
+            const reported = await AppRuntime.runPromise(
+              reportSessionTitle(sessionID, session.title, { generated: outcome.generated }),
+            )
+            if (!reported.ok) {
+              // Permanent failures (non-retryable 4xx client errors) mean the
+              // server rejected this title definitively; keep the new title so
+              // the next same-title Updated is a no-op instead of retrying
+              // forever. Transient failures (5xx, 408, 429, network errors,
+              // not_connected) still restore + retry.
+              const isPermanent = isPermanentHttpStatus(reported.reason)
+              if (isPermanent) {
+                log.warn("session title report permanent failure; title preserved", {
+                  sessionID,
+                  reason: reported.reason,
+                })
+              } else {
+                restoreTitleState()
+                log.warn("session title report failed; will retry on next Updated", {
+                  sessionID,
+                  reason: reported.reason,
+                })
+              }
+            }
+          })
+          watch(Session.Event.Deleted, (evt) => {
+            const sessionID = evt.properties.sessionID
+            knownTitles.delete(sessionID)
+            clearRenameMarks(sessionID)
           })
           watch(MessageV2.Event.Updated, async (evt) => {
             await ingest.sync(evt.properties.info.sessionID, [{ type: "message", data: evt.properties.info }])
@@ -436,7 +588,7 @@ export namespace KiloSessions {
         )
       })
 
-      return Service.of({ init, sendAgentNotification })
+      return Service.of({ init, sendAgentNotification, reportSessionTitle })
     }),
   )
 
@@ -452,13 +604,27 @@ export namespace KiloSessions {
   export const testLayer = Layer.succeed(Service, {
     init: () => Effect.void,
     sendAgentNotification: () => Effect.succeed({ ok: false, reason: "not_connected" } as const),
+    reportSessionTitle: () => Effect.succeed({ ok: false, reason: "not_connected" } as const),
   })
 
   export const node = LayerNode.suspend(() => LayerNode.make(layer, [Bus.node, Config.node, Session.node]))
 
+  // kilocode_change - DEF-1: default advertisement for every successful
+  // enableRemote() entry (covers `/remote` after auto-enable already connected).
+  // No-op when an advertisement is already set — must not re-set or fire an
+  // extra heartbeat. Explicit setInstanceAdvertisement keeps replace semantics.
+  function ensureDefaultInstanceAdvertisement() {
+    if (instanceAdvertisement) return
+    setInstanceAdvertisement(buildInstanceAdvertisement(Instance.directory))
+  }
+
   export async function enableRemote() {
-    if (remote) return
+    // ingestDisabled must not advertise. Every other successful entry — including
+    // already-connected and coalescing early returns — must ensure advertisement
+    // before returning, otherwise `/remote` after auto-enable never registers.
     if (ingestDisabled) return
+    ensureDefaultInstanceAdvertisement()
+    if (remote) return
     if (enabling) return enabling
     const seq = ++remoteSeq
     void Bus.publish(Instance.current, Event.RemoteStatusChanged, { enabled: true, connected: false })
@@ -496,8 +662,16 @@ export namespace KiloSessions {
           branch().catch(() => undefined),
         ])
         const { AppRuntime } = await import("@/effect/app-runtime")
-        const statusMap = await AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.list()))
+        // Batch SessionStatus + attention lists once per heartbeat (not per session).
+        // Permission/Question list() feeds the same precedence as deriveStatus().
+        const [statusMap, permissions, questions] = await Promise.all([
+          AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.list())),
+          AppRuntime.runPromise(Permission.Service.use((svc) => svc.list())),
+          AppRuntime.runPromise(Question.Service.use((svc) => svc.list())),
+        ])
         const statuses: Record<string, SessionStatus.Info> = Object.fromEntries(statusMap)
+        const permissionSessions = new Set(permissions.map((p) => p.sessionID as string))
+        const questionSessions = new Set(questions.map((q) => q.sessionID as string))
         // Advertise both presence-owned and pending-created ids so the relay learns about new
         // sessions before the next periodic heartbeat and the create_session response can be sent.
         const ids = new Set(Object.keys(statuses))
@@ -509,7 +683,11 @@ export namespace KiloSessions {
                 svc.get(SessionID.make(id)).pipe(
                   Effect.map((session) => ({
                     id,
-                    status: statuses[id]?.type ?? ("idle" as const),
+                    status: resolveDerivedSessionStatus({
+                      hasPermission: permissionSessions.has(id),
+                      hasQuestion: questionSessions.has(id),
+                      statusType: statuses[id]?.type,
+                    }),
                     title: session.title,
                     parentSessionId: session.parentID,
                     gitUrl,
@@ -971,6 +1149,51 @@ export namespace KiloSessions {
     }
   }
 
+  async function reportTitleChange(
+    sessionID: string,
+    title: string,
+    generated: boolean,
+  ): Promise<{ ok: true } | { ok: false; reason: string }> {
+    if (ingestDisabled) {
+      return { ok: false, reason: "not_connected" }
+    }
+    const readiness = await withTimeout(
+      resolveReadiness(sessionID),
+      agentNotificationTimeoutMs(),
+      "session title readiness timed out",
+    ).catch(() => ({ ok: false, reason: "not_connected" }) as const)
+    if (!readiness.ok) {
+      log.warn("report session title skipped", { sessionID, reason: readiness.reason })
+      return readiness
+    }
+    return postSessionTitle(sessionID, readiness.client, title, generated)
+  }
+
+  async function postSessionTitle(
+    sessionID: string,
+    client: Client,
+    title: string,
+    generated: boolean,
+  ): Promise<{ ok: true } | { ok: false; reason: string }> {
+    try {
+      const response = await client.fetch(`${client.url}/api/session/${encodeURIComponent(sessionID)}/title`, {
+        method: "POST",
+        body: JSON.stringify({ title, generated }),
+      })
+      if (response.ok) {
+        log.info("session title reported", { sessionID, generated })
+        return { ok: true }
+      }
+      const reason = `http_${response.status}`
+      log.error("session title report failed", { sessionID, status: response.status })
+      return { ok: false, reason }
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error)
+      log.error("session title report failed", { sessionID, error: reason })
+      return { ok: false, reason }
+    }
+  }
+
   export async function remove(sessionId: string) {
     const client = await getClient()
     if (!client) return
@@ -1030,7 +1253,7 @@ export namespace KiloSessions {
     await ingest.sync(sessionId, [
       {
         type: "kilo_meta",
-        data: await meta(sessionId),
+        data: await meta(sessionId, session),
       },
       {
         type: "session",
@@ -1100,10 +1323,10 @@ export namespace KiloSessions {
     return AppRuntime.runPromise(Vcs.Service.use((svc) => svc.branch()))
   }
 
-  async function meta(sessionId?: string) {
+  async function meta(sessionId?: string, info?: Session.Info | null) {
     const override = sessionId ? KiloSession.resolvePlatform(sessionId) : undefined
     const platform = override || process.env["KILO_PLATFORM"] || "cli"
-    const orgId = await getOrgId()
+    const orgId = await getOrgId(sessionId, info)
     const gitBranch = await branch().catch(() => undefined)
     const gitUrl = await getGitUrl().catch(() => undefined)
 
@@ -1115,7 +1338,16 @@ export namespace KiloSessions {
     }
   }
 
-  async function getOrgId(): Promise<Uuid | undefined> {
+  /** Test seam: meta() without preloaded info (Session.get failure → env/auth fallback). */
+  export async function _metaForTests(sessionId?: string, info?: Session.Info | null) {
+    return meta(sessionId, info)
+  }
+
+  async function getOrgId(sessionId?: string, info?: Session.Info | null): Promise<Uuid | undefined> {
+    // Per-session org from metadata (remote create_session) wins over process-global env/auth.
+    const fromMeta = await resolveSessionOrg(sessionId, info)
+    if (fromMeta) return fromMeta
+
     const env = process.env["KILO_ORG_ID"]
     if (isUuid(env)) return env
 
@@ -1124,6 +1356,22 @@ export namespace KiloSessions {
       if (auth?.type === "oauth" && isUuid(auth.accountId)) return auth.accountId
       return undefined
     })
+  }
+
+  async function resolveSessionOrg(sessionId?: string, info?: Session.Info | null): Promise<Uuid | undefined> {
+    if (!sessionId) return undefined
+    const resolved =
+      info !== undefined
+        ? info
+        : await (async () => {
+            const { AppRuntime } = await import("@/effect/app-runtime")
+            return AppRuntime.runPromise(Session.Service.use((svc) => svc.get(SessionID.make(sessionId)))).catch(
+              () => null,
+            )
+          })()
+    if (!resolved) return undefined
+    const raw = resolved.metadata?.orgId
+    return typeof raw === "string" && isUuid(raw) ? raw : undefined
   }
 
   function isUuid(value: string | undefined): value is Uuid {

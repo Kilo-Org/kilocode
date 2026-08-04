@@ -122,7 +122,9 @@ export function activate(context: vscode.ExtensionContext) {
   }
 
   // Create the provider with shared service
-  const provider = new KiloProvider(context.extensionUri, connectionService, context)
+  const provider = new KiloProvider(context.extensionUri, connectionService, context, {
+    focusContext: "kilo-code.new.sidebarFocused",
+  })
   provider.setRemoteService(remoteService)
 
   // Register the webview view provider for the sidebar.
@@ -201,6 +203,8 @@ export function activate(context: vscode.ExtensionContext) {
         const ctx = agentManagerHost.wrapExistingPanel(panel, {
           onBeforeMessage: (msg) => agentManagerProvider.handleMessage(msg),
           worktreeDirectories: () => agentManagerProvider.getWorktreeDirectories(),
+          workspaceRoot: () => agentManagerProvider.workspaceRoot(),
+          projectId: () => agentManagerProvider.projectId(),
         })
         agentManagerProvider.deserializePanel(ctx)
         return Promise.resolve()

@@ -28,6 +28,7 @@ export const AiProvidersNav: NavSection[] = [
     links: [
       { href: "/ai-providers/openrouter", children: "OpenRouter" },
       { href: "/ai-providers/requesty", children: "Requesty" },
+      { href: "/ai-providers/daoxe", children: "DaoXE" },
       { href: "/ai-providers/unbound", children: "Unbound" },
       { href: "/ai-providers/zenmux", children: "ZenMux" },
       {
@@ -46,6 +47,7 @@ export const AiProvidersNav: NavSection[] = [
       { href: "/ai-providers/groq", children: "Groq" },
       { href: "/ai-providers/cerebras", children: "Cerebras" },
       { href: "/ai-providers/fireworks", children: "Fireworks AI" },
+      { href: "/ai-providers/mixlayer", children: "Mixlayer" },
     ],
   },
   {

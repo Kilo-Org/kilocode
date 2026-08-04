@@ -1,5 +1,8 @@
 import path from "path"
 import { existsSync } from "fs"
+import { access, realpath } from "fs/promises"
+import { constants } from "fs"
+import { createHash } from "crypto"
 import { Schema } from "effect"
 import z from "zod"
 import * as Log from "@opencode-ai/core/util/log"
@@ -54,15 +57,20 @@ export namespace KilocodeConfigOverlay {
     global: z.custom<Config.Info>(Schema.is(Config.Info)),
     project: z.custom<Config.Info>(Schema.is(Config.Info)),
     sources: z.array(KilocodeConfigSources.Source),
-    targets: z.object({
-      global: z.string().optional(),
-      project: z.string().optional(),
-      active: z.string().optional(),
-    }),
+    targets: z.object({ global: z.custom<Target>(), project: z.custom<Target>(), active: z.custom<Target>() }),
     fields: z.record(z.string(), Resolved),
     collections: z.record(z.string(), z.array(Resolved)),
   })
   export type Result = z.infer<typeof Result>
+
+  export type Target = {
+    scope: Scope
+    path: string
+    revision: string
+    exists: boolean
+    writable: boolean
+    raw: Record<string, unknown>
+  }
 
   export type Input = {
     directory: string
@@ -88,6 +96,7 @@ export namespace KilocodeConfigOverlay {
     ["disabled_providers"],
     ["watcher", "ignore"],
     ["instructions"],
+    ["web_search"],
     ["indexing", "enabled"],
     ["indexing", "provider"],
     ["indexing", "model"],
@@ -143,16 +152,54 @@ export namespace KilocodeConfigOverlay {
     return candidates.find((file) => existsSync(file)) ?? candidates[0]
   }
 
+  export async function target(input: { scope: Scope; directory: string; worktree?: string }): Promise<Target> {
+    const file = input.scope === "global" ? globalTarget() : await projectTarget(input)
+    const root =
+      input.scope === "global"
+        ? Global.Path.config
+        : input.worktree && input.worktree !== "/"
+          ? input.worktree
+          : input.directory
+    const [canonical, boundary] = await Promise.all([canonicalize(file), canonicalize(root)])
+    const exists = await Bun.file(file).exists()
+    const bytes = exists ? await Bun.file(file).text() : ""
+    const relative = path.relative(boundary, canonical)
+    const inside = relative === "" || (!path.isAbsolute(relative) && relative.split(path.sep)[0] !== "..")
+    const raw = exists ? ConfigParse.jsonc(bytes, canonical) : {}
+    return {
+      scope: input.scope,
+      path: canonical,
+      revision: revision(canonical, exists, bytes),
+      exists,
+      writable: inside && (await canWrite(exists ? canonical : path.dirname(canonical))),
+      raw: isRecord(raw) ? raw : {},
+    }
+  }
+
+  export function revision(file: string, exists: boolean, bytes: string) {
+    return createHash("sha256")
+      .update(file)
+      .update("\0")
+      .update(exists ? "exists" : "missing")
+      .update("\0")
+      .update(bytes)
+      .digest("hex")
+  }
+
   export async function resolve(input: Input): Promise<Result> {
     // kilocode_change start - project agents untrusted, {file:} confined to the project root; global agents trusted
     const root = input.worktree && input.worktree !== "/" ? input.worktree : input.directory
     const local = await withAgents(await project(input), await projectDirs(input), false, root)
     const global = await withAgents(input.global, globalDirs(), true)
     // kilocode_change end
+    const [globalTarget, projectTarget] = await Promise.all([
+      target({ ...input, scope: "global" }),
+      target({ ...input, scope: "project" }),
+    ])
     const targets = {
-      global: globalTarget(),
-      project: await projectTarget(input),
-      active: input.scope === "global" ? globalTarget() : await projectTarget(input),
+      global: globalTarget,
+      project: projectTarget,
+      active: input.scope === "global" ? globalTarget : projectTarget,
     }
     return {
       scope: input.scope,
@@ -365,5 +412,25 @@ export namespace KilocodeConfigOverlay {
   function record(input: unknown) {
     if (isRecord(input)) return input
     return {}
+  }
+
+  async function canonicalize(file: string): Promise<string> {
+    const resolved = path.resolve(file)
+    const found = await realpath(resolved).catch(() => undefined)
+    if (found) return path.normalize(found)
+    const parent = path.dirname(resolved)
+    if (parent === resolved) return resolved
+    return path.join(await canonicalize(parent), path.basename(resolved))
+  }
+
+  async function canWrite(file: string): Promise<boolean> {
+    return access(file, constants.W_OK).then(
+      () => true,
+      async () => {
+        const parent = path.dirname(file)
+        if (parent === file) return false
+        return canWrite(parent)
+      },
+    )
   }
 }

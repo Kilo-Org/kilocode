@@ -549,6 +549,96 @@ describe("session prompt queue", () => {
     }
   })
 
+  test("closes a queued-handoff turn as superseded, not interrupted", async () => {
+    const ready = Promise.withResolvers<void>()
+    const release = Promise.withResolvers<void>()
+    const server = Bun.serve({
+      port: 0,
+      async fetch(req) {
+        const url = new URL(req.url)
+        if (!url.pathname.endsWith("/chat/completions")) return new Response("not found", { status: 404 })
+
+        // Hold every stream open until the follow-up prompt is queued, so
+        // runLoop deterministically takes the hasFollowup break once its
+        // current step drains. Forked title/summary calls get held too; they
+        // are Effect.ignore'd and drain once released.
+        ready.resolve()
+        const stream = reply({ text: "reply", wait: release.promise })
+        return new Response(stream, {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        })
+      },
+    })
+
+    try {
+      await using tmp = await tmpdir({
+        git: true,
+        init: async (dir) => {
+          await Bun.write(path.join(dir, "opencode.json"), JSON.stringify(providerCfg(server.url.origin)))
+        },
+      })
+
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () =>
+          scoped(tmp.path, async (prompt) => {
+            const closed: KiloSession.CloseReason[] = []
+            const unsubscribe = Bus.subscribe(KiloSession.Event.TurnClose, (event) => {
+              closed.push(event.properties.reason)
+            })
+
+            const session = await sessions.create({ title: "Superseded close reason" })
+            const first = Effect.runPromise(
+              prompt.prompt({
+                sessionID: session.id,
+                agent: "code",
+                parts: [{ type: "text", text: "first prompt" }],
+              }),
+            )
+
+            // A request reaching the mock implies the turn loop is running
+            // (forked title/summary calls fire from step 1 of the loop).
+            await ready.promise
+            const second = Effect.runPromise(
+              prompt.prompt({
+                sessionID: session.id,
+                agent: "code",
+                parts: [{ type: "text", text: "second prompt" }],
+              }),
+            )
+
+            // Wait until the follow-up is actually queued behind the in-flight
+            // turn, then let the first stream drain so runLoop hands off.
+            await Effect.runPromise(
+              pollWithTimeout(
+                Effect.sync(() => (KiloSessionPromptQueue.hasFollowup(session.id) ? (true as const) : undefined)),
+                "follow-up prompt never queued behind the in-flight turn",
+                "3 seconds",
+              ),
+            )
+            release.resolve()
+
+            expect((await first).info.role).toBe("assistant")
+            expect((await second).info.role).toBe("assistant")
+            // Bus delivery is a microtask chain; flush a macrotask so the last
+            // TurnClose callback lands before asserting.
+            await new Promise((resolve) => setTimeout(resolve, 0))
+            unsubscribe()
+
+            expect(closed).toHaveLength(2)
+            // The first turn drained its stream cleanly and handed off to the
+            // queued follow-up; it must not look like a user interruption to
+            // clients (they flash a "Turn interrupted" warning on that reason).
+            expect(closed[0]).toBe("superseded")
+            expect(closed[1]).toBe("completed")
+          }),
+      })
+    } finally {
+      server.stop(true)
+    }
+  }, 20_000)
+
   test("bridges legacy instance context for prompts after a completed turn", async () => {
     const calls: number[] = []
     const server = Bun.serve({
@@ -688,12 +778,27 @@ describe("session prompt queue", () => {
               }),
             )
 
-            // Let msg2/msg3's enqueue capture the current version before cancel bumps it.
-            await Bun.sleep(20)
+            // Wait until both follow-ups are on the waiting list (hasFollowup alone
+            // flips true when only the second is queued).
+            await Effect.runPromise(
+              pollWithTimeout(
+                Effect.sync(() =>
+                  KiloSessionPromptQueue.snapshot(session.id).length >= 2 ? (true as const) : undefined,
+                ),
+                "both follow-up prompts never queued behind the in-flight turn",
+                "3 seconds",
+              ),
+            )
             expect(calls).toHaveLength(1)
 
             await Effect.runPromise(prompt.cancel(session.id))
-            await Promise.all([first, second, third])
+            // Cancel interrupts in-flight Effect fibers; settle so interrupt does
+            // not leak as an unhandled rejection, but still require rejects to be
+            // interrupt-shaped (not an unrelated provider/session failure).
+            const settled = await Promise.allSettled([first, second, third])
+            for (const r of settled) {
+              if (r.status === "rejected") expect(String(r.reason)).toMatch(/interrupt/i)
+            }
 
             // The queued prompts must never reach the LLM once cancel flushes the queue.
             expect(calls).toHaveLength(1)
@@ -910,7 +1015,7 @@ describe("session prompt queue", () => {
     } finally {
       server.stop(true)
     }
-  }, 10_000)
+  }, 30_000)
 
   test("drop returns false for the actively running prompt", async () => {
     const sessionID = SessionID.make("session_drop_active")

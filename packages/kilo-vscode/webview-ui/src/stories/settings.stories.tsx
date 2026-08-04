@@ -380,6 +380,51 @@ export const AgentBehaviourWorkflowsEmpty: Story = {
   },
 }
 
+/** Skills subtab with seeded long paths/URLs in a narrow container — regression fixture for
+ *  the responsive overflow bug where value cells retained min-content width and pushed the
+ *  remove (×) IconButton off-screen. */
+export const AgentBehaviourSkillsOverflow: Story = {
+  name: "AgentBehaviourTab — skills subtab narrow overflow",
+  render: () => {
+    const session = {
+      ...mockSessionValue({ id: "skills-overflow-story", status: "idle" }),
+      agents: () => MOCK_AGENTS,
+      allAgents: () => MOCK_AGENTS,
+      removeAgent: noop,
+      removeMcp: noop,
+      skills: () => [],
+      refreshSkills: noop,
+      removeSkill: noop,
+    }
+    return (
+      <StoryProviders
+        sessionID="skills-overflow-story"
+        status="idle"
+        config={
+          {
+            skills: {
+              paths: [
+                "/home/user/projects/very-long-directory-name/skills-collection/team-shared",
+                "./relative/path/to/skills/another/very/long/nested/directory",
+              ],
+              urls: [
+                "https://example.com/very/long/path/to/skills/registry/index.json?ref=main&token=abc123",
+                "https://other.example.org/skills/v2/registry.json?namespace=team&version=latest",
+              ],
+            },
+          } as any
+        }
+      >
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "320px", height: "700px", overflow: "auto" }}>
+            <SubtabWrapper tab="skills" />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
 export const McpEditViewLocal: Story = {
   name: "McpEditView — local server (stdio)",
   render: () => (

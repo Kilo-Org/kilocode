@@ -57,6 +57,7 @@ function makeTerminalId(): string {
 
 export class TerminalManager {
   private readonly entries = new Map<string, Entry>()
+  private readonly restarts = new Map<string, Promise<void>>()
 
   constructor(private readonly deps: TerminalManagerDeps) {}
 
@@ -113,6 +114,16 @@ export class TerminalManager {
     }
   }
 
+  /** Titles of every live terminal in a context — used by the router to
+   *  pick the lowest free "Terminal N" ordinal. */
+  titles(worktreeId: string | null): string[] {
+    const out: string[] = []
+    for (const entry of this.entries.values()) {
+      if (entry.worktreeId === worktreeId) out.push(entry.title)
+    }
+    return out
+  }
+
   /** Kill a single terminal. Best-effort — we always drop our bookkeeping.
    *  The SDK's `pty.remove` returns `{ data, error }` without throwing
    *  on 4xx/5xx, so we have to check `error` ourselves; otherwise a
@@ -138,6 +149,24 @@ export class TerminalManager {
       const msg = err instanceof Error ? err.message : String(err)
       this.deps.log(`Terminal close transport error (${terminalId}): ${msg}`)
     }
+  }
+
+  async restart(terminalId: string, cols?: number, rows?: number): Promise<string | undefined> {
+    const entry = this.entries.get(terminalId)
+    if (!entry) return
+    const prior = this.restarts.get(terminalId)
+    if (prior) {
+      await prior
+      const current = this.entries.get(terminalId)
+      return current ? this.deps.buildWsUrl(current.ptyID, current.cwd) : undefined
+    }
+    const task = this.restartEntry(entry, cols, rows)
+    this.restarts.set(terminalId, task)
+    await task.finally(() => {
+      if (this.restarts.get(terminalId) === task) this.restarts.delete(terminalId)
+    })
+    const current = this.entries.get(terminalId)
+    return current ? this.deps.buildWsUrl(current.ptyID, current.cwd) : undefined
   }
 
   /**
@@ -207,5 +236,36 @@ export class TerminalManager {
       this.deps.log(`Terminal dispose: ${failed}/${snapshot.length} PTYs may linger until kilo serve exits`)
     }
     this.entries.clear()
+  }
+
+  private async restartEntry(entry: Entry, cols?: number, rows?: number): Promise<void> {
+    try {
+      const client = this.deps.getClient()
+      const old = entry.ptyID
+      const created = await client.pty.create({
+        directory: entry.cwd,
+        cwd: entry.cwd,
+        title: entry.title,
+      })
+      const info = created.data
+      if (created.error || !info)
+        throw new Error(created.error ? String(created.error) : "PTY create returned no session")
+      if (cols !== undefined && rows !== undefined) {
+        await client.pty.update({
+          ptyID: info.id,
+          directory: entry.cwd,
+          size: { cols, rows },
+        })
+      }
+      entry.ptyID = info.id
+      await client.pty.remove({ directory: entry.cwd, ptyID: old }).catch((error: unknown) => {
+        this.deps.log(`Failed to remove exited PTY (${old}): ${error instanceof Error ? error.message : String(error)}`)
+      })
+      this.deps.log(`Terminal restarted (${entry.terminalId} pty=${entry.ptyID})`)
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error)
+      this.deps.log(`Terminal restart failed (${entry.terminalId}): ${msg}`)
+      throw error
+    }
   }
 }

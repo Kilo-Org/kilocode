@@ -29,7 +29,8 @@
     align-items: center;
     justify-content: space-between;
     gap: 6px;
-    padding: 6px 8px 4px 12px;
+    padding-block: 6px 4px;
+    padding-inline: 12px 8px;
     cursor: pointer;
   }
 
@@ -176,7 +177,7 @@
     background-color: transparent;
     border: none;
     border-radius: 6px;
-    text-align: left;
+    text-align: start;
     width: 100%;
     cursor: pointer;
     outline: none;

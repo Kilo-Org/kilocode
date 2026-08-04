@@ -114,10 +114,19 @@ For manual docs validation, run the docs site locally, preview the affected page
 Build and launch the extension in an isolated VS Code instance:
 
 ```bash
-bun run extension        # Build + launch in dev mode
+bun run extension                  # Build + launch in dev mode
+bun run extension:isolated         # Build + launch with persistent isolated IDE + Kilo state
+bun run extension:isolated:clean   # Clear isolated state, then build + launch
 ```
 
-This auto-detects VS Code on macOS, Linux, and Windows. Override with `--app-path PATH` or `VSCODE_EXEC_PATH`. Use `--insiders` to prefer Insiders, `--workspace PATH` to open a specific folder, or `--clean` to reset cached state.
+This auto-detects VS Code on macOS, Linux, and Windows. Override with `--app-path PATH` or `VSCODE_EXEC_PATH`. Use `--insiders` to prefer Insiders, pass a directory argument to open a specific folder, or use `--workspace PATH` for the same behavior.
+
+The isolated modes are for testing the extension without touching your primary VS Code profile or real Kilo config. `extension:isolated` reuses `.kilo-dev/` on each run, so installed extensions, VS Code settings, Kilo auth, sessions, config, state, and cache persist across launches. `extension:isolated:clean` deletes `.kilo-dev/` before launching, which simulates a fresh install while still keeping all state inside this repo checkout.
+
+```bash
+bun run extension:isolated -- ../sample-project
+bun run extension:isolated:clean -- ../sample-project
+```
 
 ### Developing the JetBrains Plugin
 

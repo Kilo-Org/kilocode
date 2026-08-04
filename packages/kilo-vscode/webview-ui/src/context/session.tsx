@@ -67,12 +67,13 @@ import {
 } from "./session-utils"
 import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
+import { getAgentModel } from "./session-model-store"
 import { resolveMessagePrefs } from "./session-preferences"
 import { errorIDs } from "./session-errors"
 import { PartStash } from "./part-stash"
 import { mergeParts, sameParts } from "./session-parts"
 import { state as todoState } from "./todo-revert"
-import { getVariant, sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
+import { getAgentVariant, getVariant, sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
 import { KILO_AUTO, KILO_PROVIDER_ID, parseModelString } from "../../../src/shared/provider-model"
 import { reviewMetadata, type ReviewMessageData } from "../../../src/shared/review-comments"
 import { visibleMessages as filterVisibleMessages } from "./session-queue"
@@ -95,7 +96,6 @@ function dropSet(prev: Set<string>, ids: Iterable<string>): Set<string> {
 type MessageMutation = Exclude<MessageLoadMode, "focus"> | "append" | "update"
 
 interface MessagePageState {
-  initialLoaded: boolean
   loadingInitial: boolean
   loadingOlder: boolean
   before?: string
@@ -104,7 +104,6 @@ interface MessagePageState {
 }
 
 const emptyPageState: MessagePageState = {
-  initialLoaded: false,
   loadingInitial: false,
   loadingOlder: false,
   hasMore: false,
@@ -203,6 +202,8 @@ interface SessionContextValue {
   // Model selection (global, extension-lifetime)
   selected: (sessionID?: string) => ModelSelection | null
   configModel: (sessionID?: string) => ModelSelection | null
+  modelForAgent: (agent: string) => ModelSelection | null
+  configModelForAgent: (agent: string) => ModelSelection | null
   selectModel: (providerID: string, modelID: string, sessionID?: string) => void
   hasModelOverride: (sessionID?: string) => boolean
   clearModelOverride: (sessionID?: string) => void
@@ -211,7 +212,6 @@ interface SessionContextValue {
   costBreakdown: Accessor<Array<{ label: string; cost: number }>>
   contextUsage: Accessor<ContextUsage | undefined>
   modelUsage: Accessor<SessionModelUsage | undefined>
-  refreshModelUsage: () => void
 
   // Skills loaded from the CLI backend
   skills: Accessor<SkillInfo[]>
@@ -230,11 +230,9 @@ interface SessionContextValue {
   connectMcp: (name: string) => void
   disconnectMcp: (name: string) => void
   authenticateMcp: (name: string) => void
-  refreshMcpStatus: () => void
   selectedAgent: (sessionID?: string) => string
   selectAgent: (name: string, sessionID?: string) => void
   getSessionAgent: (sessionID: string) => string
-  getSessionModel: (sessionID: string) => ModelSelection | null
   setSessionModel: (sessionID: string, providerID: string, modelID: string) => void
   setSessionAgent: (sessionID: string, name: string) => void
   setSessionVariant: (sessionID: string, providerID: string, modelID: string, value: string, agent?: string) => void
@@ -242,6 +240,7 @@ interface SessionContextValue {
   // Thinking variant for the selected model
   variantList: (sessionID?: string) => string[]
   currentVariant: (sessionID?: string) => string | undefined
+  variantForAgent: (agent: string, model: ModelSelection | null) => string | undefined
   selectVariant: (value: string, sessionID?: string) => void
 
   // Model favorites
@@ -296,7 +295,7 @@ interface SessionContextValue {
   createSession: () => void
   clearCurrentSession: () => void
   loadSessions: () => void
-  loadOlderMessages: () => void
+  loadOlderMessages: () => boolean
   selectSession: (id: string) => void
   deleteSession: (id: string) => void
   renameSession: (id: string, title: string) => void
@@ -451,10 +450,6 @@ export const SessionProvider: ParentComponent = (props) => {
     if (!server.isConnected()) return
     setMcpLoading(name)
     vscode.postMessage({ type: "authenticateMcp", name })
-  }
-
-  const refreshMcpStatus = () => {
-    vscode.postMessage({ type: "requestMcpStatus" })
   }
 
   // Pending agent selection for before a session exists
@@ -744,6 +739,30 @@ export const SessionProvider: ParentComponent = (props) => {
     return resolveModel(agentName)
   }
 
+  function modelForAgent(agentName: string): ModelSelection | null {
+    return getAgentModel(
+      {
+        modelSelections: store.modelSelections,
+        sessionOverrides: store.sessionOverrides,
+        agentSelections: store.agentSelections,
+        recentModels: store.recentModels,
+      },
+      {
+        providers: provider.providers(),
+        connected: provider.connected(),
+        getModeModel,
+        getGlobalModel,
+        fallback: KILO_AUTO,
+      },
+      agentName,
+      userSetAgents()[agentName] === true,
+    )
+  }
+
+  function configModelForAgent(agentName: string): ModelSelection | null {
+    return resolveModel(agentName)
+  }
+
   /** True when the active model differs from what the config dictates. */
   function hasModelOverride(sessionID?: string) {
     const sel = selected(sessionID)
@@ -885,6 +904,12 @@ export const SessionProvider: ParentComponent = (props) => {
     const model = provider.findModel(sel)
     if (!model?.variants) return []
     return Object.keys(model.variants)
+  }
+
+  function variantForAgent(agentName: string, sel: ModelSelection | null) {
+    if (!sel) return undefined
+    const model = provider.findModel(sel)
+    return getAgentVariant(store.variantSelections, sel, model, agentName)
   }
 
   const currentVariant = (sessionID?: string) => {
@@ -1294,7 +1319,7 @@ export const SessionProvider: ParentComponent = (props) => {
           next.add(session.id)
           return next
         })
-        patchPage(session.id, { initialLoaded: true, lastMutation: "append" })
+        patchPage(session.id, { lastMutation: "append" })
         setPages(
           produce((state) => {
             delete state[draftID]
@@ -1473,7 +1498,7 @@ export const SessionProvider: ParentComponent = (props) => {
         if (store.parts[msg.id]) delete parts[msg.id]
       }
       rebuildToolParts(sessionID, messages, parts)
-      patchPage(sessionID, { initialLoaded: true, lastMutation: "update" })
+      patchPage(sessionID, { lastMutation: "update" })
       return
     }
 
@@ -1529,10 +1554,9 @@ export const SessionProvider: ParentComponent = (props) => {
       // preserve the existing pagination cursor/hasMore so "load earlier"
       // keeps working.
       if (mode === "reconcile") {
-        patchPage(sessionID, { initialLoaded: true, lastMutation: "update" })
+        patchPage(sessionID, { lastMutation: "update" })
       } else {
         setPages(sessionID, {
-          initialLoaded: true,
           loadingInitial: false,
           loadingOlder: false,
           before: input.cursor,
@@ -1593,7 +1617,7 @@ export const SessionProvider: ParentComponent = (props) => {
       }
       return [...msgs, message]
     })
-    patchPage(message.sessionID, { initialLoaded: true, lastMutation: exists ? "update" : "append" })
+    patchPage(message.sessionID, { lastMutation: exists ? "update" : "append" })
 
     recoverPrefs(message.sessionID, [message])
 
@@ -2095,7 +2119,7 @@ export const SessionProvider: ParentComponent = (props) => {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       })
-      patchPage(key, { initialLoaded: true, hasMore: false, lastMutation: "replace" })
+      patchPage(key, { hasMore: false, lastMutation: "replace" })
       setStore("messages", key, messages)
       for (const msg of messages) {
         if (msg.parts && msg.parts.length > 0) {
@@ -2242,7 +2266,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
     setStore("messages", sid, (msgs = []) => [...msgs, temp])
     setStore("parts", messageID, parts)
-    patchPage(sid, { initialLoaded: true, lastMutation: "append" })
+    patchPage(sid, { lastMutation: "append" })
     queueMicrotask(() => window.dispatchEvent(new CustomEvent("resumeAutoScroll")))
   }
 
@@ -2570,9 +2594,9 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function loadOlderMessages() {
     const id = currentSessionID()
-    if (!id || !server.isConnected()) return
+    if (!id || !server.isConnected()) return false
     const page = pages[id] ?? emptyPageState
-    if (!page.hasMore || page.loadingOlder || page.loadingInitial || !page.before) return
+    if (!page.hasMore || page.loadingOlder || page.loadingInitial || !page.before) return false
     patchPage(id, { loadingOlder: true })
     vscode.postMessage({
       type: "loadMessages",
@@ -2581,6 +2605,7 @@ export const SessionProvider: ParentComponent = (props) => {
       before: page.before,
       limit: MESSAGE_PAGE_LIMIT,
     })
+    return true
   }
 
   // Session whose message fetch was deferred because the backend was offline at
@@ -2956,13 +2981,14 @@ export const SessionProvider: ParentComponent = (props) => {
     scopedSuggestions,
     selected,
     configModel,
+    modelForAgent,
+    configModelForAgent,
     selectModel,
     hasModelOverride,
     clearModelOverride,
     costBreakdown,
     contextUsage,
     modelUsage,
-    refreshModelUsage,
     agents,
     allAgents,
     skills,
@@ -2975,19 +3001,12 @@ export const SessionProvider: ParentComponent = (props) => {
     connectMcp,
     disconnectMcp,
     authenticateMcp,
-    refreshMcpStatus,
     selectedAgent: agentForScope,
     selectAgent,
     getSessionAgent: (sessionID: string) => store.agentSelections[sessionID] ?? defaultAgent(),
-    getSessionModel: (sessionID: string) => {
-      const override = store.sessionOverrides[sessionID]
-      if (override) return override
-      const agentName = store.agentSelections[sessionID] ?? defaultAgent()
-      return resolveModel(agentName, store.modelSelections[agentName])
-    },
     setSessionModel: (sessionID: string, providerID: string, modelID: string) => {
       // Only write per-session override — do NOT touch global modelSelections or
-      // userSetAgents.  The override is what selected()/getSessionModel() actually
+      // userSetAgents.  The override is what selected() actually
       // reads, and mutating the global map here is both redundant and harmful: the
       // agent may not yet be assigned (sendInitialMessage calls setSessionModel
       // before setSessionAgent), so the write would land on defaultAgent() and
@@ -3010,6 +3029,7 @@ export const SessionProvider: ParentComponent = (props) => {
     toggleFavorite,
     variantList,
     currentVariant,
+    variantForAgent,
     selectVariant,
     revert,
     revertedCount,

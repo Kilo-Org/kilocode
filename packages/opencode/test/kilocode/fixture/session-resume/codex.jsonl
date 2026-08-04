@@ -1,0 +1,27 @@
+{"type":"session_meta","payload":{"cli_version":"0.8.0","cwd":"/Users/test/project","model_provider":"openai","session_id":"ses_test001"}}
+{"type":"response_item","payload":{"id":"item_001","type":"message","role":"user","content":[{"type":"input_text","text":"Read src/index.ts and then edit it."}]}}
+{"type":"response_item","payload":{"id":"item_002","type":"function_call","call_id":"call_01","name":"read","arguments":"{\"file_path\":\"src/index.ts\"}"}}
+{"type":"response_item","payload":{"id":"item_003","type":"function_call_output","call_id":"call_01","output":"export const x = 1;\nexport const y = 2;"}}
+{"type":"response_item","payload":{"id":"item_004","type":"message","role":"assistant","content":[{"type":"output_text","text":"Done reading. Now editing."}]}}
+{"type":"response_item","payload":{"id":"item_005","type":"function_call","call_id":"call_02","name":"edit","arguments":"{\"file_path\":\"src/index.ts\",\"old_str\":\"export const x = 1;\",\"new_str\":\"export const x = 42;\"}"}}
+{"type":"response_item","payload":{"id":"item_006","type":"function_call","call_id":"call_03","name":"bash","arguments":"{\"command\":\"bun run typecheck\"}"}}
+{"type":"response_item","payload":{"id":"item_007","type":"function_call_output","call_id":"call_02","output":"File edited successfully."}}
+{"type":"response_item","payload":{"id":"item_008","type":"function_call_output","call_id":"call_03","output":"Typecheck passed with no errors."}}
+{"type":"response_item","payload":{"id":"item_009","type":"message","role":"assistant","content":[{"type":"output_text","text":"The edit was applied and typecheck passed."}]}}
+{"type":"turn_context","payload":{}}
+{"type":"response_item","payload":{"id":"item_010","type":"message","role":"user","content":[{"type":"input_text","text":"What is the capital of France?"}]}}
+{"type":"response_item","payload":{"id":"item_011","type":"message","role":"assistant","content":[{"type":"output_text","text":"The capital of France is Paris."}]}}
+{"type":"response_item","payload":{"id":"item_012","type":"message","role":"user","content":[{"type":"input_text","text":"Now run multiple commands."}]}}
+{"type":"response_item","payload":{"id":"item_013","type":"function_call","call_id":"call_04","name":"bash","arguments":"{\"command\":\"ls -la\"}"}}
+{"type":"response_item","payload":{"id":"item_014","type":"function_call","call_id":"call_05","name":"bash","arguments":"{\"command\":\"git status\"}"}}
+{"type":"response_item","payload":{"id":"item_015","type":"function_call_output","call_id":"call_04","output":"total 8\ndrwxr-xr-x  3 user  staff   96 Jan 1 12:00 ."}}
+{"type":"response_item","payload":{"id":"item_016","type":"message","role":"user","content":[{"type":"input_text","text":"One result was lost. Continue."}]}}
+{"type":"response_item","payload":{"id":"item_017","type":"message","role":"assistant","content":[{"type":"output_text","text":"Only one command result arrived."}]}}
+{"type":"response_item","payload":{"id":"item_018","type":"message","role":"user","content":[{"type":"input_text","text":"Repeated call IDs."}]}}
+{"type":"response_item","payload":{"id":"item_019","type":"function_call","call_id":"call_01","name":"read","arguments":"{\"file_path\":\"src/index.ts\"}"}}
+{"type":"response_item","payload":{"id":"item_020","type":"function_call_output","call_id":"call_01","output":"export const x = 42;\nexport const y = 2;"}}
+{"type":"response_item","payload":{"id":"item_021","type":"message","role":"assistant","content":[{"type":"output_text","text":"Done with repeated call ID."}]}}
+{"type":"response_item","payload":{"id":"item_022","type":"message","role":"user","content":[{"type":"input_text","text":"Unsupported content."}]}}
+{"type":"response_item","payload":{"id":"item_023","type":"reasoning","summary":[]}}
+{"type":"event_msg","payload":{}}
+{"type":"response_item","payload":{"id":"item_024","type":"message","role":"assistant","content":[]}}

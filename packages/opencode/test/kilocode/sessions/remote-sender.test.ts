@@ -3585,5 +3585,427 @@ describe("RemoteSender slash commands", () => {
     await Promise.resolve()
     expect(sent).toEqual([{ type: "response", id: "req_rollback", error: "failed to exit session" }])
   })
+
+  // Item 8 locking gap: after exiting one of two attached sessions, the
+  // survivor must still accept send_message (and the host must not exit).
+  test("survivor session keeps accepting send_message after sibling exit_cli", async () => {
+    const { conn, sent } = fakeConn()
+    const exitID = SessionID.make("ses_exit")
+    const keepID = SessionID.make("ses_keep")
+    const owned = new Set<SessionID>([exitID, keepID])
+    const cancelled: SessionID[] = []
+    const detached: SessionID[] = []
+    const calls: SessionPrompt.PromptInput[] = []
+    let exitInvoked = false
+
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/workspace/project-a",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      session: {
+        get: async (id) => info(id),
+        children: async () => [],
+      },
+      hasSession: (id) => owned.has(id),
+      cancelPrompt: async (id) => {
+        cancelled.push(id)
+      },
+      detachSession: async (id) => {
+        detached.push(id)
+        owned.delete(id)
+      },
+      ownedCount: () => owned.size,
+      remoteExit: {
+        get: () => async () => {
+          exitInvoked = true
+        },
+      },
+      prompt: prompts(calls),
+      provide: async (input: any) => input.fn(),
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_exit_sibling",
+      command: "exit_cli",
+      sessionId: exitID,
+      data: { protocolVersion: 1 },
+    })
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(cancelled).toEqual([exitID])
+    expect(detached).toEqual([exitID])
+    expect(owned.has(keepID)).toBe(true)
+    expect(owned.has(exitID)).toBe(false)
+    expect(exitInvoked).toBe(false)
+    expect(sent).toEqual([{ type: "response", id: "req_exit_sibling", result: {} }])
+
+    sender.handle({
+      type: "command",
+      id: "req_survivor_send",
+      command: "send_message",
+      data: {
+        sessionID: keepID,
+        parts: [{ type: "text", text: "still here" }],
+      },
+    })
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(calls).toHaveLength(1)
+    expect(calls[0]?.sessionID).toBe(keepID)
+    expect(sent).toContainEqual({ type: "response", id: "req_survivor_send", result: {} })
+  })
+
+  test("create_session forwards agent, model (with variant), and orgId metadata", async () => {
+    const { conn, sent } = fakeConn()
+    const createCalls: unknown[] = []
+    const org = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
+      session: {
+        get: async (sessionID) => ({ id: sessionID, directory: "/workspace/project-a" }) as any,
+        children: async () => [],
+        create: async (input) => {
+          createCalls.push(input)
+          return { id: SessionID.make("ses_new"), directory: "/workspace/project-a" } as any
+        },
+      },
+      attachSession: async () => {},
+    })
+
+    const response = expectResponse(conn, sent, "req_inherit")
+    sender.handle({
+      type: "command",
+      id: "req_inherit",
+      command: "create_session",
+      data: {
+        protocolVersion: 1,
+        agent: "build",
+        model: { providerID: "kilo", modelID: "kilo-auto/efficient", variant: "high" },
+        orgId: org,
+      },
+    })
+    await response.promise
+    response.restore()
+
+    expect(createCalls).toEqual([
+      {
+        agent: "build",
+        model: {
+          id: ModelV2.ID.make("kilo-auto/efficient"),
+          providerID: ProviderV2.ID.make("kilo"),
+          variant: "high",
+        },
+        metadata: { orgId: org },
+      },
+    ])
+    expect(sent).toEqual([
+      { type: "response", id: "req_inherit", result: { protocolVersion: 1, sessionID: "ses_new" } },
+    ])
+  })
+
+  test("create_session accepts each optional field alone", async () => {
+    const { conn, sent } = fakeConn()
+    const createCalls: unknown[] = []
+    const org = "11111111-2222-4333-8444-555555555555"
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
+      session: {
+        get: async (sessionID) => ({ id: sessionID, directory: "/tmp" }) as any,
+        children: async () => [],
+        create: async (input) => {
+          createCalls.push(input)
+          return { id: SessionID.make(`ses_${createCalls.length}`), directory: "/tmp" } as any
+        },
+      },
+      attachSession: async () => {},
+    })
+
+    for (const [id, data] of [
+      ["req_agent", { protocolVersion: 1, agent: "plan" }],
+      ["req_model", { protocolVersion: 1, model: { providerID: "kilo", modelID: "m1" } }],
+      ["req_org", { protocolVersion: 1, orgId: org }],
+    ] as const) {
+      const response = expectResponse(conn, sent, id)
+      sender.handle({ type: "command", id, command: "create_session", data })
+      await response.promise
+      response.restore()
+    }
+
+    expect(createCalls).toEqual([
+      { agent: "plan" },
+      { model: { id: ModelV2.ID.make("m1"), providerID: ProviderV2.ID.make("kilo") } },
+      { metadata: { orgId: org } },
+    ])
+  })
+
+  test("create_session still rejects unknown fields under strict schema", async () => {
+    const { conn, sent } = fakeConn()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      session: {
+        get: async (sessionID) => ({ id: sessionID, directory: "/tmp" }) as any,
+        children: async () => [],
+        create: async () => ({ id: SessionID.make("ses_x"), directory: "/tmp" }) as any,
+      },
+      attachSession: async () => {},
+    })
+    sender.handle({
+      type: "command",
+      id: "req_strict",
+      command: "create_session",
+      data: { protocolVersion: 1, agent: "build", unknown: true },
+    })
+    expect(sent).toEqual([{ type: "response", id: "req_strict", error: "invalid create_session command" }])
+  })
+
+  test("create_session production default forwards agent, model, metadata into Session.Service.create", async () => {
+    // Omits options.session.create so the production default path runs
+    // (global runtime + Session.Service.use → svc.create(input)).
+    // Stub Session.Service.use so create yields a requirement-free Effect;
+    // the real global runtime then executes it without spying the runtime
+    // (that would trip the promise-facades allowlist).
+    const { conn, sent } = fakeConn()
+    const createCalls: unknown[] = []
+    const org = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+    const createdId = SessionID.make("ses_prod_default")
+    const created = {
+      id: createdId,
+      slug: "prod",
+      projectID: ProjectV2.ID.make("project_test"),
+      directory: "/tmp",
+      title: "New session",
+      version: "test",
+      time: { created: 0, updated: 0 },
+    } satisfies Session.Info
+
+    const useSpy = spyOn(Session.Service, "use").mockImplementation(((fn: (svc: Session.Interface) => unknown) =>
+      fn({
+        create: (input?: Parameters<Session.Interface["create"]>[0]) => {
+          createCalls.push(input)
+          return Effect.succeed(created)
+        },
+      } as Session.Interface)) as typeof Session.Service.use)
+
+    try {
+      const sender = RemoteSender.create({
+        conn,
+        directory: "/tmp",
+        log: nolog,
+        subscribe: fakeBus().subscribe,
+        provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
+        session: {
+          get: async (sessionID) => ({ id: sessionID, directory: "/tmp" }) as any,
+          children: async () => [],
+          // no create → production default
+        },
+        attachSession: async () => {},
+      })
+
+      const response = expectResponse(conn, sent, "req_prod_default")
+      sender.handle({
+        type: "command",
+        id: "req_prod_default",
+        command: "create_session",
+        data: {
+          protocolVersion: 1,
+          agent: "build",
+          model: { providerID: "kilo", modelID: "kilo-auto/efficient", variant: "high" },
+          orgId: org,
+        },
+      })
+      await response.promise
+      response.restore()
+
+      expect(createCalls).toEqual([
+        {
+          agent: "build",
+          model: {
+            id: ModelV2.ID.make("kilo-auto/efficient"),
+            providerID: ProviderV2.ID.make("kilo"),
+            variant: "high",
+          },
+          metadata: { orgId: org },
+        },
+      ])
+      expect(sent).toEqual([
+        {
+          type: "response",
+          id: "req_prod_default",
+          result: { protocolVersion: 1, sessionID: createdId },
+        },
+      ])
+    } finally {
+      useSpy.mockRestore()
+    }
+  })
+
+  test("system session.renamed applies setTitle and marks adoption", async () => {
+    const { conn } = fakeConn()
+    const titles: { sessionID: string; title: string }[] = []
+    const warnings: unknown[][] = []
+    const sid = SessionID.make("ses_renamed")
+    const { clear, consumeRenameAdoption } = await import("../../../src/kilo-sessions/rename-adoptions")
+    clear(sid)
+
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp",
+      log: { ...nolog, warn: (...args: unknown[]) => warnings.push(args) },
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
+      session: {
+        get: async (sessionID) => {
+          if (sessionID !== sid) throw new Error("unknown")
+          return { id: sessionID, directory: "/workspace" } as any
+        },
+        children: async () => [],
+        setTitle: async (input) => {
+          titles.push(input)
+        },
+      },
+    })
+
+    sender.handle({
+      type: "system",
+      event: "session.renamed",
+      data: { sessionId: sid, title: "From cloud" },
+    })
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(titles).toEqual([{ sessionID: sid, title: "From cloud" }])
+    expect(consumeRenameAdoption(sid, "From cloud")).toBe(true)
+    expect(consumeRenameAdoption(sid, "From cloud")).toBe(false)
+  })
+
+  test("system session.renamed tolerates malformed payload and unknown events", async () => {
+    const { conn } = fakeConn()
+    const titles: unknown[] = []
+    const warnings: unknown[][] = []
+    const infos: unknown[][] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp",
+      log: {
+        info: (...args: unknown[]) => infos.push(args),
+        error: () => {},
+        warn: (...args: unknown[]) => warnings.push(args),
+      },
+      subscribe: fakeBus().subscribe,
+      session: {
+        get: async () => {
+          throw new Error("should not get")
+        },
+        children: async () => [],
+        setTitle: async (input) => {
+          titles.push(input)
+        },
+      },
+    })
+
+    sender.handle({ type: "system", event: "session.renamed", data: { title: "missing id" } })
+    sender.handle({ type: "system", event: "session.renamed", data: null })
+    sender.handle({ type: "system", event: "other.event", data: {} })
+    await Promise.resolve()
+
+    expect(titles).toEqual([])
+    expect(warnings.some((w) => w[0] === "malformed session.renamed")).toBe(true)
+    expect(infos.some((i) => i[0] === "system event" && (i[1] as any)?.event === "other.event")).toBe(true)
+  })
+
+  test("system session.renamed skips when session.get fails", async () => {
+    const { conn } = fakeConn()
+    const titles: unknown[] = []
+    const warnings: unknown[][] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp",
+      log: { ...nolog, warn: (...args: unknown[]) => warnings.push(args) },
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
+      session: {
+        get: async () => {
+          throw new Error("not found")
+        },
+        children: async () => [],
+        setTitle: async (input) => {
+          titles.push(input)
+        },
+      },
+    })
+    sender.handle({
+      type: "system",
+      event: "session.renamed",
+      data: { sessionId: "ses_missing", title: "Nope" },
+    })
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(titles).toEqual([])
+    expect(warnings.some((w) => w[0] === "session.renamed apply failed")).toBe(true)
+  })
+
+  test("system session.renamed clears adoption mark when setTitle fails", async () => {
+    const { conn } = fakeConn()
+    const sid = SessionID.make("ses_rename_fail")
+    const { clear, consumeRenameAdoption, markRenameAdopted } = await import(
+      "../../../src/kilo-sessions/rename-adoptions"
+    )
+    clear(sid)
+
+    let sawMarkInsideSetTitle = false
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
+      session: {
+        get: async (sessionID) => {
+          if (sessionID !== sid) throw new Error("unknown")
+          return { id: sessionID, directory: "/workspace" } as any
+        },
+        children: async () => [],
+        setTitle: async () => {
+          // Mark must already be present (mark-before-write). Consume proves it,
+          // then re-mark so the production catch path still has something to clear.
+          expect(consumeRenameAdoption(sid, "Cloud title")).toBe(true)
+          sawMarkInsideSetTitle = true
+          markRenameAdopted(sid, "Cloud title")
+          throw new Error("setTitle boom")
+        },
+      },
+    })
+
+    sender.handle({
+      type: "system",
+      event: "session.renamed",
+      data: { sessionId: sid, title: "Cloud title" },
+    })
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(sawMarkInsideSetTitle).toBe(true)
+    // Production catch must clear the re-mark so a later local write is not skipped.
+    expect(consumeRenameAdoption(sid, "Cloud title")).toBe(false)
+  })
 })
 // kilocode_change end
