@@ -103,7 +103,7 @@ import {
   focusChatSearch,
   LOCAL,
 } from "./navigate"
-import { createProjectNav } from "./project-nav"
+import { buildProjectNavEntries, createProjectNav } from "./project-nav"
 import {
   addPendingTab as addLocalPendingTab,
   nextTabAfterClose,
@@ -882,6 +882,11 @@ const AgentManagerContent: Component = () => {
   )
   /** Map from sidebar item id → 1-based shortcut number (⌘1 for LOCAL, ⌘2 for first worktree, etc.) */
   const shortcutMap = createMemo(() => buildShortcutMap(sidebarOrder()))
+  const projectShortcutMap = createMemo(() =>
+    buildShortcutMap(
+      buildProjectNavEntries(projectList(), projectStates(), projectLive.sessions()).map((entry) => ({ id: entry.id })),
+    )
+  )
 
   const moveToSection = (ids: string[], sec: string | null) =>
     vscode.postMessage({ type: "agentManager.moveToSection", worktreeIds: ids, sectionId: sec })
@@ -2347,6 +2352,7 @@ const AgentManagerContent: Component = () => {
             t={t}
             onSearchRef={(ref) => (sidebarSearchMenu = ref)}
             onShortcuts={handleShowKeyboardShortcuts}
+            shortcutMap={projectShortcutMap}
           />
         </Show>
         <Show when={!multiProject()}>

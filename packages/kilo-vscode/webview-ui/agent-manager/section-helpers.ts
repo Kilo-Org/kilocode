@@ -145,7 +145,7 @@ export function buildSidebarOrder(
 }
 
 /** Build a map from sidebar item id → 1-based shortcut number (1 for LOCAL, 2+ for worktrees). */
-export function buildShortcutMap(order: SidebarItem[]): Map<string, number> {
+export function buildShortcutMap(order: { id: string }[]): Map<string, number> {
   const map = new Map<string, number>()
   for (let i = 0; i < order.length && i < 9; i++) {
     map.set(order[i]!.id, i + 1)

@@ -31,6 +31,8 @@ import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { createProjectStore, type ProjectStore } from "./project/store"
 import { randomColor } from "./section-colors"
 
+const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
+
 interface Props {
   project: AgentProjectSnapshot
   state?: AgentManagerStateMessage
@@ -49,6 +51,7 @@ interface Props {
   onSelectSession: (projectId: string, sessionId: string) => void
   onNewWorktree: (projectId: string) => void
   onDefaultBranch: (projectId: string, selected?: string, detected?: string) => void
+  shortcutMap?: () => Map<string, number>
 }
 
 /** Permanent real sidebar body for one expanded project. */
@@ -214,6 +217,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
         <WorktreeItem
           worktree={worktree}
           sidebarId={`${props.project.id}:${worktree.id}`}
+          shortcut={props.shortcutMap?.().get(`${props.project.id}:wt:${worktree.id}`)}
           label={worktree.label || label()}
           subtitle={worktree.label ? (worktree.label !== worktree.branch ? worktree.branch : undefined) : subtitle()}
           active={active() && props.selection === worktree.id}
@@ -284,6 +288,14 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
             <path d="M6 16.5H14" stroke="currentColor" stroke-linecap="square" />
             <path d="M10 13.5V16.5" stroke="currentColor" />
           </svg>
+          <Show when={props.shortcutMap?.().get(`${props.project.id}:local`)}>
+            {(shortcut) => (
+              <span class="am-shortcut-badge">
+                {isMac ? "⌘" : "Ctrl+"}
+                {shortcut()}
+              </span>
+            )}
+          </Show>
           <div class="am-local-text">
             <span class="am-local-label">{props.t("agentManager.local")}</span>
             <Show when={props.local?.branch}>

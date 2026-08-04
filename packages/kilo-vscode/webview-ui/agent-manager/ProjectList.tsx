@@ -39,6 +39,7 @@ interface Props {
   t: LanguageContextValue["t"]
   onSearchRef: (ref: SidebarSearchMenuRef) => void
   onShortcuts: () => void
+  shortcutMap?: () => Map<string, number>
 }
 
 export const ProjectList: Component<Props> = (props) => {
@@ -224,6 +225,7 @@ export const ProjectList: Component<Props> = (props) => {
           onSelectSession={(projectId, sessionId) => select({ projectId, kind: "session", sessionId })}
           onNewWorktree={newWorktree}
           onDefaultBranch={defaultBranch}
+          shortcutMap={props.shortcutMap}
         />
       )}
     />
