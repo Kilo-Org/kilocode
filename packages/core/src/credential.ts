@@ -4,10 +4,10 @@ import { asc, desc, eq } from "drizzle-orm" // kilocode_change
 // kilocode_change start
 import { Context, Effect, Layer, Option, Schema, Semaphore } from "effect"
 // kilocode_change end
+import { Credential } from "@opencode-ai/schema/credential"
+import { Integration } from "@opencode-ai/schema/integration"
 import { Database } from "./database/database"
-import { IntegrationSchema } from "./integration/schema"
-import { NonNegativeInt, withStatics } from "./schema"
-import { Identifier } from "./util/identifier"
+import { makeGlobalNode } from "./effect/app-node"
 import { CredentialTable } from "./credential/sql"
 // kilocode_change start
 import { FSUtil } from "./fs-util"
@@ -15,39 +15,26 @@ import { Global } from "./global"
 import { DataMigrationTable } from "./data-migration.sql"
 import path from "path"
 import { parse as parseKiloAccounts } from "./kilocode/credential-migration"
+import { NonNegativeInt } from "./schema"
 // kilocode_change end
 
-export const ID = Schema.String.pipe(
-  Schema.brand("Credential.ID"),
-  withStatics((schema) => ({ create: () => schema.make("cred_" + Identifier.ascending()) })),
-)
-export type ID = typeof ID.Type
+export const ID = Credential.ID
+export type ID = Credential.ID
 
-export class OAuth extends Schema.Class<OAuth>("Credential.OAuth")({
-  type: Schema.Literal("oauth"),
-  methodID: IntegrationSchema.MethodID,
-  refresh: Schema.String,
-  access: Schema.String,
-  expires: NonNegativeInt,
-  metadata: Schema.optional(Schema.Record(Schema.String, Schema.String)),
-}) {}
+export const OAuth = Credential.OAuth
+export type OAuth = Credential.OAuth
 
-export class Key extends Schema.Class<Key>("Credential.Key")({
-  type: Schema.Literal("key"),
-  key: Schema.String,
-  metadata: Schema.optional(Schema.Record(Schema.String, Schema.String)),
-}) {}
+export const Key = Credential.Key
+export type Key = Credential.Key
 
-export const Info = Schema.Union([OAuth, Key])
-  .pipe(Schema.toTaggedUnion("type"))
-  .annotate({ identifier: "Credential.Info" })
-export type Info = Schema.Schema.Type<typeof Info>
+export const Value = Credential.Value
+export type Value = Credential.Value
 
-export class Stored extends Schema.Class<Stored>("Credential.Stored")({
+export class Info extends Schema.Class<Info>("Credential.Info")({
   id: ID,
-  integrationID: IntegrationSchema.ID,
+  integrationID: Integration.ID,
   label: Schema.String,
-  value: Info,
+  value: Value,
 }) {}
 
 // kilocode_change start - legacy JSON credential stores that predate the integration credential table
@@ -76,15 +63,15 @@ const LegacyWellKnown = Schema.Struct({
 const LegacyValue = Schema.Union([LegacyOAuth, LegacyKey])
 const LegacyAuth = Schema.Union([LegacyOAuth, LegacyKey, LegacyWellKnown])
 
-const legacyMethod = (integration: IntegrationSchema.ID, type: "oauth" | "api") =>
-  IntegrationSchema.MethodID.make(
-    type === "api" ? "api-key" : integration === IntegrationSchema.ID.make("openai") ? "chatgpt-browser" : "oauth",
+const legacyMethod = (integration: Integration.ID, type: "oauth" | "api") =>
+  Integration.MethodID.make(
+    type === "api" ? "api-key" : integration === Integration.ID.make("openai") ? "chatgpt-browser" : "oauth",
   )
 
-const legacyValue = (integration: IntegrationSchema.ID, credential: Schema.Schema.Type<typeof LegacyValue>): Info =>
+const legacyValue = (integration: Integration.ID, credential: Schema.Schema.Type<typeof LegacyValue>): Value =>
   credential.type === "api"
-    ? new Key({ type: "key", key: credential.key, metadata: credential.metadata })
-    : new OAuth({
+    ? Key.make({ type: "key", key: credential.key, metadata: credential.metadata })
+    : OAuth.make({
         type: "oauth",
         methodID: legacyMethod(integration, credential.type),
         refresh: credential.refresh,
@@ -99,19 +86,19 @@ const legacyValue = (integration: IntegrationSchema.ID, credential: Schema.Schem
 
 export interface Interface {
   /** Returns every stored credential. */
-  readonly all: () => Effect.Effect<Stored[]>
+  readonly all: () => Effect.Effect<Info[]>
   /** Returns stored credentials belonging to one integration. */
-  readonly list: (integrationID: IntegrationSchema.ID) => Effect.Effect<Stored[]>
+  readonly list: (integrationID: Integration.ID) => Effect.Effect<Info[]>
   /** Returns one stored credential by ID. */
-  readonly get: (id: ID) => Effect.Effect<Stored | undefined>
+  readonly get: (id: ID) => Effect.Effect<Info | undefined>
   /** Replaces any credential for an integration and returns the new record. */
   readonly create: (input: {
-    readonly integrationID: IntegrationSchema.ID
-    readonly value: Info
+    readonly integrationID: Integration.ID
+    readonly value: Value
     readonly label?: string
-  }) => Effect.Effect<Stored>
+  }) => Effect.Effect<Info>
   /** Updates the label or secret value of a stored credential. */
-  readonly update: (id: ID, updates: Partial<Pick<Stored, "label" | "value">>) => Effect.Effect<void>
+  readonly update: (id: ID, updates: Partial<Pick<Info, "label" | "value">>) => Effect.Effect<void>
   /** Removes a stored credential. */
   readonly remove: (id: ID) => Effect.Effect<void>
 }
@@ -140,7 +127,7 @@ export const legacyImportLayer = Layer.effectDiscard(
             const used = new Set<ID>()
             const created = Date.now()
             for (const [index, item] of values.entries()) {
-              const integration = IntegrationSchema.ID.make(item.connectorID.replace(/\/+$/, ""))
+              const integration = Integration.ID.make(item.connectorID.replace(/\/+$/, ""))
               const value = legacyValue(integration, item.credential)
               const current = existing.find(
                 (row) =>
@@ -180,7 +167,7 @@ export const legacyImportLayer = Layer.effectDiscard(
     const values = Object.entries(raw.value).flatMap(([integrationID, value]) => {
       const decoded = decode(value)
       if (Option.isNone(decoded)) return []
-      const integration = IntegrationSchema.ID.make(integrationID.replace(/\/+$/, ""))
+      const integration = Integration.ID.make(integrationID.replace(/\/+$/, ""))
       return [{ integration, value: legacyValue(integration, decoded.value) }]
     })
     yield* db.transaction((tx) =>
@@ -211,18 +198,17 @@ export const legacyImportLayer = Layer.effectDiscard(
 )
 // kilocode_change end
 
+// kilocode_change - retained for Kilo migration and compatibility test layers
 export const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const { db } = yield* Database.Service
-    // kilocode_change start
     const fs = Option.getOrUndefined(yield* Effect.serviceOption(FSUtil.Service))
     const global = Option.getOrUndefined(yield* Effect.serviceOption(Global.Service))
-    // kilocode_change end
-    const decode = Schema.decodeUnknownSync(Info)
+    const decode = Schema.decodeUnknownSync(Value)
     const stored = (row: typeof CredentialTable.$inferSelect) => {
       if (!row.integration_id) return
-      return new Stored({
+      return new Info({
         id: row.id,
         integrationID: row.integration_id,
         label: row.label,
@@ -233,14 +219,14 @@ export const layer = Layer.effect(
     // kilocode_change start - process-local workspace credentials override host storage without being persisted
     const content = process.env.KILO_AUTH_CONTENT
     const injected = yield* content === undefined
-      ? Effect.succeed(new Map<IntegrationSchema.ID, Stored>())
+      ? Effect.succeed(new Map<Integration.ID, Info>())
       : Effect.try({
           try: () => JSON.parse(content) as unknown,
           catch: (cause) => cause,
         }).pipe(
           Effect.flatMap((raw) => {
             if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
-              return Effect.succeed(new Map<IntegrationSchema.ID, Stored>())
+              return Effect.succeed(new Map<Integration.ID, Info>())
             }
             const decode = Schema.decodeUnknownOption(LegacyAuth)
             return Effect.succeed(
@@ -248,11 +234,11 @@ export const layer = Layer.effect(
                 Object.entries(raw).flatMap(([name, raw]) => {
                   const decoded = decode(raw)
                   if (Option.isNone(decoded) || decoded.value.type === "wellknown") return []
-                  const integration = IntegrationSchema.ID.make(name.replace(/\/+$/, ""))
+                  const integration = Integration.ID.make(name.replace(/\/+$/, ""))
                   return [
                     [
                       integration,
-                      new Stored({
+                      new Info({
                         id: ID.make(`cred_env_${Buffer.from(integration).toString("base64url")}`),
                         integrationID: integration,
                         label: "Environment",
@@ -266,7 +252,7 @@ export const layer = Layer.effect(
           }),
           Effect.catch((cause) =>
             Effect.logWarning("invalid KILO_AUTH_CONTENT; using no process-local credentials", { cause }).pipe(
-              Effect.as(new Map<IntegrationSchema.ID, Stored>()),
+              Effect.as(new Map<Integration.ID, Info>()),
             ),
           ),
         )
@@ -275,7 +261,7 @@ export const layer = Layer.effect(
     const find = (id: ID) => [...local.values()].find((credential) => credential.id === id)
 
     const lock = Semaphore.makeUnsafe(1)
-    const writeLegacy = (integration: IntegrationSchema.ID) =>
+    const writeLegacy = (integration: Integration.ID) =>
       lock.withPermit(
         Effect.gen(function* () {
           if (!fs || !global || isolated) return
@@ -358,7 +344,7 @@ export const layer = Layer.effect(
         return row ? stored(row) : undefined
       }),
       create: Effect.fn("Credential.create")(function* (input) {
-        const credential = new Stored({
+        const credential = new Info({
           id: ID.create(),
           integrationID: input.integrationID,
           label: input.label ?? "default",
@@ -400,7 +386,7 @@ export const layer = Layer.effect(
           if (!credential) return
           local.set(
             credential.integrationID,
-            new Stored({
+            new Info({
               ...credential,
               label: updates.label ?? credential.label,
               value: updates.value ?? credential.value,
@@ -434,17 +420,8 @@ export const layer = Layer.effect(
   }),
 )
 
-export const defaultLayer = layer.pipe(
-  Layer.provide(Database.defaultLayer),
-  // kilocode_change start
-  Layer.provide(FSUtil.defaultLayer),
-  Layer.provide(Global.defaultLayer),
-  Layer.provideMerge(
-    legacyImportLayer.pipe(
-      Layer.provide(Database.defaultLayer),
-      Layer.provide(FSUtil.defaultLayer),
-      Layer.provide(Global.defaultLayer),
-    ),
-  ),
-  // kilocode_change end
-)
+export const node = makeGlobalNode({
+  service: Service,
+  layer: layer.pipe(Layer.provideMerge(legacyImportLayer)), // kilocode_change
+  deps: [Database.node, FSUtil.node, Global.node], // kilocode_change
+})

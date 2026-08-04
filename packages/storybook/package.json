@@ -24,7 +24,8 @@
     "storybook": "^10.2.13",
     "storybook-solidjs-vite": "^10.0.9",
     "typescript": "catalog:",
-    "vite": "catalog:"
+    "vite": "catalog:",
+    "@opencode-ai/session-ui": "workspace:*"
   },
   "version": "7.4.20",
   "dependencies": {},

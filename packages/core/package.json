@@ -17,7 +17,8 @@
     "opencode": "./bin/opencode"
   },
   "exports": {
-    "./public": "./src/public/index.ts",
+    "./effect/layer-node": "./src/effect/layer-node.ts",
+    "./effect/app-node": "./src/effect/app-node.ts",
     "./session/runner": "./src/session/runner/index.ts",
     "./system-context": "./src/system-context/index.ts",
     "./*": "./src/*.ts"
@@ -108,7 +109,7 @@
     "gitlab-ai-provider": "6.9.3",
     "google-auth-library": "10.5.0",
     "immer": "11.1.4",
-    "venice-ai-sdk-provider": "2.0.2",
+    "venice-ai-sdk-provider": "2.1.1",
     "jsonc-parser": "3.3.1",
     "@effect/sql-sqlite-bun": "catalog:",
     "@lydell/node-pty": "catalog:",
@@ -125,7 +126,10 @@
     "turndown": "7.2.0",
     "which": "6.0.1",
     "@ff-labs/fff-bun": "0.9.4",
-    "@silvia-odwyer/photon-node": "0.3.4"
+    "@silvia-odwyer/photon-node": "0.3.4",
+    "@opencode-ai/schema": "workspace:*",
+    "@kilocode/plugin": "workspace:*",
+    "diff": "catalog:"
   },
   "overrides": {
     "drizzle-orm": "catalog:"
