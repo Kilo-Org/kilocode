@@ -90,7 +90,8 @@ export const ProjectsSection: Component<ProjectsSectionProps> = (props) => (
                   </Show>
                 }
                 onToggle={() => {
-                  if (!project().trusted && !project().missing) {
+                  if (project().missing) return
+                  if (!project().trusted) {
                     props.onTrust(project().id)
                     return
                   }
