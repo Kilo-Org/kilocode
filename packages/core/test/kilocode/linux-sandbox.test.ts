@@ -10,6 +10,7 @@ import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { backendSupport, run, type Profile } from "@kilocode/sandbox"
 import { CurrentProxyFactory, startProxy, type ProxyFactory } from "@kilocode/sandbox"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 
 const linux = process.platform === "linux" ? test : test.skip
 const linuxIPv6 = process.platform === "linux" && supportsIPv6() ? test : test.skip
@@ -44,7 +45,7 @@ function execute(command: string, args: ReadonlyArray<string>, cwd: string, poli
           .spawn(ChildProcess.make(command, args, { cwd }))
           .pipe(Effect.flatMap((handle) => handle.exitCode)),
       ),
-    ).pipe(Effect.provide(CrossSpawnSpawner.defaultLayer)),
+    ).pipe(Effect.provide(AppNodeBuilder.build(CrossSpawnSpawner.node))),
   )
   return factory ? effect.pipe(Effect.provideService(CurrentProxyFactory, factory)) : effect
 }
@@ -68,7 +69,7 @@ function output(command: string, args: ReadonlyArray<string>, cwd: string, polic
           ),
         ),
       ),
-    ).pipe(Effect.provide(CrossSpawnSpawner.defaultLayer), Effect.provideService(CurrentProxyFactory, factory)),
+    ).pipe(Effect.provide(AppNodeBuilder.build(CrossSpawnSpawner.node)), Effect.provideService(CurrentProxyFactory, factory)),
   )
 }
 
@@ -726,7 +727,7 @@ linux("applies the profile environment without inheriting denied values", async 
             )
             .pipe(Effect.flatMap((handle) => handle.exitCode)),
         ),
-      ).pipe(Effect.provide(CrossSpawnSpawner.defaultLayer)),
+      ).pipe(Effect.provide(AppNodeBuilder.build(CrossSpawnSpawner.node))),
     )
     expect(Number(await Effect.runPromise(effect))).toBe(0)
   } finally {
@@ -807,7 +808,7 @@ linux("terminates daemonized descendants when the command scope closes", async (
               })
             }),
           ),
-        ).pipe(Effect.provide(CrossSpawnSpawner.defaultLayer)),
+        ).pipe(Effect.provide(AppNodeBuilder.build(CrossSpawnSpawner.node))),
       ),
     )
 

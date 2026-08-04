@@ -1,11 +1,12 @@
 import { describe, expect, test } from "bun:test"
 import { Effect } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
-import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { settle } from "@opencode-ai/core/kilocode/exit-code"
 import { testEffect } from "../lib/effect"
 
-const fx = testEffect(CrossSpawnSpawner.defaultLayer)
+const fx = testEffect(AppNodeBuilder.build(CrossSpawnSpawner.node))
 
 const code = (exit: readonly [number | null, NodeJS.Signals | null]) => Effect.runPromise(settle(exit))
 

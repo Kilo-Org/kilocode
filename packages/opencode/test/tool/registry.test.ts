@@ -57,14 +57,14 @@ const brokenPluginLayer = Layer.succeed(
 )
 
 const root = LayerNode.group([ToolRegistry.node, Agent.node])
-const registryLayer = (opts: RegistryLayerOptions = {}) =>
-  LayerNode.buildLayer(root, {
-    replacements: [
-      LayerNode.replace(Config.node, opts.config ? TestConfig.layer(opts.config) : configLayer), // kilocode_change
-      LayerNode.replace(RuntimeFlags.node, RuntimeFlags.layer(opts.flags ?? {})),
-      ...(opts.plugin ? [LayerNode.replace(Plugin.node, opts.plugin)] : []),
-    ],
-  })
+const registryLayer = (opts: RegistryLayerOptions = {}) => {
+  const replacements = [
+    [Config.node, opts.config ? TestConfig.layer(opts.config) : configLayer], // kilocode_change
+    [RuntimeFlags.node, RuntimeFlags.layer(opts.flags ?? {})],
+  ] as const
+  if (!opts.plugin) return LayerNode.compile(root, replacements)
+  return LayerNode.compile(root, [...replacements, [Plugin.node, opts.plugin] as const])
+}
 
 const it = testEffect(registryLayer())
 const scout = testEffect(registryLayer({ flags: { experimentalScout: true } })) // kilocode_change

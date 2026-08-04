@@ -1,5 +1,7 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { describe, expect } from "bun:test"
-import { Effect, Layer } from "effect"
+import { Effect } from "effect"
 import path from "path"
 import { seedProject } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
@@ -14,7 +16,7 @@ import { AbsolutePath } from "@opencode-ai/core/schema"
 import * as Log from "@opencode-ai/core/util/log"
 
 Log.init({ print: false })
-const layer = Layer.mergeAll(Session.defaultLayer, Database.defaultLayer)
+const layer = LayerNode.compile(LayerNode.group([Session.node, SessionProjector.node, Database.node]))
 const it = testEffect(layer)
 
 describe("Kilo Session.list", () => {

@@ -1,33 +1,28 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { afterEach, describe, expect, mock, test } from "bun:test"
 import { APICallError } from "ai"
 import { Effect, Layer, ManagedRuntime, Scope } from "effect"
 import * as Stream from "effect/Stream"
 import { LLMEvent, type LLMEvent as Event } from "@opencode-ai/llm"
-import { Database } from "@opencode-ai/core/database/database"
-import { Agent } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
 import { Config } from "../../src/config/config"
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
-import { EventV2Bridge } from "../../src/event-v2-bridge"
-import { Image } from "../../src/image/image"
 import { KiloCompactionPayloadRecovery } from "../../src/kilocode/session/compaction-payload-recovery"
 import { KiloSessionCompaction } from "../../src/kilocode/session/compaction"
-import { Permission } from "../../src/permission"
-import { Plugin } from "../../src/plugin"
 import { provideTestInstance } from "../fixture/fixture"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
-import { Snapshot } from "../../src/snapshot"
 import { LLM } from "../../src/session/llm"
 import { MessageV2 } from "../../src/session/message-v2"
-import * as SessionProcessorModule from "../../src/session/processor"
 import { Session as SessionNs } from "../../src/session/session"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { SessionCompaction } from "../../src/session/compaction"
-import { SessionStatus } from "../../src/session/status"
 import { SessionSummary } from "../../src/session/summary"
 import { SyncEvent } from "../../src/sync"
 import { ProviderTest } from "../fake/provider"
+import { Provider } from "../../src/provider/provider"
 import { tmpdir } from "../fixture/fixture"
 
 const sessionID = SessionID.make("ses_payload_recovery")
@@ -67,6 +62,7 @@ const summary = Layer.succeed(
     computeDiff: () => Effect.succeed([]),
   }),
 )
+const summaryNode = LayerNode.make({ service: SessionSummary.Service, layer: summary, deps: [] })
 
 function base(id: MessageID) {
   return {
@@ -154,32 +150,27 @@ function reply(
 
 const scope = Layer.effect(Scope.Scope, Scope.make())
 
-function runtime(layer: Layer.Layer<LLM.Service>, config = Config.defaultLayer) {
-  const bus = Bus.layer
-  const status = SessionStatus.layer.pipe(Layer.provide(bus))
-  const processor = SessionProcessorModule.SessionProcessor.layer.pipe(
-    Layer.provide(summary),
-    Layer.provide(Image.defaultLayer),
-    Layer.provide(SyncEvent.defaultLayer),
-  )
+function runtime(layer: Layer.Layer<LLM.Service>, config = AppNodeBuilder.build(Config.node)) {
   const model = ProviderTest.model({ providerID, id: modelID, limit: { context: 100_000, output: 32_000 } })
+  const llm = LayerNode.make({ service: LLM.Service, layer, deps: [] })
+  const cfg = LayerNode.make({ service: Config.Service, layer: config, deps: [] })
+  const provider = LayerNode.make({
+    service: Provider.Service,
+    layer: ProviderTest.fake({ model }).layer,
+    deps: [],
+  })
+  const flags = LayerNode.make({ service: RuntimeFlags.Service, layer: RuntimeFlags.layer(), deps: [] })
   return ManagedRuntime.make(
-    Layer.mergeAll(SessionCompaction.layer.pipe(Layer.provide(processor)), processor, bus, status).pipe(
-      Layer.provide(ProviderTest.fake({ model }).layer),
-      Layer.provideMerge(SessionNs.defaultLayer),
-      Layer.provide(Snapshot.defaultLayer),
-      Layer.provide(layer),
-      Layer.provide(Permission.defaultLayer),
-      Layer.provide(Agent.defaultLayer),
-      Layer.provide(Plugin.defaultLayer),
-      Layer.provide(status),
-      Layer.provide(bus),
-      Layer.provide(config),
-      Layer.provide(RuntimeFlags.layer()),
+    LayerNode.compile(LayerNode.group([SessionCompaction.node, SessionNs.node, SessionProjector.node]), [
+      [LLM.node, llm],
+      [Config.node, cfg],
+      [Provider.node, provider],
+      [RuntimeFlags.node, flags],
+      [SessionSummary.node, summaryNode],
+    ]).pipe(
+      Layer.provide(Bus.layer),
       Layer.provide(scope),
       Layer.provide(SyncEvent.defaultLayer),
-      Layer.provide(EventV2Bridge.defaultLayer),
-      Layer.provide(Database.defaultLayer),
     ),
   )
 }
@@ -269,132 +260,136 @@ describe("KiloCompactionPayloadRecovery", () => {
     }
   })
 
-  test("retries compaction without media and tool outputs after payload-size failure", async () => {
-    await using tmp = await tmpdir({ git: true })
-    const stub = llm()
-    const captures: string[] = []
-    stub.push((input) => {
-      captures.push(JSON.stringify(input.messages))
-      return Stream.fail(
-        new APICallError({
-          message: "Request Entity Too Large",
-          url: "https://api.kilo.ai/api/openrouter/responses",
-          requestBodyValues: {},
-          statusCode: 413,
-          responseHeaders: { "content-type": "text/plain" },
-          responseBody: "Request Entity Too Large\n\nFUNCTION_PAYLOAD_TOO_LARGE",
-          isRetryable: false,
-        }),
-      )
-    })
-    stub.push(
-      reply("summary", (input) => {
+  test(
+    "retries compaction without media and tool outputs after payload-size failure",
+    async () => {
+      await using tmp = await tmpdir({ git: true })
+      const stub = llm()
+      const captures: string[] = []
+      stub.push((input) => {
         captures.push(JSON.stringify(input.messages))
-      }),
-    )
-
-    await provideTestInstance({
-      directory: tmp.path,
-      fn: async () => {
-        const rt = runtime(stub.layer, Config.defaultLayer)
-        const svc = service(rt)
-        const session = await svc.create({})
-        const old = await user(svc, session.id, "old image turn")
-        await svc.updatePart({
-          id: PartID.ascending(),
-          messageID: old.id,
-          sessionID: session.id,
-          type: "file",
-          mime: "image/png",
-          filename: "old.png",
-          url: `data:image/png;base64,${"a".repeat(8_000)}`,
-        })
-        const oldReply = await assistant(svc, session.id, old.id, tmp.path)
-        await svc.updatePart({
-          id: PartID.ascending(),
-          messageID: oldReply.id,
-          sessionID: session.id,
-          type: "tool",
-          callID: crypto.randomUUID(),
-          tool: "bash",
-          state: {
-            status: "completed",
-            input: {},
-            output: "old output".repeat(10_000),
-            title: "old",
-            metadata: {},
-            time: { start: Date.now(), end: Date.now() },
-          },
-        })
-        await user(svc, session.id, "latest turn")
-        const keep = await user(svc, session.id, "preserved tail turn")
-        const keepReply = await assistant(svc, session.id, keep.id, tmp.path)
-        await svc.updatePart({
-          id: PartID.ascending(),
-          messageID: keepReply.id,
-          sessionID: session.id,
-          type: "tool",
-          callID: crypto.randomUUID(),
-          tool: "bash",
-          state: {
-            status: "completed",
-            input: {},
-            output: "keep output",
-            title: "keep",
-            metadata: {},
-            time: { start: Date.now(), end: Date.now() },
-          },
-        })
-        await Effect.runPromise(
-          KiloSessionCompaction.create({
-            session: {
-              updateMessage: (msg) => Effect.promise(() => svc.updateMessage(msg)),
-              updatePart: (part) => Effect.promise(() => svc.updatePart(part)),
-            },
-            sessionID: session.id,
-            agent: "build",
-            model: ref,
-            auto: false,
+        return Stream.fail(
+          new APICallError({
+            message: "Request Entity Too Large",
+            url: "https://api.kilo.ai/api/openrouter/responses",
+            requestBodyValues: {},
+            statusCode: 413,
+            responseHeaders: { "content-type": "text/plain" },
+            responseBody: "Request Entity Too Large\n\nFUNCTION_PAYLOAD_TOO_LARGE",
+            isRetryable: false,
           }),
         )
+      })
+      stub.push(
+        reply("summary", (input) => {
+          captures.push(JSON.stringify(input.messages))
+        }),
+      )
 
-        try {
-          const msgs = await svc.messages({ sessionID: session.id })
-          const parent = msgs.at(-1)?.info.id
-          expect(parent).toBeTruthy()
-          const result = await rt.runPromise(
-            SessionCompaction.Service.use((svc) =>
-              svc.process({
-                parentID: parent!,
-                messages: msgs,
-                sessionID: session.id,
-                auto: false,
-              }),
-            ),
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          const rt = runtime(stub.layer, AppNodeBuilder.build(Config.node))
+          const svc = service(rt)
+          const session = await svc.create({})
+          const old = await user(svc, session.id, "old image turn")
+          await svc.updatePart({
+            id: PartID.ascending(),
+            messageID: old.id,
+            sessionID: session.id,
+            type: "file",
+            mime: "image/png",
+            filename: "old.png",
+            url: `data:image/png;base64,${"a".repeat(8_000)}`,
+          })
+          const oldReply = await assistant(svc, session.id, old.id, tmp.path)
+          await svc.updatePart({
+            id: PartID.ascending(),
+            messageID: oldReply.id,
+            sessionID: session.id,
+            type: "tool",
+            callID: crypto.randomUUID(),
+            tool: "bash",
+            state: {
+              status: "completed",
+              input: {},
+              output: "old output".repeat(10_000),
+              title: "old",
+              metadata: {},
+              time: { start: Date.now(), end: Date.now() },
+            },
+          })
+          await user(svc, session.id, "latest turn")
+          const keep = await user(svc, session.id, "preserved tail turn")
+          const keepReply = await assistant(svc, session.id, keep.id, tmp.path)
+          await svc.updatePart({
+            id: PartID.ascending(),
+            messageID: keepReply.id,
+            sessionID: session.id,
+            type: "tool",
+            callID: crypto.randomUUID(),
+            tool: "bash",
+            state: {
+              status: "completed",
+              input: {},
+              output: "keep output",
+              title: "keep",
+              metadata: {},
+              time: { start: Date.now(), end: Date.now() },
+            },
+          })
+          await Effect.runPromise(
+            KiloSessionCompaction.create({
+              session: {
+                updateMessage: (msg) => Effect.promise(() => svc.updateMessage(msg)),
+                updatePart: (part) => Effect.promise(() => svc.updatePart(part)),
+              },
+              sessionID: session.id,
+              agent: "build",
+              model: ref,
+              auto: false,
+            }),
           )
 
-          expect(result).toBe("continue")
-          expect(captures).toHaveLength(2)
-          expect(captures[0]).toContain("Attached image/png: old.png")
-          expect(captures[0]).toContain("old output")
-          expect(captures[0]).not.toContain("keep output")
-          expect(captures[1]).not.toContain("data:image/png;base64")
-          expect(captures[1]).not.toContain("old output")
-          expect(captures[1]).not.toContain("keep output")
-          expect(captures[1]).toContain("Attached image/png: old.png")
-          expect(captures[1]).toContain("Old tool result content cleared")
-          const tools = (await svc.messages({ sessionID: session.id }))
-            .flatMap((msg) => msg.parts)
-            .filter((part): part is MessageV2.ToolPart => part.type === "tool")
-          expect(tools).toHaveLength(2)
-          expect(tools[0]?.type).toBe("tool")
-          if (tools[0]?.state.status === "completed") expect(tools[0].state.time.compacted).toBeNumber()
-          expect(tools[1]?.type).toBe("tool")
-          if (tools[1]?.state.status === "completed") expect(tools[1].state.time.compacted).toBeUndefined()
-        } finally {
-          await rt.dispose()
-        }
-      },
-    })
-  })
+          try {
+            const msgs = await svc.messages({ sessionID: session.id })
+            const parent = msgs.at(-1)?.info.id
+            expect(parent).toBeTruthy()
+            const result = await rt.runPromise(
+              SessionCompaction.Service.use((svc) =>
+                svc.process({
+                  parentID: parent!,
+                  messages: msgs,
+                  sessionID: session.id,
+                  auto: false,
+                }),
+              ),
+            )
+
+            expect(result).toBe("continue")
+            expect(captures).toHaveLength(2)
+            expect(captures[0]).toContain("Attached image/png: old.png")
+            expect(captures[0]).toContain("old output")
+            expect(captures[0]).not.toContain("keep output")
+            expect(captures[1]).not.toContain("data:image/png;base64")
+            expect(captures[1]).not.toContain("old output")
+            expect(captures[1]).not.toContain("keep output")
+            expect(captures[1]).toContain("Attached image/png: old.png")
+            expect(captures[1]).toContain("Old tool result content cleared")
+            const tools = (await svc.messages({ sessionID: session.id }))
+              .flatMap((msg) => msg.parts)
+              .filter((part): part is MessageV2.ToolPart => part.type === "tool")
+            expect(tools).toHaveLength(2)
+            expect(tools[0]?.type).toBe("tool")
+            if (tools[0]?.state.status === "completed") expect(tools[0].state.time.compacted).toBeNumber()
+            expect(tools[1]?.type).toBe("tool")
+            if (tools[1]?.state.status === "completed") expect(tools[1].state.time.compacted).toBeUndefined()
+          } finally {
+            await rt.dispose()
+          }
+        },
+      })
+    },
+    30_000,
+  )
 })

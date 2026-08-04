@@ -279,10 +279,12 @@ export function init() {
         name: "permission.allow_everything",
         get title() {
           return isAllowEverything(sync.data.config.permission)
-            ? "Disable auto-approve mode"
-            : "Enable auto-approve mode"
+            ? "Disable saved auto-approve"
+            : "Enable saved auto-approve"
         },
-        desc: "Toggle auto-approve for all permission prompts, saved to global config",
+        // kilocode_change - the saved rule is server side, so it also stops VS Code, JetBrains and
+        // headless runs from prompting
+        desc: "Toggle auto-approve for all permission prompts, saved to global config and shared with every client",
         category: "System",
         slashName: "auto-approve",
         slashAliases: ["autoapprove", "approve-all", "approveall"],

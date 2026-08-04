@@ -559,14 +559,8 @@ export const kiloScenarios: Scenario[] = [
         check(body === true, "skill removal should return true")
         const location = path.join(directory(ctx), ".kilo/skill/httpapi-remove/SKILL.md")
         const sentinel = path.join(directory(ctx), ".kilo/skill/httpapi-remove/KEEP.txt")
-        check(
-          !(yield* Effect.promise(() => Bun.file(location).exists())),
-          "removed skill should not remain on disk",
-        )
-        check(
-          yield* Effect.promise(() => Bun.file(sentinel).exists()),
-          "skill removal should preserve sibling files",
-        )
+        check(!(yield* Effect.promise(() => Bun.file(location).exists())), "removed skill should not remain on disk")
+        check(yield* Effect.promise(() => Bun.file(sentinel).exists()), "skill removal should preserve sibling files")
       }),
     ),
   http.protected
