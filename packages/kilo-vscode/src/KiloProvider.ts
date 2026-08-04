@@ -4758,7 +4758,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return !directory || this.isCurrentProjectDirectory(directory)
   }
 
-  private refreshGitStatusFromPart(event: Extract<ProviderEvent, { type: "message.part.updated" }>, sessionID?: string) {
+  private refreshGitStatusFromPart(
+    event: Extract<ProviderEvent, { type: "message.part.updated" }>,
+    sessionID?: string,
+  ) {
     const part = event.properties.part as {
       type?: string
       metadata?: Record<string, unknown>
