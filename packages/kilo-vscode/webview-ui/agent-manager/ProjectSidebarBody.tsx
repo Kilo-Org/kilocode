@@ -102,7 +102,9 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
   const members = (sectionId: string) => sorted().filter((wt) => wt.sectionId === sectionId)
   const ungrouped = createMemo(() => sorted().filter((wt) => !wt.sectionId))
   const top = createMemo(() => buildTopLevelItems(sections(), ungrouped(), sorted(), order()))
-  const sidebarOrder = createMemo(() => projectSidebarOrder(top(), sorted(), sections(), members, localSessions()))
+  const sidebarOrder = createMemo(() =>
+    projectSidebarOrder(top(), sorted(), sections(), members, state()?.sessionsCollapsed ? [] : localSessions()),
+  )
   const post = (message: Record<string, unknown>) =>
     vscode.postMessage({ ...message, projectId: props.project.id } as never)
 
