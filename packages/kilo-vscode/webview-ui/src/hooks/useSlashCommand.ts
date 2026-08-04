@@ -56,6 +56,7 @@ export function useSlashCommand(
   vscode: VSCodeContext,
   sandbox: { action: () => void; enabled: Accessor<boolean> },
   exclude?: Set<string> | Accessor<Set<string>>,
+  include?: Set<string> | Accessor<Set<string>>,
 ): SlashCommand {
   const [server, setServer] = createSignal<SlashCommandInfo[]>([])
   const [query, setQuery] = createSignal<string | null>(null)
@@ -83,7 +84,7 @@ export function useSlashCommand(
     {
       name: "models",
       description: "Switch the AI model",
-      hints: [],
+      hints: ["model"],
       action: () => {
         window.dispatchEvent(new CustomEvent("openModelPicker"))
       },
@@ -192,17 +193,23 @@ export function useSlashCommand(
     return exclude
   }
 
+  const included = () => {
+    if (typeof include === "function") return include()
+    return include
+  }
+
   const client = () => {
     const set = excluded()
-    if (!set) return all
-    return all.filter((c) => !set.has(c.name))
+    const only = included()
+    return all.filter((c) => !set?.has(c.name) && (!only || only.has(c.name)))
   }
 
   const commands = (): SlashCommandEntry[] => {
     const list = client()
     const names = new Set(list.map((c) => c.name))
     const set = excluded()
-    const filtered = server().filter((c) => !names.has(c.name) && !set?.has(c.name))
+    const only = included()
+    const filtered = server().filter((c) => !names.has(c.name) && !set?.has(c.name) && (!only || only.has(c.name)))
     return [...list, ...filtered]
   }
 
