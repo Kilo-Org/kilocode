@@ -36,6 +36,8 @@ interface Props {
   state?: AgentManagerStateMessage
   store?: ProjectStore
   busy?: (id: string) => boolean
+  working?: (id: string) => boolean
+  localBusy?: () => boolean
   stats?: Record<string, WorktreeGitStats>
   local?: LocalGitStats
   prs?: Record<string, PRStatus | null>
@@ -219,7 +221,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           active={active() && props.selection === worktree.id}
           pendingDelete={pending() === worktree.id}
           busy={props.busy?.(worktree.id) ?? false}
-          working={runs()[worktree.id]?.state === "running"}
+          working={props.working?.(worktree.id) || runs()[worktree.id]?.state === "running"}
           stale={state()?.staleWorktreeIds?.includes(worktree.id) === true}
           stats={props.stats?.[worktree.id]}
           sessions={sessions(worktree.id).length}
@@ -279,11 +281,13 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           data-sidebar-id={`${props.project.id}:local`}
           onClick={() => props.onSelectLocal(props.project.id)}
         >
-          <svg class="am-local-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="2.5" y="3.5" width="15" height="10" rx="1" stroke="currentColor" />
-            <path d="M6 16.5H14" stroke="currentColor" stroke-linecap="square" />
-            <path d="M10 13.5V16.5" stroke="currentColor" />
-          </svg>
+          <Show when={!props.localBusy?.()} fallback={<Spinner class="am-worktree-spinner" />}>
+            <svg class="am-local-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="2.5" y="3.5" width="15" height="10" rx="1" stroke="currentColor" />
+              <path d="M6 16.5H14" stroke="currentColor" stroke-linecap="square" />
+              <path d="M10 13.5V16.5" stroke="currentColor" />
+            </svg>
+          </Show>
           <div class="am-local-text">
             <span class="am-local-label">{props.t("agentManager.local")}</span>
             <Show when={props.local?.branch}>
