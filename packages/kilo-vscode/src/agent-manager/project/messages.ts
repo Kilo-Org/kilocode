@@ -196,8 +196,8 @@ async function setExpanded(id: string, expanded: boolean, deps: ProjectMessageDe
   }
   await deps.registry.setExpanded(id, expanded)
   if (expanded) {
-    deps.contexts.expand(id)
-    deps.expand(ctx)
+    const next = deps.contexts.expand(id)
+    if (next) deps.expand(next)
   }
   if (!expanded) deps.contexts.collapse(id)
   deps.push()

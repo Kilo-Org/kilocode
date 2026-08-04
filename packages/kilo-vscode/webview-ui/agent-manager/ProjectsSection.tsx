@@ -96,7 +96,7 @@ export const ProjectsSection: Component<ProjectsSectionProps> = (props) => (
                   }
                   const expanded = !project().expanded
                   props.onExpand(project().id, expanded)
-                  if (!project().active && project().trusted) props.onSelect(project().id)
+                  if (!project().active && project().trusted && !project().missing) props.onSelect(project().id)
                 }}
               />
               <Show when={project().expanded}>

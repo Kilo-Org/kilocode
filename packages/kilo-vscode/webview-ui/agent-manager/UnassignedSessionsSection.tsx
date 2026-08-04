@@ -33,6 +33,7 @@ export const UnassignedSessionsSection: Component<Props> = (props) => {
       <SidebarSectionHeader
         class="am-section-header am-section-toggle"
         expanded={!props.collapsed()}
+        ariaLabel={t("agentManager.section.sessions")}
         label={<span class="am-section-label">{t("agentManager.section.sessions")}</span>}
         onToggle={props.onToggle}
       />

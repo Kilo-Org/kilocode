@@ -14,31 +14,30 @@ interface Props {
 
 /** Shared layout for sidebar headings with a fixed leading control column. */
 export const SidebarSectionHeader: Component<Props> = (props) => {
-  const keydown = (event: KeyboardEvent) => {
-    if (!props.onToggle || event.target !== event.currentTarget) return
-    if (event.key !== "Enter" && event.key !== " ") return
-    event.preventDefault()
-    props.onToggle()
-  }
-
   return (
     <div
-      class={`am-sidebar-header${props.class ? ` ${props.class}` : ""}`}
-      role={props.onToggle ? "button" : undefined}
-      tabIndex={props.onToggle ? 0 : undefined}
-      aria-expanded={props.onToggle ? props.expanded : undefined}
-      aria-label={props.ariaLabel}
+      class={`am-sidebar-header${props.onToggle ? " am-sidebar-header-toggleable" : ""}${props.class ? ` ${props.class}` : ""}`}
       title={props.title}
       onClick={(event) => {
         if (event.button === 0) props.onToggle?.()
       }}
-      onKeyDown={keydown}
     >
       <div class="am-sidebar-header-main">
         <Show when={props.onToggle}>
-          <span class="am-sidebar-header-chevron" aria-hidden="true">
-            <Icon name={props.expanded ? "chevron-down" : "chevron-right"} size="small" />
-          </span>
+          <button
+            class="am-sidebar-header-toggle"
+            type="button"
+            aria-expanded={props.expanded}
+            aria-label={props.ariaLabel}
+            onClick={(event) => {
+              event.stopPropagation()
+              props.onToggle?.()
+            }}
+          >
+            <span class="am-sidebar-header-chevron" aria-hidden="true">
+              <Icon name={props.expanded ? "chevron-down" : "chevron-right"} size="small" />
+            </span>
+          </button>
         </Show>
         <div class="am-sidebar-header-label">{props.label}</div>
       </div>

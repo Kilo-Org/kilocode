@@ -31,16 +31,23 @@ const SectionHeader: Component<Props> = (props) => {
   const { t } = useLanguage()
   const [renaming, setRenaming] = createSignal(false)
   const [value, setValue] = createSignal("")
+  let cancelled = false
 
   const border = () => colorCss(props.section.color) ?? "var(--vscode-panel-border)"
 
   const startRename = () => {
+    cancelled = false
     setValue(props.section.name)
     setRenaming(true)
   }
 
   const commit = () => {
+    if (cancelled) {
+      cancelled = false
+      return
+    }
     const trimmed = value().trim()
+    cancelled = true
     setRenaming(false)
     props.onRenameEnd?.()
     if (trimmed && trimmed !== props.section.name) {
@@ -49,6 +56,7 @@ const SectionHeader: Component<Props> = (props) => {
   }
 
   const cancel = () => {
+    cancelled = true
     setRenaming(false)
     props.onRenameEnd?.()
   }
@@ -83,6 +91,7 @@ const SectionHeader: Component<Props> = (props) => {
                       if (e.key === "Enter") commit()
                       if (e.key === "Escape") cancel()
                     }}
+                    onBlur={commit}
                     onClick={(e) => e.stopPropagation()}
                     ref={(el) =>
                       requestAnimationFrame(() =>

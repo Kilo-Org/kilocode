@@ -16,6 +16,7 @@ import { SessionContext } from "../context/session"
 import { ServerContext } from "../context/server"
 import { WorktreeModeProvider } from "../context/worktree-mode"
 import { SidebarSearchMenu } from "../../agent-manager/SidebarSearchMenu"
+import { SidebarSectionHeader } from "../../agent-manager/SidebarSectionHeader"
 import { SidebarToggleButton } from "../../agent-manager/SidebarToggleButton"
 import { SideTerminalPanel, createTerminalState } from "../../agent-manager/terminal"
 import { LOCAL } from "../../agent-manager/navigate"
@@ -1162,27 +1163,30 @@ export const SidebarSearchOpen: Story = {
     return (
       <StoryProviders noPadding>
         <div style={{ "min-height": "430px", padding: "16px", background: "var(--surface-base)" }}>
-          <div class="am-section-header">
-            <span class="am-section-label">WORKTREES</span>
-            <div class="am-section-actions">
-              <SidebarSearchMenu
-                items={() => sidebarSearchItems}
-                keybind="⌘F"
-                current={() => sidebarSearchItems.find((item) => item.key === selected())}
-                labels={{
-                  search: "Search worktrees and sessions",
-                  scope: "Searches the local workspace, local sessions, worktrees, and their sessions",
-                  contexts: "LOCAL & WORKTREES",
-                  sessions: "SESSIONS",
-                  waiting: "Wait",
-                  retry: "Retry",
-                }}
-                onSelect={(item) => setSelected(item.key)}
-                defaultOpen
-                portal={false}
-              />
-            </div>
-          </div>
+          <SidebarSectionHeader
+            class="am-section-header"
+            label={<span class="am-section-label">WORKTREES</span>}
+            actions={
+              <div class="am-section-actions">
+                <SidebarSearchMenu
+                  items={() => sidebarSearchItems}
+                  keybind="⌘F"
+                  current={() => sidebarSearchItems.find((item) => item.key === selected())}
+                  labels={{
+                    search: "Search worktrees and sessions",
+                    scope: "Searches the local workspace, local sessions, worktrees, and their sessions",
+                    contexts: "LOCAL & WORKTREES",
+                    sessions: "SESSIONS",
+                    waiting: "Wait",
+                    retry: "Retry",
+                  }}
+                  onSelect={(item) => setSelected(item.key)}
+                  defaultOpen
+                  portal={false}
+                />
+              </div>
+            }
+          />
           <output class="sr-only" data-slot="sidebar-search-selection">
             {selected()}
           </output>

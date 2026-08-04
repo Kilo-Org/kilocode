@@ -210,6 +210,12 @@ describe("ProjectContexts", () => {
     expect(list[1]!.initialized).toBe(false)
   })
 
+  it("keeps the pinned project expanded before active state is initialized", () => {
+    const { contexts } = setup({ workspace: WORKSPACE })
+
+    expect(contexts.isExpanded(PINNED)).toBe(true)
+  })
+
   it("hydrates persisted project expansion without initializing the project", () => {
     const extra = stored("prj-extra", true)
     const { contexts } = setup({

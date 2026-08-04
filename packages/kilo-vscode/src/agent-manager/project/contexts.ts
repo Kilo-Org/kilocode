@@ -141,8 +141,12 @@ export class ProjectContexts {
   }
 
   isExpanded(id: string): boolean {
-    this.rememberExpansion(id, false)
-    return this.expansion.get(id) === true
+    const value = this.expansion.get(id)
+    if (value !== undefined) return value
+    const stored = this.opts.registry.expanded?.(id)
+    if (stored !== undefined) return stored
+    const root = this.opts.workspaceRoot()
+    return root !== undefined && projectIdFor(canonicalizePath(root)) === id
   }
 
   /** Make a project the active context and expand it. Returns undefined when not allowed. */
@@ -244,16 +248,17 @@ export class ProjectContexts {
     const id = ctx?.id ?? stored!.id
     const root = ctx?.root ?? stored!.root
     const pinned = ctx?.pinned ?? false
+    const missing = ctx ? ctx.missing() : !(this.opts.deps.exists ?? fs.existsSync)(root)
     return {
       id,
       root,
       label: stored?.label || path.basename(root) || root,
       pinned,
       active: this.isActive(id),
-      expanded: this.isExpanded(id),
+      expanded: !missing && this.isExpanded(id),
       initialized: ctx?.loaded ?? false,
       trusted: pinned || (stored?.trusted ?? false),
-      missing: ctx ? ctx.missing() : !(this.opts.deps.exists ?? fs.existsSync)(root),
+      missing,
     }
   }
 

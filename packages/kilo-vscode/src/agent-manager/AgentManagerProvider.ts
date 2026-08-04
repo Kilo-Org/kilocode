@@ -395,6 +395,7 @@ export class AgentManagerProvider implements Disposable {
         this.panelSessions.clear()
         void ctx.sessions.abortSessions(ids).catch((err) => this.log("Failed to abort sessions on panel close:", err))
         this.statsPoller.stop()
+        this.projectPollers.dispose()
         this.prBridge.poller.stop()
         this.diffs.stop()
         this.activeSessionId = undefined
@@ -450,12 +451,14 @@ export class AgentManagerProvider implements Disposable {
 
   /** Initialize an expanded background project and push its state (no panel wiring). */
   private initExpanded(ctx: ProjectContext): void {
-    void initContextState(ctx, (...args) => this.log(...args)).then((result) => {
-      if (!result.current) return
-      registerProjectSessions(ctx, this.panel?.sessions)
-      this.pushState(ctx)
-      this.projectPollers.sync(this.contexts)
-    })
+    void initContextState(ctx, (...args) => this.log(...args))
+      .then((result) => {
+        if (!result.current) return
+        registerProjectSessions(ctx, this.panel?.sessions)
+        this.pushState(ctx)
+        this.projectPollers.sync(this.contexts)
+      })
+      .catch((err) => this.log("Failed to initialize expanded project:", err))
   }
 
   // Message interceptor
