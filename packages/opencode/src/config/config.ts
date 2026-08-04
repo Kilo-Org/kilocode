@@ -1000,7 +1000,7 @@ export const layer = Layer.effect(
           directory: ctx.directory,
           payload: {
             type: Event.ConfigUpdated.type,
-            properties: {},
+            properties: { sandbox: Object.hasOwn(config, "sandbox") },
           },
         }),
       )

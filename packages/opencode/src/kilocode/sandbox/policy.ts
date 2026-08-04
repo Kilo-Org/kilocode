@@ -497,7 +497,7 @@ export const inherit = Effect.fn("SandboxPolicy.inherit")(function* (
       // written back under the parent's key here, or it leaks a phantom parent record.
       yield* refreshing(
         sessionID,
-        inheritSnapshot(directory, parent, sessionID, synced.get(key(source, parentID)) ?? revision),
+        inheritSnapshot(directory, parent, sessionID, synced.get(key(source, parentID)) ?? -1),
       )
     }),
   )

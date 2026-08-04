@@ -786,10 +786,36 @@ describe("config overlay routes", () => {
     20_000,
   )
 
-  test.serial("does not relax inherited sandbox policy after unrelated global saves", async () => {
+  test.serial("applies saved project sandbox settings to initialized sessions", async () => {
     await using global = await tmpdir()
     await using project = await tmpdir({ git: true })
     await setGlobal(global.path, { sandbox: { enabled: true, network: "allow" } })
+    const session = await json<Session.Info>(
+      await req(project.path, SessionPaths.create, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      }),
+    )
+    await json(await req(project.path, `/session/${session.id}/sandbox`))
+    expect(await SandboxStore.read(project.path, session.id)).toMatchObject({ mode: "allow", version: 0 })
+
+    await json(
+      await req(project.path, "/config/overlay", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ scope: "project", set: { sandbox: { enabled: true, network: "deny" } } }),
+      }),
+    )
+    await json(await req(project.path, `/session/${session.id}/sandbox`))
+
+    expect(await SandboxStore.read(project.path, session.id)).toMatchObject({ mode: "deny", version: 1 })
+  })
+
+  test.serial("does not relax inherited sandbox policy after unrelated global saves", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir({ git: true })
+    await setGlobal(global.path, { sandbox: { enabled: true, network: "deny" } })
     const parent = await json<Session.Info>(
       await req(project.path, SessionPaths.create, {
         method: "POST",
@@ -797,13 +823,7 @@ describe("config overlay routes", () => {
         body: "{}",
       }),
     )
-    await SandboxStore.write(project.path, parent.id, {
-      enabled: true,
-      mode: "deny",
-      allowedHosts: [],
-      writablePaths: [],
-      version: 0,
-    })
+    await json(await req(project.path, `/session/${parent.id}/sandbox`))
     const child = await json<Session.Info>(
       await req(project.path, SessionPaths.create, {
         method: "POST",
@@ -811,7 +831,15 @@ describe("config overlay routes", () => {
         body: JSON.stringify({ parentID: parent.id }),
       }),
     )
+    await json(await req(project.path, `/session/${child.id}/sandbox`))
     expect(await SandboxStore.read(project.path, child.id)).toMatchObject({ mode: "deny" })
+
+    // Simulate config changing while the backend is unaware. The unrelated save below
+    // must not treat that wider policy as a trusted sandbox settings update.
+    await Bun.write(
+      path.join(global.path, "kilo.json"),
+      JSON.stringify({ sandbox: { enabled: true, network: "allow" } }, null, 2),
+    )
 
     await json(
       await req(project.path, "/config/overlay", {

@@ -121,6 +121,17 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
         }
       } else {
         yield* config.update({})
+        if (result.sandboxChanged) {
+          yield* Effect.sync(() =>
+            GlobalBus.emit("event", {
+              directory: instance.directory,
+              payload: {
+                type: Event.ConfigUpdated.type,
+                properties: { sandbox: true },
+              },
+            }),
+          ).pipe(Effect.catchCause(() => Effect.void))
+        }
         yield* markInstanceForDisposal(instance)
       }
       const all = yield* auth.all().pipe(Effect.orElseSucceed(() => ({})))

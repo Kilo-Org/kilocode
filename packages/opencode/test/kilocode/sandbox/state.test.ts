@@ -743,6 +743,29 @@ it.instance("refreshes a child inherited while its parent policy is stale", () =
   })(),
 )
 
+it.instance("refreshes a cold child inherited from an untracked stored parent", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    const parent = SessionID.make("ses_sandbox_cold_parent")
+    const child = SessionID.make("ses_sandbox_cold_child")
+    yield* Effect.promise(() =>
+      SandboxStore.write(test.directory, parent, {
+        enabled: true,
+        mode: "allow",
+        allowedHosts: [],
+        writablePaths: [],
+        version: 0,
+      }),
+    )
+
+    yield* SandboxPolicy.inherit(parent, child)
+    yield* SandboxPolicy.status(child)
+
+    expect(yield* SandboxPolicy.peek(test.directory, child)).toMatchObject({ mode: "deny" })
+  }),
+  { config: { sandbox: { enabled: true, network: "deny" } } },
+)
+
 it.instance("enforces writes only while the macOS session override is active", () =>
   Effect.gen(function* () {
     if (process.platform !== "darwin") return
