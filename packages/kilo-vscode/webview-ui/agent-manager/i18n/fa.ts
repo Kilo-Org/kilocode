@@ -68,6 +68,7 @@ export const dict = {
   "agentManager.terminal.new": "تب ترمینال جدید",
   "agentManager.terminal.add": "ترمینال جدید",
   "agentManager.terminal.ended": "ترمینال پایان یافت — برای بستن، تب را ببندید",
+  "agentManager.terminal.endedRestartable": "ترمینال پایان یافت - برای شروع پوسته جدید تایپ کنید یا تب را ببندید",
   "agentManager.terminal.setupFailed": "اسکریپت راه‌اندازی ناموفق بود",
   "agentManager.terminal.setupFailedCode": "اسکریپت راه‌اندازی با کد خروجی ناموفق بود",
   "agentManager.terminal.stopSetup": "توقف اسکریپت راه‌اندازی",

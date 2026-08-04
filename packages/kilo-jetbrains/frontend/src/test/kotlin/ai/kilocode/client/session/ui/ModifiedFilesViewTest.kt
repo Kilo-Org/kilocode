@@ -6,6 +6,8 @@ import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.EditorTextField
+import com.intellij.ui.HyperlinkLabel
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.UIUtil
 import java.awt.Component
@@ -86,6 +88,34 @@ class ModifiedFilesViewTest : BasePlatformTestCase() {
         assertEquals("Changed files", titles.single())
     }
 
+    fun `test large changes set shows overflow placeholder instead of editors`() {
+        val fired = mutableListOf<List<DiffFileDto>>()
+        view.setDiffOpener({ files, _, _ -> fired.add(files) }, "ses", "turn")
+        view.setDiffs(listOf(file("src/A.kt", 2100, 0, bigPatch(2100))))
+
+        view.toggle()
+
+        assertTrue(view.isExpanded())
+        assertTrue(components(view).filterIsInstance<EditorTextField>().isEmpty())
+        components(view).filterIsInstance<HyperlinkLabel>().single().doClick()
+        assertEquals(1, fired.single().size)
+    }
+
+    fun `test large changes popup defers to the diff tab`() {
+        val fired = mutableListOf<List<DiffFileDto>>()
+        view.setDiffOpener({ files, _, _ -> fired.add(files) }, "ses", "turn")
+        view.setDiffs(listOf(file("src/A.kt", 2100, 0, bigPatch(2100))))
+        val body = view.headerPopup()!!.build()
+
+        try {
+            assertTrue(components(body.component).filterIsInstance<EditorTextField>().isEmpty())
+            components(body.component).filterIsInstance<HyperlinkLabel>().single().doClick()
+            assertEquals(1, fired.single().size)
+        } finally {
+            Disposer.dispose(body.disposable)
+        }
+    }
+
     fun `test dispose releases created editors`() {
         val base = EditorFactory.getInstance().allEditors.size
         view.setDiffs(listOf(file("src/A.kt", 2, 1, PATCH)))
@@ -120,6 +150,14 @@ class ModifiedFilesViewTest : BasePlatformTestCase() {
         deletions = deletions,
         patch = patch,
     )
+
+    // A patch whose line count clears SessionUiStyle.View.Tool.DIFF_MAX_LINES so the body overflows.
+    private fun bigPatch(lines: Int): String = buildString {
+        append("--- a/src/A.kt\n")
+        append("+++ b/src/A.kt\n")
+        append("@@ -0,0 +1,").append(lines).append(" @@\n")
+        repeat(lines) { append("+line").append(it).append('\n') }
+    }
 
     private companion object {
         val PATCH = """

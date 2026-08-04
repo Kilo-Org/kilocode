@@ -16,7 +16,7 @@ Browser Use requires an advanced agentic model. It is typically most reliable wi
 {% tabs %}
 {% tab label="VSCode" %}
 
-Browser automation is built into the extension and requires no manual setup. Enable it from **Settings → Browser** and Kilo handles the rest automatically.
+Browser automation is built into the extension and requires no manual setup. Enable it from **Settings → Web Tools → Browser Automation** and Kilo handles the rest automatically.
 
 {% /tab %}
 {% tab label="CLI" %}
@@ -93,7 +93,7 @@ Key characteristics:
 {% tabs %}
 {% tab label="VSCode" %}
 
-Browser automation settings are available under **Settings → Browser**:
+Browser automation settings are available under **Settings → Web Tools → Browser Automation**:
 
 - **Enable browser automation**: Toggle to enable or disable browser automation
 - **Headless mode**: Run the browser without a visible window (default: disabled)
