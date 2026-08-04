@@ -1,5 +1,29 @@
 # @kilocode/cli
 
+## 7.4.19
+
+### Minor Changes
+
+- [#12728](https://github.com/Kilo-Org/kilocode/pull/12728) [`6b27a26`](https://github.com/Kilo-Org/kilocode/commit/6b27a26f929f570275e26529189b4d2fc3c392cf) Thanks [@bagatao-anaconda](https://github.com/bagatao-anaconda)! - Show why a tool call was auto-approved or denied in the TUI, and record the denial reason on the tool call metadata (visible in `kilo export`) alongside the existing auto-approval reason.
+
+- [#12816](https://github.com/Kilo-Org/kilocode/pull/12816) [`63a38f5`](https://github.com/Kilo-Org/kilocode/commit/63a38f5c7ae8fb08af1461b143a7c0f6b8dbc680) - A second identical large paste expands its collapsed prompt placeholder.
+
+- [#12729](https://github.com/Kilo-Org/kilocode/pull/12729) [`ce7984f`](https://github.com/Kilo-Org/kilocode/commit/ce7984fc4247fb2805990ef62e1b1d9f286de9d9) - Configure a model and reasoning variant for each workflow from Agent Behaviour settings.
+
+### Patch Changes
+
+- [#12792](https://github.com/Kilo-Org/kilocode/pull/12792) [`7d3f50c`](https://github.com/Kilo-Org/kilocode/commit/7d3f50c2e8510e6ae86bb310c2706bb79f1c02ff) - Prevent configured compaction thresholds from interrupting active tool sequences.
+
+- [#12652](https://github.com/Kilo-Org/kilocode/pull/12652) [`c554409`](https://github.com/Kilo-Org/kilocode/commit/c554409080a59422066f93df90155e448ec9b250) Thanks [@Hardik180704](https://github.com/Hardik180704)! - Keep config-defined subagents routable when an installed primary agent uses the same name.
+
+- [#12726](https://github.com/Kilo-Org/kilocode/pull/12726) [`2fbd380`](https://github.com/Kilo-Org/kilocode/commit/2fbd380dfcfcbc4537e48727b15af2176451cf84) - Speed up local session recall searches across large conversation histories.
+
+- [#12811](https://github.com/Kilo-Org/kilocode/pull/12811) [`989f7f0`](https://github.com/Kilo-Org/kilocode/commit/989f7f06a03f3502e7ab761f1ae72b5c7b47451c) - Add bounded, context-aware signal-to-noise controls to grep searches.
+
+- [#12790](https://github.com/Kilo-Org/kilocode/pull/12790) [`8be3303`](https://github.com/Kilo-Org/kilocode/commit/8be33032b906f27c0d883212354f75eeb7044f35) - Keep Kilo's persona out of generated conversation titles and Agent Manager branch names.
+
+- [#12802](https://github.com/Kilo-Org/kilocode/pull/12802) [`5bd420a`](https://github.com/Kilo-Org/kilocode/commit/5bd420aae15787dc629d27b663f9f1b6e2cac888) Thanks [@bagatao-anaconda](https://github.com/bagatao-anaconda)! - Stop treating `` !`cmd` `` shown as an inline code example in skill documentation as a live command, so it no longer triggers a shell permission prompt.
+
 ## 7.4.18
 
 ### Minor Changes
