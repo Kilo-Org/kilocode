@@ -2,7 +2,7 @@ export * as FileSystemSearch from "./search"
 
 import { makeLocationNode } from "../effect/app-node"
 import path from "path"
-import { Context, Effect, Layer, Scope } from "effect"
+import { Context, Duration, Effect, Layer, Scope } from "effect"
 import { Fff } from "#fff"
 import fuzzysort from "fuzzysort"
 import { FileSystem } from "../filesystem"
@@ -78,11 +78,13 @@ export const ripgrepLayer = Layer.effect(
             })
             .pipe(
               Effect.map((result) =>
-                result.items.map((entry) => // kilocode_change - validate wraps results in SearchResult
-                  FileSystem.Entry.make({
-                    ...entry,
-                    path: RelativePath.make(path.relative(location.directory, path.resolve(cwd, entry.path))),
-                  }),
+                result.items.map(
+                  // kilocode_change - validate wraps results in SearchResult
+                  (entry) =>
+                    FileSystem.Entry.make({
+                      ...entry,
+                      path: RelativePath.make(path.relative(location.directory, path.resolve(cwd, entry.path))),
+                    }),
                 ),
               ),
               Effect.orDie,
@@ -105,14 +107,16 @@ export const ripgrepLayer = Layer.effect(
             })
             .pipe(
               Effect.map((result) =>
-                result.items.map((match) => // kilocode_change - validate wraps results in SearchResult
-                  FileSystem.Match.make({
-                    ...match,
-                    entry: FileSystem.Entry.make({
-                      ...match.entry,
-                      path: RelativePath.make(path.relative(location.directory, path.resolve(cwd, match.entry.path))),
+                result.items.map(
+                  // kilocode_change - validate wraps results in SearchResult
+                  (match) =>
+                    FileSystem.Match.make({
+                      ...match,
+                      entry: FileSystem.Entry.make({
+                        ...match.entry,
+                        path: RelativePath.make(path.relative(location.directory, path.resolve(cwd, match.entry.path))),
+                      }),
                     }),
-                  }),
                 ),
               ),
               Effect.orDie,
@@ -162,36 +166,65 @@ export const fffLayer = Layer.effect(
       return real !== undefined && FSUtil.contains(root.path, real)
     })
     // kilocode_change end
-    const result = yield* Effect.try({
-      try: () =>
-        Fff.create({
-          basePath: location.directory,
-          aiMode: true,
-          ...scanning(location.directory), // kilocode_change - permit broad scanning only at the exact boundary.
-        }),
-      catch: (cause) => cause,
-    }).pipe(
-      Effect.catch((error) => Effect.logWarning("failed to initialize fff", { error }).pipe(Effect.as(undefined))),
+    // kilocode_change start - defer FFF until search because other location consumers do not need its native index.
+    const scope = yield* Scope.Scope
+    const release = (entry: { finder: { destroy(): void }; closed: boolean }) =>
+      Effect.sync(() => {
+        if (entry.closed) return
+        entry.closed = true
+        entry.finder.destroy()
+      }).pipe(Effect.ignore)
+    const make = Effect.uninterruptible(
+      Effect.gen(function* () {
+        const result = yield* Effect.try({
+          try: () =>
+            Fff.create({
+              basePath: location.directory,
+              aiMode: true,
+              disableMmapCache: true,
+              disableContentIndexing: true,
+              ...scanning(location.directory),
+            }),
+          catch: (cause) => cause,
+        }).pipe(Effect.orDie)
+        if (!result.ok) return yield* Effect.die(result.error)
+        const entry = { finder: result.value, closed: false }
+        yield* Scope.addFinalizer(scope, release(entry))
+        return entry
+      }),
     )
-    if (!result?.ok) {
-      if (result) yield* Effect.logWarning("failed to initialize fff", { error: result.error })
-      return Service.of({
-        find: () => Effect.succeed([]),
-        glob: () => Effect.succeed([]),
-        grep: () => Effect.succeed([]),
-      })
-    }
-    yield* Effect.addFinalizer(() => Effect.sync(() => result.value.destroy()).pipe(Effect.ignore))
+    const [load, invalidate] = yield* Effect.cachedInvalidateWithTTL(
+      make.pipe(
+        Effect.flatMap((entry) =>
+          Effect.promise(() => entry.finder.waitForScan())
+            .pipe(
+              Effect.orDie,
+              Effect.onError(() => release(entry)),
+            )
+            .pipe(
+              Effect.flatMap((scan) => {
+                if (!scan.ok || !scan.value) return Effect.die(new Error("FFF initial scan did not complete"))
+                return Effect.succeed(entry)
+              }),
+            ),
+        ),
+      ),
+      Duration.infinity,
+    )
+    const get = load.pipe(Effect.onError(() => invalidate))
+    yield* Scope.addFinalizer(scope, invalidate)
+    // kilocode_change end
     return Service.of({
       glob: (input) =>
         // kilocode_change start
         Effect.gen(function* () {
           const { root, target } = yield* inspect(input.path)
-        // kilocode_change end
+          const result = yield* get
+          // kilocode_change end
           const prefix = input.path?.replaceAll("\\", "/").replace(/\/$/, "")
           // kilocode_change start
           const found = yield* Effect.sync(() =>
-            result.value.glob(prefix ? `${prefix}/${input.pattern}` : input.pattern, {
+            result.finder.glob(prefix ? `${prefix}/${input.pattern}` : input.pattern, {
               pageIndex: 0,
               pageSize: input.limit,
             }),
@@ -213,17 +246,19 @@ export const fffLayer = Layer.effect(
         // kilocode_change start
         Effect.gen(function* () {
           const { root, target } = yield* inspect(input.path)
-        // kilocode_change end
+          const result = yield* get
+          // kilocode_change end
           const prefix = input.path?.replaceAll("\\", "/").replace(/\/$/, "")
           // kilocode_change start
-          const found = yield* Effect.sync(() =>
-            result.value.grep(
-              [prefix ? `${prefix}/**` : undefined, input.include, input.pattern]
-                .filter((value) => value !== undefined)
-                .join(" "),
-              { mode: "regex", pageSize: input.limit, timeBudgetMs: 1_500 },
-            ),
-          // kilocode_change end
+          const found = yield* Effect.sync(
+            () =>
+              result.finder.grep(
+                [prefix ? `${prefix}/**` : undefined, input.include, input.pattern]
+                  .filter((value) => value !== undefined)
+                  .join(" "),
+                { mode: "regex", pageSize: input.limit, timeBudgetMs: 1_500 },
+              ),
+            // kilocode_change end
           )
           if (!found.ok) throw found.error
           // kilocode_change start
@@ -249,11 +284,13 @@ export const fffLayer = Layer.effect(
           // kilocode_change end
         }),
       find: (input) =>
-        Effect.sync(() => {
+        Effect.gen(function* () {
+          // kilocode_change - load the native index only for an actual search.
+          const result = yield* get // kilocode_change
           const options = { pageIndex: 0, pageSize: input.limit ?? 50 }
           const items = (() => {
             if (input.type === "file") {
-              const found = result.value.fileSearch(input.query.trim(), options)
+              const found = result.finder.fileSearch(input.query.trim(), options)
               if (!found.ok) throw found.error
               return found.value.items.map((item, index) => ({
                 path: item.relativePath,
@@ -262,7 +299,7 @@ export const fffLayer = Layer.effect(
               }))
             }
             if (input.type === "directory") {
-              const found = result.value.directorySearch(input.query.trim(), options)
+              const found = result.finder.directorySearch(input.query.trim(), options)
               if (!found.ok) throw found.error
               return found.value.items.map((item, index) => ({
                 path: item.relativePath,
@@ -270,7 +307,7 @@ export const fffLayer = Layer.effect(
                 score: found.value.scores[index]?.total ?? 0,
               }))
             }
-            const found = result.value.mixedSearch(input.query.trim(), options)
+            const found = result.finder.mixedSearch(input.query.trim(), options)
             if (!found.ok) throw found.error
             return found.value.items.map((item, index) => ({
               path: item.item.relativePath,
