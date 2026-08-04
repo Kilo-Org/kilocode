@@ -189,6 +189,7 @@ class SessionController(
     val autoApprove: Boolean get() = KiloPluginSettings.getAutoApprove()
     internal val blank: Boolean get() = ref == null && model.isEmpty() && !model.showSession
     internal val id: String? get() = sid
+    internal val sessionDirectory: String get() = model.session?.directory ?: (ref as? SessionRef.Local)?.session?.directory ?: directory
     internal val refKey: String? get() = ref?.key
     internal val refType: SessionRef.Type? get() = ref?.type
 

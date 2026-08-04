@@ -168,17 +168,38 @@ class KiloSessionRpcApiImpl internal constructor(
     override suspend fun diffSides(sessionId: String?, directory: String, file: DiffFileDto, messageId: String?): DiffFileDto? {
         val patch = file.patch
         if (patch.isNullOrBlank()) return null
+        log.info("diffSides start file=${file.file} session=${!sessionId.isNullOrBlank()} message=${!messageId.isNullOrBlank()} patch=${patch.length}")
         // 1) Authoritative: a CLI with full/file support returns whole before/after from the snapshot,
         //    correct even for historical turns. Older CLIs ignore the params, so we detect the missing
         //    content and fall through to local reconstruction.
-        if (!sessionId.isNullOrBlank()) authoritative(sessionId, directory, file, messageId)?.let { return it }
+        if (!sessionId.isNullOrBlank()) authoritative(sessionId, directory, file, messageId)?.let {
+            log.info("diffSides authoritative file=${file.file} before=${it.before?.length ?: 0} after=${it.after?.length ?: 0}")
+            return it
+        }
         // 2) Fallback: read the working-tree file and reverse-apply the hunk patch to recover the whole
         //    "before". No CLI round-trip, so this works against any pinned CLI.
         return withContext(Dispatchers.IO) {
-            val after = runCatching { Files.readString(Path.of(directory).resolve(file.file)) }.getOrNull()
+            val path = resolve(directory, file.file)
+            val after = path?.let { runCatching { Files.readString(it) }.getOrNull() }
             val before = after?.let { DiffFullReconstruct.before(it, patch) }
+            log.info("diffSides fallback file=${file.file} path=${path ?: "<missing>"} after=${after?.length ?: 0} before=${before?.length ?: 0}")
             if (after != null && before != null) file.copy(before = before, after = after) else null
         }
+    }
+
+    private fun resolve(directory: String, file: String): Path? {
+        val direct = Path.of(directory).resolve(file).normalize()
+        if (Files.isRegularFile(direct)) return direct
+        // dev-only: a stored diff may reference another worktree (relative, or absolute into a sibling
+        // worktree that isn't checked out here). Re-root onto the running worktree by trying progressively
+        // shorter path suffixes until one exists, so full-file diffs work across dev worktrees.
+        val root = System.getProperty("kilo.dev.worktree.root")?.takeIf { it.isNotBlank() }?.let(Path::of) ?: return null
+        val segs = Path.of(file).toList()
+        for (i in segs.indices) {
+            val candidate = segs.drop(i).fold(root) { acc, seg -> acc.resolve(seg) }.normalize()
+            if (Files.isRegularFile(candidate)) return candidate
+        }
+        return null
     }
 
     // Ask the CLI for full before/after via GET /session/:id/diff?full=true&file=...; returns null when
@@ -199,16 +220,18 @@ class KiloSessionRpcApiImpl internal constructor(
                     ?.build()
                     ?: return@runCatching null
                 api.client.newCall(Request.Builder().url(url).get().build()).execute().use { response ->
-                    if (!response.isSuccessful) return@runCatching null
-                    val item = Json.parseToJsonElement(response.body?.string().orEmpty()).jsonArray
-                        .firstOrNull { it.jsonObject["file"]?.jsonPrimitive?.contentOrNull == file.file }
-                        ?.jsonObject
-                        ?: return@runCatching null
-                    val before = item["before"]?.jsonPrimitive?.contentOrNull
-                    val after = item["after"]?.jsonPrimitive?.contentOrNull
+                    if (!response.isSuccessful) {
+                        log.info("diffSides authoritative file=${file.file} http=${response.code} messageID=${messageId ?: "none"}")
+                        return@runCatching null
+                    }
+                    val arr = Json.parseToJsonElement(response.body?.string().orEmpty()).jsonArray
+                    val item = arr.firstOrNull { it.jsonObject["file"]?.jsonPrimitive?.contentOrNull == file.file }?.jsonObject
+                    val before = item?.get("before")?.jsonPrimitive?.contentOrNull
+                    val after = item?.get("after")?.jsonPrimitive?.contentOrNull
+                    log.info("diffSides authoritative file=${file.file} items=${arr.size} matched=${item != null} before=${before?.length ?: 0} after=${after?.length ?: 0}")
                     if (before != null && after != null) file.copy(before = before, after = after) else null
                 }
-            }.getOrNull()
+            }.onFailure { log.info("diffSides authoritative file=${file.file} error=${it.message}") }.getOrNull()
         }
     }
 

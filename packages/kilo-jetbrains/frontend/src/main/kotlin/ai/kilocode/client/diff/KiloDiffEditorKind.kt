@@ -175,18 +175,28 @@ internal class KiloDiffEditorService(
     ): List<DiffFileDto> {
         val sessionId = params["sessionId"].takeIfPresent()
         val message = message(params)
+        LOG.info("diff editor detail source=${params["source"]} files=${files.size} session=${!sessionId.isNullOrBlank()} message=${!message.isNullOrBlank()}")
         return files.map { file ->
             val patch = file.patch
-            if (patch.isNullOrBlank() || DiffPatchReconstruct.added(patch) || DiffPatchReconstruct.deleted(patch)) file
-            else runCatching { session.diffSides(sessionId, dir, file, message) }.getOrNull() ?: file
+            if (patch.isNullOrBlank() || DiffPatchReconstruct.added(patch) || DiffPatchReconstruct.deleted(patch)) {
+                LOG.info("diff editor detail skip file=${file.file} patch=${!patch.isNullOrBlank()} status=${file.status}")
+                file
+            } else {
+                val detail = runCatching { session.diffSides(sessionId, dir, file, message) }
+                    .onFailure { LOG.warn("diff editor detail failed file=${file.file}", it) }
+                    .getOrNull()
+                LOG.info("diff editor detail file=${file.file} full=${detail?.before != null && detail?.after != null} before=${detail?.before?.length ?: 0} after=${detail?.after?.length ?: 0}")
+                detail ?: file
+            }
         }
     }
 
-    // Turn diffs carry a "turn:<sessionId>:<turnId>" token; the turn id is the message the CLI scopes
-    // the authoritative snapshot diff to. Other sources (session, branch) have no per-turn message.
+    // Turn diffs carry "turn:<sessionId>:<turnId>" and single-edit diffs carry "tool:<sessionId>:<messageId>";
+    // the third segment is the message the CLI scopes the authoritative snapshot diff to. Other sources
+    // (session, branch) have no per-message scope.
     private fun message(params: Map<String, String>): String? {
         val parts = params["token"].takeIfPresent()?.split(":", limit = 3) ?: return null
-        return if (parts.size == 3 && parts[0] == "turn") parts[2].takeIfPresent() else null
+        return if (parts.size == 3 && (parts[0] == "turn" || parts[0] == "tool")) parts[2].takeIfPresent() else null
     }
 
     private companion object {

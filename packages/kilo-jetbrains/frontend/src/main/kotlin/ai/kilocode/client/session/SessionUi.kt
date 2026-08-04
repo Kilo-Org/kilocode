@@ -822,15 +822,17 @@ class SessionUi(
     }
 
     private fun openInlineDiff(files: List<DiffFileDto>, title: String, key: String) {
+        val dir = controller.sessionDirectory
         cs.launch {
-            val branch = workspaces.branchName(workspace.directory)
+            val branch = workspaces.branchName(dir)
             val label = branch?.let { KiloBundle.message("diff.editor.inline.title.named", title, it) } ?: title
+            LOG.info("open inline diff session=${controller.id ?: "pending"} dir=${ChatLogSummary.dir(dir)} files=${files.size}")
             withContext(Dispatchers.Main) {
                 ensureDiffEditorKind()
                 project.service<KiloInlineDiffStore>().put(key, files)
                 project.service<KiloVfsManager>().open(
                     KiloDiffEditorKind.ID,
-                    diffParams("inline", workspace.directory, controller.id, label, token = key),
+                    diffParams("inline", dir, controller.id, label, token = key),
                 )
                 Telemetry.send("Diff Editor Opened", mapOf("source" to "inline"))
             }
