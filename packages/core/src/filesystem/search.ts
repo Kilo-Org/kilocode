@@ -166,22 +166,33 @@ export const fffLayer = Layer.effect(
       return real !== undefined && FSUtil.contains(root.path, real)
     })
     // kilocode_change end
-    const result = yield* Effect.try({
-      try: () =>
-        Fff.create({
-          basePath: location.directory,
-          aiMode: true,
-          ...scanning(location.directory), // kilocode_change - permit broad scanning only at the exact boundary.
-        }),
-      catch: (cause) => cause,
-    }).pipe(Effect.orDie)
-    if (!result.ok) return yield* Effect.die(result.error)
-    yield* Effect.addFinalizer(() => Effect.sync(() => result.value.destroy()).pipe(Effect.ignore))
+    // kilocode_change start - defer FFF until search because other location consumers do not need its native index.
+    const scope = yield* Scope.Scope
+    const load = yield* Effect.cached(
+      Effect.gen(function* () {
+        const result = yield* Effect.try({
+          try: () =>
+            Fff.create({
+              basePath: location.directory,
+              aiMode: true,
+              disableMmapCache: true,
+              disableContentIndexing: true,
+              ...scanning(location.directory),
+            }),
+          catch: (cause) => cause,
+        }).pipe(Effect.orDie)
+        if (!result.ok) return yield* Effect.die(result.error)
+        yield* Scope.addFinalizer(scope, Effect.sync(() => result.value.destroy()).pipe(Effect.ignore))
+        return result
+      }),
+    )
+    // kilocode_change end
     return Service.of({
       glob: (input) =>
         // kilocode_change start
         Effect.gen(function* () {
           const { root, target } = yield* inspect(input.path)
+          const result = yield* load
         // kilocode_change end
           const prefix = input.path?.replaceAll("\\", "/").replace(/\/$/, "")
           // kilocode_change start
@@ -210,6 +221,7 @@ export const fffLayer = Layer.effect(
         // kilocode_change start
         Effect.gen(function* () {
           const { root, target } = yield* inspect(input.path)
+          const result = yield* load
         // kilocode_change end
           const prefix = input.path?.replaceAll("\\", "/").replace(/\/$/, "")
           // kilocode_change start
@@ -247,7 +259,8 @@ export const fffLayer = Layer.effect(
           })
         }),
       find: (input) =>
-        Effect.sync(() => {
+        Effect.gen(function* () { // kilocode_change - load the native index only for an actual search.
+          const result = yield* load // kilocode_change
           const options = { pageIndex: 0, pageSize: input.limit ?? 50 }
           const items = (() => {
             if (input.type === "file") {
