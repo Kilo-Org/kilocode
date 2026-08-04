@@ -23,8 +23,16 @@ const mockUri = {
   },
 }
 
+class MockRelativePattern {
+  constructor(
+    public base: { fsPath: string },
+    public pattern: string,
+  ) {}
+}
+
 const mockVscode = {
   Uri: mockUri,
+  RelativePattern: MockRelativePattern,
   extensions: {
     getExtension: (id: string) => {
       if (id === "vscode.git") return undefined
@@ -65,6 +73,7 @@ const mockVscode = {
       const value = typeof pathOrUri === "string" ? pathOrUri : (pathOrUri.fsPath ?? "")
       return value.startsWith("/repo/") ? value.slice("/repo/".length) : value
     },
+    findFiles: async () => [],
     fs: {
       createDirectory: async () => {},
       writeFile: async () => {},

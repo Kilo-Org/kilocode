@@ -343,6 +343,8 @@ describe("KiloProvider file link directory resolution", () => {
     time: { created: 1, updated: 1 },
   } as Session
 
+  stat.mockImplementation(async () => ({ type: vscode.FileType.File, ctime: 0, mtime: 0, size: 0 }))
+
   afterEach(() => {
     stat.mockClear()
   })
@@ -359,7 +361,7 @@ describe("KiloProvider file link directory resolution", () => {
     expect(internal.getWorkspaceDirectory("ses-frontend")).toBe("/workspace")
   })
 
-  it("opens relative file links against the current session directory", () => {
+  it("opens relative file links against the current session directory", async () => {
     const { connection } = mockConnection()
     const provider = new KiloProvider({} as never, connection, undefined, {
       rootDirectory: () => "/workspace",
@@ -368,13 +370,14 @@ describe("KiloProvider file link directory resolution", () => {
     internal.currentSession = session
 
     internal.handleEditorOpenMessage({ type: "openFile", filePath: "spec/foo_spec.rb", line: 12 })
+    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(stat).toHaveBeenCalledTimes(1)
     const uri = stat.mock.calls[0]![0] as { fsPath: string }
     expect(uri.fsPath).toBe("/workspace/backend/spec/foo_spec.rb")
   })
 
-  it("falls back to the workspace root for relative file links without a current session", () => {
+  it("falls back to the workspace root for relative file links without a current session", async () => {
     const { connection } = mockConnection()
     const provider = new KiloProvider({} as never, connection, undefined, {
       rootDirectory: () => "/workspace",
@@ -383,6 +386,7 @@ describe("KiloProvider file link directory resolution", () => {
     internal.currentSession = null
 
     internal.handleEditorOpenMessage({ type: "openFile", filePath: "spec/foo_spec.rb", line: 12 })
+    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(stat).toHaveBeenCalledTimes(1)
     const uri = stat.mock.calls[0]![0] as { fsPath: string }
