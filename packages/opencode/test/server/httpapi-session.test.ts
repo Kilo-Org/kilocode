@@ -1068,7 +1068,7 @@ describe("session HttpApi", () => {
         Effect.provide(AppNodeBuilder.build(CrossSpawnSpawner.node)),
       )
     },
-    10_000,
+    30_000, // kilocode_change - windows CI needs headroom beyond 10s
   )
   // kilocode_change end
 

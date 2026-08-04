@@ -517,8 +517,14 @@ const layer = Layer.effect(
               return
             }
             const rawOutput = toolResultOutput(value)
+            // kilocode_change start — send_file delivery attachments (up to 4 MiB raw)
+            // must reach mobile byte-for-byte. Base64-encoded images near the cap can
+            // exceed the generic 5 MiB normalization limit, causing rewrites or omission
+            // after the tool reports success. These attachments are delivery-only; the
+            // existing message-v2 filter already strips them from model context.
+            const skipNormalization = value.name === "send_file"
             const normalized = yield* Effect.forEach(rawOutput.attachments ?? [], (attachment) =>
-              attachment.mime.startsWith("image/")
+              attachment.mime.startsWith("image/") && !skipNormalization
                 ? image.normalize(attachment).pipe(
                     Effect.catchIf(
                       (error) => error instanceof Image.ResizerUnavailableError,
@@ -528,6 +534,7 @@ const layer = Layer.effect(
                   )
                 : Effect.succeed(Exit.succeed<SessionV1.FilePart>(attachment)),
             )
+            // kilocode_change end
             const omitted = normalized.filter(Exit.isFailure).length
             const attachments = normalized.filter(Exit.isSuccess).map((item) => item.value)
             const output = {

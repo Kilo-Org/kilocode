@@ -456,7 +456,7 @@ For tools that don't need the full plugin context, drop them in a `tool/` or `to
 
 The CLI has built-in attention alerts for session completion, errors, and prompts that need input. You do not need a plugin or platform-specific notification command.
 
-Enable notifications and sounds in `kilo console` under **Settings > CLI > Notifications**, or configure the `attention` section of `tui.json`. See [CLI Notifications and Sounds](/docs/code-with-ai/platforms/cli#cli-notifications-and-sounds) for configuration and custom sound overrides.
+Configure the `attention` section of `tui.json` or `tui.jsonc` to enable notifications and sounds. See [CLI Notifications and Sounds](/docs/code-with-ai/platforms/cli#cli-notifications-and-sounds) for configuration and custom sound overrides.
 
 ### Block reads of `.env` files
 

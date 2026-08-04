@@ -3,7 +3,6 @@ export * as ConfigCommandPlugin from "./command"
 import { define } from "../../plugin/internal"
 import path from "path"
 import { Effect, Option, Schema } from "effect"
-import { CommandV2 } from "../../command"
 import { Config } from "../../config"
 import { FSUtil } from "../../fs-util"
 import { ModelV2 } from "../../model"
@@ -27,23 +26,33 @@ export const Plugin = define({
             ]),
           )
         }).pipe(Effect.map((documents) => documents.flat()))
-        for (const document of documents) {
-          for (const [name, command] of Object.entries(document.commands ?? {})) {
-            draft.update(name, (item) => {
-              item.template = command.template
-              if (command.description !== undefined) item.description = command.description
-              if (command.agent !== undefined) item.agent = command.agent
-              if (command.model !== undefined) {
-                const model = ModelV2.parse(command.model)
-                item.model = { id: model.modelID, providerID: model.providerID, variant: item.model?.variant }
-              }
-              if (command.variant !== undefined && item.model !== undefined) {
-                item.model.variant = ModelV2.VariantID.make(command.variant)
-              }
-              if (command.subtask !== undefined) item.subtask = command.subtask
-            })
-          }
+
+        // kilocode_change start - apply partial workflow overrides after every command template is registered
+        const items = documents.flatMap((document) => Object.entries(document.commands ?? {}))
+        for (const [name, command] of items) {
+          if (command.template === undefined) continue
+          const template = command.template
+          draft.update(name, (item) => {
+            item.template = template
+          })
         }
+        for (const [name, command] of items) {
+          if (command.template === undefined && !draft.get(name)) continue
+          draft.update(name, (item) => {
+            if (command.description !== undefined) item.description = command.description
+            if (command.agent !== undefined) item.agent = command.agent
+            if (command.model !== undefined) {
+              const model = ModelV2.parse(command.model)
+              item.model = { id: model.modelID, providerID: model.providerID, variant: item.model?.variant }
+            }
+            if (command.variant !== undefined) item.variant = ModelV2.VariantID.make(command.variant)
+            if (command.variant !== undefined && item.model !== undefined) {
+              item.model.variant = ModelV2.VariantID.make(command.variant)
+            }
+            if (command.subtask !== undefined) item.subtask = command.subtask
+          })
+        }
+        // kilocode_change end
       }),
     )
   }),

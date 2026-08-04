@@ -1,5 +1,0 @@
----
-"kilo-code": minor
----
-
-Add an experimental multi-project foundation for Agent Manager behind the Multi-Project Agent Manager toggle in Kilo Settings > Experimental. A persistent project registry catalogs additional Git repositories across restarts while the current workspace repository stays the pinned default project, and all repository-bound services (state, worktrees, setup scripts, stale tracking, polling) are now owned by immutable per-project contexts that can be activated, expanded, and switched through new project protocol messages. Every expanded project runs its own git stats and PR pollers, so all visible project accordions show live data at the same time; switching projects keeps previously visited projects expanded and restores the exact worktree or session that was open there. Sessions created anywhere (sidebar, another window, the CLI) appear in the owning project's list immediately, and open tabs stay private to the project they were opened in. Single-project behavior is unchanged when the experiment is disabled.

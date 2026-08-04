@@ -389,6 +389,7 @@ export const kiloScenarios: Scenario[] = [
     .status(401),
   http.protected.get("/kilo/notifications", "kilo.notifications").json(200, array),
   http.protected.get("/kilo/models/images", "kilo.models.images").probe({ path: "/path" }).status(401),
+  http.protected.get("/kilo/models/transcriptions", "kilo.models.transcriptions").probe({ path: "/path" }).status(401),
   http.protected
     .post("/kilo/organization", "kilo.organization.set")
     .at((ctx) => ({ path: "/kilo/organization", headers: ctx.headers(), body: { organizationId: null } }))

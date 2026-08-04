@@ -11,5 +11,6 @@ export const Info = Schema.Struct({
   description: Schema.String.pipe(optional),
   agent: Schema.String.pipe(optional),
   model: Model.Ref.pipe(optional),
+  variant: Model.VariantID.pipe(optional), // kilocode_change - support variant-only command overrides
   subtask: Schema.Boolean.pipe(optional),
 }).annotate({ identifier: "CommandV2.Info" })

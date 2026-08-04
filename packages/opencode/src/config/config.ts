@@ -47,6 +47,7 @@ import { Git } from "@/git"
 import { KilocodeDefaultPlugins } from "@/kilocode/config/default-plugins"
 import { KilocodeGlobalConfigStamp } from "@/kilocode/config/global-stamp"
 import { SandboxConfig } from "@/kilocode/sandbox/config"
+import { ExternalMarkdown } from "@/kilocode/config/external-markdown"
 import type { KilocodeMarkdown } from "@/kilocode/config/markdown"
 import {
   IndexingConfig as KiloIndexingConfig,
@@ -490,6 +491,7 @@ const layer = Layer.effect(
           result = mergeConfigConcatArrays(result, { agent: orgModes.agents })
         }
         warnings.push(...orgModes.warnings)
+        let configuredAgents = { ...(result.agent ?? {}) }
         // kilocode_change end
 
         const authEnv: Record<string, string> = {}
@@ -549,6 +551,7 @@ const layer = Layer.effect(
           const trusted = sourceTrusted ?? scope === "global"
           const scoped = KilocodeConfig.scopeIndexing(SandboxConfig.scope(next, scope), scope)
           result = mergeConfigConcatArrays(result, scoped)
+          if (scoped.agent) configuredAgents = mergeDeep(configuredAgents, scoped.agent)
           if (next.instructions?.length) {
             result.instruction_origins = origins(result.instruction_origins, next.instructions, trusted, source)
           }
@@ -761,17 +764,32 @@ const layer = Layer.effect(
           deps.push(dep)
 
           // kilocode_change start - propagate parse errors to the Warning accumulator
+          const sourceScopes = (names: readonly string[]) => [
+            ...(dirSourceScope ? [dirSourceScope] : []),
+            ...ExternalMarkdown.scopes({
+              dir,
+              names,
+              permission: result.permission,
+              origins: result.permission_origins,
+            }),
+          ]
           result.command = mergeDeep(
             result.command ?? {},
-            yield* Effect.promise(() => ConfigCommand.load(dir, warnings, dirTrusted, dirFileScope, dirSourceScope)),
+            yield* Effect.promise(() =>
+              ConfigCommand.load(dir, warnings, dirTrusted, dirFileScope, sourceScopes(["command", "commands"])),
+            ),
           )
-          result.agent = mergeDeep(
+          result.agent = KilocodeConfig.mergeAgentMarkdown(
             result.agent ?? {},
-            yield* Effect.promise(() => ConfigAgent.load(dir, warnings, dirTrusted, dirFileScope, dirSourceScope)),
+            yield* Effect.promise(() =>
+              ConfigAgent.load(dir, warnings, dirTrusted, dirFileScope, sourceScopes(["agent", "agents"])),
+            ),
+            configuredAgents,
           )
-          result.agent = mergeDeep(
+          result.agent = KilocodeConfig.mergeAgentMarkdown(
             result.agent ?? {},
             yield* Effect.promise(() => ConfigAgent.loadMode(dir, warnings, dirTrusted, dirFileScope, dirSourceScope)),
+            configuredAgents,
           )
           // kilocode_change end
           // kilocode_change - Auto-discovered plugins under config directories are already local files, so ConfigPlugin.load

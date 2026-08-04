@@ -29,6 +29,7 @@ import { ThinkingSelectorBase } from "../components/shared/ThinkingSelector"
 import { createSignal, onCleanup, onMount, type JSX } from "solid-js"
 import type { WorktreeFileDiff, WorktreeState, WorktreeGitStats, PRStatus } from "../types/messages"
 import type { ReviewComment } from "../../diff-viewer/review-comments"
+import { createModeRouter } from "../../agent-manager/mode-router"
 import "../../agent-manager/agent-manager.css"
 import "../../agent-manager/agent-manager-review.css"
 
@@ -1227,13 +1228,14 @@ const projectB: AgentProjectSnapshot = {
   missing: false,
 }
 
-const wt = (id: string, branch: string, label?: string): WorktreeState => ({
+const wt = (id: string, branch: string, label?: string, opts: Partial<WorktreeState> = {}): WorktreeState => ({
   id,
   branch,
   path: `/repos/x/.kilo/worktrees/${id}`,
   parentBranch: "main",
   createdAt: "2026-07-20T10:00:00Z",
   label,
+  ...opts,
 })
 
 const projectState = (
@@ -1242,12 +1244,18 @@ const projectState = (
   sessions: { id: string; worktreeId: string | null }[],
   sections: NonNullable<AgentManagerStateMessage["sections"]> = [],
   baseBranch = "main",
+  worktreeOrder?: string[],
 ): AgentManagerStateMessage => ({
   type: "agentManager.state",
   projectId,
   worktrees,
   sessions: sessions.map((s) => ({ id: s.id, worktreeId: s.worktreeId, createdAt: "2026-07-20T10:00:00Z" })),
   sections,
+  worktreeOrder: worktreeOrder ?? [
+    ...worktrees.filter((item) => !item.sectionId).map((item) => item.id),
+    ...sections.map((item) => item.id),
+    ...worktrees.filter((item) => item.sectionId).map((item) => item.id),
+  ],
   staleWorktreeIds: [],
   isGitRepo: true,
   defaultBaseBranch: baseBranch,
@@ -1292,22 +1300,35 @@ export const MultiProjectSidebar: Story = {
       <StoryProviders noPadding>
         <div style={{ display: "flex", "flex-direction": "column", "max-height": "720px", overflow: "auto" }}>
           <ProjectList
+            mode={createModeRouter()}
             projects={[projectA, projectB]}
             states={{
               [projectA.id]: projectState(
                 projectA.id,
-                [wt("wt-a1", "feature/project-list", "Project list UI"), wt("wt-a2", "fix/session-routing")],
+                [
+                  wt("wt-a1", "feature/project-list", "Project list UI", { sectionId: "sec-a1" }),
+                  wt("wt-a2", "fix/session-routing"),
+                  wt("wt-a3", "feat/project-list-v2", undefined, { groupId: "grp-a1" }),
+                  wt("wt-a4", "feat/project-list-v3", undefined, { groupId: "grp-a1" }),
+                ],
                 [
                   { id: "ses-a1", worktreeId: null },
                   { id: "ses-a2", worktreeId: "wt-a1" },
                 ],
+                [{ id: "sec-a1", name: "Agent Manager", color: "Blue", order: 0, collapsed: false }],
+                "main",
+                ["wt-a2", "sec-a1", "wt-a1", "wt-a3", "wt-a4"],
               ),
               [projectB.id]: projectState(
                 projectB.id,
-                [wt("wt-b1", "feat/gateway-routing", "Gateway routing")],
+                [
+                  wt("wt-b1", "feat/gateway-routing", "Gateway routing", { sectionId: "sec-b1" }),
+                  wt("wt-b2", "fix/api"),
+                ],
                 [{ id: "ses-b1", worktreeId: null }],
                 [{ id: "sec-b1", name: "In progress", color: null, order: 0, collapsed: false }],
                 "master",
+                ["wt-b2", "sec-b1", "wt-b1"],
               ),
             }}
             stats={{

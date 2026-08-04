@@ -71,6 +71,7 @@ Review files`,
                 id: ModelV2.ID.make("claude"),
                 variant: ModelV2.VariantID.make("high"),
               },
+              variant: ModelV2.VariantID.make("high"),
               subtask: true,
             }),
             CommandV2.Info.make({ name: "empty", template: "" }),
@@ -79,5 +80,38 @@ Review files`,
         }),
       ),
     ),
+  )
+
+  it.effect("applies a global partial override after project command definitions", () =>
+    Effect.gen(function* () {
+      const command = yield* CommandV2.Service
+      yield* ConfigCommandPlugin.Plugin.effect(host({ command: { ...command, reload: command.reload } })).pipe(
+        Effect.provideService(
+          Config.Service,
+          Config.Service.of({
+            entries: () =>
+              Effect.succeed([
+                new Config.Document({
+                  type: "document",
+                  info: decode({ commands: { review: { model: "anthropic/claude", variant: "high" } } }),
+                }),
+                new Config.Document({
+                  type: "document",
+                  info: decode({ commands: { review: { template: "Review files" } } }),
+                }),
+              ]),
+          }),
+        ),
+      )
+
+      expect(yield* command.get("review")).toMatchObject({
+        template: "Review files",
+        model: {
+          providerID: ProviderV2.ID.make("anthropic"),
+          id: ModelV2.ID.make("claude"),
+          variant: ModelV2.VariantID.make("high"),
+        },
+      })
+    }),
   )
 })

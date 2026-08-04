@@ -13922,6 +13922,81 @@
         ]
       }
     },
+    "/kilo/models/transcriptions": {
+      "get": {
+        "tags": ["kilo"],
+        "operationId": "kilo.models.transcriptions",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Speech-to-text model list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["id", "name"],
+                    "additionalProperties": false
+                  },
+                  "description": "Speech-to-text model list"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BadRequest | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "List transcription-capable models from the Kilo Gateway catalog",
+        "summary": "Speech-to-text models",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.models.transcriptions({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/kilo/notifications": {
       "get": {
         "tags": ["kilo"],
@@ -26530,6 +26605,40 @@
         "required": ["id", "sessionID", "operation", "targetSessionID"],
         "additionalProperties": false
       },
+      "AgentManagerMoveRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/AgentManagerRequestID"
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "operation": {
+            "type": "string",
+            "enum": ["move"]
+          },
+          "targetSessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "sectionID": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": ["id", "sessionID", "operation", "targetSessionID", "sectionID"],
+        "additionalProperties": false
+      },
       "AgentManagerRequest": {
         "anyOf": [
           {
@@ -26540,6 +26649,9 @@
           },
           {
             "$ref": "#/components/schemas/AgentManagerStopRequest"
+          },
+          {
+            "$ref": "#/components/schemas/AgentManagerMoveRequest"
           }
         ]
       },
@@ -27585,6 +27697,9 @@
             },
             "required": ["providerID", "modelID"],
             "additionalProperties": false
+          },
+          "variant": {
+            "type": "string"
           },
           "command": {
             "type": "string"
@@ -32529,6 +32644,9 @@
               "external_directory": {
                 "$ref": "#/components/schemas/PermissionRuleConfig"
               },
+              "markdown_source": {
+                "$ref": "#/components/schemas/PermissionRuleConfig"
+              },
               "todowrite": {
                 "$ref": "#/components/schemas/PermissionActionConfig"
               },
@@ -33139,7 +33257,6 @@
                   "type": "boolean"
                 }
               },
-              "required": ["template"],
               "additionalProperties": false
             }
           },
@@ -34783,6 +34900,9 @@
             "type": "string"
           },
           "model": {
+            "type": "string"
+          },
+          "variant": {
             "type": "string"
           },
           "source": {
@@ -36796,6 +36916,9 @@
             "required": ["providerID", "modelID"],
             "additionalProperties": false
           },
+          "variant": {
+            "type": "string"
+          },
           "command": {
             "type": "string"
           }
@@ -38779,6 +38902,37 @@
         "required": ["operation", "sessionID", "stopped"],
         "additionalProperties": false
       },
+      "AgentManagerMoveResult": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": ["move"]
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "sectionID": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "moved": {
+            "type": "boolean",
+            "enum": [true]
+          }
+        },
+        "required": ["operation", "sessionID", "sectionID", "moved"],
+        "additionalProperties": false
+      },
       "AgentManagerResult": {
         "anyOf": [
           {
@@ -38789,6 +38943,9 @@
           },
           {
             "$ref": "#/components/schemas/AgentManagerStopResult"
+          },
+          {
+            "$ref": "#/components/schemas/AgentManagerMoveResult"
           }
         ]
       },
@@ -38805,6 +38962,7 @@
               "stale_session",
               "timeout",
               "unavailable_session",
+              "unknown_section",
               "unknown_session",
               "workspace_unavailable"
             ]
@@ -50791,6 +50949,9 @@
           },
           "model": {
             "$ref": "#/components/schemas/ModelRef"
+          },
+          "variant": {
+            "type": "string"
           },
           "subtask": {
             "type": "boolean"

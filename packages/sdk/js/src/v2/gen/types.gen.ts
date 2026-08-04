@@ -372,7 +372,19 @@ export type AgentManagerStopRequest = {
   targetSessionID: string
 }
 
-export type AgentManagerRequest = AgentManagerOverviewRequest | AgentManagerPromptRequest | AgentManagerStopRequest
+export type AgentManagerMoveRequest = {
+  id: AgentManagerRequestId
+  sessionID: string
+  operation: "move"
+  targetSessionID: string
+  sectionID: string | null
+}
+
+export type AgentManagerRequest =
+  | AgentManagerOverviewRequest
+  | AgentManagerPromptRequest
+  | AgentManagerStopRequest
+  | AgentManagerMoveRequest
 
 export type NotebookRequestId = string
 
@@ -713,6 +725,7 @@ export type SubtaskPart = {
     providerID: string
     modelID: string
   }
+  variant?: string
   command?: string
 }
 
@@ -2255,6 +2268,7 @@ export type PermissionConfig =
       bash?: PermissionRuleConfig
       task?: PermissionRuleConfig
       external_directory?: PermissionRuleConfig
+      markdown_source?: PermissionRuleConfig
       todowrite?: PermissionActionConfig
       question?: PermissionActionConfig
       webfetch?: PermissionActionConfig
@@ -2489,7 +2503,7 @@ export type Config = {
   server?: ServerConfig
   command?: {
     [key: string]: {
-      template: string
+      template?: string
       description?: string
       agent?: string
       model?: string
@@ -3048,6 +3062,7 @@ export type Command = {
   description?: string
   agent?: string
   model?: string
+  variant?: string
   source?: "command" | "mcp" | "skill"
   trusted?: boolean
   template: string
@@ -3690,6 +3705,7 @@ export type SubtaskPartInput = {
     providerID: string
     modelID: string
   }
+  variant?: string
   command?: string
 }
 
@@ -4323,7 +4339,18 @@ export type AgentManagerStopResult = {
   stopped: true
 }
 
-export type AgentManagerResult = AgentManagerOverviewResult | AgentManagerPromptResult | AgentManagerStopResult
+export type AgentManagerMoveResult = {
+  operation: "move"
+  sessionID: string
+  sectionID: string | null
+  moved: true
+}
+
+export type AgentManagerResult =
+  | AgentManagerOverviewResult
+  | AgentManagerPromptResult
+  | AgentManagerStopResult
+  | AgentManagerMoveResult
 
 export type AgentManagerFailure = {
   code:
@@ -4334,6 +4361,7 @@ export type AgentManagerFailure = {
     | "stale_session"
     | "timeout"
     | "unavailable_session"
+    | "unknown_section"
     | "unknown_session"
     | "workspace_unavailable"
   message: string
@@ -7981,6 +8009,7 @@ export type CommandV2Info = {
   description?: string
   agent?: string
   model?: ModelRef
+  variant?: string
   subtask?: boolean
 }
 
@@ -16047,6 +16076,38 @@ export type KiloModelsImagesResponses = {
 }
 
 export type KiloModelsImagesResponse = KiloModelsImagesResponses[keyof KiloModelsImagesResponses]
+
+export type KiloModelsTranscriptionsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilo/models/transcriptions"
+}
+
+export type KiloModelsTranscriptionsErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+}
+
+export type KiloModelsTranscriptionsError = KiloModelsTranscriptionsErrors[keyof KiloModelsTranscriptionsErrors]
+
+export type KiloModelsTranscriptionsResponses = {
+  /**
+   * Speech-to-text model list
+   */
+  200: Array<{
+    id: string
+    name: string
+  }>
+}
+
+export type KiloModelsTranscriptionsResponse =
+  KiloModelsTranscriptionsResponses[keyof KiloModelsTranscriptionsResponses]
 
 export type KiloNotificationsData = {
   body?: never

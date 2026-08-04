@@ -190,10 +190,19 @@ interface TerminalCreatedMessage {
   placement: TerminalPlacement
   /** null for LOCAL, worktree id otherwise */
   worktreeId: string | null
+  /** Project that owns the create; the webview namespaces its per-project
+   *  terminal state with it (mirrors `ScriptTerminalView.projectId`). */
+  projectId?: string
   terminalId: string
   title: string
   wsUrl: string
   font: TerminalFont
+}
+
+interface TerminalRestartedMessage {
+  type: "agentManager.terminal.restarted"
+  terminalId: string
+  wsUrl: string
 }
 
 interface TerminalClosedMessage {
@@ -404,6 +413,7 @@ export type AgentManagerOutMessage =
   | ActionOutMessage
   | RunStatusMessage
   | TerminalCreatedMessage
+  | TerminalRestartedMessage
   | TerminalClosedMessage
   | TerminalErrorMessage
   | TerminalDestinationChangedMessage
@@ -616,6 +626,7 @@ interface SetTabOrderIn {
 
 interface SetWorktreeOrderIn {
   type: "agentManager.setWorktreeOrder"
+  projectId?: string
   order: string[]
 }
 
@@ -945,6 +956,13 @@ interface TerminalResizeIn {
   rows: number
 }
 
+interface TerminalRestartIn {
+  type: "agentManager.terminal.restart"
+  terminalId: string
+  cols?: number
+  rows?: number
+}
+
 interface TerminalDestinationSelectedIn {
   type: "agentManager.terminal.destinationSelected"
   destination: TerminalDestination
@@ -1032,4 +1050,5 @@ export type AgentManagerInMessage =
   | TerminalCloseIn
   | TerminalStopIn
   | TerminalResizeIn
+  | TerminalRestartIn
   | TerminalDestinationSelectedIn

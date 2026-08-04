@@ -7,13 +7,14 @@ import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
 import { useSession } from "../../context/session"
+import { useSpeechToTextModels } from "../../context/speech-to-text-models"
 import { parseModelString } from "../../../../src/shared/provider-model"
 import { ModelSelectorBase } from "../shared/ModelSelector"
 import { ThinkingSelectorBase } from "../shared/ThinkingSelector"
 import SettingsRow from "./SettingsRow"
 import { DEFAULT_SPEECH_TO_TEXT_MODEL } from "../../../../src/speech-to-text/models"
 import { hasSpeechToTextAccess, selectedSpeechToTextModel } from "../speech-to-text/availability"
-import { SPEECH_TO_TEXT_MODEL_OPTIONS } from "../speech-to-text/model-selector"
+import { speechToTextModelOptions } from "../speech-to-text/model-selector"
 import { AUTOCOMPLETE_SELECTOR_MODELS, getAutocompleteSelection } from "./autocomplete-model-selector"
 
 const ModelsTab: Component = () => {
@@ -21,6 +22,7 @@ const ModelsTab: Component = () => {
   const language = useLanguage()
   const provider = useProvider()
   const session = useSession()
+  const speechModels = useSpeechToTextModels()
 
   const autocompleteProvider = () => {
     const v = settings()["autocomplete.provider"]
@@ -42,8 +44,9 @@ const ModelsTab: Component = () => {
   }
 
   const subagentModel = createMemo(() => parseModelString(config().subagent_model ?? undefined))
-  const speechModel = createMemo(() => selectedSpeechToTextModel(config()))
-  const speechOption = createMemo(() => SPEECH_TO_TEXT_MODEL_OPTIONS.find((item) => item.value === speechModel()))
+  const speechModel = createMemo(() => selectedSpeechToTextModel(config(), speechModels.models()))
+  const speechOptions = createMemo(() => speechToTextModelOptions(speechModels.models()))
+  const speechOption = createMemo(() => speechOptions().find((item) => item.value === speechModel()))
   const kiloReady = createMemo(() => hasSpeechToTextAccess(config(), provider.authStates()))
   const variantKey = createMemo(() => config().subagent_model ?? undefined)
   const subagentVariants = createMemo(() => Object.keys(provider.findModel(subagentModel())?.variants ?? {}))
@@ -190,7 +193,7 @@ const ModelsTab: Component = () => {
             inactive={kiloReady()}
           >
             <Select
-              options={SPEECH_TO_TEXT_MODEL_OPTIONS}
+              options={speechOptions()}
               current={speechOption()}
               value={(item) => item.value}
               label={(item) => `${item.label} (${item.provider})`}

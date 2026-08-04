@@ -18,6 +18,12 @@ data class MessageDto(
     val cost: Double? = null,
     val tokens: TokensDto? = null,
     val error: MessageErrorDto? = null,
+    val summary: MessageSummaryDto? = null,
+)
+
+@Serializable
+data class MessageSummaryDto(
+    val diffs: List<DiffFileDto> = emptyList(),
 )
 
 @Serializable
@@ -309,6 +315,8 @@ data class PermissionRequestDto(
     val ruleDecisions: List<PermissionRuleDecisionDto> = emptyList(),
     val filePath: String? = null,
     val fileDiffs: List<PermissionFileDiffDto> = emptyList(),
+    // Verbatim skill-shell commands (metadata.commands) the prompt must display; empty for non-skill requests.
+    val skillCommands: List<String> = emptyList(),
 )
 
 @Serializable
@@ -401,6 +409,7 @@ data class DiffFileDto(
     val additions: Int,
     val deletions: Int,
     val patch: String? = null,
+    val status: String? = null,
 )
 
 // --- Config Update ---

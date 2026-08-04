@@ -19,6 +19,7 @@ import type { PermissionRequest } from "./permissions"
 import type { AnacondaDesktopExtensionMessage } from "../../../../src/shared/anaconda-desktop-messages"
 import type { QuestionRequest, SuggestionRequest, TodoItem } from "./questions"
 import type { ModelSelection, Provider, ProviderAuthState } from "./providers"
+import type { SpeechToTextModelDef } from "../../../../src/speech-to-text/models"
 import type { AgentInfo, AgentRequirementResult, SkillInfo, SlashCommandInfo } from "./agents"
 import type {
   BrowserSettings,
@@ -381,6 +382,11 @@ export interface KiloEmbeddingModelsLoadedMessage {
 export interface ImageModelsLoadedMessage {
   type: "imageModelsLoaded"
   models: Array<{ id: string; name: string; description?: string }>
+}
+
+export interface SpeechToTextModelsLoadedMessage {
+  type: "speechToTextModelsLoaded"
+  models: SpeechToTextModelDef[]
 }
 
 export interface ProvidersLoadedMessage {
@@ -785,10 +791,19 @@ export interface AgentManagerTerminalCreatedMessage {
   placement: TerminalPlacement
   /** null for LOCAL, worktree id otherwise */
   worktreeId: string | null
+  /** Project that owns the create; the webview namespaces its per-project
+   *  terminal state with it (mirrors `ScriptTerminalView.projectId`). */
+  projectId?: string
   terminalId: string
   title: string
   wsUrl: string
   font: TerminalFont
+}
+
+export interface AgentManagerTerminalRestartedMessage {
+  type: "agentManager.terminal.restarted"
+  terminalId: string
+  wsUrl: string
 }
 
 export interface AgentManagerTerminalFontChangedMessage {
@@ -1292,6 +1307,7 @@ export type ExtensionMessage =
   | ChatSettingsLoadedMessage
   | KiloEmbeddingModelsLoadedMessage
   | ImageModelsLoadedMessage
+  | SpeechToTextModelsLoadedMessage
   | ProvidersLoadedMessage
   | AgentsLoadedMessage
   | SkillsLoadedMessage
@@ -1376,6 +1392,7 @@ export type ExtensionMessage =
   | AgentManagerLocalStatsMessage
   | AgentManagerPRStatusMessage
   | AgentManagerTerminalCreatedMessage
+  | AgentManagerTerminalRestartedMessage
   | AgentManagerTerminalFontChangedMessage
   | AgentManagerTerminalClosedMessage
   | AgentManagerTerminalErrorMessage
