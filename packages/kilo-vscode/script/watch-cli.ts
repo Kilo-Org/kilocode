@@ -9,12 +9,17 @@
 import { watch, chmodSync } from "node:fs"
 import { join, relative } from "node:path"
 import { $ } from "bun"
-import { copySandboxResources, copyTreeSitterResources } from "../src/services/cli-backend/cli-resources"
+import {
+  copySandboxResources,
+  copyTreeSitterResources,
+  copyWorldDaemon,
+} from "../src/services/cli-backend/cli-resources"
 
 const kiloVscodeDir = join(import.meta.dir, "..")
 const packagesDir = join(kiloVscodeDir, "..")
 const opencodeDir = join(packagesDir, "opencode")
 const opencodeSrcDir = join(opencodeDir, "src")
+const worldSrcDir = join(packagesDir, "kilo-world", "src")
 const targetBinDir = join(kiloVscodeDir, "bin")
 const targetBinPath = join(targetBinDir, "kilo")
 
@@ -60,6 +65,7 @@ async function rebuild() {
     await $`cp ${source} ${targetBinPath}`
     await copyTreeSitterResources(source, targetBinPath)
     await copySandboxResources(source, targetBinPath)
+    await copyWorldDaemon(source, targetBinPath)
     chmodSync(targetBinPath, 0o755)
 
     const elapsed = ((performance.now() - start) / 1000).toFixed(1)
@@ -81,16 +87,18 @@ log(`Watching ${relative(kiloVscodeDir, opencodeSrcDir)}/ for changes...`)
 const debounce = 500
 let timer: ReturnType<typeof setTimeout> | null = null
 
-watch(opencodeSrcDir, { recursive: true }, (_event, filename) => {
-  if (!filename) return
-  // Skip test files
-  if (filename.endsWith(".test.ts") || filename.endsWith(".test.tsx")) return
+for (const dir of [opencodeSrcDir, worldSrcDir]) {
+  watch(dir, { recursive: true }, (_event, filename) => {
+    if (!filename) return
+    // Skip test files
+    if (filename.endsWith(".test.ts") || filename.endsWith(".test.tsx")) return
 
-  if (timer) clearTimeout(timer)
-  timer = setTimeout(() => {
-    log(`Change detected: ${filename}`)
-    rebuild()
-  }, debounce)
-})
+    if (timer) clearTimeout(timer)
+    timer = setTimeout(() => {
+      log(`Change detected: ${relative(packagesDir, join(dir, filename))}`)
+      rebuild()
+    }, debounce)
+  })
+}
 
 log("CLI watcher running. Press Ctrl+C to stop.")

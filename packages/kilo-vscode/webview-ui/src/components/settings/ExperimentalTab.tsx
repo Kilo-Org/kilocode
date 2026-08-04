@@ -159,6 +159,19 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
+          title={language.t("settings.experimental.worldBrowser.title")}
+          description={language.t("settings.experimental.worldBrowser.description")}
+        >
+          <Switch
+            checked={experimental().world_browser !== false}
+            onChange={(checked) => updateExperimental("world_browser", checked)}
+            hideLabel
+          >
+            {language.t("settings.experimental.worldBrowser.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
           title={language.t("settings.experimental.imageGeneration.title")}
           description={language.t("settings.experimental.imageGeneration.description")}
         >

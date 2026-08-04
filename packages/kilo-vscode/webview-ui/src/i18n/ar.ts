@@ -799,13 +799,15 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "المهارات",
 
   "settings.browser.description":
-    "عند التفعيل، يمكن لوكيل الذكاء الاصطناعي التفاعل مع صفحات الويب — التنقل والنقر والكتابة والتقاط لقطات الشاشة. سيتم فتح نافذة Chrome حتى تتمكن من مشاهدة الوكيل أثناء العمل.",
+    "تحكم في متصفح بدون واجهة للتنقل والنقر والكتابة والتقاط لقطات الشاشة. يعمل المتصفح بدون نافذة مرئية افتراضيًا، وستظهر صورة مضمّنة للصفحة بعد كل إجراء مرئي.",
   "settings.browser.enable.title": "تفعيل أتمتة المتصفح",
-  "settings.browser.enable.description": "تسجيل خادم Playwright MCP مع الواجهة الخلفية لـ CLI.",
+  "settings.browser.enable.description": "فعّل أداة World لأتمتة المتصفح.",
   "settings.browser.systemChrome.title": "استخدام Chrome النظام",
-  "settings.browser.systemChrome.description": "استخدم متصفح Chrome المثبت لديك بدلاً من نسخة Chromium منفصلة.",
+  "settings.browser.systemChrome.description":
+    "استخدم Chrome المثبت بدلاً من Chromium منفصل، مع الرجوع إلى Chromium إذا لم يتم العثور على Chrome.",
   "settings.browser.headless.title": "الوضع بدون واجهة",
-  "settings.browser.headless.description": "التشغيل في الوضع بدون واجهة (بدون نافذة متصفح مرئية).",
+  "settings.browser.headless.description":
+    "شغّل المتصفح بدون نافذة مرئية. عطّل هذا الخيار لفتح نافذة Chrome يمكنك مشاهدتها.",
 
   "settings.language.description": 'اختر اللغة لواجهة Kilo Code. "تلقائي" يستخدم لغة عرض VS Code.',
   "settings.language.auto": "تلقائي (لغة VS Code)",
@@ -841,6 +843,9 @@ export const dict = {
   "settings.experimental.batch.description": "تمكين المعالجة الدفعية لاستدعاءات الأدوات",
   "settings.experimental.codebaseSearch.title": "بحث في قاعدة الكود",
   "settings.experimental.codebaseSearch.description": "تمكين البحث بالذكاء الاصطناعي باللغة الطبيعية عبر قاعدة الكود",
+  "settings.experimental.worldBrowser.title": "متصفح World",
+  "settings.experimental.worldBrowser.description":
+    "فعّل أداة World للمتصفح. تعمل بدون واجهة افتراضيًا وتعيد صورة مضمّنة بعد كل إجراء مرئي. عطّلها لإخفاء إمكانات المتصفح عن الوكيل.",
   "settings.experimental.imageGeneration.title": "توليد الصور",
   "settings.experimental.imageGeneration.description": "تمكين توليد الصور بالذكاء الاصطناعي",
   "settings.experimental.imageGenerationModel.title": "نموذج الصور",

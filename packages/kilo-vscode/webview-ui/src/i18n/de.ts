@@ -835,14 +835,15 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Fähigkeiten",
 
   "settings.browser.description":
-    "Wenn aktiviert, kann der KI-Agent mit Webseiten interagieren — navigieren, klicken, tippen und Screenshots erstellen. Ein Chrome-Fenster wird geöffnet, damit Sie dem Agenten bei der Arbeit zusehen können.",
+    "Steuern Sie einen Headless-Browser zum Navigieren, Klicken, Tippen und Erstellen von Screenshots. Der Browser läuft standardmäßig ohne sichtbares Fenster, zeigt aber nach jeder visuellen Aktion ein eingebettetes Bild der Seite.",
   "settings.browser.enable.title": "Browser-Automatisierung aktivieren",
-  "settings.browser.enable.description": "Den Playwright-MCP-Server beim CLI-Backend registrieren.",
+  "settings.browser.enable.description": "Das World-Werkzeug zur Browserautomatisierung aktivieren.",
   "settings.browser.systemChrome.title": "System-Chrome verwenden",
   "settings.browser.systemChrome.description":
-    "Verwenden Sie Ihren installierten Chrome-Browser anstelle einer separaten Chromium-Instanz.",
+    "Den installierten Chrome-Browser statt einer separaten Chromium-Instanz verwenden. Fällt auf Chromium zurück, wenn Chrome nicht gefunden wird.",
   "settings.browser.headless.title": "Headless-Modus",
-  "settings.browser.headless.description": "Im Headless-Modus ausführen (kein sichtbares Browserfenster).",
+  "settings.browser.headless.description":
+    "Ohne sichtbares Browserfenster ausführen. Deaktivieren, um ein sichtbares Chrome-Fenster zu öffnen.",
 
   "settings.language.description":
     'Wählen Sie die Sprache für die Kilo Code Oberfläche. „Auto" verwendet die VS Code Anzeigesprache.',
@@ -884,6 +885,9 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Codebase-Suche",
   "settings.experimental.codebaseSearch.description":
     "KI-gestützte Suche in natürlicher Sprache über die gesamte Codebasis aktivieren",
+  "settings.experimental.worldBrowser.title": "World-Browser",
+  "settings.experimental.worldBrowser.description":
+    "Das World-Browserwerkzeug aktivieren. Es läuft standardmäßig headless und gibt nach jeder visuellen Aktion ein Bild zurück. Deaktivieren, um Browserfunktionen vor dem Agenten zu verbergen.",
   "settings.experimental.imageGeneration.title": "Bildgenerierung",
   "settings.experimental.imageGeneration.description": "KI-Bildgenerierung aktivieren",
   "settings.experimental.imageGenerationModel.title": "Bildmodell",

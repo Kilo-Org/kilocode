@@ -669,14 +669,15 @@ export const dict = {
   "settings.agentBehaviour.subtab.workflows": "Workflow",
   "settings.agentBehaviour.subtab.skills": "Skill",
   "settings.browser.description":
-    "Quando è abilitato, l'agente AI può interagire con pagine web: navigare, fare clic, scrivere e acquisire screenshot. Si aprirà una finestra Chrome così puoi osservare il lavoro dell'agente.",
+    "Controlla un browser headless per navigare, fare clic, scrivere e acquisire screenshot. Per impostazione predefinita il browser viene eseguito senza una finestra visibile, ma mostra un'immagine della pagina dopo ogni azione visiva.",
   "settings.browser.enable.title": "Abilita automazione browser",
-  "settings.browser.enable.description": "Registra il server MCP Playwright con il backend CLI.",
+  "settings.browser.enable.description": "Abilita lo strumento World per l'automazione del browser.",
   "settings.browser.systemChrome.title": "Usa Chrome di sistema",
   "settings.browser.systemChrome.description":
-    "Usa il browser Chrome installato invece di un'istanza Chromium separata.",
+    "Usa Chrome installato invece di un'istanza Chromium separata. Se Chrome non viene trovato, usa Chromium.",
   "settings.browser.headless.title": "Modalità headless",
-  "settings.browser.headless.description": "Esegui in modalità headless (senza finestra browser visibile).",
+  "settings.browser.headless.description":
+    "Esegui senza una finestra visibile. Disattiva per aprire una finestra Chrome osservabile.",
   "settings.language.description": 'Scegli la lingua dell\'interfaccia Kilo Code. "Auto" usa la lingua di VS Code.',
   "settings.language.auto": "Auto (lingua VS Code)",
   "settings.language.current": "Corrente:",
@@ -716,6 +717,9 @@ export const dict = {
     "Abilita l'indicizzazione semantica del codebase e il tool semantic_search. Richiede configurazione indicizzazione.",
   "settings.experimental.codebaseSearch.title": "Ricerca codebase",
   "settings.experimental.codebaseSearch.description": "Abilita ricerca in linguaggio naturale con AI nel codebase",
+  "settings.experimental.worldBrowser.title": "Browser World",
+  "settings.experimental.worldBrowser.description":
+    "Abilita lo strumento browser World. Funziona in modalità headless per impostazione predefinita e restituisce un'immagine dopo ogni azione visiva. Disattiva per nascondere le funzionalità del browser all'agente.",
   "settings.experimental.imageGeneration.title": "Generazione di immagini",
   "settings.experimental.imageGeneration.description": "Abilita la generazione di immagini con AI",
   "settings.experimental.imageGenerationModel.title": "Modello di immagine",

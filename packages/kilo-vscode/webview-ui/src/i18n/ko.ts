@@ -811,13 +811,15 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "스킬",
 
   "settings.browser.description":
-    "활성화하면 AI 에이전트가 웹 페이지와 상호작용할 수 있습니다 — 탐색, 클릭, 입력, 스크린샷 촬영. Chrome 창이 열려 에이전트의 작업을 확인할 수 있습니다.",
+    "헤드리스 브라우저를 제어하여 탐색, 클릭, 입력 및 스크린샷 촬영을 수행합니다. 기본적으로 표시되는 창 없이 실행되지만 각 시각적 작업 후 페이지 이미지를 표시합니다.",
   "settings.browser.enable.title": "브라우저 자동화 활성화",
-  "settings.browser.enable.description": "Playwright MCP 서버를 CLI 백엔드에 등록합니다.",
+  "settings.browser.enable.description": "브라우저 자동화를 위한 World 도구를 활성화합니다.",
   "settings.browser.systemChrome.title": "시스템 Chrome 사용",
-  "settings.browser.systemChrome.description": "별도의 Chromium 인스턴스 대신 설치된 Chrome 브라우저를 사용합니다.",
+  "settings.browser.systemChrome.description":
+    "별도의 Chromium 대신 설치된 Chrome을 사용합니다. Chrome을 찾지 못하면 Chromium을 사용합니다.",
   "settings.browser.headless.title": "헤드리스 모드",
-  "settings.browser.headless.description": "헤드리스 모드로 실행합니다 (브라우저 창이 표시되지 않음).",
+  "settings.browser.headless.description":
+    "표시되는 브라우저 창 없이 실행합니다. 끄면 확인할 수 있는 Chrome 창이 열립니다.",
 
   "settings.language.description": 'Kilo Code UI의 언어를 선택하세요. "자동"은 VS Code 표시 언어를 사용합니다.',
   "settings.language.auto": "자동 (VS Code 언어)",
@@ -854,6 +856,9 @@ export const dict = {
   "settings.experimental.batch.description": "여러 도구 호출의 배치 처리 활성화",
   "settings.experimental.codebaseSearch.title": "코드베이스 검색",
   "settings.experimental.codebaseSearch.description": "코드베이스 전체에서 AI 기반 자연어 검색 활성화",
+  "settings.experimental.worldBrowser.title": "World 브라우저",
+  "settings.experimental.worldBrowser.description":
+    "World 브라우저 도구를 활성화합니다. 기본적으로 헤드리스로 실행되며 각 시각적 작업 후 이미지를 반환합니다. 비활성화하면 에이전트에서 브라우저 기능을 숨깁니다.",
   "settings.experimental.imageGeneration.title": "이미지 생성",
   "settings.experimental.imageGeneration.description": "AI 이미지 생성 활성화",
   "settings.experimental.imageGenerationModel.title": "이미지 모델",

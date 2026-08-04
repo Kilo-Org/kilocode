@@ -747,13 +747,14 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Skills",
 
   "settings.browser.description":
-    "啟用後，AI Agent 可以與網頁互動，可導覽、點選、輸入並擷取螢幕截圖。Chrome 視窗將開啟，方便觀察 Agent 的工作。",
+    "控制無頭瀏覽器進行導覽、點選、輸入和擷取螢幕截圖。瀏覽器預設在沒有可見視窗的情況下執行，但會在每次視覺操作後顯示頁面圖像。",
   "settings.browser.enable.title": "啟用瀏覽器自動化",
-  "settings.browser.enable.description": "將 Playwright MCP 伺服器註冊到 CLI 後端。",
+  "settings.browser.enable.description": "啟用用於瀏覽器自動化的 World 工具。",
   "settings.browser.systemChrome.title": "使用系統 Chrome",
-  "settings.browser.systemChrome.description": "使用已安裝的 Chrome 瀏覽器，而非獨立的 Chromium 實例。",
+  "settings.browser.systemChrome.description":
+    "使用已安裝的 Chrome，而非獨立的 Chromium。找不到 Chrome 時會使用 Chromium。",
   "settings.browser.headless.title": "無頭模式",
-  "settings.browser.headless.description": "以無頭模式執行（無可見瀏覽器視窗）。",
+  "settings.browser.headless.description": "在沒有可見瀏覽器視窗的情況下執行。關閉後可開啟方便觀察的 Chrome 視窗。",
 
   "settings.language.description": "選擇 Kilo Code 介面的語言。「自動」使用 VS Code 的顯示語言。",
   "settings.language.auto": "自動（VS Code 語言）",
@@ -789,6 +790,9 @@ export const dict = {
   "settings.experimental.batch.description": "啟用多個工具呼叫的批次處理",
   "settings.experimental.codebaseSearch.title": "程式碼庫搜尋",
   "settings.experimental.codebaseSearch.description": "啟用 AI 驅動的自然語言程式碼庫搜尋",
+  "settings.experimental.worldBrowser.title": "World 瀏覽器",
+  "settings.experimental.worldBrowser.description":
+    "啟用 World 瀏覽器工具。它預設以無頭模式執行，並在每次視覺操作後傳回圖像。停用後可對 Agent 隱藏瀏覽器功能。",
   "settings.experimental.imageGeneration.title": "圖像生成",
   "settings.experimental.imageGeneration.description": "啟用 AI 圖像生成",
   "settings.experimental.imageGenerationModel.title": "圖像模型",

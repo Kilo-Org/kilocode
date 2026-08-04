@@ -819,14 +819,15 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Færdigheder",
 
   "settings.browser.description":
-    "Når aktiveret kan AI-agenten interagere med websider — navigere, klikke, skrive og tage skærmbilleder. Et Chrome-vindue åbnes, så du kan se agenten arbejde.",
+    "Styr en headless-browser til at navigere, klikke, skrive og tage skærmbilleder. Browseren kører som standard uden et synligt vindue, men viser et indlejret billede efter hver visuel handling.",
   "settings.browser.enable.title": "Aktivér browserautomatisering",
-  "settings.browser.enable.description": "Registrér Playwright MCP-serveren hos CLI-backend'en.",
+  "settings.browser.enable.description": "Aktivér World-værktøjet til browserautomatisering.",
   "settings.browser.systemChrome.title": "Brug system-Chrome",
   "settings.browser.systemChrome.description":
-    "Brug din installerede Chrome-browser i stedet for en separat Chromium-instans.",
+    "Brug din installerede Chrome-browser i stedet for en separat Chromium-instans. Falder tilbage til Chromium, hvis Chrome ikke findes.",
   "settings.browser.headless.title": "Headless-tilstand",
-  "settings.browser.headless.description": "Kør i headless-tilstand (intet synligt browservindue).",
+  "settings.browser.headless.description":
+    "Kør uden et synligt browservindue. Slå fra for at åbne et Chrome-vindue, du kan følge.",
 
   "settings.language.description": 'Vælg sproget til Kilo Code-brugerfladen. "Auto" bruger VS Codes visningssprog.',
   "settings.language.auto": "Auto (VS Code-sprog)",
@@ -864,6 +865,9 @@ export const dict = {
   "settings.experimental.batch.description": "Aktiver batchbehandling af flere værktøjskald",
   "settings.experimental.codebaseSearch.title": "Kodesøgning",
   "settings.experimental.codebaseSearch.description": "Aktiver AI-drevet naturlig sprogsøgning på tværs af kodebasen",
+  "settings.experimental.worldBrowser.title": "World-browser",
+  "settings.experimental.worldBrowser.description":
+    "Aktivér World-browserværktøjet. Det kører som standard headless og returnerer et billede efter hver visuel handling. Slå fra for at skjule browserfunktioner for agenten.",
   "settings.experimental.imageGeneration.title": "Billedgenerering",
   "settings.experimental.imageGeneration.description": "Aktiver AI-billedgenerering",
   "settings.experimental.imageGenerationModel.title": "Billedmodel",

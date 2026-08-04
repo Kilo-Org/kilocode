@@ -780,14 +780,15 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Ferdigheter",
 
   "settings.browser.description":
-    "Når aktivert kan AI-agenten samhandle med nettsider — navigere, klikke, skrive og ta skjermbilder. Et Chrome-vindu åpnes slik at du kan se agenten jobbe.",
+    "Styr en headless-nettleser for å navigere, klikke, skrive og ta skjermbilder. Nettleseren kjører som standard uten et synlig vindu, men viser et bilde av siden etter hver visuelle handling.",
   "settings.browser.enable.title": "Aktiver nettleserautomatisering",
-  "settings.browser.enable.description": "Registrer Playwright MCP-serveren med CLI-backend.",
+  "settings.browser.enable.description": "Aktiver World-verktøyet for nettleserautomatisering.",
   "settings.browser.systemChrome.title": "Bruk system-Chrome",
   "settings.browser.systemChrome.description":
-    "Bruk den installerte Chrome-nettleseren i stedet for en separat Chromium-instans.",
+    "Bruk installert Chrome i stedet for en separat Chromium-instans. Bruker Chromium hvis Chrome ikke finnes.",
   "settings.browser.headless.title": "Headless-modus",
-  "settings.browser.headless.description": "Kjør i headless-modus (uten synlig nettleservindu).",
+  "settings.browser.headless.description":
+    "Kjør uten et synlig nettleservindu. Slå av for å åpne et Chrome-vindu du kan følge.",
 
   "settings.language.description": 'Velg språket for Kilo Code-grensesnittet. "Auto" bruker VS Codes visningsspråk.',
   "settings.language.auto": "Auto (VS Code-språk)",
@@ -825,6 +826,9 @@ export const dict = {
   "settings.experimental.batch.description": "Aktiver batchbehandling av verktøykall",
   "settings.experimental.codebaseSearch.title": "Kodesøk",
   "settings.experimental.codebaseSearch.description": "Aktiver AI-drevet naturlig språksøk på tvers av kodebasen",
+  "settings.experimental.worldBrowser.title": "World-nettleser",
+  "settings.experimental.worldBrowser.description":
+    "Aktiver World-nettleserverktøyet. Det kjører headless som standard og returnerer et bilde etter hver visuelle handling. Slå av for å skjule nettleserfunksjoner for agenten.",
   "settings.experimental.imageGeneration.title": "Bildegenerering",
   "settings.experimental.imageGeneration.description": "Aktiver AI-bildegenerering",
   "settings.experimental.imageGenerationModel.title": "Bildemodell",

@@ -820,14 +820,15 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Vještine",
 
   "settings.browser.description":
-    "Kada je omogućeno, AI agent može komunicirati s web stranicama — navigirati, klikati, tipkati i snimati ekran. Chrome prozor će se otvoriti kako biste mogli pratiti rad agenta.",
+    "Upravljajte headless preglednikom za navigaciju, klikanje, tipkanje i snimanje ekrana. Preglednik se podrazumijevano pokreće bez vidljivog prozora, ali prikazuje sliku stranice nakon svake vizuelne radnje.",
   "settings.browser.enable.title": "Omogući automatizaciju preglednika",
-  "settings.browser.enable.description": "Registriraj Playwright MCP server s CLI pozadinom.",
+  "settings.browser.enable.description": "Omogućite alat World za automatizaciju preglednika.",
   "settings.browser.systemChrome.title": "Koristi sistemski Chrome",
   "settings.browser.systemChrome.description":
-    "Koristite instalirani Chrome preglednik umjesto zasebne Chromium instance.",
+    "Koristite instalirani Chrome umjesto zasebnog Chromiuma. Vraća se na Chromium ako Chrome nije pronađen.",
   "settings.browser.headless.title": "Headless način",
-  "settings.browser.headless.description": "Pokreni u headless načinu (bez vidljivog prozora preglednika).",
+  "settings.browser.headless.description":
+    "Pokrenite bez vidljivog prozora. Isključite da otvorite Chrome prozor koji možete pratiti.",
 
   "settings.language.description": 'Odaberite jezik za Kilo Code sučelje. "Auto" koristi jezik prikaza VS Code-a.',
   "settings.language.auto": "Auto (VS Code jezik)",
@@ -865,6 +866,9 @@ export const dict = {
   "settings.experimental.batch.description": "Omogući batch obradu poziva alata",
   "settings.experimental.codebaseSearch.title": "Pretraga koda",
   "settings.experimental.codebaseSearch.description": "Omogući AI pretragu prirodnim jezikom kroz bazu koda",
+  "settings.experimental.worldBrowser.title": "World preglednik",
+  "settings.experimental.worldBrowser.description":
+    "Omogućite World alat za preglednik. Podrazumijevano radi bez prozora i vraća sliku nakon svake vizuelne radnje. Isključite da sakrijete mogućnosti preglednika od agenta.",
   "settings.experimental.imageGeneration.title": "Generisanje slika",
   "settings.experimental.imageGeneration.description": "Omogući AI generisanje slika",
   "settings.experimental.imageGenerationModel.title": "Model slike",

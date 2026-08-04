@@ -6,6 +6,8 @@ import * as path from "path"
 const dir = "tree-sitter"
 const runtime = "tree-sitter.wasm"
 const kiloSandboxWorker = "kilo-sandbox-mutation-worker.js"
+const worldDaemon = "world-daemon.cjs"
+const worldManifest = "world-daemon.assets.json"
 const bwrap = "bwrap"
 const bwrapLicense = path.join("licenses", "bubblewrap")
 const bwrapLicenseFiles = ["NOTICE", "COPYING", "MUSL-COPYRIGHT", "build.ts"]
@@ -41,6 +43,20 @@ export function kiloSandboxWorkerForBinary(file: string): string {
 
 export function hasKiloSandboxWorker(file: string): boolean {
   return fs.existsSync(kiloSandboxWorkerForBinary(file))
+}
+
+export function worldDaemonForBinary(file: string): string {
+  const p = paths(file)
+  return p.join(p.dirname(file), worldDaemon)
+}
+
+export function worldDaemonManifestForBinary(file: string): string {
+  const p = paths(file)
+  return p.join(p.dirname(file), worldManifest)
+}
+
+export function hasWorldDaemon(file: string): boolean {
+  return fs.existsSync(worldDaemonForBinary(file)) && fs.existsSync(worldDaemonManifestForBinary(file))
 }
 
 export async function copyTreeSitterResources(source: string, target: string): Promise<void> {
@@ -92,6 +108,26 @@ export async function copyKiloSandboxWorker(source: string, target: string): Pro
   const to = kiloSandboxWorkerForBinary(target)
   if (!fs.existsSync(from)) throw new Error(`Kilo sandbox mutation worker not found at ${from}`)
   await fs.promises.copyFile(from, to)
+}
+
+export async function copyWorldDaemon(source: string, target: string): Promise<void> {
+  const manifest = worldDaemonManifestForBinary(source)
+  if (!fs.existsSync(manifest)) throw new Error(`Kilo world daemon manifest not found at ${manifest}`)
+  const value: unknown = JSON.parse(await fs.promises.readFile(manifest, "utf8"))
+  if (!Array.isArray(value) || !value.every((file) => typeof file === "string" && path.basename(file) === file)) {
+    throw new Error(`Invalid Kilo world daemon manifest at ${manifest}`)
+  }
+  if (!value.includes(worldDaemon)) throw new Error(`Kilo world daemon manifest does not include ${worldDaemon}`)
+  const from = path.dirname(source)
+  const to = path.dirname(target)
+  await Promise.all(
+    value.map(async (file) => {
+      const input = path.join(from, file)
+      if (!fs.existsSync(input)) throw new Error(`Kilo world daemon resource not found at ${input}`)
+      await fs.promises.copyFile(input, path.join(to, file))
+    }),
+  )
+  await fs.promises.copyFile(manifest, worldDaemonManifestForBinary(target))
 }
 
 function cacheRoot() {

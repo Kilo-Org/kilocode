@@ -793,14 +793,15 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Skills",
 
   "settings.browser.description":
-    "When enabled, the AI agent can interact with web pages — navigating, clicking, typing, and taking screenshots. A Chrome window will open so you can watch the agent work.",
+    "Drive a headless browser to navigate, click, type, and capture screenshots. The browser runs without a visible window by default, but you'll see an inline image of the page after every visual action.",
   "settings.browser.enable.title": "Enable Browser Automation",
-  "settings.browser.enable.description": "Register the Playwright MCP server with the CLI backend.",
+  "settings.browser.enable.description": "Enable the World tool for browser automation.",
   "settings.browser.systemChrome.title": "Use System Chrome",
   "settings.browser.systemChrome.description":
-    "Use your installed Chrome browser instead of a separate Chromium instance.",
+    "Use your installed Chrome browser instead of a separate Chromium instance. Falls back to Chromium when Chrome is not found.",
   "settings.browser.headless.title": "Headless Mode",
-  "settings.browser.headless.description": "Run in headless mode (no visible browser window).",
+  "settings.browser.headless.description":
+    "Run in headless mode (no visible browser window). Off to open a Chrome window you can watch.",
 
   "settings.language.description":
     'Choose the language for the Kilo Code UI. "Auto" uses your VS Code display language.',
@@ -842,6 +843,9 @@ export const dict = {
   "settings.experimental.batch.description": "Enable batching of multiple tool calls",
   "settings.experimental.codebaseSearch.title": "Codebase Search",
   "settings.experimental.codebaseSearch.description": "Enable AI-powered natural language search across your codebase",
+  "settings.experimental.worldBrowser.title": "World Browser",
+  "settings.experimental.worldBrowser.description":
+    "Enable the World browser tool. The browser runs headless by default and returns an inline image after every visual action. Disable to hide browser capabilities from the agent.",
   "settings.experimental.imageGeneration.title": "Image Generation",
   "settings.experimental.imageGeneration.description": "Enable AI image generation",
   "settings.experimental.imageGenerationModel.title": "Image Model",

@@ -813,14 +813,15 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "スキル",
 
   "settings.browser.description":
-    "有効にすると、AIエージェントがWebページを操作できるようになります — ナビゲーション、クリック、入力、スクリーンショットの撮影。Chromeウィンドウが開き、エージェントの作業を確認できます。",
+    "ヘッドレスブラウザを操作して、移動、クリック、入力、スクリーンショットの撮影を行います。既定では表示ウィンドウなしで実行されますが、視覚的な操作のたびにページ画像が表示されます。",
   "settings.browser.enable.title": "ブラウザ自動化を有効にする",
-  "settings.browser.enable.description": "Playwright MCPサーバーをCLIバックエンドに登録します。",
+  "settings.browser.enable.description": "ブラウザ自動化用のWorldツールを有効にします。",
   "settings.browser.systemChrome.title": "システムChromeを使用",
   "settings.browser.systemChrome.description":
-    "別のChromiumインスタンスの代わりに、インストール済みのChromeブラウザを使用します。",
+    "別のChromiumインスタンスではなく、インストール済みのChromeを使用します。Chromeが見つからない場合はChromiumを使用します。",
   "settings.browser.headless.title": "ヘッドレスモード",
-  "settings.browser.headless.description": "ヘッドレスモードで実行します（ブラウザウィンドウは表示されません）。",
+  "settings.browser.headless.description":
+    "表示ウィンドウなしで実行します。オフにすると、確認できるChromeウィンドウが開きます。",
 
   "settings.language.description": "Kilo Code UIの言語を選択します。「自動」はVS Codeの表示言語を使用します。",
   "settings.language.auto": "自動（VS Code言語）",
@@ -857,6 +858,9 @@ export const dict = {
   "settings.experimental.batch.description": "複数のツール呼び出しのバッチ処理を有効にする",
   "settings.experimental.codebaseSearch.title": "コードベース検索",
   "settings.experimental.codebaseSearch.description": "コードベース全体でAIによる自然言語検索を有効にする",
+  "settings.experimental.worldBrowser.title": "Worldブラウザ",
+  "settings.experimental.worldBrowser.description":
+    "Worldブラウザツールを有効にします。既定ではヘッドレスで実行され、視覚的な操作のたびに画像を返します。無効にするとエージェントからブラウザ機能を隠します。",
   "settings.experimental.imageGeneration.title": "画像生成",
   "settings.experimental.imageGeneration.description": "AI画像生成を有効にする",
   "settings.experimental.imageGenerationModel.title": "画像モデル",

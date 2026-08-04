@@ -807,13 +807,15 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "ทักษะ",
 
   "settings.browser.description":
-    "เมื่อเปิดใช้งาน ตัวแทน AI สามารถโต้ตอบกับหน้าเว็บได้ — นำทาง คลิก พิมพ์ และจับภาพหน้าจอ หน้าต่าง Chrome จะเปิดขึ้นเพื่อให้คุณดูการทำงานของตัวแทน",
+    "ควบคุมเบราว์เซอร์แบบไม่มีหน้าต่างเพื่อนำทาง คลิก พิมพ์ และจับภาพหน้าจอ โดยค่าเริ่มต้นเบราว์เซอร์จะทำงานโดยไม่มีหน้าต่างที่มองเห็น แต่จะแสดงภาพของหน้าหลังการทำงานที่มองเห็นแต่ละครั้ง",
   "settings.browser.enable.title": "เปิดใช้งานการทำงานอัตโนมัติของเบราว์เซอร์",
-  "settings.browser.enable.description": "ลงทะเบียนเซิร์ฟเวอร์ Playwright MCP กับ CLI backend",
+  "settings.browser.enable.description": "เปิดใช้เครื่องมือ World สำหรับระบบอัตโนมัติของเบราว์เซอร์",
   "settings.browser.systemChrome.title": "ใช้ Chrome ของระบบ",
-  "settings.browser.systemChrome.description": "ใช้เบราว์เซอร์ Chrome ที่ติดตั้งแทนอินสแตนซ์ Chromium แยกต่างหาก",
+  "settings.browser.systemChrome.description":
+    "ใช้ Chrome ที่ติดตั้งแทน Chromium แยกต่างหาก และใช้ Chromium หากไม่พบ Chrome",
   "settings.browser.headless.title": "โหมด Headless",
-  "settings.browser.headless.description": "ทำงานในโหมด headless (ไม่มีหน้าต่างเบราว์เซอร์ที่มองเห็นได้)",
+  "settings.browser.headless.description":
+    "ทำงานโดยไม่มีหน้าต่างเบราว์เซอร์ที่มองเห็น ปิดตัวเลือกนี้เพื่อเปิดหน้าต่าง Chrome ที่คุณดูได้",
 
   "settings.language.description": 'เลือกภาษาสำหรับ UI ของ Kilo Code "อัตโนมัติ" จะใช้ภาษาการแสดงผลของ VS Code',
   "settings.language.auto": "อัตโนมัติ (ภาษา VS Code)",
@@ -850,6 +852,9 @@ export const dict = {
   "settings.experimental.batch.description": "เปิดใช้งานการประมวลผลแบทช์ของการเรียกเครื่องมือ",
   "settings.experimental.codebaseSearch.title": "ค้นหาโค้ดเบส",
   "settings.experimental.codebaseSearch.description": "เปิดใช้งานการค้นหาด้วยภาษาธรรมชาติโดย AI ทั่วทั้งโค้ดเบส",
+  "settings.experimental.worldBrowser.title": "เบราว์เซอร์ World",
+  "settings.experimental.worldBrowser.description":
+    "เปิดใช้เครื่องมือเบราว์เซอร์ World ซึ่งทำงานแบบไม่มีหน้าต่างโดยค่าเริ่มต้นและส่งคืนภาพหลังการทำงานที่มองเห็นแต่ละครั้ง ปิดเพื่อซ่อนความสามารถของเบราว์เซอร์จากตัวแทน",
   "settings.experimental.imageGeneration.title": "การสร้างภาพ",
   "settings.experimental.imageGeneration.description": "เปิดใช้งานการสร้างภาพด้วย AI",
   "settings.experimental.imageGenerationModel.title": "โมเดลภาพ",

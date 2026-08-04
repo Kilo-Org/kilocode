@@ -16,6 +16,7 @@ import Remote from "@/kilocode/plugins/remote"
 import Reload from "@/kilocode/plugins/reload"
 import SessionSwitcher from "@/kilocode/plugins/session-switcher"
 import SessionV2Debug from "@/kilocode/plugins/session-v2-debug"
+import WorldPalette from "@/kilocode/plugins/world-palette"
 import type { RuntimeFlags } from "@/effect/runtime-flags"
 
 const plugins = [
@@ -34,6 +35,7 @@ const plugins = [
   Sandbox,
   Remote,
   Reload,
+  WorldPalette,
 ] satisfies BuiltinTuiPlugin[]
 
 export function withKiloTuiPlugins(

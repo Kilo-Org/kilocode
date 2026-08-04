@@ -807,14 +807,15 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Навички",
 
   "settings.browser.description":
-    "Після увімкнення агент ШІ може взаємодіяти з веб-сторінками — навігація, натискання, введення тексту та знімки екрана. Відкриється вікно Chrome, щоб ви могли стежити за роботою агента.",
+    "Керуйте браузером у фоновому режимі: переходьте сторінками, натискайте, вводьте текст і робіть знімки екрана. За замовчуванням браузер працює без видимого вікна, але показує зображення сторінки після кожної візуальної дії.",
   "settings.browser.enable.title": "Увімкнути автоматизацію браузера",
-  "settings.browser.enable.description": "Зареєструвати MCP-сервер Playwright з CLI-бекендом.",
+  "settings.browser.enable.description": "Увімкнути інструмент World для автоматизації браузера.",
   "settings.browser.systemChrome.title": "Використовувати системний Chrome",
   "settings.browser.systemChrome.description":
-    "Використовувати встановлений браузер Chrome замість окремого екземпляра Chromium.",
+    "Використовувати встановлений Chrome замість окремого Chromium. Якщо Chrome не знайдено, використовується Chromium.",
   "settings.browser.headless.title": "Безголовий режим",
-  "settings.browser.headless.description": "Запускати в безголовому режимі (без видимого вікна браузера).",
+  "settings.browser.headless.description":
+    "Запускати без видимого вікна. Вимкніть, щоб відкрити вікно Chrome, за яким можна спостерігати.",
 
   "settings.language.description":
     '"Автоматично" використовує мову відображення VS Code. Виберіть мову для інтерфейсу Kilo Code.',
@@ -856,6 +857,9 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Пошук по кодовій базі",
   "settings.experimental.codebaseSearch.description":
     "Увімкнути пошук природною мовою на основі ШІ по всій кодовій базі",
+  "settings.experimental.worldBrowser.title": "Браузер World",
+  "settings.experimental.worldBrowser.description":
+    "Увімкнути браузерний інструмент World. За замовчуванням він працює без вікна та повертає зображення після кожної візуальної дії. Вимкніть, щоб приховати можливості браузера від агента.",
   "settings.experimental.imageGeneration.title": "Генерація зображень",
   "settings.experimental.imageGeneration.description": "Увімкнути генерацію зображень за допомогою ШІ",
   "settings.experimental.imageGenerationModel.title": "Модель зображень",

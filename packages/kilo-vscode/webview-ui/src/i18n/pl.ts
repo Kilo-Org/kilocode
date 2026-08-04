@@ -777,14 +777,15 @@ export const dict = {
   "settings.agentBehaviour.subtab.skills": "Umiejętności",
 
   "settings.browser.description":
-    "Po włączeniu agent AI może wchodzić w interakcję ze stronami internetowymi — nawigować, klikać, pisać i robić zrzuty ekranu. Otworzy się okno Chrome, abyś mógł obserwować pracę agenta.",
+    "Steruj przeglądarką bez interfejsu, aby nawigować, klikać, pisać i robić zrzuty ekranu. Domyślnie przeglądarka działa bez widocznego okna, ale po każdej czynności wizualnej pokazuje obraz strony.",
   "settings.browser.enable.title": "Włącz automatyzację przeglądarki",
-  "settings.browser.enable.description": "Zarejestruj serwer Playwright MCP w backendzie CLI.",
+  "settings.browser.enable.description": "Włącz narzędzie World do automatyzacji przeglądarki.",
   "settings.browser.systemChrome.title": "Użyj systemowego Chrome",
   "settings.browser.systemChrome.description":
-    "Użyj zainstalowanej przeglądarki Chrome zamiast oddzielnej instancji Chromium.",
+    "Użyj zainstalowanej przeglądarki Chrome zamiast oddzielnego Chromium. Jeśli Chrome nie zostanie znaleziony, użyty zostanie Chromium.",
   "settings.browser.headless.title": "Tryb headless",
-  "settings.browser.headless.description": "Uruchom w trybie headless (bez widocznego okna przeglądarki).",
+  "settings.browser.headless.description":
+    "Uruchom bez widocznego okna. Wyłącz, aby otworzyć okno Chrome, które można obserwować.",
 
   "settings.language.description": 'Wybierz język interfejsu Kilo Code. „Auto" używa języka wyświetlania VS Code.',
   "settings.language.auto": "Auto (język VS Code)",
@@ -821,6 +822,9 @@ export const dict = {
   "settings.experimental.batch.description": "Włącz przetwarzanie wsadowe wywołań narzędzi",
   "settings.experimental.codebaseSearch.title": "Wyszukiwanie kodu",
   "settings.experimental.codebaseSearch.description": "Włącz wyszukiwanie w języku naturalnym z AI w całej bazie kodu",
+  "settings.experimental.worldBrowser.title": "Przeglądarka World",
+  "settings.experimental.worldBrowser.description":
+    "Włącz narzędzie przeglądarki World. Domyślnie działa bez interfejsu i zwraca obraz po każdej czynności wizualnej. Wyłącz, aby ukryć możliwości przeglądarki przed agentem.",
   "settings.experimental.imageGeneration.title": "Generowanie obrazów",
   "settings.experimental.imageGeneration.description": "Włącz generowanie obrazów przez AI",
   "settings.experimental.imageGenerationModel.title": "Model obrazu",
