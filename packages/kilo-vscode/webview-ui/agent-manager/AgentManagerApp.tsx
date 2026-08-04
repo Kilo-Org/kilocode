@@ -173,7 +173,7 @@ import { createMarkdownRender } from "./review-preferences"
 import { createSidebarCollapse } from "./sidebar-collapse"
 import { SidebarToggleButton } from "./SidebarToggleButton"
 import { setTabWidths } from "./tab-widths"
-import { clampPanelWidth, maxPanelWidth, MIN_PANEL_WIDTH } from "./side-panel-layout"
+import { clampPanelWidth, maxPanelWidth, minPanelWidth } from "./side-panel-layout"
 import { buildShortcutCategories } from "./shortcuts"
 import { tracker } from "./telemetry"
 import { createChatFocus, hasQuestionOption } from "./focus"
@@ -2636,7 +2636,7 @@ const AgentManagerContent: Component = () => {
                       direction="horizontal"
                       edge="start"
                       size={panelWidth()}
-                      min={MIN_PANEL_WIDTH}
+                      min={minPanelWidth(window.innerWidth)}
                       max={maxPanelWidth(window.innerWidth)}
                       onResize={resizeSide}
                     />
