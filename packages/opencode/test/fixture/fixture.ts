@@ -12,8 +12,10 @@ import { Database } from "@opencode-ai/core/database/database" // kilocode_chang
 import { ProjectV2 } from "@opencode-ai/core/project" // kilocode_change
 import { ProjectTable } from "@opencode-ai/core/project/sql" // kilocode_change
 import { AbsolutePath } from "@opencode-ai/core/schema" // kilocode_change
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import type { Config } from "@/config/config"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { InstanceRef } from "../../src/effect/instance-ref"
 import { InstanceBootstrap } from "../../src/project/bootstrap-service"
 import { context as instanceContext, type InstanceContext } from "../../src/project/instance-context" // kilocode_change
@@ -23,7 +25,9 @@ import { TestLLMServer } from "../lib/llm-server"
 import { remove as cleanup } from "../kilocode/cleanup" // kilocode_change
 
 const noopBootstrap = Layer.succeed(InstanceBootstrap.Service, InstanceBootstrap.Service.of({ run: Effect.void }))
-export const testInstanceStoreLayer = InstanceStore.defaultLayer.pipe(Layer.provide(noopBootstrap))
+export const testInstanceStoreLayer = LayerNode.compile(InstanceStore.node, [
+  [InstanceStore.bootstrapNode, noopBootstrap],
+])
 const makeTestRuntime = () => ManagedRuntime.make(testInstanceStoreLayer.pipe(Layer.provideMerge(Observability.layer)))
 let testRuntime: ReturnType<typeof makeTestRuntime> | undefined
 const runtime = () => (testRuntime ??= makeTestRuntime())
@@ -259,7 +263,7 @@ export const withTmpdirInstance =
     Effect.gen(function* () {
       const directory = yield* tmpdirScoped(options)
       return yield* self.pipe(Effect.provideService(TestInstance, { directory }), provideInstanceEffect(directory))
-    }).pipe(Effect.provide(testInstanceStoreLayer), Effect.provide(CrossSpawnSpawner.defaultLayer))
+    }).pipe(Effect.provide(testInstanceStoreLayer), Effect.provide(AppNodeBuilder.build(CrossSpawnSpawner.node)))
 
 export function provideTmpdirServer<A, E, R>(
   self: (input: { dir: string; llm: TestLLMServer["Service"] }) => Effect.Effect<A, E, R>,

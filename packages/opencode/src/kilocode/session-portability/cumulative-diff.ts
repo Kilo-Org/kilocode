@@ -3,6 +3,7 @@ import { Snapshot } from "@/snapshot"
 import { Storage } from "@/storage/storage"
 import { makeRuntime } from "@opencode-ai/core/effect/runtime"
 import type { SessionID } from "@/session/schema"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
 
 export type PortableDiff = Snapshot.FileDiff & {
   after?: string
@@ -51,7 +52,7 @@ export function cumulativeSessionDiff(storage: Storage.Interface, id: SessionID 
 
 // Self-contained Storage runtime so shared callers (Session.fork) can carry fork diffs without taking a
 // legacy Storage dependency in their layer. Mirrors the Database runtime pattern in session/session.ts.
-const runtime = makeRuntime(Storage.Service, Storage.defaultLayer)
+const runtime = makeRuntime(Storage.Service, AppNodeBuilder.build(Storage.node))
 
 /**
  * Carry a source session's cumulative diff base onto a freshly forked session, so imported/cumulative

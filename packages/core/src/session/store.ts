@@ -3,6 +3,7 @@ export * as SessionStore from "./store"
 import { and, eq, isNotNull } from "drizzle-orm" // kilocode_change
 import { Context, Effect, Layer, Schema } from "effect"
 import { Database } from "../database/database"
+import { makeGlobalNode } from "../effect/app-node"
 import { SessionHistory } from "./history"
 import { MessageDecodeError } from "./error"
 import { SessionMessage } from "./message"
@@ -25,7 +26,7 @@ export interface Interface {
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/v2/SessionStore") {}
 
-export const layer = Layer.effect(
+const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const { db } = yield* Database.Service
@@ -60,4 +61,4 @@ export const layer = Layer.effect(
   }),
 )
 
-export const defaultLayer = layer.pipe(Layer.provide(Database.defaultLayer))
+export const node = makeGlobalNode({ service: Service, layer, deps: [Database.node] })

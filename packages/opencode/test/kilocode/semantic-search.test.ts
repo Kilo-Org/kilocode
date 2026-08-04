@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect, test, spyOn } from "bun:test"
 import path from "path"
 import { Effect, Layer, ManagedRuntime } from "effect"
@@ -11,7 +12,7 @@ import { SessionID, MessageID } from "../../src/session/schema"
 import { Tool } from "../../src/tool/tool"
 import { Truncate } from "../../src/tool/truncate"
 
-const rt = ManagedRuntime.make(Layer.mergeAll(Truncate.defaultLayer, Agent.defaultLayer))
+const rt = ManagedRuntime.make(Layer.mergeAll(AppNodeBuilder.build(Truncate.node), AppNodeBuilder.build(Agent.node)))
 
 async function initTool() {
   return rt.runPromise(

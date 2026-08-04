@@ -1,6 +1,8 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect, spyOn, test } from "bun:test"
 import path from "path"
 import fs from "fs/promises"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Deferred, Effect, Layer } from "effect"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { Config } from "@/config/config"
@@ -20,19 +22,17 @@ const fakeCtx = {} as InstanceContext
 const fakeFlags = {} as RuntimeFlags.Info
 
 const lspLayer = (flags: Parameters<typeof RuntimeFlags.layer>[0] = {}) =>
-  LSP.layer.pipe(
-    Layer.provide(Config.defaultLayer),
-    Layer.provide(RuntimeFlags.layer(flags)),
-    Layer.provideMerge(EventV2Bridge.defaultLayer),
-  )
+  LayerNode.compile(LayerNode.group([LSP.node, Config.node, RuntimeFlags.node, EventV2Bridge.node]), [
+    [RuntimeFlags.node, RuntimeFlags.layer(flags)],
+  ])
 
-const it = testEffect(Layer.mergeAll(lspLayer(), CrossSpawnSpawner.defaultLayer))
+const it = testEffect(Layer.mergeAll(lspLayer(), LayerNode.compile(CrossSpawnSpawner.node)))
 const experimentalTyIt = testEffect(
-  Layer.mergeAll(lspLayer({ experimentalLspTy: true }), CrossSpawnSpawner.defaultLayer),
+  Layer.mergeAll(lspLayer({ experimentalLspTy: true }), LayerNode.compile(CrossSpawnSpawner.node)),
 )
 const fakeServerPath = path.join(__dirname, "../fixture/lsp/fake-lsp-server.js")
 const disabledDownloadIt = testEffect(
-  Layer.mergeAll(lspLayer({ disableLspDownload: true }), CrossSpawnSpawner.defaultLayer),
+  Layer.mergeAll(lspLayer({ disableLspDownload: true }), LayerNode.compile(CrossSpawnSpawner.node)),
 )
 
 describe("lsp.spawn", () => {
@@ -82,7 +82,7 @@ describe("lsp.spawn", () => {
 
   // kilocode_change start - provide the runtime flag so spawn() is reached past the TsClient short-circuit
   const experimentalToolIt = testEffect(
-    Layer.mergeAll(lspLayer({ experimentalLspTool: true }), CrossSpawnSpawner.defaultLayer),
+    Layer.mergeAll(lspLayer({ experimentalLspTool: true }), AppNodeBuilder.build(CrossSpawnSpawner.node)),
   )
 
   experimentalToolIt.live("would spawn builtin LSP for files inside instance when lsp is true", () =>

@@ -1,3 +1,6 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test"
 import { Effect } from "effect"
 import { HttpRouter } from "effect/unstable/http"
@@ -22,12 +25,15 @@ import path from "path"
 import os from "os"
 import fs from "fs/promises"
 import { AppRuntime } from "../../src/effect/app-runtime"
+import { makeRuntime } from "../../src/effect/run-service"
 import { remove as cleanup } from "./cleanup"
 
 Log.init({ print: false })
 
 const previous = Flag.KILO_DB
 const dbfile = path.join(os.tmpdir(), `kilo-fork-${process.pid}-${crypto.randomUUID()}.db`)
+const layer = LayerNode.compile(LayerNode.group([Session.node, SessionProjector.node]))
+const runtime = makeRuntime(Session.Service, layer)
 
 beforeAll(async () => {
   await fs.rm(dbfile, { force: true })
@@ -35,6 +41,7 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
+  await runtime.dispose()
   await AppRuntime.dispose()
   await disposeTestRuntime()
   Flag.KILO_DB = previous
@@ -43,14 +50,14 @@ afterAll(async () => {
 
 const sessions = {
   create: (input?: Parameters<Session.Interface["create"]>[0]) =>
-    Effect.runPromise(Session.Service.use((svc) => svc.create(input)).pipe(Effect.provide(Session.defaultLayer))),
-  list: () => Effect.runPromise(Session.Service.use((svc) => svc.list()).pipe(Effect.provide(Session.defaultLayer))),
+    runtime.runPromise((svc) => svc.create(input)),
+  list: () => runtime.runPromise((svc) => svc.list()),
   messages: (input: Parameters<Session.Interface["messages"]>[0]) =>
-    Effect.runPromise(Session.Service.use((svc) => svc.messages(input)).pipe(Effect.provide(Session.defaultLayer))),
+    runtime.runPromise((svc) => svc.messages(input)),
   updateMessage: <T extends MessageV2.Info>(msg: T) =>
-    Effect.runPromise(Session.Service.use((svc) => svc.updateMessage(msg)).pipe(Effect.provide(Session.defaultLayer))),
+    runtime.runPromise((svc) => svc.updateMessage(msg)),
   updatePart: <T extends MessageV2.Part>(part: T) =>
-    Effect.runPromise(Session.Service.use((svc) => svc.updatePart(part)).pipe(Effect.provide(Session.defaultLayer))),
+    runtime.runPromise((svc) => svc.updatePart(part)),
 }
 
 afterEach(async () => {
@@ -74,7 +81,7 @@ async function instance<R>(input: { directory: string; fn: () => R }) {
         .onConflictDoNothing()
         .run()
         .pipe(Effect.orDie)
-    }).pipe(Effect.provide(CoreDatabase.defaultLayer)),
+    }).pipe(Effect.provide(AppNodeBuilder.build(CoreDatabase.node))),
   })
 }
 
@@ -391,7 +398,7 @@ describe("Session.fork task detachment", () => {
                     .get()
                     .pipe(Effect.orDie),
                 ])
-              }).pipe(Effect.provide(CoreDatabase.defaultLayer)),
+              }).pipe(Effect.provide(AppNodeBuilder.build(CoreDatabase.node))),
             )
 
             expect(rows).toEqual([

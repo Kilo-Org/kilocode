@@ -2,6 +2,7 @@
 //
 // Tests for the git-based diff generator that replaced the JS Myers path.
 
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { $ } from "bun"
 import { describe, expect } from "bun:test"
 import { parsePatch } from "diff"
@@ -48,7 +49,7 @@ const commit = async (dir: string, message: string) => {
   return head.stdout.toString().trim()
 }
 
-const it = testEffect(Layer.mergeAll(CrossSpawnSpawner.defaultLayer))
+const it = testEffect(Layer.mergeAll(AppNodeBuilder.build(CrossSpawnSpawner.node)))
 
 describe("DiffFull.batch", () => {
   it.live("produces one patch per modified file", () =>
