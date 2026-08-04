@@ -232,6 +232,8 @@ export const dict = {
     "Cliquez pour restreindre les écritures dans le système de fichiers. L'accès au réseau reste autorisé par vos paramètres de sandbox.",
 
   "speechToText.tooltip.start": "Démarrer la saisie vocale avec Kilo Gateway",
+  "speechToText.tooltip.shortcut":
+    "Touchez ou appuyez sur Cmd/Ctrl+K pour démarrer ou arrêter l’enregistrement ; maintenez la touche pendant que vous parlez, puis relâchez-la pour transcrire et envoyer.",
   "speechToText.tooltip.starting": "Démarrage du microphone... Attendez avant de parler.",
   "speechToText.tooltip.stop": "Arrêter la capture audio",
   "speechToText.tooltip.transcribing": "Transcription en cours... Cliquez pour annuler.",
@@ -1051,6 +1053,9 @@ export const dict = {
     "Aucune commande personnalisée configurée. Ajoutez des commandes à opencode.json pour les voir ici.",
   "settings.agentBehaviour.workflows.detail.description": "Description",
   "settings.agentBehaviour.workflows.detail.template": "Modèle",
+  "settings.agentBehaviour.workflows.model": "modèle",
+  "settings.agentBehaviour.workflows.variant": "variante",
+  "settings.agentBehaviour.workflows.modelDescription": "Remplacement global du modèle",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Exécuter les commandes shell de l'agent dans un sandbox au niveau du système d'exploitation qui restreint les écritures aux répertoires d'état du projet et de Kilo",

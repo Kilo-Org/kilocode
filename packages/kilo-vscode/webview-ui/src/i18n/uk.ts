@@ -229,6 +229,8 @@ export const dict = {
     "Натисніть, щоб обмежити запис у файлову систему. Доступ до мережі залишиться дозволеним відповідно до налаштувань пісочниці.",
 
   "speechToText.tooltip.start": "Почати голосове введення з Kilo Gateway",
+  "speechToText.tooltip.shortcut":
+    "Торкніться кнопки або натисніть Cmd/Ctrl+K, щоб почати чи зупинити запис; утримуйте кнопку під час мовлення, а потім відпустіть її, щоб транскрибувати й надіслати.",
   "speechToText.tooltip.starting": "Запуск мікрофона... Поки що не говоріть.",
   "speechToText.tooltip.stop": "Зупинити захоплення звуку",
   "speechToText.tooltip.transcribing": "Транскрибування... Натисніть, щоб скасувати.",
@@ -984,6 +986,9 @@ export const dict = {
     "Власних команд не налаштовано. Додайте команди до opencode.json, щоб вони з'явилися тут.",
   "settings.agentBehaviour.workflows.detail.description": "Опис",
   "settings.agentBehaviour.workflows.detail.template": "Шаблон",
+  "settings.agentBehaviour.workflows.model": "модель",
+  "settings.agentBehaviour.workflows.variant": "варіант",
+  "settings.agentBehaviour.workflows.modelDescription": "Глобальне перевизначення моделі",
 
   "settings.autoApprove.description":
     "Визначте, як виконуються інструменти. Більшість інструментів за замовчуванням — Дозволити. doom_loop та external_directory за замовчуванням — Запитувати.",

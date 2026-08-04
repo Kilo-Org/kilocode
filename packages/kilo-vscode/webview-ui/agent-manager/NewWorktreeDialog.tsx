@@ -39,6 +39,7 @@ import {
 import { useLanguage } from "../src/context/language"
 import { useImageAttachments, type ImageAttachment } from "../src/hooks/useImageAttachments"
 import { useSpeechToText } from "../src/components/speech-to-text/useSpeechToText"
+import { createSpeechShortcut } from "../src/components/speech-to-text/shortcut"
 import { convertToMentionPath } from "../src/utils/path-mentions"
 import { insertSpacedText } from "../src/components/chat/prompt-input-utils"
 import { WandSparkles } from "@kilocode/kilo-ui/lucide"
@@ -380,6 +381,12 @@ export const NewWorktreeDialog: Component<{
   }
 
   const onKey = (e: KeyboardEvent) => {
+    if (shortcut.down(e)) {
+      e.preventDefault()
+      e.stopPropagation()
+      return
+    }
+
     // Shift+Tab cycles reasoning effort variants (setting: chat.shiftTabCyclesVariant).
     // When disabled or no variants exist, fall through to default focus navigation.
     if (e.key === "Tab" && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -428,6 +435,19 @@ export const NewWorktreeDialog: Component<{
   const startSpeech = () => {
     speech.start({ model: speechModel(), insert: insertSpeechText })
   }
+
+  const shortcut = createSpeechShortcut({
+    speech,
+    disabled: () => !canUseSpeech() || starting(),
+    start: startSpeech,
+    finish: (submit) => speech.stop(submit ? { done: handleSubmit } : undefined),
+  })
+  const speechUp = (e: KeyboardEvent) => {
+    if (!shortcut.up(e)) return
+    e.preventDefault()
+    e.stopPropagation()
+  }
+  onCleanup(shortcut.reset)
 
   const canEnhance = () => !starting() && !enhancing() && !speech.active() && server.isConnected()
 
@@ -606,6 +626,7 @@ export const NewWorktreeDialog: Component<{
                       adjustHeight()
                     }}
                     onKeyDown={onKey}
+                    onKeyUp={speechUp}
                     onPaste={(e) => imageAttach.handlePaste(e)}
                     rows={3}
                     dir="auto"
