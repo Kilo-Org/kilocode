@@ -4,6 +4,7 @@ import { Markdown } from "@kilocode/kilo-ui/markdown"
 import type { PRStatus } from "../../src/types/messages"
 import type { PRComment } from "./pr-types"
 import { SectionHeading } from "./SectionHeading"
+import { CopyButton } from "./CopyButton"
 
 export function PRComments(props: { comments: NonNullable<PRStatus["comments"]> }) {
   const [open, setOpen] = createSignal(true)
@@ -33,6 +34,7 @@ export function PRComments(props: { comments: NonNullable<PRStatus["comments"]> 
                     <Show when={comment.resolved}>
                       <span class="am-pr-panel-comment-resolved-badge">Resolved</span>
                     </Show>
+                    <CopyButton text={comment.body} class="am-pr-copy-btn" />
                   </div>
                   <div class="am-pr-panel-comment-body">
                     <Markdown text={comment.body} />

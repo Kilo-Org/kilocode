@@ -25,7 +25,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 6px 2px 4px;
+  padding: 2px 4px;
   border-radius: 4px;
   font-size: var(--kilo-font-size-10);
   font-variant-numeric: tabular-nums;
@@ -222,6 +222,10 @@
   border: 1px solid var(--vscode-panel-border);
   border-radius: 3px;
   padding: 1px 4px;
+  margin-left: auto;
+}
+
+.am-pr-copy-btn {
   margin-left: auto;
 }
 

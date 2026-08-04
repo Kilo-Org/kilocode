@@ -861,7 +861,7 @@ button.am-section-toggle:hover .am-section-label {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  padding: 2px 7px 2px 4px;
+  padding: 2px 4px;
   border-radius: 6px;
   border: none;
   background: color-mix(in srgb, var(--pr-accent) 12%, transparent);
