@@ -7,7 +7,8 @@
  *
  *   1. labelKey / descriptionKey  — lost during the opencode v1.3.x
  *      effectify refactor (cec1255b36), restored in PR #9246.
- *   2. mode  — lost in the same merge cycle (c37f85386f + 5bb42b6bdb),
+ *   2. descriptionArgs — added for dynamic localized descriptions.
+ *   3. mode  — lost in the same merge cycle (c37f85386f + 5bb42b6bdb),
  *      restored in the ionized-emmental branch.
  *
  * The plan follow-up "Continue here" option relies on `mode: "code"` being
@@ -52,6 +53,17 @@ describe("QuestionOption schema — Kilo-specific field contract", () => {
     expect(decoded.descriptionKey).toBe("plan.followup.answer.continue.description")
   })
 
+  test("Option class accepts and round-trips descriptionArgs", () => {
+    const raw = {
+      label: "Continue here",
+      description: "Implement the plan in this session (using 75% of Code mode context)",
+      descriptionKey: "plan.followup.answer.continue.description",
+      descriptionArgs: ["75"],
+    }
+    const decoded = Schema.decodeUnknownSync(Option)(raw)
+    expect(decoded.descriptionArgs).toEqual(["75"])
+  })
+
   // Static source checks — guard the kilocode_change markers so a conflict
   // resolution that drops the fields is caught immediately.
   test("source declares mode as an optional field inside a kilocode_change block", () => {
@@ -66,5 +78,6 @@ describe("QuestionOption schema — Kilo-specific field contract", () => {
     expect(src).toMatch(/kilocode_change start[^\n]*i18n keys/)
     expect(src).toMatch(/labelKey:\s*Schema\.optional\(Schema\.String\)/)
     expect(src).toMatch(/descriptionKey:\s*Schema\.optional\(Schema\.String\)/)
+    expect(src).toMatch(/descriptionArgs:\s*Schema\.optional\(Schema\.Array\(Schema\.String\)\)/)
   })
 })

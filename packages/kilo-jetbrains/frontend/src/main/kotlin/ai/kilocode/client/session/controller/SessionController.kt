@@ -2639,6 +2639,7 @@ private fun toQuestion(dto: QuestionRequestDto): Question {
                     description = opt.description,
                     labelKey = opt.labelKey,
                     descriptionKey = opt.descriptionKey,
+                    descriptionArgs = opt.descriptionArgs,
                     mode = opt.mode,
                 )
             },

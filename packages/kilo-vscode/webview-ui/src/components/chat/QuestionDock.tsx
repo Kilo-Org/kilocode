@@ -96,9 +96,11 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     description?: string
     labelKey?: string
     descriptionKey?: string
+    descriptionArgs?: string[]
   }) => ({
     label: () => tr(language.t, opt.labelKey, opt.label),
-    description: () => (opt.description ? tr(language.t, opt.descriptionKey, opt.description) : ""),
+    description: () =>
+      opt.description ? tr(language.t, opt.descriptionKey, opt.description, opt.descriptionArgs) : "",
   })
 
   const focusPrompt = () => requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))

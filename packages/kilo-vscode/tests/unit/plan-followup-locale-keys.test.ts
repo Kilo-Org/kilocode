@@ -48,8 +48,10 @@ const keys = [
   "plan.followup.question",
   "plan.followup.answer.newSession",
   "plan.followup.answer.newSession.description",
+  "plan.followup.answer.newSession.recommended.description",
   "plan.followup.answer.continue",
   "plan.followup.answer.continue.description",
+  "plan.followup.answer.continue.estimated.description",
   "plan.followup.answer.keepRefining",
   "plan.followup.answer.keepRefining.description",
 ]

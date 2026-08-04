@@ -677,10 +677,13 @@ class QuestionView(
 
     @RequiresEdt
     private fun optionRow(toggle: AbstractButton, opt: QuestionOption): JPanel {
+        val description = opt.descriptionKey?.let { key ->
+            KiloBundle.optional(key, *opt.descriptionArgs.toTypedArray())
+        } ?: opt.description
         val row = JPanel(BorderLayout()).apply {
             isOpaque = false
             border = JBUI.Borders.emptyBottom(UiStyle.Gap.lg())
-            toolTipText = opt.description.ifBlank { null }
+            toolTipText = description.ifBlank { null }
             alignmentX = Component.LEFT_ALIGNMENT
         }
         val press = object : MouseAdapter() {
@@ -688,7 +691,7 @@ class QuestionView(
                 if (toggle.isEnabled) toggle.doClick()
             }
         }
-        val center = opt.description.isBlank()
+        val center = description.isBlank()
         val icon = JPanel(if (center) GridBagLayout() else BorderLayout()).apply {
             isOpaque = false
             border = JBUI.Borders.emptyRight(UiStyle.Gap.sm())
@@ -705,8 +708,8 @@ class QuestionView(
         label.addMouseListener(press)
         col.add(label)
 
-        if (opt.description.isNotBlank()) {
-            val desc = text(opt.description, UiStyle.Colors.weak())
+        if (description.isNotBlank()) {
+            val desc = text(description, UiStyle.Colors.weak())
             desc.alignmentX = Component.LEFT_ALIGNMENT
             desc.addMouseListener(press)
             col.add(desc)

@@ -14,6 +14,7 @@ export interface QuestionOption {
   // The canonical English `label` stays on the reply wire, so server-side matching is unaffected.
   labelKey?: string
   descriptionKey?: string
+  descriptionArgs?: string[]
 }
 
 export interface QuestionInfo {

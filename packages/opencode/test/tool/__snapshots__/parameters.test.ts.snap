@@ -244,6 +244,13 @@ exports[`tool parameters JSON Schema (wire shape) question 1`] = `
                   "description": "Explanation of choice",
                   "type": "string",
                 },
+                "descriptionArgs": {
+                  "description": "Optional positional arguments for the description i18n key",
+                  "items": {
+                    "type": "string",
+                  },
+                  "type": "array",
+                },
                 "descriptionKey": {
                   "description": "Optional i18n key for the description",
                   "type": "string",
