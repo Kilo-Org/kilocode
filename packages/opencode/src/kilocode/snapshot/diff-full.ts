@@ -126,7 +126,9 @@ export namespace DiffFull {
       deletions: Number.isFinite(deletions) ? deletions : 0,
       status,
     }
-    if (binary) return base
+    // Uniform shape across branches: binary files carry no content, but keep the keys present
+    // (undefined) so the return type is a single object, not a union missing before/after.
+    if (binary) return { ...base, before: undefined, after: undefined }
 
     const content = yield* Effect.all(
       {
