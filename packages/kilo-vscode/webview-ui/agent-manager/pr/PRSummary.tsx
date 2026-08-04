@@ -1,12 +1,10 @@
 /** @jsxImportSource solid-js */
-import { Component, Show, createSignal } from "solid-js"
+import { Show } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
-import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import type { PRStatus } from "../../src/types/messages"
 
 interface PRSummaryProps {
   pr: PRStatus
-  onDismiss: () => void
 }
 
 function summaryRows(pr: PRStatus): Array<{ icon: string; label: string; status: string }> {
@@ -51,7 +49,6 @@ export function PRSummary(props: PRSummaryProps) {
       <div class="am-pr-summary">
         <div class="am-pr-summary-header am-pr-row">
           <span class="am-pr-summary-title">PR Summary</span>
-          <IconButton icon="close" size="small" variant="ghost" label="Dismiss" onClick={props.onDismiss} />
         </div>
         <div class="am-pr-summary-rows am-pr-col">
           {rows().map((row) => (

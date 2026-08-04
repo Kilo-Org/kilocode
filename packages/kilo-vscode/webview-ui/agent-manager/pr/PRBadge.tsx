@@ -1,4 +1,5 @@
 /** @jsxImportSource solid-js */
+import { Show } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import type { PRStatus } from "../../src/types/messages"
 import { prBadgeIndicator, prChecksRunning } from "../WorktreeItem"
@@ -7,7 +8,6 @@ const INDICATOR_ICON: Record<string, string> = {
   failure: "circle-x",
   changes: "warning",
   approved: "circle-check",
-  none: "branch",
 }
 
 export function PRBadge(props: { pr: PRStatus }) {
@@ -24,13 +24,15 @@ export function PRBadge(props: { pr: PRStatus }) {
         "am-pr-badge-pending": prChecksRunning(props.pr),
       }}
     >
-      <Icon
-        name={INDICATOR_ICON[indicator()]}
-        size="small"
-        classList={{ "am-pr-badge-status": indicator() !== "none" }}
-        data-status={indicator() !== "none" ? indicator() : undefined}
-      />
-      <span class="am-pr-badge-number">#{props.pr.number}</span>
+      <Icon name="pull-request" size="small" />
+      <Show when={indicator() !== "none"}>
+        <Icon
+          name={INDICATOR_ICON[indicator()]}
+          size="small"
+          class="am-pr-badge-status"
+          data-status={indicator()}
+        />
+      </Show>
     </span>
   )
 }

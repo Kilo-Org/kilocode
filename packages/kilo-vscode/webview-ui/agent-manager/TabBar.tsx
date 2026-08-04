@@ -252,7 +252,7 @@ export const TabBar: Component<TabBarProps> = (props) => (
                     onClick={props.onTogglePR}
                     title={`PR #${pr().number}`}
                   >
-                    <Icon name="branch" size="small" />
+                    <Icon name="pull-request" size="small" />
                     <span class="am-pr-toggle-number">#{pr().number}</span>
                   </button>
                 </Tooltip>

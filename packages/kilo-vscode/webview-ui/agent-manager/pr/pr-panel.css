@@ -49,6 +49,13 @@
   white-space: nowrap;
 }
 
+.am-pr-panel-number {
+  font-size: var(--kilo-font-size-12);
+  color: var(--vscode-descriptionForeground);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
 .am-pr-panel-actions {
   gap: 2px;
   flex-shrink: 0;

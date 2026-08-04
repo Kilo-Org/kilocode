@@ -1,5 +1,5 @@
 /** @jsxImportSource solid-js */
-import { Component, Show, createSignal } from "solid-js"
+import { Component, Show } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
@@ -23,7 +23,6 @@ interface PRPanelProps {
 }
 
 export const PRPanel: Component<PRPanelProps> = (props) => {
-  const [summaryVisible, setSummaryVisible] = createSignal(true)
   return (
     <MarkedProvider>
       <div class="am-pr-panel am-pr-col">
@@ -31,6 +30,7 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
           <div class="am-pr-panel-title-row am-pr-row">
             <PRBadge pr={props.pr} />
             <span class="am-pr-panel-title">{props.pr.title}</span>
+            <span class="am-pr-panel-number">#{props.pr.number}</span>
           </div>
           <div class="am-pr-panel-actions am-pr-row">
             <Tooltip value="Open in browser" placement="bottom">
@@ -41,9 +41,7 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
             </Tooltip>
           </div>
         </div>
-        <Show when={summaryVisible()}>
-          <PRSummary pr={props.pr} onDismiss={() => setSummaryVisible(false)} />
-        </Show>
+        <PRSummary pr={props.pr} />
         <div class="am-pr-panel-body">
           <PROverview pr={props.pr} worktree={props.worktree} />
           <Show when={props.pr.comments?.reviewers?.length ? props.pr.comments : undefined}>
