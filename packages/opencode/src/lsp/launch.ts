@@ -12,6 +12,7 @@ export function spawn(cmd: string, argsOrOpts?: string[] | Process.Options, opts
   const proc = Process.spawn([cmd, ...args], {
     ...cfg,
     env: modelEnv(cfg?.env), // kilocode_change - language servers must not inherit backend credentials
+    extendEnv: false, // kilocode_change
     stdin: "pipe",
     stdout: "pipe",
     stderr: "pipe",

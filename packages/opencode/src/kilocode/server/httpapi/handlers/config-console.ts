@@ -108,15 +108,17 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
       const hot = body.scope === "global" && Object.keys(patch).every((key) => key === "console")
       if (body.scope === "global") {
         yield* config.invalidate()
-        yield* Effect.sync(() =>
-          GlobalBus.emit("event", {
-            directory: "global",
-            payload: {
-              type: Event.ConfigUpdated.type,
-              properties: {},
-            },
-          }),
-        ).pipe(Effect.catchCause(() => Effect.void))
+        if (result.changed) {
+          yield* Effect.sync(() =>
+            GlobalBus.emit("event", {
+              directory: "global",
+              payload: {
+                type: Event.ConfigUpdated.type,
+                properties: { sandbox: result.sandboxChanged },
+              },
+            }),
+          ).pipe(Effect.catchCause(() => Effect.void))
+        }
       } else {
         yield* config.update({})
         yield* markInstanceForDisposal(instance)
@@ -151,7 +153,7 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
           sources: sources.sources,
         }),
       )
-      if (body.scope === "global" && !hot) {
+      if (body.scope === "global" && result.changed && !hot) {
         yield* disposeAllInstancesAndEmitGlobalDisposed({ swallowErrors: true }).pipe(
           Effect.catchCause(() => Effect.void),
         )

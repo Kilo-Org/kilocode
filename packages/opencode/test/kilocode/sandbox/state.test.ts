@@ -609,7 +609,10 @@ it.instance("refreshes queued tools after config changes", () =>
 
       const queued = yield* execute(id, assertNetwork("https://example.com").pipe(Effect.exit)).pipe(Effect.forkChild)
       config.sandbox.network = "deny"
-      GlobalBus.emit("event", { directory: "global", payload: { type: "global.config.updated", properties: {} } })
+      GlobalBus.emit("event", {
+        directory: "global",
+        payload: { type: "global.config.updated", properties: { sandbox: true } },
+      })
       yield* Deferred.succeed(release, undefined)
       yield* Fiber.join(running)
       expect(Exit.isFailure(yield* Fiber.join(queued))).toBe(true)
@@ -711,6 +714,33 @@ it.instance("intersects inherited network and write authority", () =>
       version: 1,
     })
   }),
+)
+
+it.instance("refreshes a child inherited while its parent policy is stale", () =>
+  (() => {
+    const config = { sandbox: { enabled: true, network: "allow" as "allow" | "deny" } }
+    return Effect.gen(function* () {
+      const parent = SessionID.make("ses_sandbox_stale_parent")
+      const child = SessionID.make("ses_sandbox_stale_child")
+      yield* SandboxPolicy.status(parent)
+      config.sandbox.network = "deny"
+      GlobalBus.emit("event", {
+        directory: "global",
+        payload: { type: "global.config.updated", properties: { sandbox: true } },
+      })
+
+      yield* SandboxPolicy.inherit(parent, child)
+      yield* SandboxPolicy.status(child)
+
+      expect(yield* SandboxPolicy.peek((yield* TestInstance).directory, child)).toMatchObject({ mode: "deny" })
+    }).pipe(
+      Effect.provide(
+        Layer.mock(Config.Service, {
+          get: () => Effect.succeed(config),
+        }),
+      ),
+    )
+  })(),
 )
 
 it.instance("enforces writes only while the macOS session override is active", () =>

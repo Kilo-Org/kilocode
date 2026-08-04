@@ -786,6 +786,45 @@ describe("config overlay routes", () => {
     20_000,
   )
 
+  test.serial("does not relax inherited sandbox policy after unrelated global saves", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir({ git: true })
+    await setGlobal(global.path, { sandbox: { enabled: true, network: "allow" } })
+    const parent = await json<Session.Info>(
+      await req(project.path, SessionPaths.create, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      }),
+    )
+    await SandboxStore.write(project.path, parent.id, {
+      enabled: true,
+      mode: "deny",
+      allowedHosts: [],
+      writablePaths: [],
+      version: 0,
+    })
+    const child = await json<Session.Info>(
+      await req(project.path, SessionPaths.create, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ parentID: parent.id }),
+      }),
+    )
+    expect(await SandboxStore.read(project.path, child.id)).toMatchObject({ mode: "deny" })
+
+    await json(
+      await req(project.path, "/config/overlay", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ scope: "global", set: { permission: { edit: "ask" } } }),
+      }),
+    )
+    await json(await req(project.path, `/session/${child.id}/sandbox`))
+
+    expect(await SandboxStore.read(project.path, child.id)).toMatchObject({ mode: "deny" })
+  })
+
   terminal("preserves active terminals after updating global console preferences", async () => {
     await using global = await tmpdir()
     await using project = await tmpdir()

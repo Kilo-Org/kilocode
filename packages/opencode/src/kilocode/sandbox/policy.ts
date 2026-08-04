@@ -31,7 +31,7 @@ const permits = 1_000_000
 let revision = 0
 
 GlobalBus.on("event", (event) => {
-  if (event.payload?.type === "global.config.updated") revision++
+  if (event.payload?.type === "global.config.updated" && event.payload.properties?.sandbox === true) revision++
 })
 
 function key(directory: string, sessionID: SessionID) {
@@ -453,6 +453,7 @@ const inheritSnapshot = Effect.fn("SandboxPolicy.inheritSnapshot")(function* (
   directory: string,
   parent: Snapshot,
   sessionID: SessionID,
+  version = revision,
 ) {
   const child = yield* read(directory, sessionID)
   const next: Snapshot = child
@@ -473,7 +474,7 @@ const inheritSnapshot = Effect.fn("SandboxPolicy.inheritSnapshot")(function* (
   yield* Effect.promise(() => SandboxStore.write(directory, sessionID, next))
   const id = key(directory, sessionID)
   snapshots.set(id, next)
-  synced.set(id, revision)
+  synced.set(id, version)
   yield* Effect.sync(() => changed(sessionID, directory, next))
 })
 
@@ -494,7 +495,10 @@ export const inherit = Effect.fn("SandboxPolicy.inherit")(function* (
       // Only persist the parent snapshot when it actually belongs to this directory. A fallback
       // carries confinement from another directory (e.g. forking into a worktree) and must not be
       // written back under the parent's key here, or it leaks a phantom parent record.
-      yield* refreshing(sessionID, inheritSnapshot(directory, parent, sessionID))
+      yield* refreshing(
+        sessionID,
+        inheritSnapshot(directory, parent, sessionID, synced.get(key(source, parentID)) ?? revision),
+      )
     }),
   )
 })

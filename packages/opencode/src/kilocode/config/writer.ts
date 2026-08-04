@@ -15,7 +15,12 @@ export namespace KilocodeConfigWriter {
     target: KilocodeConfigOverlay.Target
   }
 
-  export type Result = { ok: true; target: KilocodeConfigOverlay.Target } | Conflict
+  export type Result = {
+    ok: true
+    target: KilocodeConfigOverlay.Target
+    changed: boolean
+    sandboxChanged: boolean
+  } | Conflict
 
   export async function write(input: {
     directory: string
@@ -45,7 +50,7 @@ export namespace KilocodeConfigWriter {
     }
 
     const patch = KilocodeConfigOverlay.patch({ scope: input.scope, set: input.set, unset: input.unset })
-    if (Object.keys(patch).length === 0) return { ok: true, target }
+    if (Object.keys(patch).length === 0) return { ok: true, target, changed: false, sandboxChanged: false }
     await mkdir(path.dirname(target.path), { recursive: true })
     await input.beforeWrite?.()
     const checked = await KilocodeConfigOverlay.target(input)
@@ -77,7 +82,12 @@ export namespace KilocodeConfigWriter {
         ? 0o600
         : undefined
     if (updated !== before) await (input.write ?? Filesystem.write)(checked.path, updated, mode)
-    return { ok: true, target: await KilocodeConfigOverlay.target(input) }
+    return {
+      ok: true,
+      target: await KilocodeConfigOverlay.target(input),
+      changed: updated !== before,
+      sandboxChanged: updated !== before && Object.hasOwn(patch, "sandbox"),
+    }
   }
 
   function patchJsonc(input: string, patch: unknown, parts: string[] = []): string {

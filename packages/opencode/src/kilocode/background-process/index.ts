@@ -5,6 +5,7 @@ import { makeRuntime } from "@/effect/run-service"
 import { Identifier } from "@/id/id"
 import { Instance, type InstanceContext } from "@/kilocode/instance"
 import { KiloShutdown } from "@/kilocode/cli/shutdown"
+import { model as modelEnv } from "@/kilocode/process/env"
 import { SessionID } from "@/session/schema"
 import { Shell } from "@opencode-ai/core/shell"
 import { ProjectV2 } from "@opencode-ai/core/project"
@@ -574,14 +575,11 @@ export namespace BackgroundProcess {
   }
 
   function env(id?: ID, token?: string) {
-    const result: NodeJS.ProcessEnv = {
-      ...process.env,
+    const result: NodeJS.ProcessEnv = modelEnv({
       TERM: "dumb",
       ...(id ? { KILO_BACKGROUND_PROCESS_ID: id } : {}),
       ...(token ? { KILO_BACKGROUND_PROCESS_TOKEN: token } : {}),
-    }
-    delete result.KILO_SERVER_PASSWORD
-    delete result.KILO_SERVER_USERNAME
+    })
     delete result.KILO_BACKGROUND_PROCESS_PORTS
     return result
   }
