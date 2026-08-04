@@ -1548,7 +1548,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private handleEditorOpenMessage(message: Parameters<typeof handleEditorAction>[0]): boolean {
     return handleEditorAction(message, {
-      dir: () => this.getWorkspaceDirectory(this.currentSession?.id),
+      dir: () => {
+        const session = this.currentSession
+        return session ? this.getSessionDirectory(session.id, session) : this.getWorkspaceDirectory()
+      },
       diff: this.diffVirtualProvider,
       storage: this.extensionContext?.globalStorageUri,
       post: (msg) => this.postMessage(msg),

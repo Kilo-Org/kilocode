@@ -1,4 +1,6 @@
-import { describe, it, expect } from "bun:test"
+import { describe, it, expect, spyOn, afterEach } from "bun:test"
+import * as vscode from "vscode"
+import type { Session } from "@kilocode/sdk/v2/client"
 import { ProjectRouteService } from "../../src/agent-manager/project/route"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
@@ -80,8 +82,10 @@ function mockConnection(getImpl?: (p: SessionGetParams) => Promise<unknown>) {
 type ProviderInternals = {
   client: unknown
   connectionState: "connecting" | "connected" | "disconnected" | "error"
+  currentSession: Session | null
   initConnectionPromise: Promise<void> | null
   webview: { postMessage: (message: unknown) => Promise<unknown> } | null
+  handleEditorOpenMessage: (message: unknown) => boolean
   handleSendCommand: (
     command: string,
     args: string,
@@ -323,5 +327,56 @@ describe("KiloProvider route integration", () => {
     expect(commandCalls[0]!.command).toBe("share")
     // No fallback to the active root anywhere.
     expect(calls.every((c) => c.directory !== "/active/root")).toBe(true)
+  })
+})
+
+describe("KiloProvider file link directory resolution", () => {
+  const stat = spyOn(vscode.workspace.fs, "stat")
+  const session = {
+    id: "ses-backend",
+    slug: "ses-backend",
+    projectID: "prj-backend",
+    directory: "/workspace/backend",
+    title: "s",
+    version: "1",
+    time: { created: 1, updated: 1 },
+  } as Session
+
+  stat.mockImplementation(async () => ({ type: vscode.FileType.File, ctime: 0, mtime: 0, size: 0 }))
+
+  afterEach(() => {
+    stat.mockClear()
+  })
+
+  it("opens relative file links against the current session directory", async () => {
+    const { connection } = mockConnection()
+    const provider = new KiloProvider({} as never, connection, undefined, {
+      rootDirectory: () => "/workspace",
+    })
+    const internal = provider as unknown as ProviderInternals
+    internal.currentSession = session
+
+    internal.handleEditorOpenMessage({ type: "openFile", filePath: "spec/foo_spec.rb", line: 12 })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(stat).toHaveBeenCalledTimes(1)
+    const uri = stat.mock.calls[0]![0] as { fsPath: string }
+    expect(uri.fsPath).toBe("/workspace/backend/spec/foo_spec.rb")
+  })
+
+  it("falls back to the workspace root for relative file links without a current session", async () => {
+    const { connection } = mockConnection()
+    const provider = new KiloProvider({} as never, connection, undefined, {
+      rootDirectory: () => "/workspace",
+    })
+    const internal = provider as unknown as ProviderInternals
+    internal.currentSession = null
+
+    internal.handleEditorOpenMessage({ type: "openFile", filePath: "spec/foo_spec.rb", line: 12 })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(stat).toHaveBeenCalledTimes(1)
+    const uri = stat.mock.calls[0]![0] as { fsPath: string }
+    expect(uri.fsPath).toBe("/workspace/spec/foo_spec.rb")
   })
 })
