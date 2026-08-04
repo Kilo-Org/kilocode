@@ -443,7 +443,7 @@ describe("buildProjectNavOrder", () => {
         id: "A",
         expanded: true,
         worktrees: [{ id: "aw1", groupId: "g" }, { id: "aw2" }, { id: "aw3", groupId: "g" }],
-        worktreeOrder: ["aw2", "aw3", "aw1"],
+        worktreeOrder: ["aw1", "aw2", "aw3"],
         sections: [],
         unassigned: [],
       }),
@@ -451,9 +451,9 @@ describe("buildProjectNavOrder", () => {
 
     expect(order.map((e) => e.id)).toEqual([
       localNavId("A"),
-      worktreeNavId("A", "aw2"),
-      worktreeNavId("A", "aw3"),
       worktreeNavId("A", "aw1"),
+      worktreeNavId("A", "aw3"),
+      worktreeNavId("A", "aw2"),
     ])
   })
 

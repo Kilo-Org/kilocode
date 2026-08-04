@@ -139,8 +139,8 @@ export function focusChatSearch(reset: { history(v: boolean): void; review(v: bo
  * Multi-project navigation.
  *
  * In multi-project mode the sidebar shows an accordion of projects; each
- * expanded project renders its own Local item, worktrees (sections first,
- * then ungrouped), and an unassigned-sessions list. Keyboard previous/next
+ * expanded project renders its own Local item, ungrouped worktrees, section
+ * members, and an unassigned-sessions list. Keyboard previous/next
  * and numeric shortcuts must traverse every expanded project in visual
  * order, not just the active one.
  *
@@ -162,8 +162,8 @@ export interface NavEntry {
 export interface ProjectNavInput {
   id: string
   expanded: boolean
-  worktrees: { id: string; sectionId?: string }[]
-  /** Worktree IDs in the exact visual order produced by the project body. */
+  worktrees: { id: string; sectionId?: string; groupId?: string }[]
+  /** Persisted top-level order containing worktree and section IDs. */
   worktreeOrder?: string[]
   sections: { id: string; collapsed: boolean }[]
   sessionsCollapsed: boolean
@@ -189,12 +189,7 @@ export function buildProjectNavOrder(projects: ProjectNavInput[]): NavEntry[] {
     if (!p.expanded) continue
     const pid = p.id
     order.push({ id: localNavId(pid), target: { projectId: pid, kind: "local" } })
-    const worktrees = p.worktreeOrder
-      ? [...p.worktreeOrder, ...p.worktrees.map((w) => w.id)]
-          .filter((id, index, all) => all.indexOf(id) === index)
-          .map((id) => p.worktrees.find((w) => w.id === id))
-          .filter((w): w is NonNullable<typeof w> => !!w)
-      : p.worktrees
+    const worktrees = sortWorktrees(p.worktrees, p.worktreeOrder ?? [])
     const rank = new Map((p.worktreeOrder ?? []).map((id, index) => [id, index] as const))
     const secs = [...p.sections].sort(
       (a, b) => (rank.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (rank.get(b.id) ?? Number.MAX_SAFE_INTEGER),
