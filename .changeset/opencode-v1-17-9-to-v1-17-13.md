@@ -19,6 +19,6 @@ Changes from opencode v1.17.9 to v1.17.13 upstream:
 - Core Bugfixes: Adaptive thinking is enabled for Claude Sonnet 5, and expired promos were removed from the zen catalog.
 - Core Bugfixes: Remote skills refresh atomically with version pinning, and skill base directories are emitted as filesystem paths.
 - CLI Improvements: `kilo run --mini` provides a compact interactive mode, and ports increment from the default when busy.
-- CLI Improvements: `--yolo` auto-approves permissions that are not explicitly denied, with a palette toggle to leave the mode mid-session.
+- CLI Improvements: Use `--auto` to start the TUI in a run-scoped auto-approve mode, and leave the mode mid-session from the command palette.
 - TUI Improvements: Redesigned crash screen, model picker sorted by release date, a diff viewer keybind, main-branch diff source, bindable move-session command, and inline skill load errors.
 - TUI Bugfixes: File autocomplete is scoped to the session, multi-day durations format correctly, and root sessions load in the session switcher.
