@@ -885,7 +885,7 @@ const AgentManagerContent: Component = () => {
   const projectShortcutMap = createMemo(() =>
     buildShortcutMap(
       buildProjectNavEntries(projectList(), projectStates(), projectLive.sessions()).map((entry) => ({ id: entry.id })),
-    )
+    ),
   )
 
   const moveToSection = (ids: string[], sec: string | null) =>
