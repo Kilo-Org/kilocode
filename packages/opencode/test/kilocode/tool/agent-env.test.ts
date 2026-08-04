@@ -9,4 +9,8 @@ describe("agentEnv", () => {
   test("preserves an explicit marker", () => {
     expect(agentEnv({ AI_AGENT: "wrapper" }).AI_AGENT).toBe("wrapper")
   })
+
+  test("replaces a whitespace-only marker", () => {
+    expect(agentEnv({ AI_AGENT: "  " }).AI_AGENT).toBe("kilo-code")
+  })
 })
