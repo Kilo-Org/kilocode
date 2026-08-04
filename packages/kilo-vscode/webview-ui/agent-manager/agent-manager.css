@@ -2830,6 +2830,11 @@ body.am-wt-dragging-active * {
   overflow: visible;
 }
 
+.am-slash-command-dropdown {
+  min-width: 0;
+  max-width: none;
+}
+
 .am-nv-dialog .am-prompt-input-ghost-wrapper {
   height: 100%;
 }
