@@ -2,6 +2,7 @@ package ai.kilocode.client.session.model
 
 import junit.framework.TestCase
 import java.io.File
+import kotlin.io.path.createTempDirectory
 
 class PromptAttachmentExtractorTest : TestCase() {
 
@@ -32,6 +33,22 @@ class PromptAttachmentExtractorTest : TestCase() {
         assertTrue(item.reference)
         assertEquals("text/plain", item.mime)
         assertEquals(file.toPath().toUri().toString(), item.part().url)
+    }
+
+    fun `test directory becomes reference attachment`() {
+        val dir = createTempDirectory(prefix = "kilo-drop").toFile()
+
+        val item = PromptAttachmentExtractor.files(listOf(dir)).single()
+        val part = item.part()
+
+        assertTrue(item.reference)
+        assertEquals("application/x-directory", item.mime)
+        assertEquals(dir.toPath().toUri().toString(), item.url)
+        assertEquals(dir.toPath(), item.path)
+        assertEquals(dir.name, item.name)
+        assertEquals("file", part.type)
+        assertEquals("application/x-directory", part.mime)
+        assertEquals(dir.toPath().toUri().toString(), part.url)
     }
 
     fun `test image file remains embedded attachment`() {
