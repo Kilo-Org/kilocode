@@ -5,6 +5,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import { Global } from "@opencode-ai/core/global"
 import { Server } from "../../../src/server/server"
 import { Config } from "../../../src/config/config"
+import { ConfigParse } from "../../../src/config/parse"
 import { KilocodeConfigOverlay } from "../../../src/kilocode/config/overlay"
 import { KilocodeConfigWriter } from "../../../src/kilocode/config/writer"
 import { Permission } from "../../../src/permission"
@@ -24,6 +25,7 @@ type Overlay = {
   fields: Record<string, { source: string; inherited: boolean; overridden: boolean; value?: unknown }>
   collections: Record<string, Array<{ key: string; source: string; inherited: boolean; local?: unknown }>>
   targets: { project: Target; global: Target; active: Target }
+  effective?: Config.Info
 }
 type Agent = {
   name: string
@@ -598,6 +600,58 @@ describe("config overlay routes", () => {
     expect(Object.keys(saved.mcp)).toEqual(["local"])
   })
 
+  test.serial("writes partial global workflow overrides when both JSON and JSONC exist", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    ;(Global.Path as { config: string }).config = global.path
+    await Filesystem.write(path.join(global.path, "kilo.json"), JSON.stringify({ username: "legacy" }))
+    await Filesystem.write(path.join(global.path, "kilo.jsonc"), "{\n  // Keep JSONC as the active target.\n}\n")
+
+    await json(
+      await req(project.path, "/config/overlay", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          scope: "global",
+          set: { command: { review: { model: "anthropic/claude-sonnet-4-6", variant: "high" } } },
+        }),
+      }),
+    )
+    const saved = ConfigParse.jsonc(await Bun.file(path.join(global.path, "kilo.jsonc")).text(), "kilo.jsonc")
+    expect(saved).toMatchObject({
+      command: { review: { model: "anthropic/claude-sonnet-4-6", variant: "high" } },
+    })
+    expect(await Bun.file(path.join(global.path, "kilo.json")).json()).toMatchObject({ username: "legacy" })
+  })
+
+  test.serial("merges workflow overrides with a command body in the lower-precedence global file", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    ;(Global.Path as { config: string }).config = global.path
+    await Filesystem.write(
+      path.join(global.path, "kilo.json"),
+      JSON.stringify({ command: { review: { template: "Review the changes" } } }),
+    )
+    await Filesystem.write(path.join(global.path, "kilo.jsonc"), '{\n  "username": "legacy"\n}\n')
+
+    const response = await json<Overlay>(
+      await req(project.path, "/config/overlay", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          scope: "global",
+          set: { command: { review: { model: "anthropic/claude-sonnet-4-6", variant: "high" } } },
+        }),
+      }),
+    )
+
+    expect(response.effective?.command?.review).toMatchObject({
+      template: "Review the changes",
+      model: "anthropic/claude-sonnet-4-6",
+      variant: "high",
+    })
+  })
+
   test.serial("disables inherited mcp server with a minimal local override", async () => {
     await using global = await tmpdir()
     await using project = await tmpdir()
@@ -644,7 +698,7 @@ describe("config overlay routes", () => {
       const edit = body.effective.permission.edit
       const after = await json<Agent[]>(await req(project.path, "/agent"))
 
-      expect(typeof edit === "string" ? edit : edit["*"]).toBe("ask")
+      expect(typeof edit === "string" ? edit : edit?.["*"]).toBe("ask")
       expect(
         Permission.evaluate("edit", "*", after.find((item) => item.name === "code")?.permission ?? []).action,
       ).toBe("ask")
@@ -678,7 +732,7 @@ describe("config overlay routes", () => {
     const edit = body.effective.permission.edit
     const after = await json<Agent[]>(await req(project.path, "/agent"))
 
-    expect(typeof edit === "string" ? edit : edit["*"]).toBe("ask")
+    expect(typeof edit === "string" ? edit : edit?.["*"]).toBe("ask")
     expect(Permission.evaluate("edit", "*", after.find((item) => item.name === "code")?.permission ?? []).action).toBe(
       "ask",
     )

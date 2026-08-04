@@ -56,7 +56,8 @@ function isTerminalMessage(
   return (
     m.type === "agentManager.terminal.create" ||
     m.type === "agentManager.terminal.close" ||
-    m.type === "agentManager.terminal.resize"
+    m.type === "agentManager.terminal.resize" ||
+    m.type === "agentManager.terminal.restart"
   )
 }
 
@@ -94,6 +95,22 @@ export class TerminalRouter {
       void this.manager.close(m.terminalId).then(() => {
         this.deps.post({ type: "agentManager.terminal.closed", terminalId: m.terminalId })
       })
+      return true
+    }
+    if (m.type === "agentManager.terminal.restart") {
+      void this.manager
+        .restart(m.terminalId, m.cols, m.rows)
+        .then((wsUrl) => {
+          if (!wsUrl) return
+          this.deps.post({ type: "agentManager.terminal.restarted", terminalId: m.terminalId, wsUrl })
+        })
+        .catch((error: unknown) => {
+          this.deps.post({
+            type: "agentManager.terminal.error",
+            terminalId: m.terminalId,
+            message: error instanceof Error ? error.message : String(error),
+          })
+        })
       return true
     }
     // resize

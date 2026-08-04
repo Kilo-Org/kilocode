@@ -63,6 +63,7 @@ export const dict = {
 
   "agentManager.terminal.new": "Nova kartica terminala",
   "agentManager.terminal.ended": "terminal je završen — zatvorite karticu da biste odbacili",
+  "agentManager.terminal.endedRestartable": "terminal je završen - kucajte za novu ljusku ili zatvorite karticu",
   "agentManager.terminal.setupFailed": "skripta za postavljanje nije uspjela",
   "agentManager.terminal.setupFailedCode": "skripta za postavljanje nije uspjela s izlaznim kodom",
   "agentManager.terminal.stopSetup": "Zaustavi skriptu za postavljanje",

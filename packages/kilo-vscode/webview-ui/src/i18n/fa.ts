@@ -227,6 +227,8 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "دکمه «بهبود پرامپت» با ارائه زمینه بیشتر، توضیح یا بازنویسی، به بهتر کردن پرامپت شما کمک می‌کند. یک پرامپت تایپ کنید و دوباره روی دکمه کلیک کنید تا نحوه عملکرد آن را ببینید.",
   "speechToText.tooltip.start": "شروع ورودی صوتی با Kilo Gateway",
+  "speechToText.tooltip.shortcut":
+    "برای شروع یا توقف ضبط، روی دکمه ضربه بزنید یا Cmd/Ctrl+K را فشار دهید؛ هنگام صحبت دکمه را نگه دارید و سپس رها کنید تا گفتار به متن تبدیل و ارسال شود.",
   "speechToText.tooltip.starting": "در حال راه‌اندازی میکروفون... منتظر بمانید.",
   "speechToText.tooltip.stop": "در حال ضبط. برای توقف کلیک کنید.",
   "speechToText.tooltip.transcribing": "در حال رونویسی... برای لغو کلیک کنید.",
@@ -969,6 +971,9 @@ export const dict = {
     "هیچ دستور سفارشی پیکربندی نشده است. دستورات را به opencode.json خود اضافه کنید تا اینجا نمایش داده شوند.",
   "settings.agentBehaviour.workflows.detail.description": "توضیحات",
   "settings.agentBehaviour.workflows.detail.template": "قالب",
+  "settings.agentBehaviour.workflows.model": "مدل",
+  "settings.agentBehaviour.workflows.variant": "گونه",
+  "settings.agentBehaviour.workflows.modelDescription": "بازنویسی مدل سراسری",
 
   "settings.agentBehaviour.createMode": "ایجاد حالت جدید",
   "settings.agentBehaviour.createMode.name": "نام",

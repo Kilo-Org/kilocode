@@ -86,6 +86,8 @@ interface AnnotationHandlers {
   speech?: {
     active: () => boolean
     render: (meta: AnnotationMeta, textarea: HTMLTextAreaElement) => HTMLElement | undefined
+    down: (meta: AnnotationMeta, event: KeyboardEvent, submit: () => void) => boolean
+    up: (meta: AnnotationMeta, event: KeyboardEvent) => boolean
   }
 }
 
@@ -309,6 +311,11 @@ export function buildReviewAnnotation(
     })
 
     textarea.addEventListener("keydown", (event) => {
+      if (handlers.speech?.down(meta, event, send)) {
+        event.preventDefault()
+        event.stopPropagation()
+        return
+      }
       if (event.key === "Escape") {
         event.preventDefault()
         handlers.cancelDraft()
@@ -318,6 +325,11 @@ export function buildReviewAnnotation(
         event.preventDefault()
         submit()
       }
+    })
+    textarea.addEventListener("keyup", (event) => {
+      if (!handlers.speech?.up(meta, event)) return
+      event.preventDefault()
+      event.stopPropagation()
     })
     textarea.addEventListener("input", update)
 
@@ -363,15 +375,24 @@ export function buildReviewAnnotation(
       handlers.setEditing(null)
     })
 
-    saveButton.addEventListener("click", (event) => {
-      event.stopPropagation()
+    const save = () => {
       if (handlers.speech?.active()) return
       const text = textarea.value.trim()
       if (!text) return
       handlers.updateComment(comment.id, text)
+    }
+
+    saveButton.addEventListener("click", (event) => {
+      event.stopPropagation()
+      save()
     })
 
     textarea.addEventListener("keydown", (event) => {
+      if (handlers.speech?.down(meta, event, save)) {
+        event.preventDefault()
+        event.stopPropagation()
+        return
+      }
       if (event.key === "Escape") {
         event.preventDefault()
         handlers.setEditing(null)
@@ -379,11 +400,13 @@ export function buildReviewAnnotation(
       }
       if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault()
-        if (handlers.speech?.active()) return
-        const text = textarea.value.trim()
-        if (!text) return
-        handlers.updateComment(comment.id, text)
+        save()
       }
+    })
+    textarea.addEventListener("keyup", (event) => {
+      if (!handlers.speech?.up(meta, event)) return
+      event.preventDefault()
+      event.stopPropagation()
     })
 
     return wrapper

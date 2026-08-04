@@ -93,6 +93,20 @@ Define agents as markdown files with YAML frontmatter. Place them in:
 
 The **filename** (without `.md`) becomes the agent name.
 
+If `.kilo/agents/` is a symlink to a directory outside the project, allow that exact source in your global `~/.config/kilo/kilo.jsonc`:
+
+```jsonc
+{
+  "permission": {
+    "markdown_source": {
+      "/path/to/shared/agents/*": "allow"
+    }
+  }
+}
+```
+
+Project configuration cannot grant this permission. External agent files remain untrusted: `{env:...}` substitutions are blocked and `{file:...}` substitutions remain confined to the project.
+
 ```markdown
 ---
 description: Reviews code for quality and best practices

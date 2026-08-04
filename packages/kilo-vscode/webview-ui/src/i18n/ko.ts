@@ -230,6 +230,8 @@ export const dict = {
     "클릭하면 파일 시스템 쓰기를 제한합니다. 샌드박스 설정에 따라 네트워크 액세스는 계속 허용됩니다.",
 
   "speechToText.tooltip.start": "Kilo Gateway로 음성 입력 시작",
+  "speechToText.tooltip.shortcut":
+    "탭하거나 Cmd/Ctrl+K를 눌러 녹음을 시작하거나 중지하고, 말하는 동안에는 누르고 있다가 놓으면 음성을 텍스트로 변환해 제출합니다.",
   "speechToText.tooltip.starting": "마이크를 시작하는 중... 잠시 후 말씀해 주세요.",
   "speechToText.tooltip.stop": "음성 캡처 중지",
   "speechToText.tooltip.transcribing": "변환 중... 취소하려면 클릭하세요.",
@@ -1011,6 +1013,9 @@ export const dict = {
     "구성된 사용자 정의 명령이 없습니다. opencode.json에 명령을 추가하면 여기에 표시됩니다.",
   "settings.agentBehaviour.workflows.detail.description": "설명",
   "settings.agentBehaviour.workflows.detail.template": "템플릿",
+  "settings.agentBehaviour.workflows.model": "모델",
+  "settings.agentBehaviour.workflows.variant": "변형",
+  "settings.agentBehaviour.workflows.modelDescription": "전역 모델 재정의",
   "settings.sandboxing.enabled.title": "샌드박스",
   "settings.sandboxing.enabled.description":
     "에이전트 셸 명령을 프로젝트 및 Kilo 상태 디렉터리에 대한 쓰기를 제한하는 OS 수준의 샌드박스 내에서 실행",

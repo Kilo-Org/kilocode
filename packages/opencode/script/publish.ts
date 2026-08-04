@@ -16,21 +16,18 @@ async function publish(dir: string, name: string, version: string) {
   // GitHub artifact downloads can drop the executable bit, and Docker uses the
   // unpacked dist binaries directly rather than the published tarball.
   if (process.platform !== "win32") await $`chmod -R 755 .`.cwd(dir)
-  // kilocode_change start
-  const exists = await published(name, version)
-  if (exists) {
+  if (await published(name, version)) {
     console.log(`already published ${name}@${version}`)
+    return
   }
-  if (!exists) {
-    await $`bun pm pack`.cwd(dir)
-    await NpmPublish.retry({
-      name,
-      version,
-      run: () => $`npm publish *.tgz --access public --tag ${Script.channel} --provenance`.cwd(dir),
-      exists: () => published(name, version),
-    })
-  }
-  for (const tag of NpmPublish.aliases(Script.channel)) await $`npm dist-tag add ${name}@${version} ${tag}`
+  await $`bun pm pack`.cwd(dir)
+  // kilocode_change start
+  await NpmPublish.retry({
+    name,
+    version,
+    run: () => $`npm publish *.tgz --access public --tag ${Script.channel} --provenance`.cwd(dir),
+    exists: () => published(name, version),
+  })
   // kilocode_change end
 }
 
