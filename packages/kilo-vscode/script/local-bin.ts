@@ -40,7 +40,7 @@ const rootFile = join(repoDir, "package.json")
 const targetBinDir = join(kiloVscodeDir, "bin")
 const binName = process.platform === "win32" ? "kilo.exe" : "kilo"
 const targetBinPath = join(targetBinDir, binName)
-const versionFile = join(targetBinDir, ".cli-version")
+const versionFile = join(kiloVscodeDir, "node_modules", ".kilo-cli-version")
 
 function log(msg: string) {
   console.log(`[local-bin] ${msg}`)
@@ -106,47 +106,61 @@ async function cliInputs() {
 }
 
 async function cliSourceHash() {
-  const inputs = await cliInputs()
-  const [tree, diff, extra, branch] = await Promise.all([
-    $`git ls-tree -r HEAD -- ${inputs}`.cwd(repoDir).quiet(),
-    $`git diff --binary HEAD -- ${inputs}`.cwd(repoDir).quiet(),
-    $`git ls-files --others --exclude-standard -z -- ${inputs}`.cwd(repoDir).quiet(),
-    $`git branch --show-current`.cwd(repoDir).quiet(),
-  ])
-  const env = Object.fromEntries(
-    [
-      "GH_REPO",
-      "KILO_BUMP",
-      "KILO_BWRAP_CACHE",
-      "KILO_CHANNEL",
-      "KILO_MODELS_URL",
-      "KILO_PRE_RELEASE",
-      "KILO_RELEASE",
-      "KILO_SKIP_BUNDLED_BWRAP",
-      "KILO_VERSION",
-      "MODELS_DEV_API_JSON",
-      "ZIG",
-    ].map((key) => [key, process.env[key] ?? ""]),
-  )
-  const hash = createHash("sha256")
-    .update(tree.text())
-    .update(diff.text())
-    .update(branch.text())
-    .update(JSON.stringify(env))
-  const files = extra.text().split("\0").filter(Boolean).sort()
+  try {
+    const inputs = await cliInputs()
+    const [tree, diff, extra, branch] = await Promise.all([
+      $`git ls-tree -r HEAD -- ${inputs}`.cwd(repoDir).quiet(),
+      $`git diff --binary HEAD -- ${inputs}`.cwd(repoDir).quiet(),
+      $`git ls-files --others --exclude-standard -z -- ${inputs}`.cwd(repoDir).quiet(),
+      $`git branch --show-current`.cwd(repoDir).quiet(),
+    ])
+    const env = Object.fromEntries(
+      [
+        "GH_REPO",
+        "KILO_BUMP",
+        "KILO_BWRAP_CACHE",
+        "KILO_CHANNEL",
+        "KILO_MODELS_URL",
+        "KILO_PRE_RELEASE",
+        "KILO_RELEASE",
+        "KILO_SKIP_BUNDLED_BWRAP",
+        "KILO_VERSION",
+        "MODELS_DEV_API_JSON",
+        "ZIG",
+      ].map((key) => [key, process.env[key] ?? ""]),
+    )
+    const hash = createHash("sha256")
+      .update(tree.text())
+      .update(diff.text())
+      .update(branch.text())
+      .update(JSON.stringify(env))
+    const files = extra.text().split("\0").filter(Boolean).sort()
 
-  for (const file of files) {
-    hash.update(file)
-    hash.update(new Uint8Array(await Bun.file(join(repoDir, file)).arrayBuffer()))
+    for (const file of files) {
+      hash.update(file)
+      hash.update(new Uint8Array(await Bun.file(join(repoDir, file)).arrayBuffer()))
+    }
+
+    const models = process.env.MODELS_DEV_API_JSON
+    if (models) hash.update(new Uint8Array(await Bun.file(models).arrayBuffer()))
+    return hash.digest("hex")
+  } catch (err) {
+    log(`Could not determine CLI source hash: ${err instanceof Error ? err.message : String(err)}`)
+    return null
   }
-
-  const models = process.env.MODELS_DEV_API_JSON
-  if (models) hash.update(new Uint8Array(await Bun.file(models).arrayBuffer()))
-  return hash.digest("hex")
 }
 
 async function isStale() {
   const hash = await cliSourceHash()
+  if (!hash) {
+    if (!compiledOnly) return false
+    try {
+      const stored: unknown = await Bun.file(versionFile).json()
+      return Reflect.get(stored, "kind") !== "compiled"
+    } catch {
+      return true
+    }
+  }
   try {
     const stored: unknown = await Bun.file(versionFile).json()
     if (!stored || typeof stored !== "object") return true
@@ -160,7 +174,12 @@ async function isStale() {
 }
 
 async function writeVersion(kind: "compiled" | "wrapper") {
-  await Bun.write(versionFile, JSON.stringify({ input: await cliSourceHash(), target: platformTag(), kind }) + "\n")
+  const input = await cliSourceHash()
+  if (!input) {
+    rmSync(versionFile, { force: true })
+    return
+  }
+  await Bun.write(versionFile, JSON.stringify({ input, target: platformTag(), kind }) + "\n")
 }
 
 function platformTag(): string {
@@ -296,6 +315,9 @@ async function writeSourceWrapper() {
 }
 
 async function main() {
+  for (const file of [join(targetBinDir, ".cli-version"), join(targetBinDir, ".ffmpeg-target")]) {
+    rmSync(file, { force: true })
+  }
   const targetFile = Bun.file(targetBinPath)
   const exists = await targetFile.exists()
   const ready = exists && hasTreeSitterResources(targetBinPath) && hasKiloSandboxWorker(targetBinPath)

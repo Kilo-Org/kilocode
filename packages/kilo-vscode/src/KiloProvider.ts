@@ -4316,7 +4316,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Drop session events from other projects before any tracking logic.
     // This must come first: the trackedSessionIds guard below would otherwise
     // let a foreign session through if it was accidentally tracked.
-    if (directory && !this.isCurrentProjectDirectory(directory)) return
+    if (directory && directory !== "global" && !this.isCurrentProjectDirectory(directory)) return
     if (
       this.projectID &&
       (!this.opts.projectQualifier || !directory) &&
@@ -4770,9 +4770,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const part = event.properties.part as {
       type?: string
       metadata?: Record<string, unknown>
-      state?: { input?: Record<string, unknown>; metadata?: Record<string, unknown> }
+      state?: { status?: string; input?: Record<string, unknown>; metadata?: Record<string, unknown> }
     }
     if (part.type !== "tool") return
+    if (part.state?.status !== "completed") return
     const values = [part.metadata?.filepath, part.state?.metadata?.filepath, part.state?.input?.filePath]
     const file = values.find((value): value is string => typeof value === "string" && value.length > 0)
     if (!file) return

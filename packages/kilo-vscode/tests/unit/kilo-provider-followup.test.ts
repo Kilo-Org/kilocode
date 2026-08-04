@@ -178,6 +178,7 @@ describe("KiloProvider follow-up sessions", () => {
           part: {
             type: "tool",
             metadata: { filepath: "/workspace/frontend/src/app.ts" },
+            state: { status: "completed" },
           },
         },
       } as Event,

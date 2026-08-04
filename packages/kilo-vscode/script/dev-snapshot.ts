@@ -46,32 +46,34 @@ await $`bun run build:check:production`.cwd(root)
 console.log("\n📦 Packaging VSIX...")
 const vsixPath = join(outDir, `kilo-vscode-snapshot-${sha}-${user}.vsix`)
 const require = createRequire(import.meta.url)
-const zlib = require("node:zlib") as typeof import("node:zlib")
-const DeflateRaw = zlib.DeflateRaw
+const vsceRequire = createRequire(require.resolve("@vscode/vsce"))
 if (shouldInstall) {
   // Local installs favor fast packaging and extraction over archive size.
-  Object.defineProperty(zlib, "DeflateRaw", {
-    value: function (options?: ConstructorParameters<typeof DeflateRaw>[0]) {
-      return new DeflateRaw({ ...options, level: 0 })
-    },
-  })
+  type Options = Record<string, unknown>
+  type Zip = {
+    addFile(path: string, name: string, options?: Options): void
+    addBuffer(data: Uint8Array, name: string, options?: Options): void
+  }
+  const yazl = vsceRequire("yazl") as { ZipFile: { prototype: Zip } }
+  const zip = yazl.ZipFile.prototype
+  const file = zip.addFile
+  const buffer = zip.addBuffer
+  zip.addFile = function (this: Zip, path, name, options) {
+    return file.call(this, path, name, { ...options, compress: false })
+  }
+  zip.addBuffer = function (this: Zip, data, name, options) {
+    return buffer.call(this, data, name, { ...options, compress: false })
+  }
 }
 const { createVSIX } = await import("@vscode/vsce")
-const marker = join(root, "bin", ".cli-version")
-const cache = existsSync(marker) ? await Bun.file(marker).text() : undefined
-if (cache !== undefined) rmSync(marker)
-try {
-  await createVSIX({
-    cwd: root,
-    packagePath: vsixPath,
-    version: snapshotVersion,
-    updatePackageJson: false,
-    dependencies: false,
-    skipLicense: true,
-  })
-} finally {
-  if (cache !== undefined) await Bun.write(marker, cache)
-}
+await createVSIX({
+  cwd: root,
+  packagePath: vsixPath,
+  version: snapshotVersion,
+  updatePackageJson: false,
+  dependencies: false,
+  skipLicense: true,
+})
 
 if (shouldInstall) {
   const execPath = process.env.VSCODE_EXEC_PATH ?? ""

@@ -23,7 +23,7 @@ export async function ensureFfmpegForTarget(target: string, bin: string): Promis
 
   const exe = target.startsWith("win32") ? "ffmpeg.exe" : "ffmpeg"
   const dest = join(bin, exe)
-  const marker = join(bin, ".ffmpeg-target")
+  const marker = join(bin, "..", "node_modules", ".kilo-ffmpeg-target")
   if (existsSync(dest) && existsSync(marker) && (await Bun.file(marker).text()).trim() === target) return
 
   const tmp = join(bin, ".ffmpeg-tmp")
