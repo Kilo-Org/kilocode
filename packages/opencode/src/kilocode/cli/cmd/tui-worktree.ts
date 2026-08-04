@@ -1,13 +1,37 @@
 // kilocode_change - new file
 // Supports `kilo --worktree <name>` (create/reuse a git worktree before the TUI
-// starts) and resuming an explicit `--session <id>` in the worktree it was
+// starts, placed at `.kilo/worktrees/<name>` to match Agent Manager's own
+// worktrees) and resuming an explicit `--session <id>` in the worktree it was
 // created in.
 import path from "path"
-import { Effect } from "effect"
+import type { Effect } from "effect"
 import { UI } from "@/cli/ui"
 import { Filesystem } from "@/util/filesystem"
+import { errorMessage } from "@/util/error"
 
-function slugify(name: string) {
+// Matches packages/kilo-vscode/src/agent-manager/WorktreeManager.ts's placement.
+const KILO_WORKTREE_DIR = ".kilo/worktrees"
+
+// Mirrors WorktreeManager.ts's ensureGitExclude(): keeps `.kilo/worktrees/`
+// out of `git status` for repos Agent Manager hasn't touched yet.
+// Exported for unit testing; not part of the module's public contract.
+export async function ensureGitExclude(root: string) {
+  const excludePath = path.join(root, ".git", "info", "exclude")
+  const current = await Filesystem.readText(excludePath).catch(() => "")
+  if (current.includes(`${KILO_WORKTREE_DIR}/`)) return
+  const separator = current.length && !current.endsWith("\n") ? "\n" : ""
+  await Filesystem.write(
+    excludePath,
+    `${current}${separator}\n# Kilo Code agent worktrees\n${KILO_WORKTREE_DIR}/\n`,
+  ).catch(() => {})
+}
+
+function samePath(a: string, b: string) {
+  return process.platform === "win32" ? a.toLowerCase() === b.toLowerCase() : a === b
+}
+
+// Exported for unit testing; not part of the module's public contract.
+export function slugify(name: string) {
   return name
     .trim()
     .toLowerCase()
@@ -15,26 +39,26 @@ function slugify(name: string) {
     .replace(/^-+|-+$/g, "")
 }
 
+// `InstanceStore.Interface.provide` already loads the instance context and
+// scopes an effect to it; this just adds the AppRuntime execution and a
+// matching `disposeDirectory` once the caller is done with `root`.
 async function withInstance<A>(root: string, fn: (run: <T>(effect: Effect.Effect<T, any, any>) => Promise<T>) => Promise<A>) {
   const { AppRuntime } = await import("@/effect/app-runtime")
   const { InstanceStore } = await import("@/project/instance-store")
-  const { InstanceRef } = await import("@/effect/instance-ref")
-  const { store, ctx } = await AppRuntime.runPromise(
-    InstanceStore.Service.use((store) => store.load({ directory: root }).pipe(Effect.map((ctx) => ({ store, ctx })))),
-  )
   const run = <T>(effect: Effect.Effect<T, any, any>) =>
-    AppRuntime.runPromise(effect.pipe(Effect.provideService(InstanceRef, ctx)))
+    AppRuntime.runPromise(InstanceStore.Service.use((store) => store.provide({ directory: root }, effect)))
   try {
     return await fn(run)
   } finally {
-    await AppRuntime.runPromise(store.dispose(ctx))
+    await AppRuntime.runPromise(InstanceStore.Service.use((store) => store.disposeDirectory(root)))
   }
 }
 
 type WaitResult = { ok: true } | { ok: false; message: string }
 
-/** Waits for the `worktree.ready`/`worktree.failed` event for `directory`, with
- *  a `cancel()` handle so a caller can drop the timer/listener on early failure. */
+/** Waits for `directory`'s `worktree.setup.ready`/`worktree.failed` event (full
+ *  readiness, not just checkout), with a `cancel()` to drop the timer/listener
+ *  on early failure. */
 function waitForWorktreeEvent(
   bus: typeof import("@/bus/global").GlobalBus,
   event: typeof import("@/worktree").Worktree.Event,
@@ -47,14 +71,16 @@ function waitForWorktreeEvent(
     clearTimeout(timer)
     bus.off("event", handler)
   }
+  // Intentionally not `unref()`'d: this timer is the timeout guarantee for a
+  // launcher process that has nothing else keeping the event loop alive, so
+  // letting it be collected would let the process exit 0 on a stalled boot.
   const timer = setTimeout(() => {
     cleanup()
     deferred.resolve({ ok: false, message: "Timed out waiting for the worktree to finish setting up" })
   }, timeoutMs)
-  timer.unref?.()
   handler = (e) => {
     if (e.directory !== directory) return
-    if (e.payload?.type === event.Ready.type) {
+    if (e.payload?.type === event.SetupReady.type) {
       cleanup()
       deferred.resolve({ ok: true })
     } else if (e.payload?.type === event.Failed.type) {
@@ -69,40 +95,50 @@ function waitForWorktreeEvent(
 async function resolveWorktree(name: string, root: string, timeoutMs = 10 * 60_000) {
   const { Worktree } = await import("@/worktree")
   const { GlobalBus } = await import("@/bus/global")
+  const { InstanceState } = await import("@/effect/instance-state")
   const slug = slugify(name)
   if (!slug) throw new Error(`Invalid worktree name "${name}"`)
   return withInstance(root, async (run) => {
+    const ctx = await run(InstanceState.context)
+    const directory = path.join(ctx.worktree, KILO_WORKTREE_DIR, slug)
+
+    // Trust neither signal alone: a directory can exist without a live git
+    // registration (orphaned), and a registration can outlive its directory
+    // (deleted out-of-band).
     const existing = await run(Worktree.Service.use((svc) => svc.list()))
-    // list() remaps `name` to the project ID when a worktree's basename collides
-    // with the primary checkout's basename, so also match on the directory itself.
-    const found = existing.find(
-      (w) => w.name.toLowerCase() === slug || path.basename(w.directory).toLowerCase() === slug,
-    )
-    if (found) {
-      if (await Filesystem.exists(found.directory)) {
-        UI.println(`Using existing worktree "${found.name}" at ${found.directory}`)
-        return found.directory
+    const registered = existing.some((w) => samePath(w.directory, directory))
+    const exists = await Filesystem.exists(directory)
+
+    if (registered && exists) {
+      if (!(await Filesystem.exists(path.join(directory, ".git")))) {
+        throw new Error(`"${directory}" is registered but was never fully checked out. Remove it and retry.`)
       }
-      // The worktree directory was deleted out-of-band; git still holds the
-      // registration and branch, which would otherwise force the next
-      // makeWorktreeInfo to pick a different, random name. Prune it first so
-      // the requested name/branch can be reused.
-      await run(Worktree.Service.use((svc) => svc.remove({ directory: found.directory }))).catch(() => {})
+      UI.println(`Using existing worktree "${slug}" at ${directory}`)
+      return directory
+    }
+    if (exists) throw new Error(`"${directory}" already exists but is not a registered git worktree.`)
+    // Registered but missing: reclaim the dead registration (and its branch)
+    // the same way a fresh `--worktree <name>` run would need to, so the name
+    // is free to reuse below.
+    if (registered) {
+      await run(Worktree.Service.use((svc) => svc.remove({ directory }))).catch((error) => {
+        throw new Error(`Failed to reclaim stale worktree "${slug}": ${errorMessage(error)}`)
+      })
     }
 
-    const info = await run(Worktree.Service.use((svc) => svc.makeWorktreeInfo({ name })))
-    UI.println(`Creating worktree "${info.name}"...`)
-    // `worktree.ready` fires once checkout finishes, before the project's start
-    // script (install/build) has run — that script continues in the background.
-    const wait = waitForWorktreeEvent(GlobalBus, Worktree.Event, info.directory, timeoutMs)
-    await run(Worktree.Service.use((svc) => svc.createFromInfo(info))).catch((error) => {
-      wait.cancel()
-      throw error
-    })
+    await ensureGitExclude(ctx.worktree)
+    UI.println(`Creating worktree "${slug}"...`)
+    const wait = waitForWorktreeEvent(GlobalBus, Worktree.Event, directory, timeoutMs)
+    await run(Worktree.Service.use((svc) => svc.createFromInfo({ name: slug, branch: slug, directory }))).catch(
+      (error) => {
+        wait.cancel()
+        throw error
+      },
+    )
     const result = await wait.promise
-    if (!result.ok) throw new Error(`Failed to create worktree "${info.name}": ${result.message}`)
-    UI.println(`Worktree checked out at ${info.directory} (project setup continuing in the background)`)
-    return info.directory
+    if (!result.ok) throw new Error(`Failed to create worktree "${slug}": ${result.message}`)
+    UI.println(`Worktree ready at ${directory}`)
+    return directory
   })
 }
 

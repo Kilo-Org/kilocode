@@ -35,6 +35,12 @@ export const Event = {
       message: Schema.String,
     },
   }),
+  // kilocode_change start - fires after start scripts finish, unlike Ready
+  SetupReady: EventV2.define({
+    type: "worktree.setup.ready",
+    schema: { name: Schema.String, branch: Schema.optional(Schema.String) },
+  }),
+  // kilocode_change end
 }
 
 export const Info = Schema.Struct({
@@ -293,6 +299,18 @@ export const layer: Layer.Layer<
       })
 
       yield* runStartScripts(info.directory, { projectID, extra })
+
+      // kilocode_change start - signal full readiness once setup also completes
+      GlobalBus.emit("event", {
+        directory: info.directory,
+        project: ctx.project.id,
+        workspace: workspaceID,
+        payload: {
+          type: Event.SetupReady.type,
+          properties: { name: info.name, ...(info.branch ? { branch: info.branch } : {}) },
+        },
+      })
+      // kilocode_change end
     })
 
     const createFromInfo = Effect.fn("Worktree.createFromInfo")(function* (info: Info, startCommand?: string) {
