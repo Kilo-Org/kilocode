@@ -52,7 +52,7 @@ export const ProjectsSection: Component<ProjectsSectionProps> = (props) => (
         {(id) => {
           const project = () => props.projects.find((item) => item.id === id)!
           return (
-            <div class="am-project" classList={{ "am-project-active": project().active }}>
+            <div class="am-project">
               <SidebarSectionHeader
                 class="am-project-item"
                 expanded={project().expanded}
@@ -97,7 +97,7 @@ export const ProjectsSection: Component<ProjectsSectionProps> = (props) => (
                   }
                   const expanded = !project().expanded
                   props.onExpand(project().id, expanded)
-                  if (!project().active && project().trusted && !project().missing) props.onSelect(project().id)
+                  if (!project().active && project().trusted) props.onSelect(project().id)
                 }}
               />
               <Show when={project().expanded}>

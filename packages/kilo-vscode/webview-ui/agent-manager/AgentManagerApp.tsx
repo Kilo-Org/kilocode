@@ -89,6 +89,7 @@ import type { WorktreeBusyState } from "./project/store"
 import { rememberTarget, restoreProjectTarget } from "./project/restore"
 import { createProjectStateRouter } from "./project/state"
 import { applyRunStatus } from "./project/run-status"
+import { clearMultiVersionBusy, markMultiVersionBusy } from "./project/progress"
 import { selectLocalAction, selectWorktreeAction } from "./selection-actions"
 import { DataBridge } from "../src/App"
 import { LanguageBridge } from "../src/context/language-bridge"
@@ -103,7 +104,7 @@ import {
   focusChatSearch,
   LOCAL,
 } from "./navigate"
-import { createProjectNav } from "./project-nav"
+import { buildProjectNavEntries, createProjectNav } from "./project-nav"
 import {
   addPendingTab as addLocalPendingTab,
   nextTabAfterClose,
@@ -865,6 +866,16 @@ const AgentManagerContent: Component = () => {
   /** True when a local session is actively working. */
   const isLocalBusy = (): boolean => isAnySessionBusy(localSessionIDs())
 
+  const projectBusy = (projectId: string, worktreeId: string | null): boolean => {
+    if (projectId === activeProjectId()) {
+      return worktreeId === null ? isLocalBusy() : isAgentBusy(worktreeId)
+    }
+    const ids = (projectSessionsLive()[projectId] ?? [])
+      .filter((item) => item.worktreeId === worktreeId)
+      .map((item) => item.id)
+    return isAnySessionBusy(ids)
+  }
+
   const isSessionBusy = (id: string): boolean => isAnySessionBusy([id])
 
   /** Worktrees sorted so that grouped items are always adjacent, respecting custom order if set. */
@@ -882,6 +893,11 @@ const AgentManagerContent: Component = () => {
   )
   /** Map from sidebar item id → 1-based shortcut number (⌘1 for LOCAL, ⌘2 for first worktree, etc.) */
   const shortcutMap = createMemo(() => buildShortcutMap(sidebarOrder()))
+  const projectShortcutMap = createMemo(() =>
+    buildShortcutMap(
+      buildProjectNavEntries(projectList(), projectStates(), projectLive.sessions()).map((entry) => ({ id: entry.id })),
+    ),
+  )
 
   const moveToSection = (ids: string[], sec: string | null) =>
     vscode.postMessage({ type: "agentManager.moveToSection", worktreeIds: ids, sectionId: sec })
@@ -1447,13 +1463,8 @@ const AgentManagerContent: Component = () => {
         const ev = msg as unknown as AgentManagerMultiVersionProgressMessage
         if (ev.status === "done" && ev.groupId) {
           // Clear busy state for all worktrees in this group
-          setBusyWorktrees((prev) => {
-            const next = new Map(prev)
-            for (const wt of worktrees()) {
-              if (wt.groupId === ev.groupId) next.delete(wt.id)
-            }
-            return next
-          })
+          const store = ev.projectId ? registry.ensure(ev.projectId) : registry.active()
+          clearMultiVersionBusy(store, ev.groupId)
         }
       }
 
@@ -1462,11 +1473,8 @@ const AgentManagerContent: Component = () => {
       if (msg.type === "agentManager.worktreeSetup") {
         const ev = msg as AgentManagerWorktreeSetupMessage
         if (ev.status === "ready" && ev.sessionId) {
-          const ms = managedSessions().find((s) => s.id === ev.sessionId)
-          const wt = ms?.worktreeId ? worktrees().find((w) => w.id === ms.worktreeId) : undefined
-          if (wt?.groupId) {
-            setBusyWorktrees((prev) => new Map([...prev, [wt.id, { reason: "setting-up" as const }]]))
-          }
+          const store = ev.projectId ? registry.ensure(ev.projectId) : registry.active()
+          markMultiVersionBusy(store, ev.sessionId)
         }
       }
 
@@ -1503,7 +1511,8 @@ const AgentManagerContent: Component = () => {
         // Clear busy state — use worktreeId from the message directly
         // to avoid race condition where managedSessions() hasn't updated yet
         if (ev.worktreeId) {
-          setBusyWorktrees((prev) => {
+          const store = ev.projectId ? registry.ensure(ev.projectId) : registry.active()
+          store.setBusy((prev) => {
             const next = new Map(prev)
             next.delete(ev.worktreeId)
             return next
@@ -2335,6 +2344,9 @@ const AgentManagerContent: Component = () => {
             projects={projectList()}
             states={projectStates()}
             store={(id) => registry.ensure(id)}
+            busy={(projectId, id) => registry.ensure(projectId).busy().has(id)}
+            working={(projectId, id) => projectBusy(projectId, id)}
+            localBusy={(projectId) => projectBusy(projectId, null)}
             stats={projectLive.stats()}
             local={projectLive.local()}
             prs={projectLive.prs()}
@@ -2347,6 +2359,7 @@ const AgentManagerContent: Component = () => {
             t={t}
             onSearchRef={(ref) => (sidebarSearchMenu = ref)}
             onShortcuts={handleShowKeyboardShortcuts}
+            shortcutMap={projectShortcutMap}
           />
         </Show>
         <Show when={!multiProject()}>
@@ -2458,20 +2471,6 @@ const AgentManagerContent: Component = () => {
           onTerminalDestinationChoose={sideCtl.choose}
           track={metrics.click}
         />
-
-        {/* Empty worktree state */}
-        <Show when={contextEmpty()}>
-          <div class="am-empty-state">
-            <div class="am-empty-state-icon">
-              <Icon name="branch" size="large" />
-            </div>
-            <div class="am-empty-state-text">{t("agentManager.session.noSessions")}</div>
-            <Button variant="primary" size="small" onClick={handleAddSession}>
-              {t("agentManager.session.new")}
-              <span class="am-shortcut-hint">{kb().newTab ?? ""}</span>
-            </Button>
-          </div>
-        </Show>
 
         <Show when={overlay()}>
           {(state) => (

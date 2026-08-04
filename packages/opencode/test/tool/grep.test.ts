@@ -149,7 +149,7 @@ describe("tool.grep", () => {
       const grep = yield* info.init()
       const result = yield* grep.execute({ pattern: "needle", path: test.directory, include: "*.txt" }, ctx)
 
-      expect(result.output).toContain("100 matches limit reached. Use limit=200 for more, or refine pattern.") // kilocode_change
+      expect(result.output).toContain("(Results truncated. Consider using a more specific path or pattern.)")
       expect(result.output).not.toMatch(/showing \d+ of \d+ matches/)
     }),
   )
