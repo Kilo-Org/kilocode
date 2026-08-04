@@ -1,5 +1,9 @@
 import { KILO_PROVIDER_ID } from "../../../../src/shared/provider-model"
-import { getSpeechToTextModel } from "../../../../src/speech-to-text/models"
+import {
+  DEFAULT_SPEECH_TO_TEXT_MODEL,
+  SPEECH_TO_TEXT_MODELS,
+  type SpeechToTextModelDef,
+} from "../../../../src/speech-to-text/models"
 
 type Cfg = {
   enabled_providers?: string[]
@@ -21,6 +25,10 @@ export function canUseSpeechToText(cfg: Cfg, auth: Readonly<Record<string, AuthS
   return hasSpeechToTextAccess(cfg, auth)
 }
 
-export function selectedSpeechToTextModel(cfg: Cfg): string {
-  return getSpeechToTextModel(cfg.experimental?.speech_to_text_model).id
+export function selectedSpeechToTextModel(
+  cfg: Cfg,
+  models: readonly SpeechToTextModelDef[] = SPEECH_TO_TEXT_MODELS,
+): string {
+  const id = cfg.experimental?.speech_to_text_model
+  return models.find((model) => model.id === id)?.id ?? models[0]?.id ?? DEFAULT_SPEECH_TO_TEXT_MODEL.id
 }

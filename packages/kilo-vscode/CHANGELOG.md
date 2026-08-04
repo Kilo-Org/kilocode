@@ -1,5 +1,51 @@
 # kilo-code
 
+## 7.4.20
+
+### Patch Changes
+
+- [#12841](https://github.com/Kilo-Org/kilocode/pull/12841) [`744c5c4`](https://github.com/Kilo-Org/kilocode/commit/744c5c4a6b244d2aac38b7acc08f98a4086544ad) - Discover available speech-to-text models from the Kilo Gateway while retaining offline fallback support and organization model restrictions.
+
+- [#12842](https://github.com/Kilo-Org/kilocode/pull/12842) [`2613ff9`](https://github.com/Kilo-Org/kilocode/commit/2613ff93c6446eb3a662ed6d4a4b063131a6a371) - Show the first Agent Manager terminal prompt sooner by deferring optional terminal enhancements until after initial paint.
+
+- [#12839](https://github.com/Kilo-Org/kilocode/pull/12839) [`4af1d1c`](https://github.com/Kilo-Org/kilocode/commit/4af1d1c8abd15881f5c06554cca8e2f6133003ee) - Keep the final file visible when expanding multi-file patch results.
+
+## 7.4.19
+
+### Minor Changes
+
+- [#12729](https://github.com/Kilo-Org/kilocode/pull/12729) [`ce7984f`](https://github.com/Kilo-Org/kilocode/commit/ce7984fc4247fb2805990ef62e1b1d9f286de9d9) - Configure a model and reasoning variant for each workflow from Agent Behaviour settings.
+
+### Patch Changes
+
+- [#12796](https://github.com/Kilo-Org/kilocode/pull/12796) [`20d1648`](https://github.com/Kilo-Org/kilocode/commit/20d1648e7a10f981fde09fc4d5e9de5c89b1dda8) - Fix Agent Manager mode shortcuts in the New Worktree dialog so the selected mode and its matching model stay in sync.
+
+- [#12725](https://github.com/Kilo-Org/kilocode/pull/12725) [`f239f36`](https://github.com/Kilo-Org/kilocode/commit/f239f36f65a1edb5ef89748933b49b3f21639a45) - Show aggregate added and removed line counts for multi-file patch tool calls.
+
+- [#12803](https://github.com/Kilo-Org/kilocode/pull/12803) [`9819c1c`](https://github.com/Kilo-Org/kilocode/commit/9819c1c315bd05631862ad6f21bbef21d73b7bdc) - Restore Agent Manager sections and worktree drag-and-drop when multiple projects are shown, with ordering and section moves scoped to the owning project.
+
+- [#12836](https://github.com/Kilo-Org/kilocode/pull/12836) [`4f7dfe6`](https://github.com/Kilo-Org/kilocode/commit/4f7dfe65cc85ef7d103a9d0d93f86b030f7142e0) - Remove the duplicate border along the Kilo Code sidebar edge.
+
+- [#12814](https://github.com/Kilo-Org/kilocode/pull/12814) [`cd7d053`](https://github.com/Kilo-Org/kilocode/commit/cd7d053f03fa7b5434b6fcae9e2c68e415b54331) - Start voice input faster on macOS with native AVFoundation capture.
+
+- [#12795](https://github.com/Kilo-Org/kilocode/pull/12795) [`37559f8`](https://github.com/Kilo-Org/kilocode/commit/37559f8643ef8ecb68ee04eae770c9b47feee88a) - Restore keyboard focus to the prompt or pending question when switching Agent Manager worktrees and sessions.
+
+- [#12799](https://github.com/Kilo-Org/kilocode/pull/12799) [`7cfaeb2`](https://github.com/Kilo-Org/kilocode/commit/7cfaeb2c8dbe7355b1d92d9a8f62d6bdfb7f6d46) - Show and hide Agent Manager worktree hover cards instantly.
+
+- [#12805](https://github.com/Kilo-Org/kilocode/pull/12805) [`8490124`](https://github.com/Kilo-Org/kilocode/commit/84901241c0c6dcb735d7e229bd9bce2c0f7e5c36) - Keep the prompt controls at a consistent height when the model selector shows the prompt-training indicator.
+
+- [#12810](https://github.com/Kilo-Org/kilocode/pull/12810) [`e04f653`](https://github.com/Kilo-Org/kilocode/commit/e04f6531bf3ef2eed5cde6e1d81a4983f276b9ca) - Update model search results instantly and keep the active match visible while typing.
+
+- [#12815](https://github.com/Kilo-Org/kilocode/pull/12815) [`3d4294e`](https://github.com/Kilo-Org/kilocode/commit/3d4294e3bb50630159233c8063b253dc5f3da8d3) - Allow Agent Manager sessions to move their worktree between sections or ungroup it through the `agent_manager` tool.
+
+- [#12798](https://github.com/Kilo-Org/kilocode/pull/12798) [`dfc1607`](https://github.com/Kilo-Org/kilocode/commit/dfc16076934decb6578730ea41f9705e2acc0923) - Bind voice input to Cmd/Ctrl+K in Kilo prompt and review comment fields, with hold-to-talk and release-to-send support.
+
+- [#12801](https://github.com/Kilo-Org/kilocode/pull/12801) [`4810766`](https://github.com/Kilo-Org/kilocode/commit/4810766d058f53084b8a6cb0fe4d1ff42973e89b) - Preserve prompt or Agent Manager terminal focus independently for each session when switching sessions.
+
+- [#12812](https://github.com/Kilo-Org/kilocode/pull/12812) [`6ae16f9`](https://github.com/Kilo-Org/kilocode/commit/6ae16f9d6272b3bfba998bb516cba7667935d6e4) - Start a fresh shell in the same Agent Manager terminal tab when the user types after the terminal ends.
+
+- [#12733](https://github.com/Kilo-Org/kilocode/pull/12733) [`63220e0`](https://github.com/Kilo-Org/kilocode/commit/63220e019c048d6df639a4b2fbd4c5c3f124547f) Thanks [@rakshith1928](https://github.com/rakshith1928)! - Fix skill folder path and URL rows clipping and pushing the remove (×) button off-screen in narrow Skills settings panels. Long paths and URLs now truncate within their row, and hovering a truncated value shows the full path or URL in a tooltip.
+
 ## 7.4.18
 
 ### Minor Changes

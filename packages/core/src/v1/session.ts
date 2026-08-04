@@ -207,6 +207,7 @@ export const SubtaskPart = Schema.Struct({
       modelID: ModelV2.ID,
     }),
   ),
+  variant: Schema.optional(Schema.String), // kilocode_change - preserve workflow subtask variant
   command: Schema.optional(Schema.String),
 }).annotate({ identifier: "SubtaskPart" })
 export type SubtaskPart = Types.DeepMutable<Schema.Schema.Type<typeof SubtaskPart>>
@@ -500,6 +501,7 @@ export const SubtaskPartInput = Schema.Struct({
       modelID: ModelV2.ID,
     }),
   ),
+  variant: Schema.optional(Schema.String), // kilocode_change - preserve workflow subtask variant
   command: Schema.optional(Schema.String),
 }).annotate({ identifier: "SubtaskPartInput" })
 export type SubtaskPartInput = Types.DeepMutable<Schema.Schema.Type<typeof SubtaskPartInput>>

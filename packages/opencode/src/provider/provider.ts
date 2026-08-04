@@ -1258,10 +1258,11 @@ function fromModelsDevModel(provider: ModelsDev.Provider, model: ModelsDev.Model
     variants: {},
   }
   Object.assign(base, patchKiloModel(provider.id, model)) // kilocode_change
+  const variants = ProviderTransform.reasoningVariants(model, base) ?? ProviderTransform.variants(base) // kilocode_change
 
   return {
     ...base,
-    variants: mapValues(ProviderTransform.variants(base), (v) => v),
+    variants: mapValues(variants, (v) => v), // kilocode_change
   }
 }
 
