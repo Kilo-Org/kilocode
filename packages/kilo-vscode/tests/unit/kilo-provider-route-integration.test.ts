@@ -85,7 +85,6 @@ type ProviderInternals = {
   currentSession: Session | null
   initConnectionPromise: Promise<void> | null
   webview: { postMessage: (message: unknown) => Promise<unknown> } | null
-  getWorkspaceDirectory: (sessionId?: string) => string
   handleEditorOpenMessage: (message: unknown) => boolean
   handleSendCommand: (
     command: string,
@@ -347,18 +346,6 @@ describe("KiloProvider file link directory resolution", () => {
 
   afterEach(() => {
     stat.mockClear()
-  })
-
-  it("resolves getWorkspaceDirectory to the current session's directory", () => {
-    const { connection } = mockConnection()
-    const provider = new KiloProvider({} as never, connection, undefined, {
-      rootDirectory: () => "/workspace",
-    })
-    const internal = provider as unknown as ProviderInternals
-    internal.currentSession = session
-
-    expect(internal.getWorkspaceDirectory("ses-backend")).toBe("/workspace/backend")
-    expect(internal.getWorkspaceDirectory("ses-frontend")).toBe("/workspace")
   })
 
   it("opens relative file links against the current session directory", async () => {
