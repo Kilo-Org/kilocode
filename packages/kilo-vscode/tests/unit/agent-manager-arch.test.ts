@@ -491,7 +491,15 @@ describe("Agent Manager Provider — onMessage routing", () => {
   it("session routing handles loadMessages for terminal switching", () => {
     const text = body("onSessionMessage")
     expect(text).toContain("loadMessages")
-    expect(text).toContain("syncOnSessionSwitch")
+    expect(text).toContain('this.destination.value() === "vscode"')
+    expect(text).toContain("this.terminalManager.syncOnSessionSwitch(m.sessionID)")
+  })
+
+  it("keeps local terminal switching in the selected destination", () => {
+    const text = body("onUiMessage")
+    expect(text).toContain("agentManager.showExistingLocalTerminal")
+    expect(text).toContain('this.destination.value() === "vscode"')
+    expect(text).toContain("this.terminalManager.syncLocalOnSessionSwitch()")
   })
 
   it("terminal context reveals the terminal associated with the originating session", () => {

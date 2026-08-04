@@ -66,6 +66,7 @@ vi.mock("../git-import", () => ({
 
 import { AgentManagerProvider } from "../AgentManagerProvider"
 import type { Host, OutputHandle } from "../host"
+import type { AgentManagerInMessage } from "../types"
 
 function createMockHost(): Host {
   return {
@@ -103,8 +104,17 @@ function createHarness() {
   const manager = Object.create(AgentManagerProvider.prototype) as {
     host: Host
     panel: { sessions: { registerSession: ReturnType<typeof vi.fn> } } | undefined
-    prBridge: { handleMessage: ReturnType<typeof vi.fn> }
+    prBridge: {
+      handleMessage: ReturnType<typeof vi.fn>
+      poller: { setActiveWorktreeId: ReturnType<typeof vi.fn> }
+    }
     activeSessionId: string | undefined
+    destination: { value: ReturnType<typeof vi.fn> }
+    terminalManager: {
+      syncLocalOnSessionSwitch: ReturnType<typeof vi.fn>
+      syncOnSessionSwitch: ReturnType<typeof vi.fn>
+    }
+    state: { getSession: ReturnType<typeof vi.fn> } | undefined
     naming: { prompt: ReturnType<typeof vi.fn> }
     scripts: { intercept: ReturnType<typeof vi.fn>; snapshot: ReturnType<typeof vi.fn> }
     terminalRouter: { handle: ReturnType<typeof vi.fn> }
@@ -119,6 +129,14 @@ function createHarness() {
     log: ReturnType<typeof vi.fn>
     onCreateWorktree: (baseBranch?: string, branchName?: string) => Promise<null>
     onMessage: (msg: Record<string, unknown>) => Promise<Record<string, unknown> | null>
+    onSessionMessage: (
+      msg: AgentManagerInMessage,
+      raw: Record<string, unknown>,
+    ) => Record<string, unknown> | null | undefined
+    onUiMessage: (
+      msg: AgentManagerInMessage,
+      raw: Record<string, unknown>,
+    ) => Record<string, unknown> | null | undefined
   }
 
   manager.host = host
@@ -127,8 +145,17 @@ function createHarness() {
       registerSession: vi.fn(),
     },
   }
-  manager.prBridge = { handleMessage: vi.fn().mockReturnValue(false) }
+  manager.prBridge = {
+    handleMessage: vi.fn().mockReturnValue(false),
+    poller: { setActiveWorktreeId: vi.fn() },
+  }
   manager.activeSessionId = undefined
+  manager.destination = { value: vi.fn().mockReturnValue("vscode") }
+  manager.terminalManager = {
+    syncLocalOnSessionSwitch: vi.fn(),
+    syncOnSessionSwitch: vi.fn(),
+  }
+  Object.defineProperty(manager, "state", { value: undefined })
   manager.naming = { prompt: vi.fn() }
   manager.scripts = { intercept: vi.fn().mockReturnValue(false), snapshot: vi.fn() }
   manager.terminalRouter = { handle: vi.fn().mockReturnValue(false) }
@@ -334,5 +361,35 @@ describe("AgentManagerProvider worktree creation", () => {
       requestID: "request-1",
       contextDirectory: "/repo/.kilo/worktrees/wt-1",
     })
+  })
+})
+
+describe("AgentManagerProvider terminal destination", () => {
+  it.each([
+    { destination: "agentManager", calls: 0 },
+    { destination: "vscode", calls: 1 },
+  ])("syncs session terminals through $destination", ({ destination, calls }) => {
+    const manager = createHarness()
+    const raw = { type: "loadMessages", sessionID: "session-1" }
+    const msg = raw as AgentManagerInMessage
+    manager.destination.value.mockReturnValue(destination)
+
+    manager.onSessionMessage(msg, raw)
+
+    expect(manager.terminalManager.syncOnSessionSwitch).toHaveBeenCalledTimes(calls)
+  })
+
+  it.each([
+    { destination: "agentManager", calls: 0 },
+    { destination: "vscode", calls: 1 },
+  ])("syncs local terminals through $destination", ({ destination, calls }) => {
+    const manager = createHarness()
+    const raw = { type: "agentManager.showExistingLocalTerminal" }
+    const msg = raw as AgentManagerInMessage
+    manager.destination.value.mockReturnValue(destination)
+
+    manager.onUiMessage(msg, raw)
+
+    expect(manager.terminalManager.syncLocalOnSessionSwitch).toHaveBeenCalledTimes(calls)
   })
 })
