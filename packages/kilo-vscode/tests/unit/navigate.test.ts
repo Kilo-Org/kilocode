@@ -437,6 +437,26 @@ describe("buildProjectNavOrder", () => {
     ])
   })
 
+  it("keeps multi-version worktrees adjacent", () => {
+    const order = buildProjectNavOrder([
+      project({
+        id: "A",
+        expanded: true,
+        worktrees: [{ id: "aw1", groupId: "g" }, { id: "aw2" }, { id: "aw3", groupId: "g" }],
+        worktreeOrder: ["aw2", "aw3", "aw1"],
+        sections: [],
+        unassigned: [],
+      }),
+    ])
+
+    expect(order.map((e) => e.id)).toEqual([
+      localNavId("A"),
+      worktreeNavId("A", "aw2"),
+      worktreeNavId("A", "aw3"),
+      worktreeNavId("A", "aw1"),
+    ])
+  })
+
   it("excludes unassigned sessions when the sessions section is collapsed", () => {
     const order = buildProjectNavOrder([
       project({

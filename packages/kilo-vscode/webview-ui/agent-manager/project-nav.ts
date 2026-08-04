@@ -63,7 +63,7 @@ export function buildProjectNavEntries(
       return {
         id: p.id,
         expanded: p.expanded,
-        worktrees: (st.worktrees ?? []).map((w) => ({ id: w.id, sectionId: w.sectionId })),
+        worktrees: (st.worktrees ?? []).map((w) => ({ id: w.id, sectionId: w.sectionId, groupId: w.groupId })),
         worktreeOrder: st.worktreeOrder,
         sections: (st.sections ?? []).map((s) => ({ id: s.id, collapsed: s.collapsed })),
         sessionsCollapsed: st.sessionsCollapsed === true,
