@@ -24,15 +24,11 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.SearchTextField
-import com.intellij.ui.SimpleColoredComponent
-import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
-import java.awt.BorderLayout
 import java.awt.Cursor
 import java.awt.event.KeyEvent
 import java.time.Instant
@@ -42,6 +38,7 @@ import java.time.temporal.ChronoUnit
 import java.util.concurrent.atomic.AtomicInteger
 import javax.swing.JComponent
 import javax.swing.KeyStroke
+import javax.swing.Scrollable
 import javax.swing.ScrollPaneConstants
 import javax.swing.event.ListDataEvent
 import javax.swing.event.ListDataListener
@@ -176,61 +173,51 @@ class HistoryControllerTest : BasePlatformTestCase() {
         assertEquals(mapOf("ses_1" to SessionActivityKind.RUNNING), activity)
     }
 
-    fun `test local history renderer shows running badge for active id`() {
+    fun `test local history rows show running badge for active id`() {
         val item = LocalHistoryItem(session("ses_1", "Running"))
-        val controller = controller()
-        controller.local.replace(listOf(item))
-        val renderer = LocalHistoryRenderer(controller.local, activity = { mapOf("ses_1" to SessionActivityKind.RUNNING) })
+        val snapshot = HistoryActivitySnapshot(activity = mapOf("ses_1" to SessionActivityKind.RUNNING))
 
-        renderer.getListCellRendererComponent(javax.swing.JList(arrayOf(item)), item, 0, false, false)
+        val row = localHistoryRows(listOf(item), snapshot) { false }[0]
 
-        assertTrue(renderer.runningVisible())
+        assertEquals(KiloBundle.message("session.part.tool.running"), row.badges.single().text)
     }
 
-    fun `test local history renderer uses title overlay`() {
+    fun `test local history rows use title overlay`() {
         val item = LocalHistoryItem(session("ses_1", "Stored"))
-        val controller = controller()
-        controller.local.replace(listOf(item))
-        val renderer = LocalHistoryRenderer(controller.local, titles = { mapOf("ses_1" to "Live") })
+        val snapshot = HistoryActivitySnapshot(titles = mapOf("ses_1" to "Live"))
 
-        renderer.getListCellRendererComponent(javax.swing.JList(arrayOf(item)), item, 0, false, false)
+        val row = localHistoryRows(listOf(item), snapshot) { false }[0]
 
-        assertEquals("Live", renderer.titleText())
+        assertEquals("Live", row.title)
     }
 
-    fun `test cloud history renderer hides running badge for inactive id`() {
+    fun `test cloud history rows hide running badge for inactive id`() {
         val item = CloudHistoryItem(cloud("cloud_1", "Cloud"))
-        val controller = controller()
-        controller.cloud.replace(listOf(item), null)
-        val renderer = CloudHistoryRenderer(controller.cloud) { emptyMap() }
 
-        renderer.getListCellRendererComponent(javax.swing.JList(arrayOf(item)), item, 0, false, false)
+        val row = cloudHistoryRows(listOf(item), HistoryActivitySnapshot())[0]
 
-        assertFalse(renderer.runningVisible())
+        assertTrue(row.badges.isEmpty())
     }
 
-    fun `test history renderer uses trailing time with squeezable title`() {
+    fun `test local history rows use trailing time and delete cell`() {
         val item = LocalHistoryItem(session("ses_1", "Long ".repeat(80)))
-        val controller = controller()
-        controller.local.replace(listOf(item))
-        val renderer = LocalHistoryRenderer(controller.local)
-        val view = renderer.getListCellRendererComponent(javax.swing.JList(arrayOf(item)), item, 0, false, false)
+        val row = localHistoryRows(listOf(item), HistoryActivitySnapshot()) { false }[0]
+        val cell = row.cells.single()
 
-        val title = UIUtil.uiTraverser(view).filter(SimpleColoredComponent::class.java).firstOrNull() ?: error("missing title")
-        val head = title.parent
-        assertTrue(head.layout is BorderLayout)
-        assertSame(title, (head.layout as BorderLayout).getLayoutComponent(BorderLayout.CENTER))
+        assertEquals(HistoryTime.relative(item), row.trailing)
+        assertEquals(HISTORY_DELETE_CELL, cell.id)
+        assertTrue(cell.iconOnly)
+    }
 
-        val time = UIUtil.uiTraverser(view).filter(JBLabel::class.java)
-            .first { it.text == HistoryTime.relative(item) }
-        val main = time.parent
-        assertTrue(main.layout is BorderLayout)
-        assertSame(time, (main.layout as BorderLayout).getLayoutComponent(BorderLayout.EAST))
+    fun `test deleting local history rows hide actions and badges`() {
+        val item = LocalHistoryItem(session("ses_1", "Running"))
+        val snapshot = HistoryActivitySnapshot(activity = mapOf("ses_1" to SessionActivityKind.RUNNING))
 
-        val row = main.parent as JComponent
-        val ins = row.border.getBorderInsets(row)
-        assertEquals(ins.left, ins.right)
-        assertEquals(UiStyle.Gap.lg(), ins.right)
+        val row = localHistoryRows(listOf(item), snapshot) { true }[0]
+
+        assertTrue(row.deleting)
+        assertTrue(row.cells.isEmpty())
+        assertTrue(row.badges.isEmpty())
     }
 
     fun `test history panel sync updates running badges`() {
@@ -921,17 +908,25 @@ class HistoryControllerTest : BasePlatformTestCase() {
         assertTrue(searches.all { inset(it.parent as JComponent) == UiStyle.Gap.lg() })
 
         val scrolls = UIUtil.uiTraverser(panel.component).filter(JBScrollPane::class.java).toList()
-            .filter { it.viewport.view is JBList<*> }
+            .filter { it.viewport.view is Scrollable }
         assertTrue(scrolls.isNotEmpty())
         assertTrue(scrolls.all { it.horizontalScrollBarPolicy == ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER })
-        assertTrue(scrolls.all { it.viewportBorder.getBorderInsets(it).right == UiStyle.Gap.lg() })
+        assertTrue(scrolls.all { padded(it as JComponent) })
 
-        val lists = UIUtil.uiTraverser(panel.component).filter(JBList::class.java).toList()
-        assertTrue(lists.isNotEmpty())
-        assertTrue(lists.all { it.getScrollableTracksViewportWidth() })
+        val views = scrolls.map { it.viewport.view as Scrollable }
+        assertTrue(views.all { it.getScrollableTracksViewportWidth() })
     }
 
-    private fun inset(component: JComponent) = component.border.getBorderInsets(component).right
+    private fun inset(component: JComponent) = component.border?.getBorderInsets(component)?.right ?: -1
+
+    private fun padded(component: JComponent): Boolean {
+        var cur: java.awt.Component? = component
+        while (cur != null) {
+            if (cur is JComponent && inset(cur) == UiStyle.Gap.lg()) return true
+            cur = cur.parent
+        }
+        return false
+    }
 
     private fun collect(controller: HistoryController): MutableList<String> {
         val events = mutableListOf<String>()

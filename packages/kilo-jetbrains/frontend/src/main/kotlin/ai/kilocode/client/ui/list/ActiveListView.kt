@@ -40,6 +40,7 @@ internal class ActiveListView(
     private val surface: ActiveListSurface = ActiveListSurface.Default,
     private val matcher: (String, ActiveListItem) -> Boolean = ::activeListMatches,
     private val enter: () -> Boolean = ::activeListEnterFocus,
+    private val openOnClick: Boolean = true,
     private val onOpen: ((ActiveListItem, Boolean) -> Unit)? = null,
     private val onActivate: ((ActiveListItem) -> Unit)? = null,
     private val onClick: ((ActiveListItem) -> Unit)? = null,
@@ -126,6 +127,11 @@ internal class ActiveListView(
                     val hit = hit(e, enabled = false) ?: return
                     if (hit.id != null) return
                     if (hit.item.deleting) return
+                    if (!openOnClick) {
+                        onClick?.invoke(hit.item) ?: return
+                        e.consume()
+                        return
+                    }
                     val action = onOpen
                     if (action != null) action(hit.item, false) else onClick?.invoke(hit.item) ?: return
                     e.consume()

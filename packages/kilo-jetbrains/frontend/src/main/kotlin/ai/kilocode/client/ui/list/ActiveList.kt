@@ -1,9 +1,12 @@
 package ai.kilocode.client.ui.list
 
 import ai.kilocode.client.ui.UiStyle
+import com.intellij.openapi.actionSystem.ActionGroup
+import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.options.advanced.AdvancedSettings
 import com.intellij.openapi.ui.popup.Balloon
 import com.intellij.ui.DocumentAdapter
+import com.intellij.ui.PopupHandler
 import com.intellij.ui.SearchTextField
 import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.components.JBScrollPane
@@ -12,6 +15,7 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.Color
+import java.awt.Cursor
 import java.awt.event.KeyEvent
 import javax.swing.JComponent
 import javax.swing.KeyStroke
@@ -36,11 +40,12 @@ internal class ActiveList(
     onOpen: ((ActiveListItem, Boolean) -> Unit)? = null,
     matcher: (String, ActiveListItem) -> Boolean = ::activeListMatches,
     enter: () -> Boolean = ::activeListEnterFocus,
+    openOnClick: Boolean = true,
     onActivate: ((ActiveListItem) -> Unit)? = null,
     onClick: ((ActiveListItem) -> Unit)? = null,
     onSelect: (() -> Unit)? = null,
 ) : BorderLayoutPanel() {
-    private val view = ActiveListView(emptyText, cfg, surface, matcher, enter, onOpen, onActivate, onClick, onCell)
+    private val view = ActiveListView(emptyText, cfg, surface, matcher, enter, openOnClick, onOpen, onActivate, onClick, onCell)
     private val search: SearchTextField? = if (showSearch) SearchTextField(false) else null
     private val scroll = object : JBScrollPane(view) {
         override fun getBackground(): Color {
@@ -108,6 +113,22 @@ internal class ActiveList(
 
     @RequiresEdt
     fun focusList() = view.focusList()
+
+    @RequiresEdt
+    fun setEmptyText(text: String) = view.setEmptyText(text)
+
+    @RequiresEdt
+    fun installPopup(group: ActionGroup) = PopupHandler.installPopupMenu(view.list, group, ActionPlaces.POPUP)
+
+    @RequiresEdt
+    fun setListCursor(cursor: Cursor) {
+        view.list.cursor = cursor
+    }
+
+    @RequiresEdt
+    fun setSelectionIndices(indices: IntArray) {
+        view.list.selectedIndices = indices
+    }
 
     @RequiresEdt
     fun preferredFocus(): JComponent = view.list
