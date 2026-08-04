@@ -198,7 +198,7 @@ class RevertBanner(
         val root = model.session?.directory
             ?.takeIf { it.isNotBlank() }
             ?.let { runCatching { Path.of(it) }.getOrNull() }
-        return (root?.resolve(path) ?: path.toAbsolutePath()).normalize().toString()
+        return root?.resolve(path)?.normalize()?.toString() ?: file
     }
 
     /** Height that fits at most [MAX_FILE_ROWS] rows, or 0 when the list is short enough to show in full. */
