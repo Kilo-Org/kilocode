@@ -20,6 +20,7 @@ import type {
 } from "../src/types/messages"
 import type { LanguageContextValue } from "../src/context/language"
 import { useVSCode } from "../src/context/vscode"
+import { projectAdjacentHint, projectSidebarOrder } from "./project-local-navigation"
 import SectionHeader from "./SectionHeader"
 import { WorktreeItem } from "./WorktreeItem"
 import { UnassignedSessionsSection } from "./UnassignedSessionsSection"
@@ -30,6 +31,8 @@ import { sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { createProjectStore, type ProjectStore } from "./project/store"
 import { randomColor } from "./section-colors"
+
+const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 
 interface Props {
   project: AgentProjectSnapshot
@@ -42,6 +45,7 @@ interface Props {
   sessions?: ProjectSessionInfo[]
   selectedProject?: string
   selection?: string
+  currentSessionID?: () => string | undefined
   bindings: Record<string, string>
   t: LanguageContextValue["t"]
   onSelectLocal: (projectId: string) => void
@@ -49,6 +53,7 @@ interface Props {
   onSelectSession: (projectId: string, sessionId: string) => void
   onNewWorktree: (projectId: string) => void
   onDefaultBranch: (projectId: string, selected?: string, detected?: string) => void
+  shortcutMap?: () => Map<string, number>
 }
 
 /** Permanent real sidebar body for one expanded project. */
@@ -97,8 +102,22 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
   const members = (sectionId: string) => sorted().filter((wt) => wt.sectionId === sectionId)
   const ungrouped = createMemo(() => sorted().filter((wt) => !wt.sectionId))
   const top = createMemo(() => buildTopLevelItems(sections(), ungrouped(), sorted(), order()))
+  const sidebarOrder = createMemo(() =>
+    projectSidebarOrder(top(), sorted(), sections(), members, state()?.sessionsCollapsed ? [] : localSessions()),
+  )
   const post = (message: Record<string, unknown>) =>
     vscode.postMessage({ ...message, projectId: props.project.id } as never)
+
+  const navHint = (id: string) =>
+    projectAdjacentHint(
+      props.project.id,
+      props.selectedProject,
+      id,
+      props.selection ?? props.currentSessionID?.(),
+      sidebarOrder(),
+      props.bindings.previousSession ?? "",
+      props.bindings.nextSession ?? "",
+    )
 
   const scope = (kind: "section" | "worktree", id: string) => `${props.project.id}:${kind}:${id}`
   const parse = (kind: "section" | "worktree", value: unknown) => {
@@ -214,6 +233,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
         <WorktreeItem
           worktree={worktree}
           sidebarId={`${props.project.id}:${worktree.id}`}
+          shortcut={props.shortcutMap?.().get(`${props.project.id}:wt:${worktree.id}`)}
           label={worktree.label || label()}
           subtitle={worktree.label ? (worktree.label !== worktree.branch ? worktree.branch : undefined) : subtitle()}
           active={active() && props.selection === worktree.id}
@@ -222,6 +242,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           working={runs()[worktree.id]?.state === "running"}
           stale={state()?.staleWorktreeIds?.includes(worktree.id) === true}
           stats={props.stats?.[worktree.id]}
+          navHint={navHint(worktree.id)}
           sessions={sessions(worktree.id).length}
           grouped={isGrouped(worktree)}
           groupStart={isGroupStart(worktree, idx(), list)}
@@ -284,6 +305,14 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
             <path d="M6 16.5H14" stroke="currentColor" stroke-linecap="square" />
             <path d="M10 13.5V16.5" stroke="currentColor" />
           </svg>
+          <Show when={props.shortcutMap?.().get(`${props.project.id}:local`)}>
+            {(shortcut) => (
+              <span class="am-shortcut-badge">
+                {isMac ? "⌘" : "Ctrl+"}
+                {shortcut()}
+              </span>
+            )}
+          </Show>
           <div class="am-local-text">
             <span class="am-local-label">{props.t("agentManager.local")}</span>
             <Show when={props.local?.branch}>
