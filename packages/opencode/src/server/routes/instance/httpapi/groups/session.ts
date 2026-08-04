@@ -38,8 +38,7 @@ export const ListQuery = Schema.Struct({
 })
 export const DiffQuery = Schema.Struct({
   ...WorkspaceRoutingQueryFields,
-  ...Struct.omit(SessionSummary.DiffInput.fields, ["sessionID", "full"]), // kilocode_change
-  full: Schema.optional(QueryBoolean), // kilocode_change
+  ...Struct.omit(SessionSummary.DiffInput.fields, ["sessionID"]),
 })
 export const MessagesQuery = Schema.Struct({
   ...WorkspaceRoutingQueryFields,

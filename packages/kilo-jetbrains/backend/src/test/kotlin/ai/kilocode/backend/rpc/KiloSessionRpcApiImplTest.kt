@@ -1,41 +1,25 @@
 package ai.kilocode.backend.rpc
 
-import ai.kilocode.backend.app.KiloAppState
-import ai.kilocode.backend.app.KiloBackendAppService
-import ai.kilocode.backend.testing.FakeCliServer
-import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
 import ai.kilocode.rpc.dto.ChatEventDto
-import kotlinx.coroutines.CoroutineScope
+import ai.kilocode.rpc.dto.DiffFileDto
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeoutOrNull
-import kotlin.test.AfterTest
+import java.nio.file.Files
+import kotlin.io.path.createTempDirectory
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class KiloSessionRpcApiImplTest {
-    private val apps = mutableListOf<KiloBackendAppService>()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-
-    @AfterTest
-    fun tearDown() = runBlocking {
-        apps.forEach { it.dispose() }
-        apps.clear()
-        scope.cancel()
-    }
 
     @Test
     fun `events logs normal completion`() = runBlocking(Dispatchers.Default) {
@@ -73,63 +57,56 @@ class KiloSessionRpcApiImplTest {
     }
 
     @Test
-    fun `diffFile loads full detail with message scope`() = runBlocking(Dispatchers.Default) {
-        val mock = MockCliServer()
+    fun `diffSides rebuilds full before by reverse-applying the patch to the working tree`() = runBlocking(Dispatchers.Default) {
+        val dir = createTempDirectory("kilo-diff")
         try {
-            mock.sessionDiff = """
-                [{"file":"src/Main.kt","additions":1,"deletions":1,"status":"modified","patch":"@@ -1 +1 @@\n-old\n+new\n","before":"old\nkeep\n","after":"new\nkeep\n"}]
-            """.trimIndent()
-            val api = KiloSessionRpcApiImpl(app(mock))
+            val file = "src/Main.kt"
+            Files.createDirectories(dir.resolve("src"))
+            Files.writeString(dir.resolve(file), "a\nB2\nc\n")
+            val patch = "--- a/$file\n+++ b/$file\n@@ -1,3 +1,3 @@\n a\n-b2\n+B2\n c\n"
 
-            val diff = api.diffFile("ses_test", "/work", "src/Main.kt", "msg1")
+            val diff = KiloSessionRpcApiImpl().diffSides(dir.toString(), DiffFileDto(file, 1, 1, patch, "modified"))
 
             assertNotNull(diff)
-            assertEquals("old\nkeep\n", diff.before)
-            assertEquals("new\nkeep\n", diff.after)
-            val path = assertNotNull(mock.lastSessionDiffPath)
-            assertTrue(path.contains("full=true"), path)
-            assertTrue(path.contains("file=src%2FMain.kt"), path)
-            assertTrue(path.contains("messageID=msg1"), path)
+            assertEquals("a\nb2\nc\n", diff.before)
+            assertEquals("a\nB2\nc\n", diff.after)
         } finally {
-            mock.close()
+            delete(dir)
         }
     }
 
     @Test
-    fun `diffFile matches the requested file when server returns the whole diff`() = runBlocking(Dispatchers.Default) {
-        val mock = MockCliServer()
+    fun `diffSides returns null when the working tree drifted from the patch`() = runBlocking(Dispatchers.Default) {
+        val dir = createTempDirectory("kilo-diff")
         try {
-            // A CLI without full/file support ignores the params and returns every changed file;
-            // diffFile must select the requested path, not the first entry.
-            mock.sessionDiff = """
-                [{"file":"src/A.kt","additions":1,"deletions":0,"status":"modified","patch":"a"},
-                 {"file":"src/B.kt","additions":2,"deletions":0,"status":"modified","patch":"b"}]
-            """.trimIndent()
-            val api = KiloSessionRpcApiImpl(app(mock))
+            val file = "src/Main.kt"
+            Files.createDirectories(dir.resolve("src"))
+            Files.writeString(dir.resolve(file), "a\nUNRELATED\nc\n")
+            val patch = "--- a/$file\n+++ b/$file\n@@ -1,3 +1,3 @@\n a\n-b2\n+B2\n c\n"
 
-            val diff = api.diffFile("ses_test", "/work", "src/B.kt", null)
-
-            assertNotNull(diff)
-            assertEquals("src/B.kt", diff.file)
-            assertEquals(2, diff.additions)
+            assertNull(KiloSessionRpcApiImpl().diffSides(dir.toString(), DiffFileDto(file, 1, 1, patch, "modified")))
         } finally {
-            mock.close()
+            delete(dir)
         }
     }
 
-    private suspend fun app(mock: MockCliServer): KiloBackendAppService {
-        val log = TestLog()
-        val app = KiloBackendAppService.create(scope, FakeCliServer(mock), log).also { apps.add(it) }
-        app.connect()
-        val state = assertNotNull(
-            withTimeoutOrNull(35_000) {
-                app.appState.first {
-                    it is KiloAppState.Ready || it is KiloAppState.Error || it is KiloAppState.MigrationRequired
-                }
-            },
-            "App startup timed out in ${app.appState.value}; logs=${log.messages}",
-        )
-        assertIs<KiloAppState.Ready>(state, "App startup failed; logs=${log.messages}")
-        return app
+    @Test
+    fun `diffSides returns null for added files and missing patches`() = runBlocking(Dispatchers.Default) {
+        val dir = createTempDirectory("kilo-diff")
+        try {
+            Files.writeString(dir.resolve("new.kt"), "hello\n")
+            val added = "--- /dev/null\n+++ b/new.kt\n@@ -0,0 +1 @@\n+hello\n"
+
+            assertNull(KiloSessionRpcApiImpl().diffSides(dir.toString(), DiffFileDto("new.kt", 1, 0, added, "added")))
+            assertNull(KiloSessionRpcApiImpl().diffSides(dir.toString(), DiffFileDto("new.kt", 1, 0, null, "added")))
+        } finally {
+            delete(dir)
+        }
+    }
+
+    private fun delete(dir: java.nio.file.Path) {
+        Files.walk(dir).use { paths ->
+            paths.sorted(Comparator.reverseOrder()).forEach { Files.deleteIfExists(it) }
+        }
     }
 }

@@ -103,8 +103,12 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
     /** Load cumulative file changes for a session. */
     suspend fun diff(id: String, directory: String): List<DiffFileDto>
 
-    /** Load one full-content diff entry for a session or turn editor tab. */
-    suspend fun diffFile(id: String, directory: String, file: String, messageId: String?): DiffFileDto?
+    /**
+     * Rebuild full before/after content for one changed file so the diff editor can show a whole-file
+     * diff. Returns null when the file's working-tree content no longer matches the patch (fall back to
+     * the hunk view). Added/deleted files return null because the frontend reconstructs those directly.
+     */
+    suspend fun diffSides(directory: String, file: DiffFileDto): DiffFileDto?
 
     /** Load one attachment part from a session without returning full history to the frontend. */
     suspend fun attachmentPart(id: String, directory: String, messageId: String, partId: String, attachmentKey: String?): PartDto?

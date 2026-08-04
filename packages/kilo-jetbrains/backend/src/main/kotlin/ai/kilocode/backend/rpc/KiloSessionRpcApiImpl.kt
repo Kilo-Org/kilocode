@@ -33,12 +33,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
-import okhttp3.Request
+import ai.kilocode.backend.diff.DiffFullReconstruct
+import java.nio.file.Files
+import java.nio.file.Path
 
 /**
  * Backend implementation of [KiloSessionRpcApi].
@@ -161,41 +158,15 @@ class KiloSessionRpcApiImpl internal constructor(
             }
     }
 
-    override suspend fun diffFile(id: String, directory: String, file: String, messageId: String?): DiffFileDto? = ready {
-        val api = app.api ?: throw IllegalStateException("Kilo API is unavailable")
-        withContext(Dispatchers.IO) {
-            val url = (api.baseUrl.trimEnd('/') + "/").toHttpUrlOrNull()
-                ?.newBuilder()
-                ?.addPathSegment("session")
-                ?.addPathSegment(id)
-                ?.addPathSegment("diff")
-                ?.addQueryParameter("directory", directory)
-                ?.addQueryParameter("full", "true")
-                ?.addQueryParameter("file", file)
-                ?.apply { if (!messageId.isNullOrBlank()) addQueryParameter("messageID", messageId) }
-                ?.build()
-                ?: throw IllegalStateException("Kilo API URL is invalid")
-            api.client.newCall(Request.Builder().url(url).get().build()).execute().use { response ->
-                if (!response.isSuccessful) throw IllegalStateException("Kilo API diff detail failed: ${response.code}")
-                val body = response.body?.string().orEmpty()
-                // A CLI without full/file support ignores those query params and returns the whole
-                // diff array, so match the requested path instead of taking the first entry —
-                // otherwise every file would resolve to the same first diff.
-                Json.parseToJsonElement(body).jsonArray
-                    .mapNotNull { it.jsonObject.takeIf { obj -> obj["file"]?.jsonPrimitive?.content == file } }
-                    .firstOrNull()
-                    ?.let { item ->
-                        DiffFileDto(
-                            file,
-                            item["additions"]?.jsonPrimitive?.content?.toDoubleOrNull()?.toInt() ?: 0,
-                            item["deletions"]?.jsonPrimitive?.content?.toDoubleOrNull()?.toInt() ?: 0,
-                            item["patch"]?.jsonPrimitive?.content,
-                            item["status"]?.jsonPrimitive?.content,
-                            item["before"]?.jsonPrimitive?.content,
-                            item["after"]?.jsonPrimitive?.content,
-                        )
-                    }
-            }
+    override suspend fun diffSides(directory: String, file: DiffFileDto): DiffFileDto? {
+        val patch = file.patch
+        if (patch.isNullOrBlank()) return null
+        // Full-file diffs are rebuilt locally: read the working-tree file and reverse-apply the hunk
+        // patch to recover the whole "before". No CLI round-trip, so this works against any pinned CLI.
+        return withContext(Dispatchers.IO) {
+            val after = runCatching { Files.readString(Path.of(directory).resolve(file.file)) }.getOrNull()
+            val before = after?.let { DiffFullReconstruct.before(it, patch) }
+            if (after != null && before != null) file.copy(before = before, after = after) else null
         }
     }
 
