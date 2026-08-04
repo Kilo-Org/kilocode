@@ -20,6 +20,7 @@ import { installMemoryRuntime } from "@/kilocode/memory/runtime"
 import { KiloToolRegistry } from "@/kilocode/tool/registry"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { KilocodeWatcher } from "@/kilocode/watcher"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
 
 const log = Log.create({ service: "kilocode-bootstrap" })
 
@@ -99,25 +100,21 @@ export namespace KilocodeBootstrap {
     Layer.provide([
       KiloSessions.defaultLayer,
       Session.defaultLayer,
-      SessionSummary.defaultLayer,
-      Provider.defaultLayer,
+      AppNodeBuilder.build(SessionSummary.node),
+      AppNodeBuilder.build(Provider.node),
       MemoryService.layer,
       Bus.defaultLayer,
       KilocodeWatcher.defaultLayer,
     ]),
   )
 
-  const memory = LayerNode.make(MemoryService.layer, [])
-  const watcher = LayerNode.make(KilocodeWatcher.defaultLayer, [])
+  const memory = LayerNode.make({ service: MemoryService.Service, layer: MemoryService.layer, deps: [] })
+  const watcher = LayerNode.make({ service: KilocodeWatcher.Service, layer: KilocodeWatcher.defaultLayer, deps: [] })
   export const node = LayerNode.suspend(() =>
-    LayerNode.make(layer, [
-      KiloSessions.node,
-      Session.node,
-      SessionSummary.node,
-      Provider.node,
-      memory,
-      Bus.node,
-      watcher,
-    ]),
+    LayerNode.make({
+      service: Service,
+      layer,
+      deps: [KiloSessions.node, Session.node, SessionSummary.node, Provider.node, memory, Bus.node, watcher],
+    }),
   )
 }

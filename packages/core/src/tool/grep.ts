@@ -3,6 +3,7 @@ export * as GrepTool from "./grep"
 import { ToolFailure } from "@opencode-ai/llm"
 import { Effect, Layer, Schema } from "effect"
 import path from "path"
+import { makeLocationNode } from "../effect/app-node"
 import { FileSystem } from "../filesystem"
 import { FSUtil } from "../fs-util"
 // kilocode_change start
@@ -14,6 +15,7 @@ import { Reference } from "../reference" // kilocode_change
 import { PermissionV2 } from "../permission"
 import { Ripgrep } from "../ripgrep"
 import { RelativePath } from "../schema"
+import { ToolRegistry } from "./registry"
 import { Tool } from "./tool"
 import { Tools } from "./tools"
 
@@ -67,7 +69,7 @@ export const toModelOutput = (output: ModelOutput) => {
 // kilocode_change end
 
 /** Grep leaf that defaults its filesystem root to the active Location. */
-export const layer = Layer.effectDiscard(
+const layer = Layer.effectDiscard(
   Effect.gen(function* () {
     const tools = yield* Tools.Service
     const fs = yield* FSUtil.Service
@@ -150,20 +152,19 @@ export const layer = Layer.effectDiscard(
                     (result) =>
                       new Result({
                         ...result,
-                        items: result.items.map(
-                          (match) =>
-                            new FileSystem.Match({
-                              ...match,
-                              entry: new FileSystem.Entry({
-                                ...match.entry,
-                                path: RelativePath.make(
-                                  path.relative(
-                                    location.directory,
-                                    path.resolve(cwd, match.entry.path),
-                                  ),
+                        items: result.items.map((match) =>
+                          FileSystem.Match.make({
+                            ...match,
+                            entry: FileSystem.Entry.make({
+                              ...match.entry,
+                              path: RelativePath.make(
+                                path.relative(
+                                  location.directory,
+                                  path.resolve(cwd, match.entry.path),
                                 ),
-                              }),
+                              ),
                             }),
+                          }),
                         ),
                       }),
                   ),
@@ -175,3 +176,9 @@ export const layer = Layer.effectDiscard(
       .pipe(Effect.orDie)
   }),
 )
+
+export const node = makeLocationNode({
+  name: "tool/grep",
+  layer,
+  deps: [ToolRegistry.node, FSUtil.node, Ripgrep.node, Location.node, PermissionV2.node, Global.node, Reference.node], // kilocode_change - search targets and references
+})

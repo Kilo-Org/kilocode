@@ -3,16 +3,12 @@ import os from "node:os"
 import fs from "node:fs"
 import { expect } from "bun:test"
 import { Effect, Exit, Layer, Schema } from "effect"
-import { FetchHttpClient } from "effect/unstable/http"
-import { NodeFileSystem } from "@effect/platform-node"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
-import { RepositoryCache } from "@opencode-ai/core/repository-cache"
 import { Database } from "@opencode-ai/core/database/database"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { Agent as AgentSvc } from "../../src/agent/agent"
-import { Auth } from "../../src/auth"
 import { BackgroundJob } from "../../src/background/job"
-import { Bus } from "../../src/bus"
 import { Command } from "../../src/command"
 import { Config } from "../../src/config/config"
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
@@ -36,13 +32,14 @@ import { SessionPrompt } from "../../src/session/prompt"
 import { SessionRevert } from "../../src/session/revert"
 import { SessionRunState } from "../../src/session/run-state"
 import { Session } from "../../src/session/session"
+import { MessageV2 } from "../../src/session/message-v2"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { SessionStatus } from "../../src/session/status"
 import { SystemPrompt } from "../../src/session/system"
 import { SessionSummary } from "../../src/session/summary"
 import { Todo } from "../../src/session/todo"
 import { Skill } from "../../src/skill"
 import { Snapshot } from "../../src/snapshot"
-import { SyncEvent } from "../../src/sync"
 import { ToolRegistry } from "../../src/tool/registry"
 import { Truncate } from "../../src/tool/truncate"
 import { KiloSessions } from "../../src/kilo-sessions/kilo-sessions"
@@ -94,9 +91,11 @@ const mcp = Layer.succeed(
   MCP.Service.of({
     status: () => Effect.succeed({}),
     clients: () => Effect.succeed({}),
+    instructions: () => Effect.succeed([]),
     tools: () => Effect.succeed({}),
     prompts: () => Effect.succeed({}),
     resources: () => Effect.succeed({}),
+    resourceTemplates: () => Effect.succeed({}),
     add: () => Effect.succeed({ status: { status: "disabled" as const } }),
     connect: () => Effect.void,
     disconnect: () => Effect.void,
@@ -131,10 +130,6 @@ const lsp = Layer.succeed(
     outgoingCalls: () => Effect.succeed([]),
   }),
 )
-
-const status = SessionStatus.layer.pipe(Layer.provideMerge(EventV2Bridge.defaultLayer))
-const run = SessionRunState.layer.pipe(Layer.provide(status))
-const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLayer)
 
 const cfg = {
   provider: {
@@ -181,163 +176,71 @@ function providerCfg(url: string) {
   }
 }
 
-function makePrompt() {
-  const deps = Layer.mergeAll(
-    Session.defaultLayer,
-    Snapshot.defaultLayer,
-    LLM.defaultLayer,
-    Env.defaultLayer,
-    fastAgents,
-    Command.defaultLayer,
-    Permission.defaultLayer,
-    Plugin.defaultLayer,
-    Config.defaultLayer,
-    ProviderSvc.defaultLayer,
-    lsp,
-    mcp,
-    FSUtil.defaultLayer,
-    BackgroundJob.defaultLayer,
-    status,
-    Database.defaultLayer,
-    EventV2Bridge.defaultLayer,
-    Bus.layer,
-    MemoryService.layer,
-  ).pipe(Layer.provideMerge(infra))
-  const question = Question.layer.pipe(Layer.provideMerge(deps))
-  const todo = Todo.layer.pipe(Layer.provideMerge(deps))
-  const registry = ToolRegistry.layer.pipe(
-    Layer.provide(Skill.defaultLayer),
-    Layer.provide(FetchHttpClient.layer),
-    Layer.provide(CrossSpawnSpawner.defaultLayer),
-    Layer.provide(Git.defaultLayer),
-    Layer.provide(Ripgrep.defaultLayer),
-    Layer.provide(RepositoryCache.defaultLayer),
-    Layer.provide(Format.defaultLayer),
-    Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })),
-    Layer.provide(Auth.defaultLayer),
-    Layer.provide(KiloSessions.testLayer),
-    Layer.provideMerge(todo),
-    Layer.provideMerge(question),
-    Layer.provideMerge(deps),
-  )
-  const trunc = Truncate.layer.pipe(Layer.provideMerge(deps))
-  const proc = SessionProcessor.layer.pipe(
-    Layer.provide(summary),
-    Layer.provide(Image.defaultLayer),
-    Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })),
-    Layer.provideMerge(deps),
-  )
-  const compact = SessionCompaction.layer.pipe(
-    Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })),
-    Layer.provideMerge(proc),
-    Layer.provideMerge(deps),
-  )
-  return SessionPrompt.layer.pipe(
-    Layer.provide(SessionRevert.defaultLayer),
-    Layer.provide(Image.defaultLayer),
-    Layer.provide(summary),
-    Layer.provideMerge(run),
-    Layer.provideMerge(compact),
-    Layer.provideMerge(proc),
-    Layer.provideMerge(registry),
-    Layer.provideMerge(trunc),
-    Layer.provideMerge(question),
-    Layer.provide(Instruction.defaultLayer),
-    Layer.provide(SystemPrompt.defaultLayer),
-    Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })),
-    Layer.provideMerge(deps),
-    Layer.provide(summary),
-  )
-}
+const memoryNode = LayerNode.make({ service: MemoryService.Service, layer: MemoryService.layer, deps: [] })
+const serverNode = LayerNode.make({ service: TestLLMServer, layer: TestLLMServer.layer, deps: [] })
+const root = LayerNode.group([
+  SessionPrompt.node,
+  Session.node,
+  SessionProjector.node,
+  MessageV2.node,
+  Snapshot.node,
+  LLM.node,
+  Env.node,
+  AgentSvc.node,
+  Command.node,
+  Permission.node,
+  Plugin.node,
+  Config.node,
+  ProviderSvc.node,
+  LSP.node,
+  MCP.node,
+  FSUtil.node,
+  BackgroundJob.node,
+  SessionStatus.node,
+  SessionRunState.node,
+  Database.node,
+  EventV2Bridge.node,
+  Question.node,
+  Todo.node,
+  ToolRegistry.node,
+  Skill.node,
+  Git.node,
+  Ripgrep.node,
+  Format.node,
+  Truncate.node,
+  SessionProcessor.node,
+  Image.node,
+  SessionCompaction.node,
+  SessionRevert.node,
+  Instruction.node,
+  SystemPrompt.node,
+  CrossSpawnSpawner.node,
+  RuntimeFlags.node,
+  memoryNode,
+  serverNode,
+])
 
-// Picker tests need a Question service mock that auto-selects the first
-// option instead of blocking on the question UI.
-function makePromptWithAutoPick() {
-  const deps = Layer.mergeAll(
-    Session.defaultLayer,
-    Snapshot.defaultLayer,
-    LLM.defaultLayer,
-    Env.defaultLayer,
-    fastAgents,
-    Command.defaultLayer,
-    Permission.defaultLayer,
-    Plugin.defaultLayer,
-    Config.defaultLayer,
-    ProviderSvc.defaultLayer,
-    lsp,
-    mcp,
-    FSUtil.defaultLayer,
-    BackgroundJob.defaultLayer,
-    status,
-    Database.defaultLayer,
-    EventV2Bridge.defaultLayer,
-    Bus.layer,
-    MemoryService.layer,
-  ).pipe(Layer.provideMerge(infra))
-  const question = Layer.mock(Question.Service, {
-    ask: (input) =>
-      Effect.gen(function* () {
-        const q = input.questions[0]
-        if (!q) return [] as readonly string[][]
-        const label = q.options?.[0]?.label ?? ""
-        return [[label]]
-      }),
-  })
-  const todo = Todo.layer.pipe(Layer.provideMerge(deps))
-  const registry = ToolRegistry.layer.pipe(
-    Layer.provide(Skill.defaultLayer),
-    Layer.provide(FetchHttpClient.layer),
-    Layer.provide(CrossSpawnSpawner.defaultLayer),
-    Layer.provide(Git.defaultLayer),
-    Layer.provide(Ripgrep.defaultLayer),
-    Layer.provide(RepositoryCache.defaultLayer),
-    Layer.provide(Format.defaultLayer),
-    Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })),
-    Layer.provide(Auth.defaultLayer),
-    Layer.provide(KiloSessions.testLayer),
-    Layer.provideMerge(todo),
-    Layer.provideMerge(question),
-    Layer.provideMerge(deps),
-  )
-  const trunc = Truncate.layer.pipe(Layer.provideMerge(deps))
-  const proc = SessionProcessor.layer.pipe(
-    Layer.provide(summary),
-    Layer.provide(Image.defaultLayer),
-    Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })),
-    Layer.provideMerge(deps),
-  )
-  const compact = SessionCompaction.layer.pipe(
-    Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })),
-    Layer.provideMerge(proc),
-    Layer.provideMerge(deps),
-  )
-  return SessionPrompt.layer.pipe(
-    Layer.provide(SessionRevert.defaultLayer),
-    Layer.provide(Image.defaultLayer),
-    Layer.provide(summary),
-    Layer.provideMerge(run),
-    Layer.provideMerge(compact),
-    Layer.provideMerge(proc),
-    Layer.provideMerge(registry),
-    Layer.provideMerge(trunc),
-    Layer.provideMerge(question),
-    Layer.provide(Instruction.defaultLayer),
-    Layer.provide(SystemPrompt.defaultLayer),
-    Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })),
-    Layer.provideMerge(deps),
-    Layer.provide(summary),
-  )
-}
+const replacements = [
+  [SessionSummary.node, summary],
+  [AgentSvc.node, fastAgents],
+  [LSP.node, lsp],
+  [MCP.node, mcp],
+  [RuntimeFlags.node, RuntimeFlags.layer({ experimentalEventSystem: true })],
+  [KiloSessions.node, KiloSessions.testLayer],
+] as const
 
-function makeHttp() {
-  return Layer.mergeAll(TestLLMServer.layer, makePrompt())
-}
-const it = testEffect(makeHttp())
+const it = testEffect(LayerNode.compile(root, replacements))
 
-function makeHttpWithAutoPick() {
-  return Layer.mergeAll(TestLLMServer.layer, makePromptWithAutoPick())
-}
-const itPicker = testEffect(makeHttpWithAutoPick())
+const picker = Layer.mock(Question.Service, {
+  ask: (input) =>
+    Effect.gen(function* () {
+      const q = input.questions[0]
+      if (!q) return [] as readonly string[][]
+      const label = q.options?.[0]?.label ?? ""
+      return [[label]]
+    }),
+})
+const itPicker = testEffect(LayerNode.compile(root, [...replacements, [Question.node, picker]]))
 
 const writeText = Effect.fn("test.writeText")(function* (file: string, text: string) {
   const fsys = yield* FSUtil.Service
@@ -367,8 +270,7 @@ const boot = Effect.fn("test.boot")(function* (input?: { title?: string }) {
 
 // ── Claude fixture helpers ─────────────────────────────────────────────
 
-const claudeFixture = () =>
-  Bun.file(path.join(__dirname, "fixture/session-resume/claude.jsonl")).text()
+const claudeFixture = () => Bun.file(path.join(__dirname, "fixture/session-resume/claude.jsonl")).text()
 
 const claudeInvalidVersion = `{"type":"user","version":"3.0.0","isSidechain":false,"message":{"id":"msg_001","role":"user","content":[{"type":"text","text":"Hello"}]}}`
 
@@ -494,7 +396,9 @@ it.instance(
       const tools = msgs.flatMap((msg) => msg.parts.filter((p) => p.type === "tool"))
       expect(tools.length).toBeGreaterThanOrEqual(4)
 
-      const completed = tools.filter((t) => (t as unknown as { state: { status: string } }).state.status === "completed")
+      const completed = tools.filter(
+        (t) => (t as unknown as { state: { status: string } }).state.status === "completed",
+      )
       expect(completed.length).toBeGreaterThanOrEqual(2)
 
       const errors = tools.filter((t) => (t as unknown as { state: { status: string } }).state.status === "error")
@@ -720,8 +624,7 @@ it.instance(
 
 // ── Codex fixture helpers ────────────────────────────────────────────────
 
-const codexFixture = () =>
-  Bun.file(path.join(__dirname, "fixture/session-resume/codex.jsonl")).text()
+const codexFixture = () => Bun.file(path.join(__dirname, "fixture/session-resume/codex.jsonl")).text()
 
 const withCodexFixture = (content: string, id: string) =>
   Effect.acquireRelease(
@@ -823,9 +726,7 @@ it.instance(
       const tools = msgs.flatMap((msg) => msg.parts.filter((p) => p.type === "tool"))
       expect(tools.length).toBeGreaterThanOrEqual(2)
 
-      const completed = tools.filter(
-        (t) => (t as { state: { status: string } }).state.status === "completed",
-      )
+      const completed = tools.filter((t) => (t as { state: { status: string } }).state.status === "completed")
       expect(completed.length).toBeGreaterThanOrEqual(1)
     }),
   { config: cfg },
@@ -887,14 +788,14 @@ itPicker.instance(
 
       yield* withClaudeFixtureAt(roots.claude, dir, content, fixtureUUID)
 
-      yield* prompt.command({
-        sessionID: chat.id,
-        command: "resume-claude",
-        arguments: "",
-        agent: "build",
-      }).pipe(
-        Effect.provideService(SessionResume.ResumeRoots, { claude: roots.claude }),
-      )
+      yield* prompt
+        .command({
+          sessionID: chat.id,
+          command: "resume-claude",
+          arguments: "",
+          agent: "build",
+        })
+        .pipe(Effect.provideService(SessionResume.ResumeRoots, { claude: roots.claude }))
 
       const msgs = yield* sessionMessages(chat.id)
       expect(msgs.length).toBeGreaterThanOrEqual(10)
@@ -920,14 +821,14 @@ itPicker.instance(
 
       yield* withCodexFixtureAt(roots.codex, content, fixtureUUID)
 
-      yield* prompt.command({
-        sessionID: chat.id,
-        command: "resume-codex",
-        arguments: "",
-        agent: "build",
-      }).pipe(
-        Effect.provideService(SessionResume.ResumeRoots, { codex: roots.codex }),
-      )
+      yield* prompt
+        .command({
+          sessionID: chat.id,
+          command: "resume-codex",
+          arguments: "",
+          agent: "build",
+        })
+        .pipe(Effect.provideService(SessionResume.ResumeRoots, { codex: roots.codex }))
 
       const msgs = yield* sessionMessages(chat.id)
       expect(msgs.length).toBeGreaterThanOrEqual(8)
@@ -962,20 +863,21 @@ it.instance(
         Effect.sync(() => {
           fs.mkdirSync(file, { recursive: true })
         }),
-        () => Effect.sync(() => {
-          fs.rmSync(path.dirname(file), { recursive: true, force: true })
-        }),
+        () =>
+          Effect.sync(() => {
+            fs.rmSync(path.dirname(file), { recursive: true, force: true })
+          }),
       )
 
       const exit = yield* Effect.exit(
-        prompt.command({
-          sessionID: chat.id,
-          command: "resume-claude",
-          arguments: fixtureUUID,
-          agent: "build",
-        }).pipe(
-          Effect.provideService(SessionResume.ResumeRoots, { claude: root }),
-        ),
+        prompt
+          .command({
+            sessionID: chat.id,
+            command: "resume-claude",
+            arguments: fixtureUUID,
+            agent: "build",
+          })
+          .pipe(Effect.provideService(SessionResume.ResumeRoots, { claude: root })),
       )
 
       expect(Exit.isFailure(exit)).toBe(true)
