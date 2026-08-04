@@ -22,6 +22,7 @@ import type { LanguageContextValue } from "../src/context/language"
 import { useVSCode } from "../src/context/vscode"
 import { projectAdjacentHint, projectSidebarOrder } from "./project-local-navigation"
 import SectionHeader from "./SectionHeader"
+import { SidebarSectionHeader } from "./SidebarSectionHeader"
 import { WorktreeItem } from "./WorktreeItem"
 import { UnassignedSessionsSection } from "./UnassignedSessionsSection"
 import { ProjectActions } from "./ProjectActions"
@@ -346,20 +347,25 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
         </button>
 
         <div class="am-section">
-          <div class="am-section-header">
-            <span class="am-section-label">{props.t("agentManager.section.worktrees")}</span>
-            <ProjectActions
-              branch={state()?.defaultBaseBranch ?? props.local?.branch ?? "main"}
-              bindings={props.bindings}
-              loaded={state() !== undefined}
-              t={props.t}
-              onCreate={() => post({ type: "agentManager.createWorktree" })}
-              onNew={() => props.onNewWorktree(props.project.id)}
-              onSection={() => createSection()}
-              onSetup={() => post({ type: "agentManager.configureSetupScript" })}
-              onBranch={() => props.onDefaultBranch(props.project.id, state()?.defaultBaseBranch, props.local?.branch)}
-            />
-          </div>
+          <SidebarSectionHeader
+            class="am-section-header"
+            label={<span class="am-section-label">{props.t("agentManager.section.worktrees")}</span>}
+            actions={
+              <ProjectActions
+                branch={state()?.defaultBaseBranch ?? props.local?.branch ?? "main"}
+                bindings={props.bindings}
+                loaded={state() !== undefined}
+                t={props.t}
+                onCreate={() => post({ type: "agentManager.createWorktree" })}
+                onNew={() => props.onNewWorktree(props.project.id)}
+                onSection={() => createSection()}
+                onSetup={() => post({ type: "agentManager.configureSetupScript" })}
+                onBranch={() =>
+                  props.onDefaultBranch(props.project.id, state()?.defaultBaseBranch, props.local?.branch)
+                }
+              />
+            }
+          />
           <div class="am-worktree-list">
             <DragDropProvider
               onDragStart={onDragStart}
