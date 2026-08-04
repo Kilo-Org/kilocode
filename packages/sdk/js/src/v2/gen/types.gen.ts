@@ -1322,6 +1322,7 @@ export type PermissionConfig =
       bash?: PermissionRuleConfig
       task?: PermissionRuleConfig
       external_directory?: PermissionRuleConfig
+      markdown_source?: PermissionRuleConfig
       todowrite?: PermissionActionConfig
       question?: PermissionActionConfig
       webfetch?: PermissionActionConfig
@@ -12181,6 +12182,38 @@ export type KiloModelsImagesResponses = {
 }
 
 export type KiloModelsImagesResponse = KiloModelsImagesResponses[keyof KiloModelsImagesResponses]
+
+export type KiloModelsTranscriptionsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilo/models/transcriptions"
+}
+
+export type KiloModelsTranscriptionsErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+}
+
+export type KiloModelsTranscriptionsError = KiloModelsTranscriptionsErrors[keyof KiloModelsTranscriptionsErrors]
+
+export type KiloModelsTranscriptionsResponses = {
+  /**
+   * Speech-to-text model list
+   */
+  200: Array<{
+    id: string
+    name: string
+  }>
+}
+
+export type KiloModelsTranscriptionsResponse =
+  KiloModelsTranscriptionsResponses[keyof KiloModelsTranscriptionsResponses]
 
 export type KiloNotificationsData = {
   body?: never

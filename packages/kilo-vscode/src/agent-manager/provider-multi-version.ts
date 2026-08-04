@@ -50,6 +50,7 @@ export async function createMultiVersion(
   // Notify webview that multi-version creation has started
   host.post({
     type: "agentManager.multiVersionProgress",
+    projectId: ctx.id,
     status: "creating",
     total: versions,
     completed: 0,
@@ -78,6 +79,7 @@ export async function createMultiVersion(
     // Update progress
     host.post({
       type: "agentManager.multiVersionProgress",
+      projectId: ctx.id,
       status: "creating",
       total: versions,
       completed: created.length,
@@ -86,11 +88,19 @@ export async function createMultiVersion(
   }
 
   // Phase 2: Send the initial prompt to all sessions, or clear busy state if no text.
-  await sendInitialPrompts(host, created, models, { providerID, modelID }, { text, agent, variant: msg.variant, files })
+  await sendInitialPrompts(
+    host,
+    ctx.id,
+    created,
+    models,
+    { providerID, modelID },
+    { text, agent, variant: msg.variant, files },
+  )
 
   // Notify completion
   host.post({
     type: "agentManager.multiVersionProgress",
+    projectId: ctx.id,
     status: "done",
     total: versions,
     completed: created.length,
@@ -172,6 +182,7 @@ async function createVersion(
   if (earlyProviderID && earlyModelID) {
     host.post({
       type: "agentManager.setSessionModel",
+      projectId: ctx.id,
       sessionId: session.id,
       providerID: earlyProviderID,
       modelID: earlyModelID,
@@ -232,6 +243,7 @@ async function reconcileSandbox(
 /** Fan the initial prompt out to every created session, throttled between sends. */
 async function sendInitialPrompts(
   host: MultiVersionHost,
+  projectId: string,
   created: CreatedVersion[],
   models: VersionSpec["models"],
   resolved: { providerID: string | undefined; modelID: string | undefined },
@@ -254,7 +266,7 @@ async function sendInitialPrompts(
         modelID: msg.modelID,
       })
     }
-    host.post({ type: "agentManager.sendInitialMessage", ...msg })
+    host.post({ type: "agentManager.sendInitialMessage", projectId, ...msg })
     if (input.text && i < messages.length - 1) {
       await new Promise((resolve) => setTimeout(resolve, 300))
     }

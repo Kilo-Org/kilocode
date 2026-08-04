@@ -11,6 +11,7 @@ import { legacyReviewCommand, reviewCommand } from "@/kilocode/review/command" /
 import { apply as applyOverride, type Override } from "@/kilocode/command/override" // kilocode_change
 import { EventV2 } from "@opencode-ai/core/event"
 import PROMPT_INITIALIZE from "./template/initialize.txt"
+import { SessionResume } from "@/kilocode/session-resume" // kilocode_change
 
 type State = {
   commands: Record<string, Info>
@@ -114,6 +115,8 @@ export const layer = Layer.effect(
       commands[Default.REVIEW] = reviewCommand()
       commands["local-review"] = legacyReviewCommand("local-review")!
       commands["local-review-uncommitted"] = legacyReviewCommand("local-review-uncommitted")!
+      commands["resume-claude"] = SessionResume.resumeClaude
+      commands["resume-codex"] = SessionResume.resumeCodex
       // kilocode_change end
 
       // kilocode_change start - defer partial overrides until all command sources are registered
