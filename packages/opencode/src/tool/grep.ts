@@ -3,20 +3,18 @@ import { Effect, Schema } from "effect"
 import { InstanceState } from "@/effect/instance-state"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Ripgrep } from "@opencode-ai/core/ripgrep"
-import * as KiloGrep from "@/kilocode/tool/grep-signal-controls" // kilocode_change
 import { assertExternalDirectoryEffect } from "./external-directory"
 import DESCRIPTION from "./grep.txt"
 import * as Tool from "./tool"
 
 export const Parameters = Schema.Struct({
-  pattern: Schema.String.annotate({ description: "Pattern to search for in file contents (regex by default)" }), // kilocode_change
+  pattern: Schema.String.annotate({ description: "The regex pattern to search for in file contents" }),
   path: Schema.optional(Schema.String).annotate({
     description: "The directory to search in. Defaults to the current working directory.",
   }),
   include: Schema.optional(Schema.String).annotate({
     description: 'File pattern to include in the search (e.g. "*.js", "*.{ts,tsx}")',
   }),
-  ...KiloGrep.fields, // kilocode_change
 })
 
 export const GrepTool = Tool.define(
@@ -25,12 +23,10 @@ export const GrepTool = Tool.define(
     const fs = yield* FSUtil.Service
     const ripgrep = yield* Ripgrep.Service
     return {
-      description: KiloGrep.describe(DESCRIPTION), // kilocode_change
+      description: DESCRIPTION,
       parameters: Parameters,
-      execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
+      execute: (params: { pattern: string; path?: string; include?: string }, ctx: Tool.Context) =>
         Effect.gen(function* () {
-          const limit = params.limit ?? KiloGrep.DEFAULT_LIMIT // kilocode_change
-          const context = params.context ?? 0 // kilocode_change
           const empty = {
             title: params.pattern,
             metadata: { matches: 0, truncated: false },
@@ -48,7 +44,6 @@ export const GrepTool = Tool.define(
               pattern: params.pattern,
               path: params.path,
               include: params.include,
-              ...KiloGrep.metadata(params, limit, context), // kilocode_change
             },
           })
 
@@ -71,7 +66,7 @@ export const GrepTool = Tool.define(
             file: info?.type === "File" ? path.basename(search) : undefined, // kilocode_change - constrain exact-file searches
             pattern: params.pattern,
             include: params.include,
-            ...KiloGrep.options(params, limit, context), // kilocode_change
+            limit: 100,
             signal: ctx.abort, // kilocode_change - stop ripgrep when the tool call is cancelled
           })
           // kilocode_change start
@@ -79,20 +74,18 @@ export const GrepTool = Tool.define(
           if (matches.length === 0) return empty
           // kilocode_change end
 
-          const rows = matches.map((item) => ({
-            // kilocode_change
+          const rows = matches.map((item) => ({ // kilocode_change
             path: path.resolve(cwd, item.entry.path),
             line: item.line,
             text: item.text,
-            context: item.context, // kilocode_change
-            textTruncated: item.textTruncated, // kilocode_change
           }))
 
+          const limit = 100
           const truncated = result.truncated // kilocode_change
           const final = rows
           if (final.length === 0) return empty
 
-          const total = rows.filter((row) => !row.context).length // kilocode_change
+          const total = rows.length
           const hasMore = truncated // kilocode_change
           const output = [`Found ${total} matches${hasMore ? " (more matches available)" : ""}`]
 
@@ -103,14 +96,13 @@ export const GrepTool = Tool.define(
               current = match.path
               output.push(`${match.path}:`)
             }
-            output.push(KiloGrep.line(match, context)) // kilocode_change
+            output.push(`  Line ${match.line}: ${match.text}`)
           }
 
           if (truncated) {
             output.push("")
-            output.push(KiloGrep.limitNotice(limit)) // kilocode_change
+            output.push("(Results truncated. Consider using a more specific path or pattern.)")
           }
-          output.push(...KiloGrep.notices(rows)) // kilocode_change
           if (result.partial) output.push("", "(Some paths were inaccessible.)") // kilocode_change
 
           return {

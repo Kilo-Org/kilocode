@@ -2799,18 +2799,9 @@ ToolRegistry.register({
                 >
                   <For each={files()}>
                     {(file) => {
-                      const active = createMemo(() => expanded().includes(file.filePath))
-                      const [visible, setVisible] = createSignal(false)
-                      createEffect(() => {
-                        if (!active()) {
-                          setVisible(false)
-                          return
-                        }
-                        requestAnimationFrame(() => {
-                          if (!active()) return
-                          setVisible(true)
-                        })
-                      })
+                      // Diff defers its own expensive render; mounting the container
+                      // here avoids dropping the last item during batch expansion.
+                      const active = createMemo(() => allExpanded().includes(file.filePath))
 
                       return (
                         <Accordion.Item value={file.filePath} data-type={file.type}>
@@ -2864,7 +2855,7 @@ ToolRegistry.register({
                             </Accordion.Trigger>
                           </StickyAccordionHeader>
                           <Accordion.Content>
-                            <Show when={visible() && view(file)}>
+                            <Show when={active() && view(file)}>
                               {(diff) => (
                                 <div data-component="apply-patch-file-diff">
                                   <Dynamic

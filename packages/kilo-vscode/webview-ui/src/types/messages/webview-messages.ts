@@ -518,6 +518,10 @@ export interface RequestImageModelsMessage {
   type: "requestImageModels"
 }
 
+export interface RequestSpeechToTextModelsMessage {
+  type: "requestSpeechToTextModels"
+}
+
 export interface OpenSettingsTabRequest {
   type: "openSettingsTab"
   tab: string
@@ -1584,6 +1588,7 @@ export type WebviewMessage =
   | AgentManagerTerminalDestinationSelectedRequest
   | AgentManagerTerminalResizeRequest
   | RequestImageModelsMessage
+  | RequestSpeechToTextModelsMessage
 
 // ============================================
 // VS Code API type

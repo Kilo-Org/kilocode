@@ -19,7 +19,7 @@ import type { AgentManagerStateMessage, AgentProjectSnapshot, ProjectSessionInfo
  *
  * Handles previous/next (⌘⌥↑/↓) and numeric-shortcut (⌘1-9) navigation across
  * the sidebar. In multi-project mode it builds one global visual order across
- * every expanded project — Local, worktrees (sections first, then ungrouped),
+ * every expanded project — Local, ungrouped worktrees, then section members,
  * and visible unassigned sessions — using stable project-qualified composite
  * ids, and activates each target with a single atomic
  * `agentManager.activateSelection` dispatch. In single-project mode it keeps
@@ -48,6 +48,31 @@ export interface ProjectNav {
   jump: (index: number) => void
 }
 
+/** Build the same global order used by keyboard navigation and shortcut badges. */
+export function buildProjectNavEntries(
+  projects: AgentProjectSnapshot[],
+  states: Record<string, AgentManagerStateMessage>,
+  sessions: Record<string, ProjectSessionInfo[]>,
+): NavEntry[] {
+  return buildProjectNavOrder(
+    projects.map((p) => {
+      const st = states[p.id]
+      if (!st) {
+        return { id: p.id, expanded: false, worktrees: [], sections: [], sessionsCollapsed: false, unassigned: [] }
+      }
+      return {
+        id: p.id,
+        expanded: p.expanded,
+        worktrees: (st.worktrees ?? []).map((w) => ({ id: w.id, sectionId: w.sectionId, groupId: w.groupId })),
+        worktreeOrder: st.worktreeOrder,
+        sections: (st.sections ?? []).map((s) => ({ id: s.id, collapsed: s.collapsed })),
+        sessionsCollapsed: st.sessionsCollapsed === true,
+        unassigned: (sessions[p.id] ?? []).filter((s) => s.worktreeId === null).map((s) => ({ id: s.id })),
+      }
+    }),
+  )
+}
+
 /** DOM selector for the sidebar element backing a nav target. */
 export const navSelector = (target: NavTarget): string => {
   if (target.kind === "local") return `[data-sidebar-id="${target.projectId}:local"]`
@@ -74,24 +99,7 @@ export function createProjectNav(
     if (!deps.multiProject()) return []
     const states = deps.states()
     const live = deps.sessions()
-    return buildProjectNavOrder(
-      deps.projects().map((p) => {
-        const st = states[p.id]
-        // Until a project's state payload arrives its body shows a spinner
-        // (no Local/worktrees/sessions) — exclude it from the nav order.
-        if (!st) {
-          return { id: p.id, expanded: false, worktrees: [], sections: [], sessionsCollapsed: false, unassigned: [] }
-        }
-        return {
-          id: p.id,
-          expanded: p.expanded,
-          worktrees: (st.worktrees ?? []).map((w) => ({ id: w.id, sectionId: w.sectionId })),
-          sections: (st.sections ?? []).map((s) => ({ id: s.id, collapsed: s.collapsed })),
-          sessionsCollapsed: st.sessionsCollapsed === true,
-          unassigned: (live[p.id] ?? []).filter((s) => s.worktreeId === null).map((s) => ({ id: s.id })),
-        }
-      }),
-    )
+    return buildProjectNavEntries(deps.projects(), states, live)
   })
 
   const currentId = createMemo((): string | undefined => {

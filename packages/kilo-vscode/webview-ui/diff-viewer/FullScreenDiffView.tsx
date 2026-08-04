@@ -27,6 +27,7 @@ import { useProvider } from "../src/context/provider"
 import { useConfig } from "../src/context/config"
 import { canUseSpeechToText, selectedSpeechToTextModel } from "../src/components/speech-to-text/availability"
 import { useSpeechToText } from "../src/components/speech-to-text/useSpeechToText"
+import { useSpeechToTextModels } from "../src/context/speech-to-text-models"
 import { FileTree } from "./FileTree"
 import { treeOrder } from "./file-tree-utils"
 import { getDirectory, getFilename, lineCount, sanitizeReviewComments, type ReviewComment } from "./review-comments"
@@ -113,8 +114,9 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   const provider = useProvider()
   const { config } = useConfig()
   const speech = useSpeechToText(vscode, server, { t })
+  const speechModels = useSpeechToTextModels()
   const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates())
-  const speechModel = () => selectedSpeechToTextModel(config())
+  const speechModel = () => selectedSpeechToTextModel(config(), speechModels.models())
   const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
   const sendAllKeybind = () =>
     isMac ? t("agentManager.review.sendAllShortcut.mac") : t("agentManager.review.sendAllShortcut.other")
