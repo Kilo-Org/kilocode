@@ -1,4 +1,10 @@
+import { isTextControl } from "../src/utils/focus"
+
 const OPTION = '[data-component="question-dock"] button[data-slot="question-option"]'
+
+/** Keep an active editor, such as the worktree rename input, in control. */
+export const preservesTextFocus = (active: Element | null): boolean =>
+  active !== null && isTextControl(active) && !active.classList.contains("prompt-input")
 
 export function createChatFocus(deps: {
   term: () => string | undefined
@@ -7,6 +13,7 @@ export function createChatFocus(deps: {
 }) {
   const focus = (force: boolean) => {
     if ((!force && !document.hasFocus()) || deps.term() || deps.history() || deps.review()) return
+    if (preservesTextFocus(document.activeElement)) return
     if (!force && document.activeElement?.matches('[role="tab"]')) return
     if (!force && document.activeElement?.closest('[data-component="question-dock"]')) return
     if (focusQuestionOption()) return
