@@ -126,4 +126,15 @@ describe("Telemetry", () => {
     expect(typeof Telemetry.trackSuggestionShown).toBe("function")
     expect(typeof Telemetry.trackSuggestionAccepted).toBe("function")
   })
+
+  test("trackToolUsed sends Tool Used event with tool name and sessionId", () => {
+    const capture = spyOn(Client, "capture").mockImplementation(() => {})
+
+    try {
+      Telemetry.trackToolUsed("chart", "session-123")
+      expect(capture).toHaveBeenCalledWith(TelemetryEvent.TOOL_USED, expect.objectContaining({ tool: "chart", sessionId: "session-123" }))
+    } finally {
+      capture.mockRestore()
+    }
+  })
 })
