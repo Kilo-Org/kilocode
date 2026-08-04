@@ -176,23 +176,25 @@ export const fffLayer = Layer.effect(
         entry.closed = true
         entry.finder.destroy()
       }).pipe(Effect.ignore)
-    const make = Effect.gen(function* () {
-      const result = yield* Effect.try({
-        try: () =>
-          Fff.create({
-            basePath: location.directory,
-            aiMode: true,
-            disableMmapCache: true,
-            disableContentIndexing: true,
-            ...scanning(location.directory),
-          }),
-        catch: (cause) => cause,
-      }).pipe(Effect.orDie)
-      if (!result.ok) return yield* Effect.die(result.error)
-      const entry = { finder: result.value, closed: false }
-      yield* Scope.addFinalizer(scope, release(entry))
-      return entry
-    })
+    const make = Effect.uninterruptible(
+      Effect.gen(function* () {
+        const result = yield* Effect.try({
+          try: () =>
+            Fff.create({
+              basePath: location.directory,
+              aiMode: true,
+              disableMmapCache: true,
+              disableContentIndexing: true,
+              ...scanning(location.directory),
+            }),
+          catch: (cause) => cause,
+        }).pipe(Effect.orDie)
+        if (!result.ok) return yield* Effect.die(result.error)
+        const entry = { finder: result.value, closed: false }
+        yield* Scope.addFinalizer(scope, release(entry))
+        return entry
+      }),
+    )
     const [load, invalidate] = yield* Effect.cachedInvalidateWithTTL(
       make.pipe(
         Effect.flatMap((entry) =>

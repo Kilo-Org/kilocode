@@ -36,7 +36,7 @@ describe("FFF scanning boundaries", () => {
 })
 
 describe("FFF lifecycle", () => {
-  test("initializes on the first search and reuses one picker", async () => {
+  test("retries a failed first search and reuses one picker", async () => {
     if (!Fff.available()) return
 
     const dir = await tmpdir()
@@ -45,6 +45,7 @@ describe("FFF lifecycle", () => {
     try {
       FileFinder.create = (opts) => {
         calls.create++
+        if (calls.create === 1) return { ok: false, error: "transient failure" }
         calls.opts = opts
         const result = create(opts)
         if (!result.ok) return result
@@ -80,19 +81,25 @@ describe("FFF lifecycle", () => {
               const service = Context.get(context, FileSystemSearch.Service)
               expect(calls.create).toBe(0)
 
-              yield* Effect.all(
-                [
-                  service.find({ query: "", type: "file", limit: 1 }),
-                  service.find({ query: "", type: "file", limit: 1 }),
-                ],
-                { concurrency: "unbounded" },
+              const first = yield* Effect.exit(
+                Effect.all(
+                  [
+                    service.find({ query: "", type: "file", limit: 1 }),
+                    service.find({ query: "", type: "file", limit: 1 }),
+                  ],
+                  { concurrency: "unbounded" },
+                ),
               )
+              expect(first._tag).toBe("Failure")
               expect(calls.create).toBe(1)
+
+              yield* service.find({ query: "", type: "file", limit: 1 })
+              expect(calls.create).toBe(2)
               expect(calls.opts?.disableMmapCache).toBe(true)
               expect(calls.opts?.disableContentIndexing).toBe(true)
 
               yield* service.find({ query: "", type: "file", limit: 1 })
-              expect(calls.create).toBe(1)
+              expect(calls.create).toBe(2)
               expect(calls.destroy).toBe(0)
             }),
           (scope, exit) => Scope.close(scope, exit),
