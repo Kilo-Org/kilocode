@@ -57,11 +57,15 @@ export function useSlashCommand(
   sandbox: { action: () => void; enabled: Accessor<boolean> },
   exclude?: Set<string> | Accessor<Set<string>>,
   include?: Set<string> | Accessor<Set<string>>,
+  scope?: string,
 ): SlashCommand {
   const [server, setServer] = createSignal<SlashCommandInfo[]>([])
   const [query, setQuery] = createSignal<string | null>(null)
   const [index, setIndex] = createSignal(0)
   const [requested, setRequested] = createSignal(false)
+  const open = (name: string) => {
+    window.dispatchEvent(new CustomEvent(name, { detail: { source: scope } }))
+  }
 
   const all: SlashCommandEntry[] = [
     {
@@ -86,7 +90,7 @@ export function useSlashCommand(
       description: "Switch the AI model",
       hints: ["model"],
       action: () => {
-        window.dispatchEvent(new CustomEvent("openModelPicker"))
+        open("openModelPicker")
       },
     },
     {
@@ -94,7 +98,7 @@ export function useSlashCommand(
       description: "Switch the agent mode",
       hints: ["modes"],
       action: () => {
-        window.dispatchEvent(new CustomEvent("openModePicker"))
+        open("openModePicker")
       },
     },
     {
@@ -102,7 +106,7 @@ export function useSlashCommand(
       description: "Switch the reasoning effort",
       hints: ["variants", "reasoning", "thinking"],
       action: () => {
-        window.dispatchEvent(new CustomEvent("openVariantPicker"))
+        open("openVariantPicker")
       },
     },
     {

@@ -53,6 +53,7 @@ import type { ModeRouter } from "./mode-router"
 type VersionCount = 1 | 2 | 3 | 4
 const VERSION_OPTIONS: VersionCount[] = [1, 2, 3, 4]
 const WORKTREE_PROMPT_COMMANDS = new Set(["models", "agents", "variant", "sandbox"])
+const WORKTREE_PROMPT_SCOPE = "agent-manager-worktree-prompt"
 
 type DialogTab = "new" | "import"
 
@@ -289,7 +290,6 @@ export const NewWorktreeDialog: Component<{
 
   let textareaRef: HTMLTextAreaElement | undefined
   let containerRef: HTMLDivElement | undefined
-  let slashDropdownRef: HTMLDivElement | undefined
 
   const setPromptValue = (value: string) => {
     setPrompt(value)
@@ -310,6 +310,7 @@ export const NewWorktreeDialog: Component<{
       return hidden
     },
     WORKTREE_PROMPT_COMMANDS,
+    WORKTREE_PROMPT_SCOPE,
   )
   const onFocusPrompt = () => restorePrompt()
   window.addEventListener("focusPrompt", onFocusPrompt)
@@ -616,7 +617,7 @@ export const NewWorktreeDialog: Component<{
               onDrop={imageAttach.handleDrop}
             >
               <Show when={slash.show()}>
-                <div class="slash-command-dropdown am-slash-command-dropdown" ref={slashDropdownRef}>
+                <div class="slash-command-dropdown am-slash-command-dropdown" data-component="popover-content">
                   <Show
                     when={slash.results().length > 0}
                     fallback={<div class="slash-command-empty">No commands found</div>}
@@ -702,6 +703,7 @@ export const NewWorktreeDialog: Component<{
                       agents={session.agents()}
                       value={agent()}
                       onSelect={selectAgent}
+                      trigger={WORKTREE_PROMPT_SCOPE}
                       portal={false}
                       deferDismiss
                     />
@@ -714,6 +716,7 @@ export const NewWorktreeDialog: Component<{
                       }}
                       onPick={restorePrompt}
                       onCancel={restorePrompt}
+                      trigger={WORKTREE_PROMPT_SCOPE}
                       placement="top-start"
                       portal={false}
                       deferDismiss
@@ -722,6 +725,7 @@ export const NewWorktreeDialog: Component<{
                       variants={variants()}
                       value={effectiveVariant()}
                       onSelect={setVariant}
+                      trigger={WORKTREE_PROMPT_SCOPE}
                       portal={false}
                       deferDismiss
                       cycleHint={settings()["chat.shiftTabCyclesVariant"] !== false}

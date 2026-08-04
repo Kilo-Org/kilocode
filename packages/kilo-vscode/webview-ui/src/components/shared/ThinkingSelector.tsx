@@ -41,6 +41,8 @@ export interface ThinkingSelectorBaseProps {
   deferDismiss?: boolean
   /** Listen for the global prompt trigger event. Defaults to true. */
   globalTrigger?: boolean
+  /** Only respond to picker events from this prompt scope. */
+  trigger?: string
   /** Show the Shift+Tab cycle hint in the trigger tooltip. */
   cycleHint?: boolean
   /** Accessible name for the selector trigger. */
@@ -85,7 +87,9 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
     refocus()
   }
 
-  const onTrigger = () => {
+  const onTrigger = (event: Event) => {
+    const source = (event as CustomEvent<{ source?: string }>).detail?.source
+    if (source !== props.trigger) return
     if (rows().length === 0) return
     onOpen(true)
   }
