@@ -32,6 +32,10 @@ describe("multi-project progress state", () => {
 
     expect(first.busy().has("same")).toBe(true)
     expect(second.busy().has("same")).toBe(false)
+
+    second.setBusy(new Map([["same", { reason: "deleting" as const }]]))
+    clearMultiVersionBusy(second, "group")
+    expect(second.busy().get("same")?.reason).toBe("deleting")
   })
 
   it("marks a newly created grouped worktree as busy in its project store", () => {

@@ -1047,6 +1047,7 @@ export class AgentManagerProvider implements Disposable {
     if (!req) return
     if (directory) {
       req.directory = directory
+      req.projectId ??= this.contexts.byDirectory(directory)?.id
     }
     void this.startToolRequest(req)
   }
