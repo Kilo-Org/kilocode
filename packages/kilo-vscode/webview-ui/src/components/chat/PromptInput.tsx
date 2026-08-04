@@ -10,6 +10,7 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { showToast } from "@kilocode/kilo-ui/toast"
+import { isTextControl } from "../../utils/focus"
 import { useSession } from "../../context/session"
 import { useLocalTabs } from "../../context/local-tabs"
 import { useServer } from "../../context/server"
@@ -418,8 +419,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const onFocusPrompt = (event: Event) => {
     const defer = () =>
       event instanceof CustomEvent && event.detail?.deferFocusToQuestion && props.deferFocusToQuestion?.()
+    const ownsFocus = () => {
+      const active = document.activeElement
+      return active !== textareaRef && isTextControl(active)
+    }
     const focus = () => {
-      if (defer()) return
+      if (defer() || ownsFocus()) return
       const ref = textareaRef
       if (!ref) return
       ref.focus({ preventScroll: true })
@@ -427,7 +432,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     focus()
     if (!(event instanceof CustomEvent) || !event.detail?.restore) return
     const restore = () => {
-      if (defer()) return
+      if (defer() || ownsFocus()) return
       window.focus()
       focus()
     }
