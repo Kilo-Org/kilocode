@@ -5,5 +5,5 @@ export const isTextControl = (el: Element | null): boolean => {
   if (!el) return false
   if (el.tagName === "TEXTAREA" || el.tagName === "SELECT") return true
   if (el.tagName === "INPUT") return !nonText.has((el as HTMLInputElement).type.toLowerCase())
-  return el.getAttribute("contenteditable") === "true" || el.getAttribute("role") === "textbox"
+  return ("isContentEditable" in el && (el as HTMLElement).isContentEditable) || el.getAttribute("role") === "textbox"
 }

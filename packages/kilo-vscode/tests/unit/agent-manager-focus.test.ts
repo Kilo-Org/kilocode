@@ -61,11 +61,14 @@ describe("Agent Manager focus", () => {
     rename.className = "am-worktree-rename-input"
     const prompt = window.document.createElement("textarea")
     prompt.className = "prompt-input"
+    const editor = window.document.createElement("div")
+    editor.contentEditable = "plaintext-only"
     const button = window.document.createElement("button")
 
     expect(isTextControl(rename)).toBe(true)
     expect(preservesTextFocus(rename)).toBe(true)
     expect(preservesTextFocus(prompt)).toBe(false)
+    expect(isTextControl(editor)).toBe(true)
     expect(isTextControl(button)).toBe(false)
   })
 })
