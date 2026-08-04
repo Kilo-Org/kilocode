@@ -32,6 +32,7 @@ interface ContextsOptions {
   registry: {
     list(): StoredProject[]
     get(id: string): StoredProject | undefined
+    expanded?(id: string): boolean | undefined
   }
   /** Registry trust lookup for non-pinned projects. */
   trusted: (id: string) => boolean
@@ -44,7 +45,7 @@ interface ContextsOptions {
 export class ProjectContexts {
   private readonly contexts = new Map<string, ProjectContext>()
   private activeId: string | undefined
-  private readonly expanded = new Set<string>()
+  private readonly expansion = new Map<string, boolean>()
 
   constructor(private readonly opts: ContextsOptions) {}
 
@@ -83,7 +84,7 @@ export class ProjectContexts {
     const pinned = this.pinned()
     if (pinned) {
       this.activeId = pinned.id
-      this.expanded.add(pinned.id)
+      this.rememberExpansion(pinned.id, true)
       return pinned
     }
     if (!this.opts.enabled()) return undefined
@@ -91,7 +92,7 @@ export class ProjectContexts {
     if (!first) return undefined
     const ctx = this.ensure(first.id, first.root, false)
     this.activeId = ctx.id
-    this.expanded.add(ctx.id)
+    this.rememberExpansion(ctx.id, false)
     return ctx
   }
 
@@ -140,7 +141,8 @@ export class ProjectContexts {
   }
 
   isExpanded(id: string): boolean {
-    return this.expanded.has(id)
+    this.rememberExpansion(id, false)
+    return this.expansion.get(id) === true
   }
 
   /** Make a project the active context and expand it. Returns undefined when not allowed. */
@@ -148,6 +150,7 @@ export class ProjectContexts {
     const ctx = this.usableCtx(id)
     if (!ctx) return undefined
     this.activeId = id
+    this.rememberExpansion(id, false)
     return ctx
   }
 
@@ -155,12 +158,12 @@ export class ProjectContexts {
   expand(id: string): ProjectContext | undefined {
     const ctx = this.usableCtx(id)
     if (!ctx) return undefined
-    this.expanded.add(id)
+    this.expansion.set(id, true)
     return ctx
   }
 
   collapse(id: string): void {
-    this.expanded.delete(id)
+    this.expansion.set(id, false)
     if (this.isActive(id)) return
     this.contexts.get(id)?.suspend()
   }
@@ -169,10 +172,10 @@ export class ProjectContexts {
   disable(): ProjectContext | undefined {
     const pinned = this.pinned()
     this.activeId = pinned?.id
-    if (pinned) this.expanded.add(pinned.id)
+    if (pinned) this.expansion.set(pinned.id, true)
     for (const ctx of this.contexts.values()) {
       if (ctx.pinned) continue
-      this.expanded.delete(ctx.id)
+      this.expansion.set(ctx.id, false)
       ctx.suspend()
       // Match remove()/syncPinned(): drop the routes too, otherwise the shared
       // route service accumulates entries for every disabled project.
@@ -194,7 +197,7 @@ export class ProjectContexts {
   async remove(id: string): Promise<boolean> {
     const ctx = this.contexts.get(id)
     if (!ctx || ctx.pinned) return false
-    this.expanded.delete(id)
+    this.expansion.delete(id)
     if (this.activeId === id) this.activeId = undefined
     this.contexts.delete(id)
     this.opts.remove?.(id)
@@ -215,7 +218,7 @@ export class ProjectContexts {
     for (const [id, ctx] of [...this.contexts]) {
       if (!ctx.pinned) continue
       this.contexts.delete(id)
-      this.expanded.delete(id)
+      this.expansion.delete(id)
       if (this.activeId === id) this.activeId = undefined
       this.opts.remove?.(id)
       ctx.suspend()
@@ -254,13 +257,18 @@ export class ProjectContexts {
     }
   }
 
+  private rememberExpansion(id: string, fallback: boolean): void {
+    if (this.expansion.has(id)) return
+    this.expansion.set(id, this.opts.registry.expanded?.(id) ?? fallback)
+  }
+
   async dispose(): Promise<void> {
     for (const ctx of this.contexts.values()) {
       this.opts.remove?.(ctx.id)
       await ctx.dispose()
     }
     this.contexts.clear()
-    this.expanded.clear()
+    this.expansion.clear()
     this.activeId = undefined
   }
 }

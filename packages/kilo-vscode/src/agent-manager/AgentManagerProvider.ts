@@ -1567,11 +1567,20 @@ export class AgentManagerProvider implements Disposable {
   }
 
   private pushProjects(): void {
+    const projects = this.contexts.snapshots()
     this.postToWebview({
       type: "agentManager.projects",
       multiProject: this.host.multiProject(),
-      projects: this.contexts.snapshots(),
+      projects,
     })
+    if (this.panel) {
+      for (const project of projects) {
+        if (project.active || !project.expanded || !project.trusted || project.missing) continue
+        if (this.contexts.get(project.id)) continue
+        const ctx = this.contexts.expand(project.id)
+        if (ctx) this.initExpanded(ctx)
+      }
+    }
     this.projectPollers.sync(this.contexts)
   }
 

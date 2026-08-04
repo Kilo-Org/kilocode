@@ -189,9 +189,15 @@ function selectProject(id: string, deps: ProjectMessageDeps): void {
 
 async function setExpanded(id: string, expanded: boolean, deps: ProjectMessageDeps): Promise<void> {
   if (disabled(deps)) return
+  const ctx = expanded ? deps.contexts.usable(id) : deps.contexts.resolve(id)
+  if (!ctx) {
+    deps.push()
+    return
+  }
+  await deps.registry.setExpanded(id, expanded)
   if (expanded) {
-    const ctx = deps.contexts.expand(id)
-    if (ctx) deps.expand(ctx)
+    deps.contexts.expand(id)
+    deps.expand(ctx)
   }
   if (!expanded) deps.contexts.collapse(id)
   deps.push()

@@ -5,6 +5,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import type { SectionState } from "../src/types/messages"
 import { SECTION_COLORS, colorCss } from "./section-colors"
 import { useLanguage } from "../src/context/language"
+import { SidebarSectionHeader } from "./SidebarSectionHeader"
 
 interface Props {
   section: SectionState
@@ -56,11 +57,6 @@ const SectionHeader: Component<Props> = (props) => {
     if (props.autoRename && !renaming()) startRename()
   })
 
-  const handleClick = (e: MouseEvent) => {
-    if (e.button !== 0 || renaming()) return
-    props.onToggle()
-  }
-
   const droppable = createDroppable(props.dropId ?? props.section.id)
 
   return (
@@ -70,41 +66,43 @@ const SectionHeader: Component<Props> = (props) => {
       style={{ "--section-color": border() }}
     >
       <ContextMenu>
-        <ContextMenu.Trigger class="am-section-group-header" onClick={handleClick}>
-          <div class="am-section-group-left">
-            <Icon
-              name="chevron-down"
-              size="small"
-              class={`am-section-group-chevron ${props.section.collapsed ? "am-section-group-chevron-collapsed" : ""}`}
-            />
-            <Show
-              when={!renaming()}
-              fallback={
-                <input
-                  class="am-section-group-rename"
-                  value={value()}
-                  onInput={(e) => setValue(e.currentTarget.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") commit()
-                    if (e.key === "Escape") cancel()
-                  }}
-                  onBlur={commit}
-                  onClick={(e) => e.stopPropagation()}
-                  ref={(el) =>
-                    requestAnimationFrame(() =>
-                      requestAnimationFrame(() => {
-                        el.focus()
-                        el.select()
-                      }),
-                    )
-                  }
-                />
-              }
-            >
-              <span class="am-section-group-name">{props.section.name}</span>
-            </Show>
-          </div>
-          <span class="am-section-group-count">{props.count}</span>
+        <ContextMenu.Trigger as="div" style={{ display: "contents" }}>
+          <SidebarSectionHeader
+            class="am-section-group-header"
+            expanded={!props.section.collapsed}
+            ariaLabel={props.section.name}
+            label={
+              <Show
+                when={!renaming()}
+                fallback={
+                  <input
+                    class="am-section-group-rename"
+                    value={value()}
+                    onInput={(e) => setValue(e.currentTarget.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") commit()
+                      if (e.key === "Escape") cancel()
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    ref={(el) =>
+                      requestAnimationFrame(() =>
+                        requestAnimationFrame(() => {
+                          el.focus()
+                          el.select()
+                        }),
+                      )
+                    }
+                  />
+                }
+              >
+                <span class="am-section-group-name">{props.section.name}</span>
+              </Show>
+            }
+            count={props.count}
+            onToggle={() => {
+              if (!renaming()) props.onToggle()
+            }}
+          />
         </ContextMenu.Trigger>
         <ContextMenu.Portal>
           <ContextMenu.Content class="am-ctx-menu">
