@@ -20,6 +20,7 @@ import type {
 } from "../src/types/messages"
 import type { LanguageContextValue } from "../src/context/language"
 import { useVSCode } from "../src/context/vscode"
+import { projectAdjacentHint, projectSidebarOrder } from "./project-local-navigation"
 import SectionHeader from "./SectionHeader"
 import { WorktreeItem } from "./WorktreeItem"
 import { UnassignedSessionsSection } from "./UnassignedSessionsSection"
@@ -44,6 +45,7 @@ interface Props {
   sessions?: ProjectSessionInfo[]
   selectedProject?: string
   selection?: string
+  currentSessionID?: () => string | undefined
   bindings: Record<string, string>
   t: LanguageContextValue["t"]
   onSelectLocal: (projectId: string) => void
@@ -100,8 +102,20 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
   const members = (sectionId: string) => sorted().filter((wt) => wt.sectionId === sectionId)
   const ungrouped = createMemo(() => sorted().filter((wt) => !wt.sectionId))
   const top = createMemo(() => buildTopLevelItems(sections(), ungrouped(), sorted(), order()))
+  const sidebarOrder = createMemo(() => projectSidebarOrder(top(), sorted(), sections(), members, localSessions()))
   const post = (message: Record<string, unknown>) =>
     vscode.postMessage({ ...message, projectId: props.project.id } as never)
+
+  const navHint = (id: string) =>
+    projectAdjacentHint(
+      props.project.id,
+      props.selectedProject,
+      id,
+      props.selection ?? props.currentSessionID?.(),
+      sidebarOrder(),
+      props.bindings.previousSession ?? "",
+      props.bindings.nextSession ?? "",
+    )
 
   const scope = (kind: "section" | "worktree", id: string) => `${props.project.id}:${kind}:${id}`
   const parse = (kind: "section" | "worktree", value: unknown) => {
@@ -226,6 +240,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           working={runs()[worktree.id]?.state === "running"}
           stale={state()?.staleWorktreeIds?.includes(worktree.id) === true}
           stats={props.stats?.[worktree.id]}
+          navHint={navHint(worktree.id)}
           sessions={sessions(worktree.id).length}
           grouped={isGrouped(worktree)}
           groupStart={isGroupStart(worktree, idx(), list)}
