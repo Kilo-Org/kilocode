@@ -281,7 +281,19 @@ export type AgentManagerStopRequest = {
   targetSessionID: string
 }
 
-export type AgentManagerRequest = AgentManagerOverviewRequest | AgentManagerPromptRequest | AgentManagerStopRequest
+export type AgentManagerMoveRequest = {
+  id: AgentManagerRequestId
+  sessionID: string
+  operation: "move"
+  targetSessionID: string
+  sectionID: string | null
+}
+
+export type AgentManagerRequest =
+  | AgentManagerOverviewRequest
+  | AgentManagerPromptRequest
+  | AgentManagerStopRequest
+  | AgentManagerMoveRequest
 
 export type NotebookRequestId = string
 
@@ -621,6 +633,7 @@ export type SubtaskPart = {
     providerID: string
     modelID: string
   }
+  variant?: string
   command?: string
 }
 
@@ -1543,7 +1556,7 @@ export type Config = {
   server?: ServerConfig
   command?: {
     [key: string]: {
-      template: string
+      template?: string
       description?: string
       agent?: string
       model?: string
@@ -2102,6 +2115,7 @@ export type Command = {
   description?: string
   agent?: string
   model?: string
+  variant?: string
   source?: "command" | "mcp" | "skill"
   trusted?: boolean
   template: string
@@ -2757,6 +2771,7 @@ export type SubtaskPartInput = {
     providerID: string
     modelID: string
   }
+  variant?: string
   command?: string
 }
 
@@ -3390,7 +3405,18 @@ export type AgentManagerStopResult = {
   stopped: true
 }
 
-export type AgentManagerResult = AgentManagerOverviewResult | AgentManagerPromptResult | AgentManagerStopResult
+export type AgentManagerMoveResult = {
+  operation: "move"
+  sessionID: string
+  sectionID: string | null
+  moved: true
+}
+
+export type AgentManagerResult =
+  | AgentManagerOverviewResult
+  | AgentManagerPromptResult
+  | AgentManagerStopResult
+  | AgentManagerMoveResult
 
 export type AgentManagerFailure = {
   code:
@@ -3401,6 +3427,7 @@ export type AgentManagerFailure = {
     | "stale_session"
     | "timeout"
     | "unavailable_session"
+    | "unknown_section"
     | "unknown_session"
     | "workspace_unavailable"
   message: string
@@ -6180,6 +6207,7 @@ export type CommandV2Info = {
     providerID: string
     variant?: string
   }
+  variant?: string
   subtask?: boolean
 }
 

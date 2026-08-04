@@ -11,6 +11,7 @@ export class Info extends Schema.Class<Info>("CommandV2.Info")({
   description: Schema.String.pipe(Schema.optional),
   agent: Schema.String.pipe(Schema.optional),
   model: ModelV2.Ref.pipe(Schema.optional),
+  variant: ModelV2.VariantID.pipe(Schema.optional), // kilocode_change - support variant-only command overrides
   subtask: Schema.Boolean.pipe(Schema.optional),
 }) {}
 

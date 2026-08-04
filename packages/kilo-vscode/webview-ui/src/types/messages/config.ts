@@ -25,10 +25,12 @@ export interface ConfigCollectionEntry {
 export type ConfigCollections = Record<string, ConfigCollectionEntry[]>
 
 export interface CommandConfig {
-  template: string
+  template?: string
   description?: string
   agent?: string
-  model?: string
+  model?: string | null
+  variant?: string | null
+  subtask?: boolean
 }
 
 export interface SkillsConfig {

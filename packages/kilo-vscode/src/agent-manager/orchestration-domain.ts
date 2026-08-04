@@ -13,6 +13,7 @@ export type FailureCode =
   | "host_error"
   | "stale_session"
   | "unavailable_session"
+  | "unknown_section"
   | "unknown_session"
   | "workspace_unavailable"
 
@@ -361,4 +362,21 @@ export async function prompt(input: {
     },
     { throwOnError: true },
   )
+}
+
+export function move(input: { state: WorktreeStateManager; sessionID: string; sectionID: string | null }): void {
+  const session = input.state.getSession(input.sessionID)
+  if (!session)
+    throw new OrchestrationError("unknown_session", "The session is not managed by this Agent Manager workspace")
+  if (!session.worktreeId) {
+    if (input.sectionID === null) return
+    throw new OrchestrationError(
+      "unavailable_session",
+      "Only sessions attached to a worktree can be assigned to a section",
+    )
+  }
+  if (input.sectionID !== null && !input.state.getSection(input.sectionID)) {
+    throw new OrchestrationError("unknown_section", "The target section is not managed by this Agent Manager workspace")
+  }
+  input.state.moveToSection([session.worktreeId], input.sectionID)
 }
