@@ -7152,6 +7152,7 @@ export class Kilo extends HeyApiClient {
       model?: string
       maxTokens?: number
       temperature?: number
+      sessionId?: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -7168,6 +7169,7 @@ export class Kilo extends HeyApiClient {
             { in: "body", key: "model" },
             { in: "body", key: "maxTokens" },
             { in: "body", key: "temperature" },
+            { in: "body", key: "sessionId" },
           ],
         },
       ],

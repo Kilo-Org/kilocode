@@ -1,8 +1,14 @@
 import { ResponseMetaData } from "./types"
 import type { KiloConnectionService } from "../cli-backend"
 import { getAutocompleteModelById } from "../../shared/autocomplete-models"
+import { createHash } from "node:crypto"
 
 const FIM_MAX_TOKENS = 256
+
+export function getFimSessionId(modelId: string, scope?: string) {
+  if (!scope) return undefined
+  return createHash("sha256").update(modelId).update("\0").update(scope).digest("hex")
+}
 
 /**
  * Generate a FIM (Fill-in-the-Middle) completion via the CLI backend.
@@ -17,6 +23,7 @@ export async function generateFim(
   suffix: string,
   onChunk: (text: string) => void,
   signal?: AbortSignal,
+  scope?: string,
 ): Promise<ResponseMetaData> {
   const client = await connectionService.getClientAsync()
   const info = getAutocompleteModelById(modelId)
@@ -37,8 +44,9 @@ export async function generateFim(
       suffix,
       provider: info.providerID,
       model: info.modelID,
-      maxTokens: FIM_MAX_TOKENS,
+      maxTokens: info.maxTokens ?? FIM_MAX_TOKENS,
       temperature: info.temperature,
+      sessionId: info.configuredProvider ? getFimSessionId(info.id, scope) : undefined,
     },
     {
       signal,
