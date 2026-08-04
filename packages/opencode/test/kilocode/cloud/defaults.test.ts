@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { expect } from "bun:test"
 import { Effect, Layer, Redacted, Ref } from "effect"
 import { Agent } from "@/agent/agent"
@@ -9,7 +10,7 @@ import { CloudDefaults } from "@/kilocode/cloud/defaults"
 import { MAX_CLOUD_AGENT_RESPONSE_BYTES } from "@/kilocode/cloud/response-json"
 import { testEffect } from "../../lib/effect"
 
-const it = testEffect(Layer.mergeAll(Agent.defaultLayer, Config.defaultLayer))
+const it = testEffect(Layer.mergeAll(AppNodeBuilder.build(Agent.node), AppNodeBuilder.build(Config.node)))
 
 type RequestInfo = {
   readonly authorization: string | null

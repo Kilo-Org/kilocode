@@ -3,14 +3,12 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { InstanceRef, WorkspaceRef } from "@/effect/instance-ref"
 import { GlobalBus } from "@/bus/global"
+import { EventManifest } from "@/event-manifest" // kilocode_change
 import * as EventWire from "@/kilocode/event-wire" // kilocode_change
 import { EventV2 } from "@opencode-ai/core/event"
 import { Location } from "@opencode-ai/core/location"
 import { Project } from "@opencode-ai/core/project"
 import { AbsolutePath } from "@opencode-ai/core/schema"
-import "@opencode-ai/core/account"
-import "@opencode-ai/core/catalog"
-import "@opencode-ai/core/session/event"
 import { Context, Effect, Layer } from "effect"
 
 export class Service extends Context.Service<Service, EventV2.Interface>()("@opencode/EventV2Bridge") {}
@@ -41,7 +39,7 @@ export const layer = Layer.effect(
         const ctx = yield* InstanceRef
         const workspaceID = (yield* WorkspaceRef) ?? event.location?.workspaceID
         // kilocode_change start - legacy bus and SSE consumers require the schema's encoded representation
-        const definition = EventV2.registry.get(event.type)
+        const definition = EventManifest.Latest.get(event.type) // kilocode_change
         const data = definition ? EventWire.encode(definition.data, event.data) : event.data
         // kilocode_change end
         GlobalBus.emit("event", {
@@ -50,10 +48,7 @@ export const layer = Layer.effect(
           workspace: workspaceID,
           payload: { id: event.id, type: event.type, properties: data }, // kilocode_change - encoded
         })
-        const sync = definition?.sync
-        if (sync === undefined || event.seq === undefined || event.version === undefined) return
-        const aggregateID = (event.data as Record<string, unknown>)[sync.aggregate]
-        if (typeof aggregateID !== "string") return
+        if (event.durable === undefined) return
         GlobalBus.emit("event", {
           directory: event.location?.directory ?? ctx?.directory ?? "global", // kilocode_change - instance-less events are tagged "global" on the wire
           project: ctx?.project.id,
@@ -62,9 +57,9 @@ export const layer = Layer.effect(
             type: "sync",
             syncEvent: {
               id: event.id,
-              type: EventV2.versionedType(event.type, event.version),
-              seq: event.seq,
-              aggregateID,
+              type: EventV2.versionedType(event.type, event.durable.version),
+              seq: event.durable.seq,
+              aggregateID: event.durable.aggregateID,
               data, // kilocode_change - encoded
             },
           },
@@ -77,8 +72,9 @@ export const layer = Layer.effect(
   }),
 )
 
-export const defaultLayer = layer.pipe(Layer.provide(EventV2.defaultLayer))
+// kilocode_change - preserve legacy layer composition while EventV2 uses nodes
+export const defaultLayer = layer.pipe(Layer.provide(LayerNode.compile(EventV2.node)))
 
-export const node = LayerNode.make(layer, [EventV2.node])
+export const node = LayerNode.make({ service: Service, layer: layer, deps: [EventV2.node] })
 
 export * as EventV2Bridge from "./event-v2-bridge"

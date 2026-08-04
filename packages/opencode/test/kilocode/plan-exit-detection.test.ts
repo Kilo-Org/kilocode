@@ -7,6 +7,8 @@ import { Identifier } from "../../src/id/id"
 import { SessionID, MessageID, PartID } from "../../src/session/schema"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { Instance } from "../../src/kilocode/instance"
 import { provideTestInstance } from "../fixture/fixture"
 import { PlanFollowup } from "../../src/kilocode/plan-followup"
@@ -21,7 +23,10 @@ import { tmpdir } from "../fixture/fixture"
 
 Log.init({ print: false })
 
-const session = makeRuntime(Session.Service, Session.defaultLayer)
+const session = makeRuntime(
+  Session.Service,
+  LayerNode.compile(LayerNode.group([Session.node, SessionProjector.node])),
+)
 const sessions = {
   create: (input?: Parameters<Session.Interface["create"]>[0]) =>
     session.runPromise((svc) => svc.create(input)),

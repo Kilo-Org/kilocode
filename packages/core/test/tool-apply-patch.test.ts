@@ -2,6 +2,8 @@ import fs from "fs/promises"
 import path from "path"
 import { describe, expect } from "bun:test"
 import { Deferred, Effect, Exit, Fiber, Layer } from "effect"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { FileMutation } from "@opencode-ai/core/file-mutation"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Location } from "@opencode-ai/core/location"
@@ -10,6 +12,7 @@ import { PermissionV2 } from "@opencode-ai/core/permission"
 import { AbsolutePath } from "@opencode-ai/core/schema"
 import { SessionV2 } from "@opencode-ai/core/session"
 import { ToolRegistry } from "@opencode-ai/core/tool/registry"
+import { ToolOutputStore } from "@opencode-ai/core/tool-output-store"
 import { ApplyPatchTool } from "@opencode-ai/core/tool/apply-patch"
 import { location } from "./fixture/location"
 import { tmpdir } from "./fixture/tmpdir"
@@ -81,26 +84,34 @@ const filesystem = Layer.effect(
       },
     })
   }),
-).pipe(Layer.provide(FSUtil.defaultLayer))
+).pipe(Layer.provide(LayerNode.compile(FSUtil.node)))
 
 const withTool = <A, E, R>(directory: string, body: (registry: ToolRegistry.Interface) => Effect.Effect<A, E, R>) => {
   const activeLocation = Layer.succeed(
     Location.Service,
     Location.Service.of(location({ directory: AbsolutePath.make(directory) })),
   )
-  const resolution = LocationMutation.layer.pipe(Layer.provide(filesystem), Layer.provide(activeLocation))
-  const mutation = FileMutation.layer.pipe(Layer.provide(filesystem))
-  const registry = ToolRegistry.defaultLayer.pipe(Layer.provide(permission))
-  const patch = ApplyPatchTool.layer.pipe(
-    Layer.provide(registry),
-    Layer.provide(permission),
-    Layer.provide(resolution),
-    Layer.provide(mutation),
-    Layer.provide(filesystem),
-  )
   return Effect.gen(function* () {
     return yield* body(yield* ToolRegistry.Service)
-  }).pipe(Effect.provide(Layer.mergeAll(registry, resolution, mutation, patch)))
+  }).pipe(
+    Effect.provide(
+      AppNodeBuilder.build(
+        LayerNode.group([
+          ToolRegistry.node,
+          ToolRegistry.toolsNode,
+          LocationMutation.node,
+          FileMutation.node,
+          ApplyPatchTool.node,
+        ]),
+        [
+          [FSUtil.node, filesystem],
+          [Location.node, activeLocation],
+          [PermissionV2.node, permission],
+          [ToolOutputStore.node, ToolOutputStore.nodeWithoutConfig],
+        ],
+      ),
+    ),
+  )
 }
 
 const call = (patchText: string, id = "call-apply-patch") => ({
@@ -149,6 +160,29 @@ describe("ApplyPatchTool", () => {
                     { type: "update", resource: "update.txt" },
                     { type: "delete", resource: "remove.txt" },
                   ],
+                  files: [
+                    {
+                      file: "nested/new.txt",
+                      status: "added",
+                      additions: 1,
+                      deletions: 0,
+                      patch: expect.stringContaining("+created"),
+                    },
+                    {
+                      file: "update.txt",
+                      status: "modified",
+                      additions: 1,
+                      deletions: 1,
+                      patch: expect.stringContaining("-before\n+after"),
+                    },
+                    {
+                      file: "remove.txt",
+                      status: "deleted",
+                      additions: 0,
+                      deletions: 1,
+                      patch: expect.stringContaining("-remove"),
+                    },
+                  ],
                 })
                 expect(assertions).toMatchObject([
                   { sessionID, action: "edit", resources: ["nested/new.txt", "update.txt", "remove.txt"], save: ["*"] },
@@ -167,6 +201,33 @@ describe("ApplyPatchTool", () => {
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
     ),
   )
+
+  // kilocode_change start
+  it.live("omits oversized patches from durable structured output", () =>
+    Effect.acquireUseRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => {
+        reset()
+        const content = "x".repeat(ToolOutputStore.MAX_BYTES)
+        const patch = `*** Begin Patch\n*** Add File: large.txt\n+${content}\n*** End Patch`
+        return withTool(tmp.path, (registry) => settleTool(registry, call(patch))).pipe(
+          Effect.tap((settled) =>
+            Effect.sync(() => {
+              expect(settled.output?.structured).toEqual({
+                applied: [{ type: "add", resource: "large.txt", target: path.join(tmp.path, "large.txt") }],
+                files: [{ file: "large.txt", status: "added", additions: 1, deletions: 0 }],
+              })
+              expect(Buffer.byteLength(JSON.stringify(settled.output?.structured), "utf-8")).toBeLessThanOrEqual(
+                ToolOutputStore.MAX_BYTES,
+              )
+            }),
+          ),
+        )
+      },
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ),
+  )
+  // kilocode_change end
 
   it.live("rejects moves before applying any hunk", () =>
     Effect.acquireUseRelease(
