@@ -133,7 +133,42 @@ class DiffPatchReconstructTest {
     }
 
     @Test
-    fun `multi hunk partial context patch is not renderable`() {
+    fun `multi hunk patch reconstructs concatenated changed regions`() {
+        // Turn/tool diffs are ordinary limited-context git output with several hunks. The reconstruction
+        // stitches each hunk body into contiguous before/after text so the diff editor colors the
+        // changes instead of dumping the raw patch as all-added lines. Inter-hunk gaps collapse.
+        val dto = DiffFileDto(
+            file = "src/A.kt",
+            additions = 2,
+            deletions = 2,
+            patch = """
+                diff --git a/src/A.kt b/src/A.kt
+                --- a/src/A.kt
+                +++ b/src/A.kt
+                @@ -1,3 +1,3 @@
+                 one
+                -two
+                +TWO
+                 three
+                @@ -20,3 +20,3 @@
+                 twenty
+                -x
+                +X
+                 z
+            """.trimIndent(),
+        )
+
+        val sides = DiffPatchReconstruct.sides(dto)
+
+        assertTrue(sides.renderable)
+        assertEquals("one\ntwo\nthree\ntwenty\nx\nz", sides.before)
+        assertEquals("one\nTWO\nthree\ntwenty\nX\nz", sides.after)
+    }
+
+    @Test
+    fun `multi hunk patch with truncated context is not renderable`() {
+        // header claims 3 old / 3 new lines per hunk but the body carries only 2 of each: reconstructing
+        // would misalign the sides, so fall back to the raw-patch view.
         val dto = DiffFileDto(
             file = "src/A.kt",
             additions = 2,

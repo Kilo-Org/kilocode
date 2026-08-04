@@ -53,11 +53,14 @@ internal object DiffPatchReconstruct {
                 }
             }
         }
-        // Both producers (CLI snapshot and branchDiff) emit a single full-context hunk. A patch with
-        // several hunks, or one whose header lengths don't match the reconstructed body, has elided
-        // context: reconstructing would place every line at the wrong number, so fall back to the
-        // raw-patch view (renderable = false) instead of showing a misaligned side-by-side diff.
-        if (hunks != 1 || oldSeen != oldLen || newSeen != newLen) return DiffSides("", "", false)
+        // A patch may carry several hunks (limited-context git output) or a single full-context hunk.
+        // We concatenate every hunk body into contiguous before/after text: unchanged context lines
+        // anchor each region so the resulting side-by-side still colors adds/removes correctly. The
+        // elided gaps between hunks collapse (line numbers restart at 1), which is acceptable for a
+        // "what changed" view and far better than the all-green raw-patch fallback. We still bail when
+        // there is no hunk, or when the header lengths don't match the reconstructed body (truncated
+        // context), because that would place lines against the wrong side.
+        if (hunks < 1 || oldSeen != oldLen || newSeen != newLen) return DiffSides("", "", false)
         val left = if (added(patch)) "" else before.toString().removeSuffix("\n")
         val right = if (deleted(patch)) "" else after.toString().removeSuffix("\n")
         return DiffSides(left, right, true)
