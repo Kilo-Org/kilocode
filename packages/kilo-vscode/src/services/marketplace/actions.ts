@@ -20,8 +20,8 @@ export interface MarketplaceActionContext {
 
 export interface MarketplaceRemoveContext {
   connection: KiloConnectionService
+  marketplace: MarketplaceService
   storage?: vscode.Uri
-  remove: (item: MarketplaceItemRef, scope: "project" | "global", project?: string) => Promise<RemoveResult>
 }
 
 export async function fetchMarketplaceData(
@@ -30,8 +30,17 @@ export async function fetchMarketplaceData(
   dir: string | undefined,
   roots: readonly vscode.Uri[],
 ): Promise<MarketplaceDataResponse> {
-  const skills = dir ? await fetchSkills(ctx, dir) : undefined
-  return ctx.marketplace.fetchData(project, skills, roots)
+  const route = project ?? dir
+  if (!route) {
+    return {
+      marketplaceItems: [],
+      marketplaceInstalledMetadata: { project: {}, global: {} },
+      marketplaceRelevance: {},
+      errors: ["No directory available for marketplace data"],
+    }
+  }
+  const client = await ctx.connection.getClientAsync(route)
+  return retry(() => ctx.marketplace.fetchData(client, project, route, roots))
 }
 
 export async function installMarketplaceItem(
@@ -47,9 +56,9 @@ export async function installMarketplaceItem(
   }
 
   try {
-    const result = await ctx.marketplace.install(item, opts, project)
-    if (result.success) await invalidate(ctx, scope, scope === "project" ? project! : dir)
-    return result
+    const route = scope === "project" ? project! : dir
+    const client = await ctx.connection.getClientAsync(route)
+    return await retry(() => ctx.marketplace.install(client, item, opts, route))
   } catch (err) {
     return { success: false, slug: item.id, error: String(err) }
   }
@@ -57,7 +66,7 @@ export async function installMarketplaceItem(
 
 export async function removeMarketplaceItem(
   ctx: MarketplaceActionContext,
-  item: MarketplaceItem,
+  item: MarketplaceItemRef,
   scope: "project" | "global",
   project: string | undefined,
   dir: string,
@@ -68,9 +77,9 @@ export async function removeMarketplaceItem(
 
   try {
     if (item.type === "mcp") await removeLegacyMcp(ctx, item.id, project, scope)
-    const result = await ctx.marketplace.remove(item, scope, project)
-    if (result.success) await invalidate(ctx, scope, scope === "project" ? project! : dir)
-    return result
+    const route = scope === "project" ? project! : dir
+    const client = await ctx.connection.getClientAsync(route)
+    return await retry(() => ctx.marketplace.remove(client, item, scope, route))
   } catch (err) {
     return { success: false, slug: item.id, error: String(err) }
   }
@@ -84,47 +93,23 @@ export async function removeMarketplaceItemFromAllScopes(
 ): Promise<boolean> {
   try {
     if (item.type === "mcp") await removeLegacyMcp(ctx, item.id, project, "all")
-    const local = project ? await ctx.remove(item, "project", project) : undefined
-    const global = await ctx.remove(item, "global", project)
-    if (!local?.success && !global.success) return false
-    await invalidate(ctx, global.success ? "global" : "project", global.success ? dir : project!)
-    return true
+    const local = project ? await removeScoped(ctx, item, "project", project) : undefined
+    const global = await removeScoped(ctx, item, "global", dir)
+    return Boolean(local?.success || global.success)
   } catch (err) {
     console.warn("[Kilo New] Marketplace removal failed:", err)
     return false
   }
 }
 
-async function fetchSkills(ctx: MarketplaceActionContext, dir: string) {
-  try {
-    const client = await ctx.connection.getClientAsync(dir)
-    const { data } = await retry(() => client.app.skills({ directory: dir }, { throwOnError: true }))
-    return data
-  } catch (err) {
-    console.warn("[Kilo New] Failed to fetch CLI skills for marketplace:", err)
-    return undefined
-  }
-}
-
-async function invalidate(
-  ctx: { connection: KiloConnectionService },
+async function removeScoped(
+  ctx: MarketplaceRemoveContext,
+  item: MarketplaceItemRef,
   scope: "project" | "global",
   dir: string,
-): Promise<void> {
-  const client = await ctx.connection.getClientAsync(dir).catch((err: unknown) => {
-    console.warn("[Kilo New] Marketplace CLI invalidation deferred:", err)
-    return null
-  })
-  if (!client) return
-
-  if (scope === "global") {
-    await client.global.config.update({ config: {} }).catch((err: unknown) => {
-      console.warn("[Kilo New] global.config.update after marketplace change failed:", err)
-    })
-  }
-  await client.instance.dispose({ directory: dir }).catch((err: unknown) => {
-    console.warn("[Kilo New] instance.dispose() after marketplace change failed:", err)
-  })
+) {
+  const client = await ctx.connection.getClientAsync(dir)
+  return retry(() => ctx.marketplace.remove(client, item, scope, dir))
 }
 
 async function removeLegacyMcp(

@@ -14,7 +14,8 @@ export interface McpInstallationMethod {
 
 export interface MarketplaceSuggestFor {
   filename?: string[]
-  vscode_extension?: string[]
+  // The CLI marketplace API returns extension ids either as strings or { name, id } objects.
+  vscode_extension?: Array<string | { name: string; id: string }>
 }
 
 export interface MarketplaceItemBase {
@@ -51,15 +52,6 @@ export interface AgentContent {
 export interface AgentMarketplaceItem extends MarketplaceItemBase {
   type: "agent"
   content: AgentContent
-}
-
-export interface RawSkill {
-  id: string
-  description: string
-  category: string
-  githubUrl: string
-  content: string
-  suggest_for?: MarketplaceSuggestFor
 }
 
 export interface SkillMarketplaceItem extends MarketplaceItemBase {

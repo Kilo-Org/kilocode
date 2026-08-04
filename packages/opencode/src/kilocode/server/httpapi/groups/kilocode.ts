@@ -24,6 +24,13 @@ import {
 } from "@/kilocode/notebook/protocol"
 import { ModelUsage } from "@/kilocode/session/model-usage"
 import { SessionID } from "@/session/schema"
+import {
+  MarketplaceInstallPayload,
+  MarketplaceInstallResult,
+  MarketplaceListResult,
+  MarketplaceRemovePayload,
+  MarketplaceRemoveResult,
+} from "@/kilocode/marketplace/schema"
 
 const root = "/kilocode"
 
@@ -49,6 +56,9 @@ export const KilocodePaths = {
   agentRequirements: `${root}/agent/requirements`,
   removeSkill: `${root}/skill/remove`,
   removeAgent: `${root}/agent/remove`,
+  marketplaceList: `${root}/marketplace`,
+  marketplaceInstall: `${root}/marketplace/install`,
+  marketplaceRemove: `${root}/marketplace/remove`,
   notebookList: `${root}/notebook`,
   notebookReply: `${root}/notebook/:requestID/reply`,
   notebookReject: `${root}/notebook/:requestID/reject`,
@@ -106,6 +116,40 @@ export const KilocodeApi = HttpApi.make("kilocode")
             summary: "Remove a custom agent",
             description:
               "Remove a custom (non-native) agent by deleting its markdown file from disk and refreshing state.",
+          }),
+        ),
+        HttpApiEndpoint.get("marketplaceList", KilocodePaths.marketplaceList, {
+          query: WorkspaceRoutingQuery,
+          success: described(MarketplaceListResult, "Marketplace catalog and installed metadata"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.marketplace.list",
+            summary: "List marketplace items",
+            description: "Fetch marketplace catalog items and detect the items installed for the routed workspace.",
+          }),
+        ),
+        HttpApiEndpoint.post("marketplaceInstall", KilocodePaths.marketplaceInstall, {
+          query: WorkspaceRoutingQuery,
+          payload: MarketplaceInstallPayload,
+          success: described(MarketplaceInstallResult, "Marketplace install result"),
+          error: HttpApiError.BadRequest,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.marketplace.install",
+            summary: "Install a marketplace item",
+            description: "Install a marketplace MCP server, agent, or skill into project or global Kilo config.",
+          }),
+        ),
+        HttpApiEndpoint.post("marketplaceRemove", KilocodePaths.marketplaceRemove, {
+          query: WorkspaceRoutingQuery,
+          payload: MarketplaceRemovePayload,
+          success: described(MarketplaceRemoveResult, "Marketplace removal result"),
+          error: HttpApiError.BadRequest,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.marketplace.remove",
+            summary: "Remove a marketplace item",
+            description: "Remove a marketplace MCP server, agent, or skill from project or global Kilo config.",
           }),
         ),
         HttpApiEndpoint.get("notebookList", KilocodePaths.notebookList, {
