@@ -75,6 +75,8 @@ type Input = {
   // kilocode_change start
   telemetry?: ReviewTelemetry
   snapshotInitialization?: "wait"
+  gate?: KiloSessionProcessor.Gate
+  retry?: KiloSessionProcessor.RetryHook
   // kilocode_change end
 }
 
@@ -1322,6 +1324,7 @@ export const layer = Layer.effect(
                 (cause) => !Cause.hasInterruptsOnly(cause),
                 (cause) => Effect.fail(Cause.squash(cause)),
               ),
+              KiloSessionProcessor.gated(input.gate),
               Effect.retry(
                 SessionRetry.policy({
                   provider: input.model.providerID,
@@ -1334,7 +1337,7 @@ export const layer = Layer.effect(
                   }),
                   set: (info) => {
                     if (info.attempt > 0) retries.provider += 1
-                    return setRetry(info)
+                    return KiloSessionProcessor.retry(input.retry, info).pipe(Effect.andThen(setRetry(info)))
                   },
                 }),
               ),
