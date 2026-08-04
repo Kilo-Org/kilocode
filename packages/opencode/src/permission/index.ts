@@ -232,9 +232,8 @@ export const layer = Layer.effect(
         }
         // kilocode_change end
         if (rule.action === "deny") {
-          return yield* new DeniedError({
-            ruleset: subset(request.permission, ruleset), // kilocode_change
-          })
+          // kilocode_change - carry the deciding rule (not just the permission subset) for provenance
+          return yield* new DeniedError({ ruleset: rule })
         }
         // kilocode_change start - skill shell forces a prompt instead of honoring an allow/auto-approve rule
         if (forceAsk) {

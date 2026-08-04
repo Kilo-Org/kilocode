@@ -389,6 +389,7 @@ class SessionUi(
         header = SessionHeaderPanel(controller, this) { openBranchChanges() }
 
         scroll = SessionScroll(root, sessionContent, messageBody, blankBody)
+        messageBody.onReflow = { on -> if (on && !opening) scroll.followTail() }
         scroll.onScroll = {
             overlay.clear()
             popup.hideAll()
@@ -673,6 +674,7 @@ class SessionUi(
         if (width <= 0 || height <= 0) return
         if (body(controller.model.state) !== messageBody) return
         pending = false
+        messageBody.reflow()
         scroll.openBottom {
             opening = false
         }

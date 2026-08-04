@@ -159,7 +159,20 @@ describe("agent_manager tool", () => {
     expect(schema.oneOf).toBeUndefined()
     expect(schema.allOf).toBeUndefined()
     const action = schema.properties?.action
-    expect(action && typeof action === "object" ? action.enum : undefined).toEqual(["list", "prompt", "stop"])
+    expect(action && typeof action === "object" ? action.enum : undefined).toEqual(["list", "prompt", "stop", "move"])
+    expect(action && typeof action === "object" ? action.description : undefined).toContain("Use list first")
+    expect(action && typeof action === "object" ? action.description : undefined).toContain("Never edit")
+    expect(schema.properties?.sessionID).toEqual(
+      expect.objectContaining({ description: expect.stringContaining("returned by action=list") }),
+    )
+    expect(schema.properties?.sectionID).toEqual(
+      expect.objectContaining({ description: expect.stringContaining("Use null to unassign") }),
+    )
+    expect(schema.properties?.sectionID).toEqual(
+      expect.objectContaining({
+        anyOf: expect.arrayContaining([expect.objectContaining({ type: "string" }), { type: "null" }]),
+      }),
+    )
     expect(Object.keys(schema.properties ?? {})).toEqual([
       "mode",
       "versions",
@@ -168,6 +181,7 @@ describe("agent_manager tool", () => {
       "filter",
       "sessionID",
       "prompt",
+      "sectionID",
     ])
   })
 
@@ -226,7 +240,7 @@ describe("agent_manager tool", () => {
     const result = await rt.runPromise(
       provideTmpdirInstance(() =>
         tool.execute(
-          { action: "list" },
+          { action: "list", filter: null },
           { ...ctx, ask: (input: unknown) => Effect.sync(() => permissions.push(input)) },
         ),
       ).pipe(Effect.scoped),
@@ -242,6 +256,8 @@ describe("agent_manager tool", () => {
     ])
     expect(requests).toEqual([{ operation: "overview", sessionID: ctx.sessionID, filter: undefined }])
     expect(JSON.parse(result.output)).toEqual({
+      instructions:
+        "This overview is the source of truth. Use sections[].id as sectionID and sessions[].id/session.id as sessionID for action=move. Do not edit .kilo/agent-manager.json.",
       sections: [],
       ungrouped: [
         {
@@ -342,6 +358,58 @@ describe("agent_manager tool", () => {
     ])
     expect(result.output).toContain("removed it from Agent Manager")
     expect(result.metadata).toEqual(expect.objectContaining({ action: "stop", sessionID: "ses_target" }))
+    await rt.dispose()
+  })
+
+  test("moves one existing session with a separate mutation permission pattern", async () => {
+    const requests: unknown[] = []
+    const rt = makeRuntime("test", {
+      request: (input) =>
+        Effect.sync(() => {
+          requests.push(input)
+          return {
+            operation: "move" as const,
+            sessionID: SessionID.make("ses_target"),
+            sectionID: "sec_review",
+            moved: true as const,
+          }
+        }),
+    })
+    const tool = await rt.runPromise(
+      Effect.gen(function* () {
+        return yield* Tool.init(yield* AgentManagerTool)
+      }),
+    )
+    const permissions: unknown[] = []
+    const result = await rt.runPromise(
+      provideTmpdirInstance(() =>
+        tool.execute(
+          { action: "move", sessionID: SessionID.make("ses_target"), sectionID: "sec_review" },
+          { ...ctx, ask: (input: unknown) => Effect.sync(() => permissions.push(input)) },
+        ),
+      ).pipe(Effect.scoped),
+    )
+
+    expect(permissions).toEqual([
+      {
+        permission: "agent_manager",
+        patterns: ["move"],
+        always: ["move"],
+        metadata: { action: "move", sessionID: "ses_target", sectionID: "sec_review" },
+      },
+    ])
+    expect(requests).toEqual([
+      {
+        operation: "move",
+        sessionID: ctx.sessionID,
+        targetSessionID: "ses_target",
+        sectionID: "sec_review",
+      },
+    ])
+    expect(result.output).toContain("sec_review")
+    expect(result.metadata).toEqual(
+      expect.objectContaining({ action: "move", sessionID: "ses_target", sectionID: "sec_review" }),
+    )
     await rt.dispose()
   })
 

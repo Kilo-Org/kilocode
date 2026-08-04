@@ -42,6 +42,10 @@ import { SessionPrompt } from "../../src/session/prompt"
 import { SessionRevert } from "../../src/session/revert"
 import { SessionRunState } from "../../src/session/run-state"
 import { KiloSession } from "../../src/kilocode/session"
+// kilocode_change start - Item 14 cancel→reprompt proof helpers
+import { KiloSessionPrompt } from "../../src/kilocode/session/prompt"
+import { KiloSessionPromptQueue } from "../../src/kilocode/session/prompt-queue"
+// kilocode_change end
 import { KiloSessions } from "../../src/kilo-sessions/kilo-sessions"
 import { Suggestion } from "../../src/kilocode/suggestion"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
@@ -1245,6 +1249,240 @@ it.instance(
     }),
   10_000,
 )
+
+// kilocode_change start - Item 14 CLI prove-it: cancel settles to Idle promptly,
+// then the same session accepts a new prompt to completion. Covers idle,
+// mid-stream, mid-tool, queued follow-up, and intake-abort paths that mobile
+// stop→send depends on.
+
+it.instance(
+  "cancel when idle is a no-op and the next prompt runs to completion",
+  () =>
+    Effect.gen(function* () {
+      const { llm } = yield* useServerConfig(providerCfg)
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const status = yield* SessionStatus.Service
+      const run = yield* SessionRunState.Service
+      const chat = yield* sessions.create({ title: "Cancel idle then prompt" })
+
+      yield* prompt.cancel(chat.id).pipe(Effect.timeout("250 millis"))
+      expect((yield* status.get(chat.id)).type).toBe("idle")
+      const free = yield* run.assertNotBusy(chat.id).pipe(Effect.exit)
+      expect(Exit.isSuccess(free)).toBe(true)
+
+      yield* llm.text("after-idle-cancel")
+      const result = yield* prompt
+        .prompt({
+          sessionID: chat.id,
+          agent: "build",
+          parts: [{ type: "text", text: "hello after idle cancel" }],
+        })
+        .pipe(Effect.timeout("10 seconds"))
+      expect(result.info.role).toBe("assistant")
+      expect((yield* status.get(chat.id)).type).toBe("idle")
+    }),
+  15_000,
+)
+
+it.instance(
+  "cancel mid-stream reaches idle promptly then reprompt completes",
+  () =>
+    Effect.gen(function* () {
+      const { llm } = yield* useServerConfig(providerCfg)
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const status = yield* SessionStatus.Service
+      const run = yield* SessionRunState.Service
+      const chat = yield* sessions.create({ title: "Cancel stream then prompt" })
+      yield* seed(chat.id)
+      yield* user(chat.id, "stream me")
+
+      yield* llm.hang
+      const first = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
+      yield* llm.wait(1)
+      expect((yield* status.get(chat.id)).type).toBe("busy")
+
+      yield* prompt.cancel(chat.id).pipe(Effect.timeout("1 second"))
+      const stop = yield* Fiber.await(first).pipe(Effect.timeout("2 seconds"))
+      expect(Exit.isSuccess(stop)).toBe(true)
+      expect((yield* status.get(chat.id)).type).toBe("idle")
+      const free = yield* run.assertNotBusy(chat.id).pipe(Effect.exit)
+      expect(Exit.isSuccess(free)).toBe(true)
+
+      yield* llm.text("reprompt-ok")
+      const second = yield* prompt
+        .prompt({
+          sessionID: chat.id,
+          agent: "build",
+          parts: [{ type: "text", text: "send again" }],
+        })
+        .pipe(Effect.timeout("10 seconds"))
+      expect(second.info.role).toBe("assistant")
+      if (second.info.role === "assistant") {
+        expect(second.info.error).toBeUndefined()
+      }
+      expect((yield* status.get(chat.id)).type).toBe("idle")
+    }),
+  20_000,
+)
+
+it.instance(
+  "cancel mid-tool reaches idle promptly then reprompt completes",
+  () =>
+    Effect.gen(function* () {
+      const { llm } = yield* useServerConfig(providerCfg)
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const status = yield* SessionStatus.Service
+      const run = yield* SessionRunState.Service
+      const registry = yield* ToolRegistry.Service
+      const { read } = yield* registry.named()
+      const { ready, aborted, restore } = yield* hangUntilAborted(read)
+      yield* restore
+
+      const chat = yield* sessions.create({ title: "Cancel tool then prompt" })
+      yield* seed(chat.id)
+      yield* user(chat.id, "use a tool")
+
+      // LLM asks for a hanging tool; cancel must abort the tool and free the runner.
+      yield* llm.tool("read", { filePath: "/tmp/item14-cancel-tool.txt" })
+      const first = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
+      yield* awaitWithTimeout(Deferred.await(ready), "tool never started", "10 seconds")
+      expect((yield* status.get(chat.id)).type).toBe("busy")
+
+      yield* prompt.cancel(chat.id).pipe(Effect.timeout("1 second"))
+      const stop = yield* Fiber.await(first).pipe(Effect.timeout("5 seconds"))
+      expect(Exit.isSuccess(stop)).toBe(true)
+      yield* awaitWithTimeout(Deferred.await(aborted), "tool never aborted", "5 seconds")
+      expect((yield* status.get(chat.id)).type).toBe("idle")
+      const free = yield* run.assertNotBusy(chat.id).pipe(Effect.exit)
+      expect(Exit.isSuccess(free)).toBe(true)
+
+      yield* llm.text("after-tool-cancel")
+      const second = yield* prompt
+        .prompt({
+          sessionID: chat.id,
+          agent: "build",
+          parts: [{ type: "text", text: "send after tool cancel" }],
+        })
+        .pipe(Effect.timeout("10 seconds"))
+      expect(second.info.role).toBe("assistant")
+      expect((yield* status.get(chat.id)).type).toBe("idle")
+    }),
+  30_000,
+)
+
+it.instance(
+  "cancel drops a queued follow-up then a fresh prompt runs to completion",
+  () =>
+    Effect.gen(function* () {
+      const { llm } = yield* useServerConfig(providerCfg)
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const status = yield* SessionStatus.Service
+      const run = yield* SessionRunState.Service
+      const chat = yield* sessions.create({ title: "Cancel queued then prompt" })
+
+      // Hang the first turn so a second prompt is forced through the queue.
+      yield* llm.hang
+      const active = yield* prompt
+        .prompt({
+          sessionID: chat.id,
+          agent: "build",
+          parts: [{ type: "text", text: "active turn" }],
+        })
+        .pipe(Effect.forkChild)
+      yield* llm.wait(1)
+      expect((yield* status.get(chat.id)).type).toBe("busy")
+
+      const queued = yield* prompt
+        .prompt({
+          sessionID: chat.id,
+          agent: "build",
+          parts: [{ type: "text", text: "queued follow-up" }],
+        })
+        .pipe(Effect.forkChild)
+      // Wait until the follow-up is actually on the queue (past intake) so cancel
+      // proves the queued-drop path, not abortIntakes of a still-intaking prompt.
+      yield* pollWithTimeout(
+        Effect.sync(() => (KiloSessionPromptQueue.hasFollowup(chat.id) ? (true as const) : undefined)),
+        "follow-up prompt never queued behind the in-flight turn",
+        "3 seconds",
+      )
+
+      yield* prompt.cancel(chat.id).pipe(Effect.timeout("1 second"))
+      yield* Effect.all([Fiber.await(active), Fiber.await(queued)], { concurrency: "unbounded" }).pipe(
+        Effect.timeout("5 seconds"),
+      )
+      // Only the first (interrupted) turn may have hit the LLM; the queued one must not.
+      expect(yield* llm.inputs.pipe(Effect.map((items) => items.length))).toBe(1)
+      expect(KiloSessionPromptQueue.hasFollowup(chat.id)).toBe(false)
+      expect((yield* status.get(chat.id)).type).toBe("idle")
+      const free = yield* run.assertNotBusy(chat.id).pipe(Effect.exit)
+      expect(Exit.isSuccess(free)).toBe(true)
+
+      yield* llm.text("fresh-after-queue-cancel")
+      const again = yield* prompt
+        .prompt({
+          sessionID: chat.id,
+          agent: "build",
+          parts: [{ type: "text", text: "fresh prompt" }],
+        })
+        .pipe(Effect.timeout("10 seconds"))
+      expect(again.info.role).toBe("assistant")
+      expect((yield* status.get(chat.id)).type).toBe("idle")
+    }),
+  30_000,
+)
+
+it.instance(
+  "cancel aborts in-flight intake then a fresh prompt runs to completion",
+  () =>
+    Effect.gen(function* () {
+      const { llm } = yield* useServerConfig(providerCfg)
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const status = yield* SessionStatus.Service
+      const run = yield* SessionRunState.Service
+      const chat = yield* sessions.create({ title: "Cancel intake then prompt" })
+      const sessionID = chat.id
+
+      // Hold an intake fiber the way createUserMessage does; cancelTree must
+      // abort it via abortIntakes so the session is free for the next prompt.
+      const started = yield* Deferred.make<void>()
+      const finished = yield* Deferred.make<void>()
+      const intake = yield* KiloSessionPrompt.intake(
+        sessionID,
+        Effect.gen(function* () {
+          yield* Deferred.succeed(started, undefined)
+          return yield* Effect.never
+        }).pipe(Effect.ensuring(Deferred.succeed(finished, undefined).pipe(Effect.asVoid, Effect.ignore))),
+      ).pipe(Effect.exit, Effect.forkChild)
+      yield* Deferred.await(started).pipe(Effect.timeout("1 second"))
+
+      yield* prompt.cancel(sessionID).pipe(Effect.timeout("1 second"))
+      // Intake work must settle (interrupt/cleanup) promptly after cancel.
+      yield* Deferred.await(finished).pipe(Effect.timeout("2 seconds"))
+      yield* Fiber.await(intake).pipe(Effect.timeout("2 seconds"))
+      expect((yield* status.get(sessionID)).type).toBe("idle")
+      const free = yield* run.assertNotBusy(sessionID).pipe(Effect.exit)
+      expect(Exit.isSuccess(free)).toBe(true)
+
+      yield* llm.text("after-intake-cancel")
+      const result = yield* prompt
+        .prompt({
+          sessionID,
+          agent: "build",
+          parts: [{ type: "text", text: "send after intake cancel" }],
+        })
+        .pipe(Effect.timeout("10 seconds"))
+      expect(result.info.role).toBe("assistant")
+      expect((yield* status.get(sessionID)).type).toBe("idle")
+    }),
+  20_000,
+)
+// kilocode_change end
 
 unix(
   "cancel records MessageAbortedError on interrupted process",

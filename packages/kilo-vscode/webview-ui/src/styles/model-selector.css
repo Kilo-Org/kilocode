@@ -497,6 +497,11 @@
   flex-shrink: 0;
 }
 
+.model-selector-trigger-free-data [data-component="icon"] {
+  width: 14px;
+  height: 14px;
+}
+
 .model-selector-free-data {
   display: inline-flex;
   align-items: center;

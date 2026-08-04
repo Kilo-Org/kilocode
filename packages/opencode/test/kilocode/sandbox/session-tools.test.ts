@@ -157,14 +157,15 @@ const registry = Layer.effect(
 const it = testEffect(registry)
 const mac = process.platform === "darwin" && existsSync("/usr/bin/sandbox-exec") ? it.live : it.live.skip
 
-function resolve(ctx: InstanceContext) {
+function resolve(ctx: InstanceContext, metadataCalls: { toolCallID: string; value: Record<string, any> }[] = []) {
   return SessionTools.resolve({
     agent,
     model,
     session: session(ctx.directory),
     processor: {
       message: message(ctx),
-      metadata: () => Effect.void,
+      // capture metadata writes so tests can assert on recorded approval provenance
+      metadata: (toolCallID, value) => Effect.sync(() => void metadataCalls.push({ toolCallID, value })),
       completeToolCall: () => Effect.void,
     },
     bypassAgentCheck: false,
@@ -353,5 +354,31 @@ mac("confines a model-originated sandboxed process to the active worktree", () =
     expect(yield* exists(active)).toBe(true)
     expect(yield* exists(sibling)).toBe(false)
     expect(yield* exists(primary)).toBe(false)
+  }),
+)
+
+it.live("records why a denied tool call was refused on the tool part's metadata", () =>
+  Effect.gen(function* () {
+    const dirs = yield* fixture()
+    const metadataCalls: { toolCallID: string; value: Record<string, any> }[] = []
+    const deniedRule = { permission: "bash", pattern: "*", action: "deny" as const, source: "project" as const }
+    const overrides = Layer.mergeAll(
+      TestConfig.layer({ get: () => Effect.succeed({ sandbox: { enabled: false } }) }),
+      Layer.mock(Permission.Service)({
+        ask: () => Effect.fail(new Permission.DeniedError({ ruleset: deniedRule })),
+      }),
+    )
+    const tools = yield* resolve(dirs.ctx, metadataCalls).pipe(Effect.provide(overrides))
+    const shell = tools.bash
+    if (!shell) yield* Effect.die(new Error("bash tool is missing"))
+
+    const result = yield* call(shell, { command: "echo hi", workdir: dirs.a }, "call-denied").pipe(Effect.exit)
+
+    expect(Exit.isFailure(result)).toBe(true)
+    const approval = metadataCalls.find((c) => c.toolCallID === "call-denied")?.value?.metadata?.approval
+    expect(approval).toEqual({
+      source: "project",
+      rule: { permission: "bash", pattern: "*", action: "deny" },
+    })
   }),
 )
