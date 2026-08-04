@@ -150,17 +150,41 @@ internal class KiloDiffEditorService(
         val dir = params["directory"].takeIfPresent() ?: return DiffEditorData.Empty
         val workspace = service<KiloWorkspaceService>()
         val store = project.service<KiloInlineDiffStore>()
+        val session = project.service<KiloSessionService>()
         val files = when (params["source"]) {
             // branch is authoritative here (no store seeding): recompute on every load/refresh so a
             // re-open or Refresh always reflects the current worktree instead of a stale click seed.
             "branch" -> workspace.branchDiff(dir)
             "inline" -> store.get(params["token"].orEmpty()).orEmpty()
-            else -> project.service<KiloSessionService>().diff(params["sessionId"].orEmpty(), dir)
+            else -> session.diff(params["sessionId"].orEmpty(), dir)
         }
         if (files.isEmpty()) return DiffEditorData.Empty
         val branch = params["branch"].takeIfPresent()
             ?: if (params["source"] == "branch") workspace.branchName(dir) else null
-        return DiffEditorData.Files(files, branch)
+        return DiffEditorData.Files(detail(params, dir, files, session), branch)
+    }
+
+    private suspend fun detail(
+        params: Map<String, String>,
+        dir: String,
+        files: List<DiffFileDto>,
+        session: KiloSessionService,
+    ): List<DiffFileDto> {
+        if (params["source"] == "branch") return files
+        val id = params["sessionId"].takeIfPresent() ?: return files
+        val message = message(params)
+        return files.map { file ->
+            runCatching { session.diffFile(id, dir, file.file, message) }
+                .getOrNull()
+                ?: file
+        }
+    }
+
+    private fun message(params: Map<String, String>): String? {
+        val token = params["token"].takeIfPresent() ?: return null
+        val parts = token.split(":", limit = 3)
+        if (parts.size != 3 || parts[0] != "turn") return null
+        return parts[2].takeIfPresent()
     }
 
     private companion object {

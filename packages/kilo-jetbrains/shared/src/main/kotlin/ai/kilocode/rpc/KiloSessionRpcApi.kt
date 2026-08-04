@@ -103,6 +103,9 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
     /** Load cumulative file changes for a session. */
     suspend fun diff(id: String, directory: String): List<DiffFileDto>
 
+    /** Load one full-content diff entry for a session or turn editor tab. */
+    suspend fun diffFile(id: String, directory: String, file: String, messageId: String?): DiffFileDto?
+
     /** Load one attachment part from a session without returning full history to the frontend. */
     suspend fun attachmentPart(id: String, directory: String, messageId: String, partId: String, attachmentKey: String?): PartDto?
 

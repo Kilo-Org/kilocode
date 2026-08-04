@@ -34,6 +34,8 @@ export const FileDiff = Schema.Struct({
   // session response and broke session loading on Desktop.
   file: Schema.optional(Schema.String),
   patch: Schema.optional(Schema.String),
+  before: Schema.optional(Schema.String), // kilocode_change
+  after: Schema.optional(Schema.String), // kilocode_change
   additions: Schema.Finite,
   deletions: Schema.Finite,
   status: Schema.optional(Schema.Literals(["added", "deleted", "modified"])),
@@ -64,6 +66,7 @@ interface GitResult {
 }
 
 export const MAX_DIFF_SIZE = 256 * 1024 // kilocode_change
+export const MAX_DIFF_DETAIL_SIZE = 20 * 1024 * 1024 // kilocode_change
 
 type State = Omit<Interface, "init">
 
@@ -82,6 +85,7 @@ export interface Interface {
   readonly revert: (patches: Patch[]) => Effect.Effect<void>
   readonly diff: (hash: string) => Effect.Effect<string>
   readonly diffFull: (from: string, to: string) => Effect.Effect<FileDiff[]>
+  readonly diffFile: (from: string, to: string, file: string) => Effect.Effect<FileDiff | undefined> // kilocode_change
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/Snapshot") {}
@@ -883,6 +887,78 @@ export const layer: Layer.Layer<Service, never, Requirements> =
             )
           })
 
+          // kilocode_change start - lazy full-content detail for editor diff tabs
+          const diffFile = Effect.fnUntraced(function* (from: string, to: string, file: string) {
+            return yield* locked(
+              Effect.gen(function* () {
+                const statuses = yield* git(
+                  [...quote, ...args(["diff", "--no-ext-diff", "--name-status", "--no-renames", from, to, "--", file])],
+                  { cwd: state.directory },
+                )
+                const row = statuses.text.trim().split("\n").find(Boolean)
+                if (!row) return
+                const [code] = row.split("\t")
+                const status = code?.startsWith("A") ? "added" : code?.startsWith("D") ? "deleted" : "modified"
+
+                const numstat = yield* git(
+                  [...quote, ...args(["diff", "--no-ext-diff", "--no-renames", "--numstat", from, to, "--", file])],
+                  { cwd: state.directory },
+                )
+                const stat = numstat.text.trim().split("\n").find(Boolean)
+                const [adds, dels] = stat?.split("\t") ?? []
+                const binary = adds === "-" && dels === "-"
+                const additions = binary ? 0 : Number.parseInt(adds ?? "0", 10)
+                const deletions = binary ? 0 : Number.parseInt(dels ?? "0", 10)
+
+                const patch = binary
+                  ? ""
+                  : ((yield* DiffFull.batch(
+                      (cmd) => git([...quote, ...args(cmd)], { cwd: state.directory }),
+                      from,
+                      to,
+                      [file],
+                    )).get(file) ?? "")
+
+                if (binary) {
+                  return {
+                    file,
+                    patch,
+                    additions: Number.isFinite(additions) ? additions : 0,
+                    deletions: Number.isFinite(deletions) ? deletions : 0,
+                    status,
+                  }
+                }
+
+                const content = yield* Effect.all(
+                  {
+                    before:
+                      status === "added"
+                        ? Effect.succeed("")
+                        : git([...cfg, ...args(["show", `${from}:${file}`])]).pipe(Effect.map((item) => item.text)),
+                    after:
+                      status === "deleted"
+                        ? Effect.succeed("")
+                        : git([...cfg, ...args(["show", `${to}:${file}`])]).pipe(Effect.map((item) => item.text)),
+                  },
+                  { concurrency: 2 },
+                )
+                const before = Buffer.byteLength(content.before) <= MAX_DIFF_DETAIL_SIZE ? content.before : undefined
+                const after = Buffer.byteLength(content.after) <= MAX_DIFF_DETAIL_SIZE ? content.after : undefined
+
+                return {
+                  file,
+                  patch,
+                  before,
+                  after,
+                  additions: Number.isFinite(additions) ? additions : 0,
+                  deletions: Number.isFinite(deletions) ? deletions : 0,
+                  status,
+                }
+              }),
+            )
+          })
+          // kilocode_change end
+
           yield* materialize() // kilocode_change - resume interrupted snapshot object materialization
 
           yield* cleanup().pipe(
@@ -968,6 +1044,12 @@ export const layer: Layer.Layer<Service, never, Requirements> =
           return yield* Effect.promise(() => pending)
           // kilocode_change end
         }),
+        // kilocode_change start - lazy full-content detail for editor diff tabs
+        diffFile: Effect.fn("Snapshot.diffFile")(function* (from: string, to: string, file: string) {
+          if (from === to) return
+          return yield* InstanceState.useEffect(state, (s) => s.diffFile(from, to, file))
+        }),
+        // kilocode_change end
       })
     }),
   )

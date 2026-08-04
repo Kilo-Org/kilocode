@@ -67,7 +67,7 @@ function unquoteGitPath(input: string) {
 
 export interface Interface {
   readonly summarize: (input: { sessionID: SessionID; messageID: MessageID }) => Effect.Effect<void>
-  readonly diff: (input: { sessionID: SessionID; messageID?: MessageID }) => Effect.Effect<Snapshot.FileDiff[]>
+  readonly diff: (input: DiffInput) => Effect.Effect<Snapshot.FileDiff[]> // kilocode_change
   readonly computeDiff: (input: { messages: SessionV1.WithParts[] }) => Effect.Effect<Snapshot.FileDiff[]>
 }
 
@@ -82,10 +82,11 @@ export const layer = Layer.effect(
     const config = yield* Config.Service
     const storage = yield* Storage.Service // kilocode_change
 
-    const computeDiff = Effect.fn("SessionSummary.computeDiff")(function* (input: { messages: SessionV1.WithParts[] }) {
+    // kilocode_change start - share snapshot ref extraction with lazy diff detail
+    const refs = (messages: SessionV1.WithParts[]) => {
       let from: string | undefined
       let to: string | undefined
-      for (const item of input.messages) {
+      for (const item of messages) {
         if (!from) {
           for (const part of item.parts) {
             if (part.type === "step-start" && part.snapshot) {
@@ -98,9 +99,29 @@ export const layer = Layer.effect(
           if (part.type === "step-finish" && part.snapshot) to = part.snapshot
         }
       }
+      return { from, to }
+    }
+    // kilocode_change end
+
+    // kilocode_change start - reuse snapshot refs for lazy diff detail
+    const computeDiff = Effect.fn("SessionSummary.computeDiff")(function* (input: { messages: SessionV1.WithParts[] }) {
+      const { from, to } = refs(input.messages) // kilocode_change
       if (from && to) return yield* snapshot.diffFull(from, to)
       return []
     })
+    // kilocode_change end
+
+    // kilocode_change start - lazy full-content detail for editor diff tabs
+    const computeFile = Effect.fn("SessionSummary.computeFile")(function* (input: {
+      messages: SessionV1.WithParts[]
+      file: string
+    }) {
+      const { from, to } = refs(input.messages)
+      if (!from || !to) return []
+      const diff = yield* snapshot.diffFile(from, to, input.file)
+      return diff ? [diff] : []
+    })
+    // kilocode_change end
 
     const summarize = Effect.fn("SessionSummary.summarize")(function* (input: {
       sessionID: SessionID
@@ -144,7 +165,19 @@ export const layer = Layer.effect(
       yield* sessions.updateMessage(target.info)
     })
 
-    const diff = Effect.fn("SessionSummary.diff")(function* (input: { sessionID: SessionID; messageID?: MessageID }) {
+    const diff = Effect.fn("SessionSummary.diff")(function* (input: DiffInput) { // kilocode_change
+      // kilocode_change start - compute on-demand full-file detail from turn/session snapshots
+      if (input.full && input.file) {
+        const all = yield* sessions.messages({ sessionID: input.sessionID }).pipe(Effect.orDie)
+        const messages = input.messageID
+          ? all.filter(
+              (m) => m.info.id === input.messageID || (m.info.role === "assistant" && m.info.parentID === input.messageID),
+            )
+          : all
+        return yield* computeFile({ messages, file: input.file })
+      }
+      // kilocode_change end
+
       // kilocode_change start - retain cumulative diffs for legacy TUI and VS Code consumers
       if (!input.messageID) {
         const diffs = yield* storage
@@ -192,6 +225,8 @@ export const defaultLayer = Layer.suspend(() =>
 export const DiffInput = Schema.Struct({
   sessionID: SessionID,
   messageID: Schema.optional(MessageID),
+  full: Schema.optional(Schema.Boolean), // kilocode_change
+  file: Schema.optional(Schema.String), // kilocode_change
 })
 export type DiffInput = Schema.Schema.Type<typeof DiffInput>
 

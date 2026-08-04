@@ -22,13 +22,16 @@ internal fun diffRequest(
     val status = fileStatus(dto)
     val patch = dto.patch?.takeIf { it.isNotBlank() }
     val fallback = patch ?: KiloBundle.message("diff.editor.patch.unavailable")
+    val full = dto.before != null && dto.after != null
     val left = when {
+        full -> factory.create(project, dto.before.orEmpty(), type)
         DiffPatchReconstruct.added(dto.patch) -> factory.createEmpty()
         sides.renderable -> factory.create(project, sides.before, type)
         status == FileStatus.DELETED -> factory.create(project, fallback, type)
         else -> factory.createEmpty()
     }
     val right = when {
+        full -> factory.create(project, dto.after.orEmpty(), type)
         DiffPatchReconstruct.deleted(dto.patch) -> factory.createEmpty()
         sides.renderable -> factory.create(project, sides.after, type)
         status == FileStatus.DELETED -> factory.createEmpty()
