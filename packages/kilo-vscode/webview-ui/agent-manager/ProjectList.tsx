@@ -218,6 +218,7 @@ export const ProjectList: Component<Props> = (props) => {
           sessions={props.sessions[project.id]}
           selectedProject={props.selectedProject}
           selection={props.selection}
+          currentSessionID={props.currentSessionID}
           bindings={props.bindings}
           t={props.t}
           onSelectLocal={(projectId) => select({ projectId, kind: "local" })}
