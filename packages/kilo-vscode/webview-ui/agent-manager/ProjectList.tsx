@@ -34,7 +34,9 @@ interface Props {
   selection?: string
   currentSessionID?: () => string | undefined
   mode: ModeRouter
-  busy?: (id: string) => boolean
+  busy?: (projectId: string, id: string) => boolean
+  working?: (projectId: string, id: string) => boolean
+  localBusy?: (projectId: string) => boolean
   bindings: Record<string, string>
   t: LanguageContextValue["t"]
   onSearchRef: (ref: SidebarSearchMenuRef) => void
@@ -212,6 +214,9 @@ export const ProjectList: Component<Props> = (props) => {
           project={project}
           state={props.states[project.id]}
           store={props.store?.(project.id)}
+          busy={(id) => props.busy?.(project.id, id) ?? false}
+          working={(id) => props.working?.(project.id, id) ?? false}
+          localBusy={() => props.localBusy?.(project.id) ?? false}
           stats={props.stats[project.id]}
           local={props.local[project.id]}
           prs={props.prs[project.id]}
