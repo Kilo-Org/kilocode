@@ -401,7 +401,7 @@ describe("buildProjectNavOrder", () => {
     expect(order.map((e) => e.id)).toEqual([localNavId("A"), worktreeNavId("A", "aw2")])
   })
 
-  it("renders section members before ungrouped worktrees (matching the project body)", () => {
+  it("renders ungrouped worktrees before section members (matching the project body)", () => {
     const order = buildProjectNavOrder([
       project({
         id: "A",
@@ -411,7 +411,76 @@ describe("buildProjectNavOrder", () => {
         unassigned: [],
       }),
     ])
-    expect(order.map((e) => e.id)).toEqual([localNavId("A"), worktreeNavId("A", "aw1"), worktreeNavId("A", "aw2")])
+    expect(order.map((e) => e.id)).toEqual([localNavId("A"), worktreeNavId("A", "aw2"), worktreeNavId("A", "aw1")])
+  })
+
+  it("follows persisted top-level section order and worktree order", () => {
+    const order = buildProjectNavOrder([
+      project({
+        id: "A",
+        expanded: true,
+        worktrees: [{ id: "aw1", sectionId: "s1" }, { id: "aw2" }, { id: "aw3", sectionId: "s2" }],
+        worktreeOrder: ["aw2", "s2", "s1", "aw3", "aw1"],
+        sections: [
+          { id: "s1", collapsed: false },
+          { id: "s2", collapsed: false },
+        ],
+        unassigned: [],
+      }),
+    ])
+
+    expect(order.map((e) => e.id)).toEqual([
+      localNavId("A"),
+      worktreeNavId("A", "aw2"),
+      worktreeNavId("A", "aw3"),
+      worktreeNavId("A", "aw1"),
+    ])
+  })
+
+  it("keeps multi-version worktrees adjacent", () => {
+    const order = buildProjectNavOrder([
+      project({
+        id: "A",
+        expanded: true,
+        worktrees: [{ id: "aw1", groupId: "g" }, { id: "aw2" }, { id: "aw3", groupId: "g" }],
+        worktreeOrder: ["aw1", "aw2", "aw3"],
+        sections: [],
+        unassigned: [],
+      }),
+    ])
+
+    expect(order.map((e) => e.id)).toEqual([
+      localNavId("A"),
+      worktreeNavId("A", "aw1"),
+      worktreeNavId("A", "aw3"),
+      worktreeNavId("A", "aw2"),
+    ])
+  })
+
+  it("matches raw ungrouped order when sections are present", () => {
+    const order = buildProjectNavOrder([
+      project({
+        id: "A",
+        expanded: true,
+        worktrees: [
+          { id: "aw1", groupId: "g" },
+          { id: "aw2" },
+          { id: "aw3", groupId: "g" },
+          { id: "aw4", sectionId: "s1" },
+        ],
+        worktreeOrder: ["aw1", "aw2", "aw3", "s1", "aw4"],
+        sections: [{ id: "s1", collapsed: false }],
+        unassigned: [],
+      }),
+    ])
+
+    expect(order.map((e) => e.id)).toEqual([
+      localNavId("A"),
+      worktreeNavId("A", "aw1"),
+      worktreeNavId("A", "aw2"),
+      worktreeNavId("A", "aw3"),
+      worktreeNavId("A", "aw4"),
+    ])
   })
 
   it("excludes unassigned sessions when the sessions section is collapsed", () => {

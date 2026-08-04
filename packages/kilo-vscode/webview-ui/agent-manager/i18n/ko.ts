@@ -63,6 +63,7 @@ export const dict = {
 
   "agentManager.terminal.new": "새 터미널 탭",
   "agentManager.terminal.ended": "터미널 종료됨 — 탭을 닫아 해제",
+  "agentManager.terminal.endedRestartable": "터미널 종료됨 - 입력하여 새 셸을 시작하거나 탭을 닫으세요",
   "agentManager.terminal.setupFailed": "설정 스크립트 실패",
   "agentManager.terminal.setupFailedCode": "종료 코드로 설정 스크립트 실패",
   "agentManager.terminal.stopSetup": "설정 스크립트 중지",

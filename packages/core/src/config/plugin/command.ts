@@ -29,22 +29,33 @@ export const Plugin = PluginV2.define({
     }).pipe(Effect.map((documents) => documents.flat()))
 
     yield* transform((editor) => {
-      for (const document of documents) {
-        for (const [name, command] of Object.entries(document.commands ?? {})) {
-          editor.update(name, (item) => {
-            item.template = command.template
-            if (command.description !== undefined) item.description = command.description
-            if (command.agent !== undefined) item.agent = command.agent
-            if (command.model !== undefined) {
-              const model = ModelV2.parse(command.model)
-              item.model = { id: model.modelID, providerID: model.providerID, variant: item.model?.variant }
-            }
-            if (command.variant !== undefined && item.model !== undefined) {
-              item.model.variant = ModelV2.VariantID.make(command.variant)
-            }
-            if (command.subtask !== undefined) item.subtask = command.subtask
-          })
+      const items = documents.flatMap((document) => Object.entries(document.commands ?? {}))
+      // Register every template first, preserving the normal source priority for
+      // metadata in the second pass. // kilocode_change
+      for (const [name, command] of items) {
+        if (command.template === undefined) {
+          continue
         }
+        const template = command.template
+        editor.update(name, (item) => {
+          item.template = template
+        })
+      }
+      for (const [name, command] of items) {
+        if (command.template === undefined && !editor.get(name)) continue // kilocode_change
+        editor.update(name, (item) => {
+          if (command.description !== undefined) item.description = command.description
+          if (command.agent !== undefined) item.agent = command.agent
+          if (command.model !== undefined) {
+            const model = ModelV2.parse(command.model)
+            item.model = { id: model.modelID, providerID: model.providerID, variant: item.model?.variant }
+          }
+          if (command.variant !== undefined) item.variant = ModelV2.VariantID.make(command.variant) // kilocode_change
+          if (command.variant !== undefined && item.model !== undefined) {
+            item.model.variant = ModelV2.VariantID.make(command.variant)
+          }
+          if (command.subtask !== undefined) item.subtask = command.subtask
+        })
       }
     })
   }),
