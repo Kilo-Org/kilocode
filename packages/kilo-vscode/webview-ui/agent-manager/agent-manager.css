@@ -796,7 +796,7 @@ html[data-theme="kilo-vscode"]
 }
 
 .am-run-badge[data-run-state="stopping"] {
-  --am-run-accent: #fbbf24;
+  --am-run-accent: var(--vscode-charts-yellow, #fbbf24);
 }
 
 .am-run-badge[data-run-state="success"] {
@@ -804,7 +804,7 @@ html[data-theme="kilo-vscode"]
 }
 
 .am-run-badge[data-run-state="error"] {
-  --am-run-accent: #f87171;
+  --am-run-accent: var(--vscode-testing-iconFailed, #f87171);
 }
 
 @keyframes am-run-pulse {
@@ -854,11 +854,11 @@ html[data-theme="kilo-vscode"]
 }
 
 .am-stat-additions {
-  color: #34d399;
+  color: var(--vscode-testing-iconPassed, #34d399);
 }
 
 .am-stat-deletions {
-  color: #f87171;
+  color: var(--vscode-testing-iconFailed, #f87171);
 }
 
 /* PR badge accent colors via classList */
@@ -962,35 +962,35 @@ html[data-theme="kilo-vscode"]
 }
 
 .am-worktree-item-active .am-stat-files {
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-weak);
 }
 
 .am-worktree-item-active .am-stat-additions {
-  color: #6ee7b7;
+  color: var(--vscode-testing-iconPassed, #6ee7b7);
 }
 
 .am-worktree-item-active .am-stat-deletions {
-  color: #fca5a5;
+  color: var(--vscode-testing-iconFailed, #fca5a5);
 }
 
 .am-worktree-commits {
-  color: #34d399;
+  color: var(--vscode-testing-iconPassed, #34d399);
 }
 
 .am-worktree-behind {
-  color: #f87171;
+  color: var(--vscode-testing-iconFailed, #f87171);
 }
 
 .am-worktree-item-active .am-worktree-commits {
-  color: #6ee7b7;
+  color: var(--vscode-testing-iconPassed, #6ee7b7);
 }
 
 .am-worktree-item-active .am-worktree-behind {
-  color: #fca5a5;
+  color: var(--vscode-testing-iconFailed, #fca5a5);
 }
 
 .am-local-item-active .am-worktree-behind {
-  color: #fca5a5;
+  color: var(--vscode-testing-iconFailed, #fca5a5);
 }
 
 .am-local-item:hover .am-worktree-stats,
@@ -1664,7 +1664,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-sidebar-search-status {
-  color: #fbbf24;
+  color: var(--vscode-charts-yellow, #fbbf24);
   text-transform: uppercase;
 }
 
@@ -1759,9 +1759,10 @@ body.am-wt-dragging-active * {
   color: var(--text-base);
 }
 
-.am-diff-toggle-btn.am-tab-diff-btn-active {
-  background: var(--surface-interactive-base) !important;
-  color: var(--text-base) !important;
+.am-diff-toggle-btn.am-tab-diff-btn-active,
+.am-diff-toggle-btn.am-tab-diff-btn-active:hover {
+  background: var(--surface-interactive-base);
+  color: var(--text-on-interactive-base);
 }
 
 .am-diff-toggle-btn.am-diff-toggle-has-changes {
@@ -1775,20 +1776,24 @@ body.am-wt-dragging-active * {
 }
 
 .am-diff-toggle-btn.am-tab-diff-btn-active .am-stat-files {
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-weak);
 }
 
 .am-diff-toggle-btn.am-tab-diff-btn-active .am-stat-additions {
-  color: #6ee7b7;
+  color: var(--vscode-testing-iconPassed, #6ee7b7);
 }
 
 .am-diff-toggle-btn.am-tab-diff-btn-active .am-stat-deletions {
-  color: #fca5a5;
+  color: var(--vscode-testing-iconFailed, #fca5a5);
 }
 
 .am-tab-diff-btn-active {
   background: var(--surface-interactive-base) !important;
-  color: var(--text-base) !important;
+  color: var(--text-on-interactive-base) !important;
+}
+
+.am-tab-diff-btn-active [data-slot="icon-svg"] {
+  color: var(--text-on-interactive-base) !important;
 }
 
 .am-detail-content {
@@ -2899,9 +2904,10 @@ body.am-wt-dragging-active * {
   color: var(--text-base);
 }
 
-.am-nv-pill-active {
-  background: var(--border-focus, #007fd4) !important;
-  color: #fff !important;
+.am-nv-pill-active,
+.am-nv-pill-active:hover {
+  background: var(--border-focus, #007fd4);
+  color: var(--text-on-interactive-base);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
