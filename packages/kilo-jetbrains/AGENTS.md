@@ -170,6 +170,8 @@ For blocking I/O in coroutines, move the dispatcher switch inside the callee usi
 
 The JetBrains plugin has two independent CLI controls. Use the commands below directly when asked to change either one; do not hand-edit versions by guesswork.
 
+For a one-shot pin/unpin/regen that also cleans every leftover CLI binary and build artifact in the current worktree, use the `jetbrains-cli-pin` skill (`.kilo/skills/jetbrains-cli-pin/SKILL.md`): `bun .kilo/skills/jetbrains-cli-pin/script/cli-pin.ts <pin|unpin|regen|clean>`.
+
 **Pin mode** (`kilo.cli.pinned` in `packages/kilo-jetbrains/gradle.properties`) controls release CLI vs local repo CLI.
 
 | Ask | Do |
