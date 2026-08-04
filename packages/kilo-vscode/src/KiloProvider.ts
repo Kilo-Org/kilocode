@@ -4685,6 +4685,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private getWorkspaceDirectory(sessionId?: string): string {
+    const session = this.currentSession
+    if (sessionId && session?.id === sessionId) {
+      return this.getSessionDirectory(sessionId, session)
+    }
     const routed = this.routeSessionDirectory(sessionId ?? undefined)
     // Ambiguous ids degrade to the legacy resolution instead of throwing: this
     // runs eagerly per webview message, where a throw would drop the message.
