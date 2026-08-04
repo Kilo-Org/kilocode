@@ -52,15 +52,11 @@ function isCatalogModel(value: unknown): value is CatalogModel {
 }
 
 function toModel(model: CatalogModel): SpeechToTextModelDef {
-  const provider = model.name.split(":", 1)[0]?.trim() || model.id.split("/", 1)[0] || "Kilo Gateway"
+  const index = model.name.indexOf(":")
+  const provider = index === -1 ? model.id.split("/", 1)[0] || "Kilo Gateway" : model.name.slice(0, index).trim()
   return {
     id: model.id,
-    label: model.name.includes(":") ? model.name.slice(model.name.indexOf(":") + 1).trim() : model.name,
+    label: index === -1 ? model.name : model.name.slice(index + 1).trim(),
     provider,
-    ...(isVerbatim(model.id) ? { verbatim: true } : {}),
   }
-}
-
-function isVerbatim(id: string): boolean {
-  return id === "openai/gpt-4o-mini-transcribe" || id === "openai/gpt-4o-transcribe"
 }

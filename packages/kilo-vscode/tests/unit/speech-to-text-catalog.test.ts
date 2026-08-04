@@ -13,6 +13,10 @@ describe("speech-to-text discovery", () => {
         id: "openai/gpt-4o-mini-transcribe",
         name: "OpenAI: GPT-4o Mini Transcribe",
       },
+      {
+        id: "openai/whisper-1",
+        name: "Whisper 1",
+      },
     ])
 
     expect(models).toEqual([
@@ -21,10 +25,9 @@ describe("speech-to-text discovery", () => {
         id: "openai/gpt-4o-mini-transcribe",
         label: "GPT-4o Mini Transcribe",
         provider: "OpenAI",
-        verbatim: true,
       },
+      { id: "openai/whisper-1", label: "Whisper 1", provider: "openai" },
     ])
-    expect(models?.find((model) => model.id === "openai/gpt-4o-mini-transcribe")?.verbatim).toBe(true)
   })
 
   it("rejects empty or malformed catalogs so callers can use the static fallback", () => {
