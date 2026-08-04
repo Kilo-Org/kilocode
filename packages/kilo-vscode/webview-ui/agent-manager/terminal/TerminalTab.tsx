@@ -200,7 +200,7 @@ export const TerminalTab: Component<Props> = (props) => {
     let streamed = false
     let socketEnded = false
     let frame: number | undefined
-    let next: number | undefined
+    let deferred: number | undefined
     // The failure line must not depend on event ordering: the stream can
     // close before the exited snapshot lands (fast failures), or stay open
     // when a background child outlives the script. Write it exactly once,
@@ -332,7 +332,7 @@ export const TerminalTab: Component<Props> = (props) => {
     // until after the first frame so their startup work, especially the
     // Unicode 15 width tables, does not delay the shell connection.
     const loadAddons = () => {
-      next = undefined
+      deferred = undefined
       if (closed) return
 
       // Clickable URLs in terminal output (Cmd/Ctrl+click to open).
@@ -352,7 +352,7 @@ export const TerminalTab: Component<Props> = (props) => {
     }
     frame = requestAnimationFrame(() => {
       frame = undefined
-      next = requestAnimationFrame(loadAddons)
+      deferred = requestAnimationFrame(loadAddons)
     })
 
     const restarted = (url: string) => {
@@ -523,7 +523,7 @@ export const TerminalTab: Component<Props> = (props) => {
       closed = true
       if (pendingFrame !== null) cancelAnimationFrame(pendingFrame)
       if (frame !== undefined) cancelAnimationFrame(frame)
-      if (next !== undefined) cancelAnimationFrame(next)
+      if (deferred !== undefined) cancelAnimationFrame(deferred)
       document.removeEventListener("visibilitychange", onVisibilityChange)
       window.removeEventListener("focus", onWindowFocus)
       host.removeEventListener("focusin", onFocusIn)
