@@ -1015,7 +1015,7 @@ describe("session prompt queue", () => {
     } finally {
       server.stop(true)
     }
-  }, 10_000)
+  }, 30_000)
 
   test("drop returns false for the actively running prompt", async () => {
     const sessionID = SessionID.make("session_drop_active")

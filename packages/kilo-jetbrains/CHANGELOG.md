@@ -1,5 +1,15 @@
 # Changelog
 
+## 7.4.18
+
+### Patch Changes
+
+- [#12746](https://github.com/Kilo-Org/kilocode/pull/12746) [`1a506a7`](https://github.com/Kilo-Org/kilocode/commit/1a506a712c43d317a5a34b250df16845b641eff8) - Keep the JetBrains prompt send/stop button in sync when attachments are added or removed while a session is busy.
+
+- [#12746](https://github.com/Kilo-Org/kilocode/pull/12746) [`64f0373`](https://github.com/Kilo-Org/kilocode/commit/64f0373056b75546a015816dc0f18b1e380ad93f) - Fix JetBrains diff views to show compact workspace-relative file paths and keep added-file content visible in large branch diffs.
+
+- [#12746](https://github.com/Kilo-Org/kilocode/pull/12746) [`c1f6a75`](https://github.com/Kilo-Org/kilocode/commit/c1f6a75377b438edfc5c3b5dd85ebdc301302e7a) - Fix JetBrains chat transcripts rendering cropped when opening existing sessions.
+
 ## 7.5.0
 
 ### Minor Changes
@@ -150,6 +160,7 @@
 ## [7.0.12-rc.4] - 2026-08-01
 
 ### Fixed
+
 - Improve large branch diff performance by capping huge inline diff previews, compacting diff tree paths, and allowing horizontal scrolling for long file names.
 - Reflow existing long chat sessions after they load so transcripts lay out at the correct width without needing to resize the tool window.
 - Keep the prompt send/stop button synchronized when attachments are added, removed, or cleared while a session is busy.

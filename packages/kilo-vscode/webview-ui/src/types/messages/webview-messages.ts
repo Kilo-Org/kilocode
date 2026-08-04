@@ -23,6 +23,7 @@ import type { MemoryShowMessage, MemoryOperationMessage, RequestMemoryMessage } 
 
 export interface SendMessageRequest {
   type: "sendMessage"
+  projectId?: string
   text: string
   messageID?: string
   sessionID?: string
@@ -515,6 +516,10 @@ export interface RequestKiloEmbeddingModelsMessage {
 
 export interface RequestImageModelsMessage {
   type: "requestImageModels"
+}
+
+export interface RequestSpeechToTextModelsMessage {
+  type: "requestSpeechToTextModels"
 }
 
 export interface OpenSettingsTabRequest {
@@ -1584,6 +1589,7 @@ export type WebviewMessage =
   | AgentManagerTerminalDestinationSelectedRequest
   | AgentManagerTerminalResizeRequest
   | RequestImageModelsMessage
+  | RequestSpeechToTextModelsMessage
 
 // ============================================
 // VS Code API type

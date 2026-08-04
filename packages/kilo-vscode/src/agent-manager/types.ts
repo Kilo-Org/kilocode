@@ -266,6 +266,8 @@ interface SessionClosedMessage {
 
 interface MultiVersionProgressMessage {
   type: "agentManager.multiVersionProgress"
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
   status: "creating" | "done"
   total: number
   completed: number
@@ -274,6 +276,8 @@ interface MultiVersionProgressMessage {
 
 interface SetSessionModelMessage {
   type: "agentManager.setSessionModel"
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
   sessionId: string
   providerID: string
   modelID: string
@@ -281,6 +285,8 @@ interface SetSessionModelMessage {
 
 interface SendInitialMessage {
   type: "agentManager.sendInitialMessage"
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
   sessionId: string
   worktreeId: string
   text?: string
@@ -800,6 +806,7 @@ interface FileSourceIn {
 
 interface SendMessageIn {
   type: "sendMessage"
+  projectId?: string
   text: string
   messageID?: string
   sessionID?: string
