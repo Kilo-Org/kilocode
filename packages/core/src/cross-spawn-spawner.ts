@@ -273,17 +273,16 @@ export const make = Effect.gen(function* () {
       const signal = Deferred.makeUnsafe<readonly [code: number | null, signal: NodeJS.Signals | null]>()
       const proc = launch(command.command, command.args, opts)
       tapStdio(proc) // kilocode_change - must run in the same tick as spawn
-      let end = false
       let exit: readonly [code: number | null, signal: NodeJS.Signals | null] | undefined
       proc.on("error", (err) => {
         resume(Effect.fail(toPlatformError("spawn", err, command)))
       })
       proc.on("exit", (...args) => {
         exit = args
+        Deferred.doneUnsafe(signal, Exit.succeed(args)) // kilocode_change - settle before inherited output pipes close
       })
       proc.on("close", (...args) => {
-        if (end) return
-        end = true
+        // kilocode_change - cross-spawn can suppress `exit` for a Windows ENOENT and only emit `close`
         Deferred.doneUnsafe(signal, Exit.succeed(exit ?? args))
       })
       proc.on("spawn", () => {
@@ -325,6 +324,18 @@ export const make = Effect.gen(function* () {
       if (proc.kill(signal)) return Effect.void
       return Effect.fail(toPlatformError("kill", new Error("Failed to kill child process"), command))
     })
+
+  // kilocode_change start - detect descendants left in an exited command's owned process group
+  const groupAlive = (proc: NodeChildProcess.ChildProcess) => {
+    if (process.platform === "win32") return false
+    try {
+      process.kill(-proc.pid!, 0)
+      return true
+    } catch {
+      return false
+    }
+  }
+  // kilocode_change end
 
   const timeout =
     (
@@ -409,10 +420,14 @@ export const make = Effect.gen(function* () {
               const done = yield* Deferred.isDone(signal)
               const kill = timeout(proc, command, target.options) // kilocode_change
               if (done) {
-                const [code] = yield* Deferred.await(signal)
+                // kilocode_change start - direct exit can precede descendants and inherited pipe closure
                 if (process.platform === "win32") return yield* Effect.void
-                if (code !== 0 && Predicate.isNotNull(code)) return yield* Effect.ignore(kill(killGroup))
+                if (!groupAlive(proc)) return yield* Effect.void
+                yield* Effect.ignore(killGroup(command, proc, target.options.killSignal ?? "SIGTERM"))
+                yield* Effect.sleep("100 millis")
+                if (groupAlive(proc)) yield* Effect.ignore(killGroup(command, proc, "SIGKILL"))
                 return yield* Effect.void
+                // kilocode_change end
               }
               const send = (s: NodeJS.Signals) =>
                 Effect.catch(killGroup(command, proc, s), () => killOne(command, proc, s))
