@@ -1844,12 +1844,12 @@ function ToolMetaLine(props: {
   )
 }
 
-function ToolChanges(props: { changes: DiffValue; animate?: boolean }) {
+function ToolChanges(props: { changes: DiffValue; animate?: boolean; slot?: string }) {
   let ref: HTMLDivElement | undefined
   useToolFade(() => ref, { delay: 0.04, animate: props.animate })
 
   return (
-    <div ref={ref}>
+    <div ref={ref} data-slot={props.slot}>
       <DiffChanges changes={props.changes} />
     </div>
   )
@@ -2764,7 +2764,16 @@ ToolRegistry.register({
                       />
                     )}
                   </Show>
-                  <Show when={!single() && subtitle()}>{(text) => <ToolText text={text()} animate={reveal()} />}</Show>
+                  <Show when={!single() && subtitle()}>
+                    {(text) => (
+                      <>
+                        <ToolText text={text()} animate={reveal()} />
+                        <Show when={files().some((file) => file.additions > 0 || file.deletions > 0)}>
+                          <ToolChanges changes={files()} animate={reveal()} slot="message-part-tool-changes" />
+                        </Show>
+                      </>
+                    )}
+                  </Show>
                 </div>
               </div>
             </div>
@@ -2790,18 +2799,9 @@ ToolRegistry.register({
                 >
                   <For each={files()}>
                     {(file) => {
-                      const active = createMemo(() => expanded().includes(file.filePath))
-                      const [visible, setVisible] = createSignal(false)
-                      createEffect(() => {
-                        if (!active()) {
-                          setVisible(false)
-                          return
-                        }
-                        requestAnimationFrame(() => {
-                          if (!active()) return
-                          setVisible(true)
-                        })
-                      })
+                      // Diff defers its own expensive render; mounting the container
+                      // here avoids dropping the last item during batch expansion.
+                      const active = createMemo(() => allExpanded().includes(file.filePath))
 
                       return (
                         <Accordion.Item value={file.filePath} data-type={file.type}>
@@ -2855,7 +2855,7 @@ ToolRegistry.register({
                             </Accordion.Trigger>
                           </StickyAccordionHeader>
                           <Accordion.Content>
-                            <Show when={visible() && view(file)}>
+                            <Show when={active() && view(file)}>
                               {(diff) => (
                                 <div data-component="apply-patch-file-diff">
                                   <Dynamic
@@ -3087,4 +3087,10 @@ ToolRegistry.register({
       />
     )
   },
+})
+
+import { ChartTool } from "./chart"
+ToolRegistry.register({
+  name: "chart",
+  render: ChartTool,
 })

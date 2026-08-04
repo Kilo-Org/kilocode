@@ -76,6 +76,7 @@ import { ProviderShell } from "../src/context/provider-shell"
 import { ChatView } from "../src/components/chat"
 import HistoryView from "../src/components/history/HistoryView"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
+import { createModeRouter } from "./mode-router"
 import { ProjectList } from "./ProjectList"
 import { SidebarBody } from "./SidebarBody"
 import { TabBar } from "./TabBar"
@@ -88,6 +89,7 @@ import type { WorktreeBusyState } from "./project/store"
 import { rememberTarget, restoreProjectTarget } from "./project/restore"
 import { createProjectStateRouter } from "./project/state"
 import { applyRunStatus } from "./project/run-status"
+import { clearMultiVersionBusy, markMultiVersionBusy } from "./project/progress"
 import { selectLocalAction, selectWorktreeAction } from "./selection-actions"
 import { DataBridge } from "../src/App"
 import { LanguageBridge } from "../src/context/language-bridge"
@@ -102,7 +104,7 @@ import {
   focusChatSearch,
   LOCAL,
 } from "./navigate"
-import { createProjectNav } from "./project-nav"
+import { buildProjectNavEntries, createProjectNav } from "./project-nav"
 import {
   addPendingTab as addLocalPendingTab,
   nextTabAfterClose,
@@ -158,6 +160,7 @@ import {
   isGrouped,
   isGroupStart,
   isGroupEnd,
+  sortWorktrees,
   type TopLevelItem,
 } from "./section-helpers"
 import {} from "./section-dnd"
@@ -171,8 +174,10 @@ import { createMarkdownRender } from "./review-preferences"
 import { createSidebarCollapse } from "./sidebar-collapse"
 import { SidebarToggleButton } from "./SidebarToggleButton"
 import { setTabWidths } from "./tab-widths"
+import { clampPanelWidth, maxPanelWidth, minPanelWidth } from "./side-panel-layout"
 import { buildShortcutCategories } from "./shortcuts"
 import { tracker } from "./telemetry"
+import { createChatFocus, hasQuestionOption } from "./focus"
 import "./agent-manager.css"
 import "./agent-manager-review.css"
 import { cycleAgent as cycle } from "../src/context/session-agent"
@@ -227,6 +232,7 @@ const AgentManagerContent: Component = () => {
   const session = useSession()
   const vscode = useVSCode()
   const dialog = useDialog()
+  const mode = createModeRouter()
   let sidebarSearchMenu: SidebarSearchMenuRef | undefined
 
   const [kb, setKb] = createSignal<Record<string, string>>(defaultBindings)
@@ -269,7 +275,7 @@ const AgentManagerContent: Component = () => {
   const MAX_SIDEBAR_WIDTH_RATIO = 0.4
 
   // Recover persisted local session IDs from webview state
-  const persisted = vscode.getState<PersistedProjectTabs & { sidebarWidth?: number }>()
+  const persisted = vscode.getState<PersistedProjectTabs & { sidebarWidth?: number; sidePanelWidth?: number }>()
   const registry = createProjectRegistry({
     persisted: persisted ?? {},
     activeId: () => currentProjectId() ?? "single",
@@ -309,26 +315,15 @@ const AgentManagerContent: Component = () => {
   const diffLoading = diffs.diffLoading
   const setDiffLoading = diffs.setDiffLoading
   const diffNotices = diffs.diffNotices
-  // The diff and terminal panels each remember their own width: a diff
-  // benefits from half the window, a terminal only needs about a third.
-  const TERMINAL_MIN_WIDTH = 360
-  const TERMINAL_MAX_WIDTH = 640
-  const [diffWidth, setDiffWidth] = createSignal(Math.round(window.innerWidth * 0.5))
-  const [terminalWidth, setTerminalWidth] = createSignal(
-    Math.min(TERMINAL_MAX_WIDTH, Math.max(TERMINAL_MIN_WIDTH, Math.round(window.innerWidth / 3))),
-  )
-  // The hidden-but-mounted host still fits the terminal, so pick the
-  // terminal's width whenever one is alive and no other mode is showing.
-  const widthMode = () => sidePanel() ?? (terms.sides().length > 0 ? "terminal" : null)
-  const hostWidth = () => (widthMode() === "terminal" ? terminalWidth() : diffWidth())
-  const sideMin = () => (widthMode() === "terminal" ? TERMINAL_MIN_WIDTH : 200)
+  // Diff and terminal views share one inspector width, restored from webview
+  // state so the user's divider position survives panel reloads.
+  const [panelWidth, setPanelWidth] = createSignal(clampPanelWidth(persisted?.sidePanelWidth, window.innerWidth))
   const resizeSide = (width: number) => {
-    pendingSideWidth = Math.max(sideMin(), Math.min(width, window.innerWidth * 0.8))
+    pendingSideWidth = clampPanelWidth(width, window.innerWidth)
     if (sideRaf !== undefined) return
     sideRaf = requestAnimationFrame(() => {
       sideRaf = undefined
-      if (widthMode() === "terminal") setTerminalWidth(pendingSideWidth!)
-      else setDiffWidth(pendingSideWidth!)
+      setPanelWidth(pendingSideWidth!)
     })
   }
   const showSideTerminal = () => {
@@ -377,7 +372,96 @@ const AgentManagerContent: Component = () => {
     const sel = selection()
     return sel === null ? null : nsKey(sel)
   })
+  const requestChatFocus = createChatFocus({
+    term: () => terms.activeId(),
+    history,
+    review: reviewActive,
+  })
 
+  createEffect(
+    on(
+      () => {
+        const id = session.currentSessionID()
+        return `${id ?? ""}:${session
+          .scopedQuestions(id)
+          .map((question) => question.id)
+          .join(",")}`
+      },
+      () => {
+        requestChatFocus()
+      },
+      { defer: true },
+    ),
+  )
+
+  type FocusOwner = "prompt" | { terminal: string }
+  const focusMemory = new Map<string, FocusOwner>()
+  const focusKey = () => {
+    const context = terms.sideKey()
+    const sessionID = session.currentSessionID() ?? activePendingId() ?? "new"
+    return `${context}:${sessionID}`
+  }
+  const forgetSessionFocus = (sessionID: string) => {
+    for (const key of focusMemory.keys()) if (key.endsWith(`:${sessionID}`)) focusMemory.delete(key)
+  }
+  const forgetContextFocus = (context: string) => {
+    for (const key of focusMemory.keys()) if (key.startsWith(`${context}:`)) focusMemory.delete(key)
+  }
+  const forgetTerminalFocus = (terminalID: string) => {
+    for (const [key, owner] of focusMemory) {
+      if (owner !== "prompt" && owner.terminal === terminalID) focusMemory.delete(key)
+    }
+  }
+  const rememberPromptFocus = (focused: boolean) => {
+    if (focused) focusMemory.set(focusKey(), "prompt")
+  }
+  const terminalVisible = () => sidePanel() === "terminal" && !history() && !reviewActive()
+  const focusOnDraftChange = () => {
+    const key = focusKey()
+    const owner = focusMemory.get(key)
+    if (!owner || owner === "prompt") return true
+    if (!terms.sidesForContext(terms.sideKey()).some((term) => term.id === owner.terminal)) {
+      focusMemory.delete(key)
+      return true
+    }
+    return terminalVisible() ? false : true
+  }
+  const restoreFocus = () => {
+    const key = focusKey()
+    const owner = focusMemory.get(key)
+    if (owner && owner !== "prompt") {
+      const context = terms.sideKey()
+      const terminal = terms.sidesForContext(context).find((term) => term.id === owner.terminal)
+      if (terminal && terminalVisible()) {
+        terms.setSideActive(context, terminal.id)
+        terms.requestFocus(terminal.id)
+        return
+      }
+      if (!terminal) focusMemory.delete(key)
+    }
+    requestChatFocus()
+  }
+  createEffect(
+    on(
+      () => terms.focusedId(),
+      (id) => {
+        if (!id) return
+        const key = terms.contextFor(id)
+        if (!key || !terms.sidesForContext(key).some((term) => term.id === id)) return
+        focusMemory.set(focusKey(), { terminal: id })
+      },
+      { defer: true },
+    ),
+  )
+  createEffect(
+    on(
+      focusKey,
+      (_key, previous) => {
+        if (previous !== undefined) queueMicrotask(restoreFocus)
+      },
+      { defer: true },
+    ),
+  )
   // Ambient setup reveal restores the panel after success unless the user engaged.
   const ambientSetup = createAmbientSetup({
     terms,
@@ -549,6 +633,7 @@ const AgentManagerContent: Component = () => {
     },
     key: () => registry.active().id,
     width: sidebarWidth,
+    panelWidth,
     get: () => vscode.getState<Record<string, unknown>>(),
     set: (value) => vscode.setState(value),
   })
@@ -772,42 +857,20 @@ const AgentManagerContent: Component = () => {
   /** True when a local session is actively working. */
   const isLocalBusy = (): boolean => isAnySessionBusy(localSessionIDs())
 
+  const projectBusy = (projectId: string, worktreeId: string | null): boolean => {
+    if (projectId === activeProjectId()) {
+      return worktreeId === null ? isLocalBusy() : isAgentBusy(worktreeId)
+    }
+    const ids = (projectSessionsLive()[projectId] ?? [])
+      .filter((item) => item.worktreeId === worktreeId)
+      .map((item) => item.id)
+    return isAnySessionBusy(ids)
+  }
+
   const isSessionBusy = (id: string): boolean => isAnySessionBusy([id])
 
   /** Worktrees sorted so that grouped items are always adjacent, respecting custom order if set. */
-  const sortedWorktrees = createMemo(() => {
-    const ordered = applyTabOrder(worktrees(), sidebarWorktreeOrder())
-    if (ordered.length === 0) return []
-
-    // Collect grouped worktrees by groupId
-    const grouped = new Map<string, WorktreeState[]>()
-    for (const wt of ordered) {
-      if (!wt.groupId) continue
-      const list = grouped.get(wt.groupId) ?? []
-      list.push(wt)
-      grouped.set(wt.groupId, list)
-    }
-
-    // Build output: interleave groups at the position of their earliest member
-    const result: WorktreeState[] = []
-    const placed = new Set<string>()
-    for (const wt of ordered) {
-      if (placed.has(wt.id)) continue
-      if (wt.groupId) {
-        if (placed.has(wt.groupId)) continue
-        placed.add(wt.groupId)
-        const group = grouped.get(wt.groupId) ?? []
-        for (const g of group) {
-          result.push(g)
-          placed.add(g.id)
-        }
-      } else {
-        result.push(wt)
-        placed.add(wt.id)
-      }
-    }
-    return result
-  })
+  const sortedWorktrees = createMemo(() => sortWorktrees(worktrees(), sidebarWorktreeOrder()))
 
   const worktreesInSection = (id: string) => sortedWorktrees().filter((wt) => wt.sectionId === id)
   const ungrouped = createMemo(() => sortedWorktrees().filter((wt) => !wt.sectionId))
@@ -821,6 +884,11 @@ const AgentManagerContent: Component = () => {
   )
   /** Map from sidebar item id → 1-based shortcut number (⌘1 for LOCAL, ⌘2 for first worktree, etc.) */
   const shortcutMap = createMemo(() => buildShortcutMap(sidebarOrder()))
+  const projectShortcutMap = createMemo(() =>
+    buildShortcutMap(
+      buildProjectNavEntries(projectList(), projectStates(), projectLive.sessions()).map((entry) => ({ id: entry.id })),
+    ),
+  )
 
   const moveToSection = (ids: string[], sec: string | null) =>
     vscode.postMessage({ type: "agentManager.moveToSection", worktreeIds: ids, sectionId: sec })
@@ -843,12 +911,14 @@ const AgentManagerContent: Component = () => {
     setSelection(null)
     setReviewActive(false)
     session.selectSession(id)
+    requestChatFocus(true)
   }
 
   const focusSidebarItem = (item: { type: string; id: string }) => {
     if (item.type === "local") selectLocal()
     else if (item.type === "wt") selectWorktree(item.id)
     else selectUnassigned(item.id)
+    requestChatFocus(true)
     const el = document.querySelector(`[data-sidebar-id="${item.id}"]`)
     if (el instanceof HTMLElement) scrollIntoView(el)
   }
@@ -881,6 +951,7 @@ const AgentManagerContent: Component = () => {
     const next = direction === "left" ? idx - 1 : idx + 1
     if (next < 0 || next >= ids.length) return
     focusTab(ids[next]!)
+    requestChatFocus(true)
   }
 
   const selectionDeps = {
@@ -901,10 +972,15 @@ const AgentManagerContent: Component = () => {
       remembered === REVIEW_TAB_ID && reviewOpenByContext()[sel] === true,
   }
 
-  const selectLocal = () => selectLocalAction(selectionDeps, localSessions())
+  const selectLocal = () => {
+    selectLocalAction(selectionDeps, localSessions())
+    requestChatFocus()
+  }
 
-  const selectWorktree = (worktreeId: string) =>
+  const selectWorktree = (worktreeId: string) => {
     selectWorktreeAction(selectionDeps, worktreeId, sessionsForWorktree(worktreeId))
+    requestChatFocus()
+  }
 
   const addSessionToCurrentWorktree = (sid: string) => {
     const sel = selection()
@@ -924,6 +1000,7 @@ const AgentManagerContent: Component = () => {
     selectWorktree(worktreeId)
     setHistory(false)
     session.selectSession(sid)
+    requestChatFocus()
     return true
   }
 
@@ -1043,6 +1120,7 @@ const AgentManagerContent: Component = () => {
         setSelection,
         setActivePendingId,
       })
+      requestChatFocus()
     }
     // Recover sidebar collapsed state and mark hydrated so transitions enable
     sidebar.hydrate(state.sidebarCollapsed)
@@ -1107,13 +1185,15 @@ const AgentManagerContent: Component = () => {
       else if (msg.action === "advancedWorktree") showNewWorktreeDialog()
       else if (msg.action === "closeWorktree") closeSelectedWorktree()
       else if (msg.action === "showShortcuts") handleShowKeyboardShortcuts()
-      else if (msg.action === "focusInput") window.dispatchEvent(new Event("focusPrompt"))
+      else if (msg.action === "focusInput") requestChatFocus(true)
       else if (msg.action === "focusSearch")
         focusChatSearch({ history: setHistory, review: setReviewActive, terminal: () => terms.setActiveId(undefined) })
       else if (msg.action === "newTerminal") termHandlers.requestNew()
-      else if (msg.action === "cycleAgentMode" && document.hasFocus()) cycleAgent(1)
-      else if (msg.action === "cyclePreviousAgentMode" && document.hasFocus()) cycleAgent(-1)
-      else {
+      else if (msg.action === "cycleAgentMode" && document.hasFocus()) {
+        if (!mode.dispatch(1)) cycleAgent(1)
+      } else if (msg.action === "cyclePreviousAgentMode" && document.hasFocus()) {
+        if (!mode.dispatch(-1)) cycleAgent(-1)
+      } else {
         // Handle jumpTo1 through jumpTo9
         const match = /^jumpTo([1-9])$/.exec(msg.action ?? "")
         if (match) projectNav.jump(parseInt(match[1]!) - 1)
@@ -1188,7 +1268,7 @@ const AgentManagerContent: Component = () => {
     const onWindowFocus = () => {
       document.body.style.pointerEvents = ""
       document.body.style.overflow = ""
-      window.dispatchEvent(new Event("focusPrompt"))
+      restoreFocus()
     }
     window.addEventListener("focus", onWindowFocus)
 
@@ -1234,7 +1314,9 @@ const AgentManagerContent: Component = () => {
     // Mark sessions loaded as soon as the session context receives data (even if empty)
     const unsubSessions = vscode.onMessage((msg) => {
       if (msg.type === "sessionsLoaded" && !sessionsLoaded()) setSessionsLoaded(true)
-      if (msg.type === "agentManager.sessionClosed") handleCloseTab(msg.sessionId, false)
+      if (msg.type === "agentManager.sessionClosed") {
+        handleCloseTab(msg.sessionId, false)
+      }
     })
     const unsubRun = vscode.onMessage((msg) =>
       applyRunStatus(msg, { ensure: (id) => registry.ensure(id), active: () => registry.active() }),
@@ -1251,13 +1333,14 @@ const AgentManagerContent: Component = () => {
         showToast({ variant: "error", title: t("agentManager.terminal.errorTitle"), description: message }),
       postMessage: (message) => vscode.postMessage(message as never),
       onCreated: (contextKey, terminalId) => appendToTabOrder(contextKey, terminalId),
-      onSideCreated: (contextKey, terminalId) => {
+      onSideCreated: (contextKey, terminalId, focus) => {
         // Focus only when the user is still looking at this panel —
         // a slow create landing after a mode switch must not steal it.
-        if (sidePanel() === "terminal" && !history() && !reviewActive() && terms.sideKey() === contextKey) {
+        if (focus && sidePanel() === "terminal" && !history() && !reviewActive() && terms.sideKey() === contextKey) {
           terms.requestFocus(terminalId)
         }
       },
+      onSideClosed: (_contextKey, terminalId) => forgetTerminalFocus(terminalId),
       onScriptRunning: (contextKey, terminalId) => {
         if (terms.sideKey() !== contextKey) return
         // Setup output is informational: reveal without stealing focus, and
@@ -1307,6 +1390,7 @@ const AgentManagerContent: Component = () => {
             const ms = managedSessions().find((s) => s.id === ev.sessionId)
             if (ms?.worktreeId) setSelection(ms.worktreeId)
             evictLocal(ev.sessionId)
+            requestChatFocus(true)
           }
         } else {
           // Track this worktree as setting up and auto-select it in the sidebar
@@ -1335,6 +1419,7 @@ const AgentManagerContent: Component = () => {
         evictLocal(ev.sessionId)
         drafts.apply(ev.worktreeId, ev.sessionId)
         session.selectSession(ev.sessionId)
+        requestChatFocus(true)
       }
 
       if (msg.type === "agentManager.sessionForked") {
@@ -1354,6 +1439,7 @@ const AgentManagerContent: Component = () => {
           evictLocal(ev.sessionId)
         }
         session.selectSession(ev.sessionId)
+        requestChatFocus(true)
       }
 
       if (msg.type === "agentManager.keybindings") {
@@ -1368,13 +1454,8 @@ const AgentManagerContent: Component = () => {
         const ev = msg as unknown as AgentManagerMultiVersionProgressMessage
         if (ev.status === "done" && ev.groupId) {
           // Clear busy state for all worktrees in this group
-          setBusyWorktrees((prev) => {
-            const next = new Map(prev)
-            for (const wt of worktrees()) {
-              if (wt.groupId === ev.groupId) next.delete(wt.id)
-            }
-            return next
-          })
+          const store = ev.projectId ? registry.ensure(ev.projectId) : registry.active()
+          clearMultiVersionBusy(store, ev.groupId)
         }
       }
 
@@ -1383,11 +1464,8 @@ const AgentManagerContent: Component = () => {
       if (msg.type === "agentManager.worktreeSetup") {
         const ev = msg as AgentManagerWorktreeSetupMessage
         if (ev.status === "ready" && ev.sessionId) {
-          const ms = managedSessions().find((s) => s.id === ev.sessionId)
-          const wt = ms?.worktreeId ? worktrees().find((w) => w.id === ms.worktreeId) : undefined
-          if (wt?.groupId) {
-            setBusyWorktrees((prev) => new Map([...prev, [wt.id, { reason: "setting-up" as const }]]))
-          }
+          const store = ev.projectId ? registry.ensure(ev.projectId) : registry.active()
+          markMultiVersionBusy(store, ev.sessionId)
         }
       }
 
@@ -1424,7 +1502,8 @@ const AgentManagerContent: Component = () => {
         // Clear busy state — use worktreeId from the message directly
         // to avoid race condition where managedSessions() hasn't updated yet
         if (ev.worktreeId) {
-          setBusyWorktrees((prev) => {
+          const store = ev.projectId ? registry.ensure(ev.projectId) : registry.active()
+          store.setBusy((prev) => {
             const next = new Map(prev)
             next.delete(ev.worktreeId)
             return next
@@ -1790,7 +1869,9 @@ const AgentManagerContent: Component = () => {
   const showNewWorktreeDialog = () => {
     if (!loaded()) return
     expandSidebar()
-    dialog.show(() => <NewWorktreeDialog onClose={() => dialog.close()} defaultBaseBranch={repoDefaultBranch()} />)
+    dialog.show(() => (
+      <NewWorktreeDialog mode={mode} onClose={() => dialog.close()} defaultBaseBranch={repoDefaultBranch()} />
+    ))
   }
 
   const confirmDeleteWorktree = (worktreeId: string) => {
@@ -1800,6 +1881,7 @@ const AgentManagerContent: Component = () => {
     // Second press/click: execute the delete
     if (pendingDelete() === worktreeId) {
       cancelPendingDelete()
+      forgetContextFocus(nsKey(worktreeId))
       setBusyWorktrees((prev) => new Map([...prev, [wt.id, { reason: "deleting" as const }]]))
       vscode.postMessage({ type: "agentManager.deleteWorktree", worktreeId: wt.id })
       if (selection() === wt.id) {
@@ -1891,6 +1973,7 @@ const AgentManagerContent: Component = () => {
     setSelection(LOCAL)
     setReviewActive(false)
     session.selectSession(sid)
+    requestChatFocus()
     vscode.postMessage({ type: "agentManager.openLocally", sessionId: sid })
   }
 
@@ -1939,6 +2022,7 @@ const AgentManagerContent: Component = () => {
         session.clearCurrentSession()
       }
     }
+    forgetSessionFocus(sessionId)
     if (pending || localSet().has(sessionId)) {
       setLocalSessionIDs((prev) => prev.filter((id) => id !== sessionId))
     }
@@ -1998,7 +2082,7 @@ const AgentManagerContent: Component = () => {
       cancelAmbientSetup()
       setSidePanel(null)
     },
-    refocus: () => window.dispatchEvent(new Event("focusPrompt")),
+    refocus: requestChatFocus,
     postMessage: (msg) => vscode.postMessage(msg as never),
     track: (button, surface, properties) => metrics.track(button, surface, properties),
     // Panel-local pick, immune to cross-window setting echoes (see side.ts).
@@ -2094,7 +2178,7 @@ const AgentManagerContent: Component = () => {
     return activeTabs().find((s) => s.id === id)
   })
 
-  const focusTab = (id: string) =>
+  const focusTab = (id: string) => {
     focusCurrentTab({
       id,
       terms,
@@ -2110,6 +2194,7 @@ const AgentManagerContent: Component = () => {
       selectSession: session.selectSession,
       activateTerminal: termHandlers.activate,
     })
+  }
   const tabFocus = createTabFocus({ ids: () => tabIds(), select: focusTab })
 
   // Close the currently active tab via keyboard shortcut.
@@ -2249,6 +2334,10 @@ const AgentManagerContent: Component = () => {
           <ProjectList
             projects={projectList()}
             states={projectStates()}
+            store={(id) => registry.ensure(id)}
+            busy={(projectId, id) => registry.ensure(projectId).busy().has(id)}
+            working={(projectId, id) => projectBusy(projectId, id)}
+            localBusy={(projectId) => projectBusy(projectId, null)}
             stats={projectLive.stats()}
             local={projectLive.local()}
             prs={projectLive.prs()}
@@ -2256,10 +2345,12 @@ const AgentManagerContent: Component = () => {
             selectedProject={activeProjectId()}
             selection={selection() ?? undefined}
             currentSessionID={session.currentSessionID}
+            mode={mode}
             bindings={kb()}
             t={t}
             onSearchRef={(ref) => (sidebarSearchMenu = ref)}
             onShortcuts={handleShowKeyboardShortcuts}
+            shortcutMap={projectShortcutMap}
           />
         </Show>
         <Show when={!multiProject()}>
@@ -2372,20 +2463,6 @@ const AgentManagerContent: Component = () => {
           track={metrics.click}
         />
 
-        {/* Empty worktree state */}
-        <Show when={contextEmpty()}>
-          <div class="am-empty-state">
-            <div class="am-empty-state-icon">
-              <Icon name="branch" size="large" />
-            </div>
-            <div class="am-empty-state-text">{t("agentManager.session.noSessions")}</div>
-            <Button variant="primary" size="small" onClick={handleAddSession}>
-              {t("agentManager.session.new")}
-              <span class="am-shortcut-hint">{kb().newTab ?? ""}</span>
-            </Button>
-          </div>
-        </Show>
-
         <Show when={overlay()}>
           {(state) => (
             <div class="am-setup-overlay">
@@ -2418,6 +2495,7 @@ const AgentManagerContent: Component = () => {
                 saveTabMemory()
                 session.selectSession(id)
                 setSelection(LOCAL)
+                requestChatFocus(true)
                 return
               }
               const ms = worktreeSessionIds().has(id) ? managedSessions().find((s) => s.id === id) : undefined
@@ -2425,6 +2503,7 @@ const AgentManagerContent: Component = () => {
                 selectWorktree(ms.worktreeId)
                 session.selectSession(id)
                 setReviewActive(false)
+                requestChatFocus()
                 return
               }
               openLocally(id)
@@ -2479,6 +2558,7 @@ const AgentManagerContent: Component = () => {
                         if (localSessionIDs().includes(id)) {
                           session.selectSession(id)
                           if (selection() === null) setSelection(LOCAL)
+                          requestChatFocus()
                           return
                         }
                         // Navigate to owning worktree instead of forcing into local mode
@@ -2488,6 +2568,7 @@ const AgentManagerContent: Component = () => {
                             selectWorktree(ms.worktreeId)
                             session.selectSession(id)
                             setReviewActive(false)
+                            requestChatFocus()
                             return
                           }
                         }
@@ -2499,7 +2580,10 @@ const AgentManagerContent: Component = () => {
                       readonly={readOnly()}
                       continueInWorktree={selection() === LOCAL}
                       promptBoxId={`agent-manager:${selection() ?? "unassigned"}`}
+                      deferFocusToQuestion={hasQuestionOption}
                       pendingSessionID={selection() === LOCAL ? activePendingId() : undefined}
+                      focusOnDraftChange={focusOnDraftChange}
+                      onFocusChange={rememberPromptFocus}
                     />
                     <Show when={readOnly()}>
                       <div class="am-readonly-banner">
@@ -2543,16 +2627,16 @@ const AgentManagerContent: Component = () => {
               <Show when={sidePanel() !== null || terms.sides().length > 0}>
                 <div
                   class={`am-diff-resize ${sidePanel() === null ? "am-side-host-hidden" : ""}`}
-                  style={{ width: `${hostWidth()}px` }}
+                  style={{ width: `${panelWidth()}px` }}
                   inert={sidePanel() === null}
                 >
                   <Show when={sidePanel() !== null}>
                     <ResizeHandle
                       direction="horizontal"
                       edge="start"
-                      size={hostWidth()}
-                      min={sideMin()}
-                      max={Math.round(window.innerWidth * 0.8)}
+                      size={panelWidth()}
+                      min={minPanelWidth(window.innerWidth)}
+                      max={maxPanelWidth(window.innerWidth)}
                       onResize={resizeSide}
                     />
                   </Show>

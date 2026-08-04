@@ -17,11 +17,14 @@ function stored(id: string, trusted = false): StoredProject {
   }
 }
 
-function setup(opts: { workspace?: string; enabled?: boolean; projects?: StoredProject[] } = {}) {
+function setup(
+  opts: { workspace?: string; enabled?: boolean; projects?: StoredProject[]; expanded?: Record<string, boolean> } = {},
+) {
   const registryProjects = opts.projects ?? []
   const registry = {
     list: () => registryProjects,
     get: (id: string) => registryProjects.find((p) => p.id === id),
+    expanded: (id: string) => opts.expanded?.[id],
   }
   const created: string[] = []
   const contexts = new ProjectContexts({
@@ -205,6 +208,34 @@ describe("ProjectContexts", () => {
     expect(list[0]!.trusted).toBe(true)
     expect(list[1]!.label).toBe("prj-extra")
     expect(list[1]!.initialized).toBe(false)
+  })
+
+  it("keeps the pinned project expanded before active state is initialized", () => {
+    const { contexts } = setup({ workspace: WORKSPACE })
+
+    expect(contexts.isExpanded(PINNED)).toBe(true)
+  })
+
+  it("hydrates persisted project expansion without initializing the project", () => {
+    const extra = stored("prj-extra", true)
+    const { contexts } = setup({
+      workspace: WORKSPACE,
+      enabled: true,
+      projects: [extra],
+      expanded: { [extra.id]: true },
+    })
+
+    const list = contexts.snapshots()
+
+    expect(list[1]!.expanded).toBe(true)
+    expect(list[1]!.initialized).toBe(false)
+    expect(contexts.get(extra.id)).toBeUndefined()
+  })
+
+  it("hydrates a persisted collapsed pinned project", () => {
+    const { contexts } = setup({ workspace: WORKSPACE, expanded: { [PINNED]: false } })
+
+    expect(contexts.snapshots()[0]!.expanded).toBe(false)
   })
 
   it("hides registry projects from snapshots when the flag is off", () => {

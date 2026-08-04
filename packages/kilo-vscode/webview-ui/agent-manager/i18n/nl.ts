@@ -67,6 +67,8 @@ export const dict = {
 
   "agentManager.terminal.new": "Nieuw terminaltabblad",
   "agentManager.terminal.ended": "terminal beëindigd — sluit tabblad om te negeren",
+  "agentManager.terminal.endedRestartable":
+    "terminal beëindigd - typ om een nieuwe shell te starten of sluit het tabblad",
   "agentManager.terminal.setupFailed": "installatiescript mislukt",
   "agentManager.terminal.setupFailedCode": "installatiescript mislukt met exitcode",
   "agentManager.terminal.stopSetup": "Installatiescript stoppen",
