@@ -34,6 +34,8 @@ export const FileDiff = Schema.Struct({
   // session response and broke session loading on Desktop.
   file: Schema.optional(Schema.String),
   patch: Schema.optional(Schema.String),
+  before: Schema.optional(Schema.String), // kilocode_change - full-content sides for editor diff tabs
+  after: Schema.optional(Schema.String), // kilocode_change - full-content sides for editor diff tabs
   additions: Schema.Finite,
   deletions: Schema.Finite,
   status: Schema.optional(Schema.Literals(["added", "deleted", "modified"])),
@@ -82,6 +84,7 @@ export interface Interface {
   readonly revert: (patches: Patch[]) => Effect.Effect<void>
   readonly diff: (hash: string) => Effect.Effect<string>
   readonly diffFull: (from: string, to: string) => Effect.Effect<FileDiff[]>
+  readonly diffFile: (from: string, to: string, file: string) => Effect.Effect<FileDiff | undefined> // kilocode_change - authoritative full-content detail
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/Snapshot") {}
@@ -892,7 +895,23 @@ export const layer: Layer.Layer<Service, never, Requirements> =
             Effect.forkScoped,
           )
 
-          return { cleanup, track, patch, restore, revert, diff, diffFull }
+          // kilocode_change start - authoritative full-content detail for editor diff tabs
+          const diffFile = Effect.fnUntraced(function* (from: string, to: string, file: string) {
+            return yield* locked(
+              DiffFull.detail(
+                {
+                  diff: (cmd) => git([...quote, ...args(cmd)], { cwd: state.directory }),
+                  show: (cmd) => git([...cfg, ...args(cmd)], { cwd: state.directory }),
+                },
+                from,
+                to,
+                file,
+              ),
+            )
+          })
+          // kilocode_change end
+
+          return { cleanup, track, patch, restore, revert, diff, diffFull, diffFile } // kilocode_change - diffFile
         }),
       )
 
@@ -968,6 +987,12 @@ export const layer: Layer.Layer<Service, never, Requirements> =
           return yield* Effect.promise(() => pending)
           // kilocode_change end
         }),
+        // kilocode_change start - authoritative full-content detail for editor diff tabs
+        diffFile: Effect.fn("Snapshot.diffFile")(function* (from: string, to: string, file: string) {
+          if (from === to) return undefined
+          return yield* InstanceState.useEffect(state, (s) => s.diffFile(from, to, file))
+        }),
+        // kilocode_change end
       })
     }),
   )

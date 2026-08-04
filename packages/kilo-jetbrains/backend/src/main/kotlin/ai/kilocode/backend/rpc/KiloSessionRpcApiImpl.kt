@@ -33,6 +33,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.Request
 import ai.kilocode.backend.diff.DiffFullReconstruct
 import java.nio.file.Files
 import java.nio.file.Path
@@ -158,15 +165,50 @@ class KiloSessionRpcApiImpl internal constructor(
             }
     }
 
-    override suspend fun diffSides(directory: String, file: DiffFileDto): DiffFileDto? {
+    override suspend fun diffSides(sessionId: String?, directory: String, file: DiffFileDto, messageId: String?): DiffFileDto? {
         val patch = file.patch
         if (patch.isNullOrBlank()) return null
-        // Full-file diffs are rebuilt locally: read the working-tree file and reverse-apply the hunk
-        // patch to recover the whole "before". No CLI round-trip, so this works against any pinned CLI.
+        // 1) Authoritative: a CLI with full/file support returns whole before/after from the snapshot,
+        //    correct even for historical turns. Older CLIs ignore the params, so we detect the missing
+        //    content and fall through to local reconstruction.
+        if (!sessionId.isNullOrBlank()) authoritative(sessionId, directory, file, messageId)?.let { return it }
+        // 2) Fallback: read the working-tree file and reverse-apply the hunk patch to recover the whole
+        //    "before". No CLI round-trip, so this works against any pinned CLI.
         return withContext(Dispatchers.IO) {
             val after = runCatching { Files.readString(Path.of(directory).resolve(file.file)) }.getOrNull()
             val before = after?.let { DiffFullReconstruct.before(it, patch) }
             if (after != null && before != null) file.copy(before = before, after = after) else null
+        }
+    }
+
+    // Ask the CLI for full before/after via GET /session/:id/diff?full=true&file=...; returns null when
+    // the pinned CLI lacks full/file support (it omits before/after) so the caller falls back locally.
+    private suspend fun authoritative(sessionId: String, directory: String, file: DiffFileDto, messageId: String?): DiffFileDto? {
+        val api = app.api ?: return null
+        return withContext(Dispatchers.IO) {
+            runCatching {
+                val url = (api.baseUrl.trimEnd('/') + "/").toHttpUrlOrNull()
+                    ?.newBuilder()
+                    ?.addPathSegment("session")
+                    ?.addPathSegment(sessionId)
+                    ?.addPathSegment("diff")
+                    ?.addQueryParameter("directory", directory)
+                    ?.addQueryParameter("full", "true")
+                    ?.addQueryParameter("file", file.file)
+                    ?.apply { if (!messageId.isNullOrBlank()) addQueryParameter("messageID", messageId) }
+                    ?.build()
+                    ?: return@runCatching null
+                api.client.newCall(Request.Builder().url(url).get().build()).execute().use { response ->
+                    if (!response.isSuccessful) return@runCatching null
+                    val item = Json.parseToJsonElement(response.body?.string().orEmpty()).jsonArray
+                        .firstOrNull { it.jsonObject["file"]?.jsonPrimitive?.contentOrNull == file.file }
+                        ?.jsonObject
+                        ?: return@runCatching null
+                    val before = item["before"]?.jsonPrimitive?.contentOrNull
+                    val after = item["after"]?.jsonPrimitive?.contentOrNull
+                    if (before != null && after != null) file.copy(before = before, after = after) else null
+                }
+            }.getOrNull()
         }
     }
 

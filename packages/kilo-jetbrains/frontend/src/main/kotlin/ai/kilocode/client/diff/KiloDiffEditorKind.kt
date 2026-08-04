@@ -161,20 +161,32 @@ internal class KiloDiffEditorService(
         if (files.isEmpty()) return DiffEditorData.Empty
         val branch = params["branch"].takeIfPresent()
             ?: if (params["source"] == "branch") workspace.branchName(dir) else null
-        return DiffEditorData.Files(detail(dir, files, session), branch)
+        return DiffEditorData.Files(detail(params, dir, files, session), branch)
     }
 
     // Enrich modified files with full before/after content so the editor shows whole-file diffs.
     // Added/deleted/binary files already render fully from their patch, so they skip the round-trip;
     // a null result (working tree drifted from the patch) falls back to the hunk view.
     private suspend fun detail(
+        params: Map<String, String>,
         dir: String,
         files: List<DiffFileDto>,
         session: KiloSessionService,
-    ): List<DiffFileDto> = files.map { file ->
-        val patch = file.patch
-        if (patch.isNullOrBlank() || DiffPatchReconstruct.added(patch) || DiffPatchReconstruct.deleted(patch)) file
-        else runCatching { session.diffSides(dir, file) }.getOrNull() ?: file
+    ): List<DiffFileDto> {
+        val sessionId = params["sessionId"].takeIfPresent()
+        val message = message(params)
+        return files.map { file ->
+            val patch = file.patch
+            if (patch.isNullOrBlank() || DiffPatchReconstruct.added(patch) || DiffPatchReconstruct.deleted(patch)) file
+            else runCatching { session.diffSides(sessionId, dir, file, message) }.getOrNull() ?: file
+        }
+    }
+
+    // Turn diffs carry a "turn:<sessionId>:<turnId>" token; the turn id is the message the CLI scopes
+    // the authoritative snapshot diff to. Other sources (session, branch) have no per-turn message.
+    private fun message(params: Map<String, String>): String? {
+        val parts = params["token"].takeIfPresent()?.split(":", limit = 3) ?: return null
+        return if (parts.size == 3 && parts[0] == "turn") parts[2].takeIfPresent() else null
     }
 
     private companion object {

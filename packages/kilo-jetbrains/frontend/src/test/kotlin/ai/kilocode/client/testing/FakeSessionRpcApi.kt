@@ -260,7 +260,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
         return diffs[id]?.toList().orEmpty()
     }
 
-    override suspend fun diffSides(directory: String, file: DiffFileDto): DiffFileDto? {
+    override suspend fun diffSides(sessionId: String?, directory: String, file: DiffFileDto, messageId: String?): DiffFileDto? {
         assertNotEdt("diffSides")
         return diffSides[file.file]
     }

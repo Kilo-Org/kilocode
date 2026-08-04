@@ -101,6 +101,8 @@ class MockCliServer : AutoCloseable {
     @Volatile var recentSessions = "[]"
     @Volatile var sessionCreate = """{"id":"ses_test","slug":"test","projectID":"prj_test","directory":"/test","title":"New Session","version":"1.0.0","time":{"created":1000,"updated":1000}}"""
     @Volatile var sessionStatuses = "{}"
+    @Volatile var sessionDiff = "[]"
+    @Volatile var lastSessionDiffPath: String? = null
     @Volatile var summarizeResponse = "true"
     @Volatile var sessionsStatus = 200
     @Volatile var recentSessionsStatus = 200
@@ -430,6 +432,10 @@ class MockCliServer : AutoCloseable {
                     lastSessionRenameBody = body
                     lastSessionRenameMethod = method
                     respond(output, sessionRenameStatus, sessionRenameResponse)
+                }
+                bare.matches(Regex("/session/ses_[^/]+/diff")) && method == "GET" -> {
+                    lastSessionDiffPath = path
+                    respond(output, 200, sessionDiff)
                 }
                 bare.matches(Regex("/session/ses_[^/]+/summarize")) && method == "POST" -> {
                     lastSummarizePath = path
