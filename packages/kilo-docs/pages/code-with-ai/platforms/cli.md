@@ -97,6 +97,8 @@ The `kilo console` command and its browser interface are deprecated and will be 
 | `/copy` | - | Copy latest agent response |
 | `/copy-session` | - | Copy session transcript |
 | `/export` | - | Export session transcript |
+| `/resume-claude [uuid]` | - | Import a Claude Code session transcript |
+| `/resume-codex [uuid]` | - | Import an OpenAI Codex session transcript |
 | `/timestamps` | `/toggle-timestamps` | Show/hide timestamps |
 | `/thinking` | `/toggle-thinking` | Show/hide thinking blocks |
 
@@ -140,6 +142,16 @@ The `kilo console` command and its browser interface are deprecated and will be 
 |---|---|
 | `/init` | Create/update AGENTS.md file for the project |
 | `/review` | Review code changes |
+
+### Importing Claude Code and Codex Sessions
+
+Continue work started in Claude Code or the OpenAI Codex CLI without copying transcripts by hand:
+
+1. Start a new session with `/new` — the import commands only run in an empty session.
+2. Run `/resume-claude` or `/resume-codex`.
+3. Pick one of the 10 most recent sessions for the current directory, or pass a session UUID directly, for example `/resume-claude <uuid>`.
+
+Kilo discovers Claude Code transcripts under `~/.claude/projects/` and Codex CLI rollouts under `~/.codex/sessions/`. The imported history keeps its original order and ends with an import notice. Content that Kilo cannot represent, such as some tool outputs, is skipped and counted in that notice.
 
 ## Local Code Reviews
 
@@ -506,6 +518,10 @@ Selecting an "Always run" option will:
 3. Auto-approve future matching commands, including matching approvals already waiting in other open sessions
 
 Kilo only saves the pattern you select. Approving a specific command does not approve redirected variants or broader command patterns unless that broader option is shown and selected.
+
+### Pasting Large Text
+
+Pasting a large block of text (five or more lines, or over 800 characters) into the prompt collapses it into a placeholder such as `[Pasted ~6 lines]` to keep the prompt readable. To view or edit the pasted text, paste the same text again — the matching placeholder expands in place.
 
 ## Autonomous Mode (Non-Interactive)
 
