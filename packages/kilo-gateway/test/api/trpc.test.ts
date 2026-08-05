@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, mock, test } from "bun:test"
 import {
   CloudTrpcError,
-  getAutoTopUpState,
-  getCodingPlanUsage,
-  listByokEntries,
-  listCodingPlanSubscriptions,
+  fetchAutoTopUpState,
+  fetchByokEntries,
+  fetchCodingPlanSubscriptions,
+  fetchCodingPlanUsage,
 } from "../../src/api/trpc"
 
 const original = global.fetch
@@ -79,7 +79,7 @@ describe("Cloud tRPC client", () => {
     )
     global.fetch = fn as unknown as typeof fetch
 
-    const subscriptions = await listCodingPlanSubscriptions("secret-token")
+    const subscriptions = await fetchCodingPlanSubscriptions("secret-token")
 
     expect(subscriptions).toHaveLength(1)
     expect(subscriptions[0]).not.toHaveProperty("additive")
@@ -113,7 +113,7 @@ describe("Cloud tRPC client", () => {
     )
     global.fetch = fn as unknown as typeof fetch
 
-    const state = await getAutoTopUpState("token")
+    const state = await fetchAutoTopUpState("token")
     expect(state).toEqual({
       enabled: true,
       amountCents: 5000,
@@ -121,7 +121,7 @@ describe("Cloud tRPC client", () => {
     })
 
     global.fetch = mock(() => Promise.resolve(result([]))) as unknown as typeof fetch
-    await listByokEntries("token")
+    await fetchByokEntries("token")
     const call = (global.fetch as unknown as { mock: { calls: Array<[string, RequestInit]> } }).mock.calls[0]
     const url = new URL(call[0])
     expect(url.pathname).toBe("/api/trpc/byok.list")
@@ -146,7 +146,7 @@ describe("Cloud tRPC client", () => {
       return Promise.resolve(result(payloads[procedure]))
     }) as unknown as typeof fetch
 
-    const usage = await getCodingPlanUsage("token", "plan")
+    const usage = await fetchCodingPlanUsage("token", "plan")
     expect(usage).toEqual(quota())
     const call = (global.fetch as unknown as { mock: { calls: Array<[string]> } }).mock.calls[0]
     expect(JSON.parse(new URL(call[0]).searchParams.get("input") ?? "null")).toEqual({ subscriptionId: "plan" })
@@ -159,7 +159,7 @@ describe("Cloud tRPC client", () => {
       ),
     ) as unknown as typeof fetch
 
-    const error = await getAutoTopUpState("secret-token").catch((value) => value)
+    const error = await fetchAutoTopUpState("secret-token").catch((value) => value)
     expect(error).toBeInstanceOf(CloudTrpcError)
     expect(error).toMatchObject({ kind: "procedure", message: "Kilo Cloud data is temporarily unavailable." })
     expect(JSON.stringify(error)).not.toContain("raw private error")
@@ -168,10 +168,10 @@ describe("Cloud tRPC client", () => {
 
   test("maps malformed envelopes and schema failures safely", async () => {
     global.fetch = mock(() => Promise.resolve(new Response("not-json"))) as unknown as typeof fetch
-    await expect(getAutoTopUpState("token")).rejects.toMatchObject({ kind: "protocol" })
+    await expect(fetchAutoTopUpState("token")).rejects.toMatchObject({ kind: "protocol" })
 
     global.fetch = mock(() => Promise.resolve(result({ enabled: "unknown" }))) as unknown as typeof fetch
-    await expect(getAutoTopUpState("token")).rejects.toMatchObject({ kind: "schema" })
+    await expect(fetchAutoTopUpState("token")).rejects.toMatchObject({ kind: "schema" })
   })
 
   test.each([
@@ -200,6 +200,6 @@ describe("Cloud tRPC client", () => {
   ])("rejects %s usage payloads", async (_description, payload) => {
     global.fetch = mock(() => Promise.resolve(result(payload))) as unknown as typeof fetch
 
-    await expect(getCodingPlanUsage("token", "plan")).rejects.toMatchObject({ kind: "schema" })
+    await expect(fetchCodingPlanUsage("token", "plan")).rejects.toMatchObject({ kind: "schema" })
   })
 })

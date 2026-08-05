@@ -1,8 +1,8 @@
 import {
-  getAutoTopUpState,
-  getCodingPlanUsage,
-  listByokEntries,
-  listCodingPlanSubscriptions,
+  fetchAutoTopUpState,
+  fetchByokEntries,
+  fetchCodingPlanSubscriptions,
+  fetchCodingPlanUsage,
   type AutoTopUpState,
   type ByokEntry,
   type CodingPlanQuotaWindow,
@@ -26,9 +26,9 @@ const safe = async <T>(promise: Promise<T>): Promise<Result<T>> =>
 
 export async function load(token: string): Promise<CloudState> {
   const [topup, plans, byok] = await Promise.all([
-    safe(getAutoTopUpState(token)),
-    safe(listCodingPlanSubscriptions(token)),
-    safe(listByokEntries(token)),
+    safe(fetchAutoTopUpState(token)),
+    safe(fetchCodingPlanSubscriptions(token)),
+    safe(fetchByokEntries(token)),
   ])
   return { topup, plans, byok }
 }
@@ -129,7 +129,7 @@ export async function managed(token: string, subscription: CodingPlanSubscriptio
   const id = `kilo-managed:${subscription.id}`
   const managementUrl = `${base()}/subscriptions/coding-plans/${subscription.id}`
 
-  return getCodingPlanUsage(token, subscription.id)
+  return fetchCodingPlanUsage(token, subscription.id)
     .then((usage) => {
       const windows = usage.subscription.windows.map((item) => window(usage.subscription.id, item))
       return {
