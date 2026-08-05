@@ -23,47 +23,22 @@ export const UsageWindow = Schema.Struct({
 }).annotate({ identifier: "ProviderUsageWindow" })
 export type UsageWindow = typeof UsageWindow.Type
 
-export const UsageBalance = Schema.Struct({
-  id: Schema.String,
-  label: Schema.String,
-  currency: Schema.String,
-  unit: Schema.String,
-  total: Schema.String,
-  granted: Schema.optional(Schema.String),
-  toppedUp: Schema.optional(Schema.String),
-  available: Schema.optional(Schema.Boolean),
-}).annotate({ identifier: "ProviderUsageBalance" })
-export type UsageBalance = typeof UsageBalance.Type
-
-export const UsageCredit = Schema.Struct({
-  id: Schema.String,
-  label: Schema.String,
-  balance: Schema.optional(Schema.String),
-  unit: Schema.optional(Schema.String),
-  unlimited: Schema.optional(Schema.Boolean),
-  availableResets: Schema.optional(Schema.Finite),
-}).annotate({ identifier: "ProviderUsageCredit" })
-export type UsageCredit = typeof UsageCredit.Type
-
 export const UsageSnapshot = Schema.Struct({
   id: Schema.String,
   providerID: Schema.String,
-  sourceKind: Schema.Literals(["kilo_managed", "direct", "codex"]),
+  sourceKind: Schema.Literals(["kilo_managed", "direct"]),
   providerLabel: Schema.String,
   planLabel: Schema.String,
   sourceLabel: Schema.String,
-  accountLabel: Schema.optional(Schema.String),
   fetchState: Schema.Literals(["ready", "stale", "unavailable", "error"]),
   planState: Schema.Literals(["active", "past_due", "canceling", "unknown"]),
   routingState: Schema.Literals(["active", "disabled", "missing", "replaced", "not_applicable", "unknown"]),
   availabilityState: Schema.Literals(["available", "exhausted", "unavailable", "unlimited", "unknown"]),
   fetchedAt: Schema.optional(Schema.String),
   confidence: Schema.Literals(["high", "medium", "low"]),
-  source: Schema.Literals(["cloud", "provider_api", "provider_backend"]),
+  source: Schema.Literals(["cloud", "provider_api"]),
   managementUrl: Schema.optional(Schema.String),
   windows: Schema.Array(UsageWindow),
-  balances: Schema.Array(UsageBalance),
-  credits: Schema.Array(UsageCredit),
   error: Schema.optional(UsageError),
 }).annotate({ identifier: "ProviderUsageSnapshot" })
 export type UsageSnapshot = typeof UsageSnapshot.Type

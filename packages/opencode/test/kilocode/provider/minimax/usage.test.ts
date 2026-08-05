@@ -13,9 +13,6 @@ const native = (row: Record<string, unknown>) =>
 const options = {
   id: "usage",
   providerID: "minimax-coding-plan",
-  sourceKind: "direct" as const,
-  providerLabel: "MiniMax",
-  planLabel: "MiniMax Token Plan",
   sourceLabel: "Direct",
   managementUrl: "https://platform.minimax.io/subscribe/token-plan",
   fetchedAt: "2026-06-19T00:00:00.000Z",

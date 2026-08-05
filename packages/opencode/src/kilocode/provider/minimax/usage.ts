@@ -195,15 +195,9 @@ export function normalize(
   input: {
     id: string
     providerID: string
-    sourceKind: "kilo_managed" | "direct"
-    providerLabel: string
-    planLabel: string
     sourceLabel: string
     managementUrl: string
     fetchedAt: string
-    planID?: string
-    routingState?: UsageSnapshot["routingState"]
-    planState?: UsageSnapshot["planState"]
   },
 ): UsageSnapshot {
   const rows = native.model_remains
@@ -229,21 +223,19 @@ export function normalize(
   return {
     id: input.id,
     providerID: input.providerID,
-    sourceKind: input.sourceKind,
-    providerLabel: input.providerLabel,
-    planLabel: input.planLabel,
+    sourceKind: "direct",
+    providerLabel: "MiniMax",
+    planLabel: "MiniMax Token Plan",
     sourceLabel: input.sourceLabel,
     fetchState: "ready",
-    planState: input.planState ?? "active",
-    routingState: input.routingState ?? "not_applicable",
+    planState: "active",
+    routingState: "not_applicable",
     availabilityState,
     fetchedAt: input.fetchedAt,
     confidence,
-    source: input.sourceKind === "kilo_managed" ? "cloud" : "provider_api",
+    source: "provider_api",
     managementUrl: input.managementUrl,
     windows,
-    balances: [],
-    credits: [],
   }
 }
 
@@ -262,8 +254,6 @@ const unavailable = (id: string, providerID: string, label: string, managementUr
   source: "provider_api",
   managementUrl,
   windows: [],
-  balances: [],
-  credits: [],
   error: { code: "direct_minimax_unavailable", message: "Usage unavailable.", retryable: true },
 })
 
@@ -313,9 +303,6 @@ export async function direct(
         return normalize(response.value, {
           id,
           providerID: candidate.providerID,
-          sourceKind: "direct",
-          providerLabel: "MiniMax",
-          planLabel: "MiniMax Token Plan",
           sourceLabel: candidate.provider.name,
           managementUrl: bindings[candidate.providerID].manage,
           fetchedAt: new Date().toISOString(),

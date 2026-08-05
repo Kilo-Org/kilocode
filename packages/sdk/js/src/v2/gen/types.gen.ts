@@ -4183,26 +4183,6 @@ export type ProviderUsageWindow = {
   state: "active" | "exhausted" | "unlimited" | "not_in_plan" | "unknown"
 }
 
-export type ProviderUsageBalance = {
-  id: string
-  label: string
-  currency: string
-  unit: string
-  total: string
-  granted?: string
-  toppedUp?: string
-  available?: boolean
-}
-
-export type ProviderUsageCredit = {
-  id: string
-  label: string
-  balance?: string
-  unit?: string
-  unlimited?: boolean
-  availableResets?: number
-}
-
 export type ProviderUsageError = {
   code: string
   message: string
@@ -4212,22 +4192,19 @@ export type ProviderUsageError = {
 export type ProviderUsageSnapshot = {
   id: string
   providerID: string
-  sourceKind: "kilo_managed" | "direct" | "codex"
+  sourceKind: "kilo_managed" | "direct"
   providerLabel: string
   planLabel: string
   sourceLabel: string
-  accountLabel?: string
   fetchState: "ready" | "stale" | "unavailable" | "error"
   planState: "active" | "past_due" | "canceling" | "unknown"
   routingState: "active" | "disabled" | "missing" | "replaced" | "not_applicable" | "unknown"
   availabilityState: "available" | "exhausted" | "unavailable" | "unlimited" | "unknown"
   fetchedAt?: string
   confidence: "high" | "medium" | "low"
-  source: "cloud" | "provider_api" | "provider_backend"
+  source: "cloud" | "provider_api"
   managementUrl?: string
   windows: Array<ProviderUsageWindow>
-  balances: Array<ProviderUsageBalance>
-  credits: Array<ProviderUsageCredit>
   error?: ProviderUsageError
 }
 

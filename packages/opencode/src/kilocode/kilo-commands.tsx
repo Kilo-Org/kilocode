@@ -129,12 +129,12 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
       {
         name: "kilo.usage",
         title: "Plans & usage",
-        desc: "View provider plans, quota, and balances",
+        desc: "View provider plans, quota, and billing",
         category: "Kilo",
         slashName: "usage",
         slashAliases: ["plans", "quota"],
         run: () => {
-          dialog.replace(() => <DialogProviderUsage useSDK={useSDK} />)
+          dialog.replace(() => <DialogProviderUsage />)
         },
       },
 

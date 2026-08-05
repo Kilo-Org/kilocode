@@ -118,45 +118,6 @@ const UsageCard: Component<{
           )
         }}
       </For>
-
-      <For each={props.item.balances}>
-        {(balance) => (
-          <div class="provider-usage-row">
-            <div class="provider-usage-row-heading">
-              <span>{balance.label}</span>
-              <strong>
-                {balance.total} {balance.currency}
-                {balance.available === false ? ` ${props.language.t("profile.usage.balance.unavailable")}` : ""}
-              </strong>
-            </div>
-            <Show when={balance.granted !== undefined || balance.toppedUp !== undefined}>
-              <span class="provider-usage-meta">
-                {props.language.t("profile.usage.balance.breakdown", {
-                  granted: balance.granted ?? props.language.t("profile.usage.status.unknown"),
-                  toppedUp: balance.toppedUp ?? props.language.t("profile.usage.status.unknown"),
-                })}
-              </span>
-            </Show>
-          </div>
-        )}
-      </For>
-
-      <For each={props.item.credits}>
-        {(credit) => (
-          <div class="provider-usage-row-heading">
-            <span>{credit.label}</span>
-            <strong>
-              {credit.unlimited
-                ? props.language.t("profile.usage.status.unlimited")
-                : credit.balance !== undefined
-                  ? `${credit.balance}${credit.unit ? ` ${credit.unit}` : ""}`
-                  : credit.availableResets !== undefined
-                    ? props.language.t("profile.usage.credits.resets", { count: String(credit.availableResets) })
-                    : props.language.t("profile.usage.status.unknown")}
-            </strong>
-          </div>
-        )}
-      </For>
     </div>
 
     <Show when={props.item.routingState !== "active" && props.item.routingState !== "not_applicable"}>
@@ -185,6 +146,7 @@ const UsageCard: Component<{
 )
 
 const KiloPassUsage: Component<{ pass: KiloPassState }> = (props) => {
+  const language = useLanguage()
   const model = () => {
     const paid = Math.max(0, props.pass.currentPeriodBaseCreditsUsd)
     const bonus = Math.max(0, props.pass.currentPeriodBonusCreditsUsd)
@@ -245,7 +207,7 @@ const KiloPassUsage: Component<{ pass: KiloPassState }> = (props) => {
         </span>
         <span hidden={model().bonus <= 0}>
           <i class="kilo-pass-usage-bonus-dot" />
-          Free bonus
+          {language.t("profile.pass.bonus")}
         </span>
       </div>
     </div>

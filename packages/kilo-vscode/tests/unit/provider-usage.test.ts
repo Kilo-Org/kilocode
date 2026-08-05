@@ -24,6 +24,24 @@ type Internals = {
   fetchAndSendNotifications: () => Promise<void>
 }
 
+type UsageClient = {
+  get: (input: { directory?: string }) => Promise<unknown>
+  refresh?: (input: { directory?: string }) => Promise<unknown>
+}
+
+function bridge(usage: UsageClient) {
+  const messages: unknown[] = []
+  const provider = new KiloProvider(
+    {} as never,
+    { getClient: () => ({ kilocode: { providerUsage: usage } }) } as never,
+    undefined,
+    { projectDirectory: "/repo" },
+  )
+  const internal = provider as unknown as Internals
+  internal.postMessage = (message) => messages.push(message)
+  return { internal, messages }
+}
+
 describe("provider usage presentation", () => {
   const window = (value: Partial<ProviderUsageWindow>): ProviderUsageWindow => ({
     id: "quota",
@@ -54,30 +72,16 @@ describe("KiloProvider provider usage bridge", () => {
   it("uses cache-aware GET and explicit refresh POST", async () => {
     const get: Array<{ directory?: string }> = []
     const refresh: Array<{ directory?: string }> = []
-    const messages: unknown[] = []
-    const provider = new KiloProvider(
-      {} as never,
-      {
-        getClient: () => ({
-          kilocode: {
-            providerUsage: {
-              get: async (input: { directory?: string }) => {
-                get.push(input)
-                return { data }
-              },
-              refresh: async (input: { directory?: string }) => {
-                refresh.push(input)
-                return { data }
-              },
-            },
-          },
-        }),
-      } as never,
-      undefined,
-      { projectDirectory: "/repo" },
-    )
-    const internal = provider as unknown as Internals
-    internal.postMessage = (message) => messages.push(message)
+    const { internal, messages } = bridge({
+      get: async (input) => {
+        get.push(input)
+        return { data }
+      },
+      refresh: async (input) => {
+        refresh.push(input)
+        return { data }
+      },
+    })
 
     await internal.fetchAndSendProviderUsage()
     await internal.fetchAndSendProviderUsage(true)
@@ -93,23 +97,9 @@ describe("KiloProvider provider usage bridge", () => {
   })
 
   it("posts a terminal loading error when the backend has no cached response", async () => {
-    const messages: unknown[] = []
-    const provider = new KiloProvider(
-      {} as never,
-      {
-        getClient: () => ({
-          kilocode: {
-            providerUsage: {
-              get: async () => ({ error: { _tag: "ServiceUnavailable" } }),
-            },
-          },
-        }),
-      } as never,
-      undefined,
-      { projectDirectory: "/repo" },
-    )
-    const internal = provider as unknown as Internals
-    internal.postMessage = (message) => messages.push(message)
+    const { internal, messages } = bridge({
+      get: async () => ({ error: { _tag: "ServiceUnavailable" } }),
+    })
 
     await internal.fetchAndSendProviderUsage()
 

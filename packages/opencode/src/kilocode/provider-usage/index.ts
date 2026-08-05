@@ -28,16 +28,12 @@ interface AdapterResult {
 }
 
 export interface ProviderUsageAdapter {
-  id: string
-  providerIDs: readonly string[]
   cachePrefixes: readonly string[]
   cloudScoped?: boolean
   run(ctx: AdapterContext): Promise<AdapterResult>
 }
 
 const billing: ProviderUsageAdapter = {
-  id: "kilo-billing",
-  providerIDs: ["kilo"],
   cachePrefixes: [],
   async run(ctx) {
     if (!ctx.cloud) return { items: [] }
@@ -47,8 +43,6 @@ const billing: ProviderUsageAdapter = {
 }
 
 const managed: ProviderUsageAdapter = {
-  id: "kilo-managed-subscriptions",
-  providerIDs: ["kilo"],
   cachePrefixes: ["kilo-managed:"],
   cloudScoped: true,
   async run(ctx) {
@@ -73,8 +67,6 @@ const managed: ProviderUsageAdapter = {
 }
 
 const minimax: ProviderUsageAdapter = {
-  id: "direct-minimax",
-  providerIDs: ["minimax-coding-plan", "minimax-cn-coding-plan"],
   cachePrefixes: ["minimax-direct-"],
   async run(ctx) {
     const items = await direct(ctx.providers, ctx.fetch, ctx.source)
@@ -86,7 +78,7 @@ const minimax: ProviderUsageAdapter = {
   },
 }
 
-export const registry: readonly ProviderUsageAdapter[] = [billing, managed, minimax]
+const registry: readonly ProviderUsageAdapter[] = [billing, managed, minimax]
 
 export class ServiceError extends Schema.TaggedErrorClass<ServiceError>()("ProviderUsageServiceError", {
   message: Schema.String,

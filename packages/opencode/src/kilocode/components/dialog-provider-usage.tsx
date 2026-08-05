@@ -2,16 +2,11 @@ import { TextAttributes } from "@opentui/core"
 import { useKeyboard } from "@opentui/solid"
 import type { ProviderUsage, ProviderUsageSnapshot, ProviderUsageWindow } from "@kilocode/sdk/v2"
 import { useTheme } from "@tui/context/theme"
+import { useSDK } from "@tui/context/sdk"
 import { useDialog } from "@tui/ui/dialog"
 import { Link } from "@tui/ui/link"
 import { Spinner } from "@tui/component/spinner"
 import { For, Show, createSignal, onMount } from "solid-js"
-
-interface DialogProviderUsageProps {
-  useSDK: () => { client: { kilocode: { providerUsage: { get(): Promise<unknown>; refresh(): Promise<unknown> } } } }
-}
-
-type Response = { data?: ProviderUsage; error?: unknown }
 
 function amount(value: number, unit: string) {
   if (unit === "USD") return `$${value.toFixed(2)}`
@@ -57,35 +52,6 @@ function Item(props: { item: ProviderUsageSnapshot }) {
               {(reset) => <text fg={theme.textMuted}>Resets {new Date(reset()).toLocaleString()}</text>}
             </Show>
           </box>
-        )}
-      </For>
-      <For each={props.item.balances}>
-        {(balance) => (
-          <box>
-            <text fg={theme.text}>
-              {balance.label}: {balance.total} {balance.currency}
-              {balance.available === false ? " (unavailable)" : ""}
-            </text>
-            <Show when={balance.granted !== undefined || balance.toppedUp !== undefined}>
-              <text fg={theme.textMuted}>
-                Granted {balance.granted ?? "unknown"} | Topped up {balance.toppedUp ?? "unknown"}
-              </text>
-            </Show>
-          </box>
-        )}
-      </For>
-      <For each={props.item.credits}>
-        {(credit) => (
-          <text fg={theme.text}>
-            {credit.label}:{" "}
-            {credit.unlimited
-              ? "Unlimited"
-              : credit.balance !== undefined
-                ? `${credit.balance} ${credit.unit ?? ""}`
-                : credit.availableResets !== undefined
-                  ? `${credit.availableResets} resets`
-                  : "Unknown"}
-          </text>
         )}
       </For>
       <Show when={props.item.routingState !== "not_applicable" && props.item.routingState !== "active"}>
@@ -149,21 +115,21 @@ export function ProviderUsageBody(props: { data: ProviderUsage }) {
   )
 }
 
-export function DialogProviderUsage(props: DialogProviderUsageProps) {
+export function DialogProviderUsage() {
   const dialog = useDialog()
   const { theme } = useTheme()
-  const sdk = props.useSDK()
+  const sdk = useSDK()
   const [data, setData] = createSignal<ProviderUsage>()
   const [loading, setLoading] = createSignal(true)
   const [failure, setFailure] = createSignal<string>()
 
   async function load(force: boolean) {
-    if (loading() && data()) return
+    if (loading()) return
     setLoading(true)
     setFailure(undefined)
-    const response = (await (force
+    const response = await (force
       ? sdk.client.kilocode.providerUsage.refresh().catch(() => undefined)
-      : sdk.client.kilocode.providerUsage.get().catch(() => undefined))) as Response | undefined
+      : sdk.client.kilocode.providerUsage.get().catch(() => undefined))
     if (response?.data) setData(response.data)
     if (response?.error || !response?.data) setFailure("Provider usage could not be loaded.")
     setLoading(false)

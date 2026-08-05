@@ -35,20 +35,44 @@ const subscription = {
   planName: "Token Plan Plus",
   providerName: "MiniMax",
   providerId: "minimax",
-  routeLabel: "MiniMax via Kilo Gateway",
   hasInstalledByokKey: true,
   status: "active" as const,
-  billingPeriodDays: 30,
-  currentPeriodStart: "2026-06-01T00:00:00.000Z",
-  currentPeriodEnd: "2026-07-01T00:00:00.000Z",
-  creditRenewalAt: "2026-07-01T00:00:00.000Z",
   cancelAtPeriodEnd: false,
-  paymentGraceExpiresAt: null,
-  canceledAt: null,
-  cancellationReason: null,
-  createdAt: "2026-06-01T00:00:00.000Z",
-  costKiloCredits: 20,
 }
+
+const managed = {
+  id: "managed-minimax",
+  provider_id: "minimax",
+  management_source: "coding_plan" as const,
+  is_enabled: true,
+}
+
+const oauth = (access: string, accountId?: string): Auth.Info => ({
+  type: "oauth",
+  access,
+  refresh: `refresh-${access}`,
+  expires: Date.now() + 60_000,
+  ...(accountId ? { accountId } : {}),
+})
+
+const cloudUsage = (remaining = 80, windows?: unknown[]) => ({
+  schemaVersion: 1,
+  fetchedAt: "2026-06-19T00:00:00.000Z",
+  subscription: {
+    id: subscription.id,
+    planName: subscription.planName,
+    providerId: subscription.providerId,
+    providerName: subscription.providerName,
+    windows: windows ?? [
+      {
+        id: "short_term",
+        remainingPercent: remaining,
+        resetsAt: "2026-06-19T05:00:00.000Z",
+        period: { unit: "hour", value: 5 },
+      },
+    ],
+  },
+})
 
 it.effect("only includes managed plans with an installed managed key", () =>
   Effect.sync(() => {
@@ -57,20 +81,7 @@ it.effect("only includes managed plans with an installed managed key", () =>
       plans: { ok: true as const, value: [subscription] },
       byok: {
         ok: true as const,
-        value: entry
-          ? [
-              {
-                id: "minimax",
-                provider_id: "minimax",
-                provider_name: "minimax",
-                management_source: entry.management_source,
-                is_enabled: entry.is_enabled,
-                created_at: "2026-06-01T00:00:00.000Z",
-                updated_at: "2026-06-01T00:00:00.000Z",
-                created_by: "user",
-              },
-            ]
-          : [],
+        value: entry ? [{ ...managed, management_source: entry.management_source, is_enabled: entry.is_enabled }] : [],
       },
     })
 
@@ -273,87 +284,34 @@ it.instance("loads each personal Cloud procedure once and isolates managed enric
             stripePaymentMethodId: "pm_private",
           },
         },
-        "codingPlans.listSubscriptions": [
+        "codingPlans.listSubscriptions": [subscription],
+        "byok.list": [managed],
+        "codingPlans.getUsage": cloudUsage(80, [
           {
-            id: "plan",
-            planId: "minimax-token-plan-plus",
-            planName: "Token Plan Plus",
-            providerName: "MiniMax",
-            providerId: "minimax",
-            routeLabel: "MiniMax via Kilo Gateway",
-            hasInstalledByokKey: true,
-            status: "active",
-            billingPeriodDays: 30,
-            currentPeriodStart: "2026-06-01T00:00:00.000Z",
-            currentPeriodEnd: "2026-07-01T00:00:00.000Z",
-            creditRenewalAt: "2026-07-01T00:00:00.000Z",
-            cancelAtPeriodEnd: false,
-            paymentGraceExpiresAt: null,
-            canceledAt: null,
-            cancellationReason: null,
-            createdAt: "2026-06-01T00:00:00.000Z",
-            costKiloCredits: 20,
+            id: "short_term",
+            remainingPercent: 80,
+            resetsAt: "2026-06-19T05:00:00.000Z",
+            period: { unit: "hour", value: 5 },
           },
-        ],
-        "byok.list": [
           {
-            id: "managed-minimax",
-            provider_id: "minimax",
-            provider_name: "minimax",
-            management_source: "coding_plan",
-            is_enabled: true,
-            created_at: "2026-06-01T00:00:00.000Z",
-            updated_at: "2026-06-01T00:00:00.000Z",
-            created_by: "user",
+            id: "weekly",
+            remainingPercent: 150,
+            resetsAt: "2026-06-26T00:00:00.000Z",
+            period: { unit: "week", value: 1 },
           },
-        ],
-        "codingPlans.getUsage": {
-          schemaVersion: 1,
-          fetchedAt: "2026-06-19T00:00:00.000Z",
-          subscription: {
-            id: "plan",
-            planId: "minimax-token-plan-plus",
-            planName: "Token Plan Plus",
-            providerId: "minimax",
-            providerName: "MiniMax",
-            windows: [
-              {
-                id: "short_term",
-                remainingPercent: 80,
-                resetsAt: "2026-06-19T05:00:00.000Z",
-                period: { unit: "hour", value: 5 },
-              },
-              {
-                id: "weekly",
-                remainingPercent: 150,
-                resetsAt: "2026-06-26T00:00:00.000Z",
-                period: { unit: "week", value: 1 },
-              },
-              {
-                id: "billing_cycle",
-                remainingPercent: 60,
-                resetsAt: "2026-07-19T00:00:00.000Z",
-                period: { unit: "month", value: 1 },
-              },
-            ],
+          {
+            id: "billing_cycle",
+            remainingPercent: 60,
+            resetsAt: "2026-07-19T00:00:00.000Z",
+            period: { unit: "month", value: 1 },
           },
-        },
+        ]),
       }
       return Promise.resolve(ok(values[procedure]))
     }) as unknown as typeof fetch
 
     const result = yield* ProviderUsage.Service.use((usage) => usage.get()).pipe(
-      Effect.provide(
-        layer(
-          {
-            type: "oauth",
-            access: "kilo-private-token",
-            refresh: "refresh-private-token",
-            expires: Date.now() + 60_000,
-          },
-          {},
-        ),
-      ),
+      Effect.provide(layer(oauth("kilo-private-token"), {})),
     )
     global.fetch = original
 
@@ -406,12 +364,7 @@ it.instance("loads each personal Cloud procedure once and isolates managed enric
 it.instance("does not reuse personal Cloud data after the bearer identity changes", () =>
   Effect.gen(function* () {
     const original = global.fetch
-    let currentAuth: Auth.Info | undefined = {
-      type: "oauth",
-      access: "token-one",
-      refresh: "refresh-one",
-      expires: Date.now() + 60_000,
-    }
+    let currentAuth: Auth.Info | undefined = oauth("token-one")
     const calls: string[] = []
     const ok = (value: unknown) => Response.json({ result: { data: { json: value } } })
     global.fetch = ((input: string | URL | Request, init?: RequestInit) => {
@@ -434,32 +387,8 @@ it.instance("does not reuse personal Cloud data after the bearer identity change
         )
       }
       if (procedure === "codingPlans.listSubscriptions") return Promise.resolve(ok([subscription]))
-      if (procedure === "byok.list") {
-        return Promise.resolve(
-          ok([{ id: "managed-minimax", provider_id: "minimax", management_source: "coding_plan", is_enabled: true }]),
-        )
-      }
-      return Promise.resolve(
-        ok({
-          schemaVersion: 1,
-          fetchedAt: "2026-06-19T00:00:00.000Z",
-          subscription: {
-            id: subscription.id,
-            planId: subscription.planId,
-            planName: subscription.planName,
-            providerId: subscription.providerId,
-            providerName: subscription.providerName,
-            windows: [
-              {
-                id: "short_term",
-                remainingPercent: second ? 20 : 80,
-                resetsAt: "2026-06-19T05:00:00.000Z",
-                period: { unit: "hour", value: 5 },
-              },
-            ],
-          },
-        }),
-      )
+      if (procedure === "byok.list") return Promise.resolve(ok([managed]))
+      return Promise.resolve(ok(cloudUsage(second ? 20 : 80)))
     }) as unknown as typeof fetch
 
     const access = Layer.mock(Auth.Service)({ get: () => Effect.sync(() => currentAuth) })
@@ -468,12 +397,7 @@ it.instance("does not reuse personal Cloud data after the bearer identity change
     const output = yield* Effect.gen(function* () {
       const usage = yield* ProviderUsage.Service
       const first = yield* usage.get()
-      currentAuth = {
-        type: "oauth",
-        access: "token-two",
-        refresh: "refresh-two",
-        expires: Date.now() + 60_000,
-      }
+      currentAuth = oauth("token-two")
       const second = yield* usage.get()
       return { first, second }
     }).pipe(Effect.provide(usageLayer))
@@ -511,32 +435,10 @@ it.instance("preserves managed usage as stale when the BYOK lookup fails", () =>
       if (procedure === "byok.list") {
         byokCalls++
         if (byokCalls > 1) return Promise.resolve(Response.json({ error: {} }))
-        return Promise.resolve(
-          ok([{ id: "managed-minimax", provider_id: "minimax", management_source: "coding_plan", is_enabled: true }]),
-        )
+        return Promise.resolve(ok([managed]))
       }
       usageCalls++
-      return Promise.resolve(
-        ok({
-          schemaVersion: 1,
-          fetchedAt: "2026-06-19T00:00:00.000Z",
-          subscription: {
-            id: subscription.id,
-            planId: subscription.planId,
-            planName: subscription.planName,
-            providerId: subscription.providerId,
-            providerName: subscription.providerName,
-            windows: [
-              {
-                id: "short_term",
-                remainingPercent: 80,
-                resetsAt: "2026-06-19T05:00:00.000Z",
-                period: { unit: "hour", value: 5 },
-              },
-            ],
-          },
-        }),
-      )
+      return Promise.resolve(ok(cloudUsage()))
     }) as unknown as typeof fetch
 
     const output = yield* Effect.gen(function* () {
@@ -544,19 +446,7 @@ it.instance("preserves managed usage as stale when the BYOK lookup fails", () =>
       const first = yield* usage.get()
       const second = yield* usage.refresh()
       return { first, second }
-    }).pipe(
-      Effect.provide(
-        layer(
-          {
-            type: "oauth",
-            access: "kilo-private-token",
-            refresh: "refresh-private-token",
-            expires: Date.now() + 60_000,
-          },
-          {},
-        ),
-      ),
-    )
+    }).pipe(Effect.provide(layer(oauth("kilo-private-token"), {})))
     global.fetch = original
 
     expect(usageCalls).toBe(1)
@@ -616,18 +506,7 @@ it.instance("skips every personal Cloud procedure in organization context", () =
     }) as unknown as typeof fetch
 
     const result = yield* ProviderUsage.Service.use((usage) => usage.get()).pipe(
-      Effect.provide(
-        layer(
-          {
-            type: "oauth",
-            access: "kilo-token",
-            refresh: "refresh",
-            expires: Date.now() + 60_000,
-            accountId: "organization",
-          },
-          {},
-        ),
-      ),
+      Effect.provide(layer(oauth("kilo-token", "organization"), {})),
     )
     global.fetch = original
 

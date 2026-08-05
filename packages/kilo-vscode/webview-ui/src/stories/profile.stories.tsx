@@ -78,8 +78,6 @@ const usage: ProviderUsageData = {
           state: "active",
         },
       ],
-      balances: [],
-      credits: [],
     },
   ],
   kiloBilling: {
@@ -113,38 +111,27 @@ const directUsage: ProviderUsageData = {
 }
 
 const noop = () => {}
+const render = (profileData: ProfileData | null, providerUsage: ProviderUsageData, height: number) => (
+  <StoryProviders noPadding>
+    <div style={{ width: "420px", height: `${height}px` }}>
+      <ProfileView profileData={profileData} providerUsage={providerUsage} deviceAuth={idleAuth} onLogin={noop} />
+    </div>
+  </StoryProviders>
+)
 
 export const LoggedIn: Story = {
   name: "ProfileView — logged in with orgs",
-  render: () => (
-    <StoryProviders noPadding>
-      <div style={{ width: "420px", height: "900px" }}>
-        <ProfileView profileData={loggedInProfile} providerUsage={usage} deviceAuth={idleAuth} onLogin={noop} />
-      </div>
-    </StoryProviders>
-  ),
+  render: () => render(loggedInProfile, usage, 900),
 }
 
 export const LoggedInPersonal: Story = {
   name: "ProfileView — personal account",
-  render: () => (
-    <StoryProviders noPadding>
-      <div style={{ width: "420px", height: "900px" }}>
-        <ProfileView profileData={personalProfile} providerUsage={usage} deviceAuth={idleAuth} onLogin={noop} />
-      </div>
-    </StoryProviders>
-  ),
+  render: () => render(personalProfile, usage, 900),
 }
 
 export const ScrollableUsage: Story = {
   name: "ProfileView — scrollable usage",
-  render: () => (
-    <StoryProviders noPadding>
-      <div style={{ width: "420px", height: "480px" }}>
-        <ProfileView profileData={personalProfile} providerUsage={usage} deviceAuth={idleAuth} onLogin={noop} />
-      </div>
-    </StoryProviders>
-  ),
+  render: () => render(personalProfile, usage, 480),
   play: (context: { canvasElement: HTMLElement }) => {
     const pane = context.canvasElement.querySelector<HTMLElement>("[data-profile-scroll]")
     if (pane) pane.scrollTop = pane.scrollHeight
@@ -153,116 +140,43 @@ export const ScrollableUsage: Story = {
 
 export const NotLoggedIn: Story = {
   name: "ProfileView — not logged in",
-  render: () => (
-    <StoryProviders noPadding>
-      <div style={{ width: "420px", height: "620px" }}>
-        <ProfileView profileData={null} providerUsage={directUsage} deviceAuth={idleAuth} onLogin={noop} />
-      </div>
-    </StoryProviders>
-  ),
+  render: () => render(null, directUsage, 620),
 }
 
 export const OrganizationContext: Story = {
   name: "ProfileView — organization context",
-  render: () => (
-    <StoryProviders noPadding>
-      <div style={{ width: "420px", height: "620px" }}>
-        <ProfileView
-          profileData={{ ...loggedInProfile, currentOrgId: "org-1" }}
-          providerUsage={{ generatedAt: usage.generatedAt, items: [] }}
-          deviceAuth={idleAuth}
-          onLogin={noop}
-        />
-      </div>
-    </StoryProviders>
-  ),
+  render: () =>
+    render({ ...loggedInProfile, currentOrgId: "org-1" }, { generatedAt: usage.generatedAt, items: [] }, 620),
 }
 
 export const StaleAndUnavailable: Story = {
   name: "ProfileView — stale and unavailable usage",
-  render: () => (
-    <StoryProviders noPadding>
-      <div style={{ width: "420px", height: "760px" }}>
-        <ProfileView
-          profileData={personalProfile}
-          providerUsage={{
-            generatedAt: usage.generatedAt,
-            items: [
-              {
-                ...directUsage.items[0],
-                fetchState: "stale",
-                error: { code: "timeout", message: "The latest usage could not be loaded.", retryable: true },
-              },
-              {
-                ...usage.items[0],
-                id: "managed-unavailable",
-                fetchState: "unavailable",
-                availabilityState: "unavailable",
-                windows: [],
-                error: { code: "upstream", message: "Usage unavailable.", retryable: true },
-              },
-            ],
-          }}
-          deviceAuth={idleAuth}
-          onLogin={noop}
-        />
-      </div>
-    </StoryProviders>
-  ),
-}
-
-export const BalanceAndCredits: Story = {
-  name: "ProfileView — balance and credits contract",
-  render: () => (
-    <StoryProviders noPadding>
-      <div style={{ width: "420px", height: "620px" }}>
-        <ProfileView
-          profileData={null}
-          providerUsage={{
-            generatedAt: usage.generatedAt,
-            items: [
-              {
-                ...directUsage.items[0],
-                id: "future-balance",
-                providerLabel: "Provider account",
-                planLabel: "API balance",
-                windows: [],
-                balances: [
-                  {
-                    id: "usd",
-                    label: "Available balance",
-                    currency: "USD",
-                    unit: "USD",
-                    total: "12.50",
-                    granted: "10.00",
-                    toppedUp: "2.50",
-                    available: true,
-                  },
-                ],
-                credits: [{ id: "resets", label: "Reset credits", availableResets: 3 }],
-              },
-            ],
-          }}
-          deviceAuth={idleAuth}
-          onLogin={noop}
-        />
-      </div>
-    </StoryProviders>
-  ),
+  render: () =>
+    render(
+      personalProfile,
+      {
+        generatedAt: usage.generatedAt,
+        items: [
+          {
+            ...directUsage.items[0],
+            fetchState: "stale",
+            error: { code: "timeout", message: "The latest usage could not be loaded.", retryable: true },
+          },
+          {
+            ...usage.items[0],
+            id: "managed-unavailable",
+            fetchState: "unavailable",
+            availabilityState: "unavailable",
+            windows: [],
+            error: { code: "upstream", message: "Usage unavailable.", retryable: true },
+          },
+        ],
+      },
+      760,
+    ),
 }
 
 export const EmptyUsage: Story = {
   name: "ProfileView — no usage sources",
-  render: () => (
-    <StoryProviders noPadding>
-      <div style={{ width: "420px", height: "480px" }}>
-        <ProfileView
-          profileData={personalProfile}
-          providerUsage={{ generatedAt: usage.generatedAt, items: [] }}
-          deviceAuth={idleAuth}
-          onLogin={noop}
-        />
-      </div>
-    </StoryProviders>
-  ),
+  render: () => render(personalProfile, { generatedAt: usage.generatedAt, items: [] }, 480),
 }

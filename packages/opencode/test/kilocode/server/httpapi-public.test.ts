@@ -253,8 +253,7 @@ describe("Kilo PublicApi OpenAPI contract", () => {
 
     expect(spec.paths[KilocodePaths.providerUsage]?.get?.responses?.["200"]).toBeDefined()
     expect(spec.paths[KilocodePaths.providerUsageRefresh]?.post?.responses?.["200"]).toBeDefined()
-    expect(schemas.ProviderUsageBalance?.properties?.total).toEqual({ type: "string" })
-    expect(schemas.ProviderUsageCredit?.properties?.balance).toEqual({ type: "string" })
+    expect(schemas.ProviderUsageSnapshot?.properties?.windows).toBeDefined()
     for (const forbidden of [
       "key",
       "token",

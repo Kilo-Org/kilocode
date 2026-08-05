@@ -148,8 +148,6 @@ export async function managed(token: string, subscription: CodingPlanSubscriptio
         source: "cloud",
         managementUrl,
         windows,
-        balances: [],
-        credits: [],
       } satisfies UsageSnapshot
     })
     .catch(() => ({
@@ -168,8 +166,6 @@ export async function managed(token: string, subscription: CodingPlanSubscriptio
       source: "cloud",
       managementUrl,
       windows: [],
-      balances: [],
-      credits: [],
       error: error("managed_subscription_unavailable", "Usage unavailable."),
     }))
 }

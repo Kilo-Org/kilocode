@@ -38566,62 +38566,6 @@
         "required": ["id", "label", "resource", "kind", "unit", "orientation", "state"],
         "additionalProperties": false
       },
-      "ProviderUsageBalance": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "label": {
-            "type": "string"
-          },
-          "currency": {
-            "type": "string"
-          },
-          "unit": {
-            "type": "string"
-          },
-          "total": {
-            "type": "string"
-          },
-          "granted": {
-            "type": "string"
-          },
-          "toppedUp": {
-            "type": "string"
-          },
-          "available": {
-            "type": "boolean"
-          }
-        },
-        "required": ["id", "label", "currency", "unit", "total"],
-        "additionalProperties": false
-      },
-      "ProviderUsageCredit": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "label": {
-            "type": "string"
-          },
-          "balance": {
-            "type": "string"
-          },
-          "unit": {
-            "type": "string"
-          },
-          "unlimited": {
-            "type": "boolean"
-          },
-          "availableResets": {
-            "type": "number"
-          }
-        },
-        "required": ["id", "label"],
-        "additionalProperties": false
-      },
       "ProviderUsageError": {
         "type": "object",
         "properties": {
@@ -38649,7 +38593,7 @@
           },
           "sourceKind": {
             "type": "string",
-            "enum": ["kilo_managed", "direct", "codex"]
+            "enum": ["kilo_managed", "direct"]
           },
           "providerLabel": {
             "type": "string"
@@ -38658,9 +38602,6 @@
             "type": "string"
           },
           "sourceLabel": {
-            "type": "string"
-          },
-          "accountLabel": {
             "type": "string"
           },
           "fetchState": {
@@ -38688,7 +38629,7 @@
           },
           "source": {
             "type": "string",
-            "enum": ["cloud", "provider_api", "provider_backend"]
+            "enum": ["cloud", "provider_api"]
           },
           "managementUrl": {
             "type": "string"
@@ -38697,18 +38638,6 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ProviderUsageWindow"
-            }
-          },
-          "balances": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ProviderUsageBalance"
-            }
-          },
-          "credits": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ProviderUsageCredit"
             }
           },
           "error": {
@@ -38728,9 +38657,7 @@
           "availabilityState",
           "confidence",
           "source",
-          "windows",
-          "balances",
-          "credits"
+          "windows"
         ],
         "additionalProperties": false
       },

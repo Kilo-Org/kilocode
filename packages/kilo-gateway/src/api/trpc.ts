@@ -23,19 +23,9 @@ const CodingPlanSubscriptionSchema = z.object({
   planName: z.string(),
   providerName: z.string(),
   providerId: z.string(),
-  routeLabel: z.string(),
   hasInstalledByokKey: z.boolean(),
   status: z.enum(["active", "past_due", "canceled"]),
-  billingPeriodDays: z.number().int().positive(),
-  currentPeriodStart: z.string(),
-  currentPeriodEnd: z.string(),
-  creditRenewalAt: z.string(),
   cancelAtPeriodEnd: z.boolean(),
-  paymentGraceExpiresAt: z.string().nullable(),
-  canceledAt: z.string().nullable(),
-  cancellationReason: z.string().nullable(),
-  createdAt: z.string(),
-  costKiloCredits: z.number().nonnegative(),
 })
 
 const ByokEntrySchema = z.object({
@@ -79,7 +69,6 @@ export const CodingPlanUsageSchema = z.object({
   fetchedAt: z.iso.datetime(),
   subscription: z.object({
     id: z.string(),
-    planId: z.string(),
     planName: z.string().min(1),
     providerId: z.string().min(1),
     providerName: z.string().min(1),

@@ -15,6 +15,42 @@ const result = (data: unknown, status = 200) =>
     headers: { "content-type": "application/json" },
   })
 
+const subscription = {
+  id: "subscription",
+  planId: "minimax-token-plan-plus",
+  planName: "Token Plan Plus",
+  providerName: "MiniMax",
+  providerId: "minimax",
+  hasInstalledByokKey: true,
+  status: "active",
+  cancelAtPeriodEnd: false,
+}
+
+const quota = (id = "plan") => ({
+  schemaVersion: 1,
+  fetchedAt: "2026-06-19T00:00:00.000Z",
+  subscription: {
+    id,
+    planName: "Token Plan Plus",
+    providerId: "minimax",
+    providerName: "MiniMax",
+    windows: [
+      {
+        id: "short_term",
+        remainingPercent: 80,
+        resetsAt: "2026-06-19T05:00:00.000Z",
+        period: { unit: "hour", value: 5 },
+      },
+      {
+        id: "weekly",
+        remainingPercent: 150,
+        resetsAt: "2026-06-26T00:00:00.000Z",
+        period: { unit: "week", value: 1 },
+      },
+    ],
+  },
+})
+
 afterEach(() => {
   global.fetch = original
 })
@@ -25,19 +61,12 @@ describe("Cloud tRPC client", () => {
       Promise.resolve(
         result([
           {
-            id: "subscription",
-            planId: "minimax-token-plan-plus",
-            planName: "Token Plan Plus",
-            providerName: "MiniMax",
-            providerId: "minimax",
+            ...subscription,
             routeLabel: "MiniMax via Kilo Gateway",
-            hasInstalledByokKey: true,
-            status: "active",
             billingPeriodDays: 30,
             currentPeriodStart: "2026-06-01T00:00:00.000Z",
             currentPeriodEnd: "2026-07-01T00:00:00.000Z",
             creditRenewalAt: "2026-07-01T00:00:00.000Z",
-            cancelAtPeriodEnd: false,
             paymentGraceExpiresAt: null,
             canceledAt: null,
             cancellationReason: null,
@@ -102,31 +131,14 @@ describe("Cloud tRPC client", () => {
   test("validates every supported procedure projection", async () => {
     const payloads: Record<string, unknown> = {
       "codingPlans.getUsage": {
-        schemaVersion: 1,
-        fetchedAt: "2026-06-19T00:00:00.000Z",
-        subscription: {
-          id: "plan",
-          planId: "minimax-token-plan-plus",
-          planName: "Token Plan Plus",
-          providerId: "minimax",
-          providerName: "MiniMax",
-          windows: [
-            {
-              id: "short_term",
-              remainingPercent: 80,
-              resetsAt: "2026-06-19T05:00:00.000Z",
-              period: { unit: "hour", value: 5 },
-              providerPrivate: "stripped",
-            },
-            {
-              id: "weekly",
-              remainingPercent: 150,
-              resetsAt: "2026-06-26T00:00:00.000Z",
-              period: { unit: "week", value: 1 },
-            },
-          ],
-        },
+        ...quota(),
         additive: "stripped",
+        subscription: {
+          ...quota().subscription,
+          windows: quota().subscription.windows.map((window, index) =>
+            index === 0 ? { ...window, providerPrivate: "stripped" } : window,
+          ),
+        },
       },
     }
     global.fetch = mock((input: string | URL | Request) => {
@@ -135,31 +147,7 @@ describe("Cloud tRPC client", () => {
     }) as unknown as typeof fetch
 
     const usage = await getCodingPlanUsage("token", "plan")
-    expect(usage).toEqual({
-      schemaVersion: 1,
-      fetchedAt: "2026-06-19T00:00:00.000Z",
-      subscription: {
-        id: "plan",
-        planId: "minimax-token-plan-plus",
-        planName: "Token Plan Plus",
-        providerId: "minimax",
-        providerName: "MiniMax",
-        windows: [
-          {
-            id: "short_term",
-            remainingPercent: 80,
-            resetsAt: "2026-06-19T05:00:00.000Z",
-            period: { unit: "hour", value: 5 },
-          },
-          {
-            id: "weekly",
-            remainingPercent: 150,
-            resetsAt: "2026-06-26T00:00:00.000Z",
-            period: { unit: "week", value: 1 },
-          },
-        ],
-      },
-    })
+    expect(usage).toEqual(quota())
     const call = (global.fetch as unknown as { mock: { calls: Array<[string]> } }).mock.calls[0]
     expect(JSON.parse(new URL(call[0]).searchParams.get("input") ?? "null")).toEqual({ subscriptionId: "plan" })
   })
@@ -188,68 +176,24 @@ describe("Cloud tRPC client", () => {
 
   test.each([
     ["unknown version", { schemaVersion: 2 }],
-    [
-      "mismatched subscription",
-      {
-        schemaVersion: 1,
-        fetchedAt: "2026-06-19T00:00:00.000Z",
-        subscription: {
-          id: "other",
-          planId: "plan",
-          planName: "Plan",
-          providerId: "provider",
-          providerName: "Provider",
-          windows: [
-            {
-              id: "weekly",
-              remainingPercent: 50,
-              resetsAt: "2026-06-26T00:00:00.000Z",
-              period: { unit: "week", value: 1 },
-            },
-          ],
-        },
-      },
-    ],
+    ["mismatched subscription", quota("other")],
     [
       "duplicate windows",
       {
-        schemaVersion: 1,
-        fetchedAt: "2026-06-19T00:00:00.000Z",
+        ...quota(),
         subscription: {
-          id: "plan",
-          planId: "plan",
-          planName: "Plan",
-          providerId: "provider",
-          providerName: "Provider",
-          windows: [
-            {
-              id: "weekly",
-              remainingPercent: 50,
-              resetsAt: "2026-06-26T00:00:00.000Z",
-              period: { unit: "week", value: 1 },
-            },
-            {
-              id: "weekly",
-              remainingPercent: 40,
-              resetsAt: "2026-07-03T00:00:00.000Z",
-              period: { unit: "week", value: 1 },
-            },
-          ],
+          ...quota().subscription,
+          windows: [quota().subscription.windows[1], quota().subscription.windows[1]],
         },
       },
     ],
     [
       "missing period",
       {
-        schemaVersion: 1,
-        fetchedAt: "2026-06-19T00:00:00.000Z",
+        ...quota(),
         subscription: {
-          id: "plan",
-          planId: "plan",
-          planName: "Plan",
-          providerId: "provider",
-          providerName: "Provider",
-          windows: [{ id: "weekly", remainingPercent: 50, resetsAt: "2026-06-26T00:00:00.000Z" }],
+          ...quota().subscription,
+          windows: [{ ...quota().subscription.windows[1], period: undefined }],
         },
       },
     ],
