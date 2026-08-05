@@ -185,7 +185,7 @@ async function resolveSessionWorktree(sessionID: string, fallback: string) {
     const id = Schema.decodeUnknownSync(SessionID)(sessionID)
     const row = await Effect.runPromise(
       Database.Service.use(({ db }) => db.select().from(SessionTable).where(eq(SessionTable.id, id)).get()).pipe(
-        Effect.provide(Database.defaultLayer),
+        Effect.provide(Database.layerFromPath(Database.path())),
       ),
     )
     const directory = row?.directory
