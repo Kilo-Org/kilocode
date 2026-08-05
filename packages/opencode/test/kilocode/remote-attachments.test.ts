@@ -388,6 +388,7 @@ describe("RemoteAttachments.create().materialize", () => {
       expect(text.text).toContain("filename: blob.bin")
       expect(text.text).toContain("mime: application/octet-stream")
       expect(text.text).toContain(`size: ${bin.byteLength} bytes`)
+      expect(text.text).toContain("shell utilities")
 
       const entries = await fs.readdir(dir)
       expect(entries).toHaveLength(1)

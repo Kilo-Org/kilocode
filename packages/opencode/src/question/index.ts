@@ -1,122 +1,29 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Deferred, Effect, Layer, Schema, Context } from "effect"
 import { InstanceState } from "@/effect/instance-state"
-import { SessionID, MessageID } from "@/session/schema"
+import { SessionID } from "@/session/schema"
 import { QuestionID } from "./schema"
 import { KiloQuestion } from "@/kilocode/question" // kilocode_change
 import { EventV2Bridge } from "@/event-v2-bridge"
-import { EventV2 } from "@opencode-ai/core/event"
+import { QuestionV1 } from "@opencode-ai/schema/question-v1"
 
-// Schemas — these are pure data; nothing checks class identity (see PR
-// description) so they're plain `Schema.Struct` + type alias. That lets
-// `Question.ask` and other internal sites trust the type contract without a
-// re-decode to coerce nested class instances.
-
-export const Option = Schema.Struct({
-  label: Schema.String.annotate({
-    description: "Display text (1-5 words, concise)",
-  }),
-  description: Schema.String.annotate({
-    description: "Explanation of choice",
-  }),
-  // kilocode_change start - optional i18n keys so clients can translate while still
-  // replying with the canonical English label (backend matches on `label`).
-  labelKey: Schema.optional(Schema.String).annotate({
-    description: "Optional i18n key for the label; clients translate and still reply with `label`",
-  }),
-  descriptionKey: Schema.optional(Schema.String).annotate({
-    description: "Optional i18n key for the description",
-  }),
-  // kilocode_change end
-  // kilocode_change start - hint to UI clients to switch the active agent/mode picker
-  // when this option is selected (before the reply is confirmed by the server).
-  mode: Schema.optional(Schema.String).annotate({
-    description: "Optional agent/mode name to pre-select in the UI when this option is picked",
-  }),
-  // kilocode_change end
-}).annotate({ identifier: "QuestionOption" })
-export type Option = Schema.Schema.Type<typeof Option>
-
-const base = {
-  question: Schema.String.annotate({
-    description: "Complete question",
-  }),
-  header: Schema.String.annotate({
-    description: "Very short label (max 30 chars)",
-  }),
-  options: Schema.Array(Option).annotate({
-    description: "Available choices",
-  }),
-  multiple: Schema.optional(Schema.Boolean).annotate({
-    description: "Allow selecting multiple choices",
-  }),
-  // kilocode_change start - optional i18n keys for question text and header
-  questionKey: Schema.optional(Schema.String).annotate({
-    description: "Optional i18n key for the question text; clients fall back to `question` when missing",
-  }),
-  headerKey: Schema.optional(Schema.String).annotate({
-    description: "Optional i18n key for the header; clients fall back to `header` when missing",
-  }),
-  // kilocode_change end
-}
-
-export const Info = Schema.Struct({
-  ...base,
-  custom: Schema.optional(Schema.Boolean).annotate({
-    description: "Allow typing a custom answer (default: true)",
-  }),
-}).annotate({ identifier: "QuestionInfo" })
-export type Info = Schema.Schema.Type<typeof Info>
-
-export const Prompt = Schema.Struct(base).annotate({ identifier: "QuestionPrompt" })
-export type Prompt = Schema.Schema.Type<typeof Prompt>
-
-export const Tool = Schema.Struct({
-  messageID: MessageID,
-  callID: Schema.String,
-}).annotate({ identifier: "QuestionTool" })
-export type Tool = Schema.Schema.Type<typeof Tool>
-
-export const Request = Schema.Struct({
-  id: QuestionID,
-  sessionID: SessionID,
-  questions: Schema.Array(Info).annotate({
-    description: "Questions to ask",
-  }),
-  blocking: Schema.optional(Schema.Boolean).annotate({
-    // kilocode_change
-    description: "Whether this question blocks prompt input (default: true)",
-  }),
-  tool: Schema.optional(Tool),
-}).annotate({ identifier: "QuestionRequest" })
-export type Request = Schema.Schema.Type<typeof Request>
-
-export const Answer = Schema.Array(Schema.String).annotate({ identifier: "QuestionAnswer" })
-export type Answer = Schema.Schema.Type<typeof Answer>
-
-export const Reply = Schema.Struct({
-  answers: Schema.Array(Answer).annotate({
-    description: "User answers in order of questions (each answer is an array of selected labels)",
-  }),
-}).annotate({ identifier: "QuestionReply" })
-export type Reply = Schema.Schema.Type<typeof Reply>
-
-export const Replied = Schema.Struct({
-  sessionID: SessionID,
-  requestID: QuestionID,
-  answers: Schema.Array(Answer),
-}).annotate({ identifier: "QuestionReplied" })
-
-export const Rejected = Schema.Struct({
-  sessionID: SessionID,
-  requestID: QuestionID,
-}).annotate({ identifier: "QuestionRejected" })
-
-export const Event = {
-  Asked: EventV2.define({ type: "question.asked", schema: Request.fields }),
-  Replied: EventV2.define({ type: "question.replied", schema: Replied.fields }),
-  Rejected: EventV2.define({ type: "question.rejected", schema: Rejected.fields }),
-}
+export const Option = QuestionV1.Option
+export type Option = typeof Option.Type
+export const Info = QuestionV1.Info
+export type Info = typeof Info.Type
+export const Prompt = QuestionV1.Prompt
+export type Prompt = typeof Prompt.Type
+export const Tool = QuestionV1.Tool
+export type Tool = typeof Tool.Type
+export const Request = QuestionV1.Request
+export type Request = typeof Request.Type
+export const Answer = QuestionV1.Answer
+export type Answer = typeof Answer.Type
+export const Reply = QuestionV1.Reply
+export type Reply = typeof Reply.Type
+export const Replied = QuestionV1.Replied
+export const Rejected = QuestionV1.Rejected
+export const Event = QuestionV1.Event
 
 export class RejectedError extends Schema.TaggedErrorClass<RejectedError>()("QuestionRejectedError", {}) {
   override get message() {
@@ -272,8 +179,9 @@ export const layer = Layer.effect(
   }),
 )
 
+// kilocode_change - preserve legacy layer composition for Kilo callers
 export const defaultLayer = layer.pipe(Layer.provide(EventV2Bridge.defaultLayer))
 
-export const node = LayerNode.make(layer, [EventV2Bridge.node])
+export const node = LayerNode.make({ service: Service, layer: layer, deps: [EventV2Bridge.node] })
 
 export * as Question from "."

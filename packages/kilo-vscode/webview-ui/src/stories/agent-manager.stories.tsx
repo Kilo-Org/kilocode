@@ -5,7 +5,7 @@
  */
 
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
-import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
+import { StoryProviders, defaultMockData, mockSessionValue, t } from "./StoryProviders"
 import { FileTree } from "../../diff-viewer/FileTree"
 import { DiffPanel } from "../../agent-manager/DiffPanel"
 import { FullScreenDiffView } from "../../diff-viewer/FullScreenDiffView"
@@ -29,6 +29,7 @@ import { ThinkingSelectorBase } from "../components/shared/ThinkingSelector"
 import { createSignal, onCleanup, onMount, type JSX } from "solid-js"
 import type { WorktreeFileDiff, WorktreeState, WorktreeGitStats, PRStatus } from "../types/messages"
 import type { ReviewComment } from "../../diff-viewer/review-comments"
+import { createModeRouter } from "../../agent-manager/mode-router"
 import "../../agent-manager/agent-manager.css"
 import "../../agent-manager/agent-manager-review.css"
 
@@ -955,7 +956,9 @@ export const SideTerminalPanelEmpty: Story = {
                   visible={() => true}
                   onSelect={() => undefined}
                   onClose={() => undefined}
+                  onCloseOthers={() => undefined}
                   onStart={() => undefined}
+                  onStop={() => undefined}
                 />
               </div>
             </div>
@@ -995,7 +998,9 @@ export const SideTerminalPanelTabs: Story = {
                   visible={() => true}
                   onSelect={(id) => state.setSideActive(LOCAL, id)}
                   onClose={() => undefined}
+                  onCloseOthers={() => undefined}
                   onStart={() => undefined}
+                  onStop={() => undefined}
                 />
               </div>
             </div>
@@ -1182,6 +1187,173 @@ export const SidebarSearchOpen: Story = {
             {selected()}
           </output>
           <textarea ref={prompt} class="sr-only" aria-label="Story prompt" />
+        </div>
+      </StoryProviders>
+    )
+  },
+}
+
+// ---------------------------------------------------------------------------
+// Multi-project sidebar
+// ---------------------------------------------------------------------------
+
+import { ProjectList } from "../../agent-manager/ProjectList"
+import type {
+  AgentManagerStateMessage,
+  AgentProjectSnapshot,
+  LocalGitStats,
+  ProjectSessionInfo,
+} from "../types/messages"
+
+const projectA: AgentProjectSnapshot = {
+  id: "prj-aaaa1111aaaa",
+  root: "/repos/kilocode",
+  label: "kilocode",
+  pinned: true,
+  active: true,
+  expanded: true,
+  initialized: true,
+  trusted: true,
+  missing: false,
+}
+const projectB: AgentProjectSnapshot = {
+  id: "prj-bbbb2222bbbb",
+  root: "/repos/kilo-gateway",
+  label: "kilo-gateway",
+  pinned: false,
+  active: false,
+  expanded: true,
+  initialized: true,
+  trusted: true,
+  missing: false,
+}
+
+const wt = (id: string, branch: string, label?: string, opts: Partial<WorktreeState> = {}): WorktreeState => ({
+  id,
+  branch,
+  path: `/repos/x/.kilo/worktrees/${id}`,
+  parentBranch: "main",
+  createdAt: "2026-07-20T10:00:00Z",
+  label,
+  ...opts,
+})
+
+const projectState = (
+  projectId: string,
+  worktrees: WorktreeState[],
+  sessions: { id: string; worktreeId: string | null }[],
+  sections: NonNullable<AgentManagerStateMessage["sections"]> = [],
+  baseBranch = "main",
+  worktreeOrder?: string[],
+): AgentManagerStateMessage => ({
+  type: "agentManager.state",
+  projectId,
+  worktrees,
+  sessions: sessions.map((s) => ({ id: s.id, worktreeId: s.worktreeId, createdAt: "2026-07-20T10:00:00Z" })),
+  sections,
+  worktreeOrder: worktreeOrder ?? [
+    ...worktrees.filter((item) => !item.sectionId).map((item) => item.id),
+    ...sections.map((item) => item.id),
+    ...worktrees.filter((item) => item.sectionId).map((item) => item.id),
+  ],
+  staleWorktreeIds: [],
+  isGitRepo: true,
+  defaultBaseBranch: baseBranch,
+  sessionsCollapsed: false,
+})
+
+const projectSession = (
+  id: string,
+  worktreeId: string | null,
+  title: string,
+  updatedAt: string,
+): ProjectSessionInfo => ({
+  id,
+  worktreeId,
+  title,
+  createdAt: "2026-07-19T09:00:00Z",
+  updatedAt,
+})
+
+const storyStats = (worktreeId: string, additions: number, deletions: number, ahead = 0): WorktreeGitStats => ({
+  worktreeId,
+  files: 3,
+  additions,
+  deletions,
+  ahead,
+  behind: 0,
+})
+
+const storyLocal = (branch: string, additions: number, deletions: number, ahead = 0, behind = 0): LocalGitStats => ({
+  branch,
+  files: 2,
+  additions,
+  deletions,
+  ahead,
+  behind,
+})
+
+export const MultiProjectSidebar: Story = {
+  name: "Project List — two expanded projects with restored controls",
+  render: () => {
+    return (
+      <StoryProviders noPadding>
+        <div style={{ display: "flex", "flex-direction": "column", "max-height": "720px", overflow: "auto" }}>
+          <ProjectList
+            mode={createModeRouter()}
+            projects={[projectA, projectB]}
+            states={{
+              [projectA.id]: projectState(
+                projectA.id,
+                [
+                  wt("wt-a1", "feature/project-list", "Project list UI", { sectionId: "sec-a1" }),
+                  wt("wt-a2", "fix/session-routing"),
+                  wt("wt-a3", "feat/project-list-v2", undefined, { groupId: "grp-a1" }),
+                  wt("wt-a4", "feat/project-list-v3", undefined, { groupId: "grp-a1" }),
+                ],
+                [
+                  { id: "ses-a1", worktreeId: null },
+                  { id: "ses-a2", worktreeId: "wt-a1" },
+                ],
+                [{ id: "sec-a1", name: "Agent Manager", color: "Blue", order: 0, collapsed: false }],
+                "main",
+                ["wt-a2", "sec-a1", "wt-a1", "wt-a3", "wt-a4"],
+              ),
+              [projectB.id]: projectState(
+                projectB.id,
+                [
+                  wt("wt-b1", "feat/gateway-routing", "Gateway routing", { sectionId: "sec-b1" }),
+                  wt("wt-b2", "fix/api"),
+                ],
+                [{ id: "ses-b1", worktreeId: null }],
+                [{ id: "sec-b1", name: "In progress", color: null, order: 0, collapsed: false }],
+                "master",
+                ["wt-b2", "sec-b1", "wt-b1"],
+              ),
+            }}
+            stats={{
+              [projectA.id]: { "wt-a1": storyStats("wt-a1", 342, 87, 2), "wt-a2": storyStats("wt-a2", 18, 4) },
+              [projectB.id]: { "wt-b1": storyStats("wt-b1", 96, 12, 1) },
+            }}
+            local={{
+              [projectA.id]: storyLocal("main", 124, 33, 1),
+              [projectB.id]: storyLocal("master", 0, 0, 0, 2),
+            }}
+            prs={{ [projectA.id]: {}, [projectB.id]: {} }}
+            sessions={{
+              [projectA.id]: [
+                projectSession("ses-a1", null, "Refine project accordion layout", "2026-07-24T08:30:00Z"),
+                projectSession("ses-a2", "wt-a1", "Add per-project actions", "2026-07-23T16:10:00Z"),
+              ],
+              [projectB.id]: [projectSession("ses-b1", null, "Route stats per project", "2026-07-24T07:45:00Z")],
+            }}
+            selectedProject={projectA.id}
+            selection="local"
+            bindings={{ search: "⌘F", showShortcuts: "⌘⇧/", newWorktree: "⌘N", quickWorktree: "⌘⇧N" }}
+            t={t}
+            onSearchRef={() => {}}
+            onShortcuts={() => {}}
+          />
         </div>
       </StoryProviders>
     )

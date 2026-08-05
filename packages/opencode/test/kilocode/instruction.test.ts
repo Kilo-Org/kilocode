@@ -1,4 +1,5 @@
 // kilocode_change - new file
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect } from "bun:test"
 import path from "path"
 import { Effect, FileSystem, Layer } from "effect"
@@ -12,20 +13,19 @@ import { Global } from "@opencode-ai/core/global"
 import { TestConfig } from "../fixture/config"
 import { provideInstance, testInstanceStoreLayer, tmpdirScoped } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
+import { Config } from "../../src/config/config"
 
 const it = testEffect(
-  Layer.mergeAll(CrossSpawnSpawner.defaultLayer, NodeFileSystem.layer, RuntimeFlags.layer(), testInstanceStoreLayer),
+  Layer.mergeAll(AppNodeBuilder.build(CrossSpawnSpawner.node), NodeFileSystem.layer, RuntimeFlags.layer(), testInstanceStoreLayer),
 )
 
 const configLayer = TestConfig.layer()
 
 const instructionLayer = (global: Partial<Global.Interface>) =>
-  Instruction.layer.pipe(
-    Layer.provide(configLayer),
-    Layer.provide(FSUtil.defaultLayer),
-    Layer.provide(FetchHttpClient.layer),
-    Layer.provide(Global.layerWith(global)),
-  )
+  AppNodeBuilder.build(Instruction.node, [
+    [Config.node, configLayer],
+    [Global.node, Global.layerWith(global)],
+  ])
 
 const provideInstruction =
   (global: Partial<Global.Interface>) =>

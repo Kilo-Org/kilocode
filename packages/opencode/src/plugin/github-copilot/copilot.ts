@@ -312,7 +312,7 @@ export async function CopilotAuthPlugin(input: PluginInput): Promise<Hooks> {
 
                   if (data.error === "slow_down") {
                     // Based on the RFC spec, we must add 5 seconds to our current polling interval.
-                    // (See https://www.rfc-editor.org/rfc/rfc8628#section-3.5)
+                    // (See https://www.rfc-editor.org/rfc/rfc8628.html#section-3.5) // kilocode_change - avoid unstable redirect
                     let newInterval = (deviceData.interval + 5) * 1000
 
                     // GitHub OAuth API may return the new interval in seconds in the response.

@@ -219,6 +219,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed": "點擊以限制檔案系統寫入。沙盒設定仍允許網路存取。",
 
   "speechToText.tooltip.start": "使用 Kilo Gateway 開始語音輸入",
+  "speechToText.tooltip.shortcut": "點擊或按下 Cmd/Ctrl+K 開始或停止錄音；說話時按住，放開後即可轉錄並提交。",
   "speechToText.tooltip.starting": "正在啟動麥克風... 請稍後再說。",
   "speechToText.tooltip.stop": "停止擷取音訊",
   "speechToText.tooltip.transcribing": "正在轉錄... 點擊取消。",
@@ -252,6 +253,7 @@ export const dict = {
 
   "notification.permission.title": "需要權限",
   "notification.permission.titleSubagent": "需要權限（子代理）",
+  "notification.permission.titleSkillShell": "要執行技能「{{skill}}」的 shell 指令嗎？",
   "ui.permission.manageAutoApprove": "管理自動核准規則",
   "ui.permission.doomLoop.prompt": "偵測到 {{tool}} 工具可能陷入迴圈。是否繼續執行？",
   "ui.permission.doomLoop.rule": "繼續呼叫 {{tool}}",
@@ -817,6 +819,9 @@ export const dict = {
     "啟用 SWE-Pruner：根據智能體提供的聚焦問題，對讀取、搜尋與 shell 工具的大型輸出進行任務感知裁剪",
   "settings.experimental.swePrunerModel.title": "SWE-Pruner 模型",
   "settings.experimental.swePrunerModel.description": "用於裁剪工具輸出的模型;預設為已設定的小模型",
+  "settings.experimental.multiProject.title": "多專案 Agent Manager",
+  "settings.experimental.multiProject.description":
+    "在 Agent Manager 中啟用跨多個儲存庫的工作階段和工作樹管理。當前工作區儲存庫始終是預設專案。",
   "settings.experimental.mcpTimeout.title": "MCP 逾時（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 伺服器請求的逾時時間（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",
@@ -934,6 +939,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.empty": "未設定自訂命令。將命令新增至 opencode.json 即可在此處看到。",
   "settings.agentBehaviour.workflows.detail.description": "描述",
   "settings.agentBehaviour.workflows.detail.template": "範本",
+  "settings.agentBehaviour.workflows.model": "模型",
+  "settings.agentBehaviour.workflows.variant": "變體",
+  "settings.agentBehaviour.workflows.modelDescription": "全域模型覆寫",
   "settings.sandboxing.enabled.title": "沙盒",
   "settings.sandboxing.enabled.description":
     "在作業系統層級沙盒中執行代理 shell 指令，將寫入限制在專案和 Kilo 狀態目錄內",

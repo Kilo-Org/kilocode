@@ -37,6 +37,27 @@ object SessionUiStyle {
             const val BODY_EXTRA_HEIGHT = 16
         }
 
+        /**
+         * Single source of truth for the spacing of every session-card header (see `PartHeader`).
+         * Keep header gaps here so all cards stay aligned; do not hardcode header spacing elsewhere.
+         */
+        object Header {
+            /** Leading inset from the card edge to the first header element. */
+            fun left() = JBUI.scale(Layout.HORIZONTAL_PADDING)
+
+            /** Trailing inset from the collapse/expand arrow to the card edge. */
+            fun right() = JBUI.scale(Layout.HORIZONTAL_PADDING)
+
+            /** Gap between the leading glyph icon and the title. */
+            fun icon() = UiStyle.Gap.sm()
+
+            /** Universal gap between every element after the title. */
+            fun gap() = JBUI.scale(Layout.GAP)
+
+            /** Larger gap separating the title from the elements that follow it (one standard step above [gap]). */
+            fun title() = UiStyle.Gap.lg()
+        }
+
         object Popup {
             const val MAX_WIDTH = 350
             const val WIDE_MAX_WIDTH = MAX_WIDTH * 2
@@ -177,6 +198,15 @@ object SessionUiStyle {
             const val TASK_LINES = 10
             const val DIFF_LINES = 20
             const val PREVIEW_LIMIT = 20_000
+
+            /**
+             * Total unified-diff line count above which the hover popup and inline body stop building
+             * embedded editors and show an "open in a diff tab" placeholder instead. Each embedded
+             * editor holds the whole diff document, and reinitializing it walks every line on the EDT,
+             * so an uncapped large diff freezes the UI. Above this the platform diff viewer (which
+             * streams file diffs on background threads) handles it.
+             */
+            const val DIFF_MAX_LINES = 2_000
 
             fun pending(): Color = UiStyle.Colors.weak()
 

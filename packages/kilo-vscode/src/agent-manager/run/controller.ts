@@ -75,8 +75,9 @@ export class RunController {
     const service = this.getService()
     if (!root || !service) return
 
-    // Resolve cwd and branch: "local" runs from repo root, worktrees from their path
-    const local = worktreeId === "local"
+    // Resolve cwd and branch: "local" runs from repo root, worktrees from their path.
+    // Multi-project qualifies the local key as "<projectId>:local" (see run/message.ts).
+    const local = worktreeId === "local" || worktreeId.endsWith(":local")
     const state = this.opts.state()
     const worktree = local ? undefined : state?.getWorktree(worktreeId)
     if (!local && !worktree) {

@@ -4,6 +4,11 @@ export const dict = {
   "agentManager.sidebar.expand": "Afficher la barre latérale",
   "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "SESSIONS",
+  "agentManager.projects": "PROJETS",
+  "agentManager.project.add": "Ajouter un projet",
+  "agentManager.project.remove": "Retirer d'Agent Manager",
+  "agentManager.project.trust": "Approuver",
+  "agentManager.project.missing": "Dépôt introuvable",
   "agentManager.notGitRepo": "Ce n'est pas un dépôt git",
   "agentManager.worktree.settings": "Paramètres du Worktree",
   "agentManager.worktree.new": "Nouveau Worktree",
@@ -59,6 +64,11 @@ export const dict = {
 
   "agentManager.terminal.new": "Nouvel onglet de terminal",
   "agentManager.terminal.ended": "terminal terminé — fermez l'onglet pour ignorer",
+  "agentManager.terminal.endedRestartable":
+    "terminal terminé - saisissez du texte pour démarrer un nouveau shell ou fermez l'onglet",
+  "agentManager.terminal.setupFailed": "échec du script de configuration",
+  "agentManager.terminal.setupFailedCode": "échec du script de configuration avec le code de sortie",
+  "agentManager.terminal.stopSetup": "Arrêter le script de configuration",
   "agentManager.terminal.connectionError": "erreur de connexion du terminal",
   "agentManager.terminal.add": "Nouveau terminal",
   "agentManager.terminal.empty": "Aucun terminal ici pour l'instant",

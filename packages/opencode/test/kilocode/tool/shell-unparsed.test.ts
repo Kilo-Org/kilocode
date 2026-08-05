@@ -9,6 +9,7 @@
 // recovered nothing falls back to the raw command text (also covering ERROR
 // chunks without a command_name descendant, such as backtick escapes).
 
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect, test } from "bun:test"
 import { Cause, Effect, Exit, Layer } from "effect"
 import path from "path"
@@ -28,7 +29,7 @@ import { SessionID, MessageID } from "../../../src/session/schema"
 import { disposeAllInstances, provideInstance, testInstanceStoreLayer, tmpdir } from "../../fixture/fixture"
 import { afterEach } from "bun:test"
 
-const layer = Layer.mergeAll(CrossSpawnSpawner.defaultLayer, FSUtil.defaultLayer, testInstanceStoreLayer)
+const layer = Layer.mergeAll(AppNodeBuilder.build(CrossSpawnSpawner.node), AppNodeBuilder.build(FSUtil.node), testInstanceStoreLayer)
 
 type ScanRequest = Omit<PermissionV1.Request, "id" | "sessionID" | "tool">
 
@@ -155,13 +156,13 @@ describe("shell permission scanner fails closed on unparsed commands", () => {
 })
 
 const execLayer = Layer.mergeAll(
-  CrossSpawnSpawner.defaultLayer,
-  FSUtil.defaultLayer,
-  Plugin.defaultLayer,
-  Truncate.defaultLayer,
-  Config.defaultLayer,
-  Agent.defaultLayer,
-  RuntimeFlags.defaultLayer,
+  AppNodeBuilder.build(CrossSpawnSpawner.node),
+  AppNodeBuilder.build(FSUtil.node),
+  AppNodeBuilder.build(Plugin.node),
+  AppNodeBuilder.build(Truncate.node),
+  AppNodeBuilder.build(Config.node),
+  AppNodeBuilder.build(Agent.node),
+  AppNodeBuilder.build(RuntimeFlags.node),
   testInstanceStoreLayer,
 )
 

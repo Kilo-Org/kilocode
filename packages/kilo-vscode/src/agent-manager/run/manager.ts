@@ -13,6 +13,12 @@ export interface RunStatus {
 
 export interface RunHandle {
   stop(): void | Promise<void>
+  /**
+   * Kill the process but retain the terminal as failed with its output,
+   * instead of dropping it (stop). Used for timeouts, where the partial
+   * output must stay reviewable.
+   */
+  kill?(reason: string): void
   dispose?(): void
 }
 

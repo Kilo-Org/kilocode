@@ -1,4 +1,4 @@
-import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { makeGlobalNode } from "@opencode-ai/core/effect/app-node"
 import { Plugin } from "../plugin"
 import { Format } from "../format"
 import { LSP } from "@/lsp/lsp"
@@ -17,7 +17,7 @@ import { Service } from "./bootstrap-service"
 export { Service } from "./bootstrap-service"
 export type { Interface } from "./bootstrap-service"
 
-export const layer = Layer.effect(
+const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     // Yield each bootstrap dep at layer init so `run` itself has R = never.
@@ -56,31 +56,10 @@ export const layer = Layer.effect(
   }),
 )
 
-export const defaultLayer: Layer.Layer<Service> = layer.pipe(
-  Layer.provide([
-    Config.defaultLayer,
-    Format.defaultLayer,
-    LSP.defaultLayer,
-    Plugin.defaultLayer,
-    Project.defaultLayer,
-    // kilocode_change start
-    KilocodeBootstrap.defaultLayer,
-    // ShareNext.defaultLayer,
-    // kilocode_change end
-    Snapshot.defaultLayer,
-    Vcs.defaultLayer,
-  ]),
-)
-
-export const node = LayerNode.make(layer, [
-  Config.node,
-  Format.node,
-  LSP.node,
-  Plugin.node,
-  Project.node,
-  KilocodeBootstrap.node, // kilocode_change
-  Snapshot.node,
-  Vcs.node,
-])
+export const node = makeGlobalNode({
+  service: Service,
+  layer: layer,
+  deps: [Config.node, Format.node, LSP.node, Plugin.node, Project.node, KilocodeBootstrap.node, Snapshot.node, Vcs.node], // kilocode_change
+})
 
 export * as InstanceBootstrap from "./bootstrap"

@@ -2,13 +2,14 @@ import { describe, expect } from "bun:test"
 import fs from "fs/promises"
 import path from "path"
 import { Effect, Exit, Layer } from "effect"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import * as SearchTarget from "@opencode-ai/core/kilocode/search-target"
 import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { tmpdir } from "../fixture/tmpdir"
 import { testEffect } from "../lib/effect"
 
-const it = testEffect(Layer.mergeAll(FSUtil.defaultLayer, Ripgrep.defaultLayer))
+const it = testEffect(Layer.mergeAll(FSUtil.defaultLayer, AppNodeBuilder.build(Ripgrep.node)))
 const withTmp = <A, E, R>(f: (dir: string) => Effect.Effect<A, E, R>) =>
   Effect.acquireRelease(
     Effect.promise(() => tmpdir()),
