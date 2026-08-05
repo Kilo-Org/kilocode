@@ -131,13 +131,7 @@ export class GitStatsPoller {
     this.lastStats = {}
   }
 
-  async snapshot(refresh = false): Promise<{ worktrees: WorktreeStats[]; local?: LocalStats }> {
-    if (refresh && !this.busy) {
-      this.busy = true
-      await Promise.all([this.fetchWorktreeStats(true), this.fetchLocalStats()]).finally(() => {
-        this.busy = false
-      })
-    }
+  async snapshot(): Promise<{ worktrees: WorktreeStats[]; local?: LocalStats }> {
     return {
       worktrees: Object.values(this.lastStats),
       ...(this.lastLocalStats ? { local: this.lastLocalStats } : {}),

@@ -37,7 +37,7 @@ describe("AgentManagerOrchestrationBridge", () => {
     const replies: unknown[] = []
     const rejections: unknown[] = []
     const lists = new Map<string, AgentManagerRequest[]>()
-    const statsCalls: Array<boolean | undefined> = []
+    const statsCalls: number[] = []
     const handlers: {
       event?: (event: SSEPayload, directory?: string) => void
       state?: (state: "connecting" | "connected" | "disconnected" | "error") => void
@@ -103,9 +103,8 @@ describe("AgentManagerOrchestrationBridge", () => {
       root: () => root,
       ready: async () => state,
       state: () => state,
-      stats: async (refresh) => {
-        statsCalls.push(refresh)
-        if (refresh) return new Promise(() => undefined)
+      stats: async () => {
+        statsCalls.push(1)
         return { worktrees: [] }
       },
       prs: () => new Map(),
@@ -258,7 +257,7 @@ describe("AgentManagerOrchestrationBridge", () => {
     test.bridge.dispose()
   })
 
-  it("returns an overview without waiting for a forced git refresh", async () => {
+  it("returns an overview with cached git stats", async () => {
     const test = harness()
     test.request({
       id: "amr_overview",
@@ -267,7 +266,7 @@ describe("AgentManagerOrchestrationBridge", () => {
     })
     await waitFor(() => test.replies.length === 1)
 
-    expect(test.statsCalls).toEqual([undefined])
+    expect(test.statsCalls).toEqual([1])
     expect(test.replies[0]).toEqual({
       requestID: "amr_overview",
       directory: root,

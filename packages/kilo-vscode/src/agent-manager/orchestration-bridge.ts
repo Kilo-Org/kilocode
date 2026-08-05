@@ -44,7 +44,7 @@ interface Options {
   root(): string | undefined
   ready(): Promise<WorktreeStateManager | undefined>
   state(): WorktreeStateManager | undefined
-  stats(refresh?: boolean): Promise<{ worktrees: WorktreeStats[]; local?: LocalStats }>
+  stats(): Promise<{ worktrees: WorktreeStats[]; local?: LocalStats }>
   prs(): Map<string, PRStatus>
   push(): void
   managed(sessionID: string): boolean
