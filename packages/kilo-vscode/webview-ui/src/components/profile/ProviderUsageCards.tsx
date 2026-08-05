@@ -21,6 +21,11 @@ export interface ProviderUsageCardsProps {
   onGetKiloPass: () => void
 }
 
+export interface PersonalTopUpsCardProps {
+  data: ProviderUsageData | undefined
+  onOpen: (url: string) => void
+}
+
 type Language = ReturnType<typeof useLanguage>
 
 const source = (item: ProviderUsageSnapshot, language: Language) => {
@@ -259,6 +264,58 @@ const KiloPassCard: Component<{
         )}
       </Show>
     </Card>
+  )
+}
+
+const BillingCard: Component<{
+  billing: NonNullable<ProviderUsageData["kiloBilling"]>
+  onOpen: (url: string) => void
+  language: Language
+}> = (props) => (
+  <Card class="provider-usage-card">
+    <CardTitle icon={false}>{props.language.t("profile.usage.topups.title")}</CardTitle>
+    <Show when={props.billing.autoTopUp}>
+      {(auto) => (
+        <div class="provider-usage-resources">
+          <div class="provider-usage-row-heading">
+            <span>{props.language.t("profile.usage.topups.auto")}</span>
+            <strong>{props.language.t(auto().enabled ? "profile.usage.topups.on" : "profile.usage.topups.off")}</strong>
+          </div>
+          <p class="provider-usage-meta">
+            {props.language.t("profile.usage.topups.rule", {
+              amount: (auto().amountCents / 100).toFixed(2),
+              threshold: (auto().thresholdCents / 100).toFixed(2),
+            })}
+            {auto().paymentLast4
+              ? ` | ${props.language.t("profile.usage.topups.payment", {
+                  brand: auto().paymentBrand ?? auto().paymentType ?? "Payment method",
+                  last4: auto().paymentLast4 ?? "",
+                })}`
+              : ""}
+          </p>
+        </div>
+      )}
+    </Show>
+    <Show when={props.billing.error}>
+      <p class="provider-usage-notice">{props.language.t("profile.usage.state.unavailable")}</p>
+    </Show>
+    <CardActions>
+      <Button variant="secondary" size="small" onClick={() => props.onOpen(props.billing.topUpUrl)}>
+        {props.language.t("profile.usage.action.addCredits")}
+      </Button>
+      <Button variant="ghost" size="small" onClick={() => props.onOpen(props.billing.manageUrl)}>
+        {props.language.t("profile.usage.action.manageBilling")}
+      </Button>
+    </CardActions>
+  </Card>
+)
+
+export const PersonalTopUpsCard: Component<PersonalTopUpsCardProps> = (props) => {
+  const language = useLanguage()
+  return (
+    <Show when={props.data?.kiloBilling}>
+      {(billing) => <BillingCard billing={billing()} onOpen={props.onOpen} language={language} />}
+    </Show>
   )
 }
 
