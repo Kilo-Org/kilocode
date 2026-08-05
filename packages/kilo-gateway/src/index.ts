@@ -73,11 +73,9 @@ export { fetchKilocodeNotifications, type KilocodeNotification } from "./api/not
 export {
   CloudTrpcError,
   CodingPlanUsageSchema,
-  getAutoTopUpState,
   getCodingPlanUsage,
   listByokEntries,
   listCodingPlanSubscriptions,
-  type AutoTopUpState,
   type ByokEntry,
   type CodingPlanSubscription,
   type CodingPlanQuotaWindow,

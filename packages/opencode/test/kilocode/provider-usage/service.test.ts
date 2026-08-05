@@ -77,7 +77,6 @@ const cloudUsage = (remaining = 80, windows?: unknown[]) => ({
 it.effect("only includes managed plans with an installed managed key", () =>
   Effect.sync(() => {
     const state = (entry?: { management_source: "coding_plan" | "user"; is_enabled: boolean }) => ({
-      topup: { ok: false as const },
       plans: { ok: true as const, value: [subscription] },
       byok: {
         ok: true as const,
@@ -130,7 +129,6 @@ it.instance("returns empty usage when no source is connected", () =>
     const usage = yield* ProviderUsage.Service
     const result = yield* usage.get()
     expect(result.items).toEqual([])
-    expect(result.kiloBilling).toBeUndefined()
   }).pipe(Effect.provide(layer(undefined, {}))),
 )
 
@@ -265,7 +263,7 @@ it.instance("keeps direct provider failures independent", () =>
   }),
 )
 
-it.instance("loads each personal Cloud procedure once and isolates managed enrichment", () =>
+it.instance("loads each managed Cloud procedure once and isolates managed enrichment", () =>
   Effect.gen(function* () {
     const original = global.fetch
     const calls: string[] = []
@@ -274,16 +272,6 @@ it.instance("loads each personal Cloud procedure once and isolates managed enric
       const procedure = new URL(String(input)).pathname.split("/").at(-1) ?? ""
       calls.push(procedure)
       const values: Record<string, unknown> = {
-        "user.getAutoTopUpPaymentMethod": {
-          enabled: true,
-          amountCents: 5000,
-          paymentMethod: {
-            type: "card",
-            brand: "visa",
-            last4: "4242",
-            stripePaymentMethodId: "pm_private",
-          },
-        },
         "codingPlans.listSubscriptions": [subscription],
         "byok.list": [managed],
         "codingPlans.getUsage": cloudUsage(80, [
@@ -315,12 +303,7 @@ it.instance("loads each personal Cloud procedure once and isolates managed enric
     )
     global.fetch = original
 
-    expect(calls).toEqual([
-      "user.getAutoTopUpPaymentMethod",
-      "codingPlans.listSubscriptions",
-      "byok.list",
-      "codingPlans.getUsage",
-    ])
+    expect(calls).toEqual(["codingPlans.listSubscriptions", "byok.list", "codingPlans.getUsage"])
     expect(result.items.map((item) => item.id)).toEqual(["kilo-managed:plan"])
     expect(result.items[0]).toMatchObject({
       providerID: "minimax",
@@ -355,8 +338,6 @@ it.instance("loads each personal Cloud procedure once and isolates managed enric
       ],
     })
     expect(result.items[0]?.windows[2]).not.toHaveProperty("durationMs")
-    expect(result.kiloBilling?.autoTopUp).toMatchObject({ paymentBrand: "visa", paymentLast4: "4242" })
-    expect(JSON.stringify(result)).not.toContain("pm_private")
     expect(JSON.stringify(result)).not.toContain("kilo-private-token")
   }),
 )
@@ -372,20 +353,6 @@ it.instance("does not reuse personal Cloud data after the bearer identity change
       const token = new Headers(init?.headers).get("authorization")?.replace("Bearer ", "")
       const second = token === "token-two"
       calls.push(`${token}:${procedure}`)
-      if (procedure === "user.getAutoTopUpPaymentMethod") {
-        return Promise.resolve(
-          ok({
-            enabled: second,
-            amountCents: second ? 10_000 : 5_000,
-            thresholdCents: 500,
-            paymentMethod: {
-              type: "card",
-              brand: "visa",
-              last4: second ? "2222" : "1111",
-            },
-          }),
-        )
-      }
       if (procedure === "codingPlans.listSubscriptions") return Promise.resolve(ok([subscription]))
       if (procedure === "byok.list") return Promise.resolve(ok([managed]))
       return Promise.resolve(ok(cloudUsage(second ? 20 : 80)))
@@ -403,16 +370,12 @@ it.instance("does not reuse personal Cloud data after the bearer identity change
     }).pipe(Effect.provide(usageLayer))
     global.fetch = original
 
-    expect(output.first.kiloBilling?.autoTopUp).toMatchObject({ amountCents: 5_000, paymentLast4: "1111" })
-    expect(output.second.kiloBilling?.autoTopUp).toMatchObject({ amountCents: 10_000, paymentLast4: "2222" })
     expect(output.first.items[0]?.windows[0]?.remaining).toBe(80)
     expect(output.second.items[0]?.windows[0]?.remaining).toBe(20)
     expect(calls).toEqual([
-      "token-one:user.getAutoTopUpPaymentMethod",
       "token-one:codingPlans.listSubscriptions",
       "token-one:byok.list",
       "token-one:codingPlans.getUsage",
-      "token-two:user.getAutoTopUpPaymentMethod",
       "token-two:codingPlans.listSubscriptions",
       "token-two:byok.list",
       "token-two:codingPlans.getUsage",
@@ -428,9 +391,6 @@ it.instance("preserves managed usage as stale when the BYOK lookup fails", () =>
     const ok = (value: unknown) => Response.json({ result: { data: { json: value } } })
     global.fetch = ((input: string | URL | Request) => {
       const procedure = new URL(String(input)).pathname.split("/").at(-1) ?? ""
-      if (procedure === "user.getAutoTopUpPaymentMethod") {
-        return Promise.resolve(ok({ enabled: false, amountCents: 5_000, thresholdCents: 500, paymentMethod: null }))
-      }
       if (procedure === "codingPlans.listSubscriptions") return Promise.resolve(ok([subscription]))
       if (procedure === "byok.list") {
         byokCalls++
@@ -512,6 +472,5 @@ it.instance("skips every personal Cloud procedure in organization context", () =
 
     expect(calls).toBe(0)
     expect(result.items).toEqual([])
-    expect(result.kiloBilling).toBeUndefined()
   }),
 )

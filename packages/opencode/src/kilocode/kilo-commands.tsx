@@ -129,7 +129,7 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
       {
         name: "kilo.usage",
         title: "Plans & usage",
-        desc: "View provider plans, quota, and billing",
+        desc: "View provider plans and quota",
         category: "Kilo",
         slashName: "usage",
         slashAliases: ["plans", "quota"],

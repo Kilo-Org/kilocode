@@ -5,18 +5,6 @@ import { KILO_API_BASE } from "./constants.js"
 const timeout = 5_000
 const limit = 512 * 1024
 
-const AutoTopUpStateSchema = z.object({
-  enabled: z.boolean(),
-  amountCents: z.number().int().nonnegative(),
-  paymentMethod: z
-    .object({
-      type: z.string(),
-      brand: z.string().nullable(),
-      last4: z.string().nullable(),
-    })
-    .nullable(),
-})
-
 const CodingPlanSubscriptionSchema = z.object({
   id: z.string(),
   planId: z.string(),
@@ -81,7 +69,6 @@ const envelope = z.object({
   error: z.unknown().optional(),
 })
 
-export type AutoTopUpState = z.infer<typeof AutoTopUpStateSchema>
 export type CodingPlanSubscription = z.infer<typeof CodingPlanSubscriptionSchema>
 export type ByokEntry = z.infer<typeof ByokEntrySchema>
 export type CodingPlanUsage = z.infer<typeof CodingPlanUsageSchema>
@@ -170,10 +157,6 @@ async function query<T>(procedure: string, token: string, schema: z.ZodType<T>, 
   const result = schema.safeParse(value)
   if (!result.success) throw new CloudTrpcError("schema", response.status)
   return result.data
-}
-
-export function getAutoTopUpState(token: string) {
-  return query("user.getAutoTopUpPaymentMethod", token, AutoTopUpStateSchema)
 }
 
 export function listCodingPlanSubscriptions(token: string) {
