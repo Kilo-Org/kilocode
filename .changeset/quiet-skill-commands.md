@@ -3,4 +3,4 @@
 "kilo-code": patch
 ---
 
-Show invoked skill commands and a compact skill indicator instead of expanded skill instructions in session transcripts.
+Show slash commands instead of expanded instructions in session transcripts, with a compact indicator for invoked skills.

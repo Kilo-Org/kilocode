@@ -375,6 +375,13 @@ export const layer = Layer.effect(
       const ctx = yield* InstanceState.context
       const promptOps = yield* ops()
       const { task: taskTool } = yield* registry.named()
+      // kilocode_change start - carry the slash invocation into command-backed child sessions
+      const source = msgs.find((message) => message.info.id === lastUser.id)
+      const invocation = source?.parts.find(
+        (part): part is SessionV1.TextPart =>
+          part.type === "text" && part.ignored === true && typeof part.metadata?.command === "object",
+      )
+      // kilocode_change end
       const taskModel = task.model ? yield* getModel(task.model.providerID, task.model.modelID, sessionID) : model
       const taskVariant = task.variant ?? lastUser.model.variant // kilocode_change
       const assistantMessage: SessionV1.Assistant = yield* sessions.updateMessage({
@@ -464,6 +471,7 @@ export const layer = Layer.effect(
             bypassAgentCheck: true,
             promptOps,
             workflow, // kilocode_change
+            invocation: invocation ? { text: invocation.text, metadata: invocation.metadata } : undefined, // kilocode_change
           },
           // kilocode_change end
           messages: msgs,
@@ -2429,18 +2437,19 @@ export const layer = Layer.effect(
             },
           ]
         : [...uniqueTemplateParts, ...(input.parts ?? [])]
-      const parts =
-        cmd.source === "skill"
-          ? [
-              {
-                type: "text" as const,
-                text: `/${input.command}${input.arguments ? ` ${input.arguments}` : ""}`,
-                ignored: true,
-                metadata: { skill: { name: cmd.name, userInitiated: true } },
-              },
-              ...commandParts.map((part) => (part.type === "text" ? { ...part, synthetic: true } : part)),
-            ]
-          : commandParts
+      const metadata = {
+        command: { name: cmd.name, source: cmd.source ?? "command", userInitiated: true },
+        ...(cmd.source === "skill" ? { skill: { name: cmd.name, userInitiated: true } } : {}),
+      }
+      const parts = [
+        {
+          type: "text" as const,
+          text: `/${input.command}${input.arguments ? ` ${input.arguments}` : ""}`,
+          ignored: true,
+          metadata,
+        },
+        ...commandParts.map((part) => (part.type === "text" ? { ...part, synthetic: true } : part)),
+      ]
       // kilocode_change end
 
       const userAgent = isSubtask ? (input.agent ?? (yield* agents.defaultInfo()).name) : agent.name
