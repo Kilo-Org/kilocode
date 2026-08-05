@@ -18,11 +18,16 @@
     "./context/*": "./src/context/*.tsx",
     "./styles": "./src/styles/index.css",
     "./v2/*.css": "./src/v2/components/*.css",
-    "./v2/*": "./src/v2/components/*.tsx"
+    "./v2/*": "./src/v2/components/*.tsx",
+    "./v2/prompt-input": "./src/v2/components/prompt-input/index.tsx",
+    "./v2/prompt-input/interaction": "./src/v2/components/prompt-input/interaction.ts",
+    "./v2/prompt-input/store": "./src/v2/components/prompt-input/store.ts",
+    "./v2/prompt-input/types": "./src/v2/components/prompt-input/types.ts"
   },
   "scripts": {
     "typecheck": "tsgo --noEmit",
-    "test": "bun test src --only-failures"
+    "test": "bun test src --only-failures",
+    "test:ci": "mkdir -p .artifacts/unit && bun test src --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml"
   },
   "devDependencies": {
     "@tsconfig/node22": "catalog:",
@@ -62,6 +67,8 @@
     "shiki": "catalog:",
     "solid-js": "catalog:",
     "solid-list": "catalog:",
-    "strip-ansi": "7.1.2"
-  }
+    "strip-ansi": "7.1.2",
+    "@opencode-ai/client": "file:../app/vendor/opencode-ai-client-1.17.13-v2.tgz"
+  },
+  "peerDependencies": {}
 }
