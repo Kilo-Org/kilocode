@@ -8,6 +8,8 @@ import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.history.HistorySection
 import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.session.history.LocalHistoryItem
+import ai.kilocode.client.ui.list.ACTIVE_LIST_DELETE_CELL
+import ai.kilocode.client.ui.list.ACTIVE_LIST_RENAME_CELL
 import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListCell
@@ -18,6 +20,8 @@ import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.ActiveListRowHeight
 import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.client.ui.list.ActiveListSurface
+import ai.kilocode.client.ui.list.activeListDeleteCell
+import ai.kilocode.client.ui.list.activeListRenameCell
 import ai.kilocode.client.ui.list.activeListToolWindowBackground
 import ai.kilocode.rpc.dto.SessionDto
 import com.intellij.icons.AllIcons
@@ -72,8 +76,8 @@ class WorktreeSessionEditorPanel(
         showSearch = false,
         enter = { true },
         onCell = { key, id ->
-            if (id == RENAME_CELL) beginRename(key, RENAME_CELL)
-            if (id == DELETE_CELL) confirmDelete(listOf(key), DELETE_CELL)
+            if (id == ACTIVE_LIST_RENAME_CELL) beginRename(key, ACTIVE_LIST_RENAME_CELL)
+            if (id == ACTIVE_LIST_DELETE_CELL) confirmDelete(listOf(key), ACTIVE_LIST_DELETE_CELL)
         },
         onOpen = { row, focus -> open(row, focus) },
     )
@@ -341,24 +345,9 @@ class WorktreeSessionEditorPanel(
             get() {
                 if (selectedKeys().size != 1) return emptyList()
                 return listOf(
-                    ActiveListCell(
-                        RENAME_CELL,
-                        KiloBundle.message("worktree.session.rename.action"),
-                        icon = AllIcons.Actions.Edit,
-                        iconOnly = true,
-                    ),
-                    ActiveListCell(
-                        DELETE_CELL,
-                        KiloBundle.message("worktree.session.delete.action"),
-                        icon = AllIcons.Actions.GC,
-                        iconOnly = true,
-                    ),
+                    activeListRenameCell(KiloBundle.message("worktree.session.rename.action")),
+                    activeListDeleteCell(KiloBundle.message("worktree.session.delete.action")),
                 )
             }
-    }
-
-    private companion object {
-        const val RENAME_CELL = "rename"
-        const val DELETE_CELL = "delete"
     }
 }

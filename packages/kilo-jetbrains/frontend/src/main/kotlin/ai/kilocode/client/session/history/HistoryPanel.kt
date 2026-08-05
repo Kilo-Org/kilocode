@@ -9,6 +9,8 @@ import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
+import ai.kilocode.client.ui.list.ACTIVE_LIST_DELETE_CELL
+import ai.kilocode.client.ui.list.ACTIVE_LIST_RENAME_CELL
 import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListConfig
 import ai.kilocode.client.ui.list.ActiveListDeleteOptions
@@ -221,9 +223,11 @@ class HistoryPanel(
         showSearch = false,
         openOnClick = false,
         onCell = { key, id ->
-            if (id != HISTORY_DELETE_CELL) return@ActiveList
             val item = localRows.firstOrNull { it.key == key }?.item ?: return@ActiveList
-            showDeletePopup(listOf(item), HISTORY_DELETE_CELL)
+            when (id) {
+                ACTIVE_LIST_RENAME_CELL -> beginRename(item, id)
+                ACTIVE_LIST_DELETE_CELL -> showDeletePopup(listOf(item), id)
+            }
         },
         onOpen = { row, _ -> activate(row) },
     ).apply {
@@ -274,15 +278,27 @@ class HistoryPanel(
         restore(cloudList, cloudRows)
     }
 
+    /**
+     * Rebuilds [list] while keeping selection stable. Surviving selected rows stay selected; when a
+     * selected row disappears (e.g. it was just deleted) selection slides to the row that took its
+     * slot — the following row, or the last row when the removed one was last — so the highlight
+     * moves naturally instead of vanishing. Selection clears only when nothing was selected or the
+     * list is now empty.
+     */
     private fun restore(list: ActiveList, rows: List<ActiveListItem>) {
         val keys = list.selectedKeys()
+        val anchor = list.selectedIndex()
         list.update(rows, ActiveListSelection.PreserveNoScroll)
         val indices = keys.mapNotNull { key -> rows.indexOfFirst { it.key == key }.takeIf { it >= 0 } }.toIntArray()
-        if (indices.isEmpty()) {
-            list.clearSelection()
+        if (indices.isNotEmpty()) {
+            list.setSelectionIndices(indices)
             return
         }
-        list.setSelectionIndices(indices)
+        if (keys.isNotEmpty() && rows.isNotEmpty()) {
+            list.selectIndex(anchor.coerceIn(0, rows.size - 1))
+            return
+        }
+        list.clearSelection()
     }
 
     @RequiresEdt
@@ -320,6 +336,7 @@ class HistoryPanel(
     override fun getData(dataId: String): Any? {
         if (SessionManager.KEY.`is`(dataId)) return manager
         if (HistoryDataKeys.CONTROLLER.`is`(dataId)) return controller
+        if (HistoryDataKeys.RENAME.`is`(dataId)) return { item: LocalHistoryItem -> beginRename(item) }
         if (HistoryDataKeys.SELECTION.`is`(dataId)) {
             val source = selectedSource()
             val local = if (source == HistorySource.LOCAL) {
@@ -359,6 +376,21 @@ class HistoryPanel(
 
     internal fun confirmDelete(items: List<LocalHistoryItem>) {
         showDeletePopup(items)
+    }
+
+    /**
+     * Opens the inline rename popover anchored to [item]'s row (or its pencil cell), matching the
+     * worktree list. Committing sends the new title through the controller; the popover itself gates
+     * out blank and unchanged names, so no modal dialog is involved.
+     */
+    private fun beginRename(item: LocalHistoryItem, cell: String? = null) {
+        controller.requestRename()
+        localList.rename(
+            item.id,
+            cell,
+            current = { title(item) },
+            commit = { _, name -> controller.rename(item, name) },
+        )
     }
 
     internal fun itemCount() = activeRows().size

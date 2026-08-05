@@ -1,0 +1,27 @@
+package ai.kilocode.client.ui.list
+
+import ai.kilocode.client.plugin.KiloBundle
+import com.intellij.icons.AllIcons
+
+/**
+ * Standard hover action-cell ids and factories shared by the reveal-on-hover lists (the worktree
+ * list, the worktree-session editor list, and session history). Centralising them keeps the
+ * pencil/trash buttons — their ids, icons, and `iconOnly` treatment — identical across every list
+ * instead of each panel re-declaring `"rename"`/`"delete"` and rebuilding the same [ActiveListCell].
+ */
+internal const val ACTIVE_LIST_RENAME_CELL = "rename"
+internal const val ACTIVE_LIST_DELETE_CELL = "delete"
+
+internal fun activeListRenameCell(label: String = KiloBundle.message("common.rename")) = ActiveListCell(
+    ACTIVE_LIST_RENAME_CELL,
+    label,
+    icon = AllIcons.Actions.Edit,
+    iconOnly = true,
+)
+
+internal fun activeListDeleteCell(label: String = KiloBundle.message("common.delete")) = ActiveListCell(
+    ACTIVE_LIST_DELETE_CELL,
+    label,
+    icon = AllIcons.Actions.GC,
+    iconOnly = true,
+)

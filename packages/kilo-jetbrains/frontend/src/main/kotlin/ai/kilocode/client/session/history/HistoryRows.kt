@@ -1,13 +1,11 @@
 package ai.kilocode.client.session.history
 
-import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListCell
 import ai.kilocode.client.ui.list.ActiveListItem
-import com.intellij.icons.AllIcons
-
-internal const val HISTORY_DELETE_CELL = "delete"
+import ai.kilocode.client.ui.list.activeListDeleteCell
+import ai.kilocode.client.ui.list.activeListRenameCell
 
 internal data class LocalHistoryRow(
     val item: LocalHistoryItem,
@@ -28,14 +26,7 @@ internal data class LocalHistoryRow(
     override val cells: List<ActiveListCell>
         get() {
             if (deleting) return emptyList()
-            return listOf(
-                ActiveListCell(
-                    HISTORY_DELETE_CELL,
-                    KiloBundle.message("common.delete"),
-                    icon = AllIcons.Actions.GC,
-                    iconOnly = true,
-                ),
-            )
+            return listOf(activeListRenameCell(), activeListDeleteCell())
         }
 }
 

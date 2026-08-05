@@ -12,6 +12,8 @@ import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.HoverIcon
+import ai.kilocode.client.ui.list.ACTIVE_LIST_DELETE_CELL
+import ai.kilocode.client.ui.list.ACTIVE_LIST_RENAME_CELL
 import ai.kilocode.client.ui.layout.Align
 import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
@@ -199,14 +201,13 @@ class HistoryControllerTest : BasePlatformTestCase() {
         assertTrue(row.badges.isEmpty())
     }
 
-    fun `test local history rows use trailing time and delete cell`() {
+    fun `test local history rows use trailing time and rename and delete cells`() {
         val item = LocalHistoryItem(session("ses_1", "Long ".repeat(80)))
         val row = localHistoryRows(listOf(item), HistoryActivitySnapshot()) { false }[0]
-        val cell = row.cells.single()
 
         assertEquals(HistoryTime.relative(item), row.trailing)
-        assertEquals(HISTORY_DELETE_CELL, cell.id)
-        assertTrue(cell.iconOnly)
+        assertEquals(listOf(ACTIVE_LIST_RENAME_CELL, ACTIVE_LIST_DELETE_CELL), row.cells.map { it.id })
+        assertTrue(row.cells.all { it.iconOnly })
     }
 
     fun `test deleting local history rows hide actions and badges`() {
@@ -629,6 +630,55 @@ class HistoryControllerTest : BasePlatformTestCase() {
         flush()
 
         assertEquals(javax.swing.ListSelectionModel.SINGLE_SELECTION, panel.listSelectionMode())
+    }
+
+    // ------ Selection advances naturally on delete ------
+
+    fun `test deleting the selected session advances selection to the next row`() {
+        rpc.listed += session("ses_a", "A", 3.0)
+        rpc.listed += session("ses_b", "B", 2.0)
+        rpc.listed += session("ses_c", "C", 1.0)
+        val controller = controller()
+        val panel = HistoryPanel(parent, controller)
+        flush()
+        panel.select(1)
+
+        controller.delete(controller.local.items[1])
+        flush()
+
+        assertEquals(1, panel.selectedIndex())
+        assertEquals("C", panel.titleText(1))
+    }
+
+    fun `test deleting the last selected session falls back to the previous row`() {
+        rpc.listed += session("ses_a", "A", 3.0)
+        rpc.listed += session("ses_b", "B", 2.0)
+        val controller = controller()
+        val panel = HistoryPanel(parent, controller)
+        flush()
+        panel.select(1)
+
+        controller.delete(controller.local.items[1])
+        flush()
+
+        assertEquals(0, panel.selectedIndex())
+        assertEquals("A", panel.titleText(0))
+    }
+
+    fun `test deleting a background session keeps the current selection`() {
+        rpc.listed += session("ses_a", "A", 3.0)
+        rpc.listed += session("ses_b", "B", 2.0)
+        rpc.listed += session("ses_c", "C", 1.0)
+        val controller = controller()
+        val panel = HistoryPanel(parent, controller)
+        flush()
+        panel.select(0)
+
+        controller.delete(controller.local.items[2])
+        flush()
+
+        assertEquals(0, panel.selectedIndex())
+        assertEquals("A", panel.titleText(0))
     }
 
     // ------ Rename failure and directory selection ------

@@ -14,6 +14,8 @@ import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.list.ACTIVE_LIST_DELETE_CELL
+import ai.kilocode.client.ui.list.ACTIVE_LIST_RENAME_CELL
 import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListCell
@@ -22,6 +24,8 @@ import ai.kilocode.client.ui.list.ActiveListDeleteOptions
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.client.ui.list.ActiveListSurface
+import ai.kilocode.client.ui.list.activeListDeleteCell
+import ai.kilocode.client.ui.list.activeListRenameCell
 import ai.kilocode.client.ui.list.activeListToolWindowBackground
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
@@ -73,8 +77,8 @@ class AgentManagerPanel(
         showSearch = false,
         onCell = { key, id ->
             val item = item(key) ?: return@ActiveList
-            if (id == RENAME_CELL && renameable(item)) beginRename(item, id)
-            if (id == DELETE_CELL && deletable(item)) showDeletePopup(item, id)
+            if (id == ACTIVE_LIST_RENAME_CELL && renameable(item)) beginRename(item, id)
+            if (id == ACTIVE_LIST_DELETE_CELL && deletable(item)) showDeletePopup(item, id)
         },
         onOpen = { row, focus ->
             val item = (row as? WorktreeRow)?.dto ?: return@ActiveList
@@ -392,24 +396,9 @@ class AgentManagerPanel(
             }
         override val cells: List<ActiveListCell>
             get() = if (dto.main || pending) emptyList() else listOf(
-                ActiveListCell(
-                    RENAME_CELL,
-                    KiloBundle.message("worktree.rename.action"),
-                    icon = AllIcons.Actions.Edit,
-                    iconOnly = true,
-                ),
-                ActiveListCell(
-                    DELETE_CELL,
-                    KiloBundle.message("worktree.delete.action"),
-                    icon = AllIcons.Actions.GC,
-                    iconOnly = true,
-                ),
+                activeListRenameCell(KiloBundle.message("worktree.rename.action")),
+                activeListDeleteCell(KiloBundle.message("worktree.delete.action")),
             )
-    }
-
-    private companion object {
-        const val RENAME_CELL = "rename"
-        const val DELETE_CELL = "delete"
     }
 }
 
