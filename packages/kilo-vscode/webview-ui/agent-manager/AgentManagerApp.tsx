@@ -45,7 +45,9 @@ import type {
   SessionCreatedMessage,
   BranchInfo,
   TerminalDestination,
+  TerminalFont,
 } from "../src/types/messages"
+import { readFontSize } from "../src/font-size"
 import { IndexingProvider } from "../src/context/indexing"
 import {} from "@thisbeyond/solid-dnd"
 import type { DragEvent } from "@thisbeyond/solid-dnd"
@@ -361,6 +363,10 @@ const AgentManagerContent: Component = () => {
   const PENDING_PREFIX = "pending:"
   const closedDrafts = new Set<string>()
   const [activePendingId, setActivePendingId] = createSignal<string | undefined>()
+  const [terminalFont, setTerminalFont] = createSignal<TerminalFont>({
+    fontFamily: getComputedStyle(document.documentElement).getPropertyValue("--vscode-editor-font-family").trim(),
+    fontSize: readFontSize(),
+  })
 
   /** Namespace key so worktree/local ids from different projects never collide. */
   const nsKey = (sel: string) => `${currentProjectId() ?? "single"}:${sel}`
@@ -1067,6 +1073,7 @@ const AgentManagerContent: Component = () => {
   const applyState = (msg: ExtensionMessage) => {
     if (msg.type !== "agentManager.state") return
     const state = msg as AgentManagerStateMessage
+    if (state.terminalFont) setTerminalFont(state.terminalFont)
     const pid = state.projectId
     if (pid) setProjectStates((prev) => ({ ...prev, [pid]: state }))
     const store = pid ? registry.ensure(pid) : registry.active()
@@ -1333,13 +1340,6 @@ const AgentManagerContent: Component = () => {
         showToast({ variant: "error", title: t("agentManager.terminal.errorTitle"), description: message }),
       postMessage: (message) => vscode.postMessage(message as never),
       onCreated: (contextKey, terminalId) => appendToTabOrder(contextKey, terminalId),
-      onSideCreated: (contextKey, terminalId, focus) => {
-        // Focus only when the user is still looking at this panel —
-        // a slow create landing after a mode switch must not steal it.
-        if (focus && sidePanel() === "terminal" && !history() && !reviewActive() && terms.sideKey() === contextKey) {
-          terms.requestFocus(terminalId)
-        }
-      },
       onSideClosed: (_contextKey, terminalId) => forgetTerminalFocus(terminalId),
       onScriptRunning: (contextKey, terminalId) => {
         if (terms.sideKey() !== contextKey) return
@@ -1358,6 +1358,7 @@ const AgentManagerContent: Component = () => {
       onDestinationChanged: (destination) => sideCtl.syncDefault(destination),
     })
     const unsubTerminals = vscode.onMessage((msg) => {
+      if (msg.type === "agentManager.terminal.fontChanged") setTerminalFont(msg.font)
       terminalDispatch(msg)
     })
 
@@ -2072,6 +2073,7 @@ const AgentManagerContent: Component = () => {
     getSelection: selection,
     LOCAL,
     REVIEW_TAB_ID,
+    getFont: terminalFont,
   })
 
   const sideCtl = createSideTerminal({
