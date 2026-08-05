@@ -221,7 +221,7 @@ export namespace KilocodeConfigOverlay {
   async function loadUnsafe(file: string, fileScope?: ConfigVariable.FileScope): Promise<Config.Info> {
     // kilocode_change end
     const text = await Bun.file(file).text()
-    // kilocode_change - overlay reads project config files: {env:} left literal, expanded in MCP headers post-parse
+    // kilocode_change - overlay reads project config files: {env:} left literal; MCP headers reject {env:}/{file:} post-parse
     const expanded = await ConfigVariable.substitute({ text, type: "path", path: file, trusted: false, fileScope })
     const parsed = ConfigParse.jsonc(expanded, file)
     if (!isRecord(parsed)) return {}

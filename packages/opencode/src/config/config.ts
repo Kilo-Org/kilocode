@@ -350,7 +350,7 @@ export const layer = Layer.effect(
       const text = yield* readConfigFile(filepath)
       if (!text) return {} as Info
       let data = yield* loadConfig(text, { path: filepath }, env, trusted, fileScope) // kilocode_change
-      // kilocode_change start - expand {env:} in project MCP headers without failing the whole file
+      // kilocode_change start - reject {env:}/{file:} in project MCP headers without failing the whole file
       if (!trusted && data.mcp) {
         const expanded = yield* Effect.promise(() => expandProjectMcpHeaders(data, env, filepath))
         data = expanded.config
@@ -670,7 +670,7 @@ export const layer = Layer.effect(
             for (const file of yield* ConfigPaths.files(name, ctx.directory, ctx.worktree).pipe(Effect.orDie)) {
               yield* merge(
                 file,
-                // kilocode_change - project config is untrusted: {env:} left literal (MCP headers expanded post-parse), {file:} confined to projectRoot
+                // kilocode_change - project config is untrusted: {env:} left literal (MCP headers reject {env:}/{file:} post-parse), {file:} confined to projectRoot
                 yield* loadFile(file, authEnv, false, { root: projectRoot, source: file }, warnings).pipe(
                   Effect.catchDefect((err: unknown) => {
                     caughtWarning(warnings, file, err)

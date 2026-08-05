@@ -51,7 +51,7 @@ export async function substitute(input: SubstituteInput) {
   const missing = input.missing ?? "error"
   const escape = input.escapeJson ?? true // kilocode_change
   // kilocode_change start - untrusted (project) config leaves {env:} literal during text substitution; MCP headers
-  // are expanded post-parse. {file:} is allowed but confined to fileScope.root below.
+  // reject {env:}/{file:} post-parse (no process.env/authEnv). {file:} elsewhere is confined to fileScope.root.
   const trusted = input.trusted ?? false
   if (!trusted && !input.fileScope) {
     const file = Array.from(input.text.matchAll(/\{file:[^}]+\}/g)).find((m) => !commented(input.text, m.index))
@@ -64,7 +64,7 @@ export async function substitute(input: SubstituteInput) {
   }
   // kilocode_change end
   let text = input.text.replace(/\{env:([^}]+)\}/g, (match, varName, offset: number) => {
-    // kilocode_change start - leave commented tokens literal; leave untrusted tokens literal (expanded in MCP headers)
+    // kilocode_change start - leave commented tokens literal; leave untrusted tokens literal (MCP headers reject post-parse)
     if (commented(input.text, offset)) return match
     if (!trusted) return match
     if (!ConfigVariableGuard.env(varName)) {

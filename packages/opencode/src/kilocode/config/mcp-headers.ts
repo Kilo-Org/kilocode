@@ -1,6 +1,5 @@
 import type { Config } from "../../config/config"
 import { InvalidError } from "@opencode-ai/core/v1/config/error"
-import { ConfigVariableGuard } from "./variable"
 
 export type McpHeaderWarning = {
   path: string
@@ -8,38 +7,42 @@ export type McpHeaderWarning = {
 }
 
 /**
- * Expand {env:VAR} in remote MCP header values after untrusted project config parse.
- * Does not resolve {file:} — residual file tokens reject the MCP entry so a decoy
- * in-repo file cannot smuggle out-of-scope paths via trusted substitute.
+ * Untrusted project MCP headers must not resolve secrets.
+ * Reject {env:} (no process.env / authEnv) and {file:} — same style for both.
+ * Does not read process.env or the caller env map.
  */
-async function expandHeaderValue(value: string, env: Record<string, string> | undefined, source: string) {
+function rejectSecretHeaderValue(value: string, source: string) {
   if (!value.includes("{env:") && !value.includes("{file:")) return value
 
-  const expanded = value.replace(/\{env:([^}]+)\}/g, (match, varName: string) => {
-    if (!ConfigVariableGuard.env(varName)) {
-      throw new InvalidError({ path: source, message: `blocked environment reference: "{env:${varName}}"` })
-    }
-    return (env?.[varName] ?? process.env[varName]) || ""
-  })
-
-  const residualFile = expanded.match(/\{file:[^}]+\}/)
-  if (residualFile) {
+  const envRef = value.match(/\{env:[^}]+\}/)
+  if (envRef) {
     throw new InvalidError({
       path: source,
-      message: `file references are not expanded in MCP headers: "${residualFile[0]}"`,
+      message: `environment references are not expanded in untrusted MCP headers: "${envRef[0]}"`,
     })
   }
 
-  return expanded
+  const fileRef = value.match(/\{file:[^}]+\}/)
+  if (fileRef) {
+    throw new InvalidError({
+      path: source,
+      message: `file references are not expanded in MCP headers: "${fileRef[0]}"`,
+    })
+  }
+
+  return value
 }
 
 /**
- * Post-parse: expand {env:} only in remote MCP headers for project (untrusted) config.
+ * Post-parse: reject secret-bearing tokens in remote MCP headers for project (untrusted) config.
  * On failure for one MCP, drop that entry and warn — do not wipe sibling MCPs.
+ *
+ * The env parameter is accepted for call-site compatibility but is intentionally unused:
+ * untrusted project headers must not read process.env or authEnv.
  */
 export async function expandProjectMcpHeaders(
   data: Config.Info,
-  env: Record<string, string> | undefined,
+  _env: Record<string, string> | undefined,
   source: string,
 ): Promise<{ config: Config.Info; warnings: McpHeaderWarning[] }> {
   if (!data.mcp) return { config: data, warnings: [] }
@@ -52,15 +55,15 @@ export async function expandProjectMcpHeaders(
     if (!("type" in mcp) || mcp.type !== "remote") continue
     if (!mcp.headers || typeof mcp.headers !== "object") continue
 
-    const needsExpand = Object.values(mcp.headers).some(
+    const needsCheck = Object.values(mcp.headers).some(
       (v) => typeof v === "string" && (v.includes("{env:") || v.includes("{file:")),
     )
-    if (!needsExpand) continue
+    if (!needsCheck) continue
 
     try {
       const headers: Record<string, string> = {}
       for (const [key, value] of Object.entries(mcp.headers)) {
-        headers[key] = typeof value === "string" ? await expandHeaderValue(value, env, source) : value
+        headers[key] = typeof value === "string" ? rejectSecretHeaderValue(value, source) : value
       }
       next[name] = { ...mcp, headers }
     } catch (error) {

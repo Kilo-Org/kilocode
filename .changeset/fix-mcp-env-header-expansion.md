@@ -2,4 +2,4 @@
 "@kilocode/cli": patch
 ---
 
-Fix project config MCP header `{env:…}` expansion so one bad env reference no longer drops the entire MCP set.
+Fix project config MCP headers: reject untrusted `{env:…}`/`{file:…}` (no process.env or authEnv) per entry so one bad header no longer drops the entire MCP set.

@@ -559,7 +559,7 @@ it.instance("prefers .kilo directory config over legacy .kilocode", () =>
 )
 // kilocode_change end
 
-// kilocode_change start - {env:} preserved in project config; expanded in MCP headers post-parse; {file:} confined to project root
+// kilocode_change start - {env:} preserved in project config fields; MCP headers reject {env:}/{file:} without wiping siblings
 it.instance("preserves environment variable tokens in project config fields", () =>
   withProcessEnv(
     "TEST_VAR",
@@ -578,7 +578,7 @@ it.instance("preserves environment variable tokens in project config fields", ()
   ),
 )
 
-it.instance("expands env references in project MCP headers without dropping sibling MCPs", () =>
+it.instance("rejects env references in project MCP headers without dropping sibling MCPs", () =>
   withProcessEnv(
     "API_KEY",
     "secret-key",
@@ -602,15 +602,17 @@ it.instance("expands env references in project MCP headers without dropping sibl
         "kilo.jsonc",
       )
       const config = yield* Config.use.get()
-      expect(config.mcp?.["some-mcp"]?.headers?.["API-KEY"]).toBe("secret-key")
+      // Untrusted project headers must not pull process.env / authEnv secrets.
+      expect(config.mcp?.["some-mcp"]).toBeUndefined()
       expect(config.mcp?.["second-mcp"]?.url).toBe("https://other-url.com/mcp/")
       const issues = yield* Config.Service.use((svc) => svc.warnings())
-      expect(issues.length).toBe(0)
+      expect(issues.some((w) => w.message.includes('Skipped MCP "some-mcp"'))).toBe(true)
+      expect(JSON.stringify(config.mcp)).not.toContain("secret-key")
     }),
   ),
 )
 
-it.instance("skips MCP with blocked env header without dropping sibling MCPs", () =>
+it.instance("skips MCP with env header without dropping sibling MCPs that use static headers", () =>
   withProcessEnvs(
     { SAFE_KEY: "ok-value", KILO_SERVER_PASSWORD: "server-secret" },
     Effect.gen(function* () {
@@ -625,15 +627,17 @@ it.instance("skips MCP with blocked env header without dropping sibling MCPs", (
           good: {
             type: "remote",
             url: "https://good.example.com/mcp/",
-            headers: { "API-KEY": "{env:SAFE_KEY}" },
+            headers: { "API-KEY": "static-ok" },
           },
         },
       })
       const config = yield* Config.use.get()
       expect(config.mcp?.bad).toBeUndefined()
-      expect(config.mcp?.good?.headers?.["API-KEY"]).toBe("ok-value")
+      expect(config.mcp?.good?.headers?.["API-KEY"]).toBe("static-ok")
       const issues = yield* Config.Service.use((svc) => svc.warnings())
       expect(issues.some((w) => w.message.includes('Skipped MCP "bad"'))).toBe(true)
+      expect(JSON.stringify(config.mcp)).not.toContain("server-secret")
+      expect(JSON.stringify(config.mcp)).not.toContain("ok-value")
     }),
   ),
 )
