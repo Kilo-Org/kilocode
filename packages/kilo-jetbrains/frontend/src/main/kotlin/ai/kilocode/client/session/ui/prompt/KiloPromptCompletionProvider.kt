@@ -252,7 +252,7 @@ class KiloPromptCompletionProvider(
         PrioritizedLookupElement.withGrouping(PrioritizedLookupElement.withPriority(element, 100.0), 100)
 
     private fun file(file: WorkspaceFileDto): LookupElement = LookupElementBuilder.create(file.path)
-        .withPresentableText("@${file.path}")
+        .withPresentableText("@${file.name}")
         .withTailText(parent(file.path), true)
         .withIcon(icon(file))
         .withLookupString(file.name)
