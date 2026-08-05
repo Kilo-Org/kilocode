@@ -660,6 +660,11 @@ export interface ThroughputSettingLoadedMessage {
   visible: boolean
 }
 
+export interface TimestampSettingLoadedMessage {
+  type: "timestampSettingLoaded"
+  visible: boolean
+}
+
 export interface WorkStyleLoadedMessage {
   type: "workStyleLoaded"
   style: WorkStyleState
@@ -1359,6 +1364,7 @@ export type ExtensionMessage =
   | NotificationSettingsLoadedMessage
   | TimelineSettingLoadedMessage
   | ThroughputSettingLoadedMessage
+  | TimestampSettingLoadedMessage
   | WorkStyleLoadedMessage
   | WorkStyleAppliedMessage
   | WorkStyleApplyFailedMessage

@@ -1137,6 +1137,12 @@ export const dict = {
   "chat.throughput.tooltip":
     "میانگین {{speed}} توکن/ثانیه برای این نوبت. شامل توکن‌های خروجی و استدلال می‌شود؛ زمان اجرای ابزار و انتظار را شامل نمی‌شود.",
   "chat.throughput.tooltip.missing": "معیارهای توان عملیاتی برای این نوبت در دسترس نیست.",
+  "settings.display.messageTimestamp.title": "Show Message Timestamp",
+  "settings.display.messageTimestamp.description":
+    "Show completion time and turn duration on assistant messages. Display only — not stored in the transcript.",
+  "chat.timestamp.label": "{{when}}, took {{duration}}",
+  "chat.timestamp.tooltip": "Completed at {{when}}. Turn took {{duration}} (message start to finish).",
+  "chat.timestamp.tooltip.timeOnly": "Completed at {{when}}.",
 
   "settings.providers.defaultModel.title": "مدل پیش‌فرض",
   "settings.providers.defaultModel.description": "مدل اصلی برای مکالمات",

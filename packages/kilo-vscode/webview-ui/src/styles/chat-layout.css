@@ -258,16 +258,22 @@
   width: 100%;
 }
 
-[data-component="assistant-throughput"] {
-  /* Plain-text generation-speed value shown beside the copy/feedback buttons
-   * on an assistant message. Renders as muted metadata — no icon, no
-   * background, no border — so it reads as tertiary info that never
-   * competes with the action row for visual weight. */
+[data-component="assistant-throughput"],
+[data-component="assistant-timestamp"] {
+  /* Plain-text metadata shown beside the copy/feedback buttons on an
+   * assistant message. Renders as muted tertiary info — no icon, no
+   * background, no border — so it never competes with the action row. */
   color: var(--vscode-descriptionForeground);
   font-family: var(--font-family-sans);
   font-size: var(--kilo-font-size-11);
   line-height: var(--line-height-normal);
   font-variant-numeric: tabular-nums;
+}
+
+[data-component="assistant-meta-row"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .vscode-session-turn-diffs {

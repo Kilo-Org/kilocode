@@ -23,6 +23,8 @@ interface DisplayContextValue {
   // every AssistantMessage and the aggregated row in TaskHeader, so flipping
   // the setting once updates both surfaces without round-trips.
   throughputVisible: Accessor<boolean>
+  // Display-only completion stamp on assistant messages (time + duration).
+  timestampVisible: Accessor<boolean>
 }
 
 export const DisplayContext = createContext<DisplayContextValue>()
@@ -33,15 +35,20 @@ export const DisplayProvider: ParentComponent = (props) => {
   const reasoningAutoCollapse = createMemo(() => config().auto_collapse_reasoning ?? false)
   const [fontSize, setFontSizeSignal] = createSignal(readFontSize())
   const [throughputVisible, setThroughputVisible] = createSignal(false)
+  const [timestampVisible, setTimestampVisible] = createSignal(true)
 
-  // Request the throughput toggle once on mount; the extension posts back
+  // Request display toggles once on mount; the extension posts back
   // (and onDidChangeConfiguration forwards subsequent edits).
-  onMount(() => vscode.postMessage({ type: "requestThroughputSetting" }))
+  onMount(() => {
+    vscode.postMessage({ type: "requestThroughputSetting" })
+    vscode.postMessage({ type: "requestTimestampSetting" })
+  })
 
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type === "ready" && message.fontSize !== undefined) setFontSizeSignal(clampFontSize(message.fontSize))
     if (message.type === "fontSizeChanged") setFontSizeSignal(clampFontSize(message.fontSize))
     if (message.type === "throughputSettingLoaded") setThroughputVisible(Boolean(message.visible))
+    if (message.type === "timestampSettingLoaded") setTimestampVisible(Boolean(message.visible))
   })
 
   createEffect(() => {
@@ -62,6 +69,7 @@ export const DisplayProvider: ParentComponent = (props) => {
           vscode.postMessage({ type: "updateSetting", key: "fontSize", value: next })
         },
         throughputVisible,
+        timestampVisible,
       }}
     >
       {props.children}

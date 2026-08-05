@@ -7,6 +7,7 @@ import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { buildChatSettingsMessage } from "./chat-settings"
 import { buildThroughputSettingMessage } from "./throughput-settings"
 import { handleModelUsageMessage, type ModelUsageMessage } from "./model-usage"
+import { buildTimestampSettingMessage } from "./timestamp-settings"
 
 type Ctx = {
   question: SuggestionContext
@@ -69,6 +70,10 @@ export async function routeEarlyMessage(
   }
   if (message.type === "requestThroughputSetting") {
     ctx.post(buildThroughputSettingMessage())
+    return true
+  }
+  if (message.type === "requestTimestampSetting") {
+    ctx.post(buildTimestampSettingMessage())
     return true
   }
   if (message.type === "requestSpeechToTextModels") {
