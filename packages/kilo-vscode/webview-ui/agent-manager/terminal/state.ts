@@ -64,6 +64,7 @@ export interface TerminalFocusRequest {
  *  Multiple creates can be in flight for the same context at once. */
 interface SideRequest {
   contextKey: string
+  focus: boolean
 }
 
 export interface TerminalStateControls {
@@ -144,7 +145,7 @@ export interface TerminalStateControls {
   /** Request ids of the in-flight side-terminal creates for a context. */
   pendingSide(contextKey: string): boolean
   /** Mark a side-terminal create as in flight for a context. */
-  beginSide(contextKey: string, createId: string): void
+  beginSide(contextKey: string, createId: string, focus?: boolean): void
   /** Settle a create request; returns it so the caller can validate. */
   completeSide(createId: string): SideRequest | undefined
 }
@@ -527,8 +528,8 @@ export function createTerminalState(selection: Accessor<string | null>): Termina
 
   const pendingSide = (key: string) => (pending()[key]?.length ?? 0) > 0
 
-  const beginSide = (key: string, createId: string) => {
-    requests.set(createId, { contextKey: key })
+  const beginSide = (key: string, createId: string, focus = false) => {
+    requests.set(createId, { contextKey: key, focus })
     setPending((prev) => ({ ...prev, [key]: [...(prev[key] ?? []), createId] }))
   }
 
@@ -637,15 +638,18 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
     })
   }
 
-  const createSide = () => {
+  const createSide = (focus = false) => {
     const key = deps.state.sideKey()
+    // The wire protocol speaks plain worktree ids; `sideKey` is the
+    // project-namespaced state key and must not leak into the message.
+    const sel = deps.getSelection()
     const id = newId()
-    deps.state.beginSide(key, id)
+    deps.state.beginSide(key, id, focus)
     deps.postMessage({
       type: "agentManager.terminal.create",
       createId: id,
       placement: "side",
-      worktreeId: key === deps.LOCAL ? null : key,
+      worktreeId: sel === null || sel === deps.LOCAL ? null : sel,
     })
   }
 
@@ -656,7 +660,7 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
    */
   const addSide = () => {
     deps.onShowSide(deps.state.sideKey())
-    createSide()
+    createSide(true)
   }
 
   /** Ensure the current context has a terminal without changing panel mode. */
@@ -681,7 +685,8 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
       deps.state.requestFocus(active)
       return
     }
-    ensureSide()
+    if (deps.state.pendingSide(key)) return
+    createSide(true)
   }
 
   const closeTerminal = (terminalId: string) => {
@@ -823,11 +828,11 @@ export interface TerminalMessageHandlerDeps {
    */
   onCreated?: (contextKey: string, terminalId: string) => void
   /** Side terminal for a context finished creating. */
-  onSideCreated?: (contextKey: string, terminalId: string) => void
+  onSideCreated?: (contextKey: string, terminalId: string, focus: boolean) => void
   /** Side terminal create failed for a context. */
   onSideError?: (contextKey: string) => void
   /** Side terminal was closed (locally or by the extension). */
-  onSideClosed?: (contextKey: string) => void
+  onSideClosed?: (contextKey: string, terminalId: string) => void
   /** A newly hydrated running script terminal belongs to the selected context. */
   onScriptRunning?: (contextKey: string, terminalId: string) => void
   /** The destination setting changed (live settings sync). */
@@ -838,7 +843,10 @@ type CreatedMessage = Extract<ExtensionMessage, { type: "agentManager.terminal.c
 type ScriptTerminalsMessage = Extract<ExtensionMessage, { type: "agentManager.scriptTerminals" }>
 
 function handleCreated(deps: TerminalMessageHandlerDeps, msg: CreatedMessage) {
-  const contextKey = msg.worktreeId === null ? LOCAL : msg.worktreeId
+  // `target` is the plain protocol id (selection/tab-order keys); `key` is
+  // the project-namespaced terminal-state key (same shape as syncScripts).
+  const target = msg.worktreeId === null ? LOCAL : msg.worktreeId
+  const key = msg.projectId ? `${msg.projectId}:${target}` : target
   const term = {
     id: msg.terminalId,
     title: msg.title,
@@ -852,20 +860,20 @@ function handleCreated(deps: TerminalMessageHandlerDeps, msg: CreatedMessage) {
     // reloaded (or the context is gone) — close the PTY again instead
     // of leaking it.
     const request = deps.state.completeSide(msg.createId)
-    if (!request || request.contextKey !== contextKey) {
+    if (!request || request.contextKey !== key) {
       deps.postMessage({ type: "agentManager.terminal.close", terminalId: msg.terminalId })
       return
     }
-    deps.state.add(msg.worktreeId, term)
+    deps.state.add(key === LOCAL ? null : key, term)
     // The newest terminal becomes the visible one in its panel.
-    deps.state.setSideActive(contextKey, msg.terminalId)
-    deps.onSideCreated?.(contextKey, msg.terminalId)
+    deps.state.setSideActive(key, msg.terminalId)
+    deps.onSideCreated?.(key, msg.terminalId, request.focus)
     return
   }
-  deps.state.add(msg.worktreeId, term)
-  deps.onCreated?.(contextKey, msg.terminalId)
+  deps.state.add(key === LOCAL ? null : key, term)
+  deps.onCreated?.(target, msg.terminalId)
   deps.saveTabMemory()
-  deps.setSelection(contextKey)
+  deps.setSelection(target)
   deps.activate(msg.terminalId)
 }
 
@@ -895,7 +903,7 @@ export function createTerminalMessageHandler(deps: TerminalMessageHandlerDeps) {
     if (msg.type === "agentManager.terminal.closed") {
       const removed = deps.state.remove(msg.terminalId)
       if (deps.state.activeId() === msg.terminalId) deps.state.setActiveId(undefined)
-      if (removed?.placement === "side") deps.onSideClosed?.(removed.contextKey)
+      if (removed?.placement === "side") deps.onSideClosed?.(removed.contextKey, msg.terminalId)
       return true
     }
     if (msg.type === "agentManager.terminal.error") {

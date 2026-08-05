@@ -2,6 +2,7 @@ import { RemoteCommand } from "@/kilo-sessions/remote-command"
 import { RemoteExit } from "@/kilo-sessions/remote-exit"
 import { RemoteModelCatalog } from "@/kilo-sessions/remote-model-catalog"
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
+import { consumeRenameAdoption, markRenameAdopted } from "@/kilo-sessions/rename-adoptions"
 import type { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { GlobalBus } from "@/bus/global"
 import { RemoteAttachments } from "@/kilocode/remote-attachments"
@@ -48,12 +49,35 @@ const SuggestionData = z.object({
   index: z.number().int().nonnegative(),
 })
 
-// kilocode_change start - create_session: strict v1 request, no other fields accepted
+// kilocode_change start - create_session: strict v1 request with optional inheritance fields
+const CreateSessionModel = z.object({
+  providerID: z.string().min(1),
+  modelID: z.string().min(1),
+  variant: z.string().min(1).optional(),
+})
 const CreateSessionRequest = z
   .object({
     protocolVersion: z.literal(1),
+    agent: z.string().min(1).optional(),
+    model: CreateSessionModel.optional(),
+    orgId: z.string().uuid().optional(),
   })
   .strict()
+
+type CreateSessionInput = {
+  agent?: string
+  model?: {
+    id: ModelV2.ID
+    providerID: ProviderV2.ID
+    variant?: string
+  }
+  metadata?: { orgId: string }
+}
+
+const SessionRenamedData = z.object({
+  sessionId: z.string().min(1),
+  title: z.string().min(1),
+})
 // kilocode_change end
 
 const decodeSessionID = Schema.decodeUnknownOption(SessionID)
@@ -126,15 +150,15 @@ export namespace RemoteSender {
       readonly get: (sessionID: SessionID) => Promise<Session.Info>
       readonly children: (sessionID: SessionID) => Promise<Session.Info[]>
       // kilocode_change start - injectable create hook for create_session.
-      // create_session only ever calls `create({})` for a root session, so the
-      // test hook is typed as the loose `() => Promise<Session.Info>` shape.
-      // Production falls back to Session.Service.create with `{}`.
-      readonly create?: (input?: Record<string, never>) => Promise<Session.Info>
+      // Production forwards {agent, model, metadata} to Session.Service.create.
+      readonly create?: (input?: CreateSessionInput) => Promise<Session.Info>
       // kilocode_change - injectable remove hook used to roll back an orphan
       // root session when the spawn fails after creation. The default
       // delegates to Session.Service.remove and only swallows its own errors
       // so the original spawn failure is what reaches the caller.
       readonly remove?: (sessionID: SessionID) => Promise<void>
+      // kilocode_change - injectable setTitle for system session.renamed handling
+      readonly setTitle?: (input: { sessionID: SessionID; title: string }) => Promise<void>
       // kilocode_change end
     }
     // kilocode_change - K1 W1: in-process attach/detach/ownership/cancel
@@ -266,11 +290,15 @@ export namespace RemoteSender {
     // as a wiring bug (a missing seam is never a runtime fallback).
     const sessionCreate =
       session.create ??
-      (async (input?: Record<string, never>) => {
+      (async (input?: CreateSessionInput) => {
         const { AppRuntime } = await import("@/effect/app-runtime")
-        return AppRuntime.runPromise(
-          Session.Service.use((svc) => svc.create(input as Parameters<typeof svc.create>[0])),
-        )
+        return AppRuntime.runPromise(Session.Service.use((svc) => svc.create(input)))
+      })
+    const sessionSetTitle =
+      session.setTitle ??
+      (async (input: { sessionID: SessionID; title: string }) => {
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        await AppRuntime.runPromise(Session.Service.use((svc) => svc.setTitle(input)))
       })
     const attachSession =
       options.attachSession ??
@@ -767,18 +795,12 @@ export namespace RemoteSender {
         return
       }
       if (msg.command === "create_session") {
-        // kilocode_change - K1 W1: in-process create_session. The wire
-        // shape is unchanged (`{protocolVersion: 1}`), but the handler now
-        // (a) accepts an absent `sessionId` (the instance-picker path is
-        // connectionId-targeted — no source session needed), (b) resolves
-        // the target directory to that existing session's directory when
-        // a `sessionId` is present (legacy mobile /new-inside-a-session
-        // path) or to `options.directory` (the instance's own launch
-        // directory) otherwise, and (c) attaches the new session in the
-        // same CLI process (concurrent sessions share the process with
-        // per-directory InstanceRef isolation) instead of spawning a child.
-        // Attach failures roll back the pre-created session via
-        // `sessionRemove`.
+        // kilocode_change - K1 W1: in-process create_session. Optional wire
+        // fields (agent/model/orgId) ride protocolVersion 1; orgId lands in
+        // session metadata so the first kilo_meta carries the claim. Handler
+        // (a) accepts an absent `sessionId` (instance-picker path), (b)
+        // resolves the target directory from that session or options.directory,
+        // (c) attaches in-process; attach failures roll back via sessionRemove.
         const parsed = CreateSessionRequest.safeParse(msg.data)
         if (!parsed.success) {
           options.conn.send({
@@ -797,6 +819,19 @@ export namespace RemoteSender {
           })
           return
         }
+        const createInput: CreateSessionInput = {
+          ...(parsed.data.agent ? { agent: parsed.data.agent } : {}),
+          ...(parsed.data.model
+            ? {
+                model: {
+                  id: ModelV2.ID.make(parsed.data.model.modelID),
+                  providerID: ProviderV2.ID.make(parsed.data.model.providerID),
+                  ...(parsed.data.model.variant ? { variant: parsed.data.model.variant } : {}),
+                },
+              }
+            : {}),
+          ...(parsed.data.orgId ? { metadata: { orgId: parsed.data.orgId } } : {}),
+        }
         const run = options.provide ?? provide
         void (async () => {
           try {
@@ -812,7 +847,7 @@ export namespace RemoteSender {
             const result = await run({
               directory: targetDirectory,
               fn: async () => {
-                const created = await sessionCreate({})
+                const created = await sessionCreate(createInput)
                 // attachSession is the duplicate-safe seam: it mutates the
                 // attached set exactly once and fires conn.heartbeat() only
                 // when the set actually changes, so the relay learns about
@@ -1071,6 +1106,49 @@ export namespace RemoteSender {
         return
       }
       if (msg.type === "system") {
+        if (msg.event === "session.renamed") {
+          const parsed = SessionRenamedData.safeParse(msg.data)
+          if (!parsed.success) {
+            options.log.warn("malformed session.renamed", { data: msg.data })
+            return
+          }
+          const sid = decodeSessionID(parsed.data.sessionId)
+          if (Option.isNone(sid)) {
+            options.log.warn("malformed session.renamed", { data: msg.data })
+            return
+          }
+          const run = options.provide ?? provide
+          void (async () => {
+            const title = parsed.data.title
+            try {
+              const info = await session.get(sid.value)
+              await run({
+                directory: info.directory,
+                fn: async () => {
+                  // Mark before setTitle: Session.Event.Updated publishes inside
+                  // setTitle and the kilo-sessions consumer is deferred, so a
+                  // post-write mark races the title broadcast. Clear on failure
+                  // (same consume-on-failure pattern ensureTitle uses for auto-titles)
+                  // so a later local write to this title is not skipped as an adoption.
+                  markRenameAdopted(sid.value, title)
+                  try {
+                    await sessionSetTitle({ sessionID: sid.value, title })
+                  } catch (error) {
+                    consumeRenameAdoption(sid.value, title)
+                    throw error
+                  }
+                },
+              })
+            } catch (error) {
+              // get() failure never marked; setTitle failure cleared above.
+              options.log.warn("session.renamed apply failed", {
+                sessionId: parsed.data.sessionId,
+                error: errorName(error),
+              })
+            }
+          })()
+          return
+        }
         options.log.info("system event", { event: msg.event })
         return
       }

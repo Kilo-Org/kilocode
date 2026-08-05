@@ -23,6 +23,7 @@ import type { MemoryShowMessage, MemoryOperationMessage, RequestMemoryMessage } 
 
 export interface SendMessageRequest {
   type: "sendMessage"
+  projectId?: string
   text: string
   messageID?: string
   sessionID?: string
@@ -517,6 +518,10 @@ export interface RequestImageModelsMessage {
   type: "requestImageModels"
 }
 
+export interface RequestSpeechToTextModelsMessage {
+  type: "requestSpeechToTextModels"
+}
+
 export interface OpenSettingsTabRequest {
   type: "openSettingsTab"
   tab: string
@@ -827,6 +832,13 @@ export interface AgentManagerTerminalResizeRequest {
   rows: number
 }
 
+export interface AgentManagerTerminalRestartRequest {
+  type: "agentManager.terminal.restart"
+  terminalId: string
+  cols?: number
+  rows?: number
+}
+
 // Open a file in the selected worktree for a specific session
 export interface AgentManagerOpenFileRequest {
   type: "agentManager.openFile"
@@ -869,6 +881,7 @@ export interface SetTabOrderRequest {
 // Persist sidebar worktree order
 export interface SetWorktreeOrderRequest {
   type: "agentManager.setWorktreeOrder"
+  projectId?: string
   order: string[]
 }
 
@@ -1571,9 +1584,11 @@ export type WebviewMessage =
   | AgentManagerTerminalCreateRequest
   | AgentManagerTerminalCloseRequest
   | AgentManagerTerminalStopRequest
+  | AgentManagerTerminalRestartRequest
   | AgentManagerTerminalDestinationSelectedRequest
   | AgentManagerTerminalResizeRequest
   | RequestImageModelsMessage
+  | RequestSpeechToTextModelsMessage
 
 // ============================================
 // VS Code API type

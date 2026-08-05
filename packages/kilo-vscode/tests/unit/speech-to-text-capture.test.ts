@@ -1,5 +1,28 @@
 import { describe, expect, it } from "bun:test"
-import { cleanOutput, parseDshowAudioDevices } from "../../src/speech-to-text/capture"
+import { cleanOutput, macCaptureArgs, parseDshowAudioDevices, useMacCapture } from "../../src/speech-to-text/capture"
+
+describe("macCaptureArgs", () => {
+  it("records 16 kHz mono PCM with the built-in AVFoundation bridge", () => {
+    const args = macCaptureArgs("/tmp/speech.wav")
+
+    expect(args.slice(0, 3)).toEqual(["-l", "JavaScript", "-e"])
+    expect(args.at(-1)).toBe("/tmp/speech.wav")
+    expect(args[3]).toContain("AVAudioRecorder")
+    expect(args[3]).toContain("numberWithDouble(16000)")
+    expect(args[3]).toContain("numberWithInt(1), $.AVNumberOfChannelsKey")
+    expect(args[3]).toContain('console.log("ready")')
+  })
+})
+
+describe("useMacCapture", () => {
+  it("preserves explicit FFmpeg overrides", () => {
+    expect(useMacCapture("darwin", {})).toBe(true)
+    expect(useMacCapture("darwin", { KILO_FFMPEG_PATH: "/custom/ffmpeg" })).toBe(false)
+    expect(useMacCapture("darwin", { FFMPEG_PATH: "/custom/ffmpeg" })).toBe(false)
+    expect(useMacCapture("linux", {})).toBe(false)
+    expect(useMacCapture("win32", {})).toBe(false)
+  })
+})
 
 describe("parseDshowAudioDevices", () => {
   it("extracts Windows dshow audio device names", () => {

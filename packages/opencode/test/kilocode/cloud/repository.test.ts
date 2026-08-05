@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect } from "bun:test"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Effect, Layer } from "effect"
@@ -6,7 +7,7 @@ import { CloudRepository } from "../../../src/kilocode/cloud/repository"
 import { tmpdirScoped } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
 
-const it = testEffect(Layer.mergeAll(Git.defaultLayer, CrossSpawnSpawner.defaultLayer))
+const it = testEffect(Layer.mergeAll(AppNodeBuilder.build(Git.node), AppNodeBuilder.build(CrossSpawnSpawner.node)))
 
 const run = Effect.fn("CloudRepositoryTest.git")(function* (cwd: string, ...args: string[]) {
   const git = yield* Git.Service

@@ -3,6 +3,7 @@ export * as GlobTool from "./glob"
 import { ToolFailure } from "@opencode-ai/llm"
 import { Effect, Layer, Schema } from "effect"
 import path from "path"
+import { makeLocationNode } from "../effect/app-node"
 import { FileSystem } from "../filesystem"
 // kilocode_change start
 import { FSUtil } from "../fs-util"
@@ -13,6 +14,7 @@ import { Reference } from "../reference" // kilocode_change
 import { Ripgrep } from "../ripgrep"
 import { RelativePath } from "../schema"
 import { PermissionV2 } from "../permission"
+import { ToolRegistry } from "./registry"
 import { Tool } from "./tool"
 import { Tools } from "./tools"
 
@@ -52,7 +54,7 @@ export const toModelOutput = (output: ModelOutput) => {
 // kilocode_change end
 
 /** Glob leaf that defaults its filesystem root to the active Location. */
-export const layer = Layer.effectDiscard(
+const layer = Layer.effectDiscard(
   Effect.gen(function* () {
     const tools = yield* Tools.Service
     const fs = yield* FSUtil.Service // kilocode_change
@@ -124,14 +126,13 @@ export const layer = Layer.effectDiscard(
                     (result) =>
                       new Result({
                         ...result,
-                        items: result.items.map(
-                          (entry) =>
-                            new FileSystem.Entry({
-                              ...entry,
-                              path: RelativePath.make(
-                                path.relative(location.directory, path.resolve(target.path, entry.path)),
-                              ),
-                            }),
+                        items: result.items.map((entry) =>
+                          FileSystem.Entry.make({
+                            ...entry,
+                            path: RelativePath.make(
+                              path.relative(location.directory, path.resolve(target.path, entry.path)),
+                            ),
+                          }),
                         ),
                       }),
                   ),
@@ -145,3 +146,9 @@ export const layer = Layer.effectDiscard(
       .pipe(Effect.orDie)
   }),
 )
+
+export const node = makeLocationNode({
+  name: "tool/glob",
+  layer,
+  deps: [ToolRegistry.node, Ripgrep.node, Location.node, PermissionV2.node, FSUtil.node, Reference.node], // kilocode_change - search targets and references
+})

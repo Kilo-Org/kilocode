@@ -1,10 +1,11 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { expect } from "bun:test"
 import { Effect } from "effect"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { Provider } from "../../src/provider/provider"
 import { testEffect } from "../lib/effect"
 
-const it = testEffect(Provider.defaultLayer)
+const it = testEffect(AppNodeBuilder.build(Provider.node))
 
 const auth = <A, E, R>(value: Record<string, unknown>, effect: Effect.Effect<A, E, R>) =>
   Effect.acquireUseRelease(

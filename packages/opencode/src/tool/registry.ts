@@ -1,4 +1,5 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
 import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { PlanExitTool } from "./plan"
 import { Session } from "@/session/session"
@@ -43,6 +44,8 @@ import { Glob } from "@opencode-ai/core/util/glob"
 import path from "path"
 import { pathToFileURL } from "url"
 import { Effect, Layer, Context, Option } from "effect" // kilocode_change
+import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
+import { HttpClient } from "effect/unstable/http" // kilocode_change
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Format } from "../format"
 import { InstanceState } from "@/effect/instance-state"
@@ -103,7 +106,7 @@ export interface Interface {
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/ToolRegistry") {}
 
-export const layer = Layer.effect(
+const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const config = yield* Config.Service
@@ -394,56 +397,7 @@ export const layer = Layer.effect(
   }),
 )
 
-// kilocode_change start - keep Kilo registry requirements type-checked
-export const defaultLayer: Layer.Layer<Service> = Layer.suspend(
-  // kilocode_change end
-  () =>
-    layer
-      .pipe(
-        Layer.provide(Config.defaultLayer),
-        Layer.provide(Plugin.defaultLayer),
-        Layer.provide(Question.defaultLayer),
-        Layer.provide(Todo.defaultLayer),
-        Layer.provide(Skill.defaultLayer),
-        Layer.provide(Agent.defaultLayer),
-        Layer.provide(Session.defaultLayer),
-        Layer.provide(BackgroundJob.defaultLayer),
-        Layer.provide(Provider.defaultLayer),
-        Layer.provide(Git.defaultLayer), // kilocode_change
-        Layer.provide(LSP.defaultLayer),
-        Layer.provide(Instruction.defaultLayer),
-        Layer.provide(FSUtil.defaultLayer),
-        Layer.provide(Bus.layer),
-        Layer.provide(EventV2Bridge.defaultLayer),
-        Layer.provide(ToolNetwork.httpLayer), // kilocode_change
-        Layer.provide(Format.defaultLayer),
-        Layer.provide(CrossSpawnSpawner.defaultLayer),
-        // kilocode_change start
-        Layer.provide(
-          Ripgrep.layer.pipe(
-            Layer.provide(RipgrepBinary.layer),
-            Layer.provide(AppProcess.defaultLayer),
-            Layer.provide(ToolNetwork.httpLayer),
-            Layer.provide(FSUtil.defaultLayer),
-            Layer.provide(CrossSpawnSpawner.defaultLayer),
-          ),
-        ),
-        // kilocode_change end
-      )
-      // kilocode_change start - provide Kilo-owned registry dependencies
-      .pipe(
-        Layer.provide(Command.defaultLayer),
-        Layer.provide(AgentManager.defaultLayer),
-        Layer.provide(Notebook.defaultLayer),
-        Layer.provide(Database.defaultLayer),
-        Layer.provide(RuntimeFlags.defaultLayer),
-        Layer.provide(SessionStatus.defaultLayer),
-        Layer.provide(RepositoryCache.defaultLayer),
-        Layer.provide(Truncate.defaultLayer), // kilocode_change - split the pipe to stay within Effect's overload limit
-      )
-      .pipe(Layer.provide(Auth.defaultLayer))
-      .pipe(Layer.provide(KiloSessions.defaultLayer)), // kilocode_change - satisfy the notify_user tool's KiloSessions dependency in the tool-registry graph
-)
+export const defaultLayer: Layer.Layer<Service> = Layer.suspend(() => AppNodeBuilder.build(node)) // kilocode_change - build from the LayerNode graph
 
 function isZodType(value: unknown): value is z.ZodType {
   return typeof value === "object" && value !== null && "_zod" in value
@@ -522,41 +476,44 @@ function isJsonSchemaObject(value: unknown): value is Record<string, unknown> {
 }
 
 // kilocode_change start - preserve Kilo registry dependencies and sandbox-aware HTTP in the upstream node graph
-const networkNode = LayerNode.make(ToolNetwork.httpLayer, [])
-const busNode = LayerNode.make(Bus.layer, [])
-const notebookNode = LayerNode.make(Notebook.defaultLayer, [])
-const repositoryCacheNode = LayerNode.make(RepositoryCache.defaultLayer, [])
+const network = LayerNode.make({ service: HttpClient.HttpClient, layer: ToolNetwork.httpLayer, deps: [] })
 
 export const node = LayerNode.suspend(() =>
-  LayerNode.make(layer.pipe(Layer.provide(Ripgrep.defaultLayer)), [
-    Config.node,
-    Plugin.node,
-    Question.node,
-    Todo.node,
-    Agent.node,
-    Skill.node,
-    Session.node,
-    BackgroundJob.node,
-    Provider.node,
-    LSP.node,
-    Instruction.node,
-    FSUtil.node,
-    EventV2Bridge.node,
-    networkNode,
-    CrossSpawnSpawner.node,
-    Format.node,
-    Truncate.node,
-    RuntimeFlags.node,
-    Database.node,
-    Command.node,
-    Git.node,
-    busNode,
-    Auth.node,
-    SessionStatus.node,
-    notebookNode,
-    repositoryCacheNode,
-    KiloSessions.node, // kilocode_change - satisfy the notify_user tool's KiloSessions dependency in the runtime node graph
-  ]),
+  LayerNode.make({
+    service: Service,
+    layer,
+    deps: [
+      Config.node,
+      Plugin.node,
+      Question.node,
+      Todo.node,
+      Agent.node,
+      Skill.node,
+      Session.node,
+      BackgroundJob.node,
+      Provider.node,
+      LSP.node,
+      Instruction.node,
+      FSUtil.node,
+      EventV2Bridge.node,
+      network,
+      CrossSpawnSpawner.node,
+      Format.node,
+      Truncate.node,
+      RuntimeFlags.node,
+      Database.node,
+      Ripgrep.node,
+      Command.node,
+      Git.node,
+      Bus.node,
+      Auth.node,
+      SessionStatus.node,
+      AgentManager.node,
+      Notebook.node,
+      RepositoryCache.node,
+      KiloSessions.node,
+    ],
+  }),
 )
 // kilocode_change end
 

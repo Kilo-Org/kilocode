@@ -38,6 +38,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/ApplyDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/WorktreeItem.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SectionHeader.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/SidebarSectionHeader.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SidebarSearchMenu.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SidebarToggleButton.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/WorktreeSectionActions.tsx"),

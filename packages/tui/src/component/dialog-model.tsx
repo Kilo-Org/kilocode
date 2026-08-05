@@ -294,7 +294,8 @@ export function sortModelOptions<
   return sortBy(
     options,
     recommended, // kilocode_change
-    (option) => option.footer === undefined, // kilocode_change - free model footers include Kilo disclosure labels
+    (option) => option.footer === undefined,
+    [(option) => option.releaseDate, "desc"], // kilocode_change - free model footers include Kilo disclosure labels
     (option) => option.title,
   )
 }

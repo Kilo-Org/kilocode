@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterEach, describe, expect, test } from "bun:test"
 import { Deferred, Effect, Fiber, Layer, Stream } from "effect"
 import * as Sink from "effect/Sink"
@@ -22,13 +23,13 @@ const encoder = new TextEncoder()
 const it = testEffect(Layer.empty)
 const shell = testEffect(
   Layer.mergeAll(
-    CrossSpawnSpawner.defaultLayer,
-    FSUtil.defaultLayer,
-    Plugin.defaultLayer,
-    Truncate.defaultLayer,
-    Config.defaultLayer,
-    Agent.defaultLayer,
-    RuntimeFlags.defaultLayer,
+    AppNodeBuilder.build(CrossSpawnSpawner.node),
+    AppNodeBuilder.build(FSUtil.node),
+    AppNodeBuilder.build(Plugin.node),
+    AppNodeBuilder.build(Truncate.node),
+    AppNodeBuilder.build(Config.node),
+    AppNodeBuilder.build(Agent.node),
+    AppNodeBuilder.build(RuntimeFlags.node),
   ),
 )
 

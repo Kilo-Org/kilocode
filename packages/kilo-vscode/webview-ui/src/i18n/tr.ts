@@ -228,6 +228,8 @@ export const dict = {
     "Dosya sistemi yazma işlemlerini kısıtlamak için tıklayın. Sandbox ayarlarınız ağ erişimine izin vermeye devam ediyor.",
 
   "speechToText.tooltip.start": "Kilo Gateway ile sesli girişi başlatın",
+  "speechToText.tooltip.shortcut":
+    "Kaydı başlatmak veya durdurmak için dokunun ya da Cmd/Ctrl+K tuşlarına basın; konuşurken basılı tutun, ardından metne dönüştürüp göndermek için bırakın.",
   "speechToText.tooltip.starting": "Mikrofon başlatılıyor... Henüz konuşmayın.",
   "speechToText.tooltip.stop": "Ses yakalamayı durdur",
   "speechToText.tooltip.transcribing": "Metne dönüştürülüyor... İptal etmek için tıklayın.",
@@ -264,6 +266,7 @@ export const dict = {
 
   "notification.permission.title": "İzin gerekli",
   "notification.permission.titleSubagent": "İzin gerekli (alt ajan)",
+  "notification.permission.titleSkillShell": "“{{skill}}” becerisindeki kabuk komutları çalıştırılsın mı?",
   "ui.permission.manageAutoApprove": "Otomatik Onay Kurallarını Yönet",
   "ui.permission.doomLoop.prompt": "{{tool}} aracında olası bir döngü algılandı. Çalıştırmaya devam edilsin mi?",
   "ui.permission.doomLoop.rule": "{{tool}} çağrılarına devam et",
@@ -987,6 +990,9 @@ export const dict = {
     "Yapılandırılmış özel komut yok. Burada görmek için opencode.json dosyasına komutlar ekleyin.",
   "settings.agentBehaviour.workflows.detail.description": "Açıklama",
   "settings.agentBehaviour.workflows.detail.template": "Şablon",
+  "settings.agentBehaviour.workflows.model": "model",
+  "settings.agentBehaviour.workflows.variant": "varyant",
+  "settings.agentBehaviour.workflows.modelDescription": "Global model geçersiz kılması",
 
   "settings.autoApprove.description":
     "Araçların nasıl çalıştırılacağını tanımlayın. Çoğu araç varsayılan olarak İzin Ver'dir. doom_loop ve external_directory varsayılan olarak Sor'dur.",

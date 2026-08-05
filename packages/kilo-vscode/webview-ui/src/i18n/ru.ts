@@ -227,6 +227,8 @@ export const dict = {
     "Нажмите, чтобы ограничить запись в файловую систему. Доступ к сети останется разрешённым согласно настройкам песочницы.",
 
   "speechToText.tooltip.start": "Начать голосовой ввод с Kilo Gateway",
+  "speechToText.tooltip.shortcut":
+    "Коснитесь или нажмите Cmd/Ctrl+K, чтобы начать или остановить запись; удерживайте кнопку во время речи, затем отпустите её, чтобы транскрибировать и отправить.",
   "speechToText.tooltip.starting": "Запуск микрофона... Пока не говорите.",
   "speechToText.tooltip.stop": "Остановить захват звука",
   "speechToText.tooltip.transcribing": "Распознавание... Нажмите для отмены.",
@@ -263,6 +265,7 @@ export const dict = {
 
   "notification.permission.title": "Требуется разрешение",
   "notification.permission.titleSubagent": "Требуется разрешение (субагент)",
+  "notification.permission.titleSkillShell": "Выполнить команды оболочки из навыка «{{skill}}»?",
   "ui.permission.manageAutoApprove": "Управление правилами автоодобрения",
   "ui.permission.doomLoop.prompt":
     "Обнаружен потенциальный цикл при работе инструмента {{tool}}. Продолжить выполнение?",
@@ -1024,6 +1027,9 @@ export const dict = {
     "Пользовательские команды не настроены. Добавьте команды в opencode.json, чтобы увидеть их здесь.",
   "settings.agentBehaviour.workflows.detail.description": "Описание",
   "settings.agentBehaviour.workflows.detail.template": "Шаблон",
+  "settings.agentBehaviour.workflows.model": "модель",
+  "settings.agentBehaviour.workflows.variant": "вариант",
+  "settings.agentBehaviour.workflows.modelDescription": "Глобальное переопределение модели",
   "settings.sandboxing.enabled.title": "Песочница",
   "settings.sandboxing.enabled.description":
     "Выполнять команды оболочки агента в песочнице на уровне ОС, которая ограничивает запись в каталоги состояния проекта и Kilo",

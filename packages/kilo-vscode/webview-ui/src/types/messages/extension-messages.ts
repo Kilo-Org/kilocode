@@ -19,6 +19,7 @@ import type { PermissionRequest } from "./permissions"
 import type { AnacondaDesktopExtensionMessage } from "../../../../src/shared/anaconda-desktop-messages"
 import type { QuestionRequest, SuggestionRequest, TodoItem } from "./questions"
 import type { ModelSelection, Provider, ProviderAuthState } from "./providers"
+import type { SpeechToTextModelDef } from "../../../../src/speech-to-text/models"
 import type { AgentInfo, AgentRequirementResult, SkillInfo, SlashCommandInfo } from "./agents"
 import type {
   BrowserSettings,
@@ -381,6 +382,11 @@ export interface KiloEmbeddingModelsLoadedMessage {
 export interface ImageModelsLoadedMessage {
   type: "imageModelsLoaded"
   models: Array<{ id: string; name: string; description?: string }>
+}
+
+export interface SpeechToTextModelsLoadedMessage {
+  type: "speechToTextModelsLoaded"
+  models: SpeechToTextModelDef[]
 }
 
 export interface ProvidersLoadedMessage {
@@ -785,10 +791,19 @@ export interface AgentManagerTerminalCreatedMessage {
   placement: TerminalPlacement
   /** null for LOCAL, worktree id otherwise */
   worktreeId: string | null
+  /** Project that owns the create; the webview namespaces its per-project
+   *  terminal state with it (mirrors `ScriptTerminalView.projectId`). */
+  projectId?: string
   terminalId: string
   title: string
   wsUrl: string
   font: TerminalFont
+}
+
+export interface AgentManagerTerminalRestartedMessage {
+  type: "agentManager.terminal.restarted"
+  terminalId: string
+  wsUrl: string
 }
 
 export interface AgentManagerTerminalFontChangedMessage {
@@ -885,6 +900,8 @@ export interface SandboxStatusErrorMessage {
 // Multi-version creation progress (extension → webview)
 export interface AgentManagerMultiVersionProgressMessage {
   type: "agentManager.multiVersionProgress"
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
   status: "creating" | "done"
   total: number
   completed: number
@@ -1028,6 +1045,8 @@ export interface WorktreeStatsLoadedMessage {
 // Set the model for a session (extension → webview, used during multi-version creation)
 export interface AgentManagerSetSessionModelMessage {
   type: "agentManager.setSessionModel"
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
   sessionId: string
   providerID: string
   modelID: string
@@ -1036,6 +1055,8 @@ export interface AgentManagerSetSessionModelMessage {
 // Request webview to send initial prompt to a newly created session (extension → webview)
 export interface AgentManagerSendInitialMessage {
   type: "agentManager.sendInitialMessage"
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
   sessionId: string
   worktreeId: string
   text?: string
@@ -1292,6 +1313,7 @@ export type ExtensionMessage =
   | ChatSettingsLoadedMessage
   | KiloEmbeddingModelsLoadedMessage
   | ImageModelsLoadedMessage
+  | SpeechToTextModelsLoadedMessage
   | ProvidersLoadedMessage
   | AgentsLoadedMessage
   | SkillsLoadedMessage
@@ -1376,6 +1398,7 @@ export type ExtensionMessage =
   | AgentManagerLocalStatsMessage
   | AgentManagerPRStatusMessage
   | AgentManagerTerminalCreatedMessage
+  | AgentManagerTerminalRestartedMessage
   | AgentManagerTerminalFontChangedMessage
   | AgentManagerTerminalClosedMessage
   | AgentManagerTerminalErrorMessage

@@ -182,6 +182,7 @@ export const dict = {
   "error.promotionLimit.action": "Registrati",
   "notification.permission.title": "Autorizzazione richiesta",
   "notification.permission.titleSubagent": "Autorizzazione richiesta (sub-agent)",
+  "notification.permission.titleSkillShell": "Eseguire i comandi shell della skill “{{skill}}”?",
   "ui.permission.manageAutoApprove": "Gestisci regole approvazione automatica",
   "ui.permission.doomLoop.prompt": "Rilevato un potenziale ciclo nello strumento {{tool}}. Continuare l'esecuzione?",
   "ui.permission.doomLoop.rule": "Continua le chiamate a {{tool}}",
@@ -853,6 +854,9 @@ export const dict = {
     "Nessun comando personalizzato configurato. Aggiungi comandi a opencode.json per vederli qui.",
   "settings.agentBehaviour.workflows.detail.description": "Descrizione",
   "settings.agentBehaviour.workflows.detail.template": "Template",
+  "settings.agentBehaviour.workflows.model": "modello",
+  "settings.agentBehaviour.workflows.variant": "variante",
+  "settings.agentBehaviour.workflows.modelDescription": "Override globale del modello",
   "settings.agentBehaviour.createMode": "Crea nuova modalità",
   "settings.agentBehaviour.createMode.name": "Nome",
   "settings.agentBehaviour.createMode.name.placeholder": "es. reviewer",
@@ -1259,6 +1263,8 @@ export const dict = {
 
   // Speech to Text tooltips and errors
   "speechToText.tooltip.start": "Avvia input vocale con Kilo Gateway",
+  "speechToText.tooltip.shortcut":
+    "Tocca o premi Cmd/Ctrl+K per avviare o interrompere la registrazione; tieni premuto mentre parli e rilascia per trascrivere e inviare.",
   "speechToText.tooltip.starting": "Avvio del microfono... Attendi prima di parlare.",
   "speechToText.tooltip.stop": "Interrompi acquisizione",
   "speechToText.tooltip.transcribing": "Trascrizione... Fai clic per annullare.",
