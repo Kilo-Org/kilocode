@@ -20,7 +20,7 @@ import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import { TelemetryEventName } from "../../../../src/services/telemetry/types"
 
-interface SidebarTopBarProps {
+export interface SidebarTopBarProps {
   onNewTask: () => void
   onHistory: () => void
 }
