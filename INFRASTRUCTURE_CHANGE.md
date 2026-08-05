@@ -1,0 +1,64 @@
+# Infrastructure Change Review — upstream v1.18.13 merge
+
+Reviewed HEAD: `cce22e608f` (worktree HEAD) vs pre-merge Kilo base `b135b4e10a` (390 files). Upstream tag: `v1.18.13` = `a105350812` (local remote `upstream`).
+
+## Scope & methodology
+
+Reviewed the PR diff for infrastructure only: `.github/**` (workflows, composite actions, templates, CODEOWNERS), `.changeset/**`, `script/**`, `packages/opencode/script/**`, `packages/sdk` generation, root `package.json` / `bun.lock` / `turbo.json` / `bunfig.toml` / `.npmrc`, `patches/**`, Docker files, git hooks, and the `.opencode-version` marker. For each hit, classified as upstream infra bleeding in (finding), Kilo-side compat adjustment (noted, usually fine), or Kilo infra deletion (critical). Suspicious items were compared against upstream with `git diff a105350812..HEAD -- <path>` (empty = verbatim upstream).
+
+Headline: **no `.github/workflows/**` files were added, removed, or modified** in this PR. The workflow list at HEAD is byte-identical to the base (including `workflows/disabled/`), so the `script/check-workflows.ts` allowlist correctly needed no update. No `.changeset/` changes. `turbo.json`, `bunfig.toml`, `.npmrc`, `.husky`, `Dockerfile*`, `script/generate.ts`, `script/publish*`/`script/release*` are all untouched. No Kilo infrastructure was deleted.
+
+## Findings
+
+### 1. `.github/actions/setup-bun/action.yml` — merge produced duplicate Node setup steps (medium)
+
+- **What changed:** Upstream v1.18 added a top-level `Setup Node` step (`actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020` v4.4.0, Node 24, **no OS condition**) because node-gyp requires Node >= 22. Kilo's base already contained a `kilocode_change` block doing the same job differently: `Setup Node for native dependency builds` (`actions/setup-node@v6`, Node 24, `if: runner.os != 'Windows'`, `package-manager-cache: false`) plus a `Configure node-gyp Node headers` step that exports `nodedir`, which the install step consumes as `npm_config_nodedir`.
+- **Merge result:** Both are present. Conflict-resolution commit `88083fb5c5` accepted the upstream step on top of Kilo's existing block. Non-Windows runners now execute setup-node twice (v4.4.0, then v6); the second install wins on PATH and is the one the header-detection step sees, so it works, but it is redundant and fragile. Windows behavior changes silently: it previously used the runner's system Node for native builds and now gets Node 24 from the unconditional upstream step, **without** the `npm_config_nodedir` export (Kilo's export is non-Windows only).
+- **Upstream vs Kilo:** The added step is verbatim upstream (correctly unmarked); the duplicated block is Kilo's marked customization. `git diff a105350812..HEAD` on this file shows only Kilo's pre-existing `kilocode_change` hunks.
+- **Action for a human:** Decide which Node setup to keep. If upstream's step is kept, Kilo's v6 step is redundant but the node-gyp header/nodedir logic must be preserved or deliberately dropped (re-verify native module builds, e.g. `@lydell/node-pty`, on Windows where the nodedir export does not run).
+
+### 2. `script/translate-app.ts` (+ root `translate:app` script) — upstream maintainer tooling landed with unmarked Kilo edits and a wrong binary name (medium)
+
+- **What changed:** New 523-line file from upstream (`translate:app` root script also comes from upstream's `package.json`), plus `script/translate-app.md` / `script/translate-app.test.ts` (both byte-identical to upstream). The Kilo compat commit (`76783409bf` / `0fff61fa62` line of history) renamed `OPENCODE_*` env vars to `KILO_*` (`KILO_CONFIG_CONTENT`, `KILO_DISABLE_PROJECT_CONFIG`, etc.) to match our CLI's env namespace.
+- **Why it matters:**
+  - The `KILO_*` renames have **no `kilocode_change` markers** even though the file is an upstream-shared file inside the annotation check's `script` scope. I ran `bun run script/check-opencode-annotations.ts --base b135b4e10a`: it prints `Skipping shared upstream annotation check — upstream merge detected.`, so CI will not flag this on the merge PR. The next upstream merge that touches this file can silently revert the renames because the merge tooling relies on markers to identify intentional Kilo deviations.
+  - The script still shells out to the **`opencode` binary** in three places (lines 377, 409, 470: `Bun.spawn(["opencode", "--pure", ...])`), byte-identical to upstream. This repo's CLI package only ships `kilo` / `kilocode` bins (`packages/opencode/package.json` → `"bin": { "kilo": ..., "kilocode": ... }`), so `bun run translate:app` fails on a machine without upstream's binary installed. The env vars were adapted but the executable name was not.
+- **Upstream vs Kilo:** File itself is upstream's; the env-var renames are unmarked Kilo modifications; the `opencode` spawn is verbatim upstream (likely an oversight in the compat pass).
+- **Action for a human:** Confirm whether `translate:app` is intended to work in this repo; if yes, switch the spawned binary to `kilo` and add `kilocode_change` markers around all deviations.
+
+### 3. `artifacts/glm52-rise-video/` — new upstream demo project; mp4s auto-converted to Git LFS pointers by our `.gitattributes` (low, needs verification)
+
+- **What changed:** Entirely new directory from upstream: a Remotion video project (`package.json`, `src/*.tsx`, `public/*.jpg`, `bun.lock`) with five rendered mp4s under `out/` (~10 MB total upstream). Upstream has no LFS rules (its `.gitattributes` only has `linguist-generated` entries) and commits the mp4s as plain binaries. Kilo's `.gitattributes` tracks `*.mp4 filter=lfs`, so the merge committed them as 132-byte LFS pointer files (`git diff a105350812..HEAD` shows `Bin 2788751 -> 132 bytes`). The artifact `package.json` was also stamped with Kilo's repo version `7.4.20`, meaning our release/version tooling will keep bumping this upstream demo's version field going forward.
+- **Why it matters:** This is the first upstream content (in recent history) to hit our `*.mp4` LFS rule, so the merge implicitly created new LFS objects. `git lfs ls-files` in the worktree shows the five mp4s smudged (`*`), so local state is fine, but I could not verify (offline sandbox) that the LFS objects were **pushed** to the fork's LFS storage. If they weren't, every fresh clone/checkout of this branch fails smudge or yields broken pointer files, and CI jobs using `actions/checkout` with `lfs: true` will error.
+- **Upstream vs Kilo:** Content is verbatim upstream; the LFS-pointer conversion is a Kilo `.gitattributes` side effect (arguably desirable — keeps binaries out of the git object store — but it must be completed by the LFS push).
+- **Action for a human:** Verify the LFS objects exist on the remote (fresh clone or `git lfs pull` on a clean clone). Separately, decide whether upstream's `artifacts/` marketing/demo content should keep syncing into our repo at all; if not, exclude it in the merge tooling rather than carrying version-stamped copies.
+
+### 4. `.opencode/command/translate.md` — upstream command now references `opencode/gpt-5.6-sol` (trivial)
+
+- **What changed:** One-line change, byte-identical to upstream: default model changed from `opencode/claude-opus-4-8` to `opencode/gpt-5.6-sol`.
+- **Why it matters:** This is upstream's agent-command config for the translate workflow; the `opencode/...` provider namespace is upstream's, not Kilo's, so the command is unlikely to resolve a model in our CLI. Low impact (developer-invoked command, not CI), noted for completeness alongside finding 2.
+- **Upstream vs Kilo:** Verbatim upstream; pre-existing file (already tracked at base), only the model line changed.
+
+## Notable non-findings
+
+- **`.github/workflows/**` (all 29 files + `disabled/`)**: untouched. No upstream workflow landed; `script/check-workflows.ts` needed no update and was not changed. No changes to issue/PR templates, CODEOWNERS, or dependabot config.
+- **`script/upstream/**` (merge.ts, README, transform-package-json + test)**: Kilo-owned merge tooling improvements, not upstream bleed: in-place merge support (`--base-branch HEAD` on an already-named target branch), rerere training gated behind `--no-worktrees`, and `PRESERVE_SCRIPTS` extended so `extension:isolated*` root scripts and `test:ci` in `packages/{client,httpapi-codegen,sdk-next,session-ui,codemode}` survive future merges. Verified the new packages do have `test:ci` at HEAD.
+- **Root `package.json`**: Kilo-only scripts preserved (`extension*`, `dev-setup`, `dev:local`, `postinstall` with `script/setup-git.ts`). Changes are upstream's: `dev`/`packages/opencode` dev scripts switch `--conditions=node` → `--conditions=browser` (matches upstream and this repo's AGENTS.md), catalog bumps (OpenTUI 0.3.4→0.4.5, marked 17→18, turbo 2.9.14→2.10.2, `@tanstack/solid-virtual` 3.13.28→3.13.32, new `@corvu/drawer` + `solid-sonner` — all confirmed present in upstream's `package.json`), and upstream's `translate:app` script (see finding 2).
+- **`patches/**`**: All churn is upstream's own patch set: added `@ai-sdk/mistral@3.0.51`, `@dnd-kit/dom@0.5.0`, `@tanstack/virtual-core@3.17.3`; removed `@tanstack/solid-virtual@3.13.28` (dep bumped past the patch, upstream dropped it too) and `virtual-core@3.17.0`; modified `@modelcontextprotocol/sdk` and `solid-js` patches (both exist upstream). `patchedDependencies` in root `package.json` is consistent with the files on disk. Kilo-only patches (`ghostty-web`, `@ff-labs/fff-bun@0.9.4` vs upstream's 0.9.3, `pacote@21.5.1` vs 21.5.0, `mammoth`, `virtua`) untouched.
+- **`bun.lock`** (203 lines): regenerated consistently with the dependency/patch changes above (OpenTUI 0.4.5 platform packages, cerebras/mistral/gitlab-ai-provider bumps, new `codemode`/`client` workspace entries). Frozen-lockfile CI install is the authoritative check; nothing anomalous spotted at summary level.
+- **`packages/opencode/script/build.ts`**: Adopted upstream's new tree-sitter worker embedding (`Bun.file(import.meta.resolve("@opentui/core/parser.worker"))` fed through `files: { ... }` instead of resolving a node_modules path per target). All Kilo deviations vs upstream (45 `kilocode_change` marker lines: fs/os/createRequire imports, sandbox workers, kilo-console build, `files:` base shape, extra entrypoints) are marker-annotated. Not runtime-verified (no build run — see Limitations).
+- **`packages/opencode/script/kilocode/test-cli.ts`**: Kilo-owned file; OpenTUI 0.4 compat (`createRequire` → `Bun.resolveSync` since OpenTUI 0.4 dropped its CJS entry). Appropriate Kilo-side adjustment.
+- **`script/check-model-tool-network.ts`**: Kilo-owned CI architecture guard (marked `kilocode_change - new file`, absent upstream). One regex updated (`item` → `entry`) to track an upstream variable rename in `session/tools.ts`. Appropriate Kilo-side adjustment.
+- **`packages/sdk/openapi.json` + `packages/sdk/js/src/v2/gen/types.gen.ts`**: Regenerated, **not** upstream-verbatim — they differ from upstream by ~52k/~18k lines and contain Kilo-specific routes (`/kilo`, `/kilocode`, `/indexing`, `/background-process`, `/interactive-terminal`, ...). The small delta vs base (+37/+11) matches the v1.18.13 server changes. `script/generate.ts` itself untouched.
+- **`packages/codemode/`**: New upstream workspace package (with tests, fixtures, tsconfig). Received Kilo's JUnit `test:ci` script via the merge transform; referenced as `@opencode-ai/codemode` workspace dep in `packages/opencode/package.json`. Normal upstream code intake.
+- **`packages/storybook/` mocks**: Shared-with-upstream visual-regression harness updated for new upstream UI components (language/platform/server-sdk mocks, `main.ts` +2 lines). Follows upstream; Kilo's harness intact.
+- **`.opencode-version`**: `v1.17.13` → `v1.18.13`, as expected from the merge tooling.
+- **`.changeset/`**: no changes (none expected for a merge PR).
+
+## Limitations
+
+- Offline sandbox: could not verify LFS objects were pushed to the remote (finding 3), could not query the GitHub PR/CI state, and could not run network-dependent checks.
+- No builds or test suites were executed; `build.ts` and `test-cli.ts` changes were reviewed statically only.
+- `bun.lock` was reviewed at the level of changed dependency keys, not all 203 diff lines; `bun install --frozen-lockfile` in CI is the authoritative consistency check.
+- The annotation check (`check-opencode-annotations.ts`) self-skips on merge PRs (verified locally), so the unmarked edits in finding 2 would not be caught by CI on this PR — they were identified by manual diff against upstream.
+- The reviewed range spans two upstream rounds visible in the branch history (`v1.18.0` conflict-resolution/compat commits + `v1.18.13` merge); findings were attributed to commits where relevant, but all are reported against the full `b135b4e10a..HEAD` delta as instructed.
