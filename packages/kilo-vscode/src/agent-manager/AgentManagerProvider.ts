@@ -27,6 +27,7 @@ import { GitStatsPoller, type LocalStats, type WorktreePresenceResult, type Work
 import { PRStatusBridge } from "./pr-status-bridge"
 import { createPollers, type ProjectPollers } from "./project/pollers"
 import { GitOps } from "./GitOps"
+import type { GitExecutable } from "../util/git-executable"
 import { versionedName } from "./branch-name"
 import { BranchNamingController } from "./branch-naming"
 import { SetupScriptService } from "./SetupScriptService"
@@ -122,6 +123,7 @@ export class AgentManagerProvider implements Disposable {
   constructor(
     private readonly host: Host,
     private readonly connectionService: KiloConnectionService,
+    binary: GitExecutable = () => Promise.resolve("git"),
   ) {
     this.outputChannel = host.createOutput("Kilo Agent Manager")
     this.terminalManager = new SessionTerminalManager(
@@ -175,7 +177,7 @@ export class AgentManagerProvider implements Disposable {
       log: (...args) => this.log(...args),
     })
     const semaphore = new Semaphore(3)
-    this.gitOps = new GitOps({ log: (...args) => this.log(...args), semaphore })
+    this.gitOps = new GitOps({ log: (...args) => this.log(...args), semaphore, binary })
     const wiring = createProjectWiring({
       host: this.host,
       git: this.gitOps,
