@@ -32,6 +32,7 @@
     "./app-icon": "./src/components/app-icon.tsx",
     "./markdown": "./src/components/markdown.tsx",
     "./keybind": "./src/components/keybind.tsx",
+    "./kilo-pass-meter": "./src/components/kilo-pass-meter.tsx",
     "./popover": "./src/components/popover.tsx",
     "./hover-card": "./src/components/hover-card.tsx",
     "./dropdown-menu": "./src/components/dropdown-menu.tsx",
