@@ -222,7 +222,7 @@ Options:
   --base-branch <name>   Base branch to merge into; use HEAD for current branch (default: main)
   --dry-run              Preview changes without applying them
   --no-push              Don't push branches to remote
-  --no-worktrees         Don't create reference worktrees
+  --no-worktrees         Don't create auxiliary worktrees, including rerere training worktrees
   --report-only          Only generate conflict report
   --verbose              Enable verbose logging
   --author <name>        Author name for branch prefix
@@ -323,6 +323,8 @@ Tighten the blast radius with `--review-limit 0` (only `markers-only` and `cosme
 By default, upstream merges start from the `main` branch. However, you can use `--base-branch` to start from a different branch. This is useful for:
 
 Passing `--base-branch HEAD` targets the currently checked-out branch without typing its full name.
+It uses the checked-out commit without pulling. If the current branch already has the generated
+target name, the script keeps and merges into that branch instead of backing it up and recreating it.
 
 ### Incremental Merges
 
