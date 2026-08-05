@@ -159,15 +159,15 @@ async function query<T>(procedure: string, token: string, schema: z.ZodType<T>, 
   return result.data
 }
 
-export function listCodingPlanSubscriptions(token: string) {
+export function fetchCodingPlanSubscriptions(token: string) {
   return query("codingPlans.listSubscriptions", token, z.array(CodingPlanSubscriptionSchema))
 }
 
-export function listByokEntries(token: string) {
+export function fetchByokEntries(token: string) {
   return query("byok.list", token, z.array(ByokEntrySchema), {})
 }
 
-export async function getCodingPlanUsage(token: string, subscriptionId: string) {
+export async function fetchCodingPlanUsage(token: string, subscriptionId: string) {
   const usage = await query("codingPlans.getUsage", token, CodingPlanUsageSchema, { subscriptionId })
   if (usage.subscription.id !== subscriptionId) throw new CloudTrpcError("schema")
   return usage
