@@ -4,6 +4,7 @@ import { Effect, Layer, Schema } from "effect"
 import { applyEdits, modify } from "jsonc-parser"
 import { mergeDeep } from "remeda"
 import { Global } from "@opencode-ai/core/global"
+import * as Observability from "@opencode-ai/core/observability"
 import { ConfigParse } from "@/config/parse"
 import { CurrentWorkingDirectory } from "@/config/tui-cwd"
 import { TuiConfig } from "@/config/tui"
@@ -26,11 +27,13 @@ export namespace KilocodeTuiConfig {
   const dirs = [".kilo", ".kilocode"] as const
 
   export async function get(input: { directory: string }) {
+    // kilocode_change - provide Observability.layer so Effect logs route to Kilo's log sink, not the shared TTY
     const cfg = await Effect.runPromise(
       TuiConfig.Service.use((svc) => svc.info()).pipe(
         Effect.provide(
           AppNodeBuilder.build(TuiConfig.node).pipe(
             Layer.provide(Layer.succeed(CurrentWorkingDirectory, input.directory)),
+            Layer.provideMerge(Observability.layer),
           ),
         ),
       ),
