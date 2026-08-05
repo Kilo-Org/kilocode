@@ -15,24 +15,22 @@ import { useProvider } from "../../context/provider"
 import { useVSCode } from "../../context/vscode"
 import type { ExtensionMessage, ProviderAuthState, ProviderConfig } from "../../types/messages"
 import { createProviderAction } from "../../utils/provider-action"
-import { MASKED_CUSTOM_PROVIDER_KEY, resolveCustomProviderKey } from "../../../../src/shared/custom-provider"
+import {
+  MASKED_CUSTOM_PROVIDER_KEY,
+  REASONING_EFFORTS,
+  resolveCustomProviderKey,
+  type ReasoningEffort,
+  type ReasoningOption,
+} from "../../../../src/shared/custom-provider"
 import {
   CUSTOM_PROVIDER_PACKAGE,
   isCustomProviderPackage,
   type CustomProviderPackage,
 } from "../../../../src/shared/provider-model"
 import { ModelCard } from "./CustomProviderModelCard"
-import type {
-  ChatTemplateArgsValue,
-  EnableThinkingValue,
-  Modalities,
-  Modality,
-  ModelEntry,
-  OutputEffortValue,
-  ReasoningEffortValue,
-  ThinkingTypeValue,
-  VariantEntry,
-} from "./CustomProviderModelCard"
+import type { Modalities, Modality, ModelEntry, ReasoningMode } from "./CustomProviderModelCard"
+import { ReasoningEfforts } from "./CustomProviderReasoning"
+import { advanced, mergeMetadata } from "./CustomProviderReasoningOptions"
 import { validateCustomProvider } from "./CustomProviderValidation"
 import type { FormErrors, FormState, HeaderRow } from "./CustomProviderValidation"
 const DEBOUNCE_MS = 500
@@ -59,8 +57,9 @@ type FetchedModel = { id: string; name: string }
 type RawModel = {
   name?: string
   reasoning?: boolean
+  reasoning_options?: unknown
   modalities?: { input?: unknown; output?: unknown }
-  variants?: Record<string, Record<string, unknown>>
+  variants?: unknown
 }
 
 // Keep this aligned with the CLI provider schema; the UI only exposes image.
@@ -86,27 +85,35 @@ function modes(raw: unknown): Modalities {
   }
 }
 
-function parseVariant([name, cfg]: [string, Record<string, unknown>]): VariantEntry {
-  return {
-    name,
-    enableThinking: typeof cfg.enable_thinking === "boolean" ? cfg.enable_thinking : undefined,
-    thinking:
-      typeof cfg.thinking === "object" && cfg.thinking !== null
-        ? ((cfg.thinking as { type?: string }).type as ThinkingTypeValue)
-        : undefined,
-    splitReasoning: typeof cfg.reasoning_split === "boolean" ? cfg.reasoning_split : undefined,
-    reasoningEffort:
-      typeof cfg.reasoningEffort === "string" ? (cfg.reasoningEffort as ReasoningEffortValue) : undefined,
-    outputEffort: typeof cfg.effort === "string" ? (cfg.effort as OutputEffortValue) : undefined,
-    chatTemplateArgs:
-      typeof cfg.chat_template_args === "object" && cfg.chat_template_args !== null
-        ? ((cfg.chat_template_args as { enable_thinking?: boolean }).enable_thinking as ChatTemplateArgsValue)
-        : undefined,
-  }
+function metadata(raw: unknown): ReasoningOption[] | undefined {
+  if (!Array.isArray(raw)) return
+  return raw as ReasoningOption[]
+}
+
+function efforts(options: ReasoningOption[] | undefined): ReasoningEffort[] {
+  const values = options?.filter((option) => option.type === "effort").flatMap((option) => option.values) ?? []
+  return REASONING_EFFORTS.filter((effort) => values.includes(effort))
+}
+
+function variants(raw: unknown): Record<string, Record<string, unknown>> | undefined {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return
+  const entries = Object.entries(raw).filter(
+    (entry): entry is [string, Record<string, unknown>] =>
+      !!entry[1] && typeof entry[1] === "object" && !Array.isArray(entry[1]),
+  )
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined
 }
 
 function initModels(cfg: ProviderConfig | undefined): ModelEntry[] {
-  const empty = { id: "", name: "", reasoning: false, supportsImages: false, modalities: {}, variants: [] }
+  const empty: ModelEntry = {
+    id: "",
+    name: "",
+    reasoning: false,
+    supportsImages: false,
+    modalities: {},
+    mode: "inherit",
+    efforts: [],
+  }
   if (!cfg?.models || typeof cfg.models !== "object") return [{ ...empty }]
   const entries = Object.entries(cfg.models)
   if (entries.length === 0) return [{ ...empty }]
@@ -114,13 +121,17 @@ function initModels(cfg: ProviderConfig | undefined): ModelEntry[] {
     const raw = model as RawModel
     const modalities = modes(raw.modalities)
     const input = modalities.input ?? []
+    const options = metadata(raw.reasoning_options)
     return {
       id,
       name: raw.name ?? id,
       reasoning: raw.reasoning ?? false,
       supportsImages: input.includes("image"),
       modalities,
-      variants: Object.entries(raw.variants ?? {}).map(parseVariant),
+      mode: options === undefined ? "inherit" : options.length === 0 ? "none" : "custom",
+      efforts: efforts(options),
+      metadata: options,
+      variants: variants(raw.variants),
     }
   })
 }
@@ -147,12 +158,15 @@ function resolveAuth(existing: ExistingProvider | undefined, states: Record<stri
 
 function initForm(existing: ExistingProvider | undefined, auth: ProviderAuthState | undefined): FormState {
   const npm = existing?.config?.npm
+  const options = metadata(existing?.config?.reasoning_options)
   return {
     providerID: existing?.providerID ?? "",
     name: existing?.name ?? "",
     npm: isCustomProviderPackage(npm) ? npm : CUSTOM_PROVIDER_PACKAGE,
     baseURL: (existing?.config?.options as { baseURL?: string } | undefined)?.baseURL ?? "",
     apiKey: resolveCustomProviderKey(auth),
+    efforts: efforts(options),
+    metadata: options,
     models: initModels(existing?.config),
     headers: initHeaders(existing?.config),
     saving: false,
@@ -183,7 +197,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     providerID: undefined,
     name: undefined,
     baseURL: undefined,
-    models: form.models.map((m) => ({ variants: m.variants.map(() => ({})) })),
+    models: form.models.map(() => ({})),
     headers: form.headers.map(() => ({})),
   })
   const [apiTouched, setApiTouched] = createSignal(false)
@@ -380,7 +394,8 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
       reasoning: false,
       supportsImages: false,
       modalities: {},
-      variants: [],
+      mode: "inherit",
+      efforts: [],
     })
     const merged = empty ? toAdd.map(defaults) : [...form.models, ...toAdd.map(defaults)]
 
@@ -388,7 +403,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
       setForm("models", merged)
       setErrors(
         "models",
-        merged.map((m) => ({ variants: m.variants.map(() => ({})) })),
+        merged.map(() => ({})),
       )
     }
 
@@ -438,9 +453,17 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
   function addModel() {
     setForm("models", (v) => [
       ...v,
-      { id: "", name: "", reasoning: false, supportsImages: false, modalities: {}, variants: [] },
+      {
+        id: "",
+        name: "",
+        reasoning: false,
+        supportsImages: false,
+        modalities: {},
+        mode: "inherit",
+        efforts: [],
+      },
     ])
-    setErrors("models", (v) => [...v, { variants: [] }])
+    setErrors("models", (v) => [...v, {}])
   }
 
   function removeModel(index: number) {
@@ -460,23 +483,26 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     setErrors("headers", (v) => v.filter((_, i) => i !== index))
   }
 
-  function addVariant(mi: number) {
-    const blank: VariantEntry = {
-      name: "",
-      enableThinking: undefined,
-      thinking: undefined,
-      splitReasoning: undefined,
-      reasoningEffort: undefined,
-      outputEffort: undefined,
-      chatTemplateArgs: undefined,
-    }
-    setForm("models", mi, "variants", (v) => [...v, blank])
-    setErrors("models", mi, "variants", (v) => [...(v ?? []), {}])
+  function changeDefaults(values: ReasoningEffort[]) {
+    setForm("efforts", values)
+    setForm("metadata", mergeMetadata(form.metadata, values))
   }
 
-  function removeVariant(mi: number, vi: number) {
-    setForm("models", mi, "variants", (v) => v.filter((_, i) => i !== vi))
-    setErrors("models", mi, "variants", (v) => (v ?? []).filter((_, i) => i !== vi))
+  function changeMode(mi: number, mode: ReasoningMode) {
+    setForm("models", mi, "mode", mode)
+    setForm("models", mi, "metadata", undefined)
+    setForm("models", mi, "variants", undefined)
+    if (mode !== "custom" || form.models[mi]?.efforts.length) return
+    const values: ReasoningEffort[] = form.efforts.length > 0 ? [...form.efforts] : ["low", "medium", "high"]
+    setForm("models", mi, "efforts", values)
+  }
+
+  function changeEfforts(mi: number, values: ReasoningEffort[]) {
+    const next = mergeMetadata(form.models[mi]?.metadata, values)
+    setForm("models", mi, "efforts", values)
+    setForm("models", mi, "metadata", next ?? [])
+    setForm("models", mi, "variants", undefined)
+    if (values.length === 0 && next === undefined) setForm("models", mi, "mode", "none")
   }
 
   function validate() {
@@ -653,6 +679,38 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
             />
           </div>
 
+          <fieldset
+            style={{
+              display: "flex",
+              "flex-direction": "column",
+              gap: "8px",
+              padding: "12px",
+              margin: "0",
+              border: "1px solid var(--border-weak-base, var(--vscode-panel-border))",
+              "border-radius": "6px",
+            }}
+          >
+            <legend
+              style={{ "font-size": "var(--kilo-font-size-12)", "font-weight": "500", color: "var(--text-weak-base)" }}
+            >
+              {language.t("provider.custom.reasoning.default.label")}
+            </legend>
+            <span style={{ "font-size": "var(--kilo-font-size-12)", color: "var(--text-weak-base)" }}>
+              {language.t("provider.custom.reasoning.default.description")}
+            </span>
+            <ReasoningEfforts
+              values={form.efforts}
+              onChange={changeDefaults}
+              t={language.t}
+              label={language.t("provider.custom.reasoning.default.label")}
+            />
+            <Show when={advanced(form.metadata)}>
+              <span style={{ "font-size": "var(--kilo-font-size-12)", color: "var(--text-weak-base)" }}>
+                {language.t("provider.custom.reasoning.advanced")}
+              </span>
+            </Show>
+          </fieldset>
+
           {/* Models */}
           <div style={{ display: "flex", "flex-direction": "column", gap: "12px" }}>
             <div style={{ display: "flex", "align-items": "center", gap: "8px" }}>
@@ -673,32 +731,19 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
               {(m, i) => (
                 <ModelCard
                   m={m}
-                  i={i}
                   errors={errors.models[i()] ?? {}}
+                  defaults={form.efforts}
+                  defaultMetadata={form.metadata}
+                  advanced={advanced(m.metadata)}
                   t={language.t}
                   canRemove={form.models.length > 1}
                   onChangeId={(v) => setForm("models", i(), "id", v)}
                   onChangeName={(v) => setForm("models", i(), "name", v)}
                   onChangeReasoning={(v) => setForm("models", i(), "reasoning", v)}
                   onChangeSupportsImages={(v) => setForm("models", i(), "supportsImages", v)}
+                  onChangeMode={(mode) => changeMode(i(), mode)}
+                  onChangeEfforts={(values) => changeEfforts(i(), values)}
                   onRemove={() => removeModel(i())}
-                  onAddVariant={() => addVariant(i())}
-                  onRemoveVariant={(vi) => removeVariant(i(), vi)}
-                  onChangeVariantName={(vi, val) => setForm("models", i(), "variants", vi, "name", val)}
-                  onChangeVariantEnableThinking={(vi, val) =>
-                    setForm("models", i(), "variants", vi, "enableThinking", val)
-                  }
-                  onChangeVariantThinking={(vi, val) => setForm("models", i(), "variants", vi, "thinking", val)}
-                  onChangeVariantSplitReasoning={(vi, val) =>
-                    setForm("models", i(), "variants", vi, "splitReasoning", val)
-                  }
-                  onChangeVariantReasoningEffort={(vi, val) =>
-                    setForm("models", i(), "variants", vi, "reasoningEffort", val)
-                  }
-                  onChangeVariantOutputEffort={(vi, val) => setForm("models", i(), "variants", vi, "outputEffort", val)}
-                  onChangeVariantChatTemplateArgs={(vi, val) =>
-                    setForm("models", i(), "variants", vi, "chatTemplateArgs", val)
-                  }
                 />
               )}
             </For>

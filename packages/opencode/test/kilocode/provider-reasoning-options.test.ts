@@ -2,6 +2,15 @@ import { describe, expect, test } from "bun:test"
 import { ProviderTransform } from "../../src/provider/transform"
 import { Provider } from "../../src/provider/provider"
 import type * as ModelsDev from "@opencode-ai/core/models-dev"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { Effect } from "effect"
+import { Env } from "../../src/env"
+import { Plugin } from "../../src/plugin"
+import { testEffect } from "../lib/effect"
+import { patchConfigVariants } from "../../src/kilocode/provider/provider"
+
+const it = testEffect(LayerNode.compile(LayerNode.group([Provider.node, Env.node, Plugin.node])))
 
 function mockModel(overrides: Partial<any> = {}): any {
   return {
@@ -90,6 +99,21 @@ describe("ProviderTransform.reasoningVariants - models.dev reasoning_options", (
     expect(ProviderTransform.reasoningVariants(raw(undefined), target)).toBeUndefined()
   })
 
+  test("configured reasoning options do not enable variants on a non-reasoning model", () => {
+    const target = mockModel({
+      capabilities: { ...mockModel().capabilities, reasoning: false },
+    })
+    const result = patchConfigVariants({
+      cfg: {},
+      source: raw([{ type: "effort", values: ["high"] }]),
+      defaults: [{ type: "effort", values: ["low"] }],
+      target,
+      reasoning: ProviderTransform.reasoningVariants,
+      fallback: ProviderTransform.variants,
+    })
+    expect(result).toEqual({})
+  })
+
   test("models.dev reasoning_options take precedence over heuristic variants in the provider pipeline", () => {
     const provider = {
       id: "openai",
@@ -138,3 +162,50 @@ describe("ProviderTransform.reasoningVariants - models.dev reasoning_options", (
     expect(Object.keys(gpt5.variants ?? {})).toEqual(["minimal", "low", "medium", "high"])
   })
 })
+
+it.instance(
+  "custom providers apply default and model-specific reasoning options",
+  Effect.gen(function* () {
+    const providers = yield* Provider.use.list()
+    const models = providers[ProviderV2.ID.make("custom-reasoning")].models
+
+    expect(models.inherited.variants).toEqual({
+      low: { reasoningEffort: "low" },
+      high: { reasoningEffort: "high" },
+      max: { reasoningEffort: "max" },
+    })
+    expect(models.custom.variants).toEqual({ medium: { reasoningEffort: "medium" } })
+    expect(models.none.variants).toEqual({})
+    expect(models.standard.variants).toEqual({})
+    expect(models.explicit.variants).toEqual({ high: { reasoningEffort: "provider-specific" } })
+  }),
+  {
+    config: {
+      provider: {
+        "custom-reasoning": {
+          name: "Custom Reasoning",
+          npm: "@ai-sdk/openai-compatible",
+          reasoning_options: [{ type: "effort", values: ["low", "high", "max"] }],
+          options: { apiKey: "test", baseURL: "https://example.com/v1" },
+          models: {
+            inherited: { name: "Inherited", reasoning: true },
+            custom: {
+              name: "Custom",
+              reasoning: true,
+              reasoning_options: [{ type: "effort", values: ["medium"] }],
+            },
+            none: { name: "None", reasoning: true, reasoning_options: [] },
+            standard: { name: "Standard", reasoning: false },
+            explicit: {
+              name: "Explicit",
+              reasoning: true,
+              reasoning_options: [{ type: "effort", values: ["high"] }],
+              variants: { high: { reasoningEffort: "provider-specific" } },
+            },
+          },
+        },
+      },
+    },
+  },
+  20_000,
+)

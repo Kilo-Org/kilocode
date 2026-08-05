@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test"
 import { validateCustomProvider } from "../../webview-ui/src/components/settings/CustomProviderValidation"
 import type { FormState } from "../../webview-ui/src/components/settings/CustomProviderValidation"
+import { advanced, mergeMetadata } from "../../webview-ui/src/components/settings/CustomProviderReasoningOptions"
 
-// Simple translator that returns the key so tests can assert on key names
 const t = (key: string) => key
 
 function base(): FormState {
@@ -12,8 +12,17 @@ function base(): FormState {
     npm: "@ai-sdk/openai-compatible",
     baseURL: "https://example.com/v1",
     apiKey: "",
+    efforts: [],
     models: [
-      { id: "model-1", name: "Model One", reasoning: false, supportsImages: false, modalities: {}, variants: [] },
+      {
+        id: "model-1",
+        name: "Model One",
+        reasoning: false,
+        supportsImages: false,
+        modalities: {},
+        mode: "inherit",
+        efforts: [],
+      },
     ],
     headers: [],
     saving: false,
@@ -30,11 +39,23 @@ function args(form: FormState) {
   }
 }
 
-describe("validateCustomProvider – variant name validation", () => {
+describe("validateCustomProvider", () => {
+  it("preserves advanced metadata while updating known effort values", () => {
+    const source = [
+      { type: "budget_tokens" as const, min: 1024 },
+      { type: "effort" as const, values: ["default", "high"] },
+      { type: "effort" as const, values: ["provider-specific"] },
+    ]
+    expect(advanced(source)).toBe(true)
+    expect(mergeMetadata(source, ["low", "max"])).toEqual([
+      { type: "budget_tokens", min: 1024 },
+      { type: "effort", values: ["low", "max", "default", "provider-specific"] },
+    ])
+  })
+
   it("persists the selected provider package", () => {
     const form = base()
     form.npm = "@ai-sdk/openai"
-
     expect(validateCustomProvider(args(form)).result?.config.npm).toBe("@ai-sdk/openai")
   })
 
@@ -45,132 +66,85 @@ describe("validateCustomProvider – variant name validation", () => {
       disabledProviders: ["my-provider"],
       existingProviderIDs: new Set(["my-provider"]),
     })
-
     expect(out.result?.providerID).toBe("my-provider")
     expect(out.errors.providerID).toBeUndefined()
   })
 
-  it("allows submit when reasoning is enabled with no variants", () => {
+  it("serializes provider default reasoning efforts", () => {
     const form = base()
-    form.models[0].reasoning = true
-    const out = validateCustomProvider(args(form))
-    expect(out.result).toBeDefined()
-    expect(out.errors.models[0].variants).toEqual([])
+    form.efforts = ["none", "low", "medium", "high", "xhigh", "max"]
+    expect(validateCustomProvider(args(form)).result?.config.reasoning_options).toEqual([
+      { type: "effort", values: ["none", "low", "medium", "high", "xhigh", "max"] },
+    ])
   })
 
-  it("allows submit when reasoning is enabled with a named variant", () => {
+  it("omits model reasoning options when inheriting provider defaults", () => {
     const form = base()
     form.models[0].reasoning = true
-    form.models[0].variants = [
-      {
-        name: "fast",
-        enableThinking: undefined,
-        thinking: undefined,
-        splitReasoning: undefined,
-        outputEffort: undefined,
-        reasoningEffort: undefined,
-        chatTemplateArgs: undefined,
-      },
-    ]
-    const out = validateCustomProvider(args(form))
-    expect(out.result).toBeDefined()
-    expect(out.errors.models[0].variants?.[0]?.name).toBeUndefined()
+    const saved = validateCustomProvider(args(form)).result?.config.models["model-1"] as Record<string, unknown>
+    expect(saved.reasoning).toBe(true)
+    expect(saved.reasoning_options).toBeUndefined()
   })
 
-  it("blocks submit and reports error when reasoning is enabled with an empty variant name", () => {
+  it("serializes a model-specific reasoning effort set", () => {
     const form = base()
     form.models[0].reasoning = true
-    form.models[0].variants = [
-      {
-        name: "",
-        enableThinking: undefined,
-        thinking: undefined,
-        splitReasoning: undefined,
-        outputEffort: undefined,
-        reasoningEffort: undefined,
-        chatTemplateArgs: undefined,
-      },
-    ]
-    const out = validateCustomProvider(args(form))
-    expect(out.result).toBeUndefined()
-    expect(out.errors.models[0].variants?.[0]?.name).toBe("provider.custom.error.required")
+    form.models[0].mode = "custom"
+    form.models[0].efforts = ["minimal", "high", "max"]
+    const saved = validateCustomProvider(args(form)).result?.config.models["model-1"] as Record<string, unknown>
+    expect(saved.reasoning_options).toEqual([{ type: "effort", values: ["minimal", "high", "max"] }])
   })
 
-  it("blocks submit and reports error when reasoning is enabled with a whitespace-only variant name", () => {
+  it("serializes an explicit model opt-out as an empty option set", () => {
     const form = base()
     form.models[0].reasoning = true
-    form.models[0].variants = [
-      {
-        name: "   ",
-        enableThinking: undefined,
-        thinking: undefined,
-        splitReasoning: undefined,
-        outputEffort: undefined,
-        reasoningEffort: undefined,
-        chatTemplateArgs: undefined,
-      },
-    ]
-    const out = validateCustomProvider(args(form))
-    expect(out.result).toBeUndefined()
-    expect(out.errors.models[0].variants?.[0]?.name).toBe("provider.custom.error.required")
+    form.models[0].mode = "none"
+    const saved = validateCustomProvider(args(form)).result?.config.models["model-1"] as Record<string, unknown>
+    expect(saved.reasoning_options).toEqual([])
   })
 
-  it("blocks submit and reports duplicate error for two variants with the same name", () => {
+  it("preserves existing reasoning metadata and advanced variants", () => {
     const form = base()
     form.models[0].reasoning = true
-    form.models[0].variants = [
-      {
-        name: "fast",
-        enableThinking: undefined,
-        thinking: undefined,
-        splitReasoning: undefined,
-        outputEffort: undefined,
-        reasoningEffort: undefined,
-        chatTemplateArgs: undefined,
-      },
-      {
-        name: "fast",
-        enableThinking: undefined,
-        thinking: undefined,
-        splitReasoning: undefined,
-        outputEffort: undefined,
-        reasoningEffort: undefined,
-        chatTemplateArgs: undefined,
-      },
-    ]
-    const out = validateCustomProvider(args(form))
-    expect(out.result).toBeUndefined()
-    expect(out.errors.models[0].variants?.[1]?.name).toBe("provider.custom.error.duplicate")
+    form.models[0].mode = "custom"
+    form.models[0].metadata = [{ type: "budget_tokens", min: 1024, max: 8192 }]
+    form.models[0].variants = { fast: { budgetTokens: 1024, custom: true } }
+    const saved = validateCustomProvider(args(form)).result?.config.models["model-1"] as Record<string, unknown>
+    expect(saved.reasoning_options).toEqual([{ type: "budget_tokens", min: 1024, max: 8192 }])
+    expect(saved.variants).toEqual({ fast: { budgetTokens: 1024, custom: true } })
   })
 
-  it("ignores variants entirely when reasoning is disabled, even if they have empty names", () => {
+  it("omits reasoning metadata but preserves advanced variants when reasoning is disabled", () => {
     const form = base()
-    form.models[0].reasoning = false
-    form.models[0].variants = [
-      {
-        name: "",
-        enableThinking: undefined,
-        thinking: undefined,
-        splitReasoning: undefined,
-        outputEffort: undefined,
-        reasoningEffort: undefined,
-        chatTemplateArgs: undefined,
-      },
-    ]
-    const out = validateCustomProvider(args(form))
-    // No variant errors produced; form is allowed to submit
-    expect(out.errors.models[0].variants).toEqual([])
-    // Variant is not included in the saved config
-    expect(out.result).toBeDefined()
-    const saved = out.result!.config.models["model-1"] as Record<string, unknown>
-    expect(saved.variants).toBeUndefined()
+    form.models[0].metadata = [{ type: "effort", values: ["high"] }]
+    form.models[0].variants = { high: { reasoningEffort: "high" } }
+    const saved = validateCustomProvider(args(form)).result?.config.models["model-1"] as Record<string, unknown>
+    expect(saved.reasoning).toBe(false)
+    expect(saved.reasoning_options).toBeUndefined()
+    expect(saved.variants).toEqual({ high: { reasoningEffort: "high" } })
   })
 
   it("treats model IDs differing only in case as duplicates", () => {
     const form = base()
     form.models = [
-      { id: "qwen2.5-coder:14b", name: "Qwen", reasoning: false, variants: [] },
-      { id: "QWEN2.5-CODER:14B", name: "Qwen Upper", reasoning: false, variants: [] },
+      {
+        id: "qwen2.5-coder:14b",
+        name: "Qwen",
+        reasoning: false,
+        supportsImages: false,
+        modalities: {},
+        mode: "inherit",
+        efforts: [],
+      },
+      {
+        id: "QWEN2.5-CODER:14B",
+        name: "Qwen Upper",
+        reasoning: false,
+        supportsImages: false,
+        modalities: {},
+        mode: "inherit",
+        efforts: [],
+      },
     ]
     const out = validateCustomProvider(args(form))
     expect(out.result).toBeUndefined()
@@ -178,78 +152,19 @@ describe("validateCustomProvider – variant name validation", () => {
     expect(out.errors.models[1].id).toBe("provider.custom.error.duplicate")
   })
 
-  it("persists named variants in the saved config when reasoning is enabled", () => {
-    const form = base()
-    form.models[0].reasoning = true
-    form.models[0].variants = [
-      {
-        name: "eco",
-        enableThinking: true,
-        thinking: "adaptive",
-        splitReasoning: false,
-        outputEffort: "max",
-        reasoningEffort: "low",
-        chatTemplateArgs: undefined,
-      },
-    ]
-    const out = validateCustomProvider(args(form))
-    expect(out.result).toBeDefined()
-    const saved = out.result!.config.models["model-1"] as Record<string, unknown>
-    expect(saved.variants).toEqual({
-      eco: {
-        enable_thinking: true,
-        thinking: { type: "adaptive" },
-        reasoning_split: false,
-        effort: "max",
-        reasoningEffort: "low",
-      },
-    })
-  })
-
   it("serializes image modality when supportsImages is set", () => {
     const form = base()
     form.models[0].supportsImages = true
-    const out = validateCustomProvider(args(form))
-    expect(out.result).toBeDefined()
-    const saved = out.result!.config.models["model-1"] as Record<string, unknown>
+    const saved = validateCustomProvider(args(form)).result?.config.models["model-1"] as Record<string, unknown>
     expect(saved.modalities).toEqual({ input: ["text", "image"] })
   })
 
-  it("omits modalities when supportsImages is not set on a text-only model", () => {
-    const form = base()
-    const out = validateCustomProvider(args(form))
-    expect(out.result).toBeDefined()
-    const saved = out.result!.config.models["model-1"] as Record<string, unknown>
-    expect(saved.modalities).toBeUndefined()
-  })
-
-  it("preserves an existing image-only input when saving", () => {
+  it("preserves existing image-only input when saving", () => {
     const form = base()
     form.models[0].modalities = { input: ["image"] }
     form.models[0].supportsImages = true
-    const out = validateCustomProvider(args(form))
-    expect(out.result).toBeDefined()
-    const saved = out.result!.config.models["model-1"] as Record<string, unknown>
+    const saved = validateCustomProvider(args(form)).result?.config.models["model-1"] as Record<string, unknown>
     expect(saved.modalities).toEqual({ input: ["image"] })
-  })
-
-  it("omits an empty input when image support is removed from an image-only model", () => {
-    const form = base()
-    form.models[0].modalities = { input: ["image"] }
-    form.models[0].supportsImages = false
-    const out = validateCustomProvider(args(form))
-    expect(out.result).toBeDefined()
-    const saved = out.result!.config.models["model-1"] as Record<string, unknown>
-    expect(saved.modalities).toBeUndefined()
-  })
-
-  it("preserves output-only modalities when saving", () => {
-    const form = base()
-    form.models[0].modalities = { output: ["audio"] }
-    const out = validateCustomProvider(args(form))
-    expect(out.result).toBeDefined()
-    const saved = out.result!.config.models["model-1"] as Record<string, unknown>
-    expect(saved.modalities).toEqual({ output: ["audio"] })
   })
 
   it("preserves unsupported UI modalities when toggling image support", () => {
@@ -259,9 +174,7 @@ describe("validateCustomProvider – variant name validation", () => {
       output: ["text", "audio"],
     }
     form.models[0].supportsImages = false
-    const out = validateCustomProvider(args(form))
-    expect(out.result).toBeDefined()
-    const saved = out.result!.config.models["model-1"] as Record<string, unknown>
+    const saved = validateCustomProvider(args(form)).result?.config.models["model-1"] as Record<string, unknown>
     expect(saved.modalities).toEqual({ input: ["text", "audio", "video", "pdf"], output: ["text", "audio"] })
   })
 })

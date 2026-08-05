@@ -3,6 +3,7 @@ export * as ConfigProviderV1 from "./provider"
 import { Schema } from "effect"
 import { PROMPTS, AI_SDK_PROVIDERS } from "@kilocode/kilo-gateway" // kilocode_change
 import { PositiveInt } from "../../schema"
+import { ConfigReasoningOptions } from "../../kilocode/reasoning-option" // kilocode_change
 
 export const ModelStatus = Schema.Literals(["alpha", "beta", "deprecated", "active"])
 
@@ -16,6 +17,7 @@ export const Model = Schema.Struct({
   release_date: Schema.optional(Schema.String),
   attachment: Schema.optional(Schema.Boolean),
   reasoning: Schema.optional(Schema.NullOr(Schema.Boolean)), // kilocode_change - allow null so reasoning can be removed via stripNulls on save
+  reasoning_options: Schema.optional(Schema.NullOr(ConfigReasoningOptions)), // kilocode_change
   temperature: Schema.optional(Schema.Boolean),
   tool_call: Schema.optional(Schema.Boolean),
   interleaved: Schema.optional(
@@ -86,6 +88,7 @@ export const Info = Schema.Struct({
   env: Schema.optional(Schema.mutable(Schema.Array(Schema.String))),
   id: Schema.optional(Schema.String),
   npm: Schema.optional(Schema.String),
+  reasoning_options: Schema.optional(Schema.NullOr(ConfigReasoningOptions)), // kilocode_change
   whitelist: Schema.optional(Schema.mutable(Schema.Array(Schema.String))),
   blacklist: Schema.optional(Schema.mutable(Schema.Array(Schema.String))),
   options: Schema.optional(

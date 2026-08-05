@@ -62,5 +62,6 @@ export interface ProviderConfig {
   models?: Record<string, unknown>
   npm?: string
   env?: string[]
+  reasoning_options?: unknown
   options?: Record<string, unknown>
 }

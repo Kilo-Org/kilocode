@@ -2357,6 +2357,20 @@ export type ProviderConfig = {
   env?: Array<string>
   id?: string
   npm?: string
+  reasoning_options?: Array<
+    | {
+        type: "effort"
+        values: Array<string>
+      }
+    | {
+        type: "toggle"
+      }
+    | {
+        type: "budget_tokens"
+        min?: number
+        max?: number
+      }
+  >
   whitelist?: Array<string>
   blacklist?: Array<string>
   options?: {
@@ -2386,6 +2400,20 @@ export type ProviderConfig = {
       release_date?: string
       attachment?: boolean
       reasoning?: boolean
+      reasoning_options?: Array<
+        | {
+            type: "effort"
+            values: Array<string>
+          }
+        | {
+            type: "toggle"
+          }
+        | {
+            type: "budget_tokens"
+            min?: number
+            max?: number
+          }
+      >
       temperature?: boolean
       tool_call?: boolean
       interleaved?:

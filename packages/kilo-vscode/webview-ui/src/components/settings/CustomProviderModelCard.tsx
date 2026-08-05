@@ -1,34 +1,19 @@
-import { Button } from "@kilocode/kilo-ui/button"
+import { Checkbox } from "@kilocode/kilo-ui/checkbox"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Select } from "@kilocode/kilo-ui/select"
 import { TextField } from "@kilocode/kilo-ui/text-field"
-import { For, Show } from "solid-js"
+import { Show } from "solid-js"
+import type { ReasoningEffort, ReasoningOption } from "../../../../src/shared/custom-provider"
 import { useLanguage } from "../../context/language"
+import { ReasoningEfforts } from "./CustomProviderReasoning"
 
 export type Translator = ReturnType<typeof useLanguage>["t"]
-
-// undefined = not set; true/false = enable_thinking value
-export type EnableThinkingValue = undefined | boolean
-export type ThinkingTypeValue = undefined | "enabled" | "disabled" | "adaptive"
-export type SplitReasoningValue = undefined | boolean
-export type ReasoningEffortValue = undefined | "none" | "minimal" | "low" | "medium" | "high" | "xhigh"
-export type OutputEffortValue = undefined | "low" | "medium" | "high" | "xhigh" | "max"
-export type ChatTemplateArgsValue = undefined | boolean
 export type Modality = "text" | "audio" | "image" | "video" | "pdf"
+export type ReasoningMode = "inherit" | "custom" | "none"
 
 export type Modalities = {
   input?: Modality[]
   output?: Modality[]
-}
-
-export type VariantEntry = {
-  name: string
-  enableThinking: EnableThinkingValue
-  thinking: ThinkingTypeValue
-  splitReasoning: SplitReasoningValue
-  reasoningEffort: ReasoningEffortValue
-  outputEffort: OutputEffortValue
-  chatTemplateArgs: ChatTemplateArgsValue
 }
 
 export type ModelEntry = {
@@ -37,299 +22,56 @@ export type ModelEntry = {
   reasoning: boolean
   supportsImages: boolean
   modalities: Modalities
-  variants: VariantEntry[]
+  mode: ReasoningMode
+  efforts: ReasoningEffort[]
+  metadata?: ReasoningOption[]
+  variants?: Record<string, Record<string, unknown>>
 }
 
-type SelectOption<T> = { value: T; labelKey: string }
-
-const ENABLE_THINKING_OPTIONS: SelectOption<EnableThinkingValue>[] = [
-  { value: undefined, labelKey: "provider.custom.models.variants.option.unset" },
-  { value: true, labelKey: "provider.custom.models.variants.enableThinking.true" },
-  { value: false, labelKey: "provider.custom.models.variants.enableThinking.false" },
+const MODES: Array<{ value: ReasoningMode; label: string }> = [
+  { value: "inherit", label: "provider.custom.reasoning.mode.inherit" },
+  { value: "custom", label: "provider.custom.reasoning.mode.custom" },
+  { value: "none", label: "provider.custom.reasoning.mode.none" },
 ]
 
-const THINKING_OPTIONS: SelectOption<ThinkingTypeValue>[] = [
-  { value: undefined, labelKey: "provider.custom.models.variants.option.unset" },
-  { value: "enabled", labelKey: "provider.custom.models.variants.thinking.enabled" },
-  { value: "disabled", labelKey: "provider.custom.models.variants.thinking.disabled" },
-  { value: "adaptive", labelKey: "provider.custom.models.variants.thinking.adaptive" },
-]
-
-const SPLIT_REASONING_OPTIONS: SelectOption<SplitReasoningValue>[] = [
-  { value: undefined, labelKey: "provider.custom.models.variants.option.unset" },
-  { value: true, labelKey: "provider.custom.models.variants.splitReasoning.true" },
-  { value: false, labelKey: "provider.custom.models.variants.splitReasoning.false" },
-]
-
-const CHAT_TEMPLATE_ARGS_OPTIONS: SelectOption<ChatTemplateArgsValue>[] = [
-  { value: undefined, labelKey: "provider.custom.models.variants.option.unset" },
-  { value: true, labelKey: "provider.custom.models.variants.chatTemplateArgs.true" },
-  { value: false, labelKey: "provider.custom.models.variants.chatTemplateArgs.false" },
-]
-
-const REASONING_EFFORT_OPTIONS: SelectOption<ReasoningEffortValue>[] = [
-  { value: undefined, labelKey: "provider.custom.models.variants.option.unset" },
-  { value: "none", labelKey: "provider.custom.models.variants.reasoningEffort.none" },
-  { value: "minimal", labelKey: "provider.custom.models.variants.reasoningEffort.minimal" },
-  { value: "low", labelKey: "provider.custom.models.variants.reasoningEffort.low" },
-  { value: "medium", labelKey: "provider.custom.models.variants.reasoningEffort.medium" },
-  { value: "high", labelKey: "provider.custom.models.variants.reasoningEffort.high" },
-  { value: "xhigh", labelKey: "provider.custom.models.variants.reasoningEffort.xhigh" },
-]
-
-const OUTPUT_EFFORT_OPTIONS: SelectOption<OutputEffortValue>[] = [
-  { value: undefined, labelKey: "provider.custom.models.variants.option.unset" },
-  { value: "low", labelKey: "provider.custom.models.variants.outputEffort.low" },
-  { value: "medium", labelKey: "provider.custom.models.variants.outputEffort.medium" },
-  { value: "high", labelKey: "provider.custom.models.variants.outputEffort.high" },
-  { value: "xhigh", labelKey: "provider.custom.models.variants.outputEffort.xhigh" },
-  { value: "max", labelKey: "provider.custom.models.variants.outputEffort.max" },
-]
-
-type VariantRowProps = {
-  v: VariantEntry
-  vi: () => number
-  isFirst: () => boolean
-  error: { name?: string } | undefined
-  t: Translator
-  onChangeName: (val: string) => void
-  onChangeEnableThinking: (val: EnableThinkingValue) => void
-  onChangeThinking: (val: ThinkingTypeValue) => void
-  onChangeSplitReasoning: (val: SplitReasoningValue) => void
-  onChangeReasoningEffort: (val: ReasoningEffortValue) => void
-  onChangeOutputEffort: (val: OutputEffortValue) => void
-  onChangeChatTemplateArgs: (val: ChatTemplateArgsValue) => void
-  onRemove: () => void
-}
-
-function VariantRow(props: VariantRowProps) {
-  return (
-    <div>
-      <Show when={!props.isFirst()}>
-        <div
-          style={{
-            "border-top": "1px solid var(--border-weak-base, var(--vscode-panel-border))",
-            margin: "4px 0",
-          }}
-        />
-      </Show>
-      <div
-        style={{
-          display: "flex",
-          gap: "8px",
-          "align-items": "stretch",
-          "flex-direction": "column",
-          "padding-top": "4px",
-        }}
-      >
-        <div style={{ "min-width": "100px", flex: "1 1 80px" }}>
-          <TextField
-            label={props.t("provider.custom.models.variants.name.label")}
-            placeholder={props.t("provider.custom.models.variants.name.placeholder")}
-            value={props.v.name}
-            onChange={props.onChangeName}
-            validationState={props.error?.name ? "invalid" : undefined}
-            error={props.error?.name}
-          />
-        </div>
-        <div
-          style={{
-            display: "flex",
-            "flex-direction": "column",
-            gap: "4px",
-            flex: "0 0 auto",
-          }}
-        >
-          <label
-            style={{ "font-size": "var(--kilo-font-size-12)", "font-weight": "500", color: "var(--text-weak-base)" }}
-          >
-            {props.t("provider.custom.models.variants.enableThinking.label")}
-          </label>
-          <Select
-            options={ENABLE_THINKING_OPTIONS}
-            current={ENABLE_THINKING_OPTIONS.find((o) => o.value === props.v.enableThinking)}
-            value={(o) => String(o.value)}
-            label={(o) => props.t(o.labelKey)}
-            onSelect={(o) => props.onChangeEnableThinking(o?.value)}
-            placeholder={props.t("provider.custom.models.variants.enableThinking.placeholder")}
-            variant="secondary"
-            size="small"
-            triggerVariant="settings"
-          />
-        </div>
-        <div
-          style={{
-            display: "flex",
-            "flex-direction": "column",
-            gap: "4px",
-            flex: "0 0 auto",
-          }}
-        >
-          <label
-            style={{ "font-size": "var(--kilo-font-size-12)", "font-weight": "500", color: "var(--text-weak-base)" }}
-          >
-            {props.t("provider.custom.models.variants.thinking.label")}
-          </label>
-          <Select
-            options={THINKING_OPTIONS}
-            current={THINKING_OPTIONS.find((o) => o.value === props.v.thinking)}
-            value={(o) => String(o.value)}
-            label={(o) => props.t(o.labelKey)}
-            onSelect={(o) => props.onChangeThinking(o?.value)}
-            placeholder={props.t("provider.custom.models.variants.thinking.placeholder")}
-            variant="secondary"
-            size="small"
-            triggerVariant="settings"
-          />
-        </div>
-        <div
-          style={{
-            display: "flex",
-            "flex-direction": "column",
-            gap: "4px",
-            flex: "0 0 auto",
-          }}
-        >
-          <label
-            style={{ "font-size": "var(--kilo-font-size-12)", "font-weight": "500", color: "var(--text-weak-base)" }}
-          >
-            {props.t("provider.custom.models.variants.splitReasoning.label")}
-          </label>
-          <Select
-            options={SPLIT_REASONING_OPTIONS}
-            current={SPLIT_REASONING_OPTIONS.find((o) => o.value === props.v.splitReasoning)}
-            value={(o) => String(o.value)}
-            label={(o) => props.t(o.labelKey)}
-            onSelect={(o) => props.onChangeSplitReasoning(o?.value)}
-            placeholder={props.t("provider.custom.models.variants.splitReasoning.placeholder")}
-            variant="secondary"
-            size="small"
-            triggerVariant="settings"
-          />
-        </div>
-        <div
-          style={{
-            display: "flex",
-            "flex-direction": "column",
-            gap: "4px",
-            flex: "0 0 auto",
-          }}
-        >
-          <label
-            style={{ "font-size": "var(--kilo-font-size-12)", "font-weight": "500", color: "var(--text-weak-base)" }}
-          >
-            {props.t("provider.custom.models.variants.reasoningEffort.label")}
-          </label>
-          <Select
-            options={REASONING_EFFORT_OPTIONS}
-            current={REASONING_EFFORT_OPTIONS.find((o) => o.value === props.v.reasoningEffort)}
-            value={(o) => String(o.value)}
-            label={(o) => props.t(o.labelKey)}
-            onSelect={(o) => props.onChangeReasoningEffort(o?.value)}
-            placeholder={props.t("provider.custom.models.variants.reasoningEffort.placeholder")}
-            variant="secondary"
-            size="small"
-            triggerVariant="settings"
-          />
-        </div>
-        <div
-          style={{
-            display: "flex",
-            "flex-direction": "column",
-            gap: "4px",
-            flex: "0 0 auto",
-          }}
-        >
-          <label
-            style={{ "font-size": "var(--kilo-font-size-12)", "font-weight": "500", color: "var(--text-weak-base)" }}
-          >
-            {props.t("provider.custom.models.variants.outputEffort.label")}
-          </label>
-          <Select
-            options={OUTPUT_EFFORT_OPTIONS}
-            current={OUTPUT_EFFORT_OPTIONS.find((o) => o.value === props.v.outputEffort)}
-            value={(o) => String(o.value)}
-            label={(o) => props.t(o.labelKey)}
-            onSelect={(o) => props.onChangeOutputEffort(o?.value)}
-            placeholder={props.t("provider.custom.models.variants.outputEffort.placeholder")}
-            variant="secondary"
-            size="small"
-            triggerVariant="settings"
-          />
-        </div>
-        <div
-          style={{
-            display: "flex",
-            "flex-direction": "column",
-            gap: "4px",
-            flex: "0 0 auto",
-          }}
-        >
-          <label
-            style={{ "font-size": "var(--kilo-font-size-12)", "font-weight": "500", color: "var(--text-weak-base)" }}
-          >
-            {props.t("provider.custom.models.variants.chatTemplateArgs.label")}
-          </label>
-          <Select
-            options={CHAT_TEMPLATE_ARGS_OPTIONS}
-            current={CHAT_TEMPLATE_ARGS_OPTIONS.find((o) => o.value === props.v.chatTemplateArgs)}
-            value={(o) => String(o.value)}
-            label={(o) => props.t(o.labelKey)}
-            onSelect={(o) => props.onChangeChatTemplateArgs(o?.value)}
-            placeholder={props.t("provider.custom.models.variants.chatTemplateArgs.placeholder")}
-            variant="secondary"
-            size="small"
-            triggerVariant="settings"
-          />
-        </div>
-        <IconButton
-          type="button"
-          icon="trash"
-          variant="ghost"
-          onClick={props.onRemove}
-          aria-label={props.t("provider.custom.models.variants.remove")}
-          style={{ "margin-bottom": "4px" }}
-        />
-      </div>
-    </div>
-  )
-}
-
-type ModelCardProps = {
+type Props = {
   m: ModelEntry
-  i: () => number
-  errors: { id?: string; name?: string; variants?: Array<{ name?: string }> }
+  errors: { id?: string; name?: string }
+  defaults: readonly ReasoningEffort[]
+  defaultMetadata?: ReasoningOption[]
+  advanced: boolean
   t: Translator
   canRemove: boolean
-  onChangeId: (val: string) => void
-  onChangeName: (val: string) => void
-  onChangeReasoning: (val: boolean) => void
-  onChangeSupportsImages: (val: boolean) => void
+  onChangeId: (value: string) => void
+  onChangeName: (value: string) => void
+  onChangeReasoning: (value: boolean) => void
+  onChangeSupportsImages: (value: boolean) => void
+  onChangeMode: (value: ReasoningMode) => void
+  onChangeEfforts: (values: ReasoningEffort[]) => void
   onRemove: () => void
-  onAddVariant: () => void
-  onRemoveVariant: (vi: number) => void
-  onChangeVariantName: (vi: number, val: string) => void
-  onChangeVariantEnableThinking: (vi: number, val: EnableThinkingValue) => void
-  onChangeVariantThinking: (vi: number, val: ThinkingTypeValue) => void
-  onChangeVariantSplitReasoning: (vi: number, val: SplitReasoningValue) => void
-  onChangeVariantReasoningEffort: (vi: number, val: ReasoningEffortValue) => void
-  onChangeVariantOutputEffort: (vi: number, val: OutputEffortValue) => void
-  onChangeVariantChatTemplateArgs: (vi: number, val: ChatTemplateArgsValue) => void
 }
 
-export function ModelCard(props: ModelCardProps) {
+export function ModelCard(props: Props) {
+  const inherited = () =>
+    props.defaults.length > 0
+      ? props.t("provider.custom.reasoning.mode.inherit.description", { efforts: props.defaults.join(", ") })
+      : props.defaultMetadata?.length === 0
+        ? props.t("provider.custom.reasoning.mode.inherit.none")
+        : props.defaultMetadata !== undefined
+          ? props.t("provider.custom.reasoning.mode.inherit.advanced")
+          : props.t("provider.custom.reasoning.mode.inherit.automatic")
+
   return (
     <div
       style={{
         display: "flex",
         "flex-direction": "column",
-        gap: "8px",
-        padding: "8px",
+        gap: "12px",
+        padding: "12px",
         border: "1px solid var(--border-weak-base, var(--vscode-panel-border))",
         "border-radius": "6px",
       }}
     >
-      {/* Model id + name + remove */}
       <div style={{ display: "flex", gap: "8px", "align-items": "flex-end" }}>
         <div style={{ flex: 1 }}>
           <TextField
@@ -362,76 +104,57 @@ export function ModelCard(props: ModelCardProps) {
         />
       </div>
 
-      {/* Reasoning toggle */}
-      <label
-        style={{
-          display: "flex",
-          "align-items": "center",
-          gap: "8px",
-          cursor: "pointer",
-          "font-size": "var(--kilo-font-size-13)",
-          color: "var(--vscode-foreground)",
-        }}
-      >
-        <input
-          type="checkbox"
-          checked={props.m.reasoning}
-          onChange={(e) => props.onChangeReasoning(e.currentTarget.checked)}
-        />
-        {props.t("provider.custom.models.reasoning.label")}
-      </label>
+      <div style={{ display: "flex", gap: "20px", "flex-wrap": "wrap" }}>
+        <Checkbox checked={props.m.reasoning} onChange={props.onChangeReasoning}>
+          {props.t("provider.custom.models.reasoning.label")}
+        </Checkbox>
+        <Checkbox checked={props.m.supportsImages} onChange={props.onChangeSupportsImages}>
+          {props.t("provider.custom.models.modalities.image")}
+        </Checkbox>
+      </div>
 
-      <label
-        style={{
-          display: "flex",
-          "align-items": "center",
-          gap: "8px",
-          cursor: "pointer",
-          "font-size": "var(--kilo-font-size-13)",
-          color: "var(--vscode-foreground)",
-        }}
-      >
-        <input
-          type="checkbox"
-          checked={props.m.supportsImages}
-          onChange={(e) => props.onChangeSupportsImages(e.currentTarget.checked)}
-        />
-        {props.t("provider.custom.models.modalities.image")}
-      </label>
-
-      {/* Variants — only available when reasoning is enabled */}
       <Show when={props.m.reasoning}>
-        <Show when={props.m.variants.length > 0}>
-          <div style={{ display: "flex", "flex-direction": "column", gap: "0" }}>
-            <label
-              style={{ "font-size": "var(--kilo-font-size-11)", "font-weight": "500", color: "var(--text-weak-base)" }}
-            >
-              {props.t("provider.custom.models.variants.label")}
-            </label>
-            <For each={props.m.variants}>
-              {(v, vi) => (
-                <VariantRow
-                  v={v}
-                  vi={vi}
-                  isFirst={() => vi() === 0}
-                  error={props.errors.variants?.[vi()]}
-                  t={props.t}
-                  onChangeName={(val) => props.onChangeVariantName(vi(), val)}
-                  onChangeEnableThinking={(val) => props.onChangeVariantEnableThinking(vi(), val)}
-                  onChangeThinking={(val) => props.onChangeVariantThinking(vi(), val)}
-                  onChangeSplitReasoning={(val) => props.onChangeVariantSplitReasoning(vi(), val)}
-                  onChangeReasoningEffort={(val) => props.onChangeVariantReasoningEffort(vi(), val)}
-                  onChangeOutputEffort={(val) => props.onChangeVariantOutputEffort(vi(), val)}
-                  onChangeChatTemplateArgs={(val) => props.onChangeVariantChatTemplateArgs(vi(), val)}
-                  onRemove={() => props.onRemoveVariant(vi())}
-                />
-              )}
-            </For>
-          </div>
-        </Show>
-        <Button type="button" size="small" variant="ghost" icon="plus-small" onClick={props.onAddVariant}>
-          {props.t("provider.custom.models.variants.add")}
-        </Button>
+        <div style={{ display: "flex", "flex-direction": "column", gap: "8px" }}>
+          <label
+            style={{ "font-size": "var(--kilo-font-size-12)", "font-weight": "500", color: "var(--text-weak-base)" }}
+          >
+            {props.t("provider.custom.reasoning.model.label")}
+          </label>
+          <Select
+            options={MODES}
+            current={MODES.find((mode) => mode.value === props.m.mode)}
+            value={(mode) => mode.value}
+            label={(mode) => props.t(mode.label)}
+            onSelect={(mode) => mode && props.onChangeMode(mode.value)}
+            aria-label={props.t("provider.custom.reasoning.model.label")}
+            variant="secondary"
+            size="small"
+            triggerVariant="settings"
+          />
+          <Show when={props.m.mode === "inherit"}>
+            <span style={{ "font-size": "var(--kilo-font-size-12)", color: "var(--text-weak-base)" }}>
+              {inherited()}
+            </span>
+          </Show>
+          <Show when={props.m.mode === "custom"}>
+            <ReasoningEfforts
+              values={props.m.efforts}
+              onChange={props.onChangeEfforts}
+              t={props.t}
+              label={props.t("provider.custom.reasoning.model.efforts")}
+            />
+          </Show>
+        </div>
+      </Show>
+      <Show when={props.m.reasoning && props.advanced}>
+        <span style={{ "font-size": "var(--kilo-font-size-12)", color: "var(--text-weak-base)" }}>
+          {props.t("provider.custom.reasoning.advanced")}
+        </span>
+      </Show>
+      <Show when={props.m.variants && Object.keys(props.m.variants).length > 0}>
+        <span style={{ "font-size": "var(--kilo-font-size-12)", color: "var(--text-weak-base)" }}>
+          {props.t("provider.custom.reasoning.legacy")}
+        </span>
       </Show>
     </div>
   )

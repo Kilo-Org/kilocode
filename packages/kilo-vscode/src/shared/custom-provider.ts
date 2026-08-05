@@ -12,16 +12,25 @@ export const EnvSchema = z
   .trim()
   .regex(/^[A-Z_][A-Z0-9_]*$/, INVALID_ENV)
 
-const VariantConfigSchema = z.object({
-  enable_thinking: z.boolean().optional(),
-  thinking: z.object({ type: z.enum(["enabled", "disabled", "adaptive"]) }).optional(),
-  reasoning_split: z.boolean().optional(),
-  reasoningEffort: z.enum(["none", "minimal", "low", "medium", "high", "xhigh"]).optional(),
-  effort: z.enum(["low", "medium", "high", "xhigh", "max"]).optional(),
-  chat_template_args: z.object({ enable_thinking: z.boolean() }).optional(),
-})
+export const REASONING_EFFORTS = ["none", "minimal", "low", "medium", "high", "xhigh", "max"] as const
+const ReasoningEffortSchema = z.enum(REASONING_EFFORTS)
+const ReasoningOptionSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("effort"), values: z.array(z.string()) }).strict(),
+  z.object({ type: z.literal("toggle") }).strict(),
+  z
+    .object({
+      type: z.literal("budget_tokens"),
+      min: z.number().finite().optional(),
+      max: z.number().finite().optional(),
+    })
+    .strict(),
+])
+
+const VariantConfigSchema = z.record(z.string(), z.unknown())
 
 export type VariantConfig = z.infer<typeof VariantConfigSchema>
+export type ReasoningEffort = z.infer<typeof ReasoningEffortSchema>
+export type ReasoningOption = z.infer<typeof ReasoningOptionSchema>
 
 // Mirror the CLI provider schema so the UI preserves hand-written configs.
 const ModalitySchema = z.enum(["text", "audio", "image", "video", "pdf"])
@@ -38,6 +47,7 @@ export const CustomProviderConfigSchema = z
     npm: z.enum(CUSTOM_PROVIDER_PACKAGES).default(CUSTOM_PROVIDER_PACKAGE),
     name: z.string().trim().min(1).max(200),
     env: z.array(EnvSchema).max(1).optional(),
+    reasoning_options: z.array(ReasoningOptionSchema).optional(),
     options: z
       .object({
         baseURL: z
@@ -57,6 +67,7 @@ export const CustomProviderConfigSchema = z
           .object({
             name: z.string().trim().min(1).max(200),
             reasoning: z.boolean().optional(),
+            reasoning_options: z.array(ReasoningOptionSchema).optional(),
             modalities: ModelModalitiesSchema.optional(),
             variants: z.record(z.string().trim().min(1), VariantConfigSchema).optional(),
           })
@@ -70,13 +81,20 @@ export type SanitizedProviderConfig = {
   npm: CustomProviderPackage
   name: string
   env?: string[]
+  reasoning_options?: ReasoningOption[]
   options: {
     baseURL: string
     headers?: Record<string, string>
   }
   models: Record<
     string,
-    { name: string; reasoning?: true; modalities?: ModelModalities; variants?: Record<string, VariantConfig> }
+    {
+      name: string
+      reasoning?: boolean
+      reasoning_options?: ReasoningOption[]
+      modalities?: ModelModalities
+      variants?: Record<string, VariantConfig>
+    }
   >
 }
 
@@ -138,6 +156,7 @@ export function normalizeCustomProviderConfig(
     npm: config.npm,
     name: config.name.trim(),
     ...(config.env ? { env: config.env.map((item) => item.trim()) } : {}),
+    ...(config.reasoning_options ? { reasoning_options: config.reasoning_options } : {}),
     options: {
       baseURL: config.options.baseURL.trim(),
       ...(headers && Object.keys(headers).length > 0 ? { headers } : {}),
@@ -147,7 +166,8 @@ export function normalizeCustomProviderConfig(
         id.trim(),
         {
           name: model.name.trim(),
-          ...(model.reasoning ? { reasoning: true as const } : {}),
+          ...(model.reasoning !== undefined ? { reasoning: model.reasoning } : {}),
+          ...(model.reasoning_options ? { reasoning_options: model.reasoning_options } : {}),
           ...(model.modalities ? { modalities: model.modalities } : {}),
           ...(model.variants && Object.keys(model.variants).length > 0 ? { variants: model.variants } : {}),
         },
@@ -167,13 +187,15 @@ export function sanitizeCustomProviderConfig(provider: unknown): { value: Saniti
 }
 
 type AnyRecord = Record<string, unknown>
-type VariantPatch = Partial<{ [Key in keyof VariantConfig]: VariantConfig[Key] | null }>
+type VariantPatch = Record<string, unknown | null>
 type ProviderPatch = Omit<SanitizedProviderConfig, "models"> & {
+  reasoning_options?: ReasoningOption[] | null
   models: Record<
     string,
     null | {
       name: string
-      reasoning?: true | null
+      reasoning?: boolean | null
+      reasoning_options?: ReasoningOption[] | null
       modalities?: ModelModalities | null
       variants?: Record<string, VariantConfig | VariantPatch | null>
     }
@@ -182,6 +204,12 @@ type ProviderPatch = Omit<SanitizedProviderConfig, "models"> & {
 
 function isRecord(v: unknown): v is AnyRecord {
   return !!v && typeof v === "object" && !Array.isArray(v)
+}
+
+function removed(old: AnyRecord, next: object, key: string) {
+  const value = next as AnyRecord
+  if (old[key] === undefined || value[key] !== undefined) return {}
+  return { [key]: null }
 }
 
 /**
@@ -223,10 +251,15 @@ export function withCustomProviderDeletions(existing: unknown, next: SanitizedPr
     patched[id] = {
       ...newModel,
       ...(variants ? { variants } : {}),
-      ...(oldModel.reasoning !== undefined && newModel.reasoning === undefined ? { reasoning: null } : {}),
-      ...(oldModel.modalities !== undefined && newModel.modalities === undefined ? { modalities: null } : {}),
+      ...removed(oldModel, newModel, "reasoning"),
+      ...removed(oldModel, newModel, "reasoning_options"),
+      ...removed(oldModel, newModel, "modalities"),
     }
   }
 
-  return { ...next, models: patched } as SanitizedProviderConfig
+  return {
+    ...next,
+    ...removed(existing, next, "reasoning_options"),
+    models: patched,
+  } as SanitizedProviderConfig
 }

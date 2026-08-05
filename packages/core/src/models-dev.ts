@@ -12,6 +12,7 @@ import * as ModelsRefresh from "./kilocode/models-refresh" // kilocode_change
 import { EventV2 } from "./event"
 import { makeGlobalNode } from "./effect/app-node"
 import { httpClient } from "./effect/app-node-platform"
+import { ReasoningOptions } from "./kilocode/reasoning-option" // kilocode_change
 
 export const CatalogModelStatus = Schema.Literals(["alpha", "beta", "deprecated"])
 export type CatalogModelStatus = typeof CatalogModelStatus.Type
@@ -45,24 +46,6 @@ const Cost = Schema.Struct({
   ),
 })
 
-// kilocode_change start - models.dev reasoning_options (snatched from upstream
-// v1.18.11, #36624): effort tiers, thinking toggles, and token budgets.
-const ReasoningOption = Schema.Union([
-  Schema.Struct({
-    type: Schema.Literal("effort"),
-    values: Schema.Array(Schema.NullOr(Schema.String)),
-  }),
-  Schema.Struct({
-    type: Schema.Literal("toggle"),
-  }),
-  Schema.Struct({
-    type: Schema.Literal("budget_tokens"),
-    min: Schema.optional(Schema.Finite),
-    max: Schema.optional(Schema.Finite),
-  }),
-])
-// kilocode_change end
-
 export const Model = Schema.Struct({
   id: Schema.String,
   name: Schema.String,
@@ -70,7 +53,7 @@ export const Model = Schema.Struct({
   release_date: Schema.String,
   attachment: Schema.Boolean,
   reasoning: Schema.Boolean,
-  reasoning_options: Schema.optional(Schema.Array(ReasoningOption)), // kilocode_change
+  reasoning_options: Schema.optional(ReasoningOptions), // kilocode_change
   temperature: Schema.Boolean,
   tool_call: Schema.Boolean,
   interleaved: Schema.optional(

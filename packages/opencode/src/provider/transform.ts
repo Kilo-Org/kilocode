@@ -1166,7 +1166,7 @@ export function reasoningVariants(model: ModelsDev.Model, target: Provider.Model
   if (options.length === 0) return {}
 
   const effort = options.find((option) => option.type === "effort")
-  if (effort) return effortVariants(target, effort.values)
+  if (effort) return nonEmptyVariants(effortVariants(target, effort.values))
 
   const toggle = options.some((option) => option.type === "toggle")
   const budget = options.find((option) => option.type === "budget_tokens")

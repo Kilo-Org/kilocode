@@ -14,7 +14,8 @@ import { optionalOmitUndefined } from "@opencode-ai/core/schema"
 import { ProviderError } from "@/provider/error"
 import { Effect, Schema } from "effect"
 import type { LanguageModelV3 } from "@ai-sdk/provider"
-import { mapValues, omit, pickBy } from "remeda"
+import { mapValues, mergeDeep, omit, pickBy } from "remeda"
+import type { ConfigReasoningOptions, ReasoningOptions } from "@opencode-ai/core/kilocode/reasoning-option"
 
 /** Default timeout (ms) for provider HTTP requests (connection phase). */
 export const REQUEST_TIMEOUT_MS = 300_000 // 5 minutes
@@ -93,6 +94,30 @@ export function patchConfigModel(cfg: any, existing: any) {
         )
       : {},
   }
+}
+
+type VariantInput = {
+  cfg: { reasoning_options?: ConfigReasoningOptions | null; variants?: Record<string, any> }
+  source?: { reasoning_options?: ReasoningOptions }
+  defaults?: ConfigReasoningOptions | null
+  target: any
+  reasoning: (source: any, target: any) => Record<string, any> | undefined
+  fallback: (target: any) => Record<string, any>
+}
+
+export function patchConfigVariants(input: VariantInput) {
+  const options = input.target.capabilities.reasoning
+    ? (input.cfg.reasoning_options ?? input.source?.reasoning_options ?? input.defaults ?? undefined)
+    : undefined
+  const generated =
+    options === undefined
+      ? input.fallback(input.target)
+      : (input.reasoning({ reasoning_options: options }, input.target) ?? input.fallback(input.target))
+  const merged = mergeDeep(generated, input.cfg.variants ?? {})
+  return mapValues(
+    pickBy(merged, (value) => !!value && !value.disabled),
+    (value) => omit(value, ["disabled"]),
+  )
 }
 
 // ---------------------------------------------------------------------------

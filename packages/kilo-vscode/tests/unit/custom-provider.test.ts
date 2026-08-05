@@ -162,6 +162,41 @@ describe("sanitizeCustomProviderConfig", () => {
     })
   })
 
+  it("accepts provider and model reasoning option metadata", () => {
+    const result = sanitizeCustomProviderConfig({
+      name: "Reasoning Provider",
+      reasoning_options: [{ type: "effort", values: ["low", "medium", "high", "max"] }],
+      options: { baseURL: "https://example.com/v1" },
+      models: {
+        inherited: { name: "Inherited", reasoning: true },
+        custom: {
+          name: "Custom",
+          reasoning: true,
+          reasoning_options: [{ type: "effort", values: ["none", "high"] }],
+        },
+        fixed: { name: "Fixed", reasoning: true, reasoning_options: [] },
+      },
+    })
+
+    expect(result).toEqual({
+      value: {
+        npm: "@ai-sdk/openai-compatible",
+        name: "Reasoning Provider",
+        reasoning_options: [{ type: "effort", values: ["low", "medium", "high", "max"] }],
+        options: { baseURL: "https://example.com/v1" },
+        models: {
+          inherited: { name: "Inherited", reasoning: true },
+          custom: {
+            name: "Custom",
+            reasoning: true,
+            reasoning_options: [{ type: "effort", values: ["none", "high"] }],
+          },
+          fixed: { name: "Fixed", reasoning: true, reasoning_options: [] },
+        },
+      },
+    })
+  })
+
   it("preserves core custom model modalities", () => {
     const result = sanitizeCustomProviderConfig({
       name: "Media Provider",
@@ -258,6 +293,24 @@ describe("withCustomProviderDeletions", () => {
     const existing = { models: { keep: { name: "Keep", reasoning: true } } }
     const result = withCustomProviderDeletions(existing, baseNext)
     expect(result.models.keep).toEqual({ name: "Keep", reasoning: null })
+  })
+
+  it("emits null for removed provider and model reasoning options", () => {
+    const existing = {
+      reasoning_options: [{ type: "effort", values: ["low", "high"] }],
+      models: {
+        keep: {
+          name: "Keep",
+          reasoning_options: [{ type: "effort", values: ["high"] }],
+        },
+      },
+    }
+    const result = withCustomProviderDeletions(existing, baseNext) as unknown as {
+      reasoning_options: null
+      models: Record<string, { reasoning_options: null }>
+    }
+    expect(result.reasoning_options).toBeNull()
+    expect(result.models.keep.reasoning_options).toBeNull()
   })
 
   it("emits null for options removed from a surviving variant", () => {

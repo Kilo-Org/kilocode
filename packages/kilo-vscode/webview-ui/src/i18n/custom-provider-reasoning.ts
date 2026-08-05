@@ -1,0 +1,23 @@
+export const customProviderReasoning = {
+  "provider.custom.reasoning.default.label": "Default reasoning efforts (optional)",
+  "provider.custom.reasoning.default.description": "Used by reasoning models that do not define their own effort set.",
+  "provider.custom.reasoning.model.label": "Reasoning variants",
+  "provider.custom.reasoning.mode.inherit": "Use provider defaults",
+  "provider.custom.reasoning.mode.custom": "Custom effort set",
+  "provider.custom.reasoning.mode.none": "No variants",
+  "provider.custom.reasoning.mode.inherit.description": "Provider efforts: {{efforts}}",
+  "provider.custom.reasoning.mode.inherit.none": "Provider defaults disable reasoning variants.",
+  "provider.custom.reasoning.mode.inherit.advanced": "Uses the provider's advanced reasoning options.",
+  "provider.custom.reasoning.mode.inherit.automatic":
+    "No provider default is set. Kilo will infer variants from the model when possible.",
+  "provider.custom.reasoning.model.efforts": "Model reasoning efforts",
+  "provider.custom.reasoning.legacy": "Existing advanced variants are preserved. Changing this setting replaces them.",
+  "provider.custom.reasoning.advanced": "Advanced reasoning metadata is preserved. Changing the mode replaces it.",
+  "provider.custom.reasoning.effort.none": "None",
+  "provider.custom.reasoning.effort.minimal": "Minimal",
+  "provider.custom.reasoning.effort.low": "Low",
+  "provider.custom.reasoning.effort.medium": "Medium",
+  "provider.custom.reasoning.effort.high": "High",
+  "provider.custom.reasoning.effort.xhigh": "Extra high",
+  "provider.custom.reasoning.effort.max": "Max",
+} as const

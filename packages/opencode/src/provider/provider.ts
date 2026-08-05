@@ -37,6 +37,7 @@ import {
   KILO_MODEL_SCHEMA_EXTENSIONS,
   patchModelsDevModel as patchKiloModel,
   patchConfigModel as patchKiloConfigModel,
+  patchConfigVariants as patchKiloConfigVariants,
   patchCustomLoaderResult,
   patchKiloProviderPrivacy,
   kiloSmallModelPriority,
@@ -1526,11 +1527,16 @@ const layer = Layer.effect(
               // variants: {}, // kilocode_change, moved into patchKiloConfigModel
               ...patchKiloConfigModel(model, existingModel), // kilocode_change
             }
-            const merged = mergeDeep(ProviderTransform.variants(parsedModel), model.variants ?? {})
-            parsedModel.variants = mapValues(
-              pickBy(merged, (v): v is NonNullable<typeof v> => !!v && !v.disabled), // kilocode_change - drop null delete sentinels
-              (v) => omit(v, ["disabled"]),
-            )
+            // kilocode_change start - apply model reasoning options or provider defaults before explicit variants
+            parsedModel.variants = patchKiloConfigVariants({
+              cfg: model,
+              source: modelsDev[providerID]?.models[apiID],
+              defaults: provider.reasoning_options,
+              target: parsedModel,
+              reasoning: ProviderTransform.reasoningVariants,
+              fallback: ProviderTransform.variants,
+            })
+            // kilocode_change end
             parsed.models[modelID] = parsedModel
           }
           database[providerID] = parsed
@@ -1674,9 +1680,11 @@ const layer = Layer.effect(
             )
               delete provider.models[modelID]
 
-            if (!model.variants || Object.keys(model.variants).length === 0) {
+            // kilocode_change start - preserve explicitly empty reasoning options
+            if (model.variants === undefined) {
               model.variants = mapValues(ProviderTransform.variants(model), (v) => v)
             }
+            // kilocode_change end
 
             const configVariants = configProvider?.models?.[modelID]?.variants
             if (configVariants && model.variants) {
