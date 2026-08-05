@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { expect, spyOn, beforeEach, afterEach } from "bun:test"
 import { Effect, Fiber, Layer } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
@@ -28,17 +29,17 @@ afterEach(() => {
   }
 })
 
-const it = testEffect(CrossSpawnSpawner.defaultLayer)
-const multi = testEffect(Layer.merge(CrossSpawnSpawner.defaultLayer, testInstanceStoreLayer))
+const it = testEffect(AppNodeBuilder.build(CrossSpawnSpawner.node))
+const multi = testEffect(Layer.merge(AppNodeBuilder.build(CrossSpawnSpawner.node), testInstanceStoreLayer))
 
 function layer(overrides: Partial<Config.Interface> = {}) {
   return Layer.merge(
     KiloSessions.layer.pipe(
       Layer.provideMerge(Bus.layer),
       Layer.provide(TestConfig.layer(overrides)),
-      Layer.provide(Session.defaultLayer),
+      Layer.provide(AppNodeBuilder.build(Session.node)),
     ),
-    Auth.defaultLayer,
+    AppNodeBuilder.build(Auth.node),
   )
 }
 

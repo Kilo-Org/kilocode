@@ -3,6 +3,7 @@
 // Tests exercise the real tool pipeline rather than the Encoding helper
 // directly so we validate end-to-end behaviour.
 
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterEach, describe, expect } from "bun:test"
 import { Effect, Exit, Layer } from "effect"
 import path from "path"
@@ -45,15 +46,15 @@ afterEach(async () => {
 
 const it = testEffect(
   Layer.mergeAll(
-    Agent.defaultLayer,
-    FSUtil.defaultLayer,
-    CrossSpawnSpawner.defaultLayer,
-    Instruction.defaultLayer,
-    LSP.defaultLayer,
+    AppNodeBuilder.build(Agent.node),
+    AppNodeBuilder.build(FSUtil.node),
+    AppNodeBuilder.build(CrossSpawnSpawner.node),
+    AppNodeBuilder.build(Instruction.node),
+    AppNodeBuilder.build(LSP.node),
     Bus.layer,
-    Format.defaultLayer,
-    Truncate.defaultLayer,
-    EventV2Bridge.defaultLayer,
+    AppNodeBuilder.build(Format.node),
+    AppNodeBuilder.build(Truncate.node),
+    AppNodeBuilder.build(EventV2Bridge.node),
   ),
 )
 

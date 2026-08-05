@@ -1,4 +1,5 @@
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { expect } from "bun:test"
 import { Effect } from "effect"
 import { Agent } from "../../src/agent/agent"
@@ -7,7 +8,7 @@ import { Permission } from "../../src/permission"
 import { KiloTask } from "../../src/kilocode/tool/task" // kilocode_change
 import { testEffect } from "../lib/effect"
 
-const it = testEffect(Agent.defaultLayer)
+const it = testEffect(LayerNode.compile(Agent.node))
 
 function testAgent(input: {
   name: string

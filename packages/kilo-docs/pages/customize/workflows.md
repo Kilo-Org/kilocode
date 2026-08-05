@@ -17,6 +17,20 @@ Workflows are Markdown files stored as **slash commands** in `.kilo/commands/`:
 - **Global commands**: `~/.config/kilo/commands/` (available in all projects)
 - **Project commands**: `[project]/.kilo/commands/` (project-specific)
 
+If `.kilo/commands/` is a symlink to a directory outside the project, allow that exact source in your global `~/.config/kilo/kilo.jsonc`:
+
+```jsonc
+{
+  "permission": {
+    "markdown_source": {
+      "/path/to/shared/commands/*": "allow"
+    }
+  }
+}
+```
+
+Project configuration cannot grant this permission. External command files remain untrusted: `{env:...}` substitutions are blocked and `{file:...}` substitutions remain confined to the project.
+
 ### Basic Setup
 
 1. Create a `.md` file with step-by-step instructions

@@ -1,10 +1,10 @@
 /**
  * ProjectRegistry — global catalog of additional Agent Manager projects.
  *
- * The registry persists only *additional* projects: repositories the user
- * explicitly added through the Agent Manager project picker. The pinned
- * default project is always derived from the current VS Code workspace at
- * runtime and is never stored here.
+ * The registry persists *additional* projects: repositories the user explicitly
+ * added through the Agent Manager project picker. The pinned default project is
+ * always derived from the current VS Code workspace at runtime; only its
+ * accordion preference is stored by id.
  *
  * Storage is injected so the registry stays free of VS Code imports and can
  * be unit-tested with an in-memory store. The file is versioned; corrupt or
@@ -31,11 +31,20 @@ export interface StoredProject {
   /** Whether project-controlled scripts may execute for this project. */
   trusted: boolean
   addedAt: string
+  /** Whether this project accordion should render its body. */
+  expanded?: boolean
 }
 
 interface RegistryFile {
   version: 1
   projects: StoredProject[]
+  /** Expansion state for the pinned workspace project, which is not a catalog entry. */
+  pinnedExpanded?: Record<string, boolean>
+}
+
+interface ParsedRegistry {
+  projects: StoredProject[]
+  pinnedExpanded: Record<string, boolean>
 }
 
 export interface RegistryStorage {
@@ -53,16 +62,17 @@ function valid(entry: unknown): entry is StoredProject {
     typeof e.root === "string" &&
     typeof e.order === "number" &&
     typeof e.trusted === "boolean" &&
-    typeof e.addedAt === "string"
+    typeof e.addedAt === "string" &&
+    (e.expanded === undefined || typeof e.expanded === "boolean")
   )
 }
 
-function parse(raw: unknown, log: (msg: string) => void): StoredProject[] {
-  if (!raw || typeof raw !== "object") return []
+function parse(raw: unknown, log: (msg: string) => void): ParsedRegistry {
+  if (!raw || typeof raw !== "object") return { projects: [], pinnedExpanded: {} }
   const file = raw as Partial<RegistryFile>
   if (file.version !== VERSION || !Array.isArray(file.projects)) {
     if (file.version !== undefined) log("project registry has an unsupported shape, starting empty")
-    return []
+    return { projects: [], pinnedExpanded: {} }
   }
   const seen = new Set<string>()
   const out: StoredProject[] = []
@@ -72,11 +82,18 @@ function parse(raw: unknown, log: (msg: string) => void): StoredProject[] {
     seen.add(entry.id)
     out.push(entry)
   }
-  return out.sort((a, b) => a.order - b.order)
+  const pinnedExpanded: Record<string, boolean> = {}
+  if (file.pinnedExpanded && typeof file.pinnedExpanded === "object") {
+    for (const [id, expanded] of Object.entries(file.pinnedExpanded)) {
+      if (typeof expanded === "boolean") pinnedExpanded[id] = expanded
+    }
+  }
+  return { projects: out.sort((a, b) => a.order - b.order), pinnedExpanded }
 }
 
 export class ProjectRegistry {
   private projects: StoredProject[] | undefined
+  private pinnedExpanded: Record<string, boolean> | undefined
   private queue: Promise<void> = Promise.resolve()
 
   constructor(
@@ -85,20 +102,26 @@ export class ProjectRegistry {
   ) {}
 
   private load(): StoredProject[] {
-    this.projects ??= parse(this.storage.read(), this.log)
+    if (!this.projects) {
+      const parsed = parse(this.storage.read(), this.log)
+      this.projects = parsed.projects
+      this.pinnedExpanded = parsed.pinnedExpanded
+    }
     return this.projects
   }
 
   /** Fresh re-read + validate/dedupe/sort, used by every mutation. */
-  private fresh(): StoredProject[] {
+  private fresh(): ParsedRegistry {
     return parse(this.storage.read(), this.log)
   }
 
   /** Persist the next catalog and update the cache only after the write succeeds. */
-  private async write(next: StoredProject[]): Promise<void> {
+  private async write(next: StoredProject[], pinnedExpanded: Record<string, boolean>): Promise<void> {
     const file: RegistryFile = { version: VERSION, projects: next }
+    if (Object.keys(pinnedExpanded).length > 0) file.pinnedExpanded = pinnedExpanded
     await this.storage.write(file)
     this.projects = next
+    this.pinnedExpanded = pinnedExpanded
   }
 
   /** Serialize mutations within this instance; a failed mutation does not poison the queue. */
@@ -119,6 +142,14 @@ export class ProjectRegistry {
     return this.load().find((p) => p.id === id)
   }
 
+  /** Return explicit expansion state, if one has been persisted. */
+  expanded(id: string): boolean | undefined {
+    const project = this.get(id)
+    if (project) return project.expanded
+    this.load()
+    return this.pinnedExpanded?.[id]
+  }
+
   /** Register an additional project. Throws when the id is already registered. */
   add(input: { id: string; root: string; label?: string }): Promise<StoredProject> {
     return this.run(() => this.doAdd(input))
@@ -126,8 +157,9 @@ export class ProjectRegistry {
 
   private async doAdd(input: { id: string; root: string; label?: string }): Promise<StoredProject> {
     const current = this.fresh()
-    if (current.find((p) => p.id === input.id)) throw new Error("That repository is already registered as a project.")
-    const order = current.reduce((max, p) => Math.max(max, p.order), 0) + 1
+    if (current.projects.find((p) => p.id === input.id))
+      throw new Error("That repository is already registered as a project.")
+    const order = current.projects.reduce((max, p) => Math.max(max, p.order), 0) + 1
     const project: StoredProject = {
       id: input.id,
       root: input.root,
@@ -136,7 +168,7 @@ export class ProjectRegistry {
       trusted: false,
       addedAt: new Date().toISOString(),
     }
-    await this.write([...current, project])
+    await this.write([...current.projects, project], current.pinnedExpanded)
     return project
   }
 
@@ -147,9 +179,11 @@ export class ProjectRegistry {
 
   private async doRemove(id: string): Promise<boolean> {
     const current = this.fresh()
-    const next = current.filter((p) => p.id !== id)
-    if (next.length === current.length) return false
-    await this.write(next)
+    const next = current.projects.filter((p) => p.id !== id)
+    if (next.length === current.projects.length) return false
+    const pinnedExpanded = { ...current.pinnedExpanded }
+    delete pinnedExpanded[id]
+    await this.write(next, pinnedExpanded)
     return true
   }
 
@@ -159,8 +193,11 @@ export class ProjectRegistry {
 
   private async doSetTrusted(id: string, trusted: boolean): Promise<boolean> {
     const current = this.fresh()
-    if (!current.find((p) => p.id === id)) return false
-    await this.write(current.map((p) => (p.id === id ? { ...p, trusted } : p)))
+    if (!current.projects.find((p) => p.id === id)) return false
+    await this.write(
+      current.projects.map((p) => (p.id === id ? { ...p, trusted } : p)),
+      current.pinnedExpanded,
+    )
     return true
   }
 
@@ -170,8 +207,29 @@ export class ProjectRegistry {
 
   private async doSetLabel(id: string, label: string | undefined): Promise<boolean> {
     const current = this.fresh()
-    if (!current.find((p) => p.id === id)) return false
-    await this.write(current.map((p) => (p.id === id ? { ...p, label } : p)))
+    if (!current.projects.find((p) => p.id === id)) return false
+    await this.write(
+      current.projects.map((p) => (p.id === id ? { ...p, label } : p)),
+      current.pinnedExpanded,
+    )
+    return true
+  }
+
+  setExpanded(id: string, expanded: boolean): Promise<boolean> {
+    return this.run(() => this.doSetExpanded(id, expanded))
+  }
+
+  private async doSetExpanded(id: string, expanded: boolean): Promise<boolean> {
+    const current = this.fresh()
+    if (current.projects.some((p) => p.id === id)) {
+      await this.write(
+        current.projects.map((p) => (p.id === id ? { ...p, expanded } : p)),
+        current.pinnedExpanded,
+      )
+      return true
+    }
+    const pinnedExpanded = { ...current.pinnedExpanded, [id]: expanded }
+    await this.write(current.projects, pinnedExpanded)
     return true
   }
 }

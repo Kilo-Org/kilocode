@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterEach, describe, expect } from "bun:test"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { FSUtil } from "@opencode-ai/core/fs-util"
@@ -44,16 +45,16 @@ const runner: MutationRunner = (profile, request) =>
   })
 const it = testEffect(
   Layer.mergeAll(
-    Agent.defaultLayer,
-    FSUtil.defaultLayer,
-    AppProcess.defaultLayer,
-    CrossSpawnSpawner.defaultLayer,
-    Instruction.defaultLayer,
-    LSP.defaultLayer,
+    AppNodeBuilder.build(Agent.node),
+    AppNodeBuilder.build(FSUtil.node),
+    AppNodeBuilder.build(AppProcess.node),
+    AppNodeBuilder.build(CrossSpawnSpawner.node),
+    AppNodeBuilder.build(Instruction.node),
+    AppNodeBuilder.build(LSP.node),
     Bus.layer,
-    Format.defaultLayer,
-    Truncate.defaultLayer,
-    EventV2Bridge.defaultLayer,
+    AppNodeBuilder.build(Format.node),
+    AppNodeBuilder.build(Truncate.node),
+    AppNodeBuilder.build(EventV2Bridge.node),
   ),
 )
 

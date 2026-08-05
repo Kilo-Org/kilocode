@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect, test } from "bun:test"
 import { Agent } from "@/agent/agent"
 import { Notebook } from "@/kilocode/notebook/service"
@@ -42,7 +43,7 @@ const notebook = Layer.mock(Notebook.Service, {
     })
   },
 })
-const it = testEffect(Layer.mergeAll(notebook, Agent.defaultLayer, Truncate.defaultLayer))
+const it = testEffect(Layer.mergeAll(notebook, AppNodeBuilder.build(Agent.node), AppNodeBuilder.build(Truncate.node)))
 
 function context(asks: Parameters<Tool.Context["ask"]>[0][]): Tool.Context {
   return {

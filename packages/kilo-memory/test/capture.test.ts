@@ -393,7 +393,13 @@ describe("memory capture parsing", () => {
       },
       {
         name: "expected skip: short edited turn is interval-gated instead of trivial",
-        input: { ...base, summary: "User: test Result: ok", edited: true, priorTime: 900, lastTypedConsolidationAt: 900 },
+        input: {
+          ...base,
+          summary: "User: test Result: ok",
+          edited: true,
+          priorTime: 900,
+          lastTypedConsolidationAt: 900,
+        },
         expected: { digestDue: false, typedCall: false, fallbackDigest: false, skipReason: "interval" },
       },
       {
@@ -416,7 +422,15 @@ describe("memory capture parsing", () => {
 
     // Identical churn yields the identical verdict across every kind of path, so no ecosystem
     // (manifest, doc, config, or source language) is treated specially.
-    for (const file of ["src/app.ts", "src/app.py", "src/app.go", "src/app.rb", "package.json", "docs/x.md", "config.yaml"]) {
+    for (const file of [
+      "src/app.ts",
+      "src/app.py",
+      "src/app.go",
+      "src/app.rb",
+      "package.json",
+      "docs/x.md",
+      "config.yaml",
+    ]) {
       expect(hasSubstantialDiff([{ file, additions: 1, deletions: 0 }]), `${file} small`).toBe(false)
       expect(hasSubstantialDiff([{ file, additions: 20, deletions: 0 }]), `${file} large`).toBe(true)
     }
@@ -495,7 +509,13 @@ describe("memory capture parsing", () => {
   test("recognizes an exact-key upsert even when the model's key needs slugging", () => {
     const items = [
       {
-        id: MemoryOperations.id({ action: "add", file: "project.md", section: "Facts", key: "Deploy Target", text: "" }),
+        id: MemoryOperations.id({
+          action: "add",
+          file: "project.md",
+          section: "Facts",
+          key: "Deploy Target",
+          text: "",
+        }),
         file: "project.md" as const,
         section: "Facts",
         key: "deploy_target",
@@ -506,7 +526,13 @@ describe("memory capture parsing", () => {
       items,
       skipped: [],
       ops: [
-        { action: "add", file: "project.md", section: "Facts", key: "Deploy Target", text: "Deploy to production now." },
+        {
+          action: "add",
+          file: "project.md",
+          section: "Facts",
+          key: "Deploy Target",
+          text: "Deploy to production now.",
+        },
       ],
     })
 
@@ -764,9 +790,9 @@ describe("memory capture parsing", () => {
     expect(MemoryOperations.reject({ text: "Fixed the timeout bug\nthe retry path was reviewed." })).toBeUndefined()
 
     // A statement whose subject IS the source file is provenance...
-    expect(MemoryOperations.reject({ text: "~/.claude/CLAUDE.md is user-level context for concise replies." })).toMatchObject(
-      { reason: "out_of_scope" },
-    )
+    expect(
+      MemoryOperations.reject({ text: "~/.claude/CLAUDE.md is user-level context for concise replies." }),
+    ).toMatchObject({ reason: "out_of_scope" })
     // ...but a fact that merely cites the file mid-sentence is kept.
     expect(
       MemoryOperations.reject({ text: "Run tests from packages/opencode per the rule in .claude/claude.md." }),

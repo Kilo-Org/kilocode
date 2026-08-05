@@ -18,35 +18,55 @@ data class PromptAttachment(
     val mime: String,
     val url: String,
     val path: Path? = null,
+    val reference: Boolean = false,
 ) {
-    fun part() = PromptPartDto(
-        type = "file",
-        mime = mime,
-        url = path?.let { data(it, mime) } ?: url,
-        filename = name,
-    )
+    fun part(): PromptPartDto {
+        if (reference) {
+            return PromptPartDto(
+                type = "file",
+                mime = mime,
+                url = url,
+                filename = name,
+            )
+        }
+        return PromptPartDto(
+            type = "file",
+            mime = mime,
+            url = path?.let { data(it, mime) } ?: url,
+            filename = name,
+        )
+    }
 }
 
 object PromptAttachmentExtractor {
     private const val MAX_BYTES = 10 * 1024 * 1024
 
     fun files(files: List<java.io.File>): List<PromptAttachment> = files
-        .filter { it.exists() && it.isFile && it.canRead() && it.length() <= MAX_BYTES }
-        .map { file ->
+        .filter { it.exists() && it.canRead() }
+        .mapNotNull { file ->
             val path = file.toPath()
             val mime = mime(file)
-            if (!media(mime)) return@map null
-            PromptAttachment(
+            if (image(mime)) {
+                if (!file.isFile || file.length() > MAX_BYTES) return@mapNotNull null
+                return@mapNotNull PromptAttachment(
+                    id = path.toAbsolutePath().normalize().toString(),
+                    name = path.fileName?.toString() ?: path.name,
+                    mime = mime,
+                    url = path.toUri().toString(),
+                    path = path,
+                )
+            }
+            return@mapNotNull PromptAttachment(
                 id = path.toAbsolutePath().normalize().toString(),
                 name = path.fileName?.toString() ?: path.name,
-                mime = mime,
+                mime = if (file.isDirectory) mime else "text/plain",
                 url = path.toUri().toString(),
                 path = path,
+                reference = true,
             )
         }
-        .filterNotNull()
 
-    fun media(mime: String): Boolean = mime.startsWith("image/") || mime == "text/plain"
+    fun image(mime: String): Boolean = mime.startsWith("image/")
 
     fun image(raw: Any): PromptAttachment? {
         val image = when (raw) {
