@@ -155,7 +155,7 @@ export class TerminalRouter {
       // Join the shared backend connection instead of racing its synchronous
       // client accessor when this is the first Kilo action in the window.
       await this.deps.getClientAsync()
-      const created = await manager.create({ worktreeId, cwd, title })
+      const created = await manager.create({ terminalId: createId, worktreeId, cwd, title })
       if (generation !== this.generation) {
         await manager.close(created.terminalId)
         return
