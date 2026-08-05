@@ -37,6 +37,7 @@ describe("AgentManagerOrchestrationBridge", () => {
     const replies: unknown[] = []
     const rejections: unknown[] = []
     const lists = new Map<string, AgentManagerRequest[]>()
+    const statsCalls: Array<boolean | undefined> = []
     const handlers: {
       event?: (event: SSEPayload, directory?: string) => void
       state?: (state: "connecting" | "connected" | "disconnected" | "error") => void
@@ -53,6 +54,12 @@ describe("AgentManagerOrchestrationBridge", () => {
         })),
         status: mock(async () => ({ data: {} })),
         promptAsync,
+      },
+      permission: {
+        list: mock(async () => ({ data: [] })),
+      },
+      question: {
+        list: mock(async () => ({ data: [] })),
       },
       kilocode: {
         agentManager: {
@@ -96,7 +103,11 @@ describe("AgentManagerOrchestrationBridge", () => {
       root: () => root,
       ready: async () => state,
       state: () => state,
-      stats: async () => ({ worktrees: [] }),
+      stats: async (refresh) => {
+        statsCalls.push(refresh)
+        if (refresh) return new Promise(() => undefined)
+        return { worktrees: [] }
+      },
       prs: () => new Map(),
       push,
       managed: (id) => managed.has(id),
@@ -108,7 +119,21 @@ describe("AgentManagerOrchestrationBridge", () => {
         { id: `event-${value.id}`, type: "kilocode.agent_manager.requested", properties: value } as SSEPayload,
         directory,
       )
-    return { bridge, client, close, handlers, lists, managed, promptAsync, push, rejections, replies, request, status }
+    return {
+      bridge,
+      client,
+      close,
+      handlers,
+      lists,
+      managed,
+      promptAsync,
+      push,
+      rejections,
+      replies,
+      request,
+      statsCalls,
+      status,
+    }
   }
 
   const request: AgentManagerRequest = {
@@ -229,6 +254,30 @@ describe("AgentManagerOrchestrationBridge", () => {
       requestID: "amr_ungroup",
       directory: dir,
       result: { operation: "move", sessionID: "ses_target", sectionID: null, moved: true },
+    })
+    test.bridge.dispose()
+  })
+
+  it("returns an overview without waiting for a forced git refresh", async () => {
+    const test = harness()
+    test.request({
+      id: "amr_overview",
+      sessionID: "ses_caller",
+      operation: "overview",
+    })
+    await waitFor(() => test.replies.length === 1)
+
+    expect(test.statsCalls).toEqual([undefined])
+    expect(test.replies[0]).toEqual({
+      requestID: "amr_overview",
+      directory: root,
+      result: {
+        operation: "overview",
+        overview: expect.objectContaining({
+          ungrouped: [expect.objectContaining({ id: expect.any(String) })],
+          sections: [],
+        }),
+      },
     })
     test.bridge.dispose()
   })
