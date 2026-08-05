@@ -134,6 +134,8 @@ export interface ModelSelectorBaseProps {
   label?: string
   /** Additional accessible context for this model setting. */
   description?: string
+  /** Only respond to picker events from this prompt scope. */
+  trigger?: string
 }
 
 export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
@@ -512,7 +514,11 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
 
   // Register before the popover mounts so programmatic slash-command opens
   // always restore the prompt before the popover's own Escape handler runs.
-  const onTrigger = () => setOpen(true)
+  const onTrigger = (event: Event) => {
+    const source = (event as CustomEvent<{ source?: string }>).detail?.source
+    if (source !== props.trigger) return
+    setOpen(true)
+  }
   const onEscape = (e: KeyboardEvent) => {
     if (!open() || e.key !== "Escape") return
     e.preventDefault()

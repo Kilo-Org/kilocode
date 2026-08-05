@@ -39,6 +39,8 @@ export interface ModeSwitcherBaseProps {
   portal?: boolean
   /** Delay outside dismissal while the popover opens inside a dialog. */
   deferDismiss?: boolean
+  /** Only respond to picker events from this prompt scope. */
+  trigger?: string
 }
 
 export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
@@ -51,7 +53,9 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
   let slash = false
 
   // Listen for slash command trigger
-  const onTrigger = () => {
+  const onTrigger = (event: Event) => {
+    const source = (event as CustomEvent<{ source?: string }>).detail?.source
+    if (source !== props.trigger) return
     slash = true
     openSelected()
   }
