@@ -7,13 +7,11 @@ import { APICallError } from "ai"
 import { Cause, Deferred, Effect, Exit, Fiber, Layer, Schema } from "effect"
 import * as Stream from "effect/Stream"
 import { Config } from "@/config/config"
-import { Image } from "@/image/image"
-import { Agent } from "../../src/agent/agent"
 import { LLM } from "../../src/session/llm"
 import { SessionCompaction } from "../../src/session/compaction"
 import { Token } from "@/util/token"
-import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
+import { Snapshot } from "@/snapshot" // kilocode_change
 import { provideTmpdirInstance, TestInstance } from "../fixture/fixture"
 import { Session as SessionNs } from "@/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
@@ -22,10 +20,10 @@ import { SessionStatus } from "../../src/session/status"
 import { SessionSummary } from "../../src/session/summary"
 import { SessionV2 } from "@opencode-ai/core/session"
 import { SessionExecution } from "@opencode-ai/core/session/execution"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 
-import type { Provider } from "@/provider/provider"
+import { Provider } from "@/provider/provider"
 import * as SessionProcessorModule from "../../src/session/processor"
-import { Snapshot } from "../../src/snapshot"
 import { ProviderTest } from "../fake/provider"
 import { testEffect } from "../lib/effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
@@ -34,6 +32,8 @@ import { RuntimeFlags } from "@/effect/runtime-flags"
 import { LLMEvent, Usage } from "@opencode-ai/llm"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 
 const summary = Layer.succeed(
   SessionSummary.Service,
@@ -210,7 +210,7 @@ function fake(
   } satisfies SessionProcessorModule.SessionProcessor.Handle
 }
 
-function layer(result: "continue" | "compact") {
+function processorLayer(result: "continue" | "compact") {
   return Layer.succeed(
     SessionProcessorModule.SessionProcessor.Service,
     SessionProcessorModule.SessionProcessor.Service.of({
@@ -221,38 +221,28 @@ function layer(result: "continue" | "compact") {
 
 function cfg(compaction?: ConfigV1.Info["compaction"]) {
   const base = Schema.decodeUnknownSync(ConfigV1.Info)({}) as ConfigV1.Info
-  return TestConfig.layer({
-    get: () => Effect.succeed({ ...base, compaction }),
-  })
+  return Layer.succeed(Config.Service, TestConfig.make({ get: () => Effect.succeed({ ...base, compaction }) }))
 }
 
-const deps = Layer.mergeAll(
-  wide().layer,
-  layer("continue"),
-  Agent.defaultLayer,
-  Plugin.defaultLayer,
-  EventV2Bridge.defaultLayer,
-  Config.defaultLayer,
-  RuntimeFlags.layer({ experimentalEventSystem: true }),
-  Database.defaultLayer,
-  EventV2Bridge.defaultLayer,
-)
-
-const env = Layer.mergeAll(
-  SessionNs.defaultLayer,
-  Database.defaultLayer,
-  EventV2Bridge.defaultLayer,
-  CrossSpawnSpawner.defaultLayer,
-  SessionCompaction.layer.pipe(Layer.provide(SessionNs.defaultLayer), Layer.provideMerge(deps)),
-)
+const defaultProvider = wide()
+const compactionTestNode = LayerNode.group([
+  SessionCompaction.node,
+  SessionNs.node,
+  SessionProjector.node,
+  Database.node,
+  EventV2Bridge.node,
+  CrossSpawnSpawner.node,
+])
+const env = AppNodeBuilder.build(compactionTestNode, [
+  [Provider.node, defaultProvider.layer],
+  [SessionProcessorModule.SessionProcessor.node, processorLayer("continue")],
+  [RuntimeFlags.node, RuntimeFlags.layer({ experimentalEventSystem: true })],
+])
 
 const it = testEffect(env)
 
-const compactionEnv = Layer.mergeAll(
-  SessionNs.defaultLayer,
-  Database.defaultLayer,
-  EventV2Bridge.defaultLayer,
-  CrossSpawnSpawner.defaultLayer,
+const compactionEnv = AppNodeBuilder.build(
+  LayerNode.group([SessionNs.node, SessionProjector.node, Database.node, EventV2Bridge.node, CrossSpawnSpawner.node]),
 )
 const itCompaction = testEffect(compactionEnv)
 
@@ -260,7 +250,7 @@ type CompactionProcessOptions = {
   result?: "continue" | "compact"
   llm?: Layer.Layer<LLM.Service>
   plugin?: Layer.Layer<Plugin.Service>
-  provider?: ReturnType<typeof ProviderTest.fake>
+  provider?: ReturnType<typeof wide>
   config?: Layer.Layer<Config.Service>
   flags?: Partial<RuntimeFlags.Info> // kilocode_change
   snapshot?: Layer.Layer<Snapshot.Service> // kilocode_change
@@ -271,30 +261,26 @@ function withCompaction(options?: CompactionProcessOptions) {
 }
 
 function compactionProcessLayer(options?: CompactionProcessOptions) {
-  const events = EventV2Bridge.defaultLayer
-  const status = SessionStatus.layer.pipe(Layer.provide(events))
-  const processor = options?.llm
-    ? SessionProcessorModule.SessionProcessor.layer.pipe(
-        Layer.provide(summary),
-        Layer.provide(Image.defaultLayer),
-        Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })),
-        Layer.provide(status),
-      )
-    : layer(options?.result ?? "continue")
-  return Layer.mergeAll(SessionCompaction.layer.pipe(Layer.provide(processor)), processor, events, status).pipe(
-    Layer.provide(SessionNs.defaultLayer),
-    Layer.provide((options?.provider ?? wide()).layer),
-    Layer.provide(options?.snapshot ?? Snapshot.defaultLayer), // kilocode_change
-    Layer.provide(options?.llm ?? LLM.defaultLayer),
-    Layer.provide(Permission.defaultLayer),
-    Layer.provide(Agent.defaultLayer),
-    Layer.provide(options?.plugin ?? Plugin.defaultLayer),
-    Layer.provide(status),
-    Layer.provide(events),
-    Layer.provide(options?.config ?? Config.defaultLayer),
-    Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true, ...options?.flags })), // kilocode_change
-    Layer.provide(EventV2Bridge.defaultLayer),
-  )
+  const replacements: LayerNode.Replacements = [
+    [Provider.node, (options?.provider ?? wide()).layer],
+    [RuntimeFlags.node, RuntimeFlags.layer({ experimentalEventSystem: true, ...options?.flags })], // kilocode_change
+    [SessionSummary.node, summary],
+    ...(options?.snapshot ? ([[Snapshot.node, options.snapshot]] as const) : []), // kilocode_change
+  ]
+  if (!options?.llm) {
+    return AppNodeBuilder.build(compactionTestNode, [
+      ...replacements,
+      [SessionProcessorModule.SessionProcessor.node, processorLayer(options?.result ?? "continue")],
+      ...(options?.plugin ? ([[Plugin.node, options.plugin]] as const) : []),
+      ...(options?.config ? ([[Config.node, options.config]] as const) : []),
+    ])
+  }
+  return AppNodeBuilder.build(compactionTestNode, [
+    ...replacements,
+    [LLM.node, options.llm],
+    ...(options?.plugin ? ([[Plugin.node, options.plugin]] as const) : []),
+    ...(options?.config ? ([[Config.node, options.config]] as const) : []),
+  ])
 }
 
 // kilocode_change start - keep retry-backoff cancellation tests independent of git snapshot cleanup latency
@@ -336,7 +322,7 @@ function llm() {
     push(stream: Stream.Stream<LLMEvent, unknown> | ((input: LLM.StreamInput) => Stream.Stream<LLMEvent, unknown>)) {
       queue.push(stream)
     },
-    layer: Layer.succeed(
+    llmLayer: Layer.succeed(
       LLM.Service,
       LLM.Service.of({
         stream: (input) => {
@@ -632,8 +618,7 @@ describe("session.compaction.create", () => {
         })
 
         const v2 = yield* SessionV2.Service.use((svc) => svc.messages({ sessionID: info.id })).pipe(
-          Effect.provide(SessionExecution.noopLayer),
-          Effect.provide(SessionV2.defaultLayer),
+          Effect.provide(AppNodeBuilder.build(SessionV2.node, [[SessionExecution.node, SessionExecution.noopLayer]])),
         )
         expect(v2.at(-1)).toMatchObject({
           type: "compaction",
@@ -873,12 +858,12 @@ describe("session.compaction.process", () => {
       const msg = yield* createUserMessage(session.id, "hello")
       const msgs = yield* ssn.messages({ sessionID: session.id })
       const done = yield* Deferred.make<void, Error>()
-      let seen = false
+      const seen: string[] = []
       const unsub = yield* events.listen((evt) => {
+        seen.push(evt.type)
         if (evt.type !== SessionCompaction.Event.Compacted.type) return Effect.void
         if ((evt.data as typeof SessionCompaction.Event.Compacted.data.Type).sessionID !== session.id)
           return Effect.void
-        seen = true
         Deferred.doneUnsafe(done, Effect.void)
         return Effect.void
       })
@@ -893,7 +878,8 @@ describe("session.compaction.process", () => {
 
       yield* Deferred.await(done).pipe(Effect.timeout("500 millis"))
       expect(result).toBe("continue")
-      expect(seen).toBe(true)
+      expect(seen).toContain(SessionCompaction.Event.Compacted.type)
+      expect(seen.filter((type) => type.startsWith("session.next."))).toEqual([])
     }),
   )
 
@@ -1064,7 +1050,7 @@ describe("session.compaction.process", () => {
         expect(part?.type).toBe("compaction")
         expect(part?.tail_start_id).toBeUndefined()
         expect(captured).toContain("yyyy")
-      }).pipe(withCompaction({ llm: stub.layer, config: cfg({ tail_turns: 1, preserve_recent_tokens: 20 }) }))
+      }).pipe(withCompaction({ llm: stub.llmLayer, config: cfg({ tail_turns: 1, preserve_recent_tokens: 20 }) }))
     },
     { git: true },
   )
@@ -1101,7 +1087,7 @@ describe("session.compaction.process", () => {
         expect(part?.tail_start_id).toBeUndefined()
         expect(captured).toContain("recent image turn")
         expect(captured).toContain("Attached image/png: big.png")
-      }).pipe(withCompaction({ llm: stub.layer, config: cfg({ tail_turns: 1, preserve_recent_tokens: 100 }) }))
+      }).pipe(withCompaction({ llm: stub.llmLayer, config: cfg({ tail_turns: 1, preserve_recent_tokens: 100 }) }))
     },
     { git: true },
   )
@@ -1152,7 +1138,7 @@ describe("session.compaction.process", () => {
         expect(filtered[1]?.info.role).toBe("assistant")
         expect(filtered[1]?.info.role === "assistant" ? filtered[1].info.summary : false).toBe(true)
         expect(filtered.map((msg) => msg.info.id)).not.toContain(large.id)
-      }).pipe(withCompaction({ llm: stub.layer, config: cfg({ tail_turns: 1, preserve_recent_tokens: 100 }) }))
+      }).pipe(withCompaction({ llm: stub.llmLayer, config: cfg({ tail_turns: 1, preserve_recent_tokens: 100 }) }))
     },
     { git: true },
   )
@@ -1303,25 +1289,17 @@ describe("session.compaction.process", () => {
           })
           .pipe(Effect.forkChild)
 
-        // kilocode_change start - Effect 4.x timeout throws TimeoutError on the error
-        // channel; on loaded Windows CI runners the fiber may not reach the retry state
-        // within 1 second. Swallow the TimeoutError so the test proceeds to interrupt the
-        // fiber regardless — the assertions verify the interrupt exit either way.
-        yield* Deferred.await(ready).pipe(
-          Effect.timeout("1 second"),
-          Effect.catchTag("TimeoutError", () => Effect.void),
-        )
+        yield* Deferred.await(ready).pipe(Effect.timeout("5 seconds"))
         yield* Fiber.interrupt(fiber)
         const exit = yield* Fiber.await(fiber)
-        // kilocode_change end
 
         expect(Exit.isFailure(exit)).toBe(true)
         if (Exit.isFailure(exit)) {
           expect(Cause.hasInterrupts(exit.cause)).toBe(true)
         }
-      }).pipe(withCompaction({ llm: stub.layer, snapshot: snap })) // kilocode_change
+      }).pipe(withCompaction({ llm: stub.llmLayer, snapshot: snap })) // kilocode_change
     },
-    {}, // kilocode_change - isolate cancellation from git setup
+    { timeout: 10_000 }, // kilocode_change - snapshot is isolated above
   )
 
   itCompaction.instance(
@@ -1399,7 +1377,7 @@ describe("session.compaction.process", () => {
         expect(summary?.parts.some((part) => part.type === "reasoning")).toBe(false)
         // Sanity: the text part still got through.
         expect(summary?.parts.some((part) => part.type === "text" && part.text === "summary")).toBe(true)
-      }).pipe(withCompaction({ llm: stub.layer }))
+      }).pipe(withCompaction({ llm: stub.llmLayer }))
     },
     { git: true },
   )
@@ -1435,7 +1413,7 @@ describe("session.compaction.process", () => {
 
         expect(summary?.info.role).toBe("assistant")
         expect(summary?.parts.some((part) => part.type === "tool")).toBe(false)
-      }).pipe(withCompaction({ llm: stub.layer }))
+      }).pipe(withCompaction({ llm: stub.llmLayer }))
     },
     { git: true },
   )
@@ -1472,7 +1450,7 @@ describe("session.compaction.process", () => {
         expect(captured).not.toContain("keep this turn")
         expect(captured).not.toContain("and this one too")
         expect(captured).not.toContain("What did we do so far?")
-      }).pipe(withCompaction({ llm: stub.layer }))
+      }).pipe(withCompaction({ llm: stub.llmLayer }))
     },
     { git: true },
   )
@@ -1514,7 +1492,7 @@ describe("session.compaction.process", () => {
         expect(captured.match(/summary one/g)?.length).toBe(1)
         expect(captured).toContain("## Constraints & Preferences")
         expect(captured).toContain("## Progress")
-      }).pipe(withCompaction({ llm: stub.layer }))
+      }).pipe(withCompaction({ llm: stub.llmLayer }))
     },
     { git: true },
   )
@@ -1556,7 +1534,7 @@ describe("session.compaction.process", () => {
       expect(
         filtered.some((msg) => msg.info.role === "user" && msg.parts.some((part) => part.type === "compaction")),
       ).toBe(true)
-    }).pipe(withCompaction({ llm: stub.layer, config: cfg({ tail_turns: 2, preserve_recent_tokens: 10_000 }) }))
+    }).pipe(withCompaction({ llm: stub.llmLayer, config: cfg({ tail_turns: 2, preserve_recent_tokens: 10_000 }) }))
   })
 
   itCompaction.instance(

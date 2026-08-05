@@ -128,6 +128,12 @@ export function PromptRail(props: PromptRailProps) {
     return items()[entry.type === "overflow" ? entry.index : 0]
   }
 
+  // Dragging the pane splitter, or selecting transcript text, sweeps the pointer
+  // across the rail with a button held. The splitter tracks the drag on the
+  // document, so those moves still reach the ticks; treating them as hover would
+  // pop the navigator open in the middle of a resize.
+  const dragging = (event: MouseEvent) => event.buttons !== 0
+
   const openCard = (index: number) => {
     cancelClose()
     const entry = entries()[index]
@@ -299,7 +305,10 @@ export function PromptRail(props: PromptRailProps) {
               data-queued={(entry.type === "prompt" && entry.item.queued) || undefined}
               aria-label={entryLabel(entry)}
               tabIndex={index() === (focused() ?? 0) ? 0 : -1}
-              onMouseEnter={() => openCard(index())}
+              onMouseEnter={(event) => {
+                if (dragging(event)) return
+                openCard(index())
+              }}
               onFocus={() => openCard(index())}
               onClick={() => {
                 if (entry.type === "prompt") props.onSelect(entry.item)

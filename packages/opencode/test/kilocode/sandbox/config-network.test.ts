@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { Cause, Effect, Exit, Layer } from "effect"
 import { expect, test } from "bun:test"
 import { HttpClient } from "effect/unstable/http"
@@ -27,7 +28,7 @@ const ctx = {
 function layer(restrict?: boolean, allowedHosts: string[] = []) {
   return Layer.mergeAll(
     ToolNetwork.httpLayer,
-    Database.defaultLayer,
+    AppNodeBuilder.build(Database.node),
     TestConfig.layer({
       get: () =>
         Effect.succeed({

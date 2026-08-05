@@ -8,8 +8,12 @@ type Internals = {
   webview: { postMessage: (message: unknown) => Promise<unknown> } | null
   trackedSessionIds: Set<string>
   currentSession: Session | null
+  projectID: string | undefined
+  isWebviewReady: boolean
   pendingFollowup: { dir: string; time: number } | null
   handleLoadMessages: (sessionID: string) => Promise<void>
+  handleEvent: (event: Event, directory?: string) => void
+  refreshGitStatus: (directory?: string) => Promise<void>
   initializeConnection: () => Promise<void>
   syncWebviewState: () => Promise<void>
   flushPendingSessionRefresh: () => Promise<void>
@@ -41,6 +45,18 @@ function created(input: { id: string; directory: string; parentID?: string }): E
       },
     },
   } as Event
+}
+
+function info(input: { id: string; projectID: string; directory: string }): Session {
+  return {
+    id: input.id,
+    slug: `${input.id}-slug`,
+    projectID: input.projectID,
+    directory: input.directory,
+    title: "Session",
+    version: "1",
+    time: { created: 1, updated: 1 },
+  }
 }
 
 function connection() {
@@ -80,6 +96,135 @@ function connection() {
 }
 
 describe("KiloProvider follow-up sessions", () => {
+  it("scopes shared session events to the active project directory", () => {
+    const service = connection()
+    const provider = new KiloProvider({} as never, service as never, undefined, {
+      rootDirectory: () => "/repo/project-b",
+      projectQualifier: () => ({ projectId: "project-b" }),
+    })
+    const internal = provider as unknown as Internals
+    const sent: unknown[] = []
+    const sharedID = "ses-shared"
+
+    internal.webview = {
+      postMessage: async (message: unknown) => {
+        sent.push(message)
+        return true
+      },
+    }
+    internal.isWebviewReady = true
+    internal.currentSession = info({ id: sharedID, projectID: "backend-project-b", directory: "/repo/project-b" })
+    internal.projectID = "backend-project-a"
+    internal.trackedSessionIds.add(sharedID)
+
+    // A background project's event must not overwrite the active project's
+    // transcript when both instances expose the same raw session key.
+    internal.handleEvent(
+      {
+        type: "message.updated",
+        properties: {
+          sessionID: sharedID,
+          info: {
+            id: "msg-project-a",
+            sessionID: sharedID,
+            role: "assistant",
+            time: { created: 1 },
+          },
+        },
+      } as Event,
+      "/repo/project-a",
+    )
+    expect(sent).toEqual([])
+
+    // Switching projects can briefly leave the backend project identity stale;
+    // the active directory is the authoritative scope during that transition.
+    internal.handleEvent(
+      {
+        type: "session.created",
+        properties: { sessionID: sharedID, info: internal.currentSession },
+      } as Event,
+      "/repo/project-b",
+    )
+    expect(sent).toContainEqual({
+      type: "sessionCreated",
+      session: {
+        id: sharedID,
+        title: "Session",
+        createdAt: new Date(1).toISOString(),
+        updatedAt: new Date(1).toISOString(),
+        parentID: null,
+        revert: null,
+        summary: null,
+      },
+    })
+  })
+
+  it("refreshes Git from the file path in a completed edit tool part", () => {
+    const service = connection()
+    const provider = new KiloProvider({} as never, service as never, undefined, {
+      rootDirectory: () => "/workspace",
+      projectQualifier: () => ({ projectId: "workspace" }),
+    })
+    const internal = provider as unknown as Internals
+    const dirs: string[] = []
+    const sessionID = "ses-edit"
+    internal.currentSession = info({ id: sessionID, projectID: "backend-workspace", directory: "/workspace" })
+    internal.trackedSessionIds.add(sessionID)
+    internal.refreshGitStatus = async (directory) => {
+      if (directory) dirs.push(directory)
+    }
+
+    internal.handleEvent(
+      {
+        type: "message.part.updated",
+        properties: {
+          sessionID,
+          part: {
+            type: "tool",
+            state: { status: "completed" },
+            metadata: { filepath: "/workspace/frontend/src/app.ts" },
+          },
+        },
+      } as Event,
+      "/workspace",
+    )
+
+    expect(dirs).toEqual(["/workspace/frontend/src"])
+  })
+
+  it("ignores completed tool paths outside the active project", () => {
+    const service = connection()
+    const provider = new KiloProvider({} as never, service as never, undefined, {
+      rootDirectory: () => "/workspace",
+      projectQualifier: () => ({ projectId: "workspace" }),
+    })
+    const internal = provider as unknown as Internals
+    const dirs: string[] = []
+    const sessionID = "ses-external-edit"
+    internal.currentSession = info({ id: sessionID, projectID: "backend-workspace", directory: "/workspace" })
+    internal.trackedSessionIds.add(sessionID)
+    internal.refreshGitStatus = async (directory) => {
+      if (directory) dirs.push(directory)
+    }
+
+    internal.handleEvent(
+      {
+        type: "message.part.updated",
+        properties: {
+          sessionID,
+          part: {
+            type: "tool",
+            state: { status: "completed" },
+            metadata: { filepath: "/other-repo/src/app.ts" },
+          },
+        },
+      } as Event,
+      "/workspace",
+    )
+
+    expect(dirs).toEqual([])
+  })
+
   it("ignores subagents before adopting pending follow-up sessions", async () => {
     const service = connection()
     const provider = new KiloProvider({} as never, service as never)

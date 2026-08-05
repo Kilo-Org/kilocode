@@ -2,11 +2,12 @@ import { Auth } from "@/auth"
 import { Config } from "@/config/config"
 import { makeRuntime } from "@/effect/run-service"
 import { resolveKiloIndexingAuth } from "@/kilocode/indexing-auth"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
 
 export type OrgState = { type: "personal" } | { type: "org"; id: string } | { type: "unknown" }
 export type OrgSource = () => Promise<OrgState>
 
-const config = makeRuntime(Config.Service, Config.defaultLayer)
+const config = makeRuntime(Config.Service, AppNodeBuilder.build(Config.node))
 const auth = makeRuntime(Auth.Service, Auth.defaultLayer)
 
 export async function getAuthOrgId(): Promise<OrgState> {

@@ -1050,6 +1050,7 @@ export class AgentManagerProvider implements Disposable {
     if (!req) return
     if (directory) {
       req.directory = directory
+      req.projectId ??= this.contexts.byDirectory(directory)?.id
     }
     void this.startToolRequest(req)
   }
@@ -1558,7 +1559,11 @@ export class AgentManagerProvider implements Disposable {
     void this.sendRepoInfo()
     if (!reactivateProject(ctx, this.panel?.sessions, (c) => this.pushState(c)))
       this.stateReady = this.initializeState()
-    else this.projectPollers.sync(this.contexts)
+    else {
+      this.panel?.sessions.refreshSessions()
+      this.projectPollers.sync(this.contexts)
+    }
+    this.panel?.sessions.refreshGitStatus?.()
   }
   private onWorkspaceChanged(): void {
     if (this.contexts.syncPinned()) {

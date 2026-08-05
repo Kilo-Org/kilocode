@@ -106,9 +106,19 @@ function data(diff = false) {
 
 async function request(directory: string, body: unknown) {
   const auth = process.env.KILO_AUTH_CONTENT
+  const fetcher = globalThis.fetch
   const token = `test-${crypto.randomUUID()}`
   bodies.set(token, body)
   process.env.KILO_AUTH_CONTENT = JSON.stringify({ kilo: { type: "api", key: token } })
+  globalThis.fetch = Object.assign(
+    (input: URL | RequestInfo, init?: BunFetchRequestInit | RequestInit) => {
+      const req = new Request(input, init)
+      const url = new URL(req.url)
+      if (url.pathname !== "/api/session/ses_cloud/export") return fetcher(req)
+      return fetcher(new Request(`${ingest.url.origin}${url.pathname}${url.search}`, req))
+    },
+    { preconnect: fetcher.preconnect },
+  )
   try {
     return await HttpApiApp.webHandler().handler(
       new Request(`http://localhost${KiloGatewayPaths.cloudSessionImport}`, {
@@ -120,6 +130,7 @@ async function request(directory: string, body: unknown) {
     )
   } finally {
     bodies.delete(token)
+    globalThis.fetch = fetcher
     if (auth === undefined) delete process.env.KILO_AUTH_CONTENT
     else process.env.KILO_AUTH_CONTENT = auth
   }
