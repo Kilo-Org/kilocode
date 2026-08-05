@@ -27,7 +27,6 @@ export namespace KilocodeTuiConfig {
   const dirs = [".kilo", ".kilocode"] as const
 
   export async function get(input: { directory: string }) {
-    // kilocode_change - provide Observability.layer so Effect logs route to Kilo's log sink, not the shared TTY
     const cfg = await Effect.runPromise(
       TuiConfig.Service.use((svc) => svc.info()).pipe(
         Effect.provide(

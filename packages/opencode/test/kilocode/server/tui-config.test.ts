@@ -175,7 +175,6 @@ describe("TUI config routes", () => {
     expect(events.some((event) => event.payload?.type === "global.config.updated")).toBe(true)
   })
 
-  // kilocode_change start - regression test: internal Effect logs from TUI config must not leak to the shared TTY
   const LEAKED = ["loading tui config", "applying tui config", "skipping invalid tui config", "failed to read tui config"]
 
   async function withConsoleCapture<T>(fn: () => Promise<T>): Promise<{ stdout: string; result: T }> {
@@ -240,5 +239,4 @@ describe("TUI config routes", () => {
       expect(stdout).not.toContain(message)
     }
   })
-  // kilocode_change end
 })

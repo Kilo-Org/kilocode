@@ -13,7 +13,6 @@ afterEach(async () => {
   await resetDatabase()
 })
 
-// kilocode_change - regression test: direct calls must not leak Effect logs to the shared TTY
 const LEAKED = ["loading tui config", "applying tui config", "skipping invalid tui config", "failed to read tui config"]
 
 async function withConsoleCapture<T>(fn: () => Promise<T>): Promise<{ stdout: string; result: T }> {
