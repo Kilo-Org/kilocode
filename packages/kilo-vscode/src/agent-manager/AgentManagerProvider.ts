@@ -240,7 +240,7 @@ export class AgentManagerProvider implements Disposable {
         await this.stateReady
         return this.state
       },
-      stats: (refresh) => this.statsPoller.snapshot(refresh),
+      stats: () => this.statsPoller.snapshot(),
       prs: () => this.prBridge.snapshot(),
       push: () => this.pushState(),
       managed: (id) => this.panelSessions.has(id) || !!this.state?.getSession(id),
