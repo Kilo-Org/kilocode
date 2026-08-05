@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import path from "path"
@@ -6,7 +7,7 @@ import { Command } from "../../src/command"
 import { provideTmpdirInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
-const it = testEffect(Layer.mergeAll(Command.defaultLayer, CrossSpawnSpawner.defaultLayer))
+const it = testEffect(Layer.mergeAll(AppNodeBuilder.build(Command.node), AppNodeBuilder.build(CrossSpawnSpawner.node)))
 
 describe("skill slash commands", () => {
   it.live("lists and resolves skills that conflict with commands", () =>

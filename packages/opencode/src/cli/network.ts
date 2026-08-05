@@ -58,6 +58,16 @@ export function explicitNetworkOptions(argv = process.argv) {
 export function withNetworkOptions<T>(yargs: Argv<T>) {
   return yargs.options(options)
 }
+
+export function hasArg(name: string) {
+  return networkArgs().some((arg) => arg === name || arg.startsWith(name + "="))
+}
+
+function networkArgs() {
+  const separator = process.argv.indexOf("--")
+  return process.argv.slice(2, separator === -1 ? undefined : separator)
+}
+
 export const resolveNetworkOptions = Effect.fn("Cli.resolveNetworkOptions")(function* (args: NetworkOptions) {
   const { Config } = yield* Effect.promise(() => import("@/config/config"))
   const config = yield* Config.Service.use((cfg) => cfg.getGlobal())

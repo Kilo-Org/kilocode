@@ -166,7 +166,7 @@
     "tree-sitter-wasms": "^0.1.12",
     "turndown": "7.2.0",
     "ulid": "catalog:",
-    "venice-ai-sdk-provider": "2.0.2",
+    "venice-ai-sdk-provider": "2.1.1",
     "vscode-jsonrpc": "8.2.1",
     "web-tree-sitter": "0.25.10",
     "which": "6.0.1",
@@ -187,7 +187,9 @@
     "xdg-basedir": "5.1.0",
     "@ff-labs/fff-bun": "0.9.4",
     "@opencode-ai/tui": "workspace:*",
-    "@solid-primitives/scheduled": "1.5.2"
+    "@solid-primitives/scheduled": "1.5.2",
+    "@opencode-ai/protocol": "workspace:*",
+    "@opencode-ai/schema": "workspace:*"
   },
   "overrides": {
     "drizzle-orm": "catalog:"

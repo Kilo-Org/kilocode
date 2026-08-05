@@ -1,7 +1,7 @@
 import { expect } from "bun:test"
 import { Auth } from "@/auth"
 import { remove } from "@/kilocode/auth/remove"
-import { IntegrationSchema } from "@opencode-ai/core/integration/schema"
+import { Integration } from "@opencode-ai/core/integration"
 import { Credential } from "@opencode-ai/core/credential"
 import { Database } from "@opencode-ai/core/database/database"
 import { EventV2 } from "@opencode-ai/core/event"
@@ -10,8 +10,7 @@ import { testEffect } from "../lib/effect"
 
 const database = Database.layerFromPath(":memory:")
 const events = Layer.mock(EventV2.Service)({
-  publish: (definition, data) =>
-    Effect.succeed({ id: EventV2.ID.create(), type: definition.type, data }),
+  publish: (definition, data) => Effect.succeed({ id: EventV2.ID.create(), type: definition.type, data }),
 })
 const credentials = Credential.layer.pipe(Layer.provide(database), Layer.provide(events))
 const state = { removed: false }
@@ -24,16 +23,16 @@ it.effect("legacy provider logout removes every Core credential", () =>
   Effect.gen(function* () {
     state.removed = false
     const service = yield* Credential.Service
-    const integrationID = IntegrationSchema.ID.make("anthropic")
+    const integrationID = Integration.ID.make("anthropic")
     yield* service.create({
       integrationID,
       label: "first",
-      value: new Credential.Key({ type: "key", key: "first" }),
+      value: Credential.Key.make({ type: "key", key: "first" }),
     })
     yield* service.create({
       integrationID,
       label: "second",
-      value: new Credential.Key({ type: "key", key: "second" }),
+      value: Credential.Key.make({ type: "key", key: "second" }),
     })
 
     yield* remove("anthropic")

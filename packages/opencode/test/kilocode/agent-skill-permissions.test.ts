@@ -1,11 +1,12 @@
 // kilocode_change - new file
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { expect } from "bun:test"
 import { Effect } from "effect"
 import { testEffect } from "../lib/effect"
 import { Agent } from "../../src/agent/agent"
 import { Permission } from "../../src/permission"
 
-const it = testEffect(Agent.defaultLayer)
+const it = testEffect(AppNodeBuilder.build(Agent.node))
 
 function action(name: string, ruleset: Permission.Ruleset) {
   return Permission.evaluate("skill", name, ruleset).action

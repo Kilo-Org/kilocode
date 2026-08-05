@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterEach, describe, expect, spyOn, test } from "bun:test"
 import { Effect, Layer, Schema, Stream } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
@@ -22,8 +23,8 @@ import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { testEffect } from "../lib/effect"
 
-const node = CrossSpawnSpawner.defaultLayer
-const it = testEffect(Layer.mergeAll(Agent.defaultLayer, ToolRegistry.defaultLayer, node))
+const node = AppNodeBuilder.build(CrossSpawnSpawner.node)
+const it = testEffect(Layer.mergeAll(AppNodeBuilder.build(Agent.node), AppNodeBuilder.build(ToolRegistry.node), node))
 const ref = {
   providerID: ProviderV2.ID.make("test"),
   modelID: ModelV2.ID.make("test-model"),
