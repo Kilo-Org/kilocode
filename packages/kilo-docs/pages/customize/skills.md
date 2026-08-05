@@ -190,9 +190,6 @@ Files are downloaded from `{url}/{skill-name}/{file}` paths.
 
 ## Mode-Specific Skills
 
-{% tabs %}
-{% tab label="VSCode" %}
-
 The new platform loads skills into a shared pool instead of using mode-specific skill directories. You can still control which skills each agent sees and can invoke with that agent's `permission.skill` rules:
 
 ```jsonc
@@ -215,35 +212,6 @@ Rules use glob patterns and are evaluated in order, with the last matching rule 
 Denied skills are omitted from the agent's system-prompt metadata and Skill tool inventory, and the agent cannot invoke them through the Skill tool. Skill permissions do not replace file permissions: if an agent must not read a skill's files directly, configure matching `read` rules as well.
 
 For skills available to several agents, write a clear and specific `description` in the SKILL.md frontmatter so each agent knows when to use them.
-
-{% /tab %}
-{% tab label="CLI" %}
-
-The new platform loads skills into a shared pool instead of using mode-specific skill directories. You can still control which skills each agent sees and can invoke with that agent's `permission.skill` rules:
-
-```jsonc
-{
-  "agent": {
-    "plan": {
-      "permission": {
-        "skill": {
-          "*": "deny",
-          "kilo-config": "allow"
-        }
-      }
-    }
-  }
-}
-```
-
-Rules use glob patterns and are evaluated in order, with the last matching rule taking precedence. Put the wildcard denial before specific allowances when creating an allowlist. If `"*": "deny"` is last, Kilo removes the Skill tool and all skill metadata for that agent, including specifically allowed skills.
-
-Denied skills are omitted from the agent's system-prompt metadata and Skill tool inventory, and the agent cannot invoke them through the Skill tool. Skill permissions do not replace file permissions: if an agent must not read a skill's files directly, configure matching `read` rules as well.
-
-For skills available to several agents, write a clear and specific `description` in the SKILL.md frontmatter so each agent knows when to use them.
-
-{% /tab %}
-{% /tabs %}
 
 ## Priority and Overrides
 
