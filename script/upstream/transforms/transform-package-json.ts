@@ -291,6 +291,7 @@ const PRESERVE_SCRIPTS: Record<string, string[]> = {
     "dev-setup",
     "postinstall",
     "dev:local",
+    "test:script:ci",
   ],
   "packages/opencode/package.json": ["test", "test:ci"],
   // Upstream-shared packages where Kilo adds a JUnit test:ci script for CI.

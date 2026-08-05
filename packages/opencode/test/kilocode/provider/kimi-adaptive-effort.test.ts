@@ -7,7 +7,7 @@ const model = {
   reasoning_options: [{ type: "effort", values: ["low", "high", "max"] }],
 } as unknown as ModelsDev.Model
 
-function target(input: { providerID: string; id: string; url: string }) {
+function target(input: { providerID?: string; id: string; url?: string }) {
   return {
     id: input.id,
     providerID: input.providerID,
@@ -36,5 +36,10 @@ describe("Kimi adaptive effort", () => {
       target({ providerID: "custom", id: "custom-model", url: "https://api.moonshot.ai/anthropic" }),
     )
     expect(variants?.high).toEqual({ thinking: { type: "adaptive", display: "summarized" }, effort: "high" })
+  })
+
+  test("handles partial metadata from generic Anthropic providers", () => {
+    const variants = ProviderTransform.reasoningVariants(model, target({ id: "claude-sonnet-4-6" }))
+    expect(variants?.high).toEqual({ thinking: { type: "adaptive" }, effort: "high" })
   })
 })

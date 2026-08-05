@@ -20,6 +20,7 @@ test("fixScripts preserves Kilo-only root scripts from base", () => {
       extension: "bun --cwd packages/kilo-vscode script/launch.ts",
       "extension:isolated": "bun --cwd packages/kilo-vscode script/launch.ts --isolated",
       "extension:isolated:clean": "bun --cwd packages/kilo-vscode script/launch.ts --isolated --clean",
+      "test:script:ci": "bun test ./script",
     },
   }
   const pkg: Record<string, unknown> = {
@@ -33,6 +34,7 @@ test("fixScripts preserves Kilo-only root scripts from base", () => {
   expect(scripts.extension).toBe(ours.scripts.extension)
   expect(scripts["extension:isolated"]).toBe(ours.scripts["extension:isolated"])
   expect(scripts["extension:isolated:clean"]).toBe(ours.scripts["extension:isolated:clean"])
+  expect(scripts["test:script:ci"]).toBe(ours.scripts["test:script:ci"])
   expect(changes.some((c) => c.includes("postinstall"))).toBe(true)
   expect(changes.some((c) => c.includes("dev-setup"))).toBe(true)
 })
