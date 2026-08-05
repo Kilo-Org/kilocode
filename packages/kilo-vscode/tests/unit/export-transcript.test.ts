@@ -17,7 +17,7 @@ describe("formatTranscript", () => {
         {
           info: { role: "user" },
           parts: [
-            { type: "text", text: "Please export this." },
+            { type: "text", text: "/test-skill", ignored: true },
             { type: "text", text: "hidden", synthetic: true },
           ],
         },
@@ -33,7 +33,7 @@ describe("formatTranscript", () => {
 
     expect(text).toContain("# Export test")
     expect(text).toContain("**Session ID:** ses_123456789")
-    expect(text).toContain("## User\n\nPlease export this.")
+    expect(text).toContain("## User\n\n/test-skill")
     expect(text).toContain("## Assistant\n\n**Tool: read**\n\nSaved as Markdown.")
     expect(text).not.toContain("hidden")
   })

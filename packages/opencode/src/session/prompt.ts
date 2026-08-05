@@ -301,7 +301,11 @@ export const layer = Layer.effect(
       const firstInfo = firstUser.info
 
       const subtasks = firstUser.parts.filter((p): p is SessionV1.SubtaskPart => p.type === "subtask")
-      const onlySubtasks = subtasks.length > 0 && firstUser.parts.every((p) => p.type === "subtask")
+      // kilocode_change start - display-only skill text does not change subtask title context
+      const onlySubtasks =
+        subtasks.length > 0 &&
+        firstUser.parts.every((p) => p.type === "subtask" || (p.type === "text" && p.ignored))
+      // kilocode_change end
 
       const ag = yield* agents.get("title")
       if (!ag) return
@@ -1336,7 +1340,7 @@ export const layer = Layer.effect(
         ),
       )
       for (const part of input.parts) {
-        if (part.type !== "text" || part.synthetic) continue
+        if (part.type !== "text" || part.synthetic || part.ignored) continue // kilocode_change - ignored text is display-only
         for (const reference of yield* resolveReferenceParts(part.text, attached)) {
           if (reference.type === "file" && attached.has(reference.url)) continue
           if (reference.type === "file") {
@@ -2411,7 +2415,8 @@ export const layer = Layer.effect(
         (part) => part.type !== "file" || !inputFiles.has(fileURLToPath(part.url)),
       )
       const isSubtask = (agent.mode === "subagent" && cmd.subtask !== false) || cmd.subtask === true
-      const parts = isSubtask
+      // kilocode_change start - preserve the literal skill command while hiding its expanded prompt
+      const commandParts = isSubtask
         ? [
             {
               type: "subtask" as const,
@@ -2424,6 +2429,19 @@ export const layer = Layer.effect(
             },
           ]
         : [...uniqueTemplateParts, ...(input.parts ?? [])]
+      const parts =
+        cmd.source === "skill"
+          ? [
+              {
+                type: "text" as const,
+                text: `/${input.command}${input.arguments ? ` ${input.arguments}` : ""}`,
+                ignored: true,
+                metadata: { skill: { name: cmd.name, userInitiated: true } },
+              },
+              ...commandParts.map((part) => (part.type === "text" ? { ...part, synthetic: true } : part)),
+            ]
+          : commandParts
+      // kilocode_change end
 
       const userAgent = isSubtask ? (input.agent ?? (yield* agents.defaultInfo()).name) : agent.name
       const userModel = isSubtask

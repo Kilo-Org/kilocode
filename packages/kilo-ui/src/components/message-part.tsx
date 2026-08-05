@@ -747,6 +747,7 @@ export function UserMessageDisplay(props: {
   text?: string
   copyText?: string
   header?: JSX.Element
+  after?: JSX.Element
   onDelete?: () => void
   onFork?: () => void
   onRevert?: () => void
@@ -899,6 +900,8 @@ export function UserMessageDisplay(props: {
                 </div>
               </GrowBox>
             </div>
+
+            {props.after}
 
             <div data-slot="user-message-copy-wrapper" data-interrupted={props.interrupted ? "" : undefined}>
               <Show when={metaHead() || metaTail()}>
