@@ -123,7 +123,11 @@ internal open class MdViewHybrid(
     override fun applyStyle(style: SessionEditorStyle) {
         if (disposed) return
         this.style = style
-        selection?.applyStyle(style)
+        // Selection colors are a session-wide concern applied once by SessionUi.applyStyle via the
+        // shared SessionSelection. Re-applying them here would re-run setColorsScheme on every editor
+        // registered across the whole transcript each time any single block is styled (a popup build,
+        // an inline expand, a streaming delta), which triggers a full gutter reinit per editor and can
+        // freeze the EDT. This view's own editors are styled by syncStyle() below.
         syncStyle()
     }
 

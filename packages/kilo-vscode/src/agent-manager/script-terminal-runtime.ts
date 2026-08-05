@@ -53,11 +53,23 @@ interface RunInput {
   manager: ScriptTerminalManager
   root(): string | undefined
   state(): WorktreeStateManager | undefined
+  project?(worktreeId: string): string | undefined
   open(path: string): Promise<void>
   trusted(): boolean
   post(message: AgentManagerOutMessage): void
   log(message: string): void
   refresh(): void
+}
+
+/** Stop and remove any Run/Setup script terminals owned by a worktree. */
+export async function clearScriptTerminals(
+  manager: ScriptTerminalManager,
+  worktreeId: string,
+  projectId?: string,
+): Promise<boolean> {
+  const run = await manager.clear("run", worktreeId, projectId)
+  const setup = await manager.clear("setup", worktreeId, projectId)
+  return run && setup
 }
 
 export function createRunController(input: RunInput) {
@@ -69,7 +81,7 @@ export function createRunController(input: RunInput) {
       if (!input.trusted()) throw new Error("Trust the workspace before running scripts")
       return pickRunStart(
         config.destination,
-        (cfg, cb) => input.manager.start("run", cfg, cb),
+        (cfg, cb) => input.manager.start("run", { ...cfg, projectId: input.project?.(cfg.worktreeId) }, cb),
         startVscodeRunTask,
       )(config, done)
     },

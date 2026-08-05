@@ -1,8 +1,10 @@
 package ai.kilocode.backend.cli
 
 import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageErrorDto
+import ai.kilocode.rpc.dto.MessageSummaryDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.PartTimeDto
@@ -15,6 +17,7 @@ import ai.kilocode.rpc.dto.SessionStatusDto
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -231,6 +234,34 @@ class ChatDtoSerializationTest {
         assertEquals("image/png", decoded.mime)
         assertEquals("file:///tmp/a.png", decoded.url)
         assertEquals("a.png", decoded.filename)
+    }
+
+    @Test
+    fun `MessageDto summary diffs are preserved in round-trip`() {
+        val msg = msg("msg_1").copy(
+            summary = MessageSummaryDto(
+                diffs = listOf(DiffFileDto("src/A.kt", 2, 1, "@@ patch", "modified")),
+            ),
+        )
+
+        val encoded = json.encodeToString(MessageDto.serializer(), msg)
+        assertTrue(encoded.contains(""""summary""""))
+        assertTrue(encoded.contains(""""diffs""""))
+
+        val decoded = json.decodeFromString(MessageDto.serializer(), encoded)
+        val diff = decoded.summary?.diffs?.single()
+        assertEquals("src/A.kt", diff?.file)
+        assertEquals("@@ patch", diff?.patch)
+        assertEquals("modified", diff?.status)
+    }
+
+    @Test
+    fun `MessageDto summary defaults to null`() {
+        val encoded = json.encodeToString(MessageDto.serializer(), msg("msg_1"))
+
+        val decoded = json.decodeFromString(MessageDto.serializer(), encoded)
+
+        assertNull(decoded.summary)
     }
 
     @Test

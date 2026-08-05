@@ -3,7 +3,7 @@ import type { AuthOAuthResult, Hooks } from "@kilocode/plugin"
 import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import { Auth } from "@/auth"
 import { InstanceState } from "@/effect/instance-state"
-import { optionalOmitUndefined } from "@opencode-ai/core/schema"
+import { optional } from "@opencode-ai/core/schema"
 import { Plugin } from "../plugin"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { Array as Arr, Effect, Layer, Record, Result, Context, Schema } from "effect"
@@ -24,14 +24,14 @@ const TextPrompt = Schema.Struct({
   type: Schema.Literal("text"),
   key: Schema.String,
   message: Schema.String,
-  placeholder: optionalOmitUndefined(Schema.String),
-  when: optionalOmitUndefined(When),
+  placeholder: optional(Schema.String),
+  when: optional(When),
 })
 
 const SelectOption = Schema.Struct({
   label: Schema.String,
   value: Schema.String,
-  hint: optionalOmitUndefined(Schema.String),
+  hint: optional(Schema.String),
 })
 
 const SelectPrompt = Schema.Struct({
@@ -39,7 +39,7 @@ const SelectPrompt = Schema.Struct({
   key: Schema.String,
   message: Schema.String,
   options: Schema.Array(SelectOption),
-  when: optionalOmitUndefined(When),
+  when: optional(When),
 })
 
 const Prompt = Schema.Union([TextPrompt, SelectPrompt])
@@ -47,7 +47,7 @@ const Prompt = Schema.Union([TextPrompt, SelectPrompt])
 export class Method extends Schema.Class<Method>("ProviderAuthMethod")({
   type: Schema.Literals(["oauth", "api"]),
   label: Schema.String,
-  prompts: optionalOmitUndefined(Schema.Array(Prompt)),
+  prompts: optional(Schema.Array(Prompt)),
 }) {}
 
 export const Methods = Schema.Record(Schema.String, Schema.Array(Method))
@@ -112,14 +112,12 @@ export class Service extends Context.Service<Service, Interface>()("@opencode/Pr
 
 export const use = serviceUse(Service)
 
-// kilocode_change start
-export const layer: Layer.Layer<Service, never, Auth.Service | Plugin.Service | ModelCache.Service> = Layer.effect(
+const layer: Layer.Layer<Service, never, Auth.Service | Plugin.Service | ModelCache.Service> = Layer.effect(
   Service,
   Effect.gen(function* () {
     const auth = yield* Auth.Service
     const plugin = yield* Plugin.Service
-    const cache = yield* ModelCache.Service
-    // kilocode_change end
+    const cache = yield* ModelCache.Service // kilocode_change
     const state = yield* InstanceState.make<State>(
       Effect.fn("ProviderAuth.state")(function* () {
         const plugins = yield* plugin.list()
@@ -251,16 +249,6 @@ export const layer: Layer.Layer<Service, never, Auth.Service | Plugin.Service | 
   }),
 )
 
-// kilocode_change start
-export const defaultLayer = Layer.suspend(() =>
-  layer.pipe(
-    Layer.provide(Auth.defaultLayer),
-    Layer.provide(Plugin.defaultLayer),
-    Layer.provide(ModelCache.defaultLayer),
-  ),
-)
-// kilocode_change end
-
-export const node = LayerNode.make(layer, [Auth.node, Plugin.node, ModelCache.node]) // kilocode_change
+export const node = LayerNode.make({ service: Service, layer: layer, deps: [Auth.node, Plugin.node, ModelCache.node] }) // kilocode_change
 
 export * as ProviderAuth from "./auth"

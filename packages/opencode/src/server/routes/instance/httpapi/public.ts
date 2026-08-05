@@ -116,6 +116,7 @@ function matchLegacyOpenApi(input: Record<string, unknown>) {
   }
   normalizeComponentNames(spec)
   collapseDuplicateComponents(spec)
+  restoreAgentManagerNulls(spec) // kilocode_change
   applyLegacySchemaOverrides(spec)
   normalizeComponentDescriptions(spec)
   addLegacyErrorSchemas(spec)
@@ -171,7 +172,7 @@ function matchLegacyOpenApi(input: Record<string, unknown>) {
         normalizeLegacyErrorResponses(operation)
       }
       normalizeLegacyOperation(operation, path, method)
-      if ((path === "/event" || path === "/global/event") && method === "get") {
+      if ((path === "/event" || path === "/global/event" || path === "/api/event") && method === "get") {
         // HttpApi has no first-class SSE response schema, and these handlers are
         // raw/streaming routes. Document the actual wire protocol explicitly.
         operation.responses!["200"] = {
@@ -181,7 +182,9 @@ function matchLegacyOpenApi(input: Record<string, unknown>) {
               schema:
                 path === "/event"
                   ? { $ref: "#/components/schemas/Event" }
-                  : { $ref: "#/components/schemas/GlobalEvent" },
+                  : path === "/global/event"
+                    ? { $ref: "#/components/schemas/GlobalEvent" }
+                    : { $ref: "#/components/schemas/V2Event" },
             },
           },
         }
@@ -516,6 +519,20 @@ function stripOptionalNull(schema: OpenApiSchema): OpenApiSchema {
   }
   return schema
 }
+
+// kilocode_change start - preserve nullable Agent Manager move targets in generated SDK schemas
+function restoreAgentManagerNulls(spec: OpenApiSpec) {
+  const schemas = spec.components?.schemas
+  if (!schemas) return
+  for (const name of ["AgentManagerMoveRequest", "AgentManagerMoveResult"]) {
+    const schema = schemas[name]
+    if (!schema?.properties?.sectionID) continue
+    schema.properties.sectionID = {
+      anyOf: [schema.properties.sectionID, { type: "null" }],
+    }
+  }
+}
+// kilocode_change end
 
 function isEmptyObjectUnion(schema: OpenApiSchema) {
   const options = schema.anyOf ?? schema.oneOf

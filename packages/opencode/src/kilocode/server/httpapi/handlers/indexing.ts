@@ -9,6 +9,10 @@ export const indexingHandlers = HttpApiBuilder.group(InstanceHttpApi, "indexing"
     const status = Effect.fn("IndexingHttpApi.status")(function* () {
       return yield* EffectBridge.fromPromise(() => mod.KiloIndexing.current())
     })
+    const consent = Effect.fn("IndexingHttpApi.consent")(function* (ctx: { payload: { enabled: boolean } }) {
+      yield* EffectBridge.fromPromise(() => mod.KiloIndexing.setConsent(ctx.payload.enabled))
+      return yield* EffectBridge.fromPromise(() => mod.KiloIndexing.current())
+    })
     const models = Effect.fn("IndexingHttpApi.models")(function* () {
       return yield* EffectBridge.fromPromise(() => mod.KiloIndexing.models())
     })
@@ -16,6 +20,10 @@ export const indexingHandlers = HttpApiBuilder.group(InstanceHttpApi, "indexing"
       return yield* EffectBridge.fromPromise(() => mod.KiloIndexing.warnings())
     })
 
-    return handlers.handle("status", status).handle("models", models).handle("warnings", warnings)
+    return handlers
+      .handle("status", status)
+      .handle("consent", consent)
+      .handle("models", models)
+      .handle("warnings", warnings)
   }),
 )

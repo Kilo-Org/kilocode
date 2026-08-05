@@ -4,6 +4,11 @@ export const dict = {
   "agentManager.sidebar.expand": "サイドバーを表示",
   "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "セッション",
+  "agentManager.projects": "プロジェクト",
+  "agentManager.project.add": "プロジェクトを追加",
+  "agentManager.project.remove": "Agent Managerから削除",
+  "agentManager.project.trust": "信頼する",
+  "agentManager.project.missing": "リポジトリが見つかりません",
   "agentManager.notGitRepo": "gitリポジトリではありません",
   "agentManager.worktree.settings": "Worktree設定",
   "agentManager.worktree.new": "新しいWorktree",
@@ -59,6 +64,11 @@ export const dict = {
 
   "agentManager.terminal.new": "新しいターミナルタブ",
   "agentManager.terminal.ended": "ターミナルが終了しました — タブを閉じて破棄",
+  "agentManager.terminal.endedRestartable":
+    "ターミナルが終了しました - 入力して新しいシェルを開始するか、タブを閉じてください",
+  "agentManager.terminal.setupFailed": "セットアップスクリプトが失敗しました",
+  "agentManager.terminal.setupFailedCode": "セットアップスクリプトが終了コードで失敗しました",
+  "agentManager.terminal.stopSetup": "セットアップスクリプトを停止",
   "agentManager.terminal.connectionError": "ターミナル接続エラー",
   "agentManager.terminal.add": "新しいターミナル",
   "agentManager.terminal.empty": "ここにはまだターミナルがありません",
