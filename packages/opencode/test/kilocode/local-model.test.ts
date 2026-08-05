@@ -77,6 +77,7 @@ const realToast = await import("@tui/ui/toast")
 const realEvent = await import("@tui/context/event")
 const realRoute = await import("@tui/context/route")
 const realRuntime = await import("@tui/context/runtime")
+const realPermission = await import("@tui/context/permission")
 
 let capturedInit: (() => any) | undefined
 
@@ -167,6 +168,11 @@ mock.module("@tui/context/event", () => ({
 mock.module("@tui/context/route", () => ({
   ...realRoute,
   useRoute: () => ({ data: { type: "home" }, navigate: () => {} }),
+}))
+
+mock.module("@tui/context/permission", () => ({
+  ...realPermission,
+  usePermission: () => ({ mode: "normal", set: () => {}, toggle: () => {} }),
 }))
 
 // Import the real Global to get the state path (set by test preload via XDG_STATE_HOME)

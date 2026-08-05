@@ -227,6 +227,8 @@ export const dict = {
     "คลิกเพื่อจำกัดการเขียนในระบบไฟล์ การตั้งค่า sandbox ของคุณยังคงอนุญาตให้เข้าถึงเครือข่าย",
 
   "speechToText.tooltip.start": "เริ่มการป้อนข้อมูลด้วยเสียงด้วย Kilo Gateway",
+  "speechToText.tooltip.shortcut":
+    "แตะหรือกด Cmd/Ctrl+K เพื่อเริ่มหรือหยุดบันทึก จากนั้นกดค้างไว้ขณะพูด แล้วปล่อยเพื่อถอดเสียงและส่ง",
   "speechToText.tooltip.starting": "กำลังเริ่มไมโครโฟน... โปรดรอก่อนพูด",
   "speechToText.tooltip.stop": "หยุดจับเสียง",
   "speechToText.tooltip.transcribing": "กำลังถอดเสียง... คลิกเพื่อยกเลิก",
@@ -263,6 +265,7 @@ export const dict = {
 
   "notification.permission.title": "ต้องการสิทธิ์",
   "notification.permission.titleSubagent": "ต้องการสิทธิ์ (ตัวแทนย่อย)",
+  "notification.permission.titleSkillShell": 'เรียกใช้คำสั่งเชลล์จากสกิล "{{skill}}" หรือไม่?',
   "ui.permission.manageAutoApprove": "จัดการกฎการอนุมัติอัตโนมัติ",
   "ui.permission.doomLoop.prompt": "ตรวจพบการวนซ้ำที่อาจเกิดขึ้นในเครื่องมือ {{tool}} ต้องการดำเนินการต่อหรือไม่",
   "ui.permission.doomLoop.rule": "เรียกใช้ {{tool}} ต่อไป",
@@ -879,6 +882,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "โมเดล SWE-Pruner",
   "settings.experimental.swePrunerModel.description":
     "โมเดลที่ใช้ตัดทอนผลลัพธ์ของเครื่องมือ ค่าเริ่มต้นคือโมเดลขนาดเล็กที่กำหนดไว้",
+  "settings.experimental.multiProject.title": "Agent Manager หลายโปรเจกต์",
+  "settings.experimental.multiProject.description":
+    "เปิดใช้งานการจัดการเซสชันและเวิร์กทรีข้ามหลาย Repository ใน Agent Manager Repository ของ workspace ปัจจุบันเป็นโปรเจกต์เริ่มต้นเสมอ",
   "settings.experimental.mcpTimeout.title": "หมดเวลา MCP (มิลลิวินาที)",
   "settings.experimental.mcpTimeout.description": "หมดเวลาสำหรับคำขอเซิร์ฟเวอร์ MCP เป็นมิลลิวินาที",
   "settings.experimental.remote.title": "การควบคุม Remote",
@@ -1004,6 +1010,9 @@ export const dict = {
     "ไม่มีคำสั่งแบบกำหนดเองที่กำหนดค่าไว้ เพิ่มคำสั่งใน opencode.json เพื่อดูที่นี่",
   "settings.agentBehaviour.workflows.detail.description": "คำอธิบาย",
   "settings.agentBehaviour.workflows.detail.template": "เทมเพลต",
+  "settings.agentBehaviour.workflows.model": "โมเดล",
+  "settings.agentBehaviour.workflows.variant": "รูปแบบ",
+  "settings.agentBehaviour.workflows.modelDescription": "การแทนที่โมเดลส่วนกลาง",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "เรียกใช้คำสั่ง shell ของ agent ใน sandbox ระดับระบบปฏิบัติการที่จำกัดการเขียนไปยังโฟลเดอร์สถานะของโปรเจ็กต์และ Kilo",

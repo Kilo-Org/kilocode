@@ -22,6 +22,7 @@ function scene(initial: string | null = LOCAL) {
     shown: [] as string[],
     errors: 0,
     running: [] as Array<{ contextKey: string; terminalId: string }>,
+    sideFocus: [] as boolean[],
   }
   const tabs = () => state.current().map((term) => term.id)
   const handlers = createTerminalHandlers({
@@ -49,17 +50,18 @@ function scene(initial: string | null = LOCAL) {
     },
     showError: () => events.errors++,
     postMessage: (message) => posted.push(message as Record<string, unknown>),
+    onSideCreated: (_contextKey, _terminalId, focus) => events.sideFocus.push(focus),
     onScriptRunning: (contextKey, terminalId) => events.running.push({ contextKey, terminalId }),
   })
   return { state, selection, setSelection, posted, events, handlers, dispatch }
 }
 
-function createdSide(createId: string, terminalId: string, title = "Terminal 1") {
+function createdSide(createId: string, terminalId: string, title = "Terminal 1", worktreeId: string | null = null) {
   return {
     type: "agentManager.terminal.created",
     createId,
     placement: "side",
-    worktreeId: null,
+    worktreeId,
     terminalId,
     title,
     wsUrl: `ws://${terminalId}`,
@@ -132,7 +134,7 @@ describe("Agent Manager terminal state", () => {
       const run = item.state.sidesForContext(LOCAL).find((term) => term.id === "script:run")
       expect(run).toMatchObject({ title: "Run", placement: "side", kind: "run", contextKey: LOCAL })
       expect(item.events.running).toEqual([{ contextKey: LOCAL, terminalId: "script:run" }])
-      expect(item.state.scriptStatus("script:run")).toEqual({ state: "running" })
+      expect(item.state.scriptStatus("script:run")).toEqual({ state: "running", kind: "run" })
       expect(isTerminalTabId("script:run")).toBe(true)
 
       item.state.setTitle("script:run", "npm test")
@@ -140,7 +142,7 @@ describe("Agent Manager terminal state", () => {
 
       item.dispatch(script("script:run", "exited", 0))
       expect(item.state.sidesForContext(LOCAL).find((term) => term.id === "script:run")).toBe(run)
-      expect(item.state.scriptStatus("script:run")).toEqual({ state: "exited", exitCode: 0 })
+      expect(item.state.scriptStatus("script:run")).toEqual({ state: "exited", exitCode: 0, kind: "run" })
       expect(item.state.sidesForContext(LOCAL).find((term) => term.id === "terminal:user")).toBe(user)
       // Existing snapshots update status only; they do not re-open the inspector.
       expect(item.events.running).toEqual([{ contextKey: LOCAL, terminalId: "script:run" }])
@@ -159,6 +161,151 @@ describe("Agent Manager terminal state", () => {
 
       expect(item.state.sidesForContext(LOCAL)[0]).toMatchObject({ id: "script:exit", contextKey: LOCAL })
       expect(item.events.running).toEqual([])
+      dispose()
+    })
+  })
+
+  it("hydrates Setup snapshots with their semantic title and kind", () => {
+    createRoot((dispose) => {
+      const item = scene()
+      item.dispatch({
+        type: "agentManager.scriptTerminals",
+        terminals: [
+          {
+            terminalId: "script:setup",
+            worktreeId: "wt-1",
+            kind: "setup",
+            title: "Setup",
+            wsUrl: "ws://script:setup",
+            state: "running",
+            font,
+          },
+        ],
+      } satisfies ExtensionMessage)
+
+      const setup = item.state.sidesForContext("wt-1").find((term) => term.id === "script:setup")
+      expect(setup).toMatchObject({ title: "Setup", placement: "side", kind: "setup", contextKey: "wt-1" })
+      expect(item.events.running).toEqual([{ contextKey: "wt-1", terminalId: "script:setup" }])
+      expect(item.state.scriptStatus("script:setup")).toEqual({ state: "running", kind: "setup" })
+      expect(item.state.isScript("script:setup")).toBe(true)
+
+      item.state.setTitle("script:setup", "bash")
+      expect(item.state.title("script:setup")).toBe("Setup")
+
+      item.dispatch({ type: "agentManager.scriptTerminals", terminals: [] } satisfies ExtensionMessage)
+      expect(item.state.sidesForContext("wt-1")).toEqual([])
+      expect(item.state.scriptStatus("script:setup")).toBeUndefined()
+      dispose()
+    })
+  })
+
+  it("hydrates script terminals into independent project contexts", () => {
+    createRoot((dispose) => {
+      const item = scene()
+      item.dispatch({
+        type: "agentManager.scriptTerminals",
+        terminals: [
+          {
+            terminalId: "script:setup-a",
+            projectId: "prj-a",
+            worktreeId: "wt-1",
+            kind: "setup",
+            title: "Setup",
+            wsUrl: "ws://script:setup-a",
+            state: "running",
+            font,
+          },
+          {
+            terminalId: "script:setup-b",
+            projectId: "prj-b",
+            worktreeId: "wt-1",
+            kind: "setup",
+            title: "Setup",
+            wsUrl: "ws://script:setup-b",
+            state: "running",
+            font,
+          },
+        ],
+      } satisfies ExtensionMessage)
+
+      expect(item.state.sidesForContext("prj-a:wt-1").map((term) => term.id)).toEqual(["script:setup-a"])
+      expect(item.state.sidesForContext("prj-b:wt-1").map((term) => term.id)).toEqual(["script:setup-b"])
+      expect(item.events.running).toEqual([
+        { contextKey: "prj-a:wt-1", terminalId: "script:setup-a" },
+        { contextKey: "prj-b:wt-1", terminalId: "script:setup-b" },
+      ])
+      dispose()
+    })
+  })
+
+  it("activates a Setup terminal that hydrates before its worktree is selected", () => {
+    createRoot((dispose) => {
+      const item = scene(LOCAL)
+      item.dispatch({
+        type: "agentManager.scriptTerminals",
+        terminals: [
+          {
+            terminalId: "script:setup-background",
+            worktreeId: "wt-background",
+            kind: "setup",
+            title: "Setup",
+            wsUrl: "ws://script:setup-background",
+            state: "running",
+            font,
+          },
+        ],
+      } satisfies ExtensionMessage)
+
+      expect(item.state.sideActiveFor("wt-background")).toBe("script:setup-background")
+      expect(item.events.running).toEqual([{ contextKey: "wt-background", terminalId: "script:setup-background" }])
+      dispose()
+    })
+  })
+
+  it("does not replace an existing side-terminal selection during background hydration", () => {
+    createRoot((dispose) => {
+      const item = scene(LOCAL)
+      item.dispatch({
+        type: "agentManager.scriptTerminals",
+        terminals: [
+          {
+            terminalId: "script:run-background",
+            worktreeId: "wt-background",
+            kind: "run",
+            title: "Run",
+            wsUrl: "ws://script:run-background",
+            state: "running",
+            font,
+          },
+        ],
+      } satisfies ExtensionMessage)
+      item.state.setSideActive("wt-background", "script:run-background")
+
+      item.dispatch({
+        type: "agentManager.scriptTerminals",
+        terminals: [
+          {
+            terminalId: "script:run-background",
+            worktreeId: "wt-background",
+            kind: "run",
+            title: "Run",
+            wsUrl: "ws://script:run-background",
+            state: "running",
+            font,
+          },
+          {
+            terminalId: "script:setup-background",
+            worktreeId: "wt-background",
+            kind: "setup",
+            title: "Setup",
+            wsUrl: "ws://script:setup-background",
+            state: "running",
+            font,
+          },
+        ],
+      } satisfies ExtensionMessage)
+
+      expect(item.state.sideActiveFor("wt-background")).toBe("script:run-background")
       dispose()
     })
   })
@@ -182,6 +329,37 @@ describe("Agent Manager terminal state", () => {
       item.handlers.requestSide()
       expect(item.posted).toHaveLength(1)
       expect(item.state.focusRequest()?.id).toBe("terminal:side")
+      dispose()
+    })
+  })
+
+  it("ensures a side terminal without revealing the panel", () => {
+    createRoot((dispose) => {
+      const item = scene("wt-1")
+      item.handlers.ensureSide()
+      item.handlers.ensureSide()
+
+      expect(item.events.shown).toEqual([])
+      expect(item.posted).toHaveLength(1)
+      expect(item.posted[0]).toMatchObject({
+        type: "agentManager.terminal.create",
+        placement: "side",
+        worktreeId: "wt-1",
+      })
+      const createId = String(item.posted[0]!.createId)
+      expect(item.dispatch(createdSide(createId, "terminal:side", "Terminal 1", "wt-1"))).toBe(true)
+      expect(item.events.sideFocus).toEqual([false])
+      dispose()
+    })
+  })
+
+  it("focuses a side terminal only when the user explicitly opens it", () => {
+    createRoot((dispose) => {
+      const item = scene()
+      item.handlers.addSide()
+      const createId = String(item.posted[0]!.createId)
+      expect(item.dispatch(createdSide(createId, "terminal:side"))).toBe(true)
+      expect(item.events.sideFocus).toEqual([true])
       dispose()
     })
   })
@@ -238,6 +416,30 @@ describe("Agent Manager terminal state", () => {
       // Closing an unknown or non-side id is a no-op.
       expect(item.handlers.closeSide("terminal:gone")).toBe(false)
       expect(item.posted).toHaveLength(2)
+      dispose()
+    })
+  })
+
+  it("keeps only the target side terminal on close others", () => {
+    createRoot((dispose) => {
+      const item = scene()
+      item.state.add(null, { id: "terminal:one", title: "Terminal 1", wsUrl: "ws://one", font, placement: "side" })
+      item.state.add(null, { id: "terminal:two", title: "Terminal 2", wsUrl: "ws://two", font, placement: "side" })
+      item.state.add(null, { id: "terminal:three", title: "Terminal 3", wsUrl: "ws://three", font, placement: "side" })
+      // Another context must survive untouched: "others" is per context.
+      item.state.add("wt-1", { id: "terminal:other", title: "Other", wsUrl: "ws://other", font, placement: "side" })
+      item.state.setSideActive(LOCAL, "terminal:one")
+
+      item.handlers.closeSideOthers("terminal:two")
+      expect(item.state.sidesForContext(LOCAL).map((term) => term.id)).toEqual(["terminal:two"])
+      expect(item.state.sidesForContext("wt-1").map((term) => term.id)).toEqual(["terminal:other"])
+      // The survivor becomes visible and focused, like selecting its tab.
+      expect(item.state.sideActiveFor(LOCAL)).toBe("terminal:two")
+      expect(item.state.focusRequest()?.id).toBe("terminal:two")
+      expect(item.posted).toEqual([
+        { type: "agentManager.terminal.close", terminalId: "terminal:one" },
+        { type: "agentManager.terminal.close", terminalId: "terminal:three" },
+      ])
       dispose()
     })
   })
@@ -372,6 +574,104 @@ describe("Agent Manager terminal state", () => {
       expect(item.state.sideFocusedId()).toBeUndefined()
       item.state.setFocusedId("terminal:side")
       expect(item.state.sideFocusedId()).toBe("terminal:side")
+      dispose()
+    })
+  })
+
+  // Multi-project regression: AgentManagerApp feeds createTerminalState a
+  // project-namespaced selection accessor (`${projectId}:${sel}`) so ids
+  // from different projects never collide. The wire protocol still speaks
+  // plain worktree ids, and `terminal.created` carries the owning
+  // `projectId` so the answer lands back in the namespaced context.
+  function nsScene(initial: string | null = LOCAL, pid = "prj-1") {
+    const [selection, setSelection] = createSignal<string | null>(initial)
+    const ns = (sel: string) => `${pid}:${sel}`
+    const state = createTerminalState(() => {
+      const sel = selection()
+      return sel === null ? null : ns(sel)
+    })
+    const posted: Array<Record<string, unknown>> = []
+    const events = { activated: [] as string[], selected: [] as string[], created: [] as string[] }
+    const handlers = createTerminalHandlers({
+      state,
+      tabIds: () => state.current().map((term) => term.id),
+      selectReview: () => undefined,
+      selectSessionTab: () => undefined,
+      clearSession: () => undefined,
+      resetOthers: () => undefined,
+      isPendingId: () => false,
+      findTab: () => undefined,
+      postMessage: (message) => posted.push(message as Record<string, unknown>),
+      onShowSide: () => undefined,
+      getSelection: selection,
+      LOCAL,
+      REVIEW_TAB_ID: "review",
+    })
+    const dispatch = createTerminalMessageHandler({
+      state,
+      activate: (id) => events.activated.push(id),
+      saveTabMemory: () => undefined,
+      setSelection: (value) => events.selected.push(value),
+      showError: () => undefined,
+      postMessage: (message) => posted.push(message as Record<string, unknown>),
+      onCreated: (contextKey) => events.created.push(contextKey),
+    })
+    return { state, posted, events, handlers, dispatch, ns }
+  }
+
+  it("keeps the namespaced state key out of side creates and buckets project-stamped answers", () => {
+    createRoot((dispose) => {
+      const item = nsScene(LOCAL)
+      item.handlers.requestSide()
+
+      expect(item.posted).toHaveLength(1)
+      const request = item.posted[0]!
+      expect(request).toMatchObject({ type: "agentManager.terminal.create", placement: "side", worktreeId: null })
+      expect(item.dispatch({ ...createdSide(String(request.createId), "terminal:side"), projectId: "prj-1" })).toBe(
+        true,
+      )
+      expect(item.state.sideKey()).toBe("prj-1:local")
+      expect(item.state.sides().map((term) => term.id)).toEqual(["terminal:side"])
+      expect(item.state.sideActiveFor("prj-1:local")).toBe("terminal:side")
+
+      // A worktree context sends its plain worktree id, not "prj-1:wt-1".
+      const wt = nsScene("wt-1")
+      wt.handlers.addSide()
+      expect(wt.posted[0]).toMatchObject({
+        type: "agentManager.terminal.create",
+        placement: "side",
+        worktreeId: "wt-1",
+      })
+      dispose()
+    })
+  })
+
+  it("buckets project-stamped tab terminals under the namespaced context", () => {
+    createRoot((dispose) => {
+      const item = nsScene(LOCAL)
+      item.handlers.requestNew()
+      expect(item.posted[0]).toMatchObject({
+        type: "agentManager.terminal.create",
+        placement: "tab",
+        worktreeId: null,
+      })
+      const created: ExtensionMessage = {
+        type: "agentManager.terminal.created",
+        createId: String(item.posted[0]!.createId),
+        placement: "tab",
+        worktreeId: null,
+        projectId: "prj-1",
+        terminalId: "terminal:tab",
+        title: "Terminal 1",
+        wsUrl: "ws://tab",
+        font,
+      }
+      expect(item.dispatch(created)).toBe(true)
+      expect(item.state.current().map((term) => term.id)).toEqual(["terminal:tab"])
+      // Selection and tab order stay on the plain protocol id.
+      expect(item.events.selected).toEqual([LOCAL])
+      expect(item.events.created).toEqual([LOCAL])
+      expect(item.events.activated).toEqual(["terminal:tab"])
       dispose()
     })
   })

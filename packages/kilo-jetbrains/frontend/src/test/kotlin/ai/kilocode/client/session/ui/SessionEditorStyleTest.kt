@@ -136,4 +136,24 @@ class SessionEditorStyleTest : BasePlatformTestCase() {
 
         SessionEditorStyle.current().applyTranscriptToEditor(editor)
     }
+
+    fun `test applyToEditor skips redundant scheme reinit for the same snapshot`() {
+        val factory = EditorFactory.getInstance()
+        val editor = factory.createEditor(factory.createDocument("a\nb\nc\n"), project) as EditorEx
+        try {
+            val style = SessionEditorStyle.current()
+            style.applyToEditor(editor)
+            // setColorsScheme wraps the scheme in a fresh delegate on every call, so an unchanged
+            // colorsScheme identity proves the redundant second apply was skipped (no reinit).
+            val applied = editor.colorsScheme
+            style.applyToEditor(editor)
+            assertSame(applied, editor.colorsScheme)
+
+            // A different snapshot instance must still re-apply and swap the delegate.
+            SessionEditorStyle.current().applyToEditor(editor)
+            assertNotSame(applied, editor.colorsScheme)
+        } finally {
+            factory.releaseEditor(editor)
+        }
+    }
 }

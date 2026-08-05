@@ -4,6 +4,7 @@ import com.intellij.openapi.util.SystemInfo
 import com.intellij.util.system.CpuArch
 
 internal object KiloCliPlatform {
+    // Keep supported OS/architecture pairs in sync with Gradle CLI staging task platform lists.
     fun current(): String {
         val os = when {
             SystemInfo.isMac -> "darwin"

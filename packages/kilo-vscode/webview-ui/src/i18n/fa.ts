@@ -227,6 +227,8 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "دکمه «بهبود پرامپت» با ارائه زمینه بیشتر، توضیح یا بازنویسی، به بهتر کردن پرامپت شما کمک می‌کند. یک پرامپت تایپ کنید و دوباره روی دکمه کلیک کنید تا نحوه عملکرد آن را ببینید.",
   "speechToText.tooltip.start": "شروع ورودی صوتی با Kilo Gateway",
+  "speechToText.tooltip.shortcut":
+    "برای شروع یا توقف ضبط، روی دکمه ضربه بزنید یا Cmd/Ctrl+K را فشار دهید؛ هنگام صحبت دکمه را نگه دارید و سپس رها کنید تا گفتار به متن تبدیل و ارسال شود.",
   "speechToText.tooltip.starting": "در حال راه‌اندازی میکروفون... منتظر بمانید.",
   "speechToText.tooltip.stop": "در حال ضبط. برای توقف کلیک کنید.",
   "speechToText.tooltip.transcribing": "در حال رونویسی... برای لغو کلیک کنید.",
@@ -263,6 +265,7 @@ export const dict = {
 
   "notification.permission.title": "مجوز لازم است",
   "notification.permission.titleSubagent": "مجوز مورد نیاز است (زیرعامل)",
+  "notification.permission.titleSkillShell": "دستورهای شل از مهارت «{{skill}}» اجرا شود؟",
   "ui.permission.manageAutoApprove": "مدیریت قوانین تأیید خودکار",
   "ui.permission.doomLoop.prompt": "حلقه احتمالی برای ابزار {{tool}} شناسایی شد. ادامه می‌دهید؟",
   "ui.permission.doomLoop.rule": "ادامه فراخوانی‌های {{tool}}",
@@ -880,6 +883,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "مدل SWE-Pruner",
   "settings.experimental.swePrunerModel.description":
     "مدل مورد استفاده برای مرور سریع خروجی‌های ابزار؛ به‌طور پیش‌فرض از مدل کوچک پیکربندی‌شده استفاده می‌کند",
+  "settings.experimental.multiProject.title": "مدیر agent چندپروژه‌ای",
+  "settings.experimental.multiProject.description":
+    "مدیریت sessionها و worktreeها را در چند مخزن در Agent Manager فعال می‌کند. مخزن فضای کاری فعلی همیشه پروژه پیش‌فرض است.",
   "settings.experimental.mcpTimeout.title": "زمان‌وقفه MCP (میلی‌ثانیه)",
   "settings.experimental.mcpTimeout.description": "زمان‌وقفه برای درخواست‌های سرور MCP بر حسب میلی‌ثانیه",
   "settings.experimental.remote.title": "کنترل از راه دور",
@@ -965,6 +971,9 @@ export const dict = {
     "هیچ دستور سفارشی پیکربندی نشده است. دستورات را به opencode.json خود اضافه کنید تا اینجا نمایش داده شوند.",
   "settings.agentBehaviour.workflows.detail.description": "توضیحات",
   "settings.agentBehaviour.workflows.detail.template": "قالب",
+  "settings.agentBehaviour.workflows.model": "مدل",
+  "settings.agentBehaviour.workflows.variant": "گونه",
+  "settings.agentBehaviour.workflows.modelDescription": "بازنویسی مدل سراسری",
 
   "settings.agentBehaviour.createMode": "ایجاد حالت جدید",
   "settings.agentBehaviour.createMode.name": "نام",

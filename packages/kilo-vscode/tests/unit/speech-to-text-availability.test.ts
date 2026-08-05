@@ -23,9 +23,11 @@ describe("speech-to-text availability", () => {
   })
 
   it("normalizes configured and unknown transcription models", () => {
-    expect(selectedSpeechToTextModel({ experimental: { speech_to_text_model: "google/chirp-3" } })).toBe(
-      "google/chirp-3",
-    )
+    expect(
+      selectedSpeechToTextModel({ experimental: { speech_to_text_model: "google/chirp-3" } }, [
+        { id: "google/chirp-3", label: "Chirp 3", provider: "Google" },
+      ]),
+    ).toBe("google/chirp-3")
     expect(selectedSpeechToTextModel({ experimental: { speech_to_text_model: "unknown/model" } })).toBe(
       DEFAULT_SPEECH_TO_TEXT_MODEL.id,
     )

@@ -25,6 +25,7 @@ describe("Agent Manager terminal routing", () => {
       getServerConfig: () => ({ baseUrl: "http://127.0.0.1:4096", password: "secret" }),
       getRoot: () => "/workspace",
       getWorktreePath: (id) => (id === "wt-1" ? "/workspace/wt-1" : undefined),
+      getProjectId: () => "prj-1",
       log: () => undefined,
       post: (message) => messages.push(message),
       getTerminalFont: () => font,
@@ -42,6 +43,7 @@ describe("Agent Manager terminal routing", () => {
       createId: "side-1",
       placement: "side",
       worktreeId: "wt-1",
+      projectId: "prj-1",
     })
 
     router.handle({
@@ -83,6 +85,7 @@ describe("Agent Manager terminal routing", () => {
       getServerConfig: () => ({ baseUrl: "http://127.0.0.1:4096", password: "secret" }),
       getRoot: () => "/workspace",
       getWorktreePath: () => undefined,
+      getProjectId: () => "prj-1",
       log: () => undefined,
       post: (message) => messages.push(message),
       getTerminalFont: () => font,
@@ -132,6 +135,7 @@ describe("Agent Manager terminal routing", () => {
       getServerConfig: () => ({ baseUrl: "http://127.0.0.1:4096", password: "secret" }),
       getRoot: () => "/workspace",
       getWorktreePath: () => undefined,
+      getProjectId: () => "prj-1",
       log: () => undefined,
       post: (message) => messages.push(message),
       getTerminalFont: () => font,
@@ -178,6 +182,7 @@ describe("Agent Manager terminal routing", () => {
       getServerConfig: () => ({ baseUrl: "http://127.0.0.1:4096", password: "secret" }),
       getRoot: () => "/workspace",
       getWorktreePath: () => undefined,
+      getProjectId: () => "prj-1",
       log: () => undefined,
       post: (message) => messages.push(message),
       getTerminalFont: () => font,
@@ -217,6 +222,7 @@ describe("Agent Manager terminal routing", () => {
       getServerConfig: () => ({ baseUrl: "http://127.0.0.1:4096", password: "secret" }),
       getRoot: () => "/workspace",
       getWorktreePath: () => undefined,
+      getProjectId: () => "prj-1",
       log: () => undefined,
       post: () => undefined,
       getTerminalFont: () => font,
@@ -262,6 +268,7 @@ describe("Agent Manager terminal routing", () => {
       getServerConfig: () => ({ baseUrl: "http://127.0.0.1:4096", password: "secret" }),
       getRoot: () => "/workspace",
       getWorktreePath: () => undefined,
+      getProjectId: () => "prj-1",
       log: () => undefined,
       post: (message) => messages.push(message),
       getTerminalFont: () => font,
@@ -278,6 +285,51 @@ describe("Agent Manager terminal routing", () => {
     await wait()
 
     expect(messages[0]).toMatchObject({ type: "agentManager.terminal.created", createId: "real" })
+    await router.dispose()
+  })
+
+  it("lazily replaces an ended PTY in the same logical terminal", async () => {
+    const messages: AgentManagerOutMessage[] = []
+    let seq = 0
+    const client = {
+      pty: {
+        create: async ({ title }: { title: string }) => {
+          seq++
+          return { data: { id: `pty-${seq}`, title } }
+        },
+        remove: async () => ({ data: true }),
+        update: async () => ({ data: true }),
+      },
+    } as unknown as KiloClient
+    const router = new TerminalRouter({
+      getClient: () => client,
+      getClientAsync: async () => client,
+      getServerConfig: () => ({ baseUrl: "http://127.0.0.1:4096", password: "secret" }),
+      getRoot: () => "/workspace",
+      getWorktreePath: () => undefined,
+      getProjectId: () => "prj-1",
+      log: () => undefined,
+      post: (message) => messages.push(message),
+      getTerminalFont: () => font,
+    })
+
+    router.handle({ type: "agentManager.terminal.create", createId: "one", placement: "tab", worktreeId: null })
+    await wait()
+    const created = messages.find((message) => message.type === "agentManager.terminal.created")
+    if (!created || created.type !== "agentManager.terminal.created") throw new Error("missing terminal")
+
+    router.handle({
+      type: "agentManager.terminal.restart",
+      terminalId: created.terminalId,
+      cols: 80,
+      rows: 24,
+    })
+    await wait()
+    expect(messages.at(-1)).toMatchObject({
+      type: "agentManager.terminal.restarted",
+      terminalId: created.terminalId,
+      wsUrl: expect.stringContaining("pty-2"),
+    })
     await router.dispose()
   })
 })

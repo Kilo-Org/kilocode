@@ -38,6 +38,7 @@ function Ready(props: ParentProps) {
 // kilocode_change end
 
 test("refreshes resources into reactive getters", async () => {
+  const events = createEventSource()
   const location = {
     directory,
     project: { id: "proj_test", directory },
@@ -61,8 +62,7 @@ test("refreshes resources into reactive getters", async () => {
         data: [{ id: "build", request: { headers: {}, body: {} }, mode: "primary", hidden: false, permissions: [] }],
       })
     return undefined
-  })
-  const events = createEventSource()
+  }, events)
   let data!: ReturnType<typeof useData>
   let ready!: () => void
   const mounted = new Promise<void>((resolve) => {
@@ -133,7 +133,7 @@ test("refreshes integrations after integration updates", async () => {
               },
             ],
     })
-  })
+  }, events)
   let data!: ReturnType<typeof useData>
   let ready!: () => void
   const mounted = new Promise<void>((resolve) => {
@@ -187,7 +187,7 @@ test("refreshes effective catalog data after catalog updates", async () => {
       requests.provider++
       return json({ location: { directory, project: { id: "proj_test", directory } }, data: [] })
     }
-  })
+  }, events)
 
   const app = await testRender(() => (
     <TestTuiContexts>
@@ -225,7 +225,7 @@ test("refreshes references after updates", async () => {
       location: { directory, project: { id: "proj_test", directory } },
       data: requests === 1 ? [] : [{ name: "docs", path: "/docs", source: { type: "local", path: "/docs" } }],
     })
-  })
+  }, events)
   let data!: ReturnType<typeof useData>
   let ready!: () => void
   const mounted = new Promise<void>((resolve) => {
@@ -265,7 +265,7 @@ test("refreshes references after updates", async () => {
 
 test("settles pending tools when a live failure arrives", async () => {
   const events = createEventSource()
-  const calls = createFetch()
+  const calls = createFetch(undefined, events)
   let sync!: ReturnType<typeof useData>
   let ready!: () => void
   const mounted = new Promise<void>((resolve) => {
@@ -394,9 +394,9 @@ test("settles pending tools when a live failure arrives", async () => {
   }
 })
 
-test("renders admitted prompts only after promotion", async () => {
+test("renders admitted prompts only after they become model-visible", async () => {
   const events = createEventSource()
-  const calls = createFetch()
+  const calls = createFetch(undefined, events)
   let sync!: ReturnType<typeof useData>
   let ready!: () => void
   const mounted = new Promise<void>((resolve) => {
@@ -439,14 +439,14 @@ test("renders admitted prompts only after promotion", async () => {
     expect(sync.session.message.list("session-1") ?? []).toEqual([])
 
     emitEvent(events, {
-      id: "evt_promoted_1",
-      type: "session.next.prompt.promoted",
+      id: "evt_prompted_1",
+      type: "session.next.prompted",
       properties: {
         sessionID: "session-1",
         messageID: "msg_user_1",
-        timestamp: 1,
+        timestamp: 0,
         prompt: { text: "hello" },
-        timeCreated: 0,
+        delivery: "steer",
       },
     })
 
@@ -460,6 +460,7 @@ test("renders admitted prompts only after promotion", async () => {
   }
 })
 
+// kilocode_change start - retain promoted prompt compatibility used by Kilo sync
 test("renders a promoted prompt when admission was missed", async () => {
   const events = createEventSource()
   const calls = createFetch()
@@ -493,13 +494,13 @@ test("renders a promoted prompt when admission was missed", async () => {
     await mounted
     emitEvent(events, {
       id: "evt_promoted_1",
-      type: "session.next.prompt.promoted",
+      type: "session.next.prompted",
       properties: {
         sessionID: "session-1",
         messageID: "msg_user_1",
         timestamp: 1,
         prompt: { text: "hello" },
-        timeCreated: 0,
+        delivery: "steer",
       },
     })
 
@@ -509,10 +510,11 @@ test("renders a promoted prompt when admission was missed", async () => {
     app.renderer.destroy()
   }
 })
+// kilocode_change end
 
 test("projects live context updates with their message ID", async () => {
   const events = createEventSource()
-  const calls = createFetch()
+  const calls = createFetch(undefined, events)
   let sync!: ReturnType<typeof useData>
   let ready!: () => void
   const mounted = new Promise<void>((resolve) => {
@@ -920,13 +922,13 @@ test("replaces stale cached messages while preserving in-flight live messages", 
     await mounted
     emitEvent(events, {
       id: "evt_promoted_1",
-      type: "session.next.prompt.promoted",
+      type: "session.next.prompted",
       properties: {
         sessionID: "session-1",
         messageID: "msg_user_1",
         timestamp: 1,
         prompt: { text: "stale" },
-        timeCreated: 0,
+        delivery: "steer",
       },
     })
     await wait(() => data.session.message.list("session-1")?.[0]?.id === "msg_user_1")

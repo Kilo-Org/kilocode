@@ -5,6 +5,7 @@ import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
@@ -47,6 +48,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     /** Message history returned by [messages]. */
     val history = mutableListOf<MessageWithPartsDto>()
     val histories = mutableMapOf<String, MutableList<MessageWithPartsDto>>()
+    val diffs = mutableMapOf<String, MutableList<DiffFileDto>>()
     var historyGate: CompletableDeferred<Unit>? = null
     var historyCalls = 0
         private set
@@ -252,6 +254,11 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
         return histories[id]?.toList() ?: history.toList()
     }
 
+    override suspend fun diff(id: String, directory: String): List<DiffFileDto> {
+        assertNotEdt("diff")
+        return diffs[id]?.toList().orEmpty()
+    }
+
     override suspend fun attachmentPart(id: String, directory: String, messageId: String, partId: String, attachmentKey: String?): PartDto? {
         assertNotEdt("attachmentPart")
         attachmentParts.add(AttachmentCall(id, directory, messageId, partId, attachmentKey))
@@ -276,8 +283,11 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
         configs.add(directory to config)
     }
 
+    var replyPermissionThrows: Exception? = null
+
     override suspend fun replyPermission(requestId: String, directory: String, reply: PermissionReplyDto) {
         assertNotEdt("replyPermission")
+        replyPermissionThrows?.let { throw it }
         permissionReplies.add(Triple(requestId, directory, reply))
     }
 

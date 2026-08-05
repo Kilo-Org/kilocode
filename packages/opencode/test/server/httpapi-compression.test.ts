@@ -95,9 +95,10 @@ describe("HttpApi compression", () => {
     })
 
     test("when the response body is below the 1024-byte threshold", async () => {
-      // A bare config produces a tiny response (~few hundred bytes).
+      // kilocode_change - /config now serialises enough defaults to clear the threshold on its own,
+      // so use /global/health, which stays a handful of bytes.
       await using tmp = await tmpdir({ config: { formatter: false, lsp: false } })
-      const response = await app().request("/config", {
+      const response = await app().request("/global/health", {
         headers: { "x-kilo-directory": tmp.path, "accept-encoding": "gzip" },
       })
       expect(response.status).toBe(200)

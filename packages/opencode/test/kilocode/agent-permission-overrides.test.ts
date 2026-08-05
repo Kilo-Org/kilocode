@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterEach, expect, test } from "bun:test"
 import type { ConfigV1 } from "@opencode-ai/core/v1/config/config"
 import { Effect } from "effect"
@@ -9,7 +10,7 @@ import { disposeAllInstances, provideInstance, testInstanceStoreLayer, tmpdir } 
 function load<A>(dir: string, fn: (svc: Agent.Interface) => Effect.Effect<A>) {
   return Effect.runPromise(
     provideInstance(dir)(Agent.Service.use(fn)).pipe(
-      Effect.provide(Agent.defaultLayer),
+      Effect.provide(AppNodeBuilder.build(Agent.node)),
       Effect.provide(testInstanceStoreLayer),
     ),
   )

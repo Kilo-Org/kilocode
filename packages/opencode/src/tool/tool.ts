@@ -7,6 +7,7 @@ import type { Permission } from "../permission"
 import type { SessionID, MessageID } from "../session/schema"
 import * as Truncate from "./truncate"
 import { Agent } from "@/agent/agent"
+import { format } from "@/kilocode/tool/tool" // kilocode_change
 
 interface Metadata {
   [key: string]: any
@@ -118,15 +119,20 @@ function wrap<Parameters extends Schema.Decoder<unknown>, Result extends Metadat
           ...(ctx.callID ? { "tool.call_id": ctx.callID } : {}),
         }
         return Effect.gen(function* () {
-          const decoded = yield* decode(args).pipe(
+          // kilocode_change start
+          const decoded = yield* decode(
+            args,
+            { errors: "all" },
+          ).pipe(
             Effect.mapError(
               (error) =>
                 new InvalidArgumentsError({
                   tool: id,
-                  detail: toolInfo.formatValidationError ? toolInfo.formatValidationError(error) : String(error),
+                  detail: toolInfo.formatValidationError ? toolInfo.formatValidationError(error) : format(error),
                 }),
             ),
           )
+          // kilocode_change end
           const result = yield* execute(decoded as Schema.Schema.Type<Parameters>, ctx)
           if (result.metadata.truncated !== undefined) {
             return result

@@ -3,6 +3,7 @@ package ai.kilocode.client.session.ui.popup
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import com.intellij.openapi.Disposable
 import com.intellij.ui.EditorTextField
+import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
@@ -15,6 +16,7 @@ import javax.swing.JComponent
 import javax.swing.JEditorPane
 import javax.swing.JPanel
 import javax.swing.JScrollPane
+import javax.swing.ScrollPaneConstants
 
 class HeaderPopupRequest(
     val anchor: JComponent,
@@ -35,16 +37,29 @@ private class HeaderPopupPanel(
     private val child: JComponent,
     private val maxWidth: Int,
 ) : JPanel(BorderLayout()) {
-    init {
+    // One scroll pane wraps every popup body (single-file edit, multi-file patch, session changes),
+    // so bodies taller than the max height scroll instead of clipping. Bodies that carry their own
+    // inner scroll pane render at full height inside the viewport, so only this outer pane scrolls.
+    private val scroll = JBScrollPane(
+        child,
+        ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+        ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER,
+    ).apply {
         // Transparent so the balloon fill shows uniformly behind nested popup content.
         isOpaque = false
-        add(child, BorderLayout.CENTER)
+        viewport.isOpaque = false
+        border = JBUI.Borders.empty()
+    }
+
+    init {
+        isOpaque = false
+        add(scroll, BorderLayout.CENTER)
     }
 
     override fun getPreferredSize(): Dimension {
         val width = contentWidth(child).takeIf { it > 0 }?.coerceAtMost(maxWidth) ?: maxWidth
         fit(child, width)
-        val height = super.getPreferredSize().height.coerceAtMost(JBUI.scale(SessionUiStyle.View.Popup.MAX_HEIGHT))
+        val height = child.preferredSize.height.coerceAtMost(JBUI.scale(SessionUiStyle.View.Popup.MAX_HEIGHT))
         return Dimension(width, height)
     }
 

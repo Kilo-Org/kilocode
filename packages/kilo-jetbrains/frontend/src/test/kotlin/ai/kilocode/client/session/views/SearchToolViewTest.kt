@@ -9,9 +9,10 @@ import ai.kilocode.client.session.views.tool.GlobToolView
 import ai.kilocode.client.session.views.tool.ReadToolView
 import ai.kilocode.client.session.views.tool.SearchToolView
 import ai.kilocode.client.session.views.tool.ToolView
-import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.Container
 import java.awt.Dimension
@@ -111,12 +112,15 @@ class SearchToolViewTest : BasePlatformTestCase() {
         assertEquals(style.regularFont, view.targetFont(1))
     }
 
-    fun `test search header title target gap uses standard medium gap`() {
+    fun `test search header uses standard layout gap between regions`() {
         val view = SearchToolView(tool().also {
             it.input = mapOf("pattern" to "TODO", "include" to "*.kt")
         })
 
-        assertEquals(UiStyle.Gap.md(), (view.centerComponent().layout as BorderLayout).hgap)
+        assertEquals(
+            JBUI.scale(SessionUiStyle.View.Layout.GAP),
+            (view.headerComponent().layout as BorderLayout).hgap,
+        )
     }
 
     fun `test completed search starts collapsed and expands output`() {

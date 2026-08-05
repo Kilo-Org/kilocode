@@ -97,6 +97,7 @@ BYOK lets you use your own provider API keys with the Kilo AI Gateway. When a BY
 | Kimi Code | `kimi-coding` |
 | Martian | `martian` |
 | Neuralwatt | `neuralwatt` |
+| NVIDIA | `nvidia-byok` |
 | Ollama Cloud | `ollama-cloud` |
 | OpenCode Go | `opencode-go` |
 | OrcaRouter | `orcarouter` |

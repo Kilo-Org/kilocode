@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { mkdir, rm, utimes, writeFile } from "fs/promises"
@@ -91,7 +92,7 @@ it.instance(
 
           const after = yield* provider.list()
           expect(after[ProviderV2.ID.make("acme")]?.models["acme-2"]).toBeDefined()
-        }).pipe(Effect.provide(Layer.merge(ModelsDev.defaultLayer, Provider.defaultLayer))),
+        }).pipe(Effect.provide(Layer.merge(AppNodeBuilder.build(ModelsDev.node), AppNodeBuilder.build(Provider.node)))),
       () =>
         Effect.promise(async () => {
           Flag.KILO_MODELS_URL = flags.source

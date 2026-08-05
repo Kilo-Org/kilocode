@@ -1,5 +1,10 @@
 import { Schema } from "effect"
 import { HttpApi } from "effect/unstable/httpapi"
+import { EventV2 } from "@opencode-ai/core/event"
+import { EventManifest } from "@/event-manifest"
+import { Credential } from "@opencode-ai/core/credential"
+import { Integration } from "@opencode-ai/core/integration"
+import { SkillV2 } from "@opencode-ai/core/skill"
 import { InstanceDisposed } from "@/server/event"
 import { Question } from "@/question"
 import { BusEvent } from "@/bus/bus-event" // kilocode_change - include legacy Kilo events until they migrate to EventV2
@@ -21,7 +26,6 @@ import { SessionApi } from "./groups/session"
 import { SyncApi } from "./groups/sync"
 import { TuiApi } from "./groups/tui"
 import { WorkspaceApi } from "./groups/workspace"
-import { Api } from "@opencode-ai/server/api"
 // kilocode_change start - Kilo HttpApi groups
 import { AgentBuilderApi } from "@/kilocode/server/httpapi/groups/agent-builder"
 import { BranchNameApi } from "@/kilocode/server/httpapi/groups/branch-name"
@@ -42,12 +46,32 @@ import { SuggestionApi } from "@/kilocode/server/httpapi/groups/suggestion"
 import { TelemetryApi } from "@/kilocode/server/httpapi/groups/telemetry"
 import { MemoryApi } from "@/kilocode/server/httpapi/groups/memory" // kilocode_change
 // kilocode_change end
-// GlobalEventSchema snapshots the registry after event-producing groups register their variants.
+import { makeApi } from "@opencode-ai/protocol/api"
+import { LocationMiddleware } from "@opencode-ai/server/location"
+import { SessionLocationMiddleware } from "@opencode-ai/server/middleware/session-location"
 import { GlobalApi } from "./groups/global"
 import { Authorization } from "./middleware/authorization"
 import { SchemaErrorMiddleware } from "./middleware/schema-error"
 
-const EventSchema = Schema.Union([...BusEvent.effectPayloads(), InstanceDisposed]).annotate({ identifier: "Event" }) // kilocode_change
+const EventSchema = Schema.Union([
+  ...EventManifest.Latest.values()
+    .map((definition) =>
+      Schema.Struct({
+        id: EventV2.ID,
+        type: Schema.Literal(definition.type),
+        properties: definition.data,
+      }).annotate({ identifier: `Event.${definition.type}` }),
+    )
+    .toArray(),
+  ...BusEvent.effectPayloads(), // kilocode_change - include legacy Kilo events until they migrate to EventV2
+  InstanceDisposed,
+]).annotate({ identifier: "Event" })
+
+export const ServerApi = makeApi({
+  definitions: EventManifest.Latest.values().toArray(),
+  locationMiddleware: LocationMiddleware,
+  sessionLocationMiddleware: SessionLocationMiddleware,
+})
 
 export const RootHttpApi = HttpApi.make("opencode-root")
   .addHttpApi(ControlApi)
@@ -98,9 +122,18 @@ export const OpenCodeHttpApi = HttpApi.make("opencode")
   .addHttpApi(RootHttpApi)
   .addHttpApi(EventApi)
   .addHttpApi(InstanceHttpApi)
-  .addHttpApi(Api)
+  .addHttpApi(ServerApi)
   .addHttpApi(PtyConnectApi)
-  .annotate(HttpApi.AdditionalSchemas, [EventSchema, Question.Replied, Question.Rejected])
+  .annotate(HttpApi.AdditionalSchemas, [
+    EventSchema,
+    Question.Replied,
+    Question.Rejected,
+    Credential.Value,
+    Integration.Inputs,
+    Integration.Method,
+    Integration.Ref,
+    SkillV2.Source,
+  ])
 
 export type RootHttpApiType = typeof RootHttpApi
 export type InstanceHttpApiType = typeof InstanceHttpApi
