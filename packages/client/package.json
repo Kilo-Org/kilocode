@@ -12,7 +12,6 @@
     "generate": "bun run script/build.ts",
     "check:generated": "bun run generate && git diff --exit-code -- src/generated src/generated-effect",
     "test": "bun test --timeout 5000",
-    "test:ci": "mkdir -p .artifacts/unit && bun test --timeout 10000 --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml",
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
@@ -37,5 +36,5 @@
     "@typescript/native-preview": "catalog:",
     "effect": "catalog:"
   },
-  "version": "7.4.16"
+  "version": "7.4.20"
 }

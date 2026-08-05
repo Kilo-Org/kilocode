@@ -1,6 +1,6 @@
 {
   "name": "@opencode-ai/session-ui",
-  "version": "7.4.16",
+  "version": "7.4.20",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -22,8 +22,7 @@
   },
   "scripts": {
     "typecheck": "tsgo --noEmit",
-    "test": "bun test src --only-failures",
-    "test:ci": "mkdir -p .artifacts/unit && bun test src --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml"
+    "test": "bun test src --only-failures"
   },
   "devDependencies": {
     "@tsconfig/node22": "catalog:",
@@ -64,5 +63,6 @@
     "solid-js": "catalog:",
     "solid-list": "catalog:",
     "strip-ansi": "7.1.2"
-  }
+  },
+  "peerDependencies": {}
 }

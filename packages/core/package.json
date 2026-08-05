@@ -106,7 +106,7 @@
     "@aws-sdk/credential-providers": "3.1057.0",
     "@openrouter/ai-sdk-provider": "2.9.0",
     "ai-gateway-provider": "3.1.2",
-    "gitlab-ai-provider": "6.9.3",
+    "gitlab-ai-provider": "6.11.1",
     "google-auth-library": "10.5.0",
     "immer": "11.1.4",
     "venice-ai-sdk-provider": "2.1.1",

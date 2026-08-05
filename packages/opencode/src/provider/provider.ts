@@ -224,6 +224,13 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         },
         options: { headerTimeout: OPENAI_HEADER_TIMEOUT_DEFAULT },
       }),
+    meta: () =>
+      Effect.succeed({
+        autoload: false,
+        async getModel(sdk: any, modelID: string, _options?: Record<string, any>) {
+          return sdk.responses(modelID)
+        },
+      }),
     xai: () =>
       Effect.succeed({
         autoload: false,
@@ -235,8 +242,12 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
     "github-copilot": () =>
       Effect.succeed({
         autoload: false,
-        async getModel(sdk: any, modelID: string, _options?: Record<string, any>) {
+        async getModel(sdk: any, modelID: string, _options?: Record<string, any>, model?: Model) {
           if (sdk.responses === undefined && sdk.chat === undefined) return sdk.languageModel(modelID)
+          if (model && "endpoint" in model.api) {
+            if (model.api.endpoint === "responses" && sdk.responses) return sdk.responses(modelID)
+            if (model.api.endpoint === "chat" && sdk.chat) return sdk.chat(modelID)
+          }
           const match = /^gpt-(\d+)/.exec(modelID)
           if (match && Number(match[1]) >= 5 && !modelID.startsWith("gpt-5-mini")) return sdk.responses(modelID)
           return sdk.chat(modelID)
@@ -918,58 +929,58 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         oauthToken !== undefined && envToken === undefined && apiKeyToken === undefined && configToken === undefined
       if (!useOAuthHandler) {
         options.fetch = async (url: RequestInfo | URL, init?: RequestInit) => {
-            if (init?.body && typeof init.body === "string") {
-              try {
-                const body = JSON.parse(init.body)
-                if ("max_tokens" in body) {
-                  body.max_completion_tokens = body.max_tokens
-                  delete body.max_tokens
-                  init = { ...init, body: JSON.stringify(body) }
+          if (init?.body && typeof init.body === "string") {
+            try {
+              const body = JSON.parse(init.body)
+              if ("max_tokens" in body) {
+                body.max_completion_tokens = body.max_tokens
+                delete body.max_tokens
+                init = { ...init, body: JSON.stringify(body) }
+              }
+            } catch {}
+          }
+
+          const response = await fetch(url, init)
+
+          // Cortex returns 400 "conversation complete" as a normal stop condition
+          if (!response.ok && response.status === 400) {
+            try {
+              const errorData = await response.clone().json()
+              const errorMessage = String(errorData.message || errorData.error || "")
+              if (errorMessage.toLowerCase().includes("conversation complete")) {
+                return new Response(
+                  JSON.stringify({
+                    choices: [{ finish_reason: "stop", message: { content: "", role: "assistant" } }],
+                  }),
+                  { status: 200, headers: new Headers({ "content-type": "application/json" }) },
+                )
+              }
+            } catch {}
+          }
+
+          // Cortex returns role:"" in streaming deltas; the AI SDK schema requires "assistant"
+          if (response.body && response.headers.get("content-type")?.includes("text/event-stream")) {
+            const reader = response.body.getReader()
+            const encoder = new TextEncoder()
+            const decoder = new TextDecoder()
+            const stream = new ReadableStream({
+              async pull(ctrl) {
+                const { done, value } = await reader.read()
+                if (done) {
+                  ctrl.close()
+                  return
                 }
-              } catch {}
-            }
+                const text = decoder.decode(value, { stream: true })
+                ctrl.enqueue(encoder.encode(text.replace(/"role"\s*:\s*""/g, '"role":"assistant"')))
+              },
+              cancel() {
+                reader.cancel()
+              },
+            })
+            return new Response(stream, { headers: response.headers, status: response.status })
+          }
 
-            const response = await fetch(url, init)
-
-            // Cortex returns 400 "conversation complete" as a normal stop condition
-            if (!response.ok && response.status === 400) {
-              try {
-                const errorData = await response.clone().json()
-                const errorMessage = String(errorData.message || errorData.error || "")
-                if (errorMessage.toLowerCase().includes("conversation complete")) {
-                  return new Response(
-                    JSON.stringify({
-                      choices: [{ finish_reason: "stop", message: { content: "", role: "assistant" } }],
-                    }),
-                    { status: 200, headers: new Headers({ "content-type": "application/json" }) },
-                  )
-                }
-              } catch {}
-            }
-
-            // Cortex returns role:"" in streaming deltas; the AI SDK schema requires "assistant"
-            if (response.body && response.headers.get("content-type")?.includes("text/event-stream")) {
-              const reader = response.body.getReader()
-              const encoder = new TextEncoder()
-              const decoder = new TextDecoder()
-              const stream = new ReadableStream({
-                async pull(ctrl) {
-                  const { done, value } = await reader.read()
-                  if (done) {
-                    ctrl.close()
-                    return
-                  }
-                  const text = decoder.decode(value, { stream: true })
-                  ctrl.enqueue(encoder.encode(text.replace(/"role"\s*:\s*""/g, '"role":"assistant"')))
-                },
-                cancel() {
-                  reader.cancel()
-                },
-              })
-              return new Response(stream, { headers: response.headers, status: response.status })
-            }
-
-            return response
+          return response
         }
       }
 
@@ -1104,11 +1115,17 @@ export type ConfigProvidersResult = Types.DeepMutable<Schema.Schema.Type<typeof 
 
 export function toPublicInfo(provider: Info): Info {
   return JSON.parse(
-    JSON.stringify(provider, (_, value) => {
-      if (typeof value === "function" || typeof value === "symbol" || value === undefined) return undefined
-      if (typeof value === "bigint") return value.toString()
-      return value
-    }),
+    JSON.stringify(
+      {
+        ...provider,
+        models: Object.fromEntries(Object.entries(provider.models).filter(([, model]) => Schema.is(Model)(model))),
+      },
+      (_, value) => {
+        if (typeof value === "function" || typeof value === "symbol" || value === undefined) return undefined
+        if (typeof value === "bigint") return value.toString()
+        return value
+      },
+    ),
   )
 }
 
@@ -1295,14 +1312,7 @@ export function fromModelsDevProvider(provider: ModelsDev.Provider): Info {
         id: ModelV2.ID.make(id),
         name: `${model.name} ${mode[0].toUpperCase()}${mode.slice(1)}`,
         cost: opts.cost ? mergeDeep(base.cost, cost(opts.cost)) : base.cost,
-        options: opts.provider?.body
-          ? Object.fromEntries(
-              Object.entries(opts.provider.body).map(([k, v]) => [
-                k.replace(/_([a-z])/g, (_, c) => c.toUpperCase()),
-                v,
-              ]),
-            )
-          : base.options,
+        options: modeOptions(base, opts.provider?.body),
         headers: opts.provider?.headers ?? base.headers,
       }
     }
@@ -1316,6 +1326,17 @@ export function fromModelsDevProvider(provider: ModelsDev.Provider): Info {
     options: {},
     models,
   }
+}
+
+function modeOptions(model: Model, body: Record<string, unknown> | undefined) {
+  if (!body) return model.options
+  const options = Object.fromEntries(
+    Object.entries(body).map(([key, value]) => [key.replace(/_([a-z])/g, (_, char) => char.toUpperCase()), value]),
+  )
+  const reasoning = body.reasoning
+  if (model.api.npm !== "@ai-sdk/openai" || !isRecord(reasoning) || typeof reasoning.mode !== "string") return options
+  const { reasoning: _, ...rest } = options
+  return { ...rest, reasoningMode: reasoning.mode }
 }
 
 function modelSuggestions(provider: Info | undefined, modelID: ModelV2.ID, enableExperimentalModels: boolean) {
@@ -1526,7 +1547,11 @@ const layer = Layer.effect(
               // variants: {}, // kilocode_change, moved into patchKiloConfigModel
               ...patchKiloConfigModel(model, existingModel), // kilocode_change
             }
-            const merged = mergeDeep(ProviderTransform.variants(parsedModel), model.variants ?? {})
+            const variants =
+              existingModel?.api.npm === parsedModel.api.npm
+                ? (existingModel.variants ?? ProviderTransform.variants(parsedModel))
+                : ProviderTransform.variants(parsedModel)
+            const merged = mergeDeep(variants, model.variants ?? {})
             parsedModel.variants = mapValues(
               pickBy(merged, (v): v is NonNullable<typeof v> => !!v && !v.disabled), // kilocode_change - drop null delete sentinels
               (v) => omit(v, ["disabled"]),
@@ -1674,7 +1699,7 @@ const layer = Layer.effect(
             )
               delete provider.models[modelID]
 
-            if (!model.variants || Object.keys(model.variants).length === 0) {
+            if (model.variants === undefined) {
               model.variants = mapValues(ProviderTransform.variants(model), (v) => v)
             }
 
@@ -1811,7 +1836,8 @@ const layer = Layer.effect(
             timeout.clear()
             // kilocode_change start - hand the remaining deadline to the first-byte guard
             const remaining = deadline !== undefined ? deadline - Date.now() : undefined
-            const live = remaining !== undefined && firstByteCtl ? wrapFirstByte(res, Math.max(remaining, 1), firstByteCtl) : res
+            const live =
+              remaining !== undefined && firstByteCtl ? wrapFirstByte(res, Math.max(remaining, 1), firstByteCtl) : res
             if (!chunkAbortCtl) return live
             return wrapSSE(live, chunkTimeout, chunkAbortCtl)
             // kilocode_change end
@@ -2009,7 +2035,7 @@ const layer = Layer.effect(
       }
 
       // kilocode_change start - fall back to kilo's auto small model
-      const kiloFallback = s.providers[ProviderV2.ID.make("kilo")]
+      const kiloFallback = s.providers[ProviderV2.ID.make("kilo")] ?? s.catalog[ProviderV2.ID.make("kilo")]
       if (kiloFallback?.models["kilo-auto/small"]) return kiloFallback.models["kilo-auto/small"]
       // kilocode_change end
 
