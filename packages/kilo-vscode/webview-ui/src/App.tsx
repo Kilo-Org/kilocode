@@ -11,6 +11,7 @@ import { LocalTabsProvider, useLocalTabs } from "./context/local-tabs"
 import { ProviderShell } from "./context/provider-shell"
 import { ChatView } from "./components/chat"
 import { SidebarEmptyState } from "./components/chat/SidebarEmptyState"
+import { SidebarTopBar } from "./components/chat/SidebarTopBar"
 import { registerExpandedTaskTool } from "./components/chat/TaskToolExpanded"
 import { registerVscodeToolOverrides } from "./components/chat/VscodeToolOverrides"
 
@@ -310,6 +311,10 @@ const AppContent: Component = () => {
 
   return (
     <div class="container">
+      <SidebarTopBar
+        onNewTask={() => handleViewAction("plusButtonClicked")}
+        onHistory={() => handleViewAction("historyButtonClicked")}
+      />
       {/* legacy-migration start — state-driven overlay, independent of currentView */}
       <Show
         when={migrationNeeded()}
