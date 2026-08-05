@@ -13,6 +13,7 @@
 
 import { type ExecFileOptionsWithStringEncoding } from "child_process"
 import * as os from "os"
+import * as path from "path"
 import { exec } from "../util/process"
 
 // Environment variable keys match: letters, digits, underscores, starting with a non-digit.
@@ -27,6 +28,43 @@ const FALLBACK_TTL = 10_000
 /** In-flight fix promise so concurrent ENOENT callers wait on the same resolution. */
 let fixing: Promise<boolean> | null = null
 let fixed = false
+
+/** Inferred IANA time zone, cached because Intl resolution is not free. */
+let inferredTz: string | undefined
+
+function isGh(cmd: string): boolean {
+  const ext = path.extname(cmd)
+  const name = ext ? cmd.slice(0, -ext.length) : cmd
+  return path.basename(name) === "gh"
+}
+
+function getTimeZone(): string | undefined {
+  return process.env.TZ || (inferredTz ??= Intl.DateTimeFormat().resolvedOptions().timeZone)
+}
+
+function currentEnv(): Record<string, string> {
+  const env: Record<string, string> = {}
+  for (const [key, value] of Object.entries(process.env)) {
+    if (typeof value === "string") env[key] = value
+  }
+  return env
+}
+
+function withTzEnv(
+  cmd: string,
+  options?: Omit<ExecFileOptionsWithStringEncoding, "encoding">,
+): Omit<ExecFileOptionsWithStringEncoding, "encoding"> {
+  if (process.platform !== "win32") return options ?? {}
+  if (!isGh(cmd)) return options ?? {}
+  if (options?.env?.TZ) return options
+
+  const tz = getTimeZone()
+  if (!tz) return options ?? {}
+
+  const env = options?.env ? { ...options.env } : currentEnv()
+  env.TZ = tz
+  return { ...options, env }
+}
 
 /**
  * Parse `env` output, handling multiline variable values correctly.
@@ -133,8 +171,9 @@ export async function execWithShellEnv(
   args: string[],
   options?: Omit<ExecFileOptionsWithStringEncoding, "encoding">,
 ): Promise<{ stdout: string; stderr: string }> {
+  const opts = withTzEnv(cmd, options)
   try {
-    return await exec(cmd, args, options)
+    return await exec(cmd, args, opts)
   } catch (error) {
     if (
       process.platform !== "darwin" ||
@@ -148,13 +187,13 @@ export async function execWithShellEnv(
     // Already resolved and PATH was actually changed — no point retrying resolution.
     // Just retry with the (already-patched) process.env.
     if (fixed) {
-      return await exec(cmd, args, options)
+      return await exec(cmd, args, opts)
     }
 
     // If another caller is already resolving, wait for it then retry.
     if (fixing) {
       await fixing
-      return await exec(cmd, args, options)
+      return await exec(cmd, args, opts)
     }
 
     console.log(`[shell-env] "${cmd}" not found, resolving shell environment`)
@@ -166,7 +205,7 @@ export async function execWithShellEnv(
       fixing = null
     }
 
-    return await exec(cmd, args, options)
+    return await exec(cmd, args, opts)
   }
 }
 

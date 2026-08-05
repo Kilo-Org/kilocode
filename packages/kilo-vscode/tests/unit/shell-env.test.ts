@@ -1,9 +1,32 @@
 import { afterEach, describe, expect, it } from "bun:test"
+import * as fs from "fs"
+import * as os from "os"
+import * as path from "path"
 import { getShellEnvironment, execWithShellEnv, clearShellEnvCache } from "../../src/agent-manager/shell-env"
+
+let platformDesc: PropertyDescriptor | undefined
+const originalTz = process.env.TZ
 
 afterEach(() => {
   clearShellEnvCache()
+  if (platformDesc) Object.defineProperty(process, "platform", platformDesc)
+  if (originalTz === undefined) delete process.env.TZ
+  else process.env.TZ = originalTz
 })
+
+function setPlatform(value: string) {
+  platformDesc = Object.getOwnPropertyDescriptor(process, "platform")
+  Object.defineProperty(process, "platform", { value, configurable: true })
+}
+
+function fakeGhBin(): { dir: string; cleanup: () => void } {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "gh-tz-"))
+  fs.symlinkSync(process.execPath, path.join(dir, "gh"))
+  return {
+    dir,
+    cleanup: () => fs.rmSync(dir, { recursive: true, force: true }),
+  }
+}
 
 describe("getShellEnvironment", () => {
   it("returns an object with PATH", async () => {
@@ -72,5 +95,78 @@ describe("clearShellEnvCache", () => {
     // Both should succeed and contain PATH
     expect(first.PATH).toBeDefined()
     expect(second.PATH).toBeDefined()
+  })
+})
+
+describe("execWithShellEnv TZ for gh on Windows", () => {
+  it("injects TZ into gh child processes on Windows", async () => {
+    setPlatform("win32")
+    process.env.TZ = "Test/TZ"
+    const { dir, cleanup } = fakeGhBin()
+    try {
+      const { stdout } = await execWithShellEnv("gh", ["-e", "console.log(process.env.TZ)"], {
+        env: { PATH: dir },
+      })
+      expect(stdout.trim()).toBe("Test/TZ")
+    } finally {
+      cleanup()
+    }
+  })
+
+  it("infers a TZ value from the system when process.env.TZ is not set", async () => {
+    setPlatform("win32")
+    delete process.env.TZ
+    const { dir, cleanup } = fakeGhBin()
+    try {
+      const { stdout } = await execWithShellEnv("gh", ["-e", "console.log(process.env.TZ)"], {
+        env: { PATH: dir },
+      })
+      expect(stdout.trim()).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone)
+    } finally {
+      cleanup()
+    }
+  })
+
+  it("does not inject TZ for non-gh commands on Windows", async () => {
+    setPlatform("win32")
+    process.env.TZ = "Test/TZ"
+    const { dir, cleanup } = fakeGhBin()
+    try {
+      fs.symlinkSync(process.execPath, path.join(dir, "git"))
+      const { stdout } = await execWithShellEnv("git", ["-e", "console.log(process.env.TZ)"], {
+        env: { PATH: dir },
+      })
+      expect(stdout.trim()).toBe("undefined")
+    } finally {
+      cleanup()
+    }
+  })
+
+  it("does not inject TZ for gh on non-Windows platforms", async () => {
+    setPlatform("linux")
+    process.env.TZ = "Test/TZ"
+    const { dir, cleanup } = fakeGhBin()
+    try {
+      const { stdout } = await execWithShellEnv("gh", ["-e", "console.log(process.env.TZ)"], {
+        env: { PATH: dir },
+      })
+      expect(stdout.trim()).toBe("undefined")
+    } finally {
+      cleanup()
+    }
+  })
+
+  it("preserves an explicit TZ in options.env", async () => {
+    setPlatform("win32")
+    process.env.TZ = "Test/TZ"
+    const { dir, cleanup } = fakeGhBin()
+    try {
+      const { stdout } = await execWithShellEnv("gh", ["-e", "console.log(process.env.TZ)"], {
+        env: { PATH: dir, TZ: "Custom/Zone" },
+      })
+      expect(stdout.trim()).toBe("Custom/Zone")
+    } finally {
+      cleanup()
+    }
   })
 })
