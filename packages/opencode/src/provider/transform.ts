@@ -1297,6 +1297,9 @@ function reasoningEffort(model: Provider.Model, effort: string) {
 
 function anthropicEffort(model: Provider.Model, effort: string) {
   if (["opus-4-5", "opus-4.5"].some((value) => model.api.id.includes(value))) return { effort }
+  // kilocode_change start - Kimi Anthropic endpoints require adaptive thinking summaries for published effort tiers
+  if (isKimiFamily(model)) return { thinking: { type: "adaptive", display: "summarized" }, effort }
+  // kilocode_change end
   if (!anthropicAdaptiveEfforts(model.api.id)) return
   return {
     thinking: {
@@ -1306,6 +1309,20 @@ function anthropicEffort(model: Provider.Model, effort: string) {
     effort,
   }
 }
+
+// kilocode_change start
+function isKimiFamily(model: Provider.Model) {
+  if (
+    [model.providerID, model.api.id].some((id) => {
+      const value = id.toLowerCase()
+      return value.includes("kimi") || value.includes("moonshot")
+    })
+  )
+    return true
+  const url = model.api.url.toLowerCase()
+  return ["api.kimi.com", "api.moonshot.ai", "api.moonshot.cn", "api.moonshotai.cn"].some((host) => url.includes(host))
+}
+// kilocode_change end
 
 function reasoningBudget(model: Provider.Model, budget: number) {
   switch (model.api.npm) {

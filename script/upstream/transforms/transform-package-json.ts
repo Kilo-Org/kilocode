@@ -320,7 +320,7 @@ const DELETE_UPSTREAM_TRUSTED_DEPS: Record<string, string[]> = {
 // Kilo doesn't ship (desktop-electron, console/app, app) and would otherwise
 // reappear on every merge.
 const DELETE_UPSTREAM_SCRIPTS: Record<string, string[]> = {
-  "package.json": ["dev:desktop", "dev:web", "dev:console"],
+  "package.json": ["dev:desktop", "dev:web", "dev:console", "translate:app"],
 }
 
 // Upstream-only catalog entries to delete per package.json. These are pulled

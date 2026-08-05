@@ -142,6 +142,10 @@ jobs:
           # kilocode_change end
 
       # kilocode_change start - test non-CLI packages separately from sharded CLI tests
+      - name: Verify package test scheduling
+        if: matrix.settings.run && matrix.settings.packages && matrix.settings.os == 'linux'
+        run: bun run script/check-test-ci.ts
+
       - name: Run non-CLI unit tests
         if: matrix.settings.run && matrix.settings.packages
         run: bun turbo test:ci --output-logs=errors-only --log-order=grouped --log-prefix=task --filter='!@kilocode/cli' --filter='!@kilocode/kilo-jetbrains'

@@ -200,7 +200,8 @@ export function transformI18nContent(
       }
     }
 
-    transformedLines.push(transformedLine)
+    // Kilo branding produced by this transform remains a Kilo-owned delta in shared locale files.
+    transformedLines.push(lineReplacements > 0 ? `${transformedLine} // kilocode_change` : transformedLine)
     totalReplacements += lineReplacements
   }
 

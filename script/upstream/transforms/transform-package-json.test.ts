@@ -69,6 +69,7 @@ test("fixScripts removes upstream-only dead scripts from root", () => {
       "dev:desktop": "bun --cwd packages/desktop-electron dev",
       "dev:web": "bun --cwd packages/app dev",
       "dev:console": "ulimit -n 10240 2>/dev/null; bun run --cwd packages/console/app dev",
+      "translate:app": "bun run script/translate-app.ts",
     },
   }
   const changes: string[] = []
@@ -78,7 +79,8 @@ test("fixScripts removes upstream-only dead scripts from root", () => {
   expect(scripts["dev:desktop"]).toBeUndefined()
   expect(scripts["dev:web"]).toBeUndefined()
   expect(scripts["dev:console"]).toBeUndefined()
-  expect(changes.length).toBe(3)
+  expect(scripts["translate:app"]).toBeUndefined()
+  expect(changes.length).toBe(4)
 })
 
 test("fixScripts preserves opencode test scripts", () => {
