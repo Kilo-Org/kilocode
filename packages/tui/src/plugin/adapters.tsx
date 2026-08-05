@@ -107,6 +107,11 @@ function stateApi(sync: ReturnType<typeof useSync>): TuiPluginApi["state"] {
     get config() {
       return sync.data.config
     },
+    // kilocode_change start
+    get globalConfig() {
+      return sync.data.globalConfig
+    },
+    // kilocode_change end
     get provider() {
       return sync.data.provider
     },
