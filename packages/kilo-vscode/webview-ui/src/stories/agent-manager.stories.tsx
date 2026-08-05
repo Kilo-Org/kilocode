@@ -224,6 +224,7 @@ const chatServer = {
   providerUsageError: () => undefined,
   requestProviderUsage: () => undefined,
   refreshProviderUsage: () => undefined,
+  releaseProviderUsage: () => undefined,
   deviceAuth: () => ({ status: "idle" as const }),
   startLogin: () => undefined,
   goToLogin: () => undefined,

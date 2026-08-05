@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { decode, type ModelRemains, type Native } from "./native"
 import type { UsageSnapshot, UsageWindow } from "@/kilocode/provider-usage/schema"
 import type { Info as ProviderInfo } from "@/provider/provider"
@@ -112,11 +113,7 @@ function label(resource: string, kind: "interval" | "weekly", value: number | un
   return kind === "weekly" ? `${prefix} weekly` : `${prefix} interval`
 }
 
-function window(
-  row: ModelRemains,
-  kind: "interval" | "weekly",
-  fetchedAt: string,
-): { value: UsageWindow; confidence: "high" | "medium" | "low" } | undefined {
+function window(row: ModelRemains, kind: "interval" | "weekly", fetchedAt: string): UsageWindow | undefined {
   const weekly = kind === "weekly"
   const percent = weekly ? row.current_weekly_remaining_percent : row.current_interval_remaining_percent
   const status = weekly ? row.current_weekly_status : row.current_interval_status
@@ -133,60 +130,45 @@ function window(
     id: `${row.model_name}-${kind}`,
     label: label(row.model_name, kind, span),
     resource: row.model_name,
-    kind: "quota" as const,
     durationMs: span,
     resetAt: reset(end, remains, fetchedAt),
   }
 
-  if (status === 3) {
-    return {
-      value: { ...base, unit: "unknown", orientation: "amount", state: "not_in_plan" },
-      confidence: "high",
-    }
-  }
+  if (status === 3) return { ...base, unit: "unknown", orientation: "amount", state: "not_in_plan" }
 
   if (percent !== undefined) {
     const factor = boost !== undefined && boost > 0 ? boost / 1000 : 1
     const cap = 100 * factor
     const remaining = percent * factor
     return {
-      value: {
-        ...base,
-        unit: factor === 1 ? "percent" : "standard_units",
-        orientation: factor === 1 ? "remaining_percent" : "amount",
-        used: Math.max(0, cap - remaining),
-        remaining,
-        limit: cap,
-        state: status === 2 || remaining <= 0 ? "exhausted" : "active",
-      },
-      confidence: "high",
+      ...base,
+      unit: factor === 1 ? "percent" : "standard_units",
+      orientation: factor === 1 ? "remaining_percent" : "amount",
+      used: Math.max(0, cap - remaining),
+      remaining,
+      limit: cap,
+      state: status === 2 || remaining <= 0 ? "exhausted" : "active",
     }
   }
 
   if (total !== undefined && total > 0 && count !== undefined && count >= 0) {
     return {
-      value: {
-        ...base,
-        unit: "count",
-        orientation: "count",
-        used: Math.max(0, total - count),
-        remaining: count,
-        limit: total,
-        state: status === 2 || count === 0 ? "exhausted" : "active",
-      },
-      confidence: "medium",
+      ...base,
+      unit: "count",
+      orientation: "count",
+      used: Math.max(0, total - count),
+      remaining: count,
+      limit: total,
+      state: status === 2 || count === 0 ? "exhausted" : "active",
     }
   }
 
   if (status === undefined && total === undefined && count === undefined) return undefined
   return {
-    value: {
-      ...base,
-      unit: "unknown",
-      orientation: "amount",
-      state: status === 2 ? "exhausted" : "unknown",
-    },
-    confidence: "low",
+    ...base,
+    unit: "unknown",
+    orientation: "amount",
+    state: status === 2 ? "exhausted" : "unknown",
   }
 }
 
@@ -200,7 +182,7 @@ export function normalize(
     fetchedAt: string
   },
 ): UsageSnapshot {
-  const rows = native.model_remains
+  const windows = native.model_remains
     .filter((row) => row.model_name !== "video")
     .flatMap((row) =>
       (["interval", "weekly"] as const).flatMap((kind) => {
@@ -208,17 +190,6 @@ export function normalize(
         return value ? [value] : []
       }),
     )
-  const windows = rows.map((row) => row.value)
-  const availabilityState = windows.some((item) => item.state === "active" || item.state === "unlimited")
-    ? "available"
-    : windows.some((item) => item.state === "exhausted")
-      ? "exhausted"
-      : "unknown"
-  const confidence = rows.some((row) => row.confidence === "low")
-    ? "low"
-    : rows.some((row) => row.confidence === "medium")
-      ? "medium"
-      : "high"
 
   return {
     id: input.id,
@@ -230,10 +201,7 @@ export function normalize(
     fetchState: "ready",
     planState: "active",
     routingState: "not_applicable",
-    availabilityState,
     fetchedAt: input.fetchedAt,
-    confidence,
-    source: "provider_api",
     managementUrl: input.managementUrl,
     windows,
   }
@@ -249,9 +217,6 @@ const unavailable = (id: string, providerID: string, label: string, managementUr
   fetchState: "unavailable",
   planState: "unknown",
   routingState: "not_applicable",
-  availabilityState: "unavailable",
-  confidence: "high",
-  source: "provider_api",
   managementUrl,
   windows: [],
   error: { code: "direct_minimax_unavailable", message: "Usage unavailable.", retryable: true },
@@ -260,7 +225,8 @@ const unavailable = (id: string, providerID: string, label: string, managementUr
 export async function direct(
   providers: Record<string, ProviderInfo>,
   fetcher: typeof fetch = fetch,
-  cached: (id: string, load: () => Promise<UsageSnapshot>) => Promise<UsageSnapshot> = (_id, load) => load(),
+  cached: (id: string, load: () => Promise<UsageSnapshot>, identity?: string) => Promise<UsageSnapshot> = (_id, load) =>
+    load(),
 ) {
   const candidates = (Object.keys(bindings) as ProviderID[]).flatMap((providerID) => {
     const provider = providers[providerID]
@@ -281,33 +247,40 @@ export async function direct(
       const shared = group.length > 1
       const first = group[0]
       const id = shared ? "minimax-direct-shared" : `minimax-direct-${bindings[first.providerID].region}`
-      return cached(id, async () => {
-        const responses = await Promise.allSettled(
-          group.map((candidate) => query(candidate.providerID, candidate.key, fetcher)),
-        )
-        const index = responses.findIndex((response) => response.status === "fulfilled")
-        if (index === -1) {
-          return unavailable(
-            id,
-            first.providerID,
-            shared ? "Direct MiniMax" : first.provider.name,
-            bindings[first.providerID].manage,
+      // The key fingerprint scopes the cache cell to the configured credential, so
+      // swapping keys never reuses the previous account's quota via TTL or stale fallback.
+      const identity = createHash("sha256").update(first.key).digest("hex")
+      return cached(
+        id,
+        async () => {
+          const responses = await Promise.allSettled(
+            group.map((candidate) => query(candidate.providerID, candidate.key, fetcher)),
           )
-        }
+          const index = responses.findIndex((response) => response.status === "fulfilled")
+          if (index === -1) {
+            return unavailable(
+              id,
+              first.providerID,
+              shared ? "Direct MiniMax" : first.provider.name,
+              bindings[first.providerID].manage,
+            )
+          }
 
-        const candidate = group[index]
-        const response = responses[index]
-        if (response.status !== "fulfilled") {
-          return unavailable(id, candidate.providerID, "Direct MiniMax", bindings[candidate.providerID].manage)
-        }
-        return normalize(response.value, {
-          id,
-          providerID: candidate.providerID,
-          sourceLabel: candidate.provider.name,
-          managementUrl: bindings[candidate.providerID].manage,
-          fetchedAt: new Date().toISOString(),
-        })
-      })
+          const candidate = group[index]
+          const response = responses[index]
+          if (response.status !== "fulfilled") {
+            return unavailable(id, candidate.providerID, "Direct MiniMax", bindings[candidate.providerID].manage)
+          }
+          return normalize(response.value, {
+            id,
+            providerID: candidate.providerID,
+            sourceLabel: candidate.provider.name,
+            managementUrl: bindings[candidate.providerID].manage,
+            fetchedAt: new Date().toISOString(),
+          })
+        },
+        identity,
+      )
     }),
   )
 }

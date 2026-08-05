@@ -16,3 +16,8 @@ export interface RequestProviderUsageMessage {
 export interface RefreshProviderUsageMessage {
   type: "refreshProviderUsage"
 }
+
+/** Sent when the Profile view unmounts so the extension stops background usage refreshes. */
+export interface ReleaseProviderUsageMessage {
+  type: "releaseProviderUsage"
+}

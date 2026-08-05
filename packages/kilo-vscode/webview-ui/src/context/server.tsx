@@ -28,6 +28,7 @@ interface ServerContextValue {
   providerUsageError: Accessor<string | undefined>
   requestProviderUsage: () => void
   refreshProviderUsage: () => void
+  releaseProviderUsage: () => void
   deviceAuth: Accessor<DeviceAuthState>
   startLogin: () => void
   goToLogin: () => void
@@ -238,6 +239,12 @@ export const ServerProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "refreshProviderUsage" })
   }
 
+  const releaseProviderUsage = () => {
+    if (providerUsageRetry) clearTimeout(providerUsageRetry)
+    providerUsageRetry = undefined
+    vscode.postMessage({ type: "releaseProviderUsage" })
+  }
+
   const value: ServerContextValue = {
     connectionState,
     serverInfo,
@@ -251,6 +258,7 @@ export const ServerProvider: ParentComponent = (props) => {
     providerUsageError,
     requestProviderUsage,
     refreshProviderUsage,
+    releaseProviderUsage,
     deviceAuth,
     startLogin,
     goToLogin,

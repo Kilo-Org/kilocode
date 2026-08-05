@@ -347,6 +347,7 @@ const AppContent: Component = () => {
                 onLogin={server.startLogin}
                 onRequestProviderUsage={server.requestProviderUsage}
                 onRefreshProviderUsage={server.refreshProviderUsage}
+                onReleaseProviderUsage={server.releaseProviderUsage}
               />
             </Match>
             <Match when={currentView() === "settings"}>

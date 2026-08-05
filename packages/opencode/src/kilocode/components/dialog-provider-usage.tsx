@@ -1,33 +1,13 @@
 import { TextAttributes } from "@opentui/core"
 import { useKeyboard } from "@opentui/solid"
-import type { ProviderUsage, ProviderUsageSnapshot, ProviderUsageWindow } from "@kilocode/sdk/v2"
+import type { ProviderUsage, ProviderUsageSnapshot } from "@kilocode/sdk/v2"
+import { formatWindow } from "@kilocode/kilo-gateway/provider-usage"
 import { useTheme } from "@tui/context/theme"
 import { useSDK } from "@tui/context/sdk"
 import { useDialog } from "@tui/ui/dialog"
 import { Link } from "@tui/ui/link"
 import { Spinner } from "@tui/component/spinner"
 import { For, Show, createSignal, onMount } from "solid-js"
-
-function amount(value: number, unit: string) {
-  if (unit === "USD") return `$${value.toFixed(2)}`
-  if (unit === "percent") return `${value.toFixed(value % 1 ? 1 : 0)}%`
-  return `${value.toLocaleString()} ${unit === "count" ? "" : unit}`.trim()
-}
-
-export function formatWindow(window: ProviderUsageWindow) {
-  if (window.state === "unlimited") return "Unlimited"
-  if (window.state === "not_in_plan") return "Not in plan"
-  if (window.state === "unknown") return "Unknown"
-  if (window.orientation === "used_percent" && window.used !== undefined)
-    return `${amount(window.used, "percent")} used`
-  if (window.orientation === "remaining_percent" && window.remaining !== undefined)
-    return `${amount(window.remaining, "percent")} remaining`
-  if (window.remaining !== undefined && window.limit !== undefined)
-    return `${amount(window.remaining, window.unit)} remaining of ${amount(window.limit, window.unit)}`
-  if (window.used !== undefined && window.limit !== undefined)
-    return `${amount(window.used, window.unit)} used of ${amount(window.limit, window.unit)}`
-  return window.state === "exhausted" ? "Exhausted" : "Unknown"
-}
 
 function Item(props: { item: ProviderUsageSnapshot }) {
   const { theme } = useTheme()
@@ -72,7 +52,7 @@ function Item(props: { item: ProviderUsageSnapshot }) {
   )
 }
 
-export function ProviderUsageBody(props: { data: ProviderUsage }) {
+function ProviderUsageBody(props: { data: ProviderUsage }) {
   const { theme } = useTheme()
   return (
     <box>
@@ -91,7 +71,7 @@ export function DialogProviderUsage() {
   const { theme } = useTheme()
   const sdk = useSDK()
   const [data, setData] = createSignal<ProviderUsage>()
-  const [loading, setLoading] = createSignal(true)
+  const [loading, setLoading] = createSignal(false)
   const [failure, setFailure] = createSignal<string>()
 
   async function load(force: boolean) {

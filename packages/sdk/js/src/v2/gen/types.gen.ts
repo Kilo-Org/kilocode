@@ -4172,7 +4172,6 @@ export type ProviderUsageWindow = {
   id: string
   label: string
   resource: string
-  kind: "quota" | "spend_control"
   unit: string
   orientation: "used_percent" | "remaining_percent" | "amount" | "count"
   used?: number
@@ -4199,10 +4198,7 @@ export type ProviderUsageSnapshot = {
   fetchState: "ready" | "stale" | "unavailable" | "error"
   planState: "active" | "past_due" | "canceling" | "unknown"
   routingState: "active" | "disabled" | "missing" | "replaced" | "not_applicable" | "unknown"
-  availabilityState: "available" | "exhausted" | "unavailable" | "unlimited" | "unknown"
   fetchedAt?: string
-  confidence: "high" | "medium" | "low"
-  source: "cloud" | "provider_api"
   managementUrl?: string
   windows: Array<ProviderUsageWindow>
   error?: ProviderUsageError

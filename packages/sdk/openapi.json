@@ -38532,10 +38532,6 @@
           "resource": {
             "type": "string"
           },
-          "kind": {
-            "type": "string",
-            "enum": ["quota", "spend_control"]
-          },
           "unit": {
             "type": "string"
           },
@@ -38563,7 +38559,7 @@
             "enum": ["active", "exhausted", "unlimited", "not_in_plan", "unknown"]
           }
         },
-        "required": ["id", "label", "resource", "kind", "unit", "orientation", "state"],
+        "required": ["id", "label", "resource", "unit", "orientation", "state"],
         "additionalProperties": false
       },
       "ProviderUsageError": {
@@ -38616,20 +38612,8 @@
             "type": "string",
             "enum": ["active", "disabled", "missing", "replaced", "not_applicable", "unknown"]
           },
-          "availabilityState": {
-            "type": "string",
-            "enum": ["available", "exhausted", "unavailable", "unlimited", "unknown"]
-          },
           "fetchedAt": {
             "type": "string"
-          },
-          "confidence": {
-            "type": "string",
-            "enum": ["high", "medium", "low"]
-          },
-          "source": {
-            "type": "string",
-            "enum": ["cloud", "provider_api"]
           },
           "managementUrl": {
             "type": "string"
@@ -38654,9 +38638,6 @@
           "fetchState",
           "planState",
           "routingState",
-          "availabilityState",
-          "confidence",
-          "source",
           "windows"
         ],
         "additionalProperties": false
