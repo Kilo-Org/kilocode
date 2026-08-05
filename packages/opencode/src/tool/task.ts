@@ -213,6 +213,7 @@ export const TaskTool = Tool.define(
           providerID: msg.info.providerID,
         },
         variant: msg.info.variant,
+        workflow: KiloTask.workflow(ctx.extra), // kilocode_change
         provider,
       })
       const model = selected.model

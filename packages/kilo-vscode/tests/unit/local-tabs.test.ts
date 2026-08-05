@@ -14,6 +14,7 @@ import {
   restoreTabs,
   restoreTrackedTabs,
   showTabStrip,
+  tabsForCreatedSession,
   trackedSessionInventory,
   type LocalTabState,
 } from "../../webview-ui/src/utils/local-tabs"
@@ -61,6 +62,25 @@ const tracked = () =>
   )
 
 describe("local session tabs", () => {
+  it("opens explicitly activated sessions in the foreground", () => {
+    expect(tabsForCreatedSession(state(["s1"], "s1"), "s2", undefined, true)).toEqual({
+      ids: ["s1", "s2"],
+      active: "s2",
+    })
+  })
+
+  it("promotes a matching pending draft into the created session", () => {
+    expect(tabsForCreatedSession(state([pending()], pending()), "s1", pending(), undefined)).toEqual({
+      ids: ["s1"],
+      active: "s1",
+    })
+  })
+
+  it("ignores created sessions without activation or a pending draft", () => {
+    expect(tabsForCreatedSession(state(["s1"], "s1"), "s2", undefined, undefined)).toBeUndefined()
+    expect(tabsForCreatedSession(state(["s1"], "s1"), "s2", "sidebar-pending:gone", undefined)).toBeUndefined()
+  })
+
   it("hides the tab strip when only one tab remains", () => {
     expect(showTabStrip([pending()])).toBe(false)
     expect(showTabStrip([pending(), "sidebar-pending:2"])).toBe(true)

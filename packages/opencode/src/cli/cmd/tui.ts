@@ -7,14 +7,12 @@ import { fileURLToPath } from "url"
 import { UI } from "@/cli/ui"
 import { errorMessage } from "@opencode-ai/tui/util/error"
 import { withTimeout } from "@/util/timeout"
-import { withNetworkOptions, resolveNetworkOptionsNoConfig } from "@/cli/network"
+import { withNetworkOptions, resolveNetworkOptionsNoConfig, hasArg } from "@/cli/network"
 import { Filesystem } from "@/util/filesystem"
 import type { GlobalEvent } from "@kilocode/sdk/v2"
 import type { EventSource } from "@opencode-ai/tui/context/sdk"
-import { importCloudSession, localSessionID, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
-import { createKiloClient } from "@kilocode/sdk/v2" // kilocode_change
 import { writeHeapSnapshot } from "v8"
-import { KiloTuiThreadDaemon, type StartInput } from "@/kilocode/cli/cmd/tui/thread" // kilocode_change
+import type { StartInput } from "@/kilocode/cli/cmd/tui/thread" // kilocode_change - runtime imports deferred into handlers
 import { win32InstallCtrlCGuard } from "@opencode-ai/tui/terminal-win32"
 import { validateSession } from "../tui/validate-session"
 // kilocode_change start - correlate the TUI worker with its parent process
@@ -25,7 +23,7 @@ import {
   sanitizedProcessEnv,
 } from "@opencode-ai/core/util/opencode-process"
 // kilocode_change end
-import { createParentRemoteExitBridge, type RemoteExitBridgeClient } from "@/kilocode/cli/cmd/tui/remote-exit-bridge" // kilocode_change
+import type { RemoteExitBridgeClient } from "@/kilocode/cli/cmd/tui/remote-exit-bridge" // kilocode_change - runtime import deferred
 import type { Exit } from "@opencode-ai/tui/context/exit" // kilocode_change
 
 declare global {
@@ -45,6 +43,7 @@ export async function runEmbeddedRemoteExitBridge(input: {
   done: Promise<unknown>
   timeoutMs?: number
 }) {
+  const { createParentRemoteExitBridge } = await import("@/kilocode/cli/cmd/tui/remote-exit-bridge")
   const timeoutMs = input.timeoutMs ?? 5_000
   const bridge = createParentRemoteExitBridge(input.client, input.exit)
   let ready = false
@@ -176,8 +175,94 @@ export const TuiThreadCommand = cmd({
       .option("agent", {
         type: "string",
         describe: "agent to use",
+      })
+      .option("auto", {
+        type: "boolean",
+        describe: "auto-approve permissions that are not explicitly denied (dangerous!)",
+        default: false,
+      })
+      .option("yolo", {
+        type: "boolean",
+        hidden: true,
+        default: false,
+      })
+      .option("dangerously-skip-permissions", {
+        type: "boolean",
+        hidden: true,
+        default: false,
+      })
+      .option("mini", {
+        type: "boolean",
+        describe: "start the minimal interactive interface",
+        default: false,
+      })
+      .option("replay", {
+        type: "boolean",
+        hidden: true,
+      })
+      .option("no-replay", {
+        type: "boolean",
+        describe: "disable mini session history replay on resume and after resize",
+      })
+      .option("replay-limit", {
+        type: "number",
+        describe: "cap visible mini replay to the newest N messages",
+      })
+      .option("demo", {
+        type: "boolean",
+        hidden: true,
       }),
   handler: async (args) => {
+    if (args.replay === true) {
+      UI.error("--replay is not supported; replay is enabled by default")
+      process.exitCode = 1
+      return
+    }
+    const noReplay = args.replay === false || args.noReplay === true
+
+    if (args.mini) {
+      const network = ["--port", "--hostname", "--mdns", "--no-mdns", "--mdns-domain", "--cors"].find((option) =>
+        process.argv.some((arg) => arg === option || arg.startsWith(option + "=")),
+      )
+      if (network) {
+        UI.error(`${network} cannot be used with --mini`)
+        process.exitCode = 1
+        return
+      }
+
+      const { runMini } = await import("./run")
+      await runMini({
+        directory: resolveThreadDirectory(args.project),
+        continue: args.continue,
+        session: args.session,
+        fork: args.fork,
+        model: args.model,
+        agent: args.agent,
+        prompt: args.prompt,
+        replay: noReplay ? false : undefined,
+        replayLimit: args.replayLimit,
+        demo: args.demo,
+      })
+      return
+    }
+
+    const unsupported = [
+      ["--no-replay", noReplay],
+      ["--replay-limit", args.replayLimit !== undefined],
+      ["--demo", args.demo !== undefined],
+    ].find((entry) => entry[1])?.[0]
+    if (unsupported) {
+      UI.error(`${unsupported} requires --mini`)
+      process.exitCode = 1
+      return
+    }
+
+    // kilocode_change start - lazy Kilo implementations so other CLI commands
+    // don't pay their module cost at startup
+    const { importCloudSession, localSessionID, validateCloudFork } = await import("@/kilocode/cloud-session")
+    const { KiloTuiThreadDaemon } = await import("@/kilocode/cli/cmd/tui/thread")
+    const { preload } = await import("@/kilocode/cli/cmd/tui")
+    // kilocode_change end
     const unguard = win32InstallCtrlCGuard()
     const shutdown = {
       pending: undefined as Promise<void> | undefined,
@@ -203,6 +288,11 @@ export const TuiThreadCommand = cmd({
       // chdir so the thread and worker share the same directory key.
       const next = resolveThreadDirectory(args.project)
       const file = await target()
+      // kilocode_change start
+      const preloads = preload(typeof KILO_WORKER_PATH !== "undefined", () =>
+        import.meta.resolve("@opentui/solid/preload"),
+      )
+      // kilocode_change end
       try {
         process.chdir(next)
       } catch {
@@ -223,7 +313,7 @@ export const TuiThreadCommand = cmd({
       })
       // kilocode_change end
       const worker = new Worker(file, {
-        preload: ["@opentui/solid/preload"], // kilocode_change - Bun workers do not inherit the parent preload
+        preload: preloads, // kilocode_change
         env, // kilocode_change
       })
       worker.onerror = (e) => {
@@ -276,6 +366,9 @@ export const TuiThreadCommand = cmd({
       }
       process.once("SIGHUP", () => shutdownAndExit({ reason: "signal", signal: "SIGHUP", code: 129 }))
       process.once("SIGTERM", () => shutdownAndExit({ reason: "signal", signal: "SIGTERM", code: 143 }))
+      // kilocode_change - external kill -INT takes the same graceful path as SIGHUP/SIGTERM.
+      // Interactive Ctrl-C in the TUI is a raw-mode keypress, not a signal.
+      process.once("SIGINT", () => shutdownAndExit({ reason: "signal", signal: "SIGINT", code: 130 }))
       // In some terminal/tab-close paths the parent shell is terminated without
       // forwarding a signal to this process, leaving the TUI orphaned. Detect
       // parent PID re-parenting and exit explicitly.
@@ -314,13 +407,7 @@ export const TuiThreadCommand = cmd({
       const config = await TuiConfig.get()
 
       const network = resolveNetworkOptionsNoConfig(args)
-      const external =
-        process.argv.includes("--port") ||
-        process.argv.includes("--hostname") ||
-        process.argv.includes("--mdns") ||
-        network.mdns ||
-        network.port !== 0 ||
-        network.hostname !== "127.0.0.1"
+      const external = hasArg("--port") || hasArg("--hostname") || network.mdns === true
 
       const transport = external
         ? {
@@ -336,6 +423,8 @@ export const TuiThreadCommand = cmd({
             events: createEventSource(client),
           }
 
+      // kilocode_change - upstream validates here, but --cloud-fork's session id is only local after
+      // the import below; the guarded validateSession further down covers both paths.
       setTimeout(() => {
         client.call("checkUpgrade", { directory: cwd }).catch((err) => console.error("Upgrade check failed", err))
       }, 1000).unref?.()
@@ -344,6 +433,7 @@ export const TuiThreadCommand = cmd({
         // kilocode_change start - import cloud session before TUI renders
         if (args.cloudFork && args.session) {
           UI.println("Importing session from cloud...")
+          const { createKiloClient } = await import("@kilocode/sdk/v2")
           const sdk = createKiloClient({
             baseUrl: transport.url,
             fetch: transport.fetch,
@@ -388,7 +478,7 @@ export const TuiThreadCommand = cmd({
             config,
             directory: cwd,
             fetch: transport.fetch,
-            headers: transport.headers, // kilocode_change
+            headers: transport.headers,
             events: transport.events,
             args: {
               continue: args.continue,
@@ -397,6 +487,7 @@ export const TuiThreadCommand = cmd({
               model: args.model,
               prompt,
               fork: args.fork,
+              auto: args.auto || args.yolo || args["dangerously-skip-permissions"],
             },
           },
           embeddedRemoteExitClient(external, client),

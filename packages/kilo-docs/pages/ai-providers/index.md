@@ -45,6 +45,7 @@ Route requests through unified APIs with additional features:
 
 - **[OpenRouter](/docs/ai-providers/openrouter)** - Access multiple providers through one API
 - **[Requesty](/docs/ai-providers/requesty)** - Smart routing and fallbacks
+- **[DaoXE](/docs/ai-providers/daoxe)** - Connect multiple model families through one API
 - **[Cloudflare AI Gateway](/docs/ai-providers/cloudflare)** - Route providers through your Cloudflare account
 
 ## Choosing a Provider

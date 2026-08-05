@@ -165,6 +165,14 @@ describe("sessionToWebview", () => {
     expect(result.revert).toBeNull()
     expect(result.summary).toBeNull()
   })
+
+  it("preserves the workspace restoration outcome from a revert response", () => {
+    const session = {
+      ...makeSession(),
+      revert: { messageID: "msg-1", workspace: "snapshots-disabled" as const },
+    }
+    expect(sessionToWebview(session).revert).toMatchObject({ workspace: "snapshots-disabled" })
+  })
 })
 
 describe("indexProvidersById", () => {

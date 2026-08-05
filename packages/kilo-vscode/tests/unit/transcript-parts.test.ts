@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test"
 import path from "node:path"
 
 const WEBVIEW = path.resolve(import.meta.dir, "../../webview-ui")
+const WORKER_URL = path.resolve(import.meta.dir, "../setup/worker-url.ts")
 const PASS = "TRANSCRIPT_PARTS_PASS"
 const FAIL = "TRANSCRIPT_PARTS_FAIL:"
 
@@ -31,6 +32,13 @@ const SCRIPT = `
       state: { status: "completed", input: {}, output: "done", title: "Updated todos" },
     },
     { id: "read-running", type: "tool", tool: "read", state: { status: "running", input: {} } },
+    { id: "memory-running", type: "tool", tool: "kilo_memory_recall", state: { status: "running", input: {} } },
+    {
+      id: "memory-completed",
+      type: "tool",
+      tool: "kilo_memory_recall",
+      state: { status: "completed", input: {}, output: "memory", title: "Memory recalled" },
+    },
   ]
   const visible = parts.filter((part) => isRenderable(part, message)).map((part) => part.id)
 
@@ -38,7 +46,14 @@ const SCRIPT = `
     console.log("${FAIL}" + reason)
     process.exit(2)
   }
-  const expected = ["visible-text", "visible-reasoning", "todo-completed", "read-running"]
+  const expected = [
+    "visible-text",
+    "visible-reasoning",
+    "todo-completed",
+    "read-running",
+    "memory-running",
+    "memory-completed",
+  ]
   if (visible.length !== expected.length || visible.some((id, index) => id !== expected[index])) {
     fail("did not exclude transcript-invisible parts")
   }
@@ -47,7 +62,7 @@ const SCRIPT = `
 
 describe("transcript parts", () => {
   it("keeps timeline candidates aligned with visible transcript parts", () => {
-    const result = Bun.spawnSync(["bun", "--conditions=browser", "-e", SCRIPT], {
+    const result = Bun.spawnSync(["bun", "--preload", WORKER_URL, "--conditions=browser", "-e", SCRIPT], {
       cwd: WEBVIEW,
       stdout: "pipe",
       stderr: "pipe",

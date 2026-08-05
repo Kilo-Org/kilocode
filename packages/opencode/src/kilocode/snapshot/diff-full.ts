@@ -1,8 +1,8 @@
 // kilocode_change - new file
 //
-// Patch generation. Runs `git diff --unified=INT_MAX` to produce
+// Patch generation. Runs `git diff --unified=3` to produce
 // unified-diff text for a set of files, instead of the npm `diff` package's
-// JS Myers implementation. Myers is O(N*M) with full context, so on
+// JS Myers implementation. Myers is O(N*M), so on
 // huge-file diffs it can block the event loop for minutes (the TUI freeze
 // where ESC stopped working after a turn).
 //
@@ -18,8 +18,9 @@ import * as Log from "@opencode-ai/core/util/log"
 export namespace DiffFull {
   const log = Log.create({ service: "snapshot.diff-full" })
 
-  // INT_MAX — git clamps to this, effectively infinite context.
-  const unified = "--unified=2147483647"
+  // Keep context bounded. Git's effectively infinite context can emit
+  // malformed repeated hunks on Windows and makes persisted snapshots huge.
+  const unified = "--unified=3"
 
   interface GitResult {
     readonly code: number
@@ -28,7 +29,7 @@ export namespace DiffFull {
   }
 
   /**
-   * Run `git diff --unified=INT_MAX` for a set of files between two refs and
+   * Run `git diff --unified=3` for a set of files between two refs and
    * return a `file → unified-diff text` map. Output format matches what the
    * `diff` package's `parsePatch` expects, so downstream clients continue to
    * work.
@@ -85,7 +86,7 @@ export namespace DiffFull {
 
   /**
    * Generate a structured + unified diff for a single file in the working
-   * tree vs HEAD using `git diff --ignore-all-space --unified=INT_MAX`.
+   * tree vs HEAD using `git diff --ignore-all-space --unified=3`.
    * Returns `null` if git produces no output (caller emits a content-only
    * response with no patch).
    */

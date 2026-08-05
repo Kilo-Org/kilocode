@@ -193,6 +193,18 @@ test("large catalogs keep the rendered tree bounded and navigate to distant mode
   // The window mounts before we measure it, yet stays far smaller than the catalog.
   await expect.poll(() => tree.getByRole("treeitem").count()).toBeGreaterThan(0)
   await expect.poll(() => tree.getByRole("treeitem").count()).toBeLessThan(50)
+  await expect(page.getByRole("treeitem", { name: "Model 300" })).toBeVisible()
+
+  // Searching from deep in the catalog scrolls the first active match into view.
+  await tree.getByRole("treeitem").last().hover()
+  await tree.evaluate((el) => el.scrollTo({ top: el.scrollHeight }))
+  await combobox.pressSequentially("Model 5")
+  const first = page.getByRole("treeitem", { name: "Model 500" })
+  await expect(first).toBeVisible()
+  await expect(combobox).toHaveAttribute("aria-activedescendant", await first.getAttribute("id"))
+  const hovered = page.getByRole("treeitem", { name: "Model 501" })
+  await hovered.hover()
+  await expect(combobox).toHaveAttribute("aria-activedescendant", await hovered.getAttribute("id"))
 
   // Reaching a distant model scrolls it into the mounted window and activates it.
   await combobox.fill("Model 599")

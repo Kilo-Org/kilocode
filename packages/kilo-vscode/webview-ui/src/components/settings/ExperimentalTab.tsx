@@ -24,7 +24,7 @@ const SHARE_OPTIONS: ShareOption[] = [
 ]
 
 const ExperimentalTab: Component = () => {
-  const { config, updateConfig } = useConfig()
+  const { config, settings, updateConfig, applySetting } = useConfig()
   const language = useLanguage()
   const imageModels = useImageModels()
   const vscode = useVSCode()
@@ -250,6 +250,19 @@ const ExperimentalTab: Component = () => {
             />
           </SettingsRow>
         </Show>
+
+        <SettingsRow
+          title={language.t("settings.experimental.multiProject.title")}
+          description={language.t("settings.experimental.multiProject.description")}
+        >
+          <Switch
+            checked={settings().multiProject === true}
+            onChange={(checked) => applySetting("multiProject", checked, "experimental.multiProject")}
+            hideLabel
+          >
+            {language.t("settings.experimental.multiProject.title")}
+          </Switch>
+        </SettingsRow>
 
         {/* MCP timeout */}
         <SettingsRow

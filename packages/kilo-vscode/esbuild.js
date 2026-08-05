@@ -78,6 +78,26 @@ const pierreWorkerAliasPlugin = {
 }
 
 /**
+ * Replace Markdown's Vite-only worker URL import with the URI injected by the
+ * extension host. The worker itself is emitted as a separate dist asset below.
+ *
+ * @type {import('esbuild').Plugin}
+ */
+const markdownWorkerUrlPlugin = {
+  name: "markdown-worker-url",
+  setup(build) {
+    build.onResolve({ filter: /markdown-shiki\.worker\.ts\?worker&url$/ }, () => ({
+      path: "markdown-shiki-worker-url",
+      namespace: "kilo-worker-url",
+    }))
+    build.onLoad({ filter: /.*/, namespace: "kilo-worker-url" }, () => ({
+      contents: "export default window.KILO_MARKDOWN_SHIKI_WORKER_URI",
+      loader: "js",
+    }))
+  },
+}
+
+/**
  * Resolve the synthetic `kilo-shiki-worker` entry point to Pierre's Shiki worker
  * so esbuild can bundle it (and its inlined oniguruma WebAssembly) into a single
  * `dist/shiki-worker.js` asset loaded by `webview-ui/pierre-worker.ts`. Switch to
@@ -159,6 +179,7 @@ function createBrowserWebviewContext(entryPoint, outfile) {
     plugins: [
       solidDedupePlugin,
       pierreWorkerAliasPlugin,
+      markdownWorkerUrlPlugin,
       svgSpritePlugin,
       cssPackageResolvePlugin,
       solidPlugin(),
@@ -181,6 +202,21 @@ function createShikiWorkerContext() {
     outfile: "dist/shiki-worker.js",
     logLevel: "silent",
     plugins: [shikiWorkerEntryPlugin, esbuildProblemMatcherPlugin],
+  })
+}
+
+function createMarkdownShikiWorkerContext() {
+  return esbuild.context({
+    entryPoints: [path.join(__dirname, "..", "ui", "src", "components", "markdown-shiki.worker.ts")],
+    bundle: true,
+    format: "esm",
+    minify: production,
+    sourcemap: !production,
+    sourcesContent: false,
+    platform: "browser",
+    outfile: "dist/markdown-shiki-worker.js",
+    logLevel: "silent",
+    plugins: [esbuildProblemMatcherPlugin],
   })
 }
 
@@ -229,6 +265,7 @@ async function main() {
 
   // Build the shared Shiki highlighting worker asset
   const shikiWorkerCtx = await createShikiWorkerContext()
+  const markdownShikiWorkerCtx = await createMarkdownShikiWorkerContext()
 
   if (watch) {
     await Promise.all([
@@ -240,6 +277,7 @@ async function main() {
       kiloClawCtx.watch(),
       marketplaceCtx.watch(),
       shikiWorkerCtx.watch(),
+      markdownShikiWorkerCtx.watch(),
     ])
   } else {
     await Promise.all([
@@ -251,6 +289,7 @@ async function main() {
       diffViewerCtx.rebuild(),
       diffVirtualCtx.rebuild(),
       shikiWorkerCtx.rebuild(),
+      markdownShikiWorkerCtx.rebuild(),
     ])
     await Promise.all([
       extensionCtx.dispose(),
@@ -261,6 +300,7 @@ async function main() {
       kiloClawCtx.dispose(),
       marketplaceCtx.dispose(),
       shikiWorkerCtx.dispose(),
+      markdownShikiWorkerCtx.dispose(),
     ])
   }
 }

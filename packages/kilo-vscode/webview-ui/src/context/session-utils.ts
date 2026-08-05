@@ -205,6 +205,106 @@ export function calcTokenUsage(
 }
 
 /**
+ * Pick the throughput snapshot from the last step-finish part that carries a
+ * `metrics` block. We surface only the most recent assistant turn's rate so
+ * the figure reflects what the user is currently waiting on rather than a
+ * stale session-wide average — older turns scroll out of view and shouldn't
+ * keep pulling the displayed value down.
+ *
+ * PP (prompt-processing) is intentionally not surfaced here: the AI SDK
+ * adapter drops llama.cpp's `prompt_per_second` before providerMetadata
+ * reaches computeMetrics, so the wire shape stays `{ prompt?, generation? }`
+ * for future use but only `generation` is populated today. PP support lands
+ * when the upstream metadataExtractor wiring ships.
+ *
+ * Returns `undefined` when no step-finish part in the input carries metrics,
+ * which is the signal callers use to hide the throughput UI.
+ */
+export function latestMetrics(parts: readonly Part[]): { generation?: number; source: "computed" } | undefined {
+  let generation: number | undefined
+  for (const part of parts) {
+    if (part.type !== "step-finish") continue
+    const metrics = part.metrics
+    if (!metrics) continue
+    if (metrics.generation !== undefined) generation = metrics.generation
+  }
+  if (generation === undefined) return undefined
+  return { generation, source: "computed" }
+}
+
+/**
+ * Aggregate tokens-per-second throughput across the step-finish parts of a
+ * session. Kept as an alias of `latestMetrics` because the historical name
+ * still appears in tests and external callers — both now resolve to the same
+ * "last non-empty sample wins" snapshot semantics.
+ */
+export function aggregateMetrics(parts: readonly Part[]): { generation?: number; source: "computed" } | undefined {
+  return latestMetrics(parts)
+}
+
+/**
+ * Pick the throughput snapshot from a single assistant message's parts.
+ * Same selection strategy as `latestMetrics` so the per-message badge and
+ * the header row stay consistent.
+ */
+export function messageMetrics(parts: readonly Part[]): { generation?: number; source: "computed" } | undefined {
+  return latestMetrics(parts)
+}
+
+/**
+ * Weighted generation throughput for a single assistant message. Aggregates
+ * output + reasoning tokens across every step-finish part against the sum of
+ * their active model-generation durations, so the displayed value represents
+ * the turn rather than whichever step happened to finish last.
+ *
+ * Steps without `time.elapsed`, with non-positive `elapsed`, or with no
+ * generated tokens are skipped — tool-only steps, idempotent cache hits,
+ * and tool re-execution should not skew the figure.
+ */
+export function messageThroughput(parts: readonly Part[]): { generation?: number; source: "computed" } | undefined {
+  let generated = 0
+  let elapsedMs = 0
+  for (const part of parts) {
+    if (part.type !== "step-finish") continue
+    const time = part.time
+    if (!time || !Number.isFinite(time.elapsed) || time.elapsed <= 0) continue
+    const tokens = part.tokens
+    if (!tokens) continue
+    const stepGenerated = tokens.output + (tokens.reasoning ?? 0)
+    if (stepGenerated <= 0) continue
+    generated += stepGenerated
+    elapsedMs += time.elapsed
+  }
+  if (generated <= 0 || elapsedMs <= 0) return undefined
+  const generation = (generated * 1000) / elapsedMs
+  if (!Number.isFinite(generation) || generation <= 0) return undefined
+  return { generation, source: "computed" }
+}
+
+/**
+ * Weighted generation throughput across the flat array of parts from every
+ * message in a session. Same weighted semantics as `messageThroughput` —
+ * useful when a caller has already flattened parts across messages.
+ */
+export function sessionThroughput(parts: readonly Part[]): { generation?: number; source: "computed" } | undefined {
+  return messageThroughput(parts)
+}
+
+/**
+ * Format a text-generation rate for display. Shared by every rendering site
+ * so the same value reads the same in the per-message badge and the
+ * aggregated header row.
+ */
+function formatRateValue(value: number | undefined, locale: string): string {
+  if (!Number.isFinite(value) || value === undefined || value <= 0) return "–"
+  return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(value)} t/s`
+}
+
+export function formatTG(value: number | undefined, locale: string) {
+  return formatRateValue(value, locale)
+}
+
+/**
  * Build a map of session ID → **own cost** for each session in the family
  * that has non-zero own cost.
  *

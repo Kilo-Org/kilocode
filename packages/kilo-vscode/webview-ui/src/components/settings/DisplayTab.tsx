@@ -25,7 +25,7 @@ const CODE_EDIT_OPTIONS: LayoutOption[] = [
 ]
 
 const DisplayTab: Component = () => {
-  const { config, updateConfig } = useConfig()
+  const { config, updateConfig, settings, updateSetting } = useConfig()
   const display = useDisplay()
   const language = useLanguage()
 
@@ -75,6 +75,32 @@ const DisplayTab: Component = () => {
             hideLabel
           >
             {language.t("settings.display.reasoningAutoCollapse.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.display.shiftTabCycle.title")}
+          description={language.t("settings.display.shiftTabCycle.description")}
+        >
+          <Switch
+            checked={Boolean(settings()["chat.shiftTabCyclesVariant"] ?? true)}
+            onChange={(checked: boolean) => updateSetting("chat.shiftTabCyclesVariant", checked)}
+            hideLabel
+          >
+            {language.t("settings.display.shiftTabCycle.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.display.tokenThroughput.title")}
+          description={language.t("settings.display.tokenThroughput.description")}
+        >
+          <Switch
+            checked={Boolean(settings()["showTokenThroughput"] ?? false)}
+            onChange={(checked: boolean) => updateSetting("showTokenThroughput", checked)}
+            hideLabel
+          >
+            {language.t("settings.display.tokenThroughput.title")}
           </Switch>
         </SettingsRow>
 

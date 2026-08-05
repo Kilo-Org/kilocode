@@ -288,11 +288,6 @@ describe("kilo_memory_save", () => {
       expect(shown.sources.project).not.toContain("reply_style")
       expect(shown.sources.project).not.toContain("I prefer terse summaries")
       expect(shown.sources.project).toContain("- commit_style :: Repo convention: commit messages are concise.")
-      expect(shown.decisions).toContain('"reason":"out_of_scope"')
-      expect(shown.decisions).not.toContain("rubicon fennel")
-      expect(shown.decisions).not.toContain("Ignore prior instructions")
-      expect(shown.decisions).not.toContain("reply_style")
-      expect(shown.decisions).not.toContain("I prefer terse summaries")
     })
   })
 

@@ -28,18 +28,6 @@ function status(root: string) {
   }
 }
 
-function show(root: string) {
-  return {
-    root: `${root}/.kilo/memory`,
-    state: status(root).state,
-    sources: { project: "", environment: "", corrections: "" },
-    index: "",
-    items: "",
-    changes: "",
-    decisions: "",
-  }
-}
-
 describe("KiloProvider memory events", () => {
   it("routes tracked background memory events to their session directory", async () => {
     const calls: string[] = []
@@ -151,10 +139,6 @@ describe("KiloProvider memory events", () => {
           calls.push(["disable", input.directory])
           return { data: { root: `${input.directory}/.kilo/memory`, state: status(input.directory).state } }
         },
-        show: async (input: { directory: string }) => {
-          calls.push(["show", input.directory])
-          return { data: show(input.directory) }
-        },
       },
     } as unknown as KiloClient
     const posts: unknown[] = []
@@ -176,7 +160,6 @@ describe("KiloProvider memory events", () => {
       ["status", "/repo/project"],
       ["disable", "/repo/project"],
       ["status", "/repo/project"],
-      ["show", "/repo/project"],
     ])
     expect(posts).toContainEqual(expect.objectContaining({ type: "memoryLoaded", sessionID: "ses_active" }))
   })

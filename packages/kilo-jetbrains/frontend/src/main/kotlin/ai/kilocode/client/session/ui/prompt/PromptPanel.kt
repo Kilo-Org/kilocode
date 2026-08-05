@@ -212,7 +212,7 @@ class PromptPanel(
         isFocusPainted = false
         addActionListener {
             syncTooltip()
-            val id = if (busy) StopSessionAction.ID else SendPromptAction.ID
+            val id = if (busy && !hasDraft()) StopSessionAction.ID else SendPromptAction.ID
             val action = ActionManager.getInstance().getAction(id)
                 ?: return@addActionListener
             val ctx = DataManager.getInstance().getDataContext(button)
@@ -258,7 +258,7 @@ class PromptPanel(
     private var request = 0L
 
     override val isSendEnabled: Boolean
-        get() = ready && !busy && !submitting && (text().isNotEmpty() || attachments.isNotEmpty())
+        get() = ready && !submitting && (text().isNotEmpty() || attachments.isNotEmpty())
 
     override val isStopEnabled: Boolean
         get() = busy
@@ -273,6 +273,7 @@ class PromptPanel(
                 syncEditorHeight()
                 triggerCompletion(e)
                 syncHighlights()
+                syncButton()
                 onChange()
             }
         })
@@ -418,7 +419,7 @@ class PromptPanel(
     fun setBusy(value: Boolean) {
         busy = value
         if (value) invalidateEnhancement() else syncEnhance()
-        button.icon = if (value) STOP_ICON else SEND_ICON
+        syncButton()
         syncTooltip()
     }
 
@@ -508,6 +509,8 @@ class PromptPanel(
         strip.clear()
         syncEditorHeight()
         syncHighlights()
+        syncButton()
+        syncTooltip()
     }
 
     @RequiresEdt
@@ -629,6 +632,11 @@ class PromptPanel(
     }
 
     @RequiresEdt
+    private fun syncButton() {
+        button.icon = if (busy && !hasDraft()) STOP_ICON else SEND_ICON
+    }
+
+    @RequiresEdt
     private fun submit(src: String) {
         if (!isSendEnabled) return
         val txt = text()
@@ -718,7 +726,7 @@ class PromptPanel(
 
     @RequiresEdt
     private fun addAttachment(item: PromptAttachment) {
-        if (!attachment && PromptAttachmentExtractor.media(item.mime)) {
+        if (!attachment && !item.reference && PromptAttachmentExtractor.image(item.mime)) {
             LOG.debug { "kind=prompt-attachment add name=${item.name} mime=${item.mime} blocked=unsupported-model" }
             notify(KiloBundle.message("prompt.attachment.unsupported.model"))
             return
@@ -731,6 +739,8 @@ class PromptPanel(
         strip.add(item)
         LOG.debug { "kind=prompt-attachment add name=${item.name} mime=${item.mime} count=${attachments.size}" }
         syncEditorHeight()
+        syncButton()
+        syncTooltip()
         onChange()
     }
 
@@ -739,6 +749,8 @@ class PromptPanel(
         if (!attachments.removeIf { it.id == item.id }) return
         strip.remove(item)
         syncEditorHeight()
+        syncButton()
+        syncTooltip()
         onChange()
     }
 
@@ -801,7 +813,15 @@ class PromptPanel(
                 val items = PromptAttachmentExtractor.files(list) + listOfNotNull(image)
                 val ms = elapsedMs(start)
                 LOG.debug { "kind=$kind extract area=$area files=${list.size} image=${image != null} attachments=${items.size} extractMs=$ms sourceMs=$sourceMs" }
-                if (items.isEmpty()) return@executeOnPooledThread
+                if (items.isEmpty()) {
+                    if (list.isNotEmpty()) {
+                        ApplicationManager.getApplication().invokeLater {
+                            if (project.isDisposed) return@invokeLater
+                            notify(KiloBundle.message("prompt.attachment.drop.empty"))
+                        }
+                    }
+                    return@executeOnPooledThread
+                }
                 ApplicationManager.getApplication().invokeLater {
                     if (project.isDisposed) return@invokeLater
                     LOG.debug { "kind=$kind attach area=$area files=${list.size} image=${image != null} attachments=${items.size} extractMs=$ms sourceMs=$sourceMs" }
@@ -815,7 +835,9 @@ class PromptPanel(
 
     private fun dropFiles(event: DnDEvent): List<java.io.File> {
         if (!FileCopyPasteUtil.isFileListFlavorAvailable(event)) return emptyList()
-        return FileCopyPasteUtil.getFileListFromAttachedObject(event.attachedObject).orEmpty()
+        val files = FileCopyPasteUtil.getFileListFromAttachedObject(event.attachedObject)
+        if (files.isNotEmpty()) return files
+        return FileCopyPasteUtil.getFileList(event).orEmpty()
     }
 
     private fun elapsedMs(start: Long) = (System.nanoTime() - start) / 1_000_000
@@ -885,19 +907,20 @@ class PromptPanel(
     }
 
     private fun tooltip(): String {
-        val id = if (busy) StopSessionAction.ID else SendPromptAction.ID
-        val text = if (busy) {
+        val stop = busy && !hasDraft()
+        val id = if (stop) StopSessionAction.ID else SendPromptAction.ID
+        val text = if (stop) {
             KiloBundle.message("prompt.button.stop")
         } else {
             KiloBundle.message("prompt.button.send")
         }
         val tip = KeymapUtil.createTooltipText(text, id)
-        if (busy) return tip
-        val stop = KeymapUtil.getFirstKeyboardShortcutText(StopSessionAction.ID)
-        if (stop.isEmpty()) return tip
+        if (stop) return tip
+        val shortcut = KeymapUtil.getFirstKeyboardShortcutText(StopSessionAction.ID)
+        if (shortcut.isEmpty()) return tip
         return XmlStringUtil.wrapInHtml(
             XmlStringUtil.escapeString(tip) + "<br>" +
-                XmlStringUtil.escapeString(KiloBundle.message("prompt.button.send.tooltip.stop", stop))
+                XmlStringUtil.escapeString(KiloBundle.message("prompt.button.send.tooltip.stop", shortcut))
         )
     }
 

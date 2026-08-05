@@ -45,6 +45,7 @@ export function buildWebviewHtml(
 ): string {
   const nonce = getNonce()
   const csp = buildCspString(webview.cspSource, nonce, opts.port)
+  const markdownWorkerUri = opts.workerUri.toString().replace(/shiki-worker\.js$/, "markdown-shiki-worker.js")
 
   return `<!DOCTYPE html>
 <html lang="en" data-theme="kilo-vscode">
@@ -82,7 +83,7 @@ export function buildWebviewHtml(
 </head>
 <body>
   <div id="root"></div>
-  <script nonce="${nonce}">window.ICONS_BASE_URI = "${opts.iconsBaseUri}"; window.KILO_SHIKI_WORKER_URI = "${opts.workerUri}";</script>
+  <script nonce="${nonce}">window.ICONS_BASE_URI = "${opts.iconsBaseUri}"; window.KILO_SHIKI_WORKER_URI = "${opts.workerUri}"; window.KILO_MARKDOWN_SHIKI_WORKER_URI = "${markdownWorkerUri}";</script>
   <script nonce="${nonce}" src="${opts.scriptUri}"></script>
 </body>
 </html>`

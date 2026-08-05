@@ -37,6 +37,7 @@ export function parse(input: unknown) {
     const fallback = !first.has(account.serviceID)
     first.add(account.serviceID)
     return {
+      id: account.id,
       connectorID: account.serviceID,
       label: account.description,
       credential: account.credential,

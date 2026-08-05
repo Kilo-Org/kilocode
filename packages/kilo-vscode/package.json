@@ -2,7 +2,7 @@
   "name": "kilo-code",
   "displayName": "Kilo Code: AI Coding Agent, Copilot, and Autocomplete",
   "description": "Open Source AI coding agent that generates code from natural language, automates tasks, and runs terminal commands. Features inline autocomplete, browser automation, automated refactoring, and custom modes for planning, coding, and debugging. Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM.",
-  "version": "7.4.11",
+  "version": "7.4.20",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
@@ -678,7 +678,7 @@
         "command": "kilo-code.new.agentManager.showTerminal",
         "key": "ctrl+/",
         "mac": "cmd+/",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && !kilo-code.new.sidebarFocused"
       },
       {
         "command": "kilo-code.new.agentManager.runScript",
@@ -804,13 +804,13 @@
         "command": "kilo-code.new.cycleAgentMode",
         "key": "ctrl+.",
         "mac": "cmd+.",
-        "when": "sideBarFocus && kilo-code.new.sidebarVisible || activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' || activeWebviewPanelId == 'kilo-code.new.TabPanel'"
+        "when": "kilo-code.new.sidebarFocused || activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' || activeWebviewPanelId == 'kilo-code.new.TabPanel'"
       },
       {
         "command": "kilo-code.new.cyclePreviousAgentMode",
         "key": "ctrl+shift+.",
         "mac": "cmd+shift+.",
-        "when": "sideBarFocus && kilo-code.new.sidebarVisible || activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' || activeWebviewPanelId == 'kilo-code.new.TabPanel'"
+        "when": "kilo-code.new.sidebarFocused || activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' || activeWebviewPanelId == 'kilo-code.new.TabPanel'"
       },
       {
         "command": "kilo-code.new.autocomplete.cancelSuggestions",
@@ -868,7 +868,8 @@
             "tr",
             "nl",
             "uk",
-            "it"
+            "it",
+            "fa"
           ],
           "enumDescriptions": [
             "Auto (VS Code language)",
@@ -891,7 +892,8 @@
             "Türkçe",
             "Nederlands",
             "Українська",
-            "Italiano"
+            "Italiano",
+            "فارسی"
           ]
         },
         "kilo-code.new.languageCommitMessage": {
@@ -919,7 +921,8 @@
             "tr",
             "nl",
             "uk",
-            "it"
+            "it",
+            "fa"
           ],
           "enumDescriptions": [
             "跟随界面语言 (Sync with UI language)",
@@ -942,7 +945,8 @@
             "Türkçe",
             "Nederlands",
             "Українська",
-            "Italiano"
+            "Italiano",
+            "فارسی"
           ]
         },
         "kilo-code.new.model.providerID": {
@@ -1015,6 +1019,26 @@
           "default": "",
           "scope": "application",
           "description": "Prefix for automatically named Agent Manager branches, for example 'marius/' or 'feature/'. Explicit branch names are unchanged."
+        },
+        "kilo-code.new.experimental.multiProject": {
+          "type": "boolean",
+          "default": false,
+          "scope": "application",
+          "description": "Allow Agent Manager to manage sessions and worktrees across multiple repositories as projects. The current workspace repository is always the default project; additional projects can be added and persist across restarts."
+        },
+        "kilo-code.new.agentManager.terminalButtonDestination": {
+          "type": "string",
+          "scope": "application",
+          "default": "vscode",
+          "enum": [
+            "vscode",
+            "agentManager"
+          ],
+          "enumDescriptions": [
+            "Open or focus the VS Code integrated terminal.",
+            "Open or focus an embedded terminal in the Agent Manager side panel."
+          ],
+          "description": "Default destination for the Agent Manager terminal button and Focus Terminal keyboard shortcut. The terminal button's dropdown remembers its own choice per Agent Manager panel; this setting only applies to panels that never picked one."
         },
         "kilo-code.new.indexing.showButtonWhenDisabled": {
           "type": "boolean",
@@ -1129,6 +1153,16 @@
           "default": true,
           "description": "Show the task timeline graph in the chat header"
         },
+        "kilo-code.new.showTokenThroughput": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show tokens-per-second (prompt-processing / text-generation) badges on assistant messages and the task header"
+        },
+        "kilo-code.new.chat.shiftTabCyclesVariant": {
+          "type": "boolean",
+          "default": true,
+          "description": "Cycle through reasoning effort variants with Shift+Tab in prompt inputs. Disable to keep Shift+Tab for keyboard focus navigation."
+        },
         "kilo-code.new.agentWorkStyle": {
           "type": "string",
           "scope": "application",
@@ -1157,23 +1191,29 @@
   },
   "scripts": {
     "prepare:cli-binary": "bun script/local-bin.ts",
-    "compile": "bun run prepare:cli-binary -- --force && bun run rebuild-sdk && bun run typecheck && bun run lint && node esbuild.js",
+    "prepare:sdk": "bun script/prepare-sdk.ts",
+    "build:launch": "bun run prepare:cli-binary && bun run prepare:sdk && bun run build:check:production",
+    "compile": "bun run prepare:cli-binary -- --force && bun run rebuild-sdk && bun run build:check",
     "watch": "bun run rebuild-sdk && bun run --parallel watch:esbuild watch:tsc",
     "watch:esbuild": "bun run prepare:cli-binary && node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
     "watch:cli": "bun script/watch-cli.ts",
-    "package": "bun run prepare:cli-binary && bun run rebuild-sdk && bun run typecheck && bun run lint && node esbuild.js --production",
+    "package": "bun run prepare:cli-binary && bun run rebuild-sdk && bun run build:check:production",
+    "build:check": "bun run --parallel check-types check-types:webview lint bundle",
+    "build:check:production": "bun run --parallel check-types check-types:webview lint bundle:production",
+    "bundle": "bun esbuild.js",
+    "bundle:production": "bun esbuild.js --production",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "bun run compile-tests && bun run compile && bun run lint",
-    "check-types": "tsc --noEmit",
-    "check-types:webview": "bun script/typecheck.ts --project webview-ui/tsconfig.json",
-    "typecheck": "bun run check-types && bun run check-types:webview",
+    "check-types": "tsgo --noEmit",
+    "check-types:webview": "tsgo --noEmit --project webview-ui/tsconfig.json",
+    "typecheck": "bun run --parallel check-types check-types:webview",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "knip": "knip",
     "check-kilocode-change": "! grep -rIn 'kilocode_change' . ../kilo-ui/ --exclude='package.json' --exclude='*.md' --exclude-dir='node_modules' --exclude-dir='dist' | grep -v '`kilocode_change`'",
-    "lint": "eslint src webview-ui",
+    "lint": "eslint --cache --cache-strategy content --cache-location node_modules/.cache/eslint src webview-ui",
     "test": "vscode-test",
     "test:unit": "bun test tests/unit/ --dots",
     "rebuild-sdk": "bun run --cwd ../sdk/js build",
@@ -1184,7 +1224,9 @@
     "test:visual:update": "playwright test --update-snapshots",
     "snapshot:build": "bun script/dev-snapshot.ts build",
     "snapshot:install": "bun script/dev-snapshot.ts install",
-    "extension": "bun script/launch.ts"
+    "extension": "bun script/launch.ts",
+    "extension:isolated": "bun script/launch.ts --isolated",
+    "extension:isolated:clean": "bun script/launch.ts --isolated --clean"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.11.3",

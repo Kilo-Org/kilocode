@@ -90,12 +90,17 @@ export class DiffSourceCatalog implements vscode.Disposable {
   }
 
   build(id: string, ctx: PanelContext): DiffSource {
+    const opts = { dir: () => ctx.dir, strictDir: ctx.strictDir, git: ctx.git, log: ctx.log }
     if (id === WORKSPACE_SOURCE_ID) {
-      return createWorktreeDiffSource({ baseBranchOverride: ctx.baseBranchOverride })
+      return createWorktreeDiffSource({
+        ...opts,
+        baseBranchOverride: ctx.baseBranchOverride,
+        baseBranch: ctx.baseBranch,
+      })
     }
 
-    if (id === STAGED_SOURCE_ID) return createStagedDiffSource()
-    if (id === UNSTAGED_SOURCE_ID) return createUnstagedDiffSource()
+    if (id === STAGED_SOURCE_ID) return createStagedDiffSource(opts)
+    if (id === UNSTAGED_SOURCE_ID) return createUnstagedDiffSource(opts)
 
     if (id.startsWith(TURN_PREFIX)) {
       const [sessionId, messageId] = id.slice(TURN_PREFIX.length).split(":")
@@ -108,14 +113,22 @@ export class DiffSourceCatalog implements vscode.Disposable {
     if (id.startsWith(SESSION_PREFIX)) {
       const sessionId = id.slice(SESSION_PREFIX.length)
       if (!sessionId) throw new Error(`DiffSourceCatalog.build: empty session id in "${id}"`)
-      return createSessionDiffSource(sessionId, this.sessionFetch, ctx.workspaceRoot, this.checkSnapshotsEnabled)
+      return createSessionDiffSource(
+        sessionId,
+        this.sessionFetch,
+        ctx.dir ?? ctx.workspaceRoot,
+        this.checkSnapshotsEnabled,
+      )
     }
 
     throw new Error(`DiffSourceCatalog.build: unknown source id "${id}"`)
   }
 
-  async listWorkspaceBranches(override: string | undefined): Promise<WorkspaceBranchesResult | undefined> {
-    const root = getWorkspaceRoot()
+  async listWorkspaceBranches(
+    override: string | undefined,
+    dir?: string,
+  ): Promise<WorkspaceBranchesResult | undefined> {
+    const root = dir ?? getWorkspaceRoot()
     if (!root) return undefined
 
     const git = this.ensureBranchGit()

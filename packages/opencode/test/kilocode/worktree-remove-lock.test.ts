@@ -1,14 +1,23 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { $ } from "bun"
 import { describe, expect } from "bun:test"
 import * as fs from "fs/promises"
 import path from "path"
 import { Effect, Layer } from "effect"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
+import { InstanceBootstrap } from "../../src/project/bootstrap-service"
+import { InstanceStore } from "../../src/project/instance-store"
 import { Worktree } from "../../src/worktree"
 import { provideTmpdirInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
-const it = testEffect(Layer.mergeAll(Worktree.defaultLayer, CrossSpawnSpawner.defaultLayer))
+const bootstrap = Layer.succeed(InstanceBootstrap.Service, InstanceBootstrap.Service.of({ run: Effect.void }))
+const it = testEffect(
+  Layer.mergeAll(
+    AppNodeBuilder.build(Worktree.node, [[InstanceStore.bootstrapNode, bootstrap]]),
+    AppNodeBuilder.build(CrossSpawnSpawner.node),
+  ),
+)
 
 describe("Worktree.remove lock retries", () => {
   it.live("retries transient git remove lock failures", () =>

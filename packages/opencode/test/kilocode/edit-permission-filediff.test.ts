@@ -3,6 +3,7 @@
 // permission-ask metadata. Without `filediff`, the VS Code extension's
 // PermissionDock cannot render the inline diff preview.
 
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterAll, afterEach, describe, test, expect } from "bun:test"
 import path from "path"
 import { Effect, Layer, ManagedRuntime } from "effect"
@@ -20,13 +21,13 @@ import { SessionID, MessageID } from "../../src/session/schema"
 
 const runtime = ManagedRuntime.make(
   Layer.mergeAll(
-    LSP.defaultLayer,
-    FSUtil.defaultLayer,
-    Format.defaultLayer,
+    AppNodeBuilder.build(LSP.node),
+    AppNodeBuilder.build(FSUtil.node),
+    AppNodeBuilder.build(Format.node),
     Bus.layer,
-    Truncate.defaultLayer,
-    Agent.defaultLayer,
-    EventV2Bridge.defaultLayer,
+    AppNodeBuilder.build(Truncate.node),
+    AppNodeBuilder.build(Agent.node),
+    AppNodeBuilder.build(EventV2Bridge.node),
   ),
 )
 

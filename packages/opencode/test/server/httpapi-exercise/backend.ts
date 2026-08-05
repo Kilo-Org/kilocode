@@ -59,9 +59,15 @@ function app(modules: Runtime, options: CallOptions) {
   const web = HttpRouter.toWebHandler(
     modules.HttpApiApp.routes.pipe(
       Layer.provide(
+        // kilocode_change start - keep the filewatcher-disable flag visible (see httpapi-instance-route-auth.test.ts)
         ConfigProvider.layer(
-          ConfigProvider.fromUnknown({ KILO_SERVER_PASSWORD: password, KILO_SERVER_USERNAME: username }),
+          ConfigProvider.fromUnknown({
+            KILO_SERVER_PASSWORD: password,
+            KILO_SERVER_USERNAME: username,
+            KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: process.env.KILO_EXPERIMENTAL_DISABLE_FILEWATCHER ?? "true",
+          }),
         ),
+        // kilocode_change end
       ),
     ),
     { disableLogger: true, memoMap: modules.memoMap },

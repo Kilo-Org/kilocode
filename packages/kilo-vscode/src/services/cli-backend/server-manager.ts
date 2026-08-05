@@ -29,7 +29,12 @@ export function resolveIndexingEnv(folders: readonly WorkspaceFolderLike[] | und
 }
 
 export function resolveManagedServerEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
-  return { ...env, KILO_DISABLE_CHANNEL_DB: "true" }
+  return {
+    ...env,
+    KILO_DISABLE_CHANNEL_DB: "true",
+    // VS Code does not consume the backend's file.watcher.updated events.
+    KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: "true",
+  }
 }
 
 export class ServerManager {

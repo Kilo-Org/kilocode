@@ -10,6 +10,7 @@ import { WorktreeFamily } from "../kilocode/worktree-family" // kilocode_change
 import { Session } from "../session/session" // kilocode_change
 import { SessionID } from "../session/schema" // kilocode_change
 import { RecallSearch } from "../kilocode/session/recall-search" // kilocode_change
+import { SessionTranscript } from "../kilocode/session/transcript" // kilocode_change
 import { KiloSessionPromptQueue } from "../kilocode/session/prompt-queue" // kilocode_change
 import DESCRIPTION from "./recall.txt"
 
@@ -82,13 +83,13 @@ async function search(
     }),
   ) // kilocode_change
 
-  const coverage = `Searched ${found.sessions} sessions and ${found.parts} transcript parts.`
+  const coverage = `Searched ${found.sessions} sessions and evaluated ${found.candidates} transcript candidates.`
   const query = RecallSearch.inert(params.query)
   if (found.results.length === 0) {
     return {
       title: `Search: "${query}" (no results)`,
       output: RecallSearch.inert(`No sessions found matching "${params.query}". ${coverage}`),
-      metadata: { searchedSessions: found.sessions, searchedParts: found.parts },
+      metadata: { searchedSessions: found.sessions, candidateParts: found.candidates },
     }
   }
 
@@ -106,7 +107,7 @@ async function search(
   return {
     title: `Search: "${query}" (${found.results.length} results)`,
     output: RecallSearch.inert(lines.join("\n")),
-    metadata: { searchedSessions: found.sessions, searchedParts: found.parts },
+    metadata: { searchedSessions: found.sessions, candidateParts: found.candidates },
   }
 }
 
@@ -154,36 +155,10 @@ async function read(
   const msgs = await bridge.promise(sessions.messages({ sessionID: session.id }))
   const boundary = KiloSessionPromptQueue.active(ctx.sessionID) ?? RecallSearch.active(ctx.messages, ctx.messageID)
   const visible = session.id === ctx.sessionID ? RecallSearch.visible(msgs, boundary) : msgs
-  const lines: string[] = [
-    `# Session: ${session.title}`,
-    `Directory: ${session.directory}`,
-    `Created: ${Locale.todayTimeOrDateTime(session.time.created)}`,
-    "",
-  ]
-
-  for (const msg of visible) {
-    if (msg.info.role === "user") {
-      lines.push("## User")
-      for (const part of msg.parts) {
-        if (part.type === "text") lines.push(part.text)
-      }
-      lines.push("")
-    }
-    if (msg.info.role === "assistant") {
-      lines.push("## Assistant")
-      for (const part of msg.parts) {
-        if (part.type === "text") lines.push(part.text)
-        if (part.type === "tool" && part.state.status === "completed") {
-          lines.push(`[Tool: ${part.tool}] ${part.state.title}`)
-        }
-      }
-      lines.push("")
-    }
-  }
 
   return {
     title: `Read: ${RecallSearch.inert(session.title)}`,
-    output: RecallSearch.inert(lines.join("\n")),
+    output: RecallSearch.inert(SessionTranscript.format(session, visible, { synthetic: true })),
     metadata: {},
   }
 }

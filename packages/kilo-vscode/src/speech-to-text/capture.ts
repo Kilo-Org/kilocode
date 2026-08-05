@@ -34,11 +34,32 @@ type Args = {
   input: string[]
 }
 
+const macScript = `
+ObjC.import("AVFoundation")
+ObjC.import("Foundation")
+function run(args) {
+  const settings = $.NSMutableDictionary.alloc.init
+  settings.setObjectForKey($.NSNumber.numberWithUnsignedInt(1819304813), $.AVFormatIDKey)
+  settings.setObjectForKey($.NSNumber.numberWithDouble(16000), $.AVSampleRateKey)
+  settings.setObjectForKey($.NSNumber.numberWithInt(1), $.AVNumberOfChannelsKey)
+  settings.setObjectForKey($.NSNumber.numberWithInt(16), $.AVLinearPCMBitDepthKey)
+  settings.setObjectForKey($.NSNumber.numberWithBool(false), $.AVLinearPCMIsFloatKey)
+  settings.setObjectForKey($.NSNumber.numberWithBool(false), $.AVLinearPCMIsBigEndianKey)
+  const error = Ref()
+  const url = $.NSURL.fileURLWithPath(args[0])
+  const recorder = $.AVAudioRecorder.alloc.initWithURLSettingsError(url, settings, error)
+  if (!recorder || !recorder.prepareToRecord || !recorder.record) throw new Error("Could not start recording")
+  console.log("ready")
+  $.NSFileHandle.fileHandleWithStandardInput.readDataToEndOfFile
+  recorder.stop
+}`
+
 let active: Recording | undefined
 let starting: string | undefined
 let ffmpeg: Promise<string> | undefined
 
 export async function prewarmSpeechCapture(): Promise<void> {
+  if (useMacCapture(process.platform, process.env)) return
   await resolveFFmpeg()
 }
 
@@ -47,8 +68,15 @@ export async function startSpeechCapture(input: Input): Promise<boolean> {
 
   starting = input.requestId
   try {
-    const bin = await resolveFFmpeg()
     const file = path.join(os.tmpdir(), `kilo-stt-${process.pid}-${Date.now()}.wav`)
+    if (useMacCapture(process.platform, process.env)) {
+      const result = await startMac(file, input).catch((err: unknown) => {
+        console.warn("[Kilo New] Native macOS speech capture failed, falling back to FFmpeg", err)
+        return undefined
+      })
+      if (result) return !result.stopped
+    }
+    const bin = await resolveFFmpeg()
     const state = await startWithArgs(bin, file, input, await inputArgSets(bin))
     return !state.stopped
   } finally {
@@ -112,7 +140,7 @@ async function waitForStart(state: Recording): Promise<void> {
       onError(new Error(summary(state, "Could not start microphone recording")))
     }
     const onData = (data: Buffer) => {
-      if (/Output #0|Press \[q\]|size=\s*\d+/i.test(data.toString())) done()
+      if (/^ready$|Output #0|Press \[q\]|size=\s*\d+/im.test(data.toString())) done()
     }
     const timer = setTimeout(() => {
       onError(new Error(summary(state, "Timed out starting microphone recording")))
@@ -129,6 +157,21 @@ async function waitForStart(state: Recording): Promise<void> {
   })
 }
 
+async function startMac(file: string, input: Input): Promise<Recording> {
+  const proc = spawn("/usr/bin/osascript", macCaptureArgs(file), { stdio: ["pipe", "ignore", "pipe"] })
+  const state = createState(input, file, proc)
+  await waitForStart(state)
+  return state
+}
+
+export function macCaptureArgs(file: string): string[] {
+  return ["-l", "JavaScript", "-e", macScript, file]
+}
+
+export function useMacCapture(platform: NodeJS.Platform, env: NodeJS.ProcessEnv): boolean {
+  return platform === "darwin" && !env.KILO_FFMPEG_PATH && !env.FFMPEG_PATH
+}
+
 async function startWithArgs(bin: string, file: string, input: Input, args: Args[]): Promise<Recording> {
   const [first, ...rest] = args
   if (!first) throw new Error(`Unsupported platform for speech input: ${process.platform}`)
@@ -138,6 +181,18 @@ async function startWithArgs(bin: string, file: string, input: Input, args: Args
     : spawn(bin, ["-y", ...first.input, "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", "-f", "wav", file], {
         stdio: ["pipe", "ignore", "pipe"],
       })
+  const state = createState(input, file, proc)
+  try {
+    await waitForStart(state)
+    return state
+  } catch (err) {
+    if (state.stopped) return state
+    if (rest.length === 0) throw err
+    return startWithArgs(bin, file, input, rest)
+  }
+}
+
+function createState(input: Input, file: string, proc: ChildProcess): Recording {
   const state: Recording = { ...input, file, proc, stderr: [], stopped: false }
   active = state
 
@@ -152,15 +207,7 @@ async function startWithArgs(bin: string, file: string, input: Input, args: Args
     state.stderr.push(err.message)
     if (active === state && !state.stopped) active = undefined
   })
-
-  try {
-    await waitForStart(state)
-    return state
-  } catch (err) {
-    if (state.stopped) return state
-    if (rest.length === 0) throw err
-    return startWithArgs(bin, file, input, rest)
-  }
+  return state
 }
 
 function pipeProcess(pipe: string[], bin: string, file: string): ChildProcess {

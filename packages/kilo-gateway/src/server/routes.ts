@@ -11,7 +11,12 @@ import { fetchOrganizationModes, clearModesCache } from "../api/modes.js"
 import { KILO_API_BASE, HEADER_FEATURE, HEADER_ORGANIZATIONID } from "../api/constants.js"
 import { buildKiloHeaders } from "../headers.js"
 import type { ImportDeps, DrizzleDb } from "../cloud-sessions.js"
-import { fetchCloudSession, fetchCloudSessionForImport, importSessionToDb } from "../cloud-sessions.js"
+import {
+  fetchCloudSession,
+  fetchCloudSessionForImport,
+  importSessionToDb,
+  SessionImportValidationError,
+} from "../cloud-sessions.js"
 import { createEditHandler } from "./edit.js"
 import { createFimHandler } from "./fim.js"
 import {
@@ -646,6 +651,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
 
           return c.json(info)
         } catch (err: any) {
+          if (err instanceof SessionImportValidationError) return c.json({ error: "Invalid export data" }, 400)
           console.error("[Kilo Gateway] cloud/session/import: unhandled error", err?.message ?? err)
           return c.json({ error: "Internal error" }, 500)
         }

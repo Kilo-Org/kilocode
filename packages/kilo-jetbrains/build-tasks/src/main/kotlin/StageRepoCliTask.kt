@@ -28,12 +28,13 @@ abstract class StageRepoCliTask : DefaultTask() {
         }
 
         val out = archive.get().asFile
+        val platform = platform()
         out.parentFile.mkdirs()
         ZipOutputStream(out.outputStream().buffered()).use { zip ->
             dir.walkTopDown()
                 .filter { it.isFile }
                 .forEach { file ->
-                    val name = "bin/${file.relativeTo(dir).invariantSeparatorsPath}"
+                    val name = "$platform/bin/${file.relativeTo(dir).invariantSeparatorsPath}"
                     zip.putNextEntry(ZipEntry(name))
                     file.inputStream().use { it.copyTo(zip) }
                     zip.closeEntry()
@@ -42,4 +43,20 @@ abstract class StageRepoCliTask : DefaultTask() {
     }
 
     private fun exe() = if (System.getProperty("os.name").lowercase().contains("windows")) "kilo.exe" else "kilo"
+
+    private fun platform(): String {
+        val os = System.getProperty("os.name").lowercase()
+        val name = when {
+            os.contains("mac") || os.contains("darwin") -> "darwin"
+            os.contains("linux") -> "linux"
+            os.contains("windows") -> "windows"
+            else -> throw GradleException("Unsupported OS: ${System.getProperty("os.name")}")
+        }
+        val arch = when (System.getProperty("os.arch").lowercase()) {
+            "aarch64", "arm64" -> "arm64"
+            "x86_64", "amd64" -> "x64"
+            else -> throw GradleException("Unsupported architecture: ${System.getProperty("os.arch")}")
+        }
+        return "$name-$arch"
+    }
 }

@@ -73,8 +73,8 @@ class KiloPromptCompletionProvider(
     }
 
     fun prewarm() {
-        if (cache.containsKey("")) return
         scope.launch {
+            if (cache.containsKey("")) return@launch
             val result = service.searchFiles(workspace.directory, "", 50)
             if (result.files.isNotEmpty() || result.git) cache.putIfAbsent("", result)
         }

@@ -462,7 +462,7 @@ exports[`tool parameters JSON Schema (wire shape) websearch 1`] = `
       "type": "string",
     },
     "numResults": {
-      "description": "Number of search results to return (default: 8)",
+      "description": "Number of search results to return (default: 8, maximum: 10)",
       "type": "number",
     },
     "query": {

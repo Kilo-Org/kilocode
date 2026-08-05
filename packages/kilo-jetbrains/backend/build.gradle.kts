@@ -20,8 +20,11 @@ val rawSpec = layout.buildDirectory.file("generated/openapi-spec/openapi.raw.jso
 val generatedSpec = layout.buildDirectory.file("generated/openapi-spec/openapi.json")
 val generatedProps = layout.buildDirectory.dir("generated/kilo-props")
 val generatedCli = layout.buildDirectory.dir("generated/kilo-cli-res")
+val generatedChecksums = layout.buildDirectory.dir("generated/kilo-cli-checksums")
 val pinned = providers.gradleProperty("kilo.cli.pinned").map { it.trim().toBoolean() }.orElse(true)
 val repoCli = pinned.map { !it }
+val bundled = providers.gradleProperty("kilo.cli.bundled").map { it.trim().toBoolean() }.orElse(false)
+val downloadsCli = repoCli.zip(bundled) { repo, bundle -> !repo && !bundle }
 val repoRootDir = rootProject.layout.projectDirectory.dir("../opencode")
 
 val pinnedCliVersion = providers.fileContents(rootProject.layout.projectDirectory.file("package.json")).asText.map { text ->
@@ -32,9 +35,14 @@ val pinnedCliVersion = providers.fileContents(rootProject.layout.projectDirector
 sourceSets {
     main {
         resources.srcDir(generatedProps)
-        if (repoCli.get()) resources.srcDir(generatedCli)
+        if (downloadsCli.get()) resources.srcDir(generatedChecksums)
+        if (repoCli.get() || bundled.get()) resources.srcDir(generatedCli)
         kotlin.srcDir(generatedApi)
     }
+}
+
+if (repoCli.get() && bundled.get()) {
+    error("kilo.cli.bundled=true requires kilo.cli.pinned=true; do not combine release CLI bundling with local repo CLI mode.")
 }
 
 val writeKiloProperties by tasks.registering(WriteProperties::class) {
@@ -86,6 +94,27 @@ val stageRepoCli by tasks.registering(StageRepoCliTask::class) {
     this.bin.set(bin)
     archive.set(generatedCli.map { it.file("kilo-cli.zip") })
     outputs.upToDateWhen { false }
+}
+
+val stageBundledCli by tasks.registering(StageBundledCliTask::class) {
+    description = "Stage all pinned Kilo CLI release assets into backend resources"
+    cliVersion.set(pinnedCliVersion)
+    token.set(
+        providers.environmentVariable("GH_TOKEN")
+            .orElse(providers.environmentVariable("GITHUB_TOKEN"))
+    )
+    cacheDir.set(layout.buildDirectory.dir("cli-cache"))
+    archive.set(generatedCli.map { it.file("kilo-cli.zip") })
+}
+
+val writeCliChecksums by tasks.registering(WriteCliChecksumsTask::class) {
+    description = "Write pinned Kilo CLI checksums"
+    cliVersion.set(pinnedCliVersion)
+    token.set(
+        providers.environmentVariable("GH_TOKEN")
+            .orElse(providers.environmentVariable("GITHUB_TOKEN"))
+    )
+    checksums.set(generatedChecksums.map { it.file("kilo-cli-checksums.properties") })
 }
 
 val normalizeOpenApiSpec by tasks.registering(NormalizeOpenApiSpecTask::class) {
@@ -142,13 +171,17 @@ val fixGeneratedApi by tasks.registering(FixGeneratedApiTask::class) {
 
 tasks.named("compileKotlin") {
     dependsOn(fixGeneratedApi, writeKiloProperties)
+    if (downloadsCli.get()) dependsOn(writeCliChecksums)
     if (repoCli.get()) dependsOn(stageRepoCli)
+    if (bundled.get()) dependsOn(stageBundledCli)
     inputs.dir(generatedApi)
 }
 
 tasks.named("processResources") {
     dependsOn(writeKiloProperties)
+    if (downloadsCli.get()) dependsOn(writeCliChecksums)
     if (repoCli.get()) dependsOn(stageRepoCli)
+    if (bundled.get()) dependsOn(stageBundledCli)
 }
 
 tasks.named("compileTestKotlin") {

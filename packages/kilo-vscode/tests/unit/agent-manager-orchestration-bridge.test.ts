@@ -37,6 +37,7 @@ describe("AgentManagerOrchestrationBridge", () => {
     const replies: unknown[] = []
     const rejections: unknown[] = []
     const lists = new Map<string, AgentManagerRequest[]>()
+    const statsCalls: number[] = []
     const handlers: {
       event?: (event: SSEPayload, directory?: string) => void
       state?: (state: "connecting" | "connected" | "disconnected" | "error") => void
@@ -45,6 +46,7 @@ describe("AgentManagerOrchestrationBridge", () => {
     const managed = new Set(["ses_target"])
     const promptAsync = mock(async () => ({ data: undefined }))
     const close = mock(async () => undefined)
+    const push = mock(() => undefined)
     const client = {
       session: {
         get: mock(async () => ({
@@ -52,6 +54,12 @@ describe("AgentManagerOrchestrationBridge", () => {
         })),
         status: mock(async () => ({ data: {} })),
         promptAsync,
+      },
+      permission: {
+        list: mock(async () => ({ data: [] })),
+      },
+      question: {
+        list: mock(async () => ({ data: [] })),
       },
       kilocode: {
         agentManager: {
@@ -95,8 +103,12 @@ describe("AgentManagerOrchestrationBridge", () => {
       root: () => root,
       ready: async () => state,
       state: () => state,
-      stats: async () => ({ worktrees: [] }),
+      stats: async () => {
+        statsCalls.push(1)
+        return { worktrees: [] }
+      },
       prs: () => new Map(),
+      push,
       managed: (id) => managed.has(id),
       close,
       log: () => undefined,
@@ -106,7 +118,21 @@ describe("AgentManagerOrchestrationBridge", () => {
         { id: `event-${value.id}`, type: "kilocode.agent_manager.requested", properties: value } as SSEPayload,
         directory,
       )
-    return { bridge, client, close, handlers, lists, managed, promptAsync, rejections, replies, request, status }
+    return {
+      bridge,
+      client,
+      close,
+      handlers,
+      lists,
+      managed,
+      promptAsync,
+      push,
+      rejections,
+      replies,
+      request,
+      statsCalls,
+      status,
+    }
   }
 
   const request: AgentManagerRequest = {
@@ -182,6 +208,76 @@ describe("AgentManagerOrchestrationBridge", () => {
         result: { operation: "stop", sessionID: "ses_target", stopped: true },
       },
     ])
+    test.bridge.dispose()
+  })
+
+  it("moves its own worktree into a section and then ungroups it", async () => {
+    const test = harness()
+    const section = state.addSection("Review", null)
+
+    test.request(
+      {
+        id: "amr_move",
+        sessionID: "ses_target",
+        operation: "move",
+        targetSessionID: "ses_target",
+        sectionID: section.id,
+      },
+      dir,
+    )
+    await waitFor(() => test.replies.length === 1)
+
+    const worktreeID = state.getSession("ses_target")!.worktreeId!
+    expect(state.getWorktree(worktreeID)?.sectionId).toBe(section.id)
+    expect(test.push).toHaveBeenCalledTimes(1)
+    expect(test.replies[0]).toEqual({
+      requestID: "amr_move",
+      directory: dir,
+      result: { operation: "move", sessionID: "ses_target", sectionID: section.id, moved: true },
+    })
+
+    test.request(
+      {
+        id: "amr_ungroup",
+        sessionID: "ses_target",
+        operation: "move",
+        targetSessionID: "ses_target",
+        sectionID: null,
+      },
+      dir,
+    )
+    await waitFor(() => test.replies.length === 2)
+
+    expect(state.getWorktree(worktreeID)?.sectionId).toBeUndefined()
+    expect(test.replies[1]).toEqual({
+      requestID: "amr_ungroup",
+      directory: dir,
+      result: { operation: "move", sessionID: "ses_target", sectionID: null, moved: true },
+    })
+    test.bridge.dispose()
+  })
+
+  it("returns an overview with cached git stats", async () => {
+    const test = harness()
+    test.request({
+      id: "amr_overview",
+      sessionID: "ses_caller",
+      operation: "overview",
+    })
+    await waitFor(() => test.replies.length === 1)
+
+    expect(test.statsCalls).toEqual([1])
+    expect(test.replies[0]).toEqual({
+      requestID: "amr_overview",
+      directory: root,
+      result: {
+        operation: "overview",
+        overview: expect.objectContaining({
+          ungrouped: [expect.objectContaining({ id: expect.any(String) })],
+          sections: [],
+        }),
+      },
+    })
     test.bridge.dispose()
   })
 

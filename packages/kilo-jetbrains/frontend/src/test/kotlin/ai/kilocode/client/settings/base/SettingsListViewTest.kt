@@ -4,9 +4,11 @@ import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.testing.fire
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.ui.CollectionListModel
+import com.intellij.ui.ScrollingUtil
 import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
+import com.intellij.ui.components.JBScrollPane
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
 import java.awt.Container
@@ -14,10 +16,13 @@ import java.awt.Dimension
 import java.awt.Point
 import java.awt.event.InputEvent
 import java.awt.event.MouseEvent
+import javax.swing.ListSelectionModel
+import javax.swing.Scrollable
+import javax.swing.SwingConstants
 import javax.swing.SwingUtilities
 
 class SettingsListViewTest : BasePlatformTestCase() {
-    fun `test list owns formatted description tooltip`() {
+    fun `test list shows description tooltip over row body`() {
         edt {
             val view = SettingsListView("Empty") { _, _ -> }
             val row = item("with", "Alpha", "Use <safe> text\nAcross lines")
@@ -29,25 +34,23 @@ class SettingsListViewTest : BasePlatformTestCase() {
             val bounds = view.list.getCellBounds(0, 0)
             val tip = view.list.getToolTipText(event(view.list, Point(bounds.x + 4, bounds.y + 4)))
 
-            assertNotNull(tip)
-            assertTrue(tip, tip!!.startsWith("<html>"))
-            assertTrue(tip, tip.contains("Use &lt;safe&gt; text"))
-            assertTrue(tip, tip.contains("<br>Across lines"))
+            assertEquals("<html>Use &lt;safe&gt; text<br>Across lines</html>", tip)
         }
     }
 
-    fun `test list description tooltip ignores blank rows and outside points`() {
+    fun `test tooltip config suppresses description tooltip but keeps action tooltip`() {
         edt {
-            val view = SettingsListView("Empty") { _, _ -> }
-            view.update(listOf(item("without", "Beta", null)))
-            view.list.size = Dimension(320, 80)
-            view.list.doLayout()
-            UIUtil.dispatchAllInvocationEvents()
+            val cfg = SettingsListConfig.Equal.copy(tooltip = false)
+            val view = SettingsListView("Empty", cfg) { _, _ -> }
+            val row = item("with", "Alpha", "Description", SettingsListCell("edit", "Edit", alwaysVisible = true))
+            view.update(listOf(row))
+            layout(view)
 
             val bounds = view.list.getCellBounds(0, 0)
+            val area = settingsListCellBounds(view.list, 0, selected = true).getValue("edit")
 
             assertNull(view.list.getToolTipText(event(view.list, Point(bounds.x + 4, bounds.y + 4))))
-            assertNull(view.list.getToolTipText(event(view.list, Point(4, bounds.y + bounds.height + 20))))
+            assertEquals("Edit", view.list.getToolTipText(event(view.list, center(area))))
         }
     }
 
@@ -236,6 +239,109 @@ class SettingsListViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test unfocused selected row is not painted as active`() {
+        edt {
+            val row = item("with", "Alpha", "Description")
+            val model = CollectionListModel<SettingsListItem>(listOf(row))
+            val list = JBList(model)
+            val renderer = SettingsListRenderer(model, SettingsListConfig.Equal)
+
+            renderer.getListCellRendererComponent(list, row, 0, true, false)
+
+            val desc = components(renderer).filterIsInstance<JBLabel>().single { it.text == "Description" }
+            assertEquals(UiStyle.Colors.weak(), desc.foreground)
+        }
+    }
+
+    fun `test in-place action cells are hidden on unfocused selected row`() {
+        edt {
+            val row = item("with", "Alpha", "Description", SettingsListCell("edit", "Edit"))
+            val model = CollectionListModel<SettingsListItem>(listOf(row))
+            val list = JBList(model)
+            val renderer = SettingsListRenderer(model, SettingsListConfig.Equal)
+
+            renderer.getListCellRendererComponent(list, row, 0, true, false)
+            assertTrue(actionCells(renderer).none { it.isVisible })
+
+            renderer.getListCellRendererComponent(list, row, 0, true, true)
+            assertEquals(listOf("edit"), actionCells(renderer).filter { it.isVisible }.map { it.cellId })
+        }
+    }
+
+    fun `test always visible action cells stay on unfocused row`() {
+        edt {
+            val row = item("with", "Alpha", "Description", SettingsListCell("level", "Allow", alwaysVisible = true))
+            val model = CollectionListModel<SettingsListItem>(listOf(row))
+            val list = JBList(model)
+            val renderer = SettingsListRenderer(model, SettingsListConfig.Equal)
+
+            renderer.getListCellRendererComponent(list, row, 0, true, false)
+
+            assertEquals(listOf("level"), actionCells(renderer).filter { it.isVisible }.map { it.cellId })
+        }
+    }
+
+    fun `test active popup paints selected row as active without focus`() {
+        edt {
+            val row = item("with", "Alpha", "Description")
+            val model = CollectionListModel<SettingsListItem>(listOf(row))
+            val list = object : JBList<SettingsListItem>(model), SettingsListActive {
+                override fun active(): Boolean = true
+            }
+            val renderer = SettingsListRenderer(model, SettingsListConfig.Equal)
+
+            renderer.getListCellRendererComponent(list, row, 0, true, false)
+
+            val desc = components(renderer).filterIsInstance<JBLabel>().single { it.text == "Description" }
+            assertEquals(UIUtil.getListForeground(true, true), desc.foreground)
+        }
+    }
+
+    fun `test action click invokes on second selected row in multi selection list`() {
+        edt {
+            val calls = mutableListOf<String>()
+            val cfg = SettingsListConfig.Equal.copy(selection = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION)
+            val view = SettingsListView("Empty", cfg) { key, id -> calls += "$key:$id" }
+            view.update(listOf(
+                item("a", "Alpha", null, SettingsListCell("edit", "Edit", alwaysVisible = false)),
+                item("b", "Beta", null, SettingsListCell("edit", "Edit", alwaysVisible = false)),
+            ))
+            layout(view)
+            view.list.selectedIndices = intArrayOf(0, 1)
+
+            val area = settingsListCellBounds(view.list, 1, selected = true).getValue("edit")
+            click(view, center(area))
+
+            assertEquals(listOf("b:edit"), calls)
+        }
+    }
+
+    fun `test preserve no scroll keeps scroll position after row change`() {
+        edt {
+            val view = SettingsListView("Empty") { _, _ -> }
+            val rows = (0 until 30).map { item("row$it", "Row $it", null, SettingsListCell("level", "Allow", alwaysVisible = true)) }
+            view.update(rows)
+            val scroll = JBScrollPane(view.list)
+            scroll.size = Dimension(320, 80)
+            scroll.doLayout()
+            view.list.doLayout()
+            UIUtil.dispatchAllInvocationEvents()
+
+            view.list.selectedIndex = 25
+            ScrollingUtil.ensureIndexIsVisible(view.list, 25, 0)
+            scroll.doLayout()
+            UIUtil.dispatchAllInvocationEvents()
+            val before = scroll.viewport.viewPosition.y
+            assertTrue("expected a scrolled viewport", before > 0)
+
+            view.update(rows, SettingsListSelection.PreserveNoScroll)
+            UIUtil.dispatchAllInvocationEvents()
+
+            assertEquals(before, scroll.viewport.viewPosition.y)
+            assertEquals("row25", view.selected()?.key)
+        }
+    }
+
     fun `test update selects preferred key`() {
         edt {
             val view = SettingsListView("Empty") { _, _ -> }
@@ -260,6 +366,17 @@ class SettingsListViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test list view tracks viewport width`() {
+        edt {
+            val view = SettingsListView("Empty") { _, _ -> }
+            view.update(listOf(item("long", "Alpha", "A very long description that should wrap instead of scrolling")))
+
+            assertTrue((view as Scrollable).getScrollableTracksViewportWidth())
+            assertFalse(view.getScrollableTracksViewportHeight())
+            assertEquals(160, view.getScrollableBlockIncrement(java.awt.Rectangle(0, 0, 320, 160), SwingConstants.VERTICAL, 1))
+        }
+    }
+
     private fun item(id: String, name: String, note: String?, vararg cells: SettingsListCell) = object : SettingsListItem {
         override val key = id
         override val title = name
@@ -278,6 +395,9 @@ class SettingsListViewTest : BasePlatformTestCase() {
         root.components.filterIsInstance<Container>().forEach { layout(it) }
         UIUtil.dispatchAllInvocationEvents()
     }
+
+    private fun actionCells(root: java.awt.Component): List<SettingsListActionCell> =
+        components(root).filterIsInstance<SettingsListActionCell>()
 
     private fun components(root: java.awt.Component): List<java.awt.Component> {
         val out = mutableListOf<java.awt.Component>()

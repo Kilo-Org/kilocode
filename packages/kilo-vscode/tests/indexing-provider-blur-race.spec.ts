@@ -44,6 +44,15 @@ function field(page: Page, title: string) {
   return page.locator('[data-slot="settings-row"]', { hasText: title }).locator("input")
 }
 
+// Scope select triggers by their row title: the tab gained a project selector,
+// so positional lookups silently target the wrong control.
+function selectIn(page: Page, title: string) {
+  return page
+    .locator('[data-slot="settings-row"]', { hasText: title })
+    .locator('[data-slot="select-select-trigger"]')
+    .first()
+}
+
 test("provider switch writes to selected provider bucket", async ({ page }) => {
   await page.setViewportSize({ width: 420, height: 720 })
   await page.goto(storyUrl(), { waitUntil: "load" })
@@ -52,7 +61,7 @@ test("provider switch writes to selected provider bucket", async ({ page }) => {
 
   const saved = page.getByTestId("indexing-provider-save")
 
-  const trigger = page.locator('[data-component="select"] [data-slot="select-select-trigger"]').first()
+  const trigger = selectIn(page, "Embedding provider")
   await trigger.click()
   await page.locator('[data-slot="select-select-item-label"]', { hasText: "Gemini" }).click()
 
@@ -123,7 +132,7 @@ test("Kilo exposes only supported embedding model presets", async ({ page }) => 
   await expect(page.getByText("Embedding model", { exact: true })).toHaveCount(0)
   await expect(page.getByText("Vector dimension", { exact: true })).toBeVisible()
 
-  const preset = page.locator('[data-component="select"] [data-slot="select-select-trigger"]').nth(1)
+  const preset = selectIn(page, "Kilo model preset")
   await expect(preset).toContainText("Provider Model")
 
   const dimension = field(page, "Vector dimension").first()

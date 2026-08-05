@@ -43,6 +43,30 @@ The underlying models behind each Auto Model tier are updated server-side as bet
 
 You get lean costs on routine work and stronger models when the work demands it — with no manual switching.
 
+### Custom Efficient pools
+
+You can constrain `kilo-auto/efficient` to the exact models you trust by configuring an **Efficient model pool** on the **Auto routing** card:
+
+- **Personal** — your [profile page](https://app.kilo.ai/profile)
+- **Organization** — your organization's **Providers & Models** page. Owners and billing managers can edit; members see a read-only view.
+
+A pool holds 1–10 exact model and thinking-variant pairs. Variants stay distinct, so the same model with different thinking variants (for example `max` and `xhigh`) counts as separate entries. Leave the pool empty to inherit: an organization without a pool uses each member's personal pool, and a member without a personal pool uses the platform pool.
+
+New entries are benchmarked on demand before they can serve traffic. Each entry shows a status:
+
+| Status | Meaning |
+|---|---|
+| Benchmarking | The pair is being measured and is not used for routing yet |
+| Ready | Proven accurate enough and eligible for routing |
+| Failed | Benchmarking failed — retry the entry |
+| Unavailable | The model or variant is no longer in your catalog — remove the entry |
+
+Routing decides only among ready entries. If no pool entry can serve a request, the request falls back to the Balanced tier, so quality never drops below Balanced.
+
+{% callout type="note" %}
+You can benchmark up to 10 new or retried pairs per owner per rolling 24 hours. Entries that are already ready or benchmarking don't count against this limit.
+{% /callout %}
+
 {% callout type="warning" title="Data handling for Auto Free" %}
 Auto Free may route your requests to providers that log prompts and outputs and use them to improve their services. Do not submit personal or confidential data when using Auto Free. In particular, it may route to NVIDIA's free endpoints.
 

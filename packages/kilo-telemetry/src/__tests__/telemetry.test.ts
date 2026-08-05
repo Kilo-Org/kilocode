@@ -1,4 +1,6 @@
-import { describe, test, expect, beforeEach } from "bun:test"
+import { arch, platform, release } from "node:os"
+import { describe, test, expect, beforeEach, spyOn } from "bun:test"
+import { Client } from "../client.js"
 import { Identity } from "../identity.js"
 import { TelemetryEvent } from "../events.js"
 import { Telemetry } from "../telemetry.js"
@@ -83,6 +85,35 @@ describe("TelemetryEvent", () => {
 })
 
 describe("Telemetry", () => {
+  test("skips identity updates when disabled", async () => {
+    const enabled = spyOn(Client, "isEnabled").mockReturnValue(false)
+    const update = spyOn(Identity, "updateFromKiloAuth").mockResolvedValue()
+
+    try {
+      await Telemetry.updateIdentity("token")
+      expect(update).not.toHaveBeenCalled()
+    } finally {
+      enabled.mockRestore()
+      update.mockRestore()
+    }
+  })
+
+  test("includes host OS properties", () => {
+    const capture = spyOn(Client, "capture").mockImplementation(() => {})
+
+    Telemetry.track(TelemetryEvent.CLI_START)
+
+    expect(capture).toHaveBeenCalledWith(
+      TelemetryEvent.CLI_START,
+      expect.objectContaining({
+        os_name: platform(),
+        os_version: release(),
+        os_arch: arch(),
+      }),
+    )
+    capture.mockRestore()
+  })
+
   test("indexing helpers are exposed", () => {
     expect(typeof Telemetry.trackIndexingStarted).toBe("function")
     expect(typeof Telemetry.trackIndexingCompleted).toBe("function")
@@ -96,4 +127,3 @@ describe("Telemetry", () => {
     expect(typeof Telemetry.trackSuggestionAccepted).toBe("function")
   })
 })
-

@@ -74,6 +74,9 @@ class SessionModel {
 
     private var revert: SessionRevertDto? = null
 
+    var queued: Set<String> = emptySet()
+        private set
+
     var header: SessionHeaderSnapshot = emptyHeader()
         private set
 
@@ -124,6 +127,9 @@ class SessionModel {
         val pos = entries.keys.indexOf(id)
         return idx >= 0 && pos >= idx
     }
+
+    @RequiresEdt
+    fun isQueued(id: String): Boolean = id in queued
 
     @RequiresEdt
     fun turn(id: String): Turn? = turnEntries[id]
@@ -296,6 +302,13 @@ class SessionModel {
     }
 
     @RequiresEdt
+    fun setQueued(ids: Set<String>) {
+        if (queued == ids) return
+        queued = ids
+        fire(SessionModelEvent.QueueChanged(ids))
+    }
+
+    @RequiresEdt
     fun setDiff(diff: List<DiffFileDto>) {
         this.diff = diff
         fire(SessionModelEvent.DiffUpdated(diff))
@@ -329,6 +342,7 @@ class SessionModel {
         hiddenText.clear()
         session = null
         revert = null
+        queued = emptySet()
         state = SessionState.Idle
         diff = emptyList()
         todos = emptyList()
@@ -363,6 +377,7 @@ class SessionModel {
         hiddenText.clear()
         session = null
         revert = null
+        queued = emptySet()
         state = SessionState.Idle
         diff = emptyList()
         todos = emptyList()

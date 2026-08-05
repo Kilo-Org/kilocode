@@ -10,6 +10,7 @@ import { ModelSelectorBase } from "../components/shared/ModelSelector"
 import { SessionContext } from "../context/session"
 import type { EnrichedModel } from "../context/provider"
 import type { ModelSelection } from "../types/messages"
+import { Markdown } from "@kilocode/kilo-ui/markdown"
 
 const meta: Meta = {
   title: "Shared",
@@ -17,6 +18,27 @@ const meta: Meta = {
 }
 export default meta
 type Story = StoryObj
+
+export const MarkdownMermaid: Story = {
+  name: "Markdown - Mermaid diagram",
+  render: () => (
+    <StoryProviders>
+      <Markdown
+        text={`# Flow
+
+\`\`\`mermaid
+flowchart TD
+  A[Prompt] --> B{Needs tools?}
+  B -->|Yes| C[Run tool]
+  B -->|No| D[Respond]
+  C --> D
+\`\`\`
+
+Rendered after the diagram.`}
+      />
+    </StoryProviders>
+  ),
+}
 
 // ---------------------------------------------------------------------------
 // ModelSelector

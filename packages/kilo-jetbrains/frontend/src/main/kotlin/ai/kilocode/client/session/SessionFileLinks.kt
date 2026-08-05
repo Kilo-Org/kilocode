@@ -5,6 +5,7 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.md.MdView
 import ai.kilocode.rpc.isManagedWorktreeStorage
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.WorkspaceFileDto
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.fileTypes.FileTypeManager
@@ -27,6 +28,7 @@ import javax.swing.JComponent
 import javax.swing.JList
 
 typealias SessionFileOpener = (href: String, anchor: RelativePoint?) -> Unit
+typealias SessionDiffOpener = (files: List<DiffFileDto>, title: String, key: String) -> Unit
 
 fun MdView.LinkEvent.anchor(): RelativePoint? {
     val component = component ?: return null

@@ -9,6 +9,7 @@ import path from "path"
 import fs from "fs/promises"
 import { TestProfile } from "./kilocode/test-profile"
 import { TestShard } from "./kilocode/test-shard"
+import { TestCli } from "./kilocode/test-cli"
 import { remove } from "../test/kilocode/cleanup"
 
 const root = path.resolve(import.meta.dir, "..")
@@ -178,12 +179,33 @@ type Result = {
   attempts: number
 }
 
+type Proc = ReturnType<typeof Bun.spawn>
+
 // ---------------------------------------------------------------------------
 // Setup
 // ---------------------------------------------------------------------------
 
 const xmldir = ci ? path.join(os.tmpdir(), `opencode-junit-${process.pid}`) : ""
 if (ci) await fs.mkdir(xmldir, { recursive: true })
+const supplied = process.env[TestCli.ENV]
+const binprefix = path.join(root, ".artifacts", "test-cli-")
+const built = supplied
+  ? { binary: supplied, dir: undefined }
+  : await (async () => {
+      await fs.mkdir(path.dirname(binprefix), { recursive: true })
+      const dir = await fs.mkdtemp(binprefix)
+      return { binary: await TestCli.build(root, dir), dir }
+    })()
+
+async function cleanBinary() {
+  if (!built.dir) return
+  const expected = path.dirname(binprefix)
+  const valid =
+    path.dirname(built.dir) === expected && path.basename(built.dir).startsWith(path.basename(binprefix))
+  if (!valid) throw new Error(`Refusing to remove unexpected test CLI directory: ${built.dir}`)
+  // The generated directory contains the bundle, emitted assets, and copied migrations.
+  await fs.rm(built.dir, { recursive: true, force: true })
+}
 
 const counter = { done: 0 }
 const pad = String(files.length).length
@@ -199,6 +221,74 @@ const marks = {
   timeout: "T",
 } as const
 const legend = `Legend: ${marks.pass}=pass ${marks.retry}=pass-after-retry ${marks.fail}=fail ${marks.timeout}=timeout`
+
+function drain(stream: ReadableStream<Uint8Array>) {
+  const reader = stream.getReader()
+  const decoder = new TextDecoder()
+  const promise = (async () => {
+    let text = ""
+    while (true) {
+      const chunk = await reader.read()
+      if (chunk.done) return text + decoder.decode()
+      text += decoder.decode(chunk.value, { stream: true })
+    }
+  })()
+  return {
+    promise,
+    close: () => reader.cancel().catch(() => undefined),
+  }
+}
+
+async function signal(proc: Proc, sig: "SIGTERM" | "SIGKILL") {
+  if (process.platform === "win32") {
+    const args = ["/pid", String(proc.pid), "/T"]
+    if (sig === "SIGKILL") args.push("/F")
+    const kill = Bun.spawn(["taskkill", ...args], {
+      stdout: "ignore",
+      stderr: "ignore",
+      windowsHide: true,
+    })
+    await kill.exited
+    return
+  }
+
+  const tree = Bun.spawn(["ps", "-axo", "pid=,ppid="], {
+    stdout: "pipe",
+    stderr: "ignore",
+  })
+  const [code, text] = await Promise.all([tree.exited, new Response(tree.stdout).text()])
+  const rows = code === 0 ? text.trim().split("\n") : []
+  const children = new Map<number, number[]>()
+  for (const row of rows) {
+    const [pid, parent] = row.trim().split(/\s+/).map(Number)
+    if (!Number.isSafeInteger(pid) || !Number.isSafeInteger(parent)) continue
+    const list = children.get(parent) ?? []
+    list.push(pid)
+    children.set(parent, list)
+  }
+  const collect = (pid: number): number[] => (children.get(pid) ?? []).flatMap((child) => [...collect(child), child])
+  for (const pid of [...collect(proc.pid), proc.pid]) {
+    for (const target of [-pid, pid]) {
+      try {
+        process.kill(target, sig)
+      } catch (error) {
+        if (typeof error === "object" && error !== null && "code" in error && error.code === "ESRCH") continue
+        // A kill failure (e.g. EPERM in a sandboxed runner) must not take down the whole run.
+        console.error(`warn: failed to signal ${target} with ${sig}:`, error)
+      }
+    }
+  }
+}
+
+async function terminate(proc: Proc) {
+  if (proc.exitCode !== null) return
+  await signal(proc, "SIGTERM")
+  const exited = Symbol("exited")
+  const result = await Promise.race([proc.exited.then(() => exited), Bun.sleep(2_000)])
+  if (result === exited) return
+  await signal(proc, "SIGKILL")
+  await Promise.race([proc.exited, Bun.sleep(2_000)])
+}
 
 // ---------------------------------------------------------------------------
 // Run a single test file
@@ -218,24 +308,36 @@ async function run(file: string): Promise<Result> {
 
   const proc = Bun.spawn(cmd, {
     cwd: root,
+    env: { ...process.env, [TestCli.ENV]: built.binary },
     stdout: "pipe",
     stderr: "pipe",
     windowsHide: true,
+    detached: process.platform !== "win32",
   })
   active.set(proc.pid, proc)
 
-  const timer = setTimeout(() => {
-    killed.value = true
-    proc.kill()
-  }, deadline)
-
-  const stdout = new Response(proc.stdout).text()
-  const stderr = new Response(proc.stderr).text()
-  const code = await proc.exited.finally(async () => {
-    clearTimeout(timer)
+  const stdout = drain(proc.stdout)
+  const stderr = drain(proc.stderr)
+  const code = await Promise.race([
+    proc.exited.then((value) => ({ timedout: false, value })),
+    Bun.sleep(deadline).then(() => ({ timedout: true, value: -1 })),
+  ]).then(async (result) => {
+    if (result.timedout) {
+      killed.value = true
+      await terminate(proc)
+    }
     await finish(proc)
+    return result.timedout ? (proc.exitCode ?? result.value) : result.value
   })
-  const output = await Promise.all([stdout, stderr])
+  const output = await Promise.race([
+    Promise.all([stdout.promise, stderr.promise]).then((value) => ({ closed: true, value })),
+    Bun.sleep(2_000).then(() => ({ closed: false, value: ["", ""] as [string, string] })),
+  ]).then(async (result) => {
+    if (result.closed) return result.value
+    await signal(proc, "SIGKILL")
+    await Promise.all([stdout.close(), stderr.close()])
+    return Promise.all([stdout.promise, stderr.promise])
+  })
 
   return {
     file,
@@ -254,7 +356,7 @@ function finish(proc: ReturnType<typeof Bun.spawn>) {
   if (found) return found
 
   const promise = (async () => {
-    await proc.exited
+    await Promise.race([proc.exited, Bun.sleep(2_000)])
     await cleanup(proc.pid)
   })().finally(() => {
     active.delete(proc.pid)
@@ -269,10 +371,9 @@ function shutdown(code: number) {
   stopping.promise = (async () => {
     stopped.value = true
     const children = [...active.values()]
-    for (const proc of children) {
-      if (proc.exitCode === null) proc.kill("SIGKILL")
-    }
+    await Promise.all(children.map(terminate))
     await Promise.all(children.map(finish))
+    await cleanBinary()
     process.exit(code)
   })()
   return stopping.promise
@@ -449,6 +550,8 @@ if (ci) {
     console.error("cleanup failed:", err)
   })
 }
+
+await cleanBinary()
 
 process.exit(failures.length > 0 ? 1 : 0)
 

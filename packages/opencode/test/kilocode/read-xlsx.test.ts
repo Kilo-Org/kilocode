@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { Cause, Effect, Exit, Layer } from "effect"
 import { describe, expect } from "bun:test"
 import { truncate } from "fs/promises"
@@ -29,12 +30,12 @@ const ctx = {
 
 const it = testEffect(
   Layer.mergeAll(
-    Agent.defaultLayer,
-    FSUtil.defaultLayer,
-    CrossSpawnSpawner.defaultLayer,
-    Instruction.defaultLayer,
-    LSP.defaultLayer,
-    Truncate.defaultLayer,
+    AppNodeBuilder.build(Agent.node),
+    AppNodeBuilder.build(FSUtil.node),
+    AppNodeBuilder.build(CrossSpawnSpawner.node),
+    AppNodeBuilder.build(Instruction.node),
+    AppNodeBuilder.build(LSP.node),
+    AppNodeBuilder.build(Truncate.node),
     testInstanceStoreLayer,
   ),
 )

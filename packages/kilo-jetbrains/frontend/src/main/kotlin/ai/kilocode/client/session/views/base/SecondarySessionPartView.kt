@@ -22,7 +22,9 @@ abstract class SecondarySessionPartView(
         row.background = SessionUiStyle.View.Surface.headerBgColor()
         row.border = JBUI.Borders.empty(
             JBUI.scale(SessionUiStyle.View.Layout.VERTICAL_PADDING),
-            JBUI.scale(SessionUiStyle.View.Layout.HORIZONTAL_PADDING),
+            SessionUiStyle.View.Header.left(),
+            JBUI.scale(SessionUiStyle.View.Layout.VERTICAL_PADDING),
+            SessionUiStyle.View.Header.right(),
         )
         syncBorder()
     }

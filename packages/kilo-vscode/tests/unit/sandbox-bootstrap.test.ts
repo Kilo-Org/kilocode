@@ -91,36 +91,46 @@ describe("ensureSandbox", () => {
 
 describe("Agent Manager sandbox startup", () => {
   const provider = readFileSync(join(__dirname, "..", "..", "src", "agent-manager", "AgentManagerProvider.ts"), "utf8")
+  const flow = readFileSync(join(__dirname, "..", "..", "src", "agent-manager", "provider-multi-version.ts"), "utf8")
   const dialog = readFileSync(
     join(__dirname, "..", "..", "webview-ui", "agent-manager", "NewWorktreeDialog.tsx"),
     "utf8",
   )
 
   test("reconciles before exposing or prompting the session", () => {
-    const start = provider.indexOf("private async onCreateMultiVersion")
-    const end = provider.indexOf("\n  private ", start + 1)
-    const body = provider.slice(start, end)
-    const ensure = body.indexOf("await ensureSandbox")
-    const discard = body.indexOf("await this.discardWorktree", ensure)
-    const skip = body.indexOf("continue", discard)
-    const register = body.indexOf("this.registerWorktreeSession", ensure)
-    const ready = body.indexOf("this.notifyWorktreeReady", register)
-    const created = body.indexOf("created.push", ready)
-    const prompt = body.indexOf('type: "agentManager.sendInitialMessage"', created)
-
-    expect(ensure).toBeGreaterThan(-1)
-    expect(discard).toBeGreaterThan(ensure)
-    expect(skip).toBeGreaterThan(discard)
-    expect(register).toBeGreaterThan(skip)
+    // In createVersion the sandbox gate runs before the session is exposed.
+    const start = flow.indexOf("async function createVersion")
+    const version = flow.slice(start, flow.indexOf("\n/**", start + 1))
+    const gate = version.indexOf("await reconcileSandbox")
+    const register = version.indexOf("host.register", gate)
+    const ready = version.indexOf("host.notifyReady", register)
+    const created = version.indexOf("return {", ready)
+    expect(gate).toBeGreaterThan(-1)
+    expect(register).toBeGreaterThan(gate)
     expect(ready).toBeGreaterThan(register)
     expect(created).toBeGreaterThan(ready)
-    expect(prompt).toBeGreaterThan(created)
+
+    // In reconcileSandbox a failed reconciliation discards the worktree and
+    // aborts the version before any exposure can happen.
+    const rbStart = flow.indexOf("async function reconcileSandbox")
+    const rollback = flow.slice(rbStart, flow.indexOf("\n/**", rbStart + 1))
+    const attempt = rollback.indexOf("await ensureSandbox")
+    const discard = rollback.indexOf("await host.discard", attempt)
+    const abort = rollback.indexOf("return false", discard)
+    expect(attempt).toBeGreaterThan(-1)
+    expect(discard).toBeGreaterThan(attempt)
+    expect(abort).toBeGreaterThan(discard)
+
+    // The created sessions feed the initial prompt phase.
+    const prompts = flow.slice(flow.indexOf("async function sendInitialPrompts"))
+    expect(prompts).toContain("buildInitialMessages(created")
+    expect(prompts).toContain('type: "agentManager.sendInitialMessage"')
   })
 
   test("deletes the fresh branch when sandbox setup rolls back", () => {
     expect(provider).toContain("private async discardWorktree(id: string, dir: string, branch: string")
     expect(provider).toContain("removeWorktree(dir, branch)")
-    expect(provider).toContain("wt.result.path, wt.result.branch, session.id")
+    expect(flow).toContain("wt.result.path, wt.result.branch, sessionId")
   })
 
   test("uses the persisted sandbox default for UI and only sends explicit overrides", () => {

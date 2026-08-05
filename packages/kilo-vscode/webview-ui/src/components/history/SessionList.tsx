@@ -5,7 +5,7 @@
  * Header/back button are owned by the parent HistoryView.
  */
 
-import { Component, Show, createSignal, onMount, type JSX } from "solid-js"
+import { Component, Show, createMemo, createSignal, onMount, type Accessor, type JSX } from "solid-js"
 import { List } from "@kilocode/kilo-ui/list"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
@@ -38,6 +38,7 @@ function dateGroupKey(iso: string): (typeof DATE_GROUP_KEYS)[number] {
 
 interface SessionListProps {
   onSelectSession: (id: string) => void
+  sessionIds?: Accessor<ReadonlySet<string>>
 }
 
 const SessionList: Component<SessionListProps> = (props) => {
@@ -50,6 +51,12 @@ const SessionList: Component<SessionListProps> = (props) => {
   const [notice, setNotice] = createSignal("")
   let seq = 0
 
+  const items = createMemo(() => {
+    const ids = props.sessionIds?.()
+    if (!ids) return session.sessions()
+    return session.sessions().filter((item) => ids.has(item.id))
+  })
+
   onMount(() => {
     console.log("[Kilo New] SessionList mounted, loading sessions")
     session.loadSessions()
@@ -57,7 +64,7 @@ const SessionList: Component<SessionListProps> = (props) => {
 
   const currentSession = (): SessionInfo | undefined => {
     const id = session.currentSessionID()
-    return session.sessions().find((s) => s.id === id)
+    return items().find((s) => s.id === id)
   }
 
   function startRename(s: SessionInfo) {
@@ -189,7 +196,7 @@ const SessionList: Component<SessionListProps> = (props) => {
   return (
     <div class="session-list">
       <List<SessionInfo>
-        items={session.sessions()}
+        items={items()}
         key={(s) => s.id}
         filterKeys={["title"]}
         current={currentSession()}

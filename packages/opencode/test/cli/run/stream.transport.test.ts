@@ -88,20 +88,14 @@ function retry(sessionID: string, attempt: number, message: string) {
 function assistant(id: string, sessionID = "session-1"): SdkEvent {
   return {
     id: `evt-${id}`,
-    type: "sync",
-    syncEvent: {
-      type: "message.updated.1",
-      id: `evt-${id}`,
-      seq: 1,
-      aggregateID: sessionID,
-      data: {
+    type: "message.updated",
+    properties: {
+      sessionID,
+      info: assistantMessage({
         sessionID,
-        info: assistantMessage({
-          sessionID,
-          id,
-          parts: [],
-        }).info,
-      },
+        id,
+        parts: [],
+      }).info,
     },
   }
 }
@@ -297,6 +291,18 @@ function textPart(id: string, messageID: string, text: string, sessionID = "sess
 function textUpdated(part: TextPart): SdkEvent {
   return {
     id: `evt-${part.id}-updated`,
+    type: "message.part.updated",
+    properties: {
+      sessionID: part.sessionID,
+      part,
+      time: 1,
+    },
+  }
+}
+
+function syncTextUpdated(part: TextPart): SdkEvent {
+  return {
+    id: `evt-${part.id}-updated`,
     type: "sync",
     syncEvent: {
       type: "message.part.updated.1",
@@ -338,17 +344,11 @@ function reasoningUpdated(part: ReasoningPart): SdkEvent {
 function toolUpdated(part: SessionToolPart): SdkEvent {
   return {
     id: `evt-${part.id}-updated`,
-    type: "sync",
-    syncEvent: {
-      type: "message.part.updated.1",
-      id: `evt-${part.id}-updated`,
-      seq: 1,
-      aggregateID: part.sessionID,
-      data: {
-        sessionID: part.sessionID,
-        part,
-        time: 1,
-      },
+    type: "message.part.updated",
+    properties: {
+      sessionID: part.sessionID,
+      part,
+      time: 1,
     },
   }
 }
@@ -468,6 +468,34 @@ function sdk(
 }
 
 describe("run stream transport", () => {
+  test("ignores the sync copy of a native message event", async () => {
+    const src = globalFeed()
+    const ui = footer()
+    const transport = await createSessionTransport({
+      sdk: sdk({ globalStream: src.stream }),
+      sessionID: "session-1",
+      thinking: true,
+      limits: () => ({}),
+      footer: ui.api,
+    })
+    const part = {
+      ...textPart("text-1", "msg-1", "Hello"),
+      time: { start: 1, end: 2 },
+    }
+
+    try {
+      src.push(globalEvent(assistant("msg-1")))
+      src.push(globalEvent(textUpdated(part)))
+      src.push(globalEvent(syncTextUpdated(part)))
+
+      await waitFor(() => ui.commits.find((item) => item.kind === "assistant" && item.text === "Hello"))
+      expect(ui.commits.filter((item) => item.kind === "assistant" && item.text === "Hello")).toHaveLength(1)
+    } finally {
+      src.close()
+      await transport.close()
+    }
+  })
+
   test("does not replay persisted main-session history during bootstrap by default", async () => {
     const src = eventFeed()
     const ui = footer()

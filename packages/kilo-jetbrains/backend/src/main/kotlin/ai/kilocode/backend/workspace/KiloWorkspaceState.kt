@@ -143,4 +143,5 @@ data class SkillInfo(
     val name: String,
     val description: String?,
     val location: String,
+    val content: String?,
 )

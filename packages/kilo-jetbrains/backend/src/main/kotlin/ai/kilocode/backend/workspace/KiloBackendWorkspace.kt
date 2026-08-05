@@ -254,6 +254,7 @@ class KiloBackendWorkspace(
                     name = s.name,
                     description = s.description,
                     location = s.location,
+                    content = s.content,
                 )
             })
         } catch (e: CancellationException) {

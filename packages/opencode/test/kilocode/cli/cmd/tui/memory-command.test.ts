@@ -3,7 +3,6 @@ import type { KiloClient } from "@kilocode/sdk/v2"
 import { memoryRow } from "@/kilocode/cli/cmd/tui/component/memory-status"
 import { runMemoryCommand } from "@/kilocode/cli/cmd/tui/memory-command"
 import { MemoryTuiEvents } from "@/kilocode/cli/cmd/tui/memory-events"
-import { MemoryTuiMeta } from "@/kilocode/cli/cmd/tui/memory-meta"
 import { MemoryTuiState } from "@/kilocode/cli/cmd/tui/memory-state"
 
 type Handler = (event: {
@@ -64,16 +63,16 @@ describe("memory TUI command parser", () => {
     ])
   })
 
-  test("auto-save, verbose, and purge commands call explicit endpoints", async () => {
+  test("auto-save and purge commands call explicit endpoints", async () => {
     const shown: string[] = []
     const calls: unknown[] = []
-    const state = { autoConsolidate: true, verbose: false }
+    const state = { autoConsolidate: true }
     const client = {
       memory: {
         status: async () => ({ data: { state } }),
         configure: async (input: unknown) => {
           calls.push(input)
-          return { data: { state: { autoConsolidate: false, verbose: true } } }
+          return { data: { state: { autoConsolidate: false } } }
         },
         purge: async (input: unknown) => {
           calls.push(input)
@@ -96,17 +95,15 @@ describe("memory TUI command parser", () => {
     }
 
     await runMemoryCommand({ ...base, text: "/memory auto off" })
-    await runMemoryCommand({ ...base, text: "/memory verbose on" })
     await runMemoryCommand({ ...base, text: "/memory auto status" })
     await runMemoryCommand({ ...base, text: "/memory purge" })
     await runMemoryCommand({ ...base, text: "/memory purge confirm" })
 
     expect(shown[0]).toBe("Memory auto-save off")
-    expect(shown[1]).toBe("Memory verbose on")
-    expect(shown[2]).toContain("Missing auto mode")
-    expect(shown[3]).toContain("Purge requires confirmation")
-    expect(shown[4]).toBe("Memory purged")
-    expect(calls).toEqual([{ autoConsolidate: false }, { verbose: true }, { confirm: true }])
+    expect(shown[1]).toContain("Missing auto mode")
+    expect(shown[2]).toContain("Purge requires confirmation")
+    expect(shown[3]).toBe("Memory purged")
+    expect(calls).toEqual([{ autoConsolidate: false }, { confirm: true }])
   })
 
   test("status opens overview dialog", async () => {
@@ -131,6 +128,31 @@ describe("memory TUI command parser", () => {
 
     expect(opened).toEqual(["status"])
     expect(shown).toEqual([])
+  })
+
+  test("inspect reveals the memory folder", async () => {
+    const opened: string[] = []
+    const shown: string[] = []
+    const client = {
+      memory: {
+        status: async () => ({ data: { root: "/tmp/kilo-memory", state: { enabled: true } } }),
+      },
+    } as unknown as KiloClient
+
+    await runMemoryCommand({
+      text: "/memory inspect",
+      client,
+      toast: { show: (input) => shown.push(input.message) },
+      inspect(root) {
+        opened.push(root)
+      },
+      show() {},
+      status() {},
+      usage() {},
+    })
+
+    expect(opened).toEqual(["/tmp/kilo-memory"])
+    expect(shown).toEqual(["Memory folder: /tmp/kilo-memory"])
   })
 
   test("bare memory command opens help", async () => {
@@ -204,7 +226,7 @@ describe("memory TUI command parser", () => {
 
   test("memory commands route to session directory when no workspace is active", async () => {
     const calls: unknown[] = []
-    const state = { autoConsolidate: false, verbose: false }
+    const state = { autoConsolidate: false }
     const client = {
       memory: {
         configure: async (input: unknown) => {
@@ -222,7 +244,6 @@ describe("memory TUI command parser", () => {
     }
 
     await runMemoryCommand({ ...base, text: "/memory auto off", directory: "/repo/packages/opencode" })
-    await runMemoryCommand({ ...base, text: "/memory verbose on", directory: "/repo/packages/opencode" })
     await runMemoryCommand({
       ...base,
       text: "/memory auto off",
@@ -232,7 +253,6 @@ describe("memory TUI command parser", () => {
 
     expect(calls).toEqual([
       { directory: "/repo/packages/opencode", autoConsolidate: false },
-      { directory: "/repo/packages/opencode", verbose: true },
       { workspace: "wrk_123", autoConsolidate: false },
     ])
   })
@@ -288,63 +308,38 @@ describe("memory TUI events", () => {
   })
 })
 
-describe("memory TUI metadata", () => {
-  test("reads typed verbose and activity state", () => {
-    expect(MemoryTuiState.verbose({ verbose: true })).toBe(true)
-    expect(MemoryTuiState.verbose(undefined)).toBe(false)
+describe("memory TUI state", () => {
+  test("tracks active memory", () => {
     expect(MemoryTuiState.active({ markers: 1, saved: false })).toBe(true)
     expect(MemoryTuiState.active({ markers: 0, saved: true })).toBe(true)
     expect(MemoryTuiState.active({ markers: 0, saved: false })).toBe(false)
-    expect(MemoryTuiMeta.items({ items: ["first", 1, "second"] })).toEqual(["first", "second"])
-    expect(MemoryTuiMeta.items({})).toEqual([])
   })
 })
 
 describe("memory sidebar row", () => {
   test("shows loading, unavailable, and disabled states", () => {
-    expect(memoryRow({ loading: true, active: false, verbose: false })).toEqual({
+    expect(memoryRow({ loading: true, active: false })).toEqual({
       label: "Loading",
       tone: "muted",
     })
-    expect(memoryRow({ active: false, verbose: false })).toEqual({
+    expect(memoryRow({ active: false })).toEqual({
       label: "Unavailable",
       tone: "error",
     })
-    expect(memoryRow({ enabled: false, active: true, verbose: true, flash: "recalled 3" })).toEqual({
+    expect(memoryRow({ enabled: false, active: true })).toEqual({
       label: "Disabled",
       tone: "muted",
     })
   })
 
   test("uses muted and green dots for inactive and active sessions", () => {
-    expect(memoryRow({ enabled: true, active: false, verbose: false })).toEqual({
+    expect(memoryRow({ enabled: true, active: false })).toEqual({
       label: "Enabled",
       tone: "muted",
     })
-    expect(memoryRow({ enabled: true, active: true, verbose: false })).toEqual({
+    expect(memoryRow({ enabled: true, active: true })).toEqual({
       label: "Enabled",
       tone: "success",
-    })
-  })
-
-  test("adds verbose event captions without changing the activity tone", () => {
-    expect(memoryRow({ enabled: true, active: false, verbose: true, flash: "recalled 3" })).toEqual({
-      label: "Enabled",
-      tone: "muted",
-      caption: "recalled 3",
-    })
-    expect(memoryRow({ enabled: true, active: true, verbose: true, flash: "saved 2" })).toEqual({
-      label: "Enabled",
-      tone: "success",
-      caption: "saved 2",
-    })
-  })
-
-  test("omits verbose event captions when verbose is disabled", () => {
-    expect(memoryRow({ enabled: true, active: true, verbose: false, flash: "loaded" })).toEqual({
-      label: "Enabled",
-      tone: "success",
-      caption: undefined,
     })
   })
 })

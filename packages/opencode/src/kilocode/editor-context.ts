@@ -1,11 +1,14 @@
-export interface EditorContext {
-  directory?: string
-  worktree?: string
-  visibleFiles?: string[]
-  openTabs?: string[]
-  activeFile?: string
-  shell?: string
-}
+import { Schema, Types } from "effect"
+
+export const EditorContext = Schema.Struct({
+  directory: Schema.optional(Schema.String),
+  worktree: Schema.optional(Schema.String),
+  visibleFiles: Schema.optional(Schema.Array(Schema.String)),
+  openTabs: Schema.optional(Schema.Array(Schema.String)),
+  activeFile: Schema.optional(Schema.String),
+  shell: Schema.optional(Schema.String),
+})
+export type EditorContext = Types.DeepMutable<Schema.Schema.Type<typeof EditorContext>>
 
 /**
  * Build static <env> lines from editor context.

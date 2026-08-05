@@ -51,6 +51,7 @@ export function useSpeechToText(vscode: VSCode, server: Server, lang: Lang): Spe
   let insert: InsertTranscript | undefined
   let done: (() => void) | undefined
   let ready: (() => boolean) | undefined
+  let pending = false
 
   const unsub = vscode.onMessage((msg) => {
     if (!isSpeechMessage(msg)) return
@@ -59,6 +60,7 @@ export function useSpeechToText(vscode: VSCode, server: Server, lang: Lang): Spe
     if (msg.type === "speechToTextStarted") {
       if (state() !== "starting") return
       setState("recording")
+      if (pending) transcribe()
       return
     }
 
@@ -114,9 +116,18 @@ export function useSpeechToText(vscode: VSCode, server: Server, lang: Lang): Spe
   }
 
   function stop(opts?: StopOptions) {
-    if (state() !== "recording") return
+    if (state() !== "starting" && state() !== "recording") return
     done = opts?.done
     ready = opts?.ready
+    if (state() === "starting") {
+      pending = true
+      return
+    }
+    transcribe()
+  }
+
+  function transcribe() {
+    pending = false
     setState("transcribing")
     vscode.postMessage({ type: "speechToTextStop", requestId: request })
   }
@@ -160,6 +171,7 @@ export function useSpeechToText(vscode: VSCode, server: Server, lang: Lang): Spe
     insert = undefined
     done = undefined
     ready = undefined
+    pending = false
   }
 
   return { state, error, active, start, stop, cancel, clear }

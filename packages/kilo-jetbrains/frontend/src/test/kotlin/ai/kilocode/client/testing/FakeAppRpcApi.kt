@@ -2,6 +2,7 @@ package ai.kilocode.client.testing
 
 import ai.kilocode.rpc.KiloAppRpcApi
 import ai.kilocode.rpc.dto.AgentConfigDto
+import ai.kilocode.rpc.dto.CompactionConfigDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.DeviceAuthDto
@@ -13,9 +14,12 @@ import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
 import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.ModelVariantUpdateDto
+import ai.kilocode.rpc.dto.PermissionConfigDto
+import ai.kilocode.rpc.dto.PermissionRuleDto
 import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.SkillsConfigDto
 import ai.kilocode.rpc.dto.TelemetryCaptureDto
+import ai.kilocode.rpc.dto.WatcherConfigDto
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -196,17 +200,65 @@ class FakeAppRpcApi : KiloAppRpcApi {
         val mcp = patch.mcp?.entries?.fold(config.mcp) { acc, (name, item) ->
             if (item == null) acc - name else acc + (name to item)
         } ?: config.mcp
+        val watcher = patch.watcher?.let { item ->
+            val cfg = config.watcher
+            cfg?.copy(ignore = item.ignore ?: cfg.ignore)
+                ?: WatcherConfigDto(ignore = item.ignore ?: emptyList())
+        } ?: config.watcher
+        val compaction = patch.compaction?.let { item ->
+            val cfg = item.clear.fold(config.compaction ?: CompactionConfigDto()) { next, field ->
+                when (field) {
+                    "threshold_percent" -> next.copy(threshold_percent = null)
+                    "auto" -> next.copy(auto = null)
+                    "prune" -> next.copy(prune = null)
+                    else -> next
+                }
+            }
+            cfg.copy(
+                auto = item.auto ?: cfg.auto,
+                threshold_percent = item.threshold_percent ?: cfg.threshold_percent,
+                prune = item.prune ?: cfg.prune,
+            )
+        } ?: config.compaction
         return config.copy(
             defaultAgent = if (values.containsKey("default_agent")) values["default_agent"] else config.defaultAgent,
             model = if (values.containsKey("model")) values["model"] else config.model,
             smallModel = if (values.containsKey("small_model")) values["small_model"] else config.smallModel,
             subagentModel = if (values.containsKey("subagent_model")) values["subagent_model"] else config.subagentModel,
             subagentVariant = if (values.containsKey("subagent_variant")) values["subagent_variant"] else config.subagentVariant,
+            watcher = watcher,
+            compaction = compaction,
             instructions = patch.instructions ?: config.instructions,
             skills = patch.skills?.let { SkillsConfigDto(paths = it.paths.orEmpty(), urls = it.urls.orEmpty()) } ?: config.skills,
             mcp = mcp,
             agent = agents,
+            permission = mergePermission(config.permission, patch.permission),
         )
+    }
+
+    /** Mirrors the CLI's PATCH deep-merge for `config.permission`: `null` deletes a tool/pattern. */
+    private fun mergePermission(base: PermissionConfigDto?, patch: PermissionConfigDto?): PermissionConfigDto? {
+        if (patch == null) return base
+        val result = (base ?: emptyMap()).toMutableMap()
+        for ((tool, rule) in patch) {
+            when (rule) {
+                is PermissionRuleDto.Level -> {
+                    if (rule.value == null) result.remove(tool) else result[tool] = rule
+                }
+                is PermissionRuleDto.Patterns -> {
+                    val merged = when (val old = result[tool]) {
+                        is PermissionRuleDto.Level -> old.value?.let { mapOf("*" to it) } ?: emptyMap()
+                        is PermissionRuleDto.Patterns -> old.map
+                        null -> emptyMap()
+                    }.toMutableMap()
+                    for ((pattern, level) in rule.map) {
+                        if (level == null) merged.remove(pattern) else merged[pattern] = level
+                    }
+                    if (merged.isEmpty()) result.remove(tool) else result[tool] = PermissionRuleDto.Patterns(merged)
+                }
+            }
+        }
+        return result.takeIf { it.isNotEmpty() }
     }
 
     var fakeProfile: ProfileDto? = null

@@ -5,6 +5,7 @@ import com.intellij.ide.ui.UISettingsUtils
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.editor.colors.EditorColorsScheme
 import com.intellij.openapi.editor.ex.EditorEx
+import com.intellij.openapi.util.Key
 import com.intellij.ui.EditorTextField
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
@@ -46,8 +47,14 @@ data class SessionEditorStyle(
     fun applyToEditor(editor: EditorEx) {
         try {
             if (editor.isDisposed) return
+            // setColorsScheme always runs a full reinitSettings (gutter annotation sizing walks every
+            // document line), so skip it when this exact style snapshot was already applied to this
+            // editor. Snapshots are shared per session and recreated only on a theme change, so an
+            // identity check is enough and avoids repeated O(lines) reinit on redundant applyStyle.
+            if (editor.getUserData(APPLIED) === this) return
             editor.setColorsScheme(editorScheme)
             editor.setFontSize(editorSize)
+            editor.putUserData(APPLIED, this)
         } catch (err: RuntimeException) {
             if (err.javaClass.name != "com.intellij.openapi.util.TraceableDisposable\$DisposalException") throw err
         }
@@ -96,6 +103,9 @@ data class SessionEditorStyle(
     }
 
     companion object {
+        /** Marks the last style snapshot applied to an editor so [applyToEditor] can skip redundant reinit. */
+        private val APPLIED = Key.create<SessionEditorStyle>("kilo.session.editor.style")
+
         /** Builds a style snapshot from the current global editor color scheme. */
         fun current(): SessionEditorStyle {
             val scheme = EditorColorsManager.getInstance().globalScheme

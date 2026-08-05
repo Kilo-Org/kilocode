@@ -18,6 +18,12 @@ data class MessageDto(
     val cost: Double? = null,
     val tokens: TokensDto? = null,
     val error: MessageErrorDto? = null,
+    val summary: MessageSummaryDto? = null,
+)
+
+@Serializable
+data class MessageSummaryDto(
+    val diffs: List<DiffFileDto> = emptyList(),
 )
 
 @Serializable
@@ -255,6 +261,13 @@ sealed class ChatEventDto {
     ) : ChatEventDto()
 
     @Serializable
+    @SerialName("session.queue.changed")
+    data class SessionQueueChanged(
+        val sessionID: String,
+        val queued: List<String> = emptyList(),
+    ) : ChatEventDto()
+
+    @Serializable
     @SerialName("session.compacted")
     data class SessionCompacted(
         val sessionID: String,
@@ -299,8 +312,18 @@ data class PermissionRequestDto(
     val message: String? = null,
     val command: String? = null,
     val rules: List<String> = emptyList(),
+    val ruleDecisions: List<PermissionRuleDecisionDto> = emptyList(),
     val filePath: String? = null,
     val fileDiffs: List<PermissionFileDiffDto> = emptyList(),
+    // Verbatim skill-shell commands (metadata.commands) the prompt must display; empty for non-skill requests.
+    val skillCommands: List<String> = emptyList(),
+)
+
+@Serializable
+data class PermissionRuleDecisionDto(
+    val pattern: String,
+    val decision: String = "pending",
+    val defaultDecision: String = decision,
 )
 
 @Serializable
@@ -313,6 +336,8 @@ data class ToolRefDto(
 data class PermissionReplyDto(
     val reply: String,
     val message: String? = null,
+    // Set when a human answered the prompt; the CLI ignores machine approvals of skill-shell batches.
+    val interactive: Boolean = false,
 )
 
 @Serializable
@@ -384,6 +409,7 @@ data class DiffFileDto(
     val additions: Int,
     val deletions: Int,
     val patch: String? = null,
+    val status: String? = null,
 )
 
 // --- Config Update ---

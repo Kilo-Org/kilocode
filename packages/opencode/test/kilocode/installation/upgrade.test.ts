@@ -6,6 +6,9 @@ import { InstallationChannel } from "@opencode-ai/core/installation/version"
 import { AppProcess } from "@opencode-ai/core/process"
 import { Installation } from "../../../src/installation"
 import { testEffect } from "../../lib/effect"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { LayerNodePlatform } from "@opencode-ai/core/effect/app-node-platform"
+import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 
 const encoder = new TextEncoder()
 
@@ -48,8 +51,10 @@ function layer(
   handler: (cmd: string, args: readonly string[]) => string,
   request?: (request: HttpClientRequest.HttpClientRequest) => Response,
 ) {
-  const proc = AppProcess.layer.pipe(Layer.provide(spawner(handler)))
-  return Installation.layer.pipe(Layer.provide(http(request)), Layer.provide(proc))
+  return AppNodeBuilder.build(Installation.node, [
+    [LayerNodePlatform.httpClient, http(request)],
+    [CrossSpawnSpawner.node, spawner(handler)],
+  ])
 }
 
 describe("Kilo installation upgrade", () => {

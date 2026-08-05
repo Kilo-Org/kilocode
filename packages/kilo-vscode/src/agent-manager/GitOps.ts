@@ -171,6 +171,10 @@ export class GitOps {
     return this.raw(["rev-parse", "--abbrev-ref", "HEAD"], cwd).catch(() => "")
   }
 
+  async root(cwd: string): Promise<string | undefined> {
+    return this.raw(["rev-parse", "--show-toplevel"], cwd).catch(() => undefined)
+  }
+
   /**
    * Resolve the remote name for a branch. Checks (in order):
    * 1. The configured upstream's remote (e.g. upstream from `upstream/main`)

@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterEach, describe, expect, test } from "bun:test"
 import { Cause, Effect, Exit, Fiber, Layer, ManagedRuntime } from "effect"
 import path from "path"
@@ -14,7 +15,7 @@ import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { Database } from "@opencode-ai/core/database/database"
 import { provideTestInstance } from "../../fixture/fixture"
 import { MessageID, SessionID } from "../../../src/session/schema"
-import { Shell } from "../../../src/shell/shell"
+import { Shell } from "@opencode-ai/core/shell"
 import { Truncate } from "../../../src/tool/truncate"
 import { ShellTool } from "../../../src/tool/shell"
 import { Plugin } from "../../../src/plugin"
@@ -25,13 +26,13 @@ import { KilocodePaths } from "../../../src/kilocode/paths"
 
 const runtime = ManagedRuntime.make(
   Layer.mergeAll(
-    CrossSpawnSpawner.defaultLayer,
-    FSUtil.defaultLayer,
-    Config.defaultLayer,
+    AppNodeBuilder.build(CrossSpawnSpawner.node),
+    AppNodeBuilder.build(FSUtil.node),
+    AppNodeBuilder.build(Config.node),
     RuntimeFlags.layer(),
-    Plugin.defaultLayer,
-    Truncate.defaultLayer,
-    Agent.defaultLayer,
+    AppNodeBuilder.build(Plugin.node),
+    AppNodeBuilder.build(Truncate.node),
+    AppNodeBuilder.build(Agent.node),
   ),
 )
 
@@ -74,13 +75,9 @@ const configFile = path.join(config, "hello.txt")
 const configGlob = glob(path.join(config, "*"))
 const bus = Bus.layer
 const env = Layer.mergeAll(
-  Permission.layer.pipe(
-    Layer.provide(EventV2Bridge.defaultLayer),
-    Layer.provide(Config.defaultLayer),
-    Layer.provide(Database.defaultLayer),
-  ),
+  AppNodeBuilder.build(Permission.node),
   bus,
-  CrossSpawnSpawner.defaultLayer,
+  AppNodeBuilder.build(CrossSpawnSpawner.node),
 )
 const it = testEffect(env)
 

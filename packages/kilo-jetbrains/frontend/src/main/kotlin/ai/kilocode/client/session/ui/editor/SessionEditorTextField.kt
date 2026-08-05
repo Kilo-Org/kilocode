@@ -10,7 +10,6 @@ import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.IdeActions
-import com.intellij.openapi.actionSystem.PlatformCoreDataKeys
 import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.ex.EditorEx
@@ -74,11 +73,11 @@ internal open class SessionEditorTextField(
         super.uiDataSnapshot(sink)
         selection?.provideCopy(sink) { text }
         ctx?.let { sink.set(PromptDataKeys.SEND, it) }
-        file()?.let { sink.set(PlatformCoreDataKeys.FILE_EDITOR, it) }
     }
 
     private fun install(editor: Editor) {
         (editor as? EditorEx)?.setEmbeddedIntoDialogWrapper(true)
+        editor.putUserData(EditorTextField.SUPPLEMENTARY_KEY, true)
         // EditorImpl lazily creates EditorFloatingToolbar with the same first-show hook.
         // Settings providers run later, so this callback runs immediately after toolbar creation.
         UiNotifyConnector.doWhenFirstShown(editor.component) { hide(editor.component) }
