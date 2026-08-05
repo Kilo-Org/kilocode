@@ -23,6 +23,8 @@ import { TelemetryEventName } from "../../../../src/services/telemetry/types"
 export interface SidebarTopBarProps {
   onNewTask: () => void
   onHistory: () => void
+  /** Telemetry surface — distinguishes the sidebar from the "Open in Tab" panel, which shares this component. */
+  surface: string
 }
 
 interface Action {
@@ -43,7 +45,7 @@ export const SidebarTopBar: Component<SidebarTopBarProps> = (props) => {
     vscode.postMessage({
       type: "telemetry",
       event: TelemetryEventName.TITLE_BUTTON_CLICKED,
-      properties: { button, surface: "sidebar_title" },
+      properties: { button, surface: props.surface },
     })
 
   const open = (

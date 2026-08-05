@@ -1275,7 +1275,7 @@ export const SidebarTopBarDefault: Story = {
   render: () => (
     <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
       <div style={{ width: "340px" }}>
-        <SidebarTopBar onNewTask={() => undefined} onHistory={() => undefined} />
+        <SidebarTopBar onNewTask={() => undefined} onHistory={() => undefined} surface="sidebar_title" />
       </div>
     </StoryProviders>
   ),
