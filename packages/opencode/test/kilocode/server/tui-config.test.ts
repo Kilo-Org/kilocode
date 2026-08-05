@@ -174,4 +174,71 @@ describe("TUI config routes", () => {
 
     expect(events.some((event) => event.payload?.type === "global.config.updated")).toBe(true)
   })
+
+  // kilocode_change start - regression test: internal Effect logs from TUI config must not leak to the shared TTY
+  const LEAKED = ["loading tui config", "applying tui config", "skipping invalid tui config", "failed to read tui config"]
+
+  async function withConsoleCapture<T>(fn: () => Promise<T>): Promise<{ stdout: string; result: T }> {
+    const original = console.log
+    let captured = ""
+    console.log = (...args: unknown[]) => {
+      captured += args.map((a) => (typeof a === "string" ? a : String(a))).join(" ") + "\n"
+    }
+    try {
+      const result = await fn()
+      return { stdout: captured, result }
+    } finally {
+      console.log = original
+    }
+  }
+
+  test("GET /tui/config does not leak internal Effect logs to the terminal", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        const cfg = path.join(dir, ".kilo")
+        await fs.mkdir(cfg, { recursive: true })
+        await Bun.write(path.join(cfg, "tui.json"), JSON.stringify({ theme: "dracula" }, null, 2))
+      },
+    })
+
+    const { stdout } = await withConsoleCapture(async () => {
+      const response = await Server.Default().app.request("/tui/config", {
+        headers: { "x-kilo-directory": tmp.path },
+      })
+      expect(response.status).toBe(200)
+      return response
+    })
+
+    for (const message of LEAKED) {
+      expect(stdout).not.toContain(message)
+    }
+  })
+
+  test("PATCH /tui/config does not leak internal Effect logs during hot-reload", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        const cfg = path.join(dir, ".kilo")
+        await fs.mkdir(cfg, { recursive: true })
+        await Bun.write(path.join(cfg, "tui.json"), JSON.stringify({ theme: "dracula" }, null, 2))
+      },
+    })
+
+    const { stdout } = await withConsoleCapture(async () => {
+      const response = await Server.Default().app.request("/tui/config?scope=project", {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
+          "x-kilo-directory": tmp.path,
+        },
+        body: JSON.stringify({ theme: "nord" }),
+      })
+      expect(response.status).toBe(200)
+      return response
+    })
+
+    for (const message of LEAKED) {
+      expect(stdout).not.toContain(message)
+    }
+  })
+  // kilocode_change end
 })
