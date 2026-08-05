@@ -136,18 +136,21 @@ async function resolveWorktree(name: string, root: string, timeoutMs = 10 * 60_0
     // `createFromInfo` below passes `branch: slug` straight to `git worktree
     // add -b`, which fails outright if that branch already exists — e.g. one
     // left behind by `git worktree prune` (which drops the registration but
-    // never deletes the branch). Clear it first so the name can be reused.
+    // never deletes the branch). Clear it first so the name can be reused, but
+    // only with `-d` (not `-D`): it refuses unless the branch is fully merged,
+    // so we never silently discard unmerged work from an interrupted worktree
+    // or an unrelated branch that happens to share the name.
     const branchRef = await run(
       Git.Service.use((git) =>
         git.run(["show-ref", "--verify", "--quiet", `refs/heads/${slug}`], { cwd: ctx.worktree }),
       ),
     )
     if (branchRef.exitCode === 0) {
-      const deleted = await run(Git.Service.use((git) => git.run(["branch", "-D", slug], { cwd: ctx.worktree })))
+      const deleted = await run(Git.Service.use((git) => git.run(["branch", "-d", slug], { cwd: ctx.worktree })))
       if (deleted.exitCode !== 0) {
         const message = deleted.stderr.toString("utf8").trim() || deleted.text().trim()
         throw new Error(
-          `Branch "${slug}" already exists and could not be removed automatically${message ? `: ${message}` : ""}. Remove it with \`git branch -D ${slug}\` and retry.`,
+          `Branch "${slug}" already exists${message ? ` (${message})` : ""}. Remove it (e.g. \`git branch -D ${slug}\` if you're sure it's safe to discard) and retry.`,
         )
       }
     }
