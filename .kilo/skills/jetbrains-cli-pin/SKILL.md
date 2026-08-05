@@ -64,7 +64,7 @@ the only reliable reset.
 
 In repo CLI mode, Gradle's `generateOpenApiSpec` task runs the local CLI source through
 `bun run --conditions=browser ./src/index.ts generate`. IDE-launched Gradle runs can have
-worktree-local hint:
+a stripped `PATH` where `bun` isn't resolvable. The `unpin`/`regen` commands write an ignored, worktree-local hint:
 
 ```text
 packages/kilo-jetbrains/.gradle/kilo-cli-pin.properties
