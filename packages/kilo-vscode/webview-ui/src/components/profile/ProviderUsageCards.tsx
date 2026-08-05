@@ -2,7 +2,8 @@ import { Component, For, Show } from "solid-js"
 import type { KiloPassState, ProviderUsageData } from "../../types/messages"
 import type { ProviderUsageSnapshot } from "@kilocode/sdk/v2/client"
 import { Button } from "@kilocode/kilo-ui/button"
-import { Card, CardActions, CardDescription, CardTitle } from "@kilocode/kilo-ui/card"
+import { Card, CardActions, CardDescription, CardHeader, CardTitle } from "@kilocode/kilo-ui/card"
+import { KiloPassMeter } from "@kilocode/kilo-ui/kilo-pass-meter"
 import { Progress } from "@kilocode/kilo-ui/progress"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tag } from "@kilocode/kilo-ui/tag"
@@ -55,17 +56,19 @@ const UsageCard: Component<{
   onOpen: (url: string) => void
   language: Language
 }> = (props) => (
-  <Card class="provider-usage-card" variant={variant(props.item)}>
-    <div class="provider-usage-heading">
+  <Card variant={variant(props.item)}>
+    <CardHeader>
       <div>
-        <CardTitle icon={false}>{props.item.providerLabel}</CardTitle>
+        <CardTitle icon={false} role="heading" aria-level={4}>
+          {props.item.providerLabel}
+        </CardTitle>
         <CardDescription>{props.item.planLabel}</CardDescription>
       </div>
       <Tag>{source(props.item, props.language)}</Tag>
-    </div>
+    </CardHeader>
 
     <Show when={props.item.planState !== "active"}>
-      <p class="provider-usage-meta">
+      <CardDescription>
         {props.language.t(
           props.item.planState === "past_due"
             ? "profile.usage.plan.pastDue"
@@ -73,7 +76,7 @@ const UsageCard: Component<{
               ? "profile.usage.plan.canceling"
               : "profile.usage.plan.unknown",
         )}
-      </p>
+      </CardDescription>
     </Show>
 
     <Show when={props.item.fetchState !== "ready"}>
@@ -88,25 +91,33 @@ const UsageCard: Component<{
       <For each={props.item.windows}>
         {(window) => {
           const progress = () => windowProgress(window)
+          const value = () => formatWindowValue(window, labels(props.language))
           return (
             <div class="provider-usage-row">
-              <div class="provider-usage-row-heading">
-                <span>{window.label}</span>
-                <strong>{formatWindowValue(window, labels(props.language))}</strong>
-              </div>
               <Show when={progress() !== undefined}>
                 <Progress
                   value={progress()}
                   minValue={0}
                   maxValue={100}
-                  aria-label={`${window.label}: ${formatWindowValue(window, labels(props.language))}`}
-                />
+                  showValueLabel
+                  getValueLabel={value}
+                  aria-label={`${window.label}: ${value()}`}
+                  aria-valuetext={value()}
+                >
+                  {window.label}
+                </Progress>
+              </Show>
+              <Show when={progress() === undefined}>
+                <div class="provider-usage-summary">
+                  <span>{window.label}</span>
+                  <strong>{value()}</strong>
+                </div>
               </Show>
               <Show when={window.resetAt}>
                 {(reset) => (
-                  <span class="provider-usage-meta">
+                  <CardDescription>
                     {props.language.t("profile.usage.reset", { date: new Date(reset()).toLocaleString() })}
-                  </span>
+                  </CardDescription>
                 )}
               </Show>
             </div>
@@ -140,74 +151,7 @@ const UsageCard: Component<{
   </Card>
 )
 
-const KiloPassUsage: Component<{ pass: KiloPassState }> = (props) => {
-  const language = useLanguage()
-  const model = () => {
-    const paid = Math.max(0, props.pass.currentPeriodBaseCreditsUsd)
-    const bonus = Math.max(0, props.pass.currentPeriodBonusCreditsUsd)
-    const used = Math.max(0, props.pass.currentPeriodUsageUsd)
-    const total = paid + bonus
-    const paidWidth = total > 0 ? (paid / total) * 100 : 100
-    const usedWidth = total > 0 ? Math.min(100, (used / total) * 100) : 0
-    return {
-      paid,
-      bonus,
-      used,
-      total,
-      paidWidth,
-      paidFill: Math.min(usedWidth, paidWidth),
-      bonusFill: Math.max(0, usedWidth - paidWidth),
-    }
-  }
-  return (
-    <div class="provider-usage-row kilo-pass-usage">
-      <div class="provider-usage-row-heading">
-        <span>This month&apos;s usage</span>
-        <strong>
-          ${model().used.toFixed(2)} / ${model().total.toFixed(2)}
-        </strong>
-      </div>
-      <div
-        class="kilo-pass-usage-track"
-        role="progressbar"
-        aria-label={`Kilo Pass: $${model().used.toFixed(2)} used of $${model().total.toFixed(2)}`}
-        aria-valuemin={0}
-        aria-valuemax={model().total}
-        aria-valuenow={model().used}
-      >
-        <div class="kilo-pass-usage-paid-background" style={{ width: `${model().paidWidth}%` }} />
-        <div
-          class="kilo-pass-usage-bonus-background"
-          hidden={model().bonus <= 0}
-          style={{ left: `${model().paidWidth}%`, width: `${100 - model().paidWidth}%` }}
-        />
-        <div class="kilo-pass-usage-paid-fill" style={{ width: `${model().paidFill}%` }} />
-        <div
-          class="kilo-pass-usage-bonus-fill"
-          hidden={model().bonusFill <= 0}
-          style={{ left: `${model().paidWidth}%`, width: `${model().bonusFill}%` }}
-        />
-        <div class="kilo-pass-usage-boundary" hidden={model().bonus <= 0} style={{ left: `${model().paidWidth}%` }} />
-      </div>
-      <div class="kilo-pass-usage-amounts">
-        <span style={{ left: `${model().paidWidth}%` }}>${model().paid.toFixed(2)}</span>
-        <span class="kilo-pass-usage-bonus-amount" hidden={model().bonus <= 0}>
-          ${model().bonus.toFixed(2)}
-        </span>
-      </div>
-      <div class="kilo-pass-usage-legend">
-        <span>
-          <i class="kilo-pass-usage-paid-dot" />
-          Paid
-        </span>
-        <span hidden={model().bonus <= 0}>
-          <i class="kilo-pass-usage-bonus-dot" />
-          {language.t("profile.pass.bonus")}
-        </span>
-      </div>
-    </div>
-  )
-}
+const money = (value: number) => `$${value.toFixed(2)}`
 
 const KiloPassCard: Component<{
   pass?: KiloPassState | null
@@ -226,14 +170,16 @@ const KiloPassCard: Component<{
     }).format(date)
   }
   return (
-    <Card class="provider-usage-card">
-      <div class="provider-usage-heading">
+    <Card>
+      <CardHeader>
         <div>
-          <CardTitle icon={false}>Kilo</CardTitle>
+          <CardTitle icon={false} role="heading" aria-level={4}>
+            Kilo
+          </CardTitle>
           <CardDescription>Kilo Pass</CardDescription>
         </div>
         <Tag>Kilo Gateway</Tag>
-      </div>
+      </CardHeader>
       <Show
         when={props.pass}
         fallback={
@@ -246,10 +192,19 @@ const KiloPassCard: Component<{
       >
         {(pass) => (
           <div class="provider-usage-resources">
-            <KiloPassUsage pass={pass()} />
+            <KiloPassMeter
+              used={pass().currentPeriodUsageUsd}
+              paid={pass().currentPeriodBaseCreditsUsd}
+              bonus={pass().currentPeriodBonusCreditsUsd}
+              label="This month's usage"
+              paidLabel="Paid"
+              bonusLabel={props.language.t("profile.pass.bonus")}
+              format={money}
+              aria-label="Kilo Pass monthly usage"
+            />
             <Show when={renewal()}>
               {(date) => (
-                <div class="provider-usage-row-heading">
+                <div class="provider-usage-summary">
                   <span>{props.language.t("profile.pass.renews")}</span>
                   <strong>{date()}</strong>
                 </div>
@@ -292,13 +247,13 @@ export const ProviderUsageCards: Component<ProviderUsageCardsProps> = (props) =>
             <Show
               when={!props.loading && props.error}
               fallback={
-                <div class="provider-usage-loading">
+                <div class="provider-usage-loading" role="status" aria-label={language.t("profile.usage.title")}>
                   <Spinner />
                 </div>
               }
             >
               {(error) => (
-                <Card variant="warning">
+                <Card variant="warning" role="alert">
                   <CardDescription>{error()}</CardDescription>
                 </Card>
               )}
