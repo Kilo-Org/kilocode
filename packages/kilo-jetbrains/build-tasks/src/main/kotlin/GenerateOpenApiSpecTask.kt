@@ -49,6 +49,9 @@ abstract class GenerateOpenApiSpecTask : DefaultTask() {
     @get:Internal
     abstract val cacheDir: DirectoryProperty
 
+    @get:Internal
+    abstract val bunPath: Property<String>
+
     @get:OutputFile
     abstract val spec: RegularFileProperty
 
@@ -76,7 +79,7 @@ abstract class GenerateOpenApiSpecTask : DefaultTask() {
         val err = ByteArrayOutputStream()
         val result = exec.exec {
             workingDir = root
-            commandLine(bun(), "run", "--conditions=browser", "./src/index.ts", "generate")
+            commandLine(bunPath.get(), "run", "--conditions=browser", "./src/index.ts", "generate")
             standardOutput = out
             errorOutput = err
             isIgnoreExitValue = true
@@ -94,22 +97,6 @@ abstract class GenerateOpenApiSpecTask : DefaultTask() {
             isIgnoreExitValue = true
         }
         writeSpec(result.exitValue, out, err)
-    }
-
-    private fun bun(): String {
-        val env = listOfNotNull(System.getenv("BUN_BINARY"), System.getenv("BUN"))
-        val path = System.getenv("PATH")
-            ?.split(File.pathSeparator)
-            ?.map { File(it, if (windows()) "bun.exe" else "bun") }
-            .orEmpty()
-        val home = System.getProperty("user.home")
-        val common = listOf(
-            File(home, ".bun/bin/${if (windows()) "bun.exe" else "bun"}"),
-            File("/opt/homebrew/bin/bun"),
-            File("/usr/local/bin/bun"),
-        )
-        return (env.map(::File) + path + common).firstOrNull { it.isFile && it.canExecute() }?.absolutePath
-            ?: "bun"
     }
 
     private fun writeSpec(code: Int, out: ByteArrayOutputStream, err: ByteArrayOutputStream) {

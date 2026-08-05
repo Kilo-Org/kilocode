@@ -37,6 +37,7 @@ class FakeAppRpcApi : KiloAppRpcApi {
     var health = HealthDto(healthy = true, version = "1.0.0")
     var cliVersion = "1.0.0"
     var cliPlatform = "darwin-arm64"
+    var cliBundled = false
     var cliInfoGate: CompletableDeferred<Unit>? = null
     var cliInfoError: Exception? = null
     var cliVersionCalls = 0
@@ -92,6 +93,11 @@ class FakeAppRpcApi : KiloAppRpcApi {
         cliPlatformCalls += 1
         cliInfoError?.let { throw it }
         return cliPlatform
+    }
+
+    override suspend fun cliBundled(): Boolean {
+        assertNotEdt("cliBundled")
+        return cliBundled
     }
 
     override suspend fun retry() {

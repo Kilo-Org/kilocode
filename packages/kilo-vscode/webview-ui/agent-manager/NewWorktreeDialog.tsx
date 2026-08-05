@@ -43,6 +43,7 @@ import { useSpeechToTextModels } from "../src/context/speech-to-text-models"
 import { createSpeechShortcut } from "../src/components/speech-to-text/shortcut"
 import { convertToMentionPath } from "../src/utils/path-mentions"
 import { insertSpacedText } from "../src/components/chat/prompt-input-utils"
+import { useSlashCommand } from "../src/hooks/useSlashCommand"
 import { WandSparkles } from "@kilocode/kilo-ui/lucide"
 import { BranchSelect, BranchSelectPopover } from "../src/components/shared/BranchSelect"
 import { tracker } from "./telemetry"
@@ -51,6 +52,8 @@ import type { ModeRouter } from "./mode-router"
 
 type VersionCount = 1 | 2 | 3 | 4
 const VERSION_OPTIONS: VersionCount[] = [1, 2, 3, 4]
+const WORKTREE_PROMPT_COMMANDS = new Set(["models", "agents", "variant", "sandbox"])
+const WORKTREE_PROMPT_SCOPE = "agent-manager-worktree-prompt"
 
 type DialogTab = "new" | "import"
 
@@ -288,6 +291,31 @@ export const NewWorktreeDialog: Component<{
   let textareaRef: HTMLTextAreaElement | undefined
   let containerRef: HTMLDivElement | undefined
 
+  const setPromptValue = (value: string) => {
+    setPrompt(value)
+    persistPrompt(value)
+    adjustHeight()
+  }
+  const restorePrompt = () => {
+    requestAnimationFrame(() => textareaRef?.focus({ preventScroll: true }))
+  }
+  const slash = useSlashCommand(
+    vscode,
+    { action: toggleSandbox, enabled: () => sandboxVisible() && sandbox() !== undefined && sandboxAvailable() },
+    () => {
+      const hidden = new Set<string>()
+      if (session.agents().length < 2) hidden.add("agents")
+      if (variants().length === 0) hidden.add("variant")
+      if (!sandboxVisible()) hidden.add("sandbox")
+      return hidden
+    },
+    WORKTREE_PROMPT_COMMANDS,
+    WORKTREE_PROMPT_SCOPE,
+  )
+  const onFocusPrompt = () => restorePrompt()
+  window.addEventListener("focusPrompt", onFocusPrompt)
+  onCleanup(() => window.removeEventListener("focusPrompt", onFocusPrompt))
+
   onMount(() => {
     setBranchesLoading(true)
     vscode.postMessage({ type: "agentManager.requestBranches", projectId: props.projectId })
@@ -385,6 +413,11 @@ export const NewWorktreeDialog: Component<{
   const onKey = (e: KeyboardEvent) => {
     if (shortcut.down(e)) {
       e.preventDefault()
+      e.stopPropagation()
+      return
+    }
+
+    if (slash.onKeyDown(e, textareaRef, setPromptValue, restorePrompt)) {
       e.stopPropagation()
       return
     }
@@ -583,6 +616,33 @@ export const NewWorktreeDialog: Component<{
               onDragLeave={imageAttach.handleDragLeave}
               onDrop={imageAttach.handleDrop}
             >
+              <Show when={slash.show()}>
+                <div class="slash-command-dropdown am-slash-command-dropdown" data-component="popover-content">
+                  <Show
+                    when={slash.results().length > 0}
+                    fallback={<div class="slash-command-empty">No commands found</div>}
+                  >
+                    <For each={slash.results()}>
+                      {(cmd, index) => (
+                        <div
+                          class="slash-command-item"
+                          classList={{ "slash-command-item--active": index() === slash.index() }}
+                          onMouseDown={(e) => {
+                            e.preventDefault()
+                            if (textareaRef) slash.select(cmd, textareaRef, setPromptValue, restorePrompt)
+                          }}
+                          onMouseEnter={() => slash.setIndex(index())}
+                        >
+                          <span class="slash-command-name">/{cmd.name}</span>
+                          <Show when={cmd.description}>
+                            <span class="slash-command-desc">{cmd.description}</span>
+                          </Show>
+                        </div>
+                      )}
+                    </For>
+                  </Show>
+                </div>
+              </Show>
               <Show when={imageAttach.images().length > 0}>
                 <div class="image-attachments">
                   <For each={imageAttach.images()}>
@@ -626,6 +686,7 @@ export const NewWorktreeDialog: Component<{
                       setPrompt(val)
                       persistPrompt(val)
                       adjustHeight()
+                      slash.onInput(val, e.currentTarget.selectionStart ?? val.length)
                     }}
                     onKeyDown={onKey}
                     onKeyUp={speechUp}
@@ -642,6 +703,7 @@ export const NewWorktreeDialog: Component<{
                       agents={session.agents()}
                       value={agent()}
                       onSelect={selectAgent}
+                      trigger={WORKTREE_PROMPT_SCOPE}
                       portal={false}
                       deferDismiss
                     />
@@ -652,6 +714,9 @@ export const NewWorktreeDialog: Component<{
                       onSelect={(pid, mid) => {
                         if (pid && mid) setModel({ providerID: pid, modelID: mid })
                       }}
+                      onPick={restorePrompt}
+                      onCancel={restorePrompt}
+                      trigger={WORKTREE_PROMPT_SCOPE}
                       placement="top-start"
                       portal={false}
                       deferDismiss
@@ -660,6 +725,7 @@ export const NewWorktreeDialog: Component<{
                       variants={variants()}
                       value={effectiveVariant()}
                       onSelect={setVariant}
+                      trigger={WORKTREE_PROMPT_SCOPE}
                       portal={false}
                       deferDismiss
                       cycleHint={settings()["chat.shiftTabCyclesVariant"] !== false}

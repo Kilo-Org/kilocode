@@ -36,10 +36,12 @@ object KiloRepoCli {
         val exe = File(root, "$platform/bin/${KiloCliPlatform.exe()}")
         val done = File(root, ".complete")
         if (!force && done.isFile && exe.isFile) {
+            log.info("Bundled Kilo CLI ${KiloProps.cliVersion()} ($platform) already extracted at ${exe.absolutePath}; skipping extraction")
             if (!SystemInfo.isWindows) exe.setExecutable(true)
             if (cleanup) prune(root)
             return@withContext exe
         }
+        log.info("Extracting bundled Kilo CLI ${KiloProps.cliVersion()} ($platform) into ${root.absolutePath}")
 
         if (root.exists() && !root.deleteRecursively()) {
             throw IllegalStateException("Failed to delete local repo CLI under ${root.absolutePath}")
