@@ -1,4 +1,5 @@
 import { Image } from "@/image/image" // kilocode_change - classify user image validation defects
+import { busyMessage, isBusy } from "@/kilocode/database/sqlite-error" // kilocode_change
 import { KiloSessionHttpApi } from "@/kilocode/server/httpapi/session-fork" // kilocode_change
 import { BlockedError as AgentRequirementError } from "@/kilocode/agent-requirements" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
@@ -322,13 +323,21 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
           Effect.catchCause((cause) => {
             if (Cause.hasInterruptsOnly(cause)) return Effect.void // kilocode_change - Stop is not an error
             return Effect.gen(function* () {
-              yield* Effect.logError("prompt_async failed", { sessionID: ctx.params.sessionID, cause })
               const error = Cause.squash(cause)
+              // kilocode_change start - keep SQLite lock failures out of local CLI logs
+              const busy = isBusy(error)
+              if (busy) {
+                yield* Effect.logWarning("prompt_async database busy", { sessionID: ctx.params.sessionID })
+              }
+              if (!busy) yield* Effect.logError("prompt_async failed", { sessionID: ctx.params.sessionID, cause })
+              // kilocode_change end
               yield* events.publish(Session.Event.Error, {
                 sessionID: ctx.params.sessionID,
                 error: AgentRequirementError.isInstance(error)
                   ? error.toObject()
-                  : new NamedError.Unknown({ message: Cause.pretty(cause) }).toObject(),
+                  : busy // kilocode_change
+                    ? new NamedError.Unknown({ message: busyMessage }).toObject() // kilocode_change
+                    : new NamedError.Unknown({ message: Cause.pretty(cause) }).toObject(), // kilocode_change
               })
             })
           }),
