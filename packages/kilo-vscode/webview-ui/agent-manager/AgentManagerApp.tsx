@@ -175,7 +175,7 @@ import { createMarkdownRender } from "./review-preferences"
 import { createSidebarCollapse } from "./sidebar-collapse"
 import { SidebarToggleButton } from "./SidebarToggleButton"
 import { setTabWidths } from "./tab-widths"
-import { clampPanelWidth, maxPanelWidth, minPanelWidth } from "./side-panel-layout"
+import { clampPanelWidth, maxPanelWidth, minPanelWidth, SidePanel } from "./side-panel-layout"
 import { buildShortcutCategories } from "./shortcuts"
 import { tracker } from "./telemetry"
 import { createChatFocus, hasQuestionOption } from "./focus"
@@ -195,7 +195,7 @@ interface SetupState {
 
 /** Sidebar selection: LOCAL for local repo, worktree ID for a worktree, or null for an unassigned session. */
 type SidebarSelection = typeof LOCAL | string | null
-type SidePanel = "diff" | "pr" | "terminal" | null
+export type SidePanelState = SidePanel | null
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 // Fallback keybindings before extension sends resolved ones
 const MAX_JUMP_INDEX = 9
@@ -309,9 +309,9 @@ const AgentManagerContent: Component = () => {
   let pendingSideWidth: number | undefined
 
   const [history, setHistory] = createSignal(false)
-  const [sidePanel, setSidePanel] = createSignal<SidePanel>(null)
-  const diffOpen = () => sidePanel() === "diff"
-  const prOpen = () => sidePanel() === "pr"
+  const [sidePanel, setSidePanel] = createSignal<SidePanelState>(null)
+  const diffOpen = () => sidePanel() === SidePanel.Diff
+  const prOpen = () => sidePanel() === SidePanel.PR
   const activePR = createMemo(() => {
     const selected = selection()
     if (!selected || selected === LOCAL) return undefined
@@ -338,7 +338,7 @@ const AgentManagerContent: Component = () => {
   const showSideTerminal = () => {
     setHistory(false)
     setReviewActive(false)
-    setSidePanel("terminal")
+    setSidePanel(SidePanel.Terminal)
   }
 
   const [reviewOpenByContext, setReviewOpenByContext] = createSignal<Record<string, boolean>>({})
@@ -423,7 +423,7 @@ const AgentManagerContent: Component = () => {
   const rememberPromptFocus = (focused: boolean) => {
     if (focused) focusMemory.set(focusKey(), "prompt")
   }
-  const terminalVisible = () => sidePanel() === "terminal" && !history() && !reviewActive()
+  const terminalVisible = () => sidePanel() === SidePanel.Terminal && !history() && !reviewActive()
   const focusOnDraftChange = () => {
     const key = focusKey()
     const owner = focusMemory.get(key)
@@ -551,7 +551,7 @@ const AgentManagerContent: Component = () => {
   const togglePRPanel = () => {
     setHistory(false)
     setReviewActive(false)
-    setSidePanel((prev) => (prev === "pr" ? null : "pr"))
+    setSidePanel((prev) => (prev === SidePanel.PR ? null : SidePanel.PR))
   }
 
   const openSelectedPR = () => {
@@ -1187,8 +1187,8 @@ const AgentManagerContent: Component = () => {
       } else if (msg.action === "toggleDiff") {
         if (reviewActive()) {
           closeReviewTab()
-          setSidePanel("diff")
-        } else setSidePanel((prev) => (prev === "diff" ? null : "diff"))
+          setSidePanel(SidePanel.Diff)
+        } else setSidePanel((prev) => (prev === SidePanel.Diff ? null : SidePanel.Diff))
       } else if (msg.action === "newTab") handleNewTabForCurrentSelection()
       else if (msg.action === "closeTab") closeActiveTab()
       else if (msg.action === "newWorktree") showNewWorktreeDialog()
@@ -1350,7 +1350,7 @@ const AgentManagerContent: Component = () => {
       onSideCreated: (contextKey, terminalId, focus) => {
         // Focus only when the user is still looking at this panel —
         // a slow create landing after a mode switch must not steal it.
-        if (focus && sidePanel() === "terminal" && !history() && !reviewActive() && terms.sideKey() === contextKey) {
+        if (focus && sidePanel() === SidePanel.Terminal && !history() && !reviewActive() && terms.sideKey() === contextKey) {
           terms.requestFocus(terminalId)
         }
       },
@@ -1419,7 +1419,7 @@ const AgentManagerContent: Component = () => {
           if (!isActivePayload(ev.projectId)) return
           // Close diff/review panels — nothing to show during setup.
           // Terminal panels keep live setup output, so they stay open.
-          if (sidePanel() === "diff") setSidePanel(null)
+          if (sidePanel() === SidePanel.Diff) setSidePanel(null)
           setReviewActive(false)
           setSetup({ active: true, message: ev.message, branch: ev.branch, worktreeId: ev.worktreeId })
         }
@@ -2090,7 +2090,7 @@ const AgentManagerContent: Component = () => {
 
   const sideCtl = createSideTerminal({
     handlers: termHandlers,
-    visible: () => sidePanel() === "terminal" && !history() && !reviewActive(),
+    visible: () => sidePanel() === SidePanel.Terminal && !history() && !reviewActive(),
     focusedId: () => terms.sideFocusedId(),
     hide: () => {
       cancelAmbientSetup()
@@ -2217,7 +2217,7 @@ const AgentManagerContent: Component = () => {
     // A focused side terminal owns Cmd+W while its panel is visible —
     // closing a chat tab out from under the user's cursor would be
     // surprising. Only that terminal dies; the panel keeps the rest.
-    if (sidePanel() === "terminal" && terms.sideFocusedId()) {
+    if (sidePanel() === SidePanel.Terminal && terms.sideFocusedId()) {
       if (sideCtl.close()) return
     }
     if (termHandlers.closeActive()) {
@@ -2269,10 +2269,10 @@ const AgentManagerContent: Component = () => {
     })
     if (reviewActive()) {
       closeReviewTab()
-      setSidePanel("diff")
+      setSidePanel(SidePanel.Diff)
       return
     }
-    setSidePanel((prev) => (prev === "diff" ? null : "diff"))
+    setSidePanel((prev) => (prev === SidePanel.Diff ? null : SidePanel.Diff))
   }
 
   const renderTabById = (id: string) =>
@@ -2470,7 +2470,7 @@ const AgentManagerContent: Component = () => {
           prOpen={prOpen}
           onTogglePR={togglePRPanel}
           terminalDestination={sideCtl.destination}
-          terminalDestinationActive={() => sidePanel() === "terminal"}
+          terminalDestinationActive={() => sidePanel() === SidePanel.Terminal}
           terminalKeybind={() => kb().showTerminal ?? ""}
           onTerminalDestinationOpen={() => {
             cancelAmbientSetup()
@@ -2658,7 +2658,7 @@ const AgentManagerContent: Component = () => {
                     />
                   </Show>
                   <div class="am-diff-panel-wrapper">
-                    <Show when={sidePanel() === "diff"}>
+                    <Show when={sidePanel() === SidePanel.Diff}>
                       <DiffPanel
                         diffs={reviewDiffs()}
                         loading={diffLoading()}
@@ -2693,7 +2693,7 @@ const AgentManagerContent: Component = () => {
                         activeTerminalId={terms.activeId()}
                       />
                     </Show>
-                    <Show when={sidePanel() === "pr" && activePR()}>
+                    <Show when={sidePanel() === SidePanel.PR && activePR()}>
                       {(() => {
                         const data = activePR()!
                         return (
@@ -2709,7 +2709,7 @@ const AgentManagerContent: Component = () => {
                     <SideTerminalPanel
                       state={terms}
                       contextKey={terms.sideKey}
-                      visible={() => sidePanel() === "terminal"}
+                      visible={() => sidePanel() === SidePanel.Terminal}
                       onSelect={(id) => termHandlers.selectSide(id)}
                       onClose={(id) => {
                         cancelAmbientSetup()

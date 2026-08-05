@@ -5,7 +5,7 @@ import type { PRStatus } from "../../src/types/messages"
 import { prBadgeIndicator, prChecksRunning } from "../WorktreeItem"
 
 const INDICATOR_ICON: Record<string, string> = {
-  failure: "circle-x",
+  failure: "circle-x-outline",
   changes: "warning",
   approved: "circle-check",
 }

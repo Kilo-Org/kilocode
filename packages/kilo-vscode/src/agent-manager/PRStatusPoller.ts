@@ -1,9 +1,11 @@
 import type { ExecFileOptionsWithStringEncoding } from "child_process"
 import type { Worktree } from "./WorktreeStateManager"
-import type { PRStatus, PRCheck, PRComment, PRReviewer, CheckStatus, AggregateCheckStatus, PRState, ReviewDecision } from "./types"
+import type { PRStatus, PRCheck, PRComment, PRReviewer, AggregateCheckStatus } from "./types"
 import { execWithShellEnv } from "./shell-env"
 import { classifyPRError } from "./git-import"
 import type { Semaphore } from "./semaphore"
+import { parsePRResult, checkStatus, formatCheckDuration, parseComments, parseReviewers } from "./am-pr-utils"
+import type { PRResult, GhThread, GhReviewRequest, GhReview } from "./am-pr-utils"
 
 interface PRStatusPollerOptions {
   getWorktrees: () => Worktree[]
@@ -387,7 +389,7 @@ export class PRStatusPoller {
 
       const checks: PRCheck[] = data.map((c) => ({
         name: c.name,
-        status: mapCheckStatus(c.state),
+        status: checkStatus(c.state),
         url: c.link,
         duration: formatCheckDuration(c.startedAt, c.completedAt),
       }))
@@ -460,137 +462,14 @@ export class PRStatusPoller {
         { cwd, timeout: 15_000 },
       )
       const pr = JSON.parse(stdout)?.data?.repository?.pullRequest
-      const comments = parseComments((pr?.reviewThreads?.nodes ?? []) as GQLThread[])
-      const reviewers = parseReviewers((pr?.reviewRequests?.nodes ?? []) as GQLReviewRequest[], (pr?.reviews?.nodes ?? []) as GQLReview[])
+      const comments = parseComments((pr?.reviewThreads?.nodes ?? []) as GhThread[])
+      const reviewers = parseReviewers((pr?.reviewRequests?.nodes ?? []) as GhReviewRequest[], (pr?.reviews?.nodes ?? []) as GhReview[])
       return { total: comments.length, unresolved: comments.filter((c) => !c.resolved).length, comments, reviewers }
     } catch (err) {
       this.options.log("Failed to fetch PR comments:", err)
       return { total: 0, unresolved: 0, comments: [], reviewers: [] }
     }
   }
-}
-
-interface PRResult {
-  number: number
-  title: string
-  body: string
-  url: string
-  state: PRState
-  review: ReviewDecision | null
-  additions: number
-  deletions: number
-  files: number
-}
-
-function parsePRResult(json: string): PRResult | null {
-  const data = JSON.parse(json)
-  if (!data.number) return null
-  return {
-    number: data.number,
-    title: data.title ?? "",
-    body: data.body ?? "",
-    url: data.url ?? "",
-    state: parsePRState(data.isDraft, data.state),
-    review: parseReviewDecision(data.reviewDecision),
-    additions: data.additions ?? 0,
-    deletions: data.deletions ?? 0,
-    files: data.changedFiles ?? 0,
-  }
-}
-
-function parsePRState(isDraft: boolean, ghState: string): PRState {
-  if (isDraft) return "draft"
-  if (ghState === "MERGED") return "merged"
-  if (ghState === "CLOSED") return "closed"
-  return "open"
-}
-
-function parseReviewDecision(decision: string | undefined): ReviewDecision | null {
-  if (decision === "APPROVED") return "approved"
-  if (decision === "CHANGES_REQUESTED") return "changes_requested"
-  if (decision === "REVIEW_REQUIRED") return "pending"
-  return null
-}
-
-function mapCheckStatus(state: string): CheckStatus {
-  switch (state.toUpperCase()) {
-    case "SUCCESS":
-      return "success"
-    case "FAILURE":
-    case "ERROR":
-      return "failure"
-    case "PENDING":
-    case "QUEUED":
-    case "IN_PROGRESS":
-    case "REQUESTED":
-    case "WAITING":
-      return "pending"
-    case "SKIPPED":
-      return "skipped"
-    case "CANCELLED":
-    case "TIMED_OUT":
-    case "STALE":
-    case "STARTUP_FAILURE":
-      return "cancelled"
-    default:
-      return "pending"
-  }
-}
-
-function formatCheckDuration(startedAt?: string, completedAt?: string): string | undefined {
-  if (!startedAt || !completedAt) return undefined
-  const secs = Math.round((new Date(completedAt).getTime() - new Date(startedAt).getTime()) / 1000)
-  return secs < 60 ? `${secs}s` : `${Math.floor(secs / 60)}m ${secs % 60}s`
-}
-
-interface GQLAuthor { login?: string; avatarUrl?: string }
-interface GQLComment { id: string; author?: GQLAuthor; body?: string; path?: string; line?: number; url?: string; createdAt?: string }
-interface GQLThread { isResolved?: boolean; comments?: { nodes?: GQLComment[] } }
-interface GQLReviewRequest { requestedReviewer?: GQLAuthor }
-interface GQLReview { author?: GQLAuthor; state?: string }
-
-function parseComments(threads: GQLThread[]): PRComment[] {
-  const items: PRComment[] = []
-  for (const thread of threads) {
-    const first = thread.comments?.nodes?.[0]
-    if (!first) continue
-    items.push({
-      id: first.id,
-      author: first.author?.login ?? "unknown",
-      avatar: first.author?.avatarUrl,
-      body: first.body ?? "",
-      file: first.path,
-      line: first.line,
-      url: first.url,
-      resolved: thread.isResolved ?? false,
-      createdAt: first.createdAt ? new Date(first.createdAt).getTime() : undefined,
-    })
-  }
-  return items
-}
-
-function parseReviewers(requests: GQLReviewRequest[], reviews: GQLReview[]): PRReviewer[] {
-  const map = new Map<string, PRReviewer>()
-  for (const node of requests) {
-    const user = node.requestedReviewer
-    if (!user?.login) continue
-    map.set(user.login, { login: user.login, avatar: user.avatarUrl, state: "pending" })
-  }
-  for (const node of reviews) {
-    const login = node.author?.login
-    if (!login) continue
-    const state = REVIEWER_STATE[node.state ?? ""] ?? "pending"
-    if (!map.has(login) || state !== "commented") {
-      map.set(login, { login, avatar: node.author?.avatarUrl, state })
-    }
-  }
-  return [...map.values()]
-}
-
-const REVIEWER_STATE: Record<string, PRReviewer["state"]> = {
-  APPROVED: "approved",
-  CHANGES_REQUESTED: "changes_requested",
-  COMMENTED: "commented",
 }
 
 /** Run async thunks with bounded concurrency, returning settled results. */

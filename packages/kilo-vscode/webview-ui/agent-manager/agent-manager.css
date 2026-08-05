@@ -869,7 +869,7 @@ html[data-theme="kilo-vscode"]
 .am-pr-accent-draft,
 .am-pr-panel-badge.am-pr-accent-draft { --pr-accent: var(--text-weaker); }
 .am-pr-accent-merged,
-.am-pr-panel-badge.am-pr-accent-merged { --pr-accent: var(--vscode-charts-purple, #a78bfa); }
+.am-pr-panel-badge.am-pr-accent-merged { --pr-accent: var(--vscode-charts-purple, var(--vscode-foreground)); }
 .am-pr-accent-closed,
 .am-pr-panel-badge.am-pr-accent-closed { --pr-accent: var(--vscode-testing-iconFailed, #f87171); }
 
