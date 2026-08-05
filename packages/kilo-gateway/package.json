@@ -21,6 +21,7 @@
     "./fim": "./src/fim.ts",
     "./edit": "./src/edit.ts",
     "./edit-prompt": "./src/edit-prompt.ts",
+    "./provider-usage": "./src/provider-usage.ts",
     "./tui": "./src/tui.ts"
   },
   "files": [

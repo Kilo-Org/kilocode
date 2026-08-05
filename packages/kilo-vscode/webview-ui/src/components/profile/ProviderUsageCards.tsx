@@ -9,7 +9,7 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tag } from "@kilocode/kilo-ui/tag"
 import { useLanguage } from "../../context/language"
 import { localeToBcp47 } from "../../context/language-utils"
-import { formatWindowValue, windowProgress } from "./provider-usage-format"
+import { formatWindow, windowProgress } from "@kilocode/kilo-gateway/provider-usage"
 
 export interface ProviderUsageCardsProps {
   data: ProviderUsageData | undefined
@@ -96,7 +96,7 @@ const UsageCard: Component<{
       <For each={props.item.windows}>
         {(window) => {
           const progress = () => windowProgress(window)
-          const value = () => formatWindowValue(window, labels(props.language))
+          const value = () => formatWindow(window, labels(props.language))
           return (
             <div class="provider-usage-row">
               <Show when={progress() !== undefined}>

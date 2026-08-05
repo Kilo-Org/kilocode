@@ -141,7 +141,9 @@ function source(state: State, id: string, force: boolean, load: () => Promise<Us
   const task = load()
     .then((item) => {
       const value = stale(item, cell.value)
-      if (identity !== undefined && state.cloudIdentity !== identity) return value
+      // Skip the write when this cell was superseded (identity change) or pruned
+      // while the fetch was in flight; the result must not outlive its credential.
+      if (state.sources.get(id) !== cell) return value
       cell.value = value
       cell.updatedAt = new Date().toISOString()
       cell.expires = Date.now() + (value.fetchState === "ready" ? successTtl : errorTtl)

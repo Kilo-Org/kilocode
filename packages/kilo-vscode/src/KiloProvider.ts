@@ -1558,6 +1558,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       await this.fetchAndSendProviderUsage(true)
       return true
     }
+    if (message.type === "releaseProviderUsage") {
+      // Profile view unmounted: stop background refreshes on directory/auth
+      // changes until the view requests usage again.
+      this.providerUsageRequested = false
+      return true
+    }
     return false
   }
 

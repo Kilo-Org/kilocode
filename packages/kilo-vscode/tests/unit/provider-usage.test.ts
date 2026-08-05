@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import type { ProviderUsage, ProviderUsageWindow } from "@kilocode/sdk/v2/client"
-import { formatWindowValue, windowProgress } from "../../webview-ui/src/components/profile/provider-usage-format"
+import { formatWindow, windowProgress } from "@kilocode/kilo-gateway/provider-usage"
 
 const { KiloProvider } = await import("../../src/KiloProvider")
 
@@ -13,6 +13,7 @@ type Internals = {
   providerUsageRequested: boolean
   cachedProviderUsageMessage: unknown
   fetchAndSendProviderUsage: (force?: boolean) => Promise<void>
+  handleProfileDataMessage: (message: { type: string }) => Promise<boolean>
   reloadAfterAuthChange: () => Promise<void>
   postMessage: (message: unknown) => void
   fetchAndSendConfig: () => Promise<void>
@@ -47,7 +48,6 @@ describe("provider usage presentation", () => {
     id: "quota",
     label: "Quota",
     resource: "general",
-    kind: "quota",
     unit: "percent",
     orientation: "remaining_percent",
     state: "active",
@@ -55,16 +55,16 @@ describe("provider usage presentation", () => {
   })
 
   it("formats used and remaining orientations without provider branching", () => {
-    expect(formatWindowValue(window({ remaining: 75, limit: 100 }))).toBe("75% remaining")
-    expect(formatWindowValue(window({ orientation: "used_percent", used: 25, limit: 100 }))).toBe("25% used")
+    expect(formatWindow(window({ remaining: 75, limit: 100 }))).toBe("75% remaining")
+    expect(formatWindow(window({ orientation: "used_percent", used: 25, limit: 100 }))).toBe("25% used")
     expect(windowProgress(window({ remaining: 75, limit: 100 }))).toBe(25)
   })
 
   it("keeps known zero distinct from unknown and preserves contract states", () => {
-    expect(formatWindowValue(window({ remaining: 0, limit: 100, state: "exhausted" }))).toBe("0% remaining")
-    expect(formatWindowValue(window({ state: "unknown" }))).toBe("Unknown")
-    expect(formatWindowValue(window({ state: "unlimited" }))).toBe("Unlimited")
-    expect(formatWindowValue(window({ state: "not_in_plan" }))).toBe("Not in plan")
+    expect(formatWindow(window({ remaining: 0, limit: 100, state: "exhausted" }))).toBe("0% remaining")
+    expect(formatWindow(window({ state: "unknown" }))).toBe("Unknown")
+    expect(formatWindow(window({ state: "unlimited" }))).toBe("Unlimited")
+    expect(formatWindow(window({ state: "not_in_plan" }))).toBe("Not in plan")
   })
 })
 
@@ -126,5 +126,15 @@ describe("KiloProvider provider usage bridge", () => {
     internal.providerUsageRequested = true
     await internal.reloadAfterAuthChange()
     expect(usage).toBe(1)
+  })
+
+  it("releases the background refresh latch when the profile view unmounts", async () => {
+    const { internal } = bridge({ get: async () => ({ data }) })
+
+    await internal.fetchAndSendProviderUsage()
+    expect(internal.providerUsageRequested).toBe(true)
+
+    expect(await internal.handleProfileDataMessage({ type: "releaseProviderUsage" })).toBe(true)
+    expect(internal.providerUsageRequested).toBe(false)
   })
 })

@@ -1,15 +1,21 @@
-import type { ProviderUsageWindow } from "@kilocode/sdk/v2/client"
+/**
+ * Shared display formatting for provider usage windows.
+ *
+ * This is the single source of truth for how a quota window is presented.
+ * Both the TUI dialog (packages/opencode) and the VS Code webview consume it
+ * so the two surfaces can never drift; labels are injectable for i18n.
+ */
 
-const number = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 2 })
-
-const amount = (value: number, unit: string) => {
-  if (unit === "USD") return `$${value.toFixed(2)}`
-  if (unit === "percent") return `${number(value)}%`
-  if (unit === "count") return number(value)
-  return `${number(value)} ${unit}`
+export interface UsageWindowLike {
+  state: "active" | "exhausted" | "unlimited" | "not_in_plan" | "unknown"
+  orientation: "used_percent" | "remaining_percent" | "amount" | "count"
+  unit: string
+  used?: number
+  remaining?: number
+  limit?: number
 }
 
-interface Labels {
+export interface UsageLabels {
   unlimited: string
   notInPlan: string
   unknown: string
@@ -20,7 +26,7 @@ interface Labels {
   usedOf(value: string, limit: string): string
 }
 
-const english: Labels = {
+export const english: UsageLabels = {
   unlimited: "Unlimited",
   notInPlan: "Not in plan",
   unknown: "Unknown",
@@ -31,7 +37,16 @@ const english: Labels = {
   usedOf: (value, limit) => `${value} of ${limit} used`,
 }
 
-export const formatWindowValue = (window: ProviderUsageWindow, labels: Labels = english) => {
+const number = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 2 })
+
+const amount = (value: number, unit: string) => {
+  if (unit === "USD") return `$${value.toFixed(2)}`
+  if (unit === "percent") return `${number(value)}%`
+  if (unit === "count") return number(value)
+  return `${number(value)} ${unit}`
+}
+
+export const formatWindow = (window: UsageWindowLike, labels: UsageLabels = english) => {
   if (window.state === "unlimited") return labels.unlimited
   if (window.state === "not_in_plan") return labels.notInPlan
   if (window.state === "unknown") return labels.unknown
@@ -45,7 +60,7 @@ export const formatWindowValue = (window: ProviderUsageWindow, labels: Labels = 
   return window.state === "exhausted" ? labels.exhausted : labels.unknown
 }
 
-export const windowProgress = (window: ProviderUsageWindow) => {
+export const windowProgress = (window: UsageWindowLike) => {
   if (window.limit === undefined || window.limit <= 0) return undefined
   if (window.used !== undefined) return Math.min(100, Math.max(0, (window.used / window.limit) * 100))
   if (window.remaining !== undefined) return Math.min(100, Math.max(0, 100 - (window.remaining / window.limit) * 100))

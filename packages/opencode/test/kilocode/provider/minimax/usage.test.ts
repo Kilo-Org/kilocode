@@ -1,6 +1,7 @@
 import { describe, expect, mock, test } from "bun:test"
 import { decode } from "@/kilocode/provider/minimax/native"
 import { direct, normalize, query } from "@/kilocode/provider/minimax/usage"
+import type { UsageSnapshot } from "@/kilocode/provider-usage/schema"
 import type { Info as ProviderInfo } from "@/provider/provider"
 
 const native = (row: Record<string, unknown>) =>
@@ -89,7 +90,7 @@ describe("MiniMax usage normalization", () => {
     expect(direct.windows.find((window) => window.id === "general-interval")?.state).toBe("unknown")
   })
 
-  test("uses positive count-only usage_count as remaining with medium confidence", () => {
+  test("uses positive count-only usage_count as remaining", () => {
     const item = normalize(
       native({
         current_interval_total_count: 1500,
@@ -99,7 +100,6 @@ describe("MiniMax usage normalization", () => {
       options,
     )
 
-    expect(item.confidence).toBe("medium")
     expect(item.windows[0]).toMatchObject({ orientation: "count", remaining: 1200, used: 300, limit: 1500 })
   })
 
@@ -186,6 +186,31 @@ describe("MiniMax usage transport and detection", () => {
     expect(items).toHaveLength(1)
     expect(items[0]).toMatchObject({ id: "minimax-direct-shared", providerID: "minimax-cn-coding-plan" })
     expect(JSON.stringify(items)).not.toContain("sk-cp-shared")
+  })
+
+  test("scopes the cache cell identity to the credential fingerprint", async () => {
+    const fn = mock(() => Promise.resolve(response({ base_resp: { status_code: 0 }, model_remains: [] })))
+    const seen: Array<{ id: string; identity?: string }> = []
+    const cached = (id: string, load: () => Promise<UsageSnapshot>, identity?: string) => {
+      seen.push({ id, identity })
+      return load()
+    }
+
+    await direct(
+      { "minimax-coding-plan": provider("minimax-coding-plan", "sk-cp-key-a") },
+      fn as unknown as typeof fetch,
+      cached,
+    )
+    await direct(
+      { "minimax-coding-plan": provider("minimax-coding-plan", "sk-cp-key-b") },
+      fn as unknown as typeof fetch,
+      cached,
+    )
+
+    expect(seen.map((item) => item.id)).toEqual(["minimax-direct-global", "minimax-direct-global"])
+    expect(seen[0].identity).toHaveLength(64)
+    expect(seen[0].identity).not.toBe(seen[1].identity)
+    expect(JSON.stringify(seen)).not.toContain("sk-cp")
   })
 
   test("returns one unavailable item when an ambiguous key fails everywhere", async () => {

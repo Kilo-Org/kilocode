@@ -1,4 +1,4 @@
-import { Component, Show, createSignal, createMemo, createEffect, onMount } from "solid-js"
+import { Component, Show, createSignal, createMemo, createEffect, onCleanup, onMount } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -21,6 +21,7 @@ export interface ProfileViewProps {
   onLogin: () => void
   onRequestProviderUsage?: () => void
   onRefreshProviderUsage?: () => void
+  onReleaseProviderUsage?: () => void
 }
 
 const formatBalance = (amount: number): string => {
@@ -47,6 +48,9 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
     vscode.postMessage({ type: "refreshProfile" })
     props.onRequestProviderUsage?.()
   })
+
+  // Stop background usage refreshes while this view is not visible
+  onCleanup(() => props.onReleaseProviderUsage?.())
 
   // Reset pending target whenever profileData changes (success or failure both send a fresh profile)
   createEffect(() => {

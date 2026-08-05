@@ -71,8 +71,6 @@ export {
 } from "./api/modes.js"
 export { fetchKilocodeNotifications, type KilocodeNotification } from "./api/notifications.js"
 export {
-  CloudTrpcError,
-  CodingPlanUsageSchema,
   fetchAutoTopUpState,
   fetchByokEntries,
   fetchCodingPlanSubscriptions,
@@ -81,7 +79,6 @@ export {
   type ByokEntry,
   type CodingPlanSubscription,
   type CodingPlanQuotaWindow,
-  type CodingPlanUsage,
 } from "./api/trpc.js"
 export {
   fetchCloudSession,
