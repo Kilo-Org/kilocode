@@ -74,6 +74,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   const permissionOrigins = cfg.permission_origins
   // kilocode_change end
   const flags = yield* RuntimeFlags.Service
+  const restricted = yield* SandboxPolicy.networkRestricted(input.session.id) // kilocode_change
 
   const context = (args: Record<string, unknown>, options: ToolExecutionOptions): Tool.Context => ({
     sessionID: input.session.id,
@@ -127,6 +128,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
     family: input.model.family, // kilocode_change
     agent: input.agent,
     permission: input.session.permission,
+    networkRestricted: restricted, // kilocode_change - let the registry suppress code-mode in restricted sessions
   })) {
     // kilocode_change start - SWE-Pruner (experimental): advertise the focus parameter on prunable tools
     const pruner = swe && SwePruner.prunable(item.id)
@@ -178,7 +180,6 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
     })
   }
 
-  const restricted = yield* SandboxPolicy.networkRestricted(input.session.id) // kilocode_change
   const hasMcpResourceServer = Object.values(yield* mcp.clients()).some(
     (client) => !!client.getServerCapabilities()?.resources,
   )

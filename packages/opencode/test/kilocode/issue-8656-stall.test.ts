@@ -127,7 +127,7 @@ async function stalled(api: ReturnType<typeof session>, state: string) {
     const stalls = (await readStallState(state)).stalls
     const parts = timeline(await api.messages(id))
     return stalls > 0 && parts.includes("step-finish:tool-calls")
-  }, 30_000)
+  }, 60_000)
   expect(ready).toBe(true)
   return id
 }

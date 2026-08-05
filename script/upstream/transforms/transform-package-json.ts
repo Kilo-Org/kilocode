@@ -282,16 +282,30 @@ const TRANSFORM_PACKAGE_NAMES: Record<string, string> = {
 // Upstream's version wholesale-replaces the scripts block, so anything listed
 // here gets re-applied from ours after taking theirs.
 const PRESERVE_SCRIPTS: Record<string, string[]> = {
-  "package.json": ["extension", "changeset", "changeset:version", "dev-setup", "postinstall", "dev:local"],
+  "package.json": [
+    "extension",
+    "extension:isolated",
+    "extension:isolated:clean",
+    "changeset",
+    "changeset:version",
+    "dev-setup",
+    "postinstall",
+    "dev:local",
+  ],
   "packages/opencode/package.json": ["test", "test:ci"],
   // Upstream-shared packages where Kilo adds a JUnit test:ci script for CI.
   // Without these entries every merge silently schedules zero tests for them.
   "packages/core/package.json": ["test:ci"],
   "packages/effect-drizzle-sqlite/package.json": ["test:ci"],
   "packages/http-recorder/package.json": ["test:ci"],
+  "packages/client/package.json": ["test:ci"],
+  "packages/httpapi-codegen/package.json": ["test:ci"],
   "packages/llm/package.json": ["test:ci"],
+  "packages/sdk-next/package.json": ["test:ci"],
+  "packages/session-ui/package.json": ["test:ci"],
   "packages/tui/package.json": ["test:ci"],
   "packages/ui/package.json": ["test:ci"],
+  "packages/codemode/package.json": ["test:ci"],
 }
 
 // Upstream-only trusted dependencies to delete per package.json. Trusted deps

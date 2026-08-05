@@ -73,7 +73,7 @@ function harness(input: {
       clients: () => Effect.succeed(Object.fromEntries(input.servers.map((name) => [name, {} as any]))),
     }),
     TestConfig.layer({
-      get: () => Effect.succeed({ sandbox: { enabled: input.sandbox, network: "deny" } }),
+      get: () => Effect.succeed({ sandbox: { enabled: input.sandbox ?? false, network: "deny" } }),
     }), // kilocode_change - production code mode captures config for sandbox policy
     Layer.succeed(InstanceRef, { directory: process.cwd(), worktree: process.cwd(), project: {} as any }), // kilocode_change
     AppNodeBuilder.build(Database.node), // kilocode_change - sandbox state uses the session database
@@ -157,6 +157,27 @@ describe("code mode execute", () => {
     expect(tool.description).toBe("Run a confined orchestration script with access to connected MCP tools.")
     expect(tool.description).not.toContain("Available tools")
     expect(tool.description).not.toContain("list_issues")
+  })
+
+  test("does not expose MCP tools when the session network is restricted", async () => {
+    const called: string[] = []
+    const tool = await build(
+      {
+        github_list_issues: mcpTool("list_issues", () => {
+          called.push("github_list_issues")
+          return "unexpected"
+        }),
+      },
+      ["github"],
+      [],
+      undefined,
+      true,
+    )
+
+    const restrictedCtx = { ...ctx, sessionID: SessionID.make("ses_code-mode-restricted") }
+    const error = await failure(tool.execute({ code: "return await tools.github.list_issues({})" }, restrictedCtx))
+    expect(error.message).toContain("Unknown tool 'github.list_issues'")
+    expect(called).toEqual([])
   })
 
   test("small catalogs inline every full signature in the appended catalog", () => {
@@ -386,8 +407,8 @@ describe("code mode execute", () => {
     expect(asked.map((req: any) => req.permission)).toEqual(["a_tool", "b_tool"])
   })
 
-  // kilocode_change start - code-mode must preserve remote MCP authority through the sandbox boundary
-  test("denies remote MCP delegated authority in a network-restricted sandbox", async () => {
+  // kilocode_change start - code-mode must not advertise remote MCP tools in a network-restricted sandbox
+  test("does not expose remote MCP tools in a network-restricted sandbox", async () => {
     let called = false
     const entry = SandboxNetwork.remote(
       mcpTool("tool", () => {
@@ -404,8 +425,7 @@ describe("code mode execute", () => {
       ),
     )
 
-    expect(output.output).toContain("Sandbox denied outbound network access")
-    expect(output.output).toContain("remote MCP delegated authority")
+    expect(output.output).toContain("Unknown tool 'remote.tool'")
     expect(called).toBe(false)
   })
   // kilocode_change end

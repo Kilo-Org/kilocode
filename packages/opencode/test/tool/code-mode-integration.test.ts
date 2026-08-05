@@ -158,7 +158,9 @@ async function buildTool() {
       tools: () => Effect.succeed(mcpTools),
       clients: () => Effect.succeed({ [SERVER]: {} as any }),
     }),
-    TestConfig.layer(), // kilocode_change - production code mode captures config for sandbox policy
+    TestConfig.layer({
+      get: () => Effect.succeed({ sandbox: { enabled: false, network: "deny" } }),
+    }), // kilocode_change - production code mode captures config for sandbox policy
     Layer.succeed(InstanceRef, { directory: process.cwd(), worktree: process.cwd(), project: {} as any }), // kilocode_change
     AppNodeBuilder.build(Database.node), // kilocode_change - sandbox state uses the session database
   )

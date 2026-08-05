@@ -219,7 +219,8 @@ export const CodeModeTool = Tool.define(
         const agent = yield* agents.get(ctx.agent)
         const session = yield* sessions.get(ctx.sessionID).pipe(Effect.orDie)
         const ruleset = Permission.merge(agent.permission, session.permission ?? [])
-        const mcpTools = Permission.visibleTools(yield* mcp.tools(), ruleset)
+        const restricted = yield* bridge.run(SandboxPolicy.networkRestricted(ctx.sessionID)) // kilocode_change
+        const mcpTools = restricted ? {} : Permission.visibleTools(yield* mcp.tools(), ruleset) // kilocode_change
         const servers = Object.keys(yield* mcp.clients()).map(McpCatalog.sanitize)
         const catalog = [...groupByServer(mcpTools, servers).values()].flat()
 

@@ -78,7 +78,7 @@ export const dict: Record<string, string> = {
 
   "dialog.usageExceeded.freeTier.title": "Безкоштовний ліміт вичерпано",
   "dialog.usageExceeded.freeTier.description":
-    "Підпишіться на Kilo Go для надійного доступу до найкращих моделей із відкритим кодом від $5 на місяць.",
+    "Підпишіться на Kilo Go для надійного доступу до найкращих моделей із відкритим кодом від $5 на місяць.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "Підписатися",
   "dialog.usageExceeded.accountRateLimit.title": "Ліміт Go вичерпано",
   "dialog.usageExceeded.accountRateLimit.description":

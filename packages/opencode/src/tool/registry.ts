@@ -105,6 +105,7 @@ export interface Interface {
     family?: string
     agent: Agent.Info
     permission?: PermissionV1.Ruleset
+    networkRestricted?: boolean // kilocode_change - hide network-backed code-mode catalogs in restricted sessions
   }) => Effect.Effect<Tool.Def[]>
   // kilocode_change end
 }
@@ -359,8 +360,10 @@ const layer = Layer.effect(
     const describeCodeMode = Effect.fn("ToolRegistry.describeCodeMode")(function* (input: {
       agent: Agent.Info
       permission?: PermissionV1.Ruleset
+      networkRestricted?: boolean // kilocode_change
     }) {
       if (!codeMode) return
+      if (input.networkRestricted) return // kilocode_change
       const ruleset = Permission.merge(input.agent.permission, input.permission ?? [])
       const tools = Permission.visibleTools(yield* mcp.tools(), ruleset)
       if (Object.keys(tools).length === 0) return

@@ -117,6 +117,30 @@ const withEmptyCodeMode = testEffect(
     }),
   }),
 )
+// kilocode_change start - verify the execute catalog is suppressed in restricted sessions
+const withRestrictedCodeMode = testEffect(
+  registryLayer({
+    flags: { experimentalCodeMode: true },
+    config: {
+      get: () => Effect.succeed({ sandbox: { enabled: true, network: "deny" } }),
+    },
+    mcp: Layer.mock(MCP.Service, {
+      tools: () =>
+        Effect.succeed({
+          weather_current: {
+            def: {
+              name: "current",
+              description: "current weather",
+              inputSchema: { type: "object", properties: { city: { type: "string" } }, required: ["city"] },
+            } as MCPToolDef,
+            client: {} as MCP.McpTool["client"],
+          },
+        }),
+      clients: () => Effect.succeed({ weather: {} as MCP.McpTool["client"] }),
+    }),
+  }),
+)
+// kilocode_change end
 
 afterEach(async () => {
   await disposeAllInstances()
@@ -265,6 +289,23 @@ describe("tool.registry", () => {
       expect(tools.map((tool) => tool.id)).not.toContain("execute")
     }),
   )
+
+  // kilocode_change start
+  withRestrictedCodeMode.instance("does not advertise code mode in a network-restricted session", () =>
+    Effect.gen(function* () {
+      const registry = yield* ToolRegistry.Service
+      const agents = yield* Agent.Service
+      const tools = yield* registry.tools({
+        providerID: ProviderV2.ID.opencode,
+        modelID: ModelV2.ID.make("test"),
+        agent: yield* agents.defaultInfo(),
+        networkRestricted: true,
+      })
+
+      expect(tools.map((tool) => tool.id)).not.toContain("execute")
+    }),
+  )
+  // kilocode_change end
 
   it.instance("hides task background parameter unless experimental background subagents are enabled", () =>
     Effect.gen(function* () {

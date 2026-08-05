@@ -18,6 +18,8 @@ test("fixScripts preserves Kilo-only root scripts from base", () => {
       "dev-setup": "kilo dev-setup",
       postinstall: "bun run --cwd packages/opencode fix-node-pty && bun run script/setup-git.ts",
       extension: "bun --cwd packages/kilo-vscode script/launch.ts",
+      "extension:isolated": "bun --cwd packages/kilo-vscode script/launch.ts --isolated",
+      "extension:isolated:clean": "bun --cwd packages/kilo-vscode script/launch.ts --isolated --clean",
     },
   }
   const pkg: Record<string, unknown> = {
@@ -29,6 +31,8 @@ test("fixScripts preserves Kilo-only root scripts from base", () => {
   expect(scripts.postinstall).toBe(ours.scripts.postinstall)
   expect(scripts["dev-setup"]).toBe(ours.scripts["dev-setup"])
   expect(scripts.extension).toBe(ours.scripts.extension)
+  expect(scripts["extension:isolated"]).toBe(ours.scripts["extension:isolated"])
+  expect(scripts["extension:isolated:clean"]).toBe(ours.scripts["extension:isolated:clean"])
   expect(changes.some((c) => c.includes("postinstall"))).toBe(true)
   expect(changes.some((c) => c.includes("dev-setup"))).toBe(true)
 })
@@ -95,12 +99,17 @@ test("fixScripts preserves dev:local and shared-package test:ci scripts", () => 
   expect((root.scripts as Record<string, string>)["dev:local"]).toBe("bun run packages/opencode/script/dev-local.ts")
 
   for (const path of [
+    "packages/client/package.json",
+    "packages/httpapi-codegen/package.json",
     "packages/core/package.json",
     "packages/effect-drizzle-sqlite/package.json",
     "packages/http-recorder/package.json",
     "packages/llm/package.json",
+    "packages/sdk-next/package.json",
+    "packages/session-ui/package.json",
     "packages/tui/package.json",
     "packages/ui/package.json",
+    "packages/codemode/package.json",
   ]) {
     const pkg: Record<string, unknown> = { scripts: { test: "bun test" } }
     fixScripts(pkg, path, { scripts: { "test:ci": junit } }, changes)

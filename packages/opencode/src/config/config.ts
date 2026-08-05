@@ -432,7 +432,12 @@ const layer = Layer.effect(
     })
 
     const ensureGitignore = Effect.fn("Config.ensureGitignore")(function* (dir: string) {
-      yield* fs.ensureDir(dir)
+      // kilocode_change start - optional config setup must not abort tools after entering filesystem confinement
+      yield* fs.ensureDir(dir).pipe(
+        Effect.catchReason("PlatformError", "PermissionDenied", () => Effect.void),
+        Effect.catchReason("PlatformError", "NotFound", () => Effect.void),
+      )
+      // kilocode_change end
       const gitignore = path.join(dir, ".gitignore")
       const hasIgnore = yield* fs.existsSafe(gitignore)
       if (!hasIgnore) {
