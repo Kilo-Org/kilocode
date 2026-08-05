@@ -43,6 +43,8 @@ Enable and sign in to the Kilo provider to use voice input in prompt fields. Req
 
 You can optionally choose a transcription model in **Settings** > **Models** > **Speech to Text Model**. Kilo stores this choice as `experimental.speech_to_text_model` in your global Kilo CLI config (`~/.config/kilo/kilo.jsonc`).
 
+The model list is discovered from the Kilo Gateway and reflects the transcription models available to your account or organization, so newly available models appear automatically.
+
 ---
 
 ## Record prompts
