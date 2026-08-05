@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import path from "path"
@@ -6,7 +7,7 @@ import { Command } from "../../src/command"
 import { provideTmpdirInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
-const it = testEffect(Layer.mergeAll(Command.defaultLayer, CrossSpawnSpawner.defaultLayer))
+const it = testEffect(Layer.mergeAll(AppNodeBuilder.build(Command.node), AppNodeBuilder.build(CrossSpawnSpawner.node)))
 
 describe("skill slash commands", () => {
   it.live("lists and resolves skills that conflict with commands", () =>
@@ -76,6 +77,92 @@ Skill content.
           expect(proj?.trusted).toBe(false)
         }),
       { git: true },
+    ),
+  )
+
+  it.live("applies a partial override to a skill command", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          yield* Effect.promise(() =>
+            Bun.write(
+              path.join(dir, ".kilo", "skill", "proj", "SKILL.md"),
+              "---\nname: proj\ndescription: Project skill.\n---\n\nReview files.\n",
+            ),
+          )
+
+          const command = yield* Command.Service
+          const skill = yield* command.get("proj:skill")
+
+          expect(skill?.source).toBe("skill")
+          expect(skill?.model).toBe("anthropic/claude-sonnet")
+          expect(skill?.variant).toBe("high")
+        }),
+      {
+        git: true,
+        config: {
+          command: {
+            proj: {
+              model: "anthropic/claude-sonnet",
+              variant: "high",
+            },
+          },
+        },
+      },
+    ),
+  )
+
+  it.live("applies a skill alias override when a command has the same name", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          yield* Effect.promise(() =>
+            Bun.write(
+              path.join(dir, ".kilo", "skill", "review", "SKILL.md"),
+              "---\nname: review\ndescription: Review skill.\n---\n\nReview files.\n",
+            ),
+          )
+
+          const command = yield* Command.Service
+          const skill = yield* command.get("review:skill")
+          const list = yield* command.list()
+
+          expect(skill?.source).toBe("skill")
+          expect(skill?.model).toBe("anthropic/claude-sonnet")
+          expect(list.filter((item) => item.source === "skill" && item.name === "review")).toHaveLength(1)
+        }),
+      {
+        git: true,
+        config: {
+          command: {
+            "review:skill": { model: "anthropic/claude-sonnet" },
+            review: { template: "Command content." },
+          },
+        },
+      },
+    ),
+  )
+
+  it.live("does not apply a missing MCP alias to a command with the same name", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const command = yield* Command.Service
+          const plain = yield* command.get("review")
+          const missing = yield* command.get("review:mcp")
+
+          expect(plain?.model).toBeUndefined()
+          expect(missing).toBeUndefined()
+        }),
+      {
+        git: true,
+        config: {
+          command: {
+            review: { template: "Command content." },
+            "review:mcp": { model: "anthropic/claude-sonnet" },
+          },
+        },
+      },
     ),
   )
 })

@@ -1,16 +1,16 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { Provider } from "@/provider/provider"
-import { InstanceLayer } from "@/project/instance-layer"
 import { Env } from "@/env"
 import { Plugin } from "@/plugin"
-import { provideInstanceEffect, tmpdirScoped } from "../fixture/fixture"
+import { provideInstanceEffect, testInstanceStoreLayer, tmpdirScoped } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
 const it = testEffect(
-  Layer.mergeAll(Provider.defaultLayer, Env.defaultLayer, Plugin.defaultLayer, CrossSpawnSpawner.defaultLayer),
+  Layer.mergeAll(AppNodeBuilder.build(Provider.node), AppNodeBuilder.build(Env.node), AppNodeBuilder.build(Plugin.node), AppNodeBuilder.build(CrossSpawnSpawner.node)),
 )
 
 it.effect("loads Snowflake Cortex from OAuth credentials", () =>
@@ -49,7 +49,7 @@ it.effect("loads Snowflake Cortex from OAuth credentials", () =>
         })
         const provider = yield* Provider.use
           .getProvider(ProviderV2.ID.make("snowflake-cortex"))
-          .pipe(provideInstanceEffect(directory), Effect.provide(InstanceLayer.layer))
+          .pipe(provideInstanceEffect(directory), Effect.provide(testInstanceStoreLayer))
 
         expect(provider.options.baseURL).toBe("https://test-account.snowflakecomputing.com/api/v2/cortex/v1")
         expect(provider.options.apiKey).toBe("access-token")

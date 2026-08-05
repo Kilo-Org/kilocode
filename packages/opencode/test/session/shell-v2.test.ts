@@ -6,7 +6,7 @@ import { SessionID } from "../../src/session/schema"
 import { EventV2 } from "@opencode-ai/core/event"
 import { SessionEvent } from "@opencode-ai/core/session/event"
 import { SessionMessageUpdater } from "@opencode-ai/core/session/message-updater"
-import { SessionMessageID } from "@opencode-ai/core/session/message-id"
+import { SessionMessage } from "@opencode-ai/core/session/message"
 
 describe("v2 shell event correlation", () => {
   test("an unmatched end is ignored before a matching start and end complete one record", () => {
@@ -34,7 +34,7 @@ describe("v2 shell event correlation", () => {
       data: {
         sessionID,
         timestamp: DateTime.makeUnsafe(1),
-        messageID: SessionMessageID.ID.create(),
+        messageID: SessionMessage.ID.create(),
         callID,
         command: "pwd",
       },

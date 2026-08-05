@@ -29,7 +29,9 @@ const agents = [
 
 const noop = () => {}
 
-const PromptProviders: ParentComponent<{ variants?: boolean; modelOverride?: boolean }> = (props) => {
+const PromptProviders: ParentComponent<{ variants?: boolean; modelOverride?: boolean; training?: boolean }> = (
+  props,
+) => {
   const base = mockSessionValue({ status: "idle" })
   const session = {
     ...base,
@@ -42,7 +44,7 @@ const PromptProviders: ParentComponent<{ variants?: boolean; modelOverride?: boo
   }
 
   return (
-    <StoryProviders noPadding>
+    <StoryProviders noPadding training={props.training}>
       {/* overflow:hidden prevents margin-collapse so top/bottom borders are captured in screenshots */}
       <div style={{ overflow: "hidden" }}>
         <SessionContext.Provider value={session as any}>{props.children}</SessionContext.Provider>
@@ -79,6 +81,28 @@ export const Default200: Story = {
   name: "Default — 200px",
   render: () => (
     <PromptProviders>
+      <PromptInput />
+    </PromptProviders>
+  ),
+}
+
+// ---------------------------------------------------------------------------
+// Stories — model whose prompts may be used for training
+// ---------------------------------------------------------------------------
+
+export const WithPromptTraining420: Story = {
+  name: "With prompt training indicator — 420px",
+  render: () => (
+    <PromptProviders training>
+      <PromptInput />
+    </PromptProviders>
+  ),
+}
+
+export const WithPromptTraining200: Story = {
+  name: "With prompt training indicator — 200px",
+  render: () => (
+    <PromptProviders training>
       <PromptInput />
     </PromptProviders>
   ),

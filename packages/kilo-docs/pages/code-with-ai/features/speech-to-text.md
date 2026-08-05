@@ -54,6 +54,8 @@ When you are signed in to the enabled Kilo provider, a microphone button appears
 3. Click again to stop recording
 4. Your speech is transcribed into text
 
+You can also use **Cmd/Ctrl+K** while a Kilo prompt or review comment field is focused. Tap it to start or stop recording, or hold it while speaking and release to transcribe and submit the focused field. Press it during transcription to cancel.
+
 The feature includes real-time audio level visualization and voice activity detection to automatically detect when you're speaking.
 
 ---

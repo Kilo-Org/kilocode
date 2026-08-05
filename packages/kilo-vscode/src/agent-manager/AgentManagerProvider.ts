@@ -242,6 +242,7 @@ export class AgentManagerProvider implements Disposable {
       },
       stats: (refresh) => this.statsPoller.snapshot(refresh),
       prs: () => this.prBridge.snapshot(),
+      push: () => this.pushState(),
       managed: (id) => this.panelSessions.has(id) || !!this.state?.getSession(id),
       close: async (id) => {
         await this.onCloseSession(id)
@@ -394,6 +395,7 @@ export class AgentManagerProvider implements Disposable {
         this.panelSessions.clear()
         void ctx.sessions.abortSessions(ids).catch((err) => this.log("Failed to abort sessions on panel close:", err))
         this.statsPoller.stop()
+        this.projectPollers.dispose()
         this.prBridge.poller.stop()
         this.diffs.stop()
         this.activeSessionId = undefined
@@ -449,12 +451,14 @@ export class AgentManagerProvider implements Disposable {
 
   /** Initialize an expanded background project and push its state (no panel wiring). */
   private initExpanded(ctx: ProjectContext): void {
-    void initContextState(ctx, (...args) => this.log(...args)).then((result) => {
-      if (!result.current) return
-      registerProjectSessions(ctx, this.panel?.sessions)
-      this.pushState(ctx)
-      this.projectPollers.sync(this.contexts)
-    })
+    void initContextState(ctx, (...args) => this.log(...args))
+      .then((result) => {
+        if (!result.current) return
+        registerProjectSessions(ctx, this.panel?.sessions)
+        this.pushState(ctx)
+        this.projectPollers.sync(this.contexts)
+      })
+      .catch((err) => this.log("Failed to initialize expanded project:", err))
   }
 
   // Message interceptor
@@ -733,7 +737,11 @@ export class AgentManagerProvider implements Disposable {
       return null
     }
     if (m.type === "agentManager.setWorktreeOrder") {
-      this.state?.setWorktreeOrder(m.order)
+      const state = this.getStateManager()
+      if (state) {
+        state.setWorktreeOrder(m.order)
+        this.pushState()
+      }
       return null
     }
     if (m.type === "agentManager.setSessionsCollapsed") {
@@ -1042,6 +1050,7 @@ export class AgentManagerProvider implements Disposable {
     if (!req) return
     if (directory) {
       req.directory = directory
+      req.projectId ??= this.contexts.byDirectory(directory)?.id
     }
     void this.startToolRequest(req)
   }
@@ -1550,7 +1559,11 @@ export class AgentManagerProvider implements Disposable {
     void this.sendRepoInfo()
     if (!reactivateProject(ctx, this.panel?.sessions, (c) => this.pushState(c)))
       this.stateReady = this.initializeState()
-    else this.projectPollers.sync(this.contexts)
+    else {
+      this.panel?.sessions.refreshSessions()
+      this.projectPollers.sync(this.contexts)
+    }
+    this.panel?.sessions.refreshGitStatus?.()
   }
   private onWorkspaceChanged(): void {
     if (this.contexts.syncPinned()) {
@@ -1562,11 +1575,20 @@ export class AgentManagerProvider implements Disposable {
   }
 
   private pushProjects(): void {
+    const projects = this.contexts.snapshots()
     this.postToWebview({
       type: "agentManager.projects",
       multiProject: this.host.multiProject(),
-      projects: this.contexts.snapshots(),
+      projects,
     })
+    if (this.panel) {
+      for (const project of projects) {
+        if (project.active || !project.expanded || !project.trusted || project.missing) continue
+        if (this.contexts.get(project.id)) continue
+        const ctx = this.contexts.expand(project.id)
+        if (ctx) this.initExpanded(ctx)
+      }
+    }
     this.projectPollers.sync(this.contexts)
   }
 

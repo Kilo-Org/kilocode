@@ -199,6 +199,12 @@ interface TerminalCreatedMessage {
   font: TerminalFont
 }
 
+interface TerminalRestartedMessage {
+  type: "agentManager.terminal.restarted"
+  terminalId: string
+  wsUrl: string
+}
+
 interface TerminalClosedMessage {
   type: "agentManager.terminal.closed"
   terminalId: string
@@ -252,6 +258,8 @@ interface SessionClosedMessage {
 
 interface MultiVersionProgressMessage {
   type: "agentManager.multiVersionProgress"
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
   status: "creating" | "done"
   total: number
   completed: number
@@ -260,6 +268,8 @@ interface MultiVersionProgressMessage {
 
 interface SetSessionModelMessage {
   type: "agentManager.setSessionModel"
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
   sessionId: string
   providerID: string
   modelID: string
@@ -267,6 +277,8 @@ interface SetSessionModelMessage {
 
 interface SendInitialMessage {
   type: "agentManager.sendInitialMessage"
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
   sessionId: string
   worktreeId: string
   text?: string
@@ -407,6 +419,7 @@ export type AgentManagerOutMessage =
   | ActionOutMessage
   | RunStatusMessage
   | TerminalCreatedMessage
+  | TerminalRestartedMessage
   | TerminalClosedMessage
   | TerminalErrorMessage
   | TerminalDestinationChangedMessage
@@ -619,6 +632,7 @@ interface SetTabOrderIn {
 
 interface SetWorktreeOrderIn {
   type: "agentManager.setWorktreeOrder"
+  projectId?: string
   order: string[]
 }
 
@@ -783,6 +797,7 @@ interface FileSourceIn {
 
 interface SendMessageIn {
   type: "sendMessage"
+  projectId?: string
   text: string
   messageID?: string
   sessionID?: string
@@ -948,6 +963,13 @@ interface TerminalResizeIn {
   rows: number
 }
 
+interface TerminalRestartIn {
+  type: "agentManager.terminal.restart"
+  terminalId: string
+  cols?: number
+  rows?: number
+}
+
 interface TerminalDestinationSelectedIn {
   type: "agentManager.terminal.destinationSelected"
   destination: TerminalDestination
@@ -1035,4 +1057,5 @@ export type AgentManagerInMessage =
   | TerminalCloseIn
   | TerminalStopIn
   | TerminalResizeIn
+  | TerminalRestartIn
   | TerminalDestinationSelectedIn

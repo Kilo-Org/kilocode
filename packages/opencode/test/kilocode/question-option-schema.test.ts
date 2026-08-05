@@ -25,7 +25,7 @@ import fs from "node:fs"
 import path from "node:path"
 import { Option } from "../../src/question"
 
-const SOURCE = path.resolve(import.meta.dir, "../../src/question/index.ts")
+const SOURCE = path.resolve(import.meta.dir, "../../../schema/src/v1/question.ts")
 
 describe("QuestionOption schema — Kilo-specific field contract", () => {
   test("Option class accepts and round-trips the mode field", () => {
@@ -56,14 +56,14 @@ describe("QuestionOption schema — Kilo-specific field contract", () => {
   // resolution that drops the fields is caught immediately.
   test("source declares mode as an optional field inside a kilocode_change block", () => {
     const src = fs.readFileSync(SOURCE, "utf-8")
-    expect(src).toMatch(/kilocode_change start[^\n]*hint to UI clients/)
+    expect(src).toMatch(/kilocode_change start[^\n]*localization and mode selection hints/)
     expect(src).toMatch(/mode:\s*Schema\.optional\(Schema\.String\)/)
     expect(src).toMatch(/kilocode_change end/)
   })
 
   test("source declares labelKey and descriptionKey inside a kilocode_change block", () => {
     const src = fs.readFileSync(SOURCE, "utf-8")
-    expect(src).toMatch(/kilocode_change start[^\n]*i18n keys/)
+    expect(src).toMatch(/kilocode_change start[^\n]*localization and mode selection hints/)
     expect(src).toMatch(/labelKey:\s*Schema\.optional\(Schema\.String\)/)
     expect(src).toMatch(/descriptionKey:\s*Schema\.optional\(Schema\.String\)/)
   })

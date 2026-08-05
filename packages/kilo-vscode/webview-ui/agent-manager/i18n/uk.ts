@@ -68,6 +68,8 @@ export const dict = {
 
   "agentManager.terminal.new": "Нова вкладка термінала",
   "agentManager.terminal.ended": "термінал завершено — закрийте вкладку, щоб відхилити",
+  "agentManager.terminal.endedRestartable":
+    "термінал завершено - введіть текст, щоб запустити нову оболонку, або закрийте вкладку",
   "agentManager.terminal.setupFailed": "помилка скрипта налаштування",
   "agentManager.terminal.setupFailedCode": "помилка скрипта налаштування з кодом виходу",
   "agentManager.terminal.stopSetup": "Зупинити скрипт налаштування",

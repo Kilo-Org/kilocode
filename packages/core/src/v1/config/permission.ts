@@ -25,6 +25,7 @@ const InputObject = Schema.StructWithRest(
     bash: Schema.optional(Rule),
     task: Schema.optional(Rule),
     external_directory: Schema.optional(Rule),
+    markdown_source: Schema.optional(Rule), // kilocode_change - explicitly authorize external agent/command sources
     todowrite: Schema.optional(Action),
     question: Schema.optional(Action),
     webfetch: Schema.optional(Action),

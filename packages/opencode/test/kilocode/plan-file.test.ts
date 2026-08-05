@@ -1,5 +1,6 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { describe, expect, test } from "bun:test"
-import { Effect, Layer, ManagedRuntime } from "effect"
+import { Effect, ManagedRuntime } from "effect"
 import path from "path"
 import { Agent } from "../../src/agent/agent"
 import { PlanFile } from "../../src/kilocode/plan-file"
@@ -9,12 +10,15 @@ import { Session } from "../../src/session/session"
 import { MessageID, PartID } from "../../src/session/schema"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { PlanExitTool } from "../../src/tool/plan"
 import { Tool } from "../../src/tool/tool"
 import { Truncate } from "../../src/tool/truncate"
 import { tmpdir } from "../fixture/fixture"
 
-const rt = ManagedRuntime.make(Layer.mergeAll(Agent.defaultLayer, Session.defaultLayer, Truncate.defaultLayer))
+const rt = ManagedRuntime.make(
+  LayerNode.compile(LayerNode.group([Agent.node, Session.node, SessionProjector.node, Truncate.node])),
+)
 
 async function init() {
   return rt.runPromise(

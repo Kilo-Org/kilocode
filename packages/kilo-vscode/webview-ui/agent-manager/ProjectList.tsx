@@ -19,10 +19,13 @@ import type { SidebarSearchItem } from "./sidebar-search"
 import { LOCAL } from "./navigate"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
 import { ProjectBranchDialog } from "./ProjectBranchDialog"
+import type { ProjectStore } from "./project/store"
+import type { ModeRouter } from "./mode-router"
 
 interface Props {
   projects: AgentProjectSnapshot[]
   states: Record<string, AgentManagerStateMessage>
+  store?: (projectId: string) => ProjectStore
   stats: Record<string, Record<string, WorktreeGitStats>>
   local: Record<string, LocalGitStats>
   prs: Record<string, Record<string, PRStatus | null>>
@@ -30,11 +33,15 @@ interface Props {
   selectedProject?: string
   selection?: string
   currentSessionID?: () => string | undefined
-  busy?: (id: string) => boolean
+  mode: ModeRouter
+  busy?: (projectId: string, id: string) => boolean
+  working?: (projectId: string, id: string) => boolean
+  localBusy?: (projectId: string) => boolean
   bindings: Record<string, string>
   t: LanguageContextValue["t"]
   onSearchRef: (ref: SidebarSearchMenuRef) => void
   onShortcuts: () => void
+  shortcutMap?: () => Map<string, number>
 }
 
 export const ProjectList: Component<Props> = (props) => {
@@ -131,6 +138,7 @@ export const ProjectList: Component<Props> = (props) => {
     dialog.show(() => (
       <NewWorktreeDialog
         projectId={projectId}
+        mode={props.mode}
         defaultBaseBranch={state?.defaultBaseBranch ?? props.local[projectId]?.branch}
         onClose={() => dialog.close()}
       />
@@ -205,12 +213,17 @@ export const ProjectList: Component<Props> = (props) => {
         <ProjectSidebarBody
           project={project}
           state={props.states[project.id]}
+          store={props.store?.(project.id)}
+          busy={(id) => props.busy?.(project.id, id) ?? false}
+          working={(id) => props.working?.(project.id, id) ?? false}
+          localBusy={() => props.localBusy?.(project.id) ?? false}
           stats={props.stats[project.id]}
           local={props.local[project.id]}
           prs={props.prs[project.id]}
           sessions={props.sessions[project.id]}
           selectedProject={props.selectedProject}
           selection={props.selection}
+          currentSessionID={props.currentSessionID}
           bindings={props.bindings}
           t={props.t}
           onSelectLocal={(projectId) => select({ projectId, kind: "local" })}
@@ -218,6 +231,7 @@ export const ProjectList: Component<Props> = (props) => {
           onSelectSession={(projectId, sessionId) => select({ projectId, kind: "session", sessionId })}
           onNewWorktree={newWorktree}
           onDefaultBranch={defaultBranch}
+          shortcutMap={props.shortcutMap}
         />
       )}
     />

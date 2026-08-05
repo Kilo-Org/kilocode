@@ -1,48 +1,41 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { describe, expect, test } from "bun:test"
 import path from "path"
 import { pathToFileURL } from "url"
-import { Effect, Layer } from "effect"
+import { Effect } from "effect"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { provideInstance, TestInstance, tmpdirScoped } from "../fixture/fixture"
 import { ProviderAuth } from "@/provider/auth"
 
-import { Plugin } from "@/plugin"
 import { RuntimeFlags } from "@/effect/runtime-flags"
-import { Auth } from "@/auth"
-import { ModelCache } from "@/provider/model-cache" // kilocode_change
-import { EventV2Bridge } from "@/event-v2-bridge"
 import { TestConfig } from "../fixture/config"
 import { testEffect } from "../lib/effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { ProviderV2 } from "@opencode-ai/core/provider"
+import { Config } from "@/config/config"
 
-const it = testEffect(Layer.mergeAll(CrossSpawnSpawner.defaultLayer, FSUtil.defaultLayer))
+const it = testEffect(AppNodeBuilder.build(LayerNode.group([CrossSpawnSpawner.node, FSUtil.node])))
 
-function layer(directory: string, plugins: string[]) {
-  return ProviderAuth.layer.pipe(
-    Layer.provide(Auth.defaultLayer),
-    Layer.provide(ModelCache.defaultLayer), // kilocode_change
-    Layer.provide(
-      Plugin.layer.pipe(
-        Layer.provide(EventV2Bridge.defaultLayer),
-        Layer.provide(RuntimeFlags.layer()),
-        Layer.provide(
-          TestConfig.layer({
-            get: () =>
-              Effect.succeed({
-                plugin: plugins,
-                plugin_origins: plugins.map((plugin) => ({
-                  spec: plugin,
-                  source: path.join(directory, "opencode.json"),
-                  scope: "local" as const,
-                })),
-              }),
-            directories: () => Effect.succeed([directory]),
+function providerAuthLayer(directory: string, plugins: string[]) {
+  return AppNodeBuilder.build(ProviderAuth.node, [
+    [
+      Config.node,
+      TestConfig.layer({
+        get: () =>
+          Effect.succeed({
+            plugin: plugins,
+            plugin_origins: plugins.map((plugin) => ({
+              spec: plugin,
+              source: path.join(directory, "opencode.json"),
+              scope: "local" as const,
+            })),
           }),
-        ),
-      ),
-    ),
-  )
+        directories: () => Effect.succeed([directory]),
+      }),
+    ],
+    [RuntimeFlags.node, RuntimeFlags.layer()],
+  ])
 }
 
 describe("plugin.auth-override", () => {
@@ -75,10 +68,12 @@ describe("plugin.auth-override", () => {
 
         const plain = yield* tmpdirScoped({ git: true })
         const plugin = pathToFileURL(path.join(pluginDir, "custom-copilot-auth.ts")).href
-        const methods = yield* ProviderAuth.use.methods().pipe(Effect.provide(layer(tmp.directory, [plugin])))
+        const methods = yield* ProviderAuth.use
+          .methods()
+          .pipe(Effect.provide(providerAuthLayer(tmp.directory, [plugin])))
         const plainMethods = yield* ProviderAuth.use
           .methods()
-          .pipe(Effect.provide(layer(plain, [])), provideInstance(plain))
+          .pipe(Effect.provide(providerAuthLayer(plain, [])), provideInstance(plain))
 
         const copilot = methods[ProviderV2.ID.make("github-copilot")]
         expect(copilot).toBeDefined()

@@ -1,30 +1,23 @@
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { expect } from "bun:test"
 import { Cause, Effect, Exit, Fiber, Layer } from "effect"
-import { EventV2Bridge } from "@/event-v2-bridge"
-import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
-import { Database } from "@opencode-ai/core/database/database"
+import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { Permission } from "@/permission"
-import { InstanceBootstrap } from "@/project/bootstrap-service"
-import { InstanceStore } from "@/project/instance-store"
 import { testEffect } from "../../lib/effect"
 import { SessionID } from "@/session/schema"
-import { RuntimeFlags } from "@/effect/runtime-flags"
-import { Config } from "@/config/config"
+import * as Config from "@/config/config"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 
 // skillShell forces a single up-front prompt over soft allow/deny/auto-approve
 // rules, but must never override a hard (plan-mode) veto, and must never be
 // auto-resolved while pending.
 
-const events = EventV2Bridge.defaultLayer
-const noopBootstrap = Layer.succeed(InstanceBootstrap.Service, InstanceBootstrap.Service.of({ run: Effect.void }))
 const env = Layer.mergeAll(
-  Permission.layer.pipe(Layer.provide(Database.defaultLayer), Layer.provide(events)),
-  events,
-  CrossSpawnSpawner.defaultLayer,
-  InstanceStore.defaultLayer.pipe(Layer.provide(noopBootstrap)),
-).pipe(Layer.provide(RuntimeFlags.layer()), Layer.provide(Config.defaultLayer))
-const it = testEffect(Layer.mergeAll(env, RuntimeFlags.layer()))
+  AppNodeBuilder.build(Permission.node),
+  AppNodeBuilder.build(Config.node),
+  AppNodeBuilder.build(CrossSpawnSpawner.node),
+)
+const it = testEffect(env)
 
 const ask = (input: Parameters<Permission.Interface["ask"]>[0]) =>
   Effect.gen(function* () {

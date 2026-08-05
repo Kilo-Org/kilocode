@@ -19,6 +19,7 @@ type Ctx = {
   exportTranscript: (sessionID: string) => Promise<void>
   copy: (text: string) => PromiseLike<void>
   openSessions: (ids: string[]) => void
+  speechToTextModels: () => Promise<void>
 }
 
 export async function routeEarlyMessage(
@@ -68,6 +69,10 @@ export async function routeEarlyMessage(
   }
   if (message.type === "requestThroughputSetting") {
     ctx.post(buildThroughputSettingMessage())
+    return true
+  }
+  if (message.type === "requestSpeechToTextModels") {
+    await ctx.speechToTextModels()
     return true
   }
   if (message.type === "requestBrowserSettings") {
