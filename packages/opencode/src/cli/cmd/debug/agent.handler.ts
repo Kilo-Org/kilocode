@@ -1,4 +1,5 @@
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
+import JSON5 from "json5" // kilocode_change
 import { EOL } from "os"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { basename } from "path"
@@ -97,7 +98,8 @@ function resolveTools(agent: Agent.Info, availableTools: { id: string }[]) {
   return resolved
 }
 
-function parseToolParams(input?: string) {
+// kilocode_change: exported for unit testing
+export function parseToolParams(input?: string) {
   if (!input) return {}
   const trimmed = input.trim()
   if (trimmed.length === 0) return {}
@@ -107,11 +109,15 @@ function parseToolParams(input?: string) {
       return JSON.parse(trimmed)
     } catch (jsonError) {
       try {
-        return new Function(`return (${trimmed})`)()
-      } catch (evalError) {
+        // kilocode_change start: parse loose object-literal syntax (unquoted keys, single
+        // quotes, trailing commas) with JSON5 instead of `new Function(...)`, which executed
+        // the raw --params string as JavaScript.
+        return JSON5.parse(trimmed)
+        // kilocode_change end
+      } catch (json5Error) {
         throw new Error(
-          `Failed to parse --params. Use JSON or a JS object literal. JSON error: ${jsonError}. Eval error: ${evalError}.`,
-          { cause: evalError },
+          `Failed to parse --params. Use JSON or a JS object literal. JSON error: ${jsonError}. JSON5 error: ${json5Error}.`,
+          { cause: json5Error },
         )
       }
     }

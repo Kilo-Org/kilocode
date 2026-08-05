@@ -345,7 +345,7 @@
     },
     "packages/kilo-jetbrains": {
       "name": "@kilocode/kilo-jetbrains",
-      "version": "7.4.17",
+      "version": "7.4.20",
     },
     "packages/kilo-memory": {
       "name": "@kilocode/kilo-memory",
@@ -634,6 +634,7 @@
         "iconv-lite": "0.7.2",
         "ignore": "7.0.5",
         "immer": "11.1.4",
+        "json5": "2.2.3",
         "jsonc-parser": "3.3.1",
         "mammoth": "1.12.0",
         "mime-types": "3.0.2",
