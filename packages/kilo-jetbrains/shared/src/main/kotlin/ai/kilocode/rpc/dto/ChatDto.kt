@@ -410,6 +410,8 @@ data class DiffFileDto(
     val deletions: Int,
     val patch: String? = null,
     val status: String? = null,
+    val before: String? = null,
+    val after: String? = null,
 )
 
 // --- Config Update ---

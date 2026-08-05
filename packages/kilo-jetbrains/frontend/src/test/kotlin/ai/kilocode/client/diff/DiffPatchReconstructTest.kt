@@ -133,7 +133,98 @@ class DiffPatchReconstructTest {
     }
 
     @Test
-    fun `multi hunk partial context patch is not renderable`() {
+    fun `multi hunk patch reconstructs concatenated changed regions`() {
+        // Turn/tool diffs are ordinary limited-context git output with several hunks. The reconstruction
+        // stitches each hunk body into contiguous before/after text so the diff editor colors the
+        // changes instead of dumping the raw patch as all-added lines. Inter-hunk gaps collapse.
+        val dto = DiffFileDto(
+            file = "src/A.kt",
+            additions = 2,
+            deletions = 2,
+            patch = """
+                diff --git a/src/A.kt b/src/A.kt
+                --- a/src/A.kt
+                +++ b/src/A.kt
+                @@ -1,3 +1,3 @@
+                 one
+                -two
+                +TWO
+                 three
+                @@ -20,3 +20,3 @@
+                 twenty
+                -x
+                +X
+                 z
+            """.trimIndent(),
+        )
+
+        val sides = DiffPatchReconstruct.sides(dto)
+
+        assertTrue(sides.renderable)
+        assertEquals("one\ntwo\nthree\ntwenty\nx\nz", sides.before)
+        assertEquals("one\nTWO\nthree\ntwenty\nX\nz", sides.after)
+    }
+
+    @Test
+    fun `line maps carry real file positions across hunk gaps`() {
+        // Regression: the fallback content restarts at line 1, so the diff editor gutter showed 1..N
+        // instead of real file positions. The per-side maps (0-based; platform adds 1) must follow the
+        // @@ headers and jump across the elided gap between the two hunks.
+        val dto = DiffFileDto(
+            file = "src/A.kt",
+            additions = 2,
+            deletions = 2,
+            patch = """
+                diff --git a/src/A.kt b/src/A.kt
+                --- a/src/A.kt
+                +++ b/src/A.kt
+                @@ -126,3 +126,3 @@
+                 one
+                -two
+                +TWO
+                 three
+                @@ -220,3 +221,3 @@
+                 twenty
+                -x
+                +X
+                 z
+            """.trimIndent(),
+        )
+
+        val sides = DiffPatchReconstruct.sides(dto)
+
+        // before doc lines: one/two/three (126,127,128) then twenty/x/z (220,221,222) -> 0-based
+        assertEquals(listOf(125, 126, 127, 219, 220, 221), sides.leftLines)
+        // after doc lines: one/TWO/three (126,127,128) then twenty/X/z (221,222,223) -> 0-based
+        assertEquals(listOf(125, 126, 127, 220, 221, 222), sides.rightLines)
+    }
+
+    @Test
+    fun `added file has no left line map and after side maps from one`() {
+        val dto = DiffFileDto(
+            file = "src/A.kt",
+            additions = 2,
+            deletions = 0,
+            patch = """
+                diff --git a/src/A.kt b/src/A.kt
+                --- /dev/null
+                +++ b/src/A.kt
+                @@ -0,0 +1,2 @@
+                +one
+                +two
+            """.trimIndent(),
+        )
+
+        val sides = DiffPatchReconstruct.sides(dto)
+
+        assertEquals(emptyList<Int>(), sides.leftLines)
+        assertEquals(listOf(0, 1), sides.rightLines)
+    }
+
+    @Test
+    fun `multi hunk patch with truncated context is not renderable`() {
+        // header claims 3 old / 3 new lines per hunk but the body carries only 2 of each: reconstructing
+        // would misalign the sides, so fall back to the raw-patch view.
         val dto = DiffFileDto(
             file = "src/A.kt",
             additions = 2,
