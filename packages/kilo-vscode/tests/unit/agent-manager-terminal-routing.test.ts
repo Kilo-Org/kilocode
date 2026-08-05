@@ -41,6 +41,7 @@ describe("Agent Manager terminal routing", () => {
     expect(messages[0]).toMatchObject({
       type: "agentManager.terminal.created",
       createId: "side-1",
+      terminalId: "side-1",
       placement: "side",
       worktreeId: "wt-1",
       projectId: "prj-1",

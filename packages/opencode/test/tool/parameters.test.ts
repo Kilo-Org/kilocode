@@ -106,11 +106,11 @@ describe("tool parameters", () => {
   })
 
   describe("shell", () => {
-    test("accepts minimum: command + description", () => {
-      expect(parse(Shell, { command: "ls", description: "list" })).toEqual({ command: "ls", description: "list" })
+    test("accepts command", () => {
+      expect(parse(Shell, { command: "ls" })).toEqual({ command: "ls" })
     })
     test("accepts optional timeout + workdir", () => {
-      const parsed = parse(Shell, { command: "ls", description: "list", timeout: 5000, workdir: "/tmp" })
+      const parsed = parse(Shell, { command: "ls", timeout: 5000, workdir: "/tmp" })
       expect(parsed.timeout).toBe(5000)
       expect(parsed.workdir).toBe("/tmp")
     })
@@ -120,7 +120,7 @@ describe("tool parameters", () => {
     })
     // kilocode_change end
     test("rejects missing command", () => {
-      expect(accepts(Shell, { description: "list" })).toBe(false)
+      expect(accepts(Shell, {})).toBe(false)
     })
   })
 

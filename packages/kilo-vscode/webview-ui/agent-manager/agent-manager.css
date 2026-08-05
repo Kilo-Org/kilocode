@@ -2820,9 +2820,17 @@ body.am-wt-dragging-active * {
 /* While any inline (non-portaled) selector popover is open, let it escape the
    dialog's scroll containers. Covers model, thinking-variant, and mode pickers. */
 .am-nv-dialog .am-prompt-input-container:has([data-component="popover-content"]),
+.am-nv-dialog .am-prompt-input-container:has(.am-slash-command-dropdown),
 .am-nv-dialog-content:has([data-component="popover-content"]),
-[data-component="dialog"]:has(.am-nv-dialog [data-component="popover-content"]) [data-slot="dialog-body"] {
+.am-nv-dialog-content:has(.am-slash-command-dropdown),
+[data-component="dialog"]:has(.am-nv-dialog [data-component="popover-content"]) [data-slot="dialog-body"],
+[data-component="dialog"]:has(.am-nv-dialog .am-slash-command-dropdown) [data-slot="dialog-body"] {
   overflow: visible;
+}
+
+.am-slash-command-dropdown {
+  min-width: 0;
+  max-width: none;
 }
 
 .am-nv-dialog .am-prompt-input-ghost-wrapper {

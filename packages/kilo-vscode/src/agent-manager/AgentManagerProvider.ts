@@ -240,7 +240,7 @@ export class AgentManagerProvider implements Disposable {
         await this.stateReady
         return this.state
       },
-      stats: (refresh) => this.statsPoller.snapshot(refresh),
+      stats: () => this.statsPoller.snapshot(),
       prs: () => this.prBridge.snapshot(),
       push: () => this.pushState(),
       managed: (id) => this.panelSessions.has(id) || !!this.state?.getSession(id),
@@ -1382,6 +1382,7 @@ export class AgentManagerProvider implements Disposable {
       reviewDiffStyle: state.getReviewDiffStyle(),
       reviewMarkdownRender: getDiffMarkdownRender(),
       terminalDestination: this.destination.value(),
+      terminalFont: readTerminalFont(),
       isGitRepo: true,
       defaultBaseBranch: state.getDefaultBaseBranch(),
       activeTarget: state.getActiveTarget(),
@@ -1408,6 +1409,7 @@ export class AgentManagerProvider implements Disposable {
       reviewDiffStyle: "unified",
       reviewMarkdownRender: getDiffMarkdownRender(),
       terminalDestination: this.destination.value(),
+      terminalFont: readTerminalFont(),
       isGitRepo: false,
       runStatuses: [],
       runScriptConfigured: false,
@@ -1559,7 +1561,11 @@ export class AgentManagerProvider implements Disposable {
     void this.sendRepoInfo()
     if (!reactivateProject(ctx, this.panel?.sessions, (c) => this.pushState(c)))
       this.stateReady = this.initializeState()
-    else this.projectPollers.sync(this.contexts)
+    else {
+      this.panel?.sessions.refreshSessions()
+      this.projectPollers.sync(this.contexts)
+    }
+    this.panel?.sessions.refreshGitStatus?.()
   }
   private onWorkspaceChanged(): void {
     if (this.contexts.syncPinned()) {

@@ -3,7 +3,10 @@ import { createRoot } from "solid-js"
 import { useSlashCommand } from "../../webview-ui/src/hooks/useSlashCommand"
 import type { ExtensionMessage, WebviewMessage } from "../../webview-ui/src/types/messages"
 
-function setup(sandbox: () => void, options: { enabled?: () => boolean; exclude?: () => Set<string> } = {}) {
+function setup(
+  sandbox: () => void,
+  options: { enabled?: () => boolean; exclude?: () => Set<string>; include?: Set<string> } = {},
+) {
   const sent: WebviewMessage[] = []
   const handlers = new Set<(message: ExtensionMessage) => void>()
   const root = createRoot((dispose) => ({
@@ -18,6 +21,7 @@ function setup(sandbox: () => void, options: { enabled?: () => boolean; exclude?
       },
       { action: sandbox, enabled: options.enabled ?? (() => true) },
       options.exclude,
+      options.include,
     ),
   }))
   const fire = (message: ExtensionMessage) => {
@@ -27,6 +31,33 @@ function setup(sandbox: () => void, options: { enabled?: () => boolean; exclude?
 }
 
 describe("useSlashCommand sandbox action", () => {
+  it("supports the singular model alias", () => {
+    const ctx = setup(() => {})
+
+    ctx.slash.onInput("/model", 6)
+
+    expect(ctx.slash.results()[0]).toEqual(expect.objectContaining({ name: "models", hints: ["model"] }))
+    ctx.dispose()
+  })
+
+  it("can restrict the menu to worktree configuration commands", () => {
+    const ctx = setup(() => {}, { include: new Set(["models", "agents", "variant", "sandbox"]) })
+
+    ctx.fire({
+      type: "commandsLoaded",
+      commands: [
+        { name: "merge", description: "Merge changes", hints: [] },
+        { name: "models", description: "Server model command", hints: [] },
+      ],
+    })
+    ctx.slash.onInput("/merge", 6)
+    expect(ctx.slash.results()).toEqual([])
+
+    ctx.slash.onInput("/models", 7)
+    expect(ctx.slash.results().map((command) => command.name)).toEqual(["models"])
+    ctx.dispose()
+  })
+
   it("opens project memory actions from the top-level command", () => {
     const ctx = setup(() => {})
     const state = { text: "/memory" }

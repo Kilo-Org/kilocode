@@ -3,13 +3,10 @@ import fs from "fs/promises"
 import path from "path"
 import { pathToFileURL } from "url"
 import { Effect, Layer } from "effect"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { EventV2 } from "@opencode-ai/core/event"
-import { FSUtil } from "@opencode-ai/core/fs-util"
-import { Git } from "@opencode-ai/core/git"
 import { Global } from "@opencode-ai/core/global"
 import { Reference } from "@opencode-ai/core/reference"
-import { RepositoryCache } from "@opencode-ai/core/repository-cache"
-import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { commit, git, gitRemote } from "../fixture/git"
 import { tmpdir } from "../fixture/tmpdir"
 import { it } from "../lib/effect"
@@ -30,13 +27,10 @@ describe("Kilo reference compatibility", () => {
         repos: path.join(fixture.root, "repos"),
         state: path.join(fixture.root, "state"),
       })
-      const deps = Layer.mergeAll(global, FSUtil.defaultLayer)
-      const cache = RepositoryCache.layer.pipe(
-        Layer.provide(EffectFlock.layer.pipe(Layer.provide(deps))),
-        Layer.provide(Git.defaultLayer),
-        Layer.provide(deps),
-      )
-      const layer = Reference.layer.pipe(Layer.provide(cache), Layer.provide(events), Layer.provide(global))
+      const layer = AppNodeBuilder.build(Reference.node, [
+        [Global.node, global],
+        [EventV2.node, events],
+      ])
 
       return Effect.gen(function* () {
         const previous = process.env.KILO_REPO_CLONE_GITHUB_BASE_URL
@@ -50,16 +44,15 @@ describe("Kilo reference compatibility", () => {
         )
 
         const references = yield* Reference.Service
-        const update = yield* references.transform()
-        const source = new Reference.GitSource({ type: "git", repository: "owner/repo", branch: "main" })
+        const source = Reference.GitSource.make({ type: "git", repository: "owner/repo", branch: "main" })
         const file = path.join(fixture.root, "repos", "github.com", "owner", "repo", "README.md")
 
-        yield* update((editor) => editor.add("docs", source))
+        yield* references.transform((editor) => editor.add("docs", source))
         yield* Effect.promise(() => content(file, "one\n"))
         expect(normalize(yield* Effect.promise(() => fs.readFile(file, "utf8")))).toBe("one\n")
 
         yield* Effect.promise(() => commit(fixture.source, "two\n", "update"))
-        yield* update((editor) => editor.add("docs", source))
+        yield* references.transform((editor) => editor.add("docs", source))
         yield* Effect.promise(() => content(file, "two\n"))
         expect(normalize(yield* Effect.promise(() => fs.readFile(file, "utf8")))).toBe("two\n")
       }).pipe(Effect.scoped, Effect.provide(layer))

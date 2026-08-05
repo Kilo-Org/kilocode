@@ -45,6 +45,9 @@ interface KiloAppRpcApi : RemoteApi<Unit> {
     /** Core platform downloaded by the backend process. */
     suspend fun cliPlatform(): String
 
+    /** Whether the running Core is bundled in the plugin (true) or downloaded (false). */
+    suspend fun cliBundled(): Boolean
+
     /** Retry app connection or loading after a failure. */
     suspend fun retry()
 

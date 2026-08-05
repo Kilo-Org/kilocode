@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "7a2d751a-b26c-4a89-9905-800e3f6a8b8a",
+  "id": "08cfecbf-f95d-404b-a76a-2afc564baa8b",
   "prevIds": [
-    "169a0f0f-d58f-479f-b024-fa1c7b9a09db"
+    "f14a9b18-8207-487e-a3d3-227e629ba9ad"
   ],
   "ddl": [
     {
@@ -906,16 +906,6 @@
       "type": "text",
       "notNull": true,
       "autoincrement": false,
-      "default": "'build'",
-      "generated": null,
-      "name": "agent",
-      "entityType": "columns",
-      "table": "session_context_epoch"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
       "default": null,
       "generated": null,
       "name": "snapshot",
@@ -929,26 +919,6 @@
       "default": null,
       "generated": null,
       "name": "baseline_seq",
-      "entityType": "columns",
-      "table": "session_context_epoch"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "replacement_seq",
-      "entityType": "columns",
-      "table": "session_context_epoch"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "0",
-      "generated": null,
-      "name": "revision",
       "entityType": "columns",
       "table": "session_context_epoch"
     },
@@ -2021,7 +1991,7 @@
         }
       ],
       "isUnique": false,
-      "where": "(json_extract(\"part\".\"data\", '$.type') = 'text' AND coalesce(json_extract(\"part\".\"data\", '$.synthetic'), 0) = 0 AND coalesce(json_extract(\"part\".\"data\", '$.ignored'), 0) = 0) OR json_extract(\"part\".\"data\", '$.type') = 'file' OR (json_extract(\"part\".\"data\", '$.type') = 'tool' AND json_extract(\"part\".\"data\", '$.state.status') = 'error')",
+      "where": "json_valid(\"part\".\"data\") AND ((json_extract(\"part\".\"data\", '$.type') = 'text' AND coalesce(json_extract(\"part\".\"data\", '$.synthetic'), 0) = 0 AND coalesce(json_extract(\"part\".\"data\", '$.ignored'), 0) = 0) OR json_extract(\"part\".\"data\", '$.type') = 'file' OR (json_extract(\"part\".\"data\", '$.type') = 'tool' AND json_extract(\"part\".\"data\", '$.state.status') = 'error'))",
       "origin": "manual",
       "name": "recall_part_search_idx",
       "entityType": "indexes",

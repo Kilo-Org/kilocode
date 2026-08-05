@@ -131,13 +131,7 @@ export class GitStatsPoller {
     this.lastStats = {}
   }
 
-  async snapshot(refresh = false): Promise<{ worktrees: WorktreeStats[]; local?: LocalStats }> {
-    if (refresh && !this.busy) {
-      this.busy = true
-      await Promise.all([this.fetchWorktreeStats(true), this.fetchLocalStats()]).finally(() => {
-        this.busy = false
-      })
-    }
+  async snapshot(): Promise<{ worktrees: WorktreeStats[]; local?: LocalStats }> {
     return {
       worktrees: Object.values(this.lastStats),
       ...(this.lastLocalStats ? { local: this.lastLocalStats } : {}),
@@ -170,10 +164,10 @@ export class GitStatsPoller {
   }
 
   private async fetch(generation = this.generation): Promise<void> {
-    await Promise.all([this.fetchWorktreeStats(false, generation), this.fetchLocalStats(generation)])
+    await Promise.all([this.fetchWorktreeStats(generation), this.fetchLocalStats(generation)])
   }
 
-  private async fetchWorktreeStats(includeSkipped = false, generation = this.generation): Promise<void> {
+  private async fetchWorktreeStats(generation = this.generation): Promise<void> {
     const worktrees = this.options.getWorktrees()
     if (worktrees.length === 0) return
 
@@ -189,7 +183,7 @@ export class GitStatsPoller {
     for (const id of Object.keys(this.lastStats)) {
       if (!ids.has(id)) delete this.lastStats[id]
     }
-    const active = includeSkipped ? available : available.filter((wt) => !this.skipWorktreeIds.has(wt.id))
+    const active = available.filter((wt) => !this.skipWorktreeIds.has(wt.id))
     if (active.length === 0) {
       if (available.length > 0) return
       if (this.lastHash === "") return

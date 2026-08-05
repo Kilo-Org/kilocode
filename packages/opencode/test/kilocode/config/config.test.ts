@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { $ } from "bun"
 import { afterEach, describe, expect, test } from "bun:test"
 import { Effect, Layer, Option, Schema } from "effect"
@@ -21,8 +22,9 @@ import { KilocodeConfig } from "../../../src/kilocode/config/config"
 import { provideTestInstance } from "../../fixture/fixture"
 import { Filesystem } from "../../../src/util/filesystem"
 import { disposeAllInstances, tmpdir } from "../../fixture/fixture"
+import { LayerNodePlatform } from "@opencode-ai/core/effect/app-node-platform"
 
-const infra = CrossSpawnSpawner.defaultLayer.pipe(
+const infra = AppNodeBuilder.build(CrossSpawnSpawner.node).pipe(
   Layer.provideMerge(Layer.mergeAll(NodeFileSystem.layer, NodePath.layer)),
 )
 const emptyAccount = Layer.mock(Account.Service)({
@@ -35,22 +37,17 @@ const emptyAuth = Layer.mock(Auth.Service)({
 const noopNpm = Layer.mock(Npm.Service)({
   install: () => Effect.void,
   add: () => Effect.die("not implemented"),
-  which: () => Effect.succeed(Option.none()),
+  which: () => Effect.succeed(undefined),
 })
 const unexpectedHttp = HttpClient.make((request) =>
   Effect.die(`unexpected http request: ${request.method} ${request.url}`),
 )
-const layer = Config.layer.pipe(
-  Layer.provide(Git.defaultLayer),
-  Layer.provide(EffectFlock.defaultLayer),
-  Layer.provide(FSUtil.defaultLayer),
-  Layer.provide(Env.defaultLayer),
-  Layer.provide(emptyAuth),
-  Layer.provide(emptyAccount),
-  Layer.provideMerge(infra),
-  Layer.provide(noopNpm),
-  Layer.provide(Layer.succeed(HttpClient.HttpClient, unexpectedHttp)),
-)
+const layer = AppNodeBuilder.build(Config.node, [
+  [Auth.node, emptyAuth],
+  [Account.node, emptyAccount],
+  [Npm.node, noopNpm],
+  [LayerNodePlatform.httpClient, Layer.succeed(HttpClient.HttpClient, unexpectedHttp)],
+]).pipe(Layer.provideMerge(infra))
 
 const load = () => Effect.runPromise(Config.Service.use((svc) => svc.get()).pipe(Effect.scoped, Effect.provide(layer)))
 const clear = () =>

@@ -151,6 +151,7 @@ export class VscodeHost implements Host {
       unregisterSessionRoute: (ref) => provider.unregisterSessionRoute(ref),
       isSessionRouteAmbiguous: (sessionId) => provider.isSessionRouteAmbiguous(sessionId),
       routeSessionDirectoryFor: (ref) => provider.routeSessionDirectoryFor(ref),
+      refreshGitStatus: () => void provider.refreshGitStatus(),
       dispose: () => provider.dispose(),
     }
 

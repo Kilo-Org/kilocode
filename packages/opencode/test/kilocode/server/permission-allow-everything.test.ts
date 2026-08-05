@@ -1,31 +1,29 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { afterEach, describe, expect, test } from "bun:test"
 import { Flag } from "@opencode-ai/core/flag/flag"
-import { Cause, Effect, Exit, Fiber, Layer } from "effect"
+import { Cause, Effect, Exit, Fiber } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Bus } from "../../../src/bus"
 import * as Config from "../../../src/config/config"
 import { AllowEverythingPermission } from "../../../src/kilocode/permission/allow-everything"
 import { Permission } from "../../../src/permission"
-import { EventV2Bridge } from "../../../src/event-v2-bridge"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
-import { Database } from "@opencode-ai/core/database/database"
 import { provideTestInstance } from "../../fixture/fixture"
 import { Server } from "../../../src/server/server"
 import { Session } from "../../../src/session/session"
 import { provideTmpdirInstance, tmpdir } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
 
-const bus = Bus.layer
-const env = Layer.mergeAll(
-  Permission.layer.pipe(
-    Layer.provide(EventV2Bridge.defaultLayer),
-    Layer.provide(Config.defaultLayer),
-    Layer.provide(Database.defaultLayer),
-  ),
-  Config.defaultLayer,
-  Session.defaultLayer,
-  bus,
-  CrossSpawnSpawner.defaultLayer,
+const env = LayerNode.compile(
+  LayerNode.group([
+    Permission.node,
+    Config.node,
+    Session.node,
+    SessionProjector.node,
+    Bus.node,
+    CrossSpawnSpawner.node,
+  ]),
 )
 const it = testEffect(env)
 const original = {

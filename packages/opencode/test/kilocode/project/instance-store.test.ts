@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect } from "bun:test"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Deferred, Effect, Exit, Fiber, Layer, Scope } from "effect"
@@ -10,7 +11,10 @@ import { awaitWithTimeout, testEffect } from "../../lib/effect"
 
 const bootstrap = Layer.succeed(InstanceBootstrap.Service, InstanceBootstrap.Service.of({ run: Effect.void }))
 const it = testEffect(
-  Layer.mergeAll(InstanceStore.defaultLayer, CrossSpawnSpawner.defaultLayer).pipe(Layer.provide(bootstrap)),
+  Layer.mergeAll(
+    AppNodeBuilder.build(InstanceStore.node, [[InstanceStore.bootstrapNode, bootstrap]]),
+    AppNodeBuilder.build(CrossSpawnSpawner.node),
+  ),
 )
 
 const register = (disposer: (directory: string) => Promise<void>) =>

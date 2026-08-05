@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect, test } from "bun:test"
 import { Effect, Layer, ManagedRuntime, Queue } from "effect"
 import { MessageID, SessionID } from "../../src/session/schema"
@@ -66,10 +67,10 @@ const agent: Agent.Info = {
 function makeRuntime(defaultProviderID = "test", host: Partial<AgentManager.Interface> = {}) {
   return ManagedRuntime.make(
     Layer.mergeAll(
-      Truncate.defaultLayer,
+      AppNodeBuilder.build(Truncate.node),
       Layer.mock(Agent.Service, { get: () => Effect.succeed(agent) }),
-      Bus.defaultLayer,
-      CrossSpawnSpawner.defaultLayer,
+      AppNodeBuilder.build(Bus.node),
+      AppNodeBuilder.build(CrossSpawnSpawner.node),
       Layer.mock(AgentManager.Service, host),
       Layer.mock(Provider.Service, {
         list: () => Effect.succeed(providers),

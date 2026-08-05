@@ -11,6 +11,8 @@ import path from "path"
 import { tmpdir } from "../fixture/tmpdir"
 import { SessionHistory } from "@opencode-ai/core/session/history"
 import { SessionV2 } from "@opencode-ai/core/session"
+import { ensure } from "@opencode-ai/core/kilocode/database-compat"
+import { Database } from "@opencode-ai/core/database/database"
 
 const make = EffectDrizzleSqlite.makeWithDefaults()
 const run = <A, E>(effect: Effect.Effect<A, E, SqlClientService>) =>
@@ -43,18 +45,30 @@ describe("database migration compatibility", () => {
         )
 
         yield* DatabaseMigration.applyOnly(db, migrations.slice(split))
+        yield* ensure(db)
 
         // This is the projection shape written by the CLI bundled with VS Code v7.4.7.
         yield* db.run(
           sql`INSERT INTO session_message (id, session_id, type, time_created, time_updated, data) VALUES ('message', 'ses_session', 'user', 1, 1, '{}')`,
         )
         yield* db.run(sql`UPDATE session_message SET data = '{"text":"updated"}' WHERE id = 'message'`)
+        yield* db.run(
+          sql`INSERT INTO session_context_epoch (session_id, baseline, agent, snapshot, baseline_seq, revision) VALUES ('ses_session', 'baseline', 'build', '{}', 0, 0)`,
+        )
+        yield* db.run(
+          sql`UPDATE session_context_epoch SET replacement_seq = 4, revision = revision + 1 WHERE session_id = 'ses_session'`,
+        )
 
         expect(yield* db.get(sql`SELECT id, seq, data FROM session_message WHERE id = 'message'`)).toEqual({
           id: "message",
           seq: null,
           data: '{"text":"updated"}',
         })
+        expect(
+          yield* db.get(
+            sql`SELECT agent, replacement_seq AS replacementSeq, revision FROM session_context_epoch WHERE session_id = 'ses_session'`,
+          ),
+        ).toEqual({ agent: "build", replacementSeq: 4, revision: 1 })
         yield* db.run(
           sql`INSERT INTO session_message (id, session_id, type, seq, time_created, time_updated, data) VALUES ('msg_sequenced', 'ses_session', 'user', 1, 2, 2, '{"text":"current","files":[],"agents":[],"time":{"created":2}}')`,
         )
@@ -116,6 +130,37 @@ describe("database migration compatibility", () => {
         expect(yield* db.get(sql`SELECT id FROM message WHERE id = 'legacy-message'`)).toEqual({ id: "legacy-message" })
         expect(yield* db.get(sql`SELECT id FROM part WHERE id = 'legacy-part'`)).toEqual({ id: "legacy-part" })
       }),
+    )
+  })
+
+  test("keeps released context epoch writes compatible on fresh current databases", async () => {
+    await using tmp = await tmpdir()
+    const filename = path.join(tmp.path, "kilo.db")
+    await Effect.runPromise(
+      Database.Service.use((service) =>
+        Effect.gen(function* () {
+          const db = service.db
+          yield* ensure(db)
+          yield* db.run(
+            sql`INSERT INTO project (id, worktree, time_created, time_updated, sandboxes) VALUES ('project', '/repo', 1, 1, '[]')`,
+          )
+          yield* db.run(
+            sql`INSERT INTO session (id, project_id, slug, directory, title, version, time_created, time_updated) VALUES ('session', 'project', 'session', '/repo', 'Session', '7.4.7', 1, 1)`,
+          )
+          yield* db.run(
+            sql`INSERT INTO session_context_epoch (session_id, baseline, agent, snapshot, baseline_seq, revision) VALUES ('session', 'baseline', 'build', '{}', 0, 0)`,
+          )
+          yield* db.run(
+            sql`UPDATE session_context_epoch SET replacement_seq = 4, revision = revision + 1 WHERE session_id = 'session'`,
+          )
+
+          expect(
+            yield* db.get(
+              sql`SELECT agent, replacement_seq AS replacementSeq, revision FROM session_context_epoch WHERE session_id = 'session'`,
+            ),
+          ).toEqual({ agent: "build", replacementSeq: 4, revision: 1 })
+        }),
+      ).pipe(Effect.provide(Database.layerFromPath(filename)), Effect.scoped),
     )
   })
 
