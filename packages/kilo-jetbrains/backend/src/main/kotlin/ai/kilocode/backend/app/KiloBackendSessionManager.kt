@@ -350,9 +350,10 @@ class KiloBackendSessionManager(
         else -> runCatching {
             val cls = s.javaClass
             fun str(name: String) = cls.methods.firstOrNull { it.name == name && it.parameterCount == 0 }?.invoke(s) as? String
-            val message = str("getMessageID") ?: return@runCatching null
+            val message = str("getMessageID")
+                ?: return@runCatching null.also { log.info("revertDto reflective getMessageID missing on ${cls.name}") }
             revertDto(message, str("getPartID"), str("getSnapshot"), str("getDiff"))
-        }.getOrNull()
+        }.onFailure { log.info("revertDto reflective decode failed for ${s.javaClass.name}: ${it.message}") }.getOrNull()
     }
 
     private fun revertDto(message: String, part: String?, snapshot: String?, diff: String?) =

@@ -173,6 +173,11 @@ internal class KiloDiffEditorService(
         files: List<DiffFileDto>,
         session: KiloSessionService,
     ): List<DiffFileDto> {
+        // Revert diffs already carry range-scoped patches from the CLI's `revert.diff`. Whole-file
+        // enrichment has no per-message scope for a revert here, so the authoritative endpoint would
+        // return the whole-session before/after and splice in changes from kept turns. Render the
+        // scoped hunk patches directly instead.
+        if (params["token"].takeIfPresent()?.startsWith("revert:") == true) return files
         val sessionId = params["sessionId"].takeIfPresent()
         val message = message(params)
         LOG.info("diff editor detail source=${params["source"]} files=${files.size} session=${!sessionId.isNullOrBlank()} message=${!message.isNullOrBlank()}")

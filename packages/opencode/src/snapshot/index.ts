@@ -34,8 +34,8 @@ export type Patch = typeof Patch.Type
 export const FileDiff = Info.pipe(withStatics((s) => ({ zod: zod(s) })))
 export type FileDiff = typeof FileDiff.Type
 
-// kilocode_change start - lightweight FileDiff without patch for session summaries
-export const SummaryFileDiff = FileDiff.mapFields(Struct.omit(["patch"]))
+// kilocode_change start - lightweight FileDiff without heavy content (patch/before/after) for session summaries
+export const SummaryFileDiff = FileDiff.mapFields(Struct.omit(["patch", "before", "after"]))
   .annotate({ identifier: "SnapshotSummaryFileDiff" })
   .pipe(withStatics((s) => ({ zod: zod(s) })))
 export type SummaryFileDiff = typeof SummaryFileDiff.Type

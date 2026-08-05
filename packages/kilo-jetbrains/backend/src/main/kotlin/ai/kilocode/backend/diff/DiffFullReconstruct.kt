@@ -10,6 +10,12 @@ package ai.kilocode.backend.diff
  * frontend reconstructs those full sides directly. Binary patches and any drift between the patch's
  * after side and the real file (a stale/historical turn) also return null so the caller can fall back
  * to the hunk-only view instead of rendering a wrong diff.
+ *
+ * Known limitation: `\ No newline at end of file` markers are dropped rather than tracked per side, so
+ * the reconstructed `before` inherits the after side's trailing-newline state. When exactly one side
+ * lacks a trailing newline, the whole-file fallback view will not surface that EOF-newline change. This
+ * is cosmetic and rare (the scoped hunk view still shows the marker); tracking it per side would require
+ * remembering which side the marker followed.
  */
 internal object DiffFullReconstruct {
     private val HUNK = Regex("^@@ -\\d+(?:,\\d+)? \\+(\\d+)(?:,(\\d+))? @@")
