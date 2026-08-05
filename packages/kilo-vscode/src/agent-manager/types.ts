@@ -147,6 +147,7 @@ interface StateMessage {
   /** Last selected sidebar target for seamless project-switch restore. */
   activeTarget?: SidebarTarget
   terminalDestination?: TerminalDestination
+  terminalFont?: TerminalFont
 }
 
 /** Project catalog pushed to the webview after registry or context changes. */
@@ -939,7 +940,7 @@ interface MoveSectionIn {
 
 interface TerminalCreateIn {
   type: "agentManager.terminal.create"
-  /** Webview-generated correlation id, echoed back in created/error. */
+  /** Webview-generated logical terminal id, echoed back in created/error. */
   createId: string
   placement: TerminalPlacement
   /** null for LOCAL, worktree id otherwise */

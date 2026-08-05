@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import path from "path"
@@ -26,12 +27,12 @@ const ctx = {
 
 const it = testEffect(
   Layer.mergeAll(
-    Agent.defaultLayer,
-    FSUtil.defaultLayer,
-    CrossSpawnSpawner.defaultLayer,
-    Instruction.defaultLayer,
-    LSP.defaultLayer,
-    Truncate.defaultLayer,
+    AppNodeBuilder.build(Agent.node),
+    AppNodeBuilder.build(FSUtil.node),
+    AppNodeBuilder.build(CrossSpawnSpawner.node),
+    AppNodeBuilder.build(Instruction.node),
+    AppNodeBuilder.build(LSP.node),
+    AppNodeBuilder.build(Truncate.node),
     testInstanceStoreLayer,
   ),
 )

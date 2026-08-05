@@ -2,12 +2,14 @@ export * as ReadTool from "./read"
 
 import { ToolFailure } from "@opencode-ai/llm"
 import { Effect, Layer, Schema } from "effect"
+import { makeLocationNode } from "../effect/app-node"
 import { FileSystem } from "../filesystem"
 import { Image } from "../image"
 import { LocationMutation } from "../location-mutation" // kilocode_change
 import { PermissionV2 } from "../permission"
 import { AbsolutePath } from "../schema"
 import { ReadToolFileSystem } from "./read-filesystem"
+import { ToolRegistry } from "./registry"
 import { Tool } from "./tool"
 import { Tools } from "./tools"
 
@@ -25,7 +27,7 @@ const LocationInput = Schema.Struct({
 const Input = LocationInput
 const Output = Schema.Union([FileSystem.Content, ReadToolFileSystem.TextPage, ReadToolFileSystem.ListPage])
 
-export const layer = Layer.effectDiscard(
+const layer = Layer.effectDiscard(
   Effect.gen(function* () {
     const tools = yield* Tools.Service
     const reader = yield* ReadToolFileSystem.Service
@@ -37,7 +39,7 @@ export const layer = Layer.effectDiscard(
       .register({
         [name]: Tool.make({
           description:
-            "Read a text file or supported image, page through a large UTF-8 text file by line offset, or list a directory page. Relative paths resolve from the current location; absolute paths are read directly.",
+            "Read a text file or supported image, page through a large UTF-8 text file by line offset, or list a directory page. Relative paths resolve from the current location; absolute paths inside it are accepted, while external absolute paths require external_directory approval.",
           input: Input,
           output: Output,
           toModelOutput: ({ input, output }) => {
@@ -50,30 +52,35 @@ export const layer = Layer.effectDiscard(
           },
           execute: (input, context) => {
             return Effect.gen(function* () {
-              // kilocode_change start - retain external-directory authorization and canonical resources
-              const resolved = yield* mutation.resolve({ path: input.path })
-              const resource = resolved.resource
-              const target = yield* reader.inspect(AbsolutePath.make(resolved.canonical))
-              if (resolved.externalDirectory) {
+              const source = {
+                type: "tool" as const,
+                messageID: context.assistantMessageID,
+                callID: context.toolCallID,
+              }
+              const target = yield* mutation.resolve({ path: input.path, kind: "directory" })
+              const external = target.externalDirectory
+              if (external)
                 yield* permission.assert({
-                  ...LocationMutation.externalDirectoryPermission(resolved.externalDirectory),
+                  ...LocationMutation.externalDirectoryPermission(external),
                   sessionID: context.sessionID,
                   agent: context.agent,
-                  source: { type: "tool", messageID: context.assistantMessageID, callID: context.toolCallID },
+                  source,
                 })
-              }
-              // kilocode_change end
+              const resource = target.resource
+              const absolute = AbsolutePath.make(target.canonical)
+              // kilocode_change - retain the approved filesystem identity through the read
+              const approved = yield* reader.inspect(absolute)
               yield* permission.assert({
                 action: name,
                 resources: [resource],
                 save: ["*"],
                 sessionID: context.sessionID,
                 agent: context.agent,
-                source: { type: "tool", messageID: context.assistantMessageID, callID: context.toolCallID },
+                source,
               })
-              if (target.type === "directory")
-                return yield* reader.list(target, { offset: input.offset, limit: input.limit }) // kilocode_change - approved identity
-              const content = yield* reader.read(target, resource, {
+              if (approved.type === "directory")
+                return yield* reader.list(approved, { offset: input.offset, limit: input.limit })
+              const content = yield* reader.read(approved, resource, {
                 offset: input.offset,
                 limit: input.limit,
               }) // kilocode_change - approved identity
@@ -83,7 +90,7 @@ export const layer = Layer.effectDiscard(
                   .pipe(Effect.catchTag("Image.ResizerUnavailableError", () => Effect.succeed(content)))
               }
               if ("encoding" in content && content.encoding === "base64")
-                return yield* Effect.fail(new ReadToolFileSystem.BinaryFileError(resource))
+                return yield* Effect.fail(new ReadToolFileSystem.BinaryFileError({ resource }))
               return content
             }).pipe(
               Effect.mapError((error) => {
@@ -103,3 +110,9 @@ export const layer = Layer.effectDiscard(
       .pipe(Effect.orDie)
   }),
 )
+
+export const node = makeLocationNode({
+  name: "tool/read",
+  layer,
+  deps: [ToolRegistry.node, ReadToolFileSystem.node, LocationMutation.node, Image.node, PermissionV2.node],
+})

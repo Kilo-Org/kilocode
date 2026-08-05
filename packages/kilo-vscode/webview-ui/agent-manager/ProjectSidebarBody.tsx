@@ -20,8 +20,8 @@ import type {
 } from "../src/types/messages"
 import type { LanguageContextValue } from "../src/context/language"
 import { useVSCode } from "../src/context/vscode"
-import { projectAdjacentHint, projectSidebarOrder } from "./project-local-navigation"
 import SectionHeader from "./SectionHeader"
+import { SidebarSectionHeader } from "./SidebarSectionHeader"
 import { WorktreeItem } from "./WorktreeItem"
 import { UnassignedSessionsSection } from "./UnassignedSessionsSection"
 import { ProjectActions } from "./ProjectActions"
@@ -31,6 +31,7 @@ import { sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { createProjectStore, type ProjectStore } from "./project/store"
 import { randomColor } from "./section-colors"
+import { projectSidebarOrder, projectWorktreeRow } from "./project-local-navigation"
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 
@@ -110,16 +111,16 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
   const post = (message: Record<string, unknown>) =>
     vscode.postMessage({ ...message, projectId: props.project.id } as never)
 
-  const navHint = (id: string) =>
-    projectAdjacentHint(
-      props.project.id,
-      props.selectedProject,
-      id,
-      props.selection ?? props.currentSessionID?.(),
-      sidebarOrder(),
-      props.bindings.previousSession ?? "",
-      props.bindings.nextSession ?? "",
-    )
+  const row = (id: string) =>
+    projectWorktreeRow({
+      projectId: props.project.id,
+      activeProjectId: props.selectedProject,
+      worktreeId: id,
+      activeId: props.selection ?? props.currentSessionID?.(),
+      flatIds: sidebarOrder(),
+      bindings: props.bindings,
+      shortcuts: props.shortcutMap?.(),
+    })
 
   const scope = (kind: "section" | "worktree", id: string) => `${props.project.id}:${kind}:${id}`
   const parse = (kind: "section" | "worktree", value: unknown) => {
@@ -228,6 +229,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
   const renderWorktree = (worktree: WorktreeState, idx: () => number, list: WorktreeState[]) => {
     const label = () => firstOrderedTitle(sessions(worktree.id), store.tabOrder()[worktree.id], worktree.branch)
     const subtitle = () => (label() !== worktree.branch ? worktree.branch : undefined)
+    const values = () => row(worktree.id)
     const sortable = createSortable(scope("worktree", worktree.id))
     void sortable
     return (
@@ -235,7 +237,6 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
         <WorktreeItem
           worktree={worktree}
           sidebarId={`${props.project.id}:${worktree.id}`}
-          shortcut={props.shortcutMap?.().get(`${props.project.id}:wt:${worktree.id}`)}
           label={worktree.label || label()}
           subtitle={worktree.label ? (worktree.label !== worktree.branch ? worktree.branch : undefined) : subtitle()}
           active={active() && props.selection === worktree.id}
@@ -244,7 +245,8 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           working={props.working?.(worktree.id) || runs()[worktree.id]?.state === "running"}
           stale={state()?.staleWorktreeIds?.includes(worktree.id) === true}
           stats={props.stats?.[worktree.id]}
-          navHint={navHint(worktree.id)}
+          shortcut={values().shortcut}
+          navHint={values().navHint}
           sessions={sessions(worktree.id).length}
           grouped={isGrouped(worktree)}
           groupStart={isGroupStart(worktree, idx(), list)}
@@ -252,8 +254,8 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
           groupSize={worktree.groupId ? sorted().filter((item) => item.groupId === worktree.groupId).length : 0}
           renaming={renaming() === worktree.id}
           renameValue={name()}
-          closeKeybind=""
-          openKeybind=""
+          closeKeybind={values().closeKeybind}
+          openKeybind={values().openKeybind}
           pr={props.prs?.[worktree.id] ?? undefined}
           runStatus={runs()[worktree.id]}
           sections={sections()}
@@ -346,20 +348,25 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
         </button>
 
         <div class="am-section">
-          <div class="am-section-header">
-            <span class="am-section-label">{props.t("agentManager.section.worktrees")}</span>
-            <ProjectActions
-              branch={state()?.defaultBaseBranch ?? props.local?.branch ?? "main"}
-              bindings={props.bindings}
-              loaded={state() !== undefined}
-              t={props.t}
-              onCreate={() => post({ type: "agentManager.createWorktree" })}
-              onNew={() => props.onNewWorktree(props.project.id)}
-              onSection={() => createSection()}
-              onSetup={() => post({ type: "agentManager.configureSetupScript" })}
-              onBranch={() => props.onDefaultBranch(props.project.id, state()?.defaultBaseBranch, props.local?.branch)}
-            />
-          </div>
+          <SidebarSectionHeader
+            class="am-section-header"
+            label={<span class="am-section-label">{props.t("agentManager.section.worktrees")}</span>}
+            actions={
+              <ProjectActions
+                branch={state()?.defaultBaseBranch ?? props.local?.branch ?? "main"}
+                bindings={props.bindings}
+                loaded={state() !== undefined}
+                t={props.t}
+                onCreate={() => post({ type: "agentManager.createWorktree" })}
+                onNew={() => props.onNewWorktree(props.project.id)}
+                onSection={() => createSection()}
+                onSetup={() => post({ type: "agentManager.configureSetupScript" })}
+                onBranch={() =>
+                  props.onDefaultBranch(props.project.id, state()?.defaultBaseBranch, props.local?.branch)
+                }
+              />
+            }
+          />
           <div class="am-worktree-list">
             <DragDropProvider
               onDragStart={onDragStart}

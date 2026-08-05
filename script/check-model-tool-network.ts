@@ -106,7 +106,9 @@ const structure = [
   ...(!network.includes("host.map((item) => item.id)")
     ? ["  kilocode/sandbox/network.ts must derive host-executed tool IDs from network-tools.ts"]
     : []),
-  ...(!registry.includes("Layer.provide(ToolNetwork.httpLayer)")
+  // kilocode_change - v1.17.13 moved registry wiring from Layer.provide onto the LayerNode graph
+  ...(!registry.includes("Layer.provide(ToolNetwork.httpLayer)") &&
+  !/LayerNode\.make\(\{\s*service:\s*HttpClient\.HttpClient,\s*layer:\s*ToolNetwork\.httpLayer/.test(registry)
     ? ["  tool/registry.ts must provide the policy-aware ToolNetwork HTTP layer"]
     : []),
   ...(registry.includes("FetchHttpClient.layer")

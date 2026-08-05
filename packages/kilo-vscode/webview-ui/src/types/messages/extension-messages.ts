@@ -745,6 +745,7 @@ export interface AgentManagerStateMessage {
   /** Last selected sidebar target for seamless project-switch restore. */
   activeTarget?: AgentManagerSidebarTarget
   terminalDestination?: TerminalDestination
+  terminalFont?: TerminalFont
 }
 
 // A registered Agent Manager project as shown in the sidebar
@@ -784,9 +785,9 @@ export interface AgentManagerProjectSessionsMessage {
 
 export interface AgentManagerTerminalCreatedMessage {
   type: "agentManager.terminal.created"
-  /** Correlates with the create request; lets the webview spot stale
-   *  creates. Deliberately not named `requestId`: that field name is the
-   *  generic webview request/response correlation channel. */
+  /** Logical terminal id selected by the webview before PTY startup.
+   *  Deliberately not named `requestId`: that field name is the generic
+   *  webview request/response correlation channel. */
   createId: string
   placement: TerminalPlacement
   /** null for LOCAL, worktree id otherwise */

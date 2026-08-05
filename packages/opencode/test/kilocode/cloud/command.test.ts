@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { expect } from "bun:test"
 import { Agent } from "@/agent/agent"
 import { Auth } from "@/auth"
@@ -30,7 +31,7 @@ const auth = Layer.mock(Auth.Service)({
     ),
 })
 
-const it = testEffect(Layer.mergeAll(Agent.defaultLayer, Config.defaultLayer, Git.defaultLayer, auth))
+const it = testEffect(Layer.mergeAll(AppNodeBuilder.build(Agent.node), AppNodeBuilder.build(Config.node), AppNodeBuilder.build(Git.node), auth))
 
 const run = Effect.fn("CloudCommandTest.git")(function* (cwd: string, ...args: string[]) {
   const git = yield* Git.Service

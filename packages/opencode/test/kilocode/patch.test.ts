@@ -6,6 +6,7 @@
 // These round-trip through the apply_patch tool so the Kilo encoding layer is
 // exercised with the upstream patch parser.
 
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import fs from "fs/promises"
 import path from "path"
@@ -25,14 +26,14 @@ import { provideInstance, testInstanceStoreLayer } from "../fixture/fixture"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 
 const layer = Layer.mergeAll(
-  Agent.defaultLayer,
-  FSUtil.defaultLayer,
+  AppNodeBuilder.build(Agent.node),
+  AppNodeBuilder.build(FSUtil.node),
   Bus.layer,
-  Format.defaultLayer,
-  LSP.defaultLayer,
-  Truncate.defaultLayer,
+  AppNodeBuilder.build(Format.node),
+  AppNodeBuilder.build(LSP.node),
+  AppNodeBuilder.build(Truncate.node),
   testInstanceStoreLayer,
-  EventV2Bridge.defaultLayer,
+  AppNodeBuilder.build(EventV2Bridge.node),
 )
 
 const apply = (dir: string, patchText: string) =>

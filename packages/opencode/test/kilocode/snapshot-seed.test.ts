@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterEach, expect, test } from "bun:test"
 import { $ } from "bun"
 import fs from "fs/promises"
@@ -48,7 +49,7 @@ function durable(snapshot: Snapshot.Interface) {
   })
 }
 
-const infra = Layer.mergeAll(AppProcess.defaultLayer, FSUtil.defaultLayer)
+const infra = Layer.mergeAll(AppNodeBuilder.build(AppProcess.node), AppNodeBuilder.build(FSUtil.node))
 
 function run<A>(dir: string, body: (snapshot: Snapshot.Interface) => Effect.Effect<A>) {
   return Effect.runPromise(
@@ -57,7 +58,7 @@ function run<A>(dir: string, body: (snapshot: Snapshot.Interface) => Effect.Effe
       const value = yield* body(snapshot)
       const gitdir = path.join(Global.Path.data, "snapshot", Instance.project.id, Hash.fast(Instance.worktree))
       return { value, gitdir }
-    }).pipe(provideInstance(dir), Effect.provide(Snapshot.defaultLayer), Effect.provide(testInstanceStoreLayer)),
+    }).pipe(provideInstance(dir), Effect.provide(AppNodeBuilder.build(Snapshot.node)), Effect.provide(testInstanceStoreLayer)),
   )
 }
 

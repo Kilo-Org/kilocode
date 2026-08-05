@@ -44,7 +44,7 @@ interface Options {
   root(): string | undefined
   ready(): Promise<WorktreeStateManager | undefined>
   state(): WorktreeStateManager | undefined
-  stats(refresh?: boolean): Promise<{ worktrees: WorktreeStats[]; local?: LocalStats }>
+  stats(): Promise<{ worktrees: WorktreeStats[]; local?: LocalStats }>
   prs(): Map<string, PRStatus>
   push(): void
   managed(sessionID: string): boolean
@@ -257,7 +257,10 @@ export class AgentManagerOrchestrationBridge {
       if (this.disposed || active.cancelled) return
       const client = this.connection.getClient()
       if (request.operation === "overview") {
-        const stats = await this.options.stats(true)
+        // Git stats are refreshed by the poller independently. A forced refresh
+        // here can spawn one diff/ahead-behind pair per worktree and exceed the
+        // host request timeout before the overview can return its IDs.
+        const stats = await this.options.stats()
         if (this.disposed || active.cancelled) return
         const result = await overview({
           client,

@@ -45,7 +45,9 @@ import type {
   SessionCreatedMessage,
   BranchInfo,
   TerminalDestination,
+  TerminalFont,
 } from "../src/types/messages"
+import { readFontSize } from "../src/font-size"
 import { IndexingProvider } from "../src/context/indexing"
 import {} from "@thisbeyond/solid-dnd"
 import type { DragEvent } from "@thisbeyond/solid-dnd"
@@ -174,6 +176,7 @@ import { createMarkdownRender } from "./review-preferences"
 import { createSidebarCollapse } from "./sidebar-collapse"
 import { SidebarToggleButton } from "./SidebarToggleButton"
 import { setTabWidths } from "./tab-widths"
+import { clampPanelWidth, maxPanelWidth, minPanelWidth } from "./side-panel-layout"
 import { buildShortcutCategories } from "./shortcuts"
 import { tracker } from "./telemetry"
 import { createChatFocus, hasQuestionOption } from "./focus"
@@ -274,7 +277,7 @@ const AgentManagerContent: Component = () => {
   const MAX_SIDEBAR_WIDTH_RATIO = 0.4
 
   // Recover persisted local session IDs from webview state
-  const persisted = vscode.getState<PersistedProjectTabs & { sidebarWidth?: number }>()
+  const persisted = vscode.getState<PersistedProjectTabs & { sidebarWidth?: number; sidePanelWidth?: number }>()
   const registry = createProjectRegistry({
     persisted: persisted ?? {},
     activeId: () => currentProjectId() ?? "single",
@@ -314,26 +317,15 @@ const AgentManagerContent: Component = () => {
   const diffLoading = diffs.diffLoading
   const setDiffLoading = diffs.setDiffLoading
   const diffNotices = diffs.diffNotices
-  // The diff and terminal panels each remember their own width: a diff
-  // benefits from half the window, a terminal only needs about a third.
-  const TERMINAL_MIN_WIDTH = 360
-  const TERMINAL_MAX_WIDTH = 640
-  const [diffWidth, setDiffWidth] = createSignal(Math.round(window.innerWidth * 0.5))
-  const [terminalWidth, setTerminalWidth] = createSignal(
-    Math.min(TERMINAL_MAX_WIDTH, Math.max(TERMINAL_MIN_WIDTH, Math.round(window.innerWidth / 3))),
-  )
-  // The hidden-but-mounted host still fits the terminal, so pick the
-  // terminal's width whenever one is alive and no other mode is showing.
-  const widthMode = () => sidePanel() ?? (terms.sides().length > 0 ? "terminal" : null)
-  const hostWidth = () => (widthMode() === "terminal" ? terminalWidth() : diffWidth())
-  const sideMin = () => (widthMode() === "terminal" ? TERMINAL_MIN_WIDTH : 200)
+  // Diff and terminal views share one inspector width, restored from webview
+  // state so the user's divider position survives panel reloads.
+  const [panelWidth, setPanelWidth] = createSignal(clampPanelWidth(persisted?.sidePanelWidth, window.innerWidth))
   const resizeSide = (width: number) => {
-    pendingSideWidth = Math.max(sideMin(), Math.min(width, window.innerWidth * 0.8))
+    pendingSideWidth = clampPanelWidth(width, window.innerWidth)
     if (sideRaf !== undefined) return
     sideRaf = requestAnimationFrame(() => {
       sideRaf = undefined
-      if (widthMode() === "terminal") setTerminalWidth(pendingSideWidth!)
-      else setDiffWidth(pendingSideWidth!)
+      setPanelWidth(pendingSideWidth!)
     })
   }
   const showSideTerminal = () => {
@@ -371,6 +363,10 @@ const AgentManagerContent: Component = () => {
   const PENDING_PREFIX = "pending:"
   const closedDrafts = new Set<string>()
   const [activePendingId, setActivePendingId] = createSignal<string | undefined>()
+  const [terminalFont, setTerminalFont] = createSignal<TerminalFont>({
+    fontFamily: getComputedStyle(document.documentElement).getPropertyValue("--vscode-editor-font-family").trim(),
+    fontSize: readFontSize(),
+  })
 
   /** Namespace key so worktree/local ids from different projects never collide. */
   const nsKey = (sel: string) => `${currentProjectId() ?? "single"}:${sel}`
@@ -643,6 +639,7 @@ const AgentManagerContent: Component = () => {
     },
     key: () => registry.active().id,
     width: sidebarWidth,
+    panelWidth,
     get: () => vscode.getState<Record<string, unknown>>(),
     set: (value) => vscode.setState(value),
   })
@@ -1076,6 +1073,7 @@ const AgentManagerContent: Component = () => {
   const applyState = (msg: ExtensionMessage) => {
     if (msg.type !== "agentManager.state") return
     const state = msg as AgentManagerStateMessage
+    if (state.terminalFont) setTerminalFont(state.terminalFont)
     const pid = state.projectId
     if (pid) setProjectStates((prev) => ({ ...prev, [pid]: state }))
     const store = pid ? registry.ensure(pid) : registry.active()
@@ -1342,13 +1340,6 @@ const AgentManagerContent: Component = () => {
         showToast({ variant: "error", title: t("agentManager.terminal.errorTitle"), description: message }),
       postMessage: (message) => vscode.postMessage(message as never),
       onCreated: (contextKey, terminalId) => appendToTabOrder(contextKey, terminalId),
-      onSideCreated: (contextKey, terminalId, focus) => {
-        // Focus only when the user is still looking at this panel —
-        // a slow create landing after a mode switch must not steal it.
-        if (focus && sidePanel() === "terminal" && !history() && !reviewActive() && terms.sideKey() === contextKey) {
-          terms.requestFocus(terminalId)
-        }
-      },
       onSideClosed: (_contextKey, terminalId) => forgetTerminalFocus(terminalId),
       onScriptRunning: (contextKey, terminalId) => {
         if (terms.sideKey() !== contextKey) return
@@ -1367,6 +1358,7 @@ const AgentManagerContent: Component = () => {
       onDestinationChanged: (destination) => sideCtl.syncDefault(destination),
     })
     const unsubTerminals = vscode.onMessage((msg) => {
+      if (msg.type === "agentManager.terminal.fontChanged") setTerminalFont(msg.font)
       terminalDispatch(msg)
     })
 
@@ -2081,6 +2073,7 @@ const AgentManagerContent: Component = () => {
     getSelection: selection,
     LOCAL,
     REVIEW_TAB_ID,
+    getFont: terminalFont,
   })
 
   const sideCtl = createSideTerminal({
@@ -2472,20 +2465,6 @@ const AgentManagerContent: Component = () => {
           track={metrics.click}
         />
 
-        {/* Empty worktree state */}
-        <Show when={contextEmpty()}>
-          <div class="am-empty-state">
-            <div class="am-empty-state-icon">
-              <Icon name="branch" size="large" />
-            </div>
-            <div class="am-empty-state-text">{t("agentManager.session.noSessions")}</div>
-            <Button variant="primary" size="small" onClick={handleAddSession}>
-              {t("agentManager.session.new")}
-              <span class="am-shortcut-hint">{kb().newTab ?? ""}</span>
-            </Button>
-          </div>
-        </Show>
-
         <Show when={overlay()}>
           {(state) => (
             <div class="am-setup-overlay">
@@ -2650,16 +2629,16 @@ const AgentManagerContent: Component = () => {
               <Show when={sidePanel() !== null || terms.sides().length > 0}>
                 <div
                   class={`am-diff-resize ${sidePanel() === null ? "am-side-host-hidden" : ""}`}
-                  style={{ width: `${hostWidth()}px` }}
+                  style={{ width: `${panelWidth()}px` }}
                   inert={sidePanel() === null}
                 >
                   <Show when={sidePanel() !== null}>
                     <ResizeHandle
                       direction="horizontal"
                       edge="start"
-                      size={hostWidth()}
-                      min={sideMin()}
-                      max={Math.round(window.innerWidth * 0.8)}
+                      size={panelWidth()}
+                      min={minPanelWidth(window.innerWidth)}
+                      max={maxPanelWidth(window.innerWidth)}
                       onResize={resizeSide}
                     />
                   </Show>
