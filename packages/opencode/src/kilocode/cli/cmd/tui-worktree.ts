@@ -5,9 +5,12 @@
 // created in.
 import path from "path"
 import type { Effect } from "effect"
+import * as Log from "@opencode-ai/core/util/log"
 import { UI } from "@/cli/ui"
 import { Filesystem } from "@/util/filesystem"
 import { errorMessage } from "@/util/error"
+
+const log = Log.create({ service: "kilocode.tui-worktree" })
 
 // Matches packages/kilo-vscode/src/agent-manager/WorktreeManager.ts's placement
 // and its ensureGitExclude(), keeping `.kilo/worktrees/` out of `git status`.
@@ -19,7 +22,9 @@ export async function ensureGitExclude(root: string) {
   const current = (await Filesystem.readText(excludePath).catch(() => "")).replace(/\s+$/, "")
   if (current.includes(`${KILO_WORKTREE_DIR}/`)) return
   const prefix = current ? `${current}\n\n` : ""
-  await Filesystem.write(excludePath, `${prefix}# Kilo Code agent worktrees\n${KILO_WORKTREE_DIR}/\n`).catch(() => {})
+  await Filesystem.write(excludePath, `${prefix}# Kilo Code agent worktrees\n${KILO_WORKTREE_DIR}/\n`).catch((err) =>
+    log.error("failed to update .git/info/exclude", { excludePath, err }),
+  )
 }
 
 function samePath(a: string, b: string) {
@@ -140,13 +145,10 @@ async function resolveWorktree(name: string, root: string, timeoutMs = 10 * 60_0
     // only with `-d` (not `-D`): it refuses unless the branch is fully merged,
     // so we never silently discard unmerged work from an interrupted worktree
     // or an unrelated branch that happens to share the name.
-    const branchRef = await run(
-      Git.Service.use((git) =>
-        git.run(["show-ref", "--verify", "--quiet", `refs/heads/${slug}`], { cwd: ctx.worktree }),
-      ),
-    )
+    const runGit = (args: string[]) => run(Git.Service.use((git) => git.run(args, { cwd: ctx.worktree })))
+    const branchRef = await runGit(["show-ref", "--verify", "--quiet", `refs/heads/${slug}`])
     if (branchRef.exitCode === 0) {
-      const deleted = await run(Git.Service.use((git) => git.run(["branch", "-d", slug], { cwd: ctx.worktree })))
+      const deleted = await runGit(["branch", "-d", slug])
       if (deleted.exitCode !== 0) {
         const message = deleted.stderr.toString("utf8").trim() || deleted.text().trim()
         throw new Error(
