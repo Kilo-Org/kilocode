@@ -315,6 +315,14 @@ export const dict = {
   "session.messages.loadEarlier": "Charger les messages précédents",
   "session.messages.loading": "Chargement des messages...",
 
+  "sidebar.topBar.label": "Navigation Kilo Code",
+  "sidebar.topBar.newTask": "Nouvelle Tâche",
+  "sidebar.topBar.history": "Historique",
+  "sidebar.topBar.agentManager": "Agent Manager",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "Marketplace",
+  "sidebar.topBar.profile": "Profil",
+  "sidebar.topBar.settings": "Paramètres",
   "sidebar.session.newSession": "Nouvelle Session",
   "sidebar.session.newSession.tooltip":
     "Démarrer une nouvelle conversation tout en gardant la session actuelle intacte.",
