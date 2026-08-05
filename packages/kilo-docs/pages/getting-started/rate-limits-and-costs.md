@@ -14,7 +14,6 @@ Auto Model is Kilo's smart routing system. Instead of selecting a specific provi
 | Tier | Name | Best For | Cost |
 |---|---|---|---|
 | `kilo-auto/frontier` | Auto Frontier | Maximum capability — routes to top-tier models for planning/architect/debug and high-quality models for coding | Paid (highest) |
-| `kilo-auto/balanced` | Auto Balanced | Strong performance at a predictably lower cost — routes every request to one fixed high-quality model | Paid |
 | `kilo-auto/efficient` | Auto Efficient | Lowest cost per task — classifies each request by difficulty and routes to the cheapest benchmark-proven model for that task | Paid (lowest) |
 | `kilo-auto/free` | Auto Free | No credits required — rotates through available free models | Free |
 
@@ -22,20 +21,14 @@ Auto Model is Kilo's smart routing system. Instead of selecting a specific provi
 The underlying models behind each tier are updated server-side as better options become available or as providers change pricing. See [kilo.ai/models](https://kilo.ai/models) for current model assignments and live pricing.
 {% /callout %}
 
-## Balanced vs Efficient — What's the Difference?
+## What Makes Auto Efficient Efficient?
 
-Both tiers are paid, but they optimize for different things.
+**Auto Efficient** observes your coding session in context, classifies the difficulty of each request in real time, and routes it to the *cheapest model proven accurate enough* for that specific task, based on Kilo's continuously running benchmarks. Routine tasks (small edits, lookups, quick explanations) are handled by leaner models; harder tasks (architecture, debugging, complex refactors) automatically get a more capable model.
 
-**Auto Balanced** routes every request to a single, fixed high-quality model. You get consistent, strong results with predictable cost — a reliable default for most developers.
-
-**Auto Efficient** goes further. It observes your coding session in context, classifies the difficulty of each request in real time, and routes it to the *cheapest model proven accurate enough* for that specific task, based on Kilo's continuously running benchmarks. Routine tasks (small edits, lookups, quick explanations) are handled by leaner models; harder tasks (architecture, debugging, complex refactors) automatically get a more capable model.
-
-Efficient is also session-aware: it stays with a model across related turns and only switches when a cheaper option is clearly worth it. If it cannot make a routing decision with confidence, it falls back to Balanced — so quality never drops below Balanced.
-
-Think of Efficient as Balanced with an intelligent cost optimizer layered on top.
+Efficient is also session-aware: it stays with a model across related turns and only switches when a cheaper option is clearly worth it. If it cannot make a routing decision with confidence, it falls back to a fixed, high-quality baseline model — so quality never drops below that baseline. You get consistent, strong results with predictable cost, plus an intelligent cost optimizer layered on top.
 
 {% callout type="tip" %}
-For everyday coding tasks, start with **Auto Efficient** or **Auto Balanced**. Switch to **Auto Frontier** for complex architecture sessions or deep debugging where maximum capability matters.
+For everyday coding tasks, start with **Auto Efficient**. Switch to **Auto Frontier** for complex architecture sessions or deep debugging where maximum capability matters.
 {% /callout %}
 
 ## How to Switch Auto Models
