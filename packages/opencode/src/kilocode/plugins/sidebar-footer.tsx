@@ -100,8 +100,9 @@ function View(props: { api: TuiPluginApi }) {
       name: list.at(-1) ?? "",
     }
   })
-  const privacyMode = createMemo(() => props.api.state.config.privacy_mode === true)
+  const privacyMode = createMemo(() => props.api.state.globalConfig.privacy_mode === true)
   const balanceText = createMemo(() => (privacyMode() ? REDACTED_BALANCE : null))
+  const mutedColor = createMemo(() => (privacyMode() ? theme().textMuted : tone()))
   const refresh = () => {
     const id = ++seq
     // Cancel any prior request and time this one out — the client path has no fetch timeout,
@@ -175,12 +176,12 @@ function View(props: { api: TuiPluginApi }) {
               return (
                 <box flexDirection="row" justifyContent="space-between">
                   <box flexDirection="row" gap={1}>
-                    <text fg={tone()}>•</text>
+                    <text fg={mutedColor()}>•</text>
                     <text fg={theme().text}>
                       <b>{creditLabel(data().scope, privacyMode())}</b>
                     </text>
                   </box>
-                  <text fg={tone()}>{masked ?? format(balance)}</text>
+                  <text fg={mutedColor()}>{masked ?? format(balance)}</text>
                 </box>
               )
             })()}

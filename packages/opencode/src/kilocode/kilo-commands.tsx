@@ -139,7 +139,7 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
         hidden: !isKiloConnected(),
         run: async () => {
           try {
-            if (sync.data.config.privacy_mode === true) {
+            if (sync.data.globalConfig.privacy_mode === true) {
               const confirmed = await DialogConfirm.show(
                 dialog,
                 "Privacy Mode Enabled",
@@ -191,13 +191,13 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
       {
         name: "kilo.privacy",
         get title() {
-          return sync.data.config.privacy_mode === true ? "Disable privacy mode" : "Enable privacy mode"
+          return sync.data.globalConfig.privacy_mode === true ? "Disable privacy mode" : "Enable privacy mode"
         },
         desc: "Blur PII (balance, email, etc.) and confirm before showing profile",
         category: "Kilo",
         slashName: "privacy",
         run: async () => {
-          const next = sync.data.config.privacy_mode !== true
+          const next = sync.data.globalConfig.privacy_mode !== true
           const response = await sdk.client.config.overlayUpdate({
             scope: "global",
             set: { privacy_mode: next },
