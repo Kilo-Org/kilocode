@@ -59,6 +59,18 @@ class KiloAppService internal constructor(
     val version: String? get() = info?.version
 
     /**
+     * Whether the running Core is bundled in the plugin (true) or downloaded (false).
+     * Null until fetched. This is a static property of the plugin build, so it is
+     * fetched once via RPC independently of the download-progress state.
+     */
+    @Volatile
+    private var bundledFlag: Boolean? = null
+    private val bundledLock = Any()
+    private var bundledJob: Job? = null
+
+    val bundled: Boolean? get() = bundledFlag
+
+    /**
      * App-lifetime scope for fire-and-forget work that must outlive transient UIs such as the
      * settings dialog (whose own scope is cancelled the moment it closes on OK).
      */
@@ -152,6 +164,7 @@ class KiloAppService internal constructor(
             platform = call { cliPlatform() },
         )
         info = next
+        bundledFlag = call { cliBundled() }
         next
     } catch (e: Exception) {
         LOG.warn("core info failed", e)
@@ -198,6 +211,26 @@ class KiloAppService internal constructor(
     /** Fetch the pinned Core version and cache it. */
     fun fetchVersionAsync(done: (String?) -> Unit = {}) {
         fetchCoreInfoAsync { done(it?.version) }
+    }
+
+    /** Fetch whether the running Core is bundled and cache it. Deduped and fetched once. */
+    fun fetchBundledAsync() {
+        if (bundledFlag != null) return
+        synchronized(bundledLock) {
+            if (bundledFlag != null || bundledJob != null) return
+            bundledJob = cs.launch {
+                val value = try {
+                    call { cliBundled() }
+                } catch (e: Exception) {
+                    LOG.warn("core bundled check failed", e)
+                    null
+                }
+                synchronized(bundledLock) {
+                    if (value != null) bundledFlag = value
+                    bundledJob = null
+                }
+            }
+        }
     }
 
     fun refreshModelFavoritesAsync() {
