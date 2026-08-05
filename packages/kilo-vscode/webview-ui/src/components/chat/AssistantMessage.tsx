@@ -28,6 +28,7 @@ import { useSession } from "../../context/session"
 import { useDisplay } from "../../context/display"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
+import { localeToBcp47 } from "../../context/language-utils"
 import { useServer } from "../../context/server"
 import { planDisplayPath } from "../../utils/plan-path"
 import { isRenderable, UPSTREAM_SUPPRESSED_TOOLS } from "../../utils/transcript-parts"
@@ -215,7 +216,7 @@ function TimestampBadge(props: { time: { created: number; completed?: number } }
   const label = createMemo(() => {
     const done = props.time.completed
     if (done === undefined) return undefined
-    const when = formatCompletedAt(done, language.locale())
+    const when = formatCompletedAt(done, localeToBcp47(language.locale()))
     const ms = messageDurationMs(props.time)
     if (ms === undefined) return when
     return language.t("chat.timestamp.label", {
@@ -226,7 +227,7 @@ function TimestampBadge(props: { time: { created: number; completed?: number } }
   const tooltip = createMemo(() => {
     const done = props.time.completed
     if (done === undefined) return ""
-    const when = formatCompletedAt(done, language.locale())
+    const when = formatCompletedAt(done, localeToBcp47(language.locale()))
     const ms = messageDurationMs(props.time)
     if (ms === undefined) return language.t("chat.timestamp.tooltip.timeOnly", { when })
     return language.t("chat.timestamp.tooltip", {
