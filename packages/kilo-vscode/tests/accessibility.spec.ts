@@ -12,7 +12,6 @@ const STORIES = [
   { id: "profile--logged-in", name: "Profile / organization account" },
   { id: "profile--organization-context", name: "Profile / selected organization" },
   { id: "profile--stale-and-unavailable", name: "Profile / stale usage" },
-  { id: "profile--balance-and-credits", name: "Profile / balance and credits" },
   { id: "profile--empty-usage", name: "Profile / empty usage" },
   { id: "settings--providers-configure", name: "Settings / providers empty state" },
   { id: "marketplace--empty-list", name: "Marketplace / empty state" },
