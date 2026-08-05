@@ -117,7 +117,8 @@
     "luxon": "catalog:",
     "marked-katex-extension": "5.1.6",
     "marked-shiki": "catalog:",
-    "@shikijs/stream": "catalog:"
+    "@shikijs/stream": "catalog:",
+    "solid-sonner": "catalog:"
   },
   "peerDependencies": {
     "@solidjs/meta": "^0.29.0",

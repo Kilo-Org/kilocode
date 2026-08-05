@@ -133,6 +133,8 @@ async function smokeModels(binaryPath: string) {
 // }
 // kilocode_change end
 
+const treeSitterWorker = await Bun.file(fileURLToPath(import.meta.resolve("@opentui/core/parser.worker"))).text()
+
 const allTargets: {
   os: string
   arch: "arm64" | "x64"
@@ -251,18 +253,14 @@ for (const item of targets) {
       : undefined
   // kilocode_change end
 
-  const localPath = path.resolve(dir, "node_modules/@opentui/core/parser.worker.js")
-  const rootPath = path.resolve(dir, "../../node_modules/@opentui/core/parser.worker.js")
-  const parserWorker = fs.realpathSync(fs.existsSync(localPath) ? localPath : rootPath)
   const workerPath = "./src/cli/tui/worker.ts"
+  const treeSitterWorkerPath = "opentui-tree-sitter-worker.js"
   // kilocode_change start
   const sessionExportWorkerPath = "./src/kilocode/session-export/worker.ts"
   const indexingWorkerPath = "./src/kilocode/indexing-worker.ts"
   // kilocode_change end
 
-  // Use platform-specific bunfs root path based on target OS
   const bunfsRoot = item.os === "win32" ? "B:/~BUN/root/" : "/$bunfs/root/"
-  const workerRelativePath = path.relative(dir, parserWorker).replaceAll("\\", "/")
 
   await Bun.build({
     conditions: ["bun", "node"], // kilocode_change - port anomalyco/opencode#30873; current form from #31566
@@ -296,14 +294,14 @@ for (const item of targets) {
       windows: {},
     },
     // kilocode_change start - packages/app was removed; no embedded web UI
-    files: {},
-    entrypoints: ["./src/index.ts", parserWorker, workerPath, sessionExportWorkerPath, indexingWorkerPath],
+    files: { [treeSitterWorkerPath]: treeSitterWorker },
+    entrypoints: ["./src/index.ts", workerPath, treeSitterWorkerPath, sessionExportWorkerPath, indexingWorkerPath],
     // kilocode_change end
     define: {
       FFF_LIBC: JSON.stringify(item.abi === "musl" ? "musl" : "gnu"),
       KILO_VERSION: `'${Script.version}'`,
       KILO_MODELS_DEV: generated.modelsData,
-      OTUI_TREE_SITTER_WORKER_PATH: bunfsRoot + workerRelativePath,
+      OTUI_TREE_SITTER_WORKER_PATH: bunfsRoot + treeSitterWorkerPath,
       KILO_WORKER_PATH: workerPath,
       // kilocode_change start
       KILO_SESSION_EXPORT_WORKER_PATH: sessionExportWorkerPath,
