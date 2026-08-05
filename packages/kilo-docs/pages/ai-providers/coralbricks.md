@@ -39,8 +39,16 @@ which matters for agent loops that re-send context on every turn.
 {% /tab %}
 {% tab label="CLI" %}
 
-Define the provider in your `kilo.json` config file
-(`~/.config/kilo/kilo.json` or `./kilo.json`):
+Define the provider in your global `kilo.json` config file
+(`~/.config/kilo/kilo.json`):
+
+{% callout type="warning" %}
+`{env:...}` references only resolve in trusted config — the global config,
+`KILO_CONFIG` / `KILO_CONFIG_CONTENT`, or MDM-managed config. In a
+project-level `./kilo.json` the reference is silently ignored and the
+provider will fail to authenticate; put the provider block in the global
+config, or inline the key (not recommended for committed files).
+{% /callout %}
 
 ```bash
 export CORALBRICKS_API_KEY="ak_..."
