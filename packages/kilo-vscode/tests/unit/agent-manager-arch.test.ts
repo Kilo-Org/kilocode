@@ -64,6 +64,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/diff-viewer/BaseBranchPicker.tsx"),
 ]
 const TSX_FILE = TSX_FILES[0]!
+const KEYBIND_DEFAULTS_FILE = path.join(ROOT, "webview-ui/agent-manager/keybind-defaults.ts")
 const PROVIDER_FILE = path.join(ROOT, "src/agent-manager/AgentManagerProvider.ts")
 const DIFF_CONTROLLER_FILE = path.join(ROOT, "src/agent-manager/worktree-diff-controller.ts")
 const IMPORTER_FILE = path.join(ROOT, "src/agent-manager/worktree-importer.ts")
@@ -365,7 +366,6 @@ describe("Agent Manager Worktree Actions", () => {
     const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf-8")) as {
       contributes: { keybindings: { command: string; key?: string; mac?: string }[] }
     }
-    const source = fs.readFileSync(TSX_FILE, "utf-8")
     const dialog = manifest.contributes.keybindings.find(
       (item) => item.command === "kilo-code.new.agentManager.newWorktree",
     )
@@ -375,8 +375,9 @@ describe("Agent Manager Worktree Actions", () => {
 
     expect(dialog).toMatchObject({ key: "ctrl+n", mac: "cmd+n" })
     expect(quick).toMatchObject({ key: "ctrl+shift+n", mac: "cmd+shift+n" })
-    expect(source).toContain('newWorktree: isMac ? "⌘N" : "Ctrl+N"')
-    expect(source).toContain('quickWorktree: isMac ? "⌘⇧N" : "Ctrl+Shift+N"')
+    const bindings = fs.readFileSync(KEYBIND_DEFAULTS_FILE, "utf-8")
+    expect(bindings).toContain('newWorktree: isMac ? "⌘N" : "Ctrl+N"')
+    expect(bindings).toContain('quickWorktree: isMac ? "⌘⇧N" : "Ctrl+Shift+N"')
   })
 
   it("forwards the quick-worktree command to immediate creation", () => {
