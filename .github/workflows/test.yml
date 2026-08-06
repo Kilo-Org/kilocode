@@ -250,7 +250,7 @@ jobs:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     needs:
       - unit
-    if: always()
+    if: ${{ !cancelled() }}
     steps:
       - name: Verify unit matrix passed
         run: |
@@ -266,7 +266,7 @@ jobs:
       - unit
       - httpapi
       - jetbrains
-    if: always()
+    if: ${{ !cancelled() }}
     steps:
       - name: Verify upstream test jobs passed # kilocode_change
         run: |

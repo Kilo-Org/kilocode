@@ -84,7 +84,7 @@ jobs:
       - typecheck-js
       - jetbrains-changes
       - typecheck-jetbrains
-    if: always()
+    if: ${{ !cancelled() }}
     steps:
       - name: Verify typecheck jobs passed
         run: |
