@@ -21,7 +21,6 @@ import type {
   AgentManagerKeybindingsMessage,
   AgentManagerMultiVersionProgressMessage,
   AgentManagerSendInitialMessage,
-  AgentManagerBranchesMessage,
   AgentManagerWorktreeDiffMessage,
   AgentManagerWorktreeDiffFileMessage,
   AgentManagerWorktreeDiffLoadingMessage,
@@ -44,7 +43,6 @@ import type {
   SectionState,
   SessionInfo,
   SessionCreatedMessage,
-  BranchInfo,
   TerminalDestination,
   TerminalFont,
 } from "../src/types/messages"
@@ -154,8 +152,10 @@ import type { ReviewComment } from "../diff-viewer/review-comments"
 import { clearReviewComposer, createReviewComposer } from "../diff-viewer/review-annotations"
 import type { SidebarSearchMenuRef } from "./SidebarSearchMenu"
 import { createSidebarSearch, type SidebarSearchItem } from "./sidebar-search"
-import { BranchSelect } from "../src/components/shared/BranchSelect"
 import { randomColor } from "./section-colors"
+import { createMarkdownRender } from "./review-preferences"
+import { createChangeDefaultBaseBranch } from "./default-base-branch"
+import { createSidebarCollapse } from "./sidebar-collapse"
 import { createNewTaskDrafts } from "./new-task-drafts"
 import {
   buildTopLevelItems,
@@ -174,8 +174,6 @@ import { DiffScopeControls } from "../diff-viewer/DiffScopeControls"
 import { scopeCapabilities } from "./diff-scope-state"
 import { createDiffReviewScope } from "./diff-review-scope"
 import { initialMessage, seedInitialVariant } from "./initial-message"
-import { createMarkdownRender } from "./review-preferences"
-import { createSidebarCollapse } from "./sidebar-collapse"
 import { SidebarToggleButton } from "./SidebarToggleButton"
 import { setTabWidths } from "./tab-widths"
 import { clampPanelWidth, maxPanelWidth, minPanelWidth, SidePanel } from "./side-panel-layout"
@@ -1793,101 +1791,16 @@ const AgentManagerContent: Component = () => {
   }
   const setupScript = metrics.click("configure_setup_script", "worktree_settings", handleConfigureSetupScript)
 
-  const handleChangeDefaultBaseBranch = () => {
-    const [search, setSearch] = createSignal("")
-    const [branches, setBranches] = createSignal<BranchInfo[]>([])
-    const [loading, setLoading] = createSignal(true)
-    const [highlighted, setHighlighted] = createSignal(-1)
-
-    const unsub = vscode.onMessage((msg) => {
-      if (msg.type === "agentManager.branches") {
-        const ev = msg as AgentManagerBranchesMessage
-        setBranches(ev.branches)
-        if (ev.defaultBranch) setRepoDetectedBranch(ev.defaultBranch)
-        setLoading(false)
-      }
-    })
-
-    vscode.postMessage({ type: "agentManager.requestBranches" })
-
-    const filtered = createMemo(() => {
-      const s = search().toLowerCase()
-      if (!s) return branches()
-      return branches().filter((b) => b.name.toLowerCase().includes(s))
-    })
-
-    const selectBranch = (name: string | undefined) => {
-      vscode.postMessage({ type: "agentManager.setDefaultBaseBranch", branch: name })
-      setDefaultBaseBranch(name)
-      dialog.close()
-    }
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const items = filtered()
-      // offset by 1 for auto-detect option (-1 = auto-detect)
-      const total = items.length + 1
-      if (e.key === "ArrowDown") {
-        e.preventDefault()
-        e.stopPropagation()
-        setHighlighted((prev) => Math.min(prev + 1, total - 2))
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault()
-        e.stopPropagation()
-        setHighlighted((prev) => Math.max(prev - 1, -1))
-      } else if (e.key === "Enter") {
-        e.preventDefault()
-        e.stopPropagation()
-        const idx = highlighted()
-        if (idx === -1) {
-          selectBranch(undefined)
-        } else {
-          const branch = items[idx]
-          if (branch) selectBranch(branch.name)
-        }
-      } else if (e.key === "Escape") {
-        e.preventDefault()
-        e.stopPropagation()
-        dialog.close()
-      }
-    }
-
-    dialog.show(() => {
-      onCleanup(unsub)
-      return (
-        <Dialog title={t("agentManager.worktree.defaultBaseBranch")} fit>
-          <div class="am-default-base-branch">
-            <BranchSelect
-              branches={filtered()}
-              loading={loading()}
-              search={search()}
-              onSearch={(v) => {
-                setSearch(v)
-                setHighlighted(-1)
-              }}
-              onSelect={(b) => selectBranch(b.name)}
-              onSearchKeyDown={handleKeyDown}
-              selected={defaultBaseBranch()}
-              highlighted={highlighted()}
-              onHighlight={setHighlighted}
-              searchPlaceholder={t("agentManager.dialog.searchBranches")}
-              emptyLabel={t("agentManager.import.noMatchingBranches")}
-              loadingLabel={t("agentManager.import.loadingBranches")}
-              defaultLabel={t("agentManager.dialog.branchBadge.default")}
-              remoteLabel={t("agentManager.dialog.branchBadge.remote")}
-              defaultName={defaultBaseBranch()}
-              autoOption={{
-                label: t("agentManager.worktree.defaultBaseBranchAuto"),
-                hint: repoDetectedBranch(),
-                active: !hasConfiguredBranch(),
-                highlighted: highlighted() === -1,
-                onSelect: () => selectBranch(undefined),
-              }}
-            />
-          </div>
-        </Dialog>
-      )
-    })
-  }
+  const handleChangeDefaultBaseBranch = createChangeDefaultBaseBranch({
+    vscode,
+    dialog,
+    t,
+    defaultBaseBranch,
+    setDefaultBaseBranch,
+    setRepoDetectedBranch,
+    repoDetectedBranch,
+    hasConfiguredBranch,
+  })
 
   const handleShowKeyboardShortcuts = () => {
     const categories = buildShortcutCategories(kb(), t)
