@@ -1,4 +1,4 @@
-import { prepareForkedPart as _prepareForkedPart } from "./fork"
+import { prepareForkedPart as _prepareForkedPart, remapChildren as _remapChildren } from "./fork"
 import z from "zod"
 import { Cause, Effect, Schema } from "effect"
 import { Bus } from "@/bus"
@@ -437,6 +437,7 @@ export namespace KiloSession {
   }
 
   export const prepareForkedPart = _prepareForkedPart
+  export const remapChildren = _remapChildren
 }
 
 export { kiloSessionFork } from "./fork-command"
