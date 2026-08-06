@@ -1,5 +1,6 @@
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { TextField } from "@kilocode/kilo-ui/text-field"
+import { Show } from "solid-js"
 import { useLanguage } from "../../context/language"
 
 export type Translator = ReturnType<typeof useLanguage>["t"]
@@ -40,7 +41,7 @@ export type ModelEntry = {
 
 type ModelCardProps = {
   m: ModelEntry
-  errors: { id?: string; name?: string }
+  errors: { id?: string; name?: string; variants?: Array<{ name?: string }> }
   t: Translator
   canRemove: boolean
   onChangeId: (val: string) => void
@@ -51,6 +52,8 @@ type ModelCardProps = {
 }
 
 export function ModelCard(props: ModelCardProps) {
+  const issue = () => props.errors.variants?.find((error) => error.name)?.name
+
   return (
     <div
       style={{
@@ -131,6 +134,17 @@ export function ModelCard(props: ModelCardProps) {
         />
         {props.t("provider.custom.models.modalities.image")}
       </label>
+
+      <Show when={issue()}>
+        {(error) => (
+          <span
+            role="alert"
+            style={{ "font-size": "var(--kilo-font-size-12)", color: "var(--vscode-errorForeground)" }}
+          >
+            {error()}
+          </span>
+        )}
+      </Show>
     </div>
   )
 }
