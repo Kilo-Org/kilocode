@@ -19,8 +19,15 @@ export namespace KiloRunTerminal {
       state.id = id
       state.workspace = client.session
         .get({ sessionID: id })
-        .then((result) => result.data?.workspaceID)
-        .catch(() => undefined)
+        .then((result) => {
+          if (result.error) throw result.error
+          return result.data?.workspaceID
+        })
+        .catch(() => {
+          state.id = ""
+          state.workspace = undefined
+          return undefined
+        })
       return state.workspace
     }
 

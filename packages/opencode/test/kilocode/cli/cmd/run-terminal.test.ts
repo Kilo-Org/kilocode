@@ -40,3 +40,33 @@ test("routes direct interactive terminal requests through the session workspace"
   expect(requests.every((url) => url.searchParams.get("workspace") === "ws_terminal")).toBe(true)
   expect(seen.filter((url) => url.pathname === "/session/ses_terminal")).toHaveLength(1)
 })
+
+test("retries workspace lookup after a failed request", async () => {
+  const seen: URL[] = []
+  let sessions = 0
+  const fetch = Object.assign(
+    async (input: URL | RequestInfo, init?: RequestInit) => {
+      const request = new Request(input, init)
+      const url = new URL(request.url)
+      seen.push(url)
+      if (url.pathname === "/session/ses_terminal") {
+        sessions += 1
+        if (sessions === 1) return new Response("busy", { status: 503 })
+        return Response.json({ workspaceID: "ws_terminal" })
+      }
+      return Response.json(true)
+    },
+    { preconnect: globalThis.fetch.preconnect },
+  )
+  const sdk = createKiloClient({ baseUrl: "http://test", fetch })
+  const terminal = KiloRunTerminal.create(sdk, () => "ses_terminal")
+
+  await terminal.write({ terminalID: "itx_terminal", data: "Ada\r" })
+  await terminal.write({ terminalID: "itx_terminal", data: "Grace\r" })
+
+  expect(sessions).toBe(2)
+  const inputs = seen.filter((url) => url.pathname === "/interactive-terminal/itx_terminal/input")
+  expect(inputs).toHaveLength(2)
+  expect(inputs[0]?.searchParams.get("workspace")).toBeNull()
+  expect(inputs[1]?.searchParams.get("workspace")).toBe("ws_terminal")
+})
