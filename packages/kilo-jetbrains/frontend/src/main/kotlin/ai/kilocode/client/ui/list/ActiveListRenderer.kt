@@ -52,14 +52,12 @@ internal class ActiveListRenderer(
         tail.add(spacer, BorderLayout.EAST)
         row.remove(endPane)
         row.add(tail, BorderLayout.EAST)
+        // Stretch the glyph column top-to-bottom so its whole height is a click target; the icon
+        // stays centered within by the label's own alignment. Width stays at the icon's preferred
+        // size, pinned flush to the right edge.
         layers.addOverlay(glyph) { host, child ->
-            val size = child.preferredSize
-            Rectangle(
-                (host.width - size.width).coerceAtLeast(0),
-                ((host.height - size.height) / 2).coerceAtLeast(0),
-                size.width.coerceAtMost(host.width),
-                size.height.coerceAtMost(host.height),
-            )
+            val width = child.preferredSize.width.coerceAtMost(host.width)
+            Rectangle((host.width - width).coerceAtLeast(0), 0, width, host.height)
         }
     }
 
@@ -89,7 +87,7 @@ internal class ActiveListRenderer(
     private val text = Stack.vertical().next(header).next(desc)
     private val textPane = text.align(HAlign.TRACK, VAlign.CENTER)
     private val trail = JBLabel().apply { horizontalAlignment = SwingConstants.RIGHT }
-    private val metrics = WorktreeStatsView()
+    private val metrics = WorktreeStatsView(fill = false)
     private val trailPane = trail.align(HAlign.RIGHT, VAlign.CENTER)
     private val endPane = JPanel(BorderLayout()).apply {
         add(trailPane, BorderLayout.CENTER)

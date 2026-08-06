@@ -5,7 +5,10 @@ import ai.kilocode.client.ui.DiffStatBadge
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.list.ActiveListBadge
+import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.client.ui.layout.VAlign
+import ai.kilocode.client.ui.layout.align
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
@@ -23,6 +26,7 @@ import javax.swing.JPanel
 
 internal class WorktreeStatsView(
     private val openDiff: (() -> Unit)? = null,
+    fill: Boolean = true,
 ) : JPanel(null) {
     companion object {
         private val UP: Icon = IconLoader.getIcon("/icons/arrow-up.svg", WorktreeStatsView::class.java)
@@ -31,9 +35,13 @@ internal class WorktreeStatsView(
 
     private val behind = count(DOWN)
     private val ahead = count(UP)
-    private val diff = DiffStatBadge(0, 0, DiffStatBadge.Variant.COMPACT)
+    private val diff = DiffStatBadge(0, 0, DiffStatBadge.Variant.COMPACT, fill = fill)
     private val pr = JBLabel()
-    private val row = Stack.horizontal(UiStyle.Gap.sm()).next(behind).next(ahead).next(diff).next(pr)
+    private val change = Stack.horizontal(UiStyle.Gap.sm()).next(behind).next(ahead).next(diff)
+    // Change badge and PR link stack vertically, each pinned to the trailing edge.
+    private val changeLine = change.align(HAlign.RIGHT, VAlign.CENTER)
+    private val prLine = pr.align(HAlign.RIGHT, VAlign.CENTER)
+    private val row = Stack.vertical(UiStyle.Gap.sm()).next(changeLine).next(prLine)
     private var url: String? = null
     private var stats: WorktreeStatsDto? = null
     private var pull: WorktreePrDto? = null
@@ -84,7 +92,9 @@ internal class WorktreeStatsView(
         pr.icon = badge?.let { FilledBadgeIcon(it.text, it.style) }
         pr.toolTipText = tip
         pr.isVisible = badge != null
-        isVisible = behind.isVisible || ahead.isVisible || diff.isVisible || pr.isVisible
+        changeLine.isVisible = behind.isVisible || ahead.isVisible || diff.isVisible
+        prLine.isVisible = pr.isVisible
+        isVisible = changeLine.isVisible || prLine.isVisible
         revalidate()
         repaint()
     }
