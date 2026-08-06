@@ -604,7 +604,8 @@ it.instance("rejects env references in project MCP headers without dropping sibl
       const config = yield* Config.use.get()
       // Untrusted project headers must not pull process.env / authEnv secrets.
       expect(config.mcp?.["some-mcp"]).toBeUndefined()
-      expect(config.mcp?.["second-mcp"]?.url).toBe("https://other-url.com/mcp/")
+      const second = config.mcp?.["second-mcp"]
+      expect(second && typeof second === "object" && "type" in second && second.type === "remote" ? second.url : undefined).toBe("https://other-url.com/mcp/")
       const issues = yield* Config.Service.use((svc) => svc.warnings())
       expect(issues.some((w) => w.message.includes('Skipped MCP "some-mcp"'))).toBe(true)
       expect(JSON.stringify(config.mcp)).not.toContain("secret-key")
@@ -633,7 +634,8 @@ it.instance("skips MCP with env header without dropping sibling MCPs that use st
       })
       const config = yield* Config.use.get()
       expect(config.mcp?.bad).toBeUndefined()
-      expect(config.mcp?.good?.headers?.["API-KEY"]).toBe("static-ok")
+      const good = config.mcp?.good
+      expect(good && typeof good === "object" && "type" in good && good.type === "remote" ? good.headers?.["API-KEY"] : undefined).toBe("static-ok")
       const issues = yield* Config.Service.use((svc) => svc.warnings())
       expect(issues.some((w) => w.message.includes('Skipped MCP "bad"'))).toBe(true)
       expect(JSON.stringify(config.mcp)).not.toContain("server-secret")

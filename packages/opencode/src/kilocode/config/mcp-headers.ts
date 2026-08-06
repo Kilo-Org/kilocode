@@ -75,7 +75,7 @@ export async function expandProjectMcpHeaders(
           : String(error)
       warnings.push({
         path: source,
-        message: `Skipped MCP "${name}": header env expansion failed (${detail})`,
+        message: `Skipped MCP "${name}": ${detail}`,
       })
     }
   }

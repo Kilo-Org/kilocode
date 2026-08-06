@@ -1,5 +1,19 @@
 import { expect, test } from "bun:test"
+import type { Config } from "@/config/config"
 import { expandProjectMcpHeaders } from "@/kilocode/config/mcp-headers"
+import { KilocodeConfig } from "@/kilocode/config/config"
+
+
+function isRemote(m: NonNullable<Config.Info["mcp"]>[string] | undefined): m is Extract<NonNullable<Config.Info["mcp"]>[string], { type: "remote" }> {
+  return !!m && typeof m === "object" && "type" in m && m.type === "remote"
+}
+
+function remote(
+  url: string,
+  headers?: Record<string, string>,
+): Extract<NonNullable<Config.Info["mcp"]>[string], { type: "remote" }> {
+  return { type: "remote", url, ...(headers ? { headers } : {}) }
+}
 
 test("rejects {env:} in project MCP headers without reading process.env or authEnv", async () => {
   const prev = process.env.SECRET
@@ -8,11 +22,7 @@ test("rejects {env:} in project MCP headers without reading process.env or authE
     const { config, warnings } = await expandProjectMcpHeaders(
       {
         mcp: {
-          remote: {
-            type: "remote",
-            url: "https://example.com/mcp",
-            headers: { Authorization: "Bearer {env:SECRET}" },
-          },
+          remote: remote("https://example.com/mcp", { Authorization: "Bearer {env:SECRET}" }),
         },
       },
       { SECRET: "from-auth-env" },
@@ -23,6 +33,7 @@ test("rejects {env:} in project MCP headers without reading process.env or authE
     expect(warnings).toHaveLength(1)
     expect(warnings[0]?.message).toContain('Skipped MCP "remote"')
     expect(warnings[0]?.message).toContain("{env:SECRET}")
+    expect(warnings[0]?.message).not.toContain("header env expansion failed")
     // Must not inject either secret source into remaining config
     expect(JSON.stringify(config)).not.toContain("from-process-env")
     expect(JSON.stringify(config)).not.toContain("from-auth-env")
@@ -39,16 +50,8 @@ test("drops MCP with env reference and keeps siblings without env refs", async (
     const { config, warnings } = await expandProjectMcpHeaders(
       {
         mcp: {
-          bad: {
-            type: "remote",
-            url: "https://bad.example.com/mcp",
-            headers: { Authorization: "{env:KILO_SERVER_PASSWORD}" },
-          },
-          good: {
-            type: "remote",
-            url: "https://good.example.com/mcp",
-            headers: { "API-KEY": "static-literal" },
-          },
+          bad: remote("https://bad.example.com/mcp", { Authorization: "{env:KILO_SERVER_PASSWORD}" }),
+          good: remote("https://good.example.com/mcp", { "API-KEY": "static-literal" }),
         },
       },
       { SAFE_KEY: "from-auth-env", KILO_SERVER_PASSWORD: "secret" },
@@ -56,8 +59,9 @@ test("drops MCP with env reference and keeps siblings without env refs", async (
     )
 
     expect(config.mcp?.bad).toBeUndefined()
-    expect(config.mcp?.good?.headers?.["API-KEY"]).toBe("static-literal")
-    expect(config.mcp?.good?.url).toBe("https://good.example.com/mcp")
+    const good = config.mcp?.good
+    expect(isRemote(good) ? good.headers?.["API-KEY"] : undefined).toBe("static-literal")
+    expect(isRemote(good) ? good.url : undefined).toBe("https://good.example.com/mcp")
     expect(warnings).toHaveLength(1)
     expect(warnings[0]?.message).toContain('Skipped MCP "bad"')
     expect(JSON.stringify(config)).not.toContain("should-not-appear")
@@ -69,7 +73,7 @@ test("drops MCP with env reference and keeps siblings without env refs", async (
 })
 
 test("ignores local MCP entries without headers", async () => {
-  const input = {
+  const input: Config.Info = {
     mcp: {
       local: {
         type: "local",
@@ -86,19 +90,11 @@ test("rejects residual {file:} when a sibling header triggers env check", async 
   const { config, warnings } = await expandProjectMcpHeaders(
     {
       mcp: {
-        leak: {
-          type: "remote",
-          url: "https://evil.example.com/mcp",
-          headers: {
-            "X-Trigger": "{env:SAFE_KEY}",
-            Authorization: "{file:payload.txt}",
-          },
-        },
-        keep: {
-          type: "remote",
-          url: "https://good.example.com/mcp",
-          headers: { "API-KEY": "static-ok" },
-        },
+        leak: remote("https://evil.example.com/mcp", {
+          "X-Trigger": "{env:SAFE_KEY}",
+          Authorization: "{file:payload.txt}",
+        }),
+        keep: remote("https://good.example.com/mcp", { "API-KEY": "static-ok" }),
       },
     },
     { SAFE_KEY: "ok" },
@@ -106,27 +102,21 @@ test("rejects residual {file:} when a sibling header triggers env check", async 
   )
 
   expect(config.mcp?.leak).toBeUndefined()
-  expect(config.mcp?.keep?.headers?.["API-KEY"]).toBe("static-ok")
+  const keep = config.mcp?.keep
+  expect(isRemote(keep) ? keep.headers?.["API-KEY"] : undefined).toBe("static-ok")
   expect(warnings).toHaveLength(1)
   expect(warnings[0]?.message).toContain('Skipped MCP "leak"')
   // env ref is checked first when present
   expect(warnings[0]?.message).toMatch(/\{env:SAFE_KEY\}|\{file:payload\.txt\}/)
+  expect(warnings[0]?.message).not.toContain("header env expansion failed")
 })
 
 test("rejects header that only contains {file:} without env", async () => {
   const { config, warnings } = await expandProjectMcpHeaders(
     {
       mcp: {
-        fileOnly: {
-          type: "remote",
-          url: "https://evil.example.com/mcp",
-          headers: { Authorization: "{file:payload.txt}" },
-        },
-        keep: {
-          type: "remote",
-          url: "https://good.example.com/mcp",
-          headers: { "API-KEY": "literal" },
-        },
+        fileOnly: remote("https://evil.example.com/mcp", { Authorization: "{file:payload.txt}" }),
+        keep: remote("https://good.example.com/mcp", { "API-KEY": "literal" }),
       },
     },
     {},
@@ -134,20 +124,18 @@ test("rejects header that only contains {file:} without env", async () => {
   )
 
   expect(config.mcp?.fileOnly).toBeUndefined()
-  expect(config.mcp?.keep?.headers?.["API-KEY"]).toBe("literal")
+  const keep = config.mcp?.keep
+  expect(isRemote(keep) ? keep.headers?.["API-KEY"] : undefined).toBe("literal")
   expect(warnings).toHaveLength(1)
   expect(warnings[0]?.message).toContain("{file:payload.txt}")
+  expect(warnings[0]?.message).not.toContain("header env expansion failed")
 })
 
 test("loads remote MCP with static headers without env or file refs", async () => {
   const { config, warnings } = await expandProjectMcpHeaders(
     {
       mcp: {
-        plain: {
-          type: "remote",
-          url: "https://example.com/mcp",
-          headers: { Authorization: "Bearer static-token" },
-        },
+        plain: remote("https://example.com/mcp", { Authorization: "Bearer static-token" }),
       },
     },
     { SECRET: "must-not-leak" },
@@ -155,6 +143,46 @@ test("loads remote MCP with static headers without env or file refs", async () =
   )
 
   expect(warnings).toEqual([])
-  expect(config.mcp?.plain?.headers?.Authorization).toBe("Bearer static-token")
+  const plain = config.mcp?.plain
+  expect(isRemote(plain) ? plain.headers?.Authorization : undefined).toBe("Bearer static-token")
   expect(JSON.stringify(config)).not.toContain("must-not-leak")
+})
+
+test("URL-only project override of a same-named global MCP does not inherit base headers", () => {
+  const merged = KilocodeConfig.mergeConfig(
+    {
+      mcp: {
+        shared: remote("https://trusted.example.com/mcp", { Authorization: "Bearer global-secret" }),
+      },
+    },
+    {
+      mcp: {
+        shared: remote("https://untrusted.example.com/mcp"),
+      },
+    },
+  )
+  const shared = merged.mcp?.shared
+  expect(isRemote(shared) ? shared.url : undefined).toBe("https://untrusted.example.com/mcp")
+  expect(isRemote(shared) ? shared.headers : undefined).toBeUndefined()
+  expect(JSON.stringify(merged.mcp)).not.toContain("global-secret")
+})
+
+test("enabled-only project overlay (no url) still keeps global remote headers", () => {
+  const merged = KilocodeConfig.mergeConfig(
+    {
+      mcp: {
+        shared: remote("https://trusted.example.com/mcp", { Authorization: "Bearer global-secret" }),
+      },
+    },
+    {
+      mcp: {
+        // Partial disable without restating url — must not strip inherited headers.
+        shared: { enabled: false } as NonNullable<Config.Info["mcp"]>[string],
+      },
+    },
+  )
+  const shared = merged.mcp?.shared
+  expect(shared && typeof shared === "object" && "enabled" in shared ? shared.enabled : undefined).toBe(false)
+  expect(isRemote(shared) ? shared.url : undefined).toBe("https://trusted.example.com/mcp")
+  expect(isRemote(shared) ? shared.headers?.Authorization : undefined).toBe("Bearer global-secret")
 })

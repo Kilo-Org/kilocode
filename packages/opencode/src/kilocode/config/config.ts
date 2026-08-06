@@ -437,6 +437,53 @@ export namespace KilocodeConfig {
       e.permission = cloned
     }
 
+    // kilocode_change start - MCP servers merge by name; URL-only remote overlays must not inherit base headers
+    const existingMcp = e.mcp
+    const patchMcp = p.mcp
+    if (isRecord(existingMcp) || isRecord(patchMcp)) {
+      delete e.mcp
+      delete p.mcp
+      const merged = stripNulls(mergeDeep(e, p) as Record<string, unknown>) as Config.Info
+      const baseMcp = isRecord(existingMcp) ? (existingMcp as NonNullable<Config.Info["mcp"]>) : undefined
+      const srcMcp = isRecord(patchMcp) ? (patchMcp as NonNullable<Config.Info["mcp"]>) : undefined
+      if (!srcMcp) {
+        if (baseMcp) merged.mcp = baseMcp
+        return merged
+      }
+      if (!baseMcp) {
+        merged.mcp = srcMcp
+        return merged
+      }
+      const out: NonNullable<Config.Info["mcp"]> = { ...baseMcp }
+      for (const [name, src] of Object.entries(srcMcp)) {
+        const base = baseMcp[name]
+        if (!src || typeof src !== "object" || !base || typeof base !== "object") {
+          out[name] = src
+          continue
+        }
+        const entry = mergeDeep(base, src) as (typeof out)[string]
+        // Retargeted remote MCP (URL change) without headers must not inherit base secrets.
+        const srcUrl = "url" in src && typeof src.url === "string" ? src.url : undefined
+        const baseUrl = "url" in base && typeof base.url === "string" ? base.url : undefined
+        const retargetsRemote =
+          "type" in src &&
+          src.type === "remote" &&
+          srcUrl !== undefined &&
+          baseUrl !== undefined &&
+          srcUrl !== baseUrl &&
+          !("headers" in src)
+        if (retargetsRemote && entry && typeof entry === "object" && "headers" in entry) {
+          const { headers: _drop, ...rest } = entry as Record<string, unknown>
+          out[name] = rest as (typeof out)[string]
+        } else {
+          out[name] = entry
+        }
+      }
+      merged.mcp = out
+      return merged
+    }
+    // kilocode_change end
+
     return stripNulls(mergeDeep(e, p) as Record<string, unknown>) as Config.Info
   }
 
