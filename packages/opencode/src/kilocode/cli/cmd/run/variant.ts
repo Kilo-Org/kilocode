@@ -1,5 +1,14 @@
 const effort = ["none", "minimal", "low", "medium", "high", "xhigh", "max"]
 
+/** Keep an explicit CLI variant verbatim; only infer a fallback for automatic selections. */
+export function resolvePreservedVariant(
+  input: string | undefined,
+  current: string | undefined,
+  variants: string[],
+): string | undefined {
+  return input ?? preserveVariant(current, variants)
+}
+
 /** Keep the selected effort when possible, falling back to the nearest known effort. */
 export function preserveVariant(current: string | undefined, variants: string[]): string | undefined {
   if (!current || variants.length === 0) return undefined
