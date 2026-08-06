@@ -6587,6 +6587,23 @@
               "pattern": "^msg"
             },
             "required": false
+          },
+          {
+            "name": "file",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "full",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["true", "false"]
+            },
+            "required": false
           }
         ],
         "responses": {
@@ -26891,6 +26908,12 @@
           "patch": {
             "type": "string"
           },
+          "before": {
+            "type": "string"
+          },
+          "after": {
+            "type": "string"
+          },
           "additions": {
             "type": "number"
           },
@@ -34363,6 +34386,12 @@
           "patch": {
             "type": "string"
           },
+          "before": {
+            "type": "string"
+          },
+          "after": {
+            "type": "string"
+          },
           "additions": {
             "type": "number"
           },
@@ -34372,12 +34401,6 @@
           "status": {
             "type": "string",
             "enum": ["added", "deleted", "modified"]
-          },
-          "before": {
-            "type": "string"
-          },
-          "after": {
-            "type": "string"
           },
           "tracked": {
             "type": "boolean"
@@ -34392,7 +34415,7 @@
             "type": "string"
           }
         },
-        "required": ["additions", "deletions", "before", "after", "tracked", "generatedLike", "summarized", "stamp"],
+        "required": ["before", "after", "additions", "deletions", "tracked", "generatedLike", "summarized", "stamp"],
         "additionalProperties": false
       },
       "SnapshotSummaryFileDiff": {
