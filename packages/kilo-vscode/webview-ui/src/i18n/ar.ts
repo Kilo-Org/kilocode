@@ -158,6 +158,7 @@ export const dict = {
   "model.group.auto": "النماذج التلقائية",
   "model.group.recommended": "موصى به",
   "model.group.favorites": "المفضلة",
+  "model.group.mostUsed": "الأكثر استخدامًا",
   "model.favorite.add": "إضافة إلى المفضلة",
   "model.favorite.remove": "إزالة من المفضلة",
   "model.preview.label.released": "الإصدار",

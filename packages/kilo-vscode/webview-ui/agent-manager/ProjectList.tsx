@@ -22,6 +22,11 @@ import { ProjectBranchDialog } from "./ProjectBranchDialog"
 import type { ProjectStore } from "./project/store"
 import type { ModeRouter } from "./mode-router"
 
+const place = (state: AgentManagerStateMessage, session: ProjectSessionInfo, local: string) => {
+  const wt = state.worktrees.find((item) => item.id === session.worktreeId)
+  return wt?.label || wt?.branch || local
+}
+
 interface Props {
   projects: AgentProjectSnapshot[]
   states: Record<string, AgentManagerStateMessage>
@@ -34,6 +39,8 @@ interface Props {
   selection?: string
   currentSessionID?: () => string | undefined
   mode: ModeRouter
+  defaultBase?: (projectId: string) => string | undefined
+  onCreate?: (projectId: string) => void
   busy?: (projectId: string, id: string) => boolean
   working?: (projectId: string, id: string) => boolean
   localBusy?: (projectId: string) => boolean
@@ -88,14 +95,16 @@ export const ProjectList: Component<Props> = (props) => {
         })
       }
       for (const session of props.sessions[project.id] ?? []) {
+        const wt = state.worktrees.find((item) => item.id === session.worktreeId)
+        const where = place(state, session, props.t("agentManager.local"))
         items.push({
           key: `${project.id}:session:${session.id}`,
           projectId: project.id,
           kind: "session",
           group: "sessions",
           title: session.title || props.t("agentManager.session.untitled"),
-          meta: [project.label],
-          search: [project.label, session.title, session.id].filter(Boolean).join(" "),
+          meta: [project.label, where],
+          search: [project.label, where, wt?.branch, session.title, session.id].filter(Boolean).join(" "),
           updatedAt: session.updatedAt,
           state: "idle",
           visible: project.expanded,
@@ -134,12 +143,14 @@ export const ProjectList: Component<Props> = (props) => {
     return select({ projectId: item.projectId, kind: "session", sessionId: item.sessionId })
   }
   const newWorktree = (projectId: string) => {
-    const state = props.states[projectId]
     dialog.show(() => (
       <NewWorktreeDialog
         projectId={projectId}
+        projects={() => props.projects}
+        activeProjectId={props.selectedProject}
+        defaultBase={props.defaultBase}
+        onCreate={props.onCreate}
         mode={props.mode}
-        defaultBaseBranch={state?.defaultBaseBranch ?? props.local[projectId]?.branch}
         onClose={() => dialog.close()}
       />
     ))

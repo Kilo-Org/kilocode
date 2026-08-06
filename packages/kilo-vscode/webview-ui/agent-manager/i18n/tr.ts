@@ -123,6 +123,9 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.cancel": "İptal",
   "agentManager.dialog.removeStaleWorktree.confirm": "Eskimiş worktree'yi kaldır",
 
+  "agentManager.dialog.project.select": "Proje seç",
+  "agentManager.dialog.project.untrusted": "Önce kenar çubuğunda bu projeye güvenin",
+  "agentManager.dialog.project.missing": "Depo bulunamadı",
   "agentManager.dialog.openWorktree": "Yeni Worktree",
   "agentManager.dialog.configureWorktree": "Yeni Worktree Yapılandır...",
   "agentManager.dialog.tab.new": "Yeni",
