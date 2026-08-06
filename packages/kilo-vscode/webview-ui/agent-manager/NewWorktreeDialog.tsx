@@ -22,7 +22,7 @@ import { useServer } from "../src/context/server"
 import { useSession } from "../src/context/session"
 import { useProvider } from "../src/context/provider"
 import { useConfig } from "../src/context/config"
-import { cycleVariant } from "../src/context/session-variant-store"
+import { cycleVariant, preserveVariant } from "../src/context/session-variant-store"
 import { ModelSelectorBase } from "../src/components/shared/ModelSelector"
 import { ModeSwitcherBase } from "../src/components/shared/ModeSwitcher"
 import { SpeechToTextButton } from "../src/components/speech-to-text/SpeechToTextButton"
@@ -254,7 +254,7 @@ export const NewWorktreeDialog: Component<{
       return
     }
     const stored = variant()
-    if (!stored || !list.includes(stored)) setVariant(list[0])
+    if (!stored || !list.includes(stored)) setVariant(preserveVariant(stored, list) ?? list[0])
   })
 
   createEffect(() => {
@@ -772,7 +772,12 @@ export const NewWorktreeDialog: Component<{
                     <ModelSelectorBase
                       value={model()}
                       onSelect={(pid, mid) => {
-                        if (pid && mid) setModel({ providerID: pid, modelID: mid })
+                        if (!pid || !mid) return
+                        const current = effectiveVariant()
+                        const next = { providerID: pid, modelID: mid }
+                        const list = Object.keys(provider.findModel(next)?.variants ?? {})
+                        setModel(next)
+                        setVariant(preserveVariant(current, list))
                       }}
                       onPick={restorePrompt}
                       onCancel={restorePrompt}

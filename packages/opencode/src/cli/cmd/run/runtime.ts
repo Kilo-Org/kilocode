@@ -20,6 +20,8 @@ import { resolveModelInfo, resolveRunTuiConfig, resolveSessionInfo } from "./run
 import { createRuntimeLifecycle } from "./runtime.lifecycle"
 import { trace } from "./trace"
 import { cycleVariant, formatModelLabel, resolveSavedVariant, resolveVariant, saveVariant } from "./variant.shared"
+// kilocode_change - preserve compatible variants when switching models
+import { preserveVariant } from "@/kilocode/cli/cmd/run/variant" // kilocode_change
 import type { LocalReplayAnchor, LocalReplayRow, RunInput, RunPrompt, RunProvider, StreamCommit } from "./types"
 
 /** @internal Exported for testing */
@@ -303,8 +305,9 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
         return
       }
 
+      // kilocode_change start - preserve the active effort across model switches
+      const previous = state.activeVariant
       state.model = model
-      state.activeVariant = undefined
       state.variants = variantsFor(state.providers, model)
       const switching = resolveSavedVariant(model).then((saved) => {
         const current = state.model
@@ -312,8 +315,11 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
           return
         }
 
-        state.activeVariant = resolveVariant(ctx.variant, undefined, saved, state.variants)
+        // kilocode_change - prefer the active effort over a model-specific saved preference
+        state.activeVariant =
+          preserveVariant(previous, state.variants) ?? resolveVariant(ctx.variant, undefined, saved, state.variants)
       })
+      // kilocode_change end
       state.switching = switching
       await switching
       if (state.switching === switching) {
@@ -449,10 +455,14 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
     state.variants = variantsFor(state.providers, state.model)
     state.limits = info.limits
 
-    const next = resolveVariant(ctx.variant, session.variant, savedVariant, state.variants)
+    // kilocode_change start - preserve the active effort when the model catalog arrives asynchronously
+    const next =
+      preserveVariant(state.activeVariant, state.variants) ??
+      resolveVariant(ctx.variant, session.variant, savedVariant, state.variants)
     if (next !== state.activeVariant) {
       state.activeVariant = next
     }
+    // kilocode_change end
 
     if (footer.isClosed) {
       return
