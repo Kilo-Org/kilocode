@@ -409,7 +409,6 @@ const AgentManagerContent: Component = () => {
       { defer: true },
     ),
   )
-
   type FocusOwner = "prompt" | { terminal: string }
   const focusMemory = new Map<string, FocusOwner>()
   let focusInputUntil = 0
@@ -1230,7 +1229,6 @@ const AgentManagerContent: Component = () => {
       }
     }
     window.addEventListener("message", handler)
-
     // Prevent Cmd/Ctrl shortcuts from triggering native browser actions
     const preventDefaults = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return
@@ -2224,7 +2222,6 @@ const AgentManagerContent: Component = () => {
     })
   }
   const tabFocus = createTabFocus({ ids: () => tabIds(), select: focusTab })
-
   const cycleTerminal = (direction: "previous" | "next") => {
     const focused = terms.focusedId()
     const placement = terms.sideFocusedId() || (!focused && terminalVisible()) ? "side" : "tab"
