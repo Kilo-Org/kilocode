@@ -1,6 +1,7 @@
 import { For, Show, type Accessor, type Component } from "solid-js"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { textDirection } from "@kilocode/kilo-ui/text-direction"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type { SessionInfo } from "../src/types/messages"
@@ -67,7 +68,10 @@ export const UnassignedSessionsSection: Component<Props> = (props) => {
                       data-sidebar-id={props.sidebarId?.(session.id) ?? session.id}
                       onClick={() => props.onSelect(session.id)}
                     >
-                      <span class="am-item-title" dir="auto">
+                      <span
+                        class="am-item-title"
+                        dir={textDirection(session.title || t("agentManager.session.untitled"))}
+                      >
                         {session.title || t("agentManager.session.untitled")}
                       </span>
                       <span class="am-item-time">{formatRelativeDate(session.updatedAt)}</span>

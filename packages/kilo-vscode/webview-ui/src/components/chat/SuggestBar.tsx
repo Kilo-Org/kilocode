@@ -1,5 +1,6 @@
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { textDirection } from "@kilocode/kilo-ui/text-direction"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import type { Component } from "solid-js"
 import { For, Show } from "solid-js"
@@ -30,7 +31,7 @@ export const SuggestBar: Component<{ request: SuggestionRequest }> = (props) => 
         <span data-slot="suggest-bar-icon">
           <Icon name="brain" size="small" />
         </span>
-        <span data-slot="suggest-bar-text" dir="auto">
+        <span data-slot="suggest-bar-text" dir={textDirection(props.request.text)}>
           {props.request.text}
         </span>
       </div>

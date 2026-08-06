@@ -402,7 +402,7 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   }
 
   [data-slot="user-message-text"] {
-    unicode-bidi: plaintext; /* Match the prompt input */
+    unicode-bidi: isolate; /* Isolate from siblings, but honor the resolved dir */
     background-color: color-mix(in srgb, var(--text-base) 7%, transparent);
     border: 1px solid transparent;
     transition: opacity 0.3s ease;
