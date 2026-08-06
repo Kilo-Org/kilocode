@@ -61,6 +61,7 @@ import { extractFilePathFromHref } from "../file-path"
 import { normalize } from "./session-diff"
 import { deferredHighlight } from "../context/marked"
 import { escapeHtml } from "../util/escape-html"
+import { textDirection } from "../util/text-direction"
 import { buildHighlightedTextSegments, type HighlightSegment } from "./message-highlight"
 
 // Windows CLI tools (e.g. winget) use \r to overwrite progress bars in-place.
@@ -888,7 +889,11 @@ export function UserMessageDisplay(props: {
             <div data-slot="user-message-body">
               {props.header}
               <Show when={text()}>
-                <div data-slot="user-message-text" dir="auto" data-queued={props.queued ? "" : undefined}>
+                <div
+                  data-slot="user-message-text"
+                  dir={textDirection(text())}
+                  data-queued={props.queued ? "" : undefined}
+                >
                   <HighlightedText text={text()} references={inlineFiles()} agents={agents()} />
                 </div>
               </Show>
