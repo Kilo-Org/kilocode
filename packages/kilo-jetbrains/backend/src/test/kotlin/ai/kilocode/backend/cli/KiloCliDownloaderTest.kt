@@ -70,7 +70,7 @@ class KiloCliDownloaderTest {
             assertEquals(cli.absolutePath, cached.absolutePath)
             assertEquals(1, server.requestCount)
             assertTrue(cachedProgress.isEmpty())
-            assertContains(log.messages, "INFO: Using cached Kilo CLI 1.2.3 for ${KiloCliPlatform.current()} at ${cli.absolutePath}")
+            assertContains(log.messages, "INFO: Kilo CLI 1.2.3 (${KiloCliPlatform.current()}) already cached at ${cli.absolutePath}; skipping download and extraction")
 
             File(cli.parentFile.parentFile, ".complete").writeText("ok\n")
             server.enqueue(MockResponse().setResponseCode(200).setBody(Buffer().write(bytes)))

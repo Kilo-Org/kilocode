@@ -25,6 +25,7 @@ import { registerHeapSnapshot } from "./commands/heap-snapshot"
 import { RemoteStatusService } from "./services/RemoteStatusService"
 import { markWorkspace } from "./util/spotlight"
 import { createNotebookBridge } from "./services/notebook"
+import { createGitExecutable } from "./util/git-executable"
 
 let agentManager: AgentManagerProvider | undefined
 let shuttingDown = false
@@ -149,7 +150,10 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Create Agent Manager provider for editor panel
   const agentManagerHost = new VscodeHost(context.extensionUri, connectionService, context, remoteService)
-  const agentManagerProvider = new AgentManagerProvider(agentManagerHost, connectionService)
+  const git = createGitExecutable({
+    log: (message) => console.warn(`[Kilo New] ${message}`),
+  })
+  const agentManagerProvider = new AgentManagerProvider(agentManagerHost, connectionService, git)
   agentManagerProvider.onPanelVisibilityChange((visible) => remember({ agentManager: visible }))
   agentManager = agentManagerProvider
   context.subscriptions.push(agentManagerProvider)

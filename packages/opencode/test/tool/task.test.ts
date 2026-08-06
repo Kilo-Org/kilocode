@@ -269,6 +269,69 @@ describe("tool.task", () => {
     }),
   )
 
+  // kilocode_change start - verify forked task children remain resumable
+  it.instance("execute resumes a cloned task session after the parent is forked", () =>
+    Effect.gen(function* () {
+      const sessions = yield* Session.Service
+      const { chat, assistant } = yield* seed()
+      const child = yield* sessions.create({ parentID: chat.id, title: "Existing child" })
+      yield* sessions.updatePart({
+        id: PartID.ascending(),
+        messageID: assistant.id,
+        sessionID: chat.id,
+        type: "tool",
+        callID: "call_1",
+        tool: "task",
+        metadata: { sessionId: child.id },
+        state: {
+          status: "completed",
+          input: { description: "inspect bug", prompt: "continue", task_id: child.id },
+          output: `<task id="${child.id}"><task_result>done</task_result></task>`,
+          title: "inspect bug",
+          metadata: { sessionId: child.id },
+          time: { start: Date.now(), end: Date.now() },
+        },
+      } as MessageV2.ToolPart)
+
+      const forked = yield* sessions.fork({ sessionID: chat.id })
+      const msgs = yield* sessions.messages({ sessionID: forked.id })
+      const part = msgs.flatMap((msg) => msg.parts).find((item) => item.type === "tool" && item.tool === "task") as
+        | MessageV2.ToolPart
+        | undefined
+      if (!part || part.state.status !== "completed") throw new Error("expected a completed task part")
+      const id = part.state.input.task_id
+      if (typeof id !== "string") throw new Error("expected a cloned task ID")
+      const parent = msgs.find((msg) => msg.info.role === "assistant")
+      if (!parent || parent.info.role !== "assistant") throw new Error("expected a forked assistant message")
+
+      const tool = yield* TaskTool
+      const def = yield* tool.init()
+      let seen: SessionPrompt.PromptInput | undefined
+      yield* def.execute(
+        {
+          description: "inspect bug",
+          prompt: "continue from the fork",
+          subagent_type: "general",
+          task_id: id,
+        },
+        {
+          sessionID: forked.id,
+          messageID: parent.info.id,
+          agent: "build",
+          abort: new AbortController().signal,
+          extra: { promptOps: stubOps({ onPrompt: (input) => (seen = input) }) },
+          messages: [],
+          metadata: () => Effect.void,
+          ask: () => Effect.void,
+        },
+      )
+
+      expect(seen?.sessionID).toBe(SessionID.descending(id))
+      expect((yield* sessions.get(SessionID.descending(id))).parentID).toBe(forked.id)
+    }),
+  )
+  // kilocode_change end
+
   // kilocode_change start - resumed children rebuild parent platform attribution after restart
   it.instance("execute preserves platform attribution when resuming a task", () =>
     Effect.gen(function* () {
