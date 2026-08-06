@@ -94,7 +94,9 @@ function waitForWorktreeEvent(
   return { promise: deferred.promise, cancel: cleanup }
 }
 
-async function resolveWorktree(name: string, root: string, timeoutMs = 10 * 60_000) {
+// Exported for `kilo worktree create` (worktree.ts), which calls this and
+// exits instead of going on to launch the TUI.
+export async function resolveWorktree(name: string, root: string, timeoutMs = 10 * 60_000) {
   const { Worktree } = await import("@/worktree")
   const { GlobalBus } = await import("@/bus/global")
   const { InstanceState } = await import("@/effect/instance-state")
