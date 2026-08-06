@@ -27,7 +27,9 @@ export function KiloPassMeter(props: KiloPassMeterProps) {
     const bonus = Math.max(0, local.bonus)
     const used = Math.max(0, local.used)
     const total = paid + bonus
-    const boundary = total > 0 ? (paid / total) * 100 : 100
+    // With no credits at all the track stays empty instead of rendering a
+    // full-width paid allocation for a $0 pass.
+    const boundary = total > 0 ? (paid / total) * 100 : 0
     const filled = total > 0 ? Math.min(100, (used / total) * 100) : 0
     return {
       paid,
@@ -77,7 +79,9 @@ export function KiloPassMeter(props: KiloPassMeterProps) {
         />
       </div>
       <div data-slot="kilo-pass-meter-amounts" aria-hidden="true">
-        <span style={{ left: `${model().boundary}%` }}>{local.format(model().paid)}</span>
+        <span hidden={model().total <= 0} style={{ left: `${model().boundary}%` }}>
+          {local.format(model().paid)}
+        </span>
         <span data-slot="kilo-pass-meter-bonus-amount" hidden={model().bonus <= 0}>
           {local.format(model().bonus)}
         </span>

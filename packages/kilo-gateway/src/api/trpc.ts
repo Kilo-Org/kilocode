@@ -148,7 +148,7 @@ async function query<T>(procedure: string, token: string, schema: z.ZodType<T>, 
       throw new CloudTrpcError("protocol", response.status)
     }
   })()
-  if (parsed.error !== undefined) throw new CloudTrpcError("procedure", response.status)
+  if (parsed.error != null) throw new CloudTrpcError("procedure", response.status)
   if (!response.ok) throw new CloudTrpcError("http", response.status)
   if (!parsed.result) throw new CloudTrpcError("protocol", response.status)
 

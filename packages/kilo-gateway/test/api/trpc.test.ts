@@ -136,8 +136,18 @@ describe("Cloud tRPC client", () => {
     const error = await fetchCodingPlanSubscriptions("secret-token").catch((value) => value)
     expect(error).toBeInstanceOf(CloudTrpcError)
     expect(error).toMatchObject({ kind: "procedure", message: "Kilo Cloud data is temporarily unavailable." })
-    expect(JSON.stringify(error)).not.toContain("raw private error")
-    expect(JSON.stringify(error)).not.toContain("secret-token")
+    // Include non-enumerable Error surfaces that JSON.stringify would omit.
+    const surface = `${error.name} ${error.message} ${error.stack} ${JSON.stringify(error)}`
+    expect(surface).not.toContain("raw private error")
+    expect(surface).not.toContain("secret-token")
+  })
+
+  test("tolerates an explicit null error field in successful envelopes", async () => {
+    global.fetch = mock(() =>
+      Promise.resolve(new Response(JSON.stringify({ result: { data: { json: [] } }, error: null }))),
+    ) as unknown as typeof fetch
+
+    await expect(fetchCodingPlanSubscriptions("token")).resolves.toEqual([])
   })
 
   test("maps malformed envelopes and schema failures safely", async () => {

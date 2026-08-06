@@ -150,15 +150,20 @@ function preserve(state: State, prefix: string, identity?: string) {
   const items: UsageSnapshot[] = []
   for (const [id, cell] of state.sources) {
     if (!id.startsWith(prefix) || cell.identity !== identity || !cell.value) continue
-    const value = {
-      ...cell.value,
-      fetchState: "stale" as const,
-      error: {
-        code: "source_refresh_unavailable",
-        message: "The latest usage could not be loaded.",
-        retryable: true,
-      },
-    }
+    // Only successfully loaded data may be relabeled "stale"; snapshots that
+    // never loaded keep their failure state instead of claiming aged data.
+    const loaded = cell.value.fetchState === "ready" || cell.value.fetchState === "stale"
+    const value = loaded
+      ? {
+          ...cell.value,
+          fetchState: "stale" as const,
+          error: {
+            code: "source_refresh_unavailable",
+            message: "The latest usage could not be loaded.",
+            retryable: true,
+          },
+        }
+      : cell.value
     cell.value = value
     cell.updatedAt = new Date().toISOString()
     cell.expires = Date.now() + errorTtl
