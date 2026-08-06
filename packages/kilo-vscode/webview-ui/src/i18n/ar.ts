@@ -1105,6 +1105,9 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "تبديل جهد الاستدلال باستخدام Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "اضغط على Shift+Tab في حقل إدخال الموجه للتبديل إلى مستوى جهد الاستدلال التالي. عطّل هذا الخيار للاحتفاظ بـ Shift+Tab للتنقل بين عناصر التركيز باستخدام لوحة المفاتيح.",
+  "settings.display.limitContentWidth.title": "تقييد عرض محتوى الدردشة",
+  "settings.display.limitContentWidth.description":
+    "يبقي محتوى الدردشة ومربع الإدخال في عمود مركزي بعرض مقروء. عطّله لاستخدام العرض الكامل للوحة في الشريط الجانبي وعلامات تبويب المحرر وAgent Manager.",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",

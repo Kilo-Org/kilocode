@@ -1138,6 +1138,9 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Promijeni napor razmišljanja pomoću Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Pritisnite Shift+Tab u polju za unos upita da pređete na sljedeći nivo napora razmišljanja. Onemogućite ovu opciju kako biste zadržali Shift+Tab za navigaciju fokusom putem tastature.",
+  "settings.display.limitContentWidth.title": "Ograniči širinu sadržaja chata",
+  "settings.display.limitContentWidth.description":
+    "Drži sadržaj chata i prompt u centriranoj, čitljivoj koloni. Isključite da biste koristili punu širinu panela u bočnoj traci, karticama editora i Agent Manageru.",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",

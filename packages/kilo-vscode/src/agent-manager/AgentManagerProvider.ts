@@ -113,7 +113,6 @@ export class AgentManagerProvider implements Disposable {
   // Tracks sessions owned by this panel until they are explicitly closed.
   private panelSessions = new Set<string>()
   private busySessions = new Set<string>()
-
   /** Session ID most recently loaded via `loadMessages`; updated synchronously. */
   private activeSessionId: string | undefined
   private visiblePresence = new AgentManagerVisiblePresence(
