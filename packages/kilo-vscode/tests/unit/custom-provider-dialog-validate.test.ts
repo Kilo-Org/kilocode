@@ -206,6 +206,34 @@ describe("validateCustomProvider – variant name validation", () => {
     })
   })
 
+  it("preserves opaque variant options after the editor controls are removed", () => {
+    const form = base()
+    const raw = {
+      thinking: { type: "adaptive", display: "summarized" },
+      reasoningSummary: "auto",
+      include: ["reasoning.encrypted_content"],
+      customOption: { enabled: true },
+    }
+    form.models[0].reasoning = true
+    form.models[0].variants = [
+      {
+        name: "high",
+        raw,
+        enableThinking: undefined,
+        thinking: "adaptive",
+        splitReasoning: undefined,
+        outputEffort: undefined,
+        reasoningEffort: undefined,
+        chatTemplateArgs: undefined,
+      },
+    ]
+
+    const out = validateCustomProvider(args(form))
+    expect(out.result).toBeDefined()
+    const saved = out.result!.config.models["model-1"] as Record<string, unknown>
+    expect(saved.variants).toEqual({ high: raw })
+  })
+
   it("serializes image modality when supportsImages is set", () => {
     const form = base()
     form.models[0].supportsImages = true

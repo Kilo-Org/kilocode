@@ -105,6 +105,7 @@ function checkProviderID(id: string, editing: boolean, disabled: string[], exist
 }
 
 function serializeVariant(v: VariantEntry): [string, Record<string, unknown>] {
+  if (v.raw) return [v.name.trim(), v.raw]
   const cfg: Record<string, unknown> = {}
   if (v.enableThinking !== undefined) cfg.enable_thinking = v.enableThinking
   if (v.thinking !== undefined) cfg.thinking = { type: v.thinking }

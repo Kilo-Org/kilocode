@@ -89,6 +89,7 @@ function modes(raw: unknown): Modalities {
 function parseVariant([name, cfg]: [string, Record<string, unknown>]): VariantEntry {
   return {
     name,
+    raw: cfg,
     enableThinking: typeof cfg.enable_thinking === "boolean" ? cfg.enable_thinking : undefined,
     thinking:
       typeof cfg.thinking === "object" && cfg.thinking !== null
@@ -460,25 +461,6 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     setErrors("headers", (v) => v.filter((_, i) => i !== index))
   }
 
-  function addVariant(mi: number) {
-    const blank: VariantEntry = {
-      name: "",
-      enableThinking: undefined,
-      thinking: undefined,
-      splitReasoning: undefined,
-      reasoningEffort: undefined,
-      outputEffort: undefined,
-      chatTemplateArgs: undefined,
-    }
-    setForm("models", mi, "variants", (v) => [...v, blank])
-    setErrors("models", mi, "variants", (v) => [...(v ?? []), {}])
-  }
-
-  function removeVariant(mi: number, vi: number) {
-    setForm("models", mi, "variants", (v) => v.filter((_, i) => i !== vi))
-    setErrors("models", mi, "variants", (v) => (v ?? []).filter((_, i) => i !== vi))
-  }
-
   function validate() {
     const output = validateCustomProvider({
       form,
@@ -673,7 +655,6 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
               {(m, i) => (
                 <ModelCard
                   m={m}
-                  i={i}
                   errors={errors.models[i()] ?? {}}
                   t={language.t}
                   canRemove={form.models.length > 1}
@@ -682,23 +663,6 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
                   onChangeReasoning={(v) => setForm("models", i(), "reasoning", v)}
                   onChangeSupportsImages={(v) => setForm("models", i(), "supportsImages", v)}
                   onRemove={() => removeModel(i())}
-                  onAddVariant={() => addVariant(i())}
-                  onRemoveVariant={(vi) => removeVariant(i(), vi)}
-                  onChangeVariantName={(vi, val) => setForm("models", i(), "variants", vi, "name", val)}
-                  onChangeVariantEnableThinking={(vi, val) =>
-                    setForm("models", i(), "variants", vi, "enableThinking", val)
-                  }
-                  onChangeVariantThinking={(vi, val) => setForm("models", i(), "variants", vi, "thinking", val)}
-                  onChangeVariantSplitReasoning={(vi, val) =>
-                    setForm("models", i(), "variants", vi, "splitReasoning", val)
-                  }
-                  onChangeVariantReasoningEffort={(vi, val) =>
-                    setForm("models", i(), "variants", vi, "reasoningEffort", val)
-                  }
-                  onChangeVariantOutputEffort={(vi, val) => setForm("models", i(), "variants", vi, "outputEffort", val)}
-                  onChangeVariantChatTemplateArgs={(vi, val) =>
-                    setForm("models", i(), "variants", vi, "chatTemplateArgs", val)
-                  }
                 />
               )}
             </For>
