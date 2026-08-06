@@ -114,6 +114,9 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.cancel": "إلغاء",
   "agentManager.dialog.removeStaleWorktree.confirm": "إزالة Worktree القديم",
 
+  "agentManager.dialog.project.select": "اختيار مشروع",
+  "agentManager.dialog.project.untrusted": "يُرجى الوثوق بهذا المشروع من الشريط الجانبي أولًا",
+  "agentManager.dialog.project.missing": "المستودع غير موجود",
   "agentManager.dialog.openWorktree": "شجرة عمل جديدة",
   "agentManager.dialog.configureWorktree": "تكوين Worktree جديد...",
   "agentManager.dialog.tab.new": "جديد",

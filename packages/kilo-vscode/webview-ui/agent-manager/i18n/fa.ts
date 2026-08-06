@@ -121,6 +121,9 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.cancel": "لغو",
   "agentManager.dialog.removeStaleWorktree.confirm": "حذف Worktree قدیمی",
 
+  "agentManager.dialog.project.select": "انتخاب پروژه",
+  "agentManager.dialog.project.untrusted": "ابتدا در نوار کناری به این پروژه اعتماد کنید",
+  "agentManager.dialog.project.missing": "مخزن یافت نشد",
   "agentManager.dialog.openWorktree": "Worktree جدید",
   "agentManager.dialog.tab.new": "جدید",
   "agentManager.dialog.tab.import": "وارد کردن",

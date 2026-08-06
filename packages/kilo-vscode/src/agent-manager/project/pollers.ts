@@ -13,13 +13,12 @@
 
 import type { GitOps } from "../GitOps"
 import { GitStatsPoller, type LocalStats, type WorktreePresenceResult, type WorktreeStats } from "../GitStatsPoller"
-import { diffSummary } from "../local-diff"
 import { PRStatusBridge } from "../pr-status-bridge"
 import type { PRStatus } from "../types"
 import type { ProjectContext } from "./context"
 import type { ProjectContexts } from "./contexts"
 import type { Semaphore } from "../semaphore"
-import type { AgentManagerOutMessage, WorktreeDiffEntry } from "../types"
+import type { AgentManagerOutMessage } from "../types"
 import type { WorktreeStateManager } from "../WorktreeStateManager"
 
 export interface PollerPair {
@@ -37,11 +36,22 @@ type StatsMessage = Extract<AgentManagerOutMessage, { type: "agentManager.worktr
 interface PollerDeps {
   git: GitOps
   semaphore: Semaphore
-  localDiff: (dir: string, base: string) => Promise<WorktreeDiffEntry[]>
+  hot?: () => Set<string>
   post: (msg: StatsOutMessage) => void
   openExternal: (url: string) => void
   visible: () => boolean
   log: (...args: unknown[]) => void
+}
+
+function hot(state: WorktreeStateManager | undefined): Set<string> {
+  const result = new Set<string>()
+  const target = state?.getActiveTarget()
+  if (target?.kind === "worktree") result.add(target.worktreeId)
+  if (target?.kind === "session") {
+    const id = state?.getSession(target.sessionId)?.worktreeId
+    if (id) result.add(id)
+  }
+  return result
 }
 
 /** Create the real poller pair for one project context. */
@@ -50,7 +60,7 @@ function createPollerPair(ctx: ProjectContext, deps: PollerDeps): PollerPair {
   const stats = new GitStatsPoller({
     getWorktrees: () => state()?.getWorktrees() ?? [],
     getWorkspaceRoot: () => ctx.root,
-    localDiff: deps.localDiff,
+    getHotWorktreeIds: deps.hot ?? (() => hot(state())),
     git: deps.git,
     semaphore: deps.semaphore,
     log: deps.log,
@@ -135,12 +145,12 @@ export function createPollers(opts: {
   presence: (result: WorktreePresenceResult) => void
   openExternal: (url: string) => void
   log: (...args: unknown[]) => void
+  hot?: () => Set<string>
 }): { stats: GitStatsPoller; pr: PRStatusBridge; projects: ProjectPollers } {
-  const localDiff = (dir: string, base: string) => diffSummary(opts.git, dir, base, opts.log)
   const stats = new GitStatsPoller({
     getWorktrees: () => opts.state()?.getWorktrees() ?? [],
     getWorkspaceRoot: opts.root,
-    localDiff,
+    getHotWorktreeIds: opts.hot ?? (() => hot(opts.state())),
     semaphore: opts.semaphore,
     onStats: (stats) => {
       const msg = { type: "agentManager.worktreeStats" as const, projectId: opts.activeId(), stats }
@@ -169,7 +179,7 @@ export function createPollers(opts: {
   const projects = new ProjectPollers({
     git: opts.git,
     semaphore: opts.semaphore,
-    localDiff,
+    hot: opts.hot,
     post: opts.post,
     openExternal: opts.openExternal,
     visible: opts.visible,

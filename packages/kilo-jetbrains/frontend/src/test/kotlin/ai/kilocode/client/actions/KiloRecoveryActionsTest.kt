@@ -126,6 +126,21 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
         assertEquals("Core v1.2.3 • Architecture: darwin-arm64", event.presentation.text)
     }
 
+    fun `test core info action marks bundled core`() {
+        appRpc.cliVersion = "1.2.3"
+        appRpc.cliPlatform = "darwin-arm64"
+        appRpc.cliBundled = true
+        ApplicationManager.getApplication().executeOnPooledThread {
+            runBlocking { app().coreInfo() }
+        }.get()
+        val action = CoreInfoAction()
+        val event = event(action)
+
+        update(action, event)
+
+        assertEquals("Bundled Core v1.2.3 • Architecture: darwin-arm64", event.presentation.text)
+    }
+
     fun `test local config action says open when target exists`() {
         rpc.localConfigPath = "/test/.kilo/kilo.jsonc"
         rpc.localConfigDisplayPath = "~/.kilo/kilo.jsonc"

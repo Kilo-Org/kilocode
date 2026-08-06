@@ -15,6 +15,8 @@
 
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 
+const env = { KILO_UNICODE_LOGO: "0" }
+
 /**
  * Everything the manager needs from the surrounding AgentManagerProvider.
  *
@@ -71,6 +73,9 @@ export class TerminalManager {
       directory: params.cwd,
       cwd: params.cwd,
       title: params.title,
+      // xterm's DOM renderer cannot draw the Unicode sextant glyphs used by
+      // Kilo's modern wordmark, so use the compatible logo in embedded tabs.
+      env,
     })
     if (error || !data) {
       const err = error instanceof Error ? error.message : String(error ?? "unknown error")
@@ -237,6 +242,7 @@ export class TerminalManager {
         directory: entry.cwd,
         cwd: entry.cwd,
         title: entry.title,
+        env,
       })
       const info = created.data
       if (created.error || !info)

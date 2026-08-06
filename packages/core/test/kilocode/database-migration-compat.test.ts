@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import { Database as SQLite } from "bun:sqlite"
 import { SqliteClient } from "@effect/sql-sqlite-bun"
 import { EffectDrizzleSqlite } from "@opencode-ai/effect-drizzle-sqlite"
 import { DatabaseMigration } from "@opencode-ai/core/database/migration"
@@ -159,6 +160,22 @@ describe("database migration compatibility", () => {
               sql`SELECT agent, replacement_seq AS replacementSeq, revision FROM session_context_epoch WHERE session_id = 'session'`,
             ),
           ).toEqual({ agent: "build", replacementSeq: 4, revision: 1 })
+
+          yield* db.run("PRAGMA busy_timeout = 0")
+          yield* Effect.acquireUseRelease(
+            Effect.sync(() => {
+              const holder = new SQLite(filename)
+              holder.run("PRAGMA busy_timeout = 0")
+              holder.run("BEGIN IMMEDIATE")
+              return holder
+            }),
+            () => ensure(db),
+            (holder) =>
+              Effect.sync(() => {
+                if (holder.inTransaction) holder.run("ROLLBACK")
+                holder.close()
+              }),
+          )
         }),
       ).pipe(Effect.provide(Database.layerFromPath(filename)), Effect.scoped),
     )

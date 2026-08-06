@@ -37,7 +37,7 @@ Depending on your setup, you can also use:
 {% image src="/docs/img/kiloclaw/profile-claw-nav.png" alt="Profile page showing Claw navigation" width="400" caption="Claw navigation in profile sidebar" /%}
 
 3. Click **Create Instance**
-4. Your instance will use **Kilo Auto Balanced** as the default model. You can optionally select a different model from the dropdown — see all available models at the [Kilo Leaderboard](https://kilo.ai/leaderboard#all-models).
+4. Your instance will use **Kilo Auto Efficient** as the default model. You can optionally select a different model from the dropdown — see all available models at the [Kilo Leaderboard](https://kilo.ai/leaderboard#all-models).
 
 {% image src="/docs/img/kiloclaw/create-instance.png" alt="Create instance modal with model selection" width="600" caption="Model selection during instance creation" /%}
 
