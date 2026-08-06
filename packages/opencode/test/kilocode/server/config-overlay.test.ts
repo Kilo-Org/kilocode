@@ -744,6 +744,7 @@ describe("config overlay routes", () => {
     async () => {
       await using global = await tmpdir()
       await using project = await tmpdir({ git: true })
+      await using writable = await tmpdir()
       await setGlobal(global.path, { sandbox: { enabled: true, network: "deny" } })
       const session = await json<Session.Info>(
         await req(project.path, SessionPaths.create, {
@@ -761,7 +762,7 @@ describe("config overlay routes", () => {
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
             scope: "global",
-            set: { sandbox: { enabled: true, network: "allow", writable_paths: [global.path] } },
+            set: { sandbox: { enabled: true, network: "allow", writable_paths: [writable.path] } },
           }),
         }),
       )
@@ -779,7 +780,7 @@ describe("config overlay routes", () => {
       expect(await SandboxStore.read(project.path, session.id)).toMatchObject({
         enabled: true,
         mode: "allow",
-        writablePaths: [global.path],
+        writablePaths: [writable.path],
         version: 1,
       })
     },
