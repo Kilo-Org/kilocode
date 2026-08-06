@@ -49,15 +49,12 @@ afterAll(async () => {
 })
 
 const sessions = {
-  create: (input?: Parameters<Session.Interface["create"]>[0]) =>
-    runtime.runPromise((svc) => svc.create(input)),
+  create: (input?: Parameters<Session.Interface["create"]>[0]) => runtime.runPromise((svc) => svc.create(input)),
+  get: (id: SessionID) => runtime.runPromise((svc) => svc.get(id)),
   list: () => runtime.runPromise((svc) => svc.list()),
-  messages: (input: Parameters<Session.Interface["messages"]>[0]) =>
-    runtime.runPromise((svc) => svc.messages(input)),
-  updateMessage: <T extends MessageV2.Info>(msg: T) =>
-    runtime.runPromise((svc) => svc.updateMessage(msg)),
-  updatePart: <T extends MessageV2.Part>(part: T) =>
-    runtime.runPromise((svc) => svc.updatePart(part)),
+  messages: (input: Parameters<Session.Interface["messages"]>[0]) => runtime.runPromise((svc) => svc.messages(input)),
+  updateMessage: <T extends MessageV2.Info>(msg: T) => runtime.runPromise((svc) => svc.updateMessage(msg)),
+  updatePart: <T extends MessageV2.Part>(part: T) => runtime.runPromise((svc) => svc.updatePart(part)),
 }
 
 afterEach(async () => {
@@ -190,9 +187,9 @@ describe("Session.fork cost accounting", () => {
   )
 })
 
-describe("Session.fork task detachment", () => {
+describe("Session.fork task children", () => {
   test(
-    "keeps completed task outcomes without cloning child sessions",
+    "clones completed task children under the forked parent",
     async () => {
       await using tmp = await tmpdir({ git: true })
       await instance({
@@ -212,6 +209,13 @@ describe("Session.fork task detachment", () => {
           const user = await userMsg(parent.id)
           const assistant = await asstMsg(parent.id, user)
           await sessions.updatePart(taskPart({ messageID: assistant, sessionID: parent.id, childSessionID: child.id }))
+          await sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: assistant,
+            sessionID: parent.id,
+            type: "text",
+            text: `Subagent task ID: ${child.id}`,
+          } as MessageV2.TextPart)
           const before = await sessions.list()
 
           const server = HttpRouter.toWebHandler(HttpApiApp.routes, { disableLogger: true })
@@ -220,23 +224,36 @@ describe("Session.fork task detachment", () => {
             directory: tmp.path,
             fetch: ((request: Request) => server.handler(request, HttpApiApp.context)) as unknown as typeof fetch,
           })
-          const { data: forked } = await client.session.fork(
-            { sessionID: parent.id, directory: tmp.path },
-            { throwOnError: true },
-          ).finally(() => server.dispose())
+          const { data: forked } = await client.session
+            .fork({ sessionID: parent.id, directory: tmp.path }, { throwOnError: true })
+            .finally(() => server.dispose())
 
           const after = await sessions.list()
-          expect(after).toHaveLength(before.length + 1)
+          expect(after).toHaveLength(before.length + 2)
 
           const msgs = await sessions.messages({ sessionID: SessionID.make(forked.id) })
           const tool = msgs.flatMap((msg) => msg.parts).find((part) => part.type === "tool") as MessageV2.ToolPart
           expect(tool.state.status).toBe("completed")
           if (tool.state.status !== "completed") throw new Error("expected completed task")
-          expect(tool.metadata).toEqual({ trace: "keep" })
-          expect(tool.state.metadata).toEqual({ model: { modelID: "test", providerID: "test" } })
-          expect(tool.state.input.task_id).toBeUndefined()
+          const clonedID = tool.state.input.task_id
+          expect(clonedID).not.toBe(child.id)
+          expect(tool.metadata).toEqual({ sessionId: clonedID, trace: "keep" })
+          expect(tool.state.metadata).toEqual({
+            sessionId: clonedID,
+            model: { modelID: "test", providerID: "test" },
+          })
+          if (typeof clonedID !== "string") throw new Error("expected a cloned task ID")
           expect(tool.state.output).toBe(
-            "Background task completed: test task\r\n<task_result>\r\nchild outcome\r\n</task_result>",
+            `Background task completed: test task\r\n\ttask_id: ${clonedID} (for resuming to continue this task if needed)\r\n\r\n<task_result>\r\nchild outcome\r\n</task_result>`,
+          )
+
+          const clone = await sessions.get(SessionID.descending(clonedID))
+          expect(clone.parentID).toBe(SessionID.descending(forked.id))
+          expect((await sessions.messages({ sessionID: clone.id }))[0]?.parts).toContainEqual(
+            expect.objectContaining({ text: "child message content" }),
+          )
+          expect(msgs.flatMap((msg) => msg.parts)).toContainEqual(
+            expect.objectContaining({ text: `Subagent task ID: ${clonedID}` }),
           )
 
           const source = await sessions.messages({ sessionID: parent.id })
@@ -252,7 +269,7 @@ describe("Session.fork task detachment", () => {
   )
 
   test(
-    "turns copied running tasks into terminal historical errors",
+    "turns copied running tasks into resumable historical errors",
     async () => {
       await using tmp = await tmpdir({ git: true })
       await instance({
@@ -278,15 +295,22 @@ describe("Session.fork task detachment", () => {
             },
           } as MessageV2.ToolPart)
 
+          const before = await sessions.list()
           const forked = await Session.fork({ sessionID: parent.id })
+          const after = await sessions.list()
           const msgs = await sessions.messages({ sessionID: forked.id })
           const tool = msgs.flatMap((msg) => msg.parts).find((part) => part.type === "tool") as MessageV2.ToolPart
           expect(tool.state.status).toBe("error")
           if (tool.state.status !== "error") throw new Error("expected detached task error")
           expect(tool.state.error).toContain("still running")
-          expect(tool.state.input.task_id).toBeUndefined()
-          expect(tool.state.metadata).toEqual({ variant: "high" })
-          expect(tool.metadata).toEqual({})
+          const clonedID = tool.state.input.task_id
+          if (typeof clonedID !== "string") throw new Error("expected a cloned task ID")
+          expect(clonedID).not.toBe(child.id)
+          expect(tool.state.error).toContain(`task_id="${clonedID}"`)
+          expect(tool.state.metadata).toEqual({ sessionId: clonedID, variant: "high" })
+          expect(tool.metadata).toEqual({ sessionId: clonedID })
+          expect(after).toHaveLength(before.length + 2)
+          expect((await sessions.get(SessionID.descending(clonedID))).parentID).toBe(forked.id)
         },
       })
     },
@@ -294,7 +318,7 @@ describe("Session.fork task detachment", () => {
   )
 
   test(
-    "detaches pending and errored task references",
+    "detaches in-flight tasks and remaps errored task references",
     async () => {
       await using tmp = await tmpdir({ git: true })
       await instance({
@@ -329,7 +353,7 @@ describe("Session.fork task detachment", () => {
             state: {
               status: "error",
               input: { task_id: child.id },
-              error: "original error",
+              error: `original error; task_id="${child.id}"`,
               metadata: { sessionID: child.id, detail: "keep" },
               time: { start: Date.now(), end: Date.now() },
             },
@@ -344,15 +368,57 @@ describe("Session.fork task detachment", () => {
           expect(pending?.state.status).toBe("error")
           if (!pending || pending.state.status !== "error") throw new Error("expected detached pending task")
           expect(pending.state.error).toContain("still pending")
-          expect(pending.state.input.task_id).toBeUndefined()
-          expect(pending.metadata).toEqual({})
+          const pendingID = pending.state.input.task_id
+          if (typeof pendingID !== "string") throw new Error("expected a cloned pending task ID")
+          expect(pendingID).not.toBe(child.id)
+          expect(pending.state.error).toContain(`task_id="${pendingID}"`)
+          expect(pending.metadata).toEqual({ sessionID: pendingID })
 
           expect(errored?.state.status).toBe("error")
           if (!errored || errored.state.status !== "error") throw new Error("expected detached errored task")
-          expect(errored.state.error).toBe("original error")
-          expect(errored.state.input.task_id).toBeUndefined()
-          expect(errored.state.metadata).toEqual({ detail: "keep" })
-          expect(errored.metadata).toEqual({})
+          const clonedID = errored.state.input.task_id
+          if (typeof clonedID !== "string") throw new Error("expected a cloned task ID")
+          expect(clonedID).toBe(pendingID)
+          expect(errored.state.error).toBe(`original error; task_id="${clonedID}"`)
+          expect(errored.state.metadata).toEqual({ sessionID: clonedID, detail: "keep" })
+          expect(errored.metadata).toEqual({ sessionId: clonedID })
+        },
+      })
+    },
+    { timeout: 30000 },
+  )
+
+  test(
+    "ignores malformed task references while forking",
+    async () => {
+      await using tmp = await tmpdir({ git: true })
+      await instance({
+        directory: tmp.path,
+        fn: async () => {
+          const parent = await sessions.create({ title: "parent" })
+          const user = await userMsg(parent.id)
+          const assistant = await asstMsg(parent.id, user)
+          await sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: assistant,
+            sessionID: parent.id,
+            type: "tool",
+            callID: "call_malformed",
+            tool: "task",
+            state: {
+              status: "error",
+              input: { task_id: "not-a-session-id" },
+              error: "Cannot resume the malformed task reference",
+              time: { start: Date.now(), end: Date.now() },
+            },
+          } as MessageV2.ToolPart)
+
+          const forked = await Session.fork({ sessionID: parent.id })
+          const msgs = await sessions.messages({ sessionID: forked.id })
+          const tool = msgs.flatMap((msg) => msg.parts).find((part) => part.type === "tool") as MessageV2.ToolPart
+          expect(tool.state.status).toBe("error")
+          if (tool.state.status !== "error") throw new Error("expected malformed task error")
+          expect(tool.state.input.task_id).toBe("not-a-session-id")
         },
       })
     },
