@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test"
 import {
-  auditOps,
   capturePlan,
   duplicateOps,
+  errorReason,
   fallbackDigest,
   guardReason,
   hasSubstantialDiff,
@@ -128,7 +128,7 @@ describe("memory capture parsing", () => {
     expect(() => salvageTyped(`{"op":"upsert_project_fact","key":"good_one","value":"Keep this fact."}`)).toThrow()
   })
 
-  test("redacts secrets in salvaged unsupported ops before they reach the audit", () => {
+  test("redacts secrets in salvaged unsupported ops before they reach callers", () => {
     const parsed = salvageTyped(
       `{"operations":[{"op":"not_a_real_op","key":"leak","value":"key is sk-abcdefghijklmnopqrstuvwxyz"}],"skipped":[]}`,
     )
@@ -167,17 +167,6 @@ describe("memory capture parsing", () => {
     expect(salvaged?.text.length ?? 0).toBeLessThanOrEqual(500)
     expect(JSON.stringify(parsed.skipped)).not.toContain(secret)
     expect(JSON.stringify(parsed.skipped)).not.toContain(secret.slice(0, 20))
-  })
-
-  test("redacts remove audit queries before truncating", () => {
-    const secret = "sk-" + "a".repeat(40)
-    const query = "x".repeat(100) + secret
-    const audit = auditOps([{ action: "remove", query }])
-    const text = JSON.stringify(audit)
-
-    expect(text).toContain("[redacted]")
-    expect(text).not.toContain(secret)
-    expect(text).not.toContain(secret.slice(0, 20))
   })
 
   test("truncates typed batches beyond the op cap instead of failing", () => {
@@ -330,6 +319,11 @@ describe("memory capture parsing", () => {
       {
         name: "expected work: completed turn schedules digest and typed capture",
         input: base,
+        expected: { session: true, digestDue: true, typedCall: true, typedWork: true, skipReason: undefined },
+      },
+      {
+        name: "expected work: a persisted null typed clock does not throttle capture",
+        input: { ...base, lastTypedConsolidationAt: null },
         expected: { session: true, digestDue: true, typedCall: true, typedWork: true, skipReason: undefined },
       },
       {
@@ -650,6 +644,70 @@ describe("memory capture parsing", () => {
     )
     expect(guardReason("429 too many requests")).toBe("rate_limit_guard")
     expect(guardReason("billing credits exhausted")).toBe("quota_guard")
+    expect(guardReason("request timed out")).toBe("transient")
+    expect(guardReason("deadline exceeded")).toBe("transient")
+    expect(guardReason("DeadlineExceeded")).toBe("transient")
+    expect(guardReason('cause={"code":"ETIMEDOUT"}')).toBe("transient")
+    expect(guardReason("504 Gateway Timeout")).toBe("transient")
+    expect(guardReason("Connect Timeout Error")).toBe("transient")
+    expect(guardReason("Headers Timeout Error")).toBe("transient")
+    expect(guardReason("Body Timeout Error")).toBe("transient")
+    expect(guardReason("connect_timeout")).toBe("transient")
+    expect(guardReason('status=400 body={"error":"invalid parameter: timeout"}')).toBeUndefined()
+    expect(guardReason("set request timeout to 30000")).toBeUndefined()
+    const timeout = new Error("request aborted")
+    timeout.name = "TimeoutError"
+    expect(guardReason(timeout)).toBe("transient")
+    expect(errorReason(timeout)).toBe("request aborted")
+    expect(guardReason(Object.assign(new Error("request failed"), { status: 504 }))).toBe("transient")
+    expect(
+      guardReason(Object.assign(new Error("request failed"), { cause: { code: "UND_ERR_CONNECT_TIMEOUT" } })),
+    ).toBe("transient")
+    expect(
+      guardReason(Object.assign(new Error("request failed"), { cause: { code: "UND_ERR_HEADERS_TIMEOUT" } })),
+    ).toBe("transient")
+    expect(guardReason(Object.assign(new Error("request failed"), { cause: { code: "ETIMEDOUT" } }))).toBe(
+      "transient",
+    )
+    expect(
+      guardReason(Object.assign(new Error("failed after 2 attempts"), { errors: [{ statusCode: 504 }] })),
+    ).toBe("transient")
+    expect(guardReason(new Error("set request timeout to 30000"))).toBeUndefined()
+    expect(guardReason(new Error("request timed out"))).toBe("transient")
+    expect(guardReason(Object.assign(new Error("request failed"), { cause: new Error("connect timeout") }))).toBe(
+      "transient",
+    )
+    expect(
+      guardReason(
+        Object.assign(new Error("failed after 2 attempts"), {
+          errors: [Object.assign(new Error("rate limit reached"), { status: 429 }), timeout],
+        }),
+      ),
+    ).toBe("rate_limit_guard")
+    expect(
+      guardReason(
+        Object.assign(new Error("failed after 2 attempts"), {
+          errors: [new Error("insufficient quota available"), timeout],
+        }),
+      ),
+    ).toBe("quota_guard")
+    expect(
+      guardReason(
+        Object.assign(new Error("request failed"), {
+          cause: Object.assign(new Error("rate limit reached"), { status: 429 }),
+        }),
+      ),
+    ).toBe("rate_limit_guard")
+    expect(
+      guardReason(
+        Object.assign(new Error("timed out"), {
+          name: "TimeoutError",
+          cause: new Error("billing credit balance exhausted"),
+        }),
+      ),
+    ).toBe("quota_guard")
+    expect(guardReason("timeout after 429 too many requests")).toBe("rate_limit_guard")
+    expect(guardReason("timeout after quota exceeded")).toBe("quota_guard")
   })
 
   test("redacts common secret token shapes", () => {

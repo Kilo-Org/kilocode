@@ -50,6 +50,22 @@ describe("memory core package", () => {
     })
   })
 
+  test("legacy audit compatibility APIs remain no-op", async () => {
+    await use(async (t) => {
+      await Memory.enable({ root: t.root })
+      await MemoryFiles.append(t.root, "provider error with sensitive detail")
+      await MemoryFiles.decide(t.root, {
+        kind: "typed",
+        result: "error",
+        reason: "provider error with sensitive detail",
+      })
+
+      expect(await MemoryFiles.readChanges(t.root)).toBe("")
+      expect(await MemoryFiles.readDecisions(t.root)).toBe("")
+      expect(await Bun.file(path.join(t.root, "decisions.jsonl")).exists()).toBe(false)
+    })
+  })
+
   test("prepare removes legacy decisions once from owned memory roots", async () => {
     await use(async (t) => {
       await Memory.enable({ root: t.root })
