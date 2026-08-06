@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test"
 import path from "path"
 import fs from "fs/promises"
 import { Flag } from "@opencode-ai/core/flag/flag"
+import { Global } from "@opencode-ai/core/global"
 import * as Log from "@opencode-ai/core/util/log"
 import { Server } from "../../../src/server/server"
 import { resetDatabase } from "../../fixture/db"
@@ -72,6 +73,37 @@ function order(body: Body, file: string) {
 }
 
 describe("config source routes", () => {
+  test("lists global JSON and JSONC files in runtime precedence order", async () => {
+    await using globalTmp = await tmpdir()
+    await using project = await tmpdir()
+    const previous = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+
+    try {
+      const names = ["config.json", "opencode.json", "opencode.jsonc", "kilo.json", "kilo.jsonc"]
+      for (const name of names) await Bun.write(path.join(globalTmp.path, name), "{}")
+
+      const body = await sources(project.path)
+      const positions = names.map((name) => order(body, path.join(globalTmp.path, name)))
+      expect(positions).toEqual(positions.toSorted((a, b) => a - b))
+    } finally {
+      ;(Global.Path as { config: string }).config = previous
+    }
+  })
+
+  test("lists ancestor project config before a nearer legacy config", async () => {
+    await using tmp = await tmpdir({ git: true })
+    const nested = path.join(tmp.path, "packages", "app")
+    const ancestor = path.join(tmp.path, "kilo.json")
+    const nearer = path.join(nested, "opencode.json")
+    await fs.mkdir(nested, { recursive: true })
+    await Bun.write(ancestor, "{}")
+    await Bun.write(nearer, "{}")
+
+    const body = await sources(nested)
+    expect(order(body, ancestor)).toBeLessThan(order(body, nearer))
+  })
+
   test("lists source metadata in load order without config contents", async () => {
     await using tmp = await tmpdir({
       init: async (dir) => {

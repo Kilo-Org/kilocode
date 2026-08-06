@@ -388,6 +388,7 @@ describe("config overlay routes", () => {
     })
 
     expect(body.project.model).toBe("test/kilo-jsonc")
+    expect(body.targets.project.path).toBe(path.join(project.path, "kilo.jsonc"))
   })
 
   test.serial("tolerates unsafe project config instead of failing the overlay", async () => {
