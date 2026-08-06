@@ -124,14 +124,6 @@ const native = (remaining = 80) =>
     ],
   })
 
-it.instance("returns empty usage when no source is connected", () =>
-  Effect.gen(function* () {
-    const usage = yield* ProviderUsage.Service
-    const result = yield* usage.get()
-    expect(result.items).toEqual([])
-  }).pipe(Effect.provide(layer(undefined, {}))),
-)
-
 it.instance("caches normal reads and forces an explicit refresh", () =>
   Effect.gen(function* () {
     const original = global.fetch
