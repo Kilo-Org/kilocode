@@ -24,9 +24,9 @@ The bundled build ships the JetBrains plugin with Kilo Core included. The instal
 2. Click the gear icon and choose **Manage Plugin Repositories...**
 3. Click **+** and add the Kilo Code repository URL:
 
-```text
-https://kilo-org.github.io/kilocode/jetbrains/updatePlugins.xml
-```
+   ```text
+   https://kilo-org.github.io/kilocode/jetbrains/updatePlugins.xml
+   ```
 
 4. Click **OK**, then install or update **Kilo Code** from **Settings → Plugins**
 5. Restart the IDE if prompted
