@@ -407,7 +407,9 @@ const AgentManagerContent: Component = () => {
   let focusInputUntil = 0
   const focusPrompt = () => {
     focusInputUntil = Date.now() + 500
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
     terms.setActiveId(undefined)
+    terms.setFocusedId(undefined)
     requestChatFocus(true)
   }
   const focusKey = () => {

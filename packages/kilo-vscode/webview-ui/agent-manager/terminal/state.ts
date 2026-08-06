@@ -841,7 +841,7 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
     if (list.length === 0) return false
     const current = placement === "side" ? deps.state.sideActiveFor(key) : deps.state.activeId()
     const index = list.findIndex((term) => term.id === current)
-    const start = index === -1 ? (direction === "next" ? 0 : list.length - 1) : index
+    const start = index === -1 ? (direction === "next" ? -1 : list.length) : index
     const offset = direction === "next" ? 1 : -1
     const next = list[(start + offset + list.length) % list.length]!
     if (placement === "side") {

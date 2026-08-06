@@ -54,10 +54,14 @@ export function buildShortcutCategories(
       shortcuts: [
         { label: t("agentManager.shortcuts.toggleTerminal"), binding: bind("showTerminal") },
         { label: t("agentManager.terminal.add"), binding: bind("newTerminal") },
-        { label: t("agentManager.shortcuts.previousTab"), binding: bind("previousTerminal") },
-        { label: t("agentManager.shortcuts.nextTab"), binding: bind("nextTerminal") },
-        { label: t("agentManager.shortcuts.closeTab"), binding: bind("closeTab") },
-        { label: t("agentManager.shortcuts.openAgentManager"), binding: bind("agentManagerOpen") },
+        {
+          label: `${t("agentManager.shortcuts.previousTab")} (${t("agentManager.tab.terminal")})`,
+          binding: bind("previousTerminal"),
+        },
+        {
+          label: `${t("agentManager.shortcuts.nextTab")} (${t("agentManager.tab.terminal")})`,
+          binding: bind("nextTerminal"),
+        },
         { label: t("agentManager.shortcuts.runScript"), binding: bind("runScript") },
         { label: t("agentManager.shortcuts.toggleDiff"), binding: bind("toggleDiff") },
       ],

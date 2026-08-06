@@ -435,6 +435,22 @@ describe("Agent Manager terminal state", () => {
     })
   })
 
+  it("starts terminal cycling at the boundary when no terminal is active", () => {
+    createRoot((dispose) => {
+      const item = scene()
+      item.state.add(null, { id: "terminal:one", title: "Terminal 1", wsUrl: "ws://one", font, placement: "tab" })
+      item.state.add(null, { id: "terminal:two", title: "Terminal 2", wsUrl: "ws://two", font, placement: "tab" })
+      item.state.setActiveId(undefined)
+
+      expect(item.handlers.cycle("next", "tab")).toBe(true)
+      expect(item.state.activeId()).toBe("terminal:one")
+      item.state.setActiveId(undefined)
+      expect(item.handlers.cycle("previous", "tab")).toBe(true)
+      expect(item.state.activeId()).toBe("terminal:two")
+      dispose()
+    })
+  })
+
   it("keeps the session open when its last main terminal closes", () => {
     createRoot((dispose) => {
       const item = scene()
