@@ -88,6 +88,24 @@ describe("GitOps", () => {
     expect(await pending).toBe("")
   })
 
+  it("retries executable resolution after a transient failure", async () => {
+    await withRepo(async (cwd) => {
+      let calls = 0
+      const git = new GitOps({
+        log: () => undefined,
+        binary: async () => {
+          calls++
+          if (calls === 1) throw new Error("transient resolution failure")
+          return "git"
+        },
+      })
+
+      expect(await git.root(cwd)).toBeUndefined()
+      expect(await fs.realpath(await git.root(cwd))).toBe(await fs.realpath(cwd))
+      expect(calls).toBe(2)
+    })
+  })
+
   describe("currentBranch", () => {
     it("returns the current branch name", async () => {
       const git = ops(async (args) => {

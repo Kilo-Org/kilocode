@@ -589,14 +589,15 @@ export class GitOps {
     return new Promise<string>((resolve, reject) => {
       const onAbort = () => reject(new Error("GitOps disposed"))
       signal.addEventListener("abort", onAbort, { once: true })
-      this.executableCache ??= Promise.resolve().then(() => this.binary())
-      this.executableCache.then(
+      const cache = (this.executableCache ??= Promise.resolve().then(() => this.binary()))
+      cache.then(
         (value) => {
           signal.removeEventListener("abort", onAbort)
           resolve(value)
         },
         (err) => {
           signal.removeEventListener("abort", onAbort)
+          if (this.executableCache === cache) this.executableCache = undefined
           reject(err)
         },
       )
@@ -617,7 +618,7 @@ export class GitOps {
       const out: Buffer[] = []
       const err: Buffer[] = []
       let failure: string | undefined
-      const abort = () => child.kill("SIGINT")
+      const abort = () => child.kill("SIGTERM")
 
       this.controller.signal.addEventListener("abort", abort, { once: true })
       child.stdout?.on("data", (chunk: Buffer) => out.push(chunk))
@@ -641,7 +642,7 @@ export class GitOps {
         return
       }
       failure = "stdin not available for git process"
-      child.kill("SIGINT")
+      child.kill("SIGTERM")
     })
   }
 }
