@@ -389,6 +389,43 @@ describe("Session.fork task children", () => {
   )
 
   test(
+    "ignores malformed task references while forking",
+    async () => {
+      await using tmp = await tmpdir({ git: true })
+      await instance({
+        directory: tmp.path,
+        fn: async () => {
+          const parent = await sessions.create({ title: "parent" })
+          const user = await userMsg(parent.id)
+          const assistant = await asstMsg(parent.id, user)
+          await sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: assistant,
+            sessionID: parent.id,
+            type: "tool",
+            callID: "call_malformed",
+            tool: "task",
+            state: {
+              status: "error",
+              input: { task_id: "not-a-session-id" },
+              error: "Cannot resume the malformed task reference",
+              time: { start: Date.now(), end: Date.now() },
+            },
+          } as MessageV2.ToolPart)
+
+          const forked = await Session.fork({ sessionID: parent.id })
+          const msgs = await sessions.messages({ sessionID: forked.id })
+          const tool = msgs.flatMap((msg) => msg.parts).find((part) => part.type === "tool") as MessageV2.ToolPart
+          expect(tool.state.status).toBe("error")
+          if (tool.state.status !== "error") throw new Error("expected malformed task error")
+          expect(tool.state.input.task_id).toBe("not-a-session-id")
+        },
+      })
+    },
+    { timeout: 30000 },
+  )
+
+  test(
     "preserves workspace sync event sequencing in the atomic copy",
     async () => {
       const flag = Flag.KILO_EXPERIMENTAL_WORKSPACES

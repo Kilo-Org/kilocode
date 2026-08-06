@@ -1,4 +1,4 @@
-import { Effect } from "effect"
+import { Effect, Schema } from "effect"
 import type { Session } from "@/session/session"
 import { MessageV2 } from "@/session/message-v2"
 import { MessageID, PartID, SessionID } from "@/session/schema"
@@ -49,14 +49,7 @@ function mapRecord(value: Record<string, unknown> | undefined, map: Map<string, 
 
 function output(value: string, map: Map<string, SessionID>) {
   return [...map].reduce(
-    (text, [source, target]) =>
-      source === target
-        ? text
-        : text
-            .replaceAll(source, target)
-            .replaceAll(`task id="${source}"`, `task id="${target}"`)
-            .replaceAll(`task_id="${source}"`, `task_id="${target}"`)
-            .replaceAll(`task_id: ${source}`, `task_id: ${target}`),
+    (text, [source, target]) => (source === target ? text : text.replaceAll(source, target)),
     value,
   )
 }
@@ -154,6 +147,7 @@ export function remapChildren(input: {
 
     for (const ref of refs) {
       if (map.has(ref.child)) continue
+      if (!Schema.is(SessionID)(ref.child)) continue
       const source = yield* input.ops.get(SessionID.make(ref.child)).pipe(Effect.orElseSucceed(() => undefined))
       if (!source) continue
       const target = yield* copy({ source, parentID: input.sessionID, ops: input.ops })
