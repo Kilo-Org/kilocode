@@ -49,7 +49,6 @@ import {
 } from "./kilo-provider-utils"
 import { GitOps } from "./agent-manager/GitOps"
 import { GitStatsPoller, type LocalStats } from "./agent-manager/GitStatsPoller"
-import { diffSummary as localDiffSummary } from "./agent-manager/local-diff"
 import { createMarketplaceRemover, removeMcp } from "./kilo-provider/remove-config-item"
 import { AgentRequirementsController } from "./kilo-provider/agent-requirements-controller"
 import type { RemoteStatusService } from "./services/RemoteStatusService"
@@ -90,6 +89,7 @@ import {
 } from "./services/autocomplete/settings"
 import { routeEarlyMessage } from "./kilo-provider/early-message"
 import * as ModelState from "./kilo-provider/model-state"
+import { handleModelUsageMessage } from "./kilo-provider/model-usage"
 import { handleForkSession } from "./kilo-provider/fork-session"
 import { openConfig } from "./kilo-provider/open-config"
 import {
@@ -442,6 +442,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private cachedGitRepo = false
   private cachedGitDirectory: string | undefined
   private gitStatusRevision = 0
+  private sessionRefreshRevision = 0
 
   private onBeforeMessage: ((msg: Record<string, unknown>) => Promise<Record<string, unknown> | null>) | null = null
 
@@ -1025,6 +1026,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           copy: (text) => vscode.env.clipboard.writeText(text),
           openSessions: (ids) => this.trackOpenSessions(ids),
           speechToTextModels: () => this.fetchAndSendSpeechToTextModels(),
+          modelUsage: (msg) => handleModelUsageMessage(msg, this.extensionContext, (value) => this.postMessage(value)),
         })
       ) {
         return
@@ -1046,6 +1048,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           openAdvancedWorktree: () => vscode.commands.executeCommand("kilo-code.new.agentManager.advancedWorktree"),
           openChanges: (sessionId?: string, turnId?: string) =>
             vscode.commands.executeCommand("kilo-code.new.showChanges", { sessionId, turnId }),
+          openProfile: () => vscode.commands.executeCommand("kilo-code.new.profileButtonClicked"),
           currentSessionId: this.currentSession?.id,
           createWorktree: async (baseBranch, branchName) => {
             await this.createWorktreeHandler?.(baseBranch, branchName)
@@ -1665,7 +1668,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // Subscribe to SSE events for this webview (filtered by tracked sessions)
       this.unsubscribeEvent = this.connectionService.onEventFiltered(
         (payload, directory) => {
-          if (directory && !this.isCurrentProjectDirectory(directory)) return false
+          if (directory && directory !== "global" && !this.isCurrentProjectDirectory(directory)) return false
           if (!directory && isEventFromForeignProject(payload, this.projectID)) return false
           const event = unwrapSyncEvent(payload)
           if (!event) return false
@@ -2085,7 +2088,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /**
    * Build the context object used by the extracted session-refresh helpers.
    */
-  private get sessionRefreshContext(): SessionRefreshContext {
+  private getSessionRefreshContext(revision: number): SessionRefreshContext {
     const client = this.client
     return {
       pendingSessionRefresh: this.pendingSessionRefresh,
@@ -2097,6 +2100,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       sessionDirectories: this.sessionDirectories,
       worktreeDirectories: this.opts.worktreeDirectories,
       workspaceDirectory: this.getWorkspaceDirectory(),
+      isCurrent: () => revision === this.sessionRefreshRevision,
       postMessage: (msg: unknown) => this.postMessage(msg),
     }
   }
@@ -2107,9 +2111,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private async flushPendingSessionRefresh(reason: string): Promise<void> {
     if (!this.pendingSessionRefresh) return
     console.log("[Kilo New] KiloProvider: 🔄 Flushing deferred sessions refresh", { reason })
+    const revision = ++this.sessionRefreshRevision
     const scope = this.opts.projectQualifier?.()?.projectId
     if (scope !== undefined) this.projectID = undefined
-    const ctx = this.sessionRefreshContext
+    const ctx = this.getSessionRefreshContext(revision)
     try {
       const resolved = await flushPendingSessionRefreshUtil(ctx)
       if (resolved && scope === this.opts.projectQualifier?.()?.projectId) this.projectID = resolved
@@ -2123,9 +2128,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Handle loading all sessions.
    */
   private async handleLoadSessions(): Promise<void> {
+    const revision = ++this.sessionRefreshRevision
     const scope = this.opts.projectQualifier?.()?.projectId
     if (scope !== undefined) this.projectID = undefined
-    const ctx = this.sessionRefreshContext
+    const ctx = this.getSessionRefreshContext(revision)
     try {
       const resolved = await loadSessionsUtil(ctx)
       if (resolved && scope === this.opts.projectQualifier?.()?.projectId) this.projectID = resolved
@@ -4054,6 +4060,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Clear globalState items that are not part of the configuration
     await this.extensionContext?.globalState.update("variantSelections", undefined)
     await this.extensionContext?.globalState.update("recentModels", undefined)
+    await this.extensionContext?.globalState.update("modelUsage", undefined)
     await this.extensionContext?.globalState.update("kilo.dismissedNotificationIds", undefined)
     await this.extensionContext?.globalState.update("kilo.agentMigrationBannerDismissed", undefined)
     await this.extensionContext?.globalState.update("kilo.marketplace.dismissedSuggestions", undefined)
@@ -4071,6 +4078,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Re-send globalState items to the webview
     this.postMessage({ type: "variantsLoaded", variants: {} })
     this.postMessage({ type: "recentsLoaded", recents: [] })
+    this.postMessage({ type: "modelUsageLoaded", usage: {} })
 
     // Re-fetch notifications to reflect cleared dismissed IDs
     await this.fetchAndSendNotifications()
@@ -4312,7 +4320,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Drop session events from other projects before any tracking logic.
     // This must come first: the trackedSessionIds guard below would otherwise
     // let a foreign session through if it was accidentally tracked.
-    if (directory && !this.isCurrentProjectDirectory(directory)) return
+    if (directory && directory !== "global" && !this.isCurrentProjectDirectory(directory)) return
     if (
       this.projectID &&
       (!this.opts.projectQualifier || !directory) &&
@@ -4754,6 +4762,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private isCurrentProjectSession(sessionID: string): boolean {
     if (!this.opts.projectQualifier || !this.opts.routeService) return true
+    if (this.isSessionRouteAmbiguous(sessionID)) return false
     const directory = this.opts.routeService.trySessionDirectory(sessionID)
     return !directory || this.isCurrentProjectDirectory(directory)
   }
@@ -4798,7 +4807,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (revision !== this.gitStatusRevision) return
     const found = repo || root !== undefined
     const target = root ?? directory
-    if (!this.cachedGitDirectory || !sameDirectory(this.cachedGitDirectory, target)) this.cachedStats = null
+    const changed = !this.cachedGitDirectory || !sameDirectory(this.cachedGitDirectory, target)
+    if (changed) {
+      this.cachedStats = null
+      this.statsPoller?.stop()
+      this.statsPoller = null
+      this.statsGitOps?.dispose()
+      this.statsGitOps = null
+    }
     this.cachedGitDirectory = target
     this.cachedGitRepo = found
     this.postMessage({ type: "gitStatus", repo: found })
@@ -4893,6 +4909,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       title: "Kilo Code",
       port: this.connectionService.getServerInfo()?.port,
       extraStyles: `.container { height: 100vh; }`,
+      topBar: this.opts.hideTopBar !== true,
+      topBarSurface: this.opts.topBarSurface === "tab" ? "tab_title" : "sidebar_title",
     })
   }
 
@@ -4929,7 +4947,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.statsPoller = new GitStatsPoller({
       getWorktrees: () => [],
       getWorkspaceRoot: () => this.cachedGitDirectory ?? this.getWorkspaceDirectory(this.currentSession?.id),
-      localDiff: (dir, base) => localDiffSummary(git, dir, base),
       git,
       onStats: () => {},
       onLocalStats: (stats: LocalStats) => {

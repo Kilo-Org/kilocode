@@ -158,6 +158,7 @@ export const dict = {
   "model.group.auto": "自動模型",
   "model.group.recommended": "推薦",
   "model.group.favorites": "我的最愛",
+  "model.group.mostUsed": "最常用",
   "model.favorite.add": "加入我的最愛",
   "model.favorite.remove": "從我的最愛中移除",
 
@@ -298,6 +299,14 @@ export const dict = {
   "session.messages.loadEarlier": "載入更早的訊息",
   "session.messages.loading": "正在載入訊息...",
 
+  "sidebar.topBar.label": "Kilo Code 導覽",
+  "sidebar.topBar.newTask": "新建任務",
+  "sidebar.topBar.history": "歷史記錄",
+  "sidebar.topBar.agentManager": "代理管理器",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "市集",
+  "sidebar.topBar.profile": "個人資料",
+  "sidebar.topBar.settings": "設定",
   "sidebar.session.newSession": "新會話",
   "sidebar.session.newSession.tooltip": "在保持當前會話完整的同時開始全新的對話。",
   "sidebar.session.newWorktree": "新 Worktree",

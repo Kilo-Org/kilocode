@@ -97,6 +97,8 @@ The `kilo console` command and its browser interface are deprecated and will be 
 | `/copy` | - | Copy latest agent response |
 | `/copy-session` | - | Copy session transcript |
 | `/export` | - | Export session transcript |
+| `/move` | - | Move the current session to another project directory |
+| `/diff` | - | Open the diff viewer |
 | `/timestamps` | `/toggle-timestamps` | Show/hide timestamps |
 | `/thinking` | `/toggle-thinking` | Show/hide thinking blocks |
 
@@ -218,6 +220,19 @@ There is no notification slash command or command-palette toggle. Use `tui.json`
 ## Slash Commands
 
 The CLI's interactive mode supports slash commands for common operations. The main commands are documented above in the [Interactive Slash Commands](#interactive-slash-commands) section.
+
+Use `/diff` to review working-tree changes. From the diff viewer, switch the source to the current branch compared with the main branch or to changes from the last assistant turn. Use `/move` to move the current session to another project directory.
+
+The `diff_open` and `session_move` TUI keybindings run the same actions and are unbound by default. Set them under `keybinds` in `tui.jsonc`:
+
+```jsonc
+{
+  "keybinds": {
+    "diff_open": "<leader>d",
+    "session_move": "<leader>o",
+  },
+}
+```
 
 ## Permissions
 

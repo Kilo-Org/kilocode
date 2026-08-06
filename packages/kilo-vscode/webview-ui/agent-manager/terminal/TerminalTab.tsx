@@ -21,6 +21,7 @@ import { useVSCode } from "../../src/context/vscode"
 import { useLanguage } from "../../src/context/language"
 import { formatReviewCommentsMarkdown } from "../../src/utils/review-comment-markdown"
 import type { ScriptTerminalStatus, TerminalFont } from "./state"
+import { createInputBuffer, createReplayGate } from "./replay"
 
 interface Props {
   terminalId: string
@@ -49,6 +50,9 @@ interface Props {
    *  layer tracks this as `focusedId` so `Cmd+W` can target the
    *  terminal that actually has the cursor. */
   onFocusChange?: (focused: boolean) => void
+  /** Handle the Agent Manager prompt shortcut locally because xterm's
+   *  textarea does not reliably forward custom commands to the workbench. */
+  onFocusPrompt?: () => void
   /** Reports OSC window-title escape codes (`ESC ] 0/1/2 ; title BEL`)
    *  sent by the shell or running programs — fish sets it to the active
    *  command, oh-my-zsh to user@host:cwd, vim to the file name. The
@@ -130,7 +134,7 @@ function isAgentManagerShortcut(e: KeyboardEvent): boolean {
   const key = e.key.toLowerCase()
   if (e.altKey && ["arrowleft", "arrowright", "arrowup", "arrowdown"].includes(key)) return true
   if (["t", "w", "n", "d", "e", "f"].includes(key)) return true
-  if (e.shiftKey && ["w", "n", "o", "r", "m", "/", "?"].includes(key)) return true
+  if (e.shiftKey && ["t", "w", "n", "o", "r", "m", "[", "]", "/", "?"].includes(key)) return true
   if (/^[1-9]$/.test(key)) return true
   if (key === "/") return true
   return false
@@ -150,6 +154,7 @@ export const TerminalTab: Component<Props> = (props) => {
     const term = new Terminal({
       convertEol: true,
       cursorBlink: true,
+      cursorInactiveStyle: "outline",
       fontFamily: props.font.fontFamily,
       fontSize: props.font.fontSize,
       scrollback: 5000,
@@ -171,9 +176,17 @@ export const TerminalTab: Component<Props> = (props) => {
       }
     })
 
-    // Pass agent-manager hotkeys through to the parent key handler so
-    // ⌘T / ⌘W / ⌘⌥← etc. still work while the terminal is focused.
-    term.attachCustomKeyEventHandler((event) => !isAgentManagerShortcut(event))
+    // Pass Agent Manager hotkeys through to the parent key handler so
+    // ⌘T / ⌘⇧T / ⌘W / terminal cycling / ⌘⌥← still work while focused.
+    term.attachCustomKeyEventHandler((event) => {
+      const prompt =
+        (event.metaKey || event.ctrlKey) && event.shiftKey && !event.altKey && event.key.toLowerCase() === "m"
+      if (prompt) {
+        if (event.type === "keydown") props.onFocusPrompt?.()
+        return false
+      }
+      return !isAgentManagerShortcut(event)
+    })
 
     // Track DOM focus so the state layer knows which terminal holds the
     // cursor (drives Cmd+W targeting). focusout is ignored when focus
@@ -192,7 +205,8 @@ export const TerminalTab: Component<Props> = (props) => {
 
     let ws: WebSocket | undefined
     let closed = false
-    let pending = ""
+    const input = createInputBuffer()
+    let user = false
     let restartRequested = false
     let disconnected = false
     let readyTimer: ReturnType<typeof setTimeout> | undefined
@@ -234,11 +248,18 @@ export const TerminalTab: Component<Props> = (props) => {
         rows: term.rows,
       })
     }
+    const markUser = () => {
+      user = true
+      queueMicrotask(() => {
+        user = false
+      })
+    }
     const send = (data: string) => {
-      if (disconnected && props.restartable) {
-        pending += data
-        if (pending.length > 256 * 1024) pending = pending.slice(-256 * 1024)
-        requestRestart()
+      const reply = replay.draining() && !user
+      user = false
+      if (props.restartable && (replay.blocked() || disconnected || ws?.readyState !== WebSocket.OPEN)) {
+        input.add(data, reply)
+        if (disconnected) requestRestart()
         return
       }
       if (ws?.readyState === WebSocket.OPEN) {
@@ -246,7 +267,7 @@ export const TerminalTab: Component<Props> = (props) => {
         return
       }
     }
-    const flush = () => {
+    const flush = (all = false) => {
       if (ws?.readyState !== WebSocket.OPEN) return
       if (readyTimer) {
         clearTimeout(readyTimer)
@@ -256,9 +277,8 @@ export const TerminalTab: Component<Props> = (props) => {
         clearTimeout(fallbackTimer)
         fallbackTimer = undefined
       }
-      const data = pending
-      pending = ""
-      if (data && /[^\r\n]/.test(data)) ws.send(data)
+      const data = input.take()
+      if (data && (all || /[^\r\n]/.test(data))) ws.send(data)
       disconnected = false
       restartRequested = false
     }
@@ -270,8 +290,17 @@ export const TerminalTab: Component<Props> = (props) => {
         flush()
       }, 100)
     }
+    const replay = createReplayGate({
+      write: (data, callback) => term.write(data, callback),
+      flush: () => flush(true),
+    })
+    const disposeKey = term.onKey(markUser)
+    for (const event of ["input", "paste", "compositionend", "mousedown", "wheel"]) {
+      host.addEventListener(event, markUser, true)
+    }
     const open = (url: string) => {
       if (closed || !url) return
+      replay.attach(disconnected)
       const next = new WebSocket(url)
       next.binaryType = "arraybuffer"
       ws = next
@@ -289,14 +318,14 @@ export const TerminalTab: Component<Props> = (props) => {
         if (closed || ws !== next) return
         streamed = true
         if (typeof event.data === "string") {
-          term.write(event.data)
+          replay.output(event.data)
           scheduleFlush()
           return
         }
         if (event.data instanceof ArrayBuffer) {
           const bytes = new Uint8Array(event.data)
-          if (bytes.length > 0 && bytes[0] === 0x00) return
-          term.write(bytes)
+          if (replay.frame(bytes)) return
+          replay.output(bytes)
           scheduleFlush()
         }
       }
@@ -326,6 +355,7 @@ export const TerminalTab: Component<Props> = (props) => {
       }
     }
     const disposeData = term.onData(send)
+    const disposeBinary = term.onBinary(send)
     open(props.wsUrl)
 
     // These addons are not needed to paint the initial prompt. Defer them
@@ -359,9 +389,9 @@ export const TerminalTab: Component<Props> = (props) => {
       open(url)
     }
 
-    // Resize: fit on any host size change and forward new cols/rows to
-    // the backend PTY. Debounced because a user drag can fire dozens of
-    // resize events per second.
+    // Resize the visible terminal and forward new cols/rows to the backend
+    // PTY. Hidden terminals refit when activated, avoiding scrollback reflow
+    // for every mounted terminal during an inspector drag.
     let resizeTimer: ReturnType<typeof setTimeout> | undefined
     let lastCols = term.cols
     let lastRows = term.rows
@@ -377,6 +407,7 @@ export const TerminalTab: Component<Props> = (props) => {
       })
     }
     const ro = new ResizeObserver(() => {
+      if (!props.active) return
       try {
         fit.fit()
       } catch (err) {
@@ -440,12 +471,23 @@ export const TerminalTab: Component<Props> = (props) => {
         if (message.targetTerminalId !== props.terminalId) return
         const comments = message.comments
         if (!Array.isArray(comments) || comments.length === 0) return
+        markUser()
         term.paste(`${formatReviewCommentsMarkdown(comments)}\n`)
         return
       }
 
       if (message.type === "agentManager.terminal.restarted") {
         if (message.terminalId === props.terminalId) restarted(message.wsUrl)
+        return
+      }
+
+      if (message.type === "agentManager.terminal.created") {
+        if (message.terminalId === props.terminalId && !ws) {
+          term.options.fontFamily = message.font.fontFamily
+          term.options.fontSize = message.font.fontSize
+          scheduleRepaint()
+          open(message.wsUrl)
+        }
         return
       }
 
@@ -479,8 +521,14 @@ export const TerminalTab: Component<Props> = (props) => {
     createEffect(() => {
       const now = props.active
       const serial = props.focusSerial ?? 0
-      if (now && (!wasActive || serial !== focusSerial))
-        scheduleRepaint((serial > 0 && serial !== focusSerial) || props.focusOnActivate !== false)
+      if (now && (!wasActive || serial !== focusSerial)) {
+        const focus = (serial > 0 && serial !== focusSerial) || props.focusOnActivate !== false
+        // xterm creates its textarea synchronously in term.open(). Focus it
+        // now so a freshly revealed terminal accepts input in this event
+        // turn; the queued repaint below still refits and retries next frame.
+        if (focus && document.hasFocus()) term.focus()
+        scheduleRepaint(focus)
+      }
       if (!now && wasActive) term.blur()
       wasActive = now
       focusSerial = serial
@@ -528,11 +576,16 @@ export const TerminalTab: Component<Props> = (props) => {
       window.removeEventListener("focus", onWindowFocus)
       host.removeEventListener("focusin", onFocusIn)
       host.removeEventListener("focusout", onFocusOut)
+      for (const event of ["input", "paste", "compositionend", "mousedown", "wheel"]) {
+        host.removeEventListener(event, markUser, true)
+      }
+      disposeKey.dispose()
       fontSub()
       themeObserver.disconnect()
       clearTimeout(resizeTimer)
       ro.disconnect()
       disposeData.dispose()
+      disposeBinary.dispose()
       disposeTitle.dispose()
       try {
         ws?.close()

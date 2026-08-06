@@ -243,9 +243,9 @@ General settings include:
 |---|---|---|
 | Security Agent enabled | Off until you turn it on | Turning it on queues an initial sync for the selected repository scope. |
 | Repository selection | Selected repositories during setup | Choose all accessible repositories or selected repositories. |
-| Triage model | Kilo Balanced | Used for initial triage and exploitability recommendations. |
-| Analysis model | Kilo Balanced | Used for sandbox analysis and result extraction. |
-| Remediation model | Kilo Balanced | Used by Cloud Agent for remediation PR work. |
+| Triage model | Kilo Efficient | Used for initial triage and exploitability recommendations. |
+| Analysis model | Kilo Efficient | Used for sandbox analysis and result extraction. |
+| Remediation model | Kilo Efficient | Used by Cloud Agent for remediation PR work. |
 | Analysis mode | Auto | Auto, Shallow, or Deep. |
 
 #### Turn Security Agent on or off
@@ -271,7 +271,7 @@ Security Agent uses a separate model for each stage:
 - The Analysis model runs sandbox analysis and extracts the result.
 - The Remediation model is used by Cloud Agent to prepare remediation pull requests.
 
-Kilo Balanced is the default for all three stages. You can change each model independently. The model recorded in finding details is the model used when that analysis or remediation attempt ran. AI triage, sandbox analysis, and remediation consume Kilo Code credits.
+Kilo Efficient is the default for all three stages. You can change each model independently. The model recorded in finding details is the model used when that analysis or remediation attempt ran. AI triage, sandbox analysis, and remediation consume Kilo Code credits.
 
 #### Choose an analysis mode
 

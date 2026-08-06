@@ -9,6 +9,7 @@ import { ModelSelectorBase } from "../../shared/ModelSelector"
 import { ThinkingSelectorBase } from "../../shared/ThinkingSelector"
 import { parseModelString } from "../../../../../src/shared/provider-model"
 import type { CommandConfig } from "../../../types/messages"
+import { preserveVariant } from "../../../context/session-variant-store"
 
 const WorkflowsTab: Component = () => {
   const language = useLanguage()
@@ -48,9 +49,10 @@ const WorkflowsTab: Component = () => {
   const selectModel = (name: string, providerID: string, modelID: string) => {
     const list = Object.keys(provider.findModel({ providerID, modelID })?.variants ?? {})
     const current = variant(config().command?.[name] ?? {}, name)
+    const next = preserveVariant(current, list)
     update(name, {
       model: providerID && modelID ? `${providerID}/${modelID}` : null,
-      ...(current && !list.includes(current) ? { variant: null } : {}),
+      ...(current && !list.includes(current) ? { variant: next ?? null } : {}),
     })
   }
 
