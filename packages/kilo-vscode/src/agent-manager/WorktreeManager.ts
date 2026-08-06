@@ -13,6 +13,7 @@ import simpleGit, { type SimpleGit } from "simple-git"
 import { generateBranchName, sanitizeBranchName } from "./branch-name"
 import { type GitOps, isKiloOwnedSshCommand, nonInteractiveEnv } from "./GitOps"
 import { execWithShellEnv } from "./shell-env"
+import { execGhRead } from "./gh"
 import { markNoIndex } from "../util/spotlight"
 import {
   parsePRUrl,
@@ -1043,8 +1044,7 @@ export class WorktreeManager {
 
   private async fetchPRInfo(parsed: { owner: string; repo: string; number: number }): Promise<PRInfo> {
     try {
-      const json = await this.exec(
-        "gh",
+      const json = await this.gh(
         [
           "pr",
           "view",
@@ -1097,6 +1097,11 @@ export class WorktreeManager {
 
   private async exec(cmd: string, args: string[], timeout = 120000): Promise<string> {
     const { stdout } = await execWithShellEnv(cmd, args, { cwd: this.root, timeout })
+    return stdout
+  }
+
+  private async gh(args: string[], timeout = 120000): Promise<string> {
+    const { stdout } = await execGhRead(args, { cwd: this.root, timeout })
     return stdout
   }
 

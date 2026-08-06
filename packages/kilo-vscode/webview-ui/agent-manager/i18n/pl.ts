@@ -117,6 +117,9 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.cancel": "Anuluj",
   "agentManager.dialog.removeStaleWorktree.confirm": "Usuń nieaktualny Worktree",
 
+  "agentManager.dialog.project.select": "Wybierz projekt",
+  "agentManager.dialog.project.untrusted": "Najpierw zaufaj temu projektowi na pasku bocznym",
+  "agentManager.dialog.project.missing": "Nie znaleziono repozytorium",
   "agentManager.dialog.openWorktree": "Nowy Worktree",
   "agentManager.dialog.configureWorktree": "Skonfiguruj Nowe Worktree...",
   "agentManager.dialog.tab.new": "Nowy",

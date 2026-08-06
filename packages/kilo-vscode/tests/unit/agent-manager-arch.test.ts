@@ -23,6 +23,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/UnassignedSessionsSection.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/NewWorktreeDialog.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectSelect.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/DiffPanel.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/FullScreenDiffView.tsx"),
@@ -690,7 +691,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
 
   it("worktree import behavior lives in the cohesive importer", () => {
     const text = importer()
-    for (const value of ["createFromPR", "createWorktree", "this.busy()"]) expect(text).toContain(value)
+    for (const value of ["createFromPR", "createWorktree", "this.busy(projectId)"]) expect(text).toContain(value)
     expect(body("onImportMessage")).toContain("this.importer")
   })
 
@@ -993,6 +994,16 @@ function agentManagerSourceFiles(): string[] {
 }
 
 describe("Agent Manager — VS Code import boundary", () => {
+  it("routes GitHub CLI execution through execGhRead", () => {
+    const gh = path.join(AGENT_MANAGER_DIR, "gh.ts")
+    const violations = agentManagerSourceFiles()
+      .map((file) => path.join(AGENT_MANAGER_DIR, file))
+      .filter((file) => file !== gh)
+      .filter((file) => /(["'])gh(?:\.exe)?\1/.test(fs.readFileSync(file, "utf8")))
+      .map((file) => path.basename(file))
+    expect(violations).toEqual([])
+  })
+
   it("only allowlisted files may import vscode", () => {
     const violations: string[] = []
     for (const file of agentManagerSourceFiles()) {

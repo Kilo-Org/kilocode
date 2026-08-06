@@ -162,6 +162,7 @@ export const dict = {
   "model.group.auto": "Otomatik Modeller",
   "model.group.recommended": "Önerilen",
   "model.group.favorites": "Favoriler",
+  "model.group.mostUsed": "En çok kullanılan",
   "model.favorite.add": "Favorilere ekle",
   "model.favorite.remove": "Favorilerden çıkar",
   "model.preview.label.released": "Yayınlanma",

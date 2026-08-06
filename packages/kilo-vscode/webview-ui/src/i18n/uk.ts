@@ -163,6 +163,7 @@ export const dict = {
   "model.group.auto": "Автоматичні моделі",
   "model.group.recommended": "Рекомендовані",
   "model.group.favorites": "Обране",
+  "model.group.mostUsed": "Найчастіше використовувані",
   "model.favorite.add": "Додати до обраного",
   "model.favorite.remove": "Видалити з обраного",
   "model.preview.label.released": "Випущено",

@@ -3,6 +3,7 @@ import { NodeFileSystem, NodeSink, NodeStream } from "@effect/platform-node"
 import * as NodePath from "@effect/platform-node/NodePath"
 import { prepareCommand as prepareSandbox } from "@kilocode/sandbox" // kilocode_change
 import { tap as tapStdio, tapped } from "./kilocode/stdio-tap" // kilocode_change - Bun drops buffered stdio on close
+import * as SpawnExit from "./kilocode/spawn-exit" // kilocode_change
 import * as SpawnValidation from "./kilocode/spawn-validation" // kilocode_change
 import { settle } from "./kilocode/exit-code" // kilocode_change - settle signal termination as 128 + signum
 import * as Deferred from "effect/Deferred"
@@ -268,7 +269,11 @@ export const make = Effect.gen(function* () {
     return { stdout, stderr, all: Stream.merge(stdout, stderr) }
   }
 
-  const spawn = (command: ChildProcess.StandardCommand, opts: NodeChildProcess.SpawnOptions) =>
+  const spawn = (
+    command: ChildProcess.StandardCommand,
+    opts: NodeChildProcess.SpawnOptions,
+    direct: boolean, // kilocode_change - avoid shadowing settle
+  ) =>
     Effect.callback<readonly [NodeChildProcess.ChildProcess, ExitSignal], PlatformError.PlatformError>((resume) => {
       const signal = Deferred.makeUnsafe<readonly [code: number | null, signal: NodeJS.Signals | null]>()
       const proc = launch(command.command, command.args, opts)
@@ -280,6 +285,7 @@ export const make = Effect.gen(function* () {
       })
       proc.on("exit", (...args) => {
         exit = args
+        if (direct) Deferred.doneUnsafe(signal, Exit.succeed(args)) // kilocode_change - bounded grep must not await inherited pipes
       })
       proc.on("close", (...args) => {
         if (end) return
@@ -326,6 +332,18 @@ export const make = Effect.gen(function* () {
       return Effect.fail(toPlatformError("kill", new Error("Failed to kill child process"), command))
     })
 
+  // kilocode_change start - inspect descendants owned by commands that settle on direct exit
+  const groupAlive = (proc: NodeChildProcess.ChildProcess) => {
+    if (process.platform === "win32") return false
+    try {
+      process.kill(-proc.pid!, 0)
+      return true
+    } catch {
+      return false
+    }
+  }
+  // kilocode_change end
+
   const timeout =
     (
       proc: NodeChildProcess.ChildProcess,
@@ -370,6 +388,7 @@ export const make = Effect.gen(function* () {
       switch (command._tag) {
         case "StandardCommand": {
           const validation = SpawnValidation.take(command) // kilocode_change - retain target validation through preparation
+          const direct = SpawnExit.take(command) // kilocode_change - opt selected commands into direct-exit settlement
           const dir = yield* cwd(command.options)
           // kilocode_change start - prepare agent-scoped commands through the selected sandbox backend
           const target = yield* prepareSandbox(command, dir, env(command.options))
@@ -396,21 +415,33 @@ export const make = Effect.gen(function* () {
 
           const [proc, signal] = yield* Effect.acquireRelease(
             // kilocode_change start - spawn the prepared command and options
-            spawn(target, {
-              cwd: dir,
-              env: env(target.options),
-              stdio: stdios(sin, sout, serr, extra),
-              detached: target.options.detached ?? process.platform !== "win32",
-              shell: target.options.shell,
-              // kilocode_change end
-              windowsHide: process.platform === "win32",
-            }),
+            spawn(
+              target,
+              {
+                cwd: dir,
+                env: env(target.options),
+                stdio: stdios(sin, sout, serr, extra),
+                detached: target.options.detached ?? process.platform !== "win32",
+                shell: target.options.shell,
+                // kilocode_change end
+                windowsHide: process.platform === "win32",
+              },
+              direct, // kilocode_change
+            ),
             Effect.fnUntraced(function* ([proc, signal]) {
               const done = yield* Deferred.isDone(signal)
               const kill = timeout(proc, command, target.options) // kilocode_change
               if (done) {
                 const [code] = yield* Deferred.await(signal)
                 if (process.platform === "win32") return yield* Effect.void
+                // kilocode_change start - clean up only descendants owned by direct-settling commands
+                if (direct && groupAlive(proc)) {
+                  yield* Effect.ignore(killGroup(command, proc, target.options.killSignal ?? "SIGTERM"))
+                  yield* Effect.sleep("100 millis")
+                  if (groupAlive(proc)) yield* Effect.ignore(killGroup(command, proc, "SIGKILL"))
+                  return yield* Effect.void
+                }
+                // kilocode_change end
                 if (code !== 0 && Predicate.isNotNull(code)) return yield* Effect.ignore(kill(killGroup))
                 return yield* Effect.void
               }
