@@ -115,6 +115,9 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.cancel": "취소",
   "agentManager.dialog.removeStaleWorktree.confirm": "오래된 Worktree 제거",
 
+  "agentManager.dialog.project.select": "프로젝트 선택",
+  "agentManager.dialog.project.untrusted": "먼저 사이드바에서 이 프로젝트를 신뢰하세요",
+  "agentManager.dialog.project.missing": "저장소를 찾을 수 없음",
   "agentManager.dialog.openWorktree": "새 워크트리",
   "agentManager.dialog.configureWorktree": "새 Worktree 구성...",
   "agentManager.dialog.tab.new": "새로 만들기",

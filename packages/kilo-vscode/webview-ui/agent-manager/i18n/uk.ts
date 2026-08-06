@@ -124,6 +124,9 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.cancel": "Скасувати",
   "agentManager.dialog.removeStaleWorktree.confirm": "Видалити застаріле робоче дерево",
 
+  "agentManager.dialog.project.select": "Вибрати проєкт",
+  "agentManager.dialog.project.untrusted": "Спочатку підтвердьте, що довіряєте цьому проєкту, на бічній панелі",
+  "agentManager.dialog.project.missing": "Репозиторій не знайдено",
   "agentManager.dialog.openWorktree": "Нове робоче дерево",
   "agentManager.dialog.configureWorktree": "Налаштувати нове Worktree...",
   "agentManager.dialog.tab.new": "Нове",

@@ -27,6 +27,7 @@ import type {
   AgentManagerWorktreeDiffLoadingMessage,
   AgentManagerWorktreeDiffNoticeMessage,
   AgentManagerDiffBranchesMessage,
+  AgentManagerImportResultMessage,
   AgentManagerApplyWorktreeDiffResultMessage,
   AgentManagerWorktreeStatsMessage,
   AgentManagerLocalStatsMessage,
@@ -176,7 +177,7 @@ import { createMarkdownRender } from "./review-preferences"
 import { createSidebarCollapse } from "./sidebar-collapse"
 import { SidebarToggleButton } from "./SidebarToggleButton"
 import { setTabWidths } from "./tab-widths"
-import { clampPanelWidth, maxPanelWidth, minPanelWidth } from "./side-panel-layout"
+import { clampPanelWidth, createPanelResize, maxPanelWidth, minPanelWidth } from "./side-panel-layout"
 import { buildShortcutCategories } from "./shortcuts"
 import { tracker } from "./telemetry"
 import { createChatFocus, hasQuestionOption } from "./focus"
@@ -266,6 +267,12 @@ const AgentManagerContent: Component = () => {
   const [currentProjectId, setCurrentProjectId] = createSignal<string | undefined>()
   const [projectStates, setProjectStates] = createSignal<Record<string, AgentManagerStateMessage>>({})
   const activeProjectId = () => projectList().find((p) => p.active)?.id ?? currentProjectId()
+  const [pendingCreate, setPendingCreate] = createSignal<{ projectId: string }>()
+  const scheduleCreate = (projectId: string) => {
+    if (projectId === activeProjectId()) return
+    if (pendingCreate()) return
+    setPendingCreate({ projectId })
+  }
   const isActivePayload = (pid: string | undefined) =>
     projectList().length === 0 || pid === undefined || pid === activeProjectId()
 
@@ -282,6 +289,14 @@ const AgentManagerContent: Component = () => {
     persisted: persisted ?? {},
     activeId: () => currentProjectId() ?? "single",
   })
+  const defaultBase = (id: string) => {
+    const store = registry.ensure(id)
+    return (
+      store.defaultBaseBranch() ??
+      store.localStats()?.branch ??
+      (id === activeProjectId() ? repoDetectedBranch() : undefined)
+    )
+  }
   const localSessionIDs = () => registry.active().tabs.ids()
   const setLocalSessionIDs = (next: string[] | ((prev: string[]) => string[])) => registry.active().tabs.set(next)
   /** Remove a session ID from the local tab (no-op if absent). */
@@ -306,8 +321,6 @@ const AgentManagerContent: Component = () => {
   // rAF coalescing for resize handlers — at most one signal write per frame
   let sidebarRaf: number | undefined
   let pendingSidebarWidth: number | undefined
-  let sideRaf: number | undefined
-  let pendingSideWidth: number | undefined
 
   const [history, setHistory] = createSignal(false)
   const [sidePanel, setSidePanel] = createSignal<SidePanel>(null)
@@ -320,14 +333,7 @@ const AgentManagerContent: Component = () => {
   // Diff and terminal views share one inspector width, restored from webview
   // state so the user's divider position survives panel reloads.
   const [panelWidth, setPanelWidth] = createSignal(clampPanelWidth(persisted?.sidePanelWidth, window.innerWidth))
-  const resizeSide = (width: number) => {
-    pendingSideWidth = clampPanelWidth(width, window.innerWidth)
-    if (sideRaf !== undefined) return
-    sideRaf = requestAnimationFrame(() => {
-      sideRaf = undefined
-      setPanelWidth(pendingSideWidth!)
-    })
-  }
+  const resizeSide = createPanelResize(setPanelWidth, () => window.innerWidth)
   const showSideTerminal = () => {
     setHistory(false)
     setReviewActive(false)
@@ -1371,6 +1377,15 @@ const AgentManagerContent: Component = () => {
 
       if (msg.type === "agentManager.worktreeSetup") {
         const ev = msg as AgentManagerWorktreeSetupMessage
+        const pending = pendingCreate()
+        if (ev.status === "ready" && ev.projectId && pending?.projectId === ev.projectId && ev.worktreeId) {
+          setPendingCreate(undefined)
+          vscode.postMessage({
+            type: "agentManager.activateSelection",
+            target: { projectId: ev.projectId, kind: "worktree", worktreeId: ev.worktreeId },
+          })
+        }
+        if (ev.status === "error" && pending?.projectId === ev.projectId) setPendingCreate(undefined)
         const store = ev.projectId ? registry.ensure(ev.projectId) : registry.active()
         const updateBusy: Setter<Map<string, WorktreeBusyState>> = (value) => store.setBusy(value)
         if (ev.status === "ready" || ev.status === "error") {
@@ -1411,6 +1426,9 @@ const AgentManagerContent: Component = () => {
           setSetup({ active: true, message: ev.message, branch: ev.branch, worktreeId: ev.worktreeId })
         }
       }
+
+      if (msg.type === "agentManager.importResult" && !msg.success && pendingCreate()?.projectId === msg.projectId)
+        setPendingCreate(undefined)
 
       if (msg.type === "agentManager.sessionAdded") {
         const ev = msg as { type: string; sessionId: string; worktreeId: string }
@@ -1453,6 +1471,7 @@ const AgentManagerContent: Component = () => {
       // When a multi-version progress update arrives, mark newly created worktrees as loading
       if ((msg as { type: string }).type === "agentManager.multiVersionProgress") {
         const ev = msg as unknown as AgentManagerMultiVersionProgressMessage
+        if (ev.status === "done" && pendingCreate()?.projectId === ev.projectId) setPendingCreate(undefined)
         if (ev.status === "done" && ev.groupId) {
           // Clear busy state for all worktrees in this group
           const store = ev.projectId ? registry.ensure(ev.projectId) : registry.active()
@@ -1871,7 +1890,15 @@ const AgentManagerContent: Component = () => {
     if (!loaded()) return
     expandSidebar()
     dialog.show(() => (
-      <NewWorktreeDialog mode={mode} onClose={() => dialog.close()} defaultBaseBranch={repoDefaultBranch()} />
+      <NewWorktreeDialog
+        mode={mode}
+        onClose={() => dialog.close()}
+        projectId={multiProject() ? activeProjectId() : undefined}
+        projects={multiProject() ? projectList : undefined}
+        activeProjectId={activeProjectId()}
+        defaultBase={defaultBase}
+        onCreate={scheduleCreate}
+      />
     ))
   }
 
@@ -2348,6 +2375,8 @@ const AgentManagerContent: Component = () => {
             selection={selection() ?? undefined}
             currentSessionID={session.currentSessionID}
             mode={mode}
+            defaultBase={defaultBase}
+            onCreate={scheduleCreate}
             bindings={kb()}
             t={t}
             onSearchRef={(ref) => (sidebarSearchMenu = ref)}

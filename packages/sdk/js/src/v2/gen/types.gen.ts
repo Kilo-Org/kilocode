@@ -465,6 +465,8 @@ export type IndexingWarning = {
 export type SnapshotFileDiff = {
   file?: string
   patch?: string
+  before?: string
+  after?: string
   additions: number
   deletions: number
   status?: "added" | "deleted" | "modified"
@@ -2893,11 +2895,11 @@ export type WorktreeResetInput = {
 export type WorktreeDiffItem = {
   file?: string
   patch?: string
+  before: string
+  after: string
   additions: number
   deletions: number
   status?: "added" | "deleted" | "modified"
-  before: string
-  after: string
   tracked: boolean
   generatedLike: boolean
   summarized: boolean
@@ -13167,6 +13169,8 @@ export type SessionDiffData = {
     directory?: string
     workspace?: string
     messageID?: string
+    file?: string
+    full?: "true" | "false"
   }
   url: "/session/{sessionID}/diff"
 }
