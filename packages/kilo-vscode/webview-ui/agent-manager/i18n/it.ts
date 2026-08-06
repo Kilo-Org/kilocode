@@ -107,7 +107,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "Scheda successiva",
   "agentManager.shortcuts.newTab": "Nuova scheda",
   "agentManager.shortcuts.closeTab": "Chiudi scheda",
-  "agentManager.shortcuts.toggleTerminal": "Mostra/nascondi terminale",
+  "agentManager.shortcuts.toggleTerminal": "Metti a fuoco / nascondi il terminale",
   "agentManager.shortcuts.runScript": "Esegui script",
   "agentManager.run.options": "Opzioni di esecuzione",
   "agentManager.run.configure": "Configura script di esecuzione",

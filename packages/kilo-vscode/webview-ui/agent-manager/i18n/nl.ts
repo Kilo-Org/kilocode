@@ -106,7 +106,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "Volgend tabblad",
   "agentManager.shortcuts.newTab": "Nieuw tabblad",
   "agentManager.shortcuts.closeTab": "Tabblad sluiten",
-  "agentManager.shortcuts.toggleTerminal": "Terminal in-/uitschakelen",
+  "agentManager.shortcuts.toggleTerminal": "Terminal focussen / verbergen",
   "agentManager.shortcuts.runScript": "Script uitvoeren",
   "agentManager.run.options": "Uitvoeropties",
   "agentManager.run.configure": "Uitvoerscript configureren",

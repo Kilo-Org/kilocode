@@ -102,7 +102,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "次のタブ",
   "agentManager.shortcuts.newTab": "新しいタブ",
   "agentManager.shortcuts.closeTab": "タブを閉じる",
-  "agentManager.shortcuts.toggleTerminal": "ターミナルの切り替え",
+  "agentManager.shortcuts.toggleTerminal": "ターミナルにフォーカス / 非表示にする",
   "agentManager.shortcuts.runScript": "スクリプトを実行",
   "agentManager.run.options": "実行オプション",
   "agentManager.run.configure": "実行スクリプトを設定",
