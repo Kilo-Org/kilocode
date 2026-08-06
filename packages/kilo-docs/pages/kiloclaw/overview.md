@@ -31,6 +31,10 @@ Depending on your setup, you can also use:
 
 ## Creating an Instance
 
+{% callout type="info" title="New KiloClaw subscriptions are closed" %}
+KiloClaw no longer accepts new subscriptions. Creating or reprovisioning an instance requires an existing current KiloClaw subscription in the same personal or organization context — canceled, expired, or suspended subscriptions do not qualify. Existing instances and subscriptions are unaffected: access, billing management, and configuration updates continue to work as before.
+{% /callout %}
+
 1. Navigate to your [Kilo profile](https://app.kilo.ai/profile)
 2. Click **Claw** in the left navigation
 
