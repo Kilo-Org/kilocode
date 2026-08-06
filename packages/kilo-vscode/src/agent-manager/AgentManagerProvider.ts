@@ -811,15 +811,15 @@ export class AgentManagerProvider implements Disposable {
 
   private onImportMessage(m: AgentManagerInMessage): Record<string, unknown> | null | undefined {
     if (m.type === "agentManager.requestBranches") {
-      void this.importer.branches()
+      void this.importer.branches(m.projectId)
       return null
     }
     if (m.type === "agentManager.importFromBranch") {
-      void this.importer.branch(m.branch)
+      void this.importer.branch(m.branch, m.projectId)
       return null
     }
     if (m.type === "agentManager.importFromPR") {
-      void this.importer.pr(m.url)
+      void this.importer.pr(m.url, m.projectId)
       return null
     }
   }
@@ -1055,6 +1055,7 @@ export class AgentManagerProvider implements Disposable {
     this.pushState()
     this.postToWebview({
       type: "agentManager.worktreeSetup",
+      projectId: this.host.multiProject() ? this.context?.id : undefined,
       status: "ready",
       message: "Worktree ready",
       sessionId,

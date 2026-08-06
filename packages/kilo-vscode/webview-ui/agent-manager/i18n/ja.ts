@@ -117,6 +117,9 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.cancel": "キャンセル",
   "agentManager.dialog.removeStaleWorktree.confirm": "無効な Worktree を削除",
 
+  "agentManager.dialog.project.select": "プロジェクトを選択",
+  "agentManager.dialog.project.untrusted": "まずサイドバーでこのプロジェクトを信頼してください",
+  "agentManager.dialog.project.missing": "リポジトリが見つかりません",
   "agentManager.dialog.openWorktree": "新規ワークツリー",
   "agentManager.dialog.configureWorktree": "新規 Worktree の構成...",
   "agentManager.dialog.tab.new": "新規",

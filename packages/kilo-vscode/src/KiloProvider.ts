@@ -89,6 +89,7 @@ import {
 } from "./services/autocomplete/settings"
 import { routeEarlyMessage } from "./kilo-provider/early-message"
 import * as ModelState from "./kilo-provider/model-state"
+import { handleModelUsageMessage } from "./kilo-provider/model-usage"
 import { handleForkSession } from "./kilo-provider/fork-session"
 import { openConfig } from "./kilo-provider/open-config"
 import {
@@ -1025,6 +1026,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           copy: (text) => vscode.env.clipboard.writeText(text),
           openSessions: (ids) => this.trackOpenSessions(ids),
           speechToTextModels: () => this.fetchAndSendSpeechToTextModels(),
+          modelUsage: (msg) => handleModelUsageMessage(msg, this.extensionContext, (value) => this.postMessage(value)),
         })
       ) {
         return
@@ -4057,6 +4059,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Clear globalState items that are not part of the configuration
     await this.extensionContext?.globalState.update("variantSelections", undefined)
     await this.extensionContext?.globalState.update("recentModels", undefined)
+    await this.extensionContext?.globalState.update("modelUsage", undefined)
     await this.extensionContext?.globalState.update("kilo.dismissedNotificationIds", undefined)
     await this.extensionContext?.globalState.update("kilo.agentMigrationBannerDismissed", undefined)
     await this.extensionContext?.globalState.update("kilo.marketplace.dismissedSuggestions", undefined)
@@ -4074,6 +4077,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Re-send globalState items to the webview
     this.postMessage({ type: "variantsLoaded", variants: {} })
     this.postMessage({ type: "recentsLoaded", recents: [] })
+    this.postMessage({ type: "modelUsageLoaded", usage: {} })
 
     // Re-fetch notifications to reflect cleared dismissed IDs
     await this.fetchAndSendNotifications()
