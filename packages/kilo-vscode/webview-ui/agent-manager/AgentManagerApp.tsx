@@ -27,7 +27,6 @@ import type {
   AgentManagerWorktreeDiffLoadingMessage,
   AgentManagerWorktreeDiffNoticeMessage,
   AgentManagerDiffBranchesMessage,
-  AgentManagerImportResultMessage,
   AgentManagerApplyWorktreeDiffResultMessage,
   AgentManagerWorktreeStatsMessage,
   AgentManagerLocalStatsMessage,
@@ -181,6 +180,7 @@ import { clampPanelWidth, maxPanelWidth, minPanelWidth } from "./side-panel-layo
 import { buildShortcutCategories } from "./shortcuts"
 import { tracker } from "./telemetry"
 import { createChatFocus, hasQuestionOption } from "./focus"
+import { usePendingCreate } from "./pending-create"
 import "./agent-manager.css"
 import "./agent-manager-review.css"
 import { cycleAgent as cycle } from "../src/context/session-agent"
@@ -268,12 +268,12 @@ const AgentManagerContent: Component = () => {
   const [currentProjectId, setCurrentProjectId] = createSignal<string | undefined>()
   const [projectStates, setProjectStates] = createSignal<Record<string, AgentManagerStateMessage>>({})
   const activeProjectId = () => projectList().find((p) => p.active)?.id ?? currentProjectId()
-  const [pendingCreate, setPendingCreate] = createSignal<{ projectId: string }>()
-  const scheduleCreate = (projectId: string) => {
-    if (projectId === activeProjectId()) return
-    if (pendingCreate()) return
-    setPendingCreate({ projectId })
-  }
+  const creation = usePendingCreate(activeProjectId, (projectId, worktreeId) =>
+    vscode.postMessage({
+      type: "agentManager.activateSelection",
+      target: { projectId, kind: "worktree", worktreeId },
+    }),
+  )
   const isActivePayload = (pid: string | undefined) =>
     projectList().length === 0 || pid === undefined || pid === activeProjectId()
 
@@ -1394,15 +1394,7 @@ const AgentManagerContent: Component = () => {
 
       if (msg.type === "agentManager.worktreeSetup") {
         const ev = msg as AgentManagerWorktreeSetupMessage
-        const pending = pendingCreate()
-        if (ev.status === "ready" && ev.projectId && pending?.projectId === ev.projectId && ev.worktreeId) {
-          setPendingCreate(undefined)
-          vscode.postMessage({
-            type: "agentManager.activateSelection",
-            target: { projectId: ev.projectId, kind: "worktree", worktreeId: ev.worktreeId },
-          })
-        }
-        if (ev.status === "error" && pending?.projectId === ev.projectId) setPendingCreate(undefined)
+        creation.setup(ev)
         const store = ev.projectId ? registry.ensure(ev.projectId) : registry.active()
         const updateBusy: Setter<Map<string, WorktreeBusyState>> = (value) => store.setBusy(value)
         if (ev.status === "ready" || ev.status === "error") {
@@ -1444,8 +1436,7 @@ const AgentManagerContent: Component = () => {
         }
       }
 
-      if (msg.type === "agentManager.importResult" && !msg.success && pendingCreate()?.projectId === msg.projectId)
-        setPendingCreate(undefined)
+      if (msg.type === "agentManager.importResult" && !msg.success) creation.abandon(msg.projectId)
 
       if (msg.type === "agentManager.sessionAdded") {
         const ev = msg as { type: string; sessionId: string; worktreeId: string }
@@ -1488,7 +1479,7 @@ const AgentManagerContent: Component = () => {
       // When a multi-version progress update arrives, mark newly created worktrees as loading
       if ((msg as { type: string }).type === "agentManager.multiVersionProgress") {
         const ev = msg as unknown as AgentManagerMultiVersionProgressMessage
-        if (ev.status === "done" && pendingCreate()?.projectId === ev.projectId) setPendingCreate(undefined)
+        if (ev.status === "done") creation.abandon(ev.projectId)
         if (ev.status === "done" && ev.groupId) {
           // Clear busy state for all worktrees in this group
           const store = ev.projectId ? registry.ensure(ev.projectId) : registry.active()
@@ -1914,7 +1905,7 @@ const AgentManagerContent: Component = () => {
         projects={multiProject() ? projectList : undefined}
         activeProjectId={activeProjectId()}
         defaultBase={defaultBase}
-        onCreate={scheduleCreate}
+        onCreate={creation.schedule}
       />
     ))
   }
@@ -2393,7 +2384,7 @@ const AgentManagerContent: Component = () => {
             currentSessionID={session.currentSessionID}
             mode={mode}
             defaultBase={defaultBase}
-            onCreate={scheduleCreate}
+            onCreate={creation.schedule}
             bindings={kb()}
             t={t}
             onSearchRef={(ref) => (sidebarSearchMenu = ref)}
