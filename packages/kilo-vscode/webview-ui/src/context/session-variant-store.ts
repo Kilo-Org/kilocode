@@ -1,5 +1,26 @@
 import type { ModelSelection } from "../types/messages"
 
+const effort = ["none", "minimal", "low", "medium", "high", "xhigh", "max"]
+
+/** Keep the selected effort when possible, falling back to the nearest known effort. */
+export function preserveVariant(current: string | undefined, variants: string[]) {
+  if (!current || variants.length === 0) return undefined
+  if (variants.includes(current)) return current
+
+  const rank = effort.indexOf(current)
+  if (rank === -1) return undefined
+
+  return variants
+    .map((value, index) => ({
+      value,
+      index,
+      rank: effort.indexOf(value),
+      distance: Math.abs(effort.indexOf(value) - rank),
+    }))
+    .filter((item) => effort.includes(item.value))
+    .sort((a, b) => a.distance - b.distance || b.rank - a.rank || a.index - b.index)[0]?.value
+}
+
 export function legacyVariantKey(sel: ModelSelection) {
   return `${sel.providerID}/${sel.modelID}`
 }
@@ -21,7 +42,7 @@ export function getVariant(
   const key = variantKey(sel, agent, session)
   const fallback = session ? store[variantKey(sel, agent)] : undefined
   const stored = store[key] ?? fallback ?? store[legacyVariantKey(sel)]
-  return stored && variants.includes(stored) ? stored : variants[0]
+  return preserveVariant(stored, variants) ?? variants[0]
 }
 
 export function getAgentVariant(
