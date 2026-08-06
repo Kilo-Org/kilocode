@@ -169,6 +169,7 @@ export const dict = {
   "model.group.auto": "Automatische Modelle",
   "model.group.recommended": "Empfohlen",
   "model.group.favorites": "Favoriten",
+  "model.group.mostUsed": "Am häufigsten verwendet",
   "model.favorite.add": "Zu Favoriten hinzufügen",
   "model.favorite.remove": "Aus Favoriten entfernen",
 

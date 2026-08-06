@@ -15,6 +15,8 @@
 
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 
+const env = { KILO_UNICODE_LOGO: "0" }
+
 /**
  * Everything the manager needs from the surrounding AgentManagerProvider.
  *
@@ -46,15 +48,6 @@ interface Entry {
   title: string
 }
 
-/** Stable prefix used for terminal tab IDs in the webview (e.g. `terminal:abc123`). */
-export const TERMINAL_PREFIX = "terminal:"
-
-/** Generate a reasonably unique terminal ID without bringing in a uuid dep. */
-function makeTerminalId(): string {
-  const rand = Math.random().toString(36).slice(2, 8)
-  return `${TERMINAL_PREFIX}${Date.now().toString(36)}-${rand}`
-}
-
 export class TerminalManager {
   private readonly entries = new Map<string, Entry>()
   private readonly restarts = new Map<string, Promise<void>>()
@@ -70,6 +63,7 @@ export class TerminalManager {
    * tab back into the correct sidebar context.
    */
   async create(params: {
+    terminalId: string
     worktreeId: string | null
     cwd: string
     title: string
@@ -79,23 +73,25 @@ export class TerminalManager {
       directory: params.cwd,
       cwd: params.cwd,
       title: params.title,
+      // xterm's DOM renderer cannot draw the Unicode sextant glyphs used by
+      // Kilo's modern wordmark, so use the compatible logo in embedded tabs.
+      env,
     })
     if (error || !data) {
       const err = error instanceof Error ? error.message : String(error ?? "unknown error")
       throw new Error(`Failed to create PTY: ${err}`)
     }
-    const terminalId = makeTerminalId()
     const entry: Entry = {
-      terminalId,
+      terminalId: params.terminalId,
       ptyID: data.id,
       worktreeId: params.worktreeId,
       cwd: params.cwd,
       title: data.title ?? params.title,
     }
-    this.entries.set(terminalId, entry)
+    this.entries.set(params.terminalId, entry)
     const wsUrl = this.deps.buildWsUrl(entry.ptyID, entry.cwd)
-    this.deps.log(`Terminal created: ${terminalId} -> pty ${entry.ptyID} cwd=${entry.cwd}`)
-    return { terminalId, worktreeId: entry.worktreeId, title: entry.title, wsUrl }
+    this.deps.log(`Terminal created: ${params.terminalId} -> pty ${entry.ptyID} cwd=${entry.cwd}`)
+    return { terminalId: params.terminalId, worktreeId: entry.worktreeId, title: entry.title, wsUrl }
   }
 
   /** Forward a resize event to the backend PTY. Missing terminals are a no-op. */
@@ -246,6 +242,7 @@ export class TerminalManager {
         directory: entry.cwd,
         cwd: entry.cwd,
         title: entry.title,
+        env,
       })
       const info = created.data
       if (created.error || !info)

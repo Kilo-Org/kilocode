@@ -45,7 +45,9 @@ import type {
   SessionCreatedMessage,
   BranchInfo,
   TerminalDestination,
+  TerminalFont,
 } from "../src/types/messages"
+import { readFontSize } from "../src/font-size"
 import { IndexingProvider } from "../src/context/indexing"
 import {} from "@thisbeyond/solid-dnd"
 import type { DragEvent } from "@thisbeyond/solid-dnd"
@@ -178,6 +180,7 @@ import { clampPanelWidth, maxPanelWidth, minPanelWidth } from "./side-panel-layo
 import { buildShortcutCategories } from "./shortcuts"
 import { tracker } from "./telemetry"
 import { createChatFocus, hasQuestionOption } from "./focus"
+import { usePendingCreate } from "./pending-create"
 import "./agent-manager.css"
 import "./agent-manager-review.css"
 import { cycleAgent as cycle } from "../src/context/session-agent"
@@ -198,6 +201,7 @@ type SidePanel = "diff" | "pr" | "terminal" | null
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 // Fallback keybindings before extension sends resolved ones
 const MAX_JUMP_INDEX = 9
+const SIDE_RESIZE_INTERVAL_MS = 32
 
 const defaultBindings: Record<string, string> = {
   previousSession: isMac ? "⌘⌥↑" : "Ctrl+Alt+↑",
@@ -264,6 +268,12 @@ const AgentManagerContent: Component = () => {
   const [currentProjectId, setCurrentProjectId] = createSignal<string | undefined>()
   const [projectStates, setProjectStates] = createSignal<Record<string, AgentManagerStateMessage>>({})
   const activeProjectId = () => projectList().find((p) => p.active)?.id ?? currentProjectId()
+  const creation = usePendingCreate(activeProjectId, (projectId, worktreeId) =>
+    vscode.postMessage({
+      type: "agentManager.activateSelection",
+      target: { projectId, kind: "worktree", worktreeId },
+    }),
+  )
   const isActivePayload = (pid: string | undefined) =>
     projectList().length === 0 || pid === undefined || pid === activeProjectId()
 
@@ -280,6 +290,14 @@ const AgentManagerContent: Component = () => {
     persisted: persisted ?? {},
     activeId: () => currentProjectId() ?? "single",
   })
+  const defaultBase = (id: string) => {
+    const store = registry.ensure(id)
+    return (
+      store.defaultBaseBranch() ??
+      store.localStats()?.branch ??
+      (id === activeProjectId() ? repoDetectedBranch() : undefined)
+    )
+  }
   const localSessionIDs = () => registry.active().tabs.ids()
   const setLocalSessionIDs = (next: string[] | ((prev: string[]) => string[])) => registry.active().tabs.set(next)
   /** Remove a session ID from the local tab (no-op if absent). */
@@ -306,6 +324,7 @@ const AgentManagerContent: Component = () => {
   let pendingSidebarWidth: number | undefined
   let sideRaf: number | undefined
   let pendingSideWidth: number | undefined
+  let sideResizeTime = 0
 
   const [history, setHistory] = createSignal(false)
   const [sidePanel, setSidePanel] = createSignal<SidePanel>(null)
@@ -321,10 +340,16 @@ const AgentManagerContent: Component = () => {
   const resizeSide = (width: number) => {
     pendingSideWidth = clampPanelWidth(width, window.innerWidth)
     if (sideRaf !== undefined) return
-    sideRaf = requestAnimationFrame(() => {
+    const flush = (time: number) => {
+      if (time - sideResizeTime < SIDE_RESIZE_INTERVAL_MS) {
+        sideRaf = requestAnimationFrame(flush)
+        return
+      }
       sideRaf = undefined
+      sideResizeTime = time
       setPanelWidth(pendingSideWidth!)
-    })
+    }
+    sideRaf = requestAnimationFrame(flush)
   }
   const showSideTerminal = () => {
     setHistory(false)
@@ -361,6 +386,10 @@ const AgentManagerContent: Component = () => {
   const PENDING_PREFIX = "pending:"
   const closedDrafts = new Set<string>()
   const [activePendingId, setActivePendingId] = createSignal<string | undefined>()
+  const [terminalFont, setTerminalFont] = createSignal<TerminalFont>({
+    fontFamily: getComputedStyle(document.documentElement).getPropertyValue("--vscode-editor-font-family").trim(),
+    fontSize: readFontSize(),
+  })
 
   /** Namespace key so worktree/local ids from different projects never collide. */
   const nsKey = (sel: string) => `${currentProjectId() ?? "single"}:${sel}`
@@ -1067,6 +1096,7 @@ const AgentManagerContent: Component = () => {
   const applyState = (msg: ExtensionMessage) => {
     if (msg.type !== "agentManager.state") return
     const state = msg as AgentManagerStateMessage
+    if (state.terminalFont) setTerminalFont(state.terminalFont)
     const pid = state.projectId
     if (pid) setProjectStates((prev) => ({ ...prev, [pid]: state }))
     const store = pid ? registry.ensure(pid) : registry.active()
@@ -1333,13 +1363,6 @@ const AgentManagerContent: Component = () => {
         showToast({ variant: "error", title: t("agentManager.terminal.errorTitle"), description: message }),
       postMessage: (message) => vscode.postMessage(message as never),
       onCreated: (contextKey, terminalId) => appendToTabOrder(contextKey, terminalId),
-      onSideCreated: (contextKey, terminalId, focus) => {
-        // Focus only when the user is still looking at this panel —
-        // a slow create landing after a mode switch must not steal it.
-        if (focus && sidePanel() === "terminal" && !history() && !reviewActive() && terms.sideKey() === contextKey) {
-          terms.requestFocus(terminalId)
-        }
-      },
       onSideClosed: (_contextKey, terminalId) => forgetTerminalFocus(terminalId),
       onScriptRunning: (contextKey, terminalId) => {
         if (terms.sideKey() !== contextKey) return
@@ -1358,6 +1381,7 @@ const AgentManagerContent: Component = () => {
       onDestinationChanged: (destination) => sideCtl.syncDefault(destination),
     })
     const unsubTerminals = vscode.onMessage((msg) => {
+      if (msg.type === "agentManager.terminal.fontChanged") setTerminalFont(msg.font)
       terminalDispatch(msg)
     })
 
@@ -1370,6 +1394,7 @@ const AgentManagerContent: Component = () => {
 
       if (msg.type === "agentManager.worktreeSetup") {
         const ev = msg as AgentManagerWorktreeSetupMessage
+        creation.setup(ev)
         const store = ev.projectId ? registry.ensure(ev.projectId) : registry.active()
         const updateBusy: Setter<Map<string, WorktreeBusyState>> = (value) => store.setBusy(value)
         if (ev.status === "ready" || ev.status === "error") {
@@ -1410,6 +1435,8 @@ const AgentManagerContent: Component = () => {
           setSetup({ active: true, message: ev.message, branch: ev.branch, worktreeId: ev.worktreeId })
         }
       }
+
+      if (msg.type === "agentManager.importResult" && !msg.success) creation.abandon(msg.projectId)
 
       if (msg.type === "agentManager.sessionAdded") {
         const ev = msg as { type: string; sessionId: string; worktreeId: string }
@@ -1452,6 +1479,7 @@ const AgentManagerContent: Component = () => {
       // When a multi-version progress update arrives, mark newly created worktrees as loading
       if ((msg as { type: string }).type === "agentManager.multiVersionProgress") {
         const ev = msg as unknown as AgentManagerMultiVersionProgressMessage
+        if (ev.status === "done") creation.abandon(ev.projectId)
         if (ev.status === "done" && ev.groupId) {
           // Clear busy state for all worktrees in this group
           const store = ev.projectId ? registry.ensure(ev.projectId) : registry.active()
@@ -1870,7 +1898,15 @@ const AgentManagerContent: Component = () => {
     if (!loaded()) return
     expandSidebar()
     dialog.show(() => (
-      <NewWorktreeDialog mode={mode} onClose={() => dialog.close()} defaultBaseBranch={repoDefaultBranch()} />
+      <NewWorktreeDialog
+        mode={mode}
+        onClose={() => dialog.close()}
+        projectId={multiProject() ? activeProjectId() : undefined}
+        projects={multiProject() ? projectList : undefined}
+        activeProjectId={activeProjectId()}
+        defaultBase={defaultBase}
+        onCreate={creation.schedule}
+      />
     ))
   }
 
@@ -2072,6 +2108,7 @@ const AgentManagerContent: Component = () => {
     getSelection: selection,
     LOCAL,
     REVIEW_TAB_ID,
+    getFont: terminalFont,
   })
 
   const sideCtl = createSideTerminal({
@@ -2346,6 +2383,8 @@ const AgentManagerContent: Component = () => {
             selection={selection() ?? undefined}
             currentSessionID={session.currentSessionID}
             mode={mode}
+            defaultBase={defaultBase}
+            onCreate={creation.schedule}
             bindings={kb()}
             t={t}
             onSearchRef={(ref) => (sidebarSearchMenu = ref)}

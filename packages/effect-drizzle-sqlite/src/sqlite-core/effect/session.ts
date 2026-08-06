@@ -279,7 +279,13 @@ export class SQLiteEffectPreparedQuery<
       assertUnreachable(cacheStrat)
     }).pipe(
       Effect.catch((e) => {
-        return Effect.fail(new EffectDrizzleQueryError({ query: queryString, params, cause: Cause.fail(e) }))
+        return Effect.fail(
+          new EffectDrizzleQueryError({
+            query: queryString,
+            params: params.map(() => "<redacted>"), // kilocode_change - bound values may contain credentials
+            cause: Cause.fail(e),
+          }),
+        )
       }),
     )
   }

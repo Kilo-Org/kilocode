@@ -6,6 +6,7 @@ import type { SuggestionContext } from "./handlers/suggestion"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { buildChatSettingsMessage } from "./chat-settings"
 import { buildThroughputSettingMessage } from "./throughput-settings"
+import { handleModelUsageMessage, type ModelUsageMessage } from "./model-usage"
 
 type Ctx = {
   question: SuggestionContext
@@ -18,6 +19,7 @@ type Ctx = {
   copy: (text: string) => PromiseLike<void>
   openSessions: (ids: string[]) => void
   speechToTextModels: () => Promise<void>
+  modelUsage: (message: ModelUsageMessage) => Promise<void>
 }
 
 export async function routeEarlyMessage(
@@ -40,6 +42,10 @@ export async function routeEarlyMessage(
           error: err instanceof Error ? err.message : String(err),
         }),
     )
+    return true
+  }
+  if (message.type === "recordModelUsage" || message.type === "requestModelUsage") {
+    await ctx.modelUsage(message as ModelUsageMessage)
     return true
   }
   await routeSuggestionWebviewMessage(ctx.question, message)

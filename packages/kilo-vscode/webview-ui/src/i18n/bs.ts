@@ -163,6 +163,7 @@ export const dict = {
   "model.group.auto": "Automatski modeli",
   "model.group.recommended": "Preporučeno",
   "model.group.favorites": "Favoriti",
+  "model.group.mostUsed": "Najčešće korišteni",
   "model.favorite.add": "Dodaj u favorite",
   "model.favorite.remove": "Ukloni iz favorita",
   "model.preview.label.released": "Objavljeno",
