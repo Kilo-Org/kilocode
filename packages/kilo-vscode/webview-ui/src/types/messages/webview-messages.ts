@@ -1242,6 +1242,16 @@ export interface RequestRecentsMessage {
   type: "requestRecents"
 }
 
+export interface RecordModelUsageMessage {
+  type: "recordModelUsage"
+  providerID: string
+  modelID: string
+}
+
+export interface RequestModelUsageMessage {
+  type: "requestModelUsage"
+}
+
 export interface PersistModelSelectorExpandedRequest {
   type: "persistModelSelectorExpanded"
   value: boolean
@@ -1559,6 +1569,8 @@ export type WebviewMessage =
   | FetchCustomProviderModelsMessage
   | PersistRecentsRequest
   | RequestRecentsMessage
+  | RecordModelUsageMessage
+  | RequestModelUsageMessage
   | PersistModelSelectorExpandedRequest
   | RequestModelSelectorExpandedMessage
   | ToggleFavoriteRequest
