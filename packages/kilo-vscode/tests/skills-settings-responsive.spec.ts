@@ -73,6 +73,12 @@ test.describe("skills settings responsive layout", () => {
       await trigger.hover()
       const content = page.locator('[data-component="tooltip"]').filter({ hasText: seeded })
       await expect(content, `Kilo Tooltip exposes full path on hover: ${seeded}`).toBeVisible()
+      const tipBox = await content.boundingBox()
+      const viewport = page.viewportSize()!
+      expect(tipBox, "path tooltip bounding box").not.toBeNull()
+      expect(tipBox!.x + tipBox!.width, `path tooltip stays inside viewport: ${seeded}`).toBeLessThanOrEqual(
+        viewport.width + 1,
+      )
     }
 
     for (const seeded of [SEEDED_URL, SEEDED_URL_2]) {
@@ -99,6 +105,12 @@ test.describe("skills settings responsive layout", () => {
       await trigger.hover()
       const content = page.locator('[data-component="tooltip"]').filter({ hasText: seeded })
       await expect(content, `Kilo Tooltip exposes full URL on hover: ${seeded}`).toBeVisible()
+      const tipBox = await content.boundingBox()
+      const viewport = page.viewportSize()!
+      expect(tipBox, "URL tooltip bounding box").not.toBeNull()
+      expect(tipBox!.x + tipBox!.width, `URL tooltip stays inside viewport: ${seeded}`).toBeLessThanOrEqual(
+        viewport.width + 1,
+      )
     }
 
     for (const [label, card] of [
