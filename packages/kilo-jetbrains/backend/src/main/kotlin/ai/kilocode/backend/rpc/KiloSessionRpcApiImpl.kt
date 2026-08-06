@@ -33,6 +33,16 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.Request
+import ai.kilocode.backend.diff.DiffFullReconstruct
+import java.nio.file.Files
+import java.nio.file.Path
 
 /**
  * Backend implementation of [KiloSessionRpcApi].
@@ -153,6 +163,76 @@ class KiloSessionRpcApiImpl internal constructor(
                 val path = file.file ?: return@mapNotNull null
                 DiffFileDto(path, file.additions.toInt(), file.deletions.toInt(), file.patch, file.status?.value)
             }
+    }
+
+    override suspend fun diffSides(sessionId: String?, directory: String, file: DiffFileDto, messageId: String?): DiffFileDto? {
+        val patch = file.patch
+        if (patch.isNullOrBlank()) return null
+        log.info("diffSides start file=${file.file} session=${!sessionId.isNullOrBlank()} message=${!messageId.isNullOrBlank()} patch=${patch.length}")
+        // 1) Authoritative: a CLI with full/file support returns whole before/after from the snapshot,
+        //    correct even for historical turns. Older CLIs ignore the params, so we detect the missing
+        //    content and fall through to local reconstruction.
+        if (!sessionId.isNullOrBlank()) authoritative(sessionId, directory, file, messageId)?.let {
+            log.info("diffSides authoritative file=${file.file} before=${it.before?.length ?: 0} after=${it.after?.length ?: 0}")
+            return it
+        }
+        // 2) Fallback: read the working-tree file and reverse-apply the hunk patch to recover the whole
+        //    "before". No CLI round-trip, so this works against any pinned CLI.
+        return withContext(Dispatchers.IO) {
+            val path = resolve(directory, file.file)
+            val after = path?.let { runCatching { Files.readString(it) }.getOrNull() }
+            val before = after?.let { DiffFullReconstruct.before(it, patch) }
+            log.info("diffSides fallback file=${file.file} path=${path ?: "<missing>"} after=${after?.length ?: 0} before=${before?.length ?: 0}")
+            if (after != null && before != null) file.copy(before = before, after = after) else null
+        }
+    }
+
+    private fun resolve(directory: String, file: String): Path? {
+        val direct = Path.of(directory).resolve(file).normalize()
+        if (Files.isRegularFile(direct)) return direct
+        // dev-only: a stored diff may reference another worktree (relative, or absolute into a sibling
+        // worktree that isn't checked out here). Re-root onto the running worktree by trying progressively
+        // shorter path suffixes until one exists, so full-file diffs work across dev worktrees.
+        val root = System.getProperty("kilo.dev.worktree.root")?.takeIf { it.isNotBlank() }?.let(Path::of) ?: return null
+        val segs = Path.of(file).toList()
+        for (i in segs.indices) {
+            val candidate = segs.drop(i).fold(root) { acc, seg -> acc.resolve(seg) }.normalize()
+            if (Files.isRegularFile(candidate)) return candidate
+        }
+        return null
+    }
+
+    // Ask the CLI for full before/after via GET /session/:id/diff?full=true&file=...; returns null when
+    // the pinned CLI lacks full/file support (it omits before/after) so the caller falls back locally.
+    private suspend fun authoritative(sessionId: String, directory: String, file: DiffFileDto, messageId: String?): DiffFileDto? {
+        val api = app.api ?: return null
+        return withContext(Dispatchers.IO) {
+            runCatching {
+                val url = (api.baseUrl.trimEnd('/') + "/").toHttpUrlOrNull()
+                    ?.newBuilder()
+                    ?.addPathSegment("session")
+                    ?.addPathSegment(sessionId)
+                    ?.addPathSegment("diff")
+                    ?.addQueryParameter("directory", directory)
+                    ?.addQueryParameter("full", "true")
+                    ?.addQueryParameter("file", file.file)
+                    ?.apply { if (!messageId.isNullOrBlank()) addQueryParameter("messageID", messageId) }
+                    ?.build()
+                    ?: return@runCatching null
+                api.client.newCall(Request.Builder().url(url).get().build()).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        log.info("diffSides authoritative file=${file.file} http=${response.code} messageID=${messageId ?: "none"}")
+                        return@runCatching null
+                    }
+                    val arr = Json.parseToJsonElement(response.body?.string().orEmpty()).jsonArray
+                    val item = arr.firstOrNull { it.jsonObject["file"]?.jsonPrimitive?.contentOrNull == file.file }?.jsonObject
+                    val before = item?.get("before")?.jsonPrimitive?.contentOrNull
+                    val after = item?.get("after")?.jsonPrimitive?.contentOrNull
+                    log.info("diffSides authoritative file=${file.file} items=${arr.size} matched=${item != null} before=${before?.length ?: 0} after=${after?.length ?: 0}")
+                    if (before != null && after != null) file.copy(before = before, after = after) else null
+                }
+            }.onFailure { log.info("diffSides authoritative file=${file.file} error=${it.message}") }.getOrNull()
+        }
     }
 
     override suspend fun attachmentPart(id: String, directory: String, messageId: String, partId: String, attachmentKey: String?): PartDto? =

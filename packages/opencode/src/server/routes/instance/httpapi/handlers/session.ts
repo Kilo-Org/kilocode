@@ -106,7 +106,14 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       params: { sessionID: SessionID }
       query: typeof DiffQuery.Type
     }) {
-      return yield* summary.diff({ sessionID: ctx.params.sessionID, messageID: ctx.query.messageID })
+      // kilocode_change start - pass full-content detail query fields through to the summary service
+      return yield* summary.diff({
+        sessionID: ctx.params.sessionID,
+        messageID: ctx.query.messageID,
+        full: ctx.query.full,
+        file: ctx.query.file,
+      })
+      // kilocode_change end
     })
 
     const messages = Effect.fn("SessionHttpApi.messages")(function* (ctx: {
