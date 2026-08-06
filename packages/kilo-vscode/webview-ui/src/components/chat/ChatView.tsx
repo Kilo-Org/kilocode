@@ -23,6 +23,7 @@ import { useSession } from "../../context/session"
 import { useLocalTabs } from "../../context/local-tabs"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
+import { useConfig } from "../../context/config"
 import { useWorktreeMode } from "../../context/worktree-mode"
 import { useServer } from "../../context/server"
 import { useAgentRequirements } from "../../context/agent-requirements"
@@ -50,6 +51,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const session = useSession()
   const vscode = useVSCode()
   const language = useLanguage()
+  const { settings } = useConfig()
   const worktreeMode = useWorktreeMode()
   const server = useServer()
   const tabs = useLocalTabs()
@@ -59,6 +61,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const pendingSessionID = () => props.pendingSessionID ?? tabs?.pending()
   // Show "Continue in Worktree": only when explicitly enabled via prop
   const canContinueInWorktree = () => props.continueInWorktree === true
+  const limitWidth = () => settings()["chat.limitContentWidth"] !== false
 
   const id = () => session.currentSessionID()
   const hasMessages = () => session.messages().length > 0
@@ -335,7 +338,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
 
   return (
     <TranscriptSearchProvider>
-      <div class="chat-view">
+      <div class="chat-view" data-limit-content-width={limitWidth() ? "true" : "false"}>
         <Show when={isSidebar() && !props.readonly && tabs && showTabStrip(tabs.ids())}>
           <SessionTabStrip />
         </Show>

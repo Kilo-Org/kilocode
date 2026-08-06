@@ -1071,6 +1071,11 @@
           "default": true,
           "description": "Cycle through reasoning effort variants with Shift+Tab in prompt inputs. Disable to keep Shift+Tab for keyboard focus navigation."
         },
+        "kilo-code.new.chat.limitContentWidth": {
+          "type": "boolean",
+          "default": true,
+          "description": "Limit chat content to a centered, readable-width column on wide panels. Disable to use the full panel width in the sidebar, editor tabs, and Agent Manager."
+        },
         "kilo-code.new.agentWorkStyle": {
           "type": "string",
           "scope": "application",

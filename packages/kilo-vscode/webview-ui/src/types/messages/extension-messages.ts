@@ -371,6 +371,7 @@ export interface ChatSettingsLoadedMessage {
   type: "chatSettingsLoaded"
   settings: {
     shiftTabCyclesVariant: boolean
+    limitContentWidth: boolean
   }
 }
 
