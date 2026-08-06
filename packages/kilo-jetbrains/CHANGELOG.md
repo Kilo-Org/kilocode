@@ -128,6 +128,29 @@
 
 ## [Unreleased]
 
+## [7.0.13] - 2026-08-05
+
+### Added
+
+- Show the pinned Kilo Core version and whether JetBrains is using a downloaded or bundled CLI build.
+
+### Fixed
+
+- Avoid GitHub checksum API rate limits when JetBrains verifies downloaded Kilo Core CLI assets.
+- Add dropped files as JetBrains file references so attachments are available to Kilo reliably.
+- Stop eager Kilo Core file watchers when running from JetBrains to reduce unnecessary background work.
+- Improve JetBrains session diff rendering, including full-file editor diffs, multi-hunk diffs, fallback handling, gutter line numbers, and session-scoped diff paths.
+- Speed up local recall searches in Kilo Core.
+- Omit persona details from generated session names.
+- Make invalid tool-argument errors clearer and more actionable to the model.
+- Handle SQLite lock errors more gracefully.
+
+### Changed
+
+- Bump the JetBrains CLI pin to Kilo CLI v7.4.20.
+- Include upstream OpenCode updates through v1.17.13.
+- Adopt upstream reasoning variant metadata from OpenCode v1.18.11.
+
 ## [7.0.13-rc.1] - 2026-08-05
 
 ### Added
