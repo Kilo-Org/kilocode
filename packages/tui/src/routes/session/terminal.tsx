@@ -16,6 +16,7 @@ export function TerminalPrompt(props: { sessionID: string; terminalID: string })
   const renderer = useRenderer()
   const dimensions = useTerminalDimensions()
   const [snapshot, setSnapshot] = createSignal<InteractiveTerminalSnapshot>()
+  const workspace = () => sync.session.get(props.sessionID)?.workspaceID
   function terminal() {
     const live = sync.data.interactive_terminal[props.sessionID]?.find((item) => item.info.id === props.terminalID)
     const polled = snapshot()
@@ -41,6 +42,7 @@ export function TerminalPrompt(props: { sessionID: string; terminalID: string })
       .then(() =>
         sdk.client.interactiveTerminal.write({
           terminalID: props.terminalID,
+          workspace: workspace(),
           interactiveTerminalWriteInput: { data },
         }),
       )
@@ -51,7 +53,7 @@ export function TerminalPrompt(props: { sessionID: string; terminalID: string })
   function close() {
     if (closing()) return
     setClosing(true)
-    void sdk.client.interactiveTerminal.close({ terminalID: props.terminalID }).catch(() => {
+    void sdk.client.interactiveTerminal.close({ terminalID: props.terminalID, workspace: workspace() }).catch(() => {
       setClosing(false)
     })
   }
@@ -64,7 +66,7 @@ export function TerminalPrompt(props: { sessionID: string; terminalID: string })
     if (state.polling || closing()) return
     state.polling = true
     void sdk.client.interactiveTerminal
-      .get({ terminalID: props.terminalID })
+      .get({ terminalID: props.terminalID, workspace: workspace() })
       .then((result) => {
         if (result.data) setSnapshot(result.data)
       })
@@ -131,6 +133,7 @@ export function TerminalPrompt(props: { sessionID: string; terminalID: string })
       void sdk.client.interactiveTerminal
         .resize({
           terminalID: props.terminalID,
+          workspace: workspace(),
           interactiveTerminalResizeInput: { cols: width, rows: height },
         })
         .catch(() => undefined)

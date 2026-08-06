@@ -2,6 +2,7 @@ import * as nodePath from "path"
 import * as os from "os"
 import * as fs from "fs/promises"
 import { spawn } from "../util/process"
+import type { GitExecutable } from "../util/git-executable"
 import simpleGit from "simple-git"
 import {
   parseWorktreeList,
@@ -18,6 +19,8 @@ interface GitOpsOptions {
   runGit?: (args: string[], cwd: string) => Promise<string>
   /** Shared concurrency gate for child process spawning. */
   semaphore?: Semaphore
+  /** Validated Git executable shared by Agent Manager operations. */
+  binary?: GitExecutable
 }
 
 export interface ApplyConflict {
@@ -96,6 +99,9 @@ export class GitOps {
   private readonly runGit: (args: string[], cwd: string) => Promise<string>
   private readonly controller = new AbortController()
   private readonly semaphore: Semaphore | undefined
+  private readonly binary: GitExecutable
+  private readonly injected: boolean
+  private executableCache: Promise<string> | undefined
   private readonly resolutionCache = new Map<string, { value: string; expires: number }>()
   private static readonly CACHE_TTL_MS = 60000
   private static readonly MAX_CACHE_SIZE = 100
@@ -107,12 +113,19 @@ export class GitOps {
   constructor(options: GitOpsOptions) {
     this.log = options.log
     this.semaphore = options.semaphore
+    this.binary = options.binary ?? (() => Promise.resolve("git"))
+    this.injected = options.runGit !== undefined
     this.runGit =
       options.runGit ??
-      ((args, cwd) =>
-        simpleGit(cwd, { abort: this.controller.signal })
+      (async (args, cwd) => {
+        const binary = await this.executable()
+        return simpleGit(cwd, {
+          abort: this.controller.signal,
+          binary,
+        })
           .raw(args)
-          .then((out) => out.trim()))
+          .then((out) => out.trim())
+      })
   }
 
   dispose(): void {
@@ -148,22 +161,28 @@ export class GitOps {
   private raw(args: string[], cwd: string): Promise<string> {
     const signal = this.controller.signal
     if (signal.aborted) return Promise.reject(new Error("GitOps disposed"))
-    const invoke = () =>
-      new Promise<string>((resolve, reject) => {
-        const onAbort = () => reject(new Error("GitOps disposed"))
-        signal.addEventListener("abort", onAbort, { once: true })
-        this.runGit(args, cwd).then(
-          (value) => {
-            signal.removeEventListener("abort", onAbort)
-            resolve(value)
-          },
-          (err) => {
-            signal.removeEventListener("abort", onAbort)
-            reject(err)
-          },
-        )
-      })
-    return this.semaphore ? this.semaphore.run(invoke) : invoke()
+    return this.executable().then(() => {
+      if (signal.aborted) throw new Error("GitOps disposed")
+      const invoke = () => {
+        const pending = this.runGit(args, cwd)
+        if (!this.injected) return pending
+        return new Promise<string>((resolve, reject) => {
+          const onAbort = () => reject(new Error("GitOps disposed"))
+          signal.addEventListener("abort", onAbort, { once: true })
+          pending.then(
+            (value) => {
+              signal.removeEventListener("abort", onAbort)
+              resolve(value)
+            },
+            (err) => {
+              signal.removeEventListener("abort", onAbort)
+              reject(err)
+            },
+          )
+        })
+      }
+      return this.semaphore ? this.semaphore.run(invoke) : invoke()
+    })
   }
 
   /** Return the name of the currently checked-out branch, or `"HEAD"` if detached. */
@@ -551,43 +570,79 @@ export class GitOps {
     return { code: result.code, stdout: result.stdout.toString("utf8"), stderr: result.stderr }
   }
 
-  private execBuffer(args: string[], cwd: string, options?: ExecOptions): Promise<ExecBufferResult> {
+  private async execBuffer(args: string[], cwd: string, options?: ExecOptions): Promise<ExecBufferResult> {
+    if (this.controller.signal.aborted) {
+      return { code: 1, stdout: Buffer.alloc(0), stderr: "GitOps disposed" }
+    }
+    const cmd = await this.executable().catch(() => undefined)
+    if (!cmd || this.controller.signal.aborted) {
+      return { code: 1, stdout: Buffer.alloc(0), stderr: "GitOps disposed" }
+    }
+    const invoke = () => this.invoke(cmd, args, cwd, options)
+    return this.semaphore ? this.semaphore.run(invoke) : invoke()
+  }
+
+  private executable(): Promise<string> {
+    const signal = this.controller.signal
+    if (signal.aborted) return Promise.reject(new Error("GitOps disposed"))
+
+    return new Promise<string>((resolve, reject) => {
+      const onAbort = () => reject(new Error("GitOps disposed"))
+      signal.addEventListener("abort", onAbort, { once: true })
+      const cache = (this.executableCache ??= Promise.resolve().then(() => this.binary()))
+      cache.then(
+        (value) => {
+          signal.removeEventListener("abort", onAbort)
+          resolve(value)
+        },
+        (err) => {
+          signal.removeEventListener("abort", onAbort)
+          if (this.executableCache === cache) this.executableCache = undefined
+          reject(err)
+        },
+      )
+    })
+  }
+
+  private invoke(cmd: string, args: string[], cwd: string, options?: ExecOptions): Promise<ExecBufferResult> {
     if (this.controller.signal.aborted) {
       return Promise.resolve({ code: 1, stdout: Buffer.alloc(0), stderr: "GitOps disposed" })
     }
-    const invoke = () =>
-      new Promise<ExecBufferResult>((resolve) => {
-        const child = spawn("git", args, {
-          cwd,
-          env: options?.env,
-          signal: this.controller.signal,
-          stdio: ["pipe", "pipe", "pipe"],
-        })
 
-        if (options?.stdin !== undefined) {
-          if (!child.stdin) {
-            resolve({ code: 1, stdout: Buffer.alloc(0), stderr: "stdin not available for git process" })
-            return
-          }
-          child.stdin.end(options.stdin)
-        }
+    return new Promise<ExecBufferResult>((resolve) => {
+      const child = spawn(cmd, args, {
+        cwd,
+        env: options?.env,
+        stdio: ["pipe", "pipe", "pipe"],
+      })
+      const out: Buffer[] = []
+      const err: Buffer[] = []
+      let failure: string | undefined
+      const abort = () => child.kill("SIGTERM")
 
-        const out: Buffer[] = []
-        const err: Buffer[] = []
-        child.stdout?.on("data", (chunk: Buffer) => out.push(chunk))
-        child.stderr?.on("data", (chunk: Buffer) => err.push(chunk))
+      this.controller.signal.addEventListener("abort", abort, { once: true })
+      child.stdout?.on("data", (chunk: Buffer) => out.push(chunk))
+      child.stderr?.on("data", (chunk: Buffer) => err.push(chunk))
 
-        child.on("error", (error) => {
-          resolve({ code: 1, stdout: Buffer.alloc(0), stderr: error.message })
-        })
-        child.on("close", (code) => {
-          resolve({
-            code: code ?? 1,
-            stdout: Buffer.concat(out),
-            stderr: Buffer.concat(err).toString("utf8"),
-          })
+      child.on("error", (error) => {
+        failure = error.message
+      })
+      child.on("close", (code) => {
+        this.controller.signal.removeEventListener("abort", abort)
+        resolve({
+          code: code ?? 1,
+          stdout: Buffer.concat(out),
+          stderr: failure ?? Buffer.concat(err).toString("utf8"),
         })
       })
-    return this.semaphore ? this.semaphore.run(invoke) : invoke()
+
+      if (options?.stdin === undefined) return
+      if (child.stdin) {
+        child.stdin.end(options.stdin)
+        return
+      }
+      failure = "stdin not available for git process"
+      child.kill("SIGTERM")
+    })
   }
 }

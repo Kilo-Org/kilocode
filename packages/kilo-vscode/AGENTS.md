@@ -221,6 +221,8 @@ import { spawn, exec } from "../util/process"
 
 The `spawn` wrapper covers long-lived processes (e.g. `kilo serve`). The `exec` wrapper covers short commands (e.g. `git`, `tar`). If you need the raw callback form of `execFile` for some reason, pass `windowsHide: true` explicitly in the options object.
 
+Agent Manager uses read-only `gh` commands for PR status and PR import. Call `execGhRead` from `src/agent-manager/gh.ts` for those commands; on Windows it supplies `TZ=UTC` when no timezone is configured, preventing older `gh` releases from launching `tzutil.exe` in a visible console.
+
 ## Style
 
 Follow monorepo root AGENTS.md style guide:

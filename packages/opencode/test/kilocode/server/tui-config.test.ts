@@ -43,6 +43,34 @@ describe("TUI config routes", () => {
     expect(body.plugin_origins).toBeUndefined()
   })
 
+  test("does not write TUI config logs to the terminal", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        const cfg = path.join(dir, ".kilo")
+        await fs.mkdir(cfg, { recursive: true })
+        await Bun.write(path.join(cfg, "tui.json"), JSON.stringify({ theme: "dracula" }))
+      },
+    })
+
+    const output: unknown[][] = []
+    const log = console.log
+    try {
+      console.log = (...args) => output.push(args)
+      const response = await Server.Default().app.request("/tui/config", {
+        headers: { "x-kilo-directory": tmp.path },
+      })
+      expect(response.status).toBe(200)
+    } finally {
+      console.log = log
+    }
+
+    expect(
+      output.some((args) =>
+        args.some((item) => typeof item === "string" && /loading tui config|applying tui config/.test(item)),
+      ),
+    ).toBe(false)
+  })
+
   test("loads legacy .kilocode TUI config and ignores .opencode", async () => {
     await using tmp = await tmpdir({
       init: async (dir) => {

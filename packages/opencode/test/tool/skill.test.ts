@@ -136,7 +136,7 @@ Use this skill.
   )
 
   // kilocode_change start
-  it.live("built-in kilo-config includes named command lookup guidance", () =>
+  it.live("built-in kilo-config keeps rendered shell examples inert", () =>
     provideTmpdirInstance(
       (dir) =>
         Effect.gen(function* () {
@@ -157,9 +157,13 @@ Use this skill.
           })).find((t) => t.id === SkillTool.id)
           if (!tool) throw new Error("Skill tool not found")
 
+          const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
           const ctx: Tool.Context = {
             ...baseCtx,
-            ask: () => Effect.void,
+            ask: (req) =>
+              Effect.sync(() => {
+                requests.push(req)
+              }),
           }
 
           const result = yield* tool.execute({ name: "kilo-config" }, ctx)
@@ -170,6 +174,9 @@ Use this skill.
           expect(result.output).toContain("~/.kilocode/")
           expect(result.output).toContain("**/command/")
           expect(result.output).toContain("explicit search")
+          expect(result.output).toContain("`` !`cmd` ``")
+          expect(result.output).not.toContain("[skill shell command failed]")
+          expect(requests.map((request) => request.permission)).toEqual(["skill"])
         }),
       { git: true },
     ),
