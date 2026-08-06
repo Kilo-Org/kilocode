@@ -20,6 +20,7 @@ const subscription = {
   planName: "Token Plan Plus",
   providerName: "MiniMax",
   providerId: "minimax",
+  canQueryUsage: true,
   hasInstalledByokKey: true,
   status: "active",
   cancelAtPeriodEnd: false,

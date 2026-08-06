@@ -38,7 +38,7 @@ function base() {
 const error = (code: string, message: string) => ({ code, message, retryable: true })
 
 function installed(subscription: CodingPlanSubscription, state: Result<ByokEntry[]>) {
-  if (!state.ok || !subscription.hasInstalledByokKey) return false
+  if (!state.ok || !subscription.canQueryUsage || !subscription.hasInstalledByokKey) return false
   return state.value.some(
     (item) =>
       item.provider_id === subscription.providerId && item.management_source === "coding_plan" && item.is_enabled,

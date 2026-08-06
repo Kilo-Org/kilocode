@@ -11,6 +11,7 @@ const CodingPlanSubscriptionSchema = z.object({
   planName: z.string(),
   providerName: z.string(),
   providerId: z.string(),
+  canQueryUsage: z.boolean(),
   hasInstalledByokKey: z.boolean(),
   status: z.enum(["active", "past_due", "canceled"]),
   cancelAtPeriodEnd: z.boolean(),
