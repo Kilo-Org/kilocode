@@ -56,10 +56,11 @@ const WORKTREE_PROMPT_COMMANDS = new Set(["models", "agents", "variant", "sandbo
 const WORKTREE_PROMPT_SCOPE = "agent-manager-worktree-prompt"
 
 type DialogTab = "new" | "import"
+type Model = { providerID: string; modelID: string }
 
 type DialogSelections = {
   agent?: string
-  model?: { providerID: string; modelID: string }
+  model?: Model
   variant?: string
   sandbox?: boolean
 }
@@ -79,6 +80,18 @@ function readDialogSelections(value: unknown): DialogSelections {
     variant: typeof data.variant === "string" ? data.variant : undefined,
     sandbox: typeof data.sandbox === "boolean" ? data.sandbox : undefined,
   }
+}
+
+function restoreAgent(value: string | undefined, list: Array<{ name: string }>, base: string): string {
+  if (!value) return base
+  if (list.length === 0) return value
+  return list.some((item) => item.name === value) ? value : base
+}
+
+function restoreModel(value: Model | undefined, providers: Record<string, unknown>, valid: (value: Model) => boolean) {
+  if (!value) return undefined
+  if (Object.keys(providers).length === 0) return value
+  return valid(value) ? value : undefined
 }
 
 function fallback<T>(value: T | undefined, get: () => T): T {
@@ -140,9 +153,12 @@ export const NewWorktreeDialog: Component<{
   const [prompt, setPrompt] = createSignal((cached?.advancedDialogPrompt as string) ?? "")
   const saved = readDialogSelections(cached?.advancedDialogSelections)
   const [versions, setVersions] = createSignal<VersionCount>(1)
-  const initialAgent = fallback(saved.agent, () => session.selectedAgent())
-  const initialModel = fallback(saved.model, () => session.modelForAgent(initialAgent))
-  const [model, setModel] = createSignal<{ providerID: string; modelID: string } | null>(initialModel)
+  const initialAgent = restoreAgent(saved.agent, session.agents(), session.selectedAgent())
+  const initialModel = fallback(
+    restoreModel(saved.model, provider.providers(), (value) => provider.isModelValid(value)),
+    () => session.modelForAgent(initialAgent),
+  )
+  const [model, setModel] = createSignal<Model | null>(initialModel)
   const [compareMode, setCompareMode] = createSignal(false)
   const [modelAllocations, setModelAllocations] = createSignal<ModelAllocations>(new Map())
   const [agent, setAgent] = createSignal(initialAgent)
