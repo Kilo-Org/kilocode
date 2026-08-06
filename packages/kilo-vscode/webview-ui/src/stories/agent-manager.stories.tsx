@@ -1315,11 +1315,7 @@ export const SidebarSearchOpen: Story = {
 // ---------------------------------------------------------------------------
 
 import { ProjectList } from "../../agent-manager/ProjectList"
-import type {
-  AgentManagerStateMessage,
-  LocalGitStats,
-  ProjectSessionInfo,
-} from "../types/messages"
+import type { AgentManagerStateMessage, LocalGitStats, ProjectSessionInfo } from "../types/messages"
 
 const projectA: AgentProjectSnapshot = {
   id: "prj-aaaa1111aaaa",
