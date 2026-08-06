@@ -299,6 +299,7 @@ interface BranchesMessage {
 
 interface ImportResultMessage {
   type: "agentManager.importResult"
+  projectId?: string
   success: boolean
   message: string
   errorCode?: WorktreeSetupErrorCode

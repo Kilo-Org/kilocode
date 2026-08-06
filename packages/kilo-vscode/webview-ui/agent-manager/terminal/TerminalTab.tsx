@@ -50,6 +50,9 @@ interface Props {
    *  layer tracks this as `focusedId` so `Cmd+W` can target the
    *  terminal that actually has the cursor. */
   onFocusChange?: (focused: boolean) => void
+  /** Handle the Agent Manager prompt shortcut locally because xterm's
+   *  textarea does not reliably forward custom commands to the workbench. */
+  onFocusPrompt?: () => void
   /** Reports OSC window-title escape codes (`ESC ] 0/1/2 ; title BEL`)
    *  sent by the shell or running programs — fish sets it to the active
    *  command, oh-my-zsh to user@host:cwd, vim to the file name. The
@@ -131,7 +134,7 @@ function isAgentManagerShortcut(e: KeyboardEvent): boolean {
   const key = e.key.toLowerCase()
   if (e.altKey && ["arrowleft", "arrowright", "arrowup", "arrowdown"].includes(key)) return true
   if (["t", "w", "n", "d", "e", "f"].includes(key)) return true
-  if (e.shiftKey && ["w", "n", "o", "r", "m", "/", "?"].includes(key)) return true
+  if (e.shiftKey && ["t", "w", "n", "o", "r", "m", "[", "]", "/", "?"].includes(key)) return true
   if (/^[1-9]$/.test(key)) return true
   if (key === "/") return true
   return false
@@ -151,6 +154,7 @@ export const TerminalTab: Component<Props> = (props) => {
     const term = new Terminal({
       convertEol: true,
       cursorBlink: true,
+      cursorInactiveStyle: "outline",
       fontFamily: props.font.fontFamily,
       fontSize: props.font.fontSize,
       scrollback: 5000,
@@ -172,9 +176,17 @@ export const TerminalTab: Component<Props> = (props) => {
       }
     })
 
-    // Pass agent-manager hotkeys through to the parent key handler so
-    // ⌘T / ⌘W / ⌘⌥← etc. still work while the terminal is focused.
-    term.attachCustomKeyEventHandler((event) => !isAgentManagerShortcut(event))
+    // Pass Agent Manager hotkeys through to the parent key handler so
+    // ⌘T / ⌘⇧T / ⌘W / terminal cycling / ⌘⌥← still work while focused.
+    term.attachCustomKeyEventHandler((event) => {
+      const prompt =
+        (event.metaKey || event.ctrlKey) && event.shiftKey && !event.altKey && event.key.toLowerCase() === "m"
+      if (prompt) {
+        if (event.type === "keydown") props.onFocusPrompt?.()
+        return false
+      }
+      return !isAgentManagerShortcut(event)
+    })
 
     // Track DOM focus so the state layer knows which terminal holds the
     // cursor (drives Cmd+W targeting). focusout is ignored when focus
@@ -377,9 +389,9 @@ export const TerminalTab: Component<Props> = (props) => {
       open(url)
     }
 
-    // Resize: fit on any host size change and forward new cols/rows to
-    // the backend PTY. Debounced because a user drag can fire dozens of
-    // resize events per second.
+    // Resize the visible terminal and forward new cols/rows to the backend
+    // PTY. Hidden terminals refit when activated, avoiding scrollback reflow
+    // for every mounted terminal during an inspector drag.
     let resizeTimer: ReturnType<typeof setTimeout> | undefined
     let lastCols = term.cols
     let lastRows = term.rows
@@ -395,6 +407,7 @@ export const TerminalTab: Component<Props> = (props) => {
       })
     }
     const ro = new ResizeObserver(() => {
+      if (!props.active) return
       try {
         fit.fit()
       } catch (err) {

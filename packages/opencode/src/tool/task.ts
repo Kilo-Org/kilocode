@@ -16,6 +16,7 @@ import { KiloTaskBackgroundProcess } from "../kilocode/tool/task-background-proc
 import { KiloCostPropagation } from "../kilocode/session/cost-propagation" // kilocode_change
 import { KiloSessionProcessor } from "../kilocode/session/processor" // kilocode_change
 import { KiloSession } from "../kilocode/session" // kilocode_change
+import { resumeHint } from "../kilocode/task-resume" // kilocode_change
 import { errorMessage } from "@/util/error" // kilocode_change
 import { Effect, Exit, Schema, Scope } from "effect"
 import { EffectBridge } from "@/effect/bridge"
@@ -89,15 +90,6 @@ function renderOutput(input: {
     "</task>",
   ].join("\n")
 }
-
-// kilocode_change start - tell the parent agent how to resume a stopped/failed subagent (#11620)
-function resumeHint(sessionID: SessionID) {
-  return [
-    `This subagent session can be resumed: call the task tool again with task_id="${sessionID}"`,
-    `and a prompt describing how to continue or recover. Its prior context is preserved.`,
-  ].join(" ")
-}
-// kilocode_change end
 
 export const TaskTool = Tool.define(
   id,

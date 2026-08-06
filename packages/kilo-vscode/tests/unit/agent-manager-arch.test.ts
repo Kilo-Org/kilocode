@@ -23,6 +23,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/UnassignedSessionsSection.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/NewWorktreeDialog.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectSelect.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/DiffPanel.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/FullScreenDiffView.tsx"),
@@ -378,6 +379,28 @@ describe("Agent Manager Worktree Actions", () => {
     expect(source).toContain('quickWorktree: isMac ? "⌘⇧N" : "Ctrl+Shift+N"')
   })
 
+  it("reserves Cmd+Shift+M for the Agent Manager instead of Problems", () => {
+    const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf-8")) as {
+      contributes: { keybindings: { command: string; key?: string; mac?: string }[] }
+    }
+    const removed = manifest.contributes.keybindings.find((item) => item.command === "-workbench.actions.view.problems")
+    const manager = manifest.contributes.keybindings.find((item) => item.command === "kilo-code.new.agentManagerOpen")
+
+    expect(removed).toMatchObject({ key: "ctrl+shift+m", mac: "cmd+shift+m" })
+    expect(manager).toMatchObject({ key: "ctrl+shift+m", mac: "cmd+shift+m" })
+  })
+
+  it("creates side terminals only while a side terminal owns focus", () => {
+    const source = fs.readFileSync(TSX_FILE, "utf-8")
+    const start = source.indexOf('else if (msg.action === "newTerminal")')
+    const end = source.indexOf('else if (msg.action === "cycleAgentMode"', start)
+    const action = source.slice(start, end)
+
+    expect(action).toContain("if (terms.sideFocusedId()) termHandlers.addSide()")
+    expect(action).not.toContain("terminalVisible()")
+    expect(action).toContain("else termHandlers.requestNew()")
+  })
+
   it("forwards the quick-worktree command to immediate creation", () => {
     const source = fs.readFileSync(path.join(ROOT, "src/extension.ts"), "utf-8")
     const start = source.indexOf('vscode.commands.registerCommand("kilo-code.new.agentManager.quickWorktree"')
@@ -690,7 +713,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
 
   it("worktree import behavior lives in the cohesive importer", () => {
     const text = importer()
-    for (const value of ["createFromPR", "createWorktree", "this.busy()"]) expect(text).toContain(value)
+    for (const value of ["createFromPR", "createWorktree", "this.busy(projectId)"]) expect(text).toContain(value)
     expect(body("onImportMessage")).toContain("this.importer")
   })
 
@@ -993,6 +1016,16 @@ function agentManagerSourceFiles(): string[] {
 }
 
 describe("Agent Manager — VS Code import boundary", () => {
+  it("routes GitHub CLI execution through execGhRead", () => {
+    const gh = path.join(AGENT_MANAGER_DIR, "gh.ts")
+    const violations = agentManagerSourceFiles()
+      .map((file) => path.join(AGENT_MANAGER_DIR, file))
+      .filter((file) => file !== gh)
+      .filter((file) => /(["'])gh(?:\.exe)?\1/.test(fs.readFileSync(file, "utf8")))
+      .map((file) => path.basename(file))
+    expect(violations).toEqual([])
+  })
+
   it("only allowlisted files may import vscode", () => {
     const violations: string[] = []
     for (const file of agentManagerSourceFiles()) {
