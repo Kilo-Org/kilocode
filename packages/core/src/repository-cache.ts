@@ -157,9 +157,10 @@ const layer: Layer.Layer<Service, never, FSUtil.Service | Git.Service | EffectFl
                 // matching origin could masquerade as the cache entry; reuse
                 // requires the checkout to live exactly at the cache path.
                 const worktree = existing ? yield* fs.resolve(localPath) : undefined
+                const exact = existing && worktree ? path.relative(existing.worktree, worktree) === "" : false // kilocode_change - tolerate Windows path casing
                 const reuse = Boolean(
                   existing &&
-                    existing.worktree === worktree &&
+                    exact && // kilocode_change
                     originReference &&
                     Repository.same(originReference, cloneTarget),
                 )
