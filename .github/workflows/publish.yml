@@ -130,10 +130,66 @@ jobs:
     outputs:
       version: ${{ needs.version.outputs.version }}
 
-  # kilocode_change start - execute supported Unix CLI binaries before packaging VSIX artifacts
+  # kilocode_change start - sign Darwin binaries and execute supported Unix CLI binaries before packaging VSIX artifacts
+  sign-cli-darwin:
+    name: Sign CLI (darwin)
+    needs: build-cli
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: kilo-cli.tar.zst
+          path: /tmp
+          skip-decompress: true
+
+      - name: Unpack CLI dist
+        run: |
+          mkdir -p dist
+          tar --zstd -xf /tmp/kilo-cli.tar.zst -C dist
+
+      - name: Sign and verify Darwin binaries
+        run: |
+          for target in darwin-arm64 darwin-x64 darwin-x64-baseline; do
+            binary="dist/@kilocode/cli-$target/bin/kilo"
+            test -x "$binary"
+            codesign --force --sign - \
+              --preserve-metadata=identifier,entitlements,flags,runtime \
+              "$binary"
+            codesign --verify --strict --verbose=4 "$binary"
+
+            archive="$PWD/dist/kilo-$target.zip"
+            rm -f "$archive"
+            (cd "$(dirname "$binary")" && zip -qr "$archive" ./*)
+          done
+
+      - name: Replace draft Darwin release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ needs.build-cli.outputs.version }}
+        run: gh release upload "v$VERSION" dist/kilo-darwin-*.zip --clobber --repo "$GH_REPO"
+
+      - name: Pack signed Darwin CLI dist
+        run: |
+          tar --zstd -cf /tmp/kilo-cli-darwin.tar.zst -C dist \
+            ./@kilocode/cli-darwin-arm64 \
+            ./@kilocode/cli-darwin-x64 \
+            ./@kilocode/cli-darwin-x64-baseline \
+            ./kilo-darwin-arm64.zip \
+            ./kilo-darwin-x64.zip \
+            ./kilo-darwin-x64-baseline.zip
+
+      - uses: actions/upload-artifact@v7
+        with:
+          path: /tmp/kilo-cli-darwin.tar.zst
+          archive: false
+
   validate-cli-unix:
     name: Validate CLI (${{ matrix.target }})
-    needs: build-cli
+    needs:
+      - build-cli
+      - sign-cli-darwin
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 15
     strategy:
@@ -179,10 +235,22 @@ jobs:
           path: /tmp
           skip-decompress: true
 
+      - uses: actions/download-artifact@v8
+        if: startsWith(matrix.target, 'darwin')
+        with:
+          name: kilo-cli-darwin.tar.zst
+          path: /tmp
+          skip-decompress: true
+
       - name: Unpack CLI dist
         run: |
           mkdir -p dist
           tar --zstd -xf /tmp/kilo-cli.tar.zst -C dist
+
+      - name: Overlay signed Darwin CLI dist
+        if: startsWith(matrix.target, 'darwin')
+        run: |
+          tar --zstd -xf /tmp/kilo-cli-darwin.tar.zst -C dist
 
       - name: Run CLI smoke test
         run: |
@@ -190,6 +258,9 @@ jobs:
 
           smoke_host() {
             binary="$1"
+            case "${{ matrix.target }}" in
+              darwin-*) codesign --verify --strict --verbose=4 "$binary" ;;
+            esac
             "$binary" --version
             helper="$(dirname "$binary")/bwrap"
             if [[ "${{ matrix.target }}" == linux-* ]]; then
@@ -323,6 +394,7 @@ jobs:
   build-vscode:
     needs:
       - build-cli
+      - sign-cli-darwin # kilocode_change
       - validate-cli-unix
       - validate-cli-windows
     runs-on: blacksmith-4vcpu-ubuntu-2404
@@ -347,10 +419,17 @@ jobs:
           path: /tmp
           skip-decompress: true
 
+      - uses: actions/download-artifact@v8
+        with:
+          name: kilo-cli-darwin.tar.zst
+          path: /tmp
+          skip-decompress: true
+
       - name: Unpack CLI dist
         run: |
           mkdir -p packages/opencode/dist
           tar --zstd -xf /tmp/kilo-cli.tar.zst -C packages/opencode/dist
+          tar --zstd -xf /tmp/kilo-cli-darwin.tar.zst -C packages/opencode/dist
       # kilocode_change end
       - name: Build VSIX packages
         run: bun script/build.ts
@@ -385,6 +464,7 @@ jobs:
     needs:
       - version
       - build-cli
+      - sign-cli-darwin # kilocode_change
       - build-vscode
       - validate-cli-unix # kilocode_change
       - validate-cli-windows # kilocode_change
@@ -437,10 +517,17 @@ jobs:
           path: /tmp
           skip-decompress: true
 
+      - uses: actions/download-artifact@v8
+        with:
+          name: kilo-cli-darwin.tar.zst
+          path: /tmp
+          skip-decompress: true
+
       - name: Unpack CLI dist
         run: |
           mkdir -p packages/opencode/dist
           tar --zstd -xf /tmp/kilo-cli.tar.zst -C packages/opencode/dist
+          tar --zstd -xf /tmp/kilo-cli-darwin.tar.zst -C packages/opencode/dist
       # kilocode_change end
       - uses: actions/download-artifact@v8
         with:
