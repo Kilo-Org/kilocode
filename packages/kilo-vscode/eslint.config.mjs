@@ -43,10 +43,10 @@ export default [
   },
   {
     files: ["webview-ui/agent-manager/AgentManagerApp.tsx"],
-    // Lowered 3210 → 2800 after extracting the sidebar body (SidebarBody.tsx)
-    // and the tab bar (TabBar.tsx) into components. Keep shrinking as more
-    // logic moves out; do not raise.
-    rules: { complexity: ["error", 74], "max-lines": ["error", 2800] },
+    // Lowered 3210 → 2800 → 2785 after extracting the sidebar body (SidebarBody.tsx),
+    // the tab bar (TabBar.tsx) into components, and the keybinding defaults
+    // (keybind-defaults.ts). Keep shrinking as more logic moves out; do not raise.
+    rules: { complexity: ["error", 74], "max-lines": ["error", 2785] },
   },
   {
     files: ["src/agent-manager/AgentManagerProvider.ts"],
