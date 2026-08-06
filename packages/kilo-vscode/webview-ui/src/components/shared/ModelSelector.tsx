@@ -45,9 +45,10 @@ import {
   autoSummary,
   buildTriggerLabel,
   sanitizeName,
+  mostUsedModels,
+  rankModelSearch,
 } from "./model-selector-utils"
 import { ModelPreview } from "./ModelPreview"
-import { searchMatch } from "../../utils/search-match"
 
 // ---------------------------------------------------------------------------
 // Row / group key helpers — single source of truth for key formatting
@@ -57,6 +58,7 @@ const CLEAR_KEY = "clear"
 const FAVORITES_KEY = "favorites"
 const AUTO_KEY = "auto"
 const RECOMMENDED_KEY = "recommended"
+const MOST_USED_KEY = "most-used"
 
 function modelKey(providerID: string, modelID: string) {
   return `${providerID}/${modelID}`
@@ -234,9 +236,11 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     if (!q) {
       return visibleModels()
     }
-    return visibleModels().filter(
-      (m) => searchMatch(q, m.name) || searchMatch(q, m.id) || searchMatch(q, m.providerName),
-    )
+    return rankModelSearch(visibleModels(), q, {
+      usage: session?.modelUsageHistory(),
+      favorites: new Set(session?.favoriteModels().map((item) => modelKey(item.providerID, item.modelID))),
+      recent: session?.recentModels(),
+    })
   })
 
   // Live set of favorited keys — drives star icon visual state (filled vs outline).
@@ -267,11 +271,19 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   const groups = createMemo<ModelGroup[]>(() => {
     const autos: EnrichedModel[] = []
     const recommended: EnrichedModel[] = []
+    const mostUsed: EnrichedModel[] = []
     const map = new Map<string, EnrichedModel[]>()
+
+    if (!search() && session) {
+      mostUsed.push(...mostUsedModels(visibleModels(), session.modelUsageHistory(), favoriteKeys()))
+    }
 
     for (const m of filtered()) {
       if (isAuto(m)) {
         autos.push(m)
+        continue
+      }
+      if (!search() && mostUsed.some((item) => modelKey(item.providerID, item.id) === modelKey(m.providerID, m.id))) {
         continue
       }
       if (m.recommendedIndex !== undefined) {
@@ -328,6 +340,18 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
       })
     }
 
+    if (mostUsed.length > 0) {
+      result.push({
+        key: MOST_USED_KEY,
+        label: language.t("model.group.mostUsed"),
+        rows: mostUsed.map((m) => ({
+          key: rowKey("model", m.providerID, m.id),
+          kind: "model",
+          model: m,
+        })),
+      })
+    }
+
     const rest: ModelGroup[] = [...map.entries()]
       .sort(([a], [b]) => providerSortKey(a) - providerSortKey(b))
       .map(([id, list]) => {
@@ -342,6 +366,20 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
           })),
         }
       })
+
+    if (search()) {
+      return [
+        {
+          key: "search-results",
+          label: language.t("model.group.searchResults"),
+          rows: filtered().map((m) => ({
+            key: rowKey("model", m.providerID, m.id),
+            kind: "model",
+            model: m,
+          })),
+        },
+      ]
+    }
 
     return [...result, ...rest]
   })
@@ -366,7 +404,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
 
   const rows = createMemo<ModelRow[]>(() => {
     const c = collapsed()
-    const list = groups().flatMap((g) => (c.has(g.key) ? [] : g.rows))
+    const list = groups().flatMap((g) => (search() || !c.has(g.key) ? g.rows : []))
     if (!props.allowClear) return list
     return [{ key: CLEAR_KEY, kind: "clear" }, ...list]
   })
@@ -375,6 +413,10 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     const result: ModelNode[] = []
     if (props.allowClear) result.push({ key: CLEAR_KEY, kind: "row", row: { key: CLEAR_KEY, kind: "clear" } })
     for (const group of groups()) {
+      if (search()) {
+        result.push(...group.rows.map((row) => ({ key: row.key, kind: "row" as const, row, group })))
+        continue
+      }
       result.push({ key: groupKey(group.key), kind: "group", group })
       if (!isGroupOpen(group.key)) continue
       result.push(...group.rows.map((row) => ({ key: row.key, kind: "row" as const, row, group })))
@@ -461,13 +503,15 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
       const match = list[0]
       const first = match ? canonicalKey(match) : null
       const next =
-        canon && rowMap().has(canon)
-          ? canon
-          : first && rowMap().has(first)
-            ? first
-            : props.allowClear
-              ? CLEAR_KEY
-              : defaultKey()
+        search() && first && rowMap().has(first)
+          ? first
+          : canon && rowMap().has(canon)
+            ? canon
+            : first && rowMap().has(first)
+              ? first
+              : props.allowClear
+                ? CLEAR_KEY
+                : defaultKey()
       setSelectedKey(next)
       setBrowsing(!!search() && nodeMap().has(next))
       setNavigating(false)
@@ -957,7 +1001,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                           const hovered = () => isSelected(row.key)
                           const preActive = () => isPreActive(row.key)
                           const starred = () => favoriteKeys().has(modelKey(model.providerID, model.id))
-                          const showProvider = () => row.kind === "favorite"
+                          const showProvider = () => row.kind === "favorite" || !!search()
                           const showSelect = () => expanded() && preActive() && !isActive(model)
                           const starLabel = () =>
                             `${starred() ? language.t("model.favorite.remove") : language.t("model.favorite.add")}: ${sanitizeName(model.name)}`
