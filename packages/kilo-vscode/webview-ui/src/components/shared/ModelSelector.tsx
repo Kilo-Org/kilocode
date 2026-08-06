@@ -45,9 +45,10 @@ import {
   autoSummary,
   buildTriggerLabel,
   sanitizeName,
+  mostUsedModels,
+  rankModelSearch,
 } from "./model-selector-utils"
 import { ModelPreview } from "./ModelPreview"
-import { searchMatch } from "../../utils/search-match"
 
 // ---------------------------------------------------------------------------
 // Row / group key helpers — single source of truth for key formatting
@@ -57,6 +58,7 @@ const CLEAR_KEY = "clear"
 const FAVORITES_KEY = "favorites"
 const AUTO_KEY = "auto"
 const RECOMMENDED_KEY = "recommended"
+const MOST_USED_KEY = "most-used"
 
 function modelKey(providerID: string, modelID: string) {
   return `${providerID}/${modelID}`
@@ -82,7 +84,7 @@ interface ModelRow {
 
 interface ModelGroup {
   key: string
-  label: string
+  label?: string
   rows: ModelRow[]
 }
 
@@ -161,6 +163,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   const expanded = vscode.getModelSelectorExpanded
   const setExpanded = vscode.setModelSelectorExpanded
   const [search, setSearch] = createSignal("")
+  const hasSearch = () => search().trim().length > 0
   const [selectedKey, setSelectedKey] = createSignal(CLEAR_KEY)
   const [browsing, setBrowsing] = createSignal(false)
   const [navigating, setNavigating] = createSignal(false)
@@ -234,9 +237,11 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     if (!q) {
       return visibleModels()
     }
-    return visibleModels().filter(
-      (m) => searchMatch(q, m.name) || searchMatch(q, m.id) || searchMatch(q, m.providerName),
-    )
+    return rankModelSearch(visibleModels(), q, {
+      usage: session?.modelUsageHistory(),
+      favorites: new Set(session?.favoriteModels().map((item) => modelKey(item.providerID, item.modelID))),
+      recent: session?.recentModels(),
+    })
   })
 
   // Live set of favorited keys — drives star icon visual state (filled vs outline).
@@ -249,7 +254,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
 
   const favoriteModels = createMemo(() => {
     if (props.favorites === false) return []
-    if (!session || search()) return []
+    if (!session || hasSearch()) return []
     const map = new Map(visibleModels().map((m) => [modelKey(m.providerID, m.id), m]))
     const list = session
       .favoriteModels()
@@ -267,11 +272,28 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   const groups = createMemo<ModelGroup[]>(() => {
     const autos: EnrichedModel[] = []
     const recommended: EnrichedModel[] = []
+    const mostUsed: EnrichedModel[] = []
     const map = new Map<string, EnrichedModel[]>()
+
+    if (!hasSearch() && session) {
+      mostUsed.push(
+        ...mostUsedModels(
+          visibleModels().filter((model) => !isAuto(model) && model.recommendedIndex === undefined),
+          session.modelUsageHistory(),
+          favoriteKeys(),
+        ),
+      )
+    }
 
     for (const m of filtered()) {
       if (isAuto(m)) {
         autos.push(m)
+        continue
+      }
+      if (
+        !hasSearch() &&
+        mostUsed.some((item) => modelKey(item.providerID, item.id) === modelKey(m.providerID, m.id))
+      ) {
         continue
       }
       if (m.recommendedIndex !== undefined) {
@@ -328,6 +350,18 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
       })
     }
 
+    if (mostUsed.length > 0) {
+      result.push({
+        key: MOST_USED_KEY,
+        label: language.t("model.group.mostUsed"),
+        rows: mostUsed.map((m) => ({
+          key: rowKey("model", m.providerID, m.id),
+          kind: "model",
+          model: m,
+        })),
+      })
+    }
+
     const rest: ModelGroup[] = [...map.entries()]
       .sort(([a], [b]) => providerSortKey(a) - providerSortKey(b))
       .map(([id, list]) => {
@@ -343,11 +377,24 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
         }
       })
 
+    if (hasSearch()) {
+      if (filtered().length === 0) return []
+      return [
+        {
+          key: "search-results",
+          rows: filtered().map((m) => ({
+            key: rowKey("model", m.providerID, m.id),
+            kind: "model",
+            model: m,
+          })),
+        },
+      ]
+    }
+
     return [...result, ...rest]
   })
 
-  // Collapse state is honored even during search so users can skip past
-  // large providers (e.g. Kilo Gateway) without scrolling through every match.
+  // Search results are flattened so matching provider variants stay adjacent.
   const isGroupOpen = (key: string) => !collapsed().has(key)
 
   function toggleGroup(key: string) {
@@ -366,7 +413,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
 
   const rows = createMemo<ModelRow[]>(() => {
     const c = collapsed()
-    const list = groups().flatMap((g) => (c.has(g.key) ? [] : g.rows))
+    const list = groups().flatMap((g) => (hasSearch() || !c.has(g.key) ? g.rows : []))
     if (!props.allowClear) return list
     return [{ key: CLEAR_KEY, kind: "clear" }, ...list]
   })
@@ -375,6 +422,10 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     const result: ModelNode[] = []
     if (props.allowClear) result.push({ key: CLEAR_KEY, kind: "row", row: { key: CLEAR_KEY, kind: "clear" } })
     for (const group of groups()) {
+      if (hasSearch()) {
+        result.push(...group.rows.map((row) => ({ key: row.key, kind: "row" as const, row, group })))
+        continue
+      }
       result.push({ key: groupKey(group.key), kind: "group", group })
       if (!isGroupOpen(group.key)) continue
       result.push(...group.rows.map((row) => ({ key: row.key, kind: "row" as const, row, group })))
@@ -398,7 +449,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     if (!m) return props.allowClear ? CLEAR_KEY : defaultKey()
     const key = modelKey(m.providerID, m.id)
     const favorite = favoriteKey(m)
-    if (!search() && favoriteKeys().has(key) && rowMap().has(favorite)) return favorite
+    if (!hasSearch() && favoriteKeys().has(key) && rowMap().has(favorite)) return favorite
     return canonicalKey(m)
   }
   const chosen = (row: ModelRow) => {
@@ -461,15 +512,17 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
       const match = list[0]
       const first = match ? canonicalKey(match) : null
       const next =
-        canon && rowMap().has(canon)
-          ? canon
-          : first && rowMap().has(first)
-            ? first
-            : props.allowClear
-              ? CLEAR_KEY
-              : defaultKey()
+        hasSearch() && first
+          ? first
+          : canon && rowMap().has(canon)
+            ? canon
+            : first && rowMap().has(first)
+              ? first
+              : props.allowClear
+                ? CLEAR_KEY
+                : defaultKey()
       setSelectedKey(next)
-      setBrowsing(!!search() && nodeMap().has(next))
+      setBrowsing(hasSearch() && (!!first || props.allowClear === true))
       setNavigating(false)
       setPreActiveKey(next)
       setPreviewKey(next)
@@ -612,9 +665,10 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   }
 
   function horizontal(step: -1 | 1) {
+    if (hasSearch()) return
     const node = nodeMap().get(selectedKey())
     if (!node) return
-    if (node.kind === "group" && node.group) {
+    if (node.kind === "group" && node.group && node.group.label) {
       if (step === -1 && isGroupOpen(node.group.key)) {
         toggleGroup(node.group.key)
         return
@@ -925,7 +979,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                                   <path d="M4 6l4 5 4-5H4z" />
                                 </svg>
                                 <span>{group.label}</span>
-                                <Show when={!shown() && !!search()}>
+                                <Show when={!shown() && hasSearch()}>
                                   <span class="model-selector-group-match-dot" aria-hidden="true" />
                                 </Show>
                               </div>
@@ -957,7 +1011,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                           const hovered = () => isSelected(row.key)
                           const preActive = () => isPreActive(row.key)
                           const starred = () => favoriteKeys().has(modelKey(model.providerID, model.id))
-                          const showProvider = () => row.kind === "favorite"
+                          const showProvider = () => row.kind === "favorite" || hasSearch()
                           const showSelect = () => expanded() && preActive() && !isActive(model)
                           const starLabel = () =>
                             `${starred() ? language.t("model.favorite.remove") : language.t("model.favorite.add")}: ${sanitizeName(model.name)}`

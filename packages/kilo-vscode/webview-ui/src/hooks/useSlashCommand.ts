@@ -58,6 +58,7 @@ export function useSlashCommand(
   exclude?: Set<string> | Accessor<Set<string>>,
   include?: Set<string> | Accessor<Set<string>>,
   scope?: string,
+  extra?: SlashCommandEntry[],
 ): SlashCommand {
   const [server, setServer] = createSignal<SlashCommandInfo[]>([])
   const [query, setQuery] = createSignal<string | null>(null)
@@ -191,6 +192,7 @@ export function useSlashCommand(
       },
     },
   ]
+  all.push(...(extra ?? []))
 
   const excluded = () => {
     if (typeof exclude === "function") return exclude()
