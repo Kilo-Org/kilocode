@@ -73,7 +73,7 @@ import { createProjectWiring } from "./project/wiring"
 import { ProjectScope } from "./project/scope"
 import type { AgentManagerOutMessage, AgentManagerInMessage } from "./types"
 import type { Host, PanelContext, OutputHandle, Disposable } from "./host"
-
+import { focusPanelPrompt } from "./focus-panel"
 export class AgentManagerProvider implements Disposable {
   public static readonly viewType = "kilo-code.new.AgentManagerPanel"
   private panel: PanelContext | undefined
@@ -356,7 +356,8 @@ export class AgentManagerProvider implements Disposable {
     if (this.panel) {
       this.log("Panel already open, revealing")
       this.panel.reveal(preserveFocus)
-      if (!preserveFocus) this.focusPrompt(this.panel)
+      if (!preserveFocus)
+        focusPanelPrompt(this.panel, this.waitForPanelReady(this.panel), this.waitForPanelActive(this.panel))
       return
     }
     this.log("Opening Agent Manager panel")
@@ -369,9 +370,8 @@ export class AgentManagerProvider implements Disposable {
       projectId: () => this.contexts.active()?.id,
     })
     this.attachPanel(panel)
-    if (!preserveFocus) this.focusPrompt(panel)
+    if (!preserveFocus) focusPanelPrompt(panel, this.waitForPanelReady(panel), this.waitForPanelActive(panel))
   }
-
   public onPanelVisibilityChange(cb: (visible: boolean) => void): void {
     this.onVisibilityChange = cb
   }
@@ -1695,19 +1695,11 @@ export class AgentManagerProvider implements Disposable {
     const panel = this.panel
     if (!panel) return
     panel.reveal(false)
-    this.focusPrompt(panel)
+    focusPanelPrompt(panel, this.waitForPanelReady(panel), this.waitForPanelActive(panel))
   }
 
   public isActive(): boolean {
     return this.panel?.active === true
-  }
-
-  /** Post explicit prompt focus only after the webview can receive it. */
-  private focusPrompt(panel: PanelContext): void {
-    void Promise.all([this.waitForPanelReady(panel), this.waitForPanelActive(panel)]).then(([ready, active]) => {
-      if (!ready || !active) return
-      panel.postMessage({ type: "action", action: "focusInput" })
-    })
   }
 
   private async waitForPanel(panel: PanelContext, promise: Promise<void>): Promise<boolean> {
