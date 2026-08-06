@@ -27,7 +27,6 @@ import type {
   AgentManagerWorktreeDiffLoadingMessage,
   AgentManagerWorktreeDiffNoticeMessage,
   AgentManagerDiffBranchesMessage,
-  AgentManagerImportResultMessage,
   AgentManagerApplyWorktreeDiffResultMessage,
   AgentManagerWorktreeStatsMessage,
   AgentManagerLocalStatsMessage,
@@ -181,6 +180,7 @@ import { clampPanelWidth, createPanelResize, maxPanelWidth, minPanelWidth } from
 import { buildShortcutCategories } from "./shortcuts"
 import { tracker } from "./telemetry"
 import { createChatFocus, hasQuestionOption } from "./focus"
+import { usePendingCreate } from "./pending-create"
 import "./agent-manager.css"
 import "./agent-manager-review.css"
 import { cycleAgent as cycle } from "../src/context/session-agent"
@@ -207,6 +207,8 @@ const defaultBindings: Record<string, string> = {
   nextSession: isMac ? "⌘⌥↓" : "Ctrl+Alt+↓",
   previousTab: isMac ? "⌘⌥←" : "Ctrl+Alt+←",
   nextTab: isMac ? "⌘⌥→" : "Ctrl+Alt+→",
+  previousTerminal: isMac ? "⌘⇧[" : "Ctrl+Shift+[",
+  nextTerminal: isMac ? "⌘⇧]" : "Ctrl+Shift+]",
   search: isMac ? "⌘F" : "Ctrl+F",
   showTerminal: isMac ? "⌘/" : "Ctrl+/",
   newTerminal: isMac ? "⌘⇧T" : "Ctrl+Shift+T",
@@ -267,12 +269,12 @@ const AgentManagerContent: Component = () => {
   const [currentProjectId, setCurrentProjectId] = createSignal<string | undefined>()
   const [projectStates, setProjectStates] = createSignal<Record<string, AgentManagerStateMessage>>({})
   const activeProjectId = () => projectList().find((p) => p.active)?.id ?? currentProjectId()
-  const [pendingCreate, setPendingCreate] = createSignal<{ projectId: string }>()
-  const scheduleCreate = (projectId: string) => {
-    if (projectId === activeProjectId()) return
-    if (pendingCreate()) return
-    setPendingCreate({ projectId })
-  }
+  const creation = usePendingCreate(activeProjectId, (projectId, worktreeId) =>
+    vscode.postMessage({
+      type: "agentManager.activateSelection",
+      target: { projectId, kind: "worktree", worktreeId },
+    }),
+  )
   const isActivePayload = (pid: string | undefined) =>
     projectList().length === 0 || pid === undefined || pid === activeProjectId()
 
@@ -405,9 +407,16 @@ const AgentManagerContent: Component = () => {
       { defer: true },
     ),
   )
-
   type FocusOwner = "prompt" | { terminal: string }
   const focusMemory = new Map<string, FocusOwner>()
+  let focusInputUntil = 0
+  const focusPrompt = () => {
+    focusInputUntil = Date.now() + 500
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+    terms.setActiveId(undefined)
+    terms.setFocusedId(undefined)
+    requestChatFocus(true)
+  }
   const focusKey = () => {
     const context = terms.sideKey()
     const sessionID = session.currentSessionID() ?? activePendingId() ?? "new"
@@ -439,6 +448,7 @@ const AgentManagerContent: Component = () => {
     return terminalVisible() ? false : true
   }
   const restoreFocus = () => {
+    if (Date.now() < focusInputUntil) return
     const key = focusKey()
     const owner = focusMemory.get(key)
     if (owner && owner !== "prompt") {
@@ -1175,6 +1185,8 @@ const AgentManagerContent: Component = () => {
       else if (msg.action === "sessionNext") projectNav.step("down")
       else if (msg.action === "tabPrevious") navigateTab("left")
       else if (msg.action === "tabNext") navigateTab("right")
+      else if (msg.action === "terminalPrevious") cycleTerminal("previous")
+      else if (msg.action === "terminalNext") cycleTerminal("next")
       else if (msg.action === "search") {
         if (!sidebarCollapsed()) sidebarSearchMenu?.open()
         else {
@@ -1198,11 +1210,13 @@ const AgentManagerContent: Component = () => {
       else if (msg.action === "advancedWorktree") showNewWorktreeDialog()
       else if (msg.action === "closeWorktree") closeSelectedWorktree()
       else if (msg.action === "showShortcuts") handleShowKeyboardShortcuts()
-      else if (msg.action === "focusInput") requestChatFocus(true)
+      else if (msg.action === "focusInput") focusPrompt()
       else if (msg.action === "focusSearch")
         focusChatSearch({ history: setHistory, review: setReviewActive, terminal: () => terms.setActiveId(undefined) })
-      else if (msg.action === "newTerminal") termHandlers.requestNew()
-      else if (msg.action === "cycleAgentMode" && document.hasFocus()) {
+      else if (msg.action === "newTerminal") {
+        if (terms.sideFocusedId()) termHandlers.addSide()
+        else termHandlers.requestNew()
+      } else if (msg.action === "cycleAgentMode" && document.hasFocus()) {
         if (!mode.dispatch(1)) cycleAgent(1)
       } else if (msg.action === "cyclePreviousAgentMode" && document.hasFocus()) {
         if (!mode.dispatch(-1)) cycleAgent(-1)
@@ -1213,7 +1227,6 @@ const AgentManagerContent: Component = () => {
       }
     }
     window.addEventListener("message", handler)
-
     // Prevent Cmd/Ctrl shortcuts from triggering native browser actions
     const preventDefaults = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return
@@ -1227,8 +1240,9 @@ const AgentManagerContent: Component = () => {
       if (["t", "w", "n", "d", "e", "f"].includes(e.key.toLowerCase()) && !e.shiftKey) {
         e.preventDefault()
       }
-      // Prevent defaults for shift variants (close worktree, advanced/new/open worktree, open PR)
-      if (["w", "n", "o", "r"].includes(e.key.toLowerCase()) && e.shiftKey) {
+      // Prevent browser defaults for shift variants (new terminal, close worktree,
+      // advanced/new/open worktree, open PR, terminal cycling)
+      if (["t", "m", "w", "n", "o", "r", "[", "]"].includes(e.key.toLowerCase()) && e.shiftKey) {
         e.preventDefault()
       }
       // Prevent browser defaults for shortcuts help (Cmd/Ctrl+Shift+/)
@@ -1377,15 +1391,7 @@ const AgentManagerContent: Component = () => {
 
       if (msg.type === "agentManager.worktreeSetup") {
         const ev = msg as AgentManagerWorktreeSetupMessage
-        const pending = pendingCreate()
-        if (ev.status === "ready" && ev.projectId && pending?.projectId === ev.projectId && ev.worktreeId) {
-          setPendingCreate(undefined)
-          vscode.postMessage({
-            type: "agentManager.activateSelection",
-            target: { projectId: ev.projectId, kind: "worktree", worktreeId: ev.worktreeId },
-          })
-        }
-        if (ev.status === "error" && pending?.projectId === ev.projectId) setPendingCreate(undefined)
+        creation.setup(ev)
         const store = ev.projectId ? registry.ensure(ev.projectId) : registry.active()
         const updateBusy: Setter<Map<string, WorktreeBusyState>> = (value) => store.setBusy(value)
         if (ev.status === "ready" || ev.status === "error") {
@@ -1427,8 +1433,7 @@ const AgentManagerContent: Component = () => {
         }
       }
 
-      if (msg.type === "agentManager.importResult" && !msg.success && pendingCreate()?.projectId === msg.projectId)
-        setPendingCreate(undefined)
+      if (msg.type === "agentManager.importResult" && !msg.success) creation.abandon(msg.projectId)
 
       if (msg.type === "agentManager.sessionAdded") {
         const ev = msg as { type: string; sessionId: string; worktreeId: string }
@@ -1471,7 +1476,7 @@ const AgentManagerContent: Component = () => {
       // When a multi-version progress update arrives, mark newly created worktrees as loading
       if ((msg as { type: string }).type === "agentManager.multiVersionProgress") {
         const ev = msg as unknown as AgentManagerMultiVersionProgressMessage
-        if (ev.status === "done" && pendingCreate()?.projectId === ev.projectId) setPendingCreate(undefined)
+        if (ev.status === "done") creation.abandon(ev.projectId)
         if (ev.status === "done" && ev.groupId) {
           // Clear busy state for all worktrees in this group
           const store = ev.projectId ? registry.ensure(ev.projectId) : registry.active()
@@ -1897,7 +1902,7 @@ const AgentManagerContent: Component = () => {
         projects={multiProject() ? projectList : undefined}
         activeProjectId={activeProjectId()}
         defaultBase={defaultBase}
-        onCreate={scheduleCreate}
+        onCreate={creation.schedule}
       />
     ))
   }
@@ -2107,6 +2112,8 @@ const AgentManagerContent: Component = () => {
     handlers: termHandlers,
     visible: () => sidePanel() === "terminal" && !history() && !reviewActive(),
     focusedId: () => terms.sideFocusedId(),
+    count: () => terms.sidesForContext(terms.sideKey()).length,
+    isScript: terms.isScript,
     hide: () => {
       cancelAmbientSetup()
       setSidePanel(null)
@@ -2225,15 +2232,23 @@ const AgentManagerContent: Component = () => {
     })
   }
   const tabFocus = createTabFocus({ ids: () => tabIds(), select: focusTab })
+  const cycleTerminal = (direction: "previous" | "next") => {
+    const focused = terms.focusedId()
+    const placement = terms.sideFocusedId() || (!focused && terminalVisible()) ? "side" : "tab"
+    return termHandlers.cycle(direction, placement)
+  }
 
   // Close the currently active tab via keyboard shortcut.
   // If no tabs remain, fall through to close the selected worktree.
   const closeActiveTab = () => {
-    // A focused side terminal owns Cmd+W while its panel is visible —
-    // closing a chat tab out from under the user's cursor would be
-    // surprising. Only that terminal dies; the panel keeps the rest.
+    // A focused side terminal owns Cmd+W while its panel is visible.
+    // Closing a chat tab out from under the user's cursor would be surprising.
     if (sidePanel() === "terminal" && terms.sideFocusedId()) {
       if (sideCtl.close()) return
+    }
+    if (termHandlers.closeFocused()) {
+      tabFocus.restore()
+      return
     }
     if (termHandlers.closeActive()) {
       tabFocus.restore()
@@ -2376,7 +2391,7 @@ const AgentManagerContent: Component = () => {
             currentSessionID={session.currentSessionID}
             mode={mode}
             defaultBase={defaultBase}
-            onCreate={scheduleCreate}
+            onCreate={creation.schedule}
             bindings={kb()}
             t={t}
             onSearchRef={(ref) => (sidebarSearchMenu = ref)}
@@ -2485,6 +2500,9 @@ const AgentManagerContent: Component = () => {
           onToggleReview={metrics.click("fullscreen_review", "tab_toolbar", toggleReviewTab)}
           terminalDestination={sideCtl.destination}
           terminalDestinationActive={() => sidePanel() === "terminal"}
+          terminalDestinationFocused={() =>
+            sideCtl.destination() === "agentManager" && terms.sideFocusedId() !== undefined
+          }
           terminalKeybind={() => kb().showTerminal ?? ""}
           onTerminalDestinationOpen={() => {
             cancelAmbientSetup()
@@ -2553,7 +2571,7 @@ const AgentManagerContent: Component = () => {
             >
               <div class={`am-main-pane ${terms.activeId() ? "am-main-pane-terminal-active" : ""}`}>
                 {/* Keep terminal tabs mounted so output streams across worktree switches. */}
-                {renderTerminalLayer({ state: terms })}
+                {renderTerminalLayer({ state: terms, onFocusPrompt: focusPrompt })}
                 {/* Session-less context (e.g. a worktree mid-provisioning): the
                     empty state lives in the main pane so the side terminal
                     panel can render next to it. */}
@@ -2711,6 +2729,9 @@ const AgentManagerContent: Component = () => {
                       state={terms}
                       contextKey={terms.sideKey}
                       visible={() => sidePanel() === "terminal"}
+                      nextKeybind={kb().nextTerminal ?? ""}
+                      closeKeybind={kb().closeTab ?? ""}
+                      onFocusPrompt={focusPrompt}
                       onSelect={(id) => termHandlers.selectSide(id)}
                       onClose={(id) => {
                         cancelAmbientSetup()

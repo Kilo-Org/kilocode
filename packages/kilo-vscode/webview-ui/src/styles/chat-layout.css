@@ -23,6 +23,36 @@
   --chat-scrollbar-width: 10px;
 }
 
+/* ============================================
+   Sidebar Top Bar
+   ============================================ */
+
+/* Always-visible in-webview equivalent of the native `view/title` toolbar, which
+   disappears in the Secondary Side Bar with no way to detect or work around
+   that. border-top/-bottom rule it off from the native pane title above (which
+   a webview can't render into) and the chat content below. */
+.sidebar-top-bar {
+  --top-bar-border: 1px solid var(--vscode-sideBar-border, var(--vscode-widget-border));
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  padding: 4px 6px;
+  border-top: var(--top-bar-border);
+  border-bottom: var(--top-bar-border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.sidebar-top-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.sidebar-top-bar-spacer {
+  flex: 1;
+  min-width: 4px;
+}
+
 .chat-messages-wrapper {
   position: relative;
   flex: 1;

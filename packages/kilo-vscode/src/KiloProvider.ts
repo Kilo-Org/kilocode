@@ -1048,6 +1048,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           openAdvancedWorktree: () => vscode.commands.executeCommand("kilo-code.new.agentManager.advancedWorktree"),
           openChanges: (sessionId?: string, turnId?: string) =>
             vscode.commands.executeCommand("kilo-code.new.showChanges", { sessionId, turnId }),
+          openProfile: () => vscode.commands.executeCommand("kilo-code.new.profileButtonClicked"),
           currentSessionId: this.currentSession?.id,
           createWorktree: async (baseBranch, branchName) => {
             await this.createWorktreeHandler?.(baseBranch, branchName)
@@ -4908,6 +4909,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       title: "Kilo Code",
       port: this.connectionService.getServerInfo()?.port,
       extraStyles: `.container { height: 100vh; }`,
+      topBar: this.opts.hideTopBar !== true,
+      topBarSurface: this.opts.topBarSurface === "tab" ? "tab_title" : "sidebar_title",
     })
   }
 

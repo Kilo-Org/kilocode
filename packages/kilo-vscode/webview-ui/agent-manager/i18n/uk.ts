@@ -108,7 +108,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "Наступна вкладка",
   "agentManager.shortcuts.newTab": "Нова вкладка",
   "agentManager.shortcuts.closeTab": "Закрити вкладку",
-  "agentManager.shortcuts.toggleTerminal": "Перемкнути термінал",
+  "agentManager.shortcuts.toggleTerminal": "Перейти до термінала / приховати термінал",
   "agentManager.shortcuts.runScript": "Запустити скрипт",
   "agentManager.run.options": "Параметри запуску",
   "agentManager.run.configure": "Налаштувати скрипт запуску",
