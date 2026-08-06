@@ -2,6 +2,7 @@ import type { ExecFileOptionsWithStringEncoding } from "child_process"
 import type { Worktree } from "./WorktreeStateManager"
 import type { PRStatus, PRCheck, PRComment, CheckStatus, AggregateCheckStatus, PRState, ReviewDecision } from "./types"
 import { execWithShellEnv } from "./shell-env"
+import { execGhRead } from "./gh"
 import { classifyPRError } from "./git-import"
 import type { Semaphore } from "./semaphore"
 
@@ -56,6 +57,14 @@ export class PRStatusPoller {
     options?: Omit<ExecFileOptionsWithStringEncoding, "encoding">,
   ): Promise<{ stdout: string; stderr: string }> {
     const invoke = () => execWithShellEnv(cmd, args, options)
+    return this.semaphore ? this.semaphore.run(invoke) : invoke()
+  }
+
+  private gh(
+    args: string[],
+    options?: Omit<ExecFileOptionsWithStringEncoding, "encoding">,
+  ): Promise<{ stdout: string; stderr: string }> {
+    const invoke = () => execGhRead(args, options)
     return this.semaphore ? this.semaphore.run(invoke) : invoke()
   }
 
@@ -166,7 +175,7 @@ export class PRStatusPoller {
       return this.ghAvailable
     }
     try {
-      await this.shell("gh", ["--version"], { timeout: 5_000 })
+      await this.gh(["--version"], { timeout: 5_000 })
       this.ghAvailable = true
     } catch {
       this.ghAvailable = false
@@ -311,7 +320,7 @@ export class PRStatusPoller {
       if (branch) args.push(branch)
       args.push("--json", PRStatusPoller.PR_JSON_FIELDS)
 
-      const { stdout } = await this.shell("gh", args, { cwd, timeout: 15_000 })
+      const { stdout } = await this.gh(args, { cwd, timeout: 15_000 })
       return parsePRResult(stdout)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
@@ -327,8 +336,7 @@ export class PRStatusPoller {
       const head = sha.trim()
       if (!head) return null
 
-      const { stdout } = await this.shell(
-        "gh",
+      const { stdout } = await this.gh(
         [
           "pr",
           "list",
@@ -369,8 +377,7 @@ export class PRStatusPoller {
     items: PRCheck[]
   }> {
     try {
-      const { stdout } = await this.shell(
-        "gh",
+      const { stdout } = await this.gh(
         ["pr", "checks", String(prNumber), "--json", "name,state,link,startedAt,completedAt"],
         { cwd, timeout: 15_000 },
       )
@@ -407,7 +414,7 @@ export class PRStatusPoller {
     if (this.cachedRepo && this.cachedRepo.cwd === cwd) {
       return this.cachedRepo
     }
-    const { stdout } = await this.shell("gh", ["repo", "view", "--json", "owner,name"], {
+    const { stdout } = await this.gh(["repo", "view", "--json", "owner,name"], {
       cwd,
       timeout: 10_000,
     })
@@ -447,8 +454,7 @@ export class PRStatusPoller {
         }
       }`
 
-      const { stdout } = await this.shell(
-        "gh",
+      const { stdout } = await this.gh(
         [
           "api",
           "graphql",

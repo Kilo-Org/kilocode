@@ -15,6 +15,7 @@ import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.LoginRequiredView
 import ai.kilocode.client.session.views.PlanExitView
 import ai.kilocode.client.session.views.base.BaseQuestionView
+import ai.kilocode.client.session.views.base.PartHeader
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionResultView
 import ai.kilocode.client.session.views.question.QuestionView
@@ -29,6 +30,7 @@ import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.client.session.views.todo.TodoWriteView
 import ai.kilocode.client.ui.DiffStatBadge
 import ai.kilocode.client.ui.HoverIcon
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageDto
@@ -37,6 +39,8 @@ import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.SessionRevertDto
+import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.SessionTimeDto
 import ai.kilocode.rpc.dto.TodoDto
 import com.intellij.ide.ui.laf.darcula.ui.DarculaButtonUI
 import com.intellij.openapi.Disposable
@@ -60,6 +64,7 @@ import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.RepaintManager
+import javax.swing.ScrollPaneConstants
 import javax.swing.SwingUtilities
 import javax.swing.border.Border
 
@@ -1080,8 +1085,9 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         banner.update()
 
         assertNotNull(find<BaseQuestionView>(banner))
+        assertNotNull(components(banner).filterIsInstance<PartHeader>().singleOrNull())
 
-        val buttons = components(banner).filterIsInstance<JButton>()
+        val buttons = components(banner).filterIsInstance<JButton>().filter { it.text.isNotEmpty() }
         assertEquals(
             listOf(KiloBundle.message("revert.banner.redo"), KiloBundle.message("revert.banner.redo.all")),
             buttons.map { it.text },
@@ -1098,7 +1104,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
     fun `test rollback banner reuses file rows across updates`() {
         val banner = RevertBanner(model, {}, {}, {})
         model.upsertMessage(msg("u1", "user"))
-        model.setRevert(SessionRevertDto("u1"))
+        model.setRevert(SessionRevertDto("u1", snapshot = "snap1"))
         model.setDiff(listOf(DiffFileDto("src/A.kt", 1, 0), DiffFileDto("src/B.kt", 2, 1)))
         banner.update()
         val rows = components(banner).filterIsInstance<Stack>().filter { stack ->
@@ -1120,6 +1126,127 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertEquals("-2", badges[0].removedLabelForTest().text)
         assertEquals("+3", badges[1].addedLabelForTest().text)
         assertEquals("-2", badges[1].removedLabelForTest().text)
+    }
+
+    fun `test rollback banner caps file list with scroll pane`() {
+        val banner = RevertBanner(model, {}, {}, {})
+        model.upsertMessage(msg("u1", "user"))
+        model.setRevert(SessionRevertDto("u1", snapshot = "snap1"))
+        model.setDiff((1..80).map { DiffFileDto("src/file-$it.kt", it, 0) })
+
+        banner.update()
+
+        val scroll = components(banner).filterIsInstance<JBScrollPane>().single()
+        assertTrue(scroll.verticalScrollBarPolicy == ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED)
+        assertTrue(scroll.horizontalScrollBarPolicy == ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED)
+        val rows = rowLabels(banner).mapNotNull { it.parent }
+        val rowHeight = rows.first().preferredSize.height
+        val cap = rowHeight * RevertBanner.MAX_FILE_ROWS + UiStyle.Gap.xs() * (RevertBanner.MAX_FILE_ROWS - 1)
+        assertEquals(cap, scroll.preferredSize.height)
+    }
+
+    fun `test rollback banner shortens duplicate file names with parents`() {
+        val banner = RevertBanner(model, {}, {}, {})
+        model.upsertMessage(msg("u1", "user"))
+        model.setRevert(SessionRevertDto("u1", snapshot = "snap1"))
+        model.setDiff(listOf(
+            DiffFileDto("apps/main/src/App.kt", 1, 0),
+            DiffFileDto("packages/ui/src/App.kt", 2, 1),
+            DiffFileDto("packages/ui/src/Button.kt", 3, 0),
+        ))
+
+        banner.update()
+
+        val labels = rowLabels(banner).map { it.text to it.toolTipText }
+        assertTrue(labels.contains("main/src/App.kt" to "apps/main/src/App.kt"))
+        assertTrue(labels.contains("ui/src/App.kt" to "packages/ui/src/App.kt"))
+        assertTrue(labels.contains("Button.kt" to "packages/ui/src/Button.kt"))
+    }
+
+    fun `test rollback banner uses full path tooltip for entire file row`() {
+        val banner = RevertBanner(model, {}, {}, {})
+        model.setSession(SessionDto(
+            id = "ses",
+            projectID = "proj",
+            directory = "/workspace/root",
+            title = "Session",
+            version = "1",
+            time = SessionTimeDto(0.0, 0.0),
+        ))
+        model.upsertMessage(msg("u1", "user"))
+        model.setRevert(SessionRevertDto("u1", snapshot = "snap1"))
+        model.setDiff(listOf(
+            DiffFileDto("project/dir1/shared-alpha.txt", 0, 4),
+            DiffFileDto("project/dir2/shared-alpha.txt", 0, 4),
+        ))
+
+        banner.update()
+
+        val label = rowLabels(banner).first { it.text == "dir1/shared-alpha.txt" }
+        val row = label.parent as JComponent
+        assertEquals("/workspace/root/project/dir1/shared-alpha.txt", row.toolTipText)
+        assertTrue(components(row).filterIsInstance<JComponent>().all { it.toolTipText == "/workspace/root/project/dir1/shared-alpha.txt" })
+    }
+
+    fun `test rollback banner opens rolled back diff`() {
+        val diff = DiffFileDto("src/A.kt", 1, 0, PATCH, "modified")
+        val opened = mutableListOf<List<DiffFileDto>>()
+        val titles = mutableListOf<String>()
+        val keys = mutableListOf<String>()
+        val banner = RevertBanner(model, {}, {}, {})
+        banner.setDiffOpener({ files, title, key ->
+            opened.add(files)
+            titles.add(title)
+            keys.add(key)
+        }, "ses_1")
+        model.upsertMessage(msg("u1", "user"))
+        model.setRevert(SessionRevertDto("u1", snapshot = "snap1", diffs = listOf(diff)))
+
+        banner.update()
+
+        val button = components(banner).filterIsInstance<HoverIcon>()
+            .first { it.toolTipText == KiloBundle.message("session.part.tool.openDiff") }
+        assertTrue(button.isVisible)
+        assertTrue(button.isEnabled)
+        button.doClick()
+
+        assertEquals(listOf(diff), opened.single())
+        assertEquals(KiloBundle.message("revert.banner.openDiff.title"), titles.single())
+        assertEquals("revert:ses_1:u1", keys.single())
+    }
+
+    fun `test rollback banner hides open diff without a snapshot`() {
+        val banner = RevertBanner(model, {}, {}, {})
+        model.upsertMessage(msg("u1", "user"))
+        model.setRevert(SessionRevertDto("u1", snapshot = null))
+        model.setDiff(listOf(DiffFileDto("src/A.kt", 1, 0, PATCH)))
+
+        banner.update()
+
+        val button = components(banner).filterIsInstance<HoverIcon>()
+            .first { it.toolTipText == KiloBundle.message("session.part.tool.openDiff") }
+        assertFalse(button.isVisible)
+        assertFalse(button.isEnabled)
+    }
+
+    fun `test rollback banner opens session diff when revert diff is absent`() {
+        val diff = DiffFileDto("src/A.kt", 1, 0, PATCH, "modified")
+        val opened = mutableListOf<List<DiffFileDto>>()
+        val banner = RevertBanner(model, {}, {}, {})
+        banner.setDiffOpener({ files, _, _ -> opened.add(files) }, "ses_1")
+        model.upsertMessage(msg("u1", "user"))
+        model.setRevert(SessionRevertDto("u1", snapshot = "snap1"))
+        model.setDiff(listOf(diff))
+
+        banner.update()
+
+        val button = components(banner).filterIsInstance<HoverIcon>()
+            .first { it.toolTipText == KiloBundle.message("session.part.tool.openDiff") }
+        assertTrue(button.isVisible)
+        assertTrue(button.isEnabled)
+        button.doClick()
+
+        assertEquals(listOf(diff), opened.single())
     }
 
     fun `test rollback banner shows redo all only for multiple reverted messages`() {
@@ -1168,7 +1295,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
 
         banner.setReverting(SessionState.Reverting("Rolling back...", SessionState.Reverting.Kind.ROLLBACK, "u1"))
 
-        val buttons = components(banner).filterIsInstance<JButton>()
+        val buttons = components(banner).filterIsInstance<JButton>().filter { it.text.isNotEmpty() }
         assertTrue(buttons.filter { it.text == KiloBundle.message("revert.banner.redo") }.all { !it.isEnabled })
         assertTrue(buttons.filter { it.text == KiloBundle.message("revert.banner.redo.all") }.all { !it.isEnabled })
         val progress = components(banner).filterIsInstance<RevertProgress>().single()
@@ -1520,6 +1647,11 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         visit(root)
         return out
     }
+
+    private fun rowLabels(root: Component): List<JBLabel> = components(root)
+        .filterIsInstance<Stack>()
+        .filter { stack -> stack.components.any { it is DiffStatBadge } }
+        .mapNotNull { stack -> components(stack).filterIsInstance<JBLabel>().firstOrNull() }
 
     private fun taskText(view: TaskToolView): List<String> {
         val scroll = components(view).filterIsInstance<JBScrollPane>().single()

@@ -130,6 +130,24 @@ test("preserves failed transaction begin errors", async () => {
   }
 })
 
+// kilocode_change start - query errors must never expose bound credential values
+test("redacts bound values from query errors", async () => {
+  await run(
+    Effect.gen(function* () {
+      const db = yield* makeDb
+      const secret = "must-not-leak"
+      yield* db.insert(users).values({ id: 1, name: "Ada" })
+
+      const error = yield* db.insert(users).values({ id: 1, name: secret }).pipe(Effect.flip)
+
+      expect(error.message).not.toContain(secret)
+      expect(error.params).not.toContain(secret)
+      expect(error.params.every((param) => param === "<redacted>")).toBe(true)
+    }),
+  )
+})
+// kilocode_change end
+
 test("supports returning and rejects empty update sets", async () => {
   await run(
     Effect.gen(function* () {

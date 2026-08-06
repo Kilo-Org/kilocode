@@ -116,6 +116,9 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.cancel": "Otkaži",
   "agentManager.dialog.removeStaleWorktree.confirm": "Ukloni zastarjeli Worktree",
 
+  "agentManager.dialog.project.select": "Odaberi projekat",
+  "agentManager.dialog.project.untrusted": "Prvo vjeruj ovom projektu na bočnoj traci",
+  "agentManager.dialog.project.missing": "Repozitorij nije pronađen",
   "agentManager.dialog.openWorktree": "Novi worktree",
   "agentManager.dialog.configureWorktree": "Konfiguriši Novi Worktree...",
   "agentManager.dialog.tab.new": "Novo",

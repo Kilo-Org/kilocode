@@ -34,6 +34,10 @@ describe("KilocodeWatcher.eager", () => {
     expect(KilocodeWatcher.eager("vscode")).toBe(false)
   })
 
+  test("skips eager location watchers for JetBrains", () => {
+    expect(KilocodeWatcher.eager("jetbrains")).toBe(false)
+  })
+
   test("keeps eager location watchers for the standalone CLI", () => {
     expect(KilocodeWatcher.eager("cli")).toBe(true)
     expect(KilocodeWatcher.eager(undefined)).toBe(true)

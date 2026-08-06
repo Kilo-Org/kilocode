@@ -15,6 +15,7 @@ import { Global } from "./global"
 import { DataMigrationTable } from "./data-migration.sql"
 import path from "path"
 import { parse as parseKiloAccounts } from "./kilocode/credential-migration"
+import { isBusy } from "./kilocode/sqlite-error"
 import { NonNegativeInt } from "./schema"
 // kilocode_change end
 
@@ -170,6 +171,17 @@ export const legacyImportLayer = Layer.effectDiscard(
       const integration = Integration.ID.make(integrationID.replace(/\/+$/, ""))
       return [{ integration, value: legacyValue(integration, decoded.value) }]
     })
+    const migrated = yield* db.select().from(DataMigrationTable).where(eq(DataMigrationTable.name, name)).get()
+    const existing = yield* db.select().from(CredentialTable).orderBy(desc(CredentialTable.time_created)).all()
+    const same = (left: Value, right: Value) => JSON.stringify(left) === JSON.stringify(right)
+    if (
+      migrated &&
+      values.every((item) => {
+        const current = existing.find((row) => row.integration_id === item.integration)
+        return current !== undefined && same(current.value, item.value)
+      })
+    )
+      return
     yield* db.transaction((tx) =>
       Effect.gen(function* () {
         for (const item of values) {
@@ -181,7 +193,12 @@ export const legacyImportLayer = Layer.effectDiscard(
             .orderBy(desc(CredentialTable.time_created)) // kilocode_change - reconcile the active imported account
             .get()
           if (current) {
-            yield* tx.update(CredentialTable).set({ value: item.value }).where(eq(CredentialTable.id, current.id)).run()
+            if (!same(current.value, item.value))
+              yield* tx
+                .update(CredentialTable)
+                .set({ value: item.value })
+                .where(eq(CredentialTable.id, current.id))
+                .run()
             continue
           }
           yield* tx.insert(CredentialTable).values({
@@ -194,7 +211,15 @@ export const legacyImportLayer = Layer.effectDiscard(
         yield* tx.insert(DataMigrationTable).values({ name, time_completed: Date.now() }).onConflictDoNothing().run()
       }),
     )
-  }).pipe(Effect.orDie),
+  }).pipe(
+    Effect.retry({ while: isBusy, times: 2 }),
+    Effect.catch((error) =>
+      isBusy(error)
+        ? Effect.logWarning("legacy credential reconciliation deferred because the database is busy")
+        : Effect.fail(error),
+    ),
+    Effect.orDie,
+  ),
 )
 // kilocode_change end
 

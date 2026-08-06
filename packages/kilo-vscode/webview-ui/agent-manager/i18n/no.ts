@@ -115,6 +115,9 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.cancel": "Avbryt",
   "agentManager.dialog.removeStaleWorktree.confirm": "Fjern utdatert Worktree",
 
+  "agentManager.dialog.project.select": "Velg prosjekt",
+  "agentManager.dialog.project.untrusted": "Stol på dette prosjektet i sidepanelet først",
+  "agentManager.dialog.project.missing": "Repository ikke funnet",
   "agentManager.dialog.openWorktree": "Ny worktree",
   "agentManager.dialog.configureWorktree": "Konfigurer Nytt Worktree...",
   "agentManager.dialog.tab.new": "Ny",

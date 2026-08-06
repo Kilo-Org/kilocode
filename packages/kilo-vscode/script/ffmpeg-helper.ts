@@ -23,7 +23,8 @@ export async function ensureFfmpegForTarget(target: string, bin: string): Promis
 
   const exe = target.startsWith("win32") ? "ffmpeg.exe" : "ffmpeg"
   const dest = join(bin, exe)
-  if (existsSync(dest)) return
+  const marker = join(bin, "..", "node_modules", ".kilo-ffmpeg-target")
+  if (existsSync(dest) && existsSync(marker) && (await Bun.file(marker).text()).trim() === target) return
 
   const tmp = join(bin, ".ffmpeg-tmp")
   rmSync(tmp, { recursive: true, force: true })
@@ -37,6 +38,7 @@ export async function ensureFfmpegForTarget(target: string, bin: string): Promis
     await $`tar -xzf ${join(tmp, name)} -C ${tmp}`.quiet()
     copyFileSync(join(tmp, "package", exe), dest)
     if (!target.startsWith("win32")) chmodSync(dest, 0o755)
+    await Bun.write(marker, `${target}\n`)
   } finally {
     rmSync(tmp, { recursive: true, force: true })
   }
