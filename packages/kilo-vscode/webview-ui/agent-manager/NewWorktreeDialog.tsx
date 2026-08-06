@@ -57,6 +57,34 @@ const WORKTREE_PROMPT_SCOPE = "agent-manager-worktree-prompt"
 
 type DialogTab = "new" | "import"
 
+type DialogSelections = {
+  agent?: string
+  model?: { providerID: string; modelID: string }
+  variant?: string
+  sandbox?: boolean
+}
+
+function readDialogSelections(value: unknown): DialogSelections {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {}
+  const data = value as Record<string, unknown>
+  const raw = data.model
+  const model = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : undefined
+
+  return {
+    agent: typeof data.agent === "string" ? data.agent : undefined,
+    model:
+      typeof model?.providerID === "string" && typeof model.modelID === "string"
+        ? { providerID: model.providerID, modelID: model.modelID }
+        : undefined,
+    variant: typeof data.variant === "string" ? data.variant : undefined,
+    sandbox: typeof data.sandbox === "boolean" ? data.sandbox : undefined,
+  }
+}
+
+function fallback<T>(value: T | undefined, get: () => T): T {
+  return value === undefined ? get() : value
+}
+
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 
 function sanitizeSegment(text: string, maxLength = 50): string {
@@ -110,9 +138,10 @@ export const NewWorktreeDialog: Component<{
   const [name, setName] = createSignal("")
   const cached = vscode.getState<Record<string, unknown>>()
   const [prompt, setPrompt] = createSignal((cached?.advancedDialogPrompt as string) ?? "")
+  const saved = readDialogSelections(cached?.advancedDialogSelections)
   const [versions, setVersions] = createSignal<VersionCount>(1)
-  const initialAgent = session.selectedAgent()
-  const initialModel = session.modelForAgent(initialAgent)
+  const initialAgent = fallback(saved.agent, () => session.selectedAgent())
+  const initialModel = fallback(saved.model, () => session.modelForAgent(initialAgent))
   const [model, setModel] = createSignal<{ providerID: string; modelID: string } | null>(initialModel)
   const [compareMode, setCompareMode] = createSignal(false)
   const [modelAllocations, setModelAllocations] = createSignal<ModelAllocations>(new Map())
@@ -125,8 +154,10 @@ export const NewWorktreeDialog: Component<{
   const [baseBranchOpen, setBaseBranchOpen] = createSignal(false)
   const [compareOpen, setCompareOpen] = createSignal(false)
   const [highlightedIndex, setHighlightedIndex] = createSignal(0)
-  const [variant, setVariant] = createSignal<string | undefined>(session.variantForAgent(initialAgent, initialModel))
-  const [sandbox, setSandbox] = createSignal<boolean | undefined>()
+  const [variant, setVariant] = createSignal<string | undefined>(
+    fallback(saved.variant, () => session.variantForAgent(initialAgent, initialModel)),
+  )
+  const [sandbox, setSandbox] = createSignal<boolean | undefined>(saved.sandbox)
   const [sandboxDefault, setSandboxDefault] = createSignal<boolean | undefined>()
   const [sandboxOverride, setSandboxOverride] = createSignal<boolean | undefined>()
   const [sandboxAvailable, setSandboxAvailable] = createSignal(true)
@@ -284,6 +315,19 @@ export const NewWorktreeDialog: Component<{
     const state = vscode.getState<Record<string, unknown>>() ?? {}
     vscode.setState({ ...state, advancedDialogImages: imgs.length > 0 ? imgs : undefined })
   }
+
+  createEffect(() => {
+    const state = vscode.getState<Record<string, unknown>>() ?? {}
+    vscode.setState({
+      ...state,
+      advancedDialogSelections: {
+        agent: agent(),
+        model: model(),
+        variant: variant(),
+        sandbox: sandbox(),
+      },
+    })
+  })
 
   // Auto-persist images to webview state on any change
   createEffect(() => persistImages(imageAttach.images()))
