@@ -246,6 +246,16 @@
         "category": "Kilo Code"
       },
       {
+        "command": "kilo-code.new.agentManager.previousTerminal",
+        "title": "Agent Manager: Previous Terminal",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.agentManager.nextTerminal",
+        "title": "Agent Manager: Next Terminal",
+        "category": "Kilo Code"
+      },
+      {
         "command": "kilo-code.new.agentManager.search",
         "title": "Agent Manager: Search Worktrees and Sessions",
         "category": "Kilo Code"
@@ -634,6 +644,11 @@
         "mac": "cmd+shift+g"
       },
       {
+        "command": "-workbench.actions.view.problems",
+        "key": "ctrl+shift+m",
+        "mac": "cmd+shift+m"
+      },
+      {
         "command": "kilo-code.new.agentManagerOpen",
         "key": "ctrl+shift+m",
         "mac": "cmd+shift+m"
@@ -666,6 +681,18 @@
         "command": "kilo-code.new.agentManager.nextTab",
         "key": "ctrl+alt+right",
         "mac": "cmd+alt+right",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.agentManager.previousTerminal",
+        "key": "ctrl+shift+[",
+        "mac": "cmd+shift+[",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.agentManager.nextTerminal",
+        "key": "ctrl+shift+]",
+        "mac": "cmd+shift+]",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {

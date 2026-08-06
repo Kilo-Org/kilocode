@@ -4671,6 +4671,10 @@ body.vscode-high-contrast-light {
     outline: 1px solid var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
     outline-offset: -1px;
   }
+
+  .am-terminal-host:focus-within {
+    box-shadow: inset 0 0 0 1px var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
+  }
 }
 
 /* Context menu — restyle to match dropdown-menu visuals.
@@ -4714,6 +4718,10 @@ body.vscode-high-contrast-light {
 .am-tab-terminal [data-component="icon"] {
   flex-shrink: 0;
   opacity: 0.7;
+}
+
+.am-tab-terminal-focused {
+  background: var(--surface-base-hover);
 }
 
 /*
@@ -4916,6 +4924,10 @@ body.vscode-high-contrast-light {
   min-height: 0;
   min-width: 0;
   background: var(--vscode-terminal-background, #1e1e1e);
+}
+
+.am-terminal-host:focus-within {
+  box-shadow: inset 0 0 0 1px var(--border-focus, var(--vscode-focusBorder));
 }
 
 /* Third-party xterm classes — addressed by attribute selector so the

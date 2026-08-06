@@ -356,20 +356,20 @@ export class AgentManagerProvider implements Disposable {
     if (this.panel) {
       this.log("Panel already open, revealing")
       this.panel.reveal(preserveFocus)
-      if (!preserveFocus) this.postToWebview({ type: "action", action: "focusInput" })
+      if (!preserveFocus) this.focusPrompt(this.panel)
       return
     }
     this.log("Opening Agent Manager panel")
     this.host.capture("Agent Manager Opened", { source: PLATFORM })
 
-    this.attachPanel(
-      this.host.openPanel({
-        onBeforeMessage: (msg) => this.onMessage(msg),
-        worktreeDirectories: () => this.getWorktreeDirectories(),
-        workspaceRoot: () => this.getRoot(),
-        projectId: () => this.contexts.active()?.id,
-      }),
-    )
+    const panel = this.host.openPanel({
+      onBeforeMessage: (msg) => this.onMessage(msg),
+      worktreeDirectories: () => this.getWorktreeDirectories(),
+      workspaceRoot: () => this.getRoot(),
+      projectId: () => this.contexts.active()?.id,
+    })
+    this.attachPanel(panel)
+    if (!preserveFocus) this.focusPrompt(panel)
   }
 
   public onPanelVisibilityChange(cb: (visible: boolean) => void): void {
@@ -1692,13 +1692,22 @@ export class AgentManagerProvider implements Disposable {
    * Used for the keyboard shortcut to switch back from terminal.
    */
   public focusPanel(): void {
-    if (!this.panel) return
-    this.panel.reveal(false)
-    this.postToWebview({ type: "action", action: "focusInput" })
+    const panel = this.panel
+    if (!panel) return
+    panel.reveal(false)
+    this.focusPrompt(panel)
   }
 
   public isActive(): boolean {
     return this.panel?.active === true
+  }
+
+  /** Post explicit prompt focus only after the webview can receive it. */
+  private focusPrompt(panel: PanelContext): void {
+    void Promise.all([this.waitForPanelReady(panel), this.waitForPanelActive(panel)]).then(([ready, active]) => {
+      if (!ready || !active) return
+      panel.postMessage({ type: "action", action: "focusInput" })
+    })
   }
 
   private async waitForPanel(panel: PanelContext, promise: Promise<void>): Promise<boolean> {

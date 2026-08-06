@@ -12,6 +12,8 @@ function scene(
     saved?: "vscode" | "agentManager"
     visible?: boolean
     focusedId?: string
+    count?: number
+    script?: boolean
     mac?: boolean
   } = {},
 ) {
@@ -33,6 +35,7 @@ function scene(
       requestSide: () => {
         calls.requestSide++
         visible = true
+        focusedId ??= "terminal:side"
       },
       ensureSide: () => calls.ensureSide++,
       closeSide: (terminalId) => {
@@ -43,6 +46,8 @@ function scene(
     },
     visible: () => visible,
     focusedId: () => focusedId,
+    count: () => opts.count ?? 2,
+    isScript: () => opts.script ?? false,
     hide: () => {
       calls.hide++
       visible = false
@@ -60,7 +65,7 @@ function scene(
 }
 
 describe("Agent Manager side terminal controller", () => {
-  it("toggles the panel and hands focus to the chat only when the terminal had it", () => {
+  it("toggles the panel, focusing a visible terminal before hiding it", () => {
     const focused = scene({ destination: "agentManager", visible: true, focusedId: "terminal:side" })
     focused.ctl.toggle()
     expect(focused.calls.hide).toBe(1)
@@ -68,7 +73,8 @@ describe("Agent Manager side terminal controller", () => {
 
     const elsewhere = scene({ destination: "agentManager", visible: true })
     elsewhere.ctl.toggle()
-    expect(elsewhere.calls.hide).toBe(1)
+    expect(elsewhere.calls.requestSide).toBe(1)
+    expect(elsewhere.calls.hide).toBe(0)
     expect(elsewhere.calls.refocus).toBe(0)
 
     const hidden = scene({ destination: "agentManager", visible: false })
@@ -93,18 +99,32 @@ describe("Agent Manager side terminal controller", () => {
     hidden.ctl.syncContext("wt-2", "wt-1")
     expect(hidden.calls.ensureSide).toBe(0)
 
-    const closed = scene({ visible: true })
+    const closed = scene({ visible: true, focusedId: "terminal:side" })
     closed.ctl.syncContext("wt-2", "wt-1")
     closed.ctl.toggle()
     await Promise.resolve()
     expect(closed.calls.ensureSide).toBe(0)
   })
 
-  it("kills the focused terminal and refocuses the chat", () => {
+  it("closes the focused terminal without stealing focus from its survivor", () => {
     const focused = scene({ focusedId: "terminal:two" })
     expect(focused.ctl.close()).toBe(true)
     expect(focused.calls.closed).toEqual(["terminal:two"])
-    expect(focused.calls.refocus).toBe(1)
+    expect(focused.calls.refocus).toBe(0)
+  })
+
+  it("hides instead of killing the last or provider-owned terminal", () => {
+    const last = scene({ focusedId: "terminal:last", count: 1 })
+    expect(last.ctl.close()).toBe(true)
+    expect(last.calls.closed).toEqual([])
+    expect(last.calls.hide).toBe(1)
+    expect(last.calls.refocus).toBe(1)
+
+    const script = scene({ focusedId: "script:run", script: true, count: 2 })
+    expect(script.ctl.close()).toBe(true)
+    expect(script.calls.closed).toEqual([])
+    expect(script.calls.hide).toBe(1)
+    expect(script.calls.refocus).toBe(1)
   })
 
   it("does nothing on close without a focused terminal", () => {

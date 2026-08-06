@@ -378,6 +378,28 @@ describe("Agent Manager Worktree Actions", () => {
     expect(source).toContain('quickWorktree: isMac ? "⌘⇧N" : "Ctrl+Shift+N"')
   })
 
+  it("reserves Cmd+Shift+M for the Agent Manager instead of Problems", () => {
+    const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf-8")) as {
+      contributes: { keybindings: { command: string; key?: string; mac?: string }[] }
+    }
+    const removed = manifest.contributes.keybindings.find((item) => item.command === "-workbench.actions.view.problems")
+    const manager = manifest.contributes.keybindings.find((item) => item.command === "kilo-code.new.agentManagerOpen")
+
+    expect(removed).toMatchObject({ key: "ctrl+shift+m", mac: "cmd+shift+m" })
+    expect(manager).toMatchObject({ key: "ctrl+shift+m", mac: "cmd+shift+m" })
+  })
+
+  it("creates side terminals only while a side terminal owns focus", () => {
+    const source = fs.readFileSync(TSX_FILE, "utf-8")
+    const start = source.indexOf('else if (msg.action === "newTerminal")')
+    const end = source.indexOf('else if (msg.action === "cycleAgentMode"', start)
+    const action = source.slice(start, end)
+
+    expect(action).toContain("if (terms.sideFocusedId()) termHandlers.addSide()")
+    expect(action).not.toContain("terminalVisible()")
+    expect(action).toContain("else termHandlers.requestNew()")
+  })
+
   it("forwards the quick-worktree command to immediate creation", () => {
     const source = fs.readFileSync(path.join(ROOT, "src/extension.ts"), "utf-8")
     const start = source.indexOf('vscode.commands.registerCommand("kilo-code.new.agentManager.quickWorktree"')
