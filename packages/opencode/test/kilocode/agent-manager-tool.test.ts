@@ -164,7 +164,7 @@ describe("agent_manager tool", () => {
     expect(action && typeof action === "object" ? action.description : undefined).toContain("Use list first")
     expect(action && typeof action === "object" ? action.description : undefined).toContain("Never edit")
     expect(schema.properties?.sessionID).toEqual(
-      expect.objectContaining({ description: expect.stringContaining("returned by action=list") }),
+      expect.objectContaining({ description: expect.stringContaining("IDs start with ses_") }),
     )
     expect(schema.properties?.sessionID).not.toHaveProperty("pattern")
     expect(schema.properties?.sectionID).toEqual(
