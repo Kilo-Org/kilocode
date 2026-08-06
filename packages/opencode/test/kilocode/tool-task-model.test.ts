@@ -1,5 +1,7 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { afterEach, beforeAll, describe, expect } from "bun:test"
-import { Effect, Layer } from "effect"
+import { Effect } from "effect"
 import { Database } from "@opencode-ai/core/database/database"
 import fs from "fs/promises"
 import path from "path"
@@ -99,20 +101,23 @@ const catalog = {
 }
 
 const it = testEffect(
-  Layer.mergeAll(
-    Agent.defaultLayer,
-    BackgroundJob.defaultLayer,
-    Bus.defaultLayer,
-    Config.defaultLayer,
-    RuntimeFlags.layer(),
-    SessionRunState.defaultLayer,
-    SessionStatus.defaultLayer,
-    CrossSpawnSpawner.defaultLayer,
-    Session.defaultLayer,
-    Truncate.defaultLayer,
-    Provider.defaultLayer,
-    ToolRegistry.defaultLayer,
-    Database.defaultLayer,
+  LayerNode.compile(
+    LayerNode.group([
+      Agent.node,
+      BackgroundJob.node,
+      Bus.node,
+      Config.node,
+      RuntimeFlags.node,
+      SessionRunState.node,
+      SessionStatus.node,
+      CrossSpawnSpawner.node,
+      Session.node,
+      SessionProjector.node,
+      Truncate.node,
+      Provider.node,
+      ToolRegistry.node,
+      Database.node,
+    ]),
   ),
 )
 

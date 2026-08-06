@@ -1,5 +1,7 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { describe, expect } from "bun:test"
-import { Effect, Layer } from "effect"
+import { Effect } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
@@ -9,7 +11,7 @@ import { MessageID, PartID, SessionID } from "@/session/schema"
 import { provideTmpdirInstance } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
 
-const env = Layer.mergeAll(Session.defaultLayer, CrossSpawnSpawner.defaultLayer)
+const env = LayerNode.compile(LayerNode.group([Session.node, SessionProjector.node, CrossSpawnSpawner.node]))
 const it = testEffect(env)
 
 const providerID = ProviderV2.ID.make("test")

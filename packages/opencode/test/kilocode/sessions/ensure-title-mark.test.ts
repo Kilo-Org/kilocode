@@ -1,8 +1,8 @@
 import { expect } from "bun:test"
-import { NodeFileSystem } from "@effect/platform-node"
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
 import { Database } from "@opencode-ai/core/database/database"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
@@ -11,7 +11,6 @@ import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { MemoryService } from "@kilocode/kilo-memory/effect/service"
 import { Deferred, Effect, Fiber, Layer } from "effect"
 import * as Stream from "effect/Stream"
-import { FetchHttpClient } from "effect/unstable/http"
 import path from "path"
 import { Agent as AgentSvc } from "../../../src/agent/agent"
 import { Auth } from "../../../src/auth"
@@ -24,7 +23,11 @@ import { EventV2Bridge } from "../../../src/event-v2-bridge"
 import { Format } from "../../../src/format"
 import { Git } from "../../../src/git"
 import { Image } from "../../../src/image/image"
-import { clearAll as clearRenameMarks, consumeAutoTitle, markAutoTitle } from "../../../src/kilo-sessions/rename-adoptions"
+import {
+  clearAll as clearRenameMarks,
+  consumeAutoTitle,
+  markAutoTitle,
+} from "../../../src/kilo-sessions/rename-adoptions"
 import { KiloSessions } from "../../../src/kilo-sessions/kilo-sessions"
 import { LSP } from "../../../src/lsp/lsp"
 import { MCP } from "../../../src/mcp"
@@ -40,6 +43,7 @@ import { SessionPrompt } from "../../../src/session/prompt"
 import { SessionRevert } from "../../../src/session/revert"
 import { SessionRunState } from "../../../src/session/run-state"
 import { Session } from "../../../src/session/session"
+import { MessageV2 } from "../../../src/session/message-v2"
 import { SessionStatus } from "../../../src/session/status"
 import { SessionSummary } from "../../../src/session/summary"
 import { SystemPrompt } from "../../../src/session/system"
@@ -52,6 +56,7 @@ import { RuntimeFlags } from "../../../src/effect/runtime-flags"
 import { TestInstance } from "../../fixture/fixture"
 import { pollWithTimeout, testEffect } from "../../lib/effect"
 import { TestLLMServer } from "../../lib/llm-server"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 
 // Drives the real SessionPrompt.ensureTitle path (forked on loop step 1) for:
 // - mid-generation non-default skip (re-check before mark/setTitle)
@@ -70,6 +75,8 @@ const mcp = Layer.succeed(
     tools: () => Effect.succeed({}),
     prompts: () => Effect.succeed({}),
     resources: () => Effect.succeed({}),
+    instructions: () => Effect.succeed([]),
+    resourceTemplates: () => Effect.succeed({}),
     add: () => Effect.succeed({ status: { status: "disabled" as const } }),
     connect: () => Effect.void,
     disconnect: () => Effect.void,
@@ -114,10 +121,6 @@ const summary = Layer.succeed(
   }),
 )
 
-const status = SessionStatus.layer.pipe(Layer.provideMerge(EventV2Bridge.defaultLayer))
-const run = SessionRunState.layer.pipe(Layer.provide(status))
-const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLayer)
-
 /** Shared mutable hooks for ensureTitle integration tests. */
 const hooks = {
   stallTitle: undefined as Deferred.Deferred<void> | undefined,
@@ -126,120 +129,93 @@ const hooks = {
   setTitleCalls: [] as { sessionID: string; title: string }[],
 }
 
-const llmWrapped = Layer.effect(
-  LLM.Service,
-  Effect.gen(function* () {
-    const inner = yield* LLM.Service
-    return {
-      stream: (input: Parameters<LLM.Interface["stream"]>[0]) => {
-        if (input.agent.name === "title" && hooks.stallTitle) {
-          hooks.titleStreamEntered = true
-          const gate = hooks.stallTitle
-          return Stream.unwrap(
-            Effect.gen(function* () {
-              yield* Deferred.await(gate)
-              return inner.stream(input)
-            }),
-          )
-        }
-        return inner.stream(input)
-      },
-    } satisfies LLM.Interface
-  }),
-).pipe(Layer.provide(LLM.defaultLayer))
+const memory = LayerNode.make({ service: MemoryService.Service, layer: MemoryService.layer, deps: [] })
+const server = LayerNode.make({ service: TestLLMServer, layer: TestLLMServer.layer, deps: [] })
+const root = LayerNode.group([
+  SessionPrompt.node,
+  Session.node,
+  SessionProjector.node,
+  MessageV2.node,
+  Snapshot.node,
+  LLM.node,
+  Env.node,
+  AgentSvc.node,
+  Command.node,
+  Permission.node,
+  Plugin.node,
+  Config.node,
+  ProviderSvc.node,
+  LSP.node,
+  MCP.node,
+  FSUtil.node,
+  BackgroundJob.node,
+  SessionStatus.node,
+  SessionRunState.node,
+  Database.node,
+  EventV2Bridge.node,
+  Question.node,
+  Todo.node,
+  ToolRegistry.node,
+  Skill.node,
+  Git.node,
+  Ripgrep.node,
+  Format.node,
+  Truncate.node,
+  SessionProcessor.node,
+  Image.node,
+  SessionCompaction.node,
+  SessionRevert.node,
+  Instruction.node,
+  SystemPrompt.node,
+  CrossSpawnSpawner.node,
+  RuntimeFlags.node,
+  memory,
+  server,
+])
+const env = LayerNode.compile(root, [
+  [SessionSummary.node, summary],
+  [LSP.node, lsp],
+  [MCP.node, mcp],
+  [RuntimeFlags.node, RuntimeFlags.layer({ experimentalEventSystem: true })],
+  [KiloSessions.node, KiloSessions.testLayer],
+])
+const it = testEffect(env)
 
-const sessionWrapped = Layer.effect(
-  Session.Service,
-  Effect.gen(function* () {
-    const inner = yield* Session.Service
-    return {
-      ...inner,
-      setTitle: (input: { sessionID: Session.Info["id"]; title: string }) =>
-        Effect.gen(function* () {
-          hooks.setTitleCalls.push(input)
-          if (hooks.failSetTitle) {
-            // Mark must already be present (mark-before-write). Consume proves it,
-            // then re-mark so ensureTitle's catchCause still has something to clear.
-            expect(consumeAutoTitle(input.sessionID, input.title)).toBe(true)
-            markAutoTitle(input.sessionID, input.title)
-            return yield* Effect.die(new Error("setTitle failed for test"))
-          }
-          return yield* inner.setTitle(input)
-        }),
-    } as Session.Interface
-  }),
-).pipe(Layer.provide(Session.defaultLayer))
+const installHooks = Effect.fn("test.installTitleHooks")(function* () {
+  const llm = yield* LLM.Service
+  const sessions = yield* Session.Service
+  const stream = llm.stream
+  const title = sessions.setTitle
+  const mutableLLM = llm as { stream: LLM.Interface["stream"] }
+  const mutableSession = sessions as { setTitle: Session.Interface["setTitle"] }
 
-function makePrompt() {
-  const deps = Layer.mergeAll(
-    sessionWrapped,
-    Snapshot.defaultLayer,
-    llmWrapped,
-    Env.defaultLayer,
-    AgentSvc.defaultLayer,
-    Command.defaultLayer,
-    Permission.defaultLayer,
-    Plugin.defaultLayer,
-    Config.defaultLayer,
-    ProviderSvc.defaultLayer,
-    lsp,
-    mcp,
-    FSUtil.defaultLayer,
-    BackgroundJob.defaultLayer,
-    status,
-    Database.defaultLayer,
-    EventV2Bridge.defaultLayer,
-    Bus.layer,
-    MemoryService.layer,
-  ).pipe(Layer.provideMerge(infra))
-  const question = Question.layer.pipe(Layer.provideMerge(deps))
-  const todo = Todo.layer.pipe(Layer.provideMerge(deps))
-  const registry = ToolRegistry.layer.pipe(
-    Layer.provide(Skill.defaultLayer),
-    Layer.provide(FetchHttpClient.layer),
-    Layer.provide(CrossSpawnSpawner.defaultLayer),
-    Layer.provide(Git.defaultLayer),
-    Layer.provide(Ripgrep.defaultLayer),
-    Layer.provide(RepositoryCache.defaultLayer),
-    Layer.provide(Format.defaultLayer),
-    Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })),
-    Layer.provide(Auth.defaultLayer),
-    Layer.provide(KiloSessions.testLayer),
-    Layer.provideMerge(todo),
-    Layer.provideMerge(question),
-    Layer.provideMerge(deps),
-  )
-  const trunc = Truncate.layer.pipe(Layer.provideMerge(deps))
-  const proc = SessionProcessor.layer.pipe(
-    Layer.provide(summary),
-    Layer.provide(Image.defaultLayer),
-    Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })),
-    Layer.provideMerge(deps),
-  )
-  const compact = SessionCompaction.layer.pipe(
-    Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })),
-    Layer.provideMerge(proc),
-    Layer.provideMerge(deps),
-  )
-  return SessionPrompt.layer.pipe(
-    Layer.provide(SessionRevert.defaultLayer),
-    Layer.provide(Image.defaultLayer),
-    Layer.provide(summary),
-    Layer.provideMerge(run),
-    Layer.provideMerge(compact),
-    Layer.provideMerge(proc),
-    Layer.provideMerge(registry),
-    Layer.provideMerge(trunc),
-    Layer.provideMerge(question),
-    Layer.provide(Instruction.defaultLayer),
-    Layer.provide(SystemPrompt.defaultLayer),
-    Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })),
-    Layer.provideMerge(deps),
-    Layer.provide(summary),
-  )
-}
+  mutableLLM.stream = (input) => {
+    if (input.agent.name !== "title" || !hooks.stallTitle) return stream(input)
+    hooks.titleStreamEntered = true
+    const gate = hooks.stallTitle
+    return Stream.unwrap(
+      Effect.gen(function* () {
+        yield* Deferred.await(gate)
+        return stream(input)
+      }),
+    )
+  }
+  mutableSession.setTitle = (input) =>
+    Effect.gen(function* () {
+      hooks.setTitleCalls.push(input)
+      if (!hooks.failSetTitle) return yield* title(input)
+      expect(consumeAutoTitle(input.sessionID, input.title)).toBe(true)
+      markAutoTitle(input.sessionID, input.title)
+      return yield* Effect.die(new Error("setTitle failed for test"))
+    })
 
-const it = testEffect(Layer.mergeAll(TestLLMServer.layer, makePrompt()))
+  yield* Effect.addFinalizer(() =>
+    Effect.sync(() => {
+      mutableLLM.stream = stream
+      mutableSession.setTitle = title
+    }),
+  )
+})
 
 function providerCfg(url: string): Partial<ConfigV1.Info> {
   return {
@@ -323,6 +299,7 @@ it.instance(
   () =>
     Effect.gen(function* () {
       resetHooks()
+      yield* installHooks()
       const { llm } = yield* useServerConfig()
       const prompt = yield* SessionPrompt.Service
       const sessions = yield* Session.Service
@@ -375,6 +352,7 @@ it.instance(
   () =>
     Effect.gen(function* () {
       resetHooks()
+      yield* installHooks()
       const { llm } = yield* useServerConfig()
       const prompt = yield* SessionPrompt.Service
       const sessions = yield* Session.Service
@@ -423,6 +401,7 @@ it.instance(
   () =>
     Effect.gen(function* () {
       resetHooks()
+      yield* installHooks()
       const { llm } = yield* useServerConfig()
       const prompt = yield* SessionPrompt.Service
       const sessions = yield* Session.Service

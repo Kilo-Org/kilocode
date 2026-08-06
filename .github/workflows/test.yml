@@ -66,7 +66,6 @@ jobs:
           echo 'general=true' >> "$GITHUB_OUTPUT"
           echo 'settings=[{"os":"linux","index":1,"total":2,"host":"blacksmith-4vcpu-ubuntu-2404","run":true,"packages":true},{"os":"linux","index":2,"total":2,"host":"blacksmith-4vcpu-ubuntu-2404","run":true,"packages":false},{"os":"macos","index":1,"total":1,"host":"macos-15","run":true,"packages":true},{"os":"windows","index":1,"total":4,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":true},{"os":"windows","index":2,"total":4,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false},{"os":"windows","index":3,"total":4,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false},{"os":"windows","index":4,"total":4,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false}]' >> "$GITHUB_OUTPUT"
   # kilocode_change end
-
   unit:
     # kilocode_change start
     name: ${{ !matrix.settings.run && 'unit (unchanged)' || matrix.settings.total > 1 && format('unit ({0}, {1}/{2})', matrix.settings.os, matrix.settings.index, matrix.settings.total) || format('unit ({0})', matrix.settings.os) }}
@@ -146,6 +145,8 @@ jobs:
       - name: Run non-CLI unit tests
         if: matrix.settings.run && matrix.settings.packages
         run: bun turbo test:ci --output-logs=errors-only --log-order=grouped --log-prefix=task --filter='!@kilocode/cli' --filter='!@kilocode/kilo-jetbrains'
+        env:
+          KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: "true" # kilocode_change - non-CLI tests use the watcher-free unit-test profile
       # kilocode_change end
 
       # kilocode_change start - ensure the Darwin profile cannot suppress its own validation
@@ -222,10 +223,15 @@ jobs:
             turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-
             turbo-${{ runner.os }}-
 
+      - name: Check generated client
+        if: runner.os == 'Linux'
+        working-directory: packages/client
+        run: bun run check:generated
       - name: Run HttpApi exerciser gates
         run: bun turbo test:httpapi --filter='@kilocode/cli'
         env:
-          KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: "true" # kilocode_change - same rationale as the CLI unit step: a watcher per scenario instance is too heavy for the exerciser
+          KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: "true" # kilocode_change - a watcher per scenario instance is too heavy for the exerciser
+
   # kilocode_change end
 
   # kilocode_change start
@@ -251,7 +257,6 @@ jobs:
           echo "unit=${{ needs.unit.result }}"
           test "${{ needs.unit.result }}" = "success"
   # kilocode_change end
-
   # kilocode_change start
   required:
     name: test (linux)

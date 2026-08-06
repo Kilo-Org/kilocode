@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect } from "bun:test"
 import path from "node:path"
 import { Effect, FileSystem, Layer } from "effect"
@@ -12,20 +13,19 @@ import { Global } from "@opencode-ai/core/global"
 import { provideInstance, provideTmpdirInstance, testInstanceStoreLayer, tmpdirScoped } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
 import { TestConfig } from "../../fixture/config"
+import { Config } from "../../../src/config/config"
 
 const it = testEffect(
-  Layer.mergeAll(CrossSpawnSpawner.defaultLayer, NodeFileSystem.layer, testInstanceStoreLayer, RuntimeFlags.layer()),
+  Layer.mergeAll(AppNodeBuilder.build(CrossSpawnSpawner.node), NodeFileSystem.layer, testInstanceStoreLayer, RuntimeFlags.layer()),
 )
 
 const configLayer = TestConfig.layer()
 
 const layer = (dir: string, config = configLayer) =>
-  Instruction.layer.pipe(
-    Layer.provide(config),
-    Layer.provide(FSUtil.defaultLayer),
-    Layer.provide(FetchHttpClient.layer),
-    Layer.provide(Global.layerWith({ home: dir, config: dir })),
-  )
+  AppNodeBuilder.build(Instruction.node, [
+    [Config.node, config],
+    [Global.node, Global.layerWith({ home: dir, config: dir })],
+  ])
 
 const write = (filepath: string, content: string) =>
   Effect.gen(function* () {

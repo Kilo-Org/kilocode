@@ -15,8 +15,10 @@ class CoreInfoAction : AnAction(), DumbAware {
         val app = service<KiloAppService>()
         val info = app.core
         if (info == null) app.fetchCoreInfoAsync()
+        app.fetchBundledAsync()
+        val key = if (app.bundled == true) "action.Kilo.CoreInfo.bundled" else "action.Kilo.CoreInfo.text"
         e.presentation.text = info?.let {
-            KiloBundle.message("action.Kilo.CoreInfo.text", it.version, it.platform)
+            KiloBundle.message(key, it.version, it.platform)
         } ?: KiloBundle.message("action.Kilo.CoreInfo.loading")
         e.presentation.description = KiloBundle.message("action.Kilo.CoreInfo.description")
         e.presentation.isEnabled = false

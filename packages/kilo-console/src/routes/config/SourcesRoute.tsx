@@ -14,9 +14,7 @@ export function SourcesRoute() {
             title="Load Order"
             description="Load order and editability without exposing secret values."
             meta={
-              <Tag>
-                {data().overlay.targets.active.writable ? data().overlay.targets.active.scope : "Read only"}
-              </Tag>
+              <Tag>{data().overlay.targets.active.writable ? data().overlay.targets.active.scope : "Read only"}</Tag>
             }
           />
 

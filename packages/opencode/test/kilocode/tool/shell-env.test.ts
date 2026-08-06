@@ -1,6 +1,7 @@
 import { expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import type * as Scope from "effect/Scope"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Agent } from "@/agent/agent"
@@ -16,13 +17,13 @@ import { provideInstance, testInstanceStoreLayer, tmpdirScoped } from "../../fix
 import { testEffect } from "../../lib/effect"
 
 const layer = Layer.mergeAll(
-  CrossSpawnSpawner.defaultLayer,
-  FSUtil.defaultLayer,
-  Plugin.defaultLayer,
-  Truncate.defaultLayer,
-  Config.defaultLayer,
-  Agent.defaultLayer,
-  RuntimeFlags.defaultLayer,
+  AppNodeBuilder.build(CrossSpawnSpawner.node),
+  AppNodeBuilder.build(FSUtil.node),
+  AppNodeBuilder.build(Plugin.node),
+  AppNodeBuilder.build(Truncate.node),
+  AppNodeBuilder.build(Config.node),
+  AppNodeBuilder.build(Agent.node),
+  AppNodeBuilder.build(RuntimeFlags.node),
   testInstanceStoreLayer,
 )
 const it = testEffect(layer)

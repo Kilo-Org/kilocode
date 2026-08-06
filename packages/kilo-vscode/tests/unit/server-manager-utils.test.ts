@@ -315,10 +315,17 @@ describe("server workspace helpers", () => {
     expect(resolveIndexingEnv([{ uri: { fsPath: "/repo" } }])).toEqual({})
   })
 
-  it("uses the shared database for the managed backend while preserving the environment", () => {
-    expect(resolveManagedServerEnv({ PATH: "/usr/bin", KILO_DISABLE_CHANNEL_DB: "false" })).toEqual({
+  it("disables unused managed-backend services while preserving the environment", () => {
+    expect(
+      resolveManagedServerEnv({
+        PATH: "/usr/bin",
+        KILO_DISABLE_CHANNEL_DB: "false",
+        KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: "false",
+      }),
+    ).toEqual({
       PATH: "/usr/bin",
       KILO_DISABLE_CHANNEL_DB: "true",
+      KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: "true",
     })
   })
 })

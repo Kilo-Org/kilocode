@@ -661,7 +661,10 @@ export function mapCloudSessionMessageToWebviewMessage(message: CloudSessionMess
  * Returns true when the event carries a projectID that does not match the expected one.
  * When expectedProjectID is undefined (not yet resolved), nothing is filtered.
  */
-export function isEventFromForeignProject(event: StreamEvent, expectedProjectID: string | undefined): boolean {
+export function isEventFromForeignProject(
+  event: StreamEvent | SyncPayload,
+  expectedProjectID: string | undefined,
+): boolean {
   if (!expectedProjectID || event.type !== "sync") return false
   if (event.name === "session.created.1" || event.name === "session.deleted.1") {
     return event.data.info.projectID !== expectedProjectID

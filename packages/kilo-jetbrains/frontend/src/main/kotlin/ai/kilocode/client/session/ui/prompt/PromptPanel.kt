@@ -726,7 +726,7 @@ class PromptPanel(
 
     @RequiresEdt
     private fun addAttachment(item: PromptAttachment) {
-        if (!attachment && PromptAttachmentExtractor.media(item.mime)) {
+        if (!attachment && !item.reference && PromptAttachmentExtractor.image(item.mime)) {
             LOG.debug { "kind=prompt-attachment add name=${item.name} mime=${item.mime} blocked=unsupported-model" }
             notify(KiloBundle.message("prompt.attachment.unsupported.model"))
             return
@@ -813,7 +813,15 @@ class PromptPanel(
                 val items = PromptAttachmentExtractor.files(list) + listOfNotNull(image)
                 val ms = elapsedMs(start)
                 LOG.debug { "kind=$kind extract area=$area files=${list.size} image=${image != null} attachments=${items.size} extractMs=$ms sourceMs=$sourceMs" }
-                if (items.isEmpty()) return@executeOnPooledThread
+                if (items.isEmpty()) {
+                    if (list.isNotEmpty()) {
+                        ApplicationManager.getApplication().invokeLater {
+                            if (project.isDisposed) return@invokeLater
+                            notify(KiloBundle.message("prompt.attachment.drop.empty"))
+                        }
+                    }
+                    return@executeOnPooledThread
+                }
                 ApplicationManager.getApplication().invokeLater {
                     if (project.isDisposed) return@invokeLater
                     LOG.debug { "kind=$kind attach area=$area files=${list.size} image=${image != null} attachments=${items.size} extractMs=$ms sourceMs=$sourceMs" }
@@ -827,7 +835,9 @@ class PromptPanel(
 
     private fun dropFiles(event: DnDEvent): List<java.io.File> {
         if (!FileCopyPasteUtil.isFileListFlavorAvailable(event)) return emptyList()
-        return FileCopyPasteUtil.getFileListFromAttachedObject(event.attachedObject).orEmpty()
+        val files = FileCopyPasteUtil.getFileListFromAttachedObject(event.attachedObject)
+        if (files.isNotEmpty()) return files
+        return FileCopyPasteUtil.getFileList(event).orEmpty()
     }
 
     private fun elapsedMs(start: Long) = (System.nanoTime() - start) / 1_000_000
