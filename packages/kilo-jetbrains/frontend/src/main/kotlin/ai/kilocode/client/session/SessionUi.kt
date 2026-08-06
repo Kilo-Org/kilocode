@@ -226,7 +226,7 @@ class SessionUi(
         bindStyle()
         bindMigration()
         onStateChanged(controller.model.state)
-        refreshBranchChanges()
+        if (showBranchBadge()) refreshBranchChanges()
         loaded?.let(::finishOpen)
     }
 
@@ -839,6 +839,11 @@ class SessionUi(
 
     /** Badge-only refresh: fetches stats (no patch text) and updates the header count. */
     private fun refreshBranchChanges() {
+        if (!showBranchBadge()) {
+            refreshJob?.cancel()
+            header.hideBranchChanges()
+            return
+        }
         refreshJob?.cancel()
         refreshJob = cs.launch {
             val files = runCatching { workspaces.branchDiff(workspace.directory, patches = false) }
@@ -856,6 +861,7 @@ class SessionUi(
 
     /** User clicked the badge: opens the branch diff editor. Never cancelled by a background refresh. */
     private fun openBranchChanges() {
+        if (!showBranchBadge()) return
         openJob?.cancel()
         openJob = cs.launch {
             val dir = workspace.directory
@@ -888,6 +894,8 @@ class SessionUi(
         )
         Telemetry.send("Diff Editor Opened", mapOf("source" to "branch"))
     }
+
+    private fun showBranchBadge(): Boolean = manager?.showsBranchBadgeInHeader != false
 
     private fun openAttachment(messageId: String, item: FileAttachment) {
         val url = item.url.takeIf { it.isNotBlank() } ?: run {

@@ -43,7 +43,7 @@ object WorktreeSessionEditorKind : KiloEditorKind {
         Disposer.register(parent) { cs.cancel() }
         val controller = WorktreeSessionListController(project.service<KiloSessionService>(), path, cs)
         val manager = WorktreeSessionEditorManager(parent, project, worktree, controller)
-        return WorktreeSessionEditorPanel(parent, manager, controller, worktree)
+        return WorktreeSessionEditorPanel(parent, manager, controller, worktree, project)
     }
 
     private fun name(path: String): String {

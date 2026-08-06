@@ -8,6 +8,8 @@ import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import ai.kilocode.rpc.dto.WorktreeListDto
+import ai.kilocode.rpc.dto.WorktreePrListDto
+import ai.kilocode.rpc.dto.WorktreeStatsListDto
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
@@ -17,6 +19,8 @@ import java.util.concurrent.CopyOnWriteArrayList
 class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     val listed = CopyOnWriteArrayList<WorktreeDto>()
     val branchesList = CopyOnWriteArrayList<String>()
+    var statsResult = WorktreeStatsListDto()
+    var prResult = WorktreePrListDto()
     var currentBranch: String? = null
     val creates = CopyOnWriteArrayList<CreateWorktreeRequestDto>()
     val removes = CopyOnWriteArrayList<Triple<String, String, String?>>()
@@ -50,6 +54,16 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     override suspend fun listBranches(directory: String): WorktreeBranchesDto {
         assertNotEdt("listBranches")
         return WorktreeBranchesDto(branchesList.toList(), currentBranch)
+    }
+
+    override suspend fun stats(directory: String): WorktreeStatsListDto {
+        assertNotEdt("stats")
+        return statsResult
+    }
+
+    override suspend fun prStatus(directory: String): WorktreePrListDto {
+        assertNotEdt("prStatus")
+        return prResult
     }
 
     override suspend fun create(directory: String, request: CreateWorktreeRequestDto): CreateWorktreeResultDto {

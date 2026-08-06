@@ -16,6 +16,14 @@ private const val CELL_GAP = 8
 
 internal data class ActiveListBadge(val text: String, val style: UiStyle.Badge.Style = UiStyle.Badge.Secondary)
 
+internal data class ActiveListMetrics(
+    val additions: Int = 0,
+    val deletions: Int = 0,
+    val ahead: Int = 0,
+    val behind: Int = 0,
+    val pr: ActiveListBadge? = null,
+)
+
 internal enum class ActiveListRowHeight { EQUAL, PREFERRED }
 
 internal data class ActiveListConfig(
@@ -63,6 +71,7 @@ internal interface ActiveListItem {
     val badges: List<ActiveListBadge> get() = emptyList()
     /** Right-aligned secondary text, such as a relative timestamp. */
     val trailing: String? get() = null
+    val metrics: ActiveListMetrics? get() = null
     val cells: List<ActiveListCell> get() = emptyList()
     val disabled: Boolean get() = false
     val deleting: Boolean get() = false

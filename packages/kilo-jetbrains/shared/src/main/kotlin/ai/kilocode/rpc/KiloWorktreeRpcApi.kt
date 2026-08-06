@@ -6,6 +6,8 @@ import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
 import ai.kilocode.rpc.dto.WorktreeListDto
+import ai.kilocode.rpc.dto.WorktreePrListDto
+import ai.kilocode.rpc.dto.WorktreeStatsListDto
 import com.intellij.platform.rpc.RemoteApiProviderService
 import fleet.rpc.RemoteApi
 import fleet.rpc.Rpc
@@ -26,6 +28,8 @@ interface KiloWorktreeRpcApi : RemoteApi<Unit> {
     }
 
     suspend fun list(directory: String): WorktreeListDto
+    suspend fun stats(directory: String): WorktreeStatsListDto
+    suspend fun prStatus(directory: String): WorktreePrListDto
     suspend fun listBranches(directory: String): WorktreeBranchesDto
     suspend fun create(directory: String, request: CreateWorktreeRequestDto): CreateWorktreeResultDto
     suspend fun remove(directory: String, path: String, branch: String? = null, force: Boolean = false): RemoveWorktreeResultDto

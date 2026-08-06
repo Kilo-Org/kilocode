@@ -6,20 +6,25 @@ import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatcher
 import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatchers
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorKind
+import ai.kilocode.client.agentManager.worktree.WorktreeStatusService
 import ai.kilocode.client.agentManager.worktree.ensureWorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
+import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.testing.fire
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.list.ActiveListMetrics
 import ai.kilocode.client.ui.list.activeListToolWindowBackground
 import ai.kilocode.client.vfs.KiloPath
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.client.vfs.KiloVirtualFile
 import ai.kilocode.client.vfs.KiloVirtualFileSystem
 import ai.kilocode.rpc.dto.WorktreeDto
+import ai.kilocode.rpc.dto.WorktreeStatsDto
+import ai.kilocode.rpc.dto.WorktreeStatsListDto
 import ai.kilocode.rpc.dto.SessionActivityDto
 import ai.kilocode.rpc.dto.SessionActivityKindDto
 import com.intellij.openapi.application.ApplicationManager
@@ -28,6 +33,7 @@ import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.SearchTextField
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.testFramework.replaceService
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.UIUtil
@@ -60,7 +66,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
 
     fun `test creating a worktree selects it while pending and after the rpc resolves`() {
         rpc.listed += WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
-        val controller = WorktreeController(service, "/test", coroutines.scope)
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
         val panel = edt { AgentManagerPanel(testRootDisposable, controller) }
         edt { controller.reload() }
         flush()
@@ -121,7 +127,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
     }
 
     fun `test clicking a worktree opens the worktree session editor`() {
-        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "${project.basePath!!}/.kilo/worktrees/feature-x")
         rpc.listed += item
         val controller = WorktreeController(service, "/test", coroutines.scope)
         val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
@@ -388,6 +394,26 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
 
         val row = row(panel, 0)
         assertEquals(listOf(ActiveListBadge(SessionActivityKind.QUESTION.label(), SessionActivityKind.QUESTION.style())), row.badges)
+    }
+
+    fun `test worktree row shows metrics from status service`() {
+        val item = WorktreeDto("${project.basePath!!}/.kilo/worktrees/feature-x", "feature-x", "feature/x", "${project.basePath!!}/.kilo/worktrees/feature-x")
+        rpc.listed += item
+        rpc.statsResult = WorktreeStatsListDto(listOf(WorktreeStatsDto(item.path, additions = 5, deletions = 2, ahead = 1, behind = 3)))
+        val timers = TestUiTimers()
+        ApplicationManager.getApplication().replaceService(KiloWorktreeService::class.java, service, testRootDisposable)
+        project.replaceService(WorktreeStatusService::class.java, WorktreeStatusService(project, coroutines.scope, timers), testRootDisposable)
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        timers.advanceBy(300)
+        flush()
+
+        val metrics: ActiveListMetrics = row(panel, 0).metrics ?: error("expected metrics")
+        assertEquals(5, metrics.additions)
+        assertEquals(2, metrics.deletions)
+        assertEquals(1, metrics.ahead)
+        assertEquals(3, metrics.behind)
     }
 
     fun `test worktree row hides badge while pending or deleting`() {

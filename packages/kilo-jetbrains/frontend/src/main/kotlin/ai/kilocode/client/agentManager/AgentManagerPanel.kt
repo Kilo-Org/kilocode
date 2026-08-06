@@ -4,11 +4,14 @@ import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.agentManager.worktree.ConfigureWorktreeDialog
 import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.WorktreeIcons
+import ai.kilocode.client.agentManager.worktree.WorktreeStatusService
 import ai.kilocode.client.agentManager.worktree.WorktreeNameCache
 import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatchers
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorMatcher
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.ensureWorktreeSessionEditorKind
+import ai.kilocode.client.agentManager.worktree.normalizeWorktreePath
+import ai.kilocode.client.agentManager.worktree.style
 import ai.kilocode.client.agentManager.worktree.worktreeActivityBadge
 import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
 import ai.kilocode.client.plugin.KiloBundle
@@ -22,6 +25,7 @@ import ai.kilocode.client.ui.list.ActiveListCell
 import ai.kilocode.client.ui.list.ActiveListConfig
 import ai.kilocode.client.ui.list.ActiveListDeleteOptions
 import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.list.ActiveListMetrics
 import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.client.ui.list.ActiveListSurface
 import ai.kilocode.client.ui.list.activeListDeleteCell
@@ -30,6 +34,8 @@ import ai.kilocode.client.ui.list.activeListToolWindowBackground
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeDto
+import ai.kilocode.rpc.dto.WorktreePrDto
+import ai.kilocode.rpc.dto.WorktreeStatsDto
 import com.intellij.icons.AllIcons
 import com.intellij.ide.DeleteProvider
 import com.intellij.ide.ui.LafManagerListener
@@ -58,6 +64,12 @@ import javax.swing.event.ListDataEvent
 import javax.swing.event.ListDataListener
 import javax.swing.JComponent
 import javax.swing.SwingUtilities
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 /**
  * Agent Manager panel: a git-worktree list with search and a delete action revealed on selection,
@@ -87,6 +99,10 @@ class AgentManagerPanel(
         onSelect = { selectedRow()?.dto?.id?.let { selected = it } },
     )
     private var selected: String? = null
+    private val cs = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var stats: Map<String, WorktreeStatsDto> = emptyMap()
+    private var prs: Map<String, WorktreePrDto> = emptyMap()
+    private var status: AutoCloseable? = null
 
     init {
         Disposer.register(parent, this)
@@ -104,7 +120,11 @@ class AgentManagerPanel(
         }
         controller.onCreateFailure = { err -> notifyCreateFailed(err) }
         controller.onRemoveSuccess = { item, index -> onRemoved(item, index) }
-        controller.onActivityChanged = { sync() }
+        controller.onActivityChanged = {
+            sync()
+            project?.service<WorktreeStatusService>()?.refreshStats()
+        }
+        bindStatus()
         bindEditorSelection()
         // Reflect names adopted or renamed in a worktree session editor tab in the list live.
         service<WorktreeNameCache>().addListener(this) { path, name -> controller.applyName(path, name) }
@@ -120,6 +140,8 @@ class AgentManagerPanel(
     fun refresh() {
         selected = currentEditorWorktree()
         controller.reload()
+        project?.service<WorktreeStatusService>()?.refreshStats()
+        project?.service<WorktreeStatusService>()?.refreshPr()
     }
 
     /** Branch shown in the quick "New Worktree from …" menu item. */
@@ -293,7 +315,8 @@ class AgentManagerPanel(
         list.update(
             (0 until controller.model.size).map {
                 val item = controller.model.getElementAt(it)
-                WorktreeRow(item, controller.isPending(item.id), controller.isDeleting(item.id), controller.kind(item.path))
+                val key = normalizeWorktreePath(item.path)
+                WorktreeRow(item, controller.isPending(item.id), controller.isDeleting(item.id), controller.kind(item.path), stats[key], prs[key])
             },
             ActiveListSelection.PreserveNoScroll,
         )
@@ -333,11 +356,43 @@ class AgentManagerPanel(
             .firstOrNull { it.id == key }
     }
 
+    private fun bindStatus() {
+        val target = project ?: return
+        val service = target.service<WorktreeStatusService>()
+        status = service.attach()
+        service.refreshStats()
+        service.refreshPr()
+        cs.launch {
+            service.stats.collectLatest { value ->
+                edtIfAlive {
+                    stats = value
+                    sync()
+                }
+            }
+        }
+        cs.launch {
+            service.pr.collectLatest { value ->
+                edtIfAlive {
+                    prs = value
+                    sync()
+                }
+            }
+        }
+    }
+
+    private fun edtIfAlive(block: () -> Unit) {
+        ApplicationManager.getApplication().invokeLater {
+            if ((project == null || !project.isDisposed) && !Disposer.isDisposed(this)) block()
+        }
+    }
+
     override fun dispose() {
         controller.onSelect = null
         controller.onCreateFailure = null
         controller.onRemoveSuccess = null
         controller.onActivityChanged = null
+        status?.close()
+        cs.cancel()
     }
 
     override fun uiDataSnapshot(sink: DataSink) {
@@ -382,6 +437,8 @@ class AgentManagerPanel(
         val pending: Boolean,
         override val deleting: Boolean,
         val kind: SessionActivityKind?,
+        val stats: WorktreeStatsDto?,
+        val pr: WorktreePrDto?,
     ) : ActiveListItem {
         override val key: String get() = dto.id
         override val title: String get() = dto.name
@@ -393,6 +450,20 @@ class AgentManagerPanel(
             get() {
                 if (pending || deleting) return emptyList()
                 return listOfNotNull(kind?.let(::worktreeActivityBadge))
+            }
+        override val metrics: ActiveListMetrics?
+            get() {
+                if (pending || deleting) return null
+                val s = stats
+                val p = pr
+                if (s == null && p == null) return null
+                return ActiveListMetrics(
+                    additions = s?.additions ?: 0,
+                    deletions = s?.deletions ?: 0,
+                    ahead = s?.ahead ?: 0,
+                    behind = s?.behind ?: 0,
+                    pr = p?.let { ActiveListBadge("#${it.number}", style(it.state)) },
+                )
             }
         override val cells: List<ActiveListCell>
             get() = if (dto.main || pending) emptyList() else listOf(

@@ -17,6 +17,38 @@ data class WorktreeDto(
 data class WorktreeListDto(val worktrees: List<WorktreeDto> = emptyList())
 
 @Serializable
+data class WorktreeStatsDto(
+    val path: String,
+    val additions: Int = 0,
+    val deletions: Int = 0,
+    val ahead: Int = 0,
+    val behind: Int = 0,
+)
+
+@Serializable
+data class WorktreeStatsListDto(val items: List<WorktreeStatsDto> = emptyList())
+
+@Serializable
+enum class GhState { OPEN, DRAFT, MERGED, CLOSED }
+
+@Serializable
+data class WorktreePrDto(
+    val path: String,
+    val number: Int,
+    val state: GhState,
+    val url: String,
+)
+
+@Serializable
+enum class GhAvailability { OK, MISSING, UNAUTH }
+
+@Serializable
+data class WorktreePrListDto(
+    val availability: GhAvailability = GhAvailability.OK,
+    val items: List<WorktreePrDto> = emptyList(),
+)
+
+@Serializable
 data class WorktreeBranchesDto(
     val branches: List<String> = emptyList(),
     val current: String? = null,

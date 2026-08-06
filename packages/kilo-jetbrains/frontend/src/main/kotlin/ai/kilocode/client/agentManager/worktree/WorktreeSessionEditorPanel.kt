@@ -1,6 +1,9 @@
 package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.diff.KiloDiffEditorKind
+import ai.kilocode.client.diff.diffParams
+import ai.kilocode.client.diff.ensureDiffEditorKind
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.SessionHost
 import ai.kilocode.client.session.SessionManager
@@ -23,7 +26,10 @@ import ai.kilocode.client.ui.list.ActiveListSurface
 import ai.kilocode.client.ui.list.activeListDeleteCell
 import ai.kilocode.client.ui.list.activeListRenameCell
 import ai.kilocode.client.ui.list.activeListToolWindowBackground
+import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.WorktreePrDto
+import ai.kilocode.rpc.dto.WorktreeStatsDto
 import com.intellij.icons.AllIcons
 import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.Disposable
@@ -36,6 +42,8 @@ import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.service
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.IdeBorderFactory
 import com.intellij.ui.OnePixelSplitter
@@ -52,12 +60,19 @@ import javax.swing.JPanel
 import javax.swing.SwingUtilities
 import javax.swing.event.ListDataEvent
 import javax.swing.event.ListDataListener
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 class WorktreeSessionEditorPanel(
     parent: Disposable,
     private val manager: WorktreeSessionEditorManager,
     private val controller: WorktreeSessionListController,
     private val worktree: ai.kilocode.client.app.Workspace,
+    private val project: Project? = null,
     private val confirm: ((RelativePoint, ActiveListDeleteOptions, () -> Unit) -> Unit)? = null,
     private val edit: ((RelativePoint, ActiveListEditOptions, (String) -> Unit) -> Unit)? = null,
 ) : BorderLayoutPanel(), Disposable, UiDataProvider {
@@ -81,7 +96,12 @@ class WorktreeSessionEditorPanel(
         },
         onOpen = { row, focus -> open(row, focus) },
     )
+    private val statsView = WorktreeStatsView(::openBranchDiff)
     private var started = false
+    private val cs = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var status: AutoCloseable? = null
+    private var stats: WorktreeStatsDto? = null
+    private var pr: WorktreePrDto? = null
 
     init {
         Disposer.register(parent, this)
@@ -98,13 +118,21 @@ class WorktreeSessionEditorPanel(
         bindModel()
         bindTheme()
         manager.onPresent = { key -> select(key) }
-        manager.onListChanged = { sync() }
+        manager.onListChanged = {
+            sync()
+            project?.service<WorktreeStatusService>()?.refreshStats()
+        }
         ActionManager.getInstance().getAction("RenameElement")?.shortcutSet?.let { set ->
             rename.registerCustomShortcutSet(set, list, this)
         }
         addHierarchyListener {
-            if (isShowing) start()
+            if (isShowing) {
+                start()
+                project?.service<WorktreeStatusService>()?.refreshStats()
+                project?.service<WorktreeStatusService>()?.refreshPr()
+            }
         }
+        bindStatus()
         sync()
     }
 
@@ -171,6 +199,8 @@ class WorktreeSessionEditorPanel(
         if (started) return
         started = true
         manager.start()
+        project?.service<WorktreeStatusService>()?.refreshStats()
+        project?.service<WorktreeStatusService>()?.refreshPr()
     }
 
     @RequiresEdt
@@ -188,7 +218,18 @@ class WorktreeSessionEditorPanel(
         }.apply {
             border = IdeBorderFactory.createBorder(SideBorder.BOTTOM)
             add(toolbar.component, BorderLayout.WEST)
+            add(statsView, BorderLayout.EAST)
         }
+    }
+
+    @RequiresEdt
+    private fun openBranchDiff() {
+        val target = project ?: return
+        ensureDiffEditorKind()
+        target.service<KiloVfsManager>().open(
+            KiloDiffEditorKind.ID,
+            diffParams("branch", worktree.directory, null, KiloBundle.message("diff.editor.branch.title")),
+        )
     }
 
     @RequiresEdt
@@ -258,6 +299,34 @@ class WorktreeSessionEditorPanel(
         })
     }
 
+    private fun bindStatus() {
+        val target = project ?: return
+        val service = target.service<WorktreeStatusService>()
+        status = service.attach()
+        cs.launch {
+            service.stats.collectLatest { value ->
+                edtIfAlive {
+                    stats = value[normalizeWorktreePath(worktree.directory)]
+                    statsView.update(stats, pr)
+                }
+            }
+        }
+        cs.launch {
+            service.pr.collectLatest { value ->
+                edtIfAlive {
+                    pr = value[normalizeWorktreePath(worktree.directory)]
+                    statsView.update(stats, pr)
+                }
+            }
+        }
+    }
+
+    private fun edtIfAlive(block: () -> Unit) {
+        ApplicationManager.getApplication().invokeLater {
+            if ((project == null || !project.isDisposed) && !Disposer.isDisposed(this)) block()
+        }
+    }
+
     override fun uiDataSnapshot(sink: DataSink) {
         sink[SessionManager.KEY] = manager
         sink[SessionManager.WORKSPACE_KEY] = worktree
@@ -266,6 +335,8 @@ class WorktreeSessionEditorPanel(
     override fun dispose() {
         manager.onPresent = null
         manager.onListChanged = null
+        status?.close()
+        cs.cancel()
     }
 
     private inner class NewAction : AnAction(

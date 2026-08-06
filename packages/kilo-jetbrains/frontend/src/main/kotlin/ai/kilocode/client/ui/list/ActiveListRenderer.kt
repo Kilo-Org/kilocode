@@ -1,5 +1,6 @@
 package ai.kilocode.client.ui.list
 
+import ai.kilocode.client.agentManager.worktree.WorktreeStatsView
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.PickerRow
 import ai.kilocode.client.ui.FilledBadgeIcon
@@ -16,6 +17,7 @@ import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import ai.kilocode.rpc.dto.WorktreeStatsDto
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.Rectangle
@@ -53,7 +55,12 @@ internal class ActiveListRenderer(
     private val text = Stack.vertical().next(header).next(desc)
     private val textPane = text.align(HAlign.TRACK, VAlign.CENTER)
     private val trail = JBLabel().apply { horizontalAlignment = SwingConstants.RIGHT }
+    private val metrics = WorktreeStatsView()
     private val trailPane = trail.align(HAlign.RIGHT, VAlign.CENTER)
+    private val endPane = JPanel(BorderLayout()).apply {
+        add(trailPane, BorderLayout.CENTER)
+        add(metrics, BorderLayout.EAST)
+    }
     private val cells = Stack.horizontal(activeListCellGap())
     private val cellPane = cells.align(HAlign.RIGHT, VAlign.CENTER)
     private val pill = JPanel(BorderLayout()).apply {
@@ -63,7 +70,7 @@ internal class ActiveListRenderer(
     private val row = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
         add(mark, BorderLayout.WEST)
         add(textPane, BorderLayout.CENTER)
-        add(trailPane, BorderLayout.EAST)
+        add(endPane, BorderLayout.EAST)
     }
     private val layers = LayeredOverlayPanel(
         content = JPanel(BorderLayout()).apply { add(row, BorderLayout.CENTER) },
@@ -88,7 +95,9 @@ internal class ActiveListRenderer(
             textPane,
             desc,
             trail,
+            metrics,
             trailPane,
+            endPane,
             cells,
             cellPane,
         )
@@ -154,9 +163,12 @@ internal class ActiveListRenderer(
             JBUI.Borders.empty()
         }
         desc.foreground = weak
+        val data = if (value.deleting) null else value.metrics
+        metrics.update(data?.let { WorktreeStatsDto("", it.additions, it.deletions, it.ahead, it.behind) }, data?.pr)
         val end = if (value.deleting) KiloBundle.message("common.deleting") else value.trailing.orEmpty()
         trail.text = end
-        trail.isVisible = end.isNotBlank()
+        trail.isVisible = end.isNotBlank() && data == null
+        metrics.isVisible = data != null && !value.deleting
         trail.foreground = weak
 
         val hovered = (list as? ActiveListActive)?.hoveredIndex() == index

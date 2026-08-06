@@ -10,6 +10,8 @@ import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
 import ai.kilocode.rpc.dto.WorktreeListDto
+import ai.kilocode.rpc.dto.WorktreePrListDto
+import ai.kilocode.rpc.dto.WorktreeStatsListDto
 import com.intellij.openapi.components.Service
 import fleet.rpc.client.durable
 import kotlinx.coroutines.CoroutineScope
@@ -48,6 +50,20 @@ class KiloWorktreeService internal constructor(
     } catch (e: Exception) {
         LOG.warn("branch list failed for $directory", e)
         WorktreeBranchesDto()
+    }
+
+    suspend fun stats(directory: String): WorktreeStatsListDto = try {
+        call { stats(directory) }
+    } catch (e: Exception) {
+        LOG.warn("worktree stats failed for $directory", e)
+        WorktreeStatsListDto()
+    }
+
+    suspend fun prStatus(directory: String): WorktreePrListDto = try {
+        call { prStatus(directory) }
+    } catch (e: Exception) {
+        LOG.warn("worktree PR status failed for $directory", e)
+        WorktreePrListDto()
     }
 
     suspend fun create(directory: String, req: CreateWorktreeRequestDto): CreateWorktreeResultDto =

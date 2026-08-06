@@ -1,5 +1,6 @@
 package ai.kilocode.client
 
+import ai.kilocode.client.plugin.KiloBundle
 import com.intellij.notification.Notification
 import com.intellij.notification.NotificationAction
 import com.intellij.notification.NotificationGroupManager
@@ -39,6 +40,17 @@ object KiloNotifications {
             .getNotificationGroup(GROUP)
             ?.createNotification(title, content ?: "", NotificationType.INFORMATION)
             ?: Notification(GROUP, title, content ?: "", NotificationType.INFORMATION)
+        notification.notify(project)
+    }
+
+    fun suggestion(project: Project?, title: String, content: String?, actionLabel: String, action: () -> Unit) {
+        val notification = NotificationGroupManager.getInstance()
+            .getNotificationGroup(GROUP)
+            ?.createNotification(title, content ?: "", NotificationType.INFORMATION)
+            ?: Notification(GROUP, title, content ?: "", NotificationType.INFORMATION)
+        notification.setSuggestionType(true)
+        notification.addAction(NotificationAction.createSimpleExpiring(actionLabel) { action() })
+        notification.addAction(NotificationAction.createSimpleExpiring(KiloBundle.message("common.dont.show.again")) {})
         notification.notify(project)
     }
 }

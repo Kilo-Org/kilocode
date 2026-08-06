@@ -319,6 +319,24 @@ class KiloWorktreeRpcApiImplTest {
         assertTrue(result.branches.contains(result.current), "current should be among branches")
     }
 
+    @Test
+    fun `stats reports managed worktree diff and ahead counts`() = runBlocking {
+        initRepo()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+        val dir = Path.of(created.path)
+        Files.writeString(dir.resolve("tracked.txt"), "one\n")
+        git(dir, "add", "tracked.txt")
+        git(dir, "commit", "-m", "feature")
+        Files.writeString(dir.resolve("notes.txt"), "two\nthree\n")
+
+        val item = api.stats(repo.toString()).items.single { it.path == created.path }
+
+        assertEquals(3, item.additions)
+        assertEquals(0, item.deletions)
+        assertEquals(1, item.ahead)
+        assertEquals(0, item.behind)
+    }
+
     private fun initRepo() {
         git(repo, "init")
         git(repo, "config", "user.email", "test@kilo.ai")

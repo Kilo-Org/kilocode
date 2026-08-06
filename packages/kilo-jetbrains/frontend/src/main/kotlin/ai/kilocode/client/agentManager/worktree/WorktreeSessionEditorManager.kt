@@ -63,6 +63,7 @@ open class WorktreeSessionEditorManager(
         }
     },
 ) : SessionHost(project, worktree, create, resolve, status, timers, request) {
+    override val showsBranchBadgeInHeader: Boolean get() = false
     private val right = JPanel(BorderLayout())
     private val deleting = linkedSetOf<String>()
     private var last: String? = null

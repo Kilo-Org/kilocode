@@ -4,30 +4,56 @@ import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.KiloWorktreeRpcApi
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
+import ai.kilocode.rpc.dto.GhAvailability
+import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import ai.kilocode.rpc.dto.WorktreeListDto
+import ai.kilocode.rpc.dto.WorktreePrDto
+import ai.kilocode.rpc.dto.WorktreePrListDto
+import ai.kilocode.rpc.dto.WorktreeStatsDto
+import ai.kilocode.rpc.dto.WorktreeStatsListDto
 import com.intellij.execution.configurations.GeneralCommandLine
+import com.intellij.execution.configurations.GeneralCommandLine.ParentEnvironmentType
 import com.intellij.execution.process.CapturingProcessHandler
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.io.path.fileSize
+import kotlin.io.path.inputStream
+import kotlin.io.path.isRegularFile
 
 class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
 
     companion object {
         internal val LOG = KiloLog.create(KiloWorktreeRpcApiImpl::class.java)
+        private const val BASE_TTL = 60_000L
+        private const val GH_PROBE_TTL = 300_000L
+        private const val PR_TTL = 90_000L
     }
+
+    private val bases = ConcurrentHashMap<String, Timed<String>>()
+    private val prs = ConcurrentHashMap<String, Timed<WorktreePrListDto>>()
+    @Volatile
+    private var ghProbe: Timed<GhAvailability>? = null
 
     override suspend fun list(directory: String): WorktreeListDto = withContext(Dispatchers.IO) {
         val base = Path.of(directory).normalize()
@@ -46,6 +72,44 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         val branches = if (!refs.ok) emptyList() else refs.stdout.lines().map { it.trim() }.filter { it.isNotEmpty() }
         val current = runGit(base, "branch", "--show-current").stdout.trim().takeIf { it.isNotEmpty() }
         WorktreeBranchesDto(branches, current)
+    }
+
+    override suspend fun stats(directory: String): WorktreeStatsListDto = withContext(Dispatchers.IO) {
+        val root = Path.of(directory).normalize()
+        val res = runGit(root, "worktree", "list", "--porcelain")
+        if (!res.ok) return@withContext WorktreeStatsListDto()
+        val items = managedWorktrees(parseWorktreeList(res.stdout))
+        val main = items.firstOrNull { it.main }
+        val fallback = main?.branch?.takeIf { it.isNotBlank() && it != "(detached)" } ?: "HEAD"
+        WorktreeStatsListDto(parallel(items.filter { !it.main }) { item -> stats(item, fallback) })
+    }
+
+    override suspend fun prStatus(directory: String): WorktreePrListDto = withContext(Dispatchers.IO) {
+        val now = System.currentTimeMillis()
+        prs[directory]?.takeIf { now - it.time < PR_TTL }?.let { return@withContext it.value }
+        val root = Path.of(directory).normalize()
+        val available = ghAvailable(root)
+        if (available != GhAvailability.OK) return@withContext WorktreePrListDto(available).also { prs[directory] = Timed(now, it) }
+        val res = runGit(root, "worktree", "list", "--porcelain")
+        if (!res.ok) return@withContext WorktreePrListDto().also { prs[directory] = Timed(now, it) }
+        val items = managedWorktrees(parseWorktreeList(res.stdout)).filter { !it.main && it.branch != "(detached)" }
+        var status = GhAvailability.OK
+        val data = parallel(items) { item ->
+            if (status != GhAvailability.OK) return@parallel null
+            val out = runGh(Path.of(item.path).normalize(), "pr", "view", item.branch, "--json", "number,state,isDraft,url")
+            if (!out.ok) {
+                when (prError(out.stderr)) {
+                    GhAvailability.UNAUTH -> status = GhAvailability.UNAUTH
+                    GhAvailability.MISSING -> status = GhAvailability.MISSING
+                    GhAvailability.OK -> Unit
+                }
+                return@parallel null
+            }
+            parsePr(item.path, out.stdout)
+        }.filterNotNull()
+        val dto = WorktreePrListDto(status, if (status == GhAvailability.OK) data else emptyList())
+        prs[directory] = Timed(System.currentTimeMillis(), dto)
+        dto
     }
 
     override suspend fun create(directory: String, request: CreateWorktreeRequestDto): CreateWorktreeResultDto =
@@ -166,6 +230,8 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         val ok get() = exit == 0
     }
 
+    private data class Timed<T>(val time: Long, val value: T)
+
     private fun runGit(base: Path, vararg args: String): GitResult {
         return try {
             val cmd = GeneralCommandLine(listOf("git") + args).withWorkDirectory(base.toFile())
@@ -174,6 +240,95 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         } catch (e: Exception) {
             GitResult(-1, "", e.message ?: "git failed")
         }
+    }
+
+    private fun runGh(base: Path, vararg args: String): GitResult {
+        return try {
+            val cmd = GeneralCommandLine(listOf("gh") + args)
+                .withWorkDirectory(base.toFile())
+                .withParentEnvironmentType(ParentEnvironmentType.CONSOLE)
+            val out = CapturingProcessHandler(cmd).runProcess(30_000)
+            GitResult(if (out.isTimeout) -1 else out.exitCode, out.stdout, out.stderr)
+        } catch (e: Exception) {
+            GitResult(-1, "", e.message ?: "gh failed")
+        }
+    }
+
+    private suspend fun <T, R> parallel(items: List<T>, block: suspend (T) -> R): List<R> = coroutineScope {
+        val sem = Semaphore(4)
+        items.map { item -> async { sem.withPermit { block(item) } } }.map { it.await() }
+    }
+
+    private fun stats(item: WorktreeDto, fallback: String): WorktreeStatsDto {
+        val dir = Path.of(item.path).normalize()
+        return runCatching {
+            val base = base(item, fallback)
+            val anc = runGit(dir, "merge-base", "HEAD", base).stdout.trim().takeIf { it.isNotBlank() } ?: base
+            val diff = runGit(dir, "-c", "core.quotepath=false", "diff", "--numstat", "--no-renames", anc)
+            val tracked = if (diff.ok) parseNumstat(diff.stdout) else emptyList()
+            val untracked = runGit(dir, "-c", "core.quotepath=false", "ls-files", "--others", "--exclude-standard")
+                .stdout
+                .lineSequence()
+                .filter { it.isNotBlank() }
+                .sumOf { countUntracked(dir, it) }
+            val counts = aheadBehind(dir, base)
+            WorktreeStatsDto(
+                item.path,
+                tracked.sumOf { it.additions } + untracked,
+                tracked.sumOf { it.deletions },
+                counts.second,
+                counts.first,
+            )
+        }.getOrElse { err ->
+            LOG.warn("worktree stats failed: path=${item.path} message=${err.message}", err)
+            WorktreeStatsDto(item.path)
+        }
+    }
+
+    private fun base(item: WorktreeDto, fallback: String): String {
+        val now = System.currentTimeMillis()
+        bases[item.path]?.takeIf { now - it.time < BASE_TTL }?.let { return it.value }
+        val dir = Path.of(item.path).normalize()
+        val upstream = runGit(dir, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}")
+        val value = upstream.stdout.trim().takeIf { upstream.ok && it.isNotBlank() } ?: fallback
+        bases[item.path] = Timed(now, value)
+        return value
+    }
+
+    private fun aheadBehind(dir: Path, base: String): Pair<Int, Int> {
+        val out = runGit(dir, "rev-list", "--left-right", "--count", "$base...HEAD")
+        if (!out.ok) return 0 to 0
+        val parts = out.stdout.trim().split(Regex("\\s+"))
+        return (parts.getOrNull(0)?.toIntOrNull() ?: 0) to (parts.getOrNull(1)?.toIntOrNull() ?: 0)
+    }
+
+    private fun ghAvailable(root: Path): GhAvailability {
+        val now = System.currentTimeMillis()
+        ghProbe?.takeIf { now - it.time < GH_PROBE_TTL }?.let { return it.value }
+        val res = runGh(root, "--version")
+        val value = if (res.ok) GhAvailability.OK else GhAvailability.MISSING
+        ghProbe = Timed(now, value)
+        return value
+    }
+
+    private fun prError(stderr: String): GhAvailability {
+        val text = stderr.lowercase()
+        if (text.contains("not logged") || text.contains("gh auth login") || text.contains("authentication")) return GhAvailability.UNAUTH
+        if (text.contains("not found") || text.contains("no pull requests found")) return GhAvailability.OK
+        return GhAvailability.OK
+    }
+
+    private fun parsePr(path: String, raw: String): WorktreePrDto? {
+        val obj = runCatching { json.parseToJsonElement(raw) as? JsonObject }.getOrNull() ?: return null
+        val number = obj["number"]?.jsonPrimitive?.intOrNull ?: return null
+        val url = obj["url"]?.jsonPrimitive?.content?.takeIf { it.isNotBlank() } ?: return null
+        val draft = obj["isDraft"]?.jsonPrimitive?.booleanOrNull == true
+        val state = if (draft) GhState.DRAFT else when (obj["state"]?.jsonPrimitive?.content?.uppercase()) {
+            "MERGED" -> GhState.MERGED
+            "CLOSED" -> GhState.CLOSED
+            else -> GhState.OPEN
+        }
+        return WorktreePrDto(path, number, state, url)
     }
 }
 
@@ -350,4 +505,37 @@ private fun samePath(a: String, b: String): Boolean {
 private fun realPath(path: String): Path {
     val file = Path.of(path).normalize()
     return if (Files.exists(file)) file.toRealPath() else file
+}
+
+private fun countUntracked(base: Path, rel: String): Int {
+    return runCatching {
+        val path = base.resolve(rel).normalize()
+        if (!path.startsWith(base) || !path.isRegularFile() || path.fileSize() > 2 * 1024 * 1024L) return@runCatching 0
+        countLines(path) ?: 0
+    }.getOrElse { err ->
+        KiloWorktreeRpcApiImpl.LOG.debug { "worktree stats untracked read failed: path=$rel message=${err.message}" }
+        0
+    }
+}
+
+private fun countLines(path: Path): Int? {
+    var newlines = 0
+    var last = 0
+    var any = false
+    path.inputStream().buffered().use { input ->
+        val buf = ByteArray(8192)
+        while (true) {
+            val n = input.read(buf)
+            if (n <= 0) break
+            any = true
+            for (i in 0 until n) {
+                val b = buf[i].toInt()
+                if (b == 0) return null
+                if (b == '\n'.code) newlines++
+            }
+            last = buf[n - 1].toInt()
+        }
+    }
+    if (!any) return 0
+    return if (last == '\n'.code) newlines else newlines + 1
 }
