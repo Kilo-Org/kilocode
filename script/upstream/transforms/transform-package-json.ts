@@ -328,8 +328,10 @@ const DELETE_UPSTREAM_SCRIPTS: Record<string, string[]> = {
 // in by upstream features (e.g. desktop Sentry integration) that Kilo doesn't
 // ship, so they add install weight with zero consumers in our tree.
 const DELETE_UPSTREAM_CATALOG: Record<string, string[]> = {
-  "package.json": ["@sentry/solid", "@sentry/vite-plugin"],
+  "package.json": ["@sentry/solid", "@sentry/vite-plugin", "opentui-spinner"],
 }
+
+const DELETE_UPSTREAM_DEPENDENCIES = new Set(["opentui-spinner"])
 
 /**
  * Re-apply Kilo-specific scripts on top of the upstream-shaped scripts block,
@@ -449,7 +451,7 @@ export function isPackageJson(file: string): boolean {
 /**
  * Transform dependencies in package.json
  */
-function transformDependencies(deps: Record<string, string> | undefined): {
+export function transformDependencies(deps: Record<string, string> | undefined): {
   result: Record<string, string>
   changes: string[]
 } {
@@ -459,6 +461,10 @@ function transformDependencies(deps: Record<string, string> | undefined): {
   const changes: string[] = []
 
   for (const [name, version] of Object.entries(deps)) {
+    if (DELETE_UPSTREAM_DEPENDENCIES.has(name)) {
+      changes.push(`${name}: removed (incompatible OpenTUI runtime)`)
+      continue
+    }
     const newName = PACKAGE_NAME_MAP[name]
     if (newName) {
       result[newName] = version

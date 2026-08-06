@@ -10,6 +10,7 @@ import {
   mergeWithNewestVersions,
   prunePatchedDependencies,
   selectBunPackageManager,
+  transformDependencies,
 } from "./transform-package-json"
 
 test("fixScripts preserves Kilo-only root scripts from base", () => {
@@ -99,7 +100,12 @@ test("fixScripts preserves dev:local and shared-package test:ci scripts", () => 
   const junit = "mkdir -p .artifacts/unit && bun test --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml"
   const root: Record<string, unknown> = { scripts: { dev: "bun dev" } }
   const changes: string[] = []
-  fixScripts(root, "package.json", { scripts: { "dev:local": "bun run packages/opencode/script/dev-local.ts" } }, changes)
+  fixScripts(
+    root,
+    "package.json",
+    { scripts: { "dev:local": "bun run packages/opencode/script/dev-local.ts" } },
+    changes,
+  )
   expect((root.scripts as Record<string, string>)["dev:local"]).toBe("bun run packages/opencode/script/dev-local.ts")
 
   for (const path of [
@@ -158,12 +164,13 @@ test("fixScripts leaves unknown packages untouched", () => {
   expect(changes.length).toBe(0)
 })
 
-test("fixCatalog removes upstream-only desktop sentry entries", () => {
+test("fixCatalog removes unsupported upstream entries", () => {
   const pkg: Record<string, unknown> = {
     workspaces: {
       catalog: {
         "@sentry/solid": "10.36.0",
         "@sentry/vite-plugin": "4.6.0",
+        "opentui-spinner": "0.0.7",
         "solid-js": "1.9.12",
       },
     },
@@ -173,8 +180,9 @@ test("fixCatalog removes upstream-only desktop sentry entries", () => {
   const cat = (pkg.workspaces as { catalog: Record<string, string> }).catalog
   expect(cat["@sentry/solid"]).toBeUndefined()
   expect(cat["@sentry/vite-plugin"]).toBeUndefined()
+  expect(cat["opentui-spinner"]).toBeUndefined()
   expect(cat["solid-js"]).toBe("1.9.12")
-  expect(changes.length).toBe(2)
+  expect(changes.length).toBe(3)
 })
 
 test("fixCatalog is a no-op when catalog is absent", () => {
@@ -182,6 +190,12 @@ test("fixCatalog is a no-op when catalog is absent", () => {
   const changes: string[] = []
   fixCatalog(pkg, "package.json", changes)
   expect(changes.length).toBe(0)
+})
+
+test("transformDependencies removes the incompatible spinner runtime", () => {
+  const result = transformDependencies({ "opentui-spinner": "catalog:", "solid-js": "catalog:" })
+  expect(result.result).toEqual({ "solid-js": "catalog:" })
+  expect(result.changes).toEqual(["opentui-spinner: removed (incompatible OpenTUI runtime)"])
 })
 
 test("fixMetadata preserves opencode publish metadata from base", () => {
