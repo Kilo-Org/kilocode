@@ -34,6 +34,8 @@ interface Props {
   selection?: string
   currentSessionID?: () => string | undefined
   mode: ModeRouter
+  defaultBase?: (projectId: string) => string | undefined
+  onCreate?: (projectId: string) => void
   busy?: (projectId: string, id: string) => boolean
   working?: (projectId: string, id: string) => boolean
   localBusy?: (projectId: string) => boolean
@@ -134,12 +136,14 @@ export const ProjectList: Component<Props> = (props) => {
     return select({ projectId: item.projectId, kind: "session", sessionId: item.sessionId })
   }
   const newWorktree = (projectId: string) => {
-    const state = props.states[projectId]
     dialog.show(() => (
       <NewWorktreeDialog
         projectId={projectId}
+        projects={() => props.projects}
+        activeProjectId={props.selectedProject}
+        defaultBase={props.defaultBase}
+        onCreate={props.onCreate}
         mode={props.mode}
-        defaultBaseBranch={state?.defaultBaseBranch ?? props.local[projectId]?.branch}
         onClose={() => dialog.close()}
       />
     ))

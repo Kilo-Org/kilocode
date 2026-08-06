@@ -947,6 +947,7 @@ export interface AgentManagerBranchesMessage {
 // Agent Manager Import tab: result feedback (extension → webview)
 export interface AgentManagerImportResultMessage {
   type: "agentManager.importResult"
+  projectId?: string
   success: boolean
   message: string
   errorCode?: WorktreeErrorCode

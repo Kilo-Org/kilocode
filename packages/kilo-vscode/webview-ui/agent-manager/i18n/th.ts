@@ -112,6 +112,9 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.cancel": "ยกเลิก",
   "agentManager.dialog.removeStaleWorktree.confirm": "ลบ Worktree ที่ล้าสมัย",
 
+  "agentManager.dialog.project.select": "เลือกโปรเจกต์",
+  "agentManager.dialog.project.untrusted": "โปรดเชื่อถือโปรเจกต์นี้ในแถบด้านข้างก่อน",
+  "agentManager.dialog.project.missing": "ไม่พบ Repository",
   "agentManager.dialog.openWorktree": "Worktree ใหม่",
   "agentManager.dialog.configureWorktree": "กำหนดค่า Worktree ใหม่...",
   "agentManager.dialog.tab.new": "ใหม่",
