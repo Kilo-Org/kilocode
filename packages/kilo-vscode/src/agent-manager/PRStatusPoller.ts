@@ -18,6 +18,7 @@ interface PRStatusPollerOptions {
 }
 
 const GH_PROBE_TTL = 300_000 // 5 minutes — gh installation state rarely changes at runtime
+const GH_PROBE_FAILURE_TTL = 30_000 // 30 seconds — retry faster after a failed probe
 const MAX_BACKOFF = 120_000 // 2 minutes — cap for exponential backoff on repeated errors
 const BACKOFF_MULTIPLIER = 2
 const PR_LOOKUP_TTL = 10_000 // 10 seconds — short TTL; only the active worktree polls so this stays cheap
@@ -164,7 +165,8 @@ export class PRStatusPoller {
 
   private async probeGh(): Promise<boolean> {
     const now = Date.now()
-    if (this.ghAvailable !== undefined && now - this.ghProbeTime < GH_PROBE_TTL) {
+    const ttl = this.ghAvailable === false ? GH_PROBE_FAILURE_TTL : GH_PROBE_TTL
+    if (this.ghAvailable !== undefined && now - this.ghProbeTime < ttl) {
       return this.ghAvailable
     }
     try {

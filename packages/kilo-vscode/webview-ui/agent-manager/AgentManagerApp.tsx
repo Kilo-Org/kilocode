@@ -37,6 +37,7 @@ import type {
   RunStatus,
   PRStatus,
   AgentManagerPRStatusMessage,
+  AgentManagerPRErrorMessage,
   AgentManagerProjectsMessage,
   AgentProjectSnapshot,
   ManagedSessionState,
@@ -1565,6 +1566,11 @@ const AgentManagerContent: Component = () => {
         openTab: (id) => placeLocal(id, undefined, undefined),
         managedSession: focusManagedSession,
       })
+
+      if (msg.type === "agentManager.prError") {
+        const ev = msg as AgentManagerPRErrorMessage
+        showToast({ variant: "error", title: t(`agentManager.pr.error.${ev.error}.title`), description: t(`agentManager.pr.error.${ev.error}.description`) })
+      }
 
       if (projectLive.apply(msg)) return
     })

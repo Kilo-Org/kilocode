@@ -385,6 +385,11 @@ interface PRStatusOutMessage {
   error?: "gh_missing" | "gh_auth" | "fetch_failed"
 }
 
+interface PRErrorOutMessage {
+  type: "agentManager.prError"
+  error: "gh_missing" | "gh_auth" | "fetch_failed"
+}
+
 interface ActionOutMessage {
   type: "action"
   action: string
@@ -424,6 +429,7 @@ export type AgentManagerOutMessage =
   | RevertWorktreeFileResultMessage
   | DiffBranchesMessage
   | PRStatusOutMessage
+  | PRErrorOutMessage
   | ActionOutMessage
   | RunStatusMessage
   | TerminalCreatedMessage
