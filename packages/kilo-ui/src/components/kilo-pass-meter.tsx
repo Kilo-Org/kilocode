@@ -79,7 +79,11 @@ export function KiloPassMeter(props: KiloPassMeterProps) {
         />
       </div>
       <div data-slot="kilo-pass-meter-amounts" aria-hidden="true">
-        <span hidden={model().total <= 0} style={{ left: `${model().boundary}%` }}>
+        <span
+          hidden={model().total <= 0}
+          data-pin={model().bonus <= 0 ? "end" : model().paid <= 0 ? "start" : undefined}
+          style={{ left: `${model().boundary}%` }}
+        >
           {local.format(model().paid)}
         </span>
         <span data-slot="kilo-pass-meter-bonus-amount" hidden={model().bonus <= 0}>
