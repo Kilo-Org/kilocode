@@ -21,10 +21,10 @@ export class WorktreeImporter {
 
   constructor(private readonly host: WorktreeImporterHost) {}
 
-  async branches(): Promise<void> {
+  async branches(projectId?: string): Promise<void> {
     const manager = this.host.manager()
     if (!manager) {
-      this.host.post({ type: "agentManager.branches", branches: [], defaultBranch: "main" })
+      this.host.post({ type: "agentManager.branches", projectId, branches: [], defaultBranch: "main" })
       return
     }
 
@@ -46,31 +46,32 @@ export class WorktreeImporter {
 
       this.host.post({
         type: "agentManager.branches",
+        projectId,
         branches,
         defaultBranch: result.defaultBranch,
       })
     } catch (error) {
       this.host.log(`Failed to list branches: ${error}`)
-      this.host.post({ type: "agentManager.branches", branches: [], defaultBranch: "main" })
+      this.host.post({ type: "agentManager.branches", projectId, branches: [], defaultBranch: "main" })
     }
   }
 
-  async branch(branch: string): Promise<void> {
-    await this.run({ branch })
+  async branch(branch: string, projectId?: string): Promise<void> {
+    await this.run({ branch }, projectId)
   }
 
-  async pr(url: string): Promise<void> {
-    await this.run({ url })
+  async pr(url: string, projectId?: string): Promise<void> {
+    await this.run({ url }, projectId)
   }
 
-  private async run(target: { branch: string } | { url: string }): Promise<void> {
+  private async run(target: { branch: string } | { url: string }, projectId?: string): Promise<void> {
     const manager = this.host.manager()
     const state = this.host.state()
     if (!manager || !state) {
-      this.host.post({ type: "agentManager.importResult", success: false, message: "Not a git repository" })
+      this.host.post({ type: "agentManager.importResult", projectId, success: false, message: "Not a git repository" })
       return
     }
-    if (this.busy()) return
+    if (this.busy(projectId)) return
     this.importing = true
     const branch = "branch" in target
     const creating = branch ? "Creating worktree from branch..." : "Resolving PR..."
@@ -79,7 +80,7 @@ export class WorktreeImporter {
       ? `Branch "${target.branch}" is already checked out in another worktree`
       : "This PR's branch is already checked out in another worktree"
     try {
-      const progress = { type: "agentManager.worktreeSetup", status: "creating" } as const
+      const progress = { type: "agentManager.worktreeSetup", projectId, status: "creating" } as const
       this.host.post({ ...progress, message: creating })
       const result = branch
         ? await manager.createWorktree({ existingBranch: target.branch })
@@ -102,7 +103,7 @@ export class WorktreeImporter {
         state.addSession(session.id, worktree.id)
         this.host.register(session.id, result.path)
         this.host.ready(session.id, result, worktree.id)
-        this.host.post({ type: "agentManager.importResult", success: true, message: success })
+        this.host.post({ type: "agentManager.importResult", projectId, success: true, message: success })
         this.host.log(`${log} as worktree ${worktree.id}`)
       } catch (error) {
         state.removeWorktree(worktree.id)
@@ -111,27 +112,28 @@ export class WorktreeImporter {
         throw error
       }
     } catch (error) {
-      this.importError(error, duplicate)
+      this.importError(error, duplicate, projectId)
     } finally {
       this.importing = false
     }
   }
 
-  private busy(): boolean {
+  private busy(projectId?: string): boolean {
     if (!this.importing) return false
     this.host.post({
       type: "agentManager.importResult",
+      projectId,
       success: false,
       message: "Another import is already in progress",
     })
     return true
   }
 
-  private importError(error: unknown, duplicate: string): void {
+  private importError(error: unknown, duplicate: string, projectId?: string): void {
     const raw = error instanceof Error ? error.message : String(error)
     const message = raw.includes("already used by worktree") || raw.includes("already checked out") ? duplicate : raw
     const code = classifyWorktreeError(message)
-    this.host.post({ type: "agentManager.worktreeSetup", status: "error", message, errorCode: code })
-    this.host.post({ type: "agentManager.importResult", success: false, message, errorCode: code })
+    this.host.post({ type: "agentManager.worktreeSetup", projectId, status: "error", message, errorCode: code })
+    this.host.post({ type: "agentManager.importResult", projectId, success: false, message, errorCode: code })
   }
 }
