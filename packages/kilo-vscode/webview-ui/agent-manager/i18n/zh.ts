@@ -97,7 +97,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "下一个标签页",
   "agentManager.shortcuts.newTab": "新建标签页",
   "agentManager.shortcuts.closeTab": "关闭标签页",
-  "agentManager.shortcuts.toggleTerminal": "切换终端",
+  "agentManager.shortcuts.toggleTerminal": "聚焦终端 / 隐藏终端",
   "agentManager.shortcuts.runScript": "运行脚本",
   "agentManager.run.options": "运行选项",
   "agentManager.run.configure": "配置运行脚本",
