@@ -132,12 +132,14 @@ export function DialogProviderUsage() {
         </text>
         <text fg={theme.textMuted}>esc</text>
       </box>
-      <scrollbox height={24}>
-        <Show when={data()}>{(value) => <ProviderUsageBody data={value()} />}</Show>
-        <Show when={loading() && !data()}>
-          <Spinner />
-        </Show>
-        <Show when={failure()}>{(message) => <text fg={theme.warning}>{message()}</text>}</Show>
+      <scrollbox maxHeight={24} flexGrow={1}>
+        <box>
+          <Show when={data()}>{(value) => <ProviderUsageBody data={value()} />}</Show>
+          <Show when={loading() && !data()}>
+            <Spinner />
+          </Show>
+          <Show when={failure()}>{(message) => <text fg={theme.warning}>{message()}</text>}</Show>
+        </box>
       </scrollbox>
       <box flexDirection="row" justifyContent="flex-end" gap={2}>
         <text fg={loading() ? theme.textMuted : theme.primary} onMouseUp={() => !loading() && void load(true)}>
