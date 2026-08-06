@@ -4,6 +4,7 @@ import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupListener
 import com.intellij.openapi.ui.popup.LightweightWindowEvent
@@ -44,14 +45,23 @@ internal class ActiveListView(
     private val onOpen: ((ActiveListItem, Boolean) -> Unit)? = null,
     private val onActivate: ((ActiveListItem) -> Unit)? = null,
     private val onClick: ((ActiveListItem) -> Unit)? = null,
+    private val menu: ActiveListMenu<*>? = null,
     private val onCell: (String, String) -> Unit,
 ) : Stack(StackAxis.VERTICAL), Scrollable {
     private val model = CollectionListModel<ActiveListItem>()
-    private val renderer = ActiveListRenderer(model, cfg)
+    private val renderer = ActiveListRenderer(model, cfg, menu)
+    private val hover = cfg.hoverActions || menu != null
     internal val list: JBList<ActiveListItem> = object : JBList<ActiveListItem>(model), ActiveListActive {
         override fun active(): Boolean = popups > 0
 
         override fun hoveredIndex(): Int = hovered
+
+        override fun processMouseEvent(e: MouseEvent) {
+            if (e.id == MouseEvent.MOUSE_PRESSED && UIUtil.isActionClick(e, MouseEvent.MOUSE_PRESSED, true)) {
+                if (showMenu(e.point)) return
+            }
+            super.processMouseEvent(e)
+        }
 
         override fun getBackground(): Color {
             if (surface == ActiveListSurface.ToolWindow) return activeListToolWindowBackground()
@@ -71,7 +81,8 @@ internal class ActiveListView(
                 .entries
                 .firstOrNull { it.value.contains(event.point) }
                 ?.key
-            val cell = activeListVisibleCells(item, selected).firstOrNull { it.id == id }
+            val cell = activeListVisibleCells(item, selected, menu?.takeIf { it.available(item) } != null)
+                .firstOrNull { it.id == id }
             if (cell != null) return cell.label.takeIf { it.isNotBlank() }
             if (!cfg.description || !cfg.tooltip) return null
             val note = item.tooltip?.takeIf { it.isNotBlank() } ?: return null
@@ -162,7 +173,7 @@ internal class ActiveListView(
             }
 
             override fun mouseMoved(e: MouseEvent) {
-                if (!cfg.hoverActions) return
+                if (!hover) return
                 val idx = list.locationToIndex(e.point)
                     .takeIf { it >= 0 && list.getCellBounds(it, it)?.contains(e.point) == true }
                     ?: -1
@@ -170,16 +181,16 @@ internal class ActiveListView(
             }
 
             override fun mouseExited(e: MouseEvent) {
-                if (!cfg.hoverActions) return
+                if (!hover) return
                 setHovered(-1)
             }
         }
         list.addMouseListener(mouse)
-        if (cfg.hoverActions) list.addMouseMotionListener(mouse)
+        if (hover) list.addMouseMotionListener(mouse)
         list.addListSelectionListener { e: ListSelectionEvent ->
             // Selection gates the hover-revealed action bar, so repaint the hovered row as soon as
             // its selection flips instead of waiting for the next mouse move.
-            if (cfg.hoverActions) repaintRow(hovered)
+            if (hover) repaintRow(hovered)
             if (!e.valueIsAdjusting) onSelect?.invoke()
         }
         list.addFocusListener(object : FocusAdapter() {
@@ -329,10 +340,15 @@ internal class ActiveListView(
     @RequiresEdt
     private fun sync(prefer: String? = list.selectedValue?.key, at: Int? = null, scroll: Boolean = true) {
         checkEdt()
-        setHovered(-1)
         val q = filter.trim()
         val rows = if (q.isBlank()) items else items.filter { matcher(q, it) }
-        model.replaceAll(rows)
+        // Rebuilding the model fires a list-wide repaint, so skip it when the visible rows are
+        // structurally unchanged (e.g. a stats/name refresh that produced identical rows) and only
+        // reconcile selection below. Row types are data classes, so equality is by value.
+        if (model.items != rows) {
+            setHovered(-1)
+            model.replaceAll(rows)
+        }
         syncCellHeight(rows)
         val idx = at?.let { activeListIndex(rows, it) }?.takeIf { it >= 0 }
             ?: activeListIndex(rows, prefer).takeIf { it >= 0 }
@@ -477,7 +493,7 @@ internal class ActiveListView(
         val item = model.getElementAt(idx)
         val selected = list.isSelectedIndex(idx)
         val id = if (enabled) {
-            activeListCellAt(list, idx, e.point, selected)
+            activeListCellAt(list, idx, e.point, selected, menu?.takeIf { it.available(item) } != null)
         } else {
             activeListCellBounds(list, idx, selected)
                 .entries
@@ -485,6 +501,28 @@ internal class ActiveListView(
                 ?.key
         }
         return Hit(item, id)
+    }
+
+    private fun showMenu(point: Point): Boolean {
+        val cfg = menu ?: return false
+        val idx = list.locationToIndex(point)
+        val bounds = idx.takeIf { it >= 0 }?.let { list.getCellBounds(it, it) } ?: return false
+        if (!bounds.contains(point)) return false
+        val item = model.getElementAt(idx)
+        if (item.disabled || item.deleting || !cfg.available(item)) return false
+        val rect = activeListCellBounds(list, idx, list.isSelectedIndex(idx))[ACTIVE_LIST_MENU_CELL] ?: return false
+        if (!rect.contains(point)) return false
+        val popup = JBPopupFactory.getInstance().createActionGroupPopup(
+            null,
+            cfg.group,
+            cfg.context(list, item),
+            JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
+            true,
+            cfg.place,
+        )
+        trackPopup(popup)
+        popup.show(RelativePoint(list, Point(rect.x + rect.width / 2, rect.y + rect.height)))
+        return true
     }
 
     private fun trackPopupState(visible: Boolean, add: (JBPopupListener) -> Unit) {

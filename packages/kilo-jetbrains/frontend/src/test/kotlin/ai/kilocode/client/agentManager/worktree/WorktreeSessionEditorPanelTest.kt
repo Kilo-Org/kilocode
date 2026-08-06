@@ -314,14 +314,14 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         assertEquals(listOf("ses_2", "ses_1"), manager.deleted)
     }
 
-    fun `test multi select hides row delete cells`() {
+    fun `test session rows do not expose inline action cells`() {
         rpc.listed += session("ses_1", 1.0)
         rpc.listed += session("ses_2", 2.0)
         edt { controller.reload() }
         flush()
 
         edt { panel.selectSessions(listOf("ses_1")) }
-        assertEquals(listOf(RENAME_CELL, DELETE_CELL), row("ses_1").cells.map { it.id })
+        assertTrue(row("ses_1").cells.isEmpty())
 
         edt { panel.selectSessions(listOf("ses_1", "ses_2")) }
 
@@ -494,7 +494,5 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
 
     private companion object {
         const val DIR = "/repo/.kilo/worktrees/feature-x"
-        const val RENAME_CELL = "rename"
-        const val DELETE_CELL = "delete"
     }
 }

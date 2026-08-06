@@ -12,13 +12,17 @@ import ai.kilocode.client.ui.list.ActiveListActive
 import ai.kilocode.client.ui.list.ActiveListCell
 import ai.kilocode.client.ui.list.ActiveListConfig
 import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.list.ActiveListMenu
 import ai.kilocode.client.ui.list.ActiveListRenderer
 import ai.kilocode.client.ui.list.ActiveListRowHeight
 import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.client.ui.list.ActiveListView
+import ai.kilocode.client.ui.list.ACTIVE_LIST_MENU_CELL
 import ai.kilocode.client.ui.list.activeListCellAt
 import ai.kilocode.client.ui.list.activeListCellBounds
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.actionSystem.DataKey
+import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.CollectionListModel
@@ -506,6 +510,60 @@ class SettingsListViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test menu button overlays reserved slot on hover only`() {
+        edt {
+            val key = DataKey.create<ActiveListItem>("test.activeList.menu")
+            val menu = ActiveListMenu(key, DefaultActionGroup(), element = { it })
+            val view = ActiveListView("Empty", menu = menu) { _, _ -> }
+            view.update(listOf(item("with", "Alpha", null)))
+            layout(view)
+            view.list.clearSelection()
+
+            // The real spacer holds the column, so the overlay glyph stays hidden until hover.
+            assertTrue(renderedCells(view, 0).isEmpty())
+
+            hover(view, center(view.list.getCellBounds(0, 0)))
+
+            assertEquals(-1, view.list.selectedIndex)
+            assertEquals(listOf(ACTIVE_LIST_MENU_CELL), renderedCells(view, 0))
+            val area = activeListCellBounds(view.list, 0, selected = false).getValue(ACTIVE_LIST_MENU_CELL)
+            assertEquals(ACTIVE_LIST_MENU_CELL, activeListCellAt(view.list, 0, center(area), selected = false, menu = true))
+        }
+    }
+
+    fun `test menu button reserves dedicated east space in the layout`() {
+        edt {
+            val row = item("with", "Alpha", null)
+            val model = CollectionListModel<ActiveListItem>(listOf(row))
+            val list = JBList(model)
+
+            val plain = ActiveListRenderer(model, ActiveListConfig.Equal)
+            plain.getListCellRendererComponent(list, row, 0, true, true)
+
+            val key = DataKey.create<ActiveListItem>("test.activeList.menu.space")
+            val menu = ActiveListMenu(key, DefaultActionGroup(), element = { it })
+            val withMenu = ActiveListRenderer(model, ActiveListConfig.Equal, menu)
+            withMenu.getListCellRendererComponent(list, row, 0, true, true)
+
+            // The empty-icon spacer widens the row body instead of relying on a border inset.
+            assertTrue(
+                "menu list reserves extra trailing width for the dropdown column",
+                rowPanel(withMenu).preferredSize.width > rowPanel(plain).preferredSize.width,
+            )
+        }
+    }
+
+    fun `test menu context provides typed element`() {
+        edt {
+            val key = DataKey.create<ActiveListItem>("test.activeList.menu.context")
+            val row = item("with", "Alpha", null)
+            val menu = ActiveListMenu(key, DefaultActionGroup(), element = { item -> item.takeIf { it.key == row.key } })
+            val view = ActiveListView("Empty", menu = menu) { _, _ -> }
+
+            assertSame(row, key.getData(menu.context(view.list, row)))
+        }
+    }
+
     fun `test selection alone does not reveal cells without hover`() {
         edt {
             val cfg = ActiveListConfig.Equal.copy(hoverActions = true)
@@ -793,6 +851,9 @@ class SettingsListViewTest : BasePlatformTestCase() {
         layout(comp as Container)
         return actionCells(comp).filter { it.isVisible }.map { it.cellId }
     }
+
+    private fun rowPanel(renderer: ActiveListRenderer): JPanel =
+        components(renderer).filterIsInstance<LayeredOverlayPanel>().single().content.getComponent(0) as JPanel
 
     private fun actionPill(root: java.awt.Component): JPanel {
         val cell = actionCells(root).single()

@@ -11,6 +11,7 @@ import com.intellij.icons.AllIcons
  */
 internal const val ACTIVE_LIST_RENAME_CELL = "rename"
 internal const val ACTIVE_LIST_DELETE_CELL = "delete"
+internal const val ACTIVE_LIST_MENU_CELL = "__menu__"
 
 internal fun activeListRenameCell(label: String = KiloBundle.message("common.rename")) = ActiveListCell(
     ACTIVE_LIST_RENAME_CELL,
@@ -23,5 +24,12 @@ internal fun activeListDeleteCell(label: String = KiloBundle.message("common.del
     ACTIVE_LIST_DELETE_CELL,
     label,
     icon = AllIcons.Actions.GC,
+    iconOnly = true,
+)
+
+internal fun activeListMenuCell(label: String = KiloBundle.message("common.more.actions")) = ActiveListCell(
+    ACTIVE_LIST_MENU_CELL,
+    label,
+    icon = AllIcons.Actions.More,
     iconOnly = true,
 )

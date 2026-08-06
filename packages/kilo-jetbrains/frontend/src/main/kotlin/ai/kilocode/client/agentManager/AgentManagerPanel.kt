@@ -3,6 +3,7 @@ package ai.kilocode.client.agentManager
 import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.agentManager.worktree.ConfigureWorktreeDialog
 import ai.kilocode.client.agentManager.worktree.WorktreeController
+import ai.kilocode.client.agentManager.worktree.WorktreeDataKeys
 import ai.kilocode.client.agentManager.worktree.WorktreeIcons
 import ai.kilocode.client.agentManager.worktree.WorktreeStatusService
 import ai.kilocode.client.agentManager.worktree.WorktreeNameCache
@@ -17,19 +18,15 @@ import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.ui.UiStyle
-import ai.kilocode.client.ui.list.ACTIVE_LIST_DELETE_CELL
-import ai.kilocode.client.ui.list.ACTIVE_LIST_RENAME_CELL
 import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListBadge
-import ai.kilocode.client.ui.list.ActiveListCell
 import ai.kilocode.client.ui.list.ActiveListConfig
 import ai.kilocode.client.ui.list.ActiveListDeleteOptions
 import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.list.ActiveListMenu
 import ai.kilocode.client.ui.list.ActiveListMetrics
 import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.client.ui.list.ActiveListSurface
-import ai.kilocode.client.ui.list.activeListDeleteCell
-import ai.kilocode.client.ui.list.activeListRenameCell
 import ai.kilocode.client.ui.list.activeListToolWindowBackground
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
@@ -41,11 +38,13 @@ import com.intellij.ide.DeleteProvider
 import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.DataSink
+import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.PlatformDataKeys
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.application.ApplicationManager
@@ -82,21 +81,21 @@ class AgentManagerPanel(
 ) : BorderLayoutPanel(), Disposable, UiDataProvider {
     private val provider = WorktreeDeleteProvider()
     private val edit = RenameAction()
+    private val group = ActionManager.getInstance().getAction("Kilo.Worktree.RowMenu") as? ActionGroup ?: DefaultActionGroup()
     private val list = ActiveList(
         KiloBundle.message("worktree.empty"),
         cfg = ActiveListConfig(hoverActions = true),
         surface = ActiveListSurface.ToolWindow,
         showSearch = false,
-        onCell = { key, id ->
-            val item = item(key) ?: return@ActiveList
-            if (id == ACTIVE_LIST_RENAME_CELL && renameable(item)) beginRename(item, id)
-            if (id == ACTIVE_LIST_DELETE_CELL && deletable(item)) showDeletePopup(item, id)
-        },
+        onCell = { _, _ -> },
         onOpen = { row, focus ->
             val item = (row as? WorktreeRow)?.dto ?: return@ActiveList
             open(item, focus)
         },
         onSelect = { selectedRow()?.dto?.id?.let { selected = it } },
+        menu = ActiveListMenu(WorktreeDataKeys.WORKTREE, group, element = { row ->
+            (row as? WorktreeRow)?.dto?.takeIf { canRename(it) || canDelete(it) }
+        }),
     )
     private var selected: String? = null
     private val cs = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -109,6 +108,7 @@ class AgentManagerPanel(
         isOpaque = true
         border = JBUI.Borders.empty(UiStyle.Gap.sm())
         addToCenter(list)
+        list.installPopup(group)
         sync()
         bindModel()
         bindTheme()
@@ -160,6 +160,10 @@ class AgentManagerPanel(
         controller.remove(item, force, onFailure = { result -> notifyFailed(item, result, force) })
     }
 
+    internal fun rename(item: WorktreeDto) = beginRename(item)
+
+    internal fun canRename(item: WorktreeDto?): Boolean = renameable(item)
+
     private fun beginRename(item: WorktreeDto, cell: String? = null) {
         list.rename(
             item.id,
@@ -193,6 +197,10 @@ class AgentManagerPanel(
         val target = project ?: return
         target.service<KiloVfsManager>().close(WorktreeSessionEditorKind.ID, worktreeSessionParams(item))
     }
+
+    internal fun delete(item: WorktreeDto) = showDeletePopup(item)
+
+    internal fun canDelete(item: WorktreeDto?): Boolean = deletable(item)
 
     private fun showDeletePopup(item: WorktreeDto, cell: String? = null) {
         val opts = ActiveListDeleteOptions(
@@ -396,6 +404,8 @@ class AgentManagerPanel(
     }
 
     override fun uiDataSnapshot(sink: DataSink) {
+        sink[SidePanelKeys.WORKTREE_PANEL] = this
+        selectedRow()?.dto?.let { sink[WorktreeDataKeys.WORKTREE] = it }
         sink[PlatformDataKeys.DELETE_ELEMENT_PROVIDER] = provider
     }
 
@@ -443,7 +453,7 @@ class AgentManagerPanel(
         override val key: String get() = dto.id
         override val title: String get() = dto.name
         override val description: String get() = dto.path.trimEnd('/').substringAfterLast('/')
-        override val tooltip: String get() = dto.path
+        override val tooltip: String? get() = null
         override val icon = WorktreeIcons.forRow(dto.locked, pending)
         override val search: String get() = listOfNotNull(dto.name, dto.branch, dto.path, dto.lockReason).joinToString(" ")
         override val badges: List<ActiveListBadge>
@@ -465,11 +475,6 @@ class AgentManagerPanel(
                     pr = p?.let { ActiveListBadge("#${it.number}", style(it.state)) },
                 )
             }
-        override val cells: List<ActiveListCell>
-            get() = if (dto.main || pending) emptyList() else listOf(
-                activeListRenameCell(KiloBundle.message("worktree.rename.action")),
-                activeListDeleteCell(KiloBundle.message("worktree.delete.action")),
-            )
     }
 }
 

@@ -11,20 +11,16 @@ import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.history.HistorySection
 import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.session.history.LocalHistoryItem
-import ai.kilocode.client.ui.list.ACTIVE_LIST_DELETE_CELL
-import ai.kilocode.client.ui.list.ACTIVE_LIST_RENAME_CELL
 import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListBadge
-import ai.kilocode.client.ui.list.ActiveListCell
 import ai.kilocode.client.ui.list.ActiveListConfig
 import ai.kilocode.client.ui.list.ActiveListDeleteOptions
 import ai.kilocode.client.ui.list.ActiveListEditOptions
 import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.list.ActiveListMenu
 import ai.kilocode.client.ui.list.ActiveListRowHeight
 import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.client.ui.list.ActiveListSurface
-import ai.kilocode.client.ui.list.activeListDeleteCell
-import ai.kilocode.client.ui.list.activeListRenameCell
 import ai.kilocode.client.ui.list.activeListToolWindowBackground
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.rpc.dto.SessionDto
@@ -36,6 +32,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.ActionUpdateThread
+import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataSink
@@ -79,6 +76,7 @@ class WorktreeSessionEditorPanel(
     private val add = NewAction()
     private val rename = RenameAction()
     private val delete = DeleteAction()
+    private val group = ActionManager.getInstance().getAction("Kilo.WorktreeSession.RowMenu") as? ActionGroup ?: DefaultActionGroup()
     private val list = ActiveList(
         KiloBundle.message("worktree.session.list.empty"),
         cfg = ActiveListConfig(
@@ -90,11 +88,11 @@ class WorktreeSessionEditorPanel(
         surface = ActiveListSurface.ToolWindow,
         showSearch = false,
         enter = { true },
-        onCell = { key, id ->
-            if (id == ACTIVE_LIST_RENAME_CELL) beginRename(key, ACTIVE_LIST_RENAME_CELL)
-            if (id == ACTIVE_LIST_DELETE_CELL) confirmDelete(listOf(key), ACTIVE_LIST_DELETE_CELL)
-        },
+        onCell = { _, _ -> },
         onOpen = { row, focus -> open(row, focus) },
+        menu = ActiveListMenu(WorktreeSessionDataKeys.SESSION, group, element = { row ->
+            (row as? SessionRow)?.session?.takeIf { canRename(it) || canDelete(it) }
+        }),
     )
     private val statsView = WorktreeStatsView(::openBranchDiff)
     private var started = false
@@ -111,6 +109,7 @@ class WorktreeSessionEditorPanel(
         }
         left.add(toolbar(), BorderLayout.NORTH)
         left.add(list, BorderLayout.CENTER)
+        list.installPopup(group)
         val splitter = OnePixelSplitter(false, 0.25f)
         splitter.firstComponent = left
         splitter.secondComponent = manager.component
@@ -161,6 +160,18 @@ class WorktreeSessionEditorPanel(
         val key = selectedKeys().firstOrNull { it != SessionHost.NEW && it !in manager.deleting() } ?: return
         beginRename(key)
     }
+
+    @RequiresEdt
+    internal fun canDelete(item: SessionDto?): Boolean = item != null && item.id != SessionHost.NEW && item.id !in manager.deleting()
+
+    @RequiresEdt
+    internal fun canRename(item: SessionDto?): Boolean = canDelete(item)
+
+    @RequiresEdt
+    internal fun deleteRow(item: SessionDto) = confirmDelete(listOf(item.id))
+
+    @RequiresEdt
+    internal fun renameRow(item: SessionDto) = beginRename(item.id)
 
     @RequiresEdt
     private fun confirmDelete(ids: List<String>, cell: String? = null) {
@@ -328,6 +339,8 @@ class WorktreeSessionEditorPanel(
     }
 
     override fun uiDataSnapshot(sink: DataSink) {
+        sink[WorktreeSessionDataKeys.PANEL] = this
+        selectedSession()?.let { sink[WorktreeSessionDataKeys.SESSION] = it }
         sink[SessionManager.KEY] = manager
         sink[SessionManager.WORKSPACE_KEY] = worktree
     }
@@ -412,13 +425,10 @@ class WorktreeSessionEditorPanel(
         override val badges: List<ActiveListBadge> get() = listOfNotNull(kind?.let(::worktreeActivityBadge))
         override val section: String get() = HistoryTime.title(HistoryTime.section(item))
         override val search: String get() = listOf(session.title, session.id, session.directory).joinToString(" ")
-        override val cells: List<ActiveListCell>
-            get() {
-                if (selectedKeys().size != 1) return emptyList()
-                return listOf(
-                    activeListRenameCell(KiloBundle.message("worktree.session.rename.action")),
-                    activeListDeleteCell(KiloBundle.message("worktree.session.delete.action")),
-                )
-            }
+    }
+
+    @RequiresEdt
+    private fun selectedSession(): SessionDto? {
+        return list.selectedItems().filterIsInstance<SessionRow>().firstOrNull()?.session
     }
 }

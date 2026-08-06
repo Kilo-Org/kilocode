@@ -85,10 +85,20 @@ internal fun activeListSectionTitle(items: List<ActiveListItem>, index: Int): St
     return if (prev?.section != item.section) item.section else null
 }
 
-internal fun activeListVisibleCells(item: ActiveListItem, active: Boolean): List<ActiveListCell> {
+internal fun activeListVisibleCells(
+    item: ActiveListItem,
+    active: Boolean,
+    menu: Boolean = false,
+): List<ActiveListCell> {
     if (item.disabled) return emptyList()
     if (item.deleting) return emptyList()
-    return item.cells.filter { active || it.alwaysVisible }
+    val cells = item.cells.filter { active || it.alwaysVisible }
+    if (!menu) return cells
+    return cells + activeListMenuCell()
+}
+
+internal fun activeListVisibleCells(item: ActiveListItem, active: Boolean): List<ActiveListCell> {
+    return activeListVisibleCells(item, active, false)
 }
 
 internal fun activeListCellGap() = JBUI.scale(CELL_GAP)
@@ -131,14 +141,24 @@ internal fun activeListCellAt(
     index: Int,
     point: Point,
     selected: Boolean,
+    menu: Boolean = false,
 ): String? {
     val model = list.model
     if (index < 0 || index >= model.size) return null
     val item = model.getElementAt(index) as? ActiveListItem ?: return null
     val cells = activeListCellBounds(list, index, selected)
-    return activeListVisibleCells(item, selected)
+    return activeListVisibleCells(item, selected, menu)
         .firstOrNull { cell -> cell.enabled && cells[cell.id]?.contains(point) == true }
         ?.id
+}
+
+internal fun activeListCellAt(
+    list: JList<*>,
+    index: Int,
+    point: Point,
+    selected: Boolean,
+): String? {
+    return activeListCellAt(list, index, point, selected, false)
 }
 
 private fun activeListLayout(component: Component) {

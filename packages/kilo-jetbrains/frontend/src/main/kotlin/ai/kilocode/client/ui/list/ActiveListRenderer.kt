@@ -10,11 +10,13 @@ import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
+import com.intellij.icons.AllIcons
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.GroupHeaderSeparator
 import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
+import com.intellij.util.ui.EmptyIcon
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import ai.kilocode.rpc.dto.WorktreeStatsDto
@@ -30,6 +32,38 @@ internal class ActiveListRenderer(
     private val model: CollectionListModel<ActiveListItem>,
     private val cfg: ActiveListConfig = ActiveListConfig.Equal,
 ) : JPanel(BorderLayout()), ListCellRenderer<ActiveListItem> {
+    constructor(
+        model: CollectionListModel<ActiveListItem>,
+        cfg: ActiveListConfig = ActiveListConfig.Equal,
+        menu: ActiveListMenu<*>?,
+    ) : this(model, cfg) {
+        this.menu = menu
+        if (menu == null) return
+        glyph.update(activeListMenuCell())
+        glyph.isVisible = false
+        // Mirror the flush leading icon: drop the row's trailing inset and let the empty-icon spacer
+        // hold the column flush against the content edge, separated from the body by the row gap, so
+        // the dropdown's margin from the selection matches the leading icon's. The overlay glyph then
+        // floats over that same slot, revealed on hover.
+        row.border = JBUI.Borders.empty(UiStyle.Gap.md(), 0, UiStyle.Gap.md(), 0)
+        val tail = JPanel(BorderLayout(UiStyle.Gap.md(), 0))
+        UiStyle.Components.transparent(tail)
+        tail.add(endPane, BorderLayout.CENTER)
+        tail.add(spacer, BorderLayout.EAST)
+        row.remove(endPane)
+        row.add(tail, BorderLayout.EAST)
+        layers.addOverlay(glyph) { host, child ->
+            val size = child.preferredSize
+            Rectangle(
+                (host.width - size.width).coerceAtLeast(0),
+                ((host.height - size.height) / 2).coerceAtLeast(0),
+                size.width.coerceAtMost(host.width),
+                size.height.coerceAtMost(host.height),
+            )
+        }
+    }
+
+    private var menu: ActiveListMenu<*>? = null
     private val insets = JBUI.CurrentTheme.Popup.separatorLabelInsets()
     private val sep = GroupHeaderSeparator(insets)
     private val top = JPanel(BorderLayout()).apply {
@@ -67,6 +101,14 @@ internal class ActiveListRenderer(
         border = JBUI.Borders.empty(UiStyle.Gap.sm())
         add(cellPane, BorderLayout.CENTER)
     }
+    // The dropdown button keeps the overlay approach: a real empty-icon [spacer] holds the trailing
+    // column in the row layout, and the [glyph] button floats over that slot — revealed on hover —
+    // so the row body is laid out beside the column and never shifts. Both are bare (no border) so
+    // the icon sits flush against the content edge, mirroring the flush leading icon.
+    private val glyph = ActiveListActionCell()
+    private val spacer = JBLabel(EmptyIcon.create(AllIcons.Actions.More))
+    // Width of the dropdown column, used to offset the action pill when a list opts into both.
+    private val reserve: Int by lazy { glyph.preferredSize.width }
     private val row = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
         add(mark, BorderLayout.WEST)
         add(textPane, BorderLayout.CENTER)
@@ -100,6 +142,8 @@ internal class ActiveListRenderer(
             endPane,
             cells,
             cellPane,
+            glyph,
+            spacer,
         )
         row.border = JBUI.Borders.empty(
             UiStyle.Gap.md(),
@@ -109,8 +153,9 @@ internal class ActiveListRenderer(
         )
         layers.addOverlay(pill) { host, child ->
             val size = child.preferredSize
+            val gap = if (menu != null) reserve else 0
             Rectangle(
-                (host.width - size.width - UiStyle.Gap.pad()).coerceAtLeast(0),
+                (host.width - size.width - UiStyle.Gap.pad() - gap).coerceAtLeast(0),
                 ((host.height - size.height) / 2).coerceAtLeast(0),
                 size.width.coerceAtMost(host.width),
                 size.height.coerceAtMost(host.height),
@@ -173,9 +218,10 @@ internal class ActiveListRenderer(
 
         val hovered = (list as? ActiveListActive)?.hoveredIndex() == index
         val show = if (cfg.hoverActions) list.isEnabled && selected && hovered else active && list.isEnabled
-        syncCells(value, show, list.isEnabled)
+        syncCells(value, show)
         cellPane.isVisible = cells.isVisible
         pill.isVisible = cells.isVisible
+        menu?.let { glyph.isVisible = list.isEnabled && hovered && it.available(value) }
         // Match the row's own background so the pill never paints a focused-selection highlight
         // on a row that is not the focused selection (e.g. a hovered, unselected row).
         pill.background = if (selected && list.isEnabled) UIUtil.getListBackground(true, active) else list.background
@@ -224,8 +270,8 @@ internal class ActiveListRenderer(
         }
     }
 
-    private fun syncCells(item: ActiveListItem, selected: Boolean, enabled: Boolean) {
-        val visible = if (enabled) activeListVisibleCells(item, selected) else emptyList()
+    private fun syncCells(item: ActiveListItem, selected: Boolean) {
+        val visible = activeListVisibleCells(item, selected)
         while (cells.componentCount > visible.size) cells.remove(cells.componentCount - 1)
         while (cells.componentCount < visible.size) cells.add(ActiveListActionCell())
         cells.isVisible = visible.isNotEmpty()
