@@ -15,6 +15,7 @@
 import { createKiloClient } from "@kilocode/sdk/v2"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { MessageID } from "@/session/schema"
+import { KiloRunTerminal } from "@/kilocode/cli/cmd/run-terminal" // kilocode_change
 import { createRunDemo } from "./demo"
 import { resolveModelInfo, resolveRunTuiConfig, resolveSessionInfo } from "./runtime.boot"
 import { createRuntimeLifecycle } from "./runtime.lifecycle"
@@ -227,6 +228,8 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
     return state.session
   }
 
+  const terminal = KiloRunTerminal.create(ctx.sdk, () => state.sessionID) // kilocode_change
+
   const shell = await (deps.createRuntimeLifecycle ?? createRuntimeLifecycle)({
     directory: ctx.directory,
     findFiles: (query) =>
@@ -269,21 +272,9 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
       await ctx.sdk.question.reject(next)
     },
     // kilocode_change start - human-driven terminal in direct interactive mode
-    onTerminalWrite: async (next) => {
-      await ctx.sdk.interactiveTerminal.write({
-        terminalID: next.terminalID,
-        interactiveTerminalWriteInput: { data: next.data },
-      })
-    },
-    onTerminalResize: async (next) => {
-      await ctx.sdk.interactiveTerminal.resize({
-        terminalID: next.terminalID,
-        interactiveTerminalResizeInput: { cols: next.cols, rows: next.rows },
-      })
-    },
-    onTerminalClose: async (terminalID) => {
-      await ctx.sdk.interactiveTerminal.close({ terminalID })
-    },
+    onTerminalWrite: terminal.write,
+    onTerminalResize: terminal.resize,
+    onTerminalClose: terminal.close,
     // kilocode_change end
     onCycleVariant: () => {
       if (!state.model || state.variants.length === 0) {

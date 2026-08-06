@@ -40,6 +40,7 @@ import type {
   SuggestionRequest,
   TodoItem,
   ModelSelection,
+  ModelUsageMap,
   ContextUsage,
   AgentInfo,
   SkillInfo,
@@ -129,6 +130,7 @@ interface SessionStore {
   variantSelections: Record<string, string> // session/agent scoped variant key -> variant name
   recentModels: ModelSelection[]
   favoriteModels: ModelSelection[]
+  modelUsageHistory: ModelUsageMap
   modelUsage: Record<string, { requestID: string; data?: SessionModelUsage }>
 }
 
@@ -251,6 +253,8 @@ interface SessionContextValue {
   selectVariant: (value: string, sessionID?: string) => void
 
   // Model favorites
+  recentModels: Accessor<ModelSelection[]>
+  modelUsageHistory: Accessor<ModelUsageMap>
   favoriteModels: Accessor<ModelSelection[]>
   toggleFavorite: (providerID: string, modelID: string) => void
 
@@ -518,7 +522,6 @@ export const SessionProvider: ParentComponent = (props) => {
     )
   }
 
-  // Store for sessions, messages, parts, todos, modelSelections, agentSelections
   const [store, setStore] = createStore<SessionStore>({
     sessions: {},
     messages: {},
@@ -531,6 +534,7 @@ export const SessionProvider: ParentComponent = (props) => {
     variantSelections: {},
     recentModels: [],
     favoriteModels: [],
+    modelUsageHistory: {},
     modelUsage: {},
   })
   const [modelUsageReady, setModelUsageReady] = createSignal(false)
@@ -637,6 +641,14 @@ export const SessionProvider: ParentComponent = (props) => {
     const updated = [selection, ...filtered].slice(0, RECENT_LIMIT)
     setStore("recentModels", updated)
     vscode.postMessage({ type: "persistRecents", recents: updated })
+  }
+
+  function recordModelUsage(providerID?: string, modelID?: string) {
+    if (!providerID || !modelID) return
+    const key = `${providerID}/${modelID}`
+    const current = store.modelUsageHistory[key] ?? { count: 0, lastUsed: 0 }
+    setStore("modelUsageHistory", key, { count: current.count + 1, lastUsed: Date.now() })
+    vscode.postMessage({ type: "recordModelUsage", providerID, modelID })
   }
 
   function applyModel(agentName: string, selection: ModelSelection, sessionID?: string) {
@@ -985,6 +997,12 @@ export const SessionProvider: ParentComponent = (props) => {
   vscode.postMessage({ type: "requestRecents" })
   onCleanup(unsubRecents)
 
+  const unsubModelUsage = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type !== "modelUsageLoaded") return
+    setStore("modelUsageHistory", message.usage)
+  })
+  vscode.postMessage({ type: "requestModelUsage" })
+  onCleanup(unsubModelUsage)
   // Load persisted favorite models from extension globalState
   const unsubFavorites = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type !== "favoritesLoaded") return
@@ -2308,6 +2326,8 @@ export const SessionProvider: ParentComponent = (props) => {
     const messageID = Identifier.ascending("message")
 
     const sid = origin === undefined ? currentSessionID() : (origin ?? undefined)
+    const selection = providerID && modelID ? { providerID, modelID } : selected(sid)
+    recordModelUsage(selection?.providerID, selection?.modelID)
     const preview = sid?.startsWith("cloud:")
       ? sid.slice("cloud:".length)
       : origin === undefined
@@ -2384,6 +2404,8 @@ export const SessionProvider: ParentComponent = (props) => {
 
     // Cloud previews need import-then-command; post importAndSend with command metadata
     const sid = origin === undefined ? currentSessionID() : (origin ?? undefined)
+    const selection = providerID && modelID ? { providerID, modelID } : selected(sid)
+    recordModelUsage(selection?.providerID, selection?.modelID)
     const preview = sid?.startsWith("cloud:")
       ? sid.slice("cloud:".length)
       : origin === undefined
@@ -3049,6 +3071,8 @@ export const SessionProvider: ParentComponent = (props) => {
     allMessages,
     allParts,
     allStatusMap,
+    recentModels: () => store.recentModels,
+    modelUsageHistory: () => store.modelUsageHistory,
     favoriteModels: () => store.favoriteModels,
     toggleFavorite,
     variantList,
