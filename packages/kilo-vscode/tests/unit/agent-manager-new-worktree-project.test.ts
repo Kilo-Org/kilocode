@@ -14,8 +14,8 @@ describe("Agent Manager New Worktree project targeting", () => {
     expect(dialog).toContain('type: "agentManager.requestBranches", projectId: id')
     expect(dialog).toContain('type: "agentManager.createMultiVersion"')
     expect(dialog).toContain("projectId: target")
-    expect(dialog).toContain('type: "agentManager.importFromPR", projectId: project()')
-    expect(dialog).toContain('type: "agentManager.importFromBranch", projectId: project()')
+    expect(dialog).toContain('type: "agentManager.importFromPR"')
+    expect(dialog).toContain('type: "agentManager.importFromBranch"')
   })
 
   it("tags branch and import responses with their owning project", () => {

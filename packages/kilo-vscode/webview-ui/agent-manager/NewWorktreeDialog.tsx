@@ -602,7 +602,9 @@ export const NewWorktreeDialog: Component<{
     const url = prUrl().trim()
     if (!url || isPending()) return
     setPrPending(true)
-    vscode.postMessage({ type: "agentManager.importFromPR", projectId: project(), url })
+    const target = project()
+    if (target) props.onCreate?.(target)
+    vscode.postMessage({ type: "agentManager.importFromPR", projectId: target, url })
   }
 
   const handleBranchSelect = (name: string) => {
@@ -611,7 +613,9 @@ export const NewWorktreeDialog: Component<{
     setImportPending(true)
     setBranchOpen(false)
     setBranchSearch("")
-    vscode.postMessage({ type: "agentManager.importFromBranch", projectId: project(), branch: name })
+    const target = project()
+    if (target) props.onCreate?.(target)
+    vscode.postMessage({ type: "agentManager.importFromBranch", projectId: target, branch: name })
   }
 
   return (

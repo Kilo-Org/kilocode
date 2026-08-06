@@ -1392,6 +1392,7 @@ const AgentManagerContent: Component = () => {
             target: { projectId: ev.projectId, kind: "worktree", worktreeId: ev.worktreeId },
           })
         }
+        if (ev.status === "error" && pending?.projectId === ev.projectId) setPendingCreate(undefined)
         const store = ev.projectId ? registry.ensure(ev.projectId) : registry.active()
         const updateBusy: Setter<Map<string, WorktreeBusyState>> = (value) => store.setBusy(value)
         if (ev.status === "ready" || ev.status === "error") {
