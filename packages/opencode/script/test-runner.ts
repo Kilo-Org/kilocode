@@ -29,7 +29,7 @@ if (argv.includes("--help") || argv.includes("-h")) {
       "",
       "Options:",
       "  --ci                 Enable JUnit XML output to .artifacts/unit/junit.xml",
-      "  --concurrency <N>    Max parallel processes (default: min(4, CPU count))",
+      "  --concurrency <N>    Max parallel processes (default: min(4, CPU count), env: KILO_TEST_CONCURRENCY)",
       "  --timeout <ms>       Per-test timeout passed to bun test (default: 60000)",
       "  --file-timeout <ms>  Per-file process timeout (default: 300000)",
       "  --retries <N>        Extra attempts for failing files (default: 1)",
