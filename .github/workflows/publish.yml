@@ -160,6 +160,8 @@ jobs:
 
             archive="$PWD/dist/kilo-$target.zip"
             rm -f "$archive"
+            # Build output names are controlled and do not start with a dash.
+            # shellcheck disable=SC2035
             (cd "$(dirname "$binary")" && zip -qr "$archive" *)
           done
 
