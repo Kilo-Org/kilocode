@@ -6,7 +6,7 @@ description: "Run open models like GLM 5.2 and Kimi K3 (1M context) on CoralBric
 # Using CoralBricks With Kilo Code
 
 CoralBricks is a high-throughput inference platform for open models — GLM 5.2
-and Kimi K3 with 1M-token context windows, Kimi K2.6, and GPT-OSS 120B. It
+and Kimi K3 with 1M-token context windows, and GPT-OSS 120B. It
 exposes an OpenAI-compatible API (plus an Anthropic Messages endpoint) and
 connects to Kilo Code as a custom provider. Cached input tokens are free,
 which matters for agent loops that re-send context on every turn.
@@ -79,12 +79,6 @@ export CORALBRICKS_API_KEY="ak_..."
             "output": 32768,
           },
         },
-        "kimi-k2.6": {
-          "name": "Kimi K2.6",
-          "limit": {
-            "context": 262144,
-            "output": 32768,
-          },
         },
         "gpt-oss-120b": {
           "name": "GPT-OSS 120B",
@@ -109,7 +103,6 @@ export CORALBRICKS_API_KEY="ak_..."
 | --- | --- | --- |
 | GLM 5.2 | `glm-5.2-fp4` | 1M |
 | Kimi K3 | `kimi-k3` | 1M |
-| Kimi K2.6 | `kimi-k2.6` | 256K |
 | GPT-OSS 120B | `gpt-oss-120b` | 128K |
 
 Tool calling, streaming, and reasoning are supported across the model line.
