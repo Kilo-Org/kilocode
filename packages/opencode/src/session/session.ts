@@ -906,6 +906,13 @@ export const layer: Layer.Layer<
       }
       // kilocode_change - preserve imported/cumulative diffs when forking (self-contained Storage runtime keeps this shared file off the legacy Storage layer)
       yield* carryForkDiff(input.sessionID, session.id)
+      // kilocode_change start - fork terminal task children under the new parent and remap their references
+      yield* KiloSession.remapChildren({
+        sessionID: session.id,
+        remapped: new Map([[input.sessionID, session.id]]),
+        ops: { get, messages, create, updateMessage, updatePart },
+      })
+      // kilocode_change end
       return session
     })
 
