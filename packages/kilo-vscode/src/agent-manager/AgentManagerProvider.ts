@@ -112,6 +112,7 @@ export class AgentManagerProvider implements Disposable {
   private onVisibilityChange: ((visible: boolean) => void) | undefined
   // Tracks sessions owned by this panel until they are explicitly closed.
   private panelSessions = new Set<string>()
+  private busySessions = new Set<string>()
 
   /** Session ID most recently loaded via `loadMessages`; updated synchronously. */
   private activeSessionId: string | undefined
@@ -221,6 +222,24 @@ export class AgentManagerProvider implements Disposable {
       state: () => this.state,
       root: () => this.getRoot(),
       activeId: () => this.contexts.active()?.id,
+      hot: () => {
+        const ids = new Set<string>()
+        const target = this.state?.getActiveTarget()
+        if (target?.kind === "worktree") ids.add(target.worktreeId)
+        if (target?.kind === "session") {
+          const id = this.state?.getSession(target.sessionId)?.worktreeId
+          if (id) ids.add(id)
+        }
+        for (const status of this.run.state().runStatuses) {
+          if (status.state === "running" || status.state === "stopping") ids.add(status.worktreeId)
+        }
+        for (const sid of this.busySessions) {
+          const owner = this.contexts.byLiveSession(sid)
+          const id = owner?.peekState()?.getSession(sid)?.worktreeId ?? this.state?.getSession(sid)?.worktreeId
+          if (id) ids.add(id)
+        }
+        return ids
+      },
       visible: () => this.panel?.visible ?? false,
       post: (msg) => this.postToWebview(msg),
       cache: (msg) => {
@@ -263,7 +282,12 @@ export class AgentManagerProvider implements Disposable {
     this.unsubSessions = this.connectionService.onEventFiltered(
       (event) => {
         const type = (event as { type?: string }).type
-        return type === "session.created" || type === "session.updated" || type === "session.deleted"
+        return (
+          type === "session.created" ||
+          type === "session.updated" ||
+          type === "session.deleted" ||
+          type === "session.error"
+        )
       },
       (event) => this.onSessionLifecycle(event),
     )
@@ -276,9 +300,14 @@ export class AgentManagerProvider implements Disposable {
    */
   private onSessionLifecycle(event: unknown): void {
     const ev = event as { type?: string; properties?: { info?: Session; sessionID?: string } }
+    if (ev.type === "session.error") {
+      if (ev.properties?.sessionID) this.busySessions.delete(ev.properties.sessionID)
+      return
+    }
     if (ev.type === "session.deleted") {
       const id = ev.properties?.sessionID
       if (!id) return
+      this.busySessions.delete(id)
       const ctx = this.contexts.byLiveSession(id)
       if (!ctx) return
       ctx.removeLiveSession(id)
@@ -309,8 +338,13 @@ export class AgentManagerProvider implements Disposable {
     const sid = props?.sessionID
     const type = props?.status?.type
     if (!sid || !type) return
-    if (type === "idle") this.naming.idle(sid)
-    else this.naming.busy(sid)
+    if (type === "idle") {
+      this.busySessions.delete(sid)
+      this.naming.idle(sid)
+      return
+    }
+    this.busySessions.add(sid)
+    this.naming.busy(sid)
   }
 
   private log(...args: unknown[]) {
@@ -395,6 +429,7 @@ export class AgentManagerProvider implements Disposable {
         const ids = [...this.panelSessions]
         if (this.activeSessionId) ids.push(this.activeSessionId)
         this.panelSessions.clear()
+        this.busySessions.clear()
         void ctx.sessions.abortSessions(ids).catch((err) => this.log("Failed to abort sessions on panel close:", err))
         this.statsPoller.stop()
         this.projectPollers.dispose()
@@ -1559,6 +1594,7 @@ export class AgentManagerProvider implements Disposable {
     this.statsPoller.stop()
     this.prBridge.reset()
     this.activeSessionId = undefined
+    this.busySessions.clear()
     this.cachedWorktreeStats = this.cachedLocalStats = undefined
     void this.sendRepoInfo()
     if (!reactivateProject(ctx, this.panel?.sessions, (c) => this.pushState(c)))

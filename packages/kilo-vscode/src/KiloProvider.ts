@@ -49,7 +49,6 @@ import {
 } from "./kilo-provider-utils"
 import { GitOps } from "./agent-manager/GitOps"
 import { GitStatsPoller, type LocalStats } from "./agent-manager/GitStatsPoller"
-import { diffSummary as localDiffSummary } from "./agent-manager/local-diff"
 import { createMarketplaceRemover, removeMcp } from "./kilo-provider/remove-config-item"
 import { AgentRequirementsController } from "./kilo-provider/agent-requirements-controller"
 import type { RemoteStatusService } from "./services/RemoteStatusService"
@@ -4941,7 +4940,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.statsPoller = new GitStatsPoller({
       getWorktrees: () => [],
       getWorkspaceRoot: () => this.cachedGitDirectory ?? this.getWorkspaceDirectory(this.currentSession?.id),
-      localDiff: (dir, base) => localDiffSummary(git, dir, base),
       git,
       onStats: () => {},
       onLocalStats: (stats: LocalStats) => {
