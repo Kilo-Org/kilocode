@@ -363,7 +363,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /** Cached notificationsLoaded payload */
   private cachedNotificationsMessage: NotificationsMessage | null = null
   /** Cached provider usage payload for profile view remounts and temporary disconnects. */
-  private cachedProviderUsageMessage: unknown = null
+  private cachedProviderUsageMessage: { type: "providerUsageLoaded"; data: unknown } | null = null
   private providerUsageRequested = false
   private providerUsageGeneration = 0
   private pendingKiloModel: { modelID?: string; agent?: string } | null = null
@@ -2368,18 +2368,27 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const directory = this.getProjectDirectory(this.currentSession?.id)
     const result = await (
       force ? client.kilocode.providerUsage.refresh({ directory }) : client.kilocode.providerUsage.get({ directory })
-    ).catch(() => undefined)
+    ).catch((error) => {
+      console.error("[Kilo New] KiloProvider: Failed to fetch provider usage:", error)
+      return undefined
+    })
     if (generation !== this.providerUsageGeneration) return
     if (!result?.data) {
       if (this.cachedProviderUsageMessage) {
-        this.postMessage(this.cachedProviderUsageMessage)
+        // Re-serve the cached data, but tell the user when their explicit
+        // refresh failed instead of silently presenting stale data as fresh.
+        this.postMessage(
+          force
+            ? { ...this.cachedProviderUsageMessage, error: "Provider usage could not be refreshed." }
+            : this.cachedProviderUsageMessage,
+        )
         return
       }
       this.postMessage({ type: "providerUsageLoaded", error: "Provider usage could not be loaded." })
       return
     }
 
-    const message = { type: "providerUsageLoaded", data: result.data }
+    const message = { type: "providerUsageLoaded" as const, data: result.data }
     this.cachedProviderUsageMessage = message
     this.postMessage(message)
   }

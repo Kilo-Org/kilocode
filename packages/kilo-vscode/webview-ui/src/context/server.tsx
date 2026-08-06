@@ -237,6 +237,7 @@ export const ServerProvider: ParentComponent = (props) => {
     setProviderUsageLoading(true)
     setProviderUsageError(undefined)
     vscode.postMessage({ type: "refreshProviderUsage" })
+    retryProviderUsage()
   }
 
   const releaseProviderUsage = () => {

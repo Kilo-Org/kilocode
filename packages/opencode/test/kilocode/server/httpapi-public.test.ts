@@ -266,7 +266,10 @@ describe("Kilo PublicApi OpenAPI contract", () => {
       "fingerprint",
       "ciphertext",
     ]) {
-      expect(fields, forbidden).not.toContain(forbidden)
+      expect(
+        fields.filter((field) => field.includes(forbidden)),
+        forbidden,
+      ).toEqual([])
     }
   })
 
