@@ -70,3 +70,41 @@ export function textDirection(text: string | undefined | null): TextDirection {
   if (count.rtl >= MIN_WORDS && count.rtl >= total * RATIO) return "rtl"
   return count.rtl > count.ltr ? "rtl" : "ltr"
 }
+
+// Rendered code carries no language signal, and it is already isolated by its
+// own dir, so its text must not vote for the prose around it.
+const SKIP = new Set(["CODE", "PRE", "KBD", "SAMP", "VAR", "SVG", "MATH"])
+
+function visible(node: Element): string {
+  const parts: string[] = []
+  for (const child of node.childNodes) {
+    if (child.nodeType === 3) {
+      parts.push(child.nodeValue ?? "")
+      continue
+    }
+    if (child.nodeType !== 1) continue
+    const elem = child as Element
+    if (SKIP.has(elem.tagName.toUpperCase())) continue
+    if (elem.classList?.contains("katex")) continue
+    parts.push(visible(elem))
+  }
+  return parts.join(" ")
+}
+
+// A rendered markdown block can hold several paragraphs, and once a message is
+// complete the whole document is a single block. Giving the block one direction
+// would force an English paragraph and a Persian paragraph to share it, so each
+// top-level element resolves its own.
+//
+// The block is not always parsed into elements: while a parse is still pending
+// the html is escaped source with <br> separators, so the prose sits in bare
+// top-level text nodes. Those cannot carry dir, and tagging the <br> between
+// them does nothing, so that block resolves one direction as a whole.
+export function applyTextDirection(root: Element) {
+  const loose = Array.from(root.childNodes).some((node) => node.nodeType === 3 && (node.nodeValue ?? "").trim())
+  if (loose) {
+    root.setAttribute("dir", textDirection(visible(root)))
+    return
+  }
+  for (const child of Array.from(root.children)) child.setAttribute("dir", textDirection(visible(child)))
+}
