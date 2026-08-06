@@ -269,7 +269,11 @@ export const make = Effect.gen(function* () {
     return { stdout, stderr, all: Stream.merge(stdout, stderr) }
   }
 
-  const spawn = (command: ChildProcess.StandardCommand, opts: NodeChildProcess.SpawnOptions, settle: boolean) =>
+  const spawn = (
+    command: ChildProcess.StandardCommand,
+    opts: NodeChildProcess.SpawnOptions,
+    direct: boolean, // kilocode_change - avoid shadowing settle
+  ) =>
     Effect.callback<readonly [NodeChildProcess.ChildProcess, ExitSignal], PlatformError.PlatformError>((resume) => {
       const signal = Deferred.makeUnsafe<readonly [code: number | null, signal: NodeJS.Signals | null]>()
       const proc = launch(command.command, command.args, opts)
@@ -281,7 +285,7 @@ export const make = Effect.gen(function* () {
       })
       proc.on("exit", (...args) => {
         exit = args
-        if (settle) Deferred.doneUnsafe(signal, Exit.succeed(args)) // kilocode_change - bounded grep must not await inherited pipes
+        if (direct) Deferred.doneUnsafe(signal, Exit.succeed(args)) // kilocode_change - bounded grep must not await inherited pipes
       })
       proc.on("close", (...args) => {
         if (end) return
