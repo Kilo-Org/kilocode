@@ -598,9 +598,9 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
       disposed = true
     })
     // kilocode_change end
+    // kilocode_change start
     onMount(() => {
       void Promise.all([
-        // kilocode_change start
         reportDefaultLocationFailure(result.location.refresh(), () => disposed),
         reportDefaultLocationFailure(result.location.agent.refresh(), () => disposed),
         reportDefaultLocationFailure(result.location.integration.refresh(), () => disposed),
@@ -609,9 +609,9 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
         reportDefaultLocationFailure(result.location.reference.refresh(), () => disposed),
         reportDefaultLocationFailure(result.location.command.refresh(), () => disposed),
         reportDefaultLocationFailure(result.location.skill.refresh(), () => disposed),
-        // kilocode_change end
       ])
     })
+    // kilocode_change end
 
     return result
   },
