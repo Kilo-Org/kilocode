@@ -200,6 +200,7 @@ type SidePanel = "diff" | "pr" | "terminal" | null
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 // Fallback keybindings before extension sends resolved ones
 const MAX_JUMP_INDEX = 9
+const SIDE_RESIZE_INTERVAL_MS = 32
 
 const defaultBindings: Record<string, string> = {
   previousSession: isMac ? "⌘⌥↑" : "Ctrl+Alt+↑",
@@ -308,6 +309,7 @@ const AgentManagerContent: Component = () => {
   let pendingSidebarWidth: number | undefined
   let sideRaf: number | undefined
   let pendingSideWidth: number | undefined
+  let sideResizeTime = 0
 
   const [history, setHistory] = createSignal(false)
   const [sidePanel, setSidePanel] = createSignal<SidePanel>(null)
@@ -323,10 +325,16 @@ const AgentManagerContent: Component = () => {
   const resizeSide = (width: number) => {
     pendingSideWidth = clampPanelWidth(width, window.innerWidth)
     if (sideRaf !== undefined) return
-    sideRaf = requestAnimationFrame(() => {
+    const flush = (time: number) => {
+      if (time - sideResizeTime < SIDE_RESIZE_INTERVAL_MS) {
+        sideRaf = requestAnimationFrame(flush)
+        return
+      }
       sideRaf = undefined
+      sideResizeTime = time
       setPanelWidth(pendingSideWidth!)
-    })
+    }
+    sideRaf = requestAnimationFrame(flush)
   }
   const showSideTerminal = () => {
     setHistory(false)
