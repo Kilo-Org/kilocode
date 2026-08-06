@@ -62,9 +62,22 @@ export function eventLocation(metadata: { directory: string; workspace?: string 
   if (metadata.directory === "global") return
   return { directory: metadata.directory, workspaceID: metadata.workspace }
 }
+// kilocode_change end
 
+// kilocode_change start - suppress only refreshes canceled by normal TUI disposal
 export function shouldReportDefaultLocationFailure(reason: unknown, disposed: boolean) {
-  return !disposed || !(reason instanceof Error && reason.name === "AbortError")
+  if (!disposed) return true
+  return !(typeof reason === "object" && reason !== null && "name" in reason && reason.name === "AbortError")
+}
+
+export async function reportDefaultLocationFailure(
+  promise: Promise<void>,
+  disposed: () => boolean,
+  report: (reason: unknown) => void = (reason) => console.error("Failed to refresh default location data", reason),
+) {
+  return promise.catch((reason) => {
+    if (shouldReportDefaultLocationFailure(reason, disposed())) report(reason)
+  })
 }
 // kilocode_change end
 
@@ -579,30 +592,26 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
       },
     }
 
-    // kilocode_change start - treat SDK cancellation during normal TUI disposal as expected
+    // kilocode_change start - classify each rejection when it occurs so later disposal cannot hide earlier failures
     let disposed = false
     onCleanup(() => {
       disposed = true
     })
-    onMount(() => {
-      void Promise.allSettled([
-        result.location.refresh(),
-        result.location.agent.refresh(),
-        result.location.integration.refresh(),
-        result.location.model.refresh(),
-        result.location.provider.refresh(),
-        result.location.reference.refresh(),
-        result.location.command.refresh(),
-        result.location.skill.refresh(),
-      ]).then((settled) => {
-        for (const failure of settled) {
-          if (failure.status !== "rejected") continue
-          if (!shouldReportDefaultLocationFailure(failure.reason, disposed)) continue
-          console.error("Failed to refresh default location data", failure.reason)
-        }
-      })
-    })
     // kilocode_change end
+    onMount(() => {
+      void Promise.all([
+        // kilocode_change start
+        reportDefaultLocationFailure(result.location.refresh(), () => disposed),
+        reportDefaultLocationFailure(result.location.agent.refresh(), () => disposed),
+        reportDefaultLocationFailure(result.location.integration.refresh(), () => disposed),
+        reportDefaultLocationFailure(result.location.model.refresh(), () => disposed),
+        reportDefaultLocationFailure(result.location.provider.refresh(), () => disposed),
+        reportDefaultLocationFailure(result.location.reference.refresh(), () => disposed),
+        reportDefaultLocationFailure(result.location.command.refresh(), () => disposed),
+        reportDefaultLocationFailure(result.location.skill.refresh(), () => disposed),
+        // kilocode_change end
+      ])
+    })
 
     return result
   },
