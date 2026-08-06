@@ -173,9 +173,8 @@ export const SideTerminalPanel: Component<Props> = (props) => {
                         label={props.state.title(term.id) ?? term.title}
                         tooltip={props.state.title(term.id) ?? term.title}
                         status={props.state.scriptStatus(term.id)}
-                        keybind={props.nextKeybind}
+                        keybind={active() === term.id ? "" : props.nextKeybind}
                         closeKeybind={props.closeKeybind}
-                        closeLabel={t("agentManager.tab.close")}
                         active={active() === term.id}
                         focused={props.state.sideFocusedId() === term.id}
                         role="tab"

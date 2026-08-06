@@ -27,7 +27,6 @@ export const TerminalTabChrome: Component<{
   status?: ScriptTerminalStatus
   keybind?: string
   closeKeybind?: string
-  closeLabel?: string
   focused?: boolean
   active: boolean
   role?: "tab"
@@ -101,7 +100,7 @@ export const TerminalTabChrome: Component<{
       </Show>
       <Show when={terminalClosable(props.status)}>
         <TooltipKeybind
-          title={props.closeLabel ?? t("agentManager.tab.close")}
+          title={t("agentManager.tab.close")}
           keybind={props.closeKeybind ?? ""}
           placement="top"
           gutter={8}
@@ -112,7 +111,7 @@ export const TerminalTabChrome: Component<{
             icon="close-small"
             size="small"
             variant="ghost"
-            aria-label={props.closeLabel ?? t("agentManager.tab.closeTab")}
+            aria-label={t("agentManager.tab.closeTab")}
             tabIndex={props.active ? 0 : -1}
             class="am-tab-close"
             onClick={props.onClose}
@@ -130,7 +129,6 @@ export const SortableTerminalTab: Component<{
   status?: ScriptTerminalStatus
   keybind?: string
   closeKeybind?: string
-  closeLabel?: string
   focused?: boolean
   active: boolean
   role?: "tab"
@@ -154,7 +152,6 @@ export const SortableTerminalTab: Component<{
             status={props.status}
             keybind={props.keybind}
             closeKeybind={props.closeKeybind}
-            closeLabel={props.closeLabel}
             focused={props.focused}
             active={props.active}
             role={props.role}

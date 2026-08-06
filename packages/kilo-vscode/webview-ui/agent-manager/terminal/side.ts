@@ -115,9 +115,8 @@ export function createSideTerminal(deps: SideTerminalDeps) {
         deps.handlers.requestSide()
         return
       }
-      const was = deps.focusedId() !== undefined
       deps.hide()
-      handoff(was)
+      handoff(true)
       return
     }
     deps.handlers.requestSide()
