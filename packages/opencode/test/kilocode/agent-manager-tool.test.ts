@@ -1,16 +1,20 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect, test } from "bun:test"
-import { Effect, Layer, ManagedRuntime, Queue } from "effect"
+import { Effect, Layer, ManagedRuntime, Queue, Schema } from "effect"
 import { MessageID, SessionID } from "../../src/session/schema"
 import { provideTmpdirInstance } from "../fixture/fixture"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
-import { AgentManagerTool } from "../../src/kilocode/tool/agent-manager"
+import { AgentManagerTool, Params } from "../../src/kilocode/tool/agent-manager"
 import { AgentManagerEvent, type AgentManagerStart } from "../../src/kilocode/agent-manager/event"
+import { AgentManager } from "../../src/kilocode/agent-manager/service"
 import { Bus } from "../../src/bus"
 import { Tool } from "../../src/tool/tool"
+import * as ToolJsonSchema from "../../src/tool/json-schema"
 import { Truncate } from "../../src/tool/truncate"
 import { Agent } from "../../src/agent/agent"
 import { Provider } from "../../src/provider/provider"
-import { ModelID, ProviderID } from "../../src/provider/schema"
+import { ModelV2 } from "@opencode-ai/core/model"
+import { ProviderV2 } from "@opencode-ai/core/provider"
 
 const providers = {
   test: {
@@ -52,14 +56,22 @@ const providers = {
   } as unknown as Provider.Info,
 }
 
+const agent: Agent.Info = {
+  name: "build",
+  mode: "primary",
+  permission: [],
+  options: {},
+}
+
 // Default provider is `test`, so resolution should prefer test, then kilo, then others.
-function makeRuntime(defaultProviderID = "test") {
+function makeRuntime(defaultProviderID = "test", host: Partial<AgentManager.Interface> = {}) {
   return ManagedRuntime.make(
     Layer.mergeAll(
-      Truncate.defaultLayer,
-      Agent.defaultLayer,
-      Bus.defaultLayer,
-      CrossSpawnSpawner.defaultLayer,
+      AppNodeBuilder.build(Truncate.node),
+      Layer.mock(Agent.Service, { get: () => Effect.succeed(agent) }),
+      AppNodeBuilder.build(Bus.node),
+      AppNodeBuilder.build(CrossSpawnSpawner.node),
+      Layer.mock(AgentManager.Service, host),
       Layer.mock(Provider.Service, {
         list: () => Effect.succeed(providers),
         defaultModel: () => Effect.succeed({ providerID: defaultProviderID, modelID: "reasoning/model" }) as never,
@@ -105,8 +117,8 @@ function message(
       time: { created },
       agent: "build",
       model: {
-        providerID: ProviderID.make(provider),
-        modelID: ModelID.make(model),
+        providerID: ProviderV2.ID.make(provider),
+        modelID: ModelV2.ID.make(model),
         ...(variant ? { variant } : {}),
       },
     },
@@ -139,6 +151,47 @@ function publish(
 }
 
 describe("agent_manager tool", () => {
+  test("uses an object-root input schema without combinators", async () => {
+    const tool = await init()
+    const schema = ToolJsonSchema.fromTool(tool)
+
+    expect(schema.type).toBe("object")
+    expect(schema.anyOf).toBeUndefined()
+    expect(schema.oneOf).toBeUndefined()
+    expect(schema.allOf).toBeUndefined()
+    const action = schema.properties?.action
+    expect(action && typeof action === "object" ? action.enum : undefined).toEqual(["list", "prompt", "stop", "move"])
+    expect(action && typeof action === "object" ? action.description : undefined).toContain("Use list first")
+    expect(action && typeof action === "object" ? action.description : undefined).toContain("Never edit")
+    expect(schema.properties?.sessionID).toEqual(
+      expect.objectContaining({ description: expect.stringContaining("IDs start with ses_") }),
+    )
+    expect(schema.properties?.sessionID).not.toHaveProperty("pattern")
+    expect(schema.properties?.sectionID).toEqual(
+      expect.objectContaining({ description: expect.stringContaining("Use null to unassign") }),
+    )
+    expect(schema.properties?.sectionID).toEqual(
+      expect.objectContaining({
+        anyOf: expect.arrayContaining([expect.objectContaining({ type: "string" }), { type: "null" }]),
+      }),
+    )
+    expect(Object.keys(schema.properties ?? {})).toEqual([
+      "mode",
+      "versions",
+      "tasks",
+      "action",
+      "filter",
+      "sessionID",
+      "prompt",
+      "sectionID",
+    ])
+  })
+
+  test("keeps session ID validation local", () => {
+    expect(Schema.is(Params)({ action: "stop", sessionID: "ses_target" })).toBe(true)
+    expect(Schema.is(Params)({ action: "stop", sessionID: "invalid" })).toBe(false)
+  })
+
   test("asks for agent_manager permission", async () => {
     const tool = await init()
     const calls: unknown[] = []
@@ -160,6 +213,211 @@ describe("agent_manager tool", () => {
         metadata: { mode: "local", count: 1 },
       },
     ])
+  })
+
+  test("lists the compact overview with a separate read-only permission pattern", async () => {
+    const requests: unknown[] = []
+    const rt = makeRuntime("test", {
+      request: (input) =>
+        Effect.sync(() => {
+          requests.push(input)
+          return {
+            operation: "overview" as const,
+            overview: {
+              sections: [],
+              ungrouped: [
+                {
+                  id: "wt-1",
+                  name: "Fix auth",
+                  branch: "fix/auth",
+                  session: { id: SessionID.make("ses_target"), name: "Fix auth", activity: "idle" as const },
+                },
+              ],
+            },
+          }
+        }),
+    })
+    const tool = await rt.runPromise(
+      Effect.gen(function* () {
+        return yield* Tool.init(yield* AgentManagerTool)
+      }),
+    )
+    const permissions: unknown[] = []
+
+    const result = await rt.runPromise(
+      provideTmpdirInstance(() =>
+        tool.execute(
+          { action: "list", filter: null },
+          { ...ctx, ask: (input: unknown) => Effect.sync(() => permissions.push(input)) },
+        ),
+      ).pipe(Effect.scoped),
+    )
+
+    expect(permissions).toEqual([
+      {
+        permission: "agent_manager",
+        patterns: ["overview"],
+        always: ["overview"],
+        metadata: { action: "list" },
+      },
+    ])
+    expect(requests).toEqual([{ operation: "overview", sessionID: ctx.sessionID, filter: undefined }])
+    expect(JSON.parse(result.output)).toEqual({
+      instructions:
+        "This overview is the source of truth. Use sections[].id as sectionID and sessions[].id/session.id as sessionID for action=move. Do not edit .kilo/agent-manager.json.",
+      sections: [],
+      ungrouped: [
+        {
+          id: "wt-1",
+          name: "Fix auth",
+          branch: "fix/auth",
+          session: { id: "ses_target", name: "Fix auth", activity: "idle" },
+        },
+      ],
+    })
+    expect(result.metadata).toEqual(expect.objectContaining({ action: "list", count: 1 }))
+    await rt.dispose()
+  })
+
+  test("prompts one existing session with a separate mutation permission pattern", async () => {
+    const requests: unknown[] = []
+    const rt = makeRuntime("test", {
+      request: (input) =>
+        Effect.sync(() => {
+          requests.push(input)
+          return { operation: "prompt" as const, sessionID: SessionID.make("ses_target"), delivered: true as const }
+        }),
+    })
+    const tool = await rt.runPromise(
+      Effect.gen(function* () {
+        return yield* Tool.init(yield* AgentManagerTool)
+      }),
+    )
+    const permissions: unknown[] = []
+    const result = await rt.runPromise(
+      provideTmpdirInstance(() =>
+        tool.execute(
+          { action: "prompt", sessionID: SessionID.make("ses_target"), prompt: "  Continue the fix  " },
+          { ...ctx, ask: (input: unknown) => Effect.sync(() => permissions.push(input)) },
+        ),
+      ).pipe(Effect.scoped),
+    )
+
+    expect(permissions).toEqual([
+      {
+        permission: "agent_manager",
+        patterns: ["prompt"],
+        always: ["prompt"],
+        metadata: { action: "prompt", sessionID: "ses_target" },
+      },
+    ])
+    expect(requests).toEqual([
+      {
+        operation: "prompt",
+        sessionID: ctx.sessionID,
+        targetSessionID: "ses_target",
+        prompt: "Continue the fix",
+      },
+    ])
+    expect(result.output).toContain("accepted it asynchronously")
+    expect(result.metadata).toEqual(expect.objectContaining({ action: "prompt", sessionID: "ses_target" }))
+    await rt.dispose()
+  })
+
+  test("stops one existing session with a separate mutation permission pattern", async () => {
+    const requests: unknown[] = []
+    const rt = makeRuntime("test", {
+      request: (input) =>
+        Effect.sync(() => {
+          requests.push(input)
+          return { operation: "stop" as const, sessionID: SessionID.make("ses_target"), stopped: true as const }
+        }),
+    })
+    const tool = await rt.runPromise(
+      Effect.gen(function* () {
+        return yield* Tool.init(yield* AgentManagerTool)
+      }),
+    )
+    const permissions: unknown[] = []
+    const result = await rt.runPromise(
+      provideTmpdirInstance(() =>
+        tool.execute(
+          { action: "stop", sessionID: SessionID.make("ses_target") },
+          { ...ctx, ask: (input: unknown) => Effect.sync(() => permissions.push(input)) },
+        ),
+      ).pipe(Effect.scoped),
+    )
+
+    expect(permissions).toEqual([
+      {
+        permission: "agent_manager",
+        patterns: ["stop"],
+        always: ["stop"],
+        metadata: { action: "stop", sessionID: "ses_target" },
+      },
+    ])
+    expect(requests).toEqual([
+      {
+        operation: "stop",
+        sessionID: ctx.sessionID,
+        targetSessionID: "ses_target",
+      },
+    ])
+    expect(result.output).toContain("removed it from Agent Manager")
+    expect(result.metadata).toEqual(expect.objectContaining({ action: "stop", sessionID: "ses_target" }))
+    await rt.dispose()
+  })
+
+  test("moves one existing session with a separate mutation permission pattern", async () => {
+    const requests: unknown[] = []
+    const rt = makeRuntime("test", {
+      request: (input) =>
+        Effect.sync(() => {
+          requests.push(input)
+          return {
+            operation: "move" as const,
+            sessionID: SessionID.make("ses_target"),
+            sectionID: "sec_review",
+            moved: true as const,
+          }
+        }),
+    })
+    const tool = await rt.runPromise(
+      Effect.gen(function* () {
+        return yield* Tool.init(yield* AgentManagerTool)
+      }),
+    )
+    const permissions: unknown[] = []
+    const result = await rt.runPromise(
+      provideTmpdirInstance(() =>
+        tool.execute(
+          { action: "move", sessionID: SessionID.make("ses_target"), sectionID: "sec_review" },
+          { ...ctx, ask: (input: unknown) => Effect.sync(() => permissions.push(input)) },
+        ),
+      ).pipe(Effect.scoped),
+    )
+
+    expect(permissions).toEqual([
+      {
+        permission: "agent_manager",
+        patterns: ["move"],
+        always: ["move"],
+        metadata: { action: "move", sessionID: "ses_target", sectionID: "sec_review" },
+      },
+    ])
+    expect(requests).toEqual([
+      {
+        operation: "move",
+        sessionID: ctx.sessionID,
+        targetSessionID: "ses_target",
+        sectionID: "sec_review",
+      },
+    ])
+    expect(result.output).toContain("sec_review")
+    expect(result.metadata).toEqual(
+      expect.objectContaining({ action: "move", sessionID: "ses_target", sectionID: "sec_review" }),
+    )
+    await rt.dispose()
   })
 
   test("inherits the latest invoking model and variant when omitted", async () => {

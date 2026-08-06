@@ -1,23 +1,27 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { expect, describe, afterAll } from "bun:test"
 import fs from "fs/promises"
 import path from "path"
 import { Cause, Effect, Exit, Fiber, Layer } from "effect"
 import { Bus } from "../../../src/bus"
 import { Permission } from "../../../src/permission"
-import { PermissionID } from "../../../src/permission/schema"
+import { EventV2Bridge } from "../../../src/event-v2-bridge"
+import { PermissionV1 } from "@opencode-ai/core/v1/permission"
+import { Database } from "@opencode-ai/core/database/database"
 import { SessionID } from "../../../src/session/schema"
 import * as Config from "../../../src/config/config"
 import { InstanceRuntime } from "../../../src/project/instance-runtime"
 import { Global } from "@opencode-ai/core/global"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
-import { provideInstance, provideTmpdirInstance, tmpdirScoped } from "../../fixture/fixture"
+import { provideInstance, provideTmpdirInstance, testInstanceStoreLayer, tmpdirScoped } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
 
 const bus = Bus.layer
 const env = Layer.mergeAll(
-  Permission.layer.pipe(Layer.provide(bus), Layer.provide(Config.defaultLayer)),
+  AppNodeBuilder.build(Permission.node),
   bus,
-  CrossSpawnSpawner.defaultLayer,
+  AppNodeBuilder.build(CrossSpawnSpawner.node),
+  testInstanceStoreLayer,
 )
 const it = testEffect(env)
 
@@ -27,7 +31,7 @@ afterAll(async () => {
     await fs.rm(path.join(dir, file), { force: true }).catch(() => {})
   }
   await Effect.runPromise(
-    Config.Service.use((svc) => svc.invalidate()).pipe(Effect.scoped, Effect.provide(Config.defaultLayer)),
+    Config.Service.use((svc) => svc.invalidate()).pipe(Effect.scoped, Effect.provide(AppNodeBuilder.build(Config.node))),
   )
   await InstanceRuntime.disposeAllInstances()
 })
@@ -66,7 +70,7 @@ const withProvided =
   <A, E, R>(self: Effect.Effect<A, E, R>) =>
     self.pipe(provideInstance(dir))
 
-const expectNotFound = (exit: Exit.Exit<void, Permission.NotFoundError>, requestID: PermissionID) => {
+const expectNotFound = (exit: Exit.Exit<void, Permission.NotFoundError>, requestID: PermissionV1.ID) => {
   expect(Exit.isFailure(exit)).toBe(true)
   if (Exit.isFailure(exit)) {
     expect(Cause.squash(exit.cause)).toMatchObject({
@@ -81,7 +85,7 @@ describe("reply routing", () => {
     provideTmpdirInstance(
       () =>
         Effect.gen(function* () {
-          const requestID = PermissionID.make("permission_unknown")
+          const requestID = PermissionV1.ID.make("permission_unknown")
           const exit = yield* reply({ requestID, reply: "once" }).pipe(Effect.exit)
           expectNotFound(exit, requestID)
         }),
@@ -94,7 +98,7 @@ describe("reply routing", () => {
       () =>
         Effect.gen(function* () {
           const asking = yield* ask({
-            id: PermissionID.make("permission_accepted"),
+            id: PermissionV1.ID.make("permission_accepted"),
             sessionID: SessionID.make("session_accept"),
             permission: "bash",
             patterns: ["ls"],
@@ -105,7 +109,7 @@ describe("reply routing", () => {
 
           yield* waitForPending(1)
           yield* reply({
-            requestID: PermissionID.make("permission_accepted"),
+            requestID: PermissionV1.ID.make("permission_accepted"),
             reply: "once",
           })
           yield* Fiber.join(asking)
@@ -118,7 +122,7 @@ describe("reply routing", () => {
     provideTmpdirInstance(
       () =>
         Effect.gen(function* () {
-          const requestID = PermissionID.make("permission_unknown_reject")
+          const requestID = PermissionV1.ID.make("permission_unknown_reject")
           const exit = yield* reply({ requestID, reply: "reject" }).pipe(Effect.exit)
           expectNotFound(exit, requestID)
         }),
@@ -131,7 +135,7 @@ describe("reply routing", () => {
       () =>
         Effect.gen(function* () {
           const asking = yield* ask({
-            id: PermissionID.make("permission_double"),
+            id: PermissionV1.ID.make("permission_double"),
             sessionID: SessionID.make("session_double"),
             permission: "bash",
             patterns: ["echo hi"],
@@ -141,7 +145,7 @@ describe("reply routing", () => {
           }).pipe(Effect.forkScoped)
 
           yield* waitForPending(1)
-          const requestID = PermissionID.make("permission_double")
+          const requestID = PermissionV1.ID.make("permission_double")
           yield* reply({ requestID, reply: "once" })
           yield* Fiber.join(asking)
 
@@ -160,7 +164,7 @@ describe("reply routing", () => {
       const runB = withProvided(dirB)
 
       const fiber = yield* ask({
-        id: PermissionID.make("permission_crossdir"),
+        id: PermissionV1.ID.make("permission_crossdir"),
         sessionID: SessionID.make("session_crossdir"),
         permission: "bash",
         patterns: ["ls"],
@@ -171,7 +175,7 @@ describe("reply routing", () => {
 
       expect(yield* waitForPending(1).pipe(runA)).toHaveLength(1)
 
-      const requestID = PermissionID.make("permission_crossdir")
+      const requestID = PermissionV1.ID.make("permission_crossdir")
       const exit = yield* reply({ requestID, reply: "once" }).pipe(runB, Effect.exit)
       expectNotFound(exit, requestID)
 

@@ -2,30 +2,24 @@ import { TextAttributes, type ScrollBoxRenderable } from "@opentui/core"
 import { useTerminalDimensions } from "@opentui/solid"
 import { MemoryAutosaveStatus } from "@kilocode/kilo-memory/autosave-status"
 import { MEMORY_COMMAND_CATALOG } from "@kilocode/kilo-memory/commands"
-import { MemoryDecisions } from "@kilocode/kilo-memory/decisions"
 import { MemoryToken } from "@kilocode/kilo-memory/token"
 import { Global } from "@opencode-ai/core/global"
 import { createMemo, createResource, For, Match, Show, Switch } from "solid-js"
-import { relativeTime } from "@/cli/cmd/tui/feature-plugins/session/util"
-import { useProject } from "@/cli/cmd/tui/context/project"
-import { useSDK } from "@/cli/cmd/tui/context/sdk"
-import { useTheme } from "@/cli/cmd/tui/context/theme"
-import { useTuiConfig } from "@/cli/cmd/tui/context/tui-config"
-import { useBindings } from "@/cli/cmd/tui/keymap"
-import { useDialog, type DialogContext } from "@/cli/cmd/tui/ui/dialog"
-import { getScrollAcceleration } from "@/cli/cmd/tui/util/scroll"
+import { relativeTime } from "@/kilocode/cli/cmd/tui/relative-time"
+import { useProject } from "@tui/context/project"
+import { useSDK } from "@tui/context/sdk"
+import { useTheme } from "@tui/context/theme"
+import { useTuiConfig } from "@tui/config"
+import { useBindings } from "@tui/keymap"
+import { useDialog, type DialogContext } from "@tui/ui/dialog"
+import { DialogSelect, type DialogSelectOption } from "@tui/ui/dialog-select"
+import { useToast } from "@tui/ui/toast"
+import { getScrollAcceleration } from "@tui/util/scroll"
 import { route } from "@/kilocode/cli/cmd/tui/memory-command"
 import { errorMessage } from "@/util/error"
 
 function fmt(value: number) {
   return value.toLocaleString()
-}
-
-function saved(state: { autoConsolidate: boolean; stats: MemoryAutosaveStatus.Stats }) {
-  const item = MemoryAutosaveStatus.summarize(state)
-  if (item.state === "saved") return `${fmt(item.count)} ${item.count === 1 ? "change" : "changes"}`
-  if (item.state === "handoff") return "session handoff"
-  return "no changes"
 }
 
 function count(text: string) {
@@ -36,52 +30,12 @@ function records(text: string) {
   return (text.match(/^record id=/gm) ?? []).length
 }
 
-function preview(text: string) {
+function stored(text: string) {
   return text
     .split("\n")
     .filter((line) => line.trim())
+    .map((line) => line.split(":: ").at(-1) ?? line)
     .slice(0, 16)
-}
-
-function tail(text: string) {
-  return text
-    .split("\n")
-    .filter((line) => line.trim())
-    .slice(-8)
-}
-
-function savedOperations(input: MemoryDecisions.Operation[]) {
-  const text = input
-    .map((item) => {
-      if (item.type === "remove") return item.query ? `remove:${item.query}` : "remove"
-      return `${item.file}:${item.key}`
-    })
-    .join(", ")
-  return text || "none"
-}
-
-function skip(item: MemoryDecisions.Skipped | undefined) {
-  if (!item) return "none"
-  const dupe = item.duplicateOf ? ` duplicate of ${item.duplicateOf}` : ""
-  return `${item.reason}${dupe}`
-}
-
-function audit(text: string) {
-  const item = MemoryDecisions.summarize(text)
-  return [
-    `last save attempt: ${
-      item.lastSave ? `${item.lastSave.result}${item.lastSave.reason ? ` (${item.lastSave.reason})` : ""}` : "none"
-    }`,
-    `latest saved changes: ${savedOperations(item.latestOperations)}`,
-    `latest skipped: ${skip(item.latestSkipped)}`,
-    `accepted saves: ${item.accepted} · skipped candidates: ${item.skipped}`,
-    `fallback used: ${item.fallback ? "yes" : "no"} · files updated: ${item.files.join(", ") || "none"}`,
-    `last recall query: ${item.lastRecall?.query ?? "none"}`,
-    `matched topics: ${item.lastRecall?.topics.join(", ") || "none"} · recalled files: ${
-      item.lastRecall?.files.join(", ") || "none"
-    }`,
-    `errors: ${item.errors.join(", ") || "none"}`,
-  ]
 }
 
 export function showMemoryDialog(dialog: DialogContext, input?: { workspace?: string; directory?: string }) {
@@ -89,9 +43,14 @@ export function showMemoryDialog(dialog: DialogContext, input?: { workspace?: st
   dialog.replace(() => <DialogMemory workspace={input?.workspace} directory={input?.directory} />)
 }
 
-export function showMemoryHelpDialog(dialog: DialogContext, reason?: string) {
+export function showMemoryHelpDialog(
+  dialog: DialogContext,
+  input?: { workspace?: string; directory?: string; reason?: string },
+) {
   dialog.setSize("large")
-  dialog.replace(() => <DialogMemoryHelp reason={reason} />)
+  dialog.replace(() => (
+    <DialogMemoryHelp workspace={input?.workspace} directory={input?.directory} reason={input?.reason} />
+  ))
 }
 
 export function showMemoryStatusDialog(dialog: DialogContext, input?: { workspace?: string; directory?: string }) {
@@ -102,12 +61,10 @@ export function showMemoryStatusDialog(dialog: DialogContext, input?: { workspac
 function autosave(state: { autoConsolidate: boolean; stats: MemoryAutosaveStatus.Stats }) {
   const item = MemoryAutosaveStatus.summarize(state)
   if (item.state === "off") return "off"
-  if (item.state === "watching") return "watching…"
-  if (item.state === "saved") {
-    return `${fmt(item.count)} ${item.count === 1 ? "change" : "changes"} · ${relativeTime(item.at)}`
-  }
-  if (item.state === "handoff") return `session handoff saved · ${relativeTime(item.at)}`
-  return `no changes · ${relativeTime(item.at)}`
+  if (item.state === "watching") return "on · watching…"
+  if (item.state === "saved") return `on · saved · ${relativeTime(item.at)}`
+  if (item.state === "handoff") return `on · session handoff saved · ${relativeTime(item.at)}`
+  return `on · no changes · ${relativeTime(item.at)}`
 }
 
 function MemoryHeaderInfo(props: {
@@ -149,38 +106,54 @@ function MemorySourcesInfo(props: {
   )
 }
 
-export function DialogMemoryHelp(props: { reason?: string }) {
+function MemoryItemsInfo(props: { items: string }) {
+  const { theme } = useTheme()
+  return (
+    <box>
+      <text fg={theme.text}>Stored memory</text>
+      <Show when={stored(props.items).length > 0} fallback={<text fg={theme.textMuted}>No items</text>}>
+        <For each={stored(props.items)}>{(line) => <text fg={theme.textMuted}>{line}</text>}</For>
+      </Show>
+    </box>
+  )
+}
+
+function draft(usage: string) {
+  const head = usage.split(" ")[0]
+  if (usage.includes("<") || usage.includes("|")) return `${head} `
+  return usage
+}
+
+export function DialogMemoryHelp(props: { workspace?: string; directory?: string; reason?: string }) {
+  const sdk = useSDK()
+  const project = useProject()
   const dialog = useDialog()
   const { theme } = useTheme()
+  const toast = useToast()
+  const options: DialogSelectOption<string>[] = MEMORY_COMMAND_CATALOG.map((item) => ({
+    title: item.description,
+    footer: `/memory ${item.usage}`,
+    category: "Memory",
+    value: item.usage,
+  }))
 
   return (
-    <box paddingLeft={2} paddingRight={2} gap={1} paddingBottom={1}>
-      <box flexDirection="row" justifyContent="space-between">
-        <text fg={theme.text} attributes={TextAttributes.BOLD}>
-          Memory
-        </text>
-        <text fg={theme.textMuted} onMouseUp={() => dialog.clear()}>
-          esc
-        </text>
-      </box>
-      <Show when={props.reason}>
-        {(reason) => <text fg={theme.error}>{reason()}</text>}
-      </Show>
-      <box gap={0}>
-        <For each={MEMORY_COMMAND_CATALOG}>
-          {(item) => (
-            <box flexDirection="row" gap={2}>
-              <text fg={theme.text} flexShrink={0}>
-                /memory {item.usage}
-              </text>
-              <text fg={theme.textMuted} wrapMode="word">
-                {item.description}
-              </text>
-            </box>
-          )}
-        </For>
-      </box>
-    </box>
+    <DialogSelect
+      title="Memory"
+      options={options}
+      flat
+      footer={<Show when={props.reason}>{(reason) => <text fg={theme.error}>{reason()}</text>}</Show>}
+      onSelect={async (option) => {
+        dialog.clear()
+        const workspace = props.workspace ?? project.workspace.current()
+        const result = await sdk.client.tui.appendPrompt({
+          ...route({ workspace, directory: props.directory }),
+          text: `/memory ${draft(option.value)}`,
+        })
+        if (!result.error) return
+        toast.show({ variant: "error", message: `Memory menu failed: ${errorMessage(result.error)}` })
+      }}
+    />
   )
 }
 
@@ -228,15 +201,12 @@ function DialogMemoryStatus(props: { workspace?: string; directory?: string }) {
               <box>
                 <text fg={theme.text}>Auto-save</text>
                 <text fg={theme.textMuted}>{autosave(item().state)}</text>
-              </box>
-              <box>
-                <text fg={theme.text}>Startup context</text>
-                <text fg={theme.textMuted}>
-                  {item().state.autoInject ? "on" : "off"} · last injected{" "}
-                  {fmt(item().state.stats.lastInjectedTokens)} tokens
+                <text fg={theme.textMuted} wrapMode="word">
+                  Auto-save sends best-effort-redacted turn context to your configured model provider; disable with /memory auto off.
                 </text>
               </box>
               <MemorySourcesInfo sources={item().sources} />
+              <MemoryItemsInfo items={item().items} />
               <box>
                 <text fg={theme.text}>Index</text>
                 <text fg={theme.textMuted}>
@@ -315,49 +285,9 @@ export function DialogMemory(props: { workspace?: string; directory?: string }) 
               <box gap={1}>
                 <box>
                   <MemoryHeaderInfo root={item().root} state={item().state} />
-                  <text fg={theme.textMuted}>startup context {item().state.autoInject ? "on" : "off"}</text>
-                  <text fg={theme.textMuted}>
-                    last startup context {fmt(item().state.stats.lastInjectedTokens)} tokens · stored index{" "}
-                    {fmt(item().index.length)} chars
-                  </text>
-                  <Show when={item().state.stats.lastConsolidationTokens > 0}>
-                    <text fg={theme.textMuted}>
-                      last auto-save {saved(item().state)} · model usage{" "}
-                      {fmt(item().state.stats.lastConsolidationTokens)} tokens
-                    </text>
-                  </Show>
                 </box>
                 <MemorySourcesInfo sources={item().sources} />
-                <box>
-                  <text fg={theme.text}>Index</text>
-                  <Show when={preview(item().index).length > 0} fallback={<text fg={theme.textMuted}>No entries</text>}>
-                    <For each={preview(item().index)}>{(line) => <text fg={theme.textMuted}>{line}</text>}</For>
-                  </Show>
-                </box>
-                <box>
-                  <text fg={theme.text}>Items</text>
-                  <Show when={preview(item().items).length > 0} fallback={<text fg={theme.textMuted}>No items</text>}>
-                    <For each={preview(item().items)}>{(line) => <text fg={theme.textMuted}>{line}</text>}</For>
-                  </Show>
-                </box>
-                <box>
-                  <text fg={theme.text}>Changes</text>
-                  <Show when={tail(item().changes).length > 0} fallback={<text fg={theme.textMuted}>No changes</text>}>
-                    <For each={tail(item().changes)}>{(line) => <text fg={theme.textMuted}>{line}</text>}</For>
-                  </Show>
-                </box>
-                <box>
-                  <text fg={theme.text}>Decisions</text>
-                  <Show
-                    when={tail(item().decisions).length > 0}
-                    fallback={<text fg={theme.textMuted}>No decisions</text>}
-                  >
-                    <text fg={theme.textMuted}>Summary</text>
-                    <For each={audit(item().decisions)}>{(line) => <text fg={theme.textMuted}>{line}</text>}</For>
-                    <text fg={theme.textMuted}>Recent</text>
-                    <For each={tail(item().decisions)}>{(line) => <text fg={theme.textMuted}>{line}</text>}</For>
-                  </Show>
-                </box>
+                <MemoryItemsInfo items={item().items} />
               </box>
             )}
           </Match>

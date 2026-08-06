@@ -21,6 +21,8 @@ const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigat
 
 interface WorktreeItemProps {
   worktree: WorktreeState
+  /** Stable composite ID used by multi-project sidebar bodies. */
+  sidebarId?: string
   /** Display label (resolved from label, first session title, or branch). */
   label: string
   /** Branch name shown as subtitle when it differs from the label. */
@@ -167,6 +169,13 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
     props.onOpenPR?.()
   }
 
+  /** Worktree directory basename shown in the hover card (e.g. "decorous-taker"). */
+  const name = () => {
+    const p = props.worktree.path.replace(/[\\/]+$/, "")
+    const i = Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\"))
+    return i >= 0 ? p.slice(i + 1) : p
+  }
+
   return (
     <>
       <Show when={props.groupStart}>
@@ -178,8 +187,8 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
       <ContextMenu>
         <HoverCard
           class="am-worktree-hover-card"
-          openDelay={50}
-          closeDelay={50}
+          openDelay={0}
+          closeDelay={0}
           placement="right-start"
           gutter={8}
           open={hovered() && !overClose() && !props.pendingDelete}
@@ -194,7 +203,7 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                   "am-wt-grouped": props.grouped,
                   "am-wt-group-end": props.groupEnd,
                 }}
-                data-sidebar-id={props.worktree.id}
+                data-sidebar-id={props.sidebarId ?? props.worktree.id}
                 onClick={() => props.onClick()}
               >
                 <div class="am-wt-icon">
@@ -386,6 +395,11 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
               <Show when={props.navHint}>
                 <span class="am-hover-card-keybind">{props.navHint}</span>
               </Show>
+            </div>
+            <div class="am-hover-card-divider" />
+            <div class="am-hover-card-row">
+              <span class="am-hover-card-row-label">{t("agentManager.hoverCard.worktree")}</span>
+              <span class="am-hover-card-row-value">{name()}</span>
             </div>
             <Show when={props.worktree.parentBranch}>
               <div class="am-hover-card-divider" />

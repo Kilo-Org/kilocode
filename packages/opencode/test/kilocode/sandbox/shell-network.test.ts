@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect, test } from "bun:test"
 import { Effect, Layer } from "effect"
 import { Config } from "@/config/config"
@@ -9,21 +10,24 @@ import { Agent } from "@/agent/agent"
 import { ShellTool } from "@/tool/shell"
 import { Truncate } from "@/tool/truncate"
 import { MessageID, SessionID } from "@/session/schema"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { Database } from "@opencode-ai/core/database/database"
 import { run as runSandbox, type Profile } from "@kilocode/sandbox"
 import { TestConfig } from "../../fixture/config"
-import { provideInstance, tmpdirScoped } from "../../fixture/fixture"
+import { provideInstance, testInstanceStoreLayer, tmpdirScoped } from "../../fixture/fixture"
 
 const base = Layer.mergeAll(
-  CrossSpawnSpawner.defaultLayer,
-  AppFileSystem.defaultLayer,
-  Plugin.defaultLayer,
-  Truncate.defaultLayer,
-  Agent.defaultLayer,
-  RuntimeFlags.defaultLayer,
+  AppNodeBuilder.build(CrossSpawnSpawner.node),
+  AppNodeBuilder.build(FSUtil.node),
+  AppNodeBuilder.build(Plugin.node),
+  AppNodeBuilder.build(Truncate.node),
+  AppNodeBuilder.build(Agent.node),
+  AppNodeBuilder.build(RuntimeFlags.node),
+  testInstanceStoreLayer,
+  AppNodeBuilder.build(Database.node),
 )
-const layer = Layer.mergeAll(base, Config.defaultLayer)
+const layer = Layer.mergeAll(base, AppNodeBuilder.build(Config.node))
 
 function configured(restrict: boolean) {
   return Layer.mergeAll(
@@ -161,7 +165,7 @@ describe("model shell network integration", () => {
         expect(denied.accepted()).toBe(0)
       })
 
-      await Effect.runPromise(Effect.scoped(effect.pipe(Effect.provide(CrossSpawnSpawner.defaultLayer))))
+      await Effect.runPromise(Effect.scoped(effect.pipe(Effect.provide(AppNodeBuilder.build(CrossSpawnSpawner.node)))))
     },
   )
 })

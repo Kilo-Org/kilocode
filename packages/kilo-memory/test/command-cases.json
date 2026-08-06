@@ -26,10 +26,10 @@
     "operation": "status"
   },
   {
-    "name": "edit operation",
-    "input": "/memory edit",
+    "name": "inspect operation",
+    "input": "/memory inspect",
     "result": "operation",
-    "operation": "edit"
+    "operation": "inspect"
   },
   {
     "name": "on operation",
@@ -127,12 +127,6 @@
     "result": "operation",
     "operation": "auto",
     "mode": "off"
-  },
-  {
-    "name": "inspect action is unknown",
-    "input": "/memory inspect",
-    "result": "usage",
-    "reason": "Unknown memory action"
   },
   {
     "name": "unknown action",

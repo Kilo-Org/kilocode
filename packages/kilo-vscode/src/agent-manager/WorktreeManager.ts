@@ -13,6 +13,7 @@ import simpleGit, { type SimpleGit } from "simple-git"
 import { generateBranchName, sanitizeBranchName } from "./branch-name"
 import { type GitOps, isKiloOwnedSshCommand, nonInteractiveEnv } from "./GitOps"
 import { execWithShellEnv } from "./shell-env"
+import { execGhRead } from "./gh"
 import { markNoIndex } from "../util/spotlight"
 import {
   parsePRUrl,
@@ -65,11 +66,6 @@ export interface CreateWorktreeResult {
   remote?: string
   startPointSource: StartPointSource
   startPointWarning?: string
-}
-
-export interface ExternalWorktreeItem {
-  path: string
-  branch: string
 }
 
 /**
@@ -146,6 +142,7 @@ export class WorktreeManager {
     prompt?: string
     existingBranch?: string
     baseBranch?: string
+    baseRef?: string
     branchName?: string
     onProgress?: (step: WorktreeProgressStep, message: string, detail?: string) => void
   }): Promise<CreateWorktreeResult> {
@@ -195,6 +192,7 @@ export class WorktreeManager {
     prompt?: string
     existingBranch?: string
     baseBranch?: string
+    baseRef?: string
     branchName?: string
     onProgress?: (step: WorktreeProgressStep, message: string, detail?: string) => void
   }): Promise<CreateWorktreeResult> {
@@ -243,6 +241,9 @@ export class WorktreeManager {
       startPoint = await this.resolveStartPoint(requestedBase, params.onProgress, {
         allowFallback: !params.baseBranch, // Only fallback if user didn't explicitly request a specific base
       })
+      if (params.baseRef && !(await this.refExistsLocally(params.baseRef))) {
+        throw new Error(`Could not resolve start point for ref "${params.baseRef}"`)
+      }
       parent = startPoint.branch
       parentRemote = startPoint.remote
     }
@@ -256,7 +257,7 @@ export class WorktreeManager {
     params.onProgress?.("creating", `Creating worktree for ${branch}...`)
 
     // Dereference to commit SHA to prevent upstream tracking for new branches
-    const startRef = params.existingBranch ? undefined : `${startPoint.ref}^{commit}`
+    const startRef = params.existingBranch ? undefined : `${params.baseRef ?? startPoint.ref}^{commit}`
 
     try {
       const args = params.existingBranch
@@ -810,7 +811,7 @@ export class WorktreeManager {
 
     // 4. Derived fallback
     if (allowFallback) {
-      const fallbacks = await this.derivedFallbackBranches(branch)
+      const fallbacks = await this.derivedFallbackBranches()
       for (const fallback of fallbacks) {
         if (fallback === branch) continue // already tried
         try {
@@ -858,7 +859,7 @@ export class WorktreeManager {
     }
   }
 
-  async derivedFallbackBranches(requested: string): Promise<string[]> {
+  async derivedFallbackBranches(): Promise<string[]> {
     const defaults = []
     try {
       defaults.push(await this.defaultBranch())
@@ -1010,22 +1011,6 @@ export class WorktreeManager {
     }
   }
 
-  async listExternalWorktrees(managedPaths: Set<string>): Promise<ExternalWorktreeItem[]> {
-    try {
-      const raw = await this.git.raw(["worktree", "list", "--porcelain"])
-      const normalizedRoot = normalizePath(this.root)
-      const normalizedManaged = new Set([...managedPaths].map(normalizePath))
-      return parseWorktreeList(raw)
-        .filter(
-          (e) => !e.bare && normalizePath(e.path) !== normalizedRoot && !normalizedManaged.has(normalizePath(e.path)),
-        )
-        .map((e) => ({ path: e.path, branch: e.branch }))
-    } catch (error) {
-      this.log(`Failed to list external worktrees: ${error}`)
-      return []
-    }
-  }
-
   async createFromPR(url: string): Promise<CreateWorktreeResult> {
     return this.withGitLock(() => this.createFromPRImpl(url))
   }
@@ -1059,8 +1044,7 @@ export class WorktreeManager {
 
   private async fetchPRInfo(parsed: { owner: string; repo: string; number: number }): Promise<PRInfo> {
     try {
-      const json = await this.exec(
-        "gh",
+      const json = await this.gh(
         [
           "pr",
           "view",
@@ -1113,6 +1097,11 @@ export class WorktreeManager {
 
   private async exec(cmd: string, args: string[], timeout = 120000): Promise<string> {
     const { stdout } = await execWithShellEnv(cmd, args, { cwd: this.root, timeout })
+    return stdout
+  }
+
+  private async gh(args: string[], timeout = 120000): Promise<string> {
+    const { stdout } = await execGhRead(args, { cwd: this.root, timeout })
     return stdout
   }
 

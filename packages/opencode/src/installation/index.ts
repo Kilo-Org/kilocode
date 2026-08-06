@@ -1,13 +1,14 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { httpClient } from "@opencode-ai/core/effect/app-node-platform"
 import { Effect, Layer, Schema, Context, Stream } from "effect"
 import { serviceUse } from "@opencode-ai/core/effect/service-use"
-import { FetchHttpClient, HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
+import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
 import { withTransientReadRetry } from "@/util/effect-http-client"
 import { errorMessage } from "@/util/error"
 import { ChildProcess } from "effect/unstable/process"
 import { AppProcess } from "@opencode-ai/core/process"
 import path from "path"
-import { BusEvent } from "@/bus/bus-event"
-import * as Log from "@opencode-ai/core/util/log"
 import { makeRuntime } from "@opencode-ai/core/effect/runtime"
 import semver from "semver"
 import { InstallationChannel, InstallationVersion } from "@opencode-ai/core/installation/version"
@@ -21,27 +22,13 @@ import {
   Scoop as KiloScoop,
 } from "@/kilocode/installation"
 // kilocode_change end
-
-const log = Log.create({ service: "installation" })
+import { InstallationEvent } from "@opencode-ai/schema/installation-event"
 
 export type Method = "curl" | "npm" | "yarn" | "pnpm" | "bun" | "brew" | "scoop" | "choco" | "unknown"
 
 export type ReleaseType = "patch" | "minor" | "major"
 
-export const Event = {
-  Updated: BusEvent.define(
-    "installation.updated",
-    Schema.Struct({
-      version: Schema.String,
-    }),
-  ),
-  UpdateAvailable: BusEvent.define(
-    "installation.update-available",
-    Schema.Struct({
-      version: Schema.String,
-    }),
-  ),
-}
+export const Event = InstallationEvent
 
 export function getReleaseType(current: string, latest: string): ReleaseType {
   const currMajor = semver.major(current)
@@ -109,7 +96,7 @@ export class Service extends Context.Service<Service, Interface>()("@opencode/In
 
 export const use = serviceUse(Service)
 
-export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProcess.Service> = Layer.effect(
+const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProcess.Service> = Layer.effect(
   Service,
   Effect.gen(function* () {
     const http = yield* HttpClient.HttpClient
@@ -162,13 +149,20 @@ export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProce
       return `Upgrade failed for ${method}.`
     }
 
+    const upgradeScriptShell = Effect.fnUntraced(function* () {
+      const bashVersion = yield* text(["bash", "--version"])
+      if (bashVersion) return "bash"
+      return "sh"
+    })
+
     const upgradeCurl = Effect.fnUntraced(
       function* (target: string) {
         const response = yield* httpOk.execute(HttpClientRequest.get(KiloRelease.install)) // kilocode_change
         const body = yield* response.text
         const bodyBytes = new TextEncoder().encode(body)
+        const shell = yield* upgradeScriptShell()
         const result = yield* appProcess.run(
-          ChildProcess.make("bash", [], {
+          ChildProcess.make(shell, [], {
             stdin: Stream.make(bodyBytes),
             env: { VERSION: target },
             extendEnv: true,
@@ -308,11 +302,19 @@ export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProce
           return data.version
         }
 
+        // kilocode_change start - curl/unknown fallback: resolve from the public npm
+        // dist-tag instead of GitHub /releases/latest, which is polluted by non-CLI
+        // (e.g. JetBrains) releases and returns a tag like "jetbrains/v7.0.4" that
+        // breaks version resolution. Use the public registry directly: a curl-
+        // installed binary is not tied to any project's npm config.
         const response = yield* httpOk.execute(
-          HttpClientRequest.get(KiloRelease.api).pipe(HttpClientRequest.acceptJson), // kilocode_change
+          HttpClientRequest.get(`https://registry.npmjs.org/${KiloNpm.path}/${InstallationChannel}`).pipe(
+            HttpClientRequest.acceptJson,
+          ),
         )
-        const data = yield* HttpClientResponse.schemaBodyJson(GitHubRelease)(response)
-        return data.tag_name.replace(/^v/, "")
+        const data = yield* HttpClientResponse.schemaBodyJson(NpmPackage)(response)
+        return data.version
+        // kilocode_change end
       }, Effect.orDie),
       upgrade: Effect.fn("Installation.upgrade")(function* (m: Method, target: string) {
         let upgradeResult: { code: number; stdout: string; stderr: string } | undefined
@@ -375,7 +377,7 @@ export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProce
             stderr: upgradeFailure(m, upgradeResult),
           })
         }
-        log.info("upgraded", {
+        yield* Effect.logInfo("upgraded", {
           method: m,
           target,
           stdout: upgradeResult.stdout,
@@ -389,9 +391,9 @@ export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProce
   }),
 )
 
-export const defaultLayer = layer.pipe(Layer.provide(FetchHttpClient.layer), Layer.provide(AppProcess.defaultLayer))
+export const node = LayerNode.make({ service: Service, layer: layer, deps: [httpClient, AppProcess.node] })
 
-const { runPromise } = makeRuntime(Service, defaultLayer)
+const { runPromise } = makeRuntime(Service, AppNodeBuilder.build(node))
 
 export const latest = (...args: Parameters<Interface["latest"]>) => runPromise((s) => s.latest(...args))
 export const method = () => runPromise((s) => s.method())

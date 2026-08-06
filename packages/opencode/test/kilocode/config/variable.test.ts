@@ -4,7 +4,7 @@ import path from "node:path"
 import { expect, test } from "bun:test"
 import { ConfigVariable } from "@/config/variable"
 import { ConfigVariableGuard } from "@/kilocode/config/variable"
-import { InvalidError } from "@/config/error"
+import { InvalidError } from "@opencode-ai/core/v1/config/error"
 
 const source = { type: "virtual" as const, source: "test", dir: process.cwd() }
 const trusted = { ...source, trusted: true }

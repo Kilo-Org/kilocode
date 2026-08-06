@@ -139,3 +139,10 @@
     text-align: right;
   }
 }
+
+/* Skill Folder Paths / Skill URLs row: tooltip trigger that grows in the
+   flex row and lets the inner span truncate. Applied via Tooltip class. */
+.settings-skills-row-trigger {
+  flex: 1;
+  min-width: 0;
+}

@@ -114,11 +114,15 @@ if (Script.release) {
 console.log("\n=== cli ===\n")
 await import(`../packages/opencode/script/publish.ts`)
 
+// kilocode_change - Kilo does not ship the upstream preview CLI package
+
 console.log("\n=== sdk ===\n")
 await import(`../packages/sdk/js/script/publish.ts`)
 
 console.log("\n=== plugin ===\n")
 await import(`../packages/plugin/script/publish.ts`)
+
+// kilocode_change - Kilo does not publish the upstream-owned @opencode-ai/ui package
 
 // kilocode_change start
 console.log("\n=== vscode ===\n")
@@ -150,7 +154,8 @@ async function createJetbrainsPinPr() {
     console.log(`Skipping JetBrains CLI pin bump PR for pre-release v${Script.version}`)
     return
   }
-  const result = await $`bun .kilo/skills/release-jetbrains/script/set-pin.ts --version ${Script.version} --pr`.nothrow()
+  const result =
+    await $`bun .kilo/skills/release-jetbrains/script/set-pin.ts --version ${Script.version} --pr`.nothrow()
   const out = result.stdout.toString().trim()
   const err = result.stderr.toString().trim()
   if (result.exitCode === 0) {
@@ -162,6 +167,8 @@ async function createJetbrainsPinPr() {
   console.warn("JetBrains CLI pin bump PR creation failed; release will continue.")
   if (out) console.warn(out)
   if (err) console.warn(err)
-  console.warn("::warning title=JetBrains CLI pin bump PR failed::Release completed, but the JetBrains CLI pin bump PR was not created. Check the logs above and create it manually if needed.")
+  console.warn(
+    "::warning title=JetBrains CLI pin bump PR failed::Release completed, but the JetBrains CLI pin bump PR was not created. Check the logs above and create it manually if needed.",
+  )
 }
 // kilocode_change end

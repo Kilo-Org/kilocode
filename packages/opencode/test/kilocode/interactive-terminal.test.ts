@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { Bus } from "@/bus"
 import { Agent } from "@/agent/agent"
 import { Config } from "@/config/config"
@@ -9,11 +10,11 @@ import { InteractiveTerminalTool } from "@/kilocode/tool/interactive-terminal"
 import { Plugin } from "@/plugin"
 import type { Permission } from "@/permission"
 import { MessageID, SessionID } from "@/session/schema"
-import { Shell } from "@/shell/shell"
+import { Shell } from "@opencode-ai/core/shell"
 import { Truncate } from "@/tool/truncate"
 import type { Tool } from "@/tool/tool"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { describe, expect } from "bun:test"
 import { Cause, Effect, Exit, Layer } from "effect"
 import path from "path"
@@ -21,13 +22,13 @@ import { TestInstance, tmpdirScoped } from "../fixture/fixture"
 import { it, testEffect } from "../lib/effect"
 
 const toolLayer = Layer.mergeAll(
-  CrossSpawnSpawner.defaultLayer,
-  AppFileSystem.defaultLayer,
-  Plugin.defaultLayer,
-  Truncate.defaultLayer,
-  Config.defaultLayer,
-  Agent.defaultLayer,
-  RuntimeFlags.defaultLayer,
+  AppNodeBuilder.build(CrossSpawnSpawner.node),
+  AppNodeBuilder.build(FSUtil.node),
+  AppNodeBuilder.build(Plugin.node),
+  AppNodeBuilder.build(Truncate.node),
+  AppNodeBuilder.build(Config.node),
+  AppNodeBuilder.build(Agent.node),
+  AppNodeBuilder.build(RuntimeFlags.node),
 )
 const toolIt = testEffect(toolLayer)
 
@@ -163,7 +164,7 @@ describe("InteractiveTerminal", () => {
       const ext = requests.find((item) => item.permission === "external_directory")
       const bash = requests.find((item) => item.permission === "bash")
       const want =
-        process.platform === "win32" ? AppFileSystem.normalizePathPattern(path.join(tmp, "*")) : path.join(tmp, "*")
+        process.platform === "win32" ? FSUtil.normalizePathPattern(path.join(tmp, "*")) : path.join(tmp, "*")
       expect(ext?.patterns).toContain(want)
       expect(bash?.patterns).toContain(`cat ${quote(file)}`)
     }),

@@ -1,4 +1,4 @@
-import { type Component, createSignal, createMemo, createEffect, on, onCleanup, Show } from "solid-js"
+import { type Component, createSignal, createMemo, createEffect, on, onCleanup, Show, type JSXElement } from "solid-js"
 import type { VirtualizerHandle } from "virtua/solid"
 // Styles are imported by the component so every consumer (sidebar diff viewer,
 // agent manager, storybook) picks them up automatically. Keep these imports here —
@@ -27,6 +27,7 @@ import { useProvider } from "../src/context/provider"
 import { useConfig } from "../src/context/config"
 import { canUseSpeechToText, selectedSpeechToTextModel } from "../src/components/speech-to-text/availability"
 import { useSpeechToText } from "../src/components/speech-to-text/useSpeechToText"
+import { useSpeechToTextModels } from "../src/context/speech-to-text-models"
 import { FileTree } from "./FileTree"
 import { treeOrder } from "./file-tree-utils"
 import { getDirectory, getFilename, lineCount, sanitizeReviewComments, type ReviewComment } from "./review-comments"
@@ -65,12 +66,19 @@ import { createDiffRequests } from "./diff-requests"
 
 type DiffStyle = "unified" | "split"
 
+/** Well-known diff source notices → i18n keys (mirrors the standalone viewer). */
+const DIFF_NOTICE_KEYS: Record<string, string> = {
+  "snapshots-disabled": "diffViewer.notice.snapshotsDisabled",
+}
+
 interface FullScreenDiffViewProps {
   diffs: WorktreeFileDiff[]
   loading: boolean
   loadingFiles?: Set<string>
   sessionId?: string
   sessionKey?: string
+  /** Well-known source notice kind (e.g. "snapshots-disabled"), shown as a banner. */
+  notice?: string
   comments: ReviewComment[]
   onCommentsChange: (comments: ReviewComment[]) => void
   composer?: ReviewComposer
@@ -89,18 +97,26 @@ interface FullScreenDiffViewProps {
   canRevert?: boolean
   /** Defaults to true. Disables comment creation and "Send all" when false. */
   canComment?: boolean
+  /** Optional leading content rendered first in the toolbar's left group. */
+  lead?: JSXElement
   onClose: () => void
 }
 
 export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) => {
   const { t } = useLanguage()
+  const noticeText = () => {
+    const n = props.notice
+    if (!n) return ""
+    return t(DIFF_NOTICE_KEYS[n] ?? n)
+  }
   const vscode = useVSCode()
   const server = useServer()
   const provider = useProvider()
   const { config } = useConfig()
   const speech = useSpeechToText(vscode, server, { t })
+  const speechModels = useSpeechToTextModels()
   const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates())
-  const speechModel = () => selectedSpeechToTextModel(config())
+  const speechModel = () => selectedSpeechToTextModel(config(), speechModels.models())
   const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
   const sendAllKeybind = () =>
     isMac ? t("agentManager.review.sendAllShortcut.mac") : t("agentManager.review.sendAllShortcut.other")
@@ -175,7 +191,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
 
   const preserveScroll = (fn: () => void) => {
     const handle = virtualizer()
-    const index = handle?.findStartIndex()
+    const index = handle?.findItemIndex(handle.scrollOffset)
     const file = index === undefined ? undefined : rows()[index]?.file
     const offset = index === undefined ? 0 : (handle?.scrollOffset ?? 0) - (handle?.getItemOffset(index) ?? 0)
     fn()
@@ -468,7 +484,8 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     requestAnimationFrame(() => {
       const index = rows().findIndex((diff) => diff.file === path)
       if (index < 0) return
-      const current = virtualizer()?.findStartIndex() ?? index
+      const handle = virtualizer()
+      const current = handle?.findItemIndex(handle.scrollOffset) ?? index
       virtualizer()?.scrollToIndex(index, { offset: -8, smooth: Math.abs(index - current) <= 8 })
     })
   }
@@ -480,7 +497,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   const syncActiveFileFromScroll = () => {
     const handle = virtualizer()
     if (!handle) return
-    const file = rows()[handle.findStartIndex()]?.file
+    const file = rows()[handle.findItemIndex(handle.scrollOffset)]?.file
     if (file) setActiveFile(file)
   }
 
@@ -540,6 +557,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
       {/* Toolbar */}
       <div class="am-review-toolbar">
         <div class="am-review-toolbar-left">
+          <Show when={props.lead}>{props.lead}</Show>
           <RadioGroup
             options={["unified", "split"] as const}
             current={props.diffStyle}
@@ -611,6 +629,15 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
           />
         </div>
         <div class="am-review-diff" ref={setScroller}>
+          <Show when={noticeText()}>
+            <div class="diff-viewer-notice" role="status">
+              <span class="diff-viewer-notice-icon">
+                <Icon name="warning" size="small" />
+              </span>
+              <span class="diff-viewer-notice-text">{noticeText()}</span>
+            </div>
+          </Show>
+
           <Show when={props.loading && props.diffs.length === 0}>
             <div class="am-diff-loading">
               <Spinner />
@@ -618,7 +645,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
             </div>
           </Show>
 
-          <Show when={!props.loading && props.diffs.length === 0}>
+          <Show when={!props.loading && props.diffs.length === 0 && !noticeText()}>
             <div class="am-diff-empty">
               <span>{t("session.review.noChanges")}</span>
             </div>

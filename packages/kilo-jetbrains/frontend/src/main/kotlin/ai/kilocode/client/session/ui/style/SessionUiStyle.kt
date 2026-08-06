@@ -5,7 +5,6 @@ import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.Color
-import java.awt.Insets
 
 /** Static style tokens owned by the chat session UI. */
 object SessionUiStyle {
@@ -18,12 +17,13 @@ object SessionUiStyle {
         const val GAP = 3
         const val USER_PROMPT_GAP = 10
         const val TRANSCRIPT_SCROLLBAR_PADDING = 10
-        val InnerInsets = Insets(
-            UiStyle.Gap.md(),
-            UiStyle.Gap.sm() + TRANSCRIPT_SCROLLBAR_PADDING,
-            UiStyle.Gap.sm(),
-            UiStyle.Gap.sm(),
-        )
+
+        // Unscaled base transcript insets. Base 6 == UiStyle.Gap.md, base 4 == UiStyle.Gap.sm.
+        // Left and right reserve scrollbar allowance to match the previous symmetric padding.
+        const val INNER_TOP = 6
+        const val INNER_BOTTOM = 4
+        const val INNER_HORIZONTAL = 4 + TRANSCRIPT_SCROLLBAR_PADDING
+
         const val USER_PROMPT_INDENT = 100
         const val SCROLL_INCREMENT = 48
     }
@@ -35,6 +35,33 @@ object SessionUiStyle {
             const val VERTICAL_PADDING = 7
             const val HORIZONTAL_PADDING = 12
             const val BODY_EXTRA_HEIGHT = 16
+        }
+
+        /**
+         * Single source of truth for the spacing of every session-card header (see `PartHeader`).
+         * Keep header gaps here so all cards stay aligned; do not hardcode header spacing elsewhere.
+         */
+        object Header {
+            /** Leading inset from the card edge to the first header element. */
+            fun left() = JBUI.scale(Layout.HORIZONTAL_PADDING)
+
+            /** Trailing inset from the collapse/expand arrow to the card edge. */
+            fun right() = JBUI.scale(Layout.HORIZONTAL_PADDING)
+
+            /** Gap between the leading glyph icon and the title. */
+            fun icon() = UiStyle.Gap.sm()
+
+            /** Universal gap between every element after the title. */
+            fun gap() = JBUI.scale(Layout.GAP)
+
+            /** Larger gap separating the title from the elements that follow it (one standard step above [gap]). */
+            fun title() = UiStyle.Gap.lg()
+        }
+
+        object Popup {
+            const val MAX_WIDTH = 350
+            const val WIDE_MAX_WIDTH = MAX_WIDTH * 2
+            const val MAX_HEIGHT = 450
         }
 
         internal const val BORDER_DELTA = 80
@@ -69,7 +96,7 @@ object SessionUiStyle {
 
         /** Prompt input dimensions and chrome inside the session view. */
         object Prompt {
-            const val EDITOR_LINES = 3
+            const val EDITOR_LINES = 1
             const val EDITOR_CHROME = 16
             const val SEND_BUTTON_SIZE = 24
             const val CORNER_ARC = 6
@@ -169,7 +196,17 @@ object SessionUiStyle {
         object Tool {
             const val BODY_LINES = 15
             const val TASK_LINES = 10
+            const val DIFF_LINES = 20
             const val PREVIEW_LIMIT = 20_000
+
+            /**
+             * Total unified-diff line count above which the hover popup and inline body stop building
+             * embedded editors and show an "open in a diff tab" placeholder instead. Each embedded
+             * editor holds the whole diff document, and reinitializing it walks every line on the EDT,
+             * so an uncapped large diff freezes the UI. Above this the platform diff viewer (which
+             * streams file diffs on background threads) handles it.
+             */
+            const val DIFF_MAX_LINES = 2_000
 
             fun pending(): Color = UiStyle.Colors.weak()
 

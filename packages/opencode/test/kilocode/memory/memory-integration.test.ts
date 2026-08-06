@@ -16,7 +16,7 @@ import { MemoryPaths } from "@kilocode/kilo-memory/effect/paths"
 import { MemoryEvents } from "../../../src/kilocode/memory/events"
 import type { Provider } from "../../../src/provider/provider"
 import type { InstanceContext } from "../../../src/project/instance-context"
-import { ProjectID } from "../../../src/project/schema"
+import { ProjectV2 } from "@opencode-ai/core/project"
 import { SessionID } from "../../../src/session/schema"
 import { provideTestInstance, tmpdir } from "../../fixture/fixture"
 
@@ -48,7 +48,7 @@ function ctx(dir: string): InstanceContext {
     directory: dir,
     worktree: dir,
     project: {
-      id: ProjectID.make("project"),
+      id: ProjectV2.ID.make("project"),
       worktree: dir,
       vcs: "git",
       time: { created: 0, updated: 0 },
@@ -179,7 +179,7 @@ describe("KiloMemory integration", () => {
 
   test("targeted recall metadata replaces startup memory badge marker", () => {
     const cache: MemoryMarker.Cache = {
-      marker: { type: "startup", bytes: 20, tokens: 5, count: 1, files: ["project.md"] },
+      marker: { type: "startup", bytes: 20, tokens: 5, count: 1, files: ["project.md"], items: [] },
       marked: true,
     }
 
@@ -257,10 +257,6 @@ describe("KiloMemory integration", () => {
     expect(
       events.find((event) => event.sessionID === "ses_memory_event" && event.detail?.type === "saved")?.detail?.tokens,
     ).toBeUndefined()
-    const decisions = await MemoryFiles.readDecisions(root)
-    expect(decisions).toContain('"trigger":"explicit"')
-    expect(decisions).toContain('"sessionID":"ses_memory_event"')
-    expect(decisions).toContain('"llm":false')
   })
 
   test("explicit forget reports removals without save wording", async () => {
@@ -288,9 +284,6 @@ describe("KiloMemory integration", () => {
 
     expect(events.some((event) => event.detail?.message === "Memory updated · 1 removed")).toBe(true)
     expect(events.some((event) => event.detail?.message?.includes("Memory saved"))).toBe(false)
-    const decisions = await MemoryFiles.readDecisions(root)
-    expect(decisions).toContain("explicit memory operation removed 1 entries")
-    expect(decisions).toContain("explicit memory operation matched no source memory")
   })
 
   test("environment prompt rebuilds stale session index format", async () => {
@@ -396,8 +389,8 @@ describe("KiloMemory integration", () => {
 
       expect(after.sources).toEqual(before.sources)
       expect(after.index).toBe(before.index)
-      expect(after.changes).toBe(before.changes)
-      expect(after.decisions).toBe(before.decisions)
+      expect(after.changes).toBe("")
+      expect(after.decisions).toBe("")
       expect(after.sources.project).toContain("stable_fact")
       expect(after.sources.project).not.toContain("disabled_fact")
       expect(after.sources.corrections).not.toContain("Do not correct while disabled")
@@ -430,9 +423,6 @@ describe("KiloMemory integration", () => {
       expect(shown.sources.project).toContain("- repo_style :: Repo convention: commit messages are concise.")
       expect(shown.sources.project).not.toContain("reply_style")
       expect(shown.sources.project).not.toContain("I prefer terse summaries")
-      expect(shown.decisions).toContain('"reason":"out_of_scope"')
-      expect(shown.decisions).not.toContain("reply_style")
-      expect(shown.decisions).not.toContain("I prefer terse summaries")
     })
   })
 
@@ -580,6 +570,38 @@ describe("KiloMemory integration", () => {
       KiloToolRegistry.invalidateMemoryEnabled(root)
       const removed = await build()
       expect(removed.join("\n")).not.toContain("toggle_fact")
+    })
+  })
+
+  test("memorySystem refreshes verbose marker state for each turn", async () => {
+    await using tmp = await tmpdir()
+    await withConfig(path.join(tmp.path, "global", ".kilo"), async () => {
+      const context = ctx(tmp.path)
+      await KiloMemory.enable({ ctx: context })
+      KiloSessionPrompt.clearPinnedMemory()
+
+      const first = KiloSessionPrompt.memoryCache()
+      await Effect.runPromise(
+        KiloSessionPrompt.memoryInject({
+          ctx: context,
+          sessionID: SessionID.make("ses_verbose"),
+          record: false,
+          cache: first,
+        }),
+      )
+      expect(first.verbose).toBe(false)
+
+      await KiloMemory.configure({ ctx: context, settings: { verbose: true } })
+      const second = KiloSessionPrompt.memoryCache()
+      await Effect.runPromise(
+        KiloSessionPrompt.memoryInject({
+          ctx: context,
+          sessionID: SessionID.make("ses_verbose"),
+          record: false,
+          cache: second,
+        }),
+      )
+      expect(second.verbose).toBe(true)
     })
   })
 

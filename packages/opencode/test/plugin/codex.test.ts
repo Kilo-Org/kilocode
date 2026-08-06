@@ -4,6 +4,7 @@ import {
   parseJwtClaims,
   extractAccountIdFromClaims,
   extractAccountId,
+  renderOAuthError,
   type IdTokenClaims,
 } from "../../src/plugin/openai/codex"
 
@@ -14,6 +15,14 @@ function createTestJwt(payload: object): string {
 }
 
 describe("plugin.codex", () => {
+  test("escapes provider errors in callback HTML", () => {
+    const error = `</div><script>alert("xss" & 'more')</script>`
+    const html = renderOAuthError(error)
+
+    expect(html).toContain("&lt;/div&gt;&lt;script&gt;alert(&quot;xss&quot; &amp; &#39;more&#39;)&lt;/script&gt;")
+    expect(html).not.toContain(error)
+  })
+
   describe("parseJwtClaims", () => {
     test("parses valid JWT with claims", () => {
       const payload = { email: "test@example.com", chatgpt_account_id: "acc-123" }
@@ -139,6 +148,14 @@ describe("plugin.codex", () => {
             id: "gpt-5.5",
             api: { id: "gpt-5.5" },
           } as never,
+          "gpt-5.6": {
+            id: "gpt-5.6",
+            api: { id: "gpt-5.6" },
+          } as never,
+          "gpt-5.6-sol": {
+            id: "gpt-5.6-sol",
+            api: { id: "gpt-5.6-sol" },
+          } as never,
           "gpt-5.4-mini": {
             id: "gpt-5.4-mini",
             api: { id: "gpt-5.4-mini" },
@@ -155,6 +172,8 @@ describe("plugin.codex", () => {
       } as never, { auth: { type: "oauth" } } as never)
       expect(provider).not.toHaveProperty(["gpt-5.5-pro"])
       expect(provider).toHaveProperty(["gpt-5.5"])
+      expect(provider).not.toHaveProperty(["gpt-5.6"])
+      expect(provider).toHaveProperty(["gpt-5.6-sol"])
       expect(provider).toHaveProperty(["gpt-5.4-mini"])
       expect(provider).toHaveProperty(["gpt-5.1-codex"])
       expect(provider).not.toHaveProperty(["other-model"])

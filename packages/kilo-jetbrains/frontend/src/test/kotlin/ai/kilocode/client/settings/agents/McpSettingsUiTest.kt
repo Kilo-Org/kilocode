@@ -438,8 +438,8 @@ class McpSettingsUiTest : BasePlatformTestCase() {
     }
 
     private fun flushUntil(done: () -> Boolean) = runBlocking {
-        repeat(30) {
-            delay(100)
+        repeat(300) {
+            delay(10)
             edt { UIUtil.dispatchAllInvocationEvents(); true }
             if (done()) return@runBlocking
         }

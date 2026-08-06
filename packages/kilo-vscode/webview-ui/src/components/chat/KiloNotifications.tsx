@@ -1,4 +1,4 @@
-import { Component, Show, createEffect, createMemo, createSignal } from "solid-js"
+import { Component, Show, createEffect, createMemo, createSignal, type Accessor } from "solid-js"
 import { useNotifications } from "../../context/notifications"
 import { useVSCode } from "../../context/vscode"
 import { useSession } from "../../context/session"
@@ -8,13 +8,14 @@ import { KILO_PROVIDER_ID } from "../../../../src/shared/provider-model"
 import { TelemetryEventName } from "../../../../src/services/telemetry/types"
 import { stripSubProviderPrefix } from "../shared/model-selector-utils"
 
-export const KiloNotifications: Component = () => {
+export const KiloNotifications: Component<{ sessionID?: Accessor<string | undefined> }> = (props) => {
   const { filteredNotifications, dismiss } = useNotifications()
   const vscode = useVSCode()
   const session = useSession()
   const provider = useProvider()
   const language = useLanguage()
   const [index, setIndex] = createSignal(0)
+  const sessionID = () => props.sessionID?.() ?? session.currentSessionID() ?? session.draftSessionID()
 
   const items = filteredNotifications
   const total = () => items().length
@@ -57,7 +58,7 @@ export const KiloNotifications: Component = () => {
   const canSwitchModel = createMemo(() => {
     const suggestion = suggestedModel()
     if (!suggestion) return false
-    const sel = session.selected()
+    const sel = session.selected(sessionID())
     if (sel && sel.providerID === suggestion.providerID && sel.modelID === suggestion.modelID) return false
     return true
   })
@@ -77,7 +78,7 @@ export const KiloNotifications: Component = () => {
   const handleTryModel = () => {
     const suggestion = suggestedModel()
     if (!suggestion) return
-    session.selectModel(suggestion.providerID, suggestion.modelID)
+    session.selectModel(suggestion.providerID, suggestion.modelID, sessionID())
     vscode.postMessage({
       type: "telemetry",
       event: TelemetryEventName.NOTIFICATION_CLICKED,

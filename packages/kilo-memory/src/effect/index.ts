@@ -46,7 +46,9 @@ export namespace KiloMemory {
   }
 
   export async function prepare(input: Input) {
-    return root(input)
+    const dir = root(input)
+    await MemoryFiles.cleanup(dir)
+    return dir
   }
 
   export async function status(input: Input) {
@@ -58,7 +60,7 @@ export namespace KiloMemory {
     const id = "ctx" in input ? MemoryPaths.identity({ ctx: input.ctx }) : undefined
     const result = await Memory.enable({ root: dir, id })
     await MemoryEvents.publish({
-      event: "updated",
+      event: "status",
       payload: MemoryEvents.status({
         root: dir,
         state: result.state,
@@ -108,7 +110,7 @@ export namespace KiloMemory {
 
   export async function configure(
     input: Input & {
-      settings: Partial<Pick<MemorySchema.State, "autoConsolidate">>
+      settings: Partial<Pick<MemorySchema.State, "autoConsolidate" | "verbose">>
     },
   ) {
     const result = await Memory.configure({ root: await prepare(input), settings: input.settings })

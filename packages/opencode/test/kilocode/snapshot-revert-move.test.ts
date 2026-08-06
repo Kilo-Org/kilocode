@@ -1,5 +1,5 @@
 import { expect } from "bun:test"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import fs from "fs/promises"
 import path from "path"
 import { Effect, Layer } from "effect"
@@ -7,12 +7,12 @@ import { Snapshot } from "../../src/snapshot"
 import { TestInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
-const it = testEffect(Layer.mergeAll(Snapshot.defaultLayer, AppFileSystem.defaultLayer))
+const it = testEffect(Layer.mergeAll(Snapshot.defaultLayer, FSUtil.defaultLayer))
 const fwd = (...parts: string[]) => path.join(...parts).replaceAll("\\", "/")
-const write = (file: string, content: string) => AppFileSystem.Service.use((fs) => fs.writeWithDirs(file, content))
-const read = (file: string) => AppFileSystem.Service.use((fs) => fs.readFileString(file))
-const exists = (file: string) => AppFileSystem.Service.use((fs) => fs.existsSafe(file))
-const mkdir = (dir: string) => AppFileSystem.Service.use((fs) => fs.ensureDir(dir))
+const write = (file: string, content: string) => FSUtil.Service.use((fs) => fs.writeWithDirs(file, content))
+const read = (file: string) => FSUtil.Service.use((fs) => fs.readFileString(file))
+const exists = (file: string) => FSUtil.Service.use((fs) => fs.existsSafe(file))
+const mkdir = (dir: string) => FSUtil.Service.use((fs) => fs.ensureDir(dir))
 
 it.instance(
   "restores both paths after moving a file",

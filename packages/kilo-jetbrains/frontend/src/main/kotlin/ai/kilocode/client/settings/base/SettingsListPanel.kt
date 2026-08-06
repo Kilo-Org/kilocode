@@ -65,7 +65,7 @@ internal abstract class SettingsListPanel(
         checkEdt()
         search.textEditor.emptyText.text = searchPlaceholder()
         view.setEmptyText(emptyText())
-        content.add(header(), BorderLayout.NORTH)
+        setHeader(header())
         setContent(view)
     }
 

@@ -3,11 +3,15 @@
 // tool propagates each child session's total cost up to the parent's
 // tool-wrapper assistant message (#6321).
 
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { describe, expect } from "bun:test"
 import { Effect } from "effect"
+import { Database } from "@opencode-ai/core/database/database"
 import { aggregateSessionStats } from "../../src/cli/cmd/stats"
 import { MessageV2 } from "../../src/session/message-v2"
-import { ProviderID, ModelID } from "../../src/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { Session } from "../../src/session/session"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import * as Log from "@opencode-ai/core/util/log"
@@ -15,11 +19,11 @@ import { testEffect } from "../lib/effect"
 
 void Log.init({ print: false })
 
-const it = testEffect(Session.defaultLayer)
+const it = testEffect(LayerNode.compile(LayerNode.group([Session.node, SessionProjector.node, Database.node])))
 
 const ref = {
-  providerID: ProviderID.make("test"),
-  modelID: ModelID.make("test-model"),
+  providerID: ProviderV2.ID.make("test"),
+  modelID: ModelV2.ID.make("test-model"),
 }
 
 function assistant(sessionID: SessionID, parentID: MessageID, cost: number): MessageV2.Assistant {

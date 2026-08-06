@@ -10,6 +10,7 @@ import { ModelSelectorBase } from "../components/shared/ModelSelector"
 import { SessionContext } from "../context/session"
 import type { EnrichedModel } from "../context/provider"
 import type { ModelSelection } from "../types/messages"
+import { Markdown } from "@kilocode/kilo-ui/markdown"
 
 const meta: Meta = {
   title: "Shared",
@@ -17,6 +18,27 @@ const meta: Meta = {
 }
 export default meta
 type Story = StoryObj
+
+export const MarkdownMermaid: Story = {
+  name: "Markdown - Mermaid diagram",
+  render: () => (
+    <StoryProviders>
+      <Markdown
+        text={`# Flow
+
+\`\`\`mermaid
+flowchart TD
+  A[Prompt] --> B{Needs tools?}
+  B -->|Yes| C[Run tool]
+  B -->|No| D[Respond]
+  C --> D
+\`\`\`
+
+Rendered after the diagram.`}
+      />
+    </StoryProviders>
+  ),
+}
 
 // ---------------------------------------------------------------------------
 // ModelSelector
@@ -97,6 +119,28 @@ export const ModelSelectorSelectedFavorite: Story = {
     const session = {
       ...mockSessionValue(),
       favoriteModels: () => [{ providerID: "kilo", modelID: "alpha" }],
+    }
+
+    return (
+      <StoryProviders>
+        <SessionContext.Provider value={session as any}>
+          <AccessibleModelSelector />
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+export const ModelSelectorMostUsed: Story = {
+  name: "ModelSelector - most used suggestions",
+  render: () => {
+    const session = {
+      ...mockSessionValue(),
+      modelUsageHistory: () => ({
+        "kilo/alpha": { count: 3, lastUsed: 100 },
+        "kilo/bravo": { count: 12, lastUsed: 200 },
+        "nvidia/nova": { count: 7, lastUsed: 300 },
+      }),
     }
 
     return (

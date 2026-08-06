@@ -1,22 +1,34 @@
 // kilocode_change - new file
 import { Bus } from "@/bus"
+import { InstanceState } from "@/effect/instance-state"
 import { AgentManagerEvent, type AgentManagerTask } from "@/kilocode/agent-manager/event"
+import { AgentManager, HostError } from "@/kilocode/agent-manager/service"
+import type { Result } from "@/kilocode/agent-manager/protocol"
+import * as SandboxInheritance from "@/kilocode/sandbox/inheritance"
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order"
 import { Provider } from "@/provider/provider"
+import { SessionID } from "@/session/schema"
+import * as ToolJsonSchema from "@/tool/json-schema"
 import { Tool } from "@/tool/tool"
 import { Effect, Schema } from "effect"
 import { matchesQuery } from "./model-search"
 import DESCRIPTION from "./agent-manager.txt"
 
 const Task = Schema.Struct({
-  prompt: Schema.optional(Schema.String).annotate({ description: "Initial prompt to send to the new session" }),
-  name: Schema.optional(Schema.String).annotate({ description: "Short display name for the Agent Manager card" }),
-  branchName: Schema.optional(Schema.String).annotate({ description: "Git branch name seed for worktree mode" }),
-  model: Schema.optional(Schema.String).annotate({
+  prompt: Schema.optional(Schema.NullOr(Schema.String)).annotate({
+    description: "Initial prompt to send to the new session",
+  }),
+  name: Schema.optional(Schema.NullOr(Schema.String)).annotate({
+    description: "Short display name for the Agent Manager card",
+  }),
+  branchName: Schema.optional(Schema.NullOr(Schema.String)).annotate({
+    description: "Git branch name seed for worktree mode",
+  }),
+  model: Schema.optional(Schema.NullOr(Schema.String)).annotate({
     description:
       "Optional model override from agent_manager_models (e.g. 'Claude Opus 4.1'). Omit unless the user requests a different model. Agent Manager otherwise inherits the current turn's model. A qualified provider/model ID is also accepted to force a specific provider.",
   }),
-  variant: Schema.optional(Schema.String).annotate({
+  variant: Schema.optional(Schema.NullOr(Schema.String)).annotate({
     description:
       "Optional reasoning variant override from agent_manager_models. Specify it without model to override the inherited model's variant. Omit both to inherit the current turn's selection.",
   }),
@@ -34,11 +46,11 @@ const Task = Schema.Struct({
   ),
 )
 
-export const Params = Schema.Struct({
+const StartParams = Schema.Struct({
   mode: Schema.Literals(["worktree", "local"]).annotate({
     description: "Use worktree for isolated git worktrees, or local for same-directory Agent Manager sessions",
   }),
-  versions: Schema.optional(Schema.Boolean).annotate({
+  versions: Schema.optional(Schema.NullOr(Schema.Boolean)).annotate({
     description:
       "Set true only when tasks are alternative versions of the same work to compare. Omit or false for independent sessions.",
   }),
@@ -47,10 +59,88 @@ export const Params = Schema.Struct({
     .annotate({ description: "Agent Manager sessions to start" }),
 })
 
+const ListParams = Schema.Struct({
+  action: Schema.Literal("list").annotate({
+    description:
+      "Read the current Agent Manager sections, worktrees, and sessions before any assignment. This is the source of truth for section and session IDs.",
+  }),
+  filter: Schema.optional(
+    Schema.NullOr(
+      Schema.Struct({
+        sectionIDs: Schema.optional(Schema.Array(Schema.String).check(Schema.isMaxLength(100))),
+        states: Schema.optional(
+          Schema.Array(Schema.Literals(["idle", "busy", "retry", "offline", "waiting"])).check(Schema.isMaxLength(5)),
+        ),
+      }),
+    ),
+  ).annotate({
+    description: "Optional list filter. Omit this for an unfiltered overview when discovering assignments.",
+  }),
+})
+
+const PromptParams = Schema.Struct({
+  action: Schema.Literal("prompt"),
+  sessionID: SessionID,
+  prompt: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(100_000)).check(
+    Schema.makeFilter((value) => (value.trim() ? undefined : "Prompt must not be empty")),
+  ),
+})
+
+const StopParams = Schema.Struct({
+  action: Schema.Literal("stop"),
+  sessionID: SessionID,
+})
+
+const MoveParams = Schema.Struct({
+  action: Schema.Literal("move").annotate({
+    description: "Move exactly one managed worktree by targeting one of its session IDs returned by action=list.",
+  }),
+  sessionID: SessionID.annotate({
+    description: "Session ID returned by action=list. Do not use a worktree name, branch, or section name.",
+  }),
+  sectionID: Schema.NullOr(Schema.String).annotate({
+    description: "Section ID returned by action=list. Use null to unassign the worktree from its current section.",
+  }),
+})
+
+export const Params = Schema.Union([StartParams, ListParams, PromptParams, StopParams, MoveParams])
+
+const WireParams = Schema.Struct({
+  mode: Schema.optional(StartParams.fields.mode),
+  versions: Schema.optional(StartParams.fields.versions),
+  tasks: Schema.optional(StartParams.fields.tasks),
+  action: Schema.optional(
+    Schema.Literals(["list", "prompt", "stop", "move"]).annotate({
+      description:
+        "Use list first to discover IDs and assignments. Use move only after list, once per worktree. Never edit .kilo/agent-manager.json for these operations.",
+    }),
+  ),
+  filter: Schema.optional(ListParams.fields.filter),
+  sessionID: Schema.optional(
+    Schema.String.annotate({ description: "For move, use a session ID returned by action=list (IDs start with ses_)." }),
+  ),
+  prompt: Schema.optional(PromptParams.fields.prompt),
+  sectionID: Schema.optional(MoveParams.fields.sectionID),
+})
+
 type Input = Schema.Schema.Type<typeof Task>
 type Selected = { task?: AgentManagerTask; error?: string }
 type Candidate = { providerID: string; model: Provider.Info["models"][string] }
 type Source = { model: NonNullable<AgentManagerTask["model"]>; variant?: string }
+
+function abort(signal: AbortSignal) {
+  return Effect.callback<never, HostError>((resume) => {
+    const err = () => new HostError({ code: "cancelled", detail: "The Agent Manager tool call was cancelled" })
+    if (signal.aborted) return resume(Effect.fail(err()))
+    const handler = () => resume(Effect.fail(err()))
+    signal.addEventListener("abort", handler, { once: true })
+    return Effect.sync(() => signal.removeEventListener("abort", handler))
+  })
+}
+
+function run(effect: Effect.Effect<Result, HostError>, signal: AbortSignal) {
+  return effect.pipe(Effect.raceFirst(abort(signal)), Effect.orDie)
+}
 
 function candidates(providers: Record<string, Provider.Info>): Candidate[] {
   return Object.values(providers).flatMap((provider) =>
@@ -110,9 +200,9 @@ function select(
   index: number,
 ): Selected {
   const base = {
-    ...(task.prompt !== undefined ? { prompt: task.prompt } : {}),
-    ...(task.name !== undefined ? { name: task.name } : {}),
-    ...(task.branchName !== undefined ? { branchName: task.branchName } : {}),
+    ...(task.prompt != null ? { prompt: task.prompt } : {}),
+    ...(task.name != null ? { name: task.name } : {}),
+    ...(task.branchName != null ? { branchName: task.branchName } : {}),
   }
   const value = task.model?.trim()
   const variant = task.variant?.trim()
@@ -182,19 +272,132 @@ function select(
 
 export const AgentManagerTool = Tool.define<
   typeof Params,
-  { requestID?: string; count: number },
-  Bus.Service | Provider.Service,
+  { action: "start" | "list" | "prompt" | "stop" | "move"; requestID?: string; count?: number; sessionID?: string },
+  AgentManager.Service | Bus.Service | Provider.Service,
   "agent_manager"
 >(
   "agent_manager",
   Effect.gen(function* () {
     const bus = yield* Bus.Service
+    const host = yield* AgentManager.Service
     const provider = yield* Provider.Service
+    const wire = ToolJsonSchema.fromSchema(WireParams)
+    const section = wire.properties?.sectionID
+    if (section && typeof section === "object" && wire.properties) {
+      wire.properties.sectionID = {
+        anyOf: [{ type: "string", minLength: 1 }, { type: "null" }],
+        description: "Section ID returned by action=list. Use null to unassign the worktree from its current section.",
+      }
+    }
     return {
       description: DESCRIPTION,
       parameters: Params,
+      jsonSchema: wire,
       execute: (params, ctx) =>
         Effect.gen(function* () {
+          if ("action" in params) {
+            if (params.action === "list") {
+              yield* ctx.ask({
+                permission: "agent_manager",
+                patterns: ["overview"],
+                always: ["overview"],
+                metadata: { action: "list" },
+              })
+              const result = yield* run(
+                host.request({ operation: "overview", sessionID: ctx.sessionID, filter: params.filter ?? undefined }),
+                ctx.abort,
+              )
+              if (result.operation !== "overview")
+                return yield* Effect.die(new Error("Agent Manager host returned the wrong result type"))
+              const count =
+                (result.overview.local?.sessions.length ?? 0) +
+                result.overview.ungrouped.length +
+                result.overview.sections.reduce((sum, section) => sum + section.worktrees.length, 0)
+              return {
+                title: "Agent Manager overview",
+                output: JSON.stringify(
+                  {
+                    instructions:
+                      "This overview is the source of truth. Use sections[].id as sectionID and sessions[].id/session.id as sessionID for action=move. Do not edit .kilo/agent-manager.json.",
+                    ...result.overview,
+                  },
+                  null,
+                  2,
+                ),
+                metadata: { action: "list", count },
+              }
+            }
+            if (params.action === "prompt") {
+              yield* ctx.ask({
+                permission: "agent_manager",
+                patterns: ["prompt"],
+                always: ["prompt"],
+                metadata: { action: "prompt", sessionID: params.sessionID },
+              })
+              const result = yield* run(
+                host.request({
+                  operation: "prompt",
+                  sessionID: ctx.sessionID,
+                  targetSessionID: params.sessionID,
+                  prompt: params.prompt.trim(),
+                }),
+                ctx.abort,
+              )
+              if (result.operation !== "prompt")
+                return yield* Effect.die(new Error("Agent Manager host returned the wrong result type"))
+              return {
+                title: "Prompt delivered",
+                output: `Delivered the prompt to Agent Manager session ${result.sessionID}. The session accepted it asynchronously.`,
+                metadata: { action: "prompt", sessionID: result.sessionID },
+              }
+            }
+            if (params.action === "stop") {
+              yield* ctx.ask({
+                permission: "agent_manager",
+                patterns: ["stop"],
+                always: ["stop"],
+                metadata: { action: "stop", sessionID: params.sessionID },
+              })
+              const result = yield* run(
+                host.request({
+                  operation: "stop",
+                  sessionID: ctx.sessionID,
+                  targetSessionID: params.sessionID,
+                }),
+                ctx.abort,
+              )
+              if (result.operation !== "stop")
+                return yield* Effect.die(new Error("Agent Manager host returned the wrong result type"))
+              return {
+                title: "Session stopped",
+                output: `Stopped Agent Manager session ${result.sessionID} and removed it from Agent Manager.`,
+                metadata: { action: "stop", sessionID: result.sessionID },
+              }
+            }
+            yield* ctx.ask({
+              permission: "agent_manager",
+              patterns: ["move"],
+              always: ["move"],
+              metadata: { action: "move", sessionID: params.sessionID, sectionID: params.sectionID },
+            })
+            const result = yield* run(
+              host.request({
+                operation: "move",
+                sessionID: ctx.sessionID,
+                targetSessionID: params.sessionID,
+                sectionID: params.sectionID,
+              }),
+              ctx.abort,
+            )
+            if (result.operation !== "move")
+              return yield* Effect.die(new Error("Agent Manager host returned the wrong result type"))
+            return {
+              title: "Session moved",
+              output: `Moved Agent Manager session ${result.sessionID} to ${result.sectionID ?? "Ungrouped"}.`,
+              metadata: { action: "move", sessionID: result.sessionID, sectionID: result.sectionID },
+            }
+          }
+
           const msg = KiloSessionMessageOrder.latest(ctx.messages).user
           const source: Source | undefined = msg
             ? {
@@ -224,7 +427,7 @@ export const AgentManagerTool = Tool.define<
                 ...errors,
                 "Use agent_manager_models to find available model names and reasoning variants.",
               ].join("\n"),
-              metadata: { count: 0 },
+              metadata: { action: "start", count: 0 },
             }
           }
           const tasks = selected.flatMap((item) => (item.task ? [item.task] : []))
@@ -237,11 +440,18 @@ export const AgentManagerTool = Tool.define<
           })
 
           const requestID = `am-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+          const directory = yield* InstanceState.directory
+          const sandboxInheritanceToken = SandboxInheritance.issue({
+            sessionID: ctx.sessionID,
+            directory,
+            count: params.tasks.length,
+          })
           yield* bus.publish(AgentManagerEvent.Start, {
             requestID,
             sessionID: ctx.sessionID,
+            sandboxInheritanceToken,
             mode: params.mode,
-            versions: params.versions,
+            ...(params.versions != null ? { versions: params.versions } : {}),
             tasks,
           })
 
@@ -265,7 +475,7 @@ export const AgentManagerTool = Tool.define<
               ...(resolved.length ? ["Resolved models:", ...resolved] : []),
               "The VS Code extension will create the sessions asynchronously and show progress in Agent Manager.",
             ].join("\n"),
-            metadata: { requestID, count: tasks.length },
+            metadata: { action: "start", requestID, count: tasks.length },
           }
         }),
     }

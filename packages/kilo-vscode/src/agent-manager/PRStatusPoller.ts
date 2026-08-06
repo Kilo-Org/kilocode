@@ -2,6 +2,7 @@ import type { ExecFileOptionsWithStringEncoding } from "child_process"
 import type { Worktree } from "./WorktreeStateManager"
 import type { PRStatus, PRCheck, PRComment, CheckStatus, AggregateCheckStatus, PRState, ReviewDecision } from "./types"
 import { execWithShellEnv } from "./shell-env"
+import { execGhRead } from "./gh"
 import { classifyPRError } from "./git-import"
 import type { Semaphore } from "./semaphore"
 
@@ -38,6 +39,11 @@ export class PRStatusPoller {
   private lastFullSync = 0 // timestamp of last full (all-worktree) sync
   private readonly intervalMs: number
   private readonly semaphore: Semaphore | undefined
+  private generation = 0
+
+  private stale(generation: number): boolean {
+    return generation !== this.generation
+  }
 
   constructor(private readonly options: PRStatusPollerOptions) {
     this.intervalMs = options.intervalMs ?? 15_000
@@ -51,6 +57,14 @@ export class PRStatusPoller {
     options?: Omit<ExecFileOptionsWithStringEncoding, "encoding">,
   ): Promise<{ stdout: string; stderr: string }> {
     const invoke = () => execWithShellEnv(cmd, args, options)
+    return this.semaphore ? this.semaphore.run(invoke) : invoke()
+  }
+
+  private gh(
+    args: string[],
+    options?: Omit<ExecFileOptionsWithStringEncoding, "encoding">,
+  ): Promise<{ stdout: string; stderr: string }> {
+    const invoke = () => execGhRead(args, options)
     return this.semaphore ? this.semaphore.run(invoke) : invoke()
   }
 
@@ -87,6 +101,7 @@ export class PRStatusPoller {
   }
 
   stop(): void {
+    this.generation++
     this.active = false
     if (this.timer) {
       clearTimeout(this.timer)
@@ -144,7 +159,11 @@ export class PRStatusPoller {
     if (!this.active || !this.visible) return Promise.resolve()
     if (this.busy) return Promise.resolve()
     this.busy = true
-    return this.fetchAll().finally(() => {
+    const generation = this.generation
+    return this.fetchAll(generation).finally(() => {
+      // stop() already reset busy and bumped the generation, so a stale
+      // fetch must not touch busy: a restarted poll may own it right now.
+      if (this.stale(generation)) return
       this.busy = false
       this.schedule()
     })
@@ -156,7 +175,7 @@ export class PRStatusPoller {
       return this.ghAvailable
     }
     try {
-      await this.shell("gh", ["--version"], { timeout: 5_000 })
+      await this.gh(["--version"], { timeout: 5_000 })
       this.ghAvailable = true
     } catch {
       this.ghAvailable = false
@@ -165,8 +184,9 @@ export class PRStatusPoller {
     return this.ghAvailable
   }
 
-  private async fetchAll(): Promise<void> {
+  private async fetchAll(generation = this.generation): Promise<void> {
     if (!(await this.probeGh())) {
+      if (generation !== this.generation) return
       // De-duplicate: only emit gh_missing once, not every poll cycle
       if (this.lastError !== "gh_missing") {
         this.lastError = "gh_missing"
@@ -196,10 +216,11 @@ export class PRStatusPoller {
       return
     }
 
-    const thunks = targets.map((wt) => () => this.fetchOne(wt.id))
+    const thunks = targets.map((wt) => () => this.fetchOne(wt.id, generation))
     const results = full
       ? await settled(thunks, FULL_SYNC_CONCURRENCY)
       : await Promise.allSettled(thunks.map((fn) => fn()))
+    if (this.stale(generation)) return
     const ok = results.every((r) => r.status === "fulfilled")
     if (ok) {
       this.failures = 0
@@ -208,16 +229,14 @@ export class PRStatusPoller {
     this.failures++
   }
 
-  private async fetchOne(worktreeId: string): Promise<void> {
-    const worktrees = this.options.getWorktrees()
-    const wt = worktrees.find((w) => w.id === worktreeId)
+  private async fetchOne(worktreeId: string, generation = this.generation): Promise<void> {
+    const wt = this.target(worktreeId)
     if (!wt) return
-
-    if (!this.options.getWorkspaceRoot()) return
 
     try {
       const pr = await this.cachedFetchPR(wt.branch, wt.path)
-      if (!pr) {
+      if (!pr || this.stale(generation)) {
+        if (this.stale(generation)) return
         const hash = `${worktreeId}:none`
         if (this.lastHash.get(worktreeId) === hash) return
         this.lastHash.set(worktreeId, hash)
@@ -229,6 +248,7 @@ export class PRStatusPoller {
         this.fetchChecks(pr.number, wt.path),
         this.activeWorktreeId === worktreeId ? this.fetchComments(pr.number, wt.path) : undefined,
       ])
+      if (this.stale(generation)) return
 
       const status: PRStatus = {
         number: pr.number,
@@ -249,21 +269,26 @@ export class PRStatusPoller {
 
       this.options.onStatus(worktreeId, status)
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      const kind = classifyPRError(msg)
-      this.options.log(`PR fetch failed for ${wt.branch}:`, msg)
-
-      const errKey = kind === "gh_missing" ? "gh_missing" : kind === "gh_auth" ? "gh_auth" : "fetch_failed"
-      if (kind === "gh_missing") this.ghAvailable = false
-
-      // De-duplicate: only emit if the error state changed for this worktree
-      const hash = `${worktreeId}:error:${errKey}`
-      if (this.lastHash.get(worktreeId) !== hash) {
-        this.lastHash.set(worktreeId, hash)
-        this.options.onStatus(worktreeId, null, errKey)
-      }
+      this.handleError(worktreeId, wt.branch, err)
       throw err // propagate so fetchAll can track failures for backoff
     }
+  }
+
+  private handleError(worktreeId: string, branch: string, err: unknown): void {
+    const msg = err instanceof Error ? err.message : String(err)
+    const kind = classifyPRError(msg)
+    this.options.log(`PR fetch failed for ${branch}:`, msg)
+    const key = kind === "gh_missing" ? "gh_missing" : kind === "gh_auth" ? "gh_auth" : "fetch_failed"
+    if (kind === "gh_missing") this.ghAvailable = false
+    const hash = `${worktreeId}:error:${key}`
+    if (this.lastHash.get(worktreeId) === hash) return
+    this.lastHash.set(worktreeId, hash)
+    this.options.onStatus(worktreeId, null, key)
+  }
+
+  private target(worktreeId: string): Worktree | undefined {
+    if (!this.options.getWorkspaceRoot()) return
+    return this.options.getWorktrees().find((worktree) => worktree.id === worktreeId)
   }
 
   private static readonly PR_JSON_FIELDS =
@@ -295,7 +320,7 @@ export class PRStatusPoller {
       if (branch) args.push(branch)
       args.push("--json", PRStatusPoller.PR_JSON_FIELDS)
 
-      const { stdout } = await this.shell("gh", args, { cwd, timeout: 15_000 })
+      const { stdout } = await this.gh(args, { cwd, timeout: 15_000 })
       return parsePRResult(stdout)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
@@ -311,8 +336,7 @@ export class PRStatusPoller {
       const head = sha.trim()
       if (!head) return null
 
-      const { stdout } = await this.shell(
-        "gh",
+      const { stdout } = await this.gh(
         [
           "pr",
           "list",
@@ -353,8 +377,7 @@ export class PRStatusPoller {
     items: PRCheck[]
   }> {
     try {
-      const { stdout } = await this.shell(
-        "gh",
+      const { stdout } = await this.gh(
         ["pr", "checks", String(prNumber), "--json", "name,state,link,startedAt,completedAt"],
         { cwd, timeout: 15_000 },
       )
@@ -391,7 +414,7 @@ export class PRStatusPoller {
     if (this.cachedRepo && this.cachedRepo.cwd === cwd) {
       return this.cachedRepo
     }
-    const { stdout } = await this.shell("gh", ["repo", "view", "--json", "owner,name"], {
+    const { stdout } = await this.gh(["repo", "view", "--json", "owner,name"], {
       cwd,
       timeout: 10_000,
     })
@@ -431,8 +454,7 @@ export class PRStatusPoller {
         }
       }`
 
-      const { stdout } = await this.shell(
-        "gh",
+      const { stdout } = await this.gh(
         [
           "api",
           "graphql",

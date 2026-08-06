@@ -156,13 +156,15 @@ describe("memory marker metadata", () => {
       tokens: 4,
       count: 2,
       files: ["project.md", "environment.md"],
+      items: ["first memory", "second memory"],
     }
 
-    expect(MemoryMarkerMeta.fromParts([{ type: "text", metadata: MemoryMarkerMeta.metadata(marker) }])).toEqual({
+    expect(MemoryMarkerMeta.fromParts([{ type: "text", metadata: MemoryMarkerMeta.metadata(marker, true) }])).toEqual({
       type: "recall",
       tokens: 4,
       count: 2,
       files: ["project.md", "environment.md"],
+      items: ["first memory", "second memory"],
     })
   })
 
@@ -176,22 +178,97 @@ describe("memory marker metadata", () => {
       tokens: 3,
       count: 1,
       files: ["project.md"],
+      items: [],
     })
   })
 
   test("builds recall metadata from sources", () => {
     expect(
       MemoryMarkerMeta.fromRecall({
-        output: "remembered",
+        output: "record id=remembered source=project.md\ntext: remembered",
         metadata: { sources: ["project.md", "project.md"], count: 1 },
         tokens: 3,
       }),
     ).toEqual({
       type: "recall",
-      bytes: Buffer.byteLength("remembered"),
+      bytes: Buffer.byteLength("record id=remembered source=project.md\ntext: remembered"),
       tokens: 3,
       count: 1,
       files: ["project.md"],
+      items: ["remembered"],
     })
+  })
+
+  test("extracts display text from typed and digest recall records", () => {
+    const output = [
+      "record id=style source=project.md",
+      "text: project_style :: Use type=module in package.json.",
+      "record id=session source=sessions/session.md",
+      'text: session=ses_123 topic="memory UX" 2026-07-15T10:00:00Z :: Restore the database icon.',
+    ].join("\n")
+
+    expect(
+      MemoryMarkerMeta.fromRecall({
+        output,
+        metadata: { sources: ["project.md", "sessions/session.md"], count: 2 },
+        tokens: 12,
+      })?.items,
+    ).toEqual(["Use type=module in package.json.", "Restore the database icon."])
+  })
+
+  test("does not retain startup context snippets", () => {
+    const text = Array.from(
+      { length: 6 },
+      (_, index) => `record id=${index} source=project.md\ntext: ${"x".repeat(121)}`,
+    ).join("\n")
+    expect(MemoryMarkerMeta.fromBlocks([{ text, bytes: Buffer.byteLength(text), estimatedTokens: 8 }])).toMatchObject({
+      type: "startup",
+      count: 6,
+      files: ["project.md"],
+      items: [],
+    })
+  })
+
+  test("persists recall snippets only in verbose mode", () => {
+    const marker: MemoryMarkerMeta.Info = {
+      type: "recall",
+      bytes: 10,
+      tokens: 4,
+      count: 1,
+      files: ["project.md"],
+      items: ["private memory"],
+    }
+
+    expect(MemoryMarkerMeta.metadata(marker).kiloMemory).not.toHaveProperty("items")
+    expect(MemoryMarkerMeta.metadata(marker, true).kiloMemory).toHaveProperty("items", ["private memory"])
+  })
+
+  test("bounds recall snippets without splitting surrogate pairs", () => {
+    const text = Array.from(
+      { length: 6 },
+      (_, index) => `record id=${index} source=project.md\ntext: ${"x".repeat(119)}😀z`,
+    ).join("\n")
+    const marker = MemoryMarkerMeta.fromRecall({
+      output: text,
+      metadata: { sources: ["project.md"], count: 6 },
+      tokens: 8,
+    })
+
+    expect(marker?.items).toEqual(Array.from({ length: 5 }, () => `${"x".repeat(119)}😀`))
+  })
+
+  test("shows recall snippets only when verbose", () => {
+    const recall: MemoryMarkerMeta.Decoded = {
+      type: "recall",
+      tokens: 4,
+      count: 1,
+      files: ["project.md"],
+      items: ["remembered"],
+    }
+    const startup = { ...recall, type: "startup" as const }
+
+    expect(MemoryMarkerMeta.snippets(recall, false)).toEqual([])
+    expect(MemoryMarkerMeta.snippets(startup, true)).toEqual([])
+    expect(MemoryMarkerMeta.snippets(recall, true)).toEqual(["remembered"])
   })
 })

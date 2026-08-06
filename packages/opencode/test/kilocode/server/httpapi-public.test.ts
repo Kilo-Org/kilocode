@@ -45,6 +45,19 @@ describe("Kilo PublicApi OpenAPI contract", () => {
     expect(spec.info.description).toBe("kilo api")
   })
 
+  test("includes legacy Kilo events in the generated SDK contract", () => {
+    const spec = JSON.stringify(OpenApi.fromApi(PublicApi))
+    for (const type of [
+      "suggestion.shown",
+      "session.network.asked",
+      "background_process.updated",
+      "interactive_terminal.updated",
+      "indexing.status",
+    ]) {
+      expect(spec).toContain(type)
+    }
+  })
+
   test("constrains embedding model metadata", () => {
     const accepts = (dimension: number, scoreThreshold: number) =>
       Result.isSuccess(
@@ -223,5 +236,14 @@ describe("Kilo PublicApi OpenAPI contract", () => {
     const body = spec.paths[KiloGatewayPaths.audioTranscriptions]?.post?.requestBody as Body | undefined
     const schema = body?.content?.["application/json"]?.schema
     expect(schema?.properties?.prompt).toEqual({ type: "string" })
+  })
+
+  test("documents the transcription model catalog route", () => {
+    const spec = OpenApi.fromApi(PublicApi)
+    const route = spec.paths[KiloGatewayPaths.transcriptionModels]?.get
+    const query = (route?.parameters as Parameter[] | undefined)?.map((item) => item.name)
+
+    expect(query).toEqual(["directory", "workspace"])
+    expect(route?.responses?.["200"]?.content?.["application/json"]?.schema).toMatchObject({ type: "array" })
   })
 })

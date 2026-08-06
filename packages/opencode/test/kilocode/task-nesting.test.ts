@@ -1,5 +1,8 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { afterEach, describe, expect, test } from "bun:test"
-import { Effect, Exit, Layer } from "effect"
+import { Effect, Exit } from "effect"
+import { Database } from "@opencode-ai/core/database/database"
 import { Agent } from "../../src/agent/agent"
 import { BackgroundJob } from "../../src/background/job"
 import { Bus } from "../../src/bus"
@@ -13,9 +16,10 @@ import { MessageV2 } from "../../src/session/message-v2"
 import type { SessionPrompt } from "../../src/session/prompt"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { BackgroundProcess } from "../../src/kilocode/background-process"
-import { Shell } from "../../src/shell/shell"
+import { Shell } from "@opencode-ai/core/shell"
 import path from "path"
-import { ModelID, ProviderID } from "../../src/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { Provider } from "../../src/provider/provider"
 import { Permission } from "../../src/permission"
 import { TaskTool, type TaskPromptOps } from "../../src/tool/task"
@@ -27,24 +31,28 @@ import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
 const ref = {
-  providerID: ProviderID.make("test"),
-  modelID: ModelID.make("test-model"),
+  providerID: ProviderV2.ID.make("test"),
+  modelID: ModelV2.ID.make("test-model"),
 }
 
 const it = testEffect(
-  Layer.mergeAll(
-    Agent.defaultLayer,
-    BackgroundJob.defaultLayer,
-    Bus.defaultLayer,
-    Config.defaultLayer,
-    RuntimeFlags.layer(),
-    SessionRunState.defaultLayer,
-    SessionStatus.defaultLayer,
-    CrossSpawnSpawner.defaultLayer,
-    Session.defaultLayer,
-    Truncate.defaultLayer,
-    Provider.defaultLayer,
-    ToolRegistry.defaultLayer,
+  LayerNode.compile(
+    LayerNode.group([
+      Agent.node,
+      BackgroundJob.node,
+      Bus.node,
+      Config.node,
+      RuntimeFlags.node,
+      SessionRunState.node,
+      SessionStatus.node,
+      CrossSpawnSpawner.node,
+      Session.node,
+      SessionProjector.node,
+      Truncate.node,
+      Provider.node,
+      ToolRegistry.node,
+      Database.node,
+    ]),
   ),
 )
 

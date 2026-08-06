@@ -9,6 +9,7 @@ import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
+import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.layout.Align
@@ -28,11 +29,9 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.UIUtil
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import java.awt.BorderLayout
 import java.awt.Cursor
 import java.awt.event.KeyEvent
@@ -49,7 +48,7 @@ import javax.swing.event.ListDataListener
 
 @Suppress("UnstableApiUsage")
 class HistoryControllerTest : BasePlatformTestCase() {
-    private lateinit var scope: CoroutineScope
+    private lateinit var coroutines: TestCoroutines
     private lateinit var parent: Disposable
     private lateinit var rpc: FakeSessionRpcApi
     private lateinit var sessions: KiloSessionService
@@ -57,11 +56,11 @@ class HistoryControllerTest : BasePlatformTestCase() {
 
     override fun setUp() {
         super.setUp()
-        scope = CoroutineScope(SupervisorJob())
+        coroutines = TestCoroutines()
         parent = Disposer.newDisposable("history")
         rpc = FakeSessionRpcApi()
-        sessions = KiloSessionService(project, scope, rpc)
-        val workspaces = KiloWorkspaceService(scope, FakeWorkspaceRpcApi().also {
+        sessions = KiloSessionService(project, coroutines.scope, rpc)
+        val workspaces = KiloWorkspaceService(coroutines.scope, FakeWorkspaceRpcApi().also {
             it.state.value = KiloWorkspaceStateDto(status = KiloWorkspaceStatusDto.READY)
         })
         workspace = workspaces.workspace("/test")
@@ -70,7 +69,7 @@ class HistoryControllerTest : BasePlatformTestCase() {
     override fun tearDown() {
         try {
             Disposer.dispose(parent)
-            scope.cancel()
+            coroutines.close(::pump)
         } finally {
             super.tearDown()
         }
@@ -787,7 +786,7 @@ class HistoryControllerTest : BasePlatformTestCase() {
     fun `test cloud git url resolves once across overlapping reloads`() {
         rpc.cloud += cloud("cloud_1", "Cloud One")
         val calls = AtomicInteger()
-        val controller = HistoryController(sessions, workspace, scope, gitUrlProvider = {
+        val controller = HistoryController(sessions, workspace, coroutines.scope, gitUrlProvider = {
             calls.incrementAndGet()
             Thread.sleep(100)
             "git@github.com:test/repo.git"
@@ -795,7 +794,7 @@ class HistoryControllerTest : BasePlatformTestCase() {
 
         controller.reloadCloud()
         controller.reloadCloud()
-        flush()
+        waitFor { rpc.cloudCalls.size == 2 }
 
         assertEquals(1, calls.get())
         assertEquals(2, rpc.cloudCalls.size)
@@ -876,29 +875,37 @@ class HistoryControllerTest : BasePlatformTestCase() {
         assertFalse(panel.repoOnlySelected())
     }
 
-    private fun controller() = HistoryController(sessions, workspace, scope)
+    private fun controller() = HistoryController(sessions, workspace, coroutines.scope, io = coroutines.dispatcher)
 
     private fun telemetryController(events: MutableList<Pair<String, Map<String, String>>>) = HistoryController(
         sessions,
         workspace,
-        scope,
+        coroutines.scope,
         telemetry = { event, props -> events.add(event to props) },
+        io = coroutines.dispatcher,
     )
 
     private fun controllerWithGit(url: String?) = HistoryController(
         sessions,
         workspace,
-        scope,
+        coroutines.scope,
         gitUrlProvider = { url },
+        io = coroutines.dispatcher,
     )
 
-    private fun controller(opened: MutableList<String>) = HistoryController(sessions, workspace, scope, open = { open ->
-        val id = when (open) {
-            is SessionRef.Local -> open.id
-            is SessionRef.Cloud -> "cloud:${open.id}"
-        }
-        opened.add(id)
-    })
+    private fun controller(opened: MutableList<String>) = HistoryController(
+        sessions,
+        workspace,
+        coroutines.scope,
+        open = { open ->
+            val id = when (open) {
+                is SessionRef.Local -> open.id
+                is SessionRef.Cloud -> "cloud:${open.id}"
+            }
+            opened.add(id)
+        },
+        io = coroutines.dispatcher,
+    )
 
     private class FakeManager : SessionManager {
         override fun newSession() {}
@@ -945,10 +952,18 @@ class HistoryControllerTest : BasePlatformTestCase() {
         return events
     }
 
-    private fun flush() = runBlocking {
-        repeat(5) {
-            delay(100)
-            ApplicationManager.getApplication().invokeAndWait { UIUtil.dispatchAllInvocationEvents() }
+    private fun flush() = coroutines.drain(::pump)
+
+    private fun pump() {
+        ApplicationManager.getApplication().invokeAndWait { UIUtil.dispatchAllInvocationEvents() }
+    }
+
+    private fun waitFor(done: () -> Boolean) = runBlocking {
+        withTimeout(5_000) {
+            while (!done()) {
+                delay(10)
+                pump()
+            }
         }
     }
 

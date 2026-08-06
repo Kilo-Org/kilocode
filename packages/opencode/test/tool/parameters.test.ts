@@ -82,6 +82,13 @@ describe("tool parameters", () => {
         properties: { value: { minimum: Number.MIN_SAFE_INTEGER, maximum: Number.MAX_SAFE_INTEGER } },
       })
     })
+
+    test("does not expose defaulted optional keys as nullable", () => {
+      expect(toJsonSchema(WebFetch)).toMatchObject({
+        properties: { format: { type: "string", enum: ["text", "markdown", "html"], default: "markdown" } },
+      })
+      expect(toJsonSchema(WebFetch).properties?.format).not.toHaveProperty("anyOf")
+    })
   })
 
   describe("apply_patch", () => {
@@ -99,11 +106,11 @@ describe("tool parameters", () => {
   })
 
   describe("shell", () => {
-    test("accepts minimum: command + description", () => {
-      expect(parse(Shell, { command: "ls", description: "list" })).toEqual({ command: "ls", description: "list" })
+    test("accepts command", () => {
+      expect(parse(Shell, { command: "ls" })).toEqual({ command: "ls" })
     })
     test("accepts optional timeout + workdir", () => {
-      const parsed = parse(Shell, { command: "ls", description: "list", timeout: 5000, workdir: "/tmp" })
+      const parsed = parse(Shell, { command: "ls", timeout: 5000, workdir: "/tmp" })
       expect(parsed.timeout).toBe(5000)
       expect(parsed.workdir).toBe("/tmp")
     })
@@ -113,7 +120,7 @@ describe("tool parameters", () => {
     })
     // kilocode_change end
     test("rejects missing command", () => {
-      expect(accepts(Shell, { description: "list" })).toBe(false)
+      expect(accepts(Shell, {})).toBe(false)
     })
   })
 
@@ -156,6 +163,21 @@ describe("tool parameters", () => {
       expect(parsed.path).toBe("/tmp")
       expect(parsed.include).toBe("*.ts")
     })
+    // kilocode_change start - configurable grep signal controls
+    test("accepts signal controls", () => {
+      expect(parse(Grep, { pattern: "TODO", context: 0, limit: 1, literal: true, ignoreCase: true })).toMatchObject({
+        context: 0,
+        limit: 1,
+        literal: true,
+        ignoreCase: true,
+      })
+    })
+    test("rejects invalid signal controls", () => {
+      expect(accepts(Grep, { pattern: "TODO", context: -1 })).toBe(false)
+      expect(accepts(Grep, { pattern: "TODO", limit: 0 })).toBe(false)
+      expect(accepts(Grep, { pattern: "TODO", limit: 1.5 })).toBe(false)
+    })
+    // kilocode_change end
     test("rejects missing pattern", () => {
       expect(accepts(Grep, {})).toBe(false)
     })
@@ -259,8 +281,15 @@ describe("tool parameters", () => {
   })
 
   describe("webfetch", () => {
-    test("accepts url-only", () => {
-      expect(parse(WebFetch, { url: "https://example.com" }).url).toBe("https://example.com")
+    test("defaults omitted format to markdown", () => {
+      expect(parse(WebFetch, { url: "https://example.com" })).toEqual({
+        url: "https://example.com",
+        format: "markdown",
+      })
+      expect(parse(WebFetch, { url: "https://example.com", format: undefined })).toEqual({
+        url: "https://example.com",
+        format: "markdown",
+      })
     })
   })
 

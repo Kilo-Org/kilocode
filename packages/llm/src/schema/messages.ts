@@ -1,4 +1,5 @@
-import { Schema } from "effect"
+import { Schema, SchemaGetter } from "effect" // kilocode_change
+import { ToolContent, ToolFileContent, ToolTextContent } from "@opencode-ai/schema/llm"
 import { JsonSchema, MessageRole, ProviderMetadata } from "./ids"
 import { CacheHint, CachePolicy, GenerationOptions, HttpOptions, ModelSchema, ProviderOptions } from "./options"
 import { isRecord } from "../utils/record"
@@ -39,53 +40,77 @@ export const MediaPart = Schema.Struct({
 }).annotate({ identifier: "LLM.Content.Media" })
 export type MediaPart = Schema.Schema.Type<typeof MediaPart>
 
-export const ToolResultMediaPart = Schema.Struct({
-  type: Schema.Literal("media"),
-  mediaType: Schema.String,
-  data: Schema.String,
-  filename: Schema.optional(Schema.String),
-  metadata: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
-}).annotate({ identifier: "LLM.ToolResult.Media" })
-export type ToolResultMediaPart = Schema.Schema.Type<typeof ToolResultMediaPart>
+export { ToolContent, ToolFileContent, ToolTextContent }
 
-export const ToolResultContentPart = Schema.Union([TextPart, ToolResultMediaPart])
-export type ToolResultContentPart = Schema.Schema.Type<typeof ToolResultContentPart>
+export { StoredToolContent } from "@opencode-ai/schema/llm" // kilocode_change - shared with the durable event schema
 
-// kilocode_change start - avoid circular inference rejected by Kilo's newer tsgo
+// kilocode_change start - Kilo keeps a tolerant tool-result value union
 const toolResultValueSchema = Schema.Union([
-  Schema.Struct({
-    type: Schema.Literal("json"),
-    value: Schema.Unknown,
-  }),
-  Schema.Struct({
-    type: Schema.Literal("text"),
-    value: Schema.Unknown,
-  }),
-  Schema.Struct({
-    type: Schema.Literal("error"),
-    value: Schema.Unknown,
-  }),
-  Schema.Struct({
-    type: Schema.Literal("content"),
-    value: Schema.Array(ToolResultContentPart),
-  }),
+  Schema.Struct({ type: Schema.Literal("json"), value: Schema.Unknown }),
+  Schema.Struct({ type: Schema.Literal("text"), value: Schema.Unknown }),
+  Schema.Struct({ type: Schema.Literal("error"), value: Schema.Unknown }),
+  Schema.Struct({ type: Schema.Literal("content"), value: Schema.Array(ToolContent) }),
 ]).annotate({ identifier: "LLM.ToolResult" })
 export type ToolResultValue = Schema.Schema.Type<typeof toolResultValueSchema>
+// kilocode_change end
 
 const isToolResultValue = (value: unknown): value is ToolResultValue =>
   isRecord(value) &&
   (value.type === "text" || value.type === "json" || value.type === "error" || value.type === "content") &&
   "value" in value
 
+// kilocode_change start
 export const ToolResultValue = Object.assign(toolResultValueSchema, {
   is: isToolResultValue,
   make: (value: unknown, type: ToolResultValue["type"] = "json"): ToolResultValue => {
     if (isToolResultValue(value)) return value
     if (type === "content") return { type, value: Array.isArray(value) ? value : [] }
     return { type, value }
+    // kilocode_change end
   },
-})
-// kilocode_change end
+}) // kilocode_change
+
+export interface ToolOutput {
+  readonly structured: unknown
+  readonly content: ReadonlyArray<ToolContent>
+}
+
+export const ToolOutput = Object.assign(
+  Schema.Struct({
+    structured: Schema.Unknown,
+    content: Schema.Array(ToolContent),
+  }).annotate({ identifier: "LLM.ToolOutput" }),
+  {
+    make: (structured: unknown, content: ReadonlyArray<ToolContent> = []): ToolOutput => ({ structured, content }),
+    fromResultValue: (result: ToolResultValue): ToolOutput | undefined => {
+      switch (result.type) {
+        case "json":
+          return { structured: result.value, content: [] }
+        case "text":
+          return { structured: {}, content: [{ type: "text", text: toolResultText(result.value) }] }
+        case "content":
+          return { structured: {}, content: result.value }
+        case "error":
+          return undefined
+      }
+    },
+    toResultValue: (output: ToolOutput): ToolResultValue => {
+      if (output.content.length === 0) return { type: "json", value: output.structured }
+      if (output.content.length === 1 && output.content[0]?.type === "text")
+        return { type: "text", value: output.content[0].text }
+      return { type: "content", value: output.content }
+    },
+  },
+)
+
+const toolResultText = (value: unknown) => {
+  if (typeof value === "string") return value
+  try {
+    return JSON.stringify(value) ?? String(value)
+  } catch {
+    return String(value)
+  }
+}
 
 export const ToolCallPart = Object.assign(
   Schema.Struct({
@@ -158,6 +183,7 @@ export class Message extends Schema.Class<Message>("LLM.Message")({
 
 export namespace Message {
   export type ContentInput = string | ContentPart | ReadonlyArray<ContentPart>
+  export type SystemContentInput = string | TextPart | ReadonlyArray<TextPart>
   export type Input = Omit<ConstructorParameters<typeof Message>[0], "content"> & {
     readonly content: ContentInput
   }
@@ -176,6 +202,14 @@ export namespace Message {
 
   export const assistant = (content: ContentInput) => make({ role: "assistant", content })
 
+  /**
+   * Add an operator-authored instruction at this chronological point in the
+   * conversation. This is distinct from the initial `LLMRequest.system`
+   * prompt. Keep raw retrieved, tool, and web content out of privileged system
+   * updates; pass that untrusted content through ordinary user/tool channels.
+   */
+  export const system = (content: SystemContentInput) => make({ role: "system", content })
+
   export const tool = (result: ToolResultPart | Parameters<typeof ToolResultPart.make>[0]) =>
     make({ role: "tool", content: ["type" in result ? result : ToolResultPart.make(result)] })
 }
@@ -184,6 +218,7 @@ export class ToolDefinition extends Schema.Class<ToolDefinition>("LLM.ToolDefini
   name: Schema.String,
   description: Schema.String,
   inputSchema: JsonSchema,
+  outputSchema: Schema.optional(JsonSchema),
   cache: Schema.optional(CacheHint),
   metadata: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
   native: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),

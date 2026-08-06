@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test"
 import { messages, parse } from "../../src/kilocode/branch-name"
 import { MessageV2 } from "../../src/session/message-v2"
-import { ModelID, ProviderID } from "../../src/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 
 function user(text: string, synthetic = false): MessageV2.WithParts {
@@ -15,8 +16,8 @@ function user(text: string, synthetic = false): MessageV2.WithParts {
       time: { created: Date.now() },
       agent: "code",
       model: {
-        providerID: ProviderID.make("kilo"),
-        modelID: ModelID.make("kilo-auto/small"),
+        providerID: ProviderV2.ID.make("kilo"),
+        modelID: ModelV2.ID.make("kilo-auto/small"),
       },
     },
     parts: [

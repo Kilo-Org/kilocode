@@ -9,6 +9,7 @@
 
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import type { AssistantMessage } from "@kilocode/sdk/v2"
+import { batch, createSignal } from "solid-js"
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
 import { ChatView } from "../components/chat/ChatView"
 import { ErrorDisplay } from "../components/chat/ErrorDisplay"
@@ -18,9 +19,9 @@ import { QuestionDock } from "../components/chat/QuestionDock"
 import { SuggestBar } from "../components/chat/SuggestBar"
 import { MessageList } from "../components/chat/MessageList"
 import { VscodeUserMessage } from "../components/chat/VscodeUserMessage"
+import { SidebarTopBar } from "../components/chat/SidebarTopBar"
 import { TurnOutcome } from "../components/shared/TurnOutcome"
 import { SessionContext } from "../context/session"
-import { MemoryContext, type MemoryContextValue } from "../context/memory"
 import { ProviderContext } from "../context/provider"
 import { ServerContext } from "../context/server"
 import { WorktreeModeProvider } from "../context/worktree-mode"
@@ -618,6 +619,167 @@ export const ChatViewReadable420: Story = {
   render: () => renderReadableChat("busy"),
 }
 
+// ---------------------------------------------------------------------------
+// PromptRail — the left-edge tick rail and its hover card
+// Several turns so the rail and card are populated: a long prompt, a short
+// low-signal follow-up, a tool-only answer (empty preview), and a queued one.
+// ---------------------------------------------------------------------------
+
+const railNow = 1_700_000_200_000
+const railTurn = (i: number, prompt: string, answer: string | undefined, queued = false) => {
+  const userID = `rail-user-${i}`
+  const assistantID = `rail-asst-${i}`
+  const messages: any[] = [{ id: userID, sessionID: SESSION_ID, role: "user", time: { created: railNow + i * 100 } }]
+  if (!queued) {
+    messages.push({
+      id: assistantID,
+      sessionID: SESSION_ID,
+      role: "assistant",
+      parentID: userID,
+      time: { created: railNow + i * 100 + 50 },
+      modelID: "claude-sonnet-4-20250514",
+      providerID: "anthropic",
+      mode: "default",
+      agent: "default",
+      path: { cwd: "/project", root: "/project" },
+    })
+  }
+  const parts: Record<string, any[]> = {
+    [userID]: [{ id: `rail-part-user-${i}`, sessionID: SESSION_ID, messageID: userID, type: "text", text: prompt }],
+  }
+  if (!queued) {
+    parts[assistantID] = answer
+      ? [{ id: `rail-part-asst-${i}`, sessionID: SESSION_ID, messageID: assistantID, type: "text", text: answer }]
+      : [
+          {
+            id: `rail-part-asst-${i}`,
+            sessionID: SESSION_ID,
+            messageID: assistantID,
+            type: "tool",
+            callID: `rail-call-${i}`,
+            tool: "bash",
+            state: {
+              status: "completed",
+              input: { command: "ls", description: "List files" },
+              output: "a.ts b.ts",
+              title: "ls",
+              metadata: {},
+              time: { start: railNow + i * 100 + 50, end: railNow + i * 100 + 80 },
+            },
+          },
+        ]
+  }
+  return { messages, parts }
+}
+
+const railTurns = [
+  railTurn(
+    1,
+    "Add a prompt navigator rail to the left edge of the chat that expands into a card of prompt and answer previews when I hover it, without shrinking the readable lane",
+    "Added PromptRail with a tick per prompt and a hover card; the lane width is untouched.",
+  ),
+  railTurn(2, "yes", "Confirmed — wiring it into MessageList next."),
+  railTurn(3, "run the tests", undefined),
+  railTurn(
+    4,
+    "now do the same in the Agent Manager chat",
+    "ChatView → MessageList is shared, so the rail appears there automatically; no Agent Manager specific code needed.",
+  ),
+  railTurn(5, "looks good, ship it", "", true),
+]
+const railMessages = railTurns.flatMap((turn) => turn.messages)
+const railParts = Object.assign({}, ...railTurns.map((turn) => turn.parts))
+const railData = {
+  ...defaultMockData,
+  message: { [SESSION_ID]: railMessages },
+  part: railParts,
+}
+
+const renderRailChat = (status: "idle" | "busy" = "idle") => {
+  const session = {
+    ...mockSessionValue({ id: SESSION_ID, status }),
+    messages: () => railMessages,
+    userMessages: () => railMessages.filter((msg) => msg.role === "user"),
+    getParts: (id: string) => railParts[id] ?? [],
+  }
+  return (
+    <StoryProviders data={railData} sessionID={SESSION_ID} status={status} noPadding>
+      <SessionContext.Provider value={session as any}>
+        <div style={{ height: "100vh", display: "flex", "flex-direction": "column" }}>
+          <ChatView />
+        </div>
+      </SessionContext.Provider>
+    </StoryProviders>
+  )
+}
+
+export const PromptRailWide: Story = {
+  name: "PromptRail - wide editor tab",
+  render: () => renderRailChat(),
+}
+
+export const PromptRailSidebar: Story = {
+  name: "PromptRail - narrow sidebar",
+  render: () => renderRailChat("busy"),
+}
+
+// Long session: more prompts than fit the transcript height, so the rail and
+// the card both cap to the newest ones that fit.
+const manyTurns = Array.from({ length: 80 }, (_, i) =>
+  railTurn(100 + i, `Prompt number ${i + 1} in a long running session`, `Answer number ${i + 1}.`),
+)
+const manyMessages = manyTurns.flatMap((turn) => turn.messages)
+const recentMessages = manyTurns.slice(-40).flatMap((turn) => turn.messages)
+const manyData = {
+  ...defaultMockData,
+  message: { [SESSION_ID]: manyMessages },
+  part: Object.assign({}, ...manyTurns.map((turn) => turn.parts)),
+}
+
+export const PromptRailManyPrompts: Story = {
+  name: "PromptRail - long session caps to what fits",
+  render: () => {
+    const [messages, setMessages] = createSignal(recentMessages)
+    const [older, setOlder] = createSignal(true)
+    const [loading, setLoading] = createSignal(false)
+    const [mutation, setMutation] = createSignal<"prepend">()
+    const load = () => {
+      if (!older() || loading()) return false
+      setLoading(true)
+      // Paging is a backend round trip, so the story keeps a short delay: the
+      // navigator's loading row is part of the behavior being shown.
+      setTimeout(() => {
+        batch(() => {
+          setMessages(manyMessages)
+          setOlder(false)
+          setMutation("prepend")
+          setLoading(false)
+        })
+      }, 300)
+      return true
+    }
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "idle" }),
+      messages,
+      userMessages: () => messages().filter((msg) => msg.role === "user"),
+      getParts: (id: string) => manyData.part[id] ?? [],
+      hasOlderMessages: older,
+      loadingOlderMessages: loading,
+      messageMutation: mutation,
+      loadOlderMessages: load,
+    }
+    return (
+      <StoryProviders data={manyData} sessionID={SESSION_ID} status="idle" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ height: "100vh", display: "flex", "flex-direction": "column" }}>
+            <ChatView />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
 export const MessageListToolToQueuedUserSpacing: Story = {
   name: "MessageList — queued users stay at bottom",
   render: () => {
@@ -989,52 +1151,6 @@ export const TaskHeaderWithTodosAllDone: Story = {
   },
 }
 
-const mockMemory: MemoryContextValue = {
-  status: () => ({}) as any,
-  show: () => undefined,
-  loading: () => false,
-  pending: () => false,
-  error: () => undefined,
-  enabled: () => true,
-  sessionTokens: () => 533,
-  totalTokens: () => 12_400,
-  refresh: () => {},
-  showMemory: () => {},
-  enable: () => {},
-  disable: () => {},
-  auto: () => {},
-  rebuild: () => {},
-  remember: () => {},
-  forget: () => {},
-}
-
-export const TaskHeaderWithMemory: Story = {
-  name: "TaskHeader — with memory enabled",
-  render: () => {
-    const session = {
-      ...mockSessionValue({ id: SESSION_ID, status: "idle" }),
-      messages: () => [{ id: "msg-001" }] as any[],
-      currentSession: () => ({
-        id: SESSION_ID,
-        title: "Integrate project memory",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }),
-    }
-    return (
-      <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
-        <SessionContext.Provider value={session as any}>
-          <MemoryContext.Provider value={mockMemory}>
-            <div style={{ width: "380px" }}>
-              <TaskHeader />
-            </div>
-          </MemoryContext.Provider>
-        </SessionContext.Provider>
-      </StoryProviders>
-    )
-  },
-}
-
 const usageTokens = { input: 25_900_000, output: 52_000, reasoning: 4_100, cache: { read: 10_500_000, write: 80_000 } }
 const usageData = {
   sessionIDs: [SESSION_ID, "story-subagent-001"],
@@ -1148,6 +1264,21 @@ const mockServer = {
   languageOverride: () => undefined,
   workspaceDirectory: () => "/project",
   gitInstalled: () => true,
+}
+
+// ---------------------------------------------------------------------------
+// SidebarTopBar — in-webview replacement for the native view/title toolbar
+// ---------------------------------------------------------------------------
+
+export const SidebarTopBarDefault: Story = {
+  name: "SidebarTopBar — default actions",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
+      <div style={{ width: "340px" }}>
+        <SidebarTopBar onNewTask={() => undefined} onHistory={() => undefined} surface="sidebar_title" />
+      </div>
+    </StoryProviders>
+  ),
 }
 
 export const WelcomeWithSwitcherAndNotification: Story = {

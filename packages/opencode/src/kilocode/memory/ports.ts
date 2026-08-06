@@ -13,7 +13,8 @@ import type { MessageV2 } from "@/session/message-v2"
 import type { Session } from "@/session/session"
 import type { SessionSummary } from "@/session/summary"
 import type { Snapshot } from "@/snapshot"
-import { ModelID, ProviderID } from "@/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { SessionID } from "@/session/schema"
 
 const log = Log.create({ service: "memory.ports" })
@@ -288,7 +289,7 @@ export namespace MemoryModel {
         Effect.gen(function* () {
           const parsed = MemoryConfig.parse(configured)
           const sessionModel = () =>
-            input.provider.getModel(ProviderID.make(session.providerID), ModelID.make(session.modelID))
+            input.provider.getModel(ProviderV2.ID.make(session.providerID), ModelV2.ID.make(session.modelID))
           let reason: string | undefined
           let source: Provider.Model
           if (configured && !parsed) {
@@ -296,7 +297,7 @@ export namespace MemoryModel {
             source = yield* sessionModel()
           } else if (parsed) {
             source = yield* input.provider
-              .getModel(ProviderID.make(parsed.providerID), ModelID.make(parsed.modelID))
+              .getModel(ProviderV2.ID.make(parsed.providerID), ModelV2.ID.make(parsed.modelID))
               .pipe(
                 Effect.catch(() =>
                   Effect.sync(() => {

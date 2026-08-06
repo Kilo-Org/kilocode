@@ -57,7 +57,7 @@ export namespace KilocodeConfigSources {
   type Pending = Omit<Source, "order">
 
   const roots = [".kilocode", ".kilo"] as const
-  const global = ["config.json", "opencode.json", "opencode.jsonc", "kilo.json", "kilo.jsonc"] as const
+  const global = KilocodeConfig.GLOBAL_CONFIG_FILES
 
   export async function list(input: Input): Promise<Result> {
     const project = Flag.KILO_DISABLE_PROJECT_CONFIG ? [] : await projectSources(input)
@@ -119,15 +119,12 @@ export namespace KilocodeConfigSources {
   }
 
   async function projectSources(input: Input): Promise<Pending[]> {
-    // Mirror ConfigPaths.namedFiles(["opencode", "kilo"]): keep directory
-    // proximity primary, then apply Kilo-over-legacy precedence within each directory.
-    const files = (
-      await Filesystem.findUp(
-        ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"],
-        input.directory,
-        input.worktree,
-      )
-    ).toReversed()
+    const files = await Filesystem.findUp(
+      [...KilocodeConfig.CONFIG_LOAD_ORDER],
+      input.directory,
+      input.worktree,
+      { rootFirst: true },
+    )
     return Promise.all(
       files.map((file) => fileSource({ kind: "project-file", scope: "project", label: "Project config", file })),
     )

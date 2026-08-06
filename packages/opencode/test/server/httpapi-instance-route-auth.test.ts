@@ -5,22 +5,24 @@ import { EventPaths } from "../../src/server/routes/instance/httpapi/groups/even
 import { PtyPaths } from "../../src/server/routes/instance/httpapi/groups/pty"
 import { HttpApiApp } from "../../src/server/routes/instance/httpapi/server"
 import { ServerAuth } from "../../src/server/auth"
-import { PtyID } from "../../src/pty/schema"
+import { PtyID } from "@opencode-ai/core/pty/schema"
 import { resetDatabase } from "../fixture/db"
 import { disposeAllInstances, tmpdir } from "../fixture/fixture"
-import * as Log from "@opencode-ai/core/util/log"
-
-void Log.init({ print: false })
 
 function app(input: { password?: string; username?: string }) {
   const handler = HttpRouter.toWebHandler(
     HttpApiApp.routes.pipe(
       Layer.provide(
         ConfigProvider.layer(
+          // kilocode_change start - keep the filewatcher-disable flag visible so the
+          // @parcel/watcher Windows backend does not subscribe on temp dirs that
+          // the tmpdir fixture deletes mid-test (throws "Invalid handle").
           ConfigProvider.fromUnknown({
             KILO_SERVER_PASSWORD: input.password,
             KILO_SERVER_USERNAME: input.username,
+            KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: process.env.KILO_EXPERIMENTAL_DISABLE_FILEWATCHER ?? "true",
           }),
+          // kilocode_change end
         ),
       ),
     ),

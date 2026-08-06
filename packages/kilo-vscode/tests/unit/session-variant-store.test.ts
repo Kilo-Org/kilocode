@@ -1,6 +1,9 @@
 import { describe, expect, it } from "bun:test"
 import {
+  cycleVariant,
+  getAgentVariant,
   getVariant,
+  preserveVariant,
   sessionVariantKeys,
   sessionVariants,
   transferVariants,
@@ -40,6 +43,13 @@ describe("per-session variant selection", () => {
 
     expect(getVariant(store, model, variants, "code")).toBe("medium")
     expect(getVariant(store, model, variants, "ask")).toBe("high")
+  })
+
+  it("resolves the effective variant for a mode and model", () => {
+    const store: Record<string, string> = {}
+    store[variantKey(model, "ask")] = "high"
+
+    expect(getAgentVariant(store, model, { variants: { low: {}, high: {} } }, "ask")).toBe("high")
   })
 
   it("carries the pre-submit agent variant into a newly created session", () => {
@@ -90,5 +100,46 @@ describe("per-session variant selection", () => {
     store[variantKey(model, "code", "pending-local-2")] = "high"
 
     expect(sessionVariantKeys(store, "pending-local-1")).toEqual(["session/pending-local-1/anthropic/claude-sonnet-4"])
+  })
+})
+
+describe("cycleVariant", () => {
+  it("advances to the next variant", () => {
+    expect(cycleVariant("low", variants)).toBe("medium")
+    expect(cycleVariant("medium", variants)).toBe("high")
+  })
+
+  it("wraps back to the first variant after the last", () => {
+    expect(cycleVariant("high", variants)).toBe("low")
+  })
+
+  it("starts at the first variant when current is missing or unknown", () => {
+    expect(cycleVariant(undefined, variants)).toBe("low")
+    expect(cycleVariant("bogus", variants)).toBe("low")
+  })
+
+  it("returns undefined when no variants exist", () => {
+    expect(cycleVariant("low", [])).toBeUndefined()
+  })
+})
+
+describe("preserveVariant", () => {
+  it("keeps an exact variant", () => {
+    expect(preserveVariant("high", ["low", "high"])).toBe("high")
+    expect(preserveVariant("thinking", ["instant", "thinking"])).toBe("thinking")
+    expect(preserveVariant("default", ["default", "thinking"])).toBe("default")
+  })
+
+  it("falls back to the nearest supported effort", () => {
+    expect(preserveVariant("max", ["high", "xhigh"])).toBe("xhigh")
+    expect(preserveVariant("high", ["low", "medium"])).toBe("medium")
+    expect(preserveVariant("max", ["none", "low"])).toBe("low")
+  })
+
+  it("does not cross binary or custom variant families", () => {
+    expect(preserveVariant("thinking", ["low", "high"])).toBeUndefined()
+    expect(preserveVariant("instant", ["low", "high"])).toBeUndefined()
+    expect(preserveVariant("turbo", ["low", "high"])).toBeUndefined()
+    expect(preserveVariant("high", ["instant", "thinking"])).toBeUndefined()
   })
 })

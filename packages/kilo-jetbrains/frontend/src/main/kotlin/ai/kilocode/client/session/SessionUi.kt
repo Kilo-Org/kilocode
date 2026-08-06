@@ -4,6 +4,10 @@ import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
+import ai.kilocode.client.diff.KiloDiffEditorKind
+import ai.kilocode.client.diff.KiloInlineDiffStore
+import ai.kilocode.client.diff.diffParams
+import ai.kilocode.client.diff.ensureDiffEditorKind
 import ai.kilocode.client.migration.KiloMigrationService
 import ai.kilocode.client.migration.MigrationUiController
 import ai.kilocode.client.migration.MigrationUiState
@@ -55,8 +59,10 @@ import ai.kilocode.client.util.UiTimers
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.rpc.dto.ModelLimitDto
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
+import ai.kilocode.rpc.dto.SessionRevertDto
 import com.intellij.util.ui.JBUI
 import ai.kilocode.log.KiloLog
 import com.intellij.ide.BrowserUtil
@@ -81,8 +87,10 @@ import com.intellij.openapi.util.registry.Registry
 import com.intellij.openapi.wm.IdeFocusManager
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import java.util.function.Predicate
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
@@ -127,6 +135,8 @@ class SessionUi(
     private var pending = false
     private var loaded: Boolean? = null
     private var revertPrompt: String? = null
+    private var pendingRollback: String? = null
+    private var pendingRedo: String? = null
     private val flushMs =
         Registry.intValue("kilo.session.flushMs", EVENT_FLUSH_MS.toInt())
             .takeIf { it > 0 }
@@ -199,6 +209,11 @@ class SessionUi(
     }
     private var editorTheme = style.editorScheme
     private var colorTheme = UIManager.getLookAndFeel()
+    private var wasBusy = false
+    // Kept separate so a background stat refresh (turn end / revert) can supersede another refresh
+    // but never cancel an in-flight user-initiated open.
+    private var refreshJob: Job? = null
+    private var openJob: Job? = null
     private var disposed = false
 
     init {
@@ -211,6 +226,7 @@ class SessionUi(
         bindStyle()
         bindMigration()
         onStateChanged(controller.model.state)
+        refreshBranchChanges()
         loaded?.let(::finishOpen)
     }
 
@@ -290,6 +306,7 @@ class SessionUi(
 
         migrationOverlay = MigrationOverlayPanel().apply {
             onSkip = { migration.skip() }
+            onLater = { migration.later() }
             onDone = { migration.finish() }
             onContinueFromError = { migration.finish() }
             onStart = { sel -> migration.start(sel) }
@@ -339,7 +356,7 @@ class SessionUi(
             focus = focus,
         )
         permission = PermissionView(
-            reply = { id, dto -> controller.replyPermission(id, dto) },
+            reply = { id, dto, rules -> controller.replyPermission(id, dto, rules) },
             selection = selection,
             focus = focus,
         )
@@ -362,14 +379,17 @@ class SessionUi(
             repo = workspace.directory,
             resize = { anchor, fn -> scroll.preserve(anchor, fn) },
             revert = ::revert,
-            cancelRevert = controller::cancelRevert,
-            banner = RevertBanner(controller.model, controller::redo, controller::redoAll, controller::cancelRevert, focus),
+            cancelRevert = ::cancelRevert,
+            deleteQueued = { id -> controller.deleteQueuedMessage(id) },
+            banner = RevertBanner(controller.model, ::redo, controller::redoAll, ::cancelRevert, focus),
         ).also {
+            it.setDiffOpener(::openInlineDiff, controller.id)
             it.onHover = { view, on -> if (on) popup.show(view) else popup.notifyExit(view) }
         }
-        header = SessionHeaderPanel(controller, this)
+        header = SessionHeaderPanel(controller, this) { openBranchChanges() }
 
         scroll = SessionScroll(root, sessionContent, messageBody, blankBody)
+        messageBody.onReflow = { on -> if (on && !opening) scroll.followTail() }
         scroll.onScroll = {
             overlay.clear()
             popup.hideAll()
@@ -537,7 +557,9 @@ class SessionUi(
 
                 is SessionModelEvent.SessionUpdated -> onSessionUpdated()
 
-                is SessionModelEvent.RevertChanged -> syncPromptRevert()
+                is SessionModelEvent.RevertChanged -> onRevertChanged(event.revert)
+
+                is SessionModelEvent.QueueChanged -> Unit
 
                 is SessionModelEvent.TurnAdded,
                 is SessionModelEvent.TurnUpdated,
@@ -652,6 +674,7 @@ class SessionUi(
         if (width <= 0 || height <= 0) return
         if (body(controller.model.state) !== messageBody) return
         pending = false
+        messageBody.reflow()
         scroll.openBottom {
             opening = false
         }
@@ -688,8 +711,46 @@ class SessionUi(
 
     @RequiresEdt
     private fun revert(id: String) {
-        scroll.followBottom(true)
+        pendingRollback = id
+        pendingRedo = null
         controller.revert(id)
+    }
+
+    @RequiresEdt
+    private fun redo() {
+        pendingRedo = controller.model.revert()?.messageID
+        pendingRollback = null
+        controller.redo()
+    }
+
+    @RequiresEdt
+    private fun cancelRevert() {
+        pendingRollback = null
+        pendingRedo = null
+        controller.cancelRevert()
+    }
+
+    @RequiresEdt
+    private fun onRevertChanged(revert: SessionRevertDto?) {
+        refreshBranchChanges()
+        syncPromptRevert()
+        val rollback = pendingRollback
+        if (rollback != null) {
+            if (revert?.messageID == rollback) {
+                pendingRollback = null
+                scroll.followBottom(true)
+                return
+            }
+            pendingRollback = null
+        }
+        val redo = pendingRedo
+        if (redo == null) return
+        if (!controller.model.isRevertedMessage(redo)) {
+            pendingRedo = null
+            scroll.scrollMessageBottom(redo)
+            return
+        }
+        if (revert != null) pendingRedo = null
     }
 
     @RequiresEdt
@@ -760,6 +821,76 @@ class SessionUi(
         BrowserUtil.browse(url)
     }
 
+    private fun openInlineDiff(files: List<DiffFileDto>, title: String, key: String) {
+        val dir = controller.sessionDirectory
+        cs.launch {
+            val branch = workspaces.branchName(dir)
+            val label = branch?.let { KiloBundle.message("diff.editor.inline.title.named", title, it) } ?: title
+            LOG.info("open inline diff session=${controller.id ?: "pending"} dir=${ChatLogSummary.dir(dir)} files=${files.size}")
+            withContext(Dispatchers.Main) {
+                ensureDiffEditorKind()
+                project.service<KiloInlineDiffStore>().put(key, files)
+                project.service<KiloVfsManager>().open(
+                    KiloDiffEditorKind.ID,
+                    diffParams("inline", dir, controller.id, label, token = key),
+                )
+                Telemetry.send("Diff Editor Opened", mapOf("source" to "inline"))
+            }
+        }
+    }
+
+    /** Badge-only refresh: fetches stats (no patch text) and updates the header count. */
+    private fun refreshBranchChanges() {
+        refreshJob?.cancel()
+        refreshJob = cs.launch {
+            val files = runCatching { workspaces.branchDiff(workspace.directory, patches = false) }
+                .getOrElse {
+                    if (it is CancellationException) throw it
+                    LOG.warn("branch changes badge refresh failed dir=${workspace.directory}", it)
+                    return@launch
+                }
+            withContext(Dispatchers.Main) {
+                if (disposed || project.isDisposed) return@withContext
+                header.setBranchChanges(files)
+            }
+        }
+    }
+
+    /** User clicked the badge: opens the branch diff editor. Never cancelled by a background refresh. */
+    private fun openBranchChanges() {
+        openJob?.cancel()
+        openJob = cs.launch {
+            val dir = workspace.directory
+            val branch = workspaces.branchName(dir)
+            val files = runCatching { workspaces.branchDiff(dir, patches = false) }
+                .getOrElse {
+                    if (it is CancellationException) throw it
+                    LOG.warn("branch changes open failed dir=$dir", it)
+                    emptyList()
+                }
+            withContext(Dispatchers.Main) {
+                if (disposed || project.isDisposed) return@withContext
+                header.setBranchChanges(files)
+                openBranchDiff(branch)
+            }
+        }
+    }
+
+    @RequiresEdt
+    private fun openBranchDiff(branch: String?) {
+        // No store seeding: the diff editor's fetch recomputes branchDiff authoritatively, so a
+        // re-open or Refresh always reflects the current worktree (and nothing is retained for its life).
+        ensureDiffEditorKind()
+        val dir = workspace.directory
+        val title = branch?.let { KiloBundle.message("diff.editor.branch.title.named", it) }
+            ?: KiloBundle.message("diff.editor.branch.title")
+        project.service<KiloVfsManager>().open(
+            KiloDiffEditorKind.ID,
+            diffParams("branch", dir, null, title, branch),
+        )
+        Telemetry.send("Diff Editor Opened", mapOf("source" to "branch"))
+    }
+
     private fun openAttachment(messageId: String, item: FileAttachment) {
         val url = item.url.takeIf { it.isNotBlank() } ?: run {
             LOG.info("kind=attachment-open skipped=true reason=blank-url message=$messageId part=${item.id} name=${attachmentName(item)} mime=${item.mime}")
@@ -810,8 +941,15 @@ class SessionUi(
 
     private fun onStateChanged(state: SessionState) {
         if (disposed) return
+        val busy = state.isBusy()
+        if (wasBusy && state is SessionState.Idle) refreshBranchChanges()
+        wasBusy = busy
         if (state is SessionState.Reverting) overlay.clear()
-        prompt.setBusy(state.isBusy())
+        if (state is SessionState.Error) {
+            pendingRollback = null
+            pendingRedo = null
+        }
+        prompt.setBusy(busy)
         load.setState(state)
         scroll.setQuestionPending(questionPending(state))
         scroll.show(body(state))
@@ -879,6 +1017,8 @@ class SessionUi(
 
     override fun dispose() {
         disposed = true
+        refreshJob?.cancel()
+        openJob?.cancel()
         hide.stop()
         popup.hideAll()
         modalFocus = null

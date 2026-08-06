@@ -126,4 +126,13 @@ describe("indexing tab scope state", () => {
       qdrant: { url: "http://project", apiKey: "global-secret" },
     })
   })
+
+  it("replaces inherited file extensions with a project allowlist", () => {
+    const global = { fileExtensions: [".ts", ".tsx"] }
+
+    expect(indexingConfig("project", global, {}).fileExtensions).toEqual([".ts", ".tsx"])
+    expect(indexingConfig("project", global, { fileExtensions: [".php"] }).fileExtensions).toEqual([".php"])
+    expect(indexingInheritance("project", global, {}, [["fileExtensions"]])).toBe("inherited")
+    expect(indexingInheritance("project", global, { fileExtensions: [".php"] }, [["fileExtensions"]])).toBe("none")
+  })
 })

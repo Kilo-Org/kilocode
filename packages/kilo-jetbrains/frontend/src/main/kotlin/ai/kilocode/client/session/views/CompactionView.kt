@@ -43,7 +43,7 @@ class CompactionView(@Suppress("UNUSED_PARAMETER") compaction: Compaction) : Par
         val line = { JPanel().apply {
             background = SessionUiStyle.View.Outline.color()
             isOpaque = true
-            preferredSize = JBDimension(0, JBUI.scale(1))
+            preferredSize = JBDimension(0, 1)
         } }
 
         val row = JPanel(GridBagLayout()).apply {

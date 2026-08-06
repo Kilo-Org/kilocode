@@ -12,9 +12,10 @@
 //   3. A concurrent setInterval keeps ticking — i.e. the event loop keeps
 //      breathing and ESC would be delivered.
 
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { test, expect, afterEach, mock } from "bun:test"
 import { $ } from "bun"
-import { Effect, Fiber } from "effect"
+import { Effect, Fiber, Layer } from "effect"
 import { provideTestInstance } from "../fixture/fixture"
 import { Server } from "../../src/server/server"
 import { Session } from "../../src/session/session"
@@ -22,12 +23,21 @@ import { Snapshot } from "../../src/snapshot"
 import { Filesystem } from "../../src/util/filesystem"
 import * as Log from "@opencode-ai/core/util/log"
 import { disposeAllInstances, tmpdir } from "../fixture/fixture"
+import { seedProject } from "../fixture/fixture"
+import { Database } from "@opencode-ai/core/database/database"
+import { InstanceRef } from "../../src/effect/instance-ref"
+import type { InstanceContext } from "../../src/project/instance-context"
 
 void Log.init({ print: false })
 
-function run<A>(body: (snapshot: Snapshot.Interface) => Effect.Effect<A, never, Session.Service>) {
+function run<A>(ctx: InstanceContext, body: (snapshot: Snapshot.Interface) => Effect.Effect<A, never, Session.Service>) {
   return Effect.runPromise(
-    Snapshot.Service.use(body).pipe(Effect.provide(Snapshot.defaultLayer), Effect.provide(Session.defaultLayer)),
+    seedProject.pipe(
+      Effect.andThen(Snapshot.Service.use(body)),
+      Effect.provide(AppNodeBuilder.build(Snapshot.node)),
+      Effect.provide(AppNodeBuilder.build(Session.node).pipe(Layer.provideMerge(AppNodeBuilder.build(Database.node)))),
+      Effect.provideService(InstanceRef, ctx),
+    ),
   )
 }
 
@@ -54,8 +64,8 @@ test("pathological diffFull workload finishes quickly and does not block abort",
 
   await provideTestInstance({
     directory: tmp.path,
-    fn: () =>
-      run((snapshot) =>
+    fn: (ctx) =>
+      run(ctx, (snapshot) =>
         Effect.gen(function* () {
           const sessions = yield* Session.Service
           const session = yield* sessions.create({})

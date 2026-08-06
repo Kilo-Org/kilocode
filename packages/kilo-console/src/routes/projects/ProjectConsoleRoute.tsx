@@ -49,6 +49,7 @@ import {
   normalizeConsoleDiffStyle,
   normalizeContextSidebarWidth,
 } from "../config/state/console"
+import { sender } from "./project-console-presence-sender"
 import { GhosttyTerminal } from "./terminal/GhosttyTerminal"
 
 const ui = new Set(["3017", "3018"])
@@ -147,6 +148,7 @@ function terminalKey(url: string, item: ProjectTerminalItem) {
 export function ProjectConsoleRoute() {
   const loc = useLocation()
   const params = useParams()
+  const viewerId = crypto.randomUUID()
   const search = createMemo(() => new URLSearchParams(loc.search))
   const fallback = () => base(search())
   const [url, setUrl] = createSignal(fallback())
@@ -660,19 +662,37 @@ export function ProjectConsoleRoute() {
     if (item) clearUnread(item)
   })
 
-  createEffect(() => {
+  let lastInput: { url: string; dir: string } | undefined
+  const queue = sender((err) => console.warn(`Viewed sessions: ${errMsg(err)}`))
+
+  function sendSnapshot(force = false) {
     const base = query()
     const data = snap()
     if (!base || !data) return
-    const focused = activeSessionID()
-    const open = terminals().flatMap((item) => {
+    const selected = activeSessionID()
+    const ids = new Set<string>()
+    if (selected) ids.add(selected)
+    for (const item of terminals()) {
       const id = sessionID(item)
-      return id ? [id] : []
-    })
-    void viewProjectSessions({ url: base.url, dir: data.project.worktree }, focused ? [focused] : [], open).catch(
-      () => {},
+      if (id) ids.add(id)
+    }
+    const input = { url: base.url, dir: data.project.worktree }
+    const key = input.url + "|" + input.dir + "|" + [...ids].sort().join(",")
+    lastInput = input
+    queue.push(
+      {
+        key,
+        run: async () => {
+          await viewProjectSessions(input, { id: viewerId, active: false }, [...ids], [])
+        },
+      },
+      force,
     )
-  })
+  }
+
+  createEffect(() => sendSnapshot())
+
+  const checkin = window.setInterval(() => sendSnapshot(true), 60_000)
 
   createEffect(() => {
     const base = query()
@@ -704,6 +724,19 @@ export function ProjectConsoleRoute() {
   onCleanup(() => {
     if (events.timer) window.clearTimeout(events.timer)
     if (resize.timer) window.clearTimeout(resize.timer)
+    window.clearInterval(checkin)
+    if (lastInput) {
+      const input = lastInput
+      queue.push(
+        {
+          key: input.url + "|" + input.dir + "|",
+          run: async () => {
+            await viewProjectSessions(input, { id: viewerId, active: false }, [], [])
+          },
+        },
+        true,
+      )
+    }
   })
 
   createEffect(() => {

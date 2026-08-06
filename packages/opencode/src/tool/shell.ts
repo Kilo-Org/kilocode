@@ -3,23 +3,24 @@ import os from "os"
 import { createWriteStream } from "node:fs"
 import * as Tool from "./tool"
 import path from "path"
-import * as Log from "@opencode-ai/core/util/log"
 import { containsPath, type InstanceContext } from "../project/instance-context"
 import { InstanceState } from "@/effect/instance-state"
 import { lazy } from "@/util/lazy"
 import { Language, type Node } from "web-tree-sitter"
 
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { fileURLToPath } from "url"
 import { Config } from "@/config/config"
 import { RuntimeFlags } from "@/effect/runtime-flags"
-import { Shell } from "@/shell/shell"
+import { Shell } from "@opencode-ai/core/shell"
 import { ShellID } from "./shell/id"
 
 import * as Truncate from "./truncate"
 import { Plugin } from "@/plugin"
 import { normalizeUrls } from "@/kilocode/util/url" // kilocode_change
 import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
+import { heredocs } from "@/kilocode/tool/shell-heredoc" // kilocode_change
+import { unparsed } from "@/kilocode/tool/shell-unparsed" // kilocode_change
 import { ChildProcess } from "effect/unstable/process"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
 import { ShellPrompt, type Parameters } from "./shell/prompt"
@@ -91,8 +92,6 @@ type Chunk = {
   text: string
   size: number
 }
-
-export const log = Log.create({ service: "shell-tool" })
 
 const resolveWasm = (asset: string) => {
   if (asset.startsWith("file://")) return fileURLToPath(asset)
@@ -285,19 +284,30 @@ const ask = Effect.fn("ShellTool.ask")(function* (
   ctx: Tool.Context,
   scan: Scan,
   command: string,
+  metadata: ReturnType<typeof heredocs>, // kilocode_change
   description?: string, // kilocode_change
 ) {
   // kilocode_change
   if (scan.dirs.size > 0) {
-    const globs = Array.from(scan.dirs).map((dir) => {
-      if (process.platform === "win32") return AppFileSystem.normalizePathPattern(path.join(dir, "*"))
+    const directories = Array.from(scan.dirs)
+    const globs = directories.map((dir) => {
+      if (process.platform === "win32") return FSUtil.normalizePathPattern(path.join(dir, "*"))
       return path.join(dir, "*")
     })
     yield* ctx.ask({
       permission: "external_directory",
       patterns: globs,
       always: globs,
-      metadata: scan.access === "read" ? { command, access: "read", ...(description ? { description } : {}) } : {}, // kilocode_change
+      // kilocode_change start - retain read classification alongside upstream permission context
+      metadata: {
+        command,
+        ...(description ? { description } : {}),
+        directories,
+        patterns: globs,
+        ...(scan.access === "read" ? { access: "read" as const } : {}),
+        ...metadata,
+      },
+      // kilocode_change end
     })
   }
 
@@ -306,7 +316,7 @@ const ask = Effect.fn("ShellTool.ask")(function* (
     permission: ShellID.ToolID,
     patterns: Array.from(scan.patterns),
     always: Array.from(scan.always),
-    metadata: { command: normalizeUrls(command), ...(description ? { description } : {}) }, // kilocode_change
+    metadata: { command: normalizeUrls(command), ...(description ? { description } : {}), ...metadata }, // kilocode_change
   })
 })
 
@@ -320,7 +330,7 @@ type PermissionInput = {
 
 export const ShellPermission = Effect.gen(function* () {
   const spawner = yield* ChildProcessSpawner
-  const fs = yield* AppFileSystem.Service
+  const fs = yield* FSUtil.Service
 
   const cygpath = Effect.fn("ShellTool.cygpath")(function* (shell: string, text: string) {
     const lines = yield* spawner
@@ -328,16 +338,16 @@ export const ShellPermission = Effect.gen(function* () {
       .pipe(Effect.catch(() => Effect.succeed([] as string[])))
     const file = lines[0]?.trim()
     if (!file) return
-    return AppFileSystem.normalizePath(file)
+    return FSUtil.normalizePath(file)
   })
 
   const resolve = Effect.fn("ShellTool.resolvePath")(function* (text: string, root: string, shell: string) {
     if (process.platform === "win32") {
-      if (Shell.posix(shell) && text.startsWith("/") && AppFileSystem.windowsPath(text) === text) {
+      if (Shell.posix(shell) && text.startsWith("/") && FSUtil.windowsPath(text) === text) {
         const file = yield* cygpath(shell, text)
         if (file) return file
       }
-      return AppFileSystem.normalizePath(path.resolve(root, AppFileSystem.windowsPath(text)))
+      return FSUtil.normalizePath(path.resolve(root, FSUtil.windowsPath(text)))
     }
     return path.resolve(root, text)
   })
@@ -381,7 +391,7 @@ export const ShellPermission = Effect.gen(function* () {
         const accessKind = access(cmd, node)
         for (const arg of pathArgs(command, ps, kind === "cmd")) {
           const resolved = yield* argpath(arg, cwd, ps, shell)
-          log.info("resolved path", { arg, resolved })
+          yield* Effect.logInfo("resolved path", { arg, resolved })
           if (!resolved || containsPath(resolved, instance)) continue
           const dir = (yield* fs.isDir(resolved)) ? resolved : path.dirname(resolved)
           scan.dirs.add(dir)
@@ -395,6 +405,14 @@ export const ShellPermission = Effect.gen(function* () {
       }
     }
 
+    // kilocode_change start - fail closed on commands the grammar failed to parse (#12326)
+    const lost = unparsed(root, nodes.length)
+    if (lost.length > 0) scan.access = "unknown"
+    for (const pattern of lost) {
+      scan.patterns.add(pattern)
+    }
+    // kilocode_change end
+
     return scan
   })
 
@@ -405,16 +423,38 @@ export const ShellPermission = Effect.gen(function* () {
       Effect.gen(function* () {
         const tree = yield* Effect.acquireRelease(parse(input.command, ps), (tree) => Effect.sync(() => tree.delete()))
         const scan = yield* collect(tree.rootNode, input.cwd, ps, input.shell, instance)
+        const metadata = heredocs(tree.rootNode, ShellID.toKind(Shell.name(input.shell))) // kilocode_change
         if (!containsPath(input.cwd, instance)) {
           scan.dirs.add(input.cwd)
           scan.access = "unknown"
         }
-        yield* ask(ctx, scan, input.command, input.description)
+        yield* ask(ctx, scan, input.command, metadata, input.description) // kilocode_change
       }),
     )
   })
 
-  return { ask: check, resolve }
+  // kilocode_change start - expose the tree-sitter scan (sub-command patterns + external-dir globs) for skill-shell batching
+  const dirGlob = (dir: string) =>
+    process.platform === "win32" ? FSUtil.normalizePathPattern(path.join(dir, "*")) : path.join(dir, "*")
+  const decompose = Effect.fn("ShellTool.decompose")(function* (input: {
+    command: string
+    cwd: string
+    shell: string
+  }) {
+    const instance = yield* InstanceState.context
+    const ps = Shell.ps(input.shell)
+    return yield* Effect.scoped(
+      Effect.gen(function* () {
+        const tree = yield* Effect.acquireRelease(parse(input.command, ps), (tree) => Effect.sync(() => tree.delete()))
+        const scan = yield* collect(tree.rootNode, input.cwd, ps, input.shell, instance)
+        if (!containsPath(input.cwd, instance)) scan.dirs.add(input.cwd)
+        return { patterns: Array.from(scan.patterns), dirs: Array.from(scan.dirs, dirGlob) }
+      }),
+    )
+  })
+  // kilocode_change end
+
+  return { ask: check, resolve, decompose } // kilocode_change - decompose for skill-shell
 })
 // kilocode_change end
 
@@ -495,7 +535,7 @@ export const ShellTool = Tool.define(
         cwd: string
         env: NodeJS.ProcessEnv
         timeout: number
-        description: string
+        description: string // kilocode_change
       },
       ctx: Tool.Context,
     ) {
@@ -539,7 +579,6 @@ export const ShellTool = Tool.define(
       yield* ctx.metadata({
         metadata: {
           output: "",
-          description: input.description,
         },
       })
 
@@ -548,7 +587,8 @@ export const ShellTool = Tool.define(
           yield* Effect.addFinalizer(closeSink)
           const handle = yield* spawner.spawn(cmd(input.shell, input.command, input.cwd, input.env))
 
-          const reader = yield* Effect.forkScoped( // kilocode_change - keep the fiber so trailing output can be drained
+          const reader = yield* Effect.forkScoped(
+            // kilocode_change - keep the fiber so trailing output can be drained
             Stream.runForEach(Stream.decodeText(handle.all), (chunk) => {
               const size = Buffer.byteLength(chunk, "utf-8")
               list.push({ text: chunk, size })
@@ -580,7 +620,6 @@ export const ShellTool = Tool.define(
                       ctx.metadata({
                         metadata: {
                           output: last,
-                          description: input.description,
                         },
                       }),
                     ),
@@ -591,7 +630,6 @@ export const ShellTool = Tool.define(
               return ctx.metadata({
                 metadata: {
                   output: last,
-                  description: input.description,
                 },
               })
             }),
@@ -659,11 +697,11 @@ export const ShellTool = Tool.define(
         output += "\n\n<shell_metadata>\n" + meta.join("\n") + "\n</shell_metadata>"
       }
       return {
-        title: input.description,
+        title: input.description, // kilocode_change - UI shows the model's description, command goes in metadata
         metadata: {
           output: last || preview(output),
           exit: code,
-          description: input.description,
+          description: input.description, // kilocode_change
           truncated: cut,
           ...(cut && file ? { outputPath: file } : {}),
         },
@@ -678,7 +716,7 @@ export const ShellTool = Tool.define(
         const name = Shell.name(shell)
         const limits = yield* trunc.limits()
         const prompt = ShellPrompt.render(name, process.platform, limits, defaultTimeoutMs)
-        log.info("shell tool using shell", { shell })
+        yield* Effect.logInfo("shell tool using shell", { shell })
 
         return {
           description: prompt.description,

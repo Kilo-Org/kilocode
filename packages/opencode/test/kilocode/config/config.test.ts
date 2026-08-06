@@ -1,10 +1,11 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { $ } from "bun"
 import { afterEach, describe, expect, test } from "bun:test"
 import { Effect, Layer, Option, Schema } from "effect"
 import { NodeFileSystem, NodePath } from "@effect/platform-node"
 import path from "path"
 import { Global } from "@opencode-ai/core/global"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { Npm } from "@opencode-ai/core/npm"
@@ -21,8 +22,9 @@ import { KilocodeConfig } from "../../../src/kilocode/config/config"
 import { provideTestInstance } from "../../fixture/fixture"
 import { Filesystem } from "../../../src/util/filesystem"
 import { disposeAllInstances, tmpdir } from "../../fixture/fixture"
+import { LayerNodePlatform } from "@opencode-ai/core/effect/app-node-platform"
 
-const infra = CrossSpawnSpawner.defaultLayer.pipe(
+const infra = AppNodeBuilder.build(CrossSpawnSpawner.node).pipe(
   Layer.provideMerge(Layer.mergeAll(NodeFileSystem.layer, NodePath.layer)),
 )
 const emptyAccount = Layer.mock(Account.Service)({
@@ -35,22 +37,17 @@ const emptyAuth = Layer.mock(Auth.Service)({
 const noopNpm = Layer.mock(Npm.Service)({
   install: () => Effect.void,
   add: () => Effect.die("not implemented"),
-  which: () => Effect.succeed(Option.none()),
+  which: () => Effect.succeed(undefined),
 })
 const unexpectedHttp = HttpClient.make((request) =>
   Effect.die(`unexpected http request: ${request.method} ${request.url}`),
 )
-const layer = Config.layer.pipe(
-  Layer.provide(Git.defaultLayer),
-  Layer.provide(EffectFlock.defaultLayer),
-  Layer.provide(AppFileSystem.defaultLayer),
-  Layer.provide(Env.defaultLayer),
-  Layer.provide(emptyAuth),
-  Layer.provide(emptyAccount),
-  Layer.provideMerge(infra),
-  Layer.provide(noopNpm),
-  Layer.provide(Layer.succeed(HttpClient.HttpClient, unexpectedHttp)),
-)
+const layer = AppNodeBuilder.build(Config.node, [
+  [Auth.node, emptyAuth],
+  [Account.node, emptyAccount],
+  [Npm.node, noopNpm],
+  [LayerNodePlatform.httpClient, Layer.succeed(HttpClient.HttpClient, unexpectedHttp)],
+]).pipe(Layer.provideMerge(infra))
 
 const load = () => Effect.runPromise(Config.Service.use((svc) => svc.get()).pipe(Effect.scoped, Effect.provide(layer)))
 const clear = () =>
@@ -105,10 +102,57 @@ describe("markdown substitutions", () => {
       },
     })
 
-    const md = await ConfigMarkdown.parse(path.join(tmp.path, "SKILL.md"))
+    const md = await ConfigMarkdown.parse(path.join(tmp.path, "SKILL.md"), { trusted: true })
 
     expect(md.content).toContain("file content")
     expect(md.content).toContain("env content")
+  })
+})
+
+describe("global config updates", () => {
+  test("preserves concurrent permission updates", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir()
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          await Effect.runPromise(
+            Config.Service.use((svc) =>
+              Effect.all(
+                Array.from({ length: 10 }, (_, index) =>
+                  svc.updateGlobal(
+                    { permission: { external_directory: { [`/skills/${index}/*`]: "allow" } } },
+                    { dispose: false },
+                  ),
+                ),
+                { concurrency: "unbounded" },
+              ),
+            ).pipe(Effect.scoped, Effect.provide(layer)),
+          )
+
+          const config = await Bun.file(path.join(globalTmp.path, "kilo.jsonc")).json()
+          expect(Object.keys(config.permission.external_directory)).toHaveLength(10)
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+})
+
+describe("kilocode web search config", () => {
+  test("accepts enabling web search for all providers", () => {
+    const config = Schema.decodeUnknownSync(Config.Info)({ web_search: true })
+
+    expect(config.web_search).toBe(true)
   })
 })
 
@@ -511,6 +555,145 @@ describe("subagent variant overrides", () => {
   })
 })
 
+describe("unset propagation across layered config files", () => {
+  const getGlobal = () =>
+    Effect.runPromise(Config.Service.use((svc) => svc.getGlobal()).pipe(Effect.scoped, Effect.provide(layer)))
+
+  test("removes subagent_model from every global config file when unset", async () => {
+    await using globalTmp = await tmpdir()
+    const json = path.join(globalTmp.path, "kilo.json")
+    const jsonc = path.join(globalTmp.path, "kilo.jsonc")
+    const jsoncText = ["{", "  // Keep this comment.", '  "username": "marius"', "}", ""].join("\n")
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await writeConfig(globalTmp.path, { subagent_model: "kilo/openai/gpt-5" }, "kilo.json")
+      await Filesystem.write(jsonc, jsoncText)
+
+      await saveGlobal(decode({ subagent_model: null }))
+
+      // The key must be gone from the lower-precedence kilo.json as well, or
+      // the read chain keeps resolving it and the unset appears to do nothing.
+      expect(JSON.parse(await Bun.file(json).text())).not.toHaveProperty("subagent_model")
+      // The primary target had no key, so it must remain byte-identical.
+      expect(await Bun.file(jsonc).text()).toBe(jsoncText)
+
+      await clear()
+      expect((await getGlobal()).subagent_model).toBeUndefined()
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("removes nested sentinels from jsonc siblings while preserving comments", async () => {
+    await using globalTmp = await tmpdir()
+    const opencode = path.join(globalTmp.path, "opencode.jsonc")
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await Filesystem.write(path.join(globalTmp.path, "kilo.jsonc"), '{ "username": "marius" }\n')
+      await Filesystem.write(
+        opencode,
+        [
+          "{",
+          "  // Preserve this comment while clearing overrides.",
+          '  "agent": {',
+          '    "explore": {',
+          '      "model": "kilo/anthropic/claude-sonnet-4-6",',
+          '      "description": "Keep me"',
+          "    }",
+          "  }",
+          "}",
+        ].join("\n"),
+      )
+
+      await saveGlobal(decode({ agent: { explore: { model: null } } }))
+
+      const written = await Bun.file(opencode).text()
+      expect(written).toContain("// Preserve this comment while clearing overrides.")
+      expect(written).not.toContain('"model"')
+      expect(written).toContain('"description": "Keep me"')
+
+      await clear()
+      expect((await getGlobal()).agent?.explore?.model).toBeUndefined()
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("does not rewrite sibling files on set or when the key is absent", async () => {
+    await using globalTmp = await tmpdir()
+    const json = path.join(globalTmp.path, "kilo.json")
+    const jsonText = JSON.stringify({ subagent_model: "kilo/old-model", username: "marius" }, null, 2)
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await Filesystem.write(path.join(globalTmp.path, "kilo.jsonc"), '{ "username": "marius" }\n')
+      await Filesystem.write(json, jsonText)
+
+      // Sets only write to the primary target; lower-precedence copies stay
+      // untouched and are simply shadowed by the higher-precedence value.
+      await saveGlobal(decode({ subagent_model: "kilo/new-model" }))
+      expect(await Bun.file(json).text()).toBe(jsonText)
+
+      // Unsetting an absent key must not rewrite the sibling either.
+      await saveGlobal(decode({ small_model: null }))
+      expect(await Bun.file(json).text()).toBe(jsonText)
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("removes subagent_model from every project config file when unset", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await Filesystem.write(
+      path.join(tmp.path, ".kilo", "kilo.json"),
+      JSON.stringify({ subagent_model: "kilo/openai/gpt-5" }),
+    )
+    await Filesystem.write(path.join(tmp.path, ".kilo", "kilo.jsonc"), '{\n  "username": "keep"\n}\n')
+
+    await provideTestInstance({
+      directory: tmp.path,
+      fn: async () => {
+        await saveProject(decode({ subagent_model: null }))
+        expect((await load()).subagent_model).toBeUndefined()
+      },
+    })
+
+    const json = JSON.parse(await Bun.file(path.join(tmp.path, ".kilo", "kilo.json")).text())
+    expect(json).not.toHaveProperty("subagent_model")
+    // The primary target only gained nothing; the delete was a no-op there.
+    const jsonc = JSON.parse(await Bun.file(path.join(tmp.path, ".kilo", "kilo.jsonc")).text())
+    expect(jsonc).not.toHaveProperty("subagent_model")
+    expect(jsonc.username).toBe("keep")
+  })
+
+  test("collects null sentinel paths from nested patches", () => {
+    expect(
+      KilocodeConfig.unsetPaths({
+        subagent_model: null,
+        agent: { explore: { model: null, variant: "high" } },
+        username: "marius",
+      }),
+    ).toEqual([["subagent_model"], ["agent", "explore", "model"]])
+  })
+})
+
 describe("agent config", () => {
   test("accepts delete sentinels for agent model and variant overrides", () => {
     const patch = decode({ agent: { explore: { model: null, variant: null } } })
@@ -594,13 +777,15 @@ describe("project config directory precedence", () => {
   test("prefers kilo files over legacy opencode files in the same directory", async () => {
     await using tmp = await tmpdir()
     const dir = path.join(tmp.path, ".kilo")
-    await writeConfig(dir, { username: "legacy", model: "test/legacy" }, "opencode.jsonc")
-    await writeConfig(dir, { username: "kilo", model: "test/kilo" }, "kilo.jsonc")
+    await writeConfig(dir, { username: "legacy-json", model: "test/legacy-json" }, "opencode.json")
+    await writeConfig(dir, { username: "legacy-jsonc", model: "test/legacy-jsonc" }, "opencode.jsonc")
+    await writeConfig(dir, { username: "kilo-json", model: "test/kilo-json" }, "kilo.json")
+    await writeConfig(dir, { username: "kilo-jsonc", model: "test/kilo-jsonc" }, "kilo.jsonc")
 
     const config = await provideTestInstance({ directory: tmp.path, fn: load })
 
-    expect(config.username).toBe("kilo")
-    expect(config.model).toBe("test/kilo")
+    expect(config.username).toBe("kilo-jsonc")
+    expect(config.model).toBe("test/kilo-jsonc")
   })
 
   test("prefers .kilo over legacy .kilocode and ignores .opencode", async () => {

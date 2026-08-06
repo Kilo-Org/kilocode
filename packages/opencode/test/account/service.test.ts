@@ -1,5 +1,8 @@
 import { expect } from "bun:test"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { httpClient } from "@opencode-ai/core/effect/app-node-platform"
 import { Duration, Effect, Layer, Option, Schema } from "effect"
+import { sql } from "drizzle-orm"
 import { HttpClient, HttpClientError, HttpClientResponse } from "effect/unstable/http"
 
 import { AccountRepo } from "../../src/account/repo"
@@ -15,24 +18,25 @@ import {
   RefreshToken,
   UserCode,
 } from "../../src/account/schema"
-import { Database } from "@/storage/db"
+import { Database } from "@opencode-ai/core/database/database"
 import { testEffect } from "../lib/effect"
 
 const truncate = Layer.effectDiscard(
-  Effect.sync(() => {
-    const db = Database.Client()
-    db.run(/*sql*/ `DELETE FROM account_state`)
-    db.run(/*sql*/ `DELETE FROM account`)
+  Effect.gen(function* () {
+    const { db } = yield* Database.Service
+    yield* db.run(sql`DELETE FROM account_state`)
+    yield* db.run(sql`DELETE FROM account`)
   }),
 )
+const truncateNode = LayerNode.make({ name: "truncate-account", layer: truncate, deps: [Database.node] })
 
-const it = testEffect(Layer.merge(AccountRepo.layer, truncate))
+const it = testEffect(LayerNode.compile(LayerNode.group([AccountRepo.node, truncateNode])))
 
 const insideEagerRefreshWindow = Duration.toMillis(Duration.minutes(1))
 const outsideEagerRefreshWindow = Duration.toMillis(Duration.minutes(10))
 
 const live = (client: HttpClient.HttpClient) =>
-  Layer.fresh(Account.layer).pipe(Layer.provide(Layer.succeed(HttpClient.HttpClient, client))) // kilocode_change
+  LayerNode.compile(Account.node, [[httpClient, Layer.succeed(HttpClient.HttpClient, client)]]) // kilocode_change
 
 const json = (req: Parameters<typeof HttpClientResponse.fromWeb>[0], body: unknown, status = 200) =>
   HttpClientResponse.fromWeb(

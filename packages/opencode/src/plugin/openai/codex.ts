@@ -1,5 +1,6 @@
 import type { Hooks, PluginInput } from "@kilocode/plugin"
-import * as Log from "@opencode-ai/core/util/log"
+import * as Log from "@opencode-ai/core/util/log" // kilocode_change
+import { escapeHtml } from "@/util/html"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { OAUTH_DUMMY_KEY } from "../../auth"
 import os from "os"
@@ -8,7 +9,7 @@ import { createServer } from "http"
 import { refreshCodexAuth } from "@/kilocode/provider/codex-refresh" // kilocode_change
 import { OpenAIWebSocketPool } from "./ws-pool"
 
-const log = Log.create({ service: "plugin.codex" })
+const log = Log.create({ service: "plugin.codex" }) // kilocode_change
 
 const CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
 const ISSUER = "https://auth.openai.com"
@@ -17,8 +18,6 @@ const OAUTH_PORT = 1455
 const OAUTH_POLLING_SAFETY_MARGIN_MS = 3000
 const ALLOWED_MODELS = new Set([
   "gpt-5.5",
-  "gpt-5.2",
-  "gpt-5.3-codex",
   "gpt-5.3-codex-spark",
   "gpt-5.4",
   "gpt-5.4-mini",
@@ -30,9 +29,7 @@ const ALLOWED_MODELS = new Set([
   // kilocode_change end
 ])
 // kilocode_change start
-const DISALLOWED_MODELS = new Set([
-  "gpt-5.5-pro",
-])
+const DISALLOWED_MODELS = new Set(["gpt-5.5-pro", "gpt-5.6"])
 // kilocode_change end
 
 interface PkceCodes {
@@ -161,6 +158,7 @@ async function refreshAccessToken(refreshToken: string, issuer = ISSUER, signal?
   return response.json()
 }
 
+// kilocode_change start - retain Kilo-branded OAuth callback until the shared page supports Kilo branding
 const HTML_SUCCESS = `<!doctype html>
 <html>
   <head>
@@ -207,7 +205,7 @@ const HTML_SUCCESS = `<!doctype html>
   </body>
 </html>`
 
-const HTML_ERROR = (error: string) => `<!doctype html>
+export const renderOAuthError = (error: string) => `<!doctype html>
 <html>
   <head>
     <!-- kilocode_change start -->
@@ -252,10 +250,11 @@ const HTML_ERROR = (error: string) => `<!doctype html>
     <div class="container">
       <h1>Authorization Failed</h1>
       <p>An error occurred during authorization.</p>
-      <div class="error">${error}</div>
+      <div class="error">${escapeHtml(error)}</div>
     </div>
   </body>
 </html>`
+// kilocode_change end
 
 interface PendingOAuth {
   pkce: PkceCodes
@@ -285,8 +284,8 @@ async function startOAuthServer(): Promise<{ port: number; redirectUri: string }
         const errorMsg = errorDescription || error
         pendingOAuth?.reject(new Error(errorMsg))
         pendingOAuth = undefined
-        res.writeHead(200, { "Content-Type": "text/html" })
-        res.end(HTML_ERROR(errorMsg))
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" })
+        res.end(renderOAuthError(errorMsg))
         return
       }
 
@@ -294,8 +293,8 @@ async function startOAuthServer(): Promise<{ port: number; redirectUri: string }
         const errorMsg = "Missing authorization code"
         pendingOAuth?.reject(new Error(errorMsg))
         pendingOAuth = undefined
-        res.writeHead(400, { "Content-Type": "text/html" })
-        res.end(HTML_ERROR(errorMsg))
+        res.writeHead(400, { "Content-Type": "text/html; charset=utf-8" })
+        res.end(renderOAuthError(errorMsg))
         return
       }
 
@@ -303,8 +302,8 @@ async function startOAuthServer(): Promise<{ port: number; redirectUri: string }
         const errorMsg = "Invalid state - potential CSRF attack"
         pendingOAuth?.reject(new Error(errorMsg))
         pendingOAuth = undefined
-        res.writeHead(400, { "Content-Type": "text/html" })
-        res.end(HTML_ERROR(errorMsg))
+        res.writeHead(400, { "Content-Type": "text/html; charset=utf-8" })
+        res.end(renderOAuthError(errorMsg))
         return
       }
 
@@ -315,8 +314,8 @@ async function startOAuthServer(): Promise<{ port: number; redirectUri: string }
         .then((tokens) => current.resolve(tokens))
         .catch((err) => current.reject(err))
 
-      res.writeHead(200, { "Content-Type": "text/html" })
-      res.end(HTML_SUCCESS)
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" })
+      res.end(HTML_SUCCESS) // kilocode_change - shared callback page is currently OpenCode-branded
       return
     }
 
@@ -334,7 +333,6 @@ async function startOAuthServer(): Promise<{ port: number; redirectUri: string }
 
   await new Promise<void>((resolve, reject) => {
     oauthServer!.listen(OAUTH_PORT, () => {
-      log.info("codex oauth server started", { port: OAUTH_PORT })
       resolve()
     })
     oauthServer!.on("error", reject)
@@ -345,9 +343,7 @@ async function startOAuthServer(): Promise<{ port: number; redirectUri: string }
 
 function stopOAuthServer() {
   if (oauthServer) {
-    oauthServer.close(() => {
-      log.info("codex oauth server stopped")
-    })
+    oauthServer.close(() => {})
     oauthServer = undefined
   }
 }
@@ -389,6 +385,10 @@ export async function CodexAuthPlugin(input: PluginInput, options: CodexAuthPlug
     async dispose() {
       for (const websocketFetch of websocketFetches) websocketFetch.close()
       websocketFetches.length = 0
+    },
+    async event(input) {
+      if (input.event.type !== "session.deleted") return
+      for (const websocketFetch of websocketFetches) websocketFetch.remove(input.event.properties.info.id)
     },
     provider: {
       id: "openai",

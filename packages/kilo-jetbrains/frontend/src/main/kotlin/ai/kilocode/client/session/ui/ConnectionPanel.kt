@@ -23,7 +23,6 @@ import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
-import com.intellij.util.ui.JBDimension
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.BorderLayout
@@ -274,7 +273,9 @@ class ConnectionPanel(
     override fun getPreferredSize(): Dimension {
         val size = super.getPreferredSize()
         if (!scroll.isVisible) return size
-        return JBDimension(size.width, header.preferredSize.height + scrollHeight())
+        // header/scroll heights are already scaled px; assign with plain Dimension so IDE
+        // zoom does not scale them a second time via the user scale factor.
+        return Dimension(size.width, header.preferredSize.height + scrollHeight())
     }
 
     private fun scrollHeight(): Int {

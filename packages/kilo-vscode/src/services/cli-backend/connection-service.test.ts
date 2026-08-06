@@ -40,9 +40,9 @@ describe("KiloConnectionService clients", () => {
 })
 
 describe("KiloConnectionService viewed sessions", () => {
-  test("keeps Agent Manager sessions when sidebar focus changes during a flush", async () => {
+  test("keeps Agent Manager sessions when sidebar visibility changes during a flush", async () => {
     const service = new KiloConnectionService({} as any)
-    const calls: Array<{ focused: string[]; open?: string[] }> = []
+    const calls: Array<{ viewer: { id: string; active: boolean }; attached: string[]; visible: string[] }> = []
     let release!: () => void
     const gate = new Promise<void>((resolve) => {
       release = resolve
@@ -50,10 +50,9 @@ describe("KiloConnectionService viewed sessions", () => {
     let active = 0
     let max = 0
 
-    ;(service as any).remoteService = { getState: () => ({ enabled: true }) }
     ;(service as any).client = {
       session: {
-        viewed: async (input: { focused: string[]; open?: string[] }) => {
+        viewed: async (input: { viewer: { id: string; active: boolean }; attached: string[]; visible: string[] }) => {
           calls.push(input)
           active += 1
           max = Math.max(max, active)
@@ -63,23 +62,91 @@ describe("KiloConnectionService viewed sessions", () => {
       },
     }
 
-    service.registerFocused("agent-manager", "am-1")
-    service.registerOpen("agent-manager", ["am-1", "am-2"])
+    service.registerVisible("agent-manager", ["am-1"])
+    service.registerAttached("agent-manager", ["am-1", "am-2"])
     await Bun.sleep(175)
-    expect(calls).toEqual([{ focused: ["am-1"], open: ["am-2"] }])
+    expect(calls).toHaveLength(1)
+    expect([...calls[0].visible].sort()).toEqual(["am-1"])
+    expect([...calls[0].attached].sort()).toEqual(["am-1", "am-2"])
 
-    service.registerFocused("sidebar", "side-1")
+    service.registerVisible("sidebar", ["side-1"])
     await Bun.sleep(175)
     expect(calls).toHaveLength(1)
 
     release()
     await Bun.sleep(10)
     expect(max).toBe(1)
-    expect(calls[1]).toEqual({ focused: ["am-1", "side-1"], open: ["am-2"] })
+    expect([...calls[1].visible].sort()).toEqual(["am-1", "side-1"])
+    expect([...calls[1].attached].sort()).toEqual(["am-1", "am-2", "side-1"])
 
-    service.unregisterFocused("sidebar")
+    service.registerVisible("sidebar", [])
     await Bun.sleep(175)
-    expect(calls[2]).toEqual({ focused: ["am-1"], open: ["am-2"] })
+    expect([...calls[2].visible].sort()).toEqual(["am-1"])
+    expect([...calls[2].attached].sort()).toEqual(["am-1", "am-2"])
+  })
+
+  test("window focus gates viewer.active but not attachment", async () => {
+    const window = vscode.window as unknown as {
+      state: { focused: boolean }
+      onDidChangeWindowState: (listener: (ws: { focused: boolean }) => void) => { dispose(): void }
+    }
+    const original = window.onDidChangeWindowState
+    let listener: ((ws: { focused: boolean }) => void) | undefined
+    window.onDidChangeWindowState = (cb) => {
+      listener = cb
+      return { dispose: () => {} }
+    }
+
+    try {
+      const service = new KiloConnectionService({} as any)
+      const calls: Array<{ viewer: { id: string; active: boolean }; attached: string[]; visible: string[] }> = []
+      ;(service as any).client = {
+        session: {
+          viewed: async (input: (typeof calls)[number]) => {
+            calls.push(input)
+          },
+        },
+      }
+
+      service.registerVisible("sidebar", ["ses-1"])
+      service.registerAttached("sidebar", ["ses-1", "ses-2"])
+      await Bun.sleep(175)
+      expect(calls).toHaveLength(1)
+      expect(calls[0].viewer.active).toBe(true)
+
+      listener!({ focused: false })
+      await Bun.sleep(175)
+      expect(calls).toHaveLength(2)
+      expect(calls[1].viewer.active).toBe(false)
+      expect([...calls[1].visible].sort()).toEqual(["ses-1"])
+      expect([...calls[1].attached].sort()).toEqual(["ses-1", "ses-2"])
+    } finally {
+      window.onDidChangeWindowState = original
+    }
+  })
+
+  test("sends snapshots while remote control is disabled", async () => {
+    const service = new KiloConnectionService({} as any)
+    const calls: Array<{ viewer: { id: string; active: boolean }; attached: string[]; visible: string[] }> = []
+    ;(service as any).client = {
+      session: {
+        viewed: async (input: (typeof calls)[number]) => {
+          calls.push(input)
+        },
+      },
+    }
+    service.setRemoteService({
+      getState: () => ({ enabled: false, connected: false }),
+      onChange: () => () => {},
+    } as any)
+
+    service.registerVisible("sidebar", ["ses-1"])
+    service.registerAttached("agent-manager", ["ses-2"])
+    await Bun.sleep(175)
+
+    expect(calls).toHaveLength(1)
+    expect([...calls[0].visible].sort()).toEqual(["ses-1"])
+    expect([...calls[0].attached].sort()).toEqual(["ses-1", "ses-2"])
   })
 })
 

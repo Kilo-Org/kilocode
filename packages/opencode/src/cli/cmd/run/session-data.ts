@@ -24,9 +24,8 @@
 //   `data.questions`. The footer shows whichever is first. When a reply
 //   event arrives, the queue entry is removed and the footer falls back
 //   to the next pending request or to the prompt view.
-import type { Part, PermissionRequest, QuestionRequest, ToolPart } from "@kilocode/sdk/v2"
+import type { Event, Part, PermissionRequest, QuestionRequest, ToolPart } from "@kilocode/sdk/v2" // kilocode_change - revert to upstream native Event type
 import type { RunInteractiveTerminalSnapshot } from "@/kilocode/cli/cmd/run/types" // kilocode_change
-import type { Event } from "./event"
 import * as Locale from "@/util/locale"
 import { appendTerminalOutput } from "@/kilocode/interactive-terminal/output" // kilocode_change
 import { toolView } from "./tool"
@@ -63,6 +62,7 @@ type SessionCommit = StreamCommit
 // - part:   part ID → "assistant" | "reasoning" (text parts only)
 // - text:   part ID → full accumulated text so far
 // - sent:   part ID → byte offset of last flushed text (for incremental output)
+// - visible: part ID → rendered text for an active part after display transforms
 // - end:    part IDs whose time.end has arrived (part is finished)
 // - shell:  shell call ID → chosen transcript source for direct shell calls
 // - echo:   message ID → bash outputs to strip from the next assistant chunk
@@ -86,6 +86,7 @@ export type SessionData = {
   part: Map<string, PartKind>
   text: Map<string, string>
   sent: Map<string, number>
+  visible: Map<string, string>
   end: Set<string>
   echo: Map<string, Set<string>>
 }
@@ -123,6 +124,7 @@ export function createSessionData(
     part: new Map(),
     text: new Map(),
     sent: new Map(),
+    visible: new Map(),
     end: new Set(),
     echo: new Map(),
   }
@@ -559,6 +561,7 @@ function flushPart(data: SessionData, commits: SessionCommit[], partID: string, 
 
   if (chunk) {
     data.sent.set(partID, text.length)
+    data.visible.set(partID, (data.visible.get(partID) ?? "") + chunk)
     commits.push({
       kind,
       text: chunk,
@@ -588,6 +591,7 @@ function drop(data: SessionData, partID: string) {
   data.part.delete(partID)
   data.text.delete(partID)
   data.sent.delete(partID)
+  data.visible.delete(partID)
   data.msg.delete(partID)
   data.end.delete(partID)
 }

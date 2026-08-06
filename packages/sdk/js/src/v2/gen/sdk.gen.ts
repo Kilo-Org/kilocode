@@ -7,6 +7,9 @@ import type {
   AgentBuilderPreviewResponses,
   AgentBuilderSaveErrors,
   AgentBuilderSaveResponses,
+  AgentManagerFailure,
+  AgentManagerRequestId,
+  AgentManagerResult,
   AgentPartInput,
   AnacondaDesktopOpenErrors,
   AnacondaDesktopOpenResponses,
@@ -75,13 +78,21 @@ import type {
   EventTuiPromptAppend2,
   EventTuiSessionSelect2,
   EventTuiToastShow2,
+  ExperimentalCapabilitiesGetErrors,
+  ExperimentalCapabilitiesGetResponses,
   ExperimentalConsoleGetErrors,
   ExperimentalConsoleGetResponses,
   ExperimentalConsoleListOrgsErrors,
   ExperimentalConsoleListOrgsResponses,
   ExperimentalConsoleSwitchOrgResponses,
+  ExperimentalControlPlaneMoveSessionErrors,
+  ExperimentalControlPlaneMoveSessionResponses,
+  ExperimentalProjectCopyGenerateNameErrors,
+  ExperimentalProjectCopyGenerateNameResponses,
   ExperimentalResourceListErrors,
   ExperimentalResourceListResponses,
+  ExperimentalSessionBackgroundErrors,
+  ExperimentalSessionBackgroundResponses,
   ExperimentalSessionListErrors,
   ExperimentalSessionListResponses,
   ExperimentalWorkspaceAdapterListErrors,
@@ -126,6 +137,8 @@ import type {
   GlobalHealthResponses,
   GlobalUpgradeErrors,
   GlobalUpgradeResponses,
+  IndexingConsentErrors,
+  IndexingConsentResponses,
   IndexingModelsErrors,
   IndexingModelsResponses,
   IndexingStatusErrors,
@@ -162,8 +175,16 @@ import type {
   KiloCloudSessionImportResponses,
   KiloCloudSessionsErrors,
   KiloCloudSessionsResponses,
+  KilocodeAgentManagerListErrors,
+  KilocodeAgentManagerListResponses,
+  KilocodeAgentManagerRejectErrors,
+  KilocodeAgentManagerRejectResponses,
+  KilocodeAgentManagerReplyErrors,
+  KilocodeAgentManagerReplyResponses,
   KilocodeAgentRequirementsErrors,
   KilocodeAgentRequirementsResponses,
+  KilocodeCommandFilesErrors,
+  KilocodeCommandFilesResponses,
   KilocodeHeapSnapshotErrors,
   KilocodeHeapSnapshotResponses,
   KilocodeNotebookListErrors,
@@ -174,6 +195,8 @@ import type {
   KilocodeNotebookReplyResponses,
   KilocodeRemoveAgentErrors,
   KilocodeRemoveAgentResponses,
+  KilocodeRemoveCommandErrors,
+  KilocodeRemoveCommandResponses,
   KilocodeRemoveSkillErrors,
   KilocodeRemoveSkillResponses,
   KilocodeSessionImportMessageErrors,
@@ -192,6 +215,8 @@ import type {
   KiloFimResponses,
   KiloModelsImagesErrors,
   KiloModelsImagesResponses,
+  KiloModelsTranscriptionsErrors,
+  KiloModelsTranscriptionsResponses,
   KiloModesErrors,
   KiloModesResponses,
   KiloNotificationsErrors,
@@ -200,6 +225,7 @@ import type {
   KiloOrganizationSetResponses,
   KiloProfileErrors,
   KiloProfileResponses,
+  LocationRef,
   LspStatusErrors,
   LspStatusResponses,
   McpAddErrors,
@@ -240,6 +266,8 @@ import type {
   MemoryShowResponses,
   MemoryStatusErrors,
   MemoryStatusResponses,
+  ModelRef,
+  MoveSessionDestination,
   NetworkListErrors,
   NetworkListResponses,
   NetworkRejectErrors,
@@ -268,15 +296,21 @@ import type {
   PermissionRuleset,
   PermissionSaveAlwaysRulesErrors,
   PermissionSaveAlwaysRulesResponses,
+  PermissionV2Reply,
+  PermissionV2Source,
+  ProjectCommands,
   ProjectCurrentErrors,
   ProjectCurrentResponses,
+  ProjectDirectoriesErrors,
+  ProjectDirectoriesResponses,
+  ProjectIcon,
   ProjectInitGitErrors,
   ProjectInitGitResponses,
   ProjectListErrors,
   ProjectListResponses,
   ProjectUpdateErrors,
   ProjectUpdateResponses,
-  Prompt,
+  PromptInput,
   ProviderAuthErrors,
   ProviderAuthResponses,
   ProviderListErrors,
@@ -308,6 +342,7 @@ import type {
   QuestionRejectResponses,
   QuestionReplyErrors,
   QuestionReplyResponses,
+  QuestionV2Reply,
   RemoteDisableErrors,
   RemoteDisableResponses,
   RemoteEnableErrors,
@@ -332,7 +367,6 @@ import type {
   SessionDeleteMessageErrors,
   SessionDeleteMessageResponses,
   SessionDeleteResponses,
-  SessionDelivery,
   SessionDiffErrors,
   SessionDiffResponses,
   SessionForkErrors,
@@ -427,24 +461,128 @@ import type {
   TuiShowToastResponses,
   TuiSubmitPromptErrors,
   TuiSubmitPromptResponses,
+  V2AgentListErrors,
+  V2AgentListResponses,
+  V2CommandListErrors,
+  V2CommandListResponses,
+  V2CredentialRemoveErrors,
+  V2CredentialRemoveResponses,
+  V2CredentialUpdateErrors,
+  V2CredentialUpdateResponses,
+  V2EventSubscribeErrors,
+  V2EventSubscribeResponses,
+  V2FsFindErrors,
+  V2FsFindResponses,
+  V2FsListErrors,
+  V2FsListResponses,
+  V2FsReadErrors,
+  V2FsReadResponses,
+  V2HealthGetErrors,
+  V2HealthGetResponses,
+  V2IntegrationAttemptCancelErrors,
+  V2IntegrationAttemptCancelResponses,
+  V2IntegrationAttemptCompleteErrors,
+  V2IntegrationAttemptCompleteResponses,
+  V2IntegrationAttemptStatusErrors,
+  V2IntegrationAttemptStatusResponses,
+  V2IntegrationConnectKeyErrors,
+  V2IntegrationConnectKeyResponses,
+  V2IntegrationConnectOauthErrors,
+  V2IntegrationConnectOauthResponses,
+  V2IntegrationGetErrors,
+  V2IntegrationGetResponses,
+  V2IntegrationListErrors,
+  V2IntegrationListResponses,
+  V2LocationGetErrors,
+  V2LocationGetResponses,
   V2ModelListErrors,
   V2ModelListResponses,
+  V2PermissionRequestListErrors,
+  V2PermissionRequestListResponses,
+  V2PermissionSavedListErrors,
+  V2PermissionSavedListResponses,
+  V2PermissionSavedRemoveErrors,
+  V2PermissionSavedRemoveResponses,
+  V2ProjectCopyCreateErrors,
+  V2ProjectCopyCreateResponses,
+  V2ProjectCopyRefreshErrors,
+  V2ProjectCopyRefreshResponses,
+  V2ProjectCopyRemoveErrors,
+  V2ProjectCopyRemoveResponses,
   V2ProviderGetErrors,
   V2ProviderGetResponses,
   V2ProviderListErrors,
   V2ProviderListResponses,
+  V2PtyConnectErrors,
+  V2PtyConnectResponses,
+  V2PtyConnectTokenErrors,
+  V2PtyConnectTokenResponses,
+  V2PtyCreateErrors,
+  V2PtyCreateResponses,
+  V2PtyGetErrors,
+  V2PtyGetResponses,
+  V2PtyListErrors,
+  V2PtyListResponses,
+  V2PtyRemoveErrors,
+  V2PtyRemoveResponses,
+  V2PtyUpdateErrors,
+  V2PtyUpdateResponses,
+  V2QuestionRequestListErrors,
+  V2QuestionRequestListResponses,
+  V2ReferenceListErrors,
+  V2ReferenceListResponses,
+  V2SessionActiveErrors,
+  V2SessionActiveResponses,
   V2SessionCompactErrors,
   V2SessionCompactResponses,
   V2SessionContextErrors,
   V2SessionContextResponses,
+  V2SessionCreateErrors,
+  V2SessionCreateResponses,
+  V2SessionEventsErrors,
+  V2SessionEventsResponses,
+  V2SessionGetErrors,
+  V2SessionGetResponses,
+  V2SessionHistoryErrors,
+  V2SessionHistoryResponses,
+  V2SessionInterruptErrors,
+  V2SessionInterruptResponses,
   V2SessionListErrors,
   V2SessionListResponses,
+  V2SessionMessageErrors,
+  V2SessionMessageResponses,
   V2SessionMessagesErrors,
   V2SessionMessagesResponses,
+  V2SessionPermissionCreateErrors,
+  V2SessionPermissionCreateResponses,
+  V2SessionPermissionGetErrors,
+  V2SessionPermissionGetResponses,
+  V2SessionPermissionListErrors,
+  V2SessionPermissionListResponses,
+  V2SessionPermissionReplyErrors,
+  V2SessionPermissionReplyResponses,
   V2SessionPromptErrors,
   V2SessionPromptResponses,
+  V2SessionQuestionListErrors,
+  V2SessionQuestionListResponses,
+  V2SessionQuestionRejectErrors,
+  V2SessionQuestionRejectResponses,
+  V2SessionQuestionReplyErrors,
+  V2SessionQuestionReplyResponses,
+  V2SessionRevertClearErrors,
+  V2SessionRevertClearResponses,
+  V2SessionRevertCommitErrors,
+  V2SessionRevertCommitResponses,
+  V2SessionRevertStageErrors,
+  V2SessionRevertStageResponses,
+  V2SessionSwitchAgentErrors,
+  V2SessionSwitchAgentResponses,
+  V2SessionSwitchModelErrors,
+  V2SessionSwitchModelResponses,
   V2SessionWaitErrors,
   V2SessionWaitResponses,
+  V2SkillListErrors,
+  V2SkillListResponses,
   VcsApplyErrors,
   VcsApplyResponses,
   VcsDiffErrors,
@@ -677,6 +815,675 @@ export class App extends HeyApiClient {
       ...options,
       ...params,
     })
+  }
+}
+
+export class ControlPlane extends HeyApiClient {
+  /**
+   * Move session
+   *
+   * Move a session to another project directory, optionally transferring local changes.
+   */
+  public moveSession<ThrowOnError extends boolean = false>(
+    parameters?: {
+      sessionID?: string
+      destination?: MoveSessionDestination
+      moveChanges?: boolean
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "body", key: "sessionID" },
+            { in: "body", key: "destination" },
+            { in: "body", key: "moveChanges" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      ExperimentalControlPlaneMoveSessionResponses,
+      ExperimentalControlPlaneMoveSessionErrors,
+      ThrowOnError
+    >({
+      url: "/experimental/control-plane/move-session",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
+export class Capabilities extends HeyApiClient {
+  /**
+   * Get experimental capabilities
+   *
+   * Get experimental features enabled on the Kilo server.
+   */
+  public get<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      ExperimentalCapabilitiesGetResponses,
+      ExperimentalCapabilitiesGetErrors,
+      ThrowOnError
+    >({
+      url: "/experimental/capabilities",
+      ...options,
+      ...params,
+    })
+  }
+}
+
+export class Console extends HeyApiClient {
+  /**
+   * Get active Console provider metadata
+   *
+   * Get the active Console org name and the set of provider IDs managed by that Console org.
+   */
+  public get<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      ExperimentalConsoleGetResponses,
+      ExperimentalConsoleGetErrors,
+      ThrowOnError
+    >({
+      url: "/experimental/console",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * List switchable Console orgs
+   *
+   * Get the available Console orgs across logged-in accounts, including the current active org.
+   */
+  public listOrgs<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      ExperimentalConsoleListOrgsResponses,
+      ExperimentalConsoleListOrgsErrors,
+      ThrowOnError
+    >({
+      url: "/experimental/console/orgs",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Switch active Console org
+   *
+   * Persist a new active Console account/org selection for the current local Kilo state.
+   */
+  public switchOrg<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      accountID?: string
+      orgID?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "accountID" },
+            { in: "body", key: "orgID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<ExperimentalConsoleSwitchOrgResponses, unknown, ThrowOnError>({
+      url: "/experimental/console/switch",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
+export class Session extends HeyApiClient {
+  /**
+   * List sessions
+   *
+   * Get a list of all Kilo sessions across projects, sorted by most recently updated. Archived sessions are excluded by default.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      projectID?: string
+      worktrees?: boolean
+      current?: "true" | "false"
+      roots?: boolean | "true" | "false"
+      start?: number
+      cursor?: number
+      search?: string
+      limit?: number
+      archived?: boolean | "true" | "false"
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "query", key: "projectID" },
+            { in: "query", key: "worktrees" },
+            { in: "query", key: "current" },
+            { in: "query", key: "roots" },
+            { in: "query", key: "start" },
+            { in: "query", key: "cursor" },
+            { in: "query", key: "search" },
+            { in: "query", key: "limit" },
+            { in: "query", key: "archived" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      ExperimentalSessionListResponses,
+      ExperimentalSessionListErrors,
+      ThrowOnError
+    >({
+      url: "/experimental/session",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Background subagents
+   *
+   * Detach any synchronous subagents currently blocking the session and continue them in the background.
+   */
+  public background<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      ExperimentalSessionBackgroundResponses,
+      ExperimentalSessionBackgroundErrors,
+      ThrowOnError
+    >({
+      url: "/experimental/session/{sessionID}/background",
+      ...options,
+      ...params,
+    })
+  }
+}
+
+export class Resource extends HeyApiClient {
+  /**
+   * Get MCP resources
+   *
+   * Get all available MCP resources from connected servers. Optionally filter by name.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      ExperimentalResourceListResponses,
+      ExperimentalResourceListErrors,
+      ThrowOnError
+    >({
+      url: "/experimental/resource",
+      ...options,
+      ...params,
+    })
+  }
+}
+
+export class ProjectCopy extends HeyApiClient {
+  /**
+   * Generate project copy name
+   *
+   * Generate a short name for a project copy from task context.
+   */
+  public generateName<ThrowOnError extends boolean = false>(
+    parameters: {
+      projectID: string
+      directory?: string
+      workspace?: string
+      context?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "projectID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "context" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      ExperimentalProjectCopyGenerateNameResponses,
+      ExperimentalProjectCopyGenerateNameErrors,
+      ThrowOnError
+    >({
+      url: "/experimental/project/{projectID}/copy/generate-name",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
+export class Adapter extends HeyApiClient {
+  /**
+   * List workspace adapters
+   *
+   * List all available workspace adapters for the current project.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      ExperimentalWorkspaceAdapterListResponses,
+      ExperimentalWorkspaceAdapterListErrors,
+      ThrowOnError
+    >({
+      url: "/experimental/workspace/adapter",
+      ...options,
+      ...params,
+    })
+  }
+}
+
+export class Workspace extends HeyApiClient {
+  /**
+   * List workspaces
+   *
+   * List all workspaces.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      ExperimentalWorkspaceListResponses,
+      ExperimentalWorkspaceListErrors,
+      ThrowOnError
+    >({
+      url: "/experimental/workspace",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Create workspace
+   *
+   * Create a workspace for the current project.
+   */
+  public create<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      id?: string
+      type?: string
+      branch?: string | null
+      extra?: unknown | null
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "id" },
+            { in: "body", key: "type" },
+            { in: "body", key: "branch" },
+            { in: "body", key: "extra" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      ExperimentalWorkspaceCreateResponses,
+      ExperimentalWorkspaceCreateErrors,
+      ThrowOnError
+    >({
+      url: "/experimental/workspace",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Sync workspace list
+   *
+   * Register missing workspaces returned by workspace adapters.
+   */
+  public syncList<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      ExperimentalWorkspaceSyncListResponses,
+      ExperimentalWorkspaceSyncListErrors,
+      ThrowOnError
+    >({
+      url: "/experimental/workspace/sync-list",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Workspace status
+   *
+   * Get connection status for workspaces in the current project.
+   */
+  public status<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      ExperimentalWorkspaceStatusResponses,
+      ExperimentalWorkspaceStatusErrors,
+      ThrowOnError
+    >({
+      url: "/experimental/workspace/status",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Remove workspace
+   *
+   * Remove an existing workspace.
+   */
+  public remove<ThrowOnError extends boolean = false>(
+    parameters: {
+      id: string
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "id" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).delete<
+      ExperimentalWorkspaceRemoveResponses,
+      ExperimentalWorkspaceRemoveErrors,
+      ThrowOnError
+    >({
+      url: "/experimental/workspace/{id}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Warp session into workspace
+   *
+   * Move a session's sync history into the target workspace, or detach it to the local project.
+   */
+  public warp<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      id?: string | null
+      sessionID?: string
+      copyChanges?: boolean
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "id" },
+            { in: "body", key: "sessionID" },
+            { in: "body", key: "copyChanges" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      ExperimentalWorkspaceWarpResponses,
+      ExperimentalWorkspaceWarpErrors,
+      ThrowOnError
+    >({
+      url: "/experimental/workspace/warp",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  private _adapter?: Adapter
+  get adapter(): Adapter {
+    return (this._adapter ??= new Adapter({ client: this.client }))
+  }
+}
+
+export class Experimental extends HeyApiClient {
+  private _controlPlane?: ControlPlane
+  get controlPlane(): ControlPlane {
+    return (this._controlPlane ??= new ControlPlane({ client: this.client }))
+  }
+
+  private _capabilities?: Capabilities
+  get capabilities(): Capabilities {
+    return (this._capabilities ??= new Capabilities({ client: this.client }))
+  }
+
+  private _console?: Console
+  get console(): Console {
+    return (this._console ??= new Console({ client: this.client }))
+  }
+
+  private _session?: Session
+  get session(): Session {
+    return (this._session ??= new Session({ client: this.client }))
+  }
+
+  private _resource?: Resource
+  get resource(): Resource {
+    return (this._resource ??= new Resource({ client: this.client }))
+  }
+
+  private _projectCopy?: ProjectCopy
+  get projectCopy(): ProjectCopy {
+    return (this._projectCopy ??= new ProjectCopy({ client: this.client }))
+  }
+
+  private _workspace?: Workspace
+  get workspace(): Workspace {
+    return (this._workspace ??= new Workspace({ client: this.client }))
   }
 }
 
@@ -991,6 +1798,10 @@ export class Config2 extends HeyApiClient {
         [key: string]: unknown
       }
       unset?: Array<Array<string>>
+      expected?: {
+        path: string
+        revision: string
+      }
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -1004,6 +1815,7 @@ export class Config2 extends HeyApiClient {
             { in: "body", key: "scope" },
             { in: "body", key: "set" },
             { in: "body", key: "unset" },
+            { in: "body", key: "expected" },
           ],
         },
       ],
@@ -1227,500 +2039,6 @@ export class Config2 extends HeyApiClient {
         ...params.headers,
       },
     })
-  }
-}
-
-export class Console extends HeyApiClient {
-  /**
-   * Get active Console provider metadata
-   *
-   * Get the active Console org name and the set of provider IDs managed by that Console org.
-   */
-  public get<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<
-      ExperimentalConsoleGetResponses,
-      ExperimentalConsoleGetErrors,
-      ThrowOnError
-    >({
-      url: "/experimental/console",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * List switchable Console orgs
-   *
-   * Get the available Console orgs across logged-in accounts, including the current active org.
-   */
-  public listOrgs<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<
-      ExperimentalConsoleListOrgsResponses,
-      ExperimentalConsoleListOrgsErrors,
-      ThrowOnError
-    >({
-      url: "/experimental/console/orgs",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Switch active Console org
-   *
-   * Persist a new active Console account/org selection for the current local Kilo state.
-   */
-  public switchOrg<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      accountID?: string
-      orgID?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "accountID" },
-            { in: "body", key: "orgID" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<ExperimentalConsoleSwitchOrgResponses, unknown, ThrowOnError>({
-      url: "/experimental/console/switch",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-}
-
-export class Session extends HeyApiClient {
-  /**
-   * List sessions
-   *
-   * Get a list of all Kilo sessions across projects, sorted by most recently updated. Archived sessions are excluded by default.
-   */
-  public list<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      projectID?: string
-      worktrees?: boolean
-      current?: "true" | "false"
-      roots?: boolean | "true" | "false"
-      start?: number
-      cursor?: number
-      search?: string
-      limit?: number
-      archived?: boolean | "true" | "false"
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "query", key: "projectID" },
-            { in: "query", key: "worktrees" },
-            { in: "query", key: "current" },
-            { in: "query", key: "roots" },
-            { in: "query", key: "start" },
-            { in: "query", key: "cursor" },
-            { in: "query", key: "search" },
-            { in: "query", key: "limit" },
-            { in: "query", key: "archived" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<
-      ExperimentalSessionListResponses,
-      ExperimentalSessionListErrors,
-      ThrowOnError
-    >({
-      url: "/experimental/session",
-      ...options,
-      ...params,
-    })
-  }
-}
-
-export class Resource extends HeyApiClient {
-  /**
-   * Get MCP resources
-   *
-   * Get all available MCP resources from connected servers. Optionally filter by name.
-   */
-  public list<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<
-      ExperimentalResourceListResponses,
-      ExperimentalResourceListErrors,
-      ThrowOnError
-    >({
-      url: "/experimental/resource",
-      ...options,
-      ...params,
-    })
-  }
-}
-
-export class Adapter extends HeyApiClient {
-  /**
-   * List workspace adapters
-   *
-   * List all available workspace adapters for the current project.
-   */
-  public list<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<
-      ExperimentalWorkspaceAdapterListResponses,
-      ExperimentalWorkspaceAdapterListErrors,
-      ThrowOnError
-    >({
-      url: "/experimental/workspace/adapter",
-      ...options,
-      ...params,
-    })
-  }
-}
-
-export class Workspace extends HeyApiClient {
-  /**
-   * List workspaces
-   *
-   * List all workspaces.
-   */
-  public list<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<
-      ExperimentalWorkspaceListResponses,
-      ExperimentalWorkspaceListErrors,
-      ThrowOnError
-    >({
-      url: "/experimental/workspace",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Create workspace
-   *
-   * Create a workspace for the current project.
-   */
-  public create<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      id?: string
-      type?: string
-      branch?: string | null
-      extra?: unknown | null
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "id" },
-            { in: "body", key: "type" },
-            { in: "body", key: "branch" },
-            { in: "body", key: "extra" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      ExperimentalWorkspaceCreateResponses,
-      ExperimentalWorkspaceCreateErrors,
-      ThrowOnError
-    >({
-      url: "/experimental/workspace",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  /**
-   * Sync workspace list
-   *
-   * Register missing workspaces returned by workspace adapters.
-   */
-  public syncList<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      ExperimentalWorkspaceSyncListResponses,
-      ExperimentalWorkspaceSyncListErrors,
-      ThrowOnError
-    >({
-      url: "/experimental/workspace/sync-list",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Workspace status
-   *
-   * Get connection status for workspaces in the current project.
-   */
-  public status<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<
-      ExperimentalWorkspaceStatusResponses,
-      ExperimentalWorkspaceStatusErrors,
-      ThrowOnError
-    >({
-      url: "/experimental/workspace/status",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Remove workspace
-   *
-   * Remove an existing workspace.
-   */
-  public remove<ThrowOnError extends boolean = false>(
-    parameters: {
-      id: string
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "id" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).delete<
-      ExperimentalWorkspaceRemoveResponses,
-      ExperimentalWorkspaceRemoveErrors,
-      ThrowOnError
-    >({
-      url: "/experimental/workspace/{id}",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Warp session into workspace
-   *
-   * Move a session's sync history into the target workspace, or detach it to the local project.
-   */
-  public warp<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      id?: string | null
-      sessionID?: string
-      copyChanges?: boolean
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "id" },
-            { in: "body", key: "sessionID" },
-            { in: "body", key: "copyChanges" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      ExperimentalWorkspaceWarpResponses,
-      ExperimentalWorkspaceWarpErrors,
-      ThrowOnError
-    >({
-      url: "/experimental/workspace/warp",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  private _adapter?: Adapter
-  get adapter(): Adapter {
-    return (this._adapter ??= new Adapter({ client: this.client }))
-  }
-}
-
-export class Experimental extends HeyApiClient {
-  private _console?: Console
-  get console(): Console {
-    return (this._console ??= new Console({ client: this.client }))
-  }
-
-  private _session?: Session
-  get session(): Session {
-    return (this._session ??= new Session({ client: this.client }))
-  }
-
-  private _resource?: Resource
-  get resource(): Resource {
-    return (this._resource ??= new Resource({ client: this.client }))
-  }
-
-  private _workspace?: Workspace
-  get workspace(): Workspace {
-    return (this._workspace ??= new Workspace({ client: this.client }))
   }
 }
 
@@ -2968,17 +3286,8 @@ export class Project extends HeyApiClient {
       directory?: string
       workspace?: string
       name?: string
-      icon?: {
-        url?: string
-        override?: string
-        color?: string
-      }
-      commands?: {
-        /**
-         * Startup script to run when creating a new workspace (worktree)
-         */
-        start?: string
-      }
+      icon?: ProjectIcon
+      commands?: ProjectCommands
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -3006,6 +3315,38 @@ export class Project extends HeyApiClient {
         ...options?.headers,
         ...params.headers,
       },
+    })
+  }
+
+  /**
+   * List project directories
+   *
+   * List known local absolute directories for a project.
+   */
+  public directories<ThrowOnError extends boolean = false>(
+    parameters: {
+      projectID: string
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "projectID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<ProjectDirectoriesResponses, ProjectDirectoriesErrors, ThrowOnError>({
+      url: "/project/{projectID}/directories",
+      ...options,
+      ...params,
     })
   }
 }
@@ -3193,11 +3534,11 @@ export class Pty extends HeyApiClient {
       directory?: string
       workspace?: string
       title?: string
-      sessionID?: string | null
       size?: {
         rows: number
         cols: number
       }
+      sessionID?: string | null
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -3210,8 +3551,8 @@ export class Pty extends HeyApiClient {
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
             { in: "body", key: "title" },
-            { in: "body", key: "sessionID" },
             { in: "body", key: "size" },
+            { in: "body", key: "sessionID" },
           ],
         },
       ],
@@ -3443,6 +3784,7 @@ export class Permission extends HeyApiClient {
       workspace?: string
       reply?: "once" | "always" | "reject"
       message?: string
+      interactive?: boolean
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -3456,6 +3798,7 @@ export class Permission extends HeyApiClient {
             { in: "query", key: "workspace" },
             { in: "body", key: "reply" },
             { in: "body", key: "message" },
+            { in: "body", key: "interactive" },
           ],
         },
       ],
@@ -3833,6 +4176,7 @@ export class Session2 extends HeyApiClient {
       permission?: PermissionRuleset
       platform?: string
       workspaceID?: string
+      sandboxInheritanceToken?: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -3851,6 +4195,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "permission" },
             { in: "body", key: "platform" },
             { in: "body", key: "workspaceID" },
+            { in: "body", key: "sandboxInheritanceToken" },
           ],
         },
       ],
@@ -4169,6 +4514,8 @@ export class Session2 extends HeyApiClient {
       variant?: string
       snapshotInitialization?: "wait"
       editorContext?: {
+        directory?: string
+        worktree?: string
         visibleFiles?: Array<string>
         openTabs?: Array<string>
         activeFile?: string
@@ -4531,6 +4878,8 @@ export class Session2 extends HeyApiClient {
       variant?: string
       snapshotInitialization?: "wait"
       editorContext?: {
+        directory?: string
+        worktree?: string
         visibleFiles?: Array<string>
         openTabs?: Array<string>
         activeFile?: string
@@ -4765,8 +5114,12 @@ export class Session2 extends HeyApiClient {
     parameters?: {
       directory?: string
       workspace?: string
-      focused?: Array<string>
-      open?: Array<string>
+      viewer?: {
+        id: string
+        active: boolean
+      }
+      attached?: Array<string>
+      visible?: Array<string>
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -4777,8 +5130,9 @@ export class Session2 extends HeyApiClient {
           args: [
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
-            { in: "body", key: "focused" },
-            { in: "body", key: "open" },
+            { in: "body", key: "viewer" },
+            { in: "body", key: "attached" },
+            { in: "body", key: "visible" },
           ],
         },
       ],
@@ -5040,325 +5394,6 @@ export class Sync extends HeyApiClient {
   private _history?: History
   get history(): History {
     return (this._history ??= new History({ client: this.client }))
-  }
-}
-
-export class Session3 extends HeyApiClient {
-  /**
-   * List v2 sessions
-   *
-   * Retrieve sessions in the requested order. Items keep that order across pages; use cursor.next or cursor.previous to move through the ordered list.
-   */
-  public list<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      limit?: number
-      order?: "asc" | "desc"
-      path?: string
-      roots?: boolean | "true" | "false"
-      start?: number
-      search?: string
-      cursor?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "query", key: "limit" },
-            { in: "query", key: "order" },
-            { in: "query", key: "path" },
-            { in: "query", key: "roots" },
-            { in: "query", key: "start" },
-            { in: "query", key: "search" },
-            { in: "query", key: "cursor" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<V2SessionListResponses, V2SessionListErrors, ThrowOnError>({
-      url: "/api/session",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Send v2 message
-   *
-   * Create a v2 session message and queue it for the agent loop.
-   */
-  public prompt<ThrowOnError extends boolean = false>(
-    parameters: {
-      sessionID: string
-      directory?: string
-      workspace?: string
-      prompt?: Prompt
-      delivery?: SessionDelivery
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "sessionID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "prompt" },
-            { in: "body", key: "delivery" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<V2SessionPromptResponses, V2SessionPromptErrors, ThrowOnError>({
-      url: "/api/session/{sessionID}/prompt",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  /**
-   * Compact v2 session
-   *
-   * Compact a v2 session conversation.
-   */
-  public compact<ThrowOnError extends boolean = false>(
-    parameters: {
-      sessionID: string
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "sessionID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<V2SessionCompactResponses, V2SessionCompactErrors, ThrowOnError>({
-      url: "/api/session/{sessionID}/compact",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Wait for v2 session
-   *
-   * Wait for a v2 session agent loop to become idle.
-   */
-  public wait<ThrowOnError extends boolean = false>(
-    parameters: {
-      sessionID: string
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "sessionID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<V2SessionWaitResponses, V2SessionWaitErrors, ThrowOnError>({
-      url: "/api/session/{sessionID}/wait",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Get v2 session context
-   *
-   * Retrieve the active context messages for a v2 session (all messages after the last compaction).
-   */
-  public context<ThrowOnError extends boolean = false>(
-    parameters: {
-      sessionID: string
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "sessionID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<V2SessionContextResponses, V2SessionContextErrors, ThrowOnError>({
-      url: "/api/session/{sessionID}/context",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Get v2 session messages
-   *
-   * Retrieve projected v2 messages for a session. Items keep the requested order across pages; use cursor.next or cursor.previous to move through the ordered timeline.
-   */
-  public messages<ThrowOnError extends boolean = false>(
-    parameters: {
-      sessionID: string
-      directory?: string
-      workspace?: string
-      limit?: number
-      order?: "asc" | "desc"
-      cursor?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "sessionID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "query", key: "limit" },
-            { in: "query", key: "order" },
-            { in: "query", key: "cursor" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<V2SessionMessagesResponses, V2SessionMessagesErrors, ThrowOnError>({
-      url: "/api/session/{sessionID}/message",
-      ...options,
-      ...params,
-    })
-  }
-}
-
-export class Model extends HeyApiClient {
-  /**
-   * List v2 models
-   *
-   * Retrieve available v2 models ordered by release date.
-   */
-  public list<ThrowOnError extends boolean = false>(
-    parameters?: {
-      location?: {
-        directory?: string
-        workspace?: string
-      }
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "location" }] }])
-    return (options?.client ?? this.client).get<V2ModelListResponses, V2ModelListErrors, ThrowOnError>({
-      url: "/api/model",
-      ...options,
-      ...params,
-    })
-  }
-}
-
-export class Provider2 extends HeyApiClient {
-  /**
-   * List v2 providers
-   *
-   * Retrieve active v2 AI providers so clients can show provider availability and configuration.
-   */
-  public list<ThrowOnError extends boolean = false>(
-    parameters?: {
-      location?: {
-        directory?: string
-        workspace?: string
-      }
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "location" }] }])
-    return (options?.client ?? this.client).get<V2ProviderListResponses, V2ProviderListErrors, ThrowOnError>({
-      url: "/api/provider",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Get v2 provider
-   *
-   * Retrieve a single v2 AI provider so clients can inspect its availability and endpoint settings.
-   */
-  public get<ThrowOnError extends boolean = false>(
-    parameters: {
-      providerID: string
-      location?: {
-        directory?: string
-        workspace?: string
-      }
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "providerID" },
-            { in: "query", key: "location" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<V2ProviderGetResponses, V2ProviderGetErrors, ThrowOnError>({
-      url: "/api/provider/{providerID}",
-      ...options,
-      ...params,
-    })
-  }
-}
-
-export class V2 extends HeyApiClient {
-  private _session?: Session3
-  get session(): Session3 {
-    return (this._session ??= new Session3({ client: this.client }))
-  }
-
-  private _model?: Model
-  get model(): Model {
-    return (this._model ??= new Model({ client: this.client }))
-  }
-
-  private _provider?: Provider2
-  get provider(): Provider2 {
-    return (this._provider ??= new Provider2({ client: this.client }))
   }
 }
 
@@ -6532,6 +6567,43 @@ export class Indexing extends HeyApiClient {
       ...params,
     })
   }
+
+  /**
+   * Set indexing consent
+   *
+   * Set machine-local code indexing consent for the active project.
+   */
+  public consent<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      enabled?: boolean
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "enabled" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).put<IndexingConsentResponses, IndexingConsentErrors, ThrowOnError>({
+      url: "/indexing/consent",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
 }
 
 export class InteractiveTerminal extends HeyApiClient {
@@ -6812,6 +6884,40 @@ export class Models extends HeyApiClient {
       ...params,
     })
   }
+
+  /**
+   * Speech-to-text models
+   *
+   * List transcription-capable models from the Kilo Gateway catalog
+   */
+  public transcriptions<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      KiloModelsTranscriptionsResponses,
+      KiloModelsTranscriptionsErrors,
+      ThrowOnError
+    >({
+      url: "/kilo/models/transcriptions",
+      ...options,
+      ...params,
+    })
+  }
 }
 
 export class Organization extends HeyApiClient {
@@ -6921,7 +7027,7 @@ export class Claw extends HeyApiClient {
   }
 }
 
-export class Session4 extends HeyApiClient {
+export class Session3 extends HeyApiClient {
   /**
    * Get cloud session
    *
@@ -6997,9 +7103,9 @@ export class Session4 extends HeyApiClient {
 }
 
 export class Cloud extends HeyApiClient {
-  private _session?: Session4
-  get session(): Session4 {
-    return (this._session ??= new Session4({ client: this.client }))
+  private _session?: Session3
+  get session(): Session3 {
+    return (this._session ??= new Session3({ client: this.client }))
   }
 }
 
@@ -7451,6 +7557,128 @@ export class Notebook extends HeyApiClient {
   }
 }
 
+export class AgentManager extends HeyApiClient {
+  /**
+   * List pending Agent Manager requests
+   *
+   * List pending native Agent Manager orchestration requests for the routed workspace.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      KilocodeAgentManagerListResponses,
+      KilocodeAgentManagerListErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/agent-manager",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Reply to an Agent Manager request
+   *
+   * Complete a pending Agent Manager orchestration request with a structured result.
+   */
+  public reply<ThrowOnError extends boolean = false>(
+    parameters: {
+      requestID: AgentManagerRequestId
+      directory?: string
+      workspace?: string
+      result?: AgentManagerResult
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "requestID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "result" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeAgentManagerReplyResponses,
+      KilocodeAgentManagerReplyErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/agent-manager/{requestID}/reply",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Reject an Agent Manager request
+   *
+   * Complete a pending Agent Manager orchestration request with a structured host error.
+   */
+  public reject<ThrowOnError extends boolean = false>(
+    parameters: {
+      requestID: AgentManagerRequestId
+      directory?: string
+      workspace?: string
+      error?: AgentManagerFailure
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "requestID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "error" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeAgentManagerRejectResponses,
+      KilocodeAgentManagerRejectErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/agent-manager/{requestID}/reject",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
 export class SessionImport extends HeyApiClient {
   /**
    * Insert project for session import
@@ -7547,6 +7775,7 @@ export class SessionImport extends HeyApiClient {
         partID?: string
         snapshot?: string
         diff?: string
+        workspace?: "restored" | "snapshots-disabled" | "unavailable"
       }
       permission?: {
         [key: string]: unknown
@@ -7873,6 +8102,81 @@ export class Kilocode extends HeyApiClient {
   }
 
   /**
+   * List command files
+   *
+   * List commands with editable file locations for settings clients.
+   */
+  public commandFiles<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      KilocodeCommandFilesResponses,
+      KilocodeCommandFilesErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/command/files",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Remove a command
+   *
+   * Remove a command by deleting its markdown file from disk and clearing it from cache.
+   */
+  public removeCommand<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      location?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "location" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeRemoveCommandResponses,
+      KilocodeRemoveCommandErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/command/remove",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
    * Remove a skill
    *
    * Remove a skill by deleting its manifest from disk and clearing it from cache.
@@ -7994,6 +8298,11 @@ export class Kilocode extends HeyApiClient {
   private _notebook?: Notebook
   get notebook(): Notebook {
     return (this._notebook ??= new Notebook({ client: this.client }))
+  }
+
+  private _agentManager?: AgentManager
+  get agentManager(): AgentManager {
+    return (this._agentManager ??= new AgentManager({ client: this.client }))
   }
 
   private _sessionImport?: SessionImport
@@ -8709,6 +9018,7 @@ export class Memory extends HeyApiClient {
       directory?: string
       workspace?: string
       autoConsolidate?: boolean
+      verbose?: boolean
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -8720,6 +9030,7 @@ export class Memory extends HeyApiClient {
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
             { in: "body", key: "autoConsolidate" },
+            { in: "body", key: "verbose" },
           ],
         },
       ],
@@ -8929,6 +9240,2072 @@ export class Memory extends HeyApiClient {
   }
 }
 
+export class Health extends HeyApiClient {
+  /**
+   * Check server health
+   *
+   * Check whether the API server is ready to accept requests.
+   */
+  public get<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
+    return (options?.client ?? this.client).get<V2HealthGetResponses, V2HealthGetErrors, ThrowOnError>({
+      url: "/api/health",
+      ...options,
+    })
+  }
+}
+
+export class Location extends HeyApiClient {
+  /**
+   * Get location
+   *
+   * Resolve the requested location or the server default location.
+   */
+  public get<ThrowOnError extends boolean = false>(
+    parameters?: {
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "location" }] }])
+    return (options?.client ?? this.client).get<V2LocationGetResponses, V2LocationGetErrors, ThrowOnError>({
+      url: "/api/location",
+      ...options,
+      ...params,
+    })
+  }
+}
+
+export class Agent extends HeyApiClient {
+  /**
+   * List agents
+   *
+   * Retrieve currently registered agents.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "location" }] }])
+    return (options?.client ?? this.client).get<V2AgentListResponses, V2AgentListErrors, ThrowOnError>({
+      url: "/api/agent",
+      ...options,
+      ...params,
+    })
+  }
+}
+
+export class Revert extends HeyApiClient {
+  /**
+   * Stage session revert
+   *
+   * Stage or move a reversible session boundary and optionally apply its file changes.
+   */
+  public stage<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      messageID?: string
+      files?: boolean
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "body", key: "messageID" },
+            { in: "body", key: "files" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      V2SessionRevertStageResponses,
+      V2SessionRevertStageErrors,
+      ThrowOnError
+    >({
+      url: "/api/session/{sessionID}/revert/stage",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Clear staged revert
+   */
+  public clear<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "sessionID" }] }])
+    return (options?.client ?? this.client).post<
+      V2SessionRevertClearResponses,
+      V2SessionRevertClearErrors,
+      ThrowOnError
+    >({
+      url: "/api/session/{sessionID}/revert/clear",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Commit staged revert
+   */
+  public commit<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "sessionID" }] }])
+    return (options?.client ?? this.client).post<
+      V2SessionRevertCommitResponses,
+      V2SessionRevertCommitErrors,
+      ThrowOnError
+    >({
+      url: "/api/session/{sessionID}/revert/commit",
+      ...options,
+      ...params,
+    })
+  }
+}
+
+export class Permission2 extends HeyApiClient {
+  /**
+   * List session permission requests
+   *
+   * Retrieve pending permission requests owned by a session.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "sessionID" }] }])
+    return (options?.client ?? this.client).get<
+      V2SessionPermissionListResponses,
+      V2SessionPermissionListErrors,
+      ThrowOnError
+    >({
+      url: "/api/session/{sessionID}/permission",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Create permission request
+   *
+   * Evaluate and, when approval is required, create a permission request for a session.
+   */
+  public create<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      id?: string
+      action?: string
+      resources?: Array<string>
+      save?: Array<string>
+      metadata?: {
+        [key: string]: unknown
+      }
+      source?: PermissionV2Source
+      agent?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "body", key: "id" },
+            { in: "body", key: "action" },
+            { in: "body", key: "resources" },
+            { in: "body", key: "save" },
+            { in: "body", key: "metadata" },
+            { in: "body", key: "source" },
+            { in: "body", key: "agent" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      V2SessionPermissionCreateResponses,
+      V2SessionPermissionCreateErrors,
+      ThrowOnError
+    >({
+      url: "/api/session/{sessionID}/permission",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Get permission request
+   *
+   * Retrieve a pending permission request owned by a session.
+   */
+  public get<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      requestID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "path", key: "requestID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      V2SessionPermissionGetResponses,
+      V2SessionPermissionGetErrors,
+      ThrowOnError
+    >({
+      url: "/api/session/{sessionID}/permission/{requestID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Reply to pending permission request
+   *
+   * Respond to a pending permission request owned by a session.
+   */
+  public reply<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      requestID: string
+      reply?: PermissionV2Reply
+      message?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "path", key: "requestID" },
+            { in: "body", key: "reply" },
+            { in: "body", key: "message" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      V2SessionPermissionReplyResponses,
+      V2SessionPermissionReplyErrors,
+      ThrowOnError
+    >({
+      url: "/api/session/{sessionID}/permission/{requestID}/reply",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
+export class Question2 extends HeyApiClient {
+  /**
+   * List session question requests
+   *
+   * Retrieve pending question requests owned by a session.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "sessionID" }] }])
+    return (options?.client ?? this.client).get<
+      V2SessionQuestionListResponses,
+      V2SessionQuestionListErrors,
+      ThrowOnError
+    >({
+      url: "/api/session/{sessionID}/question",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Reply to pending question request
+   *
+   * Answer a pending question request owned by a session.
+   */
+  public reply<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      requestID: string
+      questionV2Reply: QuestionV2Reply
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "path", key: "requestID" },
+            { key: "questionV2Reply", map: "body" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      V2SessionQuestionReplyResponses,
+      V2SessionQuestionReplyErrors,
+      ThrowOnError
+    >({
+      url: "/api/session/{sessionID}/question/{requestID}/reply",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Reject pending question request
+   *
+   * Reject a pending question request owned by a session.
+   */
+  public reject<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      requestID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "path", key: "requestID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      V2SessionQuestionRejectResponses,
+      V2SessionQuestionRejectErrors,
+      ThrowOnError
+    >({
+      url: "/api/session/{sessionID}/question/{requestID}/reject",
+      ...options,
+      ...params,
+    })
+  }
+}
+
+export class Session4 extends HeyApiClient {
+  /**
+   * List sessions
+   *
+   * Retrieve sessions in the requested order. Items keep that order across pages; use cursor.next or cursor.previous to move through the ordered list.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      workspace?: string
+      limit?: number
+      order?: "asc" | "desc"
+      search?: string
+      directory?: string
+      project?: string
+      subpath?: string
+      cursor?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "workspace" },
+            { in: "query", key: "limit" },
+            { in: "query", key: "order" },
+            { in: "query", key: "search" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "project" },
+            { in: "query", key: "subpath" },
+            { in: "query", key: "cursor" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<V2SessionListResponses, V2SessionListErrors, ThrowOnError>({
+      url: "/api/session",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Create session
+   *
+   * Create a session at the requested location.
+   */
+  public create<ThrowOnError extends boolean = false>(
+    parameters?: {
+      id?: string
+      agent?: string
+      model?: ModelRef
+      location?: LocationRef
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "body", key: "id" },
+            { in: "body", key: "agent" },
+            { in: "body", key: "model" },
+            { in: "body", key: "location" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<V2SessionCreateResponses, V2SessionCreateErrors, ThrowOnError>({
+      url: "/api/session",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * List active sessions
+   *
+   * Retrieve foreground Session drains currently owned by this Kilo process. Sessions absent from the result are inactive.
+   */
+  public active<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
+    return (options?.client ?? this.client).get<V2SessionActiveResponses, V2SessionActiveErrors, ThrowOnError>({
+      url: "/api/session/active",
+      ...options,
+    })
+  }
+
+  /**
+   * Get session
+   *
+   * Retrieve a session by ID.
+   */
+  public get<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "sessionID" }] }])
+    return (options?.client ?? this.client).get<V2SessionGetResponses, V2SessionGetErrors, ThrowOnError>({
+      url: "/api/session/{sessionID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Switch session agent
+   *
+   * Switch the agent used by subsequent provider turns.
+   */
+  public switchAgent<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      agent?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "body", key: "agent" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      V2SessionSwitchAgentResponses,
+      V2SessionSwitchAgentErrors,
+      ThrowOnError
+    >({
+      url: "/api/session/{sessionID}/agent",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Switch session model
+   *
+   * Switch the model used by subsequent provider turns.
+   */
+  public switchModel<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      model?: ModelRef
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "body", key: "model" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      V2SessionSwitchModelResponses,
+      V2SessionSwitchModelErrors,
+      ThrowOnError
+    >({
+      url: "/api/session/{sessionID}/model",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Send message
+   *
+   * Durably admit one session input and schedule agent-loop execution unless resume is false.
+   */
+  public prompt<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      id?: string
+      prompt?: PromptInput
+      delivery?: "steer" | "queue"
+      resume?: boolean
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "body", key: "id" },
+            { in: "body", key: "prompt" },
+            { in: "body", key: "delivery" },
+            { in: "body", key: "resume" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<V2SessionPromptResponses, V2SessionPromptErrors, ThrowOnError>({
+      url: "/api/session/{sessionID}/prompt",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Compact session
+   *
+   * Compact a session conversation.
+   */
+  public compact<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "sessionID" }] }])
+    return (options?.client ?? this.client).post<V2SessionCompactResponses, V2SessionCompactErrors, ThrowOnError>({
+      url: "/api/session/{sessionID}/compact",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Wait for session
+   *
+   * Wait for a session agent loop to become idle.
+   */
+  public wait<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "sessionID" }] }])
+    return (options?.client ?? this.client).post<V2SessionWaitResponses, V2SessionWaitErrors, ThrowOnError>({
+      url: "/api/session/{sessionID}/wait",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get session context
+   *
+   * Retrieve the active context messages for a session (all messages after the last compaction).
+   */
+  public context<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "sessionID" }] }])
+    return (options?.client ?? this.client).get<V2SessionContextResponses, V2SessionContextErrors, ThrowOnError>({
+      url: "/api/session/{sessionID}/context",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get session history
+   *
+   * Read one finite page of public durable Session events after an exclusive aggregate sequence. Newly committed events may appear on later pages.
+   */
+  public history<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      limit?: number
+      after?: number
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "limit" },
+            { in: "query", key: "after" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<V2SessionHistoryResponses, V2SessionHistoryErrors, ThrowOnError>({
+      url: "/api/session/{sessionID}/history",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Subscribe to session events
+   *
+   * Replay durable events after an aggregate sequence, then continue with new durable events.
+   */
+  public events<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      after?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "after" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).sse.get<V2SessionEventsResponses, V2SessionEventsErrors, ThrowOnError>({
+      url: "/api/session/{sessionID}/event",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Interrupt session execution
+   *
+   * Interrupt active execution owned by this Kilo process. Idle interruption is a no-op.
+   */
+  public interrupt<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "sessionID" }] }])
+    return (options?.client ?? this.client).post<V2SessionInterruptResponses, V2SessionInterruptErrors, ThrowOnError>({
+      url: "/api/session/{sessionID}/interrupt",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get session message
+   *
+   * Retrieve one projected message owned by the Session.
+   */
+  public message<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      messageID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "path", key: "messageID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<V2SessionMessageResponses, V2SessionMessageErrors, ThrowOnError>({
+      url: "/api/session/{sessionID}/message/{messageID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get session messages
+   *
+   * Retrieve projected messages for a session. Items keep the requested order across pages; use cursor.next or cursor.previous to move through the ordered timeline.
+   */
+  public messages<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      limit?: number
+      order?: "asc" | "desc"
+      cursor?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "limit" },
+            { in: "query", key: "order" },
+            { in: "query", key: "cursor" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<V2SessionMessagesResponses, V2SessionMessagesErrors, ThrowOnError>({
+      url: "/api/session/{sessionID}/message",
+      ...options,
+      ...params,
+    })
+  }
+
+  private _revert?: Revert
+  get revert(): Revert {
+    return (this._revert ??= new Revert({ client: this.client }))
+  }
+
+  private _permission?: Permission2
+  get permission(): Permission2 {
+    return (this._permission ??= new Permission2({ client: this.client }))
+  }
+
+  private _question?: Question2
+  get question(): Question2 {
+    return (this._question ??= new Question2({ client: this.client }))
+  }
+}
+
+export class Model extends HeyApiClient {
+  /**
+   * List models
+   *
+   * Retrieve available models ordered by release date.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "location" }] }])
+    return (options?.client ?? this.client).get<V2ModelListResponses, V2ModelListErrors, ThrowOnError>({
+      url: "/api/model",
+      ...options,
+      ...params,
+    })
+  }
+}
+
+export class Provider2 extends HeyApiClient {
+  /**
+   * List providers
+   *
+   * Retrieve active AI providers so clients can show provider availability and configuration.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "location" }] }])
+    return (options?.client ?? this.client).get<V2ProviderListResponses, V2ProviderListErrors, ThrowOnError>({
+      url: "/api/provider",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get provider
+   *
+   * Retrieve a single AI provider so clients can inspect its availability and endpoint settings.
+   */
+  public get<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: string
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "query", key: "location" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<V2ProviderGetResponses, V2ProviderGetErrors, ThrowOnError>({
+      url: "/api/provider/{providerID}",
+      ...options,
+      ...params,
+    })
+  }
+}
+
+export class Connect extends HeyApiClient {
+  /**
+   * Connect with key
+   *
+   * Run a key authentication method and store the resulting credential.
+   */
+  public key<ThrowOnError extends boolean = false>(
+    parameters: {
+      integrationID: string
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+      key?: string
+      label?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "integrationID" },
+            { in: "query", key: "location" },
+            { in: "body", key: "key" },
+            { in: "body", key: "label" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      V2IntegrationConnectKeyResponses,
+      V2IntegrationConnectKeyErrors,
+      ThrowOnError
+    >({
+      url: "/api/integration/{integrationID}/connect/key",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Begin OAuth connection
+   *
+   * Start an OAuth attempt and return the authorization details.
+   */
+  public oauth<ThrowOnError extends boolean = false>(
+    parameters: {
+      integrationID: string
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+      methodID?: string
+      inputs?: {
+        [key: string]: string
+      }
+      label?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "integrationID" },
+            { in: "query", key: "location" },
+            { in: "body", key: "methodID" },
+            { in: "body", key: "inputs" },
+            { in: "body", key: "label" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      V2IntegrationConnectOauthResponses,
+      V2IntegrationConnectOauthErrors,
+      ThrowOnError
+    >({
+      url: "/api/integration/{integrationID}/connect/oauth",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
+export class Attempt extends HeyApiClient {
+  /**
+   * Cancel OAuth connection
+   *
+   * Cancel an OAuth attempt and release its resources.
+   */
+  public cancel<ThrowOnError extends boolean = false>(
+    parameters: {
+      attemptID: string
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "attemptID" },
+            { in: "query", key: "location" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).delete<
+      V2IntegrationAttemptCancelResponses,
+      V2IntegrationAttemptCancelErrors,
+      ThrowOnError
+    >({
+      url: "/api/integration/attempt/{attemptID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get OAuth attempt status
+   *
+   * Poll the current status of an OAuth attempt.
+   */
+  public status<ThrowOnError extends boolean = false>(
+    parameters: {
+      attemptID: string
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "attemptID" },
+            { in: "query", key: "location" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      V2IntegrationAttemptStatusResponses,
+      V2IntegrationAttemptStatusErrors,
+      ThrowOnError
+    >({
+      url: "/api/integration/attempt/{attemptID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Complete OAuth connection
+   *
+   * Complete a code-based OAuth attempt and store the resulting credential.
+   */
+  public complete<ThrowOnError extends boolean = false>(
+    parameters: {
+      attemptID: string
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+      code?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "attemptID" },
+            { in: "query", key: "location" },
+            { in: "body", key: "code" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      V2IntegrationAttemptCompleteResponses,
+      V2IntegrationAttemptCompleteErrors,
+      ThrowOnError
+    >({
+      url: "/api/integration/attempt/{attemptID}/complete",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
+export class Integration extends HeyApiClient {
+  /**
+   * List integrations
+   *
+   * Retrieve available integrations and their authentication methods.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "location" }] }])
+    return (options?.client ?? this.client).get<V2IntegrationListResponses, V2IntegrationListErrors, ThrowOnError>({
+      url: "/api/integration",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get integration
+   *
+   * Retrieve one integration and its authentication methods.
+   */
+  public get<ThrowOnError extends boolean = false>(
+    parameters: {
+      integrationID: string
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "integrationID" },
+            { in: "query", key: "location" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<V2IntegrationGetResponses, V2IntegrationGetErrors, ThrowOnError>({
+      url: "/api/integration/{integrationID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  private _connect?: Connect
+  get connect(): Connect {
+    return (this._connect ??= new Connect({ client: this.client }))
+  }
+
+  private _attempt?: Attempt
+  get attempt(): Attempt {
+    return (this._attempt ??= new Attempt({ client: this.client }))
+  }
+}
+
+export class Credential extends HeyApiClient {
+  /**
+   * Remove credential
+   *
+   * Remove a stored integration credential.
+   */
+  public remove<ThrowOnError extends boolean = false>(
+    parameters: {
+      credentialID: string
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "credentialID" },
+            { in: "query", key: "location" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).delete<V2CredentialRemoveResponses, V2CredentialRemoveErrors, ThrowOnError>(
+      {
+        url: "/api/credential/{credentialID}",
+        ...options,
+        ...params,
+      },
+    )
+  }
+
+  /**
+   * Update credential
+   *
+   * Update a stored credential label.
+   */
+  public update<ThrowOnError extends boolean = false>(
+    parameters: {
+      credentialID: string
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+      label?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "credentialID" },
+            { in: "query", key: "location" },
+            { in: "body", key: "label" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).patch<V2CredentialUpdateResponses, V2CredentialUpdateErrors, ThrowOnError>({
+      url: "/api/credential/{credentialID}",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
+export class Request extends HeyApiClient {
+  /**
+   * List pending permission requests
+   *
+   * Retrieve pending permission requests for a location.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "location" }] }])
+    return (options?.client ?? this.client).get<
+      V2PermissionRequestListResponses,
+      V2PermissionRequestListErrors,
+      ThrowOnError
+    >({
+      url: "/api/permission/request",
+      ...options,
+      ...params,
+    })
+  }
+}
+
+export class Saved extends HeyApiClient {
+  /**
+   * List saved permissions
+   *
+   * Retrieve saved permissions, optionally filtered by project.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      projectID?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "projectID" }] }])
+    return (options?.client ?? this.client).get<
+      V2PermissionSavedListResponses,
+      V2PermissionSavedListErrors,
+      ThrowOnError
+    >({
+      url: "/api/permission/saved",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Remove saved permission
+   *
+   * Remove a saved permission by ID.
+   */
+  public remove<ThrowOnError extends boolean = false>(
+    parameters: {
+      id: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "id" }] }])
+    return (options?.client ?? this.client).delete<
+      V2PermissionSavedRemoveResponses,
+      V2PermissionSavedRemoveErrors,
+      ThrowOnError
+    >({
+      url: "/api/permission/saved/{id}",
+      ...options,
+      ...params,
+    })
+  }
+}
+
+export class Permission3 extends HeyApiClient {
+  private _request?: Request
+  get request(): Request {
+    return (this._request ??= new Request({ client: this.client }))
+  }
+
+  private _saved?: Saved
+  get saved(): Saved {
+    return (this._saved ??= new Saved({ client: this.client }))
+  }
+}
+
+export class Fs extends HeyApiClient {
+  /**
+   * Read file
+   *
+   * Serve one file relative to the requested location.
+   */
+  public read<ThrowOnError extends boolean = false>(
+    parameters?: {
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+      path?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "location" },
+            { in: "query", key: "path" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<V2FsReadResponses, V2FsReadErrors, ThrowOnError>({
+      url: "/api/fs/read/*",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * List directory
+   *
+   * List direct children of one directory relative to the requested location.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+      path?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "location" },
+            { in: "query", key: "path" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<V2FsListResponses, V2FsListErrors, ThrowOnError>({
+      url: "/api/fs/list",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Find files
+   *
+   * Find recursively ranked filesystem entries relative to the requested location.
+   */
+  public find<ThrowOnError extends boolean = false>(
+    parameters: {
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+      query: string
+      type?: "file" | "directory"
+      limit?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "location" },
+            { in: "query", key: "query" },
+            { in: "query", key: "type" },
+            { in: "query", key: "limit" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<V2FsFindResponses, V2FsFindErrors, ThrowOnError>({
+      url: "/api/fs/find",
+      ...options,
+      ...params,
+    })
+  }
+}
+
+export class Command2 extends HeyApiClient {
+  /**
+   * List commands
+   *
+   * Retrieve currently registered commands.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "location" }] }])
+    return (options?.client ?? this.client).get<V2CommandListResponses, V2CommandListErrors, ThrowOnError>({
+      url: "/api/command",
+      ...options,
+      ...params,
+    })
+  }
+}
+
+export class Skill extends HeyApiClient {
+  /**
+   * List skills
+   *
+   * Retrieve currently registered skills.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "location" }] }])
+    return (options?.client ?? this.client).get<V2SkillListResponses, V2SkillListErrors, ThrowOnError>({
+      url: "/api/skill",
+      ...options,
+      ...params,
+    })
+  }
+}
+
+export class Event2 extends HeyApiClient {
+  /**
+   * Subscribe to events
+   *
+   * Subscribe to native event payloads for the server.
+   */
+  public subscribe<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
+    return (options?.client ?? this.client).sse.get<V2EventSubscribeResponses, V2EventSubscribeErrors, ThrowOnError>({
+      url: "/api/event",
+      ...options,
+    })
+  }
+}
+
+export class Pty2 extends HeyApiClient {
+  /**
+   * List PTY sessions
+   *
+   * List PTY sessions for a location, including exited sessions retained until removal.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "location" }] }])
+    return (options?.client ?? this.client).get<V2PtyListResponses, V2PtyListErrors, ThrowOnError>({
+      url: "/api/pty",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Create PTY session
+   *
+   * Create a pseudo-terminal session for a location.
+   */
+  public create<ThrowOnError extends boolean = false>(
+    parameters?: {
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+      command?: string
+      args?: Array<string>
+      cwd?: string
+      title?: string
+      env?: {
+        [key: string]: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "location" },
+            { in: "body", key: "command" },
+            { in: "body", key: "args" },
+            { in: "body", key: "cwd" },
+            { in: "body", key: "title" },
+            { in: "body", key: "env" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<V2PtyCreateResponses, V2PtyCreateErrors, ThrowOnError>({
+      url: "/api/pty",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Remove PTY session
+   *
+   * Terminate and remove one PTY session.
+   */
+  public remove<ThrowOnError extends boolean = false>(
+    parameters: {
+      ptyID: string
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "ptyID" },
+            { in: "query", key: "location" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).delete<V2PtyRemoveResponses, V2PtyRemoveErrors, ThrowOnError>({
+      url: "/api/pty/{ptyID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get PTY session
+   *
+   * Get one PTY session, including its exit code once exited.
+   */
+  public get<ThrowOnError extends boolean = false>(
+    parameters: {
+      ptyID: string
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "ptyID" },
+            { in: "query", key: "location" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<V2PtyGetResponses, V2PtyGetErrors, ThrowOnError>({
+      url: "/api/pty/{ptyID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Update PTY session
+   *
+   * Update the title or viewport size of one PTY session.
+   */
+  public update<ThrowOnError extends boolean = false>(
+    parameters: {
+      ptyID: string
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+      title?: string
+      size?: {
+        rows: number
+        cols: number
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "ptyID" },
+            { in: "query", key: "location" },
+            { in: "body", key: "title" },
+            { in: "body", key: "size" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).put<V2PtyUpdateResponses, V2PtyUpdateErrors, ThrowOnError>({
+      url: "/api/pty/{ptyID}",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Create PTY WebSocket token
+   *
+   * Create a short-lived single-use ticket for opening a PTY WebSocket connection.
+   */
+  public connectToken<ThrowOnError extends boolean = false>(
+    parameters: {
+      ptyID: string
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "ptyID" },
+            { in: "query", key: "location" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<V2PtyConnectTokenResponses, V2PtyConnectTokenErrors, ThrowOnError>({
+      url: "/api/pty/{ptyID}/connect-token",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Connect to PTY session
+   *
+   * Establish a WebSocket connection streaming PTY output and accepting terminal input.
+   */
+  public connect<ThrowOnError extends boolean = false>(
+    parameters: {
+      ptyID: string
+      "location[directory]"?: string
+      "location[workspace]"?: string
+      cursor?: string
+      ticket?: string
+      replayExited?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "ptyID" },
+            { in: "query", key: "location[directory]" },
+            { in: "query", key: "location[workspace]" },
+            { in: "query", key: "cursor" },
+            { in: "query", key: "ticket" },
+            { in: "query", key: "replayExited" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<V2PtyConnectResponses, V2PtyConnectErrors, ThrowOnError>({
+      url: "/api/pty/{ptyID}/connect",
+      ...options,
+      ...params,
+    })
+  }
+}
+
+export class Request2 extends HeyApiClient {
+  /**
+   * List pending question requests
+   *
+   * Retrieve pending question requests for a location.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "location" }] }])
+    return (options?.client ?? this.client).get<
+      V2QuestionRequestListResponses,
+      V2QuestionRequestListErrors,
+      ThrowOnError
+    >({
+      url: "/api/question/request",
+      ...options,
+      ...params,
+    })
+  }
+}
+
+export class Question3 extends HeyApiClient {
+  private _request?: Request2
+  get request(): Request2 {
+    return (this._request ??= new Request2({ client: this.client }))
+  }
+}
+
+export class Reference extends HeyApiClient {
+  /**
+   * List references
+   *
+   * List references available in the requested location.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "location" }] }])
+    return (options?.client ?? this.client).get<V2ReferenceListResponses, V2ReferenceListErrors, ThrowOnError>({
+      url: "/api/reference",
+      ...options,
+      ...params,
+    })
+  }
+}
+
+export class ProjectCopy2 extends HeyApiClient {
+  public remove<ThrowOnError extends boolean = false>(
+    parameters: {
+      projectID: string
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+      directory?: string
+      force?: boolean
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "projectID" },
+            { in: "query", key: "location" },
+            { in: "body", key: "directory" },
+            { in: "body", key: "force" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).delete<
+      V2ProjectCopyRemoveResponses,
+      V2ProjectCopyRemoveErrors,
+      ThrowOnError
+    >({
+      url: "/experimental/project/{projectID}/copy",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  public create<ThrowOnError extends boolean = false>(
+    parameters: {
+      projectID: string
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+      strategy?: string
+      directory?: string
+      name?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "projectID" },
+            { in: "query", key: "location" },
+            { in: "body", key: "strategy" },
+            { in: "body", key: "directory" },
+            { in: "body", key: "name" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<V2ProjectCopyCreateResponses, V2ProjectCopyCreateErrors, ThrowOnError>(
+      {
+        url: "/experimental/project/{projectID}/copy",
+        ...options,
+        ...params,
+        headers: {
+          "Content-Type": "application/json",
+          ...options?.headers,
+          ...params.headers,
+        },
+      },
+    )
+  }
+
+  public refresh<ThrowOnError extends boolean = false>(
+    parameters: {
+      projectID: string
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "projectID" },
+            { in: "query", key: "location" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      V2ProjectCopyRefreshResponses,
+      V2ProjectCopyRefreshErrors,
+      ThrowOnError
+    >({
+      url: "/experimental/project/{projectID}/copy/refresh",
+      ...options,
+      ...params,
+    })
+  }
+}
+
+export class V2 extends HeyApiClient {
+  private _health?: Health
+  get health(): Health {
+    return (this._health ??= new Health({ client: this.client }))
+  }
+
+  private _location?: Location
+  get location(): Location {
+    return (this._location ??= new Location({ client: this.client }))
+  }
+
+  private _agent?: Agent
+  get agent(): Agent {
+    return (this._agent ??= new Agent({ client: this.client }))
+  }
+
+  private _session?: Session4
+  get session(): Session4 {
+    return (this._session ??= new Session4({ client: this.client }))
+  }
+
+  private _model?: Model
+  get model(): Model {
+    return (this._model ??= new Model({ client: this.client }))
+  }
+
+  private _provider?: Provider2
+  get provider(): Provider2 {
+    return (this._provider ??= new Provider2({ client: this.client }))
+  }
+
+  private _integration?: Integration
+  get integration(): Integration {
+    return (this._integration ??= new Integration({ client: this.client }))
+  }
+
+  private _credential?: Credential
+  get credential(): Credential {
+    return (this._credential ??= new Credential({ client: this.client }))
+  }
+
+  private _permission?: Permission3
+  get permission(): Permission3 {
+    return (this._permission ??= new Permission3({ client: this.client }))
+  }
+
+  private _fs?: Fs
+  get fs(): Fs {
+    return (this._fs ??= new Fs({ client: this.client }))
+  }
+
+  private _command?: Command2
+  get command(): Command2 {
+    return (this._command ??= new Command2({ client: this.client }))
+  }
+
+  private _skill?: Skill
+  get skill(): Skill {
+    return (this._skill ??= new Skill({ client: this.client }))
+  }
+
+  private _event?: Event2
+  get event(): Event2 {
+    return (this._event ??= new Event2({ client: this.client }))
+  }
+
+  private _pty?: Pty2
+  get pty(): Pty2 {
+    return (this._pty ??= new Pty2({ client: this.client }))
+  }
+
+  private _question?: Question3
+  get question(): Question3 {
+    return (this._question ??= new Question3({ client: this.client }))
+  }
+
+  private _reference?: Reference
+  get reference(): Reference {
+    return (this._reference ??= new Reference({ client: this.client }))
+  }
+
+  private _projectCopy?: ProjectCopy2
+  get projectCopy(): ProjectCopy2 {
+    return (this._projectCopy ??= new ProjectCopy2({ client: this.client }))
+  }
+}
+
 export class KiloClient extends HeyApiClient {
   public static readonly __registry = new HeyApiRegistry<KiloClient>()
 
@@ -8947,6 +11324,11 @@ export class KiloClient extends HeyApiClient {
     return (this._app ??= new App({ client: this.client }))
   }
 
+  private _experimental?: Experimental
+  get experimental(): Experimental {
+    return (this._experimental ??= new Experimental({ client: this.client }))
+  }
+
   private _global?: Global
   get global(): Global {
     return (this._global ??= new Global({ client: this.client }))
@@ -8960,11 +11342,6 @@ export class KiloClient extends HeyApiClient {
   private _config?: Config2
   get config(): Config2 {
     return (this._config ??= new Config2({ client: this.client }))
-  }
-
-  private _experimental?: Experimental
-  get experimental(): Experimental {
-    return (this._experimental ??= new Experimental({ client: this.client }))
   }
 
   private _tool?: Tool
@@ -9062,11 +11439,6 @@ export class KiloClient extends HeyApiClient {
     return (this._sync ??= new Sync({ client: this.client }))
   }
 
-  private _v2?: V2
-  get v2(): V2 {
-    return (this._v2 ??= new V2({ client: this.client }))
-  }
-
   private _tui?: Tui
   get tui(): Tui {
     return (this._tui ??= new Tui({ client: this.client }))
@@ -9150,5 +11522,10 @@ export class KiloClient extends HeyApiClient {
   private _memory?: Memory
   get memory(): Memory {
     return (this._memory ??= new Memory({ client: this.client }))
+  }
+
+  private _v2?: V2
+  get v2(): V2 {
+    return (this._v2 ??= new V2({ client: this.client }))
   }
 }

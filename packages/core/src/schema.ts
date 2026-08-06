@@ -1,32 +1,20 @@
-import { Option, Schema, SchemaGetter } from "effect"
+import { Schema } from "effect"
+import {
+  AbsolutePath,
+  DateTimeUtcFromMillis,
+  NonNegativeInt,
+  optional,
+  PositiveInt,
+  RelativePath,
+  statics,
+} from "@opencode-ai/schema/schema"
 
-export const AbsolutePath = Schema.String.pipe(Schema.brand("AbsolutePath"))
-export type AbsolutePath = typeof AbsolutePath.Type
+export { AbsolutePath, DateTimeUtcFromMillis, NonNegativeInt, optional, PositiveInt, RelativePath, statics }
 
-export const RelativePath = Schema.String.pipe(Schema.brand("RelativePath"))
-export type RelativePath = typeof RelativePath.Type
-
-/**
- * Integer greater than zero.
- */
-export const PositiveInt = Schema.Int.check(Schema.isGreaterThan(0))
-
-/**
- * Integer greater than or equal to zero.
- */
-export const NonNegativeInt = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))
-
-/**
- * Optional public JSON field that can hold explicit `undefined` on the type
- * side but encodes it as an omitted key, matching legacy `JSON.stringify`.
- */
-export const optionalOmitUndefined = <S extends Schema.Top>(schema: S) =>
-  Schema.optionalKey(schema).pipe(
-    Schema.decodeTo(Schema.optional(schema), {
-      decode: SchemaGetter.passthrough({ strict: false }),
-      encode: SchemaGetter.transformOptional(Option.filter((value) => value !== undefined)),
-    }),
-  )
+// kilocode_change start - compatibility aliases for Kilo-owned schemas
+export const optionalOmitUndefined = optional
+export const withStatics = statics
+// kilocode_change end
 
 /**
  * Strip `readonly` from a nested type. Stand-in for `effect`'s `Types.DeepMutable`
@@ -55,22 +43,6 @@ export type DeepMutable<T> = T extends string | number | boolean | bigint | symb
       : T extends object
         ? { -readonly [K in keyof T]: DeepMutable<T[K]> }
         : T
-
-/**
- * Attach static methods to a schema object. Designed to be used with `.pipe()`:
- *
- * @example
- *   export const Foo = fooSchema.pipe(
- *     withStatics((schema) => ({
- *       zero: schema.make(0),
- *       from: Schema.decodeUnknownOption(schema),
- *     }))
- *   )
- */
-export const withStatics =
-  <S extends object, M extends Record<string, unknown>>(methods: (schema: S) => M) =>
-  (schema: S): S & M =>
-    Object.assign(schema, methods(schema))
 
 /**
  * Nominal wrapper for scalar types. The class itself is a valid schema —

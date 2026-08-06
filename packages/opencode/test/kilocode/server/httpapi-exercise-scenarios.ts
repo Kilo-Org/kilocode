@@ -3,7 +3,7 @@ import { mkdir, rm } from "fs/promises"
 import path from "path"
 import { KiloMemory } from "@kilocode/kilo-memory/effect"
 import { MemoryPaths } from "@kilocode/kilo-memory/effect/paths"
-import { array, check, object } from "../../server/httpapi-exercise/assertions"
+import { array, check, isRecord, object } from "../../server/httpapi-exercise/assertions"
 import { http, route } from "../../server/httpapi-exercise/dsl"
 import type { Scenario, ScenarioContext } from "../../server/httpapi-exercise/types"
 import { anacondaDesktopScenarios } from "../anaconda-desktop/httpapi-exercise-scenarios"
@@ -20,6 +20,28 @@ function file(ctx: ScenarioContext, name: string, content: string) {
     await Bun.write(target, content)
     return target
   })
+}
+
+const skill = async (dir: string) => {
+  await Bun.write(
+    path.join(dir, ".kilo/skill/httpapi-remove/SKILL.md"),
+    "---\nname: httpapi-remove\ndescription: HTTP API removal fixture.\n---\n# HTTP API remove\n",
+  )
+  await Bun.write(path.join(dir, ".kilo/skill/httpapi-remove/KEEP.txt"), "synthetic sentinel\n")
+}
+
+const agent = async (dir: string) => {
+  await Bun.write(
+    path.join(dir, ".kilo/agent/httpapi-remove.md"),
+    "---\ndescription: HTTP API remove\n---\nRemove me.\n",
+  )
+}
+
+const command = async (dir: string) => {
+  await Bun.write(
+    path.join(dir, ".kilo/command/httpapi-remove.md"),
+    "---\ndescription: HTTP API command remove\nmodel: anthropic/claude-sonnet-4-6\nvariant: high\n---\nRun command.\n",
+  )
 }
 
 function memory(ctx: ScenarioContext) {
@@ -203,6 +225,11 @@ export const kiloScenarios: Scenario[] = [
   http.protected.get("/indexing/status", "indexing.status").json(200, object),
   http.protected.get("/indexing/models", "indexing.models").json(200, object),
   http.protected.get("/indexing/warnings", "indexing.warnings").json(200, array),
+  http.protected
+    .put("/indexing/consent", "indexing.consent")
+    .mutating()
+    .at((ctx) => ({ path: "/indexing/consent", headers: ctx.headers(), body: { enabled: false } }))
+    .json(200, object),
   http.protected.get("/memory/status", "memory.status").json(200, (body) => {
     object(body)
     object(body.state)
@@ -369,6 +396,7 @@ export const kiloScenarios: Scenario[] = [
     .status(401),
   http.protected.get("/kilo/notifications", "kilo.notifications").json(200, array),
   http.protected.get("/kilo/models/images", "kilo.models.images").probe({ path: "/path" }).status(401),
+  http.protected.get("/kilo/models/transcriptions", "kilo.models.transcriptions").probe({ path: "/path" }).status(401),
   http.protected
     .post("/kilo/organization", "kilo.organization.set")
     .at((ctx) => ({ path: "/kilo/organization", headers: ctx.headers(), body: { organizationId: null } }))
@@ -524,47 +552,72 @@ export const kiloScenarios: Scenario[] = [
       array(body.vscode_extensions)
     }),
   http.protected
-    .post("/kilocode/skill/remove", "kilocode.removeSkill")
+    .get("/kilocode/command/files", "kilocode.commandFiles")
+    .inProject({ git: true, init: command })
+    .json(200, (body, ctx) => {
+      array(body)
+      const item = body.find((item) => isRecord(item) && item.name === "httpapi-remove")
+      object(item)
+      check(item.description === "HTTP API command remove", "command file should include description")
+      check(
+        item.location === path.join(directory(ctx), ".kilo/command/httpapi-remove.md"),
+        "command file should include location",
+      )
+      check(item.editable === true, "command file should be editable")
+      check(item.builtin === false, "command file should not be builtin")
+      check(item.model === "anthropic/claude-sonnet-4-6", "command file should include model metadata")
+      check(item.variant === "high", "command file should include variant metadata")
+      check(typeof item.content === "string" && item.content.includes("Run command."), "command file should include content")
+    }),
+  http.protected
+    .post("/kilocode/command/remove", "kilocode.removeCommand")
+    .inProject({ git: true, init: command })
     .mutating()
     .preserveDatabase()
-    .seeded((ctx) =>
-      Effect.gen(function* () {
-        const location = yield* file(
-          ctx,
-          ".kilo/skill/httpapi-remove/SKILL.md",
-          "---\nname: httpapi-remove\ndescription: HTTP API removal fixture.\n---\n# HTTP API remove\n",
-        )
-        const sentinel = yield* file(ctx, ".kilo/skill/httpapi-remove/KEEP.txt", "synthetic sentinel\n")
-        return { location, sentinel }
-      }),
-    )
     .at((ctx) => ({
-      path: "/kilocode/skill/remove",
+      path: "/kilocode/command/remove",
       headers: ctx.headers(),
-      body: { location: ctx.state.location },
+      body: { location: path.join(directory(ctx), ".kilo/command/httpapi-remove.md") },
     }))
     .jsonEffect(200, (body, ctx) =>
       Effect.gen(function* () {
-        check(body === true, "skill removal should return true")
+        check(body === true, "command removal should return true")
+        const location = path.join(directory(ctx), ".kilo/command/httpapi-remove.md")
         check(
-          !(yield* Effect.promise(() => Bun.file(ctx.state.location).exists())),
-          "removed skill should not remain on disk",
-        )
-        check(
-          yield* Effect.promise(() => Bun.file(ctx.state.sentinel).exists()),
-          "skill removal should preserve sibling files",
+          !(yield* Effect.promise(() => Bun.file(location).exists())),
+          "removed command should not remain on disk",
         )
       }),
     ),
   http.protected
-    .post("/kilocode/agent/remove", "kilocode.removeAgent")
+    .post("/kilocode/skill/remove", "kilocode.removeSkill")
+    .inProject({ git: true, init: skill })
     .mutating()
-    .seeded((ctx) => file(ctx, ".kilo/agent/httpapi-remove.md", "---\ndescription: HTTP API remove\n---\nRemove me.\n"))
+    .preserveDatabase()
+    .at((ctx) => ({
+      path: "/kilocode/skill/remove",
+      headers: ctx.headers(),
+      body: { location: path.join(directory(ctx), ".kilo/skill/httpapi-remove/SKILL.md") },
+    }))
+    .jsonEffect(200, (body, ctx) =>
+      Effect.gen(function* () {
+        check(body === true, "skill removal should return true")
+        const location = path.join(directory(ctx), ".kilo/skill/httpapi-remove/SKILL.md")
+        const sentinel = path.join(directory(ctx), ".kilo/skill/httpapi-remove/KEEP.txt")
+        check(!(yield* Effect.promise(() => Bun.file(location).exists())), "removed skill should not remain on disk")
+        check(yield* Effect.promise(() => Bun.file(sentinel).exists()), "skill removal should preserve sibling files")
+      }),
+    ),
+  http.protected
+    .post("/kilocode/agent/remove", "kilocode.removeAgent")
+    .inProject({ git: true, init: agent })
+    .mutating()
     .at((ctx) => ({ path: "/kilocode/agent/remove", headers: ctx.headers(), body: { name: "httpapi-remove" } }))
     .jsonEffect(200, (body, ctx) =>
       Effect.gen(function* () {
         check(body === true, "agent removal should return true")
-        check(!(yield* Effect.promise(() => Bun.file(ctx.state).exists())), "removed agent should not remain on disk")
+        const location = path.join(directory(ctx), ".kilo/agent/httpapi-remove.md")
+        check(!(yield* Effect.promise(() => Bun.file(location).exists())), "removed agent should not remain on disk")
       }),
     ),
   http.protected
@@ -679,8 +732,56 @@ export const kiloScenarios: Scenario[] = [
     .status(401),
   http.protected
     .post("/session/viewed", "session.viewed")
-    .at((ctx) => ({ path: "/session/viewed", headers: ctx.headers(), body: { focused: [], open: [] } }))
+    .at((ctx) => ({
+      path: "/session/viewed",
+      headers: ctx.headers(),
+      body: {
+        viewer: { id: "11111111-1111-4111-8111-111111111111", active: true },
+        attached: [],
+        visible: [],
+      },
+    }))
     .json(200, (body) => check(body === true, "session viewed should return true")),
+  http.protected
+    .post("/session/viewed", "session.viewed")
+    .at((ctx) => ({ path: "/session/viewed", headers: ctx.headers(), body: { attached: [], visible: [] } }))
+    .status(400),
+  http.protected
+    .post("/session/viewed", "session.viewed")
+    .at((ctx) => ({
+      path: "/session/viewed",
+      headers: ctx.headers(),
+      body: {
+        viewer: { id: "not-a-uuid", active: true },
+        attached: [],
+        visible: [],
+      },
+    }))
+    .status(400),
+  http.protected
+    .post("/session/viewed", "session.viewed")
+    .at((ctx) => ({
+      path: "/session/viewed",
+      headers: ctx.headers(),
+      body: {
+        viewer: { id: "11111111-1111-4111-8111-111111111111", active: true },
+        attached: ["ses_" + "x".repeat(231)],
+        visible: [],
+      },
+    }))
+    .status(400),
+  http.protected
+    .post("/session/viewed", "session.viewed")
+    .at((ctx) => ({
+      path: "/session/viewed",
+      headers: ctx.headers(),
+      body: {
+        viewer: { id: "11111111-1111-4111-8111-111111111111", active: true },
+        attached: Array.from({ length: 1001 }, () => "ses_1"),
+        visible: [],
+      },
+    }))
+    .status(400),
   http.protected
     .post("/telemetry/capture", "telemetry.capture")
     .at((ctx) => ({
@@ -695,6 +796,7 @@ export const kiloScenarios: Scenario[] = [
     .json(200, (body) => check(body === true, "telemetry enabled update should return true")),
   http.protected
     .post("/instance/reload", "instance.reload")
+    .skipValidAuthProbe()
     .mutating()
     .seeded((ctx) => ctx.session({ title: "Reload" }))
     .at((ctx) => ({

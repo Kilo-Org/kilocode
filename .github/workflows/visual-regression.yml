@@ -12,7 +12,7 @@ permissions:
 jobs:
   check-paths:
     name: Check changed paths
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # kilocode_change
     outputs:
       matched: ${{ steps.filter.outputs.matched }}
       can_autocommit: ${{ steps.autocommit-check.outputs.can_autocommit }}
@@ -58,7 +58,7 @@ jobs:
   visual-regression:
     needs: check-paths
     if: needs.check-paths.outputs.matched == 'true'
-    name: Visual Regression (kilo-ui)
+    name: Visual Regression (kilo-ui) # kilocode_change
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
 
@@ -220,7 +220,7 @@ jobs:
   visual-regression-vscode:
     needs: check-paths
     if: needs.check-paths.outputs.matched == 'true'
-    name: Visual Regression (kilo-vscode webview)
+    name: Visual Regression (kilo-vscode webview) # kilocode_change
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
     env:

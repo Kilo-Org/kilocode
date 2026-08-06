@@ -1,5 +1,5 @@
 import type { TuiPlugin } from "@kilocode/plugin/tui"
-import type { InternalTuiPlugin } from "@/cli/cmd/tui/plugin/internal"
+import type { InternalTuiPlugin } from "@/plugin/tui/internal"
 import { DialogMemoryHelp } from "@/kilocode/cli/cmd/tui/component/dialog-memory"
 
 const id = "internal:kilo-memory-palette"

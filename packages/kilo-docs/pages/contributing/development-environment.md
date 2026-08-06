@@ -109,6 +109,17 @@ bun run extension
 
 This will build and launch the extension in an isolated VS Code instance.
 
+For a fully isolated development environment, use one of the isolated scripts:
+
+```bash
+bun run extension:isolated
+bun run extension:isolated:clean
+```
+
+`extension:isolated` launches a separate VS Code process with user data and extensions under `.kilo-dev/vscode/`, and points Kilo at isolated XDG storage under `.kilo-dev/{data,config,state,cache}`. Re-running it keeps the same isolated environment, so installed extensions, VS Code settings, Kilo auth, sessions, config, state, and cache persist.
+
+`extension:isolated:clean` deletes `.kilo-dev/` before launch. Use it to simulate a fresh VS Code + Kilo install without affecting your main VS Code profile or real Kilo config.
+
 The command auto-detects VS Code on macOS, Linux, and Windows. Use these options when the default launch target is not the one you need:
 
 | Option | Use |
@@ -118,12 +129,15 @@ The command auto-detects VS Code on macOS, Linux, and Windows. Use these options
 | `VSCODE_EXEC_PATH` | Set the VS Code executable through the current shell environment |
 | `--insiders` | Prefer VS Code Insiders |
 | `--workspace <path>` | Open a specific workspace folder |
+| `<path>` | Open a specific workspace folder when passed as the final positional argument |
 | `--clean` | Reset cached extension state before launch |
 
 For example, to test the extension against a sample workspace:
 
 ```bash
 bun run extension --workspace ../sample-project
+bun run extension:isolated -- ../sample-project
+bun run extension:isolated:clean -- ../sample-project
 ```
 
 To set the executable through an environment variable, use the syntax for your shell:

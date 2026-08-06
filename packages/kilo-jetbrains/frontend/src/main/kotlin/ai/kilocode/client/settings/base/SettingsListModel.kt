@@ -8,6 +8,7 @@ import java.awt.Point
 import java.awt.Rectangle
 import javax.swing.Icon
 import javax.swing.JList
+import javax.swing.ListSelectionModel
 import javax.swing.ListCellRenderer
 import javax.swing.SwingUtilities
 
@@ -21,6 +22,8 @@ internal data class SettingsListConfig(
     val height: SettingsListRowHeight,
     val description: Boolean = true,
     val descriptionIndent: Boolean = true,
+    val tooltip: Boolean = true,
+    val selection: Int = ListSelectionModel.SINGLE_SELECTION,
 ) {
     companion object {
         val Equal = SettingsListConfig(SettingsListRowHeight.EQUAL)
@@ -41,7 +44,9 @@ internal data class SettingsListCell(
 internal interface SettingsListItem {
     val key: String
     val title: String
+    val note: String? get() = null
     val description: String? get() = null
+    val doubleClick: String? get() = null
     val icon: Icon? get() = null
     val section: String? get() = null
     val badges: List<SettingsBadge> get() = emptyList()
@@ -80,7 +85,10 @@ internal fun settingsListCellBounds(
     @Suppress("UNCHECKED_CAST")
     val renderer = list.cellRenderer as? ListCellRenderer<Any?> ?: return emptyMap()
     val cell = list.getCellBounds(index, index) ?: return emptyMap()
-    val comp = renderer.getListCellRendererComponent(list, model.getElementAt(index), index, selected, list.hasFocus())
+    // Render as focused so the action-cell geometry is available for hit-testing even when the
+    // list is not the focus owner. Painting still hides the cells on an unfocused list; this only
+    // resolves click targets and keeps them stable regardless of focus.
+    val comp = renderer.getListCellRendererComponent(list, model.getElementAt(index), index, selected, true)
     comp.setBounds(0, 0, cell.width, cell.height)
     settingsListLayout(comp)
     val out = linkedMapOf<String, Rectangle>()

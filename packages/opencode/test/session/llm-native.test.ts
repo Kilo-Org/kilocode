@@ -1,18 +1,21 @@
 import { describe, expect, test } from "bun:test"
-import { ToolFailure } from "@opencode-ai/llm"
-import { LLMClient, RequestExecutor, WebSocketExecutor } from "@opencode-ai/llm/route"
+import { LLMEvent, ToolFailure } from "@opencode-ai/llm"
+import { LLMClient, RequestExecutor, WebSocketExecutor, type LLMClientShape } from "@opencode-ai/llm/route"
 import { jsonSchema, tool, type ModelMessage, type Tool } from "ai"
-import { Effect, Layer, Stream } from "effect"
+import { Effect, Fiber, Layer, Stream } from "effect"
+import { FetchHttpClient } from "effect/unstable/http"
 import { LLMNative } from "@/session/llm/native-request"
 import { LLMNativeRuntime } from "@/session/llm/native-runtime"
 import type { Provider } from "@/provider/provider"
-import { ModelID, ProviderID } from "@/provider/schema"
+
 import { OAUTH_DUMMY_KEY } from "@/auth"
 import { testEffect } from "../lib/effect"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 
 const baseModel: Provider.Model = {
-  id: ModelID.make("gpt-5-mini"),
-  providerID: ProviderID.make("openai"),
+  id: ModelV2.ID.make("gpt-5-mini"),
+  providerID: ProviderV2.ID.make("openai"),
   api: {
     id: "gpt-5-mini",
     url: "https://api.openai.com/v1",
@@ -62,7 +65,7 @@ const baseModel: Provider.Model = {
 }
 
 const providerInfo: Provider.Info = {
-  id: ProviderID.make("openai"),
+  id: ProviderV2.ID.make("openai"),
   name: "OpenAI",
   source: "config",
   env: ["OPENAI_API_KEY"],
@@ -71,7 +74,11 @@ const providerInfo: Provider.Info = {
 }
 
 const it = testEffect(
-  LLMClient.layer.pipe(Layer.provide(Layer.mergeAll(RequestExecutor.defaultLayer, WebSocketExecutor.layer))),
+  LLMClient.layer.pipe(
+    Layer.provide(
+      Layer.mergeAll(RequestExecutor.layer.pipe(Layer.provide(FetchHttpClient.layer)), WebSocketExecutor.layer),
+    ),
+  ),
 )
 
 function responsesStream(chunks: unknown[]) {
@@ -113,10 +120,9 @@ const storedSession = {
 const openAIResponses = {
   user: (text: string) => ({ role: "user", content: [{ type: "input_text", text }] }),
   assistant: (text: string) => ({ role: "assistant", content: [{ type: "output_text", text }] }),
-  openaiReasoning: (text: string, options: { readonly itemId: string; readonly encryptedContent: string }) => ({
+  openaiReasoning: (text: string, encryptedContent: string) => ({
     type: "reasoning",
-    id: options.itemId,
-    encrypted_content: options.encryptedContent,
+    encrypted_content: encryptedContent,
     summary: [{ type: "summary_text", text }],
   }),
 }
@@ -354,7 +360,7 @@ describe("session.llm-native.request", () => {
     const compatible = LLMNative.model({
       model: {
         ...baseModel,
-        providerID: ProviderID.make("opencode"),
+        providerID: ProviderV2.ID.make("opencode"),
         api: { ...baseModel.api, url: "https://ai.example.test/v1", npm: "@ai-sdk/openai-compatible" },
       },
       apiKey: "test-key",
@@ -388,8 +394,8 @@ describe("session.llm-native.request", () => {
     })
     expect(
       LLMNativeRuntime.status({
-        model: { ...baseModel, providerID: ProviderID.make("opencode") },
-        provider: { ...providerInfo, id: ProviderID.make("opencode") },
+        model: { ...baseModel, providerID: ProviderV2.ID.make("opencode") },
+        provider: { ...providerInfo, id: ProviderV2.ID.make("opencode") },
         auth: undefined,
       }),
     ).toMatchObject({
@@ -400,10 +406,10 @@ describe("session.llm-native.request", () => {
       LLMNativeRuntime.status({
         model: {
           ...baseModel,
-          providerID: ProviderID.make("opencode"),
+          providerID: ProviderV2.ID.make("opencode"),
           api: { ...baseModel.api, npm: "@ai-sdk/openai-compatible" },
         },
-        provider: { ...providerInfo, id: ProviderID.make("opencode") },
+        provider: { ...providerInfo, id: ProviderV2.ID.make("opencode") },
         auth: undefined,
       }),
     ).toMatchObject({
@@ -412,8 +418,8 @@ describe("session.llm-native.request", () => {
     })
     expect(
       LLMNativeRuntime.status({
-        model: { ...baseModel, providerID: ProviderID.make("google") },
-        provider: { ...providerInfo, id: ProviderID.make("google") },
+        model: { ...baseModel, providerID: ProviderV2.ID.make("google") },
+        provider: { ...providerInfo, id: ProviderV2.ID.make("google") },
         auth: undefined,
       }),
     ).toEqual({ type: "unsupported", reason: "provider is not openai, opencode, or anthropic" })
@@ -454,12 +460,12 @@ describe("session.llm-native.request", () => {
       LLMNativeRuntime.status({
         model: {
           ...baseModel,
-          providerID: ProviderID.make("anthropic"),
+          providerID: ProviderV2.ID.make("anthropic"),
           api: { ...baseModel.api, npm: "@ai-sdk/anthropic", url: "https://api.anthropic.com/v1" },
         },
         provider: {
           ...providerInfo,
-          id: ProviderID.make("anthropic"),
+          id: ProviderV2.ID.make("anthropic"),
           name: "Anthropic",
           env: ["ANTHROPIC_API_KEY"],
           options: { apiKey: "test-anthropic-key" },
@@ -472,10 +478,10 @@ describe("session.llm-native.request", () => {
   test("prefers console provider api key over stored opencode auth", () => {
     expect(
       LLMNativeRuntime.status({
-        model: { ...baseModel, providerID: ProviderID.make("opencode") },
+        model: { ...baseModel, providerID: ProviderV2.ID.make("opencode") },
         provider: {
           ...providerInfo,
-          id: ProviderID.make("opencode"),
+          id: ProviderV2.ID.make("opencode"),
           options: { apiKey: "console-token" },
           key: "zen-token",
         },
@@ -531,6 +537,66 @@ describe("session.llm-native.request", () => {
       const failure = yield* Effect.flip(wrapped.incomplete.execute({}, { id: "call-1", name: "incomplete" }))
       expect(failure).toBeInstanceOf(ToolFailure)
       expect(failure.message).toContain("incomplete")
+    }),
+  )
+
+  it.effect("emits native tool calls before overlapping local settlements complete", () =>
+    Effect.gen(function* () {
+      const observed: string[] = []
+      const started: string[] = []
+      let release: (() => void) | undefined
+      let notifyStarted: (() => void) | undefined
+      const gate = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      const bothStarted = new Promise<void>((resolve) => {
+        notifyStarted = resolve
+      })
+      const lookup = {
+        description: "Lookup data",
+        inputSchema: jsonSchema({ type: "object" }),
+        execute: async (_args: unknown, options: { toolCallId: string }) => {
+          started.push(options.toolCallId)
+          if (started.length === 2) notifyStarted?.()
+          await gate
+          return { output: options.toolCallId }
+        },
+      } satisfies Tool
+      const llmClient = {
+        prepare: () => Effect.die("unused"),
+        stream: () =>
+          Stream.fromIterable([
+            LLMEvent.toolCall({ id: "call-1", name: "lookup", input: {} }),
+            LLMEvent.toolCall({ id: "call-2", name: "lookup", input: {} }),
+            LLMEvent.finish({ reason: "tool-calls" }),
+          ]),
+        generate: () => Effect.die("unused"),
+      } as LLMClientShape
+      const native = LLMNativeRuntime.stream({
+        model: baseModel,
+        provider: providerInfo,
+        auth: undefined,
+        llmClient,
+        messages: [],
+        tools: { lookup },
+        headers: {},
+        abort: new AbortController().signal,
+      })
+      expect(native.type).toBe("supported")
+      if (native.type === "unsupported") throw new Error(native.reason)
+
+      const fiber = yield* native.stream.pipe(
+        Stream.runForEach((event) => Effect.sync(() => observed.push(event.type))),
+        Effect.forkScoped,
+      )
+      yield* Effect.promise(() => bothStarted)
+
+      expect(started).toEqual(["call-1", "call-2"])
+      expect(observed).toEqual(["tool-call", "tool-call", "finish"])
+
+      release?.()
+      yield* Fiber.join(fiber)
+      expect(observed).toEqual(["tool-call", "tool-call", "finish", "tool-result", "tool-result"])
     }),
   )
 
@@ -595,10 +661,7 @@ describe("session.llm-native.request", () => {
       expectedBody: {
         input: [
           openAIResponses.user("What changed?"),
-          openAIResponses.openaiReasoning("Checked the previous diff.", {
-            itemId: "rs_1",
-            encryptedContent: "encrypted-state",
-          }),
+          openAIResponses.openaiReasoning("Checked the previous diff.", "encrypted-state"),
           openAIResponses.assistant("The parser changed."),
           openAIResponses.user("Summarize it."),
         ],
@@ -621,7 +684,7 @@ describe("session.llm-native.request", () => {
       ],
       providerOptions: { openai: { store: false, include: ["reasoning.encrypted_content"] } },
       expectedBody: {
-        input: [{ type: "reasoning", id: "rs_1", summary: [], encrypted_content: "encrypted-state" }],
+        input: [{ type: "reasoning", summary: [], encrypted_content: "encrypted-state" }],
         include: ["reasoning.encrypted_content"],
         store: false,
       },

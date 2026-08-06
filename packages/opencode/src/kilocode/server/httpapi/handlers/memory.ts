@@ -53,7 +53,12 @@ export const memoryHandlers = HttpApiBuilder.group(InstanceHttpApi, "memory", (h
     }) {
       const ctx = yield* InstanceState.context
       return MemoryContract.output(
-        yield* api(svc.configure({ ctx, settings: { autoConsolidate: req.payload.autoConsolidate } })),
+        yield* api(
+          svc.configure({
+            ctx,
+            settings: { autoConsolidate: req.payload.autoConsolidate, verbose: req.payload.verbose },
+          }),
+        ),
       )
     })
 

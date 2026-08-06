@@ -5,34 +5,23 @@ import { Flag } from "@opencode-ai/core/flag/flag"
 import { Global } from "@opencode-ai/core/global"
 import { unique } from "remeda"
 import * as Effect from "effect/Effect"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 
 export const files = Effect.fn("ConfigPaths.projectFiles")(function* (
   name: string,
   directory: string,
   worktree?: string,
 ) {
-  return yield* namedFiles([name], directory, worktree)
-})
-
-export const namedFiles = Effect.fn("ConfigPaths.namedProjectFiles")(function* (
-  names: readonly string[],
-  directory: string,
-  worktree?: string,
-) {
-  const afs = yield* AppFileSystem.Service
-  const targets = names
-    .toReversed()
-    .flatMap((name) => [`${name}.jsonc`, `${name}.json`])
+  const afs = yield* FSUtil.Service
   return (yield* afs.up({
-    targets,
+    targets: [`${name}.jsonc`, `${name}.json`],
     start: directory,
     stop: worktree,
   })).toReversed()
 })
 
 export const directories = Effect.fn("ConfigPaths.directories")(function* (directory: string, worktree?: string) {
-  const afs = yield* AppFileSystem.Service
+  const afs = yield* FSUtil.Service
   return unique([
     Global.Path.config,
     ...(!Flag.KILO_DISABLE_PROJECT_CONFIG

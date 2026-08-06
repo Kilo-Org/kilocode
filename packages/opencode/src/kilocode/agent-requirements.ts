@@ -5,57 +5,13 @@ import type { Skill } from "@/skill"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { Cause, Effect, Exit, Schema } from "effect"
+import { ConfigAgentV1 } from "@opencode-ai/core/v1/config/agent"
 
-const ID = Schema.String.check(
-  Schema.isMinLength(1),
-  Schema.isMaxLength(128),
-  Schema.isPattern(/^[A-Za-z0-9][A-Za-z0-9._-]*$/),
-)
-const Name = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(128), Schema.isPattern(/\S/))
+export const VSCodeExtension = ConfigAgentV1.VSCodeExtension
+export type VSCodeExtension = ConfigAgentV1.VSCodeExtension
 
-export const VSCodeExtension = Schema.Struct({
-  name: Name,
-  id: ID,
-})
-export type VSCodeExtension = Schema.Schema.Type<typeof VSCodeExtension>
-
-const Group = Schema.mutable(Schema.Array(Name)).check(Schema.isMinLength(1), Schema.isMaxLength(20))
-const VSCodeExtensions = Schema.mutable(Schema.Array(VSCodeExtension)).check(
-  Schema.isMinLength(1),
-  Schema.isMaxLength(20),
-)
-
-export const Requirements = Schema.Struct({
-  skills: Schema.optional(Group),
-  mcps: Schema.optional(Group),
-  vscode_extensions: Schema.optional(VSCodeExtensions),
-}).check(
-  Schema.makeFilter((input) => {
-    const issues: Schema.FilterIssue[] = []
-    if (!input.skills && !input.mcps && !input.vscode_extensions) {
-      issues.push({ path: [], issue: "At least one requirement group is required" })
-    }
-
-    for (const group of ["skills", "mcps"] as const) {
-      const seen = new Set<string>()
-      for (const [index, value] of (input[group] ?? []).entries()) {
-        if (seen.has(value)) issues.push({ path: [group, index], issue: `Duplicate ${group} requirement` })
-        seen.add(value)
-      }
-    }
-
-    const seen = new Set<string>()
-    for (const [index, extension] of (input.vscode_extensions ?? []).entries()) {
-      if (seen.has(extension.id)) {
-        issues.push({ path: ["vscode_extensions", index, "id"], issue: "Duplicate vscode_extensions requirement" })
-      }
-      seen.add(extension.id)
-    }
-
-    return issues
-  }),
-)
-export type Requirements = Schema.Schema.Type<typeof Requirements>
+export const Requirements = ConfigAgentV1.Requirements
+export type Requirements = ConfigAgentV1.Requirements
 
 export const SkillItem = Schema.Struct({
   name: Schema.String,

@@ -1,6 +1,6 @@
 import { createKiloClient } from "@kilocode/sdk/v2"
 import { RGBA, type CliRenderer } from "@opentui/core"
-import type { HostPluginApi } from "../../src/cli/cmd/tui/plugin/slots"
+import type { HostPluginApi } from "@opencode-ai/tui/plugin/slots"
 import { createTuiResolvedConfig } from "./tui-runtime"
 
 type Count = {
@@ -97,6 +97,7 @@ type Opts = {
   state?: {
     ready?: HostPluginApi["state"]["ready"]
     config?: HostPluginApi["state"]["config"]
+    globalConfig?: HostPluginApi["state"]["globalConfig"] // kilocode_change
     provider?: HostPluginApi["state"]["provider"]
     path?: HostPluginApi["state"]["path"]
     vcs?: HostPluginApi["state"]["vcs"]
@@ -303,6 +304,11 @@ export function createTuiPluginApi(opts: Opts = {}): HostPluginApi {
       get config() {
         return opts.state?.config ?? {}
       },
+      // kilocode_change start
+      get globalConfig() {
+        return opts.state?.globalConfig ?? {}
+      },
+      // kilocode_change end
       get provider() {
         return opts.state?.provider ?? []
       },

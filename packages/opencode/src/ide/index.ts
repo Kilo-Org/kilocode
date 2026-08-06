@@ -1,6 +1,6 @@
-import { BusEvent } from "@/bus/bus-event"
 import { Schema } from "effect"
 import { NamedError } from "@opencode-ai/core/util/error"
+import { IdeEvent } from "@opencode-ai/schema/ide-event"
 
 const SUPPORTED_IDES = [
   { name: "Windsurf" as const, cmd: "windsurf" },
@@ -10,14 +10,7 @@ const SUPPORTED_IDES = [
   { name: "VSCodium" as const, cmd: "codium" },
 ]
 
-export const Event = {
-  Installed: BusEvent.define(
-    "ide.installed",
-    Schema.Struct({
-      ide: Schema.String,
-    }),
-  ),
-}
+export const Event = IdeEvent
 
 export const AlreadyInstalledError = NamedError.create("AlreadyInstalledError", {})
 

@@ -5,7 +5,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
 import type { SessionModelUsage } from "../../types/messages"
-import { groupModelUsage, modelUsageName, type TokenSummary } from "../../context/model-usage"
+import { cacheRate, groupModelUsage, modelUsageName, type TokenSummary } from "../../context/model-usage"
 import { formatCompactCount } from "../../utils/format"
 
 interface TaskUsageProps {
@@ -35,12 +35,6 @@ export const TaskUsage: Component<TaskUsageProps> = (props) => {
     if (value > 0 && value < 0.000001) return "<$0.000001"
     return money().format(value)
   }
-  const rate = (model: SessionModelUsage["models"][number]) => {
-    const total = model.tokens.input + model.tokens.cache.read
-    if (total === 0) return "-"
-    return `${((model.tokens.cache.read / total) * 100).toFixed(1)}%`
-  }
-
   const Summary = () => (
     <>
       <span class="task-header-tokens-label">Tokens</span>
@@ -50,16 +44,16 @@ export const TaskUsage: Component<TaskUsageProps> = (props) => {
           {number(props.tokens.input)}
         </span>
       </Show>
+      <Show when={props.tokens.cached > 0}>
+        <span class="task-header-tokens-value">
+          <Icon name="arrow-up" size="small" />
+          cache {number(props.tokens.cached)}
+        </span>
+      </Show>
       <Show when={props.tokens.output > 0}>
         <span class="task-header-tokens-value">
           <Icon name="arrow-down-to-line" size="small" />
           {number(props.tokens.output)}
-        </span>
-      </Show>
-      <Show when={props.tokens.cached > 0}>
-        <span class="task-header-tokens-value">
-          <Icon name="arrow-down-to-line" size="small" />
-          cache {number(props.tokens.cached)}
         </span>
       </Show>
     </>
@@ -102,7 +96,7 @@ export const TaskUsage: Component<TaskUsageProps> = (props) => {
                         </div>
                         <div class="task-header-usage-meta">
                           Cache R {count(model.tokens.cache.read)} · W {count(model.tokens.cache.write)} · Hit Rate{" "}
-                          {rate(model)}
+                          {cacheRate(model)}
                         </div>
                       </div>
                     )}

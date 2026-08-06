@@ -3,6 +3,7 @@ package ai.kilocode.rpc
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
@@ -90,11 +91,26 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
     /** Revert a session to a prior user message or part. */
     suspend fun revert(id: String, directory: String, messageID: String, partID: String?)
 
+    /** Delete a single message (used to remove a queued prompt). */
+    suspend fun deleteMessage(id: String, directory: String, messageID: String): Boolean
+
     /** Redo all reverted changes for a session. */
     suspend fun unrevert(id: String, directory: String)
 
     /** Load message history for a session. */
     suspend fun messages(id: String, directory: String): List<MessageWithPartsDto>
+
+    /** Load cumulative file changes for a session. */
+    suspend fun diff(id: String, directory: String): List<DiffFileDto>
+
+    /**
+     * Full before/after content for one changed file so the diff editor can show a whole-file diff.
+     * Prefers authoritative snapshot content from a CLI that supports it (correct even for historical
+     * turns); falls back to rebuilding locally from the working tree + hunk patch against any pinned
+     * CLI. Returns null when neither is available (fall back to the hunk view). Added/deleted files
+     * return null because the frontend reconstructs those directly.
+     */
+    suspend fun diffSides(sessionId: String?, directory: String, file: DiffFileDto, messageId: String?): DiffFileDto?
 
     /** Load one attachment part from a session without returning full history to the frontend. */
     suspend fun attachmentPart(id: String, directory: String, messageId: String, partId: String, attachmentKey: String?): PartDto?

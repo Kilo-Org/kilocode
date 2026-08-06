@@ -2,7 +2,8 @@ import { describe, expect, test } from "bun:test"
 import type { LanguageModelV3 } from "@ai-sdk/provider"
 import { Effect } from "effect"
 import { ModelNotFoundError, type Provider } from "../../../src/provider/provider"
-import { ModelID, ProviderID } from "../../../src/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import type { MessageV2 } from "../../../src/session/message-v2"
 import { MessageID, PartID, SessionID } from "../../../src/session/schema"
 import type { Session } from "../../../src/session/session"
@@ -10,8 +11,8 @@ import type { SessionSummary } from "../../../src/session/summary"
 import type { Snapshot } from "../../../src/snapshot"
 import { MemoryModel, MemorySession } from "../../../src/kilocode/memory/ports"
 
-const pid = ProviderID.make("test")
-const mid = ModelID.make("fake-memory-model")
+const pid = ProviderV2.ID.make("test")
+const mid = ModelV2.ID.make("fake-memory-model")
 
 function mdl(id = mid): Provider.Model {
   return {
@@ -58,7 +59,7 @@ function lang(outputs = ["{}"]): LanguageModelV3 {
 
 function provider(input: { outputs?: string[]; seen?: string[] } = {}): Provider.Interface {
   const base = mdl()
-  const mem = mdl(ModelID.make("memory-config-model"))
+  const mem = mdl(ModelV2.ID.make("memory-config-model"))
   const info = {
     id: pid,
     name: "Test",

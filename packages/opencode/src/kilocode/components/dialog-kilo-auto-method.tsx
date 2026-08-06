@@ -12,7 +12,7 @@ import { useDialog } from "@tui/ui/dialog"
 import { useSync } from "@tui/context/sync"
 import { useToast } from "@tui/ui/toast"
 import { Link } from "@tui/ui/link"
-import * as Clipboard from "@tui/util/clipboard"
+import * as Clipboard from "@tui/clipboard"
 import { DialogKiloOrganization } from "./dialog-kilo-organization.js"
 
 // These types are OpenCode-internal and imported at runtime
@@ -43,7 +43,7 @@ export function KiloAutoMethod(props: KiloAutoMethodProps) {
   useKeyboard((evt: any) => {
     if (evt.name === "c" && !evt.ctrl && !evt.meta) {
       const code = props.authorization.instructions.match(/[A-Z0-9]{4}-[A-Z0-9]{4}/)?.[0] ?? props.authorization.url
-      Clipboard.copy(code)
+      Clipboard.write(code)
         .then(() => toast.show({ message: "Copied to clipboard", variant: "info" }))
         .catch(toast.error)
     }

@@ -13,6 +13,12 @@
       "packages/opencode/migration/*": "deny",
     },
   },
+  "references": {
+    "effect": {
+      "repository": "github.com/Effect-TS/effect-smol",
+      "description": "Use for Effect v4 and effect-smol implementation details",
+    },
+  },
   "mcp": {},
   "tools": {
     "github-triage": false,

@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import type { Session } from "@kilocode/sdk/v2"
 import {
   failed,
+  formatCost,
   formatRate,
   groupModelsByProvider,
   isSessionTreeMember,
@@ -84,5 +85,13 @@ describe("TUI model usage", () => {
       { providerID: "minimax", providerName: "MiniMax", models: models.slice(2) },
     ])
     expect(formatRate({ input: 100, output: 0, reasoning: 0, cache: { read: 300, write: 100 } })).toBe("60.0%")
+  })
+
+  test("formats costs to cents", () => {
+    expect(formatCost(18.382407)).toBe("$18.38")
+    expect(formatCost(12.166524)).toBe("$12.17")
+    expect(formatCost(0.0000001)).toBe("$0.00")
+    expect(formatCost(-1)).toBe("$0.00")
+    expect(formatCost(Number.NaN)).toBe("$0.00")
   })
 })

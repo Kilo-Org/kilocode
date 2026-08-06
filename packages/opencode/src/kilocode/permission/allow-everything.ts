@@ -1,9 +1,7 @@
-import { Bus } from "@/bus"
 import * as Config from "@/config/config"
 import { Permission } from "@/permission"
 import { SessionID } from "@/session/schema"
 import { Session } from "@/session/session"
-import { Event } from "@/server/event"
 import { Effect } from "effect"
 import z from "zod"
 
@@ -15,7 +13,6 @@ export namespace AllowEverythingPermission {
       const svc = yield* Permission.Service
       const sessions = yield* Session.Service
       const cfg = yield* Config.Service
-      const bus = yield* Bus.Service
       const rules: Permission.Ruleset = [{ permission: "*", pattern: "*", action: "allow" }]
 
       if (!input.enable) {
@@ -32,9 +29,9 @@ export namespace AllowEverythingPermission {
           return true
         }
 
+        // updateGlobal({ dispose: false }) already emits ConfigUpdated on GlobalBus
         yield* cfg.updateGlobal({ permission: { "*": { "*": null } } }, { dispose: false })
         yield* svc.allowEverything({ enable: false })
-        yield* bus.publish(Event.ConfigUpdated, {})
         return true
       }
 
@@ -48,8 +45,8 @@ export namespace AllowEverythingPermission {
       }
 
       if (!input.sessionID) {
+        // updateGlobal({ dispose: false }) already emits ConfigUpdated on GlobalBus
         yield* cfg.updateGlobal({ permission: Permission.toConfig(rules) }, { dispose: false })
-        yield* bus.publish(Event.ConfigUpdated, {})
       }
 
       yield* svc.allowEverything({

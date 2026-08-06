@@ -551,10 +551,17 @@ async function main() {
   await git.stageAll()
   const compatMessage = `refactor: kilo compat for ${targetVersion.tag}`
   if (prior) {
-    const tree = await git.writeTree()
+    const transformed = await git.writeTree()
+    const tree = await git.overlayCompatTree({
+      previous: prior.commit,
+      upstream: prior.upstream,
+      target: targetVersion.commit,
+      transformed,
+      extra: [".opencode-version"],
+    })
     const commit = await git.createCommit(tree, compatMessage, prior.commit)
     await git.updateBranch(opencodeBranch, commit)
-    await git.checkout(opencodeBranch)
+    await $`git reset --hard ${commit}`.quiet()
   } else {
     await git.commit(compatMessage)
   }

@@ -2,7 +2,7 @@ import * as path from "path"
 import os from "os"
 import * as Log from "@opencode-ai/core/util/log"
 import type { Config } from "../config/config"
-import type { ConfigPermission } from "../config/permission"
+import type { ConfigPermissionV1 as ConfigPermission } from "@opencode-ai/core/v1/config/permission"
 
 export namespace IgnoreMigrator {
   const log = Log.create({ service: "kilocode.ignore-migrator" })
