@@ -162,6 +162,8 @@ export const dict = {
   "model.group.auto": "自動モデル",
   "model.group.recommended": "推奨",
   "model.group.favorites": "お気に入り",
+  "model.group.mostUsed": "よく使うモデル",
+  "model.group.searchResults": "検索結果",
   "model.favorite.add": "お気に入りに追加",
   "model.favorite.remove": "お気に入りから削除",
 

@@ -100,7 +100,7 @@ function matchScore(model: EnrichedModel, query: string): number | undefined {
 
   const scores = tokens.map((token) => {
     const modelScore = Math.max(tokenScore(token, name), tokenScore(token, model.id))
-    const providerScore = tokenScore(token, model.providerName)
+    const providerScore = modelScore < 0 ? tokenScore(token, model.providerName) : -1
     return { modelScore, providerScore }
   })
   if (scores.some((score) => score.modelScore < 0 && score.providerScore < 0)) return undefined
@@ -138,6 +138,7 @@ export function rankModelSearch(
   const groups = new Map<
     string,
     {
+      key: string
       score: number
       count: number
       lastUsed: number
@@ -153,7 +154,7 @@ export function rankModelSearch(
     if (score === undefined) continue
     const usage = usageFor(model, options.usage)
     const key = logicalModelKey(model)
-    const group = groups.get(key) ?? { score, count: 0, lastUsed: 0, items: [] }
+    const group = groups.get(key) ?? { key, score, count: 0, lastUsed: 0, items: [] }
     group.score = Math.max(group.score, score)
     group.count += usage.count
     group.lastUsed = Math.max(group.lastUsed, usage.lastUsed)
@@ -162,7 +163,7 @@ export function rankModelSearch(
   }
 
   return [...groups.values()]
-    .sort((a, b) => b.score - a.score || b.count - a.count || b.lastUsed - a.lastUsed)
+    .sort((a, b) => b.score - a.score || b.count - a.count || b.lastUsed - a.lastUsed || a.key.localeCompare(b.key))
     .flatMap((group) =>
       group.items
         .sort(

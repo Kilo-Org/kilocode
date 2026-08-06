@@ -164,6 +164,8 @@ export const dict = {
   "model.group.auto": "Automatische modellen",
   "model.group.recommended": "Aanbevolen",
   "model.group.favorites": "Favorieten",
+  "model.group.mostUsed": "Meest gebruikt",
+  "model.group.searchResults": "Zoekresultaten",
   "model.favorite.add": "Toevoegen aan favorieten",
   "model.favorite.remove": "Verwijderen uit favorieten",
   "model.preview.label.released": "Uitgebracht",

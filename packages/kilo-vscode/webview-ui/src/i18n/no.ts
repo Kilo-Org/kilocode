@@ -165,6 +165,8 @@ export const dict = {
   "model.group.auto": "Automatiske modeller",
   "model.group.recommended": "Anbefalt",
   "model.group.favorites": "Favoritter",
+  "model.group.mostUsed": "Mest brukt",
+  "model.group.searchResults": "Søkeresultater",
   "model.favorite.add": "Legg til i favoritter",
   "model.favorite.remove": "Fjern fra favoritter",
   "model.preview.label.released": "Utgitt",

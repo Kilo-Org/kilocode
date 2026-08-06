@@ -120,6 +120,8 @@ export const dict = {
   "model.group.auto": "Modelli automatici",
   "model.group.recommended": "Consigliati",
   "model.group.favorites": "Preferiti",
+  "model.group.mostUsed": "Più usati",
+  "model.group.searchResults": "Risultati di ricerca",
   "model.favorite.add": "Aggiungi ai preferiti",
   "model.favorite.remove": "Rimuovi dai preferiti",
   "model.preview.label.released": "Rilasciato",

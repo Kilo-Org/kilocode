@@ -368,6 +368,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
       })
 
     if (search()) {
+      if (filtered().length === 0) return []
       return [
         {
           key: "search-results",
@@ -503,7 +504,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
       const match = list[0]
       const first = match ? canonicalKey(match) : null
       const next =
-        search() && first && rowMap().has(first)
+        search() && first
           ? first
           : canon && rowMap().has(canon)
             ? canon
@@ -513,7 +514,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                 ? CLEAR_KEY
                 : defaultKey()
       setSelectedKey(next)
-      setBrowsing(!!search() && nodeMap().has(next))
+      setBrowsing(!!search() && (!!first || props.allowClear === true))
       setNavigating(false)
       setPreActiveKey(next)
       setPreviewKey(next)
@@ -656,6 +657,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   }
 
   function horizontal(step: -1 | 1) {
+    if (search()) return
     const node = nodeMap().get(selectedKey())
     if (!node) return
     if (node.kind === "group" && node.group) {

@@ -90,7 +90,7 @@ test("search uses a flat relevance-ranked result list with provider labels", asy
   const nova = page.getByRole("treeitem", { name: "Nova" })
   await expect(nova).toBeVisible()
   await expect(combobox).toHaveAttribute("aria-activedescendant", await nova.getAttribute("id"))
-  await expect(page.getByRole("treeitem", { name: "NVIDIA" })).toHaveCount(0)
+  await expect(page.locator(".model-selector-group-label").filter({ hasText: "NVIDIA" })).toHaveCount(0)
   await expect(nova).toContainText("NVIDIA")
 })
 
@@ -142,12 +142,13 @@ test("active descendant always identifies a visible tree item", async ({ page })
   await active()
   await combobox.fill("N")
   await active()
-  await combobox.press("ArrowLeft")
   await combobox.press("ArrowDown")
-  await combobox.press("ArrowLeft")
   await active()
   await combobox.fill("no matching model")
-  await active()
+  await expect(combobox).toHaveAttribute(
+    "aria-activedescendant",
+    await page.getByRole("treeitem", { name: "Use default model" }).getAttribute("id"),
+  )
 })
 
 test("expanded preview waits for explicit pointer selection", async ({ page }) => {

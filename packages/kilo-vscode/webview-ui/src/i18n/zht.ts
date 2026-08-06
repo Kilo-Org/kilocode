@@ -158,6 +158,8 @@ export const dict = {
   "model.group.auto": "自動模型",
   "model.group.recommended": "推薦",
   "model.group.favorites": "我的最愛",
+  "model.group.mostUsed": "最常用",
+  "model.group.searchResults": "搜尋結果",
   "model.favorite.add": "加入我的最愛",
   "model.favorite.remove": "從我的最愛中移除",
 
