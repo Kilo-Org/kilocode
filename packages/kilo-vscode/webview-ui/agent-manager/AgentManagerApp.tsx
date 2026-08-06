@@ -177,7 +177,7 @@ import { createMarkdownRender } from "./review-preferences"
 import { createSidebarCollapse } from "./sidebar-collapse"
 import { SidebarToggleButton } from "./SidebarToggleButton"
 import { setTabWidths } from "./tab-widths"
-import { clampPanelWidth, maxPanelWidth, minPanelWidth } from "./side-panel-layout"
+import { clampPanelWidth, createPanelResize, maxPanelWidth, minPanelWidth } from "./side-panel-layout"
 import { buildShortcutCategories } from "./shortcuts"
 import { tracker } from "./telemetry"
 import { createChatFocus, hasQuestionOption } from "./focus"
@@ -201,7 +201,6 @@ type SidePanel = "diff" | "pr" | "terminal" | null
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 // Fallback keybindings before extension sends resolved ones
 const MAX_JUMP_INDEX = 9
-const SIDE_RESIZE_INTERVAL_MS = 32
 
 const defaultBindings: Record<string, string> = {
   previousSession: isMac ? "⌘⌥↑" : "Ctrl+Alt+↑",
@@ -322,9 +321,6 @@ const AgentManagerContent: Component = () => {
   // rAF coalescing for resize handlers — at most one signal write per frame
   let sidebarRaf: number | undefined
   let pendingSidebarWidth: number | undefined
-  let sideRaf: number | undefined
-  let pendingSideWidth: number | undefined
-  let sideResizeTime = 0
 
   const [history, setHistory] = createSignal(false)
   const [sidePanel, setSidePanel] = createSignal<SidePanel>(null)
@@ -337,20 +333,7 @@ const AgentManagerContent: Component = () => {
   // Diff and terminal views share one inspector width, restored from webview
   // state so the user's divider position survives panel reloads.
   const [panelWidth, setPanelWidth] = createSignal(clampPanelWidth(persisted?.sidePanelWidth, window.innerWidth))
-  const resizeSide = (width: number) => {
-    pendingSideWidth = clampPanelWidth(width, window.innerWidth)
-    if (sideRaf !== undefined) return
-    const flush = (time: number) => {
-      if (time - sideResizeTime < SIDE_RESIZE_INTERVAL_MS) {
-        sideRaf = requestAnimationFrame(flush)
-        return
-      }
-      sideRaf = undefined
-      sideResizeTime = time
-      setPanelWidth(pendingSideWidth!)
-    }
-    sideRaf = requestAnimationFrame(flush)
-  }
+  const resizeSide = createPanelResize(setPanelWidth, () => window.innerWidth)
   const showSideTerminal = () => {
     setHistory(false)
     setReviewActive(false)
