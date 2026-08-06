@@ -179,8 +179,9 @@ import { setTabWidths } from "./tab-widths"
 import { clampPanelWidth, createPanelResize, maxPanelWidth, minPanelWidth } from "./side-panel-layout"
 import { buildShortcutCategories } from "./shortcuts"
 import { tracker } from "./telemetry"
-import { createChatFocus, hasQuestionOption } from "./focus"
+import { createChatFocus, createPromptFocus, hasQuestionOption } from "./focus"
 import { usePendingCreate } from "./pending-create"
+import { defaultBase as projectDefaultBase } from "./project/default-base"
 import "./agent-manager.css"
 import "./agent-manager-review.css"
 import { cycleAgent as cycle } from "../src/context/session-agent"
@@ -291,14 +292,8 @@ const AgentManagerContent: Component = () => {
     persisted: persisted ?? {},
     activeId: () => currentProjectId() ?? "single",
   })
-  const defaultBase = (id: string) => {
-    const store = registry.ensure(id)
-    return (
-      store.defaultBaseBranch() ??
-      store.localStats()?.branch ??
-      (id === activeProjectId() ? repoDetectedBranch() : undefined)
-    )
-  }
+  const defaultBase = (id: string) =>
+    projectDefaultBase(registry.ensure(id), id === activeProjectId(), repoDetectedBranch())
   const localSessionIDs = () => registry.active().tabs.ids()
   const setLocalSessionIDs = (next: string[] | ((prev: string[]) => string[])) => registry.active().tabs.set(next)
   /** Remove a session ID from the local tab (no-op if absent). */
@@ -409,14 +404,7 @@ const AgentManagerContent: Component = () => {
   )
   type FocusOwner = "prompt" | { terminal: string }
   const focusMemory = new Map<string, FocusOwner>()
-  let focusInputUntil = 0
-  const focusPrompt = () => {
-    focusInputUntil = Date.now() + 500
-    if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
-    terms.setActiveId(undefined)
-    terms.setFocusedId(undefined)
-    requestChatFocus(true)
-  }
+  const prompt = createPromptFocus(terms, requestChatFocus)
   const focusKey = () => {
     const context = terms.sideKey()
     const sessionID = session.currentSessionID() ?? activePendingId() ?? "new"
@@ -448,7 +436,7 @@ const AgentManagerContent: Component = () => {
     return terminalVisible() ? false : true
   }
   const restoreFocus = () => {
-    if (Date.now() < focusInputUntil) return
+    if (prompt.active()) return
     const key = focusKey()
     const owner = focusMemory.get(key)
     if (owner && owner !== "prompt") {
@@ -1210,7 +1198,7 @@ const AgentManagerContent: Component = () => {
       else if (msg.action === "advancedWorktree") showNewWorktreeDialog()
       else if (msg.action === "closeWorktree") closeSelectedWorktree()
       else if (msg.action === "showShortcuts") handleShowKeyboardShortcuts()
-      else if (msg.action === "focusInput") focusPrompt()
+      else if (msg.action === "focusInput") prompt.focus()
       else if (msg.action === "focusSearch")
         focusChatSearch({ history: setHistory, review: setReviewActive, terminal: () => terms.setActiveId(undefined) })
       else if (msg.action === "newTerminal") {
@@ -2571,7 +2559,7 @@ const AgentManagerContent: Component = () => {
             >
               <div class={`am-main-pane ${terms.activeId() ? "am-main-pane-terminal-active" : ""}`}>
                 {/* Keep terminal tabs mounted so output streams across worktree switches. */}
-                {renderTerminalLayer({ state: terms, onFocusPrompt: focusPrompt })}
+                {renderTerminalLayer({ state: terms, onFocusPrompt: prompt.focus })}
                 {/* Session-less context (e.g. a worktree mid-provisioning): the
                     empty state lives in the main pane so the side terminal
                     panel can render next to it. */}
@@ -2731,7 +2719,7 @@ const AgentManagerContent: Component = () => {
                       visible={() => sidePanel() === "terminal"}
                       nextKeybind={kb().nextTerminal ?? ""}
                       closeKeybind={kb().closeTab ?? ""}
-                      onFocusPrompt={focusPrompt}
+                      onFocusPrompt={prompt.focus}
                       onSelect={(id) => termHandlers.selectSide(id)}
                       onClose={(id) => {
                         cancelAmbientSetup()
