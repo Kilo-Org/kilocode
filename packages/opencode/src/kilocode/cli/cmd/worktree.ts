@@ -9,12 +9,19 @@ import { CliError, effectCmd, fail } from "@/cli/effect-cmd"
 import { UI } from "@/cli/ui"
 import { errorMessage } from "@/util/error"
 import { slugify } from "@/kilocode/cli/cmd/tui-worktree"
-import { Worktree } from "@/worktree"
 
 const wrapErr = (message: string) => <A, E, R>(effect: Effect.Effect<A, E, R>) =>
   effect.pipe(Effect.mapError((error) => new CliError({ message: `${message}: ${errorMessage(error)}` })))
 
-const listWorktrees = Worktree.Service.use((svc) => svc.list()).pipe(wrapErr("Failed to list worktrees"))
+// Lazy: this module is imported eagerly by KiloCli.register (see setup.ts), so
+// `@/worktree`'s heavier transitive graph (Project, Provider, ...) must not
+// load until a handler actually runs, matching tui-worktree.ts's own imports.
+const importWorktree = Effect.promise(() => import("@/worktree"))
+
+const listWorktrees = importWorktree.pipe(
+  Effect.flatMap(({ Worktree }) => Worktree.Service.use((svc) => svc.list())),
+  wrapErr("Failed to list worktrees"),
+)
 
 export const WorktreeCommand = cmd({
   command: "worktree",
@@ -72,6 +79,7 @@ export const WorktreeRemoveCommand = effectCmd({
       yield* fail(`No worktree named "${args.name}" found.`)
       return
     }
+    const { Worktree } = yield* importWorktree
     yield* Worktree.Service.use((svc) => svc.remove({ directory: found.directory })).pipe(
       wrapErr(`Failed to remove worktree "${args.name}"`),
     )
