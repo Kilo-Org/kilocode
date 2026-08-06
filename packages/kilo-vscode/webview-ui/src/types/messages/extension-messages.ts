@@ -18,7 +18,7 @@ import type { AgentManagerSidebarTarget } from "./webview-messages"
 import type { PermissionRequest } from "./permissions"
 import type { AnacondaDesktopExtensionMessage } from "../../../../src/shared/anaconda-desktop-messages"
 import type { QuestionRequest, SuggestionRequest, TodoItem } from "./questions"
-import type { ModelSelection, Provider, ProviderAuthState } from "./providers"
+import type { ModelSelection, ModelUsageMap, Provider, ProviderAuthState } from "./providers"
 import type { SpeechToTextModelDef } from "../../../../src/speech-to-text/models"
 import type { AgentInfo, AgentRequirementResult, SkillInfo, SlashCommandInfo } from "./agents"
 import type {
@@ -920,6 +920,11 @@ export interface RecentsLoadedMessage {
   recents: ModelSelection[]
 }
 
+export interface ModelUsageLoadedMessage {
+  type: "modelUsageLoaded"
+  usage: ModelUsageMap
+}
+
 // Persisted model-selector expand/collapse preference (extension → webview)
 export interface ModelSelectorExpandedLoadedMessage {
   type: "modelSelectorExpandedLoaded"
@@ -1298,6 +1303,7 @@ export type ExtensionMessage =
   | MessagesLoadedMessage
   | SessionModelUsageLoadedMessage
   | SessionModelUsageChangedMessage
+  | ModelUsageLoadedMessage
   | MessageCreatedMessage
   | SessionsLoadedMessage
   | CloudSessionsLoadedMessage
