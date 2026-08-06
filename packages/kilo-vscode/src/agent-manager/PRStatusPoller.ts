@@ -6,7 +6,7 @@ import { execGhRead } from "./gh"
 import { classifyPRError } from "./git-import"
 import type { Semaphore } from "./semaphore"
 import { parsePRResult, checkStatus, formatCheckDuration, parseComments, parseReviewers } from "./am-pr-utils"
-import type { PRResult, GhThread, GhReviewRequest, GhReview } from "./am-pr-utils"
+import type { PRResult, GhThread, GhReviewRequest, GhReview } from "./am-pr-types"
 
 interface PRStatusPollerOptions {
   getWorktrees: () => Worktree[]
