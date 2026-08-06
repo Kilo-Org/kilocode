@@ -57,8 +57,9 @@ const PROVIDER_ID = /^[a-z0-9][a-z0-9-_]*$/
 
 function checkVariant(v: VariantEntry, seen: Set<string>, t: Translator) {
   const n = v.name.trim()
-  if (!n) return { name: t("provider.custom.error.required") }
-  if (seen.has(n)) return { name: t("provider.custom.error.duplicate") }
+  const path = `variants[${JSON.stringify(v.name)}]`
+  if (!n) return { name: `${path}: ${t("provider.custom.error.required")}` }
+  if (seen.has(n)) return { name: `${path}: ${t("provider.custom.error.duplicate")}` }
   seen.add(n)
   return { name: undefined }
 }
