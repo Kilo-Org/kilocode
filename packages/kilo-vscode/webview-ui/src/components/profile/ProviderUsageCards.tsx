@@ -238,6 +238,11 @@ export const ProviderUsageCards: Component<ProviderUsageCardsProps> = (props) =>
       </div>
 
       <div class="provider-usage-list">
+        <Show when={props.data && props.error}>
+          <p class="provider-usage-notice" role="alert">
+            {props.error}
+          </p>
+        </Show>
         <Show when={props.showKiloPass}>
           <KiloPassCard pass={props.kiloPass} onGet={props.onGetKiloPass} language={language} />
         </Show>

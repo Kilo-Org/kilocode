@@ -96,6 +96,21 @@ describe("KiloProvider provider usage bridge", () => {
     expect(internal.cachedProviderUsageMessage).toEqual({ type: "providerUsageLoaded", data })
   })
 
+  it("surfaces a failed forced refresh alongside the cached data", async () => {
+    const { internal, messages } = bridge({
+      get: async () => ({ data }),
+      refresh: async () => ({ error: { _tag: "ServiceUnavailable" } }),
+    })
+
+    await internal.fetchAndSendProviderUsage()
+    await internal.fetchAndSendProviderUsage(true)
+
+    expect(messages).toEqual([
+      { type: "providerUsageLoaded", data },
+      { type: "providerUsageLoaded", data, error: "Provider usage could not be refreshed." },
+    ])
+  })
+
   it("posts a terminal loading error when the backend has no cached response", async () => {
     const { internal, messages } = bridge({
       get: async () => ({ error: { _tag: "ServiceUnavailable" } }),

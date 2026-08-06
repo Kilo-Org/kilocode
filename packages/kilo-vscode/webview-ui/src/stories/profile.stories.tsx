@@ -94,10 +94,16 @@ const directUsage: ProviderUsageData = {
 }
 
 const noop = () => {}
-const render = (profileData: ProfileData | null, providerUsage: ProviderUsageData, height: number) => (
+const render = (profileData: ProfileData | null, providerUsage: ProviderUsageData, height: number, error?: string) => (
   <StoryProviders noPadding>
     <div style={{ width: "420px", height: `${height}px` }}>
-      <ProfileView profileData={profileData} providerUsage={providerUsage} deviceAuth={idleAuth} onLogin={noop} />
+      <ProfileView
+        profileData={profileData}
+        providerUsage={providerUsage}
+        providerUsageError={error}
+        deviceAuth={idleAuth}
+        onLogin={noop}
+      />
     </div>
   </StoryProviders>
 )
@@ -155,6 +161,7 @@ export const StaleAndUnavailable: Story = {
         ],
       },
       760,
+      "Provider usage could not be refreshed.",
     ),
 }
 
