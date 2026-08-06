@@ -35,6 +35,7 @@ const subscription = {
   planName: "Token Plan Plus",
   providerName: "MiniMax",
   providerId: "minimax",
+  canQueryUsage: true,
   hasInstalledByokKey: true,
   status: "active" as const,
   cancelAtPeriodEnd: false,
@@ -89,27 +90,33 @@ it.effect("only includes managed plans with an installed managed key", () =>
     expect(Cloud.plans(state({ management_source: "user", is_enabled: true }))).toEqual([])
     expect(Cloud.plans(state({ management_source: "coding_plan", is_enabled: false }))).toEqual([])
     expect(Cloud.plans(state({ management_source: "coding_plan", is_enabled: true }))).toEqual([subscription])
+    expect(
+      Cloud.plans({
+        ...state({ management_source: "coding_plan", is_enabled: true }),
+        plans: { ok: true, value: [{ ...subscription, canQueryUsage: false }] },
+      }),
+    ).toEqual([])
     expect(Cloud.plans({ ...state(), byok: { ok: false } })).toEqual([])
 
-    const alibaba = {
+    const byteplus = {
       ...subscription,
-      id: "alibaba-plan",
-      planId: "alibaba-coding-plan",
-      planName: "Alibaba Coding Plan",
-      providerName: "Alibaba",
-      providerId: "alibaba",
+      id: "byteplus-plan",
+      planId: "byteplus-coding-plan-team-lite",
+      planName: "BytePlus Coding Plan Lite",
+      providerName: "BytePlus",
+      providerId: "byteplus-coding",
     }
     const generic = state({ management_source: "coding_plan", is_enabled: true })
     expect(
       Cloud.plans({
         ...generic,
-        plans: { ok: true, value: [alibaba] },
+        plans: { ok: true, value: [byteplus] },
         byok: {
           ok: true,
-          value: generic.byok.value.map((item) => ({ ...item, provider_id: "alibaba" })),
+          value: generic.byok.value.map((item) => ({ ...item, provider_id: "byteplus-coding" })),
         },
       }),
-    ).toEqual([alibaba])
+    ).toEqual([byteplus])
   }),
 )
 
