@@ -164,7 +164,6 @@ export const dict = {
   "model.group.recommended": "پیشنهادی",
   "model.group.favorites": "موردعلاقه‌ها",
   "model.group.mostUsed": "پراستفاده‌ترین",
-  "model.group.searchResults": "نتایج جستجو",
   "model.favorite.add": "افزودن به موردعلاقه‌ها",
   "model.favorite.remove": "حذف از موردعلاقه‌ها",
   "model.preview.label.released": "منتشر شده",

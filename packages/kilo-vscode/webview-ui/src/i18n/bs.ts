@@ -164,7 +164,6 @@ export const dict = {
   "model.group.recommended": "Preporučeno",
   "model.group.favorites": "Favoriti",
   "model.group.mostUsed": "Najčešće korišteni",
-  "model.group.searchResults": "Rezultati pretrage",
   "model.favorite.add": "Dodaj u favorite",
   "model.favorite.remove": "Ukloni iz favorita",
   "model.preview.label.released": "Objavljeno",

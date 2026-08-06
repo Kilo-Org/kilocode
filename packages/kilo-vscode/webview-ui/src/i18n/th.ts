@@ -162,7 +162,6 @@ export const dict = {
   "model.group.recommended": "แนะนำ",
   "model.group.favorites": "รายการโปรด",
   "model.group.mostUsed": "ใช้บ่อยที่สุด",
-  "model.group.searchResults": "ผลการค้นหา",
   "model.favorite.add": "เพิ่มในรายการโปรด",
   "model.favorite.remove": "ลบออกจากรายการโปรด",
   "model.preview.label.released": "เปิดตัว",

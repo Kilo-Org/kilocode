@@ -163,7 +163,6 @@ export const dict = {
   "model.group.recommended": "Recomendado",
   "model.group.favorites": "Favoritos",
   "model.group.mostUsed": "Mais usados",
-  "model.group.searchResults": "Resultados da pesquisa",
   "model.favorite.add": "Adicionar aos favoritos",
   "model.favorite.remove": "Remover dos favoritos",
   "model.preview.label.released": "Lançado",

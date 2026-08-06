@@ -164,7 +164,6 @@ export const dict = {
   "model.group.recommended": "Рекомендовані",
   "model.group.favorites": "Обране",
   "model.group.mostUsed": "Найчастіше використовувані",
-  "model.group.searchResults": "Результати пошуку",
   "model.favorite.add": "Додати до обраного",
   "model.favorite.remove": "Видалити з обраного",
   "model.preview.label.released": "Випущено",
