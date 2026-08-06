@@ -93,7 +93,9 @@ class BaseQuestionView(
     }
 
     private val headerText: JBTextArea = makeText("", UiStyle.Colors.fg(), bold = true)
-    private val descriptionText: JBTextArea = makeText("", UiStyle.Colors.weak(), bold = false)
+    private val descriptionText: JBTextArea = makeText("", UiStyle.Colors.weak(), bold = false).apply {
+        isVisible = false
+    }
 
     private var top: JComponent? = null
     private var content: JComponent? = null
@@ -131,6 +133,7 @@ class BaseQuestionView(
     fun setHeader(text: String, description: String? = null) {
         headerText.text = text
         setDescription(description)
+        syncNorth()
     }
 
     /**
@@ -141,6 +144,7 @@ class BaseQuestionView(
     fun setDescription(text: String?) {
         descriptionText.text = text ?: ""
         descriptionText.isVisible = !text.isNullOrBlank()
+        syncNorth()
     }
 
     // ---- public slot API ----
@@ -170,8 +174,7 @@ class BaseQuestionView(
         if (icon == null && attached) header.remove(this.icon)
         this.icon.revalidate()
         this.icon.repaint()
-        header.revalidate()
-        header.repaint()
+        syncNorth()
     }
 
     /**
@@ -297,11 +300,13 @@ class BaseQuestionView(
     private fun syncNorth() {
         north.removeAll()
         top?.let { north.next(it) }
-        north.next(header)
+        if (hasHeader()) north.next(header)
         if (content != null) north.fill(gap)
         north.revalidate()
         north.repaint()
     }
+
+    private fun hasHeader() = icon.icon != null || headerText.text.isNotBlank() || descriptionText.isVisible
 
     private fun syncFooter() {
         val layout = footer.layout as BorderLayout
@@ -331,7 +336,8 @@ class BaseQuestionView(
 
     private fun makeText(value: String, color: Color, bold: Boolean): JBTextArea {
         val area = object : JBTextArea(value) {
-            override fun getPreferredSize() = withWidth(super.getPreferredSize().height)
+            override fun getPreferredSize() =
+                withWidth(super.getPreferredSize().height)
 
             override fun getMaximumSize(): Dimension {
                 val size = preferredSize

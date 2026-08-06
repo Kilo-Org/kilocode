@@ -344,8 +344,16 @@ class KiloBackendSessionManager(
         files = count(files),
     )
 
-    private fun revertDto(s: ai.kilocode.jetbrains.api.model.SessionRevert?) = s?.let {
-        revertDto(it.messageID, it.partID, it.snapshot, it.diff)
+    private fun revertDto(s: Any?) = when (s) {
+        null -> null
+        is ai.kilocode.jetbrains.api.model.SessionRevert -> revertDto(s.messageID, s.partID, s.snapshot, s.diff)
+        else -> runCatching {
+            val cls = s.javaClass
+            fun str(name: String) = cls.methods.firstOrNull { it.name == name && it.parameterCount == 0 }?.invoke(s) as? String
+            val message = str("getMessageID")
+                ?: return@runCatching null.also { log.info("revertDto reflective getMessageID missing on ${cls.name}") }
+            revertDto(message, str("getPartID"), str("getSnapshot"), str("getDiff"))
+        }.onFailure { log.info("revertDto reflective decode failed for ${s.javaClass.name}: ${it.message}") }.getOrNull()
     }
 
     private fun revertDto(message: String, part: String?, snapshot: String?, diff: String?) =
