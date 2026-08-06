@@ -2,6 +2,7 @@ import { Effect, Schema } from "effect"
 import type { Session } from "@/session/session"
 import { MessageV2 } from "@/session/message-v2"
 import { MessageID, PartID, SessionID } from "@/session/schema"
+import { resumeHint } from "../task-resume"
 import { KiloPartLifecycle } from "./part-lifecycle"
 
 const task = "task"
@@ -52,13 +53,6 @@ function output(value: string, map: Map<string, SessionID>) {
     (text, [source, target]) => (source === target ? text : text.replaceAll(source, target)),
     value,
   )
-}
-
-function resumeHint(sessionID: string) {
-  return [
-    `This subagent session can be resumed: call the task tool again with task_id="${sessionID}"`,
-    "and a prompt describing how to continue or recover. Its prior context is preserved.",
-  ].join(" ")
 }
 
 function remapPart(part: MessageV2.Part, map: Map<string, SessionID>) {
