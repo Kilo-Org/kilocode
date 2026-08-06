@@ -746,8 +746,6 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
           const target = deps.findTab(nextId)
           if (target) deps.selectSessionTab(target.id, deps.isPendingId(target.id))
         }
-      } else {
-        deps.clearSession()
       }
     }
     deps.postMessage({ type: "agentManager.terminal.close", terminalId })
@@ -764,6 +762,14 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
     // unmount its xterm while the backend PTY leaks (no close sent).
     const term = deps.state.sides().find((t) => t.id === terminalId)
     if (!term) return false
+    const key = term.contextKey
+    const active = deps.state.sideActiveFor(key) === terminalId
+    const rest = active ? deps.state.sidesForContext(key).filter((item) => item.id !== terminalId) : []
+    const survivor = rest[rest.length - 1]
+    if (survivor) {
+      deps.state.setSideActive(key, survivor.id)
+      deps.state.requestFocus(survivor.id)
+    }
     if (term.kind) {
       deps.postMessage({ type: "agentManager.terminal.close", terminalId })
       return true
@@ -820,6 +826,33 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
     return true
   }
 
+  /** Close the main terminal that actually owns DOM focus, not just the active tab. */
+  const closeFocused = () => {
+    const id = deps.state.focusedId()
+    if (!id || !deps.state.current().some((term) => term.id === id)) return false
+    closeTerminal(id)
+    return true
+  }
+
+  /** Cycle terminals within one placement, wrapping at either end. */
+  const cycle = (direction: "previous" | "next", placement: "side" | "tab") => {
+    const key = deps.state.sideKey()
+    const list = placement === "side" ? deps.state.sidesForContext(key) : deps.state.current()
+    if (list.length === 0) return false
+    const current = placement === "side" ? deps.state.sideActiveFor(key) : deps.state.activeId()
+    const index = list.findIndex((term) => term.id === current)
+    const start = index === -1 ? (direction === "next" ? -1 : list.length) : index
+    const offset = direction === "next" ? 1 : -1
+    const next = list[(start + offset + list.length) % list.length]!
+    if (placement === "side") {
+      deps.state.setSideActive(key, next.id)
+      deps.state.requestFocus(next.id)
+      return true
+    }
+    activate(next.id)
+    return true
+  }
+
   return {
     closeTerminal,
     closeSide,
@@ -834,6 +867,8 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
     ensureSide,
     addSide,
     closeActive,
+    closeFocused,
+    cycle,
   }
 }
 
