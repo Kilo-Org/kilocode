@@ -827,8 +827,8 @@ de es fa fr it ja ko nl no pl ru th tr uk zh zht`) via the `translator` subagent
 - No change to `.am-project-item`, `.am-branch-item`, `.am-selector-trigger`,
   `.am-nv-config-label`, or any other existing rule. The only existing rule touched is the
   `overflow: visible` selector group in E.3, and only by adding selectors to it.
-- No new message types. `agentManager.addProject`, `agentManager.requestBranches`,
-  `agentManager.createMultiVersion`, `agentManager.importFromBranch`, and
-  `agentManager.importFromPR` all already exist and already accept what is needed.
+- No new message types. `agentManager.requestBranches`, `agentManager.createMultiVersion`,
+  `agentManager.importFromBranch`, and `agentManager.importFromPR` all already exist and
+  already accept what is needed.
 - With `props.projects` empty, the rendered dialog markup must be identical to before the
   change. Verify by toggling `kilo-code.new.experimental.multiProject` off.

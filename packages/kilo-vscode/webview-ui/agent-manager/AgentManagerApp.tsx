@@ -269,6 +269,7 @@ const AgentManagerContent: Component = () => {
   const [pendingCreate, setPendingCreate] = createSignal<{ projectId: string }>()
   const scheduleCreate = (projectId: string) => {
     if (projectId === activeProjectId()) return
+    if (pendingCreate()) return
     setPendingCreate({ projectId })
   }
   const isActivePayload = (pid: string | undefined) =>
