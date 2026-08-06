@@ -27,6 +27,7 @@ import type {
   AgentManagerWorktreeDiffLoadingMessage,
   AgentManagerWorktreeDiffNoticeMessage,
   AgentManagerDiffBranchesMessage,
+  AgentManagerImportResultMessage,
   AgentManagerApplyWorktreeDiffResultMessage,
   AgentManagerWorktreeStatsMessage,
   AgentManagerLocalStatsMessage,
@@ -1434,6 +1435,9 @@ const AgentManagerContent: Component = () => {
           setSetup({ active: true, message: ev.message, branch: ev.branch, worktreeId: ev.worktreeId })
         }
       }
+
+      if (msg.type === "agentManager.importResult" && !msg.success && pendingCreate()?.projectId === msg.projectId)
+        setPendingCreate(undefined)
 
       if (msg.type === "agentManager.sessionAdded") {
         const ev = msg as { type: string; sessionId: string; worktreeId: string }

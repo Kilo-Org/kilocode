@@ -21,6 +21,8 @@ describe("Agent Manager New Worktree project targeting", () => {
 
   it("does not replace a pending cross-project activation", () => {
     expect(app).toContain("if (pendingCreate()) return")
+    expect(app).toContain('msg.type === "agentManager.importResult"')
+    expect(app).toContain("!msg.success && pendingCreate()?.projectId === msg.projectId")
   })
 
   it("tags branch and import responses with their owning project", () => {
