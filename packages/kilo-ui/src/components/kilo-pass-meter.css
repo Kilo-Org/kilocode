@@ -79,6 +79,18 @@
     transform: translateX(-50%);
   }
 
+  /* Boundary labels at the track edges stay inside the card. */
+  [data-slot="kilo-pass-meter-amounts"] > span[data-pin="end"] {
+    right: 0;
+    left: auto !important;
+    transform: none;
+  }
+
+  [data-slot="kilo-pass-meter-amounts"] > span[data-pin="start"] {
+    left: 0 !important;
+    transform: none;
+  }
+
   [data-slot="kilo-pass-meter-bonus-amount"] {
     right: 0;
     left: auto !important;
