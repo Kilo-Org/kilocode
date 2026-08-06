@@ -162,6 +162,7 @@ export const dict = {
   "model.group.auto": "自動モデル",
   "model.group.recommended": "推奨",
   "model.group.favorites": "お気に入り",
+  "model.group.mostUsed": "よく使うモデル",
   "model.favorite.add": "お気に入りに追加",
   "model.favorite.remove": "お気に入りから削除",
 
@@ -312,6 +313,14 @@ export const dict = {
   "session.messages.loadEarlier": "以前のメッセージを読み込む",
   "session.messages.loading": "メッセージを読み込み中...",
 
+  "sidebar.topBar.label": "Kilo Code ナビゲーション",
+  "sidebar.topBar.newTask": "新規タスク",
+  "sidebar.topBar.history": "履歴",
+  "sidebar.topBar.agentManager": "エージェントマネージャー",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "マーケットプレイス",
+  "sidebar.topBar.profile": "プロフィール",
+  "sidebar.topBar.settings": "設定",
   "sidebar.session.newSession": "新規セッション",
   "sidebar.session.newSession.tooltip": "現在のセッションを維持したまま、新しい会話を開始します。",
   "sidebar.session.newWorktree": "新規 Worktree",

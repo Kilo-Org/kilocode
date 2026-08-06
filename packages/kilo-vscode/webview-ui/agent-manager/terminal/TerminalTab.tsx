@@ -377,9 +377,9 @@ export const TerminalTab: Component<Props> = (props) => {
       open(url)
     }
 
-    // Resize: fit on any host size change and forward new cols/rows to
-    // the backend PTY. Debounced because a user drag can fire dozens of
-    // resize events per second.
+    // Resize the visible terminal and forward new cols/rows to the backend
+    // PTY. Hidden terminals refit when activated, avoiding scrollback reflow
+    // for every mounted terminal during an inspector drag.
     let resizeTimer: ReturnType<typeof setTimeout> | undefined
     let lastCols = term.cols
     let lastRows = term.rows
@@ -395,6 +395,7 @@ export const TerminalTab: Component<Props> = (props) => {
       })
     }
     const ro = new ResizeObserver(() => {
+      if (!props.active) return
       try {
         fit.fit()
       } catch (err) {

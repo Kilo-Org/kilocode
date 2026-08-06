@@ -180,6 +180,7 @@ import { clampPanelWidth, maxPanelWidth, minPanelWidth } from "./side-panel-layo
 import { buildShortcutCategories } from "./shortcuts"
 import { tracker } from "./telemetry"
 import { createChatFocus, hasQuestionOption } from "./focus"
+import { usePendingCreate } from "./pending-create"
 import "./agent-manager.css"
 import "./agent-manager-review.css"
 import { cycleAgent as cycle } from "../src/context/session-agent"
@@ -200,6 +201,7 @@ type SidePanel = "diff" | "pr" | "terminal" | null
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 // Fallback keybindings before extension sends resolved ones
 const MAX_JUMP_INDEX = 9
+const SIDE_RESIZE_INTERVAL_MS = 32
 
 const defaultBindings: Record<string, string> = {
   previousSession: isMac ? "⌘⌥↑" : "Ctrl+Alt+↑",
@@ -266,6 +268,12 @@ const AgentManagerContent: Component = () => {
   const [currentProjectId, setCurrentProjectId] = createSignal<string | undefined>()
   const [projectStates, setProjectStates] = createSignal<Record<string, AgentManagerStateMessage>>({})
   const activeProjectId = () => projectList().find((p) => p.active)?.id ?? currentProjectId()
+  const creation = usePendingCreate(activeProjectId, (projectId, worktreeId) =>
+    vscode.postMessage({
+      type: "agentManager.activateSelection",
+      target: { projectId, kind: "worktree", worktreeId },
+    }),
+  )
   const isActivePayload = (pid: string | undefined) =>
     projectList().length === 0 || pid === undefined || pid === activeProjectId()
 
@@ -282,6 +290,14 @@ const AgentManagerContent: Component = () => {
     persisted: persisted ?? {},
     activeId: () => currentProjectId() ?? "single",
   })
+  const defaultBase = (id: string) => {
+    const store = registry.ensure(id)
+    return (
+      store.defaultBaseBranch() ??
+      store.localStats()?.branch ??
+      (id === activeProjectId() ? repoDetectedBranch() : undefined)
+    )
+  }
   const localSessionIDs = () => registry.active().tabs.ids()
   const setLocalSessionIDs = (next: string[] | ((prev: string[]) => string[])) => registry.active().tabs.set(next)
   /** Remove a session ID from the local tab (no-op if absent). */
@@ -308,6 +324,7 @@ const AgentManagerContent: Component = () => {
   let pendingSidebarWidth: number | undefined
   let sideRaf: number | undefined
   let pendingSideWidth: number | undefined
+  let sideResizeTime = 0
 
   const [history, setHistory] = createSignal(false)
   const [sidePanel, setSidePanel] = createSignal<SidePanel>(null)
@@ -323,10 +340,16 @@ const AgentManagerContent: Component = () => {
   const resizeSide = (width: number) => {
     pendingSideWidth = clampPanelWidth(width, window.innerWidth)
     if (sideRaf !== undefined) return
-    sideRaf = requestAnimationFrame(() => {
+    const flush = (time: number) => {
+      if (time - sideResizeTime < SIDE_RESIZE_INTERVAL_MS) {
+        sideRaf = requestAnimationFrame(flush)
+        return
+      }
       sideRaf = undefined
+      sideResizeTime = time
       setPanelWidth(pendingSideWidth!)
-    })
+    }
+    sideRaf = requestAnimationFrame(flush)
   }
   const showSideTerminal = () => {
     setHistory(false)
@@ -1371,6 +1394,7 @@ const AgentManagerContent: Component = () => {
 
       if (msg.type === "agentManager.worktreeSetup") {
         const ev = msg as AgentManagerWorktreeSetupMessage
+        creation.setup(ev)
         const store = ev.projectId ? registry.ensure(ev.projectId) : registry.active()
         const updateBusy: Setter<Map<string, WorktreeBusyState>> = (value) => store.setBusy(value)
         if (ev.status === "ready" || ev.status === "error") {
@@ -1411,6 +1435,8 @@ const AgentManagerContent: Component = () => {
           setSetup({ active: true, message: ev.message, branch: ev.branch, worktreeId: ev.worktreeId })
         }
       }
+
+      if (msg.type === "agentManager.importResult" && !msg.success) creation.abandon(msg.projectId)
 
       if (msg.type === "agentManager.sessionAdded") {
         const ev = msg as { type: string; sessionId: string; worktreeId: string }
@@ -1453,6 +1479,7 @@ const AgentManagerContent: Component = () => {
       // When a multi-version progress update arrives, mark newly created worktrees as loading
       if ((msg as { type: string }).type === "agentManager.multiVersionProgress") {
         const ev = msg as unknown as AgentManagerMultiVersionProgressMessage
+        if (ev.status === "done") creation.abandon(ev.projectId)
         if (ev.status === "done" && ev.groupId) {
           // Clear busy state for all worktrees in this group
           const store = ev.projectId ? registry.ensure(ev.projectId) : registry.active()
@@ -1871,7 +1898,15 @@ const AgentManagerContent: Component = () => {
     if (!loaded()) return
     expandSidebar()
     dialog.show(() => (
-      <NewWorktreeDialog mode={mode} onClose={() => dialog.close()} defaultBaseBranch={repoDefaultBranch()} />
+      <NewWorktreeDialog
+        mode={mode}
+        onClose={() => dialog.close()}
+        projectId={multiProject() ? activeProjectId() : undefined}
+        projects={multiProject() ? projectList : undefined}
+        activeProjectId={activeProjectId()}
+        defaultBase={defaultBase}
+        onCreate={creation.schedule}
+      />
     ))
   }
 
@@ -2348,6 +2383,8 @@ const AgentManagerContent: Component = () => {
             selection={selection() ?? undefined}
             currentSessionID={session.currentSessionID}
             mode={mode}
+            defaultBase={defaultBase}
+            onCreate={creation.schedule}
             bindings={kb()}
             t={t}
             onSearchRef={(ref) => (sidebarSearchMenu = ref)}
