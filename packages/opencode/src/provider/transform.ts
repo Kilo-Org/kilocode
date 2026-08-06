@@ -32,12 +32,12 @@ export function sanitizeSurrogates(content: string) {
 function isKimiFamily(model: Provider.Model) {
   if (
     [model.providerID, model.api.id].some((id) => {
-      const value = id.toLowerCase()
+      const value = id?.toLowerCase() ?? "" // kilocode_change - tolerate partial provider metadata
       return value.includes("kimi") || value.includes("moonshot")
     })
   )
     return true
-  const url = model.api.url.toLowerCase()
+  const url = model.api.url?.toLowerCase() ?? "" // kilocode_change - tolerate partial provider metadata
   return ["api.kimi.com", "api.moonshot.ai", "api.moonshot.cn", "api.moonshotai.cn"].some((host) => url.includes(host))
 }
 
@@ -682,9 +682,11 @@ function anthropicOpus45(apiId: string) {
 }
 
 function anthropicAdaptiveEfforts(apiId: string): string[] | null {
+  // kilocode_change start - include Kilo Claude aliases
   if (anthropicUsesModernAdaptiveThinking(apiId) || anthropicClaude5(apiId)) {
     return ["low", "medium", "high", "xhigh", "max"]
   }
+  // kilocode_change end
   if (
     ["opus-4-6", "opus-4.6", "4-6-opus", "4.6-opus", "sonnet-4-6", "sonnet-4.6", "4-6-sonnet", "4.6-sonnet"].some((v) =>
       apiId.includes(v),
@@ -831,6 +833,9 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
       high: { reasoningEffort: "high" },
     }
   }
+  // kilocode_change start - only grok-4.5 supports generic reasoning effort variants
+  if (id.includes("grok") && !id.includes("grok-4.5")) return {}
+  // kilocode_change end
   switch (model.api.npm) {
     case "@kilocode/kilo-gateway": // kilocode_change
       // kilocode_change start
@@ -1502,17 +1507,6 @@ export function options(input: {
     }
   }
 
-  // kilocode_change start
-  if (
-    input.providerOptions?.setCacheKey !== false &&
-    ((input.model.providerID === "openai" && input.model.api.npm !== "@ai-sdk/openai-compatible") ||
-      input.model.api.npm === "@ai-sdk/openai" ||
-      input.model.api.npm === "@ai-sdk/xai" ||
-      input.providerOptions?.setCacheKey)
-  ) {
-    result["promptCacheKey"] = input.sessionID
-  }
-  // kilocode_change end
   if (input.model.providerID === "meta" && input.model.api.npm === "@ai-sdk/openai") {
     result["reasoningSummary"] = "auto"
     result["include"] = INCLUDE_ENCRYPTED_REASONING
@@ -1569,6 +1563,8 @@ export function options(input: {
       input.model.api.npm === "@ai-sdk/xai" ||
       input.model.api.npm === "@ai-sdk/mistral" ||
       input.model.api.npm === "venice-ai-sdk-provider" ||
+      // kilocode_change - retain cache keys for OpenAI providers using nonstandard SDK packages
+      (input.model.providerID === "openai" && input.model.api.npm !== "@ai-sdk/openai-compatible") ||
       input.providerOptions?.setCacheKey === true
     ) {
       result["promptCacheKey"] = input.sessionID
@@ -1652,6 +1648,7 @@ export function smallOptions(model: Provider.Model) {
     }
   }
   if (model.api.npm === "@kilocode/kilo-gateway") {
+    // kilocode_change
     if (!model.capabilities.reasoning) return {} // kilocode_change - omit unsupported reasoning options
     return { reasoning: { enabled: true } } // kilocode_change - use the model's supported default effort
   }

@@ -30,6 +30,7 @@ export function createPromptInputV2Store(input: PromptInputV2StoreInput) {
       return store()
     },
     setPrompt(prompt: PromptInputV2Prompt, cursor?: number) {
+      release(store().prompt, prompt) // kilocode_change - release locally owned attachments removed by replacement
       batch(() => {
         setStore()("prompt", prompt)
         if (cursor !== undefined) setStore()("cursor", cursor)
@@ -40,10 +41,7 @@ export function createPromptInputV2Store(input: PromptInputV2StoreInput) {
     },
     setText(content: string) {
       batch(() => {
-        setStore()("prompt", (prompt) => [
-          { type: "text", content, start: 0, end: content.length },
-          ...prompt.filter((part) => part.type !== "text"),
-        ])
+        setStore()("prompt", (prompt) => replaceText(prompt, content)) // kilocode_change - preserve mention ordering
         setStore()("cursor", content.length)
       })
     },
@@ -55,6 +53,7 @@ export function createPromptInputV2Store(input: PromptInputV2StoreInput) {
       })
     },
     reset() {
+      release(store().prompt) // kilocode_change - release locally owned attachment URLs on reset
       batch(() => {
         setStore()("prompt", [{ type: "text", content: "", start: 0, end: 0 }])
         setStore()("cursor", 0)
@@ -86,6 +85,8 @@ export function createPromptInputV2Store(input: PromptInputV2StoreInput) {
       setStore()("prompt", (prompt) => [...prompt, attachment])
     },
     removeAttachment(id: string) {
+      const attachment = store().prompt.find((part) => part.type === "image" && part.id === id)
+      if (attachment) release([attachment]) // kilocode_change - release locally owned attachment URLs on removal
       setStore()("prompt", (parts) => parts.filter((part) => part.type !== "image" || part.id !== id))
     },
   }
@@ -146,6 +147,58 @@ function withOffsets(prompt: PromptInputV2Prompt): PromptInputV2Prompt {
     return next
   })
 }
+
+// kilocode_change start - replace text while keeping structured parts at their original boundaries
+function replaceText(prompt: PromptInputV2Prompt, content: string): PromptInputV2Prompt {
+  const current = prompt
+    .filter((part) => part.type === "text")
+    .map((part) => part.content)
+    .join("")
+  if (current === content) return prompt
+  if (!prompt.some((part) => part.type === "text")) {
+    return withOffsets([{ type: "text", content, start: 0, end: 0 }, ...prompt])
+  }
+
+  let start = 0
+  while (start < current.length && start < content.length && current[start] === content[start]) start++
+
+  let end = current.length
+  let next = content.length
+  while (end > start && next > start && current[end - 1] === content[next - 1]) {
+    end--
+    next--
+  }
+
+  const value = content.slice(start, next)
+  let offset = 0
+  let inserted = false
+  const parts = prompt.flatMap<PromptInputV2Prompt[number]>((part) => {
+    if (part.type !== "text") return [part]
+    const from = offset
+    const to = from + part.content.length
+    offset = to
+    if (to < start || from > end) return [part]
+    if (inserted) {
+      if (end <= from) return [part]
+      if (end < to) return [{ ...part, content: part.content.slice(end - from) }]
+      return []
+    }
+    inserted = true
+    const before = part.content.slice(0, Math.max(0, start - from))
+    if (end <= to) return [{ ...part, content: before + value + part.content.slice(Math.max(0, end - from)) }]
+    return [{ ...part, content: before + value }]
+  })
+  if (!inserted) parts.push({ type: "text", content: value, start: 0, end: 0 })
+  return withOffsets(parts)
+}
+
+function release(prompt: PromptInputV2Prompt, next: PromptInputV2Prompt = []) {
+  const keep = new Set(next.filter((part) => part.type === "image").map((part) => part.blob.url))
+  prompt.forEach((part) => {
+    if (part.type === "image" && part.blob.revoke && !keep.has(part.blob.url)) URL.revokeObjectURL(part.blob.url)
+  })
+}
+// kilocode_change end
 
 function promptLength(prompt: PromptInputV2Prompt) {
   return prompt.reduce((length, part) => length + ("content" in part ? part.content.length : 0), 0)

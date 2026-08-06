@@ -69,7 +69,7 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.error.addCredits": "Thêm số dư",
   "dialog.usageExceeded.freeTier.title": "Đã đạt đến giới hạn miễn phí",
   "dialog.usageExceeded.freeTier.description":
-    "Đăng ký Kilo Go để có quyền truy cập đáng tin cậy vào các mô hình nguồn mở tốt nhất, bắt đầu từ $5/tháng.",
+    "Đăng ký Kilo Go để có quyền truy cập đáng tin cậy vào các mô hình nguồn mở tốt nhất, bắt đầu từ $5/tháng.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "Đăng ký",
   "dialog.usageExceeded.accountRateLimit.title": "Đã đạt giới hạn Go",
   "dialog.usageExceeded.accountRateLimit.description":

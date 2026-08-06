@@ -78,7 +78,7 @@ export const dict = {
 
   "dialog.usageExceeded.freeTier.title": "Dostignut besplatan limit",
   "dialog.usageExceeded.freeTier.description":
-    "Pretplati se na Kilo Go za pouzdan pristup najboljim modelima otvorenog koda, počevši od $5/mjesec.",
+    "Pretplati se na Kilo Go za pouzdan pristup najboljim modelima otvorenog koda, počevši od $5/mjesec.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "Pretplati se",
   "dialog.usageExceeded.accountRateLimit.title": "Dostignut Go limit",
   "dialog.usageExceeded.accountRateLimit.description":

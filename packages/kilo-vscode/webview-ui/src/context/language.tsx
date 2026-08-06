@@ -206,7 +206,7 @@ export const LanguageProvider: ParentComponent<LanguageProviderProps> = (props) 
     return resolveTemplate(text, params)
   }
   const plural = (key: UiI18nPluralKey, count: number, params?: UiI18nParams) =>
-    t(pluralKey(key, pluralCategory(locale(), count)), { ...params, count })
+    t(pluralKey(key, pluralCategory(localeToBcp47(locale()), count)), { ...params, count })
 
   const setLocale = (next: Locale | "") => {
     setUserOverride(next)

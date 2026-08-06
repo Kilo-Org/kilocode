@@ -678,8 +678,13 @@ test("direct subagent panel closes when moving up from the first item", async ()
     app.mockInput.pressKey("ARROW_UP")
     expect(closed).toBe(0)
 
-    app.mockInput.pressKey("ARROW_UP")
+    // kilocode_change start - ctrl+p is the same navigation command as ArrowUp
+    app.mockInput.pressKey("p", { ctrl: true })
     expect(closed).toBe(1)
+
+    app.mockInput.pressKey("ARROW_UP")
+    expect(closed).toBe(2)
+    // kilocode_change end
   } finally {
     app.renderer.destroy()
   }

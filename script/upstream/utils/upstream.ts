@@ -4,7 +4,7 @@ import { $ } from "bun"
 import path from "node:path"
 import { applyPackageNameTransforms } from "../transforms/package-names"
 import { applyExtensionTransforms } from "../transforms/transform-extensions"
-import { transformI18nContent } from "../transforms/transform-i18n"
+import { isI18nFile, transformI18nContent } from "../transforms/transform-i18n"
 import { applyScriptTransforms } from "../transforms/transform-scripts"
 import { applyBrandingTransforms } from "../transforms/transform-take-theirs"
 import { applyWebTransforms } from "../transforms/transform-web"
@@ -191,7 +191,7 @@ export async function translate(file: string, text: string) {
   const names = applyPackageNameTransforms(text).result
   const script = applyScriptTransforms(names).result
   const branded = applyBrandingTransforms(script).result
-  const i18n = transformI18nContent(branded).result
+  const i18n = transformI18nContent(branded, false, isI18nFile(file)).result
   const ext = applyExtensionTransforms(i18n, file).result
   const web = applyWebTransforms(ext).result
 

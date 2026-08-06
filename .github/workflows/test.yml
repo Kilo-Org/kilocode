@@ -142,6 +142,14 @@ jobs:
           # kilocode_change end
 
       # kilocode_change start - test non-CLI packages separately from sharded CLI tests
+      - name: Verify package test scheduling
+        if: matrix.settings.run && matrix.settings.packages && matrix.settings.os == 'linux'
+        run: bun run script/check-test-ci.ts
+
+      - name: Run root tooling unit tests
+        if: matrix.settings.run && matrix.settings.packages && matrix.settings.os == 'linux'
+        run: bun run test:script:ci
+
       - name: Run non-CLI unit tests
         if: matrix.settings.run && matrix.settings.packages
         run: bun turbo test:ci --output-logs=errors-only --log-order=grouped --log-prefix=task --filter='!@kilocode/cli' --filter='!@kilocode/kilo-jetbrains'
@@ -171,7 +179,9 @@ jobs:
         if: always() && matrix.settings.run
         uses: mikepenz/action-junit-report@bccf2e31636835cf0874589931c4116687171386 # v6.4.0
         with:
-          report_paths: packages/*/.artifacts/unit/junit.xml
+          report_paths: |
+            .artifacts/unit/junit.xml
+            packages/*/.artifacts/unit/junit.xml
           annotate_only: true
           detailed_summary: true
           include_time_in_summary: true
@@ -185,7 +195,9 @@ jobs:
           include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 7
-          path: packages/*/.artifacts/unit/junit.xml
+          path: |
+            .artifacts/unit/junit.xml
+            packages/*/.artifacts/unit/junit.xml
       # kilocode_change end
 
   # kilocode_change start

@@ -1570,6 +1570,7 @@ const layer = Layer.effect(
 
         // kilocode_change start - load auths before env so OAuth plugins can override inherited credentials
         const auths = yield* auth.all().pipe(Effect.orDie)
+        // kilocode_change end
         // load env
         const envs = yield* env.all()
         for (const [id, provider] of Object.entries(database)) {

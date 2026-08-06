@@ -77,7 +77,7 @@ export const dict = {
 
   "dialog.usageExceeded.freeTier.title": "تم الوصول إلى الحد المجاني",
   "dialog.usageExceeded.freeTier.description":
-    "اشترك في Kilo Go للحصول على وصول موثوق إلى أفضل النماذج مفتوحة المصدر، ابتداءً من $5/شهر.",
+    "اشترك في Kilo Go للحصول على وصول موثوق إلى أفضل النماذج مفتوحة المصدر، ابتداءً من $5/شهر.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "اشترك",
   "dialog.usageExceeded.accountRateLimit.title": "تم الوصول إلى حد Go",
   "dialog.usageExceeded.accountRateLimit.description":

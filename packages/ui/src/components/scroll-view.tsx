@@ -135,7 +135,7 @@ export function ScrollView(props: ScrollViewProps) {
 
   const thumbMount = createMemo(() => resolveEl(local.thumbContainer))
   const thumbHover = createMemo(() => resolveEl(local.thumbHoverTarget))
-  const hoverRoot = () => !local.thumbHoverTarget && !local.thumbContainer
+  const hoverRoot = () => !thumbHover() // kilocode_change - default hover to the root even with an external thumb track
 
   const [state, setState] = createStore({
     isHovered: false,

@@ -21,6 +21,8 @@ describe("provider error classification", () => {
   test("does not classify rate limits as context overflow", () => {
     const messages = [
       "Throttling error: Too many tokens, please wait before trying again.",
+      "Too many tokens, please wait before trying again.", // kilocode_change
+      "Token limit exceeded; retry after 30 seconds.", // kilocode_change
       "Rate limit exceeded, please retry after 30 seconds.",
       "Too many requests. Please slow down.",
     ]

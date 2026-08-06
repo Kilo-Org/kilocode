@@ -291,6 +291,7 @@ const PRESERVE_SCRIPTS: Record<string, string[]> = {
     "dev-setup",
     "postinstall",
     "dev:local",
+    "test:script:ci",
   ],
   "packages/opencode/package.json": ["test", "test:ci"],
   // Upstream-shared packages where Kilo adds a JUnit test:ci script for CI.
@@ -320,15 +321,17 @@ const DELETE_UPSTREAM_TRUSTED_DEPS: Record<string, string[]> = {
 // Kilo doesn't ship (desktop-electron, console/app, app) and would otherwise
 // reappear on every merge.
 const DELETE_UPSTREAM_SCRIPTS: Record<string, string[]> = {
-  "package.json": ["dev:desktop", "dev:web", "dev:console"],
+  "package.json": ["dev:desktop", "dev:web", "dev:console", "translate:app"],
 }
 
 // Upstream-only catalog entries to delete per package.json. These are pulled
 // in by upstream features (e.g. desktop Sentry integration) that Kilo doesn't
 // ship, so they add install weight with zero consumers in our tree.
 const DELETE_UPSTREAM_CATALOG: Record<string, string[]> = {
-  "package.json": ["@sentry/solid", "@sentry/vite-plugin"],
+  "package.json": ["@sentry/solid", "@sentry/vite-plugin", "opentui-spinner"],
 }
+
+const DELETE_UPSTREAM_DEPENDENCIES = new Set(["opentui-spinner"])
 
 /**
  * Re-apply Kilo-specific scripts on top of the upstream-shaped scripts block,
@@ -448,7 +451,7 @@ export function isPackageJson(file: string): boolean {
 /**
  * Transform dependencies in package.json
  */
-function transformDependencies(deps: Record<string, string> | undefined): {
+export function transformDependencies(deps: Record<string, string> | undefined): {
   result: Record<string, string>
   changes: string[]
 } {
@@ -458,6 +461,10 @@ function transformDependencies(deps: Record<string, string> | undefined): {
   const changes: string[] = []
 
   for (const [name, version] of Object.entries(deps)) {
+    if (DELETE_UPSTREAM_DEPENDENCIES.has(name)) {
+      changes.push(`${name}: removed (incompatible OpenTUI runtime)`)
+      continue
+    }
     const newName = PACKAGE_NAME_MAP[name]
     if (newName) {
       result[newName] = version

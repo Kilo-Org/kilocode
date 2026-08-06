@@ -31,7 +31,14 @@ const patterns = [
   /token limit exceeded/i,
 ]
 
-const exclusions = [/^(throttling error|service unavailable):/i, /rate limit/i, /too many requests/i]
+// kilocode_change start - keep transient token throttles retryable
+const exclusions = [
+  /^(throttling error|service unavailable):/i,
+  /rate limit/i,
+  /too many requests/i,
+  /(?:too many tokens|token limit exceeded).*(?:wait|try again|retry after)/i,
+]
+// kilocode_change end
 
 export const isContextOverflow = (message: string) =>
   !exclusions.some((pattern) => pattern.test(message)) &&

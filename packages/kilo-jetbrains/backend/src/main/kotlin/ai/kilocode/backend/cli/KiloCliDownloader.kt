@@ -112,7 +112,7 @@ class KiloCliDownloader(
                 "completeExists=${done.isFile} digestValid=$valid exe=${exe.absolutePath} complete=${done.absolutePath}"
         )
         if (!exe.isFile || !valid) return null
-        log.info("Using cached Kilo CLI $version for $platform at ${exe.absolutePath}")
+        log.info("Kilo CLI $version ($platform) already cached at ${exe.absolutePath}; skipping download and extraction")
         if (!SystemInfo.isWindows) exe.setExecutable(true)
         prune(version)
         return exe

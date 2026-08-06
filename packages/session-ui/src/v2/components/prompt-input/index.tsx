@@ -117,7 +117,7 @@ export function PromptInputV2(props: PromptInputV2Props) {
         }}
         onSubmit={(event) => {
           event.preventDefault()
-          if (!props.disabled) props.controller.submit()
+          if (!props.disabled && props.controller.canSubmit()) props.controller.submit() // kilocode_change
         }}
         onDragEnter={props.controller.onDragEnter}
         onDragOver={props.controller.onDragOver}
@@ -176,6 +176,7 @@ export function PromptInputV2(props: PromptInputV2Props) {
               if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
                 event.preventDefault()
                 if (event.repeat) return
+                if (props.disabled || !props.controller.canSubmit()) return // kilocode_change - match submit eligibility
                 props.controller.submit()
               }
             }}
@@ -259,7 +260,7 @@ export function PromptInputV2(props: PromptInputV2Props) {
           <PromptInputV2SubmitButton
             mode={state.mode}
             stopping={view.submit.stopping()}
-            disabled={!props.controller.canSubmit()}
+            disabled={props.disabled || !props.controller.canSubmit()} // kilocode_change
             sendLabel={i18n.t("ui.promptInput.send")}
             stopLabel={i18n.t("ui.promptInput.stop")}
             onSubmit={props.controller.submit}

@@ -203,7 +203,9 @@ export function createPromptInputV2Controller(input: {
       ctrl: event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey,
       composing: event.isComposing,
       ids: suggestions().map((item) => item.id),
-      empty: draft.state.prompt.every((part) => !("content" in part) || part.content.length === 0),
+      empty: draft.state.prompt.every(
+        (part) => part.type !== "image" && (!("content" in part) || part.content.length === 0),
+      ), // kilocode_change - attachments keep shell drafts non-empty
     })
     if (handled) event.preventDefault()
     if (handled && event.key !== "Enter" && event.key !== "Tab" && state.popover.type !== "closed") {

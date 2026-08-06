@@ -70,7 +70,7 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.error.addCredits": "کریڈٹ شامل کرو",
   "dialog.usageExceeded.freeTier.title": "مفت حد پوری ہو گئی",
   "dialog.usageExceeded.freeTier.description":
-    "$5/مہینہ توں شروع ہون والے بہترین اوپن سورس ماڈلاں تک بھروسے جوگی رسائی لئی Kilo Go دی رکنیت لوو۔",
+    "$5/مہینہ توں شروع ہون والے بہترین اوپن سورس ماڈلاں تک بھروسے جوگی رسائی لئی Kilo Go دی رکنیت لوو۔", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "سبسکرائب کرو",
   "dialog.usageExceeded.accountRateLimit.title": "Go دی حد پوری ہو گئی",
   "dialog.usageExceeded.accountRateLimit.description":

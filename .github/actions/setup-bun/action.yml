@@ -53,13 +53,6 @@ runs:
           ${{ runner.os }}-bun-
 
     # kilocode_change start
-    - name: Setup Node for native dependency builds
-      if: runner.os != 'Windows'
-      uses: actions/setup-node@v6
-      with:
-        node-version: "24"
-        package-manager-cache: false
-
     - name: Configure node-gyp Node headers
       if: runner.os != 'Windows'
       id: node-gyp

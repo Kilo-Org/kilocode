@@ -108,7 +108,7 @@ test("discovers Modal workspace models", async () => {
               },
             ],
             interleaved: {
-              field: "reasoning_content",
+              field: "reasoning_text", // kilocode_change - accept Modal's supported alternate field
             },
           },
           {
@@ -143,7 +143,7 @@ test("discovers Modal workspace models", async () => {
     npm: "@ai-sdk/openai-compatible",
   })
   expect(model.family).toBe("ling")
-  expect(model.capabilities.interleaved).toEqual({ field: "reasoning_content" })
+  expect(model.capabilities.interleaved).toEqual({ field: "reasoning_text" }) // kilocode_change
   expect(model.capabilities.input).toEqual({
     text: true,
     audio: true,
@@ -178,7 +178,8 @@ test("discovers Modal workspace models", async () => {
   })
 })
 
-test("hides Modal models when discovery fails", async () => {
+// kilocode_change start - discovery failures must retain the static provider catalog
+test("preserves Modal models when discovery fails", async () => {
   using server = Bun.serve({
     port: 0,
     fetch() {
@@ -194,5 +195,14 @@ test("hides Modal models when discovery fails", async () => {
     },
   })
 
-  expect(models).toEqual({})
+  expect(models).toEqual(makeProvider(`${server.url}v1`).models)
 })
+
+test("preserves Modal models without discovery credentials", async () => {
+  const provider = makeProvider("https://modal.test/v1")
+  const plugin = await ModalPlugin()
+  const models = await plugin.provider!.models!(provider, { auth: { type: "api", key: "" } })
+
+  expect(models).toEqual(provider.models)
+})
+// kilocode_change end

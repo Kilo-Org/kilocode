@@ -291,6 +291,31 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
         assertEquals("hello\nworld", contents[1])
     }
 
+    fun `test diff request reconstructs multi hunk modified patch`() {
+        // Regression: multi-hunk modified diffs used to fall back to an empty original + raw patch on
+        // the right, rendering every line as added. They now reconstruct into a real side-by-side diff.
+        val patch = """
+            diff --git a/src/App.kt b/src/App.kt
+            --- a/src/App.kt
+            +++ b/src/App.kt
+            @@ -1,3 +1,3 @@
+             one
+            -two
+            +TWO
+             three
+            @@ -20,3 +20,3 @@
+             twenty
+            -x
+            +X
+             z
+        """.trimIndent()
+        val request = diffRequest(project, file("src/App.kt", 2, 2, patch = patch)) as SimpleDiffRequest
+        val contents = request.contents.map(::content)
+
+        assertEquals("one\ntwo\nthree\ntwenty\nx\nz", contents[0])
+        assertEquals("one\nTWO\nthree\ntwenty\nX\nz", contents[1])
+    }
+
     fun `test tree displays absolute files relative to workspace`() {
         val parent = Disposer.newDisposable()
         try {

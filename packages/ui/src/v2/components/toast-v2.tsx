@@ -52,7 +52,7 @@ function ToastV2Region(props: ToastV2RegionProps) {
         mobileOffset={16}
         gap={12}
         duration={5000}
-        swipeDirections={["bottom"]}
+        swipeDirections={local.swipeDirections ?? ["bottom"]} // kilocode_change - honor caller overrides
         className={["toast-v2-region", local.className, local.class].filter(Boolean).join(" ")}
         style={{ "--width": "320px", ...local.style } as JSX.CSSProperties}
         toastOptions={{
