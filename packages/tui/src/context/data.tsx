@@ -62,6 +62,10 @@ export function eventLocation(metadata: { directory: string; workspace?: string 
   if (metadata.directory === "global") return
   return { directory: metadata.directory, workspaceID: metadata.workspace }
 }
+
+export function shouldReportDefaultLocationFailure(reason: unknown, disposed: boolean) {
+  return !disposed || !(reason instanceof Error && reason.name === "AbortError")
+}
 // kilocode_change end
 
 export const { use: useData, provider: DataProvider } = createSimpleContext({
@@ -575,6 +579,11 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
       },
     }
 
+    // kilocode_change start - treat SDK cancellation during normal TUI disposal as expected
+    let disposed = false
+    onCleanup(() => {
+      disposed = true
+    })
     onMount(() => {
       void Promise.allSettled([
         result.location.refresh(),
@@ -586,10 +595,14 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
         result.location.command.refresh(),
         result.location.skill.refresh(),
       ]).then((settled) => {
-        for (const failure of settled.filter((item) => item.status === "rejected"))
+        for (const failure of settled) {
+          if (failure.status !== "rejected") continue
+          if (!shouldReportDefaultLocationFailure(failure.reason, disposed)) continue
           console.error("Failed to refresh default location data", failure.reason)
+        }
       })
     })
+    // kilocode_change end
 
     return result
   },
