@@ -138,6 +138,16 @@
   font-size: var(--kilo-font-size-11);
 }
 
+.session-mention-worktree {
+  flex-shrink: 0;
+  opacity: 0.6;
+  font-size: var(--kilo-font-size-11);
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ============================================
    Slash Command Dropdown
    ============================================ */

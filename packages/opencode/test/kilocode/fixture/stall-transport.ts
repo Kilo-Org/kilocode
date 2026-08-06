@@ -16,6 +16,8 @@
 // Progress is mirrored to a JSON file so tests can assert what the provider saw
 // without sharing module state with the plugin that loads this file.
 
+import { rename } from "node:fs/promises"
+
 export type StallState = { calls: number; stalls: number; recovered: number }
 
 const HEAD = { id: "chatcmpl-stall", object: "chat.completion.chunk", created: 0, model: "mock-model" }
@@ -84,7 +86,16 @@ function stalling() {
 
 export function createStallTransport(input: { state: string; answer?: string; command?: string }) {
   const state: StallState = { calls: 0, stalls: 0, recovered: 0 }
-  const save = () => Bun.write(input.state, JSON.stringify(state))
+  let pending = Promise.resolve()
+  const save = () => {
+    const json = JSON.stringify(state)
+    const tmp = `${input.state}.${crypto.randomUUID()}.tmp`
+    pending = pending.then(async () => {
+      await Bun.write(tmp, json)
+      await rename(tmp, input.state)
+    })
+    return pending
+  }
 
   return async (_input: unknown, init?: { body?: unknown }) => {
     const body = typeof init?.body === "string" ? init.body : ""

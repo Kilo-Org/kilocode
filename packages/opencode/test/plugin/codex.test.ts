@@ -148,6 +148,14 @@ describe("plugin.codex", () => {
             id: "gpt-5.5",
             api: { id: "gpt-5.5" },
           } as never,
+          "gpt-5.6": {
+            id: "gpt-5.6",
+            api: { id: "gpt-5.6" },
+          } as never,
+          "gpt-5.6-sol": {
+            id: "gpt-5.6-sol",
+            api: { id: "gpt-5.6-sol" },
+          } as never,
           "gpt-5.4-mini": {
             id: "gpt-5.4-mini",
             api: { id: "gpt-5.4-mini" },
@@ -164,6 +172,8 @@ describe("plugin.codex", () => {
       } as never, { auth: { type: "oauth" } } as never)
       expect(provider).not.toHaveProperty(["gpt-5.5-pro"])
       expect(provider).toHaveProperty(["gpt-5.5"])
+      expect(provider).not.toHaveProperty(["gpt-5.6"])
+      expect(provider).toHaveProperty(["gpt-5.6-sol"])
       expect(provider).toHaveProperty(["gpt-5.4-mini"])
       expect(provider).toHaveProperty(["gpt-5.1-codex"])
       expect(provider).not.toHaveProperty(["other-model"])

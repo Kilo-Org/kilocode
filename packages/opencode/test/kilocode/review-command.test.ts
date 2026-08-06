@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect, test } from "bun:test"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Effect, Layer } from "effect"
@@ -6,7 +7,7 @@ import { legacyReviewMessage, parseReviewCommand, reviewCommand } from "../../sr
 import { provideTmpdirInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
-const it = testEffect(Layer.mergeAll(Command.defaultLayer, CrossSpawnSpawner.defaultLayer))
+const it = testEffect(Layer.mergeAll(AppNodeBuilder.build(Command.node), AppNodeBuilder.build(CrossSpawnSpawner.node)))
 
 function expectReviewFixContract(text: string) {
   expect(text).toContain("During the initial review phase")

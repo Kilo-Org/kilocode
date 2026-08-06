@@ -1,15 +1,15 @@
 import { createKilo, KILO_OPENROUTER_BASE } from "@kilocode/kilo-gateway" // kilocode_change
 import { Effect } from "effect"
-import { PluginV2 } from "../../plugin"
 import { ProviderV2 } from "../../provider" // kilocode_change
+import { define } from "../internal"
 
-const id = ProviderV2.ID.make("kilo") // kilocode_change
+const id = ProviderV2.ID.kilo // kilocode_change
 
-export const KiloPlugin = PluginV2.define({
-  id: PluginV2.ID.make("kilo"),
-  effect: Effect.gen(function* () {
-    return {
-      "catalog.transform": Effect.fn(function* (evt) {
+export const KiloPlugin = define({
+  id: "kilo",
+  effect: Effect.fn(function* (ctx) {
+    yield* ctx.catalog.transform(
+      Effect.fn(function* (evt) {
         for (const item of evt.provider.list()) {
           if (item.provider.id !== id) continue // kilocode_change
           evt.provider.update(item.provider.id, (provider) => {
@@ -34,12 +34,14 @@ export const KiloPlugin = PluginV2.define({
           })
         }
       }),
-      // kilocode_change start
-      "aisdk.sdk": Effect.fn(function* (evt) {
+    )
+    // kilocode_change start
+    yield* ctx.aisdk.sdk(
+      Effect.fn(function* (evt) {
         if (evt.model.providerID !== id) return
         evt.sdk = createKilo(evt.options)
       }),
-      // kilocode_change end
-    }
+    )
+    // kilocode_change end
   }),
 })

@@ -81,7 +81,7 @@ let cli = yargs(args) // kilocode_change
     process.env.AGENT = "1"
     process.env.OPENCODE = "1"
     process.env.KILO_PID = String(process.pid)
-    await KiloCli.bootstrap() // kilocode_change - env tagging, telemetry init, legacy JSON-to-SQLite migration, and auth migration
+    await KiloCli.bootstrap(opts) // kilocode_change - env tagging, telemetry init, legacy JSON-to-SQLite migration, and auth migration
     // kilocode_change start - retain Kilo process/run correlation metadata in startup logs
     Log.Default.info("opencode", {
       version: InstallationVersion,

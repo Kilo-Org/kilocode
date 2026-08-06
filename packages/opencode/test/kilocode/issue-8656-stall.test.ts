@@ -68,9 +68,21 @@ function session(dir: string) {
   const headers = { "Content-Type": "application/json", "x-kilo-directory": dir }
   const query = `directory=${encodeURIComponent(dir)}`
 
-  const json = async (route: string, init?: RequestInit) => {
-    const res = await app.request(route, { headers, ...init })
-    return await res.json()
+  const json = async (route: string, init?: RequestInit, retry = false) => {
+    const tries = retry ? 5 : 1
+    for (let attempt = 0; attempt < tries; attempt++) {
+      const res = await app.request(route, { headers, ...init })
+      const body = await res.text()
+      try {
+        return JSON.parse(body)
+      } catch (error) {
+        if (!retry || !res.ok || attempt === tries - 1) {
+          throw new Error(`${route} -> ${res.status} ${body.slice(0, 200)}`, { cause: error })
+        }
+        await sleep(100)
+      }
+    }
+    throw new Error(`failed to read JSON response from ${route}`)
   }
 
   return {
@@ -82,9 +94,9 @@ function session(dir: string) {
         body: JSON.stringify({ parts: [{ type: "text", text }] }),
       }),
     abort: (id: string) => app.request(`/session/${id}/abort`, { method: "POST", headers }),
-    messages: (id: string) => json(`/session/${id}/message?${query}`) as Promise<Message[]>,
+    messages: (id: string) => json(`/session/${id}/message?${query}`, undefined, true) as Promise<Message[]>,
     status: async (id: string) => {
-      const all = (await json(`/session/status?${query}`)) as Record<string, { type: string }>
+      const all = (await json(`/session/status?${query}`, undefined, true)) as Record<string, { type: string }>
       return all[id]?.type ?? "idle"
     },
   }

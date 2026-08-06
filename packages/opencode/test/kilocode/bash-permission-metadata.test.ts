@@ -1,4 +1,5 @@
 // regression test for bash permission metadata.command
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect, test } from "bun:test"
 import { Effect, Layer, ManagedRuntime } from "effect"
 import { ShellTool } from "../../src/tool/shell"
@@ -17,12 +18,12 @@ import { RuntimeFlags } from "../../src/effect/runtime-flags"
 
 const runtime = ManagedRuntime.make(
   Layer.mergeAll(
-    CrossSpawnSpawner.defaultLayer,
-    FSUtil.defaultLayer,
-    Plugin.defaultLayer,
-    Truncate.defaultLayer,
-    Agent.defaultLayer,
-    Config.defaultLayer,
+    AppNodeBuilder.build(CrossSpawnSpawner.node),
+    AppNodeBuilder.build(FSUtil.node),
+    AppNodeBuilder.build(Plugin.node),
+    AppNodeBuilder.build(Truncate.node),
+    AppNodeBuilder.build(Agent.node),
+    AppNodeBuilder.build(Config.node),
     RuntimeFlags.layer(),
   ),
 )

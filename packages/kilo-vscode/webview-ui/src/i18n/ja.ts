@@ -162,6 +162,7 @@ export const dict = {
   "model.group.auto": "自動モデル",
   "model.group.recommended": "推奨",
   "model.group.favorites": "お気に入り",
+  "model.group.mostUsed": "よく使うモデル",
   "model.favorite.add": "お気に入りに追加",
   "model.favorite.remove": "お気に入りから削除",
 
@@ -229,6 +230,8 @@ export const dict = {
     "クリックすると、ファイルシステムへの書き込みを制限します。サンドボックス設定により、ネットワークアクセスは引き続き許可されます。",
 
   "speechToText.tooltip.start": "Kilo Gatewayで音声入力を開始",
+  "speechToText.tooltip.shortcut":
+    "タップまたは Cmd/Ctrl+K を押して録音を開始／停止し、話している間は押し続け、離すと文字起こしして送信します。",
   "speechToText.tooltip.starting": "マイクを起動中... まだ話さないでください。",
   "speechToText.tooltip.stop": "音声キャプチャを停止",
   "speechToText.tooltip.transcribing": "文字起こし中... クリックしてキャンセル。",
@@ -265,6 +268,7 @@ export const dict = {
 
   "notification.permission.title": "権限が必要です",
   "notification.permission.titleSubagent": "権限が必要です（サブエージェント）",
+  "notification.permission.titleSkillShell": "スキル「{{skill}}」のシェルコマンドを実行しますか？",
   "ui.permission.manageAutoApprove": "自動承認ルールを管理",
   "ui.permission.doomLoop.prompt": "{{tool}} ツールでループの可能性が検出されました。実行を続行しますか？",
   "ui.permission.doomLoop.rule": "{{tool}} の呼び出しを続行",
@@ -303,13 +307,20 @@ export const dict = {
 
   "session.tab.review": "レビュー",
   "session.review.filesChanged": "{{count}} ファイル変更",
-  "session.review.change.other": "変更",
   "session.review.loadingChanges": "変更を読み込み中...",
   "session.review.noChanges": "変更なし",
   "session.messages.loadingEarlier": "以前のメッセージを読み込み中...",
   "session.messages.loadEarlier": "以前のメッセージを読み込む",
   "session.messages.loading": "メッセージを読み込み中...",
 
+  "sidebar.topBar.label": "Kilo Code ナビゲーション",
+  "sidebar.topBar.newTask": "新規タスク",
+  "sidebar.topBar.history": "履歴",
+  "sidebar.topBar.agentManager": "エージェントマネージャー",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "マーケットプレイス",
+  "sidebar.topBar.profile": "プロフィール",
+  "sidebar.topBar.settings": "設定",
   "sidebar.session.newSession": "新規セッション",
   "sidebar.session.newSession.tooltip": "現在のセッションを維持したまま、新しい会話を開始します。",
   "sidebar.session.newWorktree": "新規 Worktree",
@@ -697,7 +708,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "エージェントの動作",
   "settings.autoApprove.title": "自動承認",
-  "settings.browser.title": "ブラウザ",
+  "settings.webTools.title": "ウェブツール",
+  "settings.webTools.description": "ウェブ検索とブラウザ自動化を設定します。",
+  "settings.webTools.webSearch.enable": "すべてのプロバイダーで有効化",
+  "settings.webTools.browserAutomation": "ブラウザ自動化",
+  "settings.webTools.webSearch.title": "ウェブ検索",
+  "settings.webTools.webSearch.description": "すべてのプロバイダーのモデルでウェブ検索を利用できるようにします。",
   "settings.checkpoints.title": "チェックポイント",
   "settings.display.title": "表示",
   "settings.autocomplete.title": "オートコンプリート",
@@ -715,6 +731,13 @@ export const dict = {
   "session.messages.scrollToBottom": "下にスクロール",
   "session.messages.initializing": "初期化中...",
   "session.messages.taskStarting": "開始中...",
+  "session.prompts.navLabel": "プロンプトナビゲーター",
+  "session.prompts.tick": "プロンプト {{index}}/{{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "まだ応答がありません",
+  "session.prompts.queued": "キューに追加済み",
+  "session.prompts.first": "最初のプロンプト",
+  "session.prompts.latest": "最新のプロンプト",
+  "session.prompts.overflow": "{{count}} 件前のプロンプト",
   "session.status.writingResponse": "応答を作成中…",
   "session.status.retry": "再試行中…",
   "session.status.working": "作業中…",
@@ -742,7 +765,7 @@ export const dict = {
 
   "prompt.placeholder.connecting": "サーバーに接続中...",
   "prompt.placeholder.error": "接続に失敗しました。出力パネルを確認するか、拡張機能を再起動してください。",
-  "prompt.placeholder.default": "メッセージを入力... (Enterで送信、Shift+Enterで改行)",
+  "prompt.placeholder.default": "メッセージを入力、@ でファイルを参照... (Enterで送信、Shift+Enterで改行)",
 
   "context.usage.sessionCost": "セッションコスト",
   "context.usage.olderSessions": "{{count}} 件の古いセッション",
@@ -875,6 +898,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "SWE-Pruner モデル",
   "settings.experimental.swePrunerModel.description":
     "ツール出力の剪定に使用するモデル。既定では設定済みのスモールモデルを使用します",
+  "settings.experimental.multiProject.title": "マルチプロジェクト Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Agent Managerで複数のリポジトリにまたがるセッションとワークツリーの管理を有効にします。現在のワークスペースリポジトリは常にデフォルトプロジェクトです。",
   "settings.experimental.mcpTimeout.title": "MCPタイムアウト（ミリ秒）",
   "settings.experimental.mcpTimeout.description": "MCPサーバーリクエストのタイムアウト（ミリ秒）",
   "settings.experimental.remote.title": "Remote コントロール",
@@ -1002,6 +1028,9 @@ export const dict = {
     "カスタムコマンドが設定されていません。opencode.json にコマンドを追加するとここに表示されます。",
   "settings.agentBehaviour.workflows.detail.description": "説明",
   "settings.agentBehaviour.workflows.detail.template": "テンプレート",
+  "settings.agentBehaviour.workflows.model": "モデル",
+  "settings.agentBehaviour.workflows.variant": "バリアント",
+  "settings.agentBehaviour.workflows.modelDescription": "グローバルモデルの上書き",
   "settings.sandboxing.enabled.title": "サンドボックス",
   "settings.sandboxing.enabled.description":
     "エージェントのシェルコマンドを、プロジェクトおよびKiloの状態ディレクトリへの書き込みを制限するOSレベルのサンドボックス内で実行",

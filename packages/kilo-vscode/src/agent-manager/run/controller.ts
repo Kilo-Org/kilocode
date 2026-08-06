@@ -4,8 +4,10 @@ import { getShellEnvironment } from "../shell-env"
 import { RunScriptManager, type RunHandle, type RunStatus } from "./manager"
 import { RunScriptService } from "./service"
 import type { WorktreeStateManager } from "../WorktreeStateManager"
+import type { RunTerminalDestination } from "./destination"
 
 export interface RunTaskConfig {
+  destination: RunTerminalDestination
   worktreeId: string
   branch: string
   command: string
@@ -14,11 +16,13 @@ export interface RunTaskConfig {
   env: Record<string, string>
 }
 
-interface TaskExit {
+export interface RunTaskExit {
   exitCode?: number
+  stopped?: boolean
+  error?: string
 }
 
-type StartTask = (config: RunTaskConfig, done: (exit: TaskExit) => void) => Promise<RunHandle>
+export type StartTask = (config: RunTaskConfig, done: (exit: RunTaskExit) => void) => Promise<RunHandle>
 
 interface Options {
   root: () => string | undefined
@@ -60,7 +64,7 @@ export class RunController {
     this.opts.refresh?.()
   }
 
-  async run(worktreeId: string): Promise<void> {
+  async run(worktreeId: string, destination: RunTerminalDestination): Promise<void> {
     const status = this.manager.status(worktreeId)
     if (status.state !== "idle") {
       this.stop(worktreeId)
@@ -71,8 +75,9 @@ export class RunController {
     const service = this.getService()
     if (!root || !service) return
 
-    // Resolve cwd and branch: "local" runs from repo root, worktrees from their path
-    const local = worktreeId === "local"
+    // Resolve cwd and branch: "local" runs from repo root, worktrees from their path.
+    // Multi-project qualifies the local key as "<projectId>:local" (see run/message.ts).
+    const local = worktreeId === "local" || worktreeId.endsWith(":local")
     const state = this.opts.state()
     const worktree = local ? undefined : state?.getWorktree(worktreeId)
     if (!local && !worktree) {
@@ -109,18 +114,19 @@ export class RunController {
     }
 
     const start = () =>
-      this.opts.start({ worktreeId, branch, command: script.command, args: script.args, cwd, env }, (exit) =>
-        this.manager.finish(worktreeId, { exitCode: exit.exitCode }),
+      this.opts.start(
+        { destination, worktreeId, branch, command: script.command, args: script.args, cwd, env },
+        (exit) => this.manager.finish(worktreeId, exit),
       )
     await this.manager.start(worktreeId, start)
   }
 
   stop(worktreeId: string): void {
-    this.manager.stop(worktreeId)
+    void this.manager.stop(worktreeId)
   }
 
-  remove(worktreeId: string): void {
-    this.manager.remove(worktreeId)
+  remove(worktreeId: string): Promise<void> {
+    return this.manager.remove(worktreeId)
   }
 
   dispose(): void {

@@ -4,6 +4,11 @@ export const dict = {
   "agentManager.sidebar.expand": "Показати бічну панель",
   "agentManager.section.worktrees": "РОБОЧІ ДЕРЕВА",
   "agentManager.section.sessions": "СЕСІЇ",
+  "agentManager.projects": "ПРОЄКТИ",
+  "agentManager.project.add": "Додати проєкт",
+  "agentManager.project.remove": "Видалити з Agent Manager",
+  "agentManager.project.trust": "Довіряти",
+  "agentManager.project.missing": "Репозиторій не знайдено",
   "agentManager.notGitRepo": "Не є git-репозиторієм",
 
   "agentManager.worktree.settings": "Налаштування робочого дерева",
@@ -32,6 +37,7 @@ export const dict = {
   "agentManager.section.moveDown": "Перемістити вниз",
 
   "agentManager.hoverCard.branch": "ГІЛКА",
+  "agentManager.hoverCard.worktree": "Worktree",
   "agentManager.hoverCard.base": "База",
   "agentManager.hoverCard.sessions": "Сесії",
   "agentManager.hoverCard.files": "Файли",
@@ -62,8 +68,13 @@ export const dict = {
 
   "agentManager.terminal.new": "Нова вкладка термінала",
   "agentManager.terminal.ended": "термінал завершено — закрийте вкладку, щоб відхилити",
+  "agentManager.terminal.endedRestartable":
+    "термінал завершено - введіть текст, щоб запустити нову оболонку, або закрийте вкладку",
+  "agentManager.terminal.setupFailed": "помилка скрипта налаштування",
+  "agentManager.terminal.setupFailedCode": "помилка скрипта налаштування з кодом виходу",
+  "agentManager.terminal.stopSetup": "Зупинити скрипт налаштування",
   "agentManager.terminal.connectionError": "помилка з'єднання термінала",
-  "agentManager.terminal.kill": "Завершити термінал",
+  "agentManager.terminal.add": "Новий термінал",
   "agentManager.terminal.empty": "Тут ще немає термінала",
   "agentManager.terminal.start": "Запустити термінал",
   "agentManager.terminal.destination": "Виберіть, що відкриватиме кнопка термінала",
@@ -97,7 +108,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "Наступна вкладка",
   "agentManager.shortcuts.newTab": "Нова вкладка",
   "agentManager.shortcuts.closeTab": "Закрити вкладку",
-  "agentManager.shortcuts.toggleTerminal": "Перемкнути термінал",
+  "agentManager.shortcuts.toggleTerminal": "Перейти до термінала / приховати термінал",
   "agentManager.shortcuts.runScript": "Запустити скрипт",
   "agentManager.run.options": "Параметри запуску",
   "agentManager.run.configure": "Налаштувати скрипт запуску",
@@ -113,6 +124,9 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.cancel": "Скасувати",
   "agentManager.dialog.removeStaleWorktree.confirm": "Видалити застаріле робоче дерево",
 
+  "agentManager.dialog.project.select": "Вибрати проєкт",
+  "agentManager.dialog.project.untrusted": "Спочатку підтвердьте, що довіряєте цьому проєкту, на бічній панелі",
+  "agentManager.dialog.project.missing": "Репозиторій не знайдено",
   "agentManager.dialog.openWorktree": "Нове робоче дерево",
   "agentManager.dialog.configureWorktree": "Налаштувати нове Worktree...",
   "agentManager.dialog.tab.new": "Нове",
@@ -145,6 +159,8 @@ export const dict = {
   "agentManager.diff.revertFile": "Скасувати зміни файлу",
   "agentManager.diff.revertSuccess": "Файл відновлено",
   "agentManager.diff.revertError": "Не вдалося відновити",
+  "agentManager.diff.applyBranchOnly":
+    "Застосування працює лише з повним diff гілки. Щоб застосувати зміни, перемкніться на область Branch.",
   "agentManager.open.button": "Відкрити",
   "agentManager.open.tooltip": "Відкрити це робоче дерево у VS Code",
   "agentManager.apply.globalButton": "Застосувати",

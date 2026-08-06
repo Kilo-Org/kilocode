@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { $ } from "bun"
 import { describe, expect } from "bun:test"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
@@ -14,7 +15,7 @@ import { testEffect } from "../lib/effect"
 Log.init({ print: false })
 
 const it = testEffect(
-  Layer.mergeAll(Project.defaultLayer, Git.defaultLayer, CrossSpawnSpawner.defaultLayer, testInstanceStoreLayer),
+  Layer.mergeAll(AppNodeBuilder.build(Project.node), AppNodeBuilder.build(Git.node), AppNodeBuilder.build(CrossSpawnSpawner.node), testInstanceStoreLayer),
 )
 
 describe("WorktreeFamily.list — git submodule", () => {

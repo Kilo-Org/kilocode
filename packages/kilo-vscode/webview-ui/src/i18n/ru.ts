@@ -162,6 +162,7 @@ export const dict = {
   "model.group.auto": "Автоматические модели",
   "model.group.recommended": "Рекомендуемые",
   "model.group.favorites": "Избранное",
+  "model.group.mostUsed": "Часто используемые",
   "model.favorite.add": "Добавить в избранное",
   "model.favorite.remove": "Удалить из избранного",
   "model.preview.label.released": "Выпущена",
@@ -227,6 +228,8 @@ export const dict = {
     "Нажмите, чтобы ограничить запись в файловую систему. Доступ к сети останется разрешённым согласно настройкам песочницы.",
 
   "speechToText.tooltip.start": "Начать голосовой ввод с Kilo Gateway",
+  "speechToText.tooltip.shortcut":
+    "Коснитесь или нажмите Cmd/Ctrl+K, чтобы начать или остановить запись; удерживайте кнопку во время речи, затем отпустите её, чтобы транскрибировать и отправить.",
   "speechToText.tooltip.starting": "Запуск микрофона... Пока не говорите.",
   "speechToText.tooltip.stop": "Остановить захват звука",
   "speechToText.tooltip.transcribing": "Распознавание... Нажмите для отмены.",
@@ -263,6 +266,7 @@ export const dict = {
 
   "notification.permission.title": "Требуется разрешение",
   "notification.permission.titleSubagent": "Требуется разрешение (субагент)",
+  "notification.permission.titleSkillShell": "Выполнить команды оболочки из навыка «{{skill}}»?",
   "ui.permission.manageAutoApprove": "Управление правилами автоодобрения",
   "ui.permission.doomLoop.prompt":
     "Обнаружен потенциальный цикл при работе инструмента {{tool}}. Продолжить выполнение?",
@@ -302,13 +306,20 @@ export const dict = {
 
   "session.tab.review": "Обзор",
   "session.review.filesChanged": "{{count}} файлов изменено",
-  "session.review.change.other": "Изменения",
   "session.review.loadingChanges": "Загрузка изменений...",
   "session.review.noChanges": "Нет изменений",
   "session.messages.loadingEarlier": "Загрузка предыдущих сообщений...",
   "session.messages.loadEarlier": "Загрузить предыдущие сообщения",
   "session.messages.loading": "Загрузка сообщений...",
 
+  "sidebar.topBar.label": "Навигация Kilo Code",
+  "sidebar.topBar.newTask": "Новая задача",
+  "sidebar.topBar.history": "История",
+  "sidebar.topBar.agentManager": "Agent Manager",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "Маркетплейс",
+  "sidebar.topBar.profile": "Профиль",
+  "sidebar.topBar.settings": "Настройки",
   "sidebar.session.newSession": "Новая сессия",
   "sidebar.session.newSession.tooltip": "Начать новую беседу, сохранив текущую сессию нетронутой.",
   "sidebar.session.newWorktree": "Новое Worktree",
@@ -702,7 +713,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "Поведение агента",
   "settings.autoApprove.title": "Автоодобрение",
-  "settings.browser.title": "Браузер",
+  "settings.webTools.title": "Веб-инструменты",
+  "settings.webTools.description": "Настройте веб-поиск и автоматизацию браузера.",
+  "settings.webTools.webSearch.enable": "Включить для всех провайдеров",
+  "settings.webTools.browserAutomation": "Автоматизация браузера",
+  "settings.webTools.webSearch.title": "Веб-поиск",
+  "settings.webTools.webSearch.description": "Сделайте веб-поиск доступным для моделей всех провайдеров.",
   "settings.checkpoints.title": "Контрольные точки",
   "settings.display.title": "Отображение",
   "settings.autocomplete.title": "Автодополнение",
@@ -720,6 +736,13 @@ export const dict = {
   "session.messages.scrollToBottom": "Прокрутить вниз",
   "session.messages.initializing": "Инициализация...",
   "session.messages.taskStarting": "Запуск...",
+  "session.prompts.navLabel": "Навигатор промптов",
+  "session.prompts.tick": "Промпт {{index}} из {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "Ответа пока нет",
+  "session.prompts.queued": "В очереди",
+  "session.prompts.first": "Первый запрос",
+  "session.prompts.latest": "Последний запрос",
+  "session.prompts.overflow": "{{count}} предыдущих запросов",
   "session.status.writingResponse": "Пишу ответ…",
   "session.status.retry": "Повторная попытка…",
   "session.status.working": "Работаю…",
@@ -747,7 +770,8 @@ export const dict = {
 
   "prompt.placeholder.connecting": "Подключение к серверу...",
   "prompt.placeholder.error": "Не удалось подключиться. Проверьте панель вывода или перезапустите расширение.",
-  "prompt.placeholder.default": "Введите сообщение... (Enter для отправки, Shift+Enter для новой строки)",
+  "prompt.placeholder.default":
+    "Введите сообщение, @ чтобы упомянуть файлы... (Enter для отправки, Shift+Enter для новой строки)",
 
   "context.usage.sessionCost": "Стоимость сессии",
   "context.usage.olderSessions": "{{count}} предыдущих сессий",
@@ -878,6 +902,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "Модель SWE-Pruner",
   "settings.experimental.swePrunerModel.description":
     "Модель для обрезки вывода инструментов; по умолчанию — настроенная малая модель",
+  "settings.experimental.multiProject.title": "Мультипроектный Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Включите управление сессиями и рабочими деревьями в нескольких репозиториях в Agent Manager. Текущий репозиторий рабочего пространства всегда является проектом по умолчанию.",
   "settings.experimental.mcpTimeout.title": "Таймаут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Таймаут запросов MCP-сервера в миллисекундах",
   "settings.experimental.remote.title": "Управление Remote",
@@ -1005,6 +1032,9 @@ export const dict = {
     "Пользовательские команды не настроены. Добавьте команды в opencode.json, чтобы увидеть их здесь.",
   "settings.agentBehaviour.workflows.detail.description": "Описание",
   "settings.agentBehaviour.workflows.detail.template": "Шаблон",
+  "settings.agentBehaviour.workflows.model": "модель",
+  "settings.agentBehaviour.workflows.variant": "вариант",
+  "settings.agentBehaviour.workflows.modelDescription": "Глобальное переопределение модели",
   "settings.sandboxing.enabled.title": "Песочница",
   "settings.sandboxing.enabled.description":
     "Выполнять команды оболочки агента в песочнице на уровне ОС, которая ограничивает запись в каталоги состояния проекта и Kilo",

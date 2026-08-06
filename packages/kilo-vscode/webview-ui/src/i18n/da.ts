@@ -162,6 +162,7 @@ export const dict = {
   "model.group.auto": "Automatiske modeller",
   "model.group.recommended": "Anbefalet",
   "model.group.favorites": "Favoritter",
+  "model.group.mostUsed": "Mest brugte",
   "model.favorite.add": "Føj til favoritter",
   "model.favorite.remove": "Fjern fra favoritter",
 
@@ -229,6 +230,8 @@ export const dict = {
     "Klik for at begrænse skriveadgang til filsystemet. Netværksadgang er fortsat tilladt ifølge dine sandboxindstillinger.",
 
   "speechToText.tooltip.start": "Start stemmeinput med Kilo Gateway",
+  "speechToText.tooltip.shortcut":
+    "Tryk på knappen eller brug Cmd/Ctrl+K til at starte eller stoppe optagelsen; hold knappen nede, mens du taler, og slip den for at transskribere og sende.",
   "speechToText.tooltip.starting": "Starter mikrofonen... Vent med at tale.",
   "speechToText.tooltip.stop": "Stop lydoptagelse",
   "speechToText.tooltip.transcribing": "Transskriberer... Klik for at annullere.",
@@ -265,6 +268,7 @@ export const dict = {
 
   "notification.permission.title": "Tilladelse påkrævet",
   "notification.permission.titleSubagent": "Tilladelse påkrævet (underagent)",
+  "notification.permission.titleSkillShell": "Kør shell-kommandoer fra færdigheden „{{skill}}“?",
   "ui.permission.manageAutoApprove": "Administrer regler for automatisk godkendelse",
   "ui.permission.doomLoop.prompt": "Der blev registreret en mulig løkke for værktøjet {{tool}}. Fortsæt kørslen?",
   "ui.permission.doomLoop.rule": "Fortsæt {{tool}}-kald",
@@ -303,13 +307,20 @@ export const dict = {
 
   "session.tab.review": "Gennemgang",
   "session.review.filesChanged": "{{count}} Filer ændret",
-  "session.review.change.other": "Ændringer",
   "session.review.loadingChanges": "Indlæser ændringer...",
   "session.review.noChanges": "Ingen ændringer",
   "session.messages.loadingEarlier": "Indlæser tidligere beskeder...",
   "session.messages.loadEarlier": "Indlæs tidligere beskeder",
   "session.messages.loading": "Indlæser beskeder...",
 
+  "sidebar.topBar.label": "Kilo Code-navigation",
+  "sidebar.topBar.newTask": "Ny Opgave",
+  "sidebar.topBar.history": "Historik",
+  "sidebar.topBar.agentManager": "Agent Manager",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "Markedsplads",
+  "sidebar.topBar.profile": "Profil",
+  "sidebar.topBar.settings": "Indstillinger",
   "sidebar.session.newSession": "Ny Session",
   "sidebar.session.newSession.tooltip": "Start en frisk samtale, mens den nuværende session holdes intakt.",
   "sidebar.session.newWorktree": "Nyt Worktree",
@@ -703,7 +714,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "Agentadfærd",
   "settings.autoApprove.title": "Automatisk godkendelse",
-  "settings.browser.title": "Browser",
+  "settings.webTools.title": "Webværktøjer",
+  "settings.webTools.description": "Konfigurer websøgning og browserautomatisering.",
+  "settings.webTools.webSearch.enable": "Aktivér for alle udbydere",
+  "settings.webTools.browserAutomation": "Browserautomatisering",
+  "settings.webTools.webSearch.title": "Websøgning",
+  "settings.webTools.webSearch.description": "Gør websøgning tilgængelig for modeller fra alle udbydere.",
   "settings.checkpoints.title": "Kontrolpunkter",
   "settings.display.title": "Visning",
   "settings.autocomplete.title": "Autofuldførelse",
@@ -721,6 +737,13 @@ export const dict = {
   "session.messages.scrollToBottom": "Rul til bunden",
   "session.messages.initializing": "Initialiserer...",
   "session.messages.taskStarting": "Starter...",
+  "session.prompts.navLabel": "Promptnavigator",
+  "session.prompts.tick": "Prompt {{index}} af {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "Intet svar endnu",
+  "session.prompts.queued": "I kø",
+  "session.prompts.first": "Første prompt",
+  "session.prompts.latest": "Seneste prompt",
+  "session.prompts.overflow": "{{count}} tidligere prompter",
   "session.status.writingResponse": "Skriver svar…",
   "session.status.retry": "Prøver igen…",
   "session.status.working": "Arbejder…",
@@ -748,7 +771,8 @@ export const dict = {
 
   "prompt.placeholder.connecting": "Opretter forbindelse til server...",
   "prompt.placeholder.error": "Forbindelse mislykkedes. Tjek outputpanelet eller genstart udvidelsen.",
-  "prompt.placeholder.default": "Skriv en besked... (Enter for at sende, Shift+Enter for ny linje)",
+  "prompt.placeholder.default":
+    "Skriv en besked, @ for at nævne filer... (Enter for at sende, Shift+Enter for ny linje)",
 
   "context.usage.sessionCost": "Sessionsomkostning",
   "context.usage.olderSessions": "{{count}} ældre sessioner",
@@ -881,6 +905,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "SWE-Pruner-model",
   "settings.experimental.swePrunerModel.description":
     "Model til beskæring af værktøjsoutput; som standard den konfigurerede lille model",
+  "settings.experimental.multiProject.title": "Multi-projekt Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Aktivér styring af sessioner og worktrees på tværs af flere repositories i Agent Manager. Det nuværende workspace-repository er altid standardprojektet.",
   "settings.experimental.mcpTimeout.title": "MCP-timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout for MCP-serveranmodninger i millisekunder",
   "settings.experimental.remote.title": "Remote-styring",
@@ -1007,6 +1034,9 @@ export const dict = {
     "Ingen brugerdefinerede kommandoer konfigureret. Tilføj kommandoer til opencode.json for at se dem her.",
   "settings.agentBehaviour.workflows.detail.description": "Beskrivelse",
   "settings.agentBehaviour.workflows.detail.template": "Skabelon",
+  "settings.agentBehaviour.workflows.model": "model",
+  "settings.agentBehaviour.workflows.variant": "variant",
+  "settings.agentBehaviour.workflows.modelDescription": "Global modeloverskrivelse",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Kør shell-kommandoer for agenten i en sandbox på operativsystemniveau, der begrænser skrivning til projekt- og Kilo-tilstandsmapperne",

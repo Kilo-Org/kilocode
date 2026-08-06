@@ -1,3 +1,5 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { NodeFileSystem } from "@effect/platform-node"
 import { describe, expect } from "bun:test"
 import { Context, Effect, Layer } from "effect"
@@ -48,6 +50,8 @@ class TestLLM extends Context.Service<
   }
 >()("@test/EmptyToolCallsLLM") {}
 
+class State extends Context.Service<State, { readonly queue: Script[] }>()("@test/EmptyToolCallsState") {}
+
 function model(selection = ref): Provider.Model {
   return {
     id: selection.modelID,
@@ -76,48 +80,58 @@ function usage() {
   }
 }
 
-const llm = Layer.unwrap(
-  Effect.gen(function* () {
-    const queue: Script[] = []
-    const push = (item: Script) => {
-      queue.push(item)
-      return Effect.void
-    }
-    const reply = (...items: Event[]) => push(Stream.make(...items))
-    return Layer.mergeAll(
-      Layer.succeed(
-        LLM.Service,
-        LLM.Service.of({
-          stream: () => {
-            const item = queue.shift() ?? Stream.empty
-            return item
-          },
-        }),
-      ),
-      Layer.succeed(TestLLM, TestLLM.of({ reply, script: push })),
-    )
-  }),
-)
-
-const status = Layer.mergeAll(SessionStatus.defaultLayer, Bus.layer)
-const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLayer)
-const deps = Layer.mergeAll(
-  Session.defaultLayer,
-  Snapshot.defaultLayer,
-  AgentSvc.defaultLayer,
-  Permission.defaultLayer,
-  Plugin.defaultLayer,
-  Config.defaultLayer,
-  RuntimeFlags.layer(),
-  SessionSummary.defaultLayer,
-  Image.defaultLayer,
-  SyncEvent.defaultLayer,
-  EventV2Bridge.defaultLayer,
-  Database.defaultLayer,
-  status,
-  llm,
-).pipe(Layer.provideMerge(infra))
-const env = SessionProcessor.layer.pipe(Layer.provideMerge(deps))
+const stateNode = LayerNode.make({
+  service: State,
+  layer: Layer.sync(State, () => State.of({ queue: [] })),
+  deps: [],
+})
+const llmNode = LayerNode.make({
+  service: LLM.Service,
+  layer: Layer.effect(
+    LLM.Service,
+    Effect.gen(function* () {
+      const state = yield* State
+      return LLM.Service.of({ stream: () => state.queue.shift() ?? Stream.empty })
+    }),
+  ),
+  deps: [stateNode],
+})
+const testNode = LayerNode.make({
+  service: TestLLM,
+  layer: Layer.effect(
+    TestLLM,
+    Effect.gen(function* () {
+      const state = yield* State
+      const push = (item: Script) => Effect.sync(() => state.queue.push(item)).pipe(Effect.asVoid)
+      return TestLLM.of({ reply: (...items) => push(Stream.make(...items)), script: push })
+    }),
+  ),
+  deps: [stateNode],
+})
+const root = LayerNode.group([
+  SessionProcessor.node,
+  Session.node,
+  SessionProjector.node,
+  MessageV2.node,
+  Snapshot.node,
+  AgentSvc.node,
+  Permission.node,
+  Plugin.node,
+  Config.node,
+  SessionSummary.node,
+  Image.node,
+  SessionStatus.node,
+  EventV2Bridge.node,
+  Database.node,
+  CrossSpawnSpawner.node,
+  RuntimeFlags.node,
+  LLM.node,
+  testNode,
+])
+const env = LayerNode.compile(root, [
+  [LLM.node, llmNode],
+  [RuntimeFlags.node, RuntimeFlags.layer()],
+]).pipe(Layer.provideMerge(Layer.mergeAll(NodeFileSystem.layer, Bus.layer, SyncEvent.defaultLayer)))
 
 const it = testEffect(env)
 

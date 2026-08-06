@@ -1,5 +1,11 @@
-export function setTabWidths(frozen: boolean, root: ParentNode = document) {
-  const list = root.querySelector(".am-tab-list")
+/**
+ * Pin tab widths while a strip mutates, so closing a tab does not reflow
+ * the remaining ones out from under the cursor. `selector` picks the
+ * strip: the agent-manager tab bar by default, or the side terminal
+ * strip, which mirrors the same chrome.
+ */
+export function setTabWidths(frozen: boolean, root: ParentNode = document, selector = ".am-tab-list") {
+  const list = root.querySelector(selector)
   if (!(list instanceof HTMLElement)) return
   list.toggleAttribute("data-tab-widths-frozen", frozen)
 

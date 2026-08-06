@@ -164,6 +164,7 @@ export const dict = {
   "model.group.auto": "Automatische modellen",
   "model.group.recommended": "Aanbevolen",
   "model.group.favorites": "Favorieten",
+  "model.group.mostUsed": "Meest gebruikt",
   "model.favorite.add": "Toevoegen aan favorieten",
   "model.favorite.remove": "Verwijderen uit favorieten",
   "model.preview.label.released": "Uitgebracht",
@@ -233,6 +234,8 @@ export const dict = {
     "Klik om schrijfbewerkingen in het bestandssysteem te beperken. Netwerktoegang blijft toegestaan volgens je sandboxinstellingen.",
 
   "speechToText.tooltip.start": "Spraakinvoer starten met Kilo Gateway",
+  "speechToText.tooltip.shortcut":
+    "Tik of druk op Cmd/Ctrl+K om de opname te starten of te stoppen; houd de knop ingedrukt terwijl je spreekt en laat deze los om te transcriberen en te verzenden.",
   "speechToText.tooltip.starting": "Microfoon wordt gestart... Wacht nog even met spreken.",
   "speechToText.tooltip.stop": "Audio vastleggen stoppen",
   "speechToText.tooltip.transcribing": "Transcriberen... Klik om te annuleren.",
@@ -269,6 +272,7 @@ export const dict = {
 
   "notification.permission.title": "Toestemming vereist",
   "notification.permission.titleSubagent": "Toestemming vereist (subagent)",
+  "notification.permission.titleSkillShell": "Shell-opdrachten uit vaardigheid “{{skill}}” uitvoeren?",
   "ui.permission.manageAutoApprove": "Beheer automatisch goedkeuren regels",
   "ui.permission.doomLoop.prompt": "Mogelijke lus gedetecteerd voor het hulpmiddel {{tool}}. Doorgaan met uitvoeren?",
   "ui.permission.doomLoop.rule": "Doorgaan met {{tool}}-aanroepen",
@@ -307,7 +311,6 @@ export const dict = {
 
   "session.tab.review": "Beoordelen",
   "session.review.filesChanged": "{{count}} bestanden gewijzigd",
-  "session.review.change.other": "Wijzigingen",
   "session.review.loadingChanges": "Wijzigingen laden...",
   "session.review.noChanges": "Geen wijzigingen",
 
@@ -315,6 +318,14 @@ export const dict = {
   "session.messages.loadEarlier": "Eerdere berichten laden",
   "session.messages.loading": "Berichten laden...",
 
+  "sidebar.topBar.label": "Kilo Code-navigatie",
+  "sidebar.topBar.newTask": "Nieuwe Taak",
+  "sidebar.topBar.history": "Geschiedenis",
+  "sidebar.topBar.agentManager": "Agent Manager",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "Marketplace",
+  "sidebar.topBar.profile": "Profiel",
+  "sidebar.topBar.settings": "Instellingen",
   "sidebar.session.newSession": "Nieuwe Sessie",
   "sidebar.session.newSession.tooltip": "Start een nieuw gesprek terwijl je de huidige sessie intact houdt.",
   "sidebar.session.newWorktree": "Nieuwe Worktree",
@@ -658,7 +669,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "Agent Gedrag",
   "settings.autoApprove.title": "Automatisch Goedkeuren",
-  "settings.browser.title": "Browser",
+  "settings.webTools.title": "Webtools",
+  "settings.webTools.description": "Configureer zoeken op internet en browserautomatisering.",
+  "settings.webTools.webSearch.enable": "Inschakelen voor alle providers",
+  "settings.webTools.browserAutomation": "Browserautomatisering",
+  "settings.webTools.webSearch.title": "Zoeken op internet",
+  "settings.webTools.webSearch.description": "Maak zoeken op internet beschikbaar voor modellen van alle providers.",
   "settings.checkpoints.title": "Controlepunten",
   "settings.display.title": "Weergave",
   "settings.autocomplete.title": "Automatisch Aanvullen",
@@ -713,6 +729,13 @@ export const dict = {
   "session.messages.scrollToBottom": "Scroll naar beneden",
   "session.messages.initializing": "Initialiseren...",
   "session.messages.taskStarting": "Starten...",
+  "session.prompts.navLabel": "Promptnavigator",
+  "session.prompts.tick": "Prompt {{index}} van {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "Nog geen reactie",
+  "session.prompts.queued": "In wachtrij",
+  "session.prompts.first": "Eerste prompt",
+  "session.prompts.latest": "Meest recente prompt",
+  "session.prompts.overflow": "{{count}} eerdere prompts",
   "session.status.writingResponse": "Antwoord schrijven...",
   "session.status.retry": "Opnieuw proberen...",
   "session.status.working": "Bezig...",
@@ -739,7 +762,8 @@ export const dict = {
   "dialog.model.noProviders": "Geen providers",
 
   "prompt.placeholder.connecting": "Verbinden met server...",
-  "prompt.placeholder.default": "Typ een bericht... (Enter om te verzenden, Shift+Enter voor nieuwe regel)",
+  "prompt.placeholder.default":
+    "Typ een bericht, @ om bestanden te vermelden... (Enter om te verzenden, Shift+Enter voor nieuwe regel)",
   "prompt.placeholder.error": "Verbinding mislukt. Controleer het uitvoerpaneel of herstart de extensie.",
 
   "context.usage.sessionCost": "Sessiekosten",
@@ -882,6 +906,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "SWE-Pruner-model",
   "settings.experimental.swePrunerModel.description":
     "Model dat wordt gebruikt om tooluitvoer te snoeien; standaard het geconfigureerde kleine model",
+  "settings.experimental.multiProject.title": "Multi-project Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Schakel het beheren van sessies en worktrees over meerdere repositories in Agent Manager in. De huidige workspace-repository is altijd het standaardproject.",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout voor MCP-serververzoeken in milliseconden",
   "settings.experimental.remote.title": "Remote-bediening",
@@ -980,6 +1007,9 @@ export const dict = {
     "Geen aangepaste commando's geconfigureerd. Voeg commando's toe aan opencode.json om ze hier te zien.",
   "settings.agentBehaviour.workflows.detail.description": "Beschrijving",
   "settings.agentBehaviour.workflows.detail.template": "Sjabloon",
+  "settings.agentBehaviour.workflows.model": "model",
+  "settings.agentBehaviour.workflows.variant": "variant",
+  "settings.agentBehaviour.workflows.modelDescription": "Globale modeloverride",
 
   "settings.autoApprove.description":
     "Definieer hoe tools mogen worden uitgevoerd. De meeste tools staan standaard op Toestaan. doom_loop en external_directory staan standaard op Vragen.",

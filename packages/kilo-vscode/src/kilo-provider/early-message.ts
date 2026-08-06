@@ -4,6 +4,9 @@ import { routeInputToolMessage } from "../services/input-tools"
 import type { KiloConnectionService } from "../services/cli-backend/connection-service"
 import type { SuggestionContext } from "./handlers/suggestion"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
+import { buildChatSettingsMessage } from "./chat-settings"
+import { buildThroughputSettingMessage } from "./throughput-settings"
+import { handleModelUsageMessage, type ModelUsageMessage } from "./model-usage"
 
 type Ctx = {
   question: SuggestionContext
@@ -11,9 +14,12 @@ type Ctx = {
   connection: KiloConnectionService
   dir: string
   post: (msg: unknown) => void
+  browserSettings: () => void
   exportTranscript: (sessionID: string) => Promise<void>
   copy: (text: string) => PromiseLike<void>
   openSessions: (ids: string[]) => void
+  speechToTextModels: () => Promise<void>
+  modelUsage: (message: ModelUsageMessage) => Promise<void>
 }
 
 export async function routeEarlyMessage(
@@ -38,6 +44,10 @@ export async function routeEarlyMessage(
     )
     return true
   }
+  if (message.type === "recordModelUsage" || message.type === "requestModelUsage") {
+    await ctx.modelUsage(message as ModelUsageMessage)
+    return true
+  }
   await routeSuggestionWebviewMessage(ctx.question, message)
   if (await ModelState.handleMessage(message.type, message, ctx.client, ctx.post)) return true
   if (message.type === "exportSessionTranscript") {
@@ -51,6 +61,22 @@ export async function routeEarlyMessage(
       ? input.sessionIDs.filter((id): id is string => typeof id === "string")
       : []
     ctx.openSessions(ids)
+    return true
+  }
+  if (message.type === "requestChatSettings") {
+    ctx.post(buildChatSettingsMessage())
+    return true
+  }
+  if (message.type === "requestThroughputSetting") {
+    ctx.post(buildThroughputSettingMessage())
+    return true
+  }
+  if (message.type === "requestSpeechToTextModels") {
+    await ctx.speechToTextModels()
+    return true
+  }
+  if (message.type === "requestBrowserSettings") {
+    ctx.browserSettings()
     return true
   }
   return await routeInputToolMessage(message, { connection: ctx.connection, dir: ctx.dir, post: ctx.post })

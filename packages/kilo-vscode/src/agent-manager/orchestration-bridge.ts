@@ -7,6 +7,7 @@ import type { PRStatus } from "./types"
 import type { WorktreeStateManager } from "./WorktreeStateManager"
 import {
   OrchestrationError,
+  move,
   overview,
   prompt,
   sameManagedDirectory,
@@ -26,11 +27,13 @@ type Request =
   | (RequestBase & { operation: "overview"; filter?: OverviewFilter })
   | (RequestBase & { operation: "prompt"; targetSessionID: string; prompt: string })
   | (RequestBase & { operation: "stop"; targetSessionID: string })
+  | (RequestBase & { operation: "move"; targetSessionID: string; sectionID: string | null })
 
 type Result =
   | { operation: "overview"; overview: Overview }
   | { operation: "prompt"; sessionID: string; delivered: true }
   | { operation: "stop"; sessionID: string; stopped: true }
+  | { operation: "move"; sessionID: string; sectionID: string | null; moved: true }
 
 interface Failure {
   code: FailureCode | "cancelled" | "disconnected" | "timeout"
@@ -41,8 +44,9 @@ interface Options {
   root(): string | undefined
   ready(): Promise<WorktreeStateManager | undefined>
   state(): WorktreeStateManager | undefined
-  stats(refresh?: boolean): Promise<{ worktrees: WorktreeStats[]; local?: LocalStats }>
+  stats(): Promise<{ worktrees: WorktreeStats[]; local?: LocalStats }>
   prs(): Map<string, PRStatus>
+  push(): void
   managed(sessionID: string): boolean
   close(sessionID: string): Promise<void>
   log(...args: unknown[]): void
@@ -253,7 +257,10 @@ export class AgentManagerOrchestrationBridge {
       if (this.disposed || active.cancelled) return
       const client = this.connection.getClient()
       if (request.operation === "overview") {
-        const stats = await this.options.stats(true)
+        // Git stats are refreshed by the poller independently. A forced refresh
+        // here can spawn one diff/ahead-behind pair per worktree and exceed the
+        // host request timeout before the overview can return its IDs.
+        const stats = await this.options.stats()
         if (this.disposed || active.cancelled) return
         const result = await overview({
           client,
@@ -278,6 +285,19 @@ export class AgentManagerOrchestrationBridge {
         })
         if (this.disposed || active.cancelled) return
         return { result: { operation: "prompt", sessionID: request.targetSessionID, delivered: true } }
+      }
+      if (request.operation === "move") {
+        move({ state, sessionID: request.targetSessionID, sectionID: request.sectionID })
+        this.options.push()
+        if (this.disposed || active.cancelled) return
+        return {
+          result: {
+            operation: "move",
+            sessionID: request.targetSessionID,
+            sectionID: request.sectionID,
+            moved: true,
+          },
+        }
       }
       if (!this.options.managed(request.targetSessionID)) {
         throw new OrchestrationError("unknown_session", "The session is not managed by this Agent Manager workspace")

@@ -165,6 +165,7 @@ export const dict = {
   "model.group.auto": "Automatiske modeller",
   "model.group.recommended": "Anbefalt",
   "model.group.favorites": "Favoritter",
+  "model.group.mostUsed": "Mest brukt",
   "model.favorite.add": "Legg til i favoritter",
   "model.favorite.remove": "Fjern fra favoritter",
   "model.preview.label.released": "Utgitt",
@@ -234,6 +235,8 @@ export const dict = {
     "Klikk for å begrense skrivetilgang til filsystemet. Nettverkstilgang er fortsatt tillatt av sandbox-innstillingene dine.",
 
   "speechToText.tooltip.start": "Start taleinndata med Kilo Gateway",
+  "speechToText.tooltip.shortcut":
+    "Trykk på knappen eller bruk Cmd/Ctrl+K for å starte eller stoppe opptaket; hold knappen inne mens du snakker, og slipp den for å transkribere og sende.",
   "speechToText.tooltip.starting": "Starter mikrofonen... Vent med å snakke.",
   "speechToText.tooltip.stop": "Stopp lydfangst",
   "speechToText.tooltip.transcribing": "Transkriberer... Klikk for å avbryte.",
@@ -272,6 +275,7 @@ export const dict = {
 
   "notification.permission.title": "Tillatelse påkrevd",
   "notification.permission.titleSubagent": "Tillatelse påkrevd (underagent)",
+  "notification.permission.titleSkillShell": "Kjøre skallkommandoer fra ferdigheten «{{skill}}»?",
   "ui.permission.manageAutoApprove": "Administrer regler for automatisk godkjenning",
   "ui.permission.doomLoop.prompt": "Mulig løkke oppdaget for verktøyet {{tool}}. Fortsette kjøringen?",
   "ui.permission.doomLoop.rule": "Fortsett {{tool}}-kall",
@@ -310,13 +314,20 @@ export const dict = {
 
   "session.tab.review": "Gjennomgang",
   "session.review.filesChanged": "{{count}} filer endret",
-  "session.review.change.other": "Endringer",
   "session.review.loadingChanges": "Laster endringer...",
   "session.review.noChanges": "Ingen endringer",
   "session.messages.loadingEarlier": "Laster inn tidligere meldinger...",
   "session.messages.loadEarlier": "Last inn tidligere meldinger",
   "session.messages.loading": "Laster meldinger...",
 
+  "sidebar.topBar.label": "Kilo Code-navigasjon",
+  "sidebar.topBar.newTask": "Ny Oppgave",
+  "sidebar.topBar.history": "Historikk",
+  "sidebar.topBar.agentManager": "Agent Manager",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "Markedsplass",
+  "sidebar.topBar.profile": "Profil",
+  "sidebar.topBar.settings": "Innstillinger",
   "sidebar.session.newSession": "Ny Økt",
   "sidebar.session.newSession.tooltip": "Start en ny samtale mens den nåværende økten holdes intakt.",
   "sidebar.session.newWorktree": "Nytt Worktree",
@@ -665,7 +676,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "Agentoppførsel",
   "settings.autoApprove.title": "Automatisk godkjenning",
-  "settings.browser.title": "Nettleser",
+  "settings.webTools.title": "Nettverktøy",
+  "settings.webTools.description": "Konfigurer nettsøk og nettleserautomatisering.",
+  "settings.webTools.webSearch.enable": "Aktiver for alle leverandører",
+  "settings.webTools.browserAutomation": "Nettleserautomatisering",
+  "settings.webTools.webSearch.title": "Nettsøk",
+  "settings.webTools.webSearch.description": "Gjør nettsøk tilgjengelig for modeller fra alle leverandører.",
   "settings.checkpoints.title": "Kontrollpunkter",
   "settings.display.title": "Visning",
   "settings.autocomplete.title": "Autofullfør",
@@ -683,6 +699,13 @@ export const dict = {
   "session.messages.scrollToBottom": "Rull til bunnen",
   "session.messages.initializing": "Initialiserer...",
   "session.messages.taskStarting": "Starter...",
+  "session.prompts.navLabel": "Ledetekstnavigering",
+  "session.prompts.tick": "Ledetekst {{index}} av {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "Ingen svar ennå",
+  "session.prompts.queued": "I kø",
+  "session.prompts.first": "Første ledetekst",
+  "session.prompts.latest": "Siste ledetekst",
+  "session.prompts.overflow": "{{count}} tidligere ledetekster",
   "session.status.writingResponse": "Skriver svar…",
   "session.status.retry": "Prøver på nytt…",
   "session.status.working": "Arbeider…",
@@ -710,7 +733,8 @@ export const dict = {
 
   "prompt.placeholder.connecting": "Kobler til server...",
   "prompt.placeholder.error": "Tilkobling mislyktes. Sjekk utdatapanelet eller start utvidelsen på nytt.",
-  "prompt.placeholder.default": "Skriv en melding... (Enter for å sende, Shift+Enter for ny linje)",
+  "prompt.placeholder.default":
+    "Skriv en melding, @ for å nevne filer... (Enter for å sende, Shift+Enter for ny linje)",
 
   "context.usage.sessionCost": "Sesjonskostnad",
   "context.usage.olderSessions": "{{count}} eldre sesjoner",
@@ -842,6 +866,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "SWE-Pruner-modell",
   "settings.experimental.swePrunerModel.description":
     "Modell som brukes til å beskjære verktøyutdata; som standard den konfigurerte lille modellen",
+  "settings.experimental.multiProject.title": "Multi-prosjekt Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Aktiver administrering av økter og worktrees på tvers av flere repositories i Agent Manager. Det nåværende workspace-repositoryet er alltid standardprosjektet.",
   "settings.experimental.mcpTimeout.title": "MCP-tidsavbrudd (ms)",
   "settings.experimental.mcpTimeout.description": "Tidsavbrudd for MCP-serverforespørsler i millisekunder",
   "settings.experimental.remote.title": "Remote-kontroll",
@@ -1007,6 +1034,9 @@ export const dict = {
     "Ingen egendefinerte kommandoer konfigurert. Legg til kommandoer i opencode.json for å se dem her.",
   "settings.agentBehaviour.workflows.detail.description": "Beskrivelse",
   "settings.agentBehaviour.workflows.detail.template": "Mal",
+  "settings.agentBehaviour.workflows.model": "modell",
+  "settings.agentBehaviour.workflows.variant": "variant",
+  "settings.agentBehaviour.workflows.modelDescription": "Global modelloverstyring",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Kjør shell-kommandoer for agenten i en sandbox på operativsystemnivå som begrenser skriving til prosjekt- og Kilo-tilstandsmapper",

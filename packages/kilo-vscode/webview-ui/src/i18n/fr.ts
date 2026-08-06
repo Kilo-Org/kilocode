@@ -163,6 +163,7 @@ export const dict = {
   "model.group.auto": "Modèles automatiques",
   "model.group.recommended": "Recommandé",
   "model.group.favorites": "Favoris",
+  "model.group.mostUsed": "Les plus utilisés",
   "model.favorite.add": "Ajouter aux favoris",
   "model.favorite.remove": "Retirer des favoris",
 
@@ -232,6 +233,8 @@ export const dict = {
     "Cliquez pour restreindre les écritures dans le système de fichiers. L'accès au réseau reste autorisé par vos paramètres de sandbox.",
 
   "speechToText.tooltip.start": "Démarrer la saisie vocale avec Kilo Gateway",
+  "speechToText.tooltip.shortcut":
+    "Touchez ou appuyez sur Cmd/Ctrl+K pour démarrer ou arrêter l’enregistrement ; maintenez la touche pendant que vous parlez, puis relâchez-la pour transcrire et envoyer.",
   "speechToText.tooltip.starting": "Démarrage du microphone... Attendez avant de parler.",
   "speechToText.tooltip.stop": "Arrêter la capture audio",
   "speechToText.tooltip.transcribing": "Transcription en cours... Cliquez pour annuler.",
@@ -268,6 +271,7 @@ export const dict = {
 
   "notification.permission.title": "Permission requise",
   "notification.permission.titleSubagent": "Permission requise (sous-agent)",
+  "notification.permission.titleSkillShell": "Exécuter les commandes shell de la compétence «\u00a0{{skill}}\u00a0» ?",
   "ui.permission.manageAutoApprove": "Gérer les règles d'approbation automatique",
   "ui.permission.doomLoop.prompt": "Boucle potentielle détectée pour l’outil {{tool}}. Continuer l’exécution ?",
   "ui.permission.doomLoop.rule": "Continuer les appels à {{tool}}",
@@ -306,13 +310,20 @@ export const dict = {
 
   "session.tab.review": "Revue",
   "session.review.filesChanged": "{{count}} fichiers modifiés",
-  "session.review.change.other": "Modifications",
   "session.review.loadingChanges": "Chargement des modifications...",
   "session.review.noChanges": "Aucune modification",
   "session.messages.loadingEarlier": "Chargement des messages précédents...",
   "session.messages.loadEarlier": "Charger les messages précédents",
   "session.messages.loading": "Chargement des messages...",
 
+  "sidebar.topBar.label": "Navigation Kilo Code",
+  "sidebar.topBar.newTask": "Nouvelle Tâche",
+  "sidebar.topBar.history": "Historique",
+  "sidebar.topBar.agentManager": "Agent Manager",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "Marketplace",
+  "sidebar.topBar.profile": "Profil",
+  "sidebar.topBar.settings": "Paramètres",
   "sidebar.session.newSession": "Nouvelle Session",
   "sidebar.session.newSession.tooltip":
     "Démarrer une nouvelle conversation tout en gardant la session actuelle intacte.",
@@ -716,7 +727,13 @@ export const dict = {
 
   "settings.agentBehaviour.title": "Comportement de l'agent",
   "settings.autoApprove.title": "Approbation automatique",
-  "settings.browser.title": "Navigateur",
+  "settings.webTools.title": "Outils web",
+  "settings.webTools.description": "Configurez la recherche web et l’automatisation du navigateur.",
+  "settings.webTools.webSearch.enable": "Activer pour tous les fournisseurs",
+  "settings.webTools.browserAutomation": "Automatisation du navigateur",
+  "settings.webTools.webSearch.title": "Recherche web",
+  "settings.webTools.webSearch.description":
+    "Rendez la recherche web disponible pour les modèles de tous les fournisseurs.",
   "settings.checkpoints.title": "Points de contrôle",
   "settings.display.title": "Affichage",
   "settings.autocomplete.title": "Autocomplétion",
@@ -734,6 +751,13 @@ export const dict = {
   "session.messages.scrollToBottom": "Défiler vers le bas",
   "session.messages.initializing": "Initialisation...",
   "session.messages.taskStarting": "Démarrage...",
+  "session.prompts.navLabel": "Navigateur de prompts",
+  "session.prompts.tick": "Prompt {{index}} sur {{total}} : {{prompt}}",
+  "session.prompts.noAnswer": "Pas encore de réponse",
+  "session.prompts.queued": "En attente",
+  "session.prompts.first": "Premier prompt",
+  "session.prompts.latest": "Dernier prompt",
+  "session.prompts.overflow": "{{count}} prompts précédents",
   "session.status.writingResponse": "Rédaction de la réponse…",
   "session.status.retry": "Nouvelle tentative…",
   "session.status.working": "En cours…",
@@ -761,7 +785,8 @@ export const dict = {
 
   "prompt.placeholder.connecting": "Connexion au serveur...",
   "prompt.placeholder.error": "Échec de la connexion. Vérifiez le panneau de sortie ou redémarrez l'extension.",
-  "prompt.placeholder.default": "Tapez un message... (Entrée pour envoyer, Maj+Entrée pour un saut de ligne)",
+  "prompt.placeholder.default":
+    "Tapez un message, @ pour mentionner des fichiers... (Entrée pour envoyer, Maj+Entrée pour un saut de ligne)",
 
   "context.usage.sessionCost": "Coût de la session",
   "context.usage.olderSessions": "{{count}} sessions précédentes",
@@ -903,6 +928,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "Modèle SWE-Pruner",
   "settings.experimental.swePrunerModel.description":
     "Modèle utilisé pour élaguer les sorties d'outils ; par défaut, le small model configuré",
+  "settings.experimental.multiProject.title": "Agent Manager Multi-Projet",
+  "settings.experimental.multiProject.description":
+    "Activer la gestion des sessions et worktrees sur plusieurs dépôts dans Agent Manager. Le dépôt de l'espace de travail actuel est toujours le projet par défaut.",
   "settings.experimental.mcpTimeout.title": "Délai MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Délai des requêtes du serveur MCP en millisecondes",
   "settings.experimental.remote.title": "Contrôle Remote",
@@ -1034,6 +1062,9 @@ export const dict = {
     "Aucune commande personnalisée configurée. Ajoutez des commandes à opencode.json pour les voir ici.",
   "settings.agentBehaviour.workflows.detail.description": "Description",
   "settings.agentBehaviour.workflows.detail.template": "Modèle",
+  "settings.agentBehaviour.workflows.model": "modèle",
+  "settings.agentBehaviour.workflows.variant": "variante",
+  "settings.agentBehaviour.workflows.modelDescription": "Remplacement global du modèle",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Exécuter les commandes shell de l'agent dans un sandbox au niveau du système d'exploitation qui restreint les écritures aux répertoires d'état du projet et de Kilo",

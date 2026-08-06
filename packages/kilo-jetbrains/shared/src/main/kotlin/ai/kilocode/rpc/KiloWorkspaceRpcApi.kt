@@ -1,6 +1,7 @@
 package ai.kilocode.rpc
 
 import ai.kilocode.rpc.dto.ConfigTargetDto
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.FileSearchResultDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.ModelsWorkspaceDto
@@ -53,6 +54,17 @@ interface KiloWorkspaceRpcApi : RemoteApi<Unit> {
 
     /** Current uncommitted git changes as a unified diff for @git-changes mentions. */
     suspend fun gitChanges(directory: String): String?
+
+    /**
+     * Committed branch changes compared with the default branch merge-base.
+     *
+     * [patches] = false returns file stats only (additions/deletions/status) and skips materializing
+     * the full patch text — used by the header badge, which only needs counts.
+     */
+    suspend fun branchDiff(directory: String, patches: Boolean = true): List<DiffFileDto>
+
+    /** Current git branch name for branch-scoped UI labels. */
+    suspend fun branchName(directory: String): String?
 
     /** Open an absolute backend file path in the IDE. */
     suspend fun openFile(path: String, line: Int? = null, column: Int? = null): Boolean

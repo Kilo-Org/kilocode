@@ -3,7 +3,7 @@ import type { Part, TokenUsage } from "./parts"
 
 export type SessionModelUsage = KilocodeSessionModelUsageResponse
 
-export type SessionCloseReason = "completed" | "error" | "interrupted"
+export type SessionCloseReason = "completed" | "error" | "interrupted" | "superseded"
 
 // Message structure (simplified for webview)
 export interface Message {
@@ -58,6 +58,10 @@ export interface SessionInfo {
     files: number
     diffs?: SessionFileDiff[]
   } | null
+}
+
+export interface ProjectSessionInfo extends SessionInfo {
+  worktreeId: string | null
 }
 
 export type SessionUpdate = Partial<SessionInfo> & Pick<SessionInfo, "id">

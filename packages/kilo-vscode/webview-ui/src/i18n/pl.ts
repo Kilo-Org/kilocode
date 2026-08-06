@@ -162,6 +162,7 @@ export const dict = {
   "model.group.auto": "Modele automatyczne",
   "model.group.recommended": "Zalecane",
   "model.group.favorites": "Ulubione",
+  "model.group.mostUsed": "Najczęściej używane",
   "model.favorite.add": "Dodaj do ulubionych",
   "model.favorite.remove": "Usuń z ulubionych",
   "model.preview.label.released": "Wydano",
@@ -230,6 +231,8 @@ export const dict = {
     "Kliknij, aby ograniczyć zapisy w systemie plików. Ustawienia sandboxa nadal zezwalają na dostęp do sieci.",
 
   "speechToText.tooltip.start": "Rozpocznij wprowadzanie głosowe z Kilo Gateway",
+  "speechToText.tooltip.shortcut":
+    "Stuknij lub naciśnij Cmd/Ctrl+K, aby rozpocząć albo zatrzymać nagrywanie; przytrzymaj podczas mówienia, a następnie zwolnij, aby dokonać transkrypcji i wysłać.",
   "speechToText.tooltip.starting": "Uruchamianie mikrofonu... Poczekaj, zanim zaczniesz mówić.",
   "speechToText.tooltip.stop": "Zatrzymaj przechwytywanie dźwięku",
   "speechToText.tooltip.transcribing": "Transkrybowanie... Kliknij, aby anulować.",
@@ -266,6 +269,7 @@ export const dict = {
 
   "notification.permission.title": "Wymagane uprawnienie",
   "notification.permission.titleSubagent": "Wymagane uprawnienie (podagent)",
+  "notification.permission.titleSkillShell": "Uruchomić polecenia powłoki z umiejętności „{{skill}}”?",
   "ui.permission.manageAutoApprove": "Zarządzaj regułami automatycznego zatwierdzania",
   "ui.permission.doomLoop.prompt": "Wykryto potencjalną pętlę dla narzędzia {{tool}}. Kontynuować działanie?",
   "ui.permission.doomLoop.rule": "Kontynuuj wywołania {{tool}}",
@@ -304,13 +308,20 @@ export const dict = {
 
   "session.tab.review": "Przegląd",
   "session.review.filesChanged": "Zmieniono {{count}} plików",
-  "session.review.change.other": "Zmiany",
   "session.review.loadingChanges": "Ładowanie zmian...",
   "session.review.noChanges": "Brak zmian",
   "session.messages.loadingEarlier": "Ładowanie wcześniejszych wiadomości...",
   "session.messages.loadEarlier": "Załaduj wcześniejsze wiadomości",
   "session.messages.loading": "Ładowanie wiadomości...",
 
+  "sidebar.topBar.label": "Nawigacja Kilo Code",
+  "sidebar.topBar.newTask": "Nowe Zadanie",
+  "sidebar.topBar.history": "Historia",
+  "sidebar.topBar.agentManager": "Agent Manager",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "Marketplace",
+  "sidebar.topBar.profile": "Profil",
+  "sidebar.topBar.settings": "Ustawienia",
   "sidebar.session.newSession": "Nowa Sesja",
   "sidebar.session.newSession.tooltip": "Rozpocznij nową konwersację, zachowując obecną sesję bez zmian.",
   "sidebar.session.newWorktree": "Nowe Worktree",
@@ -661,7 +672,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "Zachowanie agenta",
   "settings.autoApprove.title": "Automatyczne zatwierdzanie",
-  "settings.browser.title": "Przeglądarka",
+  "settings.webTools.title": "Narzędzia internetowe",
+  "settings.webTools.description": "Skonfiguruj wyszukiwanie w sieci i automatyzację przeglądarki.",
+  "settings.webTools.webSearch.enable": "Włącz dla wszystkich dostawców",
+  "settings.webTools.browserAutomation": "Automatyzacja przeglądarki",
+  "settings.webTools.webSearch.title": "Wyszukiwanie w sieci",
+  "settings.webTools.webSearch.description": "Udostępnij wyszukiwanie w sieci modelom wszystkich dostawców.",
   "settings.checkpoints.title": "Punkty kontrolne",
   "settings.display.title": "Wyświetlanie",
   "settings.autocomplete.title": "Autouzupełnianie",
@@ -679,6 +695,13 @@ export const dict = {
   "session.messages.scrollToBottom": "Przewiń na dół",
   "session.messages.initializing": "Inicjalizacja...",
   "session.messages.taskStarting": "Uruchamianie...",
+  "session.prompts.navLabel": "Nawigator promptów",
+  "session.prompts.tick": "Prompt {{index}} z {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "Jeszcze brak odpowiedzi",
+  "session.prompts.queued": "W kolejce",
+  "session.prompts.first": "Pierwszy prompt",
+  "session.prompts.latest": "Ostatni prompt",
+  "session.prompts.overflow": "{{count}} wcześniejszych promptów",
   "session.status.writingResponse": "Pisanie odpowiedzi…",
   "session.status.retry": "Ponawianie…",
   "session.status.working": "Pracuję…",
@@ -706,7 +729,8 @@ export const dict = {
 
   "prompt.placeholder.connecting": "Łączenie z serwerem...",
   "prompt.placeholder.error": "Połączenie nie powiodło się. Sprawdź panel wyjściowy lub uruchom ponownie rozszerzenie.",
-  "prompt.placeholder.default": "Wpisz wiadomość... (Enter, aby wysłać, Shift+Enter dla nowej linii)",
+  "prompt.placeholder.default":
+    "Wpisz wiadomość, @ aby wspomnieć pliki... (Enter, aby wysłać, Shift+Enter dla nowej linii)",
 
   "context.usage.sessionCost": "Koszt sesji",
   "context.usage.olderSessions": "{{count}} starszych sesji",
@@ -839,6 +863,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "Model SWE-Pruner",
   "settings.experimental.swePrunerModel.description":
     "Model używany do przycinania wyników narzędzi; domyślnie skonfigurowany mały model",
+  "settings.experimental.multiProject.title": "Wieloprojektowy Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Włącz zarządzanie sesjami i worktree w wielu repozytoriach w Agent Managerze. Bieżące repozytorium obszaru roboczego jest zawsze projektem domyślnym.",
   "settings.experimental.mcpTimeout.title": "Limit czasu MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Limit czasu żądań serwera MCP w milisekundach",
   "settings.experimental.remote.title": "Sterowanie Remote",
@@ -1008,6 +1035,9 @@ export const dict = {
     "Brak skonfigurowanych niestandardowych komend. Dodaj komendy do opencode.json, aby je tu zobaczyć.",
   "settings.agentBehaviour.workflows.detail.description": "Opis",
   "settings.agentBehaviour.workflows.detail.template": "Szablon",
+  "settings.agentBehaviour.workflows.model": "model",
+  "settings.agentBehaviour.workflows.variant": "wariant",
+  "settings.agentBehaviour.workflows.modelDescription": "Globalne nadpisanie modelu",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Uruchamiaj polecenia shell agenta w sandboxie na poziomie systemu operacyjnego, który ogranicza zapisy do katalogów stanu projektu i Kilo",

@@ -41,6 +41,9 @@ function identifiers(
 
 export function terminal(input: Input): TerminalState | undefined {
   if (!input.reason) return undefined
+  // A superseded turn handed off to a queued follow-up; it is not a premature
+  // stop, and the follow-up turn closes with its own reason afterwards.
+  if (input.reason === "superseded") return undefined
   const last = input.messages[input.messages.length - 1]
   const finish = last?.role === "assistant" ? last.finish : undefined
   const ids = identifiers(last, input.parts)

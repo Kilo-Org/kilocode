@@ -158,6 +158,7 @@ export const dict = {
   "model.group.auto": "النماذج التلقائية",
   "model.group.recommended": "موصى به",
   "model.group.favorites": "المفضلة",
+  "model.group.mostUsed": "الأكثر استخدامًا",
   "model.favorite.add": "إضافة إلى المفضلة",
   "model.favorite.remove": "إزالة من المفضلة",
   "model.preview.label.released": "الإصدار",
@@ -222,6 +223,8 @@ export const dict = {
     "انقر لتقييد الكتابة في نظام الملفات. يظل الوصول إلى الشبكة مسموحًا وفق إعدادات sandbox.",
 
   "speechToText.tooltip.start": "بدء الإدخال الصوتي باستخدام Kilo Gateway",
+  "speechToText.tooltip.shortcut":
+    "انقر أو اضغط على Cmd/Ctrl+K لبدء التسجيل أو إيقافه؛ اضغط باستمرار أثناء التحدث ثم اتركه لتحويل الكلام إلى نص وإرساله.",
   "speechToText.tooltip.starting": "جارٍ تشغيل الميكروفون... يُرجى الانتظار قبل التحدث.",
   "speechToText.tooltip.stop": "إيقاف التقاط الصوت",
   "speechToText.tooltip.transcribing": "جاري تحويل الصوت إلى نص... انقر للإلغاء.",
@@ -258,6 +261,7 @@ export const dict = {
 
   "notification.permission.title": "مطلوب إذن",
   "notification.permission.titleSubagent": "مطلوب إذن (وكيل فرعي)",
+  "notification.permission.titleSkillShell": "هل تريد تشغيل أوامر الصدفة من المهارة «{{skill}}»؟",
   "ui.permission.manageAutoApprove": "إدارة قواعد الموافقة التلقائية",
   "ui.permission.doomLoop.prompt": "تم اكتشاف حلقة محتملة في أداة {{tool}}. هل تريد متابعة التشغيل؟",
   "ui.permission.doomLoop.rule": "متابعة استدعاءات {{tool}}",
@@ -296,13 +300,20 @@ export const dict = {
 
   "session.tab.review": "مراجعة",
   "session.review.filesChanged": "تم تغيير {{count}} ملفات",
-  "session.review.change.other": "تغييرات",
   "session.review.loadingChanges": "جارٍ تحميل التغييرات...",
   "session.review.noChanges": "لا توجد تغييرات",
   "session.messages.loadingEarlier": "جارٍ تحميل الرسائل السابقة...",
   "session.messages.loadEarlier": "تحميل الرسائل السابقة",
   "session.messages.loading": "جارٍ تحميل الرسائل...",
 
+  "sidebar.topBar.label": "التنقل في Kilo Code",
+  "sidebar.topBar.newTask": "مهمة جديدة",
+  "sidebar.topBar.history": "السجل",
+  "sidebar.topBar.agentManager": "مدير الوكلاء",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "المتجر",
+  "sidebar.topBar.profile": "الملف الشخصي",
+  "sidebar.topBar.settings": "الإعدادات",
   "sidebar.session.newSession": "جلسة جديدة",
   "sidebar.session.newSession.tooltip": "ابدأ محادثة جديدة مع الاحتفاظ بالجلسة الحالية كما هي.",
   "sidebar.session.newWorktree": "Worktree جديد",
@@ -649,7 +660,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "سلوك الوكيل",
   "settings.autoApprove.title": "الموافقة التلقائية",
-  "settings.browser.title": "المتصفح",
+  "settings.webTools.title": "أدوات الويب",
+  "settings.webTools.description": "اضبط البحث على الويب وأتمتة المتصفح.",
+  "settings.webTools.webSearch.enable": "تمكين لجميع المزوّدين",
+  "settings.webTools.browserAutomation": "أتمتة المتصفح",
+  "settings.webTools.webSearch.title": "البحث على الويب",
+  "settings.webTools.webSearch.description": "اجعل البحث على الويب متاحًا لنماذج جميع المزوّدين.",
   "settings.checkpoints.title": "نقاط التحقق",
   "settings.display.title": "العرض",
   "settings.autocomplete.title": "الإكمال التلقائي",
@@ -705,6 +721,13 @@ export const dict = {
   "session.messages.scrollToBottom": "التمرير إلى الأسفل",
   "session.messages.initializing": "جاري التهيئة...",
   "session.messages.taskStarting": "جاري البدء...",
+  "session.prompts.navLabel": "مستعرض المطالبات",
+  "session.prompts.tick": "المطالبة {{index}} من {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "لا توجد استجابة بعد",
+  "session.prompts.queued": "في قائمة الانتظار",
+  "session.prompts.first": "أول مطالبة",
+  "session.prompts.latest": "أحدث مطالبة",
+  "session.prompts.overflow": "{{count}} مطالبات سابقة",
   "session.status.writingResponse": "...جارٍ كتابة الرد",
   "session.status.retry": "جارٍ إعادة المحاولة…",
   "session.status.working": "...جارٍ العمل",
@@ -732,7 +755,7 @@ export const dict = {
 
   "prompt.placeholder.connecting": "جارٍ الاتصال بالخادم...",
   "prompt.placeholder.error": "فشل الاتصال. تحقق من لوحة الإخراج أو أعد تشغيل الإضافة.",
-  "prompt.placeholder.default": "اكتب رسالة... (Enter للإرسال، Shift+Enter لسطر جديد)",
+  "prompt.placeholder.default": "اكتب رسالة، @ للإشارة إلى الملفات... (Enter للإرسال، Shift+Enter لسطر جديد)",
 
   "context.usage.sessionCost": "تكلفة الجلسة",
   "context.usage.olderSessions": "{{count}} جلسات أقدم",
@@ -859,6 +882,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "نموذج SWE-Pruner",
   "settings.experimental.swePrunerModel.description":
     "النموذج المستخدم لتقليم مخرجات الأدوات؛ افتراضيًا النموذج الصغير المكوَّن",
+  "settings.experimental.multiProject.title": "إدارة متعددة المشاريع",
+  "settings.experimental.multiProject.description":
+    "تفعيل إدارة الجلسات وأشجار العمل عبر مستودعات متعددة في Agent Manager. المستودع الحالي هو دائمًا المشروع الافتراضي.",
   "settings.experimental.mcpTimeout.title": "مهلة MCP (مللي ثانية)",
   "settings.experimental.mcpTimeout.description": "مهلة طلبات خادم MCP بالمللي ثانية",
   "settings.experimental.remote.title": "التحكم Remote",
@@ -984,6 +1010,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.empty": "لم يتم تهيئة أوامر مخصصة. أضف أوامر إلى opencode.json لرؤيتها هنا.",
   "settings.agentBehaviour.workflows.detail.description": "الوصف",
   "settings.agentBehaviour.workflows.detail.template": "القالب",
+  "settings.agentBehaviour.workflows.model": "النموذج",
+  "settings.agentBehaviour.workflows.variant": "المتغير",
+  "settings.agentBehaviour.workflows.modelDescription": "تجاوز النموذج العام",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "تشغيل أوامر shell الخاصة بالوكيل داخل sandbox على مستوى نظام التشغيل يقيّد الكتابة على مجلدات حالة المشروع و Kilo",

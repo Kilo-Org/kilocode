@@ -23,6 +23,28 @@ export interface WorktreeDiffSourceOptions {
    * the current branch — only the comparison target changes. Reset on dispose.
    */
   baseBranchOverride?: string
+  /**
+   * Resolve the directory to diff. Defaults to the VS Code workspace root.
+   * Agent Manager passes a worktree path so the source diffs inside the
+   * worktree rather than the main checkout.
+   */
+  dir?: () => string | undefined
+  /**
+   * When true, a `dir` that resolves to undefined yields an empty diff rather
+   * than falling back to the workspace root. Prevents an unresolvable
+   * worktree context from silently diffing the main checkout.
+   */
+  strictDir?: boolean
+  /**
+   * Explicit base branch to diff against. When set, the source skips
+   * auto-resolution (tracking → default) and diffs against this ref directly.
+   * Agent Manager passes the worktree's recorded parent so a worktree always
+   * compares against its own base even when the workspace default differs.
+   */
+  baseBranch?: string
+  /** Shared GitOps / log so sources don't each spawn their own channel. */
+  git?: GitOps
+  log?: (...args: unknown[]) => void
 }
 
 /**
@@ -32,9 +54,16 @@ export interface WorktreeDiffSourceOptions {
  * extension host — no `kilo serve` round-trip.
  */
 export function createWorktreeDiffSource(opts: WorktreeDiffSourceOptions = {}): DiffSource {
-  const output = vscode.window.createOutputChannel("Kilo Diff: Workspace")
-  const log = (...args: unknown[]) => appendOutput(output, "WorktreeDiffSource", ...args)
-  const git = new GitOps({ log })
+  const output = opts.git ? undefined : vscode.window.createOutputChannel("Kilo Diff: Workspace")
+  const log = opts.log ?? ((...args: unknown[]) => appendOutput(output!, "WorktreeDiffSource", ...args))
+  const git = opts.git ?? new GitOps({ log })
+
+  const root = (): string | undefined => {
+    const dir = opts.dir?.()
+    if (dir) return dir
+    if (opts.strictDir) return undefined
+    return getWorkspaceRoot()
+  }
 
   // Cached between fetches so repeated polling doesn't re-resolve the base
   // branch every tick. Reset only on dispose (when the source is swapped out).
@@ -42,22 +71,32 @@ export function createWorktreeDiffSource(opts: WorktreeDiffSourceOptions = {}): 
 
   const resolveTarget = async (): Promise<DiffTarget | undefined> => {
     if (target) return target
+    if (opts.baseBranch) {
+      const dir = root()
+      if (!dir) {
+        log("Local diff: no directory (explicit base mode)")
+        return
+      }
+      target = { directory: dir, baseBranch: opts.baseBranch }
+      log(`Local diff: using explicit base=${opts.baseBranch} dir=${dir}`)
+      return target
+    }
     if (opts.baseBranchOverride) {
-      const root = getWorkspaceRoot()
-      if (!root) {
+      const dir = root()
+      if (!dir) {
         log("Local diff: no workspace root (override mode)")
         return
       }
-      const resolved = await resolveOverrideRef(git, root, opts.baseBranchOverride, log)
+      const resolved = await resolveOverrideRef(git, dir, opts.baseBranchOverride, log)
       if (!resolved) {
         log(`Local diff: override base="${opts.baseBranchOverride}" could not be resolved, falling back to auto`)
       } else {
-        target = { directory: root, baseBranch: resolved }
+        target = { directory: dir, baseBranch: resolved }
         log(`Local diff: using override base=${resolved}`)
         return target
       }
     }
-    target = await resolveLocalDiffTarget(git, log, getWorkspaceRoot())
+    target = await resolveLocalDiffTarget(git, log, root())
     return target
   }
 
@@ -109,8 +148,10 @@ export function createWorktreeDiffSource(opts: WorktreeDiffSourceOptions = {}): 
     },
 
     dispose(): void {
-      git.dispose()
-      output.dispose()
+      // Only dispose resources we own (created here). Injected git/log are
+      // owned by the caller.
+      if (!opts.git) git.dispose()
+      output?.dispose()
       target = undefined
     },
   }

@@ -2,7 +2,7 @@ import type { Hooks, PluginInput } from "@kilocode/plugin"
 import { OAUTH_DUMMY_KEY } from "../auth"
 import { createServer } from "http"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
-import { escapeHtml } from "@/util/html"
+import { escapeHtml } from "@/util/html" // kilocode_change - retained OAuth error page uses escaped diagnostics
 
 // Public Grok-CLI OAuth client. xAI's auth server rejects loopback OAuth from
 // non-allowlisted clients, so we reuse the Grok-CLI client_id that xAI ships
@@ -378,7 +378,6 @@ const HTML_ERROR = (error: string) => `<!doctype html>
   </body>
 </html>`
 // kilocode_change end
-
 // CORS allowlist for the loopback callback. The redirect_uri itself is
 // already bound to 127.0.0.1 and gated by PKCE+state, so we only accept
 // xAI's own auth origins for additional defense-in-depth on the OPTIONS
@@ -429,7 +428,7 @@ async function startOAuthServer(): Promise<{ port: number; redirectUri: string }
         pendingOAuth?.reject(new Error(errorMsg))
         pendingOAuth = undefined
         res.writeHead(200, { "Content-Type": "text/html" })
-        res.end(HTML_ERROR(errorMsg))
+        res.end(HTML_ERROR(errorMsg)) // kilocode_change - shared callback page is currently OpenCode-branded
         return
       }
 
@@ -438,7 +437,7 @@ async function startOAuthServer(): Promise<{ port: number; redirectUri: string }
         pendingOAuth?.reject(new Error(errorMsg))
         pendingOAuth = undefined
         res.writeHead(400, { "Content-Type": "text/html" })
-        res.end(HTML_ERROR(errorMsg))
+        res.end(HTML_ERROR(errorMsg)) // kilocode_change - shared callback page is currently OpenCode-branded
         return
       }
 
@@ -447,7 +446,7 @@ async function startOAuthServer(): Promise<{ port: number; redirectUri: string }
         pendingOAuth?.reject(new Error(errorMsg))
         pendingOAuth = undefined
         res.writeHead(400, { "Content-Type": "text/html" })
-        res.end(HTML_ERROR(errorMsg))
+        res.end(HTML_ERROR(errorMsg)) // kilocode_change - shared callback page is currently OpenCode-branded
         return
       }
 
@@ -459,7 +458,7 @@ async function startOAuthServer(): Promise<{ port: number; redirectUri: string }
         .catch((err) => current.reject(err))
 
       res.writeHead(200, { "Content-Type": "text/html" })
-      res.end(HTML_SUCCESS)
+      res.end(HTML_SUCCESS) // kilocode_change - shared callback page is currently OpenCode-branded
       return
     }
 

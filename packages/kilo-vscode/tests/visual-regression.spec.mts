@@ -75,9 +75,12 @@ async function settle(page: Page) {
 // Spinner animation captures at an indeterminate frame, causing flaky diffs.
 // Permission dock config-preloaded has non-deterministic toggle rendering.
 // Sandboxing rows can settle at different scroll heights after settings context updates.
+// Side terminal tabs mount live xterm instances whose websocket error text
+// lands at indeterminate times.
 const SKIP = new Set<string>([
   "agentmanager--worktree-item-busy",
   "agentmanager--full-screen-diff-agent-edit-scroll",
+  "agentmanager--side-terminal-panel-tabs",
   "composite-webview--permission-dock-config-preloaded",
   "settings--sandboxing-allowlist",
   "settings--sandboxing-panel",

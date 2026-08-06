@@ -98,4 +98,35 @@ export namespace PermissionProvenance {
       rule: { permission: rule.permission, pattern: rule.pattern, action: rule.action },
     }
   }
+
+  /**
+   * Classify why a tool call was denied, from the `ruleset` a `DeniedError` carries.
+   *
+   * `DeniedError.ruleset` is untyped (`Schema.Any`). `Permission.ask`'s main deny path sets it to
+   * the exact rule `resolve()` matched against the request's pattern (via `Wildcard.match`), not
+   * merely the deny-permission subset — two deny rules for different patterns under the same
+   * permission (e.g. `bash: { "git push *": deny, "rm -rf *": deny }`) would otherwise be
+   * indistinguishable by permission alone, misattributing the denial to whichever rule happens to
+   * sort last.
+   *
+   * Other denial paths (hard Ask/Plan/Architect vetoes, headless-subagent policy) don't carry a
+   * specific rule, so `ruleset` there is still just the permission subset (or absent). Synthesize
+   * an explicit `deny` rule for the request's permission/pattern in that case: falling through to
+   * `classify({ rule: undefined })` would report the exact same `{ source: "default" }` shape the
+   * *approval* fallback uses for "no rule matched," rendering a refusal as an auto-approval.
+   */
+  export function classifyDenial(input: {
+    ruleset: unknown
+    permission: string
+    patterns: readonly string[]
+    agent: string
+    origins: Origins
+  }): Approval {
+    const candidate = input.ruleset as Partial<Permission.Rule> | undefined
+    const rule =
+      candidate?.action === "deny" && typeof candidate.pattern === "string"
+        ? (candidate as Permission.Rule)
+        : { permission: input.permission, pattern: input.patterns[0] ?? "*", action: "deny" as const }
+    return classify({ rule, agent: input.agent, origins: input.origins })
+  }
 }
