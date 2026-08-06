@@ -232,7 +232,8 @@ export class AgentManagerProvider implements Disposable {
           if (status.state === "running" || status.state === "stopping") ids.add(status.worktreeId)
         }
         for (const sid of this.busySessions) {
-          const id = this.state?.getSession(sid)?.worktreeId
+          const owner = this.contexts.byLiveSession(sid)
+          const id = owner?.peekState()?.getSession(sid)?.worktreeId ?? this.state?.getSession(sid)?.worktreeId
           if (id) ids.add(id)
         }
         return ids
@@ -279,7 +280,12 @@ export class AgentManagerProvider implements Disposable {
     this.unsubSessions = this.connectionService.onEventFiltered(
       (event) => {
         const type = (event as { type?: string }).type
-        return type === "session.created" || type === "session.updated" || type === "session.deleted"
+        return (
+          type === "session.created" ||
+          type === "session.updated" ||
+          type === "session.deleted" ||
+          type === "session.error"
+        )
       },
       (event) => this.onSessionLifecycle(event),
     )
@@ -292,6 +298,10 @@ export class AgentManagerProvider implements Disposable {
    */
   private onSessionLifecycle(event: unknown): void {
     const ev = event as { type?: string; properties?: { info?: Session; sessionID?: string } }
+    if (ev.type === "session.error") {
+      if (ev.properties?.sessionID) this.busySessions.delete(ev.properties.sessionID)
+      return
+    }
     if (ev.type === "session.deleted") {
       const id = ev.properties?.sessionID
       if (!id) return

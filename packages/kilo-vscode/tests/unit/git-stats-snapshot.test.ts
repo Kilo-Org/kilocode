@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test"
 import * as fs from "fs/promises"
 import * as os from "os"
 import * as path from "path"
-import { GitOps } from "../../src/agent-manager/GitOps"
+import { GitOps, type ExecBufferResult } from "../../src/agent-manager/GitOps"
 import { GitStatsSnapshot, refOID } from "../../src/agent-manager/git-stats-snapshot"
 import { diffSummary } from "../../src/agent-manager/local-diff"
 
@@ -40,6 +40,22 @@ async function repo(test: (dir: string, base: string) => Promise<void>) {
 }
 
 describe("GitStatsSnapshot", () => {
+  it("accepts an absent path in an unmerged status record", async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "git-stats-conflict-"))
+    try {
+      const raw = Buffer.from(
+        "# branch.oid abc\0# branch.head main\0u UU N... 100644 100644 100644 100644 abc abc abc missing.txt\0",
+      )
+      const git = new GitOps({ log: () => undefined })
+      git.execGitBuffer = async (): Promise<ExecBufferResult> => ({ code: 0, stdout: raw, stderr: "" })
+      const status = await new GitStatsSnapshot(git).status(dir)
+      expect(status.dirty).toBe(true)
+      expect(status.fingerprint).toBeTruthy()
+    } finally {
+      await fs.rm(dir, { recursive: true, force: true })
+    }
+  })
+
   it("matches legacy aggregate stats with tracked and untracked changes", async () => {
     await repo(async (dir, base) => {
       await fs.writeFile(path.join(dir, "tracked.txt"), "one\nchanged\nthree\n")

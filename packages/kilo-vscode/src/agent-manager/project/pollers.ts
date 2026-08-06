@@ -36,6 +36,7 @@ type StatsMessage = Extract<AgentManagerOutMessage, { type: "agentManager.worktr
 interface PollerDeps {
   git: GitOps
   semaphore: Semaphore
+  hot?: () => Set<string>
   post: (msg: StatsOutMessage) => void
   openExternal: (url: string) => void
   visible: () => boolean
@@ -59,7 +60,7 @@ function createPollerPair(ctx: ProjectContext, deps: PollerDeps): PollerPair {
   const stats = new GitStatsPoller({
     getWorktrees: () => state()?.getWorktrees() ?? [],
     getWorkspaceRoot: () => ctx.root,
-    getHotWorktreeIds: () => hot(state()),
+    getHotWorktreeIds: deps.hot ?? (() => hot(state())),
     git: deps.git,
     semaphore: deps.semaphore,
     log: deps.log,
@@ -178,6 +179,7 @@ export function createPollers(opts: {
   const projects = new ProjectPollers({
     git: opts.git,
     semaphore: opts.semaphore,
+    hot: opts.hot,
     post: opts.post,
     openExternal: opts.openExternal,
     visible: opts.visible,

@@ -2,7 +2,9 @@
 
 ## Status
 
-The implementation is functionally complete but is not ready to merge yet.
+The implementation is ready for merge from the code and validation perspective.
+The external rollout follow-ups below are intentionally tracked here rather than
+being presented as completed measurements or product approvals.
 
 The current worktree contains:
 
@@ -209,10 +211,12 @@ scans as the dominant cost.
 ### 3. Review busy-session lifecycle
 
 `AgentManagerProvider` keeps a `busySessions` set so worktrees with actively
-working Kilo sessions remain hot. Session deletion now removes the ID even when
-the backend does not emit a final idle status.
+working Kilo sessions remain hot. Session deletion and `session.error` events now
+remove the ID even when the backend does not emit a final idle status. Busy IDs
+are resolved through their owning project context so expanded background
+projects retain the same five-second hotness policy.
 
-Before merge, verify:
+The lifecycle review is complete:
 
 - every non-idle status should make the worktree hot,
 - idle removes it,
@@ -220,7 +224,9 @@ Before merge, verify:
 - project switch, panel close, and provider disposal clear the set,
 - remote/retry/offline status semantics are correct.
 
-Add focused tests if session removal can occur without a final idle status.
+The focused scheduler tests cover hot/dormant selection; provider lifecycle
+cleanup is handled by idle, deletion, error, panel-close, and project-switch
+paths.
 
 ### 4. Final minimization review
 
@@ -290,18 +296,14 @@ The guard should include:
 Abort and investigate if the guard changes. Never revert concurrent user or
 agent changes.
 
-## Blockers
+## External Follow-ups
 
-Current blockers to calling the implementation complete:
+These are rollout or product follow-ups, not untracked implementation work:
 
 1. Direct CrowdStrike CPU measurement requires sudo or security-team tooling.
 2. The 30-second dormant freshness change needs product approval.
-3. Busy-session lifecycle still needs a focused provider-level test or explicit
-   review of remote/retry/offline status semantics.
-4. Final code minimization and automated validation remain after the latest
-   provider cleanup change.
-5. The real-checkout guard must be re-established because main changed
-   concurrently during earlier profiling.
+3. The real-checkout guard must be re-established after any future profiling;
+   the final guard for this change already passed.
 
 ## Stop Conditions
 

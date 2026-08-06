@@ -84,7 +84,7 @@ function records(raw: Buffer): { branch: string; head: string; paths: PathState[
     }
     if (item.startsWith("u ")) {
       const file = tail(item, 10)
-      if (file) paths.push({ file, missing: false })
+      if (file) paths.push({ file, missing: true })
     }
   }
 
