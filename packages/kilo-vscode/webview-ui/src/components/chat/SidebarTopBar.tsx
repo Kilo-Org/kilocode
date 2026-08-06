@@ -10,7 +10,6 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import { TelemetryEventName } from "../../../../src/services/telemetry/types"
-// Real codicon font, so these match the icons on each `kilo-code.new.sidebarTitle.*` command.
 import "@vscode/codicons/dist/codicon.css"
 
 export interface SidebarTopBarProps {
