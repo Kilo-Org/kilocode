@@ -160,7 +160,7 @@ jobs:
 
             archive="$PWD/dist/kilo-$target.zip"
             rm -f "$archive"
-            (cd "$(dirname "$binary")" && zip -qr "$archive" *)
+            (cd "$(dirname "$binary")" && zip -qr "$archive" -- *)
           done
 
       - name: Replace draft Darwin release assets
