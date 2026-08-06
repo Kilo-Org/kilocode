@@ -84,13 +84,17 @@ jobs:
       - typecheck-js
       - jetbrains-changes
       - typecheck-jetbrains
-    if: ${{ !cancelled() }}
+    if: always()
     steps:
       - name: Verify typecheck jobs passed
         run: |
           echo "typecheck-js=${{ needs.typecheck-js.result }}"
           echo "jetbrains-changes=${{ needs.jetbrains-changes.result }}"
           echo "typecheck-jetbrains=${{ needs.typecheck-jetbrains.result }}"
+          case "${{ needs.typecheck-js.result }},${{ needs.jetbrains-changes.result }},${{ needs.typecheck-jetbrains.result }}" in
+            *cancelled* | *abandoned*)
+              echo "::error::Typecheck jobs were cancelled or abandoned (transient/infra, not a test failure). A green re-run is required before merge." ;;
+          esac
           test "${{ needs.typecheck-js.result }}" = "success"
           test "${{ needs.jetbrains-changes.result }}" = "success"
           if [ "${{ needs.jetbrains-changes.outputs.jetbrains }}" = "true" ]; then

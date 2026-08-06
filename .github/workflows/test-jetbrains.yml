@@ -101,13 +101,17 @@ jobs:
     needs:
       - changes
       - unit
-    if: ${{ !cancelled() }}
+    if: always()
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - name: Verify JetBrains jobs passed
         run: |
           echo "changes=${{ needs.changes.result }}"
           echo "jetbrains=${{ needs.unit.result }}"
+          case "${{ needs.changes.result }},${{ needs.unit.result }}" in
+            *cancelled* | *abandoned*)
+              echo "::error::JetBrains jobs were cancelled or abandoned (transient/infra, not a test failure). A green re-run is required before merge." ;;
+          esac
           test "${{ needs.changes.result }}" = "success"
           if [ "${{ needs.changes.outputs.jetbrains }}" = "true" ]; then
             test "${{ needs.unit.result }}" = "success"

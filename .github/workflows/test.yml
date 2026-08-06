@@ -250,11 +250,16 @@ jobs:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     needs:
       - unit
-    if: ${{ !cancelled() }}
+    # kilocode_change - run even on cancel/abandon so the required check is red (blocks merge) instead of skipped/satisfied
+    if: always()
     steps:
       - name: Verify unit matrix passed
         run: |
           echo "unit=${{ needs.unit.result }}"
+          case "${{ needs.unit.result }}" in
+            cancelled | abandoned)
+              echo "::error::Unit jobs were cancelled or abandoned (transient/infra, not a test failure). A green re-run is required before merge." ;;
+          esac
           test "${{ needs.unit.result }}" = "success"
   # kilocode_change end
   # kilocode_change start
@@ -266,13 +271,18 @@ jobs:
       - unit
       - httpapi
       - jetbrains
-    if: ${{ !cancelled() }}
+    # kilocode_change - run even on cancel/abandon so the required check is red (blocks merge) instead of skipped/satisfied
+    if: always()
     steps:
       - name: Verify upstream test jobs passed # kilocode_change
         run: |
           echo "unit=${{ needs.unit.result }}"
           echo "httpapi=${{ needs.httpapi.result }}"
           echo "jetbrains=${{ needs.jetbrains.result }}"
+          case "${{ needs.unit.result }},${{ needs.httpapi.result }},${{ needs.jetbrains.result }},${{ needs.changes.result }}" in
+            *cancelled* | *abandoned*)
+              echo "::error::A test job was cancelled or abandoned (transient/infra, not a test failure). A green re-run is required before merge." ;;
+          esac
           test "${{ needs.unit.result }}" = "success"
           if [ "${{ needs.changes.outputs.general }}" = "true" ]; then
             test "${{ needs.httpapi.result }}" = "success"
