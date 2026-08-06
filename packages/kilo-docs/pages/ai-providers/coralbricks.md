@@ -79,7 +79,6 @@ export CORALBRICKS_API_KEY="ak_..."
             "output": 32768,
           },
         },
-        },
         "gpt-oss-120b": {
           "name": "GPT-OSS 120B",
           "limit": {
