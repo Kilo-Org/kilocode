@@ -102,7 +102,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "Siguiente pestaña",
   "agentManager.shortcuts.newTab": "Nueva pestaña",
   "agentManager.shortcuts.closeTab": "Cerrar pestaña",
-  "agentManager.shortcuts.toggleTerminal": "Alternar terminal",
+  "agentManager.shortcuts.toggleTerminal": "Enfocar / ocultar la terminal",
   "agentManager.shortcuts.runScript": "Ejecutar script",
   "agentManager.run.options": "Opciones de ejecución",
   "agentManager.run.configure": "Configurar script de ejecución",
