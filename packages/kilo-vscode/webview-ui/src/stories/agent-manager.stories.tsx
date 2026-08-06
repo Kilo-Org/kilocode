@@ -968,6 +968,9 @@ export const SideTerminalPanelEmpty: Story = {
                   state={state}
                   contextKey={() => LOCAL}
                   visible={() => true}
+                  nextKeybind="⌘⇧]"
+                  closeKeybind="⌘W"
+                  onFocusPrompt={() => undefined}
                   onSelect={() => undefined}
                   onClose={() => undefined}
                   onCloseOthers={() => undefined}
@@ -1010,6 +1013,9 @@ export const SideTerminalPanelTabs: Story = {
                   state={state}
                   contextKey={() => LOCAL}
                   visible={() => true}
+                  nextKeybind="⌘⇧]"
+                  closeKeybind="⌘W"
+                  onFocusPrompt={() => undefined}
                   onSelect={(id) => state.setSideActive(LOCAL, id)}
                   onClose={() => undefined}
                   onCloseOthers={() => undefined}

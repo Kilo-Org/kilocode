@@ -102,7 +102,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "Następna karta",
   "agentManager.shortcuts.newTab": "Nowa karta",
   "agentManager.shortcuts.closeTab": "Zamknij kartę",
-  "agentManager.shortcuts.toggleTerminal": "Przełącz terminal",
+  "agentManager.shortcuts.toggleTerminal": "Przenieś fokus do terminala / ukryj terminal",
   "agentManager.shortcuts.runScript": "Uruchom skrypt",
   "agentManager.run.options": "Opcje uruchamiania",
   "agentManager.run.configure": "Konfiguruj skrypt uruchamiania",

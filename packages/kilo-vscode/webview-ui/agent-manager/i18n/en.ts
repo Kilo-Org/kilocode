@@ -105,7 +105,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "Next tab",
   "agentManager.shortcuts.newTab": "New tab",
   "agentManager.shortcuts.closeTab": "Close tab",
-  "agentManager.shortcuts.toggleTerminal": "Toggle terminal",
+  "agentManager.shortcuts.toggleTerminal": "Focus / hide terminal",
   "agentManager.shortcuts.runScript": "Run script",
   "agentManager.run.options": "Run options",
   "agentManager.run.configure": "Configure run script",
