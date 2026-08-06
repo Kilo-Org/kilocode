@@ -2867,6 +2867,11 @@ body.am-wt-dragging-active * {
   overflow: visible;
 }
 
+[data-component="dialog"]:has(.am-nv-project-inline [data-component="popover-content"]) [data-slot="dialog-content"],
+[data-component="dialog"]:has(.am-nv-project-inline [data-component="popover-content"]) [data-slot="dialog-body"] {
+  overflow: visible;
+}
+
 .am-slash-command-dropdown {
   min-width: 0;
   max-width: none;
@@ -3655,6 +3660,22 @@ body.am-wt-dragging-active * {
   color: var(--text-on-interactive-base) !important;
 }
 
+/* Project scope selector — inline with the New/Import tabs */
+
+.am-nv-project-inline {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  flex: 0 1 260px;
+  min-width: 0;
+  margin-left: auto;
+}
+
+.am-nv-project-inline .am-selector-wrapper {
+  width: 100%;
+  min-width: 0;
+}
+
 /* Import tab layout */
 
 .am-import-tab {
@@ -3903,6 +3924,68 @@ body.am-wt-dragging-active * {
   padding: 16px;
   text-align: center;
   font-size: var(--kilo-font-size-12);
+  color: var(--text-weaker);
+}
+
+/* Project option rows in the New Worktree project dropdown. */
+
+.am-project-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-base);
+  font-size: var(--font-size-base);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.am-project-option:hover:not(:disabled) {
+  background: var(--surface-inset-base-hover);
+}
+
+.am-project-option-active {
+  background: var(--surface-inset-base);
+}
+
+.am-project-option:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.am-project-option-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.am-project-option-left [data-component="icon"] {
+  color: var(--text-weaker);
+  flex-shrink: 0;
+}
+
+.am-project-option-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
+  max-width: 45%;
+}
+
+.am-project-option-root {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  font-size: var(--kilo-font-size-11);
   color: var(--text-weaker);
 }
 

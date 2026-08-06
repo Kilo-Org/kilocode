@@ -111,6 +111,9 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.cancel": "取消",
   "agentManager.dialog.removeStaleWorktree.confirm": "移除失效 Worktree",
 
+  "agentManager.dialog.project.select": "选择项目",
+  "agentManager.dialog.project.untrusted": "请先在侧边栏中信任此项目",
+  "agentManager.dialog.project.missing": "未找到仓库",
   "agentManager.dialog.openWorktree": "新建工作树",
   "agentManager.dialog.configureWorktree": "配置新 Worktree...",
   "agentManager.dialog.tab.new": "新建",
