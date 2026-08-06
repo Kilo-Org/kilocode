@@ -27,18 +27,19 @@
    Sidebar Top Bar
    ============================================ */
 
-/* Always-visible in-webview equivalent of the native `view/title` toolbar.
-   VS Code's own title actions live outside the webview DOM and disappear
-   entirely when the view is docked in the Secondary Side Bar (or otherwise
-   too narrow for VS Code to render them), so this bar is the single source
-   of truth for these actions regardless of where the view is docked. */
+/* Always-visible in-webview equivalent of the native `view/title` toolbar, which
+   disappears in the Secondary Side Bar with no way to detect or work around
+   that. border-top/-bottom rule it off from the native pane title above (which
+   a webview can't render into) and the chat content below. */
 .sidebar-top-bar {
+  --top-bar-border: 1px solid var(--vscode-sideBar-border, var(--vscode-widget-border));
   display: flex;
   align-items: center;
   gap: 2px;
   flex-shrink: 0;
   padding: 4px 6px;
-  border-bottom: 1px solid var(--vscode-sideBar-border, var(--vscode-widget-border));
+  border-top: var(--top-bar-border);
+  border-bottom: var(--top-bar-border);
   overflow-x: auto;
   scrollbar-width: none;
 }
