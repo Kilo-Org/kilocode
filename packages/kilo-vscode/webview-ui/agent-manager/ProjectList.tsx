@@ -22,7 +22,7 @@ import { ProjectBranchDialog } from "./ProjectBranchDialog"
 import type { ProjectStore } from "./project/store"
 import type { ModeRouter } from "./mode-router"
 
-const location = (state: AgentManagerStateMessage, session: ProjectSessionInfo, local: string) => {
+const place = (state: AgentManagerStateMessage, session: ProjectSessionInfo, local: string) => {
   const wt = state.worktrees.find((item) => item.id === session.worktreeId)
   return wt?.label || wt?.branch || local
 }
@@ -93,7 +93,8 @@ export const ProjectList: Component<Props> = (props) => {
         })
       }
       for (const session of props.sessions[project.id] ?? []) {
-        const where = location(state, session, props.t("agentManager.local"))
+        const wt = state.worktrees.find((item) => item.id === session.worktreeId)
+        const where = place(state, session, props.t("agentManager.local"))
         items.push({
           key: `${project.id}:session:${session.id}`,
           projectId: project.id,
@@ -101,7 +102,7 @@ export const ProjectList: Component<Props> = (props) => {
           group: "sessions",
           title: session.title || props.t("agentManager.session.untitled"),
           meta: [project.label, where],
-          search: [project.label, where, session.title, session.id].filter(Boolean).join(" "),
+          search: [project.label, where, wt?.branch, session.title, session.id].filter(Boolean).join(" "),
           updatedAt: session.updatedAt,
           state: "idle",
           visible: project.expanded,
