@@ -11,6 +11,7 @@ import { DaemonCommand } from "@/kilocode/cli/cmd/daemon"
 import { DevSetupCommand, DevAliasCommand } from "@/kilocode/cli/dev-setup"
 import { RemoteCommand } from "@/cli/cmd/remote"
 import { ConfigCommand as ConfigCLICommand } from "@/cli/cmd/config"
+import { Startup } from "@/kilocode/startup"
 
 const log = Log.create({ service: "kilocode.cli" })
 
@@ -75,10 +76,12 @@ export namespace KiloCli {
     info = opts.help === true || opts.version === true
     if (info) return
 
-    const { KiloLog } = await import("@/kilocode/log")
-    await KiloLog.init()
+    await Startup.measure("bootstrap.log", async () => {
+      const { KiloLog } = await import("@/kilocode/log")
+      await KiloLog.init()
+    })
 
-    const gateway = await import("@kilocode/kilo-gateway")
+    const gateway = await Startup.measure("bootstrap.gateway", () => import("@kilocode/kilo-gateway"))
     if (!process.env[gateway.ENV_FEATURE])
       process.env[gateway.ENV_FEATURE] = process.argv.includes("serve") ? "unknown" : "cli"
     if (!process.env[gateway.ENV_VERSION]) process.env[gateway.ENV_VERSION] = InstallationVersion
@@ -86,41 +89,55 @@ export namespace KiloCli {
 
     // Must run before AppRuntime initializes the SQLite database, or the marker
     // exists before legacy JSON can be imported.
-    const { JsonMigration } = await import("@/kilocode/storage/json-migration")
-    await JsonMigration.bootstrap()
-
-    const { AppRuntime } = await import("@/effect/app-runtime")
-    const { Config } = await import("@/config/config")
-    const cfg = await AppRuntime.runPromise(Config.Service.use((c) => c.getGlobal()))
-
-    const { Global } = await import("@opencode-ai/core/global")
-    const { Telemetry } = await import("@kilocode/kilo-telemetry")
-    await Telemetry.init({
-      dataPath: Global.Path.data,
-      version: InstallationVersion,
-      enabled: cfg.experimental?.openTelemetry !== false,
+    await Startup.measure("bootstrap.json-migration", async () => {
+      const { JsonMigration } = await import("@/kilocode/storage/json-migration")
+      await JsonMigration.bootstrap()
     })
 
-    const { Auth } = await import("@/auth")
+    const runtime = await Startup.measure("bootstrap.runtime-import", async () => {
+      const { AppRuntime } = await import("@/effect/app-runtime")
+      const { Config } = await import("@/config/config")
+      return { AppRuntime, Config }
+    })
+    const cfg = await Startup.measure("bootstrap.global-config", () =>
+      runtime.AppRuntime.runPromise(runtime.Config.Service.use((c) => c.getGlobal())),
+    )
+
+    const telemetry = await Startup.measure("bootstrap.telemetry", async () => {
+      const { Global } = await import("@opencode-ai/core/global")
+      const { Telemetry } = await import("@kilocode/kilo-telemetry")
+      await Telemetry.init({
+        dataPath: Global.Path.data,
+        version: InstallationVersion,
+        enabled: cfg.experimental?.openTelemetry !== false,
+      })
+      return Telemetry
+    })
+
+    const { Auth } = await Startup.measure("bootstrap.auth-import", () => import("@/auth"))
     const { migrateLegacyKiloAuth } = gateway
 
     // Migrate legacy Kilo CLI auth (~/.kilocode/cli/config.json) into auth.json if present.
-    await migrateLegacyKiloAuth(
-      async () => (await AppRuntime.runPromise(Auth.Service.use((s) => s.get("kilo")))) !== undefined,
-      async (auth) => AppRuntime.runPromise(Auth.Service.use((s) => s.set("kilo", auth))),
+    await Startup.measure("bootstrap.auth-migration", () =>
+      migrateLegacyKiloAuth(
+        async () => (await runtime.AppRuntime.runPromise(Auth.Service.use((s) => s.get("kilo")))) !== undefined,
+        async (auth) => runtime.AppRuntime.runPromise(Auth.Service.use((s) => s.set("kilo", auth))),
+      ),
     )
 
-    const auth = await AppRuntime.runPromise(Auth.Service.use((s) => s.get("kilo")))
+    const auth = await Startup.measure("bootstrap.auth", () =>
+      runtime.AppRuntime.runPromise(Auth.Service.use((s) => s.get("kilo"))),
+    )
     if (auth) {
       const token = auth.type === "oauth" ? auth.access : auth.key
       const account = auth.type === "oauth" ? auth.accountId : undefined
-      await Telemetry.updateIdentity(token, account)
+      await Startup.measure("bootstrap.identity", () => telemetry.updateIdentity(token, account))
     }
 
-    Telemetry.trackCliStart()
+    telemetry.trackCliStart()
     // Overlap the event upload with command execution so exit is not delayed by
     // a network round trip (#10242).
-    Telemetry.flushInBackground()
+    telemetry.flushInBackground()
   }
 
   // Runs from the `finally` block on every exit path.

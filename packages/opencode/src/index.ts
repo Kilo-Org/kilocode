@@ -1,3 +1,4 @@
+import { Startup } from "@/kilocode/startup" // kilocode_change - opt-in startup profiling begins before the shared import graph
 import yargs from "yargs"
 import { hideBin } from "yargs/helpers"
 import { RunCommand } from "./cli/cmd/run"
@@ -33,6 +34,7 @@ import { KiloCli } from "@/kilocode/cli/setup" // kilocode_change
 import * as Log from "@opencode-ai/core/util/log" // kilocode_change
 import { ensureProcessMetadata } from "@opencode-ai/core/util/opencode-process" // kilocode_change
 
+Startup.mark("imports") // kilocode_change
 const args = hideBin(process.argv)
 const metadata = ensureProcessMetadata("main") // kilocode_change - correlate logs across the CLI and TUI worker
 
@@ -70,6 +72,7 @@ let cli = yargs(args) // kilocode_change
     type: "boolean",
   })
   .middleware(async (opts) => {
+    Startup.mark("middleware") // kilocode_change
     if (opts.printLogs) process.env.KILO_PRINT_LOGS = "1"
     if (opts.logLevel) process.env.KILO_LOG_LEVEL = opts.logLevel
     if (opts.pure) {
@@ -81,7 +84,7 @@ let cli = yargs(args) // kilocode_change
     process.env.AGENT = "1"
     process.env.OPENCODE = "1"
     process.env.KILO_PID = String(process.pid)
-    await KiloCli.bootstrap(opts) // kilocode_change - env tagging, telemetry init, legacy JSON-to-SQLite migration, and auth migration
+    await Startup.measure("bootstrap", () => KiloCli.bootstrap(opts)) // kilocode_change - profile env tagging, telemetry init, legacy JSON-to-SQLite migration, and auth migration
     // kilocode_change start - retain Kilo process/run correlation metadata in startup logs
     Log.Default.info("opencode", {
       version: InstallationVersion,
@@ -136,6 +139,7 @@ cli = cli
   .strict()
 
 try {
+  Startup.mark("parse") // kilocode_change
   if (args.includes("-h") || args.includes("--help")) {
     await cli.parse(args, (err: Error | undefined, _argv: unknown, out: string) => {
       if (err) throw err
@@ -145,6 +149,7 @@ try {
   } else {
     await cli.parse()
   }
+  Startup.mark("command.done") // kilocode_change
 } catch (e) {
   const formatted = FormatError(e)
   if (formatted) UI.error(formatted)
@@ -154,7 +159,7 @@ try {
   }
   process.exitCode = 1
 } finally {
-  await KiloCli.shutdown() // kilocode_change - telemetry/session-export shutdown + instance disposal
+  await Startup.measure("shutdown", () => KiloCli.shutdown()) // kilocode_change - profile telemetry/session-export shutdown + instance disposal
 
   // Some subprocesses don't react properly to SIGTERM and similar signals.
   // Most notably, some docker-container-based MCP servers don't handle such signals unless

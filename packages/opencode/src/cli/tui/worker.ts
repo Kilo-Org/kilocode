@@ -1,3 +1,4 @@
+import { Startup } from "@/kilocode/startup" // kilocode_change - opt-in worker startup profiling begins before the shared import graph
 import { Server } from "@/server/server"
 import { InstanceRuntime } from "@/project/instance-runtime"
 import { Rpc } from "@/util/rpc"
@@ -17,8 +18,38 @@ import { createWorkerShutdown } from "@/cli/tui/worker-shutdown" // kilocode_cha
 import { KiloSessions } from "@/kilo-sessions/kilo-sessions" // kilocode_change
 
 ensureProcessMetadata("worker") // kilocode_change - retain worker role and parent run correlation
-await KiloLog.init() // kilocode_change - keep compatibility logs off the TUI terminal
+Startup.setRole("worker") // kilocode_change
+Startup.mark("worker.imports") // kilocode_change
+await Startup.measure("worker.log", () => KiloLog.init()) // kilocode_change - keep compatibility logs off the TUI terminal
 Heap.start()
+
+type FetchInput = { url: string; method: string; headers: Record<string, string>; body?: string }
+
+async function request(input: FetchInput) {
+  const headers = { ...input.headers }
+  const auth = ServerAuth.header()
+  if (auth && !headers["authorization"] && !headers["Authorization"]) {
+    headers["Authorization"] = auth
+  }
+  const req = new Request(input.url, {
+    method: input.method,
+    headers,
+    body: input.body,
+  })
+  const response = await Server.Default().app.fetch(req)
+  const body = await response.text()
+  return {
+    status: response.status,
+    headers: Object.fromEntries(response.headers.entries()),
+    body,
+  }
+}
+
+function route(value: string) {
+  return new URL(value).pathname.replace(/\/(?:[a-z]{3}_[A-Za-z0-9_-]+|[a-f0-9]{32,})(?=\/|$)/g, "/:id")
+}
+
+let trace = Startup.active()
 
 // kilocode_change start - keep upstream's keep-alive intent but never swallow the error silently
 const onUnhandledRejection = (error: unknown) => {
@@ -61,24 +92,12 @@ export const rpc = {
     remoteExit.gone()
   },
   // kilocode_change end
-  async fetch(input: { url: string; method: string; headers: Record<string, string>; body?: string }) {
-    const headers = { ...input.headers }
-    const auth = ServerAuth.header()
-    if (auth && !headers["authorization"] && !headers["Authorization"]) {
-      headers["Authorization"] = auth
-    }
-    const request = new Request(input.url, {
-      method: input.method,
-      headers,
-      body: input.body,
-    })
-    const response = await Server.Default().app.fetch(request)
-    const body = await response.text()
-    return {
-      status: response.status,
-      headers: Object.fromEntries(response.headers.entries()),
-      body,
-    }
+  async fetch(input: FetchInput) {
+    if (!trace) return request(input)
+    const path = route(input.url)
+    const result = await Startup.measure("worker.fetch", () => request(input), { method: input.method, path })
+    if (path === "/config/providers") trace = false
+    return result
   },
   snapshot() {
     const result = writeHeapSnapshot("server.heapsnapshot")
@@ -114,3 +133,4 @@ export const rpc = {
 }
 
 Rpc.listen(rpc)
+Startup.mark("worker.ready") // kilocode_change

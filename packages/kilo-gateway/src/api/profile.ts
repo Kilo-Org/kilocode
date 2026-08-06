@@ -1,6 +1,6 @@
 import { select } from "@clack/prompts"
 import type { KilocodeProfile, Organization, KilocodeBalance } from "../types.js"
-import { KILO_API_BASE, DEFAULT_MODEL, DEFAULT_FREE_MODEL } from "./constants.js"
+import { KILO_API_BASE, DEFAULT_MODEL, DEFAULT_FREE_MODEL, MODELS_FETCH_TIMEOUT_MS } from "./constants.js"
 
 /**
  * Fetch user profile from Kilo API
@@ -99,7 +99,7 @@ export const getKiloBalance = fetchBalance
  * When token is provided, returns the authenticated user's default model
  * When no token is provided, returns the default free model for anonymous usage
  */
-export async function fetchDefaultModel(token?: string, organizationId?: string): Promise<string> {
+export async function fetchDefaultModel(token?: string, organizationId?: string, input?: AbortSignal): Promise<string> {
   const path = organizationId ? `/api/organizations/${organizationId}/defaults` : `/api/defaults`
   const url = `${KILO_API_BASE}${path}`
 
@@ -111,7 +111,9 @@ export async function fetchDefaultModel(token?: string, organizationId?: string)
       headers.Authorization = `Bearer ${token}`
     }
 
-    const response = await fetch(url, { headers })
+    const timeout = AbortSignal.timeout(MODELS_FETCH_TIMEOUT_MS)
+    const signal = input ? AbortSignal.any([input, timeout]) : timeout
+    const response = await fetch(url, { headers, signal })
 
     if (!response.ok) {
       return token ? DEFAULT_MODEL : DEFAULT_FREE_MODEL

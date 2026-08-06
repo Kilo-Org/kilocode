@@ -9,6 +9,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
 import { httpClient } from "@opencode-ai/core/effect/app-node-platform" // kilocode_change
+import { Startup } from "@/kilocode/startup" // kilocode_change
 
 type Models = Provider["models"]
 type KiloOptions = NonNullable<Parameters<typeof fetchKiloModels>[0]>
@@ -164,7 +165,10 @@ export const layer: Layer.Layer<
     })
 
     const fetchModels = (providerID: string, options: Options): Effect.Effect<Result, unknown> => {
-      if (providerID === "kilo") return kilo.fetch(options)
+      if (providerID === "kilo") {
+        const done = Startup.timer("models.fetch", { provider: providerID })
+        return kilo.fetch(options).pipe(Effect.ensuring(Effect.sync(done)))
+      }
       if (providerID === "apertis") return fetchApertisModels(options).pipe(Effect.map((models) => ({ models })))
       log.debug("provider not implemented", { providerID })
       return Effect.succeed({ models: {} })

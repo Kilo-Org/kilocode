@@ -8,7 +8,7 @@ import { filterPromptTrainingModels, nonEmptyProviders } from "@/kilocode/provid
 // kilocode_change end
 import { Provider } from "@/provider/provider"
 import * as InstanceState from "@/effect/instance-state"
-import { Effect } from "effect"
+import { Effect, Fiber } from "effect" // kilocode_change
 import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi" // kilocode_change
 import { InstanceHttpApi } from "../api"
 import { markInstanceForDisposal } from "../lifecycle"
@@ -37,6 +37,20 @@ export const configHandlers = HttpApiBuilder.group(InstanceHttpApi, "config", (h
     const providers = Effect.fn("ConfigHttpApi.providers")(function* () {
       // kilocode_change start
       const config = yield* configSvc.get()
+      const allowed =
+        (!config.enabled_providers || config.enabled_providers.includes(ProviderV2.ID.kilo)) &&
+        !config.disabled_providers?.includes(ProviderV2.ID.kilo)
+      const auth = yield* Auth.Service
+      const fiber = allowed
+        ? yield* Effect.forkChild(
+            Effect.gen(function* () {
+              const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.Unauthorized({})))
+              const token = info?.type === "oauth" ? info.access : info?.key
+              const organizationId = info?.type === "oauth" ? info.accountId : undefined
+              return yield* Effect.promise((signal) => fetchDefaultModel(token, organizationId, signal))
+            }),
+          )
+        : undefined
       const providers = filterPromptTrainingModels(
         yield* providerSvc.list(),
         config.hide_prompt_training_models === true,
@@ -45,12 +59,8 @@ export const configHandlers = HttpApiBuilder.group(InstanceHttpApi, "config", (h
       // kilocode_change end
 
       // kilocode_change start - Fetch default model from Kilo API when the kilo provider is available.
-      if (providers[ProviderV2.ID.kilo]) {
-        const auth = yield* Auth.Service
-        const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.Unauthorized({}))) // kilocode_change
-        const token = info?.type === "oauth" ? info.access : info?.key
-        const organizationId = info?.type === "oauth" ? info.accountId : undefined
-        const model = yield* Effect.promise(() => fetchDefaultModel(token, organizationId))
+      if (providers[ProviderV2.ID.kilo] && fiber) {
+        const model = yield* Fiber.join(fiber)
         if (model && providers[ProviderV2.ID.kilo]?.models[model]) defaults[ProviderV2.ID.kilo] = ModelV2.ID.make(model)
       }
       // kilocode_change end

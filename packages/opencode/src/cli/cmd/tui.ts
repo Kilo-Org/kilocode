@@ -25,6 +25,7 @@ import {
 // kilocode_change end
 import type { RemoteExitBridgeClient } from "@/kilocode/cli/cmd/tui/remote-exit-bridge" // kilocode_change - runtime import deferred
 import type { Exit } from "@opencode-ai/tui/context/exit" // kilocode_change
+import { Startup } from "@/kilocode/startup" // kilocode_change
 
 declare global {
   const KILO_WORKER_PATH: string
@@ -63,10 +64,19 @@ export async function runEmbeddedRemoteExitBridge(input: {
 
 // kilocode_change start - share the extracted TUI runner between daemon and worker paths
 async function start(input: StartInput, remoteExitClient?: RpcClient) {
-  const { Effect } = await import("effect")
-  const { run } = await import("../tui/layer")
-  const { createLegacyTuiPluginHost } = await import("@/plugin/tui/runtime")
+  const { Effect, run, createLegacyTuiPluginHost } = await Startup.measure("tui.imports", async () => {
+    const [effect, layer, runtime] = await Promise.all([
+      import("effect"),
+      import("../tui/layer"),
+      import("@/plugin/tui/runtime"),
+    ])
+    const { Effect } = effect
+    const { run } = layer
+    const { createLegacyTuiPluginHost } = runtime
+    return { Effect, run, createLegacyTuiPluginHost }
+  })
   const pluginHost = createLegacyTuiPluginHost()
+  Startup.mark("tui.run")
   if (!remoteExitClient) {
     await Effect.runPromise(run({ ...input, pluginHost }))
     return
@@ -213,6 +223,7 @@ export const TuiThreadCommand = cmd({
         hidden: true,
       }),
   handler: async (args) => {
+    Startup.mark("tui.handler") // kilocode_change
     if (args.replay === true) {
       UI.error("--replay is not supported; replay is enabled by default")
       process.exitCode = 1
@@ -259,9 +270,18 @@ export const TuiThreadCommand = cmd({
 
     // kilocode_change start - lazy Kilo implementations so other CLI commands
     // don't pay their module cost at startup
-    const { importCloudSession, localSessionID, validateCloudFork } = await import("@/kilocode/cloud-session")
-    const { KiloTuiThreadDaemon } = await import("@/kilocode/cli/cmd/tui/thread")
-    const { preload } = await import("@/kilocode/cli/cmd/tui")
+    const { importCloudSession, localSessionID, validateCloudFork, KiloTuiThreadDaemon, preload } =
+      await Startup.measure("tui.setup-imports", async () => {
+        const [cloud, thread, tui] = await Promise.all([
+          import("@/kilocode/cloud-session"),
+          import("@/kilocode/cli/cmd/tui/thread"),
+          import("@/kilocode/cli/cmd/tui"),
+        ])
+        const { importCloudSession, localSessionID, validateCloudFork } = cloud
+        const { KiloTuiThreadDaemon } = thread
+        const { preload } = tui
+        return { importCloudSession, localSessionID, validateCloudFork, KiloTuiThreadDaemon, preload }
+      })
     // kilocode_change end
     const unguard = win32InstallCtrlCGuard()
     const shutdown = {
@@ -301,7 +321,12 @@ export const TuiThreadCommand = cmd({
       }
       const cwd = Filesystem.resolve(process.cwd())
       // kilocode_change start - default TUI sessions attach to the daemon unless explicitly disabled
-      if (await KiloTuiThreadDaemon.attach({ args, cwd, input: () => input(args.prompt), start })) return
+      if (
+        await Startup.measure("tui.daemon", () =>
+          KiloTuiThreadDaemon.attach({ args, cwd, input: () => input(args.prompt), start }),
+        )
+      )
+        return
       // kilocode_change end
       const auth = KiloTuiThreadDaemon.workerAuth() // kilocode_change - protect TUI-owned HTTP routes from unauthenticated local callers
       // kilocode_change start - propagate stable run metadata and an explicit worker role
@@ -316,6 +341,7 @@ export const TuiThreadCommand = cmd({
         preload: preloads, // kilocode_change
         env, // kilocode_change
       })
+      Startup.mark("tui.worker.spawned") // kilocode_change
       worker.onerror = (e) => {
         console.error("TUI worker error", e.error ?? e.message)
       }
@@ -403,8 +429,8 @@ export const TuiThreadCommand = cmd({
       orphanWatch.unref()
       // kilocode_change end
 
-      const prompt = await input(args.prompt)
-      const config = await TuiConfig.get()
+      const prompt = await Startup.measure("tui.input", () => input(args.prompt))
+      const config = await Startup.measure("tui.config", () => TuiConfig.get())
 
       const network = resolveNetworkOptionsNoConfig(args)
       const external = hasArg("--port") || hasArg("--hostname") || network.mdns === true
@@ -466,31 +492,33 @@ export const TuiThreadCommand = cmd({
         }
 
         // kilocode_change start
-        await start(
-          {
-            // kilocode_change - shared lazy loader also supports daemon attach
-            url: transport.url,
-            async onSnapshot() {
-              const tui = writeHeapSnapshot("tui.heapsnapshot")
-              const server = await client.call("snapshot", undefined)
-              return [tui, server]
+        await Startup.measure("tui.session", () =>
+          start(
+            {
+              // kilocode_change - shared lazy loader also supports daemon attach
+              url: transport.url,
+              async onSnapshot() {
+                const tui = writeHeapSnapshot("tui.heapsnapshot")
+                const server = await client.call("snapshot", undefined)
+                return [tui, server]
+              },
+              config,
+              directory: cwd,
+              fetch: transport.fetch,
+              headers: transport.headers,
+              events: transport.events,
+              args: {
+                continue: args.continue,
+                sessionID: args.session,
+                agent: args.agent,
+                model: args.model,
+                prompt,
+                fork: args.fork,
+                auto: args.auto || args.yolo || args["dangerously-skip-permissions"],
+              },
             },
-            config,
-            directory: cwd,
-            fetch: transport.fetch,
-            headers: transport.headers,
-            events: transport.events,
-            args: {
-              continue: args.continue,
-              sessionID: args.session,
-              agent: args.agent,
-              model: args.model,
-              prompt,
-              fork: args.fork,
-              auto: args.auto || args.yolo || args["dangerously-skip-permissions"],
-            },
-          },
-          embeddedRemoteExitClient(external, client),
+            embeddedRemoteExitClient(external, client),
+          ),
         )
         // kilocode_change end
       } finally {
