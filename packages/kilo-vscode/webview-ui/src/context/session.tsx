@@ -74,7 +74,14 @@ import { errorIDs } from "./session-errors"
 import { PartStash } from "./part-stash"
 import { mergeParts, sameParts } from "./session-parts"
 import { state as todoState } from "./todo-revert"
-import { getAgentVariant, getVariant, sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
+import {
+  getAgentVariant,
+  getVariant,
+  preserveVariant,
+  sessionVariantKeys,
+  transferVariants,
+  variantKey,
+} from "./session-variant-store"
 import { KILO_AUTO, KILO_PROVIDER_ID, parseModelString } from "../../../src/shared/provider-model"
 import { reviewMetadata, type ReviewMessageData } from "../../../src/shared/review-comments"
 import { visibleMessages as filterVisibleMessages } from "./session-queue"
@@ -663,9 +670,22 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
+  function carryVariant(selection: ModelSelection, current: string | undefined, agent: string, sessionID?: string) {
+    const value = preserveVariant(current, Object.keys(provider.findModel(selection)?.variants ?? {}))
+    if (!value) return
+    const key = variantKey(selection, agent, sessionID)
+    setStore("variantSelections", key, value)
+    if (!sessionID) vscode.postMessage({ type: "persistVariant", key, value })
+  }
+
   function selectModel(providerID: string, modelID: string, sessionID?: string) {
     const sid = sessionID ?? currentSessionID()
-    applyModel(agentForScope(sid), { providerID, modelID }, sid)
+    const agent = agentForScope(sid)
+    const current = selected(sid)
+    const value = current ? currentVariant(sid) : undefined
+    const selection = { providerID, modelID }
+    applyModel(agent, selection, sid)
+    carryVariant(selection, value, agent, sid)
     if (sid) {
       hideErrors(sid)
     }
@@ -3033,8 +3053,12 @@ export const SessionProvider: ParentComponent = (props) => {
       // agent may not yet be assigned (sendInitialMessage calls setSessionModel
       // before setSessionAgent), so the write would land on defaultAgent() and
       // corrupt the default mode's model for later sessions.
+      const agent = store.agentSelections[sessionID] ?? defaultAgent()
+      const current = selected(sessionID)
+      const value = current ? currentVariant(sessionID) : undefined
       const model = { providerID, modelID }
       setStore("sessionOverrides", sessionID, model)
+      carryVariant(model, value, agent, sessionID)
     },
     setSessionAgent: (sessionID: string, name: string) => {
       setStore("agentSelections", sessionID, name)
