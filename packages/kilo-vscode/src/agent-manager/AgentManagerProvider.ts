@@ -1698,6 +1698,7 @@ export class AgentManagerProvider implements Disposable {
     panel.reveal(false)
     focusPanelPrompt(panel, this.waitForPanelReady(panel), this.waitForPanelActive(panel))
   }
+
   public isActive(): boolean {
     return this.panel?.active === true
   }
