@@ -71,6 +71,9 @@ export class TerminalManager {
       directory: params.cwd,
       cwd: params.cwd,
       title: params.title,
+      // xterm's DOM renderer cannot draw the Unicode sextant glyphs used by
+      // Kilo's modern wordmark, so use the compatible logo in embedded tabs.
+      env: { KILO_UNICODE_LOGO: "0" },
     })
     if (error || !data) {
       const err = error instanceof Error ? error.message : String(error ?? "unknown error")
