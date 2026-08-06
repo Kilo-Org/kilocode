@@ -8,6 +8,8 @@ export const defaultBindings: Record<string, string> = {
   nextSession: isMac ? "⌘⌥↓" : "Ctrl+Alt+↓",
   previousTab: isMac ? "⌘⌥←" : "Ctrl+Alt+←",
   nextTab: isMac ? "⌘⌥→" : "Ctrl+Alt+→",
+  previousTerminal: isMac ? "⌘⇧[" : "Ctrl+Shift+[",
+  nextTerminal: isMac ? "⌘⇧]" : "Ctrl+Shift+]",
   search: isMac ? "⌘F" : "Ctrl+F",
   showTerminal: isMac ? "⌘/" : "Ctrl+/",
   newTerminal: isMac ? "⌘⇧T" : "Ctrl+Shift+T",

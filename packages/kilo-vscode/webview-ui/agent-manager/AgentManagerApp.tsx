@@ -395,9 +395,16 @@ const AgentManagerContent: Component = () => {
       { defer: true },
     ),
   )
-
   type FocusOwner = "prompt" | { terminal: string }
   const focusMemory = new Map<string, FocusOwner>()
+  let focusInputUntil = 0
+  const focusPrompt = () => {
+    focusInputUntil = Date.now() + 500
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+    terms.setActiveId(undefined)
+    terms.setFocusedId(undefined)
+    requestChatFocus(true)
+  }
   const focusKey = () => {
     const context = terms.sideKey()
     const sessionID = session.currentSessionID() ?? activePendingId() ?? "new"
@@ -429,6 +436,7 @@ const AgentManagerContent: Component = () => {
     return terminalVisible() ? false : true
   }
   const restoreFocus = () => {
+    if (Date.now() < focusInputUntil) return
     const key = focusKey()
     const owner = focusMemory.get(key)
     if (owner && owner !== "prompt") {
@@ -1165,6 +1173,8 @@ const AgentManagerContent: Component = () => {
       else if (msg.action === "sessionNext") projectNav.step("down")
       else if (msg.action === "tabPrevious") navigateTab("left")
       else if (msg.action === "tabNext") navigateTab("right")
+      else if (msg.action === "terminalPrevious") cycleTerminal("previous")
+      else if (msg.action === "terminalNext") cycleTerminal("next")
       else if (msg.action === "search") {
         if (!sidebarCollapsed()) sidebarSearchMenu?.open()
         else {
@@ -1188,11 +1198,13 @@ const AgentManagerContent: Component = () => {
       else if (msg.action === "advancedWorktree") showNewWorktreeDialog()
       else if (msg.action === "closeWorktree") closeSelectedWorktree()
       else if (msg.action === "showShortcuts") handleShowKeyboardShortcuts()
-      else if (msg.action === "focusInput") requestChatFocus(true)
+      else if (msg.action === "focusInput") focusPrompt()
       else if (msg.action === "focusSearch")
         focusChatSearch({ history: setHistory, review: setReviewActive, terminal: () => terms.setActiveId(undefined) })
-      else if (msg.action === "newTerminal") termHandlers.requestNew()
-      else if (msg.action === "cycleAgentMode" && document.hasFocus()) {
+      else if (msg.action === "newTerminal") {
+        if (terms.sideFocusedId()) termHandlers.addSide()
+        else termHandlers.requestNew()
+      } else if (msg.action === "cycleAgentMode" && document.hasFocus()) {
         if (!mode.dispatch(1)) cycleAgent(1)
       } else if (msg.action === "cyclePreviousAgentMode" && document.hasFocus()) {
         if (!mode.dispatch(-1)) cycleAgent(-1)
@@ -1203,7 +1215,6 @@ const AgentManagerContent: Component = () => {
       }
     }
     window.addEventListener("message", handler)
-
     // Prevent Cmd/Ctrl shortcuts from triggering native browser actions
     const preventDefaults = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return
@@ -1217,8 +1228,9 @@ const AgentManagerContent: Component = () => {
       if (["t", "w", "n", "d", "e", "f"].includes(e.key.toLowerCase()) && !e.shiftKey) {
         e.preventDefault()
       }
-      // Prevent defaults for shift variants (close worktree, advanced/new/open worktree, open PR)
-      if (["w", "n", "o", "r"].includes(e.key.toLowerCase()) && e.shiftKey) {
+      // Prevent browser defaults for shift variants (new terminal, close worktree,
+      // advanced/new/open worktree, open PR, terminal cycling)
+      if (["t", "m", "w", "n", "o", "r", "[", "]"].includes(e.key.toLowerCase()) && e.shiftKey) {
         e.preventDefault()
       }
       // Prevent browser defaults for shortcuts help (Cmd/Ctrl+Shift+/)
@@ -2088,6 +2100,8 @@ const AgentManagerContent: Component = () => {
     handlers: termHandlers,
     visible: () => sidePanel() === "terminal" && !history() && !reviewActive(),
     focusedId: () => terms.sideFocusedId(),
+    count: () => terms.sidesForContext(terms.sideKey()).length,
+    isScript: terms.isScript,
     hide: () => {
       cancelAmbientSetup()
       setSidePanel(null)
@@ -2206,15 +2220,23 @@ const AgentManagerContent: Component = () => {
     })
   }
   const tabFocus = createTabFocus({ ids: () => tabIds(), select: focusTab })
+  const cycleTerminal = (direction: "previous" | "next") => {
+    const focused = terms.focusedId()
+    const placement = terms.sideFocusedId() || (!focused && terminalVisible()) ? "side" : "tab"
+    return termHandlers.cycle(direction, placement)
+  }
 
   // Close the currently active tab via keyboard shortcut.
   // If no tabs remain, fall through to close the selected worktree.
   const closeActiveTab = () => {
-    // A focused side terminal owns Cmd+W while its panel is visible —
-    // closing a chat tab out from under the user's cursor would be
-    // surprising. Only that terminal dies; the panel keeps the rest.
+    // A focused side terminal owns Cmd+W while its panel is visible.
+    // Closing a chat tab out from under the user's cursor would be surprising.
     if (sidePanel() === "terminal" && terms.sideFocusedId()) {
       if (sideCtl.close()) return
+    }
+    if (termHandlers.closeFocused()) {
+      tabFocus.restore()
+      return
     }
     if (termHandlers.closeActive()) {
       tabFocus.restore()
@@ -2466,6 +2488,9 @@ const AgentManagerContent: Component = () => {
           onToggleReview={metrics.click("fullscreen_review", "tab_toolbar", toggleReviewTab)}
           terminalDestination={sideCtl.destination}
           terminalDestinationActive={() => sidePanel() === "terminal"}
+          terminalDestinationFocused={() =>
+            sideCtl.destination() === "agentManager" && terms.sideFocusedId() !== undefined
+          }
           terminalKeybind={() => kb().showTerminal ?? ""}
           onTerminalDestinationOpen={() => {
             cancelAmbientSetup()
@@ -2534,7 +2559,7 @@ const AgentManagerContent: Component = () => {
             >
               <div class={`am-main-pane ${terms.activeId() ? "am-main-pane-terminal-active" : ""}`}>
                 {/* Keep terminal tabs mounted so output streams across worktree switches. */}
-                {renderTerminalLayer({ state: terms })}
+                {renderTerminalLayer({ state: terms, onFocusPrompt: focusPrompt })}
                 {/* Session-less context (e.g. a worktree mid-provisioning): the
                     empty state lives in the main pane so the side terminal
                     panel can render next to it. */}
@@ -2692,6 +2717,9 @@ const AgentManagerContent: Component = () => {
                       state={terms}
                       contextKey={terms.sideKey}
                       visible={() => sidePanel() === "terminal"}
+                      nextKeybind={kb().nextTerminal ?? ""}
+                      closeKeybind={kb().closeTab ?? ""}
+                      onFocusPrompt={focusPrompt}
                       onSelect={(id) => termHandlers.selectSide(id)}
                       onClose={(id) => {
                         cancelAmbientSetup()
