@@ -2,7 +2,7 @@ import { InstanceState } from "@/effect/instance-state"
 import * as Log from "@opencode-ai/core/util/log"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Location } from "@opencode-ai/core/location"
-import { LocationServiceMap } from "@opencode-ai/core/location-layer"
+import { LocationServiceMap, locationServiceMapLayer } from "@opencode-ai/core/location-services"
 import { AbsolutePath } from "@opencode-ai/core/schema"
 import { Cause, Context, Effect, Layer, Scope } from "effect"
 
@@ -22,7 +22,7 @@ export namespace KilocodeWatcher {
   export const layer = Layer.effect(
     Service,
     Effect.gen(function* () {
-      const locations = yield* LocationServiceMap
+      const locations = yield* LocationServiceMap.Service
       const scope = yield* Scope.Scope
 
       const state = yield* InstanceState.make(
@@ -60,7 +60,7 @@ export namespace KilocodeWatcher {
     Effect.gen(function* () {
       if (!eager() || (yield* Flag.KILO_EXPERIMENTAL_DISABLE_FILEWATCHER.pipe(Effect.orElseSucceed(() => false))))
         return Layer.succeed(Service, Service.of({ init: () => Effect.void }))
-      return layer.pipe(Layer.provide(LocationServiceMap.layer))
+      return layer.pipe(Layer.provide(locationServiceMapLayer))
     }),
   )
 }

@@ -28,6 +28,7 @@ import { sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { useVSCode } from "../src/context/vscode"
 import SectionHeader from "./SectionHeader"
+import { SidebarSectionHeader } from "./SidebarSectionHeader"
 import { WorktreeItem } from "./WorktreeItem"
 import { WorktreeSectionActions } from "./WorktreeSectionActions"
 import { UnassignedSessionsSection } from "./UnassignedSessionsSection"
@@ -183,26 +184,29 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
 
       {/* WORKTREES section */}
       <div class={`am-section ${props.sessionsCollapsed() ? "am-section-grow" : ""}`}>
-        <div class="am-section-header">
-          <span class="am-section-label">{props.t("agentManager.section.worktrees")}</span>
-          <WorktreeSectionActions
-            items={props.search.items}
-            current={props.search.current}
-            bindings={props.bindings()}
-            branch={props.defaultBranch()}
-            git={props.isGitRepo()}
-            loaded={props.loaded()}
-            t={props.t}
-            onRef={(value) => props.onSearchRef(value)}
-            onSelect={props.onSearchSelect}
-            onCreate={props.onCreateWorktree}
-            onNew={props.onNewWorktree}
-            onSection={props.onNewSection}
-            onShortcuts={props.onShortcuts}
-            onSetup={props.onSetup}
-            onBranch={props.onBranch}
-          />
-        </div>
+        <SidebarSectionHeader
+          class="am-section-header"
+          label={<span class="am-section-label">{props.t("agentManager.section.worktrees")}</span>}
+          actions={
+            <WorktreeSectionActions
+              items={props.search.items}
+              current={props.search.current}
+              bindings={props.bindings()}
+              branch={props.defaultBranch()}
+              git={props.isGitRepo()}
+              loaded={props.loaded()}
+              t={props.t}
+              onRef={(value) => props.onSearchRef(value)}
+              onSelect={props.onSearchSelect}
+              onCreate={props.onCreateWorktree}
+              onNew={props.onNewWorktree}
+              onSection={props.onNewSection}
+              onShortcuts={props.onShortcuts}
+              onSetup={props.onSetup}
+              onBranch={props.onBranch}
+            />
+          }
+        />
         <div class="am-worktree-list">
           <Show
             when={props.worktreesLoaded() && props.sessionsLoaded()}

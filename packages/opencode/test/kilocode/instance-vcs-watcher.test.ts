@@ -1,15 +1,20 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterAll, beforeAll, describe, expect, test } from "bun:test"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Deferred, Effect, Fiber, Layer } from "effect"
 import { GlobalBus, type GlobalEvent } from "../../src/bus/global"
 import { Git } from "../../src/git"
-import { InstanceLayer } from "../../src/project/instance-layer"
+import { InstanceBootstrap } from "../../src/project/bootstrap"
 import { InstanceStore } from "../../src/project/instance-store"
 import { KilocodeWatcher } from "../../src/kilocode/watcher"
 import { tmpdirScoped } from "../fixture/fixture"
 import { awaitWithTimeout, testEffect } from "../lib/effect"
 
-const layer = Layer.mergeAll(InstanceLayer.layer, Git.defaultLayer, CrossSpawnSpawner.defaultLayer)
+const layer = Layer.mergeAll(
+  AppNodeBuilder.build(InstanceStore.node, [[InstanceStore.bootstrapNode, InstanceBootstrap.node]]),
+  AppNodeBuilder.build(Git.node),
+  AppNodeBuilder.build(CrossSpawnSpawner.node),
+)
 const it = testEffect(layer)
 
 // The suite disables the file watcher (see test/preload.ts); this file tests it, so opt back in.

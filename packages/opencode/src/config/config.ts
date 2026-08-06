@@ -1,5 +1,5 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
-import { httpClient } from "@opencode-ai/core/effect/layer-node-platform"
+import { httpClient } from "@opencode-ai/core/effect/app-node-platform"
 import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import path from "path"
 import { pathToFileURL } from "url"
@@ -23,7 +23,7 @@ import type { ConsoleState } from "@opencode-ai/core/v1/config/console-state"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { InstanceState } from "@/effect/instance-state"
 import { Context, Duration, Effect, Exit, Fiber, Layer, Option, Schema } from "effect"
-import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/unstable/http"
+import { HttpClient, HttpClientRequest } from "effect/unstable/http"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { containsPath, type InstanceContext } from "../project/instance-context"
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
@@ -268,7 +268,7 @@ function writableGlobal(info: Info) {
   return next
 }
 
-export const layer = Layer.effect(
+const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const fs = yield* FSUtil.Service
@@ -1118,26 +1118,12 @@ export const layer = Layer.effect(
       warnings, // kilocode_change
     })
   }),
-).pipe(Layer.provide(EffectFlock.defaultLayer)) // kilocode_change - serialize global config updates in every layer
-
-export const defaultLayer = layer.pipe(
-  Layer.provide(Git.defaultLayer), // kilocode_change
-  Layer.provide(FSUtil.defaultLayer),
-  Layer.provide(Env.defaultLayer),
-  Layer.provide(Auth.defaultLayer),
-  Layer.provide(Account.defaultLayer),
-  Layer.provide(Npm.defaultLayer),
-  Layer.provide(FetchHttpClient.layer),
 )
 
-export const node = LayerNode.make(layer, [
-  FSUtil.node,
-  Auth.node,
-  Account.node,
-  Env.node,
-  Npm.node,
-  httpClient,
-  Git.node,
-]) // kilocode_change
+export const node = LayerNode.make({
+  service: Service,
+  layer: layer,
+  deps: [FSUtil.node, Auth.node, Account.node, Env.node, Npm.node, httpClient, Git.node, EffectFlock.node], // kilocode_change
+})
 
 export * as Config from "./config"

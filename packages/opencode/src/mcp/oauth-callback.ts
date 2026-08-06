@@ -46,14 +46,14 @@ const HTML_ERROR = (error: string) => `<!DOCTYPE html>
     .container { text-align: center; padding: 2rem; }
     h1 { color: #f87171; margin-bottom: 1rem; }
     p { color: #aaa; }
-    .error { color: #fca5a5; font-family: monospace; margin-top: 1rem; padding: 1rem; background: rgba(248,113,113,0.1); border-radius: 0.5rem; }
+    .detail { color: #fca5a5; font-family: monospace; margin-top: 1rem; padding: 1rem; background: rgba(248,113,113,0.1); border-radius: 0.5rem; white-space: pre-wrap; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Authorization Failed</h1>
     <p>An error occurred during authorization.</p>
-    <div class="error">${escapeHtml(error)}</div>
+    <pre class="detail" id="oc-detail">${escapeHtml(error)}</pre>
   </div>
 </body>
 </html>`
@@ -167,51 +167,7 @@ export async function ensureRunning(redirectUri?: string): Promise<void> {
     info: (msg, data) => log.info(msg, data),
     error: (msg, data) => log.error(msg, data),
   })
-  return
   // kilocode_change end
-
-  // Parse the redirect URI to get port and path (uses defaults if not provided)
-  const { port, path } = parseRedirectUri(redirectUri)
-
-  // If server is running on a different port/path, stop it first
-  if (server && (currentPort !== port || currentPath !== path)) {
-    await stop()
-  }
-
-  if (server) return
-
-  const running = await isPortInUse(port)
-  if (running) {
-    return
-  }
-
-  currentPort = port
-  currentPath = path
-
-  server = createServer(handleRequest)
-  await new Promise<void>((resolve, reject) => {
-    // kilocode_change start - EADDRINUSE can still fire when another process
-    // races us between isPortInUse() and listen() (notably across parallel
-    // bun test subprocesses). Treat it as "another instance owns the port",
-    // matching the isPortInUse() branch above instead of crashing.
-    const onError = (err: Error & { code?: string }) => {
-      if (err.code === "EADDRINUSE") {
-        log.info("oauth callback port bound by another instance", { port: currentPort })
-        server?.close()
-        server = undefined
-        resolve()
-        return
-      }
-      reject(err)
-    }
-    server!.on("error", onError)
-    // kilocode_change end
-    server!.listen(currentPort, () => {
-      server!.off("error", onError) // kilocode_change
-      log.info("oauth callback server started", { port: currentPort, path: currentPath })
-      resolve()
-    })
-  })
 }
 
 export function waitForCallback(oauthState: string, mcpName?: string): Promise<string> {

@@ -1,4 +1,5 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
 import { Cause, Duration, Effect, Layer, Schedule, Schema, Semaphore, Context } from "effect"
 import { Struct } from "effect" // kilocode_change
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
@@ -11,6 +12,7 @@ import { Hash } from "@opencode-ai/core/util/hash"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock" // kilocode_change
 import { Config } from "@/config/config"
 import { Global } from "@opencode-ai/core/global"
+import { Info } from "@opencode-ai/schema/file-diff"
 // kilocode_change start
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { DiffFull } from "../kilocode/snapshot/diff-full"
@@ -28,20 +30,8 @@ export const Patch = Schema.Struct({
 }).pipe(withStatics((s) => ({ zod: zod(s) }))) // kilocode_change
 export type Patch = typeof Patch.Type
 
-export const FileDiff = Schema.Struct({
-  // Optional because legacy/imported `summary_diffs` on disk may omit
-  // file details and patch text. Required Schema rejected the whole
-  // session response and broke session loading on Desktop.
-  file: Schema.optional(Schema.String),
-  patch: Schema.optional(Schema.String),
-  additions: Schema.Finite,
-  deletions: Schema.Finite,
-  status: Schema.optional(Schema.Literals(["added", "deleted", "modified"])),
-  // kilocode_change start
-})
-  .annotate({ identifier: "SnapshotFileDiff" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
-// kilocode_change end
+// kilocode_change - retain the legacy Zod facade while sharing the canonical schema
+export const FileDiff = Info.pipe(withStatics((s) => ({ zod: zod(s) })))
 export type FileDiff = typeof FileDiff.Type
 
 // kilocode_change start - lightweight FileDiff without patch for session summaries
@@ -120,6 +110,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
           const args = (cmd: string[]) => ["--git-dir", state.gitdir, "--work-tree", state.worktree, ...cmd]
 
           const feed = (list: string[]) => list.join("\0") + "\0"
+          const literal = (list: string[]) => feed(list.map((file) => `:(top,literal)${file}`))
 
           const git = Effect.fnUntraced(
             function* (cmd: string[], opts?: { cwd?: string; env?: Record<string, string>; stdin?: string }) {
@@ -144,6 +135,8 @@ export const layer: Layer.Layer<Service, never, Requirements> =
 
           const ignore = Effect.fnUntraced(function* (files: string[]) {
             if (!files.length) return new Set<string>()
+            // check-ignore treats a leading colon as pathspec magic but accepts and echoes a protective ./ prefix.
+            const checkIgnorePaths = files.map((item) => (item.startsWith(":") ? `./${item}` : item))
             const check = yield* git(
               [
                 ...quote,
@@ -157,12 +150,18 @@ export const layer: Layer.Layer<Service, never, Requirements> =
                 "-z",
               ],
               {
-                cwd: state.directory,
-                stdin: feed(files),
+                // ls-files --full-name emits worktree-relative candidates, so resolve them from the worktree root
+                cwd: state.worktree,
+                stdin: feed(checkIgnorePaths),
               },
             )
             if (check.code !== 0 && check.code !== 1) return new Set<string>()
-            return new Set(check.text.split("\0").filter(Boolean))
+            return new Set(
+              check.text
+                .split("\0")
+                .filter(Boolean)
+                .map((item) => (item.startsWith("./:") ? item.slice(2) : item)),
+            )
           })
 
           const drop = Effect.fnUntraced(function* (files: string[]) {
@@ -173,8 +172,9 @@ export const layer: Layer.Layer<Service, never, Requirements> =
                 ...args(["rm", "--cached", "-f", "--ignore-unmatch", "--pathspec-from-file=-", "--pathspec-file-nul"]),
               ],
               {
-                cwd: state.directory,
-                stdin: feed(files),
+                // :(top,literal) pathspecs and --full-name candidates are both worktree-relative
+                cwd: state.worktree,
+                stdin: literal(files),
               },
             )
           })
@@ -196,7 +196,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
             const result = yield* git([...cfg, ...args(cmd)], {
               cwd: state.directory,
               env: opts?.env,
-              stdin: opts?.root ? undefined : feed(files),
+              stdin: opts?.root ? undefined : literal(files),
             })
             // kilocode_change end
             if (result.code === 0) return
@@ -209,8 +209,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
           const exists = (file: string) => fs.exists(file).pipe(Effect.orDie)
           const read = (file: string) => fs.readFileString(file).pipe(Effect.catch(() => Effect.succeed("")))
           // kilocode_change start - restoration must fail if deletion fails
-          const remove = (file: string) =>
-            fs.remove(file, { force: true }).pipe(Effect.orDie)
+          const remove = (file: string) => fs.remove(file, { force: true }).pipe(Effect.orDie)
           // kilocode_change end
           // kilocode_change start - serialize snapshot repositories across CLI and extension processes
           const locked = <A, R>(fx: Effect.Effect<A, never, R>) =>
@@ -256,9 +255,12 @@ export const layer: Layer.Layer<Service, never, Requirements> =
                 git([...quote, ...args(["diff-files", "--name-only", "-z", "--", "."])], {
                   cwd: state.directory,
                 }),
-                git([...quote, ...args(["ls-files", "--others", "--exclude-standard", "-z", "--", "."])], {
-                  cwd: state.directory,
-                }),
+                git(
+                  [...quote, ...args(["ls-files", "--full-name", "--others", "--exclude-standard", "-z", "--", "."])],
+                  {
+                    cwd: state.directory,
+                  },
+                ),
               ],
               { concurrency: 2 },
             )
@@ -295,7 +297,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
               (yield* Effect.all(
                 allow.map((item) =>
                   fs
-                    .stat(path.join(state.directory, item))
+                    .stat(path.join(state.worktree, item))
                     .pipe(Effect.catch(() => Effect.void))
                     .pipe(
                       Effect.map((stat) => {
@@ -972,13 +974,12 @@ export const layer: Layer.Layer<Service, never, Requirements> =
     }),
   )
 
-export const defaultLayer = layer.pipe(
-  Layer.provide(AppProcess.defaultLayer),
-  Layer.provide(FSUtil.defaultLayer),
-  Layer.provide(Config.defaultLayer),
-  Layer.provide(EffectFlock.defaultLayer), // kilocode_change
-)
+export const defaultLayer: Layer.Layer<Service> = Layer.suspend(() => AppNodeBuilder.build(node)) // kilocode_change - build from the LayerNode graph
 
-export const node = LayerNode.make(layer, [FSUtil.node, AppProcess.node, Config.node, EffectFlock.node]) // kilocode_change
+export const node = LayerNode.make({
+  service: Service,
+  layer,
+  deps: [FSUtil.node, AppProcess.node, Config.node, EffectFlock.node], // kilocode_change
+})
 
 export * as Snapshot from "."

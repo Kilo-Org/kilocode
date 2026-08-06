@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterEach, describe, expect } from "bun:test"
 import { Effect, Layer, Queue, Schema, Stream } from "effect"
 import * as Sse from "effect/unstable/encoding/Sse" // kilocode_change - decode the legacy SSE wire format
@@ -15,7 +16,7 @@ import { EventV2Bridge } from "../../src/event-v2-bridge"
 import { GlobalPaths } from "../../src/server/routes/instance/httpapi/groups/global"
 import { SessionID } from "../../src/session/schema"
 import { Server } from "../../src/server/server"
-import { SessionMessageID } from "@opencode-ai/core/session/message-id"
+import { SessionMessage } from "@opencode-ai/core/session/message"
 // kilocode_change end
 import { resetDatabase } from "../fixture/db"
 import { disposeAllInstances, TestInstance } from "../fixture/fixture"
@@ -182,7 +183,7 @@ describe("event HttpApi", () => {
   )
 
   // kilocode_change start - transformed EventV2 data is numeric on legacy SSE while domain data stays decoded
-  const v2 = testEffectShared(Layer.mergeAll(Bus.defaultLayer, EventV2Bridge.defaultLayer))
+  const v2 = testEffectShared(Layer.mergeAll(AppNodeBuilder.build(Bus.node), AppNodeBuilder.build(EventV2Bridge.node)))
 
   v2.instance(
     "encodes catalog and session EventV2 data on the global event stream",
@@ -235,7 +236,7 @@ describe("event HttpApi", () => {
         const sessionDomain = yield* events.publish(SessionEvent.Text.Delta, {
           sessionID,
           timestamp,
-          assistantMessageID: SessionMessageID.ID.create(),
+          assistantMessageID: SessionMessage.ID.create(),
           textID: "text-event-encoding",
           delta: "hello",
         })
@@ -250,9 +251,9 @@ describe("event HttpApi", () => {
         yield* events.publish(SessionEvent.Prompted, {
           sessionID,
           timestamp,
-          messageID: SessionMessageID.ID.create(),
+          messageID: SessionMessage.ID.create(),
           delivery: "queue",
-          prompt: new Prompt({ text: "hello", files: [], agents: [] }), // kilocode_change - upstream made prompt a Prompt class
+          prompt: Prompt.make({ text: "hello", files: [], agents: [] }), // kilocode_change - Prompt is a struct
         })
         expect(properties(yield* Fiber.join(prompted))).toMatchObject({
           timestamp: 1_234,

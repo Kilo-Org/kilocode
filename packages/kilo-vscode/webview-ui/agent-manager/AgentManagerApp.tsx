@@ -174,6 +174,7 @@ import { createMarkdownRender } from "./review-preferences"
 import { createSidebarCollapse } from "./sidebar-collapse"
 import { SidebarToggleButton } from "./SidebarToggleButton"
 import { setTabWidths } from "./tab-widths"
+import { clampPanelWidth, maxPanelWidth, minPanelWidth } from "./side-panel-layout"
 import { buildShortcutCategories } from "./shortcuts"
 import { tracker } from "./telemetry"
 import { createChatFocus, hasQuestionOption } from "./focus"
@@ -274,7 +275,7 @@ const AgentManagerContent: Component = () => {
   const MAX_SIDEBAR_WIDTH_RATIO = 0.4
 
   // Recover persisted local session IDs from webview state
-  const persisted = vscode.getState<PersistedProjectTabs & { sidebarWidth?: number }>()
+  const persisted = vscode.getState<PersistedProjectTabs & { sidebarWidth?: number; sidePanelWidth?: number }>()
   const registry = createProjectRegistry({
     persisted: persisted ?? {},
     activeId: () => currentProjectId() ?? "single",
@@ -314,26 +315,15 @@ const AgentManagerContent: Component = () => {
   const diffLoading = diffs.diffLoading
   const setDiffLoading = diffs.setDiffLoading
   const diffNotices = diffs.diffNotices
-  // The diff and terminal panels each remember their own width: a diff
-  // benefits from half the window, a terminal only needs about a third.
-  const TERMINAL_MIN_WIDTH = 360
-  const TERMINAL_MAX_WIDTH = 640
-  const [diffWidth, setDiffWidth] = createSignal(Math.round(window.innerWidth * 0.5))
-  const [terminalWidth, setTerminalWidth] = createSignal(
-    Math.min(TERMINAL_MAX_WIDTH, Math.max(TERMINAL_MIN_WIDTH, Math.round(window.innerWidth / 3))),
-  )
-  // The hidden-but-mounted host still fits the terminal, so pick the
-  // terminal's width whenever one is alive and no other mode is showing.
-  const widthMode = () => sidePanel() ?? (terms.sides().length > 0 ? "terminal" : null)
-  const hostWidth = () => (widthMode() === "terminal" ? terminalWidth() : diffWidth())
-  const sideMin = () => (widthMode() === "terminal" ? TERMINAL_MIN_WIDTH : 200)
+  // Diff and terminal views share one inspector width, restored from webview
+  // state so the user's divider position survives panel reloads.
+  const [panelWidth, setPanelWidth] = createSignal(clampPanelWidth(persisted?.sidePanelWidth, window.innerWidth))
   const resizeSide = (width: number) => {
-    pendingSideWidth = Math.max(sideMin(), Math.min(width, window.innerWidth * 0.8))
+    pendingSideWidth = clampPanelWidth(width, window.innerWidth)
     if (sideRaf !== undefined) return
     sideRaf = requestAnimationFrame(() => {
       sideRaf = undefined
-      if (widthMode() === "terminal") setTerminalWidth(pendingSideWidth!)
-      else setDiffWidth(pendingSideWidth!)
+      setPanelWidth(pendingSideWidth!)
     })
   }
   const showSideTerminal = () => {
@@ -643,6 +633,7 @@ const AgentManagerContent: Component = () => {
     },
     key: () => registry.active().id,
     width: sidebarWidth,
+    panelWidth,
     get: () => vscode.getState<Record<string, unknown>>(),
     set: (value) => vscode.setState(value),
   })
@@ -2472,20 +2463,6 @@ const AgentManagerContent: Component = () => {
           track={metrics.click}
         />
 
-        {/* Empty worktree state */}
-        <Show when={contextEmpty()}>
-          <div class="am-empty-state">
-            <div class="am-empty-state-icon">
-              <Icon name="branch" size="large" />
-            </div>
-            <div class="am-empty-state-text">{t("agentManager.session.noSessions")}</div>
-            <Button variant="primary" size="small" onClick={handleAddSession}>
-              {t("agentManager.session.new")}
-              <span class="am-shortcut-hint">{kb().newTab ?? ""}</span>
-            </Button>
-          </div>
-        </Show>
-
         <Show when={overlay()}>
           {(state) => (
             <div class="am-setup-overlay">
@@ -2650,16 +2627,16 @@ const AgentManagerContent: Component = () => {
               <Show when={sidePanel() !== null || terms.sides().length > 0}>
                 <div
                   class={`am-diff-resize ${sidePanel() === null ? "am-side-host-hidden" : ""}`}
-                  style={{ width: `${hostWidth()}px` }}
+                  style={{ width: `${panelWidth()}px` }}
                   inert={sidePanel() === null}
                 >
                   <Show when={sidePanel() !== null}>
                     <ResizeHandle
                       direction="horizontal"
                       edge="start"
-                      size={hostWidth()}
-                      min={sideMin()}
-                      max={Math.round(window.innerWidth * 0.8)}
+                      size={panelWidth()}
+                      min={minPanelWidth(window.innerWidth)}
+                      max={maxPanelWidth(window.innerWidth)}
                       onResize={resizeSide}
                     />
                   </Show>

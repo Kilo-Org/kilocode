@@ -32,6 +32,10 @@ describe("multi-project progress state", () => {
 
     expect(first.busy().has("same")).toBe(true)
     expect(second.busy().has("same")).toBe(false)
+
+    second.setBusy(new Map([["same", { reason: "deleting" as const }]]))
+    clearMultiVersionBusy(second, "group")
+    expect(second.busy().get("same")?.reason).toBe("deleting")
   })
 
   it("marks a newly created grouped worktree as busy in its project store", () => {
@@ -41,5 +45,15 @@ describe("multi-project progress state", () => {
     markMultiVersionBusy(store, "a-session")
 
     expect(store.busy().get("same")?.reason).toBe("setting-up")
+  })
+
+  it("does not replace deletion progress when marking a grouped worktree", () => {
+    const store = createProjectStore("a")
+    store.applyState(state("a"))
+    store.setBusy(new Map([["same", { reason: "deleting" as const }]]))
+
+    markMultiVersionBusy(store, "a-session")
+
+    expect(store.busy().get("same")?.reason).toBe("deleting")
   })
 })

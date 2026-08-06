@@ -1,25 +1,18 @@
 import { describe, expect, test } from "bun:test"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { Cause, Effect, Exit, Layer } from "effect"
 import { Bus } from "../../../src/bus"
 import { Permission } from "../../../src/permission"
 import { PermissionProvenance } from "../../../src/kilocode/permission/provenance"
-import { EventV2Bridge } from "../../../src/event-v2-bridge"
-import { Database } from "@opencode-ai/core/database/database"
 import { SessionID } from "../../../src/session/schema"
-import * as Config from "../../../src/config/config"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { provideTmpdirInstance } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
 
 const env = Layer.mergeAll(
-  Permission.layer.pipe(
-    Layer.provide(EventV2Bridge.defaultLayer),
-    Layer.provide(Config.defaultLayer),
-    Layer.provide(Database.defaultLayer),
-  ),
-  Config.defaultLayer,
+  AppNodeBuilder.build(Permission.node),
   Bus.layer,
-  CrossSpawnSpawner.defaultLayer,
+  AppNodeBuilder.build(CrossSpawnSpawner.node),
 )
 const it = testEffect(env)
 
