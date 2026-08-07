@@ -24,7 +24,7 @@ type Recording = Input & {
 
 type Audio = {
   data: string
-  format: "wav"
+  format: "m4a"
   model: string
   language?: string
 }
@@ -39,16 +39,17 @@ ObjC.import("AVFoundation")
 ObjC.import("Foundation")
 function run(args) {
   const settings = $.NSMutableDictionary.alloc.init
-  settings.setObjectForKey($.NSNumber.numberWithUnsignedInt(1819304813), $.AVFormatIDKey)
+  settings.setObjectForKey($.NSNumber.numberWithUnsignedInt(1633772320), $.AVFormatIDKey)
   settings.setObjectForKey($.NSNumber.numberWithDouble(16000), $.AVSampleRateKey)
   settings.setObjectForKey($.NSNumber.numberWithInt(1), $.AVNumberOfChannelsKey)
-  settings.setObjectForKey($.NSNumber.numberWithInt(16), $.AVLinearPCMBitDepthKey)
-  settings.setObjectForKey($.NSNumber.numberWithBool(false), $.AVLinearPCMIsFloatKey)
-  settings.setObjectForKey($.NSNumber.numberWithBool(false), $.AVLinearPCMIsBigEndianKey)
+  settings.setObjectForKey($.NSNumber.numberWithInt(24000), $.AVEncoderBitRateKey)
   const error = Ref()
   const url = $.NSURL.fileURLWithPath(args[0])
   const recorder = $.AVAudioRecorder.alloc.initWithURLSettingsError(url, settings, error)
-  if (!recorder || !recorder.prepareToRecord || !recorder.record) throw new Error("Could not start recording")
+  if (!recorder || !recorder.prepareToRecord || !recorder.record) {
+    const description = error[0] && error[0].localizedDescription
+    throw new Error(description ? description.js : "Could not start recording")
+  }
   console.log("ready")
   $.NSFileHandle.fileHandleWithStandardInput.readDataToEndOfFile
   recorder.stop
@@ -68,7 +69,7 @@ export async function startSpeechCapture(input: Input): Promise<boolean> {
 
   starting = input.requestId
   try {
-    const file = path.join(os.tmpdir(), `kilo-stt-${process.pid}-${Date.now()}.wav`)
+    const file = path.join(os.tmpdir(), `kilo-stt-${process.pid}-${Date.now()}.m4a`)
     if (useMacCapture(process.platform, process.env)) {
       const result = await startMac(file, input).catch((err: unknown) => {
         console.warn("[Kilo New] Native macOS speech capture failed, falling back to FFmpeg", err)
@@ -105,7 +106,7 @@ export async function stopSpeechCapture(requestId: string): Promise<Audio> {
 
   const file = await readFile(state.file)
   await removeFile(state.file)
-  return { data: file.toString("base64"), format: "wav", model: state.model, language: state.language }
+  return { data: file.toString("base64"), format: "m4a", model: state.model, language: state.language }
 }
 
 export async function cancelSpeechCapture(requestId: string): Promise<void> {
@@ -168,6 +169,35 @@ export function macCaptureArgs(file: string): string[] {
   return ["-l", "JavaScript", "-e", macScript, file]
 }
 
+export function ffmpegCaptureArgs(input: string[], file: string): string[] {
+  return ["-y", ...input, "-c:a", "aac", "-b:a", "24k", "-ar", "16000", "-ac", "1", "-movflags", "+faststart", file]
+}
+
+export function ffmpegPipeArgs(file: string): string[] {
+  return [
+    "-y",
+    "-f",
+    "s16le",
+    "-ar",
+    "16000",
+    "-ac",
+    "1",
+    "-i",
+    "pipe:0",
+    "-c:a",
+    "aac",
+    "-b:a",
+    "24k",
+    "-ar",
+    "16000",
+    "-ac",
+    "1",
+    "-movflags",
+    "+faststart",
+    file,
+  ]
+}
+
 export function useMacCapture(platform: NodeJS.Platform, env: NodeJS.ProcessEnv): boolean {
   return platform === "darwin" && !env.KILO_FFMPEG_PATH && !env.FFMPEG_PATH
 }
@@ -178,7 +208,7 @@ async function startWithArgs(bin: string, file: string, input: Input, args: Args
 
   const proc = first.pipe
     ? pipeProcess(first.pipe, bin, file)
-    : spawn(bin, ["-y", ...first.input, "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", "-f", "wav", file], {
+    : spawn(bin, ffmpegCaptureArgs(first.input, file), {
         stdio: ["pipe", "ignore", "pipe"],
       })
   const state = createState(input, file, proc)
@@ -212,32 +242,9 @@ function createState(input: Input, file: string, proc: ChildProcess): Recording 
 
 function pipeProcess(pipe: string[], bin: string, file: string): ChildProcess {
   const source = spawn("pw-record", pipe, { stdio: ["ignore", "pipe", "pipe"] })
-  const proc = spawn(
-    bin,
-    [
-      "-y",
-      "-f",
-      "s16le",
-      "-ar",
-      "16000",
-      "-ac",
-      "1",
-      "-i",
-      "pipe:0",
-      "-acodec",
-      "pcm_s16le",
-      "-ar",
-      "16000",
-      "-ac",
-      "1",
-      "-f",
-      "wav",
-      file,
-    ],
-    {
-      stdio: ["pipe", "ignore", "pipe"],
-    },
-  )
+  const proc = spawn(bin, ffmpegPipeArgs(file), {
+    stdio: ["pipe", "ignore", "pipe"],
+  })
 
   if (source.stdout && proc.stdin) source.stdout.pipe(proc.stdin)
   source.on("error", (err) => proc.emit("error", err))
