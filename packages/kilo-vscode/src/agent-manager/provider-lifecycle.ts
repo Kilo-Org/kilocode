@@ -69,7 +69,16 @@ export async function createLifecycleWorktree(
     return null
   }
 
-  const state = ctx.peekState()!
+  const state = ctx.peekState()
+  if (!state?.getWorktree(created.worktree.id)) {
+    ctx
+      .worktreeManager()
+      .removeWorktree(created.result.path)
+      .catch(() => {})
+    return null
+  }
+
+  state.updateWorktreeStatus?.(created.worktree.id, "ready")
   state.addSession(session.id, created.worktree.id)
   if (!opts.branchName && host.autoName().enabled) state.armAutoName(created.worktree.id, session.id)
   host.register(session.id, created.result.path)

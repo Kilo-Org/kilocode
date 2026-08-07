@@ -31,6 +31,10 @@ export interface WorktreeState {
   prUrl?: string
   /** Cached PR state for correct badge color on reload (open/merged/closed/draft). */
   prState?: string
+  /** Status during creation lifecycle: creating, setting-up, ready, or error. */
+  status?: "creating" | "setting-up" | "ready" | "error"
+  /** Progress or error message during creation lifecycle. */
+  statusMessage?: string
   /** Section this worktree belongs to, or undefined for ungrouped. */
   sectionId?: string
 }

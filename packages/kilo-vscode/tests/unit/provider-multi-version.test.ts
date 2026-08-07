@@ -9,7 +9,11 @@ describe("multi-version provisioning", () => {
     const flow: string[] = []
     const gates = [Promise.withResolvers<void>(), Promise.withResolvers<void>()]
     const entered = [Promise.withResolvers<void>(), Promise.withResolvers<void>()]
-    const state = { addSession: mock(() => {}), armAutoName: mock(() => {}) }
+    const state = {
+      addSession: mock(() => {}),
+      armAutoName: mock(() => {}),
+      updateWorktreeStatus: mock(() => true),
+    }
     const ctx = {
       id: "project-1",
       stateManager: () => state,

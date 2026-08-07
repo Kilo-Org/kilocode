@@ -2588,27 +2588,7 @@ body.am-wt-dragging-active * {
   color: var(--text-weak);
 }
 
-/* Setup overlay */
-
-.am-setup-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--surface-base);
-  animation: am-fade-in 0.15s ease;
-}
-
-@keyframes am-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
+/* Setup card */
 
 .am-setup-card {
   display: flex;
