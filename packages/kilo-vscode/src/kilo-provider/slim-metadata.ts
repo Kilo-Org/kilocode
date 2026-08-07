@@ -73,6 +73,7 @@ function slimEdit(state: Record<string, unknown>): Record<string, unknown> {
     }
   }
   if (meta.diagnostics) result.diagnostics = meta.diagnostics
+  if (meta.approval) result.approval = meta.approval
   next.metadata = result
   return next
 }
@@ -84,6 +85,7 @@ function slimPatch(state: Record<string, unknown>): Record<string, unknown> {
   if (isObj(meta)) {
     const slim: Record<string, unknown> = {}
     if (meta.diagnostics) slim.diagnostics = meta.diagnostics
+    if (meta.approval) slim.approval = meta.approval
     if (Array.isArray(meta.files)) {
       slim.files = (meta.files as Record<string, unknown>[]).map((f) => {
         const diff = patch(f.patch) ?? patch(f.diff)
@@ -115,6 +117,7 @@ function slimMultiedit(state: Record<string, unknown>): Record<string, unknown> 
   if (isObj(meta)) {
     const slim: Record<string, unknown> = {}
     if (meta.diagnostics) slim.diagnostics = meta.diagnostics
+    if (meta.approval) slim.approval = meta.approval
     if (Array.isArray(meta.results)) {
       slim.results = (meta.results as Record<string, unknown>[]).map((r) => {
         const rs: Record<string, unknown> = {}
@@ -149,6 +152,7 @@ function slimWrite(state: Record<string, unknown>): Record<string, unknown> {
     if (meta.filepath) slim.filepath = meta.filepath
     if (meta.exists !== undefined) slim.exists = meta.exists
     if (meta.diagnostics) slim.diagnostics = meta.diagnostics
+    if (meta.approval) slim.approval = meta.approval
     const fd = meta.filediff
     if (isObj(fd)) {
       slim.filediff = {

@@ -97,18 +97,32 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
         },
       }).pipe(
         // record why the call was allowed onto the tool part, then discard the outcome for the tool-facing ask
-        Effect.tap((approval) => input.processor.metadata(options.toolCallId, { metadata: { approval } })),
+        Effect.tap((approval) =>
+          input.processor.metadata(options.toolCallId, {
+            metadata: {
+              approval: PermissionProvenance.tagOutsideWorkspace(
+                approval,
+                req.permission,
+                PermissionProvenance.filepathOf(req.metadata),
+              ),
+            },
+          }),
+        ),
         // record why the call was denied too, so JSON exports and clients can explain the denial
         Effect.tapErrorTag("PermissionDeniedError", (err) =>
           input.processor.metadata(options.toolCallId, {
             metadata: {
-              approval: PermissionProvenance.classifyDenial({
-                ruleset: err.ruleset,
-                permission: req.permission,
-                patterns: req.patterns,
-                agent: input.agent.name,
-                origins: permissionOrigins,
-              }),
+              approval: PermissionProvenance.tagOutsideWorkspace(
+                PermissionProvenance.classifyDenial({
+                  ruleset: err.ruleset,
+                  permission: req.permission,
+                  patterns: req.patterns,
+                  agent: input.agent.name,
+                  origins: permissionOrigins,
+                }),
+                req.permission,
+                PermissionProvenance.filepathOf(req.metadata),
+              ),
             },
           }),
         ),
