@@ -150,6 +150,13 @@ export class WorktreeManager {
     return this.withGitLock(() => this.createWorktreeImpl(params))
   }
 
+  /** Start the remote base refresh before creation reaches the git mutex. */
+  async prefetchBase(branch?: string): Promise<void> {
+    await this.ensureMigrated()
+    const base = branch || (await this.defaultBranch())
+    await this.withGitLock(() => this.refreshBase(base))
+  }
+
   async renameBranch(worktreePath: string, current: string, requested: string): Promise<string> {
     await this.ensureMigrated()
     return this.withGitLock(() => this.renameBranchImpl(worktreePath, current, requested))
@@ -762,20 +769,14 @@ export class WorktreeManager {
             source: "remote",
           }
         }
+        WorktreeManager.fetchCache.delete(cacheKey)
       }
 
       // Either not cached or cache is stale - do the fetch.
       // Use non-interactive env to prevent SSH passphrase popups.
       onProgress?.("fetching", `Fetching ${remote}/${branch}...`)
       try {
-        // Only opt into simple-git's allowUnsafeSshCommand when the SSH command
-        // is the fixed value Kilo injects — never for an inherited one, which
-        // could be attacker-controlled.
-        const env = nonInteractiveEnv()
-        await simpleGit(this.root, { unsafe: { allowUnsafeSshCommand: isKiloOwnedSshCommand(env) } })
-          .env(env)
-          .fetch(remote, branch, { "--quiet": null, "--no-tags": null })
-        WorktreeManager.fetchCache.set(cacheKey, Date.now())
+        await this.refreshBase(branch, remote)
         if (await this.refExistsLocally(`${remote}/${branch}`)) {
           return {
             ref: `${remote}/${branch}`,
@@ -828,6 +829,23 @@ export class WorktreeManager {
     }
 
     throw new Error(`Could not resolve start point for branch "${branch}"`)
+  }
+
+  private async refreshBase(branch: string, requested?: string): Promise<void> {
+    const remote = requested ?? (await this.resolveRemote())
+    if (!remote) return
+    const key = `${this.root}:${remote}:${branch}`
+    const cached = WorktreeManager.fetchCache.get(key)
+    if (cached && Date.now() - cached < WorktreeManager.FETCH_CACHE_TTL) return
+
+    // Only opt into simple-git's allowUnsafeSshCommand when the SSH command
+    // is the fixed value Kilo injects — never for an inherited one, which
+    // could be attacker-controlled.
+    const env = nonInteractiveEnv()
+    await simpleGit(this.root, { unsafe: { allowUnsafeSshCommand: isKiloOwnedSshCommand(env) } })
+      .env(env)
+      .fetch(remote, branch, { "--quiet": null, "--no-tags": null })
+    WorktreeManager.fetchCache.set(key, Date.now())
   }
 
   /**
