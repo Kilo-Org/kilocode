@@ -15,7 +15,11 @@ const watch = process.argv.includes("--watch")
  */
 const solidCacheDir = path.join(__dirname, "node_modules", ".cache", "esbuild-solid")
 const solidMemCache = new Map()
-const buildScriptHash = crypto.createHash("sha256").update(fs.readFileSync(__filename, "utf8")).digest("hex").slice(0, 8)
+const buildScriptHash = crypto
+  .createHash("sha256")
+  .update(fs.readFileSync(__filename, "utf8"))
+  .digest("hex")
+  .slice(0, 8)
 
 try {
   fs.mkdirSync(solidCacheDir, { recursive: true })
@@ -255,11 +259,11 @@ function getWebviewsConfig() {
   return {
     entryPoints: {
       "agent-manager": "webview-ui/agent-manager/index.tsx",
-      "kiloclaw": "webview-ui/kiloclaw/index.tsx",
-      "marketplace": "webview-ui/marketplace/index.tsx",
+      kiloclaw: "webview-ui/kiloclaw/index.tsx",
+      marketplace: "webview-ui/marketplace/index.tsx",
       "diff-viewer": "webview-ui/diff-viewer/index.tsx",
       "diff-virtual": "webview-ui/diff-virtual/index.tsx",
-      "webview": "webview-ui/src/index.tsx",
+      webview: "webview-ui/src/index.tsx",
     },
     outdir: "dist",
     bundle: true,
