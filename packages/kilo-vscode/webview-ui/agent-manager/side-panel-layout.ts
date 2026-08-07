@@ -2,6 +2,12 @@ export const MIN_PANEL_WIDTH = 360
 const DEFAULT_PANEL_WIDTH_RATIO = 0.5
 const MAX_PANEL_WIDTH_RATIO = 0.8
 
+export enum SidePanel {
+  Diff = "diff",
+  PR = "pr",
+  Terminal = "terminal",
+}
+
 function viewportWidth(viewport: number): number {
   return Number.isFinite(viewport) && viewport > 0 ? viewport : MIN_PANEL_WIDTH
 }
