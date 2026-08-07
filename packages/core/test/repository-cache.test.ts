@@ -112,7 +112,7 @@ describe("RepositoryCache", () => {
         const originPath = fileURLToPath(fixture.remote)
         const linkPath = path.join(fixture.root, "origin-link.git")
         yield* Effect.promise(async () => {
-          await fs.symlink(originPath, linkPath)
+          await fs.symlink(originPath, linkPath, process.platform === "win32" ? "junction" : "dir")
           const linkUrl = pathToFileURL(linkPath).toString()
           await git(initial.localPath, "config", "remote.origin.url", linkUrl)
         })
