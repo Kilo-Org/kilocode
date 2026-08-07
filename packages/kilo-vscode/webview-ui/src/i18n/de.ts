@@ -250,6 +250,8 @@ export const dict = {
   "speechToText.error.emptyTranscript": "Es wurde keine Sprache erkannt.",
 
   "prompt.toast.promptSendFailed.title": "Eingabe konnte nicht gesendet werden",
+  "prompt.toast.dropUnsupported.title": "Nicht unterstützter Dateityp",
+  "prompt.toast.dropUnsupported.description": "Bilder hier ablegen oder Dateien aus dem Explorer ziehen, um sie als @Pfad-Mentions anzuhängen.",
 
   "mcp.status.connected": "verbunden",
   "mcp.status.failed": "fehlgeschlagen",

@@ -239,6 +239,8 @@ export const dict = {
   "speechToText.error.emptyTranscript": "No speech was detected.",
 
   "prompt.toast.promptSendFailed.title": "Failed to send prompt",
+  "prompt.toast.dropUnsupported.title": "Unsupported file type",
+  "prompt.toast.dropUnsupported.description": "Drop images here, or drag files from the Explorer to attach them as @path mentions.",
 
   "mcp.status.connected": "connected",
   "mcp.status.failed": "failed",

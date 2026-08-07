@@ -242,6 +242,8 @@ export const dict = {
   "speechToText.error.emptyTranscript": "Govor nije otkriven.",
 
   "prompt.toast.promptSendFailed.title": "Neuspješno slanje upita",
+  "prompt.toast.dropUnsupported.title": "Nepodržan tip datoteke",
+  "prompt.toast.dropUnsupported.description": "Ovdje ispustite slike ili povucite datoteke iz Explorer-a da ih dodate kao @putanja spomena.",
 
   "mcp.status.connected": "povezano",
   "mcp.status.failed": "neuspjelo",

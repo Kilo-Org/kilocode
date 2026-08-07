@@ -239,6 +239,8 @@ export const dict = {
   "speechToText.error.emptyTranscript": "Речь не обнаружена.",
 
   "prompt.toast.promptSendFailed.title": "Не удалось отправить запрос",
+  "prompt.toast.dropUnsupported.title": "Неподдерживаемый тип файла",
+  "prompt.toast.dropUnsupported.description": "Перетащите сюда изображения или перетащите файлы из Explorer, чтобы добавить их как @путь-упоминания.",
 
   "mcp.status.connected": "подключено",
   "mcp.status.failed": "ошибка",

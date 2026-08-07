@@ -242,6 +242,8 @@ export const dict = {
   "speechToText.error.emptyTranscript": "Nie wykryto mowy.",
 
   "prompt.toast.promptSendFailed.title": "Nie udało się wysłać zapytania",
+  "prompt.toast.dropUnsupported.title": "Nieobsługiwany typ pliku",
+  "prompt.toast.dropUnsupported.description": "Upuść obrazy tutaj lub przeciągnij pliki z Eksploratora, aby dodać je jako wzmianki @ścieżka.",
 
   "mcp.status.connected": "połączono",
   "mcp.status.failed": "niepowodzenie",

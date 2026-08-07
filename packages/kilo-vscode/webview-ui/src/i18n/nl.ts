@@ -245,6 +245,8 @@ export const dict = {
   "speechToText.error.emptyTranscript": "Er is geen spraak gedetecteerd.",
 
   "prompt.toast.promptSendFailed.title": "Verzenden prompt mislukt",
+  "prompt.toast.dropUnsupported.title": "Niet-ondersteund bestandstype",
+  "prompt.toast.dropUnsupported.description": "Sleep afbeeldingen hier of sleep bestanden uit Explorer om ze als @pad-mentions toe te voegen.",
 
   "mcp.status.connected": "verbonden",
   "mcp.status.failed": "mislukt",

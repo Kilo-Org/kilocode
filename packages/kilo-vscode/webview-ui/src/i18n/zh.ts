@@ -232,6 +232,8 @@ export const dict = {
   "speechToText.error.emptyTranscript": "未检测到语音。",
 
   "prompt.toast.promptSendFailed.title": "发送提示失败",
+  "prompt.toast.dropUnsupported.title": "不支持的文件类型",
+  "prompt.toast.dropUnsupported.description": "请拖放图片，或从资源管理器拖入文件以 @路径 形式附加。",
 
   "mcp.status.connected": "已连接",
   "mcp.status.failed": "失败",

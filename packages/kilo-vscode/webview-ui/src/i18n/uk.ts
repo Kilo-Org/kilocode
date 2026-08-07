@@ -241,6 +241,8 @@ export const dict = {
   "speechToText.error.emptyTranscript": "Мовлення не виявлено.",
 
   "prompt.toast.promptSendFailed.title": "Не вдалося надіслати запит",
+  "prompt.toast.dropUnsupported.title": "Непідтриманий тип файлу",
+  "prompt.toast.dropUnsupported.description": "Перетягніть сюди зображення або перетягніть файли з Explorer, щоб додати їх як @шлях-згадки.",
 
   "mcp.status.connected": "підключено",
   "mcp.status.failed": "помилка",

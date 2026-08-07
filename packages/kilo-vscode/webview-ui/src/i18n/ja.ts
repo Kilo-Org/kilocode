@@ -241,6 +241,8 @@ export const dict = {
   "speechToText.error.emptyTranscript": "音声が検出されませんでした。",
 
   "prompt.toast.promptSendFailed.title": "プロンプトの送信に失敗しました",
+  "prompt.toast.dropUnsupported.title": "サポートされていないファイル形式",
+  "prompt.toast.dropUnsupported.description": "画像をドロップするか、Explorer からファイルをドラッグして @パス メンションとして添付してください。",
 
   "mcp.status.connected": "接続済み",
   "mcp.status.failed": "失敗",

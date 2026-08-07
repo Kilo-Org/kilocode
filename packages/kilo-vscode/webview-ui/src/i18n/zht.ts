@@ -230,6 +230,8 @@ export const dict = {
   "speechToText.error.emptyTranscript": "未偵測到語音。",
 
   "prompt.toast.promptSendFailed.title": "傳送提示失敗",
+  "prompt.toast.dropUnsupported.title": "不支援的檔案類型",
+  "prompt.toast.dropUnsupported.description": "請拖放圖片，或從 Explorer 拖入檔案以 @路徑 形式附加。",
 
   "mcp.status.connected": "已連線",
   "mcp.status.failed": "失敗",

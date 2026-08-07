@@ -234,6 +234,8 @@ export const dict = {
   "speechToText.error.emptyTranscript": "لم يتم اكتشاف أي كلام.",
 
   "prompt.toast.promptSendFailed.title": "فشل إرسال الموجه",
+  "prompt.toast.dropUnsupported.title": "نوع ملف غير مدعوم",
+  "prompt.toast.dropUnsupported.description": "أسقط الصور هنا، أو اسحب الملفات من Explorer لإرفاقها كإشارات @مسار.",
 
   "mcp.status.connected": "متصل",
   "mcp.status.failed": "فشل",

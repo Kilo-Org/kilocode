@@ -72,6 +72,24 @@ describe("extractDropPaths", () => {
     expect(extractDropPaths(dt)).toEqual(["file:///home/user/a.ts"])
   })
 
+  it("extracts paths from text/uri-list (Finder and other OS drags)", () => {
+    const dt = {
+      getData: (type: string) => (type === "text/uri-list" ? "file:///home/user/notes.md" : ""),
+    } as unknown as DataTransfer
+    expect(extractDropPaths(dt)).toEqual(["file:///home/user/notes.md"])
+  })
+
+  it("prefers vscode uri-list over text/uri-list", () => {
+    const dt = {
+      getData: (type: string) => {
+        if (type === "application/vnd.code.uri-list") return "file:///from-vscode.ts"
+        if (type === "text/uri-list") return "file:///from-finder.ts"
+        return ""
+      },
+    } as unknown as DataTransfer
+    expect(extractDropPaths(dt)).toEqual(["file:///from-vscode.ts"])
+  })
+
   it("prefers uri-list over text/plain", () => {
     const dt = {
       getData: (type: string) => {

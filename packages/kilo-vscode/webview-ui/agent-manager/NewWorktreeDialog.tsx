@@ -331,6 +331,13 @@ export const NewWorktreeDialog: Component<{
     ref.focus()
     adjustHeight()
   })
+  imageAttach.setUnsupportedDropHandler(() => {
+    showToast({
+      variant: "error",
+      title: t("prompt.toast.dropUnsupported.title"),
+      description: t("prompt.toast.dropUnsupported.description"),
+    })
+  })
 
   // Restore cached images from webview state
   const cachedImages = cached?.advancedDialogImages as ImageAttachment[] | undefined

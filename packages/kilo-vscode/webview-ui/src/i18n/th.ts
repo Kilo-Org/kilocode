@@ -239,6 +239,8 @@ export const dict = {
   "speechToText.error.emptyTranscript": "ตรวจไม่พบเสียงพูด",
 
   "prompt.toast.promptSendFailed.title": "ไม่สามารถส่งพร้อมท์",
+  "prompt.toast.dropUnsupported.title": "ประเภทไฟล์ไม่รองรับ",
+  "prompt.toast.dropUnsupported.description": "วางรูปภาพที่นี่ หรือลากไฟล์จาก Explorer เพื่อแนบเป็น @path mentions",
 
   "mcp.status.connected": "เชื่อมต่อแล้ว",
   "mcp.status.failed": "ล้มเหลว",

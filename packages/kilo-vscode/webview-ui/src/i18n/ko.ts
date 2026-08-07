@@ -242,6 +242,8 @@ export const dict = {
   "speechToText.error.emptyTranscript": "음성이 감지되지 않았습니다.",
 
   "prompt.toast.promptSendFailed.title": "프롬프트 전송 실패",
+  "prompt.toast.dropUnsupported.title": "지원되지 않는 파일 유형",
+  "prompt.toast.dropUnsupported.description": "이미지를 드롭하거나 Explorer에서 파일을 드래그하여 @경로 멘션으로 첨부하세요.",
 
   "mcp.status.connected": "연결됨",
   "mcp.status.failed": "실패",

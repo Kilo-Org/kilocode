@@ -239,6 +239,8 @@ export const dict = {
   "speechToText.error.emptyTranscript": "هیچ گفتاری شناسایی نشد.",
 
   "prompt.toast.promptSendFailed.title": "ارسال پرامپت ناموفق بود",
+  "prompt.toast.dropUnsupported.title": "نوع فایل پشتیبانی‌نشده",
+  "prompt.toast.dropUnsupported.description": "تصاویر را اینجا رها کنید یا فایل‌ها را از Explorer بکشید تا به‌صورت @مسیر اضافه شوند.",
 
   "mcp.status.connected": "متصل",
   "mcp.status.failed": "ناموفق",

@@ -240,6 +240,8 @@ export const dict = {
   "speechToText.error.emptyTranscript": "Hiçbir konuşma algılanmadı.",
 
   "prompt.toast.promptSendFailed.title": "Komut gönderilemedi",
+  "prompt.toast.dropUnsupported.title": "Desteklenmeyen dosya türü",
+  "prompt.toast.dropUnsupported.description": "Görselleri buraya bırakın veya @yol mention olarak eklemek için Explorer'dan dosyaları sürükleyin.",
 
   "mcp.status.connected": "bağlı",
   "mcp.status.failed": "başarısız",

@@ -210,6 +210,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     ref.focus()
     adjustHeight()
   })
+  imageAttach.setUnsupportedDropHandler(() => {
+    showToast({
+      variant: "error",
+      title: language.t("prompt.toast.dropUnsupported.title"),
+      description: language.t("prompt.toast.dropUnsupported.description"),
+    })
+  })
   const history = usePromptHistory()
   let textareaRef: HTMLTextAreaElement | undefined
   let highlightRef: HTMLDivElement | undefined

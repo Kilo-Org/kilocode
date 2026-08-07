@@ -241,6 +241,8 @@ export const dict = {
   "speechToText.error.emptyTranscript": "Ingen tale blev registreret.",
 
   "prompt.toast.promptSendFailed.title": "Kunne ikke sende forespørgsel",
+  "prompt.toast.dropUnsupported.title": "Ikke understøttet filtype",
+  "prompt.toast.dropUnsupported.description": "Slip billeder her, eller træk filer fra Explorer for at vedhæfte dem som @sti-mentions.",
 
   "mcp.status.connected": "forbundet",
   "mcp.status.failed": "mislykkedes",

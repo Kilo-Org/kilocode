@@ -244,6 +244,8 @@ export const dict = {
   "speechToText.error.emptyTranscript": "Aucune voix n'a été détectée.",
 
   "prompt.toast.promptSendFailed.title": "Échec de l'envoi du message",
+  "prompt.toast.dropUnsupported.title": "Type de fichier non pris en charge",
+  "prompt.toast.dropUnsupported.description": "Déposez des images ici ou glissez des fichiers depuis l’Explorateur pour les attacher en mentions @chemin.",
 
   "mcp.status.connected": "connecté",
   "mcp.status.failed": "échoué",
