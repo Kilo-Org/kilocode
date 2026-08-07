@@ -359,8 +359,14 @@ const AppContent: Component = () => {
             <Match when={currentView() === "profile"}>
               <ProfileView
                 profileData={server.profileData()}
+                providerUsage={server.providerUsage()}
+                providerUsageLoading={server.providerUsageLoading()}
+                providerUsageError={server.providerUsageError()}
                 deviceAuth={server.deviceAuth()}
                 onLogin={server.startLogin}
+                onRequestProviderUsage={server.requestProviderUsage}
+                onRefreshProviderUsage={server.refreshProviderUsage}
+                onReleaseProviderUsage={server.releaseProviderUsage}
               />
             </Match>
             <Match when={currentView() === "settings"}>

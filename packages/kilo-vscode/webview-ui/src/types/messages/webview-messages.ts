@@ -7,6 +7,11 @@ import type { Config } from "./config"
 import type { ModelAllocation, ReviewComment, TerminalDestination, TerminalPlacement } from "./agent-manager"
 import type { ReviewMessageData } from "../../../../src/shared/review-comments"
 import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
+import type {
+  RefreshProviderUsageMessage,
+  ReleaseProviderUsageMessage,
+  RequestProviderUsageMessage,
+} from "./provider-usage"
 import type { AnacondaDesktopWebviewMessage } from "../../../../src/shared/anaconda-desktop-messages"
 import type {
   ClearLegacyDataMessage,
@@ -1396,6 +1401,9 @@ export type WebviewMessage =
   | LoginRequest
   | LogoutRequest
   | RefreshProfileRequest
+  | RequestProviderUsageMessage
+  | RefreshProviderUsageMessage
+  | ReleaseProviderUsageMessage
   | OpenExternalRequest
   | OpenSettingsPanelRequest
   | OpenProfilePanelRequest
