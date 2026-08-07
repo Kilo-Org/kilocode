@@ -26,7 +26,6 @@ import { FSUtil } from "@opencode-ai/core/fs-util"
 import { isRecord } from "@/util/record"
 import { optionalOmitUndefined } from "@opencode-ai/core/schema"
 import { ProviderTransform } from "./transform"
-import { discoverModels } from "./discover-models"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { ModelStatus } from "./model-status"
@@ -46,6 +45,7 @@ import {
   wrapFirstByte,
 } from "@/kilocode/provider/provider"
 import * as ModelsRefresh from "@/kilocode/provider/models-refresh"
+import * as ModelDiscovery from "@/kilocode/provider/discover-models"
 // kilocode_change end
 import { ProviderError } from "./error"
 
@@ -1518,9 +1518,8 @@ export const layer = Layer.effect(
             parsed.models[modelID] = parsedModel
           }
 
-          if (provider.discoverModels === true) {
-            discoveryLoaders[providerID] = () => discoverModels(providerID, provider, parsed, provider.npm) // kilocode_change
-          }
+          if (provider.discoverModels === true)
+            discoveryLoaders[providerID] = () => ModelDiscovery.discover(providerID, provider, parsed) // kilocode_change
 
           database[providerID] = parsed
         }
@@ -1620,29 +1619,7 @@ export const layer = Layer.effect(
         }
         patchKiloProviderPrivacy(providers[ProviderV2.ID.make("kilo")], cfg) // kilocode_change
 
-        yield* Effect.all(
-          Object.entries(discoveryLoaders).map(([providerID, loader]) =>
-            Effect.gen(function* () {
-              const id = ProviderV2.ID.make(providerID) as ProviderV2.ID
-              if (!providers[id]) return
-              if (!isProviderAllowed(id)) return
-
-              const discovered = yield* Effect.tryPromise(() => loader()).pipe(
-                Effect.catch((err) =>
-                  Effect.logWarning("model discovery failed", { providerID, err }).pipe(
-                    Effect.as({} as Record<string, Model>),
-                  ),
-                ),
-              )
-              for (const [modelID, model] of Object.entries(discovered)) {
-                if (!providers[id].models[modelID]) {
-                  providers[id].models[modelID] = model
-                }
-              }
-            }),
-          ),
-          { concurrency: "unbounded" },
-        ) // kilocode_change
+        yield* ModelDiscovery.load({ loaders: discoveryLoaders, providers, allowed: isProviderAllowed }) // kilocode_change
 
         for (const [id, provider] of Object.entries(providers)) {
           const providerID = ProviderV2.ID.make(id)

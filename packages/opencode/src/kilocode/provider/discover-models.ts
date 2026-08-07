@@ -1,16 +1,16 @@
-// kilocode_change - new file
 import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { Effect } from "effect"
-import { type Model } from "./provider"
-import { buildTimeoutSignal } from "@/kilocode/provider/provider"
+import type { Provider } from "@/provider/provider"
+import { buildTimeoutSignal } from "./provider"
 
-export async function discoverModels(
+type Loader = () => Promise<Record<string, Provider.Model>>
+
+export async function discover(
   providerID: string,
   provider: { options?: Record<string, any>; api?: string; npm?: string },
-  parsed: { models: Record<string, Model> },
-  npm?: string,
-): Promise<Record<string, Model>> {
+  parsed: { models: Record<string, Provider.Model> },
+): Promise<Record<string, Provider.Model>> {
   const first = Object.values(parsed.models)[0]
   const baseURL = provider.options?.baseURL ?? provider.api ?? first?.api?.url
   if (typeof baseURL !== "string" || baseURL === "") return {}
@@ -36,7 +36,7 @@ export async function discoverModels(
     const body = (await response.json()) as { data?: Array<{ id?: unknown }> }
     if (!Array.isArray(body.data)) return {}
 
-    const models: Record<string, Model> = {}
+    const models: Record<string, Provider.Model> = {}
     for (const item of body.data) {
       const modelID = typeof item?.id === "string" ? item.id : undefined
       if (!modelID) continue
@@ -45,8 +45,8 @@ export async function discoverModels(
         providerID: ProviderV2.ID.make(providerID),
         api: {
           id: modelID,
-          url,
-          npm: npm ?? provider.npm ?? "@ai-sdk/openai-compatible",
+          url: baseURL,
+          npm: provider.npm ?? "@ai-sdk/openai-compatible",
         },
         name: modelID,
         family: "",
@@ -97,4 +97,32 @@ export async function discoverModels(
   } finally {
     timeout.clear()
   }
+}
+
+export function load(input: {
+  loaders: Record<string, Loader>
+  providers: Record<ProviderV2.ID, Provider.Info>
+  allowed: (id: ProviderV2.ID) => boolean
+}) {
+  return Effect.all(
+    Object.entries(input.loaders).map(([providerID, loader]) =>
+      Effect.gen(function* () {
+        const id = ProviderV2.ID.make(providerID)
+        const provider = input.providers[id]
+        if (!provider || !input.allowed(id)) return
+
+        const discovered = yield* Effect.tryPromise(() => loader()).pipe(
+          Effect.catch((err) =>
+            Effect.logWarning("model discovery failed", { providerID, err }).pipe(
+              Effect.as({} as Record<string, Provider.Model>),
+            ),
+          ),
+        )
+        for (const [modelID, model] of Object.entries(discovered)) {
+          if (!provider.models[modelID]) provider.models[modelID] = model
+        }
+      }),
+    ),
+    { concurrency: "unbounded" },
+  )
 }
