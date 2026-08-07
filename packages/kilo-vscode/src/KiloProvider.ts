@@ -17,7 +17,7 @@ import type { EditorContext, IndexingStatus } from "./services/cli-backend/types
 import { FileIgnoreController } from "./services/autocomplete/shims/FileIgnoreController"
 import { ChatTextAreaAutocomplete } from "./services/autocomplete/chat-autocomplete/ChatTextAreaAutocomplete"
 import { notebookUri } from "./services/autocomplete/continuedev/core/autocomplete/notebook"
-import { buildWebviewHtml, getWebviewFontSize } from "./utils"
+import { buildWebviewHtml, getWebviewFontSize, isCursorHost } from "./utils"
 import { saveImage } from "./kilo-provider/save-image"
 import { handleEditorAction } from "./kilo-provider/editor-actions"
 import { exportTranscript } from "./kilo-provider/export-transcript"
@@ -1055,6 +1055,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           openAdvancedWorktree: () => vscode.commands.executeCommand("kilo-code.new.agentManager.advancedWorktree"),
           openChanges: (sessionId?: string, turnId?: string) =>
             vscode.commands.executeCommand("kilo-code.new.showChanges", { sessionId, turnId }),
+          openProfile: () => vscode.commands.executeCommand("kilo-code.new.profileButtonClicked"),
           currentSessionId: this.currentSession?.id,
           createWorktree: async (baseBranch, branchName) => {
             await this.createWorktreeHandler?.(baseBranch, branchName)
@@ -4917,6 +4918,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       title: "Kilo Code",
       port: this.connectionService.getServerInfo()?.port,
       extraStyles: `.container { height: 100vh; }`,
+      // Dedicated single-purpose panels (Settings, Profile, Sub-Agent Viewer)
+      // never show the bar. Sidebar and "Open in Tab" only need it in Cursor —
+      // VS Code's native toolbar (restored in package.json) works everywhere.
+      topBar: this.opts.hideTopBar !== true && isCursorHost(),
+      topBarSurface: this.opts.topBarSurface === "tab" ? "tab_title" : "sidebar_title",
     })
   }
 

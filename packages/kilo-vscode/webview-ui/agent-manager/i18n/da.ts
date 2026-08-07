@@ -102,7 +102,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "Næste fane",
   "agentManager.shortcuts.newTab": "Ny fane",
   "agentManager.shortcuts.closeTab": "Luk fane",
-  "agentManager.shortcuts.toggleTerminal": "Skift terminal",
+  "agentManager.shortcuts.toggleTerminal": "Fokusér / skjul terminalen",
   "agentManager.shortcuts.runScript": "Kør script",
   "agentManager.run.options": "Kørselsindstillinger",
   "agentManager.run.configure": "Konfigurer kørselsscript",

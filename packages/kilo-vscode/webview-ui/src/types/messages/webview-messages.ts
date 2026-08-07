@@ -202,6 +202,10 @@ export interface OpenSettingsPanelRequest {
   tab?: string
 }
 
+export interface OpenProfilePanelRequest {
+  type: "openProfilePanel"
+}
+
 export interface OpenVSCodeSettingsRequest {
   type: "openVSCodeSettings"
   query: string
@@ -1392,6 +1396,7 @@ export type WebviewMessage =
   | RefreshProfileRequest
   | OpenExternalRequest
   | OpenSettingsPanelRequest
+  | OpenProfilePanelRequest
   | OpenVSCodeSettingsRequest
   | OpenConfigFileRequest
   | OpenMarketplacePanelRequest

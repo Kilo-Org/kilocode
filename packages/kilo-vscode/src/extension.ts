@@ -26,6 +26,7 @@ import { RemoteStatusService } from "./services/RemoteStatusService"
 import { markWorkspace } from "./util/spotlight"
 import { createNotebookBridge } from "./services/notebook"
 import { createGitExecutable } from "./util/git-executable"
+import { isCursorHost } from "./utils"
 
 let agentManager: AgentManagerProvider | undefined
 let shuttingDown = false
@@ -47,6 +48,10 @@ const panelTitleHandler = (panel: vscode.WebviewPanel) => (title: string) => {
 export function activate(context: vscode.ExtensionContext) {
   console.log("Kilo Code extension is now active")
   shuttingDown = false
+
+  // Drives the "!kilo-code.new.isCursor" guards on the native view/title and
+  // editor/title menu contributions — see isCursorHost() for why.
+  void vscode.commands.executeCommand("setContext", "kilo-code.new.isCursor", isCursorHost())
 
   const telemetry = TelemetryProxy.getInstance()
 
@@ -140,7 +145,12 @@ export function activate(context: vscode.ExtensionContext) {
   // The terminal intercepts all keystrokes unless the command is listed in
   // terminal.integrated.commandsToSkipShell, which only contains built-in
   // commands by default.
-  const skip = ["kilo-code.new.agentManagerOpen", "kilo-code.new.agentManager.showTerminal"]
+  const skip = [
+    "kilo-code.new.agentManagerOpen",
+    "kilo-code.new.agentManager.showTerminal",
+    "kilo-code.new.agentManager.previousTerminal",
+    "kilo-code.new.agentManager.nextTerminal",
+  ]
   if (process.platform === "darwin") skip.push("kilo-code.new.agentManager.runScript")
   ensureCommandsSkipShell(skip)
 
@@ -232,6 +242,7 @@ export function activate(context: vscode.ExtensionContext) {
       deserializeWebviewPanel(panel: vscode.WebviewPanel) {
         const tabProvider = new KiloProvider(context.extensionUri, connectionService, context, {
           tabTitle: panelTitleHandler(panel),
+          topBarSurface: "tab",
         })
         tabProvider.setRemoteService(remoteService)
         tabProvider.setAutoApproveController(autoApprove)
@@ -476,6 +487,12 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.agentManager.nextTab", () => {
       agentManagerProvider.postMessage({ type: "action", action: "tabNext" })
     }),
+    vscode.commands.registerCommand("kilo-code.new.agentManager.previousTerminal", () => {
+      agentManagerProvider.postMessage({ type: "action", action: "terminalPrevious" })
+    }),
+    vscode.commands.registerCommand("kilo-code.new.agentManager.nextTerminal", () => {
+      agentManagerProvider.postMessage({ type: "action", action: "terminalNext" })
+    }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.search", () => {
       agentManagerProvider.postMessage({ type: "action", action: "search" })
     }),
@@ -627,6 +644,7 @@ function openKiloInNewTab(
 
   const tabProvider = new KiloProvider(context.extensionUri, connectionService, context, {
     tabTitle: panelTitleHandler(panel),
+    topBarSurface: "tab",
   })
   tabProvider.setRemoteService(remoteService)
   tabProvider.setAutoApproveController(autoApprove)

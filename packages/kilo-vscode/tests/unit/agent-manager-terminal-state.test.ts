@@ -18,6 +18,7 @@ function scene(initial: string | null = LOCAL) {
   const events = {
     activated: [] as string[],
     selected: [] as string[],
+    cleared: 0,
     saved: 0,
     shown: [] as string[],
     errors: 0,
@@ -29,7 +30,7 @@ function scene(initial: string | null = LOCAL) {
     tabIds: tabs,
     selectReview: () => undefined,
     selectSessionTab: () => undefined,
-    clearSession: () => undefined,
+    clearSession: () => events.cleared++,
     resetOthers: () => undefined,
     isPendingId: () => false,
     findTab: () => undefined,
@@ -401,6 +402,69 @@ describe("Agent Manager terminal state", () => {
     })
   })
 
+  it("cycles side terminals in both directions and wraps", () => {
+    createRoot((dispose) => {
+      const item = scene()
+      item.state.add(null, { id: "terminal:one", title: "Terminal 1", wsUrl: "ws://one", font, placement: "side" })
+      item.state.add(null, { id: "terminal:two", title: "Terminal 2", wsUrl: "ws://two", font, placement: "side" })
+      item.state.setSideActive(LOCAL, "terminal:one")
+
+      expect(item.handlers.cycle("next", "side")).toBe(true)
+      expect(item.state.sideActiveFor(LOCAL)).toBe("terminal:two")
+      expect(item.state.focusRequest()?.id).toBe("terminal:two")
+      expect(item.handlers.cycle("next", "side")).toBe(true)
+      expect(item.state.sideActiveFor(LOCAL)).toBe("terminal:one")
+      expect(item.handlers.cycle("previous", "side")).toBe(true)
+      expect(item.state.sideActiveFor(LOCAL)).toBe("terminal:two")
+      dispose()
+    })
+  })
+
+  it("cycles main terminal tabs independently from side terminals", () => {
+    createRoot((dispose) => {
+      const item = scene()
+      item.state.add(null, { id: "terminal:one", title: "Terminal 1", wsUrl: "ws://one", font, placement: "tab" })
+      item.state.add(null, { id: "terminal:two", title: "Terminal 2", wsUrl: "ws://two", font, placement: "tab" })
+      item.state.setActiveId("terminal:one")
+
+      expect(item.handlers.cycle("next", "tab")).toBe(true)
+      expect(item.state.activeId()).toBe("terminal:two")
+      expect(item.handlers.cycle("next", "tab")).toBe(true)
+      expect(item.state.activeId()).toBe("terminal:one")
+      dispose()
+    })
+  })
+
+  it("starts terminal cycling at the boundary when no terminal is active", () => {
+    createRoot((dispose) => {
+      const item = scene()
+      item.state.add(null, { id: "terminal:one", title: "Terminal 1", wsUrl: "ws://one", font, placement: "tab" })
+      item.state.add(null, { id: "terminal:two", title: "Terminal 2", wsUrl: "ws://two", font, placement: "tab" })
+      item.state.setActiveId(undefined)
+
+      expect(item.handlers.cycle("next", "tab")).toBe(true)
+      expect(item.state.activeId()).toBe("terminal:one")
+      item.state.setActiveId(undefined)
+      expect(item.handlers.cycle("previous", "tab")).toBe(true)
+      expect(item.state.activeId()).toBe("terminal:two")
+      dispose()
+    })
+  })
+
+  it("keeps the session open when its last main terminal closes", () => {
+    createRoot((dispose) => {
+      const item = scene()
+      item.state.add(null, { id: "terminal:one", title: "Terminal 1", wsUrl: "ws://one", font, placement: "tab" })
+      item.state.setActiveId("terminal:one")
+      item.state.setFocusedId("terminal:one")
+
+      expect(item.handlers.closeFocused()).toBe(true)
+      expect(item.state.current()).toEqual([])
+      expect(item.events.cleared).toBe(0)
+      dispose()
+    })
+  })
+
   it("moves activation to the last remaining side terminal on close", () => {
     createRoot((dispose) => {
       const item = scene()
@@ -410,6 +474,7 @@ describe("Agent Manager terminal state", () => {
 
       expect(item.handlers.closeSide("terminal:two")).toBe(true)
       expect(item.state.sideActiveFor(LOCAL)).toBe("terminal:one")
+      expect(item.state.focusRequest()?.id).toBe("terminal:one")
       expect(item.posted).toEqual([{ type: "agentManager.terminal.close", terminalId: "terminal:two" }])
 
       expect(item.handlers.closeSide("terminal:one")).toBe(true)
