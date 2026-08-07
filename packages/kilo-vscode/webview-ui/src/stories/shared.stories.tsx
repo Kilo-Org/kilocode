@@ -104,6 +104,35 @@ const AccessibleModelSelector = () => {
   )
 }
 
+const SearchFavoriteModelSelector = () => {
+  const session = {
+    ...mockSessionValue(),
+    favoriteModels: () => [{ providerID: "kilo", modelID: "alpha" }],
+  }
+  const models: EnrichedModel[] = [
+    { id: "alpha", name: "Alpha", providerID: "kilo", providerName: "Kilo" },
+    { id: "alpha", name: "Alpha", providerID: "openai", providerName: "OpenAI" },
+    { id: "bravo", name: "Bravo", providerID: "kilo", providerName: "Kilo" },
+  ]
+  const [value, setValue] = createSignal<ModelSelection | null>({ providerID: "kilo", modelID: "alpha" })
+
+  return (
+    <SessionContext.Provider value={session as any}>
+      <ModelSelectorBase
+        value={value()}
+        models={models}
+        label="Review model"
+        allowClear
+        clearLabel="Use default model"
+        placement="bottom-start"
+        onSelect={(providerID, modelID) => {
+          setValue(providerID && modelID ? { providerID, modelID } : null)
+        }}
+      />
+    </SessionContext.Provider>
+  )
+}
+
 export const ModelSelectorAccessible: Story = {
   name: "ModelSelector — accessible interaction",
   render: () => (
@@ -129,6 +158,15 @@ export const ModelSelectorSelectedFavorite: Story = {
       </StoryProviders>
     )
   },
+}
+
+export const ModelSelectorSearchFavorite: Story = {
+  name: "ModelSelector - search favorite",
+  render: () => (
+    <StoryProviders>
+      <SearchFavoriteModelSelector />
+    </StoryProviders>
+  ),
 }
 
 export const ModelSelectorMostUsed: Story = {

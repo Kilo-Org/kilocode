@@ -195,6 +195,13 @@ describe("rankModelSearch", () => {
     expect(result.slice(0, 2).map((model) => model.providerID)).toEqual(["kilo", "openai"])
   })
 
+  it("keeps only the favorited variant when equivalent models match search", () => {
+    const result = rankModelSearch(SEARCH_MODELS, "sol", {
+      favorites: new Set(["kilo/gpt-5.6-sol"]),
+    })
+    expect(result.slice(0, 2).map((model) => model.providerID)).toEqual(["kilo", "nvidia"])
+  })
+
   it("does not let usage make a weaker model beat an exact match", () => {
     const result = rankModelSearch(SEARCH_MODELS, "sol", {
       usage: { "nvidia/solar-pro": { count: 1000, lastUsed: 100 } },
