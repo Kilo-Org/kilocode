@@ -14953,6 +14953,142 @@
         ]
       }
     },
+    "/kilocode/command/files": {
+      "get": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.commandFiles",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Command files",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CommandFile"
+                  },
+                  "description": "Command files"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "List commands with editable file locations for settings clients.",
+        "summary": "List command files",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.commandFiles({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/command/remove": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.removeCommand",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Command removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Command removed"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BadRequest | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Remove a command by deleting its markdown file from disk and clearing it from cache.",
+        "summary": "Remove a command",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "location": {
+                    "type": "string"
+                  }
+                },
+                "required": ["location"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.removeCommand({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/kilocode/skill/remove": {
       "post": {
         "tags": ["kilocode"],
@@ -38393,6 +38529,52 @@
           }
         },
         "required": ["agent", "directory", "enabled", "state", "skills", "mcps", "vscode_extensions"],
+        "additionalProperties": false
+      },
+      "CommandFile": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "agent": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "variant": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "builtin": {
+            "type": "boolean"
+          },
+          "location": {
+            "type": "string"
+          },
+          "editable": {
+            "type": "boolean"
+          },
+          "content": {
+            "type": "string"
+          },
+          "subtask": {
+            "type": "boolean"
+          },
+          "hints": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["name", "builtin", "location", "editable", "hints"],
         "additionalProperties": false
       },
       "NotebookOutput": {
