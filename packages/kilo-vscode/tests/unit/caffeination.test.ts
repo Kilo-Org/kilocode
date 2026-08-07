@@ -32,6 +32,21 @@ class Driver implements CaffeinationDriver {
   }
 }
 
+class DeferredDriver extends Driver {
+  private release: (() => void) | undefined
+
+  override stop(): Promise<void> {
+    this.stops++
+    return new Promise((resolve) => {
+      this.release = resolve
+    })
+  }
+
+  resolveStop(): void {
+    this.release?.()
+  }
+}
+
 function wait(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0))
 }
@@ -114,5 +129,25 @@ describe("CaffeinationService", () => {
     expect(driver.starts).toBe(3)
     expect(service.getState()).toMatchObject({ available: true, active: true, error: undefined })
     await service.dispose()
+  })
+
+  it("waits for driver cleanup and disposes only once", async () => {
+    const driver = new DeferredDriver()
+    const service = new CaffeinationService(driver)
+    await service.setEnabled(true)
+
+    const disposing = service.dispose()
+    let settled = false
+    void disposing.then(() => {
+      settled = true
+    })
+    await wait()
+    expect(settled).toBe(false)
+
+    driver.resolveStop()
+    await disposing
+    expect(settled).toBe(true)
+    await service.dispose()
+    expect(driver.stops).toBe(1)
   })
 })
