@@ -9,7 +9,6 @@ import { PRBadge } from "./PRBadge"
 import { PROverview } from "./PROverview"
 import { PRReviewers } from "./PRReviewers"
 import { PRDescription } from "./PRDescription"
-import { PRFileChanges } from "./PRFileChanges"
 import { PRChecks } from "./PRChecks"
 import { PRComments } from "./PRComments"
 import { PRSummary } from "./PRSummary"
@@ -50,7 +49,6 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
           <Show when={props.pr.body}>
             {(body) => <PRDescription body={body()} />}
           </Show>
-          <PRFileChanges files={props.pr.files} additions={props.pr.additions} deletions={props.pr.deletions} />
           <Show when={props.pr.checks.total > 0}>
             <PRChecks checks={props.pr.checks} />
           </Show>
