@@ -63,7 +63,7 @@ function compareMessage(a: Message, b: Message) {
   return a.time.created - b.time.created || a.id.localeCompare(b.id)
 }
 
-const messageKey = (message: Message) => message.time.created + message.id
+const messageKey = (message: Message) => String(message.time.created).padStart(16, "0") + message.id // kilocode_change
 
 export const {
   context: SyncContext,

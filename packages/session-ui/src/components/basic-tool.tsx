@@ -116,10 +116,24 @@ export function BasicTool(props: BasicToolProps) {
     if (props.defer && open()) scheduleReady(true)
   })
 
+  let userToggled = false
   const setOpen = (value: boolean) => {
+    userToggled = true
     if (props.open === undefined) setState("open", value)
     props.onOpenChange?.(value)
   }
+
+  createEffect(
+    on(
+      () => props.defaultOpen,
+      (val) => {
+        if (!userToggled && val !== undefined && props.open === undefined) {
+          setState("open", val)
+        }
+      },
+      { defer: true },
+    ),
+  )
 
   createEffect(() => {
     if (!props.forceOpen) return

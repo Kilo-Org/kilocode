@@ -82,7 +82,7 @@ export class Subscription {
       // Idle is queued after the turn's events, and this subscription awaits each update in order.
       void waiter.promise.catch(() => {})
       const response = await request()
-      await waiter.promise
+      await waiter.promise.catch(() => {}) // kilocode_change
       return response
     } finally {
       waiters.delete(waiter)
