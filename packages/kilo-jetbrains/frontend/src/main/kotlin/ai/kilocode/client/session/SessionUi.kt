@@ -47,6 +47,7 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.controller.EVENT_FLUSH_MS
 import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.session.controller.SessionControllerEvent
+import ai.kilocode.client.session.context.EditorContextGatherer
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.LoginRequiredView
 import ai.kilocode.client.session.views.permission.PermissionView
@@ -682,14 +683,16 @@ class SessionUi(
 
     private fun sendPrompt(text: String, files: List<PromptPartDto>) {
         if (text.isBlank() && files.isEmpty()) return
+        val editor = EditorContextGatherer.gather(project, workspace.directory)
+        val allFiles = files + listOfNotNull(editor.selection)
         val parts = buildList {
             text.takeIf { it.isNotBlank() }?.let { add(PromptPartDto(type = "text", text = it)) }
-            addAll(files)
+            addAll(allFiles)
         }
         LOG.debug {
             val agent = controller.model.agent ?: "none"
             val model = controller.model.model ?: "none"
-            "${ChatLogSummary.prompt(PromptDto(parts = parts))} agent=$agent model=$model ready=${controller.ready}"
+            "${ChatLogSummary.prompt(PromptDto(parts = parts, editorContext = editor.context))} agent=$agent model=$model ready=${controller.ready}"
         }
         prompt.clear()
         val follow = scroll.atBottom()
@@ -705,7 +708,7 @@ class SessionUi(
             scroll.followBottom(follow)
             return
         }
-        controller.prompt(text, files)
+        controller.prompt(text, allFiles, editor.context)
         scroll.followBottom(follow)
     }
 

@@ -3,6 +3,7 @@ package ai.kilocode.client.settings.context
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.settings.base.BaseContentPanel
 import ai.kilocode.client.settings.base.BaseSettingsUi
 import ai.kilocode.client.settings.base.SettingsBannerKind
@@ -134,6 +135,9 @@ internal class ContextSettingsContent(
     private val update: (ContextDraft.() -> ContextDraft) -> Unit,
 ) : BaseContentPanel() {
     private val auto = SettingsToggle { value -> update { copy(auto = value) } }
+    private val editor = SettingsToggle(KiloPluginSettings.getAutoEditorContext()) { value ->
+        KiloPluginSettings.setAutoEditorContext(value)
+    }
     private val prune = SettingsToggle { value -> update { copy(prune = value) } }
     private val threshold = ThresholdField(
         KiloBundle.message("settings.context.compaction.threshold.placeholder"),
@@ -164,6 +168,13 @@ internal class ContextSettingsContent(
             ))
         }
         section(
+            KiloBundle.message("settings.context.editor.title"),
+        ).row(SettingsRow(
+            KiloBundle.message("settings.context.editor.auto.title"),
+            KiloBundle.message("settings.context.editor.auto.description"),
+            editor,
+        ))
+        section(
             KiloBundle.message("settings.context.watcher.title"),
             KiloBundle.message("settings.context.watcher.description"),
         ).row(patterns)
@@ -172,10 +183,11 @@ internal class ContextSettingsContent(
     @RequiresEdt
     fun sync(draft: ContextDraft, enabled: Boolean) {
         auto.isSelected = draft.auto
+        editor.isSelected = KiloPluginSettings.getAutoEditorContext()
         prune.isSelected = draft.prune
         threshold.sync(draft.threshold)
         patterns.sync(draft.ignore)
-        listOf(auto, prune, threshold, patterns).forEach { it.isEnabled = enabled }
+        listOf(auto, editor, prune, threshold, patterns).forEach { it.isEnabled = enabled }
     }
 }
 
