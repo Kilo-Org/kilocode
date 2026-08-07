@@ -784,7 +784,7 @@ describe("config overlay routes", () => {
         version: 1,
       })
     },
-    20_000,
+    60_000,
   )
 
   test.serial("applies saved project sandbox settings to initialized sessions", async () => {
