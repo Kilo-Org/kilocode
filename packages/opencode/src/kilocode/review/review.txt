@@ -78,7 +78,7 @@ Before pull request review, use `gh pr view <pr>` to verify that the pull reques
 
 For staged review, review only staged changes in the Git index (`git diff --cached`). Do NOT review unstaged or untracked changes.
 
-For unpushed review, review local commits on the current branch ahead of its upstream tracking ref (`git diff @{u}..HEAD` or against the upstream merge-base).
+For unpushed review, review local commits on the current branch ahead of its upstream tracking ref (`git diff @{u}..HEAD`). If no upstream tracking ref is configured (e.g. on a fresh branch), fall back to comparing against the default base branch (`git diff $(git merge-base HEAD <base>)..HEAD`).
 
 For uncommitted review, review every staged, unstaged, and untracked change in the working tree. Do NOT review committed code.
 
@@ -164,6 +164,8 @@ Rules for the dead code track (apply only when this track is active):
 4. Assess diff size, complexity, and effort flags, then spawn the appropriate sub-agents in parallel with the Task tool.
 
    **Quick mode (`quick`, `--quick`, `-q`, or `--effort 1-3`)**: do NOT spawn sub-agents. Perform a concise, single-pass review directly in the main agent for fast, token-efficient feedback.
+
+   **Deep mode (`deep`, `--deep`, `-d`, or `--effort 8-10`)**: spawn specialized sub-agents across all six tracks (security, performance, business logic, deploy safety, duplication, dead code) for an in-depth audit regardless of diff size.
 
    Count changed lines (additions + deletions) from the diff output and the number of distinct files changed. Use these thresholds:
 

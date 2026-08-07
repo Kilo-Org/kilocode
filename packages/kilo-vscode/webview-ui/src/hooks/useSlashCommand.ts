@@ -146,7 +146,7 @@ export function useSlashCommand(
     { name: "memory purge confirm", description: "Delete all project memory files", hints: [] },
     {
       name: "review",
-      description: "Review code changes [uncommitted, staged, unpushed, branch, pr]",
+      description: "Review code changes [uncommitted, staged, unpushed, branch, commit, pr]",
       hints: ["code-review", "diff"],
       nested: true,
     },
