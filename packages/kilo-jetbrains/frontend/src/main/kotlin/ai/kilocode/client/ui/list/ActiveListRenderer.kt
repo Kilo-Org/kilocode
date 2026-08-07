@@ -21,6 +21,7 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import ai.kilocode.rpc.dto.WorktreeStatsDto
 import java.awt.BorderLayout
+import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Rectangle
 import javax.swing.JList
@@ -208,6 +209,7 @@ internal class ActiveListRenderer(
         desc.foreground = weak
         val data = if (value.deleting) null else value.metrics
         metrics.update(data?.let { WorktreeStatsDto("", it.additions, it.deletions, it.ahead, it.behind) }, data?.pr)
+        metrics.setActions(data?.onChanges, data?.onPr)
         val end = if (value.deleting) KiloBundle.message("common.deleting") else value.trailing.orEmpty()
         trail.text = end
         trail.isVisible = end.isNotBlank() && data == null
@@ -285,19 +287,30 @@ internal interface ActiveListActive {
     fun hoveredIndex(): Int = -1
 }
 
-internal class ActiveListActionCell : JBLabel() {
-    var cellId: String = ""
+internal class ActiveListActionCell : JBLabel(), ActiveListHitCell {
+    private var cell: ActiveListCell? = null
+
+    override var cellId: String = ""
         private set
 
     fun update(cell: ActiveListCell) {
+        this.cell = cell
         cellId = cell.id
         text = if (cell.iconOnly) "" else cell.label
         icon = cell.icon
-        toolTipText = cell.label.takeIf { it.isNotBlank() }
+        toolTipText = (cell.tooltip ?: cell.label).takeIf { it.isNotBlank() }
         horizontalAlignment = SwingConstants.CENTER
         isEnabled = cell.enabled
         if (!cell.iconOnly) UiStyle.Components.actionLabel(this, isEnabled)
     }
+
+    override fun cellEnabled(): Boolean = cell?.enabled ?: false
+
+    override fun cellCursor(): Int = cell?.cursor ?: Cursor.HAND_CURSOR
+
+    override fun cellTooltip(): String? = cell?.let { it.tooltip ?: it.label }?.takeIf { it.isNotBlank() }
+
+    override fun cellAction(): (() -> Unit)? = cell?.action
 
     override fun setEnabled(enabled: Boolean) {
         super.setEnabled(enabled)

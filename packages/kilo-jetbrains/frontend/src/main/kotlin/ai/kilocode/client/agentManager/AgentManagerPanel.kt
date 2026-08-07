@@ -15,6 +15,9 @@ import ai.kilocode.client.agentManager.worktree.normalizeWorktreePath
 import ai.kilocode.client.agentManager.worktree.style
 import ai.kilocode.client.agentManager.worktree.worktreeActivityBadge
 import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
+import ai.kilocode.client.diff.KiloDiffEditorKind
+import ai.kilocode.client.diff.diffParams
+import ai.kilocode.client.diff.ensureDiffEditorKind
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.ui.UiStyle
@@ -34,6 +37,7 @@ import ai.kilocode.rpc.dto.WorktreeDto
 import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
 import com.intellij.icons.AllIcons
+import com.intellij.ide.BrowserUtil
 import com.intellij.ide.DeleteProvider
 import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.Disposable
@@ -442,7 +446,13 @@ class AgentManagerPanel(
         }
     }
 
-    private data class WorktreeRow(
+    /**
+     * Inner (not data) class so [metrics] can bind each row's changes/PR handlers to the panel.
+     * Value equality is over the data fields only — the derived handlers are intentionally excluded
+     * so a stats/PR refresh that produced identical rows still skips the model rebuild in
+     * [ActiveListView].
+     */
+    private inner class WorktreeRow(
         val dto: WorktreeDto,
         val pending: Boolean,
         override val deleting: Boolean,
@@ -473,8 +483,40 @@ class AgentManagerPanel(
                     ahead = s?.ahead ?: 0,
                     behind = s?.behind ?: 0,
                     pr = p?.let { ActiveListBadge("#${it.number}", style(it.state)) },
+                    onChanges = s?.let { { openBranchDiff(dto.path) } },
+                    onPr = p?.url?.let { url -> { BrowserUtil.browse(url) } },
                 )
             }
+
+        override fun equals(other: Any?): Boolean {
+            val row = other as? WorktreeRow ?: return false
+            return dto == row.dto &&
+                pending == row.pending &&
+                deleting == row.deleting &&
+                kind == row.kind &&
+                stats == row.stats &&
+                pr == row.pr
+        }
+
+        override fun hashCode(): Int {
+            var result = dto.hashCode()
+            result = 31 * result + pending.hashCode()
+            result = 31 * result + deleting.hashCode()
+            result = 31 * result + (kind?.hashCode() ?: 0)
+            result = 31 * result + (stats?.hashCode() ?: 0)
+            result = 31 * result + (pr?.hashCode() ?: 0)
+            return result
+        }
+    }
+
+    @RequiresEdt
+    private fun openBranchDiff(path: String) {
+        val target = project ?: return
+        ensureDiffEditorKind()
+        target.service<KiloVfsManager>().open(
+            KiloDiffEditorKind.ID,
+            diffParams("branch", path, null, KiloBundle.message("diff.editor.branch.title")),
+        )
     }
 }
 

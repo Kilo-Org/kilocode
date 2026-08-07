@@ -19,6 +19,7 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.intellij.xml.util.XmlStringUtil
 import java.awt.Color
+import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Point
 import java.awt.Rectangle
@@ -77,13 +78,10 @@ internal class ActiveListView(
             if (!bounds.contains(event.point)) return null
             val item = model.getElementAt(idx)
             val selected = isSelectedIndex(idx)
-            val id = activeListCellBounds(this, idx, selected)
-                .entries
-                .firstOrNull { it.value.contains(event.point) }
-                ?.key
-            val cell = activeListVisibleCells(item, selected, menu?.takeIf { it.available(item) } != null)
-                .firstOrNull { it.id == id }
-            if (cell != null) return cell.label.takeIf { it.isNotBlank() }
+            // A button (action cell, menu glyph, or metrics badge) under the pointer owns the
+            // tooltip; only fall back to the row description when the pointer is over the body.
+            val hit = activeListHits(this, idx, selected).firstOrNull { it.bounds.contains(event.point) }
+            if (hit != null) return hit.tooltip?.takeIf { it.isNotBlank() }
             if (!cfg.description || !cfg.tooltip) return null
             val note = item.tooltip?.takeIf { it.isNotBlank() } ?: return null
             val text = note.lines().joinToString("<br>") { XmlStringUtil.escapeString(it) }
@@ -100,6 +98,8 @@ internal class ActiveListView(
     private var popups = 0
     private var hovered = -1
     private var heightKey: ActiveListHeightKey? = null
+    // Cursor for the row body; buttons override it on hover via [cursorAt].
+    private var baseCursor: Cursor = Cursor.getDefaultCursor()
     internal var onSelect: (() -> Unit)? = null
 
     fun setEmptyText(text: String) {
@@ -168,25 +168,27 @@ internal class ActiveListView(
                 val hit = hit(e) ?: return
                 if (hit.item.key != down.key || hit.id != down.id) return
                 if (hit.item.deleting) return
-                onCell(hit.item.key, down.id)
+                fire(hit.item, down.id)
                 e.consume()
             }
 
             override fun mouseMoved(e: MouseEvent) {
-                if (!hover) return
-                val idx = list.locationToIndex(e.point)
-                    .takeIf { it >= 0 && list.getCellBounds(it, it)?.contains(e.point) == true }
-                    ?: -1
-                setHovered(idx)
+                if (hover) {
+                    val idx = list.locationToIndex(e.point)
+                        .takeIf { it >= 0 && list.getCellBounds(it, it)?.contains(e.point) == true }
+                        ?: -1
+                    setHovered(idx)
+                }
+                syncCursor(cursorAt(e.point))
             }
 
             override fun mouseExited(e: MouseEvent) {
-                if (!hover) return
-                setHovered(-1)
+                if (hover) setHovered(-1)
+                syncCursor(baseCursor)
             }
         }
         list.addMouseListener(mouse)
-        if (hover) list.addMouseMotionListener(mouse)
+        list.addMouseMotionListener(mouse)
         list.addListSelectionListener { e: ListSelectionEvent ->
             // Selection gates the hover-revealed action bar, so repaint the hovered row as soon as
             // its selection flips instead of waiting for the next mouse move.
@@ -462,12 +464,12 @@ internal class ActiveListView(
             return
         }
         item.doubleClick?.let { id ->
-            onCell(item.key, id)
+            fire(item, id)
             return
         }
         activeListVisibleCells(item, true)
             .firstOrNull { it.enabled && it.primary }
-            ?.let { onCell(item.key, it.id) }
+            ?.let { fire(item, it.id) }
     }
 
     private fun primary(item: ActiveListItem) {
@@ -475,15 +477,61 @@ internal class ActiveListView(
         val cells = activeListVisibleCells(item, true)
         val cell = cells.firstOrNull { it.enabled && it.primary }
         if (cell != null) {
-            onCell(item.key, cell.id)
+            fire(item, cell.id)
             return
         }
         item.doubleClick?.let { id ->
-            onCell(item.key, id)
+            fire(item, id)
             return
         }
-        cells.firstOrNull { it.enabled }?.let { onCell(item.key, it.id) }
+        cells.firstOrNull { it.enabled }?.let { fire(item, it.id) }
             ?: onActivate?.invoke(item)
+    }
+
+    /**
+     * Dispatches a click on a button. A per-cell action or a metrics handler ([ActiveListMetrics])
+     * takes precedence; otherwise the click routes through the list-level [onCell] callback.
+     */
+    private fun fire(item: ActiveListItem, id: String) {
+        when (id) {
+            ACTIVE_LIST_CHANGES_CELL -> {
+                item.metrics?.onChanges?.invoke()
+                return
+            }
+            ACTIVE_LIST_PR_CELL -> {
+                item.metrics?.onPr?.invoke()
+                return
+            }
+        }
+        val action = item.cells.firstOrNull { it.id == id }?.action
+        if (action != null) action() else onCell(item.key, id)
+    }
+
+    @RequiresEdt
+    fun setBaseCursor(cursor: Cursor) {
+        checkEdt()
+        baseCursor = cursor
+        syncCursor(cursor)
+    }
+
+    private fun syncCursor(cursor: Cursor) {
+        if (list.cursor.type != cursor.type) list.cursor = cursor
+    }
+
+    /**
+     * Cursor for [point]: the hovered button's cursor (defaulting to the hand cursor) when the
+     * pointer is over an enabled button, otherwise the row body's [baseCursor].
+     */
+    private fun cursorAt(point: Point): Cursor {
+        val idx = list.locationToIndex(point)
+        val bounds = idx.takeIf { it >= 0 }?.let { list.getCellBounds(it, it) } ?: return baseCursor
+        if (!bounds.contains(point)) return baseCursor
+        val item = model.getElementAt(idx)
+        if (menu == null && item.cells.isEmpty() && item.metrics == null) return baseCursor
+        val hit = activeListHits(list, idx, list.isSelectedIndex(idx))
+            .firstOrNull { it.enabled && it.bounds.contains(point) }
+            ?: return baseCursor
+        return Cursor.getPredefinedCursor(hit.cursor)
     }
 
     private fun hit(e: MouseEvent, enabled: Boolean = true): Hit? {

@@ -4,6 +4,7 @@ import ai.kilocode.client.ui.UiStyle
 import com.intellij.util.ui.JBUI
 import java.awt.Component
 import java.awt.Container
+import java.awt.Cursor
 import java.awt.Point
 import java.awt.Rectangle
 import javax.swing.Icon
@@ -22,6 +23,10 @@ internal data class ActiveListMetrics(
     val ahead: Int = 0,
     val behind: Int = 0,
     val pr: ActiveListBadge? = null,
+    /** Click handler for the changes badge, e.g. open the branch diff. Null leaves it inert. */
+    val onChanges: (() -> Unit)? = null,
+    /** Click handler for the PR badge, e.g. open the pull request. Null leaves it inert. */
+    val onPr: (() -> Unit)? = null,
 )
 
 internal enum class ActiveListRowHeight { EQUAL, PREFERRED }
@@ -49,7 +54,31 @@ internal data class ActiveListCell(
     val icon: Icon? = null,
     val iconOnly: Boolean = false,
     val primary: Boolean = false,
+    /** Hover tooltip; falls back to [label] when null. */
+    val tooltip: String? = null,
+    /** Cursor shown while hovering the button; defaults to the action (hand) cursor. */
+    val cursor: Int = Cursor.HAND_CURSOR,
+    /**
+     * Click handler; when set it replaces the list-level onCell callback for this cell. Defaults to
+     * null so existing cells keep routing through onCell and stay value-equal across row rebuilds.
+     * A per-cell handler must be a stable reference when the owning list relies on row equality to
+     * skip rebuilds.
+     */
+    val action: (() -> Unit)? = null,
 )
+
+/**
+ * A component in a rendered [ActiveListItem] row that the list hit-tests for clicks, hover cursor,
+ * and tooltips. Implemented by the action-cell buttons and by rich trailing badges (the worktree
+ * changes/PR metrics) so both flow through the same click/cursor/tooltip plumbing.
+ */
+internal interface ActiveListHitCell {
+    val cellId: String
+    fun cellEnabled(): Boolean
+    fun cellCursor(): Int
+    fun cellTooltip(): String?
+    fun cellAction(): (() -> Unit)?
+}
 
 /**
  * A row in an [ActiveList]. Carries the display contract shared by settings pages, the worktree
@@ -103,36 +132,63 @@ internal fun activeListVisibleCells(item: ActiveListItem, active: Boolean): List
 
 internal fun activeListCellGap() = JBUI.scale(CELL_GAP)
 
+/** A hit-tested region of a rendered row, in list coordinates, with its interaction metadata. */
+internal class ActiveListHit(
+    val id: String,
+    val bounds: Rectangle,
+    val enabled: Boolean,
+    val cursor: Int,
+    val tooltip: String?,
+    val action: (() -> Unit)?,
+)
+
 /**
- * Clickable action-cell rectangles for a row, in list coordinates.
- *
- * The rectangles are read back from the actual rendered component tree instead of being
- * re-derived by hand. This keeps the click targets identical to what the [ActiveListRenderer]
- * draws — including the action-cell overlay layer and the horizontal insets the platform's
- * [com.intellij.ui.popup.list.SelectablePanel] adds in the New UI, which a hand-computed layout
- * would miss.
+ * Hit-test regions for a row, in list coordinates, read back from the actual rendered component
+ * tree instead of being re-derived by hand. This keeps the click/cursor/tooltip targets identical
+ * to what the [ActiveListRenderer] draws — including the action-cell overlay layer and the
+ * horizontal insets the platform's [com.intellij.ui.popup.list.SelectablePanel] adds in the New
+ * UI, which a hand-computed layout would miss.
  */
+internal fun activeListHits(
+    list: JList<*>,
+    index: Int,
+    selected: Boolean,
+): List<ActiveListHit> {
+    val model = list.model
+    if (index < 0 || index >= model.size) return emptyList()
+    @Suppress("UNCHECKED_CAST")
+    val renderer = list.cellRenderer as? ListCellRenderer<Any?> ?: return emptyList()
+    val cell = list.getCellBounds(index, index) ?: return emptyList()
+    // Render as focused so the region geometry is available for hit-testing even when the list is
+    // not the focus owner. Painting still hides the cells on an unfocused list; this only resolves
+    // hit targets and keeps them stable regardless of focus.
+    val comp = renderer.getListCellRendererComponent(list, model.getElementAt(index), index, selected, true)
+    comp.setBounds(0, 0, cell.width, cell.height)
+    activeListLayout(comp)
+    val out = mutableListOf<ActiveListHit>()
+    forEachHitCell(comp) { hit ->
+        val target = hit as Component
+        val origin = SwingUtilities.convertPoint(target, 0, 0, comp)
+        out += ActiveListHit(
+            hit.cellId,
+            Rectangle(cell.x + origin.x, cell.y + origin.y, target.width, target.height),
+            hit.cellEnabled(),
+            hit.cellCursor(),
+            hit.cellTooltip(),
+            hit.cellAction(),
+        )
+    }
+    return out
+}
+
+/** Clickable action-cell rectangles for a row, in list coordinates. */
 internal fun activeListCellBounds(
     list: JList<*>,
     index: Int,
     selected: Boolean,
 ): Map<String, Rectangle> {
-    val model = list.model
-    if (index < 0 || index >= model.size) return emptyMap()
-    @Suppress("UNCHECKED_CAST")
-    val renderer = list.cellRenderer as? ListCellRenderer<Any?> ?: return emptyMap()
-    val cell = list.getCellBounds(index, index) ?: return emptyMap()
-    // Render as focused so the action-cell geometry is available for hit-testing even when the
-    // list is not the focus owner. Painting still hides the cells on an unfocused list; this only
-    // resolves click targets and keeps them stable regardless of focus.
-    val comp = renderer.getListCellRendererComponent(list, model.getElementAt(index), index, selected, true)
-    comp.setBounds(0, 0, cell.width, cell.height)
-    activeListLayout(comp)
     val out = linkedMapOf<String, Rectangle>()
-    for (action in activeListActionCells(comp)) {
-        val origin = SwingUtilities.convertPoint(action, 0, 0, comp)
-        out[action.cellId] = Rectangle(cell.x + origin.x, cell.y + origin.y, action.width, action.height)
-    }
+    for (hit in activeListHits(list, index, selected)) out[hit.id] = hit.bounds
     return out
 }
 
@@ -146,10 +202,16 @@ internal fun activeListCellAt(
     val model = list.model
     if (index < 0 || index >= model.size) return null
     val item = model.getElementAt(index) as? ActiveListItem ?: return null
-    val cells = activeListCellBounds(list, index, selected)
-    return activeListVisibleCells(item, selected, menu)
-        .firstOrNull { cell -> cell.enabled && cells[cell.id]?.contains(point) == true }
+    val hits = activeListHits(list, index, selected)
+    if (hits.isEmpty()) return null
+    val bounds = hits.associate { it.id to it.bounds }
+    val fromCell = activeListVisibleCells(item, selected, menu)
+        .firstOrNull { cell -> cell.enabled && bounds[cell.id]?.contains(point) == true }
         ?.id
+    if (fromCell != null) return fromCell
+    // Regions that are not backed by an ActiveListCell (the changes/PR badges) are actionable in
+    // place: match the first enabled one with a handler under the point.
+    return hits.firstOrNull { it.enabled && it.action != null && it.bounds.contains(point) }?.id
 }
 
 internal fun activeListCellAt(
@@ -167,12 +229,13 @@ private fun activeListLayout(component: Component) {
     for (child in component.components) activeListLayout(child)
 }
 
-private fun activeListActionCells(component: Component): List<ActiveListActionCell> {
-    val out = mutableListOf<ActiveListActionCell>()
+private fun forEachHitCell(component: Component, action: (ActiveListHitCell) -> Unit) {
     fun visit(c: Component) {
-        if (c is ActiveListActionCell && c.isVisible) out += c
+        // Skip hidden subtrees so a badge left visible inside a hidden trailing panel is not
+        // collected as a live hit target.
+        if (!c.isVisible) return
+        if (c is ActiveListHitCell) action(c)
         if (c is Container) c.components.forEach(::visit)
     }
     visit(component)
-    return out
 }

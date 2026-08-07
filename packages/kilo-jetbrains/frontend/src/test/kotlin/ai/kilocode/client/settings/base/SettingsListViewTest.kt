@@ -2,6 +2,7 @@ package ai.kilocode.client.settings.base
 
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.testing.fire
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.PickerRow
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.LayeredOverlayPanel
@@ -13,11 +14,14 @@ import ai.kilocode.client.ui.list.ActiveListCell
 import ai.kilocode.client.ui.list.ActiveListConfig
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.ActiveListMenu
+import ai.kilocode.client.ui.list.ActiveListMetrics
 import ai.kilocode.client.ui.list.ActiveListRenderer
 import ai.kilocode.client.ui.list.ActiveListRowHeight
 import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.client.ui.list.ActiveListView
+import ai.kilocode.client.ui.list.ACTIVE_LIST_CHANGES_CELL
 import ai.kilocode.client.ui.list.ACTIVE_LIST_MENU_CELL
+import ai.kilocode.client.ui.list.ACTIVE_LIST_PR_CELL
 import ai.kilocode.client.ui.list.activeListCellAt
 import ai.kilocode.client.ui.list.activeListCellBounds
 import com.intellij.icons.AllIcons
@@ -34,6 +38,7 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
 import java.awt.Container
+import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Point
 import java.awt.event.InputEvent
@@ -809,11 +814,168 @@ class SettingsListViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test per-cell action handler replaces onCell callback`() {
+        edt {
+            val actionCalls = mutableListOf<String>()
+            val onCellCalls = mutableListOf<String>()
+            val view = ActiveListView("Empty") { key, id -> onCellCalls += "$key:$id" }
+            val row = item("with", "Alpha", null, ActiveListCell("edit", "Edit", action = { actionCalls += "edit" }))
+            view.update(listOf(row))
+            view.list.size = Dimension(320, 80)
+            view.list.doLayout()
+            UIUtil.dispatchAllInvocationEvents()
+
+            val area = activeListCellBounds(view.list, 0, selected = true).getValue("edit")
+            click(view, center(area))
+
+            assertEquals(listOf("edit"), actionCalls)
+            assertTrue(onCellCalls.isEmpty())
+        }
+    }
+
+    fun `test cell without action still routes through onCell`() {
+        edt {
+            val onCellCalls = mutableListOf<String>()
+            val view = ActiveListView("Empty") { key, id -> onCellCalls += "$key:$id" }
+            view.update(listOf(item("with", "Alpha", null, ActiveListCell("edit", "Edit"))))
+            view.list.size = Dimension(320, 80)
+            view.list.doLayout()
+            UIUtil.dispatchAllInvocationEvents()
+
+            val area = activeListCellBounds(view.list, 0, selected = true).getValue("edit")
+            click(view, center(area))
+
+            assertEquals(listOf("with:edit"), onCellCalls)
+        }
+    }
+
+    fun `test hovering a button shows the action cursor and the body keeps the base cursor`() {
+        edt {
+            val view = ActiveListView("Empty") { _, _ -> }
+            view.update(listOf(item("with", "Alpha", null, ActiveListCell("edit", "Edit", alwaysVisible = true))))
+            layout(view)
+
+            val area = activeListCellBounds(view.list, 0, selected = true).getValue("edit")
+            hover(view, center(area))
+            assertEquals(Cursor.HAND_CURSOR, view.list.cursor.type)
+
+            val bounds = view.list.getCellBounds(0, 0)
+            hover(view, Point(bounds.x + 2, bounds.y + bounds.height / 2))
+            assertEquals(Cursor.DEFAULT_CURSOR, view.list.cursor.type)
+        }
+    }
+
+    fun `test cell cursor kind is honored on hover`() {
+        edt {
+            val view = ActiveListView("Empty") { _, _ -> }
+            view.update(listOf(item("with", "Alpha", null, ActiveListCell("edit", "Edit", alwaysVisible = true, cursor = Cursor.TEXT_CURSOR))))
+            layout(view)
+
+            val area = activeListCellBounds(view.list, 0, selected = true).getValue("edit")
+            hover(view, center(area))
+
+            assertEquals(Cursor.TEXT_CURSOR, view.list.cursor.type)
+        }
+    }
+
+    fun `test more menu shows the action cursor on hover`() {
+        edt {
+            val key = DataKey.create<ActiveListItem>("test.activeList.menu.cursor")
+            val menu = ActiveListMenu(key, DefaultActionGroup(), element = { it })
+            val view = ActiveListView("Empty", menu = menu) { _, _ -> }
+            view.update(listOf(item("with", "Alpha", null)))
+            layout(view)
+            view.list.clearSelection()
+
+            // Reveal the glyph so its slot resolves, then read and hover it.
+            hover(view, center(view.list.getCellBounds(0, 0)))
+            val area = activeListCellBounds(view.list, 0, selected = false).getValue(ACTIVE_LIST_MENU_CELL)
+            hover(view, center(area))
+
+            assertEquals(Cursor.HAND_CURSOR, view.list.cursor.type)
+        }
+    }
+
+    fun `test cell tooltip overrides label`() {
+        edt {
+            val view = ActiveListView("Empty") { _, _ -> }
+            view.update(listOf(item("with", "Alpha", "Desc", ActiveListCell("edit", "Edit", alwaysVisible = true, tooltip = "Custom tip"))))
+            layout(view)
+
+            val area = activeListCellBounds(view.list, 0, selected = true).getValue("edit")
+
+            assertEquals("Custom tip", view.list.getToolTipText(event(view.list, center(area))))
+        }
+    }
+
+    fun `test changes badge is hit tested with cursor tooltip and action`() {
+        edt {
+            val calls = mutableListOf<String>()
+            val onCellCalls = mutableListOf<String>()
+            val view = ActiveListView("Empty") { key, id -> onCellCalls += "$key:$id" }
+            view.update(listOf(metricsItem("wt", "Alpha", ActiveListMetrics(additions = 3, deletions = 2, onChanges = { calls += "changes" }))))
+            view.list.size = Dimension(360, 80)
+            view.list.doLayout()
+            UIUtil.dispatchAllInvocationEvents()
+
+            val area = activeListCellBounds(view.list, 0, selected = true).getValue(ACTIVE_LIST_CHANGES_CELL)
+            assertEquals(KiloBundle.message("worktree.stats.diff.tooltip", 3, 2), view.list.getToolTipText(event(view.list, center(area))))
+
+            hover(view, center(area))
+            assertEquals(Cursor.HAND_CURSOR, view.list.cursor.type)
+
+            click(view, center(area))
+            assertEquals(listOf("changes"), calls)
+            assertTrue(onCellCalls.isEmpty())
+        }
+    }
+
+    fun `test pr badge is hit tested and invokes its action`() {
+        edt {
+            val calls = mutableListOf<String>()
+            val view = ActiveListView("Empty") { _, _ -> }
+            view.update(listOf(metricsItem("wt", "Alpha", ActiveListMetrics(pr = ActiveListBadge("#12"), onPr = { calls += "pr" }))))
+            view.list.size = Dimension(360, 80)
+            view.list.doLayout()
+            UIUtil.dispatchAllInvocationEvents()
+
+            val area = activeListCellBounds(view.list, 0, selected = true).getValue(ACTIVE_LIST_PR_CELL)
+            hover(view, center(area))
+            assertEquals(Cursor.HAND_CURSOR, view.list.cursor.type)
+
+            click(view, center(area))
+            assertEquals(listOf("pr"), calls)
+        }
+    }
+
+    fun `test inert changes badge is not hit tested`() {
+        edt {
+            val view = ActiveListView("Empty") { _, _ -> }
+            view.update(listOf(metricsItem("wt", "Alpha", ActiveListMetrics(additions = 3, deletions = 2))))
+            view.list.size = Dimension(360, 80)
+            view.list.doLayout()
+            UIUtil.dispatchAllInvocationEvents()
+
+            val area = activeListCellBounds(view.list, 0, selected = true).getValue(ACTIVE_LIST_CHANGES_CELL)
+
+            // The badge still renders, but with no handler it is not an actionable cell.
+            assertNull(activeListCellAt(view.list, 0, center(area), selected = true))
+            hover(view, center(area))
+            assertEquals(Cursor.DEFAULT_CURSOR, view.list.cursor.type)
+        }
+    }
+
     private fun item(id: String, name: String, note: String?, vararg cells: ActiveListCell) = object : ActiveListItem {
         override val key = id
         override val title = name
         override val description = note
         override val cells = cells.toList()
+    }
+
+    private fun metricsItem(id: String, name: String, data: ActiveListMetrics) = object : ActiveListItem {
+        override val key = id
+        override val title = name
+        override val metrics = data
     }
 
     private fun sectionItem(id: String, name: String, group: String) = object : ActiveListItem {

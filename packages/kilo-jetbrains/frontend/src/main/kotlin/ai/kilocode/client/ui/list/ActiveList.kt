@@ -123,7 +123,7 @@ internal class ActiveList(
 
     @RequiresEdt
     fun setListCursor(cursor: Cursor) {
-        view.list.cursor = cursor
+        view.setBaseCursor(cursor)
     }
 
     @RequiresEdt

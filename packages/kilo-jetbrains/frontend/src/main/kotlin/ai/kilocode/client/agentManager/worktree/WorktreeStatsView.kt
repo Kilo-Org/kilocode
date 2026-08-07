@@ -4,7 +4,10 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.DiffStatBadge
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.list.ACTIVE_LIST_CHANGES_CELL
+import ai.kilocode.client.ui.list.ACTIVE_LIST_PR_CELL
 import ai.kilocode.client.ui.list.ActiveListBadge
+import ai.kilocode.client.ui.list.ActiveListHitCell
 import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.VAlign
@@ -17,6 +20,7 @@ import com.intellij.openapi.util.IconLoader
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
+import java.awt.BorderLayout
 import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.event.MouseAdapter
@@ -25,7 +29,7 @@ import javax.swing.Icon
 import javax.swing.JPanel
 
 internal class WorktreeStatsView(
-    private val openDiff: (() -> Unit)? = null,
+    openDiff: (() -> Unit)? = null,
     fill: Boolean = true,
 ) : JPanel(null) {
     companion object {
@@ -38,9 +42,14 @@ internal class WorktreeStatsView(
     private val diff = DiffStatBadge(0, 0, DiffStatBadge.Variant.COMPACT, fill = fill)
     private val pr = JBLabel()
     private val change = Stack.horizontal(UiStyle.Gap.sm()).next(behind).next(ahead).next(diff)
+    // The change and PR badges are hit regions so the list can drive their clicks: inside the list
+    // the view is a render stamp whose own mouse listeners never fire, so the ActiveList reads these
+    // ids back and routes the click. Standalone (toolbar) usage keeps its own listeners below.
+    private val changeHit = HitRegion(ACTIVE_LIST_CHANGES_CELL).apply { add(change, BorderLayout.CENTER) }
+    private val prHit = HitRegion(ACTIVE_LIST_PR_CELL).apply { add(pr, BorderLayout.CENTER) }
     // Change badge and PR link stack vertically, each pinned to the trailing edge.
-    private val changeLine = change.align(HAlign.RIGHT, VAlign.CENTER)
-    private val prLine = pr.align(HAlign.RIGHT, VAlign.CENTER)
+    private val changeLine = changeHit.align(HAlign.RIGHT, VAlign.CENTER)
+    private val prLine = prHit.align(HAlign.RIGHT, VAlign.CENTER)
     private val row = Stack.vertical(UiStyle.Gap.sm()).next(changeLine).next(prLine)
     private var url: String? = null
     private var stats: WorktreeStatsDto? = null
@@ -48,19 +57,30 @@ internal class WorktreeStatsView(
 
     init {
         add(row)
-        diff.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR).takeIf { openDiff != null } ?: Cursor.getDefaultCursor()
+        changeHit.act = openDiff
+        prHit.act = { url?.let(BrowserUtil::browse) }
         diff.toolTipText = KiloBundle.message("worktree.stats.diff.tooltip", 0, 0)
-        diff.addMouseListener(object : MouseAdapter() {
+        changeHit.addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(event: MouseEvent) {
-                openDiff?.invoke()
+                changeHit.act?.invoke()
             }
         })
-        pr.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-        pr.addMouseListener(object : MouseAdapter() {
+        prHit.addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(event: MouseEvent) {
-                url?.let(BrowserUtil::browse)
+                prHit.act?.invoke()
             }
         })
+        applyCursors()
+    }
+
+    /**
+     * Replaces the click handlers, used by the list renderer to bind each row's changes/PR actions
+     * to the single reused stamp. Standalone usage leaves the constructor defaults in place.
+     */
+    fun setActions(onChanges: (() -> Unit)?, onPr: (() -> Unit)?) {
+        changeHit.act = onChanges
+        prHit.act = onPr
+        applyCursors()
     }
 
     fun update(stats: WorktreeStatsDto?, pull: WorktreePrDto?) {
@@ -87,17 +107,32 @@ internal class WorktreeStatsView(
         ahead.isVisible = s.ahead > 0
         diff.update(s.additions, s.deletions)
         diff.isVisible = s.additions > 0 || s.deletions > 0
-        diff.toolTipText = KiloBundle.message("worktree.stats.diff.tooltip", s.additions, s.deletions)
+        val diffTip = KiloBundle.message("worktree.stats.diff.tooltip", s.additions, s.deletions)
+        diff.toolTipText = diffTip
+        changeHit.tip = diffTip
         url = link
         pr.icon = badge?.let { FilledBadgeIcon(it.text, it.style) }
         pr.toolTipText = tip
+        prHit.tip = tip
         pr.isVisible = badge != null
-        changeLine.isVisible = behind.isVisible || ahead.isVisible || diff.isVisible
+        val changesVisible = behind.isVisible || ahead.isVisible || diff.isVisible
+        changeLine.isVisible = changesVisible
+        changeHit.isVisible = changesVisible
         prLine.isVisible = pr.isVisible
-        isVisible = changeLine.isVisible || prLine.isVisible
+        prHit.isVisible = pr.isVisible
+        isVisible = changesVisible || pr.isVisible
+        applyCursors()
         revalidate()
         repaint()
     }
+
+    private fun applyCursors() {
+        changeHit.cursor = actionCursor(changeHit.act != null)
+        prHit.cursor = actionCursor(prHit.act != null)
+    }
+
+    private fun actionCursor(active: Boolean) =
+        if (active) Cursor.getPredefinedCursor(Cursor.HAND_CURSOR) else Cursor.getDefaultCursor()
 
     override fun getPreferredSize(): Dimension {
         val ins = insets
@@ -117,6 +152,24 @@ internal class WorktreeStatsView(
         font = JBFont.small()
         foreground = UiStyle.Colors.weak()
         border = JBUI.Borders.empty()
+    }
+
+    /** A badge wrapper the ActiveList hit-tests for clicks, cursor, and tooltip. */
+    private class HitRegion(override val cellId: String) : JPanel(BorderLayout()), ActiveListHitCell {
+        var act: (() -> Unit)? = null
+        var tip: String? = null
+
+        init {
+            isOpaque = false
+        }
+
+        override fun cellEnabled(): Boolean = act != null && isVisible
+
+        override fun cellCursor(): Int = Cursor.HAND_CURSOR
+
+        override fun cellTooltip(): String? = tip
+
+        override fun cellAction(): (() -> Unit)? = act
     }
 }
 
