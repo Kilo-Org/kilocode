@@ -712,6 +712,14 @@ export const dict = {
   "session.costAlert.continue": "ادامه",
   "session.costAlert.question": "هزینه این جلسه از آستانه هشدار {{limit}} شما فراتر رفت و {{cost}} شد. ادامه می‌دهید؟",
   "session.costAlert.stop": "توقف",
+  "sidebar.topBar.label": "پیمایش Kilo Code",
+  "sidebar.topBar.newTask": "وظیفه جدید",
+  "sidebar.topBar.history": "تاریخچه",
+  "sidebar.topBar.agentManager": "مدیر عامل‌ها",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "بازارچه",
+  "sidebar.topBar.profile": "پروفایل",
+  "sidebar.topBar.settings": "تنظیمات",
   "sidebar.session.newSession": "جلسه جدید",
   "sidebar.session.newSession.tooltip": "یک مکالمه تازه شروع کنید و جلسه فعلی را دست‌نخورده نگه دارید.",
   "sidebar.session.newWorktree": "Worktree جدید",
@@ -1125,6 +1133,9 @@ export const dict = {
   "settings.display.tokenThroughput.title": "نمایش توان عملیاتی توکن",
   "settings.display.tokenThroughput.description":
     "نرخ تولید متن (توکن/ثانیه) را در آخرین پیام دستیار و در سربرگ وظیفه نمایش می‌دهد. به‌طور پیش‌فرض پنهان است تا چت شلوغ نشود.",
+  "settings.display.autoApprovalReason.title": "نمایش دلیل تأیید خودکار",
+  "settings.display.autoApprovalReason.description":
+    "نمایش خطی در فراخوانی ابزارها که توضیح می‌دهد چرا به‌طور خودکار تأیید شده‌اند (قانون مطابق، پیش‌فرض عامل، حالت YOLO و غیره).",
 
   "chat.throughput.tooltip":
     "میانگین {{speed}} توکن/ثانیه برای این نوبت. شامل توکن‌های خروجی و استدلال می‌شود؛ زمان اجرای ابزار و انتظار را شامل نمی‌شود.",

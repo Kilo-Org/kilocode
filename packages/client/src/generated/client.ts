@@ -840,6 +840,7 @@ export function make(options: ClientOptions) {
               cwd: input?.["cwd"],
               title: input?.["title"],
               env: input?.["env"],
+              size: input?.["size"],
             },
             successStatus: 200,
             declaredStatuses: [400, 401],

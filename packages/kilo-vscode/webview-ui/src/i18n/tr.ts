@@ -313,6 +313,14 @@ export const dict = {
   "session.messages.loadEarlier": "Önceki mesajları yükle",
   "session.messages.loading": "Mesajlar yükleniyor...",
 
+  "sidebar.topBar.label": "Kilo Code Gezinme",
+  "sidebar.topBar.newTask": "Yeni Görev",
+  "sidebar.topBar.history": "Geçmiş",
+  "sidebar.topBar.agentManager": "Agent Manager",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "Marketplace",
+  "sidebar.topBar.profile": "Profil",
+  "sidebar.topBar.settings": "Ayarlar",
   "sidebar.session.newSession": "Yeni Oturum",
   "sidebar.session.newSession.tooltip": "Mevcut oturumu koruyarak yeni bir konuşma başlatın.",
   "sidebar.session.newWorktree": "Yeni Worktree",
@@ -877,7 +885,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "İzin Verilen Ağ Hedefleri",
   "settings.sandboxing.allowedHosts.description":
-    "Korumalı alana alınmış HTTP ve HTTPS proxy trafiği için DNS ana bilgisayar ve bağlantı noktası hedefleri. GitHub CLI ve HTTPS Git genellikle github.com:443 ve api.github.com:443 gerektirir. Değişiklikler yeni oturumlara uygulanır.",
+    "Korumalı alana alınmış HTTP ve HTTPS proxy trafiği için DNS ana bilgisayar ve bağlantı noktası hedefleri. GitHub CLI ve HTTPS Git genellikle github.com:443 ve api.github.com:443 gerektirir.",
   "settings.sandboxing.writablePaths.title": "Ek Yazılabilir Yollar",
   "settings.sandboxing.writablePaths.description":
     "Sandığın yazılmasına izin veren ek dosya sistemi yolları (ör. /tmp, /var/log). Sandık etkinken varsayılan yazılabilir yollarla birleştirilir.",
@@ -1086,19 +1094,23 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Shift+Tab ile akıl yürütme eforunu değiştir",
   "settings.display.shiftTabCycle.description":
     "Bir sonraki akıl yürütme eforu seviyesine geçmek için komut girişinde Shift+Tab tuşlarına basın. Shift+Tab tuşunu klavye odağında gezinmek için korumak üzere devre dışı bırakın.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "Terminal Komut Blokları",
+  "settings.display.terminalCommand.description":
+    "Terminal komut bloklarının başlangıçta genişletilmiş mi yoksa daraltılmış mı olacağını seçin.",
+  "settings.display.terminalCommand.expanded": "Genişletilmiş",
+  "settings.display.terminalCommand.collapsed": "Daraltılmış",
   "settings.display.codeEdit.title": "Kod Düzenleme Blokları",
   "settings.display.codeEdit.description":
     "Kod düzenleme ve fark bloklarının başlangıçta genişletilmiş mi yoksa daraltılmış mı olacağını seçin.",
   "settings.display.codeEdit.expanded": "Genişletilmiş",
   "settings.display.codeEdit.collapsed": "Daraltılmış",
 
-  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.title": "Token İşleme Hızını Göster",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+    "En son asistan mesajında ve görev başlığında metin üretim hızını (token/sn) gösterir. Sohbeti dağınık göstermemek için varsayılan olarak gizlidir.",
+  "settings.display.autoApprovalReason.title": "Otomatik Onay Nedenini Göster",
+  "settings.display.autoApprovalReason.description":
+    "Araç çağrılarının neden otomatik olarak onaylandığını açıklayan bir satır gösterir (eşleşen kural, aracı varsayılanı, YOLO modu vb.).",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

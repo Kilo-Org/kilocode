@@ -591,6 +591,14 @@ export const dict = {
   "session.status.retry": "Riprovo...",
   "session.status.working": "Al lavoro...",
   "session.status.offline": "Rete disconnessa - riconnessione...",
+  "sidebar.topBar.label": "Navigazione Kilo Code",
+  "sidebar.topBar.newTask": "Nuova Attività",
+  "sidebar.topBar.history": "Cronologia",
+  "sidebar.topBar.agentManager": "Agent Manager",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "Marketplace",
+  "sidebar.topBar.profile": "Profilo",
+  "sidebar.topBar.settings": "Impostazioni",
   "sidebar.session.newSession": "Nuova sessione",
   "sidebar.session.newSession.tooltip": "Avvia una nuova conversazione mantenendo intatta la sessione corrente.",
   "sidebar.session.newWorktree": "Nuovo worktree",
@@ -735,7 +743,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "Destinazioni di rete consentite",
   "settings.sandboxing.allowedHosts.description":
-    "Destinazioni DNS di host e porta per il traffico proxy HTTP e HTTPS in sandbox. GitHub CLI e HTTPS Git richiedono comunemente github.com:443 e api.github.com:443. Le modifiche si applicano alle nuove sessioni.",
+    "Destinazioni DNS di host e porta per il traffico proxy HTTP e HTTPS in sandbox. GitHub CLI e HTTPS Git richiedono comunemente github.com:443 e api.github.com:443.",
   "settings.sandboxing.writablePaths.title": "Percorsi di scrittura aggiuntivi",
   "settings.sandboxing.writablePaths.description":
     "Percorsi aggiuntivi del file system in cui la sandbox consente la scrittura (es. /tmp, /var/log). Vengono uniti con i percorsi di scrittura predefiniti quando la sandbox è attiva.",
@@ -996,9 +1004,12 @@ export const dict = {
   "settings.display.codeEdit.expanded": "Espansi",
   "settings.display.codeEdit.collapsed": "Compressi",
 
-  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.title": "Mostra velocità di generazione dei token",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+    "Mostra la velocità di generazione del testo (token/sec) sull'ultimo messaggio dell'assistente e nell'intestazione dell'attività. Nascosto per impostazione predefinita per mantenere la chat ordinata.",
+  "settings.display.autoApprovalReason.title": "Mostra motivo dell'approvazione automatica",
+  "settings.display.autoApprovalReason.description":
+    "Mostra una riga sulle chiamate agli strumenti che spiega perché sono state approvate automaticamente (regola corrispondente, predefinito dell'agente, modalità YOLO, ecc.).",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

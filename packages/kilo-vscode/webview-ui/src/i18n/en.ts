@@ -708,6 +708,14 @@ export const dict = {
   "session.costAlert.question":
     "This session just went above your {{limit}} per-session alert threshold and cost {{cost}}. Keep going?",
   "session.costAlert.stop": "Stop",
+  "sidebar.topBar.label": "Kilo Code navigation",
+  "sidebar.topBar.newTask": "New Task",
+  "sidebar.topBar.history": "History",
+  "sidebar.topBar.agentManager": "Agent Manager",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "Marketplace",
+  "sidebar.topBar.profile": "Profile",
+  "sidebar.topBar.settings": "Settings",
   "sidebar.session.newSession": "New Session",
   "sidebar.session.newSession.tooltip": "Start a fresh conversation while keeping the current session intact.",
   "sidebar.session.newWorktree": "New Worktree",
@@ -867,7 +875,7 @@ export const dict = {
     "Block direct outbound access from model-originated commands and HTTP tools. Local and remote MCP tools are unavailable while restricted. Provider traffic and trusted plugin hooks remain outside this restriction.",
   "settings.sandboxing.allowedHosts.title": "Allowed Network Destinations",
   "settings.sandboxing.allowedHosts.description":
-    "DNS host and port destinations for sandboxed HTTP and HTTPS proxy traffic. GitHub CLI and HTTPS Git commonly need github.com:443 and api.github.com:443. Changes apply to new sessions.",
+    "DNS host and port destinations for sandboxed HTTP and HTTPS proxy traffic. GitHub CLI and HTTPS Git commonly need github.com:443 and api.github.com:443.",
   "settings.sandboxing.writablePaths.title": "Additional Writable Paths",
   "settings.sandboxing.writablePaths.description":
     "Extra filesystem paths the sandbox allows writes to (e.g. /tmp, /var/log). These are merged with the default writable paths when the sandbox is active.",
@@ -1112,6 +1120,9 @@ export const dict = {
   "settings.display.tokenThroughput.title": "Show Token Throughput",
   "settings.display.tokenThroughput.description":
     "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+  "settings.display.autoApprovalReason.title": "Show Auto-Approval Reason",
+  "settings.display.autoApprovalReason.description":
+    "Show a line on tool calls explaining why they were auto-approved (matched rule, agent default, YOLO mode, etc.).",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

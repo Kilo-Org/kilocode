@@ -157,11 +157,16 @@ const layer: Layer.Layer<Service, never, FSUtil.Service | Git.Service | EffectFl
                 // matching origin could masquerade as the cache entry; reuse
                 // requires the checkout to live exactly at the cache path.
                 const root = yield* fs.existsSafe(path.join(localPath, ".git")) // kilocode_change - avoid Windows path spelling differences
+                // kilocode_change start - canonicalize file remotes rewritten by Git on Windows
+                const match =
+                  originReference && Repository.isFile(originReference) && Repository.isFile(cloneTarget)
+                    ? (yield* fs.resolve(originReference.path)) === (yield* fs.resolve(cloneTarget.path))
+                    : originReference && Repository.same(originReference, cloneTarget)
+                // kilocode_change end
                 const reuse = Boolean(
                   existing &&
                     root && // kilocode_change
-                    originReference &&
-                    Repository.same(originReference, cloneTarget),
+                    match, // kilocode_change
                 )
                 if (!reuse && (yield* fs.existsSafe(localPath))) {
                   yield* cacheOperation(fs.remove(localPath, { recursive: true }), "remove stale cache", localPath)

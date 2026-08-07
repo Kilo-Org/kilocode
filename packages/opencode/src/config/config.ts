@@ -432,11 +432,8 @@ const layer = Layer.effect(
     })
 
     const ensureGitignore = Effect.fn("Config.ensureGitignore")(function* (dir: string) {
-      // kilocode_change start - optional config setup must not abort tools after entering filesystem confinement
-      yield* fs.ensureDir(dir).pipe(
-        Effect.catchReason("PlatformError", "PermissionDenied", () => Effect.void),
-        Effect.catchReason("PlatformError", "NotFound", () => Effect.void),
-      )
+      // kilocode_change start - optional config setup must not abort tools after entering filesystem confinement or read-only locations
+      yield* fs.ensureDir(dir).pipe(Effect.catchTag("PlatformError", () => Effect.void))
       // kilocode_change end
       const gitignore = path.join(dir, ".gitignore")
       const hasIgnore = yield* fs.existsSafe(gitignore)
@@ -457,12 +454,7 @@ const layer = Layer.effect(
             ].join("\n"),
             // kilocode_change end
           )
-          .pipe(
-            Effect.catchIf(
-              (e) => e.reason._tag === "PermissionDenied" || e.reason._tag === "NotFound", // kilocode_change - also ignore NotFound (broken symlink/junction on Windows)
-              () => Effect.void,
-            ),
-          )
+          .pipe(Effect.catchTag("PlatformError", () => Effect.void)) // kilocode_change - optional gitignore write failure must not fail config load
       }
     })
 
@@ -1020,7 +1012,7 @@ const layer = Layer.effect(
           directory: ctx.directory,
           payload: {
             type: Event.ConfigUpdated.type,
-            properties: {},
+            properties: { sandbox: Object.hasOwn(config, "sandbox") },
           },
         }),
       )
@@ -1075,6 +1067,7 @@ const layer = Layer.effect(
         .pipe(Effect.orDie)
       const next = result.next
       const changed = result.changed
+      const sandboxChanged = changed && Object.hasOwn(config, "sandbox")
       // kilocode_change end
 
       // kilocode_change start - skip dispose when caller opts out
@@ -1086,7 +1079,7 @@ const layer = Layer.effect(
             directory: "global",
             payload: {
               type: Event.ConfigUpdated.type,
-              properties: {},
+              properties: { sandbox: sandboxChanged },
             },
           }),
         ).pipe(Effect.catchCause(() => Effect.void))
@@ -1103,7 +1096,7 @@ const layer = Layer.effect(
             directory: "global",
             payload: {
               type: Event.ConfigUpdated.type,
-              properties: {},
+              properties: { sandbox: sandboxChanged },
             },
           }),
         ).pipe(Effect.catchCause(() => Effect.void))

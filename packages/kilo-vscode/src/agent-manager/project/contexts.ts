@@ -100,6 +100,10 @@ export class ProjectContexts {
     return this.contexts.get(id)
   }
 
+  values(): IterableIterator<ProjectContext> {
+    return this.contexts.values()
+  }
+
   /** The context that owns a directory: its root or one of its worktree paths. */
   byDirectory(dir: string): ProjectContext | undefined {
     for (const ctx of this.contexts.values()) {

@@ -214,7 +214,17 @@ const layer = Layer.effect(
       }
       yield* Effect.logInfo("creating session", { id, cmd: command, args, cwd })
       const { spawn } = yield* Effect.promise(() => pty())
-      const proc = yield* Effect.sync(() => spawn(command, args, { name: "xterm-256color", cwd, env }))
+      // kilocode_change start - spawn with initial terminal dimensions
+      const proc = yield* Effect.sync(() =>
+        spawn(command, args, {
+          name: "xterm-256color",
+          cwd,
+          env,
+          cols: input.size?.cols,
+          rows: input.size?.rows,
+        }),
+      )
+      // kilocode_change end
       const info: Info = {
         id,
         title: input.title || `Terminal ${id.slice(-4)}`,

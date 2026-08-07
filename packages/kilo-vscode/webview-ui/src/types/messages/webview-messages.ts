@@ -202,6 +202,10 @@ export interface OpenSettingsPanelRequest {
   tab?: string
 }
 
+export interface OpenProfilePanelRequest {
+  type: "openProfilePanel"
+}
+
 export interface OpenVSCodeSettingsRequest {
   type: "openVSCodeSettings"
   query: string
@@ -453,6 +457,10 @@ export interface RequestTimelineSettingMessage {
 
 export interface RequestThroughputSettingMessage {
   type: "requestThroughputSetting"
+}
+
+export interface RequestAutoApprovalReasonSettingMessage {
+  type: "requestAutoApprovalReasonSetting"
 }
 
 export interface RequestWorkStyleMessage {
@@ -805,6 +813,8 @@ export interface AgentManagerTerminalCreateRequest {
   createId: string
   placement: TerminalPlacement
   worktreeId: string | null
+  cols?: number
+  rows?: number
 }
 
 // Close a terminal tab
@@ -1388,6 +1398,7 @@ export type WebviewMessage =
   | RefreshProfileRequest
   | OpenExternalRequest
   | OpenSettingsPanelRequest
+  | OpenProfilePanelRequest
   | OpenVSCodeSettingsRequest
   | OpenConfigFileRequest
   | OpenMarketplacePanelRequest
@@ -1439,6 +1450,7 @@ export type WebviewMessage =
   | UpdateSettingRequest
   | RequestTimelineSettingMessage
   | RequestThroughputSettingMessage
+  | RequestAutoApprovalReasonSettingMessage
   | RequestWorkStyleMessage
   | SetWorkStyleMessage
   | ApplyWorkStyleMessage
