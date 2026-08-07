@@ -813,6 +813,8 @@ export interface AgentManagerTerminalCreateRequest {
   createId: string
   placement: TerminalPlacement
   worktreeId: string | null
+  cols?: number
+  rows?: number
 }
 
 // Close a terminal tab

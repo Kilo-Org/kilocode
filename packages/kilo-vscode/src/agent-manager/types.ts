@@ -946,6 +946,8 @@ interface TerminalCreateIn {
   placement: TerminalPlacement
   /** null for LOCAL, worktree id otherwise */
   worktreeId: string | null
+  cols?: number
+  rows?: number
 }
 
 interface TerminalCloseIn {
