@@ -19,6 +19,7 @@ describe("macCaptureArgs", () => {
     expect(args[3]).toContain("numberWithDouble(16000), $.AVSampleRateKey")
     expect(args[3]).toContain("numberWithInt(1), $.AVNumberOfChannelsKey")
     expect(args[3]).toContain("numberWithInt(24000), $.AVEncoderBitRateKey")
+    expect(args[3]).toContain("error[0] && error[0].localizedDescription")
     expect(args[3]).toContain('console.log("ready")')
   })
 })
