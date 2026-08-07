@@ -14,6 +14,7 @@ export interface AutoScrollOptions {
   working: () => boolean
   onUserInteracted?: () => void
   bottomThreshold?: number
+  overflowAnchor?: "none" | "auto" | "dynamic"
 }
 
 export function createAutoScroll(options: AutoScrollOptions) {
@@ -111,51 +112,39 @@ export function createAutoScroll(options: AutoScrollOptions) {
     }
 
     if (!store.userScrolled && !input) {
-      // Only explicit user input can pause following. Treat unclassified
-      // scroll events from virtualization or layout changes as programmatic.
       if (userActivity.isRecent()) {
         stop()
-      } else {
-        bottom()
+        return
       }
+      if (stopTimer) clearTimeout(stopTimer)
+      stopTimer = setTimeout(() => {
+        stopTimer = undefined
+        if (!scroll) return
+        if (distanceFromBottom(scroll) < threshold()) return
+        stop()
+      }, DEBOUNCE_MS)
       return
     }
 
-    // Debounce to avoid layout-induced scroll shifts (e.g. images loading,
-    // virtual-list reflows) from incorrectly breaking auto-follow.
-    if (stopTimer) clearTimeout(stopTimer)
-    stopTimer = setTimeout(() => {
-      stopTimer = undefined
-      if (!scroll) return
-      if (distanceFromBottom(scroll) < threshold()) return
-      stop()
-    }, DEBOUNCE_MS)
+    stop()
   }
 
   const onContentResize = () => {
-    if (scroll && !canScroll(scroll)) return
-    if (!active()) {
-      if (!store.userScrolled && scroll && distanceFromBottom(scroll) > threshold()) {
-        bottom()
-        return
-      }
-      return
-    }
-    if (store.userScrolled) {
-      return
-    }
-    // Virtualized lists (virtua) re-measure items during user scroll, firing
-    // resize events that race ahead of handleScroll's DEBOUNCE_MS window.
-    // If the user just interacted with the scroller and is no longer near
-    // the bottom, treat the resize as a layout reflow on top of their
-    // scroll — pause auto-follow instead of snapping back to the bottom.
-    if (scroll && userActivity.isRecent() && distanceFromBottom(scroll) > threshold()) {
+    if (!scroll || !canScroll(scroll)) return
+    if (store.userScrolled) return
+
+    if (userActivity.isRecent() && distanceFromBottom(scroll) > threshold()) {
       stop()
       return
     }
-    // ResizeObserver fires after layout, before paint.
-    // Keep the bottom locked in the same frame to avoid visible
-    // "jump up then catch up" artifacts while streaming content.
+
+    if (!active()) {
+      if (!userActivity.isRecent() && distanceFromBottom(scroll) > threshold()) {
+        bottom()
+      }
+      return
+    }
+
     follow()
   }
 
@@ -172,6 +161,15 @@ export function createAutoScroll(options: AutoScrollOptions) {
 
   createResizeObserver(() => store.contentRef, onContentResize)
   createResizeObserver(() => store.scrollRef, onViewportResize)
+
+  createEffect(
+    on(
+      () => store.userScrolled,
+      () => {
+        if (scroll) updateOverflowAnchor(scroll)
+      },
+    ),
+  )
 
   createEffect(
     on(options.working, (working: boolean) => {
@@ -195,6 +193,19 @@ export function createAutoScroll(options: AutoScrollOptions) {
   // Lifecycle
   // ---------------------------------------------------------------------------
 
+  const updateOverflowAnchor = (el: HTMLElement) => {
+    const mode = options.overflowAnchor ?? "none"
+    if (mode === "none") {
+      el.style.overflowAnchor = "none"
+      return
+    }
+    if (mode === "auto") {
+      el.style.overflowAnchor = "auto"
+      return
+    }
+    el.style.overflowAnchor = store.userScrolled ? "auto" : "none"
+  }
+
   const setScroll = (el: HTMLElement | undefined) => {
     if (cleanup) {
       cleanup()
@@ -206,7 +217,7 @@ export function createAutoScroll(options: AutoScrollOptions) {
 
     if (!el) return
 
-    el.style.overflowAnchor = "auto"
+    updateOverflowAnchor(el)
     cleanup = userActivity.listen(el)
   }
 
