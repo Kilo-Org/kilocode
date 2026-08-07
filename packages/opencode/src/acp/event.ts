@@ -164,12 +164,22 @@ export class Subscription {
     }
   }
 
-  private async waitUntilConnected() {
-    while (!this.connected) {
-      if (this.abort.signal.aborted) throw new Error("ACP event subscription stopped")
-      await new Promise<void>((resolve) => this.connectionWaiters.add(resolve))
+  // kilocode_change start
+  private async waitUntilConnected(timeoutMs = 5000) {
+    if (this.connected) return
+    let timer: ReturnType<typeof setTimeout> | undefined
+    try {
+      await Promise.race([
+        new Promise<void>((resolve) => this.connectionWaiters.add(resolve)),
+        new Promise<void>((resolve) => {
+          timer = setTimeout(resolve, timeoutMs)
+        }),
+      ])
+    } finally {
+      if (timer) clearTimeout(timer)
     }
   }
+  // kilocode_change end
 
   private disconnected() {
     if (!this.connected) return
