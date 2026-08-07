@@ -305,7 +305,7 @@ export const dict = {
   "ui.approval.source.yolo": "przez tryb automatycznego zatwierdzania (YOLO)",
   "ui.approval.source.session": "przez regułę automatycznego zatwierdzania sesji",
   "ui.approval.source.default": "domyślnie",
-  "ui.approval.outsideWorkspace": "ścieżka znajduje się poza obszarem roboczym",
+  "ui.approval.outsideWorkspace": "(poza obszarem roboczym: {{file}})",
 
   "session.tab.review": "Przegląd",
   "session.review.filesChanged": "Zmieniono {{count}} plików",

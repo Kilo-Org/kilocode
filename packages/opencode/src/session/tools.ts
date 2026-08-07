@@ -99,7 +99,13 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
         // record why the call was allowed onto the tool part, then discard the outcome for the tool-facing ask
         Effect.tap((approval) =>
           input.processor.metadata(options.toolCallId, {
-            metadata: { approval: PermissionProvenance.tagOutsideWorkspace(approval, req.permission) },
+            metadata: {
+              approval: PermissionProvenance.tagOutsideWorkspace(
+                approval,
+                req.permission,
+                PermissionProvenance.filepathOf(req.metadata),
+              ),
+            },
           }),
         ),
         // record why the call was denied too, so JSON exports and clients can explain the denial
@@ -115,6 +121,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
                   origins: permissionOrigins,
                 }),
                 req.permission,
+                PermissionProvenance.filepathOf(req.metadata),
               ),
             },
           }),

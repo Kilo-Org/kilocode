@@ -132,6 +132,14 @@ describe("PermissionProvenance.carryApproval", () => {
     })
   })
 
+  test("also carries the outsideWorkspacePath forward alongside the marker", () => {
+    const outside = { source: "manual" as const, outsideWorkspace: true, outsideWorkspacePath: "/tmp/secret.txt" }
+    const next = { approval: { source: "agent" as const, agent: "build" } }
+    expect(PermissionProvenance.carryApproval({ approval: outside }, next)).toEqual({
+      approval: { source: "agent", agent: "build", outsideWorkspace: true, outsideWorkspacePath: "/tmp/secret.txt" },
+    })
+  })
+
   test("does not add outsideWorkspace when the prior approval was not outside the workspace", () => {
     const next = { approval: { source: "agent" as const, agent: "build" } }
     expect(PermissionProvenance.carryApproval({ approval }, next)).toBe(next)
@@ -156,6 +164,36 @@ describe("PermissionProvenance.tagOutsideWorkspace", () => {
   test("leaves other permissions' approvals untouched", () => {
     const approval = { source: "manual" as const }
     expect(PermissionProvenance.tagOutsideWorkspace(approval, "read")).toBe(approval)
+  })
+
+  test("carries the target path when one is given", () => {
+    const approval = { source: "manual" as const }
+    expect(PermissionProvenance.tagOutsideWorkspace(approval, "external_directory", "/tmp/secret.txt")).toEqual({
+      source: "manual",
+      outsideWorkspace: true,
+      outsideWorkspacePath: "/tmp/secret.txt",
+    })
+  })
+
+  test("omits outsideWorkspacePath when no path is given", () => {
+    const approval = { source: "manual" as const }
+    expect(PermissionProvenance.tagOutsideWorkspace(approval, "external_directory")).toEqual({
+      source: "manual",
+      outsideWorkspace: true,
+    })
+  })
+})
+
+describe("PermissionProvenance.filepathOf", () => {
+  test("reads the filepath an external_directory ask's metadata carries", () => {
+    expect(PermissionProvenance.filepathOf({ filepath: "/tmp/secret.txt", parentDir: "/tmp" })).toBe(
+      "/tmp/secret.txt",
+    )
+  })
+
+  test("returns undefined when there is no filepath, e.g. a bash directory scan", () => {
+    expect(PermissionProvenance.filepathOf({ command: "cat /tmp/secret.txt", access: "read" })).toBeUndefined()
+    expect(PermissionProvenance.filepathOf(undefined)).toBeUndefined()
   })
 })
 

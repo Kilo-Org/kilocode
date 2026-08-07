@@ -1,4 +1,5 @@
 import { createContext, useContext, Show, type Accessor, type ParentProps } from "solid-js"
+import { getFilename } from "@opencode-ai/core/util/path"
 import { Icon } from "./icon"
 
 /**
@@ -14,6 +15,8 @@ export type ToolApproval = {
   rule?: { permission: string; pattern: string; action: string }
   /** True when the tool call's target path was outside the workspace/worktree. */
   outsideWorkspace?: boolean
+  /** The target file path, when known, for display as a filename next to the note above. */
+  outsideWorkspacePath?: string
 }
 
 /** Pre-resolved, localized text plus the raw approval, supplied by the caller. */
@@ -85,12 +88,16 @@ export function resolveToolApproval(
     rule && !(rule.permission === "*" && rule.pattern === "*")
       ? t("ui.approval.rule", { permission: rule.permission, pattern: rule.pattern })
       : undefined
+  // Only worth calling out when we know which file it was; a bare "outside your workspace" note
+  // without a filename (e.g. a bash command touching several directories) isn't actionable.
+  const filename = approval.outsideWorkspacePath ? getFilename(approval.outsideWorkspacePath) : undefined
   return {
     approval,
     decision: approval.source === "manual" ? t("ui.approval.manual") : t("ui.approval.auto"),
     source: sourceText(),
     rule: ruleText,
-    outsideWorkspace: approval.outsideWorkspace ? t("ui.approval.outsideWorkspace") : undefined,
+    outsideWorkspace:
+      approval.outsideWorkspace && filename ? t("ui.approval.outsideWorkspace", { file: filename }) : undefined,
   }
 }
 

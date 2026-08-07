@@ -297,7 +297,7 @@ export const dict = {
   "ui.approval.source.yolo": "بواسطة وضع الموافقة التلقائية (YOLO)",
   "ui.approval.source.session": "بواسطة قاعدة موافقة تلقائية للجلسة",
   "ui.approval.source.default": "افتراضيًا",
-  "ui.approval.outsideWorkspace": "المسار خارج مساحة العمل الخاصة بك",
+  "ui.approval.outsideWorkspace": "(خارج مساحة العمل: {{file}})",
 
   "session.tab.review": "مراجعة",
   "session.review.filesChanged": "تم تغيير {{count}} ملفات",

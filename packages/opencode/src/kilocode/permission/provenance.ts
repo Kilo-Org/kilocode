@@ -29,11 +29,19 @@ export namespace PermissionProvenance {
     rule?: { permission: string; pattern: string; action: Permission.Action }
     /** True when the ask's target path was outside the workspace/worktree (an `external_directory` ask). */
     outsideWorkspace?: boolean
+    /** The target file path, when the `external_directory` ask carried one, for display as a filename. */
+    outsideWorkspacePath?: string
+  }
+
+  /** The `filepath` an `external_directory` ask's metadata carries, if any (see `Tool.assertExternalDirectory`). */
+  export function filepathOf(metadata: Record<string, unknown> | undefined): string | undefined {
+    return typeof metadata?.filepath === "string" ? metadata.filepath : undefined
   }
 
   /** Tag an approval as outside-workspace when it answers an `external_directory` ask. */
-  export function tagOutsideWorkspace(approval: Approval, permission: string): Approval {
-    return permission === "external_directory" ? { ...approval, outsideWorkspace: true } : approval
+  export function tagOutsideWorkspace(approval: Approval, permission: string, path?: string): Approval {
+    if (permission !== "external_directory") return approval
+    return { ...approval, outsideWorkspace: true, ...(path ? { outsideWorkspacePath: path } : {}) }
   }
 
   export type Scope = "global" | "local"
@@ -93,7 +101,14 @@ export namespace PermissionProvenance {
     if (!("approval" in next)) return prior ? { ...next, approval: prior } : next
     const current = next.approval as Approval | undefined
     if (!prior?.outsideWorkspace || !current || current.outsideWorkspace) return next
-    return { ...next, approval: { ...current, outsideWorkspace: true } }
+    return {
+      ...next,
+      approval: {
+        ...current,
+        outsideWorkspace: true,
+        ...(prior.outsideWorkspacePath ? { outsideWorkspacePath: prior.outsideWorkspacePath } : {}),
+      },
+    }
   }
 
   /**
