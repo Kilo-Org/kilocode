@@ -20,8 +20,6 @@ interface Props {
   destination: Accessor<TerminalDestination>
   /** True while the embedded terminal panel is showing. */
   active: Accessor<boolean>
-  /** True while the embedded terminal owns DOM focus. */
-  focused: Accessor<boolean>
   keybind: Accessor<string>
   onOpen: () => void
   onChoose: (destination: TerminalDestination) => void
@@ -29,10 +27,6 @@ interface Props {
 
 export const TerminalDestinationButton: Component<Props> = (props) => {
   const { t } = useLanguage()
-  const title = () =>
-    props.destination() === "agentManager" && props.focused()
-      ? t("agentManager.shortcuts.toggleTerminal")
-      : t("agentManager.tab.openTerminal")
   const item = (destination: TerminalDestination, label: string) => (
     <DropdownMenu.Item onSelect={() => props.onChoose(destination)}>
       <span class="am-menu-check">
@@ -45,7 +39,7 @@ export const TerminalDestinationButton: Component<Props> = (props) => {
   )
   return (
     <div class="am-split-button">
-      <TooltipKeybind title={title()} keybind={props.keybind()} placement="bottom">
+      <TooltipKeybind title={t("agentManager.tab.terminal")} keybind={props.keybind()} placement="bottom">
         <IconButton
           icon="console"
           size="small"

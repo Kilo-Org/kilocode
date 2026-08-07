@@ -74,14 +74,8 @@ import { errorIDs } from "./session-errors"
 import { PartStash } from "./part-stash"
 import { mergeParts, sameParts } from "./session-parts"
 import { state as todoState } from "./todo-revert"
-import {
-  getAgentVariant,
-  getVariant,
-  preserveVariant,
-  sessionVariantKeys,
-  transferVariants,
-  variantKey,
-} from "./session-variant-store"
+import { sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
+import { createSessionVariants } from "./session-variants"
 import { KILO_AUTO, KILO_PROVIDER_ID, parseModelString } from "../../../src/shared/provider-model"
 import { reviewMetadata, type ReviewMessageData } from "../../../src/shared/review-comments"
 import { visibleMessages as filterVisibleMessages } from "./session-queue"
@@ -289,6 +283,7 @@ interface SessionContextValue {
     draftID?: string,
     context?: string,
     origin?: string | null,
+    overrides?: { agent?: string; model?: string; variant?: string },
   ) => void
   abort: () => void
   compact: () => void
@@ -670,13 +665,18 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
-  function carryVariant(selection: ModelSelection, current: string | undefined, agent: string, sessionID?: string) {
-    const value = preserveVariant(current, Object.keys(provider.findModel(selection)?.variants ?? {}))
-    if (!value) return
-    const key = variantKey(selection, agent, sessionID)
-    setStore("variantSelections", key, value)
-    if (!sessionID) vscode.postMessage({ type: "persistVariant", key, value })
-  }
+  const variants = createSessionVariants({
+    selections: () => store.variantSelections,
+    set: (key, value) => setStore("variantSelections", key, value),
+    selected,
+    session: currentSessionID,
+    agent: agentForScope,
+    find: provider.findModel,
+    post: vscode.postMessage,
+    listen: vscode.onMessage,
+  })
+  const { carry: carryVariant, list: variantList, agent: variantForAgent, current: currentVariant } = variants
+  const selectVariant = variants.select
 
   function selectModel(providerID: string, modelID: string, sessionID?: string) {
     const sid = sessionID ?? currentSessionID()
@@ -930,50 +930,7 @@ export const SessionProvider: ParentComponent = (props) => {
     clearTimeout(fallback)
   })
 
-  const variantList = (sessionID?: string) => {
-    const sel = selected(sessionID)
-    if (!sel) return []
-    const model = provider.findModel(sel)
-    if (!model?.variants) return []
-    return Object.keys(model.variants)
-  }
-
-  function variantForAgent(agentName: string, sel: ModelSelection | null) {
-    if (!sel) return undefined
-    const model = provider.findModel(sel)
-    return getAgentVariant(store.variantSelections, sel, model, agentName)
-  }
-
-  const currentVariant = (sessionID?: string) => {
-    const sid = sessionID ?? currentSessionID()
-    const sel = selected(sid)
-    if (!sel) return undefined
-    const list = variantList(sid)
-    if (list.length === 0) return undefined
-    return getVariant(store.variantSelections, sel, list, agentForScope(sid), sid)
-  }
-
-  const selectVariant = (value: string, sessionID?: string) => {
-    const sid = sessionID ?? currentSessionID()
-    const sel = selected(sid)
-    if (!sel) return
-    const key = variantKey(sel, agentForScope(sid), sid)
-    setStore("variantSelections", key, value)
-    if (!sid) vscode.postMessage({ type: "persistVariant", key, value })
-  }
-
-  // Load persisted variants from extension globalState
-  const unsubVariants = vscode.onMessage((message: ExtensionMessage) => {
-    if (message.type !== "variantsLoaded") return
-    for (const [k, v] of Object.entries(message.variants)) {
-      if (k.startsWith("session/")) continue
-      setStore("variantSelections", k, v)
-    }
-  })
-
-  vscode.postMessage({ type: "requestVariants" })
-
-  onCleanup(unsubVariants)
+  onCleanup(variants.load())
 
   // Load persisted per-mode model selections from model.json via extension host.
   // Uses replace semantics so a reset (empty payload) clears old entries.
@@ -2396,31 +2353,51 @@ export const SessionProvider: ParentComponent = (props) => {
     draftID?: string,
     context?: string,
     origin?: string | null,
+    overrides?: { agent?: string; model?: string; variant?: string },
   ) {
     if (!server.isConnected()) {
       console.warn("[Kilo New] Cannot send command: not connected")
       return
     }
 
-    // Cloud previews need import-then-command; post importAndSend with command metadata
     const sid = origin === undefined ? currentSessionID() : (origin ?? undefined)
-    const selection = providerID && modelID ? { providerID, modelID } : selected(sid)
-    recordModelUsage(selection?.providerID, selection?.modelID)
+    const effectiveDraftID = !sid && !draftID ? crypto.randomUUID() : draftID
+    const scope = effectiveDraftID ?? sid
+    if (!sid && !draftID && effectiveDraftID) agentDrafts.seed(effectiveDraftID)
+
+    if (overrides?.agent) {
+      selectAgent(overrides.agent, scope)
+    }
+    if (overrides?.model) {
+      const parsed = parseModelString(overrides.model)
+      if (parsed) {
+        selectModel(parsed.providerID, parsed.modelID, scope)
+      }
+    }
+    if (overrides?.variant) {
+      selectVariant(overrides.variant, scope)
+    }
+
+    const effectiveSelection = selected(scope)
+    const effectiveProvider = effectiveSelection?.providerID ?? providerID
+    const effectiveModel = effectiveSelection?.modelID ?? modelID
+    recordModelUsage(effectiveProvider, effectiveModel)
+
+    // Cloud previews need import-then-command; post importAndSend with command metadata
     const preview = sid?.startsWith("cloud:")
       ? sid.slice("cloud:".length)
       : origin === undefined
         ? cloudPreviewId()
         : null
     if (preview) {
-      const scope = draftID ?? sid
       const agent = promptAgent(scope)
       vscode.postMessage({
         type: "importAndSend",
         cloudSessionId: preview,
         text: `/${command} ${args}`.trim(),
         messageID: Identifier.ascending("message"),
-        providerID,
-        modelID,
+        providerID: effectiveProvider,
+        modelID: effectiveModel,
         agent,
         variant: currentVariant(scope),
         files,
@@ -2437,9 +2414,6 @@ export const SessionProvider: ParentComponent = (props) => {
       dismissQuestion(q.id)
     }
 
-    const effectiveDraftID = !sid && !draftID ? crypto.randomUUID() : draftID
-    const scope = effectiveDraftID ?? sid
-    if (!sid && !draftID && effectiveDraftID) agentDrafts.seed(effectiveDraftID)
     if (scope) {
       clearClose(scope)
       addOptimistic(scope, messageID, `/${command} ${args}`.trim(), files)
@@ -2458,8 +2432,8 @@ export const SessionProvider: ParentComponent = (props) => {
       messageID,
       sessionID: sid,
       draftID: effectiveDraftID,
-      providerID,
-      modelID,
+      providerID: effectiveProvider,
+      modelID: effectiveModel,
       agent,
       variant: currentVariant(scope),
       files,

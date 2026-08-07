@@ -145,6 +145,21 @@ export function useSlashCommand(
     { name: "memory auto off", description: "Disable automatic memory saves", hints: [] },
     { name: "memory purge confirm", description: "Delete all project memory files", hints: [] },
     {
+      name: "review",
+      description: "Review code changes [uncommitted, staged, unpushed, branch, commit, pr]",
+      hints: ["code-review", "diff"],
+      nested: true,
+    },
+    { name: "review uncommitted", description: "Review uncommitted changes (staged, unstaged, untracked)", hints: [] },
+    { name: "review staged", description: "Review staged changes only", hints: [] },
+    { name: "review unpushed", description: "Review local commits ahead of upstream", hints: [] },
+    { name: "review branch", description: "Review current branch against base branch", hints: [] },
+    {
+      name: "review quick",
+      description: "Fast single-pass review with minimal token usage",
+      hints: ["--quick", "fast"],
+    },
+    {
       name: "export",
       description: "Export the current session transcript as Markdown",
       hints: ["markdown", "transcript"],
@@ -240,6 +255,15 @@ export function useSlashCommand(
         lower,
       )
     }
+    if (q.startsWith("review ")) {
+      const matches = list.filter((cmd) => cmd.name.startsWith("review "))
+      if (q === "review ") return matches
+      const lower = q.toLowerCase()
+      return sortByScore(
+        matches.filter((cmd) => cmd.name.toLowerCase().startsWith(lower)),
+        lower,
+      )
+    }
     const root = list.filter((cmd) => !cmd.name.includes(" "))
     if (!q) return root
     const lower = q.toLowerCase()
@@ -275,12 +299,24 @@ export function useSlashCommand(
       return
     }
     const memory = before.match(/^\/(?:memory|mem)\s+([^\n]*)$/i)
-    if (!memory) return close()
-    const value = `memory ${memory[1]}`.toLowerCase()
-    if (!commands().some((cmd) => cmd.name.toLowerCase().startsWith(value))) return close()
-    request()
-    setQuery(value)
-    setIndex(0)
+    if (memory) {
+      const value = `memory ${memory[1]}`.toLowerCase()
+      if (!commands().some((cmd) => cmd.name.toLowerCase().startsWith(value))) return close()
+      request()
+      setQuery(value)
+      setIndex(0)
+      return
+    }
+    const review = before.match(/^\/review\s+([^\n]*)$/i)
+    if (review) {
+      const value = `review ${review[1]}`.toLowerCase()
+      if (!commands().some((cmd) => cmd.name.toLowerCase().startsWith(value))) return close()
+      request()
+      setQuery(value)
+      setIndex(0)
+      return
+    }
+    return close()
   }
 
   const select = (

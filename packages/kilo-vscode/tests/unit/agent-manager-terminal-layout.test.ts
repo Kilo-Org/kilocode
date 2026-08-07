@@ -39,6 +39,29 @@ test("does not refit hidden terminal buffers during resize", () => {
   expect(callback!.indexOf("if (!props.active) return")).toBeLessThan(callback!.indexOf("fit.fit()"))
 })
 
+test("keeps raw PTY line endings and initializes Unicode widths before attaching", () => {
+  expect(terminal).toContain("convertEol: false")
+  expect(terminal).toContain('term.unicode.activeVersion = "15-graphemes"')
+  expect(terminal.indexOf("term.loadAddon(new UnicodeGraphemesAddon())")).toBeLessThan(
+    terminal.indexOf("open(props.wsUrl)"),
+  )
+})
+
+test("fits and forces the initial PTY dimensions before socket attach", () => {
+  expect(terminal).toContain("const syncSize = (force = false)")
+  expect(terminal).toContain("if (props.active) syncSize(true)")
+  expect(terminal.indexOf("fitNow()\n      open(props.wsUrl)")).toBeGreaterThan(-1)
+})
+
+test("re-sends dimensions when an optimistic terminal receives its PTY", () => {
+  const created = terminal.match(
+    /if \(message\.terminalId === props\.terminalId && !ws\) \{([\s\S]*?)\n        \}/,
+  )?.[1]
+  expect(created).toBeDefined()
+  expect(created).toContain("fitNow()")
+  expect(created!.indexOf("fitNow()")).toBeLessThan(created!.indexOf("open(message.wsUrl)"))
+})
+
 test("clamps the restored inspector width to the shared layout bounds", () => {
   expect(clampPanelWidth(undefined, 1200)).toBe(600)
   expect(clampPanelWidth(500, 1200)).toBe(500)
