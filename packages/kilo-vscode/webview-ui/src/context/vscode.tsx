@@ -6,6 +6,7 @@
 import { createContext, useContext, onCleanup, ParentComponent, createSignal } from "solid-js"
 import type { VSCodeAPI, WebviewMessage, ExtensionMessage } from "../types/messages"
 import { ClipboardProvider } from "@kilocode/kilo-ui/context/clipboard"
+import { createPlayer } from "./audio"
 
 // Get the VS Code API (only available in webview context)
 let vscodeApi: VSCodeAPI | undefined
@@ -44,6 +45,7 @@ export const VSCodeProvider: ParentComponent = (props) => {
   const api = getVSCodeAPI()
   const handlers = new Set<(message: ExtensionMessage) => void>()
   const copies = new Map<string, { resolve: () => void; reject: (err: Error) => void }>()
+  const player = createPlayer()
 
   // Model-selector expand/collapse preference. Stored in extension globalState
   // so it is shared across webviews (sidebar + agent-manager panel); a local
@@ -64,6 +66,9 @@ export const VSCodeProvider: ParentComponent = (props) => {
       copy.reject(new Error(message.error ?? "Failed to write to clipboard"))
       return
     }
+    if (message.type === "playNotificationSound") {
+      player.play(message.uri)
+    }
     handlers.forEach((handler) => handler(message))
   }
 
@@ -83,6 +88,7 @@ export const VSCodeProvider: ParentComponent = (props) => {
     window.removeEventListener("blur", reportFocus)
     handlers.clear()
     copies.clear()
+    player.dispose()
   })
 
   const value: VSCodeContextValue = {
