@@ -53,9 +53,10 @@ import {
 import { initContextState, pushProjectSessions, reactivateProject, registerProjectSessions } from "./project/init"
 import { createLocalDiff } from "./local-diff"
 import { parseToolRequest, startFromTool, type ToolRequest } from "./tool-start"
-import { routeToolRequest } from "./tool-project"
+import { handleToolEvent } from "./tool-project"
 import { sandboxSessionMetadata } from "../shared/sandbox-session"
-import { AgentManagerOrchestrationBridge } from "./orchestration-bridge"
+import { createOrchestrationBridge } from "./orchestration-setup"
+import type { AgentManagerOrchestrationBridge } from "./orchestration-bridge"
 import { pruneSubagents } from "./prune-subagents"
 import { startSession } from "./mcp-warmup"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
@@ -254,53 +255,20 @@ export class AgentManagerProvider implements Disposable {
     this.statsPoller = pollers.stats
     this.prBridge = pollers.pr
     this.projectPollers = pollers.projects
-    this.orchestration = new AgentManagerOrchestrationBridge(this.connectionService, {
-      root: (dir) => (dir ? this.contexts.byDirectory(dir)?.root : undefined) ?? this.getRoot(),
-      state: (dir) => (dir ? this.contexts.byDirectory(dir)?.peekState() : undefined) ?? this.state,
-      ready: async (dir) => {
-        const ctx = dir ? this.contexts.byDirectory(dir) : undefined
-        if (ctx && ctx.id !== this.contexts.active()?.id) {
-          await initContextState(ctx, (...args) => this.log(...args))
-          return ctx.stateManager()
-        }
-        this.stateReady ??= this.initializeState()
-        await this.stateReady
-        return this.state
-      },
-      stats: () => this.statsPoller.snapshot(),
-      prs: () => this.prBridge.snapshot(),
-      push: (dir) => {
-        const ctx = dir ? this.contexts.byDirectory(dir) : undefined
-        this.pushState(ctx)
-      },
-      managed: (id, dir) => {
-        const ctx = dir ? this.contexts.byDirectory(dir) : undefined
-        if (ctx) return ctx.hasLiveSession(id) || !!ctx.peekState()?.getSession(id)
-        return this.panelSessions.has(id) || !!this.state?.getSession(id)
-      },
-      close: async (id, dir) => {
-        const ctx = dir ? this.contexts.byDirectory(dir) : undefined
-        if (ctx) {
-          await this.projectScope.run(ctx, () => this.onCloseSession(id))
-        } else {
-          await this.onCloseSession(id)
-        }
-        this.postToWebview({ type: "agentManager.sessionClosed", sessionId: id })
-      },
-      directories: () => {
-        const all: string[] = []
-        for (const ctx of this.contexts.values()) {
-          all.push(ctx.root)
-          for (const wt of ctx.peekState()?.getWorktrees() ?? []) {
-            if (wt.path) all.push(wt.path)
-          }
-        }
-        if (all.length === 0) {
-          const root = this.getRoot()
-          if (root) all.push(root)
-        }
-        return all
-      },
+    this.orchestration = createOrchestrationBridge({
+      connectionService: this.connectionService,
+      contexts: this.contexts,
+      projectScope: this.projectScope,
+      getRoot: () => this.getRoot(),
+      getState: () => this.state,
+      getStateReady: () => this.stateReady,
+      initStateReady: () => (this.stateReady = this.initializeState()),
+      getStats: () => this.statsPoller.snapshot(),
+      getPrs: () => this.prBridge.snapshot(),
+      pushState: (ctx) => this.pushState(ctx as ProjectContext),
+      hasPanelSession: (id) => this.panelSessions.has(id),
+      closeSession: (id) => this.onCloseSession(id),
+      postSessionClosed: (id) => this.postToWebview({ type: "agentManager.sessionClosed", sessionId: id }),
       log: (...args) => this.log(...args),
     })
     this.unsubTool = this.connectionService.onEventFiltered(
@@ -1114,19 +1082,16 @@ export class AgentManagerProvider implements Disposable {
   }
 
   private onToolEvent(event: unknown, directory?: string): void {
-    const properties = (event as { properties?: unknown }).properties
-    const req = parseToolRequest(properties)
-    if (!req) return
-    const routed = routeToolRequest(req, directory, {
-      byDirectory: (value) => this.contexts.byDirectory(value),
-      usable: (id) => this.contexts.usable(id),
-    })
-    const owner = routed.owner
-    if (owner) {
-      void this.projectScope.run(owner, () => this.startToolRequest(routed.request))
-      return
-    }
-    void this.startToolRequest(routed.request)
+    handleToolEvent(
+      event,
+      directory,
+      {
+        byDirectory: (value) => this.contexts.byDirectory(value),
+        usable: (id) => this.contexts.usable(id),
+      },
+      this.projectScope,
+      (req) => this.startToolRequest(req),
+    )
   }
 
   private async startToolRequest(req: ToolRequest): Promise<void> {
@@ -1865,19 +1830,15 @@ export class AgentManagerProvider implements Disposable {
 
   public async createFromSidebar(baseBranch?: string, branchName?: string): Promise<void> {
     this.openPanel()
-    const panel = this.panel
-    if (!panel) return
-    if (!(await this.waitForPanelReady(panel))) return
+    if (!this.panel || !(await this.waitForPanelReady(this.panel))) return
     await this.waitForStateReady("createFromSidebar")
     await this.onCreateWorktree(baseBranch, branchName)
   }
 
   public async openAdvancedWorktree(): Promise<void> {
     this.openPanel()
-    const panel = this.panel
-    if (!panel) return
-    if (!(await this.waitForPanelActive(panel))) return
-    if (!(await this.waitForPanelReady(panel))) return
+    if (!this.panel || !(await this.waitForPanelActive(this.panel)) || !(await this.waitForPanelReady(this.panel)))
+      return
     await this.waitForStateReady("openAdvancedWorktree")
     queueMicrotask(() => this.postToWebview({ type: "action", action: "advancedWorktree" }))
   }
