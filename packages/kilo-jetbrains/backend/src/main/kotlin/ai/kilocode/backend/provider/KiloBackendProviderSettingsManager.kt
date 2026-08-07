@@ -4,6 +4,7 @@ import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.backend.app.LoadError
 import ai.kilocode.backend.cli.KiloBackendHttpClients
 import ai.kilocode.backend.cli.KiloCliDataParser
+import ai.kilocode.backend.cli.await
 import ai.kilocode.backend.rpc.KiloWorkspaceDtoMapper
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.CustomModelFetchDto
@@ -19,8 +20,9 @@ import ai.kilocode.rpc.dto.ProviderOAuthAuthorizeDto
 import ai.kilocode.rpc.dto.ProviderOAuthCallbackDto
 import ai.kilocode.rpc.dto.ProviderOAuthReadyDto
 import ai.kilocode.rpc.dto.ProviderSettingsDto
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -167,14 +169,19 @@ internal class KiloBackendProviderSettingsManager(
                 input.apiKey?.takeIf { it.isNotBlank() }?.let { header("Authorization", "Bearer $it") }
                 input.headers.forEach { (key, value) -> header(key, value) }
             }.build()
-            val raw = withContext(Dispatchers.IO) {
-                FETCH.newCall(request).execute().use { response ->
+            val raw = withTimeout(CALL_TIMEOUT_SECONDS * 1000) {
+                FETCH.newCall(request).await().use { response ->
                     val body = response.body?.string().orEmpty()
                     if (!response.isSuccessful) throw IllegalStateException("HTTP ${response.code}: $body")
                     body
                 }
             }
             CustomModelFetchResultDto(KiloCliDataParser.parseModelIds(raw))
+        } catch (e: TimeoutCancellationException) {
+            LOG.warn("Custom provider model fetch timed out after ${CALL_TIMEOUT_SECONDS}s")
+            CustomModelFetchResultDto(error = "timeout")
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             LOG.warn("Custom provider model fetch failed: ${e.message}", e)
             CustomModelFetchResultDto(error = e.message)
@@ -248,20 +255,24 @@ internal class KiloBackendProviderSettingsManager(
     private suspend fun request(request: Request, timeoutSeconds: Long = CALL_TIMEOUT_SECONDS): String {
         val start = System.currentTimeMillis()
         LOG.debug { "provider settings http: start ${request.method} ${request.url.encodedPath}" }
-        val http = app.http?.let { KiloBackendHttpClients.bounded(it, timeoutSeconds) }
-            ?: throw IllegalStateException("Kilo HTTP client is unavailable")
-        return withContext(Dispatchers.IO) {
-            try {
-                http.newCall(request.newBuilder().header("Accept", "application/json").build()).execute().use { response ->
+        val http = app.http ?: throw IllegalStateException("Kilo HTTP client is unavailable")
+        return try {
+            withTimeout(timeoutSeconds * 1000) {
+                http.newCall(request.newBuilder().header("Accept", "application/json").build()).await().use { response ->
                     val body = response.body?.string().orEmpty()
                     LOG.debug { "provider settings http: completed ${request.method} ${request.url.encodedPath} code=${response.code} bytes=${body.length} durationMs=${System.currentTimeMillis() - start}" }
                     if (!response.isSuccessful) throw IllegalStateException("HTTP ${response.code}: $body")
                     body
                 }
-            } catch (e: Exception) {
-                LOG.debug { "provider settings http: failed ${request.method} ${request.url.encodedPath} durationMs=${System.currentTimeMillis() - start}: ${e.message}" }
-                throw e
             }
+        } catch (e: TimeoutCancellationException) {
+            LOG.debug { "provider settings http: timed out ${request.method} ${request.url.encodedPath} after ${timeoutSeconds}s" }
+            throw IllegalStateException("Request timed out after ${timeoutSeconds}s")
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            LOG.debug { "provider settings http: failed ${request.method} ${request.url.encodedPath} durationMs=${System.currentTimeMillis() - start}: ${e.message}" }
+            throw e
         }
     }
 

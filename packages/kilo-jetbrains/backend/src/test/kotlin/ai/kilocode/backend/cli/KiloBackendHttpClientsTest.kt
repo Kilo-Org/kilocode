@@ -36,11 +36,14 @@ class KiloBackendHttpClientsTest {
     }
 
     @Test
-    fun `api client has no call or read timeout`() {
+    fun `api client has no call read or write timeout`() {
         val client = KiloBackendHttpClients.api("test")
         try {
+            // All AsyncTimeout-backed timeouts must be 0 (including write, whose OkHttp default is
+            // 10s) so no request ever starts the Okio watchdog that would pin the plugin classloader.
             assertEquals(0, client.callTimeoutMillis)
             assertEquals(0, client.readTimeoutMillis)
+            assertEquals(0, client.writeTimeoutMillis)
         } finally {
             KiloBackendHttpClients.shutdown(client)
         }
@@ -57,11 +60,16 @@ class KiloBackendHttpClientsTest {
     }
 
     @Test
-    fun `health client has short timeout`() {
+    fun `health client has only a connect timeout`() {
         val client = KiloBackendHttpClients.health("test")
         try {
-            assertEquals(3000, client.callTimeoutMillis)
+            // Only connect timeout is kept (JDK socket connect, no AsyncTimeout). Read/write/call are
+            // 0 so the health poll never starts Okio's watchdog; the total bound is enforced by the
+            // caller via withTimeout + Call.await.
+            assertEquals(0, client.callTimeoutMillis)
             assertEquals(3000, client.connectTimeoutMillis)
+            assertEquals(0, client.readTimeoutMillis)
+            assertEquals(0, client.writeTimeoutMillis)
         } finally {
             KiloBackendHttpClients.shutdown(client)
         }
@@ -100,12 +108,14 @@ class KiloBackendHttpClientsTest {
     }
 
     @Test
-    fun `cli download client keeps release download timeouts`() {
+    fun `cli download client keeps only a connect timeout`() {
         val client = KiloBackendHttpClients.cliDownload()
         try {
+            // Read/write timeouts are 0 (they would start the Okio watchdog); stall/cancel handling
+            // for downloads lives at the coroutine layer in KiloCliDownloader.
             assertEquals(30_000, client.connectTimeoutMillis)
-            assertEquals(120_000, client.readTimeoutMillis)
-            assertEquals(120_000, client.writeTimeoutMillis)
+            assertEquals(0, client.readTimeoutMillis)
+            assertEquals(0, client.writeTimeoutMillis)
             assertEquals(0, client.callTimeoutMillis)
         } finally {
             KiloBackendHttpClients.shutdown(client)
@@ -113,41 +123,16 @@ class KiloBackendHttpClientsTest {
     }
 
     @Test
-    fun `model fetch client has bounded 15 second timeouts`() {
+    fun `model fetch client has only a connect timeout`() {
         val client = KiloBackendHttpClients.modelFetch()
         try {
             assertEquals(15_000, client.connectTimeoutMillis)
-            assertEquals(15_000, client.readTimeoutMillis)
-            assertEquals(15_000, client.callTimeoutMillis)
+            // Read/write/call are 0; the total bound is enforced at the call site via withTimeout.
+            assertEquals(0, client.readTimeoutMillis)
+            assertEquals(0, client.writeTimeoutMillis)
+            assertEquals(0, client.callTimeoutMillis)
         } finally {
             KiloBackendHttpClients.shutdown(client)
-        }
-    }
-
-    @Test
-    fun `bounded client applies per request timeout and preserves auth`() {
-        val pwd = "boundedpwd"
-        val server = MockWebServer()
-        server.enqueue(MockResponse().setBody("ok"))
-        server.start()
-
-        val client = KiloBackendHttpClients.api(pwd)
-        val bounded = KiloBackendHttpClients.bounded(client, 7)
-        try {
-            assertEquals(7_000, bounded.callTimeoutMillis)
-            assertEquals(7_000, bounded.readTimeoutMillis)
-            assertEquals(client.connectTimeoutMillis, bounded.connectTimeoutMillis)
-
-            val request = okhttp3.Request.Builder().url(server.url("/global/config")).build()
-            bounded.newCall(request).execute().use { response ->
-                assertEquals(200, response.code)
-            }
-            val recorded = server.takeRequest()
-            val expected = "Basic ${Base64.getEncoder().encodeToString("kilo:$pwd".toByteArray())}"
-            assertEquals(expected, recorded.getHeader("Authorization"))
-        } finally {
-            KiloBackendHttpClients.shutdown(client)
-            server.shutdown()
         }
     }
 }
