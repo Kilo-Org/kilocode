@@ -59,6 +59,12 @@
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "configurationDefaults": {
+      "files.watcherExclude": {
+        "**/.kilo/worktrees/**": true,
+        "**/.kilocode/worktrees/**": true
+      }
+    },
     "taskDefinitions": [
       {
         "type": "kilo-worktree-setup",
