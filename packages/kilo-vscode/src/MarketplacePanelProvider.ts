@@ -123,7 +123,15 @@ export class MarketplacePanelProvider implements vscode.Disposable {
     )
     this.subscriptions.push(
       this.connection.onStateChange((state, err) => {
-        this.post({ type: "connectionState", state, ...(err ? { error: err.message } : {}) })
+        this.post({
+          type: "connectionState",
+          state,
+          ...(err ? { error: err.message } : {}),
+          ...(err instanceof ServerStartupError && {
+            userMessage: err.userMessage,
+            userDetails: err.userDetails,
+          }),
+        })
         if (state === "connected") void this.sync(false)
       }),
       this.connection.onLanguageChanged((locale) => this.post({ type: "languageChanged", locale })),

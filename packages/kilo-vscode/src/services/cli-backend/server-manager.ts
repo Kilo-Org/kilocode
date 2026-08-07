@@ -202,7 +202,7 @@ export class ServerManager {
       })
 
       serverProcess.on("exit", (code, signal) => {
-        console.log("[Kilo New] ServerManager: 🛑 Process exited:", { code, signal })
+        console.warn("[Kilo New] ServerManager: 🛑 Process exited:", { code, signal })
         if (this.instance?.process === serverProcess) {
           this.instance = null
           this.onExit?.(code, signal)
