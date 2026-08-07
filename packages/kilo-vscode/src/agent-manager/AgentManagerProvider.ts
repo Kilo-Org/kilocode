@@ -265,7 +265,7 @@ export class AgentManagerProvider implements Disposable {
       initStateReady: () => (this.stateReady = this.initializeState()),
       getStats: () => this.statsPoller.snapshot(),
       getPrs: () => this.prBridge.snapshot(),
-      pushState: (ctx) => this.pushState(ctx as ProjectContext),
+      pushState: (ctx) => this.pushState(ctx),
       hasPanelSession: (id) => this.panelSessions.has(id),
       closeSession: (id) => this.onCloseSession(id),
       postSessionClosed: (id) => this.postToWebview({ type: "agentManager.sessionClosed", sessionId: id }),

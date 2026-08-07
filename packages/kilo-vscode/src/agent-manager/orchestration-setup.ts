@@ -1,6 +1,7 @@
 import type { KiloConnectionService } from "../services/cli-backend/connection-service"
 import { AgentManagerOrchestrationBridge } from "./orchestration-bridge"
 import type { ProjectContexts } from "./project/contexts"
+import type { ProjectContext } from "./project/context"
 import type { ProjectScope } from "./project/scope"
 import type { WorktreeStateManager } from "./WorktreeStateManager"
 import type { WorktreeStats, LocalStats } from "./GitStatsPoller"
@@ -17,7 +18,7 @@ export interface OrchestrationBridgeDeps {
   initStateReady: () => Promise<void>
   getStats: () => Promise<{ worktrees: WorktreeStats[]; local?: LocalStats }>
   getPrs: () => Map<string, PRStatus>
-  pushState: (ctx?: unknown) => void
+  pushState: (ctx?: ProjectContext) => void
   hasPanelSession: (id: string) => boolean
   closeSession: (id: string) => Promise<unknown>
   postSessionClosed: (id: string) => void
