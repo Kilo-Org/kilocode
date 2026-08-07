@@ -109,6 +109,10 @@ describe("DiffViewerFileTree", () => {
 
     expect(focused).toContain("▾ src/config")
     expect(unfocused).toContain("▾ src/config")
+    // kilocode_change start - restore upstream absence assertions
+    expect(focused.some((line) => line.includes("*"))).toBe(false)
+    expect(unfocused.some((line) => line.includes("*"))).toBe(false)
+    // kilocode_change end
   })
 
   test("renders collapsed and expanded directory rows", async () => {
