@@ -34,6 +34,12 @@ function resolve(input: TuiConfig.Info): TuiConfig.Resolved {
     }),
     leader_timeout: input.leader_timeout ?? 1_000,
     mouse: input.mouse ?? true,
+    cursor: input.cursor
+      ? {
+          style: input.cursor.style ?? "block",
+          blinking: input.cursor.blinking ?? true,
+        }
+      : undefined,
   }
 }
 

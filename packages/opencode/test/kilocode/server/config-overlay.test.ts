@@ -696,7 +696,7 @@ describe("config overlay routes", () => {
     const body = await json<Overlay & { effective: { permission: Record<string, string | Record<string, string>> } }>(
       await req(project.path, "/config/overlay?scope=project"),
     )
-    const edit = body.effective.permission.edit
+    const edit = body.effective?.permission?.edit
     const after = await json<Agent[]>(await req(project.path, "/agent"))
 
       expect(typeof edit === "string" ? edit : edit?.["*"]).toBe("ask")

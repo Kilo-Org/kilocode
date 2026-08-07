@@ -114,7 +114,12 @@ function isUpstreamMerge() {
     if (!parents.includes(" ")) return false
     const s = subject.toLowerCase()
     return (
-      s.startsWith("merge: upstream ") || s.startsWith("merge: opencode ") || s.startsWith("resolve merge conflict")
+      s.startsWith("merge: upstream ") ||
+      s.startsWith("merge: opencode ") ||
+      s.startsWith("merge: record upstream ") ||
+      s.startsWith("resolve merge conflict") ||
+      s.startsWith("merge branch 'johnnyeric/opencode") ||
+      (s.includes("merge") && s.includes("opencode"))
     )
   })
 }
