@@ -277,6 +277,18 @@ const layer: Layer.Layer<
       })
 
       yield* runStartScripts(info.directory, { projectID, extra })
+
+      // kilocode_change start - signal full readiness once setup also completes
+      GlobalBus.emit("event", {
+        directory: info.directory,
+        project: ctx.project.id,
+        workspace: workspaceID,
+        payload: {
+          type: Event.SetupReady.type,
+          properties: { name: info.name, ...(info.branch ? { branch: info.branch } : {}) },
+        },
+      })
+      // kilocode_change end
     })
 
     const createFromInfo = Effect.fn("Worktree.createFromInfo")(function* (info: Info, startCommand?: string) {
