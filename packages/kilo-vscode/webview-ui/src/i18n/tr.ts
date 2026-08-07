@@ -885,7 +885,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "İzin Verilen Ağ Hedefleri",
   "settings.sandboxing.allowedHosts.description":
-    "Korumalı alana alınmış HTTP ve HTTPS proxy trafiği için DNS ana bilgisayar ve bağlantı noktası hedefleri. GitHub CLI ve HTTPS Git genellikle github.com:443 ve api.github.com:443 gerektirir. Değişiklikler yeni oturumlara uygulanır.",
+    "Korumalı alana alınmış HTTP ve HTTPS proxy trafiği için DNS ana bilgisayar ve bağlantı noktası hedefleri. GitHub CLI ve HTTPS Git genellikle github.com:443 ve api.github.com:443 gerektirir.",
   "settings.sandboxing.writablePaths.title": "Ek Yazılabilir Yollar",
   "settings.sandboxing.writablePaths.description":
     "Sandığın yazılmasına izin veren ek dosya sistemi yolları (ör. /tmp, /var/log). Sandık etkinken varsayılan yazılabilir yollarla birleştirilir.",

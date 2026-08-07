@@ -896,7 +896,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "Toegestane netwerkbestemmingen",
   "settings.sandboxing.allowedHosts.description":
-    "DNS-host- en poortbestemmingen voor HTTP- en HTTPS-proxyverkeer in een sandbox. GitHub CLI en HTTPS Git hebben doorgaans github.com:443 en api.github.com:443 nodig. Wijzigingen gelden voor nieuwe sessies.",
+    "DNS-host- en poortbestemmingen voor HTTP- en HTTPS-proxyverkeer in een sandbox. GitHub CLI en HTTPS Git hebben doorgaans github.com:443 en api.github.com:443 nodig.",
   "settings.sandboxing.writablePaths.title": "Extra schrijfbare paden",
   "settings.sandboxing.writablePaths.description":
     "Extra bestandssysteempaden waar de sandbox schrijftoestemming voor geeft (bijv. /tmp, /var/log). Deze worden samengevoegd met de standaard schrijfbare paden wanneer de sandbox actief is.",

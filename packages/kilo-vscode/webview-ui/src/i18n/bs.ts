@@ -896,7 +896,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "Dozvoljena mrežna odredišta",
   "settings.sandboxing.allowedHosts.description":
-    "DNS odredišta hosta i porta za sandboxirani HTTP i HTTPS proxy promet. GitHub CLI i HTTPS Git obično trebaju github.com:443 i api.github.com:443. Promjene se primjenjuju na nove sesije.",
+    "DNS odredišta hosta i porta za sandboxirani HTTP i HTTPS proxy promet. GitHub CLI i HTTPS Git obično trebaju github.com:443 i api.github.com:443.",
   "settings.sandboxing.writablePaths.title": "Dodatne upisive putanje",
   "settings.sandboxing.writablePaths.description":
     "Dodatne putanje sistema datoteka u koje sandbox dozvoljava upis (npr. /tmp, /var/log). Spajaju se sa zadanim upisivim putanjama kada je sandbox aktivan.",

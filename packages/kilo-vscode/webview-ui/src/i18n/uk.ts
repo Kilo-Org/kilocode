@@ -887,7 +887,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "Дозволені мережеві адреси",
   "settings.sandboxing.allowedHosts.description":
-    "DNS-вузли та порти призначення для ізольованого proxy-трафіку HTTP і HTTPS. GitHub CLI та HTTPS Git зазвичай потребують github.com:443 і api.github.com:443. Зміни застосовуються до нових сеансів.",
+    "DNS-вузли та порти призначення для ізольованого proxy-трафіку HTTP і HTTPS. GitHub CLI та HTTPS Git зазвичай потребують github.com:443 і api.github.com:443.",
   "settings.sandboxing.writablePaths.title": "Додаткові шляхи для запису",
   "settings.sandboxing.writablePaths.description":
     "Додаткові шляхи файлової системи, у які дозволено запис у пісочниці (наприклад, /tmp, /var/log). Вони об'єднуються зі шляхами запису за замовчуванням, коли пісочниця активна.",

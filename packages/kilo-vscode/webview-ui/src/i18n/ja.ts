@@ -888,7 +888,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "許可されたネットワーク接続先",
   "settings.sandboxing.allowedHosts.description":
-    "サンドボックス化された HTTP および HTTPS プロキシトラフィックの DNS ホストとポートの宛先。GitHub CLI と HTTPS Git では通常、github.com:443 と api.github.com:443 が必要です。変更は新しいセッションに適用されます。",
+    "サンドボックス化された HTTP および HTTPS プロキシトラフィックの DNS ホストとポートの宛先。GitHub CLI と HTTPS Git では通常、github.com:443 と api.github.com:443 が必要です。",
   "settings.sandboxing.writablePaths.title": "追加の書き込み可能パス",
   "settings.sandboxing.writablePaths.description":
     "サンドボックスでの書き込みを許可する追加のファイルシステムパス（例: /tmp、/var/log）。サンドボックス有効時、デフォルトの書き込み可能パスと統合されます。",

@@ -45,9 +45,25 @@ type CachedApp = BackendApp & { readonly dispose: () => Promise<void> }
 const appCache: Partial<Record<string, CachedApp>> = {}
 
 export async function disposeApps() {
-  const apps = Object.values(appCache)
+  // kilocode_change start - an in-flight SSE fiber can leave the in-process router scope unable
+  // to close; bound disposal so a completed scenario run cannot wedge the exerciser or CI
+  const apps = Object.entries(appCache)
   for (const key of Object.keys(appCache)) delete appCache[key]
-  await Promise.all(apps.flatMap((app) => (app === undefined ? [] : [app.dispose()])))
+  await Promise.all(
+    apps.flatMap(([key, app]) =>
+      app === undefined
+        ? []
+        : [
+            Promise.race([
+              app.dispose(),
+              Bun.sleep(3_000).then(() => {
+                console.error(`httpapi-exercise: router dispose did not settle for ${JSON.stringify(key)} after 3s`)
+              }),
+            ]),
+          ],
+    ),
+  )
+  // kilocode_change end
 }
 
 function app(modules: Runtime, options: CallOptions) {

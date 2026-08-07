@@ -906,7 +906,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "Destinos de red permitidos",
   "settings.sandboxing.allowedHosts.description":
-    "Destinos de host y puerto DNS para el tráfico de proxy HTTP y HTTPS en zona de pruebas. GitHub CLI y HTTPS Git suelen necesitar github.com:443 y api.github.com:443. Los cambios se aplican a las sesiones nuevas.",
+    "Destinos de host y puerto DNS para el tráfico de proxy HTTP y HTTPS en zona de pruebas. GitHub CLI y HTTPS Git suelen necesitar github.com:443 y api.github.com:443.",
   "settings.sandboxing.writablePaths.title": "Rutas de escritura adicionales",
   "settings.sandboxing.writablePaths.description":
     "Rutas del sistema de archivos adicionales donde el sandbox permite escritura (por ej., /tmp, /var/log). Se combinan con las rutas de escritura predeterminadas cuando el sandbox está activo.",

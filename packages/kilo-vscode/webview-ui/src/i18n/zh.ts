@@ -859,7 +859,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "允许的网络目标",
   "settings.sandboxing.allowedHosts.description":
-    "用于沙盒化 HTTP 和 HTTPS 代理流量的 DNS 主机和端口目标。GitHub CLI 和 HTTPS Git 通常需要 github.com:443 和 api.github.com:443。更改将应用于新会话。",
+    "用于沙盒化 HTTP 和 HTTPS 代理流量的 DNS 主机和端口目标。GitHub CLI 和 HTTPS Git 通常需要 github.com:443 和 api.github.com:443。",
   "settings.sandboxing.writablePaths.title": "额外可写路径",
   "settings.sandboxing.writablePaths.description":
     "沙盒允许写入的额外文件系统路径（例如 /tmp、/var/log）。沙盒启用后，这些路径会与默认可写路径合并。",
