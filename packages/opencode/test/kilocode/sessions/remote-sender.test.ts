@@ -1117,8 +1117,6 @@ describe("RemoteSender", () => {
   test("list_models without a sessionId returns the instance catalog", async () => {
     const { conn, sent } = fakeConn()
     const dirs: string[] = []
-    const gets: SessionID[] = []
-    const messageCalls: SessionID[] = []
     const sender = RemoteSender.create({
       conn,
       directory: "/tmp/process-default",
@@ -1129,12 +1127,10 @@ describe("RemoteSender", () => {
         return input.fn()
       },
       catalog: {
-        get: async (sessionID) => {
-          gets.push(sessionID)
+        get: async () => {
           throw new Error("catalog.get must not be called without a sessionId")
         },
-        messages: async (sessionID) => {
-          messageCalls.push(sessionID)
+        messages: async () => {
           throw new Error("catalog.messages must not be called without a sessionId")
         },
         providers: async () =>
@@ -1151,7 +1147,10 @@ describe("RemoteSender", () => {
               },
             },
           }) as any,
-        default: async () => undefined,
+        default: async () => ({
+          providerID: ProviderV2.ID.make("custom"),
+          modelID: ModelV2.ID.make("deployment/model"),
+        }),
       },
     })
 
@@ -1165,8 +1164,6 @@ describe("RemoteSender", () => {
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(dirs).toEqual(["/tmp/process-default"])
-    expect(gets).toEqual([])
-    expect(messageCalls).toEqual([])
     expect(sent).toHaveLength(1)
     expect(sent[0]?.type).toBe("response")
     expect(sent[0]?.id).toBe("req_models_sessionless")
@@ -1174,58 +1171,9 @@ describe("RemoteSender", () => {
     expect(result.protocolVersion).toBe(1)
     expect(result.all).toHaveLength(1)
     expect(result.all[0]?.id).toBe("custom")
-    expect(JSON.stringify(result)).not.toContain("must-not-leak")
-  })
-
-  test("list_models without a sessionId yields a catalog with no currentModel", async () => {
-    const { conn, sent } = fakeConn()
-    const sender = RemoteSender.create({
-      conn,
-      directory: "/tmp/process-default",
-      log: nolog,
-      subscribe: fakeBus().subscribe,
-      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => input.fn(),
-      catalog: {
-        get: async () => {
-          throw new Error("catalog.get must not be called without a sessionId")
-        },
-        messages: async () => {
-          throw new Error("catalog.messages must not be called without a sessionId")
-        },
-        providers: async () =>
-          ({
-            custom: {
-              id: ProviderV2.ID.make("custom"),
-              name: "Custom Provider",
-              source: "config",
-              env: [],
-              options: {},
-              models: {
-                "deployment/model": catalogModel("custom", "deployment/model", "Deployment Model"),
-              },
-            },
-          }) as any,
-        default: async () => ({
-          providerID: ProviderV2.ID.make("custom"),
-          modelID: ModelV2.ID.make("deployment/model"),
-        }),
-      },
-    })
-
-    sender.handle({
-      type: "command",
-      id: "req_models_sessionless_no_current",
-      command: "list_models",
-      data: { protocolVersion: 1 },
-    })
-
-    await new Promise((resolve) => setTimeout(resolve, 0))
-
-    const result = sent[0]?.result as RemoteModelCatalog.Response
-    expect(result.protocolVersion).toBe(1)
-    expect(result.all).toHaveLength(1)
     expect(result.defaultModel).toEqual({ providerID: "custom", modelID: "deployment/model" })
     expect(result).not.toHaveProperty("currentModel")
+    expect(JSON.stringify(result)).not.toContain("must-not-leak")
   })
 
   test("send_message with agent is accepted", async () => {
