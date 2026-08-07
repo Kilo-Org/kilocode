@@ -37,18 +37,31 @@ describe("buildChatSettingsMessage", () => {
     expect(buildChatSettingsMessage().settings.shiftTabCyclesVariant).toBe(true)
   })
 
+  it("limits chat content width by default", () => {
+    expect(buildChatSettingsMessage().settings.limitContentWidth).toBe(true)
+  })
+
   it("returns the persisted cycling preference", () => {
     state.set("shiftTabCyclesVariant", false)
 
     expect(buildChatSettingsMessage().settings.shiftTabCyclesVariant).toBe(false)
   })
+
+  it("returns the persisted content width preference", () => {
+    state.set("limitContentWidth", false)
+
+    expect(buildChatSettingsMessage().settings.limitContentWidth).toBe(false)
+  })
 })
 
 describe("validChatSetting", () => {
-  it("accepts only boolean cycling updates", () => {
+  it("accepts only boolean chat setting updates", () => {
     expect(validChatSetting("shiftTabCyclesVariant", true)).toBe(true)
     expect(validChatSetting("shiftTabCyclesVariant", false)).toBe(true)
     expect(validChatSetting("shiftTabCyclesVariant", "false")).toBe(false)
+    expect(validChatSetting("limitContentWidth", true)).toBe(true)
+    expect(validChatSetting("limitContentWidth", false)).toBe(true)
+    expect(validChatSetting("limitContentWidth", "false")).toBe(false)
     expect(validChatSetting("unknown", true)).toBe(false)
   })
 })

@@ -1036,6 +1036,9 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "使用 Shift+Tab 切換推理強度",
   "settings.display.shiftTabCycle.description":
     "在提示輸入框中按 Shift+Tab 可切換至下一個推理強度等級。停用此選項可保留 Shift+Tab 用於鍵盤焦點導覽。",
+  "settings.display.limitContentWidth.title": "限制聊天內容寬度",
+  "settings.display.limitContentWidth.description":
+    "將聊天內容和輸入框保持在置中、易讀的寬度欄中。關閉後可在側邊欄、編輯器標籤頁和 Agent Manager 中使用完整面板寬度。",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",

@@ -23,6 +23,12 @@
   --chat-scrollbar-width: 10px;
 }
 
+/* Display setting: use the full panel width on wide surfaces (Agent Manager,
+   editor tabs) while keeping gutters. Default remains the readable lane. */
+.chat-view[data-limit-content-width="false"] {
+  --chat-readable-width: 100%;
+}
+
 /* ============================================
    Sidebar Top Bar
    ============================================ */

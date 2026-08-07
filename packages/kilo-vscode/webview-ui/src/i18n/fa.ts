@@ -1121,6 +1121,9 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "چرخش سطح استدلال با Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "در ورودی پرامپت، Shift+Tab را فشار دهید تا به سطح تلاش استدلال بعدی بروید. برای حفظ عملکرد Shift+Tab جهت ناوبری فوکوس صفحه‌کلید، این گزینه را غیرفعال کنید.",
+  "settings.display.limitContentWidth.title": "محدود کردن عرض محتوای گفتگو",
+  "settings.display.limitContentWidth.description":
+    "محتوای گفتگو و کادر ورودی را در ستونی وسط‌چین با عرض خوانا نگه می‌دارد. برای استفاده از تمام عرض پنل در نوار کناری، تب‌های ویرایشگر و Agent Manager خاموش کنید.",
   "settings.display.terminalCommand.title": "بلوک‌های دستور ترمینال",
   "settings.display.terminalCommand.description":
     "انتخاب کنید که بلوک‌های دستور ترمینال در حالت باز یا بسته شروع شوند.",

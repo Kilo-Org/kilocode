@@ -1115,6 +1115,9 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Shift+Tab으로 추론 강도 전환",
   "settings.display.shiftTabCycle.description":
     "프롬프트 입력란에서 Shift+Tab을 눌러 다음 추론 강도 수준으로 전환합니다. Shift+Tab을 키보드 포커스 탐색에 사용하려면 비활성화하세요.",
+  "settings.display.limitContentWidth.title": "채팅 콘텐츠 너비 제한",
+  "settings.display.limitContentWidth.description":
+    "채팅 콘텐츠와 입력창을 가운데 정렬된 읽기 좋은 너비 열로 유지합니다. 끄면 사이드바, 편집기 탭, Agent Manager에서 전체 패널 너비를 사용합니다.",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",

@@ -1108,6 +1108,9 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Doorloop niveaus van redeneringsinspanning met Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Druk op Shift+Tab in een promptinvoerveld om naar het volgende niveau van redeneringsinspanning te gaan. Schakel dit uit om Shift+Tab te behouden voor focusnavigatie via het toetsenbord.",
+  "settings.display.limitContentWidth.title": "Chatinhoudbreedte beperken",
+  "settings.display.limitContentWidth.description":
+    "Houdt chatinhoud en de prompt in een gecentreerde, leesbare kolom. Schakel uit om de volledige paneelbreedte te gebruiken in de zijbalk, editortabs en Agent Manager.",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",

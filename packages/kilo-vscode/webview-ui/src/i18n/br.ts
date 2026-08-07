@@ -1148,6 +1148,9 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Alternar o esforço de raciocínio com Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Pressione Shift+Tab em um campo de entrada de prompt para alternar para o próximo nível de esforço de raciocínio. Desative para manter Shift+Tab para navegação de foco pelo teclado.",
+  "settings.display.limitContentWidth.title": "Limitar a largura do conteúdo do chat",
+  "settings.display.limitContentWidth.description":
+    "Mantém o conteúdo do chat e o prompt em uma coluna centralizada de largura legível. Desative para usar a largura total do painel na barra lateral, nas abas do editor e no Agent Manager.",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",

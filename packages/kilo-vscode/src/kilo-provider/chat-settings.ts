@@ -8,6 +8,7 @@ export function buildChatSettingsMessage() {
     type: "chatSettingsLoaded" as const,
     settings: {
       shiftTabCyclesVariant: config.get<boolean>("shiftTabCyclesVariant", true),
+      limitContentWidth: config.get<boolean>("limitContentWidth", true),
     },
   }
 }
@@ -21,5 +22,5 @@ export function watchChatConfig(post: Post): vscode.Disposable {
 }
 
 export function validChatSetting(key: string, value: unknown) {
-  return key === "shiftTabCyclesVariant" && typeof value === "boolean"
+  return (key === "shiftTabCyclesVariant" || key === "limitContentWidth") && typeof value === "boolean"
 }

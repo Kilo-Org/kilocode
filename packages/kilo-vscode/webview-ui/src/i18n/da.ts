@@ -1134,6 +1134,9 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Skift ræsonnementsindsats med Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Tryk på Shift+Tab i et promptindtastningsfelt for at skifte til næste niveau af ræsonnementsindsats. Deaktivér for at beholde Shift+Tab til tastaturnavigation af fokus.",
+  "settings.display.limitContentWidth.title": "Begræns chatindholdsbredde",
+  "settings.display.limitContentWidth.description":
+    "Holder chatindhold og prompt i en centreret, læsbar kolonne. Slå fra for at bruge den fulde panelbredde i sidebjælken, editorfaner og Agent Manager.",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",

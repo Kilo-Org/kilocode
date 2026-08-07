@@ -1133,6 +1133,9 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Переключать усилие рассуждения с помощью Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Нажмите Shift+Tab в поле ввода запроса, чтобы перейти к следующему уровню усилий рассуждения. Отключите эту настройку, чтобы сохранить Shift+Tab для навигации по фокусу с помощью клавиатуры.",
+  "settings.display.limitContentWidth.title": "Ограничить ширину содержимого чата",
+  "settings.display.limitContentWidth.description":
+    "Удерживает содержимое чата и поле ввода в центрированной колонке удобной для чтения ширины. Отключите, чтобы использовать полную ширину панели в боковой панели, вкладках редактора и Agent Manager.",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
