@@ -69,7 +69,7 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.error.addCredits": "Lägg till krediter",
   "dialog.usageExceeded.freeTier.title": "Gratisgränsen nådd",
   "dialog.usageExceeded.freeTier.description":
-    "Prenumerera på Kilo Go för pålitlig tillgång till de bästa modellerna med öppen källkod, från 5 USD/månad.", // kilocode_change
+    "Prenumerera på Kilo Go för pålitlig tillgång till de bästa modellerna med öppen källkod, från 5 USD/månad.",
   "dialog.usageExceeded.freeTier.actionLabel": "Prenumerera",
   "dialog.usageExceeded.accountRateLimit.title": "Gränsen för Go har nåtts",
   "dialog.usageExceeded.accountRateLimit.description":

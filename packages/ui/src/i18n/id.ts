@@ -74,7 +74,7 @@ export const dict: Record<string, string> = {
 
   "dialog.usageExceeded.freeTier.title": "Batas gratis tercapai",
   "dialog.usageExceeded.freeTier.description":
-    "Berlangganan Kilo Go untuk akses andal ke model sumber terbuka terbaik, mulai dari $5/bulan.", // kilocode_change
+    "Berlangganan Kilo Go untuk akses andal ke model sumber terbuka terbaik, mulai dari $5/bulan.",
   "dialog.usageExceeded.freeTier.actionLabel": "Berlangganan",
   "dialog.usageExceeded.accountRateLimit.title": "Batas Go tercapai",
   "dialog.usageExceeded.accountRateLimit.description":

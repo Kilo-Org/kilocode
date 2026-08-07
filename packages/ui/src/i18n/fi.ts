@@ -68,7 +68,7 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.error.addCredits": "Lisää krediittejä",
   "dialog.usageExceeded.freeTier.title": "Ilmainen raja saavutettu",
   "dialog.usageExceeded.freeTier.description":
-    "Tilaa Kilo Go saadaksesi luotettavan pääsyn parhaisiin avoimen lähdekoodin malleihin alkaen 5 dollarista kuukaudessa.", // kilocode_change
+    "Tilaa Kilo Go saadaksesi luotettavan pääsyn parhaisiin avoimen lähdekoodin malleihin alkaen 5 dollarista kuukaudessa.",
   "dialog.usageExceeded.freeTier.actionLabel": "Tilaa",
   "dialog.usageExceeded.accountRateLimit.title": "Go-raja saavutettu",
   "dialog.usageExceeded.accountRateLimit.description":
