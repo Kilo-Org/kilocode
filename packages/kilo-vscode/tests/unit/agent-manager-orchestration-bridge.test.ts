@@ -33,7 +33,9 @@ describe("AgentManagerOrchestrationBridge", () => {
     fs.rmSync(root, { recursive: true, force: true })
   })
 
-  function harness() {
+  function harness(
+    overrides?: Partial<Parameters<(typeof AgentManagerOrchestrationBridge.prototype)["constructor"]>[1]>,
+  ) {
     const replies: unknown[] = []
     const rejections: unknown[] = []
     const lists = new Map<string, AgentManagerRequest[]>()
@@ -49,8 +51,8 @@ describe("AgentManagerOrchestrationBridge", () => {
     const push = mock(() => undefined)
     const client = {
       session: {
-        get: mock(async () => ({
-          data: { id: "ses_target", directory: dir, title: "Target" } as Session,
+        get: mock(async ({ sessionID, directory }: { sessionID?: string; directory?: string }) => ({
+          data: { id: sessionID ?? "ses_target", directory: directory ?? dir, title: "Target" } as Session,
         })),
         status: mock(async () => ({ data: {} })),
         promptAsync,
@@ -100,17 +102,17 @@ describe("AgentManagerOrchestrationBridge", () => {
       getClient: () => client,
     }
     const bridge = new AgentManagerOrchestrationBridge(connection as never, {
-      root: () => root,
-      ready: async () => state,
-      state: () => state,
-      stats: async () => {
+      root: (dir) => (overrides?.root ? overrides.root(dir) : root),
+      ready: async (dir) => (overrides?.ready ? overrides.ready(dir) : state),
+      state: (dir) => (overrides?.state ? overrides.state(dir) : state),
+      stats: async (dir) => {
         statsCalls.push(1)
-        return { worktrees: [] }
+        return overrides?.stats ? overrides.stats(dir) : { worktrees: [] }
       },
-      prs: () => new Map(),
-      push,
-      managed: (id) => managed.has(id),
-      close,
+      prs: (dir) => (overrides?.prs ? overrides.prs(dir) : new Map()),
+      push: (dir) => (overrides?.push ? overrides.push(dir) : push()),
+      managed: (id, dir) => (overrides?.managed ? overrides.managed(id, dir) : managed.has(id)),
+      close: async (id, dir) => (overrides?.close ? overrides.close(id, dir) : close(id, dir)),
       log: () => undefined,
     })
     const request = (value: AgentManagerRequest, directory = root) =>
@@ -195,7 +197,7 @@ describe("AgentManagerOrchestrationBridge", () => {
     await waitFor(() => test.replies.length === 2)
 
     expect(test.close).toHaveBeenCalledTimes(1)
-    expect(test.close).toHaveBeenCalledWith("ses_target")
+    expect(test.close).toHaveBeenCalledWith("ses_target", root)
     expect(test.replies).toEqual([
       {
         requestID: "amr_stop",
@@ -294,7 +296,7 @@ describe("AgentManagerOrchestrationBridge", () => {
     await waitFor(() => test.replies.length === 1)
 
     expect(state.getSession("ses_live")).toBeUndefined()
-    expect(test.close).toHaveBeenCalledWith("ses_live")
+    expect(test.close).toHaveBeenCalledWith("ses_live", root)
     expect(test.replies[0]).toEqual({
       requestID: "amr_stop_live",
       directory: root,
@@ -388,5 +390,40 @@ describe("AgentManagerOrchestrationBridge", () => {
     expect(test.client.kilocode.agentManager.list).toHaveBeenCalledWith({ directory: dir })
     expect(test.promptAsync).toHaveBeenCalledTimes(1)
     test.bridge.dispose()
+  })
+
+  it("handles requests for secondary project directories in multi-project mode", async () => {
+    const secondaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "am-orchestration-secondary-"))
+    fs.mkdirSync(path.join(secondaryRoot, ".kilo"), { recursive: true })
+    const secondaryState = new WorktreeStateManager(secondaryRoot, () => undefined)
+    secondaryState.addSession("ses_secondary", null)
+
+    const test = harness({
+      root: (d) => (d === secondaryRoot ? secondaryRoot : root),
+      ready: async (d) => (d === secondaryRoot ? secondaryState : state),
+      state: (d) => (d === secondaryRoot ? secondaryState : state),
+    })
+
+    test.request(
+      {
+        id: "amr_secondary",
+        sessionID: "ses_caller",
+        operation: "prompt",
+        targetSessionID: "ses_secondary",
+        prompt: "Hello from secondary",
+      },
+      secondaryRoot,
+    )
+    await waitFor(() => test.replies.length === 1)
+
+    expect(test.promptAsync).toHaveBeenCalledTimes(1)
+    expect(test.replies[0]).toEqual({
+      requestID: "amr_secondary",
+      directory: secondaryRoot,
+      result: { operation: "prompt", sessionID: "ses_secondary", delivered: true },
+    })
+    test.bridge.dispose()
+    await secondaryState.flush()
+    fs.rmSync(secondaryRoot, { recursive: true, force: true })
   })
 })

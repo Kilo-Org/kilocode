@@ -1,4 +1,4 @@
-import { readFileSync, statSync } from "node:fs"
+import { accessSync, constants, readFileSync, realpathSync, statSync } from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { Effect, Semaphore } from "effect"
@@ -131,6 +131,37 @@ function isolated(ctx: InstanceContext) {
   return linked(path.resolve(ctx.directory), path.resolve(ctx.worktree))
 }
 
+function canonical(dir: string) {
+  try {
+    return realpathSync.native(dir)
+  } catch {
+    return path.resolve(dir)
+  }
+}
+
+function ancestor(value: string, target: string) {
+  const relative = path.relative(canonical(value), canonical(target))
+  return relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative)
+}
+
+function accessible(dir: string) {
+  try {
+    accessSync(dir, constants.R_OK)
+    return true
+  } catch {
+    return false
+  }
+}
+
+function filterWritable(ctx: InstanceContext, values: readonly string[]) {
+  const list = values.filter(accessible)
+  if (!isolated(ctx)) return list
+  // A nested macOS sandbox cannot reliably canonicalize an inherited writable
+  // ancestor of the linked worktree. The active worktree is already writable;
+  // keep unrelated explicit paths, but do not widen it back to the repository.
+  return list.filter((value) => !ancestor(value, ctx.directory))
+}
+
 export function profile(
   ctx: InstanceContext,
   mode: Profile["network"]["mode"] = "deny",
@@ -152,7 +183,7 @@ export function profile(
     Global.Path.bin,
     Global.Path.log,
     Global.Path.repos,
-    ...(extraWritable ?? []),
+    ...filterWritable(ctx, extraWritable ?? []),
   ].map(root)
   return {
     filesystem: {
@@ -166,13 +197,7 @@ export function profile(
       allowedHosts,
     },
     environment: {
-      deny: [
-        "KILO_CONFIG",
-        "KILO_CONFIG_CONTENT",
-        "KILO_CONFIG_DIR",
-        "KILO_SERVER_PASSWORD",
-        "KILO_SERVER_USERNAME",
-      ],
+      deny: ["KILO_CONFIG", "KILO_CONFIG_CONTENT", "KILO_CONFIG_DIR", "KILO_SERVER_PASSWORD", "KILO_SERVER_USERNAME"],
       set: {
         TMPDIR: Global.Path.tmp,
         TMP: Global.Path.tmp,
@@ -275,8 +300,7 @@ function change<E, R, F = never, Q = never, P = never, S = never>(
           if (enabling) {
             yield* Effect.forEach(
               targets,
-              (target) =>
-                target.id === sessionID ? Effect.void : inheritSnapshot(target.directory, next, target.id),
+              (target) => (target.id === sessionID ? Effect.void : inheritSnapshot(target.directory, next, target.id)),
               { discard: true },
             )
           }
@@ -377,10 +401,7 @@ export const inherit = Effect.fn("SandboxPolicy.inherit")(function* (
       // Only persist the parent snapshot when it actually belongs to this directory. A fallback
       // carries confinement from another directory (e.g. forking into a worktree) and must not be
       // written back under the parent's key here, or it leaks a phantom parent record.
-      yield* locked(
-        sessionID,
-        inheritSnapshot(directory, parent, sessionID),
-      )
+      yield* locked(sessionID, inheritSnapshot(directory, parent, sessionID))
     }),
   )
 })
@@ -440,9 +461,7 @@ function execute<A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, E, R>) 
         if (!current.state.enabled) return yield* unrestricted(effect)
         const support = backendSupport({ mode: current.state.mode, allowedHosts: current.state.allowedHosts })
         if (!support.available) {
-          return yield* Effect.fail(
-            new Error(support.reason ?? "The configured sandbox backend is unavailable"),
-          )
+          return yield* Effect.fail(new Error(support.reason ?? "The configured sandbox backend is unavailable"))
         }
         return yield* runSandbox(
           profile(

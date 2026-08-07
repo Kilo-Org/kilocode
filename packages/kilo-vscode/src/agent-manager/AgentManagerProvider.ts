@@ -53,6 +53,7 @@ import {
 import { initContextState, pushProjectSessions, reactivateProject, registerProjectSessions } from "./project/init"
 import { createLocalDiff } from "./local-diff"
 import { parseToolRequest, startFromTool, type ToolRequest } from "./tool-start"
+import { routeToolRequest } from "./tool-project"
 import { sandboxSessionMetadata } from "../shared/sandbox-session"
 import { AgentManagerOrchestrationBridge } from "./orchestration-bridge"
 import { pruneSubagents } from "./prune-subagents"
@@ -254,20 +255,51 @@ export class AgentManagerProvider implements Disposable {
     this.prBridge = pollers.pr
     this.projectPollers = pollers.projects
     this.orchestration = new AgentManagerOrchestrationBridge(this.connectionService, {
-      root: () => this.getRoot(),
-      state: () => this.state,
-      ready: async () => {
+      root: (dir) => (dir ? this.contexts.byDirectory(dir)?.root : undefined) ?? this.getRoot(),
+      state: (dir) => (dir ? this.contexts.byDirectory(dir)?.peekState() : undefined) ?? this.state,
+      ready: async (dir) => {
+        const ctx = dir ? this.contexts.byDirectory(dir) : undefined
+        if (ctx && ctx.id !== this.contexts.active()?.id) {
+          await initContextState(ctx, (...args) => this.log(...args))
+          return ctx.stateManager()
+        }
         this.stateReady ??= this.initializeState()
         await this.stateReady
         return this.state
       },
       stats: () => this.statsPoller.snapshot(),
       prs: () => this.prBridge.snapshot(),
-      push: () => this.pushState(),
-      managed: (id) => this.panelSessions.has(id) || !!this.state?.getSession(id),
-      close: async (id) => {
-        await this.onCloseSession(id)
+      push: (dir) => {
+        const ctx = dir ? this.contexts.byDirectory(dir) : undefined
+        this.pushState(ctx)
+      },
+      managed: (id, dir) => {
+        const ctx = dir ? this.contexts.byDirectory(dir) : undefined
+        if (ctx) return ctx.hasLiveSession(id) || !!ctx.peekState()?.getSession(id)
+        return this.panelSessions.has(id) || !!this.state?.getSession(id)
+      },
+      close: async (id, dir) => {
+        const ctx = dir ? this.contexts.byDirectory(dir) : undefined
+        if (ctx) {
+          await this.projectScope.run(ctx, () => this.onCloseSession(id))
+        } else {
+          await this.onCloseSession(id)
+        }
         this.postToWebview({ type: "agentManager.sessionClosed", sessionId: id })
+      },
+      directories: () => {
+        const all: string[] = []
+        for (const ctx of this.contexts.values()) {
+          all.push(ctx.root)
+          for (const wt of ctx.peekState()?.getWorktrees() ?? []) {
+            if (wt.path) all.push(wt.path)
+          }
+        }
+        if (all.length === 0) {
+          const root = this.getRoot()
+          if (root) all.push(root)
+        }
+        return all
       },
       log: (...args) => this.log(...args),
     })
@@ -1085,11 +1117,16 @@ export class AgentManagerProvider implements Disposable {
     const properties = (event as { properties?: unknown }).properties
     const req = parseToolRequest(properties)
     if (!req) return
-    if (directory) {
-      req.directory = directory
-      req.projectId ??= this.contexts.byDirectory(directory)?.id
+    const routed = routeToolRequest(req, directory, {
+      byDirectory: (value) => this.contexts.byDirectory(value),
+      usable: (id) => this.contexts.usable(id),
+    })
+    const owner = routed.owner
+    if (owner) {
+      void this.projectScope.run(owner, () => this.startToolRequest(routed.request))
+      return
     }
-    void this.startToolRequest(req)
+    void this.startToolRequest(routed.request)
   }
 
   private async startToolRequest(req: ToolRequest): Promise<void> {
