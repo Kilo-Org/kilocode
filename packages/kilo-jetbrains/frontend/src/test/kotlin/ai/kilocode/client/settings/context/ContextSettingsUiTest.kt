@@ -1,5 +1,6 @@
 package ai.kilocode.client.settings.context
 
+import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.settings.base.SettingsToggle
@@ -284,12 +285,7 @@ class ContextSettingsUiTest : BasePlatformTestCase() {
         .filterIsInstance<HoverIcon>()
         .single { it.toolTipText == tip }
 
-    private fun <T> edt(block: () -> T): T {
-        var result: T? = null
-        ApplicationManager.getApplication().invokeAndWait { result = block() }
-        @Suppress("UNCHECKED_CAST")
-        return result as T
-    }
+    private fun <T> edt(block: () -> T): T = edtWait(block)
 
     private fun flushUntil(done: () -> Boolean) = runBlocking {
         repeat(200) {

@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.controller
 
+import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.session.model.SessionModel
@@ -267,16 +268,9 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         }
     }
 
-    protected fun edt(block: () -> Unit) {
-        ApplicationManager.getApplication().invokeAndWait(block)
-    }
+    protected fun edt(block: () -> Unit) = edtWait(block)
 
-    protected fun <T> edt(block: () -> T): T {
-        var result: T? = null
-        ApplicationManager.getApplication().invokeAndWait { result = block() }
-        @Suppress("UNCHECKED_CAST")
-        return result as T
-    }
+    protected fun <T> edt(block: () -> T): T = edtWait(block)
 
     /** Emit a chat event into the fake RPC flow. */
     protected fun emit(event: ChatEventDto, flush: Boolean = true) {

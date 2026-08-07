@@ -3,7 +3,6 @@ package ai.kilocode.client.actions
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
-import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.history.CloudHistoryItem
@@ -298,72 +297,20 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
 
     // ------ RenameSessionAction.actionPerformed ------
 
-    fun `test rename action calls controller with trimmed changed title`() {
-        rpc.listed += sessionDto("ses_1", "Original")
-        controller.reloadLocal()
-        flush()
-
-        val item = controller.local.items[0]
-        val action = RenameSessionAction().apply { input = { _, _ -> "  Renamed  " } }
-        val event = event(action, manager, selection(HistorySource.LOCAL, listOf(item)), controller)
+    fun `test rename action opens rename popover for single local selection`() {
+        val item = localItem("ses_1")
+        val renamed = mutableListOf<String>()
+        val action = RenameSessionAction()
+        val event = event(action, manager, selection(HistorySource.LOCAL, listOf(item)), controller) { renamed += it.id }
 
         action.actionPerformed(event)
-        flush()
 
-        assertEquals(listOf(Triple("ses_1", "/test", "Renamed")), rpc.renames)
+        assertEquals(listOf("ses_1"), renamed)
     }
 
-    fun `test rename action passes displayed current title to input`() {
-        rpc.listed += sessionDto("ses_1", "Original")
-        controller.reloadLocal()
-        flush()
-
-        val prompts = mutableListOf<String>()
-        val item = controller.local.items[0]
-        val action = RenameSessionAction().apply {
-            input = { _, current ->
-                prompts.add(current)
-                null
-            }
-        }
-        val event = event(action, manager, selection(HistorySource.LOCAL, listOf(item)), controller)
-
-        action.actionPerformed(event)
-        flush()
-
-        assertEquals(listOf("Original"), prompts)
-        assertTrue(rpc.renames.isEmpty())
-    }
-
-    fun `test rename action passes untitled fallback to input`() {
-        rpc.listed += sessionDto("ses_1", "")
-        controller.reloadLocal()
-        flush()
-
-        val prompts = mutableListOf<String>()
-        val item = controller.local.items[0]
-        val action = RenameSessionAction().apply {
-            input = { _, current ->
-                prompts.add(current)
-                null
-            }
-        }
-        val event = event(action, manager, selection(HistorySource.LOCAL, listOf(item)), controller)
-
-        action.actionPerformed(event)
-        flush()
-
-        assertEquals(listOf(KiloBundle.message("history.untitled")), prompts)
-        assertTrue(rpc.renames.isEmpty())
-    }
-
-    fun `test rename action ignores blank input`() {
-        rpc.listed += sessionDto("ses_1", "Original")
-        controller.reloadLocal()
-        flush()
-
-        val item = controller.local.items[0]
-        val action = RenameSessionAction().apply { input = { _, _ -> "   " } }
+    fun `test rename action does nothing without a rename provider`() {
+        val item = localItem("ses_1")
+        val action = RenameSessionAction()
         val event = event(action, manager, selection(HistorySource.LOCAL, listOf(item)), controller)
 
         action.actionPerformed(event)
@@ -372,34 +319,15 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         assertTrue(rpc.renames.isEmpty())
     }
 
-    fun `test rename action ignores unchanged input`() {
-        rpc.listed += sessionDto("ses_1", "Original")
-        controller.reloadLocal()
-        flush()
-
-        val item = controller.local.items[0]
-        val action = RenameSessionAction().apply { input = { _, _ -> "Original" } }
-        val event = event(action, manager, selection(HistorySource.LOCAL, listOf(item)), controller)
+    fun `test rename action does nothing for multiple local selection`() {
+        val items = listOf(localItem("ses_1"), localItem("ses_2"))
+        val renamed = mutableListOf<String>()
+        val action = RenameSessionAction()
+        val event = event(action, manager, selection(HistorySource.LOCAL, items), controller) { renamed += it.id }
 
         action.actionPerformed(event)
-        flush()
 
-        assertTrue(rpc.renames.isEmpty())
-    }
-
-    fun `test rename action ignores null input`() {
-        rpc.listed += sessionDto("ses_1", "Original")
-        controller.reloadLocal()
-        flush()
-
-        val item = controller.local.items[0]
-        val action = RenameSessionAction().apply { input = { _, _ -> null } }
-        val event = event(action, manager, selection(HistorySource.LOCAL, listOf(item)), controller)
-
-        action.actionPerformed(event)
-        flush()
-
-        assertTrue(rpc.renames.isEmpty())
+        assertTrue(renamed.isEmpty())
     }
 
     fun `test frontend descriptor registers history actions`() {
@@ -411,12 +339,33 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         assertTrue(xml.contains("id=\"Kilo.Session.Open\""))
         assertTrue(xml.contains("id=\"Kilo.Session.Rename\""))
         assertTrue(xml.contains("id=\"Kilo.Session.Delete\""))
+        assertTrue(xml.contains("id=\"Kilo.Worktree.Rename\""))
+        assertTrue(xml.contains("id=\"Kilo.Worktree.Delete\""))
+        assertTrue(xml.contains("id=\"Kilo.Worktree.OpenPr\""))
+        assertTrue(xml.contains("id=\"Kilo.Worktree.OpenDiff\""))
+        assertTrue(xml.contains("id=\"Kilo.WorktreeSession.Rename\""))
+        assertTrue(xml.contains("id=\"Kilo.WorktreeSession.Delete\""))
+        assertTrue(xml.contains("id=\"Kilo.Worktree.RowMenu\""))
+        assertTrue(xml.contains("id=\"Kilo.WorktreeSession.RowMenu\""))
         assertTrue(xml.contains("id=\"Kilo.History.ContextMenu\""))
         assertTrue(xml.contains("id=\"Kilo.Session.ContextMenu\""))
         assertTrue(xml.contains("ref=\"Kilo.Session.Open\""))
         assertTrue(xml.contains("ref=\"Kilo.Session.Rename\""))
         assertTrue(xml.contains("ref=\"Kilo.Session.Delete\""))
+        assertTrue(xml.contains("ref=\"Kilo.Worktree.Rename\""))
+        assertTrue(xml.contains("ref=\"Kilo.Worktree.Delete\""))
+        assertTrue(xml.contains("ref=\"Kilo.Worktree.OpenPr\""))
+        assertTrue(xml.contains("ref=\"Kilo.Worktree.OpenDiff\""))
+        assertTrue(xml.contains("ref=\"Kilo.WorktreeSession.Rename\""))
+        assertTrue(xml.contains("ref=\"Kilo.WorktreeSession.Delete\""))
         assertTrue(xml.contains("ref=\"${'$'}Copy\""))
+
+        // Row menu order: rename, (separator), open pr, open diff, (separator), delete.
+        val rename = xml.indexOf("ref=\"Kilo.Worktree.Rename\"")
+        val openPr = xml.indexOf("ref=\"Kilo.Worktree.OpenPr\"")
+        val openDiff = xml.indexOf("ref=\"Kilo.Worktree.OpenDiff\"")
+        val delete = xml.indexOf("ref=\"Kilo.Worktree.Delete\"")
+        assertTrue(rename in 0 until openPr && openPr < openDiff && openDiff < delete)
     }
 
     // ------ Helpers ------
@@ -426,6 +375,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         manager: SessionManager?,
         selection: HistorySelection,
         ctrl: HistoryController,
+        rename: ((LocalHistoryItem) -> Unit)? = null,
     ): AnActionEvent {
         val presentation = Presentation().apply { copyFrom(action.templatePresentation) }
         val context = DataContext { id ->
@@ -434,6 +384,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
                 SessionManager.KEY.`is`(id) -> manager
                 HistoryDataKeys.SELECTION.`is`(id) -> selection
                 HistoryDataKeys.CONTROLLER.`is`(id) -> ctrl
+                HistoryDataKeys.RENAME.`is`(id) -> rename
                 else -> null
             }
         }

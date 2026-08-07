@@ -28,6 +28,7 @@ import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.util.UiTimer
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
+import ai.kilocode.client.util.edtLater as edt
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigWarningDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
@@ -2342,10 +2343,6 @@ class SessionController(
 
     private fun assertEdt() {
         check(ApplicationManager.getApplication().isDispatchThread) { "SessionController state must be accessed on EDT" }
-    }
-
-    private fun edt(block: () -> Unit) {
-        ApplicationManager.getApplication().invokeLater(block)
     }
 
     private fun runEdt(block: () -> Unit) {

@@ -18,6 +18,7 @@ import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
+import ai.kilocode.rpc.dto.SessionActivityDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionListDto
 import ai.kilocode.rpc.dto.SessionStatusDto
@@ -66,6 +67,10 @@ class KiloSessionService internal constructor(
     val statuses: StateFlow<Map<String, SessionStatusDto>> =
         stream { statuses() }.stateIn(cs, SharingStarted.Eagerly, emptyMap())
 
+    /** Live session activity map from backend global events. */
+    val activity: StateFlow<Map<String, SessionActivityDto>> =
+        stream { activity() }.stateIn(cs, SharingStarted.Eagerly, emptyMap())
+
     // ------ RPC helpers ------
 
     private suspend fun <T> call(block: suspend KiloSessionRpcApi.() -> T): T {
@@ -92,7 +97,7 @@ class KiloSessionService internal constructor(
         }
     }
 
-    internal fun activity(): Map<String, SessionActivityKind> =
+    internal fun activitySnapshot(): Map<String, SessionActivityKind> =
         statuses.value
             .filterValues { it.type == "busy" }
             .mapValues { SessionActivityKind.RUNNING }
@@ -113,9 +118,9 @@ class KiloSessionService internal constructor(
 
     /** Create a new session. Caller awaits the result. */
     suspend fun create(dir: String): SessionDto {
-        log.info("create: dir=$dir")
+        log.info("kind=session create=true dir=${ChatLogSummary.dir(dir)}")
         val session = call { create(dir) }
-        log.info("create: id=${session.id}")
+        log.info("${ChatLogSummary.sid(session.id)} kind=session create=true ok=true dir=${ChatLogSummary.dir(dir)}")
         refresh(dir)
         return session
     }
@@ -132,7 +137,9 @@ class KiloSessionService internal constructor(
     }
 
     suspend fun deleteSession(id: String, dir: String) {
+        log.info("${ChatLogSummary.sid(id)} kind=session delete=true dir=${ChatLogSummary.dir(dir)}")
         call { delete(id, dir) }
+        log.info("${ChatLogSummary.sid(id)} kind=session delete=true ok=true dir=${ChatLogSummary.dir(dir)}")
         list(dir)
     }
 

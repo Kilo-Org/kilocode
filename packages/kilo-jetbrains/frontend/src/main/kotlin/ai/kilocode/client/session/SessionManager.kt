@@ -24,6 +24,8 @@ interface SessionManager {
 
     fun focusPrompt() {}
 
+    val showsBranchBadgeInHeader: Boolean get() = true
+
     fun openSession(session: SessionDto) {
         openSession(SessionRef.Local(session))
     }
