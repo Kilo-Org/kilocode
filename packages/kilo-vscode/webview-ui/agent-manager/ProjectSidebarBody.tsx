@@ -311,40 +311,45 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
               <path d="M10 13.5V16.5" stroke="currentColor" />
             </svg>
           </Show>
-          <Show when={props.shortcutMap?.().get(`${props.project.id}:local`)}>
-            {(shortcut) => (
-              <span class="am-shortcut-badge">
-                {isMac ? "⌘" : "Ctrl+"}
-                {shortcut()}
-              </span>
-            )}
-          </Show>
           <div class="am-local-text">
             <span class="am-local-label">{props.t("agentManager.local")}</span>
             <Show when={props.local?.branch}>
               <span class="am-local-branch">{props.local!.branch}</span>
             </Show>
           </div>
-          <Show
-            when={
-              props.local && (props.local.additions || props.local.deletions || props.local.ahead || props.local.behind)
-            }
-          >
-            <div class="am-worktree-stats">
-              <Show when={props.local!.behind}>
-                <span class="am-worktree-behind">↓{props.local!.behind}</span>
-              </Show>
-              <Show when={props.local!.ahead}>
-                <span class="am-worktree-commits">↑{props.local!.ahead}</span>
-              </Show>
-              <Show when={props.local!.additions}>
-                <span class="am-stat-additions">+{props.local!.additions}</span>
-              </Show>
-              <Show when={props.local!.deletions}>
-                <span class="am-stat-deletions">−{props.local!.deletions}</span>
+          <div class="am-wt-actions-cell">
+            <Show
+              when={
+                props.local &&
+                (props.local.additions || props.local.deletions || props.local.ahead || props.local.behind)
+              }
+            >
+              <div class="am-worktree-stats">
+                <Show when={props.local!.behind}>
+                  <span class="am-worktree-behind">↓{props.local!.behind}</span>
+                </Show>
+                <Show when={props.local!.ahead}>
+                  <span class="am-worktree-commits">↑{props.local!.ahead}</span>
+                </Show>
+                <Show when={props.local!.additions}>
+                  <span class="am-stat-additions">+{props.local!.additions}</span>
+                </Show>
+                <Show when={props.local!.deletions}>
+                  <span class="am-stat-deletions">−{props.local!.deletions}</span>
+                </Show>
+              </div>
+            </Show>
+            <div class="am-wt-hover-actions">
+              <Show when={props.shortcutMap?.().get(`${props.project.id}:local`)}>
+                {(shortcut) => (
+                  <span class="am-shortcut-badge">
+                    {isMac ? "⌘" : "Ctrl+"}
+                    {shortcut()}
+                  </span>
+                )}
               </Show>
             </div>
-          </Show>
+          </div>
         </button>
 
         <div class="am-section">
