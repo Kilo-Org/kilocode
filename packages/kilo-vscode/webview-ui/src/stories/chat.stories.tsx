@@ -12,6 +12,7 @@ import type { AssistantMessage } from "@kilocode/sdk/v2"
 import { batch, createSignal } from "solid-js"
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
 import { ChatView } from "../components/chat/ChatView"
+import { UltraModePrototype } from "../components/chat/UltraModePrototype"
 import { ErrorDisplay } from "../components/chat/ErrorDisplay"
 import { TaskHeader } from "../components/chat/TaskHeader"
 import { TaskUsage } from "../components/chat/TaskUsage"
@@ -225,6 +226,28 @@ export const ChatViewWithMessages: Story = {
       </StoryProviders>
     )
   },
+}
+
+export const UltraModeSidebar: Story = {
+  name: "Ultra Mode - sidebar interactive",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
+      <div style={{ width: "100%", height: "720px", display: "flex", "flex-direction": "column" }}>
+        <ChatView promptAddon={() => <UltraModePrototype />} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const UltraModeSidebarConfigure: Story = {
+  name: "Ultra Mode - sidebar configure",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
+      <div style={{ width: "100%", height: "720px", display: "flex", "flex-direction": "column" }}>
+        <ChatView promptAddon={() => <UltraModePrototype initialEnabled initialOpen />} />
+      </div>
+    </StoryProviders>
+  ),
 }
 
 export const ChatViewRequirementsChecking: Story = {

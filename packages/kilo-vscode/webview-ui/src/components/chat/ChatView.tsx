@@ -44,6 +44,8 @@ interface ChatViewProps {
   focusOnDraftChange?: () => boolean
   onFocusChange?: (focused: boolean) => void
   emptyState?: () => JSX.Element
+  /** Optional compact controls rendered directly above the prompt. */
+  promptAddon?: () => JSX.Element
 }
 
 export const ChatView: Component<ChatViewProps> = (props) => {
@@ -380,6 +382,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
             <Show when={!props.readonly && idle() && !blocked() && hasActions(hasMessages())}>
               {renderActions(hasMessages())}
             </Show>
+            <Show when={!props.readonly && props.promptAddon}>{props.promptAddon?.()}</Show>
             <Show when={!props.readonly}>
               <PromptInput
                 blocked={blocked}
