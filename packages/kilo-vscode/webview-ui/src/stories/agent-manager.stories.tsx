@@ -613,6 +613,7 @@ const basePR: PRStatus = {
   state: "open",
   review: null,
   checks: { status: "success", total: 5, passed: 5, failed: 0, pending: 0, checks: [] },
+  reviewers: [],
   additions: 978,
   deletions: 202,
   files: 12,

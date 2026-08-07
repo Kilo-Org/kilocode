@@ -44,8 +44,8 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
         <div class="am-pr-panel-body">
           <PRSummary pr={props.pr} />
           <PROverview pr={props.pr} worktree={props.worktree} />
-          <Show when={props.pr.comments?.reviewers?.length ? props.pr.comments : undefined}>
-            {(comments) => <PRReviewers reviewers={comments().reviewers} />}
+          <Show when={(props.pr.reviewers ?? []).length > 0}>
+            <PRReviewers reviewers={props.pr.reviewers ?? []} />
           </Show>
           <Show when={props.pr.body}>
             {(body) => <PRDescription body={body()} />}

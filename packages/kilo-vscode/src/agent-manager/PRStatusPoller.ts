@@ -248,8 +248,9 @@ export class PRStatusPoller {
         return
       }
 
-      const [checks, comments] = await Promise.all([
+      const [checks, reviewers, comments] = await Promise.all([
         this.fetchChecks(pr.number, wt.path),
+        this.fetchReviewers(pr.number, wt.path),
         this.activeWorktreeId === worktreeId ? this.fetchComments(pr.number, wt.path) : undefined,
       ])
       if (this.stale(generation)) return
@@ -262,15 +263,16 @@ export class PRStatusPoller {
         state: pr.state,
         review: pr.review,
         checks,
+        reviewers,
         ...(comments && {
-          comments: { total: comments.total, unresolved: comments.unresolved, comments: comments.comments, reviewers: comments.reviewers },
+          comments: { total: comments.total, unresolved: comments.unresolved, comments: comments.comments },
         }),
         additions: pr.additions,
         deletions: pr.deletions,
         files: pr.files,
       }
 
-      const hash = `${worktreeId}:${pr.number}:${pr.state}:${pr.review}:${checks.status}:${checks.passed}/${checks.total}:${comments?.total ?? ""}:${comments?.unresolved ?? ""}`
+      const hash = `${worktreeId}:${pr.number}:${pr.state}:${pr.review}:${checks.status}:${checks.passed}/${checks.total}:${reviewers.length}:${comments?.total ?? ""}:${comments?.unresolved ?? ""}`
       if (this.lastHash.get(worktreeId) === hash) return
       this.lastHash.set(worktreeId, hash)
 
@@ -431,10 +433,36 @@ export class PRStatusPoller {
     return info
   }
 
+  private async fetchReviewers(prNumber: number, cwd: string): Promise<PRReviewer[]> {
+    try {
+      const repo = await this.getRepoInfo(cwd)
+      const query = `query($owner: String!, $repo: String!, $number: Int!) {
+        repository(owner: $owner, name: $repo) {
+          pullRequest(number: $number) {
+            reviewRequests(first: 20) {
+              nodes { requestedReviewer { ... on User { login avatarUrl } } }
+            }
+            reviews(first: 20, states: [APPROVED, CHANGES_REQUESTED, COMMENTED]) {
+              nodes { author { login avatarUrl } state }
+            }
+          }
+        }
+      }`
+      const { stdout } = await this.gh(
+        ["api", "graphql", "-f", `query=${query}`, "-F", `owner=${repo.owner}`, "-F", `repo=${repo.name}`, "-F", `number=${prNumber}`],
+        { cwd, timeout: 15_000 },
+      )
+      const pr = JSON.parse(stdout)?.data?.repository?.pullRequest
+      return parseReviewers((pr?.reviewRequests?.nodes ?? []) as GhReviewRequest[], (pr?.reviews?.nodes ?? []) as GhReview[])
+    } catch {
+      return []
+    }
+  }
+
   private async fetchComments(
     prNumber: number,
     cwd: string,
-  ): Promise<{ total: number; unresolved: number; comments: PRComment[]; reviewers: PRReviewer[] }> {
+  ): Promise<{ total: number; unresolved: number; comments: PRComment[] }> {
     try {
       const repo = await this.getRepoInfo(cwd)
       const query = `query($owner: String!, $repo: String!, $number: Int!) {
@@ -455,12 +483,6 @@ export class PRStatusPoller {
                   }
                 }
               }
-            }
-            reviewRequests(first: 20) {
-              nodes { requestedReviewer { ... on User { login avatarUrl } } }
-            }
-            reviews(first: 20, states: [APPROVED, CHANGES_REQUESTED, COMMENTED]) {
-              nodes { author { login avatarUrl } state }
             }
           }
         }
@@ -483,11 +505,10 @@ export class PRStatusPoller {
       )
       const pr = JSON.parse(stdout)?.data?.repository?.pullRequest
       const comments = parseComments((pr?.reviewThreads?.nodes ?? []) as GhThread[])
-      const reviewers = parseReviewers((pr?.reviewRequests?.nodes ?? []) as GhReviewRequest[], (pr?.reviews?.nodes ?? []) as GhReview[])
-      return { total: comments.length, unresolved: comments.filter((c) => !c.resolved).length, comments, reviewers }
+      return { total: comments.length, unresolved: comments.filter((c) => !c.resolved).length, comments }
     } catch (err) {
       this.options.log("Failed to fetch PR comments:", err)
-      return { total: 0, unresolved: 0, comments: [], reviewers: [] }
+      return { total: 0, unresolved: 0, comments: [] }
     }
   }
 }

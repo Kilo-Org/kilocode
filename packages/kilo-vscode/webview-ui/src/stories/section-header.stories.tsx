@@ -593,6 +593,7 @@ export const WithPRBadges: Story = {
                   additions: 120,
                   deletions: 30,
                   files: 5,
+                  reviewers: [],
                   checks: { status: "success", total: 5, passed: 5, failed: 0, pending: 0, checks: [] },
                 }}
               />
@@ -611,6 +612,7 @@ export const WithPRBadges: Story = {
                   additions: 15,
                   deletions: 8,
                   files: 3,
+                  reviewers: [],
                   checks: { status: "failure", total: 5, passed: 3, failed: 2, pending: 0, checks: [] },
                 }}
               />
@@ -629,6 +631,7 @@ export const WithPRBadges: Story = {
                   additions: 60,
                   deletions: 12,
                   files: 4,
+                  reviewers: [],
                   checks: { status: "success", total: 5, passed: 5, failed: 0, pending: 0, checks: [] },
                 }}
               />
@@ -647,6 +650,7 @@ export const WithPRBadges: Story = {
                   additions: 200,
                   deletions: 0,
                   files: 8,
+                  reviewers: [],
                   checks: { status: "pending", total: 5, passed: 2, failed: 0, pending: 3, checks: [] },
                 }}
               />
@@ -665,6 +669,7 @@ export const WithPRBadges: Story = {
                   additions: 30,
                   deletions: 5,
                   files: 2,
+                  reviewers: [],
                   checks: { status: "none", total: 0, passed: 0, failed: 0, pending: 0, checks: [] },
                 }}
               />
@@ -683,6 +688,7 @@ export const WithPRBadges: Story = {
                   additions: 90,
                   deletions: 20,
                   files: 6,
+                  reviewers: [],
                   checks: { status: "success", total: 5, passed: 5, failed: 0, pending: 0, checks: [] },
                 }}
               />
@@ -701,6 +707,7 @@ export const WithPRBadges: Story = {
                   additions: 10,
                   deletions: 4,
                   files: 1,
+                  reviewers: [],
                   checks: { status: "failure", total: 5, passed: 1, failed: 4, pending: 0, checks: [] },
                 }}
               />

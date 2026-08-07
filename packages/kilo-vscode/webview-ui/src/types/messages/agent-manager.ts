@@ -66,11 +66,11 @@ export interface PRStatus {
     pending: number
     checks: PRCheck[]
   }
+  reviewers: PRReviewer[]
   comments?: {
     total: number
     unresolved: number
     comments: PRComment[]
-    reviewers: PRReviewer[]
   }
   additions: number
   deletions: number
