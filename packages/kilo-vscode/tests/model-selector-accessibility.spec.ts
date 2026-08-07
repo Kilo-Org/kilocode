@@ -94,19 +94,6 @@ test("search uses a flat relevance-ranked result list with provider labels", asy
   await expect(nova).toContainText("NVIDIA")
 })
 
-test("search keeps only the favorited equivalent model variant", async ({ page }) => {
-  await load(page, "shared--model-selector-search-favorite")
-
-  await page.getByRole("button", { name: "Review model: Alpha" }).click()
-  const combobox = page.getByRole("combobox", { name: "Review model: Alpha. Search models" })
-  await combobox.fill("alpha")
-
-  const rows = page.locator('.model-selector-item[data-key$="/alpha"]')
-  await expect(rows).toHaveCount(1)
-  await expect(rows.first()).toHaveAttribute("data-key", "model:kilo/alpha")
-  await expect(rows.first()).toContainText("Kilo")
-})
-
 test("provider groups collapse, expand, and skip their model rows", async ({ page }) => {
   await load(page, "shared--model-selector-accessible")
 

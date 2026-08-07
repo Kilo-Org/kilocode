@@ -164,26 +164,24 @@ export function rankModelSearch(
 
   return [...groups.values()]
     .sort((a, b) => b.score - a.score || b.count - a.count || b.lastUsed - a.lastUsed || a.key.localeCompare(b.key))
-    .flatMap((group) => {
-      const items = group.items.sort(
-        (a, b) =>
-          b.score - a.score ||
-          b.count - a.count ||
-          b.lastUsed - a.lastUsed ||
-          (options.favorites?.has(modelSelectionKey(b.model.providerID, b.model.id)) ? 1 : 0) -
-            (options.favorites?.has(modelSelectionKey(a.model.providerID, a.model.id)) ? 1 : 0) ||
-          (recent.get(modelSelectionKey(a.model.providerID, a.model.id)) ?? Infinity) -
-            (recent.get(modelSelectionKey(b.model.providerID, b.model.id)) ?? Infinity) ||
-          providerSortKey(a.model.providerID) - providerSortKey(b.model.providerID) ||
-          a.model.providerName.localeCompare(b.model.providerName) ||
-          a.model.name.localeCompare(b.model.name) ||
-          a.model.id.localeCompare(b.model.id),
-      )
-      const favorites = items.filter((item) =>
-        options.favorites?.has(modelSelectionKey(item.model.providerID, item.model.id)),
-      )
-      return (favorites.length > 0 ? favorites : items).map((item) => item.model)
-    })
+    .flatMap((group) =>
+      group.items
+        .sort(
+          (a, b) =>
+            b.score - a.score ||
+            b.count - a.count ||
+            b.lastUsed - a.lastUsed ||
+            (options.favorites?.has(modelSelectionKey(b.model.providerID, b.model.id)) ? 1 : 0) -
+              (options.favorites?.has(modelSelectionKey(a.model.providerID, a.model.id)) ? 1 : 0) ||
+            (recent.get(modelSelectionKey(a.model.providerID, a.model.id)) ?? Infinity) -
+              (recent.get(modelSelectionKey(b.model.providerID, b.model.id)) ?? Infinity) ||
+            providerSortKey(a.model.providerID) - providerSortKey(b.model.providerID) ||
+            a.model.providerName.localeCompare(b.model.providerName) ||
+            a.model.name.localeCompare(b.model.name) ||
+            a.model.id.localeCompare(b.model.id),
+        )
+        .map((item) => item.model),
+    )
 }
 
 export function mostUsedModels(
