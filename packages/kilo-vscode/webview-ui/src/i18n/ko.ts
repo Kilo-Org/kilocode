@@ -166,6 +166,7 @@ export const dict = {
   "model.group.auto": "자동 모델",
   "model.group.recommended": "추천",
   "model.group.favorites": "즐겨찾기",
+  "model.group.mostUsed": "가장 많이 사용됨",
   "model.favorite.add": "즐겨찾기에 추가",
   "model.favorite.remove": "즐겨찾기에서 제거",
 
@@ -313,6 +314,14 @@ export const dict = {
   "session.messages.loadEarlier": "이전 메시지 로드",
   "session.messages.loading": "메시지 로드 중...",
 
+  "sidebar.topBar.label": "Kilo Code 탐색",
+  "sidebar.topBar.newTask": "새 작업",
+  "sidebar.topBar.history": "기록",
+  "sidebar.topBar.agentManager": "에이전트 관리자",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "마켓플레이스",
+  "sidebar.topBar.profile": "프로필",
+  "sidebar.topBar.settings": "설정",
   "sidebar.session.newSession": "새 세션",
   "sidebar.session.newSession.tooltip": "현재 세션을 그대로 유지하면서 새로운 대화를 시작합니다.",
   "sidebar.session.newWorktree": "새 Worktree",
@@ -876,7 +885,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "허용된 네트워크 대상",
   "settings.sandboxing.allowedHosts.description":
-    "샌드박스 처리된 HTTP 및 HTTPS 프록시 트래픽의 DNS 호스트 및 포트 대상입니다. GitHub CLI 및 HTTPS Git에는 일반적으로 github.com:443 및 api.github.com:443가 필요합니다. 변경 사항은 새 세션에 적용됩니다.",
+    "샌드박스 처리된 HTTP 및 HTTPS 프록시 트래픽의 DNS 호스트 및 포트 대상입니다. GitHub CLI 및 HTTPS Git에는 일반적으로 github.com:443 및 api.github.com:443가 필요합니다.",
   "settings.sandboxing.writablePaths.title": "추가 쓰기 가능 경로",
   "settings.sandboxing.writablePaths.description":
     "샌드박스에서 쓰기를 허용하는 추가 파일시스템 경로(예: /tmp, /var/log). 샌드박스가 활성화되면 기본 쓰기 가능 경로와 병합됩니다.",

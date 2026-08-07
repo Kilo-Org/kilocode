@@ -13,7 +13,10 @@ import {
   isAuto,
   autoSummary,
   autoChoices,
+  rankModelSearch,
+  mostUsedModels,
 } from "../../webview-ui/src/components/shared/model-selector-utils"
+import type { EnrichedModel } from "../../webview-ui/src/context/provider"
 
 const labels = { select: "Select model", noProviders: "No providers", notSet: "Not set" }
 
@@ -166,6 +169,51 @@ describe("autoSummary", () => {
 
   it("falls back when there is no description", () => {
     expect(autoSummary({})).toBe("Routes requests automatically.")
+  })
+})
+
+const SEARCH_MODELS: EnrichedModel[] = [
+  { id: "solar-pro", name: "Solar Pro", providerID: "nvidia", providerName: "NVIDIA" },
+  { id: "gpt-5.6-sol", name: "GPT-5.6 Sol", providerID: "openai", providerName: "OpenAI" },
+  { id: "gpt-5.6-sol", name: "GPT-5.6 Sol", providerID: "kilo", providerName: "Kilo" },
+  { id: "gpt-5.6", name: "GPT-5.6", providerID: "anthropic", providerName: "Anthropic" },
+]
+
+describe("rankModelSearch", () => {
+  it("prefers an exact model token over a longer prefix match", () => {
+    expect(
+      rankModelSearch(SEARCH_MODELS, "sol")
+        .slice(0, 2)
+        .map((model) => model.name),
+    ).toEqual(["GPT-5.6 Sol", "GPT-5.6 Sol"])
+  })
+
+  it("keeps provider variants together and uses usage to order equivalent variants", () => {
+    const result = rankModelSearch(SEARCH_MODELS, "sol", {
+      usage: { "kilo/gpt-5.6-sol": { count: 4, lastUsed: 10 }, "openai/gpt-5.6-sol": { count: 1, lastUsed: 20 } },
+    })
+    expect(result.slice(0, 2).map((model) => model.providerID)).toEqual(["kilo", "openai"])
+  })
+
+  it("does not let usage make a weaker model beat an exact match", () => {
+    const result = rankModelSearch(SEARCH_MODELS, "sol", {
+      usage: { "nvidia/solar-pro": { count: 1000, lastUsed: 100 } },
+    })
+    expect(result[0]?.name).toBe("GPT-5.6 Sol")
+  })
+})
+
+describe("mostUsedModels", () => {
+  it("orders suggestions by personal count and excludes favorites", () => {
+    const result = mostUsedModels(
+      SEARCH_MODELS,
+      {
+        "nvidia/solar-pro": { count: 2, lastUsed: 20 },
+        "openai/gpt-5.6-sol": { count: 5, lastUsed: 10 },
+      },
+      new Set(["openai/gpt-5.6-sol"]),
+    )
+    expect(result.map((model) => model.providerID)).toEqual(["nvidia"])
   })
 })
 

@@ -202,6 +202,10 @@ export interface OpenSettingsPanelRequest {
   tab?: string
 }
 
+export interface OpenProfilePanelRequest {
+  type: "openProfilePanel"
+}
+
 export interface OpenVSCodeSettingsRequest {
   type: "openVSCodeSettings"
   query: string
@@ -1242,6 +1246,16 @@ export interface RequestRecentsMessage {
   type: "requestRecents"
 }
 
+export interface RecordModelUsageMessage {
+  type: "recordModelUsage"
+  providerID: string
+  modelID: string
+}
+
+export interface RequestModelUsageMessage {
+  type: "requestModelUsage"
+}
+
 export interface PersistModelSelectorExpandedRequest {
   type: "persistModelSelectorExpanded"
   value: boolean
@@ -1378,6 +1392,7 @@ export type WebviewMessage =
   | RefreshProfileRequest
   | OpenExternalRequest
   | OpenSettingsPanelRequest
+  | OpenProfilePanelRequest
   | OpenVSCodeSettingsRequest
   | OpenConfigFileRequest
   | OpenMarketplacePanelRequest
@@ -1559,6 +1574,8 @@ export type WebviewMessage =
   | FetchCustomProviderModelsMessage
   | PersistRecentsRequest
   | RequestRecentsMessage
+  | RecordModelUsageMessage
+  | RequestModelUsageMessage
   | PersistModelSelectorExpandedRequest
   | RequestModelSelectorExpandedMessage
   | ToggleFavoriteRequest

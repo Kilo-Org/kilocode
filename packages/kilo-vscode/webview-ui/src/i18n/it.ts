@@ -120,6 +120,7 @@ export const dict = {
   "model.group.auto": "Modelli automatici",
   "model.group.recommended": "Consigliati",
   "model.group.favorites": "Preferiti",
+  "model.group.mostUsed": "Più usati",
   "model.favorite.add": "Aggiungi ai preferiti",
   "model.favorite.remove": "Rimuovi dai preferiti",
   "model.preview.label.released": "Rilasciato",
@@ -590,6 +591,14 @@ export const dict = {
   "session.status.retry": "Riprovo...",
   "session.status.working": "Al lavoro...",
   "session.status.offline": "Rete disconnessa - riconnessione...",
+  "sidebar.topBar.label": "Navigazione Kilo Code",
+  "sidebar.topBar.newTask": "Nuova Attività",
+  "sidebar.topBar.history": "Cronologia",
+  "sidebar.topBar.agentManager": "Agent Manager",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "Marketplace",
+  "sidebar.topBar.profile": "Profilo",
+  "sidebar.topBar.settings": "Impostazioni",
   "sidebar.session.newSession": "Nuova sessione",
   "sidebar.session.newSession.tooltip": "Avvia una nuova conversazione mantenendo intatta la sessione corrente.",
   "sidebar.session.newWorktree": "Nuovo worktree",
@@ -734,7 +743,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "Destinazioni di rete consentite",
   "settings.sandboxing.allowedHosts.description":
-    "Destinazioni DNS di host e porta per il traffico proxy HTTP e HTTPS in sandbox. GitHub CLI e HTTPS Git richiedono comunemente github.com:443 e api.github.com:443. Le modifiche si applicano alle nuove sessioni.",
+    "Destinazioni DNS di host e porta per il traffico proxy HTTP e HTTPS in sandbox. GitHub CLI e HTTPS Git richiedono comunemente github.com:443 e api.github.com:443.",
   "settings.sandboxing.writablePaths.title": "Percorsi di scrittura aggiuntivi",
   "settings.sandboxing.writablePaths.description":
     "Percorsi aggiuntivi del file system in cui la sandbox consente la scrittura (es. /tmp, /var/log). Vengono uniti con i percorsi di scrittura predefiniti quando la sandbox è attiva.",

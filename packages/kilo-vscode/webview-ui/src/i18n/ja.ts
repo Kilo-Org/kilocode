@@ -162,6 +162,7 @@ export const dict = {
   "model.group.auto": "自動モデル",
   "model.group.recommended": "推奨",
   "model.group.favorites": "お気に入り",
+  "model.group.mostUsed": "よく使うモデル",
   "model.favorite.add": "お気に入りに追加",
   "model.favorite.remove": "お気に入りから削除",
 
@@ -312,6 +313,14 @@ export const dict = {
   "session.messages.loadEarlier": "以前のメッセージを読み込む",
   "session.messages.loading": "メッセージを読み込み中...",
 
+  "sidebar.topBar.label": "Kilo Code ナビゲーション",
+  "sidebar.topBar.newTask": "新規タスク",
+  "sidebar.topBar.history": "履歴",
+  "sidebar.topBar.agentManager": "エージェントマネージャー",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "マーケットプレイス",
+  "sidebar.topBar.profile": "プロフィール",
+  "sidebar.topBar.settings": "設定",
   "sidebar.session.newSession": "新規セッション",
   "sidebar.session.newSession.tooltip": "現在のセッションを維持したまま、新しい会話を開始します。",
   "sidebar.session.newWorktree": "新規 Worktree",
@@ -879,7 +888,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "許可されたネットワーク接続先",
   "settings.sandboxing.allowedHosts.description":
-    "サンドボックス化された HTTP および HTTPS プロキシトラフィックの DNS ホストとポートの宛先。GitHub CLI と HTTPS Git では通常、github.com:443 と api.github.com:443 が必要です。変更は新しいセッションに適用されます。",
+    "サンドボックス化された HTTP および HTTPS プロキシトラフィックの DNS ホストとポートの宛先。GitHub CLI と HTTPS Git では通常、github.com:443 と api.github.com:443 が必要です。",
   "settings.sandboxing.writablePaths.title": "追加の書き込み可能パス",
   "settings.sandboxing.writablePaths.description":
     "サンドボックスでの書き込みを許可する追加のファイルシステムパス（例: /tmp、/var/log）。サンドボックス有効時、デフォルトの書き込み可能パスと統合されます。",

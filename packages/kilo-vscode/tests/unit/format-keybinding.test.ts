@@ -39,6 +39,11 @@ describe("formatKeybinding", () => {
     it("formats plain key", () => {
       expect(formatKeybinding("cmd+/", true)).toBe("⌘/")
     })
+
+    it("formats bracket keys", () => {
+      expect(formatKeybinding("cmd+shift+[", true)).toBe("⌘⇧[")
+      expect(formatKeybinding("cmd+shift+]", true)).toBe("⌘⇧]")
+    })
   })
 
   describe("windows/linux", () => {
@@ -76,5 +81,12 @@ describe("buildKeybindingMap", () => {
     const bindings = [{ command: "kilo-code.new.agentManager.search", key: "ctrl+f", mac: "cmd+f" }]
     expect(buildKeybindingMap(bindings, true).search).toBe("⌘F")
     expect(buildKeybindingMap(bindings, false).search).toBe("Ctrl+F")
+  })
+
+  it("provides terminal navigation fallbacks", () => {
+    expect(buildKeybindingMap([], true).previousTerminal).toBe("⌘⇧[")
+    expect(buildKeybindingMap([], true).nextTerminal).toBe("⌘⇧]")
+    expect(buildKeybindingMap([], false).previousTerminal).toBe("Ctrl+Shift+[")
+    expect(buildKeybindingMap([], false).nextTerminal).toBe("Ctrl+Shift+]")
   })
 })

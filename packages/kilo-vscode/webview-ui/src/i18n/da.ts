@@ -162,6 +162,7 @@ export const dict = {
   "model.group.auto": "Automatiske modeller",
   "model.group.recommended": "Anbefalet",
   "model.group.favorites": "Favoritter",
+  "model.group.mostUsed": "Mest brugte",
   "model.favorite.add": "Føj til favoritter",
   "model.favorite.remove": "Fjern fra favoritter",
 
@@ -312,6 +313,14 @@ export const dict = {
   "session.messages.loadEarlier": "Indlæs tidligere beskeder",
   "session.messages.loading": "Indlæser beskeder...",
 
+  "sidebar.topBar.label": "Kilo Code-navigation",
+  "sidebar.topBar.newTask": "Ny Opgave",
+  "sidebar.topBar.history": "Historik",
+  "sidebar.topBar.agentManager": "Agent Manager",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "Markedsplads",
+  "sidebar.topBar.profile": "Profil",
+  "sidebar.topBar.settings": "Indstillinger",
   "sidebar.session.newSession": "Ny Session",
   "sidebar.session.newSession.tooltip": "Start en frisk samtale, mens den nuværende session holdes intakt.",
   "sidebar.session.newWorktree": "Nyt Worktree",
@@ -886,7 +895,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "Tilladte netværksdestinationer",
   "settings.sandboxing.allowedHosts.description":
-    "DNS-værts- og portdestinationer for sandboxet HTTP- og HTTPS-proxytrafik. GitHub CLI og HTTPS Git kræver typisk github.com:443 og api.github.com:443. Ændringer gælder for nye sessioner.",
+    "DNS-værts- og portdestinationer for sandboxet HTTP- og HTTPS-proxytrafik. GitHub CLI og HTTPS Git kræver typisk github.com:443 og api.github.com:443.",
   "settings.sandboxing.writablePaths.title": "Yderligere skrivbare stier",
   "settings.sandboxing.writablePaths.description":
     "Yderligere filsystemstier, som sandkassen tillader skrivning til (f.eks. /tmp, /var/log). Disse flettes med de standardskrivbare stier, når sandkassen er aktiv.",

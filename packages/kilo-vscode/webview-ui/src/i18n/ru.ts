@@ -162,6 +162,7 @@ export const dict = {
   "model.group.auto": "Автоматические модели",
   "model.group.recommended": "Рекомендуемые",
   "model.group.favorites": "Избранное",
+  "model.group.mostUsed": "Часто используемые",
   "model.favorite.add": "Добавить в избранное",
   "model.favorite.remove": "Удалить из избранного",
   "model.preview.label.released": "Выпущена",
@@ -311,6 +312,14 @@ export const dict = {
   "session.messages.loadEarlier": "Загрузить предыдущие сообщения",
   "session.messages.loading": "Загрузка сообщений...",
 
+  "sidebar.topBar.label": "Навигация Kilo Code",
+  "sidebar.topBar.newTask": "Новая задача",
+  "sidebar.topBar.history": "История",
+  "sidebar.topBar.agentManager": "Agent Manager",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "Маркетплейс",
+  "sidebar.topBar.profile": "Профиль",
+  "sidebar.topBar.settings": "Настройки",
   "sidebar.session.newSession": "Новая сессия",
   "sidebar.session.newSession.tooltip": "Начать новую беседу, сохранив текущую сессию нетронутой.",
   "sidebar.session.newWorktree": "Новое Worktree",
@@ -883,7 +892,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "Разрешенные сетевые назначения",
   "settings.sandboxing.allowedHosts.description":
-    "Целевые DNS-хосты и порты для прокси-трафика HTTP и HTTPS в песочнице. GitHub CLI и HTTPS Git обычно требуют github.com:443 и api.github.com:443. Изменения применяются к новым сеансам.",
+    "Целевые DNS-хосты и порты для прокси-трафика HTTP и HTTPS в песочнице. GitHub CLI и HTTPS Git обычно требуют github.com:443 и api.github.com:443.",
   "settings.sandboxing.writablePaths.title": "Дополнительные пути для записи",
   "settings.sandboxing.writablePaths.description":
     "Дополнительные пути файловой системы, в которые разрешена запись в песочнице (например, /tmp, /var/log). Они объединяются с путями записи по умолчанию при активной песочнице.",

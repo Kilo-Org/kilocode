@@ -163,6 +163,7 @@ export const dict = {
   "model.group.auto": "Automatski modeli",
   "model.group.recommended": "Preporučeno",
   "model.group.favorites": "Favoriti",
+  "model.group.mostUsed": "Najčešće korišteni",
   "model.favorite.add": "Dodaj u favorite",
   "model.favorite.remove": "Ukloni iz favorita",
   "model.preview.label.released": "Objavljeno",
@@ -314,6 +315,14 @@ export const dict = {
   "session.messages.loadEarlier": "Učitaj ranije poruke",
   "session.messages.loading": "Učitavanje poruka...",
 
+  "sidebar.topBar.label": "Navigacija Kilo Code",
+  "sidebar.topBar.newTask": "Novi Zadatak",
+  "sidebar.topBar.history": "Historija",
+  "sidebar.topBar.agentManager": "Agent Manager",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "Marketplace",
+  "sidebar.topBar.profile": "Profil",
+  "sidebar.topBar.settings": "Postavke",
   "sidebar.session.newSession": "Nova Sesija",
   "sidebar.session.newSession.tooltip": "Započnite novi razgovor držeći trenutnu sesiju netaknutom.",
   "sidebar.session.newWorktree": "Novi Worktree",
@@ -887,7 +896,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "Dozvoljena mrežna odredišta",
   "settings.sandboxing.allowedHosts.description":
-    "DNS odredišta hosta i porta za sandboxirani HTTP i HTTPS proxy promet. GitHub CLI i HTTPS Git obično trebaju github.com:443 i api.github.com:443. Promjene se primjenjuju na nove sesije.",
+    "DNS odredišta hosta i porta za sandboxirani HTTP i HTTPS proxy promet. GitHub CLI i HTTPS Git obično trebaju github.com:443 i api.github.com:443.",
   "settings.sandboxing.writablePaths.title": "Dodatne upisive putanje",
   "settings.sandboxing.writablePaths.description":
     "Dodatne putanje sistema datoteka u koje sandbox dozvoljava upis (npr. /tmp, /var/log). Spajaju se sa zadanim upisivim putanjama kada je sandbox aktivan.",

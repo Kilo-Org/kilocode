@@ -163,6 +163,7 @@ export const dict = {
   "model.group.auto": "Автоматичні моделі",
   "model.group.recommended": "Рекомендовані",
   "model.group.favorites": "Обране",
+  "model.group.mostUsed": "Найчастіше використовувані",
   "model.favorite.add": "Додати до обраного",
   "model.favorite.remove": "Видалити з обраного",
   "model.preview.label.released": "Випущено",
@@ -316,6 +317,14 @@ export const dict = {
   "session.messages.loadEarlier": "Завантажити попередні повідомлення",
   "session.messages.loading": "Завантаження повідомлень...",
 
+  "sidebar.topBar.label": "Навігація Kilo Code",
+  "sidebar.topBar.newTask": "Нове завдання",
+  "sidebar.topBar.history": "Історія",
+  "sidebar.topBar.agentManager": "Agent Manager",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "Маркетплейс",
+  "sidebar.topBar.profile": "Профіль",
+  "sidebar.topBar.settings": "Налаштування",
   "sidebar.session.newSession": "Нова сесія",
   "sidebar.session.newSession.tooltip": "Почати нову розмову, зберігши поточну сесію незмінною.",
   "sidebar.session.newWorktree": "Нове Worktree",
@@ -878,7 +887,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "Дозволені мережеві адреси",
   "settings.sandboxing.allowedHosts.description":
-    "DNS-вузли та порти призначення для ізольованого proxy-трафіку HTTP і HTTPS. GitHub CLI та HTTPS Git зазвичай потребують github.com:443 і api.github.com:443. Зміни застосовуються до нових сеансів.",
+    "DNS-вузли та порти призначення для ізольованого proxy-трафіку HTTP і HTTPS. GitHub CLI та HTTPS Git зазвичай потребують github.com:443 і api.github.com:443.",
   "settings.sandboxing.writablePaths.title": "Додаткові шляхи для запису",
   "settings.sandboxing.writablePaths.description":
     "Додаткові шляхи файлової системи, у які дозволено запис у пісочниці (наприклад, /tmp, /var/log). Вони об'єднуються зі шляхами запису за замовчуванням, коли пісочниця активна.",
