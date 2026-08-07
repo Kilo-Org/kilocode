@@ -287,6 +287,9 @@ html[data-theme="kilo-vscode"]
    land on the same glyph line as the rows inside the list. */
 .am-projects > .am-section-header {
   padding-left: 2px;
+  /* The project toolbar has one more action than the worktree toolbar. Extend
+     its row so both toolbars start on the same leading action column. */
+  margin-right: -14px;
 }
 
 .am-section-label {
