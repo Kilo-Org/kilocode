@@ -124,6 +124,13 @@ function subagentStatusLabel(status: FooterSubagentTab["status"]) {
   return "running"
 }
 
+// kilocode_change start - keep equivalent up keybindings aligned at panel boundaries
+function up(event: KeyEvent) {
+  const name = event.name.toLowerCase()
+  return name === "up" || (event.ctrl && !event.meta && !event.shift && !event.super && name === "p")
+}
+// kilocode_change end
+
 function handleKey(input: {
   event: KeyEvent
   menu: MenuState
@@ -141,11 +148,13 @@ function handleKey(input: {
     return
   }
 
-  if (name === "up" || (ctrl && name === "p")) {
+  // kilocode_change start - treat ctrl+p as the up binding
+  if (up(input.event)) {
     input.event.preventDefault()
     input.menu.move(-1)
     return
   }
+  // kilocode_change end
 
   if (name === "down" || (ctrl && name === "n")) {
     input.event.preventDefault()
@@ -632,6 +641,14 @@ export function RunSubagentSelectBody(props: {
     if (event.defaultPrevented) {
       return
     }
+
+    // kilocode_change start - close on either up binding at the first row
+    if (up(event) && menu.selected() === 0) {
+      event.preventDefault()
+      props.onClose()
+      return
+    }
+    // kilocode_change end
 
     handleKey({ event, menu, field: () => field, setQuery, select, close: props.onClose })
   })

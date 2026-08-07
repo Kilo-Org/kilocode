@@ -143,6 +143,44 @@ function stubOps(opts?: { onPrompt?: (input: SessionPrompt.PromptInput) => void 
 }
 
 describe("Kilo task nesting", () => {
+  it.live("treats a missing ancestor row as the root", () =>
+    provideTmpdirInstance(() =>
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const { assistant } = yield* seed()
+        const child = yield* sessions.create({ parentID: SessionID.make("ses_missing_ancestor"), title: "Child" })
+        const nested = yield* sessions.updateMessage({
+          ...assistant,
+          id: MessageID.ascending(),
+          parentID: MessageID.ascending(),
+          sessionID: child.id,
+        })
+        const tool = yield* TaskTool
+        const def = yield* tool.init()
+
+        const result = yield* def.execute(
+          {
+            description: "inspect bug",
+            prompt: "look into the cache key path",
+            subagent_type: "explore",
+          },
+          {
+            sessionID: child.id,
+            messageID: nested.id,
+            agent: "build",
+            abort: new AbortController().signal,
+            extra: { promptOps: stubOps() },
+            messages: [],
+            metadata: () => Effect.void,
+            ask: () => Effect.void,
+          },
+        )
+
+        expect((yield* sessions.get(result.metadata.sessionId)).parentID).toBe(child.id)
+      }),
+    ),
+  )
+
   it.live("allows primary agents to delegate one level to a subagent", () =>
     provideTmpdirInstance(() =>
       Effect.gen(function* () {

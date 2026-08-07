@@ -109,6 +109,8 @@ describe("DiffViewerFileTree", () => {
 
     expect(focused).toContain("▾ src/config")
     expect(unfocused).toContain("▾ src/config")
+    expect(focused.some((line) => line.includes("*"))).toBe(false)
+    expect(unfocused.some((line) => line.includes("*"))).toBe(false)
   })
 
   test("renders collapsed and expanded directory rows", async () => {

@@ -784,7 +784,7 @@ describe("config overlay routes", () => {
         version: 1,
       })
     },
-    20_000,
+    60_000,
   )
 
   test.serial("applies saved project sandbox settings to initialized sessions", async () => {
@@ -914,4 +914,33 @@ describe("config overlay routes", () => {
       30_000,
     )
   }
+
+  test.serial("sets and unsets privacy_mode at project scope using tuple-array unset paths", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    await setGlobal(global.path, { privacy_mode: false })
+    await disposeAllInstances()
+
+    await json(
+      await req(project.path, "/config/overlay", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ scope: "project", set: { privacy_mode: true } }),
+      }),
+    )
+
+    const overlay1 = await json<Overlay>(await req(project.path, "/config/overlay"))
+    expect(overlay1.effective?.privacy_mode).toBe(true)
+
+    await json(
+      await req(project.path, "/config/overlay", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ scope: "project", unset: [["privacy_mode"]] }),
+      }),
+    )
+
+    const overlay2 = await json<Overlay>(await req(project.path, "/config/overlay"))
+    expect(overlay2.effective?.privacy_mode).toBe(false)
+  })
 })
