@@ -189,6 +189,51 @@ describe("useSlashCommand sandbox action", () => {
     ctx.dispose()
   })
 
+  it("opens review options from the top-level command", () => {
+    const ctx = setup(() => {})
+    const state = { text: "/review" }
+    const textarea = {
+      value: state.text,
+      setSelectionRange: () => {},
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+
+    ctx.slash.onInput("/rev", 4)
+
+    expect(ctx.slash.results()).toContainEqual(
+      expect.objectContaining({ name: "review", description: expect.stringContaining("Review code changes") }),
+    )
+    ctx.slash.select(ctx.slash.results().find((c) => c.name === "review")!, textarea, (text) => (state.text = text))
+    expect(state.text).toBe("/review ")
+    expect(ctx.slash.results().map((command) => command.name)).toEqual([
+      "review uncommitted",
+      "review staged",
+      "review unpushed",
+      "review branch",
+      "review quick",
+    ])
+    ctx.dispose()
+  })
+
+  it("completes nested review actions and closes for free text", () => {
+    const ctx = setup(() => {})
+    const state = { text: "/review unp" }
+    const textarea = {
+      value: state.text,
+      setSelectionRange: () => {},
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+
+    ctx.slash.onInput(state.text, state.text.length)
+    expect(ctx.slash.results().map((command) => command.name)).toEqual(["review unpushed"])
+    ctx.slash.select(ctx.slash.results()[0]!, textarea, (text) => (state.text = text))
+    expect(state.text).toBe("/review unpushed ")
+
+    ctx.slash.onInput("/review focus on auth", 20)
+    expect(ctx.slash.show()).toBe(false)
+    ctx.dispose()
+  })
+
   it("preserves model, agent, and variant metadata on loaded server commands", () => {
     const ctx = setup(() => {})
 
