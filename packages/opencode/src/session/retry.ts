@@ -82,6 +82,7 @@ export function retryable(error: Err, _provider?: string): Retryable | undefined
     const status = error.data.statusCode
     // kilocode_change start - Current Kilo errors require user action (login/signup), don't retry
     if (isKiloError(error)) return undefined
+    if (error.data.isRetryable === false && (status === undefined || status < 500) && !error.data.responseBody) return undefined
     // kilocode_change end
 
     // 5xx errors are transient server failures and should always be retried,
