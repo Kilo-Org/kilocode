@@ -241,6 +241,12 @@
         <action id="Kilo.Worktree.Delete"
                 class="ai.kilocode.client.actions.DeleteWorktreeAction"/>
 
+        <action id="Kilo.Worktree.OpenPr"
+                class="ai.kilocode.client.actions.OpenWorktreePrAction"/>
+
+        <action id="Kilo.Worktree.OpenDiff"
+                class="ai.kilocode.client.actions.OpenWorktreeDiffAction"/>
+
         <action id="Kilo.WorktreeSession.Rename"
                 class="ai.kilocode.client.actions.RenameWorktreeSessionAction"/>
 
@@ -249,6 +255,9 @@
 
         <group id="Kilo.Worktree.RowMenu">
             <reference ref="Kilo.Worktree.Rename"/>
+            <separator/>
+            <reference ref="Kilo.Worktree.OpenPr"/>
+            <reference ref="Kilo.Worktree.OpenDiff"/>
             <separator/>
             <reference ref="Kilo.Worktree.Delete"/>
         </group>

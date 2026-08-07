@@ -98,7 +98,7 @@ class AgentManagerPanel(
         },
         onSelect = { selectedRow()?.dto?.id?.let { selected = it } },
         menu = ActiveListMenu(WorktreeDataKeys.WORKTREE, group, element = { row ->
-            (row as? WorktreeRow)?.dto?.takeIf { canRename(it) || canDelete(it) }
+            (row as? WorktreeRow)?.dto?.takeIf { canRename(it) || canDelete(it) || canOpenPr(it) || canOpenDiff(it) }
         }),
     )
     private var selected: String? = null
@@ -205,6 +205,26 @@ class AgentManagerPanel(
     internal fun delete(item: WorktreeDto) = showDeletePopup(item)
 
     internal fun canDelete(item: WorktreeDto?): Boolean = deletable(item)
+
+    internal fun canOpenPr(item: WorktreeDto?): Boolean = prUrl(item) != null
+
+    internal fun openPr(item: WorktreeDto) = prUrl(item)?.let { BrowserUtil.browse(it) }
+
+    /** The PR URL for [item], or null when it has none or is not in a stable, openable state. */
+    private fun prUrl(item: WorktreeDto?): String? {
+        if (item == null || item.main) return null
+        if (controller.isPending(item.id) || controller.isDeleting(item.id)) return null
+        return prs[normalizeWorktreePath(item.path)]?.url
+    }
+
+    internal fun canOpenDiff(item: WorktreeDto?): Boolean {
+        if (item == null || item.main || project == null) return false
+        return !controller.isPending(item.id) && !controller.isDeleting(item.id)
+    }
+
+    internal fun openDiff(item: WorktreeDto) {
+        if (canOpenDiff(item)) openBranchDiff(item.path)
+    }
 
     private fun showDeletePopup(item: WorktreeDto, cell: String? = null) {
         val opts = ActiveListDeleteOptions(

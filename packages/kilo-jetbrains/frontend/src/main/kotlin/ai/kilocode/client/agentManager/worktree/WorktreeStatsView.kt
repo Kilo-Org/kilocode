@@ -8,10 +8,7 @@ import ai.kilocode.client.ui.list.ACTIVE_LIST_CHANGES_CELL
 import ai.kilocode.client.ui.list.ACTIVE_LIST_PR_CELL
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListHitCell
-import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
-import ai.kilocode.client.ui.layout.VAlign
-import ai.kilocode.client.ui.layout.align
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
@@ -47,10 +44,9 @@ internal class WorktreeStatsView(
     // ids back and routes the click. Standalone (toolbar) usage keeps its own listeners below.
     private val changeHit = HitRegion(ACTIVE_LIST_CHANGES_CELL).apply { add(change, BorderLayout.CENTER) }
     private val prHit = HitRegion(ACTIVE_LIST_PR_CELL).apply { add(pr, BorderLayout.CENTER) }
-    // Change badge and PR link stack vertically, each pinned to the trailing edge.
-    private val changeLine = changeHit.align(HAlign.RIGHT, VAlign.CENTER)
-    private val prLine = prHit.align(HAlign.RIGHT, VAlign.CENTER)
-    private val row = Stack.vertical(UiStyle.Gap.sm()).next(changeLine).next(prLine)
+    // Change badge and PR link share one row: the changes trail first, the PR link is pinned last so
+    // it is always the rightmost element.
+    private val row = Stack.horizontal(UiStyle.Gap.md()).next(changeHit).next(prHit)
     private var url: String? = null
     private var stats: WorktreeStatsDto? = null
     private var pull: WorktreePrDto? = null
@@ -59,7 +55,7 @@ internal class WorktreeStatsView(
         add(row)
         changeHit.act = openDiff
         prHit.act = { url?.let(BrowserUtil::browse) }
-        diff.toolTipText = KiloBundle.message("worktree.stats.diff.tooltip", 0, 0)
+        diff.toolTipText = KiloBundle.message("worktree.stats.tooltip", 0, 0, 0, 0)
         changeHit.addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(event: MouseEvent) {
                 changeHit.act?.invoke()
@@ -107,18 +103,20 @@ internal class WorktreeStatsView(
         ahead.isVisible = s.ahead > 0
         diff.update(s.additions, s.deletions)
         diff.isVisible = s.additions > 0 || s.deletions > 0
-        val diffTip = KiloBundle.message("worktree.stats.diff.tooltip", s.additions, s.deletions)
-        diff.toolTipText = diffTip
-        changeHit.tip = diffTip
+        // One descriptive tooltip for the whole changes region: ahead/behind, the +/- diff, and what
+        // clicking does.
+        val changeTip = KiloBundle.message("worktree.stats.tooltip", s.ahead, s.behind, s.additions, s.deletions)
+        diff.toolTipText = changeTip
+        changeHit.tip = changeTip
+        changeHit.toolTipText = changeTip
         url = link
         pr.icon = badge?.let { FilledBadgeIcon(it.text, it.style) }
         pr.toolTipText = tip
         prHit.tip = tip
+        prHit.toolTipText = tip
         pr.isVisible = badge != null
         val changesVisible = behind.isVisible || ahead.isVisible || diff.isVisible
-        changeLine.isVisible = changesVisible
         changeHit.isVisible = changesVisible
-        prLine.isVisible = pr.isVisible
         prHit.isVisible = pr.isVisible
         isVisible = changesVisible || pr.isVisible
         applyCursors()

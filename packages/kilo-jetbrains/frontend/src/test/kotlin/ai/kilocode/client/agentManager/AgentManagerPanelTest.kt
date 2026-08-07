@@ -9,6 +9,7 @@ import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.WorktreeStatusService
 import ai.kilocode.client.agentManager.worktree.ensureWorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
+import ai.kilocode.client.diff.KiloDiffEditorKind
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.TestUiTimers
@@ -22,7 +23,11 @@ import ai.kilocode.client.vfs.KiloPath
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.client.vfs.KiloVirtualFile
 import ai.kilocode.client.vfs.KiloVirtualFileSystem
+import ai.kilocode.rpc.dto.GhAvailability
+import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreeDto
+import ai.kilocode.rpc.dto.WorktreePrDto
+import ai.kilocode.rpc.dto.WorktreePrListDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
 import ai.kilocode.rpc.dto.WorktreeStatsListDto
 import ai.kilocode.rpc.dto.SessionActivityDto
@@ -414,6 +419,39 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals(2, metrics.deletions)
         assertEquals(1, metrics.ahead)
         assertEquals(3, metrics.behind)
+    }
+
+    fun `test open diff opens the branch diff editor`() {
+        val item = WorktreeDto("${project.basePath!!}/.kilo/worktrees/feature-x", "feature-x", "feature/x", "${project.basePath!!}/.kilo/worktrees/feature-x")
+        rpc.listed += item
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+
+        assertTrue(edt { panel.canOpenDiff(item) })
+        edt { panel.openDiff(item) }
+
+        val file = edt { FileEditorManager.getInstance(project).openFiles.single() as KiloVirtualFile }
+        assertEquals(KiloDiffEditorKind.ID, file.path.kind)
+        assertEquals(item.path, file.path.params["directory"])
+    }
+
+    fun `test open pr availability reflects pr status`() {
+        val item = WorktreeDto("${project.basePath!!}/.kilo/worktrees/feature-x", "feature-x", "feature/x", "${project.basePath!!}/.kilo/worktrees/feature-x")
+        rpc.listed += item
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(item.path, 7, GhState.OPEN, "https://example.test/pr/7")))
+        val timers = TestUiTimers()
+        ApplicationManager.getApplication().replaceService(KiloWorktreeService::class.java, service, testRootDisposable)
+        project.replaceService(WorktreeStatusService::class.java, WorktreeStatusService(project, coroutines.scope, timers), testRootDisposable)
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        timers.advanceBy(300)
+        flush()
+
+        assertTrue(edt { panel.canOpenPr(item) })
+        assertFalse(edt { panel.canOpenPr(null) })
     }
 
     fun `test worktree row hides badge while pending or deleting`() {

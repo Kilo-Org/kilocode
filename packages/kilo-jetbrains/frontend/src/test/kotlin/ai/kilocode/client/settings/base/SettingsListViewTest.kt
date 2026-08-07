@@ -919,7 +919,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
             UIUtil.dispatchAllInvocationEvents()
 
             val area = activeListCellBounds(view.list, 0, selected = true).getValue(ACTIVE_LIST_CHANGES_CELL)
-            assertEquals(KiloBundle.message("worktree.stats.diff.tooltip", 3, 2), view.list.getToolTipText(event(view.list, center(area))))
+            assertEquals(KiloBundle.message("worktree.stats.tooltip", 0, 0, 3, 2), view.list.getToolTipText(event(view.list, center(area))))
 
             hover(view, center(area))
             assertEquals(Cursor.HAND_CURSOR, view.list.cursor.type)

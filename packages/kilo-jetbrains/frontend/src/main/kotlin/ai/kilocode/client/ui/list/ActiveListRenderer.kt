@@ -85,14 +85,20 @@ internal class ActiveListRenderer(
     // instead of drifting to the far right of the row.
     private val header = titleGroup.align(HAlign.LEFT, VAlign.CENTER)
     private val desc = JBLabel()
-    private val text = Stack.vertical().next(header).next(desc)
+    private val metrics = WorktreeStatsView(fill = false)
+    private val metricsPane = metrics.align(HAlign.RIGHT, VAlign.CENTER)
+    // The description (branch) line carries the changes/PR metrics on its trailing edge so they sit
+    // on the branch row instead of spanning the full row height.
+    private val descLine = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
+        add(desc, BorderLayout.CENTER)
+        add(metricsPane, BorderLayout.EAST)
+    }
+    private val text = Stack.vertical().next(header).next(descLine)
     private val textPane = text.align(HAlign.TRACK, VAlign.CENTER)
     private val trail = JBLabel().apply { horizontalAlignment = SwingConstants.RIGHT }
-    private val metrics = WorktreeStatsView(fill = false)
     private val trailPane = trail.align(HAlign.RIGHT, VAlign.CENTER)
     private val endPane = JPanel(BorderLayout()).apply {
         add(trailPane, BorderLayout.CENTER)
-        add(metrics, BorderLayout.EAST)
     }
     private val cells = Stack.horizontal(activeListCellGap())
     private val cellPane = cells.align(HAlign.RIGHT, VAlign.CENTER)
@@ -135,8 +141,10 @@ internal class ActiveListRenderer(
             text,
             textPane,
             desc,
-            trail,
+            descLine,
             metrics,
+            metricsPane,
+            trail,
             trailPane,
             endPane,
             cells,
@@ -214,6 +222,11 @@ internal class ActiveListRenderer(
         trail.text = end
         trail.isVisible = end.isNotBlank() && data == null
         metrics.isVisible = data != null && !value.deleting
+        // Hide the wrapper too so a metrics-less row does not reserve the trailing gap on its
+        // description, and collapse the whole second row when it would be empty so title-only rows
+        // stay vertically centered.
+        metricsPane.isVisible = metrics.isVisible
+        descLine.isVisible = desc.isVisible || metrics.isVisible
         trail.foreground = weak
 
         val hovered = (list as? ActiveListActive)?.hoveredIndex() == index
