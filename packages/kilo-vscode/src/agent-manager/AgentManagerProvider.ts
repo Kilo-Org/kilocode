@@ -53,8 +53,10 @@ import {
 import { initContextState, pushProjectSessions, reactivateProject, registerProjectSessions } from "./project/init"
 import { createLocalDiff } from "./local-diff"
 import { parseToolRequest, startFromTool, type ToolRequest } from "./tool-start"
+import { handleToolEvent } from "./tool-project"
 import { sandboxSessionMetadata } from "../shared/sandbox-session"
-import { AgentManagerOrchestrationBridge } from "./orchestration-bridge"
+import { createOrchestrationBridge } from "./orchestration-setup"
+import type { AgentManagerOrchestrationBridge } from "./orchestration-bridge"
 import { pruneSubagents } from "./prune-subagents"
 import { startSession } from "./mcp-warmup"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
@@ -253,22 +255,20 @@ export class AgentManagerProvider implements Disposable {
     this.statsPoller = pollers.stats
     this.prBridge = pollers.pr
     this.projectPollers = pollers.projects
-    this.orchestration = new AgentManagerOrchestrationBridge(this.connectionService, {
-      root: () => this.getRoot(),
-      state: () => this.state,
-      ready: async () => {
-        this.stateReady ??= this.initializeState()
-        await this.stateReady
-        return this.state
-      },
-      stats: () => this.statsPoller.snapshot(),
-      prs: () => this.prBridge.snapshot(),
-      push: () => this.pushState(),
-      managed: (id) => this.panelSessions.has(id) || !!this.state?.getSession(id),
-      close: async (id) => {
-        await this.onCloseSession(id)
-        this.postToWebview({ type: "agentManager.sessionClosed", sessionId: id })
-      },
+    this.orchestration = createOrchestrationBridge({
+      connectionService: this.connectionService,
+      contexts: this.contexts,
+      projectScope: this.projectScope,
+      getRoot: () => this.getRoot(),
+      getState: () => this.state,
+      getStateReady: () => this.stateReady,
+      initStateReady: () => (this.stateReady = this.initializeState()),
+      getStats: () => this.statsPoller.snapshot(),
+      getPrs: () => this.prBridge.snapshot(),
+      pushState: (ctx) => this.pushState(ctx),
+      hasPanelSession: (id) => this.panelSessions.has(id),
+      closeSession: (id) => this.onCloseSession(id),
+      postSessionClosed: (id) => this.postToWebview({ type: "agentManager.sessionClosed", sessionId: id }),
       log: (...args) => this.log(...args),
     })
     this.unsubTool = this.connectionService.onEventFiltered(
@@ -1083,14 +1083,16 @@ export class AgentManagerProvider implements Disposable {
   }
 
   private onToolEvent(event: unknown, directory?: string): void {
-    const properties = (event as { properties?: unknown }).properties
-    const req = parseToolRequest(properties)
-    if (!req) return
-    if (directory) {
-      req.directory = directory
-      req.projectId ??= this.contexts.byDirectory(directory)?.id
-    }
-    void this.startToolRequest(req)
+    handleToolEvent(
+      event,
+      directory,
+      {
+        byDirectory: (value) => this.contexts.byDirectory(value),
+        usable: (id) => this.contexts.usable(id),
+      },
+      this.projectScope,
+      (req) => this.startToolRequest(req),
+    )
   }
 
   private async startToolRequest(req: ToolRequest): Promise<void> {
@@ -1829,19 +1831,15 @@ export class AgentManagerProvider implements Disposable {
 
   public async createFromSidebar(baseBranch?: string, branchName?: string): Promise<void> {
     this.openPanel()
-    const panel = this.panel
-    if (!panel) return
-    if (!(await this.waitForPanelReady(panel))) return
+    if (!this.panel || !(await this.waitForPanelReady(this.panel))) return
     await this.waitForStateReady("createFromSidebar")
     await this.onCreateWorktree(baseBranch, branchName)
   }
 
   public async openAdvancedWorktree(): Promise<void> {
     this.openPanel()
-    const panel = this.panel
-    if (!panel) return
-    if (!(await this.waitForPanelActive(panel))) return
-    if (!(await this.waitForPanelReady(panel))) return
+    if (!this.panel || !(await this.waitForPanelActive(this.panel)) || !(await this.waitForPanelReady(this.panel)))
+      return
     await this.waitForStateReady("openAdvancedWorktree")
     queueMicrotask(() => this.postToWebview({ type: "action", action: "advancedWorktree" }))
   }
