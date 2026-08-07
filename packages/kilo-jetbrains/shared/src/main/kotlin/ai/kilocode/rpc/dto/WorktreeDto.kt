@@ -37,6 +37,7 @@ data class WorktreePrDto(
     val number: Int,
     val state: GhState,
     val url: String,
+    val title: String = "",
 )
 
 @Serializable

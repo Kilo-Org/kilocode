@@ -18,6 +18,8 @@ import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.ActiveListMetrics
+import ai.kilocode.client.ui.list.ACTIVE_LIST_PR_CELL
+import ai.kilocode.client.ui.list.activeListCellBounds
 import ai.kilocode.client.ui.list.activeListToolWindowBackground
 import ai.kilocode.client.vfs.KiloPath
 import ai.kilocode.client.vfs.KiloVfsManager
@@ -43,6 +45,7 @@ import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.UIUtil
 import java.awt.event.MouseEvent
+import java.awt.Point
 import javax.swing.JComponent
 import javax.swing.SwingUtilities
 import kotlinx.coroutines.CompletableDeferred
@@ -454,6 +457,54 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertFalse(edt { panel.canOpenPr(null) })
     }
 
+    fun `test pr title replaces row name and tooltip reveals custom name`() {
+        val path = "${project.basePath!!}/.kilo/worktrees/feature-x"
+        val item = WorktreeDto(path, "Feature Label", "feature/x", path)
+        rpc.listed += item
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 7, GhState.DRAFT, "https://example.test/pr/7", "Fix <login> bug")))
+        val timers = TestUiTimers()
+        ApplicationManager.getApplication().replaceService(KiloWorktreeService::class.java, service, testRootDisposable)
+        project.replaceService(WorktreeStatusService::class.java, WorktreeStatusService(project, coroutines.scope, timers), testRootDisposable)
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        timers.advanceBy(300)
+        flush()
+
+        val row = row(panel, 0)
+        assertEquals("Fix <login> bug", row.title)
+        val tip = row.metrics?.prTooltip ?: error("expected PR tooltip")
+        assertEquals("<html>Draft #7 Fix &lt;login&gt; bug<br>(Feature Label)<br>Click to open the pull request in your browser.</html>", tip)
+        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        edt {
+            list.size = java.awt.Dimension(360, 80)
+            list.doLayout()
+            UIUtil.dispatchAllInvocationEvents()
+        }
+        val area = edt { activeListCellBounds(list, 0, selected = false).getValue(ACTIVE_LIST_PR_CELL) }
+
+        assertEquals(tip, edt { list.getToolTipText(MouseEvent(list, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(), 0, center(area).x, center(area).y, 0, false)) })
+    }
+
+    fun `test blank pr title keeps row name and omits custom name line`() {
+        val path = "${project.basePath!!}/.kilo/worktrees/feature-x"
+        val item = WorktreeDto(path, "Feature Label", "feature/x", path)
+        rpc.listed += item
+        rpc.prResult = WorktreePrListDto(GhAvailability.OK, listOf(WorktreePrDto(path, 8, GhState.OPEN, "https://example.test/pr/8", "   ")))
+        val timers = TestUiTimers()
+        ApplicationManager.getApplication().replaceService(KiloWorktreeService::class.java, service, testRootDisposable)
+        project.replaceService(WorktreeStatusService::class.java, WorktreeStatusService(project, coroutines.scope, timers), testRootDisposable)
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        timers.advanceBy(300)
+        flush()
+
+        val row = row(panel, 0)
+        assertEquals("Feature Label", row.title)
+        assertEquals("<html>Open #8<br>Click to open the pull request in your browser.</html>", row.metrics?.prTooltip)
+    }
+
     fun `test worktree row hides badge while pending or deleting`() {
         val path = "feature/y"
         val activity = MutableStateFlow(mapOf(
@@ -481,6 +532,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
         return edt { list.model.getElementAt(idx) as ActiveListItem }
     }
+
+    private fun center(rect: java.awt.Rectangle) = Point(rect.x + rect.width / 2, rect.y + rect.height / 2)
 
     private fun pump() {
         ApplicationManager.getApplication().invokeAndWait { UIUtil.dispatchAllInvocationEvents() }

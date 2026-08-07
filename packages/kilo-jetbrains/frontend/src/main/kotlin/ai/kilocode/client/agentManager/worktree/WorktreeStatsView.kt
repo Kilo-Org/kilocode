@@ -17,6 +17,7 @@ import com.intellij.openapi.util.IconLoader
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
+import com.intellij.xml.util.XmlStringUtil
 import java.awt.BorderLayout
 import java.awt.Cursor
 import java.awt.Dimension
@@ -83,14 +84,14 @@ internal class WorktreeStatsView(
         if (this.stats == stats && this.pull == pull) return
         this.stats = stats
         this.pull = pull
-        sync(stats, pull?.let { ActiveListBadge("#${it.number}", style(it.state)) }, pull?.url, pull?.let { KiloBundle.message("worktree.pr.tooltip", it.number, it.state.name.lowercase()) })
+        sync(stats, pull?.let { ActiveListBadge("#${it.number}", style(it.state)) }, pull?.url, pull?.let(::prTooltip))
     }
 
-    fun update(stats: WorktreeStatsDto?, badge: ActiveListBadge?) {
-        if (this.stats == stats && pull == null && (pr.icon as? FilledBadgeIcon)?.text == badge?.text) return
+    fun update(stats: WorktreeStatsDto?, badge: ActiveListBadge?, prTip: String? = badge?.text) {
+        if (this.stats == stats && pull == null && (pr.icon as? FilledBadgeIcon)?.text == badge?.text && prHit.tip == prTip) return
         this.stats = stats
         this.pull = null
-        sync(stats, badge, null, badge?.text)
+        sync(stats, badge, null, prTip)
     }
 
     private fun sync(stats: WorktreeStatsDto?, badge: ActiveListBadge?, link: String?, tip: String?) {
@@ -172,8 +173,34 @@ internal class WorktreeStatsView(
 }
 
 internal fun style(state: GhState): UiStyle.Badge.Style = when (state) {
-    GhState.OPEN -> UiStyle.Badge.Primary
-    GhState.DRAFT -> UiStyle.Badge.Secondary
-    GhState.MERGED -> UiStyle.Badge.Highlight
-    GhState.CLOSED -> UiStyle.Badge.Alert
+    GhState.OPEN -> UiStyle.Badge.PullRequestOpen
+    GhState.DRAFT -> UiStyle.Badge.PullRequestDraft
+    GhState.MERGED -> UiStyle.Badge.PullRequestMerged
+    GhState.CLOSED -> UiStyle.Badge.PullRequestClosed
+}
+
+internal fun stateLabel(state: GhState): String = when (state) {
+    GhState.OPEN -> KiloBundle.message("worktree.pr.state.open")
+    GhState.DRAFT -> KiloBundle.message("worktree.pr.state.draft")
+    GhState.MERGED -> KiloBundle.message("worktree.pr.state.merged")
+    GhState.CLOSED -> KiloBundle.message("worktree.pr.state.closed")
+}
+
+internal fun prTooltip(pull: WorktreePrDto, name: String? = null): String {
+    val title = pull.title.trim()
+    val head = buildString {
+        append(stateLabel(pull.state))
+        append(" #")
+        append(pull.number)
+        if (title.isNotBlank()) {
+            append(' ')
+            append(title)
+        }
+    }
+    val lines = listOfNotNull(
+        head,
+        name?.takeIf { title.isNotBlank() }?.let { "($it)" },
+        KiloBundle.message("worktree.pr.tooltip.open"),
+    ).map(XmlStringUtil::escapeString)
+    return XmlStringUtil.wrapInHtml(lines.joinToString("<br>"))
 }

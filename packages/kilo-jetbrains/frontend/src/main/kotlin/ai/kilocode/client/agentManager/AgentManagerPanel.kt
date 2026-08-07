@@ -11,6 +11,7 @@ import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatchers
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorMatcher
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.ensureWorktreeSessionEditorKind
+import ai.kilocode.client.agentManager.worktree.prTooltip
 import ai.kilocode.client.agentManager.worktree.normalizeWorktreePath
 import ai.kilocode.client.agentManager.worktree.style
 import ai.kilocode.client.agentManager.worktree.worktreeActivityBadge
@@ -481,11 +482,13 @@ class AgentManagerPanel(
         val pr: WorktreePrDto?,
     ) : ActiveListItem {
         override val key: String get() = dto.id
-        override val title: String get() = dto.name
-        override val description: String get() = dto.path.trimEnd('/').substringAfterLast('/')
+        override val title: String get() = pr?.title?.trim()?.takeIf { it.isNotBlank() } ?: dto.name
+        override val description: String get() = defaultName
         override val tooltip: String? get() = null
         override val icon = WorktreeIcons.forRow(dto.locked, pending)
         override val search: String get() = listOfNotNull(dto.name, dto.branch, dto.path, dto.lockReason).joinToString(" ")
+        private val defaultName: String get() = dto.path.trimEnd('/').substringAfterLast('/')
+        private val customName: String? get() = dto.name.takeIf { it != defaultName }
         override val badges: List<ActiveListBadge>
             get() {
                 if (pending || deleting) return emptyList()
@@ -503,6 +506,7 @@ class AgentManagerPanel(
                     ahead = s?.ahead ?: 0,
                     behind = s?.behind ?: 0,
                     pr = p?.let { ActiveListBadge("#${it.number}", style(it.state)) },
+                    prTooltip = p?.let { prTooltip(it, customName) },
                     onChanges = s?.let { { openBranchDiff(dto.path) } },
                     onPr = p?.url?.let { url -> { BrowserUtil.browse(url) } },
                 )

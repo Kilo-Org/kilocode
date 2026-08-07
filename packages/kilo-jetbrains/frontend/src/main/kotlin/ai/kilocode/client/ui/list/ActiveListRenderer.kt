@@ -85,7 +85,7 @@ internal class ActiveListRenderer(
     // instead of drifting to the far right of the row.
     private val header = titleGroup.align(HAlign.LEFT, VAlign.CENTER)
     private val desc = JBLabel()
-    private val metrics = WorktreeStatsView(fill = false)
+    private val metrics = WorktreeStatsView()
     private val metricsPane = metrics.align(HAlign.RIGHT, VAlign.CENTER)
     // The description (branch) line carries the changes/PR metrics on its trailing edge so they sit
     // on the branch row instead of spanning the full row height.
@@ -216,7 +216,7 @@ internal class ActiveListRenderer(
         }
         desc.foreground = weak
         val data = if (value.deleting) null else value.metrics
-        metrics.update(data?.let { WorktreeStatsDto("", it.additions, it.deletions, it.ahead, it.behind) }, data?.pr)
+        metrics.update(data?.let { WorktreeStatsDto("", it.additions, it.deletions, it.ahead, it.behind) }, data?.pr, data?.prTooltip ?: data?.pr?.text)
         metrics.setActions(data?.onChanges, data?.onPr)
         val end = if (value.deleting) KiloBundle.message("common.deleting") else value.trailing.orEmpty()
         trail.text = end

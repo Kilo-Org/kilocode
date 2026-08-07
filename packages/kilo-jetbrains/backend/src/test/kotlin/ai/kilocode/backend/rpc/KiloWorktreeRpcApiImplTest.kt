@@ -1,6 +1,7 @@
 package ai.kilocode.backend.rpc
 
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
+import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.CapturingProcessHandler
@@ -335,6 +336,19 @@ class KiloWorktreeRpcApiImplTest {
         assertEquals(0, item.deletions)
         assertEquals(1, item.ahead)
         assertEquals(0, item.behind)
+    }
+
+    @Test
+    fun `parsePr reads title from gh output`() {
+        val pull = assertNotNull(parsePr("/repo/.kilo/worktrees/feature-x", """
+            {"number":12,"state":"OPEN","isDraft":false,"url":"https://example.test/pr/12","title":"  Fix login bug  "}
+        """.trimIndent()))
+
+        assertEquals("/repo/.kilo/worktrees/feature-x", pull.path)
+        assertEquals(12, pull.number)
+        assertEquals(GhState.OPEN, pull.state)
+        assertEquals("https://example.test/pr/12", pull.url)
+        assertEquals("Fix login bug", pull.title)
     }
 
     private fun initRepo() {

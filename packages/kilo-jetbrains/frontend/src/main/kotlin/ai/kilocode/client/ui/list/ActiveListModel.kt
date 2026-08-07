@@ -23,6 +23,7 @@ internal data class ActiveListMetrics(
     val ahead: Int = 0,
     val behind: Int = 0,
     val pr: ActiveListBadge? = null,
+    val prTooltip: String? = null,
     /** Click handler for the changes badge, e.g. open the branch diff. Null leaves it inert. */
     val onChanges: (() -> Unit)? = null,
     /** Click handler for the PR badge, e.g. open the pull request. Null leaves it inert. */

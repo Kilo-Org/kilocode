@@ -940,11 +940,26 @@ class SettingsListViewTest : BasePlatformTestCase() {
             UIUtil.dispatchAllInvocationEvents()
 
             val area = activeListCellBounds(view.list, 0, selected = true).getValue(ACTIVE_LIST_PR_CELL)
+            assertEquals("#12", view.list.getToolTipText(event(view.list, center(area))))
             hover(view, center(area))
             assertEquals(Cursor.HAND_CURSOR, view.list.cursor.type)
 
             click(view, center(area))
             assertEquals(listOf("pr"), calls)
+        }
+    }
+
+    fun `test pr badge uses custom tooltip when supplied`() {
+        edt {
+            val view = ActiveListView("Empty") { _, _ -> }
+            view.update(listOf(metricsItem("wt", "Alpha", ActiveListMetrics(pr = ActiveListBadge("#12"), prTooltip = "PR details"))))
+            view.list.size = Dimension(360, 80)
+            view.list.doLayout()
+            UIUtil.dispatchAllInvocationEvents()
+
+            val area = activeListCellBounds(view.list, 0, selected = true).getValue(ACTIVE_LIST_PR_CELL)
+
+            assertEquals("PR details", view.list.getToolTipText(event(view.list, center(area))))
         }
     }
 

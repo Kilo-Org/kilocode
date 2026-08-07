@@ -96,7 +96,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         var status = GhAvailability.OK
         val data = parallel(items) { item ->
             if (status != GhAvailability.OK) return@parallel null
-            val out = runGh(Path.of(item.path).normalize(), "pr", "view", item.branch, "--json", "number,state,isDraft,url")
+            val out = runGh(Path.of(item.path).normalize(), "pr", "view", item.branch, "--json", "number,state,isDraft,url,title")
             if (!out.ok) {
                 when (prError(out.stderr)) {
                     GhAvailability.UNAUTH -> status = GhAvailability.UNAUTH
@@ -318,18 +318,20 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         return GhAvailability.OK
     }
 
-    private fun parsePr(path: String, raw: String): WorktreePrDto? {
-        val obj = runCatching { json.parseToJsonElement(raw) as? JsonObject }.getOrNull() ?: return null
-        val number = obj["number"]?.jsonPrimitive?.intOrNull ?: return null
-        val url = obj["url"]?.jsonPrimitive?.content?.takeIf { it.isNotBlank() } ?: return null
-        val draft = obj["isDraft"]?.jsonPrimitive?.booleanOrNull == true
-        val state = if (draft) GhState.DRAFT else when (obj["state"]?.jsonPrimitive?.content?.uppercase()) {
-            "MERGED" -> GhState.MERGED
-            "CLOSED" -> GhState.CLOSED
-            else -> GhState.OPEN
-        }
-        return WorktreePrDto(path, number, state, url)
+}
+
+internal fun parsePr(path: String, raw: String): WorktreePrDto? {
+    val obj = runCatching { json.parseToJsonElement(raw) as? JsonObject }.getOrNull() ?: return null
+    val number = obj["number"]?.jsonPrimitive?.intOrNull ?: return null
+    val url = obj["url"]?.jsonPrimitive?.content?.takeIf { it.isNotBlank() } ?: return null
+    val title = obj["title"]?.jsonPrimitive?.content?.trim().orEmpty()
+    val draft = obj["isDraft"]?.jsonPrimitive?.booleanOrNull == true
+    val state = if (draft) GhState.DRAFT else when (obj["state"]?.jsonPrimitive?.content?.uppercase()) {
+        "MERGED" -> GhState.MERGED
+        "CLOSED" -> GhState.CLOSED
+        else -> GhState.OPEN
     }
+    return WorktreePrDto(path, number, state, url, title)
 }
 
 private val json = Json { prettyPrint = true; ignoreUnknownKeys = true }
