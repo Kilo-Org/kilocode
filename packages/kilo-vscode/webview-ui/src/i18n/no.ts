@@ -469,6 +469,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "Søk etter modeller\u2026",
   "provider.custom.models.fetch.add": "Legg til {{count}} modell(er)",
   "provider.custom.edit.title": "Rediger leverandør",
+  "provider.custom.edit.advanced": "Rediger avanserte innstillinger i JSON-konfigurasjonsfilen",
   "provider.custom.headers.label": "Headere (valgfritt)",
   "provider.custom.headers.key.label": "Header",
   "provider.custom.headers.key.placeholder": "Header-Name",

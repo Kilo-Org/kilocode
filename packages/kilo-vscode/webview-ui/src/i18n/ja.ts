@@ -502,6 +502,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "モデルを検索\u2026",
   "provider.custom.models.fetch.add": "{{count}}個のモデルを追加",
   "provider.custom.edit.title": "プロバイダーを編集",
+  "provider.custom.edit.advanced": "JSON 設定ファイルで詳細設定を編集",
   "provider.custom.headers.label": "ヘッダー（任意）",
   "provider.custom.headers.key.label": "ヘッダー",
   "provider.custom.headers.key.placeholder": "Header-Name",

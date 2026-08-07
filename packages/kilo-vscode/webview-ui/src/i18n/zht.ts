@@ -445,6 +445,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "搜尋模型\u2026",
   "provider.custom.models.fetch.add": "新增 {{count}} 個模型",
   "provider.custom.edit.title": "編輯供應商",
+  "provider.custom.edit.advanced": "在 JSON 設定檔中編輯進階設定",
   "provider.custom.headers.label": "標頭（選填）",
   "provider.custom.headers.key.label": "標頭",
   "provider.custom.headers.key.placeholder": "Header-Name",

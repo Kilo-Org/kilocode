@@ -510,6 +510,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "Rechercher des modèles\u2026",
   "provider.custom.models.fetch.add": "Ajouter {{count}} modèle(s)",
   "provider.custom.edit.title": "Modifier le fournisseur",
+  "provider.custom.edit.advanced": "Modifier les paramètres avancés dans le fichier de configuration JSON",
   "provider.custom.headers.label": "En-têtes (optionnel)",
   "provider.custom.headers.key.label": "En-tête",
   "provider.custom.headers.key.placeholder": "Header-Name",

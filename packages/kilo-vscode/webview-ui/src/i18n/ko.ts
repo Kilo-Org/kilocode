@@ -463,6 +463,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "모델 검색\u2026",
   "provider.custom.models.fetch.add": "{{count}}개 모델 추가",
   "provider.custom.edit.title": "공급자 편집",
+  "provider.custom.edit.advanced": "JSON 구성 파일에서 고급 설정 편집",
   "provider.custom.headers.label": "헤더 (선택사항)",
   "provider.custom.headers.key.label": "헤더",
   "provider.custom.headers.key.placeholder": "Header-Name",

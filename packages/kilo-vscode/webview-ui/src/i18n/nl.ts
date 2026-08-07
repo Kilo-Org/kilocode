@@ -460,6 +460,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "Modellen zoeken\u2026",
   "provider.custom.models.fetch.add": "{{count}} model(len) toevoegen",
   "provider.custom.edit.title": "Provider bewerken",
+  "provider.custom.edit.advanced": "Geavanceerde instellingen bewerken in het JSON-configuratiebestand",
   "provider.custom.headers.label": "Headers (optioneel)",
   "provider.custom.headers.key.label": "Header",
   "provider.custom.headers.key.placeholder": "Header-Naam",

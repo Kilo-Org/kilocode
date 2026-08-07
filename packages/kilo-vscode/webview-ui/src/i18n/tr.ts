@@ -455,6 +455,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "Model ara\u2026",
   "provider.custom.models.fetch.add": "{{count}} model ekle",
   "provider.custom.edit.title": "Sağlayıcıyı düzenle",
+  "provider.custom.edit.advanced": "JSON yapılandırma dosyasında gelişmiş ayarları düzenle",
   "provider.custom.headers.label": "Başlıklar (isteğe bağlı)",
   "provider.custom.headers.key.label": "Başlık",
   "provider.custom.headers.key.placeholder": "Başlık-Adı",

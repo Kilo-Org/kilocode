@@ -503,6 +503,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "Поиск моделей\u2026",
   "provider.custom.models.fetch.add": "Добавить {{count}} модель(ей)",
   "provider.custom.edit.title": "Редактировать провайдера",
+  "provider.custom.edit.advanced": "Изменить расширенные настройки в файле конфигурации JSON",
   "provider.custom.headers.label": "Заголовки (необязательно)",
   "provider.custom.headers.key.label": "Заголовок",
   "provider.custom.headers.key.placeholder": "Header-Name",

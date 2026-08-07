@@ -15,6 +15,7 @@ import { useProvider } from "../../context/provider"
 import { useVSCode } from "../../context/vscode"
 import type { ExtensionMessage, ProviderAuthState, ProviderConfig } from "../../types/messages"
 import { createProviderAction } from "../../utils/provider-action"
+import { configMessage } from "../../utils/open-config"
 import { MASKED_CUSTOM_PROVIDER_KEY, resolveCustomProviderKey } from "../../../../src/shared/custom-provider"
 import {
   CUSTOM_PROVIDER_PACKAGE,
@@ -563,6 +564,19 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
               {language.t("provider.custom.description.link")}
             </a>
             {language.t("provider.custom.description.suffix")}
+            <Show when={editing()}>
+              <div style={{ "margin-top": "8px" }}>
+                <a
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    vscode.postMessage(configMessage("global", language.t))
+                  }}
+                >
+                  {language.t("provider.custom.edit.advanced")}
+                </a>
+              </div>
+            </Show>
           </div>
 
           <div style={{ display: "flex", "flex-direction": "column", gap: "16px" }}>

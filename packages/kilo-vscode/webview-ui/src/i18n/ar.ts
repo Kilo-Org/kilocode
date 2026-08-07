@@ -455,6 +455,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "البحث في النماذج\u2026",
   "provider.custom.models.fetch.add": "إضافة {{count}} نموذج(نماذج)",
   "provider.custom.edit.title": "تعديل المزود",
+  "provider.custom.edit.advanced": "تحرير الإعدادات المتقدمة في ملف إعداد JSON",
   "provider.custom.headers.label": "الرؤوس (اختياري)",
   "provider.custom.headers.key.label": "الرأس",
   "provider.custom.headers.key.placeholder": "Header-Name",

@@ -485,6 +485,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "搜索模型\u2026",
   "provider.custom.models.fetch.add": "添加 {{count}} 个模型",
   "provider.custom.edit.title": "编辑提供商",
+  "provider.custom.edit.advanced": "在 JSON 配置文件中编辑高级设置",
   "provider.custom.headers.label": "请求头（可选）",
   "provider.custom.headers.key.label": "请求头",
   "provider.custom.headers.key.placeholder": "Header-Name",

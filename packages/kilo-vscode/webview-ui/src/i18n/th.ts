@@ -500,6 +500,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "ค้นหาโมเดล\u2026",
   "provider.custom.models.fetch.add": "เพิ่ม {{count}} โมเดล",
   "provider.custom.edit.title": "แก้ไขผู้ให้บริการ",
+  "provider.custom.edit.advanced": "แก้ไขการตั้งค่าขั้นสูงในไฟล์การกำหนดค่า JSON",
   "provider.custom.headers.label": "ส่วนหัว (ไม่จำเป็น)",
   "provider.custom.headers.key.label": "ส่วนหัว",
   "provider.custom.headers.key.placeholder": "Header-Name",

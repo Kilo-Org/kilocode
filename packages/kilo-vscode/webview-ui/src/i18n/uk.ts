@@ -458,6 +458,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "Пошук моделей\u2026",
   "provider.custom.models.fetch.add": "Додати {{count}} моделей",
   "provider.custom.edit.title": "Редагувати провайдера",
+  "provider.custom.edit.advanced": "Редагувати розширені налаштування у файлі конфігурації JSON",
   "provider.custom.headers.label": "Заголовки (необов'язково)",
   "provider.custom.headers.key.label": "Заголовок",
   "provider.custom.headers.key.placeholder": "Назва-заголовка",

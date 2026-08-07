@@ -509,6 +509,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "Pretraži modele\u2026",
   "provider.custom.models.fetch.add": "Dodaj {{count}} model(a)",
   "provider.custom.edit.title": "Uredi provajdera",
+  "provider.custom.edit.advanced": "Uredite napredne postavke u JSON konfiguracijskoj datoteci",
   "provider.custom.headers.label": "Zaglavlja (opcionalno)",
   "provider.custom.headers.key.label": "Zaglavlje",
   "provider.custom.headers.key.placeholder": "Header-Name",

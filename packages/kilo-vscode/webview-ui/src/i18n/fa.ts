@@ -421,6 +421,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "جستجوی مدل‌ها…",
   "provider.custom.models.fetch.add": "افزودن {{count}} مدل",
   "provider.custom.edit.title": "ویرایش ارائه‌دهنده",
+  "provider.custom.edit.advanced": "ویرایش تنظیمات پیشرفته در فایل پیکربندی JSON",
   "provider.custom.headers.label": "هدرها (اختیاری)",
   "provider.custom.headers.key.label": "هدر",
   "provider.custom.headers.key.placeholder": "Header-Name",

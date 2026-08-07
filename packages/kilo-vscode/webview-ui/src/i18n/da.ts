@@ -506,6 +506,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "Søg modeller\u2026",
   "provider.custom.models.fetch.add": "Tilføj {{count}} model(ler)",
   "provider.custom.edit.title": "Rediger udbyder",
+  "provider.custom.edit.advanced": "Rediger avancerede indstillinger i JSON-konfigurationsfilen",
   "provider.custom.headers.label": "Headers (valgfrit)",
   "provider.custom.headers.key.label": "Header",
   "provider.custom.headers.key.placeholder": "Header-Name",
