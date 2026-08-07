@@ -10,42 +10,42 @@ export namespace TestCli {
 
   async function fingerprint(root: string): Promise<string> {
     const hash = crypto.createHash("sha256")
-    const targets = [
-      path.join(root, "package.json"),
-      path.join(root, "src"),
-      path.join(root, "migration"),
-      path.join(root, "..", "core", "src"),
-      path.join(root, "..", "server", "src"),
-      path.join(root, "..", "tui", "src"),
-      path.join(root, "..", "llm", "src"),
-      path.join(root, "..", "protocol", "src"),
-      path.join(root, "..", "schema", "src"),
-      path.join(root, "..", "plugin", "src"),
-      path.join(root, "..", "plugin-atomic-chat", "src"),
-      path.join(root, "..", "ui", "src"),
-      path.join(root, "..", "sdk", "js", "src"),
-      path.join(root, "..", "kilo-memory", "src"),
-      path.join(root, "..", "kilo-indexing", "src"),
-      path.join(root, "..", "kilo-gateway", "src"),
-      path.join(root, "..", "kilo-sandbox", "src"),
-      path.join(root, "..", "kilo-telemetry", "src"),
-      path.resolve(root, "../../bun.lock"),
-    ]
+    const repo = path.resolve(root, "../..")
+    const pkgs = path.join(repo, "packages")
 
-    for (const target of targets) {
-      if (!fsSync.existsSync(target)) continue
-      const st = fsSync.statSync(target)
-      if (st.isDirectory()) {
-        const glob = new Bun.Glob("**/*.{ts,tsx,sql,json,txt}")
-        for await (const file of glob.scan({ cwd: target })) {
-          const p = path.join(target, file)
-          const fileStat = fsSync.statSync(p)
-          hash.update(file).update(String(fileStat.mtimeMs)).update(String(fileStat.size))
+    const lock = path.join(repo, "bun.lock")
+    if (fsSync.existsSync(lock)) {
+      const st = fsSync.statSync(lock)
+      hash.update("bun.lock").update(String(st.mtimeMs)).update(String(st.size))
+    }
+
+    const ignored = new Set(["kilo-vscode", "kilo-jetbrains", "kilo-docs"])
+    const entries = fsSync.readdirSync(pkgs, { withFileTypes: true })
+
+    for (const ent of entries) {
+      if (!ent.isDirectory() || ignored.has(ent.name)) continue
+      const dir = path.join(pkgs, ent.name)
+      const targets =
+        ent.name === "sdk"
+          ? [path.join(dir, "js", "src"), path.join(dir, "js", "package.json")]
+          : [path.join(dir, "src"), path.join(dir, "migration"), path.join(dir, "package.json")]
+
+      for (const target of targets) {
+        if (!fsSync.existsSync(target)) continue
+        const st = fsSync.statSync(target)
+        if (st.isDirectory()) {
+          const glob = new Bun.Glob("**/*.{ts,tsx,sql,json,txt}")
+          for await (const file of glob.scan({ cwd: target })) {
+            const p = path.join(target, file)
+            const fst = fsSync.statSync(p)
+            hash.update(`${ent.name}:${file}`).update(String(fst.mtimeMs)).update(String(fst.size))
+          }
+        } else {
+          hash.update(`${ent.name}:pkg`).update(String(st.mtimeMs)).update(String(st.size))
         }
-      } else {
-        hash.update(target).update(String(st.mtimeMs)).update(String(st.size))
       }
     }
+
     return hash.digest("hex")
   }
 
@@ -105,7 +105,14 @@ export namespace TestCli {
           return
         }
       })()
-      if (target) await fs.symlink(target, path.join(scope, name.replace("@opentui/", "")), kind)
+      if (target) {
+        const link = path.join(scope, name.replace("@opentui/", ""))
+        try {
+          if (!fsSync.existsSync(link)) {
+            await fs.symlink(target, link, kind)
+          }
+        } catch {}
+      }
     }
 
     if (!targetDir) {
