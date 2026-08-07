@@ -2,6 +2,7 @@ import { type ChildProcess } from "child_process"
 import { spawn } from "../../util/process"
 import * as crypto from "crypto"
 import * as fs from "fs"
+import * as os from "os"
 import * as path from "path"
 import * as vscode from "vscode"
 import { resolveLocalBwrapEnv, resolveTreeSitterEnv } from "./cli-resources"
@@ -15,6 +16,93 @@ export interface ServerInstance {
 }
 
 const STARTUP_TIMEOUT_SECONDS = 30
+
+/**
+ * Discovery files so external agents (talk.js, other scripts) can find the
+ * VS Code extension's kilo serve processes without the daemon. Same schema as
+ * daemon.json — drop-in compatible with existing tooling.
+ *
+ * One file is written per server, keyed by PID (vscode-server-<pid>.json),
+ * because each VS Code window spawns its own kilo serve on its own port with
+ * its own password. A single shared path would let a second window clobber the
+ * first's credentials, and let one window's exit delete another window's file.
+ */
+function discoveryDir(): string {
+  // Mirror the CLI's Global.Path.state (packages/core/src/global.ts): it resolves
+  // xdg-basedir's xdgState — $XDG_STATE_HOME on every platform, falling back to
+  // ~/.local/state — then joins the app name. Honoring XDG_STATE_HOME here (including
+  // on Windows) keeps vscode-server-<pid>.json in the same directory as daemon.json.
+  const base = process.env.XDG_STATE_HOME || path.join(os.homedir(), ".local", "state")
+  return path.join(base.replace(/[\r\n]+/g, ""), "kilo")
+}
+
+function discoveryFile(pid: number): string {
+  return path.join(discoveryDir(), `vscode-server-${pid}.json`)
+}
+
+function pidAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch (err) {
+    return (err as NodeJS.ErrnoException).code === "EPERM"
+  }
+}
+
+/** Best-effort: drop vscode-server-*.json whose owning process is dead, so crashed windows don't leave stale files. */
+function sweepStaleDiscovery(): void {
+  try {
+    const dir = discoveryDir()
+    for (const name of fs.readdirSync(dir)) {
+      const match = /^vscode-server-(\d+)\.json$/.exec(name)
+      if (match && !pidAlive(Number(match[1]))) fs.unlinkSync(path.join(dir, name))
+    }
+  } catch {
+    // best-effort only
+  }
+}
+
+function writeDiscovery(instance: ServerInstance, version: string, dir: string): void {
+  const pid = instance.process.pid
+  if (!pid) return
+  sweepStaleDiscovery()
+  const file = discoveryFile(pid)
+  const token = Buffer.from(`kilo:${instance.password}`).toString("base64")
+  const state = {
+    pid,
+    hostname: "127.0.0.1",
+    port: instance.port,
+    url: `http://127.0.0.1:${instance.port}`,
+    username: "kilo",
+    password: instance.password,
+    token,
+    version,
+    startedAt: new Date().toISOString(),
+    source: "vscode",
+    // Workspace this window's server is bound to. Lets discovery clients
+    // (talk.js) prefer the window matching their working directory when no
+    // KILO_SERVER_FILE self-identification is available. Superset of the
+    // daemon.json schema — drop-in compatibility is preserved.
+    directory: dir,
+  }
+  try {
+    fs.mkdirSync(path.dirname(file), { recursive: true })
+    fs.writeFileSync(file, JSON.stringify(state, null, 2), { mode: 0o600 })
+    console.log("[Kilo New] ServerManager: 📝 Discovery file written:", file)
+  } catch (err) {
+    console.warn("[Kilo New] ServerManager: ⚠️ Failed to write discovery file:", err)
+  }
+}
+
+function removeDiscovery(pid?: number): void {
+  if (!pid) return
+  try {
+    fs.unlinkSync(discoveryFile(pid))
+    console.log("[Kilo New] ServerManager: 🗑️ Discovery file removed")
+  } catch {
+    // Already gone — ignore
+  }
+}
 
 type WorkspaceFolderLike = { uri: { fsPath: string } }
 type ServerExitListener = (code: number | null) => void
@@ -172,7 +260,9 @@ export class ServerManager {
         if (port !== null && !resolved) {
           resolved = true
           console.log("[Kilo New] ServerManager: 🎯 Port detected:", port)
-          resolve({ port, password, process: serverProcess })
+          const instance: ServerInstance = { port, password, process: serverProcess }
+          writeDiscovery(instance, this.context.extension.packageJSON.version, spawnCwd)
+          resolve(instance)
         }
       })
 
@@ -191,6 +281,7 @@ export class ServerManager {
 
       serverProcess.on("exit", (code) => {
         console.log("[Kilo New] ServerManager: 🛑 Process exited with code:", code)
+        removeDiscovery(serverProcess.pid)
         if (this.instance?.process === serverProcess) {
           this.instance = null
           this.onExit?.(code)
@@ -255,6 +346,7 @@ export class ServerManager {
     }
     const proc = this.instance.process
     this.instance = null
+    removeDiscovery(proc.pid)
 
     console.log("[Kilo New] ServerManager: 🔴 Disposing — sending SIGTERM to process group, PID:", proc.pid)
     ServerManager.killProcess(proc, "SIGTERM")

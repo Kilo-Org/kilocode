@@ -20,6 +20,7 @@ import { Plugin } from "@/plugin"
 import { normalizeUrls } from "@/kilocode/util/url" // kilocode_change
 import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { heredocs } from "@/kilocode/tool/shell-heredoc" // kilocode_change
+import { serverFileEnv } from "@/kilocode/tool/shell-env" // kilocode_change
 import { unparsed } from "@/kilocode/tool/shell-unparsed" // kilocode_change
 import { ChildProcess } from "effect/unstable/process"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
@@ -524,6 +525,8 @@ export const ShellTool = Tool.define(
       )
       return {
         ...process.env,
+        KILO_SESSION_ID: ctx.sessionID, // kilocode_change
+        ...serverFileEnv(), // kilocode_change
         ...extra.env,
       }
     })
