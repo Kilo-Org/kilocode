@@ -345,9 +345,7 @@ export namespace RemoteSender {
     // bus listener count from inflating for senders that never handle
     // attachments (the count would otherwise show up in unrelated tests
     // that assert it stays at 0).
-    const attachments =
-      options.attachments ??
-      ((sessionID: SessionID) => RemoteAttachments.create({ sessionID }))
+    const attachments = options.attachments ?? ((sessionID: SessionID) => RemoteAttachments.create({ sessionID }))
     const attachmentCache = new Map<SessionID, RemoteAttachments.Result>()
     const pending = new Map<SessionID, number>()
     const retired = new Map<SessionID, RemoteAttachments.Result>()

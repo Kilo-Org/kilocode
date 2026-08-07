@@ -3173,7 +3173,9 @@ describe("RemoteSender slash commands", () => {
           removeCalls.push(id)
         },
       },
-      attachSession: async () => { throw new Error("attach failed") },
+      attachSession: async () => {
+        throw new Error("attach failed")
+      },
     })
 
     const response = expectResponse(conn, sent, "req_spawn_failed")
@@ -3214,7 +3216,9 @@ describe("RemoteSender slash commands", () => {
           throw new Error("cleanup secondary failure")
         },
       },
-      attachSession: async () => { throw new Error("attach failed") },
+      attachSession: async () => {
+        throw new Error("attach failed")
+      },
     })
 
     const response = expectResponse(conn, sent, "req_spawn_then_cleanup_fail")
