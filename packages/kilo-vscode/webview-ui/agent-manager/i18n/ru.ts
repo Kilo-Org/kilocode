@@ -215,4 +215,8 @@ export const dict = {
   "agentManager.import.noBranchesFound": "Ветки не найдены.",
   "agentManager.import.noBranchesHint": "Вставьте URL PR выше или создайте новый Worktree.",
   "agentManager.import.failed": "Ошибка импорта",
+  "agentManager.caffeination.toggle": "Не переводить компьютер в сон",
+  "agentManager.caffeination.armed": "Режим предотвращения сна включён; нажмите для отключения",
+  "agentManager.caffeination.active": "Компьютер не переходит в сон",
+  "agentManager.caffeination.unavailable": "Режим предотвращения сна недоступен на этой платформе",
 }

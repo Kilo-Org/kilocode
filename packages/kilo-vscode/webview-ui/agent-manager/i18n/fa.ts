@@ -218,4 +218,8 @@ export const dict = {
   "agentManager.import.noBranchesFound": "هیچ شاخه‌ای یافت نشد.",
   "agentManager.import.noBranchesHint": "یک URL درخواست ادغام را در بالا جای‌گذاری کنید یا یک worktree جدید بسازید.",
   "agentManager.import.failed": "وارد کردن ناموفق بود",
+  "agentManager.caffeination.toggle": "رایانه را بیدار نگه دار",
+  "agentManager.caffeination.armed": "حالت بیدار نگه داشتن رایانه فعال است؛ برای غیرفعال کردن کلیک کنید",
+  "agentManager.caffeination.active": "رایانه بیدار نگه داشته می‌شود",
+  "agentManager.caffeination.unavailable": "حالت بیدار نگه داشتن رایانه در این پلتفرم در دسترس نیست",
 }
