@@ -461,7 +461,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
     const lifecycle = source.getProject().addSourceFileAtPath(path.join(ROOT, "src/agent-manager", module))
     const fn = lifecycle.getFunction(delegated[1]!)
     expect(fn, `delegated function ${delegated[1]} not found in ${module}`).toBeTruthy()
-    // The multi-version flow spans phase helpers (createVersion, sendInitialPrompts),
+    // The multi-version flow spans prepare, provision, and initial-prompt helpers,
     // so ordering assertions need the whole module, not just the orchestrator.
     if (delegated[1] === "createMultiVersion") return lifecycle.getText()
     return fn!.getText()
