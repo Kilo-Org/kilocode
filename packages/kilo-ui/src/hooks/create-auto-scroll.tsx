@@ -4,7 +4,6 @@ import { createResizeObserver } from "@solid-primitives/resize-observer"
 import { canScroll, distanceFromBottom } from "./auto-scroll"
 import { createUserActivity } from "./scroll-user-activity"
 
-const DEBOUNCE_MS = 100
 // Grace window after a real pointer/key/touch interaction during which a
 // ResizeObserver or non-user scroll event must not snap the view back to the
 // bottom. Upward wheel intent pauses immediately in its capture handler.
@@ -25,7 +24,6 @@ export function createAutoScroll(options: AutoScrollOptions) {
   let scroll: HTMLElement | undefined
   let settling = false
   let settleTimer: ReturnType<typeof setTimeout> | undefined
-  let stopTimer: ReturnType<typeof setTimeout> | undefined
   let cleanup: (() => void) | undefined
 
   const [store, setStore] = createStore({
@@ -101,28 +99,13 @@ export function createAutoScroll(options: AutoScrollOptions) {
   const handleScroll = () => {
     if (!scroll) return
 
-    const input = userActivity.consumeScroll()
+    userActivity.consumeScroll()
     const distance = distanceFromBottom(scroll)
 
     if (!canScroll(scroll)) return
 
     if (distance < threshold()) {
       if (store.userScrolled && (distance < 2 || !userActivity.isRecent())) setStore("userScrolled", false)
-      return
-    }
-
-    if (!store.userScrolled && !input) {
-      if (userActivity.isRecent()) {
-        stop()
-        return
-      }
-      if (stopTimer) clearTimeout(stopTimer)
-      stopTimer = setTimeout(() => {
-        stopTimer = undefined
-        if (!scroll) return
-        if (distanceFromBottom(scroll) < threshold()) return
-        stop()
-      }, DEBOUNCE_MS)
       return
     }
 
@@ -223,7 +206,6 @@ export function createAutoScroll(options: AutoScrollOptions) {
 
   onCleanup(() => {
     if (settleTimer) clearTimeout(settleTimer)
-    if (stopTimer) clearTimeout(stopTimer)
     if (cleanup) cleanup()
   })
 
