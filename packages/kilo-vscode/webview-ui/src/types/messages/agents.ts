@@ -11,6 +11,9 @@ export interface SkillInfo {
 export interface SlashCommandInfo {
   name: string
   description?: string
+  agent?: string
+  model?: string
+  variant?: string
   source?: "command" | "mcp" | "skill"
   hints: string[]
 }

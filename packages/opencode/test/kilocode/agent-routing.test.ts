@@ -1,7 +1,8 @@
 import { afterEach, expect, test } from "bun:test"
 import { Global } from "@opencode-ai/core/global"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import path from "path"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { Agent } from "../../src/agent/agent"
 import { Filesystem } from "../../src/util/filesystem"
 import {
@@ -15,8 +16,7 @@ import {
 function load(dir: string) {
   return Effect.runPromise(
     provideInstance(dir)(Agent.Service.use((svc) => svc.get("architect"))).pipe(
-      Effect.provide(Agent.defaultLayer),
-      Effect.provide(testInstanceStoreLayer),
+      Effect.provide(Layer.mergeAll(AppNodeBuilder.build(Agent.node), testInstanceStoreLayer)),
     ),
   )
 }

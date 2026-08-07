@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { FetchHttpClient } from "effect/unstable/http"
@@ -20,25 +21,22 @@ import { AuthTest } from "../fake/auth"
 import { NpmTest } from "../fake/npm"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
+import { Auth } from "../../src/auth"
+import { Account } from "../../src/account/account"
+import { Npm } from "@opencode-ai/core/npm"
 
-const configLayer = Config.layer.pipe(
-  Layer.provide(Git.defaultLayer), // kilocode_change
-  Layer.provide(EffectFlock.defaultLayer),
-  Layer.provide(FSUtil.defaultLayer),
-  Layer.provide(Env.defaultLayer),
-  Layer.provide(AuthTest.empty),
-  Layer.provide(AccountTest.empty),
-  Layer.provide(NpmTest.noop),
-  Layer.provide(FetchHttpClient.layer),
-)
+const configLayer = AppNodeBuilder.build(Config.node, [
+  [Auth.node, AuthTest.empty],
+  [Account.node, AccountTest.empty],
+  [Npm.node, NpmTest.noop],
+])
 const it = testEffect(
   Layer.mergeAll(
-    Plugin.layer.pipe(
-      Layer.provide(EventV2Bridge.defaultLayer),
-      Layer.provide(configLayer),
-      Layer.provide(RuntimeFlags.layer({ disableDefaultPlugins: true })),
-    ),
-    CrossSpawnSpawner.defaultLayer,
+    AppNodeBuilder.build(Plugin.node, [
+      [Config.node, configLayer],
+      [RuntimeFlags.node, RuntimeFlags.layer({ disableDefaultPlugins: true })],
+    ]),
+    AppNodeBuilder.build(CrossSpawnSpawner.node),
   ),
 )
 const systemHook = "experimental.chat.system.transform"

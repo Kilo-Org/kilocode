@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect } from "bun:test"
 import { Cause, Effect, Exit, Layer } from "effect"
 import { HttpClient } from "effect/unstable/http"
@@ -11,7 +12,7 @@ import { Truncate } from "@/tool/truncate"
 import { WebFetchTool } from "@/tool/webfetch"
 import { testEffect } from "../../lib/effect"
 
-const layer = Layer.mergeAll(ToolNetwork.httpLayer, Truncate.defaultLayer, Agent.defaultLayer)
+const layer = Layer.mergeAll(ToolNetwork.httpLayer, AppNodeBuilder.build(Truncate.node), AppNodeBuilder.build(Agent.node))
 const it = testEffect(layer)
 
 const ctx = {

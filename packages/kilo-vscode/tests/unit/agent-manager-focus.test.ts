@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test"
 import { Window } from "happy-dom"
-import { focusQuestionOption, hasQuestionOption } from "../../webview-ui/agent-manager/focus"
+import { focusQuestionOption, hasQuestionOption, preservesTextFocus } from "../../webview-ui/agent-manager/focus"
+import { isTextControl } from "../../webview-ui/src/utils/focus"
 
 describe("Agent Manager focus", () => {
   it("focuses the first enabled question option", () => {
@@ -52,5 +53,22 @@ describe("Agent Manager focus", () => {
     expect(hasQuestionOption(root)).toBe(true)
     dock.setAttribute("inert", "")
     expect(hasQuestionOption(root)).toBe(false)
+  })
+
+  it("preserves focus for an active editable control", () => {
+    const window = new Window()
+    const rename = window.document.createElement("input")
+    rename.className = "am-worktree-rename-input"
+    const prompt = window.document.createElement("textarea")
+    prompt.className = "prompt-input"
+    const editor = window.document.createElement("div")
+    editor.contentEditable = "plaintext-only"
+    const button = window.document.createElement("button")
+
+    expect(isTextControl(rename)).toBe(true)
+    expect(preservesTextFocus(rename)).toBe(true)
+    expect(preservesTextFocus(prompt)).toBe(false)
+    expect(isTextControl(editor)).toBe(true)
+    expect(isTextControl(button)).toBe(false)
   })
 })

@@ -13,6 +13,7 @@ import { readJson, writeJsonAtomic } from "../util/persistence"
 import { useTheme } from "./theme"
 import { useToast } from "../ui/toast"
 import { useRoute } from "./route"
+import { usePermission } from "./permission"
 
 export type LocalTheme = {
   secondary: RGBA
@@ -58,6 +59,9 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
     const theme = useTheme().theme
     const route = useRoute()
     const paths = useTuiPaths()
+    const args = useArgs()
+    const event = useEvent()
+    const permission = usePermission()
 
     function isModelValid(model: { providerID: string; modelID: string }) {
       const provider = sync.data.provider.find((item) => item.id === model.providerID)
@@ -239,7 +243,6 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           if (state.pending) save()
         })
 
-      const args = useArgs()
       const fallbackModel = createMemo(() => {
         if (args.model) {
           const { providerID, modelID } = parseModel(args.model)
@@ -515,8 +518,6 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           if (state.pending) save()
         })
 
-      const event = useEvent()
-
       const slots = createMemo(() => {
         const existing = new Set(sync.data.session.filter((x) => x.parentID === undefined).map((x) => x.id))
         return sessionStore.pinned.filter((id) => existing.has(id)).slice(0, 9)
@@ -606,6 +607,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       agent,
       mcp,
       session,
+      permission,
     }
     return result
   },

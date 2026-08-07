@@ -1,12 +1,11 @@
 export * as Ripgrep from "./ripgrep"
 
-import { Context, Effect, Fiber, Layer, Schema, Stream } from "effect"
+import { Context, Duration, Effect, Fiber, Layer, Schema, Stream } from "effect"
 import { ChildProcess } from "effect/unstable/process"
-import path from "path"
-import { LayerNode } from "./effect/layer-node"
-import { Entry, Match } from "./filesystem/schema"
-import { FSUtil } from "./fs-util"
+import { makeGlobalNode } from "./effect/app-node"
+import { Entry, Match } from "@opencode-ai/schema/filesystem"
 import * as KiloGrep from "./kilocode/ripgrep-grep" // kilocode_change
+import * as SpawnExit from "./kilocode/spawn-exit" // kilocode_change
 import * as SpawnValidation from "./kilocode/spawn-validation" // kilocode_change
 import { AppProcess, collectStream, waitForAbort } from "./process"
 import { NonNegativeInt, PositiveInt, RelativePath } from "./schema"
@@ -44,7 +43,7 @@ type RawMatchData = (typeof RawMatch.Type)["data"] & { readonly context: boolean
 
 export class Error extends Schema.TaggedErrorClass<Error>()("Ripgrep.Error", {
   message: Schema.String,
-  cause: Schema.optional(Schema.Defect),
+  cause: Schema.optional(Schema.Defect()),
 }) {}
 
 export class InvalidPatternError extends Schema.TaggedErrorClass<InvalidPatternError>()("Ripgrep.InvalidPatternError", {
@@ -104,7 +103,7 @@ const failure = (message: string, cause?: unknown) => new Error({ message, cause
 const isInvalidPattern = (stderr: string) =>
   stderr.includes("regex parse error") || stderr.includes("error parsing regex")
 
-export const layer = Layer.effect(
+const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const process = yield* AppProcess.Service
@@ -129,10 +128,11 @@ export const layer = Layer.effect(
             cwd: input.cwd,
             extendEnv: true,
             stdin: "ignore",
+            forceKillAfter: input.stop ? Duration.seconds(1) : undefined, // kilocode_change - bound grep interruption
           })
-          const handle = yield* process.spawn(
-            input.validate ? SpawnValidation.attach(command, input.validate) : command,
-          )
+          const validated = input.validate ? SpawnValidation.attach(command, input.validate) : command
+          const spawned = input.stop ? SpawnExit.attach(validated) : validated // kilocode_change
+          const handle = yield* process.spawn(spawned)
           // kilocode_change end
           const stderrFiber = yield* collectStream(handle.stderr, ERROR_BYTES).pipe(
             Effect.map((output) => output.buffer.toString("utf8")),
@@ -160,7 +160,7 @@ export const layer = Layer.effect(
             Effect.map((chunk) => [...chunk]),
           )
           if (stopped) return { items: rows, truncated: true, partial: false } // kilocode_change
-          const truncated = input.stop ? false : rows.length > input.limit // kilocode_change - custom stop predicates own truncation
+          const truncated = input.stop ? false : rows.length > input.limit // kilocode_change - custom stop owns truncation
           if (truncated) return { items: rows.slice(0, input.limit), truncated, partial: false }
 
           const code = yield* handle.exitCode
@@ -213,14 +213,12 @@ export const layer = Layer.effect(
           // kilocode_change start - retain spawn metadata after mapping paths
           Effect.map((result) => ({
             ...result,
-            items: result.items.map((relative) => {
-              const absolute = path.resolve(input.cwd, relative)
-              return new Entry({
+            items: result.items.map((relative) =>
+              Entry.make({
                 path: RelativePath.make(relative),
                 type: "file",
-                mime: FSUtil.mimeType(absolute),
-              })
-            }),
+              }),
+            ),
           })),
           // kilocode_change end
           Effect.catchTag("Ripgrep.InvalidPatternError", (cause) => Effect.fail(failure(cause.message, cause))),
@@ -245,10 +243,9 @@ export const layer = Layer.effect(
               .replace(/^[\\/]+/u, "")
               .replaceAll("\\", "/")
             return Effect.succeed(
-              new Entry({
+              Entry.make({
                 path: RelativePath.make(relative),
                 type: "file",
-                mime: FSUtil.mimeType(path.resolve(input.cwd, relative)),
               }),
             )
           },
@@ -309,12 +306,10 @@ export const layer = Layer.effect(
                 .replace(/^(?:\.[\\/])+/u, "")
                 .replace(/^[\\/]+/u, "")
                 .replaceAll("\\", "/")
-              const absolute = path.resolve(input.cwd, relative)
-              const item = new Match({
-                entry: new Entry({
+              const item = Match.make({
+                entry: Entry.make({
                   path: RelativePath.make(relative),
                   type: "file",
-                  mime: FSUtil.mimeType(absolute),
                 }),
                 line: match.line_number,
                 offset: match.absolute_offset,
@@ -334,5 +329,4 @@ export const layer = Layer.effect(
   }),
 )
 
-export const defaultLayer = layer.pipe(Layer.provide(Layer.merge(RipgrepBinary.defaultLayer, AppProcess.defaultLayer)))
-export const node = LayerNode.make(layer, [RipgrepBinary.node, AppProcess.node])
+export const node = makeGlobalNode({ service: Service, layer: layer, deps: [RipgrepBinary.node, AppProcess.node] })

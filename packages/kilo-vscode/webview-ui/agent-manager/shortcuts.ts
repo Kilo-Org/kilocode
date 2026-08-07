@@ -12,15 +12,16 @@ export function buildShortcutCategories(
   bindings: Record<string, string>,
   t: (key: string, params?: Record<string, string | number>) => string,
 ): ShortcutCategory[] {
+  const bind = (key: string) => bindings[key] ?? ""
   return [
     {
       title: t("agentManager.shortcuts.category.quickSwitch"),
       shortcuts: [
-        { label: t("agentManager.sidebarSearch.label"), binding: bindings.search ?? "" },
+        { label: t("agentManager.sidebarSearch.label"), binding: bind("search") },
         {
           label: t("agentManager.shortcuts.jumpToItem"),
           binding: (() => {
-            const first = bindings.jumpTo1 ?? ""
+            const first = bind("jumpTo1")
             const prefix = first.replace(/\d+$/, "")
             return prefix ? `${prefix}1-9` : ""
           })(),
@@ -30,39 +31,48 @@ export function buildShortcutCategories(
     {
       title: t("agentManager.shortcuts.category.sidebar"),
       shortcuts: [
-        { label: t("agentManager.shortcuts.previousItem"), binding: bindings.previousSession ?? "" },
-        { label: t("agentManager.shortcuts.nextItem"), binding: bindings.nextSession ?? "" },
+        { label: t("agentManager.shortcuts.previousItem"), binding: bind("previousSession") },
+        { label: t("agentManager.shortcuts.nextItem"), binding: bind("nextSession") },
         { label: t("agentManager.shortcuts.advancedWorktree"), binding: bindings.newWorktree ?? "" },
         { label: t("agentManager.shortcuts.newWorktree"), binding: bindings.quickWorktree ?? "" },
-        { label: t("agentManager.shortcuts.deleteWorktree"), binding: bindings.closeWorktree ?? "" },
-        { label: t("agentManager.shortcuts.openWorktree"), binding: bindings.openWorktree ?? "" },
-        { label: t("agentManager.shortcuts.openPR"), binding: bindings.openPR ?? "" },
+        { label: t("agentManager.shortcuts.deleteWorktree"), binding: bind("closeWorktree") },
+        { label: t("agentManager.shortcuts.openWorktree"), binding: bind("openWorktree") },
+        { label: t("agentManager.shortcuts.openPR"), binding: bind("openPR") },
       ],
     },
     {
       title: t("agentManager.shortcuts.category.tabs"),
       shortcuts: [
-        { label: t("agentManager.shortcuts.previousTab"), binding: bindings.previousTab ?? "" },
-        { label: t("agentManager.shortcuts.nextTab"), binding: bindings.nextTab ?? "" },
-        { label: t("agentManager.shortcuts.newTab"), binding: bindings.newTab ?? "" },
-        { label: t("agentManager.shortcuts.closeTab"), binding: bindings.closeTab ?? "" },
+        { label: t("agentManager.shortcuts.previousTab"), binding: bind("previousTab") },
+        { label: t("agentManager.shortcuts.nextTab"), binding: bind("nextTab") },
+        { label: t("agentManager.shortcuts.newTab"), binding: bind("newTab") },
+        { label: t("agentManager.shortcuts.closeTab"), binding: bind("closeTab") },
       ],
     },
     {
       title: t("agentManager.shortcuts.category.terminal"),
       shortcuts: [
-        { label: t("agentManager.shortcuts.toggleTerminal"), binding: bindings.showTerminal ?? "" },
-        { label: t("agentManager.shortcuts.runScript"), binding: bindings.runScript ?? "" },
-        { label: t("agentManager.shortcuts.toggleDiff"), binding: bindings.toggleDiff ?? "" },
+        { label: t("agentManager.shortcuts.toggleTerminal"), binding: bind("showTerminal") },
+        { label: t("agentManager.terminal.add"), binding: bind("newTerminal") },
+        {
+          label: `${t("agentManager.shortcuts.previousTab")} (${t("agentManager.tab.terminal")})`,
+          binding: bind("previousTerminal"),
+        },
+        {
+          label: `${t("agentManager.shortcuts.nextTab")} (${t("agentManager.tab.terminal")})`,
+          binding: bind("nextTerminal"),
+        },
+        { label: t("agentManager.shortcuts.runScript"), binding: bind("runScript") },
+        { label: t("agentManager.shortcuts.toggleDiff"), binding: bind("toggleDiff") },
       ],
     },
     {
       title: t("agentManager.shortcuts.category.global"),
       shortcuts: [
-        { label: t("agentManager.shortcuts.openAgentManager"), binding: bindings.agentManagerOpen ?? "" },
-        { label: t("agentManager.shortcuts.cycleAgentMode"), binding: bindings.cycleAgentMode ?? "" },
-        { label: t("agentManager.shortcuts.cyclePreviousAgentMode"), binding: bindings.cyclePreviousAgentMode ?? "" },
-        { label: t("agentManager.shortcuts.showShortcuts"), binding: bindings.showShortcuts ?? "" },
+        { label: t("agentManager.shortcuts.openAgentManager"), binding: bind("agentManagerOpen") },
+        { label: t("agentManager.shortcuts.cycleAgentMode"), binding: bind("cycleAgentMode") },
+        { label: t("agentManager.shortcuts.cyclePreviousAgentMode"), binding: bind("cyclePreviousAgentMode") },
+        { label: t("agentManager.shortcuts.showShortcuts"), binding: bind("showShortcuts") },
       ].filter((s) => s.binding),
     },
   ].filter((c) => c.shortcuts.length > 0)

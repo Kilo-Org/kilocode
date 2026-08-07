@@ -20,9 +20,9 @@ test("SummaryFileDiff parse strips `patch` when present on input", () => {
   expect(parsed).toEqual({ file: "a.txt", additions: 1, deletions: 1, status: "modified" })
 })
 
-test("SummaryFileDiff differs from FileDiff by exactly `patch`", () => {
+test("SummaryFileDiff drops the heavy content fields from FileDiff", () => {
   const full = new Set(Object.keys(Snapshot.FileDiff.fields))
   const summary = new Set(Object.keys(Snapshot.SummaryFileDiff.fields))
-  expect([...full].filter((k) => !summary.has(k))).toEqual(["patch"])
+  expect([...full].filter((k) => !summary.has(k)).sort()).toEqual(["after", "before", "patch"])
   expect([...summary].filter((k) => !full.has(k))).toEqual([])
 })

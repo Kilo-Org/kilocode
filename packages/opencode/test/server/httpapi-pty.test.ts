@@ -81,11 +81,18 @@ describe("pty HttpApi bridge", () => {
     expect(list.status).toBe(200)
     expect(await list.json()).toEqual([])
 
+    // kilocode_change start - test initial spawn dimensions
     const created = await app().request(PtyPaths.create, {
       method: "POST",
       headers: { ...headers, "content-type": "application/json" },
-      body: JSON.stringify({ command: "/usr/bin/env", args: ["sh", "-c", "sleep 5"], title: "demo" }),
+      body: JSON.stringify({
+        command: "/usr/bin/env",
+        args: ["sh", "-c", "sleep 5"],
+        title: "demo",
+        size: { cols: 50, rows: 20 },
+      }),
     })
+    // kilocode_change end
     expect(created.status).toBe(200)
     const info = await created.json()
 

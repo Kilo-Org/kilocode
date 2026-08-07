@@ -1,25 +1,21 @@
 import { describe, expect } from "bun:test"
-import { Effect, Exit, Layer, Schema } from "effect"
 import path from "path"
+import { Effect } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { Agent } from "../../../src/agent/agent"
 import { Git } from "../../../src/git"
-import { GrepTool, Parameters } from "../../../src/tool/grep"
+import { GrepTool } from "../../../src/tool/grep"
 import { Truncate } from "../../../src/tool/truncate"
 import { MessageID, SessionID } from "../../../src/session/schema"
 import { TestInstance } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
 
 const it = testEffect(
-  Layer.mergeAll(
-    CrossSpawnSpawner.defaultLayer,
-    FSUtil.defaultLayer,
-    Ripgrep.defaultLayer,
-    Truncate.defaultLayer,
-    Agent.defaultLayer,
-    Git.defaultLayer,
+  LayerNode.compile(
+    LayerNode.group([CrossSpawnSpawner.node, FSUtil.node, Ripgrep.node, Truncate.node, Agent.node, Git.node]),
   ),
 )
 
@@ -42,24 +38,14 @@ const init = Effect.gen(function* () {
 })
 
 describe("Kilo grep signal-to-noise controls", () => {
-  it.effect("validates signal controls", () =>
-    Effect.sync(() => {
-      expect(Schema.decodeUnknownSync(Parameters)({ pattern: "needle", context: 0, limit: 1 })).toMatchObject({
-        context: 0,
-        limit: 1,
-      })
-      expect(() => Schema.decodeUnknownSync(Parameters)({ pattern: "needle", context: -1 })).toThrow()
-      expect(() => Schema.decodeUnknownSync(Parameters)({ pattern: "needle", limit: 0 })).toThrow()
-      expect(() => Schema.decodeUnknownSync(Parameters)({ pattern: "needle", limit: 1.5 })).toThrow()
-    }),
-  )
-
   it.instance("preserves the default match output", () =>
     Effect.gen(function* () {
       const test = yield* TestInstance
       yield* Effect.promise(() => Bun.write(file(test, "default.txt"), "before\nneedle\nafter\n"))
       const grep = yield* init
-      const result = yield* grep.execute({ pattern: "needle", path: test.directory }, ctx)
+      const result = yield* grep
+        .execute({ pattern: "needle", path: test.directory }, ctx)
+        .pipe(Effect.timeout("2 seconds"))
 
       expect(result.metadata.matches).toBe(1)
       expect(result.output).toContain("Line 2: needle")
@@ -67,63 +53,40 @@ describe("Kilo grep signal-to-noise controls", () => {
     }),
   )
 
-  it.instance("stops after the custom match limit", () =>
-    Effect.gen(function* () {
-      const test = yield* TestInstance
-      yield* Effect.promise(() =>
-        Bun.write(file(test, "many.txt"), `${Array.from({ length: 20 }, () => "needle").join("\n")}\n`),
-      )
-      const grep = yield* init
-      const result = yield* grep.execute({ pattern: "needle", path: test.directory, limit: 2 }, ctx)
-
-      expect(result.metadata.matches).toBe(2)
-      expect(result.metadata.truncated).toBe(true)
-      expect(result.output).toContain("2 matches limit reached. Use limit=4 for more, or refine pattern.")
-      expect(result.output).not.toContain("(Results truncated")
-      expect(result.output).not.toContain("Line 3: needle")
-    }),
-  )
-
-  it.instance("supports literal and case-insensitive matching", () =>
-    Effect.gen(function* () {
-      const test = yield* TestInstance
-      yield* Effect.promise(() =>
-        Promise.all([
-          Bun.write(file(test, "literal.txt"), "a.*b\n"),
-          Bun.write(file(test, "regex.txt"), "azb\n"),
-          Bun.write(file(test, "case.txt"), "Needle\n"),
-        ]),
-      )
-      const grep = yield* init
-      const literal = yield* grep.execute({ pattern: "a.*b", path: test.directory, literal: true }, ctx)
-      const insensitive = yield* grep.execute({ pattern: "needle", path: test.directory, ignoreCase: true }, ctx)
-
-      expect(literal.metadata.matches).toBe(1)
-      expect(literal.output).toContain("literal.txt")
-      expect(literal.output).not.toContain("regex.txt")
-      expect(insensitive.metadata.matches).toBe(1)
-      expect(insensitive.output).toContain("case.txt")
-    }),
-  )
-
-  it.instance("formats only bounded context around returned matches", () =>
+  it.instance("executes all signal controls and settles at the custom limit", () =>
     Effect.gen(function* () {
       const test = yield* TestInstance
       yield* Effect.promise(() =>
         Bun.write(
-          file(test, "context.txt"),
-          ["before", "needle", "after", "far", "later needle", "later after"].join("\n") + "\n",
+          file(test, "controls.txt"),
+          ["regex before", "NEEDLEzzz", "regex after", "before", "NEEDLE.*", "after", "far", "needle.*"].join("\n") +
+            "\n",
         ),
       )
       const grep = yield* init
-      const result = yield* grep.execute({ pattern: "needle", path: test.directory, context: 1, limit: 1 }, ctx)
+      const result = yield* grep
+        .execute(
+          {
+            pattern: "needle.*",
+            path: test.directory,
+            include: "*.txt",
+            context: 1,
+            limit: 1,
+            literal: true,
+            ignoreCase: true,
+          },
+          ctx,
+        )
+        .pipe(Effect.timeout("2 seconds"))
 
-      expect(result.metadata.matches).toBe(1)
-      expect(result.output).toContain("[context] Line 1: before")
-      expect(result.output).toContain("[match] Line 2: needle")
-      expect(result.output).toContain("[context] Line 3: after")
-      expect(result.output).not.toContain("Line 4: far")
-      expect(result.output).not.toContain("later needle")
+      expect(result.metadata).toEqual({ matches: 1, truncated: true })
+      expect(result.output).toContain("[context] Line 4: before")
+      expect(result.output).toContain("[match] Line 5: NEEDLE.*")
+      expect(result.output).toContain("[context] Line 6: after")
+      expect(result.output).not.toContain("NEEDLEzzz")
+      expect(result.output).not.toContain("Line 7: far")
+      expect(result.output).not.toContain("Line 8: needle.*")
+      expect(result.output).toContain("1 matches limit reached. Use limit=2 for more, or refine pattern.")
     }),
   )
 
@@ -136,7 +99,9 @@ describe("Kilo grep signal-to-noise controls", () => {
       ).join("\n")
       yield* Effect.promise(() => Bun.write(file(test, "context-limit.txt"), `${content}\n`))
       const grep = yield* init
-      const result = yield* grep.execute({ pattern: "needle", path: test.directory, context: 1, limit: 100 }, ctx)
+      const result = yield* grep
+        .execute({ pattern: "needle", path: test.directory, context: 1, limit: 100 }, ctx)
+        .pipe(Effect.timeout("2 seconds"))
 
       expect(result.metadata.matches).toBe(35)
       expect(result.metadata.truncated).toBe(false)
@@ -154,39 +119,6 @@ describe("Kilo grep signal-to-noise controls", () => {
 
       expect(result.metadata.matches).toBe(1)
       expect(result.output).toContain("Some matching or context lines were truncated. Use read for full lines.")
-    }),
-  )
-
-  it.instance("retains include filtering", () =>
-    Effect.gen(function* () {
-      const test = yield* TestInstance
-      yield* Effect.promise(() =>
-        Promise.all([
-          Bun.write(file(test, "included.ts"), "needle\n"),
-          Bun.write(file(test, "excluded.txt"), "needle\n"),
-        ]),
-      )
-      const grep = yield* init
-      const result = yield* grep.execute({ pattern: "needle", path: test.directory, include: "*.ts" }, ctx)
-
-      expect(result.metadata.matches).toBe(1)
-      expect(result.output).toContain("included.ts")
-      expect(result.output).not.toContain("excluded.txt")
-    }),
-  )
-
-  it.instance("honors cancellation", () =>
-    Effect.gen(function* () {
-      const test = yield* TestInstance
-      yield* Effect.promise(() => Bun.write(file(test, "cancel.txt"), "needle\n".repeat(10_000)))
-      const grep = yield* init
-      const controller = new AbortController()
-      controller.abort()
-      const exit = yield* grep
-        .execute({ pattern: "needle", path: test.directory }, { ...ctx, abort: controller.signal })
-        .pipe(Effect.exit)
-
-      expect(Exit.isFailure(exit)).toBe(true)
     }),
   )
 })

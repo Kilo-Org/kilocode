@@ -1,9 +1,10 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect, test } from "bun:test"
-import { Effect, Layer, ManagedRuntime, Queue } from "effect"
+import { Effect, Layer, ManagedRuntime, Queue, Schema } from "effect"
 import { MessageID, SessionID } from "../../src/session/schema"
 import { provideTmpdirInstance } from "../fixture/fixture"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
-import { AgentManagerTool } from "../../src/kilocode/tool/agent-manager"
+import { AgentManagerTool, Params } from "../../src/kilocode/tool/agent-manager"
 import { AgentManagerEvent, type AgentManagerStart } from "../../src/kilocode/agent-manager/event"
 import { AgentManager } from "../../src/kilocode/agent-manager/service"
 import { Bus } from "../../src/bus"
@@ -66,10 +67,10 @@ const agent: Agent.Info = {
 function makeRuntime(defaultProviderID = "test", host: Partial<AgentManager.Interface> = {}) {
   return ManagedRuntime.make(
     Layer.mergeAll(
-      Truncate.defaultLayer,
+      AppNodeBuilder.build(Truncate.node),
       Layer.mock(Agent.Service, { get: () => Effect.succeed(agent) }),
-      Bus.defaultLayer,
-      CrossSpawnSpawner.defaultLayer,
+      AppNodeBuilder.build(Bus.node),
+      AppNodeBuilder.build(CrossSpawnSpawner.node),
       Layer.mock(AgentManager.Service, host),
       Layer.mock(Provider.Service, {
         list: () => Effect.succeed(providers),
@@ -163,8 +164,9 @@ describe("agent_manager tool", () => {
     expect(action && typeof action === "object" ? action.description : undefined).toContain("Use list first")
     expect(action && typeof action === "object" ? action.description : undefined).toContain("Never edit")
     expect(schema.properties?.sessionID).toEqual(
-      expect.objectContaining({ description: expect.stringContaining("returned by action=list") }),
+      expect.objectContaining({ description: expect.stringContaining("IDs start with ses_") }),
     )
+    expect(schema.properties?.sessionID).not.toHaveProperty("pattern")
     expect(schema.properties?.sectionID).toEqual(
       expect.objectContaining({ description: expect.stringContaining("Use null to unassign") }),
     )
@@ -183,6 +185,11 @@ describe("agent_manager tool", () => {
       "prompt",
       "sectionID",
     ])
+  })
+
+  test("keeps session ID validation local", () => {
+    expect(Schema.is(Params)({ action: "stop", sessionID: "ses_target" })).toBe(true)
+    expect(Schema.is(Params)({ action: "stop", sessionID: "invalid" })).toBe(false)
   })
 
   test("asks for agent_manager permission", async () => {

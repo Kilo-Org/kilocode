@@ -135,8 +135,12 @@ data class AgentInfo(
 data class CommandInfo(
     val name: String,
     val description: String?,
+    val agent: String?,
+    val model: String?,
+    val variant: String?,
     val source: String?,
     val hints: List<String>,
+    val subtask: Boolean?,
 )
 
 data class SkillInfo(

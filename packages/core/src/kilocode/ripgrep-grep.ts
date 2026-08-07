@@ -1,4 +1,4 @@
-import type { Match } from "../filesystem/schema"
+import type { Match } from "@opencode-ai/schema/filesystem"
 
 export interface Options {
   readonly context?: number
@@ -46,8 +46,5 @@ export const select = <
   )
 }
 
-export const decorate = (match: Match, context: boolean, textTruncated: boolean): GrepMatch => ({
-  ...match,
-  context,
-  textTruncated,
-})
+export const decorate = (match: Match, context: boolean, textTruncated: boolean): GrepMatch =>
+  Object.assign(match, { context, textTruncated })

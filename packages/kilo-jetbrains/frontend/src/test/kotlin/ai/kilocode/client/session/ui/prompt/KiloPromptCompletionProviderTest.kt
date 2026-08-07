@@ -174,6 +174,69 @@ class KiloPromptCompletionProviderTest : BasePlatformTestCase() {
         assertFalse(myFixture.lookupElementStrings.orEmpty().contains(noMatches()))
     }
 
+    fun `test slash completion ranks prefix matches before contains matches`() {
+        rpc.state.value = KiloWorkspaceStateDto(
+            KiloWorkspaceStatusDto.READY,
+            commands = listOf(
+                CommandDto("three-jetbrains"),
+                CommandDto("jetbrains-one"),
+                CommandDto("jetbrains-two"),
+            ),
+        )
+        waitFor { provider.serverCommand("/jetbrains-one") != null }
+
+        complete("/jet<caret>")
+
+        assertOrder("jetbrains-one", "jetbrains-two", "three-jetbrains")
+    }
+
+    fun `test slash completion matches prefix across separators`() {
+        rpc.state.value = KiloWorkspaceStateDto(
+            KiloWorkspaceStatusDto.READY,
+            commands = listOf(
+                CommandDto("three-jetbrains"),
+                CommandDto("jetbrains-one"),
+                CommandDto("jetbrains-two"),
+                CommandDto("jetbrains_two"),
+                CommandDto("jetbrains.three"),
+                CommandDto("jetbrains:four"),
+                CommandDto("jetbrains+five"),
+            ),
+        )
+        waitFor { provider.serverCommand("/jetbrains-one") != null }
+
+        complete("/j-<caret>")
+        assertEquals(
+            listOf("jetbrains-one", "jetbrains-two"),
+            matches("jetbrains-one", "jetbrains-two", "jetbrains_two", "three-jetbrains"),
+        )
+
+        complete("/j_<caret>")
+        assertEquals(listOf("jetbrains_two"), matches("jetbrains-one", "jetbrains_two", "three-jetbrains"))
+
+        complete("/j.<caret>")
+        assertEquals(listOf("jetbrains.three"), matches("jetbrains.three", "jetbrains:four", "jetbrains+five"))
+
+        complete("/j:<caret>")
+        assertEquals(listOf("jetbrains:four"), matches("jetbrains.three", "jetbrains:four", "jetbrains+five"))
+
+        complete("/j+<caret>")
+        assertEquals(listOf("jetbrains+five"), matches("jetbrains.three", "jetbrains:four", "jetbrains+five"))
+    }
+
+    fun `test slash completion matches camel humps with capitals`() {
+        rpc.state.value = KiloWorkspaceStateDto(
+            KiloWorkspaceStatusDto.READY,
+            commands = listOf(CommandDto("jetBrainsSkill"), CommandDto("jetbrains-skill")),
+        )
+        waitFor { provider.serverCommand("/jetBrainsSkill") != null }
+
+        complete("/JBS<caret>")
+
+        assertContainsElements(myFixture.lookupElementStrings.orEmpty(), "jetBrainsSkill")
+        assertFalse(myFixture.lookupElementStrings.orEmpty().contains(noMatches()))
+    }
+
     fun `test blank mention completion includes special and root entries`() {
         rpc.searchResult = FileSearchResultDto(
             files = listOf(file("src", directory = true), file("README.md")),
@@ -379,6 +442,19 @@ class KiloPromptCompletionProviderTest : BasePlatformTestCase() {
     private fun icon(value: String) = LookupElementPresentation().also { item(value).renderElement(it) }.icon
 
     private fun item(value: String) = myFixture.lookupElements.orEmpty().first { it.lookupString == value }
+
+    private fun assertOrder(vararg values: String) {
+        val items = myFixture.lookupElementStrings.orEmpty()
+        assertContainsElements(items, *values)
+        values.toList().zipWithNext().forEach { (left, right) ->
+            assertTrue("Expected $left before $right in $items", items.indexOf(left) < items.indexOf(right))
+        }
+    }
+
+    private fun matches(vararg values: String): List<String> {
+        val items = myFixture.lookupElementStrings.orEmpty()
+        return values.filter { it in items }
+    }
 
     private fun file(path: String, directory: Boolean = false) = WorkspaceFileDto(
         path = path,

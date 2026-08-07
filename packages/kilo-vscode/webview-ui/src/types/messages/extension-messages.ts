@@ -18,7 +18,8 @@ import type { AgentManagerSidebarTarget } from "./webview-messages"
 import type { PermissionRequest } from "./permissions"
 import type { AnacondaDesktopExtensionMessage } from "../../../../src/shared/anaconda-desktop-messages"
 import type { QuestionRequest, SuggestionRequest, TodoItem } from "./questions"
-import type { ModelSelection, Provider, ProviderAuthState } from "./providers"
+import type { ModelSelection, ModelUsageMap, Provider, ProviderAuthState } from "./providers"
+import type { SpeechToTextModelDef } from "../../../../src/speech-to-text/models"
 import type { AgentInfo, AgentRequirementResult, SkillInfo, SlashCommandInfo } from "./agents"
 import type {
   BrowserSettings,
@@ -383,6 +384,11 @@ export interface ImageModelsLoadedMessage {
   models: Array<{ id: string; name: string; description?: string }>
 }
 
+export interface SpeechToTextModelsLoadedMessage {
+  type: "speechToTextModelsLoaded"
+  models: SpeechToTextModelDef[]
+}
+
 export interface ProvidersLoadedMessage {
   type: "providersLoaded"
   providers: Record<string, Provider>
@@ -654,6 +660,11 @@ export interface ThroughputSettingLoadedMessage {
   visible: boolean
 }
 
+export interface AutoApprovalReasonSettingLoadedMessage {
+  type: "autoApprovalReasonSettingLoaded"
+  visible: boolean
+}
+
 export interface WorkStyleLoadedMessage {
   type: "workStyleLoaded"
   style: WorkStyleState
@@ -739,6 +750,7 @@ export interface AgentManagerStateMessage {
   /** Last selected sidebar target for seamless project-switch restore. */
   activeTarget?: AgentManagerSidebarTarget
   terminalDestination?: TerminalDestination
+  terminalFont?: TerminalFont
 }
 
 // A registered Agent Manager project as shown in the sidebar
@@ -778,9 +790,9 @@ export interface AgentManagerProjectSessionsMessage {
 
 export interface AgentManagerTerminalCreatedMessage {
   type: "agentManager.terminal.created"
-  /** Correlates with the create request; lets the webview spot stale
-   *  creates. Deliberately not named `requestId`: that field name is the
-   *  generic webview request/response correlation channel. */
+  /** Logical terminal id selected by the webview before PTY startup.
+   *  Deliberately not named `requestId`: that field name is the generic
+   *  webview request/response correlation channel. */
   createId: string
   placement: TerminalPlacement
   /** null for LOCAL, worktree id otherwise */
@@ -894,6 +906,8 @@ export interface SandboxStatusErrorMessage {
 // Multi-version creation progress (extension → webview)
 export interface AgentManagerMultiVersionProgressMessage {
   type: "agentManager.multiVersionProgress"
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
   status: "creating" | "done"
   total: number
   completed: number
@@ -909,6 +923,11 @@ export interface VariantsLoadedMessage {
 export interface RecentsLoadedMessage {
   type: "recentsLoaded"
   recents: ModelSelection[]
+}
+
+export interface ModelUsageLoadedMessage {
+  type: "modelUsageLoaded"
+  usage: ModelUsageMap
 }
 
 // Persisted model-selector expand/collapse preference (extension → webview)
@@ -938,6 +957,7 @@ export interface AgentManagerBranchesMessage {
 // Agent Manager Import tab: result feedback (extension → webview)
 export interface AgentManagerImportResultMessage {
   type: "agentManager.importResult"
+  projectId?: string
   success: boolean
   message: string
   errorCode?: WorktreeErrorCode
@@ -1037,6 +1057,8 @@ export interface WorktreeStatsLoadedMessage {
 // Set the model for a session (extension → webview, used during multi-version creation)
 export interface AgentManagerSetSessionModelMessage {
   type: "agentManager.setSessionModel"
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
   sessionId: string
   providerID: string
   modelID: string
@@ -1045,6 +1067,8 @@ export interface AgentManagerSetSessionModelMessage {
 // Request webview to send initial prompt to a newly created session (extension → webview)
 export interface AgentManagerSendInitialMessage {
   type: "agentManager.sendInitialMessage"
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
   sessionId: string
   worktreeId: string
   text?: string
@@ -1285,6 +1309,7 @@ export type ExtensionMessage =
   | MessagesLoadedMessage
   | SessionModelUsageLoadedMessage
   | SessionModelUsageChangedMessage
+  | ModelUsageLoadedMessage
   | MessageCreatedMessage
   | SessionsLoadedMessage
   | CloudSessionsLoadedMessage
@@ -1301,6 +1326,7 @@ export type ExtensionMessage =
   | ChatSettingsLoadedMessage
   | KiloEmbeddingModelsLoadedMessage
   | ImageModelsLoadedMessage
+  | SpeechToTextModelsLoadedMessage
   | ProvidersLoadedMessage
   | AgentsLoadedMessage
   | SkillsLoadedMessage
@@ -1338,6 +1364,7 @@ export type ExtensionMessage =
   | NotificationSettingsLoadedMessage
   | TimelineSettingLoadedMessage
   | ThroughputSettingLoadedMessage
+  | AutoApprovalReasonSettingLoadedMessage
   | WorkStyleLoadedMessage
   | WorkStyleAppliedMessage
   | WorkStyleApplyFailedMessage
