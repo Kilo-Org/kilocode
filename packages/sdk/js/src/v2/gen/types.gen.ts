@@ -12328,6 +12328,10 @@ export type PtyCreateData = {
     env?: {
       [key: string]: string
     }
+    size?: {
+      rows: number
+      cols: number
+    }
   }
   path?: never
   query?: {
@@ -20247,6 +20251,10 @@ export type V2PtyCreateData = {
     title?: string
     env?: {
       [key: string]: string
+    }
+    size?: {
+      rows: number
+      cols: number
     }
   }
   path?: never
