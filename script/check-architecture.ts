@@ -71,17 +71,16 @@ for (const scope of DOMAIN_SCOPES) {
 // Rule 2: Kilo InstanceState.make Ratchet (Kilo-owned code)
 // ---------------------------------------------------------------------------
 
-const opencodeSrc = path.join(ROOT, "packages", "opencode", "src")
-const opencodeGlob = new Bun.Glob("**/*.ts")
+const srcGlob = new Bun.Glob("packages/*/src/**/*.ts")
 const kiloInstanceHits = new Map<string, number>()
 
-for (const file of opencodeGlob.scanSync({ cwd: opencodeSrc, onlyFiles: true })) {
-  const relPath = `packages/opencode/src/${file.replaceAll("\\", "/")}`
-  if (!isKiloOwned(relPath)) continue
-  const text = await Bun.file(path.join(opencodeSrc, file)).text()
+for (const file of srcGlob.scanSync({ cwd: ROOT, onlyFiles: true })) {
+  const normPath = file.replaceAll("\\", "/")
+  if (!isKiloOwned(normPath)) continue
+  const text = await Bun.file(path.join(ROOT, file)).text()
   const matches = [...text.matchAll(/\bInstanceState\.make\b/g)]
   if (matches.length > 0) {
-    kiloInstanceHits.set(relPath, matches.length)
+    kiloInstanceHits.set(normPath, matches.length)
   }
 }
 
@@ -124,7 +123,6 @@ for (const file of Object.keys(allowedInstanceState)) {
 const allowedDb: Record<string, { count: number; owner: string; reason: string }> =
   allowlist.rules["kilo-database-constructors"]?.allowed ?? {}
 
-const srcGlob = new Bun.Glob("packages/*/src/**/*.ts")
 const kiloDbHits = new Map<string, number>()
 
 for (const file of srcGlob.scanSync({ cwd: ROOT, onlyFiles: true })) {
@@ -176,10 +174,10 @@ const toolEnvHits = new Map<string, number>()
 
 for (const file of toolGlob.scanSync({ cwd: ROOT, onlyFiles: true })) {
   const normPath = file.replaceAll("\\", "/")
-  // Only check tools in the allowlist or new tools
   const text = await Bun.file(path.join(ROOT, file)).text()
   const matches = [...text.matchAll(/\bprocess\.env\b/g)]
-  if (matches.length > 0 && (allowedToolEnv[normPath] || normPath.includes("kilo") || normPath.includes("websearch") || normPath.includes("warpgrep"))) {
+  // Check any tool in the allowlist or any Kilo-owned/modified tool
+  if (matches.length > 0 && (allowedToolEnv[normPath] || isKiloOwned(normPath))) {
     toolEnvHits.set(normPath, matches.length)
   }
 }
@@ -212,15 +210,17 @@ for (const file of Object.keys(allowedToolEnv)) {
 }
 
 // ---------------------------------------------------------------------------
-// Rule 5: HttpApi Handler Boundaries (No raw OS operations in handlers)
+// Rule 5: HttpApi Handler Boundaries (No raw OS operations in Kilo handlers)
 // ---------------------------------------------------------------------------
 
 const handlerGlob = new Bun.Glob("packages/opencode/src/**/server/routes/instance/httpapi/handlers/**/*.ts")
 for (const file of handlerGlob.scanSync({ cwd: ROOT, onlyFiles: true })) {
+  const normPath = file.replaceAll("\\", "/")
+  if (!isKiloOwned(normPath)) continue
   const text = await Bun.file(path.join(ROOT, file)).text()
-  if (/\b(?:child_process|Bun\.spawn|from ["']node:fs["']|from ["']fs\/promises["'])\b/.test(text)) {
+  if (/\bchild_process\b|\bBun\.spawn\b|from\s+["'](?:node:)?fs(?:\/promises)?["']/.test(text)) {
     violations.push({
-      file,
+      file: normPath,
       rule: "kilo-httpapi-handlers",
       message: `Direct OS/process operations forbidden in HttpApi route handlers. Delegate to domain Effect services.`,
     })
