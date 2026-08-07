@@ -304,6 +304,7 @@ export const dict = {
   "ui.approval.source.yolo": "自動承認（YOLO）モードによって",
   "ui.approval.source.session": "セッションの自動承認ルールによって",
   "ui.approval.source.default": "デフォルトで",
+  "ui.approval.outsideWorkspace": "path is outside your workspace",
 
   "session.tab.review": "レビュー",
   "session.review.filesChanged": "{{count}} ファイル変更",

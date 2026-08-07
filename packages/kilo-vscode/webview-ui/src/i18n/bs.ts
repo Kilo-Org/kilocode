@@ -305,6 +305,7 @@ export const dict = {
   "ui.approval.source.yolo": "režimom automatskog odobravanja (YOLO)",
   "ui.approval.source.session": "pravilom automatskog odobravanja sesije",
   "ui.approval.source.default": "podrazumevano",
+  "ui.approval.outsideWorkspace": "path is outside your workspace",
 
   "session.tab.review": "Pregled",
   "session.review.filesChanged": "Izmijenjeno {{count}} datoteka",

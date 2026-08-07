@@ -304,6 +304,7 @@ export const dict = {
   "ui.approval.source.yolo": "af automatisk godkendelse (YOLO)",
   "ui.approval.source.session": "af en session-autogodkendelsesregel",
   "ui.approval.source.default": "som standard",
+  "ui.approval.outsideWorkspace": "path is outside your workspace",
 
   "session.tab.review": "Gennemgang",
   "session.review.filesChanged": "{{count}} Filer ændret",
