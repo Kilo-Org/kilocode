@@ -313,7 +313,7 @@ export const dict = {
   "ui.approval.source.yolo": "durch den Auto-Genehmigungsmodus (YOLO)",
   "ui.approval.source.session": "durch eine Sitzungs-Auto-Genehmigungsregel",
   "ui.approval.source.default": "standardmäßig",
-  "ui.approval.outsideWorkspace": "path is outside your workspace",
+  "ui.approval.outsideWorkspace": "der Pfad liegt außerhalb deines Arbeitsbereichs",
 
   "session.tab.review": "Überprüfung",
   "session.review.filesChanged": "{{count}} Dateien geändert",

@@ -307,7 +307,7 @@ export const dict = {
   "ui.approval.source.yolo": "режимом автосхвалення (YOLO)",
   "ui.approval.source.session": "правилом автосхвалення сесії",
   "ui.approval.source.default": "за замовчуванням",
-  "ui.approval.outsideWorkspace": "path is outside your workspace",
+  "ui.approval.outsideWorkspace": "шлях знаходиться за межами вашого робочого простору",
 
   "session.tab.review": "Огляд",
   "session.review.filesChanged": "{{count}} файлів змінено",

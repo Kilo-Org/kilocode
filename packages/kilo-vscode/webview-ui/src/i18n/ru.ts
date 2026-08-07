@@ -303,7 +303,7 @@ export const dict = {
   "ui.approval.source.yolo": "режимом автоодобрения (YOLO)",
   "ui.approval.source.session": "правилом автоодобрения сессии",
   "ui.approval.source.default": "по умолчанию",
-  "ui.approval.outsideWorkspace": "path is outside your workspace",
+  "ui.approval.outsideWorkspace": "путь находится за пределами вашей рабочей области",
 
   "session.tab.review": "Обзор",
   "session.review.filesChanged": "{{count}} файлов изменено",

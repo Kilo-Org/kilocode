@@ -308,7 +308,7 @@ export const dict = {
   "ui.approval.source.yolo": "por el modo de aprobación automática (YOLO)",
   "ui.approval.source.session": "por una regla de aprobación automática de sesión",
   "ui.approval.source.default": "de forma predeterminada",
-  "ui.approval.outsideWorkspace": "path is outside your workspace",
+  "ui.approval.outsideWorkspace": "la ruta está fuera de tu espacio de trabajo",
 
   "session.tab.review": "Revisión",
   "session.review.filesChanged": "{{count}} Archivos Cambiados",
