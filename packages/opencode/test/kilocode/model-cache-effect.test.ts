@@ -19,7 +19,11 @@ function layer(
   hits: Ref.Ref<Hit[]>,
   cfg = TestConfig.layer(),
   access = auth,
-  gates?: { readonly started: Deferred.Deferred<void>; readonly wait: Deferred.Deferred<void>; readonly count?: number },
+  gates?: {
+    readonly started: Deferred.Deferred<void>
+    readonly wait: Deferred.Deferred<void>
+    readonly count?: number
+  },
   fail?: number,
 ) {
   const http = HttpClient.make((request) =>
@@ -307,6 +311,67 @@ it.live("does not resolve auth or config for unsupported providers", () =>
     expect(models).toEqual({})
     expect(yield* Ref.get(configs)).toBe(0)
     expect(yield* Ref.get(auths)).toBe(0)
+    expect(yield* Ref.get(hits)).toEqual([])
+  }),
+)
+
+const clearPerplexityEnv = Effect.sync(() => {
+  const key = process.env.PERPLEXITY_API_KEY
+  const url = process.env.PERPLEXITY_BASE_URL
+  delete process.env.PERPLEXITY_API_KEY
+  delete process.env.PERPLEXITY_BASE_URL
+  return { key, url }
+})
+
+const restorePerplexityEnv = (saved: { key?: string; url?: string }) =>
+  Effect.sync(() => {
+    if (saved.key === undefined) delete process.env.PERPLEXITY_API_KEY
+    else process.env.PERPLEXITY_API_KEY = saved.key
+    if (saved.url === undefined) delete process.env.PERPLEXITY_BASE_URL
+    else process.env.PERPLEXITY_BASE_URL = saved.url
+  })
+
+it.live("fetches Perplexity Agent models through the injected HttpClient", () =>
+  Effect.gen(function* () {
+    const saved = yield* clearPerplexityEnv
+    yield* Effect.addFinalizer(() => restorePerplexityEnv(saved))
+    const hits = yield* Ref.make<Hit[]>([])
+    const models = yield* ModelCache.Service.use((cache) =>
+      cache.fetch("perplexity-agent", { apiKey: "test-key", baseURL: "https://perplexity.test/v1" }),
+    ).pipe(Effect.provide(layer(hits)))
+
+    expect(Object.keys(models).length).toBe(1)
+    expect((yield* Ref.get(hits)).map((hit) => hit.url)).toEqual(["https://perplexity.test/v1/models"])
+    const entry = models["apertis-1"]
+    expect(entry.attachment).toBe(false)
+    expect(entry.modalities?.input).toEqual(["text"])
+  }),
+)
+
+it.live("keeps the permissive placeholder metadata for Apertis models", () =>
+  Effect.gen(function* () {
+    const hits = yield* Ref.make<Hit[]>([])
+    const models = yield* ModelCache.Service.use((cache) =>
+      cache.fetch("apertis", { apiKey: "test-key", baseURL: "https://apertis.test/v1" }),
+    ).pipe(Effect.provide(layer(hits)))
+
+    expect(Object.keys(models).length).toBe(1)
+    const entry = models["apertis-1"]
+    expect(entry.attachment).toBe(true)
+    expect(entry.modalities?.input).toEqual(["text", "image"])
+  }),
+)
+
+it.live("skips the Perplexity Agent model fetch when no API key is configured", () =>
+  Effect.gen(function* () {
+    const saved = yield* clearPerplexityEnv
+    yield* Effect.addFinalizer(() => restorePerplexityEnv(saved))
+    const hits = yield* Ref.make<Hit[]>([])
+    const models = yield* ModelCache.Service.use((cache) => cache.fetch("perplexity-agent")).pipe(
+      Effect.provide(layer(hits)),
+    )
+
+    expect(models).toEqual({})
     expect(yield* Ref.get(hits)).toEqual([])
   }),
 )
