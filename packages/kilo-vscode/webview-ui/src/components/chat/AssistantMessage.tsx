@@ -28,10 +28,12 @@ import { useSession } from "../../context/session"
 import { useDisplay } from "../../context/display"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
+import { localeToBcp47 } from "../../context/language-utils"
 import { useServer } from "../../context/server"
 import { planDisplayPath } from "../../utils/plan-path"
 import { isRenderable, UPSTREAM_SUPPRESSED_TOOLS } from "../../utils/transcript-parts"
 import { messageThroughput, formatTG } from "../../context/session-utils"
+import { formatCompletedAt, formatDuration, messageDurationMs } from "../../utils/format-message-timestamp"
 import { color as timelineColor } from "../../utils/timeline/colors"
 import type { Part as TimelinePart } from "../../types/messages"
 import type { TimelineHighlight } from "../../utils/timeline/highlight"
@@ -208,6 +210,42 @@ function ThroughputBadge(props: { metrics: { generation?: number } }) {
   )
 }
 
+/** Completion time + turn duration beside copy/feedback (display-layer only). */
+function TimestampBadge(props: { time: { created: number; completed?: number } }) {
+  const language = useLanguage()
+  const label = createMemo(() => {
+    const done = props.time.completed
+    if (done === undefined) return undefined
+    const when = formatCompletedAt(done, localeToBcp47(language.locale()))
+    const ms = messageDurationMs(props.time)
+    if (ms === undefined) return when
+    return language.t("chat.timestamp.label", {
+      when,
+      duration: formatDuration(ms),
+    })
+  })
+  const tooltip = createMemo(() => {
+    const done = props.time.completed
+    if (done === undefined) return ""
+    const when = formatCompletedAt(done, localeToBcp47(language.locale()))
+    const ms = messageDurationMs(props.time)
+    if (ms === undefined) return language.t("chat.timestamp.tooltip.timeOnly", { when })
+    return language.t("chat.timestamp.tooltip", {
+      when,
+      duration: formatDuration(ms),
+    })
+  })
+  return (
+    <Show when={label()}>
+      {(text) => (
+        <Tooltip value={tooltip()} placement="top">
+          <span data-component="assistant-timestamp">{text()}</span>
+        </Tooltip>
+      )}
+    </Show>
+  )
+}
+
 export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   const data = useData()
   const session = useSession()
@@ -217,10 +255,11 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   const open = createMemo(() => config().terminal_command_display !== "collapsed")
   const edit = createMemo(() => config().code_edit_display === "expanded")
 
-  // Throughput toggle lives on the shared DisplayProvider so every
-  // AssistantMessage renders against the same signal without posting its
-  // own requestThroughputSetting round-trip on mount.
+  // Display toggles live on the shared DisplayProvider so every
+  // AssistantMessage renders against the same signals without posting its
+  // own setting round-trips on mount.
   const throughputVisible = createMemo(() => display.throughputVisible())
+  const timestampVisible = createMemo(() => display.timestampVisible())
 
   const parts = createMemo(() => {
     const stored = props.parts ?? data.store.part?.[props.message.id]
@@ -280,16 +319,23 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
             return h?.msgId === props.message.id && h?.partId === part.id
           })
 
-          // Throughput badge renders inside the copy/feedback action row of the
-          // text part that carries the copy button (the last text part of the
-          // message), pushed to the right of the buttons rather than below the
-          // message. Only built for that part so non-text parts skip the work.
+          // Throughput + timestamp badges render inside the copy/feedback action
+          // row of the text part that carries the copy button (last text part),
+          // pushed to the right of the buttons. Combined into one throughput
+          // slot so kilo-ui stays unchanged.
           const throughputEl = createMemo<JSX.Element | undefined>(() => {
-            if (!throughputVisible()) return undefined
-            const metrics = throughput()
-            if (!metrics) return undefined
             if (part.id !== props.showAssistantCopyPartID) return undefined
-            return <ThroughputBadge metrics={metrics} />
+            const speed = throughputVisible() ? throughput() : undefined
+            const stamp = timestampVisible() && props.message.time.completed !== undefined
+            if (!speed && !stamp) return undefined
+            return (
+              <span data-component="assistant-meta-row">
+                <Show when={stamp}>
+                  <TimestampBadge time={props.message.time} />
+                </Show>
+                <Show when={speed}>{(m) => <ThroughputBadge metrics={m()} />}</Show>
+              </span>
+            )
           })
 
           return (

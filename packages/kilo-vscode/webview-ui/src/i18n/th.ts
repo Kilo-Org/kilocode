@@ -1129,6 +1129,12 @@ export const dict = {
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
   "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
+  "settings.display.messageTimestamp.title": "Show Message Timestamp",
+  "settings.display.messageTimestamp.description":
+    "Show completion time and turn duration on assistant messages. Display only — not stored in the transcript.",
+  "chat.timestamp.label": "{{when}}, took {{duration}}",
+  "chat.timestamp.tooltip": "Completed at {{when}}. Turn took {{duration}} (message start to finish).",
+  "chat.timestamp.tooltip.timeOnly": "Completed at {{when}}.",
 
   "settings.providers.defaultModel.title": "โมเดลเริ่มต้น",
   "settings.providers.defaultModel.description": "โมเดลหลักสำหรับบทสนทนา",

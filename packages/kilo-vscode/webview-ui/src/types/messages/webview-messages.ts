@@ -459,6 +459,10 @@ export interface RequestThroughputSettingMessage {
   type: "requestThroughputSetting"
 }
 
+export interface RequestTimestampSettingMessage {
+  type: "requestTimestampSetting"
+}
+
 export interface RequestWorkStyleMessage {
   type: "requestWorkStyle"
 }
@@ -1444,6 +1448,7 @@ export type WebviewMessage =
   | UpdateSettingRequest
   | RequestTimelineSettingMessage
   | RequestThroughputSettingMessage
+  | RequestTimestampSettingMessage
   | RequestWorkStyleMessage
   | SetWorkStyleMessage
   | ApplyWorkStyleMessage

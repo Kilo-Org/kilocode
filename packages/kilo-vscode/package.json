@@ -1066,6 +1066,12 @@
           "default": false,
           "description": "Show tokens-per-second (prompt-processing / text-generation) badges on assistant messages and the task header"
         },
+        "kilo-code.new.showMessageTimestamp": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show completion time and turn duration on assistant messages (display only; not stored in transcript)"
+        },
+
         "kilo-code.new.chat.shiftTabCyclesVariant": {
           "type": "boolean",
           "default": true,

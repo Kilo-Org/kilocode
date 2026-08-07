@@ -1089,6 +1089,12 @@ export const dict = {
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
   "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
+  "settings.display.messageTimestamp.title": "显示消息时间戳",
+  "settings.display.messageTimestamp.description":
+    "在助手消息上显示完成时刻与本轮耗时。仅显示层，不写入 transcript。",
+  "chat.timestamp.label": "{{when}}，耗时：{{duration}}",
+  "chat.timestamp.tooltip": "完成于 {{when}}。本轮耗时 {{duration}}（从消息开始到结束）。",
+  "chat.timestamp.tooltip.timeOnly": "完成于 {{when}}。",
 
   "settings.providers.defaultModel.title": "默认模型",
   "settings.providers.defaultModel.description": "对话的主要模型",

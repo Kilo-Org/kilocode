@@ -186,6 +186,7 @@ import {
 import { canonicalizePath, projectIdFor, samePath } from "./agent-manager/project/paths"
 import { validChatSetting, watchChatConfig } from "./kilo-provider/chat-settings"
 import { buildThroughputSettingMessage, watchThroughputConfig } from "./kilo-provider/throughput-settings"
+import { buildTimestampSettingMessage, watchTimestampConfig } from "./kilo-provider/timestamp-settings"
 
 let maxCost = 0
 
@@ -419,6 +420,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private indexingConfigDisposable: vscode.Disposable | null = null
   private chatConfigDisposable: vscode.Disposable | null = null
   private throughputConfigDisposable: vscode.Disposable | null = null
+  private timestampConfigDisposable: vscode.Disposable | null = null
   private telemetryStateDisposable: vscode.Disposable | null = null
   private viewStateDisposable: vscode.Disposable | null = null
   private visibilityDisposable: vscode.Disposable | null = null
@@ -1002,6 +1004,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.chatConfigDisposable = watchChatConfig((msg) => this.postMessage(msg))
     this.throughputConfigDisposable?.dispose()
     this.throughputConfigDisposable = watchThroughputConfig((msg) => this.postMessage(msg))
+    this.timestampConfigDisposable?.dispose()
+    this.timestampConfigDisposable = watchTimestampConfig((msg) => this.postMessage(msg))
     this.telemetryStateDisposable?.dispose()
     this.telemetryStateDisposable = watchTelemetryState((msg) => this.postMessage(msg))
     this.webviewMessageDisposable = webview.onDidReceiveMessage(async (message) => {
@@ -1832,6 +1836,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.sendNotificationSettings()
       this.sendTimelineSetting()
       this.postMessage(buildThroughputSettingMessage())
+      this.postMessage(buildTimestampSettingMessage())
       this.postMessage({ type: "extensionDataReady" })
 
       console.log("[Kilo New] KiloProvider: ✅ initializeConnection completed successfully")
@@ -4072,6 +4077,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.sendNotificationSettings()
     this.sendTimelineSetting()
     this.postMessage(buildThroughputSettingMessage())
+    this.postMessage(buildTimestampSettingMessage())
     this.sendWorkStyle()
     await ModelState.reset(this.client, (msg) => this.postMessage(msg))
 
@@ -4998,6 +5004,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.indexingConfigDisposable?.dispose()
     this.chatConfigDisposable?.dispose()
     this.throughputConfigDisposable?.dispose()
+    this.timestampConfigDisposable?.dispose()
     this.telemetryStateDisposable?.dispose()
     this.autoApproveBridge?.dispose()
     this.visibleTaskStreams.clear()
