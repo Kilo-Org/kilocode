@@ -34,9 +34,7 @@ export class WorktreeImporter {
       const configured = state?.getDefaultBaseBranch()
       const base =
         configured && result.branches.some((branch) => branch.name === configured) ? configured : result.defaultBranch
-      void manager
-        .prefetchBase(base)
-        .catch((err) => this.host.log("Failed to prefetch base branch:", err))
+      void manager.prefetchBase(base).catch((err) => this.host.log("Failed to prefetch base branch:", err))
       const checked = await manager.checkedOutBranches()
       const branches = result.branches.map((branch) => ({
         ...branch,

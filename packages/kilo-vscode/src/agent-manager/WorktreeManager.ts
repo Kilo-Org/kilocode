@@ -121,6 +121,8 @@ export class WorktreeManager {
   // Key: `${root}:${remote}:${branch}`, Value: timestamp when fetch was done
   private static fetchCache = new Map<string, number>()
   private static readonly FETCH_CACHE_TTL = 60_000 // 1 minute
+  private static gitAvailable = false
+  private static lfsAvailable: boolean | undefined
 
   private withGitLock<T>(fn: () => Promise<T>): Promise<T> {
     const key = this.root
@@ -183,9 +185,12 @@ export class WorktreeManager {
   }
 
   private async ensureGitAvailable(): Promise<void> {
+    if (WorktreeManager.gitAvailable) return
     try {
       await execWithShellEnv("git", ["--version"])
+      WorktreeManager.gitAvailable = true
     } catch (error) {
+      WorktreeManager.gitAvailable = false
       if (error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT") {
         throw new Error(
           "Git is not installed or not found in PATH. Please install Git (https://git-scm.com) and restart VS Code.",
@@ -912,10 +917,13 @@ export class WorktreeManager {
   }
 
   async checkLfsAvailable(): Promise<boolean> {
+    if (WorktreeManager.lfsAvailable) return true
     try {
       await execWithShellEnv("git", ["lfs", "version"], { cwd: this.root, timeout: 5000 })
+      WorktreeManager.lfsAvailable = true
       return true
     } catch {
+      WorktreeManager.lfsAvailable = false
       // git-lfs not installed
       return false
     }
