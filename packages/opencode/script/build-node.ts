@@ -21,6 +21,7 @@ await Bun.build({
   external: ["jsonc-parser", "@lydell/node-pty"],
   define: {
     KILO_MODELS_DEV: generated.modelsData,
+    KILO_VERSION: `'${Script.version}'`,
     KILO_CHANNEL: `'${Script.channel}'`,
   },
   files: {
