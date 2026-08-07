@@ -215,6 +215,21 @@ abstract class FixGeneratedApiTask : DefaultTask() {
 
         // Fix 5: nullable body in ApiClient
         if (file.name == "ApiClient.kt") {
+            if (text.contains("import okhttp3.OkHttpClient") && !text.contains("import okhttp3.Protocol")) {
+                text = text.replace("import okhttp3.OkHttpClient", "import okhttp3.OkHttpClient\nimport okhttp3.Protocol")
+                changed = true
+            }
+            if (text.contains("val builder: OkHttpClient.Builder = OkHttpClient.Builder()")) {
+                text = text.replace(
+                    "val builder: OkHttpClient.Builder = OkHttpClient.Builder()",
+                    """val builder: OkHttpClient.Builder = OkHttpClient.Builder()
+            .protocols(listOf(Protocol.HTTP_1_1))
+            .callTimeout(0, java.util.concurrent.TimeUnit.MILLISECONDS)
+            .readTimeout(0, java.util.concurrent.TimeUnit.MILLISECONDS)
+            .writeTimeout(0, java.util.concurrent.TimeUnit.MILLISECONDS)"""
+                )
+                changed = true
+            }
             val guard = "val body = response.body"
             if (text.contains(guard) && !text.contains("if (body == null) return null")) {
                 text = text.replace(guard, "$guard\n        if (body == null) return null")
