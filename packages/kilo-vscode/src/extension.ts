@@ -157,7 +157,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Create Agent Manager provider for editor panel
   const agentManagerHost = new VscodeHost(context.extensionUri, connectionService, context, remoteService)
-  caffeination = new CaffeinationService()
+  caffeination = new CaffeinationService(connectionService)
   const git = createGitExecutable({
     log: (message) => console.warn(`[Kilo New] ${message}`),
   })
