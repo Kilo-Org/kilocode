@@ -283,6 +283,7 @@ interface SessionContextValue {
     draftID?: string,
     context?: string,
     origin?: string | null,
+    overrides?: { agent?: string; model?: string; variant?: string },
   ) => void
   abort: () => void
   compact: () => void
@@ -2352,31 +2353,51 @@ export const SessionProvider: ParentComponent = (props) => {
     draftID?: string,
     context?: string,
     origin?: string | null,
+    overrides?: { agent?: string; model?: string; variant?: string },
   ) {
     if (!server.isConnected()) {
       console.warn("[Kilo New] Cannot send command: not connected")
       return
     }
 
-    // Cloud previews need import-then-command; post importAndSend with command metadata
     const sid = origin === undefined ? currentSessionID() : (origin ?? undefined)
-    const selection = providerID && modelID ? { providerID, modelID } : selected(sid)
-    recordModelUsage(selection?.providerID, selection?.modelID)
+    const effectiveDraftID = !sid && !draftID ? crypto.randomUUID() : draftID
+    const scope = effectiveDraftID ?? sid
+    if (!sid && !draftID && effectiveDraftID) agentDrafts.seed(effectiveDraftID)
+
+    if (overrides?.agent) {
+      selectAgent(overrides.agent, scope)
+    }
+    if (overrides?.model) {
+      const parsed = parseModelString(overrides.model)
+      if (parsed) {
+        selectModel(parsed.providerID, parsed.modelID, scope)
+      }
+    }
+    if (overrides?.variant) {
+      selectVariant(overrides.variant, scope)
+    }
+
+    const effectiveSelection = selected(scope)
+    const effectiveProvider = effectiveSelection?.providerID ?? providerID
+    const effectiveModel = effectiveSelection?.modelID ?? modelID
+    recordModelUsage(effectiveProvider, effectiveModel)
+
+    // Cloud previews need import-then-command; post importAndSend with command metadata
     const preview = sid?.startsWith("cloud:")
       ? sid.slice("cloud:".length)
       : origin === undefined
         ? cloudPreviewId()
         : null
     if (preview) {
-      const scope = draftID ?? sid
       const agent = promptAgent(scope)
       vscode.postMessage({
         type: "importAndSend",
         cloudSessionId: preview,
         text: `/${command} ${args}`.trim(),
         messageID: Identifier.ascending("message"),
-        providerID,
-        modelID,
+        providerID: effectiveProvider,
+        modelID: effectiveModel,
         agent,
         variant: currentVariant(scope),
         files,
@@ -2393,9 +2414,6 @@ export const SessionProvider: ParentComponent = (props) => {
       dismissQuestion(q.id)
     }
 
-    const effectiveDraftID = !sid && !draftID ? crypto.randomUUID() : draftID
-    const scope = effectiveDraftID ?? sid
-    if (!sid && !draftID && effectiveDraftID) agentDrafts.seed(effectiveDraftID)
     if (scope) {
       clearClose(scope)
       addOptimistic(scope, messageID, `/${command} ${args}`.trim(), files)
@@ -2414,8 +2432,8 @@ export const SessionProvider: ParentComponent = (props) => {
       messageID,
       sessionID: sid,
       draftID: effectiveDraftID,
-      providerID,
-      modelID,
+      providerID: effectiveProvider,
+      modelID: effectiveModel,
       agent,
       variant: currentVariant(scope),
       files,

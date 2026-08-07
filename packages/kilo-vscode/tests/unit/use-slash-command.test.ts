@@ -188,4 +188,31 @@ describe("useSlashCommand sandbox action", () => {
     expect(ctx.slash.results()[0]?.description).toBe("Toggle sandbox")
     ctx.dispose()
   })
+
+  it("preserves model, agent, and variant metadata on loaded server commands", () => {
+    const ctx = setup(() => {})
+
+    ctx.fire({
+      type: "commandsLoaded",
+      commands: [
+        {
+          name: "ship",
+          description: "Ship PR",
+          agent: "code",
+          model: "openai/gpt-5.6-luna-fast",
+          variant: "xhigh",
+          hints: ["deploy"],
+        },
+      ],
+    })
+
+    ctx.slash.onInput("/ship", 5)
+    const matches = ctx.slash.results()
+    expect(matches).toHaveLength(1)
+    expect(matches[0]?.name).toBe("ship")
+    expect(matches[0]?.agent).toBe("code")
+    expect(matches[0]?.model).toBe("openai/gpt-5.6-luna-fast")
+    expect(matches[0]?.variant).toBe("xhigh")
+    ctx.dispose()
+  })
 })
