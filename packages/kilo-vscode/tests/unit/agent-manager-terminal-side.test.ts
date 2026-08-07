@@ -83,6 +83,23 @@ describe("Agent Manager side terminal controller", () => {
     expect(hidden.calls.hide).toBe(0)
   })
 
+  it("toggles panel visibility from toolbar button without requiring focus", () => {
+    const visibleUnfocused = scene({ destination: "agentManager", visible: true })
+    visibleUnfocused.ctl.openPreferred("tab_toolbar")
+    expect(visibleUnfocused.calls.hide).toBe(1)
+    expect(visibleUnfocused.calls.requestSide).toBe(0)
+
+    const visibleFocused = scene({ destination: "agentManager", visible: true, focusedId: "terminal:side" })
+    visibleFocused.ctl.openPreferred("tab_toolbar")
+    expect(visibleFocused.calls.hide).toBe(1)
+    expect(visibleFocused.calls.requestSide).toBe(0)
+
+    const hidden = scene({ destination: "agentManager", visible: false })
+    hidden.ctl.openPreferred("tab_toolbar")
+    expect(hidden.calls.requestSide).toBe(1)
+    expect(hidden.calls.hide).toBe(0)
+  })
+
   it("ensures an open terminal panel has a terminal after switching contexts", async () => {
     const visible = scene({ visible: true })
     visible.ctl.syncContext("wt-2", "wt-1")
