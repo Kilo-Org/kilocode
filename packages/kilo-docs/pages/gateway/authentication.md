@@ -96,6 +96,7 @@ BYOK lets you use your own provider API keys with the Kilo AI Gateway. When a BY
 | Inceptron BYOK | `inceptron-byok` |
 | Kimi Code | `kimi-coding` |
 | Martian | `martian` |
+| MiniMax Coding Plan (minimax.io) | `minimax-coding-plan` |
 | Neuralwatt | `neuralwatt` |
 | NVIDIA | `nvidia-byok` |
 | Ollama Cloud | `ollama-cloud` |
@@ -111,7 +112,7 @@ BYOK lets you use your own provider API keys with the Kilo AI Gateway. When a BY
 1. Add your provider API key in the [Kilo dashboard](https://app.kilo.ai) or through your Kilo Code extension settings
 2. Keys are encrypted at rest using AES-256 encryption
 3. When you make a request for a model from that provider, the gateway automatically uses your key
-4. Usage is tracked but not billed to your Kilo balance (cost is set to $0)
+4. Usage is tracked but not billed to your Kilo balance (cost is set to $0). Usage information for MiniMax Coding Plan requests is unavailable until MiniMax exposes a usage API
 5. If your BYOK key fails, the request will not automatically fall back to Kilo's keys
 
 BYOK keys can be configured at the personal level or at the organization level. Organization-level keys apply to all members of the organization and require owner or billing manager access to manage.

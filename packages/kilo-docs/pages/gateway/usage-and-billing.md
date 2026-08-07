@@ -117,6 +117,10 @@ Paid model requests are not rate-limited by the gateway itself, but may be rate-
 
 Usage data is tracked per request and includes:
 
+{% callout type="info" %}
+Usage information for MiniMax Coding Plan requests is unavailable until MiniMax exposes a usage API.
+{% /callout %}
+
 | Field | Description |
 |---|---|
 | `model` | Model ID used |
