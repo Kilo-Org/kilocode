@@ -5,6 +5,7 @@
 // `KILO_CONFIG_CONTENT` providing the test provider config inline.
 import { describe, expect } from "bun:test"
 import { Effect } from "effect"
+import { createKiloClient } from "@kilocode/sdk/v2" // kilocode_change
 import { reply } from "../../lib/llm-server"
 import { cliIt } from "../../lib/cli-process"
 
@@ -432,10 +433,20 @@ describe("opencode run (non-interactive subprocess)", () => {
     60_000,
   )
 
-  cliIt.concurrent(
-    "kilo run auto-dismisses suggestion and exits cleanly if suggest tool is invoked",
+  cliIt.live(
+    "kilo run auto-dismisses suggestion and exits cleanly if suggest tool is invoked in attached session",
     ({ llm, opencode }) =>
       Effect.gen(function* () {
+        const server = yield* opencode.serve()
+        const client = createKiloClient({ baseUrl: server.url })
+        const session = yield* Effect.promise(() =>
+          client.session.create({
+            permission: [{ permission: "suggest", action: "allow", pattern: "*" }],
+          }),
+        )
+        const sessionID = session.data?.id
+        expect(sessionID).toBeDefined()
+
         yield* llm.push(
           reply().tool("suggest", {
             suggest: "Run checks?",
@@ -443,12 +454,17 @@ describe("opencode run (non-interactive subprocess)", () => {
           }),
         )
         yield* llm.text("completed after dismissal")
+
         const result = yield* opencode.run("do work", {
-          permission: { suggest: "allow" },
-          extraArgs: ["--auto"],
+          extraArgs: ["--attach", server.url, "--session", sessionID!, "--auto"],
         })
         opencode.expectExit(result, 0)
-        expect(result.stdout).toContain("completed after dismissal")
+
+        const messages = yield* Effect.promise(() => client.session.messages({ sessionID: sessionID! }))
+        const assistant = messages.data?.findLast((m) => m.info.role === "assistant")
+        const toolPart = assistant?.parts.find((p) => p.type === "tool" && p.tool === "suggest")
+        expect(toolPart).toBeDefined()
+        expect((toolPart as any)?.state?.metadata?.dismissed).toBe(true)
       }),
     60_000,
   )
