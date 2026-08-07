@@ -921,12 +921,13 @@ class SessionUi(
             return
         }
         if (uri.scheme == "file") {
-            val path = runCatching { Path.of(uri).toString() }.getOrNull() ?: run {
+            val path = runCatching { Path.of(cleanAttachmentUri(uri)).toString() }.getOrNull() ?: run {
                 LOG.info("kind=attachment-open skipped=true reason=invalid-file-uri message=$messageId part=${item.id} url=${attachmentUrl(url)}")
                 return
             }
-            LOG.info("kind=attachment-open route=file session=${controller.id ?: "none"} message=$messageId part=${item.id} path=$path")
-            fileLinks.open(path, null)
+            val target = attachmentHref(path, item)
+            LOG.info("kind=attachment-open route=file session=${controller.id ?: "none"} message=$messageId part=${item.id} path=$target")
+            fileLinks.open(target, null)
             return
         }
         LOG.info("kind=attachment-open route=browser session=${controller.id ?: "none"} message=$messageId part=${item.id} url=${attachmentUrl(url)}")
@@ -936,6 +937,14 @@ class SessionUi(
     private fun attachmentName(item: FileAttachment) = item.filename?.takeIf { it.isNotBlank() }
         ?: item.url.substringBefore(',').substringAfterLast('/').takeIf { it.isNotBlank() }
         ?: "attachment"
+
+    private fun attachmentHref(path: String, item: FileAttachment): String {
+        val start = item.startLine ?: return path
+        val end = item.endLine ?: start
+        return "$path:$start-$end"
+    }
+
+    private fun cleanAttachmentUri(uri: URI): URI = URI(uri.scheme, uri.authority, uri.path, null, null)
 
     private fun attachmentUrl(url: String): String {
         val scheme = url.substringBefore(':', missingDelimiterValue = "none")
