@@ -54,4 +54,16 @@ describe("resolveToolApproval", () => {
     expect(out?.source).toBe("ui.approval.source.agent(agent=code)")
     expect(out?.rule).toBeUndefined()
   })
+
+  test("adds the outsideWorkspace text when the approval was marked outside the workspace", () => {
+    const approval = { source: "agent" as const, agent: "code", outsideWorkspace: true }
+    const out = resolveToolApproval({ approval }, t)
+    expect(out?.outsideWorkspace).toBe("ui.approval.outsideWorkspace")
+  })
+
+  test("omits the outsideWorkspace text for an ordinary in-workspace approval", () => {
+    const approval = { source: "agent" as const, agent: "code" }
+    const out = resolveToolApproval({ approval }, t)
+    expect(out?.outsideWorkspace).toBeUndefined()
+  })
 })

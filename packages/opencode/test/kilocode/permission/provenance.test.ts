@@ -121,6 +121,42 @@ describe("PermissionProvenance.carryApproval", () => {
   test("returns the replacement as-is when it is undefined", () => {
     expect(PermissionProvenance.carryApproval({ approval }, undefined)).toBeUndefined()
   })
+
+  test("merges outsideWorkspace onto a replacement's own approval instead of clobbering it", () => {
+    // A file tool crossing the workspace boundary asks twice: external_directory first, then its
+    // own read/write/edit ask. The second ask's approval must not lose the outsideWorkspace marker.
+    const outside = { source: "manual" as const, outsideWorkspace: true }
+    const next = { approval: { source: "agent" as const, agent: "build" } }
+    expect(PermissionProvenance.carryApproval({ approval: outside }, next)).toEqual({
+      approval: { source: "agent", agent: "build", outsideWorkspace: true },
+    })
+  })
+
+  test("does not add outsideWorkspace when the prior approval was not outside the workspace", () => {
+    const next = { approval: { source: "agent" as const, agent: "build" } }
+    expect(PermissionProvenance.carryApproval({ approval }, next)).toBe(next)
+  })
+
+  test("leaves a replacement's own outsideWorkspace marker untouched", () => {
+    const outside = { source: "manual" as const, outsideWorkspace: true }
+    const next = { approval: { source: "agent" as const, agent: "build", outsideWorkspace: true } }
+    expect(PermissionProvenance.carryApproval({ approval: outside }, next)).toBe(next)
+  })
+})
+
+describe("PermissionProvenance.tagOutsideWorkspace", () => {
+  test("marks an external_directory approval as outsideWorkspace", () => {
+    const approval = { source: "manual" as const }
+    expect(PermissionProvenance.tagOutsideWorkspace(approval, "external_directory")).toEqual({
+      source: "manual",
+      outsideWorkspace: true,
+    })
+  })
+
+  test("leaves other permissions' approvals untouched", () => {
+    const approval = { source: "manual" as const }
+    expect(PermissionProvenance.tagOutsideWorkspace(approval, "read")).toBe(approval)
+  })
 })
 
 describe("askPermission returns provenance", () => {
