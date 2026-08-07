@@ -51,9 +51,46 @@ async function copyTreeSitterWasms(outputDir: string) {
   console.log(`copied ${languageWasmFiles.length + 1} tree-sitter wasm files to ${targetDir}`)
 }
 
+// kilocode_change start
+async function isKiloConsoleUpToDate(app: string, out: string) {
+  const indexHtml = path.join(out, "index.html")
+  if (!fs.existsSync(indexHtml)) return false
+  const outStat = await fs.promises.stat(indexHtml)
+  const inputs = [
+    path.join(app, "src"),
+    path.join(app, "package.json"),
+    path.join(app, "vite.config.ts"),
+    path.join(app, "index.html"),
+    path.resolve(dir, "../kilo-web-ui/src"),
+    path.resolve(dir, "../kilo-indexing/src"),
+    path.resolve(dir, "../kilo-ui/src"),
+    path.resolve(dir, "../ui/src"),
+    path.resolve(dir, "../sdk/js/src"),
+    path.resolve(dir, "../../bun.lock"),
+  ]
+  for (const p of inputs) {
+    if (!fs.existsSync(p)) continue
+    const st = await fs.promises.stat(p)
+    if (st.isDirectory()) {
+      const glob = new Bun.Glob("**/*")
+      for await (const file of glob.scan({ cwd: p })) {
+        const fileStat = await fs.promises.stat(path.join(p, file))
+        if (fileStat.mtimeMs > outStat.mtimeMs) return false
+      }
+    } else if (st.mtimeMs > outStat.mtimeMs) {
+      return false
+    }
+  }
+  return true
+}
+
 async function buildKiloConsole() {
   const app = path.resolve(dir, "../kilo-console")
   const out = path.join(app, "dist")
+  if (await isKiloConsoleUpToDate(app, out)) {
+    console.log(`reusing existing Kilo Console build at ${out}`)
+    return out
+  }
   console.log("building Kilo Console")
   const proc = Bun.spawn([process.execPath, "run", "build"], {
     cwd: app,
@@ -66,6 +103,7 @@ async function buildKiloConsole() {
   if (code !== 0) throw new Error(`Kilo Console build failed with exit code ${code}`)
   return out
 }
+// kilocode_change end
 
 async function copyKiloConsole(input: string, outputDir: string) {
   const target = path.join(outputDir, "console")
@@ -217,11 +255,13 @@ const targets = singleFlag
     })
   : allTargets
 
-await $`rm -rf dist`
 // kilocode_change start
-const kiloConsoleDist = await buildKiloConsole()
-const kiloSandboxWorker = await KiloSandboxWorker.bundle()
-const kiloSandboxNetwork = await KiloSandboxNetwork.bundle()
+await $`rm -rf dist`
+const [kiloConsoleDist, kiloSandboxWorker, kiloSandboxNetwork] = await Promise.all([
+  buildKiloConsole(),
+  KiloSandboxWorker.bundle(),
+  KiloSandboxNetwork.bundle(),
+])
 // kilocode_change end
 
 const binaries: Record<string, string> = {}

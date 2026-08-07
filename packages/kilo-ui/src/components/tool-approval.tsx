@@ -1,4 +1,5 @@
 import { createContext, useContext, Show, type Accessor, type ParentProps } from "solid-js"
+import { Icon } from "./icon"
 
 /**
  * Explains why a tool call was auto-approved, inside the expanded tool row.
@@ -33,8 +34,23 @@ export function ToolApprovalProvider(props: ParentProps<{ value: Accessor<ToolAp
   return <Context.Provider value={props.value}>{props.children}</Context.Provider>
 }
 
+/**
+ * Whether the approval line should render at all. Hosts that expose a "hide
+ * auto-approval reason" display setting wrap their tree in
+ * `ToolApprovalVisibilityProvider`; without one, the line stays visible.
+ */
+const VisibilityContext = createContext<Accessor<boolean>>(() => true)
+
+export function ToolApprovalVisibilityProvider(props: ParentProps<{ value: Accessor<boolean> }>) {
+  return <VisibilityContext.Provider value={props.value}>{props.children}</VisibilityContext.Provider>
+}
+
+/** Read the approval for the tool row below, gated by the visibility toggle
+ * here (not per call site) so a new `ToolApprovalProvider` usage can't forget it. */
 export function useToolApproval() {
-  return useContext(Context)
+  const value = useContext(Context)
+  const visible = useContext(VisibilityContext)
+  return () => (visible() ? value() : undefined)
 }
 
 /** Read the raw approval payload off a tool part's metadata, if present. */
@@ -83,6 +99,7 @@ export function ToolApprovalLine(props: { display: ToolApprovalDisplay }) {
   const manual = () => props.display.approval.source === "manual"
   return (
     <div data-slot="tool-approval-line" data-source={props.display.approval.source}>
+      <Icon name="shield" size="small" />
       <span data-slot="tool-approval-decision">{props.display.decision}</span>
       <Show when={!manual()}>
         <Show when={props.display.source}>{(text) => <span data-slot="tool-approval-source">{text()}</span>}</Show>

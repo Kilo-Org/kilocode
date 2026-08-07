@@ -1134,19 +1134,22 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Skift ræsonnementsindsats med Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Tryk på Shift+Tab i et promptindtastningsfelt for at skifte til næste niveau af ræsonnementsindsats. Deaktivér for at beholde Shift+Tab til tastaturnavigation af fokus.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "Terminalkommandoblokke",
+  "settings.display.terminalCommand.description": "Vælg om terminalkommandoblokke starter foldet ud eller sammen.",
+  "settings.display.terminalCommand.expanded": "Foldet ud",
+  "settings.display.terminalCommand.collapsed": "Foldet sammen",
   "settings.display.codeEdit.title": "Koderedigeringsblokke",
   "settings.display.codeEdit.description":
     "Vælg, om blokke, der viser koderedigeringer og forskelle, starter foldet ud eller sammen.",
   "settings.display.codeEdit.expanded": "Foldet ud",
   "settings.display.codeEdit.collapsed": "Foldet sammen",
 
-  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.title": "Vis genereringshastighed",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+    "Viser tekstgenereringshastigheden (tokens/sek.) på den seneste assistentmeddelelse og i opgavehovedet. Skjult som standard for at holde chatten ryddig.",
+  "settings.display.autoApprovalReason.title": "Vis grund til automatisk godkendelse",
+  "settings.display.autoApprovalReason.description":
+    "Viser en linje ved værktøjskald, der forklarer, hvorfor de blev automatisk godkendt (matchende regel, agent-standard, YOLO-tilstand osv.).",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

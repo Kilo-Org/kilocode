@@ -88,7 +88,7 @@ export class TerminalRouter {
   handle(m: AgentManagerInMessage): boolean {
     if (!isTerminalMessage(m)) return false
     if (m.type === "agentManager.terminal.create") {
-      void this.handleCreate(m.createId, m.placement, m.worktreeId)
+      void this.handleCreate(m.createId, m.placement, m.worktreeId, m.cols, m.rows)
       return true
     }
     if (m.type === "agentManager.terminal.close") {
@@ -132,7 +132,13 @@ export class TerminalRouter {
     return manager.dispose()
   }
 
-  private async handleCreate(createId: string, placement: TerminalPlacement, worktreeId: string | null): Promise<void> {
+  private async handleCreate(
+    createId: string,
+    placement: TerminalPlacement,
+    worktreeId: string | null,
+    cols?: number,
+    rows?: number,
+  ): Promise<void> {
     const generation = this.generation
     const manager = this.manager
     const cwd = this.resolveCwd(worktreeId)
@@ -155,7 +161,7 @@ export class TerminalRouter {
       // Join the shared backend connection instead of racing its synchronous
       // client accessor when this is the first Kilo action in the window.
       await this.deps.getClientAsync()
-      const created = await manager.create({ terminalId: createId, worktreeId, cwd, title })
+      const created = await manager.create({ terminalId: createId, worktreeId, cwd, title, cols, rows })
       if (generation !== this.generation) {
         await manager.close(created.terminalId)
         return

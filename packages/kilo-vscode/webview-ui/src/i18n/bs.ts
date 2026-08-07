@@ -1138,19 +1138,23 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Promijeni napor razmišljanja pomoću Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Pritisnite Shift+Tab u polju za unos upita da pređete na sljedeći nivo napora razmišljanja. Onemogućite ovu opciju kako biste zadržali Shift+Tab za navigaciju fokusom putem tastature.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "Blokovi terminalskih naredbi",
+  "settings.display.terminalCommand.description":
+    "Odaberite da li blokovi terminalskih naredbi počinju prošireni ili sažeti.",
+  "settings.display.terminalCommand.expanded": "Prošireni",
+  "settings.display.terminalCommand.collapsed": "Sažeti",
   "settings.display.codeEdit.title": "Blokovi izmjena koda",
   "settings.display.codeEdit.description":
     "Odaberite da li će blokovi koji prikazuju izmjene koda i razlike u početku biti prošireni ili sažeti.",
   "settings.display.codeEdit.expanded": "Prošireni",
   "settings.display.codeEdit.collapsed": "Sažeti",
 
-  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.title": "Prikaži protok tokena",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+    "Prikazuje brzinu generisanja teksta (tokena/s) na najnovijoj poruci asistenta i u zaglavlju zadatka. Podrazumevano skriveno radi urednijeg chata.",
+  "settings.display.autoApprovalReason.title": "Prikaži razlog automatskog odobravanja",
+  "settings.display.autoApprovalReason.description":
+    "Prikazuje red uz pozive alata koji objašnjava zašto su automatski odobreni (odgovarajuće pravilo, podrazumevana vrijednost agenta, YOLO režim itd.).",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

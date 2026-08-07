@@ -187,25 +187,17 @@ type Proc = ReturnType<typeof Bun.spawn>
 
 const xmldir = ci ? path.join(os.tmpdir(), `opencode-junit-${process.pid}`) : ""
 if (ci) await fs.mkdir(xmldir, { recursive: true })
+// kilocode_change start
 const supplied = process.env[TestCli.ENV]
-const binprefix = path.join(root, ".artifacts", "test-cli-")
 const built = supplied
   ? { binary: supplied, dir: undefined }
-  : await (async () => {
-      await fs.mkdir(path.dirname(binprefix), { recursive: true })
-      const dir = await fs.mkdtemp(binprefix)
-      return { binary: await TestCli.build(root, dir), dir }
-    })()
+  : { binary: await TestCli.build(root), dir: undefined }
 
 async function cleanBinary() {
   if (!built.dir) return
-  const expected = path.dirname(binprefix)
-  const valid =
-    path.dirname(built.dir) === expected && path.basename(built.dir).startsWith(path.basename(binprefix))
-  if (!valid) throw new Error(`Refusing to remove unexpected test CLI directory: ${built.dir}`)
-  // The generated directory contains the bundle, emitted assets, and copied migrations.
   await fs.rm(built.dir, { recursive: true, force: true })
 }
+// kilocode_change end
 
 const counter = { done: 0 }
 const pad = String(files.length).length

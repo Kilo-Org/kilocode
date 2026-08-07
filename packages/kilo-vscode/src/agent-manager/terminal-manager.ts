@@ -51,6 +51,7 @@ interface Entry {
 export class TerminalManager {
   private readonly entries = new Map<string, Entry>()
   private readonly restarts = new Map<string, Promise<void>>()
+  private readonly pending = new Map<string, { cols: number; rows: number }>()
 
   constructor(private readonly deps: TerminalManagerDeps) {}
 
@@ -67,7 +68,14 @@ export class TerminalManager {
     worktreeId: string | null
     cwd: string
     title: string
+    cols?: number
+    rows?: number
   }): Promise<{ terminalId: string; worktreeId: string | null; title: string; wsUrl: string }> {
+    const initial =
+      this.pending.get(params.terminalId) ??
+      (params.cols !== undefined && params.rows !== undefined ? { cols: params.cols, rows: params.rows } : undefined)
+    this.pending.delete(params.terminalId)
+
     const client = this.deps.getClient()
     const { data, error } = await client.pty.create({
       directory: params.cwd,
@@ -76,6 +84,7 @@ export class TerminalManager {
       // xterm's DOM renderer cannot draw the Unicode sextant glyphs used by
       // Kilo's modern wordmark, so use the compatible logo in embedded tabs.
       env,
+      size: initial,
     })
     if (error || !data) {
       const err = error instanceof Error ? error.message : String(error ?? "unknown error")
@@ -89,15 +98,39 @@ export class TerminalManager {
       title: data.title ?? params.title,
     }
     this.entries.set(params.terminalId, entry)
+    // If a resize arrived while pty.create was in flight that differed from `initial`, apply it now.
+    const latest = this.pending.get(params.terminalId)
+    if (latest && (latest.cols !== initial?.cols || latest.rows !== initial?.rows)) {
+      this.pending.delete(params.terminalId)
+      const { error: resizeErr } = await client.pty.update({
+        directory: entry.cwd,
+        ptyID: entry.ptyID,
+        size: latest,
+      })
+      if (resizeErr) {
+        const err = resizeErr instanceof Error ? resizeErr.message : String(resizeErr)
+        this.deps.log(`Initial terminal resize failed (${params.terminalId}): ${err}`)
+      }
+    }
     const wsUrl = this.deps.buildWsUrl(entry.ptyID, entry.cwd)
     this.deps.log(`Terminal created: ${params.terminalId} -> pty ${entry.ptyID} cwd=${entry.cwd}`)
     return { terminalId: params.terminalId, worktreeId: entry.worktreeId, title: entry.title, wsUrl }
   }
 
-  /** Forward a resize event to the backend PTY. Missing terminals are a no-op. */
+  /**
+   * Forward a resize event to the backend PTY.
+   *
+   * If the terminal creation is still in flight, dimensions are queued into
+   * `pending` and applied during PTY initialization before the WebSocket
+   * URL is returned.
+   */
   async resize(terminalId: string, cols: number, rows: number): Promise<void> {
     const entry = this.entries.get(terminalId)
-    if (!entry) return
+    if (!entry) {
+      this.pending.set(terminalId, { cols, rows })
+      return
+    }
+    this.pending.delete(terminalId)
     const client = this.deps.getClient()
     const { error } = await client.pty.update({
       directory: entry.cwd,
@@ -126,6 +159,7 @@ export class TerminalManager {
    *  failed delete would be silently logged as a successful close and
    *  the server-side PTY would linger until `kilo serve` exits. */
   async close(terminalId: string): Promise<void> {
+    this.pending.delete(terminalId)
     const entry = this.entries.get(terminalId)
     if (!entry) return
     this.entries.delete(terminalId)
@@ -187,6 +221,7 @@ export class TerminalManager {
    * is sampled mid-shutdown.
    */
   async dispose(): Promise<void> {
+    this.pending.clear()
     const snapshot = [...this.entries.values()]
     if (snapshot.length === 0) {
       this.entries.clear()
