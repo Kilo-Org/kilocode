@@ -263,6 +263,27 @@ export namespace KilocodeConfig {
       .join("\n")
   }
 
+  /** Build a Warning from a frontmatter parse error and optionally append it to a list. */
+  export function frontmatterWarning(
+    err: unknown,
+    item: string,
+    kind: string,
+    warnings?: Config.Warning[],
+  ): Config.Warning {
+    const warn: Config.Warning = {
+      path: item,
+      message: ConfigError.FrontmatterError.isInstance(err)
+        ? err.data.message
+        : `Failed to parse ${kind} ${item}`,
+    }
+    if (ConfigError.FrontmatterError.isInstance(err)) {
+      warn.line = err.data.line
+      warn.column = err.data.column
+    }
+    if (warnings) warnings.push(warn)
+    return warn
+  }
+
   /** Handle an invalid agent/command config: log, publish session error, collect warning. */
   export async function handleInvalid(
     kind: "agent" | "command",

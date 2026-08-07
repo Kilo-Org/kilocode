@@ -82,9 +82,12 @@ export namespace ConfigValidation {
       })
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
-      const msg = FrontmatterError.isInstance(e)
+      let msg = FrontmatterError.isInstance(e)
         ? e.data.message
         : `Failed to parse frontmatter: ${e instanceof Error ? e.message : String(e)}`
+      if (FrontmatterError.isInstance(e) && e.data.line !== undefined) {
+        msg = `${msg} (line ${e.data.line + 1}, column ${(e.data.column ?? 0) + 1})`
+      }
       return `\n\n<config_validation>\nERROR: ${label(filepath)}\n  ${msg}\n</config_validation>`
     }
 
