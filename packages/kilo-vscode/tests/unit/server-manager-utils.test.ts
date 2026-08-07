@@ -295,6 +295,34 @@ describe("toErrorMessage", () => {
     const result = toErrorMessage("startup failed", ["some output"])
     expect(result.error).toBe("startup failed")
   })
+
+  it("formats structured spawn error details with syscall, errno, and args", () => {
+    const spawnLines = [
+      "Error: spawn UNKNOWN",
+      "Code: UNKNOWN",
+      "Errno: -86",
+      "Syscall: spawn",
+      "Path: /path/to/bin/kilo",
+      'Spawn args: ["serve","--port","0"]',
+    ]
+    const result = toErrorMessage("Failed to spawn CLI binary (UNKNOWN)", spawnLines, "/path/to/bin/kilo")
+    expect(result.userMessage).toBe("spawn UNKNOWN")
+    expect(result.userDetails).toContain("CLI path: /path/to/bin/kilo")
+    expect(result.userDetails).toContain("Failed to spawn CLI binary (UNKNOWN)")
+    expect(result.userDetails).toContain("Syscall: spawn")
+    expect(result.userDetails).toContain("Errno: -86")
+  })
+
+  it("handles signal termination without stderr lines cleanly", () => {
+    const result = toErrorMessage(
+      "CLI process terminated by signal SIGSEGV before server started",
+      [],
+      "/path/to/bin/kilo",
+    )
+    expect(result.userMessage).toBe("CLI process terminated by signal SIGSEGV before server started")
+    expect(result.userDetails).toContain("CLI path: /path/to/bin/kilo")
+    expect(result.userDetails).toContain("CLI process terminated by signal SIGSEGV before server started")
+  })
 })
 
 describe("server workspace helpers", () => {

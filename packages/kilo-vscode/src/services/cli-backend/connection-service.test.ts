@@ -282,3 +282,25 @@ describe("KiloConnectionService drainPendingPrompts", () => {
     expect(cleared).toBe(0)
   })
 })
+
+describe("KiloConnectionService server exit handling", () => {
+  test("reports signal name when process is killed by signal", () => {
+    const service = new KiloConnectionService({} as any)
+    let stateErr: Error | undefined
+    service.onStateChange((state, err) => {
+      if (state === "error") stateErr = err
+    })
+    ;(service as any).handleServerExit(null, "SIGSEGV")
+    expect(stateErr?.message).toBe("CLI background process exited with signal SIGSEGV. Retry to reconnect.")
+  })
+
+  test("reports exit code when process exits normally with code", () => {
+    const service = new KiloConnectionService({} as any)
+    let stateErr: Error | undefined
+    service.onStateChange((state, err) => {
+      if (state === "error") stateErr = err
+    })
+    ;(service as any).handleServerExit(1, null)
+    expect(stateErr?.message).toBe("CLI background process exited with code 1. Retry to reconnect.")
+  })
+})
