@@ -499,6 +499,7 @@ const AgentManagerContent: Component = () => {
   }
   createEffect(on(selection, () => cancelPendingDelete(), { defer: true }))
   createEffect(on(selection, () => clearReviewComposer(reviewComposer), { defer: true }))
+  createEffect(on(selection, () => { if (!activePR()) setSidePanel((p) => p === SidePanel.PR ? null : p) }, { defer: true }))
   onCleanup(() => clearTimeout(pendingDeleteTimer))
 
   // Per-context tab memory lives in the active project's store: maps sidebar
