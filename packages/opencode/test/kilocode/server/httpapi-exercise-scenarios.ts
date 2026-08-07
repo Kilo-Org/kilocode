@@ -3,7 +3,7 @@ import { mkdir, rm } from "fs/promises"
 import path from "path"
 import { KiloMemory } from "@kilocode/kilo-memory/effect"
 import { MemoryPaths } from "@kilocode/kilo-memory/effect/paths"
-import { array, check, object } from "../../server/httpapi-exercise/assertions"
+import { array, check, isRecord, object } from "../../server/httpapi-exercise/assertions"
 import { http, route } from "../../server/httpapi-exercise/dsl"
 import type { Scenario, ScenarioContext } from "../../server/httpapi-exercise/types"
 import { anacondaDesktopScenarios } from "../anaconda-desktop/httpapi-exercise-scenarios"
@@ -34,6 +34,13 @@ const agent = async (dir: string) => {
   await Bun.write(
     path.join(dir, ".kilo/agent/httpapi-remove.md"),
     "---\ndescription: HTTP API remove\n---\nRemove me.\n",
+  )
+}
+
+const command = async (dir: string) => {
+  await Bun.write(
+    path.join(dir, ".kilo/command/httpapi-remove.md"),
+    "---\ndescription: HTTP API command remove\nmodel: anthropic/claude-sonnet-4-6\nvariant: high\n---\nRun command.\n",
   )
 }
 
@@ -544,6 +551,44 @@ export const kiloScenarios: Scenario[] = [
       array(body.mcps)
       array(body.vscode_extensions)
     }),
+  http.protected
+    .get("/kilocode/command/files", "kilocode.commandFiles")
+    .inProject({ git: true, init: command })
+    .json(200, (body, ctx) => {
+      array(body)
+      const item = body.find((item) => isRecord(item) && item.name === "httpapi-remove")
+      object(item)
+      check(item.description === "HTTP API command remove", "command file should include description")
+      check(
+        item.location === path.join(directory(ctx), ".kilo/command/httpapi-remove.md"),
+        "command file should include location",
+      )
+      check(item.editable === true, "command file should be editable")
+      check(item.builtin === false, "command file should not be builtin")
+      check(item.model === "anthropic/claude-sonnet-4-6", "command file should include model metadata")
+      check(item.variant === "high", "command file should include variant metadata")
+      check(typeof item.content === "string" && item.content.includes("Run command."), "command file should include content")
+    }),
+  http.protected
+    .post("/kilocode/command/remove", "kilocode.removeCommand")
+    .inProject({ git: true, init: command })
+    .mutating()
+    .preserveDatabase()
+    .at((ctx) => ({
+      path: "/kilocode/command/remove",
+      headers: ctx.headers(),
+      body: { location: path.join(directory(ctx), ".kilo/command/httpapi-remove.md") },
+    }))
+    .jsonEffect(200, (body, ctx) =>
+      Effect.gen(function* () {
+        check(body === true, "command removal should return true")
+        const location = path.join(directory(ctx), ".kilo/command/httpapi-remove.md")
+        check(
+          !(yield* Effect.promise(() => Bun.file(location).exists())),
+          "removed command should not remain on disk",
+        )
+      }),
+    ),
   http.protected
     .post("/kilocode/skill/remove", "kilocode.removeSkill")
     .inProject({ git: true, init: skill })

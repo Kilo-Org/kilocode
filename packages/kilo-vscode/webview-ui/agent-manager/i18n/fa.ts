@@ -105,7 +105,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "تب بعدی",
   "agentManager.shortcuts.newTab": "تب جدید",
   "agentManager.shortcuts.closeTab": "بستن تب",
-  "agentManager.shortcuts.toggleTerminal": "نمایش/پنهان کردن ترمینال",
+  "agentManager.shortcuts.toggleTerminal": "تمرکز روی ترمینال / پنهان کردن ترمینال",
   "agentManager.shortcuts.runScript": "اجرای اسکریپت",
   "agentManager.run.options": "گزینه‌های اجرا",
   "agentManager.run.configure": "پیکربندی اسکریپت اجرا",
