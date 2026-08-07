@@ -39,6 +39,12 @@ export namespace KiloTuiConfig {
         }),
         leader_timeout: next.leader_timeout ?? LeaderTimeoutDefault,
         mouse: next.mouse ?? true,
+        cursor: next.cursor
+          ? {
+              style: next.cursor.style ?? "block",
+              blinking: next.cursor.blinking ?? true,
+            }
+          : undefined,
       }
       if (JSON.stringify(config.keybinds.bindings) === JSON.stringify(store.keybinds.bindings)) {
         config.keybinds = store.keybinds

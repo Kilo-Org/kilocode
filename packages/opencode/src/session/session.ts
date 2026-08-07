@@ -872,9 +872,9 @@ export const layer: Layer.Layer<
         sandboxFallback, // kilocode_change - seed confinement from the source session's original directory
       })
       const idMap = new Map<string, MessageID>()
+      const target = input.messageID ? msgs.findIndex((msg) => msg.info.id === input.messageID) : msgs.length
 
-      for (const msg of msgs) {
-        if (input.messageID && msg.info.id >= input.messageID) break
+      for (const msg of msgs.slice(0, target < 0 ? msgs.length : target)) {
         const newID = MessageID.ascending()
         idMap.set(msg.info.id, newID)
 

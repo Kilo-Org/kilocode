@@ -600,6 +600,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
               }}
               focusedBackgroundColor={theme.backgroundPanel}
               cursorColor={theme.primary}
+              cursorStyle={tuiConfig.cursor}
               focusedTextColor={theme.textMuted}
               ref={(r) => {
                 input = r
