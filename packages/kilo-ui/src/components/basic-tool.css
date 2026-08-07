@@ -511,13 +511,18 @@ html[data-theme="kilo-vscode"] [data-component="tool-part-wrapper"][data-part-ty
 [data-slot="tool-approval-line"] {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   gap: 4px;
   padding: 4px 0 6px;
   font-family: var(--font-family-sans);
   font-size: var(--font-size-small);
   line-height: var(--line-height-normal);
   color: var(--text-weak);
+
+  svg {
+    flex-shrink: 0;
+    color: var(--text-weak);
+  }
 
   [data-slot="tool-approval-decision"] {
     font-weight: var(--font-weight-medium);
