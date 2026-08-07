@@ -46,7 +46,10 @@ function run(args) {
   const error = Ref()
   const url = $.NSURL.fileURLWithPath(args[0])
   const recorder = $.AVAudioRecorder.alloc.initWithURLSettingsError(url, settings, error)
-  if (!recorder || !recorder.prepareToRecord || !recorder.record) throw new Error("Could not start recording")
+  if (!recorder || !recorder.prepareToRecord || !recorder.record) {
+    const description = error[0] && error[0].localizedDescription
+    throw new Error(description ? description.js : "Could not start recording")
+  }
   console.log("ready")
   $.NSFileHandle.fileHandleWithStandardInput.readDataToEndOfFile
   recorder.stop

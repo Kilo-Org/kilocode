@@ -17,7 +17,7 @@ import { ensureBackendForAutocomplete } from "./services/autocomplete/ensure-bac
 import { AutocompleteServiceManager } from "./services/autocomplete/AutocompleteServiceManager"
 import { AttentionService } from "./services/attention"
 import { BrowserAutomationService } from "./services/browser-automation"
-import { TelemetryProxy } from "./services/telemetry"
+import { TelemetryEventName, TelemetryProxy } from "./services/telemetry"
 import { registerCommitMessageService } from "./services/commit-message"
 import { registerCodeActions, registerTerminalActions, KiloCodeActionProvider } from "./services/code-actions"
 import { registerToggleAutoApprove } from "./commands/toggle-auto-approve"
@@ -26,6 +26,7 @@ import { RemoteStatusService } from "./services/RemoteStatusService"
 import { markWorkspace } from "./util/spotlight"
 import { createNotebookBridge } from "./services/notebook"
 import { createGitExecutable } from "./util/git-executable"
+import { isCursorHost } from "./utils"
 
 let agentManager: AgentManagerProvider | undefined
 let shuttingDown = false
@@ -47,6 +48,10 @@ const panelTitleHandler = (panel: vscode.WebviewPanel) => (title: string) => {
 export function activate(context: vscode.ExtensionContext) {
   console.log("Kilo Code extension is now active")
   shuttingDown = false
+
+  // Drives the "!kilo-code.new.isCursor" guards on the native view/title and
+  // editor/title menu contributions — see isCursorHost() for why.
+  void vscode.commands.executeCommand("setContext", "kilo-code.new.isCursor", isCursorHost())
 
   const telemetry = TelemetryProxy.getInstance()
 
@@ -339,8 +344,39 @@ export function activate(context: vscode.ExtensionContext) {
     }),
   )
 
+  // Sidebar menus use wrapper commands so this event measures real title button presses,
+  // not programmatic opens, shortcuts, or editor title commands.
+  const track = (button: string, command: string) => {
+    TelemetryProxy.capture(TelemetryEventName.TITLE_BUTTON_CLICKED, {
+      button,
+      surface: "sidebar_title",
+    })
+    void vscode.commands.executeCommand(command)
+  }
+
   // Register toolbar button command handlers
   context.subscriptions.push(
+    vscode.commands.registerCommand("kilo-code.new.sidebarTitle.plusButtonClicked", () => {
+      track("new_task", "kilo-code.new.plusButtonClicked")
+    }),
+    vscode.commands.registerCommand("kilo-code.new.sidebarTitle.historyButtonClicked", () => {
+      track("history", "kilo-code.new.historyButtonClicked")
+    }),
+    vscode.commands.registerCommand("kilo-code.new.sidebarTitle.agentManagerOpen", () => {
+      track("agent_manager", "kilo-code.new.agentManagerOpen")
+    }),
+    vscode.commands.registerCommand("kilo-code.new.sidebarTitle.kiloClawOpen", () => {
+      track("kiloclaw", "kilo-code.new.kiloClawOpen")
+    }),
+    vscode.commands.registerCommand("kilo-code.new.sidebarTitle.marketplaceButtonClicked", () => {
+      track("marketplace", "kilo-code.new.marketplaceButtonClicked")
+    }),
+    vscode.commands.registerCommand("kilo-code.new.sidebarTitle.profileButtonClicked", () => {
+      track("profile", "kilo-code.new.profileButtonClicked")
+    }),
+    vscode.commands.registerCommand("kilo-code.new.sidebarTitle.settingsButtonClicked", () => {
+      track("settings", "kilo-code.new.settingsButtonClicked")
+    }),
     vscode.commands.registerCommand("kilo-code.new.plusButtonClicked", () => {
       const tab = activeTabProvider()
       if (tab) tab.postMessage({ type: "action", action: "plusButtonClicked" })

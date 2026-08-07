@@ -77,6 +77,7 @@ function loadedSettings(message: ExtensionMessage): Record<string, unknown> | un
     return { "chat.shiftTabCyclesVariant": message.settings.shiftTabCyclesVariant }
   }
   if (message.type === "throughputSettingLoaded") return { showTokenThroughput: message.visible }
+  if (message.type === "autoApprovalReasonSettingLoaded") return { showAutoApprovalReason: message.visible }
 }
 
 export const ConfigProvider: ParentComponent = (props) => {

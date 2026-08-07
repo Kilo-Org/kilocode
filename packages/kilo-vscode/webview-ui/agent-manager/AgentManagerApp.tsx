@@ -2373,9 +2373,6 @@ const AgentManagerContent: Component = () => {
           onToggleReview={metrics.click("fullscreen_review", "tab_toolbar", toggleReviewTab)}
           terminalDestination={sideCtl.destination}
           terminalDestinationActive={() => sidePanel() === "terminal"}
-          terminalDestinationFocused={() =>
-            sideCtl.destination() === "agentManager" && terms.sideFocusedId() !== undefined
-          }
           terminalKeybind={() => kb().showTerminal ?? ""}
           onTerminalDestinationOpen={() => {
             cancelAmbientSetup()

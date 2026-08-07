@@ -311,8 +311,11 @@ const AppContent: Component = () => {
 
   // Set synchronously in the webview HTML by KiloProvider so it's available
   // before this component ever mounts (see buildWebviewHtml/_getHtmlForWebview).
-  // Dedicated single-purpose panels (Settings, Profile, Sub-Agent Viewer) set
-  // KILO_TOP_BAR = false since navigating away from them makes no sense.
+  // False for dedicated single-purpose panels (Settings, Profile, Sub-Agent
+  // Viewer) always, and for the Sidebar/"Open in Tab" outside Cursor — real
+  // VS Code's native title bar toolbar already covers those. Defaults to
+  // true only when unset entirely (e.g. Storybook, which doesn't render the
+  // real page HTML).
   const host = window as { KILO_TOP_BAR?: boolean; KILO_TOP_BAR_SURFACE?: string }
   const showTopBar = host.KILO_TOP_BAR !== false
   const topBarSurface = host.KILO_TOP_BAR_SURFACE ?? "sidebar_title"

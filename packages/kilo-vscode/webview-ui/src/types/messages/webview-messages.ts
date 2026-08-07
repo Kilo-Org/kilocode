@@ -459,6 +459,10 @@ export interface RequestThroughputSettingMessage {
   type: "requestThroughputSetting"
 }
 
+export interface RequestAutoApprovalReasonSettingMessage {
+  type: "requestAutoApprovalReasonSetting"
+}
+
 export interface RequestWorkStyleMessage {
   type: "requestWorkStyle"
 }
@@ -809,6 +813,8 @@ export interface AgentManagerTerminalCreateRequest {
   createId: string
   placement: TerminalPlacement
   worktreeId: string | null
+  cols?: number
+  rows?: number
 }
 
 // Close a terminal tab
@@ -1444,6 +1450,7 @@ export type WebviewMessage =
   | UpdateSettingRequest
   | RequestTimelineSettingMessage
   | RequestThroughputSettingMessage
+  | RequestAutoApprovalReasonSettingMessage
   | RequestWorkStyleMessage
   | SetWorkStyleMessage
   | ApplyWorkStyleMessage
