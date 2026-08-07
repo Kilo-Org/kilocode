@@ -465,6 +465,8 @@ export type IndexingWarning = {
 export type SnapshotFileDiff = {
   file?: string
   patch?: string
+  before?: string
+  after?: string
   additions: number
   deletions: number
   status?: "added" | "deleted" | "modified"
@@ -2888,11 +2890,11 @@ export type WorktreeResetInput = {
 export type WorktreeDiffItem = {
   file?: string
   patch?: string
+  before: string
+  after: string
   additions: number
   deletions: number
   status?: "added" | "deleted" | "modified"
-  before: string
-  after: string
   tracked: boolean
   generatedLike: boolean
   summarized: boolean
@@ -12326,6 +12328,10 @@ export type PtyCreateData = {
     env?: {
       [key: string]: string
     }
+    size?: {
+      rows: number
+      cols: number
+    }
   }
   path?: never
   query?: {
@@ -13177,6 +13183,8 @@ export type SessionDiffData = {
     directory?: string
     workspace?: string
     messageID?: string
+    file?: string
+    full?: "true" | "false"
   }
   url: "/session/{sessionID}/diff"
 }
@@ -20243,6 +20251,10 @@ export type V2PtyCreateData = {
     title?: string
     env?: {
       [key: string]: string
+    }
+    size?: {
+      rows: number
+      cols: number
     }
   }
   path?: never
