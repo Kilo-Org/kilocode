@@ -218,6 +218,11 @@ export const ImageModel = Schema.Struct({
   description: Schema.optional(Schema.String),
 })
 
+export const TranscriptionModel = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+})
+
 const UnknownRecord = Schema.Record(Schema.String, Schema.Unknown)
 
 export const CloudMessage = Schema.StructWithRest(
@@ -296,6 +301,7 @@ export const KiloGatewayPaths = {
   audioTranscriptions: `${root}/audio/transcriptions`,
   imageModels: `${root}/models/images`,
   modelEndpoints: `${root}/models/endpoints`,
+  transcriptionModels: `${root}/models/transcriptions`,
   notifications: `${root}/notifications`,
   organization: `${root}/organization`,
   clawStatus: `${root}/claw/status`,
@@ -401,6 +407,17 @@ export const KiloGatewayApi = HttpApi.make("kilo")
             description:
               "List the upstream endpoints (inference providers) serving a model, " +
               "usable as provider routing preferences for Kilo Gateway requests",
+          }),
+        ),
+        HttpApiEndpoint.get("transcriptionModels", KiloGatewayPaths.transcriptionModels, {
+          query: WorkspaceRoutingQuery,
+          success: described(Schema.Array(TranscriptionModel), "Speech-to-text model list"),
+          error: [HttpApiError.BadRequest, HttpApiError.Unauthorized],
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilo.models.transcriptions",
+            summary: "Speech-to-text models",
+            description: "List transcription-capable models from the Kilo Gateway catalog",
           }),
         ),
         HttpApiEndpoint.get("notifications", KiloGatewayPaths.notifications, {

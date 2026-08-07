@@ -21,6 +21,7 @@ import { useVSCode } from "../../src/context/vscode"
 import { useLanguage } from "../../src/context/language"
 import { formatReviewCommentsMarkdown } from "../../src/utils/review-comment-markdown"
 import type { ScriptTerminalStatus, TerminalFont } from "./state"
+import { createInputBuffer, createReplayGate } from "./replay"
 
 interface Props {
   terminalId: string
@@ -49,6 +50,9 @@ interface Props {
    *  layer tracks this as `focusedId` so `Cmd+W` can target the
    *  terminal that actually has the cursor. */
   onFocusChange?: (focused: boolean) => void
+  /** Handle the Agent Manager prompt shortcut locally because xterm's
+   *  textarea does not reliably forward custom commands to the workbench. */
+  onFocusPrompt?: () => void
   /** Reports OSC window-title escape codes (`ESC ] 0/1/2 ; title BEL`)
    *  sent by the shell or running programs — fish sets it to the active
    *  command, oh-my-zsh to user@host:cwd, vim to the file name. The
@@ -130,7 +134,7 @@ function isAgentManagerShortcut(e: KeyboardEvent): boolean {
   const key = e.key.toLowerCase()
   if (e.altKey && ["arrowleft", "arrowright", "arrowup", "arrowdown"].includes(key)) return true
   if (["t", "w", "n", "d", "e", "f"].includes(key)) return true
-  if (e.shiftKey && ["w", "n", "o", "r", "m", "/", "?"].includes(key)) return true
+  if (e.shiftKey && ["t", "w", "n", "o", "r", "m", "[", "]", "/", "?"].includes(key)) return true
   if (/^[1-9]$/.test(key)) return true
   if (key === "/") return true
   return false
@@ -148,8 +152,12 @@ export const TerminalTab: Component<Props> = (props) => {
 
   onMount(() => {
     const term = new Terminal({
-      convertEol: true,
+      // PTY output already contains terminal line endings. Converting LF to
+      // CRLF here corrupts raw PTY output and is especially visible when a
+      // narrow terminal wraps and redraws the prompt.
+      convertEol: false,
       cursorBlink: true,
+      cursorInactiveStyle: "outline",
       fontFamily: props.font.fontFamily,
       fontSize: props.font.fontSize,
       scrollback: 5000,
@@ -158,55 +166,24 @@ export const TerminalTab: Component<Props> = (props) => {
     })
     const fit = new FitAddon()
     term.loadAddon(fit)
-    // Clickable URLs in terminal output (Cmd/Ctrl+click to open).
-    // WebLinksAddon's default handler calls `window.open`, which VS Code
-    // webviews intercept and silently drop — so we pass an explicit
-    // handler that posts an `openExternal` message. The message falls
-    // through `AgentManagerProvider.onMessage` to the underlying
-    // `KiloProvider.handleWebviewMessage` path which already calls
-    // `vscode.env.openExternal` for sidebar + settings links.
-    term.loadAddon(
-      new WebLinksAddon((_event, url) => {
-        vscode.postMessage({ type: "openExternal", url })
-      }),
-    )
-    // OSC 52 clipboard support — lets shell programs (tmux, neovim, etc.)
-    // copy to the system clipboard via escape sequences. Writes always
-    // work in the webview; reads require the clipboard-read permission,
-    // which VS Code does not grant by default, so paste-from-escape
-    // silently falls back to no-op. Acceptable trade-off.
-    term.loadAddon(new ClipboardAddon())
-    // Unicode 15 grapheme-aware width tables. Fixes cell width for
-    // emoji introduced in Unicode 12-15 (🫠 melting face, 🫡 salute,
-    // 🧌 troll, and ~400 others) plus ZWJ grapheme sequences like
-    // 👨‍👩‍👧‍👦 and 🏳️‍🌈. The older `@xterm/addon-unicode11` (which VS
-    // Code's integrated terminal still uses) stops at Unicode 11
-    // (2018), leaving all post-2020 emoji rendered with wrong width —
-    // the canvas cuts them off in the DOM renderer and cursor math
-    // drifts by one cell per emoji. VS Code hides this visually with
-    // WebGL; in a webview we don't have that fallback, so we fix it
-    // at the buffer-width layer instead. Addon is marked
-    // "experimental" in its README but has been stable on npm since
-    // 2023, is shipped by the same maintainer as the core xterm.js
-    // package, and has no open bugs as of v0.4.0.
+    term.open(host)
+    // Unicode width must be configured before the first PTY bytes are parsed.
+    // Loading it later can leave already-wrapped graphemes with stale cell
+    // widths, which moves the cursor in narrow terminals.
     term.loadAddon(new UnicodeGraphemesAddon())
     term.unicode.activeVersion = "15-graphemes"
-    term.open(host)
-    // Fit on the next frame — `host` might still have 0px dimensions
-    // during the initial layout pass otherwise.
-    requestAnimationFrame(() => {
-      try {
-        fit.fit()
-      } catch (err) {
-        // Host still detached at mount time. ResizeObserver will retry
-        // once layout kicks in. Logged so regressions don't hide.
-        log("initial fit() threw", err)
-      }
-    })
 
-    // Pass agent-manager hotkeys through to the parent key handler so
-    // ⌘T / ⌘W / ⌘⌥← etc. still work while the terminal is focused.
-    term.attachCustomKeyEventHandler((event) => !isAgentManagerShortcut(event))
+    // Pass Agent Manager hotkeys through to the parent key handler so
+    // ⌘T / ⌘⇧T / ⌘W / terminal cycling / ⌘⌥← still work while focused.
+    term.attachCustomKeyEventHandler((event) => {
+      const prompt =
+        (event.metaKey || event.ctrlKey) && event.shiftKey && !event.altKey && event.key.toLowerCase() === "m"
+      if (prompt) {
+        if (event.type === "keydown") props.onFocusPrompt?.()
+        return false
+      }
+      return !isAgentManagerShortcut(event)
+    })
 
     // Track DOM focus so the state layer knows which terminal holds the
     // cursor (drives Cmd+W targeting). focusout is ignored when focus
@@ -225,13 +202,16 @@ export const TerminalTab: Component<Props> = (props) => {
 
     let ws: WebSocket | undefined
     let closed = false
-    let pending = ""
+    const input = createInputBuffer()
+    let user = false
     let restartRequested = false
     let disconnected = false
     let readyTimer: ReturnType<typeof setTimeout> | undefined
     let fallbackTimer: ReturnType<typeof setTimeout> | undefined
     let streamed = false
     let socketEnded = false
+    let frame: number | undefined
+    let deferred: number | undefined
     // The failure line must not depend on event ordering: the stream can
     // close before the exited snapshot lands (fast failures), or stay open
     // when a background child outlives the script. Write it exactly once,
@@ -265,11 +245,18 @@ export const TerminalTab: Component<Props> = (props) => {
         rows: term.rows,
       })
     }
+    const markUser = () => {
+      user = true
+      queueMicrotask(() => {
+        user = false
+      })
+    }
     const send = (data: string) => {
-      if (disconnected && props.restartable) {
-        pending += data
-        if (pending.length > 256 * 1024) pending = pending.slice(-256 * 1024)
-        requestRestart()
+      const reply = replay.draining() && !user
+      user = false
+      if (props.restartable && (replay.blocked() || disconnected || ws?.readyState !== WebSocket.OPEN)) {
+        input.add(data, reply)
+        if (disconnected) requestRestart()
         return
       }
       if (ws?.readyState === WebSocket.OPEN) {
@@ -277,7 +264,7 @@ export const TerminalTab: Component<Props> = (props) => {
         return
       }
     }
-    const flush = () => {
+    const flush = (all = false) => {
       if (ws?.readyState !== WebSocket.OPEN) return
       if (readyTimer) {
         clearTimeout(readyTimer)
@@ -287,9 +274,8 @@ export const TerminalTab: Component<Props> = (props) => {
         clearTimeout(fallbackTimer)
         fallbackTimer = undefined
       }
-      const data = pending
-      pending = ""
-      if (data && /[^\r\n]/.test(data)) ws.send(data)
+      const data = input.take()
+      if (data && (all || /[^\r\n]/.test(data))) ws.send(data)
       disconnected = false
       restartRequested = false
     }
@@ -301,8 +287,17 @@ export const TerminalTab: Component<Props> = (props) => {
         flush()
       }, 100)
     }
+    const replay = createReplayGate({
+      write: (data, callback) => term.write(data, callback),
+      flush: () => flush(true),
+    })
+    const disposeKey = term.onKey(markUser)
+    for (const event of ["input", "paste", "compositionend", "mousedown", "wheel"]) {
+      host.addEventListener(event, markUser, true)
+    }
     const open = (url: string) => {
       if (closed || !url) return
+      replay.attach(disconnected)
       const next = new WebSocket(url)
       next.binaryType = "arraybuffer"
       ws = next
@@ -320,14 +315,14 @@ export const TerminalTab: Component<Props> = (props) => {
         if (closed || ws !== next) return
         streamed = true
         if (typeof event.data === "string") {
-          term.write(event.data)
+          replay.output(event.data)
           scheduleFlush()
           return
         }
         if (event.data instanceof ArrayBuffer) {
           const bytes = new Uint8Array(event.data)
-          if (bytes.length > 0 && bytes[0] === 0x00) return
-          term.write(bytes)
+          if (replay.frame(bytes)) return
+          replay.output(bytes)
           scheduleFlush()
         }
       }
@@ -357,21 +352,42 @@ export const TerminalTab: Component<Props> = (props) => {
       }
     }
     const disposeData = term.onData(send)
-    open(props.wsUrl)
+    const disposeBinary = term.onBinary(send)
+    // These addons are not needed to paint the initial prompt. Defer them
+    // until after the first frame so their startup work does not delay the
+    // shell connection.
+    const loadAddons = () => {
+      deferred = undefined
+      if (closed) return
+
+      // Clickable URLs in terminal output (Cmd/Ctrl+click to open).
+      // WebLinksAddon's default handler calls `window.open`, which VS Code
+      // webviews intercept and silently drop, so post an explicit message.
+      term.loadAddon(
+        new WebLinksAddon((_event, url) => {
+          vscode.postMessage({ type: "openExternal", url })
+        }),
+      )
+      // OSC 52 clipboard support for shell programs such as tmux and neovim.
+      term.loadAddon(new ClipboardAddon())
+      term.refresh(0, Math.max(0, term.rows - 1))
+    }
     const restarted = (url: string) => {
       open(url)
     }
 
-    // Resize: fit on any host size change and forward new cols/rows to
-    // the backend PTY. Debounced because a user drag can fire dozens of
-    // resize events per second.
+    // Resize the visible terminal and forward new cols/rows to the backend
+    // PTY. Hidden terminals refit when activated, avoiding scrollback reflow
+    // for every mounted terminal during an inspector drag.
     let resizeTimer: ReturnType<typeof setTimeout> | undefined
     let lastCols = term.cols
     let lastRows = term.rows
-    const syncSize = () => {
-      if (term.cols === lastCols && term.rows === lastRows) return
+    let synced = false
+    const syncSize = (force = false) => {
+      if (!force && synced && term.cols === lastCols && term.rows === lastRows) return
       lastCols = term.cols
       lastRows = term.rows
+      synced = true
       vscode.postMessage({
         type: "agentManager.terminal.resize",
         terminalId: props.terminalId,
@@ -379,7 +395,18 @@ export const TerminalTab: Component<Props> = (props) => {
         rows: term.rows,
       })
     }
+    const fitNow = () => {
+      try {
+        fit.fit()
+        if (props.active) syncSize(true)
+      } catch (err) {
+        // Host still detached at mount time. ResizeObserver will retry
+        // once layout kicks in. Logged so regressions don't hide.
+        log("fit() threw", err)
+      }
+    }
     const ro = new ResizeObserver(() => {
+      if (!props.active) return
       try {
         fit.fit()
       } catch (err) {
@@ -394,6 +421,16 @@ export const TerminalTab: Component<Props> = (props) => {
       resizeTimer = setTimeout(syncSize, RESIZE_DEBOUNCE_MS)
     })
     ro.observe(host)
+    // Wait for the first committed layout before attaching the socket. This
+    // prevents the shell from emitting its first prompt at xterm's default
+    // 80 columns, which is most visible in a narrow side panel.
+    frame = requestAnimationFrame(() => {
+      frame = undefined
+      if (closed) return
+      fitNow()
+      open(props.wsUrl)
+      deferred = requestAnimationFrame(loadAddons)
+    })
 
     // ---- Repaint recovery ----
     //
@@ -424,7 +461,7 @@ export const TerminalTab: Component<Props> = (props) => {
       if (!isRenderable()) return
       try {
         fit.fit()
-        syncSize()
+        syncSize(!synced)
       } catch (err) {
         // Layout not settled yet; ResizeObserver retries on next change.
         log("repaint fit() threw", err)
@@ -443,12 +480,26 @@ export const TerminalTab: Component<Props> = (props) => {
         if (message.targetTerminalId !== props.terminalId) return
         const comments = message.comments
         if (!Array.isArray(comments) || comments.length === 0) return
+        markUser()
         term.paste(`${formatReviewCommentsMarkdown(comments)}\n`)
         return
       }
 
       if (message.type === "agentManager.terminal.restarted") {
         if (message.terminalId === props.terminalId) restarted(message.wsUrl)
+        return
+      }
+
+      if (message.type === "agentManager.terminal.created") {
+        if (message.terminalId === props.terminalId && !ws) {
+          term.options.fontFamily = message.font.fontFamily
+          term.options.fontSize = message.font.fontSize
+          // Optimistic side terminals can fit before their backend PTY exists;
+          // force the first resize again once the created response arrives.
+          fitNow()
+          scheduleRepaint()
+          open(message.wsUrl)
+        }
         return
       }
 
@@ -482,8 +533,14 @@ export const TerminalTab: Component<Props> = (props) => {
     createEffect(() => {
       const now = props.active
       const serial = props.focusSerial ?? 0
-      if (now && (!wasActive || serial !== focusSerial))
-        scheduleRepaint((serial > 0 && serial !== focusSerial) || props.focusOnActivate !== false)
+      if (now && (!wasActive || serial !== focusSerial)) {
+        const focus = (serial > 0 && serial !== focusSerial) || props.focusOnActivate !== false
+        // xterm creates its textarea synchronously in term.open(). Focus it
+        // now so a freshly revealed terminal accepts input in this event
+        // turn; the queued repaint below still refits and retries next frame.
+        if (focus && document.hasFocus()) term.focus()
+        scheduleRepaint(focus)
+      }
       if (!now && wasActive) term.blur()
       wasActive = now
       focusSerial = serial
@@ -525,15 +582,22 @@ export const TerminalTab: Component<Props> = (props) => {
     onCleanup(() => {
       closed = true
       if (pendingFrame !== null) cancelAnimationFrame(pendingFrame)
+      if (frame !== undefined) cancelAnimationFrame(frame)
+      if (deferred !== undefined) cancelAnimationFrame(deferred)
       document.removeEventListener("visibilitychange", onVisibilityChange)
       window.removeEventListener("focus", onWindowFocus)
       host.removeEventListener("focusin", onFocusIn)
       host.removeEventListener("focusout", onFocusOut)
+      for (const event of ["input", "paste", "compositionend", "mousedown", "wheel"]) {
+        host.removeEventListener(event, markUser, true)
+      }
+      disposeKey.dispose()
       fontSub()
       themeObserver.disconnect()
       clearTimeout(resizeTimer)
       ro.disconnect()
       disposeData.dispose()
+      disposeBinary.dispose()
       disposeTitle.dispose()
       try {
         ws?.close()

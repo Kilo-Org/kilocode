@@ -1,20 +1,36 @@
-/* kilocode_change start — restore main's card visual style (border + background) while keeping upstream layout selectors */
 [data-component="card"] {
+  --card-pad-y: 10px;
+  --card-pad-r: 12px;
+  --card-pad-l: 10px;
+
   width: 100%;
   display: flex;
   flex-direction: column;
+  position: relative;
+  /* kilocode_change start — preserve Kilo's bordered card surface */
   background-color: var(--surface-inset-base);
   border: 1px solid var(--border-weaker-base);
   transition: background-color 0.15s ease;
-  border-radius: var(--radius-md);
   padding: 6px 12px;
   overflow: clip;
+  /* kilocode_change end */
+  border-radius: var(--radius-md);
 
-  /* upstream layout variables (used by card.tsx data-slot system) */
+  /* text-14-regular */
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-base);
+  font-style: normal;
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-large);
+  letter-spacing: var(--letter-spacing-normal);
+  color: var(--v2-text-text-base);
+
   --card-gap: 8px;
   --card-icon: 16px;
   --card-indent: 0px;
-  --card-accent: var(--icon-active);
+  --card-line-pad: 8px;
+
+  --card-accent: var(--v2-icon-icon-base);
 
   &:has([data-slot="card-title"]) {
     gap: 8px;
@@ -25,7 +41,7 @@
   }
 
   :where([data-card="title"], [data-slot="card-title"]) {
-    color: var(--text-strong);
+    color: var(--v2-text-text-base);
     font-weight: var(--font-weight-medium);
   }
 
@@ -49,7 +65,7 @@
   }
 
   :where([data-slot="card-title-icon"][data-placeholder]) [data-component="icon"] {
-    color: var(--text-weak);
+    color: var(--v2-text-text-faint);
   }
 
   :where([data-slot="card-title-icon"])
@@ -59,7 +75,7 @@
   }
 
   :where([data-card="description"], [data-slot="card-description"]) {
-    color: var(--text-base);
+    color: var(--v2-text-text-muted);
     white-space: pre-wrap;
     overflow-wrap: anywhere;
     word-break: break-word;
@@ -69,6 +85,7 @@
     padding-left: var(--card-indent);
   }
 
+  /* kilocode_change start — preserve Kilo error and warning card variants */
   &[data-variant="error"] {
     background-color: var(--surface-critical-weak);
     border: 1px solid var(--border-critical-base);
@@ -101,5 +118,26 @@
     line-height: var(--line-height-large);
     letter-spacing: var(--letter-spacing-normal);
   }
+  /* kilocode_change end */
 }
-/* kilocode_change end */
+
+body:not([data-new-layout]) [data-component="card"] {
+  color: var(--text-strong);
+  --card-accent: var(--icon-active);
+
+  :where([data-card="title"], [data-slot="card-title"]) {
+    color: var(--text-strong);
+  }
+
+  :where([data-slot="card-title-icon"][data-placeholder]) [data-component="icon"] {
+    color: var(--text-weak);
+  }
+
+  :where([data-card="description"], [data-slot="card-description"]) {
+    color: var(--text-base);
+  }
+
+  &[data-variant="error"] {
+    --card-accent: var(--icon-critical-base) !important;
+  }
+}

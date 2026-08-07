@@ -147,6 +147,7 @@ interface StateMessage {
   /** Last selected sidebar target for seamless project-switch restore. */
   activeTarget?: SidebarTarget
   terminalDestination?: TerminalDestination
+  terminalFont?: TerminalFont
 }
 
 /** Project catalog pushed to the webview after registry or context changes. */
@@ -258,6 +259,8 @@ interface SessionClosedMessage {
 
 interface MultiVersionProgressMessage {
   type: "agentManager.multiVersionProgress"
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
   status: "creating" | "done"
   total: number
   completed: number
@@ -266,6 +269,8 @@ interface MultiVersionProgressMessage {
 
 interface SetSessionModelMessage {
   type: "agentManager.setSessionModel"
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
   sessionId: string
   providerID: string
   modelID: string
@@ -273,6 +278,8 @@ interface SetSessionModelMessage {
 
 interface SendInitialMessage {
   type: "agentManager.sendInitialMessage"
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
   sessionId: string
   worktreeId: string
   text?: string
@@ -292,6 +299,7 @@ interface BranchesMessage {
 
 interface ImportResultMessage {
   type: "agentManager.importResult"
+  projectId?: string
   success: boolean
   message: string
   errorCode?: WorktreeSetupErrorCode
@@ -791,6 +799,7 @@ interface FileSourceIn {
 
 interface SendMessageIn {
   type: "sendMessage"
+  projectId?: string
   text: string
   messageID?: string
   sessionID?: string
@@ -932,11 +941,13 @@ interface MoveSectionIn {
 
 interface TerminalCreateIn {
   type: "agentManager.terminal.create"
-  /** Webview-generated correlation id, echoed back in created/error. */
+  /** Webview-generated logical terminal id, echoed back in created/error. */
   createId: string
   placement: TerminalPlacement
   /** null for LOCAL, worktree id otherwise */
   worktreeId: string | null
+  cols?: number
+  rows?: number
 }
 
 interface TerminalCloseIn {

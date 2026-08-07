@@ -1,5 +1,15 @@
 # kilo-code
 
+## 7.4.20
+
+### Patch Changes
+
+- [#12841](https://github.com/Kilo-Org/kilocode/pull/12841) [`744c5c4`](https://github.com/Kilo-Org/kilocode/commit/744c5c4a6b244d2aac38b7acc08f98a4086544ad) - Discover available speech-to-text models from the Kilo Gateway while retaining offline fallback support and organization model restrictions.
+
+- [#12842](https://github.com/Kilo-Org/kilocode/pull/12842) [`2613ff9`](https://github.com/Kilo-Org/kilocode/commit/2613ff93c6446eb3a662ed6d4a4b063131a6a371) - Show the first Agent Manager terminal prompt sooner by deferring optional terminal enhancements until after initial paint.
+
+- [#12839](https://github.com/Kilo-Org/kilocode/pull/12839) [`4af1d1c`](https://github.com/Kilo-Org/kilocode/commit/4af1d1c8abd15881f5c06554cca8e2f6133003ee) - Keep the final file visible when expanding multi-file patch results.
+
 ## 7.4.19
 
 ### Minor Changes

@@ -1,5 +1,20 @@
 # @kilocode/cli
 
+## 7.4.20
+
+### Patch Changes
+
+- [#12847](https://github.com/Kilo-Org/kilocode/pull/12847) [`9ed716a`](https://github.com/Kilo-Org/kilocode/commit/9ed716a5b8bc7b6f8546869b56f8bf0302f5de28) - Temporarily restore the default grep controls to prevent searches from stalling subagents.
+
+- [#12659](https://github.com/Kilo-Org/kilocode/pull/12659) [`39f65ef`](https://github.com/Kilo-Org/kilocode/commit/39f65efa8bc85490462b8a71ff0b7dddb1035d6a) Thanks [@mjnaderi](https://github.com/mjnaderi)! - Skip API and telemetry lifecycle work for informational CLI commands and avoid profile requests when telemetry is disabled.
+
+- [#11961](https://github.com/Kilo-Org/kilocode/pull/11961) [`fd60036`](https://github.com/Kilo-Org/kilocode/commit/fd60036e4a17f108c80d51221944c4200ba6b85c) Thanks [@mvanhorn](https://github.com/mvanhorn)! - Help models recover from invalid tool calls with clear, field-specific validation errors.
+
+- [#12846](https://github.com/Kilo-Org/kilocode/pull/12846) [`8c84f8a`](https://github.com/Kilo-Org/kilocode/commit/8c84f8ae5ef17a6e69a66cdd06680c6bf4e91db7) - Support project agent and command directory symlinks explicitly allowed by global Markdown source permissions.
+
+- Updated dependencies [[`39f65ef`](https://github.com/Kilo-Org/kilocode/commit/39f65efa8bc85490462b8a71ff0b7dddb1035d6a)]:
+  - @kilocode/kilo-telemetry@7.4.20
+
 ## 7.4.19
 
 ### Minor Changes

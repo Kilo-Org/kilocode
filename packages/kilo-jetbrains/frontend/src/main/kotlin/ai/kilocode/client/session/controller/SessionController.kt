@@ -189,6 +189,7 @@ class SessionController(
     val autoApprove: Boolean get() = KiloPluginSettings.getAutoApprove()
     internal val blank: Boolean get() = ref == null && model.isEmpty() && !model.showSession
     internal val id: String? get() = sid
+    internal val sessionDirectory: String get() = model.session?.directory ?: (ref as? SessionRef.Local)?.session?.directory ?: directory
     internal val refKey: String? get() = ref?.key
     internal val refType: SessionRef.Type? get() = ref?.type
 
@@ -1011,6 +1012,7 @@ class SessionController(
                     }
                 }
                 recoverPending(id)
+                seedRevertDiff(id)
                 runEdt {
                     if (disposed) return@runEdt
                     if (sid != id) return@runEdt
@@ -1060,6 +1062,7 @@ class SessionController(
                     }
                 }
                 recoverPending(session.id)
+                seedRevertDiff(session.id)
                 runEdt {
                     if (disposed) return@runEdt
                     subscribeEvents()
@@ -1088,6 +1091,25 @@ class SessionController(
                 updates.holdFlush(false)
                 updates.requestFlush(true)
             }
+        }
+    }
+
+    /**
+     * Seed [SessionModel.diff] when opening a reverted session. The rolled-back file list in
+     * [ai.kilocode.client.session.ui.RevertBanner] falls back to `model.diff` when the CLI does not
+     * attach a diff to the revert marker. On a live revert a `session.diff` event seeds that; on
+     * reload nothing does, so fetch the persisted session diff once here. Skipped for sessions
+     * without a revert or once a diff is already present (e.g. a concurrent `session.diff` event).
+     */
+    private suspend fun seedRevertDiff(id: String) {
+        var fetch = false
+        runEdt { fetch = !disposed && sid == id && model.revert() != null && model.diff.isEmpty() }
+        if (!fetch) return
+        val diffs = runCatching { sessions.diff(id, directory) }.getOrNull()?.takeIf { it.isNotEmpty() } ?: return
+        runEdt {
+            if (disposed || sid != id) return@runEdt
+            if (model.revert() == null || model.diff.isNotEmpty()) return@runEdt
+            updateModel { model.setDiff(diffs) }
         }
     }
 

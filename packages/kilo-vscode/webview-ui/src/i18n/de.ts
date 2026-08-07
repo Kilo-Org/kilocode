@@ -182,6 +182,7 @@ export const dict = {
   "model.group.auto": "Automatische Modelle",
   "model.group.recommended": "Empfohlen",
   "model.group.favorites": "Favoriten",
+  "model.group.mostUsed": "Am häufigsten verwendet",
   "model.favorite.add": "Zu Favoriten hinzufügen",
   "model.favorite.remove": "Aus Favoriten entfernen",
 
@@ -325,6 +326,7 @@ export const dict = {
   "ui.approval.source.yolo": "durch den Auto-Genehmigungsmodus (YOLO)",
   "ui.approval.source.session": "durch eine Sitzungs-Auto-Genehmigungsregel",
   "ui.approval.source.default": "standardmäßig",
+  "ui.approval.outsideWorkspace": "(außerhalb deines Arbeitsbereichs: {{file}})",
 
   "session.tab.review": "Überprüfung",
   "session.review.filesChanged": "{{count}} Dateien geändert",
@@ -334,6 +336,14 @@ export const dict = {
   "session.messages.loadEarlier": "Frühere Nachrichten laden",
   "session.messages.loading": "Lade Nachrichten...",
 
+  "sidebar.topBar.label": "Kilo Code Navigation",
+  "sidebar.topBar.newTask": "Neue Aufgabe",
+  "sidebar.topBar.history": "Verlauf",
+  "sidebar.topBar.agentManager": "Agent Manager",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "Marktplatz",
+  "sidebar.topBar.profile": "Profil",
+  "sidebar.topBar.settings": "Einstellungen",
   "sidebar.session.newSession": "Neue Sitzung",
   "sidebar.session.newSession.tooltip": "Starte eine neue Unterhaltung, während die aktuelle Sitzung intakt bleibt.",
   "sidebar.session.newWorktree": "Neuer Worktree",
@@ -924,7 +934,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "Zulässige Netzwerkziele",
   "settings.sandboxing.allowedHosts.description":
-    "DNS-Host- und Portziele für Sandbox-HTTP- und HTTPS-Proxy-Datenverkehr. GitHub CLI und HTTPS Git benötigen üblicherweise github.com:443 und api.github.com:443. Änderungen gelten für neue Sitzungen.",
+    "DNS-Host- und Portziele für Sandbox-HTTP- und HTTPS-Proxy-Datenverkehr. GitHub CLI und HTTPS Git benötigen üblicherweise github.com:443 und api.github.com:443.",
   "settings.sandboxing.writablePaths.title": "Zusätzliche schreibbare Pfade",
   "settings.sandboxing.writablePaths.description":
     "Zusätzliche Dateisystempfade, in die die Sandbox Schreibvorgänge erlaubt (z. B. /tmp, /var/log). Diese werden mit den Standard-Schreibpfaden zusammengeführt, wenn die Sandbox aktiv ist.",
@@ -1168,19 +1178,23 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Reasoning-Aufwand mit Shift+Tab durchlaufen",
   "settings.display.shiftTabCycle.description":
     "Drücken Sie Shift+Tab in einem Prompt-Eingabefeld, um zur nächsten Stufe des Reasoning-Aufwands zu wechseln. Deaktivieren Sie dies, um Shift+Tab für die Tastaturfokusnavigation beizubehalten.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "Terminalbefehlsblöcke",
+  "settings.display.terminalCommand.description":
+    "Wählen Sie, ob Terminalbefehlsblöcke anfangs aus- oder eingeklappt sind.",
+  "settings.display.terminalCommand.expanded": "Ausgeklappt",
+  "settings.display.terminalCommand.collapsed": "Eingeklappt",
   "settings.display.codeEdit.title": "Blöcke für Codebearbeitungen",
   "settings.display.codeEdit.description":
     "Wählen Sie, ob Blöcke mit Codebearbeitungen und Unterschieden anfangs aus- oder eingeklappt sind.",
   "settings.display.codeEdit.expanded": "Ausgeklappt",
   "settings.display.codeEdit.collapsed": "Eingeklappt",
 
-  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.title": "Token-Durchsatz anzeigen",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+    "Zeigt die Textgenerierungsrate (Tokens/Sek.) in der letzten Assistentennachricht und im Aufgabenkopf an. Standardmäßig ausgeblendet, um den Chat übersichtlich zu halten.",
+  "settings.display.autoApprovalReason.title": "Grund für automatische Genehmigung anzeigen",
+  "settings.display.autoApprovalReason.description":
+    "Zeigt bei Tool-Aufrufen eine Zeile an, die erklärt, warum sie automatisch genehmigt wurden (passende Regel, Agent-Standard, YOLO-Modus usw.).",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

@@ -105,16 +105,19 @@ The remote server must serve an `index.json` file at the URL path with the follo
 ```json
 {
   "skills": [
-    { "name": "skill-name", "files": ["SKILL.md", "references/file.md"] }
+    { "name": "skill-name", "version": "2", "files": ["SKILL.md", "references/file.md"] }
   ]
 }
 ```
 
 Each skill object contains:
 - `name`: The skill name (must match the directory name)
+- `version`: Optional version string for refreshing cached skill files
 - `files`: Array of files to fetch for this skill (must include `SKILL.md`)
 
 Files are downloaded from `{url}/{skill-name}/{file}` paths.
+
+When you change a remote skill's contents or file list, also change its `version`. On the next skill rediscovery (`/reload` or a new session), Kilo downloads the complete new version before atomically replacing the cached directory. If any download fails, Kilo keeps the previous cached version.
 
 {% /tab %}
 {% tab label="CLI" %}
@@ -174,16 +177,19 @@ The remote server must serve an `index.json` file at the URL path with the follo
 ```json
 {
   "skills": [
-    { "name": "skill-name", "files": ["SKILL.md", "references/file.md"] }
+    { "name": "skill-name", "version": "2", "files": ["SKILL.md", "references/file.md"] }
   ]
 }
 ```
 
 Each skill object contains:
 - `name`: The skill name (must match the directory name)
+- `version`: Optional version string for refreshing cached skill files
 - `files`: Array of files to fetch for this skill (must include `SKILL.md`)
 
 Files are downloaded from `{url}/{skill-name}/{file}` paths.
+
+When you change a remote skill's contents or file list, also change its `version`. On the next skill rediscovery (`/reload` or a new session), Kilo downloads the complete new version before atomically replacing the cached directory. If any download fails, Kilo keeps the previous cached version.
 
 {% /tab %}
 {% /tabs %}

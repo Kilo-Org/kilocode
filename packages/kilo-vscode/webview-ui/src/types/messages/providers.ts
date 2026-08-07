@@ -70,6 +70,13 @@ export interface ModelEndpoint {
   uptime?: number
 }
 
+export interface ModelUsage {
+  count: number
+  lastUsed: number
+}
+
+export type ModelUsageMap = Record<string, ModelUsage>
+
 export type ProviderAuthState = "api" | "oauth" | "wellknown"
 
 export interface ProviderConfig {

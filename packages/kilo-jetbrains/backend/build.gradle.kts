@@ -20,10 +20,19 @@ val rawSpec = layout.buildDirectory.file("generated/openapi-spec/openapi.raw.jso
 val generatedSpec = layout.buildDirectory.file("generated/openapi-spec/openapi.json")
 val generatedProps = layout.buildDirectory.dir("generated/kilo-props")
 val generatedCli = layout.buildDirectory.dir("generated/kilo-cli-res")
+val generatedChecksums = layout.buildDirectory.dir("generated/kilo-cli-checksums")
 val pinned = providers.gradleProperty("kilo.cli.pinned").map { it.trim().toBoolean() }.orElse(true)
 val repoCli = pinned.map { !it }
 val bundled = providers.gradleProperty("kilo.cli.bundled").map { it.trim().toBoolean() }.orElse(false)
+val downloadsCli = repoCli.zip(bundled) { repo, bundle -> !repo && !bundle }
 val repoRootDir = rootProject.layout.projectDirectory.dir("../opencode")
+val local = rootProject.layout.projectDirectory.file(".gradle/kilo-cli-pin.properties")
+val bunPathProvider = providers.fileContents(local).asText.map { text ->
+    text.lineSequence().firstNotNullOfOrNull { line ->
+        val pair = line.split("=", limit = 2)
+        if (pair.getOrNull(0)?.trim() == "bun.path") pair.getOrNull(1)?.trim()?.takeIf { it.isNotEmpty() } else null
+    } ?: "bun"
+}.orElse("bun")
 
 val pinnedCliVersion = providers.fileContents(rootProject.layout.projectDirectory.file("package.json")).asText.map { text ->
     Regex("\"version\"\\s*:\\s*\"([^\"]+)\"").find(text)?.groupValues?.get(1)
@@ -33,6 +42,7 @@ val pinnedCliVersion = providers.fileContents(rootProject.layout.projectDirector
 sourceSets {
     main {
         resources.srcDir(generatedProps)
+        if (downloadsCli.get()) resources.srcDir(generatedChecksums)
         if (repoCli.get() || bundled.get()) resources.srcDir(generatedCli)
         kotlin.srcDir(generatedApi)
     }
@@ -61,12 +71,13 @@ val generateOpenApiSpec by tasks.registering(GenerateOpenApiSpecTask::class) {
     )
     cacheDir.set(layout.buildDirectory.dir("cli-cache"))
     spec.set(rawSpec)
+    bunPath.set(bunPathProvider)
 }
 
 val buildRepoCli by tasks.registering(Exec::class) {
     description = "Build the local repo CLI for the current platform"
     workingDir = repoRootDir.asFile
-    commandLine("bun", "run", "script/build.ts", "--single", "--skip-install")
+    commandLine(bunPathProvider.get(), "run", "script/build.ts", "--single", "--skip-install")
 }
 
 fun platform(): String {
@@ -102,6 +113,16 @@ val stageBundledCli by tasks.registering(StageBundledCliTask::class) {
     )
     cacheDir.set(layout.buildDirectory.dir("cli-cache"))
     archive.set(generatedCli.map { it.file("kilo-cli.zip") })
+}
+
+val writeCliChecksums by tasks.registering(WriteCliChecksumsTask::class) {
+    description = "Write pinned Kilo CLI checksums"
+    cliVersion.set(pinnedCliVersion)
+    token.set(
+        providers.environmentVariable("GH_TOKEN")
+            .orElse(providers.environmentVariable("GITHUB_TOKEN"))
+    )
+    checksums.set(generatedChecksums.map { it.file("kilo-cli-checksums.properties") })
 }
 
 val normalizeOpenApiSpec by tasks.registering(NormalizeOpenApiSpecTask::class) {
@@ -158,6 +179,7 @@ val fixGeneratedApi by tasks.registering(FixGeneratedApiTask::class) {
 
 tasks.named("compileKotlin") {
     dependsOn(fixGeneratedApi, writeKiloProperties)
+    if (downloadsCli.get()) dependsOn(writeCliChecksums)
     if (repoCli.get()) dependsOn(stageRepoCli)
     if (bundled.get()) dependsOn(stageBundledCli)
     inputs.dir(generatedApi)
@@ -165,6 +187,7 @@ tasks.named("compileKotlin") {
 
 tasks.named("processResources") {
     dependsOn(writeKiloProperties)
+    if (downloadsCli.get()) dependsOn(writeCliChecksums)
     if (repoCli.get()) dependsOn(stageRepoCli)
     if (bundled.get()) dependsOn(stageBundledCli)
 }

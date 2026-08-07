@@ -146,3 +146,9 @@
   flex: 1;
   min-width: 0;
 }
+
+/* Wrap long skill paths/URLs within the shared 320px tooltip width. */
+.settings-skills-tooltip-content {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

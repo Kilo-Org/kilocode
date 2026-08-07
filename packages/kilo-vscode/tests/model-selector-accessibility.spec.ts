@@ -80,17 +80,18 @@ test("auto efficient details show server description and model choices", async (
   await expect(preview).not.toContainText("openai/gpt-5.5")
 })
 
-test("typing a provider initial moves the active descendant to matching results", async ({ page }) => {
+test("search uses a flat relevance-ranked result list with provider labels", async ({ page }) => {
   await load(page, "shared--model-selector-accessible")
 
   await page.getByRole("button", { name: "Review model: Alpha" }).click()
   const combobox = page.getByRole("combobox", { name: "Review model: Alpha. Search models" })
-  await combobox.fill("N")
+  await combobox.fill("nov")
 
   const nova = page.getByRole("treeitem", { name: "Nova" })
   await expect(nova).toBeVisible()
   await expect(combobox).toHaveAttribute("aria-activedescendant", await nova.getAttribute("id"))
-  await expect(page.getByRole("treeitem", { name: "NVIDIA" })).toHaveAttribute("aria-expanded", "true")
+  await expect(page.locator(".model-selector-group-label").filter({ hasText: "NVIDIA" })).toHaveCount(0)
+  await expect(nova).toContainText("NVIDIA")
 })
 
 test("provider groups collapse, expand, and skip their model rows", async ({ page }) => {
@@ -141,12 +142,13 @@ test("active descendant always identifies a visible tree item", async ({ page })
   await active()
   await combobox.fill("N")
   await active()
-  await combobox.press("ArrowLeft")
   await combobox.press("ArrowDown")
-  await combobox.press("ArrowLeft")
   await active()
   await combobox.fill("no matching model")
-  await active()
+  await expect(combobox).toHaveAttribute(
+    "aria-activedescendant",
+    await page.getByRole("treeitem", { name: "Use default model" }).getAttribute("id"),
+  )
 })
 
 test("expanded preview waits for explicit pointer selection", async ({ page }) => {

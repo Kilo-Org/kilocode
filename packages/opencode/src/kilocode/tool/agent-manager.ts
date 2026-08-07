@@ -117,7 +117,7 @@ const WireParams = Schema.Struct({
   ),
   filter: Schema.optional(ListParams.fields.filter),
   sessionID: Schema.optional(
-    SessionID.annotate({ description: "For move, use a session ID returned by action=list." }),
+    Schema.String.annotate({ description: "For move, use a session ID returned by action=list (IDs start with ses_)." }),
   ),
   prompt: Schema.optional(PromptParams.fields.prompt),
   sectionID: Schema.optional(MoveParams.fields.sectionID),

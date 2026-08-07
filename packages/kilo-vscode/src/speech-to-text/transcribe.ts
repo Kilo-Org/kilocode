@@ -54,7 +54,7 @@ export async function transcribeSpeech(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: model.id,
+        model: input.model || model.id,
         input_audio: {
           data: input.data,
           format: input.format,
