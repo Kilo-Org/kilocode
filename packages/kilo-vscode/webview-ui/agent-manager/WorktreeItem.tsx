@@ -357,6 +357,7 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                             onClick={handleOpenPR}
                           >
                             <Icon name="pull-request" size="small" />
+                            <span class="am-pr-badge-number">#{pr().number}</span>
                             <Switch>
                               <Match when={indicator() === "failure"}>
                                 <Icon name="circle-x-outline" size="small" class="am-pr-badge-status" data-status="failure" />
