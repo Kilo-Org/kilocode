@@ -130,39 +130,9 @@
 
 ## [7.0.14] - 2026-08-06
 
-### Added
-- feat(vscode): improve model search ranking by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12943
-- feat(agent-manager): target new worktrees by project by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12931
-- feat(vscode): improve Agent Manager terminal navigation by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12945
-- feat(cli): add command file management parity with skills by @kirillk in https://github.com/Kilo-Org/kilocode/pull/12825
-
 ### Fixed
-- fix(jetbrains): improve slash command matching by @kirillk in https://github.com/Kilo-Org/kilocode/pull/12909
-- fix(vscode): avoid macOS Git launcher overhead in Agent Manager by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12888
-- fix(vscode): speed up snapshot installs and isolate project state by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12871
-- fix(vscode): avoid Agent Manager terminal logo artifacts by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12925
-- fix(cli): safely restore grep signal controls by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12882
-- fix(vscode): reduce Agent Manager Git polling load by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12924
-- fix(cli): keep built-in skill examples inert by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12926
-- fix(vscode): persist Agent Manager dialog selections by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12927
-- fix(cli): prevent TUI config logs from corrupting terminal by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12929
-- fix(vscode): prevent Windows gh console flashes by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12936
-- fix(agent-manager): tighten multi-project sidebar layout by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12940
-- fix(cli): restore interactive terminal input for workspaces by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12935
-- fix(cli): resume subagents after session fork by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12937
-- fix(agent-manager): improve inspector resize performance by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12948
-- fix(cli): avoid startup database lock crashes by @johnnyeric in https://github.com/Kilo-Org/kilocode/pull/12947
-- fix(agent-manager): support llama.cpp tool schema by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/12946
-- fix(agent-manager): extract pending-create below the app size cap by @lambertjosh in https://github.com/Kilo-Org/kilocode/pull/12952
-- fix(tui): suppress expected disposal aborts by @lambertjosh in https://github.com/Kilo-Org/kilocode/pull/12950
-- fix(vscode/cursor): keep sidebar navigation visible in the secondary side bar by @bagatao-anaconda in https://github.com/Kilo-Org/kilocode/pull/12894
-- fix(vscode): preserve model variants on switch by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12944
-- fix(vscode): translate Agent Manager terminal shortcut by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12956
-
-### Changed
-- release(jetbrains): v7.0.13 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/12921
-- docs: add bundled JetBrains install instructions by @kirillk in https://github.com/Kilo-Org/kilocode/pull/12953
-
+- Improve slash command matching in the JetBrains plugin so typed commands resolve more reliably.
+- Avoid startup crashes when the Kilo CLI database is temporarily locked by another process.
 
 ## [7.0.13] - 2026-08-05
 
