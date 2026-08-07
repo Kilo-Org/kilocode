@@ -213,4 +213,8 @@ export const dict = {
   "agentManager.import.noBranchesFound": "Keine Branches gefunden.",
   "agentManager.import.noBranchesHint": "Fügen Sie oben eine PR-URL ein oder erstellen Sie einen neuen Worktree.",
   "agentManager.import.failed": "Import fehlgeschlagen",
+  "agentManager.caffeination.toggle": "Computer wach halten",
+  "agentManager.caffeination.armed": "Wachhaltemodus aktiviert; zum Deaktivieren klicken",
+  "agentManager.caffeination.active": "Computer wird wach gehalten",
+  "agentManager.caffeination.unavailable": "Der Wachhaltemodus ist auf dieser Plattform nicht verfügbar",
 }

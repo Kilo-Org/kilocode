@@ -219,4 +219,8 @@ export const dict = {
   "agentManager.import.noBranchesFound": "Hiçbir dal bulunamadı.",
   "agentManager.import.noBranchesHint": "Yukarıya bir PR URL'si yapıştırın veya yeni bir worktree oluşturun.",
   "agentManager.import.failed": "İçe aktarma başarısız oldu",
+  "agentManager.caffeination.toggle": "Bilgisayarı uyanık tut",
+  "agentManager.caffeination.armed": "Bilgisayarı uyanık tutma modu etkin; devre dışı bırakmak için tıklayın",
+  "agentManager.caffeination.active": "Bilgisayar uyanık tutuluyor",
+  "agentManager.caffeination.unavailable": "Bilgisayarı uyanık tutma modu bu platformda kullanılamıyor",
 }

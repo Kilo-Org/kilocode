@@ -206,4 +206,8 @@ export const dict = {
   "agentManager.import.noBranchesFound": "ไม่พบ Branch",
   "agentManager.import.noBranchesHint": "วาง URL ของ PR ด้านบนหรือสร้าง Worktree ใหม่",
   "agentManager.import.failed": "นำเข้าล้มเหลว",
+  "agentManager.caffeination.toggle": "ป้องกันคอมพิวเตอร์เข้าสู่โหมดพัก",
+  "agentManager.caffeination.armed": "เปิดโหมดป้องกันการพักเครื่องแล้ว คลิกเพื่อปิด",
+  "agentManager.caffeination.active": "กำลังป้องกันคอมพิวเตอร์เข้าสู่โหมดพัก",
+  "agentManager.caffeination.unavailable": "โหมดป้องกันการพักเครื่องไม่พร้อมใช้งานบนแพลตฟอร์มนี้",
 }

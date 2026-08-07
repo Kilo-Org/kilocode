@@ -210,4 +210,8 @@ export const dict = {
   "agentManager.import.noBranchesFound": "브랜치를 찾을 수 없습니다.",
   "agentManager.import.noBranchesHint": "위에 PR URL을 붙여넣거나 새 Worktree를 만드세요.",
   "agentManager.import.failed": "가져오기 실패",
+  "agentManager.caffeination.toggle": "컴퓨터를 절전 모드로 전환하지 않기",
+  "agentManager.caffeination.armed": "절전 방지 모드가 활성화되었습니다. 클릭하여 비활성화",
+  "agentManager.caffeination.active": "컴퓨터를 절전 모드로 전환하지 않습니다",
+  "agentManager.caffeination.unavailable": "이 플랫폼에서는 절전 방지 모드를 사용할 수 없습니다",
 }

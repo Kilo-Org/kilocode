@@ -15,6 +15,7 @@ import {
 } from "solid-js"
 import type {
   AgentManagerRepoInfoMessage,
+  AgentManagerCaffeinationMessage,
   AgentManagerWorktreeSetupMessage,
   AgentManagerStateMessage,
   ExtensionMessage,
@@ -46,6 +47,7 @@ import type {
   BranchInfo,
   TerminalDestination,
   TerminalFont,
+  CaffeinationState,
 } from "../src/types/messages"
 import { readFontSize } from "../src/font-size"
 import { IndexingProvider } from "../src/context/indexing"
@@ -254,6 +256,13 @@ const AgentManagerContent: Component = () => {
   const setStaleWorktreeIds: Setter<Set<string>> = (v) => registry.active().setStaleWorktreeIds(v)
   /** True while the ⌘/Ctrl jump modifier is held — reveals the ⌘1-9 badges on all sidebar items. */
   const [held, setHeld] = createSignal(false)
+  const [caffeination, setCaffeination] = createSignal<CaffeinationState>({
+    enabled: false,
+    active: false,
+    available: true,
+  })
+  const toggleCaffeination = () =>
+    vscode.postMessage({ type: "agentManager.setCaffeination", enabled: !caffeination().enabled })
   const [worktreesLoaded, setWorktreesLoaded] = createSignal(false)
   const [sessionsLoaded, setSessionsLoaded] = createSignal(false)
   const [isGitRepo, setIsGitRepo] = createSignal(true)
@@ -1363,6 +1372,11 @@ const AgentManagerContent: Component = () => {
     })
 
     const unsub = vscode.onMessage((msg) => {
+      if (msg.type === "agentManager.caffeination") {
+        const ev = msg as AgentManagerCaffeinationMessage
+        setCaffeination(ev)
+      }
+
       if (msg.type === "agentManager.repoInfo") {
         const info = msg as AgentManagerRepoInfoMessage
         setRepoBranch(info.branch)
@@ -2353,6 +2367,8 @@ const AgentManagerContent: Component = () => {
             onSearchRef={(ref) => (sidebarSearchMenu = ref)}
             onShortcuts={handleShowKeyboardShortcuts}
             shortcutMap={projectShortcutMap}
+            caffeination={caffeination}
+            onToggleCaffeination={toggleCaffeination}
           />
         </Show>
         <Show when={!multiProject()}>
@@ -2382,6 +2398,8 @@ const AgentManagerContent: Component = () => {
             onShortcuts={metrics.click("keyboard_shortcuts", "worktrees_header", handleShowKeyboardShortcuts)}
             onSetup={setupScript}
             onBranch={handleChangeDefaultBaseBranch}
+            caffeination={caffeination}
+            onToggleCaffeination={toggleCaffeination}
             sections={sections}
             sortedWorktrees={sortedWorktrees}
             worktrees={worktrees}

@@ -220,4 +220,8 @@ export const dict = {
   "agentManager.import.noBranchesFound": "Гілок не знайдено.",
   "agentManager.import.noBranchesHint": "Вставте URL PR вище або створіть нове робоче дерево.",
   "agentManager.import.failed": "Імпортування не вдалося",
+  "agentManager.caffeination.toggle": "Не присипляти комп'ютер",
+  "agentManager.caffeination.armed": "Режим запобігання сну ввімкнено; натисніть, щоб вимкнути",
+  "agentManager.caffeination.active": "Комп'ютер не переходить у сон",
+  "agentManager.caffeination.unavailable": "Режим запобігання сну недоступний на цій платформі",
 }

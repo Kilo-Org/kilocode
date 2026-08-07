@@ -21,6 +21,8 @@ import { NewWorktreeDialog } from "./NewWorktreeDialog"
 import { ProjectBranchDialog } from "./ProjectBranchDialog"
 import type { ProjectStore } from "./project/store"
 import type { ModeRouter } from "./mode-router"
+import { CaffeinationButton } from "./CaffeinationButton"
+import type { CaffeinationState } from "../src/types/messages"
 
 interface Props {
   projects: AgentProjectSnapshot[]
@@ -42,6 +44,8 @@ interface Props {
   onSearchRef: (ref: SidebarSearchMenuRef) => void
   onShortcuts: () => void
   shortcutMap?: () => Map<string, number>
+  caffeination: () => CaffeinationState
+  onToggleCaffeination: () => void
 }
 
 export const ProjectList: Component<Props> = (props) => {
@@ -175,6 +179,7 @@ export const ProjectList: Component<Props> = (props) => {
             }}
             onSelect={selectSearch}
           />
+          <CaffeinationButton t={props.t} state={props.caffeination} onToggle={props.onToggleCaffeination} />
           <TooltipKeybind
             title={props.t("agentManager.shortcuts.title")}
             keybind={props.bindings.showShortcuts ?? ""}

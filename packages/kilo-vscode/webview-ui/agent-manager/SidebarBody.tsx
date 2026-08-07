@@ -18,6 +18,7 @@ import type {
   SessionInfo,
   WorktreeGitStats,
   WorktreeState,
+  CaffeinationState,
 } from "../src/types/messages"
 import type { LanguageContextValue } from "../src/context/language"
 import type { SidebarSearchItem } from "./sidebar-search"
@@ -63,6 +64,8 @@ export interface SidebarBodyProps {
   onShortcuts: () => void
   onSetup: () => void
   onBranch: () => void
+  caffeination: () => CaffeinationState
+  onToggleCaffeination: () => void
   sections: () => SectionState[]
   sortedWorktrees: () => WorktreeState[]
   worktrees: () => WorktreeState[]
@@ -204,6 +207,8 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
               onShortcuts={props.onShortcuts}
               onSetup={props.onSetup}
               onBranch={props.onBranch}
+              caffeination={props.caffeination}
+              onToggleCaffeination={props.onToggleCaffeination}
             />
           }
         />

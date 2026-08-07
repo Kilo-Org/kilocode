@@ -212,4 +212,8 @@ export const dict = {
   "agentManager.import.noBranchesFound": "ブランチが見つかりません。",
   "agentManager.import.noBranchesHint": "上にPR URLを貼り付けるか、新しいWorktreeを作成してください。",
   "agentManager.import.failed": "インポートに失敗しました",
+  "agentManager.caffeination.toggle": "コンピューターをスリープさせない",
+  "agentManager.caffeination.armed": "スリープ防止モードが有効です。クリックして無効にします",
+  "agentManager.caffeination.active": "コンピューターをスリープさせません",
+  "agentManager.caffeination.unavailable": "このプラットフォームではスリープ防止モードを利用できません",
 }

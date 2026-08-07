@@ -211,4 +211,8 @@ export const dict = {
   "agentManager.import.noBranchesFound": "Nie znaleziono branchy.",
   "agentManager.import.noBranchesHint": "Wklej URL PR powyżej lub utwórz nowy Worktree.",
   "agentManager.import.failed": "Import nie powiódł się",
+  "agentManager.caffeination.toggle": "Nie usypiaj komputera",
+  "agentManager.caffeination.armed": "Tryb utrzymywania komputera aktywnego włączony; kliknij, aby wyłączyć",
+  "agentManager.caffeination.active": "Komputer jest utrzymywany aktywny",
+  "agentManager.caffeination.unavailable": "Tryb utrzymywania komputera aktywnego jest niedostępny na tej platformie",
 }

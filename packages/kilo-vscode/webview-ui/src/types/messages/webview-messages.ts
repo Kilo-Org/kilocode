@@ -898,6 +898,11 @@ export interface SetSidebarCollapsedRequest {
   collapsed: boolean
 }
 
+export interface SetCaffeinationRequest {
+  type: "agentManager.setCaffeination"
+  enabled: boolean
+}
+
 // Persist review diff style preference
 export interface SetReviewDiffStyleRequest {
   type: "agentManager.setReviewDiffStyle"
@@ -1492,6 +1497,7 @@ export type WebviewMessage =
   | SetWorktreeOrderRequest
   | SetSessionsCollapsedRequest
   | SetSidebarCollapsedRequest
+  | SetCaffeinationRequest
   | SetReviewDiffStyleRequest
   | SetReviewMarkdownRenderRequest
   | PersistVariantRequest
