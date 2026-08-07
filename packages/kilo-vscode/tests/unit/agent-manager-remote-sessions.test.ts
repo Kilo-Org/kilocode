@@ -22,7 +22,7 @@ test("does not report synthetic pending or cloud preview IDs", () => {
 test("blocks visible presence while setup or an empty pane covers chat", () => {
   const source = flat(fs.readFileSync(APP, "utf-8"))
   expect(source).toContain(
-    "visible( session.currentSessionID(), !!terms.activeId() || reviewActive() || history() || !!overlay() || contextEmpty(), )",
+    "visible(session.currentSessionID(), !!terms.activeId() || reviewActive() || history() || contextEmpty())",
   )
-  expect(source).toContain("<Show when={overlay()}>")
+  expect(source).toContain("<Show when={contextEmpty()}>")
 })
