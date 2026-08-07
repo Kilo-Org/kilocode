@@ -108,18 +108,21 @@ export namespace TestCli {
       if (target) {
         const link = path.join(scope, name.replace("@opentui/", ""))
         try {
-          if (!fsSync.existsSync(link)) {
-            await fs.symlink(target, link, kind)
-          }
-        } catch {}
+          await fs.rm(link, { recursive: true, force: true })
+          await fs.symlink(target, link, kind)
+        } catch (err) {
+          console.warn(`[test-cli] failed to link native variant ${name}:`, err)
+        }
       }
     }
 
     if (!targetDir) {
       try {
         const currentHash = await fingerprint(root)
-        fsSync.writeFileSync(hashFile, currentHash)
-      } catch {}
+        await fs.writeFile(hashFile, currentHash)
+      } catch (err) {
+        console.warn("[test-cli] failed to save fingerprint hash:", err)
+      }
     }
 
     return bin

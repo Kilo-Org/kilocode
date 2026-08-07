@@ -1263,6 +1263,8 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "4.11.3",
+    "@babel/core": "^7.28.4",
+    "@babel/preset-typescript": "^7.27.1",
     "@playwright/test": "1.57.0",
     "@storybook/addon-a11y": "10.2.10",
     "@storybook/addon-docs": "10.2.10",
@@ -1274,6 +1276,7 @@
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.7.1",
+    "babel-preset-solid": "^1.9.9",
     "esbuild": "^0.27.2",
     "esbuild-plugin-solid": "^0.6.0",
     "eslint": "^9.39.2",
