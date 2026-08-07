@@ -18,6 +18,27 @@ export function getWebviewFontSize(): number {
   return clamp(raw)
 }
 
+/**
+ * True when running inside Cursor rather than real VS Code (or another
+ * fork). Cursor's Secondary Side Bar support is known to be unreliable for
+ * extension-contributed `view/title` toolbars (see
+ * https://github.com/anthropics/claude-code/issues/31375 for the same class
+ * of bug in a different extension), so Cursor falls back to an in-webview
+ * navigation bar instead of the native toolbar that VS Code renders fine
+ * everywhere.
+ *
+ * This is a per-host choice, not a per-dock-location one: `WebviewView` (and
+ * the rest of the public API, checked against @types/vscode) exposes no way
+ * to ask "is my view currently in the primary or secondary side bar", so the
+ * webview fallback bar is Cursor's only option in both locations. Accepted
+ * trade-off: Cursor's primary side bar loses the single-line native look it
+ * had before this existed, in exchange for the Secondary Side Bar actually
+ * working, with zero guessing about dock position anywhere.
+ */
+export function isCursorHost(): boolean {
+  return vscode.env.appName.toLowerCase().includes("cursor")
+}
+
 function fontStyle(): string {
   const base = getWebviewFontSize()
   const vars = SIZES.map((size) => `--kilo-font-size-${size}: ${(base * size) / 13}px;`).join("\n      ")
