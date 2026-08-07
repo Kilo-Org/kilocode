@@ -147,8 +147,8 @@ const dicts: Record<Locale, Record<string, string>> = {
   nl: { ...base, ...appNl, ...uiNl, ...kiloNl, ...amEn, ...amNl },
   uk: { ...base, ...appUk, ...uiUk, ...kiloUk, ...amEn, ...amUk },
   it: { ...base, ...appIt, ...uiIt, ...kiloIt, ...amEn, ...amIt },
-  // Persian (Kilo fork addition). Only app + agent-manager layers are localized;
-  // the upstream ui/kilo layers fall back to English via `base`.
+  // Persian (Kilo fork addition). App, UI, and agent-manager layers are localized;
+  // the Kilo overrides layer falls back to English via `base`.
   fa: { ...base, ...appFa, ...uiFa, ...amEn, ...amFa },
 }
 
