@@ -1,23 +1,20 @@
 import { describe, expect, it } from "bun:test"
 import { createModelSelector } from "../../webview-ui/src/context/session-model-selector"
-import { variantKey } from "../../webview-ui/src/context/session-variant-store"
 
 describe("model selector", () => {
-  it("preserves the nearest variant for the active session model change", () => {
+  it("carries the active session variant for the selected model", () => {
     const selected = { providerID: "kilo", modelID: "old" }
     const next: Array<{ id: string; selection: typeof selected }> = []
-    const variants: Record<string, string> = {}
+    const variants: Array<{ value: string | undefined; session: string | undefined }> = []
     const hidden: string[] = []
     const selector = createModelSelector({
       current: () => "session",
       agent: () => "code",
       selected: () => selected,
       variant: () => "high",
-      variants: () => ["low", "medium"],
       apply: (_agent, selection, id) => next.push({ id: id!, selection }),
       set: () => undefined,
-      setVariant: (key, value) => (variants[key] = value),
-      persist: () => undefined,
+      carry: (_selection, value, _agent, session) => variants.push({ value, session }),
       hide: (id) => hidden.push(id),
     })
 
@@ -25,25 +22,22 @@ describe("model selector", () => {
 
     const model = { providerID: "kilo", modelID: "new" }
     expect(next).toEqual([{ id: "session", selection: model }])
-    expect(variants[variantKey(model, "code", "session")]).toBe("medium")
+    expect(variants).toEqual([{ value: "high", session: "session" }])
     expect(hidden).toEqual(["session"])
   })
 
   it("retains a session variant without persisting a global model selection", () => {
     const selected = { providerID: "kilo", modelID: "old" }
     const models: Array<{ id: string; selection: typeof selected }> = []
-    const variants: Record<string, string> = {}
-    let persisted = false
+    const variants: Array<{ value: string | undefined; session: string | undefined }> = []
     const selector = createModelSelector({
       current: () => undefined,
       agent: () => "code",
       selected: () => selected,
       variant: () => "high",
-      variants: () => ["low", "medium", "high"],
       apply: () => undefined,
       set: (id, selection) => models.push({ id, selection }),
-      setVariant: (key, value) => (variants[key] = value),
-      persist: () => (persisted = true),
+      carry: (_selection, value, _agent, session) => variants.push({ value, session }),
       hide: () => undefined,
     })
 
@@ -51,7 +45,6 @@ describe("model selector", () => {
 
     const model = { providerID: "kilo", modelID: "new" }
     expect(models).toEqual([{ id: "session", selection: model }])
-    expect(variants[variantKey(model, "code", "session")]).toBe("high")
-    expect(persisted).toBe(false)
+    expect(variants).toEqual([{ value: "high", session: "session" }])
   })
 })

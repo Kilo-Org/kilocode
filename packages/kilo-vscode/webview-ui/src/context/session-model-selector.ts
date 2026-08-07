@@ -1,27 +1,17 @@
 import type { ModelSelection } from "../types/messages"
-import { preserveVariant, variantKey } from "./session-variant-store"
 
 type Deps = {
   current: () => string | undefined
   agent: (session?: string) => string
   selected: (session?: string) => ModelSelection | null
   variant: (session?: string) => string | undefined
-  variants: (selection: ModelSelection) => string[]
   apply: (agent: string, selection: ModelSelection, session?: string) => void
   set: (session: string, selection: ModelSelection) => void
-  setVariant: (key: string, value: string) => void
-  persist: (key: string, value: string) => void
+  carry: (selection: ModelSelection, value: string | undefined, agent: string, session?: string) => void
   hide: (session: string) => void
 }
 
 export function createModelSelector(deps: Deps) {
-  const carry = (selection: ModelSelection, current: string | undefined, agent: string, session?: string) => {
-    const value = preserveVariant(current, deps.variants(selection))
-    if (!value) return
-    const key = variantKey(selection, agent, session)
-    deps.setVariant(key, value)
-    if (!session) deps.persist(key, value)
-  }
   const select = (providerID: string, modelID: string, sessionID?: string) => {
     const session = sessionID ?? deps.current()
     const agent = deps.agent(session)
@@ -29,7 +19,7 @@ export function createModelSelector(deps: Deps) {
     const value = current ? deps.variant(session) : undefined
     const selection = { providerID, modelID }
     deps.apply(agent, selection, session)
-    carry(selection, value, agent, session)
+    deps.carry(selection, value, agent, session)
     if (session) deps.hide(session)
   }
   const session = (sessionID: string, providerID: string, modelID: string) => {
@@ -40,7 +30,7 @@ export function createModelSelector(deps: Deps) {
     const value = current ? deps.variant(sessionID) : undefined
     const selection = { providerID, modelID }
     deps.set(sessionID, selection)
-    carry(selection, value, agent, sessionID)
+    deps.carry(selection, value, agent, sessionID)
   }
   return { select, session }
 }

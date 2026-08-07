@@ -183,6 +183,8 @@ import type {
   KilocodeAgentManagerReplyResponses,
   KilocodeAgentRequirementsErrors,
   KilocodeAgentRequirementsResponses,
+  KilocodeCommandFilesErrors,
+  KilocodeCommandFilesResponses,
   KilocodeHeapSnapshotErrors,
   KilocodeHeapSnapshotResponses,
   KilocodeNotebookListErrors,
@@ -193,6 +195,8 @@ import type {
   KilocodeNotebookReplyResponses,
   KilocodeRemoveAgentErrors,
   KilocodeRemoveAgentResponses,
+  KilocodeRemoveCommandErrors,
+  KilocodeRemoveCommandResponses,
   KilocodeRemoveSkillErrors,
   KilocodeRemoveSkillResponses,
   KilocodeSessionImportMessageErrors,
@@ -8098,6 +8102,81 @@ export class Kilocode extends HeyApiClient {
       url: "/kilocode/agent/requirements",
       ...options,
       ...params,
+    })
+  }
+
+  /**
+   * List command files
+   *
+   * List commands with editable file locations for settings clients.
+   */
+  public commandFiles<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      KilocodeCommandFilesResponses,
+      KilocodeCommandFilesErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/command/files",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Remove a command
+   *
+   * Remove a command by deleting its markdown file from disk and clearing it from cache.
+   */
+  public removeCommand<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      location?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "location" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeRemoveCommandResponses,
+      KilocodeRemoveCommandErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/command/remove",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
     })
   }
 
