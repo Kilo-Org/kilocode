@@ -103,7 +103,6 @@ export class SettingsEditorProvider implements vscode.Disposable {
     // backend connectivity (config, providers, agents, profile, auth).
     const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context, {
       projectDirectory,
-      hideTopBar: true,
     })
     if (this.remoteService) {
       provider.setRemoteService(this.remoteService)

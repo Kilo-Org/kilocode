@@ -15,7 +15,6 @@ interface Ctx {
   openAgentManager: () => Thenable<unknown>
   openAdvancedWorktree: () => Thenable<unknown>
   openChanges: (sessionId?: string, turnId?: string) => Thenable<unknown>
-  openProfile: () => Thenable<unknown>
   currentSessionId?: string
   createWorktree?: (baseBranch?: string, branchName?: string) => Promise<void>
   continueInWorktree?: (
@@ -57,11 +56,6 @@ export async function handleSidebarWorktreeMessage(message: Msg, ctx: Ctx) {
 
   if (message.type === "openChanges") {
     await ctx.openChanges(ctx.currentSessionId, message.turnId)
-    return true
-  }
-
-  if (message.type === "openProfilePanel") {
-    await ctx.openProfile()
     return true
   }
 
