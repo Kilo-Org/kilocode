@@ -168,6 +168,18 @@ describe("custom provider fallback reasoning efforts", () => {
     expect(customProviderVariants(model, model.api.npm, () => generated)).toBe(generated)
   })
 
+  test("prefers configured variants to inference", () => {
+    const variants = { custom: { reasoningEffort: "custom" } }
+    for (const npm of ["@ai-sdk/openai-compatible", "@ai-sdk/openai", "@ai-sdk/anthropic"]) {
+      const model = mockModel({ api: { id: "custom", url: "https://api.test.com", npm }, variants })
+      expect(
+        customProviderVariants(model, npm, () => {
+          throw new Error("inference should not run")
+        }),
+      ).toBe(variants)
+    }
+  })
+
   test("requires a reasoning model with an explicitly configured supported package", () => {
     const npm = "@ai-sdk/openai-compatible"
     const plain = mockModel({

@@ -103,8 +103,10 @@ type Variants = NonNullable<Provider.Model["variants"]>
 type Generate = (model: Provider.Model) => Variants
 
 export function customProviderVariants(model: Provider.Model, npm: unknown, generate: Generate): Variants {
+  if (model.variants && Object.keys(model.variants).length > 0) return model.variants
+
   const supported = typeof npm === "string" && CUSTOM_PROVIDER_PACKAGES.has(npm) && model.api.npm === npm
-  const variants = generate(supported ? { ...model, variants: {} } : model)
+  const variants = generate(model)
   if (Object.keys(variants).length > 0) return variants
   if (!model.capabilities.reasoning || !supported) return variants
 

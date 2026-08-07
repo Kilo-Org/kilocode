@@ -10,14 +10,13 @@ import { testEffect } from "../lib/effect"
 const it = testEffect(LayerNode.compile(LayerNode.group([Provider.node, Env.node, Plugin.node])))
 
 it.instance(
-  "adds fallback efforts to configured reasoning models and merges explicit variants",
+  "uses configured variants instead of inferred reasoning efforts",
   () =>
     Effect.gen(function* () {
       const providers = yield* Provider.use.list()
       const model = providers[ProviderV2.ID.make("custom")]?.models["qwen-custom"]
 
-      expect(Object.keys(model?.variants ?? {})).toEqual(["none", "low", "medium", "xhigh", "max", "custom"])
-      expect(model?.variants?.none).toEqual({ reasoningEffort: "none" })
+      expect(Object.keys(model?.variants ?? {})).toEqual(["custom"])
       expect(model?.variants?.high).toBeUndefined()
       expect(model?.variants?.custom).toEqual({ reasoningEffort: "custom" })
     }),

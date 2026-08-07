@@ -1528,11 +1528,9 @@ const layer = Layer.effect(
               ...patchKiloConfigModel(model, existingModel), // kilocode_change
             }
             // kilocode_change start
-            const generated = customProviderVariants(
-              parsedModel,
-              model.provider?.npm ?? provider.npm,
-              ProviderTransform.variants,
-            )
+            const generated = Object.keys(model.variants ?? {}).length
+              ? {}
+              : customProviderVariants(parsedModel, model.provider?.npm ?? provider.npm, ProviderTransform.variants)
             const merged = mergeDeep(generated, model.variants ?? {})
             // kilocode_change end
             parsedModel.variants = mapValues(
