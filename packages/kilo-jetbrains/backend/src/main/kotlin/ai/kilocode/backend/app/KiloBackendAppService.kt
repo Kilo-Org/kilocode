@@ -593,9 +593,8 @@ class KiloBackendAppService private constructor(
      * on success, [FetchResult.ok] with `null` when not logged in or when
      * the server cannot reach the profile endpoint. Never throws.
      *
-     * Profile is optional — 401 (not logged in) and 5xx (gateway/network
-     * errors) are both non-fatal. Only unexpected client errors are treated
-     * as failures.
+     * Profile is optional — 401 (not logged in), 400 (missing/corrupt local
+     * auth), and 5xx (gateway/network errors) are all non-fatal.
      */
     private suspend fun fetchProfile(): FetchResult<KiloProfile200Response?> {
         val client = connection.appLoadApi
@@ -605,8 +604,9 @@ class KiloBackendAppService private constructor(
             log.info("Profile: ${response.profile.email}")
             FetchResult.ok(response)
         } catch (e: ClientException) {
-            if (e.statusCode == 401) {
-                log.info("Profile: not logged in (401)")
+            if (e.statusCode == 400 || e.statusCode == 401) {
+                log.info("Profile: unavailable (${e.statusCode})")
+                logResponseBody("profile", e)
                 return FetchResult.ok(null)
             }
             log.warn("Profile fetch failed: HTTP ${e.statusCode}", e)
