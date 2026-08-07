@@ -30,7 +30,7 @@ import type { DragEvent } from "@thisbeyond/solid-dnd"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
-import { Tooltip } from "@kilocode/kilo-ui/tooltip"
+import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../src/context/language"
 import { ConstrainDragYAxis } from "../../src/components/chat/TabDnd"
 import { useTabScroll } from "../../src/utils/tab-scroll"
@@ -57,8 +57,11 @@ interface Props {
   onCloseOthers: (terminalId: string) => void
   /** Create a new side terminal for this context. */
   onStart: () => void
+  nextKeybind: string
+  closeKeybind: string
   /** Deliberately stop a running script terminal. */
   onStop: (terminalId: string) => void
+  onFocusPrompt: () => void
 }
 
 export const SideTerminalPanel: Component<Props> = (props) => {
@@ -170,7 +173,10 @@ export const SideTerminalPanel: Component<Props> = (props) => {
                         label={props.state.title(term.id) ?? term.title}
                         tooltip={props.state.title(term.id) ?? term.title}
                         status={props.state.scriptStatus(term.id)}
+                        keybind={active() === term.id ? "" : props.nextKeybind}
+                        closeKeybind={props.closeKeybind}
                         active={active() === term.id}
+                        focused={props.state.sideFocusedId() === term.id}
                         role="tab"
                         selected={active() === term.id}
                         tabIndex={active() === term.id ? 0 : -1}
@@ -226,7 +232,12 @@ export const SideTerminalPanel: Component<Props> = (props) => {
           </Tooltip>
         </div>
       </div>
-      {renderSideTerminalLayer({ state: props.state, contextKey: props.contextKey, visible: props.visible })}
+      {renderSideTerminalLayer({
+        state: props.state,
+        contextKey: props.contextKey,
+        visible: props.visible,
+        onFocusPrompt: props.onFocusPrompt,
+      })}
       <Show when={props.visible() && sides().length === 0 && pending()}>
         <div class="am-side-terminal-state" role="status">
           <Spinner />

@@ -27,6 +27,7 @@ export const TerminalTabChrome: Component<{
   status?: ScriptTerminalStatus
   keybind?: string
   closeKeybind?: string
+  focused?: boolean
   active: boolean
   role?: "tab"
   selected?: boolean
@@ -46,7 +47,9 @@ export const TerminalTabChrome: Component<{
     return "console"
   }
   return (
-    <div class={`am-tab am-tab-terminal ${props.active ? "am-tab-active" : ""}`}>
+    <div
+      class={`am-tab am-tab-terminal ${props.active ? "am-tab-active" : ""} ${props.focused ? "am-tab-terminal-focused" : ""}`}
+    >
       <div
         class="am-tab-target"
         role={props.role}
@@ -126,6 +129,7 @@ export const SortableTerminalTab: Component<{
   status?: ScriptTerminalStatus
   keybind?: string
   closeKeybind?: string
+  focused?: boolean
   active: boolean
   role?: "tab"
   selected?: boolean
@@ -148,6 +152,7 @@ export const SortableTerminalTab: Component<{
             status={props.status}
             keybind={props.keybind}
             closeKeybind={props.closeKeybind}
+            focused={props.focused}
             active={props.active}
             role={props.role}
             selected={props.selected}

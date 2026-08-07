@@ -128,6 +128,12 @@
 
 ## [Unreleased]
 
+## [7.0.14] - 2026-08-06
+
+### Fixed
+- Improve slash command matching in the JetBrains plugin so typed commands resolve more reliably.
+- Avoid startup crashes when the Kilo CLI database is temporarily locked by another process.
+
 ## [7.0.13] - 2026-08-05
 
 ### Added

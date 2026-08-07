@@ -107,7 +107,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "Sonraki sekme",
   "agentManager.shortcuts.newTab": "Yeni sekme",
   "agentManager.shortcuts.closeTab": "Sekmeyi kapat",
-  "agentManager.shortcuts.toggleTerminal": "Terminali aç/kapat",
+  "agentManager.shortcuts.toggleTerminal": "Terminale odaklan / terminali gizle",
   "agentManager.shortcuts.runScript": "Betiği çalıştır",
   "agentManager.run.options": "Çalıştırma seçenekleri",
   "agentManager.run.configure": "Çalıştırma betiğini yapılandır",
