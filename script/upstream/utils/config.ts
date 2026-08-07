@@ -135,6 +135,8 @@ export const defaultConfig: MergeConfig = {
     "nix/opencode.nix",
     // opencode CLI bin (Kilo uses its own build output)
     "packages/opencode/bin/opencode",
+    // Kilo does not ship upstream's embedded web UI command.
+    "packages/opencode/src/cli/cmd/web.ts",
     // Removed prompt file
     "packages/opencode/src/session/prompt/build-switch.txt",
     // Upstream app translation automation targets products and binaries Kilo does not ship

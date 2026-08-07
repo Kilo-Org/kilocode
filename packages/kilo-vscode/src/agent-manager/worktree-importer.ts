@@ -30,14 +30,17 @@ export class WorktreeImporter {
 
     try {
       const result = await manager.listBranches()
+      const state = this.host.state()
+      const configured = state?.getDefaultBaseBranch()
+      const base =
+        configured && result.branches.some((branch) => branch.name === configured) ? configured : result.defaultBranch
+      void manager.prefetchBase(base).catch((err) => this.host.log("Failed to prefetch base branch:", err))
       const checked = await manager.checkedOutBranches()
       const branches = result.branches.map((branch) => ({
         ...branch,
         isCheckedOut: checked.has(branch.name),
       }))
 
-      const state = this.host.state()
-      const configured = state?.getDefaultBaseBranch()
       if (state && configured && !branches.some((branch) => branch.name === configured)) {
         this.host.log(`Default base branch "${configured}" no longer exists, clearing`)
         state.setDefaultBaseBranch(undefined)

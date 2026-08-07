@@ -73,7 +73,7 @@ import { createProjectWiring } from "./project/wiring"
 import { ProjectScope } from "./project/scope"
 import type { AgentManagerOutMessage, AgentManagerInMessage } from "./types"
 import type { Host, PanelContext, OutputHandle, Disposable } from "./host"
-
+import { focusPanelPrompt, revealPanel } from "./focus-panel"
 export class AgentManagerProvider implements Disposable {
   public static readonly viewType = "kilo-code.new.AgentManagerPanel"
   private panel: PanelContext | undefined
@@ -355,23 +355,21 @@ export class AgentManagerProvider implements Disposable {
   public openPanel(preserveFocus?: boolean): void {
     if (this.panel) {
       this.log("Panel already open, revealing")
-      this.panel.reveal(preserveFocus)
-      if (!preserveFocus) this.postToWebview({ type: "action", action: "focusInput" })
+      revealPanel(this.panel, preserveFocus, this.waitForPanelReady(this.panel), this.waitForPanelActive(this.panel))
       return
     }
     this.log("Opening Agent Manager panel")
     this.host.capture("Agent Manager Opened", { source: PLATFORM })
 
-    this.attachPanel(
-      this.host.openPanel({
-        onBeforeMessage: (msg) => this.onMessage(msg),
-        worktreeDirectories: () => this.getWorktreeDirectories(),
-        workspaceRoot: () => this.getRoot(),
-        projectId: () => this.contexts.active()?.id,
-      }),
-    )
+    const panel = this.host.openPanel({
+      onBeforeMessage: (msg) => this.onMessage(msg),
+      worktreeDirectories: () => this.getWorktreeDirectories(),
+      workspaceRoot: () => this.getRoot(),
+      projectId: () => this.contexts.active()?.id,
+    })
+    this.attachPanel(panel)
+    if (!preserveFocus) focusPanelPrompt(panel, this.waitForPanelReady(panel), this.waitForPanelActive(panel))
   }
-
   public onPanelVisibilityChange(cb: (visible: boolean) => void): void {
     this.onVisibilityChange = cb
   }
@@ -1693,11 +1691,10 @@ export class AgentManagerProvider implements Disposable {
    * Used for the keyboard shortcut to switch back from terminal.
    */
   public focusPanel(): void {
-    if (!this.panel) return
-    this.panel.reveal(false)
-    this.postToWebview({ type: "action", action: "focusInput" })
+    const panel = this.panel
+    if (!panel) return
+    revealPanel(panel, false, this.waitForPanelReady(panel), this.waitForPanelActive(panel))
   }
-
   public isActive(): boolean {
     return this.panel?.active === true
   }

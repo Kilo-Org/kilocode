@@ -1,4 +1,5 @@
 import type { AgentConfig } from "../../types/messages"
+import { preserveVariant } from "../../context/session-variant-store"
 
 export function modelPatch(
   providerID: string,
@@ -12,6 +13,6 @@ export function modelPatch(
 
   return {
     model: `${providerID}/${modelID}`,
-    ...(current && !variants.includes(current) ? { variant: null } : {}),
+    ...(current && !variants.includes(current) ? { variant: preserveVariant(current, variants) ?? null } : {}),
   }
 }

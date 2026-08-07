@@ -99,7 +99,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "علامة التبويب التالية",
   "agentManager.shortcuts.newTab": "علامة تبويب جديدة",
   "agentManager.shortcuts.closeTab": "إغلاق علامة التبويب",
-  "agentManager.shortcuts.toggleTerminal": "تبديل الطرفية",
+  "agentManager.shortcuts.toggleTerminal": "التركيز على الطرفية / إخفاء الطرفية",
   "agentManager.shortcuts.runScript": "تشغيل السكربت",
   "agentManager.run.options": "خيارات التشغيل",
   "agentManager.run.configure": "تكوين سكربت التشغيل",

@@ -100,7 +100,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "다음 탭",
   "agentManager.shortcuts.newTab": "새 탭",
   "agentManager.shortcuts.closeTab": "탭 닫기",
-  "agentManager.shortcuts.toggleTerminal": "터미널 전환",
+  "agentManager.shortcuts.toggleTerminal": "터미널에 포커스 / 터미널 숨기기",
   "agentManager.shortcuts.runScript": "스크립트 실행",
   "agentManager.run.options": "실행 옵션",
   "agentManager.run.configure": "실행 스크립트 구성",

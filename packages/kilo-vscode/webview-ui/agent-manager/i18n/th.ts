@@ -97,7 +97,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "แท็บถัดไป",
   "agentManager.shortcuts.newTab": "แท็บใหม่",
   "agentManager.shortcuts.closeTab": "ปิดแท็บ",
-  "agentManager.shortcuts.toggleTerminal": "สลับเทอร์มินัล",
+  "agentManager.shortcuts.toggleTerminal": "โฟกัสเทอร์มินัล / ซ่อนเทอร์มินัล",
   "agentManager.shortcuts.runScript": "เรียกใช้สคริปต์",
   "agentManager.run.options": "ตัวเลือกการเรียกใช้",
   "agentManager.run.configure": "กำหนดค่าสคริปต์การเรียกใช้",
