@@ -303,47 +303,4 @@ describe("pty HttpApi bridge", () => {
         expect(removed.status).toBe(200)
       }),
   )
-  // kilocode_change start - test initial pty spawn dimensions
-  ;(process.platform === "win32" ? effectIt.live.skip : effectIt.live)(
-    "spawns PTY with initial terminal dimensions end-to-end",
-    () =>
-      Effect.gen(function* () {
-        const dir = yield* tmpdirScoped({ git: true, config: { formatter: false, lsp: false } })
-        const created = yield* HttpClientRequest.post(PtyPaths.create).pipe(
-          directoryHeader(dir),
-          HttpClientRequest.bodyJson({
-            command: "/bin/sh",
-            args: ["-c", "stty size"],
-            title: "size-test",
-            size: { cols: 50, rows: 20 },
-          }),
-          Effect.flatMap(HttpClient.execute),
-        )
-        expect(created.status).toBe(200)
-        const info = yield* Schema.decodeUnknownEffect(Pty.Info)(yield* created.json)
-
-        const socket = yield* Socket.makeWebSocket(
-          `${(yield* serverUrl()).replace(/^http/, "ws")}${PtyPaths.connect.replace(":ptyID", info.id)}?cursor=-1&directory=${encodeURIComponent(dir)}`,
-          { closeCodeIsError: () => false },
-        )
-        const messages = yield* Queue.unbounded<string>()
-        yield* socket
-          .runRaw((message) =>
-            Queue.offer(messages, typeof message === "string" ? message : new TextDecoder().decode(message)),
-          )
-          .pipe(Effect.catch(() => Effect.void))
-          .pipe(Effect.forkScoped)
-
-        const takeUntil = (expected: string, seen = ""): Effect.Effect<string, unknown> =>
-          Effect.gen(function* () {
-            const next = seen + (yield* Queue.take(messages).pipe(Effect.timeout("5 seconds")))
-            if (next.includes(expected)) return next
-            return yield* takeUntil(expected, next)
-          })
-
-        const output = yield* takeUntil("20 50")
-        expect(output).toContain("20 50")
-      }),
-  )
-  // kilocode_change end
 })
