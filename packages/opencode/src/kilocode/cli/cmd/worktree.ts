@@ -16,7 +16,9 @@ const wrapErr = (message: string) => <A, E, R>(effect: Effect.Effect<A, E, R>) =
 // Lazy: this module is imported eagerly by KiloCli.register (see setup.ts), so
 // `@/worktree`'s heavier transitive graph (Project, Provider, ...) must not
 // load until a handler actually runs, matching tui-worktree.ts's own imports.
-const importWorktree = Effect.promise(() => import("@/worktree"))
+// `tryPromise` (not `promise`): a failed dynamic import must flow through each
+// call site's own `wrapErr`, not become an unrecoverable defect.
+const importWorktree = Effect.tryPromise(() => import("@/worktree"))
 
 const listWorktrees = importWorktree.pipe(
   Effect.flatMap(({ Worktree }) => Worktree.Service.use((svc) => svc.list())),
@@ -40,10 +42,14 @@ export const WorktreeCreateCommand = cmd({
     // instance context (it's shared with `kilo --worktree`'s pre-TUI-launch
     // path in tui-worktree.ts), so it can't run inside effectCmd's own.
     const { resolveWorktree } = await import("@/kilocode/cli/cmd/tui-worktree")
-    await resolveWorktree(args.name, process.cwd()).catch((error) => {
+    const directory = await resolveWorktree(args.name, process.cwd()).catch((error) => {
       UI.error(errorMessage(error))
       process.exitCode = 1
     })
+    // Prints only the resolved path on stdout (status messages already went
+    // to stderr via resolveWorktree's own UI.println calls), so scripts can
+    // do e.g. `cd "$(kilo worktree create foo)"`.
+    if (directory) console.log(directory)
   },
 })
 
@@ -56,13 +62,18 @@ export const WorktreeListCommand = effectCmd({
       UI.println("No worktrees found.")
       return
     }
-    for (const w of list) UI.println(`${w.name}${w.branch ? ` (${w.branch})` : ""}  ${w.directory}`)
+    // Data rows go to stdout (like `kilo session list`'s table/JSON), not
+    // UI.println's stderr, so `kilo worktree list | ...` actually captures them.
+    for (const w of list) console.log(`${w.name}${w.branch ? ` (${w.branch})` : ""}  ${w.directory}`)
   }),
 })
 
 export const WorktreeRemoveCommand = effectCmd({
   command: "remove <name>",
-  describe: "remove a git worktree by name",
+  // Worktree.Service.remove() force-deletes (`git branch -D`) the worktree's
+  // branch too, with no way to opt out (matches the TUI workspaces dialog's
+  // existing semantics) — make that explicit rather than surprise users.
+  describe: "remove a git worktree by name, deleting its branch too",
   builder: (yargs) => yargs.positional("name", { type: "string", demandOption: true }),
   handler: Effect.fn("Cli.worktree.remove")(function* (args) {
     const slug = slugify(args.name)
@@ -79,10 +90,10 @@ export const WorktreeRemoveCommand = effectCmd({
       yield* fail(`No worktree named "${args.name}" found.`)
       return
     }
-    const { Worktree } = yield* importWorktree
-    yield* Worktree.Service.use((svc) => svc.remove({ directory: found.directory })).pipe(
-      wrapErr(`Failed to remove worktree "${args.name}"`),
-    )
-    UI.println(`Removed worktree "${found.name}" at ${found.directory}`)
+    const removeMsg = `Failed to remove worktree "${args.name}"`
+    const { Worktree } = yield* importWorktree.pipe(wrapErr(removeMsg))
+    yield* Worktree.Service.use((svc) => svc.remove({ directory: found.directory })).pipe(wrapErr(removeMsg))
+    const branchNote = found.branch ? ` and branch "${found.branch}"` : ""
+    UI.println(`Removed worktree "${found.name}" at ${found.directory}${branchNote}`)
   }),
 })
