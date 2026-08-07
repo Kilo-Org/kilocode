@@ -49,9 +49,18 @@ function Item(props: { label: string; onSelect: () => void }) {
 export function MermaidActions(props: Props) {
   const [copied, setCopied] = createSignal(false)
   const copy = (run: () => Promise<void>) => {
-    void run().then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
+    void run()
+      .then(() => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 1500)
+      })
+      .catch((err) => {
+        console.warn("Mermaid copy failed", err)
+      })
+  }
+  const download = (run: () => Promise<void>) => {
+    void run().catch((err) => {
+      console.warn("Mermaid download failed", err)
     })
   }
 
@@ -72,7 +81,7 @@ export function MermaidActions(props: Props) {
         <DropdownMenu.Portal>
           <DropdownMenu.Content>
             <Item label={props.labels.downloadSvg} onSelect={props.onDownloadSvg} />
-            <Item label={props.labels.downloadPng} onSelect={() => void props.onDownloadPng()} />
+            <Item label={props.labels.downloadPng} onSelect={() => download(props.onDownloadPng)} />
           </DropdownMenu.Content>
         </DropdownMenu.Portal>
       </DropdownMenu>

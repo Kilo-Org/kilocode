@@ -303,9 +303,38 @@ async function copyText(text: string) {
   await navigator.clipboard.writeText(text)
 }
 
+// VS Code webview CSP blocks fetch(data:...); decode the data URL locally instead.
+function dataUrlToBlob(dataUrl: string): Blob {
+  const comma = dataUrl.indexOf(",")
+  if (comma < 0) throw new Error("Unable to export Mermaid diagram.")
+  const header = dataUrl.slice(0, comma)
+  const data = dataUrl.slice(comma + 1)
+  const mime = /^data:([^;,]*)/.exec(header)?.[1] || "application/octet-stream"
+  const binary = atob(data)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+  return new Blob([bytes], { type: mime })
+}
+
+function supportsSvgClipboardImage() {
+  return typeof ClipboardItem !== "undefined" && "supports" in ClipboardItem && ClipboardItem.supports("image/svg+xml")
+}
+
+async function copySvg(svg: SVGSVGElement) {
+  const markup = serialize(svg)
+  // Prefer image/svg+xml so paste targets receive a diagram, not SVG source text.
+  // Fall back to text on hosts that do not support SVG clipboard images yet.
+  if (supportsSvgClipboardImage()) {
+    const blob = new Blob([markup], { type: "image/svg+xml" })
+    await navigator.clipboard.write([new ClipboardItem({ "image/svg+xml": blob })])
+    return
+  }
+  await navigator.clipboard.writeText(markup)
+}
+
 async function copyPng(svg: SVGSVGElement) {
   const url = await png(svg)
-  const blob = await (await fetch(url)).blob()
+  const blob = dataUrlToBlob(url)
   if (typeof ClipboardItem === "undefined") {
     await navigator.clipboard.writeText(serialize(svg))
     return
@@ -329,7 +358,7 @@ function renderActions(el: HTMLDivElement, pre: HTMLPreElement, source: string, 
     mountMermaidActions(el, {
       labels,
       onCopySource: () => copyText(sourceText),
-      onCopySvg: () => copyText(sourceSvg()),
+      onCopySvg: () => copySvg(svg),
       onCopyPng: () => copyPng(svg),
       onDownloadSvg: () => save(sourceSvgUrl(), "mermaid-diagram.svg"),
       onDownloadPng: async () => save(await png(svg), "mermaid-diagram.png"),
