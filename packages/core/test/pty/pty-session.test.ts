@@ -13,7 +13,7 @@ import { testEffect } from "../lib/effect"
 
 type PtyEvent = { type: "created" | "exited" | "deleted"; id: PtyID }
 
-const PTY_TEST_TIMEOUT = "15 seconds" // kilocode_change - PTY startup can exceed the default test timeout on macOS CI
+const PTY_TEST_TIMEOUT = "30 seconds" // kilocode_change - PTY startup can exceed the default test timeout on macOS CI
 
 const locationLayer = Layer.succeed(
   Location.Service,

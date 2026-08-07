@@ -5,13 +5,30 @@ const dir = fileURLToPath(new URL("..", import.meta.url))
 process.chdir(dir)
 
 import { $ } from "bun"
+import os from "os"
 import path from "path"
+import fs from "fs/promises"
 
 import { createClient } from "@hey-api/openapi-ts"
 
 const opencode = path.resolve(dir, "../../opencode")
 
-await $`bun dev generate > ${dir}/openapi.json`.cwd(opencode)
+// kilocode_change start - isolate DB/config state; `generate` boots the real server and was
+// racing other CI processes on the shared default SQLite database ("database is locked")
+const generateHome = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-sdk-generate-"))
+try {
+  await $`bun dev generate > ${dir}/openapi.json`.cwd(opencode).env({
+    ...process.env,
+    KILO_DB: ":memory:",
+    XDG_DATA_HOME: path.join(generateHome, "data"),
+    XDG_CONFIG_HOME: path.join(generateHome, "config"),
+    XDG_STATE_HOME: path.join(generateHome, "state"),
+    XDG_CACHE_HOME: path.join(generateHome, "cache"),
+  })
+} finally {
+  await fs.rm(generateHome, { recursive: true, force: true })
+}
+// kilocode_change end
 
 const document = (await Bun.file("./openapi.json").json()) as {
   components?: { schemas?: Record<string, unknown> }

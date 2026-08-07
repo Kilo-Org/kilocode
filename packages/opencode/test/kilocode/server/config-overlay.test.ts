@@ -18,7 +18,7 @@ import { resetDatabase } from "../../fixture/db"
 import { disposeAllInstances, tmpdir } from "../../fixture/fixture"
 
 void Log.init({ print: false })
-setDefaultTimeout(30_000)
+setDefaultTimeout(45_000) // kilocode_change - was tripping on loaded CI Windows shards at 30s
 
 const original = Global.Path.config
 const terminal = process.platform === "win32" ? test.skip : test.serial

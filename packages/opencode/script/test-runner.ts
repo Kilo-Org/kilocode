@@ -29,7 +29,7 @@ if (argv.includes("--help") || argv.includes("-h")) {
       "",
       "Options:",
       "  --ci                 Enable JUnit XML output to .artifacts/unit/junit.xml",
-      "  --concurrency <N>    Max parallel processes (default: min(4, CPU count))",
+      "  --concurrency <N>    Max parallel processes (default: min(4, CPU count), env: KILO_TEST_CONCURRENCY)",
       "  --timeout <ms>       Per-test timeout passed to bun test (default: 60000)",
       "  --file-timeout <ms>  Per-file process timeout (default: 300000)",
       "  --retries <N>        Extra attempts for failing files (default: 1)",
@@ -73,7 +73,9 @@ const dots = !verbose && (ci || argv.includes("--dots"))
 // Cap concurrency at 4 even on bigger runners: the bottleneck is shared
 // resources (ports, global filesystem like ~/.local/share/kilo), not CPU.
 // Eight parallel processes was triggering port/FS races, not going faster.
-const concurrency = opt("concurrency", Math.min(4, os.cpus().length))
+// kilocode_change - KILO_TEST_CONCURRENCY lets CI override this cap per-OS
+const concurrencyEnv = Number(process.env.KILO_TEST_CONCURRENCY?.trim())
+const concurrency = opt("concurrency", Number.isSafeInteger(concurrencyEnv) && concurrencyEnv > 0 ? concurrencyEnv : Math.min(4, os.cpus().length))
 const timeout = opt("timeout", 60000)
 const deadline = opt("file-timeout", 300000)
 const retries = opt("retries", 1)
