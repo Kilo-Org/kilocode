@@ -856,7 +856,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "Tillatte nettverksmål",
   "settings.sandboxing.allowedHosts.description":
-    "DNS-verts- og portdestinasjoner for HTTP- og HTTPS-proxytrafikk i sandkassen. GitHub CLI og HTTPS Git trenger vanligvis github.com:443 og api.github.com:443. Endringer gjelder for nye økter.",
+    "DNS-verts- og portdestinasjoner for HTTP- og HTTPS-proxytrafikk i sandkassen. GitHub CLI og HTTPS Git trenger vanligvis github.com:443 og api.github.com:443.",
   "settings.sandboxing.writablePaths.title": "Ytterligere skrivbare baner",
   "settings.sandboxing.writablePaths.description":
     "Ytterligere filsystembaner som sandkassen tillater skriving til (f.eks. /tmp, /var/log). Disse flettes med de standardskrivbare banene når sandkassen er aktiv.",

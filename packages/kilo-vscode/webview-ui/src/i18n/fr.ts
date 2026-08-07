@@ -918,7 +918,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "Destinations réseau autorisées",
   "settings.sandboxing.allowedHosts.description":
-    "Destinations d’hôte et de port DNS pour le trafic proxy HTTP et HTTPS isolé. GitHub CLI et HTTPS Git nécessitent généralement github.com:443 et api.github.com:443. Les modifications s’appliquent aux nouvelles sessions.",
+    "Destinations d’hôte et de port DNS pour le trafic proxy HTTP et HTTPS isolé. GitHub CLI et HTTPS Git nécessitent généralement github.com:443 et api.github.com:443.",
   "settings.sandboxing.writablePaths.title": "Chemins en écriture supplémentaires",
   "settings.sandboxing.writablePaths.description":
     "Chemins système supplémentaires autorisés en écriture par le bac à sable (par ex. /tmp, /var/log). Ils sont fusionnés avec les chemins en écriture par défaut lorsque le bac à sable est actif.",

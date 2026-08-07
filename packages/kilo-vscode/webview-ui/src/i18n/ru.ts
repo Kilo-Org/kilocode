@@ -892,7 +892,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "Разрешенные сетевые назначения",
   "settings.sandboxing.allowedHosts.description":
-    "Целевые DNS-хосты и порты для прокси-трафика HTTP и HTTPS в песочнице. GitHub CLI и HTTPS Git обычно требуют github.com:443 и api.github.com:443. Изменения применяются к новым сеансам.",
+    "Целевые DNS-хосты и порты для прокси-трафика HTTP и HTTPS в песочнице. GitHub CLI и HTTPS Git обычно требуют github.com:443 и api.github.com:443.",
   "settings.sandboxing.writablePaths.title": "Дополнительные пути для записи",
   "settings.sandboxing.writablePaths.description":
     "Дополнительные пути файловой системы, в которые разрешена запись в песочнице (например, /tmp, /var/log). Они объединяются с путями записи по умолчанию при активной песочнице.",
