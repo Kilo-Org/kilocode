@@ -412,4 +412,45 @@ describe("opencode run (non-interactive subprocess)", () => {
       }),
     60_000, // kilocode_change
   )
+
+  // kilocode_change start - non-interactive runs exclude human-driven tools like suggest
+  cliIt.concurrent(
+    "kilo run --auto excludes suggest tool from LLM request",
+    ({ llm, opencode }) =>
+      Effect.gen(function* () {
+        yield* llm.text("done")
+        const result = yield* opencode.run("do work", { extraArgs: ["--auto"] })
+        opencode.expectExit(result, 0)
+        expect(result.stdout).toBe("done\n")
+        const inputs = yield* llm.inputs
+        const tools = (inputs[0]?.body as any)?.tools as Array<{ function?: { name?: string } }> | undefined
+        const toolNames = tools?.map((t) => t.function?.name).filter(Boolean) ?? []
+        expect(toolNames).not.toContain("suggest")
+        expect(toolNames).not.toContain("question")
+        expect(toolNames).not.toContain("interactive_terminal")
+      }),
+    60_000,
+  )
+
+  cliIt.concurrent(
+    "kilo run auto-dismisses suggestion and exits cleanly if suggest tool is invoked",
+    ({ llm, opencode }) =>
+      Effect.gen(function* () {
+        yield* llm.push(
+          reply().tool("suggest", {
+            suggest: "Run checks?",
+            actions: [{ label: "Run checks", prompt: "Run checks" }],
+          }),
+        )
+        yield* llm.text("completed after dismissal")
+        const result = yield* opencode.run("do work", {
+          permission: { suggest: "allow" },
+          extraArgs: ["--auto"],
+        })
+        opencode.expectExit(result, 0)
+        expect(result.stdout).toContain("completed after dismissal")
+      }),
+    60_000,
+  )
+  // kilocode_change end
 })
