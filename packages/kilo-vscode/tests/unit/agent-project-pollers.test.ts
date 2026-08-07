@@ -173,3 +173,78 @@ describe("ProjectPollers", () => {
     expect(made.get("prj-extra")!.stopped).toEqual({ stats: true, pr: true })
   })
 })
+
+/** Poller pair that exposes the injected deps so a test can emit like a real poller. */
+function recorder() {
+  const posted: StatsOutMessage[] = []
+  const emit = new Map<string, (msg: StatsOutMessage) => void>()
+  const replayed: string[] = []
+  const create = (ctx: { id: string }, injected: { post: (msg: StatsOutMessage) => void }): PollerPair => {
+    emit.set(ctx.id, injected.post)
+    return {
+      stats: { setEnabled: () => {}, setVisible: () => {}, stop: () => {} },
+      pr: {
+        poller: { setEnabled: () => {}, setVisible: () => {}, stop: () => {} },
+        replay: () => replayed.push(ctx.id),
+      },
+    }
+  }
+  const deps = {
+    git: {} as GitOps,
+    semaphore: undefined as never,
+    post: (msg: StatsOutMessage) => posted.push(msg),
+    openExternal: () => {},
+    visible: () => true,
+    log: () => {},
+  }
+  return { posted, emit, replayed, create, deps }
+}
+
+const LOCAL: StatsOutMessage = {
+  type: "agentManager.localStats",
+  projectId: "prj-extra",
+  stats: { branch: "main", files: 0, additions: 0, deletions: 0, ahead: 0, behind: 0 } as never,
+}
+
+describe("ProjectPollers.replay", () => {
+  /**
+   * Regression: a background poller only emits on change, so a webview that
+   * mounts or reloads after the emit would keep its stats placeholders forever.
+   */
+  it("re-posts the latest stats for a background project", () => {
+    const contexts = setup([stored("prj-extra")])
+    expand(contexts, "prj-extra")
+    const rec = recorder()
+    const pollers = new ProjectPollers(rec.deps as never, rec.create as never)
+    pollers.sync(contexts)
+    rec.emit.get("prj-extra")!(LOCAL)
+    expect(rec.posted).toHaveLength(1)
+    pollers.replay()
+    expect(rec.posted).toHaveLength(2)
+    expect(rec.posted[1]).toBe(LOCAL)
+    expect(rec.replayed).toEqual(["prj-extra"])
+  })
+
+  it("posts nothing for a project that has not emitted yet", () => {
+    const contexts = setup([stored("prj-extra")])
+    expand(contexts, "prj-extra")
+    const rec = recorder()
+    const pollers = new ProjectPollers(rec.deps as never, rec.create as never)
+    pollers.sync(contexts)
+    pollers.replay()
+    expect(rec.posted).toEqual([])
+  })
+
+  it("drops cached stats for a collapsed project", () => {
+    const contexts = setup([stored("prj-extra")])
+    expand(contexts, "prj-extra")
+    const rec = recorder()
+    const pollers = new ProjectPollers(rec.deps as never, rec.create as never)
+    pollers.sync(contexts)
+    rec.emit.get("prj-extra")!(LOCAL)
+    contexts.collapse("prj-extra")
+    pollers.sync(contexts)
+    pollers.replay()
+    expect(rec.posted).toHaveLength(1)
+  })
+})

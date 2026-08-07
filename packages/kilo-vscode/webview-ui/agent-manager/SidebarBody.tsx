@@ -32,6 +32,7 @@ import { SidebarSectionHeader } from "./SidebarSectionHeader"
 import { WorktreeItem } from "./WorktreeItem"
 import { WorktreeSectionActions } from "./WorktreeSectionActions"
 import { UnassignedSessionsSection } from "./UnassignedSessionsSection"
+import { StatsSkeleton, WorktreeSkeleton } from "./Skeleton"
 import type { SidebarSearchMenuRef } from "./SidebarSearchMenu"
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
@@ -126,10 +127,7 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
         </div>
         <div class="am-wt-actions-cell">
           <Show when={props.localStats() === undefined}>
-            <div class="am-worktree-stats-skeleton">
-              <div class="am-worktree-stats-skeleton-row" />
-              <div class="am-worktree-stats-skeleton-row" style={{ width: "70%" }} />
-            </div>
+            <StatsSkeleton />
           </Show>
           <Show
             when={
@@ -212,17 +210,7 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
           }
         />
         <div class="am-worktree-list">
-          <Show
-            when={props.worktreesLoaded() && props.sessionsLoaded()}
-            fallback={
-              <div class="am-skeleton-list">
-                <div class="am-skeleton-wt">
-                  <div class="am-skeleton-wt-icon" />
-                  <div class="am-skeleton-wt-text" style={{ width: "60%" }} />
-                </div>
-              </div>
-            }
-          >
+          <Show when={props.worktreesLoaded() && props.sessionsLoaded()} fallback={<WorktreeSkeleton />}>
             <Show when={!props.isGitRepo()}>
               <div class="am-not-git-notice">
                 <Icon name="warning" size="small" />
