@@ -50,6 +50,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/SidebarBody.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/TabBar.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectBranchDialog.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/DefaultBaseBranchDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/tab-rendering.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/TerminalTab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/SideTerminalPanel.tsx"),
@@ -64,6 +65,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/diff-viewer/BaseBranchPicker.tsx"),
 ]
 const TSX_FILE = TSX_FILES[0]!
+const KEYBIND_DEFAULTS_FILE = path.join(ROOT, "webview-ui/agent-manager/keybind-defaults.ts")
 const PROVIDER_FILE = path.join(ROOT, "src/agent-manager/AgentManagerProvider.ts")
 const DIFF_CONTROLLER_FILE = path.join(ROOT, "src/agent-manager/worktree-diff-controller.ts")
 const IMPORTER_FILE = path.join(ROOT, "src/agent-manager/worktree-importer.ts")
@@ -365,7 +367,6 @@ describe("Agent Manager Worktree Actions", () => {
     const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf-8")) as {
       contributes: { keybindings: { command: string; key?: string; mac?: string }[] }
     }
-    const source = fs.readFileSync(TSX_FILE, "utf-8")
     const dialog = manifest.contributes.keybindings.find(
       (item) => item.command === "kilo-code.new.agentManager.newWorktree",
     )
@@ -375,8 +376,9 @@ describe("Agent Manager Worktree Actions", () => {
 
     expect(dialog).toMatchObject({ key: "ctrl+n", mac: "cmd+n" })
     expect(quick).toMatchObject({ key: "ctrl+shift+n", mac: "cmd+shift+n" })
-    expect(source).toContain('newWorktree: isMac ? "⌘N" : "Ctrl+N"')
-    expect(source).toContain('quickWorktree: isMac ? "⌘⇧N" : "Ctrl+Shift+N"')
+    const bindings = fs.readFileSync(KEYBIND_DEFAULTS_FILE, "utf-8")
+    expect(bindings).toContain('newWorktree: isMac ? "⌘N" : "Ctrl+N"')
+    expect(bindings).toContain('quickWorktree: isMac ? "⌘⇧N" : "Ctrl+Shift+N"')
   })
 
   it("reserves Cmd+Shift+M for the Agent Manager instead of Problems", () => {
@@ -865,7 +867,7 @@ describe("KiloProvider — pending session refresh on reconnect", () => {
 // ---------------------------------------------------------------------------
 
 describe("Agent Manager — dialog listener cleanup", () => {
-  const tsx = fs.readFileSync(TSX_FILE, "utf-8")
+  const tsx = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/DefaultBaseBranchDialog.tsx"), "utf-8")
 
   /**
    * Regression: handleChangeDefaultBaseBranch subscribes to vscode.onMessage
@@ -873,34 +875,20 @@ describe("Agent Manager — dialog listener cleanup", () => {
    * and the Escape keydown handler. If the dialog closed via backdrop click or
    * external dialog.close(), the listener leaked and stacked on every reopen.
    *
-   * The fix ties unsub() to Solid's onCleanup inside the dialog.show() render
-   * function so it always disposes regardless of how the dialog closes.
+   * The fix ties unsub() to the dialog component's Solid cleanup so it always
+   * disposes regardless of how the dialog closes.
    */
-  it("handleChangeDefaultBaseBranch uses onCleanup(unsub) inside dialog.show", () => {
-    const fnStart = tsx.indexOf("const handleChangeDefaultBaseBranch")
-    expect(fnStart, "handleChangeDefaultBaseBranch must exist").toBeGreaterThan(-1)
-
-    // Grab the function body (enough to cover the dialog.show callback)
-    const snippet = tsx.slice(fnStart, fnStart + 2000)
-
-    // The dialog.show callback must register onCleanup(unsub)
-    const showIdx = snippet.indexOf("dialog.show(")
-    expect(showIdx, "dialog.show() call must exist").toBeGreaterThan(-1)
-    const afterShow = snippet.slice(showIdx)
-    expect(afterShow, "onCleanup(unsub) must be inside dialog.show callback").toContain("onCleanup(unsub)")
+  it("DefaultBaseBranchDialog disposes its message listener on cleanup", () => {
+    expect(tsx).toContain("const unsub = vscode.onMessage")
+    expect(tsx).toContain("onCleanup(unsub)")
   })
 
-  it("selectBranch does not manually call unsub (handled by onCleanup)", () => {
-    const fnStart = tsx.indexOf("const handleChangeDefaultBaseBranch")
-    const snippet = tsx.slice(fnStart, fnStart + 2000)
-
-    // Find the selectBranch function body
-    const selStart = snippet.indexOf("const selectBranch")
-    expect(selStart, "selectBranch must exist").toBeGreaterThan(-1)
-    const selEnd = snippet.indexOf("}", selStart + 50)
-    const selBody = snippet.slice(selStart, selEnd + 1)
-
-    expect(selBody, "selectBranch should not call unsub() directly").not.toContain("unsub()")
+  it("select does not manually call unsub (handled by onCleanup)", () => {
+    const selStart = tsx.indexOf("const select =")
+    expect(selStart, "select must exist").toBeGreaterThan(-1)
+    const selEnd = tsx.indexOf("}", selStart + 40)
+    const selBody = tsx.slice(selStart, selEnd + 1)
+    expect(selBody, "select should not call unsub() directly").not.toContain("unsub()")
   })
 })
 
