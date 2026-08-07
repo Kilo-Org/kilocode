@@ -1104,6 +1104,11 @@ export const dict = {
     "Kod düzenleme ve fark bloklarının başlangıçta genişletilmiş mi yoksa daraltılmış mı olacağını seçin.",
   "settings.display.codeEdit.expanded": "Genişletilmiş",
   "settings.display.codeEdit.collapsed": "Daraltılmış",
+  "settings.display.mcpTool.title": "MCP ve Genel Araç Blokları",
+  "settings.display.mcpTool.description":
+    "MCP ve genel araç bloklarının başlangıçta genişletilmiş mi yoksa daraltılmış mı olacağını seçin.",
+  "settings.display.mcpTool.expanded": "Genişletilmiş",
+  "settings.display.mcpTool.collapsed": "Daraltılmış",
 
   "settings.display.tokenThroughput.title": "Token İşleme Hızını Göster",
   "settings.display.tokenThroughput.description":

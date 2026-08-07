@@ -1161,6 +1161,11 @@ export const dict = {
     "Elige si los bloques de edición de código y de diferencias aparecen inicialmente expandidos o contraídos.",
   "settings.display.codeEdit.expanded": "Expandidos",
   "settings.display.codeEdit.collapsed": "Contraídos",
+  "settings.display.mcpTool.title": "Bloques de herramientas MCP y genéricas",
+  "settings.display.mcpTool.description":
+    "Elige si los bloques de herramientas MCP y genéricas aparecen inicialmente expandidos o contraídos.",
+  "settings.display.mcpTool.expanded": "Expandidos",
+  "settings.display.mcpTool.collapsed": "Contraídos",
 
   "settings.display.tokenThroughput.title": "Mostrar rendimiento de tokens",
   "settings.display.tokenThroughput.description":

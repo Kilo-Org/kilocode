@@ -1143,6 +1143,10 @@ export const dict = {
     "Vælg, om blokke, der viser koderedigeringer og forskelle, starter foldet ud eller sammen.",
   "settings.display.codeEdit.expanded": "Foldet ud",
   "settings.display.codeEdit.collapsed": "Foldet sammen",
+  "settings.display.mcpTool.title": "MCP- og generiske værktøjsblokke",
+  "settings.display.mcpTool.description": "Vælg, om MCP- og generiske værktøjsblokke starter foldet ud eller sammen.",
+  "settings.display.mcpTool.expanded": "Foldet ud",
+  "settings.display.mcpTool.collapsed": "Foldet sammen",
 
   "settings.display.tokenThroughput.title": "Vis genereringshastighed",
   "settings.display.tokenThroughput.description":

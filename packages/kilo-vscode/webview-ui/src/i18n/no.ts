@@ -1142,6 +1142,11 @@ export const dict = {
     "Velg om blokker for kodeendringer og forskjeller skal være utvidet eller skjult fra start.",
   "settings.display.codeEdit.expanded": "Utvidet",
   "settings.display.codeEdit.collapsed": "Skjult",
+  "settings.display.mcpTool.title": "Blokker for MCP- og generiske verktøy",
+  "settings.display.mcpTool.description":
+    "Velg om blokker for MCP- og generiske verktøy skal være utvidet eller skjult fra start.",
+  "settings.display.mcpTool.expanded": "Utvidet",
+  "settings.display.mcpTool.collapsed": "Skjult",
 
   "settings.display.tokenThroughput.title": "Vis genereringshastighet",
   "settings.display.tokenThroughput.description":

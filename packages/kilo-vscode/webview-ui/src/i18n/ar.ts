@@ -1114,6 +1114,10 @@ export const dict = {
     "اختر ما إذا كانت الكتل التي تعرض تعديلات التعليمات البرمجية والفروقات تبدأ موسّعة أم مطوية.",
   "settings.display.codeEdit.expanded": "موسّعة",
   "settings.display.codeEdit.collapsed": "مطوية",
+  "settings.display.mcpTool.title": "كتل أدوات MCP والأدوات العامة",
+  "settings.display.mcpTool.description": "اختر ما إذا كانت كتل أدوات MCP والأدوات العامة تبدأ موسّعة أم مطوية.",
+  "settings.display.mcpTool.expanded": "موسّعة",
+  "settings.display.mcpTool.collapsed": "مطوية",
 
   "settings.display.tokenThroughput.title": "إظهار إنتاجية الرموز",
   "settings.display.tokenThroughput.description":
