@@ -1108,22 +1108,23 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Doorloop niveaus van redeneringsinspanning met Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Druk op Shift+Tab in een promptinvoerveld om naar het volgende niveau van redeneringsinspanning te gaan. Schakel dit uit om Shift+Tab te behouden voor focusnavigatie via het toetsenbord.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "Terminalopdrachtblokken",
+  "settings.display.terminalCommand.description":
+    "Kies of terminalopdrachtblokken standaard uitgeklapt of ingeklapt zijn.",
+  "settings.display.terminalCommand.expanded": "Uitgeklapt",
+  "settings.display.terminalCommand.collapsed": "Ingeklapt",
   "settings.display.codeEdit.title": "Blokken met codebewerkingen",
   "settings.display.codeEdit.description":
     "Kies of blokken met codebewerkingen en verschillen standaard uitgeklapt of ingeklapt zijn.",
   "settings.display.codeEdit.expanded": "Uitgeklapt",
   "settings.display.codeEdit.collapsed": "Ingeklapt",
 
-  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.title": "Tokendoorvoer weergeven",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
-  "settings.display.autoApprovalReason.title": "Show Auto-Approval Reason",
+    "Toont de tekstgeneratiesnelheid (tokens/sec) bij het laatste assistentbericht en in de taakkop. Standaard verborgen om de chat overzichtelijk te houden.",
+  "settings.display.autoApprovalReason.title": "Reden voor automatische goedkeuring weergeven",
   "settings.display.autoApprovalReason.description":
-    "Show a line on tool calls explaining why they were auto-approved (matched rule, agent default, YOLO mode, etc.).",
+    "Toont een regel bij tool-aanroepen die uitlegt waarom ze automatisch zijn goedgekeurd (overeenkomende regel, agentstandaard, YOLO-modus, enz.).",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

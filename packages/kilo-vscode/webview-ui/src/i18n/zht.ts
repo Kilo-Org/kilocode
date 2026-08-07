@@ -1036,21 +1036,21 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "使用 Shift+Tab 切換推理強度",
   "settings.display.shiftTabCycle.description":
     "在提示輸入框中按 Shift+Tab 可切換至下一個推理強度等級。停用此選項可保留 Shift+Tab 用於鍵盤焦點導覽。",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "終端命令區塊",
+  "settings.display.terminalCommand.description": "選擇終端命令區塊的初始狀態：展開或收合。",
+  "settings.display.terminalCommand.expanded": "展開",
+  "settings.display.terminalCommand.collapsed": "收合",
   "settings.display.codeEdit.title": "程式碼編輯區塊",
   "settings.display.codeEdit.description": "選擇程式碼編輯區塊與差異區塊的初始狀態：展開或收合。",
   "settings.display.codeEdit.expanded": "展開",
   "settings.display.codeEdit.collapsed": "收合",
 
-  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.title": "顯示權杖吞吐量",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
-  "settings.display.autoApprovalReason.title": "Show Auto-Approval Reason",
+    "在最新的助理訊息與工作標題中顯示文字生成速率（權杖/秒）。預設隱藏，以保持對話簡潔。",
+  "settings.display.autoApprovalReason.title": "顯示自動核准原因",
   "settings.display.autoApprovalReason.description":
-    "Show a line on tool calls explaining why they were auto-approved (matched rule, agent default, YOLO mode, etc.).",
+    "在工具呼叫中顯示一行說明其被自動核准的原因（符合的規則、代理預設值、YOLO 模式等）。",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

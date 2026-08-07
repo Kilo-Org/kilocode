@@ -1004,12 +1004,12 @@ export const dict = {
   "settings.display.codeEdit.expanded": "Espansi",
   "settings.display.codeEdit.collapsed": "Compressi",
 
-  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.title": "Mostra velocità di generazione dei token",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
-  "settings.display.autoApprovalReason.title": "Show Auto-Approval Reason",
+    "Mostra la velocità di generazione del testo (token/sec) sull'ultimo messaggio dell'assistente e nell'intestazione dell'attività. Nascosto per impostazione predefinita per mantenere la chat ordinata.",
+  "settings.display.autoApprovalReason.title": "Mostra motivo dell'approvazione automatica",
   "settings.display.autoApprovalReason.description":
-    "Show a line on tool calls explaining why they were auto-approved (matched rule, agent default, YOLO mode, etc.).",
+    "Mostra una riga sulle chiamate agli strumenti che spiega perché sono state approvate automaticamente (regola corrispondente, predefinito dell'agente, modalità YOLO, ecc.).",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

@@ -1161,22 +1161,23 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Reasoning-Aufwand mit Shift+Tab durchlaufen",
   "settings.display.shiftTabCycle.description":
     "Drücken Sie Shift+Tab in einem Prompt-Eingabefeld, um zur nächsten Stufe des Reasoning-Aufwands zu wechseln. Deaktivieren Sie dies, um Shift+Tab für die Tastaturfokusnavigation beizubehalten.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "Terminalbefehlsblöcke",
+  "settings.display.terminalCommand.description":
+    "Wählen Sie, ob Terminalbefehlsblöcke anfangs aus- oder eingeklappt sind.",
+  "settings.display.terminalCommand.expanded": "Ausgeklappt",
+  "settings.display.terminalCommand.collapsed": "Eingeklappt",
   "settings.display.codeEdit.title": "Blöcke für Codebearbeitungen",
   "settings.display.codeEdit.description":
     "Wählen Sie, ob Blöcke mit Codebearbeitungen und Unterschieden anfangs aus- oder eingeklappt sind.",
   "settings.display.codeEdit.expanded": "Ausgeklappt",
   "settings.display.codeEdit.collapsed": "Eingeklappt",
 
-  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.title": "Token-Durchsatz anzeigen",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
-  "settings.display.autoApprovalReason.title": "Show Auto-Approval Reason",
+    "Zeigt die Textgenerierungsrate (Tokens/Sek.) in der letzten Assistentennachricht und im Aufgabenkopf an. Standardmäßig ausgeblendet, um den Chat übersichtlich zu halten.",
+  "settings.display.autoApprovalReason.title": "Grund für automatische Genehmigung anzeigen",
   "settings.display.autoApprovalReason.description":
-    "Show a line on tool calls explaining why they were auto-approved (matched rule, agent default, YOLO mode, etc.).",
+    "Zeigt bei Tool-Aufrufen eine Zeile an, die erklärt, warum sie automatisch genehmigt wurden (passende Regel, Agent-Standard, YOLO-Modus usw.).",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
