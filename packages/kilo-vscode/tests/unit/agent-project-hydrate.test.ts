@@ -25,12 +25,11 @@ function snapshot(id: string, over: Partial<ProjectSnapshot> = {}): ProjectSnaps
   }
 }
 
-/** Contexts keyed by id, created cold; `load` marks one as having live state. */
+/** Contexts keyed by id, created cold. */
 function contexts(ids: string[]) {
   const map = new Map(ids.map((id) => [id, new ProjectContext(id, `/repo/${id}`, false, deps)]))
   return {
     map,
-    load: (id: string) => map.get(id)!.stateManager(),
     hooks: () => {
       const pushed: string[] = []
       const inited: string[] = []

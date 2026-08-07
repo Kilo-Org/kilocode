@@ -237,6 +237,11 @@ html[data-theme="kilo-vscode"]
   cursor: pointer;
 }
 
+.am-sidebar-header-toggle:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
 .am-sidebar-header-toggle:hover {
   color: var(--text-base);
   background: var(--surface-inset-base-hover);
