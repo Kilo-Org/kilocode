@@ -28,6 +28,7 @@ import { markWorkspace } from "./util/spotlight"
 import { createNotebookBridge } from "./services/notebook"
 
 let agentManager: AgentManagerProvider | undefined
+let caffeination: CaffeinationService | undefined
 let shuttingDown = false
 
 const RESTORE_KEY = "kilo.workbench.restore"
@@ -150,7 +151,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Create Agent Manager provider for editor panel
   const agentManagerHost = new VscodeHost(context.extensionUri, connectionService, context, remoteService)
-  const caffeination = new CaffeinationService()
+  caffeination = new CaffeinationService()
   const agentManagerProvider = new AgentManagerProvider(agentManagerHost, connectionService, caffeination)
   agentManagerProvider.onPanelVisibilityChange((visible) => remember({ agentManager: visible }))
   agentManager = agentManagerProvider
@@ -588,7 +589,7 @@ export function activate(context: vscode.ExtensionContext) {
       unsubscribeStateChange()
       attention.dispose()
       browserAutomationService.dispose()
-      caffeination.dispose()
+      void caffeination?.dispose()
       provider.dispose()
       notebookBridge.dispose()
       connectionService.dispose()
@@ -599,6 +600,7 @@ export function activate(context: vscode.ExtensionContext) {
 export async function deactivate() {
   shuttingDown = true
   await agentManager?.shutdown()
+  await caffeination?.dispose()
   TelemetryProxy.getInstance().shutdown()
 }
 

@@ -51,7 +51,7 @@ describe("CaffeinationService", () => {
     await service.setEnabled(false)
     expect(driver.stops).toBe(1)
     expect(service.getState().active).toBe(false)
-    service.dispose()
+    await service.dispose()
   })
 
   it("releases the inhibitor when disabled", async () => {
@@ -60,7 +60,7 @@ describe("CaffeinationService", () => {
     await service.setEnabled(false)
     expect(driver.stops).toBe(1)
     expect(service.getState().active).toBe(false)
-    service.dispose()
+    await service.dispose()
   })
 
   it("retries even before an agent status arrives", async () => {
@@ -71,7 +71,7 @@ describe("CaffeinationService", () => {
     await wait()
     expect(driver.starts).toBe(2)
     expect(service.getState().active).toBe(true)
-    service.dispose()
+    await service.dispose()
   })
 
   it("retries once when the inhibitor exits unexpectedly", async () => {
@@ -86,7 +86,7 @@ describe("CaffeinationService", () => {
     driver.die()
     await wait()
     expect(service.getState()).toMatchObject({ active: false, available: false })
-    service.dispose()
+    await service.dispose()
   })
 
   it("does not start an unavailable driver", async () => {
@@ -96,6 +96,23 @@ describe("CaffeinationService", () => {
     await service.setEnabled(true)
     expect(driver.starts).toBe(0)
     expect(service.getState().available).toBe(false)
-    service.dispose()
+    await service.dispose()
+  })
+
+  it("can be re-enabled after an inhibitor failure", async () => {
+    const { driver, service } = setup()
+    await service.setEnabled(true)
+
+    driver.die()
+    await wait()
+    driver.die()
+    await wait()
+    expect(service.getState()).toMatchObject({ available: false, active: false })
+
+    await service.setEnabled(false)
+    await service.setEnabled(true)
+    expect(driver.starts).toBe(3)
+    expect(service.getState()).toMatchObject({ available: true, active: true, error: undefined })
+    await service.dispose()
   })
 })

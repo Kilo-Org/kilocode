@@ -20,6 +20,7 @@ export class CaffeinationService {
   private state: CaffeinationState
   private retried = false
   private disposed = false
+  private closing: Promise<void> | undefined
 
   constructor(driver: CaffeinationDriver = createCaffeinationDriver()) {
     this.driver = driver
@@ -43,20 +44,20 @@ export class CaffeinationService {
   setEnabled(enabled: boolean): Promise<void> {
     if (this.disposed || this.state.enabled === enabled) return this.work
     this.retried = false
-    this.update({ enabled, error: enabled ? this.state.error : undefined })
+    this.update({ enabled, available: this.driver.available, error: undefined })
     return this.queue()
   }
 
-  dispose(): void {
-    if (this.disposed) return
+  dispose(): Promise<void> {
+    if (this.closing) return this.closing
     this.disposed = true
     this.listeners.clear()
-    this.work = this.work
-      .then(() => this.driver.stop())
-      .catch((error: unknown) => {
+    const stop = () =>
+      this.driver.stop().catch((error: unknown) => {
         console.warn("[Kilo New] Failed to stop caffeination:", error)
-        return this.driver.stop()
       })
+    this.closing = this.work.then(stop, stop)
+    return this.closing
   }
 
   private queue(): Promise<void> {
