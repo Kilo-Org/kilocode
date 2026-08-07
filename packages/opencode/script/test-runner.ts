@@ -187,6 +187,7 @@ type Proc = ReturnType<typeof Bun.spawn>
 
 const xmldir = ci ? path.join(os.tmpdir(), `opencode-junit-${process.pid}`) : ""
 if (ci) await fs.mkdir(xmldir, { recursive: true })
+// kilocode_change start
 const supplied = process.env[TestCli.ENV]
 const built = supplied
   ? { binary: supplied, dir: undefined }
@@ -196,6 +197,7 @@ async function cleanBinary() {
   if (!built.dir) return
   await fs.rm(built.dir, { recursive: true, force: true })
 }
+// kilocode_change end
 
 const counter = { done: 0 }
 const pad = String(files.length).length

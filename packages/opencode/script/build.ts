@@ -51,6 +51,7 @@ async function copyTreeSitterWasms(outputDir: string) {
   console.log(`copied ${languageWasmFiles.length + 1} tree-sitter wasm files to ${targetDir}`)
 }
 
+// kilocode_change start
 async function isKiloConsoleUpToDate(app: string, out: string) {
   const indexHtml = path.join(out, "index.html")
   if (!fs.existsSync(indexHtml)) return false
@@ -102,6 +103,7 @@ async function buildKiloConsole() {
   if (code !== 0) throw new Error(`Kilo Console build failed with exit code ${code}`)
   return out
 }
+// kilocode_change end
 
 async function copyKiloConsole(input: string, outputDir: string) {
   const target = path.join(outputDir, "console")
@@ -253,8 +255,8 @@ const targets = singleFlag
     })
   : allTargets
 
-await $`rm -rf dist`
 // kilocode_change start
+await $`rm -rf dist`
 const [kiloConsoleDist, kiloSandboxWorker, kiloSandboxNetwork] = await Promise.all([
   buildKiloConsole(),
   KiloSandboxWorker.bundle(),
