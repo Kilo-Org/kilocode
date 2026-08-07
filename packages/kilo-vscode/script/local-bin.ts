@@ -252,13 +252,8 @@ async function ensureBuiltBinary(): Promise<string> {
     )
   }
 
-  // Use the repository-pinned Bun version throughout. Newer canaries can fail compilation
-  // and must not cause packaged snapshots to fall back to the browser-mode source wrapper.
-  const pkg = await Bun.file(join(repoDir, "package.json")).json()
-  const bun = String(pkg.packageManager)
-  log("Installing dependencies in opencode package...")
-  await $`bunx ${bun} install --frozen-lockfile`.cwd(opencodeDir)
-  await $`bunx ${bun} run build --single --skip-install`.cwd(opencodeDir)
+  log("Building CLI binary...")
+  await $`bun run script/build.ts --single --skip-install`.cwd(opencodeDir)
 
   const built = await findKiloBinaryInOpencodeDist()
   if (!built) {
