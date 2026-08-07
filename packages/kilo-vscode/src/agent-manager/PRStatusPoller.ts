@@ -405,7 +405,7 @@ export class PRStatusPoller {
         duration: formatCheckDuration(c.startedAt, c.completedAt),
       }))
 
-      const total = checks.length
+      const total = checks.filter((c) => c.status !== "skipped").length
       const passed = checks.filter((c) => c.status === "success").length
       const failed = checks.filter((c) => c.status === "failure").length
       const pending = checks.filter((c) => c.status === "pending").length

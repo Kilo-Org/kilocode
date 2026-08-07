@@ -30,9 +30,11 @@ export function parsePRResult(json: string): PRResult | null {
 export function checkStatus(state: string): CheckStatus {
   switch (state.toUpperCase()) {
     case "SUCCESS":
+    case "NEUTRAL":
       return "success"
     case "FAILURE":
     case "ERROR":
+    case "ACTION_REQUIRED":
       return "failure"
     case "PENDING":
     case "QUEUED":
@@ -48,7 +50,7 @@ export function checkStatus(state: string): CheckStatus {
     case "STARTUP_FAILURE":
       return "cancelled"
     default:
-      return "pending"
+      return "cancelled"
   }
 }
 
