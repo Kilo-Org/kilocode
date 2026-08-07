@@ -60,18 +60,18 @@ describe("hydrateExpanded", () => {
    * re-push it, otherwise the accordion stays on loading placeholders until the
    * user clicks a row inside the project.
    */
-  it("re-pushes state for an already loaded background project", () => {
+  it("re-pushes state for an already loaded background project", async () => {
     const all = contexts(["a"])
-    all.load("a")
+    await all.map.get("a")!.ensureReady(async () => ({ ok: true, refsFixed: 0 }))
     const hooks = all.hooks()
     hydrateExpanded([snapshot("a")], hooks)
     expect(hooks.pushed).toEqual(["a"])
     expect(hooks.inited).toEqual([])
   })
 
-  it("skips the active project, which the provider pushes itself", () => {
+  it("skips the active project, which the provider pushes itself", async () => {
     const all = contexts(["a"])
-    all.load("a")
+    await all.map.get("a")!.ensureReady(async () => ({ ok: true, refsFixed: 0 }))
     const hooks = all.hooks()
     hydrateExpanded([snapshot("a", { active: true })], hooks)
     expect(hooks.pushed).toEqual([])
@@ -106,9 +106,9 @@ describe("hydrateExpanded", () => {
     expect(hooks.inited).toEqual([])
   })
 
-  it("hydrates every expanded background project, not just the first", () => {
+  it("hydrates every expanded background project, not just the first", async () => {
     const all = contexts(["a", "b", "c"])
-    all.load("b")
+    await all.map.get("b")!.ensureReady(async () => ({ ok: true, refsFixed: 0 }))
     const hooks = all.hooks()
     hydrateExpanded([snapshot("a"), snapshot("b"), snapshot("c")], hooks)
     expect(hooks.inited).toEqual(["a", "c"])

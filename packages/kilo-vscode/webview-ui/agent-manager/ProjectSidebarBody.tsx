@@ -440,8 +440,13 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
         sessions={localSessions}
         loaded={() => props.sessions !== undefined && state() !== undefined}
         collapsed={() => state()?.sessionsCollapsed === true}
+        disabled={state() === undefined}
         active={() => undefined}
-        onToggle={() => post({ type: "agentManager.setSessionsCollapsed", collapsed: !state()?.sessionsCollapsed })}
+        onToggle={() => {
+          const current = state()
+          if (!current) return
+          post({ type: "agentManager.setSessionsCollapsed", collapsed: !current.sessionsCollapsed })
+        }}
         onSelect={(sessionId) => props.onSelectSession(props.project.id, sessionId)}
         onPromote={(sessionId) => post({ type: "agentManager.promoteSession", sessionId })}
         onOpen={(sessionId) => post({ type: "agentManager.openLocally", sessionId })}

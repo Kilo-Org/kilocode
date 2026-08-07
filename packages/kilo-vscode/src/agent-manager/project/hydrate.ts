@@ -31,7 +31,7 @@ export function hydrateExpanded(projects: readonly ProjectSnapshot[], hooks: Hoo
     if (project.active || !project.expanded || !project.trusted || project.missing) continue
     const ctx = hooks.expand(project.id)
     if (!ctx) continue
-    if (ctx.loaded) hooks.push(ctx)
+    if (ctx.lifecycle === "ready") hooks.push(ctx)
     else hooks.init(ctx)
   }
 }

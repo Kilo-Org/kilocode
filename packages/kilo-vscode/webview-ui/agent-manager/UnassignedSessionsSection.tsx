@@ -13,6 +13,7 @@ interface Props {
   sessions: Accessor<SessionInfo[]>
   loaded: Accessor<boolean>
   collapsed: Accessor<boolean>
+  disabled?: boolean
   active: Accessor<string | undefined>
   onToggle: () => void
   onSelect: (id: string) => void
@@ -34,6 +35,7 @@ export const UnassignedSessionsSection: Component<Props> = (props) => {
       <SidebarSectionHeader
         class="am-section-header am-section-toggle"
         expanded={!props.collapsed()}
+        disabled={props.disabled}
         ariaLabel={t("agentManager.section.sessions")}
         label={<span class="am-section-label">{t("agentManager.section.sessions")}</span>}
         onToggle={props.onToggle}
