@@ -24,16 +24,24 @@ afterEach(async () => {
   )
 })
 
+function gitExec(args: string[]) {
+  const res = Bun.spawnSync(args, { stdout: "ignore", stderr: "pipe" })
+  if (res.exitCode !== 0) {
+    const err = Buffer.from(res.stderr).toString("utf8")
+    throw new Error(`git command failed (${args.join(" ")}): ${err}`)
+  }
+}
+
 /** Create a temp git repo with an initial commit (required for worktrees). */
 async function createTempRepo(): Promise<string> {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-"))
   tempDirs.push(dir)
-  Bun.spawnSync(["git", "init", "-b", "main", dir], { stdout: "ignore", stderr: "ignore" })
-  Bun.spawnSync(["git", "-C", dir, "config", "user.email", "test@test.com"], { stdout: "ignore", stderr: "ignore" })
-  Bun.spawnSync(["git", "-C", dir, "config", "user.name", "Test"], { stdout: "ignore", stderr: "ignore" })
+  gitExec(["git", "init", "-b", "main", dir])
+  gitExec(["git", "-C", dir, "config", "user.email", "test@test.com"])
+  gitExec(["git", "-C", dir, "config", "user.name", "Test"])
   await fs.writeFile(path.join(dir, "README.md"), "init")
-  Bun.spawnSync(["git", "-C", dir, "add", "."], { stdout: "ignore", stderr: "ignore" })
-  Bun.spawnSync(["git", "-C", dir, "commit", "-m", "initial commit"], { stdout: "ignore", stderr: "ignore" })
+  gitExec(["git", "-C", dir, "add", "."])
+  gitExec(["git", "-C", dir, "commit", "-m", "initial commit"])
   return dir
 }
 
@@ -54,14 +62,14 @@ async function createTempRepoWithOrigin(): Promise<{ bare: string; clone: string
   const clone = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-clone-"))
   tempDirs.push(bare, clone)
 
-  Bun.spawnSync(["git", "init", "--bare", "-b", "main", bare], { stdout: "ignore", stderr: "ignore" })
-  Bun.spawnSync(["git", "clone", bare, clone], { stdout: "ignore", stderr: "ignore" })
-  Bun.spawnSync(["git", "-C", clone, "config", "user.email", "test@test.com"], { stdout: "ignore", stderr: "ignore" })
-  Bun.spawnSync(["git", "-C", clone, "config", "user.name", "Test"], { stdout: "ignore", stderr: "ignore" })
+  gitExec(["git", "init", "--bare", "-b", "main", bare])
+  gitExec(["git", "clone", bare, clone])
+  gitExec(["git", "-C", clone, "config", "user.email", "test@test.com"])
+  gitExec(["git", "-C", clone, "config", "user.name", "Test"])
   await fs.writeFile(path.join(clone, "README.md"), "init")
-  Bun.spawnSync(["git", "-C", clone, "add", "."], { stdout: "ignore", stderr: "ignore" })
-  Bun.spawnSync(["git", "-C", clone, "commit", "-m", "initial commit"], { stdout: "ignore", stderr: "ignore" })
-  Bun.spawnSync(["git", "-C", clone, "push", "-u", "origin", "main"], { stdout: "ignore", stderr: "ignore" })
+  gitExec(["git", "-C", clone, "add", "."])
+  gitExec(["git", "-C", clone, "commit", "-m", "initial commit"])
+  gitExec(["git", "-C", clone, "push", "-u", "origin", "main"])
 
   return { bare, clone }
 }

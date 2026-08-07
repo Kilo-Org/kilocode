@@ -21,18 +21,22 @@ export namespace TestCli {
       path.join(root, "..", "protocol", "src"),
       path.join(root, "..", "schema", "src"),
       path.join(root, "..", "plugin", "src"),
+      path.join(root, "..", "plugin-atomic-chat", "src"),
+      path.join(root, "..", "ui", "src"),
+      path.join(root, "..", "sdk", "js", "src"),
       path.join(root, "..", "kilo-memory", "src"),
       path.join(root, "..", "kilo-indexing", "src"),
       path.join(root, "..", "kilo-gateway", "src"),
       path.join(root, "..", "kilo-sandbox", "src"),
       path.join(root, "..", "kilo-telemetry", "src"),
+      path.resolve(root, "../../bun.lock"),
     ]
 
     for (const target of targets) {
       if (!fsSync.existsSync(target)) continue
       const st = fsSync.statSync(target)
       if (st.isDirectory()) {
-        const glob = new Bun.Glob("**/*.{ts,tsx,sql,json}")
+        const glob = new Bun.Glob("**/*.{ts,tsx,sql,json,txt}")
         for await (const file of glob.scan({ cwd: target })) {
           const p = path.join(target, file)
           const fileStat = fsSync.statSync(p)

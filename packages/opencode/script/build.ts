@@ -62,6 +62,10 @@ async function isKiloConsoleUpToDate(app: string, out: string) {
     path.join(app, "index.html"),
     path.resolve(dir, "../kilo-web-ui/src"),
     path.resolve(dir, "../kilo-indexing/src"),
+    path.resolve(dir, "../kilo-ui/src"),
+    path.resolve(dir, "../ui/src"),
+    path.resolve(dir, "../sdk/js/src"),
+    path.resolve(dir, "../../bun.lock"),
   ]
   for (const p of inputs) {
     if (!fs.existsSync(p)) continue

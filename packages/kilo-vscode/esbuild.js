@@ -18,12 +18,18 @@ const solidMemCache = new Map()
 const buildScriptHash = crypto
   .createHash("sha256")
   .update(fs.readFileSync(__filename, "utf8"))
+  .update(require("babel-preset-solid/package.json").version || "")
+  .update(require("@babel/preset-typescript/package.json").version || "")
   .digest("hex")
   .slice(0, 8)
 
-try {
-  fs.mkdirSync(solidCacheDir, { recursive: true })
-} catch {}
+if (!fs.existsSync(solidCacheDir)) {
+  try {
+    fs.mkdirSync(solidCacheDir, { recursive: true })
+  } catch (err) {
+    console.warn("[esbuild] could not create solid cache directory", err)
+  }
+}
 
 const cachedSolidPlugin = {
   name: "esbuild:solid-cached",
@@ -35,7 +41,9 @@ const cachedSolidPlugin = {
         const st = fs.statSync(args.path)
         mtime = st.mtimeMs
         size = st.size
-      } catch {}
+      } catch (err) {
+        console.warn("[esbuild] could not stat source file for cache key", args.path, err)
+      }
 
       const cacheKey = `${args.path}:${mtime}:${size}:${buildScriptHash}`
       const memHit = solidMemCache.get(cacheKey)
@@ -44,13 +52,15 @@ const cachedSolidPlugin = {
       const diskKey = crypto.createHash("sha256").update(cacheKey).digest("hex") + ".js"
       const diskPath = path.join(solidCacheDir, diskKey)
 
-      try {
-        if (fs.existsSync(diskPath)) {
+      if (fs.existsSync(diskPath)) {
+        try {
           const diskCode = fs.readFileSync(diskPath, "utf8")
           solidMemCache.set(cacheKey, diskCode)
           return { contents: diskCode, loader: "js" }
+        } catch (err) {
+          console.warn("[esbuild] cache read failed, rebuilding", diskPath, err)
         }
-      } catch {}
+      }
 
       const source = fs.readFileSync(args.path, "utf8")
       const { name, ext } = path.parse(args.path)
@@ -68,10 +78,13 @@ const cachedSolidPlugin = {
         throw new Error("No result was provided from Babel")
       }
 
+      if (solidMemCache.size > 2000) solidMemCache.clear()
       solidMemCache.set(cacheKey, result.code)
       try {
         fs.writeFileSync(diskPath, result.code)
-      } catch {}
+      } catch (err) {
+        console.warn("[esbuild] cache write failed", diskPath, err)
+      }
 
       return { contents: result.code, loader: "js" }
     })

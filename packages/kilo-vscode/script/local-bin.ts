@@ -252,8 +252,15 @@ async function ensureBuiltBinary(): Promise<string> {
     )
   }
 
+  const pkg = await Bun.file(join(repoDir, "package.json")).json()
+  const bun = String(pkg.packageManager)
   log("Building CLI binary...")
-  await $`bun run script/build.ts --single --skip-install`.cwd(opencodeDir)
+  try {
+    await $`bunx ${bun} run build --single --skip-install`.cwd(opencodeDir)
+  } catch (err) {
+    log(`Pinned bunx build failed (${err}), running via active bun runtime...`)
+    await $`bun run script/build.ts --single --skip-install`.cwd(opencodeDir)
+  }
 
   const built = await findKiloBinaryInOpencodeDist()
   if (!built) {

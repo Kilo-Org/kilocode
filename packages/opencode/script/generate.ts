@@ -16,22 +16,22 @@ const raw = await (async () => {
     return await Bun.file(process.env.MODELS_DEV_API_JSON).text()
   }
   const cached = Bun.file(cacheFile)
-  if (await cached.exists()) {
-    try {
-      const st = await cached.stat()
-      if (Date.now() - st.mtimeMs < 6 * 3600 * 1000) {
-        return await cached.text()
-      }
-    } catch {}
+  const exists = await cached.exists()
+  if (exists) {
+    const st = await cached.stat()
+    if (st && Date.now() - st.mtimeMs < 6 * 3600 * 1000) {
+      return await cached.text()
+    }
   }
   try {
     const res = await fetch(`${modelsUrl}/api.json`, { signal: AbortSignal.timeout(5000) })
+    if (!res.ok) throw new Error(`Failed to fetch models.dev snapshot: HTTP ${res.status}`)
     const text = await res.text()
-    await Bun.write(cacheFile, text).catch(() => {})
+    await Bun.write(cacheFile, text)
     return text
-  } catch (e) {
-    if (await cached.exists()) return await cached.text()
-    throw e
+  } catch (err) {
+    if (exists) return await cached.text()
+    throw err
   }
 })()
 export const modelsData = JSON.stringify(parseModelsSnapshot(raw).data)
