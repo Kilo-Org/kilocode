@@ -42,7 +42,12 @@ export async function load(
         ? err.data.message
         : `Failed to parse command ${item}`
       // kilocode_change start
-      if (warnings) warnings.push({ path: item, message })
+      const warn: Warning = { path: item, message }
+      if (FrontmatterError.isInstance(err)) {
+        warn.line = err.data.line
+        warn.column = err.data.column
+      }
+      if (warnings) warnings.push(warn)
       try {
         const { capture } = await import("@/kilocode/instance")
         const ctx = capture()

@@ -91,6 +91,10 @@ export const Warning = z.object({
   path: z.string(),
   message: z.string(),
   detail: z.string().optional(),
+  // kilocode_change start - carry parse position to editor diagnostics
+  line: z.number().optional(),
+  column: z.number().optional(),
+  // kilocode_change end
 })
 export type Warning = z.infer<typeof Warning>
 

@@ -25,6 +25,10 @@ export const InvalidError = NamedError.create("ConfigInvalidError", {
 export const FrontmatterError = NamedError.create("ConfigFrontmatterError", {
   path: Schema.String,
   message: Schema.String,
+  // kilocode_change start - carry parse position to editor diagnostics
+  line: Schema.optional(Schema.Number),
+  column: Schema.optional(Schema.Number),
+  // kilocode_change end
 })
 
 export const DirectoryTypoError = NamedError.create("ConfigDirectoryTypoError", {

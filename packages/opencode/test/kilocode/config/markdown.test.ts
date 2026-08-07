@@ -1,5 +1,7 @@
 import path from "node:path"
-import { expect, test } from "bun:test"
+import { expect, test, describe } from "bun:test"
+import { ConfigMarkdown } from "@/config/markdown"
+import { FrontmatterError } from "@opencode-ai/core/v1/config/error"
 import { KilocodeMarkdown } from "@/kilocode/config/markdown"
 import { tmpdir } from "../../fixture/fixture"
 
@@ -56,4 +58,23 @@ test("confines project markdown substitutions while preserving trusted substitut
     if (prior === undefined) delete process.env[name]
     else process.env[name] = prior
   }
+})
+
+describe("ConfigMarkdown frontmatter diagnostics", () => {
+  test("reports the line and column of a missing space after a colon", async () => {
+    await using tmp = await tmpdir()
+    const file = path.join(tmp.path, "agent.md")
+    const text = "---\nmode: subagent\nmodel:codedesign/KAT-Coder-V2.5-Dev\ndescription: Workspace Discovery Agent.\n---\n"
+    await Bun.write(file, text)
+
+    const err = await ConfigMarkdown.parse(file, { trusted: true }).then(
+      () => new Error("expected frontmatter parse to fail"),
+      (e) => e,
+    )
+
+    expect(FrontmatterError.isInstance(err)).toBeTrue()
+    expect(err.data.line).toBe(1)
+    expect(err.data.column).toBe(5)
+    expect(err.data.path).toBe(file)
+  })
 })

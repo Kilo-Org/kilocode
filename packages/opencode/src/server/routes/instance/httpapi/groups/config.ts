@@ -15,6 +15,10 @@ const Warning = Schema.Struct({
   path: Schema.String,
   message: Schema.String,
   detail: Schema.optional(Schema.String),
+  // kilocode_change start - carry parse position to editor diagnostics
+  line: Schema.optional(Schema.Number),
+  column: Schema.optional(Schema.Number),
+  // kilocode_change end
 })
 // kilocode_change end
 

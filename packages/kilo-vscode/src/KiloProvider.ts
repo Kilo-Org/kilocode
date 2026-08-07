@@ -364,6 +364,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /** Ref-count of in-flight handleUpdateConfig calls; prevents fetchAndSendConfig from sending stale data */
   private pending = 0
   private configWarningsShown = false
+  private configDiagnostics: vscode.DiagnosticCollection | undefined
   /** Cached notificationsLoaded payload */
   private cachedNotificationsMessage: NotificationsMessage | null = null
   private pendingKiloModel: { modelID?: string; agent?: string } | null = null
@@ -2762,15 +2763,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   /**
-   * Fetch config warnings from the server and display a single consolidated
-   * VS Code warning with a "Show Details" action button.
-   * Only shown once per provider lifecycle (flag resets on dispose/re-create, not on SSE reconnect).
+   * Fetch config warnings from the server, publish them as VS Code diagnostics,
+   * and display a single consolidated VS Code warning with a "Show Details" action.
+   * The notification is shown once per provider lifecycle; diagnostics refresh on
+   * every call so stale errors disappear after the user fixes the file.
    */
   private async checkConfigWarnings(from: string): Promise<void> {
-    if (this.configWarningsShown) {
-      console.log("[Kilo New] KiloProvider: config warnings already shown", { from })
-      return
-    }
     if (!this.client) {
       console.log("[Kilo New] KiloProvider: config warnings skipped (no client)", { from })
       return
@@ -2779,12 +2777,47 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const dir = this.getWorkspaceDirectory()
       console.log("[Kilo New] KiloProvider: checking config warnings", { from, dir })
       const result = await this.client.config.warnings({ directory: dir })
-      const list = result?.data ?? []
+      const list = (result?.data ?? []) as Array<{
+        path: string
+        message: string
+        detail?: string
+        line?: number
+        column?: number
+      }>
       console.log("[Kilo New] KiloProvider: config warnings fetched", { from, count: list.length })
+
+      this.configDiagnostics ??= vscode.languages.createDiagnosticCollection("kilo-config")
+      this.configDiagnostics.clear()
+
+      const byUri = new Map<string, vscode.Diagnostic[]>()
+      for (const w of list) {
+        if (!w.path) continue
+        const uri = vscode.Uri.file(w.path)
+        const key = uri.toString()
+        const pos =
+          w.line !== undefined && w.column !== undefined
+            ? new vscode.Range(w.line, w.column, w.line, Number.MAX_SAFE_INTEGER)
+            : new vscode.Range(0, 0, 0, 0)
+        const severity = w.line !== undefined ? vscode.DiagnosticSeverity.Error : vscode.DiagnosticSeverity.Warning
+        const message = w.detail ? `${w.message}\n${w.detail}` : w.message
+        const diagnostic = new vscode.Diagnostic(pos, message, severity)
+        diagnostic.source = "kilo"
+        const existing = byUri.get(key) ?? []
+        existing.push(diagnostic)
+        byUri.set(key, existing)
+      }
+      for (const [key, diagnostics] of byUri) {
+        this.configDiagnostics.set(vscode.Uri.parse(key), diagnostics)
+      }
+
       if (list.length === 0) return
+      if (this.configWarningsShown) {
+        console.log("[Kilo New] KiloProvider: config warning notification already shown", { from })
+        return
+      }
       this.configWarningsShown = true
 
-      const first = list[0]!
+      const first = list[0]
       const summary = list.length === 1 ? first.message : `${first.message} (and ${list.length - 1} more)`
       console.warn("[Kilo New] KiloProvider: showing config warnings", { from, count: list.length, path: first.path })
 
@@ -5031,6 +5064,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.requirements.dispose()
     this.ignoreController?.dispose()
     this.chatAutocomplete?.dispose()
+    this.configDiagnostics?.dispose()
     disposeGitChangesTarget()
   }
 }

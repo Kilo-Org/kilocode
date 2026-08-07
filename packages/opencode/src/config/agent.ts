@@ -2,7 +2,6 @@ export * as ConfigAgent from "./agent"
 
 import path from "path"
 import * as Log from "@opencode-ai/core/util/log"
-import { Exit, Schema } from "effect"
 import { Glob } from "@opencode-ai/core/util/glob"
 import { ConfigAgentV1 } from "@opencode-ai/core/v1/config/agent"
 import { configEntryNameFromPath } from "./entry-name"
@@ -41,7 +40,12 @@ export async function load(
         ? err.data.message
         : `Failed to parse agent ${item}`
       // kilocode_change start
-      if (warnings) warnings.push({ path: item, message })
+      const warn: Warning = { path: item, message }
+      if (FrontmatterError.isInstance(err)) {
+        warn.line = err.data.line
+        warn.column = err.data.column
+      }
+      if (warnings) warnings.push(warn)
       try {
         const { capture } = await import("@/kilocode/instance")
         const ctx = capture()
@@ -122,7 +126,12 @@ export async function loadMode(
         ? err.data.message
         : `Failed to parse mode ${item}`
       // kilocode_change start
-      if (warnings) warnings.push({ path: item, message })
+      const warn: Warning = { path: item, message }
+      if (FrontmatterError.isInstance(err)) {
+        warn.line = err.data.line
+        warn.column = err.data.column
+      }
+      if (warnings) warnings.push(warn)
       try {
         const { capture } = await import("@/kilocode/instance")
         const ctx = capture()
