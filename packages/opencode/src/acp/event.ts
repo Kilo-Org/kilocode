@@ -83,7 +83,17 @@ export class Subscription {
       void waiter.promise.catch(() => {})
       const response = await request()
       if (this.connected) {
-        await waiter.promise.catch(() => {}) // kilocode_change
+        let timer: ReturnType<typeof setTimeout> | undefined
+        try {
+          await Promise.race([
+            waiter.promise,
+            new Promise<void>((resolve) => {
+              timer = setTimeout(resolve, 60_000)
+            }),
+          ]).catch(() => {}) // kilocode_change
+        } finally {
+          if (timer) clearTimeout(timer)
+        }
       }
       return response
     } finally {
