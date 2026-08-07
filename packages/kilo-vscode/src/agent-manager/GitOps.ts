@@ -97,6 +97,8 @@ export function nonInteractiveEnv(): NodeJS.ProcessEnv {
   delete env.GIT_PROXY_COMMAND
   delete env.GIT_EXTERNAL_DIFF
   delete env.GIT_TEMPLATE_DIR
+  delete env.GIT_EXEC_PATH
+  delete env.PREFIX
   for (const key of Object.keys(env)) {
     if (key.startsWith("GIT_CONFIG_KEY_") || key.startsWith("GIT_CONFIG_VALUE_")) {
       delete env[key]
