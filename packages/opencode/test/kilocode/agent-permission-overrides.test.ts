@@ -57,6 +57,59 @@ test("ask agent honors user MCP allow over generated ask rule", async () => {
   })
 })
 
+test("ask agent keeps known writers denied when top-level bash config allows them", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      permission: {
+        bash: {
+          "*": "ask",
+          "sed *": "allow",
+        },
+      },
+    },
+  })
+
+  await provideTestInstance({
+    directory: tmp.path,
+    fn: async () => {
+      const ask = await load(tmp.path, (svc) => svc.get("ask"))
+      const code = await load(tmp.path, (svc) => svc.get("code"))
+      const command = "sed -i -e 's/hello/TEST/' README.md"
+      expect(ask).toBeDefined()
+      expect(code).toBeDefined()
+      expect(Permission.evaluate("bash", command, ask!.permission).action).toBe("deny")
+      expect(Permission.evaluate("bash", command, code!.permission).action).toBe("allow")
+      expect(Permission.evaluate("bash", "safe-inspector README.md", ask!.permission).action).toBe("ask")
+      expect(Permission.evaluate("bash", "sed -n '1,5p' README.md", ask!.permission).action).toBe("ask")
+    },
+  })
+})
+
+test("ask agent honors explicit per-agent bash overrides", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      agent: {
+        ask: {
+          permission: {
+            bash: {
+              "sed -i *": "allow",
+            },
+          },
+        },
+      },
+    },
+  })
+
+  await provideTestInstance({
+    directory: tmp.path,
+    fn: async () => {
+      const ask = await load(tmp.path, (svc) => svc.get("ask"))
+      expect(ask).toBeDefined()
+      expect(Permission.evaluate("bash", "sed -i file", ask!.permission).action).toBe("allow")
+    },
+  })
+})
+
 test("plan agent honors user bash allow over read-only deny default", async () => {
   await using tmp = await tmpdir({
     config: {

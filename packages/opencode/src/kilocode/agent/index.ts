@@ -59,7 +59,7 @@ export const bash: Record<string, "allow" | "ask" | "deny"> = {
 }
 
 export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
-  "*": "deny",
+  "*": "ask",
   "cat *": "allow",
   "head *": "allow",
   "tail *": "allow",
@@ -110,10 +110,29 @@ export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
   "git branch -r *": "allow",
   "git remote -v *": "allow",
   "gh *": "ask",
-  // Everything below is a blocklist layered on the allowlist above: it catches ways
-  // an "allowed" read-only command can still write files, chain commands, or exec an
-  // arbitrary program. This is defense-in-depth, not a sandbox — the durable fix is
-  // OS-level sandboxing, not command-line string matching.
+  // Unknown commands require approval, but known writers remain unavailable in Ask.
+  "touch *": "deny",
+  "mkdir *": "deny",
+  "rmdir *": "deny",
+  "cp *": "deny",
+  "mv *": "deny",
+  "rm *": "deny",
+  "install *": "deny",
+  "ln *": "deny",
+  "chmod *": "deny",
+  "chown *": "deny",
+  "truncate *": "deny",
+  "tee *": "deny",
+  "dd *": "deny",
+  "sed -i *": "deny",
+  "sed -i* *": "deny",
+  "sed -*i* *": "deny",
+  "sed * -i *": "deny",
+  "sed * -i* *": "deny",
+  "sed *--in-place*": "deny",
+  // Everything below catches ways an allowed read-only command can still write files,
+  // chain commands, or exec an arbitrary program. This is defense-in-depth, not a
+  // sandbox — the durable fix is OS-level sandboxing, not command-line string matching.
   // `*` matches any run of characters (including spaces and empty), so each rule
   // catches its operator anywhere. Broad forms subsume narrow ones: `*&*` covers
   // `&&`, and `*>*` covers `>`, `>>`, `>|`, and `>(` in any spacing.
@@ -536,7 +555,16 @@ export function patchAgents(
     description: "Get answers and explanations without making changes to the codebase.",
     prompt: PROMPT_ASK,
     options: {},
-    permission: Permission.merge(defaults, askGuard(kilo.mcpRules), user, askEditGuard(), denies(user)),
+    // Native Ask filesystem restrictions are a hard boundary. User/global
+    // auto-approve rules may narrow them, but must never re-enable Bash writes.
+    permission: Permission.merge(
+      defaults,
+      askGuard(kilo.mcpRules),
+      user,
+      Permission.fromConfig({ bash: readOnlyBash }),
+      askEditGuard(),
+      denies(user),
+    ),
     mode: "primary",
     native: true,
   }
