@@ -202,6 +202,25 @@ describe("Agent Manager orchestration domain", () => {
     )
   })
 
+  it("waits for a busy managed session to become idle before prompting", async () => {
+    const managed = state.addWorktree({ branch: "fix/wait", path: worktree, parentBranch: "main" })
+    state.addSession("ses_wait", managed.id)
+    let calls = 0
+    const promptAsync = mock(async () => ({ data: undefined }))
+    const client = {
+      session: {
+        get: mock(async () => ({ data: { id: "ses_wait", directory: worktree, title: "Wait" } as Session })),
+        status: mock(async () => ({ data: calls++ === 0 ? { ses_wait: { type: "busy" } } : {} })),
+        promptAsync,
+      },
+    } as unknown as KiloClient
+
+    await prompt({ client, root, state, sessionID: "ses_wait", text: "Continue", messageID: "amr_wait" })
+
+    expect(client.session.status).toHaveBeenCalledTimes(2)
+    expect(promptAsync).toHaveBeenCalledTimes(1)
+  })
+
   it("rejects unknown, stale, cross-workspace, and busy targets", async () => {
     const managed = state.addWorktree({ branch: "fix/errors", path: worktree, parentBranch: "main" })
     state.addSession("ses_target", managed.id)
@@ -231,7 +250,15 @@ describe("Agent Manager orchestration domain", () => {
       data: { ses_target: { type: "busy" } },
     }))
     await expect(
-      prompt({ client, root, state, sessionID: "ses_target", text: "Continue", messageID: "amr_busy" }),
+      prompt({
+        client,
+        root,
+        state,
+        sessionID: "ses_target",
+        text: "Continue",
+        messageID: "amr_busy",
+        idleTimeoutMs: 0,
+      }),
     ).rejects.toMatchObject({
       code: "unavailable_session",
     } satisfies Partial<OrchestrationError>)

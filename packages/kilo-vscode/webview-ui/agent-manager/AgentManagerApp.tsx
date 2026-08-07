@@ -77,6 +77,7 @@ import { ProviderShell } from "../src/context/provider-shell"
 import { ChatView } from "../src/components/chat"
 import HistoryView from "../src/components/history/HistoryView"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
+import { DefaultBaseBranchDialog } from "./DefaultBaseBranchDialog"
 import { createModeRouter } from "./mode-router"
 import { ProjectList } from "./ProjectList"
 import { SidebarBody } from "./SidebarBody"
@@ -154,7 +155,6 @@ import type { SidebarSearchMenuRef } from "./SidebarSearchMenu"
 import { createSidebarSearch, type SidebarSearchItem } from "./sidebar-search"
 import { randomColor } from "./section-colors"
 import { createMarkdownRender } from "./review-preferences"
-import { createChangeDefaultBaseBranch } from "./default-base-branch"
 import { createSidebarCollapse } from "./sidebar-collapse"
 import { createNewTaskDrafts } from "./new-task-drafts"
 import {
@@ -199,39 +199,10 @@ interface SetupState {
 type SidebarSelection = typeof LOCAL | string | null
 export type SidePanelState = SidePanel | null
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
-// Fallback keybindings before extension sends resolved ones
-const MAX_JUMP_INDEX = 9
 const SIDE_RESIZE_INTERVAL_MS = 32
 
-const defaultBindings: Record<string, string> = {
-  previousSession: isMac ? "⌘⌥↑" : "Ctrl+Alt+↑",
-  nextSession: isMac ? "⌘⌥↓" : "Ctrl+Alt+↓",
-  previousTab: isMac ? "⌘⌥←" : "Ctrl+Alt+←",
-  nextTab: isMac ? "⌘⌥→" : "Ctrl+Alt+→",
-  previousTerminal: isMac ? "⌘⇧[" : "Ctrl+Shift+[",
-  nextTerminal: isMac ? "⌘⇧]" : "Ctrl+Shift+]",
-  search: isMac ? "⌘F" : "Ctrl+F",
-  showTerminal: isMac ? "⌘/" : "Ctrl+/",
-  newTerminal: isMac ? "⌘⇧T" : "Ctrl+Shift+T",
-  runScript: isMac ? "⌘E" : "Ctrl+E",
-  toggleDiff: isMac ? "⌘D" : "Ctrl+D",
-  showShortcuts: isMac ? "⌘⇧/" : "Ctrl+Shift+/",
-  newTab: isMac ? "⌘T" : "Ctrl+T",
-  closeTab: isMac ? "⌘W" : "Ctrl+W",
-  newWorktree: isMac ? "⌘N" : "Ctrl+N",
-  quickWorktree: isMac ? "⌘⇧N" : "Ctrl+Shift+N",
-  closeWorktree: isMac ? "⌘⇧W" : "Ctrl+Shift+W",
-  openWorktree: isMac ? "⌘⇧O" : "Ctrl+Shift+O",
-  openPR: isMac ? "⌘⇧R" : "Ctrl+Shift+R",
-  agentManagerOpen: isMac ? "⌘⇧M" : "Ctrl+Shift+M",
-  cycleAgentMode: isMac ? "⌘." : "Ctrl+.",
-  cyclePreviousAgentMode: isMac ? "⌘⇧." : "Ctrl+Shift+.",
-  ...Object.fromEntries(
-    Array.from({ length: MAX_JUMP_INDEX }, (_, i) => [`jumpTo${i + 1}`, isMac ? `⌘${i + 1}` : `Ctrl+${i + 1}`]),
-  ),
-}
-
 import { parseBindingTokens } from "./keybind-tokens"
+import { defaultBindings } from "./keybind-defaults"
 
 const AgentManagerContent: Component = () => {
   const { t } = useLanguage()
@@ -280,7 +251,6 @@ const AgentManagerContent: Component = () => {
     projectList().length === 0 || pid === undefined || pid === activeProjectId()
 
   const repoDefaultBranch = () => defaultBaseBranch() ?? repoDetectedBranch() ?? "main"
-  const hasConfiguredBranch = () => !!defaultBaseBranch()
 
   const DEFAULT_SIDEBAR_WIDTH = 260
   const MIN_SIDEBAR_WIDTH = 200
@@ -1791,16 +1761,17 @@ const AgentManagerContent: Component = () => {
   }
   const setupScript = metrics.click("configure_setup_script", "worktree_settings", handleConfigureSetupScript)
 
-  const handleChangeDefaultBaseBranch = createChangeDefaultBaseBranch({
-    vscode,
-    dialog,
-    t,
-    defaultBaseBranch,
-    setDefaultBaseBranch,
-    setRepoDetectedBranch,
-    repoDetectedBranch,
-    hasConfiguredBranch,
-  })
+  const handleChangeDefaultBaseBranch = () => {
+    dialog.show(() => (
+      <DefaultBaseBranchDialog
+        selected={defaultBaseBranch()}
+        detected={repoDetectedBranch()}
+        onSelect={setDefaultBaseBranch}
+        onDetected={setRepoDetectedBranch}
+        onClose={() => dialog.close()}
+      />
+    ))
+  }
 
   const handleShowKeyboardShortcuts = () => {
     const categories = buildShortcutCategories(kb(), t)
@@ -2454,9 +2425,6 @@ const AgentManagerContent: Component = () => {
           onTogglePR={togglePRPanel}
           terminalDestination={sideCtl.destination}
           terminalDestinationActive={() => sidePanel() === SidePanel.Terminal}
-          terminalDestinationFocused={() =>
-            sideCtl.destination() === "agentManager" && terms.sideFocusedId() !== undefined
-          }
           terminalKeybind={() => kb().showTerminal ?? ""}
           onTerminalDestinationOpen={() => {
             cancelAmbientSetup()

@@ -22,7 +22,7 @@ import { AttachCommand } from "./cli/cmd/attach"
 import { TuiThreadCommand } from "./cli/cmd/tui"
 import { AcpCommand } from "./cli/cmd/acp"
 import { EOL } from "os"
-import { WebCommand } from "./cli/cmd/web"
+// kilocode_change - upstream web command intentionally omitted; Kilo does not ship an embedded web UI
 import { PrCommand } from "./cli/cmd/pr"
 import { SessionCommand } from "./cli/cmd/session"
 import { DbCommand } from "./cli/cmd/db"
@@ -106,7 +106,7 @@ let cli = yargs(args) // kilocode_change
   .command(UpgradeCommand)
   .command(UninstallCommand)
   .command(ServeCommand)
-  .command(WebCommand)
+  // kilocode_change - upstream web command intentionally omitted
   .command(ModelsCommand)
   .command(StatsCommand)
   .command(ExportCommand)
