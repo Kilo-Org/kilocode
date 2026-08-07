@@ -345,6 +345,7 @@ describe("kilocode tool registry indexing", () => {
       terminal: def("interactive_terminal"),
       notify: def("notify_user"),
       send: def("send_file"),
+      world: def("world"),
       notebookRead: def("notebook_read"),
       notebookEdit: def("notebook_edit"),
       notebookExecute: def("notebook_execute"),
@@ -359,6 +360,7 @@ describe("kilocode tool registry indexing", () => {
         "recall",
         "background_process",
         "interactive_terminal",
+        "world",
         "notify_user",
         "send_file",
       ])
@@ -371,6 +373,7 @@ describe("kilocode tool registry indexing", () => {
           "recall",
           "background_process",
           "interactive_terminal",
+          "world",
           "notify_user",
           "send_file",
         ],
@@ -388,6 +391,7 @@ describe("kilocode tool registry indexing", () => {
         "recall",
         "background_process",
         "interactive_terminal",
+        "world",
         "notify_user",
         "send_file",
       ])

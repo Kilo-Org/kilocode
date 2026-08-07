@@ -11,6 +11,7 @@ import { MemoryRecallTool } from "./memory-recall"
 import { MemorySaveTool } from "./memory-save"
 import { NotifyUserTool } from "./notify-user"
 import { SendFileTool } from "./send-file"
+import { WorldTool } from "./world"
 import * as Tool from "../../tool/tool"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Effect } from "effect"
@@ -84,14 +85,44 @@ export namespace KiloToolRegistry {
       const sessions = yield* KiloSessions.Service
       const notify = yield* NotifyUserTool.pipe(Effect.provideService(KiloSessions.Service, sessions))
       const send = yield* SendFileTool
+      const world = yield* WorldTool
       if (!notebook)
-        return { codebase, recall, managerModels, memory, save, manager, process, chart, image, terminal, notify, send }
+        return {
+          codebase,
+          recall,
+          managerModels,
+          memory,
+          save,
+          manager,
+          process,
+          chart,
+          image,
+          terminal,
+          notify,
+          send,
+          world,
+        }
       const tools = yield* Effect.all({
         notebookRead: NotebookReadTool,
         notebookEdit: NotebookEditTool,
         notebookExecute: NotebookExecuteTool,
       }).pipe(Effect.provideService(Notebook.Service, notebook))
-      return { codebase, recall, managerModels, memory, save, manager, process, chart, image, terminal, notify, send, ...tools }
+      return {
+        codebase,
+        recall,
+        managerModels,
+        memory,
+        save,
+        manager,
+        process,
+        chart,
+        image,
+        terminal,
+        notify,
+        send,
+        world,
+        ...tools,
+      }
     })
   }
 
@@ -111,6 +142,7 @@ export namespace KiloToolRegistry {
       terminal?: Tool.Info
       notify: Tool.Info
       send: Tool.Info
+      world: Tool.Info
       notebookRead?: Tool.Info
       notebookEdit?: Tool.Info
       notebookExecute?: Tool.Info
@@ -131,6 +163,7 @@ export namespace KiloToolRegistry {
         image: Tool.init(tools.image),
         notify: Tool.init(tools.notify),
         send: Tool.init(tools.send),
+        world: Tool.init(tools.world),
       })
       const terminal = tools.terminal ? yield* Tool.init(tools.terminal) : undefined
       const notebooks =
@@ -207,11 +240,19 @@ export namespace KiloToolRegistry {
       terminal?: Tool.Def
       notify: Tool.Def
       send: Tool.Def
+      world: Tool.Def
       notebookRead?: Tool.Def
       notebookEdit?: Tool.Def
       notebookExecute?: Tool.Def
     },
-    cfg: { experimental?: { codebase_search?: boolean; image_generation?: boolean; native_notebook_tools?: boolean } },
+    cfg: {
+      experimental?: {
+        codebase_search?: boolean
+        image_generation?: boolean
+        native_notebook_tools?: boolean
+        world_browser?: boolean
+      }
+    },
   ): Tool.Def[] {
     return [
       ...(cfg.experimental?.codebase_search === true ? [tools.codebase] : []),
@@ -223,6 +264,7 @@ export namespace KiloToolRegistry {
       ...(Flag.KILO_CLIENT === "vscode" ? [tools.chart] : []),
       ...(Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode" ? [tools.process] : []),
       ...(Flag.KILO_CLIENT === "cli" && tools.terminal ? [tools.terminal] : []),
+      ...(Flag.KILO_CLIENT === "cli" && cfg.experimental?.world_browser !== false ? [tools.world] : []),
       ...(Flag.KILO_CLIENT === "vscode" ? [tools.managerModels, tools.manager] : []),
       ...(Flag.KILO_CLIENT === "vscode" &&
       cfg.experimental?.native_notebook_tools === true &&

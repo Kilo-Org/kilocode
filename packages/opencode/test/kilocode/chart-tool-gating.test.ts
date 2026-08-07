@@ -17,6 +17,7 @@ const tools = {
   image: stub("image"),
   notify: stub("notify"),
   send: stub("send_file"),
+  world: stub("world"),
 }
 
 function ids(client: string) {

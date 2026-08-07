@@ -16,4 +16,5 @@ export const host = [
   { id: "interactive_terminal", file: "kilocode/tool/interactive-terminal.ts" },
   { id: "notebook_execute", file: "kilocode/tool/notebook-host.ts" },
   { id: "background_process", file: "kilocode/tool/background-process.ts" },
+  { id: "world", file: "kilocode/tool/world.ts" },
 ] as const

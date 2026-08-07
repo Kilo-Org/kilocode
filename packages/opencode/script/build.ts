@@ -24,6 +24,7 @@ import { stageBubblewrap } from "./kilocode/bubblewrap"
 import { LanceDBRuntime } from "../src/kilocode/lancedb"
 import { KiloSandboxWorker } from "./kilocode/kilo-sandbox-worker"
 import { KiloSandboxNetwork } from "./kilocode/kilo-sandbox-network"
+import { WorldDaemon } from "../../kilo-world/script/daemon"
 // kilocode_change end
 
 const singleFlag = process.argv.includes("--single")
@@ -222,6 +223,7 @@ await $`rm -rf dist`
 const kiloConsoleDist = await buildKiloConsole()
 const kiloSandboxWorker = await KiloSandboxWorker.bundle()
 const kiloSandboxNetwork = await KiloSandboxNetwork.bundle()
+const worldDaemon = await WorldDaemon.bundle()
 // kilocode_change end
 
 const binaries: Record<string, string> = {}
@@ -326,6 +328,7 @@ for (const item of targets) {
   await copyTreeSitterWasms(path.resolve(dir, `dist/${name}/bin`))
   await copyKiloConsole(kiloConsoleDist, path.resolve(dir, `dist/${name}/bin`))
   await KiloSandboxWorker.copy(kiloSandboxWorker, path.resolve(dir, `dist/${name}/bin`))
+  await WorldDaemon.copy(worldDaemon, path.resolve(dir, `dist/${name}/bin`))
   if (item.os === "linux") {
     await KiloSandboxNetwork.copy(kiloSandboxNetwork, path.resolve(dir, `dist/${name}/bin`), item.arch)
   }
@@ -363,6 +366,8 @@ for (const item of targets) {
       console.log("Models snapshot smoke test passed")
       await KiloSandboxWorker.smoke(binaryPath)
       console.log("Kilo sandbox mutation worker smoke test passed")
+      await WorldDaemon.smoke(path.resolve(dir, `dist/${name}/bin/${WorldDaemon.filename}`))
+      console.log("Kilo world Node daemon smoke test passed")
       // kilocode_change end
       // kilocode_change start
     } catch (e) {

@@ -33850,6 +33850,114 @@
             },
             "additionalProperties": false
           },
+          "world": {
+            "type": "object",
+            "properties": {
+              "browser": {
+                "type": "object",
+                "properties": {
+                  "headless": {
+                    "type": "boolean"
+                  },
+                  "anti_detect": {
+                    "type": "boolean"
+                  },
+                  "timeout_ms": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  },
+                  "viewport": {
+                    "type": "object",
+                    "properties": {
+                      "width": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["NaN"]
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["Infinity"]
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["-Infinity"]
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["Infinity", "-Infinity", "NaN"]
+                          }
+                        ]
+                      },
+                      "height": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["NaN"]
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["Infinity"]
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["-Infinity"]
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["Infinity", "-Infinity", "NaN"]
+                          }
+                        ]
+                      }
+                    },
+                    "required": ["width", "height"],
+                    "additionalProperties": false
+                  },
+                  "executable_path": {
+                    "type": "string"
+                  },
+                  "use_system_chrome": {
+                    "type": "boolean",
+                    "description": "Use the system-installed Google Chrome instead of the bundled Chromium. Falls back to bundled Chromium when Chrome is not found."
+                  },
+                  "args": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false,
+            "description": "Browser runtime settings for the world tool"
+          },
           "compaction": {
             "type": "object",
             "properties": {
@@ -33927,6 +34035,10 @@
               },
               "openTelemetry": {
                 "type": "boolean"
+              },
+              "world_browser": {
+                "type": "boolean",
+                "description": "Enable the World browser tool. The browser runs headless by default and returns an inline image after every visual action. Disable to hide browser capabilities from the agent."
               },
               "primary_tools": {
                 "type": "array",
