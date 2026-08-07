@@ -1824,7 +1824,7 @@ class KiloCliDataParserTest {
         @Test
         fun `parseCommands - maps name, description, source, and hints`() {
             val raw = """[
-                {"name":"init","description":"guided AGENTS.md setup","template":"static body","hints":["${'$'}ARGUMENTS"],"source":"command"},
+                {"name":"init","description":"guided AGENTS.md setup","agent":"reviewer","model":"anthropic/claude-sonnet-4-6","variant":"high","template":"static body","hints":["${'$'}ARGUMENTS"],"source":"command","subtask":true},
                 {"name":"mcp-tool","template":"","hints":["${'$'}1","${'$'}2"],"source":"mcp"}
             ]"""
 
@@ -1833,8 +1833,12 @@ class KiloCliDataParserTest {
             assertEquals(2, result.size)
             assertEquals("init", result[0].name)
             assertEquals("guided AGENTS.md setup", result[0].description)
+            assertEquals("reviewer", result[0].agent)
+            assertEquals("anthropic/claude-sonnet-4-6", result[0].model)
+            assertEquals("high", result[0].variant)
             assertEquals("command", result[0].source)
             assertEquals(listOf("\$ARGUMENTS"), result[0].hints)
+            assertEquals(true, result[0].subtask)
             assertEquals("mcp", result[1].source)
             assertEquals(listOf("\$1", "\$2"), result[1].hints)
         }
@@ -1885,6 +1889,8 @@ class KiloCliDataParserTest {
         fun `parsePathState - extracts state from valid path response`() {
             val raw = """{"home":"/home/user","state":"/home/user/.local/state/kilo","config":"/home/user/.config/kilo","worktree":"/project","directory":"/project"}"""
             assertEquals("/home/user/.local/state/kilo", KiloCliDataParser.parsePathState(raw))
+            assertEquals("/home/user/.config/kilo", KiloCliDataParser.parsePathConfig(raw))
+            assertEquals("/home/user", KiloCliDataParser.parsePathHome(raw))
         }
 
         @Test
