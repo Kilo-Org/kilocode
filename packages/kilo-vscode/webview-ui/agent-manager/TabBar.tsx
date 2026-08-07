@@ -221,13 +221,14 @@ export const TabBar: Component<TabBarProps> = (props) => (
                 <Show when={props.prStatus()}>
                   {(pr) => (
                     <Tooltip value={`PR #${pr().number}`} placement="bottom">
-                      <button
-                        class={`am-diff-toggle-btn ${props.prOpen() ? "am-tab-diff-btn-active" : ""}`}
+                      <IconButton
+                        icon="pull-request"
+                        size="small"
+                        variant="ghost"
+                        label={`PR #${pr().number}`}
+                        class={props.prOpen() ? "am-tab-diff-btn-active" : ""}
                         onClick={props.onTogglePR}
-                        title={`PR #${pr().number}`}
-                      >
-                        <Icon name="pull-request" size="small" />
-                      </button>
+                      />
                     </Tooltip>
                   )}
                 </Show>
