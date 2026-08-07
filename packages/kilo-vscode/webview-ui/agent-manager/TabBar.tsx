@@ -57,7 +57,6 @@ export interface TabBarProps {
   onToggleReview: () => void
   terminalDestination: () => TerminalDestination
   terminalDestinationActive: () => boolean
-  terminalDestinationFocused: () => boolean
   terminalKeybind: () => string
   onTerminalDestinationOpen: () => void
   onTerminalDestinationChoose: (destination: TerminalDestination) => void
@@ -260,7 +259,6 @@ export const TabBar: Component<TabBarProps> = (props) => (
           <TerminalDestinationButton
             destination={props.terminalDestination}
             active={props.terminalDestinationActive}
-            focused={props.terminalDestinationFocused}
             keybind={props.terminalKeybind}
             onOpen={props.onTerminalDestinationOpen}
             onChoose={props.onTerminalDestinationChoose}

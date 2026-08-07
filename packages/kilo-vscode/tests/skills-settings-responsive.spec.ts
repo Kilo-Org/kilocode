@@ -32,6 +32,19 @@ async function assertRowContained(row: Locator, card: Locator, label: string) {
   )
 }
 
+async function assertTooltipFitsViewport(content: Locator, label: string, page: Page) {
+  const tipBox = await content.boundingBox()
+  const viewport = page.viewportSize()!
+  expect(tipBox, `${label}: tooltip bounding box`).not.toBeNull()
+  // Kobalte's PopperRoot defaults to overflowPadding: 8, so the floating
+  // tooltip is allowed to extend up to 8px past each viewport edge before
+  // the shift middleware stops nudging it.
+  expect(tipBox!.x, `${label}: tooltip left edge inside viewport`).toBeGreaterThanOrEqual(-9)
+  expect(tipBox!.x + tipBox!.width, `${label}: tooltip right edge inside viewport`).toBeLessThanOrEqual(
+    viewport.width + 9,
+  )
+}
+
 test.describe("skills settings responsive layout", () => {
   test("folder-path and URL rows stay contained and the × button remains visible at a narrow viewport", async ({
     page,
@@ -73,6 +86,7 @@ test.describe("skills settings responsive layout", () => {
       await trigger.hover()
       const content = page.locator('[data-component="tooltip"]').filter({ hasText: seeded })
       await expect(content, `Kilo Tooltip exposes full path on hover: ${seeded}`).toBeVisible()
+      await assertTooltipFitsViewport(content, `path tooltip "${seeded}"`, page)
     }
 
     for (const seeded of [SEEDED_URL, SEEDED_URL_2]) {
@@ -99,6 +113,7 @@ test.describe("skills settings responsive layout", () => {
       await trigger.hover()
       const content = page.locator('[data-component="tooltip"]').filter({ hasText: seeded })
       await expect(content, `Kilo Tooltip exposes full URL on hover: ${seeded}`).toBeVisible()
+      await assertTooltipFitsViewport(content, `URL tooltip "${seeded}"`, page)
     }
 
     for (const [label, card] of [

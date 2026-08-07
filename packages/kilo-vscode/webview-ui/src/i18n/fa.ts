@@ -302,6 +302,7 @@ export const dict = {
   "ui.approval.source.yolo": "توسط حالت تأیید خودکار (YOLO)",
   "ui.approval.source.session": "توسط قانون تأیید خودکار جلسه",
   "ui.approval.source.default": "به‌طور پیش‌فرض",
+  "ui.approval.outsideWorkspace": "(خارج از فضای کاری شما: {{file}})",
 
   "session.tab.review": "بررسی",
   "session.review.filesChanged": "{{count}} فایل تغییر یافته",
@@ -1133,6 +1134,9 @@ export const dict = {
   "settings.display.tokenThroughput.title": "نمایش توان عملیاتی توکن",
   "settings.display.tokenThroughput.description":
     "نرخ تولید متن (توکن/ثانیه) را در آخرین پیام دستیار و در سربرگ وظیفه نمایش می‌دهد. به‌طور پیش‌فرض پنهان است تا چت شلوغ نشود.",
+  "settings.display.autoApprovalReason.title": "نمایش دلیل تأیید خودکار",
+  "settings.display.autoApprovalReason.description":
+    "نمایش خطی در فراخوانی ابزارها که توضیح می‌دهد چرا به‌طور خودکار تأیید شده‌اند (قانون مطابق، پیش‌فرض عامل، حالت YOLO و غیره).",
 
   "chat.throughput.tooltip":
     "میانگین {{speed}} توکن/ثانیه برای این نوبت. شامل توکن‌های خروجی و استدلال می‌شود؛ زمان اجرای ابزار و انتظار را شامل نمی‌شود.",

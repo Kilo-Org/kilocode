@@ -305,6 +305,7 @@ export const dict = {
   "ui.approval.source.yolo": "przez tryb automatycznego zatwierdzania (YOLO)",
   "ui.approval.source.session": "przez regułę automatycznego zatwierdzania sesji",
   "ui.approval.source.default": "domyślnie",
+  "ui.approval.outsideWorkspace": "(poza obszarem roboczym: {{file}})",
 
   "session.tab.review": "Przegląd",
   "session.review.filesChanged": "Zmieniono {{count}} plików",
@@ -853,7 +854,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "Dozwolone miejsca docelowe sieci",
   "settings.sandboxing.allowedHosts.description":
-    "Docelowe hosty DNS i porty dla ruchu HTTP i HTTPS przez proxy w piaskownicy. GitHub CLI i HTTPS Git zwykle wymagają github.com:443 i api.github.com:443. Zmiany dotyczą nowych sesji.",
+    "Docelowe hosty DNS i porty dla ruchu HTTP i HTTPS przez proxy w piaskownicy. GitHub CLI i HTTPS Git zwykle wymagają github.com:443 i api.github.com:443.",
   "settings.sandboxing.writablePaths.title": "Dodatkowe ścieżki zapisu",
   "settings.sandboxing.writablePaths.description":
     "Dodatkowe ścieżki systemu plików, do których sandbox zezwala na zapis (np. /tmp, /var/log). Są one łączone z domyślnymi ścieżkami zapisu, gdy sandbox jest aktywny.",
@@ -1139,19 +1140,23 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Przełączaj wysiłek rozumowania za pomocą Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Naciśnij Shift+Tab w polu wprowadzania promptu, aby przełączyć się na następny poziom wysiłku rozumowania. Wyłącz tę opcję, aby zachować Shift+Tab do nawigacji fokusem za pomocą klawiatury.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "Bloki poleceń terminala",
+  "settings.display.terminalCommand.description":
+    "Wybierz, czy bloki poleceń terminala mają być początkowo rozwinięte czy zwinięte.",
+  "settings.display.terminalCommand.expanded": "Rozwinięte",
+  "settings.display.terminalCommand.collapsed": "Zwinięte",
   "settings.display.codeEdit.title": "Bloki edycji kodu",
   "settings.display.codeEdit.description":
     "Wybierz, czy bloki edycji kodu i podglądy różnic mają być początkowo rozwinięte czy zwinięte.",
   "settings.display.codeEdit.expanded": "Rozwinięte",
   "settings.display.codeEdit.collapsed": "Zwinięte",
 
-  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.title": "Pokaż przepustowość tokenów",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+    "Wyświetla szybkość generowania tekstu (tokeny/s) w ostatniej wiadomości asystenta i w nagłówku zadania. Domyślnie skryte, aby czat był przejrzysty.",
+  "settings.display.autoApprovalReason.title": "Pokaż powód automatycznego zatwierdzenia",
+  "settings.display.autoApprovalReason.description":
+    "Pokazuje wiersz przy wywołaniach narzędzi wyjaśniający, dlaczego zostały automatycznie zatwierdzone (dopasowana reguła, wartość domyślna agenta, tryb YOLO itp.).",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

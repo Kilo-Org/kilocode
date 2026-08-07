@@ -59,6 +59,12 @@
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "configurationDefaults": {
+      "files.watcherExclude": {
+        "**/.kilo/worktrees/**": true,
+        "**/.kilocode/worktrees/**": true
+      }
+    },
     "taskDefinitions": [
       {
         "type": "kilo-worktree-setup",
@@ -139,6 +145,41 @@
         "command": "kilo-code.new.settingsButtonClicked",
         "title": "Settings",
         "category": "Kilo Code",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "kilo-code.new.sidebarTitle.plusButtonClicked",
+        "title": "New Task",
+        "icon": "$(add)"
+      },
+      {
+        "command": "kilo-code.new.sidebarTitle.agentManagerOpen",
+        "title": "Agent Manager",
+        "icon": "$(organization)"
+      },
+      {
+        "command": "kilo-code.new.sidebarTitle.kiloClawOpen",
+        "title": "KiloClaw",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "kilo-code.new.sidebarTitle.marketplaceButtonClicked",
+        "title": "Marketplace",
+        "icon": "$(extensions)"
+      },
+      {
+        "command": "kilo-code.new.sidebarTitle.historyButtonClicked",
+        "title": "History",
+        "icon": "$(history)"
+      },
+      {
+        "command": "kilo-code.new.sidebarTitle.profileButtonClicked",
+        "title": "Profile",
+        "icon": "$(account)"
+      },
+      {
+        "command": "kilo-code.new.sidebarTitle.settingsButtonClicked",
+        "title": "Settings",
         "icon": "$(settings-gear)"
       },
       {
@@ -437,11 +478,75 @@
     "menus": {
       "commandPalette": [
         {
+          "command": "kilo-code.new.sidebarTitle.plusButtonClicked",
+          "when": "false"
+        },
+        {
+          "command": "kilo-code.new.sidebarTitle.historyButtonClicked",
+          "when": "false"
+        },
+        {
+          "command": "kilo-code.new.sidebarTitle.agentManagerOpen",
+          "when": "false"
+        },
+        {
+          "command": "kilo-code.new.sidebarTitle.kiloClawOpen",
+          "when": "false"
+        },
+        {
           "command": "kilo-code.new.agentManager.advancedWorktree",
+          "when": "false"
+        },
+        {
+          "command": "kilo-code.new.sidebarTitle.marketplaceButtonClicked",
+          "when": "false"
+        },
+        {
+          "command": "kilo-code.new.sidebarTitle.profileButtonClicked",
+          "when": "false"
+        },
+        {
+          "command": "kilo-code.new.sidebarTitle.settingsButtonClicked",
           "when": "false"
         }
       ],
-      "view/title": [],
+      "view/title": [
+        {
+          "command": "kilo-code.new.sidebarTitle.plusButtonClicked",
+          "group": "navigation@0",
+          "when": "view == kilo-code.SidebarProvider && !kilo-code.new.isCursor"
+        },
+        {
+          "command": "kilo-code.new.sidebarTitle.historyButtonClicked",
+          "group": "navigation@1",
+          "when": "view == kilo-code.SidebarProvider && !kilo-code.new.isCursor"
+        },
+        {
+          "command": "kilo-code.new.sidebarTitle.agentManagerOpen",
+          "group": "navigation@2",
+          "when": "view == kilo-code.SidebarProvider && !kilo-code.new.isCursor"
+        },
+        {
+          "command": "kilo-code.new.sidebarTitle.kiloClawOpen",
+          "group": "navigation@3",
+          "when": "view == kilo-code.SidebarProvider && !kilo-code.new.isCursor"
+        },
+        {
+          "command": "kilo-code.new.sidebarTitle.marketplaceButtonClicked",
+          "group": "navigation@4",
+          "when": "view == kilo-code.SidebarProvider && !kilo-code.new.isCursor"
+        },
+        {
+          "command": "kilo-code.new.sidebarTitle.profileButtonClicked",
+          "group": "navigation@5",
+          "when": "view == kilo-code.SidebarProvider && !kilo-code.new.isCursor"
+        },
+        {
+          "command": "kilo-code.new.sidebarTitle.settingsButtonClicked",
+          "group": "navigation@6",
+          "when": "view == kilo-code.SidebarProvider && !kilo-code.new.isCursor"
+        }
+      ],
       "scm/title": [
         {
           "command": "kilo-code.new.generateCommitMessage",
@@ -461,6 +566,26 @@
           "command": "kilo-code.new.openInTab",
           "group": "navigation",
           "when": "true"
+        },
+        {
+          "command": "kilo-code.new.plusButtonClicked",
+          "group": "navigation@0",
+          "when": "activeWebviewPanelId == kilo-code.new.TabPanel && !kilo-code.new.isCursor"
+        },
+        {
+          "command": "kilo-code.new.historyButtonClicked",
+          "group": "navigation@1",
+          "when": "activeWebviewPanelId == kilo-code.new.TabPanel && !kilo-code.new.isCursor"
+        },
+        {
+          "command": "kilo-code.new.profileButtonClicked",
+          "group": "navigation@2",
+          "when": "activeWebviewPanelId == kilo-code.new.TabPanel && !kilo-code.new.isCursor"
+        },
+        {
+          "command": "kilo-code.new.settingsButtonClicked",
+          "group": "navigation@3",
+          "when": "activeWebviewPanelId == kilo-code.new.TabPanel && !kilo-code.new.isCursor"
         }
       ],
       "editor/context": [
@@ -1066,6 +1191,11 @@
           "default": false,
           "description": "Show tokens-per-second (prompt-processing / text-generation) badges on assistant messages and the task header"
         },
+        "kilo-code.new.showAutoApprovalReason": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show a line on tool calls explaining why they were auto-approved (matched rule, agent default, YOLO mode, etc.)"
+        },
         "kilo-code.new.chat.shiftTabCyclesVariant": {
           "type": "boolean",
           "default": true,
@@ -1101,12 +1231,12 @@
     "prepare:cli-binary": "bun script/local-bin.ts",
     "prepare:sdk": "bun script/prepare-sdk.ts",
     "build:launch": "bun run prepare:cli-binary && bun run prepare:sdk && bun run build:check:production",
-    "compile": "bun run prepare:cli-binary -- --force && bun run rebuild-sdk && bun run build:check",
-    "watch": "bun run rebuild-sdk && bun run --parallel watch:esbuild watch:tsc",
+    "compile": "bun run prepare:cli-binary && bun run prepare:sdk && bun run build:check",
+    "watch": "bun run prepare:sdk && bun run --parallel watch:esbuild watch:tsc",
     "watch:esbuild": "bun run prepare:cli-binary && node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
     "watch:cli": "bun script/watch-cli.ts",
-    "package": "bun run prepare:cli-binary && bun run rebuild-sdk && bun run build:check:production",
+    "package": "bun run prepare:cli-binary && bun run prepare:sdk && bun run build:check:production",
     "build:check": "bun run --parallel check-types check-types:webview lint bundle",
     "build:check:production": "bun run --parallel check-types check-types:webview lint bundle:production",
     "bundle": "bun esbuild.js",
@@ -1138,6 +1268,8 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "4.11.3",
+    "@babel/core": "^7.28.4",
+    "@babel/preset-typescript": "^7.27.1",
     "@playwright/test": "1.57.0",
     "@storybook/addon-a11y": "10.2.10",
     "@storybook/addon-docs": "10.2.10",
@@ -1149,6 +1281,7 @@
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.7.1",
+    "babel-preset-solid": "^1.9.9",
     "esbuild": "^0.27.2",
     "esbuild-plugin-solid": "^0.6.0",
     "eslint": "^9.39.2",

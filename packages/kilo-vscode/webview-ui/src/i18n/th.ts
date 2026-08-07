@@ -302,6 +302,7 @@ export const dict = {
   "ui.approval.source.yolo": "โดยโหมดอนุมัติอัตโนมัติ (YOLO)",
   "ui.approval.source.session": "โดยกฎอนุมัติอัตโนมัติของเซสชัน",
   "ui.approval.source.default": "ตามค่าเริ่มต้น",
+  "ui.approval.outsideWorkspace": "(นอกพื้นที่ทำงานของคุณ: {{file}})",
 
   "session.tab.review": "ตรวจสอบ",
   "session.review.filesChanged": "{{count}} ไฟล์ที่เปลี่ยนแปลง",
@@ -881,7 +882,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "ปลายทางเครือข่ายที่อนุญาต",
   "settings.sandboxing.allowedHosts.description":
-    "โฮสต์ DNS และพอร์ตปลายทางสำหรับทราฟฟิกพร็อกซี HTTP และ HTTPS ในแซนด์บ็อกซ์ GitHub CLI และ HTTPS Git มักต้องใช้ github.com:443 และ api.github.com:443 การเปลี่ยนแปลงจะมีผลกับเซสชันใหม่",
+    "โฮสต์ DNS และพอร์ตปลายทางสำหรับทราฟฟิกพร็อกซี HTTP และ HTTPS ในแซนด์บ็อกซ์ GitHub CLI และ HTTPS Git มักต้องใช้ github.com:443 และ api.github.com:443",
   "settings.sandboxing.writablePaths.title": "เส้นทางที่เขียนได้เพิ่มเติม",
   "settings.sandboxing.writablePaths.description":
     "เส้นทางระบบไฟล์เพิ่มเติมที่แซนด์บ็อกซ์อนุญาตให้เขียนได้ (เช่น /tmp, /var/log) จะถูกรวมเข้ากับเส้นทางที่เขียนได้เริ่มต้นเมื่อแซนด์บ็อกซ์เปิดใช้งาน",
@@ -1113,18 +1114,21 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "สลับระดับความพยายามในการให้เหตุผลด้วย Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "กด Shift+Tab ในช่องป้อนพรอมต์เพื่อสลับไปยังระดับความพยายามในการให้เหตุผลถัดไป ปิดใช้งานเพื่อคง Shift+Tab ไว้สำหรับการนำทางโฟกัสด้วยแป้นพิมพ์",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "บล็อกคำสั่งเทอร์มินัล",
+  "settings.display.terminalCommand.description": "เลือกว่าบล็อกคำสั่งเทอร์มินัลจะเริ่มต้นแบบขยายหรือยุบ",
+  "settings.display.terminalCommand.expanded": "ขยาย",
+  "settings.display.terminalCommand.collapsed": "ยุบ",
   "settings.display.codeEdit.title": "บล็อกการแก้ไขโค้ด",
   "settings.display.codeEdit.description": "เลือกว่าบล็อกการแก้ไขโค้ดและบล็อกแสดงความแตกต่างจะเริ่มต้นแบบขยายหรือยุบ",
   "settings.display.codeEdit.expanded": "ขยาย",
   "settings.display.codeEdit.collapsed": "ยุบ",
 
-  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.title": "แสดงอัตราการประมวลผลโทเคน",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+    "แสดงอัตราการสร้างข้อความ (โทเคน/วินาที) บนข้อความล่าสุดของผู้ช่วยและในส่วนหัวของงาน ซ่อนโดยค่าเริ่มต้นเพื่อให้แชทดูเรียบร้อย",
+  "settings.display.autoApprovalReason.title": "แสดงเหตุผลการอนุมัติอัตโนมัติ",
+  "settings.display.autoApprovalReason.description":
+    "แสดงบรรทัดในการเรียกใช้เครื่องมือเพื่ออธิบายว่าเหตุใดจึงได้รับการอนุมัติอัตโนมัติ (กฎที่ตรงกัน ค่าเริ่มต้นของเอเจนต์ โหมด YOLO ฯลฯ)",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
