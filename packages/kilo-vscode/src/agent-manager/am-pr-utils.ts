@@ -50,7 +50,7 @@ export function checkStatus(state: string): CheckStatus {
     case "STARTUP_FAILURE":
       return "cancelled"
     default:
-      return "cancelled"
+      return "pending"
   }
 }
 
