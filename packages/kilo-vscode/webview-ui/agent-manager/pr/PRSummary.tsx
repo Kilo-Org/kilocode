@@ -19,14 +19,11 @@ function summaryRows(pr: PRStatus): Array<{ icon: string; label: string; status:
     })
   }
 
-  const reviewers = pr.comments?.reviewers
-  if (reviewers && reviewers.length > 0) {
-    const approved = reviewers.filter((r) => r.state === "approved").length
-    const changes = reviewers.filter((r) => r.state === "changes_requested").length
-    const status = approved === reviewers.length ? "success" : changes > 0 ? "failure" : "pending"
+  if (pr.review) {
+    const status = pr.review === "approved" ? "success" : pr.review === "changes_requested" ? "failure" : "pending"
     rows.push({
       icon: status === "success" ? "circle-check" : status === "failure" ? "circle-x-outline" : "play",
-      label: approved === reviewers.length ? "All reviewers approved" : `${approved}/${reviewers.length} approvals`,
+      label: status === "success" ? "Approved" : status === "failure" ? "Changes requested" : "Review pending",
       status,
     })
   }

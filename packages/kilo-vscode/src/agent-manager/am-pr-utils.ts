@@ -1,4 +1,4 @@
-import type { CheckStatus, PRComment, PRReviewer } from "./types"
+import type { CheckStatus, PRComment, PRReviewer, ReviewerState } from "./types"
 import type { PRResult, GhThread, GhReviewRequest, GhReview } from "./am-pr-types"
 
 export function parsePRResult(json: string): PRResult | null {
@@ -55,7 +55,7 @@ export function formatCheckDuration(startedAt?: string, completedAt?: string): s
   return secs < 60 ? `${secs}s` : `${Math.floor(secs / 60)}m ${secs % 60}s`
 }
 
-const REVIEWER_STATE: Record<string, PRReviewer["state"]> = {
+const REVIEWER_STATE: Record<string, ReviewerState> = {
   APPROVED: "approved",
   CHANGES_REQUESTED: "changes_requested",
   COMMENTED: "commented",

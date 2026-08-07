@@ -71,10 +71,12 @@ export interface PRComment {
   createdAt?: number
 }
 
+export type ReviewerState = "approved" | "changes_requested" | "pending" | "commented"
+
 export interface PRReviewer {
   login: string
   avatar?: string
-  state: "approved" | "changes_requested" | "pending" | "commented"
+  state: ReviewerState
 }
 
 export interface PRStatus {

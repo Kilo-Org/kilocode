@@ -1,17 +1,17 @@
 /** @jsxImportSource solid-js */
 import { For, Show, createSignal } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
-import type { PRReviewer } from "./pr-types"
+import type { PRReviewer, ReviewerState } from "./pr-types"
 import { SectionHeading } from "./SectionHeading"
 
-const REVIEWER_ICON: Record<PRReviewer["state"], string> = {
+const REVIEWER_ICON: Record<ReviewerState, string> = {
   approved: "circle-check",
   changes_requested: "refresh",
   commented: "edit",
   pending: "dash",
 }
 
-const REVIEWER_LABEL: Record<PRReviewer["state"], string> = {
+const REVIEWER_LABEL: Record<ReviewerState, string> = {
   approved: "Approved",
   changes_requested: "Changes requested",
   commented: "Commented",
