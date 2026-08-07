@@ -48,8 +48,23 @@ export interface SectionState {
 // PR status types — sub-types live in agent-manager/pr/pr-types.ts
 // ---------------------------------------------------------------------------
 
-import type { PRState, ReviewDecision, AggregateCheckStatus, PRCheck, PRComment, PRReviewer } from "../../../agent-manager/pr/pr-types"
-export type { PRState, ReviewDecision, CheckStatus, AggregateCheckStatus, PRCheck, PRComment, PRReviewer } from "../../../agent-manager/pr/pr-types"
+import type {
+  PRState,
+  ReviewDecision,
+  AggregateCheckStatus,
+  PRCheck,
+  PRComment,
+  PRReviewer,
+} from "../../../agent-manager/pr/pr-types"
+export type {
+  PRState,
+  ReviewDecision,
+  CheckStatus,
+  AggregateCheckStatus,
+  PRCheck,
+  PRComment,
+  PRReviewer,
+} from "../../../agent-manager/pr/pr-types"
 
 export interface PRStatus {
   number: number

@@ -499,7 +499,15 @@ const AgentManagerContent: Component = () => {
   }
   createEffect(on(selection, () => cancelPendingDelete(), { defer: true }))
   createEffect(on(selection, () => clearReviewComposer(reviewComposer), { defer: true }))
-  createEffect(on(selection, () => { if (!activePR()) setSidePanel((p) => p === SidePanel.PR ? null : p) }, { defer: true }))
+  createEffect(
+    on(
+      selection,
+      () => {
+        if (!activePR()) setSidePanel((p) => (p === SidePanel.PR ? null : p))
+      },
+      { defer: true },
+    ),
+  )
   onCleanup(() => clearTimeout(pendingDeleteTimer))
 
   // Per-context tab memory lives in the active project's store: maps sidebar
@@ -1581,7 +1589,11 @@ const AgentManagerContent: Component = () => {
 
       if (msg.type === "agentManager.prError") {
         const ev = msg as AgentManagerPRErrorMessage
-        showToast({ variant: "error", title: t(`agentManager.pr.error.${ev.error}.title`), description: t(`agentManager.pr.error.${ev.error}.description`) })
+        showToast({
+          variant: "error",
+          title: t(`agentManager.pr.error.${ev.error}.title`),
+          description: t(`agentManager.pr.error.${ev.error}.description`),
+        })
       }
 
       if (projectLive.apply(msg)) return
@@ -2656,7 +2668,13 @@ const AgentManagerContent: Component = () => {
                             pr={data.pr}
                             worktree={data.wt}
                             onClose={() => setSidePanel(null)}
-                            onOpenExternal={() => vscode.postMessage({ type: "agentManager.openPR", worktreeId: data.selected, url: data.pr.url })}
+                            onOpenExternal={() =>
+                              vscode.postMessage({
+                                type: "agentManager.openPR",
+                                worktreeId: data.selected,
+                                url: data.pr.url,
+                              })
+                            }
                           />
                         )
                       })()}

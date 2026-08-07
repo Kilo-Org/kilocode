@@ -122,7 +122,9 @@ describe("PRStatusBridge.replay", () => {
     onStatus("wt1", null, "gh_auth")
     sent.length = 0
     bridge.replay()
-    expect(sent.some((m) => m.type === "agentManager.prError" && (m as never as { error: string }).error === "gh_auth")).toBe(true)
+    expect(
+      sent.some((m) => m.type === "agentManager.prError" && (m as never as { error: string }).error === "gh_auth"),
+    ).toBe(true)
   })
 
   it("does not replay fetch_failed errors", () => {

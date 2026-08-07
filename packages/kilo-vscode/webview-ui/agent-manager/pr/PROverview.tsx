@@ -34,7 +34,9 @@ export function PROverview(props: { pr: PRStatus; worktree?: WorktreeState }) {
       </Show>
       <div class="am-pr-panel-row am-pr-row">
         <span class="am-pr-panel-label">Status</span>
-        <span class="am-pr-panel-value" data-pr-state={props.pr.state}>{STATE_LABEL[props.pr.state]}</span>
+        <span class="am-pr-panel-value" data-pr-state={props.pr.state}>
+          {STATE_LABEL[props.pr.state]}
+        </span>
       </div>
       <Show when={props.pr.review}>
         {(review) => (

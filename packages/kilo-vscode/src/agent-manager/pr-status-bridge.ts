@@ -128,8 +128,7 @@ function bridgePollerOpts(bridge: PRStatusBridge, host: PRBridgeHost) {
         // Always forward auth/missing errors so the webview can show a toast,
         // regardless of whether prior data exists. Deduplicate per error type
         // so multiple failing worktrees don't produce multiple toasts.
-        if (err === "gh_auth" || err === "gh_missing")
-          bridge.notifyError(err)
+        if (err === "gh_auth" || err === "gh_missing") bridge.notifyError(err)
         return
       }
       const msg = { type: "agentManager.prStatus", worktreeId: id, pr, error: err } as AgentManagerOutMessage

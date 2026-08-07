@@ -26,12 +26,7 @@ export function PRBadge(props: { pr: PRStatus }) {
     >
       <Icon name="pull-request" size="small" />
       <Show when={indicator() !== "none"}>
-        <Icon
-          name={INDICATOR_ICON[indicator()]}
-          size="small"
-          class="am-pr-badge-status"
-          data-status={indicator()}
-        />
+        <Icon name={INDICATOR_ICON[indicator()]} size="small" class="am-pr-badge-status" data-status={indicator()} />
       </Show>
     </span>
   )

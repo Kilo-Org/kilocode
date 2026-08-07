@@ -47,9 +47,15 @@ export function PRSummary(props: PRSummaryProps) {
         <div class="am-pr-summary-header am-pr-row">
           <span class="am-pr-summary-title">PR Summary</span>
           <span class="am-pr-panel-section-count am-pr-panel-diff am-pr-row">
-            <Show when={props.pr.files > 0}><span class="am-stat-files">{props.pr.files}f</span></Show>
-            <Show when={props.pr.additions > 0}><span class="am-stat-additions">+{props.pr.additions}</span></Show>
-            <Show when={props.pr.deletions > 0}><span class="am-stat-deletions">−{props.pr.deletions}</span></Show>
+            <Show when={props.pr.files > 0}>
+              <span class="am-stat-files">{props.pr.files}f</span>
+            </Show>
+            <Show when={props.pr.additions > 0}>
+              <span class="am-stat-additions">+{props.pr.additions}</span>
+            </Show>
+            <Show when={props.pr.deletions > 0}>
+              <span class="am-stat-deletions">−{props.pr.deletions}</span>
+            </Show>
           </span>
         </div>
         <div class="am-pr-summary-rows am-pr-col">

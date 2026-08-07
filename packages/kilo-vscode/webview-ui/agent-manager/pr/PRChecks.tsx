@@ -34,7 +34,9 @@ export function PRChecks(props: { checks: PRStatus["checks"] }) {
                   <Icon name={CHECK[check.status].icon} size="small" class="am-pr-check-icon" />
                   <span class="am-pr-check-name">{check.name}</span>
                   <span class="am-pr-check-status">{CHECK[check.status].label}</span>
-                  <Show when={check.duration}><span class="am-pr-check-duration">{check.duration}</span></Show>
+                  <Show when={check.duration}>
+                    <span class="am-pr-check-duration">{check.duration}</span>
+                  </Show>
                   <Show when={check.url}>
                     <a class="am-pr-check-link" href={check.url} onClick={(e) => e.preventDefault()}>
                       <Icon name="link" size="small" />

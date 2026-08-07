@@ -33,7 +33,13 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
           </div>
           <div class="am-pr-panel-actions am-pr-row">
             <Tooltip value="Open in browser" placement="bottom">
-              <IconButton icon="link" size="small" variant="ghost" label="Open in browser" onClick={props.onOpenExternal} />
+              <IconButton
+                icon="link"
+                size="small"
+                variant="ghost"
+                label="Open in browser"
+                onClick={props.onOpenExternal}
+              />
             </Tooltip>
             <Tooltip value="Close" placement="bottom">
               <IconButton icon="close" size="small" variant="ghost" label="Close PR panel" onClick={props.onClose} />
@@ -46,9 +52,7 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
           <Show when={(props.pr.reviewers ?? []).length > 0}>
             <PRReviewers reviewers={props.pr.reviewers ?? []} />
           </Show>
-          <Show when={props.pr.body}>
-            {(body) => <PRDescription body={body()} />}
-          </Show>
+          <Show when={props.pr.body}>{(body) => <PRDescription body={body()} />}</Show>
           <Show when={props.pr.checks.total > 0}>
             <PRChecks checks={props.pr.checks} />
           </Show>

@@ -907,15 +907,25 @@ html[data-theme="kilo-vscode"]
 
 /* PR badge accent colors via classList */
 .am-pr-accent-open,
-.am-pr-panel-badge.am-pr-accent-open { --pr-accent: var(--vscode-testing-iconPassed, #34d399); }
+.am-pr-panel-badge.am-pr-accent-open {
+  --am-pr-accent: var(--vscode-testing-iconPassed, #34d399);
+}
 .am-pr-accent-pending,
-.am-pr-panel-badge.am-pr-accent-pending { --pr-accent: var(--vscode-charts-yellow, #fbbf24); }
+.am-pr-panel-badge.am-pr-accent-pending {
+  --am-pr-accent: var(--vscode-charts-yellow, #fbbf24);
+}
 .am-pr-accent-draft,
-.am-pr-panel-badge.am-pr-accent-draft { --pr-accent: var(--text-weaker); }
+.am-pr-panel-badge.am-pr-accent-draft {
+  --am-pr-accent: var(--text-weaker);
+}
 .am-pr-accent-merged,
-.am-pr-panel-badge.am-pr-accent-merged { --pr-accent: var(--vscode-charts-purple, var(--vscode-foreground)); }
+.am-pr-panel-badge.am-pr-accent-merged {
+  --am-pr-accent: var(--vscode-charts-purple, var(--vscode-foreground));
+}
 .am-pr-accent-closed,
-.am-pr-panel-badge.am-pr-accent-closed { --pr-accent: var(--vscode-testing-iconFailed, #f87171); }
+.am-pr-panel-badge.am-pr-accent-closed {
+  --am-pr-accent: var(--vscode-testing-iconFailed, #f87171);
+}
 
 .am-pr-badge {
   display: inline-flex;
@@ -924,8 +934,8 @@ html[data-theme="kilo-vscode"]
   padding: 2px 4px;
   border-radius: 6px;
   border: none;
-  background: color-mix(in srgb, var(--pr-accent) 12%, transparent);
-  color: var(--pr-accent);
+  background: color-mix(in srgb, var(--am-pr-accent) 12%, transparent);
+  color: var(--am-pr-accent);
   cursor: pointer;
   font-size: var(--kilo-font-size-11);
   font-weight: 500;
@@ -934,19 +944,19 @@ html[data-theme="kilo-vscode"]
   margin-left: auto;
 }
 .am-pr-badge:hover {
-  background: color-mix(in srgb, var(--pr-accent) 25%, transparent);
+  background: color-mix(in srgb, var(--am-pr-accent) 25%, transparent);
 }
 .am-pr-badge [data-component="icon"] {
   width: 12px;
   height: 12px;
-  color: var(--pr-accent);
+  color: var(--am-pr-accent);
 }
 .am-pr-badge-number {
   line-height: 1;
   color: var(--text-muted);
 }
 .am-pr-badge:hover .am-pr-badge-number {
-  color: var(--pr-accent);
+  color: var(--am-pr-accent);
 }
 /* Status icon overlaid on the badge — colored by CI/review result, independent
    of the badge's PR-state accent color. */
@@ -982,10 +992,10 @@ html[data-theme="kilo-vscode"]
 }
 
 .am-worktree-item-active .am-pr-badge {
-  background: color-mix(in srgb, var(--pr-accent) 18%, transparent);
+  background: color-mix(in srgb, var(--am-pr-accent) 18%, transparent);
 }
 .am-worktree-item-active .am-pr-badge:hover {
-  background: color-mix(in srgb, var(--pr-accent) 30%, transparent);
+  background: color-mix(in srgb, var(--am-pr-accent) 30%, transparent);
 }
 
 /* Clickable link icon in hover card to open PR on GitHub */

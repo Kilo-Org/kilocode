@@ -1453,7 +1453,10 @@ export const SessionProvider: ParentComponent = (props) => {
     // Reconcile fast-path: if the tail matches local state shape-wise, every
     // message+part-count already agrees with the server. Skip the reactive
     // store churn entirely — virtualizer and rendering stay untouched.
-    if (mode === "reconcile" && sameReconcileShape(store.messages[sessionID] ?? [], messages, (id) => store.parts[id])) {
+    if (
+      mode === "reconcile" &&
+      sameReconcileShape(store.messages[sessionID] ?? [], messages, (id) => store.parts[id])
+    ) {
       const parts = messageParts(messages)
       for (const msg of messages) {
         if (store.parts[msg.id]) delete parts[msg.id]

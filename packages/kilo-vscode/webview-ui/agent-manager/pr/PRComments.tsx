@@ -28,7 +28,8 @@ export function PRComments(props: { comments: NonNullable<PRStatus["comments"]> 
                     <span class="am-pr-panel-comment-author">{comment.author}</span>
                     <Show when={comment.file}>
                       <span class="am-pr-panel-comment-file">
-                        {comment.file}<Show when={comment.line}>{`:${comment.line}`}</Show>
+                        {comment.file}
+                        <Show when={comment.line}>{`:${comment.line}`}</Show>
                       </span>
                     </Show>
                     <Show when={comment.resolved}>

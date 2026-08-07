@@ -16,7 +16,18 @@ describe("parsePRResult", () => {
   })
 
   it("parses an open PR", () => {
-    const raw = { number: 42, title: "my PR", body: "desc", url: "https://github.com/x/y/pull/42", state: "OPEN", isDraft: false, reviewDecision: null, additions: 10, deletions: 3, changedFiles: 2 }
+    const raw = {
+      number: 42,
+      title: "my PR",
+      body: "desc",
+      url: "https://github.com/x/y/pull/42",
+      state: "OPEN",
+      isDraft: false,
+      reviewDecision: null,
+      additions: 10,
+      deletions: 3,
+      changedFiles: 2,
+    }
     expect(parsePRResult(JSON.stringify(raw))).toEqual({
       number: 42,
       title: "my PR",
@@ -31,43 +42,122 @@ describe("parsePRResult", () => {
   })
 
   it("maps isDraft to draft state regardless of gh state field", () => {
-    const raw = { number: 1, title: "", body: "", url: "", state: "OPEN", isDraft: true, reviewDecision: null, additions: 0, deletions: 0, changedFiles: 0 }
+    const raw = {
+      number: 1,
+      title: "",
+      body: "",
+      url: "",
+      state: "OPEN",
+      isDraft: true,
+      reviewDecision: null,
+      additions: 0,
+      deletions: 0,
+      changedFiles: 0,
+    }
     expect(parsePRResult(JSON.stringify(raw))?.state).toBe("draft")
   })
 
   it("maps MERGED state", () => {
-    const raw = { number: 1, title: "", body: "", url: "", state: "MERGED", isDraft: false, reviewDecision: null, additions: 0, deletions: 0, changedFiles: 0 }
+    const raw = {
+      number: 1,
+      title: "",
+      body: "",
+      url: "",
+      state: "MERGED",
+      isDraft: false,
+      reviewDecision: null,
+      additions: 0,
+      deletions: 0,
+      changedFiles: 0,
+    }
     expect(parsePRResult(JSON.stringify(raw))?.state).toBe("merged")
   })
 
   it("maps CLOSED state", () => {
-    const raw = { number: 1, title: "", body: "", url: "", state: "CLOSED", isDraft: false, reviewDecision: null, additions: 0, deletions: 0, changedFiles: 0 }
+    const raw = {
+      number: 1,
+      title: "",
+      body: "",
+      url: "",
+      state: "CLOSED",
+      isDraft: false,
+      reviewDecision: null,
+      additions: 0,
+      deletions: 0,
+      changedFiles: 0,
+    }
     expect(parsePRResult(JSON.stringify(raw))?.state).toBe("closed")
   })
 
   it("maps APPROVED review decision", () => {
-    const raw = { number: 1, title: "", body: "", url: "", state: "OPEN", isDraft: false, reviewDecision: "APPROVED", additions: 0, deletions: 0, changedFiles: 0 }
+    const raw = {
+      number: 1,
+      title: "",
+      body: "",
+      url: "",
+      state: "OPEN",
+      isDraft: false,
+      reviewDecision: "APPROVED",
+      additions: 0,
+      deletions: 0,
+      changedFiles: 0,
+    }
     expect(parsePRResult(JSON.stringify(raw))?.review).toBe("approved")
   })
 
   it("maps CHANGES_REQUESTED review decision", () => {
-    const raw = { number: 1, title: "", body: "", url: "", state: "OPEN", isDraft: false, reviewDecision: "CHANGES_REQUESTED", additions: 0, deletions: 0, changedFiles: 0 }
+    const raw = {
+      number: 1,
+      title: "",
+      body: "",
+      url: "",
+      state: "OPEN",
+      isDraft: false,
+      reviewDecision: "CHANGES_REQUESTED",
+      additions: 0,
+      deletions: 0,
+      changedFiles: 0,
+    }
     expect(parsePRResult(JSON.stringify(raw))?.review).toBe("changes_requested")
   })
 
   it("maps REVIEW_REQUIRED review decision to pending", () => {
-    const raw = { number: 1, title: "", body: "", url: "", state: "OPEN", isDraft: false, reviewDecision: "REVIEW_REQUIRED", additions: 0, deletions: 0, changedFiles: 0 }
+    const raw = {
+      number: 1,
+      title: "",
+      body: "",
+      url: "",
+      state: "OPEN",
+      isDraft: false,
+      reviewDecision: "REVIEW_REQUIRED",
+      additions: 0,
+      deletions: 0,
+      changedFiles: 0,
+    }
     expect(parsePRResult(JSON.stringify(raw))?.review).toBe("pending")
   })
 
   it("returns null review for unknown decision", () => {
-    const raw = { number: 1, title: "", body: "", url: "", state: "OPEN", isDraft: false, reviewDecision: "SOMETHING_ELSE", additions: 0, deletions: 0, changedFiles: 0 }
+    const raw = {
+      number: 1,
+      title: "",
+      body: "",
+      url: "",
+      state: "OPEN",
+      isDraft: false,
+      reviewDecision: "SOMETHING_ELSE",
+      additions: 0,
+      deletions: 0,
+      changedFiles: 0,
+    }
     expect(parsePRResult(JSON.stringify(raw))?.review).toBeNull()
   })
 
   it("defaults missing fields to empty strings and zeros", () => {
     const result = parsePRResult(JSON.stringify({ number: 5 }))
-    expect(result).toEqual(expect.objectContaining({ title: "", body: "", url: "", additions: 0, deletions: 0, files: 0 }))
+    expect(result).toEqual(
+      expect.objectContaining({ title: "", body: "", url: "", additions: 0, deletions: 0, files: 0 }),
+    )
   })
 })
 
@@ -128,21 +218,37 @@ describe("parseComments", () => {
   })
 
   it("parses a resolved thread", () => {
-    const threads: GhThread[] = [{
-      isResolved: true,
-      comments: { nodes: [{ id: "c1", author: { login: "alice", avatarUrl: "https://avatar" }, body: "looks good", path: "src/foo.ts", line: 10, url: "https://url", createdAt: "2024-01-01T00:00:00Z" }] },
-    }]
-    expect(parseComments(threads)).toEqual([{
-      id: "c1",
-      author: "alice",
-      avatar: "https://avatar",
-      body: "looks good",
-      file: "src/foo.ts",
-      line: 10,
-      url: "https://url",
-      resolved: true,
-      createdAt: new Date("2024-01-01T00:00:00Z").getTime(),
-    }])
+    const threads: GhThread[] = [
+      {
+        isResolved: true,
+        comments: {
+          nodes: [
+            {
+              id: "c1",
+              author: { login: "alice", avatarUrl: "https://avatar" },
+              body: "looks good",
+              path: "src/foo.ts",
+              line: 10,
+              url: "https://url",
+              createdAt: "2024-01-01T00:00:00Z",
+            },
+          ],
+        },
+      },
+    ]
+    expect(parseComments(threads)).toEqual([
+      {
+        id: "c1",
+        author: "alice",
+        avatar: "https://avatar",
+        body: "looks good",
+        file: "src/foo.ts",
+        line: 10,
+        url: "https://url",
+        resolved: true,
+        createdAt: new Date("2024-01-01T00:00:00Z").getTime(),
+      },
+    ])
   })
 
   it("defaults missing author to 'unknown'", () => {
@@ -151,13 +257,17 @@ describe("parseComments", () => {
   })
 
   it("only uses the first comment of each thread", () => {
-    const threads: GhThread[] = [{
-      isResolved: false,
-      comments: { nodes: [
-        { id: "first", body: "first comment" },
-        { id: "second", body: "second comment" },
-      ]},
-    }]
+    const threads: GhThread[] = [
+      {
+        isResolved: false,
+        comments: {
+          nodes: [
+            { id: "first", body: "first comment" },
+            { id: "second", body: "second comment" },
+          ],
+        },
+      },
+    ]
     const result = parseComments(threads)
     expect(result).toHaveLength(1)
     expect(result[0]?.id).toBe("first")

@@ -360,7 +360,12 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                             <span class="am-pr-badge-number">#{pr().number}</span>
                             <Switch>
                               <Match when={indicator() === "failure"}>
-                                <Icon name="circle-x-outline" size="small" class="am-pr-badge-status" data-status="failure" />
+                                <Icon
+                                  name="circle-x-outline"
+                                  size="small"
+                                  class="am-pr-badge-status"
+                                  data-status="failure"
+                                />
                               </Match>
                               <Match when={indicator() === "changes"}>
                                 <Icon name="warning" size="small" class="am-pr-badge-status" data-status="changes" />

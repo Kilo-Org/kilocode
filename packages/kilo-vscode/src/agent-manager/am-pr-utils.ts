@@ -7,10 +7,13 @@ export function parsePRResult(json: string): PRResult | null {
   const state = data.isDraft ? "draft" : (data.state?.toLowerCase() ?? "open")
   const decision = data.reviewDecision as string | undefined
   const review =
-    decision === "APPROVED" ? "approved"
-    : decision === "CHANGES_REQUESTED" ? "changes_requested"
-    : decision === "REVIEW_REQUIRED" ? "pending"
-    : null
+    decision === "APPROVED"
+      ? "approved"
+      : decision === "CHANGES_REQUESTED"
+        ? "changes_requested"
+        : decision === "REVIEW_REQUIRED"
+          ? "pending"
+          : null
   return {
     number: data.number,
     title: data.title ?? "",

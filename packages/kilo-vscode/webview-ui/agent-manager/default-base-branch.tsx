@@ -21,7 +21,16 @@ interface Deps {
 }
 
 export function createChangeDefaultBaseBranch(deps: Deps) {
-  const { vscode, dialog, t, defaultBaseBranch, setDefaultBaseBranch, setRepoDetectedBranch, repoDetectedBranch, hasConfiguredBranch } = deps
+  const {
+    vscode,
+    dialog,
+    t,
+    defaultBaseBranch,
+    setDefaultBaseBranch,
+    setRepoDetectedBranch,
+    repoDetectedBranch,
+    hasConfiguredBranch,
+  } = deps
 
   return () => {
     const [search, setSearch] = createSignal("")

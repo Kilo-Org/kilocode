@@ -449,11 +449,25 @@ export class PRStatusPoller {
         }
       }`
       const { stdout } = await this.gh(
-        ["api", "graphql", "-f", `query=${query}`, "-F", `owner=${repo.owner}`, "-F", `repo=${repo.name}`, "-F", `number=${prNumber}`],
+        [
+          "api",
+          "graphql",
+          "-f",
+          `query=${query}`,
+          "-F",
+          `owner=${repo.owner}`,
+          "-F",
+          `repo=${repo.name}`,
+          "-F",
+          `number=${prNumber}`,
+        ],
         { cwd, timeout: 15_000 },
       )
       const pr = JSON.parse(stdout)?.data?.repository?.pullRequest
-      return parseReviewers((pr?.reviewRequests?.nodes ?? []) as GhReviewRequest[], (pr?.reviews?.nodes ?? []) as GhReview[])
+      return parseReviewers(
+        (pr?.reviewRequests?.nodes ?? []) as GhReviewRequest[],
+        (pr?.reviews?.nodes ?? []) as GhReview[],
+      )
     } catch {
       return []
     }
