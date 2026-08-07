@@ -1147,6 +1147,11 @@ export const dict = {
     "Odaberite da li će blokovi koji prikazuju izmjene koda i razlike u početku biti prošireni ili sažeti.",
   "settings.display.codeEdit.expanded": "Prošireni",
   "settings.display.codeEdit.collapsed": "Sažeti",
+  "settings.display.mcpTool.title": "Blokovi MCP i generičkih alata",
+  "settings.display.mcpTool.description":
+    "Odaberite da li će blokovi MCP i generičkih alata u početku biti prošireni ili sažeti.",
+  "settings.display.mcpTool.expanded": "Prošireni",
+  "settings.display.mcpTool.collapsed": "Sažeti",
 
   "settings.display.tokenThroughput.title": "Show Token Throughput",
   "settings.display.tokenThroughput.description":

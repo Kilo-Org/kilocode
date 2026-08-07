@@ -1121,6 +1121,10 @@ export const dict = {
   "settings.display.codeEdit.description": "เลือกว่าบล็อกการแก้ไขโค้ดและบล็อกแสดงความแตกต่างจะเริ่มต้นแบบขยายหรือยุบ",
   "settings.display.codeEdit.expanded": "ขยาย",
   "settings.display.codeEdit.collapsed": "ยุบ",
+  "settings.display.mcpTool.title": "บล็อกเครื่องมือ MCP และเครื่องมือทั่วไป",
+  "settings.display.mcpTool.description": "เลือกว่าบล็อกเครื่องมือ MCP และเครื่องมือทั่วไปจะเริ่มต้นแบบขยายหรือยุบ",
+  "settings.display.mcpTool.expanded": "ขยาย",
+  "settings.display.mcpTool.collapsed": "ยุบ",
 
   "settings.display.tokenThroughput.title": "Show Token Throughput",
   "settings.display.tokenThroughput.description":

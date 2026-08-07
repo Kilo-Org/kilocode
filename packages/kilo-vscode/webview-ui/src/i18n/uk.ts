@@ -1103,6 +1103,11 @@ export const dict = {
     "Виберіть, чи будуть блоки редагування коду та відмінностей спочатку розгорнутими чи згорнутими.",
   "settings.display.codeEdit.expanded": "Розгорнуті",
   "settings.display.codeEdit.collapsed": "Згорнуті",
+  "settings.display.mcpTool.title": "Блоки MCP та загальних інструментів",
+  "settings.display.mcpTool.description":
+    "Виберіть, чи будуть блоки MCP та загальних інструментів спочатку розгорнутими чи згорнутими.",
+  "settings.display.mcpTool.expanded": "Розгорнуті",
+  "settings.display.mcpTool.collapsed": "Згорнуті",
 
   "settings.display.tokenThroughput.title": "Show Token Throughput",
   "settings.display.tokenThroughput.description":

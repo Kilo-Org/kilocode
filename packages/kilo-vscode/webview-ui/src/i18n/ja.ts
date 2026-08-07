@@ -1135,6 +1135,10 @@ export const dict = {
     "コード編集ブロックと差分ブロックを最初から展開するか折りたたむかを選択します。",
   "settings.display.codeEdit.expanded": "展開",
   "settings.display.codeEdit.collapsed": "折りたたみ",
+  "settings.display.mcpTool.title": "MCP・汎用ツールブロック",
+  "settings.display.mcpTool.description": "MCPおよび汎用ツールブロックを最初から展開するか折りたたむかを選択します。",
+  "settings.display.mcpTool.expanded": "展開",
+  "settings.display.mcpTool.collapsed": "折りたたみ",
 
   "settings.display.tokenThroughput.title": "Show Token Throughput",
   "settings.display.tokenThroughput.description":

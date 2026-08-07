@@ -1081,6 +1081,10 @@ export const dict = {
   "settings.display.codeEdit.description": "选择代码编辑块和差异块的初始状态：展开或折叠。",
   "settings.display.codeEdit.expanded": "展开",
   "settings.display.codeEdit.collapsed": "折叠",
+  "settings.display.mcpTool.title": "MCP 与通用工具块",
+  "settings.display.mcpTool.description": "选择 MCP 与通用工具块的初始状态：展开或折叠。",
+  "settings.display.mcpTool.expanded": "展开",
+  "settings.display.mcpTool.collapsed": "折叠",
 
   "settings.display.tokenThroughput.title": "Show Token Throughput",
   "settings.display.tokenThroughput.description":

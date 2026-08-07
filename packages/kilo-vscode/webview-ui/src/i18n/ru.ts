@@ -1142,6 +1142,11 @@ export const dict = {
     "Выберите, будут ли блоки изменений кода и различий изначально развёрнуты или свёрнуты.",
   "settings.display.codeEdit.expanded": "Развёрнуты",
   "settings.display.codeEdit.collapsed": "Свёрнуты",
+  "settings.display.mcpTool.title": "Блоки MCP и общих инструментов",
+  "settings.display.mcpTool.description":
+    "Выберите, будут ли блоки MCP и общих инструментов изначально развёрнуты или свёрнуты.",
+  "settings.display.mcpTool.expanded": "Развёрнуты",
+  "settings.display.mcpTool.collapsed": "Свёрнуты",
 
   "settings.display.tokenThroughput.title": "Show Token Throughput",
   "settings.display.tokenThroughput.description":

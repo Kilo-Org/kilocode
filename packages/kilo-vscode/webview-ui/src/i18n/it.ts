@@ -1003,6 +1003,10 @@ export const dict = {
     "Scegli se i blocchi delle modifiche al codice e delle differenze iniziano espansi o compressi.",
   "settings.display.codeEdit.expanded": "Espansi",
   "settings.display.codeEdit.collapsed": "Compressi",
+  "settings.display.mcpTool.title": "Blocchi strumento MCP e generici",
+  "settings.display.mcpTool.description": "Scegli se i blocchi strumento MCP e generici iniziano espansi o compressi.",
+  "settings.display.mcpTool.expanded": "Espansi",
+  "settings.display.mcpTool.collapsed": "Compressi",
 
   "settings.display.tokenThroughput.title": "Show Token Throughput",
   "settings.display.tokenThroughput.description":

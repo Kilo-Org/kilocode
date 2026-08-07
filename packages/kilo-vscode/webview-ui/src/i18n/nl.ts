@@ -1117,6 +1117,11 @@ export const dict = {
     "Kies of blokken met codebewerkingen en verschillen standaard uitgeklapt of ingeklapt zijn.",
   "settings.display.codeEdit.expanded": "Uitgeklapt",
   "settings.display.codeEdit.collapsed": "Ingeklapt",
+  "settings.display.mcpTool.title": "Blokken met MCP- en algemene tools",
+  "settings.display.mcpTool.description":
+    "Kies of blokken met MCP- en algemene tools standaard uitgeklapt of ingeklapt zijn.",
+  "settings.display.mcpTool.expanded": "Uitgeklapt",
+  "settings.display.mcpTool.collapsed": "Ingeklapt",
 
   "settings.display.tokenThroughput.title": "Show Token Throughput",
   "settings.display.tokenThroughput.description":
