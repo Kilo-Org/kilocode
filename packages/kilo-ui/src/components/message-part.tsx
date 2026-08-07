@@ -1891,9 +1891,9 @@ ToolRegistry.register({
     return (
       <>
         <BasicTool
-          hideDetails
           {...props}
           icon="glasses"
+          defer
           onSubtitleClick={
             data.openFile && props.input.filePath ? () => data.openFile!(props.input.filePath) : undefined
           }
@@ -1906,7 +1906,15 @@ ToolRegistry.register({
               animate={props.reveal}
             />
           }
-        />
+        >
+          <Show when={props.output}>
+            {(output) => (
+              <div data-component="tool-output" data-variant="preview" data-scrollable>
+                <pre data-slot="read-tool-output">{output()}</pre>
+              </div>
+            )}
+          </Show>
+        </BasicTool>
         <For each={loaded()}>
           {(filepath) => (
             <ToolLoadedFile

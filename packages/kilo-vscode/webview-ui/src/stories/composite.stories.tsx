@@ -90,6 +90,33 @@ const readCompleted: ToolPart = {
   },
 }
 
+const readOffsetCompleted: ToolPart = {
+  id: "part-read-offset-001",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "tool",
+  callID: "call-read-offset-001",
+  tool: "read",
+  state: {
+    status: "completed",
+    input: { filePath: "riemann hypothesis.lean", offset: 11091, limit: 3 },
+    output: [
+      "<path>/project/riemann hypothesis.lean</path>",
+      "<type>file</type>",
+      "<content>",
+      "11091: theorem challenge_two : True := by",
+      "11092:   trivial",
+      "11093: ",
+      "",
+      "(Showing lines 11091-11093 of 12000. Use offset=11094 to continue.)",
+      "</content>",
+    ].join("\n"),
+    title: "Read file",
+    metadata: {},
+    time: { start: now - 8000, end: now - 7500 },
+  },
+}
+
 const grepCompleted: ToolPart = {
   id: "part-grep-001",
   sessionID: SESSION_ID,
@@ -693,6 +720,15 @@ export const ToolCards: Story = {
       </StoryProviders>
     )
   },
+}
+
+export const ReadOffsetResult: Story = {
+  name: "Read - high offset result",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID}>
+      <Part part={readOffsetCompleted} message={baseAssistantMessage} />
+    </StoryProviders>
+  ),
 }
 
 export const TimelineHighlightedTool: Story = {
