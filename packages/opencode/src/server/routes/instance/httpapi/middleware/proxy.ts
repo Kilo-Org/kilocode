@@ -106,8 +106,10 @@ export function http(
       // kilocode_change start
       const body = yield* response.stream.pipe(
         Stream.decodeText(),
-        Stream.take(65536),
-        Stream.runFold(() => "", (acc: string, str: string) => acc + str),
+        Stream.runFold(() => "", (acc: string, str: string) => {
+          const needed = 65536 - acc.length
+          return needed > 0 ? acc + (str.length > needed ? str.slice(0, needed) : str) : acc
+        }),
         Effect.catch(() => Effect.succeed("")),
       )
       const contentType =
