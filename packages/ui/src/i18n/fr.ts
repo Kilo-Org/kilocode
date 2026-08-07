@@ -1,7 +1,7 @@
 export const dict = {
   "ui.sessionReview.title": "Modifications de la session",
   "ui.sessionReview.title.git": "Modifications Git",
-  "ui.sessionReview.title.branch": "Modifications de branche",
+  "ui.sessionReview.title.branch": "Modifications de la branche",
   "ui.sessionReview.title.lastTurn": "Modifications du dernier tour",
   "ui.sessionReview.diffStyle.unified": "Unifié",
   "ui.sessionReview.diffStyle.split": "Divisé",
@@ -18,6 +18,22 @@ export const dict = {
   "ui.sessionReview.largeDiff.title": "Diff trop volumineux pour être affiché",
   "ui.sessionReview.largeDiff.meta": "Limite : {{limit}} lignes modifiées. Actuel : {{current}} lignes modifiées.",
   "ui.sessionReview.largeDiff.renderAnyway": "Afficher quand même",
+  "ui.sessionReviewV2.expandMode": "Développer ou réduire le diff",
+  "ui.sessionReviewV2.filterFiles": "Filtrer les fichiers",
+  "ui.sessionReviewV2.toggleSidebar": "Afficher ou masquer l'arborescence des fichiers",
+  "ui.sessionReviewV2.showAllLines": "Afficher toutes les lignes",
+  "ui.sessionReviewV2.hideNonDiffLines": "Masquer les lignes hors diff",
+  "ui.sessionReviewV2.unifiedDiff": "Diff unifié",
+  "ui.sessionReviewV2.splitDiff": "Diff côte à côte",
+  "ui.sessionReviewV2.previousFile": "Fichier précédent",
+  "ui.sessionReviewV2.nextFile": "Fichier suivant",
+  "ui.sessionReviewV2.diffView": "Vue du diff",
+  "ui.sessionReviewV2.empty.noGit.title": "Aucune modification suivie",
+  "ui.sessionReviewV2.empty.noGit.description": "Suivre, examiner et annuler les modifications dans ce projet",
+  "ui.sessionReviewV2.empty.noGit.action": "Créer un dépôt Git",
+  "ui.sessionReviewV2.empty.noGit.actionLoading": "Création du dépôt Git...",
+  "ui.sessionReviewV2.empty.changes.title": "Aucune modification de fichier pour l'instant",
+  "ui.sessionReviewV2.empty.changes.description": "Les modifications du projet apparaîtront ici",
   "ui.fileMedia.kind.image": "image",
   "ui.fileMedia.kind.audio": "audio",
   "ui.fileMedia.state.removed": "Fichier {{kind}} supprimé",
@@ -27,14 +43,13 @@ export const dict = {
   "ui.fileMedia.binary.title": "Fichier binaire",
   "ui.fileMedia.binary.description.path": "Impossible d'afficher {{path}} car il s'agit d'un fichier binaire.",
   "ui.fileMedia.binary.description.default": "Impossible d'afficher ce fichier car il s'agit d'un fichier binaire.",
-
   "ui.lineComment.label.prefix": "Commenter sur ",
   "ui.lineComment.label.suffix": "",
   "ui.lineComment.editorLabel.prefix": "Commentaire sur ",
   "ui.lineComment.editorLabel.suffix": "",
   "ui.lineComment.placeholder": "Ajouter un commentaire",
   "ui.lineComment.submit": "Commenter",
-
+  "ui.lineComment.cancel": "Annuler",
   "ui.sessionTurn.steps.show": "Afficher les étapes",
   "ui.sessionTurn.steps.hide": "Masquer les étapes",
   "ui.sessionTurn.summary.response": "Réponse",
@@ -42,8 +57,9 @@ export const dict = {
   "ui.sessionTurn.diffs.changed": "Modifié",
   "ui.sessionTurn.diffs.showAll": "Tout afficher",
   "ui.sessionTurn.diffs.showLess": "Afficher moins",
-  "ui.sessionTurn.diffs.more": "+{{count}} fichiers supplémentaires",
-
+  "ui.sessionTurn.diffs.more": "+{{count}} de plus",
+  "ui.sessionTurn.diffs.changed.one": "Fichier modifié : {{count}}",
+  "ui.sessionTurn.diffs.changed.other": "Fichiers modifiés : {{count}}",
   "ui.sessionTurn.retry.retrying": "nouvelle tentative",
   "ui.sessionTurn.retry.inSeconds": "dans {{seconds}}s",
   "ui.sessionTurn.retry.attempt": "tentative n°{{attempt}}",
@@ -54,7 +70,7 @@ export const dict = {
 
   "dialog.usageExceeded.freeTier.title": "Limite gratuite atteinte",
   "dialog.usageExceeded.freeTier.description":
-    "Abonnez-vous à Kilo Go pour un accès fiable aux meilleurs modèles open source, à partir de $5/mois.",
+    "Abonnez-vous à Kilo Go pour un accès fiable aux meilleurs modèles open source, à partir de $5/mois.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "S'abonner",
   "dialog.usageExceeded.accountRateLimit.title": "Limite Go atteinte",
   "dialog.usageExceeded.accountRateLimit.description":
@@ -148,6 +164,7 @@ export const dict = {
   "ui.common.close": "Fermer",
   "ui.common.next": "Suivant",
   "ui.common.submit": "Soumettre",
+  "ui.common.showMore": "Afficher plus",
 
   "ui.permission.deny": "Refuser",
   "ui.permission.allowAlways": "Toujours autoriser",

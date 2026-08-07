@@ -23,6 +23,22 @@ export const dict = {
   "ui.sessionReview.largeDiff.title": "Fark gösterimi için çok büyük",
   "ui.sessionReview.largeDiff.meta": "Limit: {{limit}} değişen satır. Mevcut: {{current}} değişen satır.",
   "ui.sessionReview.largeDiff.renderAnyway": "Yine de göster",
+  "ui.sessionReviewV2.expandMode": "Farkı genişlet veya daralt",
+  "ui.sessionReviewV2.filterFiles": "Dosyaları filtrele",
+  "ui.sessionReviewV2.toggleSidebar": "Dosya ağacını aç/kapat",
+  "ui.sessionReviewV2.showAllLines": "Tüm satırları göster",
+  "ui.sessionReviewV2.hideNonDiffLines": "Fark içermeyen satırları gizle",
+  "ui.sessionReviewV2.unifiedDiff": "Birleşik fark",
+  "ui.sessionReviewV2.splitDiff": "Bölünmüş fark",
+  "ui.sessionReviewV2.previousFile": "Önceki dosya",
+  "ui.sessionReviewV2.nextFile": "Sonraki dosya",
+  "ui.sessionReviewV2.diffView": "Fark görünümü",
+  "ui.sessionReviewV2.empty.noGit.title": "İzlenen değişiklik yok",
+  "ui.sessionReviewV2.empty.noGit.description": "Bu projedeki değişiklikleri takip et, incele ve geri al",
+  "ui.sessionReviewV2.empty.noGit.action": "Git deposu oluştur",
+  "ui.sessionReviewV2.empty.noGit.actionLoading": "Git deposu oluşturuluyor...",
+  "ui.sessionReviewV2.empty.changes.title": "Henüz dosya değişikliği yok",
+  "ui.sessionReviewV2.empty.changes.description": "Proje değişiklikleri burada görünecek",
 
   "ui.fileMedia.kind.image": "görsel",
   "ui.fileMedia.kind.audio": "ses",
@@ -40,12 +56,15 @@ export const dict = {
   "ui.lineComment.editorLabel.suffix": "",
   "ui.lineComment.placeholder": "Yorum ekle",
   "ui.lineComment.submit": "Yorum yap",
+  "ui.lineComment.cancel": "İptal",
 
   "ui.sessionTurn.steps.show": "Adımları göster",
   "ui.sessionTurn.steps.hide": "Adımları gizle",
   "ui.sessionTurn.summary.response": "Yanıt",
   "ui.sessionTurn.diff.showMore": "Daha fazla değişiklik göster ({{count}})",
   "ui.sessionTurn.diffs.changed": "Değiştirildi",
+  "ui.sessionTurn.diffs.changed.one": "Değiştirilen dosya: {{count}}",
+  "ui.sessionTurn.diffs.changed.other": "Değiştirilen dosyalar: {{count}}",
   "ui.sessionTurn.diffs.showAll": "Tümünü göster",
   "ui.sessionTurn.diffs.showLess": "Daha az göster",
   "ui.sessionTurn.diffs.more": "+{{count}} dosya daha",
@@ -60,7 +79,7 @@ export const dict = {
 
   "dialog.usageExceeded.freeTier.title": "Ücretsiz sınıra ulaşıldı",
   "dialog.usageExceeded.freeTier.description":
-    "En iyi açık kaynak modellere güvenilir erişim için Kilo Go'ya abone olun. Aylık $5'tan başlar.",
+    "En iyi açık kaynak modellere güvenilir erişim için Kilo Go'ya abone olun. Aylık $5'tan başlar.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "Abone ol",
   "dialog.usageExceeded.accountRateLimit.title": "Go sınırına ulaşıldı",
   "dialog.usageExceeded.accountRateLimit.description":
@@ -154,6 +173,7 @@ export const dict = {
   "ui.common.close": "Kapat",
   "ui.common.next": "İleri",
   "ui.common.submit": "Gönder",
+  "ui.common.showMore": "Daha fazla göster",
 
   "ui.permission.deny": "Reddet",
   "ui.permission.allowAlways": "Her zaman izin ver",

@@ -5,7 +5,7 @@ type Keys = keyof typeof en
 export const dict = {
   "ui.sessionReview.title": "Promjene sesije",
   "ui.sessionReview.title.git": "Git promjene",
-  "ui.sessionReview.title.branch": "Promjene grane",
+  "ui.sessionReview.title.branch": "Promjene na grani",
   "ui.sessionReview.title.lastTurn": "Promjene u posljednjem potezu",
   "ui.sessionReview.diffStyle.unified": "Ujedinjeno",
   "ui.sessionReview.diffStyle.split": "Podijeljeno",
@@ -22,6 +22,22 @@ export const dict = {
   "ui.sessionReview.largeDiff.title": "Diff je prevelik za prikaz",
   "ui.sessionReview.largeDiff.meta": "Limit: {{limit}} izmijenjenih linija. Trenutno: {{current}} izmijenjenih linija.",
   "ui.sessionReview.largeDiff.renderAnyway": "Prikaži svejedno",
+  "ui.sessionReviewV2.expandMode": "Proširi ili sažmi diff",
+  "ui.sessionReviewV2.filterFiles": "Filtriraj datoteke",
+  "ui.sessionReviewV2.toggleSidebar": "Prikaži/sakrij stablo datoteka",
+  "ui.sessionReviewV2.showAllLines": "Prikaži sve linije",
+  "ui.sessionReviewV2.hideNonDiffLines": "Sakrij linije bez izmjena",
+  "ui.sessionReviewV2.unifiedDiff": "Ujedinjeni diff",
+  "ui.sessionReviewV2.splitDiff": "Podijeljeni diff",
+  "ui.sessionReviewV2.previousFile": "Prethodna datoteka",
+  "ui.sessionReviewV2.nextFile": "Sljedeća datoteka",
+  "ui.sessionReviewV2.diffView": "Prikaz diff-a",
+  "ui.sessionReviewV2.empty.noGit.title": "Nema praćenih promjena",
+  "ui.sessionReviewV2.empty.noGit.description": "Prati, pregledaj i poništi promjene u ovom projektu",
+  "ui.sessionReviewV2.empty.noGit.action": "Kreiraj Git repozitorij",
+  "ui.sessionReviewV2.empty.noGit.actionLoading": "Kreiranje Git repozitorija...",
+  "ui.sessionReviewV2.empty.changes.title": "Još nema izmjena u datotekama",
+  "ui.sessionReviewV2.empty.changes.description": "Promjene projekta će se prikazati ovdje",
   "ui.fileMedia.kind.image": "slika",
   "ui.fileMedia.kind.audio": "audio",
   "ui.fileMedia.state.removed": "Uklonjeno: {{kind}}",
@@ -31,14 +47,13 @@ export const dict = {
   "ui.fileMedia.binary.title": "Binarni fajl",
   "ui.fileMedia.binary.description.path": "{{path}} se ne može prikazati jer je binarni fajl.",
   "ui.fileMedia.binary.description.default": "Ovaj fajl se ne može prikazati jer je binarni.",
-
   "ui.lineComment.label.prefix": "Komentar na ",
   "ui.lineComment.label.suffix": "",
   "ui.lineComment.editorLabel.prefix": "Komentarišeš ",
   "ui.lineComment.editorLabel.suffix": "",
   "ui.lineComment.placeholder": "Dodaj komentar",
   "ui.lineComment.submit": "Komentariši",
-
+  "ui.lineComment.cancel": "Otkaži",
   "ui.sessionTurn.steps.show": "Prikaži korake",
   "ui.sessionTurn.steps.hide": "Sakrij korake",
   "ui.sessionTurn.summary.response": "Odgovor",
@@ -46,8 +61,9 @@ export const dict = {
   "ui.sessionTurn.diffs.changed": "Izmijenjeno",
   "ui.sessionTurn.diffs.showAll": "Prikaži sve",
   "ui.sessionTurn.diffs.showLess": "Prikaži manje",
-  "ui.sessionTurn.diffs.more": "Još +{{count}} datoteka",
-
+  "ui.sessionTurn.diffs.more": "+ još {{count}}",
+  "ui.sessionTurn.diffs.changed.one": "Izmijenjena datoteka: {{count}}",
+  "ui.sessionTurn.diffs.changed.other": "Izmijenjene datoteke: {{count}}",
   "ui.sessionTurn.retry.retrying": "ponovni pokušaj",
   "ui.sessionTurn.retry.inSeconds": "za {{seconds}}s",
   "ui.sessionTurn.retry.attempt": "pokušaj #{{attempt}}",
@@ -58,7 +74,7 @@ export const dict = {
 
   "dialog.usageExceeded.freeTier.title": "Dostignut besplatan limit",
   "dialog.usageExceeded.freeTier.description":
-    "Pretplatite se na Kilo Go za pouzdan pristup najboljim open-source modelima, počevši od $5/mjesec.",
+    "Pretplatite se na Kilo Go za pouzdan pristup najboljim open-source modelima, počevši od $5/mjesec.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "Pretplati se",
   "dialog.usageExceeded.accountRateLimit.title": "Dostignut Go limit",
   "dialog.usageExceeded.accountRateLimit.description":
@@ -152,6 +168,7 @@ export const dict = {
   "ui.common.close": "Zatvori",
   "ui.common.next": "Dalje",
   "ui.common.submit": "Pošalji",
+  "ui.common.showMore": "Prikaži više",
 
   "ui.permission.deny": "Zabrani",
   "ui.permission.allowAlways": "Uvijek dozvoli",

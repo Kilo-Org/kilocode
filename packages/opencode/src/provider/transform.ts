@@ -627,7 +627,6 @@ function anthropicClaude5(apiId: string) {
 }
 // kilocode_change end
 
-
 function anthropicAdaptiveEfforts(apiId: string): string[] | null {
   // kilocode_change start - include Claude 5+ models
   if (anthropicOpus47OrLater(apiId) || anthropicClaude5(apiId)) {
@@ -764,12 +763,6 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
       high: { reasoningEffort: "high" },
     }
   }
-  // kilocode_change start
-  if (id.includes("grok") && !id.includes("grok-4.5")) {
-    return {}
-  }
-  // kilocode_change end
-
   switch (model.api.npm) {
     case "@kilocode/kilo-gateway": // kilocode_change
       // kilocode_change start
@@ -827,7 +820,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
     }
 
     case "@ai-sdk/gateway":
-      if (model.id.includes("anthropic")) {
+      if (model.api.id.includes("anthropic")) {
         if (adaptiveEfforts) {
           return Object.fromEntries(
             adaptiveEfforts.map((effort) => [
@@ -860,8 +853,8 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
           },
         }
       }
-      if (model.id.includes("google")) {
-        if (id.includes("2.5")) {
+      if (model.api.id.includes("google")) {
+        if (model.api.id.includes("2.5")) {
           return {
             high: {
               thinkingConfig: {
@@ -872,7 +865,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
             max: {
               thinkingConfig: {
                 includeThoughts: true,
-                thinkingBudget: googleThinkingBudgetMax(id),
+                thinkingBudget: googleThinkingBudgetMax(model.api.id.toLowerCase()),
               },
             },
           }
@@ -952,6 +945,18 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
       )
     case "@ai-sdk/amazon-bedrock/mantle":
     case "@ai-sdk/openai": {
+      if (model.providerID === "meta") {
+        return Object.fromEntries(
+          OPENAI_EFFORTS.map((effort) => [
+            effort,
+            {
+              reasoningEffort: effort,
+              reasoningSummary: "auto",
+              include: INCLUDE_ENCRYPTED_REASONING,
+            },
+          ]),
+        )
+      }
       // https://v5.ai-sdk.dev/providers/ai-sdk-providers/openai
       const efforts = openaiReasoningEfforts(model.api.id, model.release_date)
       return Object.fromEntries(
@@ -1157,16 +1162,13 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
   return {}
 }
 
-// kilocode_change start - derive variants from models.dev reasoning_options
-// (snatched from upstream v1.18.11, #36624 + follow-up fixes). Takes precedence
-// over the heuristic variants() when the model publishes reasoning_options.
 export function reasoningVariants(model: ModelsDev.Model, target: Provider.Model): Provider.Model["variants"] {
   const options = model.reasoning_options
   if (options === undefined) return
   if (options.length === 0) return {}
 
   const effort = options.find((option) => option.type === "effort")
-  if (effort) return effortVariants(target, effort.values)
+  if (effort) return nonEmptyVariants(effortVariants(target, effort.values))
 
   const toggle = options.some((option) => option.type === "toggle")
   const budget = options.find((option) => option.type === "budget_tokens")
@@ -1231,7 +1233,7 @@ function reasoningEffort(model: Provider.Model, effort: string) {
       return { reasoning: { effort } }
     case "@ai-sdk/anthropic":
     case "@ai-sdk/google-vertex/anthropic":
-      return anthropicEffort(model, effort) ?? { effort }
+      return anthropicEffort(model, effort)
     case "@ai-sdk/google":
     case "@ai-sdk/google-vertex":
       return { thinkingConfig: { includeThoughts: true, thinkingLevel: effort } }
@@ -1242,14 +1244,6 @@ function reasoningEffort(model: Provider.Model, effort: string) {
             type: "adaptive",
             maxReasoningEffort: effort,
             ...(anthropicOmitsThinking(model.api.id) ? { display: "summarized" } : {}),
-          },
-        }
-      if (anthropicOpus45(model.api.id))
-        return {
-          reasoningConfig: {
-            type: "enabled",
-            budgetTokens: Math.min(16_000, Math.floor(model.limit.output / 2 - 1)),
-            maxReasoningEffort: effort,
           },
         }
       if (model.api.id.includes("anthropic")) return
@@ -1265,9 +1259,17 @@ function reasoningEffort(model: Provider.Model, effort: string) {
       return { reasoningEffort: effort, reasoningSummary: "auto", include: INCLUDE_ENCRYPTED_REASONING }
     case "@ai-sdk/openai":
     case "@ai-sdk/amazon-bedrock/mantle":
-      return { reasoningEffort: effort, reasoningSummary: reasoningSummary(model), include: INCLUDE_ENCRYPTED_REASONING } // kilocode_change - keep gpt-5.6 detailed summaries
+      return {
+        reasoningEffort: effort,
+        reasoningSummary: reasoningSummary(model),
+        include: INCLUDE_ENCRYPTED_REASONING,
+      } // kilocode_change - keep gpt-5.6 detailed summaries
     case "@ai-sdk/azure":
-      return { reasoningEffort: effort, reasoningSummary: reasoningSummary(model), include: INCLUDE_ENCRYPTED_REASONING } // kilocode_change
+      return {
+        reasoningEffort: effort,
+        reasoningSummary: reasoningSummary(model),
+        include: INCLUDE_ENCRYPTED_REASONING,
+      } // kilocode_change
     case "@jerome-benoit/sap-ai-provider-v2":
       if (model.id.includes("anthropic"))
         return { modelParams: { thinking: { type: "adaptive", display: "summarized" }, output_config: { effort } } }
@@ -1294,9 +1296,10 @@ function reasoningEffort(model: Provider.Model, effort: string) {
 }
 
 function anthropicEffort(model: Provider.Model, effort: string) {
-  if (anthropicOpus45(model.api.id)) return anthropicOpus45Effort(model, effort)
-  // Kimi defaults to omitting adaptive thinking text unless summarized display is requested.
+  if (["opus-4-5", "opus-4.5"].some((value) => model.api.id.includes(value))) return { effort }
+  // kilocode_change start - Kimi Anthropic endpoints require adaptive thinking summaries for published effort tiers
   if (isKimiFamily(model)) return { thinking: { type: "adaptive", display: "summarized" }, effort }
+  // kilocode_change end
   if (!anthropicAdaptiveEfforts(model.api.id)) return
   return {
     thinking: {
@@ -1307,15 +1310,19 @@ function anthropicEffort(model: Provider.Model, effort: string) {
   }
 }
 
-function anthropicOpus45Effort(model: Provider.Model, effort: string) {
-  return {
-    thinking: {
-      type: "enabled",
-      budgetTokens: Math.min(16_000, Math.floor(model.limit.output / 2 - 1)),
-    },
-    effort,
-  }
+// kilocode_change start
+function isKimiFamily(model: Provider.Model) {
+  if (
+    [model.providerID, model.api.id].some((id) => {
+      const value = id?.toLowerCase() ?? ""
+      return value.includes("kimi") || value.includes("moonshot")
+    })
+  )
+    return true
+  const url = model.api.url?.toLowerCase() ?? ""
+  return ["api.kimi.com", "api.moonshot.ai", "api.moonshot.cn", "api.moonshotai.cn"].some((host) => url.includes(host))
 }
+// kilocode_change end
 
 function reasoningBudget(model: Provider.Model, budget: number) {
   switch (model.api.npm) {
@@ -1338,7 +1345,8 @@ function reasoningBudget(model: Provider.Model, budget: number) {
     case "@ai-sdk/alibaba":
       return { enableThinking: true, thinkingBudget: budget }
     case "@jerome-benoit/sap-ai-provider-v2":
-      if (model.id.includes("anthropic")) return { modelParams: { thinking: { type: "enabled", budget_tokens: budget } } }
+      if (model.id.includes("anthropic"))
+        return { modelParams: { thinking: { type: "enabled", budget_tokens: budget } } }
       if (model.id.includes("gemini"))
         return { modelParams: { thinkingConfig: { includeThoughts: true, thinkingBudget: budget } } }
       return
@@ -1362,23 +1370,6 @@ function reasoningBudget(model: Provider.Model, budget: number) {
   }
 }
 
-function isKimiFamily(model: Provider.Model) {
-  if (
-    [model.providerID, model.api.id].some((id) => {
-      const value = id.toLowerCase()
-      return value.includes("kimi") || value.includes("moonshot")
-    })
-  )
-    return true
-  const url = model.api.url.toLowerCase()
-  return ["api.kimi.com", "api.moonshot.ai", "api.moonshot.cn", "api.moonshotai.cn"].some((host) => url.includes(host))
-}
-
-function anthropicOpus45(apiId: string) {
-  return ["opus-4-5", "opus-4.5"].some((value) => apiId.includes(value))
-}
-// kilocode_change end
-
 export function options(input: {
   model: Provider.Model
   sessionID: string
@@ -1398,7 +1389,8 @@ export function options(input: {
     input.model.providerID === "openai" ||
     input.model.api.npm === "@ai-sdk/openai" ||
     input.model.api.npm === "@ai-sdk/github-copilot" ||
-    input.model.api.npm === "@ai-sdk/amazon-bedrock/mantle"
+    input.model.api.npm === "@ai-sdk/amazon-bedrock/mantle" ||
+    input.model.api.npm === "@ai-sdk/xai"
   ) {
     result["store"] = false
   }
@@ -1442,12 +1434,19 @@ export function options(input: {
   if (
     input.providerOptions?.setCacheKey !== false &&
     (input.model.providerID === "openai" ||
+      input.model.api.npm === "@ai-sdk/openai" ||
       input.model.api.npm === "@ai-sdk/xai" ||
       input.providerOptions?.setCacheKey)
   ) {
     result["promptCacheKey"] = input.sessionID
   }
   // kilocode_change end
+
+  if (input.model.providerID === "meta" && input.model.api.npm === "@ai-sdk/openai") {
+    result["reasoningEffort"] = "high"
+    result["reasoningSummary"] = "auto"
+    result["include"] = INCLUDE_ENCRYPTED_REASONING
+  }
 
   if (input.model.api.npm === "@ai-sdk/google" || input.model.api.npm === "@ai-sdk/google-vertex") {
     if (input.model.capabilities.reasoning) {
@@ -1559,19 +1558,18 @@ export function smallOptions(model: Provider.Model) {
   if (
     model.providerID === "openai" ||
     model.api.npm === "@ai-sdk/openai" ||
-    model.api.npm === "@ai-sdk/github-copilot"
+    model.api.npm === "@ai-sdk/github-copilot" ||
+    model.api.npm === "@ai-sdk/xai"
   ) {
     const base = { store: false }
     return mergeDeep(base, small)
   }
-  if (
-    model.providerID === "openrouter" ||
-    model.providerID === "llmgateway" ||
-    model.api.npm === "@kilocode/kilo-gateway" // kilocode_change
-  ) {
-    if (model.providerID === "openrouter" && small.reasoning?.effort === "low") {
-      return { reasoning: { effort: "none" } }
+  if (model.providerID === "openrouter" || model.providerID === "llmgateway") {
+    if (Object.keys(small).length === 0 && model.api.id.includes("google")) {
+      return { reasoning: { enabled: false } }
     }
+  }
+  if (model.api.npm === "@kilocode/kilo-gateway") {
     if (!model.capabilities.reasoning) return {} // kilocode_change - omit unsupported reasoning options
     return { reasoning: { enabled: true } } // kilocode_change - use the model's supported default effort
   }

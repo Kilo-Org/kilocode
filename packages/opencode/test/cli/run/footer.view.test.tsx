@@ -1,7 +1,7 @@
 /** @jsxImportSource @opentui/solid */
 import { expect, test } from "bun:test"
 import { BoxRenderable, RGBA, type RootRenderable } from "@opentui/core"
-import { testRender, useRenderer } from "@opentui/solid"
+import { extend, testRender, useRenderer } from "@opentui/solid" // kilocode_change - register test components in this renderer instance
 import { createSignal } from "solid-js"
 import { createDefaultOpenTuiKeymap } from "@opentui/keymap/opentui"
 import type { QuestionRequest } from "@kilocode/sdk/v2"
@@ -34,6 +34,10 @@ import type {
 import { RunQuestionBody } from "@/cli/cmd/run/footer.question"
 import { RejectField } from "@/cli/cmd/run/footer.permission"
 import { createTuiResolvedConfig } from "../../fixture/tui-runtime"
+
+// kilocode_change start - keep renderer tests independent of the animated spinner's native teardown
+extend({ spinner: BoxRenderable })
+// kilocode_change end
 
 const tuiConfig = createTuiResolvedConfig()
 

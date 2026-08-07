@@ -1,4 +1,4 @@
-import { marked } from "marked"
+import { marked, type MarkedExtension, type Tokens, type TokenizerAndRendererExtension } from "marked"
 // kilocode_change: marked-shiki highlighted code blocks synchronously during
 // parse, freezing the main thread on session switches with many code blocks
 // (issue #6221 / PR #7102). We render plain <pre><code data-lang="..."> here
@@ -6,12 +6,10 @@ import { marked } from "marked"
 // This import was re-added by an upstream merge; removing it restores the
 // two-pass rendering design.
 import katex from "katex"
-// kilocode_change start: import types for double-dollar math extension
-import type { MarkedExtension, TokenizerAndRendererExtension } from "marked"
-// kilocode_change end
 import { bundledLanguages, type BundledLanguage } from "shiki"
 import { parseFilePath } from "../file-path" // kilocode_change
 import { createSimpleContext } from "./helper"
+import { markedCodeSpanBoundary } from "./marked-code-span"
 import { getSharedHighlighter, type ThemeRegistrationResolved } from "@pierre/diffs" // kilocode_change
 import { ensureKiloDiffTheme, KILO_DIFF_THEME } from "../pierre/kilo-diff-theme" // kilocode_change
 
@@ -432,9 +430,55 @@ function renderMathInText(text: string): string {
 
   // kilocode_change: removed single-dollar inline math ($...$) rendering.
   // Single $ is far more common as a currency symbol in agent responses
-  // (e.g. $93K, $307K) than as a LaTeX delimiter. Only $$...$$ is supported.
+  // (e.g. $93K, $307K) than as a LaTeX delimiter. Upstream's \(...\)
+  // delimiter remains supported because it is unambiguous.
+  // Inline math: \(...\)
+  const inlineMathRegex = /\\\(((?:\\.|[^\\\n])*?)\\\)/g
+  result = result.replace(inlineMathRegex, (_, math) => {
+    try {
+      return renderKatex(math, {
+        displayMode: false,
+        throwOnError: false,
+      })
+    } catch {
+      return `\\(${math}\\)`
+    }
+  })
 
   return result
+}
+
+const inlineMathRegex = /^\\\(((?:\\.|[^\\\n])*?)\\\)/
+const inlineKatexExtension: MarkedExtension = {
+  extensions: [
+    {
+      name: "inlineKatex",
+      level: "inline",
+      start(src) {
+        const index = src.indexOf("\\(")
+        if (index === -1) return
+        return index
+      },
+      tokenizer(src) {
+        const match = src.match(inlineMathRegex)
+        if (!match) return
+        return {
+          type: "inlineKatex",
+          raw: match[0],
+          text: match[1].trim(),
+          displayMode: false,
+        }
+      },
+      renderer: renderKatexToken,
+    },
+  ],
+}
+
+function renderKatexToken(token: Tokens.Generic) {
+  return renderKatex(typeof token.text === "string" ? token.text : "", {
+    displayMode: token.displayMode === true,
+    throwOnError: false,
+  })
 }
 
 function renderMathExpressions(html: string): string {
@@ -658,6 +702,7 @@ export const createMarkedParser = (props: { nativeParser?: NativeMarkdownParser 
   // Code blocks render as plain <pre><code data-lang="..."> immediately.
   // The Markdown component calls deferredHighlight() after DOM paint.
   const parser = marked.use(
+    markedCodeSpanBoundary,
     {
       renderer: {
         link({ href, title, text }) {
@@ -709,11 +754,12 @@ export const createMarkedParser = (props: { nativeParser?: NativeMarkdownParser 
       },
       // kilocode_change end
     },
-    // kilocode_change start: enable only double-dollar math.
+    inlineKatexExtension,
+    // kilocode_change start: enable double-dollar math without single-dollar math.
     // Single $ is far more common as a currency symbol in agent responses
     // (e.g. $93K, $307K) than as a LaTeX delimiter. Avoid registering the
-    // marked-katex-extension inline tokenizer because Marked falls through
-    // to later tokenizers when an override returns undefined.
+    // marked-katex-extension's single-dollar tokenizer because Marked falls
+    // through to later tokenizers when an override returns undefined.
     {
       extensions: [
         {

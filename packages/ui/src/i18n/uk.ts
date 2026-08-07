@@ -17,6 +17,23 @@ export const dict: Record<string, string> = {
   "ui.sessionReview.largeDiff.meta": "Ліміт: {{limit}} змінених рядків. Поточне: {{current}} змінених рядків.",
   // kilocode_change end
   "ui.sessionReview.largeDiff.renderAnyway": "Все одно відобразити",
+  "ui.sessionReviewV2.expandMode": "Розгорнути або згорнути diff",
+  "ui.sessionReviewV2.filterFiles": "Фільтрувати файли",
+  "ui.sessionReviewV2.toggleSidebar": "Перемкнути дерево файлів",
+  "ui.sessionReviewV2.showAllLines": "Показати всі рядки",
+  "ui.sessionReviewV2.hideNonDiffLines": "Приховати рядки поза diff",
+  "ui.sessionReviewV2.unifiedDiff": "Об'єднаний diff",
+  "ui.sessionReviewV2.splitDiff": "Розділений diff",
+  "ui.sessionReviewV2.previousFile": "Попередній файл",
+  "ui.sessionReviewV2.nextFile": "Наступний файл",
+  "ui.sessionReviewV2.diffView": "Перегляд diff",
+  "ui.sessionReviewV2.empty.noGit.title": "Немає відстежуваних змін",
+  "ui.sessionReviewV2.empty.noGit.description": "Відстежуйте, переглядайте та скасовуйте зміни в цьому проєкті",
+  "ui.sessionReviewV2.empty.noGit.action": "Створити Git-репозиторій",
+  "ui.sessionReviewV2.empty.noGit.actionLoading": "Створення Git-репозиторію...",
+  "ui.sessionReviewV2.empty.changes.title": "Змін у файлах ще немає",
+  "ui.sessionReviewV2.empty.changes.description": "Зміни проєкту з'являться тут",
+
   "ui.sessionReview.openFile": "Відкрити файл",
   "ui.sessionReview.selection.line": "рядок {{line}}",
   "ui.sessionReview.selection.lines": "рядки {{start}}-{{end}}",
@@ -39,15 +56,17 @@ export const dict: Record<string, string> = {
   "ui.lineComment.editorLabel.suffix": "",
   "ui.lineComment.placeholder": "Додати коментар",
   "ui.lineComment.submit": "Коментувати",
+  "ui.lineComment.cancel": "Скасувати",
 
   "ui.sessionTurn.steps.show": "Показати кроки",
   "ui.sessionTurn.steps.hide": "Приховати кроки",
   "ui.sessionTurn.summary.response": "Відповідь",
   "ui.sessionTurn.diff.showMore": "Показати більше змін ({{count}})",
-  "ui.sessionTurn.diffs.changed": "Змінено",
+  "ui.sessionTurn.diffs.changed.one": "Змінений файл: {{count}}",
+  "ui.sessionTurn.diffs.changed.other": "Змінені файли: {{count}}",
   "ui.sessionTurn.diffs.showAll": "Показати всі",
   "ui.sessionTurn.diffs.showLess": "Показати менше",
-  "ui.sessionTurn.diffs.more": "+{{count}} інших файлів",
+  "ui.sessionTurn.diffs.more": "+ ще {{count}}",
 
   "ui.sessionTurn.retry.retrying": "повтор спроби", // kilocode_change
   "ui.sessionTurn.retry.inSeconds": "через {{seconds}}с", // kilocode_change
@@ -57,16 +76,14 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.error.freeUsageExceeded": "Перевищено ліміт безкоштовного використання",
   "ui.sessionTurn.error.addCredits": "Додати кредити",
 
-  // kilocode_change start - complete upstream usage-exceeded translations
-  "dialog.usageExceeded.freeTier.title": "Досягнуто безкоштовного ліміту",
+  "dialog.usageExceeded.freeTier.title": "Безкоштовний ліміт вичерпано",
   "dialog.usageExceeded.freeTier.description":
-    "Підпишіться на Kilo Go, щоб отримати надійний доступ до найкращих моделей із відкритим кодом, від $5 на місяць.",
+    "Підпишіться на Kilo Go для надійного доступу до найкращих моделей із відкритим кодом від $5 на місяць.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "Підписатися",
-  "dialog.usageExceeded.accountRateLimit.title": "Досягнуто ліміту Go",
+  "dialog.usageExceeded.accountRateLimit.title": "Ліміт Go вичерпано",
   "dialog.usageExceeded.accountRateLimit.description":
-    "Досягнуто ліміту використання. Щоб продовжити користуватися цією моделлю зараз, увімкніть використання доступного балансу",
+    "Ліміт використання вичерпано. Щоб і надалі користуватися цією моделлю, увімкніть оплату з доступного балансу",
   "dialog.usageExceeded.accountRateLimit.actionLabel": "Відкрити налаштування",
-  // kilocode_change end
 
   "ui.sessionTurn.status.delegating": "Делегування роботи",
   // kilocode_change start
@@ -173,6 +190,7 @@ export const dict: Record<string, string> = {
   "ui.common.close": "Закрити",
   "ui.common.next": "Далі",
   "ui.common.submit": "Надіслати",
+  "ui.common.showMore": "Показати більше",
 
   "ui.permission.deny": "Заборонити",
   "ui.permission.allowAlways": "Дозволяти завжди",

@@ -57,7 +57,7 @@ export const dict: Record<Keys, string> = {
 
   "dialog.usageExceeded.freeTier.title": "Gratis grense nådd",
   "dialog.usageExceeded.freeTier.description":
-    "Abonner på Kilo Go for pålitelig tilgang til de beste åpen kildekode-modellene, fra $5/måned.",
+    "Abonner på Kilo Go for pålitelig tilgang til de beste åpen kildekode-modellene, fra $5/måned.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "Abonner",
   "dialog.usageExceeded.accountRateLimit.title": "Go-grense nådd",
   "dialog.usageExceeded.accountRateLimit.description":
@@ -151,6 +151,7 @@ export const dict: Record<Keys, string> = {
   "ui.common.close": "Lukk",
   "ui.common.next": "Neste",
   "ui.common.submit": "Send inn",
+  "ui.common.showMore": "Vis mer",
 
   "ui.permission.deny": "Avslå",
   "ui.permission.allowAlways": "Tillat alltid",
@@ -195,4 +196,24 @@ export const dict: Record<Keys, string> = {
   "ui.toolErrorCard.copyError": "Kopier feil",
   "ui.message.duration.seconds": "{{count}}s",
   "ui.message.duration.minutesSeconds": "{{minutes}}m {{seconds}}s",
+
+  "ui.sessionReviewV2.expandMode": "Utvid eller fold sammen diff",
+  "ui.sessionReviewV2.filterFiles": "Filtrer filer",
+  "ui.sessionReviewV2.toggleSidebar": "Vis eller skjul filtreet",
+  "ui.sessionReviewV2.showAllLines": "Vis alle linjer",
+  "ui.sessionReviewV2.hideNonDiffLines": "Skjul uendrede linjer",
+  "ui.sessionReviewV2.unifiedDiff": "Samlet diff",
+  "ui.sessionReviewV2.splitDiff": "Delt diff",
+  "ui.sessionReviewV2.previousFile": "Forrige fil",
+  "ui.sessionReviewV2.nextFile": "Neste fil",
+  "ui.sessionReviewV2.diffView": "Diffvisning",
+  "ui.sessionReviewV2.empty.noGit.title": "Ingen sporede endringer",
+  "ui.sessionReviewV2.empty.noGit.description": "Spor, gjennomgå og angre endringer i dette prosjektet",
+  "ui.sessionReviewV2.empty.noGit.action": "Opprett et Git-depot",
+  "ui.sessionReviewV2.empty.noGit.actionLoading": "Oppretter Git-depot...",
+  "ui.sessionReviewV2.empty.changes.title": "Ingen filendringer ennå",
+  "ui.sessionReviewV2.empty.changes.description": "Prosjektendringer vises her",
+  "ui.lineComment.cancel": "Avbryt",
+  "ui.sessionTurn.diffs.changed.one": "Endret fil: {{count}}",
+  "ui.sessionTurn.diffs.changed.other": "Endrede filer: {{count}}",
 }

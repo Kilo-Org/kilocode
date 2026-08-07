@@ -1,6 +1,6 @@
 {
   "name": "@opencode-ai/session-ui",
-  "version": "7.4.16",
+  "version": "7.4.20",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -64,5 +64,6 @@
     "solid-js": "catalog:",
     "solid-list": "catalog:",
     "strip-ansi": "7.1.2"
-  }
+  },
+  "peerDependencies": {}
 }

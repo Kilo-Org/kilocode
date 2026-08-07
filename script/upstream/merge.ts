@@ -42,6 +42,7 @@ import {
 import { transformConflictedScripts, transformAllScripts } from "./transforms/transform-scripts"
 import { transformConflictedExtensions, transformAllExtensions } from "./transforms/transform-extensions"
 import { transformConflictedWeb, transformAllWeb } from "./transforms/transform-web"
+import { transformKiloWeb } from "./transforms/remove-kilo-web"
 import { resolveLockFileConflicts, regenerateLockFiles } from "./transforms/lock-files"
 import { writeVersion } from "./utils/upstream"
 
@@ -466,6 +467,14 @@ async function main() {
   const count = skips.filter((r) => r.action === "removed").length
   if (count > 0) {
     logger.success(`Removed ${count} skipped file(s) from opencode branch`)
+  }
+
+  // Kilo does not ship upstream's embedded web UI command. Remove the known
+  // registration before merging so upstream updates cannot restore it silently.
+  logger.info("Removing unsupported Kilo web command...")
+  const webCommand = await transformKiloWeb({ dryRun: false, verbose: options.verbose })
+  if (webCommand.removals > 0) {
+    logger.success("Removed unsupported Kilo web command registration")
   }
 
   // 6a. Transform package names (opencode-ai -> @kilocode/cli)

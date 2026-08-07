@@ -1,7 +1,7 @@
 export const dict = {
   "ui.sessionReview.title": "Alterações da sessão",
   "ui.sessionReview.title.git": "Alterações do Git",
-  "ui.sessionReview.title.branch": "Alterações de branch",
+  "ui.sessionReview.title.branch": "Alterações da branch",
   "ui.sessionReview.title.lastTurn": "Alterações do último turno",
   "ui.sessionReview.diffStyle.unified": "Unificado",
   "ui.sessionReview.diffStyle.split": "Dividido",
@@ -18,6 +18,22 @@ export const dict = {
   "ui.sessionReview.largeDiff.title": "Diff grande demais para renderizar",
   "ui.sessionReview.largeDiff.meta": "Limite: {{limit}} linhas alteradas. Atual: {{current}} linhas alteradas.",
   "ui.sessionReview.largeDiff.renderAnyway": "Renderizar mesmo assim",
+  "ui.sessionReviewV2.expandMode": "Expandir ou recolher diff",
+  "ui.sessionReviewV2.filterFiles": "Filtrar arquivos",
+  "ui.sessionReviewV2.toggleSidebar": "Alternar árvore de arquivos",
+  "ui.sessionReviewV2.showAllLines": "Mostrar todas as linhas",
+  "ui.sessionReviewV2.hideNonDiffLines": "Ocultar linhas fora do diff",
+  "ui.sessionReviewV2.unifiedDiff": "Diff unificado",
+  "ui.sessionReviewV2.splitDiff": "Diff dividido",
+  "ui.sessionReviewV2.previousFile": "Arquivo anterior",
+  "ui.sessionReviewV2.nextFile": "Próximo arquivo",
+  "ui.sessionReviewV2.diffView": "Visualização do diff",
+  "ui.sessionReviewV2.empty.noGit.title": "Nenhuma alteração rastreada",
+  "ui.sessionReviewV2.empty.noGit.description": "Rastreie, revise e desfaça alterações neste projeto",
+  "ui.sessionReviewV2.empty.noGit.action": "Criar repositório Git",
+  "ui.sessionReviewV2.empty.noGit.actionLoading": "Criando repositório Git...",
+  "ui.sessionReviewV2.empty.changes.title": "Nenhuma alteração em arquivos ainda",
+  "ui.sessionReviewV2.empty.changes.description": "As alterações do projeto aparecerão aqui",
   "ui.fileMedia.kind.image": "imagem",
   "ui.fileMedia.kind.audio": "áudio",
   "ui.fileMedia.state.removed": "Removido: {{kind}}",
@@ -27,14 +43,13 @@ export const dict = {
   "ui.fileMedia.binary.title": "Arquivo binário",
   "ui.fileMedia.binary.description.path": "Não é possível exibir {{path}} porque é um arquivo binário.",
   "ui.fileMedia.binary.description.default": "Não é possível exibir o arquivo porque ele é binário.",
-
   "ui.lineComment.label.prefix": "Comentar em ",
   "ui.lineComment.label.suffix": "",
   "ui.lineComment.editorLabel.prefix": "Comentando em ",
   "ui.lineComment.editorLabel.suffix": "",
   "ui.lineComment.placeholder": "Adicionar comentário",
   "ui.lineComment.submit": "Comentar",
-
+  "ui.lineComment.cancel": "Cancelar",
   "ui.sessionTurn.steps.show": "Mostrar passos",
   "ui.sessionTurn.steps.hide": "Ocultar passos",
   "ui.sessionTurn.summary.response": "Resposta",
@@ -42,8 +57,9 @@ export const dict = {
   "ui.sessionTurn.diffs.changed": "Modificado",
   "ui.sessionTurn.diffs.showAll": "Mostrar tudo",
   "ui.sessionTurn.diffs.showLess": "Mostrar menos",
-  "ui.sessionTurn.diffs.more": "+{{count}} arquivos a mais",
-
+  "ui.sessionTurn.diffs.more": "+{{count}} a mais",
+  "ui.sessionTurn.diffs.changed.one": "Arquivo alterado: {{count}}",
+  "ui.sessionTurn.diffs.changed.other": "Arquivos alterados: {{count}}",
   "ui.sessionTurn.retry.retrying": "tentando novamente",
   "ui.sessionTurn.retry.inSeconds": "em {{seconds}}s",
   "ui.sessionTurn.retry.attempt": "tentativa #{{attempt}}",
@@ -54,7 +70,7 @@ export const dict = {
 
   "dialog.usageExceeded.freeTier.title": "Limite gratuito atingido",
   "dialog.usageExceeded.freeTier.description":
-    "Assine o Kilo Go para ter acesso confiável aos melhores modelos open-source, a partir de $5/mês.",
+    "Assine o Kilo Go para ter acesso confiável aos melhores modelos open-source, a partir de $5/mês.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "Assinar",
   "dialog.usageExceeded.accountRateLimit.title": "Limite do Go atingido",
   "dialog.usageExceeded.accountRateLimit.description":
@@ -148,6 +164,7 @@ export const dict = {
   "ui.common.close": "Fechar",
   "ui.common.next": "Próximo",
   "ui.common.submit": "Enviar",
+  "ui.common.showMore": "Mostrar mais",
 
   "ui.permission.deny": "Negar",
   "ui.permission.allowAlways": "Permitir sempre",

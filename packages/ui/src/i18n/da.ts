@@ -1,7 +1,7 @@
 export const dict = {
   "ui.sessionReview.title": "Sessionsændringer",
   "ui.sessionReview.title.git": "Git-ændringer",
-  "ui.sessionReview.title.branch": "Branch-ændringer",
+  "ui.sessionReview.title.branch": "Grenændringer",
   "ui.sessionReview.title.lastTurn": "Ændringer fra sidste tur",
   "ui.sessionReview.diffStyle.unified": "Samlet",
   "ui.sessionReview.diffStyle.split": "Opdelt",
@@ -10,7 +10,6 @@ export const dict = {
   "ui.sessionReview.selection.lines": "linjer {{start}}-{{end}}",
   "ui.sessionReview.expandAll": "Udvid alle",
   "ui.sessionReview.collapseAll": "Skjul alle",
-
   "ui.sessionReview.change.added": "Tilføjet",
   "ui.sessionReview.change.removed": "Fjernet",
   "ui.sessionReview.change.modified": "Ændret",
@@ -19,6 +18,22 @@ export const dict = {
   "ui.sessionReview.largeDiff.title": "Diff er for stor til at blive vist",
   "ui.sessionReview.largeDiff.meta": "Grænse: {{limit}} ændrede linjer. Nuværende: {{current}} ændrede linjer.",
   "ui.sessionReview.largeDiff.renderAnyway": "Vis alligevel",
+  "ui.sessionReviewV2.expandMode": "Udvid eller skjul diff",
+  "ui.sessionReviewV2.filterFiles": "Filtrer filer",
+  "ui.sessionReviewV2.toggleSidebar": "Skift filtræ",
+  "ui.sessionReviewV2.showAllLines": "Vis alle linjer",
+  "ui.sessionReviewV2.hideNonDiffLines": "Skjul linjer uden ændringer",
+  "ui.sessionReviewV2.unifiedDiff": "Samlet diff",
+  "ui.sessionReviewV2.splitDiff": "Opdelt diff",
+  "ui.sessionReviewV2.previousFile": "Forrige fil",
+  "ui.sessionReviewV2.nextFile": "Næste fil",
+  "ui.sessionReviewV2.diffView": "Diffvisning",
+  "ui.sessionReviewV2.empty.noGit.title": "Ingen sporede ændringer",
+  "ui.sessionReviewV2.empty.noGit.description": "Spor, gennemgå og fortryd ændringer i dette projekt",
+  "ui.sessionReviewV2.empty.noGit.action": "Opret et Git-repository",
+  "ui.sessionReviewV2.empty.noGit.actionLoading": "Opretter Git-repository...",
+  "ui.sessionReviewV2.empty.changes.title": "Ingen filændringer endnu",
+  "ui.sessionReviewV2.empty.changes.description": "Projektændringer vises her",
   "ui.fileMedia.kind.image": "billede",
   "ui.fileMedia.kind.audio": "lyd",
   "ui.fileMedia.state.removed": "Fjernet: {{kind}}",
@@ -34,6 +49,7 @@ export const dict = {
   "ui.lineComment.editorLabel.suffix": "",
   "ui.lineComment.placeholder": "Tilføj kommentar",
   "ui.lineComment.submit": "Kommenter",
+  "ui.lineComment.cancel": "Annuller",
   "ui.sessionTurn.steps.show": "Vis trin",
   "ui.sessionTurn.steps.hide": "Skjul trin",
   "ui.sessionTurn.summary.response": "Svar",
@@ -41,8 +57,9 @@ export const dict = {
   "ui.sessionTurn.diffs.changed": "Ændret",
   "ui.sessionTurn.diffs.showAll": "Vis alle",
   "ui.sessionTurn.diffs.showLess": "Vis færre",
-  "ui.sessionTurn.diffs.more": "+{{count}} flere filer",
-
+  "ui.sessionTurn.diffs.more": "+{{count}} mere",
+  "ui.sessionTurn.diffs.changed.one": "Ændret fil: {{count}}",
+  "ui.sessionTurn.diffs.changed.other": "Ændrede filer: {{count}}",
   "ui.sessionTurn.retry.retrying": "prøver igen",
   "ui.sessionTurn.retry.inSeconds": "om {{seconds}}s",
   "ui.sessionTurn.retry.attempt": "forsøg #{{attempt}}",
@@ -53,7 +70,7 @@ export const dict = {
 
   "dialog.usageExceeded.freeTier.title": "Gratis grænse nået",
   "dialog.usageExceeded.freeTier.description":
-    "Abonnér på Kilo Go for pålidelig adgang til de bedste open source-modeller, fra $5/måned.",
+    "Abonnér på Kilo Go for pålidelig adgang til de bedste open source-modeller, fra $5/måned.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "Abonnér",
   "dialog.usageExceeded.accountRateLimit.title": "Go-grænse nået",
   "dialog.usageExceeded.accountRateLimit.description":
@@ -147,6 +164,7 @@ export const dict = {
   "ui.common.close": "Luk",
   "ui.common.next": "Næste",
   "ui.common.submit": "Indsend",
+  "ui.common.showMore": "Vis mere",
 
   "ui.permission.deny": "Afvis",
   "ui.permission.allowAlways": "Tillad altid",

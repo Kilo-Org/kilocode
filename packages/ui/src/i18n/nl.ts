@@ -1,3 +1,4 @@
+// kilocode_change - new file
 export const dict: Record<string, string> = {
   "ui.sessionReview.title": "Sessiewijzigingen",
   "ui.sessionReview.title.git": "Git-wijzigingen",
@@ -15,6 +16,22 @@ export const dict: Record<string, string> = {
   "ui.sessionReview.largeDiff.title": "Diff te groot om weer te geven",
   "ui.sessionReview.largeDiff.meta": "Limiet: {{limit}} gewijzigde regels. Huidig: {{current}} gewijzigde regels.",
   "ui.sessionReview.largeDiff.renderAnyway": "Toch weergeven",
+  "ui.sessionReviewV2.expandMode": "Diff uit- of inklappen",
+  "ui.sessionReviewV2.filterFiles": "Bestanden filteren",
+  "ui.sessionReviewV2.toggleSidebar": "Bestandsboom tonen of verbergen",
+  "ui.sessionReviewV2.showAllLines": "Alle regels tonen",
+  "ui.sessionReviewV2.hideNonDiffLines": "Ongewijzigde regels verbergen",
+  "ui.sessionReviewV2.unifiedDiff": "Gecombineerde diff",
+  "ui.sessionReviewV2.splitDiff": "Gesplitste diff",
+  "ui.sessionReviewV2.previousFile": "Vorig bestand",
+  "ui.sessionReviewV2.nextFile": "Volgend bestand",
+  "ui.sessionReviewV2.diffView": "Diffweergave",
+  "ui.sessionReviewV2.empty.noGit.title": "Geen bijgehouden wijzigingen",
+  "ui.sessionReviewV2.empty.noGit.description": "Wijzigingen in dit project bijhouden, beoordelen en ongedaan maken",
+  "ui.sessionReviewV2.empty.noGit.action": "Git-repository maken",
+  "ui.sessionReviewV2.empty.noGit.actionLoading": "Git-repository maken...",
+  "ui.sessionReviewV2.empty.changes.title": "Nog geen bestandswijzigingen",
+  "ui.sessionReviewV2.empty.changes.description": "Projectwijzigingen verschijnen hier",
   "ui.sessionReview.openFile": "Bestand openen",
   "ui.sessionReview.selection.line": "regel {{line}}",
   "ui.sessionReview.selection.lines": "regels {{start}}-{{end}}",
@@ -35,12 +52,15 @@ export const dict: Record<string, string> = {
   "ui.lineComment.editorLabel.suffix": "",
   "ui.lineComment.placeholder": "Opmerking toevoegen",
   "ui.lineComment.submit": "Reageren",
+  "ui.lineComment.cancel": "Annuleren",
 
   "ui.sessionTurn.steps.show": "Stappen tonen",
   "ui.sessionTurn.steps.hide": "Stappen verbergen",
   "ui.sessionTurn.summary.response": "Antwoord",
   "ui.sessionTurn.diff.showMore": "Toon meer wijzigingen ({{count}})",
   "ui.sessionTurn.diffs.changed": "Gewijzigd",
+  "ui.sessionTurn.diffs.changed.one": "{{count}} gewijzigd bestand",
+  "ui.sessionTurn.diffs.changed.other": "{{count}} gewijzigde bestanden",
   "ui.sessionTurn.diffs.showAll": "Alles tonen",
   "ui.sessionTurn.diffs.showLess": "Minder tonen",
   "ui.sessionTurn.diffs.more": "+{{count}} extra bestanden",
@@ -56,7 +76,7 @@ export const dict: Record<string, string> = {
   // kilocode_change start - complete upstream usage-exceeded translations
   "dialog.usageExceeded.freeTier.title": "Gratis limiet bereikt",
   "dialog.usageExceeded.freeTier.description":
-    "Abonneer je op Kilo Go voor betrouwbare toegang tot de beste open-sourcemodellen, vanaf $5 per maand.",
+    "Abonneer je op Kilo Go voor betrouwbare toegang tot de beste open-sourcemodellen, vanaf $5 per maand.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "Abonneren",
   "dialog.usageExceeded.accountRateLimit.title": "Go-limiet bereikt",
   "dialog.usageExceeded.accountRateLimit.description":
@@ -164,6 +184,7 @@ export const dict: Record<string, string> = {
   "ui.common.close": "Sluiten",
   "ui.common.next": "Volgende",
   "ui.common.submit": "Verzenden",
+  "ui.common.showMore": "Meer tonen",
 
   "ui.permission.deny": "Weigeren",
   "ui.permission.allowAlways": "Altijd toestaan",

@@ -18,6 +18,22 @@ export const dict = {
   "ui.sessionReview.largeDiff.title": "Diff كبير جدا لعرضه",
   "ui.sessionReview.largeDiff.meta": "الحد: {{limit}} سطرًا متغيرًا. الحالي: {{current}} سطرًا متغيرًا.",
   "ui.sessionReview.largeDiff.renderAnyway": "اعرض على أي حال",
+  "ui.sessionReviewV2.expandMode": "توسيع الفروقات أو طيها",
+  "ui.sessionReviewV2.filterFiles": "تصفية الملفات",
+  "ui.sessionReviewV2.toggleSidebar": "تبديل شجرة الملفات",
+  "ui.sessionReviewV2.showAllLines": "إظهار جميع الأسطر",
+  "ui.sessionReviewV2.hideNonDiffLines": "إخفاء الأسطر خارج الفروقات",
+  "ui.sessionReviewV2.unifiedDiff": "فروقات موحدة",
+  "ui.sessionReviewV2.splitDiff": "فروقات منقسمة",
+  "ui.sessionReviewV2.previousFile": "الملف السابق",
+  "ui.sessionReviewV2.nextFile": "الملف التالي",
+  "ui.sessionReviewV2.diffView": "عرض الفروقات",
+  "ui.sessionReviewV2.empty.noGit.title": "لا توجد تغييرات متتبعة",
+  "ui.sessionReviewV2.empty.noGit.description": "تتبع التغييرات في هذا المشروع وراجعها وتراجع عنها",
+  "ui.sessionReviewV2.empty.noGit.action": "إنشاء مستودع Git",
+  "ui.sessionReviewV2.empty.noGit.actionLoading": "جارٍ إنشاء مستودع Git...",
+  "ui.sessionReviewV2.empty.changes.title": "لا توجد تغييرات في الملفات بعد",
+  "ui.sessionReviewV2.empty.changes.description": "ستظهر تغييرات المشروع هنا",
   "ui.fileMedia.kind.image": "صورة",
   "ui.fileMedia.kind.audio": "صوت",
   "ui.fileMedia.state.removed": "تمت إزالة {{kind}}",
@@ -34,6 +50,7 @@ export const dict = {
   "ui.lineComment.editorLabel.suffix": "",
   "ui.lineComment.placeholder": "أضف تعليقًا",
   "ui.lineComment.submit": "تعليق",
+  "ui.lineComment.cancel": "إلغاء",
 
   "ui.sessionTurn.steps.show": "إظهار الخطوات",
   "ui.sessionTurn.steps.hide": "إخفاء الخطوات",
@@ -42,8 +59,9 @@ export const dict = {
   "ui.sessionTurn.diffs.changed": "تم التغيير",
   "ui.sessionTurn.diffs.showAll": "إظهار الكل",
   "ui.sessionTurn.diffs.showLess": "إظهار أقل",
-  "ui.sessionTurn.diffs.more": "+{{count}} ملفات أخرى",
-
+  "ui.sessionTurn.diffs.more": "ملفات إضافية: {{count}}",
+  "ui.sessionTurn.diffs.changed.one": "ملف معدل: {{count}}",
+  "ui.sessionTurn.diffs.changed.other": "الملفات المعدلة: {{count}}",
   "ui.sessionTurn.retry.retrying": "إعادة المحاولة",
   "ui.sessionTurn.retry.inSeconds": "خلال {{seconds}} ثواني",
   "ui.sessionTurn.retry.attempt": "المحاولة رقم {{attempt}}",
@@ -54,7 +72,7 @@ export const dict = {
 
   "dialog.usageExceeded.freeTier.title": "تم الوصول إلى الحد المجاني",
   "dialog.usageExceeded.freeTier.description":
-    "اشترك في Kilo Go للحصول على وصول موثوق إلى أفضل النماذج مفتوحة المصدر، ابتداءً من $5/شهر.",
+    "اشترك في Kilo Go للحصول على وصول موثوق إلى أفضل النماذج مفتوحة المصدر، ابتداءً من $5/شهر.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "اشترك",
   "dialog.usageExceeded.accountRateLimit.title": "تم الوصول إلى حد Go",
   "dialog.usageExceeded.accountRateLimit.description":
@@ -148,6 +166,7 @@ export const dict = {
   "ui.common.close": "إغلاق",
   "ui.common.next": "التالي",
   "ui.common.submit": "إرسال",
+  "ui.common.showMore": "عرض المزيد",
 
   "ui.permission.deny": "رفض",
   "ui.permission.allowAlways": "السماح دائمًا",

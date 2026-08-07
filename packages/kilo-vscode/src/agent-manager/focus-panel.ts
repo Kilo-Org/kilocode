@@ -6,3 +6,13 @@ export function focusPanelPrompt(panel: PanelContext, ready: Promise<boolean>, a
     panel.postMessage({ type: "action", action: "focusInput" })
   })
 }
+
+export function revealPanel(
+  panel: PanelContext,
+  preserve: boolean | undefined,
+  ready: Promise<boolean>,
+  active: Promise<boolean>,
+): void {
+  panel.reveal(preserve)
+  if (!preserve) focusPanelPrompt(panel, ready, active)
+}
