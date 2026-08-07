@@ -210,7 +210,7 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
             updates.push(
               sdk.client.config.overlayUpdate({
                 scope: "project",
-                unset: ["privacy_mode"],
+                unset: [["privacy_mode"]],
               }),
             )
           }

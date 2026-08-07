@@ -1,7 +1,7 @@
 import { describe, expect } from "bun:test"
 import fs from "fs/promises"
 import path from "path"
-import { pathToFileURL } from "url"
+import { fileURLToPath, pathToFileURL } from "url" // kilocode_change
 import { Effect, Layer } from "effect"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
@@ -100,6 +100,30 @@ describe("RepositoryCache", () => {
       }).pipe(Effect.provide(cacheLayer(fixture.root))),
     ),
   )
+
+  // kilocode_change start - regression test for canonicalized file remote origin reuse
+  it.live("reuses an existing checkout when file remote origin uses a symlinked or alternate spelling", () =>
+    withRemote((fixture) =>
+      Effect.gen(function* () {
+        const cache = yield* RepositoryCache.Service
+        const initial = yield* cache.ensure({ reference: fixture.reference })
+        expect(initial.status).toBe("cloned")
+
+        const originPath = fileURLToPath(fixture.remote)
+        const linkPath = path.join(fixture.root, "origin-link.git")
+        yield* Effect.promise(async () => {
+          await fs.symlink(originPath, linkPath)
+          const linkUrl = pathToFileURL(linkPath).toString()
+          await git(initial.localPath, "config", "remote.origin.url", linkUrl)
+        })
+
+        const reused = yield* cache.ensure({ reference: fixture.reference })
+        expect(reused.status).toBe("cached")
+        expect(reused.localPath).toBe(initial.localPath)
+      }).pipe(Effect.provide(cacheLayer(fixture.root))),
+    ),
+  )
+  // kilocode_change end
 
   it.live("returns typed validation and clone failures", () =>
     withRemote((fixture) =>
