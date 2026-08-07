@@ -117,7 +117,13 @@ export class TerminalManager {
     return { terminalId: params.terminalId, worktreeId: entry.worktreeId, title: entry.title, wsUrl }
   }
 
-  /** Forward a resize event to the backend PTY. Missing terminals are a no-op. */
+  /**
+   * Forward a resize event to the backend PTY.
+   *
+   * If the terminal creation is still in flight, dimensions are queued into
+   * `pending` and applied during PTY initialization before the WebSocket
+   * URL is returned.
+   */
   async resize(terminalId: string, cols: number, rows: number): Promise<void> {
     const entry = this.entries.get(terminalId)
     if (!entry) {

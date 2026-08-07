@@ -628,9 +628,9 @@ function newId(): string {
 }
 
 /**
- * Build the close-terminal handler the main component wires to the
- * close button. Picks the next visible tab before dropping the entry
- * so focus flows naturally; notifies the extension last.
+ * Estimate initial terminal geometry from the current DOM container.
+ * Provides best-effort columns and rows so PTY spawn avoids the default
+ * 80-column line width before the first xterm fit pass commits.
  */
 function measureInitialDimensions(
   placement: TerminalPlacement,
