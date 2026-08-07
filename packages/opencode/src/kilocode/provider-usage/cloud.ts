@@ -1,14 +1,17 @@
 import {
+  fetchAutoTopUpState,
   fetchByokEntries,
   fetchCodingPlanSubscriptions,
   fetchCodingPlanUsage,
+  type AutoTopUpState,
   type ByokEntry,
   type CodingPlanQuotaWindow,
   type CodingPlanSubscription,
 } from "@kilocode/kilo-gateway"
-import type { UsageSnapshot, UsageWindow } from "./schema"
+import type { KiloBilling, UsageSnapshot, UsageWindow } from "./schema"
 
 export interface CloudState {
+  topup: Result<AutoTopUpState>
   plans: Result<CodingPlanSubscription[]>
   byok: Result<ByokEntry[]>
 }
@@ -22,8 +25,12 @@ const safe = async <T>(promise: Promise<T>): Promise<Result<T>> =>
   )
 
 export async function load(token: string): Promise<CloudState> {
-  const [plans, byok] = await Promise.all([safe(fetchCodingPlanSubscriptions(token)), safe(fetchByokEntries(token))])
-  return { plans, byok }
+  const [topup, plans, byok] = await Promise.all([
+    safe(fetchAutoTopUpState(token)),
+    safe(fetchCodingPlanSubscriptions(token)),
+    safe(fetchByokEntries(token)),
+  ])
+  return { topup, plans, byok }
 }
 
 function base() {
@@ -36,6 +43,29 @@ function base() {
 }
 
 const error = (code: string, message: string) => ({ code, message, retryable: true })
+
+// Cloud does not expose the auto-top-up trigger; mirror its fixed $5 threshold for display.
+const AUTO_TOP_UP_THRESHOLD_CENTS = 500
+
+export function billing(state: CloudState): KiloBilling {
+  const url = base()
+  return {
+    topUpUrl: `${url}/credits`,
+    manageUrl: `${url}/subscriptions`,
+    ...(state.topup.ok
+      ? {
+          autoTopUp: {
+            enabled: state.topup.value.enabled,
+            amountCents: state.topup.value.amountCents,
+            thresholdCents: AUTO_TOP_UP_THRESHOLD_CENTS,
+            ...(state.topup.value.paymentMethod?.type && { paymentType: state.topup.value.paymentMethod.type }),
+            ...(state.topup.value.paymentMethod?.brand && { paymentBrand: state.topup.value.paymentMethod.brand }),
+            ...(state.topup.value.paymentMethod?.last4 && { paymentLast4: state.topup.value.paymentMethod.last4 }),
+          },
+        }
+      : { error: error("cloud_auto_top_up_unavailable", "Auto-top-up status is unavailable.") }),
+  }
+}
 
 function installed(subscription: CodingPlanSubscription, state: Result<ByokEntry[]>) {
   if (!state.ok || !subscription.canQueryUsage || !subscription.hasInstalledByokKey) return false

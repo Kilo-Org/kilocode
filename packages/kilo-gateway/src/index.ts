@@ -71,9 +71,11 @@ export {
 } from "./api/modes.js"
 export { fetchKilocodeNotifications, type KilocodeNotification } from "./api/notifications.js"
 export {
+  fetchAutoTopUpState,
   fetchByokEntries,
   fetchCodingPlanSubscriptions,
   fetchCodingPlanUsage,
+  type AutoTopUpState,
   type ByokEntry,
   type CodingPlanSubscription,
   type CodingPlanQuotaWindow,

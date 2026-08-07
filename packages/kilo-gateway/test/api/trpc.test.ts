@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, mock, test } from "bun:test"
 import {
   CloudTrpcError,
+  fetchAutoTopUpState,
   fetchByokEntries,
   fetchCodingPlanSubscriptions,
   fetchCodingPlanUsage,
@@ -94,7 +95,32 @@ describe("Cloud tRPC client", () => {
     expect(call[1].signal).toBeInstanceOf(AbortSignal)
   })
 
-  test("encodes query input", async () => {
+  test("encodes query input and strips sensitive auto-top-up fields", async () => {
+    const fn = mock(() =>
+      Promise.resolve(
+        result({
+          enabled: true,
+          amountCents: 5000,
+          thresholdCents: 500,
+          paymentMethod: {
+            type: "card",
+            brand: "visa",
+            last4: "4242",
+            stripePaymentMethodId: "pm_secret",
+            linkEmail: "private@example.com",
+          },
+        }),
+      ),
+    )
+    global.fetch = fn as unknown as typeof fetch
+
+    const state = await fetchAutoTopUpState("token")
+    expect(state).toEqual({
+      enabled: true,
+      amountCents: 5000,
+      paymentMethod: { type: "card", brand: "visa", last4: "4242" },
+    })
+
     global.fetch = mock(() => Promise.resolve(result([]))) as unknown as typeof fetch
     await fetchByokEntries("token")
     const call = (global.fetch as unknown as { mock: { calls: Array<[string, RequestInit]> } }).mock.calls[0]
@@ -134,7 +160,7 @@ describe("Cloud tRPC client", () => {
       ),
     ) as unknown as typeof fetch
 
-    const error = await fetchCodingPlanSubscriptions("secret-token").catch((value) => value)
+    const error = await fetchAutoTopUpState("secret-token").catch((value) => value)
     expect(error).toBeInstanceOf(CloudTrpcError)
     expect(error).toMatchObject({ kind: "procedure", message: "Kilo Cloud data is temporarily unavailable." })
     // Include non-enumerable Error surfaces that JSON.stringify would omit.
@@ -153,10 +179,10 @@ describe("Cloud tRPC client", () => {
 
   test("maps malformed envelopes and schema failures safely", async () => {
     global.fetch = mock(() => Promise.resolve(new Response("not-json"))) as unknown as typeof fetch
-    await expect(fetchCodingPlanSubscriptions("token")).rejects.toMatchObject({ kind: "protocol" })
+    await expect(fetchAutoTopUpState("token")).rejects.toMatchObject({ kind: "protocol" })
 
-    global.fetch = mock(() => Promise.resolve(result({ status: "unknown" }))) as unknown as typeof fetch
-    await expect(fetchCodingPlanSubscriptions("token")).rejects.toMatchObject({ kind: "schema" })
+    global.fetch = mock(() => Promise.resolve(result({ enabled: "unknown" }))) as unknown as typeof fetch
+    await expect(fetchAutoTopUpState("token")).rejects.toMatchObject({ kind: "schema" })
   })
 
   test.each([

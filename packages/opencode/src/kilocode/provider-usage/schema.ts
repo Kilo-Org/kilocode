@@ -39,8 +39,27 @@ export const UsageSnapshot = Schema.Struct({
 }).annotate({ identifier: "ProviderUsageSnapshot" })
 export type UsageSnapshot = typeof UsageSnapshot.Type
 
+export const AutoTopUp = Schema.Struct({
+  enabled: Schema.Boolean,
+  amountCents: Schema.Finite,
+  thresholdCents: Schema.Finite,
+  paymentType: Schema.optional(Schema.String),
+  paymentBrand: Schema.optional(Schema.String),
+  paymentLast4: Schema.optional(Schema.String),
+}).annotate({ identifier: "ProviderUsageAutoTopUp" })
+export type AutoTopUp = typeof AutoTopUp.Type
+
+export const KiloBilling = Schema.Struct({
+  topUpUrl: Schema.String,
+  manageUrl: Schema.String,
+  autoTopUp: Schema.optional(AutoTopUp),
+  error: Schema.optional(UsageError),
+}).annotate({ identifier: "ProviderUsageKiloBilling" })
+export type KiloBilling = typeof KiloBilling.Type
+
 export const Info = Schema.Struct({
   items: Schema.Array(UsageSnapshot),
+  kiloBilling: Schema.optional(KiloBilling),
   generatedAt: Schema.String,
 }).annotate({ identifier: "ProviderUsage" })
 export type Info = typeof Info.Type

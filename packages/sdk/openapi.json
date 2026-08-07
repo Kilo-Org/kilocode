@@ -38880,6 +38880,50 @@
         ],
         "additionalProperties": false
       },
+      "ProviderUsageAutoTopUp": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "amountCents": {
+            "type": "number"
+          },
+          "thresholdCents": {
+            "type": "number"
+          },
+          "paymentType": {
+            "type": "string"
+          },
+          "paymentBrand": {
+            "type": "string"
+          },
+          "paymentLast4": {
+            "type": "string"
+          }
+        },
+        "required": ["enabled", "amountCents", "thresholdCents"],
+        "additionalProperties": false
+      },
+      "ProviderUsageKiloBilling": {
+        "type": "object",
+        "properties": {
+          "topUpUrl": {
+            "type": "string"
+          },
+          "manageUrl": {
+            "type": "string"
+          },
+          "autoTopUp": {
+            "$ref": "#/components/schemas/ProviderUsageAutoTopUp"
+          },
+          "error": {
+            "$ref": "#/components/schemas/ProviderUsageError"
+          }
+        },
+        "required": ["topUpUrl", "manageUrl"],
+        "additionalProperties": false
+      },
       "ProviderUsage": {
         "type": "object",
         "properties": {
@@ -38888,6 +38932,9 @@
             "items": {
               "$ref": "#/components/schemas/ProviderUsageSnapshot"
             }
+          },
+          "kiloBilling": {
+            "$ref": "#/components/schemas/ProviderUsageKiloBilling"
           },
           "generatedAt": {
             "type": "string"

@@ -5,7 +5,7 @@ import { InstanceState } from "@/effect/instance-state"
 import * as Provider from "@/provider/provider"
 import * as Cloud from "./cloud"
 import { direct } from "@/kilocode/provider/minimax/usage"
-import type { Info, UsageSnapshot } from "./schema"
+import type { Info, KiloBilling, UsageSnapshot } from "./schema"
 
 const successTtl = 60_000
 const errorTtl = 10_000
@@ -24,12 +24,22 @@ export interface AdapterContext {
 
 interface AdapterResult {
   items: ReadonlyArray<UsageSnapshot>
+  kiloBilling?: KiloBilling
 }
 
 export interface ProviderUsageAdapter {
   cachePrefixes: readonly string[]
   cloudScoped?: boolean
   run(ctx: AdapterContext): Promise<AdapterResult>
+}
+
+const billing: ProviderUsageAdapter = {
+  cachePrefixes: [],
+  async run(ctx) {
+    if (!ctx.cloud) return { items: [] }
+    const state = await ctx.cloud()
+    return { items: [], kiloBilling: Cloud.billing(state) }
+  },
 }
 
 const managed: ProviderUsageAdapter = {
@@ -68,7 +78,7 @@ const minimax: ProviderUsageAdapter = {
   },
 }
 
-const registry: readonly ProviderUsageAdapter[] = [managed, minimax]
+const registry: readonly ProviderUsageAdapter[] = [billing, managed, minimax]
 
 export class ServiceError extends Schema.TaggedErrorClass<ServiceError>()("ProviderUsageServiceError", {
   message: Schema.String,
@@ -247,11 +257,13 @@ export const layer = Layer.effect(
           ),
         ),
       )
+      const kiloBilling = results.find((result) => result.kiloBilling)?.kiloBilling
       const stamps = [current.cloud.updatedAt, ...[...current.sources.values()].map((cell) => cell.updatedAt)].filter(
         (value): value is string => value !== undefined,
       )
       return {
         items: results.flatMap((result) => result.items),
+        ...(kiloBilling ? { kiloBilling } : {}),
         generatedAt: stamps.toSorted().at(-1) ?? new Date().toISOString(),
       } satisfies Info
     })

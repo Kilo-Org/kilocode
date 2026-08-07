@@ -76,6 +76,18 @@ const usage: ProviderUsageData = {
       ],
     },
   ],
+  kiloBilling: {
+    topUpUrl: "https://app.kilo.ai/credits",
+    manageUrl: "https://app.kilo.ai/subscriptions",
+    autoTopUp: {
+      enabled: true,
+      amountCents: 5000,
+      thresholdCents: 500,
+      paymentType: "card",
+      paymentBrand: "Visa",
+      paymentLast4: "4242",
+    },
+  },
 }
 
 const directUsage: ProviderUsageData = {

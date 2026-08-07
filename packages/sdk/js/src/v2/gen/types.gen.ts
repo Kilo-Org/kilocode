@@ -4222,8 +4222,25 @@ export type ProviderUsageSnapshot = {
   error?: ProviderUsageError
 }
 
+export type ProviderUsageAutoTopUp = {
+  enabled: boolean
+  amountCents: number
+  thresholdCents: number
+  paymentType?: string
+  paymentBrand?: string
+  paymentLast4?: string
+}
+
+export type ProviderUsageKiloBilling = {
+  topUpUrl: string
+  manageUrl: string
+  autoTopUp?: ProviderUsageAutoTopUp
+  error?: ProviderUsageError
+}
+
 export type ProviderUsage = {
   items: Array<ProviderUsageSnapshot>
+  kiloBilling?: ProviderUsageKiloBilling
   generatedAt: string
 }
 

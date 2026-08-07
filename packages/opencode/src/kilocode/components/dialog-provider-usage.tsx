@@ -62,6 +62,35 @@ function ProviderUsageBody(props: { data: ProviderUsage }) {
       >
         <For each={props.data.items}>{(item) => <Item item={item} />}</For>
       </Show>
+      <Show when={props.data.kiloBilling}>
+        {(billing) => (
+          <box border={true} borderColor={theme.border} paddingLeft={1} paddingRight={1}>
+            <text fg={theme.text} attributes={TextAttributes.BOLD}>
+              Personal top-ups
+            </text>
+            <Show when={billing().autoTopUp}>
+              {(auto) => (
+                <text fg={theme.text}>
+                  Auto-top-up: {auto().enabled ? "On" : "Off"} - ${(auto().amountCents / 100).toFixed(2)} at $
+                  {(auto().thresholdCents / 100).toFixed(2)}
+                  {auto().paymentLast4
+                    ? ` - ${auto().paymentBrand ?? auto().paymentType ?? "payment method"} ending ${auto().paymentLast4}`
+                    : ""}
+                </text>
+              )}
+            </Show>
+            <Show when={billing().error}>{(error) => <text fg={theme.warning}>{error().message}</text>}</Show>
+            <box flexDirection="row" gap={2}>
+              <Link href={billing().topUpUrl} fg={theme.primary}>
+                Add credits
+              </Link>
+              <Link href={billing().manageUrl} fg={theme.primary}>
+                Manage billing
+              </Link>
+            </box>
+          </box>
+        )}
+      </Show>
     </box>
   )
 }
