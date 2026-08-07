@@ -163,6 +163,21 @@ describe("tool parameters", () => {
       expect(parsed.path).toBe("/tmp")
       expect(parsed.include).toBe("*.ts")
     })
+    // kilocode_change start - configurable grep signal controls
+    test("accepts signal controls", () => {
+      expect(parse(Grep, { pattern: "TODO", context: 0, limit: 1, literal: true, ignoreCase: true })).toMatchObject({
+        context: 0,
+        limit: 1,
+        literal: true,
+        ignoreCase: true,
+      })
+    })
+    test("rejects invalid signal controls", () => {
+      expect(accepts(Grep, { pattern: "TODO", context: -1 })).toBe(false)
+      expect(accepts(Grep, { pattern: "TODO", limit: 0 })).toBe(false)
+      expect(accepts(Grep, { pattern: "TODO", limit: 1.5 })).toBe(false)
+    })
+    // kilocode_change end
     test("rejects missing pattern", () => {
       expect(accepts(Grep, {})).toBe(false)
     })

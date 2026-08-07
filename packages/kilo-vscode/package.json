@@ -142,41 +142,6 @@
         "icon": "$(settings-gear)"
       },
       {
-        "command": "kilo-code.new.sidebarTitle.plusButtonClicked",
-        "title": "New Task",
-        "icon": "$(add)"
-      },
-      {
-        "command": "kilo-code.new.sidebarTitle.agentManagerOpen",
-        "title": "Agent Manager",
-        "icon": "$(organization)"
-      },
-      {
-        "command": "kilo-code.new.sidebarTitle.kiloClawOpen",
-        "title": "KiloClaw",
-        "icon": "$(comment-discussion)"
-      },
-      {
-        "command": "kilo-code.new.sidebarTitle.marketplaceButtonClicked",
-        "title": "Marketplace",
-        "icon": "$(extensions)"
-      },
-      {
-        "command": "kilo-code.new.sidebarTitle.historyButtonClicked",
-        "title": "History",
-        "icon": "$(history)"
-      },
-      {
-        "command": "kilo-code.new.sidebarTitle.profileButtonClicked",
-        "title": "Profile",
-        "icon": "$(account)"
-      },
-      {
-        "command": "kilo-code.new.sidebarTitle.settingsButtonClicked",
-        "title": "Settings",
-        "icon": "$(settings-gear)"
-      },
-      {
         "command": "kilo-code.new.openInTab",
         "title": "Open in Tab",
         "category": "Kilo Code",
@@ -248,6 +213,16 @@
       {
         "command": "kilo-code.new.agentManager.nextTab",
         "title": "Agent Manager: Next Tab",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.agentManager.previousTerminal",
+        "title": "Agent Manager: Previous Terminal",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.agentManager.nextTerminal",
+        "title": "Agent Manager: Next Terminal",
         "category": "Kilo Code"
       },
       {
@@ -467,75 +442,11 @@
     "menus": {
       "commandPalette": [
         {
-          "command": "kilo-code.new.sidebarTitle.plusButtonClicked",
-          "when": "false"
-        },
-        {
-          "command": "kilo-code.new.sidebarTitle.historyButtonClicked",
-          "when": "false"
-        },
-        {
-          "command": "kilo-code.new.sidebarTitle.agentManagerOpen",
-          "when": "false"
-        },
-        {
-          "command": "kilo-code.new.sidebarTitle.kiloClawOpen",
-          "when": "false"
-        },
-        {
           "command": "kilo-code.new.agentManager.advancedWorktree",
           "when": "false"
-        },
-        {
-          "command": "kilo-code.new.sidebarTitle.marketplaceButtonClicked",
-          "when": "false"
-        },
-        {
-          "command": "kilo-code.new.sidebarTitle.profileButtonClicked",
-          "when": "false"
-        },
-        {
-          "command": "kilo-code.new.sidebarTitle.settingsButtonClicked",
-          "when": "false"
         }
       ],
-      "view/title": [
-        {
-          "command": "kilo-code.new.sidebarTitle.plusButtonClicked",
-          "group": "navigation@0",
-          "when": "view == kilo-code.SidebarProvider"
-        },
-        {
-          "command": "kilo-code.new.sidebarTitle.historyButtonClicked",
-          "group": "navigation@1",
-          "when": "view == kilo-code.SidebarProvider"
-        },
-        {
-          "command": "kilo-code.new.sidebarTitle.agentManagerOpen",
-          "group": "navigation@2",
-          "when": "view == kilo-code.SidebarProvider"
-        },
-        {
-          "command": "kilo-code.new.sidebarTitle.kiloClawOpen",
-          "group": "navigation@3",
-          "when": "view == kilo-code.SidebarProvider"
-        },
-        {
-          "command": "kilo-code.new.sidebarTitle.marketplaceButtonClicked",
-          "group": "navigation@4",
-          "when": "view == kilo-code.SidebarProvider"
-        },
-        {
-          "command": "kilo-code.new.sidebarTitle.profileButtonClicked",
-          "group": "navigation@5",
-          "when": "view == kilo-code.SidebarProvider"
-        },
-        {
-          "command": "kilo-code.new.sidebarTitle.settingsButtonClicked",
-          "group": "navigation@6",
-          "when": "view == kilo-code.SidebarProvider"
-        }
-      ],
+      "view/title": [],
       "scm/title": [
         {
           "command": "kilo-code.new.generateCommitMessage",
@@ -555,26 +466,6 @@
           "command": "kilo-code.new.openInTab",
           "group": "navigation",
           "when": "true"
-        },
-        {
-          "command": "kilo-code.new.plusButtonClicked",
-          "group": "navigation@0",
-          "when": "activeWebviewPanelId == kilo-code.new.TabPanel"
-        },
-        {
-          "command": "kilo-code.new.historyButtonClicked",
-          "group": "navigation@1",
-          "when": "activeWebviewPanelId == kilo-code.new.TabPanel"
-        },
-        {
-          "command": "kilo-code.new.profileButtonClicked",
-          "group": "navigation@2",
-          "when": "activeWebviewPanelId == kilo-code.new.TabPanel"
-        },
-        {
-          "command": "kilo-code.new.settingsButtonClicked",
-          "group": "navigation@3",
-          "when": "activeWebviewPanelId == kilo-code.new.TabPanel"
         }
       ],
       "editor/context": [
@@ -639,6 +530,11 @@
         "mac": "cmd+shift+g"
       },
       {
+        "command": "-workbench.actions.view.problems",
+        "key": "ctrl+shift+m",
+        "mac": "cmd+shift+m"
+      },
+      {
         "command": "kilo-code.new.agentManagerOpen",
         "key": "ctrl+shift+m",
         "mac": "cmd+shift+m"
@@ -671,6 +567,18 @@
         "command": "kilo-code.new.agentManager.nextTab",
         "key": "ctrl+alt+right",
         "mac": "cmd+alt+right",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.agentManager.previousTerminal",
+        "key": "ctrl+shift+[",
+        "mac": "cmd+shift+[",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.agentManager.nextTerminal",
+        "key": "ctrl+shift+]",
+        "mac": "cmd+shift+]",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {
@@ -1276,6 +1184,7 @@
     "@opencode-ai/ui": "workspace:*",
     "@pierre/diffs": "catalog:",
     "@thisbeyond/solid-dnd": "0.7.5",
+    "@vscode/codicons": "^0.0.44",
     "@xterm/addon-clipboard": "0.2.0",
     "@xterm/addon-fit": "0.11.0",
     "@xterm/addon-unicode-graphemes": "0.4.0",

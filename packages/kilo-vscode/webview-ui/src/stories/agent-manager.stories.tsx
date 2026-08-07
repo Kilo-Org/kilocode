@@ -26,8 +26,16 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { ThinkingSelectorBase } from "../components/shared/ThinkingSelector"
+import { DeferredPopover } from "../components/shared/DeferredPopover"
+import { ProjectSelect } from "../../agent-manager/ProjectSelect"
 import { createSignal, onCleanup, onMount, type JSX } from "solid-js"
-import type { WorktreeFileDiff, WorktreeState, WorktreeGitStats, PRStatus } from "../types/messages"
+import type {
+  AgentProjectSnapshot,
+  WorktreeFileDiff,
+  WorktreeState,
+  WorktreeGitStats,
+  PRStatus,
+} from "../types/messages"
 import type { ReviewComment } from "../../diff-viewer/review-comments"
 import { createModeRouter } from "../../agent-manager/mode-router"
 import "../../agent-manager/agent-manager.css"
@@ -954,6 +962,9 @@ export const SideTerminalPanelEmpty: Story = {
                   state={state}
                   contextKey={() => LOCAL}
                   visible={() => true}
+                  nextKeybind="⌘⇧]"
+                  closeKeybind="⌘W"
+                  onFocusPrompt={() => undefined}
                   onSelect={() => undefined}
                   onClose={() => undefined}
                   onCloseOthers={() => undefined}
@@ -996,6 +1007,9 @@ export const SideTerminalPanelTabs: Story = {
                   state={state}
                   contextKey={() => LOCAL}
                   visible={() => true}
+                  nextKeybind="⌘⇧]"
+                  closeKeybind="⌘W"
+                  onFocusPrompt={() => undefined}
                   onSelect={(id) => state.setSideActive(LOCAL, id)}
                   onClose={() => undefined}
                   onCloseOthers={() => undefined}
@@ -1071,6 +1085,115 @@ export const NewWorktreeVariantDropdown1280: Story = {
         </div>
       </div>
       <VariantPickerOpener />
+    </StoryProviders>
+  ),
+}
+
+const projectPickerProjects: AgentProjectSnapshot[] = [
+  {
+    id: "project-main",
+    root: "/workspace/kilocode",
+    label: "kilocode",
+    pinned: true,
+    active: true,
+    expanded: true,
+    initialized: true,
+    trusted: true,
+    missing: false,
+  },
+  {
+    id: "project-cloud",
+    root: "/workspace/cloud",
+    label: "cloud",
+    pinned: false,
+    active: false,
+    expanded: false,
+    initialized: true,
+    trusted: true,
+    missing: false,
+  },
+  {
+    id: "project-untrusted",
+    root: "/workspace/sample-app",
+    label: "sample-app",
+    pinned: false,
+    active: false,
+    expanded: false,
+    initialized: false,
+    trusted: false,
+    missing: false,
+  },
+]
+
+export const NewWorktreeProjectDropdown: Story = {
+  name: "NewWorktreeDialog — project dropdown open",
+  parameters: { layout: "fullscreen" },
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ height: "100vh", display: "flex", "flex-direction": "column" }}>
+        <div data-component="dialog" data-fit="true">
+          <div data-slot="dialog-container">
+            <div data-slot="dialog-content">
+              <div data-slot="dialog-header">
+                <div data-slot="dialog-title">New Worktree</div>
+              </div>
+              <div data-slot="dialog-body">
+                <div class="am-tab-switcher">
+                  <button class="am-tab-switcher-pill am-tab-switcher-pill-active" type="button">
+                    New
+                  </button>
+                  <button class="am-tab-switcher-pill" type="button">
+                    Import
+                  </button>
+                  <div class="am-nv-project-inline">
+                    <div class="am-selector-wrapper">
+                      <DeferredPopover
+                        open
+                        onOpenChange={() => undefined}
+                        placement="bottom-start"
+                        flip={false}
+                        sameWidth
+                        portal={false}
+                        deferDismiss
+                        class="am-dropdown"
+                        trigger={
+                          <button class="am-selector-trigger" type="button" aria-label="Select project">
+                            <span class="am-selector-left">
+                              <Icon name="folder" size="small" />
+                              <span class="am-selector-value">kilocode</span>
+                            </span>
+                            <span class="am-selector-right">
+                              <Icon name="selector" size="small" />
+                            </span>
+                          </button>
+                        }
+                      >
+                        <ProjectSelect
+                          projects={projectPickerProjects}
+                          selected="project-main"
+                          onSelect={() => undefined}
+                          labels={{
+                            untrusted: "Trust this project in the sidebar first",
+                            missing: "Repository not found",
+                          }}
+                        />
+                      </DeferredPopover>
+                    </div>
+                  </div>
+                </div>
+                <div class="am-nv-dialog" style={{ "max-height": "520px" }}>
+                  <div class="am-nv-dialog-content">
+                    <div style={{ height: "420px", "flex-shrink": 0 }} />
+                    <div class="am-nv-version-bar">
+                      <span class="am-nv-config-label">VERSIONS</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </StoryProviders>
   ),
 }
@@ -1198,12 +1321,7 @@ export const SidebarSearchOpen: Story = {
 // ---------------------------------------------------------------------------
 
 import { ProjectList } from "../../agent-manager/ProjectList"
-import type {
-  AgentManagerStateMessage,
-  AgentProjectSnapshot,
-  LocalGitStats,
-  ProjectSessionInfo,
-} from "../types/messages"
+import type { AgentManagerStateMessage, LocalGitStats, ProjectSessionInfo } from "../types/messages"
 
 const projectA: AgentProjectSnapshot = {
   id: "prj-aaaa1111aaaa",

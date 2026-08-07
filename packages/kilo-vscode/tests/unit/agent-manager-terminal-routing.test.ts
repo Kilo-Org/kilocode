@@ -12,9 +12,13 @@ function wait() {
 describe("Agent Manager terminal routing", () => {
   it("round-trips side placement and rejects missing worktrees", async () => {
     const messages: AgentManagerOutMessage[] = []
+    const envs: Array<Record<string, string> | undefined> = []
     const client = {
       pty: {
-        create: async () => ({ data: { id: "pty-1", title: "Terminal 1" } }),
+        create: async ({ env }: { env?: Record<string, string> }) => {
+          envs.push(env)
+          return { data: { id: "pty-1", title: "Terminal 1" } }
+        },
         remove: async () => ({ data: true }),
         update: async () => ({ data: true }),
       },
@@ -46,6 +50,10 @@ describe("Agent Manager terminal routing", () => {
       worktreeId: "wt-1",
       projectId: "prj-1",
     })
+    expect(envs[0]).toEqual({ KILO_UNICODE_LOGO: "0" })
+    router.handle({ type: "agentManager.terminal.restart", terminalId: "side-1" })
+    await wait()
+    expect(envs[1]).toEqual({ KILO_UNICODE_LOGO: "0" })
 
     router.handle({
       type: "agentManager.terminal.create",
@@ -53,7 +61,9 @@ describe("Agent Manager terminal routing", () => {
       placement: "side",
       worktreeId: "missing",
     })
-    expect(messages[1]).toMatchObject({
+    expect(
+      messages.find((message) => message.type === "agentManager.terminal.error" && message.createId === "side-missing"),
+    ).toMatchObject({
       type: "agentManager.terminal.error",
       createId: "side-missing",
     })

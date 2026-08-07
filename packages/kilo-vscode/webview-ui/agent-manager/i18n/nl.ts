@@ -106,7 +106,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "Volgend tabblad",
   "agentManager.shortcuts.newTab": "Nieuw tabblad",
   "agentManager.shortcuts.closeTab": "Tabblad sluiten",
-  "agentManager.shortcuts.toggleTerminal": "Terminal in-/uitschakelen",
+  "agentManager.shortcuts.toggleTerminal": "Terminal focussen / verbergen",
   "agentManager.shortcuts.runScript": "Script uitvoeren",
   "agentManager.run.options": "Uitvoeropties",
   "agentManager.run.configure": "Uitvoerscript configureren",
@@ -122,6 +122,9 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.cancel": "Annuleren",
   "agentManager.dialog.removeStaleWorktree.confirm": "Verouderde worktree verwijderen",
 
+  "agentManager.dialog.project.select": "Project selecteren",
+  "agentManager.dialog.project.untrusted": "Vertrouw dit project eerst in de zijbalk",
+  "agentManager.dialog.project.missing": "Repository niet gevonden",
   "agentManager.dialog.openWorktree": "Nieuwe worktree",
   "agentManager.dialog.configureWorktree": "Nieuwe Worktree Configureren...",
   "agentManager.dialog.tab.new": "Nieuw",

@@ -1,11 +1,15 @@
 import path from "path"
+import { Database as SQLite } from "bun:sqlite" // kilocode_change
 import { describe, expect } from "bun:test"
+import { eq } from "drizzle-orm" // kilocode_change
 import { Effect, Layer } from "effect"
 import { Credential } from "@opencode-ai/core/credential"
+import { CredentialTable } from "@opencode-ai/core/credential/sql" // kilocode_change
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Integration } from "@opencode-ai/core/integration"
 // kilocode_change start
 import { Database } from "@opencode-ai/core/database/database"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Global } from "@opencode-ai/core/global"
 // kilocode_change end
 import { tmpdir } from "./fixture/tmpdir"
@@ -19,6 +23,16 @@ function localLayer(directory: string) {
     Layer.fresh, // kilocode_change - rebuild so process-local credentials are re-read
   )
 }
+
+// kilocode_change start
+function importer(dir: string, store: Database.Interface) {
+  return Credential.legacyImportLayer.pipe(
+    Layer.provide(Layer.succeed(Database.Service, store)),
+    Layer.provide(FSUtil.defaultLayer),
+    Layer.provide(Global.layerWith({ data: dir })),
+  )
+}
+// kilocode_change end
 
 describe("Credential", () => {
   it.live("stores, updates, lists, and removes credentials", () =>
@@ -193,6 +207,70 @@ describe("Credential", () => {
           expect(after.azure[0]?.value).toMatchObject({ type: "key", key: "updated" })
         }),
       ),
+    ),
+  )
+
+  it.live("skips unchanged legacy writes and defers locked reconciliation", () =>
+    Effect.acquireUseRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => {
+        const file = path.join(tmp.path, "credential.db")
+        const auth = path.join(tmp.path, "auth.json")
+        const write = (key: string) =>
+          Effect.promise(() => Bun.write(auth, JSON.stringify({ kilo: { type: "api", key } })))
+        return Effect.gen(function* () {
+          yield* write("first")
+          const store = yield* Database.Service
+          const layer = importer(tmp.path, store)
+          yield* Layer.build(Layer.fresh(layer))
+
+          const before = yield* store.db
+            .select()
+            .from(CredentialTable)
+            .where(eq(CredentialTable.integration_id, Integration.ID.make("kilo")))
+            .get()
+          yield* Layer.build(Layer.fresh(layer))
+          const unchanged = yield* store.db
+            .select()
+            .from(CredentialTable)
+            .where(eq(CredentialTable.integration_id, Integration.ID.make("kilo")))
+            .get()
+          expect(unchanged?.time_updated).toBe(before?.time_updated)
+
+          yield* write("second")
+          yield* store.db.run("PRAGMA busy_timeout = 0")
+          yield* Effect.acquireUseRelease(
+            Effect.sync(() => {
+              const holder = new SQLite(file)
+              holder.run("PRAGMA busy_timeout = 0")
+              holder.run("BEGIN IMMEDIATE")
+              return holder
+            }),
+            () => Layer.build(Layer.fresh(layer)),
+            (holder) =>
+              Effect.sync(() => {
+                if (holder.inTransaction) holder.run("ROLLBACK")
+                holder.close()
+              }),
+          )
+
+          const stale = yield* store.db
+            .select()
+            .from(CredentialTable)
+            .where(eq(CredentialTable.integration_id, Integration.ID.make("kilo")))
+            .get()
+          expect(stale?.value).toMatchObject({ type: "key", key: "first" })
+
+          yield* Layer.build(Layer.fresh(layer))
+          const reconciled = yield* store.db
+            .select()
+            .from(CredentialTable)
+            .where(eq(CredentialTable.integration_id, Integration.ID.make("kilo")))
+            .get()
+          expect(reconciled?.value).toMatchObject({ type: "key", key: "second" })
+        }).pipe(Effect.provide(Database.layerFromPath(file)), Effect.scoped)
+      },
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
     ),
   )
 

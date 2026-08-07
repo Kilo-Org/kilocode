@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 import { $ } from "bun"
+import { createHash } from "node:crypto"
 import { join, relative, dirname, basename } from "node:path"
 import { chmodSync, statSync, rmSync, readdirSync, existsSync } from "node:fs"
 import {
@@ -15,6 +16,7 @@ import { currentBwrapTarget, ensureBwrapForTarget } from "./bwrap-helper"
 import { currentFfmpegTarget, ensureFfmpegForTarget } from "./ffmpeg-helper"
 
 const forceRebuild = process.argv.includes("--force")
+const compiledOnly = process.argv.includes("--compiled")
 
 /**
  * Ensures the VS Code extension has a CLI binary at `packages/kilo-vscode/bin/kilo`.
@@ -32,62 +34,152 @@ const kiloVscodeDir = join(import.meta.dir, "..")
 const packagesDir = join(kiloVscodeDir, "..")
 const repoDir = join(packagesDir, "..")
 const opencodeDir = join(packagesDir, "opencode")
-const coreDir = join(packagesDir, "core")
-const gatewayDir = join(packagesDir, "kilo-gateway")
-const indexingDir = join(packagesDir, "kilo-indexing")
 const sandboxDir = join(packagesDir, "kilo-sandbox")
+const rootFile = join(repoDir, "package.json")
 
 const targetBinDir = join(kiloVscodeDir, "bin")
 const binName = process.platform === "win32" ? "kilo.exe" : "kilo"
 const targetBinPath = join(targetBinDir, binName)
-const versionFile = join(targetBinDir, ".cli-version")
+const versionFile = join(kiloVscodeDir, "node_modules", ".kilo-cli-version")
 
 function log(msg: string) {
   console.log(`[local-bin] ${msg}`)
 }
 
-async function cliSourceHash(): Promise<string | null> {
+type Package = {
+  name?: string
+  workspaces?: string[] | { packages?: string[] }
+  dependencies?: Record<string, string>
+  devDependencies?: Record<string, string>
+  optionalDependencies?: Record<string, string>
+  peerDependencies?: Record<string, string>
+}
+
+async function cliInputs() {
+  const root: Package = await Bun.file(rootFile).json()
+  const workspaces = Array.isArray(root.workspaces) ? root.workspaces : (root.workspaces?.packages ?? [])
+  const files = (
+    await Promise.all(
+      workspaces.map((pattern) =>
+        Array.fromAsync(new Bun.Glob(`${pattern}/package.json`).scan({ cwd: repoDir, onlyFiles: true })),
+      ),
+    )
+  ).flat()
+  const entries = await Promise.all(
+    files.map(async (file) => ({ file, pkg: (await Bun.file(join(repoDir, file)).json()) as Package })),
+  )
+  const packages = new Map(entries.flatMap((entry) => (entry.pkg.name ? [[entry.pkg.name, entry] as const] : [])))
+  const dirs = new Set<string>()
+
+  function visit(name: string) {
+    const entry = packages.get(name)
+    if (!entry) return
+    const dir = dirname(entry.file)
+    if (dirs.has(dir)) return
+    dirs.add(dir)
+    const deps = {
+      ...entry.pkg.dependencies,
+      ...entry.pkg.devDependencies,
+      ...entry.pkg.optionalDependencies,
+      ...entry.pkg.peerDependencies,
+    }
+    for (const dep of Object.keys(deps)) visit(dep)
+  }
+
+  // The CLI build embeds the console even though it is not a package dependency.
+  for (const dir of [opencodeDir, join(packagesDir, "kilo-console")]) {
+    const pkg: Package = await Bun.file(join(dir, "package.json")).json()
+    if (!pkg.name) throw new Error(`Workspace package at ${dir} has no name`)
+    visit(pkg.name)
+  }
+
+  return [
+    relative(repoDir, rootFile),
+    "bun.lock",
+    "patches",
+    ...[...dirs].sort(),
+    "packages/kilo-vscode/script/bwrap-helper.ts",
+    "packages/kilo-vscode/script/ffmpeg-helper.ts",
+    "packages/kilo-vscode/script/local-bin.ts",
+    "packages/kilo-vscode/src/services/cli-backend/cli-resources.ts",
+  ]
+}
+
+async function cliSourceHash() {
   try {
-    const opencodeResult = await $`git log -1 --format=%H -- .`.cwd(opencodeDir).quiet()
-    const coreResult = await $`git log -1 --format=%H -- .`.cwd(coreDir).quiet()
-    const gatewayResult = await $`git log -1 --format=%H -- .`.cwd(gatewayDir).quiet()
-    const indexingResult = await $`git log -1 --format=%H -- .`.cwd(indexingDir).quiet()
-    const sandboxResult = await $`git log -1 --format=%H -- .`.cwd(sandboxDir).quiet()
-    return `${opencodeResult.text().trim()}-${coreResult.text().trim()}-${gatewayResult.text().trim()}-${indexingResult.text().trim()}-${sandboxResult.text().trim()}`
-  } catch {
+    const inputs = await cliInputs()
+    const [tree, diff, extra, branch] = await Promise.all([
+      $`git ls-tree -r HEAD -- ${inputs}`.cwd(repoDir).quiet(),
+      $`git diff --binary HEAD -- ${inputs}`.cwd(repoDir).quiet(),
+      $`git ls-files --others --exclude-standard -z -- ${inputs}`.cwd(repoDir).quiet(),
+      $`git branch --show-current`.cwd(repoDir).quiet(),
+    ])
+    const env = Object.fromEntries(
+      [
+        "GH_REPO",
+        "KILO_BUMP",
+        "KILO_BWRAP_CACHE",
+        "KILO_CHANNEL",
+        "KILO_MODELS_URL",
+        "KILO_PRE_RELEASE",
+        "KILO_RELEASE",
+        "KILO_SKIP_BUNDLED_BWRAP",
+        "KILO_VERSION",
+        "MODELS_DEV_API_JSON",
+        "ZIG",
+      ].map((key) => [key, process.env[key] ?? ""]),
+    )
+    const hash = createHash("sha256")
+      .update(tree.text())
+      .update(diff.text())
+      .update(branch.text())
+      .update(JSON.stringify(env))
+    const files = extra.text().split("\0").filter(Boolean).sort()
+
+    for (const file of files) {
+      hash.update(file)
+      hash.update(new Uint8Array(await Bun.file(join(repoDir, file)).arrayBuffer()))
+    }
+
+    const models = process.env.MODELS_DEV_API_JSON
+    if (models) hash.update(new Uint8Array(await Bun.file(models).arrayBuffer()))
+    return hash.digest("hex")
+  } catch (err) {
+    log(`Could not determine CLI source hash: ${err instanceof Error ? err.message : String(err)}`)
     return null
   }
 }
 
-async function isDirty(): Promise<boolean> {
-  try {
-    const opencodeResult = await $`git status --porcelain -- .`.cwd(opencodeDir).quiet()
-    const coreResult = await $`git status --porcelain -- .`.cwd(coreDir).quiet()
-    const gatewayResult = await $`git status --porcelain -- .`.cwd(gatewayDir).quiet()
-    const indexingResult = await $`git status --porcelain -- .`.cwd(indexingDir).quiet()
-    const sandboxResult = await $`git status --porcelain -- .`.cwd(sandboxDir).quiet()
-    return (
-      opencodeResult.text().trim().length > 0 ||
-      coreResult.text().trim().length > 0 ||
-      gatewayResult.text().trim().length > 0 ||
-      indexingResult.text().trim().length > 0 ||
-      sandboxResult.text().trim().length > 0
-    )
-  } catch {
-    return false
-  }
-}
-
-async function isStale(): Promise<boolean> {
-  if (await isDirty()) return true
+async function isStale() {
   const hash = await cliSourceHash()
-  if (!hash) return false // can't determine — assume fresh
+  if (!hash) {
+    if (!compiledOnly) return false
+    try {
+      const stored: unknown = await Bun.file(versionFile).json()
+      return Reflect.get(stored, "kind") !== "compiled"
+    } catch {
+      return true
+    }
+  }
   try {
-    const stored = (await Bun.file(versionFile).text()).trim()
-    return stored !== hash
+    const stored: unknown = await Bun.file(versionFile).json()
+    if (!stored || typeof stored !== "object") return true
+    const input = Reflect.get(stored, "input")
+    const target = Reflect.get(stored, "target")
+    const kind = Reflect.get(stored, "kind")
+    return input !== hash || target !== platformTag() || (compiledOnly && kind !== "compiled")
   } catch {
     return true // no version file — treat as stale
   }
+}
+
+async function writeVersion(kind: "compiled" | "wrapper") {
+  const input = await cliSourceHash()
+  if (!input) {
+    rmSync(versionFile, { force: true })
+    return
+  }
+  await Bun.write(versionFile, JSON.stringify({ input, target: platformTag(), kind }) + "\n")
 }
 
 function platformTag(): string {
@@ -114,6 +206,8 @@ async function findKiloBinaryInOpencodeDist(): Promise<string | null> {
   } catch {
     // fall through to generic search
   }
+
+  if (compiledOnly) return null
 
   // Fallback: find any dist/**/bin/kilo or kilo.exe
   const queue = [distDir]
@@ -214,14 +308,16 @@ async function writeSourceWrapper() {
   await bundleKiloSandboxWorker()
   await ensureLocalHelpers()
 
-  const hash = await cliSourceHash()
-  if (hash) await Bun.write(versionFile, hash + "\n")
+  await writeVersion("wrapper")
   log(
     `Compiled CLI build failed; wrote source wrapper at ${relative(kiloVscodeDir, targetBinPath)} for local development.`,
   )
 }
 
 async function main() {
+  for (const file of [join(targetBinDir, ".cli-version"), join(targetBinDir, ".ffmpeg-target")]) {
+    rmSync(file, { force: true })
+  }
   const targetFile = Bun.file(targetBinPath)
   const exists = await targetFile.exists()
   const ready = exists && hasTreeSitterResources(targetBinPath) && hasKiloSandboxWorker(targetBinPath)
@@ -238,7 +334,7 @@ async function main() {
     return
   }
 
-  if (forceRebuild && !exists) {
+  if ((forceRebuild || compiledOnly) && !ready) {
     removeDist()
   }
 
@@ -256,7 +352,7 @@ async function main() {
   }
 
   const sourceBinPath = await ensureBuiltBinary().catch(async (err) => {
-    if (forceRebuild) throw err
+    if (forceRebuild || compiledOnly) throw err
     await writeSourceWrapper()
     log(`Wrapper fallback reason: ${err instanceof Error ? err.message : String(err)}`)
     return null
@@ -270,8 +366,7 @@ async function main() {
   chmodSync(targetBinPath, 0o755)
   await ensureLocalHelpers()
 
-  const hash = await cliSourceHash()
-  if (hash) await Bun.write(versionFile, hash + "\n")
+  await writeVersion("compiled")
 
   log(`Copied CLI binary from ${relative(packagesDir, sourceBinPath)} -> ${relative(kiloVscodeDir, targetBinPath)}`)
 }

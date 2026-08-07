@@ -158,6 +158,7 @@ export const dict = {
   "model.group.auto": "自动模型",
   "model.group.recommended": "推荐",
   "model.group.favorites": "收藏夹",
+  "model.group.mostUsed": "最常用",
   "model.favorite.add": "添加到收藏夹",
   "model.favorite.remove": "从收藏夹中移除",
 
@@ -300,6 +301,14 @@ export const dict = {
   "session.messages.loadEarlier": "加载更早的消息",
   "session.messages.loading": "正在加载消息...",
 
+  "sidebar.topBar.label": "Kilo Code 导航",
+  "sidebar.topBar.newTask": "新建任务",
+  "sidebar.topBar.history": "历史记录",
+  "sidebar.topBar.agentManager": "代理管理器",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "市场",
+  "sidebar.topBar.profile": "个人资料",
+  "sidebar.topBar.settings": "设置",
   "sidebar.session.newSession": "新会话",
   "sidebar.session.newSession.tooltip": "在保持当前会话完整的同时开始全新的对话。",
   "sidebar.session.newWorktree": "新 Worktree",

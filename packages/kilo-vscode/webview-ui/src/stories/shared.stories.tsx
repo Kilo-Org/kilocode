@@ -131,6 +131,28 @@ export const ModelSelectorSelectedFavorite: Story = {
   },
 }
 
+export const ModelSelectorMostUsed: Story = {
+  name: "ModelSelector - most used suggestions",
+  render: () => {
+    const session = {
+      ...mockSessionValue(),
+      modelUsageHistory: () => ({
+        "kilo/alpha": { count: 3, lastUsed: 100 },
+        "kilo/bravo": { count: 12, lastUsed: 200 },
+        "nvidia/nova": { count: 7, lastUsed: 300 },
+      }),
+    }
+
+    return (
+      <StoryProviders>
+        <SessionContext.Provider value={session as any}>
+          <AccessibleModelSelector />
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
 const LARGE_MODELS: EnrichedModel[] = Array.from({ length: 600 }, (_, i) => {
   const id = String(i).padStart(3, "0")
   const provider = `provider-${i % 12}`

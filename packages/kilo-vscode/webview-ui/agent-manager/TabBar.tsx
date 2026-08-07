@@ -57,6 +57,7 @@ export interface TabBarProps {
   onToggleReview: () => void
   terminalDestination: () => TerminalDestination
   terminalDestinationActive: () => boolean
+  terminalDestinationFocused: () => boolean
   terminalKeybind: () => string
   onTerminalDestinationOpen: () => void
   onTerminalDestinationChoose: (destination: TerminalDestination) => void
@@ -253,12 +254,13 @@ export const TabBar: Component<TabBarProps> = (props) => (
             </Tooltip>
           </Show>
           {/* Terminal destination split button: the primary action
-              follows the user's setting (VS Code integrated terminal
-              or the embedded side panel), the dropdown picks which.
-              Cmd+Shift+T still creates an xterm tab via the `+` menu. */}
+               follows the user's setting (VS Code integrated terminal
+               or the embedded side panel), the dropdown picks which.
+               Cmd+Shift+T creates a terminal in the active terminal container. */}
           <TerminalDestinationButton
             destination={props.terminalDestination}
             active={props.terminalDestinationActive}
+            focused={props.terminalDestinationFocused}
             keybind={props.terminalKeybind}
             onOpen={props.onTerminalDestinationOpen}
             onChoose={props.onTerminalDestinationChoose}

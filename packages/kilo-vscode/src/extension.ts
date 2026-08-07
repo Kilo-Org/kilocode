@@ -18,7 +18,7 @@ import { AutocompleteServiceManager } from "./services/autocomplete/Autocomplete
 import { AttentionService } from "./services/attention"
 import { CaffeinationService } from "./services/caffeination"
 import { BrowserAutomationService } from "./services/browser-automation"
-import { TelemetryEventName, TelemetryProxy } from "./services/telemetry"
+import { TelemetryProxy } from "./services/telemetry"
 import { registerCommitMessageService } from "./services/commit-message"
 import { registerCodeActions, registerTerminalActions, KiloCodeActionProvider } from "./services/code-actions"
 import { registerToggleAutoApprove } from "./commands/toggle-auto-approve"
@@ -26,6 +26,7 @@ import { registerHeapSnapshot } from "./commands/heap-snapshot"
 import { RemoteStatusService } from "./services/RemoteStatusService"
 import { markWorkspace } from "./util/spotlight"
 import { createNotebookBridge } from "./services/notebook"
+import { createGitExecutable } from "./util/git-executable"
 
 let agentManager: AgentManagerProvider | undefined
 let caffeination: CaffeinationService | undefined
@@ -141,7 +142,12 @@ export function activate(context: vscode.ExtensionContext) {
   // The terminal intercepts all keystrokes unless the command is listed in
   // terminal.integrated.commandsToSkipShell, which only contains built-in
   // commands by default.
-  const skip = ["kilo-code.new.agentManagerOpen", "kilo-code.new.agentManager.showTerminal"]
+  const skip = [
+    "kilo-code.new.agentManagerOpen",
+    "kilo-code.new.agentManager.showTerminal",
+    "kilo-code.new.agentManager.previousTerminal",
+    "kilo-code.new.agentManager.nextTerminal",
+  ]
   if (process.platform === "darwin") skip.push("kilo-code.new.agentManager.runScript")
   ensureCommandsSkipShell(skip)
 
@@ -152,7 +158,10 @@ export function activate(context: vscode.ExtensionContext) {
   // Create Agent Manager provider for editor panel
   const agentManagerHost = new VscodeHost(context.extensionUri, connectionService, context, remoteService)
   caffeination = new CaffeinationService()
-  const agentManagerProvider = new AgentManagerProvider(agentManagerHost, connectionService, caffeination)
+  const git = createGitExecutable({
+    log: (message) => console.warn(`[Kilo New] ${message}`),
+  })
+  const agentManagerProvider = new AgentManagerProvider(agentManagerHost, connectionService, caffeination, git)
   agentManagerProvider.onPanelVisibilityChange((visible) => remember({ agentManager: visible }))
   agentManager = agentManagerProvider
   context.subscriptions.push(agentManagerProvider)
@@ -231,6 +240,7 @@ export function activate(context: vscode.ExtensionContext) {
       deserializeWebviewPanel(panel: vscode.WebviewPanel) {
         const tabProvider = new KiloProvider(context.extensionUri, connectionService, context, {
           tabTitle: panelTitleHandler(panel),
+          topBarSurface: "tab",
         })
         tabProvider.setRemoteService(remoteService)
         tabProvider.setAutoApproveController(autoApprove)
@@ -332,39 +342,8 @@ export function activate(context: vscode.ExtensionContext) {
     }),
   )
 
-  // Sidebar menus use wrapper commands so this event measures real title button presses,
-  // not programmatic opens, shortcuts, or editor title commands.
-  const track = (button: string, command: string) => {
-    TelemetryProxy.capture(TelemetryEventName.TITLE_BUTTON_CLICKED, {
-      button,
-      surface: "sidebar_title",
-    })
-    void vscode.commands.executeCommand(command)
-  }
-
   // Register toolbar button command handlers
   context.subscriptions.push(
-    vscode.commands.registerCommand("kilo-code.new.sidebarTitle.plusButtonClicked", () => {
-      track("new_task", "kilo-code.new.plusButtonClicked")
-    }),
-    vscode.commands.registerCommand("kilo-code.new.sidebarTitle.historyButtonClicked", () => {
-      track("history", "kilo-code.new.historyButtonClicked")
-    }),
-    vscode.commands.registerCommand("kilo-code.new.sidebarTitle.agentManagerOpen", () => {
-      track("agent_manager", "kilo-code.new.agentManagerOpen")
-    }),
-    vscode.commands.registerCommand("kilo-code.new.sidebarTitle.kiloClawOpen", () => {
-      track("kiloclaw", "kilo-code.new.kiloClawOpen")
-    }),
-    vscode.commands.registerCommand("kilo-code.new.sidebarTitle.marketplaceButtonClicked", () => {
-      track("marketplace", "kilo-code.new.marketplaceButtonClicked")
-    }),
-    vscode.commands.registerCommand("kilo-code.new.sidebarTitle.profileButtonClicked", () => {
-      track("profile", "kilo-code.new.profileButtonClicked")
-    }),
-    vscode.commands.registerCommand("kilo-code.new.sidebarTitle.settingsButtonClicked", () => {
-      track("settings", "kilo-code.new.settingsButtonClicked")
-    }),
     vscode.commands.registerCommand("kilo-code.new.plusButtonClicked", () => {
       const tab = activeTabProvider()
       if (tab) tab.postMessage({ type: "action", action: "plusButtonClicked" })
@@ -425,9 +404,10 @@ export function activate(context: vscode.ExtensionContext) {
       await target.waitForReady()
       await target.toggleMemory()
     }),
-    vscode.commands.registerCommand("kilo-code.new.toggleCaffeination", () =>
-      caffeination.setEnabled(!caffeination.getState().enabled),
-    ),
+    vscode.commands.registerCommand("kilo-code.new.toggleCaffeination", () => {
+      if (!caffeination) return
+      return caffeination.setEnabled(!caffeination.getState().enabled)
+    }),
     // legacy-migration start
     vscode.commands.registerCommand("kilo-code.new.openMigrationWizard", () => {
       provider.postMessage({ type: "migrationState", needed: true, source: "legacy" })
@@ -477,6 +457,12 @@ export function activate(context: vscode.ExtensionContext) {
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.nextTab", () => {
       agentManagerProvider.postMessage({ type: "action", action: "tabNext" })
+    }),
+    vscode.commands.registerCommand("kilo-code.new.agentManager.previousTerminal", () => {
+      agentManagerProvider.postMessage({ type: "action", action: "terminalPrevious" })
+    }),
+    vscode.commands.registerCommand("kilo-code.new.agentManager.nextTerminal", () => {
+      agentManagerProvider.postMessage({ type: "action", action: "terminalNext" })
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.search", () => {
       agentManagerProvider.postMessage({ type: "action", action: "search" })
@@ -631,6 +617,7 @@ function openKiloInNewTab(
 
   const tabProvider = new KiloProvider(context.extensionUri, connectionService, context, {
     tabTitle: panelTitleHandler(panel),
+    topBarSurface: "tab",
   })
   tabProvider.setRemoteService(remoteService)
   tabProvider.setAutoApproveController(autoApprove)

@@ -120,6 +120,76 @@ class KiloAgentBehaviorRpcApiImplTest {
     }
 
     @Test
+    fun `command files and remove command call CLI endpoints`() = runBlocking {
+        val dir = Files.createTempDirectory("kilo-command-test")
+        val file = Files.createDirectories(dir.resolve("command")).resolve("review.md")
+        Files.writeString(file, "---\ndescription: Review code\n---\n\nReview $" + "ARGUMENTS")
+        mock.commandFiles = """[
+            {"name":"review","description":"Review code","agent":"reviewer","model":"anthropic/claude-sonnet-4-6","variant":"high","source":"command","builtin":false,"location":"$file","editable":true,"content":"Review","subtask":true},
+            {"name":"init","source":"command","builtin":true,"location":"builtin","editable":false,"content":"Init"}
+        ]""".trimIndent()
+        val rpc = rpc()
+
+        val commands = rpc.commandFiles("/test project")
+        assertEquals(listOf("review", "init"), commands.map { it.name })
+        assertEquals(true, commands.single { it.name == "review" }.editable)
+        assertEquals("reviewer", commands.single { it.name == "review" }.agent)
+        assertEquals("anthropic/claude-sonnet-4-6", commands.single { it.name == "review" }.model)
+        assertEquals("high", commands.single { it.name == "review" }.variant)
+        assertEquals(true, commands.single { it.name == "review" }.subtask)
+        assertEquals(false, commands.single { it.name == "init" }.editable)
+
+        assertTrue(rpc.removeCommand("/test project", file.toString()))
+        assertEquals("{\"location\":\"$file\"}", mock.lastCommandRemoveBody)
+        assertEquals(1, mock.requestCount("/kilocode/command/remove"))
+
+        mock.commandRemoveStatus = 400
+        val err = assertFailsWith<RuntimeException> {
+            rpc.removeCommand("/test", "/tmp/missing.md")
+        }
+        assertContains(err.message.orEmpty(), "HTTP 400")
+
+        assertTrue(rpc.reloadCommands("/test project"))
+        assertEquals(1, mock.requestCount("/instance/reload"))
+    }
+
+    @Test
+    fun `save commands validates known and new project command paths`() = runBlocking {
+        val project = Files.createTempDirectory("kilo-command-project")
+        val known = Files.createDirectories(project.resolve(".kilo/command")).resolve("known.md")
+        val added = project.resolve(".kilo/commands/new.md")
+        val other = Files.createTempFile("kilo-command-other", ".md")
+        Files.writeString(known, "old")
+        Files.writeString(other, "old")
+        mock.commandFiles = """[
+            {"name":"known","source":"command","builtin":false,"location":"$known","editable":true,"content":"old"}
+        ]""".trimIndent()
+        val rpc = rpc()
+
+        assertTrue(rpc.saveCommands(project.toString(), mapOf(known.toString() to "new", added.toString() to "created")))
+        assertEquals("new", Files.readString(known))
+        assertEquals("created", Files.readString(added))
+        assertEquals(1, mock.requestCount("/kilocode/command/files"))
+
+        assertFalse(rpc.saveCommands(project.toString(), mapOf(other.toString() to "nope")))
+        assertEquals("old", Files.readString(other))
+    }
+
+    @Test
+    fun `save commands validates new global command paths`() = runBlocking {
+        val project = Files.createTempDirectory("kilo-command-project")
+        val config = Files.createTempDirectory("kilo-command-config")
+        val added = config.resolve("commands/global.md")
+        mock.path = """{"home":"/tmp","state":"/tmp","config":"$config","worktree":"$project","directory":"$project"}"""
+        val rpc = rpc()
+
+        assertTrue(rpc.saveCommands(project.toString(), mapOf(added.toString() to "global command")))
+
+        assertEquals("global command", Files.readString(added))
+        assertEquals(1, mock.requestCount("/path"))
+    }
+
+    @Test
     fun `url cached skills are read only`() = runBlocking {
         val cache = Path.of(System.getProperty("user.home"), ".cache", "kilo", "skills", "remote")
         val file = Files.createDirectories(cache).resolve("SKILL.md")

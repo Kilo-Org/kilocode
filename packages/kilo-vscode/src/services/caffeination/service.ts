@@ -44,7 +44,11 @@ export class CaffeinationService {
   setEnabled(enabled: boolean): Promise<void> {
     if (this.disposed || this.state.enabled === enabled) return this.work
     this.retried = false
-    this.update({ enabled, available: this.driver.available, error: undefined })
+    this.update({
+      enabled,
+      available: this.driver.available,
+      error: this.driver.available ? undefined : this.driver.reason,
+    })
     return this.queue()
   }
 

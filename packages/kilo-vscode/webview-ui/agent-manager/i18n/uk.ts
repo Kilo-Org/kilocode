@@ -108,7 +108,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "Наступна вкладка",
   "agentManager.shortcuts.newTab": "Нова вкладка",
   "agentManager.shortcuts.closeTab": "Закрити вкладку",
-  "agentManager.shortcuts.toggleTerminal": "Перемкнути термінал",
+  "agentManager.shortcuts.toggleTerminal": "Перейти до термінала / приховати термінал",
   "agentManager.shortcuts.runScript": "Запустити скрипт",
   "agentManager.run.options": "Параметри запуску",
   "agentManager.run.configure": "Налаштувати скрипт запуску",
@@ -124,6 +124,9 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.cancel": "Скасувати",
   "agentManager.dialog.removeStaleWorktree.confirm": "Видалити застаріле робоче дерево",
 
+  "agentManager.dialog.project.select": "Вибрати проєкт",
+  "agentManager.dialog.project.untrusted": "Спочатку підтвердьте, що довіряєте цьому проєкту, на бічній панелі",
+  "agentManager.dialog.project.missing": "Репозиторій не знайдено",
   "agentManager.dialog.openWorktree": "Нове робоче дерево",
   "agentManager.dialog.configureWorktree": "Налаштувати нове Worktree...",
   "agentManager.dialog.tab.new": "Нове",

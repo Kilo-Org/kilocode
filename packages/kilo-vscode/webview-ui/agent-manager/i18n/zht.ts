@@ -97,7 +97,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "下一個分頁",
   "agentManager.shortcuts.newTab": "新建分頁",
   "agentManager.shortcuts.closeTab": "關閉分頁",
-  "agentManager.shortcuts.toggleTerminal": "切換終端機",
+  "agentManager.shortcuts.toggleTerminal": "聚焦終端機 / 隱藏終端機",
   "agentManager.shortcuts.runScript": "執行指令碼",
   "agentManager.run.options": "執行選項",
   "agentManager.run.configure": "設定執行指令碼",
@@ -111,6 +111,9 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.cancel": "取消",
   "agentManager.dialog.removeStaleWorktree.confirm": "移除失效 Worktree",
 
+  "agentManager.dialog.project.select": "選擇專案",
+  "agentManager.dialog.project.untrusted": "請先在側邊欄信任此專案",
+  "agentManager.dialog.project.missing": "找不到儲存庫",
   "agentManager.dialog.openWorktree": "新建工作樹",
   "agentManager.dialog.configureWorktree": "配置新 Worktree...",
   "agentManager.dialog.tab.new": "新建",
