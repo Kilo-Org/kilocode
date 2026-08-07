@@ -22,6 +22,7 @@ import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.views.MessageToolbar
 import ai.kilocode.client.session.views.MessageView
+import ai.kilocode.client.session.views.PromptAttachmentView
 import ai.kilocode.client.session.views.TextView
 import ai.kilocode.client.session.views.TurnView
 import ai.kilocode.client.session.views.base.PartView
@@ -809,7 +810,9 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         layout(message)
         val box = promptBox(message)
         val point = SwingUtilities.convertPoint(box, Point(), message)
-        assertTrue("prompt box should be below attachment", point.y > 0)
+        val attachment = components(message).filterIsInstance<PromptAttachmentView>().single()
+        val attachmentPoint = SwingUtilities.convertPoint(attachment, Point(), box)
+        assertTrue("attachment should be inside prompt box below prompt text", attachmentPoint.y > 0)
 
         val image = BufferedImage(message.width, message.height, BufferedImage.TYPE_INT_ARGB)
         val graphics = image.createGraphics()
@@ -818,7 +821,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
 
         val line = SessionUiStyle.View.Outline.color().rgb
         assertEquals(line, Color(image.getRGB(point.x + box.width / 2, point.y), true).rgb)
-        assertFalse(line == Color(image.getRGB(point.x + box.width / 2, 0), true).rgb)
+        assertEquals(line, Color(image.getRGB(point.x + box.width / 2, point.y + box.height - 1), true).rgb)
     }
 
     fun `test created ContentDelta is not double applied`() {
@@ -1635,7 +1638,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
     }
 
     private fun promptBox(root: MessageView): Component {
-        return components(root).first { it.parent != root && it is JPanel && it.componentCount == 1 && it.components.single() is TextView }
+        return components(root).first { it.parent != root && it is JPanel && it.components.any { child -> child is TextView } }
     }
 
     private fun components(root: Component): List<Component> {

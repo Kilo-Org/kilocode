@@ -212,12 +212,11 @@ class MessageView(
             }
         }
         val view = view(content)
-        val item = wrapPrompt(view)
         view.resize = resize
         view.hover = hover
         view.applyStyle(style)
         parts[content.id] = view
-        add(item)
+        wrapPrompt(view)?.let { add(it) }
     }
 
     @RequiresEdt
@@ -227,7 +226,9 @@ class MessageView(
             it.hover = hover
             it.applyStyle(style)
             attachments = it
-            add(it)
+            val node = ensurePromptWrap()
+            promptBox?.add(it, BorderLayout.SOUTH)
+            if (node.parent == null) add(node)
         }
         view.upsert(content)
         parts[content.id] = view
@@ -253,20 +254,19 @@ class MessageView(
 
     @RequiresEdt
     private fun replacePart(content: Content, existing: PartView) {
-        val at = components.indexOfFirst { it === existing }.takeIf { it >= 0 } ?: componentCount
+        val at = components.indexOfFirst { it === existing || it === wrap }.takeIf { it >= 0 } ?: componentCount
         parts.remove(content.id)
         aliases.values.removeAll { it == content.id }
         sources.keys.removeAll { it !in aliases }
-        detach(existing)
-        remove(existing)
+        removeView(existing)
+        if (existing === prompt) prompt = null
         Disposer.dispose(existing)
         val view = view(content)
-        val item = wrapPrompt(view)
         view.resize = resize
         view.hover = hover
         view.applyStyle(style)
         parts[content.id] = view
-        add(item, at)
+        wrapPrompt(view)?.let { add(it, at) }
         syncBorder()
         refresh()
     }
@@ -294,10 +294,11 @@ class MessageView(
         }
         aliases.values.removeAll { it == contentId }
         sources.keys.removeAll { it !in aliases }
-        detach(view)
-        remove(view)
+        removeView(view)
         Disposer.dispose(view)
+        if (view === prompt) prompt = null
         syncBorder()
+        syncPromptWrap()
         refresh()
         return true
     }
@@ -325,10 +326,10 @@ class MessageView(
     @RequiresEdt
     private fun rebuildParts() {
         parts.values.distinct().forEach {
-            detach(it)
-            remove(it)
+            removeView(it)
             Disposer.dispose(it)
         }
+        wrap?.let { remove(it) }
         parts.clear()
         aliases.clear()
         sources.clear()
@@ -442,10 +443,10 @@ class MessageView(
     @RequiresEdt
     override fun dispose() {
         parts.values.forEach {
-            detach(it)
-            remove(it)
+            removeView(it)
             Disposer.dispose(it)
         }
+        wrap?.let { remove(it) }
         parts.clear()
         aliases.clear()
         sources.clear()
@@ -502,19 +503,42 @@ class MessageView(
     }
 
     @RequiresEdt
-    private fun wrapPrompt(view: PartView): JComponent {
+    private fun removeView(view: PartView) {
+        detach(view)
+        view.parent?.remove(view)
+    }
+
+    @RequiresEdt
+    private fun wrapPrompt(view: PartView): JComponent? {
         if (role != SessionUiStyle.View.Message.USER_ROLE) return view
         if (view !is PromptView) return view
         prompt = view
+        val node = ensurePromptWrap()
+        val box = promptBox ?: return node
+        if (view.parent !== box) box.add(view, BorderLayout.CENTER)
+        node.bar.setActive(true)
+        return node.takeIf { it.parent == null }
+    }
+
+    @RequiresEdt
+    private fun ensurePromptWrap(): PromptWrap {
+        val existing = wrap
+        if (existing != null) return existing
         val box = JPanel(BorderLayout()).also {
             it.isOpaque = false
-            it.add(view, BorderLayout.CENTER)
             promptBox = it
         }
-        val node = PromptWrap(box)
-        wrap = node
-        node.bar.setActive(true)
-        return node
+        return PromptWrap(box).also { wrap = it }
+    }
+
+    @RequiresEdt
+    private fun syncPromptWrap() {
+        val node = wrap ?: return
+        val box = promptBox ?: return
+        if (box.componentCount > 0) return
+        node.parent?.remove(node)
+        wrap = null
+        promptBox = null
     }
 
     private inner class PromptWrap(

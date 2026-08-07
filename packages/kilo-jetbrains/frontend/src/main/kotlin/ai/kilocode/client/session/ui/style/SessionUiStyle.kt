@@ -121,6 +121,9 @@ object SessionUiStyle {
             const val CARD_HEIGHT = 59
             const val CLOSE_SIZE = 18
             const val CORNER_ARC = 8
+            const val CHIP_HEIGHT = 28
+            const val CHIP_HORIZONTAL_PADDING = 8
+            const val CHIP_ICON_GAP = 6
         }
 
         /** Full-session file drop overlay geometry and colors. */

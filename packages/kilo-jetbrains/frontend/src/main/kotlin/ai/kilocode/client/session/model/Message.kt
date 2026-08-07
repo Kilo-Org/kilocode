@@ -73,6 +73,8 @@ class FileAttachment(id: String) : Content(id) {
     var url: String = ""
     var filename: String? = null
     var source: PartSourceDto? = null
+    var startLine: Int? = null
+    var endLine: Int? = null
 }
 
 /** Tool invocation with lifecycle state. */

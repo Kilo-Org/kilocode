@@ -4,6 +4,7 @@ import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.session.ui.attachment.AttachmentCard
 import ai.kilocode.client.session.ui.attachment.AttachmentCardItem
+import ai.kilocode.client.session.ui.attachment.AttachmentChip
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.ui.UiStyle
@@ -12,6 +13,8 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import java.awt.Dimension
+import java.net.URI
+import javax.swing.JComponent
 import javax.swing.ScrollPaneConstants
 
 class PromptAttachmentView(
@@ -21,7 +24,7 @@ class PromptAttachmentView(
     override val contentId: String = "attachments:$messageId"
 
     private val items = LinkedHashMap<String, FileAttachment>()
-    private val cards = LinkedHashMap<String, AttachmentCard>()
+    private val cards = LinkedHashMap<String, JComponent>()
     private val row = Stack.horizontal(gap = UiStyle.Gap.sm())
     private val scroll = JBScrollPane(row).apply {
         border = null
@@ -35,9 +38,9 @@ class PromptAttachmentView(
         isOpaque = false
         border = JBUI.Borders.empty(
             0,
-            JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING),
+            0,
             JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING),
-            JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING),
+            0,
         )
         add(scroll)
     }
@@ -111,12 +114,23 @@ class PromptAttachmentView(
         repaint()
     }
 
-    private fun card(item: FileAttachment) = AttachmentCard(
-        AttachmentCardItem(name(item), item.mime, item.url),
-        open = { openAttachment(item) },
-    )
+    private fun card(item: FileAttachment): JComponent {
+        val card = AttachmentCardItem(name(item), item.mime, item.url)
+        if (item.mime.startsWith("image/")) return AttachmentCard(card, open = { openAttachment(item) })
+        return AttachmentChip(card, file = file(item), startLine = item.startLine, endLine = item.endLine, open = { openAttachment(item) })
+    }
 
-    private fun same(a: FileAttachment, b: FileAttachment) = a.mime == b.mime && a.url == b.url && a.filename == b.filename
+    private fun same(a: FileAttachment, b: FileAttachment) = a.mime == b.mime &&
+        a.url == b.url &&
+        a.filename == b.filename &&
+        a.startLine == b.startLine &&
+        a.endLine == b.endLine
+
+    private fun file(item: FileAttachment): Boolean {
+        if (item.source?.path?.isNotBlank() == true) return true
+        val uri = runCatching { URI.create(item.url) }.getOrNull() ?: return false
+        return uri.scheme == "file"
+    }
 
     private fun bar() = scroll.horizontalScrollBar.preferredSize.height
 
