@@ -4539,6 +4539,21 @@
                     "additionalProperties": {
                       "type": "string"
                     }
+                  },
+                  "size": {
+                    "type": "object",
+                    "properties": {
+                      "rows": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      },
+                      "cols": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      }
+                    },
+                    "required": ["rows", "cols"],
+                    "additionalProperties": false
                   }
                 },
                 "additionalProperties": false
@@ -6585,6 +6600,23 @@
             "schema": {
               "type": "string",
               "pattern": "^msg"
+            },
+            "required": false
+          },
+          {
+            "name": "file",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "full",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["true", "false"]
             },
             "required": false
           }
@@ -24318,6 +24350,21 @@
                     "additionalProperties": {
                       "type": "string"
                     }
+                  },
+                  "size": {
+                    "type": "object",
+                    "properties": {
+                      "rows": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      },
+                      "cols": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      }
+                    },
+                    "required": ["rows", "cols"],
+                    "additionalProperties": false
                   }
                 },
                 "additionalProperties": false
@@ -27024,6 +27071,12 @@
             "type": "string"
           },
           "patch": {
+            "type": "string"
+          },
+          "before": {
+            "type": "string"
+          },
+          "after": {
             "type": "string"
           },
           "additions": {
@@ -34498,6 +34551,12 @@
           "patch": {
             "type": "string"
           },
+          "before": {
+            "type": "string"
+          },
+          "after": {
+            "type": "string"
+          },
           "additions": {
             "type": "number"
           },
@@ -34507,12 +34566,6 @@
           "status": {
             "type": "string",
             "enum": ["added", "deleted", "modified"]
-          },
-          "before": {
-            "type": "string"
-          },
-          "after": {
-            "type": "string"
           },
           "tracked": {
             "type": "boolean"
@@ -34527,7 +34580,7 @@
             "type": "string"
           }
         },
-        "required": ["additions", "deletions", "before", "after", "tracked", "generatedLike", "summarized", "stamp"],
+        "required": ["before", "after", "additions", "deletions", "tracked", "generatedLike", "summarized", "stamp"],
         "additionalProperties": false
       },
       "SnapshotSummaryFileDiff": {
