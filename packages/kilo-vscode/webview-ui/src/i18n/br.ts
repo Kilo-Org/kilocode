@@ -162,6 +162,7 @@ export const dict = {
   "model.group.auto": "Modelos automáticos",
   "model.group.recommended": "Recomendado",
   "model.group.favorites": "Favoritos",
+  "model.group.mostUsed": "Mais usados",
   "model.favorite.add": "Adicionar aos favoritos",
   "model.favorite.remove": "Remover dos favoritos",
   "model.preview.label.released": "Lançado",
@@ -315,6 +316,14 @@ export const dict = {
   "session.messages.loadEarlier": "Carregar mensagens anteriores",
   "session.messages.loading": "Carregando mensagens...",
 
+  "sidebar.topBar.label": "Navegação do Kilo Code",
+  "sidebar.topBar.newTask": "Nova Tarefa",
+  "sidebar.topBar.history": "Histórico",
+  "sidebar.topBar.agentManager": "Agent Manager",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "Marketplace",
+  "sidebar.topBar.profile": "Perfil",
+  "sidebar.topBar.settings": "Configurações",
   "sidebar.session.newSession": "Nova Sessão",
   "sidebar.session.newSession.tooltip": "Inicie uma nova conversa mantendo a sessão atual intacta.",
   "sidebar.session.newWorktree": "Novo Worktree",
@@ -894,7 +903,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "Destinos de rede permitidos",
   "settings.sandboxing.allowedHosts.description":
-    "Destinos de host e porta DNS para o tráfego de proxy HTTP e HTTPS em sandbox. GitHub CLI e HTTPS Git geralmente precisam de github.com:443 e api.github.com:443. As alterações se aplicam a novas sessões.",
+    "Destinos de host e porta DNS para o tráfego de proxy HTTP e HTTPS em sandbox. GitHub CLI e HTTPS Git geralmente precisam de github.com:443 e api.github.com:443.",
   "settings.sandboxing.writablePaths.title": "Caminhos graváveis adicionais",
   "settings.sandboxing.writablePaths.description":
     "Caminhos adicionais do sistema de arquivos onde o sandbox permite gravação (por exemplo, /tmp, /var/log). Eles são mesclados com os caminhos graváveis padrão quando o sandbox está ativo.",
@@ -1139,19 +1148,23 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Alternar o esforço de raciocínio com Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Pressione Shift+Tab em um campo de entrada de prompt para alternar para o próximo nível de esforço de raciocínio. Desative para manter Shift+Tab para navegação de foco pelo teclado.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "Blocos de comando do terminal",
+  "settings.display.terminalCommand.description":
+    "Escolha se os blocos de comando do terminal começam expandidos ou recolhidos.",
+  "settings.display.terminalCommand.expanded": "Expandidos",
+  "settings.display.terminalCommand.collapsed": "Recolhidos",
   "settings.display.codeEdit.title": "Blocos de edição de código",
   "settings.display.codeEdit.description":
     "Escolha se os blocos que exibem edições de código e diferenças começam expandidos ou recolhidos.",
   "settings.display.codeEdit.expanded": "Expandidos",
   "settings.display.codeEdit.collapsed": "Recolhidos",
 
-  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.title": "Mostrar taxa de tokens",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+    "Exibe a taxa de geração de texto (tokens/s) na última mensagem do assistente e no cabeçalho da tarefa. Oculto por padrão para manter o chat organizado.",
+  "settings.display.autoApprovalReason.title": "Mostrar motivo da aprovação automática",
+  "settings.display.autoApprovalReason.description":
+    "Mostra uma linha nas chamadas de ferramentas explicando por que foram aprovadas automaticamente (regra correspondente, padrão do agente, modo YOLO, etc.).",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

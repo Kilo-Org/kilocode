@@ -12,9 +12,13 @@ function wait() {
 describe("Agent Manager terminal routing", () => {
   it("round-trips side placement and rejects missing worktrees", async () => {
     const messages: AgentManagerOutMessage[] = []
+    const envs: Array<Record<string, string> | undefined> = []
     const client = {
       pty: {
-        create: async () => ({ data: { id: "pty-1", title: "Terminal 1" } }),
+        create: async ({ env }: { env?: Record<string, string> }) => {
+          envs.push(env)
+          return { data: { id: "pty-1", title: "Terminal 1" } }
+        },
         remove: async () => ({ data: true }),
         update: async () => ({ data: true }),
       },
@@ -46,6 +50,10 @@ describe("Agent Manager terminal routing", () => {
       worktreeId: "wt-1",
       projectId: "prj-1",
     })
+    expect(envs[0]).toEqual({ KILO_UNICODE_LOGO: "0" })
+    router.handle({ type: "agentManager.terminal.restart", terminalId: "side-1" })
+    await wait()
+    expect(envs[1]).toEqual({ KILO_UNICODE_LOGO: "0" })
 
     router.handle({
       type: "agentManager.terminal.create",
@@ -53,7 +61,9 @@ describe("Agent Manager terminal routing", () => {
       placement: "side",
       worktreeId: "missing",
     })
-    expect(messages[1]).toMatchObject({
+    expect(
+      messages.find((message) => message.type === "agentManager.terminal.error" && message.createId === "side-missing"),
+    ).toMatchObject({
       type: "agentManager.terminal.error",
       createId: "side-missing",
     })
@@ -331,6 +341,64 @@ describe("Agent Manager terminal routing", () => {
       terminalId: created.terminalId,
       wsUrl: expect.stringContaining("pty-2"),
     })
+    await router.dispose()
+  })
+
+  it("applies initial create dimensions and queues resize messages before creation settles", async () => {
+    const creates: Array<Record<string, unknown>> = []
+    const updates: Array<{ ptyID: string; size?: { cols: number; rows: number } }> = []
+    let createResolver: ((value: { data: { id: string; title: string } }) => void) | undefined
+    const client = {
+      pty: {
+        create: (params: Record<string, unknown>) =>
+          new Promise<{ data: { id: string; title: string } }>((resolve) => {
+            creates.push(params)
+            createResolver = resolve
+          }),
+        remove: async () => ({ data: true }),
+        update: async (params: { ptyID: string; size?: { cols: number; rows: number } }) => {
+          updates.push(params)
+          return { data: true }
+        },
+      },
+    } as unknown as KiloClient
+    const router = new TerminalRouter({
+      getClient: () => client,
+      getClientAsync: async () => client,
+      getServerConfig: () => ({ baseUrl: "http://127.0.0.1:4096", password: "secret" }),
+      getRoot: () => "/workspace",
+      getWorktreePath: () => undefined,
+      getProjectId: () => "prj-1",
+      log: () => undefined,
+      post: () => undefined,
+      getTerminalFont: () => font,
+    })
+
+    router.handle({
+      type: "agentManager.terminal.create",
+      createId: "queued",
+      placement: "side",
+      worktreeId: null,
+      cols: 60,
+      rows: 20,
+    })
+    await wait()
+    expect(creates).toHaveLength(1)
+    expect(creates[0]?.size).toEqual({ cols: 60, rows: 20 })
+
+    // Send a resize before pty.create settles (optimistic side terminal layout)
+    router.handle({
+      type: "agentManager.terminal.resize",
+      terminalId: "queued",
+      cols: 55,
+      rows: 18,
+    })
+    await wait()
+    expect(updates).toHaveLength(0)
+
+    createResolver?.({ data: { id: "pty-queued", title: "Terminal 1" } })
+    await wait()
+    expect(updates).toEqual([{ directory: "/workspace", ptyID: "pty-queued", size: { cols: 55, rows: 18 } }])
     await router.dispose()
   })
 })

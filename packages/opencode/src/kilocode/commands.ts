@@ -13,7 +13,6 @@ import { AgentCommand } from "../cli/cmd/agent"
 import { UpgradeCommand } from "../cli/cmd/upgrade"
 import { UninstallCommand } from "../cli/cmd/uninstall"
 import { ServeCommand } from "../cli/cmd/serve"
-import { WebCommand } from "../cli/cmd/web"
 import { ModelsCommand } from "../cli/cmd/models"
 import { StatsCommand } from "../cli/cmd/stats"
 import { ExportCommand } from "../cli/cmd/export"
@@ -61,7 +60,6 @@ export const commands = [
   UpgradeCommand,
   UninstallCommand,
   ServeCommand,
-  WebCommand,
   ModelsCommand,
   RollCallCommand,
   ProfileCommand,

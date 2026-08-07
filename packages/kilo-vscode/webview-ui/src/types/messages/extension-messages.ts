@@ -18,7 +18,7 @@ import type { AgentManagerSidebarTarget } from "./webview-messages"
 import type { PermissionRequest } from "./permissions"
 import type { AnacondaDesktopExtensionMessage } from "../../../../src/shared/anaconda-desktop-messages"
 import type { QuestionRequest, SuggestionRequest, TodoItem } from "./questions"
-import type { ModelSelection, Provider, ProviderAuthState } from "./providers"
+import type { ModelSelection, ModelUsageMap, Provider, ProviderAuthState } from "./providers"
 import type { SpeechToTextModelDef } from "../../../../src/speech-to-text/models"
 import type { AgentInfo, AgentRequirementResult, SkillInfo, SlashCommandInfo } from "./agents"
 import type {
@@ -660,6 +660,11 @@ export interface ThroughputSettingLoadedMessage {
   visible: boolean
 }
 
+export interface AutoApprovalReasonSettingLoadedMessage {
+  type: "autoApprovalReasonSettingLoaded"
+  visible: boolean
+}
+
 export interface WorkStyleLoadedMessage {
   type: "workStyleLoaded"
   style: WorkStyleState
@@ -920,6 +925,11 @@ export interface RecentsLoadedMessage {
   recents: ModelSelection[]
 }
 
+export interface ModelUsageLoadedMessage {
+  type: "modelUsageLoaded"
+  usage: ModelUsageMap
+}
+
 // Persisted model-selector expand/collapse preference (extension → webview)
 export interface ModelSelectorExpandedLoadedMessage {
   type: "modelSelectorExpandedLoaded"
@@ -947,6 +957,7 @@ export interface AgentManagerBranchesMessage {
 // Agent Manager Import tab: result feedback (extension → webview)
 export interface AgentManagerImportResultMessage {
   type: "agentManager.importResult"
+  projectId?: string
   success: boolean
   message: string
   errorCode?: WorktreeErrorCode
@@ -1298,6 +1309,7 @@ export type ExtensionMessage =
   | MessagesLoadedMessage
   | SessionModelUsageLoadedMessage
   | SessionModelUsageChangedMessage
+  | ModelUsageLoadedMessage
   | MessageCreatedMessage
   | SessionsLoadedMessage
   | CloudSessionsLoadedMessage
@@ -1352,6 +1364,7 @@ export type ExtensionMessage =
   | NotificationSettingsLoadedMessage
   | TimelineSettingLoadedMessage
   | ThroughputSettingLoadedMessage
+  | AutoApprovalReasonSettingLoadedMessage
   | WorkStyleLoadedMessage
   | WorkStyleAppliedMessage
   | WorkStyleApplyFailedMessage

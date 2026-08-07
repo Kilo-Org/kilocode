@@ -144,7 +144,8 @@ describe("test runner cleanup", () => {
     const stderr = new Response(proc.stderr).text()
 
     try {
-      const code = await deadline(proc.exited, 15_000)
+      const limit = process.platform === "win32" ? 30_000 : 15_000
+      const code = await deadline(proc.exited, limit)
       const output = await Promise.all([stdout, stderr])
       expect(code, output[1] || output[0]).not.toBe(0)
       expect(output[0]).toContain("TIME")
@@ -167,7 +168,7 @@ describe("test runner cleanup", () => {
       await proc.exited
       await fs.rm(file, { force: true })
     }
-  }, 30_000)
+  }, 45_000)
 
   test.skipIf(process.platform === "win32")(
     "bounds inherited output after the test process exits",

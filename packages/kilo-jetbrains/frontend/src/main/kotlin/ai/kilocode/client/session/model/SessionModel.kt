@@ -554,6 +554,7 @@ class SessionModel {
                 source = dto.source
             }
             "tool" -> Tool(dto.id, dto.tool ?: "unknown", toolKind(dto.tool)).apply {
+                messageID = dto.messageID
                 state = parseToolState(dto.state)
                 callId = dto.callID
                 title = dto.title

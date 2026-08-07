@@ -299,6 +299,7 @@ interface BranchesMessage {
 
 interface ImportResultMessage {
   type: "agentManager.importResult"
+  projectId?: string
   success: boolean
   message: string
   errorCode?: WorktreeSetupErrorCode
@@ -945,6 +946,8 @@ interface TerminalCreateIn {
   placement: TerminalPlacement
   /** null for LOCAL, worktree id otherwise */
   worktreeId: string | null
+  cols?: number
+  rows?: number
 }
 
 interface TerminalCloseIn {
