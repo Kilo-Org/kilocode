@@ -47,6 +47,7 @@ bun run merge.ts --version v1.1.50 --base-branch catrielmuller/kilo-opencode-v1.
 | `transforms/preserve-versions.ts` | Preserve Kilo's package versions |
 | `transforms/keep-ours.ts` | Keep Kilo's version of specific files |
 | `transforms/skip-files.ts` | Skip/remove files that shouldn't exist in Kilo |
+| `transforms/remove-kilo-web.ts` | Remove the unsupported embedded web command and warn when upstream reshapes it |
 | `transforms/transform-i18n.ts` | Transform i18n files with Kilo branding |
 | `transforms/transform-take-theirs.ts` | Take upstream + apply Kilo branding for branding-only files |
 | `transforms/transform-package-json.ts` | Enhanced package.json with Kilo dependency injection and newest-Bun-wins reconciliation |
@@ -90,6 +91,7 @@ The merge automation follows this process, applying **all transformations BEFORE
 
 5. **Apply ALL transformations to upstream branch (PRE-MERGE)**:
    - Remove files that should not exist in Kilo (`skipFiles`)
+   - Remove the unsupported embedded web command and its CLI registration
    - Transform package names (opencode-ai -> @kilocode/cli)
    - Preserve Kilo's versions
    - Transform i18n files with Kilo branding
