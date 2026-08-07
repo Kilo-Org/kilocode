@@ -213,12 +213,12 @@ for (const file of Object.keys(allowedToolEnv)) {
 // Rule 5: HttpApi Handler Boundaries (No raw OS operations in Kilo handlers)
 // ---------------------------------------------------------------------------
 
-const handlerGlob = new Bun.Glob("packages/opencode/src/**/server/routes/instance/httpapi/handlers/**/*.ts")
+const handlerGlob = new Bun.Glob("packages/opencode/src/**/httpapi/handlers/**/*.ts")
 for (const file of handlerGlob.scanSync({ cwd: ROOT, onlyFiles: true })) {
   const normPath = file.replaceAll("\\", "/")
   if (!isKiloOwned(normPath)) continue
   const text = await Bun.file(path.join(ROOT, file)).text()
-  if (/\bchild_process\b|\bBun\.spawn\b|from\s+["'](?:node:)?fs(?:\/promises)?["']/.test(text)) {
+  if (/\bchild_process\b|\bBun\.spawn(?:Sync)?\b|from\s+["'](?:node:)?fs(?:\/promises)?["']/.test(text)) {
     violations.push({
       file: normPath,
       rule: "kilo-httpapi-handlers",
