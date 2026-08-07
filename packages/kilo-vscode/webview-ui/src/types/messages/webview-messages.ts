@@ -455,6 +455,10 @@ export interface RequestThroughputSettingMessage {
   type: "requestThroughputSetting"
 }
 
+export interface RequestAutoApprovalReasonSettingMessage {
+  type: "requestAutoApprovalReasonSetting"
+}
+
 export interface RequestWorkStyleMessage {
   type: "requestWorkStyle"
 }
@@ -1439,6 +1443,7 @@ export type WebviewMessage =
   | UpdateSettingRequest
   | RequestTimelineSettingMessage
   | RequestThroughputSettingMessage
+  | RequestAutoApprovalReasonSettingMessage
   | RequestWorkStyleMessage
   | SetWorkStyleMessage
   | ApplyWorkStyleMessage
