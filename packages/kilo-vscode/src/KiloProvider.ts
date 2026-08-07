@@ -317,6 +317,9 @@ type ContextRequestMessage =
   | { type: "requestFilePicker"; requestId: string }
   | { type: "requestTerminalContext"; requestId: string; sessionID?: string }
 
+// Shared per-directory so multiple providers in the same workspace do not duplicate Problems entries.
+const configDiagnosticsByDirectory = new Map<string, vscode.DiagnosticCollection>()
+
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "kilo-code.SidebarProvider"
   private readonly instanceId = crypto.randomUUID()
@@ -364,7 +367,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /** Ref-count of in-flight handleUpdateConfig calls; prevents fetchAndSendConfig from sending stale data */
   private pending = 0
   private configWarningsShown = false
-  private configDiagnostics: vscode.DiagnosticCollection | undefined
   /** Cached notificationsLoaded payload */
   private cachedNotificationsMessage: NotificationsMessage | null = null
   private pendingKiloModel: { modelID?: string; agent?: string } | null = null
@@ -2786,8 +2788,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }>
       console.log("[Kilo New] KiloProvider: config warnings fetched", { from, count: list.length })
 
-      this.configDiagnostics ??= vscode.languages.createDiagnosticCollection("kilo-config")
-      this.configDiagnostics.clear()
+      const dirKey = dir ?? this.getWorkspaceDirectory()
+      const configDiagnostics =
+        configDiagnosticsByDirectory.get(dirKey) ?? vscode.languages.createDiagnosticCollection("kilo-config")
+      configDiagnosticsByDirectory.set(dirKey, configDiagnostics)
+      configDiagnostics.clear()
 
       const byUri = new Map<string, vscode.Diagnostic[]>()
       for (const w of list) {
@@ -2807,7 +2812,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         byUri.set(key, existing)
       }
       for (const [key, diagnostics] of byUri) {
-        this.configDiagnostics.set(vscode.Uri.parse(key), diagnostics)
+        configDiagnostics.set(vscode.Uri.parse(key), diagnostics)
       }
 
       if (list.length === 0) return
@@ -5064,7 +5069,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.requirements.dispose()
     this.ignoreController?.dispose()
     this.chatAutocomplete?.dispose()
-    this.configDiagnostics?.dispose()
     disposeGitChangesTarget()
   }
 }

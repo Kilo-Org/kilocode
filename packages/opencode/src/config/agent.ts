@@ -36,22 +36,13 @@ export async function load(
     // kilocode_change start
     const md = await ConfigMarkdown.parse(item, { trusted, fileScope, sourceScope }).catch(async (err) => {
       // kilocode_change end
-      const message = FrontmatterError.isInstance(err)
-        ? err.data.message
-        : `Failed to parse agent ${item}`
-      // kilocode_change start
-      const warn: Warning = { path: item, message }
-      if (FrontmatterError.isInstance(err)) {
-        warn.line = err.data.line
-        warn.column = err.data.column
-      }
-      if (warnings) warnings.push(warn)
+      const warn = KilocodeConfig.frontmatterWarning(err, item, "agent", warnings)
       try {
         const { capture } = await import("@/kilocode/instance")
         const ctx = capture()
-        if (ctx) await report(ctx, message)
+        if (ctx) await report(ctx, warn.message)
       } catch (error) {
-        log.warn("could not publish session error", { message, err: error })
+        log.warn("could not publish session error", { message: warn.message, err: error })
       }
       // kilocode_change end
       log.error("failed to load agent", { agent: item, err })
@@ -122,22 +113,13 @@ export async function loadMode(
     // kilocode_change start
     const md = await ConfigMarkdown.parse(item, { trusted, fileScope, sourceScope }).catch(async (err) => {
       // kilocode_change end
-      const message = FrontmatterError.isInstance(err)
-        ? err.data.message
-        : `Failed to parse mode ${item}`
-      // kilocode_change start
-      const warn: Warning = { path: item, message }
-      if (FrontmatterError.isInstance(err)) {
-        warn.line = err.data.line
-        warn.column = err.data.column
-      }
-      if (warnings) warnings.push(warn)
+      const warn = KilocodeConfig.frontmatterWarning(err, item, "mode", warnings)
       try {
         const { capture } = await import("@/kilocode/instance")
         const ctx = capture()
-        if (ctx) await report(ctx, message)
+        if (ctx) await report(ctx, warn.message)
       } catch (error) {
-        log.warn("could not publish session error", { message, err: error })
+        log.warn("could not publish session error", { message: warn.message, err: error })
       }
       // kilocode_change end
       log.error("failed to load mode", { mode: item, err })

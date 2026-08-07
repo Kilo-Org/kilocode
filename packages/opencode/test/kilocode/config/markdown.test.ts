@@ -73,7 +73,7 @@ describe("ConfigMarkdown frontmatter diagnostics", () => {
     )
 
     expect(FrontmatterError.isInstance(err)).toBeTrue()
-    expect(err.data.line).toBe(1)
+    expect(err.data.line).toBe(2)
     expect(err.data.column).toBe(5)
     expect(err.data.path).toBe(file)
   })
