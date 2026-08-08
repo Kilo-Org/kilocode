@@ -16,6 +16,7 @@ let mutableVersion = "1"
 let mutableContent = "# Old"
 let mutableDownloadCount = 0
 let mutableFiles = ["SKILL.md"]
+let unversionedContent = "# Initial"
 
 const fixturePath = path.join(import.meta.dir, "../fixture/skills")
 const cacheDir = path.join(Global.Path.cache, "skills")
@@ -28,15 +29,41 @@ beforeAll(async () => {
     port: 0,
     async fetch(req) {
       const url = new URL(req.url)
+      const ifNoneMatch = req.headers.get("If-None-Match")
+
+      const etag = (body: string | ArrayBuffer | Uint8Array) => {
+        const input = typeof body === "string" ? body : new Uint8Array(body)
+        return `"${Bun.hash(input)}"`
+      }
+      const send = (body: string, counter: (() => void) | null = null) => {
+        const tag = etag(body)
+        if (ifNoneMatch === tag) return new Response(null, { status: 304, headers: { ETag: tag } })
+        counter?.()
+        return new Response(body, { headers: { ETag: tag } })
+      }
+      const sendFile = async (fullPath: string, counter: () => void) => {
+        const body = await Bun.file(fullPath).arrayBuffer()
+        const tag = etag(body)
+        if (ifNoneMatch === tag) return new Response(null, { status: 304, headers: { ETag: tag } })
+        counter()
+        return new Response(Bun.file(fullPath), { headers: { ETag: tag } })
+      }
 
       if (url.pathname === "/mutable/index.json") {
         return Response.json({ skills: [{ name: "mutable", version: mutableVersion, files: mutableFiles }] })
       }
       if (url.pathname === "/mutable/mutable/SKILL.md") {
-        mutableDownloadCount++
-        return new Response(mutableContent)
+        return send(mutableContent, () => mutableDownloadCount++)
       }
-      if (url.pathname === "/mutable/mutable/old.md") return new Response("old reference")
+      if (url.pathname === "/mutable/mutable/old.md") return send("old reference")
+
+      if (url.pathname === "/unversioned/index.json") {
+        return Response.json({ skills: [{ name: "unversioned", files: ["SKILL.md"] }] })
+      }
+      if (url.pathname === "/unversioned/unversioned/SKILL.md") {
+        return send(unversionedContent)
+      }
+
       // kilocode_change start - serve a crafted index whose skill name escapes the cache via `../`
       if (url.pathname === "/evil/index.json") {
         return Response.json({ skills: [{ name: "../../../.agents/skills/evil", files: ["SKILL.md"] }] })
@@ -56,10 +83,10 @@ beforeAll(async () => {
         const fullPath = path.join(fixturePath, filePath)
 
         if (await Filesystem.exists(fullPath)) {
-          if (!fullPath.endsWith("index.json")) {
-            downloadCount++
+          if (fullPath.endsWith("index.json")) {
+            return new Response(Bun.file(fullPath))
           }
-          return new Response(Bun.file(fullPath))
+          return sendFile(fullPath, () => downloadCount++)
         }
       }
 
@@ -216,6 +243,22 @@ describe("Discovery.pull", () => {
 
       yield* discovery.pull(url)
       expect(mutableDownloadCount).toBe(3)
+    }),
+  )
+
+  it.live("revalidates unversioned URL skills when the remote content changes", () =>
+    Effect.gen(function* () {
+      yield* Effect.promise(() => rm(cacheDir, { recursive: true, force: true }))
+      unversionedContent = "# Initial"
+      const discovery = yield* Discovery.Service
+      const url = `http://localhost:${server.port}/unversioned/`
+
+      const first = yield* discovery.pull(url)
+      expect(yield* Effect.promise(() => Bun.file(path.join(first[0], "SKILL.md")).text())).toBe("# Initial")
+
+      unversionedContent = "# Updated"
+      const second = yield* discovery.pull(url)
+      expect(yield* Effect.promise(() => Bun.file(path.join(second[0], "SKILL.md")).text())).toBe("# Updated")
     }),
   )
 })

@@ -210,6 +210,18 @@ const discoverSkills = Effect.fnUntraced(function* (
   const state: ScanState = { matches: new Map(), dirs: new Set() } // kilocode_change
   const projectRoot = worktree === "/" ? directory : worktree // kilocode_change - project substitution boundary
 
+  const cfg = yield* config.get()
+
+  // kilocode_change start - discover URL skills first so locally-installed skills discovered later take
+  // precedence and cannot be silently shadowed by a stale cached copy.
+  for (const url of cfg.skills?.urls ?? []) {
+    const pulledDirs = yield* discovery.pull(url)
+    for (const dir of pulledDirs) {
+      yield* scan(state, dir, SKILL_PATTERN, { root: dir }) // kilocode_change - downloaded markdown is untrusted
+    }
+  }
+  // kilocode_change end
+
   const externalDirs: string[] = []
   if (!disableExternalSkills) {
     if (!disableClaudeCodeSkills) externalDirs.push(CLAUDE_EXTERNAL_DIR)
@@ -260,7 +272,6 @@ const discoverSkills = Effect.fnUntraced(function* (
     // kilocode_change end
   }
 
-  const cfg = yield* config.get()
   for (const item of cfg.skills?.paths ?? []) {
     const expanded = item.startsWith("~/") ? path.join(global.home, item.slice(2)) : item
     const dir = path.isAbsolute(expanded) ? expanded : path.join(directory, expanded)
@@ -278,13 +289,6 @@ const discoverSkills = Effect.fnUntraced(function* (
       projectRoot,
     })
     // kilocode_change end
-  }
-
-  for (const url of cfg.skills?.urls ?? []) {
-    const pulledDirs = yield* discovery.pull(url)
-    for (const dir of pulledDirs) {
-      yield* scan(state, dir, SKILL_PATTERN, { root: dir }) // kilocode_change - downloaded markdown is untrusted
-    }
   }
 
   return {
