@@ -7,7 +7,11 @@ import { createEffect, createSignal, onCleanup, type Accessor } from "solid-js"
  * - Tracks whether the left/right fade indicators should be visible.
  * - Scrolls the active tab into view after tab selection or tab list changes.
  */
-export function useTabScroll<T>(items: Accessor<readonly T[]>, active: Accessor<string | undefined>) {
+export function useTabScroll<T>(
+  items: Accessor<readonly T[]>,
+  active: Accessor<string | undefined>,
+  smooth: Accessor<boolean> = () => true,
+) {
   const [ref, setRef] = createSignal<HTMLDivElement | undefined>()
   const [showLeft, setShowLeft] = createSignal(false)
   const [showRight, setShowRight] = createSignal(false)
@@ -60,14 +64,15 @@ export function useTabScroll<T>(items: Accessor<readonly T[]>, active: Accessor<
       activeFrame = undefined
       const tab = el.querySelector(`[data-tab-id="${id}"]`)
       if (!(tab instanceof HTMLElement)) return
+      const behavior = smooth() ? "smooth" : "auto"
       const left = tab.offsetLeft
       const right = left + tab.offsetWidth
       if (left < el.scrollLeft) {
-        el.scrollTo({ left: left - 8, behavior: "smooth" })
+        el.scrollTo({ left: left - 8, behavior })
         return
       }
       if (right > el.scrollLeft + el.clientWidth) {
-        el.scrollTo({ left: right - el.clientWidth + 8, behavior: "smooth" })
+        el.scrollTo({ left: right - el.clientWidth + 8, behavior })
       }
     })
   })

@@ -896,6 +896,10 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "SWE-Pruner 모델",
   "settings.experimental.swePrunerModel.description":
     "도구 출력을 정리하는 데 사용하는 모델. 기본값은 구성된 소형 모델입니다",
+
+  "settings.experimental.smoothScrolling.title": "Smooth Scrolling",
+  "settings.experimental.smoothScrolling.description":
+    "Animate scroll positions in the chat (tab strip, question dock, reasoning panel). Turn off for instant scrolling. Mouse wheel inertia is controlled by your OS / VS Code and is not affected.",
   "settings.experimental.multiProject.title": "멀티 프로젝트 Agent Manager",
   "settings.experimental.multiProject.description":
     "Agent Manager에서 여러 저장소에 걸친 세션과 워크트리 관리를 활성화합니다. 현재 워크스페이스 저장소는 항상 기본 프로젝트입니다.",

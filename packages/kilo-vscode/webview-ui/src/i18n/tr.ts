@@ -896,6 +896,10 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "SWE-Pruner Modeli",
   "settings.experimental.swePrunerModel.description":
     "Araç çıktılarını budamak için kullanılan model; varsayılan olarak yapılandırılmış küçük model",
+
+  "settings.experimental.smoothScrolling.title": "Smooth Scrolling",
+  "settings.experimental.smoothScrolling.description":
+    "Animate scroll positions in the chat (tab strip, question dock, reasoning panel). Turn off for instant scrolling. Mouse wheel inertia is controlled by your OS / VS Code and is not affected.",
   "settings.experimental.multiProject.title": "Çoklu Proje Agent Manager",
   "settings.experimental.multiProject.description":
     "Agent Manager'da birden fazla depo genelinde oturum ve worktree yönetimini etkinleştirin. Mevcut çalışma alanı deposu her zaman varsayılan projedir.",

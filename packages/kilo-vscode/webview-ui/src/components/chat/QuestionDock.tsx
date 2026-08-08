@@ -11,6 +11,7 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
+import { useConfig } from "../../context/config"
 import type { QuestionRequest } from "../../types/messages"
 import {
   clearActiveQuestionTab,
@@ -26,6 +27,7 @@ import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => {
   const session = useSession()
   const language = useLanguage()
+  const { config } = useConfig()
   const id = props.request.id
 
   const questions = createMemo(() => props.request.questions)
@@ -290,7 +292,8 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     // When collapsing inline, the content shrinks and can leave an empty gap
     // below the viewport. Scroll the dock into view so the gap is eliminated.
     if (collapsing) {
-      requestAnimationFrame(() => root?.scrollIntoView({ block: "nearest", behavior: "smooth" }))
+      const behavior = config().experimental?.smooth_scrolling === false ? "auto" : "smooth"
+      requestAnimationFrame(() => root?.scrollIntoView({ block: "nearest", behavior }))
     }
   }
 
