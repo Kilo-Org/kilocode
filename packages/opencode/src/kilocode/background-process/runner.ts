@@ -2,6 +2,7 @@ import { KiloPtySelfCommand } from "@/kilocode/pty/self-command"
 import { Filesystem } from "@/util/filesystem"
 import { Process } from "@/util/process"
 import { isRecord } from "@/util/record"
+import { WindowsJob } from "./windows-job"
 import { mkdir, open, rm } from "fs/promises"
 import { spawn } from "child_process"
 import path from "path"
@@ -139,6 +140,23 @@ export namespace BackgroundProcessRunner {
   // (now dead) leader, so seeding the walk from the leader's pid for a short
   // window lets us capture it before concluding the tree is empty.
   const GRACE = 1_000
+  const PROBE = 5_000
+
+  function native(pid: number) {
+    let job: ReturnType<typeof WindowsJob.create> = undefined
+    try {
+      job = WindowsJob.create()
+      if (!job) return
+      job.assign(pid)
+      return job
+    } catch (err) {
+      job?.close()
+      console.warn("[Kilo] Failed to create or assign Windows Job Object; using process probes", {
+        pid,
+        err,
+      })
+    }
+  }
 
   async function windows(input: Input, child: ReturnType<typeof spawn>, done: Promise<number>) {
     const pid = child.pid
@@ -147,20 +165,50 @@ export namespace BackgroundProcessRunner {
     let exited: number | undefined
     let failure: unknown
     let seen = new Map<number, string>()
+    let next = 0
     void done.then(
       (value) => {
         code = value
         exited = Date.now()
+        next = 0
       },
       (err) => {
         failure = err
       },
     )
+    const job = native(pid)
+    if (job) {
+      try {
+        while (true) {
+          if (failure) throw failure
+          if (await Bun.file(input.control).exists()) {
+            try {
+              job.terminate()
+            } catch (err) {
+              console.warn("[Kilo] Failed to terminate Windows Job Object; using process probes", { pid, err })
+              break
+            }
+            await rm(input.control, { force: true })
+            return await done
+          }
+          if (code !== undefined) {
+            try {
+              if (job.members().length === 0) return code
+            } catch (err) {
+              console.warn("[Kilo] Failed to query Windows Job Object; using process probes", { pid, err })
+              break
+            }
+          }
+          await Bun.sleep(100)
+        }
+      } finally {
+        job.close()
+      }
+    }
     while (true) {
       if (failure) throw failure
-      const active = code === undefined || (exited !== undefined && Date.now() - exited < GRACE)
-      seen = await descendants(pid, seen, active)
       if (await Bun.file(input.control).exists()) {
+        seen = await descendants(pid, seen, false)
         await Promise.all(
           [pid, ...seen.keys()].map((item) =>
             Process.run(["taskkill", "/pid", String(item), "/f", "/t"], { nothrow: true }),
@@ -174,6 +222,12 @@ export namespace BackgroundProcessRunner {
           await Bun.sleep(100)
         }
         throw new Error("Background process runner could not terminate its Windows process tree")
+      }
+      const now = Date.now()
+      const active = code === undefined || (exited !== undefined && now - exited < GRACE)
+      if (now >= next) {
+        seen = await descendants(pid, seen, active)
+        next = now + PROBE
       }
       if (code !== undefined && !active && seen.size === 0) return code
       await Bun.sleep(100)
