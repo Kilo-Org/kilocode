@@ -2,6 +2,7 @@ import * as path from "path"
 import * as vscode from "vscode"
 import type { KiloConnectionService } from "../cli-backend"
 import { retry } from "../cli-backend/retry"
+import { removeAgent } from "../agent-removal"
 import type { MarketplaceService } from "."
 import type {
   InstallMarketplaceItemOptions,
@@ -67,6 +68,11 @@ export async function removeMarketplaceItem(
   }
 
   try {
+    if (item.type === "agent") {
+      const result = await removeAgent({ connection: ctx.connection, directory: dir, name: item.id })
+      if (result.success) await invalidate(ctx, scope, dir)
+      return result
+    }
     if (item.type === "mcp") await removeLegacyMcp(ctx, item.id, project, scope)
     const result = await ctx.marketplace.remove(item, scope, project)
     if (result.success) await invalidate(ctx, scope, scope === "project" ? project! : dir)
