@@ -31,6 +31,7 @@ import { normalizePromptContent, openEditor } from "../../editor"
 import { useExit } from "../../context/exit"
 import { promptOffsetWidth } from "../../prompt/display"
 import { createStore, produce, unwrap } from "solid-js/store"
+import { createEffortReveal, EffortAnimation, EffortLabel } from "../../kilocode/effort-animation" // kilocode_change
 import { usePromptHistory, type PromptInfo } from "../../prompt/history"
 import { computePromptTraits } from "../../prompt/traits"
 import { expandPastedPlaceholder, expandPastedTextPlaceholders, expandTrackedPastedText } from "../../prompt/part"
@@ -1469,6 +1470,14 @@ export function Prompt(props: PromptProps) {
     () => !!local.agent.current() && store.mode === "normal" && showVariant(),
     animationsEnabled,
   )
+  const [effortActive, setEffortActive] = createSignal(false) // kilocode_change
+  const effortReveal = createEffortReveal(animationsEnabled) // kilocode_change
+  // kilocode_change start - hide metadata during the transition, then reveal it smoothly
+  const setEffortTransitionActive = (active: boolean) => {
+    setEffortActive(active)
+    effortReveal.active(active)
+  }
+  // kilocode_change end
   const borderHighlight = createMemo(() => tint(theme.border, highlight(), agentMetaAlpha()))
 
   const placeholderText = createMemo(() => {
@@ -1612,8 +1621,18 @@ export function Prompt(props: PromptProps) {
               cursorColor={props.disabled ? theme.backgroundElement : theme.text}
               syntaxStyle={syntax()}
             />
-            <box flexDirection="row" flexShrink={0} paddingTop={1} gap={1} justifyContent="space-between">
-              <box flexDirection="row" gap={1}>
+            {/* kilocode_change start - show effort transitions in the existing metadata row */}
+            <box
+              position="relative"
+              height={2}
+              flexDirection="row"
+              flexShrink={0}
+              paddingTop={1}
+              gap={1}
+              justifyContent="space-between"
+            >
+              {/* kilocode_change start - keep effort metadata separate from transition animation */}
+              <box flexDirection="row" gap={1} visible={!effortActive()} opacity={effortReveal.alpha()}>
                 <Show when={local.agent.current()} fallback={<box height={1} />}>
                   {(agent) => (
                     <>
@@ -1621,8 +1640,7 @@ export function Prompt(props: PromptProps) {
                         {/* kilocode_change start */}
                         {store.mode === "shell"
                           ? "Shell"
-                          : (local.agent.current()?.displayName ??
-                            Locale.titlecase(local.agent.current()?.name ?? ""))}{" "}
+                          : (agent().displayName ?? Locale.titlecase(agent().name ?? ""))}{" "}
                         {/* kilocode_change end */}
                       </text>
                       {/* kilocode_change start - vim mode indicator */}
@@ -1641,35 +1659,60 @@ export function Prompt(props: PromptProps) {
                         <text fg={fadeColor(theme.textMuted, agentMetaAlpha())}>auto</text>
                       </Show>
                       <Show when={store.mode === "normal"}>
-                      <box flexDirection="row" gap={1}>
-                        <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>·</text>
-                        <text
-                          flexShrink={0}
-                          fg={fadeColor(leader() ? theme.textMuted : theme.text, modelMetaAlpha())}
-                        >
-                          {local.model.parsed().model}
-                        </text>
-                        <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>{currentProviderLabel()}</text>
-                        <Show when={showVariant()}>
-                          <text fg={fadeColor(theme.textMuted, variantMetaAlpha())}>·</text>
-                          <text>
-                            <span style={{ fg: fadeColor(theme.warning, variantMetaAlpha()), bold: true }}>
-                              {local.model.variant.current()}
-                            </span>
+                        {/* kilocode_change start - render persistent effort accents */}
+                        <box flexDirection="row" gap={1}>
+                          <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>·</text>
+                          <text
+                            flexShrink={0}
+                            fg={fadeColor(leader() ? theme.textMuted : theme.text, modelMetaAlpha())}
+                          >
+                            {local.model.parsed().model}
                           </text>
-                        </Show>
-                      </box>
-                    </Show>
+                          <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>{currentProviderLabel()}</text>
+                          <Show when={showVariant()}>
+                            <text fg={fadeColor(theme.textMuted, variantMetaAlpha())}>·</text>
+                            {/* kilocode_change start - animate persistent max and ultra labels */}
+                            <Show
+                              when={
+                                local.model.variant.current() === "max" || local.model.variant.current() === "ultra"
+                              }
+                              fallback={
+                                <text fg={fadeColor(theme.warning, variantMetaAlpha())}>
+                                  {local.model.variant.current()}
+                                </text>
+                              }
+                            >
+                              <EffortLabel
+                                value={() => local.model.variant.current()}
+                                enabled={animationsEnabled}
+                              />
+                            </Show>
+                            {/* kilocode_change end */}
+                          </Show>{/* kilocode_change */}
+                        </box>{/* kilocode_change */}
+                        {/* kilocode_change end */}
+                      </Show>{/* kilocode_change */}
                     </>
                   )}
                 </Show>
               </box>
+              {/* kilocode_change end */}
               <Show when={hasRightContent()}>
-                <box flexDirection="row" gap={1} alignItems="center">
+                {/* kilocode_change */}
+                <box flexDirection="row" gap={1} alignItems="center" visible={!effortActive()}>{/* kilocode_change */}
                   {props.right}
                 </box>
               </Show>
+              {/* kilocode_change start - temporarily replace model metadata with the effort transition */}
+              <EffortAnimation
+                value={() => local.model.variant.current()}
+                enabled={animationsEnabled}
+                ready={() => local.model.ready}
+                onActive={setEffortTransitionActive}
+              />
+              {/* kilocode_change end */}
             </box>
+            {/* kilocode_change end */}
           </box>
         </box>
         <box
