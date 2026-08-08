@@ -779,6 +779,93 @@ describe("Anthropic Messages route", () => {
     }),
   )
 
+  // kilocode_change start - hosted (provider-executed) web_search_20250305 request lowering
+  it.effect("lowers a hosted web_search ToolDefinition to the web_search_20250305 server tool", () =>
+    Effect.gen(function* () {
+      const prepared = yield* LLMClient.prepare<AnthropicMessages.AnthropicMessagesBody>(
+        LLM.request({
+          model,
+          tools: [
+            {
+              name: "web_search",
+              description: "Hosted web search",
+              inputSchema: { type: "object", properties: {} },
+              native: {
+                anthropic: { type: "web_search_20250305", name: "web_search", max_uses: 5 },
+              },
+            },
+          ],
+          messages: [Message.user("What's the weather in NYC?")],
+          cache: "none",
+        }),
+      )
+
+      expect(prepared.body.tools).toEqual([
+        { type: "web_search_20250305", name: "web_search", max_uses: 5 },
+      ])
+    }),
+  )
+
+  it.effect("lowers a hosted web_search ToolDefinition with allowed_domains", () =>
+    Effect.gen(function* () {
+      const prepared = yield* LLMClient.prepare<AnthropicMessages.AnthropicMessagesBody>(
+        LLM.request({
+          model,
+          tools: [
+            {
+              name: "web_search",
+              description: "Hosted web search",
+              inputSchema: { type: "object", properties: {} },
+              native: {
+                anthropic: {
+                  type: "web_search_20250305",
+                  name: "web_search",
+                  allowed_domains: ["example.com"],
+                },
+              },
+            },
+          ],
+          messages: [Message.user("Search example.com")],
+          cache: "none",
+        }),
+      )
+
+      expect(prepared.body.tools).toEqual([
+        { type: "web_search_20250305", name: "web_search", allowed_domains: ["example.com"] },
+      ])
+    }),
+  )
+
+  it.effect("lowers client tools alongside a hosted web_search tool in order", () =>
+    Effect.gen(function* () {
+      const prepared = yield* LLMClient.prepare<AnthropicMessages.AnthropicMessagesBody>(
+        LLM.request({
+          model,
+          tools: [
+            {
+              name: "get_weather",
+              description: "lookup tool",
+              inputSchema: { type: "object", properties: {} },
+            },
+            {
+              name: "web_search",
+              description: "Hosted web search",
+              inputSchema: { type: "object", properties: {} },
+              native: { anthropic: { type: "web_search_20250305", name: "web_search" } },
+            },
+          ],
+          messages: [Message.user("hi")],
+          cache: "none",
+        }),
+      )
+
+      expect(prepared.body.tools).toEqual([
+        { name: "get_weather", description: "lookup tool", input_schema: { type: "object", properties: {} } },
+        { type: "web_search_20250305", name: "web_search" },
+      ])
+    }),
+  )
+  // kilocode_change end
   it.effect("emits cache_control on tool definitions and tool-result blocks", () =>
     Effect.gen(function* () {
       const prepared = yield* LLMClient.prepare(

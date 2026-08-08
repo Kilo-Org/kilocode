@@ -88,6 +88,8 @@ type TypedToolConfig = {
   readonly execute?: ToolExecute<ToolSchema<any>, ToolSchema<any>>
   readonly toModelOutput?: ToolToModelOutput<ToolSchema<any>, ToolSchema<any>>
   readonly toStructuredOutput?: (output: unknown) => unknown
+  // kilocode_change - provider-native descriptor (e.g. anthropic hosted web_search)
+  readonly native?: ToolDefinitionClass["native"]
 }
 
 type DynamicToolConfig = {
@@ -97,6 +99,8 @@ type DynamicToolConfig = {
   readonly execute?: (params: unknown, context?: ToolExecuteContext) => Effect.Effect<unknown, ToolFailure>
   readonly toModelOutput?: (input: ToolModelOutputInput<unknown, unknown>) => ReadonlyArray<ToolContent>
   readonly toStructuredOutput?: (output: unknown) => unknown
+  // kilocode_change - provider-native descriptor (e.g. anthropic hosted web_search)
+  readonly native?: ToolDefinitionClass["native"]
 }
 
 /**
@@ -137,6 +141,8 @@ export function make<Parameters extends ToolSchema<any>, Success extends ToolSch
   readonly execute: ToolExecute<Parameters, Success>
   readonly toModelOutput?: ToolToModelOutput<Parameters, Success>
   readonly toStructuredOutput?: (output: Success["Encoded"]) => unknown
+  // kilocode_change - provider-native descriptor (e.g. anthropic hosted web_search)
+  readonly native?: ToolDefinitionClass["native"]
 }): ExecutableTool<Parameters, Success>
 export function make<Parameters extends ToolSchema<any>, Success extends ToolSchema<any>>(config: {
   readonly description: string
@@ -145,6 +151,8 @@ export function make<Parameters extends ToolSchema<any>, Success extends ToolSch
   readonly execute?: undefined
   readonly toModelOutput?: ToolToModelOutput<Parameters, Success>
   readonly toStructuredOutput?: (output: Success["Encoded"]) => unknown
+  // kilocode_change - provider-native descriptor (e.g. anthropic hosted web_search)
+  readonly native?: ToolDefinitionClass["native"]
 }): Tool<Parameters, Success>
 export function make(config: {
   readonly description: string
@@ -153,6 +161,8 @@ export function make(config: {
   readonly execute: (params: unknown, context?: ToolExecuteContext) => Effect.Effect<unknown, ToolFailure>
   readonly toModelOutput?: (input: ToolModelOutputInput<unknown, unknown>) => ReadonlyArray<ToolContent>
   readonly toStructuredOutput?: (output: unknown) => unknown
+  // kilocode_change - provider-native descriptor (e.g. anthropic hosted web_search)
+  readonly native?: ToolDefinitionClass["native"]
 }): AnyExecutableTool
 export function make(config: {
   readonly description: string
@@ -161,6 +171,8 @@ export function make(config: {
   readonly execute?: undefined
   readonly toModelOutput?: (input: ToolModelOutputInput<unknown, unknown>) => ReadonlyArray<ToolContent>
   readonly toStructuredOutput?: (output: unknown) => unknown
+  // kilocode_change - provider-native descriptor (e.g. anthropic hosted web_search)
+  readonly native?: ToolDefinitionClass["native"]
 }): AnyTool
 export function make(config: TypedToolConfig | DynamicToolConfig): AnyTool {
   if ("jsonSchema" in config) {
@@ -181,6 +193,8 @@ export function make(config: TypedToolConfig | DynamicToolConfig): AnyTool {
         description: config.description,
         inputSchema: config.jsonSchema,
         outputSchema: config.outputSchema,
+        // kilocode_change - carry hosted-tool metadata
+        native: config.native,
       }),
     }
   }
@@ -201,6 +215,8 @@ export function make(config: TypedToolConfig | DynamicToolConfig): AnyTool {
       description: config.description,
       inputSchema: toJsonSchema(config.parameters),
       outputSchema: toJsonSchema(config.success),
+      // kilocode_change - carry hosted-tool metadata
+      native: config.native,
     }),
   }
 }
@@ -218,6 +234,8 @@ export type Tools = Record<string, AnyTool>
  * `_definition` is rebuilt with the correct name here. The JSON Schema body
  * is reused.
  */
+// kilocode_change start - propagate the provider-native tool descriptor so
+// protocol lowering can emit hosted (provider-executed) tool definitions.
 export const toDefinitions = (tools: Tools): ReadonlyArray<ToolDefinitionClass> =>
   Object.entries(tools).map(
     ([name, item]) =>
@@ -226,8 +244,11 @@ export const toDefinitions = (tools: Tools): ReadonlyArray<ToolDefinitionClass> 
         description: item._definition.description,
         inputSchema: item._definition.inputSchema,
         outputSchema: item._definition.outputSchema,
+        // kilocode_change - carry hosted-tool metadata (e.g. anthropic web_search_20250305)
+        native: item._definition.native,
       }),
   )
+// kilocode_change end
 
 const toJsonSchema = (schema: Schema.Top): JsonSchema.JsonSchema => {
   const document = Schema.toJsonSchemaDocument(schema)

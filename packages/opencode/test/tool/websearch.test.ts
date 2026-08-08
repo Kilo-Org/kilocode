@@ -23,6 +23,11 @@ describe("websearch provider", () => {
 
       process.env.KILO_WEBSEARCH_PROVIDER = "exa"
       expect(selectWebSearchProvider(SESSION_ID)).toBe("exa")
+
+      // kilocode_change start - native provider-hosted web search
+      process.env.KILO_WEBSEARCH_PROVIDER = "native"
+      expect(selectWebSearchProvider(SESSION_ID)).toBe("native")
+      // kilocode_change end
     } finally {
       if (original === undefined) delete process.env.KILO_WEBSEARCH_PROVIDER
       else process.env.KILO_WEBSEARCH_PROVIDER = original
@@ -49,8 +54,39 @@ describe("websearch provider", () => {
   test("uses branded labels", () => {
     expect(webSearchProviderLabel("parallel")).toBe("Parallel Web Search")
     expect(webSearchProviderLabel("exa")).toBe("Exa Web Search")
+    // kilocode_change start - native Anthropic label
+    expect(webSearchProviderLabel("native")).toBe("Anthropic Web Search")
+    // kilocode_change end
     expect(webSearchProviderLabel(undefined)).toBe("Web Search")
   })
+
+  // kilocode_change start - native Anthropic hosted tool descriptor
+  describe("nativeAnthropicWebSearchTool", () => {
+    test("returns a ToolDefinition carrying the web_search_20250305 native descriptor", async () => {
+      const { nativeAnthropicWebSearchTool } = await import("../../src/tool/websearch")
+      const tool = nativeAnthropicWebSearchTool({ maxUses: 5 })
+      expect(tool.name).toBe("web_search")
+      expect(tool.native?.anthropic).toMatchObject({
+        type: "web_search_20250305",
+        name: "web_search",
+        max_uses: 5,
+      })
+    })
+
+    test("supports allowedDomains and the newer web_search_20260209 variant", async () => {
+      const { nativeAnthropicWebSearchTool } = await import("../../src/tool/websearch")
+      const tool = nativeAnthropicWebSearchTool({
+        variant: "web_search_20260209",
+        allowedDomains: ["example.com"],
+      })
+      expect(tool.native?.anthropic).toMatchObject({
+        type: "web_search_20260209",
+        name: "web_search",
+        allowed_domains: ["example.com"],
+      })
+    })
+  })
+  // kilocode_change end
 
   test("uses the provider API model id for Parallel analytics", () => {
     expect(

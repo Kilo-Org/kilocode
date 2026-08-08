@@ -10,6 +10,7 @@ import { FetchHttpClient } from "effect/unstable/http"
 import {
   LLMRequest,
   Tool as NativeTool,
+  ToolDefinition, // kilocode_change - native hosted web search
   ToolFailure,
   ToolRuntime,
   toDefinitions,
@@ -18,6 +19,7 @@ import {
 } from "@opencode-ai/llm"
 import type { LLMClientShape } from "@opencode-ai/llm/route"
 import { LLMNative } from "./native-request"
+import { nativeAnthropicWebSearchTool, nativeWebSearchSelected } from "@/tool/websearch" // kilocode_change - native hosted web search
 
 export type RuntimeStatus =
   | { readonly type: "supported"; readonly apiKey: string; readonly baseURL?: string }
@@ -87,6 +89,12 @@ export function stream(input: StreamInput): StreamResult {
   // — if a field ever needs to differ between the two surfaces, the
   // translation belongs here, not split across both packages.
   const tools = nativeTools(input.tools, input)
+  // kilocode_change start - when native hosted search is active the AI-SDK
+  // web_search has an execute stub but only the Anthropic-hosted tool runs
+  // (providerExecuted), so drop it from the local dispatch map.
+  const webSearchNative = nativeWebSearchSelected(input.model.api.npm)
+  const dispatchTools = webSearchNative ? Object.fromEntries(Object.entries(tools).filter(([k]) => k !== "web_search")) : tools
+  // kilocode_change end
   const request = LLMNative.request({
     model: input.model,
     apiKey: current.apiKey,
@@ -100,6 +108,13 @@ export function stream(input: StreamInput): StreamResult {
     providerOptions: ProviderTransform.providerOptions(input.model, input.providerOptions ?? {}),
     headers: { ...providerHeaders(input.provider.options.headers), ...input.headers },
   })
+  // kilocode_change start - the AI-SDK web_search injected by session/tools.ts
+  // would lower as a plain client tool (input_schema) here; Anthropic rejects
+  // duplicate tool names, so drop it and append a single hosted descriptor.
+  const sessionToolDefs = webSearchNative
+    ? toDefinitions(dispatchTools).filter((def) => def.name !== "web_search")
+    : toDefinitions(tools)
+  const hostedToolDef = webSearchNative ? [ToolDefinition.make(nativeAnthropicWebSearchTool({}))] : []
   const stream = Stream.scoped(
     Stream.unwrap(
       Effect.gen(function* () {
@@ -108,7 +123,7 @@ export function stream(input: StreamInput): StreamResult {
         const provider = input.llmClient
           .stream(
             LLMRequest.update(request, {
-              tools: [...request.tools, ...toDefinitions(tools)],
+              tools: [...request.tools, ...sessionToolDefs, ...hostedToolDef],
             }),
           )
           .pipe(
@@ -118,7 +133,7 @@ export function stream(input: StreamInput): StreamResult {
                 : Stream.make(event).pipe(
                     Stream.concat(
                       Stream.fromEffectDrain(
-                        ToolRuntime.dispatch(tools, event).pipe(
+                        ToolRuntime.dispatch(dispatchTools, event).pipe(
                           Effect.flatMap((dispatched) => Queue.offerAll(results, dispatched.events)),
                           Effect.catchCause((cause) => Queue.failCause(results, cause)),
                           Effect.asVoid,

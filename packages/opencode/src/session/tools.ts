@@ -10,6 +10,7 @@ import { Tool } from "@/tool/tool"
 import { ToolJsonSchema } from "@/tool/json-schema"
 import { ToolRegistry } from "@/tool/registry"
 import { Truncate } from "@/tool/truncate"
+import { nativeWebSearchSelected } from "@/tool/websearch" // kilocode_change - native hosted web search
 
 import { Plugin } from "@/plugin"
 import type { TaskPromptOps } from "@/tool/task"
@@ -136,6 +137,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
     modelID: ModelV2.ID.make(input.model.api.id),
     providerID: input.model.providerID,
     family: input.model.family, // kilocode_change
+    apiNpm: input.model.api.npm, // kilocode_change - native hosted web search gate
     agent: input.agent,
   })) {
     // kilocode_change start - SWE-Pruner (experimental): advertise the focus parameter on prunable tools
@@ -188,6 +190,18 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
     })
   }
 
+  // kilocode_change start - register Anthropic's hosted web_search server tool
+  // on the AI SDK runtime when KILO_WEBSEARCH_PROVIDER=native + a Claude model.
+  // Registry hides the local Exa/Parallel tool; the AI SDK owns execution and
+  // emits providerExecuted tool parts. Env (not RuntimeFlags) keeps this
+  // Effect's environment unchanged.
+  const webSearchNative = nativeWebSearchSelected(input.model.api.npm)
+  if (webSearchNative) {
+    const anthropic = yield* Effect.promise(() => import("@ai-sdk/anthropic").then((m) => m.createAnthropic()))
+    tools["web_search"] = anthropic.tools.webSearch_20250305({}) as unknown as AITool
+  }
+  // kilocode_change end
+
   const restricted = yield* SandboxPolicy.networkRestricted(input.session.id) // kilocode_change
   const hasMcpResourceServer = Object.values(yield* mcp.clients()).some(
     (client) => !!client.getServerCapabilities()?.resources,
@@ -202,7 +216,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
           properties: {
             server: {
               type: "string",
-              description: "Optional MCP server name. When omitted, lists resources from every connected server.",
+              description: "Optional MCP server name. When omitted, lists resources from every connected MCP server.",
             },
           },
           additionalProperties: false,
@@ -285,7 +299,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
             server: {
               type: "string",
               description:
-                "Optional MCP server name. When omitted, lists resource templates from every connected server.",
+                "Optional MCP server name. When omitted, lists resource templates from every connected MCP server.",
             },
           },
           additionalProperties: false,
@@ -328,7 +342,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               .filter((template) => !parsed.server || template.client === parsed.server)
               .toSorted((a, b) =>
                 (a.client + "\u0000" + a.name + "\u0000" + a.uriTemplate).localeCompare(
-                  b.client + "\u0000" + b.name + "\u0000" + b.uriTemplate,
+                  b.client + "\u0000" + a.name + "\u0000" + b.uriTemplate,
                 ),
               )
             const content = JSON.stringify({ resourceTemplates: filtered.map(formatMcpResourceTemplate) }, null, 2)
