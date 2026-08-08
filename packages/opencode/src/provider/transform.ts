@@ -386,17 +386,24 @@ function applyCaching(msgs: ModelMessage[], model: Provider.Model): ModelMessage
       model.api.npm === "@ai-sdk/amazon-bedrock"
     const shouldUseContentOptions = !useMessageLevelOptions && Array.isArray(msg.content) && msg.content.length > 0
 
-    if (shouldUseContentOptions) {
-      // kilocode_change start - place caching breakpoint on stable content before trailing <environment_details>
-      const target = msg.content.findLast(
-        (part) =>
+    // kilocode_change start - place caching breakpoint on stable content before trailing <environment_details>
+    if (shouldUseContentOptions && Array.isArray(msg.content)) {
+      const parts = msg.content
+      let targetIndex = -1
+      for (let i = parts.length - 1; i >= 0; i--) {
+        const part = parts[i]
+        if (
+          part &&
           typeof part === "object" &&
-          part !== null &&
           part.type !== "tool-approval-request" &&
           part.type !== "tool-approval-response" &&
-          !(part.type === "text" && part.text.startsWith("<environment_details>")),
-      )
-      const lastContent = target ?? msg.content[msg.content.length - 1]
+          !(part.type === "text" && part.text.startsWith("<environment_details>"))
+        ) {
+          targetIndex = i
+          break
+        }
+      }
+      const lastContent = targetIndex >= 0 ? parts[targetIndex] : parts[parts.length - 1]
       if (
         lastContent &&
         typeof lastContent === "object" &&
@@ -406,8 +413,8 @@ function applyCaching(msgs: ModelMessage[], model: Provider.Model): ModelMessage
         lastContent.providerOptions = mergeDeep(lastContent.providerOptions ?? {}, providerOptions)
         continue
       }
-      // kilocode_change end
     }
+    // kilocode_change end
 
     msg.providerOptions = mergeDeep(msg.providerOptions ?? {}, providerOptions)
   }
