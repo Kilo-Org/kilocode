@@ -102,7 +102,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "Siguiente pestaña",
   "agentManager.shortcuts.newTab": "Nueva pestaña",
   "agentManager.shortcuts.closeTab": "Cerrar pestaña",
-  "agentManager.shortcuts.toggleTerminal": "Alternar terminal",
+  "agentManager.shortcuts.toggleTerminal": "Enfocar / ocultar la terminal",
   "agentManager.shortcuts.runScript": "Ejecutar script",
   "agentManager.run.options": "Opciones de ejecución",
   "agentManager.run.configure": "Configurar script de ejecución",
@@ -117,6 +117,9 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.cancel": "Cancelar",
   "agentManager.dialog.removeStaleWorktree.confirm": "Eliminar Worktree obsoleto",
 
+  "agentManager.dialog.project.select": "Seleccionar proyecto",
+  "agentManager.dialog.project.untrusted": "Confía primero en este proyecto desde la barra lateral",
+  "agentManager.dialog.project.missing": "Repositorio no encontrado",
   "agentManager.dialog.openWorktree": "Nuevo Worktree",
   "agentManager.dialog.configureWorktree": "Configurar Nuevo Worktree...",
   "agentManager.dialog.tab.new": "Nuevo",
