@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Kilo Architecture Ratchet Allowlist",
+  "description": "Baseline exception list for Kilo-owned domain architecture boundaries and state ratchets. Upstream-owned shared opencode files are exempt to prevent upstream merge conflicts. As Kilo legacy sites are refactored into clean Effect layers, decrement counts or remove entries to lock in progress.",
+  "rules": {
+    "kilo-instance-state-singletons": {
+      "description": "Legacy InstanceState.make usages in Kilo-owned code (packages/opencode/src/kilocode/**, packages/opencode/src/kilo-*/**). Target: encapsulate in scoped Effect Services in packages/core.",
+      "allowed": {
+        "packages/opencode/src/kilo-sessions/kilo-sessions.ts": { "count": 1, "owner": "session-runtime", "reason": "Kilo session coordination state" },
+        "packages/opencode/src/kilocode/agent-manager/service.ts": { "count": 1, "owner": "agent-manager", "reason": "Agent Manager multi-project worktree state" },
+        "packages/opencode/src/kilocode/background-process/index.ts": { "count": 1, "owner": "process-runtime", "reason": "Directory-keyed background process registry" },
+        "packages/opencode/src/kilocode/interactive-terminal/index.ts": { "count": 1, "owner": "terminal-runtime", "reason": "Interactive terminal manager state" },
+        "packages/opencode/src/kilocode/notebook/service.ts": { "count": 1, "owner": "notebook-runtime", "reason": "Notebook cell execution service state" },
+        "packages/opencode/src/kilocode/project-id.ts": { "count": 1, "owner": "project-runtime", "reason": "Cached project identifier resolution" },
+        "packages/opencode/src/kilocode/watcher.ts": { "count": 1, "owner": "watcher-runtime", "reason": "Eager location watcher subscription" }
+      }
+    },
+    "kilo-database-constructors": {
+      "description": "Direct new Database() / new DatabaseSync() instantiations in Kilo-owned code. Target: all persistence routes through core Database.Service.",
+      "allowed": {
+        "packages/opencode/src/kilocode/session-export/sequence.ts": { "count": 1, "owner": "export-runtime", "reason": "Read-only offline export database reader" },
+        "packages/opencode/src/kilocode/session-export/worker/storage.ts": { "count": 1, "owner": "export-runtime", "reason": "Worker-thread offline export database handle" }
+      }
+    },
+    "kilo-tool-process-env": {
+      "description": "Direct process.env reads in Kilo-owned tools. Target: pass configuration explicitly via Tool.Context or Env.Service.",
+      "allowed": {
+        "packages/opencode/src/tool/mcp-websearch.ts": { "count": 2, "owner": "tool-runtime", "reason": "Top-level EXA_API_KEY snapshot" },
+        "packages/opencode/src/tool/warpgrep.ts": { "count": 1, "owner": "tool-runtime", "reason": "MORPH_API_KEY fallback" },
+        "packages/opencode/src/tool/websearch.ts": { "count": 4, "owner": "tool-runtime", "reason": "KILO_WEBSEARCH_PROVIDER, PARALLEL_API_KEY, EXA_API_KEY reads" }
+      }
+    }
+  }
+}

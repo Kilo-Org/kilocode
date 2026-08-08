@@ -152,6 +152,33 @@ open class SessionLayoutPanel(
         layout = SessionLayout(gap, pad)
     }
 
+    override fun doLayout() {
+        super.doLayout()
+        reconcileValidateRoot()
+    }
+
+    /**
+     * Keep the parent [SessionLayout]'s cached height honest across validate-root boundaries.
+     *
+     * A validate root, such as a settled [ai.kilocode.client.session.views.TurnView], can be laid out
+     * independently by `RepaintManager`. Its `isValid` flag can flip back to `true` before the parent
+     * transcript remeasures it, so [SessionLayout] may otherwise keep stacking it at a stale cached
+     * height until some unrelated resize changes the cache key.
+     *
+     * Once this root has laid out its own content, its rendered height should match its preferred
+     * height. If it does not, the parent cache is stale: drop this entry and revalidate the parent so
+     * the outer transcript geometry follows the content. Non-roots are skipped because their
+     * invalidation already propagates to the parent and keeps `isValid` an honest cache signal.
+     */
+    private fun reconcileValidateRoot() {
+        if (!isValidateRoot()) return
+        val host = parent ?: return
+        val layout = host.layout as? SessionLayout ?: return
+        if (preferredSize.height == height) return
+        layout.forget(this)
+        (host as? javax.swing.JComponent)?.revalidate()
+    }
+
     override fun getScrollableTracksViewportWidth() = true
     override fun getScrollableTracksViewportHeight() = false
     override fun getPreferredScrollableViewportSize(): Dimension = preferredSize

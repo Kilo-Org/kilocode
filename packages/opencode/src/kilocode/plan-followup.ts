@@ -24,11 +24,12 @@ import { lazy } from "@/util/lazy"
 import path from "path"
 import z from "zod"
 import { PlanFile } from "@/kilocode/plan-file"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
 
-const agents = lazy(() => makeRuntime(Agent.Service, Agent.defaultLayer))
-const providers = lazy(() => makeRuntime(Provider.Service, Provider.defaultLayer))
+const agents = lazy(() => makeRuntime(Agent.Service, AppNodeBuilder.build(Agent.node)))
+const providers = lazy(() => makeRuntime(Provider.Service, AppNodeBuilder.build(Provider.node)))
 const todo = lazy(() => makeRuntime(Todo.Service, Todo.defaultLayer))
-const llm = lazy(() => makeRuntime(LLM.Service, LLM.defaultLayer))
+const llm = lazy(() => makeRuntime(LLM.Service, AppNodeBuilder.build(LLM.node)))
 const pending = new Map<SessionID, AbortController>()
 
 export const PlanFollowupRuntime = {

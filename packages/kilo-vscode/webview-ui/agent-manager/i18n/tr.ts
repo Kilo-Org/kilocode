@@ -68,6 +68,8 @@ export const dict = {
 
   "agentManager.terminal.new": "Yeni Terminal Sekmesi",
   "agentManager.terminal.ended": "terminal sona erdi — kapatmak için sekmeyi kapatın",
+  "agentManager.terminal.endedRestartable":
+    "terminal sona erdi - yeni bir kabuk başlatmak için yazın veya sekmeyi kapatın",
   "agentManager.terminal.setupFailed": "kurulum betiği başarısız oldu",
   "agentManager.terminal.setupFailedCode": "kurulum betiği çıkış koduyla başarısız oldu",
   "agentManager.terminal.stopSetup": "Kurulum betiğini durdur",
@@ -105,7 +107,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "Sonraki sekme",
   "agentManager.shortcuts.newTab": "Yeni sekme",
   "agentManager.shortcuts.closeTab": "Sekmeyi kapat",
-  "agentManager.shortcuts.toggleTerminal": "Terminali aç/kapat",
+  "agentManager.shortcuts.toggleTerminal": "Terminale odaklan / terminali gizle",
   "agentManager.shortcuts.runScript": "Betiği çalıştır",
   "agentManager.run.options": "Çalıştırma seçenekleri",
   "agentManager.run.configure": "Çalıştırma betiğini yapılandır",
@@ -121,6 +123,9 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.cancel": "İptal",
   "agentManager.dialog.removeStaleWorktree.confirm": "Eskimiş worktree'yi kaldır",
 
+  "agentManager.dialog.project.select": "Proje seç",
+  "agentManager.dialog.project.untrusted": "Önce kenar çubuğunda bu projeye güvenin",
+  "agentManager.dialog.project.missing": "Depo bulunamadı",
   "agentManager.dialog.openWorktree": "Yeni Worktree",
   "agentManager.dialog.configureWorktree": "Yeni Worktree Yapılandır...",
   "agentManager.dialog.tab.new": "Yeni",

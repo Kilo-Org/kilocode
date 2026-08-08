@@ -17,7 +17,7 @@ The primary model used by all agents (polecats, refinery, mayor). This affects q
 
 Popular choices:
 - **Kilo Auto Frontier** — highest quality models, best results (recommended)
-- **Kilo Auto Balanced** — good balance of quality and cost (minimum for Gas Town)
+- **Kilo Auto Efficient** — cheapest model proven accurate enough for each task, with capability matched to difficulty (minimum for Gas Town)
 
 ### Role-Specific Models
 

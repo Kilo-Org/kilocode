@@ -40,6 +40,7 @@ import type {
   SuggestionRequest,
   TodoItem,
   ModelSelection,
+  ModelUsageMap,
   ContextUsage,
   AgentInfo,
   SkillInfo,
@@ -67,12 +68,14 @@ import {
 } from "./session-utils"
 import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
+import { getAgentModel } from "./session-model-store"
 import { resolveMessagePrefs } from "./session-preferences"
 import { errorIDs } from "./session-errors"
 import { PartStash } from "./part-stash"
 import { mergeParts, sameParts } from "./session-parts"
 import { state as todoState } from "./todo-revert"
-import { getVariant, sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
+import { sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
+import { createSessionVariants } from "./session-variants"
 import { KILO_AUTO, KILO_PROVIDER_ID, parseModelString } from "../../../src/shared/provider-model"
 import { reviewMetadata, type ReviewMessageData } from "../../../src/shared/review-comments"
 import { visibleMessages as filterVisibleMessages } from "./session-queue"
@@ -121,6 +124,7 @@ interface SessionStore {
   variantSelections: Record<string, string> // session/agent scoped variant key -> variant name
   recentModels: ModelSelection[]
   favoriteModels: ModelSelection[]
+  modelUsageHistory: ModelUsageMap
   modelUsage: Record<string, { requestID: string; data?: SessionModelUsage }>
 }
 
@@ -201,6 +205,8 @@ interface SessionContextValue {
   // Model selection (global, extension-lifetime)
   selected: (sessionID?: string) => ModelSelection | null
   configModel: (sessionID?: string) => ModelSelection | null
+  modelForAgent: (agent: string) => ModelSelection | null
+  configModelForAgent: (agent: string) => ModelSelection | null
   selectModel: (providerID: string, modelID: string, sessionID?: string) => void
   hasModelOverride: (sessionID?: string) => boolean
   clearModelOverride: (sessionID?: string) => void
@@ -237,9 +243,12 @@ interface SessionContextValue {
   // Thinking variant for the selected model
   variantList: (sessionID?: string) => string[]
   currentVariant: (sessionID?: string) => string | undefined
+  variantForAgent: (agent: string, model: ModelSelection | null) => string | undefined
   selectVariant: (value: string, sessionID?: string) => void
 
   // Model favorites
+  recentModels: Accessor<ModelSelection[]>
+  modelUsageHistory: Accessor<ModelUsageMap>
   favoriteModels: Accessor<ModelSelection[]>
   toggleFavorite: (providerID: string, modelID: string) => void
 
@@ -274,6 +283,7 @@ interface SessionContextValue {
     draftID?: string,
     context?: string,
     origin?: string | null,
+    overrides?: { agent?: string; model?: string; variant?: string },
   ) => void
   abort: () => void
   compact: () => void
@@ -507,7 +517,6 @@ export const SessionProvider: ParentComponent = (props) => {
     )
   }
 
-  // Store for sessions, messages, parts, todos, modelSelections, agentSelections
   const [store, setStore] = createStore<SessionStore>({
     sessions: {},
     messages: {},
@@ -520,6 +529,7 @@ export const SessionProvider: ParentComponent = (props) => {
     variantSelections: {},
     recentModels: [],
     favoriteModels: [],
+    modelUsageHistory: {},
     modelUsage: {},
   })
   const [modelUsageReady, setModelUsageReady] = createSignal(false)
@@ -628,6 +638,14 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "persistRecents", recents: updated })
   }
 
+  function recordModelUsage(providerID?: string, modelID?: string) {
+    if (!providerID || !modelID) return
+    const key = `${providerID}/${modelID}`
+    const current = store.modelUsageHistory[key] ?? { count: 0, lastUsed: 0 }
+    setStore("modelUsageHistory", key, { count: current.count + 1, lastUsed: Date.now() })
+    vscode.postMessage({ type: "recordModelUsage", providerID, modelID })
+  }
+
   function applyModel(agentName: string, selection: ModelSelection, sessionID?: string) {
     pushRecent(selection)
     if (sessionID) {
@@ -647,9 +665,27 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
+  const variants = createSessionVariants({
+    selections: () => store.variantSelections,
+    set: (key, value) => setStore("variantSelections", key, value),
+    selected,
+    session: currentSessionID,
+    agent: agentForScope,
+    find: provider.findModel,
+    post: vscode.postMessage,
+    listen: vscode.onMessage,
+  })
+  const { carry: carryVariant, list: variantList, agent: variantForAgent, current: currentVariant } = variants
+  const selectVariant = variants.select
+
   function selectModel(providerID: string, modelID: string, sessionID?: string) {
     const sid = sessionID ?? currentSessionID()
-    applyModel(agentForScope(sid), { providerID, modelID }, sid)
+    const agent = agentForScope(sid)
+    const current = selected(sid)
+    const value = current ? currentVariant(sid) : undefined
+    const selection = { providerID, modelID }
+    applyModel(agent, selection, sid)
+    carryVariant(selection, value, agent, sid)
     if (sid) {
       hideErrors(sid)
     }
@@ -732,6 +768,30 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function configModel(sessionID?: string): ModelSelection | null {
     const agentName = agentForScope(sessionID)
+    return resolveModel(agentName)
+  }
+
+  function modelForAgent(agentName: string): ModelSelection | null {
+    return getAgentModel(
+      {
+        modelSelections: store.modelSelections,
+        sessionOverrides: store.sessionOverrides,
+        agentSelections: store.agentSelections,
+        recentModels: store.recentModels,
+      },
+      {
+        providers: provider.providers(),
+        connected: provider.connected(),
+        getModeModel,
+        getGlobalModel,
+        fallback: KILO_AUTO,
+      },
+      agentName,
+      userSetAgents()[agentName] === true,
+    )
+  }
+
+  function configModelForAgent(agentName: string): ModelSelection | null {
     return resolveModel(agentName)
   }
 
@@ -870,44 +930,7 @@ export const SessionProvider: ParentComponent = (props) => {
     clearTimeout(fallback)
   })
 
-  const variantList = (sessionID?: string) => {
-    const sel = selected(sessionID)
-    if (!sel) return []
-    const model = provider.findModel(sel)
-    if (!model?.variants) return []
-    return Object.keys(model.variants)
-  }
-
-  const currentVariant = (sessionID?: string) => {
-    const sid = sessionID ?? currentSessionID()
-    const sel = selected(sid)
-    if (!sel) return undefined
-    const list = variantList(sid)
-    if (list.length === 0) return undefined
-    return getVariant(store.variantSelections, sel, list, agentForScope(sid), sid)
-  }
-
-  const selectVariant = (value: string, sessionID?: string) => {
-    const sid = sessionID ?? currentSessionID()
-    const sel = selected(sid)
-    if (!sel) return
-    const key = variantKey(sel, agentForScope(sid), sid)
-    setStore("variantSelections", key, value)
-    if (!sid) vscode.postMessage({ type: "persistVariant", key, value })
-  }
-
-  // Load persisted variants from extension globalState
-  const unsubVariants = vscode.onMessage((message: ExtensionMessage) => {
-    if (message.type !== "variantsLoaded") return
-    for (const [k, v] of Object.entries(message.variants)) {
-      if (k.startsWith("session/")) continue
-      setStore("variantSelections", k, v)
-    }
-  })
-
-  vscode.postMessage({ type: "requestVariants" })
-
-  onCleanup(unsubVariants)
+  onCleanup(variants.load())
 
   // Load persisted per-mode model selections from model.json via extension host.
   // Uses replace semantics so a reset (empty payload) clears old entries.
@@ -931,6 +954,12 @@ export const SessionProvider: ParentComponent = (props) => {
   vscode.postMessage({ type: "requestRecents" })
   onCleanup(unsubRecents)
 
+  const unsubModelUsage = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type !== "modelUsageLoaded") return
+    setStore("modelUsageHistory", message.usage)
+  })
+  vscode.postMessage({ type: "requestModelUsage" })
+  onCleanup(unsubModelUsage)
   // Load persisted favorite models from extension globalState
   const unsubFavorites = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type !== "favoritesLoaded") return
@@ -2279,6 +2308,8 @@ export const SessionProvider: ParentComponent = (props) => {
     const messageID = Identifier.ascending("message")
 
     const sid = origin === undefined ? currentSessionID() : (origin ?? undefined)
+    const selection = providerID && modelID ? { providerID, modelID } : selected(sid)
+    recordModelUsage(selection?.providerID, selection?.modelID)
     const preview = sid?.startsWith("cloud:")
       ? sid.slice("cloud:".length)
       : origin === undefined
@@ -2347,29 +2378,51 @@ export const SessionProvider: ParentComponent = (props) => {
     draftID?: string,
     context?: string,
     origin?: string | null,
+    overrides?: { agent?: string; model?: string; variant?: string },
   ) {
     if (!server.isConnected()) {
       console.warn("[Kilo New] Cannot send command: not connected")
       return
     }
 
-    // Cloud previews need import-then-command; post importAndSend with command metadata
     const sid = origin === undefined ? currentSessionID() : (origin ?? undefined)
+    const effectiveDraftID = !sid && !draftID ? crypto.randomUUID() : draftID
+    const scope = effectiveDraftID ?? sid
+    if (!sid && !draftID && effectiveDraftID) agentDrafts.seed(effectiveDraftID)
+
+    if (overrides?.agent) {
+      selectAgent(overrides.agent, scope)
+    }
+    if (overrides?.model) {
+      const parsed = parseModelString(overrides.model)
+      if (parsed) {
+        selectModel(parsed.providerID, parsed.modelID, scope)
+      }
+    }
+    if (overrides?.variant) {
+      selectVariant(overrides.variant, scope)
+    }
+
+    const effectiveSelection = selected(scope)
+    const effectiveProvider = effectiveSelection?.providerID ?? providerID
+    const effectiveModel = effectiveSelection?.modelID ?? modelID
+    recordModelUsage(effectiveProvider, effectiveModel)
+
+    // Cloud previews need import-then-command; post importAndSend with command metadata
     const preview = sid?.startsWith("cloud:")
       ? sid.slice("cloud:".length)
       : origin === undefined
         ? cloudPreviewId()
         : null
     if (preview) {
-      const scope = draftID ?? sid
       const agent = promptAgent(scope)
       vscode.postMessage({
         type: "importAndSend",
         cloudSessionId: preview,
         text: `/${command} ${args}`.trim(),
         messageID: Identifier.ascending("message"),
-        providerID,
-        modelID,
+        providerID: effectiveProvider,
+        modelID: effectiveModel,
         agent,
         variant: currentVariant(scope),
         files,
@@ -2386,9 +2439,6 @@ export const SessionProvider: ParentComponent = (props) => {
       dismissQuestion(q.id)
     }
 
-    const effectiveDraftID = !sid && !draftID ? crypto.randomUUID() : draftID
-    const scope = effectiveDraftID ?? sid
-    if (!sid && !draftID && effectiveDraftID) agentDrafts.seed(effectiveDraftID)
     if (scope) {
       clearClose(scope)
       addOptimistic(scope, messageID, `/${command} ${args}`.trim(), files)
@@ -2407,8 +2457,8 @@ export const SessionProvider: ParentComponent = (props) => {
       messageID,
       sessionID: sid,
       draftID: effectiveDraftID,
-      providerID,
-      modelID,
+      providerID: effectiveProvider,
+      modelID: effectiveModel,
       agent,
       variant: currentVariant(scope),
       files,
@@ -2972,6 +3022,8 @@ export const SessionProvider: ParentComponent = (props) => {
     scopedSuggestions,
     selected,
     configModel,
+    modelForAgent,
+    configModelForAgent,
     selectModel,
     hasModelOverride,
     clearModelOverride,
@@ -3000,8 +3052,12 @@ export const SessionProvider: ParentComponent = (props) => {
       // agent may not yet be assigned (sendInitialMessage calls setSessionModel
       // before setSessionAgent), so the write would land on defaultAgent() and
       // corrupt the default mode's model for later sessions.
+      const agent = store.agentSelections[sessionID] ?? defaultAgent()
+      const current = selected(sessionID)
+      const value = current ? currentVariant(sessionID) : undefined
       const model = { providerID, modelID }
       setStore("sessionOverrides", sessionID, model)
+      carryVariant(model, value, agent, sessionID)
     },
     setSessionAgent: (sessionID: string, name: string) => {
       setStore("agentSelections", sessionID, name)
@@ -3014,10 +3070,13 @@ export const SessionProvider: ParentComponent = (props) => {
     allMessages,
     allParts,
     allStatusMap,
+    recentModels: () => store.recentModels,
+    modelUsageHistory: () => store.modelUsageHistory,
     favoriteModels: () => store.favoriteModels,
     toggleFavorite,
     variantList,
     currentVariant,
+    variantForAgent,
     selectVariant,
     revert,
     revertedCount,

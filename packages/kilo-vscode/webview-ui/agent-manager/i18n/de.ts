@@ -64,6 +64,8 @@ export const dict = {
 
   "agentManager.terminal.new": "Neuer Terminal-Tab",
   "agentManager.terminal.ended": "Terminal beendet — Tab schließen zum Verwerfen",
+  "agentManager.terminal.endedRestartable":
+    "Terminal beendet - tippen, um eine neue Shell zu starten, oder Tab schließen",
   "agentManager.terminal.setupFailed": "Setup-Skript fehlgeschlagen",
   "agentManager.terminal.setupFailedCode": "Setup-Skript mit Exit-Code fehlgeschlagen",
   "agentManager.terminal.stopSetup": "Setup-Skript stoppen",
@@ -101,7 +103,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "Nächster Tab",
   "agentManager.shortcuts.newTab": "Neuer Tab",
   "agentManager.shortcuts.closeTab": "Tab schließen",
-  "agentManager.shortcuts.toggleTerminal": "Terminal umschalten",
+  "agentManager.shortcuts.toggleTerminal": "Terminal fokussieren / ausblenden",
   "agentManager.shortcuts.runScript": "Skript ausführen",
   "agentManager.run.options": "Ausführungsoptionen",
   "agentManager.run.configure": "Ausführungsskript konfigurieren",
@@ -116,6 +118,9 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.cancel": "Abbrechen",
   "agentManager.dialog.removeStaleWorktree.confirm": "Veralteten Worktree entfernen",
 
+  "agentManager.dialog.project.select": "Projekt auswählen",
+  "agentManager.dialog.project.untrusted": "Vertrauen Sie diesem Projekt zuerst in der Seitenleiste",
+  "agentManager.dialog.project.missing": "Repository nicht gefunden",
   "agentManager.dialog.openWorktree": "Neuer Worktree",
   "agentManager.dialog.configureWorktree": "Neuen Worktree konfigurieren...",
   "agentManager.dialog.tab.new": "Neu",

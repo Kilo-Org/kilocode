@@ -63,6 +63,7 @@ import { Toast, useToast } from "../../ui/toast"
 import { useKV } from "../../context/kv.tsx"
 import stripAnsi from "strip-ansi"
 import { usePromptRef } from "../../context/prompt"
+import { ApprovalBadge, describeApproval, stateMetadata } from "../../kilocode/tool-approval" // kilocode_change
 import { useEpilogue } from "../../context/epilogue"
 import { normalizePath } from "../../util/path"
 import { PermissionPrompt } from "./permission"
@@ -87,7 +88,7 @@ import { usePluginRuntime } from "../../plugin/runtime"
 import { DialogRetryAction } from "../../component/dialog-retry-action"
 import { getRevertDiffFiles } from "../../util/revert-diff"
 import { KILO_BASE_MODE, useBindings, useCommandShortcut, useOpencodeKeymap } from "../../keymap"
-import { PathFormatterProvider, usePathFormatter } from "../../context/path-format"
+import { usePathFormatter } from "../../context/path-format"
 // kilocode_change start
 import { KiloErrorBlock } from "@/kilocode/components/kilo-error-display"
 import { splitDiffHunks } from "@/kilocode/tui/diff"
@@ -98,6 +99,7 @@ import { ModeSwitch } from "@/kilocode/cli/cmd/tui/routes/session/mode-switch"
 import { ModeSwitchTui } from "@/kilocode/cli/cmd/tui/routes/session/mode-switch-ui"
 import { formatMarkdownTables } from "../../util/markdown"
 // kilocode_change end
+import { LocationProvider } from "../../context/location"
 
 addDefaultParsers(parsers.parsers)
 
@@ -214,6 +216,10 @@ export function Session() {
   const { theme } = useTheme()
   const promptRef = usePromptRef()
   const session = createMemo(() => sync.session.get(route.sessionID))
+  const location = createMemo(() => {
+    const current = session()
+    return current ? { directory: current.directory, workspaceID: current.workspaceID } : undefined
+  })
 
   createEffect(() => {
     const title = Locale.truncate(session()?.title ?? "", 50)
@@ -1283,7 +1289,7 @@ export function Session() {
   createEffect(on(() => route.sessionID, toBottom))
 
   return (
-    <PathFormatterProvider path={session()?.directory}>
+    <LocationProvider location={location()}>
       <context.Provider
         value={{
           get width() {
@@ -1508,18 +1514,8 @@ export function Session() {
           </Show>
         </box>
       </context.Provider>
-    </PathFormatterProvider>
+    </LocationProvider>
   )
-}
-
-const MIME_BADGE: Record<string, string> = {
-  "text/plain": "txt",
-  "image/png": "img",
-  "image/jpeg": "img",
-  "image/gif": "img",
-  "image/webp": "img",
-  "application/pdf": "pdf",
-  "application/x-directory": "dir",
 }
 
 function UserMessage(props: {
@@ -1582,14 +1578,12 @@ function UserMessage(props: {
               <box flexDirection="row" paddingBottom={metadataVisible() ? 1 : 0} paddingTop={1} gap={1} flexWrap="wrap">
                 <For each={files()}>
                   {(file) => {
-                    const bg = createMemo(() => {
-                      if (file.mime.startsWith("image/")) return theme.accent
-                      if (file.mime === "application/pdf") return theme.primary
-                      return theme.secondary
-                    })
+                    const directory = file.mime === "application/x-directory"
                     return (
                       <text fg={theme.text}>
-                        <span style={{ bg: bg(), fg: theme.background }}> {MIME_BADGE[file.mime] ?? file.mime} </span>
+                        <span style={{ bg: theme.secondary, fg: theme.background }}>
+                          {directory ? " Directory " : " File "}
+                        </span>
                         <span style={{ bg: theme.backgroundElement, fg: theme.textMuted }}> {file.filename} </span>
                       </text>
                     )
@@ -1629,11 +1623,7 @@ function UserMessage(props: {
   )
 }
 
-function AssistantMessage(props: {
-  message: AssistantMessage
-  parts: Part[]
-  last: boolean
-}) {
+function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; last: boolean }) {
   const ctx = use()
   const local = useLocal()
   const { theme } = useTheme()
@@ -2219,6 +2209,8 @@ function InlineTool(props: {
 
   const failed = createMemo(() => Boolean(error() && !denied()))
   const clickable = createMemo(() => Boolean(props.onClick || failed()))
+  // kilocode_change - explain why the call was auto-approved or denied
+  const approvalNote = createMemo(() => describeApproval(stateMetadata(props.part.state)))
   const fg = createMemo(() => {
     if (props.color) return props.color
     if (permission()) return theme.warning
@@ -2243,6 +2235,8 @@ function InlineTool(props: {
       failure={props.failure}
       spinner={props.spinner}
       separate={props.separate}
+      note={approvalNote()} // kilocode_change
+      noteColor={theme.textMuted} // kilocode_change
       onMouseOver={() => clickable() && setHover(true)}
       onMouseOut={() => setHover(false)}
       onMouseUp={() => {
@@ -2273,6 +2267,8 @@ export function InlineToolRow(props: {
   failure?: string
   spinner?: boolean
   separate?: boolean
+  note?: string // kilocode_change - why the call was auto-approved or denied
+  noteColor?: RGBA // kilocode_change
   children: JSX.Element
   onMouseOver?: () => void
   onMouseOut?: () => void
@@ -2325,6 +2321,8 @@ export function InlineToolRow(props: {
                 attributes={props.denied ? TextAttributes.STRIKETHROUGH : undefined}
               >
                 {props.failed && !props.complete ? (props.failure ?? props.children) : props.children}
+                {/* kilocode_change - explain why the call was auto-approved or denied, inline on the header */}
+                <ApprovalBadge note={props.note} color={props.noteColor} />
               </text>
             </box>
           </Show>
@@ -2340,16 +2338,21 @@ export function InlineToolRow(props: {
 }
 
 function BlockTool(props: {
-  title: string
+  title?: string
   children: JSX.Element
   onClick?: () => void
   part?: ToolPart
   spinner?: boolean
+  hideApproval?: boolean // kilocode_change - suppress the auto-approval note (e.g. todowrite)
 }) {
   const { theme } = useTheme()
   const renderer = useRenderer()
   const [hover, setHover] = createSignal(false)
   const error = createMemo(() => (props.part?.state.status === "error" ? props.part.state.error : undefined))
+  // kilocode_change - explain why the call was auto-approved or denied
+  const approvalNote = createMemo(() =>
+    props.hideApproval ? undefined : describeApproval(stateMetadata(props.part?.state)),
+  )
   return (
     <box
       ref={(el: BoxRenderable) => alwaysSeparate.add(el)}
@@ -2369,18 +2372,24 @@ function BlockTool(props: {
         props.onClick?.()
       }}
     >
-      <Show
-        when={props.spinner}
-        fallback={
-          <text paddingLeft={3} fg={theme.textMuted}>
-            {props.title}
-            {/* kilocode_change start */}
-            <RoutedModelMeta.View id={props.part?.id} />
-            {/* kilocode_change end */}
-          </text>
-        }
-      >
-        <Spinner color={theme.textMuted}>{props.title.replace(/^# /, "")}</Spinner>
+      <Show when={props.title}>
+        {(title) => (
+          <Show
+            when={props.spinner}
+            fallback={
+              <text paddingLeft={3} fg={theme.textMuted}>
+                {title()}
+                {/* kilocode_change start */}
+                <RoutedModelMeta.View id={props.part?.id} />
+                {/* explain why the call was auto-approved or denied, inline on the title */}
+                <ApprovalBadge note={approvalNote()} color={theme.textMuted} />
+                {/* kilocode_change end */}
+              </text>
+            }
+          >
+            <Spinner color={theme.textMuted}>{title().replace(/^# /, "")}</Spinner>
+          </Show>
+        )}
       </Show>
       {props.children}
       <Show when={error()}>
@@ -2408,15 +2417,15 @@ function Shell(props: ToolProps) {
   const workdirDisplay = createMemo(() => {
     const workdir = stringValue(props.input.workdir)
     if (!workdir || workdir === ".") return undefined
-    return pathFormatter.format(workdir)
+    const formatted = pathFormatter.format(workdir)
+    if (formatted === ".") return undefined
+    return formatted
   })
 
   const title = createMemo(() => {
-    const desc = stringValue(props.input.description) ?? "Shell"
     const wd = workdirDisplay()
-    if (!wd) return `# ${desc}`
-    if (desc.includes(wd)) return `# ${desc}`
-    return `# ${desc} in ${wd}`
+    if (!wd) return
+    return `# Running in ${wd}`
   })
 
   return (
@@ -2425,11 +2434,12 @@ function Shell(props: ToolProps) {
         <BlockTool
           title={title()}
           part={props.part}
-          spinner={isRunning()}
           onClick={collapsed().overflow ? () => setExpanded((prev) => !prev) : undefined}
         >
           <box gap={1}>
-            <text fg={theme.text}>$ {stringValue(props.input.command)}</text>
+            <Show when={isRunning()} fallback={<text fg={theme.text}>$ {stringValue(props.input.command)}</text>}>
+              <Spinner color={theme.text}>{stringValue(props.input.command)}</Spinner>
+            </Show>
             <Show when={output()}>
               <text fg={theme.text}>{limited()}</text>
             </Show>
@@ -2840,7 +2850,8 @@ function TodoWrite(props: ToolProps) {
   return (
     <Switch>
       <Match when={parseTodos(props.metadata.todos).length}>
-        <BlockTool title="# Todos" part={props.part}>
+        {/* kilocode_change - todo writes are orchestration, not a mutating action to explain */}
+        <BlockTool title="# Todos" part={props.part} hideApproval>
           <box>
             <For each={todos()}>{(todo) => <TodoItem status={todo.status} content={todo.content} />}</For>
           </box>

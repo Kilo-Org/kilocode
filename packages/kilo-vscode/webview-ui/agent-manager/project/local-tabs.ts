@@ -2,13 +2,14 @@ import { createEffect, createMemo, onCleanup } from "solid-js"
 import type { SessionInfo } from "../../src/types/messages/sessions"
 
 /**
- * Persist open tabs and the sidebar width to webview state for recovery.
+ * Persist open tabs and panel widths to webview state for recovery.
  * Debounced so a resize drag does not serialize state on every pixel.
  */
 export function persistLocalTabs(opts: {
   tabs: () => Record<string, string[]>
   key: () => string
   width: () => number
+  panelWidth?: () => number
   get: () => Record<string, unknown> | undefined
   set: (value: Record<string, unknown>) => void
 }): void {
@@ -18,9 +19,16 @@ export function persistLocalTabs(opts: {
     const tabs = opts.tabs()
     const key = opts.key()
     const width = opts.width()
+    const panel = opts.panelWidth?.()
     clearTimeout(timer)
     timer = setTimeout(() => {
-      opts.set({ ...(opts.get() ?? {}), localTabs: tabs, localSessionIDs: tabs[key] ?? [], sidebarWidth: width })
+      opts.set({
+        ...(opts.get() ?? {}),
+        localTabs: tabs,
+        localSessionIDs: tabs[key] ?? [],
+        sidebarWidth: width,
+        ...(panel === undefined ? {} : { sidePanelWidth: panel }),
+      })
     }, 300)
   })
   onCleanup(() => clearTimeout(timer))

@@ -7,7 +7,8 @@ import { Auth } from "../auth"
 import type { Provider } from "@opencode-ai/core/models-dev"
 import * as Log from "@opencode-ai/core/util/log"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
-import { httpClient } from "@opencode-ai/core/effect/layer-node-platform"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
+import { httpClient } from "@opencode-ai/core/effect/app-node-platform" // kilocode_change
 
 type Models = Provider["models"]
 type KiloOptions = NonNullable<Parameters<typeof fetchKiloModels>[0]>
@@ -326,14 +327,13 @@ export const layer: Layer.Layer<
   }),
 )
 
-export const defaultLayer = layer.pipe(
-  Layer.provide(FetchHttpClient.layer),
-  Layer.provide(Auth.defaultLayer),
-  Layer.provide(Config.defaultLayer),
-  Layer.provide(kiloModelsLayer),
-)
+export const defaultLayer: Layer.Layer<Service> = Layer.suspend(() => AppNodeBuilder.build(node)) // kilocode_change - build from the LayerNode graph
 
-const kiloModels = LayerNode.make(kiloModelsLayer, [])
-export const node = LayerNode.make(layer, [Auth.node, Config.node, kiloModels, httpClient])
+const kiloModels = LayerNode.make({ name: "kilo-models", layer: kiloModelsLayer, deps: [] })
+export const node = LayerNode.make({
+  service: Service,
+  layer,
+  deps: [Auth.node, Config.node, kiloModels, httpClient],
+})
 
 export * as ModelCache from "./model-cache"

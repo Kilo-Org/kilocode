@@ -376,6 +376,7 @@ export type TuiKV = {
 export type TuiState = {
   readonly ready: boolean
   readonly config: SdkConfig
+  readonly globalConfig: SdkConfig
   readonly provider: ReadonlyArray<Provider>
   readonly path: {
     state: string
@@ -383,7 +384,7 @@ export type TuiState = {
     worktree: string
     directory: string
   }
-  readonly vcs: { branch?: string } | undefined
+  readonly vcs: { branch?: string; default_branch?: string } | undefined
   session: {
     count: () => number
     get: (sessionID: string) => Session | undefined

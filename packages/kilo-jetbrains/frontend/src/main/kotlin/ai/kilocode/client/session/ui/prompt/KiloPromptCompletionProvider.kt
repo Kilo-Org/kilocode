@@ -20,7 +20,10 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.progress.runBlockingCancellable
+import com.intellij.psi.codeStyle.MinusculeMatcher
+import com.intellij.psi.codeStyle.NameUtil
 import com.intellij.util.textCompletion.TextCompletionProvider
+import com.intellij.util.text.matching.MatchingMode
 import java.util.Collections
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -163,12 +166,18 @@ class KiloPromptCompletionProvider(
     private fun slash(prefix: String, result: CompletionResultSet) {
         result.restartCompletionOnAnyPrefixChange()
         val out = result.withPrefixMatcher(PlainPrefixMatcher.ALWAYS_TRUE)
+        val rank = Ranker(prefix)
         val names = clientTokens()
-        val clients = actions.filter { action -> matches(prefix, action.name, action.hints) }
-        clients.forEach { action -> out.addElement(client(action)) }
+        val clients = actions.mapNotNull { action ->
+            rank.score(action.name, action.hints)?.let { Hit(client(action), it) }
+        }
         val commands = workspace.state.value.commands
-            .filter { it.name !in names && matches(prefix, it.name, it.hints) }
-        commands.forEach { command -> out.addElement(server(command)) }
+            .mapNotNull { command ->
+                if (command.name in names) return@mapNotNull null
+                rank.score(command.name, command.hints)?.let { Hit(server(command), it) }
+            }
+        val hits = (clients + commands).sortedByDescending { it.score }
+        hits.forEach { hit -> out.addElement(weight(hit.item, hit.score)) }
         if (clients.isNotEmpty() || commands.isNotEmpty()) return
         result.withPrefixMatcher(PlainPrefixMatcher.ALWAYS_TRUE)
             .addElement(info(prefix, KiloBundle.message("prompt.completion.noMatches")))
@@ -178,7 +187,8 @@ class KiloPromptCompletionProvider(
         result.restartCompletionOnAnyPrefixChange()
         val out = result.withPrefixMatcher(PlainPrefixMatcher.ALWAYS_TRUE)
         val search = search(prefix)
-        val known = mentions.filter { action -> matches(prefix, action.name, action.hints) && action.available(search) }
+        val rank = Ranker(prefix)
+        val known = mentions.filter { action -> rank.matches(action.name, action.hints) && action.available(search) }
         known.forEach { action -> out.addElement(prioritize(resource(action))) }
         if (search.indexing) {
             val msg = KiloBundle.message("prompt.mention.indexing")
@@ -214,8 +224,37 @@ class KiloPromptCompletionProvider(
         }
         .withAutoCompletionPolicy(AutoCompletionPolicy.NEVER_AUTOCOMPLETE)
 
-    private fun matches(prefix: String, name: String, hints: List<String>): Boolean =
-        (listOf(name) + hints).any { it.startsWith(prefix, ignoreCase = true) }
+    private class Ranker(prefix: String) {
+        private val start = matcher(prefix)
+        private val middle = if (prefix.any { separator(it) }) null else matcher("*$prefix")
+
+        fun matches(name: String, hints: List<String>): Boolean = score(name, hints) != null
+
+        fun score(name: String, hints: List<String>): Int? = (listOf(name) + hints).maxOfOrNull { value ->
+            score(value) ?: Int.MIN_VALUE
+        }?.takeIf { it != Int.MIN_VALUE }
+
+        private fun score(value: String): Int? {
+            val exact = start.match(value)
+            if (exact != null) return START + start.matchingDegree(value, true, exact)
+            val fallback = middle ?: return null
+            val fuzzy = fallback.match(value) ?: return null
+            return fallback.matchingDegree(value, false, fuzzy)
+        }
+
+        private companion object {
+            const val START = 10_000
+
+            fun matcher(prefix: String): MinusculeMatcher = NameUtil.buildMatcher(prefix)
+                .withMatchingMode(MatchingMode.IGNORE_CASE)
+                .build()
+
+            fun separator(c: Char): Boolean = when (c) {
+                '_', '-', ':', '+', '.' -> true
+                else -> c.isWhitespace()
+            }
+        }
+    }
 
     private fun commandName(text: String): String? {
         val raw = text.trimStart()
@@ -250,6 +289,11 @@ class KiloPromptCompletionProvider(
 
     private fun prioritize(element: LookupElement): LookupElement =
         PrioritizedLookupElement.withGrouping(PrioritizedLookupElement.withPriority(element, 100.0), 100)
+
+    private fun weight(element: LookupElement, score: Int): LookupElement =
+        PrioritizedLookupElement.withPriority(element, score.toDouble())
+
+    private data class Hit(val item: LookupElement, val score: Int)
 
     private fun file(file: WorkspaceFileDto): LookupElement = LookupElementBuilder.create(file.path)
         .withPresentableText("@${file.path}")

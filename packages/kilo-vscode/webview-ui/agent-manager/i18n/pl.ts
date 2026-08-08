@@ -64,6 +64,8 @@ export const dict = {
 
   "agentManager.terminal.new": "Nowa karta terminala",
   "agentManager.terminal.ended": "terminal zakończony — zamknij kartę, aby zamknąć",
+  "agentManager.terminal.endedRestartable":
+    "terminal zakończony - wpisz tekst, aby uruchomić nową powłokę, lub zamknij kartę",
   "agentManager.terminal.setupFailed": "skrypt konfiguracji nie powiódł się",
   "agentManager.terminal.setupFailedCode": "skrypt konfiguracji nie powiódł się z kodem wyjścia",
   "agentManager.terminal.stopSetup": "Zatrzymaj skrypt konfiguracji",
@@ -100,7 +102,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "Następna karta",
   "agentManager.shortcuts.newTab": "Nowa karta",
   "agentManager.shortcuts.closeTab": "Zamknij kartę",
-  "agentManager.shortcuts.toggleTerminal": "Przełącz terminal",
+  "agentManager.shortcuts.toggleTerminal": "Przenieś fokus do terminala / ukryj terminal",
   "agentManager.shortcuts.runScript": "Uruchom skrypt",
   "agentManager.run.options": "Opcje uruchamiania",
   "agentManager.run.configure": "Konfiguruj skrypt uruchamiania",
@@ -115,6 +117,9 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.cancel": "Anuluj",
   "agentManager.dialog.removeStaleWorktree.confirm": "Usuń nieaktualny Worktree",
 
+  "agentManager.dialog.project.select": "Wybierz projekt",
+  "agentManager.dialog.project.untrusted": "Najpierw zaufaj temu projektowi na pasku bocznym",
+  "agentManager.dialog.project.missing": "Nie znaleziono repozytorium",
   "agentManager.dialog.openWorktree": "Nowy Worktree",
   "agentManager.dialog.configureWorktree": "Skonfiguruj Nowe Worktree...",
   "agentManager.dialog.tab.new": "Nowy",

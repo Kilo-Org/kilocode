@@ -32,4 +32,13 @@ export type KiloProviderOptions = {
    * is ambiguous.
    */
   projectQualifier?: () => { projectId: string } | undefined
+  /**
+   * Hides the in-webview sidebar top bar (New Task, History, Agent Manager,
+   * etc.) for dedicated single-purpose panels — Settings, Profile, and the
+   * Sub-Agent Viewer — where it doesn't apply and would let users navigate
+   * away from the panel's one job. Sidebar and "Open in Tab" leave this unset.
+   */
+  hideTopBar?: boolean
+  /** Reports "Open in Tab" as the top bar's telemetry surface instead of the sidebar default. */
+  topBarSurface?: "tab"
 }

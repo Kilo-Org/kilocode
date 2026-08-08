@@ -1,6 +1,6 @@
 {
   "name": "@kilocode/kilo-console",
-  "version": "7.4.18",
+  "version": "7.4.20",
   "private": true,
   "type": "module",
   "scripts": {

@@ -1,61 +1,14 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { InstanceState } from "@/effect/instance-state"
 import { SessionID } from "./schema"
-import { QuestionID } from "@/question/schema" // kilocode_change
-import { NonNegativeInt } from "@opencode-ai/core/schema"
-import { Effect, Layer, Context, Schema } from "effect"
+import { Effect, Layer, Context } from "effect"
 import { EventV2Bridge } from "@/event-v2-bridge"
-import { EventV2 } from "@opencode-ai/core/event"
+import { SessionStatusEvent } from "@opencode-ai/schema/session-status-event"
 
-export const Info = Schema.Union([
-  Schema.Struct({
-    type: Schema.Literal("idle"),
-  }),
-  Schema.Struct({
-    type: Schema.Literal("retry"),
-    attempt: NonNegativeInt,
-    message: Schema.String,
-    action: Schema.optional(
-      Schema.Struct({
-        reason: Schema.String,
-        provider: Schema.String,
-        title: Schema.String,
-        message: Schema.String,
-        label: Schema.String,
-        link: Schema.optional(Schema.String),
-      }),
-    ),
-    next: NonNegativeInt,
-  }),
-  Schema.Struct({
-    type: Schema.Literal("busy"),
-  }),
-  // kilocode_change start
-  Schema.Struct({
-    type: Schema.Literal("offline"),
-    requestID: QuestionID,
-    message: Schema.String,
-  }),
-  // kilocode_change end
-]).annotate({ identifier: "SessionStatus" })
-export type Info = Schema.Schema.Type<typeof Info>
+export const Info = SessionStatusEvent.Info
+export type Info = SessionStatusEvent.Info
 
-export const Event = {
-  Status: EventV2.define({
-    type: "session.status",
-    schema: {
-      sessionID: SessionID,
-      status: Info,
-    },
-  }),
-  // deprecated
-  Idle: EventV2.define({
-    type: "session.idle",
-    schema: {
-      sessionID: SessionID,
-    },
-  }),
-}
+export const Event = SessionStatusEvent
 
 export interface Interface {
   readonly get: (sessionID: SessionID) => Effect.Effect<Info>
@@ -98,8 +51,9 @@ export const layer = Layer.effect(
   }),
 )
 
+// kilocode_change - preserve legacy layer composition for Kilo callers
 export const defaultLayer = layer.pipe(Layer.provide(EventV2Bridge.defaultLayer))
 
-export const node = LayerNode.make(layer, [EventV2Bridge.node])
+export const node = LayerNode.make({ service: Service, layer: layer, deps: [EventV2Bridge.node] })
 
 export * as SessionStatus from "./status"

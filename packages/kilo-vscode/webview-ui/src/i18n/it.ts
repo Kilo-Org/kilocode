@@ -120,6 +120,7 @@ export const dict = {
   "model.group.auto": "Modelli automatici",
   "model.group.recommended": "Consigliati",
   "model.group.favorites": "Preferiti",
+  "model.group.mostUsed": "Più usati",
   "model.favorite.add": "Aggiungi ai preferiti",
   "model.favorite.remove": "Rimuovi dai preferiti",
   "model.preview.label.released": "Rilasciato",
@@ -218,6 +219,7 @@ export const dict = {
   "ui.approval.source.yolo": "dalla modalità di approvazione automatica (YOLO)",
   "ui.approval.source.session": "da una regola di approvazione automatica della sessione",
   "ui.approval.source.default": "per impostazione predefinita",
+  "ui.approval.outsideWorkspace": "(fuori dall'area di lavoro: {{file}})",
   "session.tab.review": "Revisione",
   "session.review.filesChanged": "{{count}} file modificati",
   "session.review.loadingChanges": "Caricamento modifiche...",
@@ -590,6 +592,14 @@ export const dict = {
   "session.status.retry": "Riprovo...",
   "session.status.working": "Al lavoro...",
   "session.status.offline": "Rete disconnessa - riconnessione...",
+  "sidebar.topBar.label": "Navigazione Kilo Code",
+  "sidebar.topBar.newTask": "Nuova Attività",
+  "sidebar.topBar.history": "Cronologia",
+  "sidebar.topBar.agentManager": "Agent Manager",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "Marketplace",
+  "sidebar.topBar.profile": "Profilo",
+  "sidebar.topBar.settings": "Impostazioni",
   "sidebar.session.newSession": "Nuova sessione",
   "sidebar.session.newSession.tooltip": "Avvia una nuova conversazione mantenendo intatta la sessione corrente.",
   "sidebar.session.newWorktree": "Nuovo worktree",
@@ -734,7 +744,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "Destinazioni di rete consentite",
   "settings.sandboxing.allowedHosts.description":
-    "Destinazioni DNS di host e porta per il traffico proxy HTTP e HTTPS in sandbox. GitHub CLI e HTTPS Git richiedono comunemente github.com:443 e api.github.com:443. Le modifiche si applicano alle nuove sessioni.",
+    "Destinazioni DNS di host e porta per il traffico proxy HTTP e HTTPS in sandbox. GitHub CLI e HTTPS Git richiedono comunemente github.com:443 e api.github.com:443.",
   "settings.sandboxing.writablePaths.title": "Percorsi di scrittura aggiuntivi",
   "settings.sandboxing.writablePaths.description":
     "Percorsi aggiuntivi del file system in cui la sandbox consente la scrittura (es. /tmp, /var/log). Vengono uniti con i percorsi di scrittura predefiniti quando la sandbox è attiva.",
@@ -850,6 +860,9 @@ export const dict = {
     "Nessun comando personalizzato configurato. Aggiungi comandi a opencode.json per vederli qui.",
   "settings.agentBehaviour.workflows.detail.description": "Descrizione",
   "settings.agentBehaviour.workflows.detail.template": "Template",
+  "settings.agentBehaviour.workflows.model": "modello",
+  "settings.agentBehaviour.workflows.variant": "variante",
+  "settings.agentBehaviour.workflows.modelDescription": "Override globale del modello",
   "settings.agentBehaviour.createMode": "Crea nuova modalità",
   "settings.agentBehaviour.createMode.name": "Nome",
   "settings.agentBehaviour.createMode.name.placeholder": "es. reviewer",
@@ -992,9 +1005,12 @@ export const dict = {
   "settings.display.codeEdit.expanded": "Espansi",
   "settings.display.codeEdit.collapsed": "Compressi",
 
-  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.title": "Mostra velocità di generazione dei token",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+    "Mostra la velocità di generazione del testo (token/sec) sull'ultimo messaggio dell'assistente e nell'intestazione dell'attività. Nascosto per impostazione predefinita per mantenere la chat ordinata.",
+  "settings.display.autoApprovalReason.title": "Mostra motivo dell'approvazione automatica",
+  "settings.display.autoApprovalReason.description":
+    "Mostra una riga sulle chiamate agli strumenti che spiega perché sono state approvate automaticamente (regola corrispondente, predefinito dell'agente, modalità YOLO, ecc.).",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
@@ -1256,6 +1272,8 @@ export const dict = {
 
   // Speech to Text tooltips and errors
   "speechToText.tooltip.start": "Avvia input vocale con Kilo Gateway",
+  "speechToText.tooltip.shortcut":
+    "Tocca o premi Cmd/Ctrl+K per avviare o interrompere la registrazione; tieni premuto mentre parli e rilascia per trascrivere e inviare.",
   "speechToText.tooltip.starting": "Avvio del microfono... Attendi prima di parlare.",
   "speechToText.tooltip.stop": "Interrompi acquisizione",
   "speechToText.tooltip.transcribing": "Trascrizione... Fai clic per annullare.",

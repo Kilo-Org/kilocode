@@ -63,6 +63,7 @@ export const dict = {
 
   "agentManager.terminal.new": "แท็บเทอร์มินัลใหม่",
   "agentManager.terminal.ended": "เทอร์มินัลสิ้นสุด — ปิดแท็บเพื่อยกเลิก",
+  "agentManager.terminal.endedRestartable": "เทอร์มินัลสิ้นสุด - พิมพ์เพื่อเริ่มเชลล์ใหม่หรือปิดแท็บ",
   "agentManager.terminal.setupFailed": "สคริปต์ติดตั้งล้มเหลว",
   "agentManager.terminal.setupFailedCode": "สคริปต์ติดตั้งล้มเหลวด้วยรหัสออก",
   "agentManager.terminal.stopSetup": "หยุดสคริปต์ติดตั้ง",
@@ -96,7 +97,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "แท็บถัดไป",
   "agentManager.shortcuts.newTab": "แท็บใหม่",
   "agentManager.shortcuts.closeTab": "ปิดแท็บ",
-  "agentManager.shortcuts.toggleTerminal": "สลับเทอร์มินัล",
+  "agentManager.shortcuts.toggleTerminal": "โฟกัสเทอร์มินัล / ซ่อนเทอร์มินัล",
   "agentManager.shortcuts.runScript": "เรียกใช้สคริปต์",
   "agentManager.run.options": "ตัวเลือกการเรียกใช้",
   "agentManager.run.configure": "กำหนดค่าสคริปต์การเรียกใช้",
@@ -111,6 +112,9 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.cancel": "ยกเลิก",
   "agentManager.dialog.removeStaleWorktree.confirm": "ลบ Worktree ที่ล้าสมัย",
 
+  "agentManager.dialog.project.select": "เลือกโปรเจกต์",
+  "agentManager.dialog.project.untrusted": "โปรดเชื่อถือโปรเจกต์นี้ในแถบด้านข้างก่อน",
+  "agentManager.dialog.project.missing": "ไม่พบ Repository",
   "agentManager.dialog.openWorktree": "Worktree ใหม่",
   "agentManager.dialog.configureWorktree": "กำหนดค่า Worktree ใหม่...",
   "agentManager.dialog.tab.new": "ใหม่",

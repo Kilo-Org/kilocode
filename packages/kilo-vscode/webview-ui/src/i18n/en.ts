@@ -162,6 +162,7 @@ export const dict = {
   "model.group.auto": "Auto Models",
   "model.group.recommended": "Recommended",
   "model.group.favorites": "Favorites",
+  "model.group.mostUsed": "Most used",
   "model.favorite.add": "Add to favorites",
   "model.favorite.remove": "Remove from favorites",
   "model.preview.label.released": "Released",
@@ -227,6 +228,8 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.",
   "speechToText.tooltip.start": "Start voice input with Kilo Gateway",
+  "speechToText.tooltip.shortcut":
+    "Tap to start or stop recording. Hold while speaking, then release to transcribe and submit.",
   "speechToText.tooltip.starting": "Starting microphone... Wait to speak.",
   "speechToText.tooltip.stop": "Recording. Click to stop.",
   "speechToText.tooltip.transcribing": "Transcribing... Click to cancel.",
@@ -307,6 +310,7 @@ export const dict = {
   "ui.approval.source.yolo": "by auto-approve (YOLO) mode",
   "ui.approval.source.session": "by a session auto-approve rule",
   "ui.approval.source.default": "by default",
+  "ui.approval.outsideWorkspace": "(outside your workspace: {{file}})",
 
   "session.tab.review": "Review",
   "session.review.filesChanged": "{{count}} Files Changed",
@@ -712,6 +716,14 @@ export const dict = {
   "session.costAlert.question":
     "This session just went above your {{limit}} per-session alert threshold and cost {{cost}}. Keep going?",
   "session.costAlert.stop": "Stop",
+  "sidebar.topBar.label": "Kilo Code navigation",
+  "sidebar.topBar.newTask": "New Task",
+  "sidebar.topBar.history": "History",
+  "sidebar.topBar.agentManager": "Agent Manager",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "Marketplace",
+  "sidebar.topBar.profile": "Profile",
+  "sidebar.topBar.settings": "Settings",
   "sidebar.session.newSession": "New Session",
   "sidebar.session.newSession.tooltip": "Start a fresh conversation while keeping the current session intact.",
   "sidebar.session.newWorktree": "New Worktree",
@@ -871,7 +883,7 @@ export const dict = {
     "Block direct outbound access from model-originated commands and HTTP tools. Local and remote MCP tools are unavailable while restricted. Provider traffic and trusted plugin hooks remain outside this restriction.",
   "settings.sandboxing.allowedHosts.title": "Allowed Network Destinations",
   "settings.sandboxing.allowedHosts.description":
-    "DNS host and port destinations for sandboxed HTTP and HTTPS proxy traffic. GitHub CLI and HTTPS Git commonly need github.com:443 and api.github.com:443. Changes apply to new sessions.",
+    "DNS host and port destinations for sandboxed HTTP and HTTPS proxy traffic. GitHub CLI and HTTPS Git commonly need github.com:443 and api.github.com:443.",
   "settings.sandboxing.writablePaths.title": "Additional Writable Paths",
   "settings.sandboxing.writablePaths.description":
     "Extra filesystem paths the sandbox allows writes to (e.g. /tmp, /var/log). These are merged with the default writable paths when the sandbox is active.",
@@ -973,6 +985,9 @@ export const dict = {
     "No custom commands configured. Add commands to your opencode.json to see them here.",
   "settings.agentBehaviour.workflows.detail.description": "Description",
   "settings.agentBehaviour.workflows.detail.template": "Template",
+  "settings.agentBehaviour.workflows.model": "model",
+  "settings.agentBehaviour.workflows.variant": "variant",
+  "settings.agentBehaviour.workflows.modelDescription": "Global model override",
 
   "settings.agentBehaviour.createMode": "Create New Mode",
   "settings.agentBehaviour.createMode.name": "Name",
@@ -1120,6 +1135,9 @@ export const dict = {
   "settings.display.tokenThroughput.title": "Show Token Throughput",
   "settings.display.tokenThroughput.description":
     "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+  "settings.display.autoApprovalReason.title": "Show Auto-Approval Reason",
+  "settings.display.autoApprovalReason.description":
+    "Show a line on tool calls explaining why they were auto-approved (matched rule, agent default, YOLO mode, etc.).",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

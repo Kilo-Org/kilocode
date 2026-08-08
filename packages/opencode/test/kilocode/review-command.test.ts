@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect, test } from "bun:test"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Effect, Layer } from "effect"
@@ -6,7 +7,7 @@ import { legacyReviewMessage, parseReviewCommand, reviewCommand } from "../../sr
 import { provideTmpdirInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
-const it = testEffect(Layer.mergeAll(Command.defaultLayer, CrossSpawnSpawner.defaultLayer))
+const it = testEffect(Layer.mergeAll(AppNodeBuilder.build(Command.node), AppNodeBuilder.build(CrossSpawnSpawner.node)))
 
 function expectReviewFixContract(text: string) {
   expect(text).toContain("During the initial review phase")
@@ -21,6 +22,10 @@ describe("review command parsing", () => {
     expect(parseReviewCommand("/review")).toBe("review")
     expect(parseReviewCommand("/review focus on tests")).toBe("review")
     expect(parseReviewCommand("/review uncommitted focus on tests")).toBe("review")
+    expect(parseReviewCommand("/review staged")).toBe("review")
+    expect(parseReviewCommand("/review unpushed")).toBe("review")
+    expect(parseReviewCommand("/review quick")).toBe("review")
+    expect(parseReviewCommand("/review --quick")).toBe("review")
     expect(parseReviewCommand("/review branch origin/main focus on auth")).toBe("review")
     expect(parseReviewCommand("/review a1b2c3d")).toBe("review")
     expect(parseReviewCommand("/review https://github.com/Kilo-Org/kilocode/pull/11084")).toBe("review")
@@ -57,6 +62,14 @@ describe("review command", () => {
     expect(text).toMatch(/git\b[^\n]*\bdiff HEAD/)
     expect(text).toMatch(/git\b[^\n]*\bdiff --cached/)
     expect(text).toContain("git ls-files --others --exclude-standard")
+  })
+
+  test("documents explicit staged and unpushed review", () => {
+    const text = cmd.template as string
+    expect(text).toContain("`/review staged [guidance]`")
+    expect(text).toContain("`/review unpushed [guidance]`")
+    expect(text).toContain("For staged review")
+    expect(text).toContain("For unpushed review")
   })
 
   test("documents explicit and ref-based branch review", () => {
@@ -132,6 +145,7 @@ describe("review command", () => {
 
   test("applies adaptive parallel review tracks", () => {
     const text = cmd.template as string
+    expect(text).toContain("Quick mode (`quick`, `--quick`, `-q`, or `--effort 1-3`)")
     expect(text).toContain("spawn the appropriate sub-agents in parallel")
     expect(text).toContain("do NOT spawn sub-agents")
     expect(text).toContain("spawn a single security sub-agent")
@@ -143,7 +157,7 @@ describe("review command", () => {
     expect(text).toContain("NO_FINDINGS")
   })
 
-  it.live("lists review and deprecated review aliases", () =>
+  it.live("resolves review and deprecated review aliases", () =>
     provideTmpdirInstance(
       () =>
         Effect.gen(function* () {
@@ -155,8 +169,8 @@ describe("review command", () => {
           const uncommitted = yield* command.get("local-review-uncommitted")
 
           expect(names).toContain("review")
-          expect(names).toContain("local-review")
-          expect(names).toContain("local-review-uncommitted")
+          expect(names).not.toContain("local-review")
+          expect(names).not.toContain("local-review-uncommitted")
           expect(review?.name).toBe("review")
           expect(branch?.description).toBe("deprecated; use /review branch")
           expect(branch?.template).toBe(legacyReviewMessage("local-review"))
