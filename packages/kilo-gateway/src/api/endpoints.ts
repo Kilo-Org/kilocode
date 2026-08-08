@@ -1,9 +1,9 @@
 import { z } from "zod"
-import { getKiloUrlFromToken } from "../auth/token.js"
 import { getDefaultHeaders, buildKiloHeaders } from "../headers.js"
-import { KILO_API_BASE, KILO_OPENROUTER_BASE, MODELS_FETCH_TIMEOUT_MS } from "./constants.js"
+import { MODELS_FETCH_TIMEOUT_MS } from "./constants.js"
+import { resolveKiloGatewayBaseUrl } from "./url.js"
 
-/** Public OpenRouter API base used as a fallback when the gateway does not proxy endpoint listings */
+/** Public OpenRouter API base, used for the "public" catalog (BYOK OpenRouter models) */
 const OPENROUTER_PUBLIC_API_BASE = "https://openrouter.ai/api/v1"
 
 /**
@@ -34,8 +34,12 @@ export type KiloModelEndpointsResult = {
 
 const price = z.union([z.string(), z.number()]).nullish()
 
+// The gateway response is a subset of the public OpenRouter endpoint listing:
+// per-endpoint `name`, `quantization`, `max_completion_tokens`, `uptime_last_30m`
+// and `pricing.input_cache_write` are currently absent there, so everything
+// beyond the routing slug is optional.
 const endpointSchema = z.object({
-  name: z.string(),
+  name: z.string().nullish(),
   tag: z.string().nullish(),
   provider_name: z.string().nullish(),
   quantization: z.string().nullish(),
@@ -78,7 +82,7 @@ function transform(raw: z.infer<typeof endpointSchema>): KiloModelEndpoint | und
   // encoded as null by the server response schema.
   return {
     provider: slug,
-    name: raw.provider_name ?? raw.name,
+    name: raw.provider_name ?? raw.name ?? slug,
     ...(raw.quantization != null ? { quantization: raw.quantization } : {}),
     ...(raw.context_length != null ? { context: raw.context_length } : {}),
     ...(raw.max_completion_tokens != null ? { output: raw.max_completion_tokens } : {}),
@@ -108,24 +112,17 @@ function segments(model: string): string | undefined {
   return parts.map(encodeURIComponent).join("/")
 }
 
-async function fetchEndpoints(
-  url: string,
-  headers: Record<string, string>,
-): Promise<KiloModelEndpointsResult & { retriable?: boolean }> {
+async function fetchEndpoints(url: string, headers: Record<string, string>): Promise<KiloModelEndpointsResult> {
   const response = await fetch(url, {
     headers,
     signal: AbortSignal.timeout(MODELS_FETCH_TIMEOUT_MS),
   }).catch(() => undefined)
 
-  if (!response) return { endpoints: [], error: { kind: "network" }, retriable: true }
+  if (!response) return { endpoints: [], error: { kind: "network" } }
 
   if (!response.ok) {
     const kind = response.status === 401 || response.status === 403 ? "unauthorized" : "http"
-    // Every HTTP failure — auth errors included — stays retriable so the
-    // "kilo" catalog can fall back to the public OpenRouter listing. The
-    // gateway does not proxy endpoint listings today (it answers 405), so
-    // failing hard on 401/403 would leave the selector without any catalog.
-    return { endpoints: [], error: { kind, status: response.status }, retriable: true }
+    return { endpoints: [], error: { kind, status: response.status } }
   }
 
   const json = await response.json().catch(() => null)
@@ -146,11 +143,11 @@ async function fetchEndpoints(
 /**
  * Fetch the list of upstream endpoints (inference providers) serving a model.
  *
- * With the default `"kilo"` catalog, tries the Kilo Gateway OpenRouter passthrough
- * first and falls back to the public OpenRouter API if the gateway does not expose
- * the endpoint listing (or errors). The `"public"` catalog queries the public
- * OpenRouter API only — for models configured against OpenRouter directly, where
- * gateway-specific entries would not be routable.
+ * The default `"kilo"` catalog queries the Kilo Gateway endpoints API only —
+ * no fallback to the public OpenRouter API, so the catalog never lists an
+ * endpoint the gateway cannot actually route (maintainer request in #12380).
+ * The `"public"` catalog queries the public OpenRouter API only — for models
+ * configured against OpenRouter directly, without Kilo auth headers.
  */
 export async function fetchKiloModelEndpoints(
   model: string,
@@ -164,29 +161,22 @@ export async function fetchKiloModelEndpoints(
   const encoded = segments(model)
   if (encoded === undefined) return { endpoints: [], error: { kind: "invalid" } }
   const path = `models/${encoded}/endpoints`
-  const fallback = () => fetchEndpoints(`${OPENROUTER_PUBLIC_API_BASE}/${path}`, getDefaultHeaders())
+
   if (options?.catalog === "public") {
-    const result = await fallback()
-    return { endpoints: result.endpoints, ...(result.error ? { error: result.error } : {}) }
+    return fetchEndpoints(`${OPENROUTER_PUBLIC_API_BASE}/${path}`, getDefaultHeaders())
   }
 
   const token = options?.kilocodeToken
   const organizationId = options?.kilocodeOrganizationId
 
-  const defaultBaseURL = organizationId ? `${KILO_API_BASE}/api/organizations/${organizationId}` : KILO_OPENROUTER_BASE
-  const baseURL = options?.baseURL ?? defaultBaseURL
-  const finalBaseURL = token ? getKiloUrlFromToken(baseURL, token) : baseURL
-
+  // The gateway endpoints API has no organization-scoped path; the
+  // organization id travels in the headers instead.
+  const baseURL = resolveKiloGatewayBaseUrl({ baseURL: options?.baseURL, token })
   const headers = {
     ...getDefaultHeaders(),
     ...buildKiloHeaders(undefined, { kilocodeOrganizationId: organizationId }),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   }
 
-  const primary = await fetchEndpoints(`${finalBaseURL}/${path}`, headers)
-  if (!primary.error) return { endpoints: primary.endpoints }
-  if (!primary.retriable) return primary
-
-  const result = await fallback()
-  return { endpoints: result.endpoints, ...(result.error ? { error: result.error } : {}) }
+  return fetchEndpoints(`${baseURL}${path}`, headers)
 }

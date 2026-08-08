@@ -1,4 +1,5 @@
-// Verifies fetchKiloModelEndpoints parsing, slug resolution, catalog selection and public-API fallback.
+// Verifies fetchKiloModelEndpoints parsing, slug resolution and catalog selection
+// (kilo → gateway endpoints API only, public → public OpenRouter API only).
 
 import { test, expect, afterEach } from "bun:test"
 import { fetchKiloModelEndpoints } from "../../src/api/endpoints.js"
@@ -48,10 +49,15 @@ function json(body: string) {
 }
 
 test("parses endpoints, prefers tag as routing slug, drops unroutable entries", async () => {
-  stubFetch(async () => json(VALID_RESPONSE))
+  const urls: string[] = []
+  stubFetch(async (input) => {
+    urls.push(input instanceof Request ? input.url : input.toString())
+    return json(VALID_RESPONSE)
+  })
 
   const result = await fetchKiloModelEndpoints("test/model", { kilocodeToken: "token" })
 
+  expect(urls[0].endsWith("/api/gateway/models/test/model/endpoints")).toBe(true)
   expect(result.error).toBeUndefined()
   expect(result.endpoints).toHaveLength(2)
 
@@ -68,22 +74,54 @@ test("parses endpoints, prefers tag as routing slug, drops unroutable entries", 
   expect(result.endpoints[1].provider).toBe("Chutes")
 })
 
-test("falls back to the public OpenRouter API when the gateway does not serve endpoints", async () => {
+test("parses the gateway response shape (no per-endpoint name, subset of metadata)", async () => {
+  // Mirrors the live /api/gateway/models/{model}/endpoints payload.
+  const body = JSON.stringify({
+    data: {
+      id: "test/model",
+      name: "Test: Model",
+      endpoints: [
+        {
+          tag: "streamlake/fp8",
+          provider_name: "StreamLake",
+          context_length: 1024000,
+          pricing: { prompt: "0.00000174", completion: "0.00000348", input_cache_read: "0.000000145", discount: 0 },
+        },
+      ],
+    },
+  })
+  stubFetch(async () => json(body))
+
+  const result = await fetchKiloModelEndpoints("test/model", { kilocodeToken: "token" })
+
+  expect(result.error).toBeUndefined()
+  expect(result.endpoints).toHaveLength(1)
+  const endpoint = result.endpoints[0]
+  expect(endpoint.provider).toBe("streamlake/fp8")
+  expect(endpoint.name).toBe("StreamLake")
+  expect(endpoint.context).toBe(1024000)
+  expect(endpoint.pricing?.input).toBeCloseTo(1.74)
+  expect(endpoint.pricing?.output).toBeCloseTo(3.48)
+  expect(endpoint.pricing?.cacheRead).toBeCloseTo(0.145)
+  expect(endpoint.quantization).toBeUndefined()
+  expect(endpoint.output).toBeUndefined()
+  expect(endpoint.uptime).toBeUndefined()
+  expect(endpoint.pricing?.cacheWrite).toBeUndefined()
+})
+
+test("kilo catalog does not fall back to the public API on gateway errors", async () => {
   const urls: string[] = []
 
   stubFetch(async (input) => {
-    const url = input instanceof Request ? input.url : input.toString()
-    urls.push(url)
-    if (urls.length === 1) return new Response("Not Found", { status: 404, statusText: "Not Found" })
-    return json(VALID_RESPONSE)
+    urls.push(input instanceof Request ? input.url : input.toString())
+    return new Response("Not Found", { status: 404, statusText: "Not Found" })
   })
 
   const result = await fetchKiloModelEndpoints("test/model", { kilocodeToken: "token" })
 
-  expect(urls).toHaveLength(2)
-  expect(urls[1].startsWith("https://openrouter.ai/api/v1/models/test/model/endpoints")).toBe(true)
-  expect(result.error).toBeUndefined()
-  expect(result.endpoints).toHaveLength(2)
+  expect(urls).toHaveLength(1)
+  expect(result.endpoints).toEqual([])
+  expect(result.error).toEqual({ kind: "http", status: 404 })
 })
 
 test("public catalog queries the public OpenRouter API only and sends no auth", async () => {
@@ -133,7 +171,7 @@ test("rejects model IDs with traversal or empty segments without fetching", asyn
   expect(calls).toBe(0)
 })
 
-test("does not retry the public API on schema errors and reports them", async () => {
+test("reports schema errors without retrying", async () => {
   let calls = 0
   stubFetch(async () => {
     calls++
@@ -147,13 +185,16 @@ test("does not retry the public API on schema errors and reports them", async ()
   expect(result.error?.kind).toBe("schema")
 })
 
-test("returns error when both gateway and public API fail", async () => {
+test("returns network error when the gateway is unreachable", async () => {
+  let calls = 0
   stubFetch(async () => {
+    calls++
     throw new Error("network down")
   })
 
   const result = await fetchKiloModelEndpoints("test/model", {})
 
+  expect(calls).toBe(1)
   expect(result.endpoints).toEqual([])
   expect(result.error?.kind).toBe("network")
 })
@@ -179,7 +220,7 @@ test("tolerates null endpoint fields and drops only malformed entries", async ()
           pricing: { prompt: null, completion: "0.000001", input_cache_read: null },
         },
         // Malformed entry — must not fail the surrounding catalog
-        { name: null, tag: "broken/fp8" },
+        { tag: "broken/fp8", context_length: "not-a-number" },
       ],
     },
   })
