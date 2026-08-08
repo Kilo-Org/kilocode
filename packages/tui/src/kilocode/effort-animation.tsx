@@ -42,8 +42,12 @@ export function effortProgress(elapsed: number) {
 }
 
 export function effortMaxColor(phase: number, index: number) {
-  const light = 0.35 + (Math.sin(phase / 180 + index) * 0.5 + 0.5) * 0.65
+  const light = 0.35 + (Math.sin(phase / 180 - index) * 0.5 + 0.5) * 0.65
   return RGBA.fromValues(max.r * light, max.g * light, max.b * light, 1)
+}
+
+export function effortRainbowIndex(phase: number, index: number) {
+  return Math.floor((phase / 55 - index + rainbow.length) % rainbow.length)
 }
 
 export function effortShimmerColor(value: "high" | "xhigh", progress: number, index: number, length: number) {
@@ -259,7 +263,7 @@ export class EffortLabelRenderable extends FrameBufferRenderable {
             ? ultra
             : max
           : this.tier === "ultra"
-          ? rainbow[Math.floor((this.phase / 55 + index) % rainbow.length)]
+          ? rainbow[effortRainbowIndex(this.phase, index)]
           : effortMaxColor(this.phase, index)
       this.frameBuffer.setCell(index, 0, text[index], color, clear, 1)
     }

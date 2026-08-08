@@ -5,6 +5,7 @@ import {
   effortLayout,
   effortMaxColor,
   effortProgress,
+  effortRainbowIndex,
   effortShimmerColor,
   isEffortTier,
 } from "../../src/kilocode/effort-animation"
@@ -39,6 +40,17 @@ describe("effort animation", () => {
     expect(start[3]).toBe(255)
     expect(peak[3]).toBe(255)
     expect(peak[0]).toBeGreaterThan(start[0])
+  })
+
+  test("moves persistent max and ultra accents from left to right", () => {
+    const maxLeft = effortMaxColor(Math.PI * 90, 0).toInts()[0]
+    const maxRight = effortMaxColor(Math.PI * 90, 1).toInts()[0]
+    const maxLaterLeft = effortMaxColor((Math.PI / 2 + 1) * 180, 0).toInts()[0]
+    const maxLaterRight = effortMaxColor((Math.PI / 2 + 1) * 180, 1).toInts()[0]
+    expect(maxLeft).toBeGreaterThan(maxRight)
+    expect(maxLaterRight).toBeGreaterThan(maxLaterLeft)
+    expect(effortRainbowIndex(0, 0)).toBe(0)
+    expect(effortRainbowIndex(55, 1)).toBe(0)
   })
 
   test("moves the high and xhigh shimmer between letters", () => {
