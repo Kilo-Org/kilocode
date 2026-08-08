@@ -518,6 +518,20 @@
         "typescript": "catalog:",
       },
     },
+    "packages/kilo-world": {
+      "name": "@kilocode/world",
+      "version": "0.1.0",
+      "dependencies": {
+        "playwright": "catalog:",
+      },
+      "devDependencies": {
+        "@tsconfig/bun": "catalog:",
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@typescript/native-preview": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "packages/llm": {
       "name": "@opencode-ai/llm",
       "version": "7.4.20",
@@ -1043,7 +1057,7 @@
     "@opentui/keymap": "0.3.4",
     "@opentui/solid": "0.3.4",
     "@pierre/diffs": "1.2.10",
-    "@playwright/test": "1.59.1",
+    "@playwright/test": "1.57.0",
     "@shikijs/stream": "4.2.0",
     "@solid-primitives/storage": "4.3.3",
     "@solidjs/meta": "0.29.4",
@@ -1074,6 +1088,7 @@
     "marked": "17.0.1",
     "marked-shiki": "1.2.1",
     "opentui-spinner": "0.0.7",
+    "playwright": "1.57.0",
     "remeda": "2.26.0",
     "remend": "1.3.0",
     "semver": "7.7.4",
@@ -1695,6 +1710,8 @@
     "@kilocode/sandbox": ["@kilocode/sandbox@workspace:packages/kilo-sandbox"],
 
     "@kilocode/sdk": ["@kilocode/sdk@workspace:packages/sdk/js"],
+
+    "@kilocode/world": ["@kilocode/world@workspace:packages/kilo-world"],
 
     "@kobalte/core": ["@kobalte/core@0.13.11", "", { "dependencies": { "@floating-ui/dom": "^1.5.1", "@internationalized/date": "^3.4.0", "@internationalized/number": "^3.2.1", "@kobalte/utils": "^0.9.1", "@solid-primitives/props": "^3.1.8", "@solid-primitives/resize-observer": "^2.0.26", "solid-presence": "^0.1.8", "solid-prevent-scroll": "^0.1.4" }, "peerDependencies": { "solid-js": "^1.8.15" } }, "sha512-hK7TYpdib/XDb/r/4XDBFaO9O+3ZHz4ZWryV4/3BfES+tSQVgg2IJupDnztKXB0BqbSRy/aWlHKw1SPtNPYCFQ=="],
 

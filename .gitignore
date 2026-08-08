@@ -22,6 +22,7 @@ node_modules
 playground
 tmp
 dist
+packages/kilo-world/.world-daemon-*
 ts-dist
 storybook-static
 .turbo
