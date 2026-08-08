@@ -39,9 +39,11 @@ export namespace MemoryFs {
     return error instanceof Error ? error.message.replaceAll(/\s+/g, " ").slice(0, 160) : String(error).slice(0, 160)
   }
 
-  function trusted(file: string) {
-    if (process.platform !== "darwin") return false
-    return file === "/var" || file === "/tmp" || file === "/etc"
+  export function trusted(file: string, platform = process.platform) {
+    const resolved = platform === "linux" || platform === "darwin" ? path.posix.resolve(file) : path.resolve(file)
+    if (platform === "darwin") return resolved === "/var" || resolved === "/tmp" || resolved === "/etc"
+    if (platform === "linux") return resolved === "/home"
+    return false
   }
 
   export async function guard(file: string) {
