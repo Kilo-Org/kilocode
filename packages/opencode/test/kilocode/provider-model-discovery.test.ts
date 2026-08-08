@@ -1,10 +1,11 @@
 import { afterEach, expect, mock } from "bun:test"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Effect } from "effect"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { Provider } from "../../src/provider/provider"
 import { testEffect } from "../lib/effect"
 
-const it = testEffect(Provider.defaultLayer)
+const it = testEffect(LayerNode.compile(Provider.node))
 const list = Provider.use.list()
 const original = globalThis.fetch
 
