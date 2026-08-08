@@ -5,6 +5,10 @@ import { clampPanelWidth, maxPanelWidth, minPanelWidth } from "../../webview-ui/
 
 const css = readFileSync(resolve(import.meta.dir, "../../webview-ui/agent-manager/agent-manager.css"), "utf8")
 const app = readFileSync(resolve(import.meta.dir, "../../webview-ui/agent-manager/AgentManagerApp.tsx"), "utf8")
+const terminal = readFileSync(
+  resolve(import.meta.dir, "../../webview-ui/agent-manager/terminal/TerminalTab.tsx"),
+  "utf8",
+)
 
 test("xterm owns the padding used by FitAddon", () => {
   const host = css.match(/\.am-terminal-host\s*\{([^}]*)\}/)?.[1]
@@ -21,6 +25,41 @@ test("uses one persisted width for the diff and terminal inspector", () => {
   expect(app).toContain("setPanelWidth(pendingSideWidth!)")
   expect(app).not.toContain("diffWidth")
   expect(app).not.toContain("terminalWidth")
+})
+
+test("limits inspector layout updates during resize", () => {
+  expect(app).toContain("SIDE_RESIZE_INTERVAL_MS = 32")
+  expect(app).toContain("time - sideResizeTime < SIDE_RESIZE_INTERVAL_MS")
+})
+
+test("does not refit hidden terminal buffers during resize", () => {
+  const callback = terminal.match(/const ro = new ResizeObserver\(\(\) => \{([\s\S]*?)\n    \}\)/)?.[1]
+  expect(callback).toBeDefined()
+  expect(callback).toContain("if (!props.active) return")
+  expect(callback!.indexOf("if (!props.active) return")).toBeLessThan(callback!.indexOf("fit.fit()"))
+})
+
+test("keeps raw PTY line endings and initializes Unicode widths before attaching", () => {
+  expect(terminal).toContain("convertEol: false")
+  expect(terminal).toContain('term.unicode.activeVersion = "15-graphemes"')
+  expect(terminal.indexOf("term.loadAddon(new UnicodeGraphemesAddon())")).toBeLessThan(
+    terminal.indexOf("open(props.wsUrl)"),
+  )
+})
+
+test("fits and forces the initial PTY dimensions before socket attach", () => {
+  expect(terminal).toContain("const syncSize = (force = false)")
+  expect(terminal).toContain("if (props.active) syncSize(true)")
+  expect(terminal.indexOf("fitNow()\n      open(props.wsUrl)")).toBeGreaterThan(-1)
+})
+
+test("re-sends dimensions when an optimistic terminal receives its PTY", () => {
+  const created = terminal.match(
+    /if \(message\.terminalId === props\.terminalId && !ws\) \{([\s\S]*?)\n        \}/,
+  )?.[1]
+  expect(created).toBeDefined()
+  expect(created).toContain("fitNow()")
+  expect(created!.indexOf("fitNow()")).toBeLessThan(created!.indexOf("open(message.wsUrl)"))
 })
 
 test("clamps the restored inspector width to the shared layout bounds", () => {

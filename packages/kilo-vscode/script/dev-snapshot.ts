@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 import { $ } from "bun"
+import { createRequire } from "node:module"
 import { join, dirname } from "node:path"
 import { tmpdir } from "node:os"
 import { rmSync, mkdirSync, existsSync } from "node:fs"
@@ -26,37 +27,53 @@ console.log(`Commit: ${sha}`)
 console.log(`Mode: ${mode}\n`)
 
 console.log("🧹 Cleaning build directories...")
-for (const dir of ["bin", "dist"]) {
-  const dirPath = join(root, dir)
-  if (existsSync(dirPath)) {
-    rmSync(dirPath, { recursive: true, force: true })
-    console.log(`  ✓ Cleaned ${dir}/`)
-  }
+const dist = join(root, "dist")
+if (existsSync(dist)) {
+  rmSync(dist, { recursive: true, force: true })
+  console.log("  ✓ Cleaned dist/")
 }
 
 const outDir = join(tmpdir(), "kilo-vscode-snapshots")
 mkdirSync(outDir, { recursive: true })
 
-console.log("\n📦 Rebuilding SDK...")
-await $`bun run --cwd ../sdk/js build`.cwd(root)
+console.log("\n📦 Preparing SDK...")
+await $`bun run prepare:sdk`.cwd(root)
 
-console.log("\n🔧 Preparing CLI binary...")
-await $`bun script/local-bin.ts --force`.cwd(root)
-
-console.log("\n✅ Type-checking...")
-await $`bun run typecheck`.cwd(root)
-
-console.log("\n🔍 Linting...")
-await $`bun run lint`.cwd(root)
-
-console.log("\n🏗️  Building extension...")
-await $`node ${join(root, "esbuild.js")} --production`.cwd(root)
+console.log("\n🔧 Preparing CLI binary and validating extension...")
+await $`bun script/local-bin.ts --compiled`.cwd(root)
+await $`bun run build:check:production`.cwd(root)
 
 console.log("\n📦 Packaging VSIX...")
 const vsixPath = join(outDir, `kilo-vscode-snapshot-${sha}-${user}.vsix`)
-await $`bunx vsce package ${snapshotVersion} --no-update-package-json --no-dependencies --skip-license -o ${vsixPath}`.cwd(
-  root,
-)
+const require = createRequire(import.meta.url)
+const vsceRequire = createRequire(require.resolve("@vscode/vsce"))
+if (shouldInstall) {
+  // Local installs favor fast packaging and extraction over archive size.
+  type Options = Record<string, unknown>
+  type Zip = {
+    addFile(path: string, name: string, options?: Options): void
+    addBuffer(data: Uint8Array, name: string, options?: Options): void
+  }
+  const yazl = vsceRequire("yazl") as { ZipFile: { prototype: Zip } }
+  const zip = yazl.ZipFile.prototype
+  const file = zip.addFile
+  const buffer = zip.addBuffer
+  zip.addFile = function (this: Zip, path, name, options) {
+    return file.call(this, path, name, { ...options, compress: false })
+  }
+  zip.addBuffer = function (this: Zip, data, name, options) {
+    return buffer.call(this, data, name, { ...options, compress: false })
+  }
+}
+const { createVSIX } = await import("@vscode/vsce")
+await createVSIX({
+  cwd: root,
+  packagePath: vsixPath,
+  version: snapshotVersion,
+  updatePackageJson: false,
+  dependencies: false,
+  skipLicense: true,
+})
 
 if (shouldInstall) {
   const execPath = process.env.VSCODE_EXEC_PATH ?? ""

@@ -376,6 +376,7 @@ export type TuiKV = {
 export type TuiState = {
   readonly ready: boolean
   readonly config: SdkConfig
+  readonly globalConfig: SdkConfig
   readonly provider: ReadonlyArray<Provider>
   readonly path: {
     state: string

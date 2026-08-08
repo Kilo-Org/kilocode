@@ -234,6 +234,7 @@ export interface SessionRefreshContext {
   sessionDirectories: Map<string, string>
   worktreeDirectories?: () => string[]
   workspaceDirectory: string
+  isCurrent?: () => boolean
   postMessage(message: unknown): void
 }
 
@@ -256,7 +257,7 @@ export async function loadSessions(ctx: SessionRefreshContext): Promise<string |
 
   const sessions = await list(ctx.workspaceDirectory)
   const projectID = sessions[0]?.projectID
-  const worktreeDirs = new Set([...(ctx.worktreeDirectories?.() ?? []), ...ctx.sessionDirectories.values()])
+  const worktreeDirs = new Set(ctx.worktreeDirectories ? ctx.worktreeDirectories() : ctx.sessionDirectories.values())
   const failed = new Set<string>()
   const extra = await Promise.all(
     [...worktreeDirs].map((dir) =>
@@ -275,6 +276,8 @@ export async function loadSessions(ctx: SessionRefreshContext): Promise<string |
       seen.add(s.id)
     }
   }
+
+  if (ctx.isCurrent && !ctx.isCurrent()) return
 
   // Sessions whose worktree directories failed to list — the webview must
   // not delete these during reconciliation since the absence is transient.

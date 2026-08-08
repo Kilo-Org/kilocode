@@ -98,8 +98,8 @@ describe("Agent Manager sandbox startup", () => {
   )
 
   test("reconciles before exposing or prompting the session", () => {
-    // In createVersion the sandbox gate runs before the session is exposed.
-    const start = flow.indexOf("async function createVersion")
+    // In provisionVersion the sandbox gate runs before the session is exposed.
+    const start = flow.indexOf("async function provisionVersion")
     const version = flow.slice(start, flow.indexOf("\n/**", start + 1))
     const gate = version.indexOf("await reconcileSandbox")
     const register = version.indexOf("host.register", gate)
@@ -122,8 +122,8 @@ describe("Agent Manager sandbox startup", () => {
     expect(abort).toBeGreaterThan(discard)
 
     // The created sessions feed the initial prompt phase.
-    const prompts = flow.slice(flow.indexOf("async function sendInitialPrompts"))
-    expect(prompts).toContain("buildInitialMessages(created")
+    const prompts = flow.slice(flow.indexOf("function sendInitialPrompt"))
+    expect(prompts).toContain("buildInitialMessages([created]")
     expect(prompts).toContain('type: "agentManager.sendInitialMessage"')
   })
 

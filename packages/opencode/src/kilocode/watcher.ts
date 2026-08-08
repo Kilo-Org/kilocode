@@ -15,8 +15,17 @@ export namespace KilocodeWatcher {
 
   export class Service extends Context.Service<Service, Interface>()("@kilocode/Watcher") {}
 
+  // Embedded editor clients (VS Code, JetBrains) have their own file watching
+  // and git integration and do not consume the CLI's vcs.branch.updated event,
+  // so they must not eagerly warm the location stack — that starts a native
+  // @parcel/watcher subscription per instance that lives for the whole session.
+  // On macOS FSEvents watches the entire subtree recursively (the ignore list
+  // is only a userspace filter), so an always-on, consumer-less watcher on a
+  // churny workspace burns CPU and leaks native memory while idle. The
+  // standalone CLI/TUI stays eager because its sidebar branch label is the only
+  // consumer and no request-driven route would otherwise build the stack.
   export function eager(client = Flag.KILO_CLIENT) {
-    return client !== "vscode"
+    return client !== "vscode" && client !== "jetbrains"
   }
 
   export const layer = Layer.effect(
