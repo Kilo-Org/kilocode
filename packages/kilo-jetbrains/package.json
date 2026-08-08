@@ -6,7 +6,9 @@
     "build:production": "bun script/build.ts --production",
     "typecheck": "./gradlew typecheck",
     "test": "./gradlew test",
-    "test:ci": "bun script/test-ci.ts"
+    "test:ci": "bun script/test-ci.ts",
+    "format": "./gradlew ktlintFormat",
+    "lint": "./gradlew ktlintCheck"
   },
   "version": "7.4.20",
   "dependencies": {},
