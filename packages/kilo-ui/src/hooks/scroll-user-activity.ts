@@ -18,13 +18,16 @@ export const createUserActivity = (options: UserActivityOptions) => {
   // do not get mistaken for the user leaving auto-follow mode.
   const mark = (event: Event) => {
     if (!isPotentialScrollInput(event)) return
+    if (scroll && scroll.scrollHeight - scroll.clientHeight <= 1) return
     marked = true
     time = performance.now()
   }
 
   const handleWheel = (event: WheelEvent) => {
-    if (event.deltaY >= 0 || !scroll || scroll.scrollTop <= 0) return
-    time = performance.now()
+    if (!isPotentialScrollInput(event)) return
+    if (!scroll || scroll.scrollHeight - scroll.clientHeight <= 1) return
+    mark(event)
+    if (event.deltaY >= 0 || scroll.scrollTop <= 0) return
     options.onWheelUp()
   }
 

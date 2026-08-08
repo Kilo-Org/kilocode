@@ -303,6 +303,7 @@ export const dict = {
   "ui.approval.source.yolo": "otomatik onay (YOLO) modu tarafından",
   "ui.approval.source.session": "bir oturum otomatik onay kuralı tarafından",
   "ui.approval.source.default": "varsayılan olarak",
+  "ui.approval.outsideWorkspace": "(çalışma alanınızın dışında: {{file}})",
 
   "session.tab.review": "İnceleme",
   "session.review.filesChanged": "{{count}} Dosya Değişti",
