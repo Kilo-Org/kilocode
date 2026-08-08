@@ -22,6 +22,7 @@ import { modify, applyEdits } from "jsonc-parser"
 import { Filesystem } from "@/util/filesystem"
 import { Effect } from "effect"
 import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
+import { McpAuthMode } from "@/kilocode/mcp/auth-mode" // kilocode_change
 
 function getAuthStatusIcon(status: MCP.AuthStatus): string {
   switch (status) {
@@ -63,7 +64,7 @@ function configuredServers(config: ConfigV1.Info) {
 
 function oauthServers(config: ConfigV1.Info) {
   return configuredServers(config).filter(
-    (entry): entry is [string, McpRemote] => isMcpRemote(entry[1]) && entry[1].oauth !== false,
+    (entry): entry is [string, McpRemote] => isMcpRemote(entry[1]) && McpAuthMode.oauth(entry[1]), // kilocode_change
   )
 }
 
@@ -189,7 +190,11 @@ export const McpAuthCommand = effectCmd({
 
     if (servers.length === 0) {
       prompts.log.warn("No OAuth-capable MCP servers configured")
-      prompts.log.info("Remote MCP servers support OAuth by default. Add a remote server in kilo.json:") // kilocode_change
+      // kilocode_change start
+      prompts.log.info(
+        "Remote MCP servers use OAuth automatically unless an Authorization header is configured. Set oauth: {} to opt a header-auth server into OAuth, or add a remote server in kilo.json:",
+      )
+      // kilocode_change end
       prompts.log.info(`
   "mcp": {
     "my-server": {
@@ -233,11 +238,13 @@ export const McpAuthCommand = effectCmd({
       return
     }
 
-    if (!isMcpRemote(serverConfig) || serverConfig.oauth === false) {
+    // kilocode_change start
+    if (!isMcpRemote(serverConfig) || !McpAuthMode.oauth(serverConfig)) {
       prompts.log.error(`MCP server ${serverName} is not an OAuth-capable remote server`)
       prompts.outro("Done")
       return
     }
+    // kilocode_change end
 
     // Check if already authenticated
     const authStatus = auth[serverName] ?? (yield* MCP.Service.use((mcp) => mcp.getAuthStatus(serverName)))
@@ -716,11 +723,13 @@ export const McpDebugCommand = effectCmd({
         return
       }
 
-      if (serverConfig.oauth === false) {
-        prompts.log.warn(`MCP server ${serverName} has OAuth explicitly disabled`)
-        prompts.outro("Done")
-        return
+      // kilocode_change start - header-auth servers still need the general HTTP diagnostics below
+      if (McpAuthMode.header(serverConfig) && !McpAuthMode.oauth(serverConfig)) {
+        prompts.log.info(`MCP server ${serverName} uses its configured Authorization header instead of OAuth`)
+      } else if (serverConfig.oauth === false) {
+        prompts.log.warn(`MCP server ${serverName} has OAuth explicitly disabled and no Authorization header configured`)
       }
+      // kilocode_change end
 
       prompts.log.info(`Server: ${serverName}`)
       prompts.log.info(`URL: ${serverConfig.url}`)
@@ -784,54 +793,61 @@ export const McpDebugCommand = effectCmd({
         if (response.status === 401) {
           prompts.log.info("Initial unauthenticated check returned 401, so this server requires OAuth")
 
-          // Try to discover OAuth metadata
-          const oauthConfig = typeof serverConfig.oauth === "object" ? serverConfig.oauth : undefined
-          const authProvider = new McpOAuthProvider(
-            serverName,
-            serverConfig.url,
-            {
-              clientId: oauthConfig?.clientId,
-              clientSecret: oauthConfig?.clientSecret,
-              scope: oauthConfig?.scope,
-              redirectUri: oauthConfig?.redirectUri,
-            },
-            {
-              onRedirect: async () => {},
-            },
-            auth,
-          )
+          // kilocode_change start - retain the HTTP probe for header-auth diagnostics without starting OAuth
+          if (McpAuthMode.header(serverConfig) && !McpAuthMode.oauth(serverConfig)) {
+            prompts.log.warn(McpAuthMode.failure(serverName))
+            prompts.log.info('To use OAuth as well, set "oauth": {} for this server.')
+          } else if (McpAuthMode.oauth(serverConfig)) {
+            // Try to discover OAuth metadata
+            const oauthConfig = typeof serverConfig.oauth === "object" ? serverConfig.oauth : undefined
+            const authProvider = new McpOAuthProvider(
+              serverName,
+              serverConfig.url,
+              {
+                clientId: oauthConfig?.clientId,
+                clientSecret: oauthConfig?.clientSecret,
+                scope: oauthConfig?.scope,
+                redirectUri: oauthConfig?.redirectUri,
+              },
+              {
+                onRedirect: async () => {},
+              },
+              auth,
+            )
 
-          prompts.log.info("Testing OAuth flow (without completing authorization)...")
+            prompts.log.info("Testing OAuth flow (without completing authorization)...")
 
-          // Try creating transport with auth provider to trigger discovery
-          const transport = new StreamableHTTPClientTransport(new URL(serverConfig.url), {
-            authProvider,
-            requestInit: serverConfig.headers ? { headers: serverConfig.headers } : undefined,
-          })
-
-          try {
-            const client = new Client({
-              name: "kilo-debug", // kilocode_change
-              version: InstallationVersion,
+            // Try creating transport with auth provider to trigger discovery
+            const transport = new StreamableHTTPClientTransport(new URL(serverConfig.url), {
+              authProvider,
+              requestInit: serverConfig.headers ? { headers: serverConfig.headers } : undefined,
             })
-            await client.connect(transport)
-            prompts.log.success("Connection successful (already authenticated)")
-            await client.close()
-          } catch (error) {
-            if (error instanceof UnauthorizedError) {
-              prompts.log.info(`OAuth flow triggered: ${error.message}`)
 
-              // Check if dynamic registration would be attempted
-              const clientInfo = await authProvider.clientInformation()
-              if (clientInfo) {
-                prompts.log.info(`Client ID available: ${clientInfo.client_id}`)
+            try {
+              const client = new Client({
+                name: "kilo-debug", // kilocode_change
+                version: InstallationVersion,
+              })
+              await client.connect(transport)
+              prompts.log.success("Connection successful (already authenticated)")
+              await client.close()
+            } catch (error) {
+              if (error instanceof UnauthorizedError) {
+                prompts.log.info(`OAuth flow triggered: ${error.message}`)
+
+                // Check if dynamic registration would be attempted
+                const clientInfo = await authProvider.clientInformation()
+                if (clientInfo) {
+                  prompts.log.info(`Client ID available: ${clientInfo.client_id}`)
+                } else {
+                  prompts.log.info("No client ID - dynamic registration will be attempted")
+                }
               } else {
-                prompts.log.info("No client ID - dynamic registration will be attempted")
+                prompts.log.error(`Connection error: ${error instanceof Error ? error.message : String(error)}`)
               }
-            } else {
-              prompts.log.error(`Connection error: ${error instanceof Error ? error.message : String(error)}`)
             }
           }
+          // kilocode_change end
         } else if (response.status >= 200 && response.status < 300) {
           prompts.log.success("Server responded successfully (no auth required or already authenticated)")
           const body = await response.text()

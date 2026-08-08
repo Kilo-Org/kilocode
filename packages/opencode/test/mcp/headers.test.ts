@@ -50,7 +50,9 @@ const { MCP } = await import("../../src/mcp/index")
 const it = testEffect(LayerNode.compile(MCP.node))
 
 describe("mcp.headers", () => {
-  it.instance("headers are passed to transports when oauth is enabled (default)", () =>
+  // kilocode_change start
+  it.instance("headers are passed without implicit OAuth for static Authorization", () =>
+    // kilocode_change end
     Effect.gen(function* () {
       const mcp = yield* MCP.Service
       yield* mcp
@@ -73,8 +75,9 @@ describe("mcp.headers", () => {
           Authorization: "Bearer test-token",
           "X-Custom-Header": "custom-value",
         })
-        // OAuth should be enabled by default, so authProvider should exist
-        expect(call.options.authProvider).toBeDefined()
+        // kilocode_change start - static Authorization headers are not OAuth credentials
+        expect(call.options.authProvider).toBeUndefined()
+        // kilocode_change end
       }
     }),
   )
