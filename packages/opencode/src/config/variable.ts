@@ -50,34 +50,23 @@ function commented(text: string, index: number) {
 export async function substitute(input: SubstituteInput) {
   const missing = input.missing ?? "error"
   const escape = input.escapeJson ?? true // kilocode_change
-  // kilocode_change start - untrusted (project) config cannot read environment variables. {env:} has no safe
-  // scoped form, so it is rejected outright; {file:} is allowed but confined to fileScope.root below.
+  // kilocode_change start - untrusted (project) config leaves {env:} literal during text substitution; MCP headers
+  // reject {env:}/{file:} post-parse (no process.env/authEnv). {file:} elsewhere is confined to fileScope.root.
   const trusted = input.trusted ?? false
-  if (!trusted) {
-    const active = Array.from(input.text.matchAll(/\{env:[^}]+\}/g)).find((m) => !commented(input.text, m.index))
-    if (active) {
+  if (!trusted && !input.fileScope) {
+    const file = Array.from(input.text.matchAll(/\{file:[^}]+\}/g)).find((m) => !commented(input.text, m.index))
+    if (file) {
       throw new InvalidError({
         path: source(input),
-        message: `environment references are not allowed in project config: "${active[0]}"`,
+        message: `file references cannot be resolved without a project scope: "${file[0]}"`,
       })
-    }
-    // Secure default: untrusted config needs a fileScope to bound {file:} reads to the project root. Without a
-    // scope we cannot enforce that bound, so we reject rather than read unrestricted. In-root file references are
-    // still allowed when a scope is supplied (the normal project path); this only guards a caller that omitted it.
-    if (!input.fileScope) {
-      const file = Array.from(input.text.matchAll(/\{file:[^}]+\}/g)).find((m) => !commented(input.text, m.index))
-      if (file) {
-        throw new InvalidError({
-          path: source(input),
-          message: `file references cannot be resolved without a project scope: "${file[0]}"`,
-        })
-      }
     }
   }
   // kilocode_change end
   let text = input.text.replace(/\{env:([^}]+)\}/g, (match, varName, offset: number) => {
-    // kilocode_change start - leave commented tokens literal; reject server credentials
+    // kilocode_change start - leave commented tokens literal; leave untrusted tokens literal (MCP headers reject post-parse)
     if (commented(input.text, offset)) return match
+    if (!trusted) return match
     if (!ConfigVariableGuard.env(varName)) {
       throw new InvalidError({ path: source(input), message: `blocked environment reference: "{env:${varName}}"` })
     }

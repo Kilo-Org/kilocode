@@ -37,11 +37,8 @@ test("confines project markdown substitutions while preserving trusted substitut
     const env = await KilocodeMarkdown.substitute(tmp.extra.env, tmp.extra.item, {
       trusted: false,
       fileScope: { root: tmp.extra.project, source: tmp.extra.item },
-    }).then(
-      () => false,
-      () => true,
-    )
-    expect(env).toBe(true)
+    })
+    expect(env).toBe(tmp.extra.env)
     expect(
       await KilocodeMarkdown.substitute("{file:../../allowed.txt}", tmp.extra.item, {
         trusted: false,

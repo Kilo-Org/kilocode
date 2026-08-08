@@ -548,8 +548,8 @@ it.instance("prefers .kilo directory config over legacy .kilocode", () =>
 )
 // kilocode_change end
 
-// kilocode_change start - project config is untrusted: {env:} rejected; {file:} confined to the project root
-it.instance("rejects environment variable substitution in project config", () =>
+// kilocode_change start - {env:} preserved in project config fields; MCP headers reject {env:}/{file:} without wiping siblings
+it.instance("preserves environment variable tokens in project config fields", () =>
   withProcessEnv(
     "TEST_VAR",
     "test-user",
@@ -560,9 +560,75 @@ it.instance("rejects environment variable substitution in project config", () =>
         username: "{env:TEST_VAR}",
       })
       const config = yield* Config.use.get()
-      expect(config.username).not.toBe("test-user")
+      expect(config.username).toBe("{env:TEST_VAR}")
       const issues = yield* Config.Service.use((svc) => svc.warnings())
-      expect(issues.length).toBeGreaterThan(0)
+      expect(issues.length).toBe(0)
+    }),
+  ),
+)
+
+it.instance("rejects env references in project MCP headers without dropping sibling MCPs", () =>
+  withProcessEnv(
+    "API_KEY",
+    "secret-key",
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      yield* writeConfigEffect(
+        test.directory,
+        {
+          mcp: {
+            "some-mcp": {
+              type: "remote",
+              url: "https://some-url.com/mcp/",
+              headers: { "API-KEY": "{env:API_KEY}" },
+            },
+            "second-mcp": {
+              type: "remote",
+              url: "https://other-url.com/mcp/",
+            },
+          },
+        },
+        "kilo.jsonc",
+      )
+      const config = yield* Config.use.get()
+      // Untrusted project headers must not pull process.env / authEnv secrets.
+      expect(config.mcp?.["some-mcp"]).toBeUndefined()
+      const second = config.mcp?.["second-mcp"]
+      expect(second && typeof second === "object" && "type" in second && second.type === "remote" ? second.url : undefined).toBe("https://other-url.com/mcp/")
+      const issues = yield* Config.Service.use((svc) => svc.warnings())
+      expect(issues.some((w) => w.message.includes('Skipped MCP "some-mcp"'))).toBe(true)
+      expect(JSON.stringify(config.mcp)).not.toContain("secret-key")
+    }),
+  ),
+)
+
+it.instance("skips MCP with env header without dropping sibling MCPs that use static headers", () =>
+  withProcessEnvs(
+    { SAFE_KEY: "ok-value", KILO_SERVER_PASSWORD: "server-secret" },
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      yield* writeConfigEffect(test.directory, {
+        mcp: {
+          bad: {
+            type: "remote",
+            url: "https://bad.example.com/mcp/",
+            headers: { Authorization: "{env:KILO_SERVER_PASSWORD}" },
+          },
+          good: {
+            type: "remote",
+            url: "https://good.example.com/mcp/",
+            headers: { "API-KEY": "static-ok" },
+          },
+        },
+      })
+      const config = yield* Config.use.get()
+      expect(config.mcp?.bad).toBeUndefined()
+      const good = config.mcp?.good
+      expect(good && typeof good === "object" && "type" in good && good.type === "remote" ? good.headers?.["API-KEY"] : undefined).toBe("static-ok")
+      const issues = yield* Config.Service.use((svc) => svc.warnings())
+      expect(issues.some((w) => w.message.includes('Skipped MCP "bad"'))).toBe(true)
+      expect(JSON.stringify(config.mcp)).not.toContain("server-secret")
+      expect(JSON.stringify(config.mcp)).not.toContain("ok-value")
     }),
   ),
 )
@@ -1882,7 +1948,7 @@ envIsolationWellKnown.it.instance(
       const config = yield* Config.use.get()
       // The well-known header (trusted source) resolves the auth-provided token...
       expect(envIsolationWellKnown.seen.authorization).toBe("Bearer test-token")
-      // ...but the project config token is untrusted and must not be substituted.
+      // {env:} in project (untrusted) config must not resolve the auth-provided token.
       expect(config.username).not.toBe("test-token")
       // ...and the auth env used for substitution must not leak into the real process env.
       expect(process.env.TEST_TOKEN).toBe("preexisting-token")

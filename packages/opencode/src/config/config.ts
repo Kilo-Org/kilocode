@@ -42,6 +42,7 @@ import z from "zod" // kilocode_change - Kilo config compatibility schemas
 // kilocode_change start
 import { ZodOverride } from "@opencode-ai/core/effect-zod"
 import { KilocodeConfig } from "../kilocode/config/config"
+import { expandProjectMcpHeaders } from "../kilocode/config/mcp-headers"
 import { primaryPaths } from "../kilocode/primary-worktree"
 import { Git } from "@/git"
 import { KilocodeDefaultPlugins } from "@/kilocode/config/default-plugins"
@@ -351,11 +352,20 @@ const layer = Layer.effect(
       env?: Record<string, string>,
       trusted?: boolean, // kilocode_change
       fileScope?: ConfigVariable.FileScope, // kilocode_change
+      configWarnings?: Warning[], // kilocode_change - collect MCP header expansion warnings
     ) {
       yield* Effect.logInfo("loading", { path: filepath })
       const text = yield* readConfigFile(filepath)
       if (!text) return {} as Info
-      return yield* loadConfig(text, { path: filepath }, env, trusted, fileScope) // kilocode_change
+      let data = yield* loadConfig(text, { path: filepath }, env, trusted, fileScope) // kilocode_change
+      // kilocode_change start - reject {env:}/{file:} in project MCP headers without failing the whole file
+      if (!trusted && data.mcp) {
+        const expanded = yield* Effect.promise(() => expandProjectMcpHeaders(data, env, filepath))
+        data = expanded.config
+        if (configWarnings) configWarnings.push(...expanded.warnings)
+      }
+      // kilocode_change end
+      return data
     })
 
     let globalStamp = "" // kilocode_change
@@ -670,8 +680,8 @@ const layer = Layer.effect(
             for (const file of yield* ConfigPaths.files(name, ctx.directory, ctx.worktree).pipe(Effect.orDie)) {
               yield* merge(
                 file,
-                // kilocode_change - project config is untrusted: {env:} rejected, {file:} confined to projectRoot
-                yield* loadFile(file, authEnv, false, { root: projectRoot, source: file }).pipe(
+                // kilocode_change - project config is untrusted: {env:} left literal (MCP headers reject {env:}/{file:} post-parse), {file:} confined to projectRoot
+                yield* loadFile(file, authEnv, false, { root: projectRoot, source: file }, warnings).pipe(
                   Effect.catchDefect((err: unknown) => {
                     caughtWarning(warnings, file, err)
                     return Effect.succeed({} as Info)
@@ -723,7 +733,7 @@ const layer = Layer.effect(
               const fileScope = dirTrusted ? undefined : { root: projectRoot, source }
               yield* merge(
                 source,
-                yield* loadFile(source, authEnv, dirTrusted, fileScope).pipe(
+                yield* loadFile(source, authEnv, dirTrusted, fileScope, dirTrusted ? undefined : warnings).pipe(
                   // kilocode_change
                   Effect.catchDefect((err: unknown) => {
                     caughtWarning(warnings, source, err)
