@@ -41,7 +41,7 @@ export namespace SkillInject {
   export const render = Effect.fn("SkillInject.render")(function* (opts: Options) {
     // Fenced blocks and inline code spans (`` !`cmd` ``) are documentation, not live commands.
     const inert = ranges(opts.content)
-    const live = ConfigMarkdown.shell(opts.content).filter((m) => !inert(m.index))
+    const live = ConfigMarkdown.shell(opts.content).filter((m) => !isInert(m.index, m[1], inert))
     if (live.length === 0) return opts.content
 
     // Policy checks before the approval gate; `replace` only touches live placeholders.
@@ -135,8 +135,17 @@ export namespace SkillInject {
   // containing `!`cmd`` stays inert, and documentation examples stay literal text.
   function rewrite(content: string, inert: (index: number) => boolean, value: (command: string) => string) {
     return content.replace(ConfigMarkdown.SHELL_REGEX, (match, command: string, index: number) =>
-      inert(index) ? match : value(command),
+      isInert(index, command, inert) ? match : value(command),
     )
+  }
+
+  // `!`RUST_LOG`` in prose documents an env var name, not a shell command to run.
+  function documentationShell(command: string) {
+    return /^[A-Z][A-Z0-9_]*$/.test(command.trim())
+  }
+
+  function isInert(index: number, command: string, inert: (index: number) => boolean) {
+    return inert(index) || documentationShell(command)
   }
 
   // Fenced code block spans (``` or ~~~), sorted and non-overlapping by construction.
