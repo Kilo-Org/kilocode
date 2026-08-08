@@ -29,6 +29,7 @@ import { shouldResetCodeTokens, type RenderedCodeState } from "./markdown-code-s
 // kilocode_change start: Mermaid rendering and morphdom guards for highlighted blocks
 import { hasMermaid, preserveMermaid, renderMermaid, type MermaidLabels } from "../kilocode/markdown-mermaid"
 import { preserveStreamingHighlight } from "../kilocode/markdown-stream-highlight"
+import { applyTextDirection } from "../kilocode/text-direction"
 // kilocode_change end
 
 type Entry = {
@@ -576,7 +577,7 @@ export function Markdown(
   return (
     <div
       data-component="markdown"
-      dir={"auto" /* kilocode_change */}
+      dir={"auto" /* kilocode_change - each rendered element sets its own dir in updateBlock */}
       classList={{
         ...local.classList,
         [local.class ?? ""]: !!local.class,
@@ -646,6 +647,7 @@ function updateBlock(
   next.dataset.markdownHash = block.hash
   next.style.display = "contents"
   next.innerHTML = block.html
+  applyTextDirection(next) // kilocode_change - each top-level element picks its own direction
   decorate(next, labels)
 
   if (!(current instanceof HTMLDivElement)) {

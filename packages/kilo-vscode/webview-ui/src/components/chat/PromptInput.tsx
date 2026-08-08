@@ -10,6 +10,7 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { showToast } from "@kilocode/kilo-ui/toast"
+import { textDirection } from "@kilocode/kilo-ui/text-direction"
 import { isTextControl } from "../../utils/focus"
 import { useSession } from "../../context/session"
 import { useLocalTabs } from "../../context/local-tabs"
@@ -1416,7 +1417,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       </Show>
       <div class="prompt-input-wrapper">
         <div class="prompt-input-ghost-wrapper">
-          <div class="prompt-input-highlight-overlay" ref={highlightRef} aria-hidden="true" dir="auto">
+          <div class="prompt-input-highlight-overlay" ref={highlightRef} aria-hidden="true" dir={textDirection(text())}>
             <Index each={buildHighlightSegments(text(), highlightMentions())}>
               {(seg) => (
                 <Show when={seg().highlight} fallback={<span>{seg().text}</span>}>
@@ -1479,7 +1480,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             aria-disabled={isDisabled()}
             aria-describedby={props.blockedReason?.() ? blockedHelpId() : undefined}
             rows={1}
-            dir="auto"
+            dir={textDirection(text())}
           />
         </div>
       </div>
