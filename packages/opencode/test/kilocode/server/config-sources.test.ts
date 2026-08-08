@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test"
 import path from "path"
 import fs from "fs/promises"
 import { Flag } from "@opencode-ai/core/flag/flag"
+import { Global } from "@opencode-ai/core/global"
 import * as Log from "@opencode-ai/core/util/log"
 import { Server } from "../../../src/server/server"
 import { resetDatabase } from "../../fixture/db"
@@ -72,10 +73,42 @@ function order(body: Body, file: string) {
 }
 
 describe("config source routes", () => {
+  test("lists global JSON and JSONC files in runtime precedence order", async () => {
+    await using globalTmp = await tmpdir()
+    await using project = await tmpdir()
+    const previous = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+
+    try {
+      const names = ["config.json", "opencode.json", "opencode.jsonc", "kilo.json", "kilo.jsonc"]
+      for (const name of names) await Bun.write(path.join(globalTmp.path, name), "{}")
+
+      const body = await sources(project.path)
+      const positions = names.map((name) => order(body, path.join(globalTmp.path, name)))
+      expect(positions).toEqual(positions.toSorted((a, b) => a - b))
+    } finally {
+      ;(Global.Path as { config: string }).config = previous
+    }
+  })
+
+  test("lists ancestor project config before a nearer legacy config", async () => {
+    await using tmp = await tmpdir({ git: true })
+    const nested = path.join(tmp.path, "packages", "app")
+    const ancestor = path.join(tmp.path, "kilo.json")
+    const nearer = path.join(nested, "opencode.json")
+    await fs.mkdir(nested, { recursive: true })
+    await Bun.write(ancestor, "{}")
+    await Bun.write(nearer, "{}")
+
+    const body = await sources(nested)
+    expect(order(body, ancestor)).toBeLessThan(order(body, nearer))
+  })
+
   test("lists source metadata in load order without config contents", async () => {
     await using tmp = await tmpdir({
       init: async (dir) => {
         await Bun.write(path.join(dir, "env.json"), "{}")
+        await Bun.write(path.join(dir, "opencode.json"), "{}")
         await Bun.write(path.join(dir, "kilo.json"), "{}")
 
         for (const root of [".opencode", ".kilocode", ".kilo"]) {
@@ -83,6 +116,9 @@ describe("config source routes", () => {
           await fs.mkdir(local, { recursive: true })
           await Bun.write(path.join(local, "kilo.jsonc"), "{}")
         }
+        await Bun.write(path.join(dir, ".kilo", "opencode.json"), "{}")
+        await Bun.write(path.join(dir, ".kilo", "opencode.jsonc"), "{}")
+        await Bun.write(path.join(dir, ".kilo", "kilo.json"), "{}")
 
         const extra = path.join(dir, "extra")
         await fs.mkdir(extra, { recursive: true })
@@ -95,10 +131,14 @@ describe("config source routes", () => {
     })
 
     const envFile = path.join(tmp.path, "env.json")
+    const legacyProjectFile = path.join(tmp.path, "opencode.json")
     const projectFile = path.join(tmp.path, "kilo.json")
     const opencodeFile = path.join(tmp.path, ".opencode", "kilo.jsonc")
     const kilocodeFile = path.join(tmp.path, ".kilocode", "kilo.jsonc")
+    const legacyConfigJsonFile = path.join(tmp.path, ".kilo", "opencode.json")
     const configFile = path.join(tmp.path, ".kilo", "kilo.jsonc")
+    const legacyConfigFile = path.join(tmp.path, ".kilo", "opencode.jsonc")
+    const configJsonFile = path.join(tmp.path, ".kilo", "kilo.json")
     const extraFile = path.join(tmp.path, "extra", "opencode.json")
     const managedFile = path.join(tmp.path, "managed", "kilo.json")
 
@@ -112,9 +152,14 @@ describe("config source routes", () => {
     const inline = body.sources.find((source) => source.source === "KILO_CONFIG_CONTENT")
 
     expect(order(body, envFile)).toBeLessThan(order(body, projectFile))
+    expect(order(body, legacyProjectFile)).toBeLessThan(order(body, projectFile))
     expect(order(body, projectFile)).toBeLessThan(order(body, kilocodeFile))
     expect(order(body, kilocodeFile)).toBeLessThan(order(body, configFile))
     expect(body.sources.some((source) => source.path === opencodeFile)).toBe(false)
+    expect(order(body, legacyConfigJsonFile)).toBeLessThan(order(body, legacyConfigFile))
+    expect(order(body, legacyConfigFile)).toBeLessThan(order(body, configFile))
+    expect(order(body, legacyConfigFile)).toBeLessThan(order(body, configJsonFile))
+    expect(order(body, configJsonFile)).toBeLessThan(order(body, configFile))
     expect(order(body, configFile)).toBeLessThan(order(body, extraFile))
     expect(inline?.order).toBeGreaterThan(order(body, extraFile))
     expect(inline?.order).toBeLessThan(order(body, managedFile))

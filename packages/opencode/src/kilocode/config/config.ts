@@ -37,17 +37,33 @@ export namespace KilocodeConfig {
 
   // ── Config file constants ────────────────────────────────────────────
 
-  /** All config file names in precedence order (kilo + opencode). */
+  /** All config file names in update-target preference order (Kilo before legacy). */
   export const ALL_CONFIG_FILES = ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"] as const
+
+  /** All config file names in read-merge order (legacy first, Kilo last so Kilo wins). */
+  export const CONFIG_LOAD_ORDER = ["opencode.json", "opencode.jsonc", "kilo.json", "kilo.jsonc"] as const
 
   /** Config directory suffixes in update-target preference order. */
   export const KILO_DIR_SUFFIXES = [".kilo", ".kilocode"] as const
 
-  /**
-   * List every project config file the read chain can merge: config files in
-   * ancestor config directories, then root config files, in update-target
-   * preference order.
-   */
+  /** List root project config files in read-merge order, with nearer directories winning. */
+  export const projectConfigLoadFiles = Effect.fn("KilocodeConfig.projectConfigLoadFiles")(function* (input: {
+    fs: FSUtil.Interface
+    directory: string
+    worktree?: string
+  }) {
+    return (
+      yield* input.fs
+        .up({
+          targets: CONFIG_LOAD_ORDER.toReversed(),
+          start: input.directory,
+          stop: input.worktree,
+        })
+        .pipe(Effect.orDie)
+    ).toReversed()
+  })
+
+  /** List project config candidates in update-target preference order. */
   export const projectConfigFiles = Effect.fn("KilocodeConfig.projectConfigFiles")(function* (input: {
     fs: FSUtil.Interface
     directory: string
@@ -432,7 +448,13 @@ export namespace KilocodeConfig {
   // ── Bash permission migration ────────────────────────────────────────
 
   /** Global config file names in read-merge order (lowest-to-highest precedence). */
-  export const GLOBAL_CONFIG_FILES = ["config.json", "kilo.json", "kilo.jsonc", "opencode.json", "opencode.jsonc"]
+  export const GLOBAL_CONFIG_FILES = [
+    "config.json",
+    "opencode.json",
+    "opencode.jsonc",
+    "kilo.json",
+    "kilo.jsonc",
+  ] as const
 
   /**
    * Migrate bash permission for existing users before config is consumed.
