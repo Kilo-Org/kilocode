@@ -3127,6 +3127,41 @@ describe("ProviderTransform.message - cache control on gateway", () => {
     })
     expect(result[1].content[1].providerOptions?.openai?.promptCacheBreakpoint).toBeUndefined()
   })
+
+  test("kilo gateway with openai gpt-5.6 applies caching options", () => {
+    const model = createModel({
+      providerID: "kilo",
+      api: {
+        id: "openai/gpt-5.6",
+        url: "https://api.kilo.ai/api/gateway",
+        npm: "@kilocode/kilo-gateway",
+      },
+      id: "openai/gpt-5.6",
+    })
+    const msgs = [
+      {
+        role: "system",
+        content: "You are a helpful assistant",
+      },
+      {
+        role: "user",
+        content: "Hello",
+      },
+    ] as any[]
+
+    const result = ProviderTransform.message(msgs, model, {}) as any[]
+
+    expect(result[0].providerOptions.openrouter).toEqual({
+      cacheControl: {
+        type: "ephemeral",
+      },
+    })
+    expect(result[1].providerOptions.openrouter).toEqual({
+      cacheControl: {
+        type: "ephemeral",
+      },
+    })
+  })
   // kilocode_change end
 })
 

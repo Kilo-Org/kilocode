@@ -480,7 +480,7 @@ function mapProviderOptions(
 export function message(msgs: ModelMessage[], model: Provider.Model, options: Record<string, unknown>) {
   msgs = unsupportedParts(msgs, model)
   msgs = normalizeMessages(msgs, model, options)
-  // kilocode_change start - apply caching for anthropic, alibaba, and GPT-5.6+ openai/azure
+  // kilocode_change start - apply caching for anthropic, alibaba, and GPT-5.6+ openai/azure/kilo-gateway
   if (
     (model.providerID === "anthropic" ||
       model.providerID === "google-vertex-anthropic" ||
@@ -492,8 +492,10 @@ export function message(msgs: ModelMessage[], model: Provider.Model, options: Re
       model.api.npm === "@ai-sdk/alibaba" ||
       ((model.api.npm === "@ai-sdk/openai" ||
         model.api.npm === "@ai-sdk/azure" ||
+        model.api.npm === "@kilocode/kilo-gateway" ||
         model.providerID === "openai" ||
-        model.providerID === "azure") &&
+        model.providerID === "azure" ||
+        model.providerID === "kilo") &&
         supportsPromptCacheBreakpoint(model.api.id))) &&
     model.api.npm !== "@ai-sdk/gateway"
   ) {
