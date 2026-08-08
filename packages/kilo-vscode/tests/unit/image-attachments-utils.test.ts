@@ -1,6 +1,7 @@
 import { describe, it, expect } from "bun:test"
 import {
   ACCEPTED_IMAGE_TYPES,
+  IMAGE_ACCEPT,
   isAcceptedImageType,
   isDragLeavingComponent,
 } from "../../webview-ui/src/hooks/image-attachments-utils"
@@ -11,6 +12,10 @@ describe("ACCEPTED_IMAGE_TYPES", () => {
     expect(ACCEPTED_IMAGE_TYPES).toContain("image/jpeg")
     expect(ACCEPTED_IMAGE_TYPES).toContain("image/gif")
     expect(ACCEPTED_IMAGE_TYPES).toContain("image/webp")
+  })
+
+  it("provides a native file picker accept value", () => {
+    expect(IMAGE_ACCEPT).toBe("image/png,image/jpeg,image/gif,image/webp")
   })
 })
 
