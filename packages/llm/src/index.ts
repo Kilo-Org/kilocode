@@ -26,7 +26,6 @@ export type {
   ToolToModelOutput,
 } from "./tool"
 export * as LLM from "./llm"
-export { supportsPromptCacheBreakpoint } from "./protocols/utils/openai-options" // kilocode_change
 export type {
   Definition as ProviderDefinition,
   ModelFactory as ProviderModelFactory,

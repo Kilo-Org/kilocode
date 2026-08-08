@@ -36,15 +36,10 @@ const resolve = (policy: CachePolicy | undefined): CachePolicyObject => {
   return policy
 }
 
-// kilocode_change start - Protocols whose wire format supports inline cache markers / explicit breakpoints.
-// Gemini uses out-of-band CachedContent.
-const RESPECTS_INLINE_HINTS = new Set([
-  "anthropic-messages",
-  "bedrock-converse",
-  "openai-responses",
-  "openai-chat",
-])
-// kilocode_change end
+// Protocols whose wire format ignores inline cache markers (OpenAI's implicit
+// prefix caching, Gemini's implicit + out-of-band CachedContent). Skip the
+// whole policy pass for these — emitting hints would be harmless but pointless.
+const RESPECTS_INLINE_HINTS = new Set(["anthropic-messages", "bedrock-converse"])
 
 const makeHint = (ttlSeconds: number | undefined): CacheHint =>
   ttlSeconds !== undefined ? new CacheHint({ type: "ephemeral", ttlSeconds }) : new CacheHint({ type: "ephemeral" })
@@ -66,28 +61,15 @@ const markLastSystem = (system: LLMRequest["system"], hint: CacheHint): LLMReque
 const lastIndexOfRole = (messages: ReadonlyArray<Message>, role: Message["role"]): number =>
   messages.findLastIndex((m) => m.role === role)
 
-// kilocode_change start - mark the last stable text part of `messages[index]` (skipping trailing ephemeral details)
-const isEphemeralPart = (part: ContentPart): boolean => {
-  if (part.type === "text" && (part.text.startsWith("<environment_details>") || part.text.includes("<environment_details>")))
-    return true
-  if ("metadata" in part && part.metadata && Boolean((part.metadata as Record<string, unknown>).synthetic))
-    return true
-  return false
-}
-
+// Mark the last text part of `messages[index]`. If no text part exists, mark
+// the last content part regardless of type — that's the breakpoint position
+// in tool-result-only messages too.
 const markMessageAt = (messages: ReadonlyArray<Message>, index: number, hint: CacheHint): ReadonlyArray<Message> => {
   if (index < 0 || index >= messages.length) return messages
   const target = messages[index]!
   if (target.content.length === 0) return messages
-  const lastStableTextIndex = target.content.findLastIndex((part) => part.type === "text" && !isEphemeralPart(part))
   const lastTextIndex = target.content.findLastIndex((part) => part.type === "text")
-  const markAt =
-    lastStableTextIndex >= 0
-      ? lastStableTextIndex
-      : lastTextIndex >= 0
-        ? lastTextIndex
-        : target.content.length - 1
-  // kilocode_change end
+  const markAt = lastTextIndex >= 0 ? lastTextIndex : target.content.length - 1
   const existing = target.content[markAt]!
   if ("cache" in existing && existing.cache) return messages
   const nextContent = target.content.map((part, i) => (i === markAt ? ({ ...part, cache: hint } as ContentPart) : part))

@@ -1,7 +1,6 @@
 import type { ModelMessage, ToolResultPart } from "ai"
 import { mergeDeep, unique } from "remeda"
 import type { JSONSchema7 } from "@ai-sdk/provider"
-import { supportsPromptCacheBreakpoint } from "@opencode-ai/llm" // kilocode_change
 import type * as Provider from "./provider"
 import type * as ModelsDev from "@opencode-ai/core/models-dev"
 import { iife } from "@/util/iife"
@@ -328,6 +327,20 @@ function normalizeMessages(
 
   return msgs
 }
+
+// kilocode_change start - explicit prompt cache breakpoints for GPT-5.6+
+function supportsPromptCacheBreakpoint(modelId: string): boolean {
+  const match = modelId.match(/gpt-(\d+)\.(\d+)/)
+  if (match) {
+    const major = Number(match[1])
+    const minor = Number(match[2])
+    if (major > 5 || (major === 5 && minor >= 6)) return true
+  }
+  const majorMatch = modelId.match(/gpt-(\d+)/)
+  if (majorMatch && Number(majorMatch[1]) >= 6) return true
+  return false
+}
+// kilocode_change end
 
 function applyCaching(msgs: ModelMessage[], model: Provider.Model): ModelMessage[] {
   const system = msgs.filter((msg) => msg.role === "system").slice(0, 2)

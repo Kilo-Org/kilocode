@@ -28,12 +28,6 @@ const IMAGE_MIMES = new Set<string>(ProviderShared.IMAGE_MIMES)
 export const DEFAULT_BASE_URL = "https://api.openai.com/v1"
 export const PATH = "/chat/completions"
 
-// kilocode_change start - explicit prompt cache breakpoints for GPT-5.6+
-const OpenAIChatPromptCacheBreakpoint = Schema.Struct({
-  mode: Schema.Literal("explicit"),
-})
-// kilocode_change end
-
 // =============================================================================
 // Request Body Schema
 // =============================================================================
@@ -63,29 +57,15 @@ const OpenAIChatAssistantToolCall = Schema.Struct({
 type OpenAIChatAssistantToolCall = Schema.Schema.Type<typeof OpenAIChatAssistantToolCall>
 
 const OpenAIChatUserContent = Schema.Union([
-  Schema.Struct({
-    type: Schema.Literal("text"),
-    text: Schema.String,
-    prompt_cache_breakpoint: Schema.optional(OpenAIChatPromptCacheBreakpoint), // kilocode_change
-  }),
+  Schema.Struct({ type: Schema.Literal("text"), text: Schema.String }),
   Schema.Struct({
     type: Schema.Literal("image_url"),
     image_url: Schema.Struct({ url: Schema.String }),
-    prompt_cache_breakpoint: Schema.optional(OpenAIChatPromptCacheBreakpoint), // kilocode_change
   }),
 ])
 
 const OpenAIChatMessage = Schema.Union([
-  // kilocode_change start - support content block array for system/developer messages
-  Schema.Struct({
-    role: Schema.Literal("system"),
-    content: Schema.Union([Schema.String, Schema.Array(OpenAIChatUserContent)]),
-  }),
-  Schema.Struct({
-    role: Schema.Literal("developer"),
-    content: Schema.Union([Schema.String, Schema.Array(OpenAIChatUserContent)]),
-  }),
-  // kilocode_change end
+  Schema.Struct({ role: Schema.Literal("system"), content: Schema.String }),
   Schema.Struct({
     role: Schema.Literal("user"),
     content: Schema.Union([Schema.String, Schema.Array(OpenAIChatUserContent)]),
@@ -230,33 +210,21 @@ const lowerMedia = Effect.fn("OpenAIChat.lowerMedia")(function* (part: MediaPart
 const openAICompatibleReasoningContent = (native: unknown) =>
   isRecord(native) && typeof native.reasoning_content === "string" ? native.reasoning_content : undefined
 
-const lowerUserMessage = Effect.fn("OpenAIChat.lowerUserMessage")(function* (
-  message: OpenAIChatRequestMessage,
-  modelId: string, // kilocode_change
-) {
+const lowerUserMessage = Effect.fn("OpenAIChat.lowerUserMessage")(function* (message: OpenAIChatRequestMessage) {
   const content: Array<Schema.Schema.Type<typeof OpenAIChatUserContent>> = []
   for (const part of message.content) {
-    // kilocode_change start
-    const breakpoint =
-      "cache" in part && part.cache && OpenAIOptions.supportsPromptCacheBreakpoint(modelId)
-        ? { prompt_cache_breakpoint: { mode: "explicit" as const } }
-        : {}
     if (part.type === "text") {
-      content.push({ type: "text", text: part.text, ...breakpoint })
+      content.push({ type: "text", text: part.text })
       continue
     }
     if (part.type === "media") {
-      content.push({ ...(yield* lowerMedia(part)), ...breakpoint })
+      content.push(yield* lowerMedia(part))
       continue
     }
-    // kilocode_change end
     return yield* ProviderShared.unsupportedContent("OpenAI Chat", "user", ["text", "media"])
   }
-  // kilocode_change start
-  const hasBreakpoint = content.some((part) => "prompt_cache_breakpoint" in part && part.prompt_cache_breakpoint)
-  if (!hasBreakpoint && content.every((part) => part.type === "text"))
-    return { role: "user" as const, content: content.map((part) => (part as { text: string }).text).join("\n") }
-  // kilocode_change end
+  if (content.every((part) => part.type === "text"))
+    return { role: "user" as const, content: content.map((part) => part.text).join("\n") } // kilocode_change
   return { role: "user" as const, content }
 })
 
@@ -316,36 +284,15 @@ const lowerToolMessages = Effect.fn("OpenAIChat.lowerToolMessages")(function* (m
   return { messages, images }
 })
 
-const lowerMessage = Effect.fn("OpenAIChat.lowerMessage")(function* (
-  message: OpenAIChatRequestMessage,
-  modelId: string, // kilocode_change
-) {
-  if (message.role === "user") return [yield* lowerUserMessage(message, modelId)] // kilocode_change
+const lowerMessage = Effect.fn("OpenAIChat.lowerMessage")(function* (message: OpenAIChatRequestMessage) {
+  if (message.role === "user") return [yield* lowerUserMessage(message)]
   if (message.role === "assistant") return [yield* lowerAssistantMessage(message)]
   return (yield* lowerToolMessages(message)).messages
 })
 
 const lowerMessages = Effect.fn("OpenAIChat.lowerMessages")(function* (request: LLMRequest) {
-  // kilocode_change start
-  const hasSystemCache = request.system.some((part) => part.cache) && OpenAIOptions.supportsPromptCacheBreakpoint(request.model.id)
   const system: OpenAIChatMessage[] =
-    request.system.length === 0
-      ? []
-      : hasSystemCache
-        ? [
-            {
-              role: "system",
-              content: [
-                {
-                  type: "text",
-                  text: ProviderShared.joinText(request.system),
-                  prompt_cache_breakpoint: { mode: "explicit" },
-                },
-              ],
-            },
-          ]
-        : [{ role: "system", content: ProviderShared.joinText(request.system) }]
-  // kilocode_change end
+    request.system.length === 0 ? [] : [{ role: "system", content: ProviderShared.joinText(request.system) }]
   const messages = [...system]
   const pendingImages: Array<Schema.Schema.Type<typeof OpenAIChatUserContent>> = []
   const flushImages = () => {
@@ -377,7 +324,7 @@ const lowerMessages = Effect.fn("OpenAIChat.lowerMessages")(function* (request: 
       continue
     }
     flushImages()
-    messages.push(...(yield* lowerMessage(message, request.model.id))) // kilocode_change
+    messages.push(...(yield* lowerMessage(message)))
   }
   flushImages()
   return messages
