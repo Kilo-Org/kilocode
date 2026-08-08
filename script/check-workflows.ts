@@ -41,7 +41,6 @@ const active = new Set([
   "docs-check-links.yml",
   "docs-sync.yml",
   "generate.yml",
-  "kilo-auto-close.yml",
   "nix-eval.yml",
   "nix-hashes.yml",
   "prepare-jetbrains-release.yml",
