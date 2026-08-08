@@ -75,10 +75,10 @@ export const clear = Effect.fn("SandboxState.clear")(function* (sessionID: Sessi
     .transaction((tx) =>
       Effect.gen(function* () {
         const row = yield* tx
-        .select({ metadata: SessionTable.metadata })
-        .from(SessionTable)
-        .where(eq(SessionTable.id, sessionID))
-        .get()
+          .select({ metadata: SessionTable.metadata })
+          .from(SessionTable)
+          .where(eq(SessionTable.id, sessionID))
+          .get()
         if (!row) return
         yield* tx
           .update(SessionTable)

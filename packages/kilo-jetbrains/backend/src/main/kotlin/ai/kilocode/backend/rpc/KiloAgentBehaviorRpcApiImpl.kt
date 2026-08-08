@@ -10,6 +10,7 @@ import ai.kilocode.rpc.KiloAgentBehaviorRpcApi
 import ai.kilocode.rpc.dto.AgentCreateDto
 import ai.kilocode.rpc.dto.AgentDetailDto
 import ai.kilocode.jetbrains.api.model.AgentBuilderSaveRequest
+import ai.kilocode.rpc.dto.CommandFileDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.McpConfigDto
 import ai.kilocode.rpc.dto.McpServerConfigDto
@@ -75,7 +76,7 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
 
     override suspend fun reloadSkills(directory: String): Boolean {
         LOG.info("Skills reload requested dir=$directory")
-        if (hasActiveSession(directory)) {
+        if (hasActiveSession(directory, "Skills")) {
             LOG.warn("Skills reload blocked by active session dir=$directory")
             return false
         }
@@ -136,6 +137,45 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
 
     override suspend fun commands(directory: String) = KiloCliDataParser.parseAgentBehaviorCommands(request(directory, "/command", null))
 
+    override suspend fun commandFiles(directory: String): List<CommandFileDto> =
+        KiloCliDataParser.parseAgentBehaviorCommandFiles(request(directory, "/kilocode/command/files", null))
+
+    override suspend fun removeCommand(directory: String, location: String): Boolean =
+        post(directory, "/kilocode/command/remove", JsonObject(mapOf("location" to JsonPrimitive(location))))
+
+    override suspend fun reloadCommands(directory: String): Boolean {
+        LOG.info("Commands reload requested dir=$directory")
+        if (hasActiveSession(directory, "Commands")) {
+            LOG.warn("Commands reload blocked by active session dir=$directory")
+            return false
+        }
+        runCatching { post(directory, "/instance/reload") }.onFailure { err ->
+            LOG.warn("Commands reload failed dir=$directory", err)
+        }.getOrThrow()
+        LOG.info("Commands reload succeeded dir=$directory")
+        return true
+    }
+
+    override suspend fun saveCommands(directory: String, edits: Map<String, String>): Boolean {
+        LOG.info("Commands save requested dir=$directory count=${edits.size}")
+        app.requireReady()
+        val known = knownCommands(directory)
+        val roots = commandRoots(directory)
+        val paths = edits.map { (location, content) ->
+            val path = writableCommandPath(directory, location, known, roots) ?: return false
+            path to content
+        }
+        withContext(Dispatchers.IO) {
+            for ((path, content) in paths) {
+                Files.createDirectories(path.parent)
+                Files.writeString(path, content, StandardCharsets.UTF_8)
+            }
+        }
+        LOG.info("Command files saved dir=$directory count=${paths.size}")
+        LOG.info("Commands save reload deferred dir=$directory count=${paths.size}")
+        return true
+    }
+
     override suspend fun mcpStatus(directory: String) = KiloCliDataParser.parseMcpStatus(request(directory, "/mcp", null)).also { items ->
         LOG.info("MCP status returned dir=$directory count=${items.size}")
     }
@@ -193,24 +233,24 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
         return true
     }
 
-    private fun hasActiveSession(directory: String): Boolean {
+    private fun hasActiveSession(directory: String, label: String): Boolean {
         val active = app.sessions.statuses.value.filterValues { it.type != "idle" }
         if (active.isNotEmpty()) {
-            LOG.info("Skills reload active statuses dir=$directory count=${active.size} types=${active.values.map { it.type }.distinct()}")
+            LOG.info("$label reload active statuses dir=$directory count=${active.size} types=${active.values.map { it.type }.distinct()}")
             return true
         }
         val permissions = runCatching { app.chat.pendingPermissions(directory) }.onFailure { err ->
-            LOG.warn("Skills reload pending permission check failed dir=$directory", err)
+            LOG.warn("$label reload pending permission check failed dir=$directory", err)
         }.getOrDefault(emptyList())
         if (permissions.isNotEmpty()) {
-            LOG.info("Skills reload pending permissions dir=$directory count=${permissions.size}")
+            LOG.info("$label reload pending permissions dir=$directory count=${permissions.size}")
             return true
         }
         val questions = runCatching { app.chat.pendingQuestions(directory) }.onFailure { err ->
-            LOG.warn("Skills reload pending question check failed dir=$directory", err)
+            LOG.warn("$label reload pending question check failed dir=$directory", err)
         }.getOrDefault(emptyList())
         if (questions.isNotEmpty()) {
-            LOG.info("Skills reload pending questions dir=$directory count=${questions.size}")
+            LOG.info("$label reload pending questions dir=$directory count=${questions.size}")
             return true
         }
         return false
@@ -238,6 +278,11 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
         return items.mapNotNull { item -> resolveEditablePath(item) }.toSet()
     }
 
+    private suspend fun knownCommands(directory: String): Set<Path> {
+        val items = commandFiles(directory)
+        return items.mapNotNull { item -> resolveEditableCommandPath(item) }.toSet()
+    }
+
     private fun writablePath(directory: String, location: String, known: Set<Path>): Path? {
         val path = resolveSkillPath(location)
         if (path == null) {
@@ -251,10 +296,26 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
         return path
     }
 
+    private fun writableCommandPath(directory: String, location: String, known: Set<Path>, roots: Set<Path>): Path? {
+        val path = resolveCommandPath(location)
+        if (path == null) {
+            LOG.warn("Command save rejected: invalid location dir=$directory location=$location")
+            return null
+        }
+        if (path in known || newCommandPath(path, roots)) return path
+        LOG.warn("Command save rejected: unknown command dir=$directory path=$path")
+        return null
+    }
+
     private fun resolveEditablePath(skill: SkillDto): Path? {
         val path = resolveSkillPath(skill.location) ?: return null
         if (urlCached(path)) return null
         return path
+    }
+
+    private fun resolveEditableCommandPath(command: CommandFileDto): Path? {
+        if (!command.editable) return null
+        return resolveCommandPath(command.location)
     }
 
     private fun resolveSkillPath(location: String): Path? {
@@ -266,6 +327,59 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
         }
         if (!path.isAbsolute || !isSkillFile(path)) return null
         return path
+    }
+
+    private fun resolveCommandPath(location: String): Path? {
+        val raw = normalizeWorkspacePath(location) ?: return null
+        val path = try {
+            Path.of(raw).normalize()
+        } catch (_: InvalidPathException) {
+            return null
+        }
+        if (!path.isAbsolute || path.fileName?.toString()?.endsWith(".md") != true) return null
+        return path
+    }
+
+    private suspend fun commandRoots(directory: String): Set<Path> = buildSet {
+        addProjectCommandRoots(this, directory)
+        val paths = runCatching { request(directory, "/path", null) }.getOrNull()
+        val config = paths?.let(KiloCliDataParser::parsePathConfig)
+        if (config != null) addConfigCommandRoots(this, config)
+        val home = paths?.let(KiloCliDataParser::parsePathHome)
+        if (home != null) addHomeCommandRoots(this, home)
+    }
+
+    private fun addProjectCommandRoots(roots: MutableSet<Path>, dir: String) {
+        val base = try {
+            Path.of(dir).normalize()
+        } catch (_: InvalidPathException) {
+            return
+        }
+        for (cfg in listOf(".kilo", ".kilocode")) {
+            for (name in listOf("command", "commands")) roots.add(base.resolve(cfg).resolve(name).normalize())
+        }
+    }
+
+    private fun addConfigCommandRoots(roots: MutableSet<Path>, dir: String) {
+        val base = try {
+            Path.of(dir).normalize()
+        } catch (_: InvalidPathException) {
+            return
+        }
+        for (name in listOf("command", "commands")) roots.add(base.resolve(name).normalize())
+    }
+
+    private fun addHomeCommandRoots(roots: MutableSet<Path>, home: String) {
+        val base = try {
+            Path.of(home).normalize()
+        } catch (_: InvalidPathException) {
+            return
+        }
+        for (cfg in listOf(".kilo", ".kilocode")) addConfigCommandRoots(roots, base.resolve(cfg).toString())
+    }
+
+    private fun newCommandPath(path: Path, roots: Set<Path>): Boolean {
+        return roots.any { root -> path.startsWith(root) }
     }
 
     private fun urlCached(path: Path): Boolean {

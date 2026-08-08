@@ -97,6 +97,7 @@ type Opts = {
   state?: {
     ready?: HostPluginApi["state"]["ready"]
     config?: HostPluginApi["state"]["config"]
+    globalConfig?: HostPluginApi["state"]["globalConfig"] // kilocode_change
     provider?: HostPluginApi["state"]["provider"]
     path?: HostPluginApi["state"]["path"]
     vcs?: HostPluginApi["state"]["vcs"]
@@ -303,6 +304,11 @@ export function createTuiPluginApi(opts: Opts = {}): HostPluginApi {
       get config() {
         return opts.state?.config ?? {}
       },
+      // kilocode_change start
+      get globalConfig() {
+        return opts.state?.globalConfig ?? {}
+      },
+      // kilocode_change end
       get provider() {
         return opts.state?.provider ?? []
       },

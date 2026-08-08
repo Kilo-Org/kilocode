@@ -150,17 +150,58 @@ internal class KiloDiffEditorService(
         val dir = params["directory"].takeIfPresent() ?: return DiffEditorData.Empty
         val workspace = service<KiloWorkspaceService>()
         val store = project.service<KiloInlineDiffStore>()
+        val session = project.service<KiloSessionService>()
         val files = when (params["source"]) {
             // branch is authoritative here (no store seeding): recompute on every load/refresh so a
             // re-open or Refresh always reflects the current worktree instead of a stale click seed.
             "branch" -> workspace.branchDiff(dir)
             "inline" -> store.get(params["token"].orEmpty()).orEmpty()
-            else -> project.service<KiloSessionService>().diff(params["sessionId"].orEmpty(), dir)
+            else -> session.diff(params["sessionId"].orEmpty(), dir)
         }
         if (files.isEmpty()) return DiffEditorData.Empty
         val branch = params["branch"].takeIfPresent()
             ?: if (params["source"] == "branch") workspace.branchName(dir) else null
-        return DiffEditorData.Files(files, branch)
+        return DiffEditorData.Files(detail(params, dir, files, session), branch)
+    }
+
+    // Enrich modified files with full before/after content so the editor shows whole-file diffs.
+    // Added/deleted/binary files already render fully from their patch, so they skip the round-trip;
+    // a null result (working tree drifted from the patch) falls back to the hunk view.
+    private suspend fun detail(
+        params: Map<String, String>,
+        dir: String,
+        files: List<DiffFileDto>,
+        session: KiloSessionService,
+    ): List<DiffFileDto> {
+        // Revert diffs already carry range-scoped patches from the CLI's `revert.diff`. Whole-file
+        // enrichment has no per-message scope for a revert here, so the authoritative endpoint would
+        // return the whole-session before/after and splice in changes from kept turns. Render the
+        // scoped hunk patches directly instead.
+        if (params["token"].takeIfPresent()?.startsWith("revert:") == true) return files
+        val sessionId = params["sessionId"].takeIfPresent()
+        val message = message(params)
+        LOG.info("diff editor detail source=${params["source"]} files=${files.size} session=${!sessionId.isNullOrBlank()} message=${!message.isNullOrBlank()}")
+        return files.map { file ->
+            val patch = file.patch
+            if (patch.isNullOrBlank() || DiffPatchReconstruct.added(patch) || DiffPatchReconstruct.deleted(patch)) {
+                LOG.info("diff editor detail skip file=${file.file} patch=${!patch.isNullOrBlank()} status=${file.status}")
+                file
+            } else {
+                val detail = runCatching { session.diffSides(sessionId, dir, file, message) }
+                    .onFailure { LOG.warn("diff editor detail failed file=${file.file}", it) }
+                    .getOrNull()
+                LOG.info("diff editor detail file=${file.file} full=${detail?.before != null && detail?.after != null} before=${detail?.before?.length ?: 0} after=${detail?.after?.length ?: 0}")
+                detail ?: file
+            }
+        }
+    }
+
+    // Turn diffs carry "turn:<sessionId>:<turnId>" and single-edit diffs carry "tool:<sessionId>:<messageId>";
+    // the third segment is the message the CLI scopes the authoritative snapshot diff to. Other sources
+    // (session, branch) have no per-message scope.
+    private fun message(params: Map<String, String>): String? {
+        val parts = params["token"].takeIfPresent()?.split(":", limit = 3) ?: return null
+        return if (parts.size == 3 && (parts[0] == "turn" || parts[0] == "tool")) parts[2].takeIfPresent() else null
     }
 
     private companion object {

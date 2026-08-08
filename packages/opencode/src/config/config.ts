@@ -1014,7 +1014,7 @@ const layer = Layer.effect(
           directory: ctx.directory,
           payload: {
             type: Event.ConfigUpdated.type,
-            properties: {},
+            properties: { sandbox: Object.hasOwn(config, "sandbox") },
           },
         }),
       )
@@ -1069,6 +1069,7 @@ const layer = Layer.effect(
         .pipe(Effect.orDie)
       const next = result.next
       const changed = result.changed
+      const sandboxChanged = changed && Object.hasOwn(config, "sandbox")
       // kilocode_change end
 
       // kilocode_change start - skip dispose when caller opts out
@@ -1080,7 +1081,7 @@ const layer = Layer.effect(
             directory: "global",
             payload: {
               type: Event.ConfigUpdated.type,
-              properties: {},
+              properties: { sandbox: sandboxChanged },
             },
           }),
         ).pipe(Effect.catchCause(() => Effect.void))
@@ -1097,7 +1098,7 @@ const layer = Layer.effect(
             directory: "global",
             payload: {
               type: Event.ConfigUpdated.type,
-              properties: {},
+              properties: { sandbox: sandboxChanged },
             },
           }),
         ).pipe(Effect.catchCause(() => Effect.void))

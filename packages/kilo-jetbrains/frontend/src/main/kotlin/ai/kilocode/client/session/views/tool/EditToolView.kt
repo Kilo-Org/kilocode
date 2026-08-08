@@ -254,7 +254,9 @@ class EditToolView(
     private fun openDiffViewer() {
         val files = toDiffFiles(item)
         if (files.isEmpty()) return
-        opener(files, diffTitle(item), "tool:${sessionId ?: "pending"}:${item.id}")
+        // The CLI scopes the authoritative snapshot diff by message id, so carry the owning message id
+        // (not the tool part id) in the token; otherwise the per-message lookup never matches.
+        opener(files, diffTitle(item), "tool:${sessionId ?: "pending"}:${item.messageID ?: item.id}")
     }
 
     private fun syncFilesTag(count: Int): Boolean {
