@@ -152,15 +152,6 @@ export const SandboxTooltipDisabled: Story = {
 // Stories — model with thinking-effort variants (ThinkingSelector visible)
 // ---------------------------------------------------------------------------
 
-export const WithThinking420: Story = {
-  name: "With thinking selector — 420px",
-  render: () => (
-    <PromptProviders variants>
-      <PromptInput />
-    </PromptProviders>
-  ),
-}
-
 export const WithThinking200: Story = {
   name: "With thinking selector — 200px",
   render: () => (

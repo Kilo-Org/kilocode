@@ -29,6 +29,7 @@ import { useAgentRequirements } from "../../context/agent-requirements"
 import { TranscriptSearchProvider } from "../../context/transcript-search"
 import { isPromptBlocked, isSuggesting, isQuestioning } from "./prompt-input-utils"
 import { showTabStrip } from "../../utils/local-tabs"
+import type { SlashCommandEntry } from "../../hooks/useSlashCommand"
 
 interface ChatViewProps {
   onSelectSession?: (id: string) => void
@@ -46,6 +47,9 @@ interface ChatViewProps {
   emptyState?: () => JSX.Element
   /** Optional compact controls rendered directly above the prompt. */
   promptAddon?: () => JSX.Element
+  /** Optional chip rendered inside the prompt container above the message text. */
+  promptChip?: () => JSX.Element
+  promptCommands?: SlashCommandEntry[]
 }
 
 export const ChatView: Component<ChatViewProps> = (props) => {
@@ -394,6 +398,8 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                 pendingSessionID={pendingSessionID()}
                 focusOnDraftChange={props.focusOnDraftChange}
                 onFocusChange={props.onFocusChange}
+                chip={props.promptChip}
+                commands={props.promptCommands}
               />
             </Show>
           </div>

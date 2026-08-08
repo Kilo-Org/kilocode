@@ -14,7 +14,7 @@ import { createSignal, createMemo, type ParentComponent } from "solid-js"
 import { VSCodeProvider } from "../context/vscode"
 import { ServerProvider } from "../context/server"
 import { FeedbackProvider } from "../context/feedback"
-import { ProviderContext } from "../context/provider"
+import { ProviderContext, type EnrichedModel } from "../context/provider"
 import { flattenModels, findModel as _findModel } from "../context/provider-utils"
 import { ConfigProvider, ConfigContext } from "../context/config"
 import { DisplayProvider } from "../context/display"
@@ -97,9 +97,13 @@ const MOCK_PROVIDERS = {
 const MOCK_MODELS = flattenModels(MOCK_PROVIDERS as any)
 
 /** A synchronous mock ProviderContext — provides models without waiting for a postMessage round-trip. */
-const MockProviderProvider: ParentComponent<{ kiloAuth?: boolean; training?: boolean }> = (props) => {
+const MockProviderProvider: ParentComponent<{
+  kiloAuth?: boolean
+  training?: boolean
+  models?: EnrichedModel[]
+}> = (props) => {
   const models = createMemo(() =>
-    MOCK_MODELS.map((model) => ({
+    (props.models ?? MOCK_MODELS).map((model) => ({
       ...model,
       mayTrainOnYourPrompts: props.training === true,
     })),
@@ -310,6 +314,8 @@ interface StoryProvidersProps {
   onOpenFile?: OpenFileFn
   kiloAuth?: boolean
   training?: boolean
+  /** Optional constrained model catalog for interactive prototype stories. */
+  models?: EnrichedModel[]
   /** When true, renders children without the default 12px padding wrapper */
   noPadding?: boolean
 }
@@ -441,7 +447,7 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
             onProjectConfigChange={props.onProjectConfigChange}
           >
             <DisplayProvider>
-              <MockProviderProvider kiloAuth={props.kiloAuth} training={props.training}>
+              <MockProviderProvider kiloAuth={props.kiloAuth} training={props.training} models={props.models}>
                 <DialogProvider>
                   <LanguageContext.Provider
                     value={{

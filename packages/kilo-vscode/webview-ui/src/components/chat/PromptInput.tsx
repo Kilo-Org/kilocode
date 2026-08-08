@@ -3,7 +3,18 @@
  * Text input with send/abort buttons, ghost-text autocomplete, and @ file mention support
  */
 
-import { createSignal, createEffect, on, For, Index, onCleanup, Show, untrack, type Component } from "solid-js"
+import {
+  createSignal,
+  createEffect,
+  on,
+  For,
+  Index,
+  onCleanup,
+  Show,
+  untrack,
+  type Component,
+  type JSX,
+} from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
@@ -31,7 +42,7 @@ import { useTerminalContext } from "../../hooks/useTerminalContext"
 import { useGitChangesContext } from "../../hooks/useGitChangesContext"
 import { hasTerminalMention } from "../../hooks/terminal-context-utils"
 import { hasGitChangesMention } from "../../hooks/git-changes-context-utils"
-import { useSlashCommand } from "../../hooks/useSlashCommand"
+import { useSlashCommand, type SlashCommandEntry } from "../../hooks/useSlashCommand"
 import { useGhostText } from "../../hooks/useGhostText"
 import { useSpeechToText } from "../speech-to-text/useSpeechToText"
 import { createSpeechShortcut } from "../speech-to-text/shortcut"
@@ -113,6 +124,8 @@ interface PromptInputProps {
   deferFocusToQuestion?: () => boolean
   boxId?: string
   pendingSessionID?: string
+  chip?: () => JSX.Element
+  commands?: SlashCommandEntry[]
   /** Agent Manager can suppress automatic prompt focus when this session last
    *  used its side terminal instead. Other callers retain the old behavior. */
   focusOnDraftChange?: () => boolean
@@ -304,6 +317,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       if (!sandboxVisible()) hidden.add("sandbox")
       return hidden
     },
+    props.commands,
   )
   const clearSandboxRequest = (sessionID: string | undefined, requestID: string) => {
     setSandboxRequests((current) => {
@@ -1402,6 +1416,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           </For>
         </div>
       </Show>
+      <Show when={props.chip}>{props.chip?.()}</Show>
       <div class="prompt-input-wrapper">
         <div class="prompt-input-ghost-wrapper">
           <div class="prompt-input-highlight-overlay" ref={highlightRef} aria-hidden="true" dir="auto">

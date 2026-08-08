@@ -56,6 +56,7 @@ export function useSlashCommand(
   vscode: VSCodeContext,
   sandbox: { action: () => void; enabled: Accessor<boolean> },
   exclude?: Set<string> | Accessor<Set<string>>,
+  extra: SlashCommandEntry[] = [],
 ): SlashCommand {
   const [server, setServer] = createSignal<SlashCommandInfo[]>([])
   const [query, setQuery] = createSignal<string | null>(null)
@@ -185,6 +186,7 @@ export function useSlashCommand(
         vscode.postMessage({ type: "reload" })
       },
     },
+    ...extra,
   ]
 
   const excluded = () => {

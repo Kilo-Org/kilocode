@@ -17,7 +17,6 @@ import { ServerContext } from "../context/server"
 import { WorktreeModeProvider } from "../context/worktree-mode"
 import { SidebarSearchMenu } from "../../agent-manager/SidebarSearchMenu"
 import { SidebarToggleButton } from "../../agent-manager/SidebarToggleButton"
-import { OrchestratorPrototype } from "../../agent-manager/OrchestratorPrototype"
 import { SideTerminalPanel, createTerminalState } from "../../agent-manager/terminal"
 import { LOCAL } from "../../agent-manager/navigate"
 import type { SidebarSearchItem } from "../../agent-manager/sidebar-search"
@@ -263,118 +262,6 @@ export const ReadableChat420: Story = {
   name: "Chat - constrained editor",
   parameters: { layout: "fullscreen" },
   render: renderChat,
-}
-
-// ---------------------------------------------------------------------------
-// Orchestrator concept — Agent Manager-native shell
-// ---------------------------------------------------------------------------
-
-const orchestratorSessionID = "story-orchestrator-session"
-const orchestratorUserID = "story-orchestrator-user"
-const orchestratorAssistantID = "story-orchestrator-assistant"
-const orchestratorMessages = [
-  {
-    id: orchestratorUserID,
-    sessionID: orchestratorSessionID,
-    role: "user",
-    createdAt: new Date(chatTime).toISOString(),
-    time: { created: chatTime },
-  },
-  {
-    id: orchestratorAssistantID,
-    sessionID: orchestratorSessionID,
-    role: "assistant",
-    parentID: orchestratorUserID,
-    createdAt: new Date(chatTime + 1000).toISOString(),
-    time: { created: chatTime + 1000, completed: chatTime + 5000 },
-    modelID: "anthropic/claude-sonnet-4-6",
-    providerID: "kilo",
-    mode: "default",
-    agent: "orchestrator",
-    path: { cwd: "/project", root: "/project" },
-  },
-]
-const orchestratorParts = {
-  [orchestratorUserID]: [
-    {
-      id: "story-orchestrator-user-text",
-      sessionID: orchestratorSessionID,
-      messageID: orchestratorUserID,
-      type: "text",
-      text: "Make checkout retries safe without changing payment providers. Use cheaper workers where the work is bounded, but stop before changing a public contract.",
-    },
-  ],
-  [orchestratorAssistantID]: [
-    {
-      id: "story-orchestrator-assistant-text",
-      sessionID: orchestratorSessionID,
-      messageID: orchestratorAssistantID,
-      type: "text",
-      text: "I split this into failure-mode research, two isolated implementation candidates, and an independent verification pass. The bounded implementation work is running on K3 while I keep the lead context here.\n\nThe verifier found one issue that changes the plan: reliable retries need an idempotency key or a reconciliation path. I paused the payment matrix because this crosses your contract-change guardrail. My recommendation is to add an optional idempotency key, then verify the selected candidate against the full retry matrix.",
-    },
-  ],
-}
-const orchestratorData = {
-  ...defaultMockData,
-  message: { [orchestratorSessionID]: orchestratorMessages },
-  part: orchestratorParts,
-}
-
-function renderOrchestrator(stage: "start" | "configure" | "running" = "start") {
-  const session = {
-    ...mockSessionValue({ id: orchestratorSessionID, status: "idle", closeReason: "completed" }),
-    currentSession: () => ({
-      id: orchestratorSessionID,
-      title: "Checkout reliability",
-      createdAt: new Date(chatTime).toISOString(),
-      updatedAt: new Date(chatTime + 5000).toISOString(),
-    }),
-    messages: () => orchestratorMessages,
-    visibleMessages: () => orchestratorMessages,
-    userMessages: () => orchestratorMessages.filter((message) => message.role === "user"),
-    getParts: (id: string) => orchestratorParts[id as keyof typeof orchestratorParts] ?? [],
-    worktreeStats: () => ({ files: 11, additions: 382, deletions: 96 }),
-    selected: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
-    modelForAgent: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
-    configModelForAgent: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
-    agents: () => [{ name: "orchestrator", description: "Coordinates parallel workers", mode: "primary" as const }],
-    allAgents: () => [{ name: "orchestrator", description: "Coordinates parallel workers", mode: "primary" as const }],
-    selectedAgent: () => "orchestrator",
-    getSessionAgent: () => "orchestrator",
-  }
-  return (
-    <StoryProviders data={orchestratorData} sessionID={orchestratorSessionID} status="idle" noPadding>
-      <ServerContext.Provider value={chatServer}>
-        <SessionContext.Provider value={session as any}>
-          <WorktreeModeProvider>
-            <OrchestratorPrototype initialStage={stage}>
-              <div class="am-chat-wrapper">
-                <ChatView onForkSession={() => undefined} />
-              </div>
-            </OrchestratorPrototype>
-          </WorktreeModeProvider>
-        </SessionContext.Provider>
-      </ServerContext.Provider>
-    </StoryProviders>
-  )
-}
-
-export const OrchestratorSession1280: Story = {
-  name: "Orchestrator - interactive flow",
-  parameters: { layout: "fullscreen" },
-  render: () => renderOrchestrator("start"),
-}
-
-export const OrchestratorConfigure1280: Story = {
-  name: "Orchestrator - configure",
-  parameters: { layout: "fullscreen" },
-  render: () => renderOrchestrator("configure"),
-}
-
-export const OrchestratorRunning1280: Story = {
-  name: "Orchestrator - running",
-  parameters: { layout: "fullscreen" },
-  render: () => renderOrchestrator("running"),
 }
 
 // ---------------------------------------------------------------------------
