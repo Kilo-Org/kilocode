@@ -40,19 +40,9 @@ which matters for agent loops that re-send context on every turn.
 {% tab label="CLI" %}
 
 Define the provider in your global `kilo.json` config file
-(`~/.config/kilo/kilo.json`):
-
-{% callout type="warning" %}
-`{env:...}` references only resolve in trusted config — the global config,
-`KILO_CONFIG` / `KILO_CONFIG_CONTENT`, or MDM-managed config. In a
-project-level `./kilo.json` the reference is silently ignored and the
-provider will fail to authenticate; put the provider block in the global
-config, or inline the key (not recommended for committed files).
-{% /callout %}
-
-```bash
-export CORALBRICKS_API_KEY="ak_..."
-```
+(`~/.config/kilo/kilo.json`), then run `/connect` inside Kilo Code and pick
+**CoralBricks** — you'll be prompted for your `ak_...` key, which is stored
+in `auth.json` alongside your other provider credentials:
 
 ```jsonc
 {
@@ -62,7 +52,6 @@ export CORALBRICKS_API_KEY="ak_..."
       "name": "CoralBricks",
       "options": {
         "baseURL": "https://inference.coralbricks.ai/v1",
-        "apiKey": "{env:CORALBRICKS_API_KEY}",
       },
       "models": {
         "glm-5.2-fp4": {
@@ -92,6 +81,16 @@ export CORALBRICKS_API_KEY="ak_..."
   "model": "coralbricks/glm-5.2-fp4",
 }
 ```
+
+Alternatively, skip `/connect` and reference an environment variable in the
+provider block: `"apiKey": "{env:CORALBRICKS_API_KEY}"`.
+
+{% callout type="warning" %}
+`{env:...}` references only resolve in trusted config — the global config,
+`KILO_CONFIG` / `KILO_CONFIG_CONTENT`, or MDM-managed config. In a
+project-level `./kilo.json` the reference is silently ignored and the
+provider will fail to authenticate.
+{% /callout %}
 
 {% /tab %}
 {% /tabs %}
