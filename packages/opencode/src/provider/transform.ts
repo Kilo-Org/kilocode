@@ -388,18 +388,15 @@ function applyCaching(msgs: ModelMessage[], model: Provider.Model): ModelMessage
 
     if (shouldUseContentOptions) {
       // kilocode_change start - place caching breakpoint on stable content before trailing <environment_details>
-      const parts = msg.content as any[]
-      const targetIndex = parts.findLastIndex(
+      const target = msg.content.findLast(
         (part) =>
-          part &&
           typeof part === "object" &&
+          part !== null &&
           part.type !== "tool-approval-request" &&
           part.type !== "tool-approval-response" &&
-          !(part.type === "text" && typeof part.text === "string" && part.text.startsWith("<environment_details>")) &&
-          !part.synthetic,
+          !(part.type === "text" && part.text.startsWith("<environment_details>")),
       )
-      const lastContent = targetIndex >= 0 ? parts[targetIndex] : parts[parts.length - 1]
-      // kilocode_change end
+      const lastContent = target ?? msg.content[msg.content.length - 1]
       if (
         lastContent &&
         typeof lastContent === "object" &&
@@ -409,6 +406,7 @@ function applyCaching(msgs: ModelMessage[], model: Provider.Model): ModelMessage
         lastContent.providerOptions = mergeDeep(lastContent.providerOptions ?? {}, providerOptions)
         continue
       }
+      // kilocode_change end
     }
 
     msg.providerOptions = mergeDeep(msg.providerOptions ?? {}, providerOptions)
@@ -476,6 +474,7 @@ function mapProviderOptions(
 export function message(msgs: ModelMessage[], model: Provider.Model, options: Record<string, unknown>) {
   msgs = unsupportedParts(msgs, model)
   msgs = normalizeMessages(msgs, model, options)
+  // kilocode_change start - apply caching for anthropic, alibaba, and GPT-5.6+ openai/azure/kilo-gateway
   if (
     (model.providerID === "anthropic" ||
       model.providerID === "google-vertex-anthropic" ||
@@ -484,17 +483,16 @@ export function message(msgs: ModelMessage[], model: Provider.Model, options: Re
       model.id.includes("anthropic") ||
       model.id.includes("claude") ||
       model.api.npm === "@ai-sdk/anthropic" ||
-      // kilocode_change start
       model.api.npm === "@ai-sdk/alibaba" ||
       ((model.api.npm === "@ai-sdk/openai" ||
         model.api.npm === "@ai-sdk/azure" ||
         model.api.npm === "@kilocode/kilo-gateway") &&
         supportsPromptCacheBreakpoint(model.api.id))) &&
-      // kilocode_change end
     model.api.npm !== "@ai-sdk/gateway"
   ) {
     msgs = applyCaching(msgs, model)
   }
+  // kilocode_change end
 
   // Remap providerOptions keys from stored providerID to expected SDK key
   const key = sdkKey(model.api.npm)
