@@ -1,4 +1,4 @@
-import { Component, For, Show, createMemo, createSignal } from "solid-js"
+import { Component, For, Show, createMemo, createSignal, onCleanup } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Card } from "@kilocode/kilo-ui/card"
 import { DEFAULT_VECTOR_STORE, isFileExtension, parseFileExtensions } from "@kilocode/kilo-indexing/config"
@@ -13,7 +13,8 @@ import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
 import { useServer } from "../../context/server"
 import { useVSCode } from "../../context/vscode"
-import type { IndexingConfig, IndexingProvider as ProviderId } from "../../types/messages"
+
+import type { ExtensionMessage, IndexingConfig, IndexingProvider as ProviderId } from "../../types/messages"
 import { KILO_PROVIDER_ID } from "../../../../src/shared/provider-model"
 import SettingsRow from "./SettingsRow"
 import {
@@ -29,13 +30,22 @@ import {
 } from "./indexing-tab-state"
 
 type Option = { value: string; label: string }
+
+type ProviderChoice = ProviderId | "lmstudio"
 type Project = { id: string; root: string; label: string }
 type TuningKey = "searchMinScore" | "searchMaxResults" | "embeddingBatchSize" | "scannerMaxBatchRetries"
+type LocalModel = {
+  id: string
+  name: string
+  embedding: "supported" | "unsupported" | "unknown"
+  dimension?: number
+}
 
-const allProviders: { value: ProviderId; label: string }[] = [
+const allProviders: { value: ProviderChoice; label: string }[] = [
   { value: "kilo", label: "Kilo" },
   { value: "openai", label: "OpenAI" },
   { value: "ollama", label: "Ollama (local)" },
+  { value: "lmstudio", label: "LM Studio (local)" },
   { value: "openai-compatible", label: "OpenAI-Compatible" },
   { value: "gemini", label: "Gemini" },
   { value: "mistral", label: "Mistral" },
@@ -92,6 +102,40 @@ function providerFields(provider: ProviderId | undefined): Array<{ key: string; 
   }
   if (provider === "voyage") return [{ key: "apiKey", label: "API Key", placeholder: "pa-..." }]
   return []
+}
+
+function localDescription(choice: ProviderChoice | undefined, provider: ProviderId | undefined) {
+  if (choice === "lmstudio")
+    return "Load an embedding model in LM Studio, start its local server, then discover it here."
+  if (provider === "ollama") return "Discover installed Ollama models and verify their embedding dimensions."
+  return "Discover models exposed by this OpenAI-compatible endpoint."
+}
+
+function localModelLabel(model: LocalModel) {
+  if (model.embedding === "supported")
+    return `${model.name} — Embedding${model.dimension ? ` · ${model.dimension} dimensions` : ""}`
+  if (model.embedding === "unsupported") return `${model.name} — Not embedding capable`
+  return `${model.name} — Capability unknown`
+}
+
+function isLMStudio(url: string | undefined) {
+  if (!url) return false
+  try {
+    const parsed = new URL(url)
+    return parsed.port === "1234" && parsed.pathname.replace(/\/+$/, "") === "/v1"
+  } catch {
+    return false
+  }
+}
+
+function localActionLabel(active: boolean, action: "connect" | "validate") {
+  if (active) return action === "connect" ? "Connecting…" : "Validating…"
+  return action === "connect" ? "Connect" : "Select a model"
+}
+
+function providerName(choice: ProviderChoice | undefined, provider: ProviderId) {
+  if (choice === "lmstudio") return "LM Studio"
+  return allProviders.find((item) => item.value === provider)?.label ?? provider
 }
 
 /** Config scope switcher plus the scope-derived enable switch. */
@@ -174,7 +218,12 @@ const IndexingTab: Component = () => {
   const [tuningDrafts, setTuningDrafts] = createSignal<Record<string, string>>({})
   const [extensionDrafts, setExtensionDrafts] = createSignal<Record<string, string>>({})
   const [extensionErrors, setExtensionErrors] = createSignal<Record<string, string>>({})
+  const [models, setModels] = createSignal<LocalModel[]>([])
+  const [modelError, setModelError] = createSignal<string>()
+  const [discovering, setDiscovering] = createSignal(false)
+  const [probing, setProbing] = createSignal(false)
   const [scope, setScope] = createSignal<IndexingScope>("global")
+  const subscriptions = new Set<() => void>()
 
   const globalCfg = createMemo<IndexingConfig>(() => globalConfig().indexing ?? {})
   const projectCfg = createMemo<IndexingConfig>(() => projectConfig().indexing ?? {})
@@ -196,12 +245,14 @@ const IndexingTab: Component = () => {
     // Blur first so a pending field edit commits against the scope it was typed in.
     const active = document.activeElement
     if (active instanceof HTMLElement) active.blur()
+    setModels([])
+    setModelError(undefined)
     setScope(next)
   }
 
-  const updateIndexing = (partial: IndexingConfig) => {
-    const patch = { indexing: indexingUpdate(scope(), globalCfg(), projectCfg(), partial) }
-    if (scope() === "global") {
+  const updateIndexing = (partial: IndexingConfig, target = scope()) => {
+    const patch = { indexing: indexingUpdate(target, globalCfg(), projectCfg(), partial) }
+    if (target === "global") {
       updateGlobalConfig(patch)
       return
     }
@@ -222,13 +273,32 @@ const IndexingTab: Component = () => {
   const kiloValue = () => knownKiloModel(cfg().model) ?? kiloDefault()
   const kiloAvailable = () => !!server.profileData() || provider.authStates()[KILO_PROVIDER_ID] !== undefined
   const selectedProvider = () => cfg().provider ?? (kiloAvailable() ? "kilo" : undefined)
+  const selectedChoice = (): ProviderChoice | undefined => {
+    if (selectedProvider() === "openai-compatible" && isLMStudio(cfg()["openai-compatible"]?.baseUrl)) return "lmstudio"
+    return selectedProvider()
+  }
   const staleKiloModel = () => selectedProvider() === "kilo" && !!cfg().model && !knownKiloModel(cfg().model)
   const providers = createMemo(() =>
     allProviders.filter((item) => item.value !== "kilo" || kiloAvailable() || selectedProvider() === "kilo"),
   )
   const fields = createMemo(() => providerFields(selectedProvider()))
 
-  const saveProvider = (next: ProviderId | undefined) => {
+  const saveProvider = (next: ProviderChoice | undefined) => {
+    setModels([])
+    setModelError(undefined)
+    if (next === "lmstudio") {
+      const base = cfg()["openai-compatible"]?.baseUrl
+      updateIndexing({
+        provider: "openai-compatible",
+        model: null,
+        dimension: null,
+        "openai-compatible": {
+          ...raw()["openai-compatible"],
+          baseUrl: isLMStudio(base) ? base : "http://localhost:1234/v1",
+        },
+      })
+      return
+    }
     if (next === "kilo") {
       const model = knownKiloModel(cfg().model) ?? (kiloDefault() || null)
       updateIndexing({
@@ -240,6 +310,88 @@ const IndexingTab: Component = () => {
     }
     updateIndexing({ provider: next, model: null, dimension: null })
   }
+
+  const localRuntime = () => {
+    const selected = selectedProvider()
+    if (selected === "ollama") return "ollama" as const
+    if (selected === "openai-compatible") return "openai-compatible" as const
+    return undefined
+  }
+
+  const localOptions = () => {
+    const runtime = localRuntime()
+    if (!runtime) return undefined
+    if (runtime === "ollama") {
+      return {
+        runtime,
+        baseURL: cfg().ollama?.baseUrl || "http://localhost:11434",
+      }
+    }
+    return {
+      runtime,
+      baseURL: cfg()["openai-compatible"]?.baseUrl || "",
+      apiKey: cfg()["openai-compatible"]?.apiKey,
+    }
+  }
+
+  const requestModels = (model?: string) => {
+    const target = scope()
+    const savedBatchSize = cfg().embeddingBatchSize
+    const options = localOptions()
+    if (!options?.baseURL) {
+      setModelError("Enter a base URL before discovering models.")
+      return
+    }
+    const rid = crypto.randomUUID()
+    if (model) setProbing(true)
+    if (!model) setDiscovering(true)
+    setModelError(undefined)
+    const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
+      if (message.type !== "indexingModelsFetched" || message.requestId !== rid) return
+      unsubscribe()
+      subscriptions.delete(unsubscribe)
+      setDiscovering(false)
+      setProbing(false)
+      if (message.error) {
+        setModelError(message.error)
+        return
+      }
+      if (message.model) {
+        updateIndexing(
+          {
+            model: message.model.id,
+            dimension: message.model.dimension,
+            ...(savedBatchSize === undefined && message.model.batchSize !== undefined
+              ? { embeddingBatchSize: message.model.batchSize }
+              : {}),
+          },
+          target,
+        )
+        setModels((items) =>
+          items.map((item) => (item.id === message.model?.id ? { ...item, ...message.model } : item)),
+        )
+        return
+      }
+      const found = message.models ?? []
+      if (found.length === 0) {
+        setModelError("No models found. Install or load an embedding model in the local server, then retry.")
+        return
+      }
+      setModels(found)
+    })
+    subscriptions.add(unsubscribe)
+    vscode.postMessage({
+      type: "fetchIndexingModels",
+      requestId: rid,
+      ...options,
+      model,
+    })
+  }
+
+  onCleanup(() => {
+    for (const unsubscribe of subscriptions) unsubscribe()
+    subscriptions.clear()
+  })
 
   /** Machine-local consent for the selected project; never written to config. */
   const saveConsent = (granted: boolean) => {
@@ -287,6 +439,10 @@ const IndexingTab: Component = () => {
     updateIndexing({ [group]: { ...current, [key]: value.trim() || undefined } })
     const draftKey = `${scope()}.${group}.${key}`
     setProviderDrafts((prev) => Object.fromEntries(Object.entries(prev).filter(([entry]) => entry !== draftKey)))
+    if (group === "ollama" || group === "openai-compatible") {
+      setModels([])
+      setModelError(undefined)
+    }
   }
 
   const saveStoreField = (group: "qdrant" | "lancedb", key: string, value: string) => {
@@ -415,10 +571,10 @@ const IndexingTab: Component = () => {
         >
           <Select
             options={providers()}
-            current={providers().find((item) => item.value === selectedProvider())}
+            current={providers().find((item) => item.value === selectedChoice())}
             value={(item) => item.value}
             label={(item) => item.label}
-            onSelect={(item) => saveProvider(item?.value as ProviderId | undefined)}
+            onSelect={(item) => saveProvider(item?.value as ProviderChoice | undefined)}
             variant="secondary"
             size="small"
             triggerVariant="settings"
@@ -455,6 +611,46 @@ const IndexingTab: Component = () => {
             <TextField value={cfg().model ?? ""} placeholder="Enter model ID" onChange={saveModel} />
           </SettingsRow>
         </Show>
+        <Show when={localRuntime()}>
+          <SettingsRow
+            title="Discover local models"
+            description={localDescription(selectedChoice(), selectedProvider())}
+          >
+            <Button size="small" variant="secondary" disabled={discovering()} onClick={() => requestModels()}>
+              {localActionLabel(discovering(), "connect")}
+            </Button>
+          </SettingsRow>
+          <Show when={modelError()}>
+            {(error) => (
+              <SettingsRow title="Local model error" description={error()}>
+                <Button size="small" variant="secondary" onClick={() => requestModels()}>
+                  Retry
+                </Button>
+              </SettingsRow>
+            )}
+          </Show>
+          <Show when={models().length > 0}>
+            <SettingsRow
+              title="Installed models"
+              description="Selecting a model runs a small embedding request and detects its vector dimension."
+            >
+              <Select
+                options={models()}
+                current={models().find((item) => item.id === cfg().model)}
+                value={(item) => item.id}
+                label={localModelLabel}
+                onSelect={(item) => {
+                  if (item) requestModels(item.id)
+                }}
+                disabled={probing()}
+                variant="secondary"
+                size="small"
+                triggerVariant="settings"
+                placeholder={localActionLabel(probing(), "validate")}
+              />
+            </SettingsRow>
+          </Show>
+        </Show>
         <SettingsRow
           title={language.t("settings.indexing.dimension.title")}
           description={
@@ -490,7 +686,7 @@ const IndexingTab: Component = () => {
         <Show when={fields().length > 0 ? selectedProvider() : undefined} keyed>
           {(group) => {
             const fields = providerFields(group)
-            const name = allProviders.find((item) => item.value === group)?.label ?? group
+            const name = providerName(selectedChoice(), group)
             return (
               <For each={fields}>
                 {(field, index) => (
