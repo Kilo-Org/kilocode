@@ -87,9 +87,10 @@ provider block: `"apiKey": "{env:CORALBRICKS_API_KEY}"`.
 
 {% callout type="warning" %}
 `{env:...}` references only resolve in trusted config — the global config,
-`KILO_CONFIG` / `KILO_CONFIG_CONTENT`, or MDM-managed config. In a
-project-level `./kilo.json` the reference is silently ignored and the
-provider will fail to authenticate.
+`KILO_CONFIG` / `KILO_CONFIG_CONTENT`, or MDM-managed config. A
+project-level `./kilo.json` containing an `{env:...}` reference is rejected
+entirely with a config warning — none of its settings apply. Keep the
+provider block in the global config.
 {% /callout %}
 
 {% /tab %}
