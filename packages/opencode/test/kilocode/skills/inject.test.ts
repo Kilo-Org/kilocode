@@ -339,6 +339,28 @@ describe("skill shell injection", () => {
     }),
   )
 
+  unix("does not treat env-var documentation placeholders as shell commands", () =>
+    Effect.gen(function* () {
+      // Regression for #12868: prose like `!`RUST_LOG`` documents an env var name and must
+      // not request bash permission or try to execute it.
+      yield* writeGlobalSkill(
+        "env-var-doc-shell",
+        "- Make log level configurable via env (!`RUST_LOG` or `EnvFilter`).",
+      )
+
+      const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
+      const result = yield* loadSkill("env-var-doc-shell", (req) =>
+        Effect.sync(() => {
+          requests.push(req)
+        }),
+      )
+
+      expect(result.output).toContain("!`RUST_LOG`")
+      expect(result.output).not.toContain("[skill shell")
+      expect(requests.some((r) => r.permission === "bash")).toBe(false)
+    }),
+  )
+
   unix("does not let distant unrelated inline code spans merge into one inert range", () =>
     Effect.gen(function* () {
       // Code spans cannot cross a blank line. Stray double-backticks in an earlier paragraph
@@ -516,6 +538,20 @@ describe("SkillInject.render gating", () => {
     Effect.gen(function* () {
       const out = yield* Effect.promise(() => run({ trusted: true, disabled: false, content: "no commands here" }))
       expect(out).toBe("no commands here")
+    }),
+  )
+
+  it.effect("env-var documentation placeholders stay literal without asking", () =>
+    Effect.gen(function* () {
+      const out = yield* Effect.promise(() =>
+        run({
+          trusted: true,
+          disabled: false,
+          content: "- Make log level configurable via env (!`RUST_LOG` or `EnvFilter`).",
+        }),
+      )
+      expect(out).toContain("!`RUST_LOG`")
+      expect(out).not.toContain("[skill shell")
     }),
   )
 })
