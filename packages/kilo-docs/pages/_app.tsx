@@ -74,10 +74,11 @@ export default function MyApp({ Component, pageProps }: AppProps<MyAppProps>) {
   const router = useRouter()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
-  // Check if we're on the homepage or 404 page (full-page layouts)
+  // Check if we're on the homepage, 404 page, or a standalone marketing page (full-page layouts)
   const isHomepage = router.pathname === "/"
   const is404 = router.pathname === "/404"
-  const isFullPageLayout = isHomepage || is404
+  const isMarketingPage = router.pathname === "/auto-model"
+  const isFullPageLayout = isHomepage || is404 || isMarketingPage
 
   // Track initial pageview (routeChangeComplete doesn't fire on first load)
   useEffect(() => {
