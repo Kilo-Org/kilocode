@@ -101,4 +101,18 @@ export const instructions = (request: LLMRequest) => {
   return typeof value === "string" ? value : undefined
 }
 
+// kilocode_change start - explicit prompt cache breakpoints for GPT-5.6+
+export const supportsPromptCacheBreakpoint = (modelId: string): boolean => {
+  const match = modelId.match(/gpt-(\d+)\.(\d+)/)
+  if (match) {
+    const major = Number(match[1])
+    const minor = Number(match[2])
+    if (major > 5 || (major === 5 && minor >= 6)) return true
+  }
+  const majorMatch = modelId.match(/gpt-(\d+)/)
+  if (majorMatch && Number(majorMatch[1]) >= 6) return true
+  return false
+}
+// kilocode_change end
+
 export * as OpenAIOptions from "./openai-options"

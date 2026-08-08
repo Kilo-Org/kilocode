@@ -43,7 +43,6 @@ const RESPECTS_INLINE_HINTS = new Set([
   "bedrock-converse",
   "openai-responses",
   "openai-chat",
-  "openai-compatible-chat",
 ])
 // kilocode_change end
 

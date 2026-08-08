@@ -30,18 +30,6 @@ export const DEFAULT_BASE_URL = "https://api.openai.com/v1"
 export const PATH = "/responses"
 
 // kilocode_change start - explicit prompt cache breakpoints for GPT-5.6+
-const supportsBreakpoint = (modelId: string) => {
-  const match = modelId.match(/gpt-(\d+)\.(\d+)/)
-  if (match) {
-    const major = Number(match[1])
-    const minor = Number(match[2])
-    if (major > 5 || (major === 5 && minor >= 6)) return true
-  }
-  const majorMatch = modelId.match(/gpt-(\d+)/)
-  if (majorMatch && Number(majorMatch[1]) >= 6) return true
-  return false
-}
-
 const OpenAIResponsesPromptCacheBreakpoint = Schema.Struct({
   mode: Schema.Literal("explicit"),
 })
@@ -340,7 +328,7 @@ const lowerUserContent = Effect.fn("OpenAIResponses.lowerUserContent")(function*
 ) {
   // kilocode_change start
   const breakpoint =
-    "cache" in part && part.cache && supportsBreakpoint(modelId)
+    "cache" in part && part.cache && OpenAIOptions.supportsPromptCacheBreakpoint(modelId)
       ? { prompt_cache_breakpoint: { mode: "explicit" as const } }
       : {}
   if (part.type === "text") return { type: "input_text" as const, text: part.text, ...breakpoint }
@@ -381,7 +369,7 @@ const lowerToolResultOutput = Effect.fn("OpenAIResponses.lowerToolResultOutput")
 
 const lowerMessages = Effect.fn("OpenAIResponses.lowerMessages")(function* (request: LLMRequest) {
   // kilocode_change start
-  const hasSystemCache = request.system.some((part) => part.cache) && supportsBreakpoint(request.model.id)
+  const hasSystemCache = request.system.some((part) => part.cache) && OpenAIOptions.supportsPromptCacheBreakpoint(request.model.id)
   const system: OpenAIResponsesInputItem[] =
     request.system.length === 0
       ? []
