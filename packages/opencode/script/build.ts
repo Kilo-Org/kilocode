@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import { $ } from "bun"
+import type { BunPlugin } from "bun" // kilocode_change
 import fs from "fs"
 import os from "os" // kilocode_change
 import path from "path"
@@ -31,6 +32,16 @@ const baselineFlag = process.argv.includes("--baseline")
 const skipInstall = process.argv.includes("--skip-install")
 const sourcemapsFlag = process.argv.includes("--sourcemaps")
 const plugin = createSolidTransformPlugin()
+// kilocode_change start - packaged CLIs have no node_modules tree for Morph's optional platform package
+const morphRipgrepPlugin: BunPlugin = {
+  name: "kilocode-morph-ripgrep",
+  setup(build) {
+    build.onResolve({ filter: /^@vscode\/ripgrep$/ }, () => ({
+      path: path.join(dir, "src/kilocode/morph-ripgrep.ts"),
+    }))
+  },
+}
+// kilocode_change end
 
 // kilocode_change start - codebase indexing
 async function copyTreeSitterWasms(outputDir: string) {
@@ -307,7 +318,7 @@ for (const item of targets) {
   await Bun.build({
     conditions: ["bun", "node"], // kilocode_change - port anomalyco/opencode#30873; current form from #31566
     tsconfig: "./tsconfig.json",
-    plugins: [plugin],
+    plugins: [plugin, morphRipgrepPlugin], // kilocode_change - use Morph's system-rg fallback in packaged CLIs
     // kilocode_change start - skip sourcemaps for release builds (each .js.map adds ~50 MB per target → ~600 MB total)
     sourcemap: Script.release ? "none" : "external",
     external: ["node-gyp", ...LanceDBRuntime.external],

@@ -83,6 +83,7 @@ export interface GrepInput extends KiloGrep.Options {
 }
 
 export interface Interface {
+  readonly filepath: Effect.Effect<string, globalThis.Error> // kilocode_change - share Kilo's managed binary with bundled integrations
   readonly find: (input: FindInput) => Effect.Effect<readonly Entry[], Error>
   readonly glob: (input: GlobInput) => Effect.Effect<SearchResult<Entry>, Error> // kilocode_change
   readonly grep: (input: GrepInput) => Effect.Effect<SearchResult<KiloGrep.GrepMatch>, Error | InvalidPatternError> // kilocode_change
@@ -187,6 +188,7 @@ const layer = Layer.effect(
     }
 
     return Service.of({
+      filepath: binary.filepath, // kilocode_change - share Kilo's managed binary with bundled integrations
       glob: (input) =>
         run<string>({
           cwd: input.cwd,
