@@ -122,7 +122,7 @@ Agent Manager persists UI, worktree, and session state in `.kilo/agent-manager.j
 
 ## Permissions
 
-Scalar form applies to all patterns. Object form maps glob patterns to actions. Evaluated top-to-bottom; first match wins.
+Scalar form applies to all patterns. Object form maps glob patterns to actions. Rules are evaluated in order; the last matching rule wins.
 
 ```jsonc
 {
@@ -130,9 +130,9 @@ Scalar form applies to all patterns. Object form maps glob patterns to actions. 
     "bash": "allow", // scalar: allow all bash
     "edit": {
       // object: pattern-matched
+      "*": "ask", // fallback
       "src/**": "allow",
       "*.lock": "deny",
-      "*": "ask", // fallback
     },
     "read": "ask",
     "skill": { "my-skill": "allow" },
@@ -144,6 +144,27 @@ Scalar form applies to all patterns. Object form maps glob patterns to actions. 
 Actions: `"allow"`, `"ask"`, `"deny"`. Set `null` to delete an inherited key.
 
 Tool permissions: `read`, `edit`, `glob`, `grep`, `list`, `bash`, `task`, `webfetch`, `websearch`, `semantic_search`, `kilo_memory_save`, `kilo_memory_recall`, `lsp`, `skill`, `external_directory`, `todowrite`, `todoread`, `question`, `doom_loop`.
+
+### Per-Agent Skill Scoping
+
+Use an agent's `permission.skill` rules to control which discovered skills appear in its prompt and Skill tool inventory:
+
+```jsonc
+{
+  "agent": {
+    "plan": {
+      "permission": {
+        "skill": {
+          "*": "deny",
+          "kilo-config": "allow"
+        }
+      }
+    }
+  }
+}
+```
+
+Permission rules use glob patterns and the last matching rule wins, so place the wildcard denial before specific allowances. If `"*": "deny"` is last, Kilo removes the Skill tool and all skill metadata for that agent, including specifically allowed skills. Denied skills cannot be invoked through the Skill tool. To prevent direct file access to a skill directory, add matching `read` rules too.
 
 ## MCP Servers
 

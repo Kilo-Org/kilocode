@@ -196,22 +196,28 @@ When you change a remote skill's contents or file list, also change its `version
 
 ## Mode-Specific Skills
 
-{% tabs %}
-{% tab label="VSCode" %}
+The new platform loads skills into a shared pool instead of using mode-specific skill directories. You can still control which skills each agent sees and can invoke with that agent's `permission.skill` rules:
 
-The new platform does not use mode-specific skill directories. All skills are loaded into a shared pool and the agent decides which skill to invoke based on the skill's `description` field and the current task context.
+```jsonc
+{
+  "agent": {
+    "plan": {
+      "permission": {
+        "skill": {
+          "*": "deny",
+          "kilo-config": "allow"
+        }
+      }
+    }
+  }
+}
+```
 
-If you need a skill to only apply in certain situations, write a clear and specific `description` in the SKILL.md frontmatter so the agent knows when to use it.
+Rules use glob patterns and are evaluated in order, with the last matching rule taking precedence. Put the wildcard denial before specific allowances when creating an allowlist. If `"*": "deny"` is last, Kilo removes the Skill tool and all skill metadata for that agent, including specifically allowed skills.
 
-{% /tab %}
-{% tab label="CLI" %}
+Denied skills are omitted from the agent's system-prompt metadata and Skill tool inventory, and the agent cannot invoke them through the Skill tool. Skill permissions do not replace file permissions: if an agent must not read a skill's files directly, configure matching `read` rules as well.
 
-The new platform does not use mode-specific skill directories. All skills are loaded into a shared pool and the agent decides which skill to invoke based on the skill's `description` field and the current task context.
-
-If you need a skill to only apply in certain situations, write a clear and specific `description` in the SKILL.md frontmatter so the agent knows when to use it.
-
-{% /tab %}
-{% /tabs %}
+For skills available to several agents, write a clear and specific `description` in the SKILL.md frontmatter so each agent knows when to use them.
 
 ## Priority and Overrides
 
