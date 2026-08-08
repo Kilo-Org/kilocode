@@ -277,6 +277,15 @@ export class LanceDBVectorStore implements IVectorStore {
   }
 
   async initialize(): Promise<boolean> {
+    return this.init(true)
+  }
+
+  private missing(error: unknown): boolean {
+    const message = error instanceof Error ? error.message : String(error)
+    return message.includes("Object at location ") && message.includes(".lance not found:")
+  }
+
+  private async init(repair: boolean): Promise<boolean> {
     try {
       await this.closeConnect()
       const db = await this.getDb()
@@ -321,7 +330,6 @@ export class LanceDBVectorStore implements IVectorStore {
         await this._dropTableIfExists(db, this.metadataTableName)
         await this._createVectorTable(db)
         await this._createMetadataTable(db)
-        this.optimizeTable()
 
         log.info("LanceDB store reinitialized for embedding profile change", {
           workspacePath: this.workspacePath,
@@ -332,7 +340,6 @@ export class LanceDBVectorStore implements IVectorStore {
 
         return true
       }
-      this.optimizeTable()
       log.info("LanceDB store initialized", {
         workspacePath: this.workspacePath,
         dbPath: this.dbPath,
@@ -341,6 +348,15 @@ export class LanceDBVectorStore implements IVectorStore {
       })
       return false
     } catch (error) {
+      if (repair && this.missing(error)) {
+        log.warn("Rebuilding LanceDB store with missing data files", {
+          workspacePath: this.workspacePath,
+          dbPath: this.dbPath,
+          error,
+        })
+        await this.deleteCollection()
+        return this.init(false)
+      }
       log.error("Failed to initialize LanceDB store", { error })
       throw new Error(`Failed to initialize LanceDB store: ${(error as Error).message}`, { cause: error })
     }
@@ -577,10 +593,7 @@ export class LanceDBVectorStore implements IVectorStore {
     try {
       const table = await this.getTable()
 
-      await table.optimize({
-        cleanupOlderThan: new Date(),
-        deleteUnverified: false,
-      })
+      await table.optimize()
     } catch (error) {
       log.error("Failed to optimize table", { error })
     }
