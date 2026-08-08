@@ -13,7 +13,7 @@ import { useConfig } from "../../context/config"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
-import type { AgentInfo, SkillInfo } from "../../types/messages"
+import type { AgentInfo, ModeSwitchOnReject, SkillInfo } from "../../types/messages"
 import ModeEditView from "./ModeEditView"
 import ModeCreateView from "./ModeCreateView"
 import McpEditView from "./McpEditView"
@@ -41,6 +41,8 @@ interface SelectOption {
   value: string
   label: string
 }
+
+const rejection: ModeSwitchOnReject[] = ["continue", "stop"]
 
 import SettingsRow from "./SettingsRow"
 
@@ -291,7 +293,6 @@ const AgentBehaviourTab: Component = () => {
           <SettingsRow
             title={language.t("settings.agentBehaviour.defaultAgent.title")}
             description={language.t("settings.agentBehaviour.defaultAgent.description")}
-            last
           >
             <Select
               options={defaultAgentOptions()}
@@ -303,6 +304,33 @@ const AgentBehaviourTab: Component = () => {
                 const next = selectedDefaultAgentValue(o.value)
                 if (next === (config().default_agent ?? null)) return
                 updateConfig({ default_agent: next })
+              }}
+              variant="secondary"
+              size="small"
+              triggerVariant="settings"
+            />
+          </SettingsRow>
+          <SettingsRow
+            title={language.t("settings.agentBehaviour.modeSwitchReject.title")}
+            description={language.t("settings.agentBehaviour.modeSwitchReject.description")}
+            last
+          >
+            <Select
+              options={rejection}
+              current={config().mode_switch_on_reject ?? "continue"}
+              value={(value) => value}
+              label={(value) =>
+                language.t(
+                  value === "continue"
+                    ? "settings.agentBehaviour.modeSwitchReject.continue"
+                    : "settings.agentBehaviour.modeSwitchReject.stop",
+                )
+              }
+              onSelect={(value) => {
+                if (!value) return
+                const next = value as ModeSwitchOnReject
+                if (next === (config().mode_switch_on_reject ?? "continue")) return
+                updateConfig({ mode_switch_on_reject: next })
               }}
               variant="secondary"
               size="small"

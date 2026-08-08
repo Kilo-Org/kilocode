@@ -575,7 +575,6 @@ export const dict = {
   "settings.permissions.tool.doom_loop.title": "Нескінченний цикл",
   "settings.permissions.tool.doom_loop.description":
     "Виявляти повторювані виклики інструментів з однаковими вхідними даними",
-
   "session.delete.title": "Видалити сесію",
   "session.delete.confirm": 'Видалити сесію "{{name}}"?',
   "session.delete.button": "Видалити сесію",
@@ -1331,4 +1330,13 @@ export const dict = {
   "chat.search.invalidRegex": "Недійсний регулярний вираз",
   "chat.search.noResults": "Немає результатів",
   "chat.search.searchingHistory": "Пошук у попередніх повідомленнях…",
+  "ui.permission.toolLabel.modeSwitch": "Перемкнути режим",
+  "ui.permission.modeSwitch.prompt": "Перемкнути режим з {{source}} на {{target}} — Причина: {{reason}}",
+  "settings.agentBehaviour.modeSwitchReject.title": "Коли перемикання режиму скасовано",
+  "settings.agentBehaviour.modeSwitchReject.description":
+    "Виберіть, чи продовжити поточне завдання в наявному режимі, чи зупинити його.",
+  "settings.agentBehaviour.modeSwitchReject.continue": "Продовжити завдання",
+  "settings.agentBehaviour.modeSwitchReject.stop": "Зупинити завдання",
+  "settings.autoApprove.tool.mode_switch":
+    "Перемикання режимів. Дає агентам змогу відновити поточне завдання в іншому вбудованому режимі.",
 }

@@ -118,6 +118,20 @@ export function permissionInfo(request: PermissionRequest): PermissionInfo {
     }
   }
 
+  // kilocode_change start
+  if (request.permission === "mode_switch") {
+    const meta = dict(request.metadata)
+    const source = text(meta.source)
+    const target = text(meta.target)
+    const reason = text(meta.reason)
+    return {
+      icon: "⇄",
+      title: `Switch mode from ${source} to ${target}`,
+      lines: reason ? [`Reason: ${reason}`] : [],
+    }
+  }
+  // kilocode_change end
+
   return {
     icon: "⚙",
     title: `Call tool ${request.permission}`,

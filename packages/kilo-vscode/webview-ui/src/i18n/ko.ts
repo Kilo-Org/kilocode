@@ -577,7 +577,6 @@ export const dict = {
   "settings.permissions.tool.external_directory.description": "프로젝트 디렉터리 외부의 파일에 액세스",
   "settings.permissions.tool.doom_loop.title": "무한 반복",
   "settings.permissions.tool.doom_loop.description": "동일한 입력으로 반복되는 도구 호출 감지",
-
   "session.delete.title": "세션 삭제",
   "session.delete.confirm": '"{{name}}" 세션을 삭제하시겠습니까?',
   "session.delete.button": "세션 삭제",
@@ -1293,4 +1292,12 @@ export const dict = {
   "chat.search.invalidRegex": "정규식이 잘못되었습니다",
   "chat.search.noResults": "검색 결과 없음",
   "chat.search.searchingHistory": "이전 메시지를 검색하는 중…",
+  "ui.permission.toolLabel.modeSwitch": "모드 전환",
+  "ui.permission.modeSwitch.prompt": "모드를 {{source}}에서 {{target}}(으)로 전환 — 이유: {{reason}}",
+  "settings.agentBehaviour.modeSwitchReject.title": "모드 전환이 취소된 경우",
+  "settings.agentBehaviour.modeSwitchReject.description": "현재 작업을 기존 모드에서 계속할지 중지할지 선택합니다.",
+  "settings.agentBehaviour.modeSwitchReject.continue": "작업 계속",
+  "settings.agentBehaviour.modeSwitchReject.stop": "작업 중지",
+  "settings.autoApprove.tool.mode_switch":
+    "모드를 전환합니다. 에이전트가 현재 작업을 다른 기본 제공 모드에서 재개할 수 있도록 합니다.",
 }

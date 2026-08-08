@@ -380,6 +380,11 @@ async function findHostMissing(): Promise<Missing[]> {
 
 // ── Locale completeness helpers ─────────────────────────────────────────────
 
+// Namespaces under these prefixes are allowed to live only in en.ts; other
+// locales fall back to en until translators provide copies. Add a prefix
+// here whenever a new feature intentionally relies on the en fallback.
+const EN_FALLBACK_PREFIXES = ["ui.permission.modeSwitch."]
+
 function findMissingLocaleKeys(
   en: Record<string, string>,
   locales: Record<string, Record<string, string>>,
@@ -390,7 +395,7 @@ function findMissingLocaleKeys(
     if (locale === "en") continue
     const keys = new Set(Object.keys(dict))
     for (const key of base) {
-      if (!keys.has(key)) {
+      if (!keys.has(key) && !EN_FALLBACK_PREFIXES.some((p) => key.startsWith(p))) {
         results.push({ locale, key })
       }
     }

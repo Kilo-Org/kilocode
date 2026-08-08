@@ -287,6 +287,14 @@ export const dict = {
   "ui.permission.toolLabel.task": "Task",
   "ui.permission.toolLabel.skill": "Skill",
   "ui.permission.toolLabel.lsp": "LSP",
+  "ui.permission.toolLabel.modeSwitch": "Switch Mode",
+  "ui.permission.modeSwitch.prompt": "Switch mode from {{source}} to {{target}} — Reason: {{reason}}",
+  "ui.permission.modeSwitch.heading": "Agent requests a mode change",
+  "ui.permission.modeSwitch.reason": "Reason",
+  "ui.permission.modeSwitch.reassurance": "Your task, files, and conversation continue unchanged.",
+  "ui.permission.modeSwitch.switch": "Switch to {{target}}",
+  "ui.permission.modeSwitch.switching": "Switching to {{target}}…",
+  "ui.permission.modeSwitch.stay": "Stay in {{source}}",
   "ui.permission.toolLabel.bash": "Bash",
   "ui.permission.toolLabel.todoRead": "Todo Read",
   "ui.permission.toolLabel.todoWrite": "Todo Write",
@@ -534,7 +542,6 @@ export const dict = {
   "settings.permissions.tool.external_directory.description": "Access files outside the project directory",
   "settings.permissions.tool.doom_loop.title": "Doom Loop",
   "settings.permissions.tool.doom_loop.description": "Detect repeated tool calls with identical input",
-
   "session.delete.title": "Delete session",
   "session.delete.confirm": 'Delete session "{{name}}"?',
   "session.delete.button": "Delete session",
@@ -903,6 +910,11 @@ export const dict = {
 
   "settings.agentBehaviour.defaultAgent.title": "Default Agent",
   "settings.agentBehaviour.defaultAgent.description": "Agent to use when none is specified",
+  "settings.agentBehaviour.modeSwitchReject.title": "When a Mode Switch Is Cancelled",
+  "settings.agentBehaviour.modeSwitchReject.description":
+    "Choose whether the current task continues in its existing mode or stops.",
+  "settings.agentBehaviour.modeSwitchReject.continue": "Continue task",
+  "settings.agentBehaviour.modeSwitchReject.stop": "Stop task",
   "settings.agentBehaviour.availableAgents": "Available Agents",
   "settings.agentBehaviour.modelOverride.title": "Model Override",
   "settings.agentBehaviour.modelOverride.description": "Override the default model for this agent",
@@ -1055,6 +1067,8 @@ export const dict = {
   "settings.autoApprove.tool.websearch": "Search the web. Allows performing external web searches.",
   "settings.autoApprove.tool.doom_loop":
     "Prevent repeated identical actions. Triggered when the same tool call repeats with identical input.",
+  "settings.autoApprove.tool.mode_switch":
+    "Switch modes. Allows agents to resume the current task in another built-in mode.",
 
   "settings.checkpoints.enable.title": "Enable Snapshots",
   "settings.checkpoints.enable.description": "Create checkpoints before file edits so you can restore previous states",

@@ -1304,7 +1304,9 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
                         </div>
                       </Match>
                       <Match when={true}>
-                        <span data-slot="message-part-tool-error-message">{cleaned}</span>
+                        <div data-slot="message-part-tool-error-content">
+                          <span data-slot="message-part-tool-error-message">{cleaned}</span>
+                        </div>
                       </Match>
                     </Switch>
                   </div>

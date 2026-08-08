@@ -616,7 +616,6 @@ export const dict = {
   "settings.permissions.tool.external_directory.description": "プロジェクトディレクトリ外のファイルへのアクセス",
   "settings.permissions.tool.doom_loop.title": "Doom Loop",
   "settings.permissions.tool.doom_loop.description": "同一入力による繰り返しのツール呼び出しを検出",
-
   "session.delete.title": "セッションの削除",
   "session.delete.confirm": 'セッション "{{name}}" を削除しますか？',
   "session.delete.button": "セッションを削除",
@@ -1306,4 +1305,13 @@ export const dict = {
   "chat.search.invalidRegex": "正規表現が無効です",
   "chat.search.noResults": "見つかりませんでした",
   "chat.search.searchingHistory": "以前のメッセージを検索しています…",
+  "ui.permission.toolLabel.modeSwitch": "モードを切り替え",
+  "ui.permission.modeSwitch.prompt": "モードを{{source}}から{{target}}に切り替え — 理由: {{reason}}",
+  "settings.agentBehaviour.modeSwitchReject.title": "モード切り替えがキャンセルされた場合",
+  "settings.agentBehaviour.modeSwitchReject.description":
+    "現在のタスクを既存のモードで続行するか、停止するかを選択します。",
+  "settings.agentBehaviour.modeSwitchReject.continue": "タスクを続行",
+  "settings.agentBehaviour.modeSwitchReject.stop": "タスクを停止",
+  "settings.autoApprove.tool.mode_switch":
+    "モードを切り替えます。エージェントが現在のタスクを別の組み込みモードで再開できるようにします。",
 }

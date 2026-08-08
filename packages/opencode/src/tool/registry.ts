@@ -377,7 +377,12 @@ const layer = Layer.effect(
               .filter(Boolean)
               .join("\n"),
             parameters: output.parameters,
-            jsonSchema,
+            jsonSchema: yield* KiloToolRegistry.schema(
+              tool,
+              jsonSchema,
+              output.parameters === tool.parameters && output.jsonSchema === tool.jsonSchema,
+              agents,
+            ), // kilocode_change
             execute: tool.execute,
             formatValidationError: tool.formatValidationError,
           }

@@ -69,6 +69,26 @@ function idle(sessionID = "session-1") {
   } satisfies SdkEvent
 }
 
+function sessionUpdated(agent: string): SdkEvent {
+  return {
+    id: `evt-session-1-${agent}`,
+    type: "session.updated",
+    properties: {
+      sessionID: "session-1",
+      info: {
+        id: "session-1",
+        slug: "session-1",
+        projectID: "project-1",
+        directory: "/tmp",
+        title: "Session",
+        version: "1",
+        agent,
+        time: { created: 1, updated: 2 },
+      },
+    },
+  }
+}
+
 function retry(sessionID: string, attempt: number, message: string) {
   return {
     id: `evt-${sessionID}-retry-${attempt}`,
@@ -468,6 +488,170 @@ function sdk(
 }
 
 describe("run stream transport", () => {
+  test("updates the active CLI agent from session events", async () => {
+    const src = globalFeed()
+    const agents: string[] = []
+    const transport = await createSessionTransport({
+      sdk: sdk({ globalStream: src.stream }),
+      sessionID: "session-1",
+      thinking: true,
+      limits: () => ({}),
+      footer: footer().api,
+      onAgentChange: (agent) => agents.push(agent),
+    })
+
+    try {
+      src.push(globalEvent(sessionUpdated("debug")))
+      await waitFor(() => agents[0])
+      expect(agents).toEqual(["debug"])
+    } finally {
+      src.close()
+      await transport.close()
+    }
+  })
+
+  test("updates the active CLI agent from session.next.agent.switched", async () => {
+    const src = globalFeed()
+    const agents: string[] = []
+    const transport = await createSessionTransport({
+      sdk: sdk({ globalStream: src.stream }),
+      sessionID: "session-1",
+      thinking: true,
+      limits: () => ({}),
+      footer: footer().api,
+      onAgentChange: (agent) => agents.push(agent),
+    })
+
+    try {
+      src.push(
+        globalEvent({
+          id: "evt-agentswitch",
+          type: "session.next.agent.switched",
+          properties: {
+            sessionID: "session-1",
+            messageID: "msg-1",
+            timestamp: 1,
+            agent: "debug",
+          },
+        } satisfies SdkEvent),
+      )
+      await waitFor(() => agents[0])
+      expect(agents).toEqual(["debug"])
+    } finally {
+      src.close()
+      await transport.close()
+    }
+  })
+
+  test("ignores session.next.agent.switched for other sessions", async () => {
+    const src = globalFeed()
+    const agents: string[] = []
+    const transport = await createSessionTransport({
+      sdk: sdk({ globalStream: src.stream }),
+      sessionID: "session-1",
+      thinking: true,
+      limits: () => ({}),
+      footer: footer().api,
+      onAgentChange: (agent) => agents.push(agent),
+    })
+
+    try {
+      src.push(
+        globalEvent({
+          id: "evt-agentswitch-other",
+          type: "session.next.agent.switched",
+          properties: {
+            sessionID: "session-2",
+            messageID: "msg-1",
+            timestamp: 1,
+            agent: "debug",
+          },
+        } satisfies SdkEvent),
+      )
+      await Bun.sleep(20)
+      expect(agents).toEqual([])
+    } finally {
+      src.close()
+      await transport.close()
+    }
+  })
+
+  test("replays tracked session.updated events received during bootstrap", async () => {
+    const src = globalFeed()
+    const started = defer<void>()
+    const ready = defer<void>()
+    const agents: string[] = []
+    const task = createSessionTransport({
+      sdk: sdk({
+        globalEvent: () => {
+          started.resolve()
+          return globalSse(src.stream)
+        },
+        messages: async () => {
+          await ready.promise
+          return ok([])
+        },
+      }),
+      sessionID: "session-1",
+      thinking: true,
+      limits: () => ({}),
+      footer: footer().api,
+      onAgentChange: (agent) => agents.push(agent),
+    })
+
+    await started.promise
+    src.push(globalEvent(sessionUpdated("debug")))
+    await Bun.sleep(20)
+    expect(agents).toEqual([])
+    ready.resolve()
+    const transport = await task
+
+    try {
+      await waitFor(() => agents[0])
+      expect(agents).toEqual(["debug"])
+    } finally {
+      src.close()
+      await transport.close()
+    }
+  })
+
+  test("updates the active CLI model from session.next.model.switched", async () => {
+    const src = globalFeed()
+    const models: Array<{ providerID: string; id: string; variant?: string }> = []
+    const transport = await createSessionTransport({
+      sdk: sdk({ globalStream: src.stream }),
+      sessionID: "session-1",
+      thinking: true,
+      limits: () => ({}),
+      footer: footer().api,
+      onModelChange: (model) => models.push(model),
+    })
+
+    try {
+      src.push(
+        globalEvent({
+          id: "evt-modelswitch",
+          type: "session.next.model.switched",
+          properties: {
+            sessionID: "session-1",
+            messageID: "msg-1",
+            timestamp: 1,
+            model: {
+              providerID: "kilocode",
+              id: "anthropic/claude-sonnet-4",
+              variant: "xhigh",
+            },
+          },
+        } satisfies SdkEvent),
+      )
+      await waitFor(() => models[0])
+      expect(models).toEqual([{ providerID: "kilocode", id: "anthropic/claude-sonnet-4", variant: "xhigh" }])
+    } finally {
+      src.close()
+      await transport.close()
+    }
+  })
+
   test("ignores the sync copy of a native message event", async () => {
     const src = globalFeed()
     const ui = footer()

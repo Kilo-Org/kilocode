@@ -570,7 +570,6 @@ export const dict = {
   "settings.permissions.tool.external_directory.description": "Proje dizini dışındaki dosyalara eriş",
   "settings.permissions.tool.doom_loop.title": "Sonsuz Döngü",
   "settings.permissions.tool.doom_loop.description": "Aynı girdiyle tekrarlanan araç çağrılarını algıla",
-
   "session.delete.title": "Oturumu sil",
   "session.delete.confirm": '"{{name}}" oturumu silinsin mi?',
   "session.delete.button": "Oturumu sil",
@@ -1330,4 +1329,13 @@ export const dict = {
   "chat.search.invalidRegex": "Geçersiz normal ifade",
   "chat.search.noResults": "Sonuç yok",
   "chat.search.searchingHistory": "Önceki mesajlarda aranıyor…",
+  "ui.permission.toolLabel.modeSwitch": "Mod değiştir",
+  "ui.permission.modeSwitch.prompt": "Modu {{source}} modundan {{target}} moduna değiştir — Neden: {{reason}}",
+  "settings.agentBehaviour.modeSwitchReject.title": "Mod değişikliği iptal edildiğinde",
+  "settings.agentBehaviour.modeSwitchReject.description":
+    "Mevcut görevin geçerli modunda devam mı edeceğini yoksa duracağını mı seçin.",
+  "settings.agentBehaviour.modeSwitchReject.continue": "Göreve devam et",
+  "settings.agentBehaviour.modeSwitchReject.stop": "Görevi durdur",
+  "settings.autoApprove.tool.mode_switch":
+    "Modları değiştir. Aracıların mevcut görevi başka bir yerleşik modda sürdürmesine izin verir.",
 }

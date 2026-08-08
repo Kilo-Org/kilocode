@@ -43,6 +43,7 @@ export interface SessionInfo {
   id: string
   parentID?: string | null
   title?: string
+  agent?: string
   createdAt: string
   updatedAt: string
   revert?: {

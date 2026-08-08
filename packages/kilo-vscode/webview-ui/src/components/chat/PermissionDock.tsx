@@ -30,10 +30,12 @@ import { permissionDiffs } from "./permission-diff-utils"
 import { normalizeUrls } from "../../../../../opencode/src/kilocode/util/url"
 import type { PermissionRequest } from "../../types/messages"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
+import { ModeSwitchPermissionCard } from "./ModeSwitchCard"
+import { permissionModeSwitch } from "./mode-switch-ui"
 
 let rulesExpandedPreference = false
 
-export const PermissionDock: Component<{
+const GenericPermissionDock: Component<{
   request: PermissionRequest
   responding: boolean
   onDecide: (response: "once" | "reject", approvedAlways: string[], deniedAlways: string[]) => void
@@ -66,10 +68,10 @@ export const PermissionDock: Component<{
     const val = props.request.args?.description
     return typeof val === "string" && val.length > 0 ? val : undefined
   }
-  const description = createMemo(() =>
-    command() ? null : describePatterns(props.request.toolName, props.request.patterns, language.t),
-  )
-
+  const description = createMemo(() => {
+    if (command() || props.request.toolName === "mode_switch") return null
+    return describePatterns(props.request.toolName, props.request.patterns, language.t)
+  })
   const diffs = createMemo(() => permissionDiffs(props.request))
 
   // Pre-populate toggle states from existing config rules so previously
@@ -359,4 +361,23 @@ export const PermissionDock: Component<{
       </DockPrompt>
     </div>
   )
+}
+
+export const PermissionDock: Component<{
+  request: PermissionRequest
+  responding: boolean
+  onDecide: (response: "once" | "reject", approvedAlways: string[], deniedAlways: string[]) => void
+}> = (props) => {
+  const details = permissionModeSwitch(props.request)
+  if (details) {
+    return (
+      <ModeSwitchPermissionCard
+        request={props.request}
+        details={details}
+        responding={props.responding}
+        onDecide={props.onDecide}
+      />
+    )
+  }
+  return <GenericPermissionDock {...props} />
 }

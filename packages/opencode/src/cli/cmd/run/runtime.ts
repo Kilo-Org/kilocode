@@ -24,6 +24,7 @@ import { cycleVariant, formatModelLabel, resolveSavedVariant, resolveVariant, sa
 // kilocode_change - preserve compatible variants when switching models
 import { resolvePreservedVariant } from "@/kilocode/cli/cmd/run/variant" // kilocode_change
 import type { LocalReplayAnchor, LocalReplayRow, RunInput, RunPrompt, RunProvider, StreamCommit } from "./types"
+import * as Locale from "@/util/locale" // kilocode_change
 
 /** @internal Exported for testing */
 export { pickVariant, resolveVariant } from "./variant.shared"
@@ -501,6 +502,32 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
         limits: () => state.limits,
         providers: () => state.providers,
         footer,
+        // kilocode_change start
+        onAgentChange: (agent) => {
+          state.agent = agent
+          footer.event({ type: "agent", agent: Locale.titlecase(agent) })
+        },
+        // Mirror state.model, variants, activeVariant, and the footer model label so
+        // an in-flight model switch from mode_switch survives through to the next
+        // interactive prompt in kilo run.
+        onModelChange: (model) => {
+          const next = { providerID: model.providerID, modelID: model.id, variant: model.variant }
+          state.model = next
+          const variants = variantsFor(state.providers, next)
+          state.variants = variants
+          // Only adopt the destination variant when the resolved variant list
+          // actually contains it; otherwise the source variant would silently
+          // sneak back onto the destination model.
+          state.activeVariant =
+            model.variant && variants.includes(model.variant) ? model.variant : undefined
+          footer.event({ type: "model", model: formatModelLabel(next, state.activeVariant, state.providers) })
+          footer.event({ type: "model.switch", model: next })
+          // Mirror variants + activeVariant into the footer's signals (and the
+          // statusline/picker) so the destination's variant list replaces the
+          // source's after an in-flight model switch.
+          footer.event({ type: "variants", variants: state.variants, current: state.activeVariant })
+        },
+        // kilocode_change end
         trace: log,
       })
       if (footer.isClosed) {

@@ -20,6 +20,7 @@ import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
 import { childID } from "../../context/session-utils"
 import { taskResult, taskRunning, taskVisible } from "./task-tool-state"
+import { MODE_SWITCH_TRANSITION_ICON, modeSwitchEvent } from "./mode-switch-ui"
 
 const TaskToolRenderer: Component<ToolProps> = (props) => {
   const i18n = useI18n()
@@ -168,7 +169,16 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
             <Show when={result()}>{(text) => <Markdown text={text()} />}</Show>
             <Index each={childToolParts()}>
               {(item) => {
-                const info = createMemo(() => getToolInfo(item().tool, item().state?.input))
+                const mode = createMemo(() => item().tool === "mode_switch")
+                const info = createMemo(() => {
+                  if (!mode()) return getToolInfo(item().tool, item().state?.input)
+                  const state = item().state as {
+                    input?: Record<string, unknown>
+                    metadata?: Record<string, unknown>
+                  }
+                  const event = modeSwitchEvent(state.input ?? {}, state.metadata ?? {})
+                  return { icon: MODE_SWITCH_TRANSITION_ICON, title: event.title, subtitle: event.reason }
+                })
                 const subtitle = createMemo(() => {
                   if (info().subtitle) return info().subtitle
                   const state = item().state as { status: string; title?: string }
@@ -176,11 +186,25 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
                   return undefined
                 })
                 return (
-                  <div data-slot="task-tool-item">
+                  <div data-slot="task-tool-item" data-mode-switch={mode() ? true : undefined}>
                     <Icon name={info().icon} size="small" />
-                    <span data-slot="task-tool-title">{info().title}</span>
-                    <Show when={subtitle()}>
-                      <span data-slot="task-tool-subtitle">{subtitle()}</span>
+                    <Show
+                      when={mode()}
+                      fallback={
+                        <>
+                          <span data-slot="task-tool-title">{info().title}</span>
+                          <Show when={subtitle()}>
+                            <span data-slot="task-tool-subtitle">{subtitle()}</span>
+                          </Show>
+                        </>
+                      }
+                    >
+                      <div data-slot="mode-switch-event-content">
+                        <span data-slot="mode-switch-event-title">{info().title}</span>
+                        <Show when={subtitle()}>
+                          {(reason) => <span data-slot="mode-switch-event-reason">{reason()}</span>}
+                        </Show>
+                      </div>
                     </Show>
                   </div>
                 )

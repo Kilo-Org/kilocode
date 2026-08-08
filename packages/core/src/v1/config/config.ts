@@ -103,6 +103,10 @@ export const Info = Schema.Struct({
   remote_control: Schema.optional(Schema.Boolean).annotate({
     description: "Enable remote control of sessions via Kilo Cloud. Equivalent to running /remote on startup.",
   }),
+  mode_switch_on_reject: Schema.optional(Schema.Literals(["continue", "stop"])).annotate({
+    description:
+      "Control whether a task continues in its current mode or stops when an agent-requested mode switch is rejected",
+  }),
   auto_collapse_reasoning: Schema.optional(Schema.Boolean).annotate({
     description: "Automatically collapse reasoning blocks after the agent finishes writing them",
   }),

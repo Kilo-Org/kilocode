@@ -9,6 +9,7 @@ import { InteractiveTerminalTool } from "./interactive-terminal"
 import { NotebookEditTool, NotebookExecuteTool, NotebookReadTool } from "./notebook-host"
 import { MemoryRecallTool } from "./memory-recall"
 import { MemorySaveTool } from "./memory-save"
+import { ModeSwitchTool, schema as modeSchema } from "./mode-switch"
 import { NotifyUserTool } from "./notify-user"
 import { SendFileTool } from "./send-file"
 import * as Tool from "../../tool/tool"
@@ -54,6 +55,16 @@ export namespace KiloToolRegistry {
     return family?.startsWith("gpt") ?? false
   }
 
+  export function schema(
+    tool: Tool.Def,
+    current: Tool.Def["jsonSchema"],
+    original: boolean,
+    agents: Pick<Agent.Interface, "list">,
+  ) {
+    if (tool.id !== ModeSwitchTool.id || !original) return Effect.succeed(current)
+    return agents.list().pipe(Effect.map(modeSchema))
+  }
+
   /** Resolve Kilo-specific tool Infos outside any InstanceState, so their Truncate/Agent deps are
    * satisfied at the outer registry scope instead of leaking into InstanceState's Effect. */
   const unavailable = AgentManager.Service.of({
@@ -73,6 +84,7 @@ export namespace KiloToolRegistry {
       const managerModels = yield* AgentManagerModelsTool
       const memory = yield* MemoryRecallTool
       const save = yield* MemorySaveTool
+      const mode = yield* ModeSwitchTool
       const manager = yield* AgentManagerTool.pipe(Effect.provideService(AgentManager.Service, host ?? unavailable))
       const process = yield* BackgroundProcessTool
       const chart = yield* ChartTool
@@ -85,13 +97,13 @@ export namespace KiloToolRegistry {
       const notify = yield* NotifyUserTool.pipe(Effect.provideService(KiloSessions.Service, sessions))
       const send = yield* SendFileTool
       if (!notebook)
-        return { codebase, recall, managerModels, memory, save, manager, process, chart, image, terminal, notify, send }
+        return { codebase, recall, managerModels, memory, save, mode, manager, process, chart, image, terminal, notify, send }
       const tools = yield* Effect.all({
         notebookRead: NotebookReadTool,
         notebookEdit: NotebookEditTool,
         notebookExecute: NotebookExecuteTool,
       }).pipe(Effect.provideService(Notebook.Service, notebook))
-      return { codebase, recall, managerModels, memory, save, manager, process, chart, image, terminal, notify, send, ...tools }
+      return { codebase, recall, managerModels, memory, save, mode, manager, process, chart, image, terminal, notify, send, ...tools }
     })
   }
 
@@ -104,6 +116,7 @@ export namespace KiloToolRegistry {
       managerModels: Tool.Info
       memory: Tool.Info
       save: Tool.Info
+      mode?: Tool.Info
       manager: Tool.Info
       process: Tool.Info
       chart: Tool.Info
@@ -132,6 +145,7 @@ export namespace KiloToolRegistry {
         notify: Tool.init(tools.notify),
         send: Tool.init(tools.send),
       })
+      const mode = tools.mode ? yield* Tool.init(tools.mode) : undefined
       const terminal = tools.terminal ? yield* Tool.init(tools.terminal) : undefined
       const notebooks =
         tools.notebookRead && tools.notebookEdit && tools.notebookExecute
@@ -142,7 +156,7 @@ export namespace KiloToolRegistry {
             })
           : {}
       const semantic = yield* semanticTool(deps, loaders)
-      return { ...base, terminal, ...notebooks, semantic, notify: base.notify, send: base.send }
+      return { ...base, mode, terminal, ...notebooks, semantic, notify: base.notify, send: base.send }
     })
   }
 
@@ -186,6 +200,7 @@ export namespace KiloToolRegistry {
   /** Hide human-driven tools from agents that cannot interact with the user directly. */
   export function available(tool: Tool.Def, agent: Agent.Info) {
     if (tool.id === "notify_user") return KiloSessions.remoteStatus().enabled
+    if (tool.id === "mode_switch") return agent.native === true && agent.mode !== "subagent" && agent.hidden !== true
     if (tool.id === "send_file") return KiloSessions.remoteStatus().connected
     if (tool.id !== "interactive_terminal") return true
     return agent.mode === "primary"
@@ -200,6 +215,7 @@ export namespace KiloToolRegistry {
       managerModels: Tool.Def
       memory: Tool.Def
       save: Tool.Def
+      mode?: Tool.Def
       manager: Tool.Def
       process: Tool.Def
       chart: Tool.Def
@@ -219,6 +235,7 @@ export namespace KiloToolRegistry {
       ...(tools.semantic ? [tools.semantic] : []),
       tools.memory,
       tools.save,
+      ...(tools.mode ? [tools.mode] : []),
       tools.recall,
       ...(Flag.KILO_CLIENT === "vscode" ? [tools.chart] : []),
       ...(Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode" ? [tools.process] : []),

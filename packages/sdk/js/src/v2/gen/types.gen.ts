@@ -2545,6 +2545,7 @@ export type Config = {
   disabled_providers?: Array<string>
   enabled_providers?: Array<string>
   remote_control?: boolean
+  mode_switch_on_reject?: "continue" | "stop"
   auto_collapse_reasoning?: boolean
   indexing?: IndexingConfig
   console?: {

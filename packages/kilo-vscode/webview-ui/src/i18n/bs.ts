@@ -625,7 +625,6 @@ export const dict = {
   "settings.permissions.tool.external_directory.description": "Pristup datotekama izvan direktorija projekta",
   "settings.permissions.tool.doom_loop.title": "Beskonačna petlja",
   "settings.permissions.tool.doom_loop.description": "Otkriva ponovljene pozive alata sa identičnim unosom",
-
   "session.delete.title": "Izbriši sesiju",
   "session.delete.confirm": 'Izbriši sesiju "{{name}}"?',
   "session.delete.button": "Izbriši sesiju",
@@ -1319,4 +1318,13 @@ export const dict = {
   "chat.search.invalidRegex": "Nevažeći regularni izraz",
   "chat.search.noResults": "Nema rezultata",
   "chat.search.searchingHistory": "Pretraživanje ranijih poruka…",
+  "ui.permission.toolLabel.modeSwitch": "Promijeni način",
+  "ui.permission.modeSwitch.prompt": "Promijeni način sa {{source}} na {{target}} — Razlog: {{reason}}",
+  "settings.agentBehaviour.modeSwitchReject.title": "Kada se promjena načina otkaže",
+  "settings.agentBehaviour.modeSwitchReject.description":
+    "Odaberite hoće li se trenutni zadatak nastaviti u postojećem načinu ili zaustaviti.",
+  "settings.agentBehaviour.modeSwitchReject.continue": "Nastavi zadatak",
+  "settings.agentBehaviour.modeSwitchReject.stop": "Zaustavi zadatak",
+  "settings.autoApprove.tool.mode_switch":
+    "Promijenite načine rada. Omogućava agentima da nastave trenutni zadatak u drugom ugrađenom načinu.",
 }

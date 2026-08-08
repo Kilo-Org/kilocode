@@ -11,6 +11,7 @@ import { createMemo, For, Show } from "solid-js"
 import { Dynamic } from "solid-js/web"
 import { BasicTool } from "@kilocode/kilo-ui/basic-tool"
 import { ToolRegistry, type ToolProps } from "@kilocode/kilo-ui/message-part"
+import { MODE_SWITCH_TRANSITION_ICON, modeSwitchEvent } from "./mode-switch-ui"
 
 /** Tools that should be open by default in the VS Code sidebar. */
 const DEFAULT_OPEN_TOOLS = ["bash"]
@@ -151,7 +152,37 @@ function BackgroundProcessTool(props: ToolProps) {
   )
 }
 
+function ModeSwitchTool(props: ToolProps) {
+  const event = createMemo(() => modeSwitchEvent(props.input, props.metadata))
+
+  return (
+    <div data-component="mode-switch-event" role="status" aria-live="polite">
+      <BasicTool
+        {...props}
+        icon={MODE_SWITCH_TRANSITION_ICON}
+        hideDetails
+        trigger={
+          <div data-slot="mode-switch-event-content">
+            <span data-slot="mode-switch-event-title">{event().title}</span>
+            <Show when={event().reason}>
+              {(reason) => <span data-slot="mode-switch-event-reason">{reason()}</span>}
+            </Show>
+          </div>
+        }
+      />
+    </div>
+  )
+}
+
 export function registerVscodeToolOverrides() {
+  if (!registered.has("mode_switch")) {
+    ToolRegistry.register({
+      name: "mode_switch",
+      render: ModeSwitchTool,
+    })
+    registered.add("mode_switch")
+  }
+
   if (!registered.has("background_process")) {
     ToolRegistry.register({
       name: "background_process",

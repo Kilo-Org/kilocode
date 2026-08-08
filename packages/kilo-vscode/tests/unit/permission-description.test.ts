@@ -26,6 +26,7 @@ const labels: Record<string, string> = {
   "ui.permission.toolLabel.task": "Task",
   "ui.permission.toolLabel.skill": "Skill",
   "ui.permission.toolLabel.lsp": "LSP",
+  "ui.permission.toolLabel.modeSwitch": "Switch Mode",
   "ui.permission.doomLoop.prompt": "Potential loop detected for the {{tool}} tool. Continue running?",
   "ui.permission.doomLoop.rule": "Continue {{tool}} calls",
 }
@@ -127,6 +128,7 @@ describe("describePatterns", () => {
       task: "ui.permission.toolLabel.task",
       skill: "ui.permission.toolLabel.skill",
       lsp: "ui.permission.toolLabel.lsp",
+      mode_switch: "ui.permission.toolLabel.modeSwitch",
     }
     expect(TOOL_LABEL_KEYS).toEqual(expected)
   })

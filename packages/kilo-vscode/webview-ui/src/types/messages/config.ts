@@ -135,6 +135,7 @@ export interface BrowserSettings {
 
 export type TerminalCommandDisplay = "expanded" | "collapsed"
 export type CodeEditDisplay = "expanded" | "collapsed"
+export type ModeSwitchOnReject = "continue" | "stop"
 
 export interface Config {
   permission?: PermissionConfig
@@ -154,6 +155,7 @@ export interface Config {
   skills?: SkillsConfig
   snapshot?: boolean
   remote_control?: boolean
+  mode_switch_on_reject?: ModeSwitchOnReject
   terminal_command_display?: TerminalCommandDisplay
   code_edit_display?: CodeEditDisplay
   hide_prompt_training_models?: boolean

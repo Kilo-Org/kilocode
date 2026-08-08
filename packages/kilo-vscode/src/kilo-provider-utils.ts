@@ -194,11 +194,14 @@ export async function runWithMessageConfirmation<T>(
   }
 }
 
-export function sessionToWebview(session: Pick<Session, "id" | "parentID" | "title" | "time" | "summary" | "revert">) {
+export function sessionToWebview(
+  session: Pick<Session, "id" | "parentID" | "title" | "agent" | "time" | "summary" | "revert">,
+) {
   return {
     id: session.id,
     parentID: session.parentID ?? null,
     title: session.title,
+    agent: session.agent,
     createdAt: new Date(session.time.created).toISOString(),
     updatedAt: new Date(session.time.updated).toISOString(),
     // Use null (not undefined) so the value survives postMessage JSON serialization.
@@ -448,6 +451,7 @@ export type WebviewMessage =
   | { type: "permissionError"; permissionID: string; stale?: boolean }
   | { type: "sessionCreated"; session: ReturnType<typeof sessionToWebview>; draftID?: string }
   | { type: "sessionUpdated"; session: ReturnType<typeof sessionToWebview> }
+  | { type: "sessionAgentSwitched"; sessionID: string; agent: string }
   | { type: "sessionDeleted"; sessionID: string }
   | { type: "messageRemoved"; sessionID: string; messageID: string }
   | { type: "sessionError"; sessionID?: string; error?: unknown }
@@ -624,6 +628,12 @@ export function mapSSEEventToWebviewMessage(event: StreamEvent, sessionID: strin
         error: event.properties.error,
       }
     }
+    case "session.next.agent.switched":
+      return {
+        type: "sessionAgentSwitched",
+        sessionID: event.properties.sessionID,
+        agent: event.properties.agent,
+      }
     case "sandbox.status.changed":
       return {
         type: "sandboxStatus",

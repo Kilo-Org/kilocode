@@ -154,6 +154,10 @@ describe("sessionToWebview", () => {
     expect(result.title).toBe("My Session")
   })
 
+  it("preserves the active agent", () => {
+    expect(sessionToWebview(makeSession({ agent: "debug" })).agent).toBe("debug")
+  })
+
   it("produces valid ISO format", () => {
     const result = sessionToWebview(makeSession())
     expect(() => new Date(result.createdAt)).not.toThrow()

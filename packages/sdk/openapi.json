@@ -33571,6 +33571,10 @@
           "remote_control": {
             "type": "boolean"
           },
+          "mode_switch_on_reject": {
+            "type": "string",
+            "enum": ["continue", "stop"]
+          },
           "auto_collapse_reasoning": {
             "type": "boolean"
           },

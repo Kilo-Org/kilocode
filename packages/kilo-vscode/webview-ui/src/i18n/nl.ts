@@ -576,7 +576,6 @@ export const dict = {
   "settings.permissions.tool.external_directory.description": "Krijg toegang tot bestanden buiten de projectmap",
   "settings.permissions.tool.doom_loop.title": "Doom Loop",
   "settings.permissions.tool.doom_loop.description": "Detecteer herhaalde tool calls met identieke invoer",
-
   "session.delete.title": "Verwijder sessie",
   "session.delete.confirm": 'Sessie "{{name}}" verwijderen?',
   "session.delete.button": "Verwijder sessie",
@@ -1344,4 +1343,13 @@ export const dict = {
   "chat.search.invalidRegex": "Ongeldige reguliere expressie",
   "chat.search.noResults": "Geen resultaten",
   "chat.search.searchingHistory": "Eerdere berichten doorzoeken…",
+  "ui.permission.toolLabel.modeSwitch": "Modus wisselen",
+  "ui.permission.modeSwitch.prompt": "Modus wisselen van {{source}} naar {{target}} — Reden: {{reason}}",
+  "settings.agentBehaviour.modeSwitchReject.title": "Wanneer een moduswissel wordt geannuleerd",
+  "settings.agentBehaviour.modeSwitchReject.description":
+    "Kies of de huidige taak doorgaat in de bestaande modus of stopt.",
+  "settings.agentBehaviour.modeSwitchReject.continue": "Taak voortzetten",
+  "settings.agentBehaviour.modeSwitchReject.stop": "Taak stoppen",
+  "settings.autoApprove.tool.mode_switch":
+    "Modi wisselen. Hiermee kunnen agents de huidige taak in een andere ingebouwde modus hervatten.",
 }

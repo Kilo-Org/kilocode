@@ -635,11 +635,28 @@
 
 .mode-switcher-item {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   padding: 8px 12px;
   cursor: pointer;
   font-size: var(--font-size-base);
+}
+
+.mode-switcher-item-copy {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mode-switcher-item-check {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
 }
 
 .mode-switcher-item:hover {
