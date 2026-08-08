@@ -3092,6 +3092,41 @@ describe("ProviderTransform.message - cache control on gateway", () => {
     expect(result[0].providerOptions?.openai?.promptCacheBreakpoint).toBeUndefined()
     expect(result[1].providerOptions?.openai?.promptCacheBreakpoint).toBeUndefined()
   })
+
+  test("openai gpt-5.6 places promptCacheBreakpoint before trailing environment_details", () => {
+    const model = createModel({
+      providerID: "openai",
+      api: {
+        id: "gpt-5.6",
+        url: "https://api.openai.com/v1",
+        npm: "@ai-sdk/openai",
+      },
+      id: "gpt-5.6",
+    })
+    const envBlock = "<environment_details>\nCurrent time: 2026-08-08T18:00:00+00:00\n</environment_details>"
+    const msgs = [
+      {
+        role: "system",
+        content: "You are a helpful assistant",
+      },
+      {
+        role: "user",
+        content: [
+          { type: "text", text: "Please review the changes" },
+          { type: "text", text: envBlock },
+        ],
+      },
+    ] as any[]
+
+    const result = ProviderTransform.message(msgs, model, {}) as any[]
+
+    expect(result[1].content[0].providerOptions.openai).toEqual({
+      promptCacheBreakpoint: {
+        mode: "explicit",
+      },
+    })
+    expect(result[1].content[1].providerOptions?.openai?.promptCacheBreakpoint).toBeUndefined()
+  })
   // kilocode_change end
 })
 

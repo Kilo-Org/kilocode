@@ -176,6 +176,52 @@ describe("applyCachePolicy", () => {
       })
     }),
   )
+
+  it.effect("places prompt_cache_breakpoint BEFORE trailing <environment_details> part", () =>
+    Effect.gen(function* () {
+      const envBlock = "<environment_details>\nCurrent time: 2026-08-08T18:00:00+00:00\n</environment_details>"
+      const prepared = yield* LLMClient.prepare(
+        LLM.request({
+          model: openaiGpt56ResponsesModel,
+          system: "System instructions",
+          messages: [
+            Message.user([
+              { type: "text", text: "Please inspect the codebase" },
+              { type: "text", text: envBlock },
+            ]),
+          ],
+          cache: "auto",
+        }),
+      )
+
+      expect(prepared.body).toMatchObject({
+        input: [
+          {
+            role: "system",
+            content: [{ type: "input_text", text: "System instructions", prompt_cache_breakpoint: { mode: "explicit" } }],
+          },
+          {
+            role: "user",
+            content: [
+              {
+                type: "input_text",
+                text: "Please inspect the codebase",
+                prompt_cache_breakpoint: { mode: "explicit" },
+              },
+              {
+                type: "input_text",
+                text: envBlock,
+              },
+            ],
+          },
+        ],
+      })
+
+      const userContent = (prepared.body as any).input[1].content
+      expect(userContent[0].prompt_cache_breakpoint).toEqual({ mode: "explicit" })
+      expect(userContent[1].prompt_cache_breakpoint).toBeUndefined()
+    }),
+  )
   // kilocode_change end
 
   it.effect("'auto' is a no-op on Gemini (out-of-band caching protocol)", () =>
