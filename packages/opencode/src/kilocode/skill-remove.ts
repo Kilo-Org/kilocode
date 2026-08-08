@@ -1,4 +1,4 @@
-import { unlink } from "node:fs/promises"
+import { rm } from "node:fs/promises"
 import path from "node:path"
 import { Global } from "@opencode-ai/core/global"
 import { Skill } from "@/skill"
@@ -24,14 +24,23 @@ export function target(location: string, skills: readonly Info[]) {
 
   const cache = path.join(Global.Path.cache, "skills")
   const relative = path.relative(cache, file)
-  if (relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative))) {
-    throw new Error("remove URL-backed skills from configuration")
+  if (relative === "") throw new Error("remove URL-backed skills from configuration")
+
+  if (!relative.startsWith("..") && !path.isAbsolute(relative)) {
+    const dir = path.dirname(file)
+    const parent = path.relative(cache, dir)
+    if (parent === "" || parent.startsWith("..") || path.isAbsolute(parent)) {
+      throw new Error("remove URL-backed skills from configuration")
+    }
+    return dir
   }
+
   return file
 }
 
 export async function remove(location: string, skills: readonly Info[]) {
-  const file = target(location, skills)
+  const targetPath = target(location, skills)
   // Removing only the manifest disables discovery without recursively deleting user files.
-  await unlink(file)
+  // URL-backed skills live entirely inside the cache, so the whole skill directory is removed.
+  await rm(targetPath, { recursive: true, force: true })
 }

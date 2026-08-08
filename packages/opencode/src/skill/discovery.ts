@@ -1,8 +1,7 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { httpClient, path } from "@opencode-ai/core/effect/app-node-platform"
-import { NodePath } from "@effect/platform-node"
 import { Effect, Layer, Path, Schema, Context } from "effect"
-import { FetchHttpClient, HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
+import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
 import { withTransientReadRetry } from "@/util/effect-http-client"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Global } from "@opencode-ai/core/global"
@@ -32,20 +31,55 @@ const layer: Layer.Layer<Service, never, FSUtil.Service | Path.Path | HttpClient
   Effect.gen(function* () {
     const fs = yield* FSUtil.Service
     const path = yield* Path.Path
-    const http = HttpClient.filterStatusOk(withTransientReadRetry(yield* HttpClient.HttpClient))
+    const client = yield* HttpClient.HttpClient
+    const httpRaw = withTransientReadRetry(client)
+    const http = HttpClient.filterStatusOk(httpRaw)
     const cache = path.join(Global.Path.cache, "skills")
 
-    const download = Effect.fn("Discovery.download")(function* (url: string, dest: string) {
-      if (yield* fs.exists(dest).pipe(Effect.orDie)) return true
+    // kilocode_change start - revalidate cached URL skill files using ETag/Last-Modified
+    // sidecars so stale copies are not returned forever.
+    const etagFile = (dest: string) => `${dest}.etag`
+    const lastmodFile = (dest: string) => `${dest}.lastmod`
 
-      return yield* HttpClientRequest.get(url).pipe(
-        http.execute,
-        Effect.flatMap((res) => res.arrayBuffer),
-        Effect.flatMap((body) => fs.writeWithDirs(dest, new Uint8Array(body))),
-        Effect.as(true),
-        Effect.catch((err) => Effect.logError("failed to download", { url: url, error: err }).pipe(Effect.as(false))),
-      )
+    const readTag = (tag: string) =>
+      Effect.gen(function* () {
+        if (!(yield* fs.exists(tag).pipe(Effect.orDie))) return undefined
+        return yield* fs.readFileStringSafe(tag).pipe(Effect.catch(() => Effect.succeed(undefined)))
+      })
+
+    const writeTag = (tag: string, value: string | null) =>
+      value ? fs.writeWithDirs(tag, value) : fs.remove(tag, { force: true }).pipe(Effect.ignore)
+
+    const download = Effect.fn("Discovery.download")(function* (url: string, dest: string, revalidate: boolean) {
+      const exists = yield* fs.exists(dest).pipe(Effect.orDie)
+      if (exists && !revalidate) return true
+
+      const headers: Record<string, string> = {}
+      if (revalidate) {
+        const etag = yield* readTag(etagFile(dest))
+        if (etag) headers["If-None-Match"] = etag
+        const lastmod = yield* readTag(lastmodFile(dest))
+        if (lastmod) headers["If-Modified-Since"] = lastmod
+      }
+
+      return yield* Effect.gen(function* () {
+        const res = yield* HttpClientRequest.get(url).pipe(
+          HttpClientRequest.setHeaders(headers),
+          httpRaw.execute,
+        )
+        if (res.status === 304) return true
+        if (res.status !== 200) {
+          yield* Effect.logError("failed to download", { url, status: res.status })
+          return false
+        }
+        const body = yield* res.arrayBuffer
+        yield* fs.writeWithDirs(dest, new Uint8Array(body))
+        yield* writeTag(etagFile(dest), res.headers["etag"] ?? null)
+        yield* writeTag(lastmodFile(dest), res.headers["last-modified"] ?? null)
+        return true
+      }).pipe(Effect.catch((err) => Effect.logError("failed to download", { url, error: err }).pipe(Effect.as(false))))
     })
+    // kilocode_change end
 
     const pull = Effect.fn("Discovery.pull")(function* (url: string) {
       const base = url.endsWith("/") ? url : `${url}/`
@@ -110,23 +144,26 @@ const layer: Layer.Layer<Service, never, FSUtil.Service | Path.Path | HttpClient
           Effect.gen(function* () {
             const { root, version } = skill
             const versionFile = path.join(root, ".opencode-version")
-            const fetchInto = (target: string) =>
-              Effect.forEach(skill.files, (file) => download(file.url, path.join(target, file.rel)), {
+            // kilocode_change start - pass revalidate so unversioned files are revalidated and
+            // versioned files short-circuit on existing copies.
+            const fetchInto = (target: string, revalidate: boolean) =>
+              Effect.forEach(skill.files, (file) => download(file.url, path.join(target, file.rel), revalidate), {
                 concurrency: fileConcurrency,
               })
+            // kilocode_change end
             const current =
               version === undefined
                 ? undefined
                 : yield* fs.readFileStringSafe(versionFile).pipe(Effect.catch(() => Effect.succeed(undefined)))
 
             if (version === undefined || current === version) {
-              yield* fetchInto(root)
+              yield* fetchInto(root, version === undefined)
             } else {
               const token = crypto.randomUUID()
               const staging = `${root}.tmp-${token}`
               const backup = `${root}.old-${token}`
               yield* Effect.gen(function* () {
-                const downloaded = yield* fetchInto(staging)
+                const downloaded = yield* fetchInto(staging, false)
                 if (!downloaded.every(Boolean)) return
                 if (!(yield* fs.exists(path.join(staging, "SKILL.md")).pipe(Effect.orDie))) return
                 yield* fs.writeFileString(path.join(staging, ".opencode-version"), version)

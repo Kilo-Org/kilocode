@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import path from "node:path"
 import { Global } from "@opencode-ai/core/global"
-import { target } from "../../src/kilocode/skill-remove"
+import { target, remove } from "../../src/kilocode/skill-remove"
 
 const info = (location: string) => ({
   name: "synthetic",
@@ -34,9 +34,16 @@ describe("skill removal target", () => {
     expect(() => target(location, [info(location)])).toThrow("skill location must reference SKILL.md")
   })
 
-  test("rejects URL-backed cache entries", () => {
+  test("returns the cache directory for a URL-backed skill", () => {
     const location = path.join(Global.Path.cache, "skills", "synthetic", "SKILL.md")
-    expect(() => target(location, [info(location)])).toThrow("remove URL-backed skills from configuration")
+    expect(target(location, [info(location)])).toBe(path.dirname(location))
+  })
+
+  test("removes a URL-backed skill cache directory", async () => {
+    const location = path.join(Global.Path.cache, "skills", "synthetic-remove", "SKILL.md")
+    await Bun.write(location, "---\nname: synthetic\n---\n")
+    await remove(location, [info(location)])
+    expect(await Bun.file(location).exists()).toBe(false)
   })
 
   test("returns only the registered skill manifest", () => {
