@@ -263,6 +263,9 @@ class PromptPanel(
     override val isStopEnabled: Boolean
         get() = busy
 
+    override val isAutoApproveEnabled: Boolean
+        get() = autoApprove
+
     init {
         applyStyle(style)
         selection?.register(editor)
@@ -462,6 +465,11 @@ class PromptPanel(
     override fun stop() {
         if (!isStopEnabled) return
         onAbort()
+    }
+
+    @RequiresEdt
+    override fun toggleAutoApprove() {
+        onAutoApproveToggle(!autoApprove)
     }
 
     internal fun inputFont() = editor.font

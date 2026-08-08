@@ -9,23 +9,26 @@ import com.intellij.openapi.actionSystem.Presentation
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
 @Suppress("UnstableApiUsage")
-class StopSessionActionTest : BasePlatformTestCase() {
+class ToggleAutoApproveActionTest : BasePlatformTestCase() {
     fun `test action invokes prompt context`() {
-        val ctx = FakeContext(true)
-        val action = StopSessionAction()
+        val ctx = FakeContext(false)
+        val action = ToggleAutoApproveAction()
         val event = event(action, ctx)
 
         ActionUtil.updateAction(action, event)
         action.actionPerformed(event)
 
         assertTrue(event.presentation.isEnabled)
-        assertEquals(1, ctx.stopped)
-        assertEquals("Stop Session", action.templatePresentation.text)
-        assertEquals("Stop the current Kilo session", action.templatePresentation.description)
+        assertEquals(1, ctx.toggled)
+        assertEquals("Toggle Auto-Approve", action.templatePresentation.text)
+        assertEquals(
+            "Toggle auto-approve mode for the current Kilo session",
+            action.templatePresentation.description,
+        )
     }
 
     fun `test update disables action without prompt context`() {
-        val action = StopSessionAction()
+        val action = ToggleAutoApproveAction()
         val event = event(action, null)
 
         ActionUtil.updateAction(action, event)
@@ -33,19 +36,7 @@ class StopSessionActionTest : BasePlatformTestCase() {
         assertFalse(event.presentation.isEnabled)
     }
 
-    fun `test update disables action when stop unavailable`() {
-        val ctx = FakeContext(false)
-        val action = StopSessionAction()
-        val event = event(action, ctx)
-
-        ActionUtil.updateAction(action, event)
-        action.actionPerformed(event)
-
-        assertFalse(event.presentation.isEnabled)
-        assertEquals(0, ctx.stopped)
-    }
-
-    private fun event(action: StopSessionAction, ctx: SendPromptContext?): AnActionEvent {
+    private fun event(action: ToggleAutoApproveAction, ctx: SendPromptContext?): AnActionEvent {
         val presentation = Presentation().apply { copyFrom(action.templatePresentation) }
         return AnActionEvent.createFromDataContext("", presentation, context(ctx))
     }
@@ -57,20 +48,20 @@ class StopSessionActionTest : BasePlatformTestCase() {
     }
 
     private class FakeContext(
-        override val isStopEnabled: Boolean,
+        override val isAutoApproveEnabled: Boolean,
     ) : SendPromptContext {
         override val isSendEnabled: Boolean = false
-        override val isAutoApproveEnabled: Boolean = false
-        var stopped = 0
+        override val isStopEnabled: Boolean = false
+        var toggled = 0
 
         override fun send() {
         }
 
         override fun stop() {
-            stopped++
         }
 
         override fun toggleAutoApprove() {
+            toggled++
         }
     }
 }
