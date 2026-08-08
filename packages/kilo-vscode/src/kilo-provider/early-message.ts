@@ -8,6 +8,8 @@ import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { handleIndexingModels } from "./indexing-models"
 import { buildChatSettingsMessage } from "./chat-settings"
 import { buildThroughputSettingMessage } from "./throughput-settings"
+import { buildAutoApprovalReasonSettingMessage } from "./auto-approval-reason-settings"
+import { handleModelUsageMessage, type ModelUsageMessage } from "./model-usage"
 
 type Ctx = {
   question: SuggestionContext
@@ -20,6 +22,7 @@ type Ctx = {
   copy: (text: string) => PromiseLike<void>
   openSessions: (ids: string[]) => void
   speechToTextModels: () => Promise<void>
+  modelUsage: (message: ModelUsageMessage) => Promise<void>
 }
 
 export async function routeEarlyMessage(
@@ -48,6 +51,10 @@ export async function routeEarlyMessage(
     )
     return true
   }
+  if (message.type === "recordModelUsage" || message.type === "requestModelUsage") {
+    await ctx.modelUsage(message as ModelUsageMessage)
+    return true
+  }
   await routeSuggestionWebviewMessage(ctx.question, message)
   if (await ModelState.handleMessage(message.type, message, ctx.client, ctx.post)) return true
   if (message.type === "exportSessionTranscript") {
@@ -69,6 +76,10 @@ export async function routeEarlyMessage(
   }
   if (message.type === "requestThroughputSetting") {
     ctx.post(buildThroughputSettingMessage())
+    return true
+  }
+  if (message.type === "requestAutoApprovalReasonSetting") {
+    ctx.post(buildAutoApprovalReasonSettingMessage())
     return true
   }
   if (message.type === "requestSpeechToTextModels") {

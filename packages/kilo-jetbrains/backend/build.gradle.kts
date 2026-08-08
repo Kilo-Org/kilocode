@@ -26,6 +26,13 @@ val repoCli = pinned.map { !it }
 val bundled = providers.gradleProperty("kilo.cli.bundled").map { it.trim().toBoolean() }.orElse(false)
 val downloadsCli = repoCli.zip(bundled) { repo, bundle -> !repo && !bundle }
 val repoRootDir = rootProject.layout.projectDirectory.dir("../opencode")
+val local = rootProject.layout.projectDirectory.file(".gradle/kilo-cli-pin.properties")
+val bunPathProvider = providers.fileContents(local).asText.map { text ->
+    text.lineSequence().firstNotNullOfOrNull { line ->
+        val pair = line.split("=", limit = 2)
+        if (pair.getOrNull(0)?.trim() == "bun.path") pair.getOrNull(1)?.trim()?.takeIf { it.isNotEmpty() } else null
+    } ?: "bun"
+}.orElse("bun")
 
 val pinnedCliVersion = providers.fileContents(rootProject.layout.projectDirectory.file("package.json")).asText.map { text ->
     Regex("\"version\"\\s*:\\s*\"([^\"]+)\"").find(text)?.groupValues?.get(1)
@@ -64,12 +71,13 @@ val generateOpenApiSpec by tasks.registering(GenerateOpenApiSpecTask::class) {
     )
     cacheDir.set(layout.buildDirectory.dir("cli-cache"))
     spec.set(rawSpec)
+    bunPath.set(bunPathProvider)
 }
 
 val buildRepoCli by tasks.registering(Exec::class) {
     description = "Build the local repo CLI for the current platform"
     workingDir = repoRootDir.asFile
-    commandLine("bun", "run", "script/build.ts", "--single", "--skip-install")
+    commandLine(bunPathProvider.get(), "run", "script/build.ts", "--single", "--skip-install")
 }
 
 fun platform(): String {

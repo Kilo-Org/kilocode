@@ -54,4 +54,28 @@ describe("resolveToolApproval", () => {
     expect(out?.source).toBe("ui.approval.source.agent(agent=code)")
     expect(out?.rule).toBeUndefined()
   })
+
+  test("adds the outsideWorkspace text with just the filename when a path is known", () => {
+    const approval = {
+      source: "agent" as const,
+      agent: "code",
+      outsideWorkspace: true,
+      outsideWorkspacePath: "/etc/secrets/hello.txt",
+    }
+    const out = resolveToolApproval({ approval }, t)
+    expect(out?.outsideWorkspace).toBe("ui.approval.outsideWorkspace(file=hello.txt)")
+  })
+
+  test("omits the outsideWorkspace text for an ordinary in-workspace approval", () => {
+    const approval = { source: "agent" as const, agent: "code" }
+    const out = resolveToolApproval({ approval }, t)
+    expect(out?.outsideWorkspace).toBeUndefined()
+  })
+
+  test("omits the outsideWorkspace text when outsideWorkspace is set but no path is known", () => {
+    // e.g. a bash command scanning multiple external directories has no single filepath to show.
+    const approval = { source: "agent" as const, agent: "code", outsideWorkspace: true }
+    const out = resolveToolApproval({ approval }, t)
+    expect(out?.outsideWorkspace).toBeUndefined()
+  })
 })
