@@ -22,9 +22,7 @@ const high = RGBA.fromHex("#8b5cf6")
 const xhigh = RGBA.fromHex("#06b6d4")
 const max = RGBA.fromHex("#ffbd2e")
 const ultra = RGBA.fromHex("#9966cc")
-const rainbow = ["#cc6677", "#dd9955", "#aabb55", "#55aacc", "#7777cc", "#aa66bb"].map((value) =>
-  RGBA.fromHex(value),
-)
+const rainbow = ["#cc6677", "#dd9955", "#aabb55", "#55aacc", "#7777cc", "#aa66bb"].map((value) => RGBA.fromHex(value))
 const clear = RGBA.fromValues(0, 0, 0, 0)
 const period = 900
 
@@ -109,7 +107,7 @@ export class EffortRenderable extends FrameBufferRenderable {
       ...options,
       width,
       height: 1,
-      live: options.live ?? true,
+      live: options.live ?? false,
       respectAlpha: true,
     })
     if (options.width !== undefined && typeof options.width !== "number") this.width = options.width
@@ -204,7 +202,7 @@ export class EffortRenderable extends FrameBufferRenderable {
     for (let index = 0; index < text.length; index++) {
       const color =
         this.tier === "ultra"
-          ? rainbow[Math.floor((this.elapsed / 55 + index) % rainbow.length)]
+          ? rainbow[effortRainbowIndex(this.elapsed, index)]
           : this.tier === "high" || this.tier === "xhigh"
             ? effortShimmerColor(this.tier, progress, index, text.length)
             : base
@@ -234,11 +232,14 @@ export class EffortLabelRenderable extends FrameBufferRenderable {
   }
 
   set value(value: Tier | undefined) {
-    if (value) {
-      this.tier = value
-      this.frameBuffer.resize(value.length, 1)
+    if (!value) return
+    this.tier = value
+    this.width = value.length
+    if (this.animate) {
       this.wake()
+      return
     }
+    this.requestRender()
   }
 
   set enabled(value: boolean) {
@@ -254,15 +255,14 @@ export class EffortLabelRenderable extends FrameBufferRenderable {
 
   protected override renderSelf(buffer: OptimizedBuffer, deltaTime = 0) {
     this.frameBuffer.clear(clear)
-    if (this.animate) this.phase = (this.phase + Math.max(deltaTime, 1000 / 60)) % 2000
+    if (this.animate) this.phase += Math.max(deltaTime, 1000 / 60)
     const text = this.tier.toLowerCase()
     for (let index = 0; index < text.length; index++) {
-      const color =
-        !this.animate
-          ? this.tier === "ultra"
-            ? ultra
-            : max
-          : this.tier === "ultra"
+      const color = !this.animate
+        ? this.tier === "ultra"
+          ? ultra
+          : max
+        : this.tier === "ultra"
           ? rainbow[effortRainbowIndex(this.phase, index)]
           : effortMaxColor(this.phase, index)
       this.frameBuffer.setCell(index, 0, text[index], color, clear, 1)

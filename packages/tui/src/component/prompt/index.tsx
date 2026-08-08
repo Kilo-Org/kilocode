@@ -1659,38 +1659,35 @@ export function Prompt(props: PromptProps) {
                         <text fg={fadeColor(theme.textMuted, agentMetaAlpha())}>auto</text>
                       </Show>
                       <Show when={store.mode === "normal"}>
-                        {/* kilocode_change start - render persistent effort accents */}
-                        <box flexDirection="row" gap={1}>
-                          <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>·</text>
-                          <text
-                            flexShrink={0}
-                            fg={fadeColor(leader() ? theme.textMuted : theme.text, modelMetaAlpha())}
-                          >
-                            {local.model.parsed().model}
-                          </text>
-                          <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>{currentProviderLabel()}</text>
-                          <Show when={showVariant()}>
-                            <text fg={fadeColor(theme.textMuted, variantMetaAlpha())}>·</text>
-                            {/* kilocode_change start - animate persistent max and ultra labels */}
-                            <Show
-                              when={
-                                local.model.variant.current() === "max" || local.model.variant.current() === "ultra"
-                              }
-                              fallback={
-                                <text fg={fadeColor(theme.warning, variantMetaAlpha())}>
+                      <box flexDirection="row" gap={1}>
+                        <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>·</text>
+                        <text
+                          flexShrink={0}
+                          fg={fadeColor(leader() ? theme.textMuted : theme.text, modelMetaAlpha())}
+                        >
+                          {local.model.parsed().model}
+                        </text>
+                        <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>{currentProviderLabel()}</text>
+                        <Show when={showVariant()}>
+                          <text fg={fadeColor(theme.textMuted, variantMetaAlpha())}>·</text>
+                          {/* kilocode_change start - animate persistent max and ultra labels */}
+                          <Show
+                            when={
+                              local.model.variant.current() === "max" || local.model.variant.current() === "ultra"
+                            }
+                            fallback={
+                              <text>
+                                <span style={{ fg: fadeColor(theme.warning, variantMetaAlpha()), bold: true }}>
                                   {local.model.variant.current()}
-                                </text>
-                              }
-                            >
-                              <EffortLabel
-                                value={() => local.model.variant.current()}
-                                enabled={animationsEnabled}
-                              />
-                            </Show>
-                            {/* kilocode_change end */}
-                          </Show>{/* kilocode_change */}
-                        </box>{/* kilocode_change */}
-                        {/* kilocode_change end */}
+                                </span>
+                              </text>
+                            }
+                          >
+                            <EffortLabel value={() => local.model.variant.current()} enabled={animationsEnabled} />
+                          </Show>
+                          {/* kilocode_change end */}
+                        </Show>
+                      </box>
                       </Show>{/* kilocode_change */}
                     </>
                   )}

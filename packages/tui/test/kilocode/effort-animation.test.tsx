@@ -95,7 +95,9 @@ describe("effort animation", () => {
     const states: boolean[] = []
     let target: import("../../src/kilocode/effort-animation").EffortRenderable | undefined
     const app = await testRender(
-      () => <effort_animation ref={(value) => (target = value)} width={40} height={1} onActive={states.push.bind(states)} />,
+      () => (
+        <effort_animation ref={(value) => (target = value)} width={40} height={1} onActive={states.push.bind(states)} />
+      ),
       { width: 40, height: 1 },
     )
 
@@ -110,11 +112,30 @@ describe("effort animation", () => {
     }
   })
 
+  test("keeps the transition idle until an effort change starts", async () => {
+    let target: import("../../src/kilocode/effort-animation").EffortRenderable | undefined
+    const app = await testRender(() => <effort_animation ref={(value) => (target = value)} width={40} height={1} />, {
+      width: 40,
+      height: 1,
+    })
+
+    try {
+      await app.renderOnce()
+      expect(target!.live).toBe(false)
+      target!.value = "ultra"
+      expect(target!.live).toBe(true)
+    } finally {
+      app.renderer.destroy()
+    }
+  })
+
   test("can replay an effort tier after another variant", async () => {
     const states: boolean[] = []
     let target: import("../../src/kilocode/effort-animation").EffortRenderable | undefined
     const app = await testRender(
-      () => <effort_animation ref={(value) => (target = value)} width={40} height={1} onActive={states.push.bind(states)} />,
+      () => (
+        <effort_animation ref={(value) => (target = value)} width={40} height={1} onActive={states.push.bind(states)} />
+      ),
       { width: 40, height: 1 },
     )
 
@@ -159,6 +180,25 @@ describe("effort animation", () => {
       expect(target!.live).toBe(false)
       target!.enabled = true
       expect(target!.live).toBe(true)
+    } finally {
+      app.renderer.destroy()
+    }
+  })
+
+  test("updates persistent effort label layout width with its value", async () => {
+    let target: import("../../src/kilocode/effort-animation").EffortLabelRenderable | undefined
+    const app = await testRender(() => <effort_label ref={(value) => (target = value)} value="max" enabled={false} />, {
+      width: 10,
+      height: 1,
+    })
+
+    try {
+      await app.renderOnce()
+      target!.value = "ultra"
+      await app.renderOnce()
+      expect(target!.width).toBe(5)
+      expect(target!.frameBuffer.width).toBe(5)
+      expect(target!.live).toBe(false)
     } finally {
       app.renderer.destroy()
     }
