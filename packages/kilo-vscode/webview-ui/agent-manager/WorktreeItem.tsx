@@ -207,7 +207,15 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                 onClick={() => props.onClick()}
               >
                 <div class="am-wt-icon">
-                  <Show when={!props.busy && !props.working} fallback={<Spinner class="am-worktree-spinner" />}>
+                  <Show
+                    when={
+                      !props.busy &&
+                      !props.working &&
+                      props.worktree.status !== "creating" &&
+                      props.worktree.status !== "setting-up"
+                    }
+                    fallback={<Spinner class="am-worktree-spinner" />}
+                  >
                     <Icon name="branch" size="small" />
                   </Show>
                 </div>
@@ -268,7 +276,14 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                     </Show>
                     {/* Grid cell: stats visible by default, hover actions on top */}
                     <div class="am-wt-actions-cell">
-                      <Show when={props.stats === undefined}>
+                      <Show
+                        when={
+                          !props.busy &&
+                          props.worktree.status !== "creating" &&
+                          props.worktree.status !== "setting-up" &&
+                          props.stats === undefined
+                        }
+                      >
                         <div class="am-worktree-stats-skeleton">
                           <div class="am-worktree-stats-skeleton-row" />
                         </div>
@@ -298,7 +313,7 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                           </Show>
                         </div>
                       </Show>
-                      <Show when={props.pendingDelete && !props.busy}>
+                      <Show when={props.pendingDelete}>
                         <span class="am-worktree-delete-hint">{t("agentManager.worktree.confirmDelete")}</span>
                       </Show>
                       <div class="am-wt-hover-actions">
@@ -310,7 +325,7 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                             {props.shortcut}
                           </span>
                         </Show>
-                        <Show when={!props.busy && !props.pendingDelete}>
+                        <Show when={!props.pendingDelete}>
                           <div
                             class="am-worktree-close"
                             onMouseEnter={() => setOverClose(true)}

@@ -159,6 +159,11 @@ export class WorktreeManager {
     await this.withGitLock(() => this.refreshBase(base))
   }
 
+  /** Compute the filesystem path for a worktree branch. */
+  worktreePath(branch: string): string {
+    return path.join(this.dir, branch.replace(/\//g, "-"))
+  }
+
   async renameBranch(worktreePath: string, current: string, requested: string): Promise<string> {
     await this.ensureMigrated()
     return this.withGitLock(() => this.renameBranchImpl(worktreePath, current, requested))
@@ -349,11 +354,7 @@ export class WorktreeManager {
     await this.removeWorktreeImpl(worktreePath)
   }
 
-  private async resolveBranch(params: {
-    prompt?: string
-    existingBranch?: string
-    branchName?: string
-  }): Promise<string> {
+  async resolveBranch(params: { prompt?: string; existingBranch?: string; branchName?: string }): Promise<string> {
     if (params.existingBranch) {
       const exists = await this.branchExists(params.existingBranch)
       if (!exists) throw new Error(`Branch "${params.existingBranch}" does not exist`)

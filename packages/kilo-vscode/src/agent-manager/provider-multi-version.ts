@@ -200,6 +200,7 @@ async function provisionVersion(
   if (spec.sandbox !== undefined && !(await reconcileSandbox(host, spec, wt, session.id))) return null
 
   host.register(session.id, wt.result.path)
+  state.updateWorktreeStatus?.(wt.worktree.id, "ready")
   host.notifyReady(session.id, wt.result, wt.worktree.id)
   host.sessions.register(session)
 

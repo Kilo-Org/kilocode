@@ -184,15 +184,6 @@ import "./agent-manager-review.css"
 import { cycleAgent as cycle } from "../src/context/session-agent"
 const REVIEW_TAB_ID = "review"
 
-interface SetupState {
-  active: boolean
-  message: string
-  branch?: string
-  error?: boolean
-  worktreeId?: string
-  errorCode?: string
-}
-
 /** Sidebar selection: LOCAL for local repo, worktree ID for a worktree, or null for an unassigned session. */
 type SidebarSelection = typeof LOCAL | string | null
 type SidePanel = "diff" | "pr" | "terminal" | null
@@ -212,7 +203,19 @@ const AgentManagerContent: Component = () => {
 
   const [kb, setKb] = createSignal<Record<string, string>>(defaultBindings)
 
-  const [setup, setSetup] = createSignal<SetupState>({ active: false, message: "" })
+  const [projectList, setProjectList] = createSignal<AgentProjectSnapshot[]>([])
+  const [multiProject, setMultiProject] = createSignal(false)
+  const [currentProjectId, setCurrentProjectId] = createSignal<string | undefined>()
+  const [projectStates, setProjectStates] = createSignal<Record<string, AgentManagerStateMessage>>({})
+  const activeProjectId = () => projectList().find((p) => p.active)?.id ?? currentProjectId()
+
+  // Recover persisted local session IDs from webview state
+  const persisted = vscode.getState<PersistedProjectTabs & { sidebarWidth?: number; sidePanelWidth?: number }>()
+  const registry = createProjectRegistry({
+    persisted: persisted ?? {},
+    activeId: () => currentProjectId() ?? "single",
+  })
+
   const worktrees = () => registry.active().worktrees()
   const setWorktrees = (v: Parameters<Setter<WorktreeState[]>>[0]) => registry.active().setWorktrees(v)
   const managedSessions = () => registry.active().managedSessions()
@@ -234,11 +237,6 @@ const AgentManagerContent: Component = () => {
   const defaultBaseBranch = () => registry.active().defaultBaseBranch()
   const setDefaultBaseBranch = (v: Parameters<Setter<string | undefined>>[0]) =>
     registry.active().setDefaultBaseBranch(v)
-  const [projectList, setProjectList] = createSignal<AgentProjectSnapshot[]>([])
-  const [multiProject, setMultiProject] = createSignal(false)
-  const [currentProjectId, setCurrentProjectId] = createSignal<string | undefined>()
-  const [projectStates, setProjectStates] = createSignal<Record<string, AgentManagerStateMessage>>({})
-  const activeProjectId = () => projectList().find((p) => p.active)?.id ?? currentProjectId()
   const creation = usePendingCreate(activeProjectId, (projectId, worktreeId) =>
     vscode.postMessage({
       type: "agentManager.activateSelection",
@@ -253,13 +251,6 @@ const AgentManagerContent: Component = () => {
   const DEFAULT_SIDEBAR_WIDTH = 260
   const MIN_SIDEBAR_WIDTH = 200
   const MAX_SIDEBAR_WIDTH_RATIO = 0.4
-
-  // Recover persisted local session IDs from webview state
-  const persisted = vscode.getState<PersistedProjectTabs & { sidebarWidth?: number; sidePanelWidth?: number }>()
-  const registry = createProjectRegistry({
-    persisted: persisted ?? {},
-    activeId: () => currentProjectId() ?? "single",
-  })
   const defaultBase = (id: string) => {
     const store = registry.ensure(id)
     return (
@@ -765,28 +756,18 @@ const AgentManagerContent: Component = () => {
 
   const showDetailStack = createMemo(() => showTerminalStack(history(), selection(), contextEmpty()))
 
-  const overlay = createMemo((): SetupState | null => {
-    const state = setup()
-    const sel = selection()
-    // A live Setup script terminal shows progress and failures on its own
-    // tab; never cover it with the blocking overlay.
-    if (typeof sel === "string" && sel !== LOCAL && hasSetupTerminal(nsKey(sel), terms.sides())) return null
-    if (state.active && (!state.worktreeId || sel === state.worktreeId)) return state
-    if (typeof sel !== "string" || sel === LOCAL) return null
-    const busy = busyWorktrees().get(sel)
-    if (busy?.reason !== "setting-up") return null
-    const tree = worktrees().find((item) => item.id === sel)
-    return {
-      active: true,
-      message: busy.message ?? "",
-      branch: busy.branch ?? tree?.branch,
-    }
-  })
-
   /** The selected worktree is provisioning: block session CTAs, keep selection put. */
   const settingUpSelection = createMemo(() => {
     const sel = selection()
     if (typeof sel !== "string" || sel === LOCAL) return undefined
+    const wt = worktrees().find((w) => w.id === sel)
+    if (wt?.status === "creating" || wt?.status === "setting-up") {
+      return {
+        reason: "setting-up" as const,
+        message: wt.statusMessage || busyWorktrees().get(sel)?.message || t("agentManager.setup.settingUp"),
+        branch: wt.branch,
+      }
+    }
     const busy = busyWorktrees().get(sel)
     if (busy?.reason !== "setting-up") return undefined
     return busy
@@ -821,10 +802,7 @@ const AgentManagerContent: Component = () => {
     return session.currentSessionID() ?? activePendingId()
   })
   const visibleSession = createMemo(() =>
-    visible(
-      session.currentSessionID(),
-      !!terms.activeId() || reviewActive() || history() || !!overlay() || contextEmpty(),
-    ),
+    visible(session.currentSessionID(), !!terms.activeId() || reviewActive() || history() || contextEmpty()),
   )
   reportVisibleSession(vscode, visibleSession)
   const worktreeLabel = (wt: WorktreeState): string => {
@@ -833,6 +811,11 @@ const AgentManagerContent: Component = () => {
   }
 
   const worktreeSubtitle = (wt: WorktreeState): string | undefined => {
+    if (wt.status === "creating" || wt.status === "setting-up") {
+      return wt.statusMessage || busyWorktrees().get(wt.id)?.message || t("agentManager.setup.settingUp")
+    }
+    const busy = busyWorktrees().get(wt.id)
+    if (busy?.reason === "setting-up" && busy.message) return busy.message
     const label = worktreeLabel(wt)
     return label !== wt.branch ? wt.branch : undefined
   }
@@ -1382,39 +1365,37 @@ const AgentManagerContent: Component = () => {
         if (ev.status === "ready" || ev.status === "error") {
           const error = ev.status === "error"
           if (ev.worktreeId) updateBusy((prev) => new Map([...prev].filter(([k]) => k !== ev.worktreeId)))
+          if (error) {
+            showToast({
+              variant: "error",
+              title: t("agentManager.setup.failed"),
+              description: ev.message || t("agentManager.setup.failed"),
+            })
+            if (ev.worktreeId && selection() === ev.worktreeId) setSelection(LOCAL)
+          }
           if (!isActivePayload(ev.projectId)) return
-          setSetup({
-            active: true,
-            message: ev.message,
-            branch: ev.branch,
-            error,
-            worktreeId: ev.worktreeId,
-            errorCode: ev.errorCode,
-          })
-          globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : 500)
           if (!error && ev.sessionId) {
-            session.selectSession(ev.sessionId)
-            const ms = managedSessions().find((s) => s.id === ev.sessionId)
-            if (ms?.worktreeId) setSelection(ms.worktreeId)
             evictLocal(ev.sessionId)
-            requestChatFocus(true)
+            const ms = managedSessions().find((s) => s.id === ev.sessionId)
+            const targetWorktreeId = ms?.worktreeId ?? ev.worktreeId
+            const isCurrent = selection() === targetWorktreeId
+            if (isCurrent) {
+              session.selectSession(ev.sessionId)
+              if (targetWorktreeId) setSelection(targetWorktreeId)
+              requestChatFocus(true)
+            }
           }
         } else {
-          // Track this worktree as setting up and auto-select it in the sidebar
+          // Track this worktree as setting up
           if (ev.worktreeId) {
             updateBusy(
               (prev) =>
                 new Map([...prev, [ev.worktreeId!, { reason: "setting-up", message: ev.message, branch: ev.branch }]]),
             )
-            if (!isActivePayload(ev.projectId)) return
-            setSelection(ev.worktreeId)
           }
           if (!isActivePayload(ev.projectId)) return
-          // Close diff/review panels — nothing to show during setup.
-          // Terminal panels keep live setup output, so they stay open.
           if (sidePanel() === "diff") setSidePanel(null)
           setReviewActive(false)
-          setSetup({ active: true, message: ev.message, branch: ev.branch, worktreeId: ev.worktreeId })
         }
       }
 
@@ -2410,29 +2391,6 @@ const AgentManagerContent: Component = () => {
           track={metrics.click}
         />
 
-        <Show when={overlay()}>
-          {(state) => (
-            <div class="am-setup-overlay">
-              <div class="am-setup-card">
-                <Icon name="branch" size="large" />
-                <div class="am-setup-title">
-                  {state().error ? t("agentManager.setup.failed") : t("agentManager.setup.settingUp")}
-                </div>
-                <Show when={state().branch}>
-                  <div class="am-setup-branch">{state().branch}</div>
-                </Show>
-                <div class="am-setup-status">
-                  <Show when={!state().error} fallback={<Icon name="circle-x" size="small" />}>
-                    <Spinner class="am-setup-spinner" />
-                  </Show>
-                  <span>
-                    {state().errorCode ? t(`agentManager.setup.error.${state().errorCode}`) : state().message}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-        </Show>
         <Show when={history()}>
           <HistoryView
             onSelectSession={(id) => {
@@ -2478,12 +2436,17 @@ const AgentManagerContent: Component = () => {
                     <Show
                       when={!settingUpSelection()}
                       fallback={
-                        <>
-                          <Spinner class="am-setup-spinner" />
-                          <div class="am-empty-state-text">
-                            {settingUpSelection()?.message ?? t("agentManager.setup.settingUp")}
+                        <div class="am-setup-card">
+                          <Icon name="branch" size="large" />
+                          <div class="am-setup-title">{t("agentManager.setup.settingUp")}</div>
+                          <Show when={settingUpSelection()?.branch}>
+                            <div class="am-setup-branch">{settingUpSelection()?.branch}</div>
+                          </Show>
+                          <div class="am-setup-status">
+                            <Spinner class="am-setup-spinner" />
+                            <span>{settingUpSelection()?.message || t("agentManager.setup.settingUp")}</span>
                           </div>
-                        </>
+                        </div>
                       }
                     >
                       <div class="am-empty-state-icon">

@@ -205,6 +205,7 @@ async function worktree(
     return false
   }
   state.addSession(session.id, created.worktree.id)
+  state.updateWorktreeStatus?.(created.worktree.id, "ready")
   deps.registerWorktreeSession(session.id, created.result.path)
   deps.notifyReady(session.id, created.result, created.worktree.id)
   deps.getPanel()?.sessions.registerSession(session)

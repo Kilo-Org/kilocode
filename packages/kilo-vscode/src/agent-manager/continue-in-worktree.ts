@@ -121,7 +121,10 @@ export function registerSession(
   sourceId: string,
 ): void {
   const state = ctx.getStateManager()
-  if (state) state.addSession(session.id, worktreeId)
+  if (state) {
+    state.addSession(session.id, worktreeId)
+    state.updateWorktreeStatus?.(worktreeId, "ready")
+  }
   ctx.registerWorktreeSession(session.id, result.path)
   // Push state before registerSession so the webview knows this is a worktree
   // session before receiving the sessionCreated message. Without this ordering,

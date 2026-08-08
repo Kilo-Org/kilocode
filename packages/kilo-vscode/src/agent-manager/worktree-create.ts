@@ -50,12 +50,14 @@ export async function createWorktreeOnDisk(
     return null
   }
 
-  ctx.postToWebview({ type: "agentManager.worktreeSetup", status: "creating", message: "Creating git worktree..." })
-
-  // Resolve effective base branch using configured default
   const effectiveBase = opts?.existingBranch
     ? undefined
     : await resolveBaseBranch(ctx, manager, state, opts?.baseBranch)
+
+  const branch = await resolveTargetBranch(ctx, manager, opts)
+  if (!branch) return null
+
+  const worktree = registerPendingWorktree(ctx, state, manager, branch, effectiveBase, opts)
 
   let result: CreateWorktreeResult
   try {
@@ -63,8 +65,84 @@ export async function createWorktreeOnDisk(
       prompt: opts?.name || "kilo",
       baseBranch: effectiveBase ?? opts?.baseBranch,
       baseRef: opts?.baseRef,
-      branchName: opts?.branchName,
+      branchName: branch,
       existingBranch: opts?.existingBranch,
+    })
+  } catch (error) {
+    handleDiskError(ctx, state, worktree.id, branch, error)
+    return null
+  }
+
+  if (!state.getWorktree(worktree.id)) {
+    ctx.log(`Worktree ${worktree.id} was deleted during creation, cleaning up on disk: ${result.path}`)
+    await manager.removeWorktree(result.path, result.branch).catch(() => {})
+    return null
+  }
+
+  finalizeDiskWorktree(ctx, state, worktree.id, result)
+  return { worktree, result }
+}
+
+function registerPendingWorktree(
+  ctx: CreateWorktreeOnDiskContext,
+  state: WorktreeStateManager,
+  manager: WorktreeManager,
+  branch: string,
+  effectiveBase?: string,
+  opts?: CreateWorktreeOnDiskOptions,
+): Worktree {
+  const worktree = state.addWorktree({
+    branch,
+    path: manager.worktreePath(branch),
+    parentBranch: effectiveBase ?? opts?.baseBranch ?? "main",
+    groupId: opts?.groupId,
+    label: opts?.label,
+    branchOwned: !opts?.existingBranch,
+    status: "creating",
+    statusMessage: "Creating git worktree...",
+  })
+
+  ctx.pushState()
+  ctx.postToWebview({
+    type: "agentManager.worktreeSetup",
+    status: "creating",
+    message: "Creating git worktree...",
+    branch,
+    worktreeId: worktree.id,
+  })
+  return worktree
+}
+
+function finalizeDiskWorktree(
+  ctx: CreateWorktreeOnDiskContext,
+  state: WorktreeStateManager,
+  worktreeId: string,
+  result: CreateWorktreeResult,
+): void {
+  const wt = state.getWorktree(worktreeId)
+  if (wt && wt.branch !== result.branch) state.updateWorktreeBranch(worktreeId, result.branch)
+  state.updateWorktreePath(worktreeId, result.path)
+  state.updateWorktreeStatus(worktreeId, "setting-up", "Setting up worktree...")
+  ctx.pushState()
+  ctx.postToWebview({
+    type: "agentManager.worktreeSetup",
+    status: "creating",
+    message: "Setting up worktree...",
+    branch: result.branch,
+    worktreeId,
+  })
+}
+
+async function resolveTargetBranch(
+  ctx: CreateWorktreeOnDiskContext,
+  manager: WorktreeManager,
+  opts?: CreateWorktreeOnDiskOptions,
+): Promise<string | null> {
+  try {
+    return await manager.resolveBranch({
+      prompt: opts?.name || "kilo",
+      existingBranch: opts?.existingBranch,
+      branchName: opts?.branchName,
     })
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
@@ -74,35 +152,33 @@ export async function createWorktreeOnDisk(
       message: msg,
       errorCode: classifyWorktreeError(msg),
     })
-    ctx.capture("Agent Manager Session Error", {
-      source: PLATFORM,
-      error: msg,
-      context: "createWorktree",
-    })
     return null
   }
+}
 
-  const worktree = state.addWorktree({
-    branch: result.branch,
-    path: result.path,
-    parentBranch: result.parentBranch,
-    remote: result.remote,
-    groupId: opts?.groupId,
-    label: opts?.label,
-    branchOwned: !opts?.existingBranch,
-  })
-
-  // Push state immediately so the sidebar shows the new worktree with a loading indicator
+function handleDiskError(
+  ctx: CreateWorktreeOnDiskContext,
+  state: WorktreeStateManager,
+  worktreeId: string,
+  branch: string,
+  error: unknown,
+): void {
+  state.removeWorktree(worktreeId)
   ctx.pushState()
+  const msg = error instanceof Error ? error.message : String(error)
   ctx.postToWebview({
     type: "agentManager.worktreeSetup",
-    status: "creating",
-    message: "Setting up worktree...",
-    branch: result.branch,
-    worktreeId: worktree.id,
+    status: "error",
+    message: msg,
+    errorCode: classifyWorktreeError(msg),
+    worktreeId,
+    branch,
   })
-
-  return { worktree, result }
+  ctx.capture("Agent Manager Session Error", {
+    source: PLATFORM,
+    error: msg,
+    context: "createWorktree",
+  })
 }
 
 /** Resolve the effective base branch using the configured default, explicit override, and existence check. */

@@ -56,6 +56,10 @@ export interface Worktree {
   autoNameSessionId?: string
   /** Number of prompts observed for the armed session; bounds rename attempts. */
   autoNamePromptCount?: number
+  /** Display state during creation lifecycle. */
+  status?: "creating" | "setting-up" | "ready" | "error"
+  /** Progress or error message during creation lifecycle. */
+  statusMessage?: string
   /** Section this worktree belongs to, or undefined for ungrouped. */
   sectionId?: string
 }
@@ -200,6 +204,9 @@ export class WorktreeStateManager {
     groupId?: string
     label?: string
     branchOwned?: boolean
+    sectionId?: string
+    status?: "creating" | "setting-up" | "ready" | "error"
+    statusMessage?: string
   }): Worktree {
     const id = generateId("wt")
     const wt: Worktree = {
@@ -213,6 +220,9 @@ export class WorktreeStateManager {
     if (params.groupId) wt.groupId = params.groupId
     if (params.label) wt.label = params.label
     if (params.branchOwned !== undefined) wt.branchOwned = params.branchOwned
+    if (params.sectionId) wt.sectionId = params.sectionId
+    if (params.status) wt.status = params.status
+    if (params.statusMessage) wt.statusMessage = params.statusMessage
     this.worktrees.set(id, wt)
     this.setNormalizedWorktreeOrder(this.worktreeOrder)
     this.log(
@@ -220,6 +230,23 @@ export class WorktreeStateManager {
     )
     void this.save()
     return wt
+  }
+
+  updateWorktreePath(id: string, path: string): boolean {
+    const wt = this.worktrees.get(id)
+    if (!wt || wt.path === path) return false
+    wt.path = path
+    void this.save()
+    return true
+  }
+
+  updateWorktreeStatus(id: string, status: "creating" | "setting-up" | "ready" | "error", message?: string): boolean {
+    const wt = this.worktrees.get(id)
+    if (!wt) return false
+    wt.status = status
+    wt.statusMessage = message
+    void this.save()
+    return true
   }
 
   restoreWorktree(params: {
@@ -770,6 +797,10 @@ export class WorktreeStateManager {
       if (!fs.existsSync(resolved)) {
         this.log(`Worktree ${wt.id} directory missing (${resolved}), removing`)
         this.removeWorktree(wt.id)
+        changed = true
+      } else if (wt.status === "creating" || wt.status === "setting-up") {
+        wt.status = "ready"
+        wt.statusMessage = undefined
         changed = true
       }
     }
