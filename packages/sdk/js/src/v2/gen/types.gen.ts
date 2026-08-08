@@ -2683,6 +2683,7 @@ export type Config = {
     tail_turns?: number
     preserve_recent_tokens?: number
     reserved?: number
+    output_budget?: number
   }
   experimental?: {
     disable_paste_summary?: boolean
