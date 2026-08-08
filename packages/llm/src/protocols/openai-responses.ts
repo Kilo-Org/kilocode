@@ -29,16 +29,36 @@ const ADAPTER = "openai-responses"
 export const DEFAULT_BASE_URL = "https://api.openai.com/v1"
 export const PATH = "/responses"
 
+// kilocode_change start - explicit prompt cache breakpoints for GPT-5.6+
+const supportsBreakpoint = (modelId: string) => {
+  const match = modelId.match(/gpt-(\d+)\.(\d+)/)
+  if (match) {
+    const major = Number(match[1])
+    const minor = Number(match[2])
+    if (major > 5 || (major === 5 && minor >= 6)) return true
+  }
+  const majorMatch = modelId.match(/gpt-(\d+)/)
+  if (majorMatch && Number(majorMatch[1]) >= 6) return true
+  return false
+}
+
+const OpenAIResponsesPromptCacheBreakpoint = Schema.Struct({
+  mode: Schema.Literal("explicit"),
+})
+// kilocode_change end
+
 // =============================================================================
 // Request Body Schema
 // =============================================================================
 const OpenAIResponsesInputText = Schema.Struct({
   type: Schema.tag("input_text"),
   text: Schema.String,
+  prompt_cache_breakpoint: Schema.optional(OpenAIResponsesPromptCacheBreakpoint), // kilocode_change
 })
 const OpenAIResponsesInputImage = Schema.Struct({
   type: Schema.tag("input_image"),
   image_url: Schema.String,
+  prompt_cache_breakpoint: Schema.optional(OpenAIResponsesPromptCacheBreakpoint), // kilocode_change
 })
 const OpenAIResponsesInputContent = Schema.Union([OpenAIResponsesInputText, OpenAIResponsesInputImage])
 type OpenAIResponsesInputContent = Schema.Schema.Type<typeof OpenAIResponsesInputContent>
@@ -76,7 +96,16 @@ const OpenAIResponsesFunctionCallOutput = Schema.Union([
 ])
 
 const OpenAIResponsesInputItem = Schema.Union([
-  Schema.Struct({ role: Schema.tag("system"), content: Schema.String }),
+  // kilocode_change start - support content block array for system/developer messages
+  Schema.Struct({
+    role: Schema.Literal("system"),
+    content: Schema.Union([Schema.String, Schema.Array(OpenAIResponsesInputContent)]),
+  }),
+  Schema.Struct({
+    role: Schema.Literal("developer"),
+    content: Schema.Union([Schema.String, Schema.Array(OpenAIResponsesInputContent)]),
+  }),
+  // kilocode_change end
   Schema.Struct({ role: Schema.tag("user"), content: Schema.Array(OpenAIResponsesInputContent) }),
   Schema.Struct({ role: Schema.tag("assistant"), content: Schema.Array(OpenAIResponsesOutputText) }),
   OpenAIResponsesReasoningItem,
@@ -307,16 +336,23 @@ const hostedToolItemID = (part: ToolResultPart) => {
 
 const lowerUserContent = Effect.fn("OpenAIResponses.lowerUserContent")(function* (
   part: LLMRequest["messages"][number]["content"][number],
+  modelId: string, // kilocode_change
 ) {
-  if (part.type === "text") return { type: "input_text" as const, text: part.text }
+  // kilocode_change start
+  const breakpoint =
+    "cache" in part && part.cache && supportsBreakpoint(modelId)
+      ? { prompt_cache_breakpoint: { mode: "explicit" as const } }
+      : {}
+  if (part.type === "text") return { type: "input_text" as const, text: part.text, ...breakpoint }
   if (part.type === "media") {
     const media = yield* ProviderShared.validateMedia(
       "OpenAI Responses",
       part,
       new Set<string>(ProviderShared.IMAGE_MIMES),
     )
-    return { type: "input_image" as const, image_url: media.dataUrl }
+    return { type: "input_image" as const, image_url: media.dataUrl, ...breakpoint }
   }
+  // kilocode_change end
   return yield* ProviderShared.unsupportedContent("OpenAI Responses", "user", ["text", "media"])
 })
 
@@ -344,8 +380,26 @@ const lowerToolResultOutput = Effect.fn("OpenAIResponses.lowerToolResultOutput")
 })
 
 const lowerMessages = Effect.fn("OpenAIResponses.lowerMessages")(function* (request: LLMRequest) {
+  // kilocode_change start
+  const hasSystemCache = request.system.some((part) => part.cache) && supportsBreakpoint(request.model.id)
   const system: OpenAIResponsesInputItem[] =
-    request.system.length === 0 ? [] : [{ role: "system", content: ProviderShared.joinText(request.system) }]
+    request.system.length === 0
+      ? []
+      : hasSystemCache
+        ? [
+            {
+              role: "system",
+              content: [
+                {
+                  type: "input_text",
+                  text: ProviderShared.joinText(request.system),
+                  prompt_cache_breakpoint: { mode: "explicit" },
+                },
+              ],
+            },
+          ]
+        : [{ role: "system", content: ProviderShared.joinText(request.system) }]
+  // kilocode_change end
   const input: OpenAIResponsesInputItem[] = [...system]
   const store = OpenAIOptions.store(request)
 
@@ -363,7 +417,12 @@ const lowerMessages = Effect.fn("OpenAIResponses.lowerMessages")(function* (requ
     }
 
     if (message.role === "user") {
-      input.push({ role: "user", content: yield* Effect.forEach(message.content, lowerUserContent) })
+      // kilocode_change start
+      input.push({
+        role: "user",
+        content: yield* Effect.forEach(message.content, (part) => lowerUserContent(part, request.model.id)),
+      })
+      // kilocode_change end
       continue
     }
 

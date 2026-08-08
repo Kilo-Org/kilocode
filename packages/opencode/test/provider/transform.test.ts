@@ -3029,6 +3029,70 @@ describe("ProviderTransform.message - cache control on gateway", () => {
       },
     })
   })
+
+  // kilocode_change start
+  test("openai gpt-5.6 applies promptCacheBreakpoint", () => {
+    const model = createModel({
+      providerID: "openai",
+      api: {
+        id: "gpt-5.6",
+        url: "https://api.openai.com/v1",
+        npm: "@ai-sdk/openai",
+      },
+      id: "gpt-5.6",
+    })
+    const msgs = [
+      {
+        role: "system",
+        content: "You are a helpful assistant",
+      },
+      {
+        role: "user",
+        content: "Hello",
+      },
+    ] as any[]
+
+    const result = ProviderTransform.message(msgs, model, {}) as any[]
+
+    expect(result[0].providerOptions.openai).toEqual({
+      promptCacheBreakpoint: {
+        mode: "explicit",
+      },
+    })
+    expect(result[1].providerOptions.openai).toEqual({
+      promptCacheBreakpoint: {
+        mode: "explicit",
+      },
+    })
+  })
+
+  test("openai pre-5.6 does not apply promptCacheBreakpoint", () => {
+    const model = createModel({
+      providerID: "openai",
+      api: {
+        id: "gpt-4o",
+        url: "https://api.openai.com/v1",
+        npm: "@ai-sdk/openai",
+      },
+      id: "gpt-4o",
+    })
+    const msgs = [
+      {
+        role: "system",
+        content: "You are a helpful assistant",
+      },
+      {
+        role: "user",
+        content: "Hello",
+      },
+    ] as any[]
+
+    const result = ProviderTransform.message(msgs, model, {}) as any[]
+
+    expect(result[0].providerOptions?.openai?.promptCacheBreakpoint).toBeUndefined()
+    expect(result[1].providerOptions?.openai?.promptCacheBreakpoint).toBeUndefined()
+  })
+  // kilocode_change end
 })
 
 describe("ProviderTransform.temperature - Cohere North", () => {

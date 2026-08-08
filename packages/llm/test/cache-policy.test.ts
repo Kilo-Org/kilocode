@@ -6,6 +6,9 @@ import { AmazonBedrock } from "../src/providers"
 import * as AnthropicMessages from "../src/protocols/anthropic-messages"
 import * as Gemini from "../src/protocols/gemini"
 import * as OpenAIChat from "../src/protocols/openai-chat"
+// kilocode_change start
+import * as OpenAIResponses from "../src/protocols/openai-responses"
+// kilocode_change end
 import { applyCachePolicy } from "../src/cache-policy"
 import { it } from "./lib/effect"
 
@@ -20,6 +23,16 @@ const bedrockModel = AmazonBedrock.configure({
 const openaiModel = OpenAIChat.route
   .with({ endpoint: { baseURL: "https://api.openai.test/v1/" }, auth: Auth.bearer("test") })
   .model({ id: "gpt-4o-mini" })
+
+// kilocode_change start
+const openaiGpt56ResponsesModel = OpenAIResponses.route
+  .with({ endpoint: { baseURL: "https://api.openai.test/v1/" }, auth: Auth.bearer("test") })
+  .model({ id: "gpt-5.6" })
+
+const openaiGpt56ChatModel = OpenAIChat.route
+  .with({ endpoint: { baseURL: "https://api.openai.test/v1/" }, auth: Auth.bearer("test") })
+  .model({ id: "gpt-5.6" })
+// kilocode_change end
 
 const geminiModel = Gemini.route
   .with({
@@ -79,7 +92,8 @@ describe("applyCachePolicy", () => {
     }),
   )
 
-  it.effect("'auto' is a no-op on OpenAI (implicit caching protocol)", () =>
+  // kilocode_change start
+  it.effect("'auto' does not emit explicit breakpoints on pre-5.6 OpenAI models", () =>
     Effect.gen(function* () {
       const prepared = yield* LLMClient.prepare(
         LLM.request({
@@ -91,12 +105,78 @@ describe("applyCachePolicy", () => {
       )
 
       const body = prepared.body as { messages: Array<{ content: unknown }> }
-      // OpenAI doesn't accept cache_control on messages — policy must skip.
+      // Older OpenAI models reject prompt_cache_breakpoint — policy must skip.
       const flat = JSON.stringify(body)
+      expect(flat).not.toContain("prompt_cache_breakpoint")
       expect(flat).not.toContain("cache_control")
       expect(flat).not.toContain("cachePoint")
     }),
   )
+
+  it.effect("'auto' emits prompt_cache_breakpoint on stable system prefix and latest user on GPT-5.6 Responses", () =>
+    Effect.gen(function* () {
+      const prepared = yield* LLMClient.prepare(
+        LLM.request({
+          model: openaiGpt56ResponsesModel,
+          system: "System instructions",
+          messages: [
+            Message.user("first question"),
+            Message.assistant("assistant reply"),
+            Message.user("latest question"),
+          ],
+          cache: "auto",
+        }),
+      )
+
+      expect(prepared.body).toMatchObject({
+        input: [
+          {
+            role: "system",
+            content: [{ type: "input_text", text: "System instructions", prompt_cache_breakpoint: { mode: "explicit" } }],
+          },
+          { role: "user", content: [{ type: "input_text", text: "first question" }] },
+          { role: "assistant", content: [{ type: "output_text", text: "assistant reply" }] },
+          {
+            role: "user",
+            content: [{ type: "input_text", text: "latest question", prompt_cache_breakpoint: { mode: "explicit" } }],
+          },
+        ],
+      })
+    }),
+  )
+
+  it.effect("'auto' emits prompt_cache_breakpoint on stable system prefix and latest user on GPT-5.6 Chat", () =>
+    Effect.gen(function* () {
+      const prepared = yield* LLMClient.prepare(
+        LLM.request({
+          model: openaiGpt56ChatModel,
+          system: "System instructions",
+          messages: [
+            Message.user("first question"),
+            Message.assistant("assistant reply"),
+            Message.user("latest question"),
+          ],
+          cache: "auto",
+        }),
+      )
+
+      expect(prepared.body).toMatchObject({
+        messages: [
+          {
+            role: "system",
+            content: [{ type: "text", text: "System instructions", prompt_cache_breakpoint: { mode: "explicit" } }],
+          },
+          { role: "user", content: "first question" },
+          { role: "assistant", content: "assistant reply" },
+          {
+            role: "user",
+            content: [{ type: "text", text: "latest question", prompt_cache_breakpoint: { mode: "explicit" } }],
+          },
+        ],
+      })
+    }),
+  )
+  // kilocode_change end
 
   it.effect("'auto' is a no-op on Gemini (out-of-band caching protocol)", () =>
     Effect.gen(function* () {

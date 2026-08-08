@@ -328,6 +328,20 @@ function normalizeMessages(
   return msgs
 }
 
+// kilocode_change start - explicit prompt cache breakpoints for GPT-5.6+
+function supportsOpenAICacheBreakpoint(modelId: string): boolean {
+  const match = modelId.match(/gpt-(\d+)\.(\d+)/)
+  if (match) {
+    const major = Number(match[1])
+    const minor = Number(match[2])
+    if (major > 5 || (major === 5 && minor >= 6)) return true
+  }
+  const majorMatch = modelId.match(/gpt-(\d+)/)
+  if (majorMatch && Number(majorMatch[1]) >= 6) return true
+  return false
+}
+// kilocode_change end
+
 function applyCaching(msgs: ModelMessage[], model: Provider.Model): ModelMessage[] {
   const system = msgs.filter((msg) => msg.role === "system").slice(0, 2)
   const final = msgs.filter((msg) => msg.role !== "system").slice(-2)
@@ -351,6 +365,18 @@ function applyCaching(msgs: ModelMessage[], model: Provider.Model): ModelMessage
     alibaba: {
       cacheControl: { type: "ephemeral" },
     },
+    // kilocode_change start
+    ...(supportsOpenAICacheBreakpoint(model.api.id)
+      ? {
+          openai: {
+            promptCacheBreakpoint: { mode: "explicit" },
+          },
+          azure: {
+            promptCacheBreakpoint: { mode: "explicit" },
+          },
+        }
+      : {}),
+    // kilocode_change end
   }
 
   for (const msg of unique([...system, ...final])) {
@@ -438,6 +464,7 @@ function mapProviderOptions(
 export function message(msgs: ModelMessage[], model: Provider.Model, options: Record<string, unknown>) {
   msgs = unsupportedParts(msgs, model)
   msgs = normalizeMessages(msgs, model, options)
+  // kilocode_change start - apply caching for anthropic, alibaba, and GPT-5.6+ openai/azure
   if (
     (model.providerID === "anthropic" ||
       model.providerID === "google-vertex-anthropic" ||
@@ -446,11 +473,17 @@ export function message(msgs: ModelMessage[], model: Provider.Model, options: Re
       model.id.includes("anthropic") ||
       model.id.includes("claude") ||
       model.api.npm === "@ai-sdk/anthropic" ||
-      model.api.npm === "@ai-sdk/alibaba") &&
+      model.api.npm === "@ai-sdk/alibaba" ||
+      ((model.api.npm === "@ai-sdk/openai" ||
+        model.api.npm === "@ai-sdk/azure" ||
+        model.providerID === "openai" ||
+        model.providerID === "azure") &&
+        supportsOpenAICacheBreakpoint(model.api.id))) &&
     model.api.npm !== "@ai-sdk/gateway"
   ) {
     msgs = applyCaching(msgs, model)
   }
+  // kilocode_change end
 
   // Remap providerOptions keys from stored providerID to expected SDK key
   const key = sdkKey(model.api.npm)

@@ -36,10 +36,16 @@ const resolve = (policy: CachePolicy | undefined): CachePolicyObject => {
   return policy
 }
 
-// Protocols whose wire format ignores inline cache markers (OpenAI's implicit
-// prefix caching, Gemini's implicit + out-of-band CachedContent). Skip the
-// whole policy pass for these — emitting hints would be harmless but pointless.
-const RESPECTS_INLINE_HINTS = new Set(["anthropic-messages", "bedrock-converse"])
+// kilocode_change start - Protocols whose wire format supports inline cache markers / explicit breakpoints.
+// Gemini uses out-of-band CachedContent.
+const RESPECTS_INLINE_HINTS = new Set([
+  "anthropic-messages",
+  "bedrock-converse",
+  "openai-responses",
+  "openai-chat",
+  "openai-compatible-chat",
+])
+// kilocode_change end
 
 const makeHint = (ttlSeconds: number | undefined): CacheHint =>
   ttlSeconds !== undefined ? new CacheHint({ type: "ephemeral", ttlSeconds }) : new CacheHint({ type: "ephemeral" })
