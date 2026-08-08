@@ -27,6 +27,21 @@ export namespace PermissionProvenance {
     agent?: string
     /** The winning rule, omitted for manual replies and the ask fallback. */
     rule?: { permission: string; pattern: string; action: Permission.Action }
+    /** True when the ask's target path was outside the workspace/worktree (an `external_directory` ask). */
+    outsideWorkspace?: boolean
+    /** The target file path, when the `external_directory` ask carried one, for display as a filename. */
+    outsideWorkspacePath?: string
+  }
+
+  /** The `filepath` an `external_directory` ask's metadata carries, if any (see `Tool.assertExternalDirectory`). */
+  export function filepathOf(metadata: Record<string, unknown> | undefined): string | undefined {
+    return typeof metadata?.filepath === "string" ? metadata.filepath : undefined
+  }
+
+  /** Tag an approval as outside-workspace when it answers an `external_directory` ask. */
+  export function tagOutsideWorkspace(approval: Approval, permission: string, path?: string): Approval {
+    if (permission !== "external_directory") return approval
+    return { ...approval, outsideWorkspace: true, ...(path ? { outsideWorkspacePath: path } : {}) }
   }
 
   export type Scope = "global" | "local"
@@ -71,13 +86,29 @@ export namespace PermissionProvenance {
    * The approval is written once during `ask()`, but tools freely overwrite `state.metadata`
    * during execution and on completion. Carry the prior `approval` onto the replacement unless
    * the replacement sets its own.
+   *
+   * A file tool that crosses the workspace boundary issues *two* asks for one call: the generic
+   * `external_directory` ask first, then its own `read`/`write`/`edit` ask. Both write `approval`
+   * metadata, so the second ask's `outsideWorkspace` marker would otherwise clobber the first's
+   * even though `"approval" in next` is true. Merge that marker forward so it survives.
    */
   export function carryApproval(
     prev: Record<string, unknown> | undefined,
     next: Record<string, unknown> | undefined,
   ) {
-    if (!next || !prev?.approval || "approval" in next) return next
-    return { ...next, approval: prev.approval }
+    if (!next) return next
+    const prior = prev?.approval as Approval | undefined
+    if (!("approval" in next)) return prior ? { ...next, approval: prior } : next
+    const current = next.approval as Approval | undefined
+    if (!prior?.outsideWorkspace || !current || current.outsideWorkspace) return next
+    return {
+      ...next,
+      approval: {
+        ...current,
+        outsideWorkspace: true,
+        ...(prior.outsideWorkspacePath ? { outsideWorkspacePath: prior.outsideWorkspacePath } : {}),
+      },
+    }
   }
 
   /**
