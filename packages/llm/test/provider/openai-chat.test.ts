@@ -540,6 +540,21 @@ describe("OpenAI Chat route", () => {
     }),
   )
 
+  it.effect("ignores non-chat metadata events in compatible streams", () =>
+    Effect.gen(function* () {
+      const body = sseEvents(
+        { object: "billing.summary", billing: { request: { success: true } } },
+        deltaChunk({ role: "assistant", content: "Hello" }),
+        deltaChunk({}, "stop"),
+      )
+
+      const response = yield* LLMClient.generate(request).pipe(Effect.provide(fixedResponse(body)))
+
+      expect(response.text).toBe("Hello")
+      expect(response.events.at(-1)).toMatchObject({ type: "finish", reason: "stop" })
+    }),
+  )
+
   it.effect("parses OpenAI-compatible reasoning content deltas", () =>
     Effect.gen(function* () {
       const body = sseEvents(
@@ -633,6 +648,15 @@ describe("OpenAI Chat route", () => {
   it.effect("fails on malformed stream events", () =>
     Effect.gen(function* () {
       const body = sseEvents(deltaChunk({ content: 123 }))
+      const error = yield* LLMClient.generate(request).pipe(Effect.provide(fixedResponse(body)), Effect.flip)
+
+      expect(error.message).toContain("Invalid openai/openai-chat stream event")
+    }),
+  )
+
+  it.effect("fails on malformed labeled chat-completion chunks", () =>
+    Effect.gen(function* () {
+      const body = sseEvents({ ...deltaChunk({ content: 123 }), object: "chat.completion.chunk" })
       const error = yield* LLMClient.generate(request).pipe(Effect.provide(fixedResponse(body)), Effect.flip)
 
       expect(error.message).toContain("Invalid openai/openai-chat stream event")

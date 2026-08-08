@@ -153,11 +153,31 @@ const OpenAIChatChoice = Schema.Struct({
   finish_reason: optionalNull(Schema.String),
 })
 
-const OpenAIChatEvent = Schema.Struct({
+const OpenAIChatCompletionEvent = Schema.Struct({
   choices: Schema.Array(OpenAIChatChoice),
   usage: optionalNull(OpenAIChatUsage),
 })
+// OpenAI-compatible gateways sometimes interleave provider metadata (for
+// example `billing.summary`) in the same SSE stream. Those payloads are not
+// chat-completion chunks and should be ignored by the parser.
+const OpenAIChatIgnoredEvent = Schema.Union([
+  Schema.Struct({ object: Schema.String }).check(
+    Schema.makeFilter(
+      ({ object }) => object !== "chat.completion" && object !== "chat.completion.chunk" && object !== "error",
+    ),
+  ),
+  Schema.Struct({ type: Schema.String }).check(
+    Schema.makeFilter(
+      ({ type }) => type !== "chat.completion" && type !== "chat.completion.chunk" && type !== "error",
+    ),
+  ),
+])
+const OpenAIChatEvent = Schema.Union([OpenAIChatCompletionEvent, OpenAIChatIgnoredEvent])
 type OpenAIChatEvent = Schema.Schema.Type<typeof OpenAIChatEvent>
+
+function isCompletion(event: OpenAIChatEvent): event is Schema.Schema.Type<typeof OpenAIChatCompletionEvent> {
+  return "choices" in event && Array.isArray(event.choices)
+}
 type OpenAIChatRequestMessage = LLMRequest["messages"][number]
 
 interface ParserState {
@@ -388,7 +408,7 @@ const mapFinishReason = (reason: string | null | undefined): FinishReason => {
 // a `reasoning_tokens` subset. We pass the inclusive totals through and
 // derive the non-cached breakdown so the `LLM.Usage` contract is
 // satisfied on both sides.
-const mapUsage = (usage: OpenAIChatEvent["usage"]): Usage | undefined => {
+const mapUsage = (usage: Schema.Schema.Type<typeof OpenAIChatCompletionEvent>["usage"]): Usage | undefined => {
   if (!usage) return undefined
   const cached = usage.prompt_tokens_details?.cached_tokens
   const reasoning = usage.completion_tokens_details?.reasoning_tokens
@@ -406,6 +426,7 @@ const mapUsage = (usage: OpenAIChatEvent["usage"]): Usage | undefined => {
 
 const step = (state: ParserState, event: OpenAIChatEvent) =>
   Effect.gen(function* () {
+    if (!isCompletion(event)) return [state, []] as const
     const events: LLMEvent[] = []
     const usage = mapUsage(event.usage) ?? state.usage
     const choice = event.choices[0]
