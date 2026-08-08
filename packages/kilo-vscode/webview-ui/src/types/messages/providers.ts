@@ -53,6 +53,13 @@ export interface ModelSelection {
   modelID: string
 }
 
+export interface ModelUsage {
+  count: number
+  lastUsed: number
+}
+
+export type ModelUsageMap = Record<string, ModelUsage>
+
 export type ProviderAuthState = "api" | "oauth" | "wellknown"
 
 export interface ProviderConfig {

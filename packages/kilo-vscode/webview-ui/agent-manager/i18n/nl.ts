@@ -4,6 +4,11 @@ export const dict = {
   "agentManager.sidebar.expand": "Zijbalk tonen",
   "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "SESSIES",
+  "agentManager.projects": "PROJECTEN",
+  "agentManager.project.add": "Project toevoegen",
+  "agentManager.project.remove": "Verwijderen uit Agent Manager",
+  "agentManager.project.trust": "Vertrouwen",
+  "agentManager.project.missing": "Repository niet gevonden",
   "agentManager.notGitRepo": "Geen git repository",
 
   "agentManager.worktree.settings": "Worktree instellingen",
@@ -62,6 +67,11 @@ export const dict = {
 
   "agentManager.terminal.new": "Nieuw terminaltabblad",
   "agentManager.terminal.ended": "terminal beëindigd — sluit tabblad om te negeren",
+  "agentManager.terminal.endedRestartable":
+    "terminal beëindigd - typ om een nieuwe shell te starten of sluit het tabblad",
+  "agentManager.terminal.setupFailed": "installatiescript mislukt",
+  "agentManager.terminal.setupFailedCode": "installatiescript mislukt met exitcode",
+  "agentManager.terminal.stopSetup": "Installatiescript stoppen",
   "agentManager.terminal.connectionError": "terminalverbindingsfout",
   "agentManager.terminal.add": "Nieuwe terminal",
   "agentManager.terminal.empty": "Hier is nog geen terminal",
@@ -96,7 +106,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "Volgend tabblad",
   "agentManager.shortcuts.newTab": "Nieuw tabblad",
   "agentManager.shortcuts.closeTab": "Tabblad sluiten",
-  "agentManager.shortcuts.toggleTerminal": "Terminal in-/uitschakelen",
+  "agentManager.shortcuts.toggleTerminal": "Terminal focussen / verbergen",
   "agentManager.shortcuts.runScript": "Script uitvoeren",
   "agentManager.run.options": "Uitvoeropties",
   "agentManager.run.configure": "Uitvoerscript configureren",
@@ -112,6 +122,9 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.cancel": "Annuleren",
   "agentManager.dialog.removeStaleWorktree.confirm": "Verouderde worktree verwijderen",
 
+  "agentManager.dialog.project.select": "Project selecteren",
+  "agentManager.dialog.project.untrusted": "Vertrouw dit project eerst in de zijbalk",
+  "agentManager.dialog.project.missing": "Repository niet gevonden",
   "agentManager.dialog.openWorktree": "Nieuwe worktree",
   "agentManager.dialog.configureWorktree": "Nieuwe Worktree Configureren...",
   "agentManager.dialog.tab.new": "Nieuw",

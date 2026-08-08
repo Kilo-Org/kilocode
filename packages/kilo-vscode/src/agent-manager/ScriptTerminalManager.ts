@@ -2,10 +2,13 @@ import type { KiloClient } from "@kilocode/sdk/v2/client"
 import type { TerminalFont } from "./terminal-font"
 import type { RunHandle } from "./run/manager"
 
-type ScriptTerminalKind = "run"
+export type ScriptTerminalKind = "run" | "setup"
 type ScriptTerminalState = "running" | "stopping" | "exited" | "failed"
 
+const TITLE: Record<ScriptTerminalKind, "Run" | "Setup"> = { run: "Run", setup: "Setup" }
+
 interface ScriptTerminalConfig {
+  projectId?: string
   worktreeId: string
   command: string
   args: string[]
@@ -21,10 +24,11 @@ interface ScriptTerminalExit {
 
 export interface ScriptTerminalView {
   terminalId: string
+  projectId?: string
   /** null for the LOCAL workspace; RunController retains its internal "local" key. */
   worktreeId: string | null
   kind: ScriptTerminalKind
-  title: "Run"
+  title: "Run" | "Setup"
   wsUrl: string
   state: ScriptTerminalState
   exitCode?: number
@@ -46,6 +50,7 @@ interface Entry {
   kind: ScriptTerminalKind
   terminalId: string
   ptyID: string
+  projectId?: string
   worktreeId: string
   cwd: string
   wsUrl: string
@@ -77,8 +82,8 @@ function missing(error: unknown): boolean {
   return data.status === 404 || data._tag === "PtyNotFoundError"
 }
 
-function key(kind: ScriptTerminalKind, worktreeId: string): string {
-  return `${kind}:${worktreeId}`
+function key(kind: ScriptTerminalKind, worktreeId: string, projectId?: string): string {
+  return `${projectId ?? "single"}:${kind}:${worktreeId}`
 }
 
 function terminalId(): string {
@@ -101,17 +106,18 @@ export class ScriptTerminalManager {
     config: ScriptTerminalConfig,
     done: (exit: ScriptTerminalExit) => void,
   ): Promise<RunHandle> {
-    const id = key(kind, config.worktreeId)
+    const id = key(kind, config.worktreeId, config.projectId)
     const prior = this.entries.get(id)
     if (prior) {
-      if (prior.state === "running" || prior.state === "stopping") throw new Error("Run terminal is already active")
+      if (prior.state === "running" || prior.state === "stopping")
+        throw new Error(`${TITLE[kind]} terminal is already active`)
       await this.remove(prior, false)
-      if (this.entries.has(id)) throw new Error("Failed to remove previous Run terminal")
+      if (this.entries.has(id)) throw new Error(`Failed to remove previous ${TITLE[kind]} terminal`)
     }
 
     const client = await this.deps.getClientAsync(config.cwd).catch((error) => {
       const detail = message(error)
-      this.deps.log(`Run terminal create failed: ${detail}`)
+      this.deps.log(`${TITLE[kind]} terminal create failed: ${detail}`)
       throw new Error(detail)
     })
     const created = await client.v2.pty
@@ -121,26 +127,27 @@ export class ScriptTerminalManager {
         args: config.args,
         cwd: config.cwd,
         env: config.env,
-        title: "Run",
+        title: TITLE[kind],
       })
       .catch((error) => {
         const detail = message(error)
-        this.deps.log(`Run terminal create failed: ${detail}`)
+        this.deps.log(`${TITLE[kind]} terminal create failed: ${detail}`)
         throw new Error(detail)
       })
     const pty = created.data?.data
     if (created.error || !pty) {
       const detail = message(created.error ?? "unknown error")
-      this.deps.log(`Run terminal create failed: ${detail}`)
-      throw new Error(`Failed to create Run terminal: ${detail}`)
+      this.deps.log(`${TITLE[kind]} terminal create failed: ${detail}`)
+      throw new Error(`Failed to create ${TITLE[kind]} terminal: ${detail}`)
     }
 
-    const wsUrl = await this.url(client, pty.id, config.cwd)
+    const wsUrl = await this.url(client, kind, pty.id, config.cwd)
     const entry: Entry = {
       key: id,
       kind,
       terminalId: terminalId(),
       ptyID: pty.id,
+      projectId: config.projectId,
       worktreeId: config.worktreeId,
       cwd: config.cwd,
       wsUrl,
@@ -157,6 +164,7 @@ export class ScriptTerminalManager {
 
     return {
       stop: () => this.stop(entry),
+      kill: (reason) => this.kill(entry, reason),
     }
   }
 
@@ -166,6 +174,14 @@ export class ScriptTerminalManager {
     if (typeof id !== "string" || !this.terminals.has(id)) return false
     if (msg.type === "agentManager.terminal.close") {
       void this.close(id).then((closed) => {
+        if (closed) this.deps.closed(id)
+      })
+      return true
+    }
+    if (msg.type === "agentManager.terminal.stop") {
+      // Deliberate user stop: always allowed, even for a running Setup
+      // script whose accidental close is blocked.
+      void this.close(id, true).then((closed) => {
         if (closed) this.deps.closed(id)
       })
       return true
@@ -186,13 +202,19 @@ export class ScriptTerminalManager {
     const entry = this.ptys.get(ptyID)
     if (!entry) return
     const state = entry.state
+    if (state === "failed") {
+      // Retained failure (e.g. after a timeout kill): the backend PTY is
+      // gone now, but the tab and its output stay until the user closes it.
+      this.ptys.delete(ptyID)
+      return
+    }
     this.drop(entry)
     this.emit()
     if (state === "stopping") {
       this.done(entry, { stopped: true })
       return
     }
-    if (state === "running") this.done(entry, { error: "Run terminal was removed before it exited" })
+    if (state === "running") this.done(entry, { error: `${TITLE[entry.kind]} terminal was removed before it exited` })
   }
 
   snapshot(): void {
@@ -203,11 +225,17 @@ export class ScriptTerminalManager {
     return this.ptys.has(ptyID)
   }
 
+  /** True while a script of this kind is running or stopping for the worktree. */
+  active(kind: ScriptTerminalKind, worktreeId: string, projectId?: string): boolean {
+    const entry = this.entries.get(key(kind, worktreeId, projectId))
+    return entry?.state === "running" || entry?.state === "stopping"
+  }
+
   async sync(): Promise<void> {
     await Promise.all(
       [...this.entries.values()].map(async (entry) => {
         const client = await this.deps.getClientAsync(entry.cwd).catch((error) => {
-          this.deps.log(`Failed to reconnect Run terminal: ${message(error)}`)
+          this.deps.log(`Failed to reconnect ${TITLE[entry.kind]} terminal: ${message(error)}`)
           return undefined
         })
         if (client) await this.reconcile(entry, client)
@@ -215,15 +243,24 @@ export class ScriptTerminalManager {
     )
   }
 
-  async clear(kind: ScriptTerminalKind, worktreeId: string): Promise<boolean> {
-    const entry = this.entries.get(key(kind, worktreeId))
+  async clear(kind: ScriptTerminalKind, worktreeId: string, projectId?: string): Promise<boolean> {
+    const entry = this.entries.get(key(kind, worktreeId, projectId))
     if (!entry) return true
-    return this.close(entry.terminalId)
+    return this.close(entry.terminalId, true)
   }
 
-  async close(terminalId: string): Promise<boolean> {
+  /**
+   * User-initiated tab close. A running Setup script must keep its output
+   * and finish (or time out) on its own, so only forced paths (worktree
+   * deletion, shutdown, timeout) may tear it down early.
+   */
+  async close(terminalId: string, force = false): Promise<boolean> {
     const entry = this.terminals.get(terminalId)
     if (!entry) return true
+    if (!force && entry.kind === "setup" && (entry.state === "running" || entry.state === "stopping")) {
+      this.deps.log(`Ignored close for ${TITLE[entry.kind]} terminal while it is running`)
+      return false
+    }
     if (entry.state === "running") {
       await this.stop(entry)
       return !this.terminals.has(terminalId)
@@ -247,14 +284,14 @@ export class ScriptTerminalManager {
         size: { cols, rows },
       })
       if (!result.error) return
-      this.deps.log(`Run terminal resize failed (${terminalId}): ${message(result.error)}`)
+      this.deps.log(`${TITLE[entry.kind]} terminal resize failed (${terminalId}): ${message(result.error)}`)
     } catch (error) {
-      this.deps.log(`Run terminal resize failed (${terminalId}): ${message(error)}`)
+      this.deps.log(`${TITLE[entry.kind]} terminal resize failed (${terminalId}): ${message(error)}`)
     }
   }
 
   async dispose(): Promise<void> {
-    await Promise.all([...this.terminals.keys()].map((terminalId) => this.close(terminalId)))
+    await Promise.all([...this.terminals.keys()].map((terminalId) => this.close(terminalId, true)))
   }
 
   private async reconcile(entry: Entry, client: KiloClient): Promise<void> {
@@ -263,12 +300,15 @@ export class ScriptTerminalManager {
       const result = await client.v2.pty.get({ ptyID: entry.ptyID, location: { directory: entry.cwd } })
       const pty = result.data?.data
       if (result.error || !pty) {
-        this.missing(entry, `Run terminal is no longer available: ${message(result.error ?? "unknown error")}`)
+        this.missing(
+          entry,
+          `${TITLE[entry.kind]} terminal is no longer available: ${message(result.error ?? "unknown error")}`,
+        )
         return
       }
       if (pty.status === "exited") this.finishExited(entry, pty.exitCode ?? 0)
     } catch (error) {
-      this.deps.log(`Failed to read Run terminal: ${message(error)}`)
+      this.deps.log(`Failed to read ${TITLE[entry.kind]} terminal: ${message(error)}`)
     }
   }
 
@@ -308,27 +348,28 @@ export class ScriptTerminalManager {
           if (stopped) this.done(entry, { stopped: true })
           return
         }
-        this.failed(entry, `Failed to remove Run terminal: ${message(result.error)}`)
+        this.failed(entry, `Failed to remove ${TITLE[entry.kind]} terminal: ${message(result.error)}`)
         return
       }
       this.drop(entry)
       this.emit()
       if (stopped) this.done(entry, { stopped: true })
     } catch (error) {
-      this.failed(entry, `Failed to remove Run terminal: ${message(error)}`)
+      this.failed(entry, `Failed to remove ${TITLE[entry.kind]} terminal: ${message(error)}`)
     }
   }
 
-  private async url(client: KiloClient, ptyID: string, cwd: string): Promise<string> {
+  private async url(client: KiloClient, kind: ScriptTerminalKind, ptyID: string, cwd: string): Promise<string> {
     try {
       return this.deps.buildWsUrl(ptyID, cwd)
     } catch (error) {
-      this.deps.log(`Failed to build Run terminal URL: ${message(error)}`)
+      this.deps.log(`Failed to build ${TITLE[kind]} terminal URL: ${message(error)}`)
       try {
         const result = await client.v2.pty.remove({ ptyID, location: { directory: cwd } })
-        if (result.error) this.deps.log(`Failed to remove Run terminal after URL failure: ${message(result.error)}`)
+        if (result.error)
+          this.deps.log(`Failed to remove ${TITLE[kind]} terminal after URL failure: ${message(result.error)}`)
       } catch (cleanup) {
-        this.deps.log(`Failed to remove Run terminal after URL failure: ${message(cleanup)}`)
+        this.deps.log(`Failed to remove ${TITLE[kind]} terminal after URL failure: ${message(cleanup)}`)
       }
       throw error
     }
@@ -348,6 +389,28 @@ export class ScriptTerminalManager {
     entry.state = "failed"
     this.emit()
     this.done(entry, { error })
+  }
+
+  /**
+   * Kill the process tree but retain the terminal as failed with its
+   * partial output. Timeouts use this so the user can see how far the
+   * script got; user-initiated stops use stop() and drop the tab instead.
+   */
+  private kill(entry: Entry, reason: string): void {
+    if (!this.current(entry) || (entry.state !== "running" && entry.state !== "stopping")) return
+    entry.state = "failed"
+    this.emit()
+    void this.deps
+      .getClientAsync(entry.cwd)
+      .then(async (client) => {
+        const result = await client.v2.pty.remove({ ptyID: entry.ptyID, location: { directory: entry.cwd } })
+        if (result.error) this.deps.log(`Failed to kill ${TITLE[entry.kind]} terminal: ${message(result.error)}`)
+      })
+      .catch((error) => {
+        this.deps.log(`Failed to kill ${TITLE[entry.kind]} terminal: ${message(error)}`)
+      })
+    this.deps.log(reason)
+    this.done(entry, { error: reason })
   }
 
   private missing(entry: Entry, error: string): void {
@@ -378,11 +441,13 @@ export class ScriptTerminalManager {
   private emit(): void {
     const terminals: ScriptTerminalView[] = []
     for (const entry of this.entries.values()) {
+      const local = entry.worktreeId === "local" || entry.worktreeId.endsWith(":local")
       const terminal: ScriptTerminalView = {
         terminalId: entry.terminalId,
-        worktreeId: entry.worktreeId === "local" ? null : entry.worktreeId,
+        ...(entry.projectId ? { projectId: entry.projectId } : {}),
+        worktreeId: local ? null : entry.worktreeId,
         kind: entry.kind,
-        title: "Run",
+        title: TITLE[entry.kind],
         wsUrl: entry.wsUrl,
         state: entry.state,
         font: this.deps.getTerminalFont(),

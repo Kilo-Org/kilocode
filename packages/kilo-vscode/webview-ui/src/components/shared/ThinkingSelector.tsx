@@ -41,8 +41,12 @@ export interface ThinkingSelectorBaseProps {
   deferDismiss?: boolean
   /** Listen for the global prompt trigger event. Defaults to true. */
   globalTrigger?: boolean
+  /** Only respond to picker events from this prompt scope. */
+  trigger?: string
   /** Show the Shift+Tab cycle hint in the trigger tooltip. */
   cycleHint?: boolean
+  /** Accessible name for the selector trigger. */
+  label?: string
 }
 
 export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props) => {
@@ -83,7 +87,9 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
     refocus()
   }
 
-  const onTrigger = () => {
+  const onTrigger = (event: Event) => {
+    const source = (event as CustomEvent<{ source?: string }>).detail?.source
+    if (source !== props.trigger) return
     if (rows().length === 0) return
     onOpen(true)
   }
@@ -163,7 +169,7 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
           open={open()}
           onOpenChange={onOpen}
           triggerAs={Button}
-          triggerProps={{ variant: "ghost", size: "small" }}
+          triggerProps={{ variant: "ghost", size: "small", "aria-label": props.label }}
           trigger={
             <>
               <span class="thinking-selector-trigger-label">{display(props.value)}</span>

@@ -27,6 +27,7 @@ import { MemoryMarker } from "@/kilocode/memory/marker"
 import { KilocodeSystemPrompt } from "@/kilocode/system-prompt"
 import { KiloToolRegistry } from "@/kilocode/tool/registry"
 import CODE_SWITCH from "@/session/prompt/code-switch.txt"
+import { consumeAutoTitle, markAutoTitle } from "@/kilo-sessions/rename-adoptions"
 
 export namespace KiloSessionPrompt {
   const modes = ["ask", "plan", "architect"]
@@ -70,6 +71,28 @@ export namespace KiloSessionPrompt {
 
   export function titleID(sessionID: SessionID) {
     return `title-${sessionID}`
+  }
+
+  /**
+   * Auto-title write gate for ensureTitle: re-check default title and mark
+   * before setTitle. Returns true when the caller should call setTitle (mark
+   * already recorded). On setTitle failure call `clearAutoTitleMark`.
+   * K1: mark BEFORE write; consume on fail.
+   */
+  export function prepareAutoTitle(input: {
+    sessionID: string
+    title: string
+    fresh: { title: string } | null | undefined
+    isDefaultTitle: (title: string) => boolean
+  }): boolean {
+    if (!input.fresh || !input.isDefaultTitle(input.fresh.title)) return false
+    markAutoTitle(input.sessionID, input.title)
+    return true
+  }
+
+  /** Clear auto-title mark after a failed setTitle (pair with prepareAutoTitle). */
+  export function clearAutoTitleMark(sessionID: string, title: string) {
+    consumeAutoTitle(sessionID, title)
   }
 
   function mode(name: string) {

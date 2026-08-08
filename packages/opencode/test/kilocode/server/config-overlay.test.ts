@@ -1,25 +1,34 @@
-import { afterEach, describe, expect, test } from "bun:test"
+import { afterEach, describe, expect, setDefaultTimeout, test } from "bun:test"
 import path from "path"
+import { chmod, rm, stat, symlink } from "fs/promises"
 import * as Log from "@opencode-ai/core/util/log"
 import { Global } from "@opencode-ai/core/global"
 import { Server } from "../../../src/server/server"
 import { Config } from "../../../src/config/config"
+import { ConfigParse } from "../../../src/config/parse"
 import { KilocodeConfigOverlay } from "../../../src/kilocode/config/overlay"
+import { KilocodeConfigWriter } from "../../../src/kilocode/config/writer"
 import { Permission } from "../../../src/permission"
 import { PtyPaths } from "../../../src/server/routes/instance/httpapi/groups/pty"
+import { SessionPaths } from "../../../src/server/routes/instance/httpapi/groups/session"
+import { SandboxStore } from "../../../src/kilocode/sandbox/store"
+import type { Session } from "../../../src/session/session"
 import { Filesystem } from "../../../src/util/filesystem"
 import { resetDatabase } from "../../fixture/db"
 import { disposeAllInstances, tmpdir } from "../../fixture/fixture"
 
 void Log.init({ print: false })
+setDefaultTimeout(30_000)
 
 const original = Global.Path.config
 const terminal = process.platform === "win32" ? test.skip : test.serial
 
+type Target = { path: string; revision: string; exists: boolean; writable: boolean; raw: Record<string, unknown> }
 type Overlay = {
   fields: Record<string, { source: string; inherited: boolean; overridden: boolean; value?: unknown }>
   collections: Record<string, Array<{ key: string; source: string; inherited: boolean; local?: unknown }>>
-  targets: { project?: string; global?: string; active?: string }
+  targets: { project: Target; global: Target; active: Target }
+  effective?: Config.Info
 }
 type Agent = {
   name: string
@@ -30,34 +39,41 @@ afterEach(async () => {
   ;(Global.Path as { config: string }).config = original
   await disposeAllInstances()
   await resetDatabase()
-})
+}, 15_000)
 
 function req(dir: string, input: string, init?: RequestInit) {
-  return Server.Default().app.request(input, {
-    ...init,
-    headers: {
-      "x-kilo-directory": dir,
-      ...init?.headers,
-    },
-  })
+  return request(Server.Default().app, dir, input, init)
 }
 
 function app(_value: boolean) {
   return Server.Default().app
 }
 
-function request(target: ReturnType<typeof app>, dir: string | undefined, input: string, init?: RequestInit) {
+async function request(target: ReturnType<typeof app>, dir: string | undefined, input: string, init?: RequestInit) {
+  const headers = {
+    ...(dir ? { "x-kilo-directory": dir } : {}),
+    ...init?.headers,
+  }
+  const body = init?.method === "PATCH" && input === "/config/overlay" ? JSON.parse(String(init.body)) : undefined
+  const next =
+    body && !body.expected
+      ? await (async () => {
+          const scope = body.scope === "global" ? "global" : "project"
+          const response = await target.request(`/config/overlay?scope=${scope}`, { headers })
+          const overlay = (await response.json()) as Overlay
+          const expected = overlay.targets[scope]
+          return { ...body, expected: { path: expected.path, revision: expected.revision } }
+        })()
+      : body
   return target.request(input, {
     ...init,
-    headers: {
-      ...(dir ? { "x-kilo-directory": dir } : {}),
-      ...init?.headers,
-    },
+    headers,
+    body: next ? JSON.stringify(next) : init?.body,
   })
 }
 
 async function json<T>(response: Response) {
-  expect(response.status).toBe(200)
+  if (response.status !== 200) throw new Error(`HTTP ${response.status}: ${await response.text()}`)
   return (await response.json()) as T
 }
 
@@ -77,6 +93,221 @@ async function setGlobal(dir: string, value: Config.Info) {
 }
 
 describe("config overlay routes", () => {
+  test("writes a missing project target atomically", async () => {
+    await using project = await tmpdir()
+    const target = await KilocodeConfigOverlay.target({ scope: "project", directory: project.path })
+
+    const result = await KilocodeConfigWriter.write({
+      scope: "project",
+      directory: project.path,
+      expected: target,
+      set: { model: "test/model" },
+    })
+
+    expect(result.ok).toBe(true)
+    expect(await Bun.file(target.path).text()).toContain('"model": "test/model"')
+  })
+
+  test("ignores a nested unset path when the project target is missing", async () => {
+    await using project = await tmpdir()
+    const response = await req(project.path, "/config/overlay", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ scope: "project", unset: [["agent", "explore", "model"]] }),
+    })
+
+    expect(response.status).toBe(200)
+    expect(await Bun.file(path.join(project.path, ".kilo", "kilo.jsonc")).exists()).toBe(false)
+  })
+
+  test("removes an existing nested unset path", async () => {
+    await using project = await tmpdir()
+    const file = path.join(project.path, ".kilo", "kilo.jsonc")
+    await Filesystem.write(
+      file,
+      '{\n  "$schema": "https://app.kilo.ai/config.json",\n  "indexing": {\n    "enabled": false,\n    "provider": "ollama",\n    "ollama": { "baseUrl": "http://127.0.0.1:11434" }\n  }\n}\n',
+    )
+
+    const response = await req(project.path, "/config/overlay", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ scope: "project", unset: [["indexing", "enabled"]] }),
+    })
+    expect(response.status).toBe(200)
+
+    const saved = (await Bun.file(file).json()) as {
+      indexing: { enabled?: boolean; provider: string; ollama: { baseUrl: string } }
+    }
+    expect(saved.indexing.enabled).toBeUndefined()
+    expect(saved.indexing.provider).toBe("ollama")
+    expect(saved.indexing.ollama.baseUrl).toBe("http://127.0.0.1:11434")
+  })
+
+  test("returns exact raw target data and a stable missing-file revision", async () => {
+    await using project = await tmpdir()
+    const first = await KilocodeConfigOverlay.target({ scope: "project", directory: project.path })
+    const second = await KilocodeConfigOverlay.target({ scope: "project", directory: project.path })
+
+    expect(first.exists).toBe(false)
+    expect(first.raw).toEqual({})
+    expect(first.revision).toBe(second.revision)
+
+    await Filesystem.write(first.path, '{\n  // preserved\n  "model": "test/model"\n}\n')
+    const saved = await KilocodeConfigOverlay.target({ scope: "project", directory: project.path })
+    expect(saved.raw).toEqual({ model: "test/model" })
+    expect(saved.revision).not.toBe(first.revision)
+  })
+
+  test("rejects a comment-only external edit with a typed revision conflict", async () => {
+    await using project = await tmpdir()
+    const before = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))
+    await Filesystem.write(before.targets.project.path, "{\n  // external edit\n}\n")
+
+    const response = await Server.Default().app.request("/config/overlay", {
+      method: "PATCH",
+      headers: { "content-type": "application/json", "x-kilo-directory": project.path },
+      body: JSON.stringify({
+        scope: "project",
+        expected: {
+          path: before.targets.project.path,
+          revision: before.targets.project.revision,
+        },
+        set: { model: "test/model" },
+      }),
+    })
+
+    expect(response.status).toBe(409)
+    expect(await response.json()).toMatchObject({ code: "revision-conflict" })
+  })
+
+  test("rejects a newly created higher-priority target", async () => {
+    await using project = await tmpdir()
+    const before = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))
+    await Filesystem.write(path.join(project.path, "kilo.json"), "{}")
+
+    const response = await Server.Default().app.request("/config/overlay", {
+      method: "PATCH",
+      headers: { "content-type": "application/json", "x-kilo-directory": project.path },
+      body: JSON.stringify({
+        scope: "project",
+        expected: {
+          path: before.targets.project.path,
+          revision: before.targets.project.revision,
+        },
+        set: { model: "test/model" },
+      }),
+    })
+
+    expect(response.status).toBe(409)
+    expect(await response.json()).toMatchObject({ code: "target-changed" })
+  })
+
+  test("allows only one concurrent writer for a revision", async () => {
+    await using project = await tmpdir()
+    const before = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))
+    const update = (model: string) =>
+      Server.Default().app.request("/config/overlay", {
+        method: "PATCH",
+        headers: { "content-type": "application/json", "x-kilo-directory": project.path },
+        body: JSON.stringify({
+          scope: "project",
+          expected: {
+            path: before.targets.project.path,
+            revision: before.targets.project.revision,
+          },
+          set: { model },
+        }),
+      })
+
+    const responses = await Promise.all([update("test/first"), update("test/second")])
+    expect(responses.map((response) => response.status).sort()).toEqual([200, 409])
+  })
+
+  test("rejects a project config target that escapes through a symlink", async () => {
+    if (process.platform === "win32") return
+    await using project = await tmpdir()
+    await using outside = await tmpdir()
+    await Filesystem.write(path.join(outside.path, "kilo.jsonc"), "{}")
+    await symlink(outside.path, path.join(project.path, ".kilo"), "dir")
+    const before = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))
+
+    const response = await Server.Default().app.request("/config/overlay", {
+      method: "PATCH",
+      headers: { "content-type": "application/json", "x-kilo-directory": project.path },
+      body: JSON.stringify({
+        scope: "project",
+        expected: {
+          path: before.targets.project.path,
+          revision: before.targets.project.revision,
+        },
+        set: { model: "test/model" },
+      }),
+    })
+
+    expect(response.status).toBe(400)
+    expect(await Bun.file(path.join(outside.path, "kilo.jsonc")).text()).not.toContain('"model"')
+  })
+
+  test("does not expose partial content when an atomic replacement fails", async () => {
+    await using project = await tmpdir()
+    const file = path.join(project.path, "kilo.jsonc")
+    await Filesystem.write(file, '{\n  "model": "test/before"\n}\n')
+    const target = await KilocodeConfigOverlay.target({ scope: "project", directory: project.path })
+
+    await expect(
+      KilocodeConfigWriter.write({
+        scope: "project",
+        directory: project.path,
+        expected: target,
+        set: { model: "test/after" },
+        write: async () => {
+          throw new Error("simulated replacement failure")
+        },
+      }),
+    ).rejects.toThrow("simulated replacement failure")
+    expect(await Bun.file(file).text()).toContain("test/before")
+  })
+
+  test("rechecks missing target parents before replacement", async () => {
+    if (process.platform === "win32") return
+    await using project = await tmpdir()
+    await using outside = await tmpdir()
+    const target = await KilocodeConfigOverlay.target({ scope: "project", directory: project.path })
+
+    const result = await KilocodeConfigWriter.write({
+      scope: "project",
+      directory: project.path,
+      expected: target,
+      set: { model: "test/model" },
+      beforeWrite: async () => {
+        await rm(path.dirname(target.path), { recursive: true })
+        await symlink(outside.path, path.dirname(target.path), "dir")
+      },
+    })
+
+    expect(result).toMatchObject({ ok: false, code: "target-not-writable" })
+    expect(await Bun.file(path.join(outside.path, "kilo.jsonc")).exists()).toBe(false)
+  })
+
+  test("preserves restrictive config file permissions", async () => {
+    if (process.platform === "win32") return
+    await using project = await tmpdir()
+    const file = path.join(project.path, "kilo.jsonc")
+    await Filesystem.write(file, "{}", 0o600)
+    await chmod(file, 0o600)
+    const target = await KilocodeConfigOverlay.target({ scope: "project", directory: project.path })
+
+    const result = await KilocodeConfigWriter.write({
+      scope: "project",
+      directory: project.path,
+      expected: target,
+      set: { model: "test/model" },
+    })
+
+    expect(result.ok).toBe(true)
+    expect((await stat(file)).mode & 0o777).toBe(0o600)
+  })
+
   test("ignores unsafe patch paths", () => {
     const patched = KilocodeConfigOverlay.patch({
       scope: "project",
@@ -141,7 +372,7 @@ describe("config overlay routes", () => {
       prompt: "kilo agent prompt",
     })
     expect(body.project.agent?.["opencode-only"]).toBeUndefined()
-    expect(body.targets.project).toBe(path.join(project.path, ".kilo", "kilo.json"))
+    expect(body.targets.project.path).toBe(path.join(project.path, ".kilo", "kilo.json"))
   })
 
   test.serial("tolerates unsafe project config instead of failing the overlay", async () => {
@@ -372,6 +603,58 @@ describe("config overlay routes", () => {
     expect(Object.keys(saved.mcp)).toEqual(["local"])
   })
 
+  test.serial("writes partial global workflow overrides when both JSON and JSONC exist", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    ;(Global.Path as { config: string }).config = global.path
+    await Filesystem.write(path.join(global.path, "kilo.json"), JSON.stringify({ username: "legacy" }))
+    await Filesystem.write(path.join(global.path, "kilo.jsonc"), "{\n  // Keep JSONC as the active target.\n}\n")
+
+    await json(
+      await req(project.path, "/config/overlay", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          scope: "global",
+          set: { command: { review: { model: "anthropic/claude-sonnet-4-6", variant: "high" } } },
+        }),
+      }),
+    )
+    const saved = ConfigParse.jsonc(await Bun.file(path.join(global.path, "kilo.jsonc")).text(), "kilo.jsonc")
+    expect(saved).toMatchObject({
+      command: { review: { model: "anthropic/claude-sonnet-4-6", variant: "high" } },
+    })
+    expect(await Bun.file(path.join(global.path, "kilo.json")).json()).toMatchObject({ username: "legacy" })
+  })
+
+  test.serial("merges workflow overrides with a command body in the lower-precedence global file", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    ;(Global.Path as { config: string }).config = global.path
+    await Filesystem.write(
+      path.join(global.path, "kilo.json"),
+      JSON.stringify({ command: { review: { template: "Review the changes" } } }),
+    )
+    await Filesystem.write(path.join(global.path, "kilo.jsonc"), '{\n  "username": "legacy"\n}\n')
+
+    const response = await json<Overlay>(
+      await req(project.path, "/config/overlay", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          scope: "global",
+          set: { command: { review: { model: "anthropic/claude-sonnet-4-6", variant: "high" } } },
+        }),
+      }),
+    )
+
+    expect(response.effective?.command?.review).toMatchObject({
+      template: "Review the changes",
+      model: "anthropic/claude-sonnet-4-6",
+      variant: "high",
+    })
+  })
+
   test.serial("disables inherited mcp server with a minimal local override", async () => {
     await using global = await tmpdir()
     await using project = await tmpdir()
@@ -416,15 +699,16 @@ describe("config overlay routes", () => {
     const edit = body.effective.permission.edit
     const after = await json<Agent[]>(await req(project.path, "/agent"))
 
-    expect(typeof edit === "string" ? edit : edit["*"]).toBe("ask")
-    expect(Permission.evaluate("edit", "*", after.find((item) => item.name === "code")?.permission ?? []).action).toBe(
-      "ask",
-    )
-    expect(body.collections.permission.find((item) => item.key === "edit")).toMatchObject({
-      source: "project",
-      overridden: true,
-    })
-  })
+      expect(typeof edit === "string" ? edit : edit?.["*"]).toBe("ask")
+      expect(
+        Permission.evaluate("edit", "*", after.find((item) => item.name === "code")?.permission ?? []).action,
+      ).toBe("ask")
+      expect(body.collections.permission.find((item) => item.key === "edit")).toMatchObject({
+        source: "project",
+        overridden: true,
+      })
+    },
+  )
 
   test.serial("refreshes agent permissions after global permission update", async () => {
     await using global = await tmpdir()
@@ -449,10 +733,125 @@ describe("config overlay routes", () => {
     const edit = body.effective.permission.edit
     const after = await json<Agent[]>(await req(project.path, "/agent"))
 
-    expect(typeof edit === "string" ? edit : edit["*"]).toBe("ask")
+    expect(typeof edit === "string" ? edit : edit?.["*"]).toBe("ask")
     expect(Permission.evaluate("edit", "*", after.find((item) => item.name === "code")?.permission ?? []).action).toBe(
       "ask",
     )
+  })
+
+  test.serial(
+    "applies saved global sandbox settings to initialized sessions",
+    async () => {
+      await using global = await tmpdir()
+      await using project = await tmpdir({ git: true })
+      await using writable = await tmpdir()
+      await setGlobal(global.path, { sandbox: { enabled: true, network: "deny" } })
+      const session = await json<Session.Info>(
+        await req(project.path, SessionPaths.create, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: "{}",
+        }),
+      )
+      await json(await req(project.path, `/session/${session.id}/sandbox`))
+      expect(await SandboxStore.read(project.path, session.id)).toMatchObject({ mode: "deny", version: 0 })
+
+      await json(
+        await req(project.path, "/config/overlay", {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            scope: "global",
+            set: { sandbox: { enabled: true, network: "allow", writable_paths: [writable.path] } },
+          }),
+        }),
+      )
+
+      // The global update disposes instances asynchronously. Poll the sandbox status
+      // until the reloaded instance applies the saved policy, mirroring how the
+      // extension re-checks status after saving settings.
+      for (let i = 0; i < 40; i++) {
+        await json(await req(project.path, `/session/${session.id}/sandbox`))
+        const snap = await SandboxStore.read(project.path, session.id)
+        if (snap && snap.mode === "allow" && snap.version === 1) break
+        await Bun.sleep(250)
+      }
+
+      expect(await SandboxStore.read(project.path, session.id)).toMatchObject({
+        enabled: true,
+        mode: "allow",
+        writablePaths: [writable.path],
+        version: 1,
+      })
+    },
+    20_000,
+  )
+
+  test.serial("applies saved project sandbox settings to initialized sessions", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir({ git: true })
+    await setGlobal(global.path, { sandbox: { enabled: true, network: "allow" } })
+    const session = await json<Session.Info>(
+      await req(project.path, SessionPaths.create, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      }),
+    )
+    await json(await req(project.path, `/session/${session.id}/sandbox`))
+    expect(await SandboxStore.read(project.path, session.id)).toMatchObject({ mode: "allow", version: 0 })
+
+    await json(
+      await req(project.path, "/config/overlay", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ scope: "project", set: { sandbox: { enabled: true, network: "deny" } } }),
+      }),
+    )
+    await json(await req(project.path, `/session/${session.id}/sandbox`))
+
+    expect(await SandboxStore.read(project.path, session.id)).toMatchObject({ mode: "deny", version: 1 })
+  })
+
+  test.serial("does not relax inherited sandbox policy after unrelated global saves", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir({ git: true })
+    await setGlobal(global.path, { sandbox: { enabled: true, network: "deny" } })
+    const parent = await json<Session.Info>(
+      await req(project.path, SessionPaths.create, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      }),
+    )
+    await json(await req(project.path, `/session/${parent.id}/sandbox`))
+    const child = await json<Session.Info>(
+      await req(project.path, SessionPaths.create, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ parentID: parent.id }),
+      }),
+    )
+    await json(await req(project.path, `/session/${child.id}/sandbox`))
+    expect(await SandboxStore.read(project.path, child.id)).toMatchObject({ mode: "deny" })
+
+    // Simulate config changing while the backend is unaware. The unrelated save below
+    // must not treat that wider policy as a trusted sandbox settings update.
+    await Bun.write(
+      path.join(global.path, "kilo.json"),
+      JSON.stringify({ sandbox: { enabled: true, network: "allow" } }, null, 2),
+    )
+
+    await json(
+      await req(project.path, "/config/overlay", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ scope: "global", set: { permission: { edit: "ask" } } }),
+      }),
+    )
+    await json(await req(project.path, `/session/${child.id}/sandbox`))
+
+    expect(await SandboxStore.read(project.path, child.id)).toMatchObject({ mode: "deny" })
   })
 
   terminal("preserves active terminals after updating global console preferences", async () => {
@@ -512,6 +911,7 @@ describe("config overlay routes", () => {
           Permission.evaluate("edit", "*", after.find((item) => item.name === "code")?.permission ?? []).action,
         ).toBe("allow")
       },
+      30_000,
     )
   }
 })

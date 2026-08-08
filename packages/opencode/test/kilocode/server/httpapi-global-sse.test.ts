@@ -36,7 +36,7 @@ const apiLayer = HttpRouter.serve(
       upgrade: () => Effect.void,
     }),
   ),
-  Layer.provide(ServerAuth.Config.layer({ password: Option.none(), username: "opencode" })),
+  Layer.provide(ServerAuth.Config.configLayer({ password: Option.none(), username: "opencode" })),
   // Raw HttpApi routes expose an opaque handler context at the web boundary.
   // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion
   Layer.provide(Layer.succeedContext(Context.empty() as Context.Context<unknown>)),

@@ -13,7 +13,7 @@ interface Toast {
 
 export function createRevertFile(
   diffScopeId: Accessor<string | undefined>,
-  currentDiffSessionId: Accessor<string | undefined>,
+  ctx: Accessor<string | undefined>,
   scope: Accessor<string>,
   vscode: VsCode,
   showToast: (t: Toast) => void,
@@ -29,14 +29,14 @@ export function createRevertFile(
 
   function revert(file: string) {
     const id = diffScopeId()
-    const sessionId = currentDiffSessionId()
-    if (!id || !sessionId) return
+    const context = ctx()
+    if (!id || !context) return
     setFiles((prev) => {
       const set = new Set(prev[id] ?? [])
       set.add(file)
       return { ...prev, [id]: set }
     })
-    vscode.postMessage({ type: "agentManager.revertWorktreeFile", sessionId, file, scope: scope() })
+    vscode.postMessage({ type: "agentManager.revertWorktreeFile", sessionId: context, file, scope: scope() })
   }
 
   function onResult(ev: AgentManagerRevertWorktreeFileResultMessage) {

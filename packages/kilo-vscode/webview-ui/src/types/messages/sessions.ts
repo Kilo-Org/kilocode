@@ -60,6 +60,10 @@ export interface SessionInfo {
   } | null
 }
 
+export interface ProjectSessionInfo extends SessionInfo {
+  worktreeId: string | null
+}
+
 export type SessionUpdate = Partial<SessionInfo> & Pick<SessionInfo, "id">
 
 // Cloud session info (from Kilo cloud API)

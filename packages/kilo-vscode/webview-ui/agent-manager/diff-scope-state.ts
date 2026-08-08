@@ -1,11 +1,13 @@
 /**
  * Webview-side diff scope state for Agent Manager.
  *
- * Mirrors the extension's composite diff id (`ctx#scope`, see
- * `src/agent-manager/diff-scope.ts`) and builds the fixed scope descriptor
- * list shown in the scope selector. Agent Manager always offers the same four
- * scopes per context, so the descriptors are computed client-side rather than
- * pushed from the extension.
+ * Mirrors the extension's composite diff id (`ctx#scope`, or `ctx#session:<sid>`
+ * for the session scope — see `src/agent-manager/diff-scope.ts`) and builds the
+ * fixed scope descriptor list shown in the scope selector. The context is the
+ * sidebar selection (a worktree id or the `local` pseudo-context), so it stays
+ * stable across session tab switches; only the Session scope follows the active
+ * session. Agent Manager always offers the same four scopes per context, so the
+ * descriptors are computed client-side rather than pushed from the extension.
  */
 
 import { createMemo, createSignal, type Accessor } from "solid-js"
@@ -16,15 +18,20 @@ export type DiffScope = "branch" | "staged" | "unstaged" | "session"
 export const DEFAULT_DIFF_SCOPE: DiffScope = "branch"
 
 const SEP = "#"
+const SESSION_TOKEN = "session:"
 
-export function composeDiffId(ctx: string, scope: DiffScope): string {
+export function composeDiffId(ctx: string, scope: DiffScope, sessionId?: string): string {
+  if (scope === "session" && sessionId) return `${ctx}${SEP}${SESSION_TOKEN}${sessionId}`
   return `${ctx}${SEP}${scope}`
 }
 
-export function parseDiffId(id: string): { ctx: string; scope: DiffScope } {
+export function parseDiffId(id: string): { ctx: string; scope: DiffScope; sessionId?: string } {
   const idx = id.lastIndexOf(SEP)
-  const scope = id.slice(idx + SEP.length)
-  if (idx !== -1 && isDiffScope(scope)) return { ctx: id.slice(0, idx), scope }
+  if (idx === -1) return { ctx: id, scope: DEFAULT_DIFF_SCOPE }
+  const token = id.slice(idx + SEP.length)
+  const ctx = id.slice(0, idx)
+  if (token.startsWith(SESSION_TOKEN)) return { ctx, scope: "session", sessionId: token.slice(SESSION_TOKEN.length) }
+  if (isDiffScope(token)) return { ctx, scope: token }
   return { ctx: id, scope: DEFAULT_DIFF_SCOPE }
 }
 
@@ -35,10 +42,11 @@ export function isDiffScope(value: string): value is DiffScope {
 /**
  * The fixed scope descriptors for a context. `workspace` maps to the Branch
  * scope to reuse the existing i18n keys (`diffViewer.source.workspace.*`).
- * Session scope is only meaningful for a real session context, so it is
- * omitted for the `local` pseudo-context and for contexts without a session.
+ * Session scope is only meaningful when the context has an active session, so
+ * it is omitted while a context has none (e.g. an empty worktree or the local
+ * context with no open session).
  */
-export function scopeDescriptors(ctx: string, hasSession: boolean): DiffSourceDescriptor[] {
+export function scopeDescriptors(ctx: string, sessionId?: string): DiffSourceDescriptor[] {
   const out: DiffSourceDescriptor[] = [
     {
       id: composeDiffId(ctx, "branch"),
@@ -54,9 +62,9 @@ export function scopeDescriptors(ctx: string, hasSession: boolean): DiffSourceDe
       capabilities: { revert: false, comments: true },
     },
   ]
-  if (hasSession) {
+  if (sessionId) {
     out.push({
-      id: composeDiffId(ctx, "session"),
+      id: composeDiffId(ctx, "session", sessionId),
       type: "session",
       group: "Session",
       capabilities: { revert: false, comments: true },
@@ -76,7 +84,8 @@ export function scopeCapabilities(scope: DiffScope): { revert: boolean; comments
 /**
  * Per-context scope selection. Keeps the last-picked scope per context id so
  * switching between worktrees restores each worktree's scope, while a brand
- * new context defaults to Branch.
+ * new context defaults to Branch. The context is the sidebar selection, so the
+ * picked scope survives session tab switches inside the context.
  */
 export function createDiffScope(currentCtx: Accessor<string | undefined>) {
   const [scopes, setScopes] = createSignal<Record<string, DiffScope>>({})
@@ -87,17 +96,11 @@ export function createDiffScope(currentCtx: Accessor<string | undefined>) {
     return scopes()[ctx] ?? DEFAULT_DIFF_SCOPE
   })
 
-  const id = createMemo(() => {
-    const ctx = currentCtx()
-    if (!ctx) return undefined
-    return composeDiffId(ctx, scope())
-  })
-
   const setScope = (next: DiffScope) => {
     const ctx = currentCtx()
     if (!ctx) return
     setScopes((prev) => ({ ...prev, [ctx]: next }))
   }
 
-  return { scope, id, setScope }
+  return { scope, setScope }
 }

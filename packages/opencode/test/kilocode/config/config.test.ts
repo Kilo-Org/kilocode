@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { $ } from "bun"
 import { afterEach, describe, expect, test } from "bun:test"
 import { Effect, Layer, Option, Schema } from "effect"
@@ -11,6 +12,7 @@ import { Npm } from "@opencode-ai/core/npm"
 import { HttpClient } from "effect/unstable/http"
 import { Account } from "../../../src/account/account"
 import { Auth } from "../../../src/auth"
+import { GlobalBus } from "../../../src/bus/global"
 import { Config } from "../../../src/config/config"
 import { ConfigMarkdown } from "../../../src/config/markdown"
 import { ConfigParse } from "../../../src/config/parse"
@@ -21,8 +23,9 @@ import { KilocodeConfig } from "../../../src/kilocode/config/config"
 import { provideTestInstance } from "../../fixture/fixture"
 import { Filesystem } from "../../../src/util/filesystem"
 import { disposeAllInstances, tmpdir } from "../../fixture/fixture"
+import { LayerNodePlatform } from "@opencode-ai/core/effect/app-node-platform"
 
-const infra = CrossSpawnSpawner.defaultLayer.pipe(
+const infra = AppNodeBuilder.build(CrossSpawnSpawner.node).pipe(
   Layer.provideMerge(Layer.mergeAll(NodeFileSystem.layer, NodePath.layer)),
 )
 const emptyAccount = Layer.mock(Account.Service)({
@@ -35,22 +38,17 @@ const emptyAuth = Layer.mock(Auth.Service)({
 const noopNpm = Layer.mock(Npm.Service)({
   install: () => Effect.void,
   add: () => Effect.die("not implemented"),
-  which: () => Effect.succeed(Option.none()),
+  which: () => Effect.succeed(undefined),
 })
 const unexpectedHttp = HttpClient.make((request) =>
   Effect.die(`unexpected http request: ${request.method} ${request.url}`),
 )
-const layer = Config.layer.pipe(
-  Layer.provide(Git.defaultLayer),
-  Layer.provide(EffectFlock.defaultLayer),
-  Layer.provide(FSUtil.defaultLayer),
-  Layer.provide(Env.defaultLayer),
-  Layer.provide(emptyAuth),
-  Layer.provide(emptyAccount),
-  Layer.provideMerge(infra),
-  Layer.provide(noopNpm),
-  Layer.provide(Layer.succeed(HttpClient.HttpClient, unexpectedHttp)),
-)
+const layer = AppNodeBuilder.build(Config.node, [
+  [Auth.node, emptyAuth],
+  [Account.node, emptyAccount],
+  [Npm.node, noopNpm],
+  [LayerNodePlatform.httpClient, Layer.succeed(HttpClient.HttpClient, unexpectedHttp)],
+]).pipe(Layer.provideMerge(infra))
 
 const load = () => Effect.runPromise(Config.Service.use((svc) => svc.get()).pipe(Effect.scoped, Effect.provide(layer)))
 const clear = () =>
@@ -113,6 +111,45 @@ describe("markdown substitutions", () => {
 })
 
 describe("global config updates", () => {
+  test("marks only sandbox updates for live policy refresh", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir()
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear()
+    await disposeAllInstances()
+    const events: Array<{ payload?: { type?: string; properties?: { sandbox?: boolean } } }> = []
+    const listener = (event: (typeof events)[number]) => events.push(event)
+    GlobalBus.on("event", listener)
+
+    try {
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          await Effect.runPromise(
+            Config.Service.use((svc) =>
+              Effect.all([
+                svc.updateGlobal({ permission: { edit: "ask" } }, { dispose: false }),
+                svc.updateGlobal({ sandbox: { network: "deny" } }, { dispose: false }),
+              ]),
+            ).pipe(Effect.scoped, Effect.provide(layer)),
+          )
+        },
+      })
+
+      expect(
+        events
+          .filter((event) => event.payload?.type === "global.config.updated")
+          .map((event) => event.payload?.properties?.sandbox),
+      ).toEqual([false, true])
+    } finally {
+      GlobalBus.off("event", listener)
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
   test("preserves concurrent permission updates", async () => {
     await using globalTmp = await tmpdir()
     await using tmp = await tmpdir()

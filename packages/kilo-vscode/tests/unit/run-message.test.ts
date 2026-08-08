@@ -27,4 +27,49 @@ describe("Agent Manager Run messages", () => {
     expect(handleRunMessage(item.value, msg)).toBe(true)
     expect(item.run).toHaveBeenCalledWith("wt-1", destination)
   })
+
+  it("applies the project qualifier to the shared local key", () => {
+    const item = controller()
+    const qualify = (id: string) => (id === "local" ? "prj-a:local" : id)
+
+    expect(
+      handleRunMessage(
+        item.value,
+        { type: "agentManager.runScript", worktreeId: "local", destination: "vscode" } as AgentManagerInMessage,
+        qualify,
+      ),
+    ).toBe(true)
+    expect(item.run).toHaveBeenCalledWith("prj-a:local", "vscode")
+
+    expect(
+      handleRunMessage(
+        item.value,
+        { type: "agentManager.stopRunScript", worktreeId: "local" } as AgentManagerInMessage,
+        qualify,
+      ),
+    ).toBe(true)
+    expect(item.stop).toHaveBeenCalledWith("prj-a:local")
+  })
+
+  it("leaves worktree ids unqualified and works without a qualifier", () => {
+    const item = controller()
+    const qualify = (id: string) => (id === "local" ? `${id}:qualified` : id)
+
+    expect(
+      handleRunMessage(
+        item.value,
+        { type: "agentManager.runScript", worktreeId: "wt-1", destination: "vscode" } as AgentManagerInMessage,
+        qualify,
+      ),
+    ).toBe(true)
+    expect(item.run).toHaveBeenCalledWith("wt-1", "vscode")
+
+    expect(
+      handleRunMessage(item.value, {
+        type: "agentManager.stopRunScript",
+        worktreeId: "local",
+      } as AgentManagerInMessage),
+    ).toBe(true)
+    expect(item.stop).toHaveBeenCalledWith("local")
+  })
 })

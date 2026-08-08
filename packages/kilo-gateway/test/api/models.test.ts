@@ -1,7 +1,7 @@
 // Verifies fetchKiloModels typed result and 401 fallback behaviour.
 
 import { test, expect } from "bun:test"
-import { fetchKiloModels } from "../../src/api/models.js"
+import { fetchKiloModels, fetchKiloTranscriptionModels } from "../../src/api/models.js"
 
 const VALID_RESPONSE = JSON.stringify({
   data: [
@@ -329,4 +329,57 @@ test("keeps image-output models with tools and drops models without tools", asyn
   expect(result.models["black-forest-labs/flux-1.1-pro"]).toBeDefined()
   expect(result.models["test/model-a"]).toBeDefined()
   expect(result.models["test/no-tools"]).toBeUndefined()
+})
+
+test("fetches and filters the transcription catalog", async () => {
+  const orig = globalThis.fetch
+  const calls: string[] = []
+  stubFetch(async (input) => {
+    calls.push(String(input))
+    return new Response(
+      JSON.stringify({
+        data: [
+          {
+            id: "fish-audio/transcribe-1",
+            name: "Fish Audio: Transcribe 1",
+          },
+        ],
+      }),
+      { status: 200, headers: { "content-type": "application/json" } },
+    )
+  })
+
+  const result = await fetchKiloTranscriptionModels({ kilocodeToken: "token" })
+
+  ;(globalThis as any).fetch = orig
+
+  expect(result.error).toBeUndefined()
+  expect(result.models).toEqual([
+    {
+      id: "fish-audio/transcribe-1",
+      name: "Fish Audio: Transcribe 1",
+    },
+  ])
+  expect(calls[0]).toContain("/api/gateway/transcription-models")
+})
+
+test("keeps organization catalog errors from silently falling back to personal models", async () => {
+  const orig = globalThis.fetch
+  const calls: string[] = []
+  const headers: Headers[] = []
+  stubFetch(async (input, init) => {
+    calls.push(String(input))
+    headers.push(new Headers(init?.headers))
+    return new Response("Forbidden", { status: 403 })
+  })
+
+  const result = await fetchKiloTranscriptionModels({ kilocodeToken: "token", kilocodeOrganizationId: "org-1" })
+
+  ;(globalThis as any).fetch = orig
+
+  expect(result.models).toEqual([])
+  expect(result.error?.kind).toBe("unauthorized")
+  expect(calls).toHaveLength(1)
+  expect(calls[0]).toContain("/api/gateway/transcription-models")
+  expect(headers[0]?.get("X-KILOCODE-ORGANIZATIONID")).toBe("org-1")
 })

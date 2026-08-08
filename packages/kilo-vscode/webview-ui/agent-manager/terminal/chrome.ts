@@ -21,3 +21,22 @@ export function terminalChrome(title: string, status: ScriptTerminalStatus | und
     tooltip: `${title} (Failed${status.exitCode === undefined ? "" : `, code ${status.exitCode}`})`,
   }
 }
+
+/**
+ * A running Setup script must finish (or time out) on its own: closing its
+ * tab would silently kill worktree provisioning. Run tabs stay closable
+ * because close means stop there.
+ */
+export function terminalClosable(status: ScriptTerminalStatus | undefined): boolean {
+  if (status?.kind !== "setup") return true
+  return status.state !== "running" && status.state !== "stopping"
+}
+
+/**
+ * A running Setup script can always be stopped deliberately: the stop
+ * action kills the process tree and worktree creation continues without
+ * it, which is the escape hatch for scripts that run too long.
+ */
+export function terminalStoppable(status: ScriptTerminalStatus | undefined): boolean {
+  return status?.kind === "setup" && status.state === "running"
+}

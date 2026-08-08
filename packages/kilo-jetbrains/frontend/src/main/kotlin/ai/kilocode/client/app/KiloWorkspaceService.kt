@@ -4,6 +4,7 @@ package ai.kilocode.client.app
 
 import ai.kilocode.rpc.KiloWorkspaceRpcApi
 import ai.kilocode.rpc.dto.ConfigTargetDto
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.FileSearchResultDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
@@ -155,6 +156,25 @@ class KiloWorkspaceService internal constructor(
             call { gitChanges(directory) }
         } catch (e: Exception) {
             LOG.warn("git changes lookup failed for directory=$directory", e)
+            null
+        }
+    }
+
+    /**
+     * Committed branch changes vs the default-branch merge-base. Errors propagate so the diff editor
+     * can surface a retry (a swallowed failure is indistinguishable from "no changes"); pass
+     * [patches] = false on the badge path to fetch stats only and skip materializing patch text.
+     */
+    suspend fun branchDiff(directory: String, patches: Boolean = true): List<DiffFileDto> =
+        call { branchDiff(directory, patches) }
+
+    suspend fun branchName(directory: String): String? {
+        return try {
+            call { branchName(directory) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            LOG.warn("branch name lookup failed for directory=$directory", e)
             null
         }
     }

@@ -14,6 +14,7 @@ import { createEffect, createMemo, createSignal, on, type Accessor } from "solid
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { groupApplyConflicts } from "./apply-conflicts"
 import { ApplyDialog } from "./ApplyDialog"
+import { composeDiffId } from "./diff-scope-state"
 import type { tracker } from "./telemetry"
 import type { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import type { useLanguage } from "../src/context/language"
@@ -37,7 +38,6 @@ interface ApplyToLocalOptions {
   worktrees: Accessor<{ id: string }[]>
   diffDatas: Accessor<Record<string, WorktreeFileDiff[]>>
   diffLoading: Accessor<boolean>
-  resolveWorktreeSessionId: (worktreeId: string) => string | undefined
   /** Telemetry: metrics.track(name, surface, data). */
   track: ReturnType<typeof tracker>["track"]
 }
@@ -62,19 +62,18 @@ export function createApplyToLocal(opts: ApplyToLocalOptions) {
     return state.status === "checking" || state.status === "applying"
   })
 
-  const applyTargetSessionId = createMemo(() => {
+  // Apply diffs come from the branch-scoped diff data of the target worktree
+  // (keyed by `worktreeId#branch`, matching the review surfaces).
+  const applyDiffKey = createMemo(() => {
     const target = applyTarget()
     if (!target) return undefined
-    return opts.resolveWorktreeSessionId(target)
+    return composeDiffId(target, "branch")
   })
 
   const applyDiffs = createMemo(() => {
-    const target = applyTarget()
-    if (!target) return [] as WorktreeFileDiff[]
-    const data = diffDatas()
-    const current = applyTargetSessionId()
-    if (current && data[current]) return data[current]!
-    return [] as WorktreeFileDiff[]
+    const key = applyDiffKey()
+    if (!key) return [] as WorktreeFileDiff[]
+    return diffDatas()[key] ?? ([] as WorktreeFileDiff[])
   })
 
   const applyStateForTarget = createMemo(() => {
@@ -178,8 +177,7 @@ export function createApplyToLocal(opts: ApplyToLocalOptions) {
     setApplyTarget(sel)
     setApplySelectionTouched(false)
     setApplySelectedFiles([])
-    const sid = opts.resolveWorktreeSessionId(sel)
-    if (sid) vscode.postMessage({ type: "agentManager.requestWorktreeDiff", sessionId: sid })
+    vscode.postMessage({ type: "agentManager.requestWorktreeDiff", sessionId: sel })
 
     setApplySelectedFiles(applyDiffs().map((diff) => diff.file))
 
@@ -278,6 +276,7 @@ export function createApplyToLocal(opts: ApplyToLocalOptions) {
   }
 
   return {
+    applyStateForSelection,
     applyBusyForSelection,
     openApplyDialog,
     onApplyResult,

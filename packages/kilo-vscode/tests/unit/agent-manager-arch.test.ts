@@ -23,6 +23,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/UnassignedSessionsSection.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/NewWorktreeDialog.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectSelect.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/DiffPanel.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/FullScreenDiffView.tsx"),
@@ -38,9 +39,18 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/ApplyDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/WorktreeItem.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SectionHeader.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/SidebarSectionHeader.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SidebarSearchMenu.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SidebarToggleButton.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/WorktreeSectionActions.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectsSection.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectSidebarBody.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectList.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectActions.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/SidebarBody.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/TabBar.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectBranchDialog.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/DefaultBaseBranchDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/tab-rendering.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/TerminalTab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/SideTerminalPanel.tsx"),
@@ -55,6 +65,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/diff-viewer/BaseBranchPicker.tsx"),
 ]
 const TSX_FILE = TSX_FILES[0]!
+const KEYBIND_DEFAULTS_FILE = path.join(ROOT, "webview-ui/agent-manager/keybind-defaults.ts")
 const PROVIDER_FILE = path.join(ROOT, "src/agent-manager/AgentManagerProvider.ts")
 const DIFF_CONTROLLER_FILE = path.join(ROOT, "src/agent-manager/worktree-diff-controller.ts")
 const IMPORTER_FILE = path.join(ROOT, "src/agent-manager/worktree-importer.ts")
@@ -156,7 +167,15 @@ describe("Agent Manager Provider Messages", () => {
     const cls = source.getFirstDescendantByKind(SyntaxKind.ClassDeclaration)
     const method = cls?.getMethod(name)
     expect(method, `method ${name} not found in AgentManagerProvider`).toBeTruthy()
-    return method!.getText()
+    const text = method!.getText()
+    // Follow one-line delegations into the extracted lifecycle module so the
+    // assertions keep covering the real handler logic.
+    const delegated = text.match(/return (\w+Lifecycle\w+)\(/)
+    if (!delegated) return text
+    const lifecycle = project.addSourceFileAtPath(path.join(ROOT, "src/agent-manager/provider-lifecycle.ts"))
+    const fn = lifecycle.getFunction(delegated[1]!)
+    expect(fn, `delegated function ${delegated[1]} not found in provider-lifecycle`).toBeTruthy()
+    return fn!.getText()
   }
 
   /**
@@ -184,8 +203,38 @@ describe("Agent Manager Provider Messages", () => {
     expect(warmup).toBeLessThan(create)
   })
 
+  /**
+   * Regression: WorktreeDiffController calls getRoot() eagerly during
+   * construction, so the project contexts must exist before it is created.
+   * Constructing them later crashed extension activation at runtime.
+   */
+  it("creates project wiring before services that eagerly read the root", () => {
+    const text = fs.readFileSync(PROVIDER_FILE, "utf-8")
+    const wiring = text.indexOf("createProjectWiring(")
+    const diffs = text.indexOf("new WorktreeDiffController(")
+
+    expect(wiring).toBeGreaterThanOrEqual(0)
+    expect(diffs).toBeGreaterThanOrEqual(0)
+    expect(wiring).toBeLessThan(diffs)
+  })
+
+  /**
+   * Regression: project-management messages must be consumed before the
+   * state gate, because selectProject triggers the state initialization
+   * that later messages wait for.
+   */
+  it("handles project messages before state-gated dispatch", () => {
+    const body = getMethodBody("onMessage") + getMethodBody("dispatchMessage")
+    const projects = body.indexOf("handleProjectMessage(m, this.projects)")
+    const gate = body.indexOf("if (this.shouldWaitForState(m))")
+
+    expect(projects).toBeGreaterThanOrEqual(0)
+    expect(gate).toBeGreaterThanOrEqual(0)
+    expect(projects).toBeLessThan(gate)
+  })
+
   it("state-mutating messages wait for state initialization", () => {
-    const body = getMethodBody("shouldWaitForState")
+    const body = fs.readFileSync(path.join(ROOT, "src/agent-manager/project/state-gate.ts"), "utf-8")
     const messages = [
       "agentManager.setTabOrder",
       "agentManager.setWorktreeOrder",
@@ -201,13 +250,13 @@ describe("Agent Manager Provider Messages", () => {
       expect(body, `${message} should wait for loaded state`).toContain(message)
     }
 
-    expect(getMethodBody("onMessage")).toContain("if (this.shouldWaitForState(m)) await this.waitForStateReady(m.type)")
+    expect(getMethodBody("dispatchMessage")).toContain("if (this.shouldWaitForState(m))")
   })
 
-  it("initializeState updates local git exclude before loading persisted state", () => {
-    const body = getMethodBody("initializeState")
-    const exclude = body.indexOf("await this.ensureGitExclude(manager)")
-    const load = body.indexOf("const loaded = await state.load()")
+  it("context state init updates local git exclude before loading persisted state", () => {
+    const text = fs.readFileSync(path.join(ROOT, "src/agent-manager/project/init.ts"), "utf-8")
+    const exclude = text.indexOf("ensureGitExclude(")
+    const load = text.indexOf("state.load()")
 
     expect(exclude).toBeGreaterThanOrEqual(0)
     expect(load).toBeGreaterThanOrEqual(0)
@@ -230,7 +279,7 @@ describe("Agent Manager Provider Messages", () => {
     expect(body).toContain("closedDrafts.add(sessionId)")
     expect(body).toContain('vscode.postMessage({ type: "agentManager.closeSession", sessionId })')
     expect(body).not.toContain('type: "agentManager.forgetSession"')
-    expect(getMethodBody("onCloseSession")).toContain("await this.panel?.sessions.abortSessions([sessionId])")
+    expect(getMethodBody("onCloseSession")).toContain("await host.sessions.abort([sessionId])")
     expect(text).toContain("if (created.draftID && closedDrafts.delete(created.draftID)) return")
   })
 
@@ -318,7 +367,6 @@ describe("Agent Manager Worktree Actions", () => {
     const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf-8")) as {
       contributes: { keybindings: { command: string; key?: string; mac?: string }[] }
     }
-    const source = fs.readFileSync(TSX_FILE, "utf-8")
     const dialog = manifest.contributes.keybindings.find(
       (item) => item.command === "kilo-code.new.agentManager.newWorktree",
     )
@@ -328,8 +376,31 @@ describe("Agent Manager Worktree Actions", () => {
 
     expect(dialog).toMatchObject({ key: "ctrl+n", mac: "cmd+n" })
     expect(quick).toMatchObject({ key: "ctrl+shift+n", mac: "cmd+shift+n" })
-    expect(source).toContain('newWorktree: isMac ? "⌘N" : "Ctrl+N"')
-    expect(source).toContain('quickWorktree: isMac ? "⌘⇧N" : "Ctrl+Shift+N"')
+    const bindings = fs.readFileSync(KEYBIND_DEFAULTS_FILE, "utf-8")
+    expect(bindings).toContain('newWorktree: isMac ? "⌘N" : "Ctrl+N"')
+    expect(bindings).toContain('quickWorktree: isMac ? "⌘⇧N" : "Ctrl+Shift+N"')
+  })
+
+  it("reserves Cmd+Shift+M for the Agent Manager instead of Problems", () => {
+    const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf-8")) as {
+      contributes: { keybindings: { command: string; key?: string; mac?: string }[] }
+    }
+    const removed = manifest.contributes.keybindings.find((item) => item.command === "-workbench.actions.view.problems")
+    const manager = manifest.contributes.keybindings.find((item) => item.command === "kilo-code.new.agentManagerOpen")
+
+    expect(removed).toMatchObject({ key: "ctrl+shift+m", mac: "cmd+shift+m" })
+    expect(manager).toMatchObject({ key: "ctrl+shift+m", mac: "cmd+shift+m" })
+  })
+
+  it("creates side terminals only while a side terminal owns focus", () => {
+    const source = fs.readFileSync(TSX_FILE, "utf-8")
+    const start = source.indexOf('else if (msg.action === "newTerminal")')
+    const end = source.indexOf('else if (msg.action === "cycleAgentMode"', start)
+    const action = source.slice(start, end)
+
+    expect(action).toContain("if (terms.sideFocusedId()) termHandlers.addSide()")
+    expect(action).not.toContain("terminalVisible()")
+    expect(action).toContain("else termHandlers.requestNew()")
   })
 
   it("forwards the quick-worktree command to immediate creation", () => {
@@ -381,7 +452,19 @@ describe("Agent Manager Provider — onMessage routing", () => {
     setup()
     const method = cls.getMethod(name)
     expect(method, `method ${name} not found`).toBeTruthy()
-    return method!.getText()
+    const text = method!.getText()
+    // Follow one-line delegations into the extracted handler modules so the
+    // assertions keep covering the real handler logic.
+    const delegated = text.match(/return (\w+Lifecycle\w+|createMultiVersion)\(/)
+    if (!delegated) return text
+    const module = delegated[1] === "createMultiVersion" ? "provider-multi-version.ts" : "provider-lifecycle.ts"
+    const lifecycle = source.getProject().addSourceFileAtPath(path.join(ROOT, "src/agent-manager", module))
+    const fn = lifecycle.getFunction(delegated[1]!)
+    expect(fn, `delegated function ${delegated[1]} not found in ${module}`).toBeTruthy()
+    // The multi-version flow spans prepare, provision, and initial-prompt helpers,
+    // so ordering assertions need the whole module, not just the orchestrator.
+    if (delegated[1] === "createMultiVersion") return lifecycle.getText()
+    return fn!.getText()
   }
 
   function provider(): string {
@@ -451,7 +534,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
   })
 
   it("onMessage delegates to cohesive routing groups", () => {
-    const text = body("onMessage")
+    const text = body("onMessage") + body("dispatchMessage")
     expect(text).toContain("onWorktreeMessage")
     expect(text).toContain("onSessionMessage")
     expect(text).toContain("onImportMessage")
@@ -460,7 +543,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
   })
 
   it("routes script terminal close and resize messages before user terminals", () => {
-    const text = body("onMessage")
+    const text = body("dispatchMessage")
     expect(text.indexOf("this.scripts.manager.intercept(m)")).toBeLessThan(
       text.indexOf("this.terminalRouter.handle(m)"),
     )
@@ -493,16 +576,17 @@ describe("Agent Manager Provider — onMessage routing", () => {
     expect(dest).not.toContain("getConfiguration")
   })
 
-  it("clears retained Run terminals before removing worktree state", () => {
+  it("clears retained script terminals before removing worktree state", () => {
     for (const name of ["onDeleteWorktree", "onRemoveStaleWorktree"]) {
       const text = body(name)
-      expect(text).toContain('this.scripts.manager.clear("run", worktreeId)')
-      expect(text.indexOf('this.scripts.manager.clear("run", worktreeId)')).toBeLessThan(
-        text.indexOf("state.removeWorktree"),
-      )
+      expect(text).toContain("host.clearRun(worktreeId)")
+      expect(text.indexOf("host.clearRun(worktreeId)")).toBeLessThan(text.indexOf("state.removeWorktree"))
     }
     const deleted = body("onDeleteWorktree")
-    expect(deleted.indexOf("statsPoller.skipWorktree")).toBeLessThan(deleted.indexOf("this.run.remove"))
+    expect(deleted.indexOf("host.skipStats")).toBeLessThan(deleted.indexOf("host.removeRun"))
+    const helper = fs.readFileSync(path.join(ROOT, "src/agent-manager/script-terminal-runtime.ts"), "utf-8")
+    expect(helper).toContain('manager.clear("run", worktreeId, projectId)')
+    expect(helper).toContain('manager.clear("setup", worktreeId, projectId)')
   })
 
   // -- onDeleteWorktree invariants -------------------------------------------
@@ -513,10 +597,10 @@ describe("Agent Manager Provider — onMessage routing", () => {
    */
   it("onDeleteWorktree removes from disk, state, clears orphans, and pushes", () => {
     const text = body("onDeleteWorktree")
-    expect(text).toContain("manager.removeWorktree")
+    expect(text).toContain("worktreeManager().removeWorktree")
     expect(text).toContain("state.removeWorktree")
-    expect(text).toContain("clearSessionDirectory")
-    expect(text).toContain("this.pushState()")
+    expect(text).toContain("sessions.clearDirectory")
+    expect(text).toContain("host.push()")
   })
 
   // -- onCreateWorktree invariants -------------------------------------------
@@ -528,8 +612,8 @@ describe("Agent Manager Provider — onMessage routing", () => {
    */
   it("onCreateWorktree runs setup script before creating session", () => {
     const text = body("onCreateWorktree")
-    const setupIdx = text.indexOf("runSetupScriptForWorktree")
-    const sessionIdx = text.indexOf("createSessionInWorktree")
+    const setupIdx = text.indexOf("host.runSetup(")
+    const sessionIdx = text.indexOf("host.createSession(")
     expect(setupIdx, "setup script call must exist").toBeGreaterThan(-1)
     expect(sessionIdx, "session creation call must exist").toBeGreaterThan(-1)
     expect(setupIdx, "setup script must run before session creation").toBeLessThan(sessionIdx)
@@ -546,8 +630,8 @@ describe("Agent Manager Provider — onMessage routing", () => {
 
   it("multi-version creation registers each session after publishing its worktree mapping", () => {
     const text = body("onCreateMultiVersion")
-    const ready = text.indexOf("this.notifyWorktreeReady(session.id, wt.result, wt.worktree.id)")
-    const register = text.indexOf("this.panel?.sessions.registerSession(session)")
+    const ready = text.indexOf("host.notifyReady(session.id, wt.result, wt.worktree.id)")
+    const register = text.indexOf("host.sessions.register(session)")
     const initial = text.indexOf("agentManager.sendInitialMessage")
 
     expect(ready, "multi-version path must publish ready state").toBeGreaterThan(-1)
@@ -564,7 +648,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
    */
   it("onPromoteSession runs setup script before modifying session", () => {
     const text = body("onPromoteSession")
-    const setupIdx = text.indexOf("runSetupScriptForWorktree")
+    const setupIdx = text.indexOf("host.runSetup(")
     const moveIdx = text.indexOf("moveSession")
     expect(setupIdx).toBeGreaterThan(-1)
     expect(moveIdx).toBeGreaterThan(-1)
@@ -631,7 +715,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
 
   it("worktree import behavior lives in the cohesive importer", () => {
     const text = importer()
-    for (const value of ["createFromPR", "createWorktree", "this.busy()"]) expect(text).toContain(value)
+    for (const value of ["createFromPR", "createWorktree", "this.busy(projectId)"]) expect(text).toContain(value)
     expect(body("onImportMessage")).toContain("this.importer")
   })
 
@@ -706,7 +790,7 @@ describe("Agent Manager Webview — non-git sessionsLoaded fix", () => {
     // Find the agentManager.state handler block
     const start = tsx.indexOf('"agentManager.state"')
     expect(start, "agentManager.state handler must exist").toBeGreaterThan(-1)
-    const snippet = tsx.slice(start, start + 800)
+    const snippet = tsx.slice(start, start + 1600)
     expect(snippet, "must call setSessionsLoaded in the non-git branch").toContain("setSessionsLoaded")
     expect(snippet, "must check isGitRepo === false before setting sessionsLoaded").toMatch(
       /isGitRepo.*false|false.*isGitRepo/,
@@ -783,7 +867,7 @@ describe("KiloProvider — pending session refresh on reconnect", () => {
 // ---------------------------------------------------------------------------
 
 describe("Agent Manager — dialog listener cleanup", () => {
-  const tsx = fs.readFileSync(TSX_FILE, "utf-8")
+  const tsx = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/DefaultBaseBranchDialog.tsx"), "utf-8")
 
   /**
    * Regression: handleChangeDefaultBaseBranch subscribes to vscode.onMessage
@@ -791,34 +875,20 @@ describe("Agent Manager — dialog listener cleanup", () => {
    * and the Escape keydown handler. If the dialog closed via backdrop click or
    * external dialog.close(), the listener leaked and stacked on every reopen.
    *
-   * The fix ties unsub() to Solid's onCleanup inside the dialog.show() render
-   * function so it always disposes regardless of how the dialog closes.
+   * The fix ties unsub() to the dialog component's Solid cleanup so it always
+   * disposes regardless of how the dialog closes.
    */
-  it("handleChangeDefaultBaseBranch uses onCleanup(unsub) inside dialog.show", () => {
-    const fnStart = tsx.indexOf("const handleChangeDefaultBaseBranch")
-    expect(fnStart, "handleChangeDefaultBaseBranch must exist").toBeGreaterThan(-1)
-
-    // Grab the function body (enough to cover the dialog.show callback)
-    const snippet = tsx.slice(fnStart, fnStart + 2000)
-
-    // The dialog.show callback must register onCleanup(unsub)
-    const showIdx = snippet.indexOf("dialog.show(")
-    expect(showIdx, "dialog.show() call must exist").toBeGreaterThan(-1)
-    const afterShow = snippet.slice(showIdx)
-    expect(afterShow, "onCleanup(unsub) must be inside dialog.show callback").toContain("onCleanup(unsub)")
+  it("DefaultBaseBranchDialog disposes its message listener on cleanup", () => {
+    expect(tsx).toContain("const unsub = vscode.onMessage")
+    expect(tsx).toContain("onCleanup(unsub)")
   })
 
-  it("selectBranch does not manually call unsub (handled by onCleanup)", () => {
-    const fnStart = tsx.indexOf("const handleChangeDefaultBaseBranch")
-    const snippet = tsx.slice(fnStart, fnStart + 2000)
-
-    // Find the selectBranch function body
-    const selStart = snippet.indexOf("const selectBranch")
-    expect(selStart, "selectBranch must exist").toBeGreaterThan(-1)
-    const selEnd = snippet.indexOf("}", selStart + 50)
-    const selBody = snippet.slice(selStart, selEnd + 1)
-
-    expect(selBody, "selectBranch should not call unsub() directly").not.toContain("unsub()")
+  it("select does not manually call unsub (handled by onCleanup)", () => {
+    const selStart = tsx.indexOf("const select =")
+    expect(selStart, "select must exist").toBeGreaterThan(-1)
+    const selEnd = tsx.indexOf("}", selStart + 40)
+    const selBody = tsx.slice(selStart, selEnd + 1)
+    expect(selBody, "select should not call unsub() directly").not.toContain("unsub()")
   })
 })
 
@@ -918,8 +988,8 @@ const VSCODE_ALLOWED: Record<string, { note: string }> = {
  */
 const MAX_LINES: Record<string, { maxLines: number; note: string }> = {
   "AgentManagerProvider.ts": {
-    maxLines: 2000,
-    note: "diff and import workflows are extracted into cohesive domain services; extract more orchestration next",
+    maxLines: 1900,
+    note: "worktree lifecycle handlers extracted into provider-lifecycle.ts; extract more orchestration next",
   },
 }
 
@@ -934,6 +1004,16 @@ function agentManagerSourceFiles(): string[] {
 }
 
 describe("Agent Manager — VS Code import boundary", () => {
+  it("routes GitHub CLI execution through execGhRead", () => {
+    const gh = path.join(AGENT_MANAGER_DIR, "gh.ts")
+    const violations = agentManagerSourceFiles()
+      .map((file) => path.join(AGENT_MANAGER_DIR, file))
+      .filter((file) => file !== gh)
+      .filter((file) => /(["'])gh(?:\.exe)?\1/.test(fs.readFileSync(file, "utf8")))
+      .map((file) => path.basename(file))
+    expect(violations).toEqual([])
+  })
+
   it("only allowlisted files may import vscode", () => {
     const violations: string[] = []
     for (const file of agentManagerSourceFiles()) {

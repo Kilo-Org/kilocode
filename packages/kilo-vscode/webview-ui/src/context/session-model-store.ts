@@ -78,6 +78,17 @@ export function getSelected(
   return resolveModel(env, agentName, store.modelSelections[agentName], store.recentModels)
 }
 
+/** Returns the effective model for a mode outside a session scope. */
+export function getAgentModel(
+  store: ModelStore,
+  env: ResolveEnv,
+  agentName: string,
+  userSet = false,
+): ModelSelection | null {
+  const override = env.getModeModel(agentName) && userSet ? null : store.modelSelections[agentName]
+  return resolveModel(env, agentName, override, store.recentModels)
+}
+
 export interface ApplyResult {
   modelSelections: Record<string, ModelSelection | null>
   sessionOverrides: Record<string, ModelSelection>

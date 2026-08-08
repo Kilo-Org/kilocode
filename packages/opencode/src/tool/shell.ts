@@ -12,6 +12,7 @@ import { FSUtil } from "@opencode-ai/core/fs-util"
 import { fileURLToPath } from "url"
 import { Config } from "@/config/config"
 import { RuntimeFlags } from "@/effect/runtime-flags"
+import { model as modelEnv } from "@/kilocode/process/env" // kilocode_change
 import { Shell } from "@opencode-ai/core/shell"
 import { ShellID } from "./shell/id"
 
@@ -433,7 +434,28 @@ export const ShellPermission = Effect.gen(function* () {
     )
   })
 
-  return { ask: check, resolve }
+  // kilocode_change start - expose the tree-sitter scan (sub-command patterns + external-dir globs) for skill-shell batching
+  const dirGlob = (dir: string) =>
+    process.platform === "win32" ? FSUtil.normalizePathPattern(path.join(dir, "*")) : path.join(dir, "*")
+  const decompose = Effect.fn("ShellTool.decompose")(function* (input: {
+    command: string
+    cwd: string
+    shell: string
+  }) {
+    const instance = yield* InstanceState.context
+    const ps = Shell.ps(input.shell)
+    return yield* Effect.scoped(
+      Effect.gen(function* () {
+        const tree = yield* Effect.acquireRelease(parse(input.command, ps), (tree) => Effect.sync(() => tree.delete()))
+        const scan = yield* collect(tree.rootNode, input.cwd, ps, input.shell, instance)
+        if (!containsPath(input.cwd, instance)) scan.dirs.add(input.cwd)
+        return { patterns: Array.from(scan.patterns), dirs: Array.from(scan.dirs, dirGlob) }
+      }),
+    )
+  })
+  // kilocode_change end
+
+  return { ask: check, resolve, decompose } // kilocode_change - decompose for skill-shell
 })
 // kilocode_change end
 
@@ -501,10 +523,7 @@ export const ShellTool = Tool.define(
         { cwd, sessionID: ctx.sessionID, callID: ctx.callID },
         { env: {} },
       )
-      return {
-        ...process.env,
-        ...extra.env,
-      }
+      return modelEnv(extra.env) // kilocode_change - model shells must not inherit backend credentials
     })
 
     const run = Effect.fn("ShellTool.run")(function* (
@@ -514,7 +533,7 @@ export const ShellTool = Tool.define(
         cwd: string
         env: NodeJS.ProcessEnv
         timeout: number
-        description: string
+        description: string // kilocode_change
       },
       ctx: Tool.Context,
     ) {
@@ -558,7 +577,6 @@ export const ShellTool = Tool.define(
       yield* ctx.metadata({
         metadata: {
           output: "",
-          description: input.description,
         },
       })
 
@@ -567,7 +585,8 @@ export const ShellTool = Tool.define(
           yield* Effect.addFinalizer(closeSink)
           const handle = yield* spawner.spawn(cmd(input.shell, input.command, input.cwd, input.env))
 
-          const reader = yield* Effect.forkScoped( // kilocode_change - keep the fiber so trailing output can be drained
+          const reader = yield* Effect.forkScoped(
+            // kilocode_change - keep the fiber so trailing output can be drained
             Stream.runForEach(Stream.decodeText(handle.all), (chunk) => {
               const size = Buffer.byteLength(chunk, "utf-8")
               list.push({ text: chunk, size })
@@ -599,7 +618,6 @@ export const ShellTool = Tool.define(
                       ctx.metadata({
                         metadata: {
                           output: last,
-                          description: input.description,
                         },
                       }),
                     ),
@@ -610,7 +628,6 @@ export const ShellTool = Tool.define(
               return ctx.metadata({
                 metadata: {
                   output: last,
-                  description: input.description,
                 },
               })
             }),
@@ -678,11 +695,11 @@ export const ShellTool = Tool.define(
         output += "\n\n<shell_metadata>\n" + meta.join("\n") + "\n</shell_metadata>"
       }
       return {
-        title: input.description,
+        title: input.description, // kilocode_change - UI shows the model's description, command goes in metadata
         metadata: {
           output: last || preview(output),
           exit: code,
-          description: input.description,
+          description: input.description, // kilocode_change
           truncated: cut,
           ...(cut && file ? { outputPath: file } : {}),
         },

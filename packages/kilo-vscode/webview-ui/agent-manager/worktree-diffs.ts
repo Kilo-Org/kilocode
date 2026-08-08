@@ -15,22 +15,24 @@ import type {
   AgentManagerWorktreeDiffFileMessage,
   AgentManagerWorktreeDiffLoadingMessage,
   AgentManagerWorktreeDiffMessage,
+  AgentManagerWorktreeDiffNoticeMessage,
   WorktreeFileDiff,
 } from "../src/types/messages"
 
 /**
- * Decompose a composite diff id (`ctx#scope`) into the wire fields the
- * extension expects. Bare ids (no scope separator) parse to the default
- * branch scope.
+ * Decompose a composite diff id (`ctx#scope`, or `ctx#session:<sid>`) into the
+ * wire fields the extension expects. Bare ids (no scope separator) parse to
+ * the default branch scope.
  */
-function wire(id: string) {
-  const { ctx, scope } = parseDiffId(id)
-  return { sessionId: ctx, scope }
+export function wireDiffId(id: string) {
+  const { ctx, scope, sessionId } = parseDiffId(id)
+  return { sessionId: ctx, scope, diffSessionId: sessionId }
 }
 
 export function createWorktreeDiffs(vscode: ReturnType<typeof useVSCode>) {
   const [diffDatas, setDiffDatas] = createSignal<Record<string, WorktreeFileDiff[]>>({})
   const [diffLoading, setDiffLoading] = createSignal(false)
+  const [diffNotices, setDiffNotices] = createSignal<Record<string, string | undefined>>({})
   const [diffFileLoading, setDiffFileLoading] = createSignal<Record<string, Record<string, true>>>({})
 
   const setDiffFilePending = (sessionId: string, file: string, value: boolean) => {
@@ -63,7 +65,7 @@ export function createWorktreeDiffs(vscode: ReturnType<typeof useVSCode>) {
   const requestDiffFile = (id: string, file: string) => {
     if (diffFileLoading()[id]?.[file]) return
     setDiffFilePending(id, file, true)
-    vscode.postMessage({ type: "agentManager.requestWorktreeDiffFile", file, ...wire(id) })
+    vscode.postMessage({ type: "agentManager.requestWorktreeDiffFile", file, ...wireDiffId(id) })
   }
 
   /** Files the backend flagged as stale in a merged update need a fresh fetch. */
@@ -72,7 +74,7 @@ export function createWorktreeDiffs(vscode: ReturnType<typeof useVSCode>) {
     for (const file of files) {
       if (loading[file]) continue
       setDiffFilePending(id, file, true)
-      vscode.postMessage({ type: "agentManager.requestWorktreeDiffFile", file, ...wire(id) })
+      vscode.postMessage({ type: "agentManager.requestWorktreeDiffFile", file, ...wireDiffId(id) })
     }
   }
 
@@ -115,15 +117,21 @@ export function createWorktreeDiffs(vscode: ReturnType<typeof useVSCode>) {
     setDiffLoading(ev.loading)
   }
 
+  const onWorktreeDiffNotice = (ev: AgentManagerWorktreeDiffNoticeMessage) => {
+    setDiffNotices((prev) => ({ ...prev, [ev.sessionId]: ev.notice }))
+  }
+
   return {
     diffDatas,
     diffLoading,
     setDiffLoading,
+    diffNotices,
     requestDiffFile,
     refreshStaleDiffs,
     diffFileLoadingFor,
     onWorktreeDiff,
     onWorktreeDiffFile,
     onWorktreeDiffLoading,
+    onWorktreeDiffNotice,
   }
 }

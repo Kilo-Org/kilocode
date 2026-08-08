@@ -15,7 +15,11 @@
 import { createSignal } from "solid-js"
 import type { Accessor } from "solid-js"
 import { LOCAL } from "../navigate"
-import type { ExtensionMessage, ScriptTerminalView } from "../../src/types/messages/extension-messages"
+import type {
+  ExtensionMessage,
+  ScriptTerminalKind,
+  ScriptTerminalView,
+} from "../../src/types/messages/extension-messages"
 import type { TerminalDestination, TerminalFont, TerminalPlacement } from "../../src/types/messages/agent-manager"
 
 export type { TerminalFont }
@@ -28,7 +32,7 @@ export const isTerminalTabId = (id: string): boolean =>
   id.startsWith(TERMINAL_PREFIX) || id.startsWith(SCRIPT_TERMINAL_PREFIX)
 
 /** Status is separate from mounted xterm records so snapshot updates never remount them. */
-export type ScriptTerminalStatus = Pick<ScriptTerminalView, "state" | "exitCode">
+export type ScriptTerminalStatus = Pick<ScriptTerminalView, "state" | "exitCode" | "kind">
 
 /** One row in `terminalsByContext`. `wsUrl` is short-lived and never persisted. */
 export interface TerminalTabState {
@@ -37,8 +41,8 @@ export interface TerminalTabState {
   wsUrl: string
   font: TerminalFont
   placement: TerminalPlacement
-  /** Provider-owned Run terminal, never created through the webview create flow. */
-  kind?: "run"
+  /** Provider-owned script terminal, never created through the webview create flow. */
+  kind?: ScriptTerminalKind
 }
 
 /** Terminal row enriched with the sidebar context it belongs to. Used by
@@ -63,18 +67,20 @@ interface SideRequest {
 }
 
 export interface TerminalStateControls {
-  /** Record received from `terminal.created`. */
+  /** Add a terminal record to one context. */
   add(worktreeId: string | null, term: TerminalTabState): void
+  /** Fill an optimistic terminal record without replacing its xterm-owning object. */
+  attach(terminalId: string, input: Pick<TerminalTabState, "title" | "wsUrl" | "font">): boolean
   /** Drop a terminal from its context (location resolved automatically).
    *  Returns the removed record so callers can react to placement. */
   remove(terminalId: string): TerminalTabStateWithContext | undefined
   /** Resolve the context key a terminal lives in, if any. */
   contextFor(terminalId: string): string | undefined
-  /** Whether a terminal belongs to a provider-owned Run script. */
+  /** Whether a terminal belongs to a provider-owned script (Run/Setup). */
   isScript(terminalId: string): boolean
-  /** Reactive Run state, kept apart from stable xterm terminal records. */
+  /** Reactive script state, kept apart from stable xterm terminal records. */
   scriptStatus(terminalId: string): ScriptTerminalStatus | undefined
-  /** Reconcile a complete provider-owned Run terminal snapshot. Returns newly hydrated records. */
+  /** Reconcile a complete provider-owned script terminal snapshot. Returns newly hydrated records. */
   syncScripts(views: ScriptTerminalView[]): TerminalTabStateWithContext[]
   /** All tab terminals for the given sidebar selection. */
   forSelection(selection: string | null): TerminalTabStateWithContext[]
@@ -246,9 +252,9 @@ export function createTerminalState(selection: Accessor<string | null>): Termina
     if (!key) return undefined
     const term = terminalsByContext()[key]?.find((t) => t.id === terminalId)
     if (!term) return undefined
-    // Run terminals always retain their semantic title, even when their
+    // Script terminals always retain their semantic title, even when their
     // command emits OSC title sequences.
-    if (term.kind === "run") return term.title
+    if (term.kind) return term.title
     return titles()[terminalId] ?? term.title
   }
 
@@ -270,7 +276,7 @@ export function createTerminalState(selection: Accessor<string | null>): Termina
 
   const isScript = (terminalId: string): boolean => {
     const key = contextFor(terminalId)
-    return terminalsByContext()[key ?? ""]?.some((term) => term.id === terminalId && term.kind === "run") ?? false
+    return terminalsByContext()[key ?? ""]?.some((term) => term.id === terminalId && term.kind !== undefined) ?? false
   }
 
   const scriptStatus = (terminalId: string): ScriptTerminalStatus | undefined => {
@@ -292,6 +298,19 @@ export function createTerminalState(selection: Accessor<string | null>): Termina
       const enriched: TerminalTabStateWithContext = { ...term, contextKey: key }
       return { ...prev, [key]: [...list, enriched] }
     })
+  }
+
+  const attach = (terminalId: string, input: Pick<TerminalTabState, "title" | "wsUrl" | "font">) => {
+    const key = contextFor(terminalId)
+    const term = terminalsByContext()[key ?? ""]?.find((item) => item.id === terminalId)
+    if (!term) return false
+    // Keep the record reference stable so Solid's <For> never remounts the
+    // xterm that already owns focus and buffered input.
+    term.title = input.title
+    term.wsUrl = input.wsUrl
+    term.font = input.font
+    setTitle(terminalId, input.title)
+    return true
   }
 
   const remove = (terminalId: string): TerminalTabStateWithContext | undefined => {
@@ -324,7 +343,7 @@ export function createTerminalState(selection: Accessor<string | null>): Termina
         return next
       })
     }
-    if (removed?.kind === "run" && scripts()[terminalId] !== undefined) {
+    if (removed?.kind && scripts()[terminalId] !== undefined) {
       setScripts((prev) => {
         const next = { ...prev }
         delete next[terminalId]
@@ -344,7 +363,7 @@ export function createTerminalState(selection: Accessor<string | null>): Termina
       const next: Record<string, TerminalTabStateWithContext[]> = {}
       for (const [key, list] of Object.entries(prev)) {
         const kept = list.filter((term) => {
-          if (term.kind !== "run" || ids.has(term.id)) return true
+          if (term.kind === undefined || ids.has(term.id)) return true
           removed.push(term)
           changed = true
           return false
@@ -352,16 +371,17 @@ export function createTerminalState(selection: Accessor<string | null>): Termina
         if (kept.length > 0) next[key] = kept
       }
       for (const view of views) {
-        const key = view.worktreeId ?? LOCAL
+        const target = view.worktreeId ?? LOCAL
+        const key = view.projectId ? `${view.projectId}:${target}` : target
         const list = next[key] ?? []
         if (list.some((term) => term.id === view.terminalId)) continue
         const term: TerminalTabStateWithContext = {
           id: view.terminalId,
-          title: "Run",
+          title: view.title,
           wsUrl: view.wsUrl,
           font: view.font,
           placement: "side",
-          kind: "run",
+          kind: view.kind,
           contextKey: key,
         }
         next[key] = [...list, term]
@@ -373,7 +393,7 @@ export function createTerminalState(selection: Accessor<string | null>): Termina
 
     const states: Record<string, ScriptTerminalStatus> = {}
     for (const view of views) {
-      const status: ScriptTerminalStatus = { state: view.state }
+      const status: ScriptTerminalStatus = { state: view.state, kind: view.kind }
       if (view.exitCode !== undefined) status.exitCode = view.exitCode
       states[view.terminalId] = status
     }
@@ -383,10 +403,24 @@ export function createTerminalState(selection: Accessor<string | null>): Termina
       for (const id of keys) {
         const before = prev[id]
         const after = states[id]
-        if (before?.state !== after?.state || before?.exitCode !== after?.exitCode) return states
+        if (before?.state !== after?.state || before?.exitCode !== after?.exitCode || before?.kind !== after?.kind)
+          return states
       }
       return prev
     })
+
+    if (added.length > 0) {
+      setActives((prev) => {
+        let changed = false
+        const next = { ...prev }
+        for (const term of added) {
+          if (next[term.contextKey]) continue
+          next[term.contextKey] = term.id
+          changed = true
+        }
+        return changed ? next : prev
+      })
+    }
 
     if (removed.length > 0) {
       const removedIds = new Set(removed.map((term) => term.id))
@@ -530,6 +564,7 @@ export function createTerminalState(selection: Accessor<string | null>): Termina
 
   return {
     add,
+    attach,
     remove,
     contextFor,
     isScript,
@@ -584,19 +619,41 @@ export interface TerminalHandlerDeps {
   /** Sentinel value for the LOCAL sidebar selection. */
   LOCAL: string
   REVIEW_TAB_ID: string
+  getFont: () => TerminalFont
 }
 
 /** Correlation ids for terminal create requests. */
 function newId(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID()
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+  return `${TERMINAL_PREFIX}${crypto.randomUUID()}`
 }
 
 /**
- * Build the close-terminal handler the main component wires to the
- * close button. Picks the next visible tab before dropping the entry
- * so focus flows naturally; notifies the extension last.
+ * Estimate initial terminal geometry from the current DOM container.
+ * Provides best-effort columns and rows so PTY spawn avoids the default
+ * 80-column line width before the first xterm fit pass commits.
  */
+function measureInitialDimensions(
+  placement: TerminalPlacement,
+  font: TerminalFont,
+): { cols: number; rows: number } | undefined {
+  if (typeof document === "undefined") return undefined
+  const selector =
+    placement === "side"
+      ? ".am-side-terminal-layer, .am-side-terminal, .am-diff-panel-wrapper"
+      : ".am-terminal-layer, .am-detail-stack"
+  const host = document.querySelector(selector) as HTMLElement | null
+  const rect = host?.getBoundingClientRect()
+  if (!rect || rect.width <= 0 || rect.height <= 0) return undefined
+  const cellWidth = font.fontSize > 0 ? font.fontSize * 0.6 : 7.2
+  const cellHeight = font.fontSize > 0 ? font.fontSize * 1.2 : 14.4
+  const availableWidth = Math.max(0, rect.width - 30)
+  const availableHeight = Math.max(0, rect.height - 16)
+  return {
+    cols: Math.max(10, Math.floor(availableWidth / cellWidth)),
+    rows: Math.max(3, Math.floor(availableHeight / cellHeight)),
+  }
+}
+
 export function createTerminalHandlers(deps: TerminalHandlerDeps) {
   const activate = (id: string) => {
     deps.state.setActiveId(id)
@@ -610,11 +667,43 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
   const requestNew = () => {
     const sel = deps.getSelection()
     if (sel === null) return
+    const font = deps.getFont()
+    const dims = measureInitialDimensions("tab", font)
     deps.postMessage({
       type: "agentManager.terminal.create",
       createId: newId(),
       placement: "tab",
       worktreeId: sel === deps.LOCAL ? null : sel,
+      cols: dims?.cols,
+      rows: dims?.rows,
+    })
+  }
+
+  const createSide = (focus = false) => {
+    const key = deps.state.sideKey()
+    // The wire protocol speaks plain worktree ids; `sideKey` is the
+    // project-namespaced state key and must not leak into the message.
+    const sel = deps.getSelection()
+    const id = newId()
+    const font = deps.getFont()
+    const dims = measureInitialDimensions("side", font)
+    deps.state.beginSide(key, id)
+    deps.state.add(key === deps.LOCAL ? null : key, {
+      id,
+      title: "Terminal",
+      wsUrl: "",
+      font,
+      placement: "side",
+    })
+    deps.state.setSideActive(key, id)
+    if (focus) deps.state.requestFocus(id)
+    deps.postMessage({
+      type: "agentManager.terminal.create",
+      createId: id,
+      placement: "side",
+      worktreeId: sel === null || sel === deps.LOCAL ? null : sel,
+      cols: dims?.cols,
+      rows: dims?.rows,
     })
   }
 
@@ -624,16 +713,15 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
    * flight at once; each lands as its own tab in the panel strip.
    */
   const addSide = () => {
+    deps.onShowSide(deps.state.sideKey())
+    createSide(true)
+  }
+
+  /** Ensure the current context has a terminal without changing panel mode. */
+  const ensureSide = () => {
     const key = deps.state.sideKey()
-    deps.onShowSide(key)
-    const id = newId()
-    deps.state.beginSide(key, id)
-    deps.postMessage({
-      type: "agentManager.terminal.create",
-      createId: id,
-      placement: "side",
-      worktreeId: key === deps.LOCAL ? null : key,
-    })
+    if (deps.state.sidesForContext(key).length > 0 || deps.state.pendingSide(key)) return
+    createSide()
   }
 
   /**
@@ -652,11 +740,11 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
       return
     }
     if (deps.state.pendingSide(key)) return
-    addSide()
+    createSide(true)
   }
 
   const closeTerminal = (terminalId: string) => {
-    // Run terminals transition through a provider-owned stopping snapshot.
+    // Script terminals transition through a provider-owned stopping snapshot.
     // Keep their xterm mounted until closure is confirmed by a snapshot or
     // terminal.closed message so live output is never discarded early.
     if (deps.state.isScript(terminalId)) {
@@ -688,8 +776,6 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
           const target = deps.findTab(nextId)
           if (target) deps.selectSessionTab(target.id, deps.isPendingId(target.id))
         }
-      } else {
-        deps.clearSession()
       }
     }
     deps.postMessage({ type: "agentManager.terminal.close", terminalId })
@@ -706,12 +792,45 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
     // unmount its xterm while the backend PTY leaks (no close sent).
     const term = deps.state.sides().find((t) => t.id === terminalId)
     if (!term) return false
-    if (term.kind === "run") {
+    const key = term.contextKey
+    const active = deps.state.sideActiveFor(key) === terminalId
+    const rest = active ? deps.state.sidesForContext(key).filter((item) => item.id !== terminalId) : []
+    const survivor = rest[rest.length - 1]
+    if (survivor) {
+      deps.state.setSideActive(key, survivor.id)
+      deps.state.requestFocus(survivor.id)
+    }
+    if (term.kind) {
       deps.postMessage({ type: "agentManager.terminal.close", terminalId })
       return true
     }
+    deps.state.completeSide(terminalId)
     deps.state.remove(terminalId)
     deps.postMessage({ type: "agentManager.terminal.close", terminalId })
+    return true
+  }
+
+  /**
+   * Kill every side terminal of a context except one, and make the
+   * survivor the visible tab: the side-strip counterpart of the tab
+   * bar's "Close Others".
+   */
+  const closeSideOthers = (terminalId: string) => {
+    const key = deps.state.contextFor(terminalId)
+    if (!key) return
+    for (const term of deps.state.sidesForContext(key)) {
+      if (term.id === terminalId) continue
+      closeSide(term.id)
+    }
+    deps.state.setSideActive(key, terminalId)
+    deps.state.requestFocus(terminalId)
+  }
+
+  /** Deliberately stop a running script terminal: kills its process tree. */
+  const stopSide = (terminalId: string): boolean => {
+    const term = deps.state.sides().find((t) => t.id === terminalId)
+    if (!term?.kind) return false
+    deps.postMessage({ type: "agentManager.terminal.stop", terminalId })
     return true
   }
 
@@ -737,17 +856,49 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
     return true
   }
 
+  /** Close the main terminal that actually owns DOM focus, not just the active tab. */
+  const closeFocused = () => {
+    const id = deps.state.focusedId()
+    if (!id || !deps.state.current().some((term) => term.id === id)) return false
+    closeTerminal(id)
+    return true
+  }
+
+  /** Cycle terminals within one placement, wrapping at either end. */
+  const cycle = (direction: "previous" | "next", placement: "side" | "tab") => {
+    const key = deps.state.sideKey()
+    const list = placement === "side" ? deps.state.sidesForContext(key) : deps.state.current()
+    if (list.length === 0) return false
+    const current = placement === "side" ? deps.state.sideActiveFor(key) : deps.state.activeId()
+    const index = list.findIndex((term) => term.id === current)
+    const start = index === -1 ? (direction === "next" ? -1 : list.length) : index
+    const offset = direction === "next" ? 1 : -1
+    const next = list[(start + offset + list.length) % list.length]!
+    if (placement === "side") {
+      deps.state.setSideActive(key, next.id)
+      deps.state.requestFocus(next.id)
+      return true
+    }
+    activate(next.id)
+    return true
+  }
+
   return {
     closeTerminal,
     closeSide,
+    closeSideOthers,
+    stopSide,
     selectSide,
     middleClick,
     activate,
     deactivate,
     requestNew,
     requestSide,
+    ensureSide,
     addSide,
     closeActive,
+    closeFocused,
+    cycle,
   }
 }
 
@@ -766,13 +917,11 @@ export interface TerminalMessageHandlerDeps {
    * than wherever `tabIds()`'s base composition happens to put it.
    */
   onCreated?: (contextKey: string, terminalId: string) => void
-  /** Side terminal for a context finished creating. */
-  onSideCreated?: (contextKey: string, terminalId: string) => void
   /** Side terminal create failed for a context. */
   onSideError?: (contextKey: string) => void
   /** Side terminal was closed (locally or by the extension). */
-  onSideClosed?: (contextKey: string) => void
-  /** A newly hydrated running Run terminal belongs to the selected context. */
+  onSideClosed?: (contextKey: string, terminalId: string) => void
+  /** A newly hydrated running script terminal belongs to the selected context. */
   onScriptRunning?: (contextKey: string, terminalId: string) => void
   /** The destination setting changed (live settings sync). */
   onDestinationChanged?: (destination: TerminalDestination) => void
@@ -782,7 +931,10 @@ type CreatedMessage = Extract<ExtensionMessage, { type: "agentManager.terminal.c
 type ScriptTerminalsMessage = Extract<ExtensionMessage, { type: "agentManager.scriptTerminals" }>
 
 function handleCreated(deps: TerminalMessageHandlerDeps, msg: CreatedMessage) {
-  const contextKey = msg.worktreeId === null ? LOCAL : msg.worktreeId
+  // `target` is the plain protocol id (selection/tab-order keys); `key` is
+  // the project-namespaced terminal-state key (same shape as syncScripts).
+  const target = msg.worktreeId === null ? LOCAL : msg.worktreeId
+  const key = msg.projectId ? `${msg.projectId}:${target}` : target
   const term = {
     id: msg.terminalId,
     title: msg.title,
@@ -796,20 +948,22 @@ function handleCreated(deps: TerminalMessageHandlerDeps, msg: CreatedMessage) {
     // reloaded (or the context is gone) — close the PTY again instead
     // of leaking it.
     const request = deps.state.completeSide(msg.createId)
-    if (!request || request.contextKey !== contextKey) {
+    if (!request || request.contextKey !== key || msg.terminalId !== msg.createId) {
+      deps.state.remove(msg.createId)
       deps.postMessage({ type: "agentManager.terminal.close", terminalId: msg.terminalId })
       return
     }
-    deps.state.add(msg.worktreeId, term)
-    // The newest terminal becomes the visible one in its panel.
-    deps.state.setSideActive(contextKey, msg.terminalId)
-    deps.onSideCreated?.(contextKey, msg.terminalId)
+    // The user may have closed the optimistic terminal while the PTY was
+    // starting. The request was completed above, but its record is gone.
+    if (!deps.state.attach(msg.terminalId, term)) {
+      deps.postMessage({ type: "agentManager.terminal.close", terminalId: msg.terminalId })
+    }
     return
   }
-  deps.state.add(msg.worktreeId, term)
-  deps.onCreated?.(contextKey, msg.terminalId)
+  deps.state.add(key === LOCAL ? null : key, term)
+  deps.onCreated?.(target, msg.terminalId)
   deps.saveTabMemory()
-  deps.setSelection(contextKey)
+  deps.setSelection(target)
   deps.activate(msg.terminalId)
 }
 
@@ -839,11 +993,13 @@ export function createTerminalMessageHandler(deps: TerminalMessageHandlerDeps) {
     if (msg.type === "agentManager.terminal.closed") {
       const removed = deps.state.remove(msg.terminalId)
       if (deps.state.activeId() === msg.terminalId) deps.state.setActiveId(undefined)
-      if (removed?.placement === "side") deps.onSideClosed?.(removed.contextKey)
+      if (removed?.placement === "side") deps.onSideClosed?.(removed.contextKey, msg.terminalId)
       return true
     }
     if (msg.type === "agentManager.terminal.error") {
+      const context = msg.createId ? deps.state.contextFor(msg.createId) : undefined
       const request = msg.createId ? deps.state.completeSide(msg.createId) : undefined
+      if (msg.createId && context) deps.state.remove(msg.createId)
       if (request) deps.onSideError?.(request.contextKey)
       deps.showError(msg.message)
       return true
