@@ -68,6 +68,7 @@ export const Info = Schema.Struct({
   prompt: Schema.optional(Schema.String),
   options: Schema.Record(Schema.String, Schema.Unknown),
   requirements: Schema.optional(AgentRequirements.Requirements), // kilocode_change
+  skills: Schema.optional(Schema.Array(Schema.String)), // kilocode_change - per-agent skill allow-list
   steps: Schema.optional(Schema.Finite),
 }).annotate({ identifier: "Agent" })
 export type Info = DeepMutable<Schema.Schema.Type<typeof Info>>
@@ -377,6 +378,7 @@ const layer = Layer.effect(
           item.displayName = value.displayName ?? item.displayName
           item.source = value.source ?? item.source
           item.requirements = value.requirements ?? item.requirements
+          item.skills = value.skills ?? item.skills // kilocode_change - per-agent skill allow-list
           // kilocode_change end
           item.options = mergeDeep(item.options, value.options ?? {})
           item.permission = Permission.merge(item.permission, Permission.fromConfig(value.permission ?? {}))

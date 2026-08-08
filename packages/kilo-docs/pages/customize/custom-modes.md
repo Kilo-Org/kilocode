@@ -46,6 +46,7 @@ In the VSCode extension and CLI, custom behavioral profiles are called **agents*
 | **prompt** (markdown body) | The system prompt text — the markdown body of the file, injected into the agent's system prompt |
 | **mode** | Role classification: `primary` (user-selectable), `subagent` (only invoked by other agents), or `all` (both) |
 | **permission** | Per-agent permission overrides controlling which tools the agent can use (e.g., deny `edit`, `bash`) |
+| **skills** | Glob pattern allow-list of skills available to this agent (only matching skills are injected into the system prompt and loadable via the skill tool) |
 | **color** | Hex color (`#FF5733`) or theme keyword (`primary`, `accent`, `warning`, etc.) for the agent picker UI |
 | **steps** | Maximum agentic iterations before forcing a text-only response |
 | **temperature** / **top_p** | Sampling parameters for the agent's model |
@@ -166,6 +167,32 @@ permission:
 
 Known permission types include: `read`, `edit`, `bash`, `glob`, `grep`, `task`, `webfetch`, `websearch`, `todowrite`, `todoread`, and more.
 
+### `skills`
+
+An optional glob pattern allow-list of skills for the agent. Only skills whose name matches the list are allowed — every other skill is hidden from the agent's system prompt and rejected by the skill tool. When unset or empty, all skills are available.
+
+Patterns use glob syntax (e.g. `skill-*`). A pattern prefixed with `!` excludes matching skills, and the last matching pattern wins:
+
+```yaml
+skills:
+  - "skill-*"
+  - "!skill-excluded-*"
+```
+
+This example exposes only skills starting with `skill-`, except those starting with `skill-excluded-`. A list containing only negations (e.g. `["!skill-a"]`) rejects every skill — with no positive pattern there is nothing to allow. To allow every skill except a few, always pair `!` patterns with the catch-all `"*"`:
+
+```yaml
+skills:
+  - "*"
+  - "!skill-internal"
+```
+
+Matching is case-sensitive, so `"skill-*"` does not match a skill named `Skill-A`.
+
+The allow-list is per-agent: the same skill can be available to one agent and hidden from another, restoring mode-specific skill behavior without mode-specific skill directories.
+
+The allow-list governs system-prompt injection and loading through the skill tool. It does not filter the `/skill-name` command path, which users can invoke directly — the same behavior as `permission.skill`.
+
 ### `model`
 
 Pin a specific model using the `provider/model` format:
@@ -276,6 +303,7 @@ In the CLI, custom behavioral profiles are called **agents** instead of modes. A
 | **prompt** (markdown body) | The system prompt text — the markdown body of the file, injected into the agent's system prompt |
 | **mode** | Role classification: `primary` (user-selectable), `subagent` (only invoked by other agents), or `all` (both) |
 | **permission** | Per-agent permission overrides controlling which tools the agent can use (e.g., deny `edit`, `bash`) |
+| **skills** | Glob pattern allow-list of skills available to this agent (only matching skills are injected into the system prompt and loadable via the skill tool) |
 | **color** | Hex color (`#FF5733`) or theme keyword (`primary`, `accent`, `warning`, etc.) for the agent picker UI |
 | **steps** | Maximum agentic iterations before forcing a text-only response |
 | **temperature** / **top_p** | Sampling parameters for the agent's model |
@@ -401,6 +429,32 @@ permission:
 ```
 
 Known permission types include: `read`, `edit`, `bash`, `glob`, `grep`, `task`, `webfetch`, `websearch`, `todowrite`, `todoread`, and more.
+
+### `skills`
+
+An optional glob pattern allow-list of skills for the agent. Only skills whose name matches the list are allowed — every other skill is hidden from the agent's system prompt and rejected by the skill tool. When unset or empty, all skills are available.
+
+Patterns use glob syntax (e.g. `skill-*`). A pattern prefixed with `!` excludes matching skills, and the last matching pattern wins:
+
+```yaml
+skills:
+  - "skill-*"
+  - "!skill-excluded-*"
+```
+
+This example exposes only skills starting with `skill-`, except those starting with `skill-excluded-`. A list containing only negations (e.g. `["!skill-a"]`) rejects every skill — with no positive pattern there is nothing to allow. To allow every skill except a few, always pair `!` patterns with the catch-all `"*"`:
+
+```yaml
+skills:
+  - "*"
+  - "!skill-internal"
+```
+
+Matching is case-sensitive, so `"skill-*"` does not match a skill named `Skill-A`.
+
+The allow-list is per-agent: the same skill can be available to one agent and hidden from another, restoring mode-specific skill behavior without mode-specific skill directories.
+
+The allow-list governs system-prompt injection and loading through the skill tool. It does not filter the `/skill-name` command path, which users can invoke directly — the same behavior as `permission.skill`.
 
 ### `model`
 

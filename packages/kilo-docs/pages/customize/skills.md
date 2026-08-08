@@ -201,12 +201,16 @@ When you change a remote skill's contents or file list, also change its `version
 
 The new platform does not use mode-specific skill directories. All skills are loaded into a shared pool and the agent decides which skill to invoke based on the skill's `description` field and the current task context.
 
+To restrict which skills an agent can see and load, set the `skills` allow-list on that agent (see [Custom Modes](/docs/customize/custom-modes) and [Custom Subagents](/docs/customize/custom-subagents)). Only skills matching the allow-list are injected into that agent's system prompt, and the agent cannot load excluded skills via the skill tool. A negation-only list (e.g. `["!skill-a"]`) rejects every skill, so pair `!` patterns with the catch-all `"*"` to allow all but a few. Matching is case-sensitive.
+
 If you need a skill to only apply in certain situations, write a clear and specific `description` in the SKILL.md frontmatter so the agent knows when to use it.
 
 {% /tab %}
 {% tab label="CLI" %}
 
 The new platform does not use mode-specific skill directories. All skills are loaded into a shared pool and the agent decides which skill to invoke based on the skill's `description` field and the current task context.
+
+To restrict which skills an agent can see and load, set the `skills` allow-list on that agent (see [Custom Modes](/docs/customize/custom-modes) and [Custom Subagents](/docs/customize/custom-subagents)). Only skills matching the allow-list are injected into that agent's system prompt, and the agent cannot load excluded skills via the skill tool. A negation-only list (e.g. `["!skill-a"]`) rejects every skill, so pair `!` patterns with the catch-all `"*"` to allow all but a few. Matching is case-sensitive.
 
 If you need a skill to only apply in certain situations, write a clear and specific `description` in the SKILL.md frontmatter so the agent knows when to use it.
 

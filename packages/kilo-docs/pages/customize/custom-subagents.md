@@ -172,6 +172,7 @@ The following options are available when configuring a subagent:
 | `temperature` | `number` | Controls response randomness (0.0-1.0). Lower = more deterministic. |
 | `top_p` | `number` | Alternative to temperature for controlling response diversity (0.0-1.0). |
 | `permission` | `object` | Controls tool access. See [Permissions](#permissions) below. |
+| `skills` | `string[]` | Glob pattern allow-list of skills available to this agent. Only matching skills are injected into the system prompt and loadable via the skill tool. See [Skills](#skills) below. |
 | `hidden` | `boolean` | If `true`, hides the subagent from the `@` autocomplete menu. It can still be invoked by agents via the Task tool. Only applies to `mode: subagent`. |
 | `steps` | `number` | Maximum agentic iterations before forcing a text-only response. Useful for cost control. |
 | `color` | `string` | Visual color in the UI. Accepts hex (`#FF5733`) or theme names (`primary`, `accent`, `error`, etc.). |
@@ -225,6 +226,43 @@ You can also control which subagents an agent can invoke via `permission.task`:
   }
 }
 ```
+
+### Skills
+
+The `skills` field is an optional glob pattern allow-list scoping which skills the agent can see and load. Only skills whose name matches the list are injected into the agent's system prompt; everything else is hidden and rejected by the skill tool. When unset or empty, all skills are available.
+
+Patterns use glob syntax, a `!` prefix excludes matching skills, and the last matching pattern wins. A negation-only list (e.g. `["!skill-a"]`) rejects every skill — pair `!` patterns with the catch-all `"*"` to allow all but a few. Matching is case-sensitive.
+
+JSON config (`kilo.jsonc`):
+
+```json
+{
+  "agent": {
+    "docs-reviewer": {
+      "mode": "subagent",
+      "skills": ["*", "!internal-*"]
+    }
+  }
+}
+```
+
+Markdown frontmatter (`.kilo/agents/docs-reviewer.md`):
+
+```markdown
+---
+description: Reviews documentation for accuracy and completeness
+mode: subagent
+skills:
+  - "skill-*"
+  - "!skill-excluded-*"
+---
+
+You are a documentation reviewer. Use your skills to verify the docs.
+```
+
+The allow-list is per-agent: the same skill can be available to one agent and hidden from another. See [Custom Modes](/docs/customize/custom-modes) for the full property reference.
+
+The allow-list governs system-prompt injection and loading through the skill tool. It does not filter the `/skill-name` command path, which users can invoke directly — the same behavior as `permission.skill`.
 
 ## Using Custom Subagents
 
