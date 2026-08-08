@@ -127,7 +127,12 @@ Scalar form applies to all patterns. Object form maps glob patterns to actions. 
 ```jsonc
 {
   "permission": {
-    "bash": "allow", // scalar: allow all bash
+    "bash": {
+      // object form: glob patterns (scalar "allow" also valid)
+      "git push*": "deny",
+      "git reset --hard*": "deny",
+      "*": "ask",
+    },
     "edit": {
       // object: pattern-matched
       "src/**": "allow",
