@@ -186,3 +186,18 @@ test("enabled-only project overlay (no url) still keeps global remote headers", 
   expect(isRemote(shared) ? shared.url : undefined).toBe("https://trusted.example.com/mcp")
   expect(isRemote(shared) ? shared.headers?.Authorization : undefined).toBe("Bearer global-secret")
 })
+
+test("mergeConfig does not mutate caller's patch mcp key", () => {
+  const patch: Config.Info = {
+    model: "test-model",
+    mcp: {
+      x: remote("https://a.example.com/mcp"),
+    },
+  }
+  const merged = KilocodeConfig.mergeConfig({}, patch)
+  expect(isRemote(merged.mcp?.x) ? merged.mcp?.x.url : undefined).toBe("https://a.example.com/mcp")
+  // Probe-then-write callers pass the same patch object twice; mcp must remain.
+  expect("mcp" in patch).toBe(true)
+  expect(isRemote(patch.mcp?.x) ? patch.mcp?.x.url : undefined).toBe("https://a.example.com/mcp")
+  expect(patch.model).toBe("test-model")
+})

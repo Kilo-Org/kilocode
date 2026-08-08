@@ -421,7 +421,9 @@ export namespace KilocodeConfig {
    */
   export function mergeConfig(existing: Config.Info, patch: Config.Info): Config.Info {
     const e = { ...existing } as Record<string, unknown>
-    const p = patch as Record<string, unknown>
+    // Shallow-copy patch so MCP extraction (delete p.mcp) never mutates the caller's object.
+    // Callers may probe with mergeConfig({}, patch) then reuse the same patch for a write.
+    const p = { ...patch } as Record<string, unknown>
 
     // Normalize permission scalars before merge
     const existingPerm = e.permission
