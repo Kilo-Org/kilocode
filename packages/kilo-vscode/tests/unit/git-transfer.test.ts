@@ -103,6 +103,26 @@ describe("git-transfer", () => {
       await fs.rm(target, { recursive: true, force: true }).catch(() => {})
     })
 
+    it("resolves with an error instead of throwing when git cannot be spawned", async () => {
+      // The stdin path of apply() uses cp.spawn; point PATH at an empty
+      // directory so the spawn fails with ENOENT.
+      const originalPath = process.env.PATH
+      const emptyBin = await fs.mkdtemp(path.join(os.tmpdir(), "git-transfer-empty-bin-"))
+      process.env.PATH = emptyBin
+      try {
+        const result = await apply(
+          { branch: "main", head: "deadbeef", unstaged: null, staged: "diff --git a/x b/x\n", untracked: [] },
+          target,
+          noop,
+        )
+        expect(result.ok).toBe(false)
+        expect(result.error).toContain("Staged patch failed")
+      } finally {
+        process.env.PATH = originalPath
+        await fs.rm(emptyBin, { recursive: true, force: true })
+      }
+    })
+
     it("applies unstaged changes", async () => {
       await fs.writeFile(path.join(dir, "init.txt"), "modified\n")
       const snapshot = await capture(dir, noop)
