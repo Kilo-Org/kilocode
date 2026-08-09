@@ -19,7 +19,7 @@ Different search surfaces cover different content and scopes:
 |---|---|---|
 | [VS Code History](#search-session-history-in-vs-code) | Session titles | Sessions loaded in the selected Local or Cloud history view |
 | [JetBrains History](#search-session-history-in-jetbrains) | Session titles | Sessions loaded in the selected Local or Cloud history view |
-| [CLI `/sessions` picker](#load-a-different-session-in-the-cli-tui) | Session titles | Current workspace |
+| [CLI Past chats](#reference-a-past-chat-in-the-cli-tui) | Session titles | Current workspace |
 | [`kilo session list --search`](#filter-session-titles) | Session titles | Current workspace, or every local workspace with `--all` |
 | [Ask Kilo to recall past chats](#ask-kilo-to-search-past-chats) | Titles and high-signal chat content | Current workspace |
 | [VS Code chat search](#search-the-open-chat-session) | Rendered content in the open session | Current chat session |
@@ -78,17 +78,14 @@ The JetBrains History search matches session titles, not chat content.
 {% /tab %}
 {% tab label="CLI TUI" %}
 
-### Load a different session in the CLI TUI
+### Reference a past chat in the CLI TUI
 
-Run `kilo`, then enter any of these commands:
+1. Run `kilo`.
+2. Type `@` in the prompt and select **Past chats**.
+3. Search for a session by title.
+4. Select a session, finish your message, and send it.
 
-```text
-/sessions
-/resume
-/continue
-```
-
-Start typing in the session picker to filter sessions by title, then select a result to load that chat session. This switches the TUI to the selected session; it does not add the session as context to your current chat. The picker also supports pinning and deleting local sessions.
+Kilo adds the selected chat history as context for your message. This does not switch the TUI to the selected session. Use `/sessions`, `/resume`, or `/continue` when you want to load a different session instead.
 
 {% /tab %}
 {% /tabs %}
