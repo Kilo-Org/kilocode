@@ -86,4 +86,10 @@ class KiloIgnoreTest : TestCase() {
         val ignore = KiloIgnore.of("node_modules/")
         assertTrue(ignore.ignored("a\\node_modules\\pkg.js"))
     }
+
+    fun `test malformed char class is skipped without throwing`() {
+        val ignore = KiloIgnore.of("[z-a]\n[]\n[!]\n*.log")
+        assertTrue(ignore.ignored("debug.log"))
+        assertFalse(ignore.ignored("src/App.kt"))
+    }
 }

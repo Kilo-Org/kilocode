@@ -254,7 +254,11 @@ class MessageView(
 
     @RequiresEdt
     private fun replacePart(content: Content, existing: PartView) {
-        val at = components.indexOfFirst { it === existing || it === wrap }.takeIf { it >= 0 } ?: componentCount
+        // A replaced tool view is a direct child, so re-insert at its own slot. Only fall back to
+        // the prompt wrap's index when the replaced view is nested inside it, otherwise the wrap's
+        // lower index would push the replacement above the prompt bubble on user messages.
+        val at = (if (existing.parent !== this) components.indexOf(wrap) else components.indexOfFirst { it === existing })
+            .takeIf { it >= 0 } ?: componentCount
         parts.remove(content.id)
         aliases.values.removeAll { it == content.id }
         sources.keys.removeAll { it !in aliases }

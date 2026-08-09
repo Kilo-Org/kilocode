@@ -683,17 +683,6 @@ class SessionUi(
 
     private fun sendPrompt(text: String, files: List<PromptPartDto>) {
         if (text.isBlank() && files.isEmpty()) return
-        val editor = EditorContextGatherer.gather(project, workspace.directory)
-        val allFiles = files + listOfNotNull(editor.selection)
-        val parts = buildList {
-            text.takeIf { it.isNotBlank() }?.let { add(PromptPartDto(type = "text", text = it)) }
-            addAll(allFiles)
-        }
-        LOG.debug {
-            val agent = controller.model.agent ?: "none"
-            val model = controller.model.model ?: "none"
-            "${ChatLogSummary.prompt(PromptDto(parts = parts, editorContext = editor.context))} agent=$agent model=$model ready=${controller.ready}"
-        }
         prompt.clear()
         val follow = scroll.atBottom()
         val action = completion.clientAction(text)
@@ -707,6 +696,19 @@ class SessionUi(
             controller.command(command.first, command.second, files)
             scroll.followBottom(follow)
             return
+        }
+        // Only the prompt path uses editor context; gather after the command branches so slash
+        // commands and client actions don't pay the editor-context cost or hit its failure modes.
+        val editor = EditorContextGatherer.gather(project, workspace.directory)
+        val allFiles = files + listOfNotNull(editor.selection)
+        LOG.debug {
+            val parts = buildList {
+                text.takeIf { it.isNotBlank() }?.let { add(PromptPartDto(type = "text", text = it)) }
+                addAll(allFiles)
+            }
+            val agent = controller.model.agent ?: "none"
+            val model = controller.model.model ?: "none"
+            "${ChatLogSummary.prompt(PromptDto(parts = parts, editorContext = editor.context))} agent=$agent model=$model ready=${controller.ready}"
         }
         controller.prompt(text, allFiles, editor.context)
         scroll.followBottom(follow)

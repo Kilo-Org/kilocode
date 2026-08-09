@@ -6,6 +6,7 @@ import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.EditorContextDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import com.intellij.codeWithMe.ClientId
+import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
@@ -49,7 +50,7 @@ internal object EditorContextGatherer {
         val openFiles = manager.openFilesWithRemotes
         val editor = manager.selectedTextEditorWithRemotes.firstOrNull()
         val activeFile = editor?.let { file(it) } ?: lastOpen(project, openFiles) ?: openFiles.firstOrNull()
-        val ignore = KiloIgnore.load(rootDir(listOfNotNull(activeFile) + openFiles, base))
+        val ignore = project.service<KiloIgnoreCache>().matcher(rootDir(listOfNotNull(activeFile) + openFiles, base))
 
         fun keep(file: VirtualFile?): String? = rel(file, base)?.takeUnless { ignore.ignored(it) }
 
@@ -129,7 +130,9 @@ internal object EditorContextGatherer {
 
     private fun local(file: VirtualFile, root: Path): Path? {
         if (file.fileSystem.protocol == KiloVirtualFileSystem.PROTOCOL) return null
-        val path = Path.of(file.path).toAbsolutePath().normalize()
+        // A host filename that is invalid on the client OS (e.g. `?`/`*` from a Linux host on
+        // a Windows frontend) throws InvalidPathException; drop the file instead of failing the send.
+        val path = runCatching { Path.of(file.path).toAbsolutePath().normalize() }.getOrNull() ?: return null
         if (!path.startsWith(root)) return null
         return path
     }

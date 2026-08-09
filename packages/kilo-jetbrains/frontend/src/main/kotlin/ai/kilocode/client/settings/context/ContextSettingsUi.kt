@@ -135,6 +135,9 @@ internal class ContextSettingsContent(
     private val update: (ContextDraft.() -> ContextDraft) -> Unit,
 ) : BaseContentPanel() {
     private val auto = SettingsToggle { value -> update { copy(auto = value) } }
+    // Editor-context auto-include is a local per-IDE preference in PropertiesComponent (like
+    // autoApprove), applied immediately on toggle rather than through the CLI-backed draft/apply/
+    // reset flow used by the other rows. It stays interactive even when the backend isn't READY.
     private val editor = SettingsToggle(KiloPluginSettings.getAutoEditorContext()) { value ->
         KiloPluginSettings.setAutoEditorContext(value)
     }
@@ -183,11 +186,14 @@ internal class ContextSettingsContent(
     @RequiresEdt
     fun sync(draft: ContextDraft, enabled: Boolean) {
         auto.isSelected = draft.auto
+        // Local preference: reflects PropertiesComponent and stays enabled regardless of the
+        // CLI-backed [enabled] gating that applies to the draft-driven rows below.
         editor.isSelected = KiloPluginSettings.getAutoEditorContext()
+        editor.isEnabled = true
         prune.isSelected = draft.prune
         threshold.sync(draft.threshold)
         patterns.sync(draft.ignore)
-        listOf(auto, editor, prune, threshold, patterns).forEach { it.isEnabled = enabled }
+        listOf(auto, prune, threshold, patterns).forEach { it.isEnabled = enabled }
     }
 }
 

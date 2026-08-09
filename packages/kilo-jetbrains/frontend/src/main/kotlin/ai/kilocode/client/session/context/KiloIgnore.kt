@@ -36,8 +36,8 @@ internal class KiloIgnore private constructor(private val rules: List<Rule>) {
     companion object {
         val EMPTY = KiloIgnore(emptyList())
 
-        private const val KILO = ".kilocodeignore"
-        private const val GIT = ".gitignore"
+        const val KILO = ".kilocodeignore"
+        const val GIT = ".gitignore"
         private val SENSITIVE = listOf(".env", ".env.*")
 
         /**
@@ -80,7 +80,10 @@ internal class KiloIgnore private constructor(private val rules: List<Rule>) {
             val anchored = leading || line.contains('/')
             val prefix = if (anchored) "" else "(?:.*/)?"
             val suffix = if (dirOnly) "/.*" else "(?:/.*)?"
-            return Rule(Regex("^$prefix${glob(line)}$suffix$"), negate)
+            // A malformed character class (e.g. `[]`, `[z-a]`) yields an invalid Java regex.
+            // Skip the bad rule instead of letting PatternSyntaxException break every prompt send.
+            val regex = runCatching { Regex("^$prefix${glob(line)}$suffix$") }.getOrNull() ?: return null
+            return Rule(regex, negate)
         }
 
         private fun glob(glob: String): String {
