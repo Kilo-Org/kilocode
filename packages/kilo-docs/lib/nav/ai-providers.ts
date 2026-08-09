@@ -31,6 +31,7 @@ export const AiProvidersNav: NavSection[] = [
       { href: "/ai-providers/daoxe", children: "DaoXE" },
       { href: "/ai-providers/unbound", children: "Unbound" },
       { href: "/ai-providers/zenmux", children: "ZenMux" },
+      { href: "/ai-providers/kunavo", children: "Kunavo" },
       {
         href: "/ai-providers/vercel-ai-gateway",
         children: "Vercel AI Gateway",
