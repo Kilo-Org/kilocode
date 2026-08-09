@@ -23,7 +23,7 @@
       "command": "bun",
       "args": ["run", "watch:esbuild"],
       "group": "build",
-      "problemMatcher": "$esbuild-watch",
+      "problemMatcher": [],
       "isBackground": true,
       "presentation": {
         "group": "watch",
