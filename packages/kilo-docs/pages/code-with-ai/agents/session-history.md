@@ -5,7 +5,7 @@ description: "Find, search, inspect, and resume local Kilo Code sessions"
 
 # Session history and search
 
-Kilo Code keeps local session metadata and transcripts so you can resume earlier work. You can search session titles in the history UI or CLI, ask the agent to search transcript content, or inspect the local SQLite database directly.
+Kilo Code keeps local session metadata and chat history so you can resume earlier work. You can search session titles in the history UI or CLI, ask the agent to search chat content, or inspect the local SQLite database directly.
 
 {% callout type="info" %}
 Local sessions use SQLite, not PostgreSQL. Use `kilo db` or `sqlite3`, not `psql`, to inspect the local database.
@@ -17,12 +17,14 @@ Different search surfaces cover different content and scopes:
 
 | Method | Searches | Scope |
 |---|---|---|
-| VS Code or JetBrains History | Session titles | Sessions loaded in the selected Local or Cloud history view |
-| CLI `/sessions` picker | Session titles | Current workspace |
-| `kilo session list --search` | Session titles | Current workspace, or every local workspace with `--all` |
-| Ask Kilo to recall past chats | Titles and high-signal transcript content | Current workspace |
-| VS Code transcript search | Rendered content in the open session | Current session |
-| SQLite query | Any stored field you select | Entire selected local database |
+| [VS Code History](#search-session-history-in-vs-code) | Session titles | Sessions loaded in the selected Local or Cloud history view |
+| [JetBrains History](#search-session-history-in-jetbrains) | Session titles | Sessions loaded in the selected Local or Cloud history view |
+| [CLI `/sessions` picker](#search-session-history-in-the-cli-tui) | Session titles | Current workspace |
+| [`kilo session list --search`](#filter-session-titles) | Session titles | Current workspace, or every local workspace with `--all` |
+| [Ask Kilo to recall past chats](#ask-kilo-to-search-past-chats) | Titles and high-signal chat content | Current workspace |
+| [VS Code chat search](#search-the-open-chat-session) | Rendered content in the open session | Current chat session |
+| [VS Code Past chats](#add-a-past-chat-to-the-current-session) | Session titles and workspace names | Current workspace |
+| [SQLite query](#query-sqlite-directly) | Any stored field you select | Entire selected local database |
 
 History and CLI list searches do **not** search message content. To find a string inside prompts or replies, ask Kilo to search past chats or use a direct SQLite query.
 
@@ -31,7 +33,7 @@ History and CLI list searches do **not** search message content. To find a strin
 {% tabs %}
 {% tab label="VS Code" %}
 
-### Search session history
+### Search session history in VS Code
 
 1. Open the Kilo Code sidebar.
 2. Select the **History** button in the sidebar title bar. You can also select **Show History** below the recent sessions on a new chat.
@@ -43,23 +45,25 @@ Local history actions also let you rename, export, or delete a session. Cloud hi
 
 The History search is a fuzzy title search over the sessions currently loaded into the view. It does not search prompts or agent replies.
 
-### Search the open transcript
+### Search the open chat session
 
-Open a session and select the magnifying-glass button in its header. Transcript search supports:
+Open a session and select the magnifying-glass button in its header. Chat search supports:
 
 - Previous and next match navigation
 - Match case
 - Whole word
 - Regular expressions
 
-Kilo loads older messages while the search is active so the search covers the full local transcript, not only the messages initially visible.
+Kilo loads older messages while the search is active so the search covers the full local chat session, not only the messages initially visible.
 
-### Reference another session
+### Add a past chat to the current session
 
-Type `@` in the chat input, select **Past chats**, and search by session title or workspace name. Selecting a result attaches that transcript as context when you send the message. Past chats includes sessions in the current workspace.
+Type `@` in the chat input, select **Past chats**, and search by session title or workspace name. Selecting a result adds that past chat's content as context when you send the message from your current session. It does not switch or reopen sessions. Past chats includes sessions in the current workspace.
 
 {% /tab %}
 {% tab label="JetBrains" %}
+
+### Search session history in JetBrains
 
 1. Open the Kilo Code tool window.
 2. Select **History** in the tool window toolbar.
@@ -69,10 +73,12 @@ Type `@` in the chat input, select **Past chats**, and search by session title o
 
 You can rename or delete local sessions. In Cloud history, enable **Only this repository** to narrow the list.
 
-The JetBrains History search matches session titles, not transcript content.
+The JetBrains History search matches session titles, not chat content.
 
 {% /tab %}
 {% tab label="CLI TUI" %}
+
+### Search session history in the CLI TUI
 
 Run `kilo`, then enter any of these commands:
 
@@ -87,7 +93,7 @@ Start typing in the session picker to filter sessions by title. The picker also 
 {% /tab %}
 {% /tabs %}
 
-## Ask Kilo to search transcripts
+## Ask Kilo to search past chats
 
 The simplest way to search message content across past local sessions is to ask Kilo directly:
 
@@ -97,7 +103,7 @@ Search my local sessions for "database disk image is malformed" and summarize th
 
 Kilo's local recall search covers session titles, user and assistant text, file references, and failed tool errors in the current workspace. Every query term must occur somewhere in a matching session; exact phrases and user-authored matches rank higher.
 
-The search includes archived and child sessions. It excludes reasoning, synthetic or ignored text, successful tool output, file contents, and other metadata. Kilo can then read the full transcript for a selected result.
+The search includes archived and child sessions. It excludes reasoning, synthetic or ignored text, successful tool output, file contents, and other metadata. Kilo can then read the full chat history for a selected result.
 
 ## Search with CLI commands
 
@@ -238,7 +244,7 @@ curl -u "kilo:$KILO_SERVER_PASSWORD" \
   --data-urlencode "limit=50"
 ```
 
-Read the complete transcript for one result:
+Read the complete chat history for one result:
 
 ```bash
 curl -u "kilo:$KILO_SERVER_PASSWORD" \
@@ -246,7 +252,7 @@ curl -u "kilo:$KILO_SERVER_PASSWORD" \
   --data-urlencode "directory=$PWD"
 ```
 
-The list endpoint's `search` parameter searches titles only. To search transcript text programmatically, list candidate sessions, read their messages, and inspect text parts in your application.
+The list endpoint's `search` parameter searches titles only. To search chat content programmatically, list candidate sessions, read their messages, and inspect text parts in your application.
 
 The JavaScript SDK exposes the same endpoints:
 
@@ -266,17 +272,17 @@ const result = await client.session.list(
 )
 
 for (const session of result.data) {
-  const transcript = await client.session.messages(
+  const history = await client.session.messages(
     { sessionID: session.id, limit: 0 },
     { throwOnError: true },
   )
 
-  // Inspect transcript.data[*].parts for the content your application needs.
-  console.log(session.title, transcript.data.length)
+  // Inspect history.data[*].parts for the content your application needs.
+  console.log(session.title, history.data.length)
 }
 ```
 
-`limit: 0` requests the complete transcript from the compatibility API. For large sessions, use a positive `limit` and follow the pagination cursor instead.
+`limit: 0` requests the complete chat history from the compatibility API. For large sessions, use a positive `limit` and follow the pagination cursor instead.
 
 ## Local and cloud sessions
 
