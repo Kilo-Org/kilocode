@@ -21,9 +21,9 @@ Different search surfaces cover different content and scopes:
 | [JetBrains History](#search-session-history-in-jetbrains) | Session titles | Sessions loaded in the selected Local or Cloud history view |
 | [CLI Past chats](#reference-a-past-chat-in-the-cli-tui) | Session titles | Current workspace |
 | [`kilo session list --search`](#filter-session-titles) | Session titles | Current workspace, or every local workspace with `--all` |
-| [Ask Kilo to recall past chats](#ask-kilo-to-search-past-chats) | Titles and high-signal chat content | Current workspace |
+| [Ask Kilo to recall past chats](#ask-kilo-to-search-past-chats) | Titles and high-signal chat content | Current workspace and related Git worktrees |
 | [VS Code chat search](#search-the-open-chat-session) | Rendered content in the open session | Current chat session |
-| [VS Code Past chats](#add-a-past-chat-to-the-current-session) | Session titles and workspace names | Current workspace |
+| [VS Code Past chats](#add-a-past-chat-to-the-current-session) | Session titles and worktree names | Current workspace and related Git worktrees, including Agent Manager worktrees |
 | [SQLite query](#query-sqlite-directly) | Any stored field you select | Entire selected local database |
 
 History and CLI list searches do **not** search message content. To find a string inside prompts or replies, ask Kilo to search past chats or use a direct SQLite query.
@@ -58,7 +58,7 @@ Kilo loads older messages while the search is active so the search covers the fu
 
 ### Add a past chat to the current session
 
-Type `@` in the chat input, select **Past chats**, and search by session title or workspace name. Selecting a result adds that past chat's content as context when you send the message from your current session. It does not switch or reopen sessions. Past chats includes sessions in the current workspace.
+Type `@` in the chat input, select **Past chats**, and search by session title or worktree name. Selecting a result adds that past chat's content as context when you send the message from your current session. It does not switch or reopen sessions. Past chats includes sessions in the current workspace and related Git worktrees, including Agent Manager worktrees.
 
 {% /tab %}
 {% tab label="JetBrains" %}
@@ -98,7 +98,7 @@ The simplest way to search message content across past local sessions is to ask 
 Search my local sessions for "database disk image is malformed" and summarize the matching conversations.
 ```
 
-Kilo's local recall search covers session titles, user and assistant text, file references, and failed tool errors in the current workspace. Every query term must occur somewhere in a matching session; exact phrases and user-authored matches rank higher.
+Kilo's local recall search covers session titles, user and assistant text, file references, and failed tool errors in the current workspace and related Git worktrees. Every query term must occur somewhere in a matching session; exact phrases and user-authored matches rank higher.
 
 The search includes archived and child sessions. It excludes reasoning, synthetic or ignored text, successful tool output, file contents, and other metadata. Kilo can then read the full chat history for a selected result.
 
@@ -144,8 +144,8 @@ Stable installations normally use these paths:
 
 | Environment | Default path |
 |---|---|
-| Windows | `%LOCALAPPDATA%\kilo\kilo.db` |
-| macOS | `~/Library/Application Support/kilo/kilo.db` |
+| Windows | `%USERPROFILE%\.local\share\kilo\kilo.db` |
+| macOS | `~/.local/share/kilo/kilo.db` |
 | Linux | `~/.local/share/kilo/kilo.db` |
 | VS Code Remote SSH | `~/.local/share/kilo/kilo.db` on the remote machine |
 
