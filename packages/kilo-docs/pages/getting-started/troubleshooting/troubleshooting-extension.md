@@ -33,8 +33,8 @@ The default database location depends on where Kilo Code is running:
 
 | Environment | Database path |
 |---|---|
-| Windows | `%LOCALAPPDATA%\kilo\kilo.db` |
-| macOS | `~/Library/Application Support/kilo/kilo.db` |
+| Windows | `%USERPROFILE%\.local\share\kilo\kilo.db` |
+| macOS | `~/.local/share/kilo/kilo.db` |
 | Linux | `~/.local/share/kilo/kilo.db` |
 | VS Code Remote SSH | `~/.local/share/kilo/kilo.db` on the remote machine |
 
