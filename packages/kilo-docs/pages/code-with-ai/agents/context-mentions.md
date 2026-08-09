@@ -25,15 +25,15 @@ Type `@` in the chat input to get autocomplete suggestions. You can mention:
 | **File** | Attach a file's contents to your message | `@src/utils.ts` |
 | **Terminal** | Include your active VS Code terminal output | `@terminal` |
 | **Git Changes** | Attach uncommitted working-tree diffs and new files | `@git-changes` |
-| **Past chats** | Attach a previous session's transcript as context | `@` → **Past chats** → pick a session |
+| **Past chats** | Add a previous session's chat history as context | `@` → **Past chats** → pick a session |
 
 Selecting a suggestion inserts the mention and highlights it in the input. File contents, terminal output, and git changes are attached as context when you send the message.
 
 ### Referencing Past Chats
 
-Choosing **Past chats** from the `@` menu opens a searchable picker of your previous sessions in the current workspace, ordered by recency. Selecting a session inserts a highlighted mention token; when you send the message, that session's current transcript is attached as context so the agent can build on the earlier conversation. Clicking the mention token opens the referenced session.
+Choosing **Past chats** from the `@` menu opens a searchable picker of sessions in the current workspace, ordered by recency. Search matches session titles and workspace names. Selecting a session inserts a highlighted mention token; when you send the message, that session's current chat history is added as context so the agent can build on the earlier conversation. Clicking the mention token opens the referenced session.
 
-Very long transcripts are truncated, keeping the beginning and end, so a single mention cannot fill the context window.
+Very long chat histories are truncated, keeping the beginning and end, so a single mention cannot fill the context window.
 
 ### Drag and Drop
 
@@ -77,7 +77,7 @@ This means the agent can explore your entire project as needed, rather than bein
 | **Mention files when helpful** | If you know the exact file, mention its path to save the agent a search step |
 | **Keep editor tabs relevant** | Open tabs are passed as context, so keep relevant files open |
 | **Trust the agent's tools** | The agent can search, read, and explore your codebase — let it do the discovery work |
-| **Reference a past chat** | Type `@` and choose **Past chats** to open a searchable picker of previous sessions in the current workspace. Selecting a session attaches its current transcript as context when you send the message. |
+| **Reference a past chat** | Type `@` and choose **Past chats** to search sessions in the current workspace. Selecting a session adds its current chat history as context when you send the message. |
 
 {% /tab %}
 {% tab label="CLI" %}
@@ -93,6 +93,7 @@ When you describe a task, the agent uses its tools — `read`, `grep`, `glob`, a
 In the terminal-based TUI, you can provide context in several ways:
 
 - **Type `@` for file autocomplete** — In the TUI, type `@` followed by a filename to get autocomplete suggestions. Selecting a file attaches its contents to your message. You can limit how much is included by appending a line range, e.g. `@src/utils.ts#10-50`.
+- **Reference a past chat** — Type `@`, choose **Past chats**, then search for and select a session. Kilo adds that chat history as context when you send the message without switching sessions.
 - **Mention file paths in your message** — Simply refer to files by path in your conversation text (e.g., "look at src/utils.ts") and the agent will read them.
 - **Use `kilo run -f`** — When using the non-interactive `kilo run` command, pass `-f path/to/file.ts` to explicitly include a file's contents in the context.
 - **Let the agent find files itself** — The agent has access to `glob` (find files by pattern), `grep` (search file contents), and `read` (read file contents) tools. Describe what you're looking for and it will locate the relevant code.
@@ -116,6 +117,7 @@ This means the agent can explore your entire project as needed, rather than bein
 |---|---|
 | **Describe the task clearly** | The agent finds context on its own — focus on _what_ you want done rather than _where_ the code is |
 | **Mention files when helpful** | If you know the exact file, mention its path to save the agent a search step |
+| **Reference a past chat** | Type `@` and choose **Past chats** to add another session's chat history as context without switching sessions. |
 | **Use `kilo run -f`** | Pass key files with `-f` when using `kilo run` for immediate context |
 | **Trust the agent's tools** | The agent can search, read, and explore your codebase — let it do the discovery work |
 
