@@ -18,9 +18,9 @@ Different search surfaces cover different content and scopes:
 | Method | Searches | Scope |
 |---|---|---|
 | VS Code or JetBrains History | Session titles | Sessions loaded in the selected Local or Cloud history view |
-| CLI `/sessions` picker | Session titles | Current project and its Git worktrees |
-| `kilo session list --search` | Session titles | Current project, or every local project with `--all` |
-| Ask Kilo to recall past chats | Titles and high-signal transcript content | Current project and its Git worktrees |
+| CLI `/sessions` picker | Session titles | Current workspace |
+| `kilo session list --search` | Session titles | Current workspace, or every local workspace with `--all` |
+| Ask Kilo to recall past chats | Titles and high-signal transcript content | Current workspace |
 | VS Code transcript search | Rendered content in the open session | Current session |
 | SQLite query | Any stored field you select | Entire selected local database |
 
@@ -56,7 +56,7 @@ Kilo loads older messages while the search is active so the search covers the fu
 
 ### Reference another session
 
-Type `@` in the chat input, select **Past chats**, and search by session title or worktree name. Selecting a result attaches that transcript as context when you send the message. Past chats includes sessions in the current repository's Git worktree family.
+Type `@` in the chat input, select **Past chats**, and search by session title or workspace name. Selecting a result attaches that transcript as context when you send the message. Past chats includes sessions in the current workspace.
 
 {% /tab %}
 {% tab label="JetBrains" %}
@@ -95,7 +95,7 @@ The simplest way to search message content across past local sessions is to ask 
 Search my local sessions for "database disk image is malformed" and summarize the matching conversations.
 ```
 
-Kilo's local recall search covers session titles, user and assistant text, file references, and failed tool errors in the current project and its Git worktrees. Every query term must occur somewhere in a matching session; exact phrases and user-authored matches rank higher.
+Kilo's local recall search covers session titles, user and assistant text, file references, and failed tool errors in the current workspace. Every query term must occur somewhere in a matching session; exact phrases and user-authored matches rank higher.
 
 The search includes archived and child sessions. It excludes reasoning, synthetic or ignored text, successful tool output, file contents, and other metadata. Kilo can then read the full transcript for a selected result.
 
@@ -103,13 +103,13 @@ The search includes archived and child sessions. It excludes reasoning, syntheti
 
 ### Filter session titles
 
-List sessions in the current project:
+List sessions in the current workspace:
 
 ```bash
 kilo session list --search "database migration"
 ```
 
-Search titles across every project in the local database and return JSON:
+Search titles across every local workspace and return JSON:
 
 ```bash
 kilo session list --all --search "database migration" --format json
@@ -195,7 +195,7 @@ kilo db "
 " --format json
 ```
 
-Replace the search string in the second `lower(...)` expression. This query searches ordinary user and assistant text. It intentionally does not reproduce Kilo's recall ranking, worktree-family scope, file-reference matching, or tool-error matching.
+Replace the search string in the second `lower(...)` expression. This query searches ordinary user and assistant text. It intentionally does not reproduce Kilo's recall ranking, workspace scope, file-reference matching, or tool-error matching.
 
 ### Use the SQLite shell
 
