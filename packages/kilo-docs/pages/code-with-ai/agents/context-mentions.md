@@ -31,7 +31,7 @@ Selecting a suggestion inserts the mention and highlights it in the input. File 
 
 ### Referencing Past Chats
 
-Choosing **Past chats** from the `@` menu opens a searchable picker of your previous sessions in the current workspace, ordered by recency. Selecting a session inserts a highlighted mention token; when you send the message, that session's current transcript is attached as context so the agent can build on the earlier conversation. Clicking the mention token opens the referenced session.
+Choosing **Past chats** from the `@` menu opens a searchable picker of sessions in the current repository's Git worktree family, ordered by recency. Search matches session titles and worktree names. Selecting a session inserts a highlighted mention token; when you send the message, that session's current transcript is attached as context so the agent can build on the earlier conversation. Clicking the mention token opens the referenced session.
 
 Very long transcripts are truncated, keeping the beginning and end, so a single mention cannot fill the context window.
 
@@ -77,7 +77,7 @@ This means the agent can explore your entire project as needed, rather than bein
 | **Mention files when helpful** | If you know the exact file, mention its path to save the agent a search step |
 | **Keep editor tabs relevant** | Open tabs are passed as context, so keep relevant files open |
 | **Trust the agent's tools** | The agent can search, read, and explore your codebase — let it do the discovery work |
-| **Reference a past chat** | Type `@` and choose **Past chats** to open a searchable picker of previous sessions in the current workspace. Selecting a session attaches its current transcript as context when you send the message. |
+| **Reference a past chat** | Type `@` and choose **Past chats** to search sessions in the current repository's worktree family. Selecting a session attaches its current transcript as context when you send the message. |
 
 {% /tab %}
 {% tab label="CLI" %}
