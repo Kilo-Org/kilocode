@@ -63,7 +63,7 @@ Open your terminal and run `kilo` to launch the interactive terminal interface (
 - **Input prompt** - Type your requests and press Enter to send
 - **Action buttons** - Approve or reject proposed changes, answer questions
 - **Agent dropdown** - Switch between agents (e.g. Code, Ask, Plan) from the sidebar
-- **Session management** - Start new sessions or resume previous ones
+- **Session management** - Start new sessions or [search and resume previous ones](/docs/code-with-ai/agents/session-history)
 
 **Providing context:**
 
@@ -89,7 +89,7 @@ You can also rename local sessions from **History** using the edit button or the
 - **Input prompt** - Type your requests and press Enter to send
 - **Action buttons** - Approve or reject proposed changes, answer questions
 - **Agent cycling** - Switch between agents using keybinds or slash commands
-- **Session management** - Start new sessions or resume previous ones
+- **Session management** - Start new sessions or [search and resume previous ones](/docs/code-with-ai/agents/session-history)
 - **New task** - Start a new task, available using the `+` button at the top or `New Task` button above the chat input
 - **Worktree** - Continue the current task with it's git state and session history in the Agent Manager in an isolated worktree
 - **File changes** - Shows the number of lines changed and opens a diff view

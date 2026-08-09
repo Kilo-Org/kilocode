@@ -27,7 +27,9 @@ If every prompt fails with `SQLiteError: database disk image is malformed`, Kilo
 
 ### Find the database
 
-The database location depends on where Kilo Code is running:
+When the kilo CLI uses the same environment as the affected installation, run `kilo db path` to print the selected database. See [Session History and Search](/docs/code-with-ai/agents/session-history) for normal database inspection and search workflows.
+
+The default database location depends on where Kilo Code is running:
 
 | Environment | Database path |
 |---|---|
