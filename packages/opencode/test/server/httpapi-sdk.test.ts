@@ -1042,6 +1042,49 @@ describe("HttpApi SDK", () => {
     ),
   )
 
+  serverPathParity("dispatches the theme switch command for SDK openThemes", (serverPath) =>
+    withStandardProject(serverPath, ({ sdk }) =>
+      Effect.gen(function* () {
+        const controller = new AbortController()
+        yield* Effect.addFinalizer(() => Effect.sync(() => controller.abort()))
+        const events = yield* call(() => sdk.event.subscribe(undefined, { signal: controller.signal }))
+        yield* Effect.addFinalizer(() =>
+          call(async () => void (await events.stream.return?.(undefined))).pipe(Effect.ignore),
+        )
+
+        const ready = yield* Deferred.make<void>()
+        const received = yield* Deferred.make<unknown>()
+
+        yield* call(async () => {
+          for await (const event of events.stream) {
+            const payload = record(event).payload ?? event
+            const type = record(payload).type
+            if (type === "server.connected") {
+              Deferred.doneUnsafe(ready, Effect.void)
+              continue
+            }
+            if (type === "tui.command.execute") {
+              Deferred.doneUnsafe(received, Effect.succeed(payload))
+              return
+            }
+          }
+        }).pipe(Effect.forkScoped)
+
+        yield* awaitWithTimeout(Deferred.await(ready), "timed out waiting for /event server.connected", "2 seconds")
+
+        const opened = yield* capture(() => sdk.tui.openThemes())
+        expect(opened.status).toBe(200)
+
+        const event = yield* awaitWithTimeout(
+          Deferred.await(received),
+          "timed out waiting for tui.command.execute over /event",
+          "2 seconds",
+        )
+        expect(record(record(event).properties).command).toBe("theme.switch")
+      }),
+    ),
+  )
+
   serverPathParity("matches generated SDK project git initialization", (serverPath) =>
     withProject(serverPath, {}, ({ sdk, directory }) =>
       Effect.gen(function* () {
