@@ -331,6 +331,12 @@ export const Info = Schema.Struct({
       }),
     }),
   ),
+  // kilocode_change start - Sara RLM recursive task orchestration config
+  rlm: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)).annotate({
+    description:
+      "Sara RLM settings: recursive task orchestration (enabled, maxDepth, maxReinvestigations, verification, budget, modelRouting)",
+  }),
+  // kilocode_change end
 }).annotate({ identifier: "Config" })
 
 export type Info = DeepMutable<Schema.Schema.Type<typeof Info>>

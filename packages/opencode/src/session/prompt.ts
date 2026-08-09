@@ -85,6 +85,8 @@ import { referencePromptMetadata, referenceTextPart } from "./prompt/reference"
 import { SessionReminders } from "./reminders"
 import { SessionTools } from "./tools"
 import { LLMEvent } from "@opencode-ai/llm"
+import { execute as rlmExecute, isRlmActive } from "@/rlm/runtime" // sara_rlm - recursive task orchestration
+import { fromConfig as rlmFromConfig } from "@/rlm/config" // sara_rlm - RLM config adapter
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -1490,9 +1492,7 @@ export const layer = Layer.effect(
     const closeReasons = new Map<string, KiloSession.CloseReason>()
 
     // kilocode_change start - retain request-scoped snapshot initialization policy
-    const runLoop: (input: LoopInput) => Effect.Effect<MessageV2.WithParts, NotFoundError> = Effect.fn(
-      "SessionPrompt.run",
-    )(function* (input: LoopInput) {
+    const runLoop = Effect.fn("SessionPrompt.run")(function* (input: LoopInput) {
       const sessionID = input.sessionID
       // kilocode_change end
       // kilocode_change — cache environment details per turn (prompt caching)
@@ -1912,6 +1912,43 @@ export const layer = Layer.effect(
             yield* sessions.updateMessage(handle.message)
           }
           // kilocode_change end
+          // sara_rlm start - RLM recursive task orchestration
+          const rlmCfg = rlmFromConfig(yield* config.get() as any)
+          // Reentry guard: RLM-internal prompts (planner/executor/verifier) run
+          // their own loops on the same session; those loops must not trigger
+          // the orchestration hook again, or rlmExecute recurses into itself.
+          if (rlmCfg.enabled && step === 1 && !isRlmActive(sessionID)) {
+            const userText = msgs.findLast((m) => m.info.role === "user")
+            if (userText) {
+              const lastText = userText.parts
+                .filter((p: any) => p.type === "text" && !("synthetic" in p && p.synthetic === true))
+                .map((p: any) => p.text ?? "")
+                .join("\n")
+                .trim()
+              if (lastText) {
+                const rlmResult = yield* (rlmExecute({
+                  sessionID,
+                  agent: lastUser.agent,
+                  description: lastText.slice(0, 200),
+                  prompt: lastText,
+                }) as Effect.Effect<any, any, any>).pipe(
+                  Effect.catchCause((cause: unknown) => {
+                    const message = cause instanceof Error ? cause.message : String(cause)
+                    log.error("rlm execution failed", { error: message })
+                    return Effect.succeed(null)
+                  }),
+                )
+                if (rlmResult) {
+                  handle.message.finish = "stop"
+                  handle.message.time.completed = Date.now()
+                  yield* sessions.updateMessage(handle.message)
+                  closeReasons.set(sessionID, "completed")
+                  return "break" as const
+                }
+              }
+            }
+          }
+          // sara_rlm end
           return "continue" as const
         }).pipe(
           Effect.ensuring(instruction.clear(handle.message.id)),
@@ -1937,7 +1974,7 @@ export const layer = Layer.effect(
         state.ensureRunning(
           input.sessionID,
           lastAssistant(input.sessionID).pipe(Effect.orDie),
-          runLoop(input).pipe(Effect.orDie),
+          (runLoop(input) as Effect.Effect<any>).pipe(Effect.orDie),
         ), // kilocode_change
         Effect.fnUntraced(function* (exit) {
           yield* KiloSession.publishTurnClose({
