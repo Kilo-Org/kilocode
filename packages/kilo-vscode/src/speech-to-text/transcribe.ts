@@ -1,6 +1,7 @@
 import type { KiloConnectionService } from "../services/cli-backend/connection-service"
 import { getErrorMessage } from "../kilo-provider-utils"
 import { getSpeechToTextModel } from "./models"
+import { hasCustomSource, sourceHeaders, sourceUrl, type SpeechToTextSource } from "./source"
 
 const PATH = "/kilo/audio/transcriptions"
 const PROMPT =
@@ -35,7 +36,10 @@ export async function transcribeSpeech(
   input: Req,
   dir: string,
   signal?: AbortSignal,
+  source?: SpeechToTextSource,
 ): Promise<SpeechToTextResult> {
+  if (hasCustomSource(source)) return await transcribeWithSource(source, input, signal)
+
   const cfg = connection.getServerConfig()
   if (!cfg) return { ok: false, error: "Not connected to the Kilo backend", code: "not_connected" }
 
@@ -64,26 +68,62 @@ export async function transcribeSpeech(
       }),
     })
 
-    const raw = await res.text()
-    const body = parse(raw)
-
-    if (!res.ok) {
-      return {
-        ok: false,
-        error: errorMessage(body, raw) ?? `Speech to text failed with status ${res.status}`,
-        code: res.status === 401 ? "not_authenticated" : undefined,
-      }
-    }
-
-    const text = typeof body?.text === "string" ? body.text.trim() : ""
-    if (!text) return { ok: false, error: "No speech was detected", code: "empty_transcript" }
-
-    return { ok: true, text }
+    return await read(res)
   } catch (err) {
-    if (signal?.aborted) return { ok: false, error: "Speech transcription cancelled", code: "cancelled" }
-    const msg = getErrorMessage(err) || "Speech to text request failed"
-    return { ok: false, error: msg, code: msg === "Failed to fetch" ? "not_available" : undefined }
+    return failure(err, signal)
   }
+}
+
+async function transcribeWithSource(
+  source: SpeechToTextSource,
+  input: Req,
+  signal?: AbortSignal,
+): Promise<SpeechToTextResult> {
+  const model = getSpeechToTextModel(input.model)
+  const prompt = model.verbatim ? PROMPT : undefined
+  const form = new FormData()
+  form.set("file", new Blob([Buffer.from(input.data, "base64")]), `speech.${input.format}`)
+  form.set("model", input.model || model.id)
+  form.set("response_format", "json")
+  if (input.language) form.set("language", input.language)
+  if (prompt) form.set("prompt", prompt)
+
+  try {
+    const res = await fetch(sourceUrl(source, "audio/transcriptions"), {
+      method: "POST",
+      signal,
+      headers: sourceHeaders(source),
+      body: form,
+    })
+
+    return await read(res)
+  } catch (err) {
+    return failure(err, signal)
+  }
+}
+
+async function read(res: Response): Promise<SpeechToTextResult> {
+  const raw = await res.text()
+  const body = parse(raw)
+
+  if (!res.ok) {
+    return {
+      ok: false,
+      error: errorMessage(body, raw) ?? `Speech to text failed with status ${res.status}`,
+      code: res.status === 401 ? "not_authenticated" : undefined,
+    }
+  }
+
+  const text = typeof body?.text === "string" ? body.text.trim() : ""
+  if (!text) return { ok: false, error: "No speech was detected", code: "empty_transcript" }
+
+  return { ok: true, text }
+}
+
+function failure(err: unknown, signal?: AbortSignal): SpeechToTextResult {
+  if (signal?.aborted) return { ok: false, error: "Speech transcription cancelled", code: "cancelled" }
+  const msg = getErrorMessage(err) || "Speech to text request failed"
+  return { ok: false, error: msg, code: msg === "Failed to fetch" ? "not_available" : undefined }
 }
 
 function parse(raw: string): Res | Record<string, unknown> | null {

@@ -859,9 +859,19 @@ export const dict = {
   "settings.experimental.imageGenerationModel.placeholder": "Default (Auto Router)",
 
   "settings.models.speechToText.disabledDescription":
-    "Enable and sign in to the Kilo provider to use Speech to Text. Speech to Text is currently only supported through Kilo Gateway.",
+    "Enable and sign in to the Kilo provider to use Speech to Text, or set a custom transcription base URL below.",
   "settings.models.speechToTextModel.title": "Speech to Text Model",
   "settings.models.speechToTextModel.description": "Choose the Kilo Gateway transcription model for voice input.",
+  "settings.models.speechToTextModel.customDescription":
+    "Model ID sent to your custom transcription endpoint, for example whisper-1.",
+  "settings.models.speechToTextBaseUrl.title": "Speech to Text Base URL",
+  "settings.models.speechToTextBaseUrl.description":
+    "Use an OpenAI-compatible transcription API instead of Kilo Gateway. Models are read from /models and audio is sent to /audio/transcriptions. Leave empty to use Kilo Gateway.",
+  "settings.models.speechToTextBaseUrl.placeholder": "https://api.openai.com/v1",
+  "settings.models.speechToTextApiKey.title": "Speech to Text API Key",
+  "settings.models.speechToTextApiKey.description":
+    "Bearer token sent to the custom transcription base URL. Stored in your Kilo config file.",
+  "settings.models.speechToTextApiKey.placeholder": "sk-...",
   "settings.experimental.nativeNotebookTools.title": "Native Notebook Tools",
   "settings.experimental.nativeNotebookTools.description":
     "Enable experimental tools for reading, editing, and executing VS Code notebooks",
