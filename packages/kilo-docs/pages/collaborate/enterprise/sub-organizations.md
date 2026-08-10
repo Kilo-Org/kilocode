@@ -19,9 +19,9 @@ The hierarchy has one level. A parent organization can have direct sub-organizat
 2. Open the parent organization.
 3. Select **Sub-organizations** in the organization navigation, or select **Manage Sub-Organizations** from the Sub-organizations card on the organization overview.
 
-Only parent organization Owners, Admins, and Billing Managers can open the consolidated management area. Members of the parent organization and owners of individual sub-organizations cannot use it to inspect other sub-organizations.
+Only parent organization Owners, Admins, and Billing Managers can open the consolidated management area. Members of the parent organization and Owners of individual sub-organizations cannot use it to inspect other sub-organizations.
 
-{% image src="/docs/img/enterprise/sub-organizations-overview.png" alt="Sub-organization management overview showing organization membership, seats, balances, and spend" width="100%" caption="Compare direct sub-organizations from the Overview section." /%}
+{% image src="/docs/img/enterprise/sub-organizations-overview.webp" alt="Sub-organization management overview showing organization membership, seats, balances, and spend" width="100%" caption="Compare direct sub-organizations from the Overview section." /%}
 
 ## Create a sub-organization
 
@@ -39,7 +39,7 @@ The new sub-organization starts empty. It does not automatically copy parent mem
 Billing Managers can view sub-organizations and manage financial operations, but they cannot create a sub-organization.
 {% /callout %}
 
-{% image src="/docs/img/enterprise/create-sub-organization.png" alt="Create sub-organization dialog with an organization name field" width="100%" caption="Create an empty direct sub-organization from the parent organization." /%}
+{% image src="/docs/img/enterprise/create-sub-organization.webp" alt="Create sub-organization dialog with an organization name field" width="100%" caption="Create an empty direct sub-organization from the parent organization." /%}
 
 ## Use the management sections
 
@@ -67,7 +67,7 @@ The **People** section combines each person into one record, even when that pers
 
 The People section reports current membership. To invite a new person, change a role, or remove a member, open the relevant organization's member settings.
 
-{% image src="/docs/img/enterprise/sub-organizations-people.png" alt="Sub-organization People section with search, role, status, assignment, and organization filters" width="100%" caption="Search and filter people across the parent and its sub-organizations." /%}
+{% image src="/docs/img/enterprise/sub-organizations-people.webp" alt="Sub-organization People section with search, role, status, assignment, and organization filters" width="100%" caption="Search and filter people across the parent and its sub-organizations." /%}
 
 ### Review usage and credits
 
@@ -77,7 +77,7 @@ Use **Credits** to compare financial state across sub-organizations. Kilo Pass a
 
 Use **Distribute funds** when you need to transfer credit balance. Kilo Pass capacity and credit balance are separate quantities and are managed separately.
 
-{% image src="/docs/img/enterprise/sub-organizations-credits.png" alt="Sub-organization Credits section comparing balances, expirations, Kilo Pass allocation, spend, and runway" width="100%" caption="Compare credit state and Kilo Pass allocation across sub-organizations." /%}
+{% image src="/docs/img/enterprise/sub-organizations-credits.webp" alt="Sub-organization Credits section comparing balances, expirations, Kilo Pass allocation, spend, and runway" width="100%" caption="Compare credit state and Kilo Pass allocation across sub-organizations." /%}
 
 ### Compare models and permissions
 
@@ -87,7 +87,7 @@ The section distinguishes configured restrictions from restrictions that are act
 
 Use **Permissions** to identify sub-organizations without an independent Owner, review effective SSO policy, and see which parent users have inherited access. Inherited access does not create a membership or consume a seat in the sub-organization.
 
-{% image src="/docs/img/enterprise/sub-organizations-models.png" alt="Sub-organization Models section comparing configured model and provider policies" width="100%" caption="Review independent model policy for the parent and each sub-organization." /%}
+{% image src="/docs/img/enterprise/sub-organizations-models.webp" alt="Sub-organization Models section comparing configured model and provider policies" width="100%" caption="Review independent model policy for the parent and each sub-organization." /%}
 
 ## Recommended setup
 
