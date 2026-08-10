@@ -67,7 +67,9 @@ export namespace TestCli {
             return bin
           }
         }
-      } catch {}
+      } catch (err) {
+        console.warn("[test-cli] failed to read fingerprint cache:", err)
+      }
     }
 
     const { createSolidTransformPlugin } = await import("@opentui/solid/bun-plugin")

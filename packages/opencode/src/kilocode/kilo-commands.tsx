@@ -200,12 +200,24 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
         run: async () => {
           const active = sync.data.config.privacy_mode === true || sync.data.globalConfig.privacy_mode === true
           const next = !active
-          const response = await sdk.client.config.overlayUpdate({
-            scope: "global",
-            set: { privacy_mode: next },
-          })
-          if (response.error) {
-            const status = response.response?.status ?? "?"
+          const updates = [
+            sdk.client.config.overlayUpdate({
+              scope: "global",
+              set: { privacy_mode: next },
+            }),
+          ]
+          if (!next && sync.data.config.privacy_mode === true) {
+            updates.push(
+              sdk.client.config.overlayUpdate({
+                scope: "project",
+                unset: [["privacy_mode"]],
+              }),
+            )
+          }
+          const responses = await Promise.all(updates)
+          const failed = responses.find((r) => r.error)
+          if (failed) {
+            const status = failed.response?.status ?? "?"
             toast.show({ message: `Failed to update privacy mode (${status})`, variant: "error" })
             return
           }

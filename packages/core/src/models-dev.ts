@@ -166,10 +166,10 @@ const layer = Layer.effect(
       ),
     )
 
-    const source = Flag.KILO_MODELS_URL || "https://models.opencode.ai"
+    const source = Flag.KILO_MODELS_URL || "https://models.dev" // kilocode_change
     const filepath = path.join(
       Global.Path.cache,
-      source === "https://models.opencode.ai" ? "models.json" : `models-${Hash.fast(source)}.json`,
+      source === "https://models.dev" ? "models.json" : `models-${Hash.fast(source)}.json`, // kilocode_change
     )
     const ttl = Duration.minutes(5)
     const lockKey = `models-dev:${filepath}`
