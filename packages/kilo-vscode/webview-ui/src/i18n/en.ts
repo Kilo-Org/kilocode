@@ -408,6 +408,8 @@ export const dict = {
   "provider.custom.models.name.placeholder": "Display Name",
   "provider.custom.models.reasoning.label": "Reasoning",
   "provider.custom.models.modalities.image": "Image",
+  "provider.custom.models.toggleReasoning": "Toggle reasoning for all",
+  "provider.custom.models.toggleImages": "Toggle image for all",
   "provider.custom.models.remove": "Remove model",
   "provider.custom.models.add": "Add model",
   "provider.custom.models.fetch.authError": "Authentication failed. Check the API key above and try again.",

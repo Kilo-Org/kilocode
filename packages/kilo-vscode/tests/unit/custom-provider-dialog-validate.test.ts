@@ -292,4 +292,20 @@ describe("validateCustomProvider – variant name validation", () => {
     const saved = out.result!.config.models["model-1"] as Record<string, unknown>
     expect(saved.modalities).toEqual({ input: ["text", "audio", "video", "pdf"], output: ["text", "audio"] })
   })
+
+  it("handles multiple models with reasoning and images toggled", () => {
+    const form = base()
+    form.models = [
+      { id: "m1", name: "Model 1", reasoning: true, supportsImages: true, modalities: {}, variants: [] },
+      { id: "m2", name: "Model 2", reasoning: true, supportsImages: false, modalities: {}, variants: [] },
+    ]
+    const out = validateCustomProvider(args(form))
+    expect(out.result).toBeDefined()
+    const m1 = out.result!.config.models["m1"] as Record<string, unknown>
+    const m2 = out.result!.config.models["m2"] as Record<string, unknown>
+    expect(m1.reasoning).toBe(true)
+    expect(m1.modalities).toEqual({ input: ["text", "image"] })
+    expect(m2.reasoning).toBe(true)
+    expect(m2.modalities).toBeUndefined()
+  })
 })
