@@ -2,7 +2,6 @@
 import { Component, Show } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
-import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
 import type { WorktreeState } from "../../src/types/messages"
 import type { PRStatus } from "../../src/types/messages"
 import { PRBadge } from "./PRBadge"
@@ -23,8 +22,7 @@ interface PRPanelProps {
 
 export const PRPanel: Component<PRPanelProps> = (props) => {
   return (
-    <MarkedProvider>
-      <div class="am-pr-panel am-pr-col">
+    <div class="am-pr-panel am-pr-col">
         <div class="am-pr-panel-header am-pr-row">
           <div class="am-pr-panel-title-row am-pr-row">
             <PRBadge pr={props.pr} />
@@ -61,6 +59,5 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
           </Show>
         </div>
       </div>
-    </MarkedProvider>
   )
 }
