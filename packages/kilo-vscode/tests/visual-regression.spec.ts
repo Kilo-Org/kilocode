@@ -77,6 +77,8 @@ async function settle(page: Page) {
 // Sandboxing rows can settle at different scroll heights after settings context updates.
 // Side terminal tabs mount live xterm instances whose websocket error text
 // lands at indeterminate times.
+const PORTAL = new Set(["settings--custom-provider-create", "settings--custom-provider-edit"])
+
 const SKIP = new Set<string>([
   "agentmanager--worktree-item-busy",
   "agentmanager--full-screen-diff-agent-edit-scroll",
@@ -128,10 +130,12 @@ for (const story of stories) {
     )
     await disableAnimations(page)
     await page.waitForSelector("#storybook-root *", { state: "attached" })
+    const portal = PORTAL.has(story.id)
+    if (portal) await page.waitForSelector("[data-component='dialog']")
     await settle(page)
 
     const [component, variant] = story.id.split("--")
-    const root = page.locator("#storybook-root")
+    const root = page.locator(portal ? "[data-component='dialog']" : "#storybook-root")
     await expect(root).toHaveScreenshot(["visual-regression", component!, `${variant!}-chromium-linux.png`])
   })
 }
