@@ -19,6 +19,8 @@ import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.intellij.xml.util.XmlStringUtil
 import java.awt.BorderLayout
+import java.awt.Component
+import java.awt.Container
 import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.event.MouseAdapter
@@ -57,12 +59,12 @@ internal class WorktreeStatsView(
         changeHit.act = openDiff
         prHit.act = { url?.let(BrowserUtil::browse) }
         diff.toolTipText = KiloBundle.message("worktree.stats.tooltip", 0, 0, 0, 0)
-        changeHit.addMouseListener(object : MouseAdapter() {
+        installClick(changeHit, object : MouseAdapter() {
             override fun mouseClicked(event: MouseEvent) {
                 changeHit.act?.invoke()
             }
         })
-        prHit.addMouseListener(object : MouseAdapter() {
+        installClick(prHit, object : MouseAdapter() {
             override fun mouseClicked(event: MouseEvent) {
                 prHit.act?.invoke()
             }
@@ -126,12 +128,22 @@ internal class WorktreeStatsView(
     }
 
     private fun applyCursors() {
-        changeHit.cursor = actionCursor(changeHit.act != null)
-        prHit.cursor = actionCursor(prHit.act != null)
+        applyCursor(changeHit, changeHit.act != null)
+        applyCursor(prHit, prHit.act != null)
     }
 
     private fun actionCursor(active: Boolean) =
         if (active) Cursor.getPredefinedCursor(Cursor.HAND_CURSOR) else Cursor.getDefaultCursor()
+
+    private fun installClick(comp: Component, listener: MouseAdapter) {
+        comp.addMouseListener(listener)
+        if (comp is Container) comp.components.forEach { installClick(it, listener) }
+    }
+
+    private fun applyCursor(comp: Component, active: Boolean) {
+        comp.cursor = actionCursor(active)
+        if (comp is Container) comp.components.forEach { applyCursor(it, active) }
+    }
 
     override fun getPreferredSize(): Dimension {
         val ins = insets

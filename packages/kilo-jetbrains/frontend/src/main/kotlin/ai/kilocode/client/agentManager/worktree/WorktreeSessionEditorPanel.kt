@@ -11,6 +11,7 @@ import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.history.HistorySection
 import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.session.history.LocalHistoryItem
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.util.bindTheme
 import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListBadge
@@ -41,6 +42,7 @@ import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.IconLoader
 import com.intellij.ui.IdeBorderFactory
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.SideBorder
@@ -51,6 +53,7 @@ import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.BorderLayout
 import java.awt.Color
 import javax.swing.JComponent
+import javax.swing.Icon
 import javax.swing.ListSelectionModel
 import javax.swing.JPanel
 import javax.swing.event.ListDataEvent
@@ -68,6 +71,8 @@ class WorktreeSessionEditorPanel(
     private val add = NewAction()
     private val rename = RenameAction()
     private val delete = DeleteAction()
+    private val toggle = ToggleAction()
+    private val toolbar = ActionManager.getInstance().createActionToolbar(ActionPlaces.TOOLBAR, DefaultActionGroup(toggle, add, rename, delete), true)
     private val group = ActionManager.getInstance().getAction("Kilo.WorktreeSession.RowMenu") as? ActionGroup ?: DefaultActionGroup()
     private val list = ActiveList(
         KiloBundle.message("worktree.session.list.empty"),
@@ -86,7 +91,8 @@ class WorktreeSessionEditorPanel(
             (row as? SessionRow)?.session?.takeIf { canRename(it) || canDelete(it) }
         }),
     )
-    private val statsView = WorktreeStatsView(::openBranchDiff)
+    private val prHeader = WorktreePrHeaderView(::openBranchDiff)
+    private val splitter = OnePixelSplitter(false, 0.25f)
     private var started = false
     private var stats: WorktreeStatsDto? = null
     private var pr: WorktreePrDto? = null
@@ -94,16 +100,15 @@ class WorktreeSessionEditorPanel(
     init {
         Disposer.register(parent, this)
         isOpaque = true
-        val left = object : JPanel(BorderLayout()) {
-            override fun getBackground(): Color = activeListToolWindowBackground()
-        }
-        left.add(toolbar(), BorderLayout.NORTH)
-        left.add(list, BorderLayout.CENTER)
+        toolbar.targetComponent = this
+        toolbar.component.background = activeListToolWindowBackground()
+        toolbar.updateActionsImmediately()
         list.installPopup(group)
-        val splitter = OnePixelSplitter(false, 0.25f)
-        splitter.firstComponent = left
+        splitter.firstComponent = list
         splitter.secondComponent = manager.component
+        addToTop(header())
         addToCenter(splitter)
+        syncExpanded(KiloPluginSettings.getWorktreeSessionListExpanded())
         bindModel()
         manager.onPresent = { key -> select(key) }
         manager.onListChanged = {
@@ -128,7 +133,7 @@ class WorktreeSessionEditorPanel(
     override fun getBackground(): Color = activeListToolWindowBackground()
 
     @RequiresEdt
-    fun preferredFocus(): JComponent = list.preferredFocus()
+    fun preferredFocus(): JComponent = if (expanded()) list.preferredFocus() else manager.component
 
     @RequiresEdt
     fun selectSessions(keys: List<String>) {
@@ -205,22 +210,43 @@ class WorktreeSessionEditorPanel(
     }
 
     @RequiresEdt
-    private fun toolbar(): JComponent {
-        val toolbar = ActionManager.getInstance().createActionToolbar(
-            ActionPlaces.TOOLBAR,
-            DefaultActionGroup(add, rename, delete),
-            true,
-        )
-        toolbar.targetComponent = this
-        toolbar.component.background = activeListToolWindowBackground()
-        toolbar.updateActionsImmediately()
+    private fun header(): JComponent {
         return object : JPanel(BorderLayout()) {
             override fun getBackground(): Color = activeListToolWindowBackground()
         }.apply {
             border = IdeBorderFactory.createBorder(SideBorder.BOTTOM)
-            add(toolbar.component, BorderLayout.WEST)
-            add(statsView, BorderLayout.EAST)
+            add(toolbarPanel(), BorderLayout.WEST)
+            add(prHeader, BorderLayout.CENTER)
         }
+    }
+
+    @RequiresEdt
+    private fun toolbarPanel(): JComponent {
+        return object : JPanel(BorderLayout()) {
+            override fun getBackground(): Color = activeListToolWindowBackground()
+        }.apply {
+            border = IdeBorderFactory.createBorder(SideBorder.RIGHT)
+            add(toolbar.component, BorderLayout.CENTER)
+        }
+    }
+
+    @RequiresEdt
+    private fun toggleExpanded() {
+        syncExpanded(!expanded())
+        KiloPluginSettings.setWorktreeSessionListExpanded(expanded())
+    }
+
+    @RequiresEdt
+    private fun expanded(): Boolean = splitter.firstComponent != null
+
+    @RequiresEdt
+    private fun syncExpanded(value: Boolean) {
+        val changed = expanded() != value
+        if (changed) splitter.firstComponent = if (value) list else null
+        toolbar.updateActionsImmediately()
+        if (!changed) return
+        splitter.revalidate()
+        splitter.repaint()
     }
 
     @RequiresEdt
@@ -288,14 +314,31 @@ class WorktreeSessionEditorPanel(
     }
 
     private fun bindStatus() {
-        val target = project ?: return
         val key = normalizeWorktreePath(worktree.directory)
+        syncHeader()
+        service<WorktreeNameCache>().addListener(this) { path, _ ->
+            if (normalizeWorktreePath(path) == key) syncHeader()
+        }
+        val target = project ?: return
         WorktreeStatusBinding(
             target,
             this,
-            onStats = { value -> stats = value[key]; statsView.update(stats, pr) },
-            onPr = { value -> pr = value[key]; statsView.update(stats, pr) },
+            onStats = { value -> stats = value[key]; syncHeader() },
+            onPr = { value -> pr = value[key]; syncHeader() },
         )
+    }
+
+    @RequiresEdt
+    private fun syncHeader() {
+        prHeader.update(stats, pr, worktreeName())
+    }
+
+    @RequiresEdt
+    private fun worktreeName(): String {
+        val key = normalizeWorktreePath(worktree.directory)
+        return service<WorktreeNameCache>().get(worktree.directory)
+            ?: service<WorktreeNameCache>().get(key)
+            ?: key.trimEnd('/').substringAfterLast('/').ifBlank { key }
     }
 
     override fun uiDataSnapshot(sink: DataSink) {
@@ -308,6 +351,20 @@ class WorktreeSessionEditorPanel(
     override fun dispose() {
         manager.onPresent = null
         manager.onListChanged = null
+    }
+
+    private inner class ToggleAction : AnAction() {
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+        override fun update(e: AnActionEvent) {
+            val expanded = expanded()
+            e.presentation.text = KiloBundle.message(if (expanded) "worktree.session.list.collapse" else "worktree.session.list.expand")
+            e.presentation.icon = if (expanded) LAYOUT_FULL else LAYOUT_PARTIAL
+        }
+
+        override fun actionPerformed(e: AnActionEvent) {
+            toggleExpanded()
+        }
     }
 
     private inner class NewAction : AnAction(
@@ -330,6 +387,7 @@ class WorktreeSessionEditorPanel(
         override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
 
         override fun update(e: AnActionEvent) {
+            e.presentation.isVisible = expanded()
             e.presentation.isEnabled = selectedKeys().isNotEmpty()
         }
 
@@ -346,6 +404,7 @@ class WorktreeSessionEditorPanel(
         override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
 
         override fun update(e: AnActionEvent) {
+            e.presentation.isVisible = expanded()
             e.presentation.isEnabled = selectedKeys().any { it != SessionHost.NEW && it !in manager.deleting() }
         }
 
@@ -360,6 +419,11 @@ class WorktreeSessionEditorPanel(
         // Group the pending session under Today so it appears inside the list right away instead of
         // as a detached row pinned above the first section header.
         override val section: String get() = HistoryTime.title(HistorySection.TODAY)
+    }
+
+    private companion object {
+        val LAYOUT_PARTIAL: Icon = IconLoader.getIcon("/icons/layout-left-partial.svg", WorktreeSessionEditorPanel::class.java)
+        val LAYOUT_FULL: Icon = IconLoader.getIcon("/icons/layout-left-full.svg", WorktreeSessionEditorPanel::class.java)
     }
 
     private inner class SessionRow(

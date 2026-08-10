@@ -12,6 +12,8 @@ import ai.kilocode.client.session.history.LocalHistoryItem
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.fire
+import ai.kilocode.client.plugin.KiloPluginSettings
+import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.activeListSectionTitle
@@ -56,6 +58,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
 
     override fun setUp() {
         super.setUp()
+        KiloPluginSettings.unsetWorktreeSessionListExpanded()
         coroutines = TestCoroutines()
         rpc = FakeSessionRpcApi()
         sessions = KiloSessionService(project, coroutines.scope, rpc)
@@ -67,6 +70,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
     override fun tearDown() {
         try {
             TestDialogManager.setTestDialog(TestDialog.DEFAULT)
+            KiloPluginSettings.unsetWorktreeSessionListExpanded()
             coroutines.close(::pump)
         } finally {
             super.tearDown()
@@ -76,9 +80,12 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
     fun `test panel builds splitter toolbar list and right component`() {
         edt {
             val splitter = UIUtil.findComponentOfType(panel, OnePixelSplitter::class.java)!!
+            assertSame(UIUtil.findComponentOfType(panel, ActiveList::class.java), splitter.firstComponent)
             assertSame(manager.component, splitter.secondComponent)
             assertEquals(0.25f, splitter.proportion, 0.01f)
+            assertNotNull(UIUtil.findComponentOfType(panel, WorktreePrHeaderView::class.java))
             val buttons = components(panel).filterIsInstance<ActionButton>().mapNotNull { it.presentation.text }
+            assertTrue(buttons.contains("Hide sessions"))
             assertTrue(buttons.contains("New session"))
             assertTrue(buttons.contains("Rename session"))
             assertTrue(buttons.contains("Delete session"))
@@ -92,7 +99,8 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         val scroll = edt { SwingUtilities.getAncestorOfClass(JBScrollPane::class.java, list) as JBScrollPane }
         val button = edt { components(panel).filterIsInstance<ActionButton>().single { it.presentation.text == "New session" } }
         val toolbar = edt { button.parent }
-        val row = edt { toolbar.parent }
+        val toolbarPanel = edt { toolbar.parent as JComponent }
+        val header = edt { UIUtil.findComponentOfType(panel, WorktreePrHeaderView::class.java)!!.parent as JComponent }
 
         assertEquals(activeListToolWindowBackground(), edt { panel.background })
         assertNull(edt { panel.border })
@@ -101,10 +109,53 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         assertEquals(activeListToolWindowBackground(), edt { scroll.viewport.background })
         assertEquals(activeListToolWindowBackground(), edt { (scroll.viewport.view as JComponent).background })
         assertEquals(activeListToolWindowBackground(), edt { toolbar.background })
-        assertEquals(activeListToolWindowBackground(), edt { row.background })
+        assertEquals(activeListToolWindowBackground(), edt { toolbarPanel.background })
+        assertEquals(activeListToolWindowBackground(), edt { header.background })
         assertEquals(0, edt { scroll.border.getBorderInsets(scroll).left })
         assertEquals(0, edt { scroll.viewportBorder.getBorderInsets(scroll).left })
-        assertTrue(edt { (row as JComponent).border.getBorderInsets(row).bottom > 0 })
+        assertTrue(edt { toolbarPanel.border.getBorderInsets(toolbarPanel).right > 0 })
+        assertTrue(edt { header.border.getBorderInsets(header).bottom > 0 })
+    }
+
+    fun `test expand collapse hides session list and edit toolbar but keeps header actions`() {
+        edt {
+            val splitter = UIUtil.findComponentOfType(panel, OnePixelSplitter::class.java)!!
+            val list = splitter.firstComponent
+
+            assertSame(list, splitter.firstComponent)
+            assertTrue(shown("Rename session"))
+            assertTrue(shown("Delete session"))
+
+            toggle().click()
+
+            assertNull(splitter.firstComponent)
+            assertTrue(shown("New session"))
+            assertFalse(shown("Rename session"))
+            assertFalse(shown("Delete session"))
+            assertNotNull(UIUtil.findComponentOfType(panel, WorktreePrHeaderView::class.java))
+            assertFalse(KiloPluginSettings.getWorktreeSessionListExpanded())
+
+            toggle().click()
+
+            assertSame(list, splitter.firstComponent)
+            assertTrue(shown("Rename session"))
+            assertTrue(shown("Delete session"))
+            assertTrue(KiloPluginSettings.getWorktreeSessionListExpanded())
+        }
+    }
+
+    fun `test collapsed state persists for new panels`() {
+        edt { toggle().click() }
+
+        val view = edt { WorktreeSessionEditorPanel(testRootDisposable, manager, controller, workspace, confirm = { _, _, run -> run() }) }
+
+        edt {
+            val splitter = UIUtil.findComponentOfType(view, OnePixelSplitter::class.java)!!
+            assertNull(splitter.firstComponent)
+            assertTrue(shown(view, "New session"))
+            assertFalse(shown(view, "Rename session"))
+            assertFalse(shown(view, "Delete session"))
+        }
     }
 
     fun `test editor kind delegates preferred focus to panel`() {
@@ -415,6 +466,17 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         }
         visit(root)
         return out
+    }
+
+    private fun toggle(root: java.awt.Component = panel): ActionButton {
+        val actions = setOf("New session", "Rename session", "Delete session")
+        return components(root).filterIsInstance<ActionButton>().first { it.presentation.text !in actions }
+    }
+
+    private fun shown(text: String): Boolean = shown(panel, text)
+
+    private fun shown(root: java.awt.Component, text: String): Boolean {
+        return components(root).filterIsInstance<ActionButton>().firstOrNull { it.presentation.text == text }?.isVisible == true
     }
 
     private fun click(target: javax.swing.JComponent) {
