@@ -4,6 +4,10 @@
 
 - <https://accounts.x.ai>
   <!-- packages/opencode/src/plugin/xai.ts -->
+- <https://api.anthropic.com>
+  <!-- packages/kilo-vscode/src/shared/fetch-models.ts -->
+- <https://api.anthropic.com/v1/models>
+  <!-- packages/kilo-vscode/src/shared/fetch-models.ts -->
 - <https://api.apertis.ai/v1>
   <!-- packages/opencode/src/provider/model-cache.ts -->
   <!-- packages/opencode/src/provider/models.ts -->
