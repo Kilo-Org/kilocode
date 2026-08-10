@@ -342,6 +342,53 @@ class SessionLayoutTest : BasePlatformTestCase() {
         assertEquals(count + 1, child.count)
     }
 
+    fun `test forget all re-measures all valid children`() {
+        val p = panel(width = 300)
+        val first = probe(height = 20)
+        val second = probe(height = 30)
+        p.add(first)
+        p.add(second)
+        p.doLayout()
+        first.markValid()
+        second.markValid()
+        val fCount = first.count
+        val sCount = second.count
+
+        (p.layout as SessionLayout).forgetAll()
+        p.doLayout()
+
+        assertEquals(fCount + 1, first.count)
+        assertEquals(sCount + 1, second.count)
+    }
+
+    fun `test validate root child reconciles stale parent cache after self layout`() {
+        val p = panel(width = 300)
+        val child = rootProbe(root = true)
+        p.add(child)
+        p.doLayout()
+        child.markValid()
+        child.preferred = 80
+
+        child.doLayout()
+        p.doLayout()
+
+        assertEquals(80, child.height)
+    }
+
+    fun `test non validate root child keeps parent cache until it invalidates upward`() {
+        val p = panel(width = 300)
+        val child = rootProbe(root = false)
+        p.add(child)
+        p.doLayout()
+        child.markValid()
+        child.preferred = 80
+
+        child.doLayout()
+        p.doLayout()
+
+        assertEquals(20, child.height)
+    }
+
     // ---- helpers ------
 
     /** A fixed-height JLabel. The width is reported as 0 until layout sets it. */
@@ -374,5 +421,25 @@ class SessionLayoutTest : BasePlatformTestCase() {
             count++
             return Dimension(0, height)
         }
+    }
+
+    private fun rootProbe(root: Boolean) = object : SessionLayoutPanel() {
+        var preferred = 20
+        private var valid = false
+
+        override fun isValid() = valid
+
+        override fun invalidate() {
+            valid = false
+            super.invalidate()
+        }
+
+        fun markValid() {
+            valid = true
+        }
+
+        override fun isValidateRoot() = root
+
+        override fun getPreferredSize(): Dimension = Dimension(0, preferred)
     }
 }

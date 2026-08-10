@@ -163,7 +163,7 @@ export const sync = Effect.fn("KiloReference.sync")(function* (input: {
       return [
         [
           item.name,
-          new Reference.LocalSource({
+          Reference.LocalSource.make({
             type: "local",
             path: AbsolutePath.make(item.path),
             description: item.description,
@@ -175,7 +175,7 @@ export const sync = Effect.fn("KiloReference.sync")(function* (input: {
     return [
       [
         item.name,
-        new Reference.GitSource({
+        Reference.GitSource.make({
           type: "git",
           repository: item.repository,
           branch: item.branch,

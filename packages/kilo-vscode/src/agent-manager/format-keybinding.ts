@@ -71,6 +71,9 @@ export function buildKeybindingMap(
   if (!bindings.runScript) bindings.runScript = formatKeybinding(mac ? "cmd+e" : "ctrl+e", mac)
   if (!bindings.toggleDiff) bindings.toggleDiff = formatKeybinding(mac ? "cmd+d" : "ctrl+d", mac)
   if (!bindings.showShortcuts) bindings.showShortcuts = formatKeybinding(mac ? "cmd+shift+/" : "ctrl+shift+/", mac)
+  if (!bindings.previousTerminal)
+    bindings.previousTerminal = formatKeybinding(mac ? "cmd+shift+[" : "ctrl+shift+[", mac)
+  if (!bindings.nextTerminal) bindings.nextTerminal = formatKeybinding(mac ? "cmd+shift+]" : "ctrl+shift+]", mac)
 
   return bindings
 }

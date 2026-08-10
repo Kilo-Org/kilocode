@@ -33,7 +33,7 @@ import { promptOffsetWidth } from "../../prompt/display"
 import { createStore, produce, unwrap } from "solid-js/store"
 import { usePromptHistory, type PromptInfo } from "../../prompt/history"
 import { computePromptTraits } from "../../prompt/traits"
-import { expandPastedTextPlaceholders, expandTrackedPastedText } from "../../prompt/part"
+import { expandPastedPlaceholder, expandPastedTextPlaceholders, expandTrackedPastedText } from "../../prompt/part"
 import { usePromptStash } from "../../prompt/stash"
 import { DialogStash } from "../dialog-stash"
 import { type AutocompleteRef, Autocomplete } from "./autocomplete"
@@ -177,6 +177,7 @@ export function Prompt(props: PromptProps) {
   const keymap = useOpencodeKeymap()
   const agentShortcut = useCommandShortcut("agent.cycle")
   const paletteShortcut = useCommandShortcut("command.palette.show")
+  const variantShortcut = useCommandShortcut("variant.cycle")
   const renderer = useRenderer()
   const exit = useExit()
   const dimensions = useTerminalDimensions()
@@ -621,6 +622,7 @@ export function Prompt(props: PromptProps) {
       "prompt.stash.pop",
       "prompt.stash.list",
       "prompt.vim.toggle", // kilocode_change
+      "prompt.skills", // kilocode_change
       "session.interrupt",
       "workspace.set",
       "session.move",
@@ -1319,6 +1321,15 @@ export function Prompt(props: PromptProps) {
   async function pasteInputText(text: string) {
     const normalizedText = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
     const pastedContent = normalizedText.trim()
+    // kilocode_change start - a second identical paste expands the collapsed placeholder
+    if (expandPastedPlaceholder(input, promptPartTypeId, store.extmarkToPartIndex, store.prompt.parts, pastedContent)) {
+      const value = input.plainText
+      setStore("prompt", "input", value)
+      auto()?.onInput(value)
+      syncExtmarksWithPromptParts()
+      return
+    }
+    // kilocode_change end
     const filepath = pastedFilepath(pastedContent, terminalEnvironment.platform)
     const isUrl = /^(https?):\/\//.test(filepath)
     if (!isUrl) {
@@ -1626,26 +1637,29 @@ export function Prompt(props: PromptProps) {
                         alpha={agentMetaAlpha}
                       />
                       {/* kilocode_change end */}
-                      <Show when={store.mode === "normal"}>
-                        <box flexDirection="row" gap={1}>
-                          <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>·</text>
-                          <text
-                            flexShrink={0}
-                            fg={fadeColor(leader() ? theme.textMuted : theme.text, modelMetaAlpha())}
-                          >
-                            {local.model.parsed().model}
-                          </text>
-                          <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>{currentProviderLabel()}</text>
-                          <Show when={showVariant()}>
-                            <text fg={fadeColor(theme.textMuted, variantMetaAlpha())}>·</text>
-                            <text>
-                              <span style={{ fg: fadeColor(theme.warning, variantMetaAlpha()), bold: true }}>
-                                {local.model.variant.current()}
-                              </span>
-                            </text>
-                          </Show>
-                        </box>
+                      <Show when={store.mode === "normal" && local.permission.mode === "auto"}>
+                        <text fg={fadeColor(theme.textMuted, agentMetaAlpha())}>auto</text>
                       </Show>
+                      <Show when={store.mode === "normal"}>
+                      <box flexDirection="row" gap={1}>
+                        <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>·</text>
+                        <text
+                          flexShrink={0}
+                          fg={fadeColor(leader() ? theme.textMuted : theme.text, modelMetaAlpha())}
+                        >
+                          {local.model.parsed().model}
+                        </text>
+                        <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>{currentProviderLabel()}</text>
+                        <Show when={showVariant()}>
+                          <text fg={fadeColor(theme.textMuted, variantMetaAlpha())}>·</text>
+                          <text>
+                            <span style={{ fg: fadeColor(theme.warning, variantMetaAlpha()), bold: true }}>
+                              {local.model.variant.current()}
+                            </span>
+                          </text>
+                        </Show>
+                      </box>
+                    </Show>
                     </>
                   )}
                 </Show>
@@ -1835,6 +1849,11 @@ export function Prompt(props: PromptProps) {
               </Show>
               <Switch>
                 <Match when={store.mode === "normal"}>
+                  <Show when={local.model.variant.list().length > 0}>
+                    <text fg={theme.text}>
+                      {variantShortcut()} <span style={{ fg: theme.textMuted }}>variants</span>
+                    </text>
+                  </Show>
                   <Switch>
                     <Match when={usage()}>
                       {(item) => (

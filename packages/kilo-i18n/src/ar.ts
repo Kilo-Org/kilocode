@@ -1,12 +1,5 @@
 export const dict = {
   // Kilo Gateway provider translations
-  "provider.connect.kiloGateway.line1":
-    "يمنحك Kilo Gateway الوصول إلى مجموعة مختارة من النماذج الموثوقة والمحسّنة لوكلاء البرمجة.",
-  "provider.connect.kiloGateway.line2":
-    "بمفتاح API واحد، ستحصل على إمكانية الوصول إلى نماذج مثل Claude وGPT وGemini وGLM والمزيد.",
-  "provider.connect.kiloGateway.visit.prefix": "قم بزيارة ",
-  "provider.connect.kiloGateway.visit.link": "kilo.ai",
-  "provider.connect.kiloGateway.visit.suffix": " للحصول على مفتاح API الخاص بك.",
   "provider.connect.kiloGateway.byok.prefix": "للحصول على المزيد من إحصائيات الاستخدام، استخدم ",
   "provider.connect.kiloGateway.byok.link": "BYOK عبر Kilo's Gateway",
   "provider.connect.kiloGateway.byok.suffix": ".",
@@ -24,14 +17,9 @@ export const dict = {
   "settings.providers.note.vercel": "وصول موحد إلى نماذج الذكاء الاصطناعي مع توجيه ذكي",
 
   // Reasoning block label
-  "ui.permission.run": "تشغيل",
   "ui.reasoning.label": "الاستدلال",
 
   // Marketplace
-  "marketplace.tab.skills": "المهارات",
-  "marketplace.tab.mcpServers": "خوادم MCP",
-  "marketplace.category.all": "الكل",
-  "marketplace.placeholder": "سيتم تنفيذه لاحقاً",
   "marketplace.card.installed": "مثبت",
   "marketplace.card.install": "تثبيت",
   "marketplace.card.remove": "إزالة",
@@ -44,11 +32,9 @@ export const dict = {
   "marketplace.install.scope.global": "عالمي",
   "marketplace.install.scope.project.description":
     "هذا المشروع فقط. يمكن إضافة الملفات المثبتة إلى نظام التحكم في الإصدارات ومشاركتها مع فريقك.",
-  "marketplace.install.scope.global.description":
-    "جميع المشاريع على هذا الجهاز. تُحفظ في إعدادات المستخدم الخاصة بك.",
+  "marketplace.install.scope.global.description": "جميع المشاريع على هذا الجهاز. تُحفظ في إعدادات المستخدم الخاصة بك.",
   "marketplace.install.destination": "وجهة التثبيت",
-  "marketplace.install.about.mcp":
-    "يمنح خادم MCP منصة Kilo أدوات إضافية للعمل مع الخدمات الخارجية أو البرامج المحلية.",
+  "marketplace.install.about.mcp": "يمنح خادم MCP منصة Kilo أدوات إضافية للعمل مع الخدمات الخارجية أو البرامج المحلية.",
   "marketplace.install.about.agent": "يضيف الوكيل دورًا قابلاً لإعادة الاستخدام بتعليماته وأذوناته الخاصة.",
   "marketplace.install.about.skill": "تضيف المهارة تعليمات وموارد خاصة بمهام معينة يمكن لـ Kilo تحميلها عند الحاجة.",
   "marketplace.install.mcp.warning":
@@ -72,8 +58,6 @@ export const dict = {
     "هل أنت متأكد أنك تريد إزالة هذا الـ {{type}}؟ سيؤدي هذا إلى إزالته من تكوين {{scope}} الخاص بك.",
   "marketplace.remove.cancel": "إلغاء",
   "marketplace.remove.confirm.button": "إزالة",
-  "marketplace.tab.mcp": "MCP",
-  "marketplace.tab.agents": "وكلاء",
   "marketplace.search": "بحث...",
   "marketplace.filter.all": "جميع العناصر",
   "marketplace.filter.notInstalled": "غير مثبت",
@@ -81,12 +65,10 @@ export const dict = {
   "marketplace.empty": "لم يتم العثور على عناصر",
   "marketplace.empty.relevant": "لم يتم العثور على عناصر سوق ذات صلة بمساحة العمل هذه.",
   "marketplace.badge.mcpServer": "خادم MCP",
-  "marketplace.badge.mode": "وضع",
   "marketplace.card.by": "بواسطة {{author}}",
   "marketplace.install.method": "طريقة التثبيت",
   "marketplace.install.parameters": "المعلمات",
   "marketplace.install.optional": "(اختياري)",
-  "marketplace.install.required": "{{name}} مطلوب",
   "marketplace.scope.project": "مشروع",
   "marketplace.scope.global": "عام",
   "marketplace.remove.type.mcp": "خادم MCP",
@@ -128,8 +110,6 @@ export const dict = {
 
   // Edit-tool header and shell-tool section labels
   "ui.messagePart.openInDiffViewer": "فتح في عارض الفروقات",
-  "ui.messagePart.shell.command": "الأمر",
-  "ui.messagePart.shell.output": "المخرجات",
   "ui.messagePart.openInEditor": "فتح في المحرر",
 
   // Message feedback (thumbs up/down per assistant response)

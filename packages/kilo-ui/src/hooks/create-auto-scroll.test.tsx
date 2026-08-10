@@ -216,4 +216,50 @@ describe("createAutoScroll non-scrollable layouts", () => {
     expect(ctx.el.scrollTop).toBe(300)
     ctx.dispose()
   })
+
+  test("does not snap to bottom on content resize after user scrolls up while idle", () => {
+    const ctx = setup({ working: false })
+    ctx.el.scrollHeight = 1000
+    ctx.el.clientHeight = 200
+    ctx.el.scrollTop = 800 // at bottom
+
+    // User wheels up
+    const event = new FakeWheelEvent(-50, ctx.el)
+    ctx.el.fire("wheel", event as unknown as Event)
+    ctx.el.scrollTop = 750
+    ctx.scroll.handleScroll()
+
+    expect(ctx.scroll.userScrolled()).toBe(true)
+
+    // Virtual list re-measures / resizes content
+    ctx.el.scrollHeight = 1100
+    ctx.resize()
+
+    // Must NOT snap to bottom (1100), must remain at user scroll position (750)
+    expect(ctx.scroll.userScrolled()).toBe(true)
+    expect(ctx.el.scrollTop).toBe(750)
+    ctx.dispose()
+  })
+
+  test("does not snap to bottom when dragging scrollbar up while idle", () => {
+    const ctx = setup({ working: false })
+    ctx.el.scrollHeight = 1000
+    ctx.el.clientHeight = 200
+    ctx.el.scrollTop = 800 // at bottom
+
+    // User presses pointerdown on scrollbar and drags up
+    ctx.el.fire("pointerdown", new Event("pointerdown"))
+    ctx.el.scrollTop = 600
+    ctx.scroll.handleScroll()
+
+    expect(ctx.scroll.userScrolled()).toBe(true)
+
+    // Content resize during drag
+    ctx.el.scrollHeight = 1050
+    ctx.resize()
+
+    expect(ctx.scroll.userScrolled()).toBe(true)
+    expect(ctx.el.scrollTop).toBe(600)
+    ctx.dispose()
+  })
 })

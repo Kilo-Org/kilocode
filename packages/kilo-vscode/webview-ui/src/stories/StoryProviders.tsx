@@ -59,7 +59,8 @@ type PluginSpec = string | [string, Record<string, unknown>]
 // Merged English dictionary (same merge order as the real LanguageProvider)
 const dict: Record<string, string> = { ...appEn, ...amEn, ...uiEn, ...kiloEn }
 
-function t(key: string, params?: Record<string, string | number | boolean | undefined>) {
+/** Story-local translator. Usable outside the provider tree, unlike useLanguage. */
+export function t(key: string, params?: Record<string, string | number | boolean | undefined>) {
   return resolveTemplate(dict[key] ?? key, params)
 }
 
@@ -96,14 +97,20 @@ const MOCK_PROVIDERS = {
 const MOCK_MODELS = flattenModels(MOCK_PROVIDERS as any)
 
 /** A synchronous mock ProviderContext — provides models without waiting for a postMessage round-trip. */
-const MockProviderProvider: ParentComponent<{ kiloAuth?: boolean }> = (props) => {
+const MockProviderProvider: ParentComponent<{ kiloAuth?: boolean; training?: boolean }> = (props) => {
+  const models = createMemo(() =>
+    MOCK_MODELS.map((model) => ({
+      ...model,
+      mayTrainOnYourPrompts: props.training === true,
+    })),
+  )
   const value = {
     providers: () => MOCK_PROVIDERS as any,
     connected: () => ["kilo"],
     defaults: () => ({}),
     defaultSelection: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
-    models: () => MOCK_MODELS,
-    findModel: (sel: any) => _findModel(MOCK_MODELS, sel),
+    models,
+    findModel: (sel: any) => _findModel(models(), sel),
     authMethods: () => ({}),
     authStates: () => (props.kiloAuth ? { kilo: "oauth" } : {}) as Record<string, ProviderAuthState>,
     isModelValid: () => true,
@@ -220,13 +227,14 @@ export function mockSessionValue(overrides?: {
     scopedQuestions: (sid?: string) => (sid ? qs.filter((q) => q.sessionID === sid) : qs),
     scopedSuggestions: (sid?: string) => (sid ? suggestions.filter((item) => item.sessionID === sid) : suggestions),
     selected: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
+    modelForAgent: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
+    configModelForAgent: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     selectModel: noop,
     hasModelOverride: () => false,
     clearModelOverride: noop,
     costBreakdown: () => [],
     contextUsage: () => undefined,
     modelUsage: () => undefined,
-    refreshModelUsage: noop,
     agents: () => [{ name: "code", description: "Code mode", mode: "primary" as const }],
     allAgents: () => [{ name: "code", description: "Code mode", mode: "primary" as const }],
     skills: () => [],
@@ -236,7 +244,6 @@ export function mockSessionValue(overrides?: {
     selectedAgent: () => "code",
     selectAgent: noop,
     getSessionAgent: () => "code",
-    getSessionModel: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     setSessionModel: noop,
     setSessionAgent: noop,
     setSessionVariant: noop,
@@ -247,9 +254,12 @@ export function mockSessionValue(overrides?: {
     revertSession: noop,
     unrevertSession: noop,
     favoriteModels: () => [],
+    recentModels: () => [],
+    modelUsageHistory: () => ({}),
     toggleFavorite: noop,
     variantList: () => [],
     currentVariant: () => undefined,
+    variantForAgent: () => undefined,
     selectVariant: noop,
     sendMessage: noop,
     sendCommand: noop,
@@ -264,7 +274,7 @@ export function mockSessionValue(overrides?: {
     createSession: noop,
     clearCurrentSession: noop,
     loadSessions: noop,
-    loadOlderMessages: noop,
+    loadOlderMessages: () => false,
     selectSession: noop,
     deleteSession: noop,
     renameSession: noop,
@@ -301,6 +311,7 @@ interface StoryProvidersProps {
   onOpenDiff?: OpenDiffFn
   onOpenFile?: OpenFileFn
   kiloAuth?: boolean
+  training?: boolean
   /** When true, renders children without the default 12px padding wrapper */
   noPadding?: boolean
 }
@@ -336,7 +347,9 @@ const ConfigWrapper: ParentComponent<{
     const value = {
       config: createMemo(() => cfg()),
       globalConfig: createMemo(() => (scoped ? global() : cfg())),
+      globalDraft: () => ({}),
       projectConfig: createMemo(() => (scoped ? project() : cfg())),
+      collections: () => ({}),
       settings,
       features,
       loading: () => false,
@@ -376,6 +389,9 @@ const ConfigWrapper: ParentComponent<{
       updateSetting: (key: string, value: unknown) => {
         setSettings((prev) => ({ ...prev, [key]: value }))
         setDirty(true)
+      },
+      applySetting: (key: string, value: unknown, _writeKey?: string) => {
+        setSettings((prev) => ({ ...prev, [key]: value }))
       },
       saveConfig: () => setDirty(false),
       discardConfig: () => setDirty(false),
@@ -427,7 +443,7 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
             onProjectConfigChange={props.onProjectConfigChange}
           >
             <DisplayProvider>
-              <MockProviderProvider kiloAuth={props.kiloAuth}>
+              <MockProviderProvider kiloAuth={props.kiloAuth} training={props.training}>
                 <DialogProvider>
                   <LanguageContext.Provider
                     value={{

@@ -1,5 +1,7 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { afterEach, describe, expect, test } from "bun:test"
-import { Effect, Exit, Layer } from "effect"
+import { Effect, Exit } from "effect"
 import { Database } from "@opencode-ai/core/database/database"
 import { Agent } from "../../src/agent/agent"
 import { BackgroundJob } from "../../src/background/job"
@@ -14,7 +16,7 @@ import { MessageV2 } from "../../src/session/message-v2"
 import type { SessionPrompt } from "../../src/session/prompt"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { BackgroundProcess } from "../../src/kilocode/background-process"
-import { Shell } from "../../src/shell/shell"
+import { Shell } from "@opencode-ai/core/shell"
 import path from "path"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
@@ -34,20 +36,23 @@ const ref = {
 }
 
 const it = testEffect(
-  Layer.mergeAll(
-    Agent.defaultLayer,
-    BackgroundJob.defaultLayer,
-    Bus.defaultLayer,
-    Config.defaultLayer,
-    RuntimeFlags.layer(),
-    SessionRunState.defaultLayer,
-    SessionStatus.defaultLayer,
-    CrossSpawnSpawner.defaultLayer,
-    Session.defaultLayer,
-    Truncate.defaultLayer,
-    Provider.defaultLayer,
-    ToolRegistry.defaultLayer,
-    Database.defaultLayer,
+  LayerNode.compile(
+    LayerNode.group([
+      Agent.node,
+      BackgroundJob.node,
+      Bus.node,
+      Config.node,
+      RuntimeFlags.node,
+      SessionRunState.node,
+      SessionStatus.node,
+      CrossSpawnSpawner.node,
+      Session.node,
+      SessionProjector.node,
+      Truncate.node,
+      Provider.node,
+      ToolRegistry.node,
+      Database.node,
+    ]),
   ),
 )
 
@@ -271,6 +276,11 @@ describe("Kilo task nesting", () => {
               },
               {
                 permission: "question",
+                pattern: "*",
+                action: "deny",
+              },
+              {
+                permission: "suggest",
                 pattern: "*",
                 action: "deny",
               },

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@opencode-ai/server",
-  "version": "7.4.16",
+  "version": "7.4.20",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -14,7 +14,8 @@
   "dependencies": {
     "@opencode-ai/core": "workspace:*",
     "drizzle-orm": "catalog:",
-    "effect": "catalog:"
+    "effect": "catalog:",
+    "@opencode-ai/protocol": "workspace:*"
   },
   "devDependencies": {
     "@tsconfig/bun": "catalog:",

@@ -83,7 +83,15 @@ export function toSessionDiffFile(raw: SnapshotFileDiff): DiffFile {
   // Empty patch means binary or summarized (>256 KB) — normalize() can't
   // parse it, so short-circuit to empty strings. Binary snapshot images do
   // not retain their sides, while text-backed SVG patches can be rebuilt.
-  const view = raw.patch === "" || (mime && mime !== "image/svg+xml") ? null : normalize(raw)
+  const view = (() => {
+    if (raw.patch === "" || (mime && mime !== "image/svg+xml")) return null
+    try {
+      return normalize(raw)
+    } catch (err) {
+      console.warn("[Kilo New] Failed to parse session diff", { file, err })
+      return null
+    }
+  })()
   const before = view ? text(view, "deletions") : ""
   const after = view ? text(view, "additions") : ""
   const image = (() => {
@@ -108,7 +116,8 @@ export function toSessionDiffFile(raw: SnapshotFileDiff): DiffFile {
     generatedLike: false,
     // A zero-stat empty patch has no text body to fetch; nonzero stats
     // indicate a deferred large-file summary.
-    summarized: !mime && raw.patch === "" && (raw.additions !== 0 || raw.deletions !== 0),
+    summarized:
+      !mime && ((!view && raw.patch !== "") || (raw.patch === "" && (raw.additions !== 0 || raw.deletions !== 0))),
     kind: mime ? "image" : undefined,
     image,
     stamp: mime ? fingerprint(raw) : undefined,

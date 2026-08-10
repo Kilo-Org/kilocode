@@ -80,12 +80,12 @@ class TodoWriteViewTest : BasePlatformTestCase() {
         assertEquals(style.regularFont, view.rowFont(1))
     }
 
-    fun `test todo header title subtitle gap uses standard medium gap`() {
+    fun `test todo header uses standard layout gap`() {
         val view = TodoWriteView(tool("todowrite", ToolExecState.COMPLETED).also {
             it.todos = listOf(TodoDto("Next", "pending", "medium"))
         })
 
-        assertEquals(UiStyle.Gap.md(), centerGap(view))
+        assertEquals(JBUI.scale(SessionUiStyle.View.Layout.GAP), headerGap(view))
     }
 
     fun `test todo body uses next standard inner padding`() {
@@ -157,11 +157,10 @@ class TodoWriteViewTest : BasePlatformTestCase() {
         assertTrue(view.rowText(0).contains("New"))
     }
 
-    private fun centerGap(view: TodoWriteView): Int {
+    private fun headerGap(view: TodoWriteView): Int {
         val row = view.components.filterIsInstance<JPanel>().first()
         val header = (row.layout as BorderLayout).getLayoutComponent(BorderLayout.CENTER) as JPanel
-        val center = (header.layout as BorderLayout).getLayoutComponent(BorderLayout.CENTER) as JPanel
-        return (center.layout as BorderLayout).hgap
+        return (header.layout as BorderLayout).hgap
     }
 
     private fun tool(name: String, state: ToolExecState) = Tool("p1", name, toolKind(name)).also { it.state = state }

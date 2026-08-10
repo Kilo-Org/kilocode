@@ -1,10 +1,11 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterEach, describe, expect, test } from "bun:test"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Database as CoreDatabase } from "@opencode-ai/core/database/database"
 import { EventV2 } from "@opencode-ai/core/event"
 import { EventTable } from "@opencode-ai/core/event/sql"
 import { SessionEvent } from "@opencode-ai/core/session/event"
-import { SessionMessageID } from "@opencode-ai/core/session/message-id"
+import { SessionMessage } from "@opencode-ai/core/session/message"
 import { DateTime, Deferred, Effect, Layer, Schema } from "effect"
 import { GlobalBus } from "../../src/bus/global"
 import { EventV2Bridge } from "../../src/event-v2-bridge"
@@ -16,7 +17,7 @@ import { provideTmpdirInstance } from "../fixture/fixture"
 import { awaitWithTimeout, testEffect } from "../lib/effect"
 
 const it = testEffect(
-  Layer.mergeAll(EventV2Bridge.defaultLayer, CoreDatabase.defaultLayer, CrossSpawnSpawner.defaultLayer),
+  Layer.mergeAll(AppNodeBuilder.build(EventV2Bridge.node), AppNodeBuilder.build(CoreDatabase.node), AppNodeBuilder.build(CrossSpawnSpawner.node)),
 )
 
 afterEach(resetDatabase)
@@ -57,7 +58,7 @@ describe("SyncEvent encoding", () => {
           yield* events.publish(SessionEvent.Text.Ended, {
             sessionID,
             timestamp: DateTime.makeUnsafe(1_234),
-            assistantMessageID: SessionMessageID.ID.create(),
+            assistantMessageID: SessionMessage.ID.create(),
             textID: "text_event_bus",
             text: "hello",
           })
@@ -85,7 +86,7 @@ describe("SyncEvent encoding", () => {
         yield* events.publish(SessionEvent.Text.Ended, {
           sessionID,
           timestamp,
-          assistantMessageID: SessionMessageID.ID.create(),
+          assistantMessageID: SessionMessage.ID.create(),
           textID: "text_event_replay",
           text: "hello",
         })

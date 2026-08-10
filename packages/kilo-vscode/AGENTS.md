@@ -56,15 +56,17 @@ Every client spawns or connects to a `kilo serve` process and communicates via H
 ## Commands
 
 ```bash
-bun run extension        # Build + launch VS Code with the extension in dev mode
-bun run compile          # Type-check + lint + build
-bun run watch            # Watch mode (esbuild + tsc)
-bun run test             # Run tests (requires pretest compilation)
-bun run lint             # ESLint on src/
-bun run format           # Run formatter (do this before committing to avoid styling-only changes in commits)
+bun run extension                  # Build + launch VS Code with the extension in dev mode
+bun run extension:isolated         # Build + launch with persistent isolated IDE + Kilo state
+bun run extension:isolated:clean   # Clear isolated state, then build + launch
+bun run compile                    # Type-check + lint + build
+bun run watch                      # Watch mode (esbuild + tsc)
+bun run test                       # Run tests (requires pretest compilation)
+bun run lint                       # ESLint on src/
+bun run format                     # Run formatter (do this before committing to avoid styling-only changes in commits)
 ```
 
-The `extension` commands also work from the repo root. Pass `--insiders` to prefer VS Code Insiders, `--workspace PATH` to open a different folder, `--clean` to wipe cached state, or `--wait` to block until VS Code closes. VS Code is auto-detected on macOS, Linux, and Windows; override with `--app-path` or `VSCODE_EXEC_PATH`.
+The `extension` commands also work from the repo root. When a user asks to run an isolated VS Code/Kilo environment, prefer the CLI scripts: `bun run extension:isolated` reuses `.kilo-dev/`, while `bun run extension:isolated:clean` clears `.kilo-dev/` before launching. Pass an optional workspace path after `--`, for example `bun run extension:isolated -- ../sample-project`. Pass `--insiders` to prefer VS Code Insiders, `--workspace PATH` to open a different folder, `--clean` to wipe cached state, or `--wait` to block until VS Code closes. VS Code is auto-detected on macOS, Linux, and Windows; override with `--app-path` or `VSCODE_EXEC_PATH`.
 
 Single test: `bun run test -- --grep "test name"`
 
@@ -166,6 +168,12 @@ Agent Manager local worktree sessions use the current shared `kilo serve` proces
 
 Extension-side code lives in `src/agent-manager/`, webview code in `webview-ui/agent-manager/`. The webview reuses the sidebar's provider chain and `ChatView` component, adding a `WorktreeModeProvider` and a split layout.
 
+### Multi-project migration
+
+Multi-project Agent Manager is an incremental migration behind the application-scoped `kilo-code.new.experimental.multiProject` flag (default `false`); flag-off behavior must remain unchanged. The project registry/contexts, per-project state and session routing, project sidebar, sections and drag-and-drop, progress/persistence, and project-targeted worktree creation are implemented.
+
+It is not yet a complete convergence: audit every operation for explicit project/worktree/session routing, finish immutable project-bound Settings and machine-local indexing consent, harden canonical Git identity and multi-window route ownership, and replace the duplicate `SidebarBody`/`ProjectSidebarBody` implementations with one shared body. Full two-project E2E and legacy-parity coverage is still incomplete.
+
 ## Webview UI (kilo-ui)
 
 New webview features must use **`@kilocode/kilo-ui`** components instead of raw HTML elements with inline styles. This is a Solid.js component library built on `@kobalte/core`.
@@ -218,6 +226,8 @@ import { spawn, exec } from "../util/process"
 ```
 
 The `spawn` wrapper covers long-lived processes (e.g. `kilo serve`). The `exec` wrapper covers short commands (e.g. `git`, `tar`). If you need the raw callback form of `execFile` for some reason, pass `windowsHide: true` explicitly in the options object.
+
+Agent Manager uses read-only `gh` commands for PR status and PR import. Call `execGhRead` from `src/agent-manager/gh.ts` for those commands; on Windows it supplies `TZ=UTC` when no timezone is configured, preventing older `gh` releases from launching `tzutil.exe` in a visible console.
 
 ## Style
 

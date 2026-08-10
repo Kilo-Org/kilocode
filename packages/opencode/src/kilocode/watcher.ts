@@ -2,7 +2,7 @@ import { InstanceState } from "@/effect/instance-state"
 import * as Log from "@opencode-ai/core/util/log"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Location } from "@opencode-ai/core/location"
-import { LocationServiceMap } from "@opencode-ai/core/location-layer"
+import { LocationServiceMap, locationServiceMapLayer } from "@opencode-ai/core/location-services"
 import { AbsolutePath } from "@opencode-ai/core/schema"
 import { Cause, Context, Effect, Layer, Scope } from "effect"
 
@@ -15,10 +15,23 @@ export namespace KilocodeWatcher {
 
   export class Service extends Context.Service<Service, Interface>()("@kilocode/Watcher") {}
 
+  // Embedded editor clients (VS Code, JetBrains) have their own file watching
+  // and git integration and do not consume the CLI's vcs.branch.updated event,
+  // so they must not eagerly warm the location stack — that starts a native
+  // @parcel/watcher subscription per instance that lives for the whole session.
+  // On macOS FSEvents watches the entire subtree recursively (the ignore list
+  // is only a userspace filter), so an always-on, consumer-less watcher on a
+  // churny workspace burns CPU and leaks native memory while idle. The
+  // standalone CLI/TUI stays eager because its sidebar branch label is the only
+  // consumer and no request-driven route would otherwise build the stack.
+  export function eager(client = Flag.KILO_CLIENT) {
+    return client !== "vscode" && client !== "jetbrains"
+  }
+
   export const layer = Layer.effect(
     Service,
     Effect.gen(function* () {
-      const locations = yield* LocationServiceMap
+      const locations = yield* LocationServiceMap.Service
       const scope = yield* Scope.Scope
 
       const state = yield* InstanceState.make(
@@ -51,12 +64,12 @@ export namespace KilocodeWatcher {
     }),
   )
 
-  // Gate the whole layer so LocationServiceMap's dependency graph is never built when the watcher is disabled.
+  // Gate the whole layer so LocationServiceMap is only warmed for clients that consume branch-update events.
   export const defaultLayer = Layer.unwrap(
     Effect.gen(function* () {
-      if (yield* Flag.KILO_EXPERIMENTAL_DISABLE_FILEWATCHER.pipe(Effect.orElseSucceed(() => false)))
+      if (!eager() || (yield* Flag.KILO_EXPERIMENTAL_DISABLE_FILEWATCHER.pipe(Effect.orElseSucceed(() => false))))
         return Layer.succeed(Service, Service.of({ init: () => Effect.void }))
-      return layer.pipe(Layer.provide(LocationServiceMap.layer))
+      return layer.pipe(Layer.provide(locationServiceMapLayer))
     }),
   )
 }

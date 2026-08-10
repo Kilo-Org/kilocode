@@ -142,22 +142,42 @@ jobs:
           JETBRAINS_PRIVATE_KEY: ${{ secrets.JETBRAINS_PRIVATE_KEY }}
           JETBRAINS_PRIVATE_KEY_PASSWORD: ${{ secrets.JETBRAINS_PRIVATE_KEY_PASSWORD }}
 
+      - name: Write signing secrets to temp files
+        run: |
+          dir="$RUNNER_TEMP/jetbrains-signing"
+          mkdir -m 700 -p "$dir"
+          chain="$dir/certificate-chain.pem"
+          key="$dir/private-key.pem"
+          umask 077
+          printf '%s' "$JETBRAINS_CERTIFICATE_CHAIN" > "$chain"
+          printf '%s' "$JETBRAINS_PRIVATE_KEY" > "$key"
+          chmod 600 "$chain" "$key"
+          echo "JETBRAINS_CERTIFICATE_CHAIN_FILE=$chain" >> "$GITHUB_ENV"
+          echo "JETBRAINS_PRIVATE_KEY_FILE=$key" >> "$GITHUB_ENV"
+        env:
+          JETBRAINS_CERTIFICATE_CHAIN: ${{ secrets.JETBRAINS_CERTIFICATE_CHAIN }}
+          JETBRAINS_PRIVATE_KEY: ${{ secrets.JETBRAINS_PRIVATE_KEY }}
+
       - name: Build signed bundled plugin
         working-directory: packages/kilo-jetbrains
         run: |
-          ./gradlew clean buildPlugin signPlugin verifyPluginSignature verifyPlugin \
-            -Pproduction=true \
-            -Pkilo.version="$VERSION" \
-            -Pkilo.channel="$CHANNEL" \
+          args=(
+            -Pproduction=true
+            -Pkilo.version="$VERSION"
+            -Pkilo.channel="$CHANNEL"
             -Pkilo.cli.bundled=true
+          )
+          ./gradlew clean buildPlugin signPlugin verifyPluginSignature verifyPlugin "${args[@]}"
         env:
           GH_TOKEN: ${{ github.token }}
           GITHUB_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.validate.outputs.version }}
           CHANNEL: ${{ needs.validate.outputs.channel }}
-          JETBRAINS_CERTIFICATE_CHAIN: ${{ secrets.JETBRAINS_CERTIFICATE_CHAIN }}
-          JETBRAINS_PRIVATE_KEY: ${{ secrets.JETBRAINS_PRIVATE_KEY }}
           JETBRAINS_PRIVATE_KEY_PASSWORD: ${{ secrets.JETBRAINS_PRIVATE_KEY_PASSWORD }}
+
+      - name: Remove signing secret temp files
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/jetbrains-signing"
 
       - name: Resolve bundled archive
         id: archive

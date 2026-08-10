@@ -3,7 +3,6 @@ package ai.kilocode.client.session.views.base
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
 import com.intellij.ui.components.JBLabel
-import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
@@ -29,7 +28,7 @@ abstract class AbstractSessionPartView(
     ) : this(header, { body }, expanded, expandable)
 
     protected val arrow = JBLabel()
-    protected val row = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.Layout.GAP), 0))
+    protected val row = JPanel(BorderLayout(SessionUiStyle.View.Header.gap(), 0))
     private val bound = linkedSetOf<Component>()
     private var body: JComponent? = null
 
@@ -124,6 +123,10 @@ abstract class AbstractSessionPartView(
         items.forEach { bind(it) }
     }
 
+    protected fun unbindHeader(vararg items: Component) {
+        items.forEach { unbind(it) }
+    }
+
     protected fun refresh() {
         revalidate()
         repaint()
@@ -149,6 +152,13 @@ abstract class AbstractSessionPartView(
         bound.add(component)
         component.addMouseListener(click)
         component.addMouseListener(mouse)
+    }
+
+    private fun unbind(component: Component) {
+        if (!bound.remove(component)) return
+        component.removeMouseListener(click)
+        component.removeMouseListener(mouse)
+        component.cursor = Cursor.getDefaultCursor()
     }
 
     private fun body(): JComponent {

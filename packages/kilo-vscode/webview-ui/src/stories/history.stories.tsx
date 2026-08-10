@@ -79,7 +79,6 @@ const WithSessions: ParentComponent<{ sessions?: typeof mockSessions }> = (props
     selectedAgent: () => "code",
     selectAgent: noop,
     getSessionAgent: () => "code",
-    getSessionModel: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     setSessionModel: noop,
     setSessionAgent: noop,
     setSessionVariant: noop,

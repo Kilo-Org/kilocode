@@ -20,6 +20,10 @@ export {
   createTerminalMessageHandler,
 } from "./state"
 export type { TerminalTabState, TerminalStateControls, TerminalHandlerDeps } from "./state"
-export { renderTerminalTab, renderTerminalLayer } from "./render"
+export { renderTerminalTab, renderTerminalLayer, renderSideTerminalLayer } from "./render"
+export { SideTerminalPanel } from "./SideTerminalPanel"
+export { TerminalDestinationButton } from "./TerminalDestinationButton"
+export { createSideTerminal, readSavedDestination, resolveRunScriptRequest, resolveVscodeTerminalRequest } from "./side"
 export { TerminalTab } from "./TerminalTab"
 export { SortableTerminalTab } from "./SortableTerminalTab"
+export { createAmbientSetup, hasSetupTerminal, showTerminalStack } from "./ambient"

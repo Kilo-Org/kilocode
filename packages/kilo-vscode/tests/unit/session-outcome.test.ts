@@ -138,6 +138,13 @@ describe("terminal", () => {
     ).toBe("error")
   })
 
+  it("hides superseded turns that handed off to a queued follow-up", () => {
+    expect(
+      terminal({ reason: "superseded", messages: [message("tool-calls")], todos: [todo("pending")] }),
+    ).toBeUndefined()
+    expect(terminal({ reason: "superseded", messages: [message("unknown")], todos: [] })).toBeUndefined()
+  })
+
   it("reports only the latest assistant finish reason", () => {
     const user: Message = { id: "u1", sessionID: "s1", role: "user", createdAt: new Date(1).toISOString() }
     expect(terminal({ reason: "completed", messages: [message("length"), user], todos: [] })?.finish).toBeUndefined()

@@ -6,6 +6,7 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type { SessionInfo } from "../src/types/messages"
 import { useLanguage } from "../src/context/language"
 import { formatRelativeDate } from "../src/utils/date"
+import { SidebarSectionHeader } from "./SidebarSectionHeader"
 
 interface Props {
   sessions: Accessor<SessionInfo[]>
@@ -16,6 +17,7 @@ interface Props {
   onSelect: (id: string) => void
   onPromote: (id: string) => void
   onOpen: (id: string) => void
+  sidebarId?: (id: string) => string
 }
 
 export const UnassignedSessionsSection: Component<Props> = (props) => {
@@ -28,12 +30,13 @@ export const UnassignedSessionsSection: Component<Props> = (props) => {
 
   return (
     <div class={`am-section ${props.collapsed() ? "" : "am-section-grow"}`}>
-      <button class="am-section-header am-section-toggle" onClick={props.onToggle}>
-        <span class="am-section-label">
-          <Icon name={props.collapsed() ? "chevron-right" : "chevron-down"} size="small" class="am-section-chevron" />
-          {t("agentManager.section.sessions")}
-        </span>
-      </button>
+      <SidebarSectionHeader
+        class="am-section-header am-section-toggle"
+        expanded={!props.collapsed()}
+        ariaLabel={t("agentManager.section.sessions")}
+        label={<span class="am-section-label">{t("agentManager.section.sessions")}</span>}
+        onToggle={props.onToggle}
+      />
       <Show when={!props.collapsed()}>
         <div class="am-list">
           <Show
@@ -61,7 +64,7 @@ export const UnassignedSessionsSection: Component<Props> = (props) => {
                   <ContextMenu.Trigger as="div" style={{ display: "contents" }}>
                     <button
                       class={`am-item ${session.id === props.active() ? "am-item-active" : ""}`}
-                      data-sidebar-id={session.id}
+                      data-sidebar-id={props.sidebarId?.(session.id) ?? session.id}
                       onClick={() => props.onSelect(session.id)}
                     >
                       <span class="am-item-title" dir="auto">

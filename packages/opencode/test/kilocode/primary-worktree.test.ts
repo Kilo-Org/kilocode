@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { $ } from "bun"
 import { describe, expect } from "bun:test"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
@@ -8,7 +9,7 @@ import { primaryPaths, primaryWorktree } from "../../src/kilocode/primary-worktr
 import { tmpdirScoped } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
-const it = testEffect(Layer.mergeAll(Git.defaultLayer, CrossSpawnSpawner.defaultLayer))
+const it = testEffect(Layer.mergeAll(AppNodeBuilder.build(Git.node), AppNodeBuilder.build(CrossSpawnSpawner.node)))
 
 describe("primaryWorktree", () => {
   it.live("returns the current checkout for a normal repository", () =>

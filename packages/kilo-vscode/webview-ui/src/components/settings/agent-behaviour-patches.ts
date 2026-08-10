@@ -1,3 +1,20 @@
+import type { Config, ConfigCollections } from "../../types/messages"
+
+export function mcpEnabledPatch(name: string, enabled: boolean): Partial<Config> {
+  return {
+    mcp: {
+      [name]: {
+        enabled,
+      },
+    },
+  }
+}
+
+export function mcpConfigScope(name: string, collections: ConfigCollections): "global" | "project" | undefined {
+  const source = collections.mcp?.find((entry) => entry.key === name)?.source
+  return source === "project" || source === "global" ? source : undefined
+}
+
 export function selectedDefaultAgentValue(value: string): string | null {
   return value || null
 }

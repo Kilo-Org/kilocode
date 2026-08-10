@@ -106,7 +106,7 @@ export async function handlePermissionResponse(
   }
 
   const replyResult = await ctx.client.permission
-    .reply({ requestID: permissionId, reply: response, directory: dir }, { throwOnError: true })
+    .reply({ requestID: permissionId, reply: response, directory: dir, interactive: true }, { throwOnError: true })
     .then(() => "ok" as const)
     .catch((error: unknown) => {
       if (isNotFoundError(error)) return "stale" as const

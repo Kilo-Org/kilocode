@@ -7,9 +7,10 @@
  *
  * Priority: workflow_dispatch input `since` > latest open bot PR marker >
  * last merged bot PR marker > 72h ago. Hard cap: never look back more than
- * 14 days.
+ * 14 days — unless the human explicitly requested a window via INPUT_SINCE.
  */
 
+import { pathToFileURL } from "node:url"
 import { appendOutput, appendSummary, repo, searchIssues } from "./lib.mjs"
 
 const FALLBACK_HOURS = 72
@@ -42,34 +43,65 @@ async function findWatermark() {
   return null
 }
 
-const now = new Date()
-let since
-
-const input = (process.env.INPUT_SINCE ?? "").trim()
-if (input) {
-  since = new Date(input)
-  if (Number.isNaN(since.getTime())) {
-    throw new Error(`Invalid INPUT_SINCE: ${input}`)
+/**
+ * Apply the 14-day lookback cap. When `explicit` is true (dispatch override),
+ * the cap is skipped so a human-requested recovery window is not silently
+ * shortened. Returns `{ since, clamped }`.
+ */
+export function applyCap(since, now, { explicit = false } = {}) {
+  if (explicit) {
+    console.log(`14-day cap skipped: INPUT_SINCE was set explicitly (${since.toISOString()})`)
+    return { since, clamped: false }
   }
-  console.log(`watermark from dispatch input: ${since.toISOString()}`)
-} else {
-  since =
-    (await findWatermark()) ?? new Date(now.getTime() - FALLBACK_HOURS * 3600 * 1000)
+  const cap = new Date(now.getTime() - CAP_DAYS * 24 * 3600 * 1000)
+  if (since < cap) {
+    const from = since.toISOString()
+    const to = cap.toISOString()
+    console.warn(
+      `::warning::docs-sync watermark clamped from ${from} to ${to} (${CAP_DAYS}-day cap). ` +
+        `Anything still uncovered before ${to} is abandoned and needs a human.`,
+    )
+    return { since: cap, clamped: true }
+  }
+  return { since, clamped: false }
 }
 
-// A forged, edited, or malformed marker in the future would silently match
-// nothing in the merged:>= search; clamp it loudly.
-if (since > now) {
-  console.warn(`watermark ${since.toISOString()} is in the future, clamping to now`)
-  since = now
+async function main() {
+  const now = new Date()
+  let since
+  let explicit = false
+
+  const input = (process.env.INPUT_SINCE ?? "").trim()
+  if (input) {
+    since = new Date(input)
+    if (Number.isNaN(since.getTime())) {
+      throw new Error(`Invalid INPUT_SINCE: ${input}`)
+    }
+    explicit = true
+    console.log(`watermark from dispatch input: ${since.toISOString()}`)
+  } else {
+    since = (await findWatermark()) ?? new Date(now.getTime() - FALLBACK_HOURS * 3600 * 1000)
+  }
+
+  // A forged, edited, or malformed marker in the future would silently match
+  // nothing in the merged:>= search; clamp it loudly.
+  if (since > now) {
+    console.warn(`watermark ${since.toISOString()} is in the future, clamping to now`)
+    since = now
+  }
+
+  ;({ since } = applyCap(since, now, { explicit }))
+
+  appendOutput("since", since.toISOString())
+  appendOutput("now", now.toISOString())
+  appendOutput("since_override", explicit ? "true" : "false")
+  appendSummary(`### docs-sync watermark\n\n- since: \`${since.toISOString()}\`\n- now: \`${now.toISOString()}\`\n`)
 }
 
-const cap = new Date(now.getTime() - CAP_DAYS * 24 * 3600 * 1000)
-if (since < cap) {
-  console.log(`watermark ${since.toISOString()} older than ${CAP_DAYS}d cap, clamping`)
-  since = cap
+const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href
+if (isMain) {
+  main().catch((err) => {
+    console.error(err)
+    process.exit(1)
+  })
 }
-
-appendOutput("since", since.toISOString())
-appendOutput("now", now.toISOString())
-appendSummary(`### docs-sync watermark\n\n- since: \`${since.toISOString()}\`\n- now: \`${now.toISOString()}\`\n`)

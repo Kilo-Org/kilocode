@@ -1,5 +1,5 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
-import { httpClient } from "@opencode-ai/core/effect/layer-node-platform"
+import { httpClient } from "@opencode-ai/core/effect/app-node-platform"
 import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import path from "path"
 import { pathToFileURL } from "url"
@@ -23,7 +23,7 @@ import type { ConsoleState } from "@opencode-ai/core/v1/config/console-state"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { InstanceState } from "@/effect/instance-state"
 import { Context, Duration, Effect, Exit, Fiber, Layer, Option, Schema } from "effect"
-import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/unstable/http"
+import { HttpClient, HttpClientRequest } from "effect/unstable/http"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { containsPath, type InstanceContext } from "../project/instance-context"
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
@@ -48,6 +48,7 @@ import { Git } from "@/git"
 import { KilocodeDefaultPlugins } from "@/kilocode/config/default-plugins"
 import { KilocodeGlobalConfigStamp } from "@/kilocode/config/global-stamp"
 import { SandboxConfig } from "@/kilocode/sandbox/config"
+import { ExternalMarkdown } from "@/kilocode/config/external-markdown"
 import type { KilocodeMarkdown } from "@/kilocode/config/markdown"
 import {
   IndexingConfig as KiloIndexingConfig,
@@ -208,6 +209,13 @@ function globalConfigFile() {
 
 function patchJsonc(input: string, patch: unknown, path: string[] = []): string {
   if (!isRecord(patch)) {
+    // kilocode_change start - jsonc-parser throws when deleting a path whose
+    // parent does not exist in the document; absent keys are already "unset"
+    if (patch === null) {
+      const tree = parseTree(input)
+      if (!tree || !findNodeAtLocation(tree, path)) return input
+    }
+    // kilocode_change end
     const edits = modify(input, path, patch === null ? undefined : patch, {
       // kilocode_change
       formattingOptions: {
@@ -261,7 +269,7 @@ function writableGlobal(info: Info) {
   return next
 }
 
-export const layer = Layer.effect(
+const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const fs = yield* FSUtil.Service
@@ -493,6 +501,7 @@ export const layer = Layer.effect(
           result = mergeConfigConcatArrays(result, { agent: orgModes.agents })
         }
         warnings.push(...orgModes.warnings)
+        let configuredAgents = { ...(result.agent ?? {}) }
         // kilocode_change end
 
         const authEnv: Record<string, string> = {}
@@ -552,6 +561,7 @@ export const layer = Layer.effect(
           const trusted = sourceTrusted ?? scope === "global"
           const scoped = KilocodeConfig.scopeIndexing(SandboxConfig.scope(next, scope), scope)
           result = mergeConfigConcatArrays(result, scoped)
+          if (scoped.agent) configuredAgents = mergeDeep(configuredAgents, scoped.agent)
           if (next.instructions?.length) {
             result.instruction_origins = origins(result.instruction_origins, next.instructions, trusted, source)
           }
@@ -764,17 +774,32 @@ export const layer = Layer.effect(
           deps.push(dep)
 
           // kilocode_change start - propagate parse errors to the Warning accumulator
+          const sourceScopes = (names: readonly string[]) => [
+            ...(dirSourceScope ? [dirSourceScope] : []),
+            ...ExternalMarkdown.scopes({
+              dir,
+              names,
+              permission: result.permission,
+              origins: result.permission_origins,
+            }),
+          ]
           result.command = mergeDeep(
             result.command ?? {},
-            yield* Effect.promise(() => ConfigCommand.load(dir, warnings, dirTrusted, dirFileScope, dirSourceScope)),
+            yield* Effect.promise(() =>
+              ConfigCommand.load(dir, warnings, dirTrusted, dirFileScope, sourceScopes(["command", "commands"])),
+            ),
           )
-          result.agent = mergeDeep(
+          result.agent = KilocodeConfig.mergeAgentMarkdown(
             result.agent ?? {},
-            yield* Effect.promise(() => ConfigAgent.load(dir, warnings, dirTrusted, dirFileScope, dirSourceScope)),
+            yield* Effect.promise(() =>
+              ConfigAgent.load(dir, warnings, dirTrusted, dirFileScope, sourceScopes(["agent", "agents"])),
+            ),
+            configuredAgents,
           )
-          result.agent = mergeDeep(
+          result.agent = KilocodeConfig.mergeAgentMarkdown(
             result.agent ?? {},
             yield* Effect.promise(() => ConfigAgent.loadMode(dir, warnings, dirTrusted, dirFileScope, dirSourceScope)),
+            configuredAgents,
           )
           // kilocode_change end
           // kilocode_change - Auto-discovered plugins under config directories are already local files, so ConfigPlugin.load
@@ -999,7 +1024,7 @@ export const layer = Layer.effect(
           directory: ctx.directory,
           payload: {
             type: Event.ConfigUpdated.type,
-            properties: {},
+            properties: { sandbox: Object.hasOwn(config, "sandbox") },
           },
         }),
       )
@@ -1025,20 +1050,28 @@ export const layer = Layer.effect(
           Effect.gen(function* () {
             const before = (yield* readConfigFile(file)) ?? "{}"
             const patch = writableGlobal(config)
+            // Reads merge every global config file, so delete sentinels must be
+            // removed from all of them, not just the primary write target.
+            const propagated = yield* KilocodeConfig.propagateUnset({
+              fs,
+              files: KilocodeConfig.GLOBAL_CONFIG_FILES.map((name) => path.join(Global.Path.config, name)),
+              exclude: file,
+              patch,
+            })
 
             if (!file.endsWith(".jsonc")) {
               const existing = ConfigParse.schema(ConfigV1.Info, ConfigParse.jsonc(before, file), file)
               const next = KilocodeConfig.mergeConfig(writable(existing), patch)
               const serialized = JSON.stringify(next, null, 2)
-              const changed = serialized !== before
-              if (changed) yield* fs.writeFileString(file, serialized).pipe(Effect.orDie)
+              const changed = serialized !== before || propagated
+              if (serialized !== before) yield* fs.writeFileString(file, serialized).pipe(Effect.orDie)
               return { next, changed }
             }
 
             const updated = patchJsonc(before, patch)
             const next = ConfigParse.schema(ConfigV1.Info, ConfigParse.jsonc(updated, file), file)
-            const changed = updated !== before
-            if (changed) yield* fs.writeFileString(file, updated).pipe(Effect.orDie)
+            const changed = updated !== before || propagated
+            if (updated !== before) yield* fs.writeFileString(file, updated).pipe(Effect.orDie)
             return { next, changed }
           }),
           `config:global:${path.resolve(Global.Path.config)}`,
@@ -1046,6 +1079,7 @@ export const layer = Layer.effect(
         .pipe(Effect.orDie)
       const next = result.next
       const changed = result.changed
+      const sandboxChanged = changed && Object.hasOwn(config, "sandbox")
       // kilocode_change end
 
       // kilocode_change start - skip dispose when caller opts out
@@ -1057,7 +1091,7 @@ export const layer = Layer.effect(
             directory: "global",
             payload: {
               type: Event.ConfigUpdated.type,
-              properties: {},
+              properties: { sandbox: sandboxChanged },
             },
           }),
         ).pipe(Effect.catchCause(() => Effect.void))
@@ -1074,7 +1108,7 @@ export const layer = Layer.effect(
             directory: "global",
             payload: {
               type: Event.ConfigUpdated.type,
-              properties: {},
+              properties: { sandbox: sandboxChanged },
             },
           }),
         ).pipe(Effect.catchCause(() => Effect.void))
@@ -1095,26 +1129,12 @@ export const layer = Layer.effect(
       warnings, // kilocode_change
     })
   }),
-).pipe(Layer.provide(EffectFlock.defaultLayer)) // kilocode_change - serialize global config updates in every layer
-
-export const defaultLayer = layer.pipe(
-  Layer.provide(Git.defaultLayer), // kilocode_change
-  Layer.provide(FSUtil.defaultLayer),
-  Layer.provide(Env.defaultLayer),
-  Layer.provide(Auth.defaultLayer),
-  Layer.provide(Account.defaultLayer),
-  Layer.provide(Npm.defaultLayer),
-  Layer.provide(FetchHttpClient.layer),
 )
 
-export const node = LayerNode.make(layer, [
-  FSUtil.node,
-  Auth.node,
-  Account.node,
-  Env.node,
-  Npm.node,
-  httpClient,
-  Git.node,
-]) // kilocode_change
+export const node = LayerNode.make({
+  service: Service,
+  layer: layer,
+  deps: [FSUtil.node, Auth.node, Account.node, Env.node, Npm.node, httpClient, Git.node, EffectFlock.node], // kilocode_change
+})
 
 export * as Config from "./config"

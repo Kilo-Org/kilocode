@@ -7,20 +7,23 @@ import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
 import { useSession } from "../../context/session"
+import { useSpeechToTextModels } from "../../context/speech-to-text-models"
 import { parseModelString } from "../../../../src/shared/provider-model"
 import { ModelSelectorBase } from "../shared/ModelSelector"
 import { ThinkingSelectorBase } from "../shared/ThinkingSelector"
 import SettingsRow from "./SettingsRow"
 import { DEFAULT_SPEECH_TO_TEXT_MODEL } from "../../../../src/speech-to-text/models"
 import { hasSpeechToTextAccess, selectedSpeechToTextModel } from "../speech-to-text/availability"
-import { SPEECH_TO_TEXT_MODEL_OPTIONS } from "../speech-to-text/model-selector"
+import { speechToTextModelOptions } from "../speech-to-text/model-selector"
 import { AUTOCOMPLETE_SELECTOR_MODELS, getAutocompleteSelection } from "./autocomplete-model-selector"
+import { preserveVariant } from "../../context/session-variant-store"
 
 const ModelsTab: Component = () => {
   const { config, settings, updateConfig, updateSetting } = useConfig()
   const language = useLanguage()
   const provider = useProvider()
   const session = useSession()
+  const speechModels = useSpeechToTextModels()
 
   const autocompleteProvider = () => {
     const v = settings()["autocomplete.provider"]
@@ -42,8 +45,9 @@ const ModelsTab: Component = () => {
   }
 
   const subagentModel = createMemo(() => parseModelString(config().subagent_model ?? undefined))
-  const speechModel = createMemo(() => selectedSpeechToTextModel(config()))
-  const speechOption = createMemo(() => SPEECH_TO_TEXT_MODEL_OPTIONS.find((item) => item.value === speechModel()))
+  const speechModel = createMemo(() => selectedSpeechToTextModel(config(), speechModels.models()))
+  const speechOptions = createMemo(() => speechToTextModelOptions(speechModels.models()))
+  const speechOption = createMemo(() => speechOptions().find((item) => item.value === speechModel()))
   const kiloReady = createMemo(() => hasSpeechToTextAccess(config(), provider.authStates()))
   const variantKey = createMemo(() => config().subagent_model ?? undefined)
   const subagentVariants = createMemo(() => Object.keys(provider.findModel(subagentModel())?.variants ?? {}))
@@ -61,9 +65,12 @@ const ModelsTab: Component = () => {
       return
     }
     const value = `${providerID}/${modelID}`
+    const list = Object.keys(provider.findModel({ providerID, modelID })?.variants ?? {})
+    const next = preserveVariant(subagentVariant(), list)
     updateConfig({
       subagent_model: value,
       ...(config().subagent_model === value ? {} : { subagent_variant: null }),
+      ...(next ? { subagent_variant_overrides: { ...config().subagent_variant_overrides, [value]: next } } : {}),
     })
   }
 
@@ -84,7 +91,17 @@ const ModelsTab: Component = () => {
         updateConfig({ agent: { [agentName]: { model: null } } })
         return
       }
-      updateConfig({ agent: { [agentName]: { model: `${providerID}/${modelID}` } } })
+      const current = config().agent?.[agentName]?.variant ?? undefined
+      const list = Object.keys(provider.findModel({ providerID, modelID })?.variants ?? {})
+      const next = preserveVariant(current, list)
+      updateConfig({
+        agent: {
+          [agentName]: {
+            model: `${providerID}/${modelID}`,
+            ...(current && !list.includes(current) ? { variant: next ?? null } : {}),
+          },
+        },
+      })
     }
   }
 
@@ -190,7 +207,7 @@ const ModelsTab: Component = () => {
             inactive={kiloReady()}
           >
             <Select
-              options={SPEECH_TO_TEXT_MODEL_OPTIONS}
+              options={speechOptions()}
               current={speechOption()}
               value={(item) => item.value}
               label={(item) => `${item.label} (${item.provider})`}

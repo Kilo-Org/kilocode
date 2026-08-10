@@ -105,6 +105,19 @@ const DisplayTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
+          title={language.t("settings.display.autoApprovalReason.title")}
+          description={language.t("settings.display.autoApprovalReason.description")}
+        >
+          <Switch
+            checked={Boolean(settings()["showAutoApprovalReason"] ?? true)}
+            onChange={(checked: boolean) => updateSetting("showAutoApprovalReason", checked)}
+            hideLabel
+          >
+            {language.t("settings.display.autoApprovalReason.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
           title={language.t("settings.display.terminalCommand.title")}
           description={language.t("settings.display.terminalCommand.description")}
         >
