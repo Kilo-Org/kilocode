@@ -91,8 +91,12 @@ export class PRStatusBridge {
       const threadId = m.threadId as string
       const wt = this.host.getWorktrees().find((w: Worktree) => w.id === id)
       const cwd = wt?.path ?? this.host.getWorkspaceRoot()
-      if (cwd) {
-        resolveComment(threadId, cwd).then((err) => {
+      if (!cwd) {
+        this.host.log("resolveComment: no cwd for worktree", id)
+        return true
+      }
+      resolveComment(threadId, cwd).then(
+        (err) => {
           this.host.postToWebview({
             type: "agentManager.resolveCommentResult",
             worktreeId: id,
@@ -101,7 +105,9 @@ export class PRStatusBridge {
             error: err,
           } as AgentManagerOutMessage)
           if (!err) this.poller.refresh(id)
-        }, (err: unknown) => {
+        },
+        (err: unknown) => {
+          this.host.log("resolveComment failed:", err)
           this.host.postToWebview({
             type: "agentManager.resolveCommentResult",
             worktreeId: id,
@@ -109,8 +115,8 @@ export class PRStatusBridge {
             success: false,
             error: String(err),
           } as AgentManagerOutMessage)
-        })
-      }
+        },
+      )
       return true
     }
     return false
