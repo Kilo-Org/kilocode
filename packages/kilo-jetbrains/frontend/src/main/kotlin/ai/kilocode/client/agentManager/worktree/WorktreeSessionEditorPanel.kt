@@ -11,6 +11,7 @@ import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.history.HistorySection
 import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.session.history.LocalHistoryItem
+import ai.kilocode.client.util.bindTheme
 import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListConfig
@@ -27,7 +28,6 @@ import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
 import com.intellij.icons.AllIcons
-import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
@@ -38,7 +38,6 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.UiDataProvider
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
@@ -54,15 +53,8 @@ import java.awt.Color
 import javax.swing.JComponent
 import javax.swing.ListSelectionModel
 import javax.swing.JPanel
-import javax.swing.SwingUtilities
 import javax.swing.event.ListDataEvent
 import javax.swing.event.ListDataListener
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 
 class WorktreeSessionEditorPanel(
     parent: Disposable,
@@ -96,8 +88,6 @@ class WorktreeSessionEditorPanel(
     )
     private val statsView = WorktreeStatsView(::openBranchDiff)
     private var started = false
-    private val cs = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private var status: AutoCloseable? = null
     private var stats: WorktreeStatsDto? = null
     private var pr: WorktreePrDto? = null
 
@@ -115,7 +105,6 @@ class WorktreeSessionEditorPanel(
         splitter.secondComponent = manager.component
         addToCenter(splitter)
         bindModel()
-        bindTheme()
         manager.onPresent = { key -> select(key) }
         manager.onListChanged = {
             sync()
@@ -132,6 +121,7 @@ class WorktreeSessionEditorPanel(
             }
         }
         bindStatus()
+        bindTheme(this, this)
         sync()
     }
 
@@ -262,7 +252,7 @@ class WorktreeSessionEditorPanel(
         val titles = manager.titles()
         val deleting = manager.deleting()
         if (pending || key == SessionHost.NEW) rows += NewRow
-        rows += HistoryTime.sorted((0 until controller.model.size).map { LocalHistoryItem(controller.model.getElementAt(it)) })
+        rows += HistoryTime.sorted(controller.sessions().map { LocalHistoryItem(it) })
             .map { SessionRow(it.session, kinds[it.id], deleting = it.id in deleting, live = titles[it.id]) }
         list.update(rows, ActiveListSelection.PreserveNoScroll)
         select(if (pending) SessionHost.NEW else key)
@@ -275,11 +265,7 @@ class WorktreeSessionEditorPanel(
     }
 
     @RequiresEdt
-    private fun item(key: String): SessionDto? {
-        return (0 until controller.model.size)
-            .map { controller.model.getElementAt(it) }
-            .firstOrNull { it.id == key }
-    }
+    private fun item(key: String): SessionDto? = controller.session(key)
 
     @RequiresEdt
     private fun title(key: String): String {
@@ -301,41 +287,15 @@ class WorktreeSessionEditorPanel(
         Disposer.register(this) { controller.model.removeListDataListener(listener) }
     }
 
-    private fun bindTheme() {
-        val bus = ApplicationManager.getApplication().messageBus.connect(this)
-        bus.subscribe(LafManagerListener.TOPIC, LafManagerListener {
-            ApplicationManager.getApplication().invokeLater {
-                SwingUtilities.updateComponentTreeUI(this)
-            }
-        })
-    }
-
     private fun bindStatus() {
         val target = project ?: return
-        val service = target.service<WorktreeStatusService>()
-        status = service.attach()
-        cs.launch {
-            service.stats.collectLatest { value ->
-                edtIfAlive {
-                    stats = value[normalizeWorktreePath(worktree.directory)]
-                    statsView.update(stats, pr)
-                }
-            }
-        }
-        cs.launch {
-            service.pr.collectLatest { value ->
-                edtIfAlive {
-                    pr = value[normalizeWorktreePath(worktree.directory)]
-                    statsView.update(stats, pr)
-                }
-            }
-        }
-    }
-
-    private fun edtIfAlive(block: () -> Unit) {
-        ApplicationManager.getApplication().invokeLater {
-            if ((project == null || !project.isDisposed) && !Disposer.isDisposed(this)) block()
-        }
+        val key = normalizeWorktreePath(worktree.directory)
+        WorktreeStatusBinding(
+            target,
+            this,
+            onStats = { value -> stats = value[key]; statsView.update(stats, pr) },
+            onPr = { value -> pr = value[key]; statsView.update(stats, pr) },
+        )
     }
 
     override fun uiDataSnapshot(sink: DataSink) {
@@ -348,8 +308,6 @@ class WorktreeSessionEditorPanel(
     override fun dispose() {
         manager.onPresent = null
         manager.onListChanged = null
-        status?.close()
-        cs.cancel()
     }
 
     private inner class NewAction : AnAction(

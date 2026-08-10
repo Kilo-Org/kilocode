@@ -60,6 +60,10 @@ class KiloSessionService internal constructor(
         private val LOG = KiloLog.create(KiloSessionService::class.java)
     }
 
+    // Reflects the sessions from the most recent tracking [list]/[renameSession] call, which is
+    // scoped to a single directory. It is NOT a per-workspace source of truth: a caller listing a
+    // different directory (e.g. an Agent Manager worktree tab) overwrites it. Directory-scoped
+    // callers must consume the return value of [list]/[sessionsFor], never this flow.
     private val _sessions = MutableStateFlow<List<SessionDto>>(emptyList())
     val sessions: StateFlow<List<SessionDto>> = _sessions.asStateFlow()
 
@@ -107,6 +111,13 @@ class KiloSessionService internal constructor(
         _sessions.value = result.sessions
         return result
     }
+
+    /**
+     * List sessions for [dir] without touching the shared [sessions] flow. Use this for
+     * directory-scoped views (e.g. Agent Manager worktree tabs) that maintain their own model, so a
+     * background refresh does not clobber the primary workspace's [sessions] snapshot.
+     */
+    suspend fun sessionsFor(dir: String): SessionListDto = call { list(dir) }
 
     /** Load recent sessions for the current worktree family. */
     suspend fun recent(dir: String, limit: Int): List<SessionDto> =

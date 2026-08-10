@@ -57,13 +57,13 @@ class WorktreeStatusService internal constructor(
     }
 
     fun refreshStats() {
-        if (project.isDisposed) return
+        if (project.isDisposed || refs == 0) return
         val timer = debounce ?: timers.timer(STATS_DEBOUNCE, repeats = false) { loadStats() }.also { debounce = it }
         timer.restart()
     }
 
     fun refreshPr(force: Boolean = false) {
-        if (project.isDisposed) return
+        if (project.isDisposed || refs == 0) return
         val now = timers.now()
         if (!force && now - lastPr < PR_THROTTLE) return
         lastPr = now
@@ -81,6 +81,7 @@ class WorktreeStatusService internal constructor(
         debounce?.stop()
         statsTimer?.stop()
         prTimer?.stop()
+        debounce = null
         statsTimer = null
         prTimer = null
     }
@@ -108,7 +109,12 @@ class WorktreeStatusService internal constructor(
     }
 
     private fun notify(value: GhAvailability) {
-        if (notified || value == GhAvailability.OK) return
+        // Re-arm once gh recovers so a later regression notifies again instead of staying silent.
+        if (value == GhAvailability.OK) {
+            notified = false
+            return
+        }
+        if (notified) return
         notified = true
         if (value == GhAvailability.MISSING) {
             KiloNotifications.suggestion(

@@ -166,8 +166,7 @@ open class WorktreeSessionEditorManager(
     @RequiresEdt
     private fun adoptTitle(): String? {
         val live = titles()
-        return (0 until list.model.size)
-            .map { list.model.getElementAt(it) }
+        return list.sessions()
             .sortedBy { it.time.created }
             .firstNotNullOfOrNull { s ->
                 (live[s.id]?.takeIf { it.isNotBlank() } ?: s.title.takeIf { it.isNotBlank() })
@@ -228,15 +227,14 @@ open class WorktreeSessionEditorManager(
 
     @RequiresEdt
     private fun latest(): SessionDto? {
-        return (0 until list.model.size)
-            .map { list.model.getElementAt(it) }
+        return list.sessions()
             .filter { it.id !in deleting }
             .maxByOrNull { it.time.updated }
     }
 
     @RequiresEdt
     private fun next(key: String?): SessionDto? {
-        val rows = HistoryTime.sorted((0 until list.model.size).map { LocalHistoryItem(list.model.getElementAt(it)) })
+        val rows = HistoryTime.sorted(list.sessions().map { LocalHistoryItem(it) })
             .map { it.session }
         val idx = rows.indexOfFirst { it.id == key }
         if (idx < 0) return rows.firstOrNull { it.id !in deleting }
@@ -246,9 +244,7 @@ open class WorktreeSessionEditorManager(
 
     @RequiresEdt
     private fun title(id: String): String {
-        return (0 until list.model.size)
-            .map { list.model.getElementAt(it) }
-            .firstOrNull { it.id == id }
+        return list.session(id)
             ?.title
             ?.takeIf { it.isNotBlank() }
             ?: KiloBundle.message("worktree.session.untitled")

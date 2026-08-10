@@ -18,10 +18,18 @@ class WorktreeSessionListController(
 ) {
     val model = CollectionListModel<SessionDto>()
 
+    /** Snapshot of the listed sessions, in model order. */
+    @RequiresEdt
+    fun sessions(): List<SessionDto> = (0 until model.size).map { model.getElementAt(it) }
+
+    /** The listed session with [id], or null when it is not in the model. */
+    @RequiresEdt
+    fun session(id: String): SessionDto? = sessions().firstOrNull { it.id == id }
+
     fun reload(done: (() -> Unit)? = null) {
         cs.launch {
             try {
-                val result = service.list(dir)
+                val result = service.sessionsFor(dir)
                 edt {
                     model.replaceAll(result.sessions)
                     capture("Worktree Session List Loaded", mapOf("count" to result.sessions.size.toString()))

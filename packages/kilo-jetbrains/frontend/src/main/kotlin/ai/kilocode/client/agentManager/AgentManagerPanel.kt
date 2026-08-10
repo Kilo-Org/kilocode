@@ -5,6 +5,7 @@ import ai.kilocode.client.agentManager.worktree.ConfigureWorktreeDialog
 import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.WorktreeDataKeys
 import ai.kilocode.client.agentManager.worktree.WorktreeIcons
+import ai.kilocode.client.agentManager.worktree.WorktreeStatusBinding
 import ai.kilocode.client.agentManager.worktree.WorktreeStatusService
 import ai.kilocode.client.agentManager.worktree.WorktreeNameCache
 import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatchers
@@ -22,6 +23,7 @@ import ai.kilocode.client.diff.ensureDiffEditorKind
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.util.bindTheme
 import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListConfig
@@ -40,7 +42,6 @@ import ai.kilocode.rpc.dto.WorktreeStatsDto
 import com.intellij.icons.AllIcons
 import com.intellij.ide.BrowserUtil
 import com.intellij.ide.DeleteProvider
-import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionGroup
@@ -52,7 +53,6 @@ import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.PlatformDataKeys
 import com.intellij.openapi.actionSystem.UiDataProvider
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorManagerEvent
@@ -67,13 +67,6 @@ import java.awt.Color
 import javax.swing.event.ListDataEvent
 import javax.swing.event.ListDataListener
 import javax.swing.JComponent
-import javax.swing.SwingUtilities
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 
 /**
  * Agent Manager panel: a git-worktree list with search and a delete action revealed on selection,
@@ -103,10 +96,8 @@ class AgentManagerPanel(
         }),
     )
     private var selected: String? = null
-    private val cs = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var stats: Map<String, WorktreeStatsDto> = emptyMap()
     private var prs: Map<String, WorktreePrDto> = emptyMap()
-    private var status: AutoCloseable? = null
 
     init {
         Disposer.register(parent, this)
@@ -116,7 +107,7 @@ class AgentManagerPanel(
         list.installPopup(group)
         sync()
         bindModel()
-        bindTheme()
+        bindTheme(this, this)
         controller.onSelect = { key ->
             // Focus the list so the freshly created worktree renders as an active selection rather
             // than the inactive highlight it would get while focus stays on the toolbar.
@@ -312,15 +303,6 @@ class AgentManagerPanel(
         KiloNotifications.error(project, title, result.error)
     }
 
-    private fun bindTheme() {
-        val bus = ApplicationManager.getApplication().messageBus.connect(this)
-        bus.subscribe(LafManagerListener.TOPIC, LafManagerListener {
-            ApplicationManager.getApplication().invokeLater {
-                SwingUtilities.updateComponentTreeUI(this)
-            }
-        })
-    }
-
     private fun bindEditorSelection() {
         val target = project ?: return
         target.service<WorktreeEditorMatchers>().register(WorktreeSessionEditorMatcher)
@@ -391,32 +373,12 @@ class AgentManagerPanel(
 
     private fun bindStatus() {
         val target = project ?: return
-        val service = target.service<WorktreeStatusService>()
-        status = service.attach()
-        service.refreshStats()
-        service.refreshPr()
-        cs.launch {
-            service.stats.collectLatest { value ->
-                edtIfAlive {
-                    stats = value
-                    sync()
-                }
-            }
-        }
-        cs.launch {
-            service.pr.collectLatest { value ->
-                edtIfAlive {
-                    prs = value
-                    sync()
-                }
-            }
-        }
-    }
-
-    private fun edtIfAlive(block: () -> Unit) {
-        ApplicationManager.getApplication().invokeLater {
-            if ((project == null || !project.isDisposed) && !Disposer.isDisposed(this)) block()
-        }
+        WorktreeStatusBinding(
+            target,
+            this,
+            onStats = { value -> stats = value; sync() },
+            onPr = { value -> prs = value; sync() },
+        )
     }
 
     override fun dispose() {
@@ -424,8 +386,6 @@ class AgentManagerPanel(
         controller.onCreateFailure = null
         controller.onRemoveSuccess = null
         controller.onActivityChanged = null
-        status?.close()
-        cs.cancel()
     }
 
     override fun uiDataSnapshot(sink: DataSink) {
