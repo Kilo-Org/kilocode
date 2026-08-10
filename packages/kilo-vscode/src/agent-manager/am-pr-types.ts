@@ -14,6 +14,7 @@ export interface GhComment {
   line?: number
   url?: string
   createdAt?: string
+  diffHunk?: string
 }
 export interface GhThread {
   isResolved?: boolean

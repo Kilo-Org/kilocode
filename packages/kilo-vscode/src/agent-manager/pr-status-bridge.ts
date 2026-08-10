@@ -9,6 +9,7 @@ import type { AgentManagerOutMessage, PRStatus } from "./types"
 import type { Disposable } from "./host"
 import type { Semaphore } from "./semaphore"
 import { PRStatusPoller } from "./PRStatusPoller"
+import { resolveComment } from "./PRActions"
 
 interface PRBridgeHost {
   getWorktrees(): Worktree[]
@@ -83,6 +84,33 @@ export class PRStatusBridge {
     if (m.type === "agentManager.openPR") {
       const url = (m.url as string) ?? this.host.getWorktrees().find((w: Worktree) => w.id === m.worktreeId)?.prUrl
       if (url) this.host.openExternal(url)
+      return true
+    }
+    if (m.type === "agentManager.resolveComment") {
+      const id = m.worktreeId as string
+      const threadId = m.threadId as string
+      const wt = this.host.getWorktrees().find((w: Worktree) => w.id === id)
+      const cwd = wt?.path ?? this.host.getWorkspaceRoot()
+      if (cwd) {
+        resolveComment(threadId, cwd).then((err) => {
+          this.host.postToWebview({
+            type: "agentManager.resolveCommentResult",
+            worktreeId: id,
+            threadId,
+            success: !err,
+            error: err,
+          } as AgentManagerOutMessage)
+          if (!err) this.poller.refresh(id)
+        }, (err: unknown) => {
+          this.host.postToWebview({
+            type: "agentManager.resolveCommentResult",
+            worktreeId: id,
+            threadId,
+            success: false,
+            error: String(err),
+          } as AgentManagerOutMessage)
+        })
+      }
       return true
     }
     return false

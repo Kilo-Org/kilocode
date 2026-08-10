@@ -81,6 +81,7 @@ export function parseComments(threads: GhThread[]): PRComment[] {
       url: first.url,
       resolved: thread.isResolved ?? false,
       createdAt: first.createdAt ? new Date(first.createdAt).getTime() : undefined,
+      diffHunk: first.diffHunk,
     })
   }
   return items

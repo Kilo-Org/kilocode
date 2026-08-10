@@ -23,6 +23,7 @@ export interface PRComment {
   url?: string
   resolved: boolean
   createdAt?: number
+  diffHunk?: string
 }
 
 export type ReviewerState = "approved" | "changes_requested" | "pending" | "commented"

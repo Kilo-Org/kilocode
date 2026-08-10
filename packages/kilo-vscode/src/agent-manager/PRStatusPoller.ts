@@ -496,6 +496,7 @@ export class PRStatusPoller {
                     line
                     url
                     createdAt
+                    diffHunk
                   }
                 }
               }

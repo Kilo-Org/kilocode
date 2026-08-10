@@ -69,6 +69,7 @@ export interface PRComment {
   url?: string
   resolved: boolean
   createdAt?: number
+  diffHunk?: string
 }
 
 export type ReviewerState = "approved" | "changes_requested" | "pending" | "commented"
@@ -394,6 +395,14 @@ interface PRErrorOutMessage {
   error: "gh_missing" | "gh_auth" | "fetch_failed"
 }
 
+interface ResolveCommentResultMessage {
+  type: "agentManager.resolveCommentResult"
+  worktreeId: string
+  threadId: string
+  success: boolean
+  error?: string
+}
+
 interface ActionOutMessage {
   type: "action"
   action: string
@@ -434,6 +443,7 @@ export type AgentManagerOutMessage =
   | DiffBranchesMessage
   | PRStatusOutMessage
   | PRErrorOutMessage
+  | ResolveCommentResultMessage
   | ActionOutMessage
   | RunStatusMessage
   | TerminalCreatedMessage
@@ -758,6 +768,12 @@ interface OpenPRIn {
   url?: string
 }
 
+interface ResolveCommentIn {
+  type: "agentManager.resolveComment"
+  worktreeId: string
+  threadId: string
+}
+
 interface OpenSessionsIn {
   type: "agentManager.openSessions"
   sessionIDs: string[]
@@ -1050,6 +1066,7 @@ export type AgentManagerInMessage =
   | SetDiffBaseBranchIn
   | RefreshPRIn
   | OpenPRIn
+  | ResolveCommentIn
   | OpenSessionsIn
   | VisibleSessionIn
   | OpenFileIn

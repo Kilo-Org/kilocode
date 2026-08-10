@@ -2667,6 +2667,7 @@ const AgentManagerContent: Component = () => {
                           <PRPanel
                             pr={data.pr}
                             worktree={data.wt}
+                            worktreeId={data.selected}
                             onClose={() => setSidePanel(null)}
                             onOpenExternal={() =>
                               vscode.postMessage({

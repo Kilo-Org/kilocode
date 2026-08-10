@@ -16,6 +16,7 @@ import "./pr-panel.css"
 interface PRPanelProps {
   pr: PRStatus
   worktree?: WorktreeState
+  worktreeId: string
   onClose: () => void
   onOpenExternal: () => void
 }
@@ -55,7 +56,7 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
           <PRChecks checks={props.pr.checks} />
         </Show>
         <Show when={props.pr.comments?.total ? props.pr.comments : undefined}>
-          {(comments) => <PRComments comments={comments()} />}
+          {(comments) => <PRComments comments={comments()} worktreeId={props.worktreeId} />}
         </Show>
       </div>
     </div>
