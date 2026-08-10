@@ -1,5 +1,5 @@
-import { describe, expect, test } from "bun:test"
-import type { LanguageModelV3 } from "@ai-sdk/provider"
+import { beforeEach, describe, expect, test } from "bun:test"
+import { APICallError, JSONParseError, type LanguageModelV3 } from "@ai-sdk/provider"
 import { Effect } from "effect"
 import { ModelNotFoundError, type Provider } from "../../../src/provider/provider"
 import { ProviderV2 } from "@opencode-ai/core/provider"
@@ -9,16 +9,16 @@ import { MessageID, PartID, SessionID } from "../../../src/session/schema"
 import type { Session } from "../../../src/session/session"
 import type { SessionSummary } from "../../../src/session/summary"
 import type { Snapshot } from "../../../src/snapshot"
-import { MemoryModel, MemorySession } from "../../../src/kilocode/memory/ports"
+import { MemoryModel, MemorySession, resetStreamNeeded } from "../../../src/kilocode/memory/ports"
 
 const pid = ProviderV2.ID.make("test")
 const mid = ModelV2.ID.make("fake-memory-model")
 
-function mdl(id = mid): Provider.Model {
+function mdl(id = mid, npm = "test-provider"): Provider.Model {
   return {
     id,
     providerID: pid,
-    api: { id, npm: "test-provider", url: "" },
+    api: { id, npm, url: "" },
     limit: { context: 100_000, output: 4_000 },
     capabilities: {
       toolcall: true,
@@ -83,6 +83,71 @@ function provider(input: { outputs?: string[]; seen?: string[] } = {}): Provider
     closest: () => Effect.succeed({ providerID: pid, modelID: base.id }),
     getSmallModel: () => Effect.succeed(mem),
     defaultModel: () => Effect.succeed({ providerID: pid, modelID: base.id }),
+  }
+}
+
+function compatLanguage(input: {
+  generate: () => Promise<unknown>
+  streamed?: string[]
+  called?: string[]
+}): LanguageModelV3 {
+  return {
+    specificationVersion: "v3",
+    provider: "test",
+    modelId: "compat",
+    supportedUrls: {},
+    doGenerate: input.generate,
+    doStream: input.streamed
+      ? async () => ({
+          stream: new ReadableStream({
+            start: (controller: ReadableStreamDefaultController) => {
+              input.called?.push("stream")
+              controller.enqueue({ type: "text-start", id: "1" })
+              for (const chunk of input.streamed!) controller.enqueue({ type: "text-delta", id: "1", delta: chunk })
+              controller.enqueue({ type: "text-end", id: "1" })
+              controller.enqueue({
+                type: "finish",
+                finishReason: "stop" as const,
+                usage: { inputTokens: 12, outputTokens: 8 },
+              })
+              controller.close()
+            },
+          }),
+          request: {},
+          response: {},
+        })
+      : async () => {
+          input.called?.push("stream")
+          throw new Error("streamText should not run")
+        },
+  } as unknown as LanguageModelV3
+}
+
+function compatProvider(input: {
+  generate: () => Promise<unknown>
+  streamed?: string[]
+  called?: string[]
+}): Provider.Interface {
+  const source = mdl(ModelV2.ID.make("compat"), "@ai-sdk/openai-compatible")
+  const info = {
+    id: pid,
+    name: "Test",
+    source: "config",
+    env: [],
+    options: {},
+    models: { [source.id]: source },
+  } satisfies Provider.Info
+  return {
+    list: () => Effect.succeed({ [pid]: info }),
+    getProvider: () => Effect.succeed(info),
+    getModel: (_providerID, modelID) =>
+      info.models[modelID]
+        ? Effect.succeed(info.models[modelID])
+        : Effect.fail(new ModelNotFoundError({ providerID: pid, modelID })),
+    getLanguage: () => Effect.succeed(compatLanguage(input)),
+    closest: () => Effect.succeed({ providerID: pid, modelID: source.id }),
+    getSmallModel: () => Effect.succeed(source),
+    defaultModel: () => Effect.succeed({ providerID: pid, modelID: source.id }),
   }
 }
 
@@ -184,6 +249,7 @@ function summary(input: { seen: string[]; diffs: Snapshot.FileDiff[] }): Session
 const ref = { providerID: "test", modelID: "fake-memory-model" }
 
 describe("memory ports", () => {
+  beforeEach(() => resetStreamNeeded())
   test("session port extracts the latest turn, recall markers, and all assistant steps", async () => {
     const sessionID = SessionID.make("ses_memory_adapter")
     const uid = MessageID.make("msg_user")
@@ -270,9 +336,7 @@ describe("memory ports", () => {
     const seen: string[] = []
     const port = MemoryModel.port({ provider: provider({ seen }) })
 
-    const configured = await Effect.runPromise(
-      port.resolve({ configured: "test/memory-config-model", session: ref }),
-    )
+    const configured = await Effect.runPromise(port.resolve({ configured: "test/memory-config-model", session: ref }))
     const fallback = await Effect.runPromise(port.resolve({ configured: "test/missing-memory-model", session: ref }))
 
     expect(configured.fallback).toBeUndefined()
@@ -317,5 +381,101 @@ describe("memory ports", () => {
 
     expect(handles.size).toBe(1)
     expect(cleared.size).toBe(1)
+  })
+
+  test("openai-compatible providers fall back to streamText when generateText returns invalid JSON", async () => {
+    const called: string[] = []
+    const port = MemoryModel.port({
+      provider: compatProvider({
+        generate: async () => {
+          throw new APICallError({
+            message: "Invalid JSON response",
+            url: "test://invalid-json",
+            requestBodyValues: {},
+            cause: new JSONParseError({ text: "event: data, not json", cause: undefined }),
+          })
+        },
+        streamed: ["streamed result"],
+        called,
+      }),
+    })
+    const resolved = await Effect.runPromise(port.resolve({ configured: "test/compat", session: ref }))
+    const out = await port.run({ handle: resolved.handle, system: "s", prompt: "p", timeoutMs: 30_000 })
+    expect(out.text).toBe("streamed result")
+    expect(called).toEqual(["stream"])
+  })
+
+  test("openai-compatible providers fall back to streamText on a bare JSONParseError", async () => {
+    const called: string[] = []
+    const port = MemoryModel.port({
+      provider: compatProvider({
+        generate: async () => {
+          throw new JSONParseError({ text: "event: data, not json", cause: undefined })
+        },
+        streamed: ["streamed result"],
+        called,
+      }),
+    })
+    const resolved = await Effect.runPromise(port.resolve({ configured: "test/compat", session: ref }))
+    const out = await port.run({ handle: resolved.handle, system: "s", prompt: "p", timeoutMs: 30_000 })
+    expect(out.text).toBe("streamed result")
+    expect(called).toEqual(["stream"])
+  })
+
+  test("openai-compatible providers stay on generateText when it succeeds", async () => {
+    const called: string[] = []
+    const port = MemoryModel.port({
+      provider: compatProvider({
+        generate: async () => ({
+            content: [{ type: "text", text: '{"topic":"t","summary":"s"}' }],
+            finishReason: { unified: "stop" },
+            usage: { inputTokens: { total: 12 }, outputTokens: { total: 8 }, raw: {} },
+            warnings: [],
+            providerMetadata: {},
+            request: {},
+          response: {},
+        }),
+        called,
+      }),
+    })
+    const resolved = await Effect.runPromise(port.resolve({ configured: "test/compat", session: ref }))
+    const out = await port.run({ handle: resolved.handle, system: "s", prompt: "p", timeoutMs: 30_000 })
+    expect(out.text).toBe('{"topic":"t","summary":"s"}')
+    expect(called).toEqual([])
+  })
+
+  test("openai-compatible providers stream directly once a model is known to need it", async () => {
+    const called: string[] = []
+    const first = MemoryModel.port({
+      provider: compatProvider({
+        generate: async () => {
+          throw new APICallError({
+            message: "Invalid JSON response",
+            url: "test://invalid-json",
+            requestBodyValues: {},
+            cause: new JSONParseError({ text: "event: data, not json", cause: undefined }),
+          })
+        },
+        streamed: ["first"],
+        called,
+      }),
+    })
+    const resolved = await Effect.runPromise(first.resolve({ configured: "test/compat", session: ref }))
+    const out = await first.run({ handle: resolved.handle, system: "s", prompt: "p", timeoutMs: 30_000 })
+    expect(out.text).toBe("first")
+
+    const again = MemoryModel.port({
+      provider: compatProvider({
+        generate: async () => {
+          throw new Error("generateText must not run again")
+        },
+        streamed: ["second"],
+        called,
+      }),
+    })
+    const resolved2 = await Effect.runPromise(again.resolve({ configured: "test/compat", session: ref }))
+    const out2 = await again.run({ handle: resolved2.handle, system: "s", prompt: "p", timeoutMs: 30_000 })
+    expect(out2.text).toBe("second")
+    expect(called).toEqual(["stream", "stream"])
   })
 })
