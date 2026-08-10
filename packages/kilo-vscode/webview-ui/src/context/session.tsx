@@ -1600,8 +1600,8 @@ export const SessionProvider: ParentComponent = (props) => {
 
     const exists = (store.messages[message.sessionID] ?? []).some((msg) => msg.id === message.id)
     setStore("messages", message.sessionID, (msgs = []) => {
+      if (message.sessionErrorID && msgs.some((msg) => msg.sessionErrorID === message.sessionErrorID)) return msgs
       const current = withoutResolvedSessionErrors(msgs, [message])
-      if (message.sessionErrorID && current.some((msg) => msg.sessionErrorID === message.sessionErrorID)) return current
       // Check if message already exists (optimistic or update case).
       // Since we now use the same messageID for optimistic and server messages,
       // this naturally handles the optimistic→real transition.
