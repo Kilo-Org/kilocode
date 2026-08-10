@@ -41,7 +41,7 @@ class SessionFileLinksTest : BasePlatformTestCase() {
 
     fun `test parse strips line range and column suffixes`() {
         assertEquals(SessionFileLinks.Target("src/Foo.kt", line = 12), SessionFileLinks.parse("src/Foo.kt:12"))
-        assertEquals(SessionFileLinks.Target("src/Foo.kt", line = 12), SessionFileLinks.parse("src/Foo.kt:12-20"))
+        assertEquals(SessionFileLinks.Target("src/Foo.kt", line = 12, endLine = 20), SessionFileLinks.parse("src/Foo.kt:12-20"))
         assertEquals(SessionFileLinks.Target("src/Foo.kt", line = 12, column = 3), SessionFileLinks.parse("src/Foo.kt:12:3"))
     }
 
@@ -94,6 +94,18 @@ class SessionFileLinksTest : BasePlatformTestCase() {
         assertEquals("File Link Opened", events.single().first)
         assertEquals("search_direct", events.single().second["result"])
         assertEquals("true", events.single().second["hasLine"])
+    }
+
+    fun `test open forwards line range to workspace service`() = runBlocking {
+        val file = WorkspaceFileDto("/test/src/Foo.kt", "Foo.kt")
+        val done = CompletableDeferred<Unit>()
+        rpc.fileResolver = { path -> if (path == "src/Foo.kt") listOf(file) else emptyList() }
+        val links = SessionFileLinks("/test", service, scope, JPanel(), openUrl = {}) { _, _ -> done.complete(Unit) }
+
+        links.open("src/Foo.kt:12-20", null)
+        withTimeout(OPEN_TIMEOUT_MS) { done.await() }
+
+        assertEquals(listOf(FakeWorkspaceRpcApi.Opened("/test/src/Foo.kt", 12, null, 20)), rpc.openedFiles)
     }
 
     private companion object {
