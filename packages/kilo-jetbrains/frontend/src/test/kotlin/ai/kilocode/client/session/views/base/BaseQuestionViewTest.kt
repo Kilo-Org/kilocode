@@ -21,12 +21,11 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     // ------ initial state ------
 
-    fun `test header and description text areas are in the component tree by default`() {
+    fun `test empty card does not render a header row by default`() {
         edt {
             val panel = BaseQuestionView()
             assertTrue("Root layout should be BorderLayout", panel.layout is BorderLayout)
-            val areas = findAll<JBTextArea>(panel)
-            assertTrue("Should have at least 2 text areas (header + description)", areas.size >= 2)
+            assertNull("Header row should be omitted until header content exists", headerRow(panel))
         }
     }
 
@@ -87,6 +86,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
     fun `test setTopPanel adds component before header`() {
         edt {
             val panel = BaseQuestionView()
+            panel.setHeader("Title")
             val top = JLabel("top")
             panel.setTopPanel(top)
 
@@ -280,9 +280,10 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test header row has no west icon gap by default`() {
+    fun `test header row has no west icon gap without icon`() {
         edt {
             val panel = BaseQuestionView()
+            panel.setHeader("Title")
             val header = headerRow(panel)!!
             val west = (header.layout as BorderLayout).getLayoutComponent(BorderLayout.WEST)
             assertNull("header should not reserve icon space when icon is absent", west)

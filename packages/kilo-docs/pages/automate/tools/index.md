@@ -62,7 +62,31 @@ These tools help Kilo Code run commands:
 These tools help Kilo Code access web content:
 
 - `webfetch` - Fetches a URL and returns the content
-- `websearch` - Searches the web (available to Kilo/OpenRouter users)
+- `websearch` - Searches the web
+
+#### Web Search Availability
+
+`websearch` is available automatically with the Kilo provider. For models from other providers it is off by default; enable it for all providers by setting `web_search` in `kilo.jsonc`:
+
+```json
+{
+  "web_search": true
+}
+```
+
+In the VS Code extension, the same option lives under **Settings → Web Tools → Web Search → Enable for All Providers**. The `KILO_ENABLE_EXA` and `KILO_ENABLE_PARALLEL` environment flags also enable it.
+
+#### Web Search Providers
+
+`websearch` routes through the Exa or Parallel search providers. When the Exa provider is used and you are signed into Kilo, requests go through the Kilo proxy automatically — no separate Exa API key is required. Setting `EXA_API_KEY` uses your own Exa key instead. Exa searches return at most 10 results.
+
+Set the `KILO_WEBSEARCH_PROVIDER` environment variable to force a provider:
+
+| Value | Behavior |
+|---|---|
+| `exa` | Use Exa — through the Kilo proxy when signed in, through `EXA_API_KEY` when set |
+| `parallel` | Use Parallel |
+| `kilo-exa` | Always route Exa searches through the Kilo proxy (requires Kilo sign-in) |
 
 ### Browser Tools
 

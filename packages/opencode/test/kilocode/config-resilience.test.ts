@@ -6,6 +6,7 @@ import { AppRuntime } from "../../src/effect/app-runtime"
 import { provideTestInstance } from "../fixture/fixture"
 import { Filesystem } from "../../src/util/filesystem"
 import { disposeAllInstances, tmpdir } from "../fixture/fixture"
+import { Flag } from "@opencode-ai/core/flag/flag"
 
 const load = () => AppRuntime.runPromise(Config.Service.use((svc) => svc.get()))
 const warnings = () => AppRuntime.runPromise(Config.Service.use((svc) => svc.warnings()))
@@ -105,6 +106,79 @@ describe("config resilience", () => {
       },
     })
   })
+
+  test.serial(
+    "loads external directory symlinks explicitly allowed by global config without trusting tokens",
+    async () => {
+      const name = "KILO_EXTERNAL_MARKDOWN_SECRET"
+      const env = process.env[name]
+      const config = Flag.KILO_CONFIG
+      process.env[name] = "environment secret"
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          const project = path.join(dir, "project")
+          const shared = path.join(dir, "shared")
+          const agents = path.join(shared, "agents")
+          const commands = path.join(shared, "commands")
+          const secret = path.join(dir, "secret.txt")
+          const escaped = path.join(dir, "escaped.md")
+          const global = path.join(dir, "global.json")
+          await Filesystem.write(path.join(agents, "shared.md"), "Shared agent prompt")
+          await Filesystem.write(path.join(commands, "shared.md"), "Shared command template")
+          await Filesystem.write(path.join(agents, "env.md"), `{env:${name}}`)
+          await Filesystem.write(path.join(commands, "file.md"), `{file:${secret}}`)
+          await Filesystem.write(secret, "file secret")
+          await Filesystem.write(escaped, "Escaped agent prompt")
+          await fs.symlink(escaped, path.join(agents, "escaped.md"))
+          await fs.mkdir(path.join(project, ".kilo"), { recursive: true })
+          const type = process.platform === "win32" ? "junction" : "dir"
+          await fs.symlink(agents, path.join(project, ".kilo", "agents"), type)
+          await fs.symlink(commands, path.join(project, ".kilo", "commands"), type)
+          await Filesystem.write(
+            global,
+            JSON.stringify({
+              permission: {
+                markdown_source: {
+                  [path.join(agents, "*")]: "allow",
+                  [path.join(commands, "*")]: "allow",
+                },
+              },
+            }),
+          )
+          return { project, global }
+        },
+      })
+      Flag.KILO_CONFIG = tmp.extra.global
+
+      try {
+        await provideTestInstance({
+          directory: tmp.extra.project,
+          fn: async () => {
+            const cfg = await load()
+            const warns = await warnings()
+
+            expect(cfg.agent?.shared).toMatchObject({ prompt: "Shared agent prompt" })
+            expect(cfg.command?.shared).toMatchObject({ template: "Shared command template" })
+            expect(cfg.agent?.env).toBeUndefined()
+            expect(cfg.agent?.escaped).toBeUndefined()
+            expect(cfg.command?.file).toBeUndefined()
+            expect(
+              warns.filter(
+                (warning) =>
+                  warning.path.endsWith("env.md") ||
+                  warning.path.endsWith("escaped.md") ||
+                  warning.path.endsWith("file.md"),
+              ),
+            ).toHaveLength(3)
+          },
+        })
+      } finally {
+        Flag.KILO_CONFIG = config
+        if (env === undefined) delete process.env[name]
+        else process.env[name] = env
+      }
+    },
+  )
 
   test("skips invalid agent markdown configs", async () => {
     await using tmp = await tmpdir({

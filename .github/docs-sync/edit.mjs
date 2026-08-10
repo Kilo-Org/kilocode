@@ -19,6 +19,7 @@ import fs from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { backoffMsForAttempt, deadline, remainingMs, runKilo, sleepSync } from "./lib.mjs"
+import { readLearningsBlock } from "./learn.mjs"
 
 const BATCH_SIZE = 5
 const ATTEMPTS = 3
@@ -26,7 +27,7 @@ const OUT_DIR = "docs-sync-out"
 export const SUMMARY_FILE = ".docs-sync-summary.json"
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
-const basePrompt = fs.readFileSync(path.join(HERE, "edit-prompt.md"), "utf8")
+const basePrompt = fs.readFileSync(path.join(HERE, "edit-prompt.md"), "utf8") + readLearningsBlock("edit")
 const model = process.env.EDIT_MODEL
 if (!model) throw new Error("EDIT_MODEL is required")
 
@@ -58,14 +59,7 @@ function editBatch(batch, index, budgetDeadline) {
   const triageFile = `${OUT_DIR}/edit-batch-triage-${index}.json`
   const summaryFile = `${OUT_DIR}/edit-summary-${index}.json`
   fs.writeFileSync(batchFile, JSON.stringify(batch, null, 2))
-  fs.writeFileSync(
-    triageFile,
-    JSON.stringify(
-      batch.map((d) => priority.get(d.url)).filter(Boolean),
-      null,
-      2,
-    ),
-  )
+  fs.writeFileSync(triageFile, JSON.stringify(batch.map((d) => priority.get(d.url)).filter(Boolean), null, 2))
 
   const prompt = `${basePrompt}
 
@@ -88,7 +82,21 @@ Batch specifics for this run: the PRs to handle are in the attached ${batchFile}
     // permission.bash map via KILO_CONFIG_CONTENT should replace --auto once the
     // required shell patterns are stable (see PR #12605 review thread).
     const result = runKilo({
-      args: ["run", "--auto", prompt, "-m", model, "--variant", "high", "--dir", process.cwd(), "-f", batchFile, "-f", triageFile],
+      args: [
+        "run",
+        "--auto",
+        prompt,
+        "-m",
+        model,
+        "--variant",
+        "high",
+        "--dir",
+        process.cwd(),
+        "-f",
+        batchFile,
+        "-f",
+        triageFile,
+      ],
       timeoutMs: Math.min(BATCH_TIMEOUT_MS, left),
       streamStdout: true,
       label: `edit batch ${index} attempt ${attempt}`,
@@ -120,9 +128,7 @@ Batch specifics for this run: the PRs to handle are in the attached ${batchFile}
         console.warn(`batch ${index}: backing off ${wait / 1000}s before attempt ${attempt + 1}`)
         sleepSync(wait)
       } else if (wait > 0) {
-        console.warn(
-          `batch ${index}: skipping backoff — remaining budget cannot fit attempt ${attempt + 1} after wait`,
-        )
+        console.warn(`batch ${index}: skipping backoff — remaining budget cannot fit attempt ${attempt + 1} after wait`)
       }
     }
   }

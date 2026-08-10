@@ -56,11 +56,17 @@ export function useSlashCommand(
   vscode: VSCodeContext,
   sandbox: { action: () => void; enabled: Accessor<boolean> },
   exclude?: Set<string> | Accessor<Set<string>>,
+  include?: Set<string> | Accessor<Set<string>>,
+  scope?: string,
+  extra?: SlashCommandEntry[],
 ): SlashCommand {
   const [server, setServer] = createSignal<SlashCommandInfo[]>([])
   const [query, setQuery] = createSignal<string | null>(null)
   const [index, setIndex] = createSignal(0)
   const [requested, setRequested] = createSignal(false)
+  const open = (name: string) => {
+    window.dispatchEvent(new CustomEvent(name, { detail: { source: scope } }))
+  }
 
   const all: SlashCommandEntry[] = [
     {
@@ -83,9 +89,9 @@ export function useSlashCommand(
     {
       name: "models",
       description: "Switch the AI model",
-      hints: [],
+      hints: ["model"],
       action: () => {
-        window.dispatchEvent(new CustomEvent("openModelPicker"))
+        open("openModelPicker")
       },
     },
     {
@@ -93,7 +99,7 @@ export function useSlashCommand(
       description: "Switch the agent mode",
       hints: ["modes"],
       action: () => {
-        window.dispatchEvent(new CustomEvent("openModePicker"))
+        open("openModePicker")
       },
     },
     {
@@ -101,7 +107,7 @@ export function useSlashCommand(
       description: "Switch the reasoning effort",
       hints: ["variants", "reasoning", "thinking"],
       action: () => {
-        window.dispatchEvent(new CustomEvent("openVariantPicker"))
+        open("openVariantPicker")
       },
     },
     {
@@ -138,6 +144,21 @@ export function useSlashCommand(
     { name: "memory auto on", description: "Enable automatic memory saves", hints: [] },
     { name: "memory auto off", description: "Disable automatic memory saves", hints: [] },
     { name: "memory purge confirm", description: "Delete all project memory files", hints: [] },
+    {
+      name: "review",
+      description: "Review code changes [uncommitted, staged, unpushed, branch, commit, pr]",
+      hints: ["code-review", "diff"],
+      nested: true,
+    },
+    { name: "review uncommitted", description: "Review uncommitted changes (staged, unstaged, untracked)", hints: [] },
+    { name: "review staged", description: "Review staged changes only", hints: [] },
+    { name: "review unpushed", description: "Review local commits ahead of upstream", hints: [] },
+    { name: "review branch", description: "Review current branch against base branch", hints: [] },
+    {
+      name: "review quick",
+      description: "Fast single-pass review with minimal token usage",
+      hints: ["--quick", "fast"],
+    },
     {
       name: "export",
       description: "Export the current session transcript as Markdown",
@@ -186,23 +207,30 @@ export function useSlashCommand(
       },
     },
   ]
+  all.push(...(extra ?? []))
 
   const excluded = () => {
     if (typeof exclude === "function") return exclude()
     return exclude
   }
 
+  const included = () => {
+    if (typeof include === "function") return include()
+    return include
+  }
+
   const client = () => {
     const set = excluded()
-    if (!set) return all
-    return all.filter((c) => !set.has(c.name))
+    const only = included()
+    return all.filter((c) => !set?.has(c.name) && (!only || only.has(c.name)))
   }
 
   const commands = (): SlashCommandEntry[] => {
     const list = client()
     const names = new Set(list.map((c) => c.name))
     const set = excluded()
-    const filtered = server().filter((c) => !names.has(c.name) && !set?.has(c.name))
+    const only = included()
+    const filtered = server().filter((c) => !names.has(c.name) && !set?.has(c.name) && (!only || only.has(c.name)))
     return [...list, ...filtered]
   }
 
@@ -221,6 +249,15 @@ export function useSlashCommand(
     if (q.startsWith("memory ")) {
       const matches = list.filter((cmd) => cmd.name.startsWith("memory "))
       if (q === "memory ") return matches
+      const lower = q.toLowerCase()
+      return sortByScore(
+        matches.filter((cmd) => cmd.name.toLowerCase().startsWith(lower)),
+        lower,
+      )
+    }
+    if (q.startsWith("review ")) {
+      const matches = list.filter((cmd) => cmd.name.startsWith("review "))
+      if (q === "review ") return matches
       const lower = q.toLowerCase()
       return sortByScore(
         matches.filter((cmd) => cmd.name.toLowerCase().startsWith(lower)),
@@ -262,12 +299,24 @@ export function useSlashCommand(
       return
     }
     const memory = before.match(/^\/(?:memory|mem)\s+([^\n]*)$/i)
-    if (!memory) return close()
-    const value = `memory ${memory[1]}`.toLowerCase()
-    if (!commands().some((cmd) => cmd.name.toLowerCase().startsWith(value))) return close()
-    request()
-    setQuery(value)
-    setIndex(0)
+    if (memory) {
+      const value = `memory ${memory[1]}`.toLowerCase()
+      if (!commands().some((cmd) => cmd.name.toLowerCase().startsWith(value))) return close()
+      request()
+      setQuery(value)
+      setIndex(0)
+      return
+    }
+    const review = before.match(/^\/review\s+([^\n]*)$/i)
+    if (review) {
+      const value = `review ${review[1]}`.toLowerCase()
+      if (!commands().some((cmd) => cmd.name.toLowerCase().startsWith(value))) return close()
+      request()
+      setQuery(value)
+      setIndex(0)
+      return
+    }
+    return close()
   }
 
   const select = (

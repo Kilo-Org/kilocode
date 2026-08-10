@@ -1,18 +1,21 @@
 import fs from "fs/promises"
 import path from "path"
 import { describe, expect } from "bun:test"
-import { Effect, Layer, Schema } from "effect"
+import { Effect, Schema } from "effect"
 import { CommandV2 } from "@opencode-ai/core/command"
 import { Config } from "@opencode-ai/core/config"
 import { ConfigCommandPlugin } from "@opencode-ai/core/config/plugin/command"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { AbsolutePath } from "@opencode-ai/core/schema"
 import { tmpdir } from "../fixture/tmpdir"
 import { testEffect } from "../lib/effect"
+import { host } from "../plugin/host"
 
-const it = testEffect(Layer.mergeAll(CommandV2.locationLayer, FSUtil.defaultLayer))
+const it = testEffect(AppNodeBuilder.build(LayerNode.group([CommandV2.node, FSUtil.node])))
 const decode = Schema.decodeUnknownSync(Config.Info)
 
 describe("ConfigCommandPlugin.Plugin", () => {
@@ -41,8 +44,7 @@ Review files`,
           })
 
           const command = yield* CommandV2.Service
-          yield* ConfigCommandPlugin.Plugin.effect.pipe(
-            Effect.provideService(CommandV2.Service, command),
+          yield* ConfigCommandPlugin.Plugin.effect(host({ command: { ...command, reload: command.reload } })).pipe(
             Effect.provideService(
               Config.Service,
               Config.Service.of({
@@ -59,7 +61,7 @@ Review files`,
           )
 
           expect(yield* command.list()).toEqual([
-            new CommandV2.Info({
+            CommandV2.Info.make({
               name: "review",
               template: "Review files",
               description: "File review",
@@ -69,13 +71,47 @@ Review files`,
                 id: ModelV2.ID.make("claude"),
                 variant: ModelV2.VariantID.make("high"),
               },
+              variant: ModelV2.VariantID.make("high"),
               subtask: true,
             }),
-            new CommandV2.Info({ name: "empty", template: "" }),
-            new CommandV2.Info({ name: "nested/docs", template: "Write docs" }),
+            CommandV2.Info.make({ name: "empty", template: "" }),
+            CommandV2.Info.make({ name: "nested/docs", template: "Write docs" }),
           ])
         }),
       ),
     ),
+  )
+
+  it.effect("applies a global partial override after project command definitions", () =>
+    Effect.gen(function* () {
+      const command = yield* CommandV2.Service
+      yield* ConfigCommandPlugin.Plugin.effect(host({ command: { ...command, reload: command.reload } })).pipe(
+        Effect.provideService(
+          Config.Service,
+          Config.Service.of({
+            entries: () =>
+              Effect.succeed([
+                new Config.Document({
+                  type: "document",
+                  info: decode({ commands: { review: { model: "anthropic/claude", variant: "high" } } }),
+                }),
+                new Config.Document({
+                  type: "document",
+                  info: decode({ commands: { review: { template: "Review files" } } }),
+                }),
+              ]),
+          }),
+        ),
+      )
+
+      expect(yield* command.get("review")).toMatchObject({
+        template: "Review files",
+        model: {
+          providerID: ProviderV2.ID.make("anthropic"),
+          id: ModelV2.ID.make("claude"),
+          variant: ModelV2.VariantID.make("high"),
+        },
+      })
+    }),
   )
 })

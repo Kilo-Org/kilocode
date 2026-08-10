@@ -1,7 +1,9 @@
 import { describe, expect, it } from "bun:test"
 import {
   cycleVariant,
+  getAgentVariant,
   getVariant,
+  preserveVariant,
   sessionVariantKeys,
   sessionVariants,
   transferVariants,
@@ -41,6 +43,13 @@ describe("per-session variant selection", () => {
 
     expect(getVariant(store, model, variants, "code")).toBe("medium")
     expect(getVariant(store, model, variants, "ask")).toBe("high")
+  })
+
+  it("resolves the effective variant for a mode and model", () => {
+    const store: Record<string, string> = {}
+    store[variantKey(model, "ask")] = "high"
+
+    expect(getAgentVariant(store, model, { variants: { low: {}, high: {} } }, "ask")).toBe("high")
   })
 
   it("carries the pre-submit agent variant into a newly created session", () => {
@@ -111,5 +120,26 @@ describe("cycleVariant", () => {
 
   it("returns undefined when no variants exist", () => {
     expect(cycleVariant("low", [])).toBeUndefined()
+  })
+})
+
+describe("preserveVariant", () => {
+  it("keeps an exact variant", () => {
+    expect(preserveVariant("high", ["low", "high"])).toBe("high")
+    expect(preserveVariant("thinking", ["instant", "thinking"])).toBe("thinking")
+    expect(preserveVariant("default", ["default", "thinking"])).toBe("default")
+  })
+
+  it("falls back to the nearest supported effort", () => {
+    expect(preserveVariant("max", ["high", "xhigh"])).toBe("xhigh")
+    expect(preserveVariant("high", ["low", "medium"])).toBe("medium")
+    expect(preserveVariant("max", ["none", "low"])).toBe("low")
+  })
+
+  it("does not cross binary or custom variant families", () => {
+    expect(preserveVariant("thinking", ["low", "high"])).toBeUndefined()
+    expect(preserveVariant("instant", ["low", "high"])).toBeUndefined()
+    expect(preserveVariant("turbo", ["low", "high"])).toBeUndefined()
+    expect(preserveVariant("high", ["instant", "thinking"])).toBeUndefined()
   })
 })

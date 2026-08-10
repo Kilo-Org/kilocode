@@ -63,6 +63,7 @@ export const dict = {
 
   "agentManager.terminal.new": "新建终端标签页",
   "agentManager.terminal.ended": "终端已结束 — 关闭标签页以消除",
+  "agentManager.terminal.endedRestartable": "终端已结束 - 输入以启动新 shell，或关闭标签页",
   "agentManager.terminal.setupFailed": "设置脚本失败",
   "agentManager.terminal.setupFailedCode": "设置脚本失败，退出代码为",
   "agentManager.terminal.stopSetup": "停止设置脚本",
@@ -96,7 +97,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "下一个标签页",
   "agentManager.shortcuts.newTab": "新建标签页",
   "agentManager.shortcuts.closeTab": "关闭标签页",
-  "agentManager.shortcuts.toggleTerminal": "切换终端",
+  "agentManager.shortcuts.toggleTerminal": "聚焦终端 / 隐藏终端",
   "agentManager.shortcuts.runScript": "运行脚本",
   "agentManager.run.options": "运行选项",
   "agentManager.run.configure": "配置运行脚本",
@@ -110,6 +111,9 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.cancel": "取消",
   "agentManager.dialog.removeStaleWorktree.confirm": "移除失效 Worktree",
 
+  "agentManager.dialog.project.select": "选择项目",
+  "agentManager.dialog.project.untrusted": "请先在侧边栏中信任此项目",
+  "agentManager.dialog.project.missing": "未找到仓库",
   "agentManager.dialog.openWorktree": "新建工作树",
   "agentManager.dialog.configureWorktree": "配置新 Worktree...",
   "agentManager.dialog.tab.new": "新建",

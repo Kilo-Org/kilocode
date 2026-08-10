@@ -33,10 +33,13 @@ describe("AgentManagerOrchestrationBridge", () => {
     fs.rmSync(root, { recursive: true, force: true })
   })
 
-  function harness() {
+  function harness(
+    overrides?: Partial<Parameters<(typeof AgentManagerOrchestrationBridge.prototype)["constructor"]>[1]>,
+  ) {
     const replies: unknown[] = []
     const rejections: unknown[] = []
     const lists = new Map<string, AgentManagerRequest[]>()
+    const statsCalls: number[] = []
     const handlers: {
       event?: (event: SSEPayload, directory?: string) => void
       state?: (state: "connecting" | "connected" | "disconnected" | "error") => void
@@ -45,13 +48,20 @@ describe("AgentManagerOrchestrationBridge", () => {
     const managed = new Set(["ses_target"])
     const promptAsync = mock(async () => ({ data: undefined }))
     const close = mock(async () => undefined)
+    const push = mock(() => undefined)
     const client = {
       session: {
-        get: mock(async () => ({
-          data: { id: "ses_target", directory: dir, title: "Target" } as Session,
+        get: mock(async ({ sessionID, directory }: { sessionID?: string; directory?: string }) => ({
+          data: { id: sessionID ?? "ses_target", directory: directory ?? dir, title: "Target" } as Session,
         })),
         status: mock(async () => ({ data: {} })),
         promptAsync,
+      },
+      permission: {
+        list: mock(async () => ({ data: [] })),
+      },
+      question: {
+        list: mock(async () => ({ data: [] })),
       },
       kilocode: {
         agentManager: {
@@ -92,13 +102,17 @@ describe("AgentManagerOrchestrationBridge", () => {
       getClient: () => client,
     }
     const bridge = new AgentManagerOrchestrationBridge(connection as never, {
-      root: () => root,
-      ready: async () => state,
-      state: () => state,
-      stats: async () => ({ worktrees: [] }),
-      prs: () => new Map(),
-      managed: (id) => managed.has(id),
-      close,
+      root: (dir) => (overrides?.root ? overrides.root(dir) : root),
+      ready: async (dir) => (overrides?.ready ? overrides.ready(dir) : state),
+      state: (dir) => (overrides?.state ? overrides.state(dir) : state),
+      stats: async (dir) => {
+        statsCalls.push(1)
+        return overrides?.stats ? overrides.stats(dir) : { worktrees: [] }
+      },
+      prs: (dir) => (overrides?.prs ? overrides.prs(dir) : new Map()),
+      push: (dir) => (overrides?.push ? overrides.push(dir) : push()),
+      managed: (id, dir) => (overrides?.managed ? overrides.managed(id, dir) : managed.has(id)),
+      close: async (id, dir) => (overrides?.close ? overrides.close(id, dir) : close(id, dir)),
       log: () => undefined,
     })
     const request = (value: AgentManagerRequest, directory = root) =>
@@ -106,7 +120,21 @@ describe("AgentManagerOrchestrationBridge", () => {
         { id: `event-${value.id}`, type: "kilocode.agent_manager.requested", properties: value } as SSEPayload,
         directory,
       )
-    return { bridge, client, close, handlers, lists, managed, promptAsync, rejections, replies, request, status }
+    return {
+      bridge,
+      client,
+      close,
+      handlers,
+      lists,
+      managed,
+      promptAsync,
+      push,
+      rejections,
+      replies,
+      request,
+      statsCalls,
+      status,
+    }
   }
 
   const request: AgentManagerRequest = {
@@ -169,7 +197,7 @@ describe("AgentManagerOrchestrationBridge", () => {
     await waitFor(() => test.replies.length === 2)
 
     expect(test.close).toHaveBeenCalledTimes(1)
-    expect(test.close).toHaveBeenCalledWith("ses_target")
+    expect(test.close).toHaveBeenCalledWith("ses_target", root)
     expect(test.replies).toEqual([
       {
         requestID: "amr_stop",
@@ -182,6 +210,76 @@ describe("AgentManagerOrchestrationBridge", () => {
         result: { operation: "stop", sessionID: "ses_target", stopped: true },
       },
     ])
+    test.bridge.dispose()
+  })
+
+  it("moves its own worktree into a section and then ungroups it", async () => {
+    const test = harness()
+    const section = state.addSection("Review", null)
+
+    test.request(
+      {
+        id: "amr_move",
+        sessionID: "ses_target",
+        operation: "move",
+        targetSessionID: "ses_target",
+        sectionID: section.id,
+      },
+      dir,
+    )
+    await waitFor(() => test.replies.length === 1)
+
+    const worktreeID = state.getSession("ses_target")!.worktreeId!
+    expect(state.getWorktree(worktreeID)?.sectionId).toBe(section.id)
+    expect(test.push).toHaveBeenCalledTimes(1)
+    expect(test.replies[0]).toEqual({
+      requestID: "amr_move",
+      directory: dir,
+      result: { operation: "move", sessionID: "ses_target", sectionID: section.id, moved: true },
+    })
+
+    test.request(
+      {
+        id: "amr_ungroup",
+        sessionID: "ses_target",
+        operation: "move",
+        targetSessionID: "ses_target",
+        sectionID: null,
+      },
+      dir,
+    )
+    await waitFor(() => test.replies.length === 2)
+
+    expect(state.getWorktree(worktreeID)?.sectionId).toBeUndefined()
+    expect(test.replies[1]).toEqual({
+      requestID: "amr_ungroup",
+      directory: dir,
+      result: { operation: "move", sessionID: "ses_target", sectionID: null, moved: true },
+    })
+    test.bridge.dispose()
+  })
+
+  it("returns an overview with cached git stats", async () => {
+    const test = harness()
+    test.request({
+      id: "amr_overview",
+      sessionID: "ses_caller",
+      operation: "overview",
+    })
+    await waitFor(() => test.replies.length === 1)
+
+    expect(test.statsCalls).toEqual([1])
+    expect(test.replies[0]).toEqual({
+      requestID: "amr_overview",
+      directory: root,
+      result: {
+        operation: "overview",
+        overview: expect.objectContaining({
+          ungrouped: [expect.objectContaining({ id: expect.any(String) })],
+          sections: [],
+        }),
+      },
+    })
     test.bridge.dispose()
   })
 
@@ -198,7 +296,7 @@ describe("AgentManagerOrchestrationBridge", () => {
     await waitFor(() => test.replies.length === 1)
 
     expect(state.getSession("ses_live")).toBeUndefined()
-    expect(test.close).toHaveBeenCalledWith("ses_live")
+    expect(test.close).toHaveBeenCalledWith("ses_live", root)
     expect(test.replies[0]).toEqual({
       requestID: "amr_stop_live",
       directory: root,
@@ -292,5 +390,40 @@ describe("AgentManagerOrchestrationBridge", () => {
     expect(test.client.kilocode.agentManager.list).toHaveBeenCalledWith({ directory: dir })
     expect(test.promptAsync).toHaveBeenCalledTimes(1)
     test.bridge.dispose()
+  })
+
+  it("handles requests for secondary project directories in multi-project mode", async () => {
+    const secondaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "am-orchestration-secondary-"))
+    fs.mkdirSync(path.join(secondaryRoot, ".kilo"), { recursive: true })
+    const secondaryState = new WorktreeStateManager(secondaryRoot, () => undefined)
+    secondaryState.addSession("ses_secondary", null)
+
+    const test = harness({
+      root: (d) => (d === secondaryRoot ? secondaryRoot : root),
+      ready: async (d) => (d === secondaryRoot ? secondaryState : state),
+      state: (d) => (d === secondaryRoot ? secondaryState : state),
+    })
+
+    test.request(
+      {
+        id: "amr_secondary",
+        sessionID: "ses_caller",
+        operation: "prompt",
+        targetSessionID: "ses_secondary",
+        prompt: "Hello from secondary",
+      },
+      secondaryRoot,
+    )
+    await waitFor(() => test.replies.length === 1)
+
+    expect(test.promptAsync).toHaveBeenCalledTimes(1)
+    expect(test.replies[0]).toEqual({
+      requestID: "amr_secondary",
+      directory: secondaryRoot,
+      result: { operation: "prompt", sessionID: "ses_secondary", delivered: true },
+    })
+    test.bridge.dispose()
+    await secondaryState.flush()
+    fs.rmSync(secondaryRoot, { recursive: true, force: true })
   })
 })

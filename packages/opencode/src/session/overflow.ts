@@ -30,8 +30,7 @@ export function isOverflow(input: {
   if (input.model.limit.context === 0) return false
 
   const count = KiloSessionOverflow.count(input.tokens) // kilocode_change
-  // kilocode_change start
-  const cap = KiloSessionOverflow.limit({ cfg: input.cfg, model: input.model, usable: usable(input) })
-  return count >= cap
+  // kilocode_change start - post-step checks are safety-only; economic thresholds run in preflight
+  return count >= usable(input)
   // kilocode_change end
 }

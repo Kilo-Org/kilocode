@@ -124,6 +124,7 @@ When remote mode is enabled in the CLI, your active local sessions appear in the
 - **Agent questions** appear in both places — answer wherever you are
 - **Permission requests** route to your active connection
 - **Full editing capabilities** work remotely
+- **Session renames** sync in both directions between the CLI and the web or mobile app
 
 ### Enabling Remote Mode
 

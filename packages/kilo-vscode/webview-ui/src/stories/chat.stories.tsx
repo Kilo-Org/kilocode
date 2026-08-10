@@ -19,6 +19,7 @@ import { QuestionDock } from "../components/chat/QuestionDock"
 import { SuggestBar } from "../components/chat/SuggestBar"
 import { MessageList } from "../components/chat/MessageList"
 import { VscodeUserMessage } from "../components/chat/VscodeUserMessage"
+import { SidebarTopBar } from "../components/chat/SidebarTopBar"
 import { TurnOutcome } from "../components/shared/TurnOutcome"
 import { SessionContext } from "../context/session"
 import { ProviderContext } from "../context/provider"
@@ -1263,6 +1264,21 @@ const mockServer = {
   languageOverride: () => undefined,
   workspaceDirectory: () => "/project",
   gitInstalled: () => true,
+}
+
+// ---------------------------------------------------------------------------
+// SidebarTopBar — in-webview replacement for the native view/title toolbar
+// ---------------------------------------------------------------------------
+
+export const SidebarTopBarDefault: Story = {
+  name: "SidebarTopBar — default actions",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
+      <div style={{ width: "340px" }}>
+        <SidebarTopBar onNewTask={() => undefined} onHistory={() => undefined} surface="sidebar_title" />
+      </div>
+    </StoryProviders>
+  ),
 }
 
 export const WelcomeWithSwitcherAndNotification: Story = {

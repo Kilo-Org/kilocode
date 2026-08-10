@@ -1,9 +1,95 @@
 const esbuild = require("esbuild")
 const path = require("path")
-const { solidPlugin } = require("esbuild-plugin-solid")
+const fs = require("fs")
+const crypto = require("crypto")
+const core = require("@babel/core")
+const solid = require("babel-preset-solid")
+const ts = require("@babel/preset-typescript")
 
 const production = process.argv.includes("--production")
 const watch = process.argv.includes("--watch")
+
+/**
+ * Cache transformed Solid JSX files in memory and on disk to avoid
+ * re-parsing and re-transforming unchanged files across builds and webviews.
+ */
+const solidCacheDir = path.join(__dirname, "node_modules", ".cache", "esbuild-solid")
+const solidMemCache = new Map()
+const buildScriptHash = crypto
+  .createHash("sha256")
+  .update(fs.readFileSync(__filename, "utf8"))
+  .update(require("babel-preset-solid/package.json").version || "")
+  .update(require("@babel/preset-typescript/package.json").version || "")
+  .digest("hex")
+  .slice(0, 8)
+
+if (!fs.existsSync(solidCacheDir)) {
+  try {
+    fs.mkdirSync(solidCacheDir, { recursive: true })
+  } catch (err) {
+    console.warn("[esbuild] could not create solid cache directory", err)
+  }
+}
+
+const cachedSolidPlugin = {
+  name: "esbuild:solid-cached",
+  setup(build) {
+    build.onLoad({ filter: /\.(t|j)sx$/ }, async (args) => {
+      let mtime = 0
+      let size = 0
+      try {
+        const st = fs.statSync(args.path)
+        mtime = st.mtimeMs
+        size = st.size
+      } catch (err) {
+        console.warn("[esbuild] could not stat source file for cache key", args.path, err)
+      }
+
+      const cacheKey = `${args.path}:${mtime}:${size}:${buildScriptHash}`
+      const memHit = solidMemCache.get(cacheKey)
+      if (memHit) return { contents: memHit, loader: "js" }
+
+      const diskKey = crypto.createHash("sha256").update(cacheKey).digest("hex") + ".js"
+      const diskPath = path.join(solidCacheDir, diskKey)
+
+      if (fs.existsSync(diskPath)) {
+        try {
+          const diskCode = fs.readFileSync(diskPath, "utf8")
+          solidMemCache.set(cacheKey, diskCode)
+          return { contents: diskCode, loader: "js" }
+        } catch (err) {
+          console.warn("[esbuild] cache read failed, rebuilding", diskPath, err)
+        }
+      }
+
+      const source = fs.readFileSync(args.path, "utf8")
+      const { name, ext } = path.parse(args.path)
+      const filename = name + ext
+      const result = await core.transformAsync(source, {
+        presets: [
+          [solid, {}],
+          [ts, {}],
+        ],
+        filename,
+        sourceMaps: "inline",
+      })
+
+      if (result?.code === void 0 || result.code === null) {
+        throw new Error("No result was provided from Babel")
+      }
+
+      if (solidMemCache.size > 2000) solidMemCache.clear()
+      solidMemCache.set(cacheKey, result.code)
+      try {
+        fs.writeFileSync(diskPath, result.code)
+      } catch (err) {
+        console.warn("[esbuild] cache write failed", diskPath, err)
+      }
+
+      return { contents: result.code, loader: "js" }
+    })
+  },
+}
 
 /**
  * Force all solid-js imports (from kilo-ui and the webview) to resolve to
@@ -123,7 +209,7 @@ const svgSpritePlugin = {
   name: "svg-sprite-inline",
   setup(build) {
     build.onLoad({ filter: /sprite\.svg$/ }, (args) => {
-      const content = require("fs").readFileSync(args.path, "utf8")
+      const content = fs.readFileSync(args.path, "utf8")
       return {
         contents: `
           const svg = ${JSON.stringify(content)};
@@ -160,69 +246,8 @@ const cssPackageResolvePlugin = {
   },
 }
 
-function createBrowserWebviewContext(entryPoint, outfile) {
-  return esbuild.context({
-    entryPoints: [entryPoint],
-    bundle: true,
-    format: "iife",
-    minify: production,
-    sourcemap: !production,
-    sourcesContent: false,
-    platform: "browser",
-    outfile,
-    logLevel: "silent",
-    loader: {
-      ".woff": "file",
-      ".woff2": "file",
-      ".ttf": "file",
-    },
-    plugins: [
-      solidDedupePlugin,
-      pierreWorkerAliasPlugin,
-      markdownWorkerUrlPlugin,
-      svgSpritePlugin,
-      cssPackageResolvePlugin,
-      solidPlugin(),
-      esbuildProblemMatcherPlugin,
-    ],
-  })
-}
-
-// Bundle Pierre's Shiki worker into a single self-contained asset that the
-// webviews load off the main thread for syntax highlighting.
-function createShikiWorkerContext() {
-  return esbuild.context({
-    entryPoints: ["kilo-shiki-worker"],
-    bundle: true,
-    format: "iife",
-    minify: production,
-    sourcemap: !production,
-    sourcesContent: false,
-    platform: "browser",
-    outfile: "dist/shiki-worker.js",
-    logLevel: "silent",
-    plugins: [shikiWorkerEntryPlugin, esbuildProblemMatcherPlugin],
-  })
-}
-
-function createMarkdownShikiWorkerContext() {
-  return esbuild.context({
-    entryPoints: [path.join(__dirname, "..", "ui", "src", "components", "markdown-shiki.worker.ts")],
-    bundle: true,
-    format: "esm",
-    minify: production,
-    sourcemap: !production,
-    sourcesContent: false,
-    platform: "browser",
-    outfile: "dist/markdown-shiki-worker.js",
-    logLevel: "silent",
-    plugins: [esbuildProblemMatcherPlugin],
-  })
-}
-
-async function main() {
-  // Build extension
-  const extensionCtx = await esbuild.context({
+function getExtensionConfig() {
+  return {
     entryPoints: ["src/extension.ts"],
     bundle: true,
     format: "cjs",
@@ -239,68 +264,101 @@ async function main() {
     outfile: "dist/extension.js",
     external: ["vscode"],
     logLevel: "silent",
-    plugins: [esbuildProblemMatcherPlugin],
-  })
+    plugins: watch ? [esbuildProblemMatcherPlugin] : [],
+  }
+}
 
-  // Build Agent Manager webview (SolidJS, shares components with sidebar)
-  const agentManagerCtx = await createBrowserWebviewContext(
-    "webview-ui/agent-manager/index.tsx",
-    "dist/agent-manager.js",
-  )
+function getWebviewsConfig() {
+  return {
+    entryPoints: {
+      "agent-manager": "webview-ui/agent-manager/index.tsx",
+      kiloclaw: "webview-ui/kiloclaw/index.tsx",
+      marketplace: "webview-ui/marketplace/index.tsx",
+      "diff-viewer": "webview-ui/diff-viewer/index.tsx",
+      "diff-virtual": "webview-ui/diff-virtual/index.tsx",
+      webview: "webview-ui/src/index.tsx",
+    },
+    outdir: "dist",
+    bundle: true,
+    format: "iife",
+    minify: production,
+    sourcemap: !production,
+    sourcesContent: false,
+    platform: "browser",
+    logLevel: "silent",
+    loader: {
+      ".woff": "file",
+      ".woff2": "file",
+      ".ttf": "file",
+    },
+    plugins: [
+      solidDedupePlugin,
+      pierreWorkerAliasPlugin,
+      markdownWorkerUrlPlugin,
+      svgSpritePlugin,
+      cssPackageResolvePlugin,
+      cachedSolidPlugin,
+      ...(watch ? [esbuildProblemMatcherPlugin] : []),
+    ],
+  }
+}
 
-  // Build KiloClaw webview (SolidJS, standalone chat panel)
-  const kiloClawCtx = await createBrowserWebviewContext("webview-ui/kiloclaw/index.tsx", "dist/kiloclaw.js")
+function getShikiWorkerConfig() {
+  return {
+    entryPoints: ["kilo-shiki-worker"],
+    bundle: true,
+    format: "iife",
+    minify: production,
+    sourcemap: !production,
+    sourcesContent: false,
+    platform: "browser",
+    outfile: "dist/shiki-worker.js",
+    logLevel: "silent",
+    plugins: [shikiWorkerEntryPlugin, ...(watch ? [esbuildProblemMatcherPlugin] : [])],
+  }
+}
 
-  // Build Marketplace webview (SolidJS, standalone catalog panel)
-  const marketplaceCtx = await createBrowserWebviewContext("webview-ui/marketplace/index.tsx", "dist/marketplace.js")
+function getMarkdownShikiWorkerConfig() {
+  return {
+    entryPoints: [path.join(__dirname, "..", "ui", "src", "components", "markdown-shiki.worker.ts")],
+    bundle: true,
+    format: "esm",
+    minify: production,
+    sourcemap: !production,
+    sourcesContent: false,
+    platform: "browser",
+    outfile: "dist/markdown-shiki-worker.js",
+    logLevel: "silent",
+    plugins: watch ? [esbuildProblemMatcherPlugin] : [],
+  }
+}
 
-  // Build Diff Viewer webview (SolidJS, reuses Agent Manager diff components)
-  const diffViewerCtx = await createBrowserWebviewContext("webview-ui/diff-viewer/index.tsx", "dist/diff-viewer.js")
-
-  // Build Diff Virtual webview (lightweight single-file diff for permission approval)
-  const diffVirtualCtx = await createBrowserWebviewContext("webview-ui/diff-virtual/index.tsx", "dist/diff-virtual.js")
-
-  // Build webview
-  const webviewCtx = await createBrowserWebviewContext("webview-ui/src/index.tsx", "dist/webview.js")
-
-  // Build the shared Shiki highlighting worker asset
-  const shikiWorkerCtx = await createShikiWorkerContext()
-  const markdownShikiWorkerCtx = await createMarkdownShikiWorkerContext()
+async function main() {
+  const extensionConfig = getExtensionConfig()
+  const webviewsConfig = getWebviewsConfig()
+  const shikiWorkerConfig = getShikiWorkerConfig()
+  const markdownShikiWorkerConfig = getMarkdownShikiWorkerConfig()
 
   if (watch) {
+    const [extensionCtx, webviewsCtx, shikiWorkerCtx, markdownShikiWorkerCtx] = await Promise.all([
+      esbuild.context(extensionConfig),
+      esbuild.context(webviewsConfig),
+      esbuild.context(shikiWorkerConfig),
+      esbuild.context(markdownShikiWorkerConfig),
+    ])
+
     await Promise.all([
       extensionCtx.watch(),
-      webviewCtx.watch(),
-      agentManagerCtx.watch(),
-      diffViewerCtx.watch(),
-      diffVirtualCtx.watch(),
-      kiloClawCtx.watch(),
-      marketplaceCtx.watch(),
+      webviewsCtx.watch(),
       shikiWorkerCtx.watch(),
       markdownShikiWorkerCtx.watch(),
     ])
   } else {
     await Promise.all([
-      extensionCtx.rebuild(),
-      webviewCtx.rebuild(),
-      agentManagerCtx.rebuild(),
-      kiloClawCtx.rebuild(),
-      marketplaceCtx.rebuild(),
-      diffViewerCtx.rebuild(),
-      diffVirtualCtx.rebuild(),
-      shikiWorkerCtx.rebuild(),
-      markdownShikiWorkerCtx.rebuild(),
-    ])
-    await Promise.all([
-      extensionCtx.dispose(),
-      webviewCtx.dispose(),
-      agentManagerCtx.dispose(),
-      diffViewerCtx.dispose(),
-      diffVirtualCtx.dispose(),
-      kiloClawCtx.dispose(),
-      marketplaceCtx.dispose(),
-      shikiWorkerCtx.dispose(),
-      markdownShikiWorkerCtx.dispose(),
+      esbuild.build(extensionConfig),
+      esbuild.build(webviewsConfig),
+      esbuild.build(shikiWorkerConfig),
+      esbuild.build(markdownShikiWorkerConfig),
     ])
   }
 }

@@ -1,5 +1,15 @@
 # Changelog
 
+## 7.4.18
+
+### Patch Changes
+
+- [#12746](https://github.com/Kilo-Org/kilocode/pull/12746) [`1a506a7`](https://github.com/Kilo-Org/kilocode/commit/1a506a712c43d317a5a34b250df16845b641eff8) - Keep the JetBrains prompt send/stop button in sync when attachments are added or removed while a session is busy.
+
+- [#12746](https://github.com/Kilo-Org/kilocode/pull/12746) [`64f0373`](https://github.com/Kilo-Org/kilocode/commit/64f0373056b75546a015816dc0f18b1e380ad93f) - Fix JetBrains diff views to show compact workspace-relative file paths and keep added-file content visible in large branch diffs.
+
+- [#12746](https://github.com/Kilo-Org/kilocode/pull/12746) [`c1f6a75`](https://github.com/Kilo-Org/kilocode/commit/c1f6a75377b438edfc5c3b5dd85ebdc301302e7a) - Fix JetBrains chat transcripts rendering cropped when opening existing sessions.
+
 ## 7.5.0
 
 ### Minor Changes
@@ -118,6 +128,66 @@
 
 ## [Unreleased]
 
+## [7.0.14] - 2026-08-06
+
+### Fixed
+- Improve slash command matching in the JetBrains plugin so typed commands resolve more reliably.
+- Avoid startup crashes when the Kilo CLI database is temporarily locked by another process.
+
+## [7.0.13] - 2026-08-05
+
+### Added
+
+- Show the pinned Kilo Core version and whether JetBrains is using a downloaded or bundled CLI build.
+
+### Fixed
+
+- Avoid GitHub checksum API rate limits when JetBrains verifies downloaded Kilo Core CLI assets.
+- Add dropped files as JetBrains file references so attachments are available to Kilo reliably.
+- Stop eager Kilo Core file watchers when running from JetBrains to reduce unnecessary background work.
+- Improve JetBrains session diff rendering, including full-file editor diffs, multi-hunk diffs, fallback handling, gutter line numbers, and session-scoped diff paths.
+- Speed up local recall searches in Kilo Core.
+- Omit persona details from generated session names.
+- Make invalid tool-argument errors clearer and more actionable to the model.
+- Handle SQLite lock errors more gracefully.
+
+### Changed
+
+- Bump the JetBrains CLI pin to Kilo CLI v7.4.20.
+- Include upstream OpenCode updates through v1.17.13.
+- Adopt upstream reasoning variant metadata from OpenCode v1.18.11.
+
+## [7.0.13-rc.1] - 2026-08-05
+
+### Added
+
+- Show the pinned Kilo Core version and whether JetBrains is using a downloaded or bundled CLI build.
+- Add JetBrains developer tooling for pinning, unpinning, and updating the bundled Kilo Core CLI used by the plugin.
+- Support resuming Claude and Codex sessions through the bundled Kilo Core runtime.
+- Add remote CLI file delivery support for attachment flows.
+
+### Fixed
+
+- Avoid GitHub checksum API rate limits when JetBrains verifies downloaded Kilo Core CLI assets.
+- Add dropped files as JetBrains file references so attachments are available to Kilo reliably.
+- Stop eager Kilo Core file watchers when running from JetBrains to reduce unnecessary background work.
+- Improve JetBrains session diff rendering, including full-file editor diffs, multi-hunk diffs, fallback handling, gutter line numbers, and session-scoped diff paths.
+- Preserve configured subagent routing in Kilo Core.
+- Defer threshold compaction during active tool loops so long-running sessions do not compact at unsafe points.
+- Speed up local recall searches in Kilo Core.
+- Stop inline skill-shell documentation examples from triggering permission prompts.
+- Omit persona details from generated session names.
+- Skip Kilo Core startup work for informational commands.
+- Make invalid tool-argument errors clearer and more actionable to the model.
+- Allow explicit external markdown sources in Kilo Core.
+- Handle SQLite lock errors more gracefully.
+
+### Changed
+
+- Bump the JetBrains CLI pin to Kilo CLI v7.4.20.
+- Include upstream OpenCode updates through v1.17.13.
+- Adopt upstream reasoning variant metadata from OpenCode v1.18.11.
+
 ## [7.0.12] - 2026-08-01
 
 ### Added
@@ -150,6 +220,7 @@
 ## [7.0.12-rc.4] - 2026-08-01
 
 ### Fixed
+
 - Improve large branch diff performance by capping huge inline diff previews, compacting diff tree paths, and allowing horizontal scrolling for long file names.
 - Reflow existing long chat sessions after they load so transcripts lay out at the correct width without needing to resize the tool window.
 - Keep the prompt send/stop button synchronized when attachments are added, removed, or cleared while a session is busy.

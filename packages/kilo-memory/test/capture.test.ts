@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test"
 import {
-  auditOps,
   capturePlan,
   duplicateOps,
+  errorReason,
   fallbackDigest,
   guardReason,
   hasSubstantialDiff,
@@ -128,7 +128,7 @@ describe("memory capture parsing", () => {
     expect(() => salvageTyped(`{"op":"upsert_project_fact","key":"good_one","value":"Keep this fact."}`)).toThrow()
   })
 
-  test("redacts secrets in salvaged unsupported ops before they reach the audit", () => {
+  test("redacts secrets in salvaged unsupported ops before they reach callers", () => {
     const parsed = salvageTyped(
       `{"operations":[{"op":"not_a_real_op","key":"leak","value":"key is sk-abcdefghijklmnopqrstuvwxyz"}],"skipped":[]}`,
     )
@@ -167,17 +167,6 @@ describe("memory capture parsing", () => {
     expect(salvaged?.text.length ?? 0).toBeLessThanOrEqual(500)
     expect(JSON.stringify(parsed.skipped)).not.toContain(secret)
     expect(JSON.stringify(parsed.skipped)).not.toContain(secret.slice(0, 20))
-  })
-
-  test("redacts remove audit queries before truncating", () => {
-    const secret = "sk-" + "a".repeat(40)
-    const query = "x".repeat(100) + secret
-    const audit = auditOps([{ action: "remove", query }])
-    const text = JSON.stringify(audit)
-
-    expect(text).toContain("[redacted]")
-    expect(text).not.toContain(secret)
-    expect(text).not.toContain(secret.slice(0, 20))
   })
 
   test("truncates typed batches beyond the op cap instead of failing", () => {
@@ -333,6 +322,11 @@ describe("memory capture parsing", () => {
         expected: { session: true, digestDue: true, typedCall: true, typedWork: true, skipReason: undefined },
       },
       {
+        name: "expected work: a persisted null typed clock does not throttle capture",
+        input: { ...base, lastTypedConsolidationAt: null },
+        expected: { session: true, digestDue: true, typedCall: true, typedWork: true, skipReason: undefined },
+      },
+      {
         name: "expected idle flush: completed turn inside interval skips now",
         input: { ...base, priorTime: 900, lastTypedConsolidationAt: 900 },
         expected: { digestDue: false, typedCall: false, skipReason: "interval", idleFlush: true },
@@ -393,7 +387,13 @@ describe("memory capture parsing", () => {
       },
       {
         name: "expected skip: short edited turn is interval-gated instead of trivial",
-        input: { ...base, summary: "User: test Result: ok", edited: true, priorTime: 900, lastTypedConsolidationAt: 900 },
+        input: {
+          ...base,
+          summary: "User: test Result: ok",
+          edited: true,
+          priorTime: 900,
+          lastTypedConsolidationAt: 900,
+        },
         expected: { digestDue: false, typedCall: false, fallbackDigest: false, skipReason: "interval" },
       },
       {
@@ -416,7 +416,15 @@ describe("memory capture parsing", () => {
 
     // Identical churn yields the identical verdict across every kind of path, so no ecosystem
     // (manifest, doc, config, or source language) is treated specially.
-    for (const file of ["src/app.ts", "src/app.py", "src/app.go", "src/app.rb", "package.json", "docs/x.md", "config.yaml"]) {
+    for (const file of [
+      "src/app.ts",
+      "src/app.py",
+      "src/app.go",
+      "src/app.rb",
+      "package.json",
+      "docs/x.md",
+      "config.yaml",
+    ]) {
       expect(hasSubstantialDiff([{ file, additions: 1, deletions: 0 }]), `${file} small`).toBe(false)
       expect(hasSubstantialDiff([{ file, additions: 20, deletions: 0 }]), `${file} large`).toBe(true)
     }
@@ -495,7 +503,13 @@ describe("memory capture parsing", () => {
   test("recognizes an exact-key upsert even when the model's key needs slugging", () => {
     const items = [
       {
-        id: MemoryOperations.id({ action: "add", file: "project.md", section: "Facts", key: "Deploy Target", text: "" }),
+        id: MemoryOperations.id({
+          action: "add",
+          file: "project.md",
+          section: "Facts",
+          key: "Deploy Target",
+          text: "",
+        }),
         file: "project.md" as const,
         section: "Facts",
         key: "deploy_target",
@@ -506,7 +520,13 @@ describe("memory capture parsing", () => {
       items,
       skipped: [],
       ops: [
-        { action: "add", file: "project.md", section: "Facts", key: "Deploy Target", text: "Deploy to production now." },
+        {
+          action: "add",
+          file: "project.md",
+          section: "Facts",
+          key: "Deploy Target",
+          text: "Deploy to production now.",
+        },
       ],
     })
 
@@ -624,6 +644,70 @@ describe("memory capture parsing", () => {
     )
     expect(guardReason("429 too many requests")).toBe("rate_limit_guard")
     expect(guardReason("billing credits exhausted")).toBe("quota_guard")
+    expect(guardReason("request timed out")).toBe("transient")
+    expect(guardReason("deadline exceeded")).toBe("transient")
+    expect(guardReason("DeadlineExceeded")).toBe("transient")
+    expect(guardReason('cause={"code":"ETIMEDOUT"}')).toBe("transient")
+    expect(guardReason("504 Gateway Timeout")).toBe("transient")
+    expect(guardReason("Connect Timeout Error")).toBe("transient")
+    expect(guardReason("Headers Timeout Error")).toBe("transient")
+    expect(guardReason("Body Timeout Error")).toBe("transient")
+    expect(guardReason("connect_timeout")).toBe("transient")
+    expect(guardReason('status=400 body={"error":"invalid parameter: timeout"}')).toBeUndefined()
+    expect(guardReason("set request timeout to 30000")).toBeUndefined()
+    const timeout = new Error("request aborted")
+    timeout.name = "TimeoutError"
+    expect(guardReason(timeout)).toBe("transient")
+    expect(errorReason(timeout)).toBe("request aborted")
+    expect(guardReason(Object.assign(new Error("request failed"), { status: 504 }))).toBe("transient")
+    expect(
+      guardReason(Object.assign(new Error("request failed"), { cause: { code: "UND_ERR_CONNECT_TIMEOUT" } })),
+    ).toBe("transient")
+    expect(
+      guardReason(Object.assign(new Error("request failed"), { cause: { code: "UND_ERR_HEADERS_TIMEOUT" } })),
+    ).toBe("transient")
+    expect(guardReason(Object.assign(new Error("request failed"), { cause: { code: "ETIMEDOUT" } }))).toBe(
+      "transient",
+    )
+    expect(
+      guardReason(Object.assign(new Error("failed after 2 attempts"), { errors: [{ statusCode: 504 }] })),
+    ).toBe("transient")
+    expect(guardReason(new Error("set request timeout to 30000"))).toBeUndefined()
+    expect(guardReason(new Error("request timed out"))).toBe("transient")
+    expect(guardReason(Object.assign(new Error("request failed"), { cause: new Error("connect timeout") }))).toBe(
+      "transient",
+    )
+    expect(
+      guardReason(
+        Object.assign(new Error("failed after 2 attempts"), {
+          errors: [Object.assign(new Error("rate limit reached"), { status: 429 }), timeout],
+        }),
+      ),
+    ).toBe("rate_limit_guard")
+    expect(
+      guardReason(
+        Object.assign(new Error("failed after 2 attempts"), {
+          errors: [new Error("insufficient quota available"), timeout],
+        }),
+      ),
+    ).toBe("quota_guard")
+    expect(
+      guardReason(
+        Object.assign(new Error("request failed"), {
+          cause: Object.assign(new Error("rate limit reached"), { status: 429 }),
+        }),
+      ),
+    ).toBe("rate_limit_guard")
+    expect(
+      guardReason(
+        Object.assign(new Error("timed out"), {
+          name: "TimeoutError",
+          cause: new Error("billing credit balance exhausted"),
+        }),
+      ),
+    ).toBe("quota_guard")
+    expect(guardReason("timeout after 429 too many requests")).toBe("rate_limit_guard")
+    expect(guardReason("timeout after quota exceeded")).toBe("quota_guard")
   })
 
   test("redacts common secret token shapes", () => {
@@ -764,9 +848,9 @@ describe("memory capture parsing", () => {
     expect(MemoryOperations.reject({ text: "Fixed the timeout bug\nthe retry path was reviewed." })).toBeUndefined()
 
     // A statement whose subject IS the source file is provenance...
-    expect(MemoryOperations.reject({ text: "~/.claude/CLAUDE.md is user-level context for concise replies." })).toMatchObject(
-      { reason: "out_of_scope" },
-    )
+    expect(
+      MemoryOperations.reject({ text: "~/.claude/CLAUDE.md is user-level context for concise replies." }),
+    ).toMatchObject({ reason: "out_of_scope" })
     // ...but a fact that merely cites the file mid-sentence is kept.
     expect(
       MemoryOperations.reject({ text: "Run tests from packages/opencode per the rule in .claude/claude.md." }),

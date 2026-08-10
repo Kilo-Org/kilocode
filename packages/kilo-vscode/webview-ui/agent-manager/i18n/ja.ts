@@ -64,6 +64,8 @@ export const dict = {
 
   "agentManager.terminal.new": "新しいターミナルタブ",
   "agentManager.terminal.ended": "ターミナルが終了しました — タブを閉じて破棄",
+  "agentManager.terminal.endedRestartable":
+    "ターミナルが終了しました - 入力して新しいシェルを開始するか、タブを閉じてください",
   "agentManager.terminal.setupFailed": "セットアップスクリプトが失敗しました",
   "agentManager.terminal.setupFailedCode": "セットアップスクリプトが終了コードで失敗しました",
   "agentManager.terminal.stopSetup": "セットアップスクリプトを停止",
@@ -100,7 +102,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "次のタブ",
   "agentManager.shortcuts.newTab": "新しいタブ",
   "agentManager.shortcuts.closeTab": "タブを閉じる",
-  "agentManager.shortcuts.toggleTerminal": "ターミナルの切り替え",
+  "agentManager.shortcuts.toggleTerminal": "ターミナルにフォーカス / 非表示にする",
   "agentManager.shortcuts.runScript": "スクリプトを実行",
   "agentManager.run.options": "実行オプション",
   "agentManager.run.configure": "実行スクリプトを設定",
@@ -115,6 +117,9 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.cancel": "キャンセル",
   "agentManager.dialog.removeStaleWorktree.confirm": "無効な Worktree を削除",
 
+  "agentManager.dialog.project.select": "プロジェクトを選択",
+  "agentManager.dialog.project.untrusted": "まずサイドバーでこのプロジェクトを信頼してください",
+  "agentManager.dialog.project.missing": "リポジトリが見つかりません",
   "agentManager.dialog.openWorktree": "新規ワークツリー",
   "agentManager.dialog.configureWorktree": "新規 Worktree の構成...",
   "agentManager.dialog.tab.new": "新規",

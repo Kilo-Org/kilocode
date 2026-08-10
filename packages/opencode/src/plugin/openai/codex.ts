@@ -158,6 +158,7 @@ async function refreshAccessToken(refreshToken: string, issuer = ISSUER, signal?
   return response.json()
 }
 
+// kilocode_change start - retain Kilo-branded OAuth callback until the shared page supports Kilo branding
 const HTML_SUCCESS = `<!doctype html>
 <html>
   <head>
@@ -253,6 +254,7 @@ export const renderOAuthError = (error: string) => `<!doctype html>
     </div>
   </body>
 </html>`
+// kilocode_change end
 
 interface PendingOAuth {
   pkce: PkceCodes
@@ -313,7 +315,7 @@ async function startOAuthServer(): Promise<{ port: number; redirectUri: string }
         .catch((err) => current.reject(err))
 
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" })
-      res.end(HTML_SUCCESS)
+      res.end(HTML_SUCCESS) // kilocode_change - shared callback page is currently OpenCode-branded
       return
     }
 
