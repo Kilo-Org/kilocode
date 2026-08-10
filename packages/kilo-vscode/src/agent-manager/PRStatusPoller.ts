@@ -443,7 +443,7 @@ export class PRStatusPoller {
             reviewRequests(first: 20) {
               nodes { requestedReviewer { ... on User { login avatarUrl } } }
             }
-            reviews(first: 20, states: [APPROVED, CHANGES_REQUESTED, COMMENTED]) {
+            reviews(last: 20, states: [APPROVED, CHANGES_REQUESTED, COMMENTED]) {
               nodes { author { login avatarUrl } state }
             }
           }
