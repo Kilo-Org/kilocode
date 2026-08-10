@@ -128,6 +128,18 @@
 
 ## [Unreleased]
 
+## [7.0.15] - 2026-08-10
+
+### Added
+- Include editor context in JetBrains prompts, including the active file, open and visible files, selected text, and shell context when available.
+- Show selected text and attached files as prompt attachments in user messages, with clickable links back to source files and selections.
+- Add a JetBrains Context setting to enable or disable automatic editor context.
+
+### Fixed
+- Avoid JetBrains prompt editor crashes during undo/redo bulk updates.
+- Keep completed question and tool views in the correct JetBrains transcript position.
+- Keep JetBrains chat pinned to the bottom when a turn finishes after modified-file updates.
+
 ## [7.0.14] - 2026-08-06
 
 ### Fixed
