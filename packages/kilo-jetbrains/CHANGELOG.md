@@ -128,6 +128,56 @@
 
 ## [Unreleased]
 
+## [7.0.15] - 2026-08-10
+
+### Added
+- feat(vscode): sync model selector with slash command overrides by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12982
+- feat(review): add nested suggestions and subcommands for review by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12991
+- feat(docs): Add detailed instructions on how to install the Slack bot by @RSO in https://github.com/Kilo-Org/kilocode/pull/13011
+- feat(vscode): show approval reason outside workspace reads and writes by @bagatao-anaconda in https://github.com/Kilo-Org/kilocode/pull/13001
+- feat(cli): set prompt cache breakpoints on stable prefix and user query before environment details by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/13022
+- feat(vscode): show Auto model routes for every kilo-auto model by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/13034
+- feat(cli): answer sessionless model catalog requests by @iscekic in https://github.com/Kilo-Org/kilocode/pull/13014
+- feat(cli): exclude ChatGPT subscriptions from explicit promptCacheBreakpoint treatment by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/13044
+- feat(vscode): improve custom provider dialog layout and model toggles by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/13046
+- feat(vscode): Agent Manager PR View Panel by @cosi-conda in https://github.com/Kilo-Org/kilocode/pull/12961
+- feat(jetbrains): add editor context and prompt attachments by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13015
+
+### Fixed
+- fix(agent-manager): align multi-project header actions by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12975
+- fix(cli): remove unsupported kilo web command by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/12978
+- fix(vscode): compress speech-to-text audio to AAC to prevent payload errors by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12983
+- fix(vscode): toggle Agent Manager terminal from toolbar button by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12985
+- fix(vscode): sidebar top bar regression by @bagatao-anaconda in https://github.com/Kilo-Org/kilocode/pull/12988
+- fix(cli): apply saved sandbox settings to existing sessions by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12600
+- fix(vscode): improve narrow recent sessions layout by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12819
+- fix(vscode): align xterm terminal on narrow sidebar width by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12989
+- fix(vscode): tool approval source display by @bagatao-anaconda in https://github.com/Kilo-Org/kilocode/pull/12995
+- fix(vscode): surface macOS speech capture errors by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12821
+- fix(agent-manager): route tool requests by project directory and handle busy sessions by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12993
+- fix(vscode): surface exit signals and spawn errors in server startup diagnostics by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13008
+- fix(ui): prevent snap-to-bottom and flickering during upward session scroll by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/13009
+- fix(cli): disable suggest tool in non-interactive runs by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/13007
+- fix(vscode): infer custom provider reasoning efforts by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/12941
+- fix(gateway): ignore negative prices in model catalog by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/13040
+- fix(memory): quiet transient capture timeouts and stop same-turn retries by @johnnyeric in https://github.com/Kilo-Org/kilocode/pull/12958
+- fix(ui): Mermaid Copy PNG/SVG should copy images, not fail or copy markup by @fxnie in https://github.com/Kilo-Org/kilocode/pull/12981
+- fix(vscode): keep session errors visible by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/13045
+- fix(config): expand MCP header env refs without wiping MCP set by @arimu1 in https://github.com/Kilo-Org/kilocode/pull/12554
+
+### Changed
+- release(jetbrains): v7.0.14 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/12966
+- refactor(agent-manager): extract keybinding defaults into keybind-defaults.ts by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12954
+- refactor(vscode): keep large files below line caps by @lambertjosh in https://github.com/Kilo-Org/kilocode/pull/12963
+- docs(vscode): update multi-project Agent Manager guidance by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12973
+- perf(agent-manager): speed up worktree session startup by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12979
+- ci: add domain architecture and state ratchet guards by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12990
+- perf(build): optimize cli and extension compile and test times by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12987
+- refactor(vscode): wrap long skill path tooltips to prevent viewport overflow by @rakshith1928 in https://github.com/Kilo-Org/kilocode/pull/12971
+- docs(kilo-docs): document local session search by @lambertjosh in https://github.com/Kilo-Org/kilocode/pull/13032
+- docs(kilo-docs): correct session paths and scope by @lambertjosh in https://github.com/Kilo-Org/kilocode/pull/13036
+
+
 ## [7.0.14] - 2026-08-06
 
 ### Fixed
