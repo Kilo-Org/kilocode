@@ -457,6 +457,8 @@ export const dict = {
   "provider.custom.models.name.placeholder": "Visningsnavn",
   "provider.custom.models.reasoning.label": "Resonnering",
   "provider.custom.models.modalities.image": "Bilde",
+  "provider.custom.models.toggleReasoning": "Veksle resonnering for alle",
+  "provider.custom.models.toggleImages": "Veksle bilde for alle",
   "provider.custom.models.remove": "Fjern modell",
   "provider.custom.models.add": "Legg til modell",
   "provider.custom.models.fetch.authError": "Autentisering mislyktes. Sjekk API-nøkkelen ovenfor og prøv igjen.",

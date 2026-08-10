@@ -447,6 +447,8 @@ export const dict = {
   "provider.custom.models.name.placeholder": "Weergavenaam",
   "provider.custom.models.reasoning.label": "Redeneren",
   "provider.custom.models.modalities.image": "Afbeelding",
+  "provider.custom.models.toggleReasoning": "Redeneren voor alle modellen in-/uitschakelen",
+  "provider.custom.models.toggleImages": "Afbeelding voor alle modellen in-/uitschakelen",
   "provider.custom.models.remove": "Model verwijderen",
   "provider.custom.models.add": "Model toevoegen",
   "provider.custom.models.fetch.authError":

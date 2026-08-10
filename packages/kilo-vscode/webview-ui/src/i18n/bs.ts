@@ -496,6 +496,8 @@ export const dict = {
   "provider.custom.models.name.placeholder": "Naziv za prikaz",
   "provider.custom.models.reasoning.label": "Zaključivanje",
   "provider.custom.models.modalities.image": "Slika",
+  "provider.custom.models.toggleReasoning": "Uključi/isključi rezonovanje za sve",
+  "provider.custom.models.toggleImages": "Uključi/isključi slike za sve",
   "provider.custom.models.remove": "Ukloni model",
   "provider.custom.models.add": "Dodaj model",
   "provider.custom.models.fetch.authError":

@@ -409,6 +409,8 @@ export const dict = {
   "provider.custom.models.name.placeholder": "نام نمایشی",
   "provider.custom.models.reasoning.label": "استدلال",
   "provider.custom.models.modalities.image": "تصویر",
+  "provider.custom.models.toggleReasoning": "تغییر وضعیت استدلال برای همه",
+  "provider.custom.models.toggleImages": "تغییر وضعیت تصویر برای همه",
   "provider.custom.models.remove": "حذف مدل",
   "provider.custom.models.add": "افزودن مدل",
   "provider.custom.models.fetch.authError": "احراز هویت ناموفق بود. کلید API بالا را بررسی کرده و دوباره امتحان کنید.",
