@@ -2,7 +2,7 @@ import { type Rule } from "./rule"
 
 export namespace AgentManagerPermission {
   /**
-   * Prompting, stopping, or moving an existing Agent Manager session has an external side effect.
+   * Prompting, stopping, moving, or deleting an existing Agent Manager session or worktree has an external side effect.
    * Broad approvals for legacy session creation must not silently grant it.
    */
   export function harden(permission: string, pattern: string, rule: Rule): Rule {

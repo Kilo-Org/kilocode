@@ -334,6 +334,15 @@ export class AgentManagerOrchestrationBridge {
     }
     await this.options.delete(worktreeID, origin.directory)
     if (this.disposed || active.cancelled) return
+    // deleteLifecycleWorktree resolves to null on every path, so a remaining entry means the
+    // teardown was aborted (e.g. a Run/Setup script terminal could not be stopped). Surface that
+    // instead of reporting a false success to driven agents and orchestration flows.
+    if (state.getWorktree(worktreeID)) {
+      throw new OrchestrationError(
+        "host_error",
+        "The worktree could not be deleted (a Run/Setup script may still be running)",
+      )
+    }
     return {
       result: {
         operation: "delete",
