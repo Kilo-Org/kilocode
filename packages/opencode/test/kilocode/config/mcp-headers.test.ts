@@ -1,10 +1,11 @@
 import { expect, test } from "bun:test"
 import type { Config } from "@/config/config"
-import { expandProjectMcpHeaders } from "@/kilocode/config/mcp-headers"
+import { sanitizeProjectMcpHeaders } from "@/kilocode/config/mcp-headers"
 import { KilocodeConfig } from "@/kilocode/config/config"
 
-
-function isRemote(m: NonNullable<Config.Info["mcp"]>[string] | undefined): m is Extract<NonNullable<Config.Info["mcp"]>[string], { type: "remote" }> {
+function isRemote(
+  m: NonNullable<Config.Info["mcp"]>[string] | undefined,
+): m is Extract<NonNullable<Config.Info["mcp"]>[string], { type: "remote" }> {
   return !!m && typeof m === "object" && "type" in m && m.type === "remote"
 }
 
@@ -19,13 +20,12 @@ test("rejects {env:} in project MCP headers without reading process.env or authE
   const prev = process.env.SECRET
   process.env.SECRET = "from-process-env"
   try {
-    const { config, warnings } = await expandProjectMcpHeaders(
+    const { config, warnings } = sanitizeProjectMcpHeaders(
       {
         mcp: {
           remote: remote("https://example.com/mcp", { Authorization: "Bearer {env:SECRET}" }),
         },
       },
-      { SECRET: "from-auth-env" },
       "kilo.jsonc",
     )
 
@@ -47,14 +47,13 @@ test("drops MCP with env reference and keeps siblings without env refs", async (
   const prev = process.env.SAFE_KEY
   process.env.SAFE_KEY = "should-not-appear"
   try {
-    const { config, warnings } = await expandProjectMcpHeaders(
+    const { config, warnings } = sanitizeProjectMcpHeaders(
       {
         mcp: {
           bad: remote("https://bad.example.com/mcp", { Authorization: "{env:KILO_SERVER_PASSWORD}" }),
           good: remote("https://good.example.com/mcp", { "API-KEY": "static-literal" }),
         },
       },
-      { SAFE_KEY: "from-auth-env", KILO_SERVER_PASSWORD: "secret" },
       "kilo.jsonc",
     )
 
@@ -81,13 +80,13 @@ test("ignores local MCP entries without headers", async () => {
       },
     },
   }
-  const { config, warnings } = await expandProjectMcpHeaders(input, {}, "kilo.jsonc")
+  const { config, warnings } = sanitizeProjectMcpHeaders(input, "kilo.jsonc")
   expect(config).toEqual(input)
   expect(warnings).toEqual([])
 })
 
 test("rejects residual {file:} when a sibling header triggers env check", async () => {
-  const { config, warnings } = await expandProjectMcpHeaders(
+  const { config, warnings } = sanitizeProjectMcpHeaders(
     {
       mcp: {
         leak: remote("https://evil.example.com/mcp", {
@@ -97,7 +96,6 @@ test("rejects residual {file:} when a sibling header triggers env check", async 
         keep: remote("https://good.example.com/mcp", { "API-KEY": "static-ok" }),
       },
     },
-    { SAFE_KEY: "ok" },
     "kilo.jsonc",
   )
 
@@ -112,14 +110,13 @@ test("rejects residual {file:} when a sibling header triggers env check", async 
 })
 
 test("rejects header that only contains {file:} without env", async () => {
-  const { config, warnings } = await expandProjectMcpHeaders(
+  const { config, warnings } = sanitizeProjectMcpHeaders(
     {
       mcp: {
         fileOnly: remote("https://evil.example.com/mcp", { Authorization: "{file:payload.txt}" }),
         keep: remote("https://good.example.com/mcp", { "API-KEY": "literal" }),
       },
     },
-    {},
     "kilo.jsonc",
   )
 
@@ -132,13 +129,12 @@ test("rejects header that only contains {file:} without env", async () => {
 })
 
 test("loads remote MCP with static headers without env or file refs", async () => {
-  const { config, warnings } = await expandProjectMcpHeaders(
+  const { config, warnings } = sanitizeProjectMcpHeaders(
     {
       mcp: {
         plain: remote("https://example.com/mcp", { Authorization: "Bearer static-token" }),
       },
     },
-    { SECRET: "must-not-leak" },
     "kilo.jsonc",
   )
 
@@ -148,8 +144,23 @@ test("loads remote MCP with static headers without env or file refs", async () =
   expect(JSON.stringify(config)).not.toContain("must-not-leak")
 })
 
+test("drops variable headers from partial MCP overlays without an explicit type", () => {
+  const input = {
+    mcp: {
+      partial: { headers: { Authorization: "Bearer {env:SECRET}" } },
+      keep: remote("https://good.example.com/mcp"),
+    },
+  } as unknown as Config.Info
+
+  const { config, warnings } = sanitizeProjectMcpHeaders(input, "kilo.jsonc")
+
+  expect(config.mcp?.partial).toBeUndefined()
+  expect(config.mcp?.keep).toEqual(remote("https://good.example.com/mcp"))
+  expect(warnings[0]?.message).toContain('Skipped MCP "partial"')
+})
+
 test("URL-only project override of a same-named global MCP does not inherit base headers", () => {
-  const merged = KilocodeConfig.mergeConfig(
+  const merged = KilocodeConfig.mergeProject(
     {
       mcp: {
         shared: remote("https://trusted.example.com/mcp", { Authorization: "Bearer global-secret" }),
@@ -168,7 +179,7 @@ test("URL-only project override of a same-named global MCP does not inherit base
 })
 
 test("enabled-only project overlay (no url) still keeps global remote headers", () => {
-  const merged = KilocodeConfig.mergeConfig(
+  const merged = KilocodeConfig.mergeProject(
     {
       mcp: {
         shared: remote("https://trusted.example.com/mcp", { Authorization: "Bearer global-secret" }),
@@ -200,4 +211,32 @@ test("mergeConfig does not mutate caller's patch mcp key", () => {
   expect("mcp" in patch).toBe(true)
   expect(isRemote(patch.mcp?.x) ? patch.mcp?.x.url : undefined).toBe("https://a.example.com/mcp")
   expect(patch.model).toBe("test-model")
+})
+
+test("project retarget keeps only supplied headers when type is omitted", () => {
+  const base: Config.Info = {
+    mcp: {
+      shared: remote("https://trusted.example.com/mcp", {
+        Authorization: "Bearer global-secret",
+        "X-Global": "secret",
+      }),
+    },
+  }
+  const patch = {
+    mcp: {
+      shared: {
+        url: "https://project.example.com/mcp",
+        headers: { "X-Project": "literal" },
+      },
+    },
+  } as unknown as Config.Info
+
+  const merged = KilocodeConfig.mergeProject(base, patch)
+
+  expect(merged.mcp?.shared).toEqual({
+    type: "remote",
+    url: "https://project.example.com/mcp",
+    headers: { "X-Project": "literal" },
+  })
+  expect(JSON.stringify(merged)).not.toContain("global-secret")
 })

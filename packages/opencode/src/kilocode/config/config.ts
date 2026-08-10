@@ -519,6 +519,15 @@ export namespace KilocodeConfig {
    * 3. Strip null delete sentinels
    */
   export function mergeConfig(existing: Config.Info, patch: Config.Info): Config.Info {
+    return merge(existing, patch, true)
+  }
+
+  /** Merge an untrusted project layer without changing generic config merge semantics. */
+  export function mergeProject(existing: Config.Info, patch: Config.Info): Config.Info {
+    return merge(existing, patch, false)
+  }
+
+  function merge(existing: Config.Info, patch: Config.Info, clean: boolean): Config.Info {
     const e = { ...existing } as Record<string, unknown>
     // Shallow-copy patch so MCP extraction (delete p.mcp) never mutates the caller's object.
     // Callers may probe with mergeConfig({}, patch) then reuse the same patch for a write.
@@ -527,7 +536,7 @@ export namespace KilocodeConfig {
     // Normalize permission scalars before merge
     const existingPerm = e.permission
     const patchPerm = p.permission
-    if (isRecord(existingPerm) && isRecord(patchPerm)) {
+    if (clean && isRecord(existingPerm) && isRecord(patchPerm)) {
       const cloned = { ...existingPerm }
       for (const [key, value] of Object.entries(patchPerm)) {
         const existing = cloned[key]
@@ -538,54 +547,52 @@ export namespace KilocodeConfig {
       e.permission = cloned
     }
 
-    // kilocode_change start - MCP servers merge by name; URL-only remote overlays must not inherit base headers
+    // MCP servers merge by name; project URL retargets must not inherit base headers.
     const existingMcp = e.mcp
     const patchMcp = p.mcp
-    if (isRecord(existingMcp) || isRecord(patchMcp)) {
-      delete e.mcp
-      delete p.mcp
-      const merged = stripNulls(mergeDeep(e, p) as Record<string, unknown>) as Config.Info
-      const baseMcp = isRecord(existingMcp) ? (existingMcp as NonNullable<Config.Info["mcp"]>) : undefined
-      const srcMcp = isRecord(patchMcp) ? (patchMcp as NonNullable<Config.Info["mcp"]>) : undefined
-      if (!srcMcp) {
-        if (baseMcp) merged.mcp = baseMcp
-        return merged
-      }
-      if (!baseMcp) {
-        merged.mcp = srcMcp
-        return merged
-      }
-      const out: NonNullable<Config.Info["mcp"]> = { ...baseMcp }
-      for (const [name, src] of Object.entries(srcMcp)) {
-        const base = baseMcp[name]
-        if (!src || typeof src !== "object" || !base || typeof base !== "object") {
-          out[name] = src
-          continue
-        }
-        const entry = mergeDeep(base, src) as (typeof out)[string]
-        // Retargeted remote MCP (URL change) without headers must not inherit base secrets.
-        const srcUrl = "url" in src && typeof src.url === "string" ? src.url : undefined
-        const baseUrl = "url" in base && typeof base.url === "string" ? base.url : undefined
-        const retargetsRemote =
-          "type" in src &&
-          src.type === "remote" &&
-          srcUrl !== undefined &&
-          baseUrl !== undefined &&
-          srcUrl !== baseUrl &&
-          !("headers" in src)
-        if (retargetsRemote && entry && typeof entry === "object" && "headers" in entry) {
-          const { headers: _drop, ...rest } = entry as Record<string, unknown>
-          out[name] = rest as (typeof out)[string]
-        } else {
-          out[name] = entry
-        }
-      }
-      merged.mcp = out
+    if (!isRecord(existingMcp) && !isRecord(patchMcp)) {
+      return (clean ? stripNulls(mergeDeep(e, p) as Record<string, unknown>) : mergeDeep(e, p)) as Config.Info
+    }
+
+    delete e.mcp
+    delete p.mcp
+    const merged = (clean ? stripNulls(mergeDeep(e, p) as Record<string, unknown>) : mergeDeep(e, p)) as Config.Info
+    const baseMcp = isRecord(existingMcp) ? (existingMcp as NonNullable<Config.Info["mcp"]>) : undefined
+    const srcMcp = isRecord(patchMcp) ? (patchMcp as NonNullable<Config.Info["mcp"]>) : undefined
+    if (!srcMcp) {
+      if (baseMcp) merged.mcp = baseMcp
       return merged
     }
-    // kilocode_change end
+    if (!baseMcp) {
+      merged.mcp = srcMcp
+      return merged
+    }
 
-    return stripNulls(mergeDeep(e, p) as Record<string, unknown>) as Config.Info
+    const out: NonNullable<Config.Info["mcp"]> = { ...baseMcp }
+    for (const [name, src] of Object.entries(srcMcp)) {
+      const base = baseMcp[name]
+      if (!isRecord(src) || !isRecord(base)) {
+        out[name] = src
+        continue
+      }
+
+      const entry = mergeDeep(base, src) as (typeof out)[string]
+      const baseRemote = "type" in base && base.type === "remote"
+      const srcLocal = "type" in src && src.type === "local"
+      const srcUrl = "url" in src && typeof src.url === "string" ? src.url : undefined
+      const baseUrl = "url" in base && typeof base.url === "string" ? base.url : undefined
+      const retargeted = baseRemote && !srcLocal && srcUrl !== undefined && baseUrl !== undefined && srcUrl !== baseUrl
+      if (!retargeted || !isRecord(entry) || !("headers" in entry)) {
+        out[name] = entry
+        continue
+      }
+
+      const { headers: _headers, ...rest } = entry as Record<string, unknown>
+      if ("headers" in src) rest.headers = src.headers
+      out[name] = rest as (typeof out)[string]
+    }
+    merged.mcp = out
+    return merged
   }
 
   // ── Directory check helper ───────────────────────────────────────────

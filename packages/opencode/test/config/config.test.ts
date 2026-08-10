@@ -548,8 +548,8 @@ it.instance("prefers .kilo directory config over legacy .kilocode", () =>
 )
 // kilocode_change end
 
-// kilocode_change start - {env:} preserved in project config fields; MCP headers reject {env:}/{file:} without wiping siblings
-it.instance("preserves environment variable tokens in project config fields", () =>
+// kilocode_change start - project config is untrusted: {env:} rejected; {file:} confined to the project root
+it.instance("rejects environment variable substitution in project config", () =>
   withProcessEnv(
     "TEST_VAR",
     "test-user",
@@ -560,9 +560,9 @@ it.instance("preserves environment variable tokens in project config fields", ()
         username: "{env:TEST_VAR}",
       })
       const config = yield* Config.use.get()
-      expect(config.username).toBe("{env:TEST_VAR}")
+      expect(config.username).not.toBe("test-user")
       const issues = yield* Config.Service.use((svc) => svc.warnings())
-      expect(issues.length).toBe(0)
+      expect(issues.length).toBeGreaterThan(0)
     }),
   ),
 )

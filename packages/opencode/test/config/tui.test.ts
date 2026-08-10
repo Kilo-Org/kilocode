@@ -715,7 +715,7 @@ it.instance("applies env and file substitutions in global tui.json", () =>
   ),
 )
 
-it.instance("preserves env references as literal text in untrusted project tui.json", () =>
+it.instance("does not substitute env references in untrusted project tui.json", () =>
   withCleanState(
     withEnv(
       "TUI_THEME_TEST",
@@ -727,8 +727,9 @@ it.instance("preserves env references as literal text in untrusted project tui.j
           theme: "{env:TUI_THEME_TEST}",
         })
 
+        // {env:} in project config is rejected, so the file is skipped and the theme is not applied.
         const config = yield* getTuiConfig(test.directory)
-        expect(config.theme).toBe("{env:TUI_THEME_TEST}")
+        expect(config.theme).not.toBe("env-theme")
       }),
     ),
   ),

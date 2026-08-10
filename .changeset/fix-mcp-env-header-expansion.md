@@ -2,4 +2,4 @@
 "@kilocode/cli": patch
 ---
 
-Fix project config MCP headers: reject untrusted `{env:…}`/`{file:…}` (no process.env or authEnv) per entry so one bad header no longer drops the entire MCP set.
+Prevent project MCP configs from resolving variable-backed headers or inheriting trusted headers when changing endpoints, while preserving unaffected servers.
