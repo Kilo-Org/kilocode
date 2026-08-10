@@ -133,6 +133,7 @@ function bridgePollerOpts(bridge: PRStatusBridge, host: PRBridgeHost) {
       }
       const msg = { type: "agentManager.prStatus", worktreeId: id, pr, error: err } as AgentManagerOutMessage
       bridge["cache"].set(id, msg)
+      bridge["lastErrorNotified"] = undefined
       host.postToWebview(msg)
       host.updateWorktreePR(id, pr?.number, pr?.url, pr?.state)
     },
