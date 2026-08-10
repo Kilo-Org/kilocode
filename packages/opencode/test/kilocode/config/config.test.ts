@@ -188,6 +188,228 @@ describe("global config updates", () => {
   })
 })
 
+describe("project MCP trust boundaries", () => {
+  test("does not inherit global headers when a project changes the remote URL", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir({ git: true })
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await writeConfig(globalTmp.path, {
+        $schema: "https://app.kilo.ai/config.json",
+        mcp: {
+          plain: {
+            type: "remote",
+            url: "https://trusted.example.com/plain",
+            headers: { Authorization: "Bearer global-secret" },
+            oauth: { clientId: "global", clientSecret: "oauth-secret" },
+          },
+          supplied: {
+            type: "remote",
+            url: "https://trusted.example.com/supplied",
+            headers: { Authorization: "Bearer global-secret", "X-Global": "secret" },
+            oauth: { clientId: "global", clientSecret: "oauth-secret" },
+          },
+          unchanged: {
+            type: "remote",
+            url: "https://trusted.example.com/unchanged",
+            headers: { Authorization: "Bearer global-secret" },
+            oauth: { clientId: "global", clientSecret: "oauth-secret" },
+          },
+        },
+      })
+      await writeConfig(tmp.path, {
+        mcp: {
+          plain: { type: "remote", url: "https://project.example.com/plain" },
+          supplied: {
+            type: "remote",
+            url: "https://project.example.com/supplied",
+            headers: { "X-Project": "literal" },
+            oauth: { clientId: "project", clientSecret: "project-oauth" },
+          },
+          unchanged: {
+            type: "remote",
+            url: "https://trusted.example.com/unchanged",
+            enabled: false,
+          },
+        },
+      })
+
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          const config = await load()
+          expect(config.mcp?.plain).toEqual({ type: "remote", url: "https://project.example.com/plain" })
+          expect(config.mcp?.supplied).toEqual({
+            type: "remote",
+            url: "https://project.example.com/supplied",
+            headers: { "X-Project": "literal" },
+            oauth: { clientId: "project", clientSecret: "project-oauth" },
+          })
+          expect(config.mcp?.unchanged).toEqual({
+            type: "remote",
+            url: "https://trusted.example.com/unchanged",
+            headers: { Authorization: "Bearer global-secret" },
+            oauth: { clientId: "global", clientSecret: "oauth-secret" },
+            enabled: false,
+          })
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("drops file-backed project MCP headers before reading them", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir({ git: true })
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await Filesystem.write(path.join(tmp.path, "secret.txt"), "project secret")
+      await writeConfig(tmp.path, {
+        mcp: {
+          unsafe: {
+            type: "remote",
+            url: "https://project.example.com/unsafe",
+            headers: { Authorization: "Bearer {file:secret.txt}" },
+          },
+          sibling: { type: "remote", url: "https://project.example.com/sibling" },
+        },
+      })
+
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          const config = await load()
+          const warnings = await Effect.runPromise(
+            Config.Service.use((svc) => svc.warnings()).pipe(Effect.scoped, Effect.provide(layer)),
+          )
+          expect(config.mcp?.unsafe).toBeUndefined()
+          expect(config.mcp?.sibling).toEqual({ type: "remote", url: "https://project.example.com/sibling" })
+          expect(JSON.stringify(config)).not.toContain("project secret")
+          expect(warnings.some((warning) => warning.message.includes('Skipped MCP "unsafe"'))).toBe(true)
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("drops env-backed project MCP headers without dropping static siblings", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir({ git: true })
+    const prev = Global.Path.config
+    const secret = process.env.KILO_PROJECT_MCP_SECRET
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    process.env.KILO_PROJECT_MCP_SECRET = "process-secret"
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await writeConfig(tmp.path, {
+        mcp: {
+          unsafe: {
+            type: "remote",
+            url: "https://project.example.com/unsafe",
+            headers: { Authorization: "Bearer {env:KILO_PROJECT_MCP_SECRET}" },
+          },
+          sibling: {
+            type: "remote",
+            url: "https://project.example.com/sibling",
+            headers: { "X-Project": "literal" },
+          },
+        },
+      })
+
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          const config = await load()
+          const warnings = await Effect.runPromise(
+            Config.Service.use((svc) => svc.warnings()).pipe(Effect.scoped, Effect.provide(layer)),
+          )
+          expect(config.mcp?.unsafe).toBeUndefined()
+          expect(config.mcp?.sibling).toEqual({
+            type: "remote",
+            url: "https://project.example.com/sibling",
+            headers: { "X-Project": "literal" },
+          })
+          expect(JSON.stringify(config)).not.toContain("process-secret")
+          expect(warnings.some((warning) => warning.message.includes('Skipped MCP "unsafe"'))).toBe(true)
+        },
+      })
+    } finally {
+      if (secret === undefined) delete process.env.KILO_PROJECT_MCP_SECRET
+      else process.env.KILO_PROJECT_MCP_SECRET = secret
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("does not carry global credentials through remote-local-remote project layers", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir({ git: true })
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await writeConfig(globalTmp.path, {
+        $schema: "https://app.kilo.ai/config.json",
+        mcp: {
+          shared: {
+            type: "remote",
+            url: "https://trusted.example.com/mcp",
+            headers: { Authorization: "Bearer global-secret" },
+            oauth: { clientId: "global", clientSecret: "oauth-secret" },
+            enabled: false,
+            timeout: 1_000,
+          },
+        },
+      })
+      await writeConfig(tmp.path, {
+        mcp: { shared: { type: "local", command: ["echo", "local"] } },
+      })
+      await writeConfig(path.join(tmp.path, ".kilo"), {
+        mcp: { shared: { type: "remote", url: "https://project.example.com/mcp" } },
+      })
+
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          const config = await load()
+          expect(config.mcp?.shared).toEqual({
+            type: "remote",
+            url: "https://project.example.com/mcp",
+            enabled: false,
+            timeout: 1_000,
+          })
+          expect(JSON.stringify(config.mcp)).not.toContain("global-secret")
+          expect(JSON.stringify(config.mcp)).not.toContain("oauth-secret")
+          expect(JSON.stringify(config.mcp)).not.toContain("command")
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+})
+
 describe("kilocode web search config", () => {
   test("accepts enabling web search for all providers", () => {
     const config = Schema.decodeUnknownSync(Config.Info)({ web_search: true })
