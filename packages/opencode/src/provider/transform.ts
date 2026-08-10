@@ -328,13 +328,14 @@ function normalizeMessages(
   return msgs
 }
 
-// kilocode_change start - explicit prompt cache breakpoints for GPT-5.6+ (excluding ChatGPT subscriptions)
+// kilocode_change start - explicit prompt cache breakpoints for GPT-5.6+ (excluding ChatGPT subscriptions and unsupported variants)
 function isLikelyChatGPTSubscription(model: Provider.Model): boolean {
   return model.providerID === "openai" && model.cost?.input === 0 && model.cost?.output === 0
 }
 
 function supportsPromptCacheBreakpoint(model: Provider.Model): boolean {
   if (isLikelyChatGPTSubscription(model)) return false
+  if (model.api.id.includes("terra")) return false
   const match = model.api.id.match(/gpt-(\d+)\.(\d+)/)
   if (match) {
     const major = Number(match[1])
