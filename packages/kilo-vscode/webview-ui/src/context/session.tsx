@@ -70,7 +70,7 @@ import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
 import { getAgentModel } from "./session-model-store"
 import { resolveMessagePrefs } from "./session-preferences"
-import { errorIDs } from "./session-errors"
+import { errorIDs, preserveSessionErrors, withoutResolvedSessionErrors } from "./session-errors"
 import { PartStash } from "./part-stash"
 import { mergeParts, sameParts } from "./session-parts"
 import { state as todoState } from "./todo-revert"
@@ -1175,7 +1175,7 @@ export const SessionProvider: ParentComponent = (props) => {
         break
 
       case "sessionError": {
-        if (message.error?.name === "MessageAbortedError") break
+        if (!message.error || message.error.name === "MessageAbortedError") break
         const sid = message.sessionID ?? currentSessionID()
         if (!sid) break
         // Find the last user message in this session to use as parentID
@@ -1188,6 +1188,7 @@ export const SessionProvider: ParentComponent = (props) => {
           createdAt: new Date().toISOString(),
           parentID: parent?.id,
           error: message.error,
+          sessionErrorID: message.eventID,
         }
         handleMessageCreated(errorMsg)
         break
@@ -1381,20 +1382,17 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function mergeMessages(current: Message[], incoming: Message[], mode: Exclude<MessageLoadMode, "focus">) {
+    const kept = withoutResolvedSessionErrors(current, incoming)
     if (mode === "reconcile") {
-      // Tail reconcile: incoming is the authoritative newest-N snapshot.
-      // Local state may already hold some of those IDs and may also hold
-      // newer optimistic entries created after the fetch was taken. Merge
-      // by id (server wins on collision) then sort by createdAt so new
-      // server messages land in the right position and optimistic tail
-      // entries stay at the end.
+      // Merge the authoritative newest-N snapshot by ID, then sort so newer
+      // optimistic entries stay at the end.
       const byId = new Map<string, Message>()
-      for (const msg of current) byId.set(msg.id, msg)
+      for (const msg of kept) byId.set(msg.id, msg)
       for (const msg of incoming) byId.set(msg.id, msg)
       return [...byId.values()].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
     }
     const seen = new Set<string>()
-    const source = mode === "prepend" ? [...incoming, ...current] : incoming
+    const source = mode === "prepend" ? [...incoming, ...kept] : incoming
     return source.filter((msg) => {
       if (seen.has(msg.id)) return false
       seen.add(msg.id)
@@ -1418,12 +1416,13 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function withPending(sessionID: string, messages: Message[]) {
-    const pending = pendingOptimistic.get(sessionID)
-    if (!pending || pending.size === 0) return messages
-    const ids = new Set(messages.map((msg) => msg.id))
     const current = store.messages[sessionID] ?? []
+    const merged = preserveSessionErrors(current, messages)
+    const pending = pendingOptimistic.get(sessionID)
+    if (!pending || pending.size === 0) return merged
+    const ids = new Set(merged.map((msg) => msg.id))
     const orphans = current.filter((msg) => pending.has(msg.id) && !ids.has(msg.id))
-    return [...messages, ...orphans]
+    return [...merged, ...orphans]
   }
 
   // Cheap tail check: same ids in the same order and no visible streamed-part
@@ -1601,16 +1600,18 @@ export const SessionProvider: ParentComponent = (props) => {
 
     const exists = (store.messages[message.sessionID] ?? []).some((msg) => msg.id === message.id)
     setStore("messages", message.sessionID, (msgs = []) => {
+      if (message.sessionErrorID && msgs.some((msg) => msg.sessionErrorID === message.sessionErrorID)) return msgs
+      const current = withoutResolvedSessionErrors(msgs, [message])
       // Check if message already exists (optimistic or update case).
       // Since we now use the same messageID for optimistic and server messages,
       // this naturally handles the optimistic→real transition.
-      const idx = msgs.findIndex((m) => m.id === message.id)
+      const idx = current.findIndex((m) => m.id === message.id)
       if (idx >= 0) {
-        const updated = [...msgs]
-        updated[idx] = { ...msgs[idx], ...message }
+        const updated = [...current]
+        updated[idx] = { ...current[idx], ...message }
         return updated
       }
-      return [...msgs, message]
+      return [...current, message]
     })
     patchPage(message.sessionID, { lastMutation: exists ? "update" : "append" })
 

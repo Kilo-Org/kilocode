@@ -98,42 +98,44 @@ export function ModelCard(props: ModelCardProps) {
         />
       </div>
 
-      {/* Reasoning toggle */}
-      <label
-        style={{
-          display: "flex",
-          "align-items": "center",
-          gap: "8px",
-          cursor: "pointer",
-          "font-size": "var(--kilo-font-size-13)",
-          color: "var(--vscode-foreground)",
-        }}
-      >
-        <input
-          type="checkbox"
-          checked={props.m.reasoning}
-          onChange={(e) => props.onChangeReasoning(e.currentTarget.checked)}
-        />
-        {props.t("provider.custom.models.reasoning.label")}
-      </label>
+      {/* Reasoning and Image toggles */}
+      <div style={{ display: "flex", gap: "16px", "align-items": "center", "flex-wrap": "wrap" }}>
+        <label
+          style={{
+            display: "flex",
+            "align-items": "center",
+            gap: "8px",
+            cursor: "pointer",
+            "font-size": "var(--kilo-font-size-13)",
+            color: "var(--vscode-foreground)",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={props.m.reasoning}
+            onChange={(e) => props.onChangeReasoning(e.currentTarget.checked)}
+          />
+          {props.t("provider.custom.models.reasoning.label")}
+        </label>
 
-      <label
-        style={{
-          display: "flex",
-          "align-items": "center",
-          gap: "8px",
-          cursor: "pointer",
-          "font-size": "var(--kilo-font-size-13)",
-          color: "var(--vscode-foreground)",
-        }}
-      >
-        <input
-          type="checkbox"
-          checked={props.m.supportsImages}
-          onChange={(e) => props.onChangeSupportsImages(e.currentTarget.checked)}
-        />
-        {props.t("provider.custom.models.modalities.image")}
-      </label>
+        <label
+          style={{
+            display: "flex",
+            "align-items": "center",
+            gap: "8px",
+            cursor: "pointer",
+            "font-size": "var(--kilo-font-size-13)",
+            color: "var(--vscode-foreground)",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={props.m.supportsImages}
+            onChange={(e) => props.onChangeSupportsImages(e.currentTarget.checked)}
+          />
+          {props.t("provider.custom.models.modalities.image")}
+        </label>
+      </div>
 
       <Show when={issue()}>
         {(error) => (

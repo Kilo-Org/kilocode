@@ -1,6 +1,7 @@
 import * as path from "path"
 import { existsSync } from "fs"
 import * as vscode from "vscode"
+import { TRANSIENT as MEMORY_TRANSIENT } from "@kilocode/kilo-memory/schema"
 import type {
   KiloClient,
   Session,
@@ -4307,8 +4308,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       for (const sid of trackedByDir) targets.add(sid)
       if (local && active) targets.add(active)
       if (targets.size === 0 && local) targets.add(undefined)
-      const detail =
-        props.detail && typeof props.detail === "object"
+      const transient = event.type === "memory.error" && props.reason === MEMORY_TRANSIENT
+      const detail = transient
+        ? undefined
+        : props.detail && typeof props.detail === "object"
           ? props.detail
           : event.type === "memory.error" && typeof props.reason === "string"
             ? { type: "error", message: props.reason, reason: props.reason }

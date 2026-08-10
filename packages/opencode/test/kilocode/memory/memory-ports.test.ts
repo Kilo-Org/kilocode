@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import type { LanguageModelV3 } from "@ai-sdk/provider"
+import { APICallError } from "ai"
 import { Effect } from "effect"
 import { ModelNotFoundError, type Provider } from "../../../src/provider/provider"
 import { ProviderV2 } from "@opencode-ai/core/provider"
@@ -31,15 +32,22 @@ function mdl(id = mid): Provider.Model {
   } as unknown as Provider.Model
 }
 
-function lang(outputs = ["{}"]): LanguageModelV3 {
+function lang(outputs: (string | Error)[] = ["{}"], calls?: unknown[], hang?: boolean): LanguageModelV3 {
   let idx = 0
+  const next = () => {
+    const item = outputs[idx++] ?? outputs.at(-1) ?? "{}"
+    if (item instanceof Error) throw item
+    return item
+  }
   return {
     specificationVersion: "v3",
     provider: "test",
     modelId: "fake-memory-model",
     supportedUrls: {},
-    doGenerate: async () => {
-      const text = outputs[idx++] ?? outputs.at(-1) ?? "{}"
+    doGenerate: async (...args: Parameters<LanguageModelV3["doGenerate"]>) => {
+      calls?.push(args[0])
+      if (hang) return new Promise(() => {})
+      const text = next()
       return {
         content: [{ type: "text", text }],
         finishReason: { unified: "stop" },
@@ -57,7 +65,9 @@ function lang(outputs = ["{}"]): LanguageModelV3 {
   } as unknown as LanguageModelV3
 }
 
-function provider(input: { outputs?: string[]; seen?: string[] } = {}): Provider.Interface {
+function provider(
+  input: { outputs?: (string | Error)[]; seen?: string[]; calls?: unknown[]; hang?: boolean } = {},
+): Provider.Interface {
   const base = mdl()
   const mem = mdl(ModelV2.ID.make("memory-config-model"))
   const info = {
@@ -78,7 +88,7 @@ function provider(input: { outputs?: string[]; seen?: string[] } = {}): Provider
     },
     getLanguage: (model) => {
       input.seen?.push(model.id)
-      return Effect.succeed(lang(input.outputs))
+      return Effect.succeed(lang(input.outputs, input.calls, input.hang))
     },
     closest: () => Effect.succeed({ providerID: pid, modelID: base.id }),
     getSmallModel: () => Effect.succeed(mem),
@@ -278,6 +288,34 @@ describe("memory ports", () => {
     expect(configured.fallback).toBeUndefined()
     expect(fallback.fallback).toEqual({ reason: "model unavailable" })
     expect(seen).toEqual(["memory-config-model", "fake-memory-model"])
+  })
+
+  test("model port retries a transient provider failure once", async () => {
+    const calls: unknown[] = []
+    const err = new APICallError({
+      message: "temporarily unavailable",
+      url: "https://example.com/v1/generate",
+      requestBodyValues: {},
+      statusCode: 503,
+      responseHeaders: {},
+      responseBody: '{"error":"temporarily unavailable"}',
+      isRetryable: true,
+    })
+    const port = MemoryModel.port({ provider: provider({ outputs: [err, "{}"], calls }) })
+    const resolved = await Effect.runPromise(port.resolve({ session: ref }))
+
+    await port.run({ handle: resolved.handle, system: "system", prompt: "prompt", timeoutMs: 30_000 })
+
+    expect(calls).toHaveLength(2)
+  })
+
+  test("model port emits a structured timeout error", async () => {
+    const port = MemoryModel.port({ provider: provider({ hang: true }) })
+    const resolved = await Effect.runPromise(port.resolve({ session: ref }))
+
+    await expect(
+      port.run({ handle: resolved.handle, system: "system", prompt: "prompt", timeoutMs: 1 }),
+    ).rejects.toMatchObject({ name: "TimeoutError", message: "memory model timed out" })
   })
 
   test("model port clears its timeout after successful output", async () => {

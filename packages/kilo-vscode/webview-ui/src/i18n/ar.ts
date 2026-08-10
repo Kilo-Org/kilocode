@@ -443,6 +443,8 @@ export const dict = {
   "provider.custom.models.name.placeholder": "الاسم المعروض",
   "provider.custom.models.reasoning.label": "الاستدلال",
   "provider.custom.models.modalities.image": "صورة",
+  "provider.custom.models.toggleReasoning": "تبديل التفكير للكل",
+  "provider.custom.models.toggleImages": "تبديل الصور للكل",
   "provider.custom.models.remove": "إزالة النموذج",
   "provider.custom.models.add": "إضافة نموذج",
   "provider.custom.models.fetch.authError": "فشلت المصادقة. تحقق من مفتاح API أعلاه وحاول مرة أخرى.",
