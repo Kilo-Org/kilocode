@@ -576,19 +576,28 @@ export namespace KilocodeConfig {
         continue
       }
 
-      const entry = mergeDeep(base, src) as (typeof out)[string]
-      const baseRemote = "type" in base && base.type === "remote"
-      const srcLocal = "type" in src && src.type === "local"
+      const kind = "type" in base && (base.type === "local" || base.type === "remote") ? base.type : undefined
+      const next = "type" in src && (src.type === "local" || src.type === "remote") ? src.type : undefined
+      const changed = next !== undefined && next !== kind
+      const seed = changed
+        ? {
+            ...("enabled" in base ? { enabled: base.enabled } : {}),
+            ...("timeout" in base ? { timeout: base.timeout } : {}),
+          }
+        : base
+      const entry = mergeDeep(seed, src) as (typeof out)[string]
       const srcUrl = "url" in src && typeof src.url === "string" ? src.url : undefined
       const baseUrl = "url" in base && typeof base.url === "string" ? base.url : undefined
-      const retargeted = baseRemote && !srcLocal && srcUrl !== undefined && baseUrl !== undefined && srcUrl !== baseUrl
-      if (!retargeted || !isRecord(entry) || !("headers" in entry)) {
+      const retargeted =
+        kind === "remote" && next !== "local" && srcUrl !== undefined && baseUrl !== undefined && srcUrl !== baseUrl
+      if (!retargeted || !isRecord(entry)) {
         out[name] = entry
         continue
       }
 
-      const { headers: _headers, ...rest } = entry as Record<string, unknown>
+      const { headers: _headers, oauth: _oauth, ...rest } = entry as Record<string, unknown>
       if ("headers" in src) rest.headers = src.headers
+      if ("oauth" in src) rest.oauth = src.oauth
       out[name] = rest as (typeof out)[string]
     }
     merged.mcp = out

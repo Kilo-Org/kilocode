@@ -159,11 +159,14 @@ test("drops variable headers from partial MCP overlays without an explicit type"
   expect(warnings[0]?.message).toContain('Skipped MCP "partial"')
 })
 
-test("URL-only project override of a same-named global MCP does not inherit base headers", () => {
+test("URL-only project override of a same-named global MCP does not inherit base credentials", () => {
   const merged = KilocodeConfig.mergeProject(
     {
       mcp: {
-        shared: remote("https://trusted.example.com/mcp", { Authorization: "Bearer global-secret" }),
+        shared: {
+          ...remote("https://trusted.example.com/mcp", { Authorization: "Bearer global-secret" }),
+          oauth: { clientId: "global", clientSecret: "oauth-secret" },
+        },
       },
     },
     {
@@ -175,14 +178,19 @@ test("URL-only project override of a same-named global MCP does not inherit base
   const shared = merged.mcp?.shared
   expect(isRemote(shared) ? shared.url : undefined).toBe("https://untrusted.example.com/mcp")
   expect(isRemote(shared) ? shared.headers : undefined).toBeUndefined()
+  expect(isRemote(shared) ? shared.oauth : undefined).toBeUndefined()
   expect(JSON.stringify(merged.mcp)).not.toContain("global-secret")
+  expect(JSON.stringify(merged.mcp)).not.toContain("oauth-secret")
 })
 
-test("enabled-only project overlay (no url) still keeps global remote headers", () => {
+test("enabled-only project overlay (no url) still keeps global remote credentials", () => {
   const merged = KilocodeConfig.mergeProject(
     {
       mcp: {
-        shared: remote("https://trusted.example.com/mcp", { Authorization: "Bearer global-secret" }),
+        shared: {
+          ...remote("https://trusted.example.com/mcp", { Authorization: "Bearer global-secret" }),
+          oauth: { clientId: "global", clientSecret: "oauth-secret" },
+        },
       },
     },
     {
@@ -196,6 +204,53 @@ test("enabled-only project overlay (no url) still keeps global remote headers", 
   expect(shared && typeof shared === "object" && "enabled" in shared ? shared.enabled : undefined).toBe(false)
   expect(isRemote(shared) ? shared.url : undefined).toBe("https://trusted.example.com/mcp")
   expect(isRemote(shared) ? shared.headers?.Authorization : undefined).toBe("Bearer global-secret")
+  expect(isRemote(shared) && typeof shared.oauth === "object" ? shared.oauth.clientSecret : undefined).toBe(
+    "oauth-secret",
+  )
+})
+
+test("project MCP merges clear variant fields on local and remote transitions", () => {
+  const merged = KilocodeConfig.mergeProject(
+    {
+      mcp: {
+        local: {
+          ...remote("https://trusted.example.com/mcp", { Authorization: "Bearer global-secret" }),
+          oauth: { clientId: "global", clientSecret: "oauth-secret" },
+          enabled: false,
+          timeout: 1_000,
+        },
+        remote: {
+          type: "local",
+          command: ["echo", "old"],
+          cwd: "/tmp/old",
+          environment: { LOCAL_SECRET: "local-secret" },
+          enabled: false,
+          timeout: 1_000,
+        },
+      },
+    },
+    {
+      mcp: {
+        local: { type: "local", command: ["echo", "new"] },
+        remote: remote("https://project.example.com/mcp"),
+      },
+    },
+  )
+
+  expect(merged.mcp?.local).toEqual({
+    type: "local",
+    command: ["echo", "new"],
+    enabled: false,
+    timeout: 1_000,
+  })
+  expect(merged.mcp?.remote).toEqual({
+    type: "remote",
+    url: "https://project.example.com/mcp",
+    enabled: false,
+    timeout: 1_000,
+  })
+  expect(JSON.stringify(merged.mcp)).not.toContain("secret")
+  expect(JSON.stringify(merged.mcp)).not.toContain("/tmp/old")
 })
 
 test("mergeConfig does not mutate caller's patch mcp key", () => {
@@ -213,13 +268,16 @@ test("mergeConfig does not mutate caller's patch mcp key", () => {
   expect(patch.model).toBe("test-model")
 })
 
-test("project retarget keeps only supplied headers when type is omitted", () => {
+test("project retarget keeps only supplied credentials when type is omitted", () => {
   const base: Config.Info = {
     mcp: {
-      shared: remote("https://trusted.example.com/mcp", {
-        Authorization: "Bearer global-secret",
-        "X-Global": "secret",
-      }),
+      shared: {
+        ...remote("https://trusted.example.com/mcp", {
+          Authorization: "Bearer global-secret",
+          "X-Global": "secret",
+        }),
+        oauth: { clientId: "global", clientSecret: "oauth-secret" },
+      },
     },
   }
   const patch = {
@@ -227,6 +285,7 @@ test("project retarget keeps only supplied headers when type is omitted", () => 
       shared: {
         url: "https://project.example.com/mcp",
         headers: { "X-Project": "literal" },
+        oauth: { clientId: "project", clientSecret: "project-oauth" },
       },
     },
   } as unknown as Config.Info
@@ -237,6 +296,8 @@ test("project retarget keeps only supplied headers when type is omitted", () => 
     type: "remote",
     url: "https://project.example.com/mcp",
     headers: { "X-Project": "literal" },
+    oauth: { clientId: "project", clientSecret: "project-oauth" },
   })
   expect(JSON.stringify(merged)).not.toContain("global-secret")
+  expect(JSON.stringify(merged)).not.toContain("oauth-secret")
 })
