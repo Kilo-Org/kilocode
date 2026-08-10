@@ -395,6 +395,7 @@ const live: Layer.Layer<
         ...KiloLLM.timeout({ options: prepared.params.options, fallback: item.options, log: l }), // kilocode_change
         headers: prepared.headers,
         maxRetries: input.retries ?? 0,
+        allowSystemInMessages: true, // kilocode_change - system prompts are trusted and intentionally included in messages
         messages: prepared.messages,
         model: wrapLanguageModel({
           model: language,

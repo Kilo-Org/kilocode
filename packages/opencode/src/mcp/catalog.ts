@@ -3,7 +3,6 @@ import {
   CallToolResultSchema,
   ListToolsResultSchema,
   ToolSchema,
-  type CallToolResult, // kilocode_change
   type Tool as MCPToolDef,
 } from "@modelcontextprotocol/sdk/types.js"
 import { dynamicTool, jsonSchema, type JSONSchema7, type Tool } from "ai"
@@ -65,7 +64,7 @@ export function convertTool(mcpTool: MCPToolDef, client: Client, timeout?: numbe
           // The MCP SDK only sends a progress token when this hook is present, enabling timeout resets.
           onprogress: () => {},
         },
-      ) as CallToolResult // kilocode_change
+      )
       if (result.isError)
         throw new Error(
           result.content
