@@ -12,7 +12,6 @@
     border: 1px solid var(--border-weak-base);
   }
 
-  &[data-size="large"] [data-slot="dialog-content"],
   &[data-size="x-large"] [data-slot="dialog-content"] {
     max-width: none;
   }

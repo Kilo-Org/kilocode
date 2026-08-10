@@ -222,10 +222,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     return models.filter((m) => fuzzy(q, m.id) || fuzzy(q, m.name))
   })
 
-  const rows = createMemo(() => {
-    form.models.length
-    return form.models.slice()
-  })
+  const rows = createMemo(() => form.models.slice())
 
   const listHeight = createMemo(() => Math.min(Math.max(rows().length, 1) * MODEL_ROW, MODEL_LIST_MAX))
 
@@ -882,33 +879,35 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
                     />
                   </Show>
 
-                  <VList
-                    data={filtered()}
-                    itemSize={28}
-                    style={{ height: `${Math.min(Math.max(filtered().length, 1) * 28, 200)}px` }}
-                  >
-                    {(m) => (
-                      <label
-                        style={{
-                          display: "flex",
-                          "align-items": "center",
-                          gap: "8px",
-                          padding: "4px 2px",
-                          cursor: "pointer",
-                          "font-size": "var(--kilo-font-size-13)",
-                          color: "var(--text-base, var(--vscode-foreground))",
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selected().has(m.id)}
-                          onChange={() => toggleModel(m.id)}
-                          style={{ cursor: "pointer" }}
-                        />
-                        {m.id}
-                      </label>
-                    )}
-                  </VList>
+                  <Show when={filtered().length > 0}>
+                    <VList
+                      data={filtered()}
+                      itemSize={28}
+                      style={{ height: `${Math.min(filtered().length * 28, 200)}px` }}
+                    >
+                      {(m) => (
+                        <label
+                          style={{
+                            display: "flex",
+                            "align-items": "center",
+                            gap: "8px",
+                            padding: "4px 2px",
+                            cursor: "pointer",
+                            "font-size": "var(--kilo-font-size-13)",
+                            color: "var(--text-base, var(--vscode-foreground))",
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selected().has(m.id)}
+                            onChange={() => toggleModel(m.id)}
+                            style={{ cursor: "pointer" }}
+                          />
+                          {m.id}
+                        </label>
+                      )}
+                    </VList>
+                  </Show>
 
                   {/* Actions */}
                   <div style={{ display: "flex", gap: "8px", "margin-top": "4px" }}>

@@ -5,7 +5,9 @@
 
 import { onMount, createSignal } from "solid-js"
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
+import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { StoryProviders, mockSessionValue } from "./StoryProviders"
+import CustomProviderDialog from "../components/settings/CustomProviderDialog"
 import { SessionContext } from "../context/session"
 import { KiloEmbeddingModelsContext } from "../context/kilo-embedding-models"
 import Settings from "../components/settings/Settings"
@@ -694,4 +696,43 @@ export const IndexingKiloCatalogLoading: Story = {
       </>
     )
   },
+}
+
+function OpenCustomProvider(props: { existing?: Parameters<typeof CustomProviderDialog>[0]["existing"] }) {
+  const dialog = useDialog()
+  onMount(() => dialog.show(() => <CustomProviderDialog existing={props.existing} />))
+  return null
+}
+
+export const CustomProviderCreate: Story = {
+  name: "CustomProviderDialog — create",
+  render: () => (
+    <StoryProviders>
+      <OpenCustomProvider />
+    </StoryProviders>
+  ),
+}
+
+export const CustomProviderEdit: Story = {
+  name: "CustomProviderDialog — edit",
+  render: () => (
+    <StoryProviders>
+      <OpenCustomProvider
+        existing={{
+          providerID: "myprovider",
+          name: "My Provider",
+          config: {
+            npm: "@ai-sdk/openai-compatible",
+            name: "My Provider",
+            options: { baseURL: "https://api.myprovider.com/v1" },
+            models: {
+              "gpt-4o": { name: "GPT-4o", reasoning: false, modalities: { input: ["text", "image"] } },
+              "o3-mini": { name: "o3-mini", reasoning: true },
+              "llama-3.3": { name: "Llama 3.3" },
+            },
+          },
+        }}
+      />
+    </StoryProviders>
+  ),
 }
