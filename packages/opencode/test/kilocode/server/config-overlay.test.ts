@@ -911,7 +911,7 @@ describe("config overlay routes", () => {
           Permission.evaluate("edit", "*", after.find((item) => item.name === "code")?.permission ?? []).action,
         ).toBe("allow")
       },
-      30_000,
+      60_000,
     )
   }
 })

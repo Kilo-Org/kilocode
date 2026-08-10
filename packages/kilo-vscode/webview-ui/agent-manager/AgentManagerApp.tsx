@@ -198,7 +198,6 @@ interface SetupState {
 type SidebarSelection = typeof LOCAL | string | null
 type SidePanel = "diff" | "pr" | "terminal" | null
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
-const SIDE_RESIZE_INTERVAL_MS = 32
 
 import { parseBindingTokens } from "./keybind-tokens"
 import { defaultBindings } from "./keybind-defaults"

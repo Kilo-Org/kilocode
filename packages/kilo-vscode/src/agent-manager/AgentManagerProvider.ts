@@ -355,7 +355,10 @@ export class AgentManagerProvider implements Disposable {
   public openPanel(preserveFocus?: boolean): void {
     if (this.panel) {
       this.log("Panel already open, revealing")
-      revealPanel(this.panel, preserveFocus, this.waitForPanelReady(this.panel), this.waitForPanelActive(this.panel))
+      const panel = this.panel
+      revealPanel(panel, preserveFocus, () =>
+        focusPanelPrompt(panel, this.waitForPanelReady(panel), this.waitForPanelActive(panel)),
+      )
       return
     }
     this.log("Opening Agent Manager panel")
@@ -1695,7 +1698,9 @@ export class AgentManagerProvider implements Disposable {
   public focusPanel(): void {
     const panel = this.panel
     if (!panel) return
-    revealPanel(panel, false, this.waitForPanelReady(panel), this.waitForPanelActive(panel))
+    revealPanel(panel, false, () =>
+      focusPanelPrompt(panel, this.waitForPanelReady(panel), this.waitForPanelActive(panel)),
+    )
   }
   public isActive(): boolean {
     return this.panel?.active === true
