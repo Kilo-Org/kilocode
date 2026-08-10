@@ -1553,9 +1553,11 @@ const layer = Layer.effect(
               existingModel?.api.npm === m.api.npm
                 ? (existingModel.variants ?? ProviderTransform.variants(m))
                 : ProviderTransform.variants(m)
-            const generated = Object.keys(model.variants ?? {}).length
-              ? {}
-              : customProviderVariants(parsedModel, model.provider?.npm ?? provider.npm, baseGenerate)
+            const generated = customProviderVariants(
+              parsedModel,
+              model.provider?.npm ?? provider.npm,
+              baseGenerate,
+            )
             const merged = mergeDeep(generated, model.variants ?? {})
             // kilocode_change end
             parsedModel.variants = mapValues(
