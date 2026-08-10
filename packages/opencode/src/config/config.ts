@@ -42,6 +42,7 @@ import z from "zod" // kilocode_change - Kilo config compatibility schemas
 // kilocode_change start
 import { ZodOverride } from "@opencode-ai/core/effect-zod"
 import { KilocodeConfig } from "../kilocode/config/config"
+import { sanitizeProjectMcpHeaders } from "../kilocode/config/mcp-headers"
 import { primaryPaths } from "../kilocode/primary-worktree"
 import { Git } from "@/git"
 import { KilocodeDefaultPlugins } from "@/kilocode/config/default-plugins"
@@ -66,8 +67,9 @@ function mergeConfig(target: Info, source: Info): Info {
   return mergeDeep(target, source) as Info
 }
 
-function mergeConfigConcatArrays(target: Info, source: Info): Info {
-  const merged = mergeConfig(target, source)
+function mergeConfigConcatArrays(target: Info, source: Info, trusted = true): Info {
+  // kilocode_change
+  const merged = trusted ? mergeConfig(target, source) : KilocodeConfig.mergeProject(target, source)
   if (target.instructions && source.instructions) {
     merged.instructions = Array.from(new Set([...target.instructions, ...source.instructions]))
   }
@@ -310,7 +312,7 @@ const layer = Layer.effect(
 
     const loadConfig = Effect.fnUntraced(function* (
       text: string,
-      options: { path: string } | { dir: string; source: string },
+      options: { path: string; original?: string } | { dir: string; source: string }, // kilocode_change
       env?: Record<string, string>,
       // kilocode_change start - trusted allows {env:}; fileScope confines untrusted {file:} reads to a root
       trusted?: boolean,
@@ -333,12 +335,13 @@ const layer = Layer.effect(
       if (!data.$schema) {
         // kilocode_change start
         data.$schema = "https://app.kilo.ai/config.json"
-        const edits = modify(text, ["$schema"], "https://app.kilo.ai/config.json", {
+        const original = options.original ?? text
+        const edits = modify(original, ["$schema"], "https://app.kilo.ai/config.json", {
           formattingOptions: { insertSpaces: true, tabSize: 2 },
           getInsertionIndex: () => 0,
         })
-        const updated = applyEdits(text, edits)
-        if (updated !== text) {
+        const updated = applyEdits(original, edits)
+        if (updated !== original) {
           yield* fs.writeFileString(options.path, updated).pipe(Effect.catch(() => Effect.void))
         }
         // kilocode_change end
@@ -351,11 +354,25 @@ const layer = Layer.effect(
       env?: Record<string, string>,
       trusted?: boolean, // kilocode_change
       fileScope?: ConfigVariable.FileScope, // kilocode_change
+      configWarnings?: Warning[], // kilocode_change - collect MCP header expansion warnings
     ) {
       yield* Effect.logInfo("loading", { path: filepath })
       const text = yield* readConfigFile(filepath)
       if (!text) return {} as Info
-      return yield* loadConfig(text, { path: filepath }, env, trusted, fileScope) // kilocode_change
+      // kilocode_change start - remove variable-bearing project MCP headers before generic substitution can read them
+      const sanitized =
+        trusted === false ? sanitizeProjectMcpHeaders(ConfigParse.jsonc(text, filepath), filepath) : undefined
+      const content = sanitized ? (JSON.stringify(sanitized.config) ?? text) : text
+      if (sanitized && configWarnings) configWarnings.push(...sanitized.warnings)
+      const data = yield* loadConfig(
+        content,
+        { path: filepath, original: text },
+        trusted === false ? undefined : env,
+        trusted,
+        fileScope,
+      )
+      // kilocode_change end
+      return data
     })
 
     let globalStamp = "" // kilocode_change
@@ -550,7 +567,7 @@ const layer = Layer.effect(
           const scope = kind ?? (yield* pluginScopeForSource(source))
           const trusted = sourceTrusted ?? scope === "global"
           const scoped = KilocodeConfig.scopeIndexing(SandboxConfig.scope(next, scope), scope)
-          result = mergeConfigConcatArrays(result, scoped)
+          result = mergeConfigConcatArrays(result, scoped, trusted) // kilocode_change
           if (scoped.agent) configuredAgents = mergeDeep(configuredAgents, scoped.agent)
           if (next.instructions?.length) {
             result.instruction_origins = origins(result.instruction_origins, next.instructions, trusted, source)
@@ -670,8 +687,8 @@ const layer = Layer.effect(
             for (const file of yield* ConfigPaths.files(name, ctx.directory, ctx.worktree).pipe(Effect.orDie)) {
               yield* merge(
                 file,
-                // kilocode_change - project config is untrusted: {env:} rejected, {file:} confined to projectRoot
-                yield* loadFile(file, authEnv, false, { root: projectRoot, source: file }).pipe(
+                // kilocode_change - project config is untrusted: {env:} rejected by substitution; MCP entries with variable-bearing headers dropped pre-substitution, {file:} confined to projectRoot
+                yield* loadFile(file, authEnv, false, { root: projectRoot, source: file }, warnings).pipe(
                   Effect.catchDefect((err: unknown) => {
                     caughtWarning(warnings, file, err)
                     return Effect.succeed({} as Info)
@@ -723,7 +740,7 @@ const layer = Layer.effect(
               const fileScope = dirTrusted ? undefined : { root: projectRoot, source }
               yield* merge(
                 source,
-                yield* loadFile(source, authEnv, dirTrusted, fileScope).pipe(
+                yield* loadFile(source, authEnv, dirTrusted, fileScope, dirTrusted ? undefined : warnings).pipe(
                   // kilocode_change
                   Effect.catchDefect((err: unknown) => {
                     caughtWarning(warnings, source, err)

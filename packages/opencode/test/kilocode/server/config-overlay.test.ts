@@ -911,7 +911,9 @@ describe("config overlay routes", () => {
           Permission.evaluate("edit", "*", after.find((item) => item.name === "code")?.permission ?? []).action,
         ).toBe("allow")
       },
-      30_000,
+      // Cold Windows CI runs take ~32s (observed timeout at 30s); give the two
+      // instance create/dispose cycles of each iteration real headroom.
+      90_000,
     )
   }
 })
