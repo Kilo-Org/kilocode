@@ -516,6 +516,13 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
               action: "deny",
               pattern: "*",
             },
+            // kilocode_change start
+            {
+              permission: "suggest",
+              action: "deny",
+              pattern: "*",
+            },
+            // kilocode_change end
           ],
         }),
       )

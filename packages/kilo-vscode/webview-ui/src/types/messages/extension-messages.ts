@@ -148,6 +148,7 @@ export interface SessionTurnClosedMessage {
 
 export interface SessionErrorMessage {
   type: "sessionError"
+  eventID: string
   sessionID?: string
   error?: { name: string; data?: Record<string, unknown> }
 }

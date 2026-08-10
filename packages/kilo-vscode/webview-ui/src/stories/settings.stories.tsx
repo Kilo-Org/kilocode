@@ -17,6 +17,8 @@ import ModeEditView from "../components/settings/ModeEditView"
 import McpEditView from "../components/settings/McpEditView"
 import type { AgentConfig, CommandConfig, Config } from "../types/messages"
 import IndexingTab from "../components/settings/IndexingTab"
+import CustomProviderDialog from "../components/settings/CustomProviderDialog"
+import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { SidebarEmptyState } from "../components/chat/SidebarEmptyState"
 import { WorkStyleContext, type WorkStyleContextValue } from "../context/work-style"
 
@@ -694,4 +696,45 @@ export const IndexingKiloCatalogLoading: Story = {
       </>
     )
   },
+}
+
+function CustomProviderDialogMount(props: { existing?: Parameters<typeof CustomProviderDialog>[0]["existing"] }) {
+  const dialog = useDialog()
+  onMount(() => dialog.show(() => <CustomProviderDialog existing={props.existing} />))
+  return null
+}
+
+export const CustomProviderCreateDialog: Story = {
+  name: "Custom Provider — create dialog",
+  render: () => (
+    <StoryProviders>
+      <CustomProviderDialogMount />
+    </StoryProviders>
+  ),
+}
+
+export const CustomProviderEditDialog: Story = {
+  name: "Custom Provider — edit dialog",
+  render: () => (
+    <StoryProviders>
+      <CustomProviderDialogMount
+        existing={{
+          providerID: "custom-ollama",
+          name: "Local Ollama",
+          config: {
+            npm: "@ai-sdk/openai-compatible",
+            options: { baseURL: "http://localhost:11434/v1" },
+            models: {
+              "qwen2.5-coder:32b": {
+                name: "Qwen 2.5 Coder 32B",
+                reasoning: true,
+                modalities: { input: ["text", "image"] },
+              },
+              "llama3.3:70b": { name: "Llama 3.3 70B", reasoning: false },
+            },
+          },
+        }}
+      />
+    </StoryProviders>
+  ),
 }
