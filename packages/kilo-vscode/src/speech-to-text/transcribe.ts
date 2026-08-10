@@ -96,21 +96,23 @@ async function transcribeWithSource(
       body: form,
     })
 
-    return await read(res)
+    return await read(res, source)
   } catch (err) {
     return failure(err, signal)
   }
 }
 
-async function read(res: Response): Promise<SpeechToTextResult> {
+async function read(res: Response, source?: SpeechToTextSource): Promise<SpeechToTextResult> {
   const raw = await res.text()
   const body = parse(raw)
 
   if (!res.ok) {
+    // A 401 from a custom endpoint means the user's own key was rejected, so it must not
+    // route the webview into the "sign in to Kilo" flow that `not_authenticated` triggers.
     return {
       ok: false,
-      error: errorMessage(body, raw) ?? `Speech to text failed with status ${res.status}`,
-      code: res.status === 401 ? "not_authenticated" : undefined,
+      error: errorMessage(body, raw) ?? failed(res.status, source),
+      code: res.status === 401 && !source ? "not_authenticated" : undefined,
     }
   }
 
@@ -118,6 +120,13 @@ async function read(res: Response): Promise<SpeechToTextResult> {
   if (!text) return { ok: false, error: "No speech was detected", code: "empty_transcript" }
 
   return { ok: true, text }
+}
+
+function failed(status: number, source?: SpeechToTextSource): string {
+  if (!source) return `Speech to text failed with status ${status}`
+  if (status === 401 || status === 403)
+    return `Speech to text was rejected by ${source.baseUrl} (HTTP ${status}). Check the API key for that endpoint.`
+  return `Speech to text failed at ${source.baseUrl} with status ${status}`
 }
 
 function failure(err: unknown, signal?: AbortSignal): SpeechToTextResult {

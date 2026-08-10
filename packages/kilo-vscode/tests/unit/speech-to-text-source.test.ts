@@ -24,6 +24,10 @@ const server = Bun.serve({
       return Response.json({ data: [{ id: "whisper-1" }, { id: "parakeet", name: "Parakeet" }] })
     }
 
+    if (url.pathname === "/denied/audio/transcriptions") {
+      return new Response("", { status: 401 })
+    }
+
     if (url.pathname === "/v1/audio/transcriptions") {
       const form = await request.formData()
       seen.model = String(form.get("model"))
@@ -82,6 +86,21 @@ describe("speech-to-text custom source", () => {
     expect(seen.model).toBe("whisper-1")
     expect(seen.file).toBe("audio")
     expect(result).toEqual({ ok: true, text: "hello there" })
+  })
+
+  it("reports a rejected custom key without asking for a Kilo sign-in", async () => {
+    const denied = `http://localhost:${server.port}/denied`
+    const result = await transcribeSpeech(offline, { data: "", format: "m4a" }, "", undefined, {
+      baseUrl: denied,
+      apiKey: "wrong",
+    })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) throw new Error("expected a failure")
+    expect(result.code).toBeUndefined()
+    expect(result.error).toBe(
+      `Speech to text was rejected by ${denied} (HTTP 401). Check the API key for that endpoint.`,
+    )
   })
 
   it("still requires the Kilo backend without a custom source", async () => {
