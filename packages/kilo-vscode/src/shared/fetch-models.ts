@@ -60,16 +60,21 @@ function collect(items: Item[], seen: Set<string>, result: ModelEntry[]) {
   }
 }
 
+function target(base: string, anthropic: boolean, after?: string) {
+  const root = base.replace(/\/+$/, "") + "/models"
+  if (!anthropic) return root
+  const query = new URLSearchParams({ limit: String(PAGE) })
+  if (after) query.set("after_id", after)
+  return `${root}?${query}`
+}
+
 async function load(opts: Options, anthropic: boolean): Promise<ModelEntry[]> {
   const seen = new Set<string>()
   const result: ModelEntry[] = []
   let after: string | undefined
 
   for (let page = 0; page < PAGES; page++) {
-    const root = opts.baseURL.replace(/\/+$/, "") + "/models"
-    const query = new URLSearchParams({ limit: String(PAGE) })
-    if (after) query.set("after_id", after)
-    const response = await fetch(`${root}?${query}`, {
+    const response = await fetch(target(opts.baseURL, anthropic, after), {
       method: "GET",
       headers: headers(opts, anthropic),
       signal: AbortSignal.timeout(15_000),
@@ -102,6 +107,7 @@ export async function fetchProviderModels(opts: Options): Promise<ModelEntry[]> 
   try {
     return await load(opts, true)
   } catch (err) {
+    if (err instanceof FetchModelsError && err.auth) throw err
     try {
       return await load(opts, false)
     } catch {

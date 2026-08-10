@@ -234,8 +234,6 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     const npm = fetchPackage()
     const url = fetchURL()
     const key = fetchKey()
-    void npm
-    void key
 
     // Clear previous results whenever URL or key changes
     setFetchedModels(undefined)
@@ -244,6 +242,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     setSearch("")
 
     if (!/^https?:\/\//.test(url.trim())) return
+    if (npm === ANTHROPIC_NPM && !key.trim() && !props.existing) return
 
     fetchVersion++
     const version = fetchVersion

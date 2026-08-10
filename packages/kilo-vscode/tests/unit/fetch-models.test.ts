@@ -17,17 +17,22 @@ async function withServer(handler: Handler, run: (url: string) => Promise<void>)
 
 describe("fetchOpenAIModels", () => {
   it("parses OpenAI-compatible model lists", async () => {
+    const paths: string[] = []
     await withServer(
-      () =>
-        Response.json({
+      (req) => {
+        const url = new URL(req.url)
+        paths.push(url.pathname + url.search)
+        return Response.json({
           data: [{ id: "gpt-4o", name: "GPT-4o" }, { id: "  gpt-4o  " }, { id: "o3-mini" }],
-        }),
+        })
+      },
       async (url) => {
         const models = await fetchOpenAIModels({ baseURL: `${url}/v1`, apiKey: "sk-test" })
         expect(models).toEqual([
           { id: "gpt-4o", name: "GPT-4o" },
           { id: "o3-mini", name: "o3-mini" },
         ])
+        expect(paths).toEqual(["/v1/models"])
       },
     )
   })
@@ -120,6 +125,30 @@ describe("fetchProviderModels", () => {
         })
         expect(models).toEqual([{ id: "anthropic/claude-sonnet-4", name: "Claude Sonnet 4" }])
         expect(calls).toBe(2)
+      },
+    )
+  })
+
+  it("does not fall back after an Anthropic auth failure", async () => {
+    let calls = 0
+    await withServer(
+      () => {
+        calls++
+        return new Response("nope", { status: 401 })
+      },
+      async (url) => {
+        try {
+          await fetchProviderModels({
+            baseURL: url,
+            apiKey: "bad",
+            npm: "@ai-sdk/anthropic",
+          })
+          throw new Error("expected fetch to fail")
+        } catch (err) {
+          expect(err).toBeInstanceOf(FetchModelsError)
+          expect((err as FetchModelsError).auth).toBe(true)
+          expect(calls).toBe(1)
+        }
       },
     )
   })
