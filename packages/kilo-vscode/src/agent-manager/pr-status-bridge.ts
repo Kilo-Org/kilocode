@@ -9,7 +9,7 @@ import type { AgentManagerOutMessage, PRStatus } from "./types"
 import type { Disposable } from "./host"
 import type { Semaphore } from "./semaphore"
 import { PRStatusPoller } from "./PRStatusPoller"
-import { resolveComment } from "./PRActions"
+import { resolveComment } from "./pr/PRActions"
 
 interface PRBridgeHost {
   getWorktrees(): Worktree[]

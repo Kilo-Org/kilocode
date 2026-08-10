@@ -1,4 +1,4 @@
-import type { PRState, ReviewDecision } from "./types"
+import type { PRState, ReviewDecision } from "../types"
 
 // Raw shapes returned by `gh pr view --json`
 

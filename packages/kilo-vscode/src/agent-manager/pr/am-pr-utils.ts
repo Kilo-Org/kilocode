@@ -1,4 +1,4 @@
-import type { CheckStatus, PRComment, PRReviewer, ReviewerState } from "./types"
+import type { CheckStatus, PRComment, PRReviewer, ReviewerState } from "../types"
 import type { PRResult, GhThread, GhReviewRequest, GhReview } from "./am-pr-types"
 
 export function parsePRResult(json: string): PRResult | null {
