@@ -59,11 +59,13 @@ function search<T>(items: T[], target: string, key: (item: T) => string) {
   return { found: false, index: left }
 }
 
+// kilocode_change start
 function compareMessage(a: Message, b: Message) {
-  return a.time.created - b.time.created || a.id.localeCompare(b.id)
+  return a.time.created - b.time.created || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
 }
 
-const messageKey = (message: Message) => message.time.created + message.id
+const messageKey = (message: Message) => String(message.time.created).padStart(16, "0") + message.id
+// kilocode_change end
 
 export const {
   context: SyncContext,

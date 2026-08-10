@@ -100,7 +100,9 @@ function View(props: { api: TuiPluginApi }) {
       name: list.at(-1) ?? "",
     }
   })
-  const privacyMode = createMemo(() => props.api.state.globalConfig.privacy_mode === true)
+  const privacyMode = createMemo(
+    () => props.api.state.config.privacy_mode === true || props.api.state.globalConfig.privacy_mode === true,
+  )
   const balanceText = createMemo(() => (privacyMode() ? REDACTED_BALANCE : null))
   const mutedColor = createMemo(() => (privacyMode() ? theme().textMuted : tone()))
   const refresh = () => {

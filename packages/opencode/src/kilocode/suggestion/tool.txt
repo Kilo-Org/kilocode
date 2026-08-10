@@ -26,5 +26,6 @@ Do NOT suggest a review when:
 
 Choosing the right review prompt for the action prompt:
 - Use `/review uncommitted` as the action prompt for uncommitted working-tree changes (staged, unstaged, and untracked files)
-- Use `/review branch` as the action prompt for committed branch-level changes
+- Use `/review unpushed` as the action prompt for committed changes ahead of upstream
+- Use `/review branch` as the action prompt for branch-level changes against base
 - Prefer `/review uncommitted` when the work you just did has not been committed yet

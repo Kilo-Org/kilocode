@@ -12,6 +12,7 @@ import { FSUtil } from "@opencode-ai/core/fs-util"
 import { fileURLToPath } from "url"
 import { Config } from "@/config/config"
 import { RuntimeFlags } from "@/effect/runtime-flags"
+import { model as modelEnv } from "@/kilocode/process/env" // kilocode_change
 import { Shell } from "@opencode-ai/core/shell"
 import { ShellID } from "./shell/id"
 
@@ -522,10 +523,7 @@ export const ShellTool = Tool.define(
         { cwd, sessionID: ctx.sessionID, callID: ctx.callID },
         { env: {} },
       )
-      return {
-        ...process.env,
-        ...extra.env,
-      }
+      return modelEnv(extra.env) // kilocode_change - model shells must not inherit backend credentials
     })
 
     const run = Effect.fn("ShellTool.run")(function* (

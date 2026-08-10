@@ -17,6 +17,7 @@ import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.CommandDto
+import ai.kilocode.rpc.dto.CommandFileDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
@@ -630,8 +631,12 @@ object KiloCliDataParser {
             CommandInfo(
                 name = obj.str("name") ?: "",
                 description = obj.str("description"),
+                agent = obj.str("agent"),
+                model = obj.str("model"),
+                variant = obj.str("variant"),
                 source = obj.str("source"),
                 hints = obj["hints"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
+                subtask = obj.flagOrNull("subtask"),
             )
         }
 
@@ -662,9 +667,34 @@ object KiloCliDataParser {
             CommandDto(
                 name = name,
                 description = obj.str("description"),
+                agent = obj.str("agent"),
+                model = obj.str("model"),
+                variant = obj.str("variant"),
                 source = obj.str("source"),
                 hints = obj["hints"].arr()?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
                 template = obj.str("template"),
+                subtask = obj.flagOrNull("subtask"),
+            )
+        }
+
+    fun parseAgentBehaviorCommandFiles(raw: String): List<CommandFileDto> =
+        raw.array().mapNotNull { item ->
+            val obj = item.obj() ?: return@mapNotNull null
+            val name = obj.str("name") ?: return@mapNotNull null
+            val location = obj.str("location") ?: return@mapNotNull null
+            CommandFileDto(
+                name = name,
+                description = obj.str("description"),
+                agent = obj.str("agent"),
+                model = obj.str("model"),
+                variant = obj.str("variant"),
+                source = obj.str("source"),
+                builtin = obj.bool("builtin"),
+                location = location,
+                editable = obj.bool("editable"),
+                content = obj.str("content"),
+                subtask = obj.flagOrNull("subtask"),
+                hints = obj["hints"].arr()?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
             )
         }
 
@@ -710,6 +740,16 @@ object KiloCliDataParser {
      */
     fun parsePathState(raw: String): String? {
         val prim = runCatching { tryParseObject(raw)?.get("state")?.jsonPrimitive }.getOrNull() ?: return null
+        return if (prim.isString) prim.content else null
+    }
+
+    fun parsePathConfig(raw: String): String? {
+        val prim = runCatching { tryParseObject(raw)?.get("config")?.jsonPrimitive }.getOrNull() ?: return null
+        return if (prim.isString) prim.content else null
+    }
+
+    fun parsePathHome(raw: String): String? {
+        val prim = runCatching { tryParseObject(raw)?.get("home")?.jsonPrimitive }.getOrNull() ?: return null
         return if (prim.isString) prim.content else null
     }
 

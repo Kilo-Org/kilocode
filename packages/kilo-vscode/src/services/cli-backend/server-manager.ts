@@ -17,7 +17,7 @@ export interface ServerInstance {
 const STARTUP_TIMEOUT_SECONDS = 30
 
 type WorkspaceFolderLike = { uri: { fsPath: string } }
-type ServerExitListener = (code: number | null) => void
+type ServerExitListener = (code: number | null, signal: NodeJS.Signals | null) => void
 
 export function resolveServerCwd(folders: readonly WorkspaceFolderLike[] | undefined, storage: string): string {
   return folders?.[0]?.uri.fsPath ?? storage
@@ -182,25 +182,36 @@ export class ServerManager {
         stderrLines.push(errorOutput)
       })
 
-      serverProcess.on("error", (error) => {
-        console.error("[Kilo New] ServerManager: ❌ Process error:", error)
+      serverProcess.on("error", (err: NodeJS.ErrnoException) => {
+        console.error("[Kilo New] ServerManager: ❌ Process error:", err)
         if (!resolved) {
-          reject(error)
+          const spawnErr = err as NodeJS.ErrnoException & { spawnargs?: string[] }
+          const code = err.code || err.name || "UNKNOWN"
+          const header = t("server.spawnFailed", { code })
+          const lines = [
+            `Error: ${err.message}`,
+            ...(err.code ? [`Code: ${err.code}`] : []),
+            ...(err.errno !== undefined ? [`Errno: ${err.errno}`] : []),
+            ...(err.syscall ? [`Syscall: ${err.syscall}`] : []),
+            ...(err.path ? [`Path: ${err.path}`] : []),
+            ...(Array.isArray(spawnErr.spawnargs) ? [`Spawn args: ${JSON.stringify(spawnErr.spawnargs)}`] : []),
+          ]
+          const { userMessage, userDetails } = toErrorMessage(header, [...lines, ...stderrLines], cliPath)
+          reject(new ServerStartupError(userMessage, userDetails))
         }
       })
 
-      serverProcess.on("exit", (code) => {
-        console.log("[Kilo New] ServerManager: 🛑 Process exited with code:", code)
+      serverProcess.on("exit", (code, signal) => {
+        console.warn("[Kilo New] ServerManager: 🛑 Process exited:", { code, signal })
         if (this.instance?.process === serverProcess) {
           this.instance = null
-          this.onExit?.(code)
+          this.onExit?.(code, signal)
         }
         if (!resolved) {
-          const { userMessage, userDetails } = toErrorMessage(
-            t("server.processExited", { code: code ?? "null" }),
-            stderrLines,
-            cliPath,
-          )
+          const msg = signal
+            ? t("server.processSignaled", { signal })
+            : t("server.processExited", { code: code ?? "unknown" })
+          const { userMessage, userDetails } = toErrorMessage(msg, stderrLines, cliPath)
           reject(new ServerStartupError(userMessage, userDetails))
         }
       })

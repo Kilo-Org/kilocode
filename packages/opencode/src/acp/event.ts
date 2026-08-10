@@ -42,6 +42,7 @@ export class Subscription {
   private readonly toolStarts = new Set<string>()
   private readonly connectionWaiters = new Set<() => void>()
   private readonly idleWaiters = new Map<string, Set<ReturnType<typeof signal>>>()
+  private readonly idleCounters = new Map<string, number>() // kilocode_change
   private readonly permission: ACPPermission.Handler
   private connected = false
   private started = false
@@ -73,21 +74,38 @@ export class Subscription {
 
   async runUntilIdle<A>(sessionId: string, request: () => Promise<A>) {
     await this.waitUntilConnected()
+    // kilocode_change start - correlate idle waiter with per-session generation count
+    const start = this.idleCounters.get(sessionId) ?? 0
     const waiter = signal()
     const waiters = this.idleWaiters.get(sessionId) ?? new Set()
     waiters.add(waiter)
     this.idleWaiters.set(sessionId, waiters)
 
     try {
-      // Idle is queued after the turn's events, and this subscription awaits each update in order.
       void waiter.promise.catch(() => {})
       const response = await request()
-      await waiter.promise
+      if (this.connected && (this.idleCounters.get(sessionId) ?? 0) === start) {
+        let timer: ReturnType<typeof setTimeout> | undefined
+        try {
+          await Promise.race([
+            waiter.promise,
+            new Promise<void>((resolve) => {
+              timer = setTimeout(resolve, 60_000)
+            }),
+          ]).catch(() => {})
+        } finally {
+          if (timer) clearTimeout(timer)
+        }
+      }
       return response
     } finally {
       waiters.delete(waiter)
-      if (waiters.size === 0) this.idleWaiters.delete(sessionId)
+      if (waiters.size === 0) {
+        this.idleWaiters.delete(sessionId)
+        this.idleCounters.delete(sessionId) // kilocode_change
+      }
     }
+    // kilocode_change end
   }
 
   async handle(event: Event) {
@@ -164,12 +182,22 @@ export class Subscription {
     }
   }
 
-  private async waitUntilConnected() {
-    while (!this.connected) {
-      if (this.abort.signal.aborted) throw new Error("ACP event subscription stopped")
-      await new Promise<void>((resolve) => this.connectionWaiters.add(resolve))
+  // kilocode_change start
+  private async waitUntilConnected(timeoutMs = 5000) {
+    if (this.connected) return
+    let timer: ReturnType<typeof setTimeout> | undefined
+    try {
+      await Promise.race([
+        new Promise<void>((resolve) => this.connectionWaiters.add(resolve)),
+        new Promise<void>((resolve) => {
+          timer = setTimeout(resolve, timeoutMs)
+        }),
+      ])
+    } finally {
+      if (timer) clearTimeout(timer)
     }
   }
+  // kilocode_change end
 
   private disconnected() {
     if (!this.connected) return
@@ -184,6 +212,7 @@ export class Subscription {
   private idle(sessionId: string) {
     const waiters = this.idleWaiters.get(sessionId)
     if (!waiters) return
+    this.idleCounters.set(sessionId, (this.idleCounters.get(sessionId) ?? 0) + 1) // kilocode_change
     this.idleWaiters.delete(sessionId)
     for (const waiter of waiters) waiter.resolve()
   }

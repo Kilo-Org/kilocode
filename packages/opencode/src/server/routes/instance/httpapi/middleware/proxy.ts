@@ -103,8 +103,18 @@ export function http(
     // forward it unchanged (preserving content-type so the client can still parse
     // the structured error, e.g. its `ref`).
     if (response.status >= 500) {
-      const body = yield* response.text.pipe(Effect.catch(() => Effect.succeed("")))
-      const contentType = response.headers["content-type"] ?? "application/json"
+      // kilocode_change start
+      const body = yield* response.stream.pipe(
+        Stream.decodeText(),
+        Stream.runFold(() => "", (acc: string, str: string) => {
+          const needed = 65536 - acc.length
+          return needed > 0 ? acc + (str.length > needed ? str.slice(0, needed) : str) : acc
+        }),
+        Effect.catch(() => Effect.succeed("")),
+      )
+      const contentType =
+        response.headers["content-type"] ?? (body.trim().startsWith("{") ? "application/json" : "text/plain")
+      // kilocode_change end
       headers.delete("content-type")
       yield* Effect.logError("workspace proxy upstream error", {
         url: url.toString(),

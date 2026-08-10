@@ -628,10 +628,32 @@ function newId(): string {
 }
 
 /**
- * Build the close-terminal handler the main component wires to the
- * close button. Picks the next visible tab before dropping the entry
- * so focus flows naturally; notifies the extension last.
+ * Estimate initial terminal geometry from the current DOM container.
+ * Provides best-effort columns and rows so PTY spawn avoids the default
+ * 80-column line width before the first xterm fit pass commits.
  */
+function measureInitialDimensions(
+  placement: TerminalPlacement,
+  font: TerminalFont,
+): { cols: number; rows: number } | undefined {
+  if (typeof document === "undefined") return undefined
+  const selector =
+    placement === "side"
+      ? ".am-side-terminal-layer, .am-side-terminal, .am-diff-panel-wrapper"
+      : ".am-terminal-layer, .am-detail-stack"
+  const host = document.querySelector(selector) as HTMLElement | null
+  const rect = host?.getBoundingClientRect()
+  if (!rect || rect.width <= 0 || rect.height <= 0) return undefined
+  const cellWidth = font.fontSize > 0 ? font.fontSize * 0.6 : 7.2
+  const cellHeight = font.fontSize > 0 ? font.fontSize * 1.2 : 14.4
+  const availableWidth = Math.max(0, rect.width - 30)
+  const availableHeight = Math.max(0, rect.height - 16)
+  return {
+    cols: Math.max(10, Math.floor(availableWidth / cellWidth)),
+    rows: Math.max(3, Math.floor(availableHeight / cellHeight)),
+  }
+}
+
 export function createTerminalHandlers(deps: TerminalHandlerDeps) {
   const activate = (id: string) => {
     deps.state.setActiveId(id)
@@ -645,11 +667,15 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
   const requestNew = () => {
     const sel = deps.getSelection()
     if (sel === null) return
+    const font = deps.getFont()
+    const dims = measureInitialDimensions("tab", font)
     deps.postMessage({
       type: "agentManager.terminal.create",
       createId: newId(),
       placement: "tab",
       worktreeId: sel === deps.LOCAL ? null : sel,
+      cols: dims?.cols,
+      rows: dims?.rows,
     })
   }
 
@@ -659,12 +685,14 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
     // project-namespaced state key and must not leak into the message.
     const sel = deps.getSelection()
     const id = newId()
+    const font = deps.getFont()
+    const dims = measureInitialDimensions("side", font)
     deps.state.beginSide(key, id)
     deps.state.add(key === deps.LOCAL ? null : key, {
       id,
       title: "Terminal",
       wsUrl: "",
-      font: deps.getFont(),
+      font,
       placement: "side",
     })
     deps.state.setSideActive(key, id)
@@ -674,6 +702,8 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
       createId: id,
       placement: "side",
       worktreeId: sel === null || sel === deps.LOCAL ? null : sel,
+      cols: dims?.cols,
+      rows: dims?.rows,
     })
   }
 
@@ -746,8 +776,6 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
           const target = deps.findTab(nextId)
           if (target) deps.selectSessionTab(target.id, deps.isPendingId(target.id))
         }
-      } else {
-        deps.clearSession()
       }
     }
     deps.postMessage({ type: "agentManager.terminal.close", terminalId })
@@ -764,6 +792,14 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
     // unmount its xterm while the backend PTY leaks (no close sent).
     const term = deps.state.sides().find((t) => t.id === terminalId)
     if (!term) return false
+    const key = term.contextKey
+    const active = deps.state.sideActiveFor(key) === terminalId
+    const rest = active ? deps.state.sidesForContext(key).filter((item) => item.id !== terminalId) : []
+    const survivor = rest[rest.length - 1]
+    if (survivor) {
+      deps.state.setSideActive(key, survivor.id)
+      deps.state.requestFocus(survivor.id)
+    }
     if (term.kind) {
       deps.postMessage({ type: "agentManager.terminal.close", terminalId })
       return true
@@ -820,6 +856,33 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
     return true
   }
 
+  /** Close the main terminal that actually owns DOM focus, not just the active tab. */
+  const closeFocused = () => {
+    const id = deps.state.focusedId()
+    if (!id || !deps.state.current().some((term) => term.id === id)) return false
+    closeTerminal(id)
+    return true
+  }
+
+  /** Cycle terminals within one placement, wrapping at either end. */
+  const cycle = (direction: "previous" | "next", placement: "side" | "tab") => {
+    const key = deps.state.sideKey()
+    const list = placement === "side" ? deps.state.sidesForContext(key) : deps.state.current()
+    if (list.length === 0) return false
+    const current = placement === "side" ? deps.state.sideActiveFor(key) : deps.state.activeId()
+    const index = list.findIndex((term) => term.id === current)
+    const start = index === -1 ? (direction === "next" ? -1 : list.length) : index
+    const offset = direction === "next" ? 1 : -1
+    const next = list[(start + offset + list.length) % list.length]!
+    if (placement === "side") {
+      deps.state.setSideActive(key, next.id)
+      deps.state.requestFocus(next.id)
+      return true
+    }
+    activate(next.id)
+    return true
+  }
+
   return {
     closeTerminal,
     closeSide,
@@ -834,6 +897,8 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
     ensureSide,
     addSide,
     closeActive,
+    closeFocused,
+    cycle,
   }
 }
 

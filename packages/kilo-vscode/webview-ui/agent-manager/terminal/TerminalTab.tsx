@@ -50,6 +50,9 @@ interface Props {
    *  layer tracks this as `focusedId` so `Cmd+W` can target the
    *  terminal that actually has the cursor. */
   onFocusChange?: (focused: boolean) => void
+  /** Handle the Agent Manager prompt shortcut locally because xterm's
+   *  textarea does not reliably forward custom commands to the workbench. */
+  onFocusPrompt?: () => void
   /** Reports OSC window-title escape codes (`ESC ] 0/1/2 ; title BEL`)
    *  sent by the shell or running programs — fish sets it to the active
    *  command, oh-my-zsh to user@host:cwd, vim to the file name. The
@@ -131,7 +134,7 @@ function isAgentManagerShortcut(e: KeyboardEvent): boolean {
   const key = e.key.toLowerCase()
   if (e.altKey && ["arrowleft", "arrowright", "arrowup", "arrowdown"].includes(key)) return true
   if (["t", "w", "n", "d", "e", "f"].includes(key)) return true
-  if (e.shiftKey && ["w", "n", "o", "r", "m", "/", "?"].includes(key)) return true
+  if (e.shiftKey && ["t", "w", "n", "o", "r", "m", "[", "]", "/", "?"].includes(key)) return true
   if (/^[1-9]$/.test(key)) return true
   if (key === "/") return true
   return false
@@ -149,8 +152,12 @@ export const TerminalTab: Component<Props> = (props) => {
 
   onMount(() => {
     const term = new Terminal({
-      convertEol: true,
+      // PTY output already contains terminal line endings. Converting LF to
+      // CRLF here corrupts raw PTY output and is especially visible when a
+      // narrow terminal wraps and redraws the prompt.
+      convertEol: false,
       cursorBlink: true,
+      cursorInactiveStyle: "outline",
       fontFamily: props.font.fontFamily,
       fontSize: props.font.fontSize,
       scrollback: 5000,
@@ -160,21 +167,23 @@ export const TerminalTab: Component<Props> = (props) => {
     const fit = new FitAddon()
     term.loadAddon(fit)
     term.open(host)
-    // Fit on the next frame — `host` might still have 0px dimensions
-    // during the initial layout pass otherwise.
-    requestAnimationFrame(() => {
-      try {
-        fit.fit()
-      } catch (err) {
-        // Host still detached at mount time. ResizeObserver will retry
-        // once layout kicks in. Logged so regressions don't hide.
-        log("initial fit() threw", err)
-      }
-    })
+    // Unicode width must be configured before the first PTY bytes are parsed.
+    // Loading it later can leave already-wrapped graphemes with stale cell
+    // widths, which moves the cursor in narrow terminals.
+    term.loadAddon(new UnicodeGraphemesAddon())
+    term.unicode.activeVersion = "15-graphemes"
 
-    // Pass agent-manager hotkeys through to the parent key handler so
-    // ⌘T / ⌘W / ⌘⌥← etc. still work while the terminal is focused.
-    term.attachCustomKeyEventHandler((event) => !isAgentManagerShortcut(event))
+    // Pass Agent Manager hotkeys through to the parent key handler so
+    // ⌘T / ⌘⇧T / ⌘W / terminal cycling / ⌘⌥← still work while focused.
+    term.attachCustomKeyEventHandler((event) => {
+      const prompt =
+        (event.metaKey || event.ctrlKey) && event.shiftKey && !event.altKey && event.key.toLowerCase() === "m"
+      if (prompt) {
+        if (event.type === "keydown") props.onFocusPrompt?.()
+        return false
+      }
+      return !isAgentManagerShortcut(event)
+    })
 
     // Track DOM focus so the state layer knows which terminal holds the
     // cursor (drives Cmd+W targeting). focusout is ignored when focus
@@ -344,11 +353,9 @@ export const TerminalTab: Component<Props> = (props) => {
     }
     const disposeData = term.onData(send)
     const disposeBinary = term.onBinary(send)
-    open(props.wsUrl)
-
     // These addons are not needed to paint the initial prompt. Defer them
-    // until after the first frame so their startup work, especially the
-    // Unicode 15 width tables, does not delay the shell connection.
+    // until after the first frame so their startup work does not delay the
+    // shell connection.
     const loadAddons = () => {
       deferred = undefined
       if (closed) return
@@ -363,16 +370,8 @@ export const TerminalTab: Component<Props> = (props) => {
       )
       // OSC 52 clipboard support for shell programs such as tmux and neovim.
       term.loadAddon(new ClipboardAddon())
-      // Use grapheme-aware width tables for newer emoji and ZWJ sequences.
-      term.loadAddon(new UnicodeGraphemesAddon())
-      term.unicode.activeVersion = "15-graphemes"
       term.refresh(0, Math.max(0, term.rows - 1))
     }
-    frame = requestAnimationFrame(() => {
-      frame = undefined
-      deferred = requestAnimationFrame(loadAddons)
-    })
-
     const restarted = (url: string) => {
       open(url)
     }
@@ -383,16 +382,28 @@ export const TerminalTab: Component<Props> = (props) => {
     let resizeTimer: ReturnType<typeof setTimeout> | undefined
     let lastCols = term.cols
     let lastRows = term.rows
-    const syncSize = () => {
-      if (term.cols === lastCols && term.rows === lastRows) return
+    let synced = false
+    const syncSize = (force = false) => {
+      if (!force && synced && term.cols === lastCols && term.rows === lastRows) return
       lastCols = term.cols
       lastRows = term.rows
+      synced = true
       vscode.postMessage({
         type: "agentManager.terminal.resize",
         terminalId: props.terminalId,
         cols: term.cols,
         rows: term.rows,
       })
+    }
+    const fitNow = () => {
+      try {
+        fit.fit()
+        if (props.active) syncSize(true)
+      } catch (err) {
+        // Host still detached at mount time. ResizeObserver will retry
+        // once layout kicks in. Logged so regressions don't hide.
+        log("fit() threw", err)
+      }
     }
     const ro = new ResizeObserver(() => {
       if (!props.active) return
@@ -410,6 +421,16 @@ export const TerminalTab: Component<Props> = (props) => {
       resizeTimer = setTimeout(syncSize, RESIZE_DEBOUNCE_MS)
     })
     ro.observe(host)
+    // Wait for the first committed layout before attaching the socket. This
+    // prevents the shell from emitting its first prompt at xterm's default
+    // 80 columns, which is most visible in a narrow side panel.
+    frame = requestAnimationFrame(() => {
+      frame = undefined
+      if (closed) return
+      fitNow()
+      open(props.wsUrl)
+      deferred = requestAnimationFrame(loadAddons)
+    })
 
     // ---- Repaint recovery ----
     //
@@ -440,7 +461,7 @@ export const TerminalTab: Component<Props> = (props) => {
       if (!isRenderable()) return
       try {
         fit.fit()
-        syncSize()
+        syncSize(!synced)
       } catch (err) {
         // Layout not settled yet; ResizeObserver retries on next change.
         log("repaint fit() threw", err)
@@ -473,6 +494,9 @@ export const TerminalTab: Component<Props> = (props) => {
         if (message.terminalId === props.terminalId && !ws) {
           term.options.fontFamily = message.font.fontFamily
           term.options.fontSize = message.font.fontSize
+          // Optimistic side terminals can fit before their backend PTY exists;
+          // force the first resize again once the created response arrives.
+          fitNow()
           scheduleRepaint()
           open(message.wsUrl)
         }

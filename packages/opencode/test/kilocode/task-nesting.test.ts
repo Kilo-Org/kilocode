@@ -318,6 +318,11 @@ describe("Kilo task nesting", () => {
                 action: "deny",
               },
               {
+                permission: "suggest",
+                pattern: "*",
+                action: "deny",
+              },
+              {
                 permission: "interactive_terminal",
                 pattern: "*",
                 action: "deny",

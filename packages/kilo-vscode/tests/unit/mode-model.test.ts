@@ -13,8 +13,15 @@ describe("modelPatch", () => {
     })
   })
 
-  it("clears stale variant when next model does not support it", () => {
+  it("keeps the nearest supported effort when the exact variant is unavailable", () => {
     expect(modelPatch("kilo", "anthropic/claude-sonnet-4-6", ["low", "medium"], "high")).toEqual({
+      model: "kilo/anthropic/claude-sonnet-4-6",
+      variant: "medium",
+    })
+  })
+
+  it("clears an unknown variant when next model does not support it", () => {
+    expect(modelPatch("kilo", "anthropic/claude-sonnet-4-6", ["low", "medium"], "thinking")).toEqual({
       model: "kilo/anthropic/claude-sonnet-4-6",
       variant: null,
     })

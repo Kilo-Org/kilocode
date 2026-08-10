@@ -101,7 +101,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "Sljedeća kartica",
   "agentManager.shortcuts.newTab": "Nova kartica",
   "agentManager.shortcuts.closeTab": "Zatvori karticu",
-  "agentManager.shortcuts.toggleTerminal": "Prebaci terminal",
+  "agentManager.shortcuts.toggleTerminal": "Fokusiraj / sakrij terminal",
   "agentManager.shortcuts.runScript": "Pokreni skriptu",
   "agentManager.run.options": "Opcije pokretanja",
   "agentManager.run.configure": "Konfiguriši skriptu za pokretanje",

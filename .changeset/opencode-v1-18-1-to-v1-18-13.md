@@ -3,4 +3,4 @@
 "kilo-code": patch
 ---
 
-Adopt OpenCode v1.18.1 through v1.18.13 improvements, including model compatibility, MCP reliability, and TUI enhancements.
+Adopt upstream improvements from v1.18.1 through v1.18.13, including model compatibility, MCP reliability, and TUI enhancements.
