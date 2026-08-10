@@ -59,6 +59,8 @@ export namespace CloudCatalog {
     const env = options.env ?? process.env
 
     const request = Effect.fn("CloudCatalog.request")(function* <A>(url: string, input: Input, schema: z.ZodType<A>) {
+      const defaults = url.endsWith("/defaults") || url.includes("/defaults?")
+      const auth = !defaults || input.organizationID ? { Authorization: `Bearer ${Redacted.value(input.token)}` } : {}
       const req = yield* Effect.try({
         try: () =>
           new Request(url, {
@@ -69,7 +71,7 @@ export namespace CloudCatalog {
                 input.organizationID ? { kilocodeOrganizationId: input.organizationID } : undefined,
               ),
               "X-KILOCODE-FEATURE": "kilo-cli",
-              Authorization: `Bearer ${Redacted.value(input.token)}`,
+              ...auth,
             },
             redirect: "error",
             signal: AbortSignal.timeout(TIMEOUT),

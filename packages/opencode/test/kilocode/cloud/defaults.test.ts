@@ -304,6 +304,7 @@ it.instance(
           Effect.sync(() => {
             expect(resolved.model).toBe("anthropic/default")
             expect(requests.map((request) => request.path)).toEqual(["/api/openrouter/models", "/api/defaults"])
+            expect(requests[1].authorization).toBeNull()
           }),
         ),
         Effect.provide(

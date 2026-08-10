@@ -107,7 +107,7 @@ export async function fetchDefaultModel(token?: string, organizationId?: string)
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     }
-    if (token) {
+    if (token && organizationId) {
       headers.Authorization = `Bearer ${token}`
     }
 
