@@ -95,9 +95,8 @@ export async function fetchBalance(token: string, organizationId?: string): Prom
 export const getKiloBalance = fetchBalance
 
 /**
- * Fetch default model for a given organization context
- * When token is provided, returns the authenticated user's default model
- * When no token is provided, returns the default free model for anonymous usage
+ * Fetch default model for a given organization context.
+ * `/api/defaults` is public — send Authorization only when an organization id is present.
  */
 export async function fetchDefaultModel(token?: string, organizationId?: string): Promise<string> {
   const path = organizationId ? `/api/organizations/${organizationId}/defaults` : `/api/defaults`
@@ -107,7 +106,7 @@ export async function fetchDefaultModel(token?: string, organizationId?: string)
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     }
-    if (token) {
+    if (token && organizationId) {
       headers.Authorization = `Bearer ${token}`
     }
 

@@ -303,7 +303,20 @@ it.instance(
         Effect.tap((resolved) =>
           Effect.sync(() => {
             expect(resolved.model).toBe("anthropic/default")
-            expect(requests.map((request) => request.path)).toEqual(["/api/openrouter/models", "/api/defaults"])
+            expect(requests).toEqual([
+              {
+                authorization: "Bearer stored-api-token",
+                feature: "kilo-cli",
+                organization: null,
+                path: "/api/openrouter/models",
+              },
+              {
+                authorization: null,
+                feature: "kilo-cli",
+                organization: null,
+                path: "/api/defaults",
+              },
+            ])
           }),
         ),
         Effect.provide(
@@ -314,6 +327,47 @@ it.instance(
           ),
         ),
       ),
+    ),
+  {
+    config: { agent: { code: { model: null } } },
+  },
+)
+
+it.instance(
+  "authorizes organization defaults but not the public defaults endpoint",
+  () =>
+    withCatalog(["anthropic/default"], "anthropic/default", (url, requests) =>
+      Effect.gen(function* () {
+        const organizationID = "11111111-1111-4111-8111-111111111111"
+        const resolved = yield* CloudDefaults.resolve().pipe(
+          Effect.provide(
+            Layer.mergeAll(
+              authLayer(oauth("stored-token", organizationID)),
+              stateLayer(state()),
+              CloudCatalog.layer({ env: { KILO_API_URL: url.origin } }),
+            ),
+          ),
+        )
+        expect(resolved).toMatchObject({
+          mode: "code",
+          model: "anthropic/default",
+          organizationID,
+        })
+        expect(requests).toEqual([
+          {
+            authorization: "Bearer stored-token",
+            feature: "kilo-cli",
+            organization: organizationID,
+            path: `/api/organizations/${organizationID}/models`,
+          },
+          {
+            authorization: "Bearer stored-token",
+            feature: "kilo-cli",
+            organization: organizationID,
+            path: `/api/organizations/${organizationID}/defaults`,
+          },
+        ])
+      }),
     ),
   {
     config: { agent: { code: { model: null } } },

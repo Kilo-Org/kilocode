@@ -58,7 +58,12 @@ export namespace CloudCatalog {
     const fetcher = options.fetch ?? ((request: Request) => globalThis.fetch(request))
     const env = options.env ?? process.env
 
-    const request = Effect.fn("CloudCatalog.request")(function* <A>(url: string, input: Input, schema: z.ZodType<A>) {
+    const request = Effect.fn("CloudCatalog.request")(function* <A>(
+      url: string,
+      input: Input,
+      schema: z.ZodType<A>,
+      auth = true,
+    ) {
       const req = yield* Effect.try({
         try: () =>
           new Request(url, {
@@ -69,7 +74,7 @@ export namespace CloudCatalog {
                 input.organizationID ? { kilocodeOrganizationId: input.organizationID } : undefined,
               ),
               "X-KILOCODE-FEATURE": "kilo-cli",
-              Authorization: `Bearer ${Redacted.value(input.token)}`,
+              ...(auth ? { Authorization: `Bearer ${Redacted.value(input.token)}` } : {}),
             },
             redirect: "error",
             signal: AbortSignal.timeout(TIMEOUT),
@@ -165,7 +170,7 @@ export namespace CloudCatalog {
       const path = input.organizationID
         ? `../organizations/${encodeURIComponent(input.organizationID)}/defaults`
         : "../defaults"
-      return (yield* request(new URL(path, root).toString(), input, Defaults)).defaultModel
+      return (yield* request(new URL(path, root).toString(), input, Defaults, !!input.organizationID)).defaultModel
     })
 
     return Layer.succeed(Service, Service.of({ models, defaultModel }))
