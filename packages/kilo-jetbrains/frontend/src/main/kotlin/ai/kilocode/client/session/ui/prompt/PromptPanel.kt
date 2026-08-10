@@ -127,11 +127,14 @@ class PromptPanel(
         private val INVALID_KEY = CodeInsightColors.WRONG_REFERENCES_ATTRIBUTES
     }
 
-    val mode = ModePicker()
+    // Prompt-bar pickers blend into the prompt background when idle and only show the standard
+    // hover fill on pointer-over (idleFill = null paints nothing behind the label).
+    val mode = ModePicker().apply { idleFill = null }
     val model = ModelPicker().apply {
         placement = ModelPicker.Placement.ABOVE
+        idleFill = null
     }
-    val reasoning = ReasoningPicker()
+    val reasoning = ReasoningPicker().apply { idleFill = null }
     var onReset: () -> Unit = {}
     var onChange: () -> Unit = {}
     var onAutoApproveToggle: (Boolean) -> Unit = {}
@@ -411,7 +414,7 @@ class PromptPanel(
     @RequiresEdt
     private fun chrome(ed: EditorEx) {
         if (ed.isDisposed) return
-        style.applyPromptToEditor(ed)
+        style.applyPromptToEditor(ed, SessionUiStyle.View.Prompt.bgColor(style))
         if (ed.isDisposed) return
     }
 
@@ -497,11 +500,12 @@ class PromptPanel(
     @RequiresEdt
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
-        background = style.editorScheme.defaultBackground
-        shell.background = style.editorScheme.defaultBackground
+        val bg = SessionUiStyle.View.Prompt.bgColor(style)
+        background = bg
+        shell.background = bg
         style.applyTranscriptToField(editor)
         editor.getEditor(false)?.let(::chrome)
-        editor.background = style.editorBackground
+        editor.background = bg
         syncEditorHeight()
         syncAutoApprove()
         syncHighlights()

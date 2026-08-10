@@ -80,7 +80,7 @@ data class SessionEditorStyle(
     }
 
     /** Apply the visible prompt-input text styling to embedded session editor components. */
-    fun applyPromptToEditor(editor: EditorEx) {
+    fun applyPromptToEditor(editor: EditorEx, background: Color = editorBackground) {
         if (editor.isDisposed) return
         applyTranscriptToEditor(editor)
         if (editor.isDisposed) return
@@ -92,11 +92,11 @@ data class SessionEditorStyle(
             0,
             JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_HORIZONTAL_INSET),
         )
-        editor.backgroundColor = editorBackground
-        editor.component.background = editorBackground
-        editor.contentComponent.background = editorBackground
-        editor.scrollPane.background = editorBackground
-        editor.scrollPane.viewport.background = editorBackground
+        editor.backgroundColor = background
+        editor.component.background = background
+        editor.contentComponent.background = background
+        editor.scrollPane.background = background
+        editor.scrollPane.viewport.background = background
         editor.scrollPane.horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
         editor.scrollPane.revalidate()
         editor.scrollPane.repaint()

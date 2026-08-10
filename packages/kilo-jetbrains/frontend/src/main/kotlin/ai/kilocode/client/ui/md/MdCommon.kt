@@ -94,7 +94,7 @@ internal object MdCommon {
             ?: fg(style, DefaultLanguageHighlighterColors.DOC_COMMENT)
             ?: UIUtil.getContextHelpForeground()
         val border = color(style, EditorColors.PREVIEW_BORDER_COLOR) ?: UiStyle.Colors.contentBorder()
-        val blockBg = bg(style, DefaultLanguageHighlighterColors.DOC_CODE_BLOCK) ?: style.editorBackground
+        val blockBg = UiStyle.Colors.codeBlockBackground(style.editorScheme)
         return MdStyle(
             font = style.transcriptFont,
             foreground = style.editorForeground,

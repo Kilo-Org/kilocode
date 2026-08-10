@@ -99,7 +99,7 @@ class MessageView(
 
     init {
         isOpaque = false
-        if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) background = style.editorScheme.defaultBackground
+        if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) background = SessionUiStyle.View.Prompt.bgColor(style)
         border = assistantBorder()
 
         // Populate content that already exists (e.g. after loadHistory)
@@ -439,7 +439,7 @@ class MessageView(
     @RequiresEdt
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
-        if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) background = style.editorScheme.defaultBackground
+        if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) background = SessionUiStyle.View.Prompt.bgColor(style)
         for (view in parts.values) view.applyStyle(style)
         refresh()
     }
@@ -481,14 +481,17 @@ class MessageView(
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
             val arc = JBUI.scale(JBUI.getInt("Button.arc", SessionUiStyle.View.Prompt.CORNER_ARC))
             val pt = if (box === this) Point() else SwingUtilities.convertPoint(box, Point(), this)
-            val x = pt.x
-            val y = pt.y
-            val w = box.width - 1
-            val h = box.height - 1
-            g2.color = style.editorScheme.defaultBackground
-            g2.fillRoundRect(x, y, box.width, box.height, arc, arc)
-            g2.color = SessionUiStyle.View.Outline.color()
-            if (w > 0 && h > 0) g2.drawRoundRect(x, y, w, h, arc, arc)
+            val bg = SessionUiStyle.View.Prompt.bgColor(style)
+            g2.color = bg
+            g2.fillRoundRect(pt.x, pt.y, box.width, box.height, arc, arc)
+            // When the prompt shares the session background there is no fill contrast, so draw the
+            // outline to keep the bubble visible.
+            if (bg.rgb == style.editorBackground.rgb) {
+                val w = box.width - 1
+                val h = box.height - 1
+                g2.color = SessionUiStyle.View.Outline.color()
+                if (w > 0 && h > 0) g2.drawRoundRect(pt.x, pt.y, w, h, arc, arc)
+            }
         } finally {
             g2.dispose()
         }

@@ -96,6 +96,16 @@ object SessionUiStyle {
 
         /** Prompt input dimensions and chrome inside the session view. */
         object Prompt {
+            /**
+             * Background of the prompt input and the transcript user-prompt bubble. Uses a dedicated
+             * theme key so the prompt surface can be restyled independently, defaulting to the
+             * code-fragment background so the prompt matches rendered code blocks.
+             */
+            fun bgColor(style: SessionEditorStyle): Color = JBColor.namedColor(
+                "Kilo.Session.Prompt.Background",
+                UiStyle.Colors.codeBlockBackground(style.editorScheme),
+            )
+
             const val EDITOR_LINES = 1
             const val EDITOR_CHROME = 16
             const val SEND_BUTTON_SIZE = 24

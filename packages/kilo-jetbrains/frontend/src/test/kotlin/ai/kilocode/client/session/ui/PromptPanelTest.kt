@@ -138,11 +138,11 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertEquals(style.transcriptFont.size, font.size)
     }
 
-    fun `test prompt input uses editor background`() {
+    fun `test prompt input uses prompt background`() {
         val style = SessionEditorStyle.current()
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
 
-        assertEquals(style.editorScheme.defaultBackground, panel.defaultFocusedComponent.background)
+        assertEquals(SessionUiStyle.View.Prompt.bgColor(style), panel.defaultFocusedComponent.background)
     }
 
     fun `test prompt editor hides floating toolbar`() {
@@ -249,7 +249,12 @@ class PromptPanelTest : BasePlatformTestCase() {
             HighlighterColors.TEXT,
             TextAttributes(Color(0xEA, 0xEA, 0xEA), bg, null, null, Font.PLAIN),
         )
+        scheme.setAttributes(
+            DefaultLanguageHighlighterColors.DOC_CODE_BLOCK,
+            TextAttributes(null, bg, null, null, Font.PLAIN),
+        )
         val style = SessionEditorStyle.create(scheme = scheme)
+        val promptBg = SessionUiStyle.View.Prompt.bgColor(style)
 
         realize(panel, 260, 400)
         val editor = (panel.defaultFocusedComponent as EditorTextField).getEditor(false)!!
@@ -259,11 +264,11 @@ class PromptPanelTest : BasePlatformTestCase() {
 
         panel.applyStyle(style)
 
-        assertEquals(bg, panel.defaultFocusedComponent.background)
-        assertEquals(bg, editor.backgroundColor)
-        assertEquals(bg, editor.scrollPane.background)
-        assertEquals(bg, editor.scrollPane.viewport.background)
-        assertEquals(bg, editor.contentComponent.background)
+        assertEquals(promptBg, panel.defaultFocusedComponent.background)
+        assertEquals(promptBg, editor.backgroundColor)
+        assertEquals(promptBg, editor.scrollPane.background)
+        assertEquals(promptBg, editor.scrollPane.viewport.background)
+        assertEquals(promptBg, editor.contentComponent.background)
     }
 
     fun `test prompt editor grows when lines are added`() {
