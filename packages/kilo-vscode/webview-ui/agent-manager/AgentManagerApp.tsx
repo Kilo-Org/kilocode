@@ -567,7 +567,7 @@ const AgentManagerContent: Component = () => {
 
   const togglePRPanel = () => {
     setHistory(false)
-    setReviewActive(false)
+    if (reviewActive()) closeReviewTab()
     setSidePanel((prev) => (prev === SidePanel.PR ? null : SidePanel.PR))
   }
 
