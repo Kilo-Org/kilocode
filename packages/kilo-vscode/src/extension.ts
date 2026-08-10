@@ -16,6 +16,7 @@ import { registerAutocompleteProvider } from "./services/autocomplete"
 import { ensureBackendForAutocomplete } from "./services/autocomplete/ensure-backend"
 import { AutocompleteServiceManager } from "./services/autocomplete/AutocompleteServiceManager"
 import { AttentionService } from "./services/attention"
+import { CaffeinationService } from "./services/caffeination"
 import { BrowserAutomationService } from "./services/browser-automation"
 import { TelemetryEventName, TelemetryProxy } from "./services/telemetry"
 import { registerCommitMessageService } from "./services/commit-message"
@@ -29,6 +30,7 @@ import { createGitExecutable } from "./util/git-executable"
 import { isCursorHost } from "./utils"
 
 let agentManager: AgentManagerProvider | undefined
+let caffeination: CaffeinationService | undefined
 let shuttingDown = false
 
 const RESTORE_KEY = "kilo.workbench.restore"
@@ -160,10 +162,11 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Create Agent Manager provider for editor panel
   const agentManagerHost = new VscodeHost(context.extensionUri, connectionService, context, remoteService)
+  caffeination = new CaffeinationService(connectionService)
   const git = createGitExecutable({
     log: (message) => console.warn(`[Kilo New] ${message}`),
   })
-  const agentManagerProvider = new AgentManagerProvider(agentManagerHost, connectionService, git)
+  const agentManagerProvider = new AgentManagerProvider(agentManagerHost, connectionService, caffeination, git)
   agentManagerProvider.onPanelVisibilityChange((visible) => remember({ agentManager: visible }))
   agentManager = agentManagerProvider
   context.subscriptions.push(agentManagerProvider)
@@ -437,6 +440,10 @@ export function activate(context: vscode.ExtensionContext) {
       await target.waitForReady()
       await target.toggleMemory()
     }),
+    vscode.commands.registerCommand("kilo-code.new.toggleCaffeination", () => {
+      if (!caffeination) return
+      return caffeination.setEnabled(!caffeination.getState().enabled)
+    }),
     // legacy-migration start
     vscode.commands.registerCommand("kilo-code.new.openMigrationWizard", () => {
       provider.postMessage({ type: "migrationState", needed: true, source: "legacy" })
@@ -604,6 +611,7 @@ export function activate(context: vscode.ExtensionContext) {
       unsubscribeStateChange()
       attention.dispose()
       browserAutomationService.dispose()
+      void caffeination?.dispose()
       provider.dispose()
       notebookBridge.dispose()
       connectionService.dispose()
@@ -614,6 +622,7 @@ export function activate(context: vscode.ExtensionContext) {
 export async function deactivate() {
   shuttingDown = true
   await agentManager?.shutdown()
+  await caffeination?.dispose()
   TelemetryProxy.getInstance().shutdown()
 }
 

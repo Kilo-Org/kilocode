@@ -10,6 +10,8 @@ import type { LanguageContextValue } from "../src/context/language"
 import { parseBindingTokens } from "./keybind-tokens"
 import { SidebarSearchMenu, type SidebarSearchMenuRef } from "./SidebarSearchMenu"
 import type { SidebarSearchItem } from "./sidebar-search"
+import { CaffeinationButton } from "./CaffeinationButton"
+import type { CaffeinationState } from "../src/types/messages"
 
 interface WorktreeSectionActionsProps {
   items: Accessor<SidebarSearchItem[]>
@@ -27,6 +29,8 @@ interface WorktreeSectionActionsProps {
   onShortcuts: () => void
   onSetup: () => void
   onBranch: () => void
+  caffeination: () => CaffeinationState
+  onToggleCaffeination: () => void
 }
 
 export const WorktreeSectionActions: Component<WorktreeSectionActionsProps> = (props) => (
@@ -108,6 +112,9 @@ export const WorktreeSectionActions: Component<WorktreeSectionActionsProps> = (p
           onClick={props.onShortcuts}
         />
       </TooltipKeybind>
+    </Show>
+    <CaffeinationButton t={props.t} state={props.caffeination} onToggle={props.onToggleCaffeination} />
+    <Show when={props.git}>
       <DropdownMenu gutter={4} placement="bottom-end">
         <DropdownMenu.Trigger
           as={IconButton}

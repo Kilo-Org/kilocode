@@ -211,4 +211,8 @@ export const dict = {
   "agentManager.import.noBranchesFound": "لم يتم العثور على فروع.",
   "agentManager.import.noBranchesHint": "الصق رابط PR أعلاه أو أنشئ Worktree جديدًا.",
   "agentManager.import.failed": "فشل الاستيراد",
+  "agentManager.caffeination.toggle": "إبقاء الكمبيوتر مستيقظًا",
+  "agentManager.caffeination.armed": "تم تفعيل وضع إبقاء الكمبيوتر مستيقظًا؛ انقر للتعطيل",
+  "agentManager.caffeination.active": "يتم إبقاء الكمبيوتر مستيقظًا",
+  "agentManager.caffeination.unavailable": "وضع إبقاء الكمبيوتر مستيقظًا غير متاح على هذا النظام الأساسي",
 }

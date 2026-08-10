@@ -216,4 +216,8 @@ export const dict = {
   "agentManager.import.noBranchesFound": "Aucune branche trouvée.",
   "agentManager.import.noBranchesHint": "Collez une URL de PR ci-dessus ou créez un nouveau Worktree.",
   "agentManager.import.failed": "Échec de l'importation",
+  "agentManager.caffeination.toggle": "Garder l'ordinateur éveillé",
+  "agentManager.caffeination.armed": "Mode veille active activé ; cliquez pour désactiver",
+  "agentManager.caffeination.active": "Ordinateur maintenu éveillé",
+  "agentManager.caffeination.unavailable": "Le mode veille active n'est pas disponible sur cette plateforme",
 }

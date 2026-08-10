@@ -2,6 +2,7 @@ import * as fs from "fs"
 import * as path from "path"
 import type { KiloClient, Session } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../services/cli-backend"
+import type { CaffeinationService } from "../services/caffeination"
 import { getErrorMessage, sessionToWebview } from "../kilo-provider-utils"
 import { samePath } from "./project/paths"
 import { resolveLocalDiffTarget } from "../diff/shared/target"
@@ -126,6 +127,7 @@ export class AgentManagerProvider implements Disposable {
   constructor(
     private readonly host: Host,
     private readonly connectionService: KiloConnectionService,
+    private readonly caffeination: CaffeinationService,
     binary: GitExecutable = () => Promise.resolve("git"),
   ) {
     this.outputChannel = host.createOutput("Kilo Agent Manager")
@@ -157,6 +159,7 @@ export class AgentManagerProvider implements Disposable {
       this.destination.sync(destination)
       this.postToWebview({ type: "agentManager.terminal.destinationChanged", destination })
     })
+    caffeination.onChange((state) => this.postToWebview({ type: "agentManager.caffeination", ...state }))
     this.run = createRunController({
       manager: this.scripts.manager,
       root: () => this.getRoot(),
@@ -793,7 +796,11 @@ export class AgentManagerProvider implements Disposable {
       this.state?.setSidebarCollapsed(m.collapsed)
       return null
     }
-    if (this.handleSection(m)) return null
+    if (m.type === "agentManager.setCaffeination") {
+      void this.caffeination.setEnabled(m.enabled)
+      return null
+    }
+    if (handleSection(this.state, m, this.pushState.bind(this), this.log.bind(this))) return null
     if (m.type === "agentManager.setReviewDiffStyle") {
       this.state?.setReviewDiffStyle(m.style)
       return null
@@ -905,6 +912,7 @@ export class AgentManagerProvider implements Disposable {
     // instance are reaped by the router's generation guard.
     void this.terminalRouter.dispose()
     this.scripts.manager.snapshot()
+    this.postToWebview({ type: "agentManager.caffeination", ...this.caffeination.getState() })
     this.log(
       `onRequestState: stateReady=${this.stateReady ? "pending" : "missing"}, state=${this.state ? "ok" : "missing"}`,
     )
@@ -1842,15 +1850,6 @@ export class AgentManagerProvider implements Disposable {
       return
     await this.waitForStateReady("openAdvancedWorktree")
     queueMicrotask(() => this.postToWebview({ type: "action", action: "advancedWorktree" }))
-  }
-
-  private handleSection(m: AgentManagerInMessage): boolean {
-    return handleSection(
-      this.state,
-      m,
-      () => this.pushState(),
-      (...args) => this.log(...args),
-    )
   }
 
   public postMessage(message: unknown): void {

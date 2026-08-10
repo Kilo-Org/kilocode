@@ -108,6 +108,17 @@ export interface RunStatus {
   error?: string
 }
 
+export interface CaffeinationState {
+  enabled: boolean
+  active: boolean
+  available: boolean
+  error?: string
+}
+
+export interface AgentManagerCaffeinationMessage extends CaffeinationState {
+  type: "agentManager.caffeination"
+}
+
 export interface ManagedSessionState {
   id: string
   worktreeId: string | null
