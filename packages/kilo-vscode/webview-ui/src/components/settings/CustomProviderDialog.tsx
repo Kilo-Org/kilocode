@@ -15,6 +15,7 @@ import { useProvider } from "../../context/provider"
 import { useVSCode } from "../../context/vscode"
 import type { ExtensionMessage, ProviderAuthState, ProviderConfig } from "../../types/messages"
 import { createProviderAction } from "../../utils/provider-action"
+import { configMessage } from "../../utils/open-config"
 import { MASKED_CUSTOM_PROVIDER_KEY, resolveCustomProviderKey } from "../../../../src/shared/custom-provider"
 import {
   CUSTOM_PROVIDER_PACKAGE,
@@ -89,6 +90,7 @@ function modes(raw: unknown): Modalities {
 function parseVariant([name, cfg]: [string, Record<string, unknown>]): VariantEntry {
   return {
     name,
+    raw: cfg,
     enableThinking: typeof cfg.enable_thinking === "boolean" ? cfg.enable_thinking : undefined,
     thinking:
       typeof cfg.thinking === "object" && cfg.thinking !== null
@@ -460,25 +462,6 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     setErrors("headers", (v) => v.filter((_, i) => i !== index))
   }
 
-  function addVariant(mi: number) {
-    const blank: VariantEntry = {
-      name: "",
-      enableThinking: undefined,
-      thinking: undefined,
-      splitReasoning: undefined,
-      reasoningEffort: undefined,
-      outputEffort: undefined,
-      chatTemplateArgs: undefined,
-    }
-    setForm("models", mi, "variants", (v) => [...v, blank])
-    setErrors("models", mi, "variants", (v) => [...(v ?? []), {}])
-  }
-
-  function removeVariant(mi: number, vi: number) {
-    setForm("models", mi, "variants", (v) => v.filter((_, i) => i !== vi))
-    setErrors("models", mi, "variants", (v) => (v ?? []).filter((_, i) => i !== vi))
-  }
-
   function validate() {
     const output = validateCustomProvider({
       form,
@@ -581,6 +564,19 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
               {language.t("provider.custom.description.link")}
             </a>
             {language.t("provider.custom.description.suffix")}
+            <Show when={editing()}>
+              <div style={{ "margin-top": "8px" }}>
+                <a
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    vscode.postMessage(configMessage("global", language.t))
+                  }}
+                >
+                  {language.t("provider.custom.edit.advanced")}
+                </a>
+              </div>
+            </Show>
           </div>
 
           <div style={{ display: "flex", "flex-direction": "column", gap: "16px" }}>
@@ -673,7 +669,6 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
               {(m, i) => (
                 <ModelCard
                   m={m}
-                  i={i}
                   errors={errors.models[i()] ?? {}}
                   t={language.t}
                   canRemove={form.models.length > 1}
@@ -682,23 +677,6 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
                   onChangeReasoning={(v) => setForm("models", i(), "reasoning", v)}
                   onChangeSupportsImages={(v) => setForm("models", i(), "supportsImages", v)}
                   onRemove={() => removeModel(i())}
-                  onAddVariant={() => addVariant(i())}
-                  onRemoveVariant={(vi) => removeVariant(i(), vi)}
-                  onChangeVariantName={(vi, val) => setForm("models", i(), "variants", vi, "name", val)}
-                  onChangeVariantEnableThinking={(vi, val) =>
-                    setForm("models", i(), "variants", vi, "enableThinking", val)
-                  }
-                  onChangeVariantThinking={(vi, val) => setForm("models", i(), "variants", vi, "thinking", val)}
-                  onChangeVariantSplitReasoning={(vi, val) =>
-                    setForm("models", i(), "variants", vi, "splitReasoning", val)
-                  }
-                  onChangeVariantReasoningEffort={(vi, val) =>
-                    setForm("models", i(), "variants", vi, "reasoningEffort", val)
-                  }
-                  onChangeVariantOutputEffort={(vi, val) => setForm("models", i(), "variants", vi, "outputEffort", val)}
-                  onChangeVariantChatTemplateArgs={(vi, val) =>
-                    setForm("models", i(), "variants", vi, "chatTemplateArgs", val)
-                  }
                 />
               )}
             </For>

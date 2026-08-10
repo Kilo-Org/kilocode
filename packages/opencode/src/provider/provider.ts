@@ -37,6 +37,7 @@ import {
   KILO_MODEL_SCHEMA_EXTENSIONS,
   patchModelsDevModel as patchKiloModel,
   patchConfigModel as patchKiloConfigModel,
+  customProviderVariants,
   patchCustomLoaderResult,
   patchKiloProviderPrivacy,
   kiloSmallModelPriority,
@@ -1527,7 +1528,12 @@ const layer = Layer.effect(
               // variants: {}, // kilocode_change, moved into patchKiloConfigModel
               ...patchKiloConfigModel(model, existingModel), // kilocode_change
             }
-            const merged = mergeDeep(ProviderTransform.variants(parsedModel), model.variants ?? {})
+            // kilocode_change start
+            const generated = Object.keys(model.variants ?? {}).length
+              ? {}
+              : customProviderVariants(parsedModel, model.provider?.npm ?? provider.npm, ProviderTransform.variants)
+            const merged = mergeDeep(generated, model.variants ?? {})
+            // kilocode_change end
             parsedModel.variants = mapValues(
               pickBy(merged, (v): v is NonNullable<typeof v> => !!v && !v.disabled), // kilocode_change - drop null delete sentinels
               (v) => omit(v, ["disabled"]),
