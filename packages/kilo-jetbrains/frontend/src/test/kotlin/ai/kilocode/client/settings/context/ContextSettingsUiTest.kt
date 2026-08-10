@@ -274,7 +274,7 @@ class ContextSettingsUiTest : BasePlatformTestCase() {
         flushUntil { rpc.configPatches.isNotEmpty() }
     }
 
-    fun `test editor context toggle persists immediately without a config patch`() {
+    fun `test editor context toggle marks modified and applies without a config patch`() {
         val panel = requireUi()
         assertTrue(KiloPluginSettings.getAutoEditorContext())
 
@@ -282,10 +282,14 @@ class ContextSettingsUiTest : BasePlatformTestCase() {
             val editor = editorToggle(panel)
             assertTrue(editor.isEnabled)
             editor.doClick()
+            assertTrue(panel.modified())
         }
 
+        assertTrue(KiloPluginSettings.getAutoEditorContext())
+        edt { panel.applyDraft() }
         assertFalse(KiloPluginSettings.getAutoEditorContext())
         edt { UIUtil.dispatchAllInvocationEvents() }
+        assertFalse(edt { panel.modified() })
         assertTrue(rpc.configPatches.isEmpty())
     }
 

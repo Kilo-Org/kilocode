@@ -70,6 +70,7 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.util.Producer
 import com.intellij.util.ui.EmptyIcon
 import com.intellij.ui.scale.JBUIScale
+import com.intellij.util.DocumentUtil
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.CompletableDeferred
@@ -498,6 +499,22 @@ class PromptPanelTest : BasePlatformTestCase() {
         invokeComponentAction("Kilo Session Undo", editor)
         assertEquals("", editor.document.text)
         invokeComponentAction("Kilo Session Redo", editor)
+        assertEquals("hello", editor.document.text)
+    }
+
+    fun `test prompt editor height sync skips bulk document updates`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
+        val field = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 260, 400)
+        val editor = field.getEditor(false)!!
+        WriteCommandAction.runWriteCommandAction(project) {
+            DocumentUtil.executeInBulk(editor.document, true) {
+                editor.document.insertString(0, "hello")
+            }
+        }
+        UIUtil.dispatchAllInvocationEvents()
+
         assertEquals("hello", editor.document.text)
     }
 

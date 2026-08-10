@@ -42,6 +42,7 @@ import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.actionSystem.IdeActions
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
+import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.SpellCheckingEditorCustomizationProvider
 import com.intellij.openapi.editor.colors.CodeInsightColors
 import com.intellij.openapi.editor.colors.TextAttributesKey
@@ -256,6 +257,7 @@ class PromptPanel(
     private var ready = false
     private var enhancing = false
     private var request = 0L
+    private var deferred = false
 
     override val isSendEnabled: Boolean
         get() = ready && !submitting && (text().isNotEmpty() || attachments.isNotEmpty())
@@ -270,11 +272,21 @@ class PromptPanel(
         editor.addDocumentListener(object : DocumentListener {
             override fun documentChanged(e: DocumentEvent) {
                 invalidateEnhancement()
+                if (e.document.isInBulkUpdate) {
+                    deferEditorSync()
+                    syncButton()
+                    onChange()
+                    return
+                }
                 syncEditorHeight()
                 triggerCompletion(e)
                 syncHighlights()
                 syncButton()
                 onChange()
+            }
+
+            override fun bulkUpdateFinished(document: Document) {
+                deferEditorSync()
             }
         })
         shell.add(strip, BorderLayout.NORTH)
@@ -937,6 +949,10 @@ class PromptPanel(
 
     @RequiresEdt
     private fun syncEditorHeight() {
+        if (editor.document.isInBulkUpdate) {
+            deferEditorSync()
+            return
+        }
         val before = editor.preferredSize.height
         val lower = editor.minimumSize.height
         editor.setPreferredSize(null)
@@ -966,6 +982,19 @@ class PromptPanel(
         editor.minimumSize = Dimension(0, height)
         revalidate()
         repaint()
+    }
+
+    @RequiresEdt
+    private fun deferEditorSync() {
+        if (deferred) return
+        deferred = true
+        ApplicationManager.getApplication().invokeLater {
+            deferred = false
+            if (project.isDisposed || editor.document.isInBulkUpdate) return@invokeLater
+            syncEditorHeight()
+            syncHighlights()
+            syncButton()
+        }
     }
 
     @RequiresEdt

@@ -63,10 +63,23 @@ internal class ContextSettingsUi(
         startSettings(ContextSettingsContent { updateDraft(it) })
     }
 
-    override fun change(from: ContextDraft, to: ContextDraft): ConfigPatchDto? = patch(from, to)?.takeIf(::changed)
+    override fun change(from: ContextDraft, to: ContextDraft): ConfigPatchDto? {
+        val patch = patch(from, to) ?: return null
+        if (changed(patch)) return patch
+        return ConfigPatchDto().takeIf { localChanged(from, to) }
+    }
 
     override fun save(change: ConfigPatchDto, done: (KiloAppStateDto?) -> Unit) {
-        app.updateConfigAsync(change, done)
+        val value = draft.editor
+        if (!changed(change)) {
+            KiloPluginSettings.setAutoEditorContext(value)
+            done(appState)
+            return
+        }
+        app.updateConfigAsync(change) { result ->
+            if (result != null) KiloPluginSettings.setAutoEditorContext(value)
+            done(result)
+        }
     }
 
     override fun base(result: KiloAppStateDto): ContextDraft = contextDraft(result.config)
@@ -136,11 +149,9 @@ internal class ContextSettingsContent(
 ) : BaseContentPanel() {
     private val auto = SettingsToggle { value -> update { copy(auto = value) } }
     // Editor-context auto-include is a local per-IDE preference in PropertiesComponent (like
-    // autoApprove), applied immediately on toggle rather than through the CLI-backed draft/apply/
-    // reset flow used by the other rows. It stays interactive even when the backend isn't READY.
-    private val editor = SettingsToggle(KiloPluginSettings.getAutoEditorContext()) { value ->
-        KiloPluginSettings.setAutoEditorContext(value)
-    }
+    // autoApprove). It participates in this page's draft/apply/reset state so the Configurable
+    // Apply button reflects unsaved local changes, but it is never sent as CLI config.
+    private val editor = SettingsToggle { value -> update { copy(editor = value) } }
     private val prune = SettingsToggle { value -> update { copy(prune = value) } }
     private val threshold = ThresholdField(
         KiloBundle.message("settings.context.compaction.threshold.placeholder"),
@@ -186,9 +197,9 @@ internal class ContextSettingsContent(
     @RequiresEdt
     fun sync(draft: ContextDraft, enabled: Boolean) {
         auto.isSelected = draft.auto
-        // Local preference: reflects PropertiesComponent and stays enabled regardless of the
-        // CLI-backed [enabled] gating that applies to the draft-driven rows below.
-        editor.isSelected = KiloPluginSettings.getAutoEditorContext()
+        // Local preference: draft-driven, but still enabled regardless of the CLI-backed [enabled]
+        // gating that applies to the remote config rows below.
+        editor.isSelected = draft.editor
         editor.isEnabled = true
         prune.isSelected = draft.prune
         threshold.sync(draft.threshold)
