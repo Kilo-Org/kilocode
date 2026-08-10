@@ -71,14 +71,15 @@ async function settle(page: Page) {
   await frames()
 }
 
+// Dialog stories render through a Kobalte portal outside #storybook-root.
+const PORTAL = new Set(["settings--custom-provider-create", "settings--custom-provider-edit"])
+
 // Stories to skip from visual regression (add IDs here if needed)
 // Spinner animation captures at an indeterminate frame, causing flaky diffs.
 // Permission dock config-preloaded has non-deterministic toggle rendering.
 // Sandboxing rows can settle at different scroll heights after settings context updates.
 // Side terminal tabs mount live xterm instances whose websocket error text
 // lands at indeterminate times.
-const PORTAL = new Set(["settings--custom-provider-create", "settings--custom-provider-edit"])
-
 const SKIP = new Set<string>([
   "agentmanager--worktree-item-busy",
   "agentmanager--full-screen-diff-agent-edit-scroll",
