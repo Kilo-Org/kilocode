@@ -1,9 +1,11 @@
 /** @jsxImportSource solid-js */
 import { For, Show, createSignal } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type { PRStatus } from "../../src/types/messages"
 import type { PRCheck, CheckStatus } from "./pr-types"
 import { SectionHeading } from "./SectionHeading"
+import { useVSCode } from "../../src/context/vscode"
 
 const CHECK: Record<CheckStatus, { icon: string; label: string }> = {
   success: { icon: "circle-check", label: "Passed" },
@@ -14,6 +16,7 @@ const CHECK: Record<CheckStatus, { icon: string; label: string }> = {
 }
 
 export function PRChecks(props: { checks: PRStatus["checks"] }) {
+  const vscode = useVSCode()
   const [open, setOpen] = createSignal(true)
   return (
     <>
@@ -38,9 +41,15 @@ export function PRChecks(props: { checks: PRStatus["checks"] }) {
                     <span class="am-pr-check-duration">{check.duration}</span>
                   </Show>
                   <Show when={check.url}>
-                    <a class="am-pr-check-link" href={check.url} onClick={(e) => e.preventDefault()}>
-                      <Icon name="link" size="small" />
-                    </a>
+                    <Tooltip value="Open in browser" placement="bottom">
+                      <button
+                        class="am-pr-check-link"
+                        aria-label="Open check in browser"
+                        onClick={() => vscode.postMessage({ type: "openExternal", url: check.url! })}
+                      >
+                        <Icon name="link" size="small" />
+                      </button>
+                    </Tooltip>
                   </Show>
                 </div>
               )}
