@@ -451,6 +451,18 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     setErrors("models", (v) => v.filter((_, i) => i !== index))
   }
 
+  function toggleAllReasoning() {
+    const all = form.models.length > 0 && form.models.every((m) => m.reasoning)
+    const target = !all
+    form.models.forEach((_, i) => setForm("models", i, "reasoning", target))
+  }
+
+  function toggleAllImages() {
+    const all = form.models.length > 0 && form.models.every((m) => m.supportsImages)
+    const target = !all
+    form.models.forEach((_, i) => setForm("models", i, "supportsImages", target))
+  }
+
   function addHeader() {
     setForm("headers", (v) => [...v, { key: "", value: "" }])
     setErrors("headers", (v) => [...v, {}])
@@ -515,6 +527,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
 
   return (
     <Dialog
+      size="large"
       title={
         <IconButton
           tabIndex={-1}
@@ -530,13 +543,15 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
         style={{
           display: "flex",
           "flex-direction": "column",
-          gap: "24px",
-          padding: "0 10px 12px 10px",
+          gap: "20px",
+          padding: "0 16px 16px 16px",
           "overflow-y": "auto",
-          "max-height": "60vh",
+          flex: 1,
+          width: "100%",
+          "box-sizing": "border-box",
         }}
       >
-        <div style={{ padding: "0 10px", display: "flex", gap: "16px", "align-items": "center" }}>
+        <div style={{ display: "flex", gap: "16px", "align-items": "center" }}>
           <ProviderIcon id="synthetic" width={20} height={20} />
           <div
             style={{ "font-size": "var(--kilo-font-size-16)", "font-weight": "500", color: "var(--vscode-foreground)" }}
@@ -545,36 +560,35 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
           </div>
         </div>
 
-        <form
-          onSubmit={save}
-          style={{ padding: "0 10px 24px 10px", display: "flex", "flex-direction": "column", gap: "24px" }}
-        >
-          <div style={{ "font-size": "var(--kilo-font-size-14)", color: "var(--text-base)" }}>
-            {language.t("provider.custom.description.prefix")}
-            <a
-              href="https://kilo.ai/docs/ai-providers#custom-provider"
-              onClick={(e) => {
-                e.preventDefault()
-                vscode.postMessage({
-                  type: "openExternal",
-                  url: "https://kilo.ai/docs/ai-providers#custom-provider",
-                })
-              }}
-            >
-              {language.t("provider.custom.description.link")}
-            </a>
-            {language.t("provider.custom.description.suffix")}
+        <form onSubmit={save} style={{ display: "flex", "flex-direction": "column", gap: "20px" }}>
+          <div style={{ display: "flex", "flex-direction": "column", gap: "10px" }}>
+            <div style={{ "font-size": "var(--kilo-font-size-14)", color: "var(--text-base)" }}>
+              {language.t("provider.custom.description.prefix")}
+              <a
+                href="https://kilo.ai/docs/ai-providers#custom-provider"
+                onClick={(e) => {
+                  e.preventDefault()
+                  vscode.postMessage({
+                    type: "openExternal",
+                    url: "https://kilo.ai/docs/ai-providers#custom-provider",
+                  })
+                }}
+              >
+                {language.t("provider.custom.description.link")}
+              </a>
+              {language.t("provider.custom.description.suffix")}
+            </div>
             <Show when={editing()}>
-              <div style={{ "margin-top": "8px" }}>
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    vscode.postMessage(configMessage("global", language.t))
-                  }}
+              <div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="small"
+                  icon="edit"
+                  onClick={() => vscode.postMessage(configMessage("global", language.t))}
                 >
                   {language.t("provider.custom.edit.advanced")}
-                </a>
+                </Button>
               </div>
             </Show>
           </div>
@@ -651,19 +665,49 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
 
           {/* Models */}
           <div style={{ display: "flex", "flex-direction": "column", gap: "12px" }}>
-            <div style={{ display: "flex", "align-items": "center", gap: "8px" }}>
-              <label
-                style={{
-                  "font-size": "var(--kilo-font-size-12)",
-                  "font-weight": "500",
-                  color: "var(--text-weak-base)",
-                }}
-              >
-                {language.t("provider.custom.models.label")}
-              </label>
-              <Show when={fetching()}>
-                <Spinner style={{ width: "12px", height: "12px" }} />
-              </Show>
+            <div
+              style={{
+                display: "flex",
+                "justify-content": "space-between",
+                "align-items": "center",
+                "flex-wrap": "wrap",
+                gap: "8px",
+              }}
+            >
+              <div style={{ display: "flex", "align-items": "center", gap: "8px" }}>
+                <label
+                  style={{
+                    "font-size": "var(--kilo-font-size-12)",
+                    "font-weight": "500",
+                    color: "var(--text-weak-base)",
+                  }}
+                >
+                  {language.t("provider.custom.models.label")}
+                </label>
+                <Show when={fetching()}>
+                  <Spinner style={{ width: "12px", height: "12px" }} />
+                </Show>
+              </div>
+              <div style={{ display: "flex", gap: "8px", "align-items": "center", "flex-wrap": "wrap" }}>
+                <Button
+                  type="button"
+                  size="small"
+                  variant="ghost"
+                  onClick={toggleAllReasoning}
+                  disabled={form.models.length === 0}
+                >
+                  {language.t("provider.custom.models.toggleReasoning")}
+                </Button>
+                <Button
+                  type="button"
+                  size="small"
+                  variant="ghost"
+                  onClick={toggleAllImages}
+                  disabled={form.models.length === 0}
+                >
+                  {language.t("provider.custom.models.toggleImages")}
+                </Button>
+              </div>
             </div>
             <For each={form.models}>
               {(m, i) => (

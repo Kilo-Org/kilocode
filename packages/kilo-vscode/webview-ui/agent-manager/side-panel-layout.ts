@@ -5,6 +5,12 @@ export const SIDE_RESIZE_INTERVAL_MS = 32
 
 type Frame = (callback: (time: number) => void) => number
 
+export enum SidePanel {
+  Diff = "diff",
+  PR = "pr",
+  Terminal = "terminal",
+}
+
 function viewportWidth(viewport: number): number {
   return Number.isFinite(viewport) && viewport > 0 ? viewport : MIN_PANEL_WIDTH
 }

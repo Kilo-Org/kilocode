@@ -433,6 +433,8 @@ export const dict = {
   "provider.custom.models.name.placeholder": "顯示名稱",
   "provider.custom.models.reasoning.label": "推理",
   "provider.custom.models.modalities.image": "圖片",
+  "provider.custom.models.toggleReasoning": "切換所有模型的推理",
+  "provider.custom.models.toggleImages": "切換所有模型的圖像",
   "provider.custom.models.remove": "移除模型",
   "provider.custom.models.add": "新增模型",
   "provider.custom.models.fetch.authError": "驗證失敗。請檢查上方的 API 金鑰後重試。",

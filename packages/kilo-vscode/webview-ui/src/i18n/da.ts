@@ -494,6 +494,8 @@ export const dict = {
   "provider.custom.models.name.placeholder": "Visningsnavn",
   "provider.custom.models.reasoning.label": "Ræsonnement",
   "provider.custom.models.modalities.image": "Billede",
+  "provider.custom.models.toggleReasoning": "Slå ræsonnement til/fra for alle",
+  "provider.custom.models.toggleImages": "Slå billede til/fra for alle",
   "provider.custom.models.remove": "Fjern model",
   "provider.custom.models.add": "Tilføj model",
   "provider.custom.models.fetch.authError": "Godkendelse mislykkedes. Kontrollér API-nøglen ovenfor, og prøv igen.",

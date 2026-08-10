@@ -328,15 +328,20 @@ function normalizeMessages(
   return msgs
 }
 
-// kilocode_change start - explicit prompt cache breakpoints for GPT-5.6+
-function supportsPromptCacheBreakpoint(modelId: string): boolean {
-  const match = modelId.match(/gpt-(\d+)\.(\d+)/)
+// kilocode_change start - explicit prompt cache breakpoints for GPT-5.6+ (excluding ChatGPT subscriptions)
+function isLikelyChatGPTSubscription(model: Provider.Model): boolean {
+  return model.providerID === "openai" && model.cost?.input === 0 && model.cost?.output === 0
+}
+
+function supportsPromptCacheBreakpoint(model: Provider.Model): boolean {
+  if (isLikelyChatGPTSubscription(model)) return false
+  const match = model.api.id.match(/gpt-(\d+)\.(\d+)/)
   if (match) {
     const major = Number(match[1])
     const minor = Number(match[2])
     if (major > 5 || (major === 5 && minor >= 6)) return true
   }
-  const majorMatch = modelId.match(/gpt-(\d+)/)
+  const majorMatch = model.api.id.match(/gpt-(\d+)/)
   if (majorMatch && Number(majorMatch[1]) >= 6) return true
   return false
 }
@@ -366,7 +371,7 @@ function applyCaching(msgs: ModelMessage[], model: Provider.Model): ModelMessage
       cacheControl: { type: "ephemeral" },
     },
     // kilocode_change start
-    ...(supportsPromptCacheBreakpoint(model.api.id)
+    ...(supportsPromptCacheBreakpoint(model)
       ? {
           openai: {
             promptCacheBreakpoint: { mode: "explicit" },
@@ -494,7 +499,7 @@ export function message(msgs: ModelMessage[], model: Provider.Model, options: Re
       ((model.api.npm === "@ai-sdk/openai" ||
         model.api.npm === "@ai-sdk/azure" ||
         model.api.npm === "@kilocode/kilo-gateway") &&
-        supportsPromptCacheBreakpoint(model.api.id))) &&
+        supportsPromptCacheBreakpoint(model))) &&
     model.api.npm !== "@ai-sdk/gateway"
   ) {
     msgs = applyCaching(msgs, model)

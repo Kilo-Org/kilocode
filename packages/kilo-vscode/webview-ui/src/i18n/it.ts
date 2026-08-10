@@ -318,6 +318,8 @@ export const dict = {
   "provider.custom.models.name.placeholder": "Nome visualizzato",
   "provider.custom.models.reasoning.label": "Reasoning",
   "provider.custom.models.modalities.image": "Immagine",
+  "provider.custom.models.toggleReasoning": "Attiva/disattiva reasoning per tutti",
+  "provider.custom.models.toggleImages": "Attiva/disattiva immagine per tutti",
   "provider.custom.models.remove": "Rimuovi modello",
   "provider.custom.models.add": "Aggiungi modello",
   "provider.custom.models.fetch.authError": "Autenticazione non riuscita. Controlla l'API key sopra e riprova.",

@@ -451,6 +451,8 @@ export const dict = {
   "provider.custom.models.name.placeholder": "표시 이름",
   "provider.custom.models.reasoning.label": "추론",
   "provider.custom.models.modalities.image": "이미지",
+  "provider.custom.models.toggleReasoning": "모든 모델의 추론 전환",
+  "provider.custom.models.toggleImages": "모든 모델의 이미지 전환",
   "provider.custom.models.remove": "모델 제거",
   "provider.custom.models.add": "모델 추가",
   "provider.custom.models.fetch.authError": "인증에 실패했습니다. 위의 API 키를 확인하고 다시 시도하세요.",
