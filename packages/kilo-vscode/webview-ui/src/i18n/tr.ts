@@ -441,7 +441,9 @@ export const dict = {
   "provider.custom.models.name.label": "Ad",
   "provider.custom.models.name.placeholder": "Görünen Ad",
   "provider.custom.models.reasoning.label": "Akıl Yürütme",
+  "provider.custom.models.reasoning.all": "Tüm akıl yürütme",
   "provider.custom.models.modalities.image": "Görüntü",
+  "provider.custom.models.image.all": "Tüm görseller",
   "provider.custom.models.remove": "Modeli kaldır",
   "provider.custom.models.add": "Model ekle",
   "provider.custom.models.fetch.authError":

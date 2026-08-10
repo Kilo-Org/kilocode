@@ -21,6 +21,16 @@
   }
 }
 
+[data-component="dialog"][data-size="large"] [data-slot="dialog-content"],
+[data-component="dialog"][data-size="x-large"] [data-slot="dialog-content"] {
+  max-width: none;
+}
+
+[data-component="dialog"][data-size="x-large"] [data-slot="dialog-container"] {
+  width: min(calc(100vw - 32px), 920px);
+  height: min(calc(100vh - 48px), 780px);
+}
+
 [data-component="dialog"][data-fit] [data-slot="dialog-container"] {
   height: auto;
 }

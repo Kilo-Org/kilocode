@@ -38,11 +38,13 @@ import { validateCustomProvider } from "./CustomProviderValidation"
 import type { FormErrors, FormState, HeaderRow } from "./CustomProviderValidation"
 const DEBOUNCE_MS = 500
 const SEARCH_DEBOUNCE_MS = 150
+const ANTHROPIC_NPM = "@ai-sdk/anthropic"
+const ANTHROPIC_URL = "https://api.anthropic.com/v1"
 
 const PACKAGE_OPTIONS: Array<{ value: CustomProviderPackage; label: string }> = [
   { value: "@ai-sdk/openai-compatible", label: "OpenAI Compatible" },
   { value: "@ai-sdk/openai", label: "OpenAI Responses" },
-  { value: "@ai-sdk/anthropic", label: "Anthropic Messages" },
+  { value: ANTHROPIC_NPM, label: "Anthropic Messages" },
 ]
 
 /** Subsequence fuzzy match — "gpt4o" matches "gpt-4o-mini". */
@@ -232,7 +234,8 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     const npm = fetchPackage()
     const url = fetchURL()
     const key = fetchKey()
-    void key // subscribe to key changes without using the value here
+    void npm
+    void key
 
     // Clear previous results whenever URL or key changes
     setFetchedModels(undefined)
@@ -240,7 +243,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     setFetchStatus(undefined)
     setSearch("")
 
-    if (npm === "@ai-sdk/anthropic" || !/^https?:\/\//.test(url.trim())) return
+    if (!/^https?:\/\//.test(url.trim())) return
 
     fetchVersion++
     const version = fetchVersion
@@ -326,6 +329,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
       apiKey,
       providerID,
       headers,
+      npm: fetchPackage(),
     })
   }
 
@@ -445,6 +449,16 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     setErrors("models", (v) => [...v, { variants: [] }])
   }
 
+  function allOn(key: "reasoning" | "supportsImages") {
+    return form.models.length > 0 && form.models.every((row) => row[key])
+  }
+
+  function setAll(key: "reasoning" | "supportsImages", on: boolean) {
+    for (let i = 0; i < form.models.length; i++) {
+      setForm("models", i, key, on)
+    }
+  }
+
   function removeModel(index: number) {
     if (form.models.length <= 1) return
     setForm("models", (v) => v.filter((_, i) => i !== index))
@@ -524,19 +538,21 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
           aria-label={language.t("common.goBack")}
         />
       }
+      size="x-large"
       transition
     >
       <div
         style={{
           display: "flex",
           "flex-direction": "column",
-          gap: "24px",
-          padding: "0 10px 12px 10px",
+          gap: "20px",
+          padding: "0 16px 12px 16px",
+          height: "100%",
+          "min-height": 0,
           "overflow-y": "auto",
-          "max-height": "60vh",
         }}
       >
-        <div style={{ padding: "0 10px", display: "flex", gap: "16px", "align-items": "center" }}>
+        <div style={{ display: "flex", gap: "16px", "align-items": "center" }}>
           <ProviderIcon id="synthetic" width={20} height={20} />
           <div
             style={{ "font-size": "var(--kilo-font-size-16)", "font-weight": "500", color: "var(--vscode-foreground)" }}
@@ -547,39 +563,53 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
 
         <form
           onSubmit={save}
-          style={{ padding: "0 10px 24px 10px", display: "flex", "flex-direction": "column", gap: "24px" }}
+          style={{ padding: "0 0 24px 0", display: "flex", "flex-direction": "column", gap: "20px" }}
         >
-          <div style={{ "font-size": "var(--kilo-font-size-14)", color: "var(--text-base)" }}>
-            {language.t("provider.custom.description.prefix")}
-            <a
-              href="https://kilo.ai/docs/ai-providers#custom-provider"
-              onClick={(e) => {
-                e.preventDefault()
-                vscode.postMessage({
-                  type: "openExternal",
-                  url: "https://kilo.ai/docs/ai-providers#custom-provider",
-                })
-              }}
-            >
-              {language.t("provider.custom.description.link")}
-            </a>
-            {language.t("provider.custom.description.suffix")}
+          <div
+            style={{
+              display: "flex",
+              "flex-wrap": "wrap",
+              gap: "12px",
+              "align-items": "center",
+              "justify-content": "space-between",
+            }}
+          >
+            <div style={{ "font-size": "var(--kilo-font-size-14)", color: "var(--text-base)", flex: "1 1 240px" }}>
+              {language.t("provider.custom.description.prefix")}
+              <a
+                href="https://kilo.ai/docs/ai-providers#custom-provider"
+                onClick={(e) => {
+                  e.preventDefault()
+                  vscode.postMessage({
+                    type: "openExternal",
+                    url: "https://kilo.ai/docs/ai-providers#custom-provider",
+                  })
+                }}
+              >
+                {language.t("provider.custom.description.link")}
+              </a>
+              {language.t("provider.custom.description.suffix")}
+            </div>
             <Show when={editing()}>
-              <div style={{ "margin-top": "8px" }}>
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    vscode.postMessage(configMessage("global", language.t))
-                  }}
-                >
-                  {language.t("provider.custom.edit.advanced")}
-                </a>
-              </div>
+              <Button
+                type="button"
+                size="small"
+                variant="secondary"
+                icon="edit"
+                onClick={() => vscode.postMessage(configMessage("global", language.t))}
+              >
+                {language.t("provider.custom.edit.advanced")}
+              </Button>
             </Show>
           </div>
 
-          <div style={{ display: "flex", "flex-direction": "column", gap: "16px" }}>
+          <div
+            style={{
+              display: "grid",
+              "grid-template-columns": "repeat(auto-fit, minmax(240px, 1fr))",
+              gap: "16px",
+            }}
+          >
             <TextField
               autofocus={!editing()}
               label={language.t("provider.custom.field.providerID.label")}
@@ -618,6 +648,9 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
                   if (!option) return
                   setForm("npm", option.value)
                   setFetchPackage(option.value)
+                  if (option.value !== ANTHROPIC_NPM || form.baseURL.trim()) return
+                  setForm("baseURL", ANTHROPIC_URL)
+                  setFetchURL(ANTHROPIC_URL)
                 }}
                 variant="secondary"
                 triggerVariant="settings"
@@ -634,29 +667,32 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
               validationState={errors.baseURL ? "invalid" : undefined}
               error={errors.baseURL}
             />
-            <TextField
-              type="password"
-              label={language.t("provider.custom.field.apiKey.label")}
-              placeholder={language.t("provider.custom.field.apiKey.placeholder")}
-              description={language.t("provider.custom.field.apiKey.description")}
-              value={form.apiKey}
-              onChange={(v) => {
-                const key = !apiTouched() && form.apiKey === MASKED_CUSTOM_PROVIDER_KEY ? v.replace(/^\*+/, "") : v
-                setApiTouched(true)
-                setForm("apiKey", key)
-                setFetchKey(key)
-              }}
-            />
+            <div style={{ "grid-column": "1 / -1" }}>
+              <TextField
+                type="password"
+                label={language.t("provider.custom.field.apiKey.label")}
+                placeholder={language.t("provider.custom.field.apiKey.placeholder")}
+                description={language.t("provider.custom.field.apiKey.description")}
+                value={form.apiKey}
+                onChange={(v) => {
+                  const key = !apiTouched() && form.apiKey === MASKED_CUSTOM_PROVIDER_KEY ? v.replace(/^\*+/, "") : v
+                  setApiTouched(true)
+                  setForm("apiKey", key)
+                  setFetchKey(key)
+                }}
+              />
+            </div>
           </div>
 
           {/* Models */}
           <div style={{ display: "flex", "flex-direction": "column", gap: "12px" }}>
-            <div style={{ display: "flex", "align-items": "center", gap: "8px" }}>
+            <div style={{ display: "flex", "align-items": "center", gap: "8px", "flex-wrap": "wrap" }}>
               <label
                 style={{
                   "font-size": "var(--kilo-font-size-12)",
                   "font-weight": "500",
                   color: "var(--text-weak-base)",
+                  "margin-right": "auto",
                 }}
               >
                 {language.t("provider.custom.models.label")}
@@ -664,22 +700,46 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
               <Show when={fetching()}>
                 <Spinner style={{ width: "12px", height: "12px" }} />
               </Show>
+              <Button
+                type="button"
+                size="small"
+                variant={allOn("reasoning") ? "secondary" : "ghost"}
+                onClick={() => setAll("reasoning", !allOn("reasoning"))}
+              >
+                {language.t("provider.custom.models.reasoning.all")}
+              </Button>
+              <Button
+                type="button"
+                size="small"
+                variant={allOn("supportsImages") ? "secondary" : "ghost"}
+                onClick={() => setAll("supportsImages", !allOn("supportsImages"))}
+              >
+                {language.t("provider.custom.models.image.all")}
+              </Button>
             </div>
-            <For each={form.models}>
-              {(m, i) => (
-                <ModelCard
-                  m={m}
-                  errors={errors.models[i()] ?? {}}
-                  t={language.t}
-                  canRemove={form.models.length > 1}
-                  onChangeId={(v) => setForm("models", i(), "id", v)}
-                  onChangeName={(v) => setForm("models", i(), "name", v)}
-                  onChangeReasoning={(v) => setForm("models", i(), "reasoning", v)}
-                  onChangeSupportsImages={(v) => setForm("models", i(), "supportsImages", v)}
-                  onRemove={() => removeModel(i())}
-                />
-              )}
-            </For>
+            <div
+              style={{
+                display: "grid",
+                "grid-template-columns": "repeat(auto-fit, minmax(280px, 1fr))",
+                gap: "12px",
+              }}
+            >
+              <For each={form.models}>
+                {(m, i) => (
+                  <ModelCard
+                    m={m}
+                    errors={errors.models[i()] ?? {}}
+                    t={language.t}
+                    canRemove={form.models.length > 1}
+                    onChangeId={(v) => setForm("models", i(), "id", v)}
+                    onChangeName={(v) => setForm("models", i(), "name", v)}
+                    onChangeReasoning={(v) => setForm("models", i(), "reasoning", v)}
+                    onChangeSupportsImages={(v) => setForm("models", i(), "supportsImages", v)}
+                    onRemove={() => removeModel(i())}
+                  />
+                )}
+              </For>
+            </div>
             <Button type="button" size="small" variant="ghost" icon="plus-small" onClick={addModel}>
               {language.t("provider.custom.models.add")}
             </Button>

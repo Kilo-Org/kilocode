@@ -503,7 +503,9 @@ export const dict = {
   "provider.custom.models.name.label": "Name",
   "provider.custom.models.name.placeholder": "Anzeigename",
   "provider.custom.models.reasoning.label": "Schlussfolgerung",
+  "provider.custom.models.reasoning.all": "Gesamtes Reasoning",
   "provider.custom.models.modalities.image": "Bild",
+  "provider.custom.models.image.all": "Alle Bilder",
   "provider.custom.models.remove": "Modell entfernen",
   "provider.custom.models.add": "Modell hinzufügen",
   "provider.custom.models.fetch.authError":

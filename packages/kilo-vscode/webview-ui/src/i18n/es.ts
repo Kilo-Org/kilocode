@@ -496,7 +496,9 @@ export const dict = {
   "provider.custom.models.name.label": "Nombre",
   "provider.custom.models.name.placeholder": "Nombre para mostrar",
   "provider.custom.models.reasoning.label": "Razonamiento",
+  "provider.custom.models.reasoning.all": "Todo el razonamiento",
   "provider.custom.models.modalities.image": "Imagen",
+  "provider.custom.models.image.all": "Todas las imágenes",
   "provider.custom.models.remove": "Eliminar modelo",
   "provider.custom.models.add": "Añadir modelo",
   "provider.custom.models.fetch.authError":

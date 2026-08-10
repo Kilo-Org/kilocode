@@ -495,7 +495,9 @@ export const dict = {
   "provider.custom.models.name.label": "Naziv",
   "provider.custom.models.name.placeholder": "Naziv za prikaz",
   "provider.custom.models.reasoning.label": "Zaključivanje",
+  "provider.custom.models.reasoning.all": "Sve zaključivanje",
   "provider.custom.models.modalities.image": "Slika",
+  "provider.custom.models.image.all": "Sve slike",
   "provider.custom.models.remove": "Ukloni model",
   "provider.custom.models.add": "Dodaj model",
   "provider.custom.models.fetch.authError":
