@@ -30,6 +30,7 @@ exclude = [
   '^https?://(cloud|console)\.google\.ai',
   # API endpoint prefixes are valid but return 4xx to plain GET link checks.
   '^https?://ai-gateway\.vercel\.sh/v1/?$',
+  '^https?://api\.anthropic\.com(/v1/models)?/?$',
   '^https?://api\.voyageai\.com/v1/embeddings/?$',
   '^https?://inference\.do-ai\.run/v1/?$',
   '^https?://generativelanguage\.googleapis\.com/v1beta/openai/?$',
