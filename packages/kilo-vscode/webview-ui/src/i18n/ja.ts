@@ -492,6 +492,8 @@ export const dict = {
   "provider.custom.models.modalities.image": "画像",
   "provider.custom.models.remove": "モデルを削除",
   "provider.custom.models.add": "モデルを追加",
+  "provider.custom.models.toggleReasoning": "すべての推論を切り替え",
+  "provider.custom.models.toggleImages": "すべての画像を切り替え",
   "provider.custom.models.fetch.authError": "認証に失敗しました。上記のAPIキーを確認して再試行してください。",
   "provider.custom.models.fetch.empty": "このサーバーにモデルが見つかりません。",
   "provider.custom.models.fetch.added": "{{count}}個のモデルを追加しました。",

@@ -500,6 +500,8 @@ export const dict = {
   "provider.custom.models.modalities.image": "Image",
   "provider.custom.models.remove": "Supprimer le modèle",
   "provider.custom.models.add": "Ajouter un modèle",
+  "provider.custom.models.toggleReasoning": "Basculer le raisonnement pour tous",
+  "provider.custom.models.toggleImages": "Basculer les images pour tous",
   "provider.custom.models.fetch.authError": "Échec de l'authentification. Vérifiez la clé API ci-dessus et réessayez.",
   "provider.custom.models.fetch.empty": "Aucun modèle trouvé sur ce serveur.",
   "provider.custom.models.fetch.added": "{{count}} modèle(s) ajouté(s).",

@@ -449,6 +449,8 @@ export const dict = {
   "provider.custom.models.modalities.image": "Afbeelding",
   "provider.custom.models.remove": "Model verwijderen",
   "provider.custom.models.add": "Model toevoegen",
+  "provider.custom.models.toggleReasoning": "Redeneren voor alle modellen wisselen",
+  "provider.custom.models.toggleImages": "Afbeeldingen voor alle modellen wisselen",
   "provider.custom.models.fetch.authError":
     "Authenticatie mislukt. Controleer de API-sleutel hierboven en probeer het opnieuw.",
   "provider.custom.models.fetch.empty": "Geen modellen gevonden op deze server.",

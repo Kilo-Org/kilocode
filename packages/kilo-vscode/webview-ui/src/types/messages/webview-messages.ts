@@ -1,3 +1,4 @@
+import type { CustomProviderPackage } from "../../../../src/shared/provider-model"
 import type { InstallMarketplaceItemOptions, MarketplaceFilters, MarketplaceItem } from "../marketplace"
 import type { FileAttachment } from "./parts"
 import type { MessageLoadMode } from "./sessions"
@@ -1231,6 +1232,7 @@ export interface SaveCustomProviderMessage {
 export interface FetchCustomProviderModelsMessage {
   type: "fetchCustomProviderModels"
   requestId: string
+  npm?: CustomProviderPackage
   baseURL: string
   apiKey?: string
   /**

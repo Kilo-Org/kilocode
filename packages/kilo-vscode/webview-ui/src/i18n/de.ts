@@ -506,6 +506,8 @@ export const dict = {
   "provider.custom.models.modalities.image": "Bild",
   "provider.custom.models.remove": "Modell entfernen",
   "provider.custom.models.add": "Modell hinzufügen",
+  "provider.custom.models.toggleReasoning": "Reasoning für alle umschalten",
+  "provider.custom.models.toggleImages": "Bilder für alle umschalten",
   "provider.custom.models.fetch.authError":
     "Authentifizierung fehlgeschlagen. Überprüfen Sie den API-Schlüssel oben und versuchen Sie es erneut.",
   "provider.custom.models.fetch.empty": "Keine Modelle auf diesem Server gefunden.",

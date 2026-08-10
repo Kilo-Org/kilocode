@@ -475,6 +475,8 @@ export const dict = {
   "provider.custom.models.modalities.image": "图片",
   "provider.custom.models.remove": "移除模型",
   "provider.custom.models.add": "添加模型",
+  "provider.custom.models.toggleReasoning": "切换所有模型的推理",
+  "provider.custom.models.toggleImages": "切换所有模型的图像支持",
   "provider.custom.models.fetch.authError": "认证失败。请检查上方的 API 密钥后重试。",
   "provider.custom.models.fetch.empty": "此服务器上未找到模型。",
   "provider.custom.models.fetch.added": "已添加 {{count}} 个模型。",

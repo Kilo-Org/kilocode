@@ -411,6 +411,8 @@ export const dict = {
   "provider.custom.models.modalities.image": "تصویر",
   "provider.custom.models.remove": "حذف مدل",
   "provider.custom.models.add": "افزودن مدل",
+  "provider.custom.models.toggleReasoning": "تغییر وضعیت استدلال برای همه",
+  "provider.custom.models.toggleImages": "تغییر وضعیت تصویر برای همه",
   "provider.custom.models.fetch.authError": "احراز هویت ناموفق بود. کلید API بالا را بررسی کرده و دوباره امتحان کنید.",
   "provider.custom.models.fetch.empty": "هیچ مدلی در این سرور یافت نشد.",
   "provider.custom.models.fetch.added": "{{count}} مدل اضافه شد.",

@@ -158,7 +158,7 @@ import {
 } from "./provider-actions"
 import type { StoredProviderKey } from "./provider-actions"
 import { AnacondaDesktopBridge } from "./anaconda-desktop/bridge"
-import { fetchOpenAIModels, FetchModelsError } from "./shared/fetch-models"
+import { fetchCustomModels, FetchModelsError } from "./shared/fetch-models"
 import type { Agent } from "@kilocode/sdk/v2/client"
 import { configFeatures } from "./features"
 import { fetchSnapshot } from "./kilo-provider/config-snapshot"
@@ -2457,12 +2457,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private async handleFetchCustomProviderModels(msg: Record<string, unknown>): Promise<void> {
     const rid = typeof msg.requestId === "string" ? msg.requestId : ""
     const url = typeof msg.baseURL === "string" ? msg.baseURL : ""
+    const npm = typeof msg.npm === "string" ? msg.npm : undefined
     if (!rid || !url) return
     const key =
       typeof msg.apiKey === "string" ? msg.apiKey : resolveStoredKey(this.storedProviderKeys, msg.providerID, url)
     const headers = msg.headers && typeof msg.headers === "object" ? (msg.headers as Record<string, string>) : undefined
     try {
-      const models = await fetchOpenAIModels({ baseURL: url, apiKey: key, headers })
+      const models = await fetchCustomModels({ npm, baseURL: url, apiKey: key, headers })
       this.postMessage({ type: "customProviderModelsFetched", requestId: rid, models })
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to fetch models"

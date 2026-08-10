@@ -459,6 +459,8 @@ export const dict = {
   "provider.custom.models.modalities.image": "Bilde",
   "provider.custom.models.remove": "Fjern modell",
   "provider.custom.models.add": "Legg til modell",
+  "provider.custom.models.toggleReasoning": "Slå resonnering av/på for alle",
+  "provider.custom.models.toggleImages": "Slå bilder av/på for alle",
   "provider.custom.models.fetch.authError": "Autentisering mislyktes. Sjekk API-nøkkelen ovenfor og prøv igjen.",
   "provider.custom.models.fetch.empty": "Ingen modeller funnet på denne serveren.",
   "provider.custom.models.fetch.added": "{{count}} modell(er) lagt til.",

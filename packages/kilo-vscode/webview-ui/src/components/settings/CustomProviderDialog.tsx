@@ -232,6 +232,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     const npm = fetchPackage()
     const url = fetchURL()
     const key = fetchKey()
+    void npm // subscribe to package changes
     void key // subscribe to key changes without using the value here
 
     // Clear previous results whenever URL or key changes
@@ -240,7 +241,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     setFetchStatus(undefined)
     setSearch("")
 
-    if (npm === "@ai-sdk/anthropic" || !/^https?:\/\//.test(url.trim())) return
+    if (!/^https?:\/\//.test(url.trim())) return
 
     fetchVersion++
     const version = fetchVersion
@@ -322,6 +323,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     vscode.postMessage({
       type: "fetchCustomProviderModels",
       requestId: rid,
+      npm: fetchPackage(),
       baseURL: url,
       apiKey,
       providerID,
@@ -451,6 +453,18 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     setErrors("models", (v) => v.filter((_, i) => i !== index))
   }
 
+  function toggleAllReasoning() {
+    const all = form.models.every((m) => m.reasoning)
+    const next = !all
+    form.models.forEach((_, i) => setForm("models", i, "reasoning", next))
+  }
+
+  function toggleAllSupportsImages() {
+    const all = form.models.every((m) => m.supportsImages)
+    const next = !all
+    form.models.forEach((_, i) => setForm("models", i, "supportsImages", next))
+  }
+
   function addHeader() {
     setForm("headers", (v) => [...v, { key: "", value: "" }])
     setErrors("headers", (v) => [...v, {}])
@@ -524,6 +538,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
           aria-label={language.t("common.goBack")}
         />
       }
+      size="large"
       transition
     >
       <div
@@ -533,7 +548,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
           gap: "24px",
           padding: "0 10px 12px 10px",
           "overflow-y": "auto",
-          "max-height": "60vh",
+          "max-height": "calc(85vh - 70px)",
         }}
       >
         <div style={{ padding: "0 10px", display: "flex", gap: "16px", "align-items": "center" }}>
@@ -560,21 +575,26 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
                   url: "https://kilo.ai/docs/ai-providers#custom-provider",
                 })
               }}
+              style={{
+                color: "var(--vscode-textLink-foreground)",
+                "text-decoration": "underline",
+                cursor: "pointer",
+              }}
             >
               {language.t("provider.custom.description.link")}
             </a>
             {language.t("provider.custom.description.suffix")}
             <Show when={editing()}>
-              <div style={{ "margin-top": "8px" }}>
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    vscode.postMessage(configMessage("global", language.t))
-                  }}
+              <div style={{ "margin-top": "12px" }}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="small"
+                  icon="edit"
+                  onClick={() => vscode.postMessage(configMessage("global", language.t))}
                 >
                   {language.t("provider.custom.edit.advanced")}
-                </a>
+                </Button>
               </div>
             </Show>
           </div>
@@ -651,18 +671,38 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
 
           {/* Models */}
           <div style={{ display: "flex", "flex-direction": "column", gap: "12px" }}>
-            <div style={{ display: "flex", "align-items": "center", gap: "8px" }}>
-              <label
-                style={{
-                  "font-size": "var(--kilo-font-size-12)",
-                  "font-weight": "500",
-                  color: "var(--text-weak-base)",
-                }}
-              >
-                {language.t("provider.custom.models.label")}
-              </label>
-              <Show when={fetching()}>
-                <Spinner style={{ width: "12px", height: "12px" }} />
+            <div
+              style={{
+                display: "flex",
+                "align-items": "center",
+                "justify-content": "space-between",
+                "flex-wrap": "wrap",
+                gap: "8px",
+              }}
+            >
+              <div style={{ display: "flex", "align-items": "center", gap: "8px" }}>
+                <label
+                  style={{
+                    "font-size": "var(--kilo-font-size-12)",
+                    "font-weight": "500",
+                    color: "var(--text-weak-base)",
+                  }}
+                >
+                  {language.t("provider.custom.models.label")}
+                </label>
+                <Show when={fetching()}>
+                  <Spinner style={{ width: "12px", height: "12px" }} />
+                </Show>
+              </div>
+              <Show when={form.models.length > 0}>
+                <div style={{ display: "flex", gap: "8px", "flex-wrap": "wrap" }}>
+                  <Button type="button" size="small" variant="secondary" icon="brain" onClick={toggleAllReasoning}>
+                    {language.t("provider.custom.models.toggleReasoning")}
+                  </Button>
+                  <Button type="button" size="small" variant="secondary" icon="photo" onClick={toggleAllSupportsImages}>
+                    {language.t("provider.custom.models.toggleImages")}
+                  </Button>
+                </div>
               </Show>
             </div>
             <For each={form.models}>
