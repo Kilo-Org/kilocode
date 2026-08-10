@@ -122,7 +122,6 @@ object SessionUiStyle {
             const val CLOSE_SIZE = 18
             const val CORNER_ARC = 8
             const val CHIP_HEIGHT = 28
-            const val CHIP_HORIZONTAL_PADDING = 8
             const val CHIP_ICON_GAP = 6
         }
 

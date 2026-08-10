@@ -36,11 +36,12 @@ class PromptAttachmentView(
 
     init {
         isOpaque = false
+        // Align the attachment chips with the prompt text: same left/right/bottom padding as PromptView.
         border = JBUI.Borders.empty(
             0,
-            0,
+            JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING),
             JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING),
-            0,
+            JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING),
         )
         add(scroll)
     }
