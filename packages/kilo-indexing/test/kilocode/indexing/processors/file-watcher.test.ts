@@ -556,16 +556,21 @@ describe("FileWatcher subscription", () => {
   test("skips derived prunes for ignore files inside glob-metachar directories", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "file-watcher-meta-"))
     try {
-      // A .gitignore inside a Next.js-style [slug] route: emitting a raw glob for it
-      // (e.g. app/[slug]/**/generated) would prune the wrong tree, so no prune glob
+      // A .gitignore inside a metachar directory would emit a raw glob (e.g.
+      // app/[slug]/**/generated) that prunes the wrong tree — and for a leading "!"
+      // (e.g. a dir named "!scope") parcel reads it as a negation — so no prune glob
       // may be derived from it. A normal dir's prune still works.
       await mkdir(path.join(root, "app", "[slug]"), { recursive: true })
       await writeFile(path.join(root, "app", "[slug]", ".gitignore"), "generated\n")
+      await mkdir(path.join(root, "!scope"), { recursive: true })
+      await writeFile(path.join(root, "!scope", ".gitignore"), "cache\n")
       await writeFile(path.join(root, ".gitignore"), ".venv/\n")
 
       const globs = (await loadIgnore(root)).watchIgnoreGlobs?.() ?? []
       expect(globs).toContain("**/.venv")
       expect(globs.some((g) => g.includes("[slug]") || g.includes("generated"))).toBe(false)
+      // No negation glob and nothing derived from the "!scope" tree.
+      expect(globs.some((g) => g.startsWith("!") || g.includes("!scope") || g.includes("cache"))).toBe(false)
     } finally {
       await rm(root, { recursive: true, force: true })
     }

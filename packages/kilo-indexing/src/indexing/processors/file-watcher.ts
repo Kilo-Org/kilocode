@@ -1,4 +1,6 @@
 import type ParcelWatcher from "@parcel/watcher"
+// @ts-ignore - the wrapper subpath ships without type declarations
+import { createWrapper } from "@parcel/watcher/wrapper"
 import { stat, readFile } from "fs/promises"
 import { createHash } from "crypto"
 import path from "path"
@@ -68,20 +70,16 @@ let parcelModule: typeof import("@parcel/watcher") | null | undefined
 function loadParcelWatcher(): typeof import("@parcel/watcher") | undefined {
   if (parcelModule !== undefined) return parcelModule ?? undefined
   try {
-    // Load the platform binding directly; this is what resolves inside the
-    // bundled bun-compiled runtime (mirrors @kilocode/core's workspace watcher).
+    // The platform binding stays a dynamic require so bun-compiled multi-platform
+    // binaries resolve the right prebuild at runtime (mirrors @kilocode/core).
     const libc = typeof KILO_LIBC === "undefined" ? undefined : KILO_LIBC
     const suffix = process.platform === "linux" ? `-${libc || "glibc"}` : ""
-    // @ts-ignore - the wrapper subpath ships without type declarations
-    const { createWrapper } = require("@parcel/watcher/wrapper")
     const binding = require(`@parcel/watcher-${process.platform}-${process.arch}${suffix}`)
     parcelModule = createWrapper(binding) as typeof import("@parcel/watcher")
   } catch {
-    try {
-      parcelModule = require("@parcel/watcher") as typeof import("@parcel/watcher") // dev / CLI / test fallback
-    } catch {
-      parcelModule = null
-    }
+    // Single loading path: degrade cleanly when the native binding is unavailable
+    // (no @parcel/watcher main-package fallback), exactly like the core watcher.
+    parcelModule = null
   }
   return parcelModule ?? undefined
 }

@@ -101,9 +101,10 @@ function rules(dir: string, txt: string): string[] {
   return result
 }
 
-// Glob metacharacters we don't translate into watcher globs (parcel uses
-// micromatch); such patterns fall back to ignores() rather than risk drift.
-const GLOB_META = /[*?[\]{}()]/
+// Glob metacharacters (matching discovery()'s set, including `!`, which parcel
+// treats as negation) that we don't translate into watcher globs; such patterns
+// fall back to ignores() rather than risk drift or an inverted (negation) prune.
+const GLOB_META = /[*?![\]{}()]/
 
 type PruneCandidate = { segment: string; glob: string; scoped: boolean }
 
