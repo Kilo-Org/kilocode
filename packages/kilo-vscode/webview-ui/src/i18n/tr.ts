@@ -444,6 +444,10 @@ export const dict = {
   "provider.custom.models.modalities.image": "Görüntü",
   "provider.custom.models.remove": "Modeli kaldır",
   "provider.custom.models.add": "Model ekle",
+  "provider.custom.models.allReasoning": "Tüm akıl yürütme",
+  "provider.custom.models.noReasoning": "Akıl yürütme yok",
+  "provider.custom.models.allImages": "Tüm görseller",
+  "provider.custom.models.noImages": "Görsel yok",
   "provider.custom.models.fetch.authError":
     "Kimlik doğrulama başarısız oldu. Yukarıdaki API anahtarını kontrol edin ve tekrar deneyin.",
   "provider.custom.models.fetch.empty": "Bu sunucuda model bulunamadı.",

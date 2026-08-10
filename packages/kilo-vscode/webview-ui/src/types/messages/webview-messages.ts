@@ -1241,6 +1241,7 @@ export interface FetchCustomProviderModelsMessage {
    */
   providerID?: string
   headers?: Record<string, string>
+  npm?: string
 }
 
 export interface PersistRecentsRequest {

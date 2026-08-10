@@ -2462,7 +2462,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       typeof msg.apiKey === "string" ? msg.apiKey : resolveStoredKey(this.storedProviderKeys, msg.providerID, url)
     const headers = msg.headers && typeof msg.headers === "object" ? (msg.headers as Record<string, string>) : undefined
     try {
-      const models = await fetchOpenAIModels({ baseURL: url, apiKey: key, headers })
+      const npm = typeof msg.npm === "string" ? msg.npm : undefined
+      const models = await fetchOpenAIModels({ baseURL: url, apiKey: key, headers, npm })
       this.postMessage({ type: "customProviderModelsFetched", requestId: rid, models })
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to fetch models"

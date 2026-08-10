@@ -498,6 +498,10 @@ export const dict = {
   "provider.custom.models.modalities.image": "Slika",
   "provider.custom.models.remove": "Ukloni model",
   "provider.custom.models.add": "Dodaj model",
+  "provider.custom.models.allReasoning": "Svo rezonovanje",
+  "provider.custom.models.noReasoning": "Bez rezonovanja",
+  "provider.custom.models.allImages": "Sve slike",
+  "provider.custom.models.noImages": "Bez slika",
   "provider.custom.models.fetch.authError":
     "Autentifikacija nije uspjela. Provjerite API ključ iznad i pokušajte ponovo.",
   "provider.custom.models.fetch.empty": "Nisu pronađeni modeli na ovom serveru.",

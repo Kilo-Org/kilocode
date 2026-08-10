@@ -51,6 +51,17 @@ type ModelCardProps = {
   onRemove: () => void
 }
 
+const check = {
+  display: "flex",
+  "align-items": "center",
+  gap: "6px",
+  cursor: "pointer",
+  "font-size": "var(--kilo-font-size-12)",
+  color: "var(--vscode-foreground)",
+  "flex-shrink": "0",
+  "user-select": "none",
+} as const
+
 export function ModelCard(props: ModelCardProps) {
   const issue = () => props.errors.variants?.find((error) => error.name)?.name
 
@@ -59,17 +70,17 @@ export function ModelCard(props: ModelCardProps) {
       style={{
         display: "flex",
         "flex-direction": "column",
-        gap: "8px",
-        padding: "8px",
+        gap: "4px",
+        padding: "4px 6px",
         border: "1px solid var(--border-weak-base, var(--vscode-panel-border))",
         "border-radius": "6px",
       }}
     >
-      {/* Model id + name + remove */}
-      <div style={{ display: "flex", gap: "8px", "align-items": "flex-end" }}>
-        <div style={{ flex: 1 }}>
+      <div style={{ display: "flex", gap: "8px", "align-items": "center", "flex-wrap": "wrap" }}>
+        <div style={{ flex: "1 1 120px", "min-width": "100px" }}>
           <TextField
             label={props.t("provider.custom.models.id.label")}
+            hideLabel
             placeholder={props.t("provider.custom.models.id.placeholder")}
             value={props.m.id}
             onChange={props.onChangeId}
@@ -77,9 +88,10 @@ export function ModelCard(props: ModelCardProps) {
             error={props.errors.id}
           />
         </div>
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: "1 1 120px", "min-width": "100px" }}>
           <TextField
             label={props.t("provider.custom.models.name.label")}
+            hideLabel
             placeholder={props.t("provider.custom.models.name.placeholder")}
             value={props.m.name}
             onChange={props.onChangeName}
@@ -87,53 +99,37 @@ export function ModelCard(props: ModelCardProps) {
             error={props.errors.name}
           />
         </div>
+        <label style={check}>
+          <input
+            type="checkbox"
+            checked={props.m.reasoning}
+            onChange={(e) => props.onChangeReasoning(e.currentTarget.checked)}
+          />
+          {props.t("provider.custom.models.reasoning.label")}
+        </label>
+        <label style={check}>
+          <input
+            type="checkbox"
+            checked={props.m.supportsImages}
+            onChange={(e) => props.onChangeSupportsImages(e.currentTarget.checked)}
+          />
+          {props.t("provider.custom.models.modalities.image")}
+        </label>
         <IconButton
           type="button"
           icon="trash"
           variant="ghost"
-          onClick={props.onRemove}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            if (!props.canRemove) return
+            props.onRemove()
+          }}
           disabled={!props.canRemove}
           aria-label={props.t("provider.custom.models.remove")}
-          style={{ "margin-bottom": "4px" }}
         />
       </div>
-
-      {/* Reasoning toggle */}
-      <label
-        style={{
-          display: "flex",
-          "align-items": "center",
-          gap: "8px",
-          cursor: "pointer",
-          "font-size": "var(--kilo-font-size-13)",
-          color: "var(--vscode-foreground)",
-        }}
-      >
-        <input
-          type="checkbox"
-          checked={props.m.reasoning}
-          onChange={(e) => props.onChangeReasoning(e.currentTarget.checked)}
-        />
-        {props.t("provider.custom.models.reasoning.label")}
-      </label>
-
-      <label
-        style={{
-          display: "flex",
-          "align-items": "center",
-          gap: "8px",
-          cursor: "pointer",
-          "font-size": "var(--kilo-font-size-13)",
-          color: "var(--vscode-foreground)",
-        }}
-      >
-        <input
-          type="checkbox"
-          checked={props.m.supportsImages}
-          onChange={(e) => props.onChangeSupportsImages(e.currentTarget.checked)}
-        />
-        {props.t("provider.custom.models.modalities.image")}
-      </label>
 
       <Show when={issue()}>
         {(error) => (

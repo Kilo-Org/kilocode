@@ -8,7 +8,8 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js"
-import { createStore, reconcile } from "solid-js/store"
+import { createStore, produce, reconcile } from "solid-js/store"
+import { VList } from "virtua/solid"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
@@ -38,6 +39,12 @@ import { validateCustomProvider } from "./CustomProviderValidation"
 import type { FormErrors, FormState, HeaderRow } from "./CustomProviderValidation"
 const DEBOUNCE_MS = 500
 const SEARCH_DEBOUNCE_MS = 150
+const MODEL_LIST_MAX = 320
+const MODEL_ROW = 56
+
+function blank(): ModelEntry {
+  return { id: "", name: "", reasoning: false, supportsImages: false, modalities: {}, variants: [] }
+}
 
 const PACKAGE_OPTIONS: Array<{ value: CustomProviderPackage; label: string }> = [
   { value: "@ai-sdk/openai-compatible", label: "OpenAI Compatible" },
@@ -108,10 +115,9 @@ function parseVariant([name, cfg]: [string, Record<string, unknown>]): VariantEn
 }
 
 function initModels(cfg: ProviderConfig | undefined): ModelEntry[] {
-  const empty = { id: "", name: "", reasoning: false, supportsImages: false, modalities: {}, variants: [] }
-  if (!cfg?.models || typeof cfg.models !== "object") return [{ ...empty }]
+  if (!cfg?.models || typeof cfg.models !== "object") return [blank()]
   const entries = Object.entries(cfg.models)
-  if (entries.length === 0) return [{ ...empty }]
+  if (entries.length === 0) return [blank()]
   return entries.map(([id, model]) => {
     const raw = model as RawModel
     const modalities = modes(raw.modalities)
@@ -216,6 +222,13 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     return models.filter((m) => fuzzy(q, m.id) || fuzzy(q, m.name))
   })
 
+  const rows = createMemo(() => {
+    form.models.length
+    return form.models.slice()
+  })
+
+  const listHeight = createMemo(() => Math.min(Math.max(rows().length, 1) * MODEL_ROW, MODEL_LIST_MAX))
+
   // ── Auto-fetch on debounce ──────────────────────────────────────────
 
   // Dedicated signals for the URL and API key drive the auto-fetch effect.
@@ -229,7 +242,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
   let fetchVersion = 0
 
   createEffect(() => {
-    const npm = fetchPackage()
+    fetchPackage()
     const url = fetchURL()
     const key = fetchKey()
     void key // subscribe to key changes without using the value here
@@ -240,7 +253,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     setFetchStatus(undefined)
     setSearch("")
 
-    if (npm === "@ai-sdk/anthropic" || !/^https?:\/\//.test(url.trim())) return
+    if (!/^https?:\/\//.test(url.trim())) return
 
     fetchVersion++
     const version = fetchVersion
@@ -326,6 +339,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
       apiKey,
       providerID,
       headers,
+      npm: fetchPackage(),
     })
   }
 
@@ -378,19 +392,28 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     })
 
     const defaults = (m: FetchedModel): ModelEntry => ({
-      ...m,
+      id: m.id,
+      name: m.name,
       reasoning: false,
       supportsImages: false,
       modalities: {},
       variants: [],
     })
-    const merged = empty ? toAdd.map(defaults) : [...form.models, ...toAdd.map(defaults)]
 
     if (toAdd.length > 0) {
-      setForm("models", merged)
+      setForm(
+        "models",
+        produce((list) => {
+          if (empty) list.splice(0, list.length)
+          for (const m of toAdd) list.push(defaults(m))
+        }),
+      )
       setErrors(
         "models",
-        merged.map((m) => ({ variants: m.variants.map(() => ({})) })),
+        produce((list) => {
+          if (empty) list.splice(0, list.length)
+          list.push(...toAdd.map(() => ({ variants: [] })))
+        }),
       )
     }
 
@@ -438,28 +461,74 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
   }
 
   function addModel() {
-    setForm("models", (v) => [
-      ...v,
-      { id: "", name: "", reasoning: false, supportsImages: false, modalities: {}, variants: [] },
-    ])
-    setErrors("models", (v) => [...v, { variants: [] }])
+    setForm(
+      "models",
+      produce((list) => {
+        list.push(blank())
+      }),
+    )
+    setErrors(
+      "models",
+      produce((list) => {
+        list.push({ variants: [] })
+      }),
+    )
   }
 
   function removeModel(index: number) {
     if (form.models.length <= 1) return
-    setForm("models", (v) => v.filter((_, i) => i !== index))
-    setErrors("models", (v) => v.filter((_, i) => i !== index))
+    setForm(
+      "models",
+      produce((list) => {
+        list.splice(index, 1)
+      }),
+    )
+    setErrors(
+      "models",
+      produce((list) => {
+        list.splice(index, 1)
+      }),
+    )
+  }
+
+  function setAll(field: "reasoning" | "supportsImages", value: boolean) {
+    setForm(
+      "models",
+      produce((list) => {
+        for (const m of list) m[field] = value
+      }),
+    )
   }
 
   function addHeader() {
-    setForm("headers", (v) => [...v, { key: "", value: "" }])
-    setErrors("headers", (v) => [...v, {}])
+    setForm(
+      "headers",
+      produce((list) => {
+        list.push({ key: "", value: "" })
+      }),
+    )
+    setErrors(
+      "headers",
+      produce((list) => {
+        list.push({})
+      }),
+    )
   }
 
   function removeHeader(index: number) {
     if (form.headers.length <= 1) return
-    setForm("headers", (v) => v.filter((_, i) => i !== index))
-    setErrors("headers", (v) => v.filter((_, i) => i !== index))
+    setForm(
+      "headers",
+      produce((list) => {
+        list.splice(index, 1)
+      }),
+    )
+    setErrors(
+      "headers",
+      produce((list) => {
+        list.splice(index, 1)
+      }),
+    )
   }
 
   function validate() {
@@ -524,19 +593,22 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
           aria-label={language.t("common.goBack")}
         />
       }
+      size="x-large"
       transition
     >
       <div
         style={{
           display: "flex",
           "flex-direction": "column",
-          gap: "24px",
-          padding: "0 10px 12px 10px",
+          gap: "16px",
+          padding: "0 16px 16px 16px",
+          flex: "1",
+          "min-height": "0",
           "overflow-y": "auto",
-          "max-height": "60vh",
+          width: "100%",
         }}
       >
-        <div style={{ padding: "0 10px", display: "flex", gap: "16px", "align-items": "center" }}>
+        <div style={{ display: "flex", gap: "16px", "align-items": "center" }}>
           <ProviderIcon id="synthetic" width={20} height={20} />
           <div
             style={{ "font-size": "var(--kilo-font-size-16)", "font-weight": "500", color: "var(--vscode-foreground)" }}
@@ -547,7 +619,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
 
         <form
           onSubmit={save}
-          style={{ padding: "0 10px 24px 10px", display: "flex", "flex-direction": "column", gap: "24px" }}
+          style={{ padding: "0 0 8px 0", display: "flex", "flex-direction": "column", gap: "16px" }}
         >
           <div style={{ "font-size": "var(--kilo-font-size-14)", color: "var(--text-base)" }}>
             {language.t("provider.custom.description.prefix")}
@@ -565,16 +637,16 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
             </a>
             {language.t("provider.custom.description.suffix")}
             <Show when={editing()}>
-              <div style={{ "margin-top": "8px" }}>
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    vscode.postMessage(configMessage("global", language.t))
-                  }}
+              <div style={{ "margin-top": "10px" }}>
+                <Button
+                  type="button"
+                  size="small"
+                  variant="secondary"
+                  icon="code"
+                  onClick={() => vscode.postMessage(configMessage("global", language.t))}
                 >
                   {language.t("provider.custom.edit.advanced")}
-                </a>
+                </Button>
               </div>
             </Show>
           </div>
@@ -650,8 +722,15 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
           </div>
 
           {/* Models */}
-          <div style={{ display: "flex", "flex-direction": "column", gap: "12px" }}>
-            <div style={{ display: "flex", "align-items": "center", gap: "8px" }}>
+          <div style={{ display: "flex", "flex-direction": "column", gap: "8px" }}>
+            <div
+              style={{
+                display: "flex",
+                "align-items": "center",
+                gap: "8px",
+                "flex-wrap": "wrap",
+              }}
+            >
               <label
                 style={{
                   "font-size": "var(--kilo-font-size-12)",
@@ -664,22 +743,55 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
               <Show when={fetching()}>
                 <Spinner style={{ width: "12px", height: "12px" }} />
               </Show>
+              <div style={{ display: "flex", gap: "6px", "margin-left": "auto", "flex-wrap": "wrap" }}>
+                <Button type="button" size="small" variant="secondary" onClick={() => setAll("reasoning", true)}>
+                  {language.t("provider.custom.models.allReasoning")}
+                </Button>
+                <Button type="button" size="small" variant="ghost" onClick={() => setAll("reasoning", false)}>
+                  {language.t("provider.custom.models.noReasoning")}
+                </Button>
+                <Button type="button" size="small" variant="secondary" onClick={() => setAll("supportsImages", true)}>
+                  {language.t("provider.custom.models.allImages")}
+                </Button>
+                <Button type="button" size="small" variant="ghost" onClick={() => setAll("supportsImages", false)}>
+                  {language.t("provider.custom.models.noImages")}
+                </Button>
+              </div>
             </div>
-            <For each={form.models}>
-              {(m, i) => (
-                <ModelCard
-                  m={m}
-                  errors={errors.models[i()] ?? {}}
-                  t={language.t}
-                  canRemove={form.models.length > 1}
-                  onChangeId={(v) => setForm("models", i(), "id", v)}
-                  onChangeName={(v) => setForm("models", i(), "name", v)}
-                  onChangeReasoning={(v) => setForm("models", i(), "reasoning", v)}
-                  onChangeSupportsImages={(v) => setForm("models", i(), "supportsImages", v)}
-                  onRemove={() => removeModel(i())}
-                />
+            <div
+              style={{
+                display: "flex",
+                gap: "8px",
+                padding: "0 6px",
+                "font-size": "var(--kilo-font-size-12)",
+                "font-weight": "500",
+                color: "var(--text-weak-base)",
+              }}
+            >
+              <span style={{ flex: "1 1 120px" }}>{language.t("provider.custom.models.id.label")}</span>
+              <span style={{ flex: "1 1 120px" }}>{language.t("provider.custom.models.name.label")}</span>
+            </div>
+            <VList data={rows()} style={{ height: `${listHeight()}px` }}>
+              {(_m, i) => (
+                <Show when={form.models[i()]}>
+                  {(m) => (
+                    <div style={{ padding: "0 0 6px 0" }}>
+                      <ModelCard
+                        m={m()}
+                        errors={errors.models[i()] ?? {}}
+                        t={language.t}
+                        canRemove={rows().length > 1}
+                        onChangeId={(v) => setForm("models", i(), "id", v)}
+                        onChangeName={(v) => setForm("models", i(), "name", v)}
+                        onChangeReasoning={(v) => setForm("models", i(), "reasoning", v)}
+                        onChangeSupportsImages={(v) => setForm("models", i(), "supportsImages", v)}
+                        onRemove={() => removeModel(i())}
+                      />
+                    </div>
+                  )}
+                </Show>
               )}
-            </For>
+            </VList>
             <Button type="button" size="small" variant="ghost" icon="plus-small" onClick={addModel}>
               {language.t("provider.custom.models.add")}
             </Button>
@@ -770,40 +882,33 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
                     />
                   </Show>
 
-                  {/* Model list */}
-                  <div
-                    style={{
-                      "max-height": "200px",
-                      "overflow-y": "auto",
-                      display: "flex",
-                      "flex-direction": "column",
-                      gap: "2px",
-                    }}
+                  <VList
+                    data={filtered()}
+                    itemSize={28}
+                    style={{ height: `${Math.min(Math.max(filtered().length, 1) * 28, 200)}px` }}
                   >
-                    <For each={filtered()}>
-                      {(m) => (
-                        <label
-                          style={{
-                            display: "flex",
-                            "align-items": "center",
-                            gap: "8px",
-                            padding: "4px 2px",
-                            cursor: "pointer",
-                            "font-size": "var(--kilo-font-size-13)",
-                            color: "var(--text-base, var(--vscode-foreground))",
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selected().has(m.id)}
-                            onChange={() => toggleModel(m.id)}
-                            style={{ cursor: "pointer" }}
-                          />
-                          {m.id}
-                        </label>
-                      )}
-                    </For>
-                  </div>
+                    {(m) => (
+                      <label
+                        style={{
+                          display: "flex",
+                          "align-items": "center",
+                          gap: "8px",
+                          padding: "4px 2px",
+                          cursor: "pointer",
+                          "font-size": "var(--kilo-font-size-13)",
+                          color: "var(--text-base, var(--vscode-foreground))",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selected().has(m.id)}
+                          onChange={() => toggleModel(m.id)}
+                          style={{ cursor: "pointer" }}
+                        />
+                        {m.id}
+                      </label>
+                    )}
+                  </VList>
 
                   {/* Actions */}
                   <div style={{ display: "flex", gap: "8px", "margin-top": "4px" }}>
@@ -855,7 +960,12 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
                     type="button"
                     icon="trash"
                     variant="ghost"
-                    onClick={() => removeHeader(i())}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      removeHeader(i())
+                    }}
                     disabled={form.headers.length <= 1}
                     aria-label={language.t("provider.custom.headers.remove")}
                     style={{ "margin-top": "6px" }}
