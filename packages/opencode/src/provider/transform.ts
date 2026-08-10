@@ -328,6 +328,20 @@ function normalizeMessages(
   return msgs
 }
 
+// kilocode_change start - explicit prompt cache breakpoints for GPT-5.6+
+function supportsPromptCacheBreakpoint(modelId: string): boolean {
+  const match = modelId.match(/gpt-(\d+)\.(\d+)/)
+  if (match) {
+    const major = Number(match[1])
+    const minor = Number(match[2])
+    if (major > 5 || (major === 5 && minor >= 6)) return true
+  }
+  const majorMatch = modelId.match(/gpt-(\d+)/)
+  if (majorMatch && Number(majorMatch[1]) >= 6) return true
+  return false
+}
+// kilocode_change end
+
 function applyCaching(msgs: ModelMessage[], model: Provider.Model): ModelMessage[] {
   const system = msgs.filter((msg) => msg.role === "system").slice(0, 2)
   const final = msgs.filter((msg) => msg.role !== "system").slice(-2)
@@ -351,6 +365,18 @@ function applyCaching(msgs: ModelMessage[], model: Provider.Model): ModelMessage
     alibaba: {
       cacheControl: { type: "ephemeral" },
     },
+    // kilocode_change start
+    ...(supportsPromptCacheBreakpoint(model.api.id)
+      ? {
+          openai: {
+            promptCacheBreakpoint: { mode: "explicit" },
+          },
+          azure: {
+            promptCacheBreakpoint: { mode: "explicit" },
+          },
+        }
+      : {}),
+    // kilocode_change end
   }
 
   for (const msg of unique([...system, ...final])) {
@@ -360,8 +386,24 @@ function applyCaching(msgs: ModelMessage[], model: Provider.Model): ModelMessage
       model.api.npm === "@ai-sdk/amazon-bedrock"
     const shouldUseContentOptions = !useMessageLevelOptions && Array.isArray(msg.content) && msg.content.length > 0
 
-    if (shouldUseContentOptions) {
-      const lastContent = msg.content[msg.content.length - 1]
+    // kilocode_change start - place caching breakpoint on stable content before trailing <environment_details>
+    if (shouldUseContentOptions && Array.isArray(msg.content)) {
+      const parts = msg.content
+      let targetIndex = -1
+      for (let i = parts.length - 1; i >= 0; i--) {
+        const part = parts[i]
+        if (
+          part &&
+          typeof part === "object" &&
+          part.type !== "tool-approval-request" &&
+          part.type !== "tool-approval-response" &&
+          !(part.type === "text" && part.text.startsWith("<environment_details>"))
+        ) {
+          targetIndex = i
+          break
+        }
+      }
+      const lastContent = targetIndex >= 0 ? parts[targetIndex] : parts[parts.length - 1]
       if (
         lastContent &&
         typeof lastContent === "object" &&
@@ -372,6 +414,7 @@ function applyCaching(msgs: ModelMessage[], model: Provider.Model): ModelMessage
         continue
       }
     }
+    // kilocode_change end
 
     msg.providerOptions = mergeDeep(msg.providerOptions ?? {}, providerOptions)
   }
@@ -438,6 +481,7 @@ function mapProviderOptions(
 export function message(msgs: ModelMessage[], model: Provider.Model, options: Record<string, unknown>) {
   msgs = unsupportedParts(msgs, model)
   msgs = normalizeMessages(msgs, model, options)
+  // kilocode_change start - apply caching for anthropic, alibaba, and GPT-5.6+ openai/azure/kilo-gateway
   if (
     (model.providerID === "anthropic" ||
       model.providerID === "google-vertex-anthropic" ||
@@ -446,11 +490,16 @@ export function message(msgs: ModelMessage[], model: Provider.Model, options: Re
       model.id.includes("anthropic") ||
       model.id.includes("claude") ||
       model.api.npm === "@ai-sdk/anthropic" ||
-      model.api.npm === "@ai-sdk/alibaba") &&
+      model.api.npm === "@ai-sdk/alibaba" ||
+      ((model.api.npm === "@ai-sdk/openai" ||
+        model.api.npm === "@ai-sdk/azure" ||
+        model.api.npm === "@kilocode/kilo-gateway") &&
+        supportsPromptCacheBreakpoint(model.api.id))) &&
     model.api.npm !== "@ai-sdk/gateway"
   ) {
     msgs = applyCaching(msgs, model)
   }
+  // kilocode_change end
 
   // Remap providerOptions keys from stored providerID to expected SDK key
   const key = sdkKey(model.api.npm)
