@@ -20,18 +20,8 @@
     font-weight: 600;
   }
 
-  &[data-size="large"] [data-slot="dialog-container"] {
-    width: min(calc(100vw - 32px), 800px);
-    height: min(calc(100vh - 32px), 800px);
-  }
-
   &[data-size="large"] [data-slot="dialog-content"] {
     max-width: 800px;
-  }
-
-  &[data-size="x-large"] [data-slot="dialog-container"] {
-    width: min(calc(100vw - 32px), 980px);
-    height: min(calc(100vh - 32px), 850px);
   }
 
   &[data-size="x-large"] [data-slot="dialog-content"] {

@@ -153,13 +153,15 @@ export async function fetchAnthropicModels(opts: Options): Promise<ModelEntry[]>
   if (response.status === 404 && !base.includes("/v1")) {
     const fallbackUrl = new URL(`${base}/v1/models`)
     fallbackUrl.searchParams.set("limit", "1000")
-    const fallbackRes = await fetch(fallbackUrl.toString(), {
-      method: "GET",
-      headers,
-      signal: AbortSignal.timeout(15_000),
-    }).catch(() => null)
-    if (fallbackRes?.ok) {
-      response = fallbackRes
+    if (fallbackUrl.toString() !== url) {
+      const fallbackRes = await fetch(fallbackUrl.toString(), {
+        method: "GET",
+        headers,
+        signal: AbortSignal.timeout(15_000),
+      }).catch(() => null)
+      if (fallbackRes?.ok) {
+        response = fallbackRes
+      }
     }
   }
 
