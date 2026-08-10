@@ -1,8 +1,6 @@
 /** @jsxImportSource solid-js */
 import { For, Show, createSignal, onCleanup, onMount } from "solid-js"
 import { Markdown } from "@kilocode/kilo-ui/markdown"
-import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useVSCode } from "../../src/context/vscode"
 import type { PRStatus } from "../../src/types/messages"
 import type { PRComment } from "./pr-types"
@@ -34,6 +32,7 @@ function CommentCard(props: { comment: PRComment; worktreeId: string }) {
   const vscode = useVSCode()
   const [resolving, setResolving] = createSignal(false)
   const [optimisticResolved, setOptimisticResolved] = createSignal<boolean | undefined>(undefined)
+  const [resolveError, setResolveError] = createSignal<string | undefined>(undefined)
 
   const resolved = () => optimisticResolved() ?? props.comment.resolved
 
@@ -47,8 +46,10 @@ function CommentCard(props: { comment: PRComment; worktreeId: string }) {
       ) {
         if (msg.success) {
           setOptimisticResolved(true)
+          setResolveError(undefined)
         } else {
           setOptimisticResolved(undefined)
+          setResolveError("Failed to resolve thread")
         }
         setResolving(false)
       }
@@ -59,6 +60,7 @@ function CommentCard(props: { comment: PRComment; worktreeId: string }) {
 
   function resolve() {
     setResolving(true)
+    setResolveError(undefined)
     setOptimisticResolved(true)
     vscode.postMessage({ type: "agentManager.resolveComment", worktreeId: props.worktreeId, threadId: props.comment.id })
   }
@@ -79,24 +81,21 @@ function CommentCard(props: { comment: PRComment; worktreeId: string }) {
         <Show when={resolved()}>
           <span class="am-pr-panel-comment-resolved-badge">Resolved</span>
         </Show>
-        <Show when={!resolved()}>
-          <Tooltip value="Resolve thread" placement="bottom">
-            <IconButton
-              icon="circle-check"
-              size="small"
-              variant="ghost"
-              label="Resolve"
-              class="am-pr-resolve-btn"
-              disabled={resolving()}
-              onClick={resolve}
-            />
-          </Tooltip>
-        </Show>
         <CopyButton text={props.comment.body} class="am-pr-copy-btn" />
       </div>
+      <Show when={resolveError()}>
+        {(err) => <div class="am-pr-resolve-error">{err()}</div>}
+      </Show>
       <div class="am-pr-panel-comment-body">
         <Markdown text={props.comment.body} />
       </div>
+      <Show when={!resolved()}>
+        <div class="am-pr-resolve-row">
+          <button class="am-pr-resolve-btn" disabled={resolving()} onClick={resolve}>
+            Resolve conversation
+          </button>
+        </div>
+      </Show>
     </div>
   )
 }

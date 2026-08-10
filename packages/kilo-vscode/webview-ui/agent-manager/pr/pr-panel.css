@@ -291,13 +291,35 @@
 }
 
 /* Resolve button */
+.am-pr-resolve-row {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 15px;
+}
+
 .am-pr-resolve-btn {
-  opacity: 0.5;
+  background: none;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 3px;
+  color: var(--text-weak);
+  cursor: pointer;
+  font-size: var(--kilo-font-size-14);
+  padding: 4px 16px;
 }
 
 .am-pr-resolve-btn:hover {
-  opacity: 1;
-  color: var(--vscode-testing-iconPassed, #34d399);
+  color: var(--vscode-foreground);
+  border-color: var(--vscode-foreground);
+}
+.am-pr-resolve-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.am-pr-resolve-error {
+  font-size: var(--kilo-font-size-11);
+  color: var(--vscode-testing-iconFailed, #f87171);
+  padding: 2px 0 4px;
 }
 
 .am-pr-panel-comment-body [data-component="markdown"] {
