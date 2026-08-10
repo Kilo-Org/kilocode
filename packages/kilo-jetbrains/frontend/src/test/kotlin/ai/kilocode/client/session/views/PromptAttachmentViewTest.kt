@@ -3,18 +3,27 @@ package ai.kilocode.client.session.views
 import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.session.ui.attachment.AttachmentCardItem
 import ai.kilocode.client.session.ui.attachment.AttachmentChip
+import ai.kilocode.client.ui.UiStyle
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
 class PromptAttachmentViewTest : BasePlatformTestCase() {
-    // The attachment strip should line up with the prompt text: same left, right, and bottom
-    // padding as PromptView so the selection reference reads as part of the prompt.
-    fun `test attachment padding matches prompt text`() {
+    // The attachment strip should line up with the prompt text horizontally and keep only a
+    // small standard bottom inset below the selection reference.
+    fun `test attachment padding matches prompt text with small bottom inset`() {
         val prompt = PromptView(Text("p1")).insets
         val attach = PromptAttachmentView("m1") {}.insets
 
         assertEquals(prompt.left, attach.left)
         assertEquals(prompt.right, attach.right)
-        assertEquals(prompt.bottom, attach.bottom)
+        assertEquals(0, attach.top)
+        assertEquals(UiStyle.Gap.sm(), attach.bottom)
+    }
+
+    fun `test attachment scroll pane has no border line`() {
+        val scroll = PromptAttachmentView("m1") {}.scrollPane()
+
+        assertNull(scroll.border)
+        assertNull(scroll.viewportBorder)
     }
 
     // With the outline removed, the chip owns no internal padding; alignment comes from the

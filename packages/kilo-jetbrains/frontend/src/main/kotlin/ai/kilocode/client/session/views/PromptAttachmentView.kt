@@ -28,6 +28,7 @@ class PromptAttachmentView(
     private val row = Stack.horizontal(gap = UiStyle.Gap.sm())
     private val scroll = JBScrollPane(row).apply {
         border = null
+        viewportBorder = null
         isOpaque = false
         viewport.isOpaque = false
         horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED
@@ -36,11 +37,11 @@ class PromptAttachmentView(
 
     init {
         isOpaque = false
-        // Align the attachment chips with the prompt text: same left/right/bottom padding as PromptView.
+        // Align the attachment chips with the prompt text horizontally, with only a small bottom inset.
         border = JBUI.Borders.empty(
             0,
             JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING),
-            JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING),
+            UiStyle.Gap.sm(),
             JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING),
         )
         add(scroll)
@@ -87,7 +88,7 @@ class PromptAttachmentView(
     override fun getPreferredSize(): Dimension {
         val ins = insets
         val pref = scroll.preferredSize
-        return Dimension(0, pref.height + bar() + ins.top + ins.bottom)
+        return Dimension(0, pref.height + ins.top + ins.bottom)
     }
 
     override fun getMinimumSize() = preferredSize
@@ -132,8 +133,6 @@ class PromptAttachmentView(
         val uri = runCatching { URI.create(item.url) }.getOrNull() ?: return false
         return uri.scheme == "file"
     }
-
-    private fun bar() = scroll.horizontalScrollBar.preferredSize.height
 
     private fun name(item: FileAttachment) = item.filename?.takeIf { it.isNotBlank() }
         ?: tail(item.url).takeIf { it.isNotBlank() }

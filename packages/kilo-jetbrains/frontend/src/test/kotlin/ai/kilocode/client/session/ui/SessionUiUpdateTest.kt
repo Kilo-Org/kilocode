@@ -5,6 +5,7 @@ import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.ui.attachment.AttachmentCard
 import ai.kilocode.client.session.ui.attachment.AttachmentChip
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.session.views.AttachmentView
 import ai.kilocode.client.session.views.PromptAttachmentView
 import ai.kilocode.client.session.views.tool.ReadToolView
@@ -467,11 +468,9 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
         assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED, pane.horizontalScrollBarPolicy)
         assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER, pane.verticalScrollBarPolicy)
         assertEquals(0, view.insets.top)
-        assertEquals(JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING), view.insets.bottom)
+        assertEquals(UiStyle.Gap.sm(), view.insets.bottom)
         assertEquals(
-            JBUI.scale(SessionUiStyle.View.Attachment.CARD_HEIGHT) +
-                pane.horizontalScrollBar.preferredSize.height +
-                JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING),
+            JBUI.scale(SessionUiStyle.View.Attachment.CARD_HEIGHT) + UiStyle.Gap.sm(),
             height,
         )
 
