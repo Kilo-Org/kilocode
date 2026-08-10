@@ -93,7 +93,7 @@ describe("validateCustomProvider – variant name validation", () => {
     ]
     const out = validateCustomProvider(args(form))
     expect(out.result).toBeUndefined()
-    expect(out.errors.models[0].variants?.[0]?.name).toBe("provider.custom.error.required")
+    expect(out.errors.models[0].variants?.[0]?.name).toBe('variants[""]: provider.custom.error.required')
   })
 
   it("blocks submit and reports error when reasoning is enabled with a whitespace-only variant name", () => {
@@ -112,7 +112,7 @@ describe("validateCustomProvider – variant name validation", () => {
     ]
     const out = validateCustomProvider(args(form))
     expect(out.result).toBeUndefined()
-    expect(out.errors.models[0].variants?.[0]?.name).toBe("provider.custom.error.required")
+    expect(out.errors.models[0].variants?.[0]?.name).toBe('variants["   "]: provider.custom.error.required')
   })
 
   it("blocks submit and reports duplicate error for two variants with the same name", () => {
@@ -140,7 +140,7 @@ describe("validateCustomProvider – variant name validation", () => {
     ]
     const out = validateCustomProvider(args(form))
     expect(out.result).toBeUndefined()
-    expect(out.errors.models[0].variants?.[1]?.name).toBe("provider.custom.error.duplicate")
+    expect(out.errors.models[0].variants?.[1]?.name).toBe('variants["fast"]: provider.custom.error.duplicate')
   })
 
   it("ignores variants entirely when reasoning is disabled, even if they have empty names", () => {
@@ -204,6 +204,34 @@ describe("validateCustomProvider – variant name validation", () => {
         reasoningEffort: "low",
       },
     })
+  })
+
+  it("preserves opaque variant options after the editor controls are removed", () => {
+    const form = base()
+    const raw = {
+      thinking: { type: "adaptive", display: "summarized" },
+      reasoningSummary: "auto",
+      include: ["reasoning.encrypted_content"],
+      customOption: { enabled: true },
+    }
+    form.models[0].reasoning = true
+    form.models[0].variants = [
+      {
+        name: "high",
+        raw,
+        enableThinking: undefined,
+        thinking: "adaptive",
+        splitReasoning: undefined,
+        outputEffort: undefined,
+        reasoningEffort: undefined,
+        chatTemplateArgs: undefined,
+      },
+    ]
+
+    const out = validateCustomProvider(args(form))
+    expect(out.result).toBeDefined()
+    const saved = out.result!.config.models["model-1"] as Record<string, unknown>
+    expect(saved.variants).toEqual({ high: raw })
   })
 
   it("serializes image modality when supportsImages is set", () => {

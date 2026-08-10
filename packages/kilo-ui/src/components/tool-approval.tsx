@@ -1,4 +1,5 @@
 import { createContext, useContext, Show, type Accessor, type ParentProps } from "solid-js"
+import { getFilename } from "@opencode-ai/core/util/path"
 import { Icon } from "./icon"
 
 /**
@@ -12,6 +13,10 @@ export type ToolApproval = {
   source: "agent" | "global" | "project" | "yolo" | "session" | "manual" | "default"
   agent?: string
   rule?: { permission: string; pattern: string; action: string }
+  /** True when the tool call's target path was outside the workspace/worktree. */
+  outsideWorkspace?: boolean
+  /** The target file path, when known, for display as a filename next to the note above. */
+  outsideWorkspacePath?: string
 }
 
 /** Pre-resolved, localized text plus the raw approval, supplied by the caller. */
@@ -20,6 +25,7 @@ export type ToolApprovalDisplay = {
   decision: string
   source?: string
   rule?: string
+  outsideWorkspace?: string
 }
 
 const SOURCE_KEYS = ["agent", "global", "project", "yolo", "session", "manual", "default"] as const
@@ -82,11 +88,16 @@ export function resolveToolApproval(
     rule && !(rule.permission === "*" && rule.pattern === "*")
       ? t("ui.approval.rule", { permission: rule.permission, pattern: rule.pattern })
       : undefined
+  // Only worth calling out when we know which file it was; a bare "outside your workspace" note
+  // without a filename (e.g. a bash command touching several directories) isn't actionable.
+  const filename = approval.outsideWorkspacePath ? getFilename(approval.outsideWorkspacePath) : undefined
   return {
     approval,
     decision: approval.source === "manual" ? t("ui.approval.manual") : t("ui.approval.auto"),
     source: sourceText(),
     rule: ruleText,
+    outsideWorkspace:
+      approval.outsideWorkspace && filename ? t("ui.approval.outsideWorkspace", { file: filename }) : undefined,
   }
 }
 
@@ -100,6 +111,9 @@ export function ToolApprovalLine(props: { display: ToolApprovalDisplay }) {
       <Show when={!manual()}>
         <Show when={props.display.source}>{(text) => <span data-slot="tool-approval-source">{text()}</span>}</Show>
         <Show when={props.display.rule}>{(text) => <span data-slot="tool-approval-rule">{text()}</span>}</Show>
+      </Show>
+      <Show when={props.display.outsideWorkspace}>
+        {(text) => <span data-slot="tool-approval-outside-workspace">{text()}</span>}
       </Show>
     </div>
   )

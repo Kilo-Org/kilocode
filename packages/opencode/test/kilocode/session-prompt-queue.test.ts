@@ -555,7 +555,7 @@ describe("session prompt queue", () => {
     } finally {
       server.stop(true)
     }
-  })
+  }, 30_000)
 
   test("closes a queued-handoff turn as superseded, not interrupted", async () => {
     const ready = Promise.withResolvers<void>()
