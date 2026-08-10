@@ -5,6 +5,7 @@ describe("Agent Manager initial message", () => {
   it("forwards the selected variant to sendMessage", () => {
     const msg = initialMessage({
       type: "agentManager.sendInitialMessage",
+      projectId: "project-a",
       sessionId: "session-a",
       worktreeId: "wt-a",
       text: "Fix it",
@@ -16,6 +17,7 @@ describe("Agent Manager initial message", () => {
 
     expect(msg).toEqual({
       type: "sendMessage",
+      projectId: "project-a",
       text: "Fix it",
       sessionID: "session-a",
       providerID: "anthropic",

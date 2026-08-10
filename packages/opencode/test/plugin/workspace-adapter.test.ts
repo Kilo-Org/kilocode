@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterEach, describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { FetchHttpClient } from "effect/unstable/http"
@@ -17,6 +18,7 @@ import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { Workspace } from "../../src/control-plane/workspace"
 import { Plugin } from "../../src/plugin/index"
 import { InstanceBootstrap } from "../../src/project/bootstrap-service"
+import { InstanceBootstrap as InstanceBootstrapNode } from "../../src/project/bootstrap"
 import { InstanceStore } from "../../src/project/instance-store"
 import { Project } from "../../src/project/project"
 import { Vcs } from "../../src/project/vcs"
@@ -28,38 +30,25 @@ import { testEffect } from "../lib/effect"
 import { AccountTest } from "../fake/account"
 import { AuthTest } from "../fake/auth"
 import { NpmTest } from "../fake/npm"
+import { Account } from "../../src/account/account"
+import { Npm } from "@opencode-ai/core/npm"
 
-const configLayer = Config.layer.pipe(
-  Layer.provide(Git.defaultLayer), // kilocode_change
-  Layer.provide(EffectFlock.defaultLayer),
-  Layer.provide(FSUtil.defaultLayer),
-  Layer.provide(Env.defaultLayer),
-  Layer.provide(AuthTest.empty),
-  Layer.provide(AccountTest.empty),
-  Layer.provide(NpmTest.noop),
-  Layer.provide(FetchHttpClient.layer),
-)
-const pluginLayer = Plugin.layer.pipe(
-  Layer.provide(EventV2Bridge.defaultLayer),
-  Layer.provide(configLayer),
-  Layer.provide(RuntimeFlags.layer({ disableDefaultPlugins: true })),
-)
+const configLayer = AppNodeBuilder.build(Config.node, [
+  [Auth.node, AuthTest.empty],
+  [Account.node, AccountTest.empty],
+  [Npm.node, NpmTest.noop],
+])
+const pluginLayer = AppNodeBuilder.build(Plugin.node, [
+  [Config.node, configLayer],
+  [RuntimeFlags.node, RuntimeFlags.layer({ disableDefaultPlugins: true })],
+])
 const noopBootstrapLayer = Layer.succeed(InstanceBootstrap.Service, InstanceBootstrap.Service.of({ run: Effect.void }))
-const workspaceLayer = Workspace.layer.pipe(
-  Layer.provide(Auth.defaultLayer),
-  Layer.provide(Session.defaultLayer),
-  Layer.provide(SessionPrompt.defaultLayer),
-  Layer.provide(Project.defaultLayer),
-  Layer.provide(Vcs.defaultLayer),
-  Layer.provide(FetchHttpClient.layer),
-  Layer.provide(Database.defaultLayer),
-  Layer.provide(EventV2Bridge.defaultLayer),
-  Layer.provide(FSUtil.defaultLayer),
-  Layer.provide(InstanceStore.defaultLayer.pipe(Layer.provide(noopBootstrapLayer))),
-  Layer.provide(RuntimeFlags.layer({ experimentalWorkspaces: true })),
-)
+const workspaceLayer = AppNodeBuilder.build(Workspace.node, [
+  [InstanceBootstrapNode.node, noopBootstrapLayer],
+  [RuntimeFlags.node, RuntimeFlags.layer({ experimentalWorkspaces: true })],
+])
 const it = testEffect(
-  Layer.mergeAll(pluginLayer, workspaceLayer, CrossSpawnSpawner.defaultLayer).pipe(Layer.provide(Ripgrep.defaultLayer)),
+  Layer.mergeAll(pluginLayer, workspaceLayer, AppNodeBuilder.build(CrossSpawnSpawner.node)).pipe(Layer.provide(AppNodeBuilder.build(Ripgrep.node))),
 )
 
 afterEach(async () => {

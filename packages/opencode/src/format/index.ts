@@ -9,6 +9,7 @@ import { mergeDeep } from "remeda"
 import { Config } from "@/config/config"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { errorMessage } from "@/util/error"
+import { model as modelEnv } from "@/kilocode/process/env" // kilocode_change
 import * as Formatter from "./formatter"
 
 export const Status = Schema.Struct({
@@ -28,7 +29,7 @@ export class Service extends Context.Service<Service, Interface>()("@opencode/Fo
 
 export const use = serviceUse(Service)
 
-export const layer = Layer.effect(
+const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const config = yield* Config.Service
@@ -85,8 +86,8 @@ export const layer = Layer.effect(
                 .run(
                   ChildProcess.make(replaced[0]!, replaced.slice(1), {
                     cwd: dir,
-                    env: item.environment,
-                    extendEnv: true,
+                    env: modelEnv(item.environment), // kilocode_change - formatters must not inherit backend credentials
+                    extendEnv: false, // kilocode_change
                     stdin: "ignore",
                     stdout: "ignore",
                     stderr: "ignore",
@@ -194,12 +195,10 @@ export const layer = Layer.effect(
   }),
 )
 
-export const defaultLayer = layer.pipe(
-  Layer.provide(Config.defaultLayer),
-  Layer.provide(AppProcess.defaultLayer),
-  Layer.provide(RuntimeFlags.defaultLayer),
-)
-
-export const node = LayerNode.make(layer, [Config.node, AppProcess.node, RuntimeFlags.node])
+export const node = LayerNode.make({
+  service: Service,
+  layer: layer,
+  deps: [Config.node, AppProcess.node, RuntimeFlags.node],
+})
 
 export * as Format from "."

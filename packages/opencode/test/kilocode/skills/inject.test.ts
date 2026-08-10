@@ -1,6 +1,6 @@
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
-import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
-import { Ripgrep } from "@opencode-ai/core/ripgrep"
+import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { Shell } from "@opencode-ai/core/shell"
 import { Effect, Exit, Layer } from "effect"
 import { afterEach, describe, expect } from "bun:test"
@@ -36,7 +36,7 @@ afterEach(async () => {
 })
 
 const it = testEffect(
-  Layer.mergeAll(ToolRegistry.defaultLayer, CrossSpawnSpawner.defaultLayer).pipe(Layer.provide(Ripgrep.defaultLayer)),
+  Layer.mergeAll(AppNodeBuilder.build(ToolRegistry.node), AppNodeBuilder.build(CrossSpawnSpawner.node)),
 )
 
 // Shell injection spawns real processes; skip on windows CI like the sibling suite.

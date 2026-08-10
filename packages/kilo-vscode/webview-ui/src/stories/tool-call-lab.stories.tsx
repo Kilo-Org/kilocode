@@ -180,6 +180,15 @@ const writePatch = [
   '+import { AssistantMessage } from "../components/chat/AssistantMessage"',
 ].join("\n")
 
+const tailPatch = [
+  "===================================================================",
+  "--- packages/kilo-vscode/webview-ui/src/components/chat/MessageList.tsx",
+  "+++ packages/kilo-vscode/webview-ui/src/components/chat/MessageList.tsx",
+  "@@ -1,1 +1,1 @@",
+  "-const old = true",
+  "+const next = true",
+].join("\n")
+
 const blockQuestions: QuestionRequest[] = [
   {
     id: "matrix-question-request",
@@ -465,7 +474,7 @@ const blocks: SDKPart[] = [
         "*** Begin Patch\n*** Update File: packages/kilo-ui/src/components/message-part.css\n@@\n-gap: 4px;\n+gap: 8px;\n*** End Patch",
     },
     output: "",
-    title: "Patch two files",
+    title: "Patch three files",
     metadata: {
       files: [
         {
@@ -485,6 +494,15 @@ const blocks: SDKPart[] = [
           diff: writePatch,
           additions: 1,
           deletions: 0,
+        },
+        {
+          filePath: "/project/packages/kilo-vscode/webview-ui/src/components/chat/MessageList.tsx",
+          relativePath: "packages/kilo-vscode/webview-ui/src/components/chat/MessageList.tsx",
+          type: "update",
+          patch: tailPatch,
+          diff: tailPatch,
+          additions: 1,
+          deletions: 1,
         },
       ],
     },

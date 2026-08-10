@@ -66,6 +66,8 @@ export interface SessionProvider {
   isSessionRouteAmbiguous?(sessionId: string): boolean
   /** Exact directory for a project-qualified session ref, or undefined. */
   routeSessionDirectoryFor?(ref: SessionRef): string | undefined
+  /** Re-check Git capability for the active project/session directory. */
+  refreshGitStatus?(): void
   dispose(): void
 }
 

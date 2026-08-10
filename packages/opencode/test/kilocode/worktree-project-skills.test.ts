@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { $ } from "bun"
 import { afterEach, describe, expect } from "bun:test"
 import { FSUtil } from "@opencode-ai/core/fs-util"
@@ -15,17 +16,10 @@ import { Discovery } from "../../src/skill/discovery"
 import { disposeAllInstances, provideInstance, testInstanceStoreLayer, tmpdirScoped } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
-const layer = Skill.layer.pipe(
-  Layer.provide(Git.defaultLayer),
-  Layer.provide(Discovery.defaultLayer),
-  Layer.provide(Config.defaultLayer),
-  Layer.provide(Bus.layer),
-  Layer.provide(FSUtil.defaultLayer),
-  Layer.provide(Global.layer),
-  Layer.provide(RuntimeFlags.layer({ disableExternalSkills: false, disableClaudeCodeSkills: false })),
-  Layer.provide(EventV2Bridge.defaultLayer),
-)
-const it = testEffect(Layer.mergeAll(layer, CrossSpawnSpawner.defaultLayer, testInstanceStoreLayer))
+const layer = AppNodeBuilder.build(Skill.node, [
+  [RuntimeFlags.node, RuntimeFlags.layer({ disableExternalSkills: false, disableClaudeCodeSkills: false })],
+])
+const it = testEffect(Layer.mergeAll(layer, AppNodeBuilder.build(CrossSpawnSpawner.node), testInstanceStoreLayer))
 
 afterEach(() => disposeAllInstances())
 

@@ -3,10 +3,6 @@ export namespace NpmPublish {
   const base = 10_000
   const jitter = 5_000
 
-  export function aliases(channel: string) {
-    return channel === "latest" ? ["rc"] : []
-  }
-
   export async function retry(input: {
     name: string
     version: string

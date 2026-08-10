@@ -966,17 +966,18 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertEquals(1, panel.attachmentCountForTest())
     }
 
-    fun `test frontend file attachment defers data url encoding until send`() {
+    fun `test frontend text file attachment stays file reference`() {
         val file = File.createTempFile("kilo-paste", ".txt")
         file.writeText("hello")
 
         val item = ai.kilocode.client.session.model.PromptAttachmentExtractor.files(listOf(file)).single()
 
+        assertTrue(item.reference)
         assertTrue(item.url.startsWith("file://"))
-        assertTrue(item.part().url.orEmpty().startsWith("data:text/plain;base64,"))
+        assertEquals(item.url, item.part().url)
     }
 
-    fun `test pasted frontend file sends data url payload`() {
+    fun `test pasted frontend file sends reference payload`() {
         var sent: ai.kilocode.rpc.dto.PromptPartDto? = null
         val panel = PromptPanel(project, { _, files -> sent = files.single() }, {}, { _, _ -> })
         val file = File.createTempFile("kilo-paste", ".txt")
@@ -990,8 +991,7 @@ class PromptPanelTest : BasePlatformTestCase() {
 
         val item = sent!!
         assertEquals("text/plain", item.mime)
-        assertTrue(item.url.orEmpty().startsWith("data:text/plain;base64,"))
-        assertFalse(item.url.orEmpty().startsWith("file://"))
+        assertEquals(file.toPath().toUri().toString(), item.url)
     }
 
     fun `test raw image paste adds attachment`() {
@@ -1036,6 +1036,18 @@ class PromptPanelTest : BasePlatformTestCase() {
         UIUtil.dispatchAllInvocationEvents()
 
         assertEquals(0, panel.attachmentCountForTest())
+    }
+
+    fun `test disabled media model allows file reference attachment`() {
+        val panel = PromptPanel(project, { _, _ -> }, {}, { _, _ -> })
+        val file = File.createTempFile("kilo-paste", ".php")
+        file.writeText("<?php echo 'hello';")
+        val item = ai.kilocode.client.session.model.PromptAttachmentExtractor.files(listOf(file)).single()
+        panel.setAttachmentEnabled(false)
+
+        panel.addAttachmentForTest(item)
+
+        assertEquals(1, panel.attachmentCountForTest())
     }
 
     fun `test prompt button switches between send and stop state`() {

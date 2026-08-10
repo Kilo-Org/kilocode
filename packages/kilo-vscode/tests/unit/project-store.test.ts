@@ -42,4 +42,16 @@ describe("project stores", () => {
       same: { worktreeId: "same", state: "running" },
     })
   })
+
+  it("keeps busy worktrees isolated between projects", () => {
+    const first = createProjectStore("a")
+    const second = createProjectStore("b")
+    first.applyState(state("a", ["same"]))
+    second.applyState(state("b", ["same"]))
+
+    first.setBusy(new Map([["same", { reason: "setting-up" as const }]]))
+
+    expect(first.busy().has("same")).toBe(true)
+    expect(second.busy().has("same")).toBe(false)
+  })
 })

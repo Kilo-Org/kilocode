@@ -10,11 +10,11 @@ export type TopLevelItem = { kind: "section"; section: SectionState } | { kind: 
 export type SidebarItem = { type: "local" | "wt" | "session"; id: string }
 
 /** Apply persisted order while keeping multi-version worktrees adjacent. */
-export function sortWorktrees(all: WorktreeState[], order: string[]): WorktreeState[] {
+export function sortWorktrees<T extends { id: string; groupId?: string }>(all: T[], order: string[]): T[] {
   const ordered = applyTabOrder(all, order)
   if (ordered.length === 0) return []
 
-  const groups = new Map<string, WorktreeState[]>()
+  const groups = new Map<string, T[]>()
   for (const wt of ordered) {
     if (!wt.groupId) continue
     const group = groups.get(wt.groupId) ?? []
@@ -22,7 +22,7 @@ export function sortWorktrees(all: WorktreeState[], order: string[]): WorktreeSt
     groups.set(wt.groupId, group)
   }
 
-  const result: WorktreeState[] = []
+  const result: T[] = []
   const placed = new Set<string>()
   for (const wt of ordered) {
     if (placed.has(wt.id)) continue
@@ -145,7 +145,7 @@ export function buildSidebarOrder(
 }
 
 /** Build a map from sidebar item id → 1-based shortcut number (1 for LOCAL, 2+ for worktrees). */
-export function buildShortcutMap(order: SidebarItem[]): Map<string, number> {
+export function buildShortcutMap(order: { id: string }[]): Map<string, number> {
   const map = new Map<string, number>()
   for (let i = 0; i < order.length && i < 9; i++) {
     map.set(order[i]!.id, i + 1)

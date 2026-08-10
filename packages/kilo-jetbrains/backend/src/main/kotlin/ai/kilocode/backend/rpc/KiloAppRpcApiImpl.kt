@@ -11,6 +11,7 @@ import ai.kilocode.backend.app.LoadProgress
 import ai.kilocode.backend.app.ProfileResult
 import ai.kilocode.backend.cli.KiloCliPlatform
 import ai.kilocode.backend.cli.KiloProps
+import ai.kilocode.backend.cli.KiloRepoCli
 import ai.kilocode.jetbrains.api.model.KiloProfile200Response
 import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.KiloAppRpcApi
@@ -56,6 +57,8 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
     override suspend fun cliVersion(): String = KiloProps.cliVersion()
 
     override suspend fun cliPlatform(): String = KiloCliPlatform.current()
+
+    override suspend fun cliBundled(): Boolean = KiloRepoCli.available()
 
     override suspend fun retry() = app.retry()
 

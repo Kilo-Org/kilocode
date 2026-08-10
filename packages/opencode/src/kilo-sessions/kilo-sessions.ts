@@ -44,6 +44,7 @@ import { withTimeout } from "@/util/timeout"
 import { Snapshot } from "@/snapshot"
 import { cumulativeSessionDiff } from "@/kilocode/session-portability/cumulative-diff"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
 
 async function provide<R>(input: { directory: string; fn: () => R }): Promise<R> {
   const { provide } = await import("@/kilocode/instance")
@@ -594,7 +595,7 @@ export namespace KiloSessions {
 
   export const defaultLayer = layer.pipe(
     Layer.provide(Bus.layer),
-    Layer.provide(Config.defaultLayer),
+    Layer.provide(AppNodeBuilder.build(Config.node)),
     Layer.provide(Session.defaultLayer),
   )
 
@@ -607,7 +608,9 @@ export namespace KiloSessions {
     reportSessionTitle: () => Effect.succeed({ ok: false, reason: "not_connected" } as const),
   })
 
-  export const node = LayerNode.suspend(() => LayerNode.make(layer, [Bus.node, Config.node, Session.node]))
+  export const node = LayerNode.suspend(() =>
+    LayerNode.make({ service: Service, layer, deps: [Bus.node, Config.node, Session.node] }),
+  )
 
   // kilocode_change - DEF-1: default advertisement for every successful
   // enableRemote() entry (covers `/remote` after auto-enable already connected).

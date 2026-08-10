@@ -6,6 +6,8 @@ import { playgroundCss } from "./playground-css-plugin"
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const ui = path.resolve(here, "../../ui")
+const sessionUi = path.resolve(here, "../../session-ui")
+const app = path.resolve(here, "../../app/src")
 const mocks = path.resolve(here, "./mocks")
 
 export default defineMain({
@@ -20,7 +22,11 @@ export default defineMain({
     "@storybook/addon-a11y",
     "@storybook/addon-vitest",
   ],
-  stories: ["../../ui/src/**/*.stories.@(js|jsx|mjs|ts|tsx)", "../../app/src/**/*.stories.@(js|jsx|mjs|ts|tsx)"],
+  stories: [
+    "../../ui/src/**/*.stories.@(js|jsx|mjs|ts|tsx)",
+    "../../session-ui/src/**/*.stories.@(js|jsx|mjs|ts|tsx)",
+    "../../app/src/**/*.stories.@(js|jsx|mjs|ts|tsx)",
+  ],
   async viteFinal(config) {
     const { mergeConfig, searchForWorkspaceRoot } = await import("vite")
     return mergeConfig(config, {
@@ -57,7 +63,7 @@ export default defineMain({
       },
       server: {
         fs: {
-          allow: [searchForWorkspaceRoot(process.cwd()), ui, mocks], // kilocode_change
+          allow: [searchForWorkspaceRoot(process.cwd()), ui, sessionUi, app, mocks],
         },
       },
     })

@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { existsSync } from "node:fs"
 import fs from "node:fs/promises"
 import path from "node:path"
@@ -111,6 +112,7 @@ const plugin = Layer.mock(Plugin.Service)({
 })
 const mcp = Layer.mock(MCP.Service)({
   tools: () => Effect.succeed({}),
+  clients: () => Effect.succeed({}), // kilocode_change - upstream's MCP resource tools probe the clients
 })
 const lsp = Layer.mock(LSP.Service)({
   touchFile: () => Effect.void,
@@ -134,10 +136,10 @@ const base = Layer.mergeAll(
   format,
   truncate,
   Bus.layer,
-  EventV2Bridge.defaultLayer,
-  Database.defaultLayer,
-  FSUtil.defaultLayer,
-  CrossSpawnSpawner.defaultLayer,
+  AppNodeBuilder.build(EventV2Bridge.node),
+  AppNodeBuilder.build(Database.node),
+  AppNodeBuilder.build(FSUtil.node),
+  AppNodeBuilder.build(CrossSpawnSpawner.node),
   RuntimeFlags.layer(),
 )
 const registry = Layer.effect(

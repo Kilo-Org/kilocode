@@ -10,6 +10,7 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { showToast } from "@kilocode/kilo-ui/toast"
+import { isTextControl } from "../../utils/focus"
 import { useSession } from "../../context/session"
 import { useLocalTabs } from "../../context/local-tabs"
 import { useServer } from "../../context/server"
@@ -34,6 +35,7 @@ import { hasGitChangesMention } from "../../hooks/git-changes-context-utils"
 import { useSlashCommand } from "../../hooks/useSlashCommand"
 import { useGhostText } from "../../hooks/useGhostText"
 import { useSpeechToText } from "../speech-to-text/useSpeechToText"
+import { useSpeechToTextModels } from "../../context/speech-to-text-models"
 import { createSpeechShortcut } from "../speech-to-text/shortcut"
 import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageAttachments"
 import { convertToMentionPath } from "../../utils/path-mentions"
@@ -348,6 +350,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   const ghost = useGhostText(vscode, text, () => server.isConnected())
   const speech = useSpeechToText(vscode, server, language)
+  const speechModels = useSpeechToTextModels()
 
   const replaceReviewComments = (next: ReviewComment[]) => {
     setReviewComments(next)
@@ -416,8 +419,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const onFocusPrompt = (event: Event) => {
     const defer = () =>
       event instanceof CustomEvent && event.detail?.deferFocusToQuestion && props.deferFocusToQuestion?.()
+    const ownsFocus = () => {
+      const active = document.activeElement
+      return active !== textareaRef && isTextControl(active)
+    }
     const focus = () => {
-      if (defer()) return
+      if (defer() || ownsFocus()) return
       const ref = textareaRef
       if (!ref) return
       ref.focus({ preventScroll: true })
@@ -425,7 +432,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     focus()
     if (!(event instanceof CustomEvent) || !event.detail?.restore) return
     const restore = () => {
-      if (defer()) return
+      if (defer() || ownsFocus()) return
       window.focus()
       focus()
     }
@@ -511,7 +518,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     )
   const isDisabled = () => !server.isConnected()
   const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates())
-  const speechModel = () => selectedSpeechToTextModel(config())
+  const speechModel = () => selectedSpeechToTextModel(config(), speechModels.models())
   const hasInput = () => text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0
   const canSend = () =>
     !isDisabled() &&
@@ -1232,6 +1239,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         pendingId,
         context,
         origin ?? null,
+        {
+          agent: matched.agent,
+          model: matched.model,
+          variant: matched.variant,
+        },
       )
     } else {
       session.sendMessage(message, sel?.providerID, sel?.modelID, attachments, pendingId, context, data, origin ?? null)

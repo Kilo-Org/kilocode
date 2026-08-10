@@ -49,6 +49,9 @@ abstract class GenerateOpenApiSpecTask : DefaultTask() {
     @get:Internal
     abstract val cacheDir: DirectoryProperty
 
+    @get:Internal
+    abstract val bunPath: Property<String>
+
     @get:OutputFile
     abstract val spec: RegularFileProperty
 
@@ -76,7 +79,7 @@ abstract class GenerateOpenApiSpecTask : DefaultTask() {
         val err = ByteArrayOutputStream()
         val result = exec.exec {
             workingDir = root
-            commandLine("bun", "run", "--conditions=browser", "./src/index.ts", "generate")
+            commandLine(bunPath.get(), "run", "--conditions=browser", "./src/index.ts", "generate")
             standardOutput = out
             errorOutput = err
             isIgnoreExitValue = true

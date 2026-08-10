@@ -2,6 +2,7 @@
 //
 // Tests for the git-based diff generator that replaced the JS Myers path.
 
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { $ } from "bun"
 import { describe, expect } from "bun:test"
 import { parsePatch } from "diff"
@@ -48,7 +49,7 @@ const commit = async (dir: string, message: string) => {
   return head.stdout.toString().trim()
 }
 
-const it = testEffect(Layer.mergeAll(CrossSpawnSpawner.defaultLayer))
+const it = testEffect(Layer.mergeAll(AppNodeBuilder.build(CrossSpawnSpawner.node)))
 
 describe("DiffFull.batch", () => {
   it.live("produces one patch per modified file", () =>
@@ -180,6 +181,70 @@ describe("DiffFull.batch", () => {
         expect(result.get("f1199.txt")).toContain("+after")
       }),
     30_000,
+  )
+})
+
+describe("DiffFull.detail", () => {
+  const runners = (dir: string) => ({ diff: gitResult(dir), show: gitResult(dir) })
+
+  it.live("returns full before/after plus hunk patch for a modified file", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped({ git: true })
+      yield* Effect.promise(() => Filesystem.write(path.join(dir, "a.txt"), "keep\nold\ntail\n"))
+      const from = yield* Effect.promise(() => commit(dir, "v1"))
+      yield* Effect.promise(() => Filesystem.write(path.join(dir, "a.txt"), "keep\nnew\ntail\n"))
+      const to = yield* Effect.promise(() => commit(dir, "v2"))
+
+      const got = yield* DiffFull.detail(runners(dir), from, to, "a.txt")
+      expect(got?.status).toBe("modified")
+      expect(got?.before).toBe("keep\nold\ntail\n")
+      expect(got?.after).toBe("keep\nnew\ntail\n")
+      expect(got?.patch).toContain("-old")
+      expect(got?.patch).toContain("+new")
+    }),
+  )
+
+  it.live("returns an empty before for an added file", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped({ git: true })
+      yield* Effect.promise(() => Filesystem.write(path.join(dir, "base.txt"), "x\n"))
+      const from = yield* Effect.promise(() => commit(dir, "v1"))
+      yield* Effect.promise(() => Filesystem.write(path.join(dir, "added.txt"), "hi\nthere\n"))
+      const to = yield* Effect.promise(() => commit(dir, "v2"))
+
+      const got = yield* DiffFull.detail(runners(dir), from, to, "added.txt")
+      expect(got?.status).toBe("added")
+      expect(got?.before).toBe("")
+      expect(got?.after).toBe("hi\nthere\n")
+    }),
+  )
+
+  it.live("returns an empty after for a deleted file", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped({ git: true })
+      yield* Effect.promise(() => Filesystem.write(path.join(dir, "gone.txt"), "bye\nnow\n"))
+      const from = yield* Effect.promise(() => commit(dir, "v1"))
+      yield* Effect.promise(() => $`git rm gone.txt`.cwd(dir).quiet())
+      const to = yield* Effect.promise(() => commit(dir, "v2"))
+
+      const got = yield* DiffFull.detail(runners(dir), from, to, "gone.txt")
+      expect(got?.status).toBe("deleted")
+      expect(got?.before).toBe("bye\nnow\n")
+      expect(got?.after).toBe("")
+    }),
+  )
+
+  it.live("returns undefined for a file unchanged between refs", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped({ git: true })
+      yield* Effect.promise(() => Filesystem.write(path.join(dir, "same.txt"), "same\n"))
+      const from = yield* Effect.promise(() => commit(dir, "v1"))
+      yield* Effect.promise(() => Filesystem.write(path.join(dir, "other.txt"), "changed\n"))
+      const to = yield* Effect.promise(() => commit(dir, "v2"))
+
+      const got = yield* DiffFull.detail(runners(dir), from, to, "same.txt")
+      expect(got).toBeUndefined()
+    }),
   )
 })
 
