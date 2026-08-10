@@ -63,6 +63,7 @@ export const dict = {
 
   "agentManager.terminal.new": "Nova kartica terminala",
   "agentManager.terminal.ended": "terminal je završen — zatvorite karticu da biste odbacili",
+  "agentManager.terminal.endedRestartable": "terminal je završen - kucajte za novu ljusku ili zatvorite karticu",
   "agentManager.terminal.setupFailed": "skripta za postavljanje nije uspjela",
   "agentManager.terminal.setupFailedCode": "skripta za postavljanje nije uspjela s izlaznim kodom",
   "agentManager.terminal.stopSetup": "Zaustavi skriptu za postavljanje",
@@ -100,7 +101,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "Sljedeća kartica",
   "agentManager.shortcuts.newTab": "Nova kartica",
   "agentManager.shortcuts.closeTab": "Zatvori karticu",
-  "agentManager.shortcuts.toggleTerminal": "Prebaci terminal",
+  "agentManager.shortcuts.toggleTerminal": "Fokusiraj / sakrij terminal",
   "agentManager.shortcuts.runScript": "Pokreni skriptu",
   "agentManager.run.options": "Opcije pokretanja",
   "agentManager.run.configure": "Konfiguriši skriptu za pokretanje",
@@ -115,6 +116,9 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.cancel": "Otkaži",
   "agentManager.dialog.removeStaleWorktree.confirm": "Ukloni zastarjeli Worktree",
 
+  "agentManager.dialog.project.select": "Odaberi projekat",
+  "agentManager.dialog.project.untrusted": "Prvo vjeruj ovom projektu na bočnoj traci",
+  "agentManager.dialog.project.missing": "Repozitorij nije pronađen",
   "agentManager.dialog.openWorktree": "Novi worktree",
   "agentManager.dialog.configureWorktree": "Konfiguriši Novi Worktree...",
   "agentManager.dialog.tab.new": "Novo",

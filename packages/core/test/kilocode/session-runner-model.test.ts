@@ -10,7 +10,7 @@ import { it } from "../lib/effect"
 describe("SessionRunnerModel Kilo credentials", () => {
   it.effect("maps OAuth account IDs to Kilo organization routing", () =>
     Effect.gen(function* () {
-      const model = new ModelV2.Info({
+      const model = ModelV2.Info.make({
         id: ModelV2.ID.make("test-model"),
         providerID: ProviderV2.ID.make("kilo"),
         name: "Test model",
@@ -21,19 +21,19 @@ describe("SessionRunnerModel Kilo credentials", () => {
           url: "https://api.kilo.ai/openrouter",
         },
         capabilities: { tools: true, input: ["text"], output: ["text"] },
-        request: { headers: {}, body: {}, generation: {}, options: {} },
+        request: { headers: {}, body: {} },
         variants: [],
-        time: { released: DateTime.makeUnsafe(0) },
+        time: { released: 0 },
         cost: [],
         status: "active",
         enabled: true,
         limit: { context: 100, output: 20 },
       })
-      const credential = new Credential.Stored({
+      const credential = Credential.Info.make({
         id: Credential.ID.create(),
         integrationID: Integration.ID.make("kilo"),
         label: "Work",
-        value: new Credential.OAuth({
+        value: Credential.OAuth.make({
           type: "oauth",
           methodID: Integration.MethodID.make("oauth"),
           refresh: "refresh",
@@ -43,11 +43,7 @@ describe("SessionRunnerModel Kilo credentials", () => {
         }),
       })
 
-      const resolved = yield* SessionRunnerModel.fromCatalogModel(
-        model,
-        { type: "credential", id: credential.id, label: credential.label },
-        credential,
-      )
+      const resolved = yield* SessionRunnerModel.fromCatalogModel(model, credential.value)
 
       expect(resolved.route.defaults.http?.body).toMatchObject({ kilocodeOrganizationId: "org-enterprise" })
       expect(resolved.route.defaults.http?.body).not.toHaveProperty("accountID")

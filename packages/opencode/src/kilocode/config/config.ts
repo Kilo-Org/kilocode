@@ -181,6 +181,35 @@ export namespace KilocodeConfig {
     return stripGlobalIndexing(info)
   }
 
+  /**
+   * Merge discovered agent markdown while preserving routing explicitly defined
+   * in config. Tracking config entries separately keeps normal directory
+   * precedence between markdown files intact.
+   */
+  export function mergeAgentMarkdown(
+    existing: Record<string, ConfigAgentV1.Info>,
+    incoming: Record<string, ConfigAgentV1.Info>,
+    configured: Record<string, ConfigAgentV1.Info>,
+  ) {
+    const result = { ...existing }
+    for (const [name, agent] of Object.entries(incoming)) {
+      const current = result[name]
+      if (!current) {
+        result[name] = agent
+        continue
+      }
+
+      const config = configured[name]
+      if (agent.mode === "primary" && config && config.mode !== "primary") {
+        result[name] = mergeDeep(mergeDeep(current, agent), { ...config, mode: config.mode ?? "all" })
+        continue
+      }
+
+      result[name] = mergeDeep(current, agent)
+    }
+    return result
+  }
+
   export function retireIndexingFlag(info: Record<string, unknown>, source: string) {
     if (!isRecord(info.experimental) || !("semantic_indexing" in info.experimental)) return info
     const experimental = { ...info.experimental }

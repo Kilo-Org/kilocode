@@ -97,6 +97,8 @@ The `kilo console` command and its browser interface are deprecated and will be 
 | `/copy` | - | Copy latest agent response |
 | `/copy-session` | - | Copy session transcript |
 | `/export` | - | Export session transcript |
+| `/move` | - | Move the current session to another project directory |
+| `/diff` | - | Open the diff viewer |
 | `/timestamps` | `/toggle-timestamps` | Show/hide timestamps |
 | `/thinking` | `/toggle-thinking` | Show/hide thinking blocks |
 
@@ -123,6 +125,7 @@ The `kilo console` command and its browser interface are deprecated and will be 
 | `/help` | - | Show help |
 | `/reload` | - | Reload config, skills, agents, and commands from disk |
 | `/editor` | - | Open external editor |
+| `/auto-approve` | `/autoapprove`, `/approve-all`, `/approveall` | Toggle auto-approve mode for all permission prompts (saved to global config) |
 | `/exit` | `/quit`, `/q` | Exit the app |
 
 #### Kilo Gateway Commands (when connected)
@@ -217,6 +220,19 @@ There is no notification slash command or command-palette toggle. Use `tui.json`
 ## Slash Commands
 
 The CLI's interactive mode supports slash commands for common operations. The main commands are documented above in the [Interactive Slash Commands](#interactive-slash-commands) section.
+
+Use `/diff` to review working-tree changes. From the diff viewer, switch the source to the current branch compared with the main branch or to changes from the last assistant turn. Use `/move` to move the current session to another project directory.
+
+The `diff_open` and `session_move` TUI keybindings run the same actions and are unbound by default. Set them under `keybinds` in `tui.jsonc`:
+
+```jsonc
+{
+  "keybinds": {
+    "diff_open": "<leader>d",
+    "session_move": "<leader>o",
+  },
+}
+```
 
 ## Permissions
 
@@ -541,6 +557,8 @@ This instructs the AI to proceed without user input.
 - `0`: Success (task completed)
 - `124`: Timeout (task exceeded time limit)
 - `1`: Error (initialization or execution failure)
+
+Without `--auto`, a non-interactive run cannot prompt for approval and auto-rejects any permission request it receives. If a run auto-rejected at least one request, it exits `1` with a stderr diagnostic naming the cause, since the task likely did not complete. Pass `--auto` for autonomous use.
 
 ### Example CI/CD Integration
 

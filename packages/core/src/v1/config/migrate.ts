@@ -6,7 +6,6 @@ import { ConfigMCPV1 } from "./mcp"
 import { ConfigPermissionV1 } from "./permission"
 import { ConfigProviderV1 } from "./provider"
 import { ConfigProviderOptionsV1 } from "./provider-options"
-import { ModelRequest } from "../../model-request"
 
 const keys = new Set([
   "logLevel",
@@ -139,7 +138,7 @@ function mcp(info: typeof ConfigV1.Info.Type) {
   )
   const timeout = info.experimental?.mcp_timeout
   if (!timeout && !Object.keys(servers).length) return undefined
-  return { timeout, servers }
+  return { timeout: timeout === undefined ? undefined : { request: timeout }, servers }
 }
 
 function migrateMcp(info: ConfigMCPV1.Info) {
@@ -151,7 +150,7 @@ function migrateMcp(info: ConfigMCPV1.Info) {
       cwd: info.cwd,
       environment: info.environment,
       disabled,
-      timeout: info.timeout,
+      timeout: info.timeout === undefined ? undefined : { request: info.timeout },
     }
   return {
     type: info.type,
@@ -165,7 +164,7 @@ function migrateMcp(info: ConfigMCPV1.Info) {
       redirect_uri: info.oauth.redirectUri,
     },
     disabled,
-    timeout: info.timeout,
+    timeout: info.timeout === undefined ? undefined : { request: info.timeout },
   }
 }
 
@@ -182,6 +181,7 @@ function providers(info?: Readonly<Record<string, ConfigProviderV1.Info | null>>
 function migrateProvider(info: ConfigProviderV1.Info) {
   const lowerer = ConfigProviderOptionsV1.get(info.npm)
   const options = lowerer.provider(info.options ?? {})
+  const url = info.api ?? options.url
   return {
     name: info.name,
     env: info.env,
@@ -189,7 +189,7 @@ function migrateProvider(info: ConfigProviderV1.Info) {
       ? {
           type: "aisdk" as const,
           package: info.npm,
-          url: info.api ?? options.url,
+          ...(url === undefined ? {} : { url }),
           settings: options.settings ?? {},
         }
       : undefined,
@@ -208,11 +208,7 @@ function migrateProvider(info: ConfigProviderV1.Info) {
 function migrateModel(info: typeof ConfigProviderV1.Model.Type, packageName?: string) {
   const packageID = info.provider?.npm ?? packageName
   const lowerer = ConfigProviderOptionsV1.get(packageID)
-  const ingest = (options: Readonly<Record<string, unknown>>) => {
-    const request = ModelRequest.normalizeAiSdkOptions(packageID, options)
-    return { ...lowerer.request(request.body), ...request.generation, ...request.options }
-  }
-  const request = info.options && ingest(info.options)
+  const request = info.options && lowerer.request(info.options)
   const costs = info.cost && [
     {
       input: info.cost.input,
@@ -242,7 +238,7 @@ function migrateModel(info: typeof ConfigProviderV1.Model.Type, packageName?: st
           ...(info.id === undefined ? {} : { id: info.id }),
           type: "aisdk" as const,
           package: info.provider.npm,
-          url: info.provider.api,
+          ...(info.provider.api === undefined ? {} : { url: info.provider.api }),
           settings: {},
         }
       : info.id === undefined
@@ -260,7 +256,7 @@ function migrateModel(info: typeof ConfigProviderV1.Model.Type, packageName?: st
         .filter((entry): entry is [string, NonNullable<(typeof info.variants)[string]>] => entry[1] !== null)
         .map(([id, options]) => ({
         id,
-        body: ingest(options),
+        body: lowerer.request(options),
       })),
     cost: costs,
     disabled: info.status === "deprecated" ? true : undefined,

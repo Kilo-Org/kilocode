@@ -219,6 +219,9 @@ class KiloSessionService internal constructor(
     suspend fun diff(id: String, dir: String): List<DiffFileDto> =
         call { diff(id, dir) }
 
+    suspend fun diffSides(sessionId: String?, dir: String, file: DiffFileDto, messageId: String?): DiffFileDto? =
+        call { diffSides(sessionId, dir, file, messageId) }
+
     suspend fun attachmentPart(id: String, dir: String, message: String, part: String, key: String?): PartDto? =
         call { attachmentPart(id, dir, message, part, key) }
 

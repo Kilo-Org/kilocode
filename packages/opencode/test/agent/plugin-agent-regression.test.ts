@@ -1,6 +1,7 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { expect } from "bun:test"
 import { FSUtil } from "@opencode-ai/core/fs-util"
-import { LocationServiceMap } from "@opencode-ai/core/location-layer"
+import { LocationServiceMap } from "@opencode-ai/core/location-services"
 import { Effect, Layer } from "effect"
 import { FetchHttpClient } from "effect/unstable/http"
 import path from "path"
@@ -20,6 +21,11 @@ import { ProviderTest } from "../fake/provider"
 import { SkillTest } from "../fake/skill"
 import { testEffect } from "../lib/effect"
 import { PLUGIN_AGENT } from "../fixture/agent-plugin.constants"
+import { Auth } from "../../src/auth"
+import { Account } from "../../src/account/account"
+import { Npm } from "@opencode-ai/core/npm"
+import { Skill } from "../../src/skill"
+import { Provider } from "../../src/provider/provider"
 
 // `it.instance` skips InstanceBootstrap so LSP / MCP don't spin up — those
 // services hang during scope teardown on Windows and aren't needed
@@ -27,31 +33,26 @@ import { PLUGIN_AGENT } from "../fixture/agent-plugin.constants"
 const pluginUrl = pathToFileURL(path.join(import.meta.dir, "..", "fixture", "agent-plugin.ts")).href
 
 const provider = ProviderTest.fake()
-const configLayer = Config.layer.pipe(
-  Layer.provide(Git.defaultLayer), // kilocode_change
-  Layer.provide(RuntimeFlags.layer({ disableDefaultPlugins: true })),
-  Layer.provide(FSUtil.defaultLayer),
-  Layer.provide(Env.defaultLayer),
-  Layer.provide(AuthTest.empty),
-  Layer.provide(AccountTest.empty),
-  Layer.provide(NpmTest.noop),
-  Layer.provide(FetchHttpClient.layer),
-)
-const pluginLayer = Plugin.layer.pipe(
-  Layer.provide(EventV2Bridge.defaultLayer),
-  Layer.provide(RuntimeFlags.layer({ disableDefaultPlugins: true })),
-)
+const configLayer = AppNodeBuilder.build(Config.node, [
+  [Auth.node, AuthTest.empty],
+  [Account.node, AccountTest.empty],
+  [Npm.node, NpmTest.noop],
+  [RuntimeFlags.node, RuntimeFlags.layer({ disableDefaultPlugins: true })],
+])
+const pluginLayer = AppNodeBuilder.build(Plugin.node, [
+  [Config.node, configLayer],
+  [RuntimeFlags.node, RuntimeFlags.layer({ disableDefaultPlugins: true })],
+])
 const dependencies = Layer.mergeAll(configLayer, pluginLayer).pipe(Layer.provideMerge(configLayer))
-const agentLayer = Agent.layer.pipe(
-  Layer.provide(AuthTest.empty),
-  Layer.provide(SkillTest.empty),
-  Layer.provide(Layer.mock(MCP.Service)({})), // kilocode_change
-  Layer.provide(provider.layer),
-  Layer.provide(pluginLayer),
-  Layer.provide(pluginLayer),
-  Layer.provide(LocationServiceMap.layer),
-  Layer.provide(RuntimeFlags.layer({ disableDefaultPlugins: true })),
-)
+const agentLayer = AppNodeBuilder.build(Agent.node, [
+  [Auth.node, AuthTest.empty],
+  [Skill.node, SkillTest.empty],
+  [MCP.node, Layer.mock(MCP.Service)({})], // kilocode_change
+  [Provider.node, provider.layer],
+  [Plugin.node, pluginLayer],
+  [Config.node, configLayer],
+  [RuntimeFlags.node, RuntimeFlags.layer({ disableDefaultPlugins: true })],
+])
 const layer = Layer.mergeAll(agentLayer, dependencies).pipe(Layer.provideMerge(dependencies))
 
 const it = testEffect(layer)

@@ -18,6 +18,7 @@ function scene(initial: string | null = LOCAL) {
   const events = {
     activated: [] as string[],
     selected: [] as string[],
+    cleared: 0,
     saved: 0,
     shown: [] as string[],
     errors: 0,
@@ -29,7 +30,7 @@ function scene(initial: string | null = LOCAL) {
     tabIds: tabs,
     selectReview: () => undefined,
     selectSessionTab: () => undefined,
-    clearSession: () => undefined,
+    clearSession: () => events.cleared++,
     resetOthers: () => undefined,
     isPendingId: () => false,
     findTab: () => undefined,
@@ -38,6 +39,7 @@ function scene(initial: string | null = LOCAL) {
     getSelection: selection,
     LOCAL,
     REVIEW_TAB_ID: "review",
+    getFont: () => font,
   })
   const dispatch = createTerminalMessageHandler({
     state,
@@ -54,12 +56,12 @@ function scene(initial: string | null = LOCAL) {
   return { state, selection, setSelection, posted, events, handlers, dispatch }
 }
 
-function createdSide(createId: string, terminalId: string, title = "Terminal 1") {
+function createdSide(createId: string, terminalId: string, title = "Terminal 1", worktreeId: string | null = null) {
   return {
     type: "agentManager.terminal.created",
     createId,
     placement: "side",
-    worktreeId: null,
+    worktreeId,
     terminalId,
     title,
     wsUrl: `ws://${terminalId}`,
@@ -315,18 +317,23 @@ describe("Agent Manager terminal state", () => {
       item.handlers.requestSide()
 
       expect(item.posted).toHaveLength(1)
+      expect(item.state.sidesForContext(LOCAL)).toHaveLength(1)
       const request = item.posted[0]!
       expect(request).toMatchObject({ type: "agentManager.terminal.create", placement: "side", worktreeId: null })
       const createId = String(request.createId)
-      expect(item.dispatch(createdSide(createId, "terminal:side"))).toBe(true)
-      expect(item.state.sideActiveFor(LOCAL)).toBe("terminal:side")
+      expect(createId).toStartWith("terminal:")
+      const optimistic = item.state.sidesForContext(LOCAL)[0]
+      expect(item.dispatch(createdSide(createId, createId))).toBe(true)
+      expect(item.state.sidesForContext(LOCAL)[0]).toBe(optimistic)
+      expect(optimistic?.wsUrl).toBe(`ws://${createId}`)
+      expect(item.state.sideActiveFor(LOCAL)).toBe(createId)
       expect(item.events.activated).toEqual([])
       expect(item.events.selected).toEqual([])
       expect(item.events.saved).toBe(0)
 
       item.handlers.requestSide()
       expect(item.posted).toHaveLength(1)
-      expect(item.state.focusRequest()?.id).toBe("terminal:side")
+      expect(item.state.focusRequest()?.id).toBe(createId)
       dispose()
     })
   })
@@ -344,6 +351,20 @@ describe("Agent Manager terminal state", () => {
         placement: "side",
         worktreeId: "wt-1",
       })
+      const createId = String(item.posted[0]!.createId)
+      expect(item.dispatch(createdSide(createId, createId, "Terminal 1", "wt-1"))).toBe(true)
+      expect(item.state.sidesForContext("wt-1")[0]).toMatchObject({ id: createId, title: "Terminal 1" })
+      dispose()
+    })
+  })
+
+  it("focuses a side terminal only when the user explicitly opens it", () => {
+    createRoot((dispose) => {
+      const item = scene()
+      item.handlers.addSide()
+      const createId = String(item.posted[0]!.createId)
+      expect(item.dispatch(createdSide(createId, createId))).toBe(true)
+      expect(item.state.focusRequest()?.id).toBe(createId)
       dispose()
     })
   })
@@ -357,13 +378,12 @@ describe("Agent Manager terminal state", () => {
       const first = String(item.posted[0]!.createId)
       const second = String(item.posted[1]!.createId)
 
-      item.dispatch(createdSide(first, "terminal:one", "Terminal 1"))
-      expect(item.state.sidesForContext(LOCAL).map((term) => term.id)).toEqual(["terminal:one"])
-      expect(item.state.sideActiveFor(LOCAL)).toBe("terminal:one")
+      item.dispatch(createdSide(first, first, "Terminal 1"))
+      expect(item.state.sidesForContext(LOCAL).map((term) => term.id)).toEqual([first, second])
 
-      item.dispatch(createdSide(second, "terminal:two", "Terminal 2"))
-      expect(item.state.sidesForContext(LOCAL).map((term) => term.id)).toEqual(["terminal:one", "terminal:two"])
-      expect(item.state.sideActiveFor(LOCAL)).toBe("terminal:two")
+      item.dispatch(createdSide(second, second, "Terminal 2"))
+      expect(item.state.sidesForContext(LOCAL).map((term) => term.id)).toEqual([first, second])
+      expect(item.state.sideActiveFor(LOCAL)).toBe(second)
       dispose()
     })
   })
@@ -382,6 +402,69 @@ describe("Agent Manager terminal state", () => {
     })
   })
 
+  it("cycles side terminals in both directions and wraps", () => {
+    createRoot((dispose) => {
+      const item = scene()
+      item.state.add(null, { id: "terminal:one", title: "Terminal 1", wsUrl: "ws://one", font, placement: "side" })
+      item.state.add(null, { id: "terminal:two", title: "Terminal 2", wsUrl: "ws://two", font, placement: "side" })
+      item.state.setSideActive(LOCAL, "terminal:one")
+
+      expect(item.handlers.cycle("next", "side")).toBe(true)
+      expect(item.state.sideActiveFor(LOCAL)).toBe("terminal:two")
+      expect(item.state.focusRequest()?.id).toBe("terminal:two")
+      expect(item.handlers.cycle("next", "side")).toBe(true)
+      expect(item.state.sideActiveFor(LOCAL)).toBe("terminal:one")
+      expect(item.handlers.cycle("previous", "side")).toBe(true)
+      expect(item.state.sideActiveFor(LOCAL)).toBe("terminal:two")
+      dispose()
+    })
+  })
+
+  it("cycles main terminal tabs independently from side terminals", () => {
+    createRoot((dispose) => {
+      const item = scene()
+      item.state.add(null, { id: "terminal:one", title: "Terminal 1", wsUrl: "ws://one", font, placement: "tab" })
+      item.state.add(null, { id: "terminal:two", title: "Terminal 2", wsUrl: "ws://two", font, placement: "tab" })
+      item.state.setActiveId("terminal:one")
+
+      expect(item.handlers.cycle("next", "tab")).toBe(true)
+      expect(item.state.activeId()).toBe("terminal:two")
+      expect(item.handlers.cycle("next", "tab")).toBe(true)
+      expect(item.state.activeId()).toBe("terminal:one")
+      dispose()
+    })
+  })
+
+  it("starts terminal cycling at the boundary when no terminal is active", () => {
+    createRoot((dispose) => {
+      const item = scene()
+      item.state.add(null, { id: "terminal:one", title: "Terminal 1", wsUrl: "ws://one", font, placement: "tab" })
+      item.state.add(null, { id: "terminal:two", title: "Terminal 2", wsUrl: "ws://two", font, placement: "tab" })
+      item.state.setActiveId(undefined)
+
+      expect(item.handlers.cycle("next", "tab")).toBe(true)
+      expect(item.state.activeId()).toBe("terminal:one")
+      item.state.setActiveId(undefined)
+      expect(item.handlers.cycle("previous", "tab")).toBe(true)
+      expect(item.state.activeId()).toBe("terminal:two")
+      dispose()
+    })
+  })
+
+  it("keeps the session open when its last main terminal closes", () => {
+    createRoot((dispose) => {
+      const item = scene()
+      item.state.add(null, { id: "terminal:one", title: "Terminal 1", wsUrl: "ws://one", font, placement: "tab" })
+      item.state.setActiveId("terminal:one")
+      item.state.setFocusedId("terminal:one")
+
+      expect(item.handlers.closeFocused()).toBe(true)
+      expect(item.state.current()).toEqual([])
+      expect(item.events.cleared).toBe(0)
+      dispose()
+    })
+  })
+
   it("moves activation to the last remaining side terminal on close", () => {
     createRoot((dispose) => {
       const item = scene()
@@ -391,6 +474,7 @@ describe("Agent Manager terminal state", () => {
 
       expect(item.handlers.closeSide("terminal:two")).toBe(true)
       expect(item.state.sideActiveFor(LOCAL)).toBe("terminal:one")
+      expect(item.state.focusRequest()?.id).toBe("terminal:one")
       expect(item.posted).toEqual([{ type: "agentManager.terminal.close", terminalId: "terminal:two" }])
 
       expect(item.handlers.closeSide("terminal:one")).toBe(true)
@@ -590,6 +674,7 @@ describe("Agent Manager terminal state", () => {
       getSelection: selection,
       LOCAL,
       REVIEW_TAB_ID: "review",
+      getFont: () => font,
     })
     const dispatch = createTerminalMessageHandler({
       state,
@@ -611,12 +696,11 @@ describe("Agent Manager terminal state", () => {
       expect(item.posted).toHaveLength(1)
       const request = item.posted[0]!
       expect(request).toMatchObject({ type: "agentManager.terminal.create", placement: "side", worktreeId: null })
-      expect(item.dispatch({ ...createdSide(String(request.createId), "terminal:side"), projectId: "prj-1" })).toBe(
-        true,
-      )
+      const id = String(request.createId)
+      expect(item.dispatch({ ...createdSide(id, id), projectId: "prj-1" })).toBe(true)
       expect(item.state.sideKey()).toBe("prj-1:local")
-      expect(item.state.sides().map((term) => term.id)).toEqual(["terminal:side"])
-      expect(item.state.sideActiveFor("prj-1:local")).toBe("terminal:side")
+      expect(item.state.sides().map((term) => term.id)).toEqual([id])
+      expect(item.state.sideActiveFor("prj-1:local")).toBe(id)
 
       // A worktree context sends its plain worktree id, not "prj-1:wt-1".
       const wt = nsScene("wt-1")

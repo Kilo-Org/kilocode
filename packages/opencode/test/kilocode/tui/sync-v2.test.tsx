@@ -205,13 +205,13 @@ test("sync v2 renders admitted prompts only after promotion", async () => {
 
     emitTwice(events, {
       id: "evt_promoted_1",
-      type: "session.next.prompt.promoted",
+      type: "session.next.prompted",
       properties: {
         sessionID: "session-1",
         messageID: "msg_user_1",
         timestamp: 1,
         prompt: { text: "hello" },
-        timeCreated: 0,
+        delivery: "steer",
       },
     })
 
@@ -254,13 +254,13 @@ test("sync v2 renders a promoted prompt when admission was missed", async () => 
     await mounted
     emitTwice(events, {
       id: "evt_promoted_1",
-      type: "session.next.prompt.promoted",
+      type: "session.next.prompted",
       properties: {
         sessionID: "session-1",
         messageID: "msg_user_1",
         timestamp: 1,
         prompt: { text: "hello" },
-        timeCreated: 0,
+        delivery: "steer",
       },
     })
 
@@ -401,13 +401,13 @@ test("sync v2 replaces stale cached rows while preserving in-flight live rows", 
     await mounted
     emitTwice(events, {
       id: "evt_promoted_1",
-      type: "session.next.prompt.promoted",
+      type: "session.next.prompted",
       properties: {
         sessionID: "session-1",
         messageID: "msg_user_1",
         timestamp: 1,
         prompt: { text: "stale" },
-        timeCreated: 0,
+        delivery: "steer",
       },
     })
     await wait(() => sync.session.message.fromSession("session-1")[0]?.id === "msg_user_1")

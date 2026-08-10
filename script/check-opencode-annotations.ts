@@ -37,6 +37,12 @@ const ROOT = path.resolve(import.meta.dir, "..")
 const SOURCE_EXTS = new Set([".ts", ".tsx", ".js", ".jsx", ".yml", ".yaml", ".toml", ".sh", ".bash", ".zsh"])
 const SCOPES = [
   "packages/opencode",
+  "packages/core",
+  "packages/llm",
+  "packages/schema",
+  "packages/protocol",
+  "packages/server",
+  "packages/tui",
   "packages/extensions",
   "packages/ui",
   "packages/shared",

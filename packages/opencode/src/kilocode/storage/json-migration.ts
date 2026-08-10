@@ -14,6 +14,7 @@ import { Glob } from "@opencode-ai/core/util/glob"
 import { EOL } from "os"
 import { Effect } from "effect"
 import { errorMessage } from "@/util/error"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
 
 const log = Log.create({ service: "json-migration" })
 
@@ -84,7 +85,7 @@ export async function bootstrap() {
   let last = -1
   if (tty) process.stderr.write("\x1b[?25l")
   try {
-    await Effect.runPromise(Database.Service.use(() => Effect.void).pipe(Effect.provide(Database.defaultLayer)))
+    await Effect.runPromise(Database.Service.use(() => Effect.void).pipe(Effect.provide(AppNodeBuilder.build(Database.node))))
     const sqlite = new BunDatabase(marker)
     try {
       const stats = await run(drizzle({ client: sqlite }), {

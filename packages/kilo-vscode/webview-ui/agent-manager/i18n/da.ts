@@ -65,6 +65,7 @@ export const dict = {
 
   "agentManager.terminal.new": "Ny terminalfane",
   "agentManager.terminal.ended": "terminal afsluttet — luk fanen for at fjerne",
+  "agentManager.terminal.endedRestartable": "terminal afsluttet - skriv for at starte en ny shell, eller luk fanen",
   "agentManager.terminal.setupFailed": "opsætningsscript mislykkedes",
   "agentManager.terminal.setupFailedCode": "opsætningsscript mislykkedes med exitkode",
   "agentManager.terminal.stopSetup": "Stop opsætningsscript",
@@ -101,7 +102,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "Næste fane",
   "agentManager.shortcuts.newTab": "Ny fane",
   "agentManager.shortcuts.closeTab": "Luk fane",
-  "agentManager.shortcuts.toggleTerminal": "Skift terminal",
+  "agentManager.shortcuts.toggleTerminal": "Fokusér / skjul terminalen",
   "agentManager.shortcuts.runScript": "Kør script",
   "agentManager.run.options": "Kørselsindstillinger",
   "agentManager.run.configure": "Konfigurer kørselsscript",
@@ -116,6 +117,9 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.cancel": "Annuller",
   "agentManager.dialog.removeStaleWorktree.confirm": "Fjern forældet Worktree",
 
+  "agentManager.dialog.project.select": "Vælg projekt",
+  "agentManager.dialog.project.untrusted": "Godkend først dette projekt i sidepanelet",
+  "agentManager.dialog.project.missing": "Repository ikke fundet",
   "agentManager.dialog.openWorktree": "Ny Worktree",
   "agentManager.dialog.configureWorktree": "Konfigurer Nyt Worktree...",
   "agentManager.dialog.tab.new": "Ny",

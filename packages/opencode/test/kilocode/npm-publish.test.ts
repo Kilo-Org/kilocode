@@ -1,16 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { NpmPublish } from "../../script/kilocode/npm-publish"
 
-describe("npm publish aliases", () => {
-  test("promotes stable releases to the rc channel", () => {
-    expect(NpmPublish.aliases("latest")).toEqual(["rc"])
-  })
-
-  test("does not promote prereleases", () => {
-    expect(NpmPublish.aliases("rc")).toEqual([])
-  })
-})
-
 describe("npm publish retry", () => {
   test("returns after the first successful attempt", async () => {
     const calls = { run: 0, exists: 0, sleep: 0 }

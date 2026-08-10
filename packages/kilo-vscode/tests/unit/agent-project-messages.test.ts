@@ -4,7 +4,7 @@ import * as os from "os"
 import * as path from "path"
 import { execFileSync } from "child_process"
 import { handleProjectMessage, type ProjectMessageDeps } from "../../src/agent-manager/project/messages"
-import { ProjectRegistry } from "../../src/agent-manager/project/registry"
+import { ProjectRegistry, type RegistryStorage } from "../../src/agent-manager/project/registry"
 import { ProjectContexts } from "../../src/agent-manager/project/contexts"
 import { projectIdFor } from "../../src/agent-manager/project/paths"
 import type { AgentManagerInMessage } from "../../src/agent-manager/types"
@@ -20,12 +20,13 @@ function gitRepo(): string {
 function setup(opts: { enabled?: boolean; workspace?: string } = {}) {
   let stored: unknown
   let pickResult: string | undefined
-  const registry = new ProjectRegistry({
+  const storage: RegistryStorage = {
     read: () => stored,
     write: (value) => {
       stored = value
     },
-  })
+  }
+  const registry = new ProjectRegistry(storage)
   const contexts = new ProjectContexts({
     workspaceRoot: () => opts.workspace ?? WORKSPACE,
     registry,
@@ -63,7 +64,7 @@ function setup(opts: { enabled?: boolean; workspace?: string } = {}) {
   const pick = (dir: string | undefined) => {
     pickResult = dir
   }
-  return { registry, contexts, deps, calls, pick }
+  return { registry, contexts, deps, calls, pick, storage }
 }
 
 function msg(type: string, extra: Record<string, unknown> = {}): AgentManagerInMessage {
@@ -168,6 +169,36 @@ describe("handleProjectMessage", () => {
     expect(calls.expand).toEqual([id])
     await handleProjectMessage(msg("agentManager.setProjectExpanded", { projectId: id, expanded: false }), deps)
     expect(calls.expand).toEqual([id])
+  })
+
+  it("persists project expansion state across registry instances", async () => {
+    const repo = gitRepo()
+    const { deps, registry, storage, calls } = setup()
+    const id = projectIdFor(repo)
+    await registry.add({ id, root: repo })
+    await registry.setTrusted(id, true)
+
+    await handleProjectMessage(msg("agentManager.setProjectExpanded", { projectId: id, expanded: true }), deps)
+
+    const restored = new ProjectRegistry(storage)
+    expect(restored.expanded(id)).toBe(true)
+    expect(restored.get(id)?.expanded).toBe(true)
+
+    await handleProjectMessage(msg("agentManager.setProjectExpanded", { projectId: id, expanded: false }), deps)
+
+    expect(new ProjectRegistry(storage).expanded(id)).toBe(false)
+    expect(calls.push).toBe(2)
+  })
+
+  it("persists the pinned project expansion state without adding it to the catalog", async () => {
+    const { deps, registry, storage } = setup()
+    const id = projectIdFor(WORKSPACE)
+
+    await handleProjectMessage(msg("agentManager.setProjectExpanded", { projectId: id, expanded: false }), deps)
+
+    const restored = new ProjectRegistry(storage)
+    expect(restored.expanded(id)).toBe(false)
+    expect(registry.list()).toEqual([])
   })
 
   it("does not initialize untrusted projects on expand", async () => {

@@ -7,12 +7,13 @@
  */
 
 import assert from "node:assert/strict"
-import { execFileSync, spawnSync } from "node:child_process"
+import { execFileSync, spawn, spawnSync } from "node:child_process"
 import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
+import { sleepSync } from "./lib.mjs"
 import { mergeOrFallback, DEFAULT_BRANCH } from "./prepare-branch.mjs"
 import { applyCap } from "./watermark.mjs"
 import {
@@ -21,6 +22,9 @@ import {
   routeRows,
   dropLegacySkipped,
   noDiffReport,
+  LEARNINGS_FILE,
+  nonContentFiles,
+  resolveLearnedThrough,
   renderBody,
   extractSectionRows,
 } from "./upsert-pr.mjs"
@@ -31,11 +35,23 @@ import {
   applyRevertAnnotations,
   unannotatedRevertSignals,
 } from "./reverts.mjs"
+import {
+  parseLearnings,
+  renderLearnings,
+  parseLearnedThrough,
+  patchMarkerIntoBody,
+  parseDelta,
+  validateDelta,
+  applyDelta,
+  isTrustedComment,
+  promptBlock,
+} from "./learn.mjs"
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const EDIT_SCRIPT = path.join(HERE, "edit.mjs")
 const TRIAGE_SCRIPT = path.join(HERE, "triage.mjs")
 const COLLECT_SCRIPT = path.join(HERE, "collect.mjs")
+const LEARN_SCRIPT = path.join(HERE, "learn.mjs")
 
 const temps = []
 
@@ -152,6 +168,16 @@ if (mode === "triage-embed-env-secret") {
     priority: "high",
   }));
   process.stdout.write(JSON.stringify(entries) + "\\n");
+  process.exit(0);
+}
+if (mode === "extraction-delta") {
+  const deltaFile = "docs-sync-out/extraction-delta.json";
+  if (fs.existsSync(deltaFile)) {
+    const delta = JSON.parse(fs.readFileSync(deltaFile, "utf8"));
+    process.stdout.write(JSON.stringify(delta) + "\\n");
+  } else {
+    process.stdout.write('{"add":[],"remove":[]}' + "\\n");
+  }
   process.exit(0);
 }
 process.stderr.write("unknown stub mode\\n");
@@ -321,9 +347,9 @@ function setupTriageCwd(digest) {
   return cwd
 }
 
-function runNodeScript(scriptPath, { cwd, env = {}, kiloDir }) {
+function runNodeScript(scriptPath, { cwd, env = {}, kiloDir, args = [] }) {
   const pathEnv = [kiloDir, process.env.PATH].filter(Boolean).join(path.delimiter)
-  const result = spawnSync(process.execPath, [scriptPath], {
+  const result = spawnSync(process.execPath, [scriptPath, ...args], {
     cwd,
     env: {
       ...process.env,
@@ -1067,10 +1093,12 @@ function case4_routing() {
 
   // round-trip renderBody → extractSectionRows
   const through = "2026-07-20T09:59:59.999Z"
+  const learnedMarker = "<!-- docs-sync: learned-through commit=deadbeef comment=2026-07-20T10:00:00Z -->"
   const body = renderBody({
     date: "2026-07-27",
     since: "2026-07-17T00:00:00.000Z",
     through,
+    learnedThrough: learnedMarker,
     changesRows,
     pendingRows,
     skippedRows,
@@ -1079,6 +1107,7 @@ function case4_routing() {
     note: "",
   })
   assert.ok(body.includes(`<!-- docs-sync: processed-through ${through} -->`))
+  assert.ok(body.includes(learnedMarker), "learned-through marker must appear in rendered body")
   const extChanges = extractSectionRows(body, "changes")
   const extPending = extractSectionRows(body, "pending")
   const extSkipped = extractSectionRows(body, "skipped")
@@ -1106,6 +1135,7 @@ function case4_routing() {
       date: "2026-07-27",
       since: "s",
       through: "t",
+      learnedThrough: "",
       changesRows: [],
       pendingRows: [],
       skippedRows: forgedRows.skippedRows,
@@ -1417,7 +1447,7 @@ function case9_reverts() {
   console.log("case 9: revert interception")
 
   // --- revertTitleKind ---
-  assert.equal(revertTitleKind('revert(cli): restore opt-in stream idle timeouts'), "conventional")
+  assert.equal(revertTitleKind("revert(cli): restore opt-in stream idle timeouts"), "conventional")
   assert.equal(revertTitleKind('Revert "feat(cli): default stream watchdog"'), "github-native")
   assert.equal(revertTitleKind("REVERT: all of it"), "conventional")
   assert.equal(revertTitleKind("feat(cli): add x"), null)
@@ -1825,6 +1855,1603 @@ Reverts #12249 and #12481.
 }
 
 // ---------------------------------------------------------------------------
+// Case 10 — learnings extraction, validation, injection, upsert safety
+// ---------------------------------------------------------------------------
+function case10_learnings() {
+  console.log("case 10: learnings")
+
+  // --- helpers for extraction runs ---
+  function writeFixture(cwd, data) {
+    const f = path.join(cwd, "fixture.json")
+    fs.writeFileSync(f, JSON.stringify(data, null, 2))
+    return f
+  }
+
+  function writeExtractionDelta(cwd, delta) {
+    fs.mkdirSync(path.join(cwd, "docs-sync-out"), { recursive: true })
+    fs.writeFileSync(path.join(cwd, "docs-sync-out", "extraction-delta.json"), JSON.stringify(delta, null, 2))
+  }
+
+  // Prepare a git repo for learn.mjs tests: set origin refs, create docs-sync-out.
+  function setupLearnRepo(dir) {
+    fs.mkdirSync(path.join(dir, "docs-sync-out"), { recursive: true })
+    gitIn(dir, ["update-ref", "refs/remotes/origin/main", "main"])
+    gitIn(dir, ["update-ref", "refs/remotes/origin/docs/auto-sync", "docs/auto-sync"])
+    return dir
+  }
+
+  const githubBotEmail = "41898282+github-actions[bot]@users.noreply.github.com"
+  const kiloconnectBotEmail = "240665456+kiloconnect[bot]@users.noreply.github.com"
+
+  // 10a — three commit classes
+  {
+    console.log("  10a — three commit classes")
+    const dir = mktemp("docs-sync-learn-a-")
+    initRepoWithIdentity(dir)
+    fs.writeFileSync(path.join(dir, "base.txt"), "base\n")
+    gitIn(dir, ["add", "base.txt"])
+    gitIn(dir, ["commit", "-m", "base"])
+
+    // Branch
+    gitIn(dir, ["checkout", "-b", "docs/auto-sync"])
+    // 1. kiloconnect[bot] commit that touches packages/kilo-docs/pages/x.md
+    gitIn(dir, ["config", "user.email", kiloconnectBotEmail])
+    fs.mkdirSync(path.join(dir, "packages", "kilo-docs", "pages"), { recursive: true })
+    fs.writeFileSync(path.join(dir, "packages", "kilo-docs", "pages", "x.md"), "# x\n")
+    gitIn(dir, ["add", "packages/kilo-docs/pages/x.md"])
+    gitIn(dir, ["commit", "-m", "docs: add x page"])
+    const kiloconnectSha = gitIn(dir, ["rev-parse", "HEAD"])
+    // 2. github-actions[bot] commit
+    gitIn(dir, ["config", "user.email", githubBotEmail])
+    fs.writeFileSync(path.join(dir, "packages", "kilo-docs", "pages", "y.md"), "# y\n")
+    gitIn(dir, ["add", "packages/kilo-docs/pages/y.md"])
+    gitIn(dir, ["commit", "-m", "docs: add y page"])
+    // 3. Merge commit (non-merge filter)
+    gitIn(dir, ["config", "user.email", "someone@example.com"])
+    gitIn(dir, ["checkout", "-b", "tmp-merge"])
+    fs.writeFileSync(path.join(dir, "z.txt"), "z\n")
+    gitIn(dir, ["add", "z.txt"])
+    gitIn(dir, ["commit", "-m", "tmp"])
+    gitIn(dir, ["checkout", "docs/auto-sync"])
+    gitIn(dir, ["merge", "--no-ff", "tmp-merge", "-m", "merge tmp"])
+    // 4. commit reachable from main
+    gitIn(dir, ["checkout", "main"])
+    fs.writeFileSync(path.join(dir, "main-only.txt"), "main only\n")
+    gitIn(dir, ["add", "main-only.txt"])
+    gitIn(dir, ["commit", "-m", "main only"])
+
+    gitIn(dir, ["checkout", "docs/auto-sync"])
+    const tip = gitIn(dir, ["rev-parse", "HEAD"])
+
+    // Setup origin refs (needed by learn.mjs git commands)
+    const cwd = setupLearnRepo(dir)
+
+    const fixturePath = writeFixture(dir, {
+      pr: { number: 1, head: { ref: "docs/auto-sync" }, body: "", user: { login: "github-actions[bot]" } },
+      comments: [],
+    })
+
+    const callLog = path.join(dir, "kilo-calls.log")
+    const kiloDir = makeStubKiloDir({ mode: "extraction-delta", callLog })
+    writeExtractionDelta(dir, { add: [], remove: [] })
+
+    const result = runNodeScript(LEARN_SCRIPT, {
+      cwd: dir,
+      kiloDir,
+      env: {
+        TRIAGE_MODEL: "test/model",
+        DOCS_SYNC_FIXTURE: fixturePath,
+        LEARNINGS_BUDGET_MINUTES: "1",
+        DOCS_SYNC_BACKOFF_MS: "0",
+      },
+    })
+
+    // Assert: input file written, exactly one correction — kiloconnect only.
+    // github-actions[bot] commit excluded (criterion 5), merge commit excluded
+    // via --no-merges, main-reachable commit excluded by origin/main range (criterion 6).
+    const inputFile = path.join(dir, "docs-sync-out", "learnings-input.json")
+    assert.ok(fs.existsSync(inputFile), `expected ${inputFile}`)
+    const input = JSON.parse(fs.readFileSync(inputFile, "utf8"))
+    assert.equal(input.corrections.length, 1, "exactly one correction (kiloconnect commit)")
+    assert.equal(
+      input.corrections[0].source,
+      `commit:${kiloconnectSha.slice(0, 7)}`,
+      "correction must be kiloconnect commit only",
+    )
+  }
+
+  // 10rz — timestamp correlation with different timezone offsets
+  // A comment must map to the chronologically earliest eligible commit even when
+  // timestamps use different timezone offsets (Z vs +05:00).
+  {
+    console.log("  10rz — timestamp correlation")
+    const dir = mktemp("docs-sync-learn-rz-")
+    initRepoWithIdentity(dir)
+    fs.writeFileSync(path.join(dir, "base.txt"), "base\n")
+    gitIn(dir, ["add", "base.txt"])
+    gitIn(dir, ["commit", "-m", "base"])
+
+    gitIn(dir, ["checkout", "-b", "docs/auto-sync"])
+
+    // Commit A: non-UTC offset, chronologically earliest (UTC 08:00)
+    // iso = 2026-08-03T13:00:00+05:00
+    fs.mkdirSync(path.join(dir, "packages", "kilo-docs", "pages"), { recursive: true })
+    fs.writeFileSync(path.join(dir, "packages", "kilo-docs", "pages", "x.md"), "# x\n")
+    gitIn(dir, ["add", "packages/kilo-docs/pages/x.md"])
+    gitIn(dir, ["commit", "-m", "first edit x", "--author", `kiloconnect[bot] <${kiloconnectBotEmail}>`], {
+      GIT_COMMITTER_DATE: "2026-08-03T13:00:00+05:00",
+    })
+    const shaA = gitIn(dir, ["rev-parse", "HEAD"])
+
+    // Commit B: UTC offset, chronologically later (UTC 09:00)
+    // iso = 2026-08-03T09:00:00Z — string comparison would pick this as "earlier" (09 < 13)
+    // but chronologically A is earlier (08:00 < 09:00)
+    fs.writeFileSync(path.join(dir, "packages", "kilo-docs", "pages", "x.md"), "# x\n## edit\n")
+    gitIn(dir, ["add", "packages/kilo-docs/pages/x.md"])
+    gitIn(dir, ["commit", "-m", "second edit x", "--author", `kiloconnect[bot] <${kiloconnectBotEmail}>`], {
+      GIT_COMMITTER_DATE: "2026-08-03T09:00:00Z",
+    })
+    const shaB = gitIn(dir, ["rev-parse", "HEAD"])
+
+    // Seed LEARNINGS.md so existing entries are non-empty but irrelevant
+    const existing = [
+      { id: "pre", rule: "Pre-existing rule.", scope: "both", source: "commit:0000000", date: "2026-01-01" },
+    ]
+    const learningsPath = path.join(dir, "packages", "kilo-docs", "LEARNINGS.md")
+    fs.mkdirSync(path.dirname(learningsPath), { recursive: true })
+    fs.writeFileSync(learningsPath, renderLearnings(existing))
+    gitIn(dir, ["add", "packages/kilo-docs/LEARNINGS.md"])
+    gitIn(dir, ["commit", "-m", "seed learnings", "--author", `kiloconnect[bot] <${kiloconnectBotEmail}>`])
+
+    const cwd = setupLearnRepo(dir)
+
+    // Comment at UTC 05:30 on x.md — before both commits chronologically.
+    // 05:30 < 08:00 (A) and 05:30 < 09:00 (B) → both eligible
+    // The chronologically earliest eligible commit is A (08:00).
+    const fixturePath = writeFixture(cwd, {
+      pr: { number: 1, head: { ref: "docs/auto-sync" }, body: "", user: { login: "github-actions[bot]" } },
+      comments: [
+        {
+          id: 101,
+          created_at: "2026-08-03T05:30:00Z",
+          path: "packages/kilo-docs/pages/x.md",
+          body: "Please fix the docs.",
+          author_association: "MEMBER",
+          user: { login: "maintainer" },
+        },
+      ],
+    })
+
+    const kiloDir = makeStubKiloDir({ mode: "extraction-delta", callLog: path.join(cwd, "kilo-calls.log") })
+    writeExtractionDelta(cwd, { add: [], remove: [] })
+
+    const result = runNodeScript(LEARN_SCRIPT, {
+      cwd,
+      kiloDir,
+      env: {
+        TRIAGE_MODEL: "test/model",
+        DOCS_SYNC_FIXTURE: fixturePath,
+        LEARNINGS_BUDGET_MINUTES: "1",
+        DOCS_SYNC_BACKOFF_MS: "0",
+      },
+    })
+
+    // Read learnings-input.json to inspect the correlation result
+    const inputFile = path.join(cwd, "docs-sync-out", "learnings-input.json")
+    assert.ok(fs.existsSync(inputFile), "learnings-input.json must exist")
+    const input = JSON.parse(fs.readFileSync(inputFile, "utf8"))
+
+    // Both commits must appear as corrections
+    const commitA = input.corrections.find((c) => c.source === `commit:${shaA.slice(0, 7)}`)
+    const commitB = input.corrections.find((c) => c.source === `commit:${shaB.slice(0, 7)}`)
+    assert.ok(commitA, "commit A must be in corrections")
+    assert.ok(commitB, "commit B must be in corrections")
+
+    // Comment must be associated with commit A (chronologically earliest)
+    assert.ok(commitA.comment, "commit A must have the comment associated")
+    assert.equal(commitA.comment.path, "packages/kilo-docs/pages/x.md")
+    assert.equal(commitB.comment, undefined, "commit B must not have the comment associated")
+
+    // No standalone comment candidate — the comment was correlated, not orphaned
+    const standalone = input.corrections.filter((c) => c.source && c.source.startsWith("comment:"))
+    assert.equal(standalone.length, 0, "comment must be associated, not standalone")
+  }
+
+  // 10b — watermark suppression (no model call when marker covers all)
+  {
+    console.log("  10b — watermark suppression")
+    const dir = mktemp("docs-sync-learn-b-")
+    initRepoWithIdentity(dir)
+    fs.writeFileSync(path.join(dir, "base.txt"), "base\n")
+    gitIn(dir, ["add", "base.txt"])
+    gitIn(dir, ["commit", "-m", "base"])
+
+    gitIn(dir, ["checkout", "-b", "docs/auto-sync"])
+    // corrective commit
+    fs.mkdirSync(path.join(dir, "packages", "kilo-docs", "pages"), { recursive: true })
+    fs.writeFileSync(path.join(dir, "packages", "kilo-docs", "pages", "x.md"), "# x\n")
+    gitIn(dir, ["add", "packages/kilo-docs/pages/x.md"])
+    gitIn(dir, ["commit", "-m", "docs update", "--author", `kiloconnect[bot] <${kiloconnectBotEmail}>`])
+
+    // Write LEARNINGS.md on the branch first, so the marker can point to the tip after it
+    const existing = [
+      { id: "test", rule: "existing rule", scope: "both", source: "commit:0000000", date: "2026-01-01" },
+    ]
+    const learningsPath = path.join(dir, "packages", "kilo-docs", "LEARNINGS.md")
+    const learningsContent = renderLearnings(existing)
+    fs.mkdirSync(path.dirname(learningsPath), { recursive: true })
+    fs.writeFileSync(learningsPath, learningsContent)
+    gitIn(dir, ["add", "packages/kilo-docs/LEARNINGS.md"])
+    gitIn(dir, ["commit", "-m", "seed learnings"])
+
+    const tip = gitIn(dir, ["rev-parse", "HEAD"])
+    const tipDate = new Date().toISOString()
+
+    const cwd = setupLearnRepo(dir)
+    const body = `<!-- docs-sync: learned-through commit=${tip} comment=${tipDate} -->`
+    const fixturePath = writeFixture(cwd, {
+      pr: { number: 1, head: { ref: "docs/auto-sync" }, body, user: { login: "github-actions[bot]" } },
+      comments: [],
+    })
+
+    const callLog = path.join(cwd, "kilo-calls.log")
+    const kiloDir = makeStubKiloDir({ mode: "extraction-delta", callLog })
+    writeExtractionDelta(cwd, { add: [], remove: [] })
+
+    fs.writeFileSync(path.join(cwd, "docs-sync-out", "learnings.json"), JSON.stringify(existing, null, 2))
+
+    const result = runNodeScript(LEARN_SCRIPT, {
+      cwd,
+      kiloDir,
+      env: {
+        TRIAGE_MODEL: "test/model",
+        DOCS_SYNC_FIXTURE: fixturePath,
+        LEARNINGS_BUDGET_MINUTES: "1",
+        DOCS_SYNC_BACKOFF_MS: "0",
+      },
+    })
+
+    // Assert: stub never invoked, learnings.json unchanged, no model call
+    const calls = fs.existsSync(callLog) ? fs.readFileSync(callLog, "utf8").trim() : ""
+    assert.equal(calls, "", `kilo must not be invoked when marker covers all; got ${calls}`)
+    const out = JSON.parse(fs.readFileSync(path.join(cwd, "docs-sync-out", "learnings.json"), "utf8"))
+    assert.deepEqual(out, existing, "learnings.json must equal existing entries")
+
+    // Run apply and prove LEARNINGS.md is byte-unchanged
+    const lp = path.join(cwd, "packages", "kilo-docs", "LEARNINGS.md")
+    const before = fs.readFileSync(lp, "utf8")
+    runNodeScript(LEARN_SCRIPT, {
+      cwd,
+      kiloDir,
+      args: ["--apply"],
+      env: { DOCS_SYNC_BACKOFF_MS: "0" },
+    })
+    const after = fs.readFileSync(lp, "utf8")
+    assert.equal(after, before, "LEARNINGS.md must be byte-unchanged after apply")
+  }
+
+  // 10c — rerun idempotency
+  {
+    console.log("  10c — rerun idempotency")
+    const dir = mktemp("docs-sync-learn-c-")
+    initRepoWithIdentity(dir)
+    fs.writeFileSync(path.join(dir, "base.txt"), "base\n")
+    gitIn(dir, ["add", "base.txt"])
+    gitIn(dir, ["commit", "-m", "base"])
+
+    gitIn(dir, ["checkout", "-b", "docs/auto-sync"])
+    fs.mkdirSync(path.join(dir, "packages", "kilo-docs", "pages"), { recursive: true })
+    fs.writeFileSync(path.join(dir, "packages", "kilo-docs", "pages", "x.md"), "# x\n")
+    gitIn(dir, ["add", "packages/kilo-docs/pages/x.md"])
+    gitIn(dir, ["commit", "-m", "docs update", "--author", `kiloconnect[bot] <${kiloconnectBotEmail}>`])
+    let tip = gitIn(dir, ["rev-parse", "HEAD"])
+
+    const add = [
+      {
+        id: "new-rule",
+        rule: "A new rule from testing.",
+        scope: "both",
+        source: `commit:${tip.slice(0, 7)}`,
+        date: "2026-08-03",
+      },
+    ]
+    let firstLEARNINGS
+
+    // First run
+    {
+      const cwd = setupLearnRepo(dir)
+      const fixturePath = writeFixture(cwd, {
+        pr: { number: 1, head: { ref: "docs/auto-sync" }, body: "", user: { login: "github-actions[bot]" } },
+        comments: [],
+      })
+      const kiloDir = makeStubKiloDir({ mode: "extraction-delta", callLog: path.join(cwd, "kilo-calls.log") })
+      writeExtractionDelta(cwd, { add, remove: [] })
+      const result = runNodeScript(LEARN_SCRIPT, {
+        cwd,
+        kiloDir,
+        env: {
+          TRIAGE_MODEL: "test/model",
+          DOCS_SYNC_FIXTURE: fixturePath,
+          LEARNINGS_BUDGET_MINUTES: "1",
+          DOCS_SYNC_BACKOFF_MS: "0",
+        },
+      })
+      const out1 = JSON.parse(fs.readFileSync(path.join(cwd, "docs-sync-out", "learnings.json"), "utf8"))
+      assert.equal(out1.length, 1)
+      assert.equal(out1[0].id, "new-rule")
+      // Write LEARNINGS.md on the branch so second run sees existing entries
+      const learningsPath = path.join(dir, "packages", "kilo-docs", "LEARNINGS.md")
+      fs.mkdirSync(path.dirname(learningsPath), { recursive: true })
+      fs.writeFileSync(learningsPath, renderLearnings(out1))
+      gitIn(dir, ["add", "packages/kilo-docs/LEARNINGS.md"])
+      gitIn(dir, ["commit", "-m", "seed learnings"])
+      tip = gitIn(dir, ["rev-parse", "HEAD"])
+      firstLEARNINGS = fs.readFileSync(path.join(dir, "packages", "kilo-docs", "LEARNINGS.md"), "utf8")
+    }
+
+    // Second run with marker covering first run's result
+    {
+      const cwd = setupLearnRepo(dir)
+      const body = `<!-- docs-sync: learned-through commit=${tip} comment=2026-08-03T12:00:00Z -->`
+      const fixturePath = writeFixture(cwd, {
+        pr: { number: 1, head: { ref: "docs/auto-sync" }, body, user: { login: "github-actions[bot]" } },
+        comments: [],
+      })
+      const callLog2 = path.join(cwd, "kilo-calls-run2.log")
+      const kiloDir2 = makeStubKiloDir({ mode: "extraction-delta", callLog: callLog2 })
+      writeExtractionDelta(cwd, { add, remove: [] })
+      const result = runNodeScript(LEARN_SCRIPT, {
+        cwd,
+        kiloDir: kiloDir2,
+        env: {
+          TRIAGE_MODEL: "test/model",
+          DOCS_SYNC_FIXTURE: fixturePath,
+          LEARNINGS_BUDGET_MINUTES: "1",
+          DOCS_SYNC_BACKOFF_MS: "0",
+        },
+      })
+      const calls2 = fs.existsSync(callLog2) ? fs.readFileSync(callLog2, "utf8").trim() : ""
+      assert.equal(calls2, "", "second run must not invoke kilo")
+      const out2 = JSON.parse(fs.readFileSync(path.join(cwd, "docs-sync-out", "learnings.json"), "utf8"))
+      assert.equal(out2.length, 1)
+      assert.equal(out2[0].id, "new-rule")
+      // Run apply and prove LEARNINGS.md is byte-identical after idempotent rerun
+      runNodeScript(LEARN_SCRIPT, {
+        cwd,
+        kiloDir: kiloDir2,
+        args: ["--apply"],
+        env: { DOCS_SYNC_BACKOFF_MS: "0" },
+      })
+      const afterApply = fs.readFileSync(path.join(dir, "packages", "kilo-docs", "LEARNINGS.md"), "utf8")
+      assert.equal(afterApply.length, firstLEARNINGS.length, "LEARNINGS.md must be same length after apply")
+      assert.equal(afterApply, firstLEARNINGS, "LEARNINGS.md must be byte-identical after apply")
+    }
+  }
+
+  // 10d — contradiction replacement (applyDelta)
+  {
+    console.log("  10d — contradiction replacement")
+    const old = [
+      { id: "old-rule", rule: "Old rule text.", scope: "both", source: "commit:aaaaaaa", date: "2026-01-01" },
+    ]
+    const add = [
+      { id: "new-rule", rule: "New rule text.", scope: "both", source: "commit:bbbbbbb", date: "2026-02-01" },
+    ]
+    const delta = { add, remove: ["old-rule"] }
+    const result = applyDelta(old, delta)
+    assert.equal(result.length, 1)
+    assert.equal(result[0].id, "new-rule")
+    // Third delta touching neither does not bring old back
+    const again = applyDelta(result, { add: [], remove: [] })
+    assert.equal(again.length, 1)
+    assert.equal(again[0].id, "new-rule")
+  }
+
+  // 10e — prompt injection (triage/edit argv carry tagged rules)
+  {
+    console.log("  10e — prompt injection")
+    const dir = mktemp("docs-sync-learn-e-")
+    initRepoWithIdentity(dir)
+    fs.writeFileSync(path.join(dir, "base.txt"), "base\n")
+    gitIn(dir, ["add", "base.txt"])
+    gitIn(dir, ["commit", "-m", "base"])
+    gitIn(dir, ["checkout", "-b", "docs/auto-sync"])
+    // Add a corrective commit so extraction has a candidate
+    fs.mkdirSync(path.join(dir, "packages", "kilo-docs", "pages"), { recursive: true })
+    fs.writeFileSync(path.join(dir, "packages", "kilo-docs", "pages", "x.md"), "# x\n")
+    gitIn(dir, ["add", "packages/kilo-docs/pages/x.md"])
+    gitIn(dir, ["commit", "-m", "docs update", "--author", `kiloconnect[bot] <${kiloconnectBotEmail}>`])
+    const commitSha = gitIn(dir, ["rev-parse", "HEAD"])
+
+    const cwd = setupLearnRepo(dir)
+    const fixturePath = writeFixture(cwd, {
+      pr: { number: 1, head: { ref: "docs/auto-sync" }, body: "", user: { login: "github-actions[bot]" } },
+      comments: [],
+    })
+    const callLog = path.join(cwd, "kilo-calls.log")
+    const kiloDir = makeStubKiloDir({ mode: "extraction-delta", callLog })
+    // Three entries: triage, edit, both — all from the same candidate source
+    const src = `commit:${commitSha.slice(0, 7)}`
+    writeExtractionDelta(cwd, {
+      add: [
+        { id: "triage-rule", rule: "Triage-only rule text.", scope: "triage", source: src, date: "2026-08-01" },
+        { id: "edit-rule", rule: "Edit-only rule text.", scope: "edit", source: src, date: "2026-08-02" },
+        { id: "both-rule", rule: "Both scope rule text.", scope: "both", source: src, date: "2026-08-03" },
+      ],
+      remove: [],
+    })
+
+    // Run extraction so it writes learnings-<scope>.md blocks (extraction step 13).
+    // Only extraction writes these files; --apply writes only LEARNINGS.md.
+    runNodeScript(LEARN_SCRIPT, {
+      cwd,
+      kiloDir,
+      env: {
+        TRIAGE_MODEL: "test/model",
+        DOCS_SYNC_FIXTURE: fixturePath,
+        LEARNINGS_BUDGET_MINUTES: "1",
+        DOCS_SYNC_BACKOFF_MS: "0",
+      },
+    })
+
+    const triageBlockPath = path.join(cwd, "docs-sync-out", "learnings-triage.md")
+    const editBlockPath = path.join(cwd, "docs-sync-out", "learnings-edit.md")
+    assert.ok(fs.existsSync(triageBlockPath), "learnings-triage.md must exist")
+    assert.ok(fs.existsSync(editBlockPath), "learnings-edit.md must exist")
+
+    // Run triage.mjs against a recording stub. Copy the learnings block into
+    // its cwd so readLearningsBlock picks it up.
+    {
+      const triageCwd = setupTriageCwd([samplePr(1)])
+      fs.copyFileSync(triageBlockPath, path.join(triageCwd, "docs-sync-out", "learnings-triage.md"))
+      const triageCallLog = path.join(triageCwd, "triage-calls.log")
+      const triageKiloDir = makeStubKiloDir({ mode: "record", callLog: triageCallLog })
+      runNodeScript(TRIAGE_SCRIPT, {
+        cwd: triageCwd,
+        kiloDir: triageKiloDir,
+        env: { TRIAGE_MODEL: "test/model", DOCS_SYNC_BACKOFF_MS: "0" },
+      })
+      const logText = fs.readFileSync(triageCallLog, "utf8")
+      assert.ok(logText.includes("Triage-only rule text"), "triage argv must contain triage rule")
+      assert.ok(logText.includes("Both scope rule text"), "triage argv must contain both rule")
+      assert.ok(!logText.includes("Edit-only rule text"), "triage argv must not contain edit-only rule")
+    }
+
+    // Run edit.mjs against a recording stub.
+    {
+      const triageEntry = {
+        pr: 1,
+        url: "https://github.com/Kilo-Org/cloud/pull/1",
+        docs_worthy: true,
+        reason: "needs docs",
+        target_sections: [],
+        priority: "medium",
+      }
+      const editCwd = setupEditCwd([samplePr(1)], [triageEntry])
+      fs.copyFileSync(editBlockPath, path.join(editCwd, "docs-sync-out", "learnings-edit.md"))
+      const editCallLog = path.join(editCwd, "edit-calls.log")
+      const editKiloDir = makeStubKiloDir({ mode: "record", callLog: editCallLog })
+      runNodeScript(EDIT_SCRIPT, {
+        cwd: editCwd,
+        kiloDir: editKiloDir,
+        env: { EDIT_MODEL: "test/model", DOCS_SYNC_BACKOFF_MS: "0" },
+      })
+      const logText = fs.readFileSync(editCallLog, "utf8")
+      assert.ok(logText.includes("Edit-only rule text"), "edit argv must contain edit rule")
+      assert.ok(logText.includes("Both scope rule text"), "edit argv must contain both rule")
+      assert.ok(!logText.includes("Triage-only rule text"), "edit argv must not contain triage-only rule")
+    }
+  }
+
+  // 10f — failure path
+  {
+    console.log("  10f — failure path")
+    const dir = mktemp("docs-sync-learn-f-")
+    initRepoWithIdentity(dir)
+    fs.writeFileSync(path.join(dir, "base.txt"), "base\n")
+    gitIn(dir, ["add", "base.txt"])
+    gitIn(dir, ["commit", "-m", "base"])
+    gitIn(dir, ["checkout", "-b", "docs/auto-sync"])
+    fs.mkdirSync(path.join(dir, "packages", "kilo-docs", "pages"), { recursive: true })
+    fs.writeFileSync(path.join(dir, "packages", "kilo-docs", "pages", "x.md"), "# x\n")
+    gitIn(dir, ["add", "packages/kilo-docs/pages/x.md"])
+    gitIn(dir, ["commit", "-m", "docs update", "--author", `kiloconnect[bot] <${kiloconnectBotEmail}>`])
+
+    const existing = [
+      { id: "test", rule: "existing rule", scope: "both", source: "commit:0000000", date: "2026-01-01" },
+    ]
+    // Write LEARNINGS.md on the branch so learn.mjs reads it as existing entries
+    const learningsPath = path.join(dir, "packages", "kilo-docs", "LEARNINGS.md")
+    fs.mkdirSync(path.dirname(learningsPath), { recursive: true })
+    fs.writeFileSync(learningsPath, renderLearnings(existing))
+    gitIn(dir, ["add", "packages/kilo-docs/LEARNINGS.md"])
+    gitIn(dir, ["commit", "-m", "seed learnings"])
+
+    const cwd = setupLearnRepo(dir)
+    const fixturePath = writeFixture(cwd, {
+      pr: { number: 1, head: { ref: "docs/auto-sync" }, body: "", user: { login: "github-actions[bot]" } },
+      comments: [],
+    })
+
+    // Stub exits 0 with garbage stdout (stderr-exit0 mode)
+    const stderrText = "some fake error stream"
+    const kiloDir = makeStubKiloDir({ mode: "stderr-exit0", stderrText })
+
+    const outputFile = path.join(cwd, "gh-output-f")
+    const result = runNodeScript(LEARN_SCRIPT, {
+      cwd,
+      kiloDir,
+      env: {
+        TRIAGE_MODEL: "test/model",
+        DOCS_SYNC_FIXTURE: fixturePath,
+        LEARNINGS_BUDGET_MINUTES: "1",
+        DOCS_SYNC_BACKOFF_MS: "0",
+        GITHUB_OUTPUT: outputFile,
+      },
+    })
+
+    assert.equal(result.status, 0, "learn.mjs must exit 0 on failure")
+    const out = JSON.parse(fs.readFileSync(path.join(cwd, "docs-sync-out", "learnings.json"), "utf8"))
+    assert.deepEqual(out, existing, "learnings.json must equal existing entries on failure")
+    // No marker PATCH file
+    assert.ok(!fs.existsSync(`${fixturePath}.patched`), "no marker PATCH on failure")
+    // No learned_through output
+    if (fs.existsSync(outputFile)) {
+      const ghOut = fs.readFileSync(outputFile, "utf8")
+      assert.ok(!ghOut.includes("learned_through="), "GITHUB_OUTPUT must not contain learned_through on failure")
+    }
+
+    // Run apply and prove LEARNINGS.md is byte-unchanged
+    const lp = path.join(cwd, "packages", "kilo-docs", "LEARNINGS.md")
+    const before = fs.readFileSync(lp, "utf8")
+    runNodeScript(LEARN_SCRIPT, {
+      cwd,
+      kiloDir,
+      args: ["--apply"],
+      env: { DOCS_SYNC_BACKOFF_MS: "0" },
+    })
+    const after = fs.readFileSync(lp, "utf8")
+    assert.equal(after, before, "LEARNINGS.md must be byte-unchanged after apply on failure")
+  }
+
+  // 10g — general-rule check (validateDelta rejections)
+  {
+    console.log("  10g — general-rule check")
+    const existing = []
+    const sources = ["commit:aaaaaaa"]
+    const entryWithPR = {
+      id: "bad-pr",
+      rule: "See #12716 for details",
+      scope: "both",
+      source: "commit:aaaaaaa",
+      date: "2026-08-03",
+    }
+    const entryWithURL = {
+      id: "bad-url",
+      rule: "Check https://example.com",
+      scope: "both",
+      source: "commit:aaaaaaa",
+      date: "2026-08-03",
+    }
+    const entryWithPerson = {
+      id: "bad-person",
+      rule: "Ask @emilieschario",
+      scope: "both",
+      source: "commit:aaaaaaa",
+      date: "2026-08-03",
+    }
+    const entryWithPage = {
+      id: "bad-page",
+      rule: "Edit packages/kilo-docs/pages/x.md",
+      scope: "both",
+      source: "commit:aaaaaaa",
+      date: "2026-08-03",
+    }
+    const entryBadSource = {
+      id: "bad-source",
+      rule: "A valid sentence.",
+      scope: "both",
+      source: "invented",
+      date: "2026-08-03",
+    }
+    const entryBadScope = {
+      id: "bad-scope",
+      rule: "A valid sentence.",
+      scope: "wrong",
+      source: "commit:aaaaaaa",
+      date: "2026-08-03",
+    }
+    const entryCollide = {
+      id: "existing-id",
+      rule: "A valid sentence.",
+      scope: "both",
+      source: "commit:aaaaaaa",
+      date: "2026-08-03",
+    }
+    const entryBadDate = {
+      id: "bad-date",
+      rule: "A valid sentence.",
+      scope: "both",
+      source: "commit:aaaaaaa",
+      date: "not-a-date",
+    }
+    const entryRemoveUnknown = {
+      id: "valid",
+      rule: "A valid sentence.",
+      scope: "both",
+      source: "commit:aaaaaaa",
+      date: "2026-08-03",
+    }
+
+    const existingWithId = [
+      { id: "existing-id", rule: "Existing rule.", scope: "both", source: "commit:aaaaaaa", date: "2026-01-01" },
+    ]
+
+    // PR number
+    {
+      const { rejected } = validateDelta(
+        { add: [entryWithPR], remove: [] },
+        { existing, candidateSources: sources, deletedInWindow: [] },
+      )
+      assert.equal(rejected.length, 1, "PR number must be rejected")
+      assert.ok(rejected[0].reason, "rejection must carry a reason")
+    }
+
+    // URL — docs-check-links.yml link-checks LEARNINGS.md with fail:true, so
+    // a URL in a rule would break CI on every bot commit.
+    {
+      const { rejected } = validateDelta(
+        { add: [entryWithURL], remove: [] },
+        { existing, candidateSources: sources, deletedInWindow: [] },
+      )
+      assert.equal(rejected.length, 1, "URL must be rejected")
+    }
+
+    // Person
+    {
+      const { rejected } = validateDelta(
+        { add: [entryWithPerson], remove: [] },
+        { existing, candidateSources: sources, deletedInWindow: [] },
+      )
+      assert.equal(rejected.length, 1, "person reference must be rejected")
+    }
+
+    // Docs page
+    {
+      const { rejected } = validateDelta(
+        { add: [entryWithPage], remove: [] },
+        { existing, candidateSources: sources, deletedInWindow: [] },
+      )
+      assert.equal(rejected.length, 1, "docs page reference must be rejected")
+    }
+
+    // Bad source
+    {
+      const { rejected } = validateDelta(
+        { add: [entryBadSource], remove: [] },
+        { existing, candidateSources: sources, deletedInWindow: [] },
+      )
+      assert.equal(rejected.length, 1, "invented source must be rejected")
+    }
+
+    // Bad scope
+    {
+      const { rejected } = validateDelta(
+        { add: [entryBadScope], remove: [] },
+        { existing, candidateSources: sources, deletedInWindow: [] },
+      )
+      assert.equal(rejected.length, 1, "bad scope must be rejected")
+    }
+
+    // Colliding id
+    {
+      const { rejected } = validateDelta(
+        { add: [entryCollide], remove: [] },
+        { existing: existingWithId, candidateSources: sources, deletedInWindow: [] },
+      )
+      assert.equal(rejected.length, 1, "colliding id must be rejected")
+    }
+
+    // Remove unknown id
+    {
+      const { rejected } = validateDelta(
+        { add: [entryRemoveUnknown], remove: ["unknown-id"] },
+        { existing, candidateSources: sources, deletedInWindow: [] },
+      )
+      assert.equal(rejected.length, 1, "remove of unknown id must be rejected")
+    }
+
+    // Bad date
+    {
+      const { rejected } = validateDelta(
+        { add: [entryBadDate], remove: [] },
+        { existing, candidateSources: sources, deletedInWindow: [] },
+      )
+      assert.equal(rejected.length, 1, "bad date must be rejected")
+    }
+  }
+
+  // 10h — comment trust (isTrustedComment)
+  {
+    console.log("  10h — comment trust")
+    assert.equal(isTrustedComment({ author_association: "OWNER", user: { login: "owner-user" } }), true)
+    assert.equal(isTrustedComment({ author_association: "MEMBER", user: { login: "emilieschario" } }), true)
+    assert.equal(isTrustedComment({ author_association: "COLLABORATOR", user: { login: "collab-user" } }), true)
+    assert.equal(isTrustedComment({ author_association: "CONTRIBUTOR", user: { login: "kilo-code-bot[bot]" } }), false)
+    assert.equal(isTrustedComment({ author_association: "NONE", user: { login: "rando" } }), false)
+    // MEMBER whose login ends in [bot]
+    assert.equal(isTrustedComment({ author_association: "MEMBER", user: { login: "some-bot[bot]" } }), false)
+  }
+
+  // 10i — draft gate (nonContentFiles)
+  {
+    console.log("  10i — draft gate")
+    const files = ["packages/kilo-docs/LEARNINGS.md", "packages/kilo-docs/pages/a.md"]
+    const result = nonContentFiles(files)
+    assert.equal(result.length, 0, "LEARNINGS.md and pages must not trigger the draft gate")
+    // Still flags non-content
+    const withConfig = ["packages/kilo-docs/next.config.js"]
+    const flagged = nonContentFiles(withConfig)
+    assert.equal(flagged.length, 1, "next.config.js must still trigger the gate")
+    assert.equal(flagged[0], "packages/kilo-docs/next.config.js")
+  }
+
+  // 10j — no --auto on extraction call
+  {
+    console.log("  10j — no --auto on extraction call")
+    const src = fs.readFileSync(LEARN_SCRIPT, "utf8")
+
+    // Find the extraction-mode runKilo args array
+    const argsStart = src.indexOf("runKilo({")
+    assert.ok(argsStart >= 0, "runKilo call must exist in learn.mjs")
+    const argsBlock = src.slice(argsStart, src.indexOf("})", argsStart) + 2)
+    assert.ok(!argsBlock.includes("--auto"), "extraction runKilo must not include --auto")
+    assert.ok(argsBlock.includes("-f"), "extraction runKilo must include -f")
+  }
+
+  // 10k — hand-mangled file (parseLearnings)
+  {
+    console.log("  10k — hand-mangled file")
+    const text = `# header
+<!-- docs-sync:learnings:start -->
+- Valid rule. <!-- id=valid-rule scope=both source=commit:aaaaaaa date=2026-08-03 -->
+- Broken meta. <!-- id=broken-rule scope=not-a-scope source=bad date=bad -->
+Just prose, not a rule line.
+<!-- docs-sync:learnings:end -->`
+    const entries = parseLearnings(text)
+    assert.equal(entries.length, 1, "only valid entry must parse")
+    assert.equal(entries[0].id, "valid-rule")
+  }
+
+  // 10l — first-run fallback (main when branch has none)
+  // Prove the git commands learn.mjs relies on: when the branch file is absent,
+  // git show origin/<branch>:packages/kilo-docs/LEARNINGS.md fails, and
+  // git show origin/main:packages/kilo-docs/LEARNINGS.md returns the main's entries.
+  {
+    console.log("  10l — empty file fallback")
+    const dir = mktemp("docs-sync-learn-l-")
+    initRepoWithIdentity(dir)
+
+    // Write LEARNINGS.md on main
+    const entries = [
+      { id: "test", rule: "Test rule text.", scope: "both", source: "commit:aaaaaaa", date: "2026-01-01" },
+    ]
+    const lp = path.join(dir, "packages", "kilo-docs", "LEARNINGS.md")
+    fs.mkdirSync(path.dirname(lp), { recursive: true })
+    fs.writeFileSync(lp, renderLearnings(entries))
+    gitIn(dir, ["add", "packages/kilo-docs/LEARNINGS.md"])
+    gitIn(dir, ["commit", "-m", "main learnings"])
+
+    // Branch from main, then remove LEARNINGS.md
+    gitIn(dir, ["checkout", "-b", "docs/auto-sync"])
+    fs.rmSync(lp)
+    gitIn(dir, ["add", "packages/kilo-docs/LEARNINGS.md"])
+    gitIn(dir, ["commit", "-m", "remove learnings on branch"])
+
+    // Set up origin refs so git show origin/<ref> resolves
+    setupLearnRepo(dir)
+
+    // git show on branch must fail — file absent at that ref
+    let branchFailed = false
+    try {
+      gitIn(dir, ["show", "origin/docs/auto-sync:packages/kilo-docs/LEARNINGS.md"])
+    } catch {
+      branchFailed = true
+    }
+    assert.ok(branchFailed, "git show on branch must fail when LEARNINGS.md absent")
+
+    // git show on main must succeed with the main's entries
+    const mainContent = gitIn(dir, ["show", "origin/main:packages/kilo-docs/LEARNINGS.md"])
+    const parsed = parseLearnings(mainContent)
+    assert.equal(parsed.length, 1, "main fallback must return the main's entries")
+    assert.equal(parsed[0].id, "test")
+
+    // Also verify: empty parse and render (unit coverage of the empty case)
+    const empty = parseLearnings("")
+    assert.equal(empty.length, 0)
+    assert.deepEqual(empty, [])
+    const rendered = renderLearnings([])
+    assert.ok(rendered.includes("<!-- docs-sync:learnings:start -->"))
+    assert.ok(rendered.includes("<!-- docs-sync:learnings:end -->"))
+  }
+
+  // 10m — empty delta advances marker with no file change
+  {
+    console.log("  10m — empty delta marker advance")
+    const dir = mktemp("docs-sync-learn-m-")
+    initRepoWithIdentity(dir)
+    fs.writeFileSync(path.join(dir, "base.txt"), "base\n")
+    gitIn(dir, ["add", "base.txt"])
+    gitIn(dir, ["commit", "-m", "base"])
+    gitIn(dir, ["checkout", "-b", "docs/auto-sync"])
+    fs.mkdirSync(path.join(dir, "packages", "kilo-docs", "pages"), { recursive: true })
+    fs.writeFileSync(path.join(dir, "packages", "kilo-docs", "pages", "x.md"), "# x\n")
+    gitIn(dir, ["add", "packages/kilo-docs/pages/x.md"])
+    gitIn(dir, ["commit", "-m", "docs update", "--author", `kiloconnect[bot] <${kiloconnectBotEmail}>`])
+    const tip = gitIn(dir, ["rev-parse", "HEAD"])
+
+    const cwd = setupLearnRepo(dir)
+    const fixturePath = writeFixture(cwd, {
+      pr: { number: 1, head: { ref: "docs/auto-sync" }, body: "", user: { login: "github-actions[bot]" } },
+      comments: [],
+    })
+
+    const kiloDir = makeStubKiloDir({ mode: "extraction-delta", callLog: path.join(cwd, "kilo-calls.log") })
+    writeExtractionDelta(cwd, { add: [], remove: [] })
+
+    const existing = []
+    fs.writeFileSync(path.join(cwd, "docs-sync-out", "learnings.json"), JSON.stringify(existing, null, 2))
+    const learningsPath = path.join(cwd, "packages", "kilo-docs", "LEARNINGS.md")
+    fs.mkdirSync(path.dirname(learningsPath), { recursive: true })
+    fs.writeFileSync(learningsPath, renderLearnings(existing))
+    const before = fs.readFileSync(learningsPath, "utf8")
+
+    const outputFile = path.join(cwd, "gh-output-m")
+    const result = runNodeScript(LEARN_SCRIPT, {
+      cwd,
+      kiloDir,
+      env: {
+        TRIAGE_MODEL: "test/model",
+        DOCS_SYNC_FIXTURE: fixturePath,
+        LEARNINGS_BUDGET_MINUTES: "1",
+        DOCS_SYNC_BACKOFF_MS: "0",
+        GITHUB_OUTPUT: outputFile,
+      },
+    })
+
+    // learnings.json unchanged
+    const out = JSON.parse(fs.readFileSync(path.join(cwd, "docs-sync-out", "learnings.json"), "utf8"))
+    assert.deepEqual(out, existing)
+
+    // No learned_through output (empty delta route omits it per G5 table)
+    if (fs.existsSync(outputFile)) {
+      const ghOut = fs.readFileSync(outputFile, "utf8")
+      assert.ok(!ghOut.includes("learned_through="), "GITHUB_OUTPUT must not contain learned_through on empty delta")
+    }
+    const patched = `${fixturePath}.patched`
+    assert.ok(fs.existsSync(patched), "marker PATCH file must be written for empty delta")
+    const markerText = fs.readFileSync(patched, "utf8")
+    assert.ok(markerText.includes(tip), "marker PATCH must contain tip SHA")
+
+    runNodeScript(LEARN_SCRIPT, {
+      cwd,
+      kiloDir,
+      args: ["--apply"],
+      env: { DOCS_SYNC_BACKOFF_MS: "0" },
+    })
+    assert.equal(fs.readFileSync(learningsPath, "utf8"), before, "LEARNINGS.md must be byte-unchanged after apply")
+
+    // patchMarkerIntoBody: existing marker → replaced in place
+    {
+      const oldBody = "some text\n<!-- docs-sync: learned-through commit=old comment=old -->\nmore text\n"
+      const newLine = "<!-- docs-sync: learned-through commit=abc comment=2026-01-01 -->"
+      const patched = patchMarkerIntoBody(oldBody, newLine)
+      assert.ok(patched.includes(newLine), "new marker must be in body")
+      assert.ok(!patched.includes("commit=old"), "old marker must be gone")
+      assert.equal(
+        (patched.match(/<!--\s*docs-sync:\s*learned-through/g) || []).length,
+        1,
+        "exactly one marker after replace",
+      )
+    }
+
+    // patchMarkerIntoBody: no marker → appended
+    {
+      const oldBody = "no marker here\n"
+      const newLine = "<!-- docs-sync: learned-through commit=abc comment=2026-01-01 -->"
+      const patched = patchMarkerIntoBody(oldBody, newLine)
+      assert.ok(patched.includes(newLine))
+    }
+  }
+
+  // 10n — non-empty delta routes through upsert (not learn.mjs PATCH)
+  {
+    console.log("  10n — non-empty delta marker route")
+    const dir = mktemp("docs-sync-learn-n-")
+    initRepoWithIdentity(dir)
+    fs.writeFileSync(path.join(dir, "base.txt"), "base\n")
+    gitIn(dir, ["add", "base.txt"])
+    gitIn(dir, ["commit", "-m", "base"])
+    gitIn(dir, ["checkout", "-b", "docs/auto-sync"])
+    fs.mkdirSync(path.join(dir, "packages", "kilo-docs", "pages"), { recursive: true })
+    fs.writeFileSync(path.join(dir, "packages", "kilo-docs", "pages", "x.md"), "# x\n")
+    gitIn(dir, ["add", "packages/kilo-docs/pages/x.md"])
+    gitIn(dir, ["commit", "-m", "docs update", "--author", `kiloconnect[bot] <${kiloconnectBotEmail}>`])
+    const source = `commit:${gitIn(dir, ["rev-parse", "HEAD"]).slice(0, 7)}`
+    const tip = gitIn(dir, ["rev-parse", "HEAD"])
+
+    const cwd = setupLearnRepo(dir)
+    const fixturePath = writeFixture(cwd, {
+      pr: { number: 1, head: { ref: "docs/auto-sync" }, body: "", user: { login: "github-actions[bot]" } },
+      comments: [],
+    })
+
+    const kiloDir = makeStubKiloDir({ mode: "extraction-delta", callLog: path.join(cwd, "kilo-calls.log") })
+    writeExtractionDelta(cwd, {
+      add: [
+        { id: "new-rule", rule: "A new rule.", scope: "both", source: `commit:${tip.slice(0, 7)}`, date: "2026-08-03" },
+      ],
+      remove: [],
+    })
+
+    const summaryFile = path.join(cwd, "step-summary.md")
+    fs.writeFileSync(summaryFile, "")
+    const outputFile = path.join(cwd, "gh-output")
+    const result = runNodeScript(LEARN_SCRIPT, {
+      cwd,
+      kiloDir,
+      env: {
+        TRIAGE_MODEL: "test/model",
+        DOCS_SYNC_FIXTURE: fixturePath,
+        LEARNINGS_BUDGET_MINUTES: "1",
+        DOCS_SYNC_BACKOFF_MS: "0",
+        GITHUB_STEP_SUMMARY: summaryFile,
+        GITHUB_OUTPUT: outputFile,
+      },
+    })
+
+    // No marker PATCH file
+    assert.ok(!fs.existsSync(`${fixturePath}.patched`), "non-empty delta must not PATCH marker")
+
+    // Assert learned_through was written to GITHUB_OUTPUT (non-empty delta route)
+    const ghOut = fs.readFileSync(outputFile, "utf8")
+    assert.ok(ghOut.includes("learned_through="), "GITHUB_OUTPUT must contain learned_through on non-empty delta")
+    assert.ok(ghOut.includes(`commit=${tip}`), "learned_through must contain tip SHA")
+
+    // renderBody with learnedThrough marker
+    const marker = "<!-- docs-sync: learned-through commit=abc comment=2026-01-01 -->"
+    const body1 = renderBody({
+      date: "2026-08-03",
+      since: "2026-07-01T00:00:00.000Z",
+      through: "2026-08-03T00:00:00.000Z",
+      learnedThrough: marker,
+      changesRows: [],
+      pendingRows: [],
+      skippedRows: [],
+      verified: true,
+      draftReasons: [],
+      note: "",
+    })
+    assert.ok(body1.includes(marker), "renderBody must emit marker when given")
+
+    // renderBody with parameter omitted → no marker
+    const body2 = renderBody({
+      date: "2026-08-03",
+      since: "2026-07-01T00:00:00.000Z",
+      through: "2026-08-03T00:00:00.000Z",
+      changesRows: [],
+      pendingRows: [],
+      skippedRows: [],
+      verified: true,
+      draftReasons: [],
+      note: "",
+    })
+    assert.ok(!body2.includes("learned-through"), "renderBody without learnedThrough must emit no marker")
+    // Still round-trips
+    const extChanges = extractSectionRows(body2, "changes")
+    assert.deepEqual(extChanges, [])
+  }
+
+  // 10o — deleted-in-window rejection
+  {
+    console.log("  10o — deleted-in-window rejection")
+    // Normalized match catches near-identical wording
+    {
+      const delta = {
+        add: [
+          {
+            id: "dup",
+            rule: "do not document experimental features!",
+            scope: "both",
+            source: "commit:aaaaaaa",
+            date: "2026-08-03",
+          },
+        ],
+        remove: [],
+      }
+      const { rejected } = validateDelta(delta, {
+        existing: [],
+        candidateSources: ["commit:aaaaaaa"],
+        deletedInWindow: ["Do not document experimental features."],
+      })
+      assert.equal(rejected.length, 1, "normalized match must reject deleted rule")
+    }
+
+    // Different meaning on same topic — NOT rejected (accepted limit)
+    {
+      const delta = {
+        add: [
+          {
+            id: "good",
+            rule: "Document experimental features in a separate section.",
+            scope: "both",
+            source: "commit:aaaaaaa",
+            date: "2026-08-03",
+          },
+        ],
+        remove: [],
+      }
+      const { rejected } = validateDelta(delta, {
+        existing: [],
+        candidateSources: ["commit:aaaaaaa"],
+        deletedInWindow: ["Do not document experimental features."],
+      })
+      assert.equal(rejected.length, 0, "different rule on same topic must not be rejected")
+    }
+  }
+
+  // 10p — resolveLearnedThrough pure function and anti-drift assertions
+  {
+    console.log("  10p — resolveLearnedThrough + anti-drift")
+    // Unit tests on the pure export
+    // env value set wins over body marker
+    assert.equal(
+      resolveLearnedThrough({
+        envValue: "<!-- docs-sync: learned-through commit=env commit=env -->",
+        prBody: "<!-- docs-sync: learned-through commit=body comment=body -->",
+      }),
+      "<!-- docs-sync: learned-through commit=env commit=env -->",
+    )
+    // env unset, body marker present → body wins
+    assert.equal(
+      resolveLearnedThrough({ envValue: "", prBody: "<!-- docs-sync: learned-through commit=body comment=body -->" }),
+      "<!-- docs-sync: learned-through commit=body comment=body -->",
+    )
+    // both absent → empty string
+    assert.equal(resolveLearnedThrough({ envValue: "", prBody: "" }), "")
+    // env set to whitespace → treated as unset
+    assert.equal(
+      resolveLearnedThrough({
+        envValue: "   ",
+        prBody: "<!-- docs-sync: learned-through commit=body comment=body -->",
+      }),
+      "<!-- docs-sync: learned-through commit=body comment=body -->",
+    )
+
+    // renderBody emits no marker for ""
+    const bodyEmpty = renderBody({
+      date: "d",
+      since: "s",
+      through: "t",
+      learnedThrough: "",
+      changesRows: [],
+      pendingRows: [],
+      skippedRows: [],
+      verified: true,
+      draftReasons: [],
+      note: "",
+    })
+    assert.ok(!bodyEmpty.includes("learned-through"), "empty learnedThrough must emit no marker")
+
+    // Anti-drift: static-source assertions on upsert-pr.mjs
+    const upsertSrc = fs.readFileSync(path.join(HERE, "upsert-pr.mjs"), "utf8")
+
+    // (a) exactly one resolveLearnedThrough( call passing process.env.LEARNED_THROUGH
+    const calls = upsertSrc.match(/resolveLearnedThrough\(/g) || []
+    // One in the export definition, one in the call site
+    assert.ok(calls.length >= 2, `expected at least 2 resolveLearnedThrough( occurrences; got ${calls.length}`)
+    assert.ok(
+      upsertSrc.includes("process.env.LEARNED_THROUGH"),
+      "resolveLearnedThrough must receive process.env.LEARNED_THROUGH",
+    )
+    assert.ok(upsertSrc.includes("prBody"), "resolveLearnedThrough must receive prBody")
+
+    // (b) prBody is at function scope (let prBody before the if block)
+    const prBodyIdx = upsertSrc.indexOf('let prBody = ""')
+    assert.ok(prBodyIdx >= 0, 'prBody must be declared at function scope with let prBody = ""')
+    const ifIdx = upsertSrc.indexOf('if (mode === "update"')
+    assert.ok(prBodyIdx < ifIdx, 'let prBody must appear before if (mode === "update"...)')
+
+    // (c) renderBody({ argument object contains learnedThrough
+    const renderBodyIdx = upsertSrc.indexOf("const body = renderBody({")
+    assert.ok(renderBodyIdx >= 0, "renderBody call must exist")
+    const afterRenderBody = upsertSrc.slice(renderBodyIdx)
+    const renderBodyArgsEnd = afterRenderBody.indexOf("})")
+    const renderBodyArgs = afterRenderBody.slice(0, renderBodyArgsEnd)
+    assert.ok(renderBodyArgs.includes("learnedThrough"), "renderBody call in main() must pass learnedThrough")
+  }
+
+  // 10q — dry run makes no live write
+  {
+    console.log("  10q — dry run no live write")
+    const dir = mktemp("docs-sync-learn-q-")
+    initRepoWithIdentity(dir)
+    fs.writeFileSync(path.join(dir, "base.txt"), "base\n")
+    gitIn(dir, ["add", "base.txt"])
+    gitIn(dir, ["commit", "-m", "base"])
+    gitIn(dir, ["checkout", "-b", "docs/auto-sync"])
+    fs.mkdirSync(path.join(dir, "packages", "kilo-docs", "pages"), { recursive: true })
+    fs.writeFileSync(path.join(dir, "packages", "kilo-docs", "pages", "x.md"), "# x\n")
+    gitIn(dir, ["add", "packages/kilo-docs/pages/x.md"])
+    gitIn(dir, ["commit", "-m", "docs update", "--author", `kiloconnect[bot] <${kiloconnectBotEmail}>`])
+
+    // DRY_RUN=true
+    {
+      const cwd = setupLearnRepo(dir)
+      const fixturePath = writeFixture(cwd, {
+        pr: { number: 1, head: { ref: "docs/auto-sync" }, body: "", user: { login: "github-actions[bot]" } },
+        comments: [],
+      })
+
+      const kiloDir = makeStubKiloDir({ mode: "extraction-delta", callLog: path.join(cwd, "kilo-calls.log") })
+      writeExtractionDelta(cwd, { add: [], remove: [] })
+
+      const outputFile = path.join(cwd, "gh-output-q-dry")
+      const result = runNodeScript(LEARN_SCRIPT, {
+        cwd,
+        kiloDir,
+        env: {
+          TRIAGE_MODEL: "test/model",
+          DOCS_SYNC_FIXTURE: fixturePath,
+          LEARNINGS_BUDGET_MINUTES: "1",
+          DOCS_SYNC_BACKOFF_MS: "0",
+          DRY_RUN: "true",
+          GITHUB_OUTPUT: outputFile,
+        },
+      })
+
+      assert.ok(!fs.existsSync(`${fixturePath}.patched`), "DRY_RUN must suppress marker PATCH")
+      if (fs.existsSync(outputFile)) {
+        const ghOut = fs.readFileSync(outputFile, "utf8")
+        assert.ok(!ghOut.includes("learned_through="), "GITHUB_OUTPUT must not contain learned_through on DRY_RUN")
+      }
+      assert.ok(result.stdout.includes("marker PATCH suppressed"), "stdout must log marker suppression for DRY_RUN")
+      assert.ok(
+        result.stdout.includes("would have written marker"),
+        "stdout must log the suppressed marker for DRY_RUN",
+      )
+    }
+
+    // LEARNINGS_NO_PATCH=1 (same mechanism)
+    {
+      const cwd = setupLearnRepo(dir)
+      const fixturePath = writeFixture(cwd, {
+        pr: { number: 1, head: { ref: "docs/auto-sync" }, body: "", user: { login: "github-actions[bot]" } },
+        comments: [],
+      })
+
+      const kiloDir = makeStubKiloDir({ mode: "extraction-delta", callLog: path.join(cwd, "kilo-calls.log") })
+      writeExtractionDelta(cwd, { add: [], remove: [] })
+
+      const outputFile = path.join(cwd, "gh-output-q-nopatch")
+      const result = runNodeScript(LEARN_SCRIPT, {
+        cwd,
+        kiloDir,
+        env: {
+          TRIAGE_MODEL: "test/model",
+          DOCS_SYNC_FIXTURE: fixturePath,
+          LEARNINGS_BUDGET_MINUTES: "1",
+          DOCS_SYNC_BACKOFF_MS: "0",
+          LEARNINGS_NO_PATCH: "1",
+          GITHUB_OUTPUT: outputFile,
+        },
+      })
+
+      assert.ok(!fs.existsSync(`${fixturePath}.patched`), "LEARNINGS_NO_PATCH must suppress marker PATCH")
+      if (fs.existsSync(outputFile)) {
+        const ghOut = fs.readFileSync(outputFile, "utf8")
+        assert.ok(
+          !ghOut.includes("learned_through="),
+          "GITHUB_OUTPUT must not contain learned_through on LEARNINGS_NO_PATCH",
+        )
+      }
+      assert.ok(
+        result.stdout.includes("marker PATCH suppressed"),
+        "stdout must log marker suppression for LEARNINGS_NO_PATCH",
+      )
+      assert.ok(
+        result.stdout.includes("would have written marker"),
+        "stdout must log the suppressed marker for LEARNINGS_NO_PATCH",
+      )
+    }
+
+    // DRY_RUN=true with non-empty delta (suppresses learned_through output)
+    {
+      const cwd = setupLearnRepo(dir)
+      const tipSource = `commit:${gitIn(dir, ["rev-parse", "HEAD"]).slice(0, 7)}`
+      const fixturePath = writeFixture(cwd, {
+        pr: { number: 1, head: { ref: "docs/auto-sync" }, body: "", user: { login: "github-actions[bot]" } },
+        comments: [],
+      })
+
+      const kiloDir = makeStubKiloDir({ mode: "extraction-delta", callLog: path.join(cwd, "kilo-calls.log") })
+      writeExtractionDelta(cwd, {
+        add: [
+          {
+            id: "dry-suppress",
+            rule: "A rule suppressed under dry run.",
+            scope: "both",
+            source: tipSource,
+            date: "2026-08-03",
+          },
+        ],
+        remove: [],
+      })
+
+      const outputFile = path.join(cwd, "gh-output-q-dry-nonempty")
+      const result = runNodeScript(LEARN_SCRIPT, {
+        cwd,
+        kiloDir,
+        env: {
+          TRIAGE_MODEL: "test/model",
+          DOCS_SYNC_FIXTURE: fixturePath,
+          LEARNINGS_BUDGET_MINUTES: "1",
+          DOCS_SYNC_BACKOFF_MS: "0",
+          DRY_RUN: "true",
+          GITHUB_OUTPUT: outputFile,
+        },
+      })
+
+      if (fs.existsSync(outputFile)) {
+        const ghOut = fs.readFileSync(outputFile, "utf8")
+        assert.ok(
+          !ghOut.includes("learned_through="),
+          "GITHUB_OUTPUT must not contain learned_through on DRY_RUN non-empty delta",
+        )
+      }
+      assert.ok(
+        result.stdout.includes("learned-through output suppressed"),
+        "stdout must log learned-through output suppression for DRY_RUN non-empty delta",
+      )
+    }
+
+    // LEARNINGS_NO_PATCH=1 with non-empty delta
+    {
+      const cwd = setupLearnRepo(dir)
+      const tipSource = `commit:${gitIn(dir, ["rev-parse", "HEAD"]).slice(0, 7)}`
+      const fixturePath = writeFixture(cwd, {
+        pr: { number: 1, head: { ref: "docs/auto-sync" }, body: "", user: { login: "github-actions[bot]" } },
+        comments: [],
+      })
+
+      const kiloDir = makeStubKiloDir({ mode: "extraction-delta", callLog: path.join(cwd, "kilo-calls.log") })
+      writeExtractionDelta(cwd, {
+        add: [
+          {
+            id: "nopatch-suppress",
+            rule: "A rule suppressed under no-patch.",
+            scope: "both",
+            source: tipSource,
+            date: "2026-08-03",
+          },
+        ],
+        remove: [],
+      })
+
+      const outputFile = path.join(cwd, "gh-output-q-nopatch-nonempty")
+      const result = runNodeScript(LEARN_SCRIPT, {
+        cwd,
+        kiloDir,
+        env: {
+          TRIAGE_MODEL: "test/model",
+          DOCS_SYNC_FIXTURE: fixturePath,
+          LEARNINGS_BUDGET_MINUTES: "1",
+          DOCS_SYNC_BACKOFF_MS: "0",
+          LEARNINGS_NO_PATCH: "1",
+          GITHUB_OUTPUT: outputFile,
+        },
+      })
+
+      if (fs.existsSync(outputFile)) {
+        const ghOut = fs.readFileSync(outputFile, "utf8")
+        assert.ok(
+          !ghOut.includes("learned_through="),
+          "GITHUB_OUTPUT must not contain learned_through on LEARNINGS_NO_PATCH non-empty delta",
+        )
+      }
+      assert.ok(
+        result.stdout.includes("learned-through output suppressed"),
+        "stdout must log learned-through output suppression for LEARNINGS_NO_PATCH non-empty delta",
+      )
+    }
+  }
+
+  // 10s — a failed API call must not disable the existing learnings
+  // The learn step is continue-on-error, and triage and edit read only the two prompt
+  // artifacts. So learn.mjs must write them before the first call that can throw.
+  {
+    console.log("  10s — prompt artifacts survive an API failure")
+    const dir = mktemp("docs-sync-learn-s-")
+    const learningsPath = path.join(dir, "packages", "kilo-docs", "LEARNINGS.md")
+    fs.mkdirSync(path.dirname(learningsPath), { recursive: true })
+    const seeded = [
+      {
+        id: "seeded-rule",
+        rule: "Do not document features behind experimental flags.",
+        scope: "both",
+        source: "commit:aaaaaaa",
+        date: "2026-08-01",
+      },
+    ]
+    fs.writeFileSync(learningsPath, renderLearnings(seeded))
+
+    // No DOCS_SYNC_FIXTURE and an empty GITHUB_REPOSITORY: repo() throws inside
+    // extract(). It stands for any API failure before the artifacts exist.
+    const failEnv = {
+      TRIAGE_MODEL: "test/model",
+      GITHUB_REPOSITORY: "",
+      GITHUB_OUTPUT: path.join(dir, "gh-output-s"),
+      GITHUB_STEP_SUMMARY: path.join(dir, "gh-summary-s"),
+      DOCS_SYNC_BACKOFF_MS: "0",
+    }
+    const result = runNodeScript(LEARN_SCRIPT, { cwd: dir, env: failEnv })
+    assert.notEqual(result.status, 0, "extraction must fail without GITHUB_REPOSITORY")
+
+    const triagePath = path.join(dir, "docs-sync-out", "learnings-triage.md")
+    const editPath = path.join(dir, "docs-sync-out", "learnings-edit.md")
+    for (const f of [triagePath, editPath]) {
+      assert.ok(fs.existsSync(f), `${path.basename(f)} must survive the failure`)
+      assert.ok(
+        fs.readFileSync(f, "utf8").includes("Do not document features behind experimental flags."),
+        `${path.basename(f)} must carry the checked-out rule`,
+      )
+    }
+
+    // An empty file must clear the stale block, not leave the earlier rule in place.
+    fs.writeFileSync(learningsPath, renderLearnings([]))
+    runNodeScript(LEARN_SCRIPT, { cwd: dir, env: failEnv })
+    assert.ok(!fs.existsSync(triagePath), "an empty learnings file must remove learnings-triage.md")
+    assert.ok(!fs.existsSync(editPath), "an empty learnings file must remove learnings-edit.md")
+  }
+
+  // 10t — the direct marker PATCH must not overwrite a concurrent body edit
+  // The body read at step 1 predates the extraction call, so learn.mjs must re-read
+  // the body immediately before the PATCH.
+  {
+    console.log("  10t — marker PATCH preserves a concurrent body edit")
+    const dir = mktemp("docs-sync-learn-t-")
+    initRepoWithIdentity(dir)
+    fs.writeFileSync(path.join(dir, "base.txt"), "base\n")
+    gitIn(dir, ["add", "base.txt"])
+    gitIn(dir, ["commit", "-m", "base"])
+    gitIn(dir, ["checkout", "-b", "docs/auto-sync"])
+
+    // github-actions[bot] authored the only branch commit, so there is no candidate
+    // correction and no model call. The run goes straight to the direct marker PATCH.
+    const learningsPath = path.join(dir, "packages", "kilo-docs", "LEARNINGS.md")
+    fs.mkdirSync(path.dirname(learningsPath), { recursive: true })
+    fs.writeFileSync(learningsPath, renderLearnings([]))
+    gitIn(dir, ["add", "packages/kilo-docs/LEARNINGS.md"])
+    gitIn(dir, ["commit", "-m", "seed learnings", "--author", `github-actions[bot] <${githubBotEmail}>`])
+    gitIn(dir, ["remote", "add", "origin", dir]) // learn.mjs fetches origin itself
+    const cwd = setupLearnRepo(dir)
+    const tip = gitIn(dir, ["rev-parse", "HEAD"])
+
+    // Stub GitHub API. The second read of the pull request returns the maintainer edit.
+    const serverDir = mktemp("docs-sync-api-t-")
+    const portFile = path.join(serverDir, "port")
+    const patchFile = path.join(serverDir, "patch.json")
+    const serverScript = path.join(serverDir, "server.cjs")
+    fs.writeFileSync(
+      serverScript,
+      `const fs = require("node:fs")
+const http = require("node:http")
+let reads = 0
+const json = (res, data) => {
+  res.writeHead(200, { "content-type": "application/json" })
+  res.end(JSON.stringify(data))
+}
+const server = http.createServer((req, res) => {
+  let raw = ""
+  req.on("data", (c) => (raw += c))
+  req.on("end", () => {
+    if (req.method === "PATCH") return fs.writeFileSync(process.env.PATCH_FILE, raw), json(res, {})
+    if (req.url.startsWith("/search/issues")) return json(res, { items: [{ number: 1 }] })
+    if (req.url.includes("/comments")) return json(res, [])
+    if (req.url.includes("/pulls/1")) {
+      const body = reads++ === 0 ? process.env.BODY_BEFORE : process.env.BODY_AFTER
+      return json(res, {
+        number: 1,
+        body,
+        head: { ref: "docs/auto-sync" },
+        user: { login: "github-actions[bot]" },
+      })
+    }
+    json(res, {})
+  })
+})
+server.listen(0, "127.0.0.1", () => fs.writeFileSync(process.env.PORT_FILE, String(server.address().port)))
+`,
+    )
+
+    const bodyBefore = "Rolling PR body.\n<!-- docs-sync: learned-through commit=old comment=none -->\n"
+    const humanEdit = "A maintainer edited the body while extraction ran."
+    const child = spawn(process.execPath, [serverScript], {
+      stdio: "ignore",
+      env: {
+        ...process.env,
+        PORT_FILE: portFile,
+        PATCH_FILE: patchFile,
+        BODY_BEFORE: bodyBefore,
+        BODY_AFTER: bodyBefore + humanEdit + "\n",
+      },
+    })
+
+    try {
+      let port = ""
+      for (let i = 0; i < 100 && !port; i++) {
+        if (fs.existsSync(portFile)) port = fs.readFileSync(portFile, "utf8").trim()
+        else sleepSync(50)
+      }
+      assert.ok(port, "the stub API server must report a port")
+
+      const result = runNodeScript(LEARN_SCRIPT, {
+        cwd,
+        env: {
+          TRIAGE_MODEL: "test/model",
+          GITHUB_REPOSITORY: "acme/repo",
+          GH_TOKEN: "stub-token",
+          DOCS_SYNC_API_BASE: `http://127.0.0.1:${port}`,
+          GITHUB_OUTPUT: path.join(dir, "gh-output-t"),
+          GITHUB_STEP_SUMMARY: path.join(dir, "gh-summary-t"),
+          LEARNINGS_BUDGET_MINUTES: "1",
+          DOCS_SYNC_BACKOFF_MS: "0",
+        },
+      })
+      assert.equal(result.status, 0, `learn.mjs must succeed against the stub API: ${result.output}`)
+
+      assert.ok(fs.existsSync(patchFile), "the run must PATCH the pull request body")
+      const patchedBody = JSON.parse(fs.readFileSync(patchFile, "utf8")).body
+      assert.ok(patchedBody.includes(humanEdit), "the concurrent body edit must survive the marker PATCH")
+      assert.ok(patchedBody.includes(tip), "the PATCH must carry the new tip SHA")
+      assert.ok(!patchedBody.includes("commit=old"), "the old marker must be replaced")
+      assert.equal(
+        (patchedBody.match(/<!--\s*docs-sync:\s*learned-through/g) || []).length,
+        1,
+        "exactly one marker after the PATCH",
+      )
+    } finally {
+      child.kill()
+    }
+  }
+
+  // 10u — one model response cannot repeat an id or a rule
+  {
+    console.log("  10u — duplicates inside one delta")
+    const base = { scope: "both", source: "commit:aaaaaaa", date: "2026-08-03" }
+    const ctx = { existing: [], candidateSources: ["commit:aaaaaaa"], deletedInWindow: [] }
+
+    const dupId = validateDelta(
+      {
+        add: [
+          { ...base, id: "same-id", rule: "Do not document features behind experimental flags." },
+          { ...base, id: "same-id", rule: "Keep the release notes short." },
+        ],
+        remove: [],
+      },
+      ctx,
+    )
+    assert.equal(dupId.add.length, 1, "a repeated id must be rejected")
+    assert.equal(dupId.add[0].rule, "Do not document features behind experimental flags.")
+    assert.equal(dupId.rejected.length, 1)
+    assert.ok(dupId.rejected[0].reason.includes("earlier addition"), "the reason must name the earlier addition")
+
+    const dupText = validateDelta(
+      {
+        add: [
+          { ...base, id: "rule-one", rule: "Do not document features behind experimental flags." },
+          { ...base, id: "rule-two", rule: "Do not document features behind experimental flags!" },
+        ],
+        remove: [],
+      },
+      ctx,
+    )
+    assert.equal(dupText.add.length, 1, "a repeated rule text must be rejected")
+    assert.equal(dupText.rejected.length, 1)
+    assert.ok(dupText.rejected[0].reason.includes("earlier addition"), "the reason must name the earlier addition")
+  }
+
+  // Prompt block format
+  {
+    console.log("  10 — promptBlock format")
+    const entries = [
+      { id: "r1", rule: "First rule.", scope: "triage", source: "commit:aaaaaaa", date: "2026-08-01" },
+      { id: "r2", rule: "Second rule.", scope: "edit", source: "commit:bbbbbbb", date: "2026-08-02" },
+      { id: "r3", rule: "Both rule.", scope: "both", source: "commit:ccccccc", date: "2026-08-03" },
+    ]
+
+    const triageBlock = promptBlock(entries, "triage")
+    assert.ok(triageBlock.includes("First rule"), "triage block must include triage-scoped rule")
+    assert.ok(triageBlock.includes("Both rule"), "triage block must include both-scoped rule")
+    assert.ok(!triageBlock.includes("Second rule"), "triage block must not include edit-only rule")
+    assert.ok(triageBlock.includes("## Learnings from maintainer corrections"))
+
+    const editBlock = promptBlock(entries, "edit")
+    assert.ok(editBlock.includes("Second rule"), "edit block must include edit-scoped rule")
+    assert.ok(editBlock.includes("Both rule"), "edit block must include both-scoped rule")
+    assert.ok(!editBlock.includes("First rule"), "edit block must not include triage-only rule")
+
+    // Empty: no matching entries
+    const emptyBlock = promptBlock(
+      [{ id: "r1", rule: "R.", scope: "edit", source: "commit:aa", date: "2026-01-01" }],
+      "triage",
+    )
+    assert.equal(emptyBlock, "")
+  }
+
+  // parseLearnedThrough
+  {
+    console.log("  10 — parseLearnedThrough")
+    const body = "stuff\n<!-- docs-sync: learned-through commit=abc1234 comment=2026-08-03T12:00:00Z -->\nmore"
+    const parsed = parseLearnedThrough(body)
+    assert.equal(parsed.commit, "abc1234")
+    assert.equal(parsed.comment, "2026-08-03T12:00:00Z")
+
+    // none values → null
+    const noneBody = "<!-- docs-sync: learned-through commit=none comment=none -->"
+    const noneParsed = parseLearnedThrough(noneBody)
+    assert.equal(noneParsed.commit, null)
+    assert.equal(noneParsed.comment, null)
+
+    // absent → both null
+    const absent = parseLearnedThrough("no marker")
+    assert.equal(absent.commit, null)
+    assert.equal(absent.comment, null)
+  }
+
+  // renderLearnings deterministic order
+  {
+    console.log("  10 — renderLearnings deterministic order")
+    const entries = [
+      { id: "b", rule: "B rule.", scope: "both", source: "commit:bb", date: "2026-08-02" },
+      { id: "a", rule: "A rule.", scope: "both", source: "commit:aa", date: "2026-08-01" },
+      { id: "c", rule: "C rule.", scope: "both", source: "commit:cc", date: "2026-08-01" },
+    ]
+    const r1 = renderLearnings(entries)
+    const r2 = renderLearnings(entries)
+    assert.equal(r1, r2, "renderLearnings must be deterministic")
+    // Order: date ascending, then id ascending. So a before b before c (a.date < c.date, both before b)
+    const aPos = r1.indexOf("A rule")
+    const cPos = r1.indexOf("C rule")
+    const bPos = r1.indexOf("B rule")
+    assert.ok(aPos < cPos, "a (earlier date) must come before c")
+    assert.ok(cPos < bPos, "c (same date as a but later id) must come before b (later date)")
+  }
+}
+
+// Case 11 — the created rolling PR gets an assignee and a review request
+function case11_prOwner() {
+  console.log("case 11 — created PR assignee and reviewer")
+  const src = fs.readFileSync(path.join(HERE, "upsert-pr.mjs"), "utf8")
+
+  assert.ok(/const DOCS_OWNER = "\S+"/.test(src), "DOCS_OWNER must be a module constant")
+  assert.ok(src.includes("/assignees`, {"), "created PR must POST assignees")
+  assert.ok(src.includes("/requested_reviewers`, {"), "created PR must POST requested_reviewers")
+
+  // Both calls belong to the create arm, after the PR exists.
+  const createIdx = src.indexOf("const pr = await api(`/repos/${repo()}/pulls`")
+  assert.ok(createIdx >= 0, "create-PR call must exist")
+  assert.ok(src.indexOf("/assignees`, {") > createIdx, "assignees POST must follow PR creation")
+  assert.ok(src.indexOf("/requested_reviewers`, {") > createIdx, "reviewer POST must follow PR creation")
+
+  // A failure here must not fail the run — the PR is already open.
+  const ownerIdx = src.indexOf("/assignees`, {")
+  const tryIdx = src.lastIndexOf("try {", ownerIdx)
+  const catchIdx = src.indexOf("} catch", ownerIdx)
+  assert.ok(tryIdx >= 0 && catchIdx > src.indexOf("/requested_reviewers`, {"), "both POSTs must sit in one try/catch")
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 function main() {
@@ -1846,6 +3473,8 @@ function main() {
     case7_cap,
     case8_triage,
     case9_reverts,
+    case10_learnings,
+    case11_prOwner,
   ]
   let failed = 0
   for (const fn of cases) {
