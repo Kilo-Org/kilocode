@@ -268,6 +268,7 @@ export class AgentManagerProvider implements Disposable {
       pushState: (ctx) => this.pushState(ctx),
       hasPanelSession: (id) => this.panelSessions.has(id),
       closeSession: (id) => this.onCloseSession(id),
+      deleteWorktree: (worktreeId) => this.onDeleteWorktree(worktreeId),
       postSessionClosed: (id) => this.postToWebview({ type: "agentManager.sessionClosed", sessionId: id }),
       log: (...args) => this.log(...args),
     })

@@ -21,6 +21,7 @@ export interface OrchestrationBridgeDeps {
   pushState: (ctx?: ProjectContext) => void
   hasPanelSession: (id: string) => boolean
   closeSession: (id: string) => Promise<unknown>
+  deleteWorktree: (worktreeId: string) => Promise<unknown>
   postSessionClosed: (id: string) => void
   log: (...args: unknown[]) => void
 }
@@ -58,6 +59,14 @@ export function createOrchestrationBridge(deps: OrchestrationBridgeDeps): AgentM
         await deps.closeSession(id)
       }
       deps.postSessionClosed(id)
+    },
+    delete: async (worktreeID, dir) => {
+      const ctx = dir ? deps.contexts.byDirectory(dir) : undefined
+      if (ctx) {
+        await deps.projectScope.run(ctx, () => deps.deleteWorktree(worktreeID))
+      } else {
+        await deps.deleteWorktree(worktreeID)
+      }
     },
     directories: () => {
       const all: string[] = []

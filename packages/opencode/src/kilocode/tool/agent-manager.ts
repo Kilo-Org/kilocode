@@ -103,16 +103,26 @@ const MoveParams = Schema.Struct({
   }),
 })
 
-export const Params = Schema.Union([StartParams, ListParams, PromptParams, StopParams, MoveParams])
+const DeleteParams = Schema.Struct({
+  action: Schema.Literal("delete").annotate({
+    description:
+      "Delete a worktree: clear its card from Agent Manager, remove the .kilo/worktrees/<name> directory, and delete its local branch. Mirrors the UI 'Delete worktree' button. Use this (not stop) to fully tear down a worktree fan-out.",
+  }),
+  worktreeID: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(200)).annotate({
+    description: "Worktree ID returned by action=list (the worktree.id, not a session ID).",
+  }),
+})
+
+export const Params = Schema.Union([StartParams, ListParams, PromptParams, StopParams, MoveParams, DeleteParams])
 
 const WireParams = Schema.Struct({
   mode: Schema.optional(StartParams.fields.mode),
   versions: Schema.optional(StartParams.fields.versions),
   tasks: Schema.optional(StartParams.fields.tasks),
   action: Schema.optional(
-    Schema.Literals(["list", "prompt", "stop", "move"]).annotate({
+    Schema.Literals(["list", "prompt", "stop", "move", "delete"]).annotate({
       description:
-        "Use list first to discover IDs and assignments. Use move only after list, once per worktree. Never edit .kilo/agent-manager.json for these operations.",
+        "Use list first to discover IDs and assignments. Use move only after list, once per worktree. Use delete to tear down a worktree. Never edit .kilo/agent-manager.json for these operations.",
     }),
   ),
   filter: Schema.optional(ListParams.fields.filter),
@@ -121,6 +131,9 @@ const WireParams = Schema.Struct({
   ),
   prompt: Schema.optional(PromptParams.fields.prompt),
   sectionID: Schema.optional(MoveParams.fields.sectionID),
+  worktreeID: Schema.optional(
+    Schema.String.annotate({ description: "For delete, use a worktree ID returned by action=list." }),
+  ),
 })
 
 type Input = Schema.Schema.Type<typeof Task>
@@ -272,7 +285,7 @@ function select(
 
 export const AgentManagerTool = Tool.define<
   typeof Params,
-  { action: "start" | "list" | "prompt" | "stop" | "move"; requestID?: string; count?: number; sessionID?: string },
+  { action: "start" | "list" | "prompt" | "stop" | "move" | "delete"; requestID?: string; count?: number; sessionID?: string; worktreeID?: string },
   AgentManager.Service | Bus.Service | Provider.Service,
   "agent_manager"
 >(
@@ -372,6 +385,29 @@ export const AgentManagerTool = Tool.define<
                 title: "Session stopped",
                 output: `Stopped Agent Manager session ${result.sessionID} and removed it from Agent Manager.`,
                 metadata: { action: "stop", sessionID: result.sessionID },
+              }
+            }
+            if (params.action === "delete") {
+              yield* ctx.ask({
+                permission: "agent_manager",
+                patterns: ["delete"],
+                always: ["delete"],
+                metadata: { action: "delete", worktreeID: params.worktreeID },
+              })
+              const result = yield* run(
+                host.request({
+                  operation: "delete",
+                  sessionID: ctx.sessionID,
+                  worktreeID: params.worktreeID,
+                }),
+                ctx.abort,
+              )
+              if (result.operation !== "delete")
+                return yield* Effect.die(new Error("Agent Manager host returned the wrong result type"))
+              return {
+                title: "Worktree deleted",
+                output: `Deleted Agent Manager worktree ${result.worktreeID} and removed it from Agent Manager.`,
+                metadata: { action: "delete", worktreeID: result.worktreeID },
               }
             }
             yield* ctx.ask({

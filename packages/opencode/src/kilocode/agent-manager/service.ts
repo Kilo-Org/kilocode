@@ -37,7 +37,7 @@ interface State {
 }
 
 function matches(request: Request, result: Result) {
-  if (request.operation === "overview") return result.operation === "overview"
+  if (request.operation === "overview" || request.operation === "delete") return result.operation === request.operation
   return result.operation === request.operation && result.sessionID === request.targetSessionID
 }
 

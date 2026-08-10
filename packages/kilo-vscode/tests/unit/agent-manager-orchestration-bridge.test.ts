@@ -48,6 +48,7 @@ describe("AgentManagerOrchestrationBridge", () => {
     const managed = new Set(["ses_target"])
     const promptAsync = mock(async () => ({ data: undefined }))
     const close = mock(async () => undefined)
+    const del = mock(async (_id?: string, _dir?: string) => undefined)
     const push = mock(() => undefined)
     const client = {
       session: {
@@ -113,6 +114,7 @@ describe("AgentManagerOrchestrationBridge", () => {
       push: (dir) => (overrides?.push ? overrides.push(dir) : push()),
       managed: (id, dir) => (overrides?.managed ? overrides.managed(id, dir) : managed.has(id)),
       close: async (id, dir) => (overrides?.close ? overrides.close(id, dir) : close(id, dir)),
+      delete: async (id, dir) => (overrides?.delete ? overrides.delete(id, dir) : del(id, dir)),
       log: () => undefined,
     })
     const request = (value: AgentManagerRequest, directory = root) =>
@@ -124,6 +126,7 @@ describe("AgentManagerOrchestrationBridge", () => {
       bridge,
       client,
       close,
+      del,
       handlers,
       lists,
       managed,
@@ -208,6 +211,40 @@ describe("AgentManagerOrchestrationBridge", () => {
         requestID: "amr_stop",
         directory: root,
         result: { operation: "stop", sessionID: "ses_target", stopped: true },
+      },
+    ])
+    test.bridge.dispose()
+  })
+
+  it("deletes a worktree through the same deletion operation as the UI", async () => {
+    const test = harness()
+    test.status.failReply = true
+    const worktreeID = state.getSession("ses_target")!.worktreeId!
+    const del: AgentManagerRequest = {
+      id: "amr_delete",
+      sessionID: "ses_caller",
+      operation: "delete",
+      worktreeID,
+    }
+
+    test.request(del)
+    await waitFor(() => test.replies.length === 1)
+    test.status.failReply = false
+    test.request(del)
+    await waitFor(() => test.replies.length === 2)
+
+    expect(test.del).toHaveBeenCalledTimes(1)
+    expect(test.del).toHaveBeenCalledWith(worktreeID, root)
+    expect(test.replies).toEqual([
+      {
+        requestID: "amr_delete",
+        directory: root,
+        result: { operation: "delete", worktreeID, deleted: true },
+      },
+      {
+        requestID: "amr_delete",
+        directory: root,
+        result: { operation: "delete", worktreeID, deleted: true },
       },
     ])
     test.bridge.dispose()
