@@ -70,9 +70,10 @@ import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
 import { getAgentModel } from "./session-model-store"
 import { resolveMessagePrefs } from "./session-preferences"
-import { errorIDs } from "./session-errors"
+import { errorIDs, preserveSessionErrors, withoutResolvedSessionErrors } from "./session-errors"
 import { PartStash } from "./part-stash"
-import { mergeParts, sameParts } from "./session-parts"
+import { mergeParts } from "./session-parts"
+import { mergeMessages, sameReconcileShape } from "./session-merge"
 import { state as todoState } from "./todo-revert"
 import { sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
 import { createSessionVariants } from "./session-variants"
@@ -1175,7 +1176,7 @@ export const SessionProvider: ParentComponent = (props) => {
         break
 
       case "sessionError": {
-        if (message.error?.name === "MessageAbortedError") break
+        if (!message.error || message.error.name === "MessageAbortedError") break
         const sid = message.sessionID ?? currentSessionID()
         if (!sid) break
         // Find the last user message in this session to use as parentID
@@ -1188,6 +1189,7 @@ export const SessionProvider: ParentComponent = (props) => {
           createdAt: new Date().toISOString(),
           parentID: parent?.id,
           error: message.error,
+          sessionErrorID: message.eventID,
         }
         handleMessageCreated(errorMsg)
         break
@@ -1380,28 +1382,6 @@ export const SessionProvider: ParentComponent = (props) => {
     setPages(sessionID, { ...(pages[sessionID] ?? emptyPageState), ...patch })
   }
 
-  function mergeMessages(current: Message[], incoming: Message[], mode: Exclude<MessageLoadMode, "focus">) {
-    if (mode === "reconcile") {
-      // Tail reconcile: incoming is the authoritative newest-N snapshot.
-      // Local state may already hold some of those IDs and may also hold
-      // newer optimistic entries created after the fetch was taken. Merge
-      // by id (server wins on collision) then sort by createdAt so new
-      // server messages land in the right position and optimistic tail
-      // entries stay at the end.
-      const byId = new Map<string, Message>()
-      for (const msg of current) byId.set(msg.id, msg)
-      for (const msg of incoming) byId.set(msg.id, msg)
-      return [...byId.values()].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-    }
-    const seen = new Set<string>()
-    const source = mode === "prepend" ? [...incoming, ...current] : incoming
-    return source.filter((msg) => {
-      if (seen.has(msg.id)) return false
-      seen.add(msg.id)
-      return true
-    })
-  }
-
   function recoverPrefs(sessionID: string, messages: Message[], names = agentNames()) {
     const prefs = resolveMessagePrefs(messages, names)
     if (prefs.agent && !store.agentSelections[sessionID]) {
@@ -1418,25 +1398,13 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function withPending(sessionID: string, messages: Message[]) {
-    const pending = pendingOptimistic.get(sessionID)
-    if (!pending || pending.size === 0) return messages
-    const ids = new Set(messages.map((msg) => msg.id))
     const current = store.messages[sessionID] ?? []
+    const merged = preserveSessionErrors(current, messages)
+    const pending = pendingOptimistic.get(sessionID)
+    if (!pending || pending.size === 0) return merged
+    const ids = new Set(merged.map((msg) => msg.id))
     const orphans = current.filter((msg) => pending.has(msg.id) && !ids.has(msg.id))
-    return [...messages, ...orphans]
-  }
-
-  // Cheap tail check: same ids in the same order and no visible streamed-part
-  // correction to apply. It skips store churn when SSE already matches the
-  // snapshot, but lets reconcile heal part removals and finalized text.
-  function sameReconcileShape(current: Message[], incoming: Message[]): boolean {
-    if (current.length !== incoming.length) return false
-    for (const [i, n] of incoming.entries()) {
-      const c = current[i]!
-      if (c.id !== n.id) return false
-      if (!sameParts(store.parts[c.id] ?? c.parts, n.parts)) return false
-    }
-    return true
+    return [...merged, ...orphans]
   }
 
   function setTools(sessionID: string, tools: ToolPart[]) {
@@ -1487,7 +1455,10 @@ export const SessionProvider: ParentComponent = (props) => {
     // Reconcile fast-path: if the tail matches local state shape-wise, every
     // message+part-count already agrees with the server. Skip the reactive
     // store churn entirely — virtualizer and rendering stay untouched.
-    if (mode === "reconcile" && sameReconcileShape(store.messages[sessionID] ?? [], messages)) {
+    if (
+      mode === "reconcile" &&
+      sameReconcileShape(store.messages[sessionID] ?? [], messages, (id) => store.parts[id])
+    ) {
       const parts = messageParts(messages)
       for (const msg of messages) {
         if (store.parts[msg.id]) delete parts[msg.id]
@@ -1601,16 +1572,18 @@ export const SessionProvider: ParentComponent = (props) => {
 
     const exists = (store.messages[message.sessionID] ?? []).some((msg) => msg.id === message.id)
     setStore("messages", message.sessionID, (msgs = []) => {
+      if (message.sessionErrorID && msgs.some((msg) => msg.sessionErrorID === message.sessionErrorID)) return msgs
+      const current = withoutResolvedSessionErrors(msgs, [message])
       // Check if message already exists (optimistic or update case).
       // Since we now use the same messageID for optimistic and server messages,
       // this naturally handles the optimistic→real transition.
-      const idx = msgs.findIndex((m) => m.id === message.id)
+      const idx = current.findIndex((m) => m.id === message.id)
       if (idx >= 0) {
-        const updated = [...msgs]
-        updated[idx] = { ...msgs[idx], ...message }
+        const updated = [...current]
+        updated[idx] = { ...current[idx], ...message }
         return updated
       }
-      return [...msgs, message]
+      return [...current, message]
     })
     patchPage(message.sessionID, { lastMutation: exists ? "update" : "append" })
 

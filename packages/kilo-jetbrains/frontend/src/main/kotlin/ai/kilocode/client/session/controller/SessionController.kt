@@ -32,6 +32,7 @@ import ai.kilocode.client.util.edtLater as edt
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigWarningDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
+import ai.kilocode.rpc.dto.EditorContextDto
 import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
@@ -262,11 +263,11 @@ class SessionController(
         }
     }
 
-    fun prompt(text: String, files: List<PromptPartDto> = emptyList()) {
+    fun prompt(text: String, files: List<PromptPartDto> = emptyList(), editorContext: EditorContextDto? = null) {
         assertEdt()
         val start = sid ?: ref?.key ?: "pending"
         val exists = sid != null
-        val dto = promptDto(text, files)
+        val dto = promptDto(text, files, editorContext)
         val props = promptProps(files)
         LOG.debug { "${ChatLogSummary.sid(start)} ${ChatLogSummary.prompt(dto)} ${ChatLogSummary.dir(directory)}" }
         dispatch(Dispatch("prompt", "user", text, props, start, exists)) { id ->
@@ -1821,7 +1822,11 @@ class SessionController(
         }
     }
 
-    private fun promptDto(text: String, files: List<PromptPartDto> = emptyList()): PromptDto {
+    private fun promptDto(
+        text: String,
+        files: List<PromptPartDto> = emptyList(),
+        editorContext: EditorContextDto? = null,
+    ): PromptDto {
         val full = model.model
         val sel = full?.let(::parseModel)
         val variant = model.variant?.takeIf { it in model.variants }
@@ -1835,6 +1840,7 @@ class SessionController(
             modelID = sel?.second,
             agent = model.agent,
             variant = variant,
+            editorContext = editorContext,
         )
     }
 
