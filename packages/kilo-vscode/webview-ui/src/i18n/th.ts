@@ -488,6 +488,8 @@ export const dict = {
   "provider.custom.models.name.placeholder": "ชื่อที่แสดง",
   "provider.custom.models.reasoning.label": "การใช้เหตุผล",
   "provider.custom.models.modalities.image": "รูปภาพ",
+  "provider.custom.models.toggleReasoning": "สลับการให้เหตุผลสำหรับทุกโมเดล",
+  "provider.custom.models.toggleImages": "สลับรูปภาพสำหรับทุกโมเดล",
   "provider.custom.models.remove": "ลบโมเดล",
   "provider.custom.models.add": "เพิ่มโมเดล",
   "provider.custom.models.fetch.authError": "การยืนยันตัวตนล้มเหลว ตรวจสอบคีย์ API ด้านบนแล้วลองอีกครั้ง",

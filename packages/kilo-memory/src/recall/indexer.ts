@@ -226,7 +226,6 @@ export namespace MemoryIndexer {
     return MemoryFiles.queue(input.root, async () => {
       const result = await build(input)
       await MemoryFiles.writeIndex(input.root, result.text)
-      await MemoryFiles.append(input.root, `regenerate index.kmem bytes=${result.bytes} tokens=${result.tokens}`)
       return result
     })
   }

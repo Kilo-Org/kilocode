@@ -519,13 +519,24 @@ export namespace KilocodeConfig {
    * 3. Strip null delete sentinels
    */
   export function mergeConfig(existing: Config.Info, patch: Config.Info): Config.Info {
+    return merge(existing, patch, true)
+  }
+
+  /** Merge an untrusted project layer without changing generic config merge semantics. */
+  export function mergeProject(existing: Config.Info, patch: Config.Info): Config.Info {
+    return merge(existing, patch, false)
+  }
+
+  function merge(existing: Config.Info, patch: Config.Info, clean: boolean): Config.Info {
     const e = { ...existing } as Record<string, unknown>
-    const p = patch as Record<string, unknown>
+    // Shallow-copy patch so MCP extraction (delete p.mcp) never mutates the caller's object.
+    // Callers may probe with mergeConfig({}, patch) then reuse the same patch for a write.
+    const p = { ...patch } as Record<string, unknown>
 
     // Normalize permission scalars before merge
     const existingPerm = e.permission
     const patchPerm = p.permission
-    if (isRecord(existingPerm) && isRecord(patchPerm)) {
+    if (clean && isRecord(existingPerm) && isRecord(patchPerm)) {
       const cloned = { ...existingPerm }
       for (const [key, value] of Object.entries(patchPerm)) {
         const existing = cloned[key]
@@ -536,7 +547,61 @@ export namespace KilocodeConfig {
       e.permission = cloned
     }
 
-    return stripNulls(mergeDeep(e, p) as Record<string, unknown>) as Config.Info
+    // MCP servers merge by name; project URL retargets must not inherit base headers.
+    const existingMcp = e.mcp
+    const patchMcp = p.mcp
+    if (!isRecord(existingMcp) && !isRecord(patchMcp)) {
+      return (clean ? stripNulls(mergeDeep(e, p) as Record<string, unknown>) : mergeDeep(e, p)) as Config.Info
+    }
+
+    delete e.mcp
+    delete p.mcp
+    const merged = (clean ? stripNulls(mergeDeep(e, p) as Record<string, unknown>) : mergeDeep(e, p)) as Config.Info
+    const baseMcp = isRecord(existingMcp) ? (existingMcp as NonNullable<Config.Info["mcp"]>) : undefined
+    const srcMcp = isRecord(patchMcp) ? (patchMcp as NonNullable<Config.Info["mcp"]>) : undefined
+    if (!srcMcp) {
+      if (baseMcp) merged.mcp = baseMcp
+      return merged
+    }
+    if (!baseMcp) {
+      merged.mcp = srcMcp
+      return merged
+    }
+
+    const out: NonNullable<Config.Info["mcp"]> = { ...baseMcp }
+    for (const [name, src] of Object.entries(srcMcp)) {
+      const base = baseMcp[name]
+      if (!isRecord(src) || !isRecord(base)) {
+        out[name] = src
+        continue
+      }
+
+      const kind = "type" in base && (base.type === "local" || base.type === "remote") ? base.type : undefined
+      const next = "type" in src && (src.type === "local" || src.type === "remote") ? src.type : undefined
+      const changed = next !== undefined && next !== kind
+      const seed = changed
+        ? {
+            ...("enabled" in base ? { enabled: base.enabled } : {}),
+            ...("timeout" in base ? { timeout: base.timeout } : {}),
+          }
+        : base
+      const entry = mergeDeep(seed, src) as (typeof out)[string]
+      const srcUrl = "url" in src && typeof src.url === "string" ? src.url : undefined
+      const baseUrl = "url" in base && typeof base.url === "string" ? base.url : undefined
+      const retargeted =
+        kind === "remote" && next !== "local" && srcUrl !== undefined && baseUrl !== undefined && srcUrl !== baseUrl
+      if (!retargeted || !isRecord(entry)) {
+        out[name] = entry
+        continue
+      }
+
+      const { headers: _headers, oauth: _oauth, ...rest } = entry as Record<string, unknown>
+      if ("headers" in src) rest.headers = src.headers
+      if ("oauth" in src) rest.oauth = src.oauth
+      out[name] = rest as (typeof out)[string]
+    }
+    merged.mcp = out
+    return merged
   }
 
   // ── Directory check helper ───────────────────────────────────────────

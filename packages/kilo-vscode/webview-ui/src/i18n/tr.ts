@@ -442,6 +442,8 @@ export const dict = {
   "provider.custom.models.name.placeholder": "Görünen Ad",
   "provider.custom.models.reasoning.label": "Akıl Yürütme",
   "provider.custom.models.modalities.image": "Görüntü",
+  "provider.custom.models.toggleReasoning": "Tüm modeller için akıl yürütmeyi aç/kapat",
+  "provider.custom.models.toggleImages": "Tüm modeller için görüntüyü aç/kapat",
   "provider.custom.models.remove": "Modeli kaldır",
   "provider.custom.models.add": "Model ekle",
   "provider.custom.models.fetch.authError":

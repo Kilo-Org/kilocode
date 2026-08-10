@@ -3434,6 +3434,38 @@ describe("ProviderTransform.message - cache control on gateway", () => {
       },
     })
   })
+
+  test("openai gpt-5.6 with ChatGPT subscription (zero cost heuristic) does not apply promptCacheBreakpoint", () => {
+    const model = createModel({
+      providerID: "openai",
+      api: {
+        id: "gpt-5.6",
+        url: "https://api.openai.com/v1",
+        npm: "@ai-sdk/openai",
+      },
+      id: "gpt-5.6",
+      cost: {
+        input: 0,
+        output: 0,
+        cache: { read: 0, write: 0 },
+      },
+    })
+    const msgs = [
+      {
+        role: "system",
+        content: "You are a helpful assistant",
+      },
+      {
+        role: "user",
+        content: "Hello",
+      },
+    ] as any[]
+
+    const result = ProviderTransform.message(msgs, model, {}) as any[]
+
+    expect(result[0].providerOptions?.openai?.promptCacheBreakpoint).toBeUndefined()
+    expect(result[1].providerOptions?.openai?.promptCacheBreakpoint).toBeUndefined()
+  })
   // kilocode_change end
 })
 
