@@ -292,6 +292,7 @@ export const dict = {
   "ui.approval.source.yolo": "由自动批准（YOLO）模式",
   "ui.approval.source.session": "由会话自动批准规则",
   "ui.approval.source.default": "默认",
+  "ui.approval.outsideWorkspace": "（工作区之外：{{file}}）",
 
   "session.tab.review": "审查",
   "session.review.filesChanged": "{{count}} 个文件变更",
@@ -859,7 +860,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "允许的网络目标",
   "settings.sandboxing.allowedHosts.description":
-    "用于沙盒化 HTTP 和 HTTPS 代理流量的 DNS 主机和端口目标。GitHub CLI 和 HTTPS Git 通常需要 github.com:443 和 api.github.com:443。更改将应用于新会话。",
+    "用于沙盒化 HTTP 和 HTTPS 代理流量的 DNS 主机和端口目标。GitHub CLI 和 HTTPS Git 通常需要 github.com:443 和 api.github.com:443。",
   "settings.sandboxing.writablePaths.title": "额外可写路径",
   "settings.sandboxing.writablePaths.description":
     "沙盒允许写入的额外文件系统路径（例如 /tmp、/var/log）。沙盒启用后，这些路径会与默认可写路径合并。",
@@ -1073,18 +1074,21 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "使用 Shift+Tab 切换推理强度",
   "settings.display.shiftTabCycle.description":
     "在提示输入框中按 Shift+Tab 可切换到下一个推理强度等级。禁用此选项可将 Shift+Tab 用于键盘焦点导航。",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "终端命令块",
+  "settings.display.terminalCommand.description": "选择终端命令块的初始状态：展开或折叠。",
+  "settings.display.terminalCommand.expanded": "展开",
+  "settings.display.terminalCommand.collapsed": "折叠",
   "settings.display.codeEdit.title": "代码编辑块",
   "settings.display.codeEdit.description": "选择代码编辑块和差异块的初始状态：展开或折叠。",
   "settings.display.codeEdit.expanded": "展开",
   "settings.display.codeEdit.collapsed": "折叠",
 
-  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.title": "显示令牌吞吐量",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+    "在最新的助手消息和任务标题中显示文本生成速率（令牌/秒）。默认隐藏以保持聊天简洁。",
+  "settings.display.autoApprovalReason.title": "显示自动批准原因",
+  "settings.display.autoApprovalReason.description":
+    "在工具调用中显示一行说明其被自动批准的原因（匹配的规则、代理默认值、YOLO 模式等）。",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

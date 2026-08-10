@@ -303,6 +303,7 @@ export const dict = {
   "ui.approval.source.yolo": "режимом автоодобрения (YOLO)",
   "ui.approval.source.session": "правилом автоодобрения сессии",
   "ui.approval.source.default": "по умолчанию",
+  "ui.approval.outsideWorkspace": "(за пределами вашей рабочей области: {{file}})",
 
   "session.tab.review": "Обзор",
   "session.review.filesChanged": "{{count}} файлов изменено",
@@ -892,7 +893,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "Разрешенные сетевые назначения",
   "settings.sandboxing.allowedHosts.description":
-    "Целевые DNS-хосты и порты для прокси-трафика HTTP и HTTPS в песочнице. GitHub CLI и HTTPS Git обычно требуют github.com:443 и api.github.com:443. Изменения применяются к новым сеансам.",
+    "Целевые DNS-хосты и порты для прокси-трафика HTTP и HTTPS в песочнице. GitHub CLI и HTTPS Git обычно требуют github.com:443 и api.github.com:443.",
   "settings.sandboxing.writablePaths.title": "Дополнительные пути для записи",
   "settings.sandboxing.writablePaths.description":
     "Дополнительные пути файловой системы, в которые разрешена запись в песочнице (например, /tmp, /var/log). Они объединяются с путями записи по умолчанию при активной песочнице.",
@@ -1133,19 +1134,23 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Переключать усилие рассуждения с помощью Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Нажмите Shift+Tab в поле ввода запроса, чтобы перейти к следующему уровню усилий рассуждения. Отключите эту настройку, чтобы сохранить Shift+Tab для навигации по фокусу с помощью клавиатуры.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "Блоки команд терминала",
+  "settings.display.terminalCommand.description":
+    "Выберите, будут ли блоки команд терминала изначально развёрнуты или свёрнуты.",
+  "settings.display.terminalCommand.expanded": "Развёрнуты",
+  "settings.display.terminalCommand.collapsed": "Свёрнуты",
   "settings.display.codeEdit.title": "Блоки изменений кода",
   "settings.display.codeEdit.description":
     "Выберите, будут ли блоки изменений кода и различий изначально развёрнуты или свёрнуты.",
   "settings.display.codeEdit.expanded": "Развёрнуты",
   "settings.display.codeEdit.collapsed": "Свёрнуты",
 
-  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.title": "Показывать пропускную способность токенов",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+    "Отображает скорость генерации текста (токенов/с) в последнем сообщении ассистента и в заголовке задачи. По умолчанию скрыто, чтобы не загромождать чат.",
+  "settings.display.autoApprovalReason.title": "Показывать причину автоодобрения",
+  "settings.display.autoApprovalReason.description":
+    "Показывает строку у вызовов инструментов, объясняющую, почему они были одобрены автоматически (совпавшее правило, значение агента по умолчанию, режим YOLO и т. д.).",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

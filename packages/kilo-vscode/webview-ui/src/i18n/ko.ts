@@ -305,6 +305,7 @@ export const dict = {
   "ui.approval.source.yolo": "자동 승인(YOLO) 모드에 의해",
   "ui.approval.source.session": "세션 자동 승인 규칙에 의해",
   "ui.approval.source.default": "기본값으로",
+  "ui.approval.outsideWorkspace": "(작업 영역 외부: {{file}})",
 
   "session.tab.review": "검토",
   "session.review.filesChanged": "{{count}}개 파일 변경됨",
@@ -885,7 +886,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "허용된 네트워크 대상",
   "settings.sandboxing.allowedHosts.description":
-    "샌드박스 처리된 HTTP 및 HTTPS 프록시 트래픽의 DNS 호스트 및 포트 대상입니다. GitHub CLI 및 HTTPS Git에는 일반적으로 github.com:443 및 api.github.com:443가 필요합니다. 변경 사항은 새 세션에 적용됩니다.",
+    "샌드박스 처리된 HTTP 및 HTTPS 프록시 트래픽의 DNS 호스트 및 포트 대상입니다. GitHub CLI 및 HTTPS Git에는 일반적으로 github.com:443 및 api.github.com:443가 필요합니다.",
   "settings.sandboxing.writablePaths.title": "추가 쓰기 가능 경로",
   "settings.sandboxing.writablePaths.description":
     "샌드박스에서 쓰기를 허용하는 추가 파일시스템 경로(예: /tmp, /var/log). 샌드박스가 활성화되면 기본 쓰기 가능 경로와 병합됩니다.",
@@ -1115,18 +1116,21 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Shift+Tab으로 추론 강도 전환",
   "settings.display.shiftTabCycle.description":
     "프롬프트 입력란에서 Shift+Tab을 눌러 다음 추론 강도 수준으로 전환합니다. Shift+Tab을 키보드 포커스 탐색에 사용하려면 비활성화하세요.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "터미널 명령 블록",
+  "settings.display.terminalCommand.description": "터미널 명령 블록을 처음부터 펼칠지 접을지 선택합니다.",
+  "settings.display.terminalCommand.expanded": "펼침",
+  "settings.display.terminalCommand.collapsed": "접힘",
   "settings.display.codeEdit.title": "코드 편집 블록",
   "settings.display.codeEdit.description": "코드 편집 블록과 차이점 블록을 처음부터 펼칠지 접을지 선택합니다.",
   "settings.display.codeEdit.expanded": "펼침",
   "settings.display.codeEdit.collapsed": "접힘",
 
-  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.title": "토큰 처리량 표시",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+    "최신 어시스턴트 메시지와 작업 헤더에 텍스트 생성 속도(토큰/초)를 표시합니다. 채팅을 깔끔하게 유지하기 위해 기본적으로 숨겨져 있습니다.",
+  "settings.display.autoApprovalReason.title": "자동 승인 이유 표시",
+  "settings.display.autoApprovalReason.description":
+    "도구 호출이 자동으로 승인된 이유(일치한 규칙, 에이전트 기본값, YOLO 모드 등)를 설명하는 줄을 표시합니다.",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

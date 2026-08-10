@@ -1,8 +1,10 @@
 /**
  * Renders New Task, History, Agent Manager, KiloClaw, Marketplace, Profile, and
- * Settings inside the webview. VS Code's native `view/title` toolbar renders
- * outside the webview DOM and disappears in the Secondary Side Bar with no way
- * to detect or work around that — this bar guarantees the actions stay visible.
+ * Settings inside the webview, as a fallback for Cursor only (see isCursorHost()
+ * in src/utils.ts). Cursor's Secondary Side Bar support is unreliable for
+ * extension-contributed `view/title` toolbars, which render outside the webview
+ * DOM with no API to detect or work around the failure. Real VS Code renders the
+ * native toolbar fine everywhere, so it keeps using that instead of this bar.
  */
 
 import { Component, For } from "solid-js"
@@ -45,13 +47,12 @@ export const SidebarTopBar: Component<SidebarTopBarProps> = (props) => {
     type: "openAgentManager" | "openKiloClaw" | "openMarketplacePanel" | "openProfilePanel" | "openSettingsPanel",
   ) => vscode.postMessage({ type })
 
-  const actions: (Action | "spacer")[] = [
+  const actions: Action[] = [
     { key: "newTask", codicon: "add", button: "new_task", run: () => props.onNewTask() },
     { key: "history", codicon: "history", button: "history", run: () => props.onHistory() },
     { key: "agentManager", codicon: "organization", button: "agent_manager", run: () => open("openAgentManager") },
     { key: "kiloClaw", codicon: "comment-discussion", button: "kiloclaw", run: () => open("openKiloClaw") },
     { key: "marketplace", codicon: "extensions", button: "marketplace", run: () => open("openMarketplacePanel") },
-    "spacer",
     { key: "profile", codicon: "account", button: "profile", run: () => open("openProfilePanel") },
     { key: "settings", codicon: "settings-gear", button: "settings", run: () => open("openSettingsPanel") },
   ]
@@ -60,7 +61,6 @@ export const SidebarTopBar: Component<SidebarTopBarProps> = (props) => {
     <div class="sidebar-top-bar" role="toolbar" aria-label={language.t("sidebar.topBar.label")}>
       <For each={actions}>
         {(action) => {
-          if (action === "spacer") return <div class="sidebar-top-bar-spacer" />
           const label = language.t(`sidebar.topBar.${action.key}`)
           return (
             <Tooltip value={label} placement="bottom">

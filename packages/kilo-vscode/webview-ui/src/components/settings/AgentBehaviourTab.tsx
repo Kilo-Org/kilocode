@@ -903,7 +903,7 @@ const AgentBehaviourTab: Component = () => {
                 "border-bottom": index() < skillPaths().length - 1 ? "1px solid var(--border-weak-base)" : "none",
               }}
             >
-              <Tooltip value={path} class="settings-skills-row-trigger">
+              <Tooltip value={path} class="settings-skills-row-trigger" contentClass="settings-skills-tooltip-content">
                 <span
                   style={{
                     width: "100%",
@@ -960,7 +960,7 @@ const AgentBehaviourTab: Component = () => {
                 "border-bottom": index() < skillUrls().length - 1 ? "1px solid var(--border-weak-base)" : "none",
               }}
             >
-              <Tooltip value={url} class="settings-skills-row-trigger">
+              <Tooltip value={url} class="settings-skills-row-trigger" contentClass="settings-skills-tooltip-content">
                 <span
                   style={{
                     width: "100%",

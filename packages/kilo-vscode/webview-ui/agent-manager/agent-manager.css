@@ -281,12 +281,14 @@ html[data-theme="kilo-vscode"]
 
 .am-project-body .am-section-header {
   padding-left: 6px;
+  padding-right: 6px;
 }
 
 /* This heading sits outside the projects list, so it needs its own inset to
    land on the same glyph line as the rows inside the list. */
 .am-projects > .am-section-header {
   padding-left: 2px;
+  padding-right: 2px;
 }
 
 .am-section-label {
@@ -328,7 +330,11 @@ html[data-theme="kilo-vscode"]
 .am-project-actions {
   display: flex;
   align-items: center;
-  gap: 2px;
+  justify-content: space-between;
+  /* The project row needs 20px + 24px + 20px; the worktree row uses the
+     remaining space for its split-button and settings gap. */
+  width: 64px;
+  gap: 0;
 }
 
 .am-project {
