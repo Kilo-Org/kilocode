@@ -1,10 +1,12 @@
 import type { ExecFileOptionsWithStringEncoding } from "child_process"
 import type { Worktree } from "./WorktreeStateManager"
-import type { PRStatus, PRCheck, PRComment, CheckStatus, AggregateCheckStatus, PRState, ReviewDecision } from "./types"
+import type { PRStatus, PRCheck, PRComment, PRReviewer, AggregateCheckStatus } from "./types"
 import { execWithShellEnv } from "./shell-env"
 import { execGhRead } from "./gh"
 import { classifyPRError } from "./git-import"
 import type { Semaphore } from "./semaphore"
+import { parsePRResult, checkStatus, formatCheckDuration, parseComments, parseReviewers } from "./am-pr-utils"
+import type { PRResult, GhThread, GhReviewRequest, GhReview } from "./am-pr-types"
 
 interface PRStatusPollerOptions {
   getWorktrees: () => Worktree[]
@@ -17,6 +19,7 @@ interface PRStatusPollerOptions {
 }
 
 const GH_PROBE_TTL = 300_000 // 5 minutes — gh installation state rarely changes at runtime
+const GH_PROBE_FAILURE_TTL = 30_000 // 30 seconds — retry faster after a failed probe
 const MAX_BACKOFF = 120_000 // 2 minutes — cap for exponential backoff on repeated errors
 const BACKOFF_MULTIPLIER = 2
 const PR_LOOKUP_TTL = 10_000 // 10 seconds — short TTL; only the active worktree polls so this stays cheap
@@ -171,7 +174,8 @@ export class PRStatusPoller {
 
   private async probeGh(): Promise<boolean> {
     const now = Date.now()
-    if (this.ghAvailable !== undefined && now - this.ghProbeTime < GH_PROBE_TTL) {
+    const ttl = this.ghAvailable === false ? GH_PROBE_FAILURE_TTL : GH_PROBE_TTL
+    if (this.ghAvailable !== undefined && now - this.ghProbeTime < ttl) {
       return this.ghAvailable
     }
     try {
@@ -244,8 +248,9 @@ export class PRStatusPoller {
         return
       }
 
-      const [checks, comments] = await Promise.all([
+      const [checks, reviewers, comments] = await Promise.all([
         this.fetchChecks(pr.number, wt.path),
+        this.fetchReviewers(pr.number, wt.path),
         this.activeWorktreeId === worktreeId ? this.fetchComments(pr.number, wt.path) : undefined,
       ])
       if (this.stale(generation)) return
@@ -253,17 +258,22 @@ export class PRStatusPoller {
       const status: PRStatus = {
         number: pr.number,
         title: pr.title,
+        body: pr.body,
         url: pr.url,
         state: pr.state,
         review: pr.review,
         checks,
-        ...(comments && { comments }),
+        reviewers,
+        ...(comments && {
+          comments: { total: comments.total, unresolved: comments.unresolved, comments: comments.comments },
+        }),
         additions: pr.additions,
         deletions: pr.deletions,
         files: pr.files,
       }
 
-      const hash = `${worktreeId}:${pr.number}:${pr.state}:${pr.review}:${checks.status}:${checks.passed}/${checks.total}:${comments?.total ?? ""}:${comments?.unresolved ?? ""}`
+      const reviewersSig = reviewers.map((r) => `${r.login}:${r.state}`).join(",")
+      const hash = `${worktreeId}:${pr.number}:${pr.title}:${pr.state}:${pr.review}:${checks.status}:${checks.passed}/${checks.total}:${reviewersSig}:${pr.body ?? ""}:${comments?.total ?? ""}:${comments?.unresolved ?? ""}`
       if (this.lastHash.get(worktreeId) === hash) return
       this.lastHash.set(worktreeId, hash)
 
@@ -292,7 +302,7 @@ export class PRStatusPoller {
   }
 
   private static readonly PR_JSON_FIELDS =
-    "number,title,url,state,isDraft,reviewDecision,additions,deletions,changedFiles,headRefName,headRefOid"
+    "number,title,body,url,state,isDraft,reviewDecision,additions,deletions,changedFiles,headRefName,headRefOid"
 
   /** Return a cached PR lookup if still fresh, otherwise fetch and cache.
    *  Keyed by branch name so multiple worktrees on the same branch share
@@ -374,7 +384,7 @@ export class PRStatusPoller {
     passed: number
     failed: number
     pending: number
-    items: PRCheck[]
+    checks: PRCheck[]
   }> {
     try {
       const { stdout } = await this.gh(
@@ -389,24 +399,24 @@ export class PRStatusPoller {
         completedAt?: string
       }>
 
-      const items: PRCheck[] = data.map((c) => ({
+      const checks: PRCheck[] = data.map((c) => ({
         name: c.name,
-        status: mapCheckStatus(c.state),
+        status: checkStatus(c.state),
         url: c.link,
         duration: formatCheckDuration(c.startedAt, c.completedAt),
       }))
 
-      const total = items.length
-      const passed = items.filter((c) => c.status === "success").length
-      const failed = items.filter((c) => c.status === "failure").length
-      const pending = items.filter((c) => c.status === "pending").length
+      const total = checks.filter((c) => c.status !== "skipped").length
+      const passed = checks.filter((c) => c.status === "success").length
+      const failed = checks.filter((c) => c.status === "failure").length
+      const pending = checks.filter((c) => c.status === "pending").length
 
       const status: AggregateCheckStatus =
         total === 0 ? "none" : failed > 0 ? "failure" : pending > 0 ? "pending" : "success"
 
-      return { status, total, passed, failed, pending, items }
+      return { status, total, passed, failed, pending, checks }
     } catch {
-      return { status: "none", total: 0, passed: 0, failed: 0, pending: 0, items: [] }
+      return { status: "none", total: 0, passed: 0, failed: 0, pending: 0, checks: [] }
     }
   }
 
@@ -424,13 +434,53 @@ export class PRStatusPoller {
     return info
   }
 
+  private async fetchReviewers(prNumber: number, cwd: string): Promise<PRReviewer[]> {
+    try {
+      const repo = await this.getRepoInfo(cwd)
+      const query = `query($owner: String!, $repo: String!, $number: Int!) {
+        repository(owner: $owner, name: $repo) {
+          pullRequest(number: $number) {
+            reviewRequests(first: 20) {
+              nodes { requestedReviewer { ... on User { login avatarUrl } } }
+            }
+            reviews(last: 20, states: [APPROVED, CHANGES_REQUESTED, COMMENTED]) {
+              nodes { author { login avatarUrl } state }
+            }
+          }
+        }
+      }`
+      const { stdout } = await this.gh(
+        [
+          "api",
+          "graphql",
+          "-f",
+          `query=${query}`,
+          "-F",
+          `owner=${repo.owner}`,
+          "-F",
+          `repo=${repo.name}`,
+          "-F",
+          `number=${prNumber}`,
+        ],
+        { cwd, timeout: 15_000 },
+      )
+      const pr = JSON.parse(stdout)?.data?.repository?.pullRequest
+      return parseReviewers(
+        (pr?.reviewRequests?.nodes ?? []) as GhReviewRequest[],
+        (pr?.reviews?.nodes ?? []) as GhReview[],
+      )
+    } catch (err) {
+      this.options.log("Failed to fetch PR reviewers:", err)
+      return []
+    }
+  }
+
   private async fetchComments(
     prNumber: number,
     cwd: string,
-  ): Promise<{ total: number; unresolved: number; items: PRComment[] }> {
+  ): Promise<{ total: number; unresolved: number; comments: PRComment[] }> {
     try {
       const repo = await this.getRepoInfo(cwd)
-
       const query = `query($owner: String!, $repo: String!, $number: Int!) {
         repository(owner: $owner, name: $repo) {
           pullRequest(number: $number) {
@@ -469,105 +519,14 @@ export class PRStatusPoller {
         ],
         { cwd, timeout: 15_000 },
       )
-      const result = JSON.parse(stdout)
-      const threads = result?.data?.repository?.pullRequest?.reviewThreads?.nodes ?? []
-
-      const items: PRComment[] = []
-      for (const thread of threads) {
-        const first = thread.comments?.nodes?.[0]
-        if (!first) continue
-        items.push({
-          id: first.id,
-          author: first.author?.login ?? "unknown",
-          avatar: first.author?.avatarUrl,
-          body: first.body ?? "",
-          file: first.path,
-          line: first.line,
-          url: first.url,
-          resolved: thread.isResolved ?? false,
-          createdAt: first.createdAt ? new Date(first.createdAt).getTime() : undefined,
-        })
-      }
-
-      const total = items.length
-      const unresolved = items.filter((c) => !c.resolved).length
-      return { total, unresolved, items }
+      const pr = JSON.parse(stdout)?.data?.repository?.pullRequest
+      const comments = parseComments((pr?.reviewThreads?.nodes ?? []) as GhThread[])
+      return { total: comments.length, unresolved: comments.filter((c) => !c.resolved).length, comments }
     } catch (err) {
       this.options.log("Failed to fetch PR comments:", err)
-      return { total: 0, unresolved: 0, items: [] }
+      return { total: 0, unresolved: 0, comments: [] }
     }
   }
-}
-
-interface PRResult {
-  number: number
-  title: string
-  url: string
-  state: PRState
-  review: ReviewDecision | null
-  additions: number
-  deletions: number
-  files: number
-}
-
-function parsePRResult(json: string): PRResult | null {
-  const data = JSON.parse(json)
-  if (!data.number) return null
-  return {
-    number: data.number,
-    title: data.title ?? "",
-    url: data.url ?? "",
-    state: parsePRState(data.isDraft, data.state),
-    review: parseReviewDecision(data.reviewDecision),
-    additions: data.additions ?? 0,
-    deletions: data.deletions ?? 0,
-    files: data.changedFiles ?? 0,
-  }
-}
-
-function parsePRState(isDraft: boolean, ghState: string): PRState {
-  if (isDraft) return "draft"
-  if (ghState === "MERGED") return "merged"
-  if (ghState === "CLOSED") return "closed"
-  return "open"
-}
-
-function parseReviewDecision(decision: string | undefined): ReviewDecision | null {
-  if (decision === "APPROVED") return "approved"
-  if (decision === "CHANGES_REQUESTED") return "changes_requested"
-  if (decision === "REVIEW_REQUIRED") return "pending"
-  return null
-}
-
-function mapCheckStatus(state: string): CheckStatus {
-  switch (state.toUpperCase()) {
-    case "SUCCESS":
-      return "success"
-    case "FAILURE":
-    case "ERROR":
-      return "failure"
-    case "PENDING":
-    case "QUEUED":
-    case "IN_PROGRESS":
-    case "REQUESTED":
-    case "WAITING":
-      return "pending"
-    case "SKIPPED":
-      return "skipped"
-    case "CANCELLED":
-    case "TIMED_OUT":
-    case "STALE":
-    case "STARTUP_FAILURE":
-      return "cancelled"
-    default:
-      return "pending"
-  }
-}
-
-function formatCheckDuration(startedAt?: string, completedAt?: string): string | undefined {
-  if (!startedAt || !completedAt) return undefined
-  const secs = Math.round((new Date(completedAt).getTime() - new Date(startedAt).getTime()) / 1000)
-  return secs < 60 ? `${secs}s` : `${Math.floor(secs / 60)}m ${secs % 60}s`
 }
 
 /** Run async thunks with bounded concurrency, returning settled results. */
