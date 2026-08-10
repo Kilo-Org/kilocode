@@ -27,8 +27,9 @@ class PromptAttachmentView(
     private val cards = LinkedHashMap<String, JComponent>()
     private val row = Stack.horizontal(gap = UiStyle.Gap.sm())
     private val scroll = JBScrollPane(row).apply {
-        border = null
-        viewportBorder = null
+        // Empty borders remove the visible scroll pane frame; null can be replaced by the current UI.
+        border = JBUI.Borders.empty()
+        viewportBorder = JBUI.Borders.empty()
         isOpaque = false
         viewport.isOpaque = false
         horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED

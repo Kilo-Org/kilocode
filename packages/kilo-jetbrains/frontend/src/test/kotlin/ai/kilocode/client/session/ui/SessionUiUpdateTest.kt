@@ -383,7 +383,7 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
         val chip = find(view, AttachmentChip::class.java)
 
         assertNotNull(chip)
-        assertTrue(findAll(chip!!, JBLabel::class.java).any { it.text == "HvJwtFilter.java:12-40" })
+        assertTrue(findAll(chip!!, JBLabel::class.java).any { it.text.contains("<u>HvJwtFilter.java:12-40</u>") })
     }
 
     fun `test source backed image attachment still renders in prompt strip`() {

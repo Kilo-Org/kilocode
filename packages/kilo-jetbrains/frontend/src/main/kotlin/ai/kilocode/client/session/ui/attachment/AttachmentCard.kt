@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.ui.attachment
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.ui.fileLinkHtml
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.iconButton
@@ -68,7 +69,7 @@ class AttachmentChip(
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         toolTipText = tip
         accessibleContext?.accessibleName = KiloBundle.message("prompt.attachment.open", item.name)
-        val label = JBLabel(label()).apply {
+        val label = JBLabel(fileLinkHtml(label())).apply {
             icon = attachmentIcon(item.mime, item.name)
             iconTextGap = JBUI.scale(SessionUiStyle.View.Attachment.CHIP_ICON_GAP)
             toolTipText = tip
