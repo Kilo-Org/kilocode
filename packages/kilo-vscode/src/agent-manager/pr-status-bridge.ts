@@ -9,7 +9,7 @@ import type { AgentManagerOutMessage, PRStatus } from "./types"
 import type { Disposable } from "./host"
 import type { Semaphore } from "./semaphore"
 import { PRStatusPoller } from "./PRStatusPoller"
-import { resolveComment } from "./pr/PRActions"
+import { resolveComment, unresolveComment } from "./pr/PRActions"
 
 interface PRBridgeHost {
   getWorktrees(): Worktree[]
@@ -86,7 +86,9 @@ export class PRStatusBridge {
       if (url) this.host.openExternal(url)
       return true
     }
-    if (m.type === "agentManager.resolveComment") {
+    const isResolve = m.type === "agentManager.resolveComment"
+    const isUnresolve = m.type === "agentManager.unresolveComment"
+    if (isResolve || isUnresolve) {
       const id = m.worktreeId as string
       const threadId = m.threadId as string
       const wt = this.host.getWorktrees().find((w: Worktree) => w.id === id)
@@ -95,20 +97,21 @@ export class PRStatusBridge {
         this.host.log("resolveComment: no cwd for worktree", id)
         return true
       }
-      resolveComment(threadId, cwd).then(
+      const action = isResolve ? resolveComment : unresolveComment
+      const resultType = isResolve ? "agentManager.resolveCommentResult" : "agentManager.unresolveCommentResult"
+      action(threadId, cwd).then(
         () => {
           this.host.postToWebview({
-            type: "agentManager.resolveCommentResult",
+            type: resultType,
             worktreeId: id,
             threadId,
             success: true,
           } as AgentManagerOutMessage)
-          this.poller.refresh(id)
         },
         (err: unknown) => {
-          this.host.log("resolveComment failed:", err)
+          this.host.log(`${resultType} failed:`, err)
           this.host.postToWebview({
-            type: "agentManager.resolveCommentResult",
+            type: resultType,
             worktreeId: id,
             threadId,
             success: false,

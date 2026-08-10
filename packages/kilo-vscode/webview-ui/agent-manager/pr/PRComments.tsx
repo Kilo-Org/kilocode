@@ -30,39 +30,43 @@ function DiffHunk(props: { hunk: string }) {
 
 function CommentCard(props: { comment: PRComment; worktreeId: string }) {
   const vscode = useVSCode()
-  const [resolving, setResolving] = createSignal(false)
+  const [acting, setActing] = createSignal(false)
   const [optimisticResolved, setOptimisticResolved] = createSignal<boolean | undefined>(undefined)
-  const [resolveError, setResolveError] = createSignal<string | undefined>(undefined)
+  const [actionError, setActionError] = createSignal<string | undefined>(undefined)
 
   const resolved = () => optimisticResolved() ?? props.comment.resolved
 
   onMount(() => {
     function handler(ev: MessageEvent) {
       const msg = ev.data
-      if (
-        msg?.type === "agentManager.resolveCommentResult" &&
+      const isResult =
+        (msg?.type === "agentManager.resolveCommentResult" || msg?.type === "agentManager.unresolveCommentResult") &&
         msg.worktreeId === props.worktreeId &&
         msg.threadId === props.comment.id
-      ) {
-        if (msg.success) {
-          setOptimisticResolved(true)
-          setResolveError(undefined)
-        } else {
-          setOptimisticResolved(undefined)
-          setResolveError("Failed to resolve thread")
-        }
-        setResolving(false)
+      if (!isResult) return
+      if (msg.success) {
+        setOptimisticResolved(msg.type === "agentManager.resolveCommentResult" ? true : false)
+        setActionError(undefined)
+      } else {
+        setOptimisticResolved(undefined)
+        setActionError(msg.type === "agentManager.resolveCommentResult" ? "Failed to resolve thread" : "Failed to unresolve thread")
       }
+      setActing(false)
     }
     window.addEventListener("message", handler)
     onCleanup(() => window.removeEventListener("message", handler))
   })
 
-  function resolve() {
-    setResolving(true)
-    setResolveError(undefined)
-    setOptimisticResolved(true)
-    vscode.postMessage({ type: "agentManager.resolveComment", worktreeId: props.worktreeId, threadId: props.comment.id })
+  function toggle() {
+    setActing(true)
+    setActionError(undefined)
+    const next = !resolved()
+    setOptimisticResolved(next)
+    vscode.postMessage({
+      type: next ? "agentManager.resolveComment" : "agentManager.unresolveComment",
+      worktreeId: props.worktreeId,
+      threadId: props.comment.id,
+    } as never)
   }
 
   return (
@@ -83,19 +87,17 @@ function CommentCard(props: { comment: PRComment; worktreeId: string }) {
         </Show>
         <CopyButton text={props.comment.body} class="am-pr-copy-btn" />
       </div>
-      <Show when={resolveError()}>
+      <Show when={actionError()}>
         {(err) => <div class="am-pr-resolve-error">{err()}</div>}
       </Show>
       <div class="am-pr-panel-comment-body">
         <Markdown text={props.comment.body} />
       </div>
-      <Show when={!resolved()}>
-        <div class="am-pr-resolve-row">
-          <button class="am-pr-resolve-btn" disabled={resolving()} onClick={resolve}>
-            Resolve conversation
-          </button>
-        </div>
-      </Show>
+      <div class="am-pr-resolve-row">
+        <button class="am-pr-resolve-btn" disabled={acting()} onClick={toggle}>
+          {resolved() ? "Unresolve conversation" : "Resolve conversation"}
+        </button>
+      </div>
     </div>
   )
 }

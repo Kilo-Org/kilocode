@@ -22,6 +22,12 @@ interface PRPanelProps {
 }
 
 export const PRPanel: Component<PRPanelProps> = (props) => {
+  let commentsRef: HTMLDivElement | undefined
+
+  function jumpToComments() {
+    commentsRef?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }
+
   return (
     <div class="am-pr-panel am-pr-col">
       <div class="am-pr-panel-header am-pr-row">
@@ -46,7 +52,7 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
         </div>
       </div>
       <div class="am-pr-panel-body">
-        <PRSummary pr={props.pr} />
+        <PRSummary pr={props.pr} onJumpToComments={jumpToComments} />
         <PROverview pr={props.pr} worktree={props.worktree} />
         <Show when={(props.pr.reviewers ?? []).length > 0}>
           <PRReviewers reviewers={props.pr.reviewers ?? []} />
@@ -56,7 +62,11 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
           <PRChecks checks={props.pr.checks} />
         </Show>
         <Show when={props.pr.comments?.total ? props.pr.comments : undefined}>
-          {(comments) => <PRComments comments={comments()} worktreeId={props.worktreeId} />}
+          {(comments) => (
+            <div ref={commentsRef}>
+              <PRComments comments={comments()} worktreeId={props.worktreeId} />
+            </div>
+          )}
         </Show>
       </div>
     </div>

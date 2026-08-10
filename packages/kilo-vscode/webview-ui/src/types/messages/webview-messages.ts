@@ -997,6 +997,12 @@ export interface ResolveCommentMessage {
   threadId: string
 }
 
+export interface UnresolveCommentMessage {
+  type: "agentManager.unresolveComment"
+  worktreeId: string
+  threadId: string
+}
+
 export interface ApplyWorktreeDiffMessage {
   type: "agentManager.applyWorktreeDiff"
   worktreeId: string
@@ -1539,6 +1545,7 @@ export type WebviewMessage =
   | RefreshPRMessage
   | OpenPRMessage
   | ResolveCommentMessage
+  | UnresolveCommentMessage
   // legacy-migration start
   | RequestMigrationDataMessage
   | StartMigrationMessage

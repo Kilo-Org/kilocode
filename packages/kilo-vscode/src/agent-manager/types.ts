@@ -403,6 +403,14 @@ interface ResolveCommentResultMessage {
   error?: string
 }
 
+interface UnresolveCommentResultMessage {
+  type: "agentManager.unresolveCommentResult"
+  worktreeId: string
+  threadId: string
+  success: boolean
+  error?: string
+}
+
 interface ActionOutMessage {
   type: "action"
   action: string
@@ -444,6 +452,7 @@ export type AgentManagerOutMessage =
   | PRStatusOutMessage
   | PRErrorOutMessage
   | ResolveCommentResultMessage
+  | UnresolveCommentResultMessage
   | ActionOutMessage
   | RunStatusMessage
   | TerminalCreatedMessage
@@ -774,6 +783,12 @@ interface ResolveCommentIn {
   threadId: string
 }
 
+interface UnresolveCommentIn {
+  type: "agentManager.unresolveComment"
+  worktreeId: string
+  threadId: string
+}
+
 interface OpenSessionsIn {
   type: "agentManager.openSessions"
   sessionIDs: string[]
@@ -1067,6 +1082,7 @@ export type AgentManagerInMessage =
   | RefreshPRIn
   | OpenPRIn
   | ResolveCommentIn
+  | UnresolveCommentIn
   | OpenSessionsIn
   | VisibleSessionIn
   | OpenFileIn

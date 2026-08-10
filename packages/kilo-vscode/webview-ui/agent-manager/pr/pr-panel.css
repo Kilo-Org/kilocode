@@ -522,3 +522,14 @@
 .am-pr-summary-label {
   color: var(--vscode-foreground);
 }
+
+.am-pr-summary-row-link {
+  cursor: pointer;
+  border-radius: 3px;
+  padding-left: 2px;
+  padding-right: 2px;
+}
+
+.am-pr-summary-row-link:hover {
+  background: var(--vscode-list-hoverBackground);
+}

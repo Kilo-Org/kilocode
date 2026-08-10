@@ -5,9 +5,10 @@ import type { PRStatus } from "../../src/types/messages"
 
 interface PRSummaryProps {
   pr: PRStatus
+  onJumpToComments?: () => void
 }
 
-function summaryRows(pr: PRStatus): Array<{ icon: string; label: string; status: string }> {
+function summaryRows(pr: PRStatus): Array<{ icon: string; label: string; status: string; isComments?: boolean }> {
   const rows = []
 
   if (pr.checks.total > 0) {
@@ -33,6 +34,7 @@ function summaryRows(pr: PRStatus): Array<{ icon: string; label: string; status:
       icon: "comment",
       label: `${pr.comments.unresolved} unresolved comment${pr.comments.unresolved > 1 ? "s" : ""}`,
       status: "warning",
+      isComments: true,
     })
   }
 
@@ -60,7 +62,12 @@ export function PRSummary(props: PRSummaryProps) {
         </div>
         <div class="am-pr-summary-rows am-pr-col">
           {rows().map((row) => (
-            <div class="am-pr-summary-row am-pr-row" data-status={row.status}>
+            <div
+              class="am-pr-summary-row am-pr-row"
+              classList={{ "am-pr-summary-row-link": !!(row.isComments && props.onJumpToComments) }}
+              data-status={row.status}
+              onClick={row.isComments && props.onJumpToComments ? props.onJumpToComments : undefined}
+            >
               <Icon name={row.icon} size="small" class="am-pr-summary-icon" />
               <span class="am-pr-summary-label">{row.label}</span>
             </div>
