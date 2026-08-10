@@ -469,7 +469,8 @@ export class PRStatusPoller {
         (pr?.reviewRequests?.nodes ?? []) as GhReviewRequest[],
         (pr?.reviews?.nodes ?? []) as GhReview[],
       )
-    } catch {
+    } catch (err) {
+      this.options.log("Failed to fetch PR reviewers:", err)
       return []
     }
   }
