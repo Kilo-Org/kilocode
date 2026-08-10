@@ -156,7 +156,7 @@ class SessionUi(
         condense = Registry.`is`("kilo.session.condense", true),
         displayMs = displayMs,
         open = { item -> manager?.openSession(item) },
-        beforeUpdate = { if (opening) false else scroll.atBottom() },
+        beforeUpdate = { if (opening) false else scroll.following() },
         afterUpdate = { if (!opening) scroll.followBottom(it) },
         loaded = ::onSessionLoaded,
         openProfileAction = ::openProfileSettings,
@@ -684,7 +684,7 @@ class SessionUi(
     private fun sendPrompt(text: String, files: List<PromptPartDto>) {
         if (text.isBlank() && files.isEmpty()) return
         prompt.clear()
-        val follow = scroll.atBottom()
+        val follow = scroll.following()
         val action = completion.clientAction(text)
         if (action != null) {
             action.action()
