@@ -96,15 +96,14 @@ export class PRStatusBridge {
         return true
       }
       resolveComment(threadId, cwd).then(
-        (err) => {
+        () => {
           this.host.postToWebview({
             type: "agentManager.resolveCommentResult",
             worktreeId: id,
             threadId,
-            success: !err,
-            error: err,
+            success: true,
           } as AgentManagerOutMessage)
-          if (!err) this.poller.refresh(id)
+          this.poller.refresh(id)
         },
         (err: unknown) => {
           this.host.log("resolveComment failed:", err)
