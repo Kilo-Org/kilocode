@@ -302,13 +302,13 @@
 }
 
 .am-pr-diff-line-add {
-  background: color-mix(in srgb, var(--vscode-testing-iconPassed, #34d399) 12%, transparent);
-  color: var(--vscode-testing-iconPassed, #34d399);
+  background: color-mix(in lab, var(--syntax-diff-add, #318430) 15%, transparent);
+  color: var(--syntax-diff-add, #318430);
 }
 
 .am-pr-diff-line-del {
-  background: color-mix(in srgb, var(--vscode-testing-iconFailed, #f87171) 12%, transparent);
-  color: var(--vscode-testing-iconFailed, #f87171);
+  background: color-mix(in lab, var(--syntax-diff-delete, #da3319) 15%, transparent);
+  color: var(--syntax-diff-delete, #da3319);
 }
 
 .am-pr-diff-line-meta {

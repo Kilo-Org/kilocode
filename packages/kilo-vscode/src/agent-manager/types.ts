@@ -396,16 +396,8 @@ interface PRErrorOutMessage {
   error: "gh_missing" | "gh_auth" | "fetch_failed"
 }
 
-interface ResolveCommentResultMessage {
-  type: "agentManager.resolveCommentResult"
-  worktreeId: string
-  threadId: string
-  success: boolean
-  error?: string
-}
-
-interface UnresolveCommentResultMessage {
-  type: "agentManager.unresolveCommentResult"
+interface CommentActionResultMessage {
+  type: "agentManager.resolveCommentResult" | "agentManager.unresolveCommentResult"
   worktreeId: string
   threadId: string
   success: boolean
@@ -452,8 +444,7 @@ export type AgentManagerOutMessage =
   | DiffBranchesMessage
   | PRStatusOutMessage
   | PRErrorOutMessage
-  | ResolveCommentResultMessage
-  | UnresolveCommentResultMessage
+  | CommentActionResultMessage
   | ActionOutMessage
   | RunStatusMessage
   | TerminalCreatedMessage
@@ -778,14 +769,8 @@ interface OpenPRIn {
   url?: string
 }
 
-interface ResolveCommentIn {
-  type: "agentManager.resolveComment"
-  worktreeId: string
-  threadId: string
-}
-
-interface UnresolveCommentIn {
-  type: "agentManager.unresolveComment"
+interface CommentActionIn {
+  type: "agentManager.resolveComment" | "agentManager.unresolveComment"
   worktreeId: string
   threadId: string
 }
@@ -1082,8 +1067,7 @@ export type AgentManagerInMessage =
   | SetDiffBaseBranchIn
   | RefreshPRIn
   | OpenPRIn
-  | ResolveCommentIn
-  | UnresolveCommentIn
+  | CommentActionIn
   | OpenSessionsIn
   | VisibleSessionIn
   | OpenFileIn
