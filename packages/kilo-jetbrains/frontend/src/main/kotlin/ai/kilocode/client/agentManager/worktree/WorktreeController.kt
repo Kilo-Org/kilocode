@@ -1,9 +1,11 @@
 package ai.kilocode.client.agentManager.worktree
 
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.util.edt
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
+import ai.kilocode.rpc.dto.CreateWorktreeResultDto
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.SessionActivityDto
 import ai.kilocode.rpc.dto.WorktreeDto
@@ -23,7 +25,7 @@ import java.util.Collections
  */
 class WorktreeController(
     private val service: KiloWorktreeService,
-    private val directory: String,
+    val directory: String,
     private val cs: CoroutineScope,
     activity: StateFlow<Map<String, SessionActivityDto>> = MutableStateFlow(emptyMap()),
     private val telemetry: (String, Map<String, String>) -> Unit = { event, props -> Telemetry.send(event, props) },
@@ -96,7 +98,14 @@ class WorktreeController(
     /** Creates a worktree immediately with a generated friendly name, based on [defaultBranch]. */
     fun quickCreate() = create(suggestName(), defaultBranch)
 
-    fun create(branch: String, base: String?) {
+    /** Imports a worktree that checks out an existing local branch. */
+    fun importBranch(branch: String) = create(branch, base = null, existingBranch = true)
+
+    /**
+     * Creates a worktree. When [prompt] is set, it is stashed for the worktree's first session so the
+     * editor auto-sends it once it opens (see [PendingWorktreePrompt]).
+     */
+    fun create(branch: String, base: String?, existingBranch: Boolean = false, prompt: String? = null) {
         val id = "pending:$branch:${System.nanoTime()}"
         val temp = WorktreeDto(id, branch, branch, id)
         edt {
@@ -105,22 +114,46 @@ class WorktreeController(
             onSelect?.invoke(temp.id)
         }
         cs.launch {
-            val result = service.create(directory, CreateWorktreeRequestDto(branch, base))
-            val created = result.worktree
-            edt {
-                pending.remove(temp.id)
-                val idx = model.getElementIndex(temp)
-                if (created != null) {
-                    if (idx >= 0) model.setElementAt(created, idx) else model.add(created)
-                    cache().put(created)
-                    onSelect?.invoke(created.id)
-                    telemetry("Worktree Created", mapOf("branch" to branch))
-                    return@edt
-                }
-                if (idx >= 0) model.remove(temp)
-                telemetry("Worktree Create Failed", mapOf("branch" to branch))
-                onCreateFailure?.invoke(result.error)
+            val result = service.create(directory, CreateWorktreeRequestDto(branch, base, existingBranch))
+            finishCreate(temp, branch, prompt, result)
+        }
+    }
+
+    fun importPr(url: String) {
+        val id = "pending:pr:${System.nanoTime()}"
+        val temp = WorktreeDto(id, KiloBundle.message("worktree.import.pr.section"), "", id)
+        edt {
+            pending[temp.id] = temp
+            model.add(temp)
+            onSelect?.invoke(temp.id)
+        }
+        cs.launch {
+            val result = service.importPr(directory, url)
+            finishCreate(temp, "pr", null, result)
+        }
+    }
+
+    private fun finishCreate(
+        temp: WorktreeDto,
+        branch: String,
+        prompt: String?,
+        result: CreateWorktreeResultDto,
+    ) {
+        val created = result.worktree
+        edt {
+            pending.remove(temp.id)
+            val idx = model.getElementIndex(temp)
+            if (created != null) {
+                if (idx >= 0) model.setElementAt(created, idx) else model.add(created)
+                cache().put(created)
+                prompt?.let { service<PendingWorktreePrompt>().put(created.path, it) }
+                onSelect?.invoke(created.id)
+                telemetry("Worktree Created", mapOf("branch" to branch))
+                return@edt
             }
+            if (idx >= 0) model.remove(temp)
+            telemetry("Worktree Create Failed", mapOf("branch" to branch))
+            onCreateFailure?.invoke(result.error)
         }
     }
 

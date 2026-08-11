@@ -32,6 +32,13 @@ interface KiloWorktreeRpcApi : RemoteApi<Unit> {
     suspend fun prStatus(directory: String): WorktreePrListDto
     suspend fun listBranches(directory: String): WorktreeBranchesDto
     suspend fun create(directory: String, request: CreateWorktreeRequestDto): CreateWorktreeResultDto
+
+    /**
+     * Imports a worktree from a GitHub pull request [url]. Resolves the PR's head branch via `gh`,
+     * fetches it (adding a fork remote for cross-repo PRs), then checks it out into a new worktree.
+     */
+    suspend fun importPr(directory: String, url: String): CreateWorktreeResultDto
+
     suspend fun remove(directory: String, path: String, branch: String? = null, force: Boolean = false): RemoveWorktreeResultDto
     suspend fun rename(directory: String, path: String, name: String): RenameWorktreeResultDto
 

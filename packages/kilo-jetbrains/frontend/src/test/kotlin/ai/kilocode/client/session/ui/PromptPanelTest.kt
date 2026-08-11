@@ -750,6 +750,43 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(sent)
     }
 
+    fun `test dialog prompt hides runtime submit and approve controls`() {
+        val panel = PromptPanel(
+            project = project,
+            onSend = { _, _ -> },
+            onAbort = {},
+            onEnhance = { _, _ -> },
+            rounded = false,
+            showSubmit = false,
+            approve = false,
+        )
+
+        assertFalse(components(panel).contains(panel.buttonForTest()))
+    }
+
+    fun `test hidden submit button still exposes send context from editor`() {
+        var sent: String? = null
+        val panel = PromptPanel(
+            project = project,
+            onSend = { text, _ -> sent = text },
+            onAbort = {},
+            onEnhance = { _, _ -> },
+            showSubmit = false,
+        )
+        val editor = panel.defaultFocusedComponent as EditorTextField
+        panel.setReady(true)
+        editor.text = "create it"
+
+        val sink = TestSink()
+        (editor as UiDataProvider).uiDataSnapshot(sink)
+        val send = sink.send as ai.kilocode.client.session.ui.prompt.SendPromptContext
+        assertTrue(send.isSendEnabled)
+        send.send()
+        waitForSend { sent != null }
+
+        assertEquals("create it", sent)
+    }
+
     fun `test submit resolves mentions from current text`() {
         var text: String? = null
         var sent: List<PromptPartDto>? = null

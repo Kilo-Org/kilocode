@@ -339,6 +339,47 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `create with existingBranch checks out an existing branch without creating one`() = runBlocking {
+        initRepo()
+        git(repo, "branch", "feature/x")
+
+        val result = api.create(repo.toString(), CreateWorktreeRequestDto("feature/x", existingBranch = true))
+        val created = assertNotNull(result.worktree, "existing-branch create failed: ${result.error}")
+
+        assertEquals("feature/x", created.branch)
+        assertTrue(Files.isDirectory(Path.of(created.path)))
+        val listed = api.list(repo.toString()).worktrees
+        assertTrue(listed.any { it.branch == "feature/x" }, "list should contain the imported branch")
+    }
+
+    @Test
+    fun `create with existingBranch fails for an unknown branch`() = runBlocking {
+        initRepo()
+
+        val result = api.create(repo.toString(), CreateWorktreeRequestDto("no-such-branch", existingBranch = true))
+
+        assertNull(result.worktree, "unknown branch should not create a worktree")
+        assertNotNull(result.error)
+    }
+
+    @Test
+    fun `parsePrUrl reads owner repo and number and rejects non-PR urls`() {
+        val ref = assertNotNull(parsePrUrl("https://github.com/Kilo-Org/kilocode/pull/12714"))
+        assertEquals("Kilo-Org", ref.owner)
+        assertEquals("kilocode", ref.repo)
+        assertEquals(12714, ref.number)
+
+        assertNull(parsePrUrl("https://github.com/Kilo-Org/kilocode/issues/1"))
+        assertNull(parsePrUrl("not a url"))
+    }
+
+    @Test
+    fun `parsePrHeadRef reads headRefName`() {
+        assertEquals("feature/login", parsePrHeadRef("""{"headRefName":"feature/login","title":"x"}"""))
+        assertEquals("", parsePrHeadRef("not json"))
+    }
+
+    @Test
     fun `parsePr reads title from gh output`() {
         val pull = assertNotNull(parsePr("/repo/.kilo/worktrees/feature-x", """
             {"number":12,"state":"OPEN","isDraft":false,"url":"https://example.test/pr/12","title":"  Fix login bug  "}

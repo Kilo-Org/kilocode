@@ -36,6 +36,10 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     var createResult: (CreateWorktreeRequestDto) -> CreateWorktreeResultDto = { req ->
         CreateWorktreeResultDto(WorktreeDto(req.branch, req.branch, req.branch, req.branch))
     }
+    val prImports = CopyOnWriteArrayList<String>()
+    var importPrResult: (String) -> CreateWorktreeResultDto = { url ->
+        CreateWorktreeResultDto(WorktreeDto(url, "pr", "pr", url))
+    }
     var removeResult: (String, String?, Boolean) -> RemoveWorktreeResultDto = { _, _, _ -> RemoveWorktreeResultDto(ok = true) }
     var renameResult: (String, String) -> RenameWorktreeResultDto = { path, name ->
         val idx = listed.indexOfFirst { it.path == path }
@@ -71,6 +75,13 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
         creates.add(request)
         beforeCreate()
         return createResult(request)
+    }
+
+    override suspend fun importPr(directory: String, url: String): CreateWorktreeResultDto {
+        assertNotEdt("importPr")
+        prImports.add(url)
+        beforeCreate()
+        return importPrResult(url)
     }
 
     override suspend fun remove(directory: String, path: String, branch: String?, force: Boolean): RemoveWorktreeResultDto {

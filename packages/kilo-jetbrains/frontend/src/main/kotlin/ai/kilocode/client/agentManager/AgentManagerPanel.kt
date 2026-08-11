@@ -1,7 +1,8 @@
 package ai.kilocode.client.agentManager
 
 import ai.kilocode.client.KiloNotifications
-import ai.kilocode.client.agentManager.worktree.ConfigureWorktreeDialog
+import ai.kilocode.client.app.KiloSessionService
+import ai.kilocode.client.agentManager.worktree.NewWorktreeDialog
 import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.WorktreeDataKeys
 import ai.kilocode.client.agentManager.worktree.WorktreeIcons
@@ -144,16 +145,23 @@ class AgentManagerPanel(
         project?.service<WorktreeStatusService>()?.refreshPr()
     }
 
-    /** Branch shown in the quick "New Worktree from …" menu item. */
-    fun defaultBranch(): String = controller.defaultBranch
-
-    /** Immediately creates a worktree with a generated friendly name off [defaultBranch]. */
-    fun quickCreate() = controller.quickCreate()
-
-    /** Opens the advanced dialog to pick a branch name and base branch. */
+    /** Opens the New Worktree dialog (New + Import tabs). */
     fun configure() {
-        val dialog = ConfigureWorktreeDialog(this, controller.suggestName(), controller.defaultBranch, controller.branches)
-        if (dialog.showAndGet()) controller.create(dialog.branch, dialog.baseBranch)
+        val target = project ?: return
+        NewWorktreeDialog(
+            this,
+            target,
+            controller.directory,
+            controller.suggestName(),
+            controller.defaultBranch,
+            controller.branches,
+            onCreate = { branch, base, prompt ->
+                controller.create(branch, base, prompt = prompt.takeIf { it.isNotEmpty() })
+            },
+            onImportPr = { url -> controller.importPr(url) },
+            onImportBranch = { branch -> controller.importBranch(branch) },
+            sessions = target.service<KiloSessionService>(),
+        ).show()
     }
 
     private fun remove(item: WorktreeDto, force: Boolean) {

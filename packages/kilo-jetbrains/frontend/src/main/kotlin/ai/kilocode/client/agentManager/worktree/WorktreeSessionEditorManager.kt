@@ -105,8 +105,20 @@ open class WorktreeSessionEditorManager(
         onListChanged?.invoke()
         list.create { session ->
             pending = false
-            if (session != null) openSession(SessionRef.Local(session), focus) else onListChanged?.invoke()
+            if (session != null) {
+                openSession(SessionRef.Local(session), focus)
+                consumePendingPrompt()
+            } else {
+                onListChanged?.invoke()
+            }
         }
+    }
+
+    /** Sends the New Worktree dialog's queued prompt into this worktree's first session, once. */
+    @RequiresEdt
+    private fun consumePendingPrompt() {
+        val text = service<PendingWorktreePrompt>().take(worktree.directory) ?: return
+        currentUi()?.submitPrompt(text)
     }
 
     @RequiresEdt

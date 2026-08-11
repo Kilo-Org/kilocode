@@ -117,30 +117,65 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             val base = Path.of(directory).normalize()
             val branch = request.branch.trim()
             if (branch.isEmpty()) return@withContext CreateWorktreeResultDto(error = "Branch name is required")
-            val dir = base.resolve(".kilo").resolve("worktrees").resolve(branch.replace('/', '-'))
-            Files.createDirectories(dir.parent)
-            val args = buildList {
-                addAll(listOf("worktree", "add", "-b", branch, dir.toString()))
-                request.baseBranch?.trim()?.takeIf { it.isNotEmpty() }?.let { add(it) }
+            addWorktree(base, branch, request.existingBranch, request.baseBranch)
+        }
+
+    override suspend fun importPr(directory: String, url: String): CreateWorktreeResultDto =
+        withContext(Dispatchers.IO) {
+            val base = Path.of(directory).normalize()
+            val ref = parsePrUrl(url) ?: return@withContext CreateWorktreeResultDto(error = "Enter a valid GitHub pull request URL")
+            when (ghAvailable(base)) {
+                GhAvailability.MISSING -> return@withContext CreateWorktreeResultDto(error = "GitHub CLI (gh) is not installed")
+                GhAvailability.UNAUTH -> return@withContext CreateWorktreeResultDto(error = "GitHub CLI (gh) is not authorized")
+                GhAvailability.OK -> Unit
             }
-            LOG.info("worktree create requested: branch=$branch base=${request.baseBranch ?: "(current)"} dir=$dir")
-            val res = runGit(base, *args.toTypedArray())
-            if (!res.ok) {
-                LOG.warn("worktree create failed: branch=$branch exit=${res.exit} stderr=${res.stderr.trim()}")
-                CreateWorktreeResultDto(error = res.stderr.ifBlank { "git worktree add failed" })
+            val view = runGh(base, "pr", "view", ref.number.toString(), "--repo", "${ref.owner}/${ref.repo}", "--json", "headRefName,title")
+            if (!view.ok) {
+                LOG.warn("pr import view failed: url=$url exit=${view.exit} stderr=${view.stderr.trim()}")
+                return@withContext CreateWorktreeResultDto(error = view.stderr.ifBlank { "gh pr view failed" })
+            }
+            val branch = parsePrHeadRef(view.stdout).ifBlank { "pr-${ref.number}" }
+            // The pull ref works for both same-repo and fork PRs without adding a fork remote; the
+            // leading '+' force-updates a stale local branch from a previous import attempt.
+            val fetch = runGit(base, "fetch", "origin", "+refs/pull/${ref.number}/head:$branch")
+            if (!fetch.ok) {
+                LOG.warn("pr import fetch failed: url=$url exit=${fetch.exit} stderr=${fetch.stderr.trim()}")
+                return@withContext CreateWorktreeResultDto(error = fetch.stderr.ifBlank { "git fetch failed" })
+            }
+            addWorktree(base, branch, existing = true, baseRef = null)
+        }
+
+    /** Runs `git worktree add` under `<base>/.kilo/worktrees/<slug>` and records list bookkeeping. */
+    private fun addWorktree(base: Path, branch: String, existing: Boolean, baseRef: String?): CreateWorktreeResultDto {
+        val dir = base.resolve(".kilo").resolve("worktrees").resolve(branch.replace('/', '-'))
+        Files.createDirectories(dir.parent)
+        val args = buildList {
+            addAll(listOf("worktree", "add"))
+            if (existing) {
+                add(dir.toString())
+                add(branch)
             } else {
-                LOG.info("worktree created: branch=$branch dir=$dir")
-                val path = dir.toRealPath().toString()
-                val list = runGit(base, "worktree", "list", "--porcelain")
-                val items = if (list.ok) managedWorktrees(parseWorktreeList(list.stdout)) else emptyList()
-                val store = worktreeNameStore(items) ?: base.resolve(".kilo").resolve(WORKTREE_NAMES_FILE)
-                val paths = worktreePaths(items).ifEmpty { listOf(path) }
-                appendWorktreeOrder(store, path, paths)
-                CreateWorktreeResultDto(
-                    worktree = WorktreeDto(path, dir.fileName.toString(), branch, path),
-                )
+                add("-b")
+                add(branch)
+                add(dir.toString())
+                baseRef?.trim()?.takeIf { it.isNotEmpty() }?.let { add(it) }
             }
         }
+        LOG.info("worktree add requested: branch=$branch existing=$existing base=${baseRef ?: "(current)"} dir=$dir")
+        val res = runGit(base, *args.toTypedArray())
+        if (!res.ok) {
+            LOG.warn("worktree add failed: branch=$branch exit=${res.exit} stderr=${res.stderr.trim()}")
+            return CreateWorktreeResultDto(error = res.stderr.ifBlank { "git worktree add failed" })
+        }
+        LOG.info("worktree created: branch=$branch dir=$dir")
+        val path = dir.toRealPath().toString()
+        val list = runGit(base, "worktree", "list", "--porcelain")
+        val items = if (list.ok) managedWorktrees(parseWorktreeList(list.stdout)) else emptyList()
+        val store = worktreeNameStore(items) ?: base.resolve(".kilo").resolve(WORKTREE_NAMES_FILE)
+        val paths = worktreePaths(items).ifEmpty { listOf(path) }
+        appendWorktreeOrder(store, path, paths)
+        return CreateWorktreeResultDto(worktree = WorktreeDto(path, dir.fileName.toString(), branch, path))
+    }
 
     override suspend fun remove(directory: String, path: String, branch: String?, force: Boolean): RemoveWorktreeResultDto =
         withContext(Dispatchers.IO) {
@@ -332,6 +367,23 @@ internal fun parsePr(path: String, raw: String): WorktreePrDto? {
         else -> GhState.OPEN
     }
     return WorktreePrDto(path, number, state, url, title)
+}
+
+internal data class PrRef(val owner: String, val repo: String, val number: Int)
+
+private val PR_URL = Regex("github\\.com[/:]([^/]+)/([^/]+?)(?:\\.git)?/pull/(\\d+)")
+
+/** Parses `https://github.com/<owner>/<repo>/pull/<n>` (and ssh-style hosts) into its parts. */
+internal fun parsePrUrl(url: String): PrRef? {
+    val match = PR_URL.find(url.trim()) ?: return null
+    val number = match.groupValues[3].toIntOrNull() ?: return null
+    return PrRef(match.groupValues[1], match.groupValues[2], number)
+}
+
+/** Reads `headRefName` out of a `gh pr view --json` payload. */
+internal fun parsePrHeadRef(raw: String): String {
+    val obj = runCatching { json.parseToJsonElement(raw) as? JsonObject }.getOrNull() ?: return ""
+    return obj["headRefName"]?.jsonPrimitive?.content?.trim().orEmpty()
 }
 
 private val json = Json { prettyPrint = true; ignoreUnknownKeys = true }

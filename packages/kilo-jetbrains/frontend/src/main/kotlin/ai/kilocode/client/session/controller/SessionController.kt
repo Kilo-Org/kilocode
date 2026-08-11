@@ -20,6 +20,7 @@ import ai.kilocode.client.session.model.Question
 import ai.kilocode.client.session.model.QuestionItem
 import ai.kilocode.client.session.model.QuestionOption
 import ai.kilocode.client.session.model.Reasoning
+import ai.kilocode.client.session.ui.mode.agentTitle
 import ai.kilocode.client.session.model.ToolCallRef
 import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.plugin.KiloPluginSettings
@@ -936,7 +937,7 @@ class SessionController(
                     model.agents = state.agents?.agents?.map {
                         AgentItem(
                             it.name,
-                            it.displayName ?: title(it.name),
+                            agentTitle(it.name, it.displayName),
                             it.description,
                             it.deprecated == true,
                         )
@@ -2492,12 +2493,6 @@ private fun summary(count: Int): String {
     if (count <= 1) return base
     return "$base ($count)"
 }
-
-private fun title(name: String): String = name
-    .split('-', '_')
-    .filter { it.isNotEmpty() }
-    .joinToString(" ") { it.replaceFirstChar { c -> c.titlecase() } }
-    .ifEmpty { name }
 
 private const val KILO_PROVIDER = "kilo"
 private const val KILO_AUTO_MODEL = "kilo-auto/free"

@@ -59,6 +59,9 @@ data class WorktreeBranchesDto(
 data class CreateWorktreeRequestDto(
     val branch: String,
     val baseBranch: String? = null,
+    // When true, check out an existing branch (`git worktree add <dir> <branch>`) instead of creating
+    // a new one (`-b`). Used by the Import tab to adopt an existing local/remote branch.
+    val existingBranch: Boolean = false,
 )
 
 @Serializable

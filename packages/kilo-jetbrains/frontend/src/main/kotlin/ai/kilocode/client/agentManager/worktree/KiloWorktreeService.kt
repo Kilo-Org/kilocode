@@ -69,6 +69,13 @@ class KiloWorktreeService internal constructor(
     suspend fun create(directory: String, req: CreateWorktreeRequestDto): CreateWorktreeResultDto =
         call { create(directory, req) }
 
+    suspend fun importPr(directory: String, url: String): CreateWorktreeResultDto = try {
+        call { importPr(directory, url) }
+    } catch (e: Exception) {
+        LOG.warn("worktree PR import failed for $url", e)
+        CreateWorktreeResultDto(error = e.message ?: "worktree PR import failed")
+    }
+
     suspend fun remove(directory: String, path: String, branch: String?, force: Boolean = false): RemoveWorktreeResultDto = try {
         call { remove(directory, path, branch, force) }
     } catch (e: Exception) {

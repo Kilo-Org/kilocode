@@ -3,6 +3,7 @@ package ai.kilocode.client.agentManager
 import ai.kilocode.client.agentManager.worktree.WorktreeIcons
 import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
 import ai.kilocode.client.agentManager.worktree.WorktreeController
+import ai.kilocode.client.agentManager.worktree.PendingWorktreePrompt
 import ai.kilocode.client.agentManager.worktree.WorktreeNameCache
 import ai.kilocode.client.agentManager.worktree.WorktreeNames
 import ai.kilocode.client.session.SessionActivityKind
@@ -272,6 +273,43 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertEquals("trunk", req.baseBranch)
         assertTrue("generated '${req.branch}'", req.branch.matches(Regex("[a-z]+-[a-z]+(-\\d+)?")))
         assertEquals(1, controller.model.size)
+    }
+
+    fun `test import branch creates a worktree on an existing branch`() {
+        val controller = controller()
+
+        ApplicationManager.getApplication().invokeAndWait { controller.importBranch("feature/x") }
+        flush()
+
+        val req = rpc.creates.single()
+        assertEquals("feature/x", req.branch)
+        assertTrue("should check out an existing branch", req.existingBranch)
+        assertEquals(1, controller.model.size)
+    }
+
+    fun `test import pr creates a worktree from the pr url`() {
+        rpc.importPrResult = { CreateWorktreeResultDto(WorktreeDto("/wt/pr-7", "pr-7", "pr-7", "/wt/pr-7")) }
+        val controller = controller()
+
+        ApplicationManager.getApplication().invokeAndWait { controller.importPr("https://github.com/o/r/pull/7") }
+        flush()
+
+        assertEquals(listOf("https://github.com/o/r/pull/7"), rpc.prImports)
+        assertEquals("/wt/pr-7", controller.model.getElementAt(0).path)
+    }
+
+    fun `test create stashes the prompt for the created worktree`() {
+        val controller = controller()
+
+        ApplicationManager.getApplication().invokeAndWait { controller.create("feature/y", null, prompt = "fix the bug") }
+        flush()
+
+        val created = controller.model.getElementAt(0)
+        ApplicationManager.getApplication().invokeAndWait {
+            assertEquals("fix the bug", service<PendingWorktreePrompt>().take(created.path))
+            // A one-shot take clears it.
+            assertNull(service<PendingWorktreePrompt>().take(created.path))
+        }
     }
 
     fun `test name generator avoids taken names`() {

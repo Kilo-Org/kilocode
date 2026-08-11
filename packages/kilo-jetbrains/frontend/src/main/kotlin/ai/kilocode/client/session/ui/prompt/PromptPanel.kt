@@ -113,6 +113,9 @@ class PromptPanel(
     private val completion: KiloPromptCompletionProvider? = null,
     private val selection: SessionSelection? = null,
     private val cs: CoroutineScope = CoroutineScope(Dispatchers.Default),
+    private val rounded: Boolean = true,
+    private val showSubmit: Boolean = true,
+    private val approve: Boolean = true,
 ) : BorderLayoutPanel(), SessionEditorStyleTarget, SendPromptContext, UiDataProvider {
 
     companion object {
@@ -308,13 +311,17 @@ class PromptPanel(
         bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
         bar.add(reset)
         bar.add(Box.createHorizontalGlue())
-        bar.add(auto)
-        bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
+        if (approve) {
+            bar.add(auto)
+            bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
+        }
         bar.add(enhance)
-        bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
-        bar.add(separator)
-        bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
-        bar.add(button)
+        if (showSubmit) {
+            bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
+            bar.add(separator)
+            bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
+            bar.add(button)
+        }
         shell.add(bar, BorderLayout.SOUTH)
         add(shell, BorderLayout.CENTER)
         addComponentListener(resize)
@@ -375,7 +382,7 @@ class PromptPanel(
             val left = half
             val right = width - half
             val bottom = height - half
-            val arc = if (IslandsState.isEnabled()) {
+            val arc = if (rounded && IslandsState.isEnabled()) {
                 JBUI.scale(JBUI.getInt("Island.arc", SessionUiStyle.View.Prompt.CORNER_ARC)) / 2f
             } else {
                 0f

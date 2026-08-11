@@ -24,6 +24,7 @@ import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import ai.kilocode.rpc.dto.WorktreeDto
+import com.intellij.openapi.components.service
 import com.intellij.openapi.ui.TestDialog
 import com.intellij.openapi.ui.TestDialogManager
 import com.intellij.openapi.util.Disposer
@@ -87,6 +88,21 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         assertEquals(1, rpc.creates)
         assertEquals(listOf(DIR to "ses_new"), created)
         assertEquals(1, requested.size)
+    }
+
+    fun `test new session sends the queued worktree prompt once`() {
+        rpc.session = session("ses_new", updated = 4.0).copy(title = "New session")
+        val manager = manager()
+        edt { service<PendingWorktreePrompt>().put(DIR, "fix the bug") }
+
+        edt { manager.newSession() }
+        waitUntil { rpc.prompts.any { it.first == "ses_new" } }
+
+        val sent = rpc.prompts.single { it.first == "ses_new" }
+        assertEquals(DIR, sent.second)
+        assertTrue("prompt parts should carry the typed text", sent.third.parts.any { it.text == "fix the bug" })
+        // The queued prompt is consumed once, so it is cleared after the first new session.
+        assertNull(edt { service<PendingWorktreePrompt>().take(DIR) })
     }
 
     fun `test open session shows selected session`() {

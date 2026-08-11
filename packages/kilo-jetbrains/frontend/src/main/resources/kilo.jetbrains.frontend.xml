@@ -188,9 +188,8 @@
         <action id="Kilo.NewSession"
                 class="ai.kilocode.client.actions.NewSessionAction"/>
 
-        <group id="Kilo.NewWorktree"
-               class="ai.kilocode.client.actions.NewWorktreeAction"
-               popup="true"/>
+        <action id="Kilo.NewWorktree"
+                class="ai.kilocode.client.actions.NewWorktreeAction"/>
 
         <action id="Kilo.History"
                 class="ai.kilocode.client.actions.HistoryAction"/>

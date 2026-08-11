@@ -285,6 +285,16 @@ class SessionUi(
 
     internal val promptFocusedComponent: JComponent get() = prompt.defaultFocusedComponent
 
+    /**
+     * Sends [text] as the session's first message. Used by the New Worktree flow to auto-start a
+     * session with the prompt typed in the dialog, routing through the same path as a typed prompt.
+     */
+    @RequiresEdt
+    internal fun submitPrompt(text: String) {
+        if (text.isBlank()) return
+        sendPrompt(text, emptyList())
+    }
+
     @RequiresEdt
     internal fun focusPrompt() {
         val target = prompt.defaultFocusedComponent
