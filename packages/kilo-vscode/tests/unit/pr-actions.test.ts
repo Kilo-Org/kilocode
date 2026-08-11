@@ -12,18 +12,17 @@ describe("resolveComment", () => {
   it("calls gh api graphql with resolveReviewThread mutation", async () => {
     execGhRead.mockResolvedValueOnce({ stdout: "{}", stderr: "" })
     await resolveComment("PRT_abc123", "/repo")
-    expect(execGhRead.mock.calls[0]?.[0]).toContain("api")
-    expect(execGhRead.mock.calls[0]?.[0]).toContain("graphql")
-    const queryArg = execGhRead.mock.calls[0]?.[0]?.find((a: string) => a.includes("resolveReviewThread"))
-    expect(queryArg).toBeDefined()
+    const args = execGhRead.mock.calls[0]?.[0] as string[]
+    expect(args).toContain("api")
+    expect(args).toContain("graphql")
+    expect(args.some((a) => a.includes("resolveReviewThread"))).toBe(true)
   })
 
   it("passes threadId as the id variable", async () => {
     execGhRead.mockResolvedValueOnce({ stdout: "{}", stderr: "" })
     await resolveComment("PRT_abc123", "/repo")
     const args = execGhRead.mock.calls[0]?.[0] as string[]
-    const idArg = args.find((a) => a.includes("PRT_abc123"))
-    expect(idArg).toBeDefined()
+    expect(args.some((a) => a.includes("PRT_abc123"))).toBe(true)
   })
 
   it("throws a clean error when gh fails", async () => {
@@ -38,8 +37,8 @@ describe("unresolveComment", () => {
   it("calls gh api graphql with unresolveReviewThread mutation", async () => {
     execGhRead.mockResolvedValueOnce({ stdout: "{}", stderr: "" })
     await unresolveComment("PRT_abc123", "/repo")
-    const queryArg = execGhRead.mock.calls[0]?.[0]?.find((a: string) => a.includes("unresolveReviewThread"))
-    expect(queryArg).toBeDefined()
+    const args = execGhRead.mock.calls[0]?.[0] as string[]
+    expect(args.some((a) => a.includes("unresolveReviewThread"))).toBe(true)
   })
 
   it("throws a clean error when gh fails", async () => {
