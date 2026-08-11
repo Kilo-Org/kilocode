@@ -455,6 +455,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
 
         assertTrue(edt { panel.canOpenPr(item) })
         assertFalse(edt { panel.canOpenPr(null) })
+        assertFalse(edt { panel.canRename(item) })
+        assertTrue(edt { panel.canShowRename(item) })
     }
 
     fun `test pr title replaces row name and tooltip reveals custom name`() {

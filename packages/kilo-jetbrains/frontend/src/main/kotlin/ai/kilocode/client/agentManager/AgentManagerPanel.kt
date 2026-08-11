@@ -164,6 +164,8 @@ class AgentManagerPanel(
 
     internal fun canRename(item: WorktreeDto?): Boolean = renameable(item)
 
+    internal fun canShowRename(item: WorktreeDto?): Boolean = renameVisible(item)
+
     private fun beginRename(item: WorktreeDto, cell: String? = null) {
         list.rename(
             item.id,
@@ -243,6 +245,11 @@ class AgentManagerPanel(
     }
 
     private fun renameable(item: WorktreeDto?): Boolean {
+        if (!renameVisible(item)) return false
+        return prUrl(item) == null
+    }
+
+    private fun renameVisible(item: WorktreeDto?): Boolean {
         if (item == null || item.main) return false
         return !controller.isPending(item.id) && !controller.isDeleting(item.id)
     }

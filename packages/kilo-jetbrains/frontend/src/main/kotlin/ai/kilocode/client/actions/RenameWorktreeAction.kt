@@ -12,7 +12,9 @@ class RenameWorktreeAction : AnAction() {
     override fun update(e: AnActionEvent) {
         val panel = e.getData(SidePanelKeys.WORKTREE_PANEL)
         val item = e.getData(WorktreeDataKeys.WORKTREE)
-        e.presentation.isEnabledAndVisible = panel != null && panel.canRename(item)
+        val visible = panel != null && panel.canShowRename(item)
+        e.presentation.isVisible = visible
+        e.presentation.isEnabled = visible && panel.canRename(item)
     }
 
     override fun actionPerformed(e: AnActionEvent) {
