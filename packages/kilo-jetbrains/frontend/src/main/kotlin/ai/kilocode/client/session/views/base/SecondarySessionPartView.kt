@@ -18,8 +18,6 @@ abstract class SecondarySessionPartView(
         expandable: Boolean = true,
     ) : this(header, { content }, expanded, expandable)
     init {
-        row.isOpaque = true
-        row.background = SessionUiStyle.View.Surface.headerBgColor()
         row.border = JBUI.Borders.empty(
             JBUI.scale(SessionUiStyle.View.Layout.VERTICAL_PADDING),
             SessionUiStyle.View.Header.left(),

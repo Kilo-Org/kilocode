@@ -60,14 +60,19 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         val root = find<SessionRootPanel>(ui)
         val pane = scrollComponent() as JBScrollPane
 
-        assertEquals(bg, ui.background)
-        assertEquals(bg, root.content.background)
-        assertEquals(bg, pane.background)
-        assertEquals(bg, pane.viewport.background)
+        // One opaque backdrop, self-rendered from the theme at first paint (no applyStyle push).
+        assertTrue(root.isOpaque)
+        assertEquals(bg, root.background)
+        // Intermediate containers stay transparent over that single backdrop.
+        assertFalse(root.content.isOpaque)
+        assertFalse(pane.isOpaque)
+        assertFalse(pane.viewport.isOpaque)
 
         showMessages()
 
-        assertEquals(bg, find<SessionMessageListPanel>(ui).background)
+        val messages = find<SessionMessageListPanel>(ui)
+        assertFalse(messages.isOpaque)
+        assertEquals(bg, root.background)
     }
 
     fun `test prompt is docked and connection is overlaid`() {

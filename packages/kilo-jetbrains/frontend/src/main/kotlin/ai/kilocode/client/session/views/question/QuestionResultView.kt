@@ -40,20 +40,28 @@ class QuestionResultView(tool: Tool, private val selection: SessionSelection? = 
     private val root = object : JPanel(BorderLayout()) {
         override fun updateUI() {
             super.updateUI()
-            isOpaque = true
-            background = SessionUiStyle.View.Surface.bgColor()
+            isOpaque = false
             border = JBUI.Borders.empty(1)
         }
     }
     private val header = object : JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.Layout.GAP), 0)) {
+        var isHovered = false
+
         override fun updateUI() {
             super.updateUI()
             isOpaque = true
-            background = SessionUiStyle.View.Surface.headerBgColor()
             border = JBUI.Borders.empty(
                 JBUI.scale(SessionUiStyle.View.Layout.VERTICAL_PADDING),
                 JBUI.scale(SessionUiStyle.View.Layout.HORIZONTAL_PADDING),
             )
+        }
+
+        override fun getBackground(): Color {
+            return if (isHovered) {
+                SessionUiStyle.View.Surface.headerHoverBgColor()
+            } else {
+                SessionUiStyle.View.Surface.headerBgColor()
+            }
         }
     }
     private val glyph = JBLabel(SessionViewIcons.bubble)
@@ -169,8 +177,7 @@ class QuestionResultView(tool: Tool, private val selection: SessionSelection? = 
         val panel = object : JPanel() {
             override fun updateUI() {
                 super.updateUI()
-                isOpaque = true
-                background = SessionUiStyle.View.Surface.bgColor()
+                isOpaque = false
                 border = JBUI.Borders.compound(
                     JBUI.Borders.customLine(
                         SessionUiStyle.View.Outline.brightColor(),
@@ -291,12 +298,11 @@ class QuestionResultView(tool: Tool, private val selection: SessionSelection? = 
 
     override fun setHovered(value: Boolean) {
         hover?.invoke(this, value)
-        val color =
-            if (value) SessionUiStyle.View.Surface.headerHoverBgColor() else SessionUiStyle.View.Surface.headerBgColor()
-        if (header.background?.rgb != color.rgb) {
-            header.background = color
-            header.repaint()
-        }
+        val old = header.background
+        header.isHovered = value
+        val color = header.background
+        if (old.rgb == color.rgb) return
+        header.repaint()
     }
 
     private fun syncBorder() {

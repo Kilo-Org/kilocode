@@ -5,7 +5,6 @@ import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
-import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.ui.components.JBLabel
@@ -41,6 +40,9 @@ internal class SessionScroll(
         border = JBUI.Borders.empty()
         verticalScrollBarPolicy = JBScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED
         horizontalScrollBarPolicy = JBScrollPane.HORIZONTAL_SCROLLBAR_NEVER
+        // Transparent over the self-rendered SessionUi backdrop; the message list paints its own.
+        isOpaque = false
+        viewport.isOpaque = false
     }
 
     internal val bar: JScrollBar get() = component.verticalScrollBar
@@ -224,9 +226,6 @@ internal class SessionScroll(
     @RequiresEdt
     fun applyStyle(style: SessionEditorStyle) {
         this.style = style
-        val bg = SessionUiStyle.Colors.sessionBackground()
-        component.background = bg
-        component.viewport.background = bg
         syncIcon()
         messages.applyStyle(style)
         val view = component.viewport.view

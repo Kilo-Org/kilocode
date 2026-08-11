@@ -11,10 +11,6 @@ abstract class PrimarySessionPartView(
     expandable: Boolean = true,
 ) : AbstractSessionPartView(header, content, expanded, expandable) {
     init {
-        isOpaque = true
-        background = SessionUiStyle.View.Surface.bgColor()
-        row.isOpaque = true
-        row.background = SessionUiStyle.View.Surface.headerBgColor()
         row.border = JBUI.Borders.empty(
             JBUI.scale(SessionUiStyle.View.Layout.VERTICAL_PADDING),
             SessionUiStyle.View.Header.left(),

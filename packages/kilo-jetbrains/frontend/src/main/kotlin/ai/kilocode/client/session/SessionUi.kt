@@ -101,7 +101,6 @@ import java.nio.file.Path
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.SwingUtilities
-import javax.swing.UIManager
 
 /**
  * Top-level session UI composition root.
@@ -208,8 +207,6 @@ class SessionUi(
             return listOf(text)
         }
     }
-    private var editorTheme = style.editorScheme
-    private var colorTheme = UIManager.getLookAndFeel()
     private var wasBusy = false
     // Kept separate so a background stat refresh (turn end / revert) can supersede another refresh
     // but never cancel an in-flight user-initiated open.
@@ -234,10 +231,6 @@ class SessionUi(
     override fun addNotify() {
         if (disposed) return
         super.addNotify()
-        // First realized paint: the constructor's applyStyle can run before the tool window is
-        // attached, when panel/editor colors are still provisional. Re-apply from the live scheme
-        // so the session is styled correctly without needing a theme toggle to trigger it.
-        applyStyle(SessionEditorStyle.current())
         resumeOpen()
     }
 
@@ -306,6 +299,7 @@ class SessionUi(
 
     private fun buildUi() {
         root = SessionRootPanel()
+        // Containers stay transparent over the single self-rendered session root backdrop.
         fileLinks = SessionFileLinks(workspace.directory, workspaces, cs, root, ::openUrl)
         SessionContextMenu.install(root, this)
 
@@ -344,9 +338,9 @@ class SessionUi(
             overlay.bounds(pane, child)
         }
 
-        sessionContent = JPanel(BorderLayout())
+        sessionContent = JPanel(BorderLayout()).apply { isOpaque = false }
 
-        blankBody = JPanel(BorderLayout())
+        blankBody = JPanel(BorderLayout()).apply { isOpaque = false }
 
         load = LoadingPanel()
         progressBody = load
@@ -627,11 +621,7 @@ class SessionUi(
     private fun bindStyle() {
         addHierarchyListener { event ->
             if ((event.changeFlags and HierarchyEvent.SHOWING_CHANGED.toLong()) == 0L) return@addHierarchyListener
-            if (!isShowing) {
-                popup.hideAll()
-                return@addHierarchyListener
-            }
-            applyStyleIfThemeChanged()
+            if (!isShowing) popup.hideAll()
         }
 
         val bus = ApplicationManager.getApplication().messageBus.connect(this)
@@ -990,14 +980,6 @@ class SessionUi(
         if (disposed) return
         this.style = style
         selection.applyStyle(style)
-        editorTheme = style.editorScheme
-        colorTheme = UIManager.getLookAndFeel()
-        val bg = SessionUiStyle.Colors.sessionBackground()
-        background = bg
-        root.background = bg
-        root.content.background = bg
-        sessionContent.background = bg
-        blankBody.background = bg
         load.applyStyle(style)
         header.applyStyle(style)
         prompt.applyStyle(style)
@@ -1005,14 +987,6 @@ class SessionUi(
         scroll.applyStyle(style)
         empty?.applyStyle(style)
         refresh()
-    }
-
-    private fun applyStyleIfThemeChanged() {
-        if (disposed) return
-        val next = SessionEditorStyle.current()
-        val laf = UIManager.getLookAndFeel()
-        if (editorTheme === next.editorScheme && colorTheme == laf) return
-        applyStyle(next)
     }
 
     private fun openProfileSettings() {

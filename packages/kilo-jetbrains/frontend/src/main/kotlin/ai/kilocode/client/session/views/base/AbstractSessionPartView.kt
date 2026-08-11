@@ -31,7 +31,7 @@ abstract class AbstractSessionPartView(
     ) : this(header, { body }, expanded, expandable)
 
     protected val arrow = JBLabel()
-    protected val row = JPanel(BorderLayout(SessionUiStyle.View.Header.gap(), 0))
+    protected val row = Row()
     private val bound = linkedSetOf<Component>()
     private val watched = linkedSetOf<Component>()
     private var body: JComponent? = null
@@ -148,10 +148,23 @@ abstract class AbstractSessionPartView(
 
     override fun setHovered(value: Boolean) {
         hover?.invoke(this, value)
-        val color = hoverColor(value) ?: return
-        if (row.background?.rgb == color.rgb) return
-        row.background = color
+        val old = row.background
+        row.isHovered = value
+        val color = row.background
+        if (old.rgb == color.rgb) return
         row.repaint()
+    }
+
+    protected inner class Row : JPanel(BorderLayout(SessionUiStyle.View.Header.gap(), 0)) {
+        var isHovered = false
+
+        override fun isOpaque(): Boolean {
+            return hoverColor(false) != null
+        }
+
+        override fun getBackground(): Color {
+            return hoverColor(isHovered) ?: super.getBackground()
+        }
     }
 
     private fun inside(e: MouseEvent): Boolean {

@@ -1,7 +1,6 @@
 package ai.kilocode.client.session.ui
 
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import ai.kilocode.client.ui.UiStyle
 import com.intellij.icons.AllIcons
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBLabel
@@ -35,8 +34,9 @@ class SessionRootPanelTest : BasePlatformTestCase() {
     fun `test blocker is opaque and uses session background`() {
         val root = SessionRootPanel()
 
+        assertTrue(root.isOpaque)
+        assertEquals(SessionUiStyle.Colors.sessionBackground(), root.background)
         assertTrue(root.blocker.isOpaque)
-        assertEquals(UiStyle.Colors.bg(), SessionUiStyle.Colors.sessionBackground())
         assertEquals(SessionUiStyle.Colors.sessionBackground(), root.blocker.background)
     }
 

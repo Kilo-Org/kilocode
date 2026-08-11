@@ -1,11 +1,11 @@
 package ai.kilocode.client.session.ui.style
 
 import ai.kilocode.client.ui.UiStyle
-import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.Color
+import javax.swing.UIManager
 
 /** Static style tokens owned by the chat session UI. */
 object SessionUiStyle {
@@ -18,14 +18,26 @@ object SessionUiStyle {
     object Colors {
         private const val HINT_BOOST = 0.35f
 
+        /**
+         * Fallback recess applied to the editor background only if the panel-background key is ever
+         * missing. [sessionBackground] normally follows the panel background; this keeps it from
+         * falling through to `JBColor.PanelBackground`'s hardcoded white while defaults are provisional.
+         */
+        private const val SESSION_DELTA = 8
+
+        /** Whole session backdrop: follows the panel (chrome) background, distinct from raised surfaces. */
         fun sessionBackground(): Color = JBColor.namedColor(
             "Kilo.Session.background",
-            UiStyle.Colors.bg(),
+            JBColor.lazy {
+                UIManager.getColor("Panel.background")
+                    ?: UiStyle.Colors.contrast(UiStyle.Colors.editorBackground(), SESSION_DELTA)
+            },
         )
 
+        /** Single raised surface (code blocks, tool/shell output, prompt bubble, prompt input): the editor background. */
         fun codeBlockBackground(): Color = JBColor.namedColor(
             "Kilo.Session.codeBlockBackground",
-            JBColor.lazy { UiStyle.Colors.codeBlockBackground(EditorColorsManager.getInstance().globalScheme) },
+            UiStyle.Colors.editorBackground(),
         )
 
         fun foreground(): Color = JBColor.namedColor(
