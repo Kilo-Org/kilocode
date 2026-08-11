@@ -276,7 +276,7 @@ describe("memory TUI events", () => {
     expect(handlers).toEqual({ "memory.error": [expect.any(Function)] })
   })
 
-  test("keeps generic and detailed errors visible", async () => {
+  test("suppresses transient errors while keeping generic and detailed errors visible", async () => {
     const shown: string[] = []
     const handlers: Record<string, Handler[]> = {}
     MemoryTuiEvents.attach({
@@ -296,6 +296,17 @@ describe("memory TUI events", () => {
     await Promise.all(
       (handlers["memory.error"] ?? []).map((fn) =>
         fn({ properties: { sessionID: "ses_tui_memory", reason: "model failed" } }),
+      ),
+    )
+    await Promise.all(
+      (handlers["memory.error"] ?? []).map((fn) =>
+        fn({
+          properties: {
+            sessionID: "ses_tui_memory",
+            reason: "transient",
+            detail: { message: "Memory model timed out" },
+          },
+        }),
       ),
     )
     await Promise.all(

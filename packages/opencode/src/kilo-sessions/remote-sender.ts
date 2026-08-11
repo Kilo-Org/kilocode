@@ -345,9 +345,7 @@ export namespace RemoteSender {
     // bus listener count from inflating for senders that never handle
     // attachments (the count would otherwise show up in unrelated tests
     // that assert it stays at 0).
-    const attachments =
-      options.attachments ??
-      ((sessionID: SessionID) => RemoteAttachments.create({ sessionID }))
+    const attachments = options.attachments ?? ((sessionID: SessionID) => RemoteAttachments.create({ sessionID }))
     const attachmentCache = new Map<SessionID, RemoteAttachments.Result>()
     const pending = new Map<SessionID, number>()
     const retired = new Map<SessionID, RemoteAttachments.Result>()
@@ -886,27 +884,27 @@ export namespace RemoteSender {
         return
       }
       // kilocode_change end
+      // kilocode_change start - sessionless list_models for the pre-session instance picker
       if (msg.command === "list_models") {
         const parsed = RemoteModelCatalog.Request.safeParse(msg.data)
-        const session = msg.sessionId ? decodeSessionID(msg.sessionId) : Option.none<SessionID>()
-        if (!parsed.success || Option.isNone(session)) {
-          options.conn.send({
-            type: "response",
-            id: msg.id,
-            error: "invalid list_models command",
-          })
+        // Accept an absent sessionId (the mobile instance-picker path asks for the
+        // instance's catalog before a session exists). A present but undecodable
+        // sessionId is still invalid.
+        const target = msg.sessionId ? decodeSessionID(msg.sessionId) : Option.none<SessionID>()
+        if (!parsed.success || (msg.sessionId && Option.isNone(target))) {
+          options.conn.send({ type: "response", id: msg.id, error: "invalid list_models command" })
           return
         }
         const run = options.provide ?? provide
         void (async () => {
           try {
-            const info = await catalog.get(session.value)
+            const info = Option.isSome(target) ? await catalog.get(target.value) : undefined
             const result = await run({
-              directory: info.directory,
+              directory: info?.directory ?? options.directory,
               fn: async () => {
                 const [providers, messages, fallback] = await Promise.all([
                   catalog.providers(),
-                  catalog.messages(info.id),
+                  info ? catalog.messages(info.id) : Promise.resolve([]),
                   catalog.default().catch((err) => {
                     options.log.warn("default model lookup failed", { error: String(err) })
                     return undefined
@@ -914,7 +912,7 @@ export namespace RemoteSender {
                 ])
                 return RemoteModelCatalog.build({
                   providers,
-                  session: info,
+                  session: info ?? {},
                   messages,
                   defaultModel: fallback,
                 })
@@ -928,6 +926,7 @@ export namespace RemoteSender {
         })()
         return
       }
+      // kilocode_change end
       if (msg.command === "send_message") {
         const parsed = getRemotePromptInput().safeParse(msg.data)
         if (!parsed.success) {

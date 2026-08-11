@@ -127,6 +127,43 @@ describe("KiloProvider memory events", () => {
     expect(calls).toEqual(["/repo", "/repo"])
   })
 
+  it("refreshes status without forwarding transient memory errors", async () => {
+    const calls: string[] = []
+    const posts: unknown[] = []
+    const client = {
+      memory: {
+        status: async (input: { directory: string }) => {
+          calls.push(input.directory)
+          return { data: status(input.directory) }
+        },
+      },
+    } as unknown as KiloClient
+    const provider = new KiloProvider(
+      {} as never,
+      {
+        getClient: () => client,
+      } as never,
+    )
+    const item = provider as unknown as Internals
+    item.webview = { postMessage: async (message) => posts.push(message) }
+    item.currentSession = { id: "ses_active" }
+    item.trackedSessionIds.add("ses_active")
+    provider.setSessionDirectory("ses_active", "/repo")
+
+    item.handleEvent(
+      {
+        type: "memory.error",
+        properties: { sessionID: "ses_active", reason: "transient" },
+      },
+      "/repo",
+    )
+    await item.memory.idle()
+
+    expect(posts).not.toContainEqual(expect.objectContaining({ type: "memoryEvent" }))
+    expect(posts).toContainEqual(expect.objectContaining({ type: "memoryLoaded", sessionID: "ses_active" }))
+    expect(calls).toEqual(["/repo"])
+  })
+
   it("uses the project directory when toggling memory", async () => {
     const calls: unknown[] = []
     const client = {

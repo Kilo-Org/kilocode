@@ -1,5 +1,6 @@
 package ai.kilocode.client.settings.context
 
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.rpc.dto.CompactionPatchDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
@@ -9,6 +10,7 @@ internal data class ContextDraft(
     val auto: Boolean = false,
     val threshold: String = "",
     val prune: Boolean = false,
+    val editor: Boolean = KiloPluginSettings.getAutoEditorContext(),
     val ignore: List<String> = emptyList(),
 )
 
@@ -21,6 +23,7 @@ internal fun contextDraft(config: ConfigDto?): ContextDraft = ContextDraft(
     auto = config?.compaction?.auto ?: false,
     threshold = config?.compaction?.threshold_percent?.let(::formatThreshold).orEmpty(),
     prune = config?.compaction?.prune ?: false,
+    editor = KiloPluginSettings.getAutoEditorContext(),
     ignore = config?.watcher?.ignore ?: emptyList(),
 )
 
@@ -38,7 +41,10 @@ internal fun savedMatches(base: ContextDraft, draft: ContextDraft): Boolean =
     base.auto == draft.auto &&
         normalizeThreshold(base.threshold) == normalizeThreshold(draft.threshold) &&
         base.prune == draft.prune &&
+        base.editor == draft.editor &&
         base.ignore == draft.ignore
+
+internal fun localChanged(base: ContextDraft, draft: ContextDraft): Boolean = base.editor != draft.editor
 
 internal fun thresholdStatus(value: String): ThresholdStatus {
     val text = value.trim()
