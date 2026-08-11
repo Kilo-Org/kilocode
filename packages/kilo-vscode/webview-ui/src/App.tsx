@@ -11,6 +11,7 @@ import { LocalTabsProvider, useLocalTabs } from "./context/local-tabs"
 import { ProviderShell } from "./context/provider-shell"
 import { ChatView } from "./components/chat"
 import { SidebarEmptyState } from "./components/chat/SidebarEmptyState"
+import { SidebarTopBar } from "./components/chat/SidebarTopBar"
 import { registerExpandedTaskTool } from "./components/chat/TaskToolExpanded"
 import { registerVscodeToolOverrides } from "./components/chat/VscodeToolOverrides"
 
@@ -308,8 +309,26 @@ const AppContent: Component = () => {
     <SidebarEmptyState onSelectSession={handleSelectSession} onShowHistory={() => setCurrentView("history")} />
   )
 
+  // Set synchronously in the webview HTML by KiloProvider so it's available
+  // before this component ever mounts (see buildWebviewHtml/_getHtmlForWebview).
+  // False for dedicated single-purpose panels (Settings, Profile, Sub-Agent
+  // Viewer) always, and for the Sidebar/"Open in Tab" outside Cursor — real
+  // VS Code's native title bar toolbar already covers those. Defaults to
+  // true only when unset entirely (e.g. Storybook, which doesn't render the
+  // real page HTML).
+  const host = window as { KILO_TOP_BAR?: boolean; KILO_TOP_BAR_SURFACE?: string }
+  const showTopBar = host.KILO_TOP_BAR !== false
+  const topBarSurface = host.KILO_TOP_BAR_SURFACE ?? "sidebar_title"
+
   return (
     <div class="container">
+      <Show when={showTopBar}>
+        <SidebarTopBar
+          onNewTask={() => handleViewAction("plusButtonClicked")}
+          onHistory={() => handleViewAction("historyButtonClicked")}
+          surface={topBarSurface}
+        />
+      </Show>
       {/* legacy-migration start — state-driven overlay, independent of currentView */}
       <Show
         when={migrationNeeded()}

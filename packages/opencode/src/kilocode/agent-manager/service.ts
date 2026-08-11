@@ -53,7 +53,7 @@ export interface Interface {
 
 export class Service extends Context.Service<Service, Interface>()("@kilocode/AgentManager") {}
 
-export function layer(timeout: Duration.Input = "10 seconds") {
+export function layer(timeout: Duration.Input = "60 seconds") {
   return Layer.effect(
     Service,
     Effect.gen(function* () {

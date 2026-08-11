@@ -18,7 +18,7 @@ import type { AgentManagerSidebarTarget } from "./webview-messages"
 import type { PermissionRequest } from "./permissions"
 import type { AnacondaDesktopExtensionMessage } from "../../../../src/shared/anaconda-desktop-messages"
 import type { QuestionRequest, SuggestionRequest, TodoItem } from "./questions"
-import type { ModelSelection, Provider, ProviderAuthState } from "./providers"
+import type { ModelSelection, ModelUsageMap, Provider, ProviderAuthState } from "./providers"
 import type { SpeechToTextModelDef } from "../../../../src/speech-to-text/models"
 import type { AgentInfo, AgentRequirementResult, SkillInfo, SlashCommandInfo } from "./agents"
 import type {
@@ -148,6 +148,7 @@ export interface SessionTurnClosedMessage {
 
 export interface SessionErrorMessage {
   type: "sessionError"
+  eventID: string
   sessionID?: string
   error?: { name: string; data?: Record<string, unknown> }
 }
@@ -660,6 +661,11 @@ export interface ThroughputSettingLoadedMessage {
   visible: boolean
 }
 
+export interface AutoApprovalReasonSettingLoadedMessage {
+  type: "autoApprovalReasonSettingLoaded"
+  visible: boolean
+}
+
 export interface WorkStyleLoadedMessage {
   type: "workStyleLoaded"
   style: WorkStyleState
@@ -745,6 +751,7 @@ export interface AgentManagerStateMessage {
   /** Last selected sidebar target for seamless project-switch restore. */
   activeTarget?: AgentManagerSidebarTarget
   terminalDestination?: TerminalDestination
+  terminalFont?: TerminalFont
 }
 
 // A registered Agent Manager project as shown in the sidebar
@@ -784,9 +791,9 @@ export interface AgentManagerProjectSessionsMessage {
 
 export interface AgentManagerTerminalCreatedMessage {
   type: "agentManager.terminal.created"
-  /** Correlates with the create request; lets the webview spot stale
-   *  creates. Deliberately not named `requestId`: that field name is the
-   *  generic webview request/response correlation channel. */
+  /** Logical terminal id selected by the webview before PTY startup.
+   *  Deliberately not named `requestId`: that field name is the generic
+   *  webview request/response correlation channel. */
   createId: string
   placement: TerminalPlacement
   /** null for LOCAL, worktree id otherwise */
@@ -919,6 +926,11 @@ export interface RecentsLoadedMessage {
   recents: ModelSelection[]
 }
 
+export interface ModelUsageLoadedMessage {
+  type: "modelUsageLoaded"
+  usage: ModelUsageMap
+}
+
 // Persisted model-selector expand/collapse preference (extension → webview)
 export interface ModelSelectorExpandedLoadedMessage {
   type: "modelSelectorExpandedLoaded"
@@ -946,6 +958,7 @@ export interface AgentManagerBranchesMessage {
 // Agent Manager Import tab: result feedback (extension → webview)
 export interface AgentManagerImportResultMessage {
   type: "agentManager.importResult"
+  projectId?: string
   success: boolean
   message: string
   errorCode?: WorktreeErrorCode
@@ -1032,6 +1045,11 @@ export interface AgentManagerPRStatusMessage {
   worktreeId: string
   pr: PRStatus | null
   error?: "gh_missing" | "gh_auth" | "fetch_failed"
+}
+
+export interface AgentManagerPRErrorMessage {
+  type: "agentManager.prError"
+  error: "gh_missing" | "gh_auth" | "fetch_failed"
 }
 
 // Sidebar: Live worktree diff stats (extension → webview)
@@ -1297,6 +1315,7 @@ export type ExtensionMessage =
   | MessagesLoadedMessage
   | SessionModelUsageLoadedMessage
   | SessionModelUsageChangedMessage
+  | ModelUsageLoadedMessage
   | MessageCreatedMessage
   | SessionsLoadedMessage
   | CloudSessionsLoadedMessage
@@ -1351,6 +1370,7 @@ export type ExtensionMessage =
   | NotificationSettingsLoadedMessage
   | TimelineSettingLoadedMessage
   | ThroughputSettingLoadedMessage
+  | AutoApprovalReasonSettingLoadedMessage
   | WorkStyleLoadedMessage
   | WorkStyleAppliedMessage
   | WorkStyleApplyFailedMessage
@@ -1397,6 +1417,7 @@ export type ExtensionMessage =
   | AgentManagerWorktreeStatsMessage
   | AgentManagerLocalStatsMessage
   | AgentManagerPRStatusMessage
+  | AgentManagerPRErrorMessage
   | AgentManagerTerminalCreatedMessage
   | AgentManagerTerminalRestartedMessage
   | AgentManagerTerminalFontChangedMessage

@@ -4,15 +4,21 @@
 
 .prompt-rail {
   --prompt-rail-width: 16px;
-  --prompt-rail-gap: 8px;
   --prompt-rail-step: 14px;
   --prompt-rail-ease: cubic-bezier(0.22, 1, 0.36, 1);
 
+  /* Clears the pane splitter. Agent Manager's sidebar resize handle is 8px wide
+     and straddles the boundary, so it reaches 4px into the transcript; without
+     this gutter, aiming slightly wide of the splitter lands on a tick instead of
+     starting a drag. */
+  --prompt-rail-edge: 8px;
+
   position: absolute;
-  inset-inline-start: max(
-    0px,
-    calc(50% - var(--chat-readable-width) / 2 - var(--prompt-rail-width) - var(--prompt-rail-gap))
-  );
+  /* Against the panel edge rather than tracking the readable lane: on a wide
+     editor tab the lane is centered, so a lane-hugging rail would sit right
+     next to the prose the pointer travels over and open on the way past. The
+     far edge is somewhere the pointer only goes deliberately. */
+  inset-inline-start: var(--prompt-rail-edge);
   top: 0;
   bottom: 0;
   width: var(--prompt-rail-width);
@@ -51,15 +57,21 @@
   outline: none;
 }
 
+/* Ticks grow by transform, not by width and height: a rail can hold a hundred
+   of them, and a compositor-only transition keeps the hover response smooth
+   instead of laying out the line on every frame. The box is the full 16px x 2px
+   target and the resting scale draws it as the 9px x 1.5px hairline. */
 .prompt-rail-tick-line {
   display: block;
-  height: 1.5px;
-  width: 9px;
+  height: 2px;
+  width: var(--prompt-rail-width);
   border-radius: 1px;
   background: var(--icon-base);
   opacity: 0.7;
+  transform: scale(0.5625, 0.75);
+  transform-origin: left center;
   transition:
-    width 0.24s var(--prompt-rail-ease),
+    transform 0.24s var(--prompt-rail-ease),
     opacity 0.2s var(--prompt-rail-ease),
     background-color 0.2s var(--prompt-rail-ease),
     box-shadow 0.2s var(--prompt-rail-ease);
@@ -70,8 +82,18 @@
   opacity: 0.5;
 }
 
+/* The summary tick keeps a real width: scaling would squash its dash pattern
+   along with it. At most a couple of these exist, so the width transition is
+   free here. */
 .prompt-rail-tick--overflow .prompt-rail-tick-line {
   width: 6px;
+  transform: scale(1, 0.75);
+  transition:
+    width 0.24s var(--prompt-rail-ease),
+    transform 0.24s var(--prompt-rail-ease),
+    opacity 0.2s var(--prompt-rail-ease),
+    background-color 0.2s var(--prompt-rail-ease),
+    box-shadow 0.2s var(--prompt-rail-ease);
   background: repeating-linear-gradient(
     to right,
     var(--icon-weaker) 0,
@@ -83,23 +105,32 @@
 
 /* Scroll position: subtle, always-on cue. */
 .prompt-rail-tick--active .prompt-rail-tick-line {
-  width: 13px;
+  transform: scale(0.8125, 0.75);
   opacity: 1;
   background: var(--icon-strong-base);
+}
+
+.prompt-rail-tick--overflow.prompt-rail-tick--active .prompt-rail-tick-line {
+  width: 13px;
+  transform: scale(1, 0.75);
 }
 
 /* Pointer or keyboard target: the loud state, full width. */
 .prompt-rail-tick:hover .prompt-rail-tick-line,
 .prompt-rail-tick--open .prompt-rail-tick-line {
-  width: 100%;
-  height: 2px;
+  transform: none;
   opacity: 1;
   background: var(--icon-strong-base);
 }
 
+.prompt-rail-tick--overflow:hover .prompt-rail-tick-line,
+.prompt-rail-tick--overflow.prompt-rail-tick--open .prompt-rail-tick-line,
+.prompt-rail-tick--overflow:focus-visible .prompt-rail-tick-line {
+  width: var(--prompt-rail-width);
+}
+
 .prompt-rail-tick:focus-visible .prompt-rail-tick-line {
-  width: 100%;
-  height: 2px;
+  transform: none;
   opacity: 1;
   background: var(--icon-strong-base);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--vscode-focusBorder) 50%, transparent);

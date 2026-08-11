@@ -465,6 +465,8 @@ export type IndexingWarning = {
 export type SnapshotFileDiff = {
   file?: string
   patch?: string
+  before?: string
+  after?: string
   additions: number
   deletions: number
   status?: "added" | "deleted" | "modified"
@@ -2389,9 +2391,13 @@ export type ProviderConfig = {
       temperature?: boolean
       tool_call?: boolean
       interleaved?:
-        | true
+        | boolean
+        | "reasoning"
+        | "reasoning_content"
+        | "reasoning_text"
+        | string
         | {
-            field: "reasoning" | "reasoning_content" | "reasoning_details"
+            field: "reasoning" | "reasoning_content" | "reasoning_text" | string
           }
       cost?: {
         input: number
@@ -2555,6 +2561,7 @@ export type Config = {
   terminal_command_display?: "expanded" | "collapsed"
   code_edit_display?: "expanded" | "collapsed"
   hide_prompt_training_models?: boolean
+  privacy_mode?: boolean
   /**
    * Sandbox configuration for agent tools
    */
@@ -2584,6 +2591,7 @@ export type Config = {
     [key: string]: string
   }
   default_agent?: string
+  subagent_depth?: number
   username?: string
   mode?: {
     build?: AgentConfig
@@ -2735,7 +2743,7 @@ export type Model = {
     interleaved:
       | boolean
       | {
-          field: "reasoning" | "reasoning_content" | "reasoning_details"
+          field: "reasoning" | "reasoning_content" | "reasoning_text" | string
         }
   }
   cost: {
@@ -2887,11 +2895,11 @@ export type WorktreeResetInput = {
 export type WorktreeDiffItem = {
   file?: string
   patch?: string
+  before: string
+  after: string
   additions: number
   deletions: number
   status?: "added" | "deleted" | "modified"
-  before: string
-  after: string
   tracked: boolean
   generatedLike: boolean
   summarized: boolean
@@ -4166,6 +4174,21 @@ export type AgentRequirementResult = {
     code: "unknown_agent" | "malformed_declaration" | "discovery_failed" | "mcp_status_failed"
     message: string
   }
+}
+
+export type CommandFile = {
+  name: string
+  description?: string
+  agent?: string
+  model?: string
+  variant?: string
+  source?: string
+  builtin: boolean
+  location: string
+  editable: boolean
+  content?: string
+  subtask?: boolean
+  hints: Array<string>
 }
 
 export type NotebookOutput = {
@@ -12310,6 +12333,10 @@ export type PtyCreateData = {
     env?: {
       [key: string]: string
     }
+    size?: {
+      rows: number
+      cols: number
+    }
   }
   path?: never
   query?: {
@@ -13161,6 +13188,8 @@ export type SessionDiffData = {
     directory?: string
     workspace?: string
     messageID?: string
+    file?: string
+    full?: "true" | "false"
   }
   url: "/session/{sessionID}/diff"
 }
@@ -16490,6 +16519,64 @@ export type KilocodeAgentRequirementsResponses = {
 
 export type KilocodeAgentRequirementsResponse =
   KilocodeAgentRequirementsResponses[keyof KilocodeAgentRequirementsResponses]
+
+export type KilocodeCommandFilesData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/command/files"
+}
+
+export type KilocodeCommandFilesErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeCommandFilesError = KilocodeCommandFilesErrors[keyof KilocodeCommandFilesErrors]
+
+export type KilocodeCommandFilesResponses = {
+  /**
+   * Command files
+   */
+  200: Array<CommandFile>
+}
+
+export type KilocodeCommandFilesResponse = KilocodeCommandFilesResponses[keyof KilocodeCommandFilesResponses]
+
+export type KilocodeRemoveCommandData = {
+  body?: {
+    location: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/command/remove"
+}
+
+export type KilocodeRemoveCommandErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+}
+
+export type KilocodeRemoveCommandError = KilocodeRemoveCommandErrors[keyof KilocodeRemoveCommandErrors]
+
+export type KilocodeRemoveCommandResponses = {
+  /**
+   * Command removed
+   */
+  200: boolean
+}
+
+export type KilocodeRemoveCommandResponse = KilocodeRemoveCommandResponses[keyof KilocodeRemoveCommandResponses]
 
 export type KilocodeRemoveSkillData = {
   body?: {
@@ -20169,6 +20256,10 @@ export type V2PtyCreateData = {
     title?: string
     env?: {
       [key: string]: string
+    }
+    size?: {
+      rows: number
+      cols: number
     }
   }
   path?: never

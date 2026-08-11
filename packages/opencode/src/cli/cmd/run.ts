@@ -472,7 +472,12 @@ export const RunCommand = effectCmd({
               action: "deny",
               pattern: "*",
             },
-            // kilocode_change start - non-interactive runs cannot take over a terminal
+            // kilocode_change start - non-interactive runs cannot answer suggestions or take over a terminal
+            {
+              permission: "suggest",
+              action: "deny",
+              pattern: "*",
+            },
             {
               permission: "interactive_terminal",
               action: "deny",
@@ -903,6 +908,16 @@ export const RunCommand = effectCmd({
             ) {
               break
             }
+
+            // kilocode_change start - non-interactive runs dismiss suggestions so they don't block
+            if (event.type === "suggestion.shown") {
+              const suggestion = event.properties
+              if (suggestion.sessionID === sessionID || KiloRunAuto.allowed(tracked, suggestion.sessionID)) {
+                await client.suggestion.dismiss({ requestID: suggestion.id }).catch(() => {})
+              }
+              continue
+            }
+            // kilocode_change end
 
             if (event.type === "permission.asked") {
               const permission = event.properties

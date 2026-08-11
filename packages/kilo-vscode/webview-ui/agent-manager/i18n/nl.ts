@@ -106,7 +106,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "Volgend tabblad",
   "agentManager.shortcuts.newTab": "Nieuw tabblad",
   "agentManager.shortcuts.closeTab": "Tabblad sluiten",
-  "agentManager.shortcuts.toggleTerminal": "Terminal in-/uitschakelen",
+  "agentManager.shortcuts.toggleTerminal": "Terminal focussen / verbergen",
   "agentManager.shortcuts.runScript": "Script uitvoeren",
   "agentManager.run.options": "Uitvoeropties",
   "agentManager.run.configure": "Uitvoerscript configureren",
@@ -122,6 +122,9 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.cancel": "Annuleren",
   "agentManager.dialog.removeStaleWorktree.confirm": "Verouderde worktree verwijderen",
 
+  "agentManager.dialog.project.select": "Project selecteren",
+  "agentManager.dialog.project.untrusted": "Vertrouw dit project eerst in de zijbalk",
+  "agentManager.dialog.project.missing": "Repository niet gevonden",
   "agentManager.dialog.openWorktree": "Nieuwe worktree",
   "agentManager.dialog.configureWorktree": "Nieuwe Worktree Configureren...",
   "agentManager.dialog.tab.new": "Nieuw",
@@ -135,7 +138,7 @@ export const dict = {
   "agentManager.dialog.baseBranch": "Basis branch",
   "agentManager.dialog.searchBranches": "Zoeken naar branches...",
   "agentManager.dialog.branchBadge.default": "standaard",
-  "agentManager.dialog.branchBadge.remote": "remote",
+  "agentManager.dialog.branchBadge.remote": "extern",
   "agentManager.dialog.versions": "Versies",
   "agentManager.dialog.versionHint": "{{count}} worktrees zullen parallel draaien",
   "agentManager.dialog.compareModels": "Modellen vergelijken",
@@ -206,7 +209,7 @@ export const dict = {
   "agentManager.review.imageUnavailable": "Afbeeldingsvoorbeeld is niet beschikbaar voor deze sessiesnapshot.",
   "agentManager.review.endOfLongDiff": "Je hebt het einde bereikt!",
 
-  "agentManager.import.pullRequest": "Pull Request",
+  "agentManager.import.pullRequest": "Pull request",
   "agentManager.import.pastePrUrl": "Plak PR URL...",
   "agentManager.import.open": "Openen",
   "agentManager.import.branches": "Branches",
@@ -217,4 +220,9 @@ export const dict = {
   "agentManager.import.noBranchesFound": "Geen branches gevonden.",
   "agentManager.import.noBranchesHint": "Plak hierboven een PR URL of maak een nieuwe worktree.",
   "agentManager.import.failed": "Importeren mislukt",
+
+  "agentManager.pr.error.gh_auth.title": "GitHub-authenticatie vereist",
+  "agentManager.pr.error.gh_auth.description": "Voer 'gh auth login' uit in je terminal om de PR-status te herstellen.",
+  "agentManager.pr.error.gh_missing.title": "GitHub CLI niet geïnstalleerd",
+  "agentManager.pr.error.gh_missing.description": "Installeer de GitHub CLI om de PR-status in te schakelen.",
 }

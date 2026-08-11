@@ -4,19 +4,29 @@ import type { Database } from "../database/database"
 type Db = Database.Interface["db"]
 
 export function ensure(db: Db) {
-  return db.transaction(
-    (tx) =>
-      Effect.gen(function* () {
-        const rows = yield* tx.all<{ name: string }>("PRAGMA table_info('session_context_epoch')")
-        const names = new Set(rows.map((row) => row.name))
+  const load = db.all<{ name: string }>("PRAGMA table_info('session_context_epoch')")
+  const ready = (rows: { name: string }[]) => {
+    const names = new Set(rows.map((row) => row.name))
+    return ["agent", "replacement_seq", "revision"].every((name) => names.has(name))
+  }
+  return load.pipe(
+    Effect.flatMap((rows) => {
+      if (ready(rows)) return Effect.void
+      return db.transaction(
+        (tx) =>
+          Effect.gen(function* () {
+            const current = yield* tx.all<{ name: string }>("PRAGMA table_info('session_context_epoch')")
+            const names = new Set(current.map((row) => row.name))
 
-        if (!names.has("agent"))
-          yield* tx.run("ALTER TABLE `session_context_epoch` ADD `agent` text DEFAULT 'build' NOT NULL")
-        if (!names.has("replacement_seq"))
-          yield* tx.run("ALTER TABLE `session_context_epoch` ADD `replacement_seq` integer")
-        if (!names.has("revision"))
-          yield* tx.run("ALTER TABLE `session_context_epoch` ADD `revision` integer DEFAULT 0 NOT NULL")
-      }),
-    { behavior: "immediate" },
+            if (!names.has("agent"))
+              yield* tx.run("ALTER TABLE `session_context_epoch` ADD `agent` text DEFAULT 'build' NOT NULL")
+            if (!names.has("replacement_seq"))
+              yield* tx.run("ALTER TABLE `session_context_epoch` ADD `replacement_seq` integer")
+            if (!names.has("revision"))
+              yield* tx.run("ALTER TABLE `session_context_epoch` ADD `revision` integer DEFAULT 0 NOT NULL")
+          }),
+        { behavior: "immediate" },
+      )
+    }),
   )
 }

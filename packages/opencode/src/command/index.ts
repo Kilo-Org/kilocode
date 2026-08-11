@@ -115,8 +115,6 @@ const layer = Layer.effect(
       }
       // kilocode_change start
       commands[Default.REVIEW] = reviewCommand()
-      commands["local-review"] = legacyReviewCommand("local-review")!
-      commands["local-review-uncommitted"] = legacyReviewCommand("local-review-uncommitted")!
       commands["resume-claude"] = SessionResume.resumeClaude
       commands["resume-codex"] = SessionResume.resumeCodex
       // kilocode_change end

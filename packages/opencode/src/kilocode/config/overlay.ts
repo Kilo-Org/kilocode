@@ -14,6 +14,7 @@ import { ConfigVariable } from "@/config/variable"
 import { Filesystem } from "@/util/filesystem"
 import { isRecord } from "@/util/record"
 import { KilocodeConfig } from "./config"
+import { sanitizeProjectMcpHeaders } from "./mcp-headers"
 import { KilocodeConfigSources } from "./sources"
 
 export namespace KilocodeConfigOverlay {
@@ -88,6 +89,7 @@ export namespace KilocodeConfigOverlay {
     ["model"],
     ["small_model"],
     ["hide_prompt_training_models"],
+    ["privacy_mode"],
     ["default_agent"],
     ["snapshot"],
     ["share"],
@@ -267,10 +269,20 @@ export namespace KilocodeConfigOverlay {
   async function loadUnsafe(file: string, fileScope?: ConfigVariable.FileScope): Promise<Config.Info> {
     // kilocode_change end
     const text = await Bun.file(file).text()
-    // kilocode_change - overlay reads project config files: {env:} rejected, {file:} confined to fileScope.root
-    const expanded = await ConfigVariable.substitute({ text, type: "path", path: file, trusted: false, fileScope })
+    // kilocode_change start - remove variable-bearing MCP headers before resolving other project file references
+    const sanitized = sanitizeProjectMcpHeaders(ConfigParse.jsonc(text, file), file)
+    const content = JSON.stringify(sanitized.config) ?? text
+    const expanded = await ConfigVariable.substitute({
+      text: content,
+      type: "path",
+      path: file,
+      trusted: false,
+      fileScope,
+    })
     const parsed = ConfigParse.jsonc(expanded, file)
     if (!isRecord(parsed)) return {}
+    for (const warning of sanitized.warnings) log.warn(warning.message, { path: warning.path })
+    // kilocode_change end
     return ConfigParse.schema(Config.Info, parsed, file) as Config.Info
   }
 

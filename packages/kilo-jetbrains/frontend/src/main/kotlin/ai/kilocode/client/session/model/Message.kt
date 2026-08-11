@@ -73,10 +73,14 @@ class FileAttachment(id: String) : Content(id) {
     var url: String = ""
     var filename: String? = null
     var source: PartSourceDto? = null
+    var startLine: Int? = null
+    var endLine: Int? = null
 }
 
 /** Tool invocation with lifecycle state. */
 class Tool(id: String, val name: String, var kind: ToolKind) : Content(id) {
+    /** Owning message id. The CLI scopes authoritative snapshot diffs by message, not part, id. */
+    var messageID: String? = null
     var state: ToolExecState = ToolExecState.PENDING
     var callId: String? = null
     var title: String? = null

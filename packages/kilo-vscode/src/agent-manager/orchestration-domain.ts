@@ -319,6 +319,7 @@ export async function prompt(input: {
   text: string
   messageID: string
   signal?: AbortSignal
+  idleTimeoutMs?: number
 }): Promise<void> {
   if (input.signal?.aborted) return
   const managed = input.state.getSession(input.sessionID)
@@ -342,15 +343,7 @@ export async function prompt(input: {
   if (!(await sameManagedDirectory(response.data.directory, dir))) {
     throw new OrchestrationError("cross_workspace", "The managed session belongs to a different workspace directory")
   }
-  const status = await input.client.session.status({ directory: dir })
-  if (status.error) throw new OrchestrationError("host_error", "The managed session status could not be read")
-  const activity = status.data?.[input.sessionID]?.type ?? "idle"
-  if (activity !== "idle") {
-    throw new OrchestrationError(
-      "unavailable_session",
-      `The managed session is ${activity}; only idle sessions can be prompted`,
-    )
-  }
+  await waitForIdle(input.client, dir, input.sessionID, input.signal, input.idleTimeoutMs ?? 30_000)
   if (input.signal?.aborted) return
   await input.client.session.promptAsync(
     {
@@ -362,6 +355,29 @@ export async function prompt(input: {
     },
     { throwOnError: true },
   )
+}
+
+async function waitForIdle(
+  client: KiloClient,
+  directory: string,
+  sessionID: string,
+  signal: AbortSignal | undefined,
+  timeout: number,
+  start = Date.now(),
+): Promise<void> {
+  if (signal?.aborted) return
+  const status = await client.session.status({ directory })
+  if (status.error) throw new OrchestrationError("host_error", "The managed session status could not be read")
+  const activity = status.data?.[sessionID]?.type ?? "idle"
+  if (activity === "idle") return
+  if (Date.now() - start >= timeout) {
+    throw new OrchestrationError(
+      "unavailable_session",
+      `The managed session is still ${activity}; only idle sessions can be prompted`,
+    )
+  }
+  await new Promise<void>((resolve) => setTimeout(resolve, 250))
+  return waitForIdle(client, directory, sessionID, signal, timeout, start)
 }
 
 export function move(input: { state: WorktreeStateManager; sessionID: string; sectionID: string | null }): void {

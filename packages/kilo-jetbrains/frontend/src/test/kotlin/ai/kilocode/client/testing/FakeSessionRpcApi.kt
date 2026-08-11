@@ -49,6 +49,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     val history = mutableListOf<MessageWithPartsDto>()
     val histories = mutableMapOf<String, MutableList<MessageWithPartsDto>>()
     val diffs = mutableMapOf<String, MutableList<DiffFileDto>>()
+    val diffSides = mutableMapOf<String, DiffFileDto>()
     var historyGate: CompletableDeferred<Unit>? = null
     var historyCalls = 0
         private set
@@ -257,6 +258,11 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     override suspend fun diff(id: String, directory: String): List<DiffFileDto> {
         assertNotEdt("diff")
         return diffs[id]?.toList().orEmpty()
+    }
+
+    override suspend fun diffSides(sessionId: String?, directory: String, file: DiffFileDto, messageId: String?): DiffFileDto? {
+        assertNotEdt("diffSides")
+        return diffSides[file.file]
     }
 
     override suspend fun attachmentPart(id: String, directory: String, messageId: String, partId: String, attachmentKey: String?): PartDto? {

@@ -4539,6 +4539,21 @@
                     "additionalProperties": {
                       "type": "string"
                     }
+                  },
+                  "size": {
+                    "type": "object",
+                    "properties": {
+                      "rows": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      },
+                      "cols": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      }
+                    },
+                    "required": ["rows", "cols"],
+                    "additionalProperties": false
                   }
                 },
                 "additionalProperties": false
@@ -6585,6 +6600,23 @@
             "schema": {
               "type": "string",
               "pattern": "^msg"
+            },
+            "required": false
+          },
+          {
+            "name": "file",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "full",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["true", "false"]
             },
             "required": false
           }
@@ -14949,6 +14981,142 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.agentRequirements({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/command/files": {
+      "get": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.commandFiles",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Command files",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CommandFile"
+                  },
+                  "description": "Command files"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "List commands with editable file locations for settings clients.",
+        "summary": "List command files",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.commandFiles({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/command/remove": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.removeCommand",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Command removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Command removed"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BadRequest | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Remove a command by deleting its markdown file from disk and clearing it from cache.",
+        "summary": "Remove a command",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "location": {
+                    "type": "string"
+                  }
+                },
+                "required": ["location"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.removeCommand({\n  ...\n})"
           }
         ]
       }
@@ -24182,6 +24350,21 @@
                     "additionalProperties": {
                       "type": "string"
                     }
+                  },
+                  "size": {
+                    "type": "object",
+                    "properties": {
+                      "rows": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      },
+                      "cols": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      }
+                    },
+                    "required": ["rows", "cols"],
+                    "additionalProperties": false
                   }
                 },
                 "additionalProperties": false
@@ -24711,6 +24894,7 @@
         },
         "description": "Establish a WebSocket connection streaming PTY output and accepting terminal input.",
         "summary": "Connect to PTY session",
+        "x-websocket": true,
         "x-codeSamples": [
           {
             "lang": "js",
@@ -26888,6 +27072,12 @@
             "type": "string"
           },
           "patch": {
+            "type": "string"
+          },
+          "before": {
+            "type": "string"
+          },
+          "after": {
             "type": "string"
           },
           "additions": {
@@ -32945,15 +33135,28 @@
                 "interleaved": {
                   "anyOf": [
                     {
-                      "type": "boolean",
-                      "enum": [true]
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "string",
+                      "enum": ["reasoning", "reasoning_content", "reasoning_text"]
+                    },
+                    {
+                      "type": "string"
                     },
                     {
                       "type": "object",
                       "properties": {
                         "field": {
-                          "type": "string",
-                          "enum": ["reasoning", "reasoning_content", "reasoning_details"]
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": ["reasoning", "reasoning_content", "reasoning_text"]
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
                         }
                       },
                       "required": ["field"],
@@ -33415,6 +33618,9 @@
           "hide_prompt_training_models": {
             "type": "boolean"
           },
+          "privacy_mode": {
+            "type": "boolean"
+          },
           "sandbox": {
             "type": "object",
             "properties": {
@@ -33465,6 +33671,10 @@
           },
           "default_agent": {
             "type": "string"
+          },
+          "subagent_depth": {
+            "type": "integer",
+            "minimum": 0
           },
           "username": {
             "type": "string"
@@ -33931,8 +34141,15 @@
                     "type": "object",
                     "properties": {
                       "field": {
-                        "type": "string",
-                        "enum": ["reasoning", "reasoning_content", "reasoning_details"]
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": ["reasoning", "reasoning_content", "reasoning_text"]
+                          },
+                          {
+                            "type": "string"
+                          }
+                        ]
                       }
                     },
                     "required": ["field"],
@@ -34359,6 +34576,12 @@
           "patch": {
             "type": "string"
           },
+          "before": {
+            "type": "string"
+          },
+          "after": {
+            "type": "string"
+          },
           "additions": {
             "type": "number"
           },
@@ -34368,12 +34591,6 @@
           "status": {
             "type": "string",
             "enum": ["added", "deleted", "modified"]
-          },
-          "before": {
-            "type": "string"
-          },
-          "after": {
-            "type": "string"
           },
           "tracked": {
             "type": "boolean"
@@ -34388,7 +34605,7 @@
             "type": "string"
           }
         },
-        "required": ["additions", "deletions", "before", "after", "tracked", "generatedLike", "summarized", "stamp"],
+        "required": ["before", "after", "additions", "deletions", "tracked", "generatedLike", "summarized", "stamp"],
         "additionalProperties": false
       },
       "SnapshotSummaryFileDiff": {
@@ -38390,6 +38607,52 @@
           }
         },
         "required": ["agent", "directory", "enabled", "state", "skills", "mcps", "vscode_extensions"],
+        "additionalProperties": false
+      },
+      "CommandFile": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "agent": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "variant": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "builtin": {
+            "type": "boolean"
+          },
+          "location": {
+            "type": "string"
+          },
+          "editable": {
+            "type": "boolean"
+          },
+          "content": {
+            "type": "string"
+          },
+          "subtask": {
+            "type": "boolean"
+          },
+          "hints": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["name", "builtin", "location", "editable", "hints"],
         "additionalProperties": false
       },
       "NotebookOutput": {
