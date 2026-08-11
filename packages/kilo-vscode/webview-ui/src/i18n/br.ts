@@ -454,6 +454,8 @@ export const dict = {
   "provider.custom.models.name.placeholder": "Nome de Exibição",
   "provider.custom.models.reasoning.label": "Raciocínio",
   "provider.custom.models.modalities.image": "Imagem",
+  "provider.custom.models.toggleReasoning": "Alternar raciocínio para todos",
+  "provider.custom.models.toggleImages": "Alternar imagem para todos",
   "provider.custom.models.remove": "Remover modelo",
   "provider.custom.models.add": "Adicionar modelo",
   "provider.custom.models.fetch.authError": "Falha na autenticação. Verifique a chave de API acima e tente novamente.",

@@ -122,6 +122,17 @@ data class PromptDto(
     val agent: String? = null,
     val variant: String? = null,
     val noReply: Boolean? = null,
+    val editorContext: EditorContextDto? = null,
+)
+
+@Serializable
+data class EditorContextDto(
+    val directory: String? = null,
+    val worktree: String? = null,
+    val visibleFiles: List<String>? = null,
+    val openTabs: List<String>? = null,
+    val activeFile: String? = null,
+    val shell: String? = null,
 )
 
 @Serializable

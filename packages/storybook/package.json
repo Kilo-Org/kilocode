@@ -27,7 +27,7 @@
     "vite": "catalog:",
     "@opencode-ai/session-ui": "workspace:*"
   },
-  "version": "7.4.20",
+  "version": "7.4.21",
   "dependencies": {},
   "peerDependencies": {}
 }

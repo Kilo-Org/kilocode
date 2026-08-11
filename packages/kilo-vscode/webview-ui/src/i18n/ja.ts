@@ -490,6 +490,8 @@ export const dict = {
   "provider.custom.models.name.placeholder": "表示名",
   "provider.custom.models.reasoning.label": "推論",
   "provider.custom.models.modalities.image": "画像",
+  "provider.custom.models.toggleReasoning": "すべてのモデルの推論を切り替え",
+  "provider.custom.models.toggleImages": "すべてのモデルの画像を切り替え",
   "provider.custom.models.remove": "モデルを削除",
   "provider.custom.models.add": "モデルを追加",
   "provider.custom.models.fetch.authError": "認証に失敗しました。上記のAPIキーを確認して再試行してください。",

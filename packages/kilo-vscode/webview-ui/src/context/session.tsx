@@ -72,7 +72,8 @@ import { getAgentModel } from "./session-model-store"
 import { resolveMessagePrefs } from "./session-preferences"
 import { errorIDs, preserveSessionErrors, withoutResolvedSessionErrors } from "./session-errors"
 import { PartStash } from "./part-stash"
-import { mergeParts, sameParts } from "./session-parts"
+import { mergeParts } from "./session-parts"
+import { mergeMessages, sameReconcileShape } from "./session-merge"
 import { state as todoState } from "./todo-revert"
 import { sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
 import { createSessionVariants } from "./session-variants"
@@ -1381,25 +1382,6 @@ export const SessionProvider: ParentComponent = (props) => {
     setPages(sessionID, { ...(pages[sessionID] ?? emptyPageState), ...patch })
   }
 
-  function mergeMessages(current: Message[], incoming: Message[], mode: Exclude<MessageLoadMode, "focus">) {
-    const kept = withoutResolvedSessionErrors(current, incoming)
-    if (mode === "reconcile") {
-      // Merge the authoritative newest-N snapshot by ID, then sort so newer
-      // optimistic entries stay at the end.
-      const byId = new Map<string, Message>()
-      for (const msg of kept) byId.set(msg.id, msg)
-      for (const msg of incoming) byId.set(msg.id, msg)
-      return [...byId.values()].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-    }
-    const seen = new Set<string>()
-    const source = mode === "prepend" ? [...incoming, ...kept] : incoming
-    return source.filter((msg) => {
-      if (seen.has(msg.id)) return false
-      seen.add(msg.id)
-      return true
-    })
-  }
-
   function recoverPrefs(sessionID: string, messages: Message[], names = agentNames()) {
     const prefs = resolveMessagePrefs(messages, names)
     if (prefs.agent && !store.agentSelections[sessionID]) {
@@ -1423,19 +1405,6 @@ export const SessionProvider: ParentComponent = (props) => {
     const ids = new Set(merged.map((msg) => msg.id))
     const orphans = current.filter((msg) => pending.has(msg.id) && !ids.has(msg.id))
     return [...merged, ...orphans]
-  }
-
-  // Cheap tail check: same ids in the same order and no visible streamed-part
-  // correction to apply. It skips store churn when SSE already matches the
-  // snapshot, but lets reconcile heal part removals and finalized text.
-  function sameReconcileShape(current: Message[], incoming: Message[]): boolean {
-    if (current.length !== incoming.length) return false
-    for (const [i, n] of incoming.entries()) {
-      const c = current[i]!
-      if (c.id !== n.id) return false
-      if (!sameParts(store.parts[c.id] ?? c.parts, n.parts)) return false
-    }
-    return true
   }
 
   function setTools(sessionID: string, tools: ToolPart[]) {
@@ -1486,7 +1455,10 @@ export const SessionProvider: ParentComponent = (props) => {
     // Reconcile fast-path: if the tail matches local state shape-wise, every
     // message+part-count already agrees with the server. Skip the reactive
     // store churn entirely — virtualizer and rendering stay untouched.
-    if (mode === "reconcile" && sameReconcileShape(store.messages[sessionID] ?? [], messages)) {
+    if (
+      mode === "reconcile" &&
+      sameReconcileShape(store.messages[sessionID] ?? [], messages, (id) => store.parts[id])
+    ) {
       const parts = messageParts(messages)
       for (const msg of messages) {
         if (store.parts[msg.id]) delete parts[msg.id]

@@ -13,7 +13,7 @@ import {
   closestCenter,
   type DragEvent,
 } from "@thisbeyond/solid-dnd"
-import type { LocalGitStats, RunStatus, WorktreeGitStats } from "../src/types/messages"
+import type { LocalGitStats, RunStatus, WorktreeGitStats, PRStatus } from "../src/types/messages"
 import type { LanguageContextValue } from "../src/context/language"
 import { LOCAL } from "./navigate"
 import { ConstrainDragYAxis } from "../src/components/chat/TabDnd"
@@ -55,6 +55,9 @@ export interface TabBarProps {
   reviewActive: () => boolean
   onToggleDiff: () => void
   onToggleReview: () => void
+  prStatus: () => PRStatus | undefined
+  prOpen: () => boolean
+  onTogglePR: () => void
   terminalDestination: () => TerminalDestination
   terminalDestinationActive: () => boolean
   terminalKeybind: () => string
@@ -215,6 +218,20 @@ export const TabBar: Component<TabBarProps> = (props) => (
                     )
                   })()}
                 </Show>
+                <Show when={props.prStatus()}>
+                  {(pr) => (
+                    <Tooltip value={`PR #${pr().number}`} placement="bottom">
+                      <IconButton
+                        icon="pull-request"
+                        size="small"
+                        variant="ghost"
+                        label={`PR #${pr().number}`}
+                        class={props.prOpen() ? "am-tab-diff-btn-active" : ""}
+                        onClick={props.onTogglePR}
+                      />
+                    </Tooltip>
+                  )}
+                </Show>
                 <TooltipKeybind
                   title={props.t("agentManager.diff.toggle")}
                   keybind={props.bindings().toggleDiff ?? ""}
@@ -226,14 +243,19 @@ export const TabBar: Component<TabBarProps> = (props) => (
                     title={props.t("agentManager.diff.toggle")}
                   >
                     <Icon name="layers" size="small" />
-                    <Show when={hasChanges()}>
-                      <span class="am-diff-toggle-stats">
-                        <Show when={stats()!.files > 0}>
-                          <span class="am-stat-files">{stats()!.files}f</span>
+                    <Show when={props.prStatus()}>
+                      {(pr) => (
+                        <Show when={pr().additions > 0 || pr().deletions > 0}>
+                          <span class="am-diff-toggle-stats">
+                            <Show when={pr().additions > 0}>
+                              <span class="am-stat-additions">+{pr().additions}</span>
+                            </Show>
+                            <Show when={pr().deletions > 0}>
+                              <span class="am-stat-deletions">−{pr().deletions}</span>
+                            </Show>
+                          </span>
                         </Show>
-                        <span class="am-stat-additions">+{stats()!.additions}</span>
-                        <span class="am-stat-deletions">−{stats()!.deletions}</span>
-                      </span>
+                      )}
                     </Show>
                   </button>
                 </TooltipKeybind>

@@ -26,6 +26,8 @@ import com.intellij.execution.process.CapturingProcessHandler
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.service
+import com.intellij.openapi.editor.ScrollType
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
@@ -288,7 +290,7 @@ class KiloWorkspaceRpcApiImpl internal constructor(
         }.ifBlank { null }
     }
 
-    override suspend fun openFile(path: String, line: Int?, column: Int?): Boolean {
+    override suspend fun openFile(path: String, line: Int?, column: Int?, endLine: Int?): Boolean {
         val item = clean(path) ?: return false
         val target = file(item)?.takeIf { it.isAbsolute } ?: return false
         val vf = LocalFileSystem.getInstance().refreshAndFindFileByPath(target.toString()) ?: return false
@@ -296,7 +298,7 @@ class KiloWorkspaceRpcApiImpl internal constructor(
             LOG.warn("No project available to open file: $path")
             return false
         }
-        navigate(project, vf, line, column)
+        navigate(project, vf, line, column, endLine)
         return true
     }
 
@@ -374,8 +376,26 @@ class KiloWorkspaceRpcApiImpl internal constructor(
         null
     }
 
-    private suspend fun navigate(project: Project, file: VirtualFile, line: Int? = null, column: Int? = null) = suspendCancellableCoroutine { cont ->
+    private suspend fun navigate(project: Project, file: VirtualFile, line: Int? = null, column: Int? = null, endLine: Int? = null) = suspendCancellableCoroutine { cont ->
         ApplicationManager.getApplication().invokeLater({
+            if (line != null && endLine != null) {
+                val editor = FileEditorManager.getInstance(project).openTextEditor(
+                    OpenFileDescriptor(project, file, (line - 1).coerceAtLeast(0), 0),
+                    true,
+                )
+                val doc = editor?.document
+                if (editor != null && doc != null && doc.lineCount > 0) {
+                    val start = (line - 1).coerceIn(0, doc.lineCount - 1)
+                    val end = (endLine - 1).coerceIn(start, doc.lineCount - 1)
+                    val from = doc.getLineStartOffset(start)
+                    val to = doc.getLineEndOffset(end)
+                    editor.selectionModel.setSelection(from, to)
+                    editor.caretModel.moveToOffset(from)
+                    editor.scrollingModel.scrollToCaret(ScrollType.CENTER)
+                }
+                if (cont.isActive) cont.resume(Unit)
+                return@invokeLater
+            }
             val descriptor = if (line == null) {
                 OpenFileDescriptor(project, file)
             } else {
