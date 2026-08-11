@@ -1,8 +1,7 @@
 import { describe, expect, mock, test } from "bun:test"
-import { decode } from "@/kilocode/provider/minimax/native"
-import { direct, normalize, query } from "@/kilocode/provider/minimax/usage"
-import type { UsageSnapshot } from "@/kilocode/provider-usage/schema"
-import type { Info as ProviderInfo } from "@/provider/provider"
+import { decode } from "../src/kilocode/provider-usage/minimax/native"
+import { direct, normalize, query, type Candidate } from "../src/kilocode/provider-usage/minimax/usage"
+import type { ProviderUsage } from "@opencode-ai/schema/kilocode/provider-usage"
 
 const native = (row: Record<string, unknown>) =>
   decode({
@@ -19,16 +18,11 @@ const options = {
   fetchedAt: "2026-06-19T00:00:00.000Z",
 }
 
-const provider = (id: string, key: string): ProviderInfo =>
-  ({
-    id,
-    name: id.endsWith("cn-coding-plan") ? "MiniMax China" : "MiniMax Global",
-    source: "env",
-    env: ["MINIMAX_API_KEY"],
-    key,
-    options: { baseURL: "https://attacker.invalid" },
-    models: { model: {} },
-  }) as unknown as ProviderInfo
+const candidate = (providerID: Candidate["providerID"], key: string): Candidate => ({
+  providerID,
+  label: providerID === "minimax-cn-coding-plan" ? "MiniMax China" : "MiniMax Global",
+  key,
+})
 
 const response = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } })
@@ -151,13 +145,7 @@ describe("MiniMax usage transport and detection", () => {
 
   test("does not query PAYG keys or provider IDs", async () => {
     const fn = mock(() => Promise.resolve(response({})))
-    const items = await direct(
-      {
-        "minimax-coding-plan": provider("minimax-coding-plan", "sk-api-payg"),
-        minimax: provider("minimax", "sk-cp-not-a-coding-plan-provider"),
-      },
-      fn as unknown as typeof fetch,
-    )
+    const items = await direct([candidate("minimax-coding-plan", "sk-api-payg")], fn as unknown as typeof fetch)
 
     expect(items).toEqual([])
     expect(fn).not.toHaveBeenCalled()
@@ -175,10 +163,7 @@ describe("MiniMax usage transport and detection", () => {
       ),
     )
     const items = await direct(
-      {
-        "minimax-coding-plan": provider("minimax-coding-plan", "sk-cp-shared"),
-        "minimax-cn-coding-plan": provider("minimax-cn-coding-plan", "sk-cp-shared"),
-      },
+      [candidate("minimax-coding-plan", "sk-cp-shared"), candidate("minimax-cn-coding-plan", "sk-cp-shared")],
       fn as unknown as typeof fetch,
     )
 
@@ -191,21 +176,13 @@ describe("MiniMax usage transport and detection", () => {
   test("scopes the cache cell identity to the credential fingerprint", async () => {
     const fn = mock(() => Promise.resolve(response({ base_resp: { status_code: 0 }, model_remains: [] })))
     const seen: Array<{ id: string; identity?: string }> = []
-    const cached = (id: string, load: () => Promise<UsageSnapshot>, identity?: string) => {
+    const cached = (id: string, load: () => Promise<ProviderUsage.UsageSnapshot>, identity?: string) => {
       seen.push({ id, identity })
       return load()
     }
 
-    await direct(
-      { "minimax-coding-plan": provider("minimax-coding-plan", "sk-cp-key-a") },
-      fn as unknown as typeof fetch,
-      cached,
-    )
-    await direct(
-      { "minimax-coding-plan": provider("minimax-coding-plan", "sk-cp-key-b") },
-      fn as unknown as typeof fetch,
-      cached,
-    )
+    await direct([candidate("minimax-coding-plan", "sk-cp-key-a")], fn as unknown as typeof fetch, cached)
+    await direct([candidate("minimax-coding-plan", "sk-cp-key-b")], fn as unknown as typeof fetch, cached)
 
     expect(seen.map((item) => item.id)).toEqual(["minimax-direct-global", "minimax-direct-global"])
     expect(seen[0].identity).toHaveLength(64)
@@ -216,10 +193,7 @@ describe("MiniMax usage transport and detection", () => {
   test("returns one unavailable item when an ambiguous key fails everywhere", async () => {
     const fn = mock(() => Promise.resolve(response({ message: "raw failure" }, 500)))
     const items = await direct(
-      {
-        "minimax-coding-plan": provider("minimax-coding-plan", "sk-cp-shared"),
-        "minimax-cn-coding-plan": provider("minimax-cn-coding-plan", "sk-cp-shared"),
-      },
+      [candidate("minimax-coding-plan", "sk-cp-shared"), candidate("minimax-cn-coding-plan", "sk-cp-shared")],
       fn as unknown as typeof fetch,
     )
 

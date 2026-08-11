@@ -6,7 +6,9 @@ import {
   type CodingPlanQuotaWindow,
   type CodingPlanSubscription,
 } from "@kilocode/kilo-gateway"
-import type { UsageSnapshot, UsageWindow } from "./schema"
+import type { ProviderUsage } from "@opencode-ai/schema/kilocode/provider-usage"
+
+export { fetchByokEntries, fetchCodingPlanSubscriptions, fetchCodingPlanUsage }
 
 export interface CloudState {
   plans: Result<CodingPlanSubscription[]>
@@ -21,8 +23,14 @@ const safe = async <T>(promise: Promise<T>): Promise<Result<T>> =>
     () => ({ ok: false }),
   )
 
-export async function load(token: string): Promise<CloudState> {
-  const [plans, byok] = await Promise.all([safe(fetchCodingPlanSubscriptions(token)), safe(fetchByokEntries(token))])
+export async function load(
+  token: string,
+  transport: {
+    plans: typeof fetchCodingPlanSubscriptions
+    byok: typeof fetchByokEntries
+  } = { plans: fetchCodingPlanSubscriptions, byok: fetchByokEntries },
+): Promise<CloudState> {
+  const [plans, byok] = await Promise.all([safe(transport.plans(token)), safe(transport.byok(token))])
   return { plans, byok }
 }
 
@@ -70,7 +78,7 @@ function periodLabel(period: CodingPlanQuotaWindow["period"]) {
   return singular ? "Monthly quota" : `${period.value}-month quota`
 }
 
-function window(subscriptionId: string, value: CodingPlanQuotaWindow): UsageWindow {
+function window(subscriptionId: string, value: CodingPlanQuotaWindow): ProviderUsage.UsageWindow {
   const remaining = value.remainingPercent
   const duration = durationMs(value.period)
   return {
@@ -88,7 +96,11 @@ function window(subscriptionId: string, value: CodingPlanQuotaWindow): UsageWind
   }
 }
 
-export async function managed(token: string, subscription: CodingPlanSubscription): Promise<UsageSnapshot> {
+export async function managed(
+  token: string,
+  subscription: CodingPlanSubscription,
+  usage: typeof fetchCodingPlanUsage = fetchCodingPlanUsage,
+): Promise<ProviderUsage.UsageSnapshot> {
   const fetchedAt = new Date().toISOString()
   const planState = subscription.cancelAtPeriodEnd
     ? "canceling"
@@ -98,7 +110,7 @@ export async function managed(token: string, subscription: CodingPlanSubscriptio
   const id = `kilo-managed:${subscription.id}`
   const managementUrl = `${base()}/subscriptions/coding-plans/${subscription.id}`
 
-  return fetchCodingPlanUsage(token, subscription.id)
+  return usage(token, subscription.id)
     .then((usage) => {
       const windows = usage.subscription.windows.map((item) => window(usage.subscription.id, item))
       return {
@@ -114,7 +126,7 @@ export async function managed(token: string, subscription: CodingPlanSubscriptio
         fetchedAt: usage.fetchedAt,
         managementUrl,
         windows,
-      } satisfies UsageSnapshot
+      } satisfies ProviderUsage.UsageSnapshot
     })
     .catch(() => ({
       id,

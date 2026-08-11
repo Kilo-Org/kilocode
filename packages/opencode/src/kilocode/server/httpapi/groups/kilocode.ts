@@ -8,8 +8,9 @@ import {
   WorkspaceRoutingQueryFields,
 } from "@/server/routes/instance/httpapi/middleware/workspace-routing"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
-import { Info as ProviderUsageInfo } from "@/kilocode/provider-usage/schema"
+import { ProviderUsage } from "@opencode-ai/schema/kilocode/provider-usage"
 import { AnacondaDesktopApi } from "./anaconda-desktop"
+import { ProviderUsageLocationMiddleware } from "../middleware/provider-usage-location"
 import { Result as AgentRequirementResult } from "@/kilocode/agent-requirements"
 import {
   Failure as AgentManagerFailure,
@@ -142,26 +143,30 @@ export const KilocodeApi = HttpApi.make("kilocode")
         ),
         HttpApiEndpoint.get("providerUsage", KilocodePaths.providerUsage, {
           query: WorkspaceRoutingQuery,
-          success: described(ProviderUsageInfo, "Current provider usage"),
+          success: described(ProviderUsage.Info, "Current provider usage"),
           error: HttpApiError.ServiceUnavailable,
-        }).annotateMerge(
-          OpenApi.annotations({
-            identifier: "kilocode.providerUsage.get",
-            summary: "Get provider usage",
-            description: "Get cache-aware, secret-free provider plan usage and personal billing status.",
-          }),
-        ),
+        })
+          .annotateMerge(
+            OpenApi.annotations({
+              identifier: "kilocode.providerUsage.get",
+              summary: "Get provider usage",
+              description: "Get cache-aware, secret-free provider plan usage and personal billing status.",
+            }),
+          )
+          .middleware(ProviderUsageLocationMiddleware),
         HttpApiEndpoint.post("providerUsageRefresh", KilocodePaths.providerUsageRefresh, {
           query: WorkspaceRoutingQuery,
-          success: described(ProviderUsageInfo, "Refreshed provider usage"),
+          success: described(ProviderUsage.Info, "Refreshed provider usage"),
           error: HttpApiError.ServiceUnavailable,
-        }).annotateMerge(
-          OpenApi.annotations({
-            identifier: "kilocode.providerUsage.refresh",
-            summary: "Refresh provider usage",
-            description: "Refresh provider plan usage while coalescing concurrent source requests.",
-          }),
-        ),
+        })
+          .annotateMerge(
+            OpenApi.annotations({
+              identifier: "kilocode.providerUsage.refresh",
+              summary: "Refresh provider usage",
+              description: "Refresh provider plan usage while coalescing concurrent source requests.",
+            }),
+          )
+          .middleware(ProviderUsageLocationMiddleware),
         HttpApiEndpoint.get("notebookList", KilocodePaths.notebookList, {
           query: WorkspaceRoutingQuery,
           success: described(Schema.Array(NotebookRequest), "Pending notebook host requests"),

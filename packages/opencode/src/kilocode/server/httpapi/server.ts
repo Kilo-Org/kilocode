@@ -22,7 +22,6 @@ import { instanceReloadHandlers } from "./handlers/instance-reload"
 import { interactiveTerminalHandlers } from "./handlers/interactive-terminal"
 import { kiloGatewayHandlers } from "./handlers/kilo-gateway"
 import { kilocodeHandlers } from "./handlers/kilocode"
-import { ProviderUsage } from "@/kilocode/provider-usage"
 import { memoryHandlers } from "./handlers/memory"
 import { networkHandlers } from "./handlers/network"
 import { remoteHandlers } from "./handlers/remote"
@@ -30,6 +29,7 @@ import { sandboxHandlers } from "./handlers/sandbox"
 import { sessionImportHandlers } from "./handlers/session-import"
 import { suggestionHandlers } from "./handlers/suggestion"
 import { telemetryHandlers } from "./handlers/telemetry"
+import { layer as providerUsageLocationLayer } from "./middleware/provider-usage-location"
 
 export const provide = Layer.provide([
   agentBuilderHandlers,
@@ -43,7 +43,7 @@ export const provide = Layer.provide([
   instanceReloadHandlers,
   interactiveTerminalHandlers,
   kiloGatewayHandlers,
-  kilocodeHandlers.pipe(Layer.provide(ProviderUsage.defaultLayer)),
+  kilocodeHandlers.pipe(Layer.provide(providerUsageLocationLayer)),
   memoryHandlers,
   networkHandlers,
   remoteHandlers,

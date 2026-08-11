@@ -13,10 +13,10 @@ import { AgentManager } from "@/kilocode/agent-manager/service"
 import type { RequestID as NotebookRequestID } from "@/kilocode/notebook/protocol"
 import { Notebook } from "@/kilocode/notebook/service"
 import { ModelUsage } from "@/kilocode/session/model-usage"
+import { ProviderUsage } from "@opencode-ai/core/kilocode/provider-usage"
 import { InstanceStore } from "@/project/instance-store"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
 import { Skill } from "@/skill"
-import { ProviderUsage } from "@/kilocode/provider-usage"
 import type { SessionID } from "@/session/schema"
 import {
   AgentManagerRejectPayload,
@@ -37,7 +37,6 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     const store = yield* InstanceStore.Service
     const manager = yield* AgentManager.Service
     const notebook = yield* Notebook.Service
-    const usage = yield* ProviderUsage.Service
     const heapSnapshot = Effect.fn("KilocodeHttpApi.heapSnapshot")(function* () {
       return yield* Effect.sync(() => HeapSnapshot.write())
     })
@@ -109,11 +108,15 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     })
 
     const providerUsage = Effect.fn("KilocodeHttpApi.providerUsage")(function* () {
-      return yield* usage.get().pipe(Effect.mapError(() => new HttpApiError.ServiceUnavailable({})))
+      return yield* (yield* ProviderUsage.Service)
+        .get()
+        .pipe(Effect.mapError(() => new HttpApiError.ServiceUnavailable({})))
     })
 
     const providerUsageRefresh = Effect.fn("KilocodeHttpApi.providerUsageRefresh")(function* () {
-      return yield* usage.refresh().pipe(Effect.mapError(() => new HttpApiError.ServiceUnavailable({})))
+      return yield* (yield* ProviderUsage.Service)
+        .refresh()
+        .pipe(Effect.mapError(() => new HttpApiError.ServiceUnavailable({})))
     })
 
     const notebookList = Effect.fn("KilocodeHttpApi.notebookList")(function* () {

@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto"
 import { decode, type ModelRemains, type Native } from "./native"
-import type { UsageSnapshot, UsageWindow } from "@/kilocode/provider-usage/schema"
-import type { Info as ProviderInfo } from "@/provider/provider"
+import type { ProviderUsage } from "@opencode-ai/schema/kilocode/provider-usage"
 
 export const bindings = {
   "minimax-coding-plan": {
@@ -113,7 +112,11 @@ function label(resource: string, kind: "interval" | "weekly", value: number | un
   return kind === "weekly" ? `${prefix} weekly` : `${prefix} interval`
 }
 
-function window(row: ModelRemains, kind: "interval" | "weekly", fetchedAt: string): UsageWindow | undefined {
+function window(
+  row: ModelRemains,
+  kind: "interval" | "weekly",
+  fetchedAt: string,
+): ProviderUsage.UsageWindow | undefined {
   const weekly = kind === "weekly"
   const percent = weekly ? row.current_weekly_remaining_percent : row.current_interval_remaining_percent
   const status = weekly ? row.current_weekly_status : row.current_interval_status
@@ -181,7 +184,7 @@ export function normalize(
     managementUrl: string
     fetchedAt: string
   },
-): UsageSnapshot {
+): ProviderUsage.UsageSnapshot {
   const windows = native.model_remains
     .filter((row) => row.model_name !== "video")
     .flatMap((row) =>
@@ -207,7 +210,12 @@ export function normalize(
   }
 }
 
-const unavailable = (id: string, providerID: string, label: string, managementUrl: string): UsageSnapshot => ({
+const unavailable = (
+  id: string,
+  providerID: string,
+  label: string,
+  managementUrl: string,
+): ProviderUsage.UsageSnapshot => ({
   id,
   providerID,
   sourceKind: "direct",
@@ -222,21 +230,24 @@ const unavailable = (id: string, providerID: string, label: string, managementUr
   error: { code: "direct_minimax_unavailable", message: "Usage unavailable.", retryable: true },
 })
 
+export interface Candidate {
+  providerID: ProviderID
+  label: string
+  key: string
+}
+
 export async function direct(
-  providers: Record<string, ProviderInfo>,
+  candidates: readonly Candidate[],
   fetcher: typeof fetch = fetch,
-  cached: (id: string, load: () => Promise<UsageSnapshot>, identity?: string) => Promise<UsageSnapshot> = (_id, load) =>
-    load(),
+  cached: (
+    id: string,
+    load: () => Promise<ProviderUsage.UsageSnapshot>,
+    identity?: string,
+  ) => Promise<ProviderUsage.UsageSnapshot> = (_id, load) => load(),
 ) {
-  const candidates = (Object.keys(bindings) as ProviderID[]).flatMap((providerID) => {
-    const provider = providers[providerID]
-    if (!provider) return []
-    const value = provider.options.apiKey !== undefined ? provider.options.apiKey : provider.key
-    if (typeof value !== "string" || !value.trim().startsWith("sk-cp")) return []
-    return [{ providerID, provider, key: value.trim() }]
-  })
-  const groups = new Map<string, typeof candidates>()
+  const groups = new Map<string, Candidate[]>()
   for (const candidate of candidates) {
+    if (!candidate.key.startsWith("sk-cp")) continue
     const group = groups.get(candidate.key) ?? []
     group.push(candidate)
     groups.set(candidate.key, group)
@@ -261,7 +272,7 @@ export async function direct(
             return unavailable(
               id,
               first.providerID,
-              shared ? "Direct MiniMax" : first.provider.name,
+              shared ? "Direct MiniMax" : first.label,
               bindings[first.providerID].manage,
             )
           }
@@ -274,7 +285,7 @@ export async function direct(
           return normalize(response.value, {
             id,
             providerID: candidate.providerID,
-            sourceLabel: candidate.provider.name,
+            sourceLabel: candidate.label,
             managementUrl: bindings[candidate.providerID].manage,
             fetchedAt: new Date().toISOString(),
           })

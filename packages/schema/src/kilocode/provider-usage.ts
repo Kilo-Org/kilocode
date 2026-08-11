@@ -1,27 +1,31 @@
-import { Schema } from "effect"
+export * as ProviderUsage from "./provider-usage"
 
+import { Schema } from "effect"
+import { optional } from "../schema"
+
+export interface UsageError extends Schema.Schema.Type<typeof UsageError> {}
 export const UsageError = Schema.Struct({
   code: Schema.String,
   message: Schema.String,
   retryable: Schema.Boolean,
 }).annotate({ identifier: "ProviderUsageError" })
-export type UsageError = typeof UsageError.Type
 
+export interface UsageWindow extends Schema.Schema.Type<typeof UsageWindow> {}
 export const UsageWindow = Schema.Struct({
   id: Schema.String,
   label: Schema.String,
   resource: Schema.String,
   unit: Schema.String,
   orientation: Schema.Literals(["used_percent", "remaining_percent", "amount", "count"]),
-  used: Schema.optional(Schema.Finite),
-  remaining: Schema.optional(Schema.Finite),
-  limit: Schema.optional(Schema.Finite),
-  durationMs: Schema.optional(Schema.Finite),
-  resetAt: Schema.optional(Schema.String),
+  used: optional(Schema.Finite),
+  remaining: optional(Schema.Finite),
+  limit: optional(Schema.Finite),
+  durationMs: optional(Schema.Finite),
+  resetAt: optional(Schema.String),
   state: Schema.Literals(["active", "exhausted", "unlimited", "not_in_plan", "unknown"]),
 }).annotate({ identifier: "ProviderUsageWindow" })
-export type UsageWindow = typeof UsageWindow.Type
 
+export interface UsageSnapshot extends Schema.Schema.Type<typeof UsageSnapshot> {}
 export const UsageSnapshot = Schema.Struct({
   id: Schema.String,
   providerID: Schema.String,
@@ -32,15 +36,14 @@ export const UsageSnapshot = Schema.Struct({
   fetchState: Schema.Literals(["ready", "stale", "unavailable", "error"]),
   planState: Schema.Literals(["active", "past_due", "canceling", "unknown"]),
   routingState: Schema.Literals(["active", "disabled", "missing", "replaced", "not_applicable", "unknown"]),
-  fetchedAt: Schema.optional(Schema.String),
-  managementUrl: Schema.optional(Schema.String),
+  fetchedAt: optional(Schema.String),
+  managementUrl: optional(Schema.String),
   windows: Schema.Array(UsageWindow),
-  error: Schema.optional(UsageError),
+  error: optional(UsageError),
 }).annotate({ identifier: "ProviderUsageSnapshot" })
-export type UsageSnapshot = typeof UsageSnapshot.Type
 
+export interface Info extends Schema.Schema.Type<typeof Info> {}
 export const Info = Schema.Struct({
   items: Schema.Array(UsageSnapshot),
   generatedAt: Schema.String,
 }).annotate({ identifier: "ProviderUsage" })
-export type Info = typeof Info.Type
