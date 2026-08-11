@@ -3,6 +3,7 @@ import * as Tool from "./tool"
 import { WarpGrepClient } from "@morphllm/morphsdk/tools/warp-grep/client" // kilocode_change
 import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
 import { Instance } from "../kilocode/instance" // kilocode_change
+import * as Provision from "../kilocode/tool/warpgrep" // kilocode_change
 import { EventV2Bridge } from "@/event-v2-bridge" // kilocode_change
 import { TuiEvent } from "@/server/tui-event" // kilocode_change
 import DESCRIPTION from "./warpgrep.txt"
@@ -22,6 +23,7 @@ export const CodebaseSearchTool = Tool.define(
   "codebase_search",
   Effect.gen(function* () {
     const events = yield* EventV2Bridge.Service // kilocode_change
+    const provision = yield* Provision.provision // kilocode_change
     return {
       description: DESCRIPTION,
       parameters: Parameters,
@@ -44,6 +46,11 @@ export const CodebaseSearchTool = Tool.define(
             ...(apiKey ? {} : { morphApiUrl: KILO_WARPGREP_PROXY_URL }),
             timeout: 60_000,
           })
+
+          // kilocode_change start - provision only when the packaged Morph shim is active
+          const unavailable = yield* provision(params.query)
+          if (unavailable) return unavailable
+          // kilocode_change end
 
           const result = yield* Effect.promise(() =>
             client.execute({

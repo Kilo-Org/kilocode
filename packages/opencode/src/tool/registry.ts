@@ -503,6 +503,7 @@ export const node = LayerNode.suspend(() =>
       RuntimeFlags.node,
       Database.node,
       Ripgrep.node,
+      RipgrepBinary.node,
       Command.node,
       Git.node,
       Bus.node,

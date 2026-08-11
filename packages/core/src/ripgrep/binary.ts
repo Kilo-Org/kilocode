@@ -8,6 +8,7 @@ import { makeGlobalNode } from "../effect/app-node"
 import { httpClient } from "../effect/app-node-platform"
 import { FSUtil } from "../fs-util"
 import { Global } from "../global"
+import * as Managed from "../kilocode/ripgrep-binary" // kilocode_change
 import { which } from "../util/which"
 
 export namespace RipgrepBinary {
@@ -95,7 +96,7 @@ export namespace RipgrepBinary {
             const system = yield* Effect.sync(() => (process.platform === "win32" ? undefined : which("rg")))
             if (system && (yield* fs.isFile(system).pipe(Effect.orDie))) return system
 
-            const target = path.join(Global.Path.bin, `rg${process.platform === "win32" ? ".exe" : ""}`)
+            const target = Managed.target // kilocode_change
             if (yield* fs.isFile(target).pipe(Effect.orDie)) return target
 
             const platformKey = `${process.arch}-${process.platform}` as keyof typeof PLATFORM
