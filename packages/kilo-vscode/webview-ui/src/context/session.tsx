@@ -70,7 +70,7 @@ import {
 import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
 import { getAgentModel } from "./session-model-store"
-import { resolveMessagePrefs } from "./session-preferences"
+import { reconcileAgent, resolveMessagePrefs } from "./session-preferences"
 import { errorIDs, preserveSessionErrors, withoutResolvedSessionErrors } from "./session-errors"
 import { PartStash } from "./part-stash"
 import { mergeParts } from "./session-parts"
@@ -469,6 +469,7 @@ export const SessionProvider: ParentComponent = (props) => {
   // Tracks optimistic messageIDs that haven't been confirmed by the server yet.
   // Prevents handleMessagesLoaded from wiping them when it replaces the array.
   const pendingOptimistic = new Map<string, Set<string>>()
+  const reconciledUser = new Map<string, string>()
   // Sessions can be created/imported while an older list request is still in flight.
   // Keep them until a later list payload confirms them or deletion arrives.
   const freshSessions = new Set<string>()
@@ -1581,6 +1582,11 @@ export const SessionProvider: ParentComponent = (props) => {
     patchPage(message.sessionID, { lastMutation: exists ? "update" : "append" })
 
     recoverPrefs(message.sessionID, [message])
+    const agent = reconcileAgent(message, agentNames(), reconciledUser.get(message.sessionID))
+    if (agent) {
+      reconciledUser.set(message.sessionID, message.id)
+      setStore("agentSelections", message.sessionID, agent)
+    }
 
     if (message.parts && message.parts.length > 0) {
       stash.remove(message.id)
@@ -1978,6 +1984,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function handleSessionDeleted(sessionID: string) {
     pendingOptimistic.delete(sessionID)
+    reconciledUser.delete(sessionID)
     freshSessions.delete(sessionID)
     aborts.clear(sessionID)
     confirmSubmissions(sessionID)

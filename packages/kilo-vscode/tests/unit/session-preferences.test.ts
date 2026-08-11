@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { resolveMessagePrefs } from "../../webview-ui/src/context/session-preferences"
+import { reconcileAgent, resolveMessagePrefs } from "../../webview-ui/src/context/session-preferences"
 import type { Message } from "../../webview-ui/src/types/messages"
 
 function msg(input: Partial<Message>): Message {
@@ -68,5 +68,27 @@ describe("session preference recovery", () => {
       model: { providerID: "anthropic", modelID: "claude-sonnet-4" },
       variant: undefined,
     })
+  })
+})
+
+describe("session agent reconciliation", () => {
+  it("reconciles a valid user message agent", () => {
+    expect(reconcileAgent(msg({ id: "new", agent: "code" }), agents, undefined)).toBe("code")
+  })
+
+  it("ignores a user message id that was already reconciled", () => {
+    expect(reconcileAgent(msg({ id: "same", agent: "code" }), agents, "same")).toBeUndefined()
+  })
+
+  it("ignores assistant messages", () => {
+    expect(reconcileAgent(msg({ role: "assistant", agent: "code" }), agents, undefined)).toBeUndefined()
+  })
+
+  it("ignores invalid agents", () => {
+    expect(reconcileAgent(msg({ agent: "task" }), agents, undefined)).toBeUndefined()
+  })
+
+  it("ignores messages without an agent", () => {
+    expect(reconcileAgent(msg({}), agents, undefined)).toBeUndefined()
   })
 })

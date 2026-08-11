@@ -23,3 +23,11 @@ export function resolveMessagePrefs(messages: Message[], names: Set<string>): Me
   }
   return prefs
 }
+
+export function reconcileAgent(message: Message, names: Set<string>, last: string | undefined) {
+  if (message.role !== "user") return undefined
+  if (last === message.id) return undefined
+  const agent = message.agent?.trim()
+  if (!agent || !names.has(agent)) return undefined
+  return agent
+}

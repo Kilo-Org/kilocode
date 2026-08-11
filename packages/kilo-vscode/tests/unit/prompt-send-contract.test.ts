@@ -328,6 +328,13 @@ describe("PromptInput restoreFailed fallback contract", () => {
     expect(created).toContain("clearSessionDraftDiscarded(message.sessionID)")
     expect(status).not.toContain("clearSessionDraftDiscarded")
   })
+
+  it("reconciles confirmed backend user agents into the mode selector", () => {
+    const session = readFile(SESSION_FILE)
+    const created = extractFunctionBody(session, "handleMessageCreated")
+    expect(created).toContain("reconcileAgent(message, agentNames(), reconciledUser.get(message.sessionID))")
+    expect(created).toContain('setStore("agentSelections", message.sessionID, agent)')
+  })
 })
 
 describe("PromptInput send origin contract", () => {
