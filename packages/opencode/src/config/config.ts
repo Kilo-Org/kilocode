@@ -1050,6 +1050,7 @@ const layer = Layer.effect(
 
     const invalidate = Effect.fn("Config.invalidate")(function* () {
       yield* invalidateGlobal
+      yield* InstanceState.invalidate(state).pipe(Effect.catchCause(() => Effect.void)) // kilocode_change
     })
 
     // kilocode_change start - add dispose option to skip Instance.disposeAll for permission-only changes

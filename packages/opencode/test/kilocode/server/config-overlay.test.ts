@@ -774,7 +774,7 @@ describe("config overlay routes", () => {
       for (let i = 0; i < 40; i++) {
         await json(await req(project.path, `/session/${session.id}/sandbox`))
         const snap = await SandboxStore.read(project.path, session.id)
-        if (snap && snap.mode === "allow" && snap.version === 1) break
+        if (snap && snap.mode === "allow" && snap.writablePaths.includes(writable.path) && snap.version === 1) break
         await Bun.sleep(250)
       }
 
