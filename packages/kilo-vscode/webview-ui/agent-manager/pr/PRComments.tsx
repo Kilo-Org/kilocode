@@ -1,6 +1,7 @@
 /** @jsxImportSource solid-js */
-import { For, Index, Show, createEffect, createMemo, createSignal, on, onCleanup, onMount } from "solid-js"
+import { Index, Show, createMemo, createSignal, onCleanup, onMount } from "solid-js"
 import { Markdown } from "@kilocode/kilo-ui/markdown"
+import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { useVSCode } from "../../src/context/vscode"
 import type { PRStatus } from "../../src/types/messages"
 import type { PRComment } from "./pr-types"
@@ -11,40 +12,41 @@ function DiffHunk(props: { hunk: string }) {
   const lines = () => props.hunk.split("\n")
   return (
     <div class="am-pr-diff-hunk">
-      <For each={lines()}>
+      <Index each={lines()}>
         {(line) => {
-          const cls = line.startsWith("+")
+          const text = line()
+          const cls = text.startsWith("+")
             ? "am-pr-diff-line-add"
-            : line.startsWith("-")
+            : text.startsWith("-")
               ? "am-pr-diff-line-del"
-              : line.startsWith("@@")
+              : text.startsWith("@@")
                 ? "am-pr-diff-line-meta"
                 : "am-pr-diff-line-ctx"
-          return <div class={`am-pr-diff-line ${cls}`}>{line || " "}</div>
+          return <div class={`am-pr-diff-line ${cls}`}>{text || " "}</div>
         }}
-      </For>
+      </Index>
     </div>
   )
 }
 
 function CommentCard(props: { comment: PRComment; worktreeId: string }) {
   const vscode = useVSCode()
-  const [optimisticResolved, setOptimisticResolved] = createSignal<boolean | undefined>(undefined)
+
+  // Track pending action and any error from the result
+  const [pendingResolved, setPendingResolved] = createSignal<boolean | undefined>(undefined)
   const [actionError, setActionError] = createSignal<string | undefined>(undefined)
 
-  // Clear optimistic state if the comment at this position changes (Index tracks by position)
-  createEffect(
-    on(
-      () => props.comment.threadId,
-      () => {
-        setOptimisticResolved(undefined)
-        setActionError(undefined)
-      },
-      { defer: true },
-    ),
-  )
+  // Resolved shows pending state if exists, otherwise server state
+  const resolved = createMemo(() => pendingResolved() ?? props.comment.resolved)
 
-  const resolved = createMemo(() => optimisticResolved() ?? props.comment.resolved)
+  // Clear pending when server state matches (action confirmed by poll)
+  createMemo(() => {
+    const pending = pendingResolved()
+    if (pending !== undefined && pending === props.comment.resolved) {
+      setPendingResolved(undefined)
+      setActionError(undefined)
+    }
+  })
 
   onMount(() => {
     function handler(ev: MessageEvent) {
@@ -54,11 +56,9 @@ function CommentCard(props: { comment: PRComment; worktreeId: string }) {
         msg.worktreeId === props.worktreeId &&
         msg.threadId === props.comment.threadId
       if (!isResult) return
-      if (msg.success) {
-        setOptimisticResolved(msg.type === "agentManager.resolveCommentResult" ? true : false)
-        setActionError(undefined)
-      } else {
-        setOptimisticResolved(undefined)
+      if (!msg.success) {
+        // Only clear on error - success waits for poll to update props.comment.resolved
+        setPendingResolved(undefined)
         setActionError(
           msg.type === "agentManager.resolveCommentResult"
             ? "Failed to resolve thread."
@@ -73,11 +73,16 @@ function CommentCard(props: { comment: PRComment; worktreeId: string }) {
   function toggle() {
     setActionError(undefined)
     const next = !resolved()
-    setOptimisticResolved(next)
+    setPendingResolved(next)
     vscode.postMessage({
       type: next ? "agentManager.resolveComment" : "agentManager.unresolveComment",
       worktreeId: props.worktreeId,
       threadId: props.comment.threadId,
+    } as never)
+    // Trigger immediate PR refresh to get updated comment state
+    vscode.postMessage({
+      type: "agentManager.refreshPR",
+      worktreeId: props.worktreeId,
     } as never)
   }
 
@@ -102,9 +107,16 @@ function CommentCard(props: { comment: PRComment; worktreeId: string }) {
         <Markdown text={props.comment.body} />
       </div>
       <div class="am-pr-resolve-row">
-        <button class="am-pr-resolve-btn" onClick={toggle}>
-          {resolved() ? "Unresolve conversation" : "Resolve conversation"}
-        </button>
+        <Show when={pendingResolved() === undefined} fallback={
+          <div class="am-pr-resolve-loading">
+            <Spinner class="am-pr-resolve-spinner" />
+            <span>Loading</span>
+          </div>
+        }>
+          <button class="am-pr-resolve-btn" onClick={toggle}>
+            {resolved() ? "Unresolve comment" : "Resolve comment"}
+          </button>
+        </Show>
       </div>
     </div>
   )

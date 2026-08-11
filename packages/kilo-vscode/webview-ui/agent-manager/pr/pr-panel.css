@@ -351,6 +351,20 @@
   padding: 2px 0 4px;
 }
 
+.am-pr-resolve-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 16px;
+  font-size: var(--kilo-font-size-14);
+  color: var(--text-weak);
+}
+
+.am-pr-resolve-spinner {
+  width: 14px;
+  height: 14px;
+}
+
 .am-pr-panel-comment-body [data-component="markdown"] {
   font-size: var(--kilo-font-size-12);
   color: var(--vscode-foreground);
@@ -573,6 +587,11 @@ button.am-pr-summary-row-link {
   padding: 2px;
   font-size: var(--kilo-font-size-12);
   box-sizing: border-box;
+  cursor: pointer;
+}
+
+button.am-pr-summary-row-link:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
 }
 
 .am-pr-summary-row-link:hover {
