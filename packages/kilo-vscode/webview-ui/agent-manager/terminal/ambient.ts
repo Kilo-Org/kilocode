@@ -13,11 +13,12 @@
 import { createEffect, createSignal, type Accessor } from "solid-js"
 import type { ScriptTerminalStatus, TerminalStateControls } from "./state"
 import type { TerminalTabStateWithContext } from "./state"
+import type { SidePanelState } from "../AgentManagerApp"
 
 interface AmbientSetupDeps {
   terms: TerminalStateControls
   selection: Accessor<string | null>
-  sidePanel: Accessor<string | null>
+  sidePanel: Accessor<SidePanelState>
   setSidePanel(panel: null): void
 }
 

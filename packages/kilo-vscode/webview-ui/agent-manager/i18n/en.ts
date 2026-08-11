@@ -217,4 +217,8 @@ export const dict = {
   "agentManager.import.noBranchesFound": "No branches found.",
   "agentManager.import.noBranchesHint": "Paste a PR URL above or create a new worktree.",
   "agentManager.import.failed": "Import failed",
+  "agentManager.pr.error.gh_auth.title": "GitHub authentication required",
+  "agentManager.pr.error.gh_auth.description": "Run 'gh auth login' in your terminal to restore PR status.",
+  "agentManager.pr.error.gh_missing.title": "GitHub CLI not installed",
+  "agentManager.pr.error.gh_missing.description": "Install the GitHub CLI to enable PR status.",
 }

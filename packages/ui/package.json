@@ -1,6 +1,6 @@
 {
   "name": "@opencode-ai/ui",
-  "version": "7.4.20",
+  "version": "7.4.21",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -117,7 +117,8 @@
     "luxon": "catalog:",
     "marked-katex-extension": "5.1.6",
     "marked-shiki": "catalog:",
-    "@shikijs/stream": "catalog:"
+    "@shikijs/stream": "catalog:",
+    "solid-sonner": "catalog:"
   },
   "peerDependencies": {
     "@solidjs/meta": "^0.29.0",

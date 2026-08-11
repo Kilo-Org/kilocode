@@ -14,7 +14,7 @@ export const dict = {
   "agentManager.worktree.new": "新建 Worktree",
   "agentManager.worktree.setupScript": "Worktree 设置脚本",
   "agentManager.worktree.delete": "删除 Worktree",
-  "agentManager.worktree.confirmDelete": "Delete?",
+  "agentManager.worktree.confirmDelete": "删除？",
   "agentManager.worktree.stale": "已失效",
   "agentManager.worktree.staleTooltip": "在磁盘上缺失，或不再由 git worktree 跟踪",
   "agentManager.worktree.removeStale": "移除失效 Worktree",
@@ -102,8 +102,8 @@ export const dict = {
   "agentManager.run.options": "运行选项",
   "agentManager.run.configure": "配置运行脚本",
   "agentManager.shortcuts.openAgentManager": "打开 Agent Manager",
-  "agentManager.shortcuts.cycleAgentMode": "Next agent mode",
-  "agentManager.shortcuts.cyclePreviousAgentMode": "Previous agent mode",
+  "agentManager.shortcuts.cycleAgentMode": "下一个代理模式",
+  "agentManager.shortcuts.cyclePreviousAgentMode": "上一个代理模式",
   "agentManager.shortcuts.showShortcuts": "显示键盘快捷键",
   "agentManager.dialog.removeStaleWorktree.title": "移除失效 Worktree",
   "agentManager.dialog.removeStaleWorktree.messagePre": "移除失效 Worktree ",
@@ -196,7 +196,7 @@ export const dict = {
   "agentManager.review.imageUnavailable": "此会话快照无法提供图片预览。",
   "agentManager.review.endOfLongDiff": "你已经到末尾了！",
 
-  "agentManager.import.pullRequest": "Pull Request",
+  "agentManager.import.pullRequest": "拉取请求",
   "agentManager.import.pastePrUrl": "粘贴 PR URL...",
   "agentManager.import.open": "打开",
   "agentManager.import.branches": "分支",
@@ -207,4 +207,9 @@ export const dict = {
   "agentManager.import.noBranchesFound": "未找到分支。",
   "agentManager.import.noBranchesHint": "在上方粘贴 PR URL 或创建新的 Worktree。",
   "agentManager.import.failed": "导入失败",
+
+  "agentManager.pr.error.gh_auth.title": "需要 GitHub 身份验证",
+  "agentManager.pr.error.gh_auth.description": "在终端中运行 'gh auth login' 以恢复 PR 状态。",
+  "agentManager.pr.error.gh_missing.title": "未安装 GitHub CLI",
+  "agentManager.pr.error.gh_missing.description": "安装 GitHub CLI 以启用 PR 状态。",
 }
