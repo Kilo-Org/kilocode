@@ -64,7 +64,7 @@ You are helping submit a pull request...
 
 Each workflow can run with its own model and reasoning effort variant. In the VS Code extension, open **Settings → Agent Behaviour → Workflows**, expand a workflow, and choose a model and variant. The selection is saved as a command override in your global config, so the workflow's template file stays unchanged.
 
-You can also set `model` and `variant` in the command's frontmatter or in the `command` section of `kilo.jsonc`. A variant only applies when the selected model supports it — picking a different model clears a variant the new model does not offer.
+You can also set `model` and `variant` in the command's frontmatter or in the `command` section of `kilo.jsonc`.  A variant only applies when the selected model supports it — picking a different model clears a variant the new model does not offer.
 
 ### Workflow Capabilities
 
