@@ -523,6 +523,12 @@
   color: var(--vscode-foreground);
 }
 
+.am-pr-summary-jump {
+  margin-left: auto;
+  font-size: var(--kilo-font-size-12);
+  color: var(--text-weaker);
+}
+
 .am-pr-summary-row-link {
   cursor: pointer;
   border-radius: 3px;
@@ -532,4 +538,8 @@
 
 .am-pr-summary-row-link:hover {
   background: var(--vscode-list-hoverBackground);
+}
+
+.am-pr-summary-row-link:hover .am-pr-summary-jump {
+  color: var(--vscode-foreground);
 }
