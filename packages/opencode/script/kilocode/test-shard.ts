@@ -1,8 +1,12 @@
+import { JunitDurations } from "./junit-durations"
+
 export namespace TestShard {
   export type Info = {
     index: number
     total: number
   }
+
+  export type Durations = JunitDurations.Map
 
   export function parse(input?: string) {
     if (!input) return { ok: true as const, value: undefined }
@@ -39,5 +43,53 @@ export namespace TestShard {
       group.weight += weight(file)
     }
     return groups.map((group) => group.files)
+  }
+
+  // Thin pass-through to the junit walker. Kept as a `TestShard` export so
+  // callers don't need to know about the parsing module.
+  export const durationsFromJUnit = JunitDurations.parse
+
+  // Merge per-file duration maps. The largest observed time wins so
+  // historically slow outliers (subprocess tests, etc.) keep their true
+  // cost instead of being smoothed away by a faster recent run; argument
+  // order is irrelevant.
+  export function combineDurations(...maps: ReadonlyArray<Durations>): Durations {
+    const out: Durations = {}
+    for (const map of maps) {
+      for (const [file, time] of Object.entries(map)) {
+        if (!Number.isFinite(time) || time <= 0) continue
+        const prev = out[file]
+        if (prev === undefined || time > prev) out[file] = time
+      }
+    }
+    return out
+  }
+
+  // Build a weight function from observed per-file durations plus a fallback
+  // weight (typically file size in bytes). Observed durations are returned
+  // verbatim; files without a measurement are estimated as
+  // `fallback(file) * scale`, where `scale` converts the fallback unit into
+  // seconds using the ratio of total observed seconds to total observed
+  // fallback weight. This keeps both branches in the same unit so the LPT
+  // shard split balances wall-clock time rather than mixing units.
+  export function weightFromDurations(
+    durations: Durations,
+    fallback: (file: string) => number,
+  ): (file: string) => number {
+    const entries = Object.entries(durations).filter(([, time]) => time > 0)
+    if (entries.length === 0) return fallback
+
+    let totalSec = 0
+    let totalFallback = 0
+    for (const [file, sec] of entries) {
+      totalSec += sec
+      totalFallback += fallback(file)
+    }
+    const scale = totalFallback > 0 ? totalSec / totalFallback : 1
+    return (file: string) => {
+      const observed = durations[file]
+      if (observed !== undefined && observed > 0) return observed
+      return fallback(file) * scale
+    }
   }
 }
