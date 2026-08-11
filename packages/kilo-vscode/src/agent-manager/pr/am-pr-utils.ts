@@ -69,12 +69,11 @@ const REVIEWER_STATE: Record<string, ReviewerState> = {
 export function parseComments(threads: GhThread[]): PRComment[] {
   const items: PRComment[] = []
   for (const thread of threads) {
-    if (!thread.id) continue
     const first = thread.comments?.nodes?.[0]
     if (!first) continue
     items.push({
       id: first.id,
-      threadId: thread.id,
+      threadId: thread.id ?? first.id,
       author: first.author?.login ?? "unknown",
       avatar: first.author?.avatarUrl,
       body: first.body ?? "",
