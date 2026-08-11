@@ -107,12 +107,15 @@ function CommentCard(props: { comment: PRComment; worktreeId: string }) {
         <Markdown text={props.comment.body} />
       </div>
       <div class="am-pr-resolve-row">
-        <Show when={pendingResolved() === undefined} fallback={
-          <div class="am-pr-resolve-loading">
-            <Spinner class="am-pr-resolve-spinner" />
-            <span>Loading</span>
-          </div>
-        }>
+        <Show
+          when={pendingResolved() === undefined}
+          fallback={
+            <div class="am-pr-resolve-loading">
+              <Spinner class="am-pr-resolve-spinner" />
+              <span>Loading</span>
+            </div>
+          }
+        >
           <button class="am-pr-resolve-btn" onClick={toggle}>
             {resolved() ? "Unresolve comment" : "Resolve comment"}
           </button>

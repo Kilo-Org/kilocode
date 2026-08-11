@@ -32,9 +32,10 @@ function summaryRows(pr: PRStatus): Array<{ icon: string; label: string; status:
   if (pr.comments && pr.comments.total > 0) {
     const unresolved = pr.comments.unresolved
     const total = pr.comments.total
-    const label = unresolved > 0
-      ? `${unresolved} unresolved comment${unresolved > 1 ? "s" : ""}`
-      : `${total} comment${total > 1 ? "s" : ""}`
+    const label =
+      unresolved > 0
+        ? `${unresolved} unresolved comment${unresolved > 1 ? "s" : ""}`
+        : `${total} comment${total > 1 ? "s" : ""}`
     rows.push({
       icon: "comment",
       label,
