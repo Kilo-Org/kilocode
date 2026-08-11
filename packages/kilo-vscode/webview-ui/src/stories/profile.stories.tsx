@@ -149,6 +149,7 @@ export const StaleAndUnavailable: Story = {
           {
             ...directUsage.items[0],
             fetchState: "stale",
+            planState: "unknown",
             error: { code: "timeout", message: "The latest usage could not be loaded.", retryable: true },
           },
           {

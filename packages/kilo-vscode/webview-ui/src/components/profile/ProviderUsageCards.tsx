@@ -46,6 +46,14 @@ const variant = (item: ProviderUsageSnapshot) => {
   return "normal" as const
 }
 
+const stale = (item: ProviderUsageSnapshot, language: Language) => {
+  const notice = `${language.t("profile.usage.state.unavailable")} ${language.t("profile.usage.state.stale")}`
+  if (!item.fetchedAt) return notice
+  const date = new Date(item.fetchedAt)
+  if (Number.isNaN(date.getTime())) return notice
+  return `${notice} (${date.toLocaleString(localeToBcp47(language.locale()))})`
+}
+
 const order = (items: ProviderUsageSnapshot[]) =>
   [...items].sort(
     (left, right) => Number(left.sourceKind !== "kilo_managed") - Number(right.sourceKind !== "kilo_managed"),
@@ -67,7 +75,11 @@ const UsageCard: Component<{
       <Tag>{source(props.item, props.language)}</Tag>
     </CardHeader>
 
-    <Show when={props.item.planState !== "active"}>
+    <Show
+      when={
+        props.item.planState !== "active" && !(props.item.planState === "unknown" && props.item.fetchState !== "ready")
+      }
+    >
       <CardDescription>
         {props.language.t(
           props.item.planState === "past_due"
@@ -82,7 +94,7 @@ const UsageCard: Component<{
     <Show when={props.item.fetchState !== "ready"}>
       <p class="provider-usage-notice">
         {props.item.fetchState === "stale"
-          ? props.language.t("profile.usage.state.stale")
+          ? stale(props.item, props.language)
           : props.language.t("profile.usage.state.unavailable")}
       </p>
     </Show>
