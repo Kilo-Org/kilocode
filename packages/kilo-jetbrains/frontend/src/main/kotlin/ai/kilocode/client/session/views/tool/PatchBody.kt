@@ -184,7 +184,7 @@ class PatchBody(
     @RequiresEdt
     private fun header(file: EditFileChange): JComponent {
         val link = FileLinkLabel(openFile).apply {
-            foreground = UiStyle.Colors.fg()
+            foreground = SessionUiStyle.Colors.foreground()
             font = style.transcriptFont
             setTarget(file.path, tail(file.path))
             isVisible = true
@@ -207,8 +207,8 @@ class PatchBody(
         md.applyStyle(style)
         md.font = style.editorFont
         md.foreground = style.editorForeground
-        md.background = style.editorBackground
-        md.preBg = style.editorBackground
+        md.background = SessionUiStyle.Colors.codeBlockBackground()
+        md.preBg = SessionUiStyle.Colors.codeBlockBackground()
         md.codeFont = style.editorFamily
         md.component.border = JBUI.Borders.empty()
         rows.getOrNull(views.indexOf(md))?.let { installGutter(md, it) }

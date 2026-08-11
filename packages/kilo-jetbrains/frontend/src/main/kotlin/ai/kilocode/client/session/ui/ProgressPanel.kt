@@ -6,6 +6,7 @@ import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
@@ -44,7 +45,7 @@ class ProgressPanel(
         foreground = style.editorForeground
     }
     private val elapsed = JBLabel().apply {
-        foreground = UiStyle.Colors.weak()
+        foreground = SessionUiStyle.Colors.hint()
     }
     private val spinner = JBLabel(AnimatedIcon.Default())
     private val tick = clock.timer(1000) { syncElapsed() }
@@ -140,7 +141,7 @@ class ProgressPanel(
         this.style = style
         label.font = style.regularFont
         elapsed.font = style.regularFont
-        elapsed.foreground = UiStyle.Colors.weak()
+        elapsed.foreground = SessionUiStyle.Colors.hint()
         if (state is SessionState.Busy) label.foreground = style.editorForeground
         revalidate()
         repaint()

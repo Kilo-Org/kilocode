@@ -234,6 +234,10 @@ class SessionUi(
     override fun addNotify() {
         if (disposed) return
         super.addNotify()
+        // First realized paint: the constructor's applyStyle can run before the tool window is
+        // attached, when panel/editor colors are still provisional. Re-apply from the live scheme
+        // so the session is styled correctly without needing a theme toggle to trigger it.
+        applyStyle(SessionEditorStyle.current())
         resumeOpen()
     }
 
@@ -988,16 +992,18 @@ class SessionUi(
         selection.applyStyle(style)
         editorTheme = style.editorScheme
         colorTheme = UIManager.getLookAndFeel()
-        background = style.editorBackground
-        root.background = style.editorBackground
-        root.content.background = style.editorBackground
-        sessionContent.background = style.editorBackground
-        blankBody.background = style.editorBackground
+        val bg = SessionUiStyle.Colors.sessionBackground()
+        background = bg
+        root.background = bg
+        root.content.background = bg
+        sessionContent.background = bg
+        blankBody.background = bg
         load.applyStyle(style)
         header.applyStyle(style)
         prompt.applyStyle(style)
         connection.applyStyle(style)
         scroll.applyStyle(style)
+        empty?.applyStyle(style)
         refresh()
     }
 

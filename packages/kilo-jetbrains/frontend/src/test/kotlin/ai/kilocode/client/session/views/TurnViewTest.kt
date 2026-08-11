@@ -8,6 +8,7 @@ import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.ui.ModifiedFilesView
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.tool.EditToolView
 import ai.kilocode.rpc.dto.DiffFileDto
@@ -144,14 +145,22 @@ class TurnViewTest : BasePlatformTestCase() {
         assertFalse(mv.isOpaque)
     }
 
-    fun `test user message uses standard outline color`() {
+    fun `test user message fills a prompt surface`() {
         val mv = MessageView(msg("u1", "user"), openFile)
         mv.setSize(120, 48)
         val image = BufferedImage(120, 48, BufferedImage.TYPE_INT_ARGB)
 
         mv.paint(image.createGraphics())
 
-        assertEquals(SessionUiStyle.View.Outline.color().rgb, image.getRGB(60, 0))
+        // The user bubble is a filled code-block surface; it only outlines when the fill matches the
+        // session background (no contrast).
+        val bg = SessionUiStyle.View.Prompt.bgColor(SessionEditorStyle.current())
+        val expected = if (bg.rgb == SessionUiStyle.Colors.sessionBackground().rgb) {
+            SessionUiStyle.View.Outline.color().rgb
+        } else {
+            bg.rgb
+        }
+        assertEquals(expected, image.getRGB(60, 0))
     }
 
     fun `test assistant message remains borderless`() {

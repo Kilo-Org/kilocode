@@ -5,6 +5,7 @@ import ai.kilocode.client.diff.installDiffGutter
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.md.MdCodeBlockFactory
 import ai.kilocode.client.ui.md.MdCodeBlockOptions
 import ai.kilocode.client.ui.md.MdView
@@ -88,8 +89,8 @@ class ToolMarkdownBody(
         md.applyStyle(style)
         md.font = font(style)
         md.foreground = style.editorForeground
-        md.background = style.editorBackground
-        md.preBg = style.editorBackground
+        md.background = SessionUiStyle.Colors.codeBlockBackground()
+        md.preBg = SessionUiStyle.Colors.codeBlockBackground()
         md.codeFont = style.editorFamily
         md.component.border = JBUI.Borders.empty()
         chrome(md)

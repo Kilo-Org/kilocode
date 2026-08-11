@@ -245,8 +245,8 @@ class ReasoningView(
         md.font = font
         changed = md.codeFont != style.editorFamily || changed
         md.codeFont = style.editorFamily
-        changed = md.foreground.rgb != UiStyle.Colors.weak().rgb || changed
-        md.foreground = UiStyle.Colors.weak()
+        changed = md.foreground.rgb != SessionUiStyle.Colors.hint().rgb || changed
+        md.foreground = SessionUiStyle.Colors.hint()
         return changed
     }
 
@@ -280,22 +280,22 @@ class ReasoningView(
         md.applyStyle(style)
         md.font = style.smallEditorFont.deriveFont(Font.ITALIC)
         md.codeFont = style.editorFamily
-        md.foreground = UiStyle.Colors.weak()
-        md.background = style.editorBackground
+        md.foreground = SessionUiStyle.Colors.hint()
+        md.background = SessionUiStyle.Colors.codeBlockBackground()
         md.component.border = JBUI.Borders.empty()
         md.set(text)
         // The shared popup wrapper (HeaderPopupBody) provides the scroll pane, so pass the content
         // panel directly instead of nesting a second scroll pane here.
         val panel = TrackPanel().apply {
             isOpaque = true
-            background = style.editorBackground
+            background = SessionUiStyle.Colors.codeBlockBackground()
             border = JBUI.Borders.empty(
                 JBUI.scale(SessionUiStyle.View.Reasoning.BODY_VERTICAL_PADDING),
                 JBUI.scale(SessionUiStyle.View.Reasoning.BODY_HORIZONTAL_PADDING),
             )
             add(md.component, BorderLayout.CENTER)
         }
-        return HeaderPopupBody(panel, md, style.editorBackground)
+        return HeaderPopupBody(panel, md, SessionUiStyle.Colors.codeBlockBackground())
     }
 
     private fun bodyMaxHeight(): Int {
@@ -360,7 +360,7 @@ class ReasoningParts(
         }
         val panel = TrackPanel().apply {
             isOpaque = true
-            background = SessionUiStyle.View.Surface.bgColor()
+            background = SessionUiStyle.Colors.codeBlockBackground()
             border = JBUI.Borders.empty(
                 JBUI.scale(SessionUiStyle.View.Reasoning.BODY_VERTICAL_PADDING),
                 JBUI.scale(SessionUiStyle.View.Reasoning.BODY_HORIZONTAL_PADDING),
@@ -370,8 +370,8 @@ class ReasoningParts(
         val scroll = JBScrollPane(panel).apply {
             border = JBUI.Borders.empty()
             isOpaque = true
-            background = SessionUiStyle.View.Surface.bgColor()
-            viewport.background = SessionUiStyle.View.Surface.bgColor()
+            background = SessionUiStyle.Colors.codeBlockBackground()
+            viewport.background = SessionUiStyle.Colors.codeBlockBackground()
             horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
             verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
         }
@@ -386,8 +386,8 @@ class ReasoningBody(
 )
 
 private fun reasoningParts(selection: SessionSelection? = null): ReasoningParts {
-    val title = JBLabel(KiloBundle.message("session.part.reasoning")).apply { foreground = UiStyle.Colors.weak() }
-    val icon = JBLabel(SessionViewIcons.brain).apply { foreground = UiStyle.Colors.weak() }
+    val title = JBLabel(KiloBundle.message("session.part.reasoning")).apply { foreground = SessionUiStyle.Colors.hint() }
+    val icon = JBLabel(SessionViewIcons.brain).apply { foreground = SessionUiStyle.Colors.hint() }
     val header = PartHeader().apply {
         leading(icon)
         left(title)

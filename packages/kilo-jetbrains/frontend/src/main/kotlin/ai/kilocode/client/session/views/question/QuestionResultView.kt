@@ -58,7 +58,7 @@ class QuestionResultView(tool: Tool, private val selection: SessionSelection? = 
     }
     private val glyph = JBLabel(SessionViewIcons.bubble)
     private val title = JBLabel()
-    private val sub = JBLabel().apply { foreground = UiStyle.Colors.weak() }
+    private val sub = JBLabel().apply { foreground = SessionUiStyle.Colors.hint() }
     private val arrow = JBLabel()
     private val center = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.Layout.GAP), 0)).apply {
         isOpaque = false
@@ -197,7 +197,7 @@ class QuestionResultView(tool: Tool, private val selection: SessionSelection? = 
         title.text = KiloBundle.message("session.question.result.title")
         val count = result.answers.count { it.isNotEmpty() }
         sub.text = KiloBundle.message("session.question.result.answered", count)
-        sub.foreground = UiStyle.Colors.weak()
+        sub.foreground = SessionUiStyle.Colors.hint()
     }
 
     private fun syncBody() {
@@ -214,7 +214,7 @@ class QuestionResultView(tool: Tool, private val selection: SessionSelection? = 
             }
             if (i > 0) row.border = JBUI.Borders.emptyTop(UiStyle.Gap.lg())
 
-            val qText = makeText(q, UiStyle.Colors.weak(), false)
+            val qText = makeText(q, SessionUiStyle.Colors.hint(), false)
             qText.alignmentX = Component.LEFT_ALIGNMENT
             qText.border = JBUI.Borders.emptyBottom(UiStyle.Gap.xs())
             row.add(qText)
@@ -222,7 +222,7 @@ class QuestionResultView(tool: Tool, private val selection: SessionSelection? = 
             val joined = result.answers.getOrNull(i)?.joinToString(", ").orEmpty()
             val aText = makeText(
                 joined.ifBlank { KiloBundle.message("session.question.review.notAnswered") },
-                UiStyle.Colors.fg(),
+                SessionUiStyle.Colors.foreground(),
                 true,
             )
             aText.alignmentX = Component.LEFT_ALIGNMENT

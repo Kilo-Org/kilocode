@@ -3,6 +3,7 @@ package ai.kilocode.client.session.views.base
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Generic
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.ui.components.JBLabel
 
@@ -23,7 +24,7 @@ class GenericView private constructor(
     override val contentId: String = content.id
 
     init {
-        label.foreground = UiStyle.Colors.weak()
+        label.foreground = SessionUiStyle.Colors.hint()
         applyStyle(SessionEditorStyle.current())
         syncExpandable(false)
         border = null

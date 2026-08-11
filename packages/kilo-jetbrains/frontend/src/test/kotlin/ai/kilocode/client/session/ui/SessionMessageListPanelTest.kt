@@ -819,9 +819,16 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         message.paint(graphics)
         graphics.dispose()
 
-        val line = SessionUiStyle.View.Outline.color().rgb
-        assertEquals(line, Color(image.getRGB(point.x + box.width / 2, point.y), true).rgb)
-        assertEquals(line, Color(image.getRGB(point.x + box.width / 2, point.y + box.height - 1), true).rgb)
+        // The bubble is a filled code-block surface; it only draws an outline when that fill matches
+        // the session background. Probing the box edges verifies it paints at the wrapped coordinates.
+        val bg = SessionUiStyle.View.Prompt.bgColor(SessionEditorStyle.current())
+        val expected = if (bg.rgb == SessionUiStyle.Colors.sessionBackground().rgb) {
+            SessionUiStyle.View.Outline.color().rgb
+        } else {
+            bg.rgb
+        }
+        assertEquals(expected, Color(image.getRGB(point.x + box.width / 2, point.y), true).rgb)
+        assertEquals(expected, Color(image.getRGB(point.x + box.width / 2, point.y + box.height - 1), true).rgb)
     }
 
     fun `test created ContentDelta is not double applied`() {

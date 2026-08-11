@@ -239,7 +239,7 @@ class ShellToolViewTest : BasePlatformTestCase() {
         assertEquals(style.transcriptFont.name, view.subtitleFont().name)
         assertEquals(style.transcriptFont.size, view.subtitleFont().size)
         assertFalse(view.subtitleFont().isBold)
-        assertEquals(UiStyle.Colors.weak().rgb, view.subtitleForeground().rgb)
+        assertEquals(SessionUiStyle.Colors.hint().rgb, view.subtitleForeground().rgb)
         assertTrue(view.stateFont().size < style.editorSize)
     }
 

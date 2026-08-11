@@ -63,7 +63,7 @@ class EditToolView(
     )
     private val diffAnchor = hoverPlaceholder(diff)
     private val filesTag = JBLabel().apply {
-        foreground = UiStyle.Colors.weak()
+        foreground = SessionUiStyle.Colors.hint()
         font = JBFont.small()
         isVisible = false
     }
@@ -233,7 +233,7 @@ class EditToolView(
         val path = if (count > 1) null else editPath(item)
         changed = setFileTarget(parts, path, if (path == null) "" else tail(path)) || changed
         changed = setForeground(parts.title, titleColor(item)) || changed
-        changed = setForeground(parts.link, UiStyle.Colors.fg()) || changed
+        changed = setForeground(parts.link, SessionUiStyle.Colors.foreground()) || changed
         changed = setText(parts.state, stateText(item)) || changed
         changed = setForeground(parts.state, color(item)) || changed
         syncDiffAction(count)
@@ -287,7 +287,7 @@ class EditToolView(
         // calls rebuild and sets its signature), so a follow-up update() here would be a no-op.
         val panel = popup.mount(item)
         popup.applyStyle(style)
-        return HeaderPopupBody(panel, owner, style.editorBackground, SessionUiStyle.View.Popup.WIDE_MAX_WIDTH)
+        return HeaderPopupBody(panel, owner, SessionUiStyle.Colors.codeBlockBackground(), SessionUiStyle.View.Popup.WIDE_MAX_WIDTH)
     }
 
     override fun dumpLabel() = "EditToolView#$contentId(${labelText()})"

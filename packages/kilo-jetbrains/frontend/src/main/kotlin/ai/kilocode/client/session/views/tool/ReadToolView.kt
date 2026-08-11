@@ -121,8 +121,8 @@ class ReadToolView(
         changed = setText(parts.title, title(item)) || changed
         changed = syncSubtitle() || changed
         changed = setForeground(parts.title, titleColor(item)) || changed
-        changed = setForeground(parts.sub, UiStyle.Colors.fg()) || changed
-        changed = setForeground(parts.link, UiStyle.Colors.fg()) || changed
+        changed = setForeground(parts.sub, SessionUiStyle.Colors.foreground()) || changed
+        changed = setForeground(parts.link, SessionUiStyle.Colors.foreground()) || changed
         changed = setText(parts.state, stateText(item)) || changed
         changed = setForeground(parts.state, color(item)) || changed
         parts.text?.let { changed = setForeground(it, bodyColor()) || changed }
@@ -146,7 +146,7 @@ class ReadToolView(
         return true
     }
 
-    private fun bodyColor() = if (item.state == ToolExecState.ERROR) UiStyle.Colors.errorLabelForeground() else UiStyle.Colors.fg()
+    private fun bodyColor() = if (item.state == ToolExecState.ERROR) UiStyle.Colors.errorLabelForeground() else SessionUiStyle.Colors.foreground()
 
     private fun bodyMaxHeight(): Int {
         val text = parts.text ?: return 0

@@ -2,6 +2,7 @@ package ai.kilocode.client.session.ui.mode
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.PickerRow
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.icons.AllIcons
@@ -72,7 +73,7 @@ internal class ModePickerRenderer(
     ): JPanel {
         val focus = selected || list.hasFocus() || focused
         val fg = UIUtil.getListForeground(selected, focus)
-        val weak = if (selected) fg else UiStyle.Colors.weak()
+        val weak = if (selected) fg else SessionUiStyle.Colors.hint()
 
         background = list.background
         wrap.update(list, selected, focus)

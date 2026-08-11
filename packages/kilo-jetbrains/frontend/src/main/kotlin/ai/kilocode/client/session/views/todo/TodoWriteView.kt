@@ -103,7 +103,7 @@ class TodoParts(
 private fun todoParts(): TodoParts {
     val glyph = JBLabel(SessionViewIcons.checklist)
     val title = JBLabel(KiloBundle.message("session.part.todo.title"))
-    val sub = JBLabel().apply { foreground = UiStyle.Colors.weak() }
+    val sub = JBLabel().apply { foreground = SessionUiStyle.Colors.hint() }
     val header = PartHeader().apply {
         leading(glyph)
         left(title)

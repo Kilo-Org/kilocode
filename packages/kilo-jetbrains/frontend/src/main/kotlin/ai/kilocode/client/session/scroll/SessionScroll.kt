@@ -5,6 +5,7 @@ import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.ui.components.JBLabel
@@ -223,8 +224,9 @@ internal class SessionScroll(
     @RequiresEdt
     fun applyStyle(style: SessionEditorStyle) {
         this.style = style
-        component.background = style.editorBackground
-        component.viewport.background = style.editorBackground
+        val bg = SessionUiStyle.Colors.sessionBackground()
+        component.background = bg
+        component.viewport.background = bg
         syncIcon()
         messages.applyStyle(style)
         val view = component.viewport.view

@@ -6,7 +6,10 @@ import com.intellij.ui.components.JBLabel
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
+import java.awt.Container
 import java.awt.Cursor
+import java.awt.event.ContainerAdapter
+import java.awt.event.ContainerEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.JComponent
@@ -30,6 +33,7 @@ abstract class AbstractSessionPartView(
     protected val arrow = JBLabel()
     protected val row = JPanel(BorderLayout(SessionUiStyle.View.Header.gap(), 0))
     private val bound = linkedSetOf<Component>()
+    private val watched = linkedSetOf<Component>()
     private var body: JComponent? = null
 
     private val click = object : MouseAdapter() {
@@ -38,7 +42,10 @@ abstract class AbstractSessionPartView(
             toggle()
         }
     }
-    private val mouse = object : MouseAdapter() {
+    // Hover is tracked across the whole header subtree so leaving the row via any nested
+    // element (e.g. an unbound file link) still clears the hover fill. Swing only delivers
+    // mouseExited to the deepest component, so a single listener on the row is not enough.
+    private val pointer = object : MouseAdapter() {
         override fun mouseEntered(e: MouseEvent) {
             setHovered(true)
         }
@@ -48,6 +55,10 @@ abstract class AbstractSessionPartView(
             setHovered(false)
         }
     }
+    private val nested = object : ContainerAdapter() {
+        override fun componentAdded(e: ContainerEvent) = watch(e.child)
+        override fun componentRemoved(e: ContainerEvent) = unwatch(e.child)
+    }
 
     init {
         layout = BorderLayout()
@@ -56,6 +67,7 @@ abstract class AbstractSessionPartView(
         row.add(arrow, BorderLayout.EAST)
         add(row, BorderLayout.NORTH)
         bindHeader(row, header, arrow)
+        watch(row)
         if (expanded && expandable) add(body(), BorderLayout.CENTER)
         if (!expandable) syncExpandable(false) else syncArrow()
     }
@@ -148,17 +160,33 @@ abstract class AbstractSessionPartView(
     }
 
     private fun bind(component: Component) {
-        if (bound.contains(component)) return
-        bound.add(component)
+        if (!bound.add(component)) return
         component.addMouseListener(click)
-        component.addMouseListener(mouse)
     }
 
     private fun unbind(component: Component) {
         if (!bound.remove(component)) return
         component.removeMouseListener(click)
-        component.removeMouseListener(mouse)
         component.cursor = Cursor.getDefaultCursor()
+    }
+
+    /** Attaches the hover listener to [component] and its whole subtree, keeping up with later children. */
+    private fun watch(component: Component) {
+        if (!watched.add(component)) return
+        component.addMouseListener(pointer)
+        if (component is Container) {
+            component.addContainerListener(nested)
+            component.components.forEach { watch(it) }
+        }
+    }
+
+    private fun unwatch(component: Component) {
+        if (!watched.remove(component)) return
+        component.removeMouseListener(pointer)
+        if (component is Container) {
+            component.removeContainerListener(nested)
+            component.components.forEach { unwatch(it) }
+        }
     }
 
     private fun body(): JComponent {

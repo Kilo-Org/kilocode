@@ -156,7 +156,7 @@ class ModifiedFilesView private constructor(
         }
         val panel = popup.mountFiles(files)
         popup.applyStyle(style)
-        return HeaderPopupBody(panel, owner, style.editorBackground, SessionUiStyle.View.Popup.WIDE_MAX_WIDTH)
+        return HeaderPopupBody(panel, owner, SessionUiStyle.Colors.codeBlockBackground(), SessionUiStyle.View.Popup.WIDE_MAX_WIDTH)
     }
 
     private class Header {
@@ -189,8 +189,8 @@ class ModifiedFilesView private constructor(
             setForeground(glyph, SessionUiStyle.View.Tool.completed())
             setFont(title, style.boldEditorFont)
             setFont(count, style.transcriptFont)
-            setForeground(title, UiStyle.Colors.fg())
-            setForeground(count, UiStyle.Colors.weak())
+            setForeground(title, SessionUiStyle.Colors.foreground())
+            setForeground(count, SessionUiStyle.Colors.hint())
         }
     }
 

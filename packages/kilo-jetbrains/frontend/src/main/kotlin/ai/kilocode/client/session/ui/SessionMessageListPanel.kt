@@ -610,7 +610,7 @@ class SessionMessageListPanel(
 
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
-        background = style.editorBackground
+        background = SessionUiStyle.Colors.sessionBackground()
         for (view in turnViews.values) view.applyStyle(style)
         question?.applyStyle(style)
         permission?.applyStyle(style)

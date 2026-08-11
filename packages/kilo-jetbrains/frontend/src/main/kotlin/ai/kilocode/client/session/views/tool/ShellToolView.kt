@@ -174,7 +174,7 @@ class ShellToolView(
         changed = setText(parts.title, title(item)) || changed
         changed = setText(parts.sub, subtitle(item)) || changed
         changed = setForeground(parts.title, titleColor(item)) || changed
-        changed = setForeground(parts.sub, UiStyle.Colors.weak()) || changed
+        changed = setForeground(parts.sub, SessionUiStyle.Colors.hint()) || changed
         changed = setText(parts.state, stateText(item)) || changed
         changed = setForeground(parts.state, color(item)) || changed
         return changed
@@ -198,13 +198,13 @@ class ShellToolView(
         md.applyStyle(style)
         md.font = style.transcriptFont
         md.foreground = style.editorForeground
-        md.background = style.editorBackground
-        md.preBg = style.editorBackground
+        md.background = SessionUiStyle.Colors.codeBlockBackground()
+        md.preBg = SessionUiStyle.Colors.codeBlockBackground()
         md.codeFont = style.editorFamily
         md.component.border = JBUI.Borders.empty()
         md.set(popupMd(formatCommand(cmd)))
         padPopup(md.component)
-        return HeaderPopupBody(md.component, md, style.editorBackground, SessionUiStyle.View.Popup.WIDE_MAX_WIDTH)
+        return HeaderPopupBody(md.component, md, SessionUiStyle.Colors.codeBlockBackground(), SessionUiStyle.View.Popup.WIDE_MAX_WIDTH)
     }
 
     override fun dumpLabel() = "ShellToolView#$contentId(${labelText()})"

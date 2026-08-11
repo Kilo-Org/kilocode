@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.ui.style
 
 import ai.kilocode.client.ui.UiStyle
+import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
@@ -8,8 +9,38 @@ import java.awt.Color
 
 /** Static style tokens owned by the chat session UI. */
 object SessionUiStyle {
+    /**
+     * The session palette is driven by three authored keys; everything else is derived:
+     * - [sessionBackground] paints the whole session backdrop (containers stay transparent over it).
+     * - [codeBlockBackground] is the single raised surface (code blocks, tool/shell output, prompt bubble, prompt input).
+     * - [foreground] is normal text and links; [hint] is derived from it.
+     */
+    object Colors {
+        private const val HINT_BOOST = 0.35f
+
+        fun sessionBackground(): Color = JBColor.namedColor(
+            "Kilo.Session.background",
+            UiStyle.Colors.bg(),
+        )
+
+        fun codeBlockBackground(): Color = JBColor.namedColor(
+            "Kilo.Session.codeBlockBackground",
+            JBColor.lazy { UiStyle.Colors.codeBlockBackground(EditorColorsManager.getInstance().globalScheme) },
+        )
+
+        fun foreground(): Color = JBColor.namedColor(
+            "Kilo.Session.foreground",
+            UiStyle.Colors.fg(),
+        )
+
+        fun hint(): Color = JBColor.namedColor(
+            "Kilo.Session.hintForeground",
+            UiStyle.Colors.blend(UiStyle.Colors.weak(), foreground(), HINT_BOOST),
+        )
+    }
+
     object Transcript {
-        fun bgColor(): Color = UiStyle.Colors.bg()
+        fun bgColor(): Color = Colors.sessionBackground()
     }
 
     /** Geometry for the transcript list and its scroll behavior. */
@@ -69,13 +100,13 @@ object SessionUiStyle {
         internal const val HOVER_FILL_ALPHA = 0.10f
 
         object Surface {
-            fun bgColor(): Color = UiStyle.Colors.editorBackground()
+            fun bgColor(): Color = Colors.sessionBackground()
 
-            fun headerBgColor(): Color = UiStyle.Colors.editorBackground()
+            fun headerBgColor(): Color = Colors.sessionBackground()
 
             /** Subtle hover fill, softer than the session-view outline. */
             fun headerHoverBgColor(): Color = JBColor.lazy {
-                UiStyle.Colors.blend(headerBgColor(), Outline.hoverColor(), HOVER_FILL_ALPHA)
+                UiStyle.Colors.blend(Colors.sessionBackground(), Outline.hoverColor(), HOVER_FILL_ALPHA)
             }
         }
 
@@ -83,7 +114,7 @@ object SessionUiStyle {
             fun color(): Color = UiStyle.Colors.contentBorder()
 
             fun brightColor(): Color = JBColor.lazy {
-                UiStyle.Colors.contrast(UiStyle.Colors.editorBackground(), BORDER_DELTA)
+                UiStyle.Colors.contrast(Colors.sessionBackground(), BORDER_DELTA)
             }
 
             /** Subtle hover outline, stronger than the hover fill. */
@@ -96,15 +127,7 @@ object SessionUiStyle {
 
         /** Prompt input dimensions and chrome inside the session view. */
         object Prompt {
-            /**
-             * Background of the prompt input and the transcript user-prompt bubble. Uses a dedicated
-             * theme key so the prompt surface can be restyled independently, defaulting to the
-             * code-fragment background so the prompt matches rendered code blocks.
-             */
-            fun bgColor(style: SessionEditorStyle): Color = JBColor.namedColor(
-                "Kilo.Session.Prompt.Background",
-                UiStyle.Colors.codeBlockBackground(style.editorScheme),
-            )
+            fun bgColor(_style: SessionEditorStyle): Color = Colors.codeBlockBackground()
 
             const val EDITOR_LINES = 1
             const val EDITOR_CHROME = 16
@@ -145,7 +168,7 @@ object SessionUiStyle {
             private const val SCRIM_ALPHA = 210
 
             fun scrim(): Color = JBColor.lazy {
-                val bg = UiStyle.Colors.bg()
+                val bg = Colors.sessionBackground()
                 Color(bg.red, bg.green, bg.blue, SCRIM_ALPHA)
             }
 
@@ -220,11 +243,11 @@ object SessionUiStyle {
              */
             const val DIFF_MAX_LINES = 2_000
 
-            fun pending(): Color = UiStyle.Colors.weak()
+            fun pending(): Color = Colors.hint()
 
-            fun running(): Color = UiStyle.Colors.fg()
+            fun running(): Color = Colors.foreground()
 
-            fun completed(): Color = UiStyle.Colors.weak()
+            fun completed(): Color = Colors.hint()
 
             fun error(): Color = UiStyle.Colors.errorLabelForeground()
         }

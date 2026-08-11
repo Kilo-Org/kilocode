@@ -221,7 +221,7 @@ class TaskToolView(
         private var item = tool
         val icon = JBLabel()
         val title = JBLabel()
-        val sub = JBLabel().apply { foreground = UiStyle.Colors.weak() }
+        val sub = JBLabel().apply { foreground = SessionUiStyle.Colors.hint() }
         val panel = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
             isOpaque = false
             add(icon, BorderLayout.WEST)
@@ -265,7 +265,7 @@ private class TaskBody(glyph: JBLabel) {
     val panel = object : JPanel(BorderLayout()) {
         override fun updateUI() {
             super.updateUI()
-            background = SessionUiStyle.View.Surface.bgColor()
+            background = SessionUiStyle.Colors.codeBlockBackground()
             border = taskBodyBorder(glyph)
         }
     }.apply {
@@ -286,8 +286,8 @@ private class TaskBodyScroll(val body: TaskBody) : JBScrollPane(body.panel) {
     override fun updateUI() {
         super.updateUI()
         border = JBUI.Borders.empty()
-        background = SessionUiStyle.View.Surface.bgColor()
-        viewport?.background = SessionUiStyle.View.Surface.bgColor()
+        background = SessionUiStyle.Colors.codeBlockBackground()
+        viewport?.background = SessionUiStyle.Colors.codeBlockBackground()
     }
 }
 
@@ -313,7 +313,7 @@ private class TaskRows : Stack(StackAxis.VERTICAL, UiStyle.Gap.sm()), Scrollable
 private fun rowTitleColor(tool: Tool) = if (tool.state == ToolExecState.ERROR) {
     UiStyle.Colors.errorLabelForeground()
 } else {
-    UiStyle.Colors.weak()
+    SessionUiStyle.Colors.hint()
 }
 
 private fun taskBodyBorder(glyph: JBLabel) = run {

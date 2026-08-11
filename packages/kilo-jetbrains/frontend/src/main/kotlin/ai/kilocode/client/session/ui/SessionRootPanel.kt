@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.ui
 
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.LayeredOverlayPanel
 
 class SessionRootPanel(
@@ -12,5 +13,10 @@ class SessionRootPanel(
 
     class Overlay : LayeredOverlayPanel.Overlay()
 
-    class Blocker : LayeredOverlayPanel.Blocker()
+    class Blocker : LayeredOverlayPanel.Blocker() {
+        override fun updateUI() {
+            super.updateUI()
+            background = SessionUiStyle.Colors.sessionBackground()
+        }
+    }
 }

@@ -4,11 +4,13 @@ import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
 import java.awt.event.MouseEvent
 import java.awt.image.BufferedImage
 import javax.swing.Icon
+import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.border.Border
@@ -88,6 +90,8 @@ class AbstractSessionPartViewTest : BasePlatformTestCase() {
     }
 
     fun `test header hover fill differs from outline colors`() {
+        assertEquals(SessionUiStyle.Colors.sessionBackground(), SessionUiStyle.View.Surface.headerBgColor())
+        assertEquals(SessionUiStyle.Colors.sessionBackground(), SessionUiStyle.View.Surface.bgColor())
         assertNotSameColor(SessionUiStyle.View.Surface.headerHoverBgColor(), SessionUiStyle.View.Outline.hoverColor())
         assertNotSameColor(SessionUiStyle.View.Surface.headerHoverBgColor(), SessionUiStyle.View.Outline.brightColor())
     }
@@ -108,7 +112,24 @@ class AbstractSessionPartViewTest : BasePlatformTestCase() {
         assertLine(view.border)
     }
 
-    private class TestView(content: JLabel, expanded: Boolean = false, expandable: Boolean = true) :
+    fun `test hover tracks nested header child and clears on leave`() {
+        val child = JLabel("link")
+        val header = JPanel(BorderLayout()).apply { add(child, BorderLayout.WEST) }
+        val view = NestedView(header)
+        val row = view.component(0) as JPanel
+        view.setSize(200, 40)
+        view.doLayout()
+
+        // A nested child that is not click-bound (e.g. a file link) must still report hover.
+        enter(child)
+        assertEquals(SessionUiStyle.View.Surface.headerHoverBgColor().rgb, row.background.rgb)
+
+        // Leaving the row through that nested child clears the fill instead of leaving it stuck.
+        exit(child, 10_000, 10_000)
+        assertEquals(SessionUiStyle.View.Surface.headerBgColor().rgb, row.background.rgb)
+    }
+
+    private open class TestView(content: JLabel, expanded: Boolean = false, expandable: Boolean = true) :
         PrimarySessionPartView(JLabel("header"), content, expanded, expandable) {
 
         override val contentId = "test"
@@ -117,20 +138,25 @@ class AbstractSessionPartViewTest : BasePlatformTestCase() {
         fun arrowIcon(): Icon = arrow.icon
     }
 
-    private fun TestView.component(index: Int): Component = components[index]
+    private class NestedView(header: JComponent) : PrimarySessionPartView(header, JLabel("body")) {
+        override val contentId = "nested"
+        override fun update(content: Content) {}
+    }
 
-    private fun enter(component: Component) = event(component, MouseEvent.MOUSE_ENTERED)
+    private fun PrimarySessionPartView.component(index: Int): Component = components[index]
 
-    private fun exit(component: Component) = event(component, MouseEvent.MOUSE_EXITED)
+    private fun enter(component: Component) = event(component, MouseEvent.MOUSE_ENTERED, 1, 1)
 
-    private fun event(component: Component, id: Int) {
+    private fun exit(component: Component, x: Int = 1, y: Int = 1) = event(component, MouseEvent.MOUSE_EXITED, x, y)
+
+    private fun event(component: Component, id: Int, x: Int, y: Int) {
         component.dispatchEvent(MouseEvent(
             component,
             id,
             System.currentTimeMillis(),
             0,
-            1,
-            1,
+            x,
+            y,
             0,
             false,
         ))

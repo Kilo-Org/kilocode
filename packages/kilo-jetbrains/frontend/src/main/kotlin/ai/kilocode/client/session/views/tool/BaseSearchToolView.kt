@@ -129,7 +129,7 @@ abstract class BaseSearchToolView(
         changed = setForeground(parts.glyph, color(item)) || changed
         changed = setText(parts.title, toolTitle(item)) || changed
         changed = setForeground(parts.title, titleColor(item)) || changed
-        changed = setForeground(parts.sub, UiStyle.Colors.weak()) || changed
+        changed = setForeground(parts.sub, SessionUiStyle.Colors.hint()) || changed
         changed = syncTargets() || changed
         changed = setText(parts.state, stateText(item)) || changed
         changed = setForeground(parts.state, color(item)) || changed
@@ -148,7 +148,7 @@ abstract class BaseSearchToolView(
             val text = values.getOrNull(index) ?: ""
             changed = setVisible(label, text.isNotBlank()) || changed
             changed = setTargetText(label, text) || changed
-            changed = setForeground(label, UiStyle.Colors.fg()) || changed
+            changed = setForeground(label, SessionUiStyle.Colors.foreground()) || changed
         }
         return changed
     }
@@ -176,7 +176,7 @@ abstract class BaseSearchToolView(
         return body.applyStyle(style)
     }
 
-    private fun bodyColor() = if (item.state == ToolExecState.ERROR) UiStyle.Colors.errorLabelForeground() else UiStyle.Colors.fg()
+    private fun bodyColor() = if (item.state == ToolExecState.ERROR) UiStyle.Colors.errorLabelForeground() else SessionUiStyle.Colors.foreground()
 
     private fun bodyMaxHeight(): Int {
         val body = parts.content ?: return 0

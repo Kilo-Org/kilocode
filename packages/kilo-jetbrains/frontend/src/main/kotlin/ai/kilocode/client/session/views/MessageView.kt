@@ -486,7 +486,7 @@ class MessageView(
             g2.fillRoundRect(pt.x, pt.y, box.width, box.height, arc, arc)
             // When the prompt shares the session background there is no fill contrast, so draw the
             // outline to keep the bubble visible.
-            if (bg.rgb == style.editorBackground.rgb) {
+            if (bg.rgb == SessionUiStyle.Colors.sessionBackground().rgb) {
                 val w = box.width - 1
                 val h = box.height - 1
                 g2.color = SessionUiStyle.View.Outline.color()

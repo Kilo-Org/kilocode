@@ -92,8 +92,8 @@ class BaseQuestionView(
         isVisible = false
     }
 
-    private val headerText: JBTextArea = makeText("", UiStyle.Colors.fg(), bold = true)
-    private val descriptionText: JBTextArea = makeText("", UiStyle.Colors.weak(), bold = false).apply {
+    private val headerText: JBTextArea = makeText("", SessionUiStyle.Colors.foreground(), bold = true)
+    private val descriptionText: JBTextArea = makeText("", SessionUiStyle.Colors.hint(), bold = false).apply {
         isVisible = false
     }
 

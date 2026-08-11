@@ -56,7 +56,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
     }
 
     fun `test session surfaces use session background from initial render`() {
-        val bg = SessionEditorStyle.current().editorBackground
+        val bg = SessionUiStyle.Colors.sessionBackground()
         val root = find<SessionRootPanel>(ui)
         val pane = scrollComponent() as JBScrollPane
 
