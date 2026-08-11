@@ -121,7 +121,7 @@ export const DataBridge: Component<{ children: any }> = (props) => {
   }
 
   const open = (filePath: string, line?: number, column?: number) => {
-    vscode.postMessage({ type: "openFile", filePath, line, column })
+    vscode.postMessage({ type: "openFile", sessionID: session.currentSessionID(), filePath, line, column })
   }
 
   const openDiff = (diff: { file: string; patch?: string; additions: number; deletions: number }) => {
@@ -143,7 +143,7 @@ export const DataBridge: Component<{ children: any }> = (props) => {
     const id = `vf-${++counter.n}`
     return new Promise((resolve) => {
       pending.set(id, resolve)
-      vscode.postMessage({ type: "validateFiles", id, paths })
+      vscode.postMessage({ type: "validateFiles", sessionID: session.currentSessionID(), id, paths })
       setTimeout(() => {
         if (pending.has(id)) {
           pending.delete(id)

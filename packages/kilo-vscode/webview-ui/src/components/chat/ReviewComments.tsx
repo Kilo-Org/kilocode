@@ -38,7 +38,13 @@ export const ReviewComments: Component<ReviewCommentsProps> = (props) => {
       dialog.close()
       return
     }
-    vscode.postMessage({ type: "openFile", filePath: item.file, line: item.line, column: 1 })
+    vscode.postMessage({
+      type: "openFile",
+      sessionID: props.sessionID,
+      filePath: item.file,
+      line: item.line,
+      column: 1,
+    })
     dialog.close()
   }
 

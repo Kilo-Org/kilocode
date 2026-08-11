@@ -1560,7 +1560,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private handleEditorOpenMessage(message: Parameters<typeof handleEditorAction>[0]): boolean {
     return handleEditorAction(message, {
-      dir: () => this.getWorkspaceDirectory(this.currentSession?.id),
+      dir: () => {
+        const sid = message.sessionID ?? this.contextSessionID ?? this.currentSession?.id
+        if (!sid) return this.getRootDirectory()
+        const routed = this.routeSessionDirectory(sid)
+        if (routed === null) {
+          console.warn(`[Kilo New] KiloProvider: session ${sid} is ambiguous across projects; refusing file action`)
+          return
+        }
+        const session = this.currentSession?.id === sid ? this.currentSession : undefined
+        const dir = routed ?? this.getSessionDirectory(sid, session)
+        const root = this.getRootDirectory()
+        return !existsSync(dir) && existsSync(root) ? root : dir
+      },
       diff: this.diffVirtualProvider,
       storage: this.extensionContext?.globalStorageUri,
       post: (msg) => this.postMessage(msg),

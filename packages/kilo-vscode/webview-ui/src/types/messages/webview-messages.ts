@@ -146,6 +146,7 @@ export interface OpenExternalRequest {
 
 export interface OpenFileRequest {
   type: "openFile"
+  sessionID?: string
   filePath: string
   line?: number
   column?: number
@@ -159,6 +160,7 @@ export interface OpenContentRequest {
 
 export interface ValidateFilesRequest {
   type: "validateFiles"
+  sessionID?: string
   id: string
   paths: string[]
 }

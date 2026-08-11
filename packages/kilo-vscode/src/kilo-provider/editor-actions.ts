@@ -6,6 +6,7 @@ import type { DiffVirtualFile, DiffVirtualProvider } from "../DiffVirtualProvide
 
 type EditorOpenMessage = {
   type?: string
+  sessionID?: string
   filePath?: string
   line?: number
   column?: number
@@ -73,14 +74,16 @@ export function handleEditorAction(
     paths?: string[]
   },
   opts: {
-    dir: () => string
+    dir: () => string | undefined
     diff?: DiffVirtualProvider
     storage?: vscode.Uri
     post?: (msg: unknown) => void
   },
 ): boolean {
   if (message.type === "openFile") {
-    if (message.filePath) openFile(opts.dir(), message.filePath, message.line, message.column)
+    const dir = opts.dir()
+    if (message.filePath && dir) openFile(dir, message.filePath, message.line, message.column)
+    if (message.filePath && !dir) vscode.window.showWarningMessage("Unable to resolve file for this session")
     return true
   }
   if (message.type === "openContent") {
@@ -92,7 +95,12 @@ export function handleEditorAction(
     const paths = message.paths
     if (id && paths && opts.post) {
       const post = opts.post
-      validateFiles(opts.dir(), paths).then(
+      const dir = opts.dir()
+      if (!dir) {
+        post({ type: "validateFilesResult", id, existing: [] })
+        return true
+      }
+      validateFiles(dir, paths).then(
         (existing) => post({ type: "validateFilesResult", id, existing }),
         (err) => console.error("[Kilo New] KiloProvider: validateFiles failed:", err),
       )

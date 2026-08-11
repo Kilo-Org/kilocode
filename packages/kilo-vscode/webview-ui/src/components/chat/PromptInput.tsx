@@ -1428,7 +1428,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                       if (mention.mentionedSessions().has(seg().text.replace(/^@/, ""))) return
                       e.preventDefault()
                       e.stopPropagation()
-                      vscode.postMessage({ type: "openFile", filePath: seg().text.replace(/^@/, "") })
+                      vscode.postMessage({
+                        type: "openFile",
+                        sessionID: session.currentSessionID(),
+                        filePath: seg().text.replace(/^@/, ""),
+                      })
                     }}
                   >
                     {seg().text}
