@@ -92,7 +92,7 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
         val manager = open?.let { fn ->
             object : SessionManager {
                 override fun newSession() {}
-                override fun showHistory() {}
+                override fun showHistory(back: (() -> Unit)?) {}
                 override fun openSession(ref: SessionRef) = fn(ref)
             }
         }

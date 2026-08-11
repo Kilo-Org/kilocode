@@ -110,7 +110,7 @@ open class WorktreeSessionEditorManager(
     }
 
     @RequiresEdt
-    override fun showHistory() {
+    override fun showHistory(back: (() -> Unit)?) {
         list.reload()
         onListChanged?.invoke()
     }

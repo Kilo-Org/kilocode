@@ -239,7 +239,7 @@ class HistoryControllerTest : BasePlatformTestCase() {
         rpc.listed += session("ses_1", "Local One")
         val panel = HistoryPanel(parent, controller(), manager = object : SessionManager {
             override fun newSession() {}
-            override fun showHistory() {}
+            override fun showHistory(back: (() -> Unit)?) {}
             override fun openSession(ref: SessionRef) {}
             override fun activity() = mapOf("ses_1" to SessionActivityKind.PERMISSION)
         })
@@ -255,7 +255,7 @@ class HistoryControllerTest : BasePlatformTestCase() {
         var kind: SessionActivityKind? = null
         val panel = HistoryPanel(parent, controller(), manager = object : SessionManager {
             override fun newSession() {}
-            override fun showHistory() {}
+            override fun showHistory(back: (() -> Unit)?) {}
             override fun openSession(ref: SessionRef) {}
             override fun activity() = sessions.activitySnapshot() + kind?.let { mapOf("ses_1" to it) }.orEmpty()
         })
@@ -276,7 +276,7 @@ class HistoryControllerTest : BasePlatformTestCase() {
         var title = "Live"
         val panel = HistoryPanel(parent, controller(), manager = object : SessionManager {
             override fun newSession() {}
-            override fun showHistory() {}
+            override fun showHistory(back: (() -> Unit)?) {}
             override fun openSession(ref: SessionRef) {}
             override fun titles() = title.takeIf { it.isNotBlank() }?.let { mapOf("ses_1" to it) }.orEmpty()
         })
@@ -946,7 +946,7 @@ class HistoryControllerTest : BasePlatformTestCase() {
 
     private class FakeManager : SessionManager {
         override fun newSession() {}
-        override fun showHistory() {}
+        override fun showHistory(back: (() -> Unit)?) {}
         override fun openSession(ref: SessionRef) {}
     }
 

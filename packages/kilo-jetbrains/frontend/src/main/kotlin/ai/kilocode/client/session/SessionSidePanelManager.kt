@@ -47,6 +47,7 @@ class SessionSidePanelManager(
     }
 
     private var panel: JComponent? = null
+    private var historyBack: (() -> Unit)? = null
 
     val defaultFocusedComponent: JComponent? get() = currentUi()?.defaultFocusedComponent ?: (panel as? HistoryPanel)?.defaultFocusedComponent
 
@@ -57,7 +58,8 @@ class SessionSidePanelManager(
     }
 
     @RequiresEdt
-    override fun showHistory() {
+    override fun showHistory(back: (() -> Unit)?) {
+        historyBack = back
         val active = currentUi()
         register(active)
         release(active)
@@ -94,6 +96,12 @@ class SessionSidePanelManager(
 
     @RequiresEdt
     private fun back() {
+        val callback = historyBack
+        historyBack = null
+        if (callback != null) {
+            callback()
+            return
+        }
         val ui = latestUi()
         if (ui != null) {
             show(ui)

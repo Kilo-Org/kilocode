@@ -12,7 +12,7 @@ interface SessionManager {
 
     fun newSession()
 
-    fun showHistory()
+    fun showHistory(back: (() -> Unit)? = null)
 
     fun openSession(ref: SessionRef)
 
