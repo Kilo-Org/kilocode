@@ -147,7 +147,8 @@
                 class="ai.kilocode.client.actions.CoreInfoAction"/>
 
         <action id="Kilo.OpenSettings"
-                class="ai.kilocode.client.actions.OpenSettingsAction"/>
+                class="ai.kilocode.client.actions.OpenSettingsAction"
+                icon="AllIcons.General.GearPlain"/>
 
         <action id="Kilo.OpenLocalConfig"
                 class="ai.kilocode.client.actions.OpenLocalConfigAction"/>

@@ -13,9 +13,9 @@ import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.AgentManagerPanel
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.log.KiloLog
+import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.DataProvider
-import com.intellij.openapi.actionSystem.Separator
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbAware
@@ -108,6 +108,8 @@ internal class KiloToolWindowSetupService(
             chat.add(manager.component, BorderLayout.CENTER)
             val agent = object : JPanel(BorderLayout()), DataProvider {
                 override fun getData(dataId: String): Any? {
+                    // Expose the shared manager here too so History works from the Agent Manager tab.
+                    if (SessionManager.KEY.`is`(dataId)) return manager
                     if (SessionManager.WORKSPACE_KEY.`is`(dataId)) return workspace
                     if (SidePanelKeys.MODE.`is`(dataId)) return SidePanelMode.AGENT_MANAGER
                     if (SidePanelKeys.WORKTREE_PANEL.`is`(dataId)) return agentManagerPanel
@@ -143,10 +145,13 @@ internal class KiloToolWindowSetupService(
                 ActionManager.getInstance().getAction("Kilo.NewSession"),
                 ActionManager.getInstance().getAction("Kilo.NewWorktree"),
                 ActionManager.getInstance().getAction("Kilo.History"),
-                Separator.getInstance(),
-                ActionManager.getInstance().getAction("Kilo.Settings"),
             )
             toolWindow.setTitleActions(actions)
+            // Settings moves off the toolbar into the header gear (options) menu: Open Settings…,
+            // Config Files, and Core, inlined from the declarative Kilo.SettingsGroup.
+            (ActionManager.getInstance().getAction("Kilo.SettingsGroup") as? ActionGroup)?.let {
+                toolWindow.setAdditionalGearActions(it)
+            }
         } catch (e: Exception) {
             Telemetry.send("Tool Window Setup Failed", mapOf("stage" to "setup", "errorClass" to e::class.java.name))
             LOG.error("Failed to set up Kilo tool window content", e)
