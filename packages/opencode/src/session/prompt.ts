@@ -1703,6 +1703,7 @@ export const layer = Layer.effect(
             Effect.provideService(Config.Service, config),
             Effect.provideService(Provider.Service, provider),
             Effect.provideService(Database.Service, database),
+            Effect.provideService(RuntimeFlags.Service, flags),
             // kilocode_change end
           )
 
@@ -2007,22 +2008,30 @@ export const layer = Layer.effect(
             const code = typeof cause === "object" && cause !== null && "code" in cause ? cause.code : undefined
             if (code !== "ENOENT") {
               const error = new NamedError.Unknown({ message: "Unreadable Claude transcript directory" })
-              yield* events.publish(Session.Event.Error, { sessionID: input.cmdInput.sessionID, error: error.toObject() })
+              yield* events.publish(Session.Event.Error, {
+                sessionID: input.cmdInput.sessionID,
+                error: error.toObject(),
+              })
               return yield* Effect.fail(error)
             }
           }
         }
-        const codexExit = input.format === "codex"
-          ? yield* Effect.exit(Effect.promise(() => SessionResume.discoverCodex({ cwd, ...roots })))
-          : undefined
-        const codexFiles = (codexExit && Exit.isSuccess(codexExit)) ? codexExit.value : []
+        const codexExit =
+          input.format === "codex"
+            ? yield* Effect.exit(Effect.promise(() => SessionResume.discoverCodex({ cwd, ...roots })))
+            : undefined
+        const codexFiles = codexExit && Exit.isSuccess(codexExit) ? codexExit.value : []
 
         type Entry = { id: string; format: SessionResume.Format; mtime?: number }
         const entries: Entry[] = []
         for (const f of claudeFiles) {
           const id = path.basename(f, ".jsonl")
           let mtime: number | undefined
-          try { mtime = fs.statSync(f).mtimeMs } catch { mtime = undefined }
+          try {
+            mtime = fs.statSync(f).mtimeMs
+          } catch {
+            mtime = undefined
+          }
           entries.push({ id, format: "claude", mtime })
         }
         for (const f of codexFiles) {
@@ -2031,13 +2040,18 @@ export const layer = Layer.effect(
           const raw = base.slice("rollout-".length)
           const id = raw.split("-").slice(-5).join("-")
           let mtime: number | undefined
-          try { mtime = fs.statSync(f).mtimeMs } catch { mtime = undefined }
+          try {
+            mtime = fs.statSync(f).mtimeMs
+          } catch {
+            mtime = undefined
+          }
           entries.push({ id, format: "codex", mtime })
         }
 
         if (entries.length === 0) {
           const error = new NamedError.Unknown({
-            message: "No session transcripts found in the current directory. Use /resume-claude <uuid> or /resume-codex <uuid> with an explicit UUID.",
+            message:
+              "No session transcripts found in the current directory. Use /resume-claude <uuid> or /resume-codex <uuid> with an explicit UUID.",
           })
           yield* events.publish(Session.Event.Error, { sessionID: input.cmdInput.sessionID, error: error.toObject() })
           return yield* Effect.fail(error)
@@ -2094,9 +2108,10 @@ export const layer = Layer.effect(
 
       // Discover and parse
       const cwd = ctx.directory
-      const codexExit = input.format === "codex"
-        ? yield* Effect.exit(Effect.promise(() => SessionResume.discoverCodex({ cwd, id: uuid, ...roots })))
-        : undefined
+      const codexExit =
+        input.format === "codex"
+          ? yield* Effect.exit(Effect.promise(() => SessionResume.discoverCodex({ cwd, id: uuid, ...roots })))
+          : undefined
       let file: string | undefined
       if (input.format === "claude") {
         try {
@@ -2185,9 +2200,12 @@ export const layer = Layer.effect(
         const newID = MessageID.ascending()
         idMap.set(item.info.id as string, newID)
 
-        const parentID = item.info.role === "assistant"
-          ? (typeof item.info.parentID === "string" ? idMap.get(item.info.parentID) : undefined)
-          : undefined
+        const parentID =
+          item.info.role === "assistant"
+            ? typeof item.info.parentID === "string"
+              ? idMap.get(item.info.parentID)
+              : undefined
+            : undefined
 
         const info = {
           ...item.info,
@@ -2510,10 +2528,7 @@ export const PromptInput = Schema.Struct({
 // `parts` type from the exported Schema input types so callers see a proper
 // tagged union.
 type PartInputUnion =
-  | MessageV2.TextPartInput
-  | MessageV2.FilePartInput
-  | MessageV2.AgentPartInput
-  | MessageV2.SubtaskPartInput
+  MessageV2.TextPartInput | MessageV2.FilePartInput | MessageV2.AgentPartInput | MessageV2.SubtaskPartInput
 export type PromptInput = Omit<Schema.Schema.Type<typeof PromptInput>, "parts" | "editorContext"> & {
   parts: PartInputUnion[]
   editorContext?: MessageV2.EditorContext

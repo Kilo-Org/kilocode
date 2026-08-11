@@ -47,6 +47,7 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.controller.EVENT_FLUSH_MS
 import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.session.controller.SessionControllerEvent
+import ai.kilocode.client.session.context.EditorContextGatherer
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.LoginRequiredView
 import ai.kilocode.client.session.views.permission.PermissionView
@@ -155,7 +156,7 @@ class SessionUi(
         condense = Registry.`is`("kilo.session.condense", true),
         displayMs = displayMs,
         open = { item -> manager?.openSession(item) },
-        beforeUpdate = { if (opening) false else scroll.atBottom() },
+        beforeUpdate = { if (opening) false else scroll.following() },
         afterUpdate = { if (!opening) scroll.followBottom(it) },
         loaded = ::onSessionLoaded,
         openProfileAction = ::openProfileSettings,
@@ -682,17 +683,8 @@ class SessionUi(
 
     private fun sendPrompt(text: String, files: List<PromptPartDto>) {
         if (text.isBlank() && files.isEmpty()) return
-        val parts = buildList {
-            text.takeIf { it.isNotBlank() }?.let { add(PromptPartDto(type = "text", text = it)) }
-            addAll(files)
-        }
-        LOG.debug {
-            val agent = controller.model.agent ?: "none"
-            val model = controller.model.model ?: "none"
-            "${ChatLogSummary.prompt(PromptDto(parts = parts))} agent=$agent model=$model ready=${controller.ready}"
-        }
         prompt.clear()
-        val follow = scroll.atBottom()
+        val follow = scroll.following()
         val action = completion.clientAction(text)
         if (action != null) {
             action.action()
@@ -705,7 +697,20 @@ class SessionUi(
             scroll.followBottom(follow)
             return
         }
-        controller.prompt(text, files)
+        // Only the prompt path uses editor context; gather after the command branches so slash
+        // commands and client actions don't pay the editor-context cost or hit its failure modes.
+        val editor = EditorContextGatherer.gather(project, workspace.directory)
+        val allFiles = files + listOfNotNull(editor.selection)
+        LOG.debug {
+            val parts = buildList {
+                text.takeIf { it.isNotBlank() }?.let { add(PromptPartDto(type = "text", text = it)) }
+                addAll(allFiles)
+            }
+            val agent = controller.model.agent ?: "none"
+            val model = controller.model.model ?: "none"
+            "${ChatLogSummary.prompt(PromptDto(parts = parts, editorContext = editor.context))} agent=$agent model=$model ready=${controller.ready}"
+        }
+        controller.prompt(text, allFiles, editor.context)
         scroll.followBottom(follow)
     }
 
@@ -918,12 +923,13 @@ class SessionUi(
             return
         }
         if (uri.scheme == "file") {
-            val path = runCatching { Path.of(uri).toString() }.getOrNull() ?: run {
+            val path = runCatching { Path.of(cleanAttachmentUri(uri)).toString() }.getOrNull() ?: run {
                 LOG.info("kind=attachment-open skipped=true reason=invalid-file-uri message=$messageId part=${item.id} url=${attachmentUrl(url)}")
                 return
             }
-            LOG.info("kind=attachment-open route=file session=${controller.id ?: "none"} message=$messageId part=${item.id} path=$path")
-            fileLinks.open(path, null)
+            val target = attachmentHref(path, item)
+            LOG.info("kind=attachment-open route=file session=${controller.id ?: "none"} message=$messageId part=${item.id} path=$target")
+            fileLinks.open(target, null)
             return
         }
         LOG.info("kind=attachment-open route=browser session=${controller.id ?: "none"} message=$messageId part=${item.id} url=${attachmentUrl(url)}")
@@ -933,6 +939,14 @@ class SessionUi(
     private fun attachmentName(item: FileAttachment) = item.filename?.takeIf { it.isNotBlank() }
         ?: item.url.substringBefore(',').substringAfterLast('/').takeIf { it.isNotBlank() }
         ?: "attachment"
+
+    private fun attachmentHref(path: String, item: FileAttachment): String {
+        val start = item.startLine ?: return path
+        val end = item.endLine ?: start
+        return "$path:$start-$end"
+    }
+
+    private fun cleanAttachmentUri(uri: URI): URI = URI(uri.scheme, uri.authority, uri.path, null, null)
 
     private fun attachmentUrl(url: String): String {
         val scheme = url.substringBefore(':', missingDelimiterValue = "none")
