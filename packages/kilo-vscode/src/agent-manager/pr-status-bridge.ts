@@ -101,7 +101,7 @@ export class PRStatusBridge {
           worktreeId: id,
           threadId,
           success: false,
-        } as AgentManagerOutMessage)
+        })
         return true
       }
       const action = isResolve ? resolveComment : unresolveComment
@@ -112,7 +112,7 @@ export class PRStatusBridge {
             worktreeId: id,
             threadId,
             success: true,
-          } as AgentManagerOutMessage)
+          })
         },
         (err: unknown) => {
           const msg = err instanceof Error ? err.message : String(err)
@@ -122,7 +122,7 @@ export class PRStatusBridge {
             worktreeId: id,
             threadId,
             success: false,
-          } as AgentManagerOutMessage)
+          })
         },
       )
       return true
