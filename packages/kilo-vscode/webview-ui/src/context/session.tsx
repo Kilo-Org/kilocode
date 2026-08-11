@@ -245,7 +245,7 @@ interface SessionContextValue {
   variantList: (sessionID?: string) => string[]
   currentVariant: (sessionID?: string) => string | undefined
   variantForAgent: (agent: string, model: ModelSelection | null) => string | undefined
-  selectVariant: (value: string, sessionID?: string) => void
+  selectVariant: (value: string | undefined, sessionID?: string) => void
 
   // Model favorites
   recentModels: Accessor<ModelSelection[]>

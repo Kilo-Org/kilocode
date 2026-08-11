@@ -63,4 +63,14 @@ describe("session variants", () => {
     expect(scoped.selections).toEqual({ "session/session-a/anthropic/claude-sonnet-4": "low" })
     expect(scoped.messages).toEqual([])
   })
+
+  it("persists an explicit default selection", () => {
+    const state = setup()
+    state.variants.select(undefined)
+    expect(state.selections).toEqual({ "agent/code/anthropic/claude-sonnet-4": "default" })
+    expect(state.variants.current()).toBeUndefined()
+    expect(state.messages).toEqual([
+      { type: "persistVariant", key: "agent/code/anthropic/claude-sonnet-4", value: "default" },
+    ])
+  })
 })

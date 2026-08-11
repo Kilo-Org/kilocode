@@ -221,6 +221,7 @@ interface ThinkingSelectorProps {
 export const ThinkingSelector: Component<ThinkingSelectorProps> = (props) => {
   const session = useSession()
   const { settings } = useConfig()
+  const language = useLanguage()
   const id = () => props.sessionID?.()
 
   return (
@@ -228,6 +229,9 @@ export const ThinkingSelector: Component<ThinkingSelectorProps> = (props) => {
       variants={session.variantList(id())}
       value={session.currentVariant(id())}
       onSelect={(value) => session.selectVariant(value, id())}
+      onClear={() => session.selectVariant(undefined, id())}
+      allowClear
+      clearLabel={language.t("common.default")}
       cycleHint={settings()["chat.shiftTabCyclesVariant"] !== false}
     />
   )
