@@ -1,7 +1,6 @@
 package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.app.KiloAppService
-import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.session.ui.ReasoningPicker
 import ai.kilocode.client.session.ui.mode.ModePicker
@@ -35,7 +34,6 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
     private lateinit var app: KiloAppService
     private lateinit var workspaces: KiloWorkspaceService
     private lateinit var sessionRpc: FakeSessionRpcApi
-    private lateinit var sessions: KiloSessionService
     private var dialog: NewWorktreeDialog? = null
     private val created = mutableListOf<Triple<String, String?, PendingPrompt?>>()
 
@@ -46,7 +44,6 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         val ws = FakeWorkspaceRpcApi().apply { models = workspace() }
         workspaces = KiloWorkspaceService(scope, ws)
         sessionRpc = FakeSessionRpcApi()
-        sessions = KiloSessionService(project, scope, sessionRpc)
     }
 
     override fun tearDown() {
@@ -138,11 +135,8 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
                 "main",
                 listOf("main"),
                 onCreate = { branch, base, prompt -> created.add(Triple(branch, base, prompt)) },
-                onImportPr = {},
-                onImportBranch = {},
                 app,
                 workspaces,
-                sessions,
             )
         }
     }

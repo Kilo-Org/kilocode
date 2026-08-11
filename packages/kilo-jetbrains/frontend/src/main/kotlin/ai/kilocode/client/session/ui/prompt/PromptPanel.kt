@@ -108,7 +108,7 @@ class PromptPanel(
     private val project: Project,
     private val onSend: (String, List<PromptPartDto>) -> Unit,
     private val onAbort: () -> Unit,
-    private val onEnhance: (String, (Result<String>) -> Unit) -> Unit,
+    private val onEnhance: (String, (Result<String>) -> Unit) -> Unit = { _, _ -> },
     private val onMentions: suspend (String) -> List<PromptPartDto> = { emptyList() },
     private val completion: KiloPromptCompletionProvider? = null,
     private val selection: SessionSelection? = null,
@@ -116,6 +116,7 @@ class PromptPanel(
     private val rounded: Boolean = true,
     private val showSubmit: Boolean = true,
     private val approve: Boolean = true,
+    private val showEnhance: Boolean = true,
 ) : BorderLayoutPanel(), SessionEditorStyleTarget, SendPromptContext, UiDataProvider {
 
     companion object {
@@ -315,7 +316,7 @@ class PromptPanel(
             bar.add(auto)
             bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
         }
-        bar.add(enhance)
+        if (showEnhance) bar.add(enhance)
         if (showSubmit) {
             bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
             bar.add(separator)

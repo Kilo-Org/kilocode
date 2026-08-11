@@ -1,7 +1,6 @@
 package ai.kilocode.client.agentManager
 
 import ai.kilocode.client.KiloNotifications
-import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.agentManager.worktree.NewWorktreeDialog
 import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.WorktreeDataKeys
@@ -145,7 +144,7 @@ class AgentManagerPanel(
         project?.service<WorktreeStatusService>()?.refreshPr()
     }
 
-    /** Opens the New Worktree dialog (New + Import tabs). */
+    /** Opens the New Worktree dialog. */
     fun configure() {
         val target = project ?: return
         NewWorktreeDialog(
@@ -158,9 +157,6 @@ class AgentManagerPanel(
             onCreate = { branch, base, prompt ->
                 controller.create(branch, base, prompt = prompt)
             },
-            onImportPr = { url -> controller.importPr(url) },
-            onImportBranch = { branch -> controller.importBranch(branch) },
-            sessions = target.service<KiloSessionService>(),
         ).show()
     }
 
