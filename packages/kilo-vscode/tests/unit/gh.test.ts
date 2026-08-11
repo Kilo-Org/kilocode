@@ -60,9 +60,7 @@ describe("execGhRead", () => {
     try {
       const child = env(bin.dir)
       unset(child, "TZ")
-      const result = await execGhRead(["-e", "console.log(process.env.TZ)"], { env: child })
-      expect(result).not.toBeNull()
-      const { stdout } = result ?? { stdout: "" }
+      const { stdout } = await execGhRead(["-e", "console.log(process.env.TZ)"], { env: child })
       expect(stdout.trim()).toBe("UTC")
     } finally {
       bin.cleanup()
@@ -75,9 +73,7 @@ describe("execGhRead", () => {
     try {
       const child = env(bin.dir)
       child.TZ = "Europe/London"
-      const result = await execGhRead(["-e", "console.log(process.env.TZ)"], { env: child })
-      expect(result).not.toBeNull()
-      const { stdout } = result ?? { stdout: "" }
+      const { stdout } = await execGhRead(["-e", "console.log(process.env.TZ)"], { env: child })
       expect(stdout.trim()).toBe("Europe/London")
     } finally {
       bin.cleanup()
@@ -90,9 +86,7 @@ describe("execGhRead", () => {
     try {
       const child = env(bin.dir)
       unset(child, "TZ")
-      const result = await execGhRead(["-e", "console.log(process.env.TZ)"], { env: child })
-      expect(result).not.toBeNull()
-      const { stdout } = result ?? { stdout: "" }
+      const { stdout } = await execGhRead(["-e", "console.log(process.env.TZ)"], { env: child })
       expect(stdout.trim()).toBe("undefined")
     } finally {
       bin.cleanup()
