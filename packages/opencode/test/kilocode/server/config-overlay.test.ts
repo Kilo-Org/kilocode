@@ -18,7 +18,8 @@ import { resetDatabase } from "../../fixture/db"
 import { disposeAllInstances, tmpdir } from "../../fixture/fixture"
 
 void Log.init({ print: false })
-setDefaultTimeout(30_000)
+// Cold Windows CI runs with 4 parallel shards take ~32s across multiple temp repo instance cycles
+setDefaultTimeout(90_000)
 
 const original = Global.Path.config
 const terminal = process.platform === "win32" ? test.skip : test.serial
