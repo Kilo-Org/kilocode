@@ -6,6 +6,7 @@ import {
   type RenderContext,
 } from "@opentui/core"
 import { extend } from "@opentui/solid"
+import { SpinnerRenderable } from "opentui-spinner"
 import { createEffect, createSignal, onCleanup, onMount, type Accessor } from "solid-js"
 
 type Tier = "high" | "xhigh" | "max" | "ultra"
@@ -217,8 +218,6 @@ declare module "@opentui/solid" {
   }
 }
 
-extend({ effort_animation: EffortRenderable })
-
 export class EffortLabelRenderable extends FrameBufferRenderable {
   private tier: Tier = "max"
   private phase = 0
@@ -284,7 +283,11 @@ declare module "@opentui/solid" {
   }
 }
 
-extend({ effort_label: EffortLabelRenderable })
+extend({
+  spinner: SpinnerRenderable,
+  effort_animation: EffortRenderable,
+  effort_label: EffortLabelRenderable,
+})
 
 export function EffortLabel(props: { value: Accessor<string | undefined>; enabled: Accessor<boolean> }) {
   let target: EffortLabelRenderable | undefined

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
-import { testRender } from "@opentui/solid"
+import { getComponentCatalogue, testRender } from "@opentui/solid"
+import { SpinnerRenderable } from "opentui-spinner"
 import {
   createEffortReveal,
   effortLayout,
@@ -11,6 +12,10 @@ import {
 } from "../../src/kilocode/effort-animation"
 
 describe("effort animation", () => {
+  test("registers spinner in the reconciler component catalogue", () => {
+    expect(getComponentCatalogue().spinner).toBe(SpinnerRenderable)
+  })
+
   test("centers labels inside the prompt content width", () => {
     expect(effortLayout("high", 71)).toEqual({ size: 7, start: 32, middle: 35 })
     expect(effortLayout("xhigh", 71)).toEqual({ size: 9, start: 31, middle: 35 })
