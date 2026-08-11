@@ -11,6 +11,7 @@ import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.SessionUi
 import ai.kilocode.client.session.SessionUiFactory
+import ai.kilocode.client.session.controller.PromptSelection
 import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.session.history.LocalHistoryItem
 import ai.kilocode.client.util.UiTimerSource
@@ -117,8 +118,11 @@ open class WorktreeSessionEditorManager(
     /** Sends the New Worktree dialog's queued prompt into this worktree's first session, once. */
     @RequiresEdt
     private fun consumePendingPrompt() {
-        val text = service<PendingWorktreePrompt>().take(worktree.directory) ?: return
-        currentUi()?.submitPrompt(text)
+        val prompt = service<PendingWorktreePrompt>().take(worktree.directory) ?: return
+        currentUi()?.submitPrompt(
+            prompt.text,
+            PromptSelection(prompt.agent, prompt.provider, prompt.model, prompt.variant),
+        )
     }
 
     @RequiresEdt

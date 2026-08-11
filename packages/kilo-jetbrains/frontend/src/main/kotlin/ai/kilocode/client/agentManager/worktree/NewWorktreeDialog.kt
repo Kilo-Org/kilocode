@@ -13,7 +13,6 @@ import ai.kilocode.client.session.ui.prompt.MentionAction
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.ui.prompt.SlashAction
 import ai.kilocode.client.ui.UiStyle
-import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.ModelsWorkspaceDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
@@ -62,7 +61,7 @@ internal class NewWorktreeDialog(
     private val suggestedName: String,
     private val defaultBase: String,
     private val branches: List<String>,
-    private val onCreate: (branch: String, base: String?, prompt: String) -> Unit,
+    private val onCreate: (branch: String, base: String?, prompt: PendingPrompt?) -> Unit,
     private val onImportPr: (url: String) -> Unit,
     private val onImportBranch: (branch: String) -> Unit,
     private val app: KiloAppService = service(),
@@ -203,8 +202,10 @@ internal class NewWorktreeDialog(
     }
 
     private fun selectAgent(id: String) {
+        // The picked agent travels with the initial prompt (see submitCreate), so the dialog no
+        // longer writes default_agent to the global config here — doing so changed the mode for
+        // every other workspace and raced the new session's own model load.
         agent = id
-        sessions?.let { svc -> app.scope.launch { svc.updateConfig(directory, ConfigUpdateDto(agent = id)) } }
         val saved = app.models.value.model[id]?.let { "${it.providerID}/${it.modelID}" }
         if (saved != null && items.any { it.key == saved }) {
             prompt.model.select(saved)
@@ -253,8 +254,22 @@ internal class NewWorktreeDialog(
         if (tabs?.selectedIndex != 0) return
         val explicit = branch.text.trim()
         val resolved = explicit.ifEmpty { name.text.trim() }.ifEmpty { suggestedName }
-        onCreate(resolved, base.editor.item?.toString()?.trim()?.takeIf { it.isNotEmpty() }, text.trim())
+        onCreate(resolved, base.editor.item?.toString()?.trim()?.takeIf { it.isNotEmpty() }, pending(text))
         close(OK_EXIT_CODE)
+    }
+
+    /** Bundles the typed prompt with the picked mode / model / reasoning, or null when empty. */
+    private fun pending(text: String): PendingPrompt? {
+        val body = text.trim()
+        if (body.isEmpty()) return null
+        val item = items.firstOrNull { it.key == modelKey }
+        return PendingPrompt(
+            text = body,
+            agent = agent,
+            provider = item?.provider,
+            model = item?.id,
+            variant = modelKey?.let { app.models.value.variant[it] },
+        )
     }
 
     private fun enhance(text: String, done: (Result<String>) -> Unit) {

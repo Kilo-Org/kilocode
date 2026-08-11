@@ -103,9 +103,9 @@ class WorktreeController(
 
     /**
      * Creates a worktree. When [prompt] is set, it is stashed for the worktree's first session so the
-     * editor auto-sends it once it opens (see [PendingWorktreePrompt]).
+     * editor auto-sends it once it opens with its picked mode/model (see [PendingWorktreePrompt]).
      */
-    fun create(branch: String, base: String?, existingBranch: Boolean = false, prompt: String? = null) {
+    fun create(branch: String, base: String?, existingBranch: Boolean = false, prompt: PendingPrompt? = null) {
         val id = "pending:$branch:${System.nanoTime()}"
         val temp = WorktreeDto(id, branch, branch, id)
         edt {
@@ -136,7 +136,7 @@ class WorktreeController(
     private fun finishCreate(
         temp: WorktreeDto,
         branch: String,
-        prompt: String?,
+        prompt: PendingPrompt?,
         result: CreateWorktreeResultDto,
     ) {
         val created = result.worktree

@@ -45,6 +45,7 @@ import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.controller.EVENT_FLUSH_MS
+import ai.kilocode.client.session.controller.PromptSelection
 import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.session.controller.SessionControllerEvent
 import ai.kilocode.client.session.context.EditorContextGatherer
@@ -288,11 +289,16 @@ class SessionUi(
     /**
      * Sends [text] as the session's first message. Used by the New Worktree flow to auto-start a
      * session with the prompt typed in the dialog, routing through the same path as a typed prompt.
+     * The optional [select] carries the mode / model / reasoning picked in the dialog so the first
+     * turn runs with them even before this session's own model state has loaded.
      */
     @RequiresEdt
-    internal fun submitPrompt(text: String) {
+    internal fun submitPrompt(text: String, select: PromptSelection? = null) {
         if (text.isBlank()) return
-        sendPrompt(text, emptyList())
+        // Seed the session's agent/model/reasoning so the pickers and later turns reflect the pick,
+        // then send the first turn carrying it too (so it applies before workspace-ready resolves).
+        select?.let { controller.applySelection(it) }
+        sendPrompt(text, emptyList(), select)
     }
 
     @RequiresEdt
@@ -691,7 +697,7 @@ class SessionUi(
         }
     }
 
-    private fun sendPrompt(text: String, files: List<PromptPartDto>) {
+    private fun sendPrompt(text: String, files: List<PromptPartDto>, select: PromptSelection? = null) {
         if (text.isBlank() && files.isEmpty()) return
         prompt.clear()
         val follow = scroll.following()
@@ -720,7 +726,7 @@ class SessionUi(
             val model = controller.model.model ?: "none"
             "${ChatLogSummary.prompt(PromptDto(parts = parts, editorContext = editor.context))} agent=$agent model=$model ready=${controller.ready}"
         }
-        controller.prompt(text, allFiles, editor.context)
+        controller.prompt(text, allFiles, editor.context, select)
         scroll.followBottom(follow)
     }
 

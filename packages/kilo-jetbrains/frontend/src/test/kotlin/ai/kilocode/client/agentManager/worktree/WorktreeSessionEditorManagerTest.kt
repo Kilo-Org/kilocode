@@ -90,10 +90,15 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         assertEquals(1, requested.size)
     }
 
-    fun `test new session sends the queued worktree prompt once`() {
+    fun `test new session sends the queued worktree prompt once with its picked selection`() {
         rpc.session = session("ses_new", updated = 4.0).copy(title = "New session")
         val manager = manager()
-        edt { service<PendingWorktreePrompt>().put(DIR, "fix the bug") }
+        edt {
+            service<PendingWorktreePrompt>().put(
+                DIR,
+                PendingPrompt("fix the bug", agent = "plan", provider = "kilo", model = "gpt-5", variant = "high"),
+            )
+        }
 
         edt { manager.newSession() }
         waitUntil { rpc.prompts.any { it.first == "ses_new" } }
@@ -101,6 +106,11 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         val sent = rpc.prompts.single { it.first == "ses_new" }
         assertEquals(DIR, sent.second)
         assertTrue("prompt parts should carry the typed text", sent.third.parts.any { it.text == "fix the bug" })
+        // The dialog's mode / model / reasoning must ride along with the first turn.
+        assertEquals("plan", sent.third.agent)
+        assertEquals("kilo", sent.third.providerID)
+        assertEquals("gpt-5", sent.third.modelID)
+        assertEquals("high", sent.third.variant)
         // The queued prompt is consumed once, so it is cleared after the first new session.
         assertNull(edt { service<PendingWorktreePrompt>().take(DIR) })
     }

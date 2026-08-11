@@ -3,6 +3,7 @@ package ai.kilocode.client.agentManager
 import ai.kilocode.client.agentManager.worktree.WorktreeIcons
 import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
 import ai.kilocode.client.agentManager.worktree.WorktreeController
+import ai.kilocode.client.agentManager.worktree.PendingPrompt
 import ai.kilocode.client.agentManager.worktree.PendingWorktreePrompt
 import ai.kilocode.client.agentManager.worktree.WorktreeNameCache
 import ai.kilocode.client.agentManager.worktree.WorktreeNames
@@ -298,15 +299,22 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertEquals("/wt/pr-7", controller.model.getElementAt(0).path)
     }
 
-    fun `test create stashes the prompt for the created worktree`() {
+    fun `test create stashes the prompt with its picked selection for the created worktree`() {
         val controller = controller()
 
-        ApplicationManager.getApplication().invokeAndWait { controller.create("feature/y", null, prompt = "fix the bug") }
+        ApplicationManager.getApplication().invokeAndWait {
+            controller.create(
+                "feature/y",
+                null,
+                prompt = PendingPrompt("fix the bug", agent = "plan", provider = "kilo", model = "gpt-5", variant = "high"),
+            )
+        }
         flush()
 
         val created = controller.model.getElementAt(0)
         ApplicationManager.getApplication().invokeAndWait {
-            assertEquals("fix the bug", service<PendingWorktreePrompt>().take(created.path))
+            val stashed = service<PendingWorktreePrompt>().take(created.path)
+            assertEquals(PendingPrompt("fix the bug", "plan", "kilo", "gpt-5", "high"), stashed)
             // A one-shot take clears it.
             assertNull(service<PendingWorktreePrompt>().take(created.path))
         }

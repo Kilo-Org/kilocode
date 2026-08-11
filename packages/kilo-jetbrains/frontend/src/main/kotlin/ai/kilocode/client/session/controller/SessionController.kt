@@ -264,11 +264,16 @@ class SessionController(
         }
     }
 
-    fun prompt(text: String, files: List<PromptPartDto> = emptyList(), editorContext: EditorContextDto? = null) {
+    fun prompt(
+        text: String,
+        files: List<PromptPartDto> = emptyList(),
+        editorContext: EditorContextDto? = null,
+        select: PromptSelection? = null,
+    ) {
         assertEdt()
         val start = sid ?: ref?.key ?: "pending"
         val exists = sid != null
-        val dto = promptDto(text, files, editorContext)
+        val dto = promptDto(text, files, editorContext, select)
         val props = promptProps(files)
         LOG.debug { "${ChatLogSummary.sid(start)} ${ChatLogSummary.prompt(dto)} ${ChatLogSummary.dir(directory)}" }
         dispatch(Dispatch("prompt", "user", text, props, start, exists)) { id ->
@@ -681,6 +686,32 @@ class SessionController(
         app.selectVariant(key, value)
         model.variant = value
         capture("Reasoning Variant Selected", sessionProps() + mapOf("model" to key, "variant" to value))
+    }
+
+    /**
+     * Seeds this session's agent / model / reasoning from an initial [select] (New Worktree flow),
+     * mirroring VS Code's setSessionAgent + setSessionModel + variant seeding. Attaching the pick to
+     * the first prompt alone only affects that one turn; setting it as the session's preferred
+     * selection makes the pickers and every later turn use it too, and survives the later
+     * workspace-ready model resolution because [prefAgent] / [prefModel] win in [syncModelSelection].
+     */
+    fun applySelection(select: PromptSelection) {
+        assertEdt()
+        val agent = select.agent ?: return
+        fire(SessionControllerEvent.WorkspaceReady) {
+            model.agent = agent
+            val provider = select.provider
+            val id = select.model
+            if (provider != null && id != null) {
+                val key = "$provider/$id"
+                app.selectModel(agent, provider, id)
+                select.variant?.let { app.selectVariant(key, it) }
+                prefAgent = agent
+                prefModel = key
+            }
+            syncModelSelection()
+            model.refreshHeader()
+        }
     }
 
     // ------ permission / question resolution ------
@@ -1827,19 +1858,24 @@ class SessionController(
         text: String,
         files: List<PromptPartDto> = emptyList(),
         editorContext: EditorContextDto? = null,
+        select: PromptSelection? = null,
     ): PromptDto {
-        val full = model.model
-        val sel = full?.let(::parseModel)
-        val variant = model.variant?.takeIf { it in model.variants }
+        val sel = model.model?.let(::parseModel)
+        val provider = select?.provider ?: sel?.first
+        val modelId = select?.model ?: sel?.second
+        val agent = select?.agent ?: model.agent
+        // An explicit variant comes from the dialog before the model catalog is loaded, so it can't
+        // be validated against model.variants yet; only the fallback is filtered.
+        val variant = select?.variant ?: model.variant?.takeIf { it in model.variants }
         val parts = buildList {
             text.takeIf { it.isNotBlank() }?.let { add(PromptPartDto(type = "text", text = it)) }
             addAll(files)
         }
         return PromptDto(
             parts = parts,
-            providerID = sel?.first,
-            modelID = sel?.second,
-            agent = model.agent,
+            providerID = provider,
+            modelID = modelId,
+            agent = agent,
             variant = variant,
             editorContext = editorContext,
         )
@@ -2528,6 +2564,18 @@ private fun selection(value: String): ModelSelectionDto? {
     val parsed = parseModel(value) ?: return null
     return ModelSelectionDto(parsed.first, parsed.second)
 }
+
+/**
+ * An explicit agent / provider / model / reasoning selection to attach to a single prompt. Used by
+ * the New Worktree flow so the first turn runs with the mode and model picked in the dialog rather
+ * than whatever the freshly-opened session resolves as its default.
+ */
+data class PromptSelection(
+    val agent: String? = null,
+    val provider: String? = null,
+    val model: String? = null,
+    val variant: String? = null,
+)
 
 private fun parseModel(value: String): Pair<String, String>? {
     val slash = value.indexOf('/')

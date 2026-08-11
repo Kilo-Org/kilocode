@@ -37,7 +37,7 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
     private lateinit var sessionRpc: FakeSessionRpcApi
     private lateinit var sessions: KiloSessionService
     private var dialog: NewWorktreeDialog? = null
-    private val created = mutableListOf<Triple<String, String?, String>>()
+    private val created = mutableListOf<Triple<String, String?, PendingPrompt?>>()
 
     override fun setUp() {
         super.setUp()
@@ -71,14 +71,22 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test selecting a mode persists the agent for the workspace`() {
+    fun `test selecting a mode forwards it with the created prompt and writes no global config`() {
         open()
-        flushUntil { edt { mode().selectedForTest() != null } }
+        flushUntil { edt { model().selectionKeyForTest() != null } }
 
-        edt { mode().onSelect(ModePicker.Item("plan", "Plan")) }
-        flushUntil { sessionRpc.configs.any { it.second.agent == "plan" } }
+        edt {
+            mode().onSelect(ModePicker.Item("plan", "Plan"))
+            prompt().setText("do it")
+        }
+        flushUntil { edt { prompt().isSendEnabled } }
+        edt { prompt().send() }
+        flushUntil { created.isNotEmpty() }
+        dialog = null
 
-        assertTrue(sessionRpc.configs.any { it.first == "/test" && it.second.agent == "plan" })
+        assertEquals("plan", created.single().third?.agent)
+        // Picking a mode must no longer mutate the global default_agent config.
+        assertTrue(sessionRpc.configs.none { it.second.agent != null })
     }
 
     fun `test selecting a model persists it for the default agent`() {
@@ -99,8 +107,9 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         assertEquals("high", app.models.value.variant["kilo/gpt-5"])
     }
 
-    fun `test creating forwards the prompt and resolved branch`() {
+    fun `test creating forwards the prompt, resolved branch, and default selection`() {
         open()
+        flushUntil { edt { model().selectionKeyForTest() != null } }
         edt {
             prompt().setText("build the thing")
         }
@@ -109,7 +118,14 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         flushUntil { created.isNotEmpty() }
         dialog = null
 
-        assertEquals(listOf(Triple("agent/foo", "main", "build the thing")), created)
+        val entry = created.single()
+        assertEquals("agent/foo", entry.first)
+        assertEquals("main", entry.second)
+        val payload = requireNotNull(entry.third)
+        assertEquals("build the thing", payload.text)
+        assertEquals("build", payload.agent)
+        assertEquals("kilo", payload.provider)
+        assertEquals("gpt-5", payload.model)
     }
 
     private fun open() {

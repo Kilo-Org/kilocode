@@ -156,7 +156,7 @@ class AgentManagerPanel(
             controller.defaultBranch,
             controller.branches,
             onCreate = { branch, base, prompt ->
-                controller.create(branch, base, prompt = prompt.takeIf { it.isNotEmpty() })
+                controller.create(branch, base, prompt = prompt)
             },
             onImportPr = { url -> controller.importPr(url) },
             onImportBranch = { branch -> controller.importBranch(branch) },
