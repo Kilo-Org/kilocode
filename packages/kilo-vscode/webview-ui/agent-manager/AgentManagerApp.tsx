@@ -2661,24 +2661,19 @@ const AgentManagerContent: Component = () => {
                       />
                     </Show>
                     <Show when={sidePanel() === SidePanel.PR && activePR()}>
-                      {(() => {
-                        const data = activePR()!
-                        return (
-                          <PRPanel
-                            pr={data.pr}
-                            worktree={data.wt}
-                            worktreeId={data.selected}
-                            onClose={() => setSidePanel(null)}
-                            onOpenExternal={() =>
-                              vscode.postMessage({
-                                type: "agentManager.openPR",
-                                worktreeId: data.selected,
-                                url: data.pr.url,
-                              })
-                            }
-                          />
-                        )
-                      })()}
+                      <PRPanel
+                        pr={activePR()!.pr}
+                        worktree={activePR()!.wt}
+                        worktreeId={activePR()!.selected}
+                        onClose={() => setSidePanel(null)}
+                        onOpenExternal={() =>
+                          vscode.postMessage({
+                            type: "agentManager.openPR",
+                            worktreeId: activePR()!.selected,
+                            url: activePR()!.pr.url,
+                          })
+                        }
+                      />
                     </Show>
                     <SideTerminalPanel
                       state={terms}

@@ -71,6 +71,7 @@
   flex: 1;
   overflow-y: auto;
   padding: 8px 0;
+  overflow-anchor: none;
 }
 
 .am-pr-panel-section {
