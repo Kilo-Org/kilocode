@@ -577,6 +577,7 @@ describe("ProviderUsage location service", () => {
     Effect.gen(function* () {
       const calls = { direct: 0, cloud: 0 }
       let byokFailure = false
+      let usageFailure = false
       let credentialFailure: "kilo" | undefined
       let organization: string | undefined
       const scope = yield* Scope.make()
@@ -600,24 +601,27 @@ describe("ProviderUsage location service", () => {
                 if (byokFailure) throw new Error("private metadata failure")
                 return [byok]
               },
-              usage: async () => ({
-                schemaVersion: 1,
-                fetchedAt: "2026-08-09T12:00:00.000Z",
-                subscription: {
-                  id: subscription.id,
-                  planName: subscription.planName,
-                  providerId: subscription.providerId,
-                  providerName: subscription.providerName,
-                  windows: [
-                    {
-                      id: "monthly",
-                      remainingPercent: 75,
-                      resetsAt: "2026-09-01T00:00:00.000Z",
-                      period: { unit: "month", value: 1 },
-                    },
-                  ],
-                },
-              }),
+              usage: async () => {
+                if (usageFailure) throw new Error("private usage failure")
+                return {
+                  schemaVersion: 1,
+                  fetchedAt: "2026-08-09T12:00:00.000Z",
+                  subscription: {
+                    id: subscription.id,
+                    planName: subscription.planName,
+                    providerId: subscription.providerId,
+                    providerName: subscription.providerName,
+                    windows: [
+                      {
+                        id: "monthly",
+                        remainingPercent: 75,
+                        resetsAt: "2026-09-01T00:00:00.000Z",
+                        period: { unit: "month", value: 1 },
+                      },
+                    ],
+                  },
+                }
+              },
             },
           }),
           scope,
@@ -628,11 +632,18 @@ describe("ProviderUsage location service", () => {
       expect((yield* usage.get()).items).toHaveLength(2)
       byokFailure = true
       const partial = yield* usage.refresh()
-      expect(partial.items.find((item) => item.sourceKind === "kilo_managed")).toMatchObject({ fetchState: "stale" })
+      // Discovery failure retains the last good Cloud state, so usage still refreshes.
+      expect(partial.items.find((item) => item.sourceKind === "kilo_managed")).toMatchObject({ fetchState: "ready" })
       expect(partial.items.find((item) => item.sourceKind === "direct")).toMatchObject({ fetchState: "ready" })
       expect(JSON.stringify(partial)).not.toContain("private metadata failure")
 
+      usageFailure = true
+      const degraded = yield* usage.refresh()
+      expect(degraded.items.find((item) => item.sourceKind === "kilo_managed")).toMatchObject({ fetchState: "stale" })
+      expect(JSON.stringify(degraded)).not.toContain("private usage failure")
+
       byokFailure = false
+      usageFailure = false
       credentialFailure = "kilo"
       const credential = yield* usage.get()
       expect(credential.items.find((item) => item.sourceKind === "kilo_managed")).toMatchObject({

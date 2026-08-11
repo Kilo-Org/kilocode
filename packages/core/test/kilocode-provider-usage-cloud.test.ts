@@ -36,6 +36,15 @@ describe("managed provider usage", () => {
       Cloud.plans({ ...state(), plans: { ok: true, value: [{ ...subscription, canQueryUsage: false }] } }),
     ).toEqual([])
     expect(
+      Cloud.plans({ ...state(), plans: { ok: true, value: [{ ...subscription, hasInstalledByokKey: false }] } }),
+    ).toEqual([])
+    expect(
+      Cloud.plans({
+        ...state(),
+        byok: { ok: true, value: [{ ...state().byok.value[0]!, management_source: "user" as const }] },
+      }),
+    ).toEqual([])
+    expect(
       Cloud.plans({
         ...state(),
         byok: { ok: true, value: [{ ...state().byok.value[0]!, provider_id: "minimax" }] },

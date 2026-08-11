@@ -225,6 +225,11 @@ function cloud(state: State, token: string, identity: string, force: boolean, tr
     .then((value) => {
       if (state.cloudIdentity !== identity) return value
       const failed = Object.values(value).some((result) => !result.ok)
+      const previous = cell.value
+      if (failed && previous) {
+        cell.expires = Date.now() + errorTtl
+        return previous
+      }
       cell.value = value
       cell.updatedAt = new Date().toISOString()
       cell.expires = Date.now() + (failed ? errorTtl : successTtl)
