@@ -1,5 +1,5 @@
 /** @jsxImportSource solid-js */
-import { For, Index, Show, createMemo, createSignal, onCleanup, onMount } from "solid-js"
+import { For, Index, Show, createEffect, createMemo, createSignal, on, onCleanup, onMount } from "solid-js"
 import { Markdown } from "@kilocode/kilo-ui/markdown"
 import { useVSCode } from "../../src/context/vscode"
 import type { PRStatus } from "../../src/types/messages"
@@ -32,6 +32,12 @@ function CommentCard(props: { comment: PRComment; worktreeId: string }) {
   const vscode = useVSCode()
   const [optimisticResolved, setOptimisticResolved] = createSignal<boolean | undefined>(undefined)
   const [actionError, setActionError] = createSignal<string | undefined>(undefined)
+
+  // Clear optimistic state if the comment at this position changes (Index tracks by position)
+  createEffect(on(() => props.comment.threadId, () => {
+    setOptimisticResolved(undefined)
+    setActionError(undefined)
+  }, { defer: true }))
 
   const resolved = createMemo(() => optimisticResolved() ?? props.comment.resolved)
 
