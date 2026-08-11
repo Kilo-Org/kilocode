@@ -83,7 +83,9 @@ export const PRPanel: Component<PRPanelProps> = (props) => {
         </div>
         <Show when={showScrollTop()}>
           <Tooltip value="Scroll to top" placement="left">
-            <button class="am-pr-scroll-top" onClick={scrollToTop}>↑</button>
+            <button class="am-pr-scroll-top" onClick={scrollToTop}>
+              ↑
+            </button>
           </Tooltip>
         </Show>
       </div>

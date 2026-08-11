@@ -13,14 +13,13 @@ function DiffHunk(props: { hunk: string }) {
     <div class="am-pr-diff-hunk">
       <For each={lines()}>
         {(line) => {
-          const cls =
-            line.startsWith("+")
-              ? "am-pr-diff-line-add"
-              : line.startsWith("-")
-                ? "am-pr-diff-line-del"
-                : line.startsWith("@@")
-                  ? "am-pr-diff-line-meta"
-                  : "am-pr-diff-line-ctx"
+          const cls = line.startsWith("+")
+            ? "am-pr-diff-line-add"
+            : line.startsWith("-")
+              ? "am-pr-diff-line-del"
+              : line.startsWith("@@")
+                ? "am-pr-diff-line-meta"
+                : "am-pr-diff-line-ctx"
           return <div class={`am-pr-diff-line ${cls}`}>{line || " "}</div>
         }}
       </For>
@@ -34,10 +33,16 @@ function CommentCard(props: { comment: PRComment; worktreeId: string }) {
   const [actionError, setActionError] = createSignal<string | undefined>(undefined)
 
   // Clear optimistic state if the comment at this position changes (Index tracks by position)
-  createEffect(on(() => props.comment.threadId, () => {
-    setOptimisticResolved(undefined)
-    setActionError(undefined)
-  }, { defer: true }))
+  createEffect(
+    on(
+      () => props.comment.threadId,
+      () => {
+        setOptimisticResolved(undefined)
+        setActionError(undefined)
+      },
+      { defer: true },
+    ),
+  )
 
   const resolved = createMemo(() => optimisticResolved() ?? props.comment.resolved)
 
@@ -54,7 +59,11 @@ function CommentCard(props: { comment: PRComment; worktreeId: string }) {
         setActionError(undefined)
       } else {
         setOptimisticResolved(undefined)
-        setActionError(msg.type === "agentManager.resolveCommentResult" ? "Failed to resolve thread." : "Failed to unresolve thread.")
+        setActionError(
+          msg.type === "agentManager.resolveCommentResult"
+            ? "Failed to resolve thread."
+            : "Failed to unresolve thread.",
+        )
       }
     }
     window.addEventListener("message", handler)
@@ -74,9 +83,7 @@ function CommentCard(props: { comment: PRComment; worktreeId: string }) {
 
   return (
     <div class="am-pr-panel-comment" classList={{ "am-pr-panel-comment-resolved": resolved() }}>
-      <Show when={props.comment.diffHunk}>
-        {(hunk) => <DiffHunk hunk={hunk()} />}
-      </Show>
+      <Show when={props.comment.diffHunk}>{(hunk) => <DiffHunk hunk={hunk()} />}</Show>
       <div class="am-pr-panel-comment-header am-pr-row">
         <span class="am-pr-panel-comment-author">{props.comment.author}</span>
         <Show when={props.comment.file}>
@@ -90,9 +97,7 @@ function CommentCard(props: { comment: PRComment; worktreeId: string }) {
         </Show>
         <CopyButton text={props.comment.body} class="am-pr-copy-btn" />
       </div>
-      <Show when={actionError()}>
-        {(err) => <div class="am-pr-resolve-error">{err()}</div>}
-      </Show>
+      <Show when={actionError()}>{(err) => <div class="am-pr-resolve-error">{err()}</div>}</Show>
       <div class="am-pr-panel-comment-body">
         <Markdown text={props.comment.body} />
       </div>

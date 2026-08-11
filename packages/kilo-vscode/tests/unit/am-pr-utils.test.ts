@@ -255,9 +255,7 @@ describe("parseComments", () => {
   })
 
   it("uses comment id as threadId fallback when thread has no id", () => {
-    const threads: GhThread[] = [
-      { isResolved: false, comments: { nodes: [{ id: "c2", body: "note" }] } },
-    ]
+    const threads: GhThread[] = [{ isResolved: false, comments: { nodes: [{ id: "c2", body: "note" }] } }]
     const result = parseComments(threads)
     expect(result[0]?.threadId).toBe("c2")
   })

@@ -70,9 +70,7 @@ export function PRSummary(props: PRSummaryProps) {
             >
               <Icon name={row.icon} size="small" class="am-pr-summary-icon" />
               <span class="am-pr-summary-label">{row.label}</span>
-              {row.isComments && props.onJumpToComments && (
-                <span class="am-pr-summary-jump">Jump to comments ↓</span>
-              )}
+              {row.isComments && props.onJumpToComments && <span class="am-pr-summary-jump">Jump to comments ↓</span>}
             </div>
           ))}
         </div>

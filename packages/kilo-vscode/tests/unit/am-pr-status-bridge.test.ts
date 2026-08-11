@@ -205,13 +205,17 @@ describe("PRStatusBridge.handleMessage resolveComment", () => {
   it("returns true for agentManager.resolveComment", () => {
     const { bridge } = harness()
     resolveComment.mockResolvedValueOnce(undefined)
-    expect(bridge.handleMessage({ type: "agentManager.resolveComment", worktreeId: "wt1", threadId: "PRT_1" })).toBe(true)
+    expect(bridge.handleMessage({ type: "agentManager.resolveComment", worktreeId: "wt1", threadId: "PRT_1" })).toBe(
+      true,
+    )
   })
 
   it("returns true for agentManager.unresolveComment", () => {
     const { bridge } = harness()
     unresolveComment.mockResolvedValueOnce(undefined)
-    expect(bridge.handleMessage({ type: "agentManager.unresolveComment", worktreeId: "wt1", threadId: "PRT_1" })).toBe(true)
+    expect(bridge.handleMessage({ type: "agentManager.unresolveComment", worktreeId: "wt1", threadId: "PRT_1" })).toBe(
+      true,
+    )
   })
 
   it("posts resolveCommentResult with success:true on resolve success", async () => {
@@ -220,7 +224,14 @@ describe("PRStatusBridge.handleMessage resolveComment", () => {
     bridge.handleMessage({ type: "agentManager.resolveComment", worktreeId: "wt1", threadId: "PRT_1" })
     await Promise.resolve()
     const result = sent.find((m) => m.type === "agentManager.resolveCommentResult")
-    expect(result).toEqual(expect.objectContaining({ type: "agentManager.resolveCommentResult", worktreeId: "wt1", threadId: "PRT_1", success: true }))
+    expect(result).toEqual(
+      expect.objectContaining({
+        type: "agentManager.resolveCommentResult",
+        worktreeId: "wt1",
+        threadId: "PRT_1",
+        success: true,
+      }),
+    )
   })
 
   it("posts unresolveCommentResult with success:true on unresolve success", async () => {
