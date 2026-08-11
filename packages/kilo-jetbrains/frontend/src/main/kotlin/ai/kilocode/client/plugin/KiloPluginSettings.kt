@@ -4,6 +4,7 @@ import com.intellij.ide.util.PropertiesComponent
 
 object KiloPluginSettings {
     private const val AUTO_APPROVE_KEY = "kilo.session.autoApprove"
+    private const val AUTO_EDITOR_CONTEXT_KEY = "kilo.session.autoEditorContext"
     private const val PERMISSION_RULES_EXPANDED_KEY = "kilo.session.permissionRulesExpanded"
 
     fun getAutoApprove(): Boolean = PropertiesComponent.getInstance().getBoolean(AUTO_APPROVE_KEY, false)
@@ -14,6 +15,16 @@ object KiloPluginSettings {
 
     internal fun unsetAutoApprove() {
         PropertiesComponent.getInstance().unsetValue(AUTO_APPROVE_KEY)
+    }
+
+    fun getAutoEditorContext(): Boolean = PropertiesComponent.getInstance().getBoolean(AUTO_EDITOR_CONTEXT_KEY, true)
+
+    fun setAutoEditorContext(value: Boolean) {
+        PropertiesComponent.getInstance().setValue(AUTO_EDITOR_CONTEXT_KEY, value.toString())
+    }
+
+    internal fun unsetAutoEditorContext() {
+        PropertiesComponent.getInstance().unsetValue(AUTO_EDITOR_CONTEXT_KEY)
     }
 
     fun getPermissionRulesExpanded(): Boolean = PropertiesComponent.getInstance().getBoolean(PERMISSION_RULES_EXPANDED_KEY, false)

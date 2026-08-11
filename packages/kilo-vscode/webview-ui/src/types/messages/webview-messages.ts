@@ -988,6 +988,7 @@ export interface OpenPRMessage {
   type: "agentManager.openPR"
   projectId?: string
   worktreeId: string
+  url?: string
 }
 
 export interface ApplyWorktreeDiffMessage {
