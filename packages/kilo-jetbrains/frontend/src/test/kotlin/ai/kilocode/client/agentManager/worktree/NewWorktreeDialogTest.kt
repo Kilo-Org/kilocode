@@ -17,6 +17,7 @@ import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.ModelsWorkspaceDto
 import ai.kilocode.rpc.dto.ProviderDto
 import ai.kilocode.rpc.dto.ProvidersDto
+import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBPanel
@@ -28,6 +29,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import java.awt.Component
 import java.awt.Container
+import java.awt.event.FocusEvent
+import javax.swing.JTextField
+import javax.swing.plaf.basic.BasicComboPopup
 
 class NewWorktreeDialogTest : BasePlatformTestCase() {
     private lateinit var scope: CoroutineScope
@@ -125,7 +129,71 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
         assertEquals("gpt-5", payload.model)
     }
 
-    private fun open() {
+    fun `test base branch fuzzy search selects matching popup item`() {
+        open(branches = listOf("main", "release/candidate", "feature/refactor-ui"))
+
+        edt { field().text = "relcan" }
+
+        edt { assertEquals("release/candidate", popup().list.selectedValue) }
+    }
+
+    fun `test empty base branch restores default on focus lost`() {
+        open()
+
+        edt {
+            val field = field()
+            field.text = ""
+            field.focusListeners.forEach { it.focusLost(FocusEvent(field, FocusEvent.FOCUS_LOST)) }
+
+            assertEquals("main", field.text)
+        }
+    }
+
+    fun `test creating with empty base branch falls back to default`() {
+        open()
+        flushUntil { edt { model().selectionKeyForTest() != null } }
+        edt {
+            field().text = ""
+            prompt().setText("build the thing")
+        }
+        flushUntil { edt { prompt().isSendEnabled } }
+        edt { prompt().send() }
+        flushUntil { created.isNotEmpty() }
+        dialog = null
+
+        assertEquals("main", created.single().second)
+    }
+
+    fun `test creating with fuzzy base branch uses matching branch`() {
+        open(branches = listOf("main", "release/candidate", "feature/refactor-ui"))
+        flushUntil { edt { model().selectionKeyForTest() != null } }
+        edt {
+            field().text = "relcan"
+            prompt().setText("build the thing")
+        }
+        flushUntil { edt { prompt().isSendEnabled } }
+        edt { prompt().send() }
+        flushUntil { created.isNotEmpty() }
+        dialog = null
+
+        assertEquals("release/candidate", created.single().second)
+    }
+
+    fun `test creating with unknown base branch does not create`() {
+        open(branches = listOf("main", "release/candidate"))
+        flushUntil { edt { model().selectionKeyForTest() != null } }
+        edt {
+            field().text = "zzzzzz"
+            prompt().setText("build the thing")
+        }
+        flushUntil { edt { prompt().isSendEnabled } }
+        edt { prompt().send() }
+        flush()
+
+        assertTrue(created.isEmpty())
+    }
+
+    private fun open(branches: List<String> = listOf("main")) {
         dialog = edt {
             NewWorktreeDialog(
                 JBPanel<Nothing>(),
@@ -133,7 +201,7 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
                 "/test",
                 "agent/foo",
                 "main",
-                listOf("main"),
+                branches,
                 onCreate = { branch, base, prompt -> created.add(Triple(branch, base, prompt)) },
                 app,
                 workspaces,
@@ -167,6 +235,12 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
 
     private fun prompt(): PromptPanel = descendants(root()).filterIsInstance<PromptPanel>().single()
 
+    private fun combo(): ComboBox<*> = descendants(root()).filterIsInstance<ComboBox<*>>().single()
+
+    private fun field(): JTextField = combo().editor.editorComponent as JTextField
+
+    private fun popup(): BasicComboPopup = combo().accessibleContext.getAccessibleChild(0) as BasicComboPopup
+
     private fun root(): Component = requireNotNull(dialog).centerComponent()
 
     private fun descendants(root: Component): List<Component> {
@@ -180,6 +254,13 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
     }
 
     private fun <T> edt(block: () -> T): T = edtWait(block)
+
+    private fun flush() = runBlocking {
+        repeat(20) {
+            delay(10)
+            edt { UIUtil.dispatchAllInvocationEvents() }
+        }
+    }
 
     private fun flushUntil(done: () -> Boolean) = runBlocking {
         repeat(200) {

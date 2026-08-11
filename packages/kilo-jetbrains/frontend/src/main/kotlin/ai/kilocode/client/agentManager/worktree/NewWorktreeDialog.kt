@@ -1,5 +1,6 @@
 package ai.kilocode.client.agentManager.worktree
 
+import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
@@ -9,6 +10,7 @@ import ai.kilocode.client.session.ui.model.ModelPicker
 import ai.kilocode.client.session.ui.model.modelItems
 import ai.kilocode.client.session.ui.prompt.KiloPromptCompletionProvider
 import ai.kilocode.client.session.ui.prompt.MentionAction
+import ai.kilocode.client.session.ui.prompt.PromptFuzzyRanker
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.ui.prompt.SlashAction
 import ai.kilocode.client.ui.UiStyle
@@ -20,6 +22,7 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.DialogWrapper
+import com.intellij.ui.DocumentAdapter
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBUI
@@ -30,8 +33,14 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.awt.Component
 import java.awt.GridBagConstraints
+import java.awt.event.FocusAdapter
+import java.awt.event.FocusEvent
+import javax.swing.ComboBoxModel
 import javax.swing.DefaultComboBoxModel
 import javax.swing.JComponent
+import javax.swing.JTextField
+import javax.swing.event.DocumentEvent
+import javax.swing.plaf.basic.BasicComboPopup
 
 private const val NAME_COLUMNS = 100
 
@@ -82,10 +91,13 @@ internal class NewWorktreeDialog(
         showEnhance = false,
     )
     private val branch = JBTextField(suggestedName)
-    private val base = ComboBox(baseModel(branches, defaultBase)).apply {
+    private val bases = baseBranches(branches, defaultBase)
+    private val baseSet = bases.toSet()
+    private val base = ComboBox(baseModel(bases)).apply {
         isEditable = true
         selectedItem = defaultBase
     }
+    private var syncing = false
 
     /** The agent (mode) for the new session; model selections persist against it. */
     private var agent: String? = null
@@ -102,6 +114,7 @@ internal class NewWorktreeDialog(
     private var center: JComponent? = null
 
     init {
+        wireBase()
         title = KiloBundle.message("worktree.configure.title")
         init()
         setOKButtonText(KiloBundle.message("worktree.dialog.create"))
@@ -199,10 +212,96 @@ internal class NewWorktreeDialog(
         )
     }
 
+    private fun wireBase() {
+        val field = baseField() ?: return
+        field.document.addDocumentListener(object : DocumentAdapter() {
+            override fun textChanged(e: DocumentEvent) {
+                if (!syncing) syncBase(field.text, popup = true)
+            }
+        })
+        field.addFocusListener(object : FocusAdapter() {
+            override fun focusLost(e: FocusEvent) {
+                restoreBase()
+            }
+        })
+    }
+
+    private fun restoreBase() {
+        if (baseText().isNotEmpty() || defaultBase.isBlank()) return
+        setBase(defaultBase)
+    }
+
+    private fun syncBase(text: String, popup: Boolean) {
+        val value = text.trim()
+        if (value.isEmpty()) return
+        if (popup && base.isShowing && !base.isPopupVisible) {
+            base.isPopupVisible = true
+        }
+        val idx = matchBase(value) ?: return
+        val list = popupList() ?: return
+        if (list.selectedIndex != idx) list.selectedIndex = idx
+        list.ensureIndexIsVisible(idx)
+    }
+
+    private fun matchBase(text: String): Int? {
+        val rank = PromptFuzzyRanker(text)
+        return bases.withIndex().mapNotNull { item ->
+            rank.score(item.value, emptyList())?.let { score -> item.index to score }
+        }.maxByOrNull { it.second }?.first
+    }
+
+    private fun popupList() = (base.accessibleContext?.getAccessibleChild(0) as? BasicComboPopup)?.list
+
+    private fun baseField() = base.editor.editorComponent as? JTextField
+
+    private fun baseText() = baseField()?.text?.trim()
+        ?: base.editor.item?.toString()?.trim().orEmpty()
+
+    private fun setBase(value: String) {
+        syncing = true
+        try {
+            base.selectedItem = value
+            baseField()?.text = value
+        } finally {
+            syncing = false
+        }
+    }
+
+    private fun resolvedBase(): String? {
+        val value = baseText()
+        if (value.isEmpty()) {
+            val fallback = defaultBase.trim()
+            if (fallback.isNotEmpty()) setBase(fallback)
+            return fallback.takeIf { it.isNotEmpty() }
+        }
+        if (value in baseSet) return value
+        val idx = matchBase(value) ?: return value
+        val target = bases[idx]
+        setBase(target)
+        return target
+    }
+
+    private fun validBase(value: String?): Boolean {
+        if (value == null || value in baseSet) return true
+        KiloNotifications.error(
+            project,
+            KiloBundle.message("worktree.configure.base.invalid.title"),
+            KiloBundle.message("worktree.configure.base.invalid.content", value),
+        )
+        baseField()?.apply {
+            requestFocusInWindow()
+            selectAll()
+        }
+        syncBase(value, popup = true)
+        return false
+    }
+
     private fun submitCreate(text: String = prompt.text()) {
         val explicit = branch.text.trim()
         val resolved = explicit.ifEmpty { name.text.trim() }.ifEmpty { suggestedName }
-        onCreate(resolved, base.editor.item?.toString()?.trim()?.takeIf { it.isNotEmpty() }, pending(text))
+        val target = resolvedBase()
+        if (!validBase(target)) return
+        onCreate(resolved, target, pending(text))
         close(OK_EXIT_CODE)
     }
 
@@ -245,11 +344,15 @@ internal class NewWorktreeDialog(
         spec.available,
     )
 
-    private fun baseModel(branches: List<String>, default: String): DefaultComboBoxModel<String> {
+    private fun baseBranches(branches: List<String>, default: String): List<String> {
         val ordered = LinkedHashSet<String>()
         if (default.isNotBlank()) ordered.add(default)
         ordered.addAll(branches)
-        return DefaultComboBoxModel(ordered.toTypedArray())
+        return ordered.toList()
+    }
+
+    private fun baseModel(branches: List<String>): ComboBoxModel<String> {
+        return DefaultComboBoxModel(branches.toTypedArray())
     }
 
     private fun variantTitle(value: String): String = value.replaceFirstChar { it.titlecase() }
