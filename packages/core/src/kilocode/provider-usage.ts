@@ -15,7 +15,7 @@ const successTtl = 60_000
 const errorTtl = 10_000
 const readyPlugin = PluginV2.ID.make("config-provider")
 
-export interface AdapterContext {
+interface AdapterContext {
   candidates: readonly Candidate[]
   failedCandidates: readonly Candidate["providerID"][]
   cloud: (() => Promise<Cloud.CloudState>) | undefined
@@ -34,7 +34,7 @@ interface AdapterResult {
   items: ReadonlyArray<Contract.UsageSnapshot>
 }
 
-export interface Adapter {
+interface Adapter {
   cachePrefixes: readonly string[]
   cloudScoped?: boolean
   run(ctx: AdapterContext): Promise<AdapterResult>
@@ -258,7 +258,7 @@ export interface TransportInterface {
 
 export class Transport extends Context.Service<Transport, TransportInterface>()("@kilocode/ProviderUsageTransport") {}
 
-export const transportLayer = Layer.succeed(Transport, {
+const transportLayer = Layer.succeed(Transport, {
   fetch,
   plans: Cloud.fetchCodingPlanSubscriptions,
   byok: Cloud.fetchByokEntries,

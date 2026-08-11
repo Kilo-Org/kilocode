@@ -15,12 +15,12 @@ export const bindings = {
   },
 } as const
 
-export type ProviderID = keyof typeof bindings
+type ProviderID = keyof typeof bindings
 
 const timeout = 5_000
 const limit = 64 * 1024
 
-export class MiniMaxUsageError extends Error {
+class MiniMaxUsageError extends Error {
   constructor(readonly code: "network" | "http" | "too_large" | "invalid" | "application") {
     super("MiniMax usage is temporarily unavailable.")
     this.name = "MiniMaxUsageError"
