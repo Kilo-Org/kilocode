@@ -758,4 +758,71 @@ describe("session.llm-native.request", () => {
       )
     }),
   )
+
+  // kilocode_change start - the native runtime must lower native+Anthropic
+  // web_search to a single hosted server tool; a duplicate plain client tool
+  // (input_schema) is rejected by Anthropic.
+  it.effect("lowers native+Anthropic web_search to a single hosted server tool", () =>
+    Effect.gen(function* () {
+      const prev = process.env.KILO_WEBSEARCH_PROVIDER
+      process.env.KILO_WEBSEARCH_PROVIDER = "native"
+      try {
+        const anthropicModel: Provider.Model = {
+          ...baseModel,
+          providerID: ProviderV2.ID.make("anthropic"),
+          api: { id: "claude-opus-4-6", url: "https://api.anthropic.com/v1", npm: "@ai-sdk/anthropic" },
+        }
+        // Simulate the AI-SDK hosted web_search object that session/tools.ts
+        // injects into the tool map when KILO_WEBSEARCH_PROVIDER=native. This
+        // is a real AI SDK Tool shape (inputSchema + jsonSchema + execute)
+        // so nativeSchema()/nativeTools() round-trip cleanly.
+        const aiSdkHostedWebSearch: Tool = {
+          description: "Anthropic hosted web search",
+          inputSchema: jsonSchema({ type: "object", properties: { query: { type: "string" } } }),
+          execute: async () => ({ output: "hosted-result" }),
+        }
+
+        let capturedRequest: { tools: Array<{ name: string; native?: unknown; inputSchema?: unknown }> } | undefined
+        const llmClient = {
+          prepare: () => Effect.die("unused"),
+          stream: (request: unknown) => {
+            capturedRequest = request as typeof capturedRequest
+            return Stream.fromIterable([LLMEvent.finish({ reason: "stop" })])
+          },
+          generate: () => Effect.die("unused"),
+        } as unknown as LLMClientShape
+
+        const native = LLMNativeRuntime.stream({
+          model: anthropicModel,
+          provider: {
+            ...providerInfo,
+            id: ProviderV2.ID.make("anthropic"),
+            name: "Anthropic",
+            env: ["ANTHROPIC_API_KEY"],
+            options: { apiKey: "test-anthropic-key" },
+          },
+          auth: undefined,
+          llmClient,
+          messages: [{ role: "user", content: "search the web" }],
+          tools: { web_search: aiSdkHostedWebSearch },
+          headers: {},
+          abort: new AbortController().signal,
+        })
+        expect(native.type).toBe("supported")
+        if (native.type === "unsupported") throw new Error(native.reason)
+
+        // Drain the stream so the request is built and captured.
+        yield* native.stream.pipe(Stream.runDrain)
+
+        expect(capturedRequest).toBeDefined()
+        const webSearchTools = capturedRequest!.tools.filter((t) => t.name === "web_search")
+        expect(webSearchTools).toHaveLength(1)
+        expect(webSearchTools[0].native).toMatchObject({ anthropic: { type: "web_search_20250305" } })
+      } finally {
+        if (prev === undefined) delete process.env.KILO_WEBSEARCH_PROVIDER
+        else process.env.KILO_WEBSEARCH_PROVIDER = prev
+      }
+    }),
+  )
+  // kilocode_change end
 })

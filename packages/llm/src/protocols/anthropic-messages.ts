@@ -24,6 +24,10 @@ import * as Cache from "./utils/cache"
 import { Lifecycle } from "./utils/lifecycle"
 import { ToolSchemaProjection } from "./utils/tool-schema"
 import { ToolStream } from "./utils/tool-stream"
+// kilocode_change start - hosted (provider-executed) tool lowering lives in the
+// kilocode mirror to keep shared upstream protocol file minimal for merges.
+import { lowerHostedTool } from "../kilocode/protocols/anthropic-hosted-tools"
+// kilocode_change end
 
 const ADAPTER = "anthropic-messages"
 export const DEFAULT_BASE_URL = "https://api.anthropic.com/v1"
@@ -143,6 +147,33 @@ const AnthropicTool = Schema.Struct({
 })
 type AnthropicTool = Schema.Schema.Type<typeof AnthropicTool>
 
+// kilocode_change start - Anthropic server (provider-hosted) tools use a typed
+// body distinct from client tools: a `type` discriminator (e.g.
+// "web_search_20250305"), the `name` Claude surfaces, and tool-specific config.
+// No `description`/`input_schema`; the provider owns execution.
+const AnthropicHostedWebSearch = Schema.Struct({
+  type: Schema.Literals(["web_search_20250305", "web_search_20260209"]),
+  name: Schema.String,
+  max_uses: Schema.optional(Schema.Number),
+  allowed_domains: Schema.optional(Schema.Array(Schema.String)),
+  blocked_domains: Schema.optional(Schema.Array(Schema.String)),
+  user_location: Schema.optional(
+    Schema.Struct({
+      type: Schema.Literal("approximate"),
+      city: Schema.optional(Schema.String),
+      region: Schema.optional(Schema.String),
+      country: Schema.optional(Schema.String),
+      timezone: Schema.optional(Schema.String),
+    }),
+  ),
+})
+// One entry per hosted tool variant. Future server tools (e.g. web_fetch,
+// code_execution that need client-side declaration) extend this union.
+const AnthropicHostedTool = Schema.Union([AnthropicHostedWebSearch])
+const AnthropicAnyTool = Schema.Union([AnthropicTool, AnthropicHostedTool])
+type AnthropicToolBody = Schema.Schema.Type<typeof AnthropicAnyTool>
+// kilocode_change end
+
 const AnthropicToolChoice = Schema.Union([
   Schema.Struct({ type: Schema.Literals(["auto", "any"]) }),
   Schema.Struct({ type: Schema.tag("tool"), name: Schema.String }),
@@ -157,7 +188,7 @@ const AnthropicBodyFields = {
   model: Schema.String,
   system: optionalArray(AnthropicTextBlock),
   messages: Schema.Array(AnthropicMessage),
-  tools: optionalArray(AnthropicTool),
+  tools: optionalArray(AnthropicAnyTool), // kilocode_change - accept hosted server tools alongside client tools
   tool_choice: Schema.optional(AnthropicToolChoice),
   stream: Schema.Literal(true),
   max_tokens: Schema.Number,
@@ -512,16 +543,23 @@ const fromRequest = Effect.fn("AnthropicMessages.fromRequest")(function* (reques
   // messages. Tools live highest in the cache hierarchy, so when callers
   // over-mark we keep their tool hints and shed the message-tail ones first.
   const breakpoints = Cache.newBreakpoints(ANTHROPIC_BREAKPOINT_CAP)
+  // kilocode_change start - emit hosted (provider-executed) tool fragments when a
+  // ToolDefinition carries `native.anthropic`; otherwise lower the client tool.
+  // Hosted tools are provider-owned and never accept a cache_control breakpoint.
+  const lowerAnyTool = (tool: typeof request.tools[number]): AnthropicToolBody => {
+    const hosted = lowerHostedTool(tool)
+    if (hosted !== undefined) return hosted as AnthropicToolBody
+    return lowerTool(
+      breakpoints,
+      tool,
+      ToolSchemaProjection.modelCompatibility(tool.inputSchema, toolSchemaCompatibility),
+    )
+  }
   const tools =
     request.tools.length === 0 || request.toolChoice?.type === "none"
       ? undefined
-      : request.tools.map((tool) =>
-          lowerTool(
-            breakpoints,
-            tool,
-            ToolSchemaProjection.modelCompatibility(tool.inputSchema, toolSchemaCompatibility),
-          ),
-        )
+      : request.tools.map(lowerAnyTool)
+  // kilocode_change end
   const system =
     request.system.length === 0
       ? undefined

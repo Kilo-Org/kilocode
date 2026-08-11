@@ -28,12 +28,16 @@ export const Parameters = Schema.Struct({
   }),
 })
 
-const WebSearchProviderSchema = Schema.Literals(["exa", "parallel", "kilo-exa"]) // kilocode_change - kilo-exa env override
+// kilocode_change start - add `"native"` as a provider-hosted alternative to
+// Exa/Parallel. When selected, web search is executed at the model provider
+// (Anthropic server-side web_search) instead of egressing to Exa/Parallel.
+const WebSearchProviderSchema = Schema.Literals(["exa", "parallel", "kilo-exa", "native"]) // kilocode_change - native + kilo-exa
 export type WebSearchProvider = Schema.Schema.Type<typeof WebSearchProviderSchema>
 
 export function selectWebSearchProvider(sessionID: string, flags = { exa: false, parallel: false }): WebSearchProvider {
   const override = process.env.KILO_WEBSEARCH_PROVIDER
-  if (override === "exa" || override === "parallel" || override === "kilo-exa") return override // kilocode_change - kilo-exa env override
+  // kilocode_change - allow native + kilo-exa env overrides
+  if (override === "exa" || override === "parallel" || override === "kilo-exa" || override === "native") return override
   if (flags.parallel) return "parallel"
   if (flags.exa) return "exa"
 
@@ -43,6 +47,9 @@ export function selectWebSearchProvider(sessionID: string, flags = { exa: false,
 export function webSearchProviderLabel(provider: unknown) {
   if (provider === "parallel") return "Parallel Web Search"
   if (provider === "exa" || provider === "kilo-exa") return "Exa Web Search" // kilocode_change - kilo-exa shares label
+  // kilocode_change start - Anthropic Web Search label
+  if (provider === "native") return "Anthropic Web Search"
+  // kilocode_change end
   return "Web Search"
 }
 
@@ -189,3 +196,61 @@ export const WebSearchTool = Tool.define(
     }
   }),
 )
+
+// kilocode_change start - provider-hosted (Anthropic-native) web search tool.
+// `nativeAnthropicWebSearchTool` builds a ToolDefinition whose `native.anthropic`
+// descriptor the @opencode-ai/llm Anthropic protocol lowers to
+// `{ type: "web_search_20250305", ... }`; Claude runs the search server-side and
+// results round-trip through the existing parser. Only @ai-sdk/anthropic Claude.
+import type { ToolDefinition } from "@opencode-ai/llm" // kilocode_change
+
+export interface AnthropicWebSearchOptions {
+  readonly variant?: "web_search_20250305" | "web_search_20260209"
+  readonly maxUses?: number
+  readonly allowedDomains?: ReadonlyArray<string>
+  readonly blockedDomains?: ReadonlyArray<string>
+  readonly userLocation?: {
+    readonly type: "approximate"
+    readonly city?: string
+    readonly region?: string
+    readonly country?: string
+    readonly timezone?: string
+  }
+}
+
+const anthropicWebSearchNative = (opts: AnthropicWebSearchOptions) => {
+  const anthropic: Record<string, unknown> = {
+    type: opts.variant ?? "web_search_20250305",
+    name: "web_search",
+  }
+  if (opts.maxUses !== undefined) anthropic.max_uses = opts.maxUses
+  if (opts.allowedDomains) anthropic.allowed_domains = [...opts.allowedDomains]
+  if (opts.blockedDomains) anthropic.blocked_domains = [...opts.blockedDomains]
+  if (opts.userLocation) anthropic.user_location = opts.userLocation
+  return { anthropic }
+}
+
+export function nativeAnthropicWebSearchTool(opts: AnthropicWebSearchOptions = {}): ToolDefinition.Input {
+  return {
+    name: "web_search",
+    description: "Search the web using Anthropic's hosted web_search server tool.",
+    inputSchema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] },
+    native: anthropicWebSearchNative(opts),
+  }
+}
+
+/** Hosted (provider-native) web search is only available on @ai-sdk/anthropic Claude models. */
+export function nativeWebSearchEnabled(modelNpm: string | undefined): boolean {
+  return modelNpm === "@ai-sdk/anthropic" || modelNpm === "@ai-sdk/google-vertex/anthropic"
+}
+
+/**
+ * Registry-only gate: true when the native hosted override is selected AND the
+ * model supports it. Unlike `selectWebSearchProvider`, this is session-agnostic
+ * (the 50/50 exa/parallel fallback is resolved later inside WebSearchTool with
+ * the real sessionID).
+ */
+export function nativeWebSearchSelected(modelNpm: string | undefined): boolean {
+  return process.env.KILO_WEBSEARCH_PROVIDER === "native" && nativeWebSearchEnabled(modelNpm)
+}
+// kilocode_change end

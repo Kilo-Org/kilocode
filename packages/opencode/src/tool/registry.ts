@@ -29,7 +29,7 @@ import z from "zod"
 import { Plugin } from "../plugin"
 import { Provider } from "@/provider/provider"
 
-import { WebSearchTool } from "./websearch"
+import { WebSearchTool, nativeWebSearchSelected } from "./websearch" // kilocode_change - native hosted web search gate
 import { KiloToolRegistry } from "../kilocode/tool/registry" // kilocode_change
 import { Notebook } from "@/kilocode/notebook/service" // kilocode_change
 import { AgentManager } from "@/kilocode/agent-manager/service" // kilocode_change
@@ -99,6 +99,7 @@ export interface Interface {
     providerID: ProviderV2.ID
     modelID: ModelV2.ID
     family?: string
+    apiNpm?: string
     agent: Agent.Info
   }) => Effect.Effect<Tool.Def[]>
   // kilocode_change end
@@ -341,7 +342,11 @@ const layer = Layer.effect(
       const filtered = (yield* all()).filter((tool) => {
         if (!KiloToolRegistry.available(tool, input.agent)) return false // kilocode_change
         if (tool.id === WebSearchTool.id) {
-          if (cfg.web_search === true) return true // kilocode_change
+          // kilocode_change start - hide local Exa/Parallel when native hosted
+          // search is selected AND the model supports it (Anthropic Claude);
+          // otherwise fall back to the local tool's session-keyed selection.
+          if (cfg.web_search === true) return true
+          if (nativeWebSearchSelected(input.apiNpm)) return false
           return webSearchEnabled(input.providerID, { exa: flags.enableExa, parallel: flags.enableParallel })
         }
 
