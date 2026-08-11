@@ -48,8 +48,8 @@ This returns model information including pricing, context window, and supported 
 | `openai/gpt-5.4-mini` | OpenAI | Fast and efficient |
 | `google/gemini-3.1-pro-preview` | Google | Advanced reasoning |
 | `google/gemini-2.5-flash` | Google | Fast and efficient |
-| `x-ai/grok-4` | xAI | Most capable Grok model |
-| `x-ai/grok-code-fast-1` | xAI | Optimized for code tasks |
+| `x-ai/grok-4` | SpaceXAI | Most capable Grok model |
+| `x-ai/grok-code-fast-1` | SpaceXAI | Optimized for code tasks |
 | `deepseek/deepseek-v3.2` | DeepSeek | Strong coding and reasoning model |
 | `moonshotai/kimi-k2.5` | Moonshot | Strong coding and multilingual model |
 | `minimax/minimax-m2.7` | MiniMax | High-performance MoE model |
