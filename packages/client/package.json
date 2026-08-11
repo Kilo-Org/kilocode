@@ -37,5 +37,5 @@
     "@typescript/native-preview": "catalog:",
     "effect": "catalog:"
   },
-  "version": "7.4.16"
+  "version": "7.4.21"
 }

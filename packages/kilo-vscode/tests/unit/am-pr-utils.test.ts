@@ -1,0 +1,324 @@
+import { describe, expect, it } from "bun:test"
+import {
+  parsePRResult,
+  checkStatus,
+  formatCheckDuration,
+  parseComments,
+  parseReviewers,
+} from "../../src/agent-manager/am-pr-utils"
+import type { GhThread, GhReviewRequest, GhReview } from "../../src/agent-manager/am-pr-types"
+
+// --- parsePRResult ---
+
+describe("parsePRResult", () => {
+  it("returns null when number is missing", () => {
+    expect(parsePRResult(JSON.stringify({ title: "foo" }))).toBeNull()
+  })
+
+  it("parses an open PR", () => {
+    const raw = {
+      number: 42,
+      title: "my PR",
+      body: "desc",
+      url: "https://github.com/x/y/pull/42",
+      state: "OPEN",
+      isDraft: false,
+      reviewDecision: null,
+      additions: 10,
+      deletions: 3,
+      changedFiles: 2,
+    }
+    expect(parsePRResult(JSON.stringify(raw))).toEqual({
+      number: 42,
+      title: "my PR",
+      body: "desc",
+      url: "https://github.com/x/y/pull/42",
+      state: "open",
+      review: null,
+      additions: 10,
+      deletions: 3,
+      files: 2,
+    })
+  })
+
+  it("maps isDraft to draft state regardless of gh state field", () => {
+    const raw = {
+      number: 1,
+      title: "",
+      body: "",
+      url: "",
+      state: "OPEN",
+      isDraft: true,
+      reviewDecision: null,
+      additions: 0,
+      deletions: 0,
+      changedFiles: 0,
+    }
+    expect(parsePRResult(JSON.stringify(raw))?.state).toBe("draft")
+  })
+
+  it("maps MERGED state", () => {
+    const raw = {
+      number: 1,
+      title: "",
+      body: "",
+      url: "",
+      state: "MERGED",
+      isDraft: false,
+      reviewDecision: null,
+      additions: 0,
+      deletions: 0,
+      changedFiles: 0,
+    }
+    expect(parsePRResult(JSON.stringify(raw))?.state).toBe("merged")
+  })
+
+  it("maps CLOSED state", () => {
+    const raw = {
+      number: 1,
+      title: "",
+      body: "",
+      url: "",
+      state: "CLOSED",
+      isDraft: false,
+      reviewDecision: null,
+      additions: 0,
+      deletions: 0,
+      changedFiles: 0,
+    }
+    expect(parsePRResult(JSON.stringify(raw))?.state).toBe("closed")
+  })
+
+  it("maps APPROVED review decision", () => {
+    const raw = {
+      number: 1,
+      title: "",
+      body: "",
+      url: "",
+      state: "OPEN",
+      isDraft: false,
+      reviewDecision: "APPROVED",
+      additions: 0,
+      deletions: 0,
+      changedFiles: 0,
+    }
+    expect(parsePRResult(JSON.stringify(raw))?.review).toBe("approved")
+  })
+
+  it("maps CHANGES_REQUESTED review decision", () => {
+    const raw = {
+      number: 1,
+      title: "",
+      body: "",
+      url: "",
+      state: "OPEN",
+      isDraft: false,
+      reviewDecision: "CHANGES_REQUESTED",
+      additions: 0,
+      deletions: 0,
+      changedFiles: 0,
+    }
+    expect(parsePRResult(JSON.stringify(raw))?.review).toBe("changes_requested")
+  })
+
+  it("maps REVIEW_REQUIRED review decision to pending", () => {
+    const raw = {
+      number: 1,
+      title: "",
+      body: "",
+      url: "",
+      state: "OPEN",
+      isDraft: false,
+      reviewDecision: "REVIEW_REQUIRED",
+      additions: 0,
+      deletions: 0,
+      changedFiles: 0,
+    }
+    expect(parsePRResult(JSON.stringify(raw))?.review).toBe("pending")
+  })
+
+  it("returns null review for unknown decision", () => {
+    const raw = {
+      number: 1,
+      title: "",
+      body: "",
+      url: "",
+      state: "OPEN",
+      isDraft: false,
+      reviewDecision: "SOMETHING_ELSE",
+      additions: 0,
+      deletions: 0,
+      changedFiles: 0,
+    }
+    expect(parsePRResult(JSON.stringify(raw))?.review).toBeNull()
+  })
+
+  it("defaults missing fields to empty strings and zeros", () => {
+    const result = parsePRResult(JSON.stringify({ number: 5 }))
+    expect(result).toEqual(
+      expect.objectContaining({ title: "", body: "", url: "", additions: 0, deletions: 0, files: 0 }),
+    )
+  })
+})
+
+// --- checkStatus ---
+
+describe("checkStatus", () => {
+  it("maps SUCCESS", () => expect(checkStatus("SUCCESS")).toBe("success"))
+  it("maps FAILURE", () => expect(checkStatus("FAILURE")).toBe("failure"))
+  it("maps ERROR to failure", () => expect(checkStatus("ERROR")).toBe("failure"))
+  it("maps PENDING", () => expect(checkStatus("PENDING")).toBe("pending"))
+  it("maps QUEUED to pending", () => expect(checkStatus("QUEUED")).toBe("pending"))
+  it("maps IN_PROGRESS to pending", () => expect(checkStatus("IN_PROGRESS")).toBe("pending"))
+  it("maps REQUESTED to pending", () => expect(checkStatus("REQUESTED")).toBe("pending"))
+  it("maps WAITING to pending", () => expect(checkStatus("WAITING")).toBe("pending"))
+  it("maps SKIPPED", () => expect(checkStatus("SKIPPED")).toBe("skipped"))
+  it("maps CANCELLED", () => expect(checkStatus("CANCELLED")).toBe("cancelled"))
+  it("maps TIMED_OUT to cancelled", () => expect(checkStatus("TIMED_OUT")).toBe("cancelled"))
+  it("maps STALE to cancelled", () => expect(checkStatus("STALE")).toBe("cancelled"))
+  it("maps STARTUP_FAILURE to cancelled", () => expect(checkStatus("STARTUP_FAILURE")).toBe("cancelled"))
+  it("maps unknown state to pending", () => expect(checkStatus("WHATEVER")).toBe("pending"))
+  it("is case-insensitive", () => expect(checkStatus("success")).toBe("success"))
+})
+
+// --- formatCheckDuration ---
+
+describe("formatCheckDuration", () => {
+  it("returns undefined when startedAt is missing", () => {
+    expect(formatCheckDuration(undefined, "2024-01-01T00:01:00Z")).toBeUndefined()
+  })
+
+  it("returns undefined when completedAt is missing", () => {
+    expect(formatCheckDuration("2024-01-01T00:00:00Z", undefined)).toBeUndefined()
+  })
+
+  it("formats sub-minute durations in seconds", () => {
+    expect(formatCheckDuration("2024-01-01T00:00:00Z", "2024-01-01T00:00:45Z")).toBe("45s")
+  })
+
+  it("formats durations over a minute as m/s", () => {
+    expect(formatCheckDuration("2024-01-01T00:00:00Z", "2024-01-01T00:02:30Z")).toBe("2m 30s")
+  })
+
+  it("formats exactly 60 seconds as 1m 0s", () => {
+    expect(formatCheckDuration("2024-01-01T00:00:00Z", "2024-01-01T00:01:00Z")).toBe("1m 0s")
+  })
+})
+
+// --- parseComments ---
+
+describe("parseComments", () => {
+  it("returns empty array for empty threads", () => {
+    expect(parseComments([])).toEqual([])
+  })
+
+  it("skips threads with no comments", () => {
+    const threads: GhThread[] = [{ isResolved: false, comments: { nodes: [] } }]
+    expect(parseComments(threads)).toHaveLength(0)
+  })
+
+  it("parses a resolved thread", () => {
+    const threads: GhThread[] = [
+      {
+        isResolved: true,
+        comments: {
+          nodes: [
+            {
+              id: "c1",
+              author: { login: "alice", avatarUrl: "https://avatar" },
+              body: "looks good",
+              path: "src/foo.ts",
+              line: 10,
+              url: "https://url",
+              createdAt: "2024-01-01T00:00:00Z",
+            },
+          ],
+        },
+      },
+    ]
+    expect(parseComments(threads)).toEqual([
+      {
+        id: "c1",
+        author: "alice",
+        avatar: "https://avatar",
+        body: "looks good",
+        file: "src/foo.ts",
+        line: 10,
+        url: "https://url",
+        resolved: true,
+        createdAt: new Date("2024-01-01T00:00:00Z").getTime(),
+      },
+    ])
+  })
+
+  it("defaults missing author to 'unknown'", () => {
+    const threads: GhThread[] = [{ isResolved: false, comments: { nodes: [{ id: "c2", body: "note" }] } }]
+    expect(parseComments(threads)[0]?.author).toBe("unknown")
+  })
+
+  it("only uses the first comment of each thread", () => {
+    const threads: GhThread[] = [
+      {
+        isResolved: false,
+        comments: {
+          nodes: [
+            { id: "first", body: "first comment" },
+            { id: "second", body: "second comment" },
+          ],
+        },
+      },
+    ]
+    const result = parseComments(threads)
+    expect(result).toHaveLength(1)
+    expect(result[0]?.id).toBe("first")
+  })
+})
+
+// --- parseReviewers ---
+
+describe("parseReviewers", () => {
+  it("returns empty array with no requests or reviews", () => {
+    expect(parseReviewers([], [])).toEqual([])
+  })
+
+  it("adds pending reviewer from request", () => {
+    const requests: GhReviewRequest[] = [{ requestedReviewer: { login: "alice", avatarUrl: "https://avatar" } }]
+    expect(parseReviewers(requests, [])).toEqual([{ login: "alice", avatar: "https://avatar", state: "pending" }])
+  })
+
+  it("skips review requests without a login", () => {
+    const requests: GhReviewRequest[] = [{ requestedReviewer: {} }]
+    expect(parseReviewers(requests, [])).toHaveLength(0)
+  })
+
+  it("adds reviewer from review when not in requests", () => {
+    const reviews: GhReview[] = [{ author: { login: "bob" }, state: "APPROVED" }]
+    expect(parseReviewers([], reviews)).toEqual([{ login: "bob", avatar: undefined, state: "approved" }])
+  })
+
+  it("upgrades pending request to approved when review arrives", () => {
+    const requests: GhReviewRequest[] = [{ requestedReviewer: { login: "alice" } }]
+    const reviews: GhReview[] = [{ author: { login: "alice" }, state: "APPROVED" }]
+    expect(parseReviewers(requests, reviews)).toEqual([{ login: "alice", avatar: undefined, state: "approved" }])
+  })
+
+  it("does not downgrade approved to commented", () => {
+    const requests: GhReviewRequest[] = [{ requestedReviewer: { login: "alice" } }]
+    const reviews: GhReview[] = [
+      { author: { login: "alice" }, state: "APPROVED" },
+      { author: { login: "alice" }, state: "COMMENTED" },
+    ]
+    expect(parseReviewers(requests, reviews)[0]?.state).toBe("approved")
+  })
+
+  it("does upgrade pending to changes_requested", () => {
+    const requests: GhReviewRequest[] = [{ requestedReviewer: { login: "alice" } }]
+    const reviews: GhReview[] = [{ author: { login: "alice" }, state: "CHANGES_REQUESTED" }]
+    expect(parseReviewers(requests, reviews)[0]?.state).toBe("changes_requested")
+  })
+
+  it("skips reviews without a login", () => {
+    const reviews: GhReview[] = [{ author: {}, state: "APPROVED" }]
+    expect(parseReviewers([], reviews)).toHaveLength(0)
+  })
+})

@@ -1,15 +1,5 @@
-import z from "zod"
-import { MemoryFs } from "./fs"
-
+/** Compatibility facade for the removed memory audit log. */
 export namespace MemoryAudit {
-  const Log = z
-    .object({
-      kind: z.literal("log"),
-      summary: z.string(),
-      time: z.string().optional(),
-    })
-    .passthrough()
-
   export type Decision =
     | {
         kind: "log"
@@ -43,18 +33,14 @@ export namespace MemoryAudit {
         }[]
       }
 
-  function audit(root: string, input: Decision) {
-    void root
-    void input
-    return Promise.resolve()
-  }
-
   export async function append(root: string, text: string) {
-    await audit(root, { kind: "log", result: "logged", summary: text })
+    void root
+    void text
   }
 
   export async function decide(root: string, input: Decision) {
-    await audit(root, input)
+    void root
+    void input
   }
 
   export async function readDecisions(root: string) {
@@ -62,24 +48,8 @@ export namespace MemoryAudit {
     return ""
   }
 
-  function record(input: string) {
-    try {
-      const data = JSON.parse(input)
-      const parsed = Log.safeParse(data)
-      return parsed.success ? parsed.data : undefined
-    } catch (error) {
-      if (MemoryFs.parse(error)) return undefined
-      throw error
-    }
-  }
-
   export async function readChanges(root: string) {
-    const lines = (await readDecisions(root)).split("\n").flatMap((line) => {
-      const data = record(line)
-      if (!data) return []
-      const time = data.time ?? ""
-      return [`${time} ${data.summary}`.trim()]
-    })
-    return lines.join("\n")
+    void root
+    return ""
   }
 }
