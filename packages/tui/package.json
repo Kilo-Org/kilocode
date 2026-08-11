@@ -45,7 +45,8 @@
     "./ui/dialog": "./src/ui/dialog.tsx",
     "./ui/spinner": "./src/ui/spinner.ts",
     "./ui/toast": "./src/ui/toast.tsx",
-    "./component/spinner": "./src/component/spinner.tsx"
+    "./component/spinner": "./src/component/spinner.tsx",
+    "./component/register-spinner": "./src/component/register-spinner.ts"
   },
   "dependencies": {
     "@opencode-ai/core": "workspace:*",
@@ -60,7 +61,6 @@
     "effect": "catalog:",
     "fuzzysort": "catalog:",
     "open": "10.1.2",
-    "opentui-spinner": "catalog:",
     "remeda": "catalog:",
     "strip-ansi": "7.1.2",
     "solid-js": "catalog:"
