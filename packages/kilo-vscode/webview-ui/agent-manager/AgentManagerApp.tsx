@@ -568,7 +568,14 @@ const AgentManagerContent: Component = () => {
   const togglePRPanel = () => {
     setHistory(false)
     if (reviewActive()) closeReviewTab()
+    const opening = sidePanel() !== SidePanel.PR
     setSidePanel((prev) => (prev === SidePanel.PR ? null : SidePanel.PR))
+    // Trigger an immediate refresh when opening so the panel shows fresh data
+    // rather than waiting for the next poll cycle
+    if (opening) {
+      const sel = selection()
+      if (sel && sel !== LOCAL) vscode.postMessage({ type: "agentManager.refreshPR", worktreeId: sel })
+    }
   }
 
   const openSelectedPR = () => {
