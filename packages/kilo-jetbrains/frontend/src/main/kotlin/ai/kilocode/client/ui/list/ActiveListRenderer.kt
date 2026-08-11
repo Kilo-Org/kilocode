@@ -43,11 +43,12 @@ internal class ActiveListRenderer(
         glyph.update(activeListMenuCell())
         glyph.isVisible = false
         // Mirror the flush leading icon: drop the row's trailing inset and let the empty-icon spacer
-        // hold the column flush against the content edge, separated from the body by the row gap, so
-        // the dropdown's margin from the selection matches the leading icon's. The overlay glyph then
-        // floats over that same slot, revealed on hover.
+        // hold a dedicated menu column at the content edge. The overlay glyph then floats over that
+        // same slot, revealed on hover.
         row.border = JBUI.Borders.empty(UiStyle.Gap.md(), 0, UiStyle.Gap.md(), 0)
-        val tail = JPanel(BorderLayout(UiStyle.Gap.md(), 0))
+        (row.layout as BorderLayout).hgap = 0
+        mark.border = JBUI.Borders.emptyRight(UiStyle.Gap.md())
+        val tail = JPanel(BorderLayout())
         UiStyle.Components.transparent(tail)
         tail.add(endPane, BorderLayout.CENTER)
         tail.add(spacer, BorderLayout.EAST)

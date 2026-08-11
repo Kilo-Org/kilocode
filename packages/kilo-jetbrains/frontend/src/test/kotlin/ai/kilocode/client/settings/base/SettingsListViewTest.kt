@@ -538,23 +538,37 @@ class SettingsListViewTest : BasePlatformTestCase() {
 
     fun `test menu button reserves dedicated east space in the layout`() {
         edt {
-            val row = item("with", "Alpha", null)
-            val model = CollectionListModel<ActiveListItem>(listOf(row))
-            val list = JBList(model)
-
-            val plain = ActiveListRenderer(model, ActiveListConfig.Equal)
-            plain.getListCellRendererComponent(list, row, 0, true, true)
-
             val key = DataKey.create<ActiveListItem>("test.activeList.menu.space")
             val menu = ActiveListMenu(key, DefaultActionGroup(), element = { it })
-            val withMenu = ActiveListRenderer(model, ActiveListConfig.Equal, menu)
-            withMenu.getListCellRendererComponent(list, row, 0, true, true)
+            val view = ActiveListView("Empty", menu = menu) { _, _ -> }
+            view.update(listOf(item("with", "Alpha", null)))
+            layout(view)
 
-            // The empty-icon spacer widens the row body instead of relying on a border inset.
+            hover(view, center(view.list.getCellBounds(0, 0)))
+            val area = activeListCellBounds(view.list, 0, selected = true).getValue(ACTIVE_LIST_MENU_CELL)
+            val cell = view.list.getCellBounds(0, 0)
+
             assertTrue(
-                "menu list reserves extra trailing width for the dropdown column",
-                rowPanel(withMenu).preferredSize.width > rowPanel(plain).preferredSize.width,
+                "menu list reserves a trailing dropdown column",
+                area.width > 0 && area.x > cell.x + cell.width / 2,
             )
+        }
+    }
+
+    fun `test menu button is tight to trailing content`() {
+        edt {
+            val key = DataKey.create<ActiveListItem>("test.activeList.menu.edge")
+            val menu = ActiveListMenu(key, DefaultActionGroup(), element = { it })
+            val view = ActiveListView("Empty", menu = menu) { _, _ -> }
+            view.update(listOf(metricsItem("with", "Alpha", ActiveListMetrics(pr = ActiveListBadge("#12")))))
+            layout(view)
+
+            hover(view, center(view.list.getCellBounds(0, 0)))
+            val cells = activeListCellBounds(view.list, 0, selected = true)
+            val pull = cells.getValue(ACTIVE_LIST_PR_CELL)
+            val menuArea = cells.getValue(ACTIVE_LIST_MENU_CELL)
+
+            assertEquals("menu glyph should touch trailing row content", pull.x + pull.width, menuArea.x)
         }
     }
 
