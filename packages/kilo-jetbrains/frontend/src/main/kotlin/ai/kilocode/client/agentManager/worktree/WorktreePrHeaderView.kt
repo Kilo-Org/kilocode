@@ -30,22 +30,24 @@ internal class WorktreePrHeaderView(
     private val changes = WorktreeStatsView(openDiff)
     private val statusPane = status.align(HAlign.LEFT, VAlign.CENTER)
     private val changesPane = changes.align(HAlign.RIGHT, VAlign.CENTER) as JComponent
+    private val actions = BorderLayoutPanel()
     private var pull: WorktreePrDto? = null
     private var state: GhState? = null
     private var text: String? = null
     private var tip: String? = null
     private var url: String? = null
-    private var changesLeft = false
 
     init {
         isOpaque = false
+        actions.isOpaque = false
         status.border = JBUI.Borders.empty(0, UiStyle.Gap.md(), 0, UiStyle.Gap.xs())
         title.border = JBUI.Borders.empty(0, UiStyle.Gap.sm())
         title.isOpaque = false
         changesPane.border = JBUI.Borders.emptyRight(UiStyle.Gap.pad())
+        actions.addToRight(changesPane)
         addToLeft(statusPane)
         addToCenter(title)
-        addToRight(changesPane)
+        addToRight(actions)
         val listener = object : MouseAdapter() {
             override fun mouseClicked(event: MouseEvent) {
                 url?.let(BrowserUtil::browse)
@@ -93,23 +95,11 @@ internal class WorktreePrHeaderView(
         if (value) {
             if (statusPane.parent !== this) add(statusPane, BorderLayout.WEST)
             if (title.parent !== this) add(title, BorderLayout.CENTER)
-            placeChanges(left = false)
             title.isVisible = true
             return
         }
         if (statusPane.parent === this) remove(statusPane)
-        placeChanges(left = true)
         title.isVisible = false
-    }
-
-    private fun placeChanges(left: Boolean) {
-        val constraint = if (left) BorderLayout.WEST else BorderLayout.EAST
-        val border = if (left) JBUI.Borders.emptyLeft(UiStyle.Gap.md()) else JBUI.Borders.emptyRight(UiStyle.Gap.pad())
-        if (changesPane.parent === this && changesLeft == left) return
-        if (changesPane.parent === this) remove(changesPane)
-        changesLeft = left
-        changesPane.border = border
-        add(changesPane, constraint)
         changed()
     }
 

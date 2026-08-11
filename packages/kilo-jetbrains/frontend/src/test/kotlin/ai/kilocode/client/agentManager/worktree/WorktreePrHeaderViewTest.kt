@@ -16,6 +16,7 @@ import java.awt.Point
 import java.awt.event.InputEvent
 import java.awt.event.MouseEvent
 import javax.swing.JComponent
+import javax.swing.SwingUtilities
 
 class WorktreePrHeaderViewTest : BasePlatformTestCase() {
     fun `test PR state title and colors render`() {
@@ -61,7 +62,7 @@ class WorktreePrHeaderViewTest : BasePlatformTestCase() {
         assertEquals(Cursor.DEFAULT_CURSOR, title.cursor.type)
     }
 
-    fun `test no PR aligns changes badge to the left`() {
+    fun `test no PR keeps changes badge on the right`() {
         val view = edt { WorktreePrHeaderView {} }
         val changes = edt { UIUtil.findComponentOfType(view, WorktreeStatsView::class.java)!! }
 
@@ -71,7 +72,7 @@ class WorktreePrHeaderViewTest : BasePlatformTestCase() {
             view.doLayout()
         }
 
-        assertTrue(edt { changes.parent.x < 20 })
+        assertTrue(edt { SwingUtilities.convertPoint(changes.parent, Point(0, 0), view).x > 300 })
     }
 
     fun `test changes view visibility follows stats`() {

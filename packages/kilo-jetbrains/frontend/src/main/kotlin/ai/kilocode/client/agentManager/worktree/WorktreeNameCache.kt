@@ -1,6 +1,7 @@
 package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.rpc.dto.WorktreeDto
+import ai.kilocode.rpc.dto.WorktreePrDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.util.Disposer
@@ -14,10 +15,14 @@ import com.intellij.util.concurrency.annotations.RequiresEdt
 @Service(Service.Level.APP)
 class WorktreeNameCache {
     private val names = linkedMapOf<String, String>()
+    private val pulls = linkedMapOf<String, WorktreePrDto>()
     private val listeners = mutableListOf<(String, String?) -> Unit>()
 
     @RequiresEdt
     fun get(path: String): String? = names[path]
+
+    @RequiresEdt
+    fun title(path: String): String = WorktreeTitle.text(names[path], path, pulls[path])
 
     @RequiresEdt
     fun put(path: String, name: String) {
@@ -30,13 +35,29 @@ class WorktreeNameCache {
     fun put(item: WorktreeDto) = put(item.path, item.name)
 
     @RequiresEdt
+    fun putPr(path: String, pull: WorktreePrDto?) {
+        val prev = pulls[path]
+        if (pull == null) {
+            if (prev == null) return
+            pulls.remove(path)
+            fire(path, names[path])
+            return
+        }
+        if (prev == pull) return
+        pulls[path] = pull
+        fire(path, names[path])
+    }
+
+    @RequiresEdt
     fun remove(path: String) {
-        if (names.remove(path) != null) fire(path, null)
+        val changed = names.remove(path) != null || pulls.remove(path) != null
+        if (changed) fire(path, null)
     }
 
     @RequiresEdt
     fun clear() {
         names.clear()
+        pulls.clear()
     }
 
     /**

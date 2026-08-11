@@ -11,6 +11,7 @@ import ai.kilocode.client.agentManager.worktree.WorktreeNameCache
 import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatchers
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorMatcher
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorKind
+import ai.kilocode.client.agentManager.worktree.WorktreeTitle
 import ai.kilocode.client.agentManager.worktree.ensureWorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.prTooltip
 import ai.kilocode.client.agentManager.worktree.normalizeWorktreePath
@@ -123,7 +124,10 @@ class AgentManagerPanel(
         bindStatus()
         bindEditorSelection()
         // Reflect names adopted or renamed in a worktree session editor tab in the list live.
-        service<WorktreeNameCache>().addListener(this) { path, name -> controller.applyName(path, name) }
+        service<WorktreeNameCache>().addListener(this) { path, name ->
+            controller.applyName(path, name)
+            project?.service<KiloVfsManager>()?.updatePresentation(WorktreeSessionEditorKind.ID, mapOf("path" to path))
+        }
         ActionManager.getInstance().getAction("RenameElement")?.shortcutSet?.let { set ->
             edit.registerCustomShortcutSet(set, list, this)
         }
@@ -331,7 +335,9 @@ class AgentManagerPanel(
             (0 until controller.model.size).map {
                 val item = controller.model.getElementAt(it)
                 val key = normalizeWorktreePath(item.path)
-                WorktreeRow(item, controller.isPending(item.id), controller.isDeleting(item.id), controller.kind(item.path), stats[key], prs[key])
+                val pull = prs[key]
+                service<WorktreeNameCache>().putPr(item.path, pull)
+                WorktreeRow(item, controller.isPending(item.id), controller.isDeleting(item.id), controller.kind(item.path), stats[key], pull)
             },
             ActiveListSelection.PreserveNoScroll,
         )
@@ -442,13 +448,12 @@ class AgentManagerPanel(
         val pr: WorktreePrDto?,
     ) : ActiveListItem {
         override val key: String get() = dto.id
-        override val title: String get() = pr?.title?.trim()?.takeIf { it.isNotBlank() } ?: dto.name
-        override val description: String get() = defaultName
+        override val title: String get() = WorktreeTitle.text(dto.name, dto.path, pr)
+        override val description: String get() = WorktreeTitle.fallback(dto.path)
         override val tooltip: String? get() = null
         override val icon = WorktreeIcons.forRow(dto.locked, pending)
         override val search: String get() = listOfNotNull(dto.name, dto.branch, dto.path, dto.lockReason).joinToString(" ")
-        private val defaultName: String get() = dto.path.trimEnd('/').substringAfterLast('/')
-        private val customName: String? get() = dto.name.takeIf { it != defaultName }
+        private val customName: String? get() = WorktreeTitle.custom(dto.name, dto.path)
         override val badges: List<ActiveListBadge>
             get() {
                 if (pending || deleting) return emptyList()

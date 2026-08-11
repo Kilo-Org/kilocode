@@ -10,6 +10,8 @@ import ai.kilocode.client.vfs.KiloEditorKindRegistry
 import ai.kilocode.client.vfs.KiloPath
 import ai.kilocode.client.vfs.KiloVirtualFileKindRegistry
 import ai.kilocode.client.vfs.KiloVirtualFileSystem
+import ai.kilocode.rpc.dto.GhState
+import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.openapi.components.service
 import com.intellij.openapi.vfs.VirtualFilePathWrapper
@@ -57,5 +59,13 @@ class WorktreeSessionEditorKindTest : BasePlatformTestCase() {
         service<WorktreeNameCache>().put(path, "Feature Label")
 
         assertEquals("Feature Label", WorktreeSessionEditorKind.title(mapOf("path" to path)))
+    }
+
+    fun `test worktree session title uses same winning label as worktree list`() {
+        val path = "/repo/.kilo/worktrees/feature-x"
+        service<WorktreeNameCache>().put(path, "Feature Label")
+        service<WorktreeNameCache>().putPr(path, WorktreePrDto(path, 3, GhState.OPEN, "https://example.test/pr/3", "PR Label"))
+
+        assertEquals("PR Label", WorktreeSessionEditorKind.title(mapOf("path" to path)))
     }
 }

@@ -25,7 +25,7 @@ object WorktreeSessionEditorKind : KiloEditorKind {
     override val id: String = ID
 
     override fun title(params: Map<String, String>): String = params[PATH]?.let { path ->
-        service<WorktreeNameCache>().get(path) ?: name(path)
+        service<WorktreeNameCache>().title(path)
     } ?: KiloBundle.message("worktree.session.title")
     override fun icon(params: Map<String, String>): Icon = WorktreeIcons.branch
     override fun fileType(params: Map<String, String>): FileType = WorktreeSessionFileType
@@ -44,11 +44,6 @@ object WorktreeSessionEditorKind : KiloEditorKind {
         val controller = WorktreeSessionListController(project.service<KiloSessionService>(), path, cs)
         val manager = WorktreeSessionEditorManager(parent, project, worktree, controller)
         return WorktreeSessionEditorPanel(parent, manager, controller, worktree, project)
-    }
-
-    private fun name(path: String): String {
-        val value = path.trimEnd('/', '\\')
-        return value.substringAfterLast('/').substringAfterLast('\\').takeIf { it.isNotBlank() } ?: value
     }
 
     private const val PATH = "path"

@@ -1,7 +1,9 @@
 package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.util.edtWait
+import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreeDto
+import ai.kilocode.rpc.dto.WorktreePrDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.util.Disposer
@@ -41,6 +43,19 @@ class WorktreeNameCacheTest : BasePlatformTestCase() {
 
         assertEquals("Feature", cache().get("/repo/wt"))
         assertTrue(events.isEmpty())
+    }
+
+    fun `test title prefers PR title then worktree name`() = edt {
+        val path = "/repo/wt"
+        cache().put(path, "Feature")
+
+        assertEquals("Feature", cache().title(path))
+
+        cache().putPr(path, WorktreePrDto(path, 12, GhState.OPEN, "https://example.test/pr/12", "PR Title"))
+        assertEquals("PR Title", cache().title(path))
+
+        cache().putPr(path, WorktreePrDto(path, 12, GhState.OPEN, "https://example.test/pr/12", "   "))
+        assertEquals("Feature", cache().title(path))
     }
 
     fun `test listener is removed with parent disposable`() = edt {
