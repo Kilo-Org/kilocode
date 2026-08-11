@@ -391,20 +391,14 @@ class BaseQuestionView(
     }
 
     private fun makeButton(id: String, text: String): JButton {
-        val btn = object : JButton(text) {
-            init {
-                syncBackground()
-            }
-
-            override fun updateUI() {
-                super.updateUI()
-                syncBackground()
-            }
-
-            private fun syncBackground() {
-                background = SessionUiStyle.View.Surface.bgColor()
-            }
-        }
+        // Standard platform buttons: primary uses DEFAULT_STYLE_KEY (accent), the rest render as
+        // ordinary secondary buttons. DarculaButtonUI paints the rounded fill and border itself
+        // via isContentAreaFilled, so the button must be non-opaque. If it stays opaque, Swing
+        // first fills the rectangular bounds with the component background; in the Islands Light
+        // theme that color differs from the card surface and leaks as a stray frame around the
+        // rounded button (other themes happen to match, so they look fine).
+        val btn = JButton(text)
+        btn.isOpaque = false
         btn.addActionListener {
             actionHandlers[id]?.invoke()
             focus?.invoke()

@@ -1,7 +1,6 @@
 package ai.kilocode.client.session.views.base
 
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
-import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.icons.AllIcons
 import com.intellij.ide.ui.laf.darcula.ui.DarculaButtonUI
@@ -249,15 +248,18 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test action buttons use question card surface background`() {
+    fun `test action buttons are non-opaque so no stray fill frame`() {
         edt {
             val panel = BaseQuestionView()
             panel.setActions(listOf(
                 BaseQuestionView.Action("a", "A", primary = false) {},
                 BaseQuestionView.Action("b", "B", primary = true) {},
             ))
-            assertEquals(SessionUiStyle.View.Surface.bgColor(), actionButton(panel, "A").background)
-            assertEquals(SessionUiStyle.View.Surface.bgColor(), actionButton(panel, "B").background)
+            // Non-opaque so Swing does not fill the rectangular bounds with the component
+            // background before DarculaButtonUI paints the rounded shape. That rectangle leaked
+            // as a stray frame around the button in the Islands Light theme.
+            assertFalse(actionButton(panel, "A").isOpaque)
+            assertFalse(actionButton(panel, "B").isOpaque)
         }
     }
 
