@@ -17,6 +17,7 @@ export interface GhComment {
   diffHunk?: string
 }
 export interface GhThread {
+  id?: string
   isResolved?: boolean
   comments?: { nodes?: GhComment[] }
 }

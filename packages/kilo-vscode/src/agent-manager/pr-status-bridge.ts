@@ -109,13 +109,13 @@ export class PRStatusBridge {
           } as AgentManagerOutMessage)
         },
         (err: unknown) => {
-          this.host.log(`${resultType} failed:`, err)
+          const msg = err instanceof Error ? err.message : String(err)
+          this.host.log(`${resultType} failed: ${msg}`)
           this.host.postToWebview({
             type: resultType,
             worktreeId: id,
             threadId,
             success: false,
-            error: String(err),
           } as AgentManagerOutMessage)
         },
       )

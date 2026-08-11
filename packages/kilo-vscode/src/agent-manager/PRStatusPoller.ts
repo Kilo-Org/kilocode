@@ -486,6 +486,7 @@ export class PRStatusPoller {
           pullRequest(number: $number) {
             reviewThreads(first: 100) {
               nodes {
+                id
                 isResolved
                 comments(first: 1) {
                   nodes {

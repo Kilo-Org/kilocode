@@ -10,7 +10,8 @@ export async function resolveComment(threadId: string, cwd: string): Promise<voi
     )
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    throw new Error(`Could not resolve thread: ${msg}`)
+    const stderr = (err as Record<string, unknown>).stderr
+    throw new Error(`Could not resolve thread: ${msg}${stderr ? ` — ${stderr}` : ""}`)
   }
 }
 
@@ -23,6 +24,7 @@ export async function unresolveComment(threadId: string, cwd: string): Promise<v
     )
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    throw new Error(`Could not unresolve thread: ${msg}`)
+    const stderr = (err as Record<string, unknown>).stderr
+    throw new Error(`Could not unresolve thread: ${msg}${stderr ? ` — ${stderr}` : ""}`)
   }
 }

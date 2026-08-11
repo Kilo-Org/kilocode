@@ -73,6 +73,7 @@ export function parseComments(threads: GhThread[]): PRComment[] {
     if (!first) continue
     items.push({
       id: first.id,
+      threadId: thread.id ?? first.id,
       author: first.author?.login ?? "unknown",
       avatar: first.author?.avatarUrl,
       body: first.body ?? "",

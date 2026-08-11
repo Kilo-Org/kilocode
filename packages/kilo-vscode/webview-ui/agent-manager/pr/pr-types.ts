@@ -15,6 +15,7 @@ export interface PRCheck {
 
 export interface PRComment {
   id: string
+  threadId: string
   author: string
   avatar?: string
   body: string
