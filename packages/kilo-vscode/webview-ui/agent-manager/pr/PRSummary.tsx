@@ -61,18 +61,28 @@ export function PRSummary(props: PRSummaryProps) {
           </span>
         </div>
         <div class="am-pr-summary-rows am-pr-col">
-          {rows().map((row) => (
-            <div
-              class="am-pr-summary-row am-pr-row"
-              classList={{ "am-pr-summary-row-link": !!(row.isComments && props.onJumpToComments) }}
-              data-status={row.status}
-              onClick={row.isComments && props.onJumpToComments ? props.onJumpToComments : undefined}
-            >
-              <Icon name={row.icon} size="small" class="am-pr-summary-icon" />
-              <span class="am-pr-summary-label">{row.label}</span>
-              {row.isComments && props.onJumpToComments && <span class="am-pr-summary-jump">Jump to comments ↓</span>}
-            </div>
-          ))}
+          {rows().map((row) => {
+            const isClickable = !!(row.isComments && props.onJumpToComments)
+            const rowProps = {
+              class: "am-pr-summary-row am-pr-row",
+              classList: { "am-pr-summary-row-link": isClickable },
+              "data-status": row.status,
+            }
+            const content = (
+              <>
+                <Icon name={row.icon} size="small" class="am-pr-summary-icon" />
+                <span class="am-pr-summary-label">{row.label}</span>
+                {row.isComments && props.onJumpToComments && <span class="am-pr-summary-jump">Jump to comments ↓</span>}
+              </>
+            )
+            return isClickable ? (
+              <button {...rowProps} onClick={props.onJumpToComments}>
+                {content}
+              </button>
+            ) : (
+              <div {...rowProps}>{content}</div>
+            )
+          })}
         </div>
       </div>
     </Show>

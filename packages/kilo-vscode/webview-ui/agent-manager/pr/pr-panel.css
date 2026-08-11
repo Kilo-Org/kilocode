@@ -565,6 +565,16 @@
   padding-right: 2px;
 }
 
+button.am-pr-summary-row-link {
+  all: unset;
+  display: flex;
+  width: 100%;
+  gap: 7px;
+  padding: 2px;
+  font-size: var(--kilo-font-size-12);
+  box-sizing: border-box;
+}
+
 .am-pr-summary-row-link:hover {
   background: var(--vscode-list-hoverBackground);
 }
