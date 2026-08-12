@@ -4,3 +4,4 @@ out/
 storybook-static/
 test-results/
 playwright-report/
+.github-schema-cache.graphql

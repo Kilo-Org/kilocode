@@ -1254,6 +1254,7 @@
     "lint": "eslint --cache --cache-strategy content --cache-location node_modules/.cache/eslint src webview-ui",
     "test": "vscode-test",
     "test:unit": "bun test tests/unit/ --dots",
+    "validate:github-graphql": "bun script/validate-github-graphql.ts",
     "rebuild-sdk": "bun run --cwd ../sdk/js build",
     "storybook": "storybook dev -p 6007",
     "build-storybook": "storybook build -o storybook-static",

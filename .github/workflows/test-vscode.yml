@@ -53,3 +53,24 @@ jobs:
       - name: Check for kilocode_change markers
         working-directory: packages/kilo-vscode
         run: bun run check-kilocode-change
+
+  graphql-schema:
+    name: Validate GraphQL schema (non-blocking)
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    # Non-blocking - PR can merge even if this fails
+    continue-on-error: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Validate GitQL fields against GitHub schema
+        working-directory: packages/kilo-vscode
+        run: |
+          echo "Checking GraphQL fields..."
+          bun run validate:github-graphql || {
+            echo "::warning::GraphQL validation failed - check logs above"
+            exit 1
+          }
