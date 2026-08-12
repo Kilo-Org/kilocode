@@ -44,6 +44,10 @@ describe("cloud auth fields", () => {
     expect(access).toBe("AKIA")
     expect(secret).toBe("secret")
     expect(session).toBe("token")
+    bedrockFields({ env: {} })
+    expect(process.env.AWS_ACCESS_KEY_ID).toBe(prev.AWS_ACCESS_KEY_ID)
+    expect(process.env.AWS_SECRET_ACCESS_KEY).toBe(prev.AWS_SECRET_ACCESS_KEY)
+    expect(process.env.AWS_SESSION_TOKEN).toBe(prev.AWS_SESSION_TOKEN)
     for (const [key, value] of Object.entries(prev)) {
       if (value === undefined) delete process.env[key]
       else process.env[key] = value

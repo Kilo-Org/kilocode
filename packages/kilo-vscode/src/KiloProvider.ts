@@ -158,6 +158,7 @@ import {
   saveCustomProvider as saveCustomProviderAction,
   resolveStoredKey,
 } from "./provider-actions"
+import { isCloudProvider } from "./shared/cloud-provider"
 import type { StoredProviderKey } from "./provider-actions"
 import { AnacondaDesktopBridge } from "./anaconda-desktop/bridge"
 import { fetchOpenAIModels, FetchModelsError } from "./shared/fetch-models"
@@ -2470,7 +2471,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const config = msg.config && typeof msg.config === "object" ? (msg.config as Record<string, unknown>) : undefined
     const metadata =
       msg.metadata && typeof msg.metadata === "object" ? (msg.metadata as Record<string, unknown>) : undefined
-    if (msg.type === "connectProvider") return connectProviderAction(ctx, rid, pid, key ?? "", metadata, set)
+    if (msg.type === "connectProvider" && (key || isCloudProvider(pid))) {
+      return connectProviderAction(ctx, rid, pid, key ?? "", metadata, set)
+    }
     if (msg.type === "authorizeProviderOAuth") return authorizeOAuthAction(ctx, rid, pid, method)
     if (msg.type === "completeProviderOAuth") return completeOAuthAction(ctx, rid, pid, method, code)
     if (msg.type === "disconnectProvider") return disconnectProviderAction(ctx, rid, pid, this.cachedConfigMessage, set)

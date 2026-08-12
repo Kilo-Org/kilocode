@@ -19,10 +19,19 @@ export function bedrockBearer(auth: CloudAuth | undefined) {
   return text(auth.key)
 }
 
+const injected = new Map<string, string | undefined>()
+
 export function applyEnv(key: string, value: string | undefined) {
-  if (!value) return
-  if (process.env[key]) return
-  process.env[key] = value
+  if (value) {
+    if (!injected.has(key)) injected.set(key, process.env[key])
+    process.env[key] = value
+    return
+  }
+  if (!injected.has(key)) return
+  const prev = injected.get(key)
+  if (prev === undefined) delete process.env[key]
+  else process.env[key] = prev
+  injected.delete(key)
 }
 
 export function bedrockFields(input: {
@@ -33,12 +42,14 @@ export function bedrockFields(input: {
   const meta = apiMeta(input.auth)
   const region = text(input.options?.region) ?? text(meta?.region) ?? text(input.env.AWS_REGION) ?? "us-east-1"
   const profile = text(input.options?.profile) ?? text(meta?.profile) ?? text(input.env.AWS_PROFILE)
-  const accessKey = text(input.env.AWS_ACCESS_KEY_ID) ?? text(meta?.accessKeyId)
-  const secret = text(input.env.AWS_SECRET_ACCESS_KEY) ?? text(meta?.secretAccessKey)
-  const session = text(input.env.AWS_SESSION_TOKEN) ?? text(meta?.sessionToken)
-  applyEnv("AWS_ACCESS_KEY_ID", accessKey)
-  applyEnv("AWS_SECRET_ACCESS_KEY", secret)
-  applyEnv("AWS_SESSION_TOKEN", session)
+  const metaAccess = text(meta?.accessKeyId)
+  const metaSecret = text(meta?.secretAccessKey)
+  const metaSession = text(meta?.sessionToken)
+  const fromMeta = Boolean(metaAccess || metaSecret)
+  applyEnv("AWS_ACCESS_KEY_ID", fromMeta ? metaAccess : undefined)
+  applyEnv("AWS_SECRET_ACCESS_KEY", fromMeta ? metaSecret : undefined)
+  applyEnv("AWS_SESSION_TOKEN", fromMeta ? metaSession : undefined)
+  const accessKey = metaAccess ?? text(input.env.AWS_ACCESS_KEY_ID)
   return { region, profile, accessKey }
 }
 

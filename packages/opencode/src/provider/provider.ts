@@ -330,16 +330,9 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       const cloud = bedrockFields({ options: providerConfig?.options, auth, env }) // kilocode_change
 
       // Region precedence: 1) config file, 2) env var, 3) default
-      const configRegion = providerConfig?.options?.region
-      const envRegion = env["AWS_REGION"]
-      const defaultRegion = configRegion ?? envRegion ?? cloud.region ?? "us-east-1" // kilocode_change
-
-      // Profile: config file takes precedence over env var
-      const configProfile = providerConfig?.options?.profile
-      const envProfile = env["AWS_PROFILE"]
-      const profile = configProfile ?? envProfile ?? cloud.profile // kilocode_change
-
-      const awsAccessKeyId = env["AWS_ACCESS_KEY_ID"] ?? cloud.accessKey // kilocode_change
+      const defaultRegion = cloud.region // kilocode_change
+      const profile = cloud.profile // kilocode_change
+      const awsAccessKeyId = cloud.accessKey // kilocode_change
       const configApiKey = providerConfig?.options?.apiKey
 
       // TODO: Using process.env directly because Env.set only updates a process.env shallow copy,
@@ -537,22 +530,8 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       const cloud = vertexFields({ options: provider.options, auth, env }) // kilocode_change
       // models.dev advertises GOOGLE_VERTEX_PROJECT for Vertex; keep the wider
       // Google Cloud project env names as fallbacks for existing ADC setups.
-      const project =
-        provider.options?.project ??
-        cloud.project ?? // kilocode_change
-        env["GOOGLE_VERTEX_PROJECT"] ??
-        env["GOOGLE_CLOUD_PROJECT"] ??
-        env["GCP_PROJECT"] ??
-        env["GCLOUD_PROJECT"]
-
-      const location = String(
-        provider.options?.location ??
-          cloud.location ?? // kilocode_change
-          env["GOOGLE_VERTEX_LOCATION"] ??
-          env["GOOGLE_CLOUD_LOCATION"] ??
-          env["VERTEX_LOCATION"] ??
-          "us-central1",
-      )
+      const project = cloud.project // kilocode_change
+      const location = String(cloud.location) // kilocode_change
 
       const autoload = Boolean(project)
       if (!autoload) return { autoload: false }
