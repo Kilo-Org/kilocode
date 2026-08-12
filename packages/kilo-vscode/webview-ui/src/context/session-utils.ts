@@ -333,11 +333,14 @@ export function formatTG(value: number | undefined, locale: string) {
 export function buildFamilyCosts(
   family: Set<string>,
   messages: Record<string, Array<{ role: string; cost?: number }>>,
-  sessions: Record<string, { parentID?: string | null } | undefined>,
+  sessions: Record<string, { parentID?: string | null; cost?: number } | undefined>,
   parents: Map<string, string> = new Map(),
 ): Map<string, number> {
   const totals = new Map<string, number>()
-  for (const sid of family) totals.set(sid, calcTotalCost(messages[sid] ?? []))
+  for (const sid of family) {
+    const loaded = calcTotalCost(messages[sid] ?? [])
+    totals.set(sid, Math.max(loaded, sessions[sid]?.cost ?? 0))
+  }
 
   const own = new Map<string, number>(totals)
   for (const sid of family) {

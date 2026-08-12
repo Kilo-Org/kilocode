@@ -44,6 +44,7 @@ export interface SessionInfo {
   id: string
   parentID?: string | null
   title?: string
+  cost?: number
   createdAt: string
   updatedAt: string
   revert?: {

@@ -194,11 +194,14 @@ export async function runWithMessageConfirmation<T>(
   }
 }
 
-export function sessionToWebview(session: Pick<Session, "id" | "parentID" | "title" | "time" | "summary" | "revert">) {
+export function sessionToWebview(
+  session: Pick<Session, "id" | "parentID" | "title" | "time" | "summary" | "revert" | "cost">,
+) {
   return {
     id: session.id,
     parentID: session.parentID ?? null,
     title: session.title,
+    cost: session.cost,
     createdAt: new Date(session.time.created).toISOString(),
     updatedAt: new Date(session.time.updated).toISOString(),
     // Use null (not undefined) so the value survives postMessage JSON serialization.
