@@ -36,6 +36,12 @@ class TodoListPanel(
         sync()
     }
 
+    // The todo list is a raised content surface: opaque with the editor background so it fills the
+    // whole body (including padding) while the card body around it stays transparent.
+    override fun isOpaque(): Boolean = true
+
+    override fun getBackground(): Color = SessionUiStyle.Colors.codeBlockBackground()
+
     fun update(todos: List<TodoDto>, hiddenBefore: Int = 0, hiddenAfter: Int = 0) {
         val size = todos.size != items.size
         items = todos

@@ -76,7 +76,6 @@ class ReasoningView(
             JBUI.scale(SessionUiStyle.View.Reasoning.HEADER_VERTICAL_PADDING),
             SessionUiStyle.View.Header.right(),
         )
-        bindHeader(parts.title, parts.icon)
         applyStyle(style)
         if (bodyVisible()) syncBody()
         syncBorder()

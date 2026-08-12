@@ -25,7 +25,6 @@ class TodoWriteView(tool: Tool, private val parts: TodoParts = todoParts()) :
     private var style = SessionEditorStyle.current()
 
     init {
-        bindHeader(parts.glyph, parts.title, parts.sub, parts.left, parts.right)
         parts.list.border = JBUI.Borders.compound(
             JBUI.Borders.customLine(
                 SessionUiStyle.View.Outline.color(),

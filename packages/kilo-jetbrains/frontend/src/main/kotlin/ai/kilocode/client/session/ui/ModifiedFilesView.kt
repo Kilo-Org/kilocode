@@ -56,7 +56,6 @@ class ModifiedFilesView private constructor(
         body.overflow = ::openDiffViewer
         parts.diff.addActionListener { openDiffViewer() }
         isVisible = false
-        bindHeader(parts.glyph, parts.title, parts.count, parts.panel.left, parts.bars, parts.anchor)
         applyStyle(style)
     }
 

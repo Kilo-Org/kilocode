@@ -32,7 +32,7 @@ abstract class AbstractSessionPartView(
 
     protected val arrow = JBLabel()
     protected val row = Row()
-    private val bound = linkedSetOf<Component>()
+    private val clickable = linkedSetOf<Component>()
     private val watched = linkedSetOf<Component>()
     private var body: JComponent? = null
 
@@ -66,7 +66,6 @@ abstract class AbstractSessionPartView(
         row.add(header, BorderLayout.CENTER)
         row.add(arrow, BorderLayout.EAST)
         add(row, BorderLayout.NORTH)
-        bindHeader(row, header, arrow)
         watch(row)
         if (expanded && expandable) add(body(), BorderLayout.CENTER)
         if (!expandable) syncExpandable(false) else syncArrow()
@@ -131,14 +130,6 @@ abstract class AbstractSessionPartView(
         return changed || detached || moved || icon
     }
 
-    protected fun bindHeader(vararg items: Component) {
-        items.forEach { bind(it) }
-    }
-
-    protected fun unbindHeader(vararg items: Component) {
-        items.forEach { unbind(it) }
-    }
-
     protected fun refresh() {
         revalidate()
         repaint()
@@ -172,20 +163,19 @@ abstract class AbstractSessionPartView(
         return row.contains(point)
     }
 
-    private fun bind(component: Component) {
-        if (!bound.add(component)) return
-        component.addMouseListener(click)
-    }
-
-    private fun unbind(component: Component) {
-        if (!bound.remove(component)) return
-        component.removeMouseListener(click)
-        component.cursor = Cursor.getDefaultCursor()
-    }
-
-    /** Attaches the hover listener to [component] and its whole subtree, keeping up with later children. */
+    /**
+     * Attaches hover (and, for non-interactive elements, click-to-toggle) to [component] and its
+     * whole subtree, keeping up with later children. Hover covers everything so leaving the row via
+     * any nested element clears the fill. Click-to-toggle is bound only where the element does not
+     * already own a mouse listener, so controls like file links and copy buttons keep their own
+     * click action and do not also toggle the card.
+     */
     private fun watch(component: Component) {
         if (!watched.add(component)) return
+        if (component.mouseListeners.isEmpty()) {
+            component.addMouseListener(click)
+            clickable.add(component)
+        }
         component.addMouseListener(pointer)
         if (component is Container) {
             component.addContainerListener(nested)
@@ -195,6 +185,10 @@ abstract class AbstractSessionPartView(
 
     private fun unwatch(component: Component) {
         if (!watched.remove(component)) return
+        if (clickable.remove(component)) {
+            component.removeMouseListener(click)
+            component.cursor = Cursor.getDefaultCursor()
+        }
         component.removeMouseListener(pointer)
         if (component is Container) {
             component.removeContainerListener(nested)
@@ -210,7 +204,7 @@ abstract class AbstractSessionPartView(
 
     private fun syncCursor(cursor: Cursor): Boolean {
         var changed = false
-        bound.forEach {
+        clickable.forEach {
             if (it.cursor?.type != cursor.type) {
                 it.cursor = cursor
                 changed = true

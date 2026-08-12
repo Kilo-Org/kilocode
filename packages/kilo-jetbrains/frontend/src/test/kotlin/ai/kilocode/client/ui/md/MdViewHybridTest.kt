@@ -980,6 +980,7 @@ class MdViewHybridTest : BasePlatformTestCase() {
         val field = editors().single()
         val editor = field.getEditor(true)!!
         val style = customStyle()
+        val bg = style.editorBackground.rgb
 
         view.applyStyle(style)
 
@@ -989,11 +990,11 @@ class MdViewHybridTest : BasePlatformTestCase() {
             Color(0xDD, 0xEE, 0xFF).rgb,
             editor.colorsScheme.getAttributes(DefaultLanguageHighlighterColors.DOC_CODE_BLOCK).foregroundColor.rgb,
         )
-        assertEquals(Color(0x44, 0x55, 0x66).rgb, editor.backgroundColor.rgb)
-        assertEquals(Color(0x44, 0x55, 0x66).rgb, pane.background.rgb)
-        assertEquals(Color(0x44, 0x55, 0x66).rgb, pane.viewport.background.rgb)
-        assertEquals(Color(0x44, 0x55, 0x66).rgb, editor.scrollPane.background.rgb)
-        assertEquals(Color(0x44, 0x55, 0x66).rgb, editor.scrollPane.viewport.background.rgb)
+        assertEquals(bg, editor.backgroundColor.rgb)
+        assertEquals(bg, pane.background.rgb)
+        assertEquals(bg, pane.viewport.background.rgb)
+        assertEquals(bg, editor.scrollPane.background.rgb)
+        assertEquals(bg, editor.scrollPane.viewport.background.rgb)
         assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER, editor.scrollPane.horizontalScrollBarPolicy)
         assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER, editor.scrollPane.verticalScrollBarPolicy)
     }

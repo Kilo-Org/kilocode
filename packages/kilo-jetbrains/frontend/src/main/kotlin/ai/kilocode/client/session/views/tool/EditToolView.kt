@@ -76,10 +76,9 @@ class EditToolView(
         parts.left.next(filesTag)
         parts.left.next(PartHeader.centered(badge))
         parts.left.next(PartHeader.centered(diffAnchor))
-        // parts.link is intentionally omitted: FileLinkLabel installs its own click handler that opens
-        // the file, and binding it here would also toggle the card on the same click (see ReadToolView,
-        // which likewise omits it). Header toggling still works via parts.left/row.
-        bindHeader(parts.glyph, parts.title, parts.sub, parts.state, parts.left, parts.right, parts.slot, filesTag, badge, diffAnchor)
+        // The base binds click-to-toggle across the whole header subtree, skipping controls that own
+        // a mouse listener. parts.link (FileLinkLabel) installs its own click handler that opens the
+        // file, so it is skipped automatically and does not also toggle the card.
         applyStyle(style)
         sync()
     }

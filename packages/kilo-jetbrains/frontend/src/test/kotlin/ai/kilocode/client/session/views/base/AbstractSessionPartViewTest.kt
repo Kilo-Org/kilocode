@@ -129,6 +129,38 @@ class AbstractSessionPartViewTest : BasePlatformTestCase() {
         assertEquals(SessionUiStyle.View.Surface.headerBgColor().rgb, row.background.rgb)
     }
 
+    fun `test clicking a nested header child toggles the card`() {
+        val child = JLabel("plain")
+        val header = JPanel(BorderLayout()).apply { add(child, BorderLayout.WEST) }
+        val view = NestedView(header)
+        view.setSize(200, 40)
+        view.doLayout()
+
+        assertFalse(view.isExpanded())
+        click(child)
+        assertTrue("Clicking anywhere on the header toggles the card", view.isExpanded())
+        click(child)
+        assertFalse(view.isExpanded())
+    }
+
+    fun `test clicking an interactive header child runs its action without toggling`() {
+        var clicks = 0
+        val child = JLabel("link").apply {
+            addMouseListener(object : java.awt.event.MouseAdapter() {
+                override fun mouseClicked(e: MouseEvent) { clicks++ }
+            })
+        }
+        val header = JPanel(BorderLayout()).apply { add(child, BorderLayout.WEST) }
+        val view = NestedView(header)
+        view.setSize(200, 40)
+        view.doLayout()
+
+        click(child)
+
+        assertEquals("The child's own action runs", 1, clicks)
+        assertFalse("A control with its own click handler must not also toggle", view.isExpanded())
+    }
+
     private open class TestView(content: JLabel, expanded: Boolean = false, expandable: Boolean = true) :
         PrimarySessionPartView(JLabel("header"), content, expanded, expandable) {
 
@@ -144,6 +176,8 @@ class AbstractSessionPartViewTest : BasePlatformTestCase() {
     }
 
     private fun PrimarySessionPartView.component(index: Int): Component = components[index]
+
+    private fun click(component: Component) = event(component, MouseEvent.MOUSE_CLICKED, 1, 1)
 
     private fun enter(component: Component) = event(component, MouseEvent.MOUSE_ENTERED, 1, 1)
 

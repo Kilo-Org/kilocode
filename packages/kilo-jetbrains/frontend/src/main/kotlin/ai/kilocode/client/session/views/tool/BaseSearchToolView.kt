@@ -34,8 +34,6 @@ abstract class BaseSearchToolView(
     protected abstract fun viewName(): String
 
     init {
-        bindHeader(parts.glyph, parts.title, parts.sub, parts.state, parts.left, parts.right, parts.slot)
-        parts.targets.forEach { bindHeader(it) }
         applyStyle(style)
         sync()
     }

@@ -314,6 +314,7 @@ class MdViewTest : BasePlatformTestCase() {
     fun `test applyStyle derives markdown colors from editor scheme`() {
         val style = customStyle()
         val color = MdCommon.hex(SessionUiStyle.View.Markdown.string())
+        val pre = MdCommon.hex(style.editorBackground)
         val quote = "#445566"
 
         view.applyStyle(style)
@@ -325,7 +326,7 @@ class MdViewTest : BasePlatformTestCase() {
         assertTrue(html.contains("<code style=\"color: $color\">inline</code>"))
         assertFalse(html.contains("background: #112233"))
         assertFalse(html.contains("#cc8866"))
-        assertTrue(sheet.contains("pre { background: #445566; color: #ddeeff; border-color: #223344"))
+        assertTrue(sheet.contains("pre { background: $pre; color: #ddeeff; border-color: #223344"))
         assertTrue(sheet.contains("blockquote { background:"))
         assertTrue(sheet.contains("border-left-color: #223344; color: $quote"))
         assertTrue(sheet.contains("blockquote p { color: $quote"))

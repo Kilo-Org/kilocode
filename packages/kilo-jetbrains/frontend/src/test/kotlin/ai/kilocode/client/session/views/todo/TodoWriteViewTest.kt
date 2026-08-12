@@ -51,6 +51,17 @@ class TodoWriteViewTest : BasePlatformTestCase() {
         assertEquals("Pending to-do: Next", view.rowCheckAccessibleName(1))
     }
 
+    fun `test todo content is an opaque editor-background surface`() {
+        val view = TodoWriteView(tool("todowrite", ToolExecState.COMPLETED).also {
+            it.todos = listOf(TodoDto("A", "pending", "medium"))
+        })
+        val list = view.components.filterIsInstance<TodoListPanel>().single()
+
+        // The body wrapper stays transparent; the todo list itself is the raised editor surface.
+        assertTrue(list.isOpaque)
+        assertEquals(SessionUiStyle.Colors.codeBlockBackground().rgb, list.background.rgb)
+    }
+
     fun `test pending rows keep normal foreground`() {
         val view = TodoWriteView(tool("todowrite", ToolExecState.COMPLETED).also {
             it.todos = listOf(

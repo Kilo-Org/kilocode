@@ -113,8 +113,7 @@ class QuestionResultViewTest : BasePlatformTestCase() {
         ))
 
         view.toggle()
-        val root = view.node(0)
-        val body = root.node(1)
+        val body = view.node(1)
         val row = body.node(0)
         val text = row.components[0] as JBTextArea
         val ins = text.border.getBorderInsets(text)
@@ -174,21 +173,20 @@ class QuestionResultViewTest : BasePlatformTestCase() {
             input = mapOf("questions" to """[{"question":"Q1"}]"""),
             metadata = mapOf("answers" to """[["A1"]]"""),
         ))
-        val root = view.node(0)
-        val header = root.node(0)
+        val row = view.node(0)
 
-        assertEquals(0, paint(root.border).alpha)
+        assertEquals(0, paint(view.border).alpha)
         view.toggle()
-        val body = root.node(1)
+        val body = view.node(1)
 
         view.setHovered(true)
 
-        assertEquals(SessionUiStyle.View.Surface.headerHoverBgColor().rgb, header.background.rgb)
-        assertLine(root.border)
+        assertEquals(SessionUiStyle.View.Surface.headerHoverBgColor().rgb, row.background.rgb)
+        assertLine(view.border)
         assertEquals(SessionUiStyle.View.Outline.brightColor().rgb, paint(body.border).rgb)
         view.setHovered(false)
-        assertEquals(SessionUiStyle.View.Surface.headerBgColor().rgb, header.background.rgb)
-        assertLine(root.border)
+        assertEquals(SessionUiStyle.View.Surface.headerBgColor().rgb, row.background.rgb)
+        assertLine(view.border)
     }
 
     // ------ view factory routing ------

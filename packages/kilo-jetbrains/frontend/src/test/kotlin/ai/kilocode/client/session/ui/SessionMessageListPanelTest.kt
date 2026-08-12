@@ -1592,9 +1592,10 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         input = mapOf("filePath" to "src/Main.kt", "pattern" to "query"),
     )
 
-    private fun root(view: QuestionResultView) = view.components[0] as JPanel
+    // The card is the view itself (border), and the hover surface is the base header row (child 0).
+    private fun root(view: QuestionResultView) = view
 
-    private fun header(view: QuestionResultView) = root(view).components[0] as JPanel
+    private fun header(view: QuestionResultView) = view.components[0] as JPanel
 
     private fun enter(component: Component) {
         component.dispatchEvent(MouseEvent(
