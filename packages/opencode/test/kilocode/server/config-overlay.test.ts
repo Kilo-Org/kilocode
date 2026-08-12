@@ -18,7 +18,8 @@ import { resetDatabase } from "../../fixture/db"
 import { disposeAllInstances, tmpdir } from "../../fixture/fixture"
 
 void Log.init({ print: false })
-setDefaultTimeout(30_000)
+// Cold Windows CI runs with 4 parallel shards take ~32s across multiple temp repo instance cycles
+setDefaultTimeout(90_000)
 
 const original = Global.Path.config
 const terminal = process.platform === "win32" ? test.skip : test.serial
@@ -773,7 +774,7 @@ describe("config overlay routes", () => {
       for (let i = 0; i < 40; i++) {
         await json(await req(project.path, `/session/${session.id}/sandbox`))
         const snap = await SandboxStore.read(project.path, session.id)
-        if (snap && snap.mode === "allow" && snap.version === 1) break
+        if (snap && snap.mode === "allow" && snap.writablePaths.includes(writable.path) && snap.version === 1) break
         await Bun.sleep(250)
       }
 
@@ -784,7 +785,7 @@ describe("config overlay routes", () => {
         version: 1,
       })
     },
-    20_000,
+    60_000,
   )
 
   test.serial("applies saved project sandbox settings to initialized sessions", async () => {
@@ -916,4 +917,33 @@ describe("config overlay routes", () => {
       90_000,
     )
   }
+
+  test.serial("sets and unsets privacy_mode at project scope using tuple-array unset paths", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    await setGlobal(global.path, { privacy_mode: false })
+    await disposeAllInstances()
+
+    await json(
+      await req(project.path, "/config/overlay", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ scope: "project", set: { privacy_mode: true } }),
+      }),
+    )
+
+    const overlay1 = await json<Overlay>(await req(project.path, "/config/overlay"))
+    expect(overlay1.effective?.privacy_mode).toBe(true)
+
+    await json(
+      await req(project.path, "/config/overlay", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ scope: "project", unset: [["privacy_mode"]] }),
+      }),
+    )
+
+    const overlay2 = await json<Overlay>(await req(project.path, "/config/overlay"))
+    expect(overlay2.effective?.privacy_mode).toBe(false)
+  })
 })

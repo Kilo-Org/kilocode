@@ -1,7 +1,12 @@
 import { expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
-import { clampPanelWidth, maxPanelWidth, minPanelWidth } from "../../webview-ui/agent-manager/side-panel-layout"
+import {
+  clampPanelWidth,
+  createPanelResize,
+  maxPanelWidth,
+  minPanelWidth,
+} from "../../webview-ui/agent-manager/side-panel-layout"
 
 const css = readFileSync(resolve(import.meta.dir, "../../webview-ui/agent-manager/agent-manager.css"), "utf8")
 const app = readFileSync(resolve(import.meta.dir, "../../webview-ui/agent-manager/AgentManagerApp.tsx"), "utf8")
@@ -22,14 +27,28 @@ test("xterm owns the padding used by FitAddon", () => {
 
 test("uses one persisted width for the diff and terminal inspector", () => {
   expect(app).toContain("persisted?.sidePanelWidth")
-  expect(app).toContain("setPanelWidth(pendingSideWidth!)")
+  expect(app).toContain("createPanelResize(setPanelWidth")
   expect(app).not.toContain("diffWidth")
   expect(app).not.toContain("terminalWidth")
 })
 
 test("limits inspector layout updates during resize", () => {
-  expect(app).toContain("SIDE_RESIZE_INTERVAL_MS = 32")
-  expect(app).toContain("time - sideResizeTime < SIDE_RESIZE_INTERVAL_MS")
+  const frames: ((time: number) => void)[] = []
+  const widths: number[] = []
+  const resize = createPanelResize(
+    (width) => widths.push(width),
+    () => 1200,
+    (frame) => frames.push(frame),
+  )
+
+  resize(700)
+  resize(720)
+  expect(frames).toHaveLength(1)
+  frames.shift()!(16)
+  expect(frames).toHaveLength(1)
+  expect(widths).toEqual([])
+  frames.shift()!(32)
+  expect(widths).toEqual([720])
 })
 
 test("does not refit hidden terminal buffers during resize", () => {
