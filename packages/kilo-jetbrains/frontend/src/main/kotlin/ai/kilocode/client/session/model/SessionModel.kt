@@ -498,6 +498,9 @@ class SessionModel {
                 existing.url = dto.url ?: ""
                 existing.filename = dto.filename
                 existing.source = dto.source
+                val range = range(existing.url)
+                existing.startLine = range?.first
+                existing.endLine = range?.last
             }
             is Tool -> {
                 val old = existing.childSessionId
@@ -552,6 +555,9 @@ class SessionModel {
                 url = dto.url ?: ""
                 filename = dto.filename
                 source = dto.source
+                val range = range(url)
+                startLine = range?.first
+                endLine = range?.last
             }
             "tool" -> Tool(dto.id, dto.tool ?: "unknown", toolKind(dto.tool)).apply {
                 messageID = dto.messageID
@@ -579,6 +585,20 @@ class SessionModel {
 
     private fun fire(event: SessionModelEvent) {
         for (l in listeners) l.onEvent(event)
+    }
+
+    private fun range(url: String): IntRange? {
+        val query = runCatching { java.net.URI.create(url).rawQuery }.getOrNull() ?: return null
+        val args = query.split('&')
+            .mapNotNull {
+                val index = it.indexOf('=')
+                if (index < 0) return@mapNotNull null
+                it.substring(0, index) to it.substring(index + 1)
+            }
+            .toMap()
+        val start = args["start"]?.toIntOrNull()?.takeIf { it > 0 } ?: return null
+        val end = args["end"]?.toIntOrNull()?.takeIf { it >= start } ?: start
+        return start..end
     }
 
     private fun trackChild(messageId: String, content: Content) {

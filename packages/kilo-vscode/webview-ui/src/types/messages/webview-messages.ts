@@ -989,6 +989,13 @@ export interface OpenPRMessage {
   type: "agentManager.openPR"
   projectId?: string
   worktreeId: string
+  url?: string
+}
+
+export interface CommentActionMessage {
+  type: "agentManager.resolveComment" | "agentManager.unresolveComment"
+  worktreeId: string
+  threadId: string
 }
 
 export interface ApplyWorktreeDiffMessage {
@@ -1534,6 +1541,7 @@ export type WebviewMessage =
   | SetDiffBaseBranchMessage
   | RefreshPRMessage
   | OpenPRMessage
+  | CommentActionMessage
   // legacy-migration start
   | RequestMigrationDataMessage
   | StartMigrationMessage

@@ -70,6 +70,7 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.util.Producer
 import com.intellij.util.ui.EmptyIcon
 import com.intellij.ui.scale.JBUIScale
+import com.intellij.util.DocumentUtil
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.CompletableDeferred
@@ -137,11 +138,11 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertEquals(style.transcriptFont.size, font.size)
     }
 
-    fun `test prompt input uses editor background`() {
+    fun `test prompt input uses prompt background`() {
         val style = SessionEditorStyle.current()
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
 
-        assertEquals(style.editorScheme.defaultBackground, panel.defaultFocusedComponent.background)
+        assertEquals(SessionUiStyle.View.Prompt.bgColor(style), panel.defaultFocusedComponent.background)
     }
 
     fun `test prompt editor hides floating toolbar`() {
@@ -248,7 +249,12 @@ class PromptPanelTest : BasePlatformTestCase() {
             HighlighterColors.TEXT,
             TextAttributes(Color(0xEA, 0xEA, 0xEA), bg, null, null, Font.PLAIN),
         )
+        scheme.setAttributes(
+            DefaultLanguageHighlighterColors.DOC_CODE_BLOCK,
+            TextAttributes(null, bg, null, null, Font.PLAIN),
+        )
         val style = SessionEditorStyle.create(scheme = scheme)
+        val promptBg = SessionUiStyle.View.Prompt.bgColor(style)
 
         realize(panel, 260, 400)
         val editor = (panel.defaultFocusedComponent as EditorTextField).getEditor(false)!!
@@ -258,11 +264,11 @@ class PromptPanelTest : BasePlatformTestCase() {
 
         panel.applyStyle(style)
 
-        assertEquals(bg, panel.defaultFocusedComponent.background)
-        assertEquals(bg, editor.backgroundColor)
-        assertEquals(bg, editor.scrollPane.background)
-        assertEquals(bg, editor.scrollPane.viewport.background)
-        assertEquals(bg, editor.contentComponent.background)
+        assertEquals(promptBg, panel.defaultFocusedComponent.background)
+        assertEquals(promptBg, editor.backgroundColor)
+        assertEquals(promptBg, editor.scrollPane.background)
+        assertEquals(promptBg, editor.scrollPane.viewport.background)
+        assertEquals(promptBg, editor.contentComponent.background)
     }
 
     fun `test prompt editor grows when lines are added`() {
@@ -498,6 +504,22 @@ class PromptPanelTest : BasePlatformTestCase() {
         invokeComponentAction("Kilo Session Undo", editor)
         assertEquals("", editor.document.text)
         invokeComponentAction("Kilo Session Redo", editor)
+        assertEquals("hello", editor.document.text)
+    }
+
+    fun `test prompt editor height sync skips bulk document updates`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
+        val field = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 260, 400)
+        val editor = field.getEditor(false)!!
+        WriteCommandAction.runWriteCommandAction(project) {
+            DocumentUtil.executeInBulk(editor.document, true) {
+                editor.document.insertString(0, "hello")
+            }
+        }
+        UIUtil.dispatchAllInvocationEvents()
+
         assertEquals("hello", editor.document.text)
     }
 

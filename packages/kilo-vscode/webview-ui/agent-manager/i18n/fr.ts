@@ -14,7 +14,7 @@ export const dict = {
   "agentManager.worktree.new": "Nouveau Worktree",
   "agentManager.worktree.setupScript": "Script de configuration du Worktree",
   "agentManager.worktree.delete": "Supprimer le Worktree",
-  "agentManager.worktree.confirmDelete": "Delete?",
+  "agentManager.worktree.confirmDelete": "Supprimer ?",
   "agentManager.worktree.stale": "Obsolète",
   "agentManager.worktree.staleTooltip": "Absent du disque ou n'est plus suivi par git worktree",
   "agentManager.worktree.removeStale": "Supprimer le Worktree obsolète",
@@ -60,7 +60,7 @@ export const dict = {
   "agentManager.sidebarSearch.label": "Rechercher des Worktrees et des sessions",
   "agentManager.sidebarSearch.scope":
     "Recherche dans l'espace de travail local, les sessions locales, les Worktrees et leurs sessions",
-  "agentManager.sidebarSearch.contexts": "LOCAL & WORKTREES",
+  "agentManager.sidebarSearch.contexts": "LOCAL ET WORKTREES",
 
   "agentManager.terminal.new": "Nouvel onglet de terminal",
   "agentManager.terminal.ended": "terminal terminé — fermez l'onglet pour ignorer",
@@ -107,8 +107,8 @@ export const dict = {
   "agentManager.run.options": "Options d'exécution",
   "agentManager.run.configure": "Configurer le script d'exécution",
   "agentManager.shortcuts.openAgentManager": "Ouvrir Agent Manager",
-  "agentManager.shortcuts.cycleAgentMode": "Next agent mode",
-  "agentManager.shortcuts.cyclePreviousAgentMode": "Previous agent mode",
+  "agentManager.shortcuts.cycleAgentMode": "Mode d'agent suivant",
+  "agentManager.shortcuts.cyclePreviousAgentMode": "Mode d'agent précédent",
   "agentManager.shortcuts.showShortcuts": "Afficher les raccourcis clavier",
   "agentManager.dialog.removeStaleWorktree.title": "Supprimer le Worktree obsolète",
   "agentManager.dialog.removeStaleWorktree.messagePre": "Supprimer le Worktree obsolète ",
@@ -216,4 +216,10 @@ export const dict = {
   "agentManager.import.noBranchesFound": "Aucune branche trouvée.",
   "agentManager.import.noBranchesHint": "Collez une URL de PR ci-dessus ou créez un nouveau Worktree.",
   "agentManager.import.failed": "Échec de l'importation",
+
+  "agentManager.pr.error.gh_auth.title": "Authentification GitHub requise",
+  "agentManager.pr.error.gh_auth.description":
+    "Exécutez 'gh auth login' dans votre terminal pour restaurer le statut de la PR.",
+  "agentManager.pr.error.gh_missing.title": "GitHub CLI non installé",
+  "agentManager.pr.error.gh_missing.description": "Installez GitHub CLI pour activer le statut de la PR.",
 }
