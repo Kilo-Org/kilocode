@@ -79,11 +79,6 @@ function CommentCard(props: { comment: PRComment; worktreeId: string }) {
       worktreeId: props.worktreeId,
       threadId: props.comment.threadId,
     } as never)
-    // Trigger immediate PR refresh to get updated comment state
-    vscode.postMessage({
-      type: "agentManager.refreshPR",
-      worktreeId: props.worktreeId,
-    } as never)
   }
 
   return (

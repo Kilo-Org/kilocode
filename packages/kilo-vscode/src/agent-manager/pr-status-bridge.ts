@@ -113,6 +113,8 @@ export class PRStatusBridge {
             threadId,
             success: true,
           })
+          // Refresh PR data after successful mutation to get updated comment state
+          this.poller.refresh(id)
         },
         (err: unknown) => {
           const msg = err instanceof Error ? err.message : String(err)
