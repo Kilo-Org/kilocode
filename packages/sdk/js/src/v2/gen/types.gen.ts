@@ -2391,9 +2391,13 @@ export type ProviderConfig = {
       temperature?: boolean
       tool_call?: boolean
       interleaved?:
-        | true
+        | boolean
+        | "reasoning"
+        | "reasoning_content"
+        | "reasoning_text"
+        | string
         | {
-            field: "reasoning" | "reasoning_content" | "reasoning_details"
+            field: "reasoning" | "reasoning_content" | "reasoning_text" | string
           }
       cost?: {
         input: number
@@ -2587,6 +2591,7 @@ export type Config = {
     [key: string]: string
   }
   default_agent?: string
+  subagent_depth?: number
   username?: string
   mode?: {
     build?: AgentConfig
@@ -2687,7 +2692,6 @@ export type Config = {
   experimental?: {
     disable_paste_summary?: boolean
     batch_tool?: boolean
-    codebase_search?: boolean
     image_generation?: boolean
     image_generation_model?: string
     agent_requirements?: boolean
@@ -2738,7 +2742,7 @@ export type Model = {
     interleaved:
       | boolean
       | {
-          field: "reasoning" | "reasoning_content" | "reasoning_details"
+          field: "reasoning" | "reasoning_content" | "reasoning_text" | string
         }
   }
   cost: {

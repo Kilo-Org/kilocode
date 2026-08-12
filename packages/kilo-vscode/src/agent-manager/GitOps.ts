@@ -82,6 +82,28 @@ export function nonInteractiveEnv(): NodeJS.ProcessEnv {
   if (!process.env.GIT_SSH_COMMAND) {
     env.GIT_SSH_COMMAND = KILO_NON_INTERACTIVE_SSH_COMMAND
   }
+  delete env.GIT_CONFIG_COUNT
+  delete env.SSH_ASKPASS
+  delete env.GIT_ASKPASS
+  delete env.EDITOR
+  delete env.GIT_EDITOR
+  delete env.GIT_SEQUENCE_EDITOR
+  delete env.PAGER
+  delete env.GIT_PAGER
+  delete env.GIT_SSH
+  delete env.GIT_CONFIG_GLOBAL
+  delete env.GIT_CONFIG_SYSTEM
+  delete env.GIT_CONFIG
+  delete env.GIT_PROXY_COMMAND
+  delete env.GIT_EXTERNAL_DIFF
+  delete env.GIT_TEMPLATE_DIR
+  delete env.GIT_EXEC_PATH
+  delete env.PREFIX
+  for (const key of Object.keys(env)) {
+    if (key.startsWith("GIT_CONFIG_KEY_") || key.startsWith("GIT_CONFIG_VALUE_")) {
+      delete env[key]
+    }
+  }
   return env
 }
 

@@ -827,9 +827,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Увімкнути інтеграцію з мовним сервером",
   "settings.experimental.batch.title": "Пакетний інструмент",
   "settings.experimental.batch.description": "Увімкнути пакетну обробку кількох викликів інструментів",
-  "settings.experimental.codebaseSearch.title": "Пошук по кодовій базі",
-  "settings.experimental.codebaseSearch.description":
-    "Увімкнути пошук природною мовою на основі ШІ по всій кодовій базі",
   "settings.experimental.imageGeneration.title": "Генерація зображень",
   "settings.experimental.imageGeneration.description": "Увімкнути генерацію зображень за допомогою ШІ",
   "settings.experimental.imageGenerationModel.title": "Модель зображень",

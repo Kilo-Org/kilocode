@@ -78,7 +78,7 @@ function mergeConfigConcatArrays(target: Info, source: Info, trusted = true): In
 
 function normalizeLoadedConfig(data: unknown, source: string) {
   if (!isRecord(data)) return data
-  const copy = KilocodeConfig.retireIndexingFlag({ ...data }, source) // kilocode_change
+  const copy = KilocodeConfig.retireExperimentalFlags({ ...data }, source) // kilocode_change
   const hadLegacy = "theme" in copy || "keybinds" in copy || "tui" in copy
   if (!hadLegacy) return copy
   delete copy.theme
@@ -449,6 +449,9 @@ const layer = Layer.effect(
     })
 
     const ensureGitignore = Effect.fn("Config.ensureGitignore")(function* (dir: string) {
+      // kilocode_change start - optional config setup must not abort tools after entering filesystem confinement or read-only locations
+      yield* fs.ensureDir(dir).pipe(Effect.catchTag("PlatformError", () => Effect.void))
+      // kilocode_change end
       const gitignore = path.join(dir, ".gitignore")
       const hasIgnore = yield* fs.existsSafe(gitignore)
       if (!hasIgnore) {
@@ -468,12 +471,7 @@ const layer = Layer.effect(
             ].join("\n"),
             // kilocode_change end
           )
-          .pipe(
-            Effect.catchIf(
-              (e) => e.reason._tag === "PermissionDenied" || e.reason._tag === "NotFound", // kilocode_change - also ignore NotFound (broken symlink/junction on Windows)
-              () => Effect.void,
-            ),
-          )
+          .pipe(Effect.catchTag("PlatformError", () => Effect.void)) // kilocode_change - optional gitignore write failure must not fail config load
       }
     })
 
@@ -1021,7 +1019,8 @@ const layer = Layer.effect(
         worktree: ctx.worktree,
         config,
         read: readConfigFile,
-        parse: (input, file) => ConfigParse.schema(ConfigV1.Info, ConfigParse.jsonc(input, file), file),
+        parse: (input, file) =>
+          ConfigParse.schema(ConfigV1.Info, normalizeLoadedConfig(ConfigParse.jsonc(input, file), file), file),
         patch: (input, patch) => patchJsonc(input, patch),
         writable,
       })
@@ -1044,6 +1043,7 @@ const layer = Layer.effect(
 
     const invalidate = Effect.fn("Config.invalidate")(function* () {
       yield* invalidateGlobal
+      yield* InstanceState.invalidate(state).pipe(Effect.catchCause(() => Effect.void)) // kilocode_change
     })
 
     // kilocode_change start - add dispose option to skip Instance.disposeAll for permission-only changes
@@ -1067,7 +1067,11 @@ const layer = Layer.effect(
             })
 
             if (!file.endsWith(".jsonc")) {
-              const existing = ConfigParse.schema(ConfigV1.Info, ConfigParse.jsonc(before, file), file)
+              const existing = ConfigParse.schema(
+                ConfigV1.Info,
+                normalizeLoadedConfig(ConfigParse.jsonc(before, file), file),
+                file,
+              )
               const next = KilocodeConfig.mergeConfig(writable(existing), patch)
               const serialized = JSON.stringify(next, null, 2)
               const changed = serialized !== before || propagated
@@ -1076,7 +1080,11 @@ const layer = Layer.effect(
             }
 
             const updated = patchJsonc(before, patch)
-            const next = ConfigParse.schema(ConfigV1.Info, ConfigParse.jsonc(updated, file), file)
+            const next = ConfigParse.schema(
+              ConfigV1.Info,
+              normalizeLoadedConfig(ConfigParse.jsonc(updated, file), file),
+              file,
+            )
             const changed = updated !== before || propagated
             if (updated !== before) yield* fs.writeFileString(file, updated).pipe(Effect.orDie)
             return { next, changed }
