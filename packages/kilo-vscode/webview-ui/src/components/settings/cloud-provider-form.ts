@@ -29,8 +29,8 @@ function fail(field: keyof CloudFields | undefined, message: string): CloudError
   return { ok: false, field, message }
 }
 
-function isError(value: { ok?: false }): value is CloudError {
-  return value.ok === false
+function isError(value: unknown): value is CloudError {
+  return !!value && typeof value === "object" && "ok" in value && value.ok === false
 }
 
 function required(fields: CloudFields, field: keyof CloudFields, label: string, t: Translate) {
@@ -57,7 +57,10 @@ function parseVertex(fields: CloudFields, t: Translate): CloudError | { project:
         ? (parsed as { project_id: string }).project_id.trim()
         : "")
     if (!project) {
-      return fail("project", t("provider.connect.prompt.required", { field: t("provider.connect.vertex.project.label") }))
+      return fail(
+        "project",
+        t("provider.connect.prompt.required", { field: t("provider.connect.vertex.project.label") }),
+      )
     }
     return { project, credentials: JSON.stringify(parsed) }
   } catch {
