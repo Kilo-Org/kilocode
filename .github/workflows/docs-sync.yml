@@ -10,6 +10,9 @@ name: docs-sync
 # this workflow and .github/docs-sync/**) execute branch code only in a
 # read-only, secretless `selftest` job that never pushes, comments, or calls an
 # LLM. `pull_request` (not `pull_request_target`) keeps fork tokens read-only.
+# The collect step additionally mints a read-only GitHub App token so it can see
+# merged PRs in the private Kilo-Org/cloud; every write still goes through
+# github.token.
 # State is derived from the bot's own PRs (watermark marker in the PR body), so
 # missed or failed runs self-heal on the next run.
 
@@ -119,10 +122,30 @@ jobs:
           DRY_RUN: ${{ inputs.dry_run }}
         run: node .github/docs-sync/learn.mjs
 
+      # Kilo-Org/cloud is private, so GITHUB_TOKEN cannot see it: its
+      # `repo:Kilo-Org/cloud` search query 422s ("Validation Failed") and takes
+      # the whole run down with it. The docs-sync app is installed on both
+      # source repos with Pull requests: read, which is all collect.mjs needs.
+      #
+      # Minted here, immediately before the only step that reads cloud, and not
+      # job-wide: installation tokens expire after 1 hour while this job budgets
+      # 250 minutes, so a token minted at job start would be dead by upsert-pr.
+      # Keeping the push and PR writes on github.token also avoids needing
+      # Workflows: write, which an app push would require whenever
+      # prepare-branch merges workflow changes from main into the rolling branch.
+      - name: Create app token for private source repos
+        id: app
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
+        with:
+          app-id: ${{ secrets.DOCS_SYNC_APP_ID }}
+          private-key: ${{ secrets.DOCS_SYNC_APP_SECRET }}
+          owner: ${{ github.repository_owner }}
+          repositories: cloud,kilocode
+
       - name: Collect merged PRs
         id: collect
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app.outputs.token }}
         run: node .github/docs-sync/collect.mjs --since "${{ steps.wm.outputs.since }}"
 
       - name: Triage merged PRs (LLM, chunked)
