@@ -479,10 +479,16 @@ class MessageView(
         val g2 = g.create() as Graphics2D
         try {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-            val arc = JBUI.scale(JBUI.getInt("Button.arc", SessionUiStyle.View.Prompt.CORNER_ARC))
+            val arc = JBUI.scale(SessionUiStyle.View.Prompt.CORNER_ARC)
             val pt = if (box === this) Point() else SwingUtilities.convertPoint(box, Point(), this)
             g2.color = SessionUiStyle.View.Prompt.bgColor(style)
             g2.fillRoundRect(pt.x, pt.y, box.width, box.height, arc, arc)
+            val w = box.width - 1
+            val h = box.height - 1
+            if (w > 0 && h > 0) {
+                g2.color = SessionUiStyle.View.Outline.color()
+                g2.drawRoundRect(pt.x, pt.y, w, h, arc, arc)
+            }
         } finally {
             g2.dispose()
         }

@@ -155,7 +155,7 @@ object SessionUiStyle {
             const val EDITOR_LINES = 1
             const val EDITOR_CHROME = 16
             const val SEND_BUTTON_SIZE = 24
-            const val CORNER_ARC = 6
+            const val CORNER_ARC = 10
             const val FOCUS_WIDTH = 2
             const val PANEL_VERTICAL_PADDING = 8
             const val PANEL_HORIZONTAL_PADDING = 12
