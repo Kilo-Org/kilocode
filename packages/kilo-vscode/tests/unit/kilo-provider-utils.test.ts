@@ -21,6 +21,7 @@ import type {
   Event,
   EventSessionStatus,
   EventSessionTurnClose,
+  EventSessionError,
   EventSandboxStatusChanged,
   EventPermissionAsked,
   EventPermissionReplied,
@@ -373,6 +374,30 @@ describe("mapSSEEventToWebviewMessage", () => {
     }
     const msg = mapSSEEventToWebviewMessage(event, "sess-1")
     expect(msg).toEqual({ type: "sessionTurnClosed", sessionID: "sess-1", reason: "interrupted" })
+  })
+
+  it("maps session errors with their event identity and message", () => {
+    const event: EventSessionError = {
+      id: "evt-error",
+      type: "session.error",
+      properties: {
+        sessionID: "sess-1",
+        error: {
+          name: "APIError",
+          data: {
+            message: "prompt_cache_breakpoint is not supported on this model",
+            isRetryable: false,
+          },
+        },
+      },
+    }
+
+    expect(mapSSEEventToWebviewMessage(event, "sess-1")).toEqual({
+      type: "sessionError",
+      eventID: "evt-error",
+      sessionID: "sess-1",
+      error: event.properties.error,
+    })
   })
 
   it("maps permission.asked to permissionRequest", () => {

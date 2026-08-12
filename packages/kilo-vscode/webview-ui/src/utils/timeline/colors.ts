@@ -28,7 +28,7 @@ export type TimelineColor = (typeof palette)[keyof typeof palette]
 
 // ── File operation detection ─────────────────────────────────────────
 
-const READ_TOOLS = new Set(["read", "glob", "grep", "find", "ls", "diagnostics", "warpgrep"])
+const READ_TOOLS = new Set(["read", "glob", "grep", "find", "ls", "diagnostics"])
 const WRITE_TOOLS = new Set(["edit", "write", "patch", "multi_edit", "multiedit", "apply_patch"])
 
 function isRead(name: string): boolean {

@@ -3428,6 +3428,10 @@ export class Pty extends HeyApiClient {
       env?: {
         [key: string]: string
       }
+      size?: {
+        rows: number
+        cols: number
+      }
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -3443,6 +3447,7 @@ export class Pty extends HeyApiClient {
             { in: "body", key: "cwd" },
             { in: "body", key: "title" },
             { in: "body", key: "env" },
+            { in: "body", key: "size" },
           ],
         },
       ],
@@ -4430,6 +4435,8 @@ export class Session2 extends HeyApiClient {
       directory?: string
       workspace?: string
       messageID?: string
+      file?: string
+      full?: "true" | "false"
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -4442,6 +4449,8 @@ export class Session2 extends HeyApiClient {
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
             { in: "query", key: "messageID" },
+            { in: "query", key: "file" },
+            { in: "query", key: "full" },
           ],
         },
       ],
@@ -10831,6 +10840,10 @@ export class Pty2 extends HeyApiClient {
       env?: {
         [key: string]: string
       }
+      size?: {
+        rows: number
+        cols: number
+      }
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -10845,6 +10858,7 @@ export class Pty2 extends HeyApiClient {
             { in: "body", key: "cwd" },
             { in: "body", key: "title" },
             { in: "body", key: "env" },
+            { in: "body", key: "size" },
           ],
         },
       ],

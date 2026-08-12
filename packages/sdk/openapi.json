@@ -4539,6 +4539,21 @@
                     "additionalProperties": {
                       "type": "string"
                     }
+                  },
+                  "size": {
+                    "type": "object",
+                    "properties": {
+                      "rows": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      },
+                      "cols": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      }
+                    },
+                    "required": ["rows", "cols"],
+                    "additionalProperties": false
                   }
                 },
                 "additionalProperties": false
@@ -6585,6 +6600,23 @@
             "schema": {
               "type": "string",
               "pattern": "^msg"
+            },
+            "required": false
+          },
+          {
+            "name": "file",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "full",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["true", "false"]
             },
             "required": false
           }
@@ -24318,6 +24350,21 @@
                     "additionalProperties": {
                       "type": "string"
                     }
+                  },
+                  "size": {
+                    "type": "object",
+                    "properties": {
+                      "rows": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      },
+                      "cols": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      }
+                    },
+                    "required": ["rows", "cols"],
+                    "additionalProperties": false
                   }
                 },
                 "additionalProperties": false
@@ -24847,6 +24894,7 @@
         },
         "description": "Establish a WebSocket connection streaming PTY output and accepting terminal input.",
         "summary": "Connect to PTY session",
+        "x-websocket": true,
         "x-codeSamples": [
           {
             "lang": "js",
@@ -27024,6 +27072,12 @@
             "type": "string"
           },
           "patch": {
+            "type": "string"
+          },
+          "before": {
+            "type": "string"
+          },
+          "after": {
             "type": "string"
           },
           "additions": {
@@ -33081,15 +33135,28 @@
                 "interleaved": {
                   "anyOf": [
                     {
-                      "type": "boolean",
-                      "enum": [true]
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "string",
+                      "enum": ["reasoning", "reasoning_content", "reasoning_text"]
+                    },
+                    {
+                      "type": "string"
                     },
                     {
                       "type": "object",
                       "properties": {
                         "field": {
-                          "type": "string",
-                          "enum": ["reasoning", "reasoning_content", "reasoning_details"]
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": ["reasoning", "reasoning_content", "reasoning_text"]
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ]
                         }
                       },
                       "required": ["field"],
@@ -33605,6 +33672,10 @@
           "default_agent": {
             "type": "string"
           },
+          "subagent_depth": {
+            "type": "integer",
+            "minimum": 0
+          },
           "username": {
             "type": "string"
           },
@@ -33907,9 +33978,6 @@
               "batch_tool": {
                 "type": "boolean"
               },
-              "codebase_search": {
-                "type": "boolean"
-              },
               "image_generation": {
                 "type": "boolean"
               },
@@ -34070,8 +34138,15 @@
                     "type": "object",
                     "properties": {
                       "field": {
-                        "type": "string",
-                        "enum": ["reasoning", "reasoning_content", "reasoning_details"]
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": ["reasoning", "reasoning_content", "reasoning_text"]
+                          },
+                          {
+                            "type": "string"
+                          }
+                        ]
                       }
                     },
                     "required": ["field"],
@@ -34498,6 +34573,12 @@
           "patch": {
             "type": "string"
           },
+          "before": {
+            "type": "string"
+          },
+          "after": {
+            "type": "string"
+          },
           "additions": {
             "type": "number"
           },
@@ -34507,12 +34588,6 @@
           "status": {
             "type": "string",
             "enum": ["added", "deleted", "modified"]
-          },
-          "before": {
-            "type": "string"
-          },
-          "after": {
-            "type": "string"
           },
           "tracked": {
             "type": "boolean"
@@ -34527,7 +34602,7 @@
             "type": "string"
           }
         },
-        "required": ["additions", "deletions", "before", "after", "tracked", "generatedLike", "summarized", "stamp"],
+        "required": ["before", "after", "additions", "deletions", "tracked", "generatedLike", "summarized", "stamp"],
         "additionalProperties": false
       },
       "SnapshotSummaryFileDiff": {

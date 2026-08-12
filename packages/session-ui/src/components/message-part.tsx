@@ -47,11 +47,14 @@ import { DiffChanges } from "@opencode-ai/ui/diff-changes"
 import { Markdown } from "./markdown"
 import { ImagePreview } from "@opencode-ai/ui/image-preview"
 import { getDirectory as _getDirectory, getFilename } from "@opencode-ai/core/util/path"
+import { AttachmentCardV2 } from "../v2/components/attachment-card-v2"
+import { CommentCardV2 } from "../v2/components/comment-card-v2"
 import { checksum } from "@opencode-ai/core/util/encode"
 import { Tooltip } from "@opencode-ai/ui/tooltip"
 import { IconButton } from "@opencode-ai/ui/icon-button"
 import { Icon as IconV2 } from "@opencode-ai/ui/v2/icon"
 import { IconButtonV2 } from "@opencode-ai/ui/v2/icon-button-v2"
+import { ButtonV2 } from "@opencode-ai/ui/v2/button-v2"
 import { TooltipV2 } from "@opencode-ai/ui/v2/tooltip-v2"
 import { Spinner } from "@opencode-ai/ui/spinner"
 import { TextShimmer } from "@opencode-ai/ui/text-shimmer"
@@ -59,9 +62,9 @@ import { AnimatedCountList } from "./tool-count-summary"
 import { ToolStatusTitle } from "./tool-status-title"
 import { patchFiles } from "./apply-patch-file"
 import { animate } from "motion"
-import { useLocation } from "@solidjs/router"
-import { attached, inline, kind } from "./message-file"
+import { attached, inline, kind, typeLabel } from "./message-file"
 import { readPartText } from "./message-part-text"
+import { SessionProgressIndicatorV2 } from "../v2/components/session-progress-indicator-v2"
 
 async function writeClipboard(text: string): Promise<boolean> {
   const body = typeof document === "undefined" ? undefined : document.body
@@ -104,7 +107,7 @@ function ShellSubmessage(props: { text: string; animate?: boolean }) {
   })
 
   return (
-    <span data-component="shell-submessage">
+    <span data-component="shell-submessage" dir="ltr">
       <span ref={widthRef} data-slot="shell-submessage-width" style={{ width: props.animate ? "0px" : undefined }}>
         <span data-slot="basic-tool-tool-subtitle">
           <span
@@ -166,6 +169,7 @@ export interface MessageProps {
   showAssistantCopyPartID?: string | null
   showReasoningSummaries?: boolean
   useV2Actions?: boolean
+  comments?: UserMessageComment[]
 }
 
 export type SessionAction = (input: { sessionID: string; messageID: string }) => Promise<void> | void
@@ -173,6 +177,16 @@ export type SessionAction = (input: { sessionID: string; messageID: string }) =>
 export type UserActions = {
   fork?: SessionAction
   revert?: SessionAction
+  openAttachment?: (file: FilePart) => void
+}
+
+export type UserMessageComment = {
+  path: string
+  comment: string
+  selection?: {
+    startLine: number
+    endLine: number
+  }
 }
 
 export interface MessagePartProps {
@@ -370,6 +384,34 @@ const agentTones: Record<string, string> = {
   plan: "var(--icon-agent-plan-base)",
 }
 
+const v2AgentTones: Record<string, string> = {
+  build: "var(--v2-agent-build-solid)",
+  explore: "var(--v2-agent-explore-solid)",
+  plan: "var(--v2-agent-plan-solid)",
+  review: "var(--v2-agent-review-solid)",
+  writer: "var(--v2-agent-writer-solid)",
+}
+
+const agentThemeColors: Record<string, string> = {
+  primary: "var(--text-interactive-base)",
+  secondary: "var(--text-base)",
+  accent: "var(--icon-info-base)",
+  success: "var(--icon-success-base)",
+  warning: "var(--icon-warning-base)",
+  error: "var(--icon-critical-base)",
+  info: "var(--icon-info-base)",
+}
+
+const v2AgentThemeColors: Record<string, string> = {
+  primary: "var(--v2-text-text-accent)",
+  secondary: "var(--v2-text-text-muted)",
+  accent: "var(--v2-icon-icon-accent)",
+  success: "var(--v2-state-fg-success)",
+  warning: "var(--v2-state-fg-warning)",
+  error: "var(--v2-state-fg-danger)",
+  info: "var(--v2-state-fg-info)",
+}
+
 const agentPalette = [
   "var(--icon-agent-ask-base)",
   "var(--icon-agent-build-base)",
@@ -394,20 +436,33 @@ function tone(name: string) {
 function taskAgent(
   raw: unknown,
   list?: readonly { name: string; color?: string }[],
-): { name?: string; color?: string } {
+): { name?: string; color?: string; v2Color?: string } {
   if (typeof raw !== "string" || !raw) return {}
   const key = raw.toLowerCase()
   const item = list?.find((entry) => entry.name === raw || entry.name.toLowerCase() === key)
+  const v2Tone = item?.color ? undefined : v2AgentTones[key]
+  const color = agentColor(item?.color, agentThemeColors) ?? agentTones[key] ?? tone(key)
+  const v2Color = agentColor(item?.color, v2AgentThemeColors) ?? v2Tone ?? color
   return {
     name: item?.name ?? `${raw[0]!.toUpperCase()}${raw.slice(1)}`,
-    color: item?.color ?? agentTones[key] ?? tone(key),
+    color,
+    v2Color,
   }
 }
 
-function webSearchProviderLabel(provider: unknown) {
-  if (provider === "parallel") return "Parallel Web Search"
-  if (provider === "exa") return "Exa Web Search"
-  return "Web Search"
+function agentColor(value: string | undefined, themeColors: Record<string, string>) {
+  if (!value) return
+  return themeColors[value] ?? value
+}
+
+function newLayout() {
+  return typeof document !== "undefined" && document.body.hasAttribute("data-new-layout")
+}
+
+function webSearchProviderLabel(provider: unknown, i18n: ReturnType<typeof useI18n>) {
+  const name = provider === "parallel" ? "Parallel" : provider === "exa" ? "Exa" : undefined
+  if (name) return i18n.t("ui.tool.websearch.provider", { provider: name })
+  return i18n.t("ui.tool.websearch")
 }
 
 export function getToolInfo(
@@ -450,7 +505,7 @@ export function getToolInfo(
     case "websearch":
       return {
         icon: "window-cursor",
-        title: webSearchProviderLabel(metadata?.provider),
+        title: webSearchProviderLabel(metadata?.provider, i18n),
         subtitle: input.query,
       }
     case "task": {
@@ -465,6 +520,7 @@ export function getToolInfo(
       }
     }
     case "bash":
+    case "shell":
       return {
         icon: "console",
         title: i18n.t("ui.tool.shell"),
@@ -482,6 +538,7 @@ export function getToolInfo(
         title: i18n.t("ui.messagePart.title.write"),
         subtitle: input.filePath ? getFilename(input.filePath) : undefined,
       }
+    case "patch":
     case "apply_patch":
       return {
         icon: "code-lines",
@@ -525,29 +582,18 @@ function urls(text: string | undefined) {
     })
 }
 
-function sessionLink(id: string | undefined, path: string, href?: (id: string) => string | undefined) {
-  if (!id) return
-
-  const direct = href?.(id)
-  if (direct) return direct
-
-  const idx = path.indexOf("/session")
-  if (idx === -1) return
-  return `${path.slice(0, idx)}/session/${id}`
-}
-
-function currentSession(path: string) {
-  return path.match(/\/session\/([^/?#]+)/)?.[1]
+function sessionLink(id: string | undefined, href?: (id: string) => string | undefined) {
+  if (!id) return undefined
+  return href?.(id)
 }
 
 function taskSession(
   input: Record<string, any>,
-  path: string,
+  parentID: string | undefined,
   sessions: Session[] | undefined,
   agents?: readonly { name: string; color?: string }[],
 ) {
-  const parentID = currentSession(path)
-  if (!parentID) return
+  if (!parentID) return undefined
   const description = typeof input.description === "string" ? input.description : ""
   const agent = taskAgent(input.subagent_type, agents).name
   return (sessions ?? [])
@@ -673,8 +719,8 @@ export function renderable(part: PartType, showReasoningSummaries = true) {
 }
 
 function toolDefaultOpen(tool: string, shell = false, edit = false) {
-  if (tool === "bash") return shell
-  if (tool === "edit" || tool === "write" || tool === "apply_patch") return edit
+  if (tool === "bash" || tool === "shell") return shell
+  if (tool === "edit" || tool === "write" || tool === "patch" || tool === "apply_patch") return edit
 }
 
 export function partDefaultOpen(part: PartType, shell = false, edit = false) {
@@ -904,6 +950,7 @@ export function Message(props: MessageProps) {
             parts={props.parts}
             actions={props.actions}
             useV2Actions={props.useV2Actions}
+            comments={props.comments}
           />
         )}
       </Match>
@@ -1000,16 +1047,24 @@ export function AssistantMessageDisplay(props: {
   )
 }
 
-export function ContextToolGroup(props: { parts: ToolPart[]; busy?: boolean; onSizeChange?: () => void }) {
+export function ContextToolGroup(props: {
+  parts: ToolPart[]
+  busy?: boolean
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  onSizeChange?: () => void
+}) {
   const i18n = useI18n()
-  const [open, setOpen] = createSignal(false)
+  const [localOpen, setLocalOpen] = createSignal(false)
+  const open = () => props.open ?? localOpen()
   const pending = createMemo(
     () =>
       !!props.busy || props.parts.some((part) => part.state.status === "pending" || part.state.status === "running"),
   )
   const summary = createMemo(() => contextToolSummary(props.parts))
   const handleOpenChange = (value: boolean) => {
-    setOpen(value)
+    if (props.open === undefined) setLocalOpen(value)
+    props.onOpenChange?.(value)
     props.onSizeChange?.()
   }
 
@@ -1042,22 +1097,16 @@ export function ContextToolGroup(props: { parts: ToolPart[]; busy?: boolean; onS
               <AnimatedCountList
                 items={[
                   {
-                    key: "read",
+                    key: "ui.messagePart.context.read",
                     count: summary().read,
-                    one: i18n.t("ui.messagePart.context.read.one"),
-                    other: i18n.t("ui.messagePart.context.read.other"),
                   },
                   {
-                    key: "search",
+                    key: "ui.messagePart.context.search",
                     count: summary().search,
-                    one: i18n.t("ui.messagePart.context.search.one"),
-                    other: i18n.t("ui.messagePart.context.search.other"),
                   },
                   {
-                    key: "list",
+                    key: "ui.messagePart.context.list",
                     count: summary().list,
-                    one: i18n.t("ui.messagePart.context.list.one"),
-                    other: i18n.t("ui.messagePart.context.list.other"),
                   },
                 ]}
                 fallback=""
@@ -1108,11 +1157,40 @@ export function ContextToolGroup(props: { parts: ToolPart[]; busy?: boolean; onS
   )
 }
 
+function UserMessageComments(props: { comments: UserMessageComment[]; bounded: boolean }) {
+  const i18n = useI18n()
+  const [state, setState] = createStore({ expanded: false })
+  const comments = createMemo(() => (props.bounded && !state.expanded ? props.comments.slice(0, 5) : props.comments))
+
+  return (
+    <div data-slot="user-message-comments" data-bounded={props.bounded ? "true" : undefined}>
+      <For each={comments()}>
+        {(comment) => (
+          <CommentCardV2
+            comment={comment.comment}
+            path={comment.path}
+            selection={comment.selection}
+            title={comment.comment}
+            tooltip
+            wide
+          />
+        )}
+      </For>
+      <Show when={props.bounded && props.comments.length > 5 && !state.expanded}>
+        <ButtonV2 size="small" variant="ghost-muted" onClick={() => setState("expanded", true)}>
+          {i18n.t("ui.common.showMore")}
+        </ButtonV2>
+      </Show>
+    </div>
+  )
+}
+
 export function UserMessageDisplay(props: {
   message: UserMessage
   parts: PartType[]
   actions?: UserActions
   useV2Actions?: boolean
+  comments?: UserMessageComment[]
 }) {
   const data = useData()
   const dialog = useDialog()
@@ -1133,6 +1211,8 @@ export function UserMessageDisplay(props: {
   const files = createMemo(() => (props.parts?.filter((p) => p.type === "file") as FilePart[]) ?? [])
 
   const attachments = createMemo(() => files().filter(attached))
+
+  const messageComments = createMemo(() => (newLayout() ? (props.comments ?? []) : []))
 
   const inlineFiles = createMemo(() => files().filter(inline))
 
@@ -1188,83 +1268,118 @@ export function UserMessageDisplay(props: {
       .finally(() => setState("busy", false))
   }
 
+  const renderAttachments = () => (
+    <Show when={attachments().length > 0}>
+      <div data-slot="user-message-attachments">
+        <For each={attachments()}>
+          {(file) => {
+            const type = kind(file)
+            const name = file.filename ?? i18n.t("ui.message.attachment.alt")
+
+            return (
+              <Show
+                when={newLayout() && type === "file"}
+                fallback={
+                  <div
+                    data-slot="user-message-attachment"
+                    data-type={type}
+                    data-clickable={type === "image" ? "true" : undefined}
+                    title={type === "file" ? name : undefined}
+                    onClick={() => {
+                      if (type === "image") openImagePreview(file.url, name)
+                    }}
+                  >
+                    <Show
+                      when={type === "image"}
+                      fallback={
+                        <div data-slot="user-message-attachment-file">
+                          <FileIcon node={{ path: name, type: "file" }} />
+                          <span data-slot="user-message-attachment-name">{name}</span>
+                        </div>
+                      }
+                    >
+                      <img data-slot="user-message-attachment-image" src={file.url} alt={name} />
+                    </Show>
+                  </div>
+                }
+              >
+                <AttachmentCardV2
+                  title={getFilename(name)}
+                  hover={name}
+                  clickable={!!props.actions?.openAttachment}
+                  onClick={() => props.actions?.openAttachment?.(file)}
+                >
+                  {typeLabel(name, file.mime, i18n.t("ui.common.file"))}
+                </AttachmentCardV2>
+              </Show>
+            )
+          }}
+        </For>
+      </div>
+    </Show>
+  )
+
   return (
     <div data-component="user-message" data-timeline-part-id={textPart()?.id}>
-      <Show when={attachments().length > 0}>
-        <div data-slot="user-message-attachments">
-          <For each={attachments()}>
-            {(file) => {
-              const type = kind(file)
-              const name = file.filename ?? i18n.t("ui.message.attachment.alt")
-
-              return (
-                <div
-                  data-slot="user-message-attachment"
-                  data-type={type}
-                  data-clickable={type === "image" ? "true" : undefined}
-                  title={type === "file" ? name : undefined}
-                  onClick={() => {
-                    if (type === "image") openImagePreview(file.url, name)
-                  }}
-                >
-                  <Show
-                    when={type === "image"}
-                    fallback={
-                      <div data-slot="user-message-attachment-file">
-                        <FileIcon node={{ path: name, type: "file" }} />
-                        <span data-slot="user-message-attachment-name">{name}</span>
-                      </div>
-                    }
-                  >
-                    <img data-slot="user-message-attachment-image" src={file.url} alt={name} />
-                  </Show>
-                </div>
-              )
-            }}
-          </For>
+      <Show when={!props.useV2Actions}>{renderAttachments()}</Show>
+      <Show
+        when={text()}
+        fallback={
+          <Show when={messageComments().length > 0}>
+            <UserMessageComments comments={messageComments()} bounded={false} />
+          </Show>
+        }
+      >
+        <div data-slot="user-message-body">
+          <div
+            data-slot="user-message-text"
+            dir="auto"
+            data-comments={messageComments().length > 0 ? "true" : undefined}
+          >
+            <HighlightedText text={text()} references={inlineFiles()} agents={agents()} />
+            <Show when={messageComments().length > 0}>
+              <UserMessageComments comments={messageComments()} bounded />
+            </Show>
+          </div>
         </div>
       </Show>
-      <Show when={text()}>
-        <>
-          <div data-slot="user-message-body">
-            <div data-slot="user-message-text">
-              <HighlightedText text={text()} references={inlineFiles()} agents={agents()} />
-            </div>
-          </div>
-          <div data-slot="user-message-copy-wrapper">
-            <Show when={metaHead() || metaTail()}>
-              <span data-slot="user-message-meta-wrap">
-                <Show when={metaHead()}>
-                  <span data-slot="user-message-meta" class="text-12-regular text-text-weak cursor-default">
-                    {metaHead()}
-                  </span>
-                </Show>
-                <Show when={metaHead() && metaTail()}>
-                  <span data-slot="user-message-meta-sep" class="text-12-regular text-text-weak cursor-default">
-                    {"\u00A0\u00B7\u00A0"}
-                  </span>
-                </Show>
-                <Show when={metaTail()}>
-                  <span data-slot="user-message-meta-tail" class="text-12-regular text-text-weak cursor-default">
-                    {metaTail()}
-                  </span>
-                </Show>
-              </span>
-            </Show>
-            <Show when={props.actions?.revert}>
-              <MessageActionButton
-                icon="reset"
-                label={i18n.t("ui.message.revertMessage")}
-                useV2={props.useV2Actions}
-                disabled={!!busy()}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  revert()
-                }}
-                aria-label={i18n.t("ui.message.revertMessage")}
-              />
-            </Show>
+      <Show when={props.useV2Actions}>{renderAttachments()}</Show>
+      <Show when={text() || (props.useV2Actions && messageComments().length > 0)}>
+        <div data-slot="user-message-copy-wrapper">
+          <Show when={metaHead() || metaTail()}>
+            <span data-slot="user-message-meta-wrap">
+              <Show when={metaHead()}>
+                <span data-slot="user-message-meta" class="text-12-regular text-text-weak cursor-default">
+                  {metaHead()}
+                </span>
+              </Show>
+              <Show when={metaHead() && metaTail()}>
+                <span data-slot="user-message-meta-sep" class="text-12-regular text-text-weak cursor-default">
+                  {"\u00A0\u00B7\u00A0"}
+                </span>
+              </Show>
+              <Show when={metaTail()}>
+                <span data-slot="user-message-meta-tail" class="text-12-regular text-text-weak cursor-default">
+                  {metaTail()}
+                </span>
+              </Show>
+            </span>
+          </Show>
+          <Show when={props.actions?.revert}>
+            <MessageActionButton
+              icon="reset"
+              label={i18n.t("ui.message.revertMessage")}
+              useV2={props.useV2Actions}
+              disabled={!!busy()}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={(event) => {
+                event.stopPropagation()
+                revert()
+              }}
+              aria-label={i18n.t("ui.message.revertMessage")}
+            />
+          </Show>
+          <Show when={text()}>
             <MessageActionButton
               icon={copied() ? "check" : "copy"}
               label={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}
@@ -1276,8 +1391,8 @@ export function UserMessageDisplay(props: {
               }}
               aria-label={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}
             />
-          </div>
-        </>
+          </Show>
+        </div>
       </Show>
     </div>
   )
@@ -1379,7 +1494,7 @@ export function registerTool(input: { name: string; render?: ToolComponent }) {
 }
 
 export function getTool(name: string) {
-  return state[name]?.render
+  return state[name === "apply_patch" ? "patch" : name === "bash" ? "shell" : name]?.render
 }
 
 export const ToolRegistry = {
@@ -1446,7 +1561,7 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
   })
   const taskHref = createMemo(() => {
     if (part().tool !== "task") return
-    return sessionLink(taskId(), useLocation().pathname, data.sessionHref)
+    return sessionLink(taskId(), data.sessionHref)
   })
   const taskSubtitle = createMemo(() => {
     if (part().tool !== "task") return undefined
@@ -1479,12 +1594,22 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
                 <ToolErrorCard
                   tool={part().tool}
                   error={error()}
-                  title={part().tool === "websearch" ? webSearchProviderLabel(partMetadata().provider) : undefined}
+                  title={
+                    part().tool === "websearch" ? webSearchProviderLabel(partMetadata().provider, i18n) : undefined
+                  }
                   defaultOpen={props.defaultOpen}
                   open={controlledOpen()}
                   onOpenChange={props.onToolOpenChange ? handleToolOpenChange : undefined}
                   subtitle={taskSubtitle()}
                   href={taskHref()}
+                  onSubtitleClick={(event) => {
+                    if (!data.navigateToSession) return
+                    if (event.button !== 0 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
+                    const id = taskId()
+                    if (!id) return
+                    event.preventDefault()
+                    data.navigateToSession(id)
+                  }}
                 />
               )
             }}
@@ -1614,9 +1739,7 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     <Show when={text()}>
       <div data-component="text-part" data-timeline-part-id={part().id}>
         <div data-slot="text-part-body">
-          <Show when={streaming()} fallback={<Markdown text={text()} cacheKey={part().id} streaming={false} />}>
-            <PacedMarkdown text={text()} cacheKey={part().id} streaming={streaming()} />
-          </Show>
+          <PacedMarkdown text={text()} cacheKey={part().id} streaming={streaming()} />
         </div>
         <Show when={showCopy()}>
           <div data-slot="text-part-copy-wrapper" data-interrupted={interrupted() ? "" : undefined}>
@@ -1651,9 +1774,7 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props) {
   return (
     <Show when={text()}>
       <div data-component="reasoning-part" data-timeline-part-id={part().id}>
-        <Show when={streaming()} fallback={<Markdown text={text()} cacheKey={part().id} streaming={false} />}>
-          <PacedMarkdown text={text()} cacheKey={part().id} streaming={streaming()} />
-        </Show>
+        <PacedMarkdown text={text()} cacheKey={part().id} streaming={streaming()} />
       </div>
     </Show>
   )
@@ -1710,7 +1831,13 @@ ToolRegistry.register({
         trigger={{ title: i18n.t("ui.tool.list"), subtitle: getDirectory(props.input.path || "/") }}
       >
         <Show when={props.output}>
-          <div data-component="tool-output" data-scrollable>
+          <div
+            data-component="tool-output"
+            data-scrollable
+            tabIndex={0}
+            role="region"
+            aria-label={i18n.t("ui.scrollView.ariaLabel")}
+          >
             <Markdown text={props.output!} />
           </div>
         </Show>
@@ -1734,7 +1861,13 @@ ToolRegistry.register({
         }}
       >
         <Show when={props.output}>
-          <div data-component="tool-output" data-scrollable>
+          <div
+            data-component="tool-output"
+            data-scrollable
+            tabIndex={0}
+            role="region"
+            aria-label={i18n.t("ui.scrollView.ariaLabel")}
+          >
             <Markdown text={props.output!} />
           </div>
         </Show>
@@ -1761,7 +1894,13 @@ ToolRegistry.register({
         }}
       >
         <Show when={props.output}>
-          <div data-component="tool-output" data-scrollable>
+          <div
+            data-component="tool-output"
+            data-scrollable
+            tabIndex={0}
+            role="region"
+            aria-label={i18n.t("ui.scrollView.ariaLabel")}
+          >
             <Markdown text={props.output!} />
           </div>
         </Show>
@@ -1819,12 +1958,13 @@ ToolRegistry.register({
 ToolRegistry.register({
   name: "websearch",
   render(props) {
+    const i18n = useI18n()
     const query = createMemo(() => {
       const value = props.input.query
       if (typeof value !== "string") return ""
       return value
     })
-    const title = createMemo(() => webSearchProviderLabel(props.metadata.provider))
+    const title = createMemo(() => webSearchProviderLabel(props.metadata.provider, i18n))
 
     return (
       <BasicTool
@@ -1847,15 +1987,15 @@ ToolRegistry.register({
   render(props) {
     const data = useData()
     const i18n = useI18n()
-    const location = useLocation()
     const childSessionId = createMemo(() => {
       const value = props.metadata.sessionId
       if (typeof value === "string" && value) return value
-      return taskSession(props.input, location.pathname, data.store.session, data.store.agent)
+      return taskSession(props.input, data.sessionID, data.store.session, data.store.agent)
     })
     const agent = createMemo(() => taskAgent(props.input.subagent_type, data.store.agent))
     const title = createMemo(() => agent().name ?? i18n.t("ui.tool.agent.default"))
     const tone = createMemo(() => agent().color)
+    const v2Tone = createMemo(() => agent().v2Color)
     const subtitle = createMemo(() => {
       const value =
         typeof props.input.description === "string" && props.input.description
@@ -1867,18 +2007,13 @@ ToolRegistry.register({
     })
     const running = createMemo(() => props.status === "pending" || props.status === "running")
 
-    const href = createMemo(() => sessionLink(childSessionId(), location.pathname, data.sessionHref))
+    const href = createMemo(() => sessionLink(childSessionId(), data.sessionHref))
     const clickable = createMemo(() => !!(childSessionId() && (data.navigateToSession || href())))
 
     const open = () => {
       const id = childSessionId()
       if (!id) return
-      if (data.navigateToSession) {
-        data.navigateToSession(id)
-        return
-      }
-      const value = href()
-      if (value) window.location.assign(value)
+      data.navigateToSession?.(id)
     }
 
     const navigate = (event: MouseEvent) => {
@@ -1887,22 +2022,47 @@ ToolRegistry.register({
       event.preventDefault()
       open()
     }
+    const navigateKey = (event: KeyboardEvent) => {
+      if (!clickable() || href()) return
+      if (event.key !== "Enter" && event.key !== " ") return
+      event.preventDefault()
+      open()
+    }
 
     const trigger = () => (
-      <div data-component="task-tool-card">
-        <div data-slot="basic-tool-tool-info-structured">
-          <div data-slot="basic-tool-tool-info-main">
-            <Show when={running()}>
-              <span data-component="task-tool-spinner" style={{ color: tone() ?? "var(--icon-interactive-base)" }}>
-                <Spinner />
-              </span>
-            </Show>
-            <span data-component="task-tool-title" style={{ color: tone() ?? "var(--text-strong)" }}>
-              {title()}
-            </span>
-            <Show when={subtitle()}>
-              <span data-slot="basic-tool-tool-subtitle">{subtitle()}</span>
-            </Show>
+      <div
+        data-component="task-tool-card"
+        style={{
+          "--task-agent-color": v2Tone(),
+          "--task-agent-legacy-color": tone(),
+        }}
+      >
+        <div data-component="task-tool-surface">
+          <div data-slot="basic-tool-tool-info-structured">
+            <div data-slot="basic-tool-tool-info-main">
+              <Show
+                when={running()}
+                fallback={
+                  <Show when={newLayout()}>
+                    <span data-component="task-tool-icon">
+                      <Icon name="subagent" size="small" />
+                    </span>
+                  </Show>
+                }
+              >
+                <span data-component="task-tool-spinner" style={{ color: tone() ?? "var(--icon-interactive-base)" }}>
+                  <Show when={newLayout()} fallback={<Spinner />}>
+                    <SessionProgressIndicatorV2
+                      style={{ color: v2Tone() ?? "light-dark(var(--v2-text-text-base), #ffffff)" }}
+                    />
+                  </Show>
+                </span>
+              </Show>
+              <span data-component="task-tool-title">{title()}</span>
+              <Show when={subtitle()}>
+                <span data-slot="basic-tool-tool-subtitle">{subtitle()}</span>
+              </Show>
+            </div>
           </div>
         </div>
         <Show when={clickable()}>
@@ -1919,16 +2079,18 @@ ToolRegistry.register({
         status={props.status}
         trigger={trigger()}
         hideDetails
+        triggerAsLink
         triggerHref={href()}
         clickable={clickable()}
         onTriggerClick={navigate}
+        onTriggerKeyDown={navigateKey}
       />
     )
   },
 })
 
 ToolRegistry.register({
-  name: "bash",
+  name: "shell",
   render(props) {
     const i18n = useI18n()
     const pending = () => props.status === "pending" || props.status === "running"
@@ -1953,20 +2115,21 @@ ToolRegistry.register({
       <BasicTool
         {...props}
         icon="console"
+        allowOpenWhilePending
         trigger={(open) => (
           <div data-slot="basic-tool-tool-info-structured">
             <div data-slot="basic-tool-tool-info-main">
               <span data-slot="basic-tool-tool-title">
                 <TextShimmer text={i18n.t("ui.tool.shell")} active={pending()} />
               </span>
-              <Show when={!pending() && !open() && props.input.command}>
+              <Show when={!open() && props.input.command}>
                 <ShellSubmessage text={props.input.command} animate={sawPending} />
               </Show>
             </div>
           </div>
         )}
       >
-        <div data-component="bash-output">
+        <div data-component="bash-output" dir="ltr">
           <div data-slot="bash-copy">
             <TooltipV2 value={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copy")} placement="top">
               <IconButtonV2
@@ -1979,7 +2142,13 @@ ToolRegistry.register({
               />
             </TooltipV2>
           </div>
-          <div data-slot="bash-scroll" data-scrollable>
+          <div
+            data-slot="bash-scroll"
+            data-scrollable
+            tabIndex={0}
+            role="region"
+            aria-label={i18n.t("ui.scrollView.ariaLabel")}
+          >
             <pre data-slot="bash-pre">
               <code>{text()}</code>
             </pre>
@@ -2157,7 +2326,7 @@ ToolRegistry.register({
 })
 
 ToolRegistry.register({
-  name: "apply_patch",
+  name: "patch",
   render(props) {
     const i18n = useI18n()
     const fileComponent = useFileComponent()

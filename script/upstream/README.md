@@ -47,6 +47,7 @@ bun run merge.ts --version v1.1.50 --base-branch catrielmuller/kilo-opencode-v1.
 | `transforms/preserve-versions.ts` | Preserve Kilo's package versions |
 | `transforms/keep-ours.ts` | Keep Kilo's version of specific files |
 | `transforms/skip-files.ts` | Skip/remove files that shouldn't exist in Kilo |
+| `transforms/remove-kilo-web.ts` | Remove the unsupported embedded web command and warn when upstream reshapes it |
 | `transforms/transform-i18n.ts` | Transform i18n files with Kilo branding |
 | `transforms/transform-take-theirs.ts` | Take upstream + apply Kilo branding for branding-only files |
 | `transforms/transform-package-json.ts` | Enhanced package.json with Kilo dependency injection and newest-Bun-wins reconciliation |
@@ -90,6 +91,7 @@ The merge automation follows this process, applying **all transformations BEFORE
 
 5. **Apply ALL transformations to upstream branch (PRE-MERGE)**:
    - Remove files that should not exist in Kilo (`skipFiles`)
+   - Remove the unsupported embedded web command and its CLI registration
    - Transform package names (opencode-ai -> @kilocode/cli)
    - Preserve Kilo's versions
    - Transform i18n files with Kilo branding
@@ -222,7 +224,7 @@ Options:
   --base-branch <name>   Base branch to merge into; use HEAD for current branch (default: main)
   --dry-run              Preview changes without applying them
   --no-push              Don't push branches to remote
-  --no-worktrees         Don't create reference worktrees
+  --no-worktrees         Don't create auxiliary worktrees, including rerere training worktrees
   --report-only          Only generate conflict report
   --verbose              Enable verbose logging
   --author <name>        Author name for branch prefix
@@ -323,6 +325,8 @@ Tighten the blast radius with `--review-limit 0` (only `markers-only` and `cosme
 By default, upstream merges start from the `main` branch. However, you can use `--base-branch` to start from a different branch. This is useful for:
 
 Passing `--base-branch HEAD` targets the currently checked-out branch without typing its full name.
+It uses the checked-out commit without pulling. If the current branch already has the generated
+target name, the script keeps and merges into that branch instead of backing it up and recreating it.
 
 ### Incremental Merges
 

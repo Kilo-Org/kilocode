@@ -244,4 +244,74 @@ describe("database migration compatibility", () => {
       }).pipe(Effect.provide(SqliteClient.layer({ filename })), Effect.scoped),
     )
   })
+
+  test("skips a migration another writer recorded after the completed snapshot", async () => {
+    await run(
+      Effect.gen(function* () {
+        const db = yield* make
+        yield* db.run(sql`CREATE TABLE session (id text PRIMARY KEY)`)
+        // stands in for a second kilo process committing the later migration's journal row
+        // while this process is already partway through applyOnly
+        const first = {
+          id: "20260622170816_first",
+          up: (tx) =>
+            tx.run(
+              sql`INSERT INTO ${sql.identifier("migration")} (id, time_completed) VALUES ('20260622202450_second', 1)`,
+            ),
+        } satisfies DatabaseMigration.Migration
+        const second = {
+          id: "20260622202450_second",
+          up: (tx) => tx.run(sql`CREATE TABLE replayed (id text)`),
+        } satisfies DatabaseMigration.Migration
+
+        yield* DatabaseMigration.applyOnly(db, [first, second])
+
+        // the already-recorded migration must be skipped, not replayed
+        expect(
+          yield* db.get(sql`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'replayed'`),
+        ).toBeUndefined()
+        expect(
+          (yield* db.all<{ id: string }>(sql`SELECT id FROM migration ORDER BY id`)).map((row) => row.id),
+        ).toEqual(["20260622170816_first", "20260622202450_second"])
+      }),
+    )
+  })
+
+  test("holds the write lock before re-checking the migration journal", async () => {
+    await using tmp = await tmpdir()
+    const filename = path.join(tmp.path, "kilo.db")
+    let error: unknown
+    // opens a second, independent connection to the same file from inside the
+    // migration's own transaction: if the write reservation isn't already held
+    // (BEGIN IMMEDIATE), this insert succeeds instead of being rejected as busy
+    const migration = {
+      id: "20260622210000_lock_pin",
+      up: () =>
+        Effect.sync(() => {
+          const writer = new SQLite(filename)
+          writer.run("PRAGMA busy_timeout = 50")
+          try {
+            writer.run("INSERT INTO migration (id, time_completed) VALUES ('20260622210000_other_writer', 1)")
+          } catch (err) {
+            error = err
+          } finally {
+            writer.close()
+          }
+        }),
+    } satisfies DatabaseMigration.Migration
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const db = yield* make
+        yield* db.run(sql`CREATE TABLE session (id text PRIMARY KEY)`)
+        yield* DatabaseMigration.applyOnly(db, [migration])
+        expect(yield* db.get(sql`SELECT id FROM migration WHERE id = ${migration.id}`)).toEqual({ id: migration.id })
+      }).pipe(Effect.provide(SqliteClient.layer({ filename })), Effect.scoped),
+    )
+
+    // bun:sqlite reports lock contention as a SQLiteError with code SQLITE_BUSY;
+    // asserting on that structured field (rather than any thrown error) ensures
+    // an unrelated failure can't masquerade as the lock being held
+    expect((error as { code?: string } | undefined)?.code).toBe("SQLITE_BUSY")
+  })
 })

@@ -6,6 +6,7 @@ import type { SuggestionContext } from "./handlers/suggestion"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { buildChatSettingsMessage } from "./chat-settings"
 import { buildThroughputSettingMessage } from "./throughput-settings"
+import { buildAutoApprovalReasonSettingMessage } from "./auto-approval-reason-settings"
 import { handleModelUsageMessage, type ModelUsageMessage } from "./model-usage"
 
 type Ctx = {
@@ -69,6 +70,10 @@ export async function routeEarlyMessage(
   }
   if (message.type === "requestThroughputSetting") {
     ctx.post(buildThroughputSettingMessage())
+    return true
+  }
+  if (message.type === "requestAutoApprovalReasonSetting") {
+    ctx.post(buildAutoApprovalReasonSettingMessage())
     return true
   }
   if (message.type === "requestSpeechToTextModels") {
