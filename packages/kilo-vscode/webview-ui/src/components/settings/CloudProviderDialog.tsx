@@ -122,7 +122,7 @@ const CloudProviderDialog = (props: CloudProviderDialogProps) => {
         },
         onError: (message) => {
           setPhase("idle")
-          setError({ message: message.message })
+          setError({ ok: false, message: message.message })
         },
       },
     )
