@@ -12,8 +12,7 @@ import { useProvider } from "../../context/provider"
 import { useVSCode } from "../../context/vscode"
 import { createProviderAction } from "../../utils/provider-action"
 import { BEDROCK_ID, VERTEX_ID } from "../../../../src/shared/cloud-provider"
-
-type Mode = "apiKey" | "accessKeys" | "profile"
+import { buildCloudConnect, type CloudError, type CloudMode } from "./cloud-provider-form"
 
 interface CloudProviderDialogProps {
   providerID: typeof BEDROCK_ID | typeof VERTEX_ID
@@ -22,6 +21,32 @@ interface CloudProviderDialogProps {
 function option(cfg: Record<string, unknown> | undefined, key: string) {
   const value = cfg?.[key]
   return typeof value === "string" ? value : ""
+}
+
+function Field(props: {
+  label: string
+  placeholder?: string
+  value: string
+  type?: "text" | "password"
+  multiline?: boolean
+  autofocus?: boolean
+  field: string
+  error?: CloudError
+  onChange: (next: string) => void
+}) {
+  return (
+    <TextField
+      autofocus={props.autofocus}
+      multiline={props.multiline}
+      type={props.type ?? "text"}
+      label={props.label}
+      placeholder={props.placeholder}
+      value={props.value}
+      onChange={props.onChange}
+      validationState={props.error?.field === props.field ? "invalid" : undefined}
+      error={props.error?.field === props.field ? props.error.message : undefined}
+    />
+  )
 }
 
 const CloudProviderDialog = (props: CloudProviderDialogProps) => {
@@ -36,8 +61,8 @@ const CloudProviderDialog = (props: CloudProviderDialogProps) => {
   const name = () => item()?.name ?? props.providerID
   const cfg = () => config().provider?.[props.providerID]?.options as Record<string, unknown> | undefined
   const [phase, setPhase] = createSignal<"idle" | "connecting">("idle")
-  const [error, setError] = createSignal<{ field?: string; message: string }>()
-  const [mode, setMode] = createSignal<Mode>("apiKey")
+  const [error, setError] = createSignal<CloudError>()
+  const [mode, setMode] = createSignal<CloudMode>("apiKey")
   const [fields, setFields] = createStore({
     region: option(cfg(), "region") || "us-east-1",
     profile: option(cfg(), "profile"),
@@ -69,97 +94,21 @@ const CloudProviderDialog = (props: CloudProviderDialogProps) => {
     },
   ])
 
-  function fail(field: string | undefined, message: string) {
-    setError({ field, message })
-  }
-
-  function required(field: keyof typeof fields, key: string) {
-    const value = fields[field].trim()
-    if (value) return value
-    fail(field, language.t("provider.connect.prompt.required", { field: language.t(key) }))
-    return
-  }
-
-  function parseVertex() {
-    const blob = fields.credentials.trim()
-    if (!blob) return { project: required("project", "provider.connect.vertex.project.label") }
-    try {
-      const parsed = JSON.parse(blob) as unknown
-      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-        fail("credentials", language.t("provider.connect.vertex.credentials.invalid"))
-        return
-      }
-      const project =
-        fields.project.trim() ||
-        (typeof (parsed as { project_id?: unknown }).project_id === "string"
-          ? (parsed as { project_id: string }).project_id.trim()
-          : "")
-      if (!project) {
-        fail(
-          "project",
-          language.t("provider.connect.prompt.required", { field: language.t("provider.connect.vertex.project.label") }),
-        )
-        return
-      }
-      return { project, credentials: JSON.stringify(parsed) }
-    } catch {
-      fail("credentials", language.t("provider.connect.vertex.credentials.invalid"))
-      return
-    }
-  }
-
   function submit(e: SubmitEvent) {
     e.preventDefault()
     setError()
-    const metadata: Record<string, string> = {}
-    const apiKey = fields.apiKey.trim()
-
-    if (props.providerID === BEDROCK_ID) {
-      const region = required("region", "provider.connect.bedrock.region.label")
-      if (!region) return
-      metadata.mode = mode()
-      metadata.region = region
-      const endpoint = fields.endpoint.trim()
-      if (endpoint) metadata.endpoint = endpoint
-      if (mode() === "apiKey") {
-        if (!apiKey) {
-          fail("apiKey", language.t("provider.connect.apiKey.required"))
-          return
-        }
-      }
-      if (mode() === "accessKeys") {
-        const access = required("accessKeyId", "provider.connect.bedrock.accessKeyId.label")
-        const secret = required("secretAccessKey", "provider.connect.bedrock.secretAccessKey.label")
-        if (!access || !secret) return
-        metadata.accessKeyId = access
-        metadata.secretAccessKey = secret
-        const session = fields.sessionToken.trim()
-        if (session) metadata.sessionToken = session
-      }
-      if (mode() === "profile") {
-        const profile = required("profile", "provider.connect.bedrock.profile.label")
-        if (!profile) return
-        metadata.profile = profile
-      }
+    const parsed = buildCloudConnect(props.providerID, fields, mode(), language.t)
+    if ("field" in parsed) {
+      setError(parsed)
+      return
     }
-
-    if (props.providerID === VERTEX_ID) {
-      const parsed = parseVertex()
-      if (!parsed) return
-      metadata.project = parsed.project
-      const location = required("location", "provider.connect.vertex.location.label")
-      if (!location) return
-      metadata.location = location
-      if (parsed.credentials) metadata.credentials = parsed.credentials
-    }
-
     setPhase("connecting")
     action.send(
       {
         type: "connectProvider",
         providerID: props.providerID,
-        apiKey,
-        metadata,
+        apiKey: parsed.apiKey,
+        metadata: parsed.metadata,
       },
       {
         onConnected: () => {
@@ -173,7 +122,7 @@ const CloudProviderDialog = (props: CloudProviderDialogProps) => {
         },
         onError: (message) => {
           setPhase("idle")
-          fail(undefined, message.message)
+          setError({ message: message.message })
         },
       },
     )
@@ -216,48 +165,47 @@ const CloudProviderDialog = (props: CloudProviderDialogProps) => {
               triggerVariant="settings"
             />
           </div>
-          <TextField
-            type="text"
+          <Field
+            field="region"
             label={language.t("provider.connect.bedrock.region.label")}
             placeholder={language.t("provider.connect.bedrock.region.placeholder")}
             value={fields.region}
+            error={error()}
             onChange={(next) => setFields("region", next)}
-            validationState={error()?.field === "region" ? "invalid" : undefined}
-            error={error()?.field === "region" ? error()?.message : undefined}
           />
           <Show when={mode() === "apiKey"}>
-            <TextField
+            <Field
               autofocus
+              field="apiKey"
               type="password"
               label={language.t("provider.connect.bedrock.apiKey.label")}
               placeholder={language.t("provider.connect.apiKey.placeholder")}
               value={fields.apiKey}
+              error={error()}
               onChange={(next) => setFields("apiKey", next)}
-              validationState={error()?.field === "apiKey" ? "invalid" : undefined}
-              error={error()?.field === "apiKey" ? error()?.message : undefined}
             />
           </Show>
           <Show when={mode() === "accessKeys"}>
-            <TextField
+            <Field
               autofocus
-              type="text"
+              field="accessKeyId"
               label={language.t("provider.connect.bedrock.accessKeyId.label")}
               placeholder={language.t("provider.connect.bedrock.accessKeyId.placeholder")}
               value={fields.accessKeyId}
+              error={error()}
               onChange={(next) => setFields("accessKeyId", next)}
-              validationState={error()?.field === "accessKeyId" ? "invalid" : undefined}
-              error={error()?.field === "accessKeyId" ? error()?.message : undefined}
             />
-            <TextField
+            <Field
+              field="secretAccessKey"
               type="password"
               label={language.t("provider.connect.bedrock.secretAccessKey.label")}
               placeholder={language.t("provider.connect.bedrock.secretAccessKey.placeholder")}
               value={fields.secretAccessKey}
+              error={error()}
               onChange={(next) => setFields("secretAccessKey", next)}
-              validationState={error()?.field === "secretAccessKey" ? "invalid" : undefined}
-              error={error()?.field === "secretAccessKey" ? error()?.message : undefined}
             />
-            <TextField
+            <Field
+              field="sessionToken"
               type="password"
               label={language.t("provider.connect.bedrock.sessionToken.label")}
               placeholder={language.t("provider.connect.bedrock.sessionToken.placeholder")}
@@ -266,19 +214,18 @@ const CloudProviderDialog = (props: CloudProviderDialogProps) => {
             />
           </Show>
           <Show when={mode() === "profile"}>
-            <TextField
+            <Field
               autofocus
-              type="text"
+              field="profile"
               label={language.t("provider.connect.bedrock.profile.label")}
               placeholder={language.t("provider.connect.bedrock.profile.placeholder")}
               value={fields.profile}
+              error={error()}
               onChange={(next) => setFields("profile", next)}
-              validationState={error()?.field === "profile" ? "invalid" : undefined}
-              error={error()?.field === "profile" ? error()?.message : undefined}
             />
           </Show>
-          <TextField
-            type="text"
+          <Field
+            field="endpoint"
             label={language.t("provider.connect.bedrock.endpoint.label")}
             placeholder={language.t("provider.connect.bedrock.endpoint.placeholder")}
             value={fields.endpoint}
@@ -286,34 +233,31 @@ const CloudProviderDialog = (props: CloudProviderDialogProps) => {
           />
         </Show>
         <Show when={props.providerID === VERTEX_ID}>
-          <TextField
+          <Field
             autofocus
-            type="text"
+            field="project"
             label={language.t("provider.connect.vertex.project.label")}
             placeholder={language.t("provider.connect.vertex.project.placeholder")}
             value={fields.project}
+            error={error()}
             onChange={(next) => setFields("project", next)}
-            validationState={error()?.field === "project" ? "invalid" : undefined}
-            error={error()?.field === "project" ? error()?.message : undefined}
           />
-          <TextField
-            type="text"
+          <Field
+            field="location"
             label={language.t("provider.connect.vertex.location.label")}
             placeholder={language.t("provider.connect.vertex.location.placeholder")}
             value={fields.location}
+            error={error()}
             onChange={(next) => setFields("location", next)}
-            validationState={error()?.field === "location" ? "invalid" : undefined}
-            error={error()?.field === "location" ? error()?.message : undefined}
           />
-          <TextField
+          <Field
             multiline
-            type="text"
+            field="credentials"
             label={language.t("provider.connect.vertex.credentials.label")}
             placeholder={language.t("provider.connect.vertex.credentials.placeholder")}
             value={fields.credentials}
+            error={error()}
             onChange={(next) => setFields("credentials", next)}
-            validationState={error()?.field === "credentials" ? "invalid" : undefined}
-            error={error()?.field === "credentials" ? error()?.message : undefined}
           />
         </Show>
         <Show when={error() && !error()?.field}>
