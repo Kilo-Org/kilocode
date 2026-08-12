@@ -855,9 +855,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Language-Server-Protokoll-Integration aktivieren",
   "settings.experimental.batch.title": "Batch-Werkzeug",
   "settings.experimental.batch.description": "Bündelung mehrerer Werkzeugaufrufe aktivieren",
-  "settings.experimental.codebaseSearch.title": "Codebase-Suche",
-  "settings.experimental.codebaseSearch.description":
-    "KI-gestützte Suche in natürlicher Sprache über die gesamte Codebasis aktivieren",
   "settings.experimental.imageGeneration.title": "Bildgenerierung",
   "settings.experimental.imageGeneration.description": "KI-Bildgenerierung aktivieren",
   "settings.experimental.imageGenerationModel.title": "Bildmodell",
