@@ -8,6 +8,9 @@ import java.awt.Color
 import java.awt.Component
 import java.awt.Container
 import java.awt.Cursor
+import java.awt.Graphics
+import java.awt.Graphics2D
+import java.awt.RenderingHints
 import java.awt.event.ContainerAdapter
 import java.awt.event.ContainerEvent
 import java.awt.event.MouseAdapter
@@ -137,6 +140,9 @@ abstract class AbstractSessionPartView(
 
     protected open fun hoverColor(value: Boolean): Color? = null
 
+    /** Corner arc (scaled) for the hover fill. 0 keeps the fill rectangular. */
+    protected open fun hoverArc(): Int = 0
+
     override fun setHovered(value: Boolean) {
         hover?.invoke(this, value)
         val old = row.background
@@ -149,12 +155,26 @@ abstract class AbstractSessionPartView(
     protected inner class Row : JPanel(BorderLayout(SessionUiStyle.View.Header.gap(), 0)) {
         var isHovered = false
 
-        override fun isOpaque(): Boolean {
-            return hoverColor(false) != null
-        }
+        // Painted by paintComponent so the hover fill can be rounded; a rounded opaque fill would
+        // leave the corners stale, so the row stays non-opaque and the backdrop shows through.
+        override fun isOpaque(): Boolean = false
 
         override fun getBackground(): Color {
             return hoverColor(isHovered) ?: super.getBackground()
+        }
+
+        override fun paintComponent(g: Graphics) {
+            super.paintComponent(g)
+            val color = hoverColor(isHovered) ?: return
+            val g2 = g.create() as Graphics2D
+            try {
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                g2.color = color
+                val arc = hoverArc()
+                if (arc > 0) g2.fillRoundRect(0, 0, width, height, arc, arc) else g2.fillRect(0, 0, width, height)
+            } finally {
+                g2.dispose()
+            }
         }
     }
 

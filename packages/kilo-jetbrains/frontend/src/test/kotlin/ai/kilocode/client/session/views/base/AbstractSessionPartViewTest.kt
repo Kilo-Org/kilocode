@@ -133,6 +133,40 @@ class AbstractSessionPartViewTest : BasePlatformTestCase() {
         assertLine(view.border)
     }
 
+    fun `test collapsed card hover fill is rounded`() {
+        val view = TestView(content = JLabel("body"))
+        val row = view.component(0) as JPanel
+        row.setSize(40, 40)
+        view.setHovered(true)
+
+        val image = paintRow(row)
+        val hover = SessionUiStyle.View.Surface.headerHoverBgColor().rgb
+
+        assertEquals("center is filled with the hover color", hover, image.getRGB(20, 2))
+        assertFalse("rounded corner is left unfilled", hover == image.getRGB(0, 0))
+    }
+
+    fun `test expanded card hover fill is square`() {
+        val view = TestView(content = JLabel("body"))
+        view.expand()
+        val row = view.component(0) as JPanel
+        row.setSize(40, 40)
+        view.setHovered(true)
+
+        val image = paintRow(row)
+        val hover = SessionUiStyle.View.Surface.headerHoverBgColor().rgb
+
+        assertEquals("expanded header fill reaches the corner", hover, image.getRGB(0, 0))
+    }
+
+    private fun paintRow(row: JPanel): BufferedImage {
+        val image = BufferedImage(40, 40, BufferedImage.TYPE_INT_ARGB)
+        val graphics = image.createGraphics()
+        row.paint(graphics)
+        graphics.dispose()
+        return image
+    }
+
     fun `test hover tracks nested header child and clears on leave`() {
         val child = JLabel("link")
         val header = JPanel(BorderLayout()).apply { add(child, BorderLayout.WEST) }

@@ -819,12 +819,11 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         message.paint(graphics)
         graphics.dispose()
 
-        // The bubble always draws an outline; probing the box edges verifies it paints at the
-        // wrapped coordinates, while the center remains the prompt fill surface.
-        val outline = SessionUiStyle.View.Outline.color().rgb
+        // The borderless bubble fills its surface; probing the box edges and center verifies it
+        // paints the fill at the wrapped coordinates.
         val fill = SessionUiStyle.View.Prompt.bgColor(SessionEditorStyle.current()).rgb
-        assertEquals(outline, Color(image.getRGB(point.x + box.width / 2, point.y), true).rgb)
-        assertEquals(outline, Color(image.getRGB(point.x + box.width / 2, point.y + box.height - 1), true).rgb)
+        assertEquals(fill, Color(image.getRGB(point.x + box.width / 2, point.y), true).rgb)
+        assertEquals(fill, Color(image.getRGB(point.x + box.width / 2, point.y + box.height - 1), true).rgb)
         assertEquals(fill, Color(image.getRGB(point.x + box.width / 2, point.y + box.height / 2), true).rgb)
     }
 

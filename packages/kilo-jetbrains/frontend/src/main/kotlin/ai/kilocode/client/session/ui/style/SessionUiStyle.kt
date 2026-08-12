@@ -91,6 +91,12 @@ object SessionUiStyle {
 
     /** Shared tokens for individual transcript views and session views. */
     object View {
+        /**
+         * Corner arc (unscaled) for raised session blocks: the user prompt bubble and the
+         * collapsed card hover fill. Scale with [JBUI.scale] at the call site.
+         */
+        const val BLOCK_ARC = 8
+
         object Layout {
             const val GAP = 5
             const val VERTICAL_PADDING = 7

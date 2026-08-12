@@ -42,6 +42,10 @@ abstract class SecondarySessionPartView(
     override fun hoverColor(value: Boolean) =
         if (value) SessionUiStyle.View.Surface.headerHoverBgColor() else SessionUiStyle.View.Surface.headerBgColor()
 
+    // A collapsed card is a standalone block, so its hover fill is rounded; an expanded card sits
+    // inside the rectangular outline, so its header hover stays square to meet that edge.
+    override fun hoverArc() = if (isExpanded()) 0 else JBUI.scale(SessionUiStyle.View.BLOCK_ARC)
+
     private fun syncBorder() {
         if (isExpanded()) {
             border = JBUI.Borders.customLine(SessionUiStyle.View.Outline.color(), SessionUiStyle.View.Outline.width())
