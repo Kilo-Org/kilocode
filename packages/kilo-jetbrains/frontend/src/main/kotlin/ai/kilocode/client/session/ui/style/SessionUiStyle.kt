@@ -19,20 +19,31 @@ object SessionUiStyle {
         private const val HINT_BOOST = 0.35f
 
         /**
-         * Fallback recess applied to the editor background only if the panel-background key is ever
-         * missing. [sessionBackground] normally follows the panel background; this keeps it from
-         * falling through to `JBColor.PanelBackground`'s hardcoded white while defaults are provisional.
+         * Recess applied to the raised editor surface to derive a distinct backdrop. Used both when
+         * the panel-background key is missing and when the panel background is identical to the
+         * raised surface (e.g. Islands Dark/Darcula), so the prompt bubble/input and other raised
+         * surfaces still stand out. [UiStyle.Colors.contrast] lightens dark themes and darkens light
+         * themes, matching how generic themes separate the backdrop from editor content.
          */
         private const val SESSION_DELTA = 8
 
-        /** Whole session backdrop: follows the panel (chrome) background, distinct from raised surfaces. */
-        fun sessionBackground(): Color = JBColor.namedColor(
-            "Kilo.Session.background",
-            JBColor.lazy {
-                UIManager.getColor("Panel.background")
-                    ?: UiStyle.Colors.contrast(UiStyle.Colors.editorBackground(), SESSION_DELTA)
-            },
-        )
+        /**
+         * Whole session backdrop: follows the panel (chrome) background, distinct from raised
+         * surfaces. When the panel background matches the raised surface — so raised surfaces would
+         * be invisible against it — the backdrop is shifted by [SESSION_DELTA] instead.
+         *
+         * Not a `namedColor`: `JBColor.namedColor` resolves through theme `"*"` wildcard rules by
+         * suffix (`name.endsWith("background")`), so any theme with a `*.background` rule would
+         * hijack this key and skip the fallback below. We read an exact override key ourselves and
+         * otherwise compute the backdrop, wrapped in `JBColor.lazy` so it re-resolves on LaF changes.
+         */
+        fun sessionBackground(): Color = JBColor.lazy {
+            UIManager.getColor("Kilo.Session.background") ?: run {
+                val raised = codeBlockBackground()
+                val panel = UIManager.getColor("Panel.background") ?: raised
+                if (panel.rgb == raised.rgb) UiStyle.Colors.contrast(raised, SESSION_DELTA) else panel
+            }
+        }
 
         /** Single raised surface (code blocks, tool/shell output, prompt bubble, prompt input): the editor background. */
         fun codeBlockBackground(): Color = JBColor.namedColor(

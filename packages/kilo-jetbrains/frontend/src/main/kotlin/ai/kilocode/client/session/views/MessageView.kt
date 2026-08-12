@@ -481,17 +481,8 @@ class MessageView(
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
             val arc = JBUI.scale(JBUI.getInt("Button.arc", SessionUiStyle.View.Prompt.CORNER_ARC))
             val pt = if (box === this) Point() else SwingUtilities.convertPoint(box, Point(), this)
-            val bg = SessionUiStyle.View.Prompt.bgColor(style)
-            g2.color = bg
+            g2.color = SessionUiStyle.View.Prompt.bgColor(style)
             g2.fillRoundRect(pt.x, pt.y, box.width, box.height, arc, arc)
-            // When the prompt shares the session background there is no fill contrast, so draw the
-            // outline to keep the bubble visible.
-            if (bg.rgb == SessionUiStyle.Colors.sessionBackground().rgb) {
-                val w = box.width - 1
-                val h = box.height - 1
-                g2.color = SessionUiStyle.View.Outline.color()
-                if (w > 0 && h > 0) g2.drawRoundRect(pt.x, pt.y, w, h, arc, arc)
-            }
         } finally {
             g2.dispose()
         }

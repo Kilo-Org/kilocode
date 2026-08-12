@@ -299,6 +299,7 @@ inside the session. This avoids fragile component-hierarchy coupling and prevent
 theme-specific artifacts in transparent/rounded Swing painting.
 
 - `SessionRootPanel` is the primary opaque backdrop. It overrides `getBackground()` and returns `SessionUiStyle.Colors.sessionBackground()`.
+- `sessionBackground()` follows the panel background, but when that equals the raised editor surface (`codeBlockBackground()`) — e.g. Islands Dark/Darcula, where panel and editor backgrounds are identical — it shifts by `SESSION_DELTA` via `UiStyle.Colors.contrast` (lighter in dark themes, darker in light) so the prompt bubble/input and other raised surfaces stay visible. This is a universal fallback, not a per-theme override.
 - `SessionRootPanel.Blocker` is the only other session-background opaque panel. It also overrides `getBackground()` with `sessionBackground()` for modal blocking.
 - Scroll panes, viewports, transcript layout panels, message lists, turn containers, wrapper panels, and card bodies should be non-opaque unless they intentionally paint a distinct surface.
 - `applyStyle(style)` must not assign session-background colors. It may update fonts, foregrounds, editor colors, and other non-background styling. Background colors that must be dynamic should come from `getBackground()` or custom painting.
