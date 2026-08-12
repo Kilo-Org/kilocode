@@ -791,14 +791,6 @@ const blocks: SDKPart[] = [
     { ecosystems: ["TypeScript"], dependency_files: ["package.json"], depth: 2, truncated: false },
   ),
   done(
-    "codebase-search",
-    "codebase_search",
-    { query: "Where is the tool renderer selected?" },
-    "Search codebase",
-    "### packages/kilo-ui/src/components/message-part.tsx\nThe registry selects a renderer by exact tool ID.",
-    { count: 1 },
-  ),
-  done(
     "semantic-search",
     "semantic_search",
     { query: "tool renderer selection", path: "packages/kilo-ui" },
@@ -936,7 +928,6 @@ for (const key of [
   "task_status:matrix-call-task-status",
   "repo_clone:matrix-call-repo-clone",
   "repo_overview:matrix-call-repo-overview",
-  "codebase_search:matrix-call-codebase-search",
   "semantic_search:matrix-call-semantic-search",
   "kilo_local_recall:matrix-call-local-recall",
   "agent_manager:matrix-call-agent-manager",

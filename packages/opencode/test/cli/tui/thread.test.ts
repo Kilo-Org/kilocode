@@ -16,6 +16,15 @@ describe("tui thread", () => {
     expect(source).not.toContain('import("./app")')
   })
 
+  // kilocode_change start - preserve the sanitized Kilo worker environment
+  test("forwards the sanitized CLI environment to the TUI worker", async () => {
+    const source = await Bun.file(new URL("../../../src/cli/cmd/tui.ts", import.meta.url)).text()
+
+    expect(source).toMatch(/const env = sanitizedProcessEnv\(/)
+    expect(source).toMatch(/new Worker\(file, \{[\s\S]*env,/)
+  })
+  // kilocode_change end
+
   async function check(project?: string) {
     await using tmp = await tmpdir({ git: true })
     const link = path.join(path.dirname(tmp.path), path.basename(tmp.path) + "-link")

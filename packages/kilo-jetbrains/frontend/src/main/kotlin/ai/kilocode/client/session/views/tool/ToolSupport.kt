@@ -7,6 +7,8 @@ import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.ToolKind
+import ai.kilocode.client.session.ui.fileLinkHtml
+import ai.kilocode.client.session.ui.fileLinkText
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
@@ -135,8 +137,8 @@ class FileLinkLabel(
 
     @RequiresEdt
     fun setTarget(path: String?, text: String): Boolean {
-        val next = single(text.ifBlank { path.orEmpty() })
-        val value = if (next.isBlank()) "" else XmlStringUtil.wrapInHtml("<nobr><u>${XmlStringUtil.escapeString(next)}</u></nobr>")
+        val next = fileLinkText(text.ifBlank { path.orEmpty() })
+        val value = fileLinkHtml(next)
         var changed = false
         if (href != path) {
             href = path
@@ -489,7 +491,7 @@ internal fun setText(label: JBLabel, text: String): Boolean {
 
 @RequiresEdt
 internal fun setTargetText(label: JBLabel, text: String): Boolean {
-    val value = single(text)
+    val value = fileLinkText(text)
     if (label.text == value) return false
     label.text = value
     return true
@@ -511,15 +513,10 @@ private fun <T : JBLabel> clip(label: T): T = label.apply {
 }
 
 private fun html(text: String): String {
-    val value = single(text)
+    val value = fileLinkText(text)
     if (value.isBlank()) return ""
     return XmlStringUtil.wrapInHtml("<nobr>${XmlStringUtil.escapeString(value)}</nobr>")
 }
-
-private fun single(text: String): String = text.lineSequence()
-    .map { it.trim() }
-    .filter { it.isNotEmpty() }
-    .joinToString(" ")
 
 @RequiresEdt
 internal fun show(parts: ToolParts, link: Boolean): Boolean {
