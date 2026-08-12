@@ -71,9 +71,18 @@ export interface PRComment {
   createdAt?: number
 }
 
+export type ReviewerState = "approved" | "changes_requested" | "pending" | "commented"
+
+export interface PRReviewer {
+  login: string
+  avatar?: string
+  state: ReviewerState
+}
+
 export interface PRStatus {
   number: number
   title: string
+  body?: string
   url: string
   state: PRState
   review: ReviewDecision | null
@@ -83,12 +92,13 @@ export interface PRStatus {
     passed: number
     failed: number
     pending: number
-    items: PRCheck[]
+    checks: PRCheck[]
   }
+  reviewers: PRReviewer[]
   comments?: {
     total: number
     unresolved: number
-    items: PRComment[]
+    comments: PRComment[]
   }
   additions: number
   deletions: number
@@ -299,6 +309,7 @@ interface BranchesMessage {
 
 interface ImportResultMessage {
   type: "agentManager.importResult"
+  projectId?: string
   success: boolean
   message: string
   errorCode?: WorktreeSetupErrorCode
@@ -378,6 +389,11 @@ interface PRStatusOutMessage {
   error?: "gh_missing" | "gh_auth" | "fetch_failed"
 }
 
+interface PRErrorOutMessage {
+  type: "agentManager.prError"
+  error: "gh_missing" | "gh_auth" | "fetch_failed"
+}
+
 interface ActionOutMessage {
   type: "action"
   action: string
@@ -417,6 +433,7 @@ export type AgentManagerOutMessage =
   | RevertWorktreeFileResultMessage
   | DiffBranchesMessage
   | PRStatusOutMessage
+  | PRErrorOutMessage
   | ActionOutMessage
   | RunStatusMessage
   | TerminalCreatedMessage
@@ -738,6 +755,7 @@ interface OpenPRIn {
   type: "agentManager.openPR"
   projectId?: string
   worktreeId: string
+  url?: string
 }
 
 interface OpenSessionsIn {
@@ -945,6 +963,8 @@ interface TerminalCreateIn {
   placement: TerminalPlacement
   /** null for LOCAL, worktree id otherwise */
   worktreeId: string | null
+  cols?: number
+  rows?: number
 }
 
 interface TerminalCloseIn {

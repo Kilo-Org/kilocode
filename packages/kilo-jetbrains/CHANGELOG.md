@@ -1,5 +1,27 @@
 # Changelog
 
+## 7.5.0
+
+### Minor Changes
+
+- [#13015](https://github.com/Kilo-Org/kilocode/pull/13015) [`62923ad`](https://github.com/Kilo-Org/kilocode/commit/62923adb518371d1659ea65e5519768e4abf231b) - Include the active editor file, open files, visible files, and selected text in JetBrains chat context by default, with a Context settings toggle to disable it. Files matched by `.kilocodeignore` (or `.gitignore` plus `.env` files) are excluded, and the default shell is reported to the agent.
+
+- [#12895](https://github.com/Kilo-Org/kilocode/pull/12895) [`a340d61`](https://github.com/Kilo-Org/kilocode/commit/a340d61716b6fdec89943bff438c151b513fd1f3) - Log whether the JetBrains plugin downloads Core or uses the bundled/cached version, and mark the Core version shown in the popup as "Bundled" when it wasn't downloaded.
+
+### Patch Changes
+
+- [#13040](https://github.com/Kilo-Org/kilocode/pull/13040) [`48c4a4a`](https://github.com/Kilo-Org/kilocode/commit/48c4a4af227572011bf44c172ab0ae86e0c2a429) - Ignore negative pricing entries from model catalogs and handle unpriced models gracefully in UI price formatting.
+
+- [#12861](https://github.com/Kilo-Org/kilocode/pull/12861) [`a957cc3`](https://github.com/Kilo-Org/kilocode/commit/a957cc38031823ae923d5bf7cc406543e19124c6) - Avoid GitHub API rate-limit failures when the JetBrains plugin downloads the pinned Kilo CLI.
+
+- [#12869](https://github.com/Kilo-Org/kilocode/pull/12869) [`cee2e36`](https://github.com/Kilo-Org/kilocode/commit/cee2e369f80ac5e8baa949ab7c789dcec831d886) - Fix dropping files into the JetBrains prompt so code files are added as readable file references and drops anywhere in the session panel feed the prompt attachments.
+
+- [#13015](https://github.com/Kilo-Org/kilocode/pull/13015) [`74470aa`](https://github.com/Kilo-Org/kilocode/commit/74470aa8611cdb48e3dc6c2e0deaa027b9af46f9) - Render prompt attachments inside the sent message bubble with file chips, image previews, and selection-aware file opening.
+
+- [#12862](https://github.com/Kilo-Org/kilocode/pull/12862) [`c47cfec`](https://github.com/Kilo-Org/kilocode/commit/c47cfeceebcd6b2ae5c0d416bde00f7e57449df8) - Improve JetBrains session transcript layout, icons, reverted-change summaries, and multi-hunk diff rendering.
+
+- [#12909](https://github.com/Kilo-Org/kilocode/pull/12909) [`5e60473`](https://github.com/Kilo-Org/kilocode/commit/5e60473e768325ce4109ef1c07106e392b49427f) - Improve slash command completion to match separators, camel-case humps, and contained command names.
+
 ## 7.4.18
 
 ### Patch Changes
@@ -127,6 +149,81 @@
 - [#12059](https://github.com/Kilo-Org/kilocode/pull/12059) [`8ea3f10`](https://github.com/Kilo-Org/kilocode/commit/8ea3f10495e28c8a131b805d51f8f7524895148b) - Increase spacing before non-initial user prompts in the JetBrains session transcript.
 
 ## [Unreleased]
+
+## [7.0.15] - 2026-08-10
+
+### Added
+
+- Include editor context in JetBrains prompts, including the active file, open and visible files, selected text, and shell context when available.
+- Show selected text and attached files as prompt attachments in user messages, with clickable links back to source files and selections.
+- Add a JetBrains Context setting to enable or disable automatic editor context.
+
+### Fixed
+
+- Avoid JetBrains prompt editor crashes during undo/redo bulk updates.
+- Keep completed question and tool views in the correct JetBrains transcript position.
+- Keep JetBrains chat pinned to the bottom when a turn finishes after modified-file updates.
+
+## [7.0.14] - 2026-08-06
+
+### Fixed
+
+- Improve slash command matching in the JetBrains plugin so typed commands resolve more reliably.
+- Avoid startup crashes when the Kilo CLI database is temporarily locked by another process.
+
+## [7.0.13] - 2026-08-05
+
+### Added
+
+- Show the pinned Kilo Core version and whether JetBrains is using a downloaded or bundled CLI build.
+
+### Fixed
+
+- Avoid GitHub checksum API rate limits when JetBrains verifies downloaded Kilo Core CLI assets.
+- Add dropped files as JetBrains file references so attachments are available to Kilo reliably.
+- Stop eager Kilo Core file watchers when running from JetBrains to reduce unnecessary background work.
+- Improve JetBrains session diff rendering, including full-file editor diffs, multi-hunk diffs, fallback handling, gutter line numbers, and session-scoped diff paths.
+- Speed up local recall searches in Kilo Core.
+- Omit persona details from generated session names.
+- Make invalid tool-argument errors clearer and more actionable to the model.
+- Handle SQLite lock errors more gracefully.
+
+### Changed
+
+- Bump the JetBrains CLI pin to Kilo CLI v7.4.20.
+- Include upstream OpenCode updates through v1.17.13.
+- Adopt upstream reasoning variant metadata from OpenCode v1.18.11.
+
+## [7.0.13-rc.1] - 2026-08-05
+
+### Added
+
+- Show the pinned Kilo Core version and whether JetBrains is using a downloaded or bundled CLI build.
+- Add JetBrains developer tooling for pinning, unpinning, and updating the bundled Kilo Core CLI used by the plugin.
+- Support resuming Claude and Codex sessions through the bundled Kilo Core runtime.
+- Add remote CLI file delivery support for attachment flows.
+
+### Fixed
+
+- Avoid GitHub checksum API rate limits when JetBrains verifies downloaded Kilo Core CLI assets.
+- Add dropped files as JetBrains file references so attachments are available to Kilo reliably.
+- Stop eager Kilo Core file watchers when running from JetBrains to reduce unnecessary background work.
+- Improve JetBrains session diff rendering, including full-file editor diffs, multi-hunk diffs, fallback handling, gutter line numbers, and session-scoped diff paths.
+- Preserve configured subagent routing in Kilo Core.
+- Defer threshold compaction during active tool loops so long-running sessions do not compact at unsafe points.
+- Speed up local recall searches in Kilo Core.
+- Stop inline skill-shell documentation examples from triggering permission prompts.
+- Omit persona details from generated session names.
+- Skip Kilo Core startup work for informational commands.
+- Make invalid tool-argument errors clearer and more actionable to the model.
+- Allow explicit external markdown sources in Kilo Core.
+- Handle SQLite lock errors more gracefully.
+
+### Changed
+
+- Bump the JetBrains CLI pin to Kilo CLI v7.4.20.
+- Include upstream OpenCode updates through v1.17.13.
+- Adopt upstream reasoning variant metadata from OpenCode v1.18.11.
 
 ## [7.0.12] - 2026-08-01
 

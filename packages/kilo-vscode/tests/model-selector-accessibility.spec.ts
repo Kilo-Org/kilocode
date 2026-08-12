@@ -80,17 +80,32 @@ test("auto efficient details show server description and model choices", async (
   await expect(preview).not.toContainText("openai/gpt-5.5")
 })
 
-test("typing a provider initial moves the active descendant to matching results", async ({ page }) => {
+test("auto frontier details show model choices when routes are present", async ({ page }) => {
+  await load(page, "shared--model-selector-accessible")
+
+  await page.getByRole("button", { name: "Review model: Alpha" }).click()
+  await page.getByRole("treeitem", { name: /Kilo Auto Frontier/ }).click()
+
+  const preview = page.locator(".model-selector-preview")
+  await expect(preview).toContainText("Routes each request to the strongest available models.")
+  await expect(preview).toContainText("Model choices")
+  await expect(preview).toContainText("openai/gpt-5.5")
+  await expect(preview).toContainText("anthropic/claude-opus-4.6")
+  await expect(preview).not.toContainText("google/gemini-2.5-flash")
+})
+
+test("search uses a flat relevance-ranked result list with provider labels", async ({ page }) => {
   await load(page, "shared--model-selector-accessible")
 
   await page.getByRole("button", { name: "Review model: Alpha" }).click()
   const combobox = page.getByRole("combobox", { name: "Review model: Alpha. Search models" })
-  await combobox.fill("N")
+  await combobox.fill("nov")
 
   const nova = page.getByRole("treeitem", { name: "Nova" })
   await expect(nova).toBeVisible()
   await expect(combobox).toHaveAttribute("aria-activedescendant", await nova.getAttribute("id"))
-  await expect(page.getByRole("treeitem", { name: "NVIDIA" })).toHaveAttribute("aria-expanded", "true")
+  await expect(page.locator(".model-selector-group-label").filter({ hasText: "NVIDIA" })).toHaveCount(0)
+  await expect(nova).toContainText("NVIDIA")
 })
 
 test("provider groups collapse, expand, and skip their model rows", async ({ page }) => {
@@ -141,12 +156,13 @@ test("active descendant always identifies a visible tree item", async ({ page })
   await active()
   await combobox.fill("N")
   await active()
-  await combobox.press("ArrowLeft")
   await combobox.press("ArrowDown")
-  await combobox.press("ArrowLeft")
   await active()
   await combobox.fill("no matching model")
-  await active()
+  await expect(combobox).toHaveAttribute(
+    "aria-activedescendant",
+    await page.getByRole("treeitem", { name: "Use default model" }).getAttribute("id"),
+  )
 })
 
 test("expanded preview waits for explicit pointer selection", async ({ page }) => {

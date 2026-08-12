@@ -128,6 +128,7 @@ export const PtyGroup = HttpApiGroup.make("server.pty")
         description: "Establish a WebSocket connection streaming PTY output and accepting terminal input.",
         transform: (operation) => ({
           ...operation,
+          "x-websocket": true,
           parameters: [
             ...(operation.parameters ?? []),
             ...[

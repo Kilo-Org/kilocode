@@ -12,7 +12,7 @@ export function createChatFocus(deps: {
   review: () => boolean
 }) {
   const focus = (force: boolean) => {
-    if ((!force && !document.hasFocus()) || deps.term() || deps.history() || deps.review()) return
+    if ((!force && (!document.hasFocus() || deps.term())) || deps.history() || deps.review()) return
     if (preservesTextFocus(document.activeElement)) return
     if (!force && document.activeElement?.matches('[role="tab"]')) return
     if (!force && document.activeElement?.closest('[data-component="question-dock"]')) return
@@ -33,6 +33,23 @@ export function createChatFocus(deps: {
         requestAnimationFrame(() => focus(force))
       })
     })
+  }
+}
+
+export function createPromptFocus(
+  terms: { setActiveId: (id: undefined) => void; setFocusedId: (id: undefined) => void },
+  focus: (force?: boolean) => void,
+) {
+  let until = 0
+  return {
+    active: () => Date.now() < until,
+    focus: () => {
+      until = Date.now() + 500
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+      terms.setActiveId(undefined)
+      terms.setFocusedId(undefined)
+      focus(true)
+    },
   }
 }
 

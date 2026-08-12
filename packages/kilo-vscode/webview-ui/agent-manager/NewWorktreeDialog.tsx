@@ -2,10 +2,11 @@
 
 /** @jsxImportSource solid-js */
 
-import { type Component, For, Show, createSignal, createEffect, createMemo, onMount, onCleanup } from "solid-js"
+import { type Component, For, Show, createSignal, createEffect, createMemo, on, onMount, onCleanup } from "solid-js"
 import type {
   AgentManagerBranchesMessage,
   AgentManagerImportResultMessage,
+  AgentProjectSnapshot,
   BranchInfo,
   EnhancePromptResultMessage,
   EnhancePromptErrorMessage,
@@ -22,7 +23,7 @@ import { useServer } from "../src/context/server"
 import { useSession } from "../src/context/session"
 import { useProvider } from "../src/context/provider"
 import { useConfig } from "../src/context/config"
-import { cycleVariant } from "../src/context/session-variant-store"
+import { cycleVariant, preserveVariant } from "../src/context/session-variant-store"
 import { ModelSelectorBase } from "../src/components/shared/ModelSelector"
 import { ModeSwitcherBase } from "../src/components/shared/ModeSwitcher"
 import { SpeechToTextButton } from "../src/components/speech-to-text/SpeechToTextButton"
@@ -49,13 +50,55 @@ import { BranchSelect, BranchSelectPopover } from "../src/components/shared/Bran
 import { tracker } from "./telemetry"
 import { cycleAgent } from "../src/context/session-agent"
 import type { ModeRouter } from "./mode-router"
+import { ProjectSelect } from "./ProjectSelect"
 
 type VersionCount = 1 | 2 | 3 | 4
 const VERSION_OPTIONS: VersionCount[] = [1, 2, 3, 4]
-const WORKTREE_PROMPT_COMMANDS = new Set(["models", "agents", "variant", "sandbox"])
+const WORKTREE_PROMPT_COMMANDS = new Set(["models", "agents", "variant", "sandbox", "project"])
 const WORKTREE_PROMPT_SCOPE = "agent-manager-worktree-prompt"
 
 type DialogTab = "new" | "import"
+type Model = { providerID: string; modelID: string }
+
+type DialogSelections = {
+  agent?: string
+  model?: Model
+  variant?: string
+  sandbox?: boolean
+}
+
+function readDialogSelections(value: unknown): DialogSelections {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {}
+  const data = value as Record<string, unknown>
+  const raw = data.model
+  const model = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : undefined
+
+  return {
+    agent: typeof data.agent === "string" ? data.agent : undefined,
+    model:
+      typeof model?.providerID === "string" && typeof model.modelID === "string"
+        ? { providerID: model.providerID, modelID: model.modelID }
+        : undefined,
+    variant: typeof data.variant === "string" ? data.variant : undefined,
+    sandbox: typeof data.sandbox === "boolean" ? data.sandbox : undefined,
+  }
+}
+
+function restoreAgent(value: string | undefined, list: Array<{ name: string }>, base: string): string {
+  if (!value) return base
+  if (list.length === 0) return value
+  return list.some((item) => item.name === value) ? value : base
+}
+
+function restoreModel(value: Model | undefined, providers: Record<string, unknown>, valid: (value: Model) => boolean) {
+  if (!value) return undefined
+  if (Object.keys(providers).length === 0) return value
+  return valid(value) ? value : undefined
+}
+
+function fallback<T>(value: T | undefined, get: () => T): T {
+  return value === undefined ? get() : value
+}
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 
@@ -83,8 +126,11 @@ function sanitizeBranchName(name: string): string {
 
 export const NewWorktreeDialog: Component<{
   onClose: () => void
-  defaultBaseBranch?: string
+  defaultBase?: (projectId: string) => string | undefined
   projectId?: string
+  projects?: () => AgentProjectSnapshot[]
+  activeProjectId?: string
+  onCreate?: (projectId: string) => void
   mode: ModeRouter
 }> = (props) => {
   const { t } = useLanguage()
@@ -99,21 +145,34 @@ export const NewWorktreeDialog: Component<{
   const click = metrics.click
 
   const [tab, setTab] = createSignal<DialogTab>("new")
+  const [project, setProject] = createSignal(props.projectId ?? props.activeProjectId)
+  const [projectOpen, setProjectOpen] = createSignal(false)
+  const projects = () => props.projects?.() ?? []
+  const showProject = () => projects().length > 0
+  const projectLabel = () => projects().find((item) => item.id === project())?.label ?? ""
+  const base = () => {
+    const id = project()
+    return id ? props.defaultBase?.(id) : undefined
+  }
 
   // --- Shared branch data (used by both New tab's base branch selector and Import tab) ---
   const [branches, setBranches] = createSignal<BranchInfo[]>([])
   const [branchesLoading, setBranchesLoading] = createSignal(false)
-  const [defaultBranch, setDefaultBranch] = createSignal(props.defaultBaseBranch ?? "main")
+  const [defaultBranch, setDefaultBranch] = createSignal(base() ?? "main")
   const [branchSearch, setBranchSearch] = createSignal("")
 
   // --- New tab state ---
   const [name, setName] = createSignal("")
   const cached = vscode.getState<Record<string, unknown>>()
   const [prompt, setPrompt] = createSignal((cached?.advancedDialogPrompt as string) ?? "")
+  const saved = readDialogSelections(cached?.advancedDialogSelections)
   const [versions, setVersions] = createSignal<VersionCount>(1)
-  const initialAgent = session.selectedAgent()
-  const initialModel = session.modelForAgent(initialAgent)
-  const [model, setModel] = createSignal<{ providerID: string; modelID: string } | null>(initialModel)
+  const initialAgent = restoreAgent(saved.agent, session.agents(), session.selectedAgent())
+  const initialModel = fallback(
+    restoreModel(saved.model, provider.providers(), (value) => provider.isModelValid(value)),
+    () => session.modelForAgent(initialAgent),
+  )
+  const [model, setModel] = createSignal<Model | null>(initialModel)
   const [compareMode, setCompareMode] = createSignal(false)
   const [modelAllocations, setModelAllocations] = createSignal<ModelAllocations>(new Map())
   const [agent, setAgent] = createSignal(initialAgent)
@@ -125,8 +184,10 @@ export const NewWorktreeDialog: Component<{
   const [baseBranchOpen, setBaseBranchOpen] = createSignal(false)
   const [compareOpen, setCompareOpen] = createSignal(false)
   const [highlightedIndex, setHighlightedIndex] = createSignal(0)
-  const [variant, setVariant] = createSignal<string | undefined>(session.variantForAgent(initialAgent, initialModel))
-  const [sandbox, setSandbox] = createSignal<boolean | undefined>()
+  const [variant, setVariant] = createSignal<string | undefined>(
+    fallback(saved.variant, () => session.variantForAgent(initialAgent, initialModel)),
+  )
+  const [sandbox, setSandbox] = createSignal<boolean | undefined>(saved.sandbox)
   const [sandboxDefault, setSandboxDefault] = createSignal<boolean | undefined>()
   const [sandboxOverride, setSandboxOverride] = createSignal<boolean | undefined>()
   const [sandboxAvailable, setSandboxAvailable] = createSignal(true)
@@ -207,7 +268,7 @@ export const NewWorktreeDialog: Component<{
       return
     }
     const stored = variant()
-    if (!stored || !list.includes(stored)) setVariant(list[0])
+    if (!stored || !list.includes(stored)) setVariant(preserveVariant(stored, list) ?? list[0])
   })
 
   createEffect(() => {
@@ -285,6 +346,19 @@ export const NewWorktreeDialog: Component<{
     vscode.setState({ ...state, advancedDialogImages: imgs.length > 0 ? imgs : undefined })
   }
 
+  createEffect(() => {
+    const state = vscode.getState<Record<string, unknown>>() ?? {}
+    vscode.setState({
+      ...state,
+      advancedDialogSelections: {
+        agent: agent(),
+        model: model(),
+        variant: variant(),
+        sandbox: sandbox(),
+      },
+    })
+  })
+
   // Auto-persist images to webview state on any change
   createEffect(() => persistImages(imageAttach.images()))
 
@@ -307,18 +381,25 @@ export const NewWorktreeDialog: Component<{
       if (session.agents().length < 2) hidden.add("agents")
       if (variants().length === 0) hidden.add("variant")
       if (!sandboxVisible()) hidden.add("sandbox")
+      if (!showProject()) hidden.add("project")
       return hidden
     },
     WORKTREE_PROMPT_COMMANDS,
     WORKTREE_PROMPT_SCOPE,
+    [
+      {
+        name: "project",
+        description: t("agentManager.dialog.project.select"),
+        hints: [],
+        action: () => setProjectOpen(true),
+      },
+    ],
   )
   const onFocusPrompt = () => restorePrompt()
   window.addEventListener("focusPrompt", onFocusPrompt)
   onCleanup(() => window.removeEventListener("focusPrompt", onFocusPrompt))
 
   onMount(() => {
-    setBranchesLoading(true)
-    vscode.postMessage({ type: "agentManager.requestBranches", projectId: props.projectId })
     // Resize textarea if restoring a cached prompt
     if (prompt()) adjustHeight()
     const focus = () => {
@@ -333,6 +414,20 @@ export const NewWorktreeDialog: Component<{
       setTimeout(focus, 50)
     })
   })
+
+  // Branch data and base-branch defaults belong to the selected project. Other
+  // dialog state deliberately survives project changes.
+  createEffect(
+    on(project, (id) => {
+      setBranches([])
+      setBranchSearch("")
+      setHighlightedIndex(0)
+      setBaseBranch(null)
+      setDefaultBranch(id ? (props.defaultBase?.(id) ?? "main") : "main")
+      setBranchesLoading(true)
+      vscode.postMessage({ type: "agentManager.requestBranches", projectId: id })
+    }),
+  )
 
   const effectiveBaseBranch = () => baseBranch() ?? defaultBranch()
 
@@ -367,10 +462,12 @@ export const NewWorktreeDialog: Component<{
     const allocations = isCompare ? allocationsToArray(modelAllocations()) : undefined
     const count = total()
     const sel = isCompare ? null : model()
+    const target = project()
+    if (target) props.onCreate?.(target)
 
     vscode.postMessage({
       type: "agentManager.createMultiVersion",
-      projectId: props.projectId,
+      projectId: target,
       text,
       name: name().trim() || undefined,
       versions: count,
@@ -519,12 +616,14 @@ export const NewWorktreeDialog: Component<{
   const importUnsub = vscode.onMessage((msg) => {
     if (msg.type === "agentManager.branches") {
       const ev = msg as AgentManagerBranchesMessage
+      if (ev.projectId !== project()) return
       setBranches(ev.branches)
-      if (!props.defaultBaseBranch) setDefaultBranch(ev.defaultBranch)
+      if (!base()) setDefaultBranch(ev.defaultBranch)
       setBranchesLoading(false)
     }
     if (msg.type === "agentManager.importResult") {
       const ev = msg as AgentManagerImportResultMessage
+      if (ev.projectId !== project()) return
       setPrPending(false)
       setImportPending(false)
       if (ev.success) {
@@ -563,7 +662,9 @@ export const NewWorktreeDialog: Component<{
     const url = prUrl().trim()
     if (!url || isPending()) return
     setPrPending(true)
-    vscode.postMessage({ type: "agentManager.importFromPR", projectId: props.projectId, url })
+    const target = project()
+    if (target) props.onCreate?.(target)
+    vscode.postMessage({ type: "agentManager.importFromPR", projectId: target, url })
   }
 
   const handleBranchSelect = (name: string) => {
@@ -572,7 +673,9 @@ export const NewWorktreeDialog: Component<{
     setImportPending(true)
     setBranchOpen(false)
     setBranchSearch("")
-    vscode.postMessage({ type: "agentManager.importFromBranch", projectId: props.projectId, branch: name })
+    const target = project()
+    if (target) props.onCreate?.(target)
+    vscode.postMessage({ type: "agentManager.importFromBranch", projectId: target, branch: name })
   }
 
   return (
@@ -595,6 +698,62 @@ export const NewWorktreeDialog: Component<{
         >
           {t("agentManager.dialog.tab.import")}
         </button>
+        {/* Project scope applies to both New and Import tabs. */}
+        <Show when={showProject()}>
+          <div class="am-nv-project-inline">
+            <div class="am-selector-wrapper">
+              <DeferredPopover
+                open={projectOpen()}
+                onOpenChange={setProjectOpen}
+                placement="bottom-start"
+                flip={false}
+                sameWidth
+                portal={false}
+                deferDismiss
+                class="am-dropdown"
+                trigger={
+                  <button
+                    class="am-selector-trigger"
+                    type="button"
+                    aria-label={t("agentManager.dialog.project.select")}
+                    disabled={starting() || isPending()}
+                  >
+                    <span class="am-selector-left">
+                      <Icon name="folder" size="small" />
+                      <Show
+                        when={projectLabel()}
+                        fallback={
+                          <span class="am-selector-value am-selector-placeholder">
+                            {t("agentManager.dialog.project.select")}
+                          </span>
+                        }
+                      >
+                        <span class="am-selector-value">{projectLabel()}</span>
+                      </Show>
+                    </span>
+                    <span class="am-selector-right">
+                      <Icon name="selector" size="small" />
+                    </span>
+                  </button>
+                }
+              >
+                <ProjectSelect
+                  projects={projects()}
+                  selected={project()}
+                  onSelect={(id) => {
+                    track("project_select", { changed: id !== props.activeProjectId })
+                    setProject(id)
+                    setProjectOpen(false)
+                  }}
+                  labels={{
+                    untrusted: t("agentManager.dialog.project.untrusted"),
+                    missing: t("agentManager.dialog.project.missing"),
+                  }}
+                />
+              </DeferredPopover>
+            </div>
+          </div>
+        </Show>
       </div>
 
       {/* New tab */}
@@ -712,7 +871,12 @@ export const NewWorktreeDialog: Component<{
                     <ModelSelectorBase
                       value={model()}
                       onSelect={(pid, mid) => {
-                        if (pid && mid) setModel({ providerID: pid, modelID: mid })
+                        if (!pid || !mid) return
+                        const current = effectiveVariant()
+                        const next = { providerID: pid, modelID: mid }
+                        const list = Object.keys(provider.findModel(next)?.variants ?? {})
+                        setModel(next)
+                        setVariant(preserveVariant(current, list))
                       }}
                       onPick={restorePrompt}
                       onCancel={restorePrompt}

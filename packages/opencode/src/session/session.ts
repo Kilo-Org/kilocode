@@ -870,6 +870,7 @@ export const layer: Layer.Layer<
         model, // kilocode_change - preserve the model + variant active at the fork point
         sourceID: input.sessionID, // kilocode_change - forks preserve initialized confinement
         sandboxFallback, // kilocode_change - seed confinement from the source session's original directory
+        platform: KiloSession.resolvePlatform(original.id), // kilocode_change - inherit platform telemetry attribution
       })
       const idMap = new Map<string, MessageID>()
 
@@ -906,6 +907,13 @@ export const layer: Layer.Layer<
       }
       // kilocode_change - preserve imported/cumulative diffs when forking (self-contained Storage runtime keeps this shared file off the legacy Storage layer)
       yield* carryForkDiff(input.sessionID, session.id)
+      // kilocode_change start - fork terminal task children under the new parent and remap their references
+      yield* KiloSession.remapChildren({
+        sessionID: session.id,
+        remapped: new Map([[input.sessionID, session.id]]),
+        ops: { get, messages, create, updateMessage, updatePart },
+      })
+      // kilocode_change end
       return session
     })
 

@@ -41,6 +41,71 @@ async function withRepo(run: (cwd: string) => Promise<void>): Promise<void> {
 }
 
 describe("GitOps", () => {
+  it("uses the configured Git executable for raw commands", async () => {
+    await withRepo(async (cwd) => {
+      let calls = 0
+      const git = new GitOps({
+        log: () => undefined,
+        binary: async () => {
+          calls++
+          return "git"
+        },
+      })
+
+      expect(await fs.realpath(await git.root(cwd))).toBe(await fs.realpath(cwd))
+      expect(calls).toBe(1)
+    })
+  })
+
+  it("does not hold a semaphore slot while resolving Git", async () => {
+    const semaphore = new Semaphore(1)
+    let resolve!: (value: string) => void
+    const binary = new Promise<string>((done) => {
+      resolve = done
+    })
+    const git = new GitOps({ log: () => undefined, semaphore, binary: () => binary })
+    const pending = git.currentBranch("/repo")
+    let entered = false
+
+    await semaphore.run(async () => {
+      entered = true
+    })
+    resolve("git")
+    await pending
+
+    expect(entered).toBe(true)
+  })
+
+  it("stops waiting for Git resolution when disposed", async () => {
+    const git = new GitOps({
+      log: () => undefined,
+      binary: () => new Promise(() => undefined),
+    })
+    const pending = git.currentBranch("/repo")
+
+    git.dispose()
+
+    expect(await pending).toBe("")
+  })
+
+  it("retries executable resolution after a transient failure", async () => {
+    await withRepo(async (cwd) => {
+      let calls = 0
+      const git = new GitOps({
+        log: () => undefined,
+        binary: async () => {
+          calls++
+          if (calls === 1) throw new Error("transient resolution failure")
+          return "git"
+        },
+      })
+
+      expect(await git.root(cwd)).toBeUndefined()
+      expect(await fs.realpath(await git.root(cwd))).toBe(await fs.realpath(cwd))
+      expect(calls).toBe(2)
+    })
+  })
+
   describe("currentBranch", () => {
     it("returns the current branch name", async () => {
       const git = ops(async (args) => {

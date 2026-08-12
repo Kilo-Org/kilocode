@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.ui.attachment
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.ui.fileLinkHtml
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.iconButton
@@ -46,6 +47,62 @@ data class AttachmentCardItem(
     val url: String,
     val path: Path? = null,
 )
+
+class AttachmentChip(
+    private val item: AttachmentCardItem,
+    private val file: Boolean,
+    private val startLine: Int? = null,
+    private val endLine: Int? = null,
+    open: (() -> Unit)? = null,
+) : JPanel(BorderLayout()) {
+    private val tip = tooltip(item)
+    private val open = open?.let { callback ->
+        object : MouseAdapter() {
+            override fun mouseClicked(e: MouseEvent) {
+                callback()
+            }
+        }
+    }
+
+    init {
+        isOpaque = false
+        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+        toolTipText = tip
+        accessibleContext?.accessibleName = KiloBundle.message("prompt.attachment.open", item.name)
+        val label = JBLabel(fileLinkHtml(label())).apply {
+            icon = attachmentIcon(item.mime, item.name)
+            iconTextGap = JBUI.scale(SessionUiStyle.View.Attachment.CHIP_ICON_GAP)
+            toolTipText = tip
+        }
+        add(label, BorderLayout.CENTER)
+        watch(this)
+    }
+
+    override fun getPreferredSize(): Dimension {
+        val size = super.getPreferredSize()
+        return Dimension(size.width, JBUI.scale(SessionUiStyle.View.Attachment.CHIP_HEIGHT))
+    }
+
+    override fun getMinimumSize(): Dimension = preferredSize
+
+    private fun label(): String {
+        val start = startLine
+        val end = endLine
+        if (file && start != null && end != null) return KiloBundle.message("session.attachment.file.range", item.name, start, end)
+        if (file) return item.name
+        return KiloBundle.message("session.attachment.unknown", item.mime.ifBlank { "unknown" })
+    }
+
+    private fun watch(node: Component) {
+        if (node is JComponent) node.toolTipText = tip
+        open?.let {
+            node.removeMouseListener(it)
+            node.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+            node.addMouseListener(it)
+        }
+        if (node is Container) node.components.forEach(::watch)
+    }
+}
 
 open class AttachmentCard(
     private val item: AttachmentCardItem,
