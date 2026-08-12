@@ -17,30 +17,55 @@ import { useSession } from "../../context/session"
 import { calcTokenUsage, collapseCostBreakdown } from "../../context/session-utils"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
+import { useLocalTabs } from "../../context/local-tabs"
 import { TaskTimeline } from "./TaskTimeline"
 import { ContextProgress } from "./ContextProgress"
 import { TaskUsage } from "./TaskUsage"
 import { TranscriptSearch } from "./TranscriptSearch"
 import { useTranscriptSearch } from "../../context/transcript-search"
 import { hasModelUsage, tokenSummary } from "../../context/model-usage"
+import { focusPrompt } from "../../utils/tab-navigation"
+import { isPendingTab } from "../../utils/local-tabs"
 import { SessionRenameEditor } from "../shared/SessionRenameEditor"
+import { SessionTabSwitcher } from "./SessionTabSwitcher"
 import { target as todoTarget } from "../../context/todo-revert"
 import type { Part, TodoItem, ExtensionMessage } from "../../types/messages"
 
 interface TaskHeaderProps {
   readonly?: boolean
+  sessionSwitcher?: boolean
 }
 
 export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const session = useSession()
   const language = useLanguage()
   const search = useTranscriptSearch()
+  const tabs = useLocalTabs()
 
   const title = createMemo(() => session.currentSession()?.title ?? language.t("command.session.new"))
   const canRename = createMemo(() => !props.readonly && !!session.currentSession())
   const hasMessages = createMemo(() => session.messages().length > 0)
   const busy = createMemo(() => session.status() === "busy")
   const canCompact = createMemo(() => !busy() && session.visibleMessages().length > 0 && !!session.selected())
+  const infos = createMemo(() => new Map(session.sessions().map((item) => [item.id, item])))
+  const tabTitle = (id: string) => {
+    if (isPendingTab(id)) return language.t("sidebar.session.newSession")
+    return infos().get(id)?.title || language.t("session.untitled")
+  }
+  const tabBusy = (id: string) => {
+    const status = session.allStatusMap()[id]
+    return status?.type === "busy" || status?.type === "retry"
+  }
+  const rows = createMemo(() =>
+    (tabs?.ids() ?? []).map((id) => ({
+      id,
+      title: tabTitle(id),
+      active: tabs?.active() === id,
+      busy: tabBusy(id),
+      pending: isPendingTab(id),
+    })),
+  )
+  const hasTabs = createMemo(() => !!props.sessionSwitcher && !!tabs && tabs.ids().length > 0)
 
   const fmt = (n: number) => new Intl.NumberFormat(language.locale(), { style: "currency", currency: "USD" }).format(n)
 
@@ -113,9 +138,9 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   // Escape — send focus back to the chat input rather than leaving it
   // stranded on whatever control was just clicked/removed. Watches
   // `closeSignal` rather than `active()` transitions so that MessageList
-  // silently resetting the widget on a session/tab change (which also
-  // flips `active()` false) can't trigger this same aggressive restore and
-  // steal focus back from the tab strip's own focus handling. `defer: true`
+  // silently resetting the widget on a session change (which also flips
+  // `active()` false) can't trigger this same aggressive restore and steal
+  // focus back from the session switcher's own focus handling. `defer: true`
   // skips the initial run so mounting doesn't immediately steal focus.
   createEffect(
     on(
@@ -185,8 +210,31 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   }
 
   return (
-    <Show when={hasMessages()}>
+    <Show when={hasMessages() || hasTabs()}>
       <div data-component="task-header">
+        <Show when={hasTabs() ? tabs : undefined}>
+          {(tab) => (
+            <div data-slot="task-header-session-switcher">
+              <SessionTabSwitcher
+                items={rows}
+                labels={{
+                  open: language.t("session.tabs.switcher.open"),
+                  search: language.t("session.tabs.switcher.search"),
+                  close: language.t("common.closeTab"),
+                  current: language.t("session.tabs.switcher.current"),
+                  pending: language.t("session.tabs.switcher.pending"),
+                  busy: language.t("session.tabs.switcher.busy"),
+                }}
+                onSelect={tab().select}
+                onRestore={focusPrompt}
+                onClose={tab().close}
+                placement="bottom-start"
+                hover
+                autofocus={false}
+              />
+            </div>
+          )}
+        </Show>
         <div data-slot="task-header-title">
           <Show
             when={!renaming()}
@@ -236,7 +284,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
               </Tooltip>
             )}
           </Show>
-          <Show when={!props.readonly}>
+          <Show when={!props.readonly && hasMessages()}>
             <Tooltip value={language.t("command.session.compact")} placement="bottom">
               <IconButton
                 icon="compress"

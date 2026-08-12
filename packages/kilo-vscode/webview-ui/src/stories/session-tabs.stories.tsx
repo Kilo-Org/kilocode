@@ -36,7 +36,7 @@ export const SwitcherOpen: Story = {
         }}
       >
         <textarea class="sr-only" aria-label="Chat input" data-slot="session-prompt-focus-target" />
-        <div class="session-tab-switcher-wrap">
+        <div data-slot="task-header-session-switcher">
           <SessionTabSwitcher
             items={() => rows}
             labels={{

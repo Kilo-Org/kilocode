@@ -5,7 +5,7 @@ import type { ListRef } from "@kilocode/kilo-ui/list"
 import { Popover } from "@kilocode/kilo-ui/popover"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
-import { Show, createEffect, createMemo, createSignal, type Component, type JSX } from "solid-js"
+import { Show, createEffect, createMemo, createSignal, onCleanup, type Component, type JSX } from "solid-js"
 
 interface SessionTabSwitcherItem {
   id: string
@@ -30,6 +30,9 @@ interface SessionTabSwitcherProps {
   onClose: (id: string) => void
   defaultOpen?: boolean
   portal?: boolean
+  placement?: "bottom-start" | "bottom-end"
+  hover?: boolean
+  autofocus?: boolean
 }
 
 export const SessionTabSwitcher: Component<SessionTabSwitcherProps> = (props) => {
@@ -37,6 +40,7 @@ export const SessionTabSwitcher: Component<SessionTabSwitcherProps> = (props) =>
   const [notice, setNotice] = createSignal("")
   let list: ListRef | undefined
   let root: HTMLDivElement | undefined
+  let timer: ReturnType<typeof setTimeout> | undefined
 
   const current = createMemo(() => props.items().find((item) => item.active))
 
@@ -46,8 +50,33 @@ export const SessionTabSwitcher: Component<SessionTabSwitcherProps> = (props) =>
       root?.querySelector<HTMLInputElement>("input")?.focus({ preventScroll: true })
     })
 
+  const clear = () => {
+    clearTimeout(timer)
+    timer = undefined
+  }
+
+  const show = () => {
+    if (!props.hover) return
+    clear()
+    setOpen(true)
+  }
+
+  const schedule = () => {
+    if (!props.hover) return
+    clear()
+    timer = setTimeout(() => setOpen(false), 120)
+  }
+
+  const hide = () => {
+    if (!props.hover) return
+    clear()
+    setOpen(false)
+  }
+
+  onCleanup(clear)
+
   createEffect(() => {
-    if (open()) focus(true)
+    if (open() && props.autofocus !== false) focus(true)
   })
 
   const select = (item: SessionTabSwitcherItem) => {
@@ -107,9 +136,12 @@ export const SessionTabSwitcher: Component<SessionTabSwitcherProps> = (props) =>
   return (
     <Tooltip value={props.labels.open} placement="bottom" gutter={8} inactive={open()}>
       <Popover
-        placement="bottom-end"
+        placement={props.placement ?? "bottom-end"}
         open={open()}
-        onOpenChange={setOpen}
+        onOpenChange={(next) => {
+          clear()
+          setOpen(next)
+        }}
         modal={false}
         portal={props.portal}
         class="search-menu-popover session-tab-switcher-popover"
@@ -122,9 +154,11 @@ export const SessionTabSwitcher: Component<SessionTabSwitcherProps> = (props) =>
           variant: "ghost",
           class: "search-menu-trigger",
           "aria-label": props.labels.open,
+          onPointerEnter: show,
+          onPointerLeave: schedule,
         }}
       >
-        <div ref={root} class="search-menu session-tab-switcher">
+        <div ref={root} class="search-menu session-tab-switcher" onPointerEnter={show} onPointerLeave={hide}>
           <List<SessionTabSwitcherItem>
             ref={(value) => {
               list = value
@@ -134,7 +168,7 @@ export const SessionTabSwitcher: Component<SessionTabSwitcherProps> = (props) =>
             filterKeys={["title"]}
             current={current()}
             noInitialSelection
-            search={{ placeholder: props.labels.search, autofocus: true }}
+            search={{ placeholder: props.labels.search, autofocus: props.autofocus !== false }}
             onKeyEvent={key}
             onMove={(item) => setNotice(item ? item.title : "")}
             onSelect={(item) => {

@@ -8,6 +8,18 @@
   min-width: 0;
 }
 
+[data-slot="task-header-session-switcher"] {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-inline-start: -6px;
+}
+
+[data-slot="task-header-session-switcher"] .search-menu-trigger[data-component="icon-button"] {
+  width: 26px;
+  height: 26px;
+}
+
 [data-slot="task-header-title-trigger"] {
   display: inline-flex;
   max-width: 100%;
