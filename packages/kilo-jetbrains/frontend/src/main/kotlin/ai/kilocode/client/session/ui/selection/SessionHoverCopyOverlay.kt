@@ -18,6 +18,7 @@ import javax.swing.SwingUtilities
 
 internal class SessionHoverCopyOverlay(
     private val root: JComponent,
+    private val area: JComponent,
     parent: Disposable,
 ) : JPanel(null), Disposable {
     private var target: SessionCopyTarget? = null
@@ -57,16 +58,29 @@ internal class SessionHoverCopyOverlay(
         if (visible.isEmpty) return Rectangle()
         val size = child.preferredSize
         val gap = JBUI.scale(4)
+        val limit = limit(pane)
+        if (limit.isEmpty) return Rectangle()
         if (item.copyToolbar != null) {
             val pt = SwingUtilities.convertPoint(anchor, Point(visible.x, visible.y), pane)
-            val x = (pt.x + visible.width - size.width).coerceIn(0, (pane.width - size.width).coerceAtLeast(0))
-            val y = (pt.y + visible.height - size.height).coerceIn(0, (pane.height - size.height).coerceAtLeast(0))
+            val x = clamp(pt.x + visible.width - size.width, limit.x, limit.x + limit.width - size.width)
+            val y = clamp(pt.y + visible.height - size.height, limit.y, limit.y + limit.height - size.height)
             return Rectangle(x, y, size.width, size.height)
         }
         val pt = SwingUtilities.convertPoint(anchor, Point(visible.x + visible.width, visible.y), pane)
-        val x = (pt.x - size.width - gap).coerceIn(0, (pane.width - size.width).coerceAtLeast(0))
-        val y = (pt.y + gap).coerceIn(0, (pane.height - size.height).coerceAtLeast(0))
+        val x = clamp(pt.x - size.width - gap, limit.x, limit.x + limit.width - size.width)
+        val y = clamp(pt.y + gap, limit.y, limit.y + limit.height - size.height)
         return Rectangle(x, y, size.width, size.height)
+    }
+
+    private fun limit(pane: JPanel): Rectangle {
+        if (!area.isShowing || area.parent == null) return Rectangle()
+        val pt = SwingUtilities.convertPoint(area.parent, area.location, pane)
+        return Rectangle(pt.x, pt.y, area.width, area.height)
+    }
+
+    private fun clamp(value: Int, min: Int, max: Int): Int {
+        if (max < min) return min
+        return value.coerceIn(min, max)
     }
 
     override fun doLayout() {

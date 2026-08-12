@@ -235,7 +235,7 @@ class SessionSelectionCopyTest : SessionUiTestBase() {
         val root = ShowingPanel()
         val parent = Disposer.newDisposable("overlay-test")
         val target = TargetPanel("alpha")
-        val overlay = SessionHoverCopyOverlay(root, parent)
+        val overlay = SessionHoverCopyOverlay(root, root, parent)
         root.setBounds(0, 0, 100, 100)
         target.setBounds(10, 10, 80, 80)
         root.add(target)
@@ -245,6 +245,29 @@ class SessionSelectionCopyTest : SessionUiTestBase() {
         target.dispatchEvent(MouseEvent(target, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(), 0, 1, 1, 0, false))
 
         assertFalse(overlay.isVisible)
+    }
+
+    fun `test hover copy overlay bounds stay inside scroll area`() {
+        val root = ShowingPanel()
+        val area = ShowingPanel()
+        val parent = Disposer.newDisposable("overlay-test")
+        val target = TargetPanel("alpha")
+        val overlay = SessionHoverCopyOverlay(root, area, parent)
+        root.setBounds(0, 0, 200, 200)
+        area.setBounds(0, 0, 200, 100)
+        target.setBounds(170, 90, 20, 20)
+        area.add(target)
+        root.add(area)
+        root.add(overlay)
+
+        try {
+            show(overlay, target)
+            val bounds = overlay.bounds(root, overlay.components.single() as JComponent)
+
+            assertTrue("copy overlay should stay above the prompt/status area", bounds.y + bounds.height <= area.y + area.height)
+        } finally {
+            Disposer.dispose(parent)
+        }
     }
 
     fun `test session context menu can reinstall after parent disposal`() {

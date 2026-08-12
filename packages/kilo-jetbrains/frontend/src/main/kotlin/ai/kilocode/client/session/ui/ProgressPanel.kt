@@ -18,6 +18,7 @@ import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
+import java.awt.Color
 
 /**
  * Progress footer rendered at the bottom of the session transcript while the
@@ -51,7 +52,7 @@ class ProgressPanel(
     private val tick = clock.timer(1000) { syncElapsed() }
 
     init {
-        isOpaque = false
+        isOpaque = true
         isVisible = false
         border = JBUI.Borders.empty(
             UiStyle.Gap.sm(),
@@ -82,6 +83,8 @@ class ProgressPanel(
 
     /** Exposed for test assertions. */
     fun labelForeground() = label.foreground
+
+    override fun getBackground(): Color = SessionUiStyle.Colors.sessionBackground()
 
     private fun onState(state: SessionState) {
         this.state = state

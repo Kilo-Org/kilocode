@@ -333,11 +333,6 @@ class SessionUi(
             )
         }
 
-        overlay = SessionHoverCopyOverlay(root, this)
-        root.addOverlay(overlay) { pane, child ->
-            overlay.bounds(pane, child)
-        }
-
         sessionContent = JPanel(BorderLayout()).apply { isOpaque = false }
 
         blankBody = JPanel(BorderLayout()).apply { isOpaque = false }
@@ -388,6 +383,10 @@ class SessionUi(
         header = SessionHeaderPanel(controller, this) { openBranchChanges() }
 
         scroll = SessionScroll(root, sessionContent, messageBody, blankBody)
+        overlay = SessionHoverCopyOverlay(root, scroll.component, this)
+        root.addOverlay(overlay) { pane, child ->
+            overlay.bounds(pane, child)
+        }
         messageBody.onReflow = { on -> if (on && !opening) scroll.followTail() }
         scroll.onScroll = {
             overlay.clear()
