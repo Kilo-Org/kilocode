@@ -777,8 +777,6 @@ export const dict = {
   "settings.experimental.lsp.description": "啟用語言伺服器協定整合",
   "settings.experimental.batch.title": "批次工具",
   "settings.experimental.batch.description": "啟用多個工具呼叫的批次處理",
-  "settings.experimental.codebaseSearch.title": "程式碼庫搜尋",
-  "settings.experimental.codebaseSearch.description": "啟用 AI 驅動的自然語言程式碼庫搜尋",
   "settings.experimental.imageGeneration.title": "圖像生成",
   "settings.experimental.imageGeneration.description": "啟用 AI 圖像生成",
   "settings.experimental.imageGenerationModel.title": "圖像模型",

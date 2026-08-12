@@ -873,9 +873,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Activer l'intégration du protocole de serveur de langage",
   "settings.experimental.batch.title": "Outil par lot",
   "settings.experimental.batch.description": "Activer le traitement par lot d'appels d'outils",
-  "settings.experimental.codebaseSearch.title": "Recherche de code",
-  "settings.experimental.codebaseSearch.description":
-    "Activer la recherche en langage naturel par IA dans toute la base de code",
   "settings.experimental.imageGeneration.title": "Génération d'images",
   "settings.experimental.imageGeneration.description": "Activer la génération d'images par IA",
   "settings.experimental.imageGenerationModel.title": "Modèle d'image",

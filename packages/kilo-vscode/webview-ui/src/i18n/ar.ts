@@ -830,8 +830,6 @@ export const dict = {
   "settings.experimental.lsp.description": "تمكين تكامل بروتوكول خادم اللغة",
   "settings.experimental.batch.title": "أداة دفعية",
   "settings.experimental.batch.description": "تمكين المعالجة الدفعية لاستدعاءات الأدوات",
-  "settings.experimental.codebaseSearch.title": "بحث في قاعدة الكود",
-  "settings.experimental.codebaseSearch.description": "تمكين البحث بالذكاء الاصطناعي باللغة الطبيعية عبر قاعدة الكود",
   "settings.experimental.imageGeneration.title": "توليد الصور",
   "settings.experimental.imageGeneration.description": "تمكين توليد الصور بالذكاء الاصطناعي",
   "settings.experimental.imageGenerationModel.title": "نموذج الصور",

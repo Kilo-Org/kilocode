@@ -849,9 +849,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Schakel language server protocol integratie in",
   "settings.experimental.batch.title": "Batch Tool",
   "settings.experimental.batch.description": "Schakel batching van meerdere tool calls in",
-  "settings.experimental.codebaseSearch.title": "Codebase Zoeken",
-  "settings.experimental.codebaseSearch.description":
-    "Schakel AI-aangedreven zoeken in natuurlijke taal door je codebase in",
   "settings.experimental.imageGeneration.title": "Afbeeldingsgeneratie",
   "settings.experimental.imageGeneration.description": "AI-afbeeldingsgeneratie inschakelen",
   "settings.experimental.imageGenerationModel.title": "Afbeeldingsmodel",

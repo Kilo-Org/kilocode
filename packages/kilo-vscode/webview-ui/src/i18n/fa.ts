@@ -833,9 +833,6 @@ export const dict = {
   "settings.experimental.lsp.description": "فعال‌سازی یکپارچه‌سازی پروتکل سرور زبان",
   "settings.experimental.batch.title": "ابزار دسته‌ای",
   "settings.experimental.batch.description": "فعال‌سازی دسته‌بندی چندین فراخوانی ابزار",
-  "settings.experimental.codebaseSearch.title": "جستجوی پایگاه کد",
-  "settings.experimental.codebaseSearch.description":
-    "فعال‌سازی جستجوی زبان طبیعی مبتنی بر هوش مصنوعی در سراسر پایگاه کد",
   "settings.experimental.imageGeneration.title": "تولید تصویر",
   "settings.experimental.imageGeneration.description": "فعال‌سازی تولید تصویر با هوش مصنوعی",
   "settings.experimental.imageGenerationModel.title": "مدل تصویر",

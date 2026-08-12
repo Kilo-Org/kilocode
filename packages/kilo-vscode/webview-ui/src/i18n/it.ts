@@ -702,8 +702,6 @@ export const dict = {
   "settings.experimental.semanticIndexing.title": "Indicizzazione semantica",
   "settings.experimental.semanticIndexing.description":
     "Abilita l'indicizzazione semantica del codebase e il tool semantic_search. Richiede configurazione indicizzazione.",
-  "settings.experimental.codebaseSearch.title": "Ricerca codebase",
-  "settings.experimental.codebaseSearch.description": "Abilita ricerca in linguaggio naturale con AI nel codebase",
   "settings.experimental.imageGeneration.title": "Generazione di immagini",
   "settings.experimental.imageGeneration.description": "Abilita la generazione di immagini con AI",
   "settings.experimental.imageGenerationModel.title": "Modello di immagine",

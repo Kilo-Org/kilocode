@@ -2692,7 +2692,6 @@ export type Config = {
   experimental?: {
     disable_paste_summary?: boolean
     batch_tool?: boolean
-    codebase_search?: boolean
     image_generation?: boolean
     image_generation_model?: string
     agent_requirements?: boolean

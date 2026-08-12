@@ -809,8 +809,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Włącz integrację protokołu serwera języka",
   "settings.experimental.batch.title": "Narzędzie wsadowe",
   "settings.experimental.batch.description": "Włącz przetwarzanie wsadowe wywołań narzędzi",
-  "settings.experimental.codebaseSearch.title": "Wyszukiwanie kodu",
-  "settings.experimental.codebaseSearch.description": "Włącz wyszukiwanie w języku naturalnym z AI w całej bazie kodu",
   "settings.experimental.imageGeneration.title": "Generowanie obrazów",
   "settings.experimental.imageGeneration.description": "Włącz generowanie obrazów przez AI",
   "settings.experimental.imageGenerationModel.title": "Model obrazu",

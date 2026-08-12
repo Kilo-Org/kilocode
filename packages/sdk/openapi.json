@@ -34100,9 +34100,6 @@
               "batch_tool": {
                 "type": "boolean"
               },
-              "codebase_search": {
-                "type": "boolean"
-              },
               "image_generation": {
                 "type": "boolean"
               },
