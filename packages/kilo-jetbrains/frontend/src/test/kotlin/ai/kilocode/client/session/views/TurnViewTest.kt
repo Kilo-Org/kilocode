@@ -145,7 +145,7 @@ class TurnViewTest : BasePlatformTestCase() {
         assertFalse(mv.isOpaque)
     }
 
-    fun `test user message fills a prompt surface`() {
+    fun `test user message fills a borderless prompt surface`() {
         val mv = MessageView(msg("u1", "user"), openFile)
         mv.setSize(120, 48)
         val image = BufferedImage(120, 48, BufferedImage.TYPE_INT_ARGB)
@@ -154,10 +154,9 @@ class TurnViewTest : BasePlatformTestCase() {
         mv.paint(g)
         g.dispose()
 
-        // The user bubble is a filled code-block surface with an outline.
         val bg = SessionUiStyle.View.Prompt.bgColor(SessionEditorStyle.current())
         assertEquals(bg.rgb, image.getRGB(60, 24))
-        assertEquals(SessionUiStyle.View.Outline.color().rgb, image.getRGB(60, 0))
+        assertEquals(bg.rgb, image.getRGB(60, 0))
     }
 
     fun `test assistant message remains borderless`() {

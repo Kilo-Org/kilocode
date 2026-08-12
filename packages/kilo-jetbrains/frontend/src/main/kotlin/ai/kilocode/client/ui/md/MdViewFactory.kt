@@ -27,7 +27,7 @@ object MdViewFactory {
 }
 
 data class MdCodeBlockOptions(
-    val border: MdCodeBlockBorder = MdCodeBlockBorder.All,
+    val border: MdCodeBlockBorder = MdCodeBlockBorder.None,
     val maxLines: Int? = null,
     val verticalPolicy: Int = ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER,
     val editorOnly: Boolean = false,

@@ -329,7 +329,7 @@ internal open class MdViewHybrid(
         return object : JBHtmlPane(
             JBHtmlPaneStyleConfiguration {
                 enableInlineCodeBackground = false
-                enableCodeBlocksBackground = true
+                enableCodeBlocksBackground = false
             },
             JBHtmlPaneConfiguration {
                 customStyleSheetProvider { sheet() }

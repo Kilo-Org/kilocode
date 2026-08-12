@@ -237,6 +237,7 @@ class MdViewHybridTest : BasePlatformTestCase() {
         assertTrue(pane.text.contains("<code style=\"color: $color\">"))
         assertFalse(pane.text.contains("#cc8866"))
         assertFalse(pane.text.contains("background:"))
+        assertTrue(view.overrideSheet().contains("border-width: 0"))
         assertTrue(scrolls().isEmpty())
         assertTrue(editors().isEmpty())
     }
@@ -783,7 +784,7 @@ class MdViewHybridTest : BasePlatformTestCase() {
         assertEquals("one", editors().single().text)
     }
 
-    fun `test fenced code block width is bounded and boxed`() {
+    fun `test fenced code block width is bounded and borderless`() {
         view.set("```kotlin\n${"x".repeat(500)}\n```")
         val pane = scrolls().single()
         val editor = editors().single()
@@ -792,8 +793,10 @@ class MdViewHybridTest : BasePlatformTestCase() {
         assertEquals(0, pane.preferredSize.width)
         assertTrue(editor.preferredSize.width > pane.preferredSize.width)
         assertTrue(pane.maximumSize.width > 1000)
-        assertTrue(ins.top > 0)
-        assertTrue(ins.left > 0)
+        assertEquals(0, ins.top)
+        assertEquals(0, ins.left)
+        assertEquals(0, ins.bottom)
+        assertEquals(0, ins.right)
         assertEquals(pane.background, pane.viewport.background)
     }
 
