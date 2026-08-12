@@ -138,7 +138,7 @@ export class KiloConnectionService {
         update: async () => undefined,
       } satisfies Pick<vscode.Memento, "get" | "update">)
     this.sandboxPreference = new SandboxPreference(state)
-    this.serverManager = new ServerManager(context, (code) => this.handleServerExit(code))
+    this.serverManager = new ServerManager(context, (code, signal) => this.handleServerExit(code, signal))
     this.active = vscode.window.state.focused
     this.windowStateDisposable = vscode.window.onDidChangeWindowState((ws) => {
       this.active = ws.focused
@@ -790,13 +790,11 @@ export class KiloConnectionService {
     this.questionRevision += 1
   }
 
-  private handleServerExit(code: number | null): void {
-    console.warn("[Kilo New] ConnectionService: CLI background process exited:", code)
+  private handleServerExit(code: number | null, signal: NodeJS.Signals | null): void {
+    const reason = signal ? `signal ${signal}` : `code ${code ?? "unknown"}`
+    console.warn(`[Kilo New] ConnectionService: CLI background process exited with ${reason}`)
     this.resetConnection()
-    this.setState(
-      "error",
-      new Error(`CLI background process exited with code ${code ?? "unknown"}. Retry to reconnect.`),
-    )
+    this.setState("error", new Error(`CLI background process exited with ${reason}. Retry to reconnect.`))
   }
 
   private async doConnect(workspaceDir: string): Promise<void> {

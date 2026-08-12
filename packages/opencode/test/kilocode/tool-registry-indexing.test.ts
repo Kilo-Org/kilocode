@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterEach, describe, expect, spyOn, test } from "bun:test"
 import { Effect, Layer, Schema, Stream } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
@@ -22,8 +23,8 @@ import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { testEffect } from "../lib/effect"
 
-const node = CrossSpawnSpawner.defaultLayer
-const it = testEffect(Layer.mergeAll(Agent.defaultLayer, ToolRegistry.defaultLayer, node))
+const node = AppNodeBuilder.build(CrossSpawnSpawner.node)
+const it = testEffect(Layer.mergeAll(AppNodeBuilder.build(Agent.node), AppNodeBuilder.build(ToolRegistry.node), node))
 const ref = {
   providerID: ProviderV2.ID.make("test"),
   modelID: ModelV2.ID.make("test-model"),
@@ -331,7 +332,6 @@ describe("kilocode tool registry indexing", () => {
       execute: () => Effect.succeed({ title: id, output: id, metadata: {} }),
     })
     const tools = {
-      codebase: def("codebase_search"),
       semantic: def("semantic_search"),
       recall: def("recall"),
       managerModels: def("agent_manager_models"),
@@ -339,9 +339,11 @@ describe("kilocode tool registry indexing", () => {
       save: def("kilo_memory_save"),
       manager: def("agent_manager"),
       process: def("background_process"),
+      chart: def("chart"),
       image: def("generate_image"),
       terminal: def("interactive_terminal"),
       notify: def("notify_user"),
+      send: def("send_file"),
       notebookRead: def("notebook_read"),
       notebookEdit: def("notebook_edit"),
       notebookExecute: def("notebook_execute"),
@@ -357,25 +359,11 @@ describe("kilocode tool registry indexing", () => {
         "background_process",
         "interactive_terminal",
         "notify_user",
+        "send_file",
       ])
-      expect(KiloToolRegistry.extra(tools, { experimental: { codebase_search: true } }).map((tool) => tool.id)).toEqual(
-        [
-          "codebase_search",
-          "semantic_search",
-          "kilo_memory_recall",
-          "kilo_memory_save",
-          "recall",
-          "background_process",
-          "interactive_terminal",
-          "notify_user",
-        ],
-      )
       expect(
-        KiloToolRegistry.extra(tools, { experimental: { codebase_search: true, image_generation: true } }).map(
-          (tool) => tool.id,
-        ),
+        KiloToolRegistry.extra(tools, { experimental: { image_generation: true } }).map((tool) => tool.id),
       ).toEqual([
-        "codebase_search",
         "generate_image",
         "semantic_search",
         "kilo_memory_recall",
@@ -384,32 +372,32 @@ describe("kilocode tool registry indexing", () => {
         "background_process",
         "interactive_terminal",
         "notify_user",
+        "send_file",
       ])
 
       process.env["KILO_CLIENT"] = "vscode"
-      expect(KiloToolRegistry.extra(tools, { experimental: { codebase_search: true } }).map((tool) => tool.id)).toEqual(
-        [
-          "codebase_search",
-          "semantic_search",
-          "kilo_memory_recall",
-          "kilo_memory_save",
-          "recall",
-          "background_process",
-          "agent_manager_models",
-          "agent_manager",
-          "notify_user",
-        ],
-      )
-      expect(
-        KiloToolRegistry.extra(tools, {
-          experimental: { codebase_search: true, native_notebook_tools: true },
-        }).map((tool) => tool.id),
-      ).toEqual([
-        "codebase_search",
+      expect(KiloToolRegistry.extra(tools, {}).map((tool) => tool.id)).toEqual([
         "semantic_search",
         "kilo_memory_recall",
         "kilo_memory_save",
         "recall",
+        "chart",
+        "background_process",
+        "agent_manager_models",
+        "agent_manager",
+        "notify_user",
+        "send_file",
+      ])
+      expect(
+        KiloToolRegistry.extra(tools, {
+          experimental: { native_notebook_tools: true },
+        }).map((tool) => tool.id),
+      ).toEqual([
+        "semantic_search",
+        "kilo_memory_recall",
+        "kilo_memory_save",
+        "recall",
+        "chart",
         "background_process",
         "agent_manager_models",
         "agent_manager",
@@ -417,15 +405,18 @@ describe("kilocode tool registry indexing", () => {
         "notebook_edit",
         "notebook_execute",
         "notify_user",
+        "send_file",
       ])
       expect(KiloToolRegistry.extra({ ...tools, semantic: undefined }, {}).map((tool) => tool.id)).toEqual([
         "kilo_memory_recall",
         "kilo_memory_save",
         "recall",
+        "chart",
         "background_process",
         "agent_manager_models",
         "agent_manager",
         "notify_user",
+        "send_file",
       ])
 
       process.env["KILO_CLIENT"] = "desktop"
@@ -435,6 +426,7 @@ describe("kilocode tool registry indexing", () => {
         "kilo_memory_save",
         "recall",
         "notify_user",
+        "send_file",
       ])
 
       process.env["KILO_CLIENT"] = "run"
@@ -444,6 +436,7 @@ describe("kilocode tool registry indexing", () => {
         "kilo_memory_save",
         "recall",
         "notify_user",
+        "send_file",
       ])
 
       process.env["KILO_CLIENT"] = "acp"
@@ -453,6 +446,7 @@ describe("kilocode tool registry indexing", () => {
         "kilo_memory_save",
         "recall",
         "notify_user",
+        "send_file",
       ])
     } finally {
       if (prev === undefined) delete process.env["KILO_CLIENT"]

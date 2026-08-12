@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { Skill } from "../../src/skill"
@@ -14,18 +15,12 @@ import { testEffect } from "../lib/effect"
 import path from "path"
 import fs from "fs/promises"
 
-const node = CrossSpawnSpawner.defaultLayer
+const node = AppNodeBuilder.build(CrossSpawnSpawner.node)
 
 const skills = (disableExternalSkills: boolean, disableClaudeCodeSkills: boolean) =>
-  Skill.layer.pipe(
-    Layer.provide(Git.defaultLayer), // kilocode_change
-    Layer.provide(Discovery.defaultLayer),
-    Layer.provide(Config.defaultLayer),
-    Layer.provide(EventV2Bridge.defaultLayer),
-    Layer.provide(FSUtil.defaultLayer),
-    Layer.provide(Global.layer),
-    Layer.provide(RuntimeFlags.layer({ disableExternalSkills, disableClaudeCodeSkills })),
-  )
+  AppNodeBuilder.build(Skill.node, [
+    [RuntimeFlags.node, RuntimeFlags.layer({ disableExternalSkills, disableClaudeCodeSkills })],
+  ])
 
 const it = testEffect(Layer.mergeAll(skills(false, false), node, testInstanceStoreLayer))
 const itWithoutExternalSkills = testEffect(Layer.mergeAll(skills(true, false), node, testInstanceStoreLayer))
@@ -66,6 +61,33 @@ const discovered = <T extends { location: string }>(list: readonly T[]) =>
   list.filter((skill) => ![Skill.BUILTIN_LOCATION, "<built-in>"].includes(skill.location)) // kilocode_change
 
 describe("skill", () => {
+  it.effect("formats verbose locations as XML-safe filesystem paths", () =>
+    Effect.sync(() => {
+      const output = Skill.fmt(
+        [
+          {
+            name: "tagged-skill",
+            description: "A tagged skill.",
+            location: "/tmp/plugin.git#v1.3.0/SKILL.md",
+            content: "",
+          },
+          {
+            name: "built-in-skill",
+            description: "A built-in skill.",
+            location: "<built-in>",
+            content: "",
+          },
+        ],
+        { verbose: true },
+      )
+
+      expect(output).toContain("<location>/tmp/plugin.git#v1.3.0/SKILL.md</location>")
+      expect(output).toContain("<location>&lt;built-in&gt;</location>")
+      expect(output).not.toContain("file://")
+      expect(output).not.toContain("%23")
+    }),
+  )
+
   // kilocode_change start
   it.live("discovers skills from .kilo/skill/ directory", () =>
     // kilocode_change end

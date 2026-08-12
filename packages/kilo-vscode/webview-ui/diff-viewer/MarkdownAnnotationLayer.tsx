@@ -3,6 +3,7 @@ import type { AnnotationSide, DiffLineAnnotation, SelectedLineRange } from "@pie
 import { markdownCommentBlocks, type MarkdownRange } from "./markdown-comment-ranges"
 import type { AnnotationMeta } from "./review-annotations"
 import { annotationSelector, isAnnotationMutation } from "./markdown-annotation-mutation"
+import { markdownRenderedChildren } from "./markdown-rendered-children"
 
 type Insert = "after" | "list" | "table"
 
@@ -24,16 +25,6 @@ export interface MarkdownAnnotationLayerProps {
   onLineNumberClick: ((event: { annotationSide: AnnotationSide; lineNumber: number }) => void) | undefined
 }
 
-function children(root: HTMLElement): HTMLElement[] {
-  return Array.from(root.children).filter((child): child is HTMLElement => {
-    if (!(child instanceof HTMLElement)) return false
-    if (child.classList.contains("am-markdown-inline-annotations")) return false
-    if (child.classList.contains("am-markdown-list-annotation")) return false
-    if (child.classList.contains("am-markdown-table-annotation")) return false
-    return true
-  })
-}
-
 function listItems(root: HTMLElement): HTMLElement[] {
   return Array.from(root.children).filter((child): child is HTMLElement => {
     if (!(child instanceof HTMLElement)) return false
@@ -49,7 +40,7 @@ function tableRows(root: HTMLElement): HTMLElement[] {
 }
 
 function anchors(root: HTMLElement, source: ReturnType<typeof markdownCommentBlocks>): Anchor[] {
-  const rendered = children(root)
+  const rendered = markdownRenderedChildren(root)
   const result: Anchor[] = []
   let index = 0
 

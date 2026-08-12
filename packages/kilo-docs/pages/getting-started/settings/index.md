@@ -105,6 +105,10 @@ Valid values are `expanded` and `collapsed`.
 
 Markdown files in Kilo diff viewers can be shown as rendered Markdown instead of a raw text diff. Use the eye/code toggle in a Markdown file header, or set `kilo-code.new.diff.renderMarkdown` to `true` to render Markdown files by default.
 
+### Web Search
+
+See [Web Search Availability](/docs/automate/tools#web-search-availability) for how to enable the `websearch` tool for models from all providers.
+
 ### Export and Import
 
 You can export and import settings from the **About Kilo Code** tab in the Settings UI:
@@ -189,7 +193,6 @@ Advanced options not exposed in the UI can be configured via the `experimental` 
 ```json
 {
   "experimental": {
-    "codebase_search": true,
     "batch_tool": false,
     "openTelemetry": true,
     "disable_paste_summary": false,

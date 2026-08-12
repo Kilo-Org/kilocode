@@ -58,6 +58,7 @@ function buildAuthorizeUrl(state: string): string {
   return `${DO_AUTHORIZE_URL}?${params.toString()}`
 }
 
+// kilocode_change start - retain Kilo-branded OAuth callback until the shared page supports Kilo branding
 const HTML_CALLBACK = `<!doctype html>
 <html>
   <head>
@@ -116,7 +117,7 @@ const HTML_CALLBACK = `<!doctype html>
     </script>
   </body>
 </html>`
-
+// kilocode_change end
 async function startOAuthServer(): Promise<void> {
   if (oauthServer) return
   oauthServer = createServer((req, res) => {
@@ -124,7 +125,7 @@ async function startOAuthServer(): Promise<void> {
 
     if (req.method === "GET" && url.pathname === OAUTH_REDIRECT_PATH) {
       res.writeHead(200, { "Content-Type": "text/html" })
-      res.end(HTML_CALLBACK)
+      res.end(HTML_CALLBACK) // kilocode_change - shared callback page is currently OpenCode-branded
       return
     }
 

@@ -61,6 +61,7 @@ export interface PRCheck {
 
 export interface PRComment {
   id: string
+  threadId: string
   author: string
   avatar?: string
   body: string
@@ -69,11 +70,21 @@ export interface PRComment {
   url?: string
   resolved: boolean
   createdAt?: number
+  diffHunk?: string
+}
+
+export type ReviewerState = "approved" | "changes_requested" | "pending" | "commented"
+
+export interface PRReviewer {
+  login: string
+  avatar?: string
+  state: ReviewerState
 }
 
 export interface PRStatus {
   number: number
   title: string
+  body?: string
   url: string
   state: PRState
   review: ReviewDecision | null
@@ -83,12 +94,13 @@ export interface PRStatus {
     passed: number
     failed: number
     pending: number
-    items: PRCheck[]
+    checks: PRCheck[]
   }
+  reviewers: PRReviewer[]
   comments?: {
     total: number
     unresolved: number
-    items: PRComment[]
+    comments: PRComment[]
   }
   additions: number
   deletions: number
@@ -147,6 +159,7 @@ interface StateMessage {
   /** Last selected sidebar target for seamless project-switch restore. */
   activeTarget?: SidebarTarget
   terminalDestination?: TerminalDestination
+  terminalFont?: TerminalFont
 }
 
 /** Project catalog pushed to the webview after registry or context changes. */
@@ -197,6 +210,12 @@ interface TerminalCreatedMessage {
   title: string
   wsUrl: string
   font: TerminalFont
+}
+
+interface TerminalRestartedMessage {
+  type: "agentManager.terminal.restarted"
+  terminalId: string
+  wsUrl: string
 }
 
 interface TerminalClosedMessage {
@@ -252,6 +271,8 @@ interface SessionClosedMessage {
 
 interface MultiVersionProgressMessage {
   type: "agentManager.multiVersionProgress"
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
   status: "creating" | "done"
   total: number
   completed: number
@@ -260,6 +281,8 @@ interface MultiVersionProgressMessage {
 
 interface SetSessionModelMessage {
   type: "agentManager.setSessionModel"
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
   sessionId: string
   providerID: string
   modelID: string
@@ -267,6 +290,8 @@ interface SetSessionModelMessage {
 
 interface SendInitialMessage {
   type: "agentManager.sendInitialMessage"
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
   sessionId: string
   worktreeId: string
   text?: string
@@ -286,6 +311,7 @@ interface BranchesMessage {
 
 interface ImportResultMessage {
   type: "agentManager.importResult"
+  projectId?: string
   success: boolean
   message: string
   errorCode?: WorktreeSetupErrorCode
@@ -365,6 +391,19 @@ interface PRStatusOutMessage {
   error?: "gh_missing" | "gh_auth" | "fetch_failed"
 }
 
+interface PRErrorOutMessage {
+  type: "agentManager.prError"
+  error: "gh_missing" | "gh_auth" | "fetch_failed"
+}
+
+interface CommentActionResultMessage {
+  type: "agentManager.resolveCommentResult" | "agentManager.unresolveCommentResult"
+  worktreeId: string
+  threadId: string
+  success: boolean
+  error?: string
+}
+
 interface ActionOutMessage {
   type: "action"
   action: string
@@ -404,9 +443,12 @@ export type AgentManagerOutMessage =
   | RevertWorktreeFileResultMessage
   | DiffBranchesMessage
   | PRStatusOutMessage
+  | PRErrorOutMessage
+  | CommentActionResultMessage
   | ActionOutMessage
   | RunStatusMessage
   | TerminalCreatedMessage
+  | TerminalRestartedMessage
   | TerminalClosedMessage
   | TerminalErrorMessage
   | TerminalDestinationChangedMessage
@@ -619,6 +661,7 @@ interface SetTabOrderIn {
 
 interface SetWorktreeOrderIn {
   type: "agentManager.setWorktreeOrder"
+  projectId?: string
   order: string[]
 }
 
@@ -723,6 +766,13 @@ interface OpenPRIn {
   type: "agentManager.openPR"
   projectId?: string
   worktreeId: string
+  url?: string
+}
+
+interface CommentActionIn {
+  type: "agentManager.resolveComment" | "agentManager.unresolveComment"
+  worktreeId: string
+  threadId: string
 }
 
 interface OpenSessionsIn {
@@ -783,6 +833,7 @@ interface FileSourceIn {
 
 interface SendMessageIn {
   type: "sendMessage"
+  projectId?: string
   text: string
   messageID?: string
   sessionID?: string
@@ -924,11 +975,13 @@ interface MoveSectionIn {
 
 interface TerminalCreateIn {
   type: "agentManager.terminal.create"
-  /** Webview-generated correlation id, echoed back in created/error. */
+  /** Webview-generated logical terminal id, echoed back in created/error. */
   createId: string
   placement: TerminalPlacement
   /** null for LOCAL, worktree id otherwise */
   worktreeId: string | null
+  cols?: number
+  rows?: number
 }
 
 interface TerminalCloseIn {
@@ -946,6 +999,13 @@ interface TerminalResizeIn {
   terminalId: string
   cols: number
   rows: number
+}
+
+interface TerminalRestartIn {
+  type: "agentManager.terminal.restart"
+  terminalId: string
+  cols?: number
+  rows?: number
 }
 
 interface TerminalDestinationSelectedIn {
@@ -1007,6 +1067,7 @@ export type AgentManagerInMessage =
   | SetDiffBaseBranchIn
   | RefreshPRIn
   | OpenPRIn
+  | CommentActionIn
   | OpenSessionsIn
   | VisibleSessionIn
   | OpenFileIn
@@ -1035,4 +1096,5 @@ export type AgentManagerInMessage =
   | TerminalCloseIn
   | TerminalStopIn
   | TerminalResizeIn
+  | TerminalRestartIn
   | TerminalDestinationSelectedIn

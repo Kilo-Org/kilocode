@@ -51,6 +51,7 @@ export function renderTerminalTab(deps: TerminalTabRenderDeps): JSX.Element {
       status={deps.terms.scriptStatus(deps.id)}
       keybind={isActive() ? "" : deps.keybind()}
       closeKeybind={deps.closeKeybind()}
+      focused={deps.terms.focusedId() === deps.id}
       active={isActive()}
       role={deps.role}
       selected={deps.selected}
@@ -93,7 +94,7 @@ export function renderTerminalTab(deps: TerminalTabRenderDeps): JSX.Element {
  * exists; that boundary never flips under a live xterm, since removing
  * the last terminal disposes its instance first.
  */
-export function renderTerminalLayer(props: { state: TerminalStateControls }): JSX.Element {
+export function renderTerminalLayer(props: { state: TerminalStateControls; onFocusPrompt: () => void }): JSX.Element {
   const layerActive = () => props.state.activeId() !== undefined
   const slotVisible = (termId: string, contextKey: string) =>
     props.state.activeId() === termId && props.state.currentKey() === contextKey
@@ -108,10 +109,12 @@ export function renderTerminalLayer(props: { state: TerminalStateControls }): JS
                 <TerminalTab
                   terminalId={term.id}
                   wsUrl={term.wsUrl}
+                  restartable={term.kind === undefined}
                   active={visible()}
                   focusSerial={focusSerial(props.state, term.id)}
                   font={term.font}
                   onFocusChange={(focused) => props.state.setFocusedId(focused ? term.id : undefined)}
+                  onFocusPrompt={props.onFocusPrompt}
                   onTitleChange={(title) => props.state.setTitle(term.id, title)}
                 />
               </div>
@@ -137,6 +140,7 @@ export function renderSideTerminalLayer(props: {
   state: TerminalStateControls
   contextKey: Accessor<string>
   visible: Accessor<boolean>
+  onFocusPrompt: () => void
 }): JSX.Element {
   return (
     <div class={`am-side-terminal-layer ${props.visible() ? "am-side-terminal-layer-active" : ""}`}>
@@ -152,10 +156,13 @@ export function renderSideTerminalLayer(props: {
                 terminalId={term.id}
                 wsUrl={term.wsUrl}
                 active={active()}
+                focusOnActivate={false}
                 focusSerial={focusSerial(props.state, term.id)}
                 font={term.font}
                 status={() => props.state.scriptStatus(term.id)}
+                restartable={term.kind === undefined}
                 onFocusChange={(focused) => props.state.setFocusedId(focused ? term.id : undefined)}
+                onFocusPrompt={props.onFocusPrompt}
                 onTitleChange={(title) => props.state.setTitle(term.id, title)}
               />
             </div>

@@ -25,10 +25,12 @@ export interface ConfigCollectionEntry {
 export type ConfigCollections = Record<string, ConfigCollectionEntry[]>
 
 export interface CommandConfig {
-  template: string
+  template?: string
   description?: string
   agent?: string
-  model?: string
+  model?: string | null
+  variant?: string | null
+  subtask?: boolean
 }
 
 export interface SkillsConfig {
@@ -48,7 +50,6 @@ export interface WatcherConfig {
 
 export interface ExperimentalConfig {
   batch_tool?: boolean
-  codebase_search?: boolean
   image_generation?: boolean
   image_generation_model?: string
   agent_requirements?: boolean

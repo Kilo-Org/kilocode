@@ -8,6 +8,7 @@ import ai.kilocode.rpc.dto.CompactionPatchDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
+import ai.kilocode.rpc.dto.EditorContextDto
 import ai.kilocode.rpc.dto.McpConfigDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
@@ -691,7 +692,7 @@ class KiloCliDataParserTest {
                             "messageID": "msg_rollback",
                             "partID": "prt_rollback",
                             "snapshot": "snap_rollback",
-                            "diff": "diff --git a/file b/file"
+                            "diff": "diff --git a/src/A.kt b/src/A.kt\n--- a/src/A.kt\n+++ b/src/A.kt\n@@ -1 +1,2 @@\n-old\n+new\n+more\ndiff --git a/src/Old.kt b/src/Old.kt\ndeleted file mode 100644\n--- a/src/Old.kt\n+++ /dev/null\n@@ -1 +0,0 @@\n-gone"
                         }
                     }
                 }
@@ -705,6 +706,13 @@ class KiloCliDataParserTest {
             assertEquals(2, result.session.summary?.files)
             assertEquals("msg_rollback", result.session.revert?.messageID)
             assertEquals("prt_rollback", result.session.revert?.partID)
+            assertEquals(2, result.session.revert?.diffs?.size)
+            assertEquals("src/A.kt", result.session.revert?.diffs?.get(0)?.file)
+            assertEquals(2, result.session.revert?.diffs?.get(0)?.additions)
+            assertEquals(1, result.session.revert?.diffs?.get(0)?.deletions)
+            assertEquals("modified", result.session.revert?.diffs?.get(0)?.status)
+            assertEquals("src/Old.kt", result.session.revert?.diffs?.get(1)?.file)
+            assertEquals("deleted", result.session.revert?.diffs?.get(1)?.status)
         }
 
         @Test
@@ -1817,7 +1825,7 @@ class KiloCliDataParserTest {
         @Test
         fun `parseCommands - maps name, description, source, and hints`() {
             val raw = """[
-                {"name":"init","description":"guided AGENTS.md setup","template":"static body","hints":["${'$'}ARGUMENTS"],"source":"command"},
+                {"name":"init","description":"guided AGENTS.md setup","agent":"reviewer","model":"anthropic/claude-sonnet-4-6","variant":"high","template":"static body","hints":["${'$'}ARGUMENTS"],"source":"command","subtask":true},
                 {"name":"mcp-tool","template":"","hints":["${'$'}1","${'$'}2"],"source":"mcp"}
             ]"""
 
@@ -1826,8 +1834,12 @@ class KiloCliDataParserTest {
             assertEquals(2, result.size)
             assertEquals("init", result[0].name)
             assertEquals("guided AGENTS.md setup", result[0].description)
+            assertEquals("reviewer", result[0].agent)
+            assertEquals("anthropic/claude-sonnet-4-6", result[0].model)
+            assertEquals("high", result[0].variant)
             assertEquals("command", result[0].source)
             assertEquals(listOf("\$ARGUMENTS"), result[0].hints)
+            assertEquals(true, result[0].subtask)
             assertEquals("mcp", result[1].source)
             assertEquals(listOf("\$1", "\$2"), result[1].hints)
         }
@@ -1878,6 +1890,8 @@ class KiloCliDataParserTest {
         fun `parsePathState - extracts state from valid path response`() {
             val raw = """{"home":"/home/user","state":"/home/user/.local/state/kilo","config":"/home/user/.config/kilo","worktree":"/project","directory":"/project"}"""
             assertEquals("/home/user/.local/state/kilo", KiloCliDataParser.parsePathState(raw))
+            assertEquals("/home/user/.config/kilo", KiloCliDataParser.parsePathConfig(raw))
+            assertEquals("/home/user", KiloCliDataParser.parsePathHome(raw))
         }
 
         @Test
@@ -1943,6 +1957,25 @@ class KiloCliDataParserTest {
             )
             val result = KiloCliDataParser.buildPromptJson(prompt)
             assertEquals("""{"parts":[{"type":"text","text":"Hi"}],"noReply":true}""", result)
+        }
+
+        @Test
+        fun `buildPromptJson - with editor context`() {
+            val prompt = PromptDto(
+                parts = listOf(PromptPartDto("text", "Hi")),
+                editorContext = EditorContextDto(
+                    activeFile = "src/App.kt",
+                    visibleFiles = listOf("src/App.kt"),
+                    openTabs = listOf("src/App.kt", "src/Other.kt"),
+                ),
+            )
+
+            val result = KiloCliDataParser.buildPromptJson(prompt)
+
+            assertEquals(
+                """{"parts":[{"type":"text","text":"Hi"}],"editorContext":{"visibleFiles":["src/App.kt"],"openTabs":["src/App.kt","src/Other.kt"],"activeFile":"src/App.kt"}}""",
+                result,
+            )
         }
 
         @Test

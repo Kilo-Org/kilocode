@@ -1,6 +1,8 @@
 import { describe, expect } from "bun:test"
 import { Cause, Deferred, Effect, Exit, Layer, Queue } from "effect"
 import { Config } from "@opencode-ai/core/config"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { EventV2 } from "@opencode-ai/core/event"
 import { Location } from "@opencode-ai/core/location"
 import { Pty } from "@opencode-ai/core/pty"
@@ -11,17 +13,18 @@ import { testEffect } from "../lib/effect"
 
 type PtyEvent = { type: "created" | "exited" | "deleted"; id: PtyID }
 
+const PTY_TEST_TIMEOUT = "15 seconds" // kilocode_change - PTY startup can exceed the default test timeout on macOS CI
+
 const locationLayer = Layer.succeed(
   Location.Service,
   Location.Service.of(location({ directory: AbsolutePath.make("/tmp") })),
 )
 const configLayer = Layer.mock(Config.Service)({ entries: () => Effect.succeed([]) })
 const it = testEffect(
-  Pty.layer.pipe(
-    Layer.provide(configLayer),
-    Layer.provideMerge(EventV2.defaultLayer),
-    Layer.provideMerge(locationLayer),
-  ),
+  AppNodeBuilder.build(LayerNode.group([Pty.node, EventV2.node]), [
+    [Config.node, configLayer],
+    [Location.node, locationLayer],
+  ]),
 )
 const ptyTest = process.platform === "win32" ? it.live.skip : it.live
 
@@ -59,7 +62,7 @@ const waitForEvents = (events: Queue.Queue<PtyEvent>, id: PtyID, count: number) 
     return picked
   }).pipe(
     Effect.timeoutOrElse({
-      duration: "5 seconds",
+      duration: PTY_TEST_TIMEOUT, // kilocode_change
       orElse: () => Effect.fail(new Error("timeout waiting for pty events")),
     }),
   )
@@ -73,21 +76,26 @@ const attachCollecting = Effect.fn("PtySessionTest.attachCollecting")(function* 
     onData: (chunk) => Queue.offerUnsafe(output, chunk),
     onEnd: (event) => Deferred.doneUnsafe(ended, Effect.succeed(event)),
   })
+  if (attachment.replay) Queue.offerUnsafe(output, attachment.replay)
   attachment.activate()
   return { attachment, output, ended }
 })
 
-const waitForOutput = (output: Queue.Queue<string>, text: string) =>
-  Effect.gen(function* () {
-    let received = ""
+// kilocode_change start - preserve collected PTY output in timeout diagnostics
+const waitForOutput = (output: Queue.Queue<string>, text: string) => {
+  let received = ""
+  const pull = Effect.gen(function* () {
     while (!received.includes(text)) received += yield* Queue.take(output)
     return received
-  }).pipe(
+  })
+  return pull.pipe(
     Effect.timeoutOrElse({
-      duration: "5 seconds",
-      orElse: () => Effect.fail(new Error(`timeout waiting for output containing ${JSON.stringify(text)}`)),
+      duration: PTY_TEST_TIMEOUT, // kilocode_change
+      orElse: () => Effect.fail(new Error(`timeout waiting for output containing ${JSON.stringify(text)}, received ${JSON.stringify(received)}`)),
     }),
   )
+}
+// kilocode_change end
 
 describe("pty", () => {
   it.live("returns typed not found errors for missing sessions", () =>
@@ -140,11 +148,13 @@ describe("pty", () => {
   )
 
   // (script terminals forward raw output to xterm without transcoding).
+  // The child must outlive its output: an immediate exit can race bun-pty's
+  // reader thread and drop trailing bytes under load, so print then sleep.
   ptyTest("round-trips non-ASCII output byte-identically", () =>
     Effect.gen(function* () {
       const pty = yield* Pty.Service
       const marker = "café-über-北京-🚀"
-      const info = yield* createPty("sh", ["-c", `printf '${marker}\\n'`])
+      const info = yield* createPty("sh", ["-c", "printf 'caf\\303\\251-\\303\\274ber-\\345\\214\\227\\344\\272\\254-\\360\\237\\232\\200\\n'; sleep 5"])
       const attached = yield* attachCollecting(info.id)
       expect(yield* waitForOutput(attached.output, marker)).toContain(marker)
     }),
@@ -268,7 +278,7 @@ describe("pty", () => {
       attachment.write("ignored")
       yield* pty.remove(info.id)
       attachment.activate()
-      expect(yield* Deferred.await(ended).pipe(Effect.timeout("5 seconds"))).toEqual({ exitCode: 7 })
+      expect(yield* Deferred.await(ended).pipe(Effect.timeout(PTY_TEST_TIMEOUT))).toEqual({ exitCode: 7 })
       attachment.detach()
     }),
   )
@@ -277,8 +287,9 @@ describe("pty", () => {
 
 const configuredShell = process.platform === "win32" ? undefined : Bun.which("bash")
 const configuredIt = testEffect(
-  Pty.layer.pipe(
-    Layer.provide(
+  AppNodeBuilder.build(LayerNode.group([Pty.node, EventV2.node]), [
+    [
+      Config.node,
       Layer.mock(Config.Service)({
         entries: () =>
           Effect.succeed(
@@ -287,10 +298,9 @@ const configuredIt = testEffect(
               : [],
           ),
       }),
-    ),
-    Layer.provideMerge(EventV2.defaultLayer),
-    Layer.provideMerge(locationLayer),
-  ),
+    ],
+    [Location.node, locationLayer],
+  ]),
 )
 const configuredTest = process.platform === "win32" ? configuredIt.live.skip : configuredIt.live
 

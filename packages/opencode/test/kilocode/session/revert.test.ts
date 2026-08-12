@@ -1,5 +1,7 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { describe, expect } from "bun:test"
-import { Effect, Exit, Layer } from "effect"
+import { Effect, Exit } from "effect"
 import fs from "node:fs/promises"
 import path from "node:path"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
@@ -14,11 +16,14 @@ import { Snapshot } from "@/snapshot"
 import { provideInstance, provideTmpdirInstance } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
 
-const env = Layer.mergeAll(
-  Session.defaultLayer,
-  SessionRevert.defaultLayer,
-  Snapshot.defaultLayer,
-  CrossSpawnSpawner.defaultLayer,
+const env = LayerNode.compile(
+  LayerNode.group([
+    Session.node,
+    SessionProjector.node,
+    SessionRevert.node,
+    Snapshot.node,
+    CrossSpawnSpawner.node,
+  ]),
 )
 const it = testEffect(env)
 const guarded = process.platform === "win32" ? it.live.skip : it.live

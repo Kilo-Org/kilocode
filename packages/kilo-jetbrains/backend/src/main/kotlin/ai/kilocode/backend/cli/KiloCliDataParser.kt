@@ -17,6 +17,7 @@ import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.CommandDto
+import ai.kilocode.rpc.dto.CommandFileDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
@@ -25,6 +26,7 @@ import ai.kilocode.rpc.dto.CustomModelDto
 import ai.kilocode.rpc.dto.CustomProviderConfigDto
 import ai.kilocode.rpc.dto.CustomProviderSaveDto
 import ai.kilocode.rpc.dto.DiffFileDto
+import ai.kilocode.rpc.dto.EditorContextDto
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageErrorDto
 import ai.kilocode.rpc.dto.MessageSummaryDto
@@ -630,8 +632,12 @@ object KiloCliDataParser {
             CommandInfo(
                 name = obj.str("name") ?: "",
                 description = obj.str("description"),
+                agent = obj.str("agent"),
+                model = obj.str("model"),
+                variant = obj.str("variant"),
                 source = obj.str("source"),
                 hints = obj["hints"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
+                subtask = obj.flagOrNull("subtask"),
             )
         }
 
@@ -662,9 +668,34 @@ object KiloCliDataParser {
             CommandDto(
                 name = name,
                 description = obj.str("description"),
+                agent = obj.str("agent"),
+                model = obj.str("model"),
+                variant = obj.str("variant"),
                 source = obj.str("source"),
                 hints = obj["hints"].arr()?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
                 template = obj.str("template"),
+                subtask = obj.flagOrNull("subtask"),
+            )
+        }
+
+    fun parseAgentBehaviorCommandFiles(raw: String): List<CommandFileDto> =
+        raw.array().mapNotNull { item ->
+            val obj = item.obj() ?: return@mapNotNull null
+            val name = obj.str("name") ?: return@mapNotNull null
+            val location = obj.str("location") ?: return@mapNotNull null
+            CommandFileDto(
+                name = name,
+                description = obj.str("description"),
+                agent = obj.str("agent"),
+                model = obj.str("model"),
+                variant = obj.str("variant"),
+                source = obj.str("source"),
+                builtin = obj.bool("builtin"),
+                location = location,
+                editable = obj.bool("editable"),
+                content = obj.str("content"),
+                subtask = obj.flagOrNull("subtask"),
+                hints = obj["hints"].arr()?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
             )
         }
 
@@ -710,6 +741,16 @@ object KiloCliDataParser {
      */
     fun parsePathState(raw: String): String? {
         val prim = runCatching { tryParseObject(raw)?.get("state")?.jsonPrimitive }.getOrNull() ?: return null
+        return if (prim.isString) prim.content else null
+    }
+
+    fun parsePathConfig(raw: String): String? {
+        val prim = runCatching { tryParseObject(raw)?.get("config")?.jsonPrimitive }.getOrNull() ?: return null
+        return if (prim.isString) prim.content else null
+    }
+
+    fun parsePathHome(raw: String): String? {
+        val prim = runCatching { tryParseObject(raw)?.get("home")?.jsonPrimitive }.getOrNull() ?: return null
         return if (prim.isString) prim.content else null
     }
 
@@ -782,9 +823,26 @@ object KiloCliDataParser {
         if (variant != null) {
             sb.append(""","variant":${escape(variant)}""")
         }
+        val editor = prompt.editorContext
+        if (editor != null) {
+            sb.append(""","editorContext":${editorContextJson(editor)}""")
+        }
         sb.append("}")
         return sb.toString()
     }
+
+    private fun editorContextJson(ctx: EditorContextDto): String {
+        val fields = mutableListOf<String>()
+        ctx.directory?.let { fields += "\"directory\":${escape(it)}" }
+        ctx.worktree?.let { fields += "\"worktree\":${escape(it)}" }
+        ctx.visibleFiles?.takeIf { it.isNotEmpty() }?.let { fields += "\"visibleFiles\":${array(it)}" }
+        ctx.openTabs?.takeIf { it.isNotEmpty() }?.let { fields += "\"openTabs\":${array(it)}" }
+        ctx.activeFile?.let { fields += "\"activeFile\":${escape(it)}" }
+        ctx.shell?.let { fields += "\"shell\":${escape(it)}" }
+        return "{${fields.joinToString(",")}}"
+    }
+
+    private fun array(values: List<String>): String = values.joinToString(",", "[", "]") { escape(it) }
 
     private fun buildPromptPartJson(part: PromptPartDto): String {
         val fields = mutableListOf("\"type\":${escape(part.type)}")
@@ -1516,12 +1574,69 @@ object KiloCliDataParser {
     private fun parseRevert(obj: JsonObject?): SessionRevertDto? {
         if (obj == null) return null
         val message = obj.str("messageID") ?: return null
+        val diff = obj.str("diff")
         return SessionRevertDto(
             messageID = message,
             partID = obj.str("partID"),
             snapshot = obj.str("snapshot"),
-            diff = obj.str("diff"),
+            diff = diff,
+            diffs = parseUnifiedDiff(diff),
         )
+    }
+
+    private fun parseUnifiedDiff(diff: String?): List<DiffFileDto> {
+        if (diff.isNullOrBlank()) return emptyList()
+        val lines = diff.lines()
+        val starts = lines.mapIndexedNotNull { index, line -> if (line.startsWith("diff --git ")) index else null }
+        if (starts.isEmpty()) return emptyList()
+        return starts.mapIndexedNotNull { index, start ->
+            val end = starts.getOrNull(index + 1) ?: lines.size
+            parseUnifiedBlock(lines.subList(start, end).joinToString("\n"))
+        }
+    }
+
+    private fun parseUnifiedBlock(block: String): DiffFileDto? {
+        val lines = block.lines()
+        val file = unifiedFile(lines) ?: return null
+        return DiffFileDto(
+            file = file,
+            additions = lines.count { it.startsWith("+") && !it.startsWith("+++") },
+            deletions = lines.count { it.startsWith("-") && !it.startsWith("---") },
+            patch = block,
+            status = unifiedStatus(lines),
+        )
+    }
+
+    private fun unifiedFile(lines: List<String>): String? {
+        val next = lines.firstOrNull { it.startsWith("+++ ") }?.removePrefix("+++ ")
+        val prev = lines.firstOrNull { it.startsWith("--- ") }?.removePrefix("--- ")
+        val path = sequenceOf(next, prev)
+            .filterNotNull()
+            .firstOrNull { it != "/dev/null" }
+            ?: lines.firstOrNull()?.let(::gitDiffTarget)
+        return path?.let(::cleanDiffPath)
+    }
+
+    private fun unifiedStatus(lines: List<String>): String = when {
+        lines.any { it == "new file mode" || it.startsWith("new file mode ") } -> "added"
+        lines.any { it == "deleted file mode" || it.startsWith("deleted file mode ") } -> "deleted"
+        lines.any { it.startsWith("--- /dev/null") } -> "added"
+        lines.any { it.startsWith("+++ /dev/null") } -> "deleted"
+        else -> "modified"
+    }
+
+    private fun gitDiffTarget(line: String): String? {
+        val match = Regex("^diff --git a/(.*) b/(.*)$").find(line) ?: return null
+        return match.groupValues.getOrNull(2)
+    }
+
+    private fun cleanDiffPath(path: String): String {
+        val text = path.trim().trim('"')
+        return when {
+            text.startsWith("a/") -> text.removePrefix("a/")
+            text.startsWith("b/") -> text.removePrefix("b/")
+            else -> text
+        }
     }
 
     // ================================================================

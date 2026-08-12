@@ -1,5 +1,4 @@
 import { Context, Effect, Layer, Semaphore } from "effect"
-import { skipLine, type CaptureSkip } from "../capture/capture"
 import type { Memory } from "../memory"
 import type { MemoryOperations } from "../capture/operations"
 import { MemoryRecall } from "../recall/recall"
@@ -104,7 +103,6 @@ type CommitInput = RootInput & {
   // shared typed-interval clock (lastTypedConsolidationAt); a digest-only commit must leave it untouched so a
   // digest in one session cannot throttle another session's typed capture.
   typed: boolean
-  skipped: CaptureSkip[]
   cost?: number
 }
 
@@ -156,10 +154,12 @@ export namespace MemoryService {
     readonly recent: (
       input: RecentInput,
     ) => Effect.Effect<Awaited<ReturnType<typeof MemoryFiles.recentSessions>>, Failure>
+    /** @deprecated Memory audit persistence was removed. */
     readonly append: (input: AppendInput) => Effect.Effect<void, Failure>
     readonly index: (input: RootInput) => Effect.Effect<Index, Failure>
     readonly commit: (input: CommitInput) => Effect.Effect<void, Failure>
     readonly recordRecall: (input: RecordRecallInput) => Effect.Effect<void, Failure>
+    /** @deprecated Memory audit persistence was removed. */
     readonly decide: (input: DecideInput) => Effect.Effect<void, Failure>
     readonly readSource: (input: ReadSourceInput) => Effect.Effect<string, Failure>
     readonly turnLock: (sessionID: SessionID) => Semaphore.Semaphore
@@ -200,7 +200,7 @@ export namespace MemoryService {
           return Object.fromEntries(entries) as Sources
         }),
       recent: (input) => bridge(() => MemoryFiles.recentSessions(input.root, input.limit, input.max)),
-      append: (input) => bridge(() => MemoryFiles.append(input.root, input.text)),
+      append: () => Effect.void,
       index: (input) =>
         bridge(async () => {
           const text = await MemoryFiles.readIndex(input.root)
@@ -219,20 +219,11 @@ export namespace MemoryService {
                 lastSessionSavedAt: input.digest ? input.now : state.stats.lastSessionSavedAt,
                 lastConsolidatedMessageID: input.messageID,
                 lastConsolidationCost: input.cost ?? state.stats.lastConsolidationCost,
-                lastConsolidationTokens: input.tokens,
-                lastOperationCount: input.count,
+                lastConsolidationTokens:
+                  input.typed || input.digest ? input.tokens : state.stats.lastConsolidationTokens,
+                lastOperationCount: input.typed ? input.count : state.stats.lastOperationCount,
               },
             })
-            const skip = skipLine(input.skipped)
-            await MemoryFiles.append(
-              input.root,
-              [
-                `consolidate trigger=turn-close digest=${input.digest ? 1 : 0} ops=${input.count} tokens=${input.tokens}`,
-                skip,
-              ]
-                .filter(Boolean)
-                .join(" "),
-            )
           }),
         ),
       recordRecall: (input) =>
@@ -266,7 +257,7 @@ export namespace MemoryService {
             }),
           })
         }),
-      decide: (input) => bridge(() => MemoryFiles.decide(input.root, input.decision)),
+      decide: () => Effect.void,
       readSource: (input) => bridge(() => MemoryFiles.readSource(input.root, input.file)),
       // Ref-counted so every acquirer — in-flight or queued behind `withPermits` — shares one
       // semaphore. Each call must be balanced by exactly one `dropLock`.

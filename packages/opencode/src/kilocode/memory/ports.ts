@@ -191,6 +191,7 @@ async function memoryText(input: {
     temperature: input.temperature,
     topP: input.topP,
     topK: input.topK,
+    maxRetries: 1,
   }
   const work = async () => {
     if (!openai) return generateText(common)
@@ -210,7 +211,7 @@ async function memoryText(input: {
   const timeout = new Promise<never>((_, reject) => {
     timer = setTimeout(() => {
       ctl.abort()
-      reject(new Error("memory model timed out"))
+      reject(new DOMException("memory model timed out", "TimeoutError"))
     }, ms)
   })
   try {

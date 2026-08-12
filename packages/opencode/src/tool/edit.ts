@@ -22,6 +22,7 @@ import { filterDiagnostics } from "./diagnostics" // kilocode_change
 import { ConfigValidation } from "../kilocode/config-validation" // kilocode_change
 import * as EncodedIO from "../kilocode/tool/encoded-io" // kilocode_change
 import * as Encoding from "../kilocode/encoding" // kilocode_change
+import { assertMutablePath } from "../kilocode/agent-manager/protection" // kilocode_change
 
 const MAX_DIFF_CONTENT = 500_000 // kilocode_change
 
@@ -106,6 +107,7 @@ export const EditTool = Tool.define(
           const filePath = path.isAbsolute(params.filePath)
             ? params.filePath
             : path.join(instance.directory, params.filePath)
+          assertMutablePath(filePath) // kilocode_change
           yield* assertExternalDirectoryEffect(ctx, filePath)
 
           let diff = ""
