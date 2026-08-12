@@ -17,6 +17,7 @@ import okhttp3.Response
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 import java.io.File
+import java.io.IOException
 import java.io.RandomAccessFile
 import java.nio.channels.FileLock
 import java.nio.channels.OverlappingFileLockException
@@ -41,6 +42,11 @@ class KiloCliDownloader(
     companion object {
         private const val LOCK_TIMEOUT_MS = 30_000L
         private const val LOCK_POLL_MS = 100L
+        // GitHub release downloads intermittently drop the connection mid-transfer
+        // (e.g. "Unexpected end of file from server"). Retry transient network errors
+        // with a short backoff so a single flake does not fail the whole build/connect.
+        private const val NETWORK_ATTEMPTS = 3
+        private const val NETWORK_BACKOFF_MS = 500L
         private val DIGEST = Regex("^sha256:[a-f0-9]{64}$")
         private val JSON = Json { ignoreUnknownKeys = true }
         private val LOCKS = ConcurrentHashMap<String, Any>()
@@ -218,6 +224,7 @@ class KiloCliDownloader(
             .url(url)
             .header("Accept", "application/vnd.github+json")
             .build()
+        return retryNetwork("Fetching Kilo CLI $version metadata") {
         http.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
                 val info = rate(response)
@@ -250,7 +257,8 @@ class KiloCliDownloader(
             if (!digest.matches(DIGEST)) {
                 fail("Kilo CLI release $version asset $name has a malformed digest '$digest'; expected sha256:<64 hex chars>")
             }
-            return digest
+            digest
+        }
         }
     }
 
@@ -269,6 +277,7 @@ class KiloCliDownloader(
         val url = url(version, platform, ext)
         log.info("Downloading Kilo CLI $version for $platform from $url")
         val request = Request.Builder().url(url).build()
+        retryNetwork("Downloading Kilo CLI $version for $platform") {
         http.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
                 throw IllegalStateException("Failed to download Kilo CLI $version for $platform: HTTP ${response.code}")
@@ -294,6 +303,25 @@ class KiloCliDownloader(
                         }
                     }
                 }
+            }
+        }
+        }
+    }
+
+    // Retry transient network failures (dropped connections, read timeouts) with a short
+    // linear backoff. HTTP status errors surface as IllegalStateException and are not retried.
+    private fun <T> retryNetwork(what: String, block: () -> T): T {
+        var attempt = 1
+        while (true) {
+            try {
+                return block()
+            } catch (e: IOException) {
+                if (attempt >= NETWORK_ATTEMPTS) {
+                    throw IllegalStateException("$what failed after $attempt attempts: ${e.message}", e)
+                }
+                log.warn("$what failed on attempt $attempt/$NETWORK_ATTEMPTS, retrying: ${e.message}")
+                Thread.sleep(NETWORK_BACKOFF_MS * attempt)
+                attempt += 1
             }
         }
     }

@@ -4,6 +4,7 @@ import ai.kilocode.backend.testing.TestLog
 import kotlinx.coroutines.runBlocking
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.SocketPolicy
 import okio.Buffer
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
@@ -224,6 +225,35 @@ class KiloCliDownloaderTest {
             assertTrue(cli.isFile)
             assertEquals("#!/bin/old\n", cli.readText())
             assertTrue(File(cli.parentFile.parentFile, ".complete").isFile)
+        }
+    }
+
+    @Test
+    fun `retries a dropped download and succeeds`() = runBlocking {
+        MockWebServer().use { server ->
+            val bytes = archive()
+            // First attempt drops the connection mid-transfer (the observed CI flake:
+            // "Unexpected end of file from server"); the retry then completes normally.
+            server.enqueue(
+                MockResponse()
+                    .setResponseCode(200)
+                    .setBody(Buffer().write(bytes))
+                    .setSocketPolicy(SocketPolicy.DISCONNECT_DURING_RESPONSE_BODY)
+            )
+            server.enqueue(MockResponse().setResponseCode(200).setBody(Buffer().write(bytes)))
+            val log = TestLog()
+
+            val cli = KiloCliDownloader(
+                log = log,
+                root = dir,
+                baseUrl = server.url("/release").toString(),
+                api = server.url("/api").toString(),
+                digests = digests(bytes),
+            ).resolve("1.2.3")
+
+            assertTrue(cli.isFile)
+            assertEquals(2, server.requestCount)
+            assertTrue(log.messages.any { it.contains("Downloading Kilo CLI 1.2.3") && it.contains("retrying") })
         }
     }
 
