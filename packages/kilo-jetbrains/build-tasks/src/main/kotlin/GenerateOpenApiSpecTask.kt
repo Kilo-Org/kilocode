@@ -17,6 +17,7 @@ import org.gradle.api.tasks.TaskAction
 import org.gradle.process.ExecOperations
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URI
 import java.security.MessageDigest
@@ -32,7 +33,14 @@ abstract class GenerateOpenApiSpecTask : DefaultTask() {
         private val DIGEST = Regex("^sha256:[a-f0-9]{64}$")
         private val JSON = Json { ignoreUnknownKeys = true }
         private const val API = "https://api.github.com/repos/Kilo-Org/kilocode/releases/tags"
+        // GitHub release/API downloads intermittently drop connections or return transient 5xx
+        // (observed in CI: "socket hang up", HTTP 503). Retry those with a backoff so a brief
+        // CDN blip does not fail the whole build. Permanent errors (404, digest, rate limit) do not retry.
+        private const val NETWORK_ATTEMPTS = 4
+        private const val NETWORK_BACKOFF_MS = 5_000L
     }
+
+    private class RetryableHttp(val code: Int, message: String) : RuntimeException(message)
 
     @get:Input
     abstract val cliVersion: Property<String>
@@ -151,6 +159,7 @@ abstract class GenerateOpenApiSpecTask : DefaultTask() {
     private fun asset(version: String, name: String): String {
         val url = "$API/v$version"
         logger.lifecycle("Fetching pinned Kilo CLI release metadata from $url")
+        return withRetry("Fetching pinned Kilo CLI release metadata") {
         val conn = URI(url).toURL().openConnection() as HttpURLConnection
         conn.connectTimeout = 30_000
         conn.readTimeout = 120_000
@@ -173,7 +182,9 @@ abstract class GenerateOpenApiSpecTask : DefaultTask() {
                         "GitHub API rate limit exceeded while fetching pinned Kilo CLI release metadata ($info)$detail"
                     )
                 }
-                throw GradleException("Failed to fetch pinned Kilo CLI release metadata: HTTP $code from $url ($info)$detail")
+                val message = "Failed to fetch pinned Kilo CLI release metadata: HTTP $code from $url ($info)$detail"
+                if (transient(code)) throw RetryableHttp(code, message)
+                throw GradleException(message)
             }
             val body = conn.inputStream.bufferedReader().use { it.readText() }
             val digest = JSON.parseToJsonElement(body).jsonObject["assets"]?.jsonArray
@@ -181,11 +192,35 @@ abstract class GenerateOpenApiSpecTask : DefaultTask() {
                 ?.jsonObject?.get("digest")?.jsonPrimitive?.contentOrNull
                 ?: throw GradleException("Pinned Kilo CLI release $version did not include $name")
             if (!digest.matches(DIGEST)) throw GradleException("Pinned Kilo CLI release $version asset $name has invalid digest")
-            return digest
+            digest
         } finally {
             conn.disconnect()
         }
+        }
     }
+
+    // Retry transient network failures (dropped connections and 5xx) with a linear backoff.
+    // Permanent errors (4xx, rate limit, digest mismatch) surface immediately as GradleException.
+    private fun <T> withRetry(what: String, block: () -> T): T {
+        var attempt = 1
+        while (true) {
+            try {
+                return block()
+            } catch (e: RetryableHttp) {
+                if (attempt >= NETWORK_ATTEMPTS) throw GradleException(e.message ?: "$what failed after $attempt attempts")
+                logger.warn("$what failed on attempt $attempt/$NETWORK_ATTEMPTS (HTTP ${e.code}), retrying")
+                Thread.sleep(NETWORK_BACKOFF_MS * attempt)
+                attempt += 1
+            } catch (e: IOException) {
+                if (attempt >= NETWORK_ATTEMPTS) throw GradleException("$what failed after $attempt attempts: ${e.message}", e)
+                logger.warn("$what failed on attempt $attempt/$NETWORK_ATTEMPTS, retrying: ${e.message}")
+                Thread.sleep(NETWORK_BACKOFF_MS * attempt)
+                attempt += 1
+            }
+        }
+    }
+
+    private fun transient(code: Int) = code in 500..599
 
     private fun rate(conn: HttpURLConnection): String {
         val reset = conn.getHeaderField("X-RateLimit-Reset")
@@ -200,18 +235,24 @@ abstract class GenerateOpenApiSpecTask : DefaultTask() {
 
     private fun download(url: String, file: File) {
         logger.lifecycle("Downloading pinned Kilo CLI from $url")
-        val conn = URI(url).toURL().openConnection() as HttpURLConnection
-        conn.connectTimeout = 30_000
-        conn.readTimeout = 120_000
-        conn.instanceFollowRedirects = true
-        try {
-            val code = conn.responseCode
-            if (code !in 200..299) throw GradleException("Failed to download pinned Kilo CLI: HTTP $code from $url")
-            conn.inputStream.use { input ->
-                file.outputStream().use { output -> input.copyTo(output) }
+        withRetry("Downloading pinned Kilo CLI") {
+            val conn = URI(url).toURL().openConnection() as HttpURLConnection
+            conn.connectTimeout = 30_000
+            conn.readTimeout = 120_000
+            conn.instanceFollowRedirects = true
+            try {
+                val code = conn.responseCode
+                if (code !in 200..299) {
+                    val message = "Failed to download pinned Kilo CLI: HTTP $code from $url"
+                    if (transient(code)) throw RetryableHttp(code, message)
+                    throw GradleException(message)
+                }
+                conn.inputStream.use { input ->
+                    file.outputStream().use { output -> input.copyTo(output) }
+                }
+            } finally {
+                conn.disconnect()
             }
-        } finally {
-            conn.disconnect()
         }
     }
 
