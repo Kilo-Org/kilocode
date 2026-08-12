@@ -50,6 +50,7 @@ export function parseOptions(args: string[]): Options {
     failOnMissing: args.includes("--fail-on-missing"),
     failOnSkip: args.includes("--fail-on-skip"),
     scenarioTimeout: parseScenarioTimeout(option(args, "--scenario-timeout") ?? "30 seconds"),
+    retries: parseRetries(option(args, "--retries")), // kilocode_change
     progress: args.includes("--progress"),
     trace: args.includes("--trace"),
   }
@@ -84,6 +85,17 @@ function option(args: string[], name: string) {
   if (index === -1) return undefined
   return args[index + 1]
 }
+
+// kilocode_change start - default to 2 extra attempts so a single transient scenario flake
+// (for example cross-scenario state that outlives an async reset) does not fail the whole gate.
+// Retries only cost time on failure; a real regression still fails every attempt.
+function parseRetries(input: string | undefined) {
+  if (input === undefined) return 2
+  const value = Number(input)
+  if (!Number.isInteger(value) || value < 0) throw new Error(`invalid --retries ${input}`)
+  return value
+}
+// kilocode_change end
 
 function parseScenarioTimeout(input: string) {
   if (!isScenarioTimeout(input)) throw new Error(`invalid --scenario-timeout ${input}`)

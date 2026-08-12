@@ -31,9 +31,13 @@ export function printHeader(
 export function printResults(results: Result[], missing: string[], extra: Scenario[]) {
   for (const result of results) {
     if (result.status === "pass") {
+      // kilocode_change start - flag scenarios that only passed after a retry so flakes stay visible
+      const retried =
+        result.attempts && result.attempts > 1 ? ` ${color.yellow}[attempt ${result.attempts}]${color.reset}` : ""
       console.log(
-        `${color.green}PASS${color.reset} ${pad(result.scenario.method, 6)} ${pad(result.scenario.path, 48)} ${result.scenario.name}`,
+        `${color.green}PASS${color.reset} ${pad(result.scenario.method, 6)} ${pad(result.scenario.path, 48)} ${result.scenario.name}${retried}`,
       )
+      // kilocode_change end
       continue
     }
     if (result.status === "skip") {
@@ -56,9 +60,12 @@ export function printResults(results: Result[], missing: string[], extra: Scenar
     for (const scenario of extra)
       console.log(`${color.yellow}EXTRA${color.reset} ${routeKey(scenario)} ${scenario.name}`)
   }
+  // kilocode_change start - surface the flaky count (passed only after a retry) alongside the totals
+  const flaky = results.filter((result) => result.status === "pass" && (result.attempts ?? 1) > 1).length
   console.log(
-    `\n${color.dim}summary pass=${results.filter((result) => result.status === "pass").length} fail=${results.filter((result) => result.status === "fail").length} skip=${results.filter((result) => result.status === "skip").length} missing=${missing.length} extra=${extra.length}${color.reset}`,
+    `\n${color.dim}summary pass=${results.filter((result) => result.status === "pass").length} fail=${results.filter((result) => result.status === "fail").length} skip=${results.filter((result) => result.status === "skip").length} flaky=${flaky} missing=${missing.length} extra=${extra.length}${color.reset}`,
   )
+  // kilocode_change end
 }
 
 function routeKey(scenario: Scenario) {

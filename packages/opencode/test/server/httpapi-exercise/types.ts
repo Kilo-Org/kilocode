@@ -33,6 +33,7 @@ export type Options = {
   failOnMissing: boolean
   failOnSkip: boolean
   scenarioTimeout: Duration.Duration
+  retries: number // kilocode_change - extra attempts for a failing scenario before it counts as a failure
   progress: boolean
   trace: boolean
 }
@@ -121,8 +122,10 @@ export type TodoScenario = {
 }
 
 export type Result =
-  | { status: "pass"; scenario: ActiveScenario }
-  | { status: "fail"; scenario: ActiveScenario; message: string }
+  // kilocode_change start - `attempts` records how many tries a scenario took; >1 means it passed only after a retry (flaky)
+  | { status: "pass"; scenario: ActiveScenario; attempts?: number }
+  | { status: "fail"; scenario: ActiveScenario; message: string; attempts?: number }
+  // kilocode_change end
   | { status: "skip"; scenario: TodoScenario }
 
 export type SessionInfo = { id: SessionID; title: string; parentID?: SessionID }

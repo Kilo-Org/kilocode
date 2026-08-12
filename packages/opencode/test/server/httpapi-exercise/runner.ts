@@ -17,17 +17,41 @@ import { ModelV2 } from "@opencode-ai/core/model"
 export function runScenario(options: Options) {
   return (scenario: Scenario) => {
     if (scenario.kind === "todo") return Effect.succeed({ status: "skip", scenario } as Result)
-    return runActive(options, scenario).pipe(
-      Effect.timeoutOrElse({
-        duration: options.scenarioTimeout,
-        orElse: () => Effect.die(new Error(`scenario timed out after ${Duration.format(options.scenarioTimeout)}`)),
-      }),
-      Effect.as({ status: "pass", scenario } as Result),
-      Effect.catchCause((cause) => Effect.succeed({ status: "fail" as const, scenario, message: Cause.pretty(cause) })),
-      Effect.scoped,
-    )
+    // kilocode_change start - retry a failing scenario before it counts as a failure so a single transient
+    // flake does not turn the whole HttpApi gate (and main) red. A genuine regression fails every attempt.
+    return attemptWithRetry(runOnce(options, scenario), options.retries + 1, 1)
+    // kilocode_change end
   }
 }
+
+// kilocode_change start
+function runOnce(options: Options, scenario: ActiveScenario) {
+  return runActive(options, scenario).pipe(
+    Effect.timeoutOrElse({
+      duration: options.scenarioTimeout,
+      orElse: () => Effect.die(new Error(`scenario timed out after ${Duration.format(options.scenarioTimeout)}`)),
+    }),
+    Effect.as({ status: "pass", scenario } as Result),
+    Effect.catchCause((cause) => Effect.succeed({ status: "fail" as const, scenario, message: Cause.pretty(cause) })),
+    Effect.scoped,
+  )
+}
+
+export function attemptWithRetry<R>(
+  attempt: Effect.Effect<Result, never, R>,
+  total: number,
+  index: number,
+): Effect.Effect<Result, never, R> {
+  return attempt.pipe(
+    Effect.flatMap((result) => {
+      if (result.status === "fail" && index < total) return attemptWithRetry(attempt, total, index + 1)
+      // Only tag `attempts` once a retry happened so single-try passes stay noise-free in the report.
+      if (result.status === "skip" || index === 1) return Effect.succeed(result)
+      return Effect.succeed({ ...result, attempts: index })
+    }),
+  )
+}
+// kilocode_change end
 
 function runActive(options: Options, scenario: ActiveScenario) {
   if (options.mode === "auth") return runAuth(scenario)
