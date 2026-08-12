@@ -22,9 +22,7 @@ describe("buildCloudConnect", () => {
       field: "region",
       message: "provider.connect.prompt.required",
     })
-    expect(
-      buildCloudConnect("amazon-bedrock", { ...empty, region: "us-east-1", apiKey: "token" }, "apiKey", t),
-    ).toEqual({
+    expect(buildCloudConnect("amazon-bedrock", { ...empty, region: "us-east-1", apiKey: "token" }, "apiKey", t)).toEqual({
       metadata: { mode: "apiKey", region: "us-east-1" },
       apiKey: "token",
     })
@@ -32,14 +30,7 @@ describe("buildCloudConnect", () => {
 
   it("reads project_id from vertex service account json", () => {
     const blob = JSON.stringify({ type: "service_account", project_id: "from-json" })
-    expect(
-      buildCloudConnect(
-        "google-vertex",
-        { ...empty, location: "us-central1", credentials: blob },
-        "apiKey",
-        t,
-      ),
-    ).toEqual({
+    expect(buildCloudConnect("google-vertex", { ...empty, location: "us-central1", credentials: blob }, "apiKey", t)).toEqual({
       metadata: { project: "from-json", location: "us-central1", credentials: blob },
       apiKey: "",
     })

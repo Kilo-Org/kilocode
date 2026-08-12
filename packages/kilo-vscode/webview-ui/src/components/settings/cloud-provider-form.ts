@@ -1,3 +1,4 @@
+import type { UiI18nParams } from "@kilocode/kilo-ui/context"
 import { BEDROCK_ID, VERTEX_ID } from "../../../../src/shared/cloud-provider"
 
 export type CloudMode = "apiKey" | "accessKeys" | "profile"
@@ -17,7 +18,7 @@ type CloudFields = {
 
 export type CloudError = { field?: string; message: string }
 
-type Translate = (key: string, params?: Record<string, string>) => string
+type Translate = (key: string, params?: UiI18nParams) => string
 
 function text(value: string) {
   return value.trim()

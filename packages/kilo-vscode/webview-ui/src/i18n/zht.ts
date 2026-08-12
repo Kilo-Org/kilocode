@@ -159,7 +159,7 @@ export const dict = {
   "provider.connect.bedrock.profile.label": "AWS profile",
   "provider.connect.bedrock.profile.placeholder": "e.g. default",
   "provider.connect.bedrock.endpoint.label": "Custom endpoint (optional)",
-  "provider.connect.bedrock.endpoint.placeholder": "e.g. https://bedrock-runtime.us-east-1.amazonaws.com",
+  "provider.connect.bedrock.endpoint.placeholder": "Optional custom Bedrock endpoint URL",
   "provider.connect.vertex.description":
     "Configure Google Vertex AI with a project ID and location. Paste a service account JSON blob, or leave it empty to use Application Default Credentials.",
   "provider.connect.vertex.project.label": "Google Cloud project ID",
