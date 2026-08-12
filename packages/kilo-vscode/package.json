@@ -1287,6 +1287,7 @@
     "esbuild-plugin-solid": "^0.6.0",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
+    "graphql": "17.0.2",
     "happy-dom": "20.8.9",
     "knip": "5.85.0",
     "prettier": "3.6.2",
