@@ -64,7 +64,10 @@ jobs:
             exit 0
           fi
           echo 'general=true' >> "$GITHUB_OUTPUT"
-          echo 'settings=[{"os":"linux","index":1,"total":2,"host":"blacksmith-4vcpu-ubuntu-2404","run":true,"packages":true},{"os":"linux","index":2,"total":2,"host":"blacksmith-4vcpu-ubuntu-2404","run":true,"packages":false},{"os":"macos","index":1,"total":1,"host":"macos-15","run":true,"packages":true},{"os":"windows","index":1,"total":4,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":true},{"os":"windows","index":2,"total":4,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false},{"os":"windows","index":3,"total":4,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false},{"os":"windows","index":4,"total":4,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false}]' >> "$GITHUB_OUTPUT"
+          # kilocode_change - Windows is 6 shards (was 4): CLI tests now run at KILO_TEST_CONCURRENCY=2
+          # instead of the default 4 to cut CPU contention on the 4-vCPU runner; more shards keep
+          # per-shard wall-clock within the job timeout despite the lower per-shard parallelism.
+          echo 'settings=[{"os":"linux","index":1,"total":2,"host":"blacksmith-4vcpu-ubuntu-2404","run":true,"packages":true},{"os":"linux","index":2,"total":2,"host":"blacksmith-4vcpu-ubuntu-2404","run":true,"packages":false},{"os":"macos","index":1,"total":1,"host":"macos-15","run":true,"packages":true},{"os":"windows","index":1,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":true},{"os":"windows","index":2,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false},{"os":"windows","index":3,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false},{"os":"windows","index":4,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false},{"os":"windows","index":5,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false},{"os":"windows","index":6,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false}]' >> "$GITHUB_OUTPUT"
   # kilocode_change end
   unit:
     # kilocode_change start
@@ -172,6 +175,17 @@ jobs:
           KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: "true" # kilocode_change - was Windows-only; the CLI now starts a watcher per instance, too heavy/racy for unit tests. Watcher tests opt back in.
           KILO_TEST_PROFILE: ${{ matrix.settings.os == 'macos' && 'darwin' || '' }}
           KILO_TEST_SHARD: ${{ format('{0}/{1}', matrix.settings.index, matrix.settings.total) }}
+          # kilocode_change - cap parallelism on the 4-vCPU Windows runner. At the default
+          # min(4, cpus)=4, four heavy real-server test files share 4 vCPUs (~1 each) and blow
+          # their per-test timeouts; 2 gives each process real CPU headroom. Windows grows to
+          # 6 shards to absorb the lower per-shard parallelism. Linux/macOS (not timeout
+          # offenders; macOS is a single unsharded job) keep the default.
+          KILO_TEST_CONCURRENCY: ${{ matrix.settings.os == 'windows' && '2' || '' }}
+          # kilocode_change - raise the per-file kill deadline on Windows only. Heavy real-server
+          # files run ~230-270s serially there (vs ~40s on macOS/Linux), leaving only ~30s under
+          # the 300s default; 600s gives healthy-but-slow files real margin without masking hangs
+          # elsewhere (Linux/macOS keep the 300s default).
+          KILO_TEST_FILE_TIMEOUT: ${{ matrix.settings.os == 'windows' && '600000' || '' }}
       # kilocode_change end
 
       # kilocode_change start
