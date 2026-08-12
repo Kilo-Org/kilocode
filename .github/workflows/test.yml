@@ -64,7 +64,9 @@ jobs:
             exit 0
           fi
           echo 'general=true' >> "$GITHUB_OUTPUT"
-          echo 'settings=[{"os":"linux","index":1,"total":2,"host":"blacksmith-4vcpu-ubuntu-2404","run":true,"packages":true},{"os":"linux","index":2,"total":2,"host":"blacksmith-4vcpu-ubuntu-2404","run":true,"packages":false},{"os":"macos","index":1,"total":1,"host":"macos-15","run":true,"packages":true},{"os":"windows","index":1,"total":4,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":true},{"os":"windows","index":2,"total":4,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false},{"os":"windows","index":3,"total":4,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false},{"os":"windows","index":4,"total":4,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false}]' >> "$GITHUB_OUTPUT"
+          # kilocode_change start - rebalanced shard counts: Linux 2->4, Windows 4->6
+          echo 'settings=[{"os":"linux","index":1,"total":4,"host":"blacksmith-4vcpu-ubuntu-2404","run":true,"packages":true},{"os":"linux","index":2,"total":4,"host":"blacksmith-4vcpu-ubuntu-2404","run":true,"packages":false},{"os":"linux","index":3,"total":4,"host":"blacksmith-4vcpu-ubuntu-2404","run":true,"packages":false},{"os":"linux","index":4,"total":4,"host":"blacksmith-4vcpu-ubuntu-2404","run":true,"packages":false},{"os":"macos","index":1,"total":1,"host":"macos-15","run":true,"packages":true},{"os":"windows","index":1,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":true},{"os":"windows","index":2,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false},{"os":"windows","index":3,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false},{"os":"windows","index":4,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false},{"os":"windows","index":5,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false},{"os":"windows","index":6,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false}]' >> "$GITHUB_OUTPUT"
+          # kilocode_change end
   # kilocode_change end
   unit:
     # kilocode_change start
@@ -141,6 +143,30 @@ jobs:
             turbo-${{ runner.os }}-
           # kilocode_change end
 
+      # kilocode_change start - reuse the previous run's merged junit.xml so the runner can weight shards by observed wall-clock duration instead of file size
+      - name: Restore unit junit history
+        if: matrix.settings.run
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: packages/opencode/.artifacts/unit/junit.xml
+          key: unit-junit-${{ runner.os }}-${{ matrix.settings.index }}-${{ matrix.settings.total }}-${{ github.ref }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            unit-junit-${{ runner.os }}-${{ matrix.settings.index }}-${{ matrix.settings.total }}-${{ github.ref }}-
+            unit-junit-${{ runner.os }}-${{ matrix.settings.index }}-${{ matrix.settings.total }}-
+            unit-junit-${{ runner.os }}-
+
+      # kilocode_change start - cross-shard history: the aggregated junit from the previous run's `aggregate-junit-history` job, so each shard sees the slow files from sibling shards too
+      - name: Restore aggregated unit junit history
+        if: matrix.settings.run && matrix.settings.os != 'macos'
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: packages/opencode/.artifacts/unit/aggregate-${{ runner.os }}.xml
+          key: unit-junit-${{ runner.os }}-aggregate-${{ github.ref }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            unit-junit-${{ runner.os }}-aggregate-${{ github.ref }}-
+            unit-junit-${{ runner.os }}-aggregate-
+            unit-junit-${{ runner.os }}-
+
       # kilocode_change start - test non-CLI packages separately from sharded CLI tests
       - name: Verify package test scheduling
         if: matrix.settings.run && matrix.settings.packages && matrix.settings.os == 'linux'
@@ -172,7 +198,16 @@ jobs:
           KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: "true" # kilocode_change - was Windows-only; the CLI now starts a watcher per instance, too heavy/racy for unit tests. Watcher tests opt back in.
           KILO_TEST_PROFILE: ${{ matrix.settings.os == 'macos' && 'darwin' || '' }}
           KILO_TEST_SHARD: ${{ format('{0}/{1}', matrix.settings.index, matrix.settings.total) }}
+          KILO_TEST_HISTORY_DIR: ${{ matrix.settings.os == 'macos' && '' || '.artifacts/unit' }} # kilocode_change - feed observed durations into the sharder (runner cwd is packages/opencode, so this is runner-relative)
       # kilocode_change end
+
+      # kilocode_change start - persist the freshly merged junit.xml so the next run can balance by wall-clock duration
+      - name: Save unit junit history
+        if: matrix.settings.run && matrix.settings.os != 'macos' && always()
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: packages/opencode/.artifacts/unit/junit.xml
+          key: unit-junit-${{ runner.os }}-${{ matrix.settings.index }}-${{ matrix.settings.total }}-${{ github.ref }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       # kilocode_change start
       - name: Publish unit reports
@@ -199,6 +234,55 @@ jobs:
             .artifacts/unit/junit.xml
             packages/*/.artifacts/unit/junit.xml
       # kilocode_change end
+
+  # kilocode_change start - combine every per-shard junit into one per-OS aggregated file so sibling shards share slow-file history on the next run
+  aggregate-junit-history:
+    name: aggregate junit history
+    needs: unit
+    if: always()
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      # Without merge-multiple, each `unit-<os>-<i>-<attempt>` artifact lands
+      # in its own subdirectory under `artifacts/`, preserving the inner
+      # path (`packages/opencode/.artifacts/unit/junit.xml`) so the
+      # aggregator can find the per-shard junits.
+      - name: Download unit artifacts
+        uses: actions/download-artifact@v7
+        with:
+          path: artifacts
+          pattern: unit-*
+
+      - name: Aggregate per-OS junit
+        working-directory: packages/opencode
+        # cwd is packages/opencode; the output path is relative to that so
+        # the file lands at <workspace>/packages/opencode/.artifacts/unit,
+        # which matches the path the unit matrix restores.
+        run: bun script/kilocode/aggregate-junit-history.ts ../../artifacts .artifacts/unit
+
+      # Save at the exact workspace-relative path the unit matrix restores
+      # to — `actions/cache` does not relocate files on restore, so the
+      # save path must match the restore path byte-for-byte.
+      - name: Save Linux aggregate
+        if: hashFiles('packages/opencode/.artifacts/unit/aggregate-Linux.xml') != ''
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: packages/opencode/.artifacts/unit/aggregate-Linux.xml
+          key: unit-junit-Linux-aggregate-${{ github.ref }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Save Windows aggregate
+        if: hashFiles('packages/opencode/.artifacts/unit/aggregate-Windows.xml') != ''
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: packages/opencode/.artifacts/unit/aggregate-Windows.xml
+          key: unit-junit-Windows-aggregate-${{ github.ref }}-${{ github.run_id }}-${{ github.run_attempt }}
+  # kilocode_change end
 
   # kilocode_change start
   httpapi:

@@ -35,6 +35,7 @@ if (argv.includes("--help") || argv.includes("-h")) {
       "  --retries <N>        Extra attempts for failing files (default: 1)",
       "  --profile <name>     Run a curated test profile (env: KILO_TEST_PROFILE)",
       "  --shard <N/M>        Run one balanced file shard (env: KILO_TEST_SHARD)",
+      "  --history <dir>      Load per-file durations from junit.xml under <dir> (env: KILO_TEST_HISTORY_DIR)",
       "  --bail               Stop on first failure",
       "  --dots               Show compact dot progress",
       "  --verbose            Show full output for every file",
@@ -96,8 +97,15 @@ if (!parsed.ok) {
   process.exit(2)
 }
 const shard = parsed.value
+const historyFlag = text("history")
+const historyEnv = process.env.KILO_TEST_HISTORY_DIR?.trim() || undefined
+if (historyFlag && historyEnv && historyFlag !== historyEnv) {
+  console.error(`Conflicting test history dirs: --history=${historyFlag}, KILO_TEST_HISTORY_DIR=${historyEnv}`)
+  process.exit(2)
+}
+const historyDir = historyFlag ?? historyEnv
 
-const valued = new Set(["--concurrency", "--timeout", "--file-timeout", "--retries", "--profile", "--shard"])
+const valued = new Set(["--concurrency", "--timeout", "--file-timeout", "--retries", "--profile", "--shard", "--history"])
 const patterns = argv.filter((arg, i) => {
   if (arg.startsWith("-")) return false
   if (i > 0 && valued.has(argv[i - 1])) return false
@@ -152,12 +160,17 @@ const matched =
       )
     : selected
 const candidates = patterns.length > 0 && !profile ? matched : matched.filter((file) => !skipped.has(file)) // kilocode_change
+const weight = (file: string) => Bun.file(path.join(root, "test", file)).size
+const durations = await loadHistory(historyDir)
+const shardWeight = TestShard.weightFromDurations(durations, weight)
 if (shard && shard.total > candidates.length) {
   console.error(`Test shard count ${shard.total} exceeds selected file count ${candidates.length}`)
   process.exit(2)
 }
-const weight = (file: string) => Bun.file(path.join(root, "test", file)).size
-const files = shard ? TestShard.split(candidates, weight, shard.total)[shard.index - 1] : candidates
+const files = shard ? TestShard.split(candidates, shardWeight, shard.total)[shard.index - 1] : candidates
+if (Object.keys(durations).length > 0) {
+  console.log(`Loaded ${Object.keys(durations).length} file durations from ${historyDir ?? "history"}`)
+}
 
 if (files.length === 0) {
   console.log("No test files found")
@@ -618,6 +631,28 @@ async function cleanup(pid: number) {
   await remove(dir).catch((err) => {
     console.error(`cleanup failed for ${dir}:`, err)
   })
+}
+
+// Read every *.xml file under `dir` and merge per-file durations. The CI
+// workflow restores the previous merged junit.xml into this directory via
+// actions/cache; in practice it's a single file but scanning is cheap and
+// tolerates future cross-shard aggregation layouts.
+async function loadHistory(dir: string | undefined): Promise<TestShard.Durations> {
+  if (!dir) return {}
+  let entries: string[]
+  try {
+    const glob = new Bun.Glob("**/*.xml")
+    entries = await Array.fromAsync(glob.scan({ cwd: dir }))
+  } catch (err) {
+    console.error(`history dir ${dir} is unreadable:`, err)
+    return {}
+  }
+  const maps: TestShard.Durations[] = []
+  for (const file of entries) {
+    const content = await Bun.file(path.join(dir, file)).text()
+    maps.push(TestShard.durationsFromJUnit(content))
+  }
+  return TestShard.combineDurations(...maps)
 }
 
 // Grab everything between the outer <testsuites ...> and </testsuites> of a
