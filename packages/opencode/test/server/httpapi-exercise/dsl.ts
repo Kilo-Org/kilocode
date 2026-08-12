@@ -23,7 +23,7 @@ class ScenarioBuilder<S = undefined> {
       path,
       name,
       // kilocode_change start - default to an in-memory project dir; opt into git init only for routes
-      // that exercise VCS primitives or HEAD-baseed diffs to avoid ~70 redundant `git init` calls per run.
+      // that exercise VCS primitives or HEAD-based diffs to avoid ~70 redundant `git init` calls per run.
       project: { git: false },
       // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- The unseeded builder state is intentionally undefined until `.seeded(...)` narrows it.
       seed: () => Effect.succeed(undefined as S),

@@ -1789,17 +1789,12 @@ const llmScenarios = new Set([
 ])
 
 const main = Effect.gen(function* () {
-  // kilocode_change start - dispose final non-mutating instances so shared test scopes can close
-  yield* Effect.addFinalizer(() =>
-    Effect.gen(function* () {
-      const modules = yield* Effect.promise(() => runtime())
-      yield* Effect.promise(() => modules.disposeAllInstances())
-      yield* Effect.promise(() => disposeApps())
-      yield* cleanupExercisePaths
-    }),
-  )
-  // kilocode_change end
   const options = parseOptions(Bun.argv.slice(2))
+  for (const scenario of scenarios) {
+    if (scenario.kind === "active" && llmScenarios.has(scenario.name) && !scenario.project?.llm) {
+      return yield* Effect.fail(new Error(`${scenario.name} must use TestLLMServer via .withLlm()`))
+    }
+  }
   // kilocode_change start - coverage only needs the OpenAPI group; bypass runtime + LLM + DB allocation
   if (options.mode === "coverage") {
     const selected = selectedScenarios(options, scenarios)
@@ -1818,8 +1813,19 @@ const main = Effect.gen(function* () {
       return yield* Effect.fail(new Error("one or more scenarios are skipped"))
     if (options.failOnMissing && missing.length > 0)
       return yield* Effect.fail(new Error("one or more routes have no scenario"))
+    yield* cleanupExercisePaths
     return undefined
   }
+  // kilocode_change end
+  // kilocode_change start - dispose final non-mutating instances so shared test scopes can close; skip when coverage returned early so runtime() is never imported in static mode
+  yield* Effect.addFinalizer(() =>
+    Effect.gen(function* () {
+      const modules = yield* Effect.promise(() => runtime())
+      yield* Effect.promise(() => modules.disposeAllInstances())
+      yield* Effect.promise(() => disposeApps())
+      yield* cleanupExercisePaths
+    }),
+  )
   // kilocode_change end
   const modules = yield* Effect.promise(() => runtime())
   const effectRoutes = routeKeys(OpenApi.fromApi(modules.PublicApi))
@@ -1827,12 +1833,6 @@ const main = Effect.gen(function* () {
   const sharded = shardScenarios(selected, options.shard)
   const missing = effectRoutes.filter((route) => !scenarios.some((scenario) => route === routeKey(scenario)))
   const extra = scenarios.filter((scenario) => !effectRoutes.includes(routeKey(scenario)))
-
-  for (const scenario of scenarios) {
-    if (scenario.kind === "active" && llmScenarios.has(scenario.name) && !scenario.project?.llm) {
-      return yield* Effect.fail(new Error(`${scenario.name} must use TestLLMServer via .withLlm()`))
-    }
-  }
 
   printHeader(options, effectRoutes, sharded, missing, extra, {
     database: exerciseDatabasePath,
