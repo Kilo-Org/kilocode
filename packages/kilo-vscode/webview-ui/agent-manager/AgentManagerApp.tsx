@@ -539,7 +539,14 @@ const AgentManagerContent: Component = () => {
   const togglePRPanel = () => {
     setHistory(false)
     if (reviewActive()) closeReviewTab()
+    const opening = sidePanel() !== SidePanel.PR
     setSidePanel((prev) => (prev === SidePanel.PR ? null : SidePanel.PR))
+    // Trigger an immediate refresh when opening so the panel shows fresh data
+    // rather than waiting for the next poll cycle
+    if (opening) {
+      const sel = selection()
+      if (sel && sel !== LOCAL) vscode.postMessage({ type: "agentManager.refreshPR", worktreeId: sel })
+    }
   }
 
   const openSelectedPR = () => {
@@ -2632,23 +2639,19 @@ const AgentManagerContent: Component = () => {
                       />
                     </Show>
                     <Show when={sidePanel() === SidePanel.PR && activePR()}>
-                      {(() => {
-                        const data = activePR()!
-                        return (
-                          <PRPanel
-                            pr={data.pr}
-                            worktree={data.wt}
-                            onClose={() => setSidePanel(null)}
-                            onOpenExternal={() =>
-                              vscode.postMessage({
-                                type: "agentManager.openPR",
-                                worktreeId: data.selected,
-                                url: data.pr.url,
-                              })
-                            }
-                          />
-                        )
-                      })()}
+                      <PRPanel
+                        pr={activePR()!.pr}
+                        worktree={activePR()!.wt}
+                        worktreeId={activePR()!.selected}
+                        onClose={() => setSidePanel(null)}
+                        onOpenExternal={() =>
+                          vscode.postMessage({
+                            type: "agentManager.openPR",
+                            worktreeId: activePR()!.selected,
+                            url: activePR()!.pr.url,
+                          })
+                        }
+                      />
                     </Show>
                     <SideTerminalPanel
                       state={terms}
