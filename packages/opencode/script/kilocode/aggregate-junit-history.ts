@@ -52,6 +52,9 @@ for (const abs of await walk(inputDir)) {
   const head = rel.split("/")[0]
   // Macos excluded explicitly; the unit matrix doesn't restore it and
   // there is no Save macOS step, so it'd be a dead write.
+  // kilocode_change - the `\d+` index also excludes `unit-linux-packages-<attempt>`, the
+  // dedicated non-CLI packages job. That is deliberate: its junit holds package and root
+  // tooling tests, which are not CLI test files and must not weight the CLI shards.
   const match = head?.match(/^unit-(linux|windows)-\d+-\d+$/)
   if (!match) {
     skippedArtifacts++

@@ -37,7 +37,14 @@ describe("test profiles", () => {
     expect(result.files).not.toContain("cli/smokes/read-only.test.ts")
     expect(result.files).not.toContain("cli/acp/lifecycle.test.ts")
     expect(result.files).not.toContain("cli/run/run-process.test.ts")
-    expect(result.files).not.toContain("kilocode/server/config-overlay.test.ts")
+    // kilocode_change - config-overlay is four files since the 180s single-file split; all stay out.
+    for (const file of [
+      "kilocode/server/config-overlay-scope.test.ts",
+      "kilocode/server/config-overlay-instances.test.ts",
+      "kilocode/server/config-overlay-effective.test.ts",
+      "kilocode/server/config-overlay-sandbox.test.ts",
+    ])
+      expect(result.files).not.toContain(file)
     expect(result.files).not.toContain("server/httpapi-listen.test.ts")
   })
 

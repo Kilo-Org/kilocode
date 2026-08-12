@@ -64,13 +64,48 @@ jobs:
             exit 0
           fi
           echo 'general=true' >> "$GITHUB_OUTPUT"
-          # kilocode_change start - rebalanced shard counts: Linux 2->4, Windows 4->6
-          echo 'settings=[{"os":"linux","index":1,"total":4,"host":"blacksmith-4vcpu-ubuntu-2404","run":true,"packages":true},{"os":"linux","index":2,"total":4,"host":"blacksmith-4vcpu-ubuntu-2404","run":true,"packages":false},{"os":"linux","index":3,"total":4,"host":"blacksmith-4vcpu-ubuntu-2404","run":true,"packages":false},{"os":"linux","index":4,"total":4,"host":"blacksmith-4vcpu-ubuntu-2404","run":true,"packages":false},{"os":"macos","index":1,"total":1,"host":"macos-15","run":true,"packages":true},{"os":"windows","index":1,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":true},{"os":"windows","index":2,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false},{"os":"windows","index":3,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false},{"os":"windows","index":4,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false},{"os":"windows","index":5,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false},{"os":"windows","index":6,"total":6,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false}]' >> "$GITHUB_OUTPUT"
+          # kilocode_change start - rebalanced shard counts: Linux 8 CLI shards + a dedicated
+          # packages job, Windows 4->6. Duration weighting alone could not get Linux under ~5m,
+          # for two measured reasons (CI run 31648508417, Linux at 4 shards):
+          #   1. Shard 1 was the straggler at 6m51s against ~4m25s for its siblings, purely
+          #      because it also ran every non-CLI package test. Those now get their own job,
+          #      which makes the CLI shards symmetric and lets shard count actually buy time.
+          #   2. Per-file process spawn is ~3s on Linux, so cost tracks file count. The old
+          #      config-overlay.test.ts held 34 tests / 180s in ONE file, and the runner spawns
+          #      one process per *file* -- so no weighting scheme could break up those 180s.
+          #      It imposed a ~3.05m floor at any shard count (8 -> 3.05m, 10 -> 3.05m).
+          #      It is now four files, so shards help again: modelled makespan 4 -> 5.05m,
+          #      6 -> 3.78m, 7 -> 3.09m, 8 -> 2.66m. 8 is the first count under the 2m15-2m45
+          #      target, hence 8 rather than 6.
+          # Generated rather than written out: 16 entries on one line is not reviewable.
+          LINUX_HOST=blacksmith-4vcpu-ubuntu-2404
+          WINDOWS_HOST=blacksmith-4vcpu-windows-2025
+          LINUX_SHARDS=8
+          WINDOWS_SHARDS=6
+          # os host index total packages
+          shard() { printf '{"os":"%s","index":%s,"total":%s,"host":"%s","run":true,"packages":%s},' "$1" "$3" "$4" "$2" "$5"; }
+          settings="$(
+            {
+              printf '['
+              # Non-CLI packages and root tooling tests run alone, off the critical path of the
+              # CLI shards. Note: no apostrophes in comments inside this command substitution --
+              # bash parses them as an unterminated quote and the step dies with "unexpected EOF".
+              printf '{"os":"linux","index":"packages","total":0,"host":"%s","run":true,"packages":true,"packagesOnly":true},' "$LINUX_HOST"
+              for i in $(seq 1 "$LINUX_SHARDS"); do shard linux "$LINUX_HOST" "$i" "$LINUX_SHARDS" false; done
+              shard macos macos-15 1 1 true
+              for i in $(seq 1 "$WINDOWS_SHARDS"); do
+                if [ "$i" = 1 ]; then packages=true; else packages=false; fi
+                shard windows "$WINDOWS_HOST" "$i" "$WINDOWS_SHARDS" "$packages"
+              done
+              printf ']'
+            } | sed 's/,]$/]/'
+          )"
+          echo "settings=$settings" >> "$GITHUB_OUTPUT"
           # kilocode_change end
   # kilocode_change end
   unit:
     # kilocode_change start
-    name: ${{ !matrix.settings.run && 'unit (unchanged)' || matrix.settings.total > 1 && format('unit ({0}, {1}/{2})', matrix.settings.os, matrix.settings.index, matrix.settings.total) || format('unit ({0})', matrix.settings.os) }}
+    name: ${{ !matrix.settings.run && 'unit (unchanged)' || matrix.settings.packagesOnly && format('unit ({0}, packages)', matrix.settings.os) || matrix.settings.total > 1 && format('unit ({0}, {1}/{2})', matrix.settings.os, matrix.settings.index, matrix.settings.total) || format('unit ({0})', matrix.settings.os) }}
     needs: changes
     # kilocode_change end
     strategy:
@@ -145,7 +180,10 @@ jobs:
 
       # kilocode_change start - reuse the previous run's merged junit.xml so the runner can weight shards by observed wall-clock duration instead of file size
       - name: Restore unit junit history
-        if: matrix.settings.run
+        # kilocode_change - the packages job runs no CLI shard, so it has no durations to weight
+        # and never writes packages/opencode/.artifacts/unit/junit.xml. Skip all three history
+        # steps there; actions/cache/save in particular hard-fails on a missing path.
+        if: matrix.settings.run && !matrix.settings.packagesOnly
         uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: packages/opencode/.artifacts/unit/junit.xml
@@ -157,7 +195,7 @@ jobs:
 
       # kilocode_change start - cross-shard history: the aggregated junit from the previous run's `aggregate-junit-history` job, so each shard sees the slow files from sibling shards too
       - name: Restore aggregated unit junit history
-        if: matrix.settings.run && matrix.settings.os != 'macos'
+        if: matrix.settings.run && matrix.settings.os != 'macos' && !matrix.settings.packagesOnly # kilocode_change
         uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: packages/opencode/.artifacts/unit/aggregate-${{ runner.os }}.xml
@@ -192,7 +230,8 @@ jobs:
 
       # kilocode_change start - run Kilo CLI tests through platform-specific shards
       - name: Run CLI unit tests
-        if: matrix.settings.run
+        # kilocode_change - the Linux packages job carries no CLI shard, so it skips this step.
+        if: matrix.settings.run && !matrix.settings.packagesOnly
         run: bun turbo test:ci --output-logs=errors-only --log-order=grouped --log-prefix=task --filter='@kilocode/cli'
         env:
           KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: "true" # kilocode_change - was Windows-only; the CLI now starts a watcher per instance, too heavy/racy for unit tests. Watcher tests opt back in.
@@ -203,7 +242,7 @@ jobs:
 
       # kilocode_change start - persist the freshly merged junit.xml so the next run can balance by wall-clock duration
       - name: Save unit junit history
-        if: matrix.settings.run && matrix.settings.os != 'macos' && always()
+        if: always() && matrix.settings.run && matrix.settings.os != 'macos' && !matrix.settings.packagesOnly # kilocode_change
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: packages/opencode/.artifacts/unit/junit.xml
