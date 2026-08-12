@@ -1,6 +1,6 @@
 ---
 title: "Using Poolside with Kilo Code"
-description: "Connect Poolside models to Kilo Code. Guide to getting an API key and setting up Poolside in VS Code and the CLI."
+description: "Connect Poolside models to Kilo Code. Guide to getting a Poolside Platform API key and setting up the built-in Poolside provider in VS Code and the CLI."
 sidebar_label: Poolside
 ---
 
