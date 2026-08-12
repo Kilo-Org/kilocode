@@ -73,7 +73,10 @@ export const ServerProvider: ParentComponent = (props) => {
     if (m.reset) {
       setProviderUsage(undefined)
       setProviderUsageError(undefined)
-      setProviderUsageLoading(false)
+      // The reset itself means previous account/project usage was invalidated:
+      // never show it again, and reload once via the cache-aware endpoint.
+      setProviderUsageLoading(true)
+      vscode.postMessage({ type: "requestProviderUsage" })
       return
     }
     if (m.data) setProviderUsage(m.data)
@@ -85,7 +88,8 @@ export const ServerProvider: ParentComponent = (props) => {
     if (providerUsage() === undefined && !providerUsageLoading()) return
     setProviderUsage(undefined)
     setProviderUsageError(undefined)
-    setProviderUsageLoading(false)
+    setProviderUsageLoading(true)
+    vscode.postMessage({ type: "requestProviderUsage" })
   }
 
   onMount(() => {
