@@ -226,7 +226,10 @@ abstract class GenerateOpenApiSpecTask : DefaultTask() {
         conn.instanceFollowRedirects = true
         try {
             val code = conn.responseCode
-            if (code !in 200..299) throw GradleException("Failed to download pinned Kilo CLI: HTTP $code from $url")
+            if (code !in 200..299) {
+                if (code == 429 || code in 500..599) throw IOException("HTTP $code from $url")
+                throw GradleException("Failed to download pinned Kilo CLI: HTTP $code from $url")
+            }
             conn.inputStream.use { input ->
                 file.outputStream().use { output -> input.copyTo(output) }
             }
