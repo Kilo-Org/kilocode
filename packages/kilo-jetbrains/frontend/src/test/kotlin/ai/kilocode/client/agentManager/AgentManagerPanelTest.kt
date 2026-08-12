@@ -5,6 +5,7 @@ import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
 import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatcher
 import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatchers
+import ai.kilocode.client.agentManager.worktree.WorktreeNameCache
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.WorktreeStatusService
 import ai.kilocode.client.agentManager.worktree.ensureWorktreeSessionEditorKind
@@ -66,6 +67,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
 
     override fun tearDown() {
         try {
+            edt { service<WorktreeNameCache>().clear() }
             coroutines.close(::pump)
         } finally {
             super.tearDown()

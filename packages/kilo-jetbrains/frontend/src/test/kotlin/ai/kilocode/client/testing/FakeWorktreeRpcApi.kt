@@ -94,8 +94,8 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
 
     override suspend fun rename(directory: String, path: String, name: String): RenameWorktreeResultDto {
         assertNotEdt("rename")
-        renames.add(Triple(directory, path, name))
         beforeRename()
+        renames.add(Triple(directory, path, name))
         return renameResult(path, name)
     }
 
