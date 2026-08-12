@@ -17,6 +17,7 @@ import org.gradle.api.tasks.TaskAction
 import org.gradle.process.ExecOperations
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URI
 import java.security.MessageDigest
@@ -32,6 +33,8 @@ abstract class GenerateOpenApiSpecTask : DefaultTask() {
         private val DIGEST = Regex("^sha256:[a-f0-9]{64}$")
         private val JSON = Json { ignoreUnknownKeys = true }
         private const val API = "https://api.github.com/repos/Kilo-Org/kilocode/releases/tags"
+        private const val ATTEMPTS = 3
+        private const val DELAY_MS = 1_000L
     }
 
     @get:Input
@@ -200,6 +203,23 @@ abstract class GenerateOpenApiSpecTask : DefaultTask() {
 
     private fun download(url: String, file: File) {
         logger.lifecycle("Downloading pinned Kilo CLI from $url")
+        var failure: IOException? = null
+        for (attempt in 1..ATTEMPTS) {
+            try {
+                downloadOnce(url, file)
+                return
+            } catch (err: IOException) {
+                failure = err
+                if (file.exists() && !file.delete()) logger.warn("Failed to delete partial pinned Kilo CLI archive ${file.absolutePath}")
+                if (attempt == ATTEMPTS) break
+                logger.warn("Pinned Kilo CLI download failed (attempt $attempt/$ATTEMPTS), retrying: ${err.message}")
+                Thread.sleep(DELAY_MS * attempt)
+            }
+        }
+        throw GradleException("Failed to download pinned Kilo CLI after $ATTEMPTS attempts from $url", failure)
+    }
+
+    private fun downloadOnce(url: String, file: File) {
         val conn = URI(url).toURL().openConnection() as HttpURLConnection
         conn.connectTimeout = 30_000
         conn.readTimeout = 120_000
