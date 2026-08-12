@@ -28,6 +28,14 @@ interface KiloWorktreeRpcApi : RemoteApi<Unit> {
     }
 
     suspend fun list(directory: String): WorktreeListDto
+
+    /**
+     * Opens the worktree [directory] as a project in a new IDE frame. Runs on the backend/host so it
+     * works in remote development, where the frontend is a JetBrains Client that cannot open local
+     * projects. Returns true when a project was opened or was already open.
+     */
+    suspend fun open(directory: String): Boolean
+
     suspend fun stats(directory: String): WorktreeStatsListDto
     suspend fun prStatus(directory: String): WorktreePrListDto
     suspend fun listBranches(directory: String): WorktreeBranchesDto

@@ -26,6 +26,11 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `open returns false when the directory does not exist`() = runBlocking {
+        assertFalse(api.open(repo.resolve("missing").toString()))
+    }
+
+    @Test
     fun `parseWorktreeList reads porcelain output and flags the main tree`() {
         val raw = """
             worktree /repo

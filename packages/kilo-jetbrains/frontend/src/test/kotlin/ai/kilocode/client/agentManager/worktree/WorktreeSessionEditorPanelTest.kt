@@ -86,6 +86,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
             assertNotNull(UIUtil.findComponentOfType(panel, WorktreePrHeaderView::class.java))
             val buttons = components(panel).filterIsInstance<ActionButton>().mapNotNull { it.presentation.text }
             assertTrue(buttons.contains("Hide sessions"))
+            assertTrue(buttons.contains("Open worktree in new window"))
             assertTrue(buttons.contains("New session"))
             assertTrue(buttons.contains("Rename session"))
             assertTrue(buttons.contains("Delete session"))
@@ -172,6 +173,34 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         }
 
         assertEquals(1, manager.newCount)
+    }
+
+    fun `test open action opens worktree directory in new frame`() {
+        val opened = mutableListOf<String>()
+        val view = edt {
+            WorktreeSessionEditorPanel(testRootDisposable, manager, controller, workspace, openWorktree = { opened += it })
+        }
+
+        edt {
+            components(view).filterIsInstance<ActionButton>().single { it.presentation.text == "Open worktree in new window" }.click()
+        }
+
+        assertEquals(listOf(DIR), opened)
+    }
+
+    fun `test open action disabled without a worktree directory`() {
+        val blank = Workspace("", kotlinx.coroutines.flow.MutableStateFlow(ai.kilocode.rpc.dto.KiloWorkspaceStateDto(ai.kilocode.rpc.dto.KiloWorkspaceStatusDto.READY)), {}, {})
+        val opened = mutableListOf<String>()
+        val view = edt {
+            WorktreeSessionEditorPanel(testRootDisposable, manager, controller, blank, openWorktree = { opened += it })
+        }
+
+        val button = edt {
+            components(view).filterIsInstance<ActionButton>().single { it.presentation.text == "Open worktree in new window" }
+        }
+
+        assertFalse(edt { button.isEnabled })
+        assertTrue(opened.isEmpty())
     }
 
     fun `test pending new session appears in list`() {
@@ -469,7 +498,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
     }
 
     private fun toggle(root: java.awt.Component = panel): ActionButton {
-        val actions = setOf("New session", "Rename session", "Delete session")
+        val actions = setOf("Open worktree in new window", "New session", "Rename session", "Delete session")
         return components(root).filterIsInstance<ActionButton>().first { it.presentation.text !in actions }
     }
 

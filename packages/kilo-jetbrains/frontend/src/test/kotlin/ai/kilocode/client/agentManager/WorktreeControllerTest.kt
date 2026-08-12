@@ -22,6 +22,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 
 @Suppress("UnstableApiUsage")
 class WorktreeControllerTest : BasePlatformTestCase() {
@@ -55,6 +56,24 @@ class WorktreeControllerTest : BasePlatformTestCase() {
 
         assertEquals(1, controller.model.size)
         assertEquals("feature/x", controller.model.getElementAt(0).branch)
+    }
+
+    fun `test service open routes the directory to the backend rpc`() {
+        var result: Boolean? = null
+        coroutines.scope.launch { result = service.open("/repo/.kilo/worktrees/feature-x") }
+        flush()
+
+        assertEquals(true, result)
+        assertEquals(listOf("/repo/.kilo/worktrees/feature-x"), rpc.opens.toList())
+    }
+
+    fun `test service open returns false when the backend call fails`() {
+        rpc.openResult = { error("boom") }
+        var result: Boolean? = null
+        coroutines.scope.launch { result = service.open("/repo/x") }
+        flush()
+
+        assertEquals(false, result)
     }
 
     fun `test create invokes rpc and adds the created worktree`() {

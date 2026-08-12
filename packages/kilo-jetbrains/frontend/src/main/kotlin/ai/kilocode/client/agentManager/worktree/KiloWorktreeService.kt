@@ -14,6 +14,7 @@ import ai.kilocode.rpc.dto.WorktreePrListDto
 import ai.kilocode.rpc.dto.WorktreeStatsListDto
 import com.intellij.openapi.components.Service
 import fleet.rpc.client.durable
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 
 /**
@@ -50,6 +51,15 @@ class KiloWorktreeService internal constructor(
     } catch (e: Exception) {
         LOG.warn("branch list failed for $directory", e)
         WorktreeBranchesDto()
+    }
+
+    suspend fun open(directory: String): Boolean = try {
+        call { open(directory) }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        LOG.warn("worktree open failed for $directory", e)
+        false
     }
 
     suspend fun stats(directory: String): WorktreeStatsListDto = try {

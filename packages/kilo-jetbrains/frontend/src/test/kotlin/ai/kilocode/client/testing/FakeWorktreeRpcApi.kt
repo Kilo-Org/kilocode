@@ -27,6 +27,7 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     val removeForces = CopyOnWriteArrayList<Boolean>()
     val renames = CopyOnWriteArrayList<Triple<String, String, String>>()
     val adopts = CopyOnWriteArrayList<Triple<String, String, String>>()
+    val opens = CopyOnWriteArrayList<String>()
     var beforeCreate: suspend () -> Unit = {}
     var beforeRemove: suspend () -> Unit = {}
     var beforeRename: suspend () -> Unit = {}
@@ -40,6 +41,7 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     var importPrResult: (String) -> CreateWorktreeResultDto = { url ->
         CreateWorktreeResultDto(WorktreeDto(url, "pr", "pr", url))
     }
+    var openResult: (String) -> Boolean = { true }
     var removeResult: (String, String?, Boolean) -> RemoveWorktreeResultDto = { _, _, _ -> RemoveWorktreeResultDto(ok = true) }
     var renameResult: (String, String) -> RenameWorktreeResultDto = { path, name ->
         val idx = listed.indexOfFirst { it.path == path }
@@ -68,6 +70,12 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     override suspend fun prStatus(directory: String): WorktreePrListDto {
         assertNotEdt("prStatus")
         return prResult
+    }
+
+    override suspend fun open(directory: String): Boolean {
+        assertNotEdt("open")
+        opens.add(directory)
+        return openResult(directory)
     }
 
     override suspend fun create(directory: String, request: CreateWorktreeRequestDto): CreateWorktreeResultDto {

@@ -18,6 +18,13 @@ import ai.kilocode.rpc.dto.WorktreeStatsListDto
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.configurations.GeneralCommandLine.ParentEnvironmentType
 import com.intellij.execution.process.CapturingProcessHandler
+import com.intellij.ide.impl.OpenProjectTask
+import com.intellij.ide.impl.ProjectUtil
+import com.intellij.openapi.application.EDT
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.wm.IdeFocusManager
+import com.intellij.openapi.wm.WindowManager
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -33,6 +40,7 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
+import java.awt.Frame
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
@@ -64,6 +72,43 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         val state = store?.let { syncWorktreeState(it, worktreePaths(items)) } ?: WorktreeState()
         val named = overlayWorktreeNames(items, state.names)
         WorktreeListDto(orderWorktrees(named, state.worktreeOrder))
+    }
+
+    override suspend fun open(directory: String): Boolean {
+        val dir = Path.of(directory).normalize()
+        val exists = withContext(Dispatchers.IO) { Files.isDirectory(dir) }
+        if (!exists) {
+            LOG.warn("worktree open skipped, not a directory: $directory")
+            return false
+        }
+        // The frontend focuses an already-open frame itself because it owns the windows the user sees.
+        // This is the safety net: never force-open an already-open path, because IntelliJ skips the
+        // existing-project guard when forceOpenInNewFrame is true and may reopen after the first frame
+        // closes.
+        val open = withContext(Dispatchers.EDT) { ProjectUtil.findProject(dir) }
+        if (open != null) {
+            withContext(Dispatchers.EDT) { focusFrame(open) }
+            LOG.info("worktree open: already open, focused on host: dir=$dir")
+            return true
+        }
+        val project = ProjectUtil.openOrImportAsync(dir, OpenProjectTask { forceOpenInNewFrame = true })
+        LOG.info("worktree open requested: dir=$dir opened=${project != null}")
+        return project != null
+    }
+
+    /**
+     * Brings [project]'s frame to the front and moves focus into it, mirroring the platform window
+     * switcher (com.intellij.openapi.wm.impl.ProjectWindowAction). Only effective in monolithic mode;
+     * in remote development the visible windows live in the frontend client, which focuses them itself.
+     */
+    @RequiresEdt
+    private fun focusFrame(project: Project) {
+        val frame = WindowManager.getInstance().getFrame(project) ?: return
+        val state = frame.extendedState
+        if (state and Frame.ICONIFIED != 0) frame.extendedState = state and Frame.ICONIFIED.inv()
+        frame.toFront()
+        val focus = IdeFocusManager.getGlobalInstance()
+        focus.doWhenFocusSettlesDown { frame.mostRecentFocusOwner?.let { focus.requestFocus(it, true) } }
     }
 
     override suspend fun listBranches(directory: String): WorktreeBranchesDto = withContext(Dispatchers.IO) {

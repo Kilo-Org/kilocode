@@ -12,6 +12,7 @@ import ai.kilocode.client.session.history.HistorySection
 import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.session.history.LocalHistoryItem
 import ai.kilocode.client.plugin.KiloPluginSettings
+import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.util.bindTheme
 import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListBadge
@@ -25,6 +26,7 @@ import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.client.ui.list.ActiveListSurface
 import ai.kilocode.client.ui.list.activeListToolWindowBackground
 import ai.kilocode.client.vfs.KiloVfsManager
+import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
@@ -40,9 +42,13 @@ import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.components.service
+import com.intellij.openapi.progress.currentThreadCoroutineScope
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.IconLoader
+import com.intellij.openapi.wm.IdeFocusManager
+import com.intellij.openapi.wm.WindowManager
 import com.intellij.ui.IdeBorderFactory
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.SideBorder
@@ -50,8 +56,12 @@ import com.intellij.ui.awt.RelativePoint
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.components.BorderLayoutPanel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.awt.BorderLayout
 import java.awt.Color
+import java.awt.Frame
+import java.nio.file.Path
 import javax.swing.JComponent
 import javax.swing.Icon
 import javax.swing.ListSelectionModel
@@ -67,12 +77,14 @@ class WorktreeSessionEditorPanel(
     private val project: Project? = null,
     private val confirm: ((RelativePoint, ActiveListDeleteOptions, () -> Unit) -> Unit)? = null,
     private val edit: ((RelativePoint, ActiveListEditOptions, (String) -> Unit) -> Unit)? = null,
+    private val openWorktree: ((String) -> Unit)? = null,
 ) : BorderLayoutPanel(), Disposable, UiDataProvider {
     private val add = NewAction()
     private val rename = RenameAction()
     private val delete = DeleteAction()
     private val toggle = ToggleAction()
-    private val toolbar = ActionManager.getInstance().createActionToolbar(ActionPlaces.TOOLBAR, DefaultActionGroup(toggle, add, rename, delete), true)
+    private val openAction = OpenAction()
+    private val toolbar = ActionManager.getInstance().createActionToolbar(ActionPlaces.TOOLBAR, DefaultActionGroup(toggle, openAction, add, rename, delete), true)
     private val group = ActionManager.getInstance().getAction("Kilo.WorktreeSession.RowMenu") as? ActionGroup ?: DefaultActionGroup()
     private val list = ActiveList(
         KiloBundle.message("worktree.session.list.empty"),
@@ -250,6 +262,50 @@ class WorktreeSessionEditorPanel(
     }
 
     @RequiresEdt
+    private fun openInNewFrame() {
+        val dir = worktree.directory.takeIf { it.isNotBlank() } ?: return
+        Telemetry.send("Worktree Opened In New Frame", mapOf("surface" to "worktree_toolbar"))
+        if (openWorktree != null) {
+            openWorktree.invoke(dir)
+            return
+        }
+        if (focusExistingFrame(dir)) return
+        currentThreadCoroutineScope().launch(Dispatchers.Default) {
+            service<KiloWorktreeService>().open(dir)
+        }
+    }
+
+    /**
+     * Focus runs in the frontend client because it owns the visible windows in remote development.
+     * Match on presentableUrl, the same project identity the platform Window menu uses, and never ask
+     * the backend to reopen once the worktree is already open.
+     */
+    @RequiresEdt
+    private fun focusExistingFrame(dir: String): Boolean {
+        val target = Path.of(dir).normalize()
+        val projects = ProjectManager.getInstance().openProjects
+        val item = projects.firstOrNull { same(it.presentableUrl, target) || same(it.basePath, target) }
+        if (item == null) {
+            LOG.info("worktree focus: no open frame for $dir; open=" + projects.joinToString { "${it.name}@${it.presentableUrl}" })
+            return false
+        }
+        val frame = WindowManager.getInstance().getFrame(item)
+        if (frame == null) {
+            LOG.info("worktree focus: ${item.name} is open but has no frame yet")
+            return true
+        }
+        val state = frame.extendedState
+        if (state and Frame.ICONIFIED != 0) frame.extendedState = state and Frame.ICONIFIED.inv()
+        frame.toFront()
+        val focus = IdeFocusManager.getGlobalInstance()
+        focus.doWhenFocusSettlesDown { frame.mostRecentFocusOwner?.let { focus.requestFocus(it, true) } }
+        return true
+    }
+
+    private fun same(path: String?, target: Path): Boolean =
+        path != null && runCatching { Path.of(path).normalize() == target }.getOrDefault(false)
+
+    @RequiresEdt
     private fun openBranchDiff() {
         val target = project ?: return
         ensureDiffEditorKind()
@@ -367,6 +423,22 @@ class WorktreeSessionEditorPanel(
         }
     }
 
+    private inner class OpenAction : AnAction(
+        KiloBundle.message("worktree.session.open.action"),
+        null,
+        AllIcons.Actions.MoveToWindow,
+    ) {
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+        override fun update(e: AnActionEvent) {
+            e.presentation.isEnabled = worktree.directory.isNotBlank()
+        }
+
+        override fun actionPerformed(e: AnActionEvent) {
+            openInNewFrame()
+        }
+    }
+
     private inner class NewAction : AnAction(
         KiloBundle.message("worktree.session.new.action"),
         null,
@@ -422,6 +494,7 @@ class WorktreeSessionEditorPanel(
     }
 
     private companion object {
+        private val LOG = KiloLog.create(WorktreeSessionEditorPanel::class.java)
         val LAYOUT_PARTIAL: Icon = IconLoader.getIcon("/icons/layout-left-partial.svg", WorktreeSessionEditorPanel::class.java)
         val LAYOUT_FULL: Icon = IconLoader.getIcon("/icons/layout-left-full.svg", WorktreeSessionEditorPanel::class.java)
     }
