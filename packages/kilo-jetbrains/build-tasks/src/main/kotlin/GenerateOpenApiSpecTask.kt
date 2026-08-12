@@ -34,9 +34,10 @@ abstract class GenerateOpenApiSpecTask : DefaultTask() {
         private val JSON = Json { ignoreUnknownKeys = true }
         private const val API = "https://api.github.com/repos/Kilo-Org/kilocode/releases/tags"
         // GitHub release/API downloads intermittently drop connections or return transient 5xx
-        // (observed in CI: "socket hang up", HTTP 503). Retry those with a backoff so a brief
-        // CDN blip does not fail the whole build. Permanent errors (404, digest, rate limit) do not retry.
-        private const val NETWORK_ATTEMPTS = 4
+        // (observed in CI: "socket hang up", HTTP 503) for tens of seconds at a time. This build
+        // task has no cached fallback, so retry generously (linear backoff 5s/10s/15s/20s ~= 50s)
+        // to ride out CDN blips. Permanent errors (404, digest, rate limit) still fail immediately.
+        private const val NETWORK_ATTEMPTS = 5
         private const val NETWORK_BACKOFF_MS = 5_000L
     }
 
