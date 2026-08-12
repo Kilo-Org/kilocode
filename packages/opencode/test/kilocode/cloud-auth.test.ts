@@ -25,9 +25,9 @@ describe("cloud auth fields", () => {
       AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
       AWS_SESSION_TOKEN: process.env.AWS_SESSION_TOKEN,
     }
-    delete process.env.AWS_ACCESS_KEY_ID
-    delete process.env.AWS_SECRET_ACCESS_KEY
-    delete process.env.AWS_SESSION_TOKEN
+    process.env.AWS_ACCESS_KEY_ID = "REAL"
+    process.env.AWS_SECRET_ACCESS_KEY = "REAL_SECRET"
+    process.env.AWS_SESSION_TOKEN = "REAL_TOKEN"
     expect(
       bedrockFields({
         auth: {
@@ -46,9 +46,9 @@ describe("cloud auth fields", () => {
     expect(env("AWS_SECRET_ACCESS_KEY")).toBe("secret")
     expect(env("AWS_SESSION_TOKEN")).toBe("token")
     bedrockFields({ env: {} })
-    expect(env("AWS_ACCESS_KEY_ID")).toBe(prev.AWS_ACCESS_KEY_ID)
-    expect(env("AWS_SECRET_ACCESS_KEY")).toBe(prev.AWS_SECRET_ACCESS_KEY)
-    expect(env("AWS_SESSION_TOKEN")).toBe(prev.AWS_SESSION_TOKEN)
+    expect(env("AWS_ACCESS_KEY_ID")).toBe("REAL")
+    expect(env("AWS_SECRET_ACCESS_KEY")).toBe("REAL_SECRET")
+    expect(env("AWS_SESSION_TOKEN")).toBe("REAL_TOKEN")
     for (const [key, value] of Object.entries(prev)) {
       if (value === undefined) delete process.env[key]
       else process.env[key] = value
