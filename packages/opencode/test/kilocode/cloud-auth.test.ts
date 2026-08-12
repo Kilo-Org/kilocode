@@ -38,9 +38,12 @@ describe("cloud auth fields", () => {
       profile: undefined,
       accessKey: "AKIA",
     })
-    expect(process.env.AWS_ACCESS_KEY_ID).toBe("AKIA")
-    expect(process.env.AWS_SECRET_ACCESS_KEY).toBe("secret")
-    expect(process.env.AWS_SESSION_TOKEN).toBe("token")
+    const access = process.env.AWS_ACCESS_KEY_ID ?? ""
+    const secret = process.env.AWS_SECRET_ACCESS_KEY ?? ""
+    const session = process.env.AWS_SESSION_TOKEN ?? ""
+    expect(access).toBe("AKIA")
+    expect(secret).toBe("secret")
+    expect(session).toBe("token")
     for (const [key, value] of Object.entries(prev)) {
       if (value === undefined) delete process.env[key]
       else process.env[key] = value
