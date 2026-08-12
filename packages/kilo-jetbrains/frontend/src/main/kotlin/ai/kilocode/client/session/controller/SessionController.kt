@@ -185,6 +185,8 @@ class SessionController(
     private var agentTime: Double? = null
     private var prefModel: String? = null
     private var prefAgent: String? = null
+    private var prefVariantKey: String? = null
+    private var prefVariant: String? = null
     private var modelTime: Double? = null
     private val snapshots = mutableMapOf<PartKey, String>()
 
@@ -638,6 +640,8 @@ class SessionController(
         modelTime = null
         prefModel = null
         prefAgent = null
+        prefVariantKey = null
+        prefVariant = null
         cs.launch {
             try {
                 sessions.updateConfig(directory, ConfigUpdateDto(agent = name))
@@ -661,6 +665,8 @@ class SessionController(
         modelTime = null
         prefModel = null
         prefAgent = null
+        prefVariantKey = null
+        prefVariant = null
         app.selectModel(agent, provider, id)
         selectResolvedModel(key)
         model.modelOverride = model.defaultModel != model.model
@@ -671,6 +677,8 @@ class SessionController(
         assertEdt()
         val agent = model.agent ?: return
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=config model-reset agent=$agent" }
+        prefVariantKey = null
+        prefVariant = null
         app.clearModel(agent)
         val auto = configModel(agent) ?: providerModel(agent)
         selectResolvedModel(auto)
@@ -683,6 +691,8 @@ class SessionController(
         val key = model.model ?: return
         if (value !in model.variants) return
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=config variant=$key/$value" }
+        prefVariantKey = key
+        prefVariant = value
         app.selectVariant(key, value)
         model.variant = value
         capture("Reasoning Variant Selected", sessionProps() + mapOf("model" to key, "variant" to value))
@@ -693,7 +703,8 @@ class SessionController(
      * mirroring VS Code's setSessionAgent + setSessionModel + variant seeding. Attaching the pick to
      * the first prompt alone only affects that one turn; setting it as the session's preferred
      * selection makes the pickers and every later turn use it too, and survives the later
-     * workspace-ready model resolution because [prefAgent] / [prefModel] win in [syncModelSelection].
+     * workspace-ready model resolution because [prefAgent] / [prefModel] / [prefVariant] win in
+     * [syncModelSelection].
      */
     fun applySelection(select: PromptSelection) {
         assertEdt()
@@ -708,6 +719,11 @@ class SessionController(
                 select.variant?.let { app.selectVariant(key, it) }
                 prefAgent = agent
                 prefModel = key
+                prefVariantKey = key
+                prefVariant = select.variant
+            } else {
+                prefVariantKey = null
+                prefVariant = null
             }
             syncModelSelection()
             model.refreshHeader()
@@ -1930,8 +1946,11 @@ class SessionController(
         model.model = key
         val item = key?.let(::item)
         model.variants = item?.variants ?: emptyList()
+        val pref = prefVariant?.takeIf { prefVariantKey == key }
         val saved = key?.let { app.models.value.variant[it] }
-        model.variant = saved?.takeIf { it in model.variants } ?: model.variants.firstOrNull()
+        model.variant = pref?.takeIf { it in model.variants }
+            ?: saved?.takeIf { it in model.variants }
+            ?: model.variants.firstOrNull()
         model.refreshHeader()
     }
 
