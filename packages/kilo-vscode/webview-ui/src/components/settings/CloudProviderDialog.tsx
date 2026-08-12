@@ -98,7 +98,7 @@ const CloudProviderDialog = (props: CloudProviderDialogProps) => {
     e.preventDefault()
     setError()
     const parsed = buildCloudConnect(props.providerID, fields, mode(), language.t)
-    if ("field" in parsed) {
+    if (!parsed.ok) {
       setError(parsed)
       return
     }

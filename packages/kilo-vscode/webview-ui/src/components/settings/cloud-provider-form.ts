@@ -16,7 +16,8 @@ type CloudFields = {
   credentials: string
 }
 
-export type CloudError = { field?: string; message: string }
+export type CloudError = { ok: false; field?: string; message: string }
+type CloudResult = { ok: true; metadata: Record<string, string>; apiKey: string }
 
 type Translate = (key: string, params?: UiI18nParams) => string
 
@@ -27,7 +28,7 @@ function text(value: string) {
 function required(fields: CloudFields, field: keyof CloudFields, label: string, t: Translate): CloudError | string {
   const value = text(fields[field])
   if (value) return value
-  return { field, message: t("provider.connect.prompt.required", { field: t(label) }) }
+  return { ok: false, field, message: t("provider.connect.prompt.required", { field: t(label) }) }
 }
 
 function parseVertex(fields: CloudFields, t: Translate) {
@@ -40,7 +41,7 @@ function parseVertex(fields: CloudFields, t: Translate) {
   try {
     const parsed = JSON.parse(blob) as unknown
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return { field: "credentials", message: t("provider.connect.vertex.credentials.invalid") }
+      return { ok: false, field: "credentials", message: t("provider.connect.vertex.credentials.invalid") }
     }
     const project =
       text(fields.project) ||
@@ -49,13 +50,14 @@ function parseVertex(fields: CloudFields, t: Translate) {
         : "")
     if (!project) {
       return {
+        ok: false,
         field: "project",
         message: t("provider.connect.prompt.required", { field: t("provider.connect.vertex.project.label") }),
       }
     }
     return { project, credentials: JSON.stringify(parsed) }
   } catch {
-    return { field: "credentials", message: t("provider.connect.vertex.credentials.invalid") }
+    return { ok: false, field: "credentials", message: t("provider.connect.vertex.credentials.invalid") }
   }
 }
 
@@ -66,8 +68,8 @@ function parseBedrock(fields: CloudFields, mode: CloudMode, t: Translate) {
   const endpoint = text(fields.endpoint)
   if (endpoint) metadata.endpoint = endpoint
   if (mode === "apiKey") {
-    if (!text(fields.apiKey)) return { field: "apiKey", message: t("provider.connect.apiKey.required") }
-    return { metadata, apiKey: text(fields.apiKey) }
+    if (!text(fields.apiKey)) return { ok: false, field: "apiKey", message: t("provider.connect.apiKey.required") }
+    return { ok: true, metadata, apiKey: text(fields.apiKey) }
   }
   if (mode === "accessKeys") {
     const access = required(fields, "accessKeyId", "provider.connect.bedrock.accessKeyId.label", t)
@@ -78,12 +80,12 @@ function parseBedrock(fields: CloudFields, mode: CloudMode, t: Translate) {
     metadata.secretAccessKey = secret
     const session = text(fields.sessionToken)
     if (session) metadata.sessionToken = session
-    return { metadata, apiKey: "" }
+    return { ok: true, metadata, apiKey: "" }
   }
   const profile = required(fields, "profile", "provider.connect.bedrock.profile.label", t)
   if (typeof profile !== "string") return profile
   metadata.profile = profile
-  return { metadata, apiKey: "" }
+  return { ok: true, metadata, apiKey: "" }
 }
 
 export function buildCloudConnect(
@@ -91,13 +93,13 @@ export function buildCloudConnect(
   fields: CloudFields,
   mode: CloudMode,
   t: Translate,
-) {
+): CloudError | CloudResult {
   if (id === BEDROCK_ID) return parseBedrock(fields, mode, t)
   const parsed = parseVertex(fields, t)
-  if ("field" in parsed) return parsed
+  if ("ok" in parsed) return parsed
   const location = required(fields, "location", "provider.connect.vertex.location.label", t)
   if (typeof location !== "string") return location
   const metadata: Record<string, string> = { project: parsed.project, location }
   if (parsed.credentials) metadata.credentials = parsed.credentials
-  return { metadata, apiKey: "" }
+  return { ok: true, metadata, apiKey: "" }
 }
