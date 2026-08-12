@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test"
 import { bedrockBearer, bedrockFields, vertexFields } from "../../src/kilocode/provider/cloud-auth"
 
+function env(key: string) {
+  return process.env[key]
+}
+
 describe("cloud auth fields", () => {
   test("bedrock prefers config region and profile over env", () => {
     expect(
@@ -38,16 +42,13 @@ describe("cloud auth fields", () => {
       profile: undefined,
       accessKey: "AKIA",
     })
-    const access = process.env.AWS_ACCESS_KEY_ID ?? ""
-    const secret = process.env.AWS_SECRET_ACCESS_KEY ?? ""
-    const session = process.env.AWS_SESSION_TOKEN ?? ""
-    expect(access).toBe("AKIA")
-    expect(secret).toBe("secret")
-    expect(session).toBe("token")
+    expect(env("AWS_ACCESS_KEY_ID")).toBe("AKIA")
+    expect(env("AWS_SECRET_ACCESS_KEY")).toBe("secret")
+    expect(env("AWS_SESSION_TOKEN")).toBe("token")
     bedrockFields({ env: {} })
-    expect(process.env.AWS_ACCESS_KEY_ID).toBe(prev.AWS_ACCESS_KEY_ID)
-    expect(process.env.AWS_SECRET_ACCESS_KEY).toBe(prev.AWS_SECRET_ACCESS_KEY)
-    expect(process.env.AWS_SESSION_TOKEN).toBe(prev.AWS_SESSION_TOKEN)
+    expect(env("AWS_ACCESS_KEY_ID")).toBe(prev.AWS_ACCESS_KEY_ID)
+    expect(env("AWS_SECRET_ACCESS_KEY")).toBe(prev.AWS_SECRET_ACCESS_KEY)
+    expect(env("AWS_SESSION_TOKEN")).toBe(prev.AWS_SESSION_TOKEN)
     for (const [key, value] of Object.entries(prev)) {
       if (value === undefined) delete process.env[key]
       else process.env[key] = value
