@@ -18,6 +18,8 @@ import {
   LOCAL_PROVIDER_API_KEY_PLACEHOLDER,
 } from "../../utils/local-providers"
 import AnacondaDesktopDialog from "./AnacondaDesktopDialog"
+import CloudProviderDialog from "./CloudProviderDialog"
+import { isCloudProvider } from "../../../../src/shared/cloud-provider"
 
 interface ProviderConnectDialogProps {
   providerID: string
@@ -58,6 +60,9 @@ function visible(prompt: Prompt, values: Record<string, string>) {
 
 const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => {
   if (props.providerID === "anaconda-desktop") return <AnacondaDesktopDialog />
+  if (isCloudProvider(props.providerID)) {
+    return <CloudProviderDialog providerID={props.providerID} />
+  }
 
   const dialog = useDialog()
   const language = useLanguage()

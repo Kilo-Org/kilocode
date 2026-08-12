@@ -48,6 +48,7 @@ import {
 import * as ModelsRefresh from "@/kilocode/provider/models-refresh"
 // kilocode_change end
 import { ProviderError } from "./error"
+import { bedrockBearer, bedrockFields, vertexFields } from "@/kilocode/provider/cloud-auth" // kilocode_change
 
 const OPENAI_HEADER_TIMEOUT_DEFAULT = 300_000
 
@@ -326,18 +327,19 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       const providerConfig = (yield* dep.config()).provider?.["amazon-bedrock"]
       const auth = yield* dep.auth("amazon-bedrock")
       const env = yield* dep.env()
+      const cloud = bedrockFields({ options: providerConfig?.options, auth, env }) // kilocode_change
 
       // Region precedence: 1) config file, 2) env var, 3) default
       const configRegion = providerConfig?.options?.region
       const envRegion = env["AWS_REGION"]
-      const defaultRegion = configRegion ?? envRegion ?? "us-east-1"
+      const defaultRegion = configRegion ?? envRegion ?? cloud.region ?? "us-east-1" // kilocode_change
 
       // Profile: config file takes precedence over env var
       const configProfile = providerConfig?.options?.profile
       const envProfile = env["AWS_PROFILE"]
-      const profile = configProfile ?? envProfile
+      const profile = configProfile ?? envProfile ?? cloud.profile // kilocode_change
 
-      const awsAccessKeyId = env["AWS_ACCESS_KEY_ID"]
+      const awsAccessKeyId = env["AWS_ACCESS_KEY_ID"] ?? cloud.accessKey // kilocode_change
       const configApiKey = providerConfig?.options?.apiKey
 
       // TODO: Using process.env directly because Env.set only updates a process.env shallow copy,
@@ -345,10 +347,13 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       const awsBearerToken = iife(() => {
         const envToken = process.env.AWS_BEARER_TOKEN_BEDROCK
         if (envToken) return envToken
-        if (auth?.type === "api") {
-          process.env.AWS_BEARER_TOKEN_BEDROCK = auth.key
-          return auth.key
+        // kilocode_change start
+        const key = bedrockBearer(auth)
+        if (key) {
+          process.env.AWS_BEARER_TOKEN_BEDROCK = key
+          return key
         }
+        // kilocode_change end
         return undefined
       })
 
@@ -528,10 +533,13 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       }),
     "google-vertex": Effect.fnUntraced(function* (provider: Info) {
       const env = yield* dep.env()
+      const auth = yield* dep.auth(provider.id) // kilocode_change
+      const cloud = vertexFields({ options: provider.options, auth, env }) // kilocode_change
       // models.dev advertises GOOGLE_VERTEX_PROJECT for Vertex; keep the wider
       // Google Cloud project env names as fallbacks for existing ADC setups.
       const project =
         provider.options?.project ??
+        cloud.project ?? // kilocode_change
         env["GOOGLE_VERTEX_PROJECT"] ??
         env["GOOGLE_CLOUD_PROJECT"] ??
         env["GCP_PROJECT"] ??
@@ -539,6 +547,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
 
       const location = String(
         provider.options?.location ??
+          cloud.location ?? // kilocode_change
           env["GOOGLE_VERTEX_LOCATION"] ??
           env["GOOGLE_CLOUD_LOCATION"] ??
           env["VERTEX_LOCATION"] ??
@@ -562,7 +571,12 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
           location,
           fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
             const { GoogleAuth } = await import("google-auth-library")
-            const auth = new GoogleAuth({ scopes: ["https://www.googleapis.com/auth/cloud-platform"] })
+            // kilocode_change start
+            const auth = new GoogleAuth({
+              scopes: ["https://www.googleapis.com/auth/cloud-platform"],
+              ...(cloud.credentials ? { credentials: cloud.credentials } : {}),
+            })
+            // kilocode_change end
             const client = await auth.getClient()
             const token = await client.getAccessToken()
 

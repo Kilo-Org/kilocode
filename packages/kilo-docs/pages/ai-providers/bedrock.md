@@ -39,9 +39,9 @@ You have three options for configuring AWS credentials:
 {% tabs %}
 {% tab label="VSCode" %}
 
-Open **Settings** (gear icon) and go to the **Providers** tab to add AWS Bedrock. The extension uses the AWS credentials chain for authentication — configure your AWS credentials using the AWS CLI or environment variables before adding the provider.
+Open **Settings** (gear icon) and go to the **Providers** tab to add AWS Bedrock. Choose a Bedrock API key, IAM access keys, or an AWS profile, then set the AWS region. You can also leave the profile empty and use environment variables or the AWS CLI credential chain.
 
-The extension stores this in your `kilo.json` config file. You can also edit the config file directly — see the **CLI** tab for the file format.
+The extension stores the region and profile in your `kilo.json` config file. You can also edit the config file directly — see the **CLI** tab for the file format.
 
 {% /tab %}
 {% tab label="CLI" %}

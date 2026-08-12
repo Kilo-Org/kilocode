@@ -10,6 +10,7 @@ import {
   withCustomProviderDeletions,
 } from "./shared/custom-provider"
 import { isCustomProviderPackage, KILO_AUTO, KILO_PROVIDER_ID, parseModelString } from "./shared/provider-model"
+import { parseCloudConnect } from "./shared/cloud-provider"
 import { configFeatures } from "./features"
 
 /**
@@ -292,19 +293,47 @@ async function enableConfigured(ctx: ActionContext, id: string, config: Config) 
   await saveGlobal(ctx, { disabled_providers: disabled })
 }
 
+const CLOUD_KEYS = ["region", "profile", "endpoint", "project", "location", "apiKey"] as const
+
+async function saveOptions(ctx: ActionContext, id: string, options?: Record<string, string>) {
+  if (!options) return
+  const global = (await ctx.client.global.config.get({ throwOnError: true })).data ?? {}
+  const existing = record(global.provider?.[id]) ? global.provider[id] : {}
+  const prev = record(existing.options) ? existing.options : {}
+  const next = { ...prev }
+  for (const key of CLOUD_KEYS) {
+    if (options[key]) next[key] = options[key]
+    else delete next[key]
+  }
+  await saveGlobal(ctx, {
+    provider: { [id]: { ...existing, options: next } },
+    disabled_providers: disabledWithout(global.disabled_providers, id),
+  })
+}
+
 export async function connectProvider(
   ctx: ActionContext,
   requestId: string,
   providerID: string,
   apiKey: string,
   metadata?: Record<string, unknown>,
+  setCachedConfig?: SetCachedConfig,
 ) {
   const id = validateID(ctx, requestId, providerID, "connect")
   if (!id) return
   try {
-    const meta = cleanMetadata(metadata)
-    const auth = meta ? { type: "api" as const, key: apiKey, metadata: meta } : { type: "api" as const, key: apiKey }
-    await ctx.client.auth.set({ providerID: id, auth }, { throwOnError: true })
+    const cloud = parseCloudConnect(id, apiKey, metadata)
+    if (cloud) {
+      await saveOptions(ctx, id, cloud.options)
+      if (cloud.auth) await ctx.client.auth.set({ providerID: id, auth: cloud.auth }, { throwOnError: true })
+      if (!cloud.auth) await removeAuth(ctx, id, true)
+      if (setCachedConfig) await refreshConfig(ctx, setCachedConfig)
+    }
+    if (!cloud) {
+      const meta = cleanMetadata(metadata)
+      const auth = meta ? { type: "api" as const, key: apiKey, metadata: meta } : { type: "api" as const, key: apiKey }
+      await ctx.client.auth.set({ providerID: id, auth }, { throwOnError: true })
+    }
     await ctx.disposeGlobal(`provider connect (${id})`)
     await ctx.fetchAndSendProviders()
     ctx.postMessage({ type: "providerConnected", requestId, providerID: id })

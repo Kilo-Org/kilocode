@@ -25,9 +25,9 @@ Kilo Code supports accessing models through Google Cloud Platform's Vertex AI, a
 {% tabs %}
 {% tab label="VSCode" %}
 
-Open **Settings** (gear icon) and go to the **Providers** tab to add GCP Vertex AI. The extension uses Google Application Default Credentials (ADC) for authentication — run `gcloud auth application-default login` before adding the provider. Set your project ID and region in the provider settings.
+Open **Settings** (gear icon) and go to the **Providers** tab to add GCP Vertex AI. Enter your Google Cloud project ID and location. Optionally paste a service account JSON blob; otherwise Kilo uses Application Default Credentials (`gcloud auth application-default login` or `GOOGLE_APPLICATION_CREDENTIALS`).
 
-The extension stores this in your `kilo.json` config file. You can also edit the config file directly — see the **CLI** tab for the file format.
+The extension stores the project and location in your `kilo.json` config file. You can also edit the config file directly — see the **CLI** tab for the file format.
 
 {% /tab %}
 {% tab label="CLI" %}

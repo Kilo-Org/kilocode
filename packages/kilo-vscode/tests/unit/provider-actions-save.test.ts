@@ -175,6 +175,122 @@ describe("connectProvider", () => {
       },
     ])
   })
+
+  it("stores bedrock region and iam keys without treating them as a bearer token", async () => {
+    const { ctx, calls } = createCtx()
+
+    await connectProvider(ctx, "req", "amazon-bedrock", "", {
+      mode: "accessKeys",
+      region: " eu-west-1 ",
+      accessKeyId: " AKIAEXAMPLE ",
+      secretAccessKey: " secret ",
+    })
+
+    expect(calls.config).toEqual([
+      {
+        config: {
+          provider: {
+            "amazon-bedrock": {
+              options: { region: "eu-west-1" },
+            },
+          },
+          disabled_providers: [],
+        },
+      },
+    ])
+    expect(calls.set).toEqual([
+      {
+        providerID: "amazon-bedrock",
+        auth: {
+          type: "api",
+          key: "configured",
+          metadata: { accessKeyId: "AKIAEXAMPLE", secretAccessKey: "secret" },
+        },
+      },
+    ])
+  })
+
+  it("stores bedrock profile in provider options without auth.json", async () => {
+    const { ctx, calls } = createCtx()
+
+    await connectProvider(ctx, "req", "amazon-bedrock", "", {
+      mode: "profile",
+      region: "us-west-2",
+      profile: " bedrock ",
+    })
+
+    expect(calls.config).toEqual([
+      {
+        config: {
+          provider: {
+            "amazon-bedrock": {
+              options: { region: "us-west-2", profile: "bedrock" },
+            },
+          },
+          disabled_providers: [],
+        },
+      },
+    ])
+    expect(calls.set).toHaveLength(0)
+    expect(calls.remove).toEqual([{ providerID: "amazon-bedrock" }])
+  })
+
+  it("stores vertex project and location without an api key", async () => {
+    const { ctx, calls } = createCtx()
+
+    await connectProvider(ctx, "req", "google-vertex", "", {
+      project: " my-project ",
+      location: " us-east5 ",
+    })
+
+    expect(calls.config).toEqual([
+      {
+        config: {
+          provider: {
+            "google-vertex": {
+              options: { project: "my-project", location: "us-east5" },
+            },
+          },
+          disabled_providers: [],
+        },
+      },
+    ])
+    expect(calls.set).toHaveLength(0)
+    expect(calls.remove).toEqual([{ providerID: "google-vertex" }])
+  })
+
+  it("stores vertex service account json in auth metadata", async () => {
+    const { ctx, calls } = createCtx()
+    const blob = JSON.stringify({ type: "service_account", project_id: "from-json", client_email: "svc@x.iam" })
+
+    await connectProvider(ctx, "req", "google-vertex", "", {
+      location: "us-central1",
+      credentials: blob,
+    })
+
+    expect(calls.config).toEqual([
+      {
+        config: {
+          provider: {
+            "google-vertex": {
+              options: { project: "from-json", location: "us-central1" },
+            },
+          },
+          disabled_providers: [],
+        },
+      },
+    ])
+    expect(calls.set).toEqual([
+      {
+        providerID: "google-vertex",
+        auth: {
+          type: "api",
+          key: "configured",
+          metadata: { credentials: blob },
+        },
+      },
+    ])
+  })
 })
 
 describe("saveCustomProvider", () => {
