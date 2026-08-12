@@ -66,7 +66,7 @@ internal class BranchChangesBadge(
 
     fun applyStyle(style: SessionEditorStyle) {
         count.font = style.smallFont
-        count.foreground = SessionUiStyle.Colors.hint()
+        count.foreground = SessionUiStyle.Text.Secondary.foreground()
     }
 
     override fun getPreferredSize(): Dimension {

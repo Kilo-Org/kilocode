@@ -127,7 +127,7 @@ abstract class BaseSearchToolView(
         changed = setForeground(parts.glyph, color(item)) || changed
         changed = setText(parts.title, toolTitle(item)) || changed
         changed = setForeground(parts.title, titleColor(item)) || changed
-        changed = setForeground(parts.sub, SessionUiStyle.Colors.hint()) || changed
+        changed = setForeground(parts.sub, SessionUiStyle.Text.Secondary.foreground()) || changed
         changed = syncTargets() || changed
         changed = setText(parts.state, stateText(item)) || changed
         changed = setForeground(parts.state, color(item)) || changed

@@ -33,10 +33,10 @@ internal class ModelDetailsPanel(
     private val toggle: (ModelPicker.Item) -> Unit,
 ) : JPanel(BorderLayout()), Disposable {
     private val empty = JBLabel(KiloBundle.message("model.picker.details.empty")).apply {
-        foreground = UIUtil.getContextHelpForeground()
+        foreground = SessionUiStyle.Text.Secondary.foreground()
     }
     private val title = JBLabel().apply { font = UiStyle.Fonts.bold() }
-    private val provider = JBLabel().apply { foreground = UIUtil.getContextHelpForeground() }
+    private val provider = JBLabel().apply { foreground = SessionUiStyle.Text.Secondary.foreground() }
     private val star = JBLabel().apply {
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         horizontalAlignment = JBLabel.CENTER
@@ -242,8 +242,8 @@ private class RowsSection(title: String) {
 }
 
 private class DetailRow : JPanel(BorderLayout()) {
-    private val name = JBLabel().apply { foreground = UIUtil.getContextHelpForeground() }
-    private val value = JBLabel().apply { foreground = UIUtil.getLabelForeground() }
+    private val name = JBLabel().apply { foreground = SessionUiStyle.Text.Secondary.foreground() }
+    private val value = JBLabel().apply { foreground = SessionUiStyle.Colors.foreground() }
 
     init {
         add(name, BorderLayout.WEST)

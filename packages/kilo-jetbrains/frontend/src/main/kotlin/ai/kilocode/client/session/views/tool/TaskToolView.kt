@@ -220,7 +220,7 @@ class TaskToolView(
         private var item = tool
         val icon = JBLabel()
         val title = JBLabel()
-        val sub = JBLabel().apply { foreground = SessionUiStyle.Colors.hint() }
+        val sub = JBLabel().apply { foreground = SessionUiStyle.Text.Secondary.foreground() }
         val panel = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
             isOpaque = false
             add(icon, BorderLayout.WEST)
@@ -312,7 +312,7 @@ private class TaskRows : Stack(StackAxis.VERTICAL, UiStyle.Gap.sm()), Scrollable
 private fun rowTitleColor(tool: Tool) = if (tool.state == ToolExecState.ERROR) {
     UiStyle.Colors.errorLabelForeground()
 } else {
-    SessionUiStyle.Colors.hint()
+    SessionUiStyle.Text.Secondary.foreground()
 }
 
 private fun taskBodyBorder(glyph: JBLabel) = run {

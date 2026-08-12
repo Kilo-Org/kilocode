@@ -103,7 +103,7 @@ class QuestionResultView(
         parts.title.text = KiloBundle.message("session.question.result.title")
         val count = result.answers.count { it.isNotEmpty() }
         parts.sub.text = KiloBundle.message("session.question.result.answered", count)
-        parts.sub.foreground = SessionUiStyle.Colors.hint()
+        parts.sub.foreground = SessionUiStyle.Text.Secondary.foreground()
     }
 
     private fun syncBorder() {
@@ -136,7 +136,7 @@ class QuestionParts(
 private fun questionParts(selection: SessionSelection?): QuestionParts {
     val glyph = JBLabel(SessionViewIcons.bubble)
     val title = JBLabel()
-    val sub = JBLabel().apply { foreground = SessionUiStyle.Colors.hint() }
+    val sub = JBLabel().apply { foreground = SessionUiStyle.Text.Secondary.foreground() }
     val header = PartHeader().apply {
         leading(glyph)
         left(title)
@@ -205,7 +205,7 @@ class QuestionResultBody(private val selection: SessionSelection?) : JPanel() {
             }
             if (i > 0) row.border = JBUI.Borders.emptyTop(UiStyle.Gap.lg())
 
-            val qText = makeText(q, SessionUiStyle.Colors.hint(), false)
+            val qText = makeText(q, SessionUiStyle.Text.Secondary.foreground(), false)
             qText.alignmentX = Component.LEFT_ALIGNMENT
             qText.border = JBUI.Borders.emptyBottom(UiStyle.Gap.xs())
             row.add(qText)

@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.views.base
 
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.icons.AllIcons
 import com.intellij.ide.ui.laf.darcula.ui.DarculaButtonUI
@@ -396,7 +397,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     // ------ applyStyle: UI fonts ----
 
-    fun `test applyStyle applies headerFont to header and hintFont to description`() {
+    fun `test applyStyle applies headerFont to header and secondary font to description`() {
         edt {
             val panel = BaseQuestionView()
             panel.setHeader("Title", "Hint")
@@ -407,7 +408,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
             val desc = areas.first { it.text == "Hint" }
 
             assertEquals("headerText should use headerFont", style.headerFont, header.font)
-            assertEquals("descriptionText should use hintFont", style.hintFont, desc.font)
+            assertEquals("descriptionText should use secondary text font", SessionUiStyle.Text.Secondary.font(style), desc.font)
         }
     }
 

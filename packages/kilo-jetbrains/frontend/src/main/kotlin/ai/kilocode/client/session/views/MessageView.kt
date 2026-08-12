@@ -35,7 +35,6 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
-import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
 import java.awt.Point
 import java.awt.Graphics
@@ -620,7 +619,7 @@ class MessageView(
         private fun queue(onDelete: () -> Unit) = Stack.horizontal(UiStyle.Gap.sm()).also { row ->
             row.isOpaque = false
             row.next(JBLabel(KiloBundle.message("session.queued")).apply {
-                foreground = UIUtil.getContextHelpForeground()
+                foreground = SessionUiStyle.Text.Secondary.foreground()
             })
             row.next(toolbarButton(
                 ToolbarButtonAction(

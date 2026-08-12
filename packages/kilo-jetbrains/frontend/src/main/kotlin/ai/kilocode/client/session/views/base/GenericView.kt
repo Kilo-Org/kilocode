@@ -24,7 +24,7 @@ class GenericView private constructor(
     override val contentId: String = content.id
 
     init {
-        label.foreground = SessionUiStyle.Colors.hint()
+        label.foreground = SessionUiStyle.Text.Secondary.foreground()
         applyStyle(SessionEditorStyle.current())
         syncExpandable(false)
         border = null

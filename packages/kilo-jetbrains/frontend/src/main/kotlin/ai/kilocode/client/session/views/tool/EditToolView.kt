@@ -63,7 +63,7 @@ class EditToolView(
     )
     private val diffAnchor = hoverPlaceholder(diff)
     private val filesTag = JBLabel().apply {
-        foreground = SessionUiStyle.Colors.hint()
+        foreground = SessionUiStyle.Text.Secondary.foreground()
         font = JBFont.small()
         isVisible = false
     }

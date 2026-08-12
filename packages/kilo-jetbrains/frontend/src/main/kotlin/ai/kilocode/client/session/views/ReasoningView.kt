@@ -244,8 +244,8 @@ class ReasoningView(
         md.font = font
         changed = md.codeFont != style.editorFamily || changed
         md.codeFont = style.editorFamily
-        changed = md.foreground.rgb != SessionUiStyle.Colors.hint().rgb || changed
-        md.foreground = SessionUiStyle.Colors.hint()
+        changed = md.foreground.rgb != SessionUiStyle.Text.Secondary.foreground().rgb || changed
+        md.foreground = SessionUiStyle.Text.Secondary.foreground()
         return changed
     }
 
@@ -279,7 +279,7 @@ class ReasoningView(
         md.applyStyle(style)
         md.font = style.smallEditorFont.deriveFont(Font.ITALIC)
         md.codeFont = style.editorFamily
-        md.foreground = SessionUiStyle.Colors.hint()
+        md.foreground = SessionUiStyle.Text.Secondary.foreground()
         md.background = SessionUiStyle.Colors.codeBlockBackground()
         md.component.border = JBUI.Borders.empty()
         md.set(text)
@@ -385,8 +385,8 @@ class ReasoningBody(
 )
 
 private fun reasoningParts(selection: SessionSelection? = null): ReasoningParts {
-    val title = JBLabel(KiloBundle.message("session.part.reasoning")).apply { foreground = SessionUiStyle.Colors.hint() }
-    val icon = JBLabel(SessionViewIcons.brain).apply { foreground = SessionUiStyle.Colors.hint() }
+    val title = JBLabel(KiloBundle.message("session.part.reasoning")).apply { foreground = SessionUiStyle.Text.Secondary.foreground() }
+    val icon = JBLabel(SessionViewIcons.brain).apply { foreground = SessionUiStyle.Text.Secondary.foreground() }
     val header = PartHeader().apply {
         leading(icon)
         left(title)

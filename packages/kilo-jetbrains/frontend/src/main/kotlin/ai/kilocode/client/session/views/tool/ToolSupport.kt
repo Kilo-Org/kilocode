@@ -404,14 +404,14 @@ internal fun toolParts(
 ): ToolParts {
     val glyph = JBLabel()
     val title = clip(JBLabel())
-    val sub = clip(JBLabel()).apply { foreground = SessionUiStyle.Colors.hint() }
+    val sub = clip(JBLabel()).apply { foreground = SessionUiStyle.Text.Secondary.foreground() }
     val link = clip(FileLinkLabel(openFile))
     val slot = Stack.fitHorizontal(SessionUiStyle.View.Header.gap()).apply {
         minimumSize = Dimension(0, minimumSize.height)
         next(sub)
         next(link)
     }
-    val state = clip(JBLabel()).apply { foreground = SessionUiStyle.Colors.hint() }
+    val state = clip(JBLabel()).apply { foreground = SessionUiStyle.Text.Secondary.foreground() }
     val header = PartHeader().apply {
         leading(glyph)
         left(title)
@@ -426,7 +426,7 @@ internal fun toolParts(
 internal fun searchParts(count: Int): ToolParts {
     val glyph = JBLabel()
     val title = clip(JBLabel())
-    val sub = clip(JBLabel()).apply { foreground = SessionUiStyle.Colors.hint() }
+    val sub = clip(JBLabel()).apply { foreground = SessionUiStyle.Text.Secondary.foreground() }
     val targets = List(count) {
         clip(JBLabel()).apply {
             foreground = SessionUiStyle.Colors.foreground()
@@ -438,7 +438,7 @@ internal fun searchParts(count: Int): ToolParts {
         next(sub)
         next(link)
     }
-    val state = clip(JBLabel()).apply { foreground = SessionUiStyle.Colors.hint() }
+    val state = clip(JBLabel()).apply { foreground = SessionUiStyle.Text.Secondary.foreground() }
     val target = Stack.fitHorizontal(SessionUiStyle.View.Header.gap()).apply {
         minimumSize = Dimension(0, minimumSize.height)
         targets.forEach { next(it) }

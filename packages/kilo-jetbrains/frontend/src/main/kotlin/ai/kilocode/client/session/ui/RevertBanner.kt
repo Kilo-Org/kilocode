@@ -174,7 +174,7 @@ class RevertBanner(
         title.foreground = SessionUiStyle.Colors.foreground()
         progress?.applyStyle(style)
         hint.foreground = UIUtil.getLabelForeground()
-        notice.foreground = UIUtil.getContextHelpForeground()
+        notice.foreground = SessionUiStyle.Text.Secondary.foreground()
         rows.values.forEach { it.applyStyle() }
     }
 

@@ -46,7 +46,7 @@ class ProgressPanel(
         foreground = style.editorForeground
     }
     private val elapsed = JBLabel().apply {
-        foreground = SessionUiStyle.Colors.hint()
+        foreground = SessionUiStyle.Text.Secondary.foreground()
     }
     private val spinner = JBLabel(AnimatedIcon.Default())
     private val tick = clock.timer(1000) { syncElapsed() }
@@ -144,7 +144,7 @@ class ProgressPanel(
         this.style = style
         label.font = style.regularFont
         elapsed.font = style.regularFont
-        elapsed.foreground = SessionUiStyle.Colors.hint()
+        elapsed.foreground = SessionUiStyle.Text.Secondary.foreground()
         if (state is SessionState.Busy) label.foreground = style.editorForeground
         revalidate()
         repaint()

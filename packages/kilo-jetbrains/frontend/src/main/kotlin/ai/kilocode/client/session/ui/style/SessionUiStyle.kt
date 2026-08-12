@@ -5,6 +5,7 @@ import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.Color
+import java.awt.Font
 import javax.swing.UIManager
 
 /** Static style tokens owned by the chat session UI. */
@@ -13,11 +14,9 @@ object SessionUiStyle {
      * The session palette is driven by three authored keys; everything else is derived:
      * - [sessionBackground] paints the whole session backdrop (containers stay transparent over it).
      * - [codeBlockBackground] is the single raised surface (code blocks, tool/shell output, prompt bubble, prompt input).
-     * - [foreground] is normal text and links; [hint] is derived from it.
+     * - [foreground] is normal text and links; [Text.Secondary] owns secondary session text.
      */
     object Colors {
-        private const val HINT_BOOST = 0.35f
-
         /**
          * Recess applied to the raised editor surface to derive a distinct backdrop. Used both when
          * the panel-background key is missing and when the panel background is identical to the
@@ -55,11 +54,19 @@ object SessionUiStyle {
             "Kilo.Session.foreground",
             UiStyle.Colors.fg(),
         )
+    }
 
-        fun hint(): Color = JBColor.namedColor(
-            "Kilo.Session.hintForeground",
-            UiStyle.Colors.blend(UiStyle.Colors.weak(), foreground(), HINT_BOOST),
-        )
+    /** Text roles used by session UI labels and transcript chrome. */
+    object Text {
+        object Secondary {
+            private const val BACKGROUND_BLEND = 0.35f
+
+            fun foreground(): Color = JBColor.lazy {
+                UiStyle.Colors.blend(Colors.foreground(), Colors.sessionBackground(), BACKGROUND_BLEND)
+            }
+
+            fun font(style: SessionEditorStyle): Font = style.regularFont
+        }
     }
 
     object Transcript {
@@ -266,11 +273,11 @@ object SessionUiStyle {
              */
             const val DIFF_MAX_LINES = 2_000
 
-            fun pending(): Color = Colors.hint()
+            fun pending(): Color = Text.Secondary.foreground()
 
             fun running(): Color = Colors.foreground()
 
-            fun completed(): Color = Colors.hint()
+            fun completed(): Color = Text.Secondary.foreground()
 
             fun error(): Color = UiStyle.Colors.errorLabelForeground()
         }
@@ -295,7 +302,7 @@ object SessionUiStyle {
         val TOOL: Color = JBColor.namedColor("Kilo.Session.Timeline.Tool", Color(0x00, 0x7a, 0xcc))
         val SUCCESS: Color = JBColor.namedColor("Label.successForeground", UIUtil.getLabelSuccessForeground())
         val ERROR: Color = JBColor.namedColor("Kilo.Session.Timeline.Error", UIUtil.getErrorForeground())
-        val TEXT: Color = JBColor.namedColor("Kilo.Session.Timeline.Text", UIUtil.getContextHelpForeground())
+        val TEXT: Color = Text.Secondary.foreground()
         val STEP: Color = JBColor.namedColor("Kilo.Session.Timeline.Step", JBColor.border())
     }
 }

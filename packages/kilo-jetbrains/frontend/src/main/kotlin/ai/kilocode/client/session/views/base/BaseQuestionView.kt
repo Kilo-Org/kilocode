@@ -93,7 +93,7 @@ class BaseQuestionView(
     }
 
     private val headerText: JBTextArea = makeText("", SessionUiStyle.Colors.foreground(), bold = true)
-    private val descriptionText: JBTextArea = makeText("", SessionUiStyle.Colors.hint(), bold = false).apply {
+    private val descriptionText: JBTextArea = makeText("", SessionUiStyle.Text.Secondary.foreground(), bold = false).apply {
         isVisible = false
     }
 
@@ -386,7 +386,7 @@ class BaseQuestionView(
     }
 
     private fun applyFont(area: JBTextArea, bold: Boolean) {
-        val font = if (bold) style.headerFont else style.hintFont
+        val font = if (bold) style.headerFont else SessionUiStyle.Text.Secondary.font(style)
         if (area.font != font) area.font = font
     }
 

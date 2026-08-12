@@ -24,7 +24,7 @@ import javax.swing.JComponent
 @RequiresEdt
 internal fun diffOverflowPanel(open: () -> Unit): JComponent {
     val message = JBLabel(KiloBundle.message("diff.overflow.message")).apply {
-        foreground = SessionUiStyle.Colors.hint()
+        foreground = SessionUiStyle.Text.Secondary.foreground()
     }
     val link = HyperlinkLabel(KiloBundle.message("diff.overflow.open")).apply {
         addHyperlinkListener { open() }

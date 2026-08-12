@@ -223,7 +223,7 @@ class QuestionView(
         val total = q.items.size
         val shown = minOf(idx + 1, total)
         summary.text = KiloBundle.message("session.question.summary", shown, total)
-        summary.foreground = SessionUiStyle.Colors.hint()
+        summary.foreground = SessionUiStyle.Text.Secondary.foreground()
         summary.isVisible = total > 1
         nav.isVisible = total > 1
         topPanel.isVisible = total > 1
@@ -331,7 +331,7 @@ class QuestionView(
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
             border = JBUI.Borders.emptyBottom(UiStyle.Gap.lg())
         }
-        val qText = text(item.question, SessionUiStyle.Colors.hint())
+        val qText = text(item.question, SessionUiStyle.Text.Secondary.foreground())
         qText.alignmentX = Component.LEFT_ALIGNMENT
         row.add(qText)
 
@@ -706,7 +706,7 @@ class QuestionView(
         col.add(label)
 
         if (opt.description.isNotBlank()) {
-            val desc = text(opt.description, SessionUiStyle.Colors.hint())
+            val desc = text(opt.description, SessionUiStyle.Text.Secondary.foreground())
             desc.alignmentX = Component.LEFT_ALIGNMENT
             desc.addMouseListener(press)
             col.add(desc)

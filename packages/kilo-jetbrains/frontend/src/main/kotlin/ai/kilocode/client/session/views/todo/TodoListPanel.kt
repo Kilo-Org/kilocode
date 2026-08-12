@@ -58,8 +58,8 @@ class TodoListPanel(
         this.style = style
         prior.font = style.smallFont
         later.font = style.smallFont
-        prior.foreground = SessionUiStyle.Colors.hint()
-        later.foreground = SessionUiStyle.Colors.hint()
+        prior.foreground = SessionUiStyle.Text.Secondary.foreground()
+        later.foreground = SessionUiStyle.Text.Secondary.foreground()
         rows.forEachIndexed { index, row -> row.update(items[index], style) }
         syncHidden()
     }
@@ -142,7 +142,7 @@ class TodoListPanel(
             text.font = style.regularFont
             text.foreground = when {
                 !done -> style.editorForeground
-                else -> SessionUiStyle.Colors.hint()
+                else -> SessionUiStyle.Text.Secondary.foreground()
             }
         }
 

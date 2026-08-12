@@ -172,8 +172,8 @@ class PermissionView(
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
         card.applyStyle(style)
-        desc.font = style.hintFont
-        desc.foreground = SessionUiStyle.Colors.hint()
+        desc.font = SessionUiStyle.Text.Secondary.font(style)
+        desc.foreground = SessionUiStyle.Text.Secondary.foreground()
         rules.applyStyle(style)
         md?.let { applyCodeStyle(it) }
         for (dv in diffViews) {
@@ -354,8 +354,8 @@ class PermissionView(
             caret.isSelectionVisible = false
             lineWrap = true
             wrapStyleWord = true
-            foreground = SessionUiStyle.Colors.hint()
-            font = style.hintFont
+            foreground = SessionUiStyle.Text.Secondary.foreground()
+            font = SessionUiStyle.Text.Secondary.font(style)
             border = JBUI.Borders.empty()
             isVisible = false
         }
@@ -706,8 +706,8 @@ internal class PermissionRulesView(
 
         @RequiresEdt
         fun applyStyle(style: SessionEditorStyle) {
-            hint.font = style.hintFont
-            hint.foreground = SessionUiStyle.Colors.hint()
+            hint.font = SessionUiStyle.Text.Secondary.font(style)
+            hint.foreground = SessionUiStyle.Text.Secondary.foreground()
             field.applyStyle(style)
         }
 

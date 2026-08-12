@@ -189,7 +189,7 @@ class ModifiedFilesView private constructor(
             setFont(title, style.boldEditorFont)
             setFont(count, style.transcriptFont)
             setForeground(title, SessionUiStyle.Colors.foreground())
-            setForeground(count, SessionUiStyle.Colors.hint())
+            setForeground(count, SessionUiStyle.Text.Secondary.foreground())
         }
     }
 

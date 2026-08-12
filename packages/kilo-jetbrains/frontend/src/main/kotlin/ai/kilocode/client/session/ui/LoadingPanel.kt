@@ -34,7 +34,7 @@ class LoadingPanel : JPanel(BorderLayout()), SessionEditorStyleTarget {
 
             else -> {
                 label.text = KiloBundle.message("session.empty.loading")
-                label.foreground = SessionUiStyle.Colors.hint()
+                label.foreground = SessionUiStyle.Text.Secondary.foreground()
             }
         }
         revalidate()

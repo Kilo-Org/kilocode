@@ -173,7 +173,7 @@ class ShellToolView(
         changed = setText(parts.title, title(item)) || changed
         changed = setText(parts.sub, subtitle(item)) || changed
         changed = setForeground(parts.title, titleColor(item)) || changed
-        changed = setForeground(parts.sub, SessionUiStyle.Colors.hint()) || changed
+        changed = setForeground(parts.sub, SessionUiStyle.Text.Secondary.foreground()) || changed
         changed = setText(parts.state, stateText(item)) || changed
         changed = setForeground(parts.state, color(item)) || changed
         return changed
