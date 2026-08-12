@@ -35,6 +35,7 @@ export type Options = {
   scenarioTimeout: Duration.Duration
   progress: boolean
   trace: boolean
+  shard: { index: number; total: number } // kilocode_change - opt-in sharding so CI runners can fan out across processes
 }
 
 export type RequestSpec = {
