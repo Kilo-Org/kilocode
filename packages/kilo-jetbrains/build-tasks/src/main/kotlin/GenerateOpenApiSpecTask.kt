@@ -33,8 +33,8 @@ abstract class GenerateOpenApiSpecTask : DefaultTask() {
         private val DIGEST = Regex("^sha256:[a-f0-9]{64}$")
         private val JSON = Json { ignoreUnknownKeys = true }
         private const val API = "https://api.github.com/repos/Kilo-Org/kilocode/releases/tags"
-        private const val ATTEMPTS = 3
-        private const val DELAY_MS = 1_000L
+        private const val ATTEMPTS = 8
+        private const val DELAY_MS = 5_000L
     }
 
     @get:Input
@@ -159,6 +159,7 @@ abstract class GenerateOpenApiSpecTask : DefaultTask() {
         conn.readTimeout = 120_000
         conn.instanceFollowRedirects = true
         conn.setRequestProperty("Accept", "application/vnd.github+json")
+        conn.setRequestProperty("User-Agent", "Kilo-JetBrains-Gradle")
         token.getOrNull()
             ?.trim()
             ?.takeIf { it.isNotEmpty() }
@@ -213,7 +214,7 @@ abstract class GenerateOpenApiSpecTask : DefaultTask() {
                 if (file.exists() && !file.delete()) logger.warn("Failed to delete partial pinned Kilo CLI archive ${file.absolutePath}")
                 if (attempt == ATTEMPTS) break
                 logger.warn("Pinned Kilo CLI download failed (attempt $attempt/$ATTEMPTS), retrying: ${err.message}")
-                Thread.sleep(DELAY_MS * attempt)
+                Thread.sleep((DELAY_MS * attempt).coerceAtMost(60_000L))
             }
         }
         throw GradleException("Failed to download pinned Kilo CLI after $ATTEMPTS attempts from $url", failure)
@@ -224,6 +225,12 @@ abstract class GenerateOpenApiSpecTask : DefaultTask() {
         conn.connectTimeout = 30_000
         conn.readTimeout = 120_000
         conn.instanceFollowRedirects = true
+        conn.setRequestProperty("Accept", "application/octet-stream")
+        conn.setRequestProperty("User-Agent", "Kilo-JetBrains-Gradle")
+        token.getOrNull()
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?.let { conn.setRequestProperty("Authorization", "Bearer $it") }
         try {
             val code = conn.responseCode
             if (code !in 200..299) {
