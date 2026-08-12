@@ -159,7 +159,7 @@ describe("AppProcess", () => {
           (directory) => {
             const ready = path.join(directory, "ready")
             const settled = path.join(directory, "settled")
-            const script = `const fs=require('fs');process.on('SIGTERM',()=>{fs.writeFileSync(${JSON.stringify(settled)},'settled');process.exit(0)});fs.writeFileSync(${JSON.stringify(ready)},String(process.pid));setInterval(()=>{},60000)` // kilocode_change
+            const script = `const fs=require('fs');fs.writeFileSync(${JSON.stringify(ready)},String(process.pid));process.on('SIGTERM',()=>{fs.writeFileSync(${JSON.stringify(settled)},'settled');process.exit(0)});setInterval(()=>{},60000)`
             return Effect.gen(function* () {
               const svc = yield* AppProcess.Service
               const exit = yield* Effect.exit(svc.run(cmd("-e", script), { timeout: "250 millis" }))
@@ -180,7 +180,7 @@ describe("AppProcess", () => {
           (directory) => {
             const ready = path.join(directory, "ready")
             const settled = path.join(directory, "settled")
-            const script = `const fs=require('fs');process.on('SIGTERM',()=>{fs.writeFileSync(${JSON.stringify(settled)},'settled');process.exit(0)});fs.writeFileSync(${JSON.stringify(ready)},String(process.pid));setInterval(()=>{},60000)` // kilocode_change
+            const script = `const fs=require('fs');fs.writeFileSync(${JSON.stringify(ready)},String(process.pid));process.on('SIGTERM',()=>{fs.writeFileSync(${JSON.stringify(settled)},'settled');process.exit(0)});setInterval(()=>{},60000)`
             return Effect.gen(function* () {
               const svc = yield* AppProcess.Service
               const fiber = yield* svc.run(cmd("-e", script)).pipe(Effect.forkChild)
