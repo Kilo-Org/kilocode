@@ -210,11 +210,20 @@ export namespace KilocodeConfig {
     return result
   }
 
-  export function retireIndexingFlag(info: Record<string, unknown>, source: string) {
-    if (!isRecord(info.experimental) || !("semantic_indexing" in info.experimental)) return info
+  export function retireExperimentalFlags(info: Record<string, unknown>, source: string) {
+    if (!isRecord(info.experimental)) return info
+    const indexing = "semantic_indexing" in info.experimental
+    const codebase = "codebase_search" in info.experimental
+    if (!indexing && !codebase) return info
     const experimental = { ...info.experimental }
-    delete experimental.semantic_indexing
-    log.warn("ignored retired experimental.semantic_indexing config; use indexing.enabled instead", { path: source })
+    if (indexing) {
+      delete experimental.semantic_indexing
+      log.warn("ignored retired experimental.semantic_indexing config; use indexing.enabled instead", { path: source })
+    }
+    if (codebase) {
+      delete experimental.codebase_search
+      log.warn("ignored retired experimental.codebase_search config", { path: source })
+    }
     return { ...info, experimental }
   }
 

@@ -830,8 +830,6 @@ export const dict = {
   "settings.experimental.lsp.description": "言語サーバープロトコル統合を有効にする",
   "settings.experimental.batch.title": "バッチツール",
   "settings.experimental.batch.description": "複数のツール呼び出しのバッチ処理を有効にする",
-  "settings.experimental.codebaseSearch.title": "コードベース検索",
-  "settings.experimental.codebaseSearch.description": "コードベース全体でAIによる自然言語検索を有効にする",
   "settings.experimental.imageGeneration.title": "画像生成",
   "settings.experimental.imageGeneration.description": "AI画像生成を有効にする",
   "settings.experimental.imageGenerationModel.title": "画像モデル",
