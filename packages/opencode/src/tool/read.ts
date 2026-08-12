@@ -38,10 +38,10 @@ const SUPPORTED_IMAGE_MIMES = new Set(["image/jpeg", "image/png", "image/gif", "
 // unchanged; purely CLI-facing uses must now send numbers rather than strings.
 export const Parameters = Schema.Struct({
   filePath: Schema.String.annotate({ description: "The absolute path to the file or directory to read" }),
-  offset: Schema.optional(NonNegativeInt).annotate({
+  offset: Schema.optional(Schema.Int.pipe(Schema.greaterThanOrEqualTo(1))).annotate({
     description: "The line number to start reading from (1-indexed)",
   }),
-  limit: Schema.optional(NonNegativeInt).annotate({
+  limit: Schema.optional(Schema.Int.pipe(Schema.greaterThanOrEqualTo(1))).annotate({
     description: "The maximum number of lines to read (defaults to 2000)",
   }),
 })
