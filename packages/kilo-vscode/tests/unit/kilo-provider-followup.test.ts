@@ -14,6 +14,7 @@ type Internals = {
   handleLoadMessages: (sessionID: string) => Promise<void>
   handleEvent: (event: Event, directory?: string) => void
   refreshGitStatus: (directory?: string) => Promise<void>
+  refreshGitStatusFromParts: (parts: unknown[], sessionID?: string) => Promise<boolean>
   initializeConnection: () => Promise<void>
   syncWebviewState: () => Promise<void>
   flushPendingSessionRefresh: () => Promise<void>
@@ -159,7 +160,7 @@ describe("KiloProvider follow-up sessions", () => {
     })
   })
 
-  it("refreshes Git from the file path in a completed edit tool part", () => {
+  it("refreshes Git from the file path in a completed edit tool part", async () => {
     const service = connection()
     const provider = new KiloProvider({} as never, service as never, undefined, {
       rootDirectory: () => "/workspace",
@@ -167,11 +168,13 @@ describe("KiloProvider follow-up sessions", () => {
     })
     const internal = provider as unknown as Internals
     const dirs: string[] = []
+    const refreshed = Promise.withResolvers<void>()
     const sessionID = "ses-edit"
     internal.currentSession = info({ id: sessionID, projectID: "backend-workspace", directory: "/workspace" })
     internal.trackedSessionIds.add(sessionID)
     internal.refreshGitStatus = async (directory) => {
       if (directory) dirs.push(directory)
+      refreshed.resolve()
     }
 
     internal.handleEvent(
@@ -181,18 +184,22 @@ describe("KiloProvider follow-up sessions", () => {
           sessionID,
           part: {
             type: "tool",
-            state: { status: "completed" },
-            metadata: { filepath: "/workspace/frontend/src/app.ts" },
+            tool: "edit",
+            state: {
+              status: "completed",
+              metadata: { filediff: { file: "/workspace/frontend/src/app.ts" } },
+            },
           },
         },
       } as Event,
       "/workspace",
     )
 
+    await refreshed.promise
     expect(dirs).toEqual(["/workspace/frontend/src"])
   })
 
-  it("ignores completed tool paths outside the active project", () => {
+  it("ignores completed tool paths outside the active project", async () => {
     const service = connection()
     const provider = new KiloProvider({} as never, service as never, undefined, {
       rootDirectory: () => "/workspace",
@@ -207,21 +214,21 @@ describe("KiloProvider follow-up sessions", () => {
       if (directory) dirs.push(directory)
     }
 
-    internal.handleEvent(
-      {
-        type: "message.part.updated",
-        properties: {
-          sessionID,
-          part: {
-            type: "tool",
-            state: { status: "completed" },
-            metadata: { filepath: "/other-repo/src/app.ts" },
+    const found = await internal.refreshGitStatusFromParts(
+      [
+        {
+          type: "tool",
+          tool: "edit",
+          state: {
+            status: "completed",
+            metadata: { filediff: { file: "/other-repo/src/app.ts" } },
           },
         },
-      } as Event,
-      "/workspace",
+      ],
+      sessionID,
     )
 
+    expect(found).toBe(false)
     expect(dirs).toEqual([])
   })
 
