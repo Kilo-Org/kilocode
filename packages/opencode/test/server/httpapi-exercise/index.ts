@@ -116,11 +116,13 @@ const scenarios: Scenario[] = [
       },
       "status",
     ),
-  http.protected.get("/path", "path.get").json(200, (body, ctx) => {
+  // kilocode_change start - opt into git init; the worktree assertion requires a git-backed project
+  http.protected.get("/path", "path.get").inProject({ git: true }).json(200, (body, ctx) => {
     object(body)
     check(body.directory === ctx.directory, "directory should resolve from x-kilo-directory")
     check(body.worktree === ctx.directory, "worktree should resolve from x-kilo-directory")
   }),
+  // kilocode_change end
   http.protected.get("/vcs", "vcs.get").inProject({ git: true }).json(),
   http.protected.get("/vcs/status", "vcs.status").inProject({ git: true }).json(200, array),
   http.protected
@@ -165,14 +167,19 @@ const scenarios: Scenario[] = [
     .status(400),
   http.protected.get("/config/providers", "config.providers").json(),
   http.protected.get("/project", "project.list").json(200, array, "status"),
-  http.protected.get("/project/current", "project.current").json(
-    200,
-    (body, ctx) => {
-      object(body)
-      check(body.worktree === ctx.directory, "current project should resolve from scenario directory")
-    },
-    "status",
-  ),
+  // kilocode_change start - opt into git init; the worktree assertion requires a git-backed project
+  http.protected
+    .get("/project/current", "project.current")
+    .inProject({ git: true })
+    .json(
+      200,
+      (body, ctx) => {
+        object(body)
+        check(body.worktree === ctx.directory, "current project should resolve from scenario directory")
+      },
+      "status",
+    ),
+  // kilocode_change end
   http.protected
     .patch("/project/{projectID}", "project.update")
     .mutating()
@@ -871,6 +878,9 @@ const scenarios: Scenario[] = [
       headers: ctx.headers(),
       body: { action: "read", resources: [".env"] },
     }))
+    // kilocode_change start - opt into git init; the permission resolver consults VCS state for unknown resources
+    .inProject({ git: true })
+    // kilocode_change end
     .json(200, (body) => {
       object(body)
       object(body.data)
