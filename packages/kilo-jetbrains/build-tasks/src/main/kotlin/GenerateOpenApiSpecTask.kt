@@ -227,10 +227,6 @@ abstract class GenerateOpenApiSpecTask : DefaultTask() {
         conn.instanceFollowRedirects = true
         conn.setRequestProperty("Accept", "application/octet-stream")
         conn.setRequestProperty("User-Agent", "Kilo-JetBrains-Gradle")
-        token.getOrNull()
-            ?.trim()
-            ?.takeIf { it.isNotEmpty() }
-            ?.let { conn.setRequestProperty("Authorization", "Bearer $it") }
         try {
             val code = conn.responseCode
             if (code !in 200..299) {
