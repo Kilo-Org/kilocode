@@ -7,6 +7,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
+import java.awt.Cursor
 import java.awt.event.MouseEvent
 import java.awt.image.BufferedImage
 import javax.swing.Icon
@@ -87,6 +88,26 @@ class AbstractSessionPartViewTest : BasePlatformTestCase() {
         assertFalse(view.isExpanded())
         assertFalse(view.arrowVisible())
         assertNull(content.parent)
+    }
+
+    fun `test expandable card header shows the hand cursor`() {
+        val view = TestView(content = JLabel("body"))
+
+        assertEquals(Cursor.HAND_CURSOR, (view.component(0) as JPanel).cursor.type)
+    }
+
+    fun `test expandable card applies the hand cursor to nested header children`() {
+        val child = JLabel("plain")
+        val header = JPanel(BorderLayout()).apply { add(child, BorderLayout.WEST) }
+        NestedView(header)
+
+        assertEquals(Cursor.HAND_CURSOR, child.cursor.type)
+    }
+
+    fun `test fixed non expandable card keeps the default cursor`() {
+        val view = TestView(content = JLabel("body"), expandable = false)
+
+        assertEquals(Cursor.DEFAULT_CURSOR, (view.component(0) as JPanel).cursor.type)
     }
 
     fun `test header hover fill differs from outline colors`() {

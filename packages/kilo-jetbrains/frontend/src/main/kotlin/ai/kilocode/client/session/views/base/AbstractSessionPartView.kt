@@ -168,13 +168,19 @@ abstract class AbstractSessionPartView(
      * whole subtree, keeping up with later children. Hover covers everything so leaving the row via
      * any nested element clears the fill. Click-to-toggle is bound only where the element does not
      * already own a mouse listener, so controls like file links and copy buttons keep their own
-     * click action and do not also toggle the card.
+     * click action and do not also toggle the card. This means a control must install its own mouse
+     * listener before it joins the header subtree: a control that adds its listener later would
+     * already carry the toggle listener and would both act and toggle. All current call sites bind
+     * their listeners in constructors, so this ordering holds.
      */
     private fun watch(component: Component) {
         if (!watched.add(component)) return
         if (component.mouseListeners.isEmpty()) {
             component.addMouseListener(click)
             clickable.add(component)
+            // Toggle-clickable header elements show the hand cursor while the card is toggleable.
+            // Arrow visibility mirrors that state, and syncExpandable resets the cursor when it flips.
+            if (arrow.isVisible) component.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         }
         component.addMouseListener(pointer)
         if (component is Container) {

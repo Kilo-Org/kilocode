@@ -150,17 +150,14 @@ class TurnViewTest : BasePlatformTestCase() {
         mv.setSize(120, 48)
         val image = BufferedImage(120, 48, BufferedImage.TYPE_INT_ARGB)
 
-        mv.paint(image.createGraphics())
+        val g = image.createGraphics()
+        mv.paint(g)
+        g.dispose()
 
-        // The user bubble is a filled code-block surface; it only outlines when the fill matches the
-        // session background (no contrast).
+        // The user bubble is a filled code-block surface with an outline.
         val bg = SessionUiStyle.View.Prompt.bgColor(SessionEditorStyle.current())
-        val expected = if (bg.rgb == SessionUiStyle.Colors.sessionBackground().rgb) {
-            SessionUiStyle.View.Outline.color().rgb
-        } else {
-            bg.rgb
-        }
-        assertEquals(expected, image.getRGB(60, 0))
+        assertEquals(bg.rgb, image.getRGB(60, 24))
+        assertEquals(SessionUiStyle.View.Outline.color().rgb, image.getRGB(60, 0))
     }
 
     fun `test assistant message remains borderless`() {
