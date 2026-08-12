@@ -29,6 +29,10 @@ function fail(field: keyof CloudFields | undefined, message: string): CloudError
   return { ok: false, field, message }
 }
 
+function isError(value: { ok?: false }): value is CloudError {
+  return value.ok === false
+}
+
 function required(fields: CloudFields, field: keyof CloudFields, label: string, t: Translate) {
   const value = text(fields[field])
   if (value) return value
@@ -96,7 +100,7 @@ export function buildCloudConnect(
 ): CloudError | CloudResult {
   if (id === BEDROCK_ID) return parseBedrock(fields, mode, t)
   const parsed = parseVertex(fields, t)
-  if (parsed.ok === false) return parsed
+  if (isError(parsed)) return parsed
   const location = required(fields, "location", "provider.connect.vertex.location.label", t)
   if (typeof location !== "string") return location
   const metadata: Record<string, string> = { project: parsed.project, location }
