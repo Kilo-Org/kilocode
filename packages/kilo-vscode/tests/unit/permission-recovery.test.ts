@@ -141,7 +141,9 @@ describe("handlePermissionResponse", () => {
 
     await handlePermissionResponse(fake, "p1", "s1", "once", [], [])
 
-    expect(replies).toEqual([{ requestID: "p1", reply: "once", directory: "/workspace/.kilo/worktrees/feature" }])
+    expect(replies).toEqual([
+      { requestID: "p1", reply: "once", directory: "/workspace/.kilo/worktrees/feature", interactive: true },
+    ])
   })
 
   it("saves selected rules and replies in the recorded SSE directory", async () => {
@@ -158,7 +160,9 @@ describe("handlePermissionResponse", () => {
         deniedAlways: ["rm *"],
       },
     ])
-    expect(replies).toEqual([{ requestID: "p1", reply: "reject", directory: "/workspace/.kilo/worktrees/feature" }])
+    expect(replies).toEqual([
+      { requestID: "p1", reply: "reject", directory: "/workspace/.kilo/worktrees/feature", interactive: true },
+    ])
   })
 
   it("treats an SDK-wrapped 404 while saving rules as stale", async () => {
@@ -192,7 +196,9 @@ describe("handlePermissionResponse", () => {
 
     await handlePermissionResponse(fake, "p1", "s1", "once", [], [])
 
-    expect(replies).toEqual([{ requestID: "p1", reply: "once", directory: "/workspace/.kilo/worktrees/feature" }])
+    expect(replies).toEqual([
+      { requestID: "p1", reply: "once", directory: "/workspace/.kilo/worktrees/feature", interactive: true },
+    ])
     expect(permDirs.has("p1")).toBe(false)
     expect(messages).toEqual([{ type: "permissionError", permissionID: "p1", stale: true }])
   })

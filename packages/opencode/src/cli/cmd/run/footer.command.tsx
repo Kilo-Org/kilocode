@@ -124,6 +124,13 @@ function subagentStatusLabel(status: FooterSubagentTab["status"]) {
   return "running"
 }
 
+// kilocode_change start - keep equivalent up keybindings aligned at panel boundaries
+function up(event: KeyEvent) {
+  const name = event.name.toLowerCase()
+  return name === "up" || (event.ctrl && !event.meta && !event.shift && !event.super && name === "p")
+}
+// kilocode_change end
+
 function handleKey(input: {
   event: KeyEvent
   menu: MenuState
@@ -141,11 +148,13 @@ function handleKey(input: {
     return
   }
 
-  if (name === "up" || (ctrl && name === "p")) {
+  // kilocode_change start - treat ctrl+p as the up binding
+  if (up(input.event)) {
     input.event.preventDefault()
     input.menu.move(-1)
     return
   }
+  // kilocode_change end
 
   if (name === "down" || (ctrl && name === "n")) {
     input.event.preventDefault()
@@ -202,7 +211,6 @@ function match<T extends PanelEntry>(query: string, entries: T[]) {
 }
 
 function PanelShell(props: {
-  id: string
   title: string
   countVisible?: boolean
   query: string
@@ -279,7 +287,7 @@ function PanelShell(props: {
     </>
   )
   return (
-    <box id={props.id} width="100%" flexDirection="column" border={false} backgroundColor="transparent" flexShrink={0}>
+    <box width="100%" flexDirection="column" border={false} backgroundColor="transparent" flexShrink={0}>
       {minimal() ? (
         <box width="100%" flexDirection="column" border={false} backgroundColor="transparent" flexShrink={0}>
           {content}
@@ -298,14 +306,7 @@ function PanelShell(props: {
         </box>
       )}
       {minimal() ? (
-        <box
-          id={`${props.id}-bottom`}
-          width="100%"
-          height={1}
-          border={false}
-          backgroundColor="transparent"
-          flexShrink={0}
-        >
+        <box width="100%" height={1} border={false} backgroundColor="transparent" flexShrink={0}>
           <box
             width="100%"
             height={1}
@@ -317,7 +318,6 @@ function PanelShell(props: {
         </box>
       ) : (
         <box
-          id={`${props.id}-bottom`}
           width="100%"
           height={1}
           border={["left"]}
@@ -549,7 +549,6 @@ export function RunCommandMenuBody(props: {
 
   return (
     <PanelShell
-      id="run-direct-footer-command-panel"
       title="Commands"
       countVisible={false}
       query={query()}
@@ -565,7 +564,6 @@ export function RunCommandMenuBody(props: {
       chrome="minimal"
     >
       <RunFooterMenu
-        id="run-direct-footer-command-list"
         theme={props.theme}
         items={items}
         selected={menu.selected}
@@ -644,12 +642,19 @@ export function RunSubagentSelectBody(props: {
       return
     }
 
+    // kilocode_change start - close on either up binding at the first row
+    if (up(event) && menu.selected() === 0) {
+      event.preventDefault()
+      props.onClose()
+      return
+    }
+    // kilocode_change end
+
     handleKey({ event, menu, field: () => field, setQuery, select, close: props.onClose })
   })
 
   return (
     <PanelShell
-      id="run-direct-footer-subagent-panel"
       title="Select subagent"
       query={query()}
       count={items().length}
@@ -664,7 +669,6 @@ export function RunSubagentSelectBody(props: {
       chrome="minimal"
     >
       <RunFooterMenu
-        id="run-direct-footer-subagent-list"
         theme={props.theme}
         items={items}
         selected={menu.selected}
@@ -748,7 +752,6 @@ export function RunQueuedPromptSelectBody(props: {
 
   return (
     <PanelShell
-      id="run-direct-footer-queued-panel"
       title="Queued prompts"
       query={query()}
       count={items().length}
@@ -763,7 +766,6 @@ export function RunQueuedPromptSelectBody(props: {
       chrome="minimal"
     >
       <RunFooterMenu
-        id="run-direct-footer-queued-list"
         theme={props.theme}
         items={items}
         selected={menu.selected}
@@ -827,7 +829,6 @@ export function RunSkillSelectBody(props: {
 
   return (
     <PanelShell
-      id="run-direct-footer-skill-panel"
       title="Skills"
       query={query()}
       count={items().length}
@@ -842,7 +843,6 @@ export function RunSkillSelectBody(props: {
       chrome="minimal"
     >
       <RunFooterMenu
-        id="run-direct-footer-skill-list"
         theme={props.theme}
         items={items}
         selected={menu.selected}
@@ -927,7 +927,6 @@ export function RunVariantSelectBody(props: {
 
   return (
     <PanelShell
-      id="run-direct-footer-variant-panel"
       title="Select variant"
       query={query()}
       count={items().length}
@@ -942,7 +941,6 @@ export function RunVariantSelectBody(props: {
       chrome="minimal"
     >
       <RunFooterMenu
-        id="run-direct-footer-variant-list"
         theme={props.theme}
         items={items}
         selected={menu.selected}
@@ -1050,7 +1048,6 @@ export function RunModelSelectBody(props: {
 
   return (
     <PanelShell
-      id="run-direct-footer-model-panel"
       title="Select model"
       query={query()}
       count={items().length}
@@ -1065,7 +1062,6 @@ export function RunModelSelectBody(props: {
       chrome="minimal"
     >
       <RunFooterMenu
-        id="run-direct-footer-model-list"
         theme={props.theme}
         items={items}
         selected={menu.selected}

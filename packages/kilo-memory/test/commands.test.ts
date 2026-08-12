@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { parseMemoryCommand, type MemoryOperation, type ParsedMemoryCommand } from "../src/commands"
+import { MEMORY_USAGE, parseMemoryCommand, type MemoryOperation, type ParsedMemoryCommand } from "../src/commands"
 
 type Case = {
   name: string
@@ -29,7 +29,7 @@ function expected(item: Case): ParsedMemoryCommand | undefined {
     if (!item.query) throw new Error(`Missing query for fixture: ${item.name}`)
     return { kind: "operation", operation: item.operation, query: item.query }
   }
-  if (item.operation === "auto" || item.operation === "verbose") {
+  if (item.operation === "auto") {
     if (!item.mode) throw new Error(`Missing mode for fixture: ${item.name}`)
     return { kind: "operation", operation: item.operation, mode: item.mode }
   }
@@ -41,6 +41,23 @@ function expected(item: Case): ParsedMemoryCommand | undefined {
 }
 
 describe("memory commands", () => {
+  test("does not expose verbose mode", () => {
+    expect(MEMORY_USAGE).not.toContain("verbose")
+    expect(parseMemoryCommand("/memory verbose on")).toEqual({
+      kind: "usage",
+      reason: "Unknown memory action: verbose.",
+    })
+  })
+
+  test("replaces edit with inspect", () => {
+    expect(MEMORY_USAGE).toContain("inspect")
+    expect(MEMORY_USAGE).not.toContain("edit")
+    expect(parseMemoryCommand("/memory edit")).toEqual({
+      kind: "usage",
+      reason: "Unknown memory action: edit.",
+    })
+  })
+
   test("parse shared fixtures", () => {
     for (const item of cases) {
       const parsed = parseMemoryCommand(item.input)

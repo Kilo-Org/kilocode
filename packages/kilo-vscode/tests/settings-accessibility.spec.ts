@@ -6,7 +6,7 @@ const NAMES = [
   "Providers",
   "Agent Behaviour",
   "Auto-Approve",
-  "Browser",
+  "Web Tools",
   "Checkpoints",
   "Display",
   "Autocomplete",

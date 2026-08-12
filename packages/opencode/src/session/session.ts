@@ -1,4 +1,5 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { Slug } from "@opencode-ai/core/util/slug"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
@@ -27,6 +28,7 @@ import { Snapshot } from "@/snapshot"
 import { ProjectV2 } from "@opencode-ai/core/project"
 import { WorkspaceV2 } from "@opencode-ai/core/workspace"
 import { SessionID, MessageID, PartID } from "./schema"
+import { SessionMessage } from "@opencode-ai/core/session/message" // kilocode_change - shared Revert.State brand
 
 import type { Provider } from "@/provider/provider"
 import { Permission } from "@/permission"
@@ -50,7 +52,7 @@ import { RuntimeFlags } from "@/effect/runtime-flags"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 
-const runtime = makeRuntime(Database.Service, Database.defaultLayer)
+const runtime = makeRuntime(Database.Service, AppNodeBuilder.build(Database.node))
 
 const parentTitlePrefix = "New session - "
 const childTitlePrefix = "Child session - "
@@ -74,7 +76,17 @@ export function fromRow(row: SessionRow): Info {
         }
       : undefined
   const share = row.share_url ? { url: row.share_url } : undefined
-  const revert = row.revert ?? undefined
+  // kilocode_change start - the shared column stores the upstream Revert.State brand; project it to the v1 shape
+  const revert = row.revert
+    ? {
+        messageID: MessageID.make(row.revert.messageID),
+        partID: row.revert.partID ? PartID.make(row.revert.partID) : undefined,
+        snapshot: row.revert.snapshot,
+        diff: row.revert.diff,
+        workspace: row.revert.workspace,
+      }
+    : undefined
+  // kilocode_change end
   return {
     id: row.id,
     slug: row.slug,
@@ -142,7 +154,10 @@ export function toRow(info: Info) {
     tokens_reasoning: (info.tokens ?? EmptyTokens).reasoning,
     tokens_cache_read: (info.tokens ?? EmptyTokens).cache.read,
     tokens_cache_write: (info.tokens ?? EmptyTokens).cache.write,
-    revert: info.revert ?? null,
+    // kilocode_change - re-brand the v1 messageID to the shared Revert.State brand for the column
+    revert: info.revert
+      ? { ...info.revert, messageID: SessionMessage.ID.make(info.revert.messageID) }
+      : null,
     permission: info.permission,
     time_created: info.time.created,
     time_updated: info.time.updated,
@@ -204,6 +219,7 @@ const Revert = Schema.Struct({
   partID: optionalOmitUndefined(PartID),
   snapshot: optionalOmitUndefined(Schema.String),
   diff: optionalOmitUndefined(Schema.String),
+  workspace: optionalOmitUndefined(Schema.Literals(["restored", "snapshots-disabled", "unavailable"])), // kilocode_change
 })
 
 const Model = Schema.Struct({
@@ -514,6 +530,12 @@ export interface Interface {
   readonly setTitle: (input: { sessionID: SessionID; title: string }) => Effect.Effect<void>
   readonly setArchived: (input: { sessionID: SessionID; time?: number }) => Effect.Effect<void>
   readonly setMetadata: (input: typeof SetMetadataInput.Type) => Effect.Effect<void>
+  readonly setAgentModel: (input: {
+    sessionID: SessionID
+    agent: string
+    model: NonNullable<Info["model"]>
+    time: number
+  }) => Effect.Effect<void>
   readonly setPermission: (input: { sessionID: SessionID; permission: PermissionV1.Ruleset }) => Effect.Effect<void>
   readonly setRevert: (input: {
     sessionID: SessionID
@@ -825,9 +847,7 @@ export const layer: Layer.Layer<
       // kilocode_change start - historical forks must use the model from retained context, not a later source-session selection
       const msgs = yield* messages({ sessionID: input.sessionID })
       const point = input.messageID
-      const message = point
-        ? msgs.findLast((msg) => msg.info.id < point && msg.info.role === "user")
-        : undefined
+      const message = point ? msgs.findLast((msg) => msg.info.id < point && msg.info.role === "user") : undefined
       const model =
         message?.info.role === "user"
           ? {
@@ -850,6 +870,7 @@ export const layer: Layer.Layer<
         model, // kilocode_change - preserve the model + variant active at the fork point
         sourceID: input.sessionID, // kilocode_change - forks preserve initialized confinement
         sandboxFallback, // kilocode_change - seed confinement from the source session's original directory
+        platform: KiloSession.resolvePlatform(original.id), // kilocode_change - inherit platform telemetry attribution
       })
       const idMap = new Map<string, MessageID>()
 
@@ -886,6 +907,13 @@ export const layer: Layer.Layer<
       }
       // kilocode_change - preserve imported/cumulative diffs when forking (self-contained Storage runtime keeps this shared file off the legacy Storage layer)
       yield* carryForkDiff(input.sessionID, session.id)
+      // kilocode_change start - fork terminal task children under the new parent and remap their references
+      yield* KiloSession.remapChildren({
+        sessionID: session.id,
+        remapped: new Map([[input.sessionID, session.id]]),
+        ops: { get, messages, create, updateMessage, updatePart },
+      })
+      // kilocode_change end
       return session
     })
 
@@ -918,6 +946,19 @@ export const layer: Layer.Layer<
 
     const setMetadata = Effect.fn("Session.setMetadata")(function* (input: typeof SetMetadataInput.Type) {
       yield* patch(input.sessionID, { metadata: input.metadata, time: { updated: Date.now() } }).pipe(Effect.orDie)
+    })
+
+    const setAgentModel = Effect.fn("Session.setAgentModel")(function* (input: {
+      sessionID: SessionID
+      agent: string
+      model: NonNullable<Info["model"]>
+      time: number
+    }) {
+      yield* patch(input.sessionID, {
+        agent: input.agent,
+        model: input.model,
+        time: { updated: input.time },
+      }).pipe(Effect.orDie)
     })
 
     const setPermission = Effect.fn("Session.setPermission")(function* (input: {
@@ -1058,6 +1099,7 @@ export const layer: Layer.Layer<
       setTitle,
       setArchived,
       setMetadata,
+      setAgentModel,
       setPermission,
       setRevert,
       clearRevert,
@@ -1079,14 +1121,7 @@ export const layer: Layer.Layer<
   }),
 )
 
-export const defaultLayer = layer.pipe(
-  Layer.provide(BackgroundJob.defaultLayer),
-  Layer.provide(Database.defaultLayer),
-  Layer.provide(EventV2Bridge.defaultLayer),
-  Layer.provide(SessionExecution.noopLayer),
-  Layer.provide(SessionV2.defaultLayer),
-  Layer.provide(RuntimeFlags.defaultLayer),
-)
+export const defaultLayer: Layer.Layer<Service> = Layer.suspend(() => AppNodeBuilder.build(node)) // kilocode_change - build from the LayerNode graph
 
 const cancelBackgroundJobs = Effect.fn("Session.cancelBackgroundJobs")(function* (
   background: BackgroundJob.Interface,
@@ -1189,6 +1224,10 @@ export function listGlobal(input?: {
 // kilocode_change - delegate the exported Promise facade to the Kilo session runtime
 export const fork = kiloSessionFork
 
-export const node = LayerNode.make(layer, [BackgroundJob.node, RuntimeFlags.node, Database.node, EventV2Bridge.node])
+export const node = LayerNode.make({
+  service: Service,
+  layer,
+  deps: [BackgroundJob.node, RuntimeFlags.node, Database.node, EventV2Bridge.node],
+})
 
 export * as Session from "./session"

@@ -1,5 +1,90 @@
 import { describe, expect, it } from "bun:test"
-import { cleanOutput, parseDshowAudioDevices } from "../../src/speech-to-text/capture"
+import {
+  cleanOutput,
+  ffmpegCaptureArgs,
+  ffmpegPipeArgs,
+  macCaptureArgs,
+  parseDshowAudioDevices,
+  useMacCapture,
+} from "../../src/speech-to-text/capture"
+
+describe("macCaptureArgs", () => {
+  it("records 16 kHz mono AAC at 24 kbps with the built-in AVFoundation bridge", () => {
+    const args = macCaptureArgs("/tmp/speech.m4a")
+
+    expect(args.slice(0, 3)).toEqual(["-l", "JavaScript", "-e"])
+    expect(args.at(-1)).toBe("/tmp/speech.m4a")
+    expect(args[3]).toContain("AVAudioRecorder")
+    expect(args[3]).toContain("numberWithUnsignedInt(1633772320), $.AVFormatIDKey")
+    expect(args[3]).toContain("numberWithDouble(16000), $.AVSampleRateKey")
+    expect(args[3]).toContain("numberWithInt(1), $.AVNumberOfChannelsKey")
+    expect(args[3]).toContain("numberWithInt(24000), $.AVEncoderBitRateKey")
+    expect(args[3]).toContain("error[0] && error[0].localizedDescription")
+    expect(args[3]).toContain('console.log("ready")')
+  })
+})
+
+describe("ffmpeg args", () => {
+  it("builds AAC capture arguments with faststart", () => {
+    const args = ffmpegCaptureArgs(["-f", "avfoundation", "-i", ":default"], "/tmp/speech.m4a")
+
+    expect(args).toEqual([
+      "-y",
+      "-f",
+      "avfoundation",
+      "-i",
+      ":default",
+      "-c:a",
+      "aac",
+      "-b:a",
+      "24k",
+      "-ar",
+      "16000",
+      "-ac",
+      "1",
+      "-movflags",
+      "+faststart",
+      "/tmp/speech.m4a",
+    ])
+  })
+
+  it("builds pipe capture arguments for Linux PipeWire", () => {
+    const args = ffmpegPipeArgs("/tmp/speech.m4a")
+
+    expect(args).toEqual([
+      "-y",
+      "-f",
+      "s16le",
+      "-ar",
+      "16000",
+      "-ac",
+      "1",
+      "-i",
+      "pipe:0",
+      "-c:a",
+      "aac",
+      "-b:a",
+      "24k",
+      "-ar",
+      "16000",
+      "-ac",
+      "1",
+      "-movflags",
+      "+faststart",
+      "/tmp/speech.m4a",
+    ])
+  })
+})
+
+describe("useMacCapture", () => {
+  it("preserves explicit FFmpeg overrides", () => {
+    expect(useMacCapture("darwin", {})).toBe(true)
+    expect(useMacCapture("darwin", { KILO_FFMPEG_PATH: "/custom/ffmpeg" })).toBe(false)
+    expect(useMacCapture("darwin", { FFMPEG_PATH: "/custom/ffmpeg" })).toBe(false)
+    expect(useMacCapture("linux", {})).toBe(false)
+    expect(useMacCapture("win32", {})).toBe(false)
+  })
+})
 
 describe("parseDshowAudioDevices", () => {
   it("extracts Windows dshow audio device names", () => {

@@ -43,10 +43,18 @@
 .am-review-toolbar-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   flex: 1;
   min-width: 0;
   overflow: hidden;
+}
+
+/* Keep the radio group from being the tallest thing in the row so it matches
+   the 22px selector chips and the small ghost buttons. The inline scope/base
+   controls are styled in banners.css (non-am- prefixed, shared with the
+   standalone diff viewer). */
+.am-review-toolbar [data-component="radio-group"] {
+  font-size: var(--font-size-small);
 }
 
 .am-review-toolbar-right {
@@ -77,7 +85,7 @@
 .am-review-toolbar-stats {
   display: flex;
   align-items: center;
-  flex: 1 1 auto;
+  flex: 0 100 auto;
   gap: 8px;
   font-size: var(--font-size-small);
   color: var(--text-weak);

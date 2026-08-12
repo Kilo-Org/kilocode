@@ -34,17 +34,39 @@ function stamp(entry: FileEntry, before: string, after: string): FileEntry {
   return { ...entry, stamp: `${entry.status}:${before}:${after}` }
 }
 
+export interface StagedDiffSourceOptions {
+  /**
+   * Resolve the directory to diff. Defaults to the VS Code workspace root.
+   * Agent Manager passes a worktree path so the source diffs inside the
+   * worktree rather than the main checkout.
+   */
+  dir?: () => string | undefined
+  /**
+   * When true, a `dir` that resolves to undefined yields an empty diff rather
+   * than falling back to the workspace root.
+   */
+  strictDir?: boolean
+  /** Shared GitOps / log so sources don't each spawn their own channel. */
+  git?: GitOps
+  log?: (...args: unknown[]) => void
+}
+
 /**
  * Diff between the git index and HEAD — what `git diff --cached` would show.
  * Polls on the standard interval; revert isn't supported (use `git reset` from
  * a real git client). Read-only view.
  */
-export function createStagedDiffSource(): DiffSource {
-  const output = vscode.window.createOutputChannel("Kilo Diff: Staged")
-  const log = (...args: unknown[]) => appendOutput(output, "StagedDiffSource", ...args)
-  const git = new GitOps({ log })
+export function createStagedDiffSource(opts: StagedDiffSourceOptions = {}): DiffSource {
+  const output = opts.git ? undefined : vscode.window.createOutputChannel("Kilo Diff: Staged")
+  const log = opts.log ?? ((...args: unknown[]) => appendOutput(output!, "StagedDiffSource", ...args))
+  const git = opts.git ?? new GitOps({ log })
 
-  const root = (): string | undefined => getWorkspaceRoot()
+  const root = (): string | undefined => {
+    const dir = opts.dir?.()
+    if (dir) return dir
+    if (opts.strictDir) return undefined
+    return getWorkspaceRoot()
+  }
 
   const listEntries = async (dir: string): Promise<FileEntry[]> => {
     const [nameStatus, numstat, raw] = await Promise.all([
@@ -150,8 +172,10 @@ export function createStagedDiffSource(): DiffSource {
     },
 
     dispose(): void {
-      git.dispose()
-      output.dispose()
+      // Only dispose resources we own (created here). Injected git/log are
+      // owned by the caller.
+      if (!opts.git) git.dispose()
+      output?.dispose()
     },
   }
 }

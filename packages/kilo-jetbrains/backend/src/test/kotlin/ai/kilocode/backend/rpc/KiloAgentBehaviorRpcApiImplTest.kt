@@ -14,6 +14,8 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import java.nio.file.Files
+import java.nio.file.Path
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -76,6 +78,226 @@ class KiloAgentBehaviorRpcApiImplTest {
             rpc.removeAgent("/test", "missing")
         }
         assertContains(err.message.orEmpty(), "HTTP 400")
+    }
+
+    @Test
+    fun `skills and remove skill call CLI endpoints`() = runBlocking {
+        val dir = Files.createTempDirectory("kilo-skill-test")
+        val file = Files.createDirectories(dir.resolve("plan")).resolve("SKILL.md")
+        val content = """---
+            |name: plan
+            |description: Plan work
+            |---
+            |
+            |# Fresh Plan
+        """.trimMargin()
+        Files.writeString(file, content)
+        mock.skills = """[
+            {"name":"plan","description":"Plan work","location":"$file","content":"# Stale Plan"},
+            {"name":"builtin","location":"builtin"}
+        ]""".trimIndent()
+        val rpc = rpc()
+
+        val skills = rpc.skills("/test project")
+        assertEquals(listOf("plan", "builtin"), skills.map { it.name })
+        assertEquals("Plan work", skills.single { it.name == "plan" }.description)
+        assertEquals(content, skills.single { it.name == "plan" }.content)
+        assertEquals(true, skills.single { it.name == "plan" }.editable)
+        assertEquals(false, skills.single { it.name == "builtin" }.editable)
+
+        assertTrue(rpc.removeSkill("/test project", file.toString()))
+        assertEquals("{\"location\":\"$file\"}", mock.lastSkillRemoveBody)
+        assertEquals(1, mock.requestCount("/kilocode/skill/remove"))
+
+        mock.skillRemoveStatus = 400
+        val err = assertFailsWith<RuntimeException> {
+            rpc.removeSkill("/test", "/tmp/missing/SKILL.md")
+        }
+        assertContains(err.message.orEmpty(), "HTTP 400")
+
+        assertTrue(rpc.reloadSkills("/test project"))
+        assertEquals(1, mock.requestCount("/instance/reload"))
+    }
+
+    @Test
+    fun `command files and remove command call CLI endpoints`() = runBlocking {
+        val dir = Files.createTempDirectory("kilo-command-test")
+        val file = Files.createDirectories(dir.resolve("command")).resolve("review.md")
+        Files.writeString(file, "---\ndescription: Review code\n---\n\nReview $" + "ARGUMENTS")
+        mock.commandFiles = """[
+            {"name":"review","description":"Review code","agent":"reviewer","model":"anthropic/claude-sonnet-4-6","variant":"high","source":"command","builtin":false,"location":"$file","editable":true,"content":"Review","subtask":true},
+            {"name":"init","source":"command","builtin":true,"location":"builtin","editable":false,"content":"Init"}
+        ]""".trimIndent()
+        val rpc = rpc()
+
+        val commands = rpc.commandFiles("/test project")
+        assertEquals(listOf("review", "init"), commands.map { it.name })
+        assertEquals(true, commands.single { it.name == "review" }.editable)
+        assertEquals("reviewer", commands.single { it.name == "review" }.agent)
+        assertEquals("anthropic/claude-sonnet-4-6", commands.single { it.name == "review" }.model)
+        assertEquals("high", commands.single { it.name == "review" }.variant)
+        assertEquals(true, commands.single { it.name == "review" }.subtask)
+        assertEquals(false, commands.single { it.name == "init" }.editable)
+
+        assertTrue(rpc.removeCommand("/test project", file.toString()))
+        assertEquals("{\"location\":\"$file\"}", mock.lastCommandRemoveBody)
+        assertEquals(1, mock.requestCount("/kilocode/command/remove"))
+
+        mock.commandRemoveStatus = 400
+        val err = assertFailsWith<RuntimeException> {
+            rpc.removeCommand("/test", "/tmp/missing.md")
+        }
+        assertContains(err.message.orEmpty(), "HTTP 400")
+
+        assertTrue(rpc.reloadCommands("/test project"))
+        assertEquals(1, mock.requestCount("/instance/reload"))
+    }
+
+    @Test
+    fun `save commands validates known and new project command paths`() = runBlocking {
+        val project = Files.createTempDirectory("kilo-command-project")
+        val known = Files.createDirectories(project.resolve(".kilo/command")).resolve("known.md")
+        val added = project.resolve(".kilo/commands/new.md")
+        val other = Files.createTempFile("kilo-command-other", ".md")
+        Files.writeString(known, "old")
+        Files.writeString(other, "old")
+        mock.commandFiles = """[
+            {"name":"known","source":"command","builtin":false,"location":"$known","editable":true,"content":"old"}
+        ]""".trimIndent()
+        val rpc = rpc()
+
+        assertTrue(rpc.saveCommands(project.toString(), mapOf(known.toString() to "new", added.toString() to "created")))
+        assertEquals("new", Files.readString(known))
+        assertEquals("created", Files.readString(added))
+        assertEquals(1, mock.requestCount("/kilocode/command/files"))
+
+        assertFalse(rpc.saveCommands(project.toString(), mapOf(other.toString() to "nope")))
+        assertEquals("old", Files.readString(other))
+    }
+
+    @Test
+    fun `save commands validates new global command paths`() = runBlocking {
+        val project = Files.createTempDirectory("kilo-command-project")
+        val config = Files.createTempDirectory("kilo-command-config")
+        val added = config.resolve("commands/global.md")
+        mock.path = """{"home":"/tmp","state":"/tmp","config":"$config","worktree":"$project","directory":"$project"}"""
+        val rpc = rpc()
+
+        assertTrue(rpc.saveCommands(project.toString(), mapOf(added.toString() to "global command")))
+
+        assertEquals("global command", Files.readString(added))
+        assertEquals(1, mock.requestCount("/path"))
+    }
+
+    @Test
+    fun `url cached skills are read only`() = runBlocking {
+        val cache = Path.of(System.getProperty("user.home"), ".cache", "kilo", "skills", "remote")
+        val file = Files.createDirectories(cache).resolve("SKILL.md")
+        Files.writeString(file, "# Remote")
+        mock.skills = """[
+            {"name":"remote","description":"Remote","location":"$file","content":"# Remote"}
+        ]""".trimIndent()
+
+        val skill = rpc().skills("/test project").single()
+
+        assertEquals(false, skill.editable)
+        assertEquals("# Remote", skill.content)
+    }
+
+    @Test
+    fun `custom skills under non cache paths remain editable`() = runBlocking {
+        val dir = Files.createTempDirectory("kilo-skill-test")
+        val file = Files.createDirectories(dir.resolve("cache/kilo/skills/custom")).resolve("SKILL.md")
+        Files.writeString(file, "# Custom")
+        mock.skills = """[
+            {"name":"custom","description":"Custom","location":"$file","content":"# Custom"}
+        ]""".trimIndent()
+
+        val skill = rpc().skills("/test project").single()
+
+        assertEquals(true, skill.editable)
+    }
+
+    @Test
+    fun `save skill supports configured markdown text and html files without reload`() = runBlocking {
+        val dir = Files.createTempDirectory("kilo-skill-test")
+        val file = dir.resolve("test.md")
+        Files.writeString(file, "old")
+        mock.skills = """[
+            {"name":"test","description":"Test","location":"$file","content":"old"}
+        ]""".trimIndent()
+        val rpc = rpc()
+
+        assertTrue(rpc.saveSkill("/test project", file.toString(), "new content"))
+        assertEquals("new content", Files.readString(file))
+        assertEquals(0, mock.requestCount("/instance/reload"))
+    }
+
+    @Test
+    fun `save skill writes content without reloading instance`() = runBlocking {
+        val dir = Files.createTempDirectory("kilo-skill-test")
+        val file = Files.createDirectories(dir.resolve("plan")).resolve("SKILL.md")
+        Files.writeString(file, "old")
+        mock.skills = """[
+            {"name":"plan","description":"Plan work","location":"$file","content":"old"}
+        ]""".trimIndent()
+        val rpc = rpc()
+
+        assertTrue(rpc.saveSkill("/test project", file.toString(), "new content"))
+
+        assertEquals("new content", Files.readString(file))
+        assertEquals(0, mock.requestCount("/instance/reload"))
+        assertFalse(rpc.saveSkill("/test project", "builtin", "nope"))
+    }
+
+    @Test
+    fun `save skills validates known paths once for multiple edits`() = runBlocking {
+        val dir = Files.createTempDirectory("kilo-skill-test")
+        val plan = Files.createDirectories(dir.resolve("plan")).resolve("SKILL.md")
+        val review = Files.createDirectories(dir.resolve("review")).resolve("SKILL.md")
+        Files.writeString(plan, "old plan")
+        Files.writeString(review, "old review")
+        mock.skills = """[
+            {"name":"plan","description":"Plan work","location":"$plan","content":"old plan"},
+            {"name":"review","description":"Review work","location":"$review","content":"old review"}
+        ]""".trimIndent()
+        val rpc = rpc()
+        mock.resetCounts()
+
+        assertTrue(rpc.saveSkills("/test project", mapOf(plan.toString() to "new plan", review.toString() to "new review")))
+
+        assertEquals("new plan", Files.readString(plan))
+        assertEquals("new review", Files.readString(review))
+        assertEquals(1, mock.requestCount("/skill"))
+    }
+
+    @Test
+    fun `save skill rejects unknown absolute skill files`() = runBlocking {
+        val dir = Files.createTempDirectory("kilo-skill-test")
+        val known = Files.createDirectories(dir.resolve("known")).resolve("SKILL.md")
+        val other = Files.createDirectories(dir.resolve("other")).resolve("SKILL.md")
+        Files.writeString(known, "known")
+        Files.writeString(other, "old")
+        mock.skills = """[
+            {"name":"known","description":"Known","location":"$known","content":"known"}
+        ]""".trimIndent()
+
+        assertFalse(rpc().saveSkill("/test project", other.toString(), "new content"))
+
+        assertEquals("old", Files.readString(other))
+    }
+
+    @Test
+    fun `reload skills is blocked by pending permissions`() = runBlocking {
+        mock.pendingPermissions = """[
+            {"id":"per_test","sessionID":"ses_test","permission":"bash","patterns":["*"],"metadata":{}}
+        ]""".trimIndent()
+        val rpc = rpc()
+
+        assertFalse(rpc.reloadSkills("/test project"))
+
+        assertEquals(1, mock.requestCount("/permission"))
+        assertEquals(0, mock.requestCount("/instance/reload"))
     }
 
     @Test

@@ -4,7 +4,6 @@ import { MemoryError, type MemoryError as Failure } from "./effect/errors"
 import { MemoryPaths } from "./effect/paths"
 import { MemoryService } from "./effect/service"
 import { MemoryRecall } from "./recall/recall"
-import { MemoryToken } from "./recall/token"
 import { MemorySchema } from "./schema"
 import recallDescription from "./prompts/tool-memory-recall.txt"
 import saveDescription from "./prompts/tool-memory-save.txt"
@@ -115,50 +114,6 @@ export namespace MemoryTool {
     }
   }
 
-  function audit(
-    memory: MemoryService.Interface,
-    input: {
-      root: string
-      params: RecallParams
-      current: string
-      hits: MemoryRecall.Hit[]
-      skipped?: string
-      output: string
-    },
-  ) {
-    const files = [...new Set(input.hits.map((hit) => hit.source))]
-    const topics = [...new Set(input.hits.flatMap((hit) => (hit.topics?.length ? hit.topics : [hit.kind])))]
-    const query =
-      input.params.query ??
-      (input.params.sessionID
-        ? `sessionID=${input.params.sessionID}`
-        : input.params.mode === "digest"
-          ? "recent digests"
-          : undefined)
-    return memory.decide({
-      root: input.root,
-      decision: {
-        kind: "recall",
-        trigger: "targeted-recall",
-        sessionID: input.current,
-        result: input.hits.length ? "recalled" : "skipped",
-        llm: false,
-        parsed: false,
-        fallback: false,
-        reason: input.skipped,
-        query,
-        topics,
-        files,
-        tokens: MemoryToken.estimate(input.output),
-        operationCount: input.hits.length,
-        skippedCount: input.hits.length ? 0 : 1,
-        summary: input.hits.length
-          ? `memory recall returned ${input.hits.length} ${input.params.mode} hits`
-          : `memory recall found no ${input.params.mode} hits`,
-      },
-    })
-  }
-
   function miss(input: { params: RecallParams; current: string }) {
     const self = input.params.sessionID === input.current
     if (self && input.params.mode === "digest") {
@@ -239,35 +194,6 @@ export namespace MemoryTool {
     })
   }
 
-  function catalogAudit(
-    memory: MemoryService.Interface,
-    input: {
-      root: string
-      current: string
-      query: string
-      result: { output: string; count: number; files: string[] }
-    },
-  ) {
-    return memory.decide({
-      root: input.root,
-      decision: {
-        kind: "recall",
-        trigger: "targeted-recall",
-        sessionID: input.current,
-        result: input.result.count ? "recalled" : "skipped",
-        llm: false,
-        parsed: false,
-        fallback: false,
-        query: input.query || "all keys",
-        files: input.result.files,
-        tokens: MemoryToken.estimate(input.result.output),
-        operationCount: input.result.count,
-        skippedCount: input.result.count ? 0 : 1,
-        summary: `memory catalog listed ${input.result.count} entries`,
-      },
-    })
-  }
-
   function approvalRecall(input: Recall) {
     return input.ask({
       permission: "kilo_memory_recall",
@@ -285,7 +211,6 @@ export namespace MemoryTool {
     return Effect.gen(function* () {
       const result = yield* catalog(input.memory, { root: live.root, query })
       const safe = { ...result, output: block(result.output) }
-      yield* catalogAudit(input.memory, { root: live.root, current: live.current, query, result: safe })
       yield* input.memory.recordRecall({ root: live.root, sessionID: live.current, now: Date.now(), count: result.count })
       return {
         title: `Kilo memory catalog: ${result.count} entr${result.count === 1 ? "y" : "ies"}`,
@@ -296,22 +221,13 @@ export namespace MemoryTool {
   }
 
   function recallQuery(input: Recall, live: Live) {
-    return Effect.gen(function* () {
-      const output = "Provide a topic query for typed/search memory recall."
-      yield* audit(input.memory, {
-        root: live.root,
-        params: input.params,
-        current: live.current,
-        hits: [],
-        skipped: "missing_query",
-        output,
-      })
-      return {
+    return Effect.succeed(
+      {
         title: `Kilo memory ${input.params.mode}: no query`,
-        output,
+        output: "Provide a topic query for typed/search memory recall.",
         metadata: { sources: [], count: 0 },
-      } satisfies Result
-    })
+      } satisfies Result,
+    )
   }
 
   function recallSearch(input: Recall, live: Live, query: string, mode: MemoryRecall.Mode) {
@@ -327,15 +243,7 @@ export namespace MemoryTool {
         limit,
       })
       const hits = result?.hits ?? []
-      const self = input.params.sessionID === live.current
-      const skipped =
-        input.params.sessionID && input.params.mode === "digest" && hits.length === 0
-          ? self
-            ? "current_session_digest"
-            : "missing_session_digest"
-          : undefined
       const output = hits.length ? result!.block : miss({ params: input.params, current: live.current })
-      yield* audit(input.memory, { root: live.root, params: input.params, current: live.current, hits, skipped, output })
       yield* input.memory.recordRecall({ root: live.root, sessionID: live.current, now: Date.now(), count: hits.length })
 
       if (hits.length === 0) {
@@ -440,29 +348,8 @@ export namespace MemoryTool {
     return saved(input)
   }
 
-  function skip(input: Base & { params: SaveParams }, root: string) {
-    return Effect.gen(function* () {
-      const reason = input.params.reason ?? "out_of_scope"
-      yield* input.memory.decide({
-        root,
-        decision: {
-          kind: "typed",
-          trigger: "explicit",
-          sessionID: input.sessionID,
-          result: "skipped",
-          llm: false,
-          parsed: true,
-          fallback: false,
-          reason,
-          tokens: 0,
-          operationCount: 0,
-          skippedCount: 1,
-          skipped: [{ reason }],
-          summary: `explicit memory save skipped: ${reason}`,
-        },
-      })
-      return skipped({ reason })
-    })
+  function skip(input: Base & { params: SaveParams }) {
+    return Effect.succeed(skipped({ reason: input.params.reason ?? "out_of_scope" }))
   }
 
   function forget(input: Save, root: string) {
@@ -497,7 +384,7 @@ export namespace MemoryTool {
       const state = yield* input.memory.state({ root })
       if (!state.enabled) return disabled()
       if (input.params.action === "forget") return yield* forget(input, root)
-      if (input.params.action === "skip") return yield* skip(input, root)
+      if (input.params.action === "skip") return yield* skip(input)
       return yield* write(input, root)
     })
   }

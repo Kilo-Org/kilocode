@@ -17,7 +17,7 @@ import { Process } from "@/util/process"
 import { errorMessage } from "@/util/error"
 import { text } from "node:stream/consumers"
 import { Effect, Option } from "effect"
-import { remove as removeAuth } from "@/kilocode/auth/remove" // kilocode_change
+// kilocode_change - @/kilocode/auth/remove is dynamically imported in the logout handler to keep startup fast
 
 type PluginAuth = NonNullable<Hooks["auth"]>
 
@@ -487,25 +487,6 @@ export const ProvidersLoginCommand = effectCmd({
       )
     }
 
-    if (provider === "snowflake-cortex") {
-      const account = yield* promptValue(
-        yield* Prompt.text({
-          message: "Snowflake Account Identifier",
-          placeholder: "xy12345.us-east-1",
-          validate: (x) => (x && x.length > 0 ? undefined : "Required"),
-        }),
-      )
-      const pat = yield* promptValue(
-        yield* Prompt.password({
-          message: "Programmatic Access Token (PAT)",
-          validate: (x) => (x && x.length > 0 ? undefined : "Required"),
-        }),
-      )
-      yield* Effect.orDie(authSvc.set(provider, { type: "api", key: pat, metadata: { account } }))
-      yield* Prompt.outro("Done")
-      return
-    }
-
     const key = yield* Prompt.password({
       message: "Enter your API key",
       validate: (x) => (x && x.length > 0 ? undefined : "Required"),
@@ -557,7 +538,10 @@ export const ProvidersLogoutCommand = effectCmd({
           }),
         )
     if (!provider) return yield* fail(`Unknown configured provider "${args.provider}"`)
-    yield* removeAuth(provider) // kilocode_change
+    // kilocode_change start - lazy import keeps the CLI startup graph light
+    const { remove: removeAuth } = yield* Effect.promise(() => import("@/kilocode/auth/remove"))
+    yield* removeAuth(provider)
+    // kilocode_change end
     yield* Prompt.outro("Logout successful")
   }),
 })

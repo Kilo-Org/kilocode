@@ -1,14 +1,14 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@opencode-ai/tui",
-  "version": "7.4.8",
+  "version": "7.4.21",
   "private": true,
   "type": "module",
   "license": "MIT",
   "scripts": {
     "test": "bun test --timeout 30000 --only-failures",
-    "test:ci": "mkdir -p .artifacts/unit && bun test --timeout 30000 --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml",
-    "typecheck": "tsgo --noEmit"
+    "typecheck": "tsgo --noEmit",
+    "test:ci": "mkdir -p .artifacts/unit && bun test --timeout 30000 --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml"
   },
   "exports": {
     ".": "./src/index.tsx",
@@ -45,7 +45,8 @@
     "./ui/dialog": "./src/ui/dialog.tsx",
     "./ui/spinner": "./src/ui/spinner.ts",
     "./ui/toast": "./src/ui/toast.tsx",
-    "./component/spinner": "./src/component/spinner.tsx"
+    "./component/spinner": "./src/component/spinner.tsx",
+    "./component/register-spinner": "./src/component/register-spinner.ts"
   },
   "dependencies": {
     "@opencode-ai/core": "workspace:*",
@@ -60,7 +61,6 @@
     "effect": "catalog:",
     "fuzzysort": "catalog:",
     "open": "10.1.2",
-    "opentui-spinner": "catalog:",
     "remeda": "catalog:",
     "strip-ansi": "7.1.2",
     "solid-js": "catalog:"
@@ -69,5 +69,6 @@
     "@tsconfig/bun": "catalog:",
     "@types/bun": "catalog:",
     "@typescript/native-preview": "catalog:"
-  }
+  },
+  "peerDependencies": {}
 }

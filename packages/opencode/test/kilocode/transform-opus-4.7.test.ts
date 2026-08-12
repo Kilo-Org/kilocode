@@ -207,6 +207,78 @@ describe("ProviderTransform.variants - Claude Opus 4.7 / 4.8", () => {
     })
   })
 
+  test("opus-5 returns adaptive thinking variants including xhigh (native anthropic)", () => {
+    const model = mockModel({
+      api: {
+        id: "claude-opus-5",
+        url: "https://api.anthropic.com",
+        npm: "@ai-sdk/anthropic",
+      },
+    })
+    const result = ProviderTransform.variants(model)
+    expect(Object.keys(result)).toEqual(["low", "medium", "high", "xhigh", "max"])
+    expect(result.xhigh).toEqual({
+      thinking: { type: "adaptive", display: "summarized" },
+      effort: "xhigh",
+    })
+  })
+
+  test("opus-5 returns adaptive thinking variants via @ai-sdk/gateway", () => {
+    const model = mockModel({
+      id: "anthropic/claude-opus-5",
+      api: {
+        id: "anthropic/claude-opus-5",
+        url: "https://gateway.ai",
+        npm: "@ai-sdk/gateway",
+      },
+    })
+    const result = ProviderTransform.variants(model)
+    expect(Object.keys(result)).toEqual(["low", "medium", "high", "xhigh", "max"])
+  })
+
+  test("opus-5 on bedrock returns adaptive reasoningConfig with xhigh", () => {
+    const model = mockModel({
+      api: {
+        id: "anthropic.claude-opus-5",
+        url: "https://bedrock.amazonaws.com",
+        npm: "@ai-sdk/amazon-bedrock",
+      },
+    })
+    const result = ProviderTransform.variants(model)
+    expect(Object.keys(result)).toEqual(["low", "medium", "high", "xhigh", "max"])
+    expect(result.xhigh).toEqual({
+      reasoningConfig: { type: "adaptive", maxReasoningEffort: "xhigh", display: "summarized" },
+    })
+  })
+
+  test.each([
+    "claude-opus-5.3",
+    "claude-opus-6",
+    "claude-6-opus",
+    "claude-opus-10",
+    "claude-sonnet-5.3",
+    "claude-sonnet-6",
+    "claude-6-sonnet",
+    "claude-sonnet-10",
+  ])(
+    "%s is treated as an adaptive thinking model",
+    (id) => {
+      const model = mockModel({
+        api: {
+          id,
+          url: "https://api.anthropic.com",
+          npm: "@ai-sdk/anthropic",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["low", "medium", "high", "xhigh", "max"])
+      expect(result.xhigh).toEqual({
+        thinking: { type: "adaptive", display: "summarized" },
+        effort: "xhigh",
+      })
+    },
+  )
+
   test("sonnet-4.6 keeps original adaptive efforts without xhigh", () => {
     const model = mockModel({
       api: {

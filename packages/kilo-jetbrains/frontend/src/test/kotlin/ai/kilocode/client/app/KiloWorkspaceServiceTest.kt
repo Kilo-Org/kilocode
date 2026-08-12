@@ -97,4 +97,24 @@ class KiloWorkspaceServiceTest : BasePlatformTestCase() {
         assertEquals(err.message, seen?.message)
         assertEquals(listOf("dep"), rpc.searchQueries)
     }
+
+    fun `test refreshConfigFiles logs backend failure and completes`() = runBlocking {
+        rpc.refreshConfigThrows = IllegalStateException("backend unavailable")
+
+        val job = service.refreshConfigFiles("/test")
+        job.join()
+
+        assertTrue(job.isCompleted)
+        assertEquals(listOf("/test"), rpc.refreshedConfigs.toList())
+        assertEquals(0, rpc.localConfigPathCalls)
+        assertEquals(0, rpc.globalConfigPathCalls)
+    }
+
+    fun `test searchFiles sends query to RPC`() = runBlocking {
+        withContext(Dispatchers.Default) {
+            service.searchFiles("/test", "src")
+        }
+
+        assertEquals(listOf("src"), rpc.searchQueries)
+    }
 }

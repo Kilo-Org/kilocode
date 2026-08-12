@@ -82,4 +82,25 @@ export namespace Client {
       }
     }
   }
+
+  // Flush queued events in the background without blocking the caller. The
+  // flush is delayed slightly so commands that exit immediately pay only the
+  // single shutdown() flush instead of an in-flight flush plus a follow-up
+  // flush for CLI_EXIT. For commands that outlive the delay, the upload
+  // overlaps with execution, so by the time shutdown() runs the queue is
+  // usually empty (or the connection is still warm) and process exit is not
+  // delayed by a network round trip. The unref'd timer never keeps a process
+  // alive on its own. The authoritative, error-handled flush still happens in
+  // shutdown(); failures here are retried there, so they are only surfaced
+  // when debug logging is on.
+  export function flushInBackground(delayMs = 300): void {
+    if (!enabled || !client) return
+    const timer = setTimeout(() => {
+      if (!client) return
+      client.flush().catch((err) => {
+        if (process.env.KILO_PRINT_LOGS) console.warn("telemetry background flush failed", err)
+      })
+    }, delayMs)
+    timer.unref?.()
+  }
 }

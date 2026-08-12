@@ -104,6 +104,7 @@ describe("RemoteCommand", () => {
           subtask: true,
         },
       ],
+      canExitSession: true,
     })
     expect(JSON.stringify(catalog)).not.toContain("template")
     expect(JSON.stringify(catalog)).not.toContain("secret-skill")
@@ -115,6 +116,9 @@ describe("RemoteCommand", () => {
       { name: "alpha", source: "command", hints: [], template: "alpha" },
     ])
     expect(base.commands.map((item) => item.name)).toEqual(["alpha", "beta", "compact"])
+    // kilocode_change - K1 W1: canExitSession is always true, independent of
+    // exitAvailable (which gates the synthetic `/exit` entry).
+    expect(base.canExitSession).toBe(true)
 
     const catalog = RemoteCommand.build(
       [
@@ -155,16 +159,26 @@ describe("RemoteCommand", () => {
       compaction: { create: async () => {} },
       prompt: { loop: async () => {} },
     })
-    expect((await remote.list()).commands.some((item) => item.name === "exit")).toBe(false)
+    // kilocode_change - K1 W1: canExitSession is true even when the synthetic
+    // `/exit` entry is absent (e.g. a headless `kilo remote` host has no
+    // RemoteExit callback, so `/exit` is gated off — but the host still
+    // interprets `exit_cli` as session-detach).
+    const baseList = await remote.list()
+    expect(baseList.canExitSession).toBe(true)
+    expect(baseList.commands.some((item) => item.name === "exit")).toBe(false)
 
     const unregister = RemoteExit.register(async () => {})
     try {
-      expect((await remote.list()).commands.some((item) => item.name === "exit")).toBe(true)
+      const list = await remote.list()
+      expect(list.commands.some((item) => item.name === "exit")).toBe(true)
+      expect(list.canExitSession).toBe(true)
     } finally {
       unregister()
     }
 
-    expect((await remote.list()).commands.some((item) => item.name === "exit")).toBe(false)
+    const after = await remote.list()
+    expect(after.commands.some((item) => item.name === "exit")).toBe(false)
+    expect(after.canExitSession).toBe(true)
   })
 
   test("keeps compact and exit within command and byte caps", () => {
@@ -713,6 +727,50 @@ describe("RemoteCommand", () => {
 
   // Even when the catalog advertises "compact" (the synthesized built-in),
   // a name not in the catalog must still be rejected.
+  test("resume commands appear from the current catalog", () => {
+    const catalog = RemoteCommand.build([
+      {
+        name: "resume-claude",
+        description: "import a Claude Code session transcript",
+        source: "command",
+        hints: ["$ARGUMENTS"],
+        template: "must-not-leak",
+      },
+      {
+        name: "resume-codex",
+        description: "import an OpenAI Codex session transcript",
+        source: "command",
+        hints: ["$ARGUMENTS"],
+        template: "must-not-leak",
+      },
+    ])
+
+    const names = catalog.commands.map((item) => item.name)
+    expect(names).toContain("resume-claude")
+    expect(names).toContain("resume-codex")
+    expect(names).toContain("compact")
+    expect(JSON.stringify(catalog)).not.toContain("template")
+    expect(JSON.stringify(catalog)).not.toContain("must-not-leak")
+    expect(catalog.commands.find((item) => item.name === "resume-claude")?.source).toBe("command")
+    expect(catalog.commands.find((item) => item.name === "resume-codex")?.source).toBe("command")
+  })
+
+  test("resume commands disappear from a catalog without them", () => {
+    const catalog = RemoteCommand.build([
+      {
+        name: "review",
+        description: "Review changes",
+        source: "command",
+        hints: ["$ARGUMENTS"],
+        template: "must-not-leak",
+      },
+    ])
+
+    const names = catalog.commands.map((item) => item.name)
+    expect(names).not.toContain("resume-claude")
+    expect(names).not.toContain("resume-codex")
+  })
+
   test("execute rejects arbitrary names even when the catalog advertises built-in compact", async () => {
     const calls: unknown[] = []
     const remote = RemoteCommand.create({

@@ -1,7 +1,7 @@
 /** @jsxImportSource @opentui/solid */
 import { expect, test } from "bun:test"
-import { RGBA, type BoxRenderable } from "@opentui/core"
-import { testRender, useRenderer } from "@opentui/solid"
+import { BoxRenderable, RGBA, type RootRenderable } from "@opentui/core"
+import { extend, testRender, useRenderer } from "@opentui/solid" // kilocode_change - register test components in this renderer instance
 import { createSignal } from "solid-js"
 import { createDefaultOpenTuiKeymap } from "@opentui/keymap/opentui"
 import type { QuestionRequest } from "@kilocode/sdk/v2"
@@ -34,6 +34,10 @@ import type {
 import { RunQuestionBody } from "@/cli/cmd/run/footer.question"
 import { RejectField } from "@/cli/cmd/run/footer.permission"
 import { createTuiResolvedConfig } from "../../fixture/tui-runtime"
+
+// kilocode_change start - keep renderer tests independent of the animated spinner's native teardown
+extend({ spinner: BoxRenderable })
+// kilocode_change end
 
 const tuiConfig = createTuiResolvedConfig()
 
@@ -251,6 +255,45 @@ function expectPaletteList(list: BoxRenderable, selectedIndex: number) {
   )
 }
 
+function child(root: BoxRenderable | RootRenderable, index: number) {
+  return root.getChildren()[index] as BoxRenderable
+}
+
+function boxPath(root: BoxRenderable | RootRenderable, name: string): BoxRenderable[] | undefined {
+  for (const item of root.getChildren()) {
+    if (item.constructor.name === name) return root instanceof BoxRenderable ? [root] : []
+    if (!(item instanceof BoxRenderable)) continue
+    const path = boxPath(item, name)
+    if (path) return root instanceof BoxRenderable ? [root, ...path] : path
+  }
+}
+
+function footerComposerFrame(root: BoxRenderable | RootRenderable) {
+  return boxPath(root, "TextareaRenderable")!.at(-5)!
+}
+
+function footerStatusline(root: BoxRenderable | RootRenderable) {
+  const status = (RUN_THEME_FALLBACK.footer.status as RGBA).toInts()
+  const accent = (RUN_THEME_FALLBACK.footer.statusAccent as RGBA).toInts()
+  const boxes = root.getChildren().filter((item): item is BoxRenderable => item instanceof BoxRenderable)
+  for (const box of boxes) {
+    const first = box.getChildren().find((item): item is BoxRenderable => item instanceof BoxRenderable)
+    if (
+      box.backgroundColor?.toInts().every((value, index) => value === status[index]) &&
+      first?.backgroundColor?.toInts().every((value, index) => value === accent[index])
+    )
+      return box
+    boxes.push(...box.getChildren().filter((item): item is BoxRenderable => item instanceof BoxRenderable))
+  }
+  throw new Error("Footer statusline not found")
+}
+
+function panelMenu(root: BoxRenderable | RootRenderable) {
+  const panel = child(child(root, 0), 0)
+  const content = child(panel, 0)
+  return child(content.getChildren().at(-1) as BoxRenderable, 0)
+}
+
 test("direct footer composer area does not adopt footer surface", async () => {
   const surface = RGBA.fromHex("#123456")
   const [theme, setTheme] = createSignal(RUN_THEME_FALLBACK)
@@ -258,7 +301,7 @@ test("direct footer composer area does not adopt footer surface", async () => {
 
   try {
     await app.renderOnce()
-    const area = app.renderer.root.findDescendantById("run-direct-footer-composer-area") as BoxRenderable
+    const area = child(footerComposerFrame(app.renderer.root), 0)
 
     expect(area.backgroundColor.toInts()).not.toEqual(surface.toInts())
     setTheme({
@@ -591,7 +634,7 @@ test("direct subagent panel renders active subagents", async () => {
   try {
     await app.renderOnce()
     const frame = app.captureCharFrame()
-    const list = app.renderer.root.findDescendantById("run-direct-footer-subagent-list") as BoxRenderable
+    const list = panelMenu(app.renderer.root)
 
     expect(frame).toContain("Select subagent")
     expect(frame).toContain("Inspect auth flow")
@@ -601,6 +644,47 @@ test("direct subagent panel renders active subagents", async () => {
     expect(frame).not.toContain("┃")
     expectPaletteList(list, 0)
     expect(rows).toBe(8)
+  } finally {
+    app.renderer.destroy()
+  }
+})
+
+test("direct subagent panel closes when moving up from the first item", async () => {
+  const [tabs] = createSignal([
+    subagent({ sessionID: "s-1", label: "Explore", description: "Inspect auth flow" }),
+    subagent({ sessionID: "s-2", label: "General", description: "Write migration plan" }),
+  ])
+  const [current] = createSignal<string | undefined>()
+  let closed = 0
+
+  const app = await testRender(
+    () => (
+      <box width={100} height={RUN_SUBAGENT_PANEL_ROWS}>
+        <RunSubagentSelectBody
+          theme={() => RUN_THEME_FALLBACK.footer}
+          tabs={tabs}
+          current={current}
+          onClose={() => closed++}
+          onSelect={() => {}}
+        />
+      </box>
+    ),
+    { width: 100, height: RUN_SUBAGENT_PANEL_ROWS },
+  )
+
+  try {
+    await app.renderOnce()
+    app.mockInput.pressKey("ARROW_DOWN")
+    app.mockInput.pressKey("ARROW_UP")
+    expect(closed).toBe(0)
+
+    // kilocode_change start - ctrl+p is the same navigation command as ArrowUp
+    app.mockInput.pressKey("p", { ctrl: true })
+    expect(closed).toBe(1)
+
+    app.mockInput.pressKey("ARROW_UP")
+    expect(closed).toBe(2)
+    // kilocode_change end
   } finally {
     app.renderer.destroy()
   }
@@ -629,7 +713,7 @@ test("direct queued prompt panel renders pending prompt actions", async () => {
   try {
     await app.renderOnce()
     const frame = app.captureCharFrame()
-    const list = app.renderer.root.findDescendantById("run-direct-footer-queued-list") as BoxRenderable
+    const list = panelMenu(app.renderer.root)
 
     expect(frame).toContain("Queued prompts")
     expect(frame).toContain("fix the auth test")
@@ -651,12 +735,12 @@ test.skip("direct footer recreates the frame across command panel transitions", 
     await app.renderOnce()
 
     for (let index = 0; index < 3; index++) {
-      const composerFrame = app.renderer.root.findDescendantById("run-direct-footer-composer-frame") as BoxRenderable
+      const composerFrame = footerComposerFrame(app.renderer.root)
       app.mockInput.pressKey("p", { ctrl: true })
       await app.renderOnce()
 
       expect(app.captureCharFrame()).toContain("Commands")
-      expect(app.renderer.root.findDescendantById("run-direct-footer-composer-frame")).not.toBe(composerFrame)
+      expect(footerComposerFrame(app.renderer.root)).not.toBe(composerFrame)
       app.mockInput.pressKey("c", { ctrl: true })
       await app.renderOnce()
       expect(app.captureCharFrame()).not.toContain("Commands")
@@ -956,13 +1040,14 @@ test("direct footer shows editable prompts and additional queued work while runn
     const transparent = RGBA.fromValues(0, 0, 0, 0).toInts()
     const tinted = (RUN_THEME_FALLBACK.footer.status as RGBA).toInts()
     const accent = (RUN_THEME_FALLBACK.footer.statusAccent as RGBA).toInts()
-    const statusline = app.renderer.root.findDescendantById("run-direct-footer-statusline") as BoxRenderable
-    const mode = app.renderer.root.findDescendantById("run-direct-footer-statusline-mode") as BoxRenderable
-    const main = app.renderer.root.findDescendantById("run-direct-footer-statusline-main") as BoxRenderable
-    const spinner = app.renderer.root.findDescendantById("run-direct-footer-status-spinner")
-    const model = app.renderer.root.findDescendantById("run-direct-footer-statusline-model") as BoxRenderable
-    const queued = app.renderer.root.findDescendantById("run-direct-footer-statusline-queued") as BoxRenderable
-    const hint = app.renderer.root.findDescendantById("run-direct-footer-statusline-hint") as BoxRenderable
+    const statusline = footerStatusline(app.renderer.root)
+    const statusItems = statusline.getChildren().filter((item): item is BoxRenderable => item instanceof BoxRenderable)
+    const mode = statusItems[0]
+    const main = statusItems[1]
+    const spinner = main.getChildren()[0]
+    const model = statusItems[2]
+    const queued = statusItems[3]
+    const hint = statusItems.at(-1)!
 
     expect(spinner).toBeDefined()
     expect(frame).toContain("a-model-name-long-enough-to-force-responsive-truncation")
@@ -1280,7 +1365,7 @@ test("direct model panel renders current model selector", async () => {
   try {
     await app.renderOnce()
     const frame = app.captureCharFrame()
-    const list = app.renderer.root.findDescendantById("run-direct-footer-model-list") as BoxRenderable
+    const list = panelMenu(app.renderer.root)
 
     expect(frame).toContain("Select model")
     expect(frame).toContain("Search")
@@ -1323,7 +1408,7 @@ test("direct variant panel renders current variant selector", async () => {
   try {
     await app.renderOnce()
     const frame = app.captureCharFrame()
-    const list = app.renderer.root.findDescendantById("run-direct-footer-variant-list") as BoxRenderable
+    const list = panelMenu(app.renderer.root)
 
     expect(frame).toContain("Select variant")
     expect(frame).toContain("Default")

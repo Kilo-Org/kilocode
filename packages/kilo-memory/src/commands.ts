@@ -2,13 +2,12 @@ export const MEMORY_COMMAND_CATALOG = [
   { usage: "on", description: "Enable project memory" },
   { usage: "off", description: "Disable project memory" },
   { usage: "status", description: "Storage location and stored memory overview" },
-  { usage: "show", description: "Full audit view (sources, index, changes, decisions)" },
+  { usage: "show", description: "Stored project memory overview" },
   { usage: "remember <text>", description: "Save a project memory note" },
   { usage: "correct <text>", description: "Save a correction to project memory" },
   { usage: "forget <query>", description: "Remove matching project memory" },
   { usage: "auto on|off", description: "Turn automatic memory saves on or off" },
-  { usage: "verbose on|off", description: "Turn verbose memory details on or off" },
-  { usage: "edit", description: "Open project.md in $VISUAL/$EDITOR, then rebuild" },
+  { usage: "inspect", description: "Reveal the project memory folder" },
   { usage: "rebuild", description: "Rebuild the memory index from source files" },
   { usage: "purge confirm", description: "Delete all project memory files" },
 ] as const
@@ -18,7 +17,7 @@ export const MEMORY_USAGE = `/memory [project] ${MEMORY_COMMAND_CATALOG.map((ite
 export const MEMORY_OPERATIONS = [
   "enable",
   "status",
-  "edit",
+  "inspect",
   "disable",
   "rebuild",
   "remember",
@@ -26,19 +25,11 @@ export const MEMORY_OPERATIONS = [
   "forget",
   "purge",
   "auto",
-  "verbose",
 ] as const
-export const MEMORY_PROMPT_OPERATIONS = ["remember", "forget"] as const
-
 export type MemoryOperation = (typeof MEMORY_OPERATIONS)[number]
-export type MemoryPromptOperation = (typeof MEMORY_PROMPT_OPERATIONS)[number]
 
 export function isMemoryOperation(input: unknown): input is MemoryOperation {
   return typeof input === "string" && (MEMORY_OPERATIONS as readonly string[]).includes(input)
-}
-
-export function isMemoryPromptOperation(input: unknown): input is MemoryPromptOperation {
-  return typeof input === "string" && (MEMORY_PROMPT_OPERATIONS as readonly string[]).includes(input)
 }
 
 type Help = {
@@ -62,7 +53,7 @@ type Operation =
     }
   | {
       kind: "operation"
-      operation: "auto" | "verbose"
+      operation: "auto"
       mode: "on" | "off"
     }
   | {
@@ -72,7 +63,7 @@ type Operation =
     }
   | {
       kind: "operation"
-      operation: Exclude<MemoryOperation, "remember" | "correct" | "forget" | "purge" | "auto" | "verbose">
+      operation: Exclude<MemoryOperation, "remember" | "correct" | "forget" | "purge" | "auto">
     }
 
 type Usage = {
@@ -104,7 +95,7 @@ function usage(reason: string): ParsedMemoryCommand {
 function operation(verb: string, text: string): ParsedMemoryCommand | undefined {
   if (verb === "on" || verb === "enable") return { kind: "operation", operation: "enable" }
   if (verb === "off" || verb === "disable") return { kind: "operation", operation: "disable" }
-  if (verb === "status" || verb === "edit" || verb === "rebuild") {
+  if (verb === "status" || verb === "inspect" || verb === "rebuild") {
     return { kind: "operation", operation: verb }
   }
   if (verb === "purge") {
@@ -115,11 +106,6 @@ function operation(verb: string, text: string): ParsedMemoryCommand | undefined 
     const mode = text.toLowerCase()
     if (mode === "on" || mode === "off") return { kind: "operation", operation: "auto", mode }
     return usage("Missing auto mode. Run /memory auto on or /memory auto off.")
-  }
-  if (verb === "verbose") {
-    const mode = text.toLowerCase()
-    if (mode === "on" || mode === "off") return { kind: "operation", operation: "verbose", mode }
-    return usage("Missing verbose mode. Run /memory verbose on or /memory verbose off.")
   }
   if (verb === "remember") {
     if (text) return { kind: "operation", operation: "remember", text }

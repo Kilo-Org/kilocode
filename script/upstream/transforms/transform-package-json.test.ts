@@ -4,9 +4,13 @@ import {
   fixCatalog,
   fixMetadata,
   fixPackageManager,
+  fixRepository,
   fixScripts,
+  fixTrustedDependencies,
   mergeWithNewestVersions,
+  prunePatchedDependencies,
   selectBunPackageManager,
+  transformDependencies,
 } from "./transform-package-json"
 
 test("fixScripts preserves Kilo-only root scripts from base", () => {
@@ -15,6 +19,9 @@ test("fixScripts preserves Kilo-only root scripts from base", () => {
       "dev-setup": "kilo dev-setup",
       postinstall: "bun run --cwd packages/opencode fix-node-pty && bun run script/setup-git.ts",
       extension: "bun --cwd packages/kilo-vscode script/launch.ts",
+      "extension:isolated": "bun --cwd packages/kilo-vscode script/launch.ts --isolated",
+      "extension:isolated:clean": "bun --cwd packages/kilo-vscode script/launch.ts --isolated --clean",
+      "test:script:ci": "bun test ./script",
     },
   }
   const pkg: Record<string, unknown> = {
@@ -26,8 +33,36 @@ test("fixScripts preserves Kilo-only root scripts from base", () => {
   expect(scripts.postinstall).toBe(ours.scripts.postinstall)
   expect(scripts["dev-setup"]).toBe(ours.scripts["dev-setup"])
   expect(scripts.extension).toBe(ours.scripts.extension)
+  expect(scripts["extension:isolated"]).toBe(ours.scripts["extension:isolated"])
+  expect(scripts["extension:isolated:clean"]).toBe(ours.scripts["extension:isolated:clean"])
+  expect(scripts["test:script:ci"]).toBe(ours.scripts["test:script:ci"])
   expect(changes.some((c) => c.includes("postinstall"))).toBe(true)
   expect(changes.some((c) => c.includes("dev-setup"))).toBe(true)
+})
+
+test("fixRepository preserves Kilo package links", () => {
+  const ours = {
+    repository: { url: "https://github.com/Kilo-Org/kilocode.git" },
+    homepage: "https://github.com/Kilo-Org/kilocode/tree/main/packages/example",
+    bugs: "https://github.com/Kilo-Org/kilocode/issues",
+  }
+  const pkg: Record<string, unknown> = {
+    repository: { url: "https://example.com/upstream.git" },
+    homepage: "https://example.com/upstream/packages/example",
+    bugs: "https://example.com/upstream/issues",
+  }
+  const changes: string[] = []
+
+  fixRepository(pkg, ours, changes)
+
+  expect(pkg.repository).toEqual(ours.repository)
+  expect(pkg.homepage).toBe(ours.homepage)
+  expect(pkg.bugs).toBe(ours.bugs)
+  expect(changes).toEqual([
+    "repository: preserved Kilo metadata",
+    "homepage: preserved Kilo metadata",
+    "bugs: preserved Kilo metadata",
+  ])
 })
 
 test("fixScripts removes upstream-only dead scripts from root", () => {
@@ -37,6 +72,7 @@ test("fixScripts removes upstream-only dead scripts from root", () => {
       "dev:desktop": "bun --cwd packages/desktop-electron dev",
       "dev:web": "bun --cwd packages/app dev",
       "dev:console": "ulimit -n 10240 2>/dev/null; bun run --cwd packages/console/app dev",
+      "translate:app": "bun run script/translate-app.ts",
     },
   }
   const changes: string[] = []
@@ -46,7 +82,8 @@ test("fixScripts removes upstream-only dead scripts from root", () => {
   expect(scripts["dev:desktop"]).toBeUndefined()
   expect(scripts["dev:web"]).toBeUndefined()
   expect(scripts["dev:console"]).toBeUndefined()
-  expect(changes.length).toBe(3)
+  expect(scripts["translate:app"]).toBeUndefined()
+  expect(changes.length).toBe(4)
 })
 
 test("fixScripts preserves opencode test scripts", () => {
@@ -59,6 +96,66 @@ test("fixScripts preserves opencode test scripts", () => {
   expect(scripts["test:ci"]).toBe("bun test --ci")
 })
 
+test("fixScripts preserves dev:local and shared-package test:ci scripts", () => {
+  const junit = "mkdir -p .artifacts/unit && bun test --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml"
+  const root: Record<string, unknown> = { scripts: { dev: "bun dev" } }
+  const changes: string[] = []
+  fixScripts(
+    root,
+    "package.json",
+    { scripts: { "dev:local": "bun run packages/opencode/script/dev-local.ts" } },
+    changes,
+  )
+  expect((root.scripts as Record<string, string>)["dev:local"]).toBe("bun run packages/opencode/script/dev-local.ts")
+
+  for (const path of [
+    "packages/client/package.json",
+    "packages/httpapi-codegen/package.json",
+    "packages/core/package.json",
+    "packages/effect-drizzle-sqlite/package.json",
+    "packages/http-recorder/package.json",
+    "packages/llm/package.json",
+    "packages/sdk-next/package.json",
+    "packages/session-ui/package.json",
+    "packages/tui/package.json",
+    "packages/ui/package.json",
+    "packages/codemode/package.json",
+  ]) {
+    const pkg: Record<string, unknown> = { scripts: { test: "bun test" } }
+    fixScripts(pkg, path, { scripts: { "test:ci": junit } }, changes)
+    expect((pkg.scripts as Record<string, string>)["test:ci"]).toBe(junit)
+  }
+})
+
+test("fixTrustedDependencies removes native-build permissions against Kilo policy", () => {
+  const pkg: Record<string, unknown> = { trustedDependencies: ["tree-sitter-powershell", "bun-pty"] }
+  const changes: string[] = []
+  fixTrustedDependencies(pkg, "package.json", changes)
+  expect(pkg.trustedDependencies).toEqual(["bun-pty"])
+  expect(changes.some((c) => c.includes("tree-sitter-powershell"))).toBe(true)
+})
+
+test("prunePatchedDependencies drops superseded and missing-file entries", async () => {
+  const ours = {
+    patchedDependencies: {
+      "pacote@21.5.1": "patches/pacote@21.5.1.patch",
+      "keep@1.0.0": import.meta.path,
+    },
+  }
+  const pkg: Record<string, unknown> = {
+    patchedDependencies: {
+      "pacote@21.5.0": "patches/pacote@21.5.0.patch",
+      "gcp-metadata@8.1.2": "patches/__does-not-exist__.patch",
+      "unrelated@2.0.0": import.meta.path,
+    },
+  }
+  const changes: string[] = []
+  await prunePatchedDependencies(pkg, ours, changes)
+  expect(pkg.patchedDependencies).toEqual({ "unrelated@2.0.0": import.meta.path })
+  expect(changes.some((c) => c.includes("pacote@21.5.0"))).toBe(true)
+  expect(changes.some((c) => c.includes("gcp-metadata@8.1.2"))).toBe(true)
+})
+
 test("fixScripts leaves unknown packages untouched", () => {
   const pkg: Record<string, unknown> = { scripts: { build: "tsc" } }
   const changes: string[] = []
@@ -67,12 +164,13 @@ test("fixScripts leaves unknown packages untouched", () => {
   expect(changes.length).toBe(0)
 })
 
-test("fixCatalog removes upstream-only desktop sentry entries", () => {
+test("fixCatalog removes unsupported upstream entries", () => {
   const pkg: Record<string, unknown> = {
     workspaces: {
       catalog: {
         "@sentry/solid": "10.36.0",
         "@sentry/vite-plugin": "4.6.0",
+        "opentui-spinner": "0.0.7",
         "solid-js": "1.9.12",
       },
     },
@@ -82,8 +180,9 @@ test("fixCatalog removes upstream-only desktop sentry entries", () => {
   const cat = (pkg.workspaces as { catalog: Record<string, string> }).catalog
   expect(cat["@sentry/solid"]).toBeUndefined()
   expect(cat["@sentry/vite-plugin"]).toBeUndefined()
+  expect(cat["opentui-spinner"]).toBeUndefined()
   expect(cat["solid-js"]).toBe("1.9.12")
-  expect(changes.length).toBe(2)
+  expect(changes.length).toBe(3)
 })
 
 test("fixCatalog is a no-op when catalog is absent", () => {
@@ -91,6 +190,12 @@ test("fixCatalog is a no-op when catalog is absent", () => {
   const changes: string[] = []
   fixCatalog(pkg, "package.json", changes)
   expect(changes.length).toBe(0)
+})
+
+test("transformDependencies removes the incompatible spinner runtime", () => {
+  const result = transformDependencies({ "opentui-spinner": "catalog:", "solid-js": "catalog:" })
+  expect(result.result).toEqual({ "solid-js": "catalog:" })
+  expect(result.changes).toEqual(["opentui-spinner: removed (incompatible OpenTUI runtime)"])
 })
 
 test("fixMetadata preserves opencode publish metadata from base", () => {

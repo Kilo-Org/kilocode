@@ -8,12 +8,11 @@ import { AttachCommand } from "../cli/cmd/attach"
 import { RunCommand } from "../cli/cmd/run"
 import { GenerateCommand } from "../cli/cmd/generate"
 import { DebugCommand } from "../cli/cmd/debug"
-import { ProvidersCommand } from "../cli/cmd/providers" // kilocode_change — upstream renamed auth → providers
+import { ProvidersCommand } from "../cli/cmd/providers"
 import { AgentCommand } from "../cli/cmd/agent"
 import { UpgradeCommand } from "../cli/cmd/upgrade"
 import { UninstallCommand } from "../cli/cmd/uninstall"
 import { ServeCommand } from "../cli/cmd/serve"
-import { WebCommand } from "../cli/cmd/web"
 import { ModelsCommand } from "../cli/cmd/models"
 import { StatsCommand } from "../cli/cmd/stats"
 import { ExportCommand } from "../cli/cmd/export"
@@ -30,6 +29,7 @@ import { RollCallCommand } from "./cli/cmd/roll-call"
 import { ProfileCommand } from "./cli/cmd/profile"
 import { DaemonCommand } from "./cli/cmd/daemon"
 import { KiloConsoleCommand } from "./cli/cmd/console"
+import { CloudCommand } from "./cli/cmd/cloud"
 import { HelpCommand } from "./help-command"
 import { InstallationBuildKind } from "@opencode-ai/core/installation/version"
 
@@ -55,12 +55,11 @@ export const commands = [
   RunCommand,
   GenerateCommand,
   DebugCommand,
-  ProvidersCommand, // kilocode_change — upstream renamed AuthCommand → ProvidersCommand
+  ProvidersCommand,
   AgentCommand,
   UpgradeCommand,
   UninstallCommand,
   ServeCommand,
-  WebCommand,
   ModelsCommand,
   RollCallCommand,
   ProfileCommand,
@@ -73,6 +72,7 @@ export const commands = [
   RemoteCommand,
   DaemonCommand,
   KiloConsoleCommand,
+  CloudCommand,
   DbCommand,
   ConfigCLICommand,
   ...dev,

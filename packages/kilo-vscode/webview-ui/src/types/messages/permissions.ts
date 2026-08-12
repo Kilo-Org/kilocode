@@ -43,6 +43,10 @@ export interface PermissionRequest {
     filediff?: PermissionFileDiff
     files?: PermissionPatchFile[]
     description?: string
+    heredoc?: boolean
+    skillShell?: boolean
+    commands?: string[]
+    skill?: string
   }
   message?: string
   tool?: { messageID: string; callID: string }

@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { afterEach, describe, expect } from "bun:test"
 import path from "path"
 import { pathToFileURL } from "node:url"
@@ -31,12 +32,12 @@ const ctx = {
 
 const it = testEffect(
   Layer.mergeAll(
-    Agent.defaultLayer,
-    FSUtil.defaultLayer,
-    CrossSpawnSpawner.defaultLayer,
-    Git.defaultLayer,
-    RepositoryCache.defaultLayer,
-    Truncate.defaultLayer,
+    AppNodeBuilder.build(Agent.node),
+    AppNodeBuilder.build(FSUtil.node),
+    AppNodeBuilder.build(CrossSpawnSpawner.node),
+    AppNodeBuilder.build(Git.node),
+    AppNodeBuilder.build(RepositoryCache.node),
+    AppNodeBuilder.build(Truncate.node),
   ),
 )
 

@@ -8,6 +8,7 @@ import java.awt.Container
 import java.awt.Dimension
 import java.awt.Insets
 import java.awt.LayoutManager
+import java.util.IdentityHashMap
 
 /**
  * A vertical, width-aware layout manager for the session transcript.
@@ -33,8 +34,12 @@ class SessionLayout(
     private val basePad: Insets = JBUI.emptyInsets(),
 ) : LayoutManager {
 
+    private val cache = IdentityHashMap<Component, Measured>()
+
     override fun addLayoutComponent(name: String, comp: Component) = Unit
-    override fun removeLayoutComponent(comp: Component) = Unit
+    override fun removeLayoutComponent(comp: Component) {
+        cache.remove(comp)
+    }
 
     override fun preferredLayoutSize(parent: Container): Dimension {
         val ins = insets(parent)
@@ -46,9 +51,7 @@ class SessionLayout(
             if (!first) h += gap(comp)
             first = false
             val child = bounds(ins, w, comp)
-            // Pre-size to available width so HTML panes reflow before we measure
-            comp.setSize(child.width, comp.height.coerceAtLeast(1))
-            h += comp.preferredSize.height
+            h += measure(comp, child.width)
         }
         // w and h are already scaled px (child preferred heights + scaled gaps/insets) and
         // match what layoutContainer stacks, so return a plain Dimension. A JBDimension would
@@ -68,12 +71,39 @@ class SessionLayout(
             if (!first) y += gap(comp)
             first = false
             val child = bounds(ins, w, comp)
-            // Fix width first so HTML reflows, then read the resulting height
-            comp.setSize(child.width, comp.height.coerceAtLeast(1))
-            val h = comp.preferredSize.height
+            val h = measure(comp, child.width)
             comp.setBounds(child.left, y, child.width, h)
             y += h
         }
+    }
+
+    /**
+     * Drop the cached measurement for [comp] so the next layout pass re-measures it.
+     *
+     * [measure] trusts `comp.isValid` as a freshness signal, which is safe only while `comp` is
+     * invalidated through this container. A child that is its own validate root (see
+     * [ai.kilocode.client.session.views.TurnView.isValidateRoot]) can be re-validated independently
+     * by `RepaintManager` — its `isValid` flips back to `true` before this layout re-measures it,
+     * so a content change that grows/shrinks its height would otherwise return a stale cached value.
+     * Callers that mutate such a child's content must forget it here so the cache stays honest.
+     */
+    fun forget(comp: Component) {
+        cache.remove(comp)
+    }
+
+    /** Drop every cached measurement so the next layout pass re-measures all children. */
+    fun forgetAll() {
+        cache.clear()
+    }
+
+    private fun measure(comp: Component, width: Int): Int {
+        val hit = cache[comp]
+        if (comp.isValid && hit?.width == width) return hit.height
+        // Pre-size to available width so HTML panes reflow before we measure.
+        comp.setSize(width, comp.height.coerceAtLeast(1))
+        val h = comp.preferredSize.height
+        cache[comp] = Measured(width, h)
+        return h
     }
 
     private fun bounds(ins: Insets, width: Int, comp: Component): Bounds {
@@ -103,6 +133,8 @@ class SessionLayout(
     private fun view(comp: Component): SessionView? = comp as? SessionView
 
     private data class Bounds(val left: Int, val width: Int)
+
+    private data class Measured(val width: Int, val height: Int)
 }
 
 /**
@@ -118,6 +150,33 @@ open class SessionLayoutPanel(
 ) : BorderLayoutPanel(), javax.swing.Scrollable {
     init {
         layout = SessionLayout(gap, pad)
+    }
+
+    override fun doLayout() {
+        super.doLayout()
+        reconcileValidateRoot()
+    }
+
+    /**
+     * Keep the parent [SessionLayout]'s cached height honest across validate-root boundaries.
+     *
+     * A validate root, such as a settled [ai.kilocode.client.session.views.TurnView], can be laid out
+     * independently by `RepaintManager`. Its `isValid` flag can flip back to `true` before the parent
+     * transcript remeasures it, so [SessionLayout] may otherwise keep stacking it at a stale cached
+     * height until some unrelated resize changes the cache key.
+     *
+     * Once this root has laid out its own content, its rendered height should match its preferred
+     * height. If it does not, the parent cache is stale: drop this entry and revalidate the parent so
+     * the outer transcript geometry follows the content. Non-roots are skipped because their
+     * invalidation already propagates to the parent and keeps `isValid` an honest cache signal.
+     */
+    private fun reconcileValidateRoot() {
+        if (!isValidateRoot()) return
+        val host = parent ?: return
+        val layout = host.layout as? SessionLayout ?: return
+        if (preferredSize.height == height) return
+        layout.forget(this)
+        (host as? javax.swing.JComponent)?.revalidate()
     }
 
     override fun getScrollableTracksViewportWidth() = true

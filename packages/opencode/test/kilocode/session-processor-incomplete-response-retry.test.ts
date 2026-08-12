@@ -1,3 +1,5 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { NodeFileSystem } from "@effect/platform-node"
 import { describe, expect, spyOn } from "bun:test"
 import { APICallError } from "ai"
@@ -52,6 +54,10 @@ class TestLLM extends Context.Service<
   }
 >()("@test/IncompleteResponseRetryLLM") {}
 
+class State extends Context.Service<State, { readonly queue: Script[]; calls: number }>()(
+  "@test/IncompleteResponseRetryState",
+) {}
+
 function model(): Provider.Model {
   return {
     id: ref.modelID,
@@ -72,13 +78,14 @@ function model(): Provider.Model {
   } as Provider.Model
 }
 
-function empty() {
+function empty(vercelID?: string) {
   const usage = new Usage({})
+  const providerMetadata = vercelID ? { kilo: { vercelID } } : undefined
   return [
     LLMEvent.stepStart({ index: 0 }),
     LLMEvent.reasoningStart({ id: "reasoning" }),
     LLMEvent.reasoningEnd({ id: "reasoning" }),
-    LLMEvent.stepFinish({ index: 0, reason: "unknown", usage }),
+    LLMEvent.stepFinish({ index: 0, reason: "unknown", usage, providerMetadata }),
     LLMEvent.finish({ reason: "unknown", usage }),
   ]
 }
@@ -106,63 +113,72 @@ function retryable429() {
   })
 }
 
-const llm = Layer.unwrap(
-  Effect.gen(function* () {
-    const queue: Script[] = []
-    let calls = 0
-    const push = (stream: Script) => {
-      queue.push(stream)
-      return Effect.void
-    }
-    return Layer.mergeAll(
-      Layer.succeed(
-        LLM.Service,
-        LLM.Service.of({
-          stream: () => {
-            calls += 1
-            return queue.shift() ?? Stream.fail(new Error("unexpected extra llm call"))
-          },
-        }),
-      ),
-      Layer.succeed(
-        TestLLM,
-        TestLLM.of({
-          push,
-          reply: (...events) => push(Stream.make(...events)),
-          calls: Effect.sync(() => calls),
-        }),
-      ),
-    )
-  }),
-)
-
 const reference = Layer.mock(Reference.Service, {
   list: () => Effect.succeed([]),
 })
-const status = Layer.mergeAll(SessionStatus.defaultLayer, Bus.layer)
-const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLayer)
+const stateNode = LayerNode.make({
+  service: State,
+  layer: Layer.sync(State, () => State.of({ queue: [], calls: 0 })),
+  deps: [],
+})
+const llmNode = LayerNode.make({
+  service: LLM.Service,
+  layer: Layer.effect(
+    LLM.Service,
+    Effect.gen(function* () {
+      const state = yield* State
+      return LLM.Service.of({
+        stream: () => {
+          state.calls += 1
+          return state.queue.shift() ?? Stream.fail(new Error("unexpected extra llm call"))
+        },
+      })
+    }),
+  ),
+  deps: [stateNode],
+})
+const testNode = LayerNode.make({
+  service: TestLLM,
+  layer: Layer.effect(
+    TestLLM,
+    Effect.gen(function* () {
+      const state = yield* State
+      const push = (stream: Script) => Effect.sync(() => state.queue.push(stream)).pipe(Effect.asVoid)
+      return TestLLM.of({
+        push,
+        reply: (...events) => push(Stream.make(...events)),
+        calls: Effect.sync(() => state.calls),
+      })
+    }),
+  ),
+  deps: [stateNode],
+})
+const root = LayerNode.group([
+  SessionProcessor.node,
+  Session.node,
+  SessionProjector.node,
+  MessageV2.node,
+  Snapshot.node,
+  AgentSvc.node,
+  Permission.node,
+  Plugin.node,
+  Config.node,
+  SessionSummary.node,
+  Image.node,
+  SessionStatus.node,
+  EventV2Bridge.node,
+  Database.node,
+  CrossSpawnSpawner.node,
+  RuntimeFlags.node,
+  LLM.node,
+  testNode,
+])
 const env = (event = false) =>
-  SessionProcessor.layer.pipe(
-    Layer.provideMerge(
-      Layer.mergeAll(
-        Session.defaultLayer,
-        Snapshot.defaultLayer,
-        AgentSvc.defaultLayer,
-        Permission.defaultLayer,
-        Plugin.defaultLayer,
-        Config.defaultLayer,
-        RuntimeFlags.layer({ experimentalEventSystem: event }),
-        reference,
-        SessionSummary.defaultLayer,
-        Image.defaultLayer,
-        SyncEvent.defaultLayer,
-        EventV2Bridge.defaultLayer,
-        Database.defaultLayer,
-        status,
-        llm,
-      ).pipe(Layer.provideMerge(infra)),
-    ),
-    Layer.provide(reference),
+  LayerNode.compile(root, [
+    [LLM.node, llmNode],
+    [RuntimeFlags.node, RuntimeFlags.layer({ experimentalEventSystem: event })],
+  ]).pipe(
+    Layer.provideMerge(Layer.mergeAll(NodeFileSystem.layer, Bus.layer, SyncEvent.defaultLayer, reference)),
   )
 
 const it = testEffect(env())
@@ -242,9 +258,9 @@ describe("session processor incomplete response retry", () => {
       (dir) =>
         Effect.gen(function* () {
           const ctx = yield* setup(dir)
-          yield* ctx.test.reply(...empty())
-          yield* ctx.test.reply(...empty())
-          yield* ctx.test.reply(...empty())
+          yield* ctx.test.reply(...empty("attempt-1"))
+          yield* ctx.test.reply(...empty("attempt-2"))
+          yield* ctx.test.reply(...empty("final-id"))
           yield* ctx.test.push(Stream.fail(new Error("unexpected extra llm call")))
           const delay = spyOn(SessionRetry, "delay").mockReturnValue(0)
 
@@ -260,6 +276,7 @@ describe("session processor incomplete response retry", () => {
           expect(MessageV2.APIError.isInstance(error)).toBe(true)
           if (!MessageV2.APIError.isInstance(error)) throw new Error("expected API error")
           expect(error.data.message).toBe(KiloSessionProcessor.INCOMPLETE_RESPONSE_MESSAGE)
+          expect(error.data.responseHeaders?.["x-vercel-id"]).toBe("final-id")
           expect(yield* MessageV2.parts(ctx.msg.id)).toEqual([])
         }),
       { git: true },
@@ -557,16 +574,23 @@ describe("session processor incomplete response retry", () => {
     ),
   )
 
-  eventIt.effect("does not retry when Event V2 mirroring is enabled", () =>
+  eventIt.effect("retries an empty response the same way when the event system flag is on", () =>
     provideTmpdirProject(
       (dir) =>
         Effect.gen(function* () {
           const ctx = yield* setup(dir)
           yield* ctx.test.reply(...empty())
+          yield* ctx.test.reply(...success())
+          const delay = spyOn(SessionRetry, "delay").mockReturnValue(0)
 
-          expect(yield* ctx.handle.process(ctx.input)).toBe("continue")
-          expect(yield* ctx.test.calls).toBe(1)
-          expect(ctx.handle.message.finish).toBe("unknown")
+          try {
+            expect(yield* ctx.handle.process(ctx.input)).toBe("continue")
+          } finally {
+            delay.mockRestore()
+          }
+
+          expect(yield* ctx.test.calls).toBe(2)
+          expect(ctx.handle.message.finish).toBe("stop")
         }),
       { git: true },
     ),

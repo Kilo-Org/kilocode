@@ -1,7 +1,6 @@
 // kilocode_change - new file
 import path from "path"
 import fs from "fs/promises"
-import { StringDecoder } from "string_decoder"
 import { Cause, Effect, Exit, Fiber, Scope } from "effect"
 import { SessionID, PartID } from "@/session/schema"
 import { MessageV2 } from "@/session/message-v2"
@@ -16,6 +15,7 @@ import { KiloSession } from "@/kilocode/session"
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { Permission } from "@/permission"
+import { PermissionProvenance } from "@/kilocode/permission/provenance"
 import { Question } from "@/question"
 import { environmentDetails } from "@/kilocode/editor-context"
 import { Identifier } from "@/id/id"
@@ -27,6 +27,7 @@ import { MemoryMarker } from "@/kilocode/memory/marker"
 import { KilocodeSystemPrompt } from "@/kilocode/system-prompt"
 import { KiloToolRegistry } from "@/kilocode/tool/registry"
 import CODE_SWITCH from "@/session/prompt/code-switch.txt"
+import { consumeAutoTitle, markAutoTitle } from "@/kilo-sessions/rename-adoptions"
 
 export namespace KiloSessionPrompt {
   const modes = ["ask", "plan", "architect"]
@@ -70,6 +71,28 @@ export namespace KiloSessionPrompt {
 
   export function titleID(sessionID: SessionID) {
     return `title-${sessionID}`
+  }
+
+  /**
+   * Auto-title write gate for ensureTitle: re-check default title and mark
+   * before setTitle. Returns true when the caller should call setTitle (mark
+   * already recorded). On setTitle failure call `clearAutoTitleMark`.
+   * K1: mark BEFORE write; consume on fail.
+   */
+  export function prepareAutoTitle(input: {
+    sessionID: string
+    title: string
+    fresh: { title: string } | null | undefined
+    isDefaultTitle: (title: string) => boolean
+  }): boolean {
+    if (!input.fresh || !input.isDefaultTitle(input.fresh.title)) return false
+    markAutoTitle(input.sessionID, input.title)
+    return true
+  }
+
+  /** Clear auto-title mark after a failed setTitle (pair with prepareAutoTitle). */
+  export function clearAutoTitleMark(sessionID: string, title: string) {
+    consumeAutoTitle(sessionID, title)
   }
 
   function mode(name: string) {
@@ -229,6 +252,7 @@ export namespace KiloSessionPrompt {
     permission: Pick<Permission.Interface, "ask">
     agents: Pick<Agent.Interface, "get">
     sessions: Pick<Session.Interface, "get">
+    origins?: PermissionProvenance.Origins
     agent: Agent.Info
     session: Session.Info
     request: Omit<Permission.AskInput, "ruleset" | "hardRuleset">
@@ -237,11 +261,21 @@ export namespace KiloSessionPrompt {
     const session = yield* input.sessions
       .get(input.session.id)
       .pipe(Effect.catchCause(() => Effect.succeed(input.session)))
-    yield* input.permission.ask({
-      ...input.request,
-      ruleset: Permission.merge(agent.permission, guardPermissions({ agent, session })),
-      hardRuleset: hardPermissions({ agent }),
-    })
+
+    // kilocode_change start - tag every rule with its true origin before merging, so the winning
+    // rule (chosen by findLast) reports the correct source instead of classify() having to guess.
+    // guardPermissions re-appends agent.permission for ask/plan/architect modes and prepends
+    // session.permission, so tag those inputs up front rather than the outer copy alone.
+    const taggedAgent = PermissionProvenance.tagAgent(agent.permission, input.origins)
+    const taggedSession = PermissionProvenance.tagSession(session.permission ?? [])
+    const ruleset = Permission.merge(
+      taggedAgent,
+      guardPermissions({ agent: { name: agent.name, permission: taggedAgent }, session: { permission: taggedSession } }),
+    )
+    const outcome = yield* input.permission.ask({ ...input.request, ruleset, hardRuleset: hardPermissions({ agent }) })
+    if (outcome.manual) return { source: "manual" } satisfies PermissionProvenance.Approval
+    return PermissionProvenance.classify({ rule: outcome.rule, agent: agent.name, origins: input.origins })
+    // kilocode_change end
   })
 
   /**
@@ -366,25 +400,6 @@ export namespace KiloSessionPrompt {
   }
 
   /**
-   * Creates StringDecoder-based helpers for shell stdout/stderr that correctly
-   * handle multi-byte UTF-8 characters split across chunks.
-   */
-  export function createShellDecoders() {
-    const stdout = new StringDecoder("utf8")
-    const stderr = new StringDecoder("utf8")
-    return {
-      /** Decode a chunk from the given stream. */
-      write(stream: "stdout" | "stderr", chunk: Buffer) {
-        return stream === "stdout" ? stdout.write(chunk) : stderr.write(chunk)
-      },
-      /** Flush any trailing buffered bytes from both decoders. */
-      flush() {
-        return stdout.end() + stderr.end()
-      },
-    }
-  }
-
-  /**
    * Ensures the plan file directory exists. Pre-checks with `Filesystem.isDir`
    * because `fs.mkdir(recursive: true)` still throws `EEXIST` on Windows
    * OneDrive ReparsePoint directories in some Node versions (kilocode#9755).
@@ -442,12 +457,6 @@ export namespace KiloSessionPrompt {
     ].join("\n")
     add(`<system-reminder>\n${body}\n</system-reminder>`)
   }
-
-  /**
-   * Returns the CODE_SWITCH prompt text (plan-to-code transition).
-   * Used when switching from plan agent to code agent.
-   */
-  export const CODE_SWITCH_TEXT = CODE_SWITCH
 
   /**
    * Determines the close reason for a session turn.

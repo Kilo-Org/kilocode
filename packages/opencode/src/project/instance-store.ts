@@ -1,4 +1,5 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { makeGlobalNode, Node } from "@opencode-ai/core/effect/app-node"
 import { GlobalBus } from "@/bus/global"
 import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import { WorkspaceContext } from "@/control-plane/workspace-context"
@@ -8,7 +9,6 @@ import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Context, Deferred, Duration, Effect, Exit, Layer, Scope } from "effect"
 import { context as instanceContext, type InstanceContext } from "./instance-context" // kilocode_change
 import { InstanceBootstrap } from "./bootstrap-service"
-import { InstanceBootstrap as InstanceBootstrapGraph } from "./bootstrap"
 import * as Project from "./project"
 
 export interface LoadInput {
@@ -34,7 +34,7 @@ interface Entry {
   readonly deferred: Deferred.Deferred<InstanceContext>
 }
 
-export const layer: Layer.Layer<Service, never, Project.Service | InstanceBootstrap.Service> = Layer.effect(
+const layer: Layer.Layer<Service, never, Project.Service | InstanceBootstrap.Service> = Layer.effect(
   Service,
   Effect.gen(function* () {
     const project = yield* Project.Service
@@ -60,8 +60,9 @@ export const layer: Layer.Layer<Service, never, Project.Service | InstanceBootst
               )
         // kilocode_change start - run bootstrap inside the Instance ALS so KilocodeBootstrap
         // (and anything it forks via Effect.forkDetach) sees Instance.directory.
+        const runtime = yield* Effect.context<never>()
         const ready = bootstrap.run.pipe(Effect.provideService(InstanceRef, ctx)) as Effect.Effect<void>
-        yield* Effect.promise(() => instanceContext.provide(ctx, () => Effect.runPromise(ready)))
+        yield* Effect.promise(() => instanceContext.provide(ctx, () => Effect.runPromiseWith(runtime)(ready)))
         // kilocode_change end
         return ctx
       }).pipe(Effect.withSpan("InstanceStore.boot"))
@@ -73,12 +74,20 @@ export const layer: Layer.Layer<Service, never, Project.Service | InstanceBootst
         return true
       })
 
+    // kilocode_change start - complete the deferred and drop failed entries on any exit,
+    // including interruption of the boot fiber when an enclosing scope closes. Otherwise a
+    // boot killed mid-flight leaves a never-resolving deferred in the cache and every later
+    // load or reload of that directory hangs forever.
     const completeLoad = (directory: string, input: LoadInput, entry: Entry) =>
-      Effect.gen(function* () {
-        const exit = yield* Effect.exit(boot({ ...input, directory }))
-        if (Exit.isFailure(exit)) yield* removeEntry(directory, entry)
-        yield* Deferred.done(entry.deferred, exit).pipe(Effect.asVoid)
-      })
+      Effect.suspend(() => boot({ ...input, directory })).pipe(
+        Effect.onExit((exit) =>
+          Effect.gen(function* () {
+            if (Exit.isFailure(exit)) yield* removeEntry(directory, entry)
+            yield* Deferred.done(entry.deferred, exit)
+          }),
+        ),
+      )
+    // kilocode_change end
 
     const emitDisposed = (input: { directory: string; project?: string }) =>
       Effect.sync(() =>
@@ -225,8 +234,12 @@ export const layer: Layer.Layer<Service, never, Project.Service | InstanceBootst
   }),
 )
 
-export const defaultLayer = layer.pipe(Layer.provide(Project.defaultLayer))
+export const bootstrapNode = LayerNode.unbound(InstanceBootstrap.Service, Node.tags.values.global)
 
-export const node = LayerNode.make(layer, [Project.node, InstanceBootstrapGraph.node])
+export const node = makeGlobalNode({
+  service: Service,
+  layer: layer,
+  deps: [Project.node, bootstrapNode],
+})
 
 export * as InstanceStore from "./instance-store"

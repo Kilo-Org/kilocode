@@ -65,6 +65,10 @@ Or use npm:
 
 For detailed help on every command and subcommand, see the [CLI Command Reference](/docs/code-with-ai/platforms/cli-reference).
 
+{% callout type="warning" title="Kilo Console is deprecated" %}
+The `kilo console` command and its browser interface are deprecated and will be removed in a future release. Use the CLI TUI, VS Code extension, or JetBrains plugin to run sessions. Use the CLI slash commands, other extensions, or edit Kilo configuration files directly to manage settings.
+{% /callout %}
+
 ### Global Options
 
 | Flag | Description |
@@ -93,6 +97,10 @@ For detailed help on every command and subcommand, see the [CLI Command Referenc
 | `/copy` | - | Copy latest agent response |
 | `/copy-session` | - | Copy session transcript |
 | `/export` | - | Export session transcript |
+| `/resume-claude [uuid]` | - | Import a Claude Code session transcript |
+| `/resume-codex [uuid]` | - | Import an OpenAI Codex session transcript |
+| `/move` | - | Move the current session to another project directory |
+| `/diff` | - | Open the diff viewer |
 | `/timestamps` | `/toggle-timestamps` | Show/hide timestamps |
 | `/thinking` | `/toggle-thinking` | Show/hide thinking blocks |
 
@@ -119,6 +127,8 @@ For detailed help on every command and subcommand, see the [CLI Command Referenc
 | `/help` | - | Show help |
 | `/reload` | - | Reload config, skills, agents, and commands from disk |
 | `/editor` | - | Open external editor |
+| `/auto-approve` | `/autoapprove`, `/approve-all`, `/approveall` | Toggle auto-approve mode for all permission prompts (saved to global config) |
+| `/privacy` | - | Toggle privacy mode (blurs PII in the TUI) |
 | `/exit` | `/quit`, `/q` | Exit the app |
 
 #### Kilo Gateway Commands (when connected)
@@ -135,6 +145,16 @@ For detailed help on every command and subcommand, see the [CLI Command Referenc
 |---|---|
 | `/init` | Create/update AGENTS.md file for the project |
 | `/review` | Review code changes |
+
+### Importing Claude Code and Codex Sessions
+
+Continue work started in Claude Code or the OpenAI Codex CLI without copying transcripts by hand:
+
+1. Start a new session with `/new` — the import commands only run in an empty session.
+2. Run `/resume-claude` or `/resume-codex`.
+3. Pick one of the 10 most recent sessions for the current directory, or pass a session UUID directly, for example `/resume-claude <uuid>`.
+
+Kilo discovers Claude Code transcripts under `~/.claude/projects/` and Codex CLI rollouts under `~/.codex/sessions/`. The imported history keeps its original order and ends with an import notice. Content that Kilo cannot represent, such as some tool outputs, is skipped and counted in that notice.
 
 ## Local Code Reviews
 
@@ -161,12 +181,12 @@ Configuration is managed through:
 
 ## CLI Notifications and Sounds
 
-CLI attention alerts are disabled by default. Enable and configure them in either of these ways:
+CLI attention alerts are disabled by default. Enable and configure them by editing the TUI configuration:
 
-- Run `kilo console`, open your project, then go to **Settings > CLI > Notifications**.
-- Edit the TUI configuration directly. Use `~/.config/kilo/tui.jsonc` (or `tui.json`) for global settings, or `.kilo/tui.json` (or `tui.jsonc`) for project settings.
+- Edit `~/.config/kilo/tui.jsonc` (or `tui.json`) for global settings.
+- Edit `.kilo/tui.json` (or `tui.jsonc`) for project settings.
 
-The Console exposes the attention, desktop notification, sound, and volume controls. The equivalent TUI configuration is:
+Use the following configuration for attention, desktop notification, sound, and volume controls:
 
 ```json
 {
@@ -208,11 +228,24 @@ Supported sound names are `default`, `question`, `permission`, `error`, `done`, 
 
 The `attention.sound_pack` setting selects a sound pack registered by a TUI plugin. Setting an arbitrary pack name does not install or load a pack. Per-event file overrides remain the simplest way to customize sounds without a plugin.
 
-There is no notification slash command or command-palette toggle. Use Kilo Console or `tui.json` / `tui.jsonc` so all attention behavior is controlled by the same configuration.
+There is no notification slash command or command-palette toggle. Use `tui.json` or `tui.jsonc` so all attention behavior is controlled by the same configuration.
 
 ## Slash Commands
 
 The CLI's interactive mode supports slash commands for common operations. The main commands are documented above in the [Interactive Slash Commands](#interactive-slash-commands) section.
+
+Use `/diff` to review working-tree changes. From the diff viewer, switch the source to the current branch compared with the main branch or to changes from the last assistant turn. Use `/move` to move the current session to another project directory.
+
+The `diff_open` and `session_move` TUI keybindings run the same actions and are unbound by default. Set them under `keybinds` in `tui.jsonc`:
+
+```jsonc
+{
+  "keybinds": {
+    "diff_open": "<leader>d",
+    "session_move": "<leader>o",
+  },
+}
+```
 
 ## Permissions
 
@@ -369,6 +402,7 @@ Common configuration options include:
 - **`formatter`** - Code formatter configuration (`true`, `false`, or formatter-specific entries)
 - **`lsp`** - Language server configuration (`true`, `false`, or server-specific entries)
 - **`disabled_providers`** / **`enabled_providers`** - Control which providers are available
+- **`privacy_mode`** - Blur PII in the TUI (balance, team name, Kilo Pass usage) and require confirmation before `/profile` reveals account details — see [Privacy Mode](#privacy-mode)
 
 {% callout type="tip" %}
 **Using a model that's not in the built-in list?** You can register any model by adding it under `provider.<provider_id>.models` in your config file. See [Custom Models](/docs/code-with-ai/agents/custom-models) for full details and examples.
@@ -453,6 +487,23 @@ Kilo telemetry is enabled by default and can be disabled with `experimental.open
 
 If `OTEL_EXPORTER_OTLP_ENDPOINT` is set, the CLI exports OpenTelemetry traces and logs to that OTLP HTTP endpoint. You can also pass `OTEL_EXPORTER_OTLP_HEADERS` as comma-separated `key=value` pairs and `OTEL_RESOURCE_ATTRIBUTES` as comma-separated resource attributes. Request spans include `http.method`, `http.path`, route params such as `session.id` and `message.id`, and internal params under the `opencode.*` namespace.
 
+### Privacy Mode
+
+Set `privacy_mode` to `true` in `kilo.jsonc`, or toggle it with the `/privacy` command, to blur always-visible personal information in the TUI:
+
+```jsonc
+{
+  "privacy_mode": true,
+}
+```
+
+When privacy mode is on:
+
+- The sidebar footer shows the balance as `•••`, collapses the team name to "Team credits", and hides the Kilo Pass usage block.
+- `/profile` asks for confirmation before revealing your email, name, balance, and team on screen.
+
+Privacy mode only affects the TUI display. The `kilo profile` CLI command is unaffected.
+
 ### Environment Variables
 
 Use `{env:VARIABLE_NAME}` syntax in config files to reference environment variables:
@@ -502,6 +553,10 @@ Selecting an "Always run" option will:
 
 Kilo only saves the pattern you select. Approving a specific command does not approve redirected variants or broader command patterns unless that broader option is shown and selected.
 
+### Pasting Large Text
+
+Pasting a large block of text (five or more lines, or over 800 characters) into the prompt collapses it into a placeholder such as `[Pasted ~6 lines]` to keep the prompt readable. To view or edit the pasted text, paste the same text again — the matching placeholder expands in place.
+
 ## Autonomous Mode (Non-Interactive)
 
 Autonomous mode allows Kilo Code to run in automated environments like CI/CD pipelines without requiring user interaction.
@@ -537,6 +592,8 @@ This instructs the AI to proceed without user input.
 - `0`: Success (task completed)
 - `124`: Timeout (task exceeded time limit)
 - `1`: Error (initialization or execution failure)
+
+Without `--auto`, a non-interactive run cannot prompt for approval and auto-rejects any permission request it receives. If a run auto-rejected at least one request, it exits `1` with a stderr diagnostic naming the cause, since the task likely did not complete. Pass `--auto` for autonomous use.
 
 ### Example CI/CD Integration
 

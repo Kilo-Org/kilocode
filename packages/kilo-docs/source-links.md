@@ -50,6 +50,8 @@
   <!-- packages/opencode/src/provider/error.ts -->
 - <https://cli.github.com/>
   <!-- packages/kilo-vscode/src/agent-manager/WorktreeManager.ts -->
+- <https://cloud-agent-next.kilosessions.ai>
+  <!-- packages/opencode/src/kilocode/cloud/origin.ts -->
 - <https://cloud.digitalocean.com/v1/oauth/authorize>
   <!-- packages/opencode/src/plugin/digitalocean.ts -->
 - <https://cloudflare.com/cdn-cgi/trace>
@@ -70,6 +72,8 @@
   <!-- packages/kilo-vscode/src/agent-manager/WorktreeManager.ts -->
 - <https://github.com>
   <!-- packages/opencode/src/kilocode/security/github.ts -->
+- <https://github.com/anthropics/claude-code/issues/31375>
+  <!-- packages/kilo-vscode/src/utils.ts -->
 - <https://github.com/apps/kiloconnect>
   <!-- packages/opencode/src/cli/cmd/github.handler.ts -->
 - <https://github.com/cline/cline/blob/main/evals/diff-edits/diff-apply/diff-06-23-25.ts>
@@ -106,6 +110,7 @@
   <!-- packages/opencode/src/plugin/digitalocean.ts -->
 - <https://kilo.ai>
   <!-- packages/opencode/src/cli/cmd/github.handler.ts -->
+  <!-- packages/opencode/src/kilocode/cloud/origin.ts -->
   <!-- packages/opencode/src/mcp/oauth-provider.ts -->
   <!-- packages/opencode/src/session/network.ts -->
 - <https://kilo.ai/>
@@ -152,8 +157,6 @@
 - <https://opencode.ai/>
   <!-- packages/opencode/src/cli/cmd/generate.ts -->
   <!-- packages/opencode/src/kilocode/server/httpapi/public.ts -->
-- <https://opencode.ai/zen>
-  <!-- packages/kilo-vscode/webview-ui/src/i18n/en.ts -->
 - <https://openrouter.ai/api/v1/chat/completions>
   <!-- packages/opencode/src/kilocode/tool/generate-image.ts -->
 - <https://openrouter.ai/docs/cookbook/administration/usage-accounting>
@@ -204,7 +207,7 @@
   <!-- packages/opencode/src/provider/provider.ts -->
 - <https://www.morphllm.com/>
   <!-- packages/opencode/src/tool/warpgrep.ts -->
-- <https://www.rfc-editor.org/rfc/rfc8628#section-3.5>
+- <https://www.rfc-editor.org/rfc/rfc8628.html#section-3.5>
   <!-- packages/opencode/src/plugin/github-copilot/copilot.ts -->
 - <https://x.com>
   <!-- packages/opencode/src/kilocode/util/url.ts -->

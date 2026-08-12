@@ -34,7 +34,7 @@ Use your provider API key to route matching models through your account:
 - Novita
 - OpenAI
 - Xiaomi
-- xAI
+- SpaceXAI
 - Z.ai
 
 ### Subscription and direct provider plans
@@ -49,6 +49,7 @@ These providers offer coding-focused subscriptions or dedicated endpoints. Bring
 - Martian
 - Mistral Codestral
 - Neuralwatt
+- NVIDIA
 - Ollama Cloud
 - OpenCode Go
 - OrcaRouter

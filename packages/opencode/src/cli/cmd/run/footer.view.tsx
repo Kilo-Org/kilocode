@@ -10,7 +10,7 @@
 /** @jsxImportSource @opentui/solid */
 import { useTerminalDimensions } from "@opentui/solid"
 import { For, Match, Show, Switch, createEffect, createMemo, createSignal, onCleanup } from "solid-js"
-import "opentui-spinner/solid"
+import { registerOpencodeSpinner } from "@opencode-ai/tui/component/register-spinner"
 import { createColors, createFrames } from "@opencode-ai/tui/ui/spinner"
 import { RunInteractiveTerminalBody } from "@/kilocode/cli/cmd/run/interactive-terminal" // kilocode_change
 import {
@@ -56,6 +56,8 @@ import type {
 } from "./types"
 import type { RunTheme } from "./theme"
 import { modelInfo } from "./variant.shared"
+
+registerOpencodeSpinner()
 
 const EMPTY_BORDER = {
   topLeft: "",
@@ -631,7 +633,6 @@ export function RunFooterView(props: RunFooterViewProps) {
 
   return (
     <box
-      id="run-direct-footer-shell"
       width="100%"
       height="100%"
       border={false}
@@ -641,7 +642,7 @@ export function RunFooterView(props: RunFooterViewProps) {
       padding={0}
     >
       <Show when={panel() || inspecting()}>
-        <box id="run-direct-footer-panel-spacer" width="100%" height={1} flexShrink={0} backgroundColor="transparent" />
+        <box width="100%" height={1} flexShrink={0} backgroundColor="transparent" />
       </Show>
 
       <Show
@@ -651,7 +652,6 @@ export function RunFooterView(props: RunFooterViewProps) {
             <For each={[promptView()]}>
               {() => (
                 <box
-                  id="run-direct-footer-composer-frame"
                   width="100%"
                   flexShrink={0}
                   border={panel() || prompt() ? false : ["left"]}
@@ -666,7 +666,6 @@ export function RunFooterView(props: RunFooterViewProps) {
                   }
                 >
                   <box
-                    id="run-direct-footer-composer-area"
                     width="100%"
                     flexGrow={1}
                     paddingLeft={0}
@@ -676,7 +675,7 @@ export function RunFooterView(props: RunFooterViewProps) {
                     backgroundColor={panel() || prompt() ? "transparent" : theme().surface}
                     gap={0}
                   >
-                    <box id="run-direct-footer-body" width="100%" flexGrow={1} flexShrink={1} flexDirection="column">
+                    <box width="100%" flexGrow={1} flexShrink={1} flexDirection="column">
                       <Switch>
                         <Match when={active().type === "prompt" && route().type === "composer"}>
                           <RunPromptBody
@@ -825,7 +824,6 @@ export function RunFooterView(props: RunFooterViewProps) {
 
             <Show when={!panel() && menu()}>
               <RunFooterMenu
-                id="run-direct-footer-complete"
                 theme={theme}
                 items={composer.options}
                 selected={composer.selected}
@@ -839,7 +837,6 @@ export function RunFooterView(props: RunFooterViewProps) {
 
             <Show when={!panel() && !menu()}>
               <box
-                id="run-direct-footer-statusline"
                 width="100%"
                 height={1}
                 flexDirection="row"
@@ -847,20 +844,13 @@ export function RunFooterView(props: RunFooterViewProps) {
                 flexShrink={0}
                 backgroundColor={statuslineBackground()}
               >
-                <box
-                  id="run-direct-footer-statusline-mode"
-                  paddingLeft={1}
-                  paddingRight={1}
-                  backgroundColor={theme().statusAccent}
-                  flexShrink={0}
-                >
+                <box paddingLeft={1} paddingRight={1} backgroundColor={theme().statusAccent} flexShrink={0}>
                   <text wrapMode="none" truncate>
                     <span style={{ fg: modeColor(), bold: true }}>{modeLabel()}</span>
                   </text>
                 </box>
 
                 <box
-                  id="run-direct-footer-statusline-main"
                   flexDirection="row"
                   gap={1}
                   flexGrow={1}
@@ -871,19 +861,12 @@ export function RunFooterView(props: RunFooterViewProps) {
                   backgroundColor="transparent"
                 >
                   <Show when={busy() && !exiting()}>
-                    <box id="run-direct-footer-status-spinner" flexShrink={0}>
+                    <box flexShrink={0}>
                       <spinner color={spin().color} frames={spin().frames} interval={40} />
                     </box>
                   </Show>
 
-                  <text
-                    id="run-direct-footer-statusline-text"
-                    fg={statusColor()}
-                    wrapMode="none"
-                    truncate
-                    flexGrow={1}
-                    flexShrink={1}
-                  >
+                  <text fg={statusColor()} wrapMode="none" truncate flexGrow={1} flexShrink={1}>
                     <Show when={busy() && !exiting()} fallback={statusText()}>
                       <Show when={interruptLabel()}>
                         {(label) => <span style={{ fg: armed() ? statusColor() : theme().muted }}>{label()} </span>}
@@ -894,12 +877,7 @@ export function RunFooterView(props: RunFooterViewProps) {
                 </box>
 
                 <Show when={activityMeta().length > 0}>
-                  <box
-                    id="run-direct-footer-statusline-meta"
-                    paddingRight={1}
-                    backgroundColor="transparent"
-                    flexShrink={1}
-                  >
+                  <box paddingRight={1} backgroundColor="transparent" flexShrink={1}>
                     <text fg={theme().muted} wrapMode="none" truncate>
                       {activityMeta()}
                     </text>
@@ -908,12 +886,7 @@ export function RunFooterView(props: RunFooterViewProps) {
 
                 <Show when={responsive().statusline.showModel && modelStatus()}>
                   {(info) => (
-                    <box
-                      id="run-direct-footer-statusline-model"
-                      paddingRight={1}
-                      backgroundColor="transparent"
-                      flexShrink={0}
-                    >
+                    <box paddingRight={1} backgroundColor="transparent" flexShrink={0}>
                       <text fg={theme().text} wrapMode="none">
                         {info().model}
                         <Show when={info().provider}>
@@ -933,13 +906,7 @@ export function RunFooterView(props: RunFooterViewProps) {
 
                 <For each={contextHints()}>
                   {(hint, index) => (
-                    <box
-                      id={`run-direct-footer-statusline-${hint.kind}`}
-                      paddingRight={1}
-                      backgroundColor="transparent"
-                      flexShrink={0}
-                      maxWidth={24}
-                    >
+                    <box paddingRight={1} backgroundColor="transparent" flexShrink={0} maxWidth={24}>
                       <text fg={theme().text} wrapMode="none" truncate>
                         <Show when={index() > 0 || ((hasActivityMeta() || hasModelStatus()) && index() === 0)}>
                           {sectionSeparator()}
@@ -953,13 +920,7 @@ export function RunFooterView(props: RunFooterViewProps) {
 
                 <Show when={commandHint()}>
                   {(hint) => (
-                    <box
-                      id="run-direct-footer-statusline-hint"
-                      paddingRight={1}
-                      backgroundColor="transparent"
-                      flexShrink={0}
-                      maxWidth={18}
-                    >
+                    <box paddingRight={1} backgroundColor="transparent" flexShrink={0} maxWidth={18}>
                       <text fg={theme().text} wrapMode="none" truncate>
                         <Show when={hasActivityMeta() || hasModelStatus() || hasContextHints()}>
                           {sectionSeparator()}
@@ -976,7 +937,6 @@ export function RunFooterView(props: RunFooterViewProps) {
         }
       >
         <box
-          id="run-direct-footer-subagent-frame"
           width="100%"
           flexGrow={1}
           flexShrink={1}

@@ -1,6 +1,5 @@
 import { readdir, rm } from "fs/promises"
 import path from "path"
-import { MemoryAudit } from "./audit"
 import { MemoryFs } from "./fs"
 import { MemoryMarkdown } from "./markdown"
 import { MemoryPaths } from "./paths"
@@ -10,19 +9,19 @@ import { MemoryText } from "../text"
 import { MemoryTopics } from "../recall/topics"
 
 export namespace MemoryState {
+  const CLEAN_LIMIT = 128
+  const CLEAN_RETRY_MS = 60_000
+  const cleaned = new Map<string, number>()
   const seed: Record<MemorySchema.Source, string> = {
     "project.md": "# Project Memory\n\n## Facts\n\n## Decisions\n\n## Constraints\n\n## Open Questions\n",
     "environment.md": "# Environment Memory\n\n## Commands\n\n## Paths\n\n## Tooling\n",
     "corrections.md": "# Corrective Memory\n\n## Corrections\n",
   }
 
-  async function recover(root: string, file: string, error: unknown) {
+  async function recover(root: string, file: string) {
     await MemoryFs.backup(file)
     const state = MemorySchema.missing()
     await writeState(root, state)
-    await MemoryAudit.append(root, `recover state.json error=${MemoryFs.brief(error)}`).catch((err: unknown) =>
-      MemoryFs.warn("failed to audit memory state recovery", { err, root }),
-    )
     return state
   }
 
@@ -30,14 +29,14 @@ export namespace MemoryState {
     const file = MemoryPaths.files(root).state
     const data = await MemoryFs.json(file).catch(async (error: unknown) => {
       if (MemoryFs.miss(error)) return undefined
-      if (MemoryFs.parse(error)) return recover(root, file, error)
+      if (MemoryFs.parse(error)) return recover(root, file)
       throw error
     })
     if (data === undefined) return MemorySchema.missing()
     return Promise.resolve()
       .then(() => MemorySchema.parse(data))
       .catch((error: unknown) => {
-        if (MemoryFs.parse(error)) return recover(root, file, error)
+        if (MemoryFs.parse(error)) return recover(root, file)
         throw error
       })
   }
@@ -90,6 +89,38 @@ export namespace MemoryState {
       "version" in data &&
       data.version === 1
     )
+  }
+
+  export async function cleanup(root: string) {
+    const retry = cleaned.get(root)
+    if (retry !== undefined && retry > Date.now()) return false
+    cleaned.delete(root)
+    const owns = await owned(root).catch((error: unknown) => {
+      MemoryFs.warn("failed to inspect legacy memory audit", { error, root })
+      return undefined
+    })
+    if (owns !== true) {
+      if (owns === undefined) cache(root, Date.now() + CLEAN_RETRY_MS)
+      return false
+    }
+    const removed = await MemoryFs.remove(MemoryPaths.files(root).decisions).catch((error: unknown) => {
+      MemoryFs.warn("failed to remove legacy memory audit", { error, root })
+      return undefined
+    })
+    if (removed === undefined) {
+      cache(root, Date.now() + CLEAN_RETRY_MS)
+      return false
+    }
+    cache(root, Number.POSITIVE_INFINITY)
+    return removed
+  }
+
+  function cache(root: string, retry: number) {
+    cleaned.delete(root)
+    cleaned.set(root, retry)
+    if (cleaned.size <= CLEAN_LIMIT) return
+    const key = cleaned.keys().next().value
+    if (typeof key === "string") cleaned.delete(key)
   }
 
   export async function readIndex(root: string) {
@@ -164,7 +195,6 @@ export namespace MemoryState {
       ? { ...(await readState(root)), enabled: true, autoInject: true }
       : { ...MemorySchema.create(), enabled: true }
     await writeState(root, state)
-    await MemoryAudit.append(root, "enable project source=command")
     return state
   }
 
@@ -218,8 +248,9 @@ export namespace MemoryState {
       index: await readIndex(root),
       inventory,
       items: await inspect(root, inventory),
-      changes: await MemoryAudit.readChanges(root),
-      decisions: await MemoryAudit.readDecisions(root),
+      // Retain empty fields for wire compatibility while the legacy audit file is removed.
+      changes: "",
+      decisions: "",
     }
   }
 

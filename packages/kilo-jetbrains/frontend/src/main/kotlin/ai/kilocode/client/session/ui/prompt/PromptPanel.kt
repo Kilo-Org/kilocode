@@ -42,6 +42,7 @@ import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.actionSystem.IdeActions
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
+import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.SpellCheckingEditorCustomizationProvider
 import com.intellij.openapi.editor.colors.CodeInsightColors
 import com.intellij.openapi.editor.colors.TextAttributesKey
@@ -126,11 +127,14 @@ class PromptPanel(
         private val INVALID_KEY = CodeInsightColors.WRONG_REFERENCES_ATTRIBUTES
     }
 
-    val mode = ModePicker()
+    // Prompt-bar pickers blend into the prompt background when idle and only show the standard
+    // hover fill on pointer-over (idleFill = null paints nothing behind the label).
+    val mode = ModePicker().apply { idleFill = null }
     val model = ModelPicker().apply {
         placement = ModelPicker.Placement.ABOVE
+        idleFill = null
     }
-    val reasoning = ReasoningPicker()
+    val reasoning = ReasoningPicker().apply { idleFill = null }
     var onReset: () -> Unit = {}
     var onChange: () -> Unit = {}
     var onAutoApproveToggle: (Boolean) -> Unit = {}
@@ -212,7 +216,7 @@ class PromptPanel(
         isFocusPainted = false
         addActionListener {
             syncTooltip()
-            val id = if (busy) StopSessionAction.ID else SendPromptAction.ID
+            val id = if (busy && !hasDraft()) StopSessionAction.ID else SendPromptAction.ID
             val action = ActionManager.getInstance().getAction(id)
                 ?: return@addActionListener
             val ctx = DataManager.getInstance().getDataContext(button)
@@ -256,9 +260,10 @@ class PromptPanel(
     private var ready = false
     private var enhancing = false
     private var request = 0L
+    private var deferred = false
 
     override val isSendEnabled: Boolean
-        get() = ready && !busy && !submitting && (text().isNotEmpty() || attachments.isNotEmpty())
+        get() = ready && !submitting && (text().isNotEmpty() || attachments.isNotEmpty())
 
     override val isStopEnabled: Boolean
         get() = busy
@@ -270,10 +275,21 @@ class PromptPanel(
         editor.addDocumentListener(object : DocumentListener {
             override fun documentChanged(e: DocumentEvent) {
                 invalidateEnhancement()
+                if (e.document.isInBulkUpdate) {
+                    deferEditorSync()
+                    syncButton()
+                    onChange()
+                    return
+                }
                 syncEditorHeight()
                 triggerCompletion(e)
                 syncHighlights()
+                syncButton()
                 onChange()
+            }
+
+            override fun bulkUpdateFinished(document: Document) {
+                deferEditorSync()
             }
         })
         shell.add(strip, BorderLayout.NORTH)
@@ -398,7 +414,7 @@ class PromptPanel(
     @RequiresEdt
     private fun chrome(ed: EditorEx) {
         if (ed.isDisposed) return
-        style.applyPromptToEditor(ed)
+        style.applyPromptToEditor(ed, SessionUiStyle.View.Prompt.bgColor(style))
         if (ed.isDisposed) return
     }
 
@@ -418,7 +434,7 @@ class PromptPanel(
     fun setBusy(value: Boolean) {
         busy = value
         if (value) invalidateEnhancement() else syncEnhance()
-        button.icon = if (value) STOP_ICON else SEND_ICON
+        syncButton()
         syncTooltip()
     }
 
@@ -484,11 +500,12 @@ class PromptPanel(
     @RequiresEdt
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
-        background = style.editorScheme.defaultBackground
-        shell.background = style.editorScheme.defaultBackground
+        val bg = SessionUiStyle.View.Prompt.bgColor(style)
+        background = bg
+        shell.background = bg
         style.applyTranscriptToField(editor)
         editor.getEditor(false)?.let(::chrome)
-        editor.background = style.editorBackground
+        editor.background = bg
         syncEditorHeight()
         syncAutoApprove()
         syncHighlights()
@@ -508,6 +525,8 @@ class PromptPanel(
         strip.clear()
         syncEditorHeight()
         syncHighlights()
+        syncButton()
+        syncTooltip()
     }
 
     @RequiresEdt
@@ -629,6 +648,11 @@ class PromptPanel(
     }
 
     @RequiresEdt
+    private fun syncButton() {
+        button.icon = if (busy && !hasDraft()) STOP_ICON else SEND_ICON
+    }
+
+    @RequiresEdt
     private fun submit(src: String) {
         if (!isSendEnabled) return
         val txt = text()
@@ -718,7 +742,7 @@ class PromptPanel(
 
     @RequiresEdt
     private fun addAttachment(item: PromptAttachment) {
-        if (!attachment && PromptAttachmentExtractor.media(item.mime)) {
+        if (!attachment && !item.reference && PromptAttachmentExtractor.image(item.mime)) {
             LOG.debug { "kind=prompt-attachment add name=${item.name} mime=${item.mime} blocked=unsupported-model" }
             notify(KiloBundle.message("prompt.attachment.unsupported.model"))
             return
@@ -731,6 +755,8 @@ class PromptPanel(
         strip.add(item)
         LOG.debug { "kind=prompt-attachment add name=${item.name} mime=${item.mime} count=${attachments.size}" }
         syncEditorHeight()
+        syncButton()
+        syncTooltip()
         onChange()
     }
 
@@ -739,6 +765,8 @@ class PromptPanel(
         if (!attachments.removeIf { it.id == item.id }) return
         strip.remove(item)
         syncEditorHeight()
+        syncButton()
+        syncTooltip()
         onChange()
     }
 
@@ -801,7 +829,15 @@ class PromptPanel(
                 val items = PromptAttachmentExtractor.files(list) + listOfNotNull(image)
                 val ms = elapsedMs(start)
                 LOG.debug { "kind=$kind extract area=$area files=${list.size} image=${image != null} attachments=${items.size} extractMs=$ms sourceMs=$sourceMs" }
-                if (items.isEmpty()) return@executeOnPooledThread
+                if (items.isEmpty()) {
+                    if (list.isNotEmpty()) {
+                        ApplicationManager.getApplication().invokeLater {
+                            if (project.isDisposed) return@invokeLater
+                            notify(KiloBundle.message("prompt.attachment.drop.empty"))
+                        }
+                    }
+                    return@executeOnPooledThread
+                }
                 ApplicationManager.getApplication().invokeLater {
                     if (project.isDisposed) return@invokeLater
                     LOG.debug { "kind=$kind attach area=$area files=${list.size} image=${image != null} attachments=${items.size} extractMs=$ms sourceMs=$sourceMs" }
@@ -815,7 +851,9 @@ class PromptPanel(
 
     private fun dropFiles(event: DnDEvent): List<java.io.File> {
         if (!FileCopyPasteUtil.isFileListFlavorAvailable(event)) return emptyList()
-        return FileCopyPasteUtil.getFileListFromAttachedObject(event.attachedObject).orEmpty()
+        val files = FileCopyPasteUtil.getFileListFromAttachedObject(event.attachedObject)
+        if (files.isNotEmpty()) return files
+        return FileCopyPasteUtil.getFileList(event).orEmpty()
     }
 
     private fun elapsedMs(start: Long) = (System.nanoTime() - start) / 1_000_000
@@ -885,19 +923,20 @@ class PromptPanel(
     }
 
     private fun tooltip(): String {
-        val id = if (busy) StopSessionAction.ID else SendPromptAction.ID
-        val text = if (busy) {
+        val stop = busy && !hasDraft()
+        val id = if (stop) StopSessionAction.ID else SendPromptAction.ID
+        val text = if (stop) {
             KiloBundle.message("prompt.button.stop")
         } else {
             KiloBundle.message("prompt.button.send")
         }
         val tip = KeymapUtil.createTooltipText(text, id)
-        if (busy) return tip
-        val stop = KeymapUtil.getFirstKeyboardShortcutText(StopSessionAction.ID)
-        if (stop.isEmpty()) return tip
+        if (stop) return tip
+        val shortcut = KeymapUtil.getFirstKeyboardShortcutText(StopSessionAction.ID)
+        if (shortcut.isEmpty()) return tip
         return XmlStringUtil.wrapInHtml(
             XmlStringUtil.escapeString(tip) + "<br>" +
-                XmlStringUtil.escapeString(KiloBundle.message("prompt.button.send.tooltip.stop", stop))
+                XmlStringUtil.escapeString(KiloBundle.message("prompt.button.send.tooltip.stop", shortcut))
         )
     }
 
@@ -914,6 +953,10 @@ class PromptPanel(
 
     @RequiresEdt
     private fun syncEditorHeight() {
+        if (editor.document.isInBulkUpdate) {
+            deferEditorSync()
+            return
+        }
         val before = editor.preferredSize.height
         val lower = editor.minimumSize.height
         editor.setPreferredSize(null)
@@ -943,6 +986,19 @@ class PromptPanel(
         editor.minimumSize = Dimension(0, height)
         revalidate()
         repaint()
+    }
+
+    @RequiresEdt
+    private fun deferEditorSync() {
+        if (deferred) return
+        deferred = true
+        ApplicationManager.getApplication().invokeLater {
+            deferred = false
+            if (project.isDisposed || editor.document.isInBulkUpdate) return@invokeLater
+            syncEditorHeight()
+            syncHighlights()
+            syncButton()
+        }
     }
 
     @RequiresEdt

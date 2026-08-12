@@ -59,6 +59,7 @@ const SessionSchema = Schema.Struct({
       partID: Schema.optional(Schema.String),
       snapshot: Schema.optional(Schema.String),
       diff: Schema.optional(Schema.String),
+      workspace: Schema.optional(Schema.Literals(["restored", "snapshots-disabled", "unavailable"])),
     }),
   ),
   permission: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
@@ -216,13 +217,6 @@ export const SessionImportPaths = {
   session: `${root}/session`,
   message: `${root}/message`,
   part: `${root}/part`,
-} as const
-
-export const SessionImportPayloads = {
-  Project: ProjectSchema,
-  Session: SessionSchema,
-  Message: MessageSchema,
-  Part: PartSchema,
 } as const
 
 export const SessionImportApi = HttpApi.make("session-import")

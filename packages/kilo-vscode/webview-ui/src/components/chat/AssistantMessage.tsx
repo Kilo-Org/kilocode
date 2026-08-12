@@ -7,11 +7,16 @@
  * Active questions render inline via QuestionDock; permissions are in the bottom dock.
  */
 
-import { Component, For, Show, createMemo } from "solid-js"
+import { Component, For, Show, createMemo, type JSX } from "solid-js"
 import { Dynamic } from "solid-js/web"
-import { Part, PART_MAPPING, ToolRegistry } from "@kilocode/kilo-ui/message-part"
+import {
+  Part,
+  PART_MAPPING,
+  ToolRegistry,
+  ToolApprovalProvider,
+  resolveToolApproval,
+} from "@kilocode/kilo-ui/message-part"
 import type { MessageFeedbackControls } from "@kilocode/kilo-ui/message-part"
-import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type {
   AssistantMessage as SDKAssistantMessage,
   Part as SDKPart,
@@ -23,14 +28,14 @@ import { useSession } from "../../context/session"
 import { useDisplay } from "../../context/display"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
-import { useMemory } from "../../context/memory"
 import { useServer } from "../../context/server"
 import { planDisplayPath } from "../../utils/plan-path"
 import { isRenderable, UPSTREAM_SUPPRESSED_TOOLS } from "../../utils/transcript-parts"
-import { MemoryMarkerMeta } from "@kilocode/kilo-memory/marker-meta"
+import { messageThroughput, formatTG } from "../../context/session-utils"
 import { color as timelineColor } from "../../utils/timeline/colors"
 import type { Part as TimelinePart } from "../../types/messages"
 import type { TimelineHighlight } from "../../utils/timeline/highlight"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { QuestionDock } from "./QuestionDock"
 import { SuggestBar } from "./SuggestBar"
 import { toolDefaultOpen } from "./tool-default-open"
@@ -117,27 +122,28 @@ type ToolStateProps = {
   status?: string
 }
 
-type MemoryItem = MemoryMarkerMeta.Decoded
-
 function TodoToolCard(props: { part: ToolPart; forceOpen?: boolean }) {
   const render = ToolRegistry.render(props.part.tool)
   const state = () => props.part.state as ToolStateProps
+  const language = useLanguage()
   return (
     <Show when={render}>
       {(renderFn) => (
-        <Dynamic
-          component={renderFn()}
-          input={state()?.input ?? {}}
-          metadata={state()?.metadata ?? {}}
-          tool={props.part.tool}
-          partID={props.part.id}
-          callID={props.part.callID}
-          output={state()?.output}
-          status={state()?.status}
-          defaultOpen
-          forceOpen={props.forceOpen}
-          reveal={false}
-        />
+        <ToolApprovalProvider value={() => resolveToolApproval(state()?.metadata, language.t)}>
+          <Dynamic
+            component={renderFn()}
+            input={state()?.input ?? {}}
+            metadata={state()?.metadata ?? {}}
+            tool={props.part.tool}
+            partID={props.part.id}
+            callID={props.part.callID}
+            output={state()?.output}
+            status={state()?.status}
+            defaultOpen
+            forceOpen={props.forceOpen}
+            reveal={false}
+          />
+        </ToolApprovalProvider>
       )}
     </Show>
   )
@@ -146,26 +152,59 @@ function TodoToolCard(props: { part: ToolPart; forceOpen?: boolean }) {
 function BashToolCard(props: { part: ToolPart; defaultOpen: boolean; forceOpen?: boolean }) {
   const render = ToolRegistry.render(props.part.tool)
   const state = () => props.part.state as ToolStateProps
+  const language = useLanguage()
   return (
     <Show when={render}>
       {(card) => (
-        <Dynamic
-          component={card() as unknown as Component<Record<string, unknown>>}
-          input={state()?.input ?? {}}
-          metadata={state()?.metadata ?? {}}
-          partMetadata={props.part.metadata ?? {}}
-          tool={props.part.tool}
-          partID={props.part.id}
-          callID={props.part.callID}
-          output={state()?.output}
-          status={state()?.status}
-          defaultOpen={props.defaultOpen}
-          forceOpen={props.forceOpen}
-          animate
-          reveal={state()?.status === "pending" || state()?.status === "running"}
-        />
+        <ToolApprovalProvider value={() => resolveToolApproval(state()?.metadata, language.t)}>
+          <Dynamic
+            component={card() as unknown as Component<Record<string, unknown>>}
+            input={state()?.input ?? {}}
+            metadata={state()?.metadata ?? {}}
+            partMetadata={props.part.metadata ?? {}}
+            tool={props.part.tool}
+            partID={props.part.id}
+            callID={props.part.callID}
+            output={state()?.output}
+            status={state()?.status}
+            defaultOpen={props.defaultOpen}
+            forceOpen={props.forceOpen}
+            animate
+            reveal={state()?.status === "pending" || state()?.status === "running"}
+          />
+        </ToolApprovalProvider>
       )}
     </Show>
+  )
+}
+
+/** Plain-text generation-speed value shown beside the copy/feedback buttons
+ * on an assistant message.
+ *
+ * Renders as muted metadata — no icon, no background, no border — so it
+ * reads as tertiary info rather than an interactive control. The
+ * description on hover explains that the value is a weighted generation
+ * rate across the turn's model-generation steps (output + reasoning
+ * tokens over active generation time).
+ *
+ * Visibility is gated by the same `kilo-code.new.showTokenThroughput`
+ * toggle that previously controlled the multi-row badge. The metric only
+ * renders when the message has at least one step-finish part carrying both
+ * a token count and elapsed timing.
+ */
+function ThroughputBadge(props: { metrics: { generation?: number } }) {
+  const language = useLanguage()
+  const speedText = createMemo(() => formatTG(props.metrics.generation, language.locale()))
+  const tooltip = createMemo(() => {
+    if (props.metrics.generation === undefined) {
+      return language.t("chat.throughput.tooltip.missing")
+    }
+    return language.t("chat.throughput.tooltip", { speed: speedText() })
+  })
+  return (
+    <Tooltip value={tooltip()} placement="top">
+      <span data-component="assistant-throughput">{speedText()}</span>
+    </Tooltip>
   )
 }
 
@@ -173,11 +212,15 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   const data = useData()
   const session = useSession()
   const display = useDisplay()
-  const mem = useMemory()
   const language = useLanguage()
   const { config } = useConfig()
   const open = createMemo(() => config().terminal_command_display !== "collapsed")
   const edit = createMemo(() => config().code_edit_display === "expanded")
+
+  // Throughput toggle lives on the shared DisplayProvider so every
+  // AssistantMessage renders against the same signal without posting its
+  // own requestThroughputSetting round-trip on mount.
+  const throughputVisible = createMemo(() => display.throughputVisible())
 
   const parts = createMemo(() => {
     const stored = props.parts ?? data.store.part?.[props.message.id]
@@ -189,33 +232,20 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
       return !!matchToolRequest(part, "question", session.questions())
     })
   })
-  const meta = createMemo(() =>
-    MemoryMarkerMeta.fromParts((props.parts ?? data.store.part?.[props.message.id] ?? []) as MemoryMarkerMeta.Part[]),
+  // Pull the weighted generation rate across the turn's step-finish parts
+  // (output + reasoning tokens over active generation duration) so the badge
+  // represents the turn as a whole rather than whichever step happened to
+  // finish most recently. We intentionally read from the full message parts
+  // in the data store rather than `props.parts` — the parent chunks
+  // messages into rows of ~8 parts, and step-finish may land in a row
+  // different from the one currently rendered.
+  const throughput = createMemo(() =>
+    messageThroughput(
+      (data.store.part?.[props.message.id] as TimelinePart[] | undefined) ??
+        (props.parts as TimelinePart[] | undefined) ??
+        ([] as TimelinePart[]),
+    ),
   )
-  const recall = createMemo(() => {
-    const item = meta()
-    if (item?.type === "recall") return item
-  })
-  const fmt = (value: number) => value.toLocaleString(language.locale())
-  const count = (item: MemoryItem) => fmt(item.count)
-  const items = (item: MemoryItem) => item.items ?? []
-  const verbose = createMemo(() => Boolean(mem.status()?.state.verbose))
-  const tip = (item: MemoryItem) => {
-    const values = MemoryMarkerMeta.snippets(item, verbose())
-    return (
-      <div style={{ "text-align": "left", "white-space": "normal", "max-width": "280px" }}>
-        <Show
-          when={values.length > 0}
-          fallback={
-            <div>{`${language.t("chat.memory.badge.recalled")} · ${language.t("chat.memory.badge.items", { count: count(item) })}`}</div>
-          }
-        >
-          <For each={values}>{(value) => <div>{value}</div>}</For>
-        </Show>
-      </div>
-    )
-  }
-
   return (
     <>
       <For each={parts()}>
@@ -248,6 +278,18 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
           const highlighted = createMemo(() => {
             const h = props.highlight?.()
             return h?.msgId === props.message.id && h?.partId === part.id
+          })
+
+          // Throughput badge renders inside the copy/feedback action row of the
+          // text part that carries the copy button (the last text part of the
+          // message), pushed to the right of the buttons rather than below the
+          // message. Only built for that part so non-text parts skip the work.
+          const throughputEl = createMemo<JSX.Element | undefined>(() => {
+            if (!throughputVisible()) return undefined
+            const metrics = throughput()
+            if (!metrics) return undefined
+            if (part.id !== props.showAssistantCopyPartID) return undefined
+            return <ThroughputBadge metrics={metrics} />
           })
 
           return (
@@ -294,6 +336,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                                       forceOpenFile={forceOpen() ? props.forceOpenFile : undefined}
                                       reasoningAutoCollapse={display.reasoningAutoCollapse()}
                                       feedback={props.feedback}
+                                      throughput={throughputEl()}
                                       animate={
                                         part.type === "tool" &&
                                         ((part as unknown as ToolPart).state?.status === "pending" ||
@@ -331,17 +374,6 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
           )
         }}
       </For>
-      <Show when={mem.enabled() && recall()}>
-        {(item) => (
-          <Tooltip value={tip(item())} placement="top">
-            <div data-component="assistant-memory-badge">
-              {language.t("chat.memory.badge.recalled")} ·{" "}
-              {language.t("chat.memory.badge.items", { count: count(item()) })}
-              <Show when={verbose() && items(item()).length > 0}> · {items(item())[0]}</Show>
-            </div>
-          </Tooltip>
-        )}
-      </Show>
     </>
   )
 }

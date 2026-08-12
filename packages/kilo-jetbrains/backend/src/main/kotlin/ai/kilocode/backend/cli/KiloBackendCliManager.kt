@@ -126,14 +126,18 @@ class KiloBackendCliManager(
     private suspend fun resolveCli(onProgress: (CliDownload) -> Unit): File {
         val force = forceExtract
         forceExtract = false
-        if (!KiloProps.pinned()) {
-            if (force) log.info("Force re-extracting local repo CLI ${KiloProps.cliVersion()}")
+        val version = KiloProps.cliVersion()
+        val platform = KiloCliPlatform.current()
+        if (KiloRepoCli.available()) {
+            if (force) log.info("Force re-extracting bundled CLI $version")
+            log.info("Kilo CLI mode: BUNDLED — using CLI $version ($platform) shipped in the plugin; no download needed")
             val cli = KiloRepoCli.extract(force)
-            onProgress(CliDownload(100, KiloProps.cliVersion(), KiloCliPlatform.current()))
+            onProgress(CliDownload(100, version, platform))
             return cli
         }
-        if (force) log.info("Force re-downloading CLI ${KiloProps.cliVersion()}")
-        return KiloCliDownloader(log = log).resolve(KiloProps.cliVersion(), force, onProgress)
+        if (force) log.info("Force re-downloading CLI $version")
+        log.info("Kilo CLI mode: DOWNLOAD — resolving CLI $version ($platform) from the GitHub release")
+        return KiloCliDownloader(log = log).resolve(version, force, onProgress)
     }
 
     // Must be called from a background thread — devStorageEnv() performs blocking I/O (mkdirs).
@@ -581,7 +585,7 @@ internal suspend fun awaitReady(
     }
 }
 
-private const val DEFAULT_CONFIG = """{"permission":{"edit":"ask","bash":"ask"}}"""
+private const val DEFAULT_CONFIG = """{"permission":{"edit":"ask"}}"""
 
 // Must be called from a background thread — devStorageEnv() performs blocking I/O (mkdirs).
 internal fun buildKiloCliEnv(

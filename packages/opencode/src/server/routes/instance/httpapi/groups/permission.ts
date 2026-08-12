@@ -12,6 +12,7 @@ const root = "/permission"
 const ReplyPayload = Schema.Struct({
   reply: PermissionV1.Reply,
   message: Schema.optional(Schema.String),
+  interactive: Schema.optional(Schema.Boolean), // kilocode_change - human-answered flag; gates skill-shell approvals
 })
 
 // kilocode_change start

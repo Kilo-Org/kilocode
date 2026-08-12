@@ -3,7 +3,10 @@ import { createRoot } from "solid-js"
 import { useSlashCommand } from "../../webview-ui/src/hooks/useSlashCommand"
 import type { ExtensionMessage, WebviewMessage } from "../../webview-ui/src/types/messages"
 
-function setup(sandbox: () => void, options: { enabled?: () => boolean; exclude?: () => Set<string> } = {}) {
+function setup(
+  sandbox: () => void,
+  options: { enabled?: () => boolean; exclude?: () => Set<string>; include?: Set<string> } = {},
+) {
   const sent: WebviewMessage[] = []
   const handlers = new Set<(message: ExtensionMessage) => void>()
   const root = createRoot((dispose) => ({
@@ -18,6 +21,7 @@ function setup(sandbox: () => void, options: { enabled?: () => boolean; exclude?
       },
       { action: sandbox, enabled: options.enabled ?? (() => true) },
       options.exclude,
+      options.include,
     ),
   }))
   const fire = (message: ExtensionMessage) => {
@@ -27,6 +31,103 @@ function setup(sandbox: () => void, options: { enabled?: () => boolean; exclude?
 }
 
 describe("useSlashCommand sandbox action", () => {
+  it("supports the singular model alias", () => {
+    const ctx = setup(() => {})
+
+    ctx.slash.onInput("/model", 6)
+
+    expect(ctx.slash.results()[0]).toEqual(expect.objectContaining({ name: "models", hints: ["model"] }))
+    ctx.dispose()
+  })
+
+  it("can restrict the menu to worktree configuration commands", () => {
+    const ctx = setup(() => {}, { include: new Set(["models", "agents", "variant", "sandbox"]) })
+
+    ctx.fire({
+      type: "commandsLoaded",
+      commands: [
+        { name: "merge", description: "Merge changes", hints: [] },
+        { name: "models", description: "Server model command", hints: [] },
+      ],
+    })
+    ctx.slash.onInput("/merge", 6)
+    expect(ctx.slash.results()).toEqual([])
+
+    ctx.slash.onInput("/models", 7)
+    expect(ctx.slash.results().map((command) => command.name)).toEqual(["models"])
+    ctx.dispose()
+  })
+
+  it("opens project memory actions from the top-level command", () => {
+    const ctx = setup(() => {})
+    const state = { text: "/memory" }
+    const textarea = {
+      value: state.text,
+      setSelectionRange: () => {},
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+
+    ctx.slash.onInput("/mem", 4)
+
+    expect(ctx.slash.results()).toContainEqual(
+      expect.objectContaining({ name: "memory", description: "Manage project memory", hints: ["mem"] }),
+    )
+    ctx.slash.select(ctx.slash.results()[0]!, textarea, (text) => (state.text = text))
+    expect(state.text).toBe("/memory ")
+    expect(ctx.slash.results().map((command) => command.name)).toContain("memory inspect")
+    ctx.dispose()
+  })
+
+  it("offers memory actions after the parent command", () => {
+    const ctx = setup(() => {})
+
+    ctx.slash.onInput("/memory ", 8)
+
+    expect(ctx.slash.results().map((command) => command.name)).toEqual([
+      "memory status",
+      "memory show",
+      "memory on",
+      "memory off",
+      "memory inspect",
+      "memory rebuild",
+      "memory remember",
+      "memory correct",
+      "memory forget",
+      "memory auto on",
+      "memory auto off",
+      "memory purge confirm",
+    ])
+    ctx.dispose()
+  })
+
+  it("keeps nested memory actions out of root hint matching", () => {
+    const ctx = setup(() => {})
+    const nested = ctx.slash.commands().filter((command) => command.name.startsWith("memory "))
+
+    expect(nested.length).toBeGreaterThan(0)
+    expect(nested.every((command) => command.hints.length === 0)).toBe(true)
+    ctx.dispose()
+  })
+
+  it("completes nested memory actions and closes for free text", () => {
+    const ctx = setup(() => {})
+    const state = { text: "/mem rem" }
+    const textarea = {
+      value: state.text,
+      setSelectionRange: () => {},
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+
+    ctx.slash.onInput(state.text, state.text.length)
+    expect(ctx.slash.results().map((command) => command.name)).toEqual(["memory remember"])
+    ctx.slash.select(ctx.slash.results()[0]!, textarea, (text) => (state.text = text))
+    expect(state.text).toBe("/memory remember ")
+
+    ctx.slash.onInput("/memory remember durable fact", 31)
+    expect(ctx.slash.show()).toBe(false)
+    ctx.dispose()
+  })
+
   it("runs the sandbox toggle as a client command", () => {
     const state = { toggles: 0, text: "/sandbox", prevented: 0 }
     const ctx = setup(() => state.toggles++)
@@ -85,6 +186,78 @@ describe("useSlashCommand sandbox action", () => {
     state.hidden = false
     expect(ctx.slash.results().map((command) => command.name)).toEqual(["sandbox"])
     expect(ctx.slash.results()[0]?.description).toBe("Toggle sandbox")
+    ctx.dispose()
+  })
+
+  it("opens review options from the top-level command", () => {
+    const ctx = setup(() => {})
+    const state = { text: "/review" }
+    const textarea = {
+      value: state.text,
+      setSelectionRange: () => {},
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+
+    ctx.slash.onInput("/rev", 4)
+
+    expect(ctx.slash.results()).toContainEqual(
+      expect.objectContaining({ name: "review", description: expect.stringContaining("Review code changes") }),
+    )
+    ctx.slash.select(ctx.slash.results().find((c) => c.name === "review")!, textarea, (text) => (state.text = text))
+    expect(state.text).toBe("/review ")
+    expect(ctx.slash.results().map((command) => command.name)).toEqual([
+      "review uncommitted",
+      "review staged",
+      "review unpushed",
+      "review branch",
+      "review quick",
+    ])
+    ctx.dispose()
+  })
+
+  it("completes nested review actions and closes for free text", () => {
+    const ctx = setup(() => {})
+    const state = { text: "/review unp" }
+    const textarea = {
+      value: state.text,
+      setSelectionRange: () => {},
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+
+    ctx.slash.onInput(state.text, state.text.length)
+    expect(ctx.slash.results().map((command) => command.name)).toEqual(["review unpushed"])
+    ctx.slash.select(ctx.slash.results()[0]!, textarea, (text) => (state.text = text))
+    expect(state.text).toBe("/review unpushed ")
+
+    ctx.slash.onInput("/review focus on auth", 20)
+    expect(ctx.slash.show()).toBe(false)
+    ctx.dispose()
+  })
+
+  it("preserves model, agent, and variant metadata on loaded server commands", () => {
+    const ctx = setup(() => {})
+
+    ctx.fire({
+      type: "commandsLoaded",
+      commands: [
+        {
+          name: "ship",
+          description: "Ship PR",
+          agent: "code",
+          model: "openai/gpt-5.6-luna-fast",
+          variant: "xhigh",
+          hints: ["deploy"],
+        },
+      ],
+    })
+
+    ctx.slash.onInput("/ship", 5)
+    const matches = ctx.slash.results()
+    expect(matches).toHaveLength(1)
+    expect(matches[0]?.name).toBe("ship")
+    expect(matches[0]?.agent).toBe("code")
+    expect(matches[0]?.model).toBe("openai/gpt-5.6-luna-fast")
+    expect(matches[0]?.variant).toBe("xhigh")
     ctx.dispose()
   })
 })

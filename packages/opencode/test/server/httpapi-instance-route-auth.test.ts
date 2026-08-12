@@ -14,10 +14,15 @@ function app(input: { password?: string; username?: string }) {
     HttpApiApp.routes.pipe(
       Layer.provide(
         ConfigProvider.layer(
+          // kilocode_change start - keep the filewatcher-disable flag visible so the
+          // @parcel/watcher Windows backend does not subscribe on temp dirs that
+          // the tmpdir fixture deletes mid-test (throws "Invalid handle").
           ConfigProvider.fromUnknown({
             KILO_SERVER_PASSWORD: input.password,
             KILO_SERVER_USERNAME: input.username,
+            KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: process.env.KILO_EXPERIMENTAL_DISABLE_FILEWATCHER ?? "true",
           }),
+          // kilocode_change end
         ),
       ),
     ),

@@ -10,7 +10,6 @@ body.vscode-high-contrast-light {
   .scroll-to-bottom-button,
   .feedback-button,
   .startup-error-retry,
-  .kilo-notifications-nav-btn,
   .image-attachment-remove,
   .prompt-review-chip-remove,
   .session-tab-bar .am-tab-close,
@@ -109,8 +108,7 @@ body.vscode-high-contrast-light {
   /* Focus states */
   .scroll-to-bottom-button:focus-visible,
   .feedback-button:focus-visible,
-  .recent-session-item:focus-visible,
-  .kilo-notifications-nav-btn:focus-visible {
+  .recent-session-item:focus-visible {
     outline: 1px solid var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
     outline-offset: -1px;
   }

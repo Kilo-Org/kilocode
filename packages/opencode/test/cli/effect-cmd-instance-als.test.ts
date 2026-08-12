@@ -1,4 +1,5 @@
 import { afterEach, expect } from "bun:test"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Effect } from "effect"
 import { effectCmd } from "../../src/cli/effect-cmd"
@@ -8,7 +9,7 @@ import { Instance } from "../../src/kilocode/instance"
 import { disposeAllInstances, TestInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
-const it = testEffect(FSUtil.defaultLayer)
+const it = testEffect(LayerNode.compile(FSUtil.node))
 
 afterEach(async () => {
   await disposeAllInstances()

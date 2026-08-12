@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import { Database as SQLite } from "bun:sqlite"
 import { SqliteClient } from "@effect/sql-sqlite-bun"
 import { EffectDrizzleSqlite } from "@opencode-ai/effect-drizzle-sqlite"
 import { DatabaseMigration } from "@opencode-ai/core/database/migration"
@@ -11,6 +12,8 @@ import path from "path"
 import { tmpdir } from "../fixture/tmpdir"
 import { SessionHistory } from "@opencode-ai/core/session/history"
 import { SessionV2 } from "@opencode-ai/core/session"
+import { ensure } from "@opencode-ai/core/kilocode/database-compat"
+import { Database } from "@opencode-ai/core/database/database"
 
 const make = EffectDrizzleSqlite.makeWithDefaults()
 const run = <A, E>(effect: Effect.Effect<A, E, SqlClientService>) =>
@@ -43,18 +46,30 @@ describe("database migration compatibility", () => {
         )
 
         yield* DatabaseMigration.applyOnly(db, migrations.slice(split))
+        yield* ensure(db)
 
         // This is the projection shape written by the CLI bundled with VS Code v7.4.7.
         yield* db.run(
           sql`INSERT INTO session_message (id, session_id, type, time_created, time_updated, data) VALUES ('message', 'ses_session', 'user', 1, 1, '{}')`,
         )
         yield* db.run(sql`UPDATE session_message SET data = '{"text":"updated"}' WHERE id = 'message'`)
+        yield* db.run(
+          sql`INSERT INTO session_context_epoch (session_id, baseline, agent, snapshot, baseline_seq, revision) VALUES ('ses_session', 'baseline', 'build', '{}', 0, 0)`,
+        )
+        yield* db.run(
+          sql`UPDATE session_context_epoch SET replacement_seq = 4, revision = revision + 1 WHERE session_id = 'ses_session'`,
+        )
 
         expect(yield* db.get(sql`SELECT id, seq, data FROM session_message WHERE id = 'message'`)).toEqual({
           id: "message",
           seq: null,
           data: '{"text":"updated"}',
         })
+        expect(
+          yield* db.get(
+            sql`SELECT agent, replacement_seq AS replacementSeq, revision FROM session_context_epoch WHERE session_id = 'ses_session'`,
+          ),
+        ).toEqual({ agent: "build", replacementSeq: 4, revision: 1 })
         yield* db.run(
           sql`INSERT INTO session_message (id, session_id, type, seq, time_created, time_updated, data) VALUES ('msg_sequenced', 'ses_session', 'user', 1, 2, 2, '{"text":"current","files":[],"agents":[],"time":{"created":2}}')`,
         )
@@ -116,6 +131,53 @@ describe("database migration compatibility", () => {
         expect(yield* db.get(sql`SELECT id FROM message WHERE id = 'legacy-message'`)).toEqual({ id: "legacy-message" })
         expect(yield* db.get(sql`SELECT id FROM part WHERE id = 'legacy-part'`)).toEqual({ id: "legacy-part" })
       }),
+    )
+  })
+
+  test("keeps released context epoch writes compatible on fresh current databases", async () => {
+    await using tmp = await tmpdir()
+    const filename = path.join(tmp.path, "kilo.db")
+    await Effect.runPromise(
+      Database.Service.use((service) =>
+        Effect.gen(function* () {
+          const db = service.db
+          yield* ensure(db)
+          yield* db.run(
+            sql`INSERT INTO project (id, worktree, time_created, time_updated, sandboxes) VALUES ('project', '/repo', 1, 1, '[]')`,
+          )
+          yield* db.run(
+            sql`INSERT INTO session (id, project_id, slug, directory, title, version, time_created, time_updated) VALUES ('session', 'project', 'session', '/repo', 'Session', '7.4.7', 1, 1)`,
+          )
+          yield* db.run(
+            sql`INSERT INTO session_context_epoch (session_id, baseline, agent, snapshot, baseline_seq, revision) VALUES ('session', 'baseline', 'build', '{}', 0, 0)`,
+          )
+          yield* db.run(
+            sql`UPDATE session_context_epoch SET replacement_seq = 4, revision = revision + 1 WHERE session_id = 'session'`,
+          )
+
+          expect(
+            yield* db.get(
+              sql`SELECT agent, replacement_seq AS replacementSeq, revision FROM session_context_epoch WHERE session_id = 'session'`,
+            ),
+          ).toEqual({ agent: "build", replacementSeq: 4, revision: 1 })
+
+          yield* db.run("PRAGMA busy_timeout = 0")
+          yield* Effect.acquireUseRelease(
+            Effect.sync(() => {
+              const holder = new SQLite(filename)
+              holder.run("PRAGMA busy_timeout = 0")
+              holder.run("BEGIN IMMEDIATE")
+              return holder
+            }),
+            () => ensure(db),
+            (holder) =>
+              Effect.sync(() => {
+                if (holder.inTransaction) holder.run("ROLLBACK")
+                holder.close()
+              }),
+          )
+        }),
+      ).pipe(Effect.provide(Database.layerFromPath(filename)), Effect.scoped),
     )
   })
 
@@ -181,5 +243,75 @@ describe("database migration compatibility", () => {
         expect(yield* db.all(sql`SELECT id FROM session_message`)).toEqual([])
       }).pipe(Effect.provide(SqliteClient.layer({ filename })), Effect.scoped),
     )
+  })
+
+  test("skips a migration another writer recorded after the completed snapshot", async () => {
+    await run(
+      Effect.gen(function* () {
+        const db = yield* make
+        yield* db.run(sql`CREATE TABLE session (id text PRIMARY KEY)`)
+        // stands in for a second kilo process committing the later migration's journal row
+        // while this process is already partway through applyOnly
+        const first = {
+          id: "20260622170816_first",
+          up: (tx) =>
+            tx.run(
+              sql`INSERT INTO ${sql.identifier("migration")} (id, time_completed) VALUES ('20260622202450_second', 1)`,
+            ),
+        } satisfies DatabaseMigration.Migration
+        const second = {
+          id: "20260622202450_second",
+          up: (tx) => tx.run(sql`CREATE TABLE replayed (id text)`),
+        } satisfies DatabaseMigration.Migration
+
+        yield* DatabaseMigration.applyOnly(db, [first, second])
+
+        // the already-recorded migration must be skipped, not replayed
+        expect(
+          yield* db.get(sql`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'replayed'`),
+        ).toBeUndefined()
+        expect(
+          (yield* db.all<{ id: string }>(sql`SELECT id FROM migration ORDER BY id`)).map((row) => row.id),
+        ).toEqual(["20260622170816_first", "20260622202450_second"])
+      }),
+    )
+  })
+
+  test("holds the write lock before re-checking the migration journal", async () => {
+    await using tmp = await tmpdir()
+    const filename = path.join(tmp.path, "kilo.db")
+    let error: unknown
+    // opens a second, independent connection to the same file from inside the
+    // migration's own transaction: if the write reservation isn't already held
+    // (BEGIN IMMEDIATE), this insert succeeds instead of being rejected as busy
+    const migration = {
+      id: "20260622210000_lock_pin",
+      up: () =>
+        Effect.sync(() => {
+          const writer = new SQLite(filename)
+          writer.run("PRAGMA busy_timeout = 50")
+          try {
+            writer.run("INSERT INTO migration (id, time_completed) VALUES ('20260622210000_other_writer', 1)")
+          } catch (err) {
+            error = err
+          } finally {
+            writer.close()
+          }
+        }),
+    } satisfies DatabaseMigration.Migration
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const db = yield* make
+        yield* db.run(sql`CREATE TABLE session (id text PRIMARY KEY)`)
+        yield* DatabaseMigration.applyOnly(db, [migration])
+        expect(yield* db.get(sql`SELECT id FROM migration WHERE id = ${migration.id}`)).toEqual({ id: migration.id })
+      }).pipe(Effect.provide(SqliteClient.layer({ filename })), Effect.scoped),
+    )
+
+    // bun:sqlite reports lock contention as a SQLiteError with code SQLITE_BUSY;
+    // asserting on that structured field (rather than any thrown error) ensures
+    // an unrelated failure can't masquerade as the lock being held
+    expect((error as { code?: string } | undefined)?.code).toBe("SQLITE_BUSY")
   })
 })

@@ -1,12 +1,5 @@
 export const dict = {
   // Kilo Gateway provider translations
-  "provider.connect.kiloGateway.line1":
-    "Kilo Gateway gir deg tilgang til et utvalgt sett med pålitelige, optimaliserte modeller for kodingsagenter.",
-  "provider.connect.kiloGateway.line2":
-    "Med én enkelt API-nøkkel får du tilgang til modeller som Claude, GPT, Gemini, GLM og flere.",
-  "provider.connect.kiloGateway.visit.prefix": "Besøk ",
-  "provider.connect.kiloGateway.visit.link": "kilo.ai",
-  "provider.connect.kiloGateway.visit.suffix": " for å hente API-nøkkelen din.",
   "provider.connect.kiloGateway.byok.prefix": "For mer bruksstatistikk, bruk ",
   "provider.connect.kiloGateway.byok.link": "BYOK via Kilo's Gateway",
   "provider.connect.kiloGateway.byok.suffix": ".",
@@ -24,14 +17,9 @@ export const dict = {
   "settings.providers.note.vercel": "Samlet tilgang til AI-modeller med smart ruting",
 
   // Reasoning block label
-  "ui.permission.run": "Kjør",
   "ui.reasoning.label": "Resonnement",
 
   // Marketplace
-  "marketplace.tab.skills": "Skills",
-  "marketplace.tab.mcpServers": "MCP-servere",
-  "marketplace.category.all": "Alle",
-  "marketplace.placeholder": "Skal implementeres",
   "marketplace.card.installed": "Installert",
   "marketplace.card.install": "Installer",
   "marketplace.card.remove": "Fjern",
@@ -73,8 +61,6 @@ export const dict = {
     "Er du sikker på at du vil fjerne denne {{type}}? Dette vil fjerne den fra din {{scope}}-konfigurasjon.",
   "marketplace.remove.cancel": "Avbryt",
   "marketplace.remove.confirm.button": "Fjern",
-  "marketplace.tab.mcp": "MCP",
-  "marketplace.tab.agents": "Agenter",
   "marketplace.search": "Søk...",
   "marketplace.filter.all": "Alle elementer",
   "marketplace.filter.notInstalled": "Ikke installert",
@@ -82,12 +68,10 @@ export const dict = {
   "marketplace.empty": "Ingen elementer funnet",
   "marketplace.empty.relevant": "Ingen relevante marketplace-elementer funnet for dette arbeidsområdet.",
   "marketplace.badge.mcpServer": "MCP-server",
-  "marketplace.badge.mode": "Modus",
   "marketplace.card.by": "av {{author}}",
   "marketplace.install.method": "Installasjonsmetode",
   "marketplace.install.parameters": "Parametere",
   "marketplace.install.optional": "(valgfritt)",
-  "marketplace.install.required": "{{name}} er påkrevd",
   "marketplace.scope.project": "prosjekt",
   "marketplace.scope.global": "global",
   "marketplace.remove.type.mcp": "MCP-server",
@@ -129,8 +113,6 @@ export const dict = {
 
   // Edit-tool header and shell-tool section labels
   "ui.messagePart.openInDiffViewer": "Åpne i diff-visning",
-  "ui.messagePart.shell.command": "Kommando",
-  "ui.messagePart.shell.output": "Utdata",
   "ui.messagePart.openInEditor": "Åpne i editor",
 
   // Message feedback (thumbs up/down per assistant response)

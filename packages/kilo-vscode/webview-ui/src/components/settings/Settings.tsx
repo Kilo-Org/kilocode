@@ -28,6 +28,7 @@ import SandboxingTab from "./SandboxingTab"
 import * as Sandboxing from "./sandboxing"
 import { useServer } from "../../context/server"
 import type { MigrationSource } from "../../types/messages"
+import { configMessage } from "../../utils/open-config"
 
 export interface SettingsProps {
   tab?: string
@@ -66,34 +67,7 @@ const Settings: Component<SettingsProps> = (props) => {
   }
 
   const open = (scope: "local" | "global") => {
-    const label =
-      scope === "global" ? language.t("settings.config.scope.global") : language.t("settings.config.scope.local")
-    vscode.postMessage({
-      type: "openConfigFile",
-      scope,
-      labels: {
-        scope: label,
-        statusLoaded: language.t("settings.config.status.loaded"),
-        statusLoadedLegacy: language.t("settings.config.status.loadedLegacy"),
-        statusNotLoaded: language.t("settings.config.status.notLoaded"),
-        statusCreate: language.t("settings.config.status.create"),
-        title: language.t("settings.config.title", { scope: label }),
-        placeholder: language.t("settings.config.placeholder"),
-        noWorkspace: language.t("settings.config.noWorkspace"),
-        openFailed: language.t("settings.config.openFailed", { scope: label, message: "{{message}}" }),
-        sourceXdg: language.t("settings.config.source.xdg"),
-        sourceHomeKilo: language.t("settings.config.source.homeKilo"),
-        sourceHomeKilocode: language.t("settings.config.source.homeKilocode"),
-        sourceHomeOpencode: language.t("settings.config.source.homeOpencode"),
-        sourceEnvFile: language.t("settings.config.source.envFile"),
-        sourceEnvDir: language.t("settings.config.source.envDir"),
-        sourceEnvContent: language.t("settings.config.source.envContent"),
-        sourceProjectKilo: language.t("settings.config.source.projectKilo"),
-        sourceProjectRoot: language.t("settings.config.source.projectRoot"),
-        sourceProjectKilocode: language.t("settings.config.source.projectKilocode"),
-        sourceProjectOpencode: language.t("settings.config.source.projectOpencode"),
-      },
-    })
+    vscode.postMessage(configMessage(scope, language.t))
   }
 
   // Sync when the parent changes the tab prop (e.g. via navigate message)
@@ -177,9 +151,9 @@ const Settings: Component<SettingsProps> = (props) => {
             <Icon name="checklist" />
             <span class="label">{language.t("settings.autoApprove.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="browser" aria-label={language.t("settings.browser.title")}>
+          <Tabs.Trigger value="browser" aria-label={language.t("settings.webTools.title")}>
             <Icon name="window-cursor" />
-            <span class="label">{language.t("settings.browser.title")}</span>
+            <span class="label">{language.t("settings.webTools.title")}</span>
           </Tabs.Trigger>
           <Tabs.Trigger value="checkpoints" aria-label={language.t("settings.checkpoints.title")}>
             <Icon name="branch" />
@@ -249,7 +223,7 @@ const Settings: Component<SettingsProps> = (props) => {
           <AutoApproveTab />
         </Tabs.Content>
         <Tabs.Content value="browser">
-          <h3>{language.t("settings.browser.title")}</h3>
+          <h3>{language.t("settings.webTools.title")}</h3>
           <BrowserTab />
         </Tabs.Content>
         <Tabs.Content value="checkpoints">

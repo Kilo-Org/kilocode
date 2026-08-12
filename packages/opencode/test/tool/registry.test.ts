@@ -21,6 +21,8 @@ import * as SandboxNetwork from "@/kilocode/sandbox/network" // kilocode_change
 import { run as runSandbox, type Profile } from "@kilocode/sandbox" // kilocode_change
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
+import { MCP } from "@/mcp"
+import type { Tool as MCPToolDef } from "@modelcontextprotocol/sdk/types.js"
 
 const configLayer = TestConfig.layer({
   directories: () => InstanceState.directory.pipe(Effect.map((dir) => [path.join(dir, ".kilo")])), // kilocode_change
@@ -29,6 +31,8 @@ const configLayer = TestConfig.layer({
 type RegistryLayerOptions = {
   flags?: Partial<RuntimeFlags.Info>
   plugin?: Layer.Layer<Plugin.Service>
+  config?: Parameters<typeof TestConfig.layer>[0] // kilocode_change
+  mcp?: Layer.Layer<MCP.Service>
 }
 
 // Fake Plugin.Service that returns a single plugin whose `tool` map contains
@@ -56,20 +60,86 @@ const brokenPluginLayer = Layer.succeed(
 )
 
 const root = LayerNode.group([ToolRegistry.node, Agent.node])
-const registryLayer = (opts: RegistryLayerOptions = {}) =>
-  LayerNode.buildLayer(root, {
-    replacements: [
-      LayerNode.replace(Config.node, configLayer),
-      LayerNode.replace(RuntimeFlags.node, RuntimeFlags.layer(opts.flags ?? {})),
-      ...(opts.plugin ? [LayerNode.replace(Plugin.node, opts.plugin)] : []),
-    ],
-  })
+const registryLayer = (opts: RegistryLayerOptions = {}) => {
+  const replacements = [
+    [Config.node, opts.config ? TestConfig.layer(opts.config) : configLayer], // kilocode_change
+    [RuntimeFlags.node, RuntimeFlags.layer(opts.flags ?? {})],
+  ] as const
+  const extra = [
+    ...(opts.plugin ? ([[Plugin.node, opts.plugin]] as const) : []),
+    ...(opts.mcp ? ([[MCP.node, opts.mcp]] as const) : []),
+  ]
+  return LayerNode.compile(root, [...replacements, ...extra])
+}
 
 const it = testEffect(registryLayer())
 const scout = testEffect(registryLayer({ flags: { experimentalScout: true } })) // kilocode_change
 const withBrokenPlugin = testEffect(registryLayer({ plugin: brokenPluginLayer }))
 // kilocode_change start
+const websearch = testEffect(
+  registryLayer({
+    config: {
+      get: () =>
+        Effect.succeed({
+          web_search: true,
+          provider: { openai: { options: { apiKey: "test-openai-key" } } },
+        }),
+    },
+  }),
+)
 const sandboxed = testEffect(registryLayer({ flags: { experimentalLspTool: true } }))
+// kilocode_change end
+const withCodeMode = testEffect(
+  registryLayer({
+    flags: { experimentalCodeMode: true },
+    mcp: Layer.mock(MCP.Service, {
+      tools: () =>
+        Effect.succeed({
+          weather_current: {
+            def: {
+              name: "current",
+              description: "current weather",
+              inputSchema: { type: "object", properties: { city: { type: "string" } }, required: ["city"] },
+            } as MCPToolDef,
+            client: {} as MCP.McpTool["client"],
+          },
+        }),
+      clients: () => Effect.succeed({ weather: {} as MCP.McpTool["client"] }),
+    }),
+  }),
+)
+const withEmptyCodeMode = testEffect(
+  registryLayer({
+    flags: { experimentalCodeMode: true },
+    mcp: Layer.mock(MCP.Service, {
+      tools: () => Effect.succeed({}),
+      clients: () => Effect.succeed({}),
+    }),
+  }),
+)
+// kilocode_change start - verify the execute catalog is suppressed in restricted sessions
+const withRestrictedCodeMode = testEffect(
+  registryLayer({
+    flags: { experimentalCodeMode: true },
+    config: {
+      get: () => Effect.succeed({ sandbox: { enabled: true, network: "deny" } }),
+    },
+    mcp: Layer.mock(MCP.Service, {
+      tools: () =>
+        Effect.succeed({
+          weather_current: {
+            def: {
+              name: "current",
+              description: "current weather",
+              inputSchema: { type: "object", properties: { city: { type: "string" } }, required: ["city"] },
+            } as MCPToolDef,
+            client: {} as MCP.McpTool["client"],
+          },
+        }),
+      clients: () => Effect.succeed({ weather: {} as MCP.McpTool["client"] }),
+    }),
+  }),
+)
 // kilocode_change end
 
 afterEach(async () => {
@@ -88,6 +158,38 @@ function sandboxProfile(): Profile {
 
 describe("tool.registry", () => {
   // kilocode_change start
+  it.instance("hides websearch for a third-party provider by default", () =>
+    Effect.gen(function* () {
+      const registry = yield* ToolRegistry.Service
+      const agent = yield* Agent.Service
+      const build = yield* agent.get("build")
+      if (!build) return yield* Effect.die(new Error("build agent not found"))
+      const tools = yield* registry.tools({
+        providerID: ProviderV2.ID.openai,
+        modelID: ModelV2.ID.make("test"),
+        agent: build,
+      })
+
+      expect(tools.map((tool) => tool.id)).not.toContain("websearch")
+    }),
+  )
+
+  websearch.instance("shows websearch for a configured third-party provider when enabled", () =>
+    Effect.gen(function* () {
+      const registry = yield* ToolRegistry.Service
+      const agent = yield* Agent.Service
+      const build = yield* agent.get("build")
+      if (!build) return yield* Effect.die(new Error("build agent not found"))
+      const tools = yield* registry.tools({
+        providerID: ProviderV2.ID.openai,
+        modelID: ModelV2.ID.make("test"),
+        agent: build,
+      })
+
+      expect(tools.map((tool) => tool.id)).toContain("websearch")
+    }),
+  )
+
   sandboxed.instance("preserves built-in network classification through production tool definition processing", () =>
     Effect.gen(function* () {
       const registry = yield* ToolRegistry.Service
@@ -146,6 +248,64 @@ describe("tool.registry", () => {
       expect(ids).not.toContain("task_status")
     }),
   )
+
+  it.instance("does not expose execute unless code mode is enabled", () =>
+    Effect.gen(function* () {
+      const registry = yield* ToolRegistry.Service
+      const ids = yield* registry.ids()
+
+      expect(ids).not.toContain("execute")
+    }),
+  )
+
+  withCodeMode.instance("exposes execute when code mode is enabled", () =>
+    Effect.gen(function* () {
+      const registry = yield* ToolRegistry.Service
+      const agents = yield* Agent.Service
+      const ids = yield* registry.ids()
+      const tools = yield* registry.tools({
+        providerID: ProviderV2.ID.opencode,
+        modelID: ModelV2.ID.make("test"),
+        agent: yield* agents.defaultInfo(),
+      })
+      const execute = tools.find((tool) => tool.id === "execute")
+
+      expect(ids).toContain("execute")
+      expect(tools.map((tool) => tool.id)).toContain("execute")
+      expect(execute?.description).toContain("tools.weather.current(input: {\n  city: string,\n})")
+    }),
+  )
+
+  withEmptyCodeMode.instance("does not expose execute when code mode has no visible tools", () =>
+    Effect.gen(function* () {
+      const registry = yield* ToolRegistry.Service
+      const agents = yield* Agent.Service
+      const tools = yield* registry.tools({
+        providerID: ProviderV2.ID.opencode,
+        modelID: ModelV2.ID.make("test"),
+        agent: yield* agents.defaultInfo(),
+      })
+
+      expect(tools.map((tool) => tool.id)).not.toContain("execute")
+    }),
+  )
+
+  // kilocode_change start
+  withRestrictedCodeMode.instance("does not advertise code mode in a network-restricted session", () =>
+    Effect.gen(function* () {
+      const registry = yield* ToolRegistry.Service
+      const agents = yield* Agent.Service
+      const tools = yield* registry.tools({
+        providerID: ProviderV2.ID.opencode,
+        modelID: ModelV2.ID.make("test"),
+        agent: yield* agents.defaultInfo(),
+        networkRestricted: true,
+      })
+
+      expect(tools.map((tool) => tool.id)).not.toContain("execute")
+    }),
+  )
+  // kilocode_change end
 
   it.instance("hides task background parameter unless experimental background subagents are enabled", () =>
     Effect.gen(function* () {

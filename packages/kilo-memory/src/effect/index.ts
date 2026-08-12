@@ -46,7 +46,9 @@ export namespace KiloMemory {
   }
 
   export async function prepare(input: Input) {
-    return root(input)
+    const dir = root(input)
+    await MemoryFiles.cleanup(dir)
+    return dir
   }
 
   export async function status(input: Input) {
