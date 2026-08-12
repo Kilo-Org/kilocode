@@ -29,7 +29,6 @@ import { sandboxHandlers } from "./handlers/sandbox"
 import { sessionImportHandlers } from "./handlers/session-import"
 import { suggestionHandlers } from "./handlers/suggestion"
 import { telemetryHandlers } from "./handlers/telemetry"
-import { layer as providerUsageLocationLayer } from "./middleware/provider-usage-location"
 
 export const provide = Layer.provide([
   agentBuilderHandlers,
@@ -43,7 +42,7 @@ export const provide = Layer.provide([
   instanceReloadHandlers,
   interactiveTerminalHandlers,
   kiloGatewayHandlers,
-  kilocodeHandlers.pipe(Layer.provide(providerUsageLocationLayer)),
+  kilocodeHandlers,
   memoryHandlers,
   networkHandlers,
   remoteHandlers,

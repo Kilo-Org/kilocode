@@ -4186,15 +4186,20 @@ export type CommandFile = {
   hints: Array<string>
 }
 
+export type ProviderUsagePeriod = {
+  unit: "hour" | "day" | "week" | "month"
+  value: number
+}
+
 export type ProviderUsageWindow = {
   id: string
-  label: string
   resource: string
   unit: string
   orientation: "used_percent" | "remaining_percent" | "amount" | "count"
   used?: number
   remaining?: number
   limit?: number
+  period?: ProviderUsagePeriod
   durationMs?: number
   resetAt?: string
   state: "active" | "exhausted" | "unlimited" | "not_in_plan" | "unknown"

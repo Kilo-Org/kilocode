@@ -70,26 +70,18 @@ function durationMs(period: CodingPlanQuotaWindow["period"]) {
   return period.value * multipliers[period.unit]
 }
 
-function periodLabel(period: CodingPlanQuotaWindow["period"]) {
-  const singular = period.value === 1
-  if (period.unit === "hour") return `${period.value}-hour quota`
-  if (period.unit === "day") return singular ? "Daily quota" : `${period.value}-day quota`
-  if (period.unit === "week") return singular ? "Weekly quota" : `${period.value}-week quota`
-  return singular ? "Monthly quota" : `${period.value}-month quota`
-}
-
 function window(subscriptionId: string, value: CodingPlanQuotaWindow): ProviderUsage.UsageWindow {
   const remaining = value.remainingPercent
   const duration = durationMs(value.period)
   return {
     id: `${subscriptionId}:${value.id}`,
-    label: periodLabel(value.period),
     resource: "subscription",
     unit: "percent",
     orientation: "remaining_percent",
     used: Math.max(0, 100 - remaining),
     remaining,
     limit: 100,
+    period: value.period,
     ...(duration !== undefined ? { durationMs: duration } : {}),
     resetAt: value.resetsAt,
     state: remaining <= 0 ? "exhausted" : "active",

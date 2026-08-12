@@ -10,16 +10,22 @@ export const UsageError = Schema.Struct({
   retryable: Schema.Boolean,
 }).annotate({ identifier: "ProviderUsageError" })
 
+export interface UsagePeriod extends Schema.Schema.Type<typeof UsagePeriod> {}
+export const UsagePeriod = Schema.Struct({
+  unit: Schema.Literals(["hour", "day", "week", "month"]),
+  value: Schema.Int,
+}).annotate({ identifier: "ProviderUsagePeriod" })
+
 export interface UsageWindow extends Schema.Schema.Type<typeof UsageWindow> {}
 export const UsageWindow = Schema.Struct({
   id: Schema.String,
-  label: Schema.String,
   resource: Schema.String,
   unit: Schema.String,
   orientation: Schema.Literals(["used_percent", "remaining_percent", "amount", "count"]),
   used: optional(Schema.Finite),
   remaining: optional(Schema.Finite),
   limit: optional(Schema.Finite),
+  period: optional(UsagePeriod),
   durationMs: optional(Schema.Finite),
   resetAt: optional(Schema.String),
   state: Schema.Literals(["active", "exhausted", "unlimited", "not_in_plan", "unknown"]),

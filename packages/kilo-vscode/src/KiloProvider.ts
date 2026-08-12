@@ -3,6 +3,7 @@ import { existsSync } from "fs"
 import * as vscode from "vscode"
 import type {
   KiloClient,
+  ProviderUsage,
   Session,
   SessionStatus,
   Event,
@@ -367,8 +368,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /** Cached notificationsLoaded payload */
   private cachedNotificationsMessage: NotificationsMessage | null = null
   /** Cached provider usage payload for profile view remounts and temporary disconnects. */
-  private cachedProviderUsageMessage: { type: "providerUsageLoaded"; data: unknown } | null = null
-  private providerUsageRequested = false
+  private cachedProviderUsageMessage: { type: "providerUsageLoaded"; data: ProviderUsage } | null = null
   private providerUsageGeneration = 0
   private pendingKiloModel: { modelID?: string; agent?: string } | null = null
   private pendingReviewComments: { comments: unknown[]; autoSend: boolean }[] = []
@@ -575,7 +575,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.postMessage({ type: "workspaceDirectoryChanged", directory: directory ?? "" })
     this.postMessage({ type: "configBindingExpired", reason: "project-changed" })
     this.requirements.clear()
-    if (this.providerUsageRequested) void this.fetchAndSendProviderUsage()
   }
 
   public setDiffVirtualProvider(provider: import("./DiffVirtualProvider").DiffVirtualProvider): void {
@@ -1560,18 +1559,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       await handleRefreshProfile(this.authCtx)
       return true
     }
-    if (message.type === "requestProviderUsage") {
-      await this.fetchAndSendProviderUsage()
-      return true
-    }
     if (message.type === "refreshProviderUsage") {
-      await this.fetchAndSendProviderUsage(true)
-      return true
-    }
-    if (message.type === "releaseProviderUsage") {
-      // Profile view unmounted: stop background refreshes on directory/auth
-      // changes until the view requests usage again.
-      this.providerUsageRequested = false
+      await this.fetchAndSendProviderUsage()
       return true
     }
     return false
@@ -2370,32 +2359,28 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
-  private async fetchAndSendProviderUsage(force = false): Promise<void> {
-    this.providerUsageRequested = true
+  private async fetchAndSendProviderUsage(): Promise<void> {
     const generation = ++this.providerUsageGeneration
     const client = this.client
     if (!client) {
-      if (this.cachedProviderUsageMessage) this.postMessage(this.cachedProviderUsageMessage)
+      this.postMessage(
+        this.cachedProviderUsageMessage ?? {
+          type: "providerUsageLoaded",
+          error: "Provider usage could not be loaded.",
+        },
+      )
       return
     }
 
     const directory = this.getProjectDirectory(this.currentSession?.id)
-    const result = await (
-      force ? client.kilocode.providerUsage.refresh({ directory }) : client.kilocode.providerUsage.get({ directory })
-    ).catch((error) => {
+    const result = await client.kilocode.providerUsage.refresh({ directory }).catch((error) => {
       console.error("[Kilo New] KiloProvider: Failed to fetch provider usage:", error)
       return undefined
     })
     if (generation !== this.providerUsageGeneration) return
     if (!result?.data) {
       if (this.cachedProviderUsageMessage) {
-        // Re-serve the cached data, but tell the user when their explicit
-        // refresh failed instead of silently presenting stale data as fresh.
-        this.postMessage(
-          force
-            ? { ...this.cachedProviderUsageMessage, error: "Provider usage could not be refreshed." }
-            : this.cachedProviderUsageMessage,
-        )
+        this.postMessage({ ...this.cachedProviderUsageMessage, error: "Provider usage could not be refreshed." })
         return
       }
       this.postMessage({ type: "providerUsageLoaded", error: "Provider usage could not be loaded." })
@@ -4038,10 +4023,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       postMessage: (msg) => this.postMessage(msg),
       getWorkspaceDirectory: () => this.getWorkspaceDirectory(),
       disposeGlobal: () => this.disposeGlobal(),
+      invalidateProviderUsage: () => this.invalidateProviderUsage(),
       fetchAndSendProviders: () => this.fetchAndSendProviders(),
       fetchAndSendAgents: () => this.fetchAndSendAgents(),
       fetchAndSendSpeechToTextModels: () => this.fetchAndSendSpeechToTextModels(),
     }
+  }
+
+  private invalidateProviderUsage(): void {
+    this.providerUsageGeneration++
+    this.cachedProviderUsageMessage = null
+    this.postMessage({ type: "providerUsageLoaded", reset: true })
   }
 
   private async disposeGlobal(): Promise<void> {
@@ -4188,9 +4180,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /** Re-fetch all server-side state after an auth change. */
   private async reloadAfterAuthChange(): Promise<void> {
     this.requirements.clear()
-    this.providerUsageGeneration++
-    this.cachedProviderUsageMessage = null
-    if (this.providerUsageRequested) this.postMessage({ type: "providerUsageLoaded", reset: true })
+    this.invalidateProviderUsage()
     await this.fetchAndSendConfig()
     await Promise.all([
       this.fetchAndSendProviders(),
@@ -4199,7 +4189,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.fetchAndSendCommands(),
       this.fetchAndSendIndexingStatus(),
       this.fetchAndSendNotifications(),
-      this.providerUsageRequested ? this.fetchAndSendProviderUsage() : Promise.resolve(),
     ])
   }
 

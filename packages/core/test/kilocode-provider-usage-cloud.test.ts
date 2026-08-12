@@ -80,7 +80,8 @@ describe("managed provider usage", () => {
       windows: [
         {
           id: "byteplus-plan:monthly",
-          label: "Monthly quota",
+          resource: "subscription",
+          period: { unit: "month", value: 1 },
           remaining: 75,
           used: 25,
           limit: 100,

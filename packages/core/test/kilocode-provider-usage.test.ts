@@ -1,4 +1,4 @@
-import { describe, expect, mock } from "bun:test"
+import { describe, expect, mock, setSystemTime } from "bun:test"
 import { Context, Deferred, Effect, Exit, Fiber, Layer, Scope } from "effect"
 import { Catalog } from "../src/catalog"
 import { Credential } from "../src/credential"
@@ -406,6 +406,54 @@ describe("ProviderUsage location service", () => {
     }),
   )
 
+  it.live("expires the success cache and retries failures on the shorter error TTL", () =>
+    Effect.gen(function* () {
+      const calls = { direct: 0, cloud: 0 }
+      const responses = [native(80), new Response("upstream failure", { status: 503 }), native(70)]
+      const base = Date.parse("2026-08-12T00:00:00.000Z")
+      setSystemTime(new Date(base))
+      const scope = yield* Scope.make()
+      const usage = Context.get(
+        yield* Layer.buildWithScope(
+          configuredLayer({
+            calls,
+            direct: "sk-cp-direct",
+            accountID: "org",
+            transport: {
+              fetch: mock(() => {
+                calls.direct++
+                return Promise.resolve(responses.shift()!)
+              }) as unknown as typeof fetch,
+              plans: async () => [],
+              byok: async () => [],
+              usage: async () => {
+                throw new Error("unused")
+              },
+            },
+          }),
+          scope,
+        ),
+        ProviderUsage.Service,
+      )
+
+      expect((yield* usage.get()).items[0]).toMatchObject({ fetchState: "ready", windows: [{ remaining: 80 }] })
+      expect((yield* usage.get()).items[0]).toMatchObject({ fetchState: "ready" })
+      expect(calls.direct).toBe(1)
+
+      // Success TTL (60s) elapsed: the next get refetches and degrades to stale on failure.
+      setSystemTime(new Date(base + 61_000))
+      expect((yield* usage.get()).items[0]).toMatchObject({ fetchState: "stale", windows: [{ remaining: 80 }] })
+      expect((yield* usage.get()).items[0]).toMatchObject({ fetchState: "stale" })
+      expect(calls.direct).toBe(2)
+
+      // Error TTL (10s) elapsed: the failure is retried and recovers.
+      setSystemTime(new Date(base + 72_000))
+      expect((yield* usage.get()).items[0]).toMatchObject({ fetchState: "ready", windows: [{ remaining: 70 }] })
+      expect(calls.direct).toBe(3)
+      yield* Scope.close(scope, Exit.void)
+    }).pipe(Effect.ensuring(Effect.sync(() => setSystemTime()))),
+  )
+
   it.live("prunes authoritative removal but preserves a transient credential failure", () =>
     Effect.gen(function* () {
       const removedCalls = { direct: 0, cloud: 0 }
@@ -470,7 +518,7 @@ describe("ProviderUsage location service", () => {
     }),
   )
 
-  it.live("does not duplicate shared usage when one provider credential fails", () =>
+  it.live("keeps same-key providers independent when one credential fails", () =>
     Effect.gen(function* () {
       const calls = { direct: 0, cloud: 0 }
       let failure: "global" | undefined
@@ -489,17 +537,19 @@ describe("ProviderUsage location service", () => {
         ProviderUsage.Service,
       )
 
-      expect((yield* usage.get()).items).toHaveLength(1)
+      expect((yield* usage.get()).items).toHaveLength(2)
       failure = "global"
       const result = yield* usage.get()
 
-      expect(result.items).toHaveLength(1)
-      expect(result.items[0]).toMatchObject({ providerID: "minimax-cn-coding-plan", fetchState: "ready" })
-      expect(calls.direct).toBe(3)
+      expect(result.items).toHaveLength(2)
+      expect(result.items.find((item) => item.id === "minimax-direct-global")).toMatchObject({ fetchState: "stale" })
+      expect(result.items.find((item) => item.id === "minimax-direct-china")).toMatchObject({ fetchState: "ready" })
+      // The surviving sibling serves from cache; the failed one is not refetched.
+      expect(calls.direct).toBe(2)
     }),
   )
 
-  it.live("preserves failed shared usage when the surviving provider rotates credentials", () =>
+  it.live("refreshes a rotated credential while preserving the failed sibling's cached usage", () =>
     Effect.gen(function* () {
       const calls = { direct: 0, cloud: 0 }
       let failure: "global" | undefined
@@ -519,23 +569,21 @@ describe("ProviderUsage location service", () => {
         ProviderUsage.Service,
       )
 
-      expect((yield* usage.get()).items).toHaveLength(1)
+      expect((yield* usage.get()).items).toHaveLength(2)
       failure = "global"
       key = "sk-cp-rotated"
       const result = yield* usage.get()
 
       expect(result.items).toHaveLength(2)
-      expect(result.items.find((item) => item.id === "minimax-direct-shared")).toMatchObject({ fetchState: "stale" })
+      expect(result.items.find((item) => item.id === "minimax-direct-global")).toMatchObject({ fetchState: "stale" })
       expect(result.items.find((item) => item.id === "minimax-direct-china")).toMatchObject({ fetchState: "ready" })
       expect(calls.direct).toBe(3)
     }),
   )
 
-  it.live("preserves shared usage when the surviving same-key query fails", () =>
+  it.live("omits a failed provider with no cached usage", () =>
     Effect.gen(function* () {
       const calls = { direct: 0, cloud: 0 }
-      let failure: "global" | undefined
-      let queryFailure = false
       const scope = yield* Scope.make()
       const usage = Context.get(
         yield* Layer.buildWithScope(
@@ -544,32 +592,18 @@ describe("ProviderUsage location service", () => {
             accountID: "org",
             config: { china: true },
             direct: "sk-cp-shared",
-            failure: () => failure,
-            transport: {
-              fetch: mock(() => {
-                calls.direct++
-                return queryFailure ? Promise.reject(new Error("private query failure")) : Promise.resolve(native(80))
-              }) as unknown as typeof fetch,
-              plans: async () => [],
-              byok: async () => [],
-              usage: async () => {
-                throw new Error("unused")
-              },
-            },
+            failure: () => "global" as const,
           }),
           scope,
         ),
         ProviderUsage.Service,
       )
 
-      expect((yield* usage.get()).items).toHaveLength(1)
-      failure = "global"
-      queryFailure = true
       const result = yield* usage.get()
 
       expect(result.items).toHaveLength(1)
-      expect(result.items[0]).toMatchObject({ id: "minimax-direct-shared", fetchState: "stale" })
-      expect(JSON.stringify(result)).not.toContain("private query failure")
+      expect(result.items[0]).toMatchObject({ id: "minimax-direct-china", fetchState: "ready" })
+      expect(calls.direct).toBe(1)
     }),
   )
 

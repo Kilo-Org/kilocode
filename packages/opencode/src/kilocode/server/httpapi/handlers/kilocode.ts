@@ -6,6 +6,7 @@ import * as KiloSkill from "@/kilocode/skill-remove"
 import { Agent } from "@/agent/agent"
 import { Command } from "@/command"
 import { Config } from "@/config/config"
+import { WorkspaceRef } from "@/effect/instance-ref"
 import { InstanceState } from "@/effect/instance-state"
 import { HeapSnapshot } from "@/kilocode/cli/heap-snapshot"
 import type { RequestID as AgentManagerRequestID } from "@/kilocode/agent-manager/protocol"
@@ -14,6 +15,9 @@ import type { RequestID as NotebookRequestID } from "@/kilocode/notebook/protoco
 import { Notebook } from "@/kilocode/notebook/service"
 import { ModelUsage } from "@/kilocode/session/model-usage"
 import { ProviderUsage } from "@opencode-ai/core/kilocode/provider-usage"
+import { Location } from "@opencode-ai/core/location"
+import { LocationServiceMap } from "@opencode-ai/core/location-services"
+import { AbsolutePath } from "@opencode-ai/core/schema"
 import { InstanceStore } from "@/project/instance-store"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
 import { Skill } from "@/skill"
@@ -37,6 +41,22 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     const store = yield* InstanceStore.Service
     const manager = yield* AgentManager.Service
     const notebook = yield* Notebook.Service
+    const locations = yield* LocationServiceMap.Service
+
+    // Location-scoped services, keyed by the request's directory and workspace.
+    const located = Effect.fnUntraced(function* <A, E, R>(effect: Effect.Effect<A, E, R>) {
+      return yield* effect.pipe(
+        Effect.provide(
+          locations.get(
+            Location.Ref.make({
+              directory: AbsolutePath.make((yield* InstanceState.context).directory),
+              workspaceID: yield* WorkspaceRef,
+            }),
+          ),
+        ),
+      )
+    })
+
     const heapSnapshot = Effect.fn("KilocodeHttpApi.heapSnapshot")(function* () {
       return yield* Effect.sync(() => HeapSnapshot.write())
     })
@@ -108,15 +128,15 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     })
 
     const providerUsage = Effect.fn("KilocodeHttpApi.providerUsage")(function* () {
-      return yield* (yield* ProviderUsage.Service)
-        .get()
-        .pipe(Effect.mapError(() => new HttpApiError.ServiceUnavailable({})))
+      return yield* located(ProviderUsage.Service.use((usage) => usage.get())).pipe(
+        Effect.mapError(() => new HttpApiError.ServiceUnavailable({})),
+      )
     })
 
     const providerUsageRefresh = Effect.fn("KilocodeHttpApi.providerUsageRefresh")(function* () {
-      return yield* (yield* ProviderUsage.Service)
-        .refresh()
-        .pipe(Effect.mapError(() => new HttpApiError.ServiceUnavailable({})))
+      return yield* located(ProviderUsage.Service.use((usage) => usage.refresh())).pipe(
+        Effect.mapError(() => new HttpApiError.ServiceUnavailable({})),
+      )
     })
 
     const notebookList = Effect.fn("KilocodeHttpApi.notebookList")(function* () {

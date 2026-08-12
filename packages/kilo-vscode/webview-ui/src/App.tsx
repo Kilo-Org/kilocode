@@ -364,9 +364,7 @@ const AppContent: Component = () => {
                 providerUsageError={server.providerUsageError()}
                 deviceAuth={server.deviceAuth()}
                 onLogin={server.startLogin}
-                onRequestProviderUsage={server.requestProviderUsage}
                 onRefreshProviderUsage={server.refreshProviderUsage}
-                onReleaseProviderUsage={server.releaseProviderUsage}
               />
             </Match>
             <Match when={currentView() === "settings"}>

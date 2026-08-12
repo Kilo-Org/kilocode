@@ -105,11 +105,17 @@ function duration(start: number | undefined, end: number | undefined) {
   return end - start
 }
 
-function label(resource: string, kind: "interval" | "weekly", value: number | undefined) {
-  const prefix = resource === "general" ? "Shared quota" : resource === "video" ? "Video" : resource
-  if (value === 300 * 60 * 1000) return `${prefix} 5-hour`
-  if (value === 10_080 * 60 * 1000) return `${prefix} weekly`
-  return kind === "weekly" ? `${prefix} weekly` : `${prefix} interval`
+const hourMs = 60 * 60 * 1000
+const dayMs = 24 * hourMs
+const weekMs = 7 * dayMs
+
+function cadence(kind: "interval" | "weekly", span: number | undefined): ProviderUsage.UsagePeriod | undefined {
+  if (kind === "weekly") return { unit: "week", value: 1 }
+  if (span === undefined) return undefined
+  if (span % weekMs === 0) return { unit: "week", value: span / weekMs }
+  if (span % dayMs === 0) return { unit: "day", value: span / dayMs }
+  if (span % hourMs === 0) return { unit: "hour", value: span / hourMs }
+  return undefined
 }
 
 function window(
@@ -131,8 +137,8 @@ function window(
   const span = duration(start, end)
   const base = {
     id: `${row.model_name}-${kind}`,
-    label: label(row.model_name, kind, span),
     resource: row.model_name,
+    period: cadence(kind, span),
     durationMs: span,
     resetAt: reset(end, remains, fetchedAt),
   }
@@ -245,53 +251,33 @@ export async function direct(
     identity?: string,
   ) => Promise<ProviderUsage.UsageSnapshot> = (_id, load) => load(),
 ) {
-  const groups = new Map<string, Candidate[]>()
-  for (const candidate of candidates) {
-    if (!candidate.key.startsWith("sk-cp")) continue
-    const group = groups.get(candidate.key) ?? []
-    group.push(candidate)
-    groups.set(candidate.key, group)
-  }
-
+  // Each configured provider is an independent plan with a stable per-region
+  // cache cell, even when providers share a credential.
   return Promise.all(
-    [...groups.values()].map(async (group) => {
-      const shared = group.length > 1
-      const first = group[0]
-      const id = shared ? "minimax-direct-shared" : `minimax-direct-${bindings[first.providerID].region}`
-      // The key fingerprint scopes the cache cell to the configured credential, so
-      // swapping keys never reuses the previous account's quota via TTL or stale fallback.
-      const identity = createHash("sha256").update(first.key).digest("hex")
-      return cached(
-        id,
-        async () => {
-          const responses = await Promise.allSettled(
-            group.map((candidate) => query(candidate.providerID, candidate.key, fetcher)),
-          )
-          const index = responses.findIndex((response) => response.status === "fulfilled")
-          if (index === -1) {
-            return unavailable(
-              id,
-              first.providerID,
-              shared ? "Direct MiniMax" : first.label,
-              bindings[first.providerID].manage,
-            )
-          }
-
-          const candidate = group[index]
-          const response = responses[index]
-          if (response.status !== "fulfilled") {
-            return unavailable(id, candidate.providerID, "Direct MiniMax", bindings[candidate.providerID].manage)
-          }
-          return normalize(response.value, {
-            id,
-            providerID: candidate.providerID,
-            sourceLabel: candidate.label,
-            managementUrl: bindings[candidate.providerID].manage,
-            fetchedAt: new Date().toISOString(),
-          })
-        },
-        identity,
-      )
-    }),
+    candidates
+      .filter((candidate) => candidate.key.startsWith("sk-cp"))
+      .map((candidate) => {
+        const binding = bindings[candidate.providerID]
+        const id = `minimax-direct-${binding.region}`
+        // The key fingerprint scopes the cache cell to the configured credential, so
+        // swapping keys never reuses the previous account's quota via TTL or stale fallback.
+        const identity = createHash("sha256").update(candidate.key).digest("hex")
+        return cached(
+          id,
+          () =>
+            query(candidate.providerID, candidate.key, fetcher)
+              .then((native) =>
+                normalize(native, {
+                  id,
+                  providerID: candidate.providerID,
+                  sourceLabel: candidate.label,
+                  managementUrl: binding.manage,
+                  fetchedAt: new Date().toISOString(),
+                }),
+              )
+              .catch(() => unavailable(id, candidate.providerID, candidate.label, binding.manage)),
+          identity,
+        )
+      }),
   )
 }

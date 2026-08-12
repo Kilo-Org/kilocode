@@ -69,30 +69,9 @@ const minimax: Adapter = {
   cachePrefixes: ["minimax-direct-"],
   async run(ctx) {
     const items = await direct(ctx.candidates, ctx.fetch, ctx.source)
-    const failed = ctx.failedCandidates.flatMap((providerID) =>
-      ctx.preserve(`minimax-direct-${bindings[providerID].region}`),
-    )
-    const skipped = new Set<string>()
-    if (ctx.failedCandidates.length) {
-      const shared = ctx.preserve("minimax-direct-shared")
-      const match = ctx.candidates.find(
-        (candidate) => ctx.preserve("minimax-direct-shared", fingerprint(candidate.key)).length,
-      )
-      const group = match ? ctx.candidates.filter((candidate) => candidate.key === match.key) : []
-      const id = match
-        ? group.length > 1
-          ? "minimax-direct-shared"
-          : `minimax-direct-${bindings[match.providerID].region}`
-        : undefined
-      const item = items.find((candidate) => candidate.id === id)
-      if (!item || item.fetchState === "unavailable") {
-        failed.push(...shared)
-        if (id) skipped.add(id)
-      }
-    }
-    const merged = [
-      ...new Map([...failed, ...items.filter((item) => !skipped.has(item.id))].map((item) => [item.id, item])).values(),
-    ]
+    // A candidate is either live or failed, never both, so the id sets are disjoint.
+    const stale = ctx.failedCandidates.flatMap((id) => ctx.preserve(`minimax-direct-${bindings[id].region}`))
+    const merged = [...items, ...stale]
     ctx.prune(
       "minimax-direct-",
       merged.map((item) => item.id),
@@ -371,6 +350,9 @@ function makeService(
     const results = yield* Effect.promise(() =>
       Promise.all(
         registry.map((adapter) =>
+          // Adapters are expected to be total (they absorb their own failures into
+          // unavailable/stale snapshots). This catch is the containment boundary so a
+          // faulty future adapter degrades to stale output instead of failing the endpoint.
           adapter.run(ctx).catch(
             (): AdapterResult => ({
               items: adapter.cachePrefixes.flatMap((prefix) =>

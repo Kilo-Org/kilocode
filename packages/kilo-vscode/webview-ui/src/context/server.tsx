@@ -26,9 +26,7 @@ interface ServerContextValue {
   providerUsage: Accessor<ProviderUsageData | undefined>
   providerUsageLoading: Accessor<boolean>
   providerUsageError: Accessor<string | undefined>
-  requestProviderUsage: () => void
   refreshProviderUsage: () => void
-  releaseProviderUsage: () => void
   deviceAuth: Accessor<DeviceAuthState>
   startLogin: () => void
   goToLogin: () => void
@@ -54,7 +52,6 @@ export const ServerProvider: ParentComponent = (props) => {
   const [providerUsage, setProviderUsage] = createSignal<ProviderUsageData>()
   const [providerUsageLoading, setProviderUsageLoading] = createSignal(false)
   const [providerUsageError, setProviderUsageError] = createSignal<string>()
-  let providerUsageRetry: ReturnType<typeof setTimeout> | undefined
   const [deviceAuth, setDeviceAuth] = createSignal<DeviceAuthState>(initialDeviceAuth)
   const [vscodeLanguage, setVscodeLanguage] = createSignal<string | undefined>()
   const [languageOverride, setLanguageOverride] = createSignal<string | undefined>()
@@ -72,12 +69,10 @@ export const ServerProvider: ParentComponent = (props) => {
 
   const usageSub = vscode.onMessage((m: ExtensionMessage) => {
     if (m.type !== "providerUsageLoaded") return
-    if (providerUsageRetry) clearTimeout(providerUsageRetry)
-    providerUsageRetry = undefined
     if (m.reset) {
       setProviderUsage(undefined)
       setProviderUsageError(undefined)
-      setProviderUsageLoading(true)
+      setProviderUsageLoading(false)
       return
     }
     if (m.data) setProviderUsage(m.data)
@@ -85,18 +80,11 @@ export const ServerProvider: ParentComponent = (props) => {
     setProviderUsageLoading(false)
   })
 
-  const usageReadySub = vscode.onMessage((m: ExtensionMessage) => {
-    if (m.type !== "extensionDataReady" || !providerUsageLoading() || providerUsage()) return
-    if (providerUsageRetry) clearTimeout(providerUsageRetry)
-    providerUsageRetry = undefined
-    vscode.postMessage({ type: "requestProviderUsage" })
-  })
-
   const resetProviderUsageForDirectory = () => {
     if (providerUsage() === undefined && !providerUsageLoading()) return
     setProviderUsage(undefined)
     setProviderUsageError(undefined)
-    setProviderUsageLoading(true)
+    setProviderUsageLoading(false)
   }
 
   onMount(() => {
@@ -185,8 +173,6 @@ export const ServerProvider: ParentComponent = (props) => {
       gitSub()
       fontSub()
       usageSub()
-      usageReadySub()
-      if (providerUsageRetry) clearTimeout(providerUsageRetry)
       unsubscribe()
     })
 
@@ -218,32 +204,10 @@ export const ServerProvider: ParentComponent = (props) => {
     startLogin()
   }
 
-  const retryProviderUsage = () => {
-    if (providerUsageRetry) clearTimeout(providerUsageRetry)
-    providerUsageRetry = setTimeout(() => {
-      providerUsageRetry = undefined
-      if (providerUsageLoading() && !providerUsage()) vscode.postMessage({ type: "requestProviderUsage" })
-    }, 3000)
-  }
-
-  const requestProviderUsage = () => {
-    setProviderUsageLoading(true)
-    setProviderUsageError(undefined)
-    vscode.postMessage({ type: "requestProviderUsage" })
-    retryProviderUsage()
-  }
-
   const refreshProviderUsage = () => {
     setProviderUsageLoading(true)
     setProviderUsageError(undefined)
     vscode.postMessage({ type: "refreshProviderUsage" })
-    retryProviderUsage()
-  }
-
-  const releaseProviderUsage = () => {
-    if (providerUsageRetry) clearTimeout(providerUsageRetry)
-    providerUsageRetry = undefined
-    vscode.postMessage({ type: "releaseProviderUsage" })
   }
 
   const value: ServerContextValue = {
@@ -257,9 +221,7 @@ export const ServerProvider: ParentComponent = (props) => {
     providerUsage,
     providerUsageLoading,
     providerUsageError,
-    requestProviderUsage,
     refreshProviderUsage,
-    releaseProviderUsage,
     deviceAuth,
     startLogin,
     goToLogin,

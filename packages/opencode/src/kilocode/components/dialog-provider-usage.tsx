@@ -1,7 +1,7 @@
 import { TextAttributes } from "@opentui/core"
 import { useKeyboard } from "@opentui/solid"
 import type { ProviderUsage, ProviderUsageSnapshot } from "@kilocode/sdk/v2"
-import { formatWindow } from "@kilocode/kilo-gateway/provider-usage"
+import { formatWindow, windowLabel } from "@kilocode/kilo-gateway/provider-usage"
 import { useTheme } from "@tui/context/theme"
 import { useSDK } from "@tui/context/sdk"
 import { useDialog } from "@tui/ui/dialog"
@@ -26,7 +26,7 @@ function Item(props: { item: ProviderUsageSnapshot }) {
         {(window) => (
           <box>
             <text fg={theme.text}>
-              {window.label}: {formatWindow(window)}
+              {windowLabel(window)}: {formatWindow(window)}
             </text>
             <Show when={window.resetAt}>
               {(reset) => <text fg={theme.textMuted}>Resets {new Date(reset()).toLocaleString()}</text>}

@@ -9,7 +9,7 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tag } from "@kilocode/kilo-ui/tag"
 import { useLanguage } from "../../context/language"
 import { localeToBcp47 } from "../../context/language-utils"
-import { formatWindow, windowProgress } from "@kilocode/kilo-gateway/provider-usage"
+import { formatWindow, windowLabel, windowProgress } from "@kilocode/kilo-gateway/provider-usage"
 
 export interface ProviderUsageCardsProps {
   data: ProviderUsageData | undefined
@@ -38,6 +38,16 @@ const labels = (language: Language) => ({
   remaining: (value: string) => language.t("profile.usage.window.remaining", { value }),
   remainingOf: (value: string, limit: string) => language.t("profile.usage.window.remainingOf", { value, limit }),
   usedOf: (value: string, limit: string) => language.t("profile.usage.window.usedOf", { value, limit }),
+  quota: language.t("profile.usage.window.quota"),
+  daily: language.t("profile.usage.window.daily"),
+  weekly: language.t("profile.usage.window.weekly"),
+  monthly: language.t("profile.usage.window.monthly"),
+  hours: (count: number) => language.t("profile.usage.window.hours", { count: String(count) }),
+  days: (count: number) => language.t("profile.usage.window.days", { count: String(count) }),
+  weeks: (count: number) => language.t("profile.usage.window.weeks", { count: String(count) }),
+  months: (count: number) => language.t("profile.usage.window.months", { count: String(count) }),
+  shared: language.t("profile.usage.window.shared"),
+  scoped: (resource: string, period: string) => language.t("profile.usage.window.scoped", { resource, period }),
 })
 
 const variant = (item: ProviderUsageSnapshot) => {
@@ -104,6 +114,7 @@ const UsageCard: Component<{
         {(window) => {
           const progress = () => windowProgress(window)
           const value = () => formatWindow(window, labels(props.language))
+          const title = () => windowLabel(window, labels(props.language))
           return (
             <div class="provider-usage-row">
               <Show when={progress() !== undefined}>
@@ -113,22 +124,24 @@ const UsageCard: Component<{
                   maxValue={100}
                   showValueLabel
                   getValueLabel={value}
-                  aria-label={`${window.label}: ${value()}`}
+                  aria-label={`${title()}: ${value()}`}
                   aria-valuetext={value()}
                 >
-                  {window.label}
+                  {title()}
                 </Progress>
               </Show>
               <Show when={progress() === undefined}>
                 <div class="provider-usage-summary">
-                  <span>{window.label}</span>
+                  <span>{title()}</span>
                   <strong>{value()}</strong>
                 </div>
               </Show>
               <Show when={window.resetAt}>
                 {(reset) => (
                   <CardDescription>
-                    {props.language.t("profile.usage.reset", { date: new Date(reset()).toLocaleString() })}
+                    {props.language.t("profile.usage.reset", {
+                      date: new Date(reset()).toLocaleString(localeToBcp47(props.language.locale())),
+                    })}
                   </CardDescription>
                 )}
               </Show>
@@ -153,7 +166,7 @@ const UsageCard: Component<{
             variant="secondary"
             size="small"
             onClick={() => props.onOpen(url())}
-            aria-label={`Manage ${props.item.planLabel}`}
+            aria-label={props.language.t("profile.usage.action.managePlan", { plan: props.item.planLabel })}
           >
             {props.language.t("profile.usage.action.manage")}
           </Button>
@@ -208,11 +221,11 @@ const KiloPassCard: Component<{
               used={pass().currentPeriodUsageUsd}
               paid={pass().currentPeriodBaseCreditsUsd}
               bonus={pass().currentPeriodBonusCreditsUsd}
-              label="This month's usage"
-              paidLabel="Paid"
+              label={props.language.t("profile.pass.usage")}
+              paidLabel={props.language.t("profile.pass.paid")}
               bonusLabel={props.language.t("profile.pass.bonus")}
               format={money}
-              aria-label="Kilo Pass monthly usage"
+              aria-label={props.language.t("profile.pass.meter")}
             />
             <Show when={renewal()}>
               {(date) => (
@@ -261,20 +274,20 @@ export const ProviderUsageCards: Component<ProviderUsageCardsProps> = (props) =>
         <Show
           when={props.data}
           fallback={
-            <Show
-              when={!props.loading && props.error}
-              fallback={
+            <>
+              <Show when={props.loading}>
                 <div class="provider-usage-loading" role="status" aria-label={language.t("profile.usage.title")}>
                   <Spinner />
                 </div>
-              }
-            >
-              {(error) => (
-                <Card variant="warning" role="alert">
-                  <CardDescription>{error()}</CardDescription>
-                </Card>
-              )}
-            </Show>
+              </Show>
+              <Show when={!props.loading && props.error}>
+                {(error) => (
+                  <Card variant="warning" role="alert">
+                    <CardDescription>{error()}</CardDescription>
+                  </Card>
+                )}
+              </Show>
+            </>
           }
         >
           {(data) => (

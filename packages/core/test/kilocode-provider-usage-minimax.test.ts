@@ -44,6 +44,7 @@ describe("MiniMax usage normalization", () => {
       remaining: 80,
       used: 20,
       limit: 100,
+      period: { unit: "hour", value: 5 },
       resetAt: "2026-06-19T05:00:00.000Z",
     })
     expect(direct.windows[0]?.remaining).not.toBe(1)
@@ -112,6 +113,7 @@ describe("MiniMax usage normalization", () => {
       orientation: "amount",
       remaining: 150,
       limit: 150,
+      period: { unit: "week", value: 1 },
     })
   })
 
@@ -151,7 +153,7 @@ describe("MiniMax usage transport and detection", () => {
     expect(fn).not.toHaveBeenCalled()
   })
 
-  test("deduplicates a shared credential while probing fixed regions", async () => {
+  test("keeps same-key providers as independent regional plans", async () => {
     const fn = mock((url: string | URL | Request) =>
       Promise.resolve(
         String(url).includes("api.minimax.io")
@@ -168,8 +170,17 @@ describe("MiniMax usage transport and detection", () => {
     )
 
     expect(fn).toHaveBeenCalledTimes(2)
-    expect(items).toHaveLength(1)
-    expect(items[0]).toMatchObject({ id: "minimax-direct-shared", providerID: "minimax-cn-coding-plan" })
+    expect(items).toHaveLength(2)
+    expect(items.find((item) => item.id === "minimax-direct-global")).toMatchObject({
+      providerID: "minimax-coding-plan",
+      sourceLabel: "MiniMax Global",
+      fetchState: "unavailable",
+    })
+    expect(items.find((item) => item.id === "minimax-direct-china")).toMatchObject({
+      providerID: "minimax-cn-coding-plan",
+      sourceLabel: "MiniMax China",
+      fetchState: "ready",
+    })
     expect(JSON.stringify(items)).not.toContain("sk-cp-shared")
   })
 
@@ -190,15 +201,15 @@ describe("MiniMax usage transport and detection", () => {
     expect(JSON.stringify(seen)).not.toContain("sk-cp")
   })
 
-  test("returns one unavailable item when an ambiguous key fails everywhere", async () => {
+  test("returns per-provider unavailable items when every query fails", async () => {
     const fn = mock(() => Promise.resolve(response({ message: "raw failure" }, 500)))
     const items = await direct(
       [candidate("minimax-coding-plan", "sk-cp-shared"), candidate("minimax-cn-coding-plan", "sk-cp-shared")],
       fn as unknown as typeof fetch,
     )
 
-    expect(items).toHaveLength(1)
-    expect(items[0]).toMatchObject({ id: "minimax-direct-shared", fetchState: "unavailable" })
+    expect(items).toHaveLength(2)
+    expect(items.every((item) => item.fetchState === "unavailable")).toBe(true)
     expect(JSON.stringify(items)).not.toContain("raw failure")
   })
 })

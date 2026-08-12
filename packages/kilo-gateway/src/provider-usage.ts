@@ -6,10 +6,17 @@
  * so the two surfaces can never drift; labels are injectable for i18n.
  */
 
+export interface UsagePeriodLike {
+  unit: "hour" | "day" | "week" | "month"
+  value: number
+}
+
 export interface UsageWindowLike {
   state: "active" | "exhausted" | "unlimited" | "not_in_plan" | "unknown"
   orientation: "used_percent" | "remaining_percent" | "amount" | "count"
   unit: string
+  resource: string
+  period?: UsagePeriodLike
   used?: number
   remaining?: number
   limit?: number
@@ -24,6 +31,17 @@ export interface UsageLabels {
   remaining(value: string): string
   remainingOf(value: string, limit: string): string
   usedOf(value: string, limit: string): string
+  quota: string
+  daily: string
+  weekly: string
+  monthly: string
+  hours(count: number): string
+  days(count: number): string
+  weeks(count: number): string
+  months(count: number): string
+  /** Display name for MiniMax's pooled "general" resource. */
+  shared: string
+  scoped(resource: string, period: string): string
 }
 
 export const english: UsageLabels = {
@@ -35,6 +53,30 @@ export const english: UsageLabels = {
   remaining: (value) => `${value} remaining`,
   remainingOf: (value, limit) => `${value} of ${limit} remaining`,
   usedOf: (value, limit) => `${value} of ${limit} used`,
+  quota: "Quota",
+  daily: "Daily quota",
+  weekly: "Weekly quota",
+  monthly: "Monthly quota",
+  hours: (count) => `${count}-hour quota`,
+  days: (count) => `${count}-day quota`,
+  weeks: (count) => `${count}-week quota`,
+  months: (count) => `${count}-month quota`,
+  shared: "Shared",
+  scoped: (resource, period) => `${resource} · ${period}`,
+}
+
+const period = (value: UsagePeriodLike, labels: UsageLabels) => {
+  if (value.unit === "hour") return labels.hours(value.value)
+  if (value.unit === "day") return value.value === 1 ? labels.daily : labels.days(value.value)
+  if (value.unit === "week") return value.value === 1 ? labels.weekly : labels.weeks(value.value)
+  return value.value === 1 ? labels.monthly : labels.months(value.value)
+}
+
+export const windowLabel = (window: UsageWindowLike, labels: UsageLabels = english) => {
+  const phrase = window.period ? period(window.period, labels) : labels.quota
+  // Plan-level windows ("subscription") are the whole card; named resources prefix theirs.
+  if (window.resource === "subscription") return phrase
+  return labels.scoped(window.resource === "general" ? labels.shared : window.resource, phrase)
 }
 
 const number = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 2 })

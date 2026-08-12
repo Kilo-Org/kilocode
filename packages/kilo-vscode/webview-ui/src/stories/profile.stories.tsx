@@ -64,8 +64,8 @@ const usage: ProviderUsageData = {
       windows: [
         {
           id: "general-interval",
-          label: "Shared quota 5-hour",
           resource: "general",
+          period: { unit: "hour", value: 5 },
           unit: "percent",
           orientation: "remaining_percent",
           used: 24,

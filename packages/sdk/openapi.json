@@ -38758,13 +38758,24 @@
         "required": ["name", "builtin", "location", "editable", "hints"],
         "additionalProperties": false
       },
+      "ProviderUsagePeriod": {
+        "type": "object",
+        "properties": {
+          "unit": {
+            "type": "string",
+            "enum": ["hour", "day", "week", "month"]
+          },
+          "value": {
+            "type": "integer"
+          }
+        },
+        "required": ["unit", "value"],
+        "additionalProperties": false
+      },
       "ProviderUsageWindow": {
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
-          },
-          "label": {
             "type": "string"
           },
           "resource": {
@@ -38786,6 +38797,9 @@
           "limit": {
             "type": "number"
           },
+          "period": {
+            "$ref": "#/components/schemas/ProviderUsagePeriod"
+          },
           "durationMs": {
             "type": "number"
           },
@@ -38797,7 +38811,7 @@
             "enum": ["active", "exhausted", "unlimited", "not_in_plan", "unknown"]
           }
         },
-        "required": ["id", "label", "resource", "unit", "orientation", "state"],
+        "required": ["id", "resource", "unit", "orientation", "state"],
         "additionalProperties": false
       },
       "ProviderUsageError": {
