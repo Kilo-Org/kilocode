@@ -1559,8 +1559,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       await handleRefreshProfile(this.authCtx)
       return true
     }
-    if (message.type === "refreshProviderUsage") {
+    if (message.type === "requestProviderUsage") {
       await this.fetchAndSendProviderUsage()
+      return true
+    }
+    if (message.type === "refreshProviderUsage") {
+      await this.fetchAndSendProviderUsage(true)
       return true
     }
     return false
@@ -2359,7 +2363,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
-  private async fetchAndSendProviderUsage(): Promise<void> {
+  private async fetchAndSendProviderUsage(force = false): Promise<void> {
     const generation = ++this.providerUsageGeneration
     const client = this.client
     if (!client) {
@@ -2373,14 +2377,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     const directory = this.getProjectDirectory(this.currentSession?.id)
-    const result = await client.kilocode.providerUsage.refresh({ directory }).catch((error) => {
+    const result = await (
+      force ? client.kilocode.providerUsage.refresh({ directory }) : client.kilocode.providerUsage.get({ directory })
+    ).catch((error) => {
       console.error("[Kilo New] KiloProvider: Failed to fetch provider usage:", error)
       return undefined
     })
     if (generation !== this.providerUsageGeneration) return
     if (!result?.data) {
       if (this.cachedProviderUsageMessage) {
-        this.postMessage({ ...this.cachedProviderUsageMessage, error: "Provider usage could not be refreshed." })
+        this.postMessage(
+          force
+            ? { ...this.cachedProviderUsageMessage, error: "Provider usage could not be refreshed." }
+            : this.cachedProviderUsageMessage,
+        )
         return
       }
       this.postMessage({ type: "providerUsageLoaded", error: "Provider usage could not be loaded." })

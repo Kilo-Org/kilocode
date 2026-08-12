@@ -11,12 +11,13 @@ const data: ProviderUsage = {
 
 type Internals = {
   cachedProviderUsageMessage: unknown
-  fetchAndSendProviderUsage: () => Promise<void>
+  fetchAndSendProviderUsage: (force?: boolean) => Promise<void>
   reloadAfterAuthChange: () => Promise<void>
   postMessage: (message: unknown) => void
 }
 
 type UsageClient = {
+  get: (input: { directory?: string }) => Promise<unknown>
   refresh: (input: { directory?: string }) => Promise<unknown>
 }
 
@@ -80,9 +81,14 @@ describe("provider usage presentation", () => {
 })
 
 describe("KiloProvider provider usage bridge", () => {
-  it("loads usage only through an explicit refresh", async () => {
+  it("uses cache-aware GET on open and forced POST for refresh", async () => {
+    const get: Array<{ directory?: string }> = []
     const refresh: Array<{ directory?: string }> = []
     const { internal, messages } = bridge({
+      get: async (input) => {
+        get.push(input)
+        return { data }
+      },
       refresh: async (input) => {
         refresh.push(input)
         return { data }
@@ -90,25 +96,32 @@ describe("KiloProvider provider usage bridge", () => {
     })
 
     await internal.fetchAndSendProviderUsage()
+    await internal.fetchAndSendProviderUsage(true)
 
+    expect(get).toEqual([{ directory: "/repo" }])
     expect(refresh).toEqual([{ directory: "/repo" }])
-    expect(messages).toEqual([{ type: "providerUsageLoaded", data }])
+    expect(messages).toEqual([
+      { type: "providerUsageLoaded", data },
+      { type: "providerUsageLoaded", data },
+    ])
     expect(internal.cachedProviderUsageMessage).toEqual({ type: "providerUsageLoaded", data })
   })
 
   it("surfaces a failed forced refresh alongside the cached data", async () => {
     const { internal, messages } = bridge({
+      get: async () => ({ data }),
       refresh: async () => ({ error: { _tag: "ServiceUnavailable" } }),
     })
 
     internal.cachedProviderUsageMessage = { type: "providerUsageLoaded", data }
-    await internal.fetchAndSendProviderUsage()
+    await internal.fetchAndSendProviderUsage(true)
 
     expect(messages).toEqual([{ type: "providerUsageLoaded", data, error: "Provider usage could not be refreshed." }])
   })
 
   it("posts a terminal loading error when the backend has no cached response", async () => {
     const { internal, messages } = bridge({
+      get: async () => ({ error: { _tag: "ServiceUnavailable" } }),
       refresh: async () => ({ error: { _tag: "ServiceUnavailable" } }),
     })
 
@@ -120,10 +133,11 @@ describe("KiloProvider provider usage bridge", () => {
   it("invalidates cached usage without reloading on auth change", async () => {
     const requests: unknown[] = []
     const { internal, messages } = bridge({
-      refresh: async (input) => {
+      get: async (input) => {
         requests.push(input)
         return { data: { generatedAt: "a", items: [] } }
       },
+      refresh: async () => ({ data }),
     })
 
     await internal.fetchAndSendProviderUsage()
@@ -140,6 +154,7 @@ describe("KiloProvider provider usage bridge", () => {
   it("resets usage without fetching when auth changes before the profile is opened", async () => {
     const requests: unknown[] = []
     const { internal, messages } = bridge({
+      get: async () => ({ data }),
       refresh: async (input) => {
         requests.push(input)
         return { data }
@@ -157,10 +172,11 @@ describe("KiloProvider provider usage bridge", () => {
     const first = new Promise<{ data: ProviderUsage }>((resolve) => (release = resolve))
     const calls: unknown[] = []
     const { internal, messages } = bridge({
-      refresh: (input) => {
+      get: (input) => {
         calls.push(input)
         return first
       },
+      refresh: async () => ({ data }),
     })
 
     const hung = internal.fetchAndSendProviderUsage()
@@ -176,10 +192,11 @@ describe("KiloProvider provider usage bridge", () => {
   it("invalidates cached usage without fetching when the workspace directory changes", async () => {
     const requests: unknown[] = []
     const { provider, internal, messages } = bridge({
-      refresh: async (input) => {
+      get: async (input) => {
         requests.push(input)
         return { data }
       },
+      refresh: async () => ({ data }),
     })
 
     await internal.fetchAndSendProviderUsage()

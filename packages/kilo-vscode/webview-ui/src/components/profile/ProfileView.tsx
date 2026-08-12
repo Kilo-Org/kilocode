@@ -19,6 +19,7 @@ export interface ProfileViewProps {
   providerUsageLoading?: boolean
   providerUsageError?: string
   onLogin: () => void
+  onRequestProviderUsage?: () => void
   onRefreshProviderUsage?: () => void
 }
 
@@ -44,7 +45,7 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
   // Load current profile and usage when navigating to this view.
   onMount(() => {
     vscode.postMessage({ type: "refreshProfile" })
-    props.onRefreshProviderUsage?.()
+    props.onRequestProviderUsage?.()
   })
 
   // Reset pending target whenever profileData changes (success or failure both send a fresh profile)

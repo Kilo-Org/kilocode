@@ -26,6 +26,7 @@ interface ServerContextValue {
   providerUsage: Accessor<ProviderUsageData | undefined>
   providerUsageLoading: Accessor<boolean>
   providerUsageError: Accessor<string | undefined>
+  requestProviderUsage: () => void
   refreshProviderUsage: () => void
   deviceAuth: Accessor<DeviceAuthState>
   startLogin: () => void
@@ -204,6 +205,12 @@ export const ServerProvider: ParentComponent = (props) => {
     startLogin()
   }
 
+  const requestProviderUsage = () => {
+    setProviderUsageLoading(true)
+    setProviderUsageError(undefined)
+    vscode.postMessage({ type: "requestProviderUsage" })
+  }
+
   const refreshProviderUsage = () => {
     setProviderUsageLoading(true)
     setProviderUsageError(undefined)
@@ -221,6 +228,7 @@ export const ServerProvider: ParentComponent = (props) => {
     providerUsage,
     providerUsageLoading,
     providerUsageError,
+    requestProviderUsage,
     refreshProviderUsage,
     deviceAuth,
     startLogin,

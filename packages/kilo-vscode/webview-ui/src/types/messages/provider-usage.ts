@@ -9,6 +9,10 @@ export interface ProviderUsageLoadedMessage {
   reset?: boolean
 }
 
+export interface RequestProviderUsageMessage {
+  type: "requestProviderUsage"
+}
+
 export interface RefreshProviderUsageMessage {
   type: "refreshProviderUsage"
 }
