@@ -77,11 +77,30 @@ jobs:
           #      It is now four files, so shards help again: modelled makespan 4 -> 5.05m,
           #      6 -> 3.78m, 7 -> 3.09m, 8 -> 2.66m. 8 is the first count under the 2m15-2m45
           #      target, hence 8 rather than 6.
-          # Generated rather than written out: 16 entries on one line is not reviewable.
+          #
+          # Windows 6 -> 10 for a different reason. Windows was the actual critical path of the
+          # whole workflow in run 31648508417 (shard 3/6 at 12m13s). Unlike Linux it is not
+          # floor-bound: its heaviest file, cli/run/run-process.test.ts, is 185s, and modelling
+          # a split of the top five heavy files moved a 6-shard makespan by 3s. It is
+          # throughput-bound, so shard count is the lever that works. Windows sits far above its
+          # 185s floor at every count below, so wall scales close to 1/shards. Anchoring on the
+          # 733s observed at 6, and assuming the Defender exclusion above does nothing at all:
+          #   8 -> 9.0m   10 -> 7.3m   12 -> 6.1m   14 -> 5.3m
+          # Returns flatten after 10 and billed minutes are near flat across these counts,
+          # because total Windows work is fixed at ~7142s and extra shards only add each jobs
+          # own setup. 10 clears the httpapi job (12m) with margin even in the worst case, which
+          # is what matters: httpapi is the next bound and is tracked separately in the epic.
+          # Deliberately NOT changed: per-shard concurrency, which test-runner.ts already caps at
+          # min(4, cpus) and these runners hit -- 8 was tried and lost to port and shared-FS
+          # races, so there is no headroom there. Windows also keeps running every test file. A
+          # curated Windows profile like the darwin one would be the biggest single win, but it
+          # trades away what test-profile.ts calls the backstop for platform-neutral behavior,
+          # which is a coverage decision rather than a CI tuning one.
+          # Generated rather than written out: 20 entries on one line is not reviewable.
           LINUX_HOST=blacksmith-4vcpu-ubuntu-2404
           WINDOWS_HOST=blacksmith-4vcpu-windows-2025
           LINUX_SHARDS=8
-          WINDOWS_SHARDS=6
+          WINDOWS_SHARDS=10
           # os host index total packages
           shard() { printf '{"os":"%s","index":%s,"total":%s,"host":"%s","run":true,"packages":%s},' "$1" "$3" "$4" "$2" "$5"; }
           settings="$(
