@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Połącz Anaconda Desktop",
   "provider.anaconda.title.manage": "Zarządzaj Anaconda Desktop",
@@ -53,6 +55,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Połącz dostawcę",
 
