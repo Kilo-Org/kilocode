@@ -265,7 +265,7 @@ export const TuiThreadCommand = cmd({
 
     // kilocode_change start - lazy Kilo implementations so other CLI commands
     // don't pay their module cost at startup
-    const { importCloudSession, localSessionID, validateCloudFork } = await import("@/kilocode/cloud-session")
+    const { importCloudSession, localSessionID, validateCloudFork, reportCloudImportError } = await import("@/kilocode/cloud-session")
     const { KiloTuiThreadDaemon } = await import("@/kilocode/cli/cmd/tui/thread")
     const { preload } = await import("@/kilocode/cli/cmd/tui")
     const { resolveTuiDirectory } = await import("@/kilocode/cli/cmd/tui-worktree")
@@ -454,14 +454,15 @@ export const TuiThreadCommand = cmd({
             headers: transport.headers, // kilocode_change
             directory: cwd,
           })
-          const id = await importCloudSession(sdk, args.session).catch(() => undefined)
-          if (!id) {
-            UI.error("Failed to import session from cloud")
+          try {
+            const id = await importCloudSession(sdk, args.session)
+            args.session = id
+            args.cloudFork = false
+          } catch (err) {
+            reportCloudImportError(err)
             shutdownAndExit({ reason: "cloud-fork-failed", code: 1 })
             return
           }
-          args.session = id
-          args.cloudFork = false
         }
         // kilocode_change end
 
