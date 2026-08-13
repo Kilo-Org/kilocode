@@ -1,6 +1,7 @@
 package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.ui.FilledBadgeIcon
+import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreePrDto
@@ -117,6 +118,16 @@ class WorktreePrHeaderViewTest : BasePlatformTestCase() {
         assertEquals(labels, edt { components(view).filterIsInstance<JBLabel>() })
         assertSame(title, edt { title(view) })
         assertSame(changes, edt { UIUtil.findComponentOfType(view, WorktreeStatsView::class.java) })
+    }
+
+    fun `test terminal button triggers callback`() {
+        var opened = 0
+        val view = edt { WorktreePrHeaderView(openDiff = {}, openTerminal = { opened++ }) }
+        val terminal = edt { components(view).filterIsInstance<HoverIcon>().single() }
+
+        edt { click(terminal) }
+
+        assertEquals(1, opened)
     }
 
     private fun pull(state: GhState) = WorktreePrDto(

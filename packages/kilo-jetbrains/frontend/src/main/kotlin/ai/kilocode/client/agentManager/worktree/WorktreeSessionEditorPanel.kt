@@ -46,10 +46,13 @@ import com.intellij.openapi.progress.currentThreadCoroutineScope
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Disposer
-import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.util.IconLoader
+import com.intellij.openapi.util.Key
+import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.wm.IdeFocusManager
+import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.openapi.wm.WindowManager
+import com.intellij.terminal.frontend.toolwindow.TerminalToolWindowTabsManager
 import com.intellij.ui.IdeBorderFactory
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.SideBorder
@@ -59,6 +62,7 @@ import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.components.BorderLayoutPanel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.jetbrains.plugins.terminal.TerminalToolWindowFactory
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Frame
@@ -102,7 +106,7 @@ class WorktreeSessionEditorPanel(
             (row as? SessionRow)?.session?.takeIf { canRename(it) || canDelete(it) }
         }),
     )
-    private val prHeader = WorktreePrHeaderView(openWorktree = ::openInNewFrame, openEnabled = worktree.directory.isNotBlank(), openDiff = ::openBranchDiff)
+    private val prHeader = WorktreePrHeaderView(openWorktree = ::openInNewFrame, openEnabled = worktree.directory.isNotBlank(), openDiff = ::openBranchDiff, openTerminal = ::openTerminal)
     private val splitter = OnePixelSplitter(false, 0.25f)
     private var started = false
     private var stats: WorktreeStatsDto? = null
@@ -322,6 +326,32 @@ class WorktreeSessionEditorPanel(
         )
     }
 
+    /**
+     * Opens (or focuses) the worktree's terminal tab in the host IDE's terminal tool window. Tabs are
+     * tagged with the worktree directory via user data on the tab's [Content], so re-clicking reuses
+     * the existing tab instead of spawning a new shell -- this survives the user cd-ing or renaming the
+     * tab, unlike matching by working directory or tab name.
+     */
+    @RequiresEdt
+    private fun openTerminal() {
+        val dir = worktree.directory.takeIf { it.isNotBlank() } ?: return
+        val target = project ?: return
+        Telemetry.send("Worktree Terminal Opened", mapOf("surface" to "worktree_toolbar"))
+        val tabs = TerminalToolWindowTabsManager.getInstance(target)
+        val existing = tabs.tabs.firstOrNull { same(it.content.getUserData(TERMINAL_DIR), dir) }
+        if (existing != null) {
+            existing.content.manager?.setSelectedContent(existing.content, true)
+            ToolWindowManager.getInstance(target).getToolWindow(TerminalToolWindowFactory.TOOL_WINDOW_ID)?.activate(null)
+            return
+        }
+        val tab = tabs.createTabBuilder()
+            .workingDirectory(dir)
+            .tabName(dir.trimEnd('/').substringAfterLast('/').takeIf { it.isNotBlank() })
+            .requestFocus(true)
+            .createTab()
+        tab.content.putUserData(TERMINAL_DIR, dir)
+    }
+
     @RequiresEdt
     private fun open(row: ActiveListItem, focus: Boolean) {
         if (row.key == SessionHost.NEW) {
@@ -486,6 +516,7 @@ class WorktreeSessionEditorPanel(
 
     private companion object {
         private val LOG = KiloLog.create(WorktreeSessionEditorPanel::class.java)
+        private val TERMINAL_DIR = Key.create<String>("kilo.worktree.terminal.dir")
         val LAYOUT_PARTIAL: Icon = IconLoader.getIcon("/icons/layout-left-partial.svg", WorktreeSessionEditorPanel::class.java)
         val LAYOUT_FULL: Icon = IconLoader.getIcon("/icons/layout-left-full.svg", WorktreeSessionEditorPanel::class.java)
     }

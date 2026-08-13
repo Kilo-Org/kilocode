@@ -2,6 +2,7 @@ package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.FilledBadgeIcon
+import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
@@ -19,6 +20,7 @@ import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.components.BorderLayoutPanel
+import org.jetbrains.plugins.terminal.TerminalIcons
 import java.awt.BorderLayout
 import java.awt.Cursor
 import java.awt.event.MouseAdapter
@@ -29,15 +31,17 @@ import javax.swing.JComponent
 internal class WorktreePrHeaderView(
     openWorktree: () -> Unit = {},
     openEnabled: Boolean = true,
+    openTerminal: () -> Unit = {},
     openDiff: () -> Unit,
 ) : BorderLayoutPanel() {
+    private val terminal = HoverIcon().apply { icon = TerminalIcons.OpenTerminal_13x13 }
     private val open = JButton(KiloBundle.message("worktree.session.open.action"), ProductIcons.getInstance().productIcon)
     private val status = JBLabel()
     private val title = SimpleColoredComponent()
     private val changes = WorktreeStatsView(openDiff)
     private val statusPane = status.align(HAlign.LEFT, VAlign.CENTER)
     private val changesPane = changes.align(HAlign.RIGHT, VAlign.CENTER) as JComponent
-    private val actions = Stack.horizontal(UiStyle.Gap.sm()).next(changesPane).next(open)
+    private val actions = Stack.horizontal(UiStyle.Gap.sm()).next(changesPane).next(terminal).next(open)
     private var pull: WorktreePrDto? = null
     private var state: GhState? = null
     private var text: String? = null
@@ -50,6 +54,9 @@ internal class WorktreePrHeaderView(
         open.isEnabled = openEnabled
         open.toolTipText = KiloBundle.message("worktree.session.open.tooltip")
         open.addActionListener { openWorktree() }
+        terminal.isEnabled = openEnabled
+        terminal.toolTipText = KiloBundle.message("worktree.session.terminal.tooltip")
+        terminal.addActionListener { openTerminal() }
         actions.border = JBUI.Borders.emptyRight(UiStyle.Gap.pad())
         status.border = JBUI.Borders.empty(0, UiStyle.Gap.md(), 0, UiStyle.Gap.xs())
         title.border = JBUI.Borders.empty(0, UiStyle.Gap.sm())

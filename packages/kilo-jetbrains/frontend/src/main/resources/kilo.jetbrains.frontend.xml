@@ -1,6 +1,8 @@
 <idea-plugin>
     <dependencies>
         <module name="intellij.platform.frontend"/>
+        <plugin id="org.jetbrains.plugins.terminal"/>
+        <module name="intellij.terminal.frontend"/>
         <module name="kilo.jetbrains.shared"/>
     </dependencies>
 
