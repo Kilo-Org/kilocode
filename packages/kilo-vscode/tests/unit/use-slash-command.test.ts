@@ -226,6 +226,33 @@ describe("select", () => {
     ctx.dispose()
   })
 
+  it("uses slashEnd for server commands when onInput fired before select", () => {
+    const ctx = setup(() => {})
+    let currentText = ""
+    let selectionStart = 0
+
+    ctx.slash.onInput("/docmdexisting text", 6)
+
+    const textarea = {
+      value: "/docmdexisting text",
+      selectionStart: 2,
+      setSelectionRange: (start: number, end: number) => {
+        selectionStart = start
+      },
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+    const setText = (text: string) => {
+      currentText = text
+    }
+
+    ctx.slash.select({ name: "docmd", description: "Run doc command", hints: [] }, textarea, setText)
+
+    expect(textarea.value).toBe("/docmd existing text")
+    expect(currentText).toBe("/docmd existing text")
+    expect(selectionStart).toBe("/docmd ".length)
+    ctx.dispose()
+  })
+
   it("preserves trailing text even when cursor moves after typing slash command", () => {
     let actionCalls = 0
     let currentText = "existing text"
@@ -290,6 +317,36 @@ describe("select", () => {
     ctx.slash.select(remembered!, textarea, setText)
 
     // Trailing text from slashEnd (end of typed text) — empty — should be preserved correctly
+    expect(currentText).toBe("/memory remember ")
+    expect(textarea.value).toBe("/memory remember ")
+    ctx.dispose()
+  })
+
+  it("preserves trailing text through the two-step nested command path", () => {
+    let currentText = ""
+    const ctx = setup(() => {})
+
+    ctx.slash.onInput("/mem", 4)
+
+    const textarea = {
+      value: "/mem",
+      selectionStart: 4,
+      setSelectionRange: () => {},
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+    const setText = (text: string) => {
+      currentText = text
+    }
+
+    const memory = ctx.slash.results().find((c) => c.name === "memory")
+    expect(memory).toBeDefined()
+    ctx.slash.select(memory!, textarea, setText)
+    expect(currentText).toBe("/memory ")
+    expect(textarea.value).toBe("/memory ")
+
+    const remember = ctx.slash.results().find((c) => c.name === "memory remember")
+    expect(remember).toBeDefined()
+    ctx.slash.select(remember!, textarea, setText)
     expect(currentText).toBe("/memory remember ")
     expect(textarea.value).toBe("/memory remember ")
     ctx.dispose()

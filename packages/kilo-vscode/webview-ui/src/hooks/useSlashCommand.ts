@@ -303,6 +303,7 @@ export function useSlashCommand(
     if (cmd.nested) {
       setQuery(`${cmd.name} `)
       setIndex(0)
+      setSlashEnd(commandText.length)
     }
     if (!cmd.nested) close()
     onSelect?.()
