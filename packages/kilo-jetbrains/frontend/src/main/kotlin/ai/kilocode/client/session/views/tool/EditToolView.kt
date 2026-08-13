@@ -363,6 +363,7 @@ internal val POPUP_OPTS = MdCodeBlockOptions(
     border = MdCodeBlockBorder.None,
     verticalPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
     editorOnly = true,
+    horizontalPadding = 0,
 )
 
 /**

@@ -19,7 +19,6 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.EditorTextField
 import com.intellij.ui.components.JBScrollPane
-import com.intellij.util.ui.NamedColorUtil
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import java.awt.Component
@@ -195,7 +194,6 @@ class PatchBody(
             .next(DiffStatBadge(file.additions, file.deletions))
         return JBUI.Panels.simplePanel(row).apply {
             isOpaque = false
-            border = JBUI.Borders.customLineBottom(NamedColorUtil.getBoundsColor())
         }
     }
 
