@@ -837,8 +837,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Omogući integraciju jezičkog servera",
   "settings.experimental.batch.title": "Batch alat",
   "settings.experimental.batch.description": "Omogući batch obradu poziva alata",
-  "settings.experimental.codebaseSearch.title": "Pretraga koda",
-  "settings.experimental.codebaseSearch.description": "Omogući AI pretragu prirodnim jezikom kroz bazu koda",
   "settings.experimental.imageGeneration.title": "Generisanje slika",
   "settings.experimental.imageGeneration.description": "Omogući AI generisanje slika",
   "settings.experimental.imageGenerationModel.title": "Model slike",

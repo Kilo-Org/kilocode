@@ -1,4 +1,10 @@
-import { describe, expect, it } from "bun:test"
+import { describe, expect, it, mock, beforeEach } from "bun:test"
+
+const resolveComment = mock(async (_threadId: string, _cwd: string) => {})
+const unresolveComment = mock(async (_threadId: string, _cwd: string) => {})
+
+mock.module("../../src/agent-manager/pr/PRActions", () => ({ resolveComment, unresolveComment }))
+
 import { PRStatusBridge } from "../../src/agent-manager/pr-status-bridge"
 import type { AgentManagerOutMessage, PRStatus } from "../../src/agent-manager/types"
 
@@ -9,6 +15,7 @@ const pr: PRStatus = {
   state: "open",
   review: null,
   checks: { status: "none", total: 0, passed: 0, failed: 0, pending: 0, checks: [] },
+  reviewers: [],
   additions: 0,
   deletions: 0,
   files: 0,
@@ -16,7 +23,7 @@ const pr: PRStatus = {
 
 function harness(opts: { hasPersisted?: boolean } = {}) {
   const sent: AgentManagerOutMessage[] = []
-  const worktrees: { id: string; prUrl?: string }[] = []
+  const worktrees: { id: string; path: string; prUrl?: string }[] = [{ id: "wt1", path: "/repo/wt1" }]
   const bridge = PRStatusBridge.create({
     getWorktrees: () => worktrees as never,
     getWorkspaceRoot: () => "/repo",
@@ -184,5 +191,80 @@ describe("PRStatusBridge.reset", () => {
     sent.length = 0
     bridge.notifyError("gh_auth")
     expect(sent).toHaveLength(1)
+  })
+})
+
+// --- resolveComment / unresolveComment message handling ---
+
+describe("PRStatusBridge.handleMessage resolveComment", () => {
+  beforeEach(() => {
+    resolveComment.mockReset()
+    unresolveComment.mockReset()
+  })
+
+  it("returns true for agentManager.resolveComment", () => {
+    const { bridge } = harness()
+    resolveComment.mockResolvedValueOnce(undefined)
+    expect(bridge.handleMessage({ type: "agentManager.resolveComment", worktreeId: "wt1", threadId: "PRT_1" })).toBe(
+      true,
+    )
+  })
+
+  it("returns true for agentManager.unresolveComment", () => {
+    const { bridge } = harness()
+    unresolveComment.mockResolvedValueOnce(undefined)
+    expect(bridge.handleMessage({ type: "agentManager.unresolveComment", worktreeId: "wt1", threadId: "PRT_1" })).toBe(
+      true,
+    )
+  })
+
+  it("posts resolveCommentResult with success:true on resolve success", async () => {
+    const { bridge, sent } = harness()
+    resolveComment.mockResolvedValueOnce(undefined)
+    bridge.handleMessage({ type: "agentManager.resolveComment", worktreeId: "wt1", threadId: "PRT_1" })
+    await Promise.resolve()
+    const result = sent.find((m) => m.type === "agentManager.resolveCommentResult")
+    expect(result).toEqual(
+      expect.objectContaining({
+        type: "agentManager.resolveCommentResult",
+        worktreeId: "wt1",
+        threadId: "PRT_1",
+        success: true,
+      }),
+    )
+  })
+
+  it("posts unresolveCommentResult with success:true on unresolve success", async () => {
+    const { bridge, sent } = harness()
+    unresolveComment.mockResolvedValueOnce(undefined)
+    bridge.handleMessage({ type: "agentManager.unresolveComment", worktreeId: "wt1", threadId: "PRT_1" })
+    await Promise.resolve()
+    const result = sent.find((m) => m.type === "agentManager.unresolveCommentResult")
+    expect(result).toEqual(expect.objectContaining({ success: true }))
+  })
+
+  it("posts resolveCommentResult with success:false on failure", async () => {
+    const { bridge, sent } = harness()
+    resolveComment.mockRejectedValueOnce(new Error("gh: Not Found"))
+    bridge.handleMessage({ type: "agentManager.resolveComment", worktreeId: "wt1", threadId: "PRT_1" })
+    await Promise.resolve()
+    const result = sent.find((m) => m.type === "agentManager.resolveCommentResult")
+    expect(result).toEqual(expect.objectContaining({ success: false }))
+  })
+
+  it("logs and returns early when no cwd found", () => {
+    const logged: unknown[] = []
+    const bridge = PRStatusBridge.create({
+      getWorktrees: () => [] as never,
+      getWorkspaceRoot: () => undefined,
+      postToWebview: () => {},
+      updateWorktreePR: () => {},
+      hasPersistedPR: () => false,
+      openExternal: () => {},
+      log: (...args) => logged.push(args),
+    })
+    bridge.handleMessage({ type: "agentManager.resolveComment", worktreeId: "wt-missing", threadId: "PRT_1" })
+    expect(resolveComment).not.toHaveBeenCalled()
+    expect(logged.length).toBeGreaterThan(0)
   })
 })

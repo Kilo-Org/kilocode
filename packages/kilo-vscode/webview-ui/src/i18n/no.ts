@@ -797,8 +797,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Aktiver språkserverprotokoll-integrasjon",
   "settings.experimental.batch.title": "Batchverktøy",
   "settings.experimental.batch.description": "Aktiver batchbehandling av verktøykall",
-  "settings.experimental.codebaseSearch.title": "Kodesøk",
-  "settings.experimental.codebaseSearch.description": "Aktiver AI-drevet naturlig språksøk på tvers av kodebasen",
   "settings.experimental.imageGeneration.title": "Bildegenerering",
   "settings.experimental.imageGeneration.description": "Aktiver AI-bildegenerering",
   "settings.experimental.imageGenerationModel.title": "Bildemodell",

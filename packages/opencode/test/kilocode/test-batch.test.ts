@@ -52,6 +52,14 @@ describe("TestBatch.plan", () => {
     expect(plan.stale).toEqual(["gone/away.test.ts"])
   })
 
+  test("a partial run does not report the files it simply did not select as stale", () => {
+    // A shard or a pattern filter runs a fraction of the allowlist. Only entries
+    // absent from the whole suite are drift; the rest are just not in this run.
+    const shard = many.slice(0, 20)
+    const plan = TestBatch.plan(shard, new Set([...many, "gone/away.test.ts"]), 4, size, many)
+    expect(plan.stale).toEqual(["gone/away.test.ts"])
+  })
+
   test("nothing is batched when no file is allowlisted", () => {
     const plan = TestBatch.plan(many, new Set(), 4, size)
     expect(plan.groups).toEqual([])

@@ -293,6 +293,17 @@ jobs:
           KILO_TEST_PROFILE: ${{ matrix.settings.os == 'macos' && 'darwin' || '' }}
           KILO_TEST_SHARD: ${{ format('{0}/{1}', matrix.settings.index, matrix.settings.total) }}
           KILO_TEST_HISTORY_DIR: ${{ matrix.settings.os == 'macos' && '' || '.artifacts/unit' }} # kilocode_change - feed observed durations into the sharder (runner cwd is packages/opencode, so this is runner-relative)
+          # kilocode_change - cap parallelism on the 4-vCPU Windows runner. At the default
+          # min(4, cpus)=4, four heavy real-server test files share 4 vCPUs (~1 each) and blow
+          # their per-test timeouts; 2 gives each process real CPU headroom. Windows carries more
+          # shards to absorb the lower per-shard parallelism. Linux/macOS (not timeout
+          # offenders; macOS is a single unsharded job) keep the default.
+          KILO_TEST_CONCURRENCY: ${{ matrix.settings.os == 'windows' && '2' || '' }}
+          # kilocode_change - raise the per-file kill deadline on Windows only. Heavy real-server
+          # files run ~230-270s serially there (vs ~40s on macOS/Linux), leaving only ~30s under
+          # the 300s default; 600s gives healthy-but-slow files real margin without masking hangs
+          # elsewhere (Linux/macOS keep the 300s default).
+          KILO_TEST_FILE_TIMEOUT: ${{ matrix.settings.os == 'windows' && '600000' || '' }}
       # kilocode_change end
 
       # kilocode_change start - persist the freshly merged junit.xml so the next run can balance by wall-clock duration

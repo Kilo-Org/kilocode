@@ -273,6 +273,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(diffSourceCatalog)
   const diffViewerProvider = new DiffViewerProvider(context.extensionUri, connectionService, diffSourceCatalog, {
     sessionIdProvider: () => provider.getCurrentSessionId(),
+    sessionDirectoryProvider: (sessionId) => provider.getSessionGitDirectory(sessionId),
   })
   diffViewerProvider.setCommentHandler((comments, autoSend) => {
     void provider.appendReviewComments(comments, autoSend)
@@ -468,7 +469,7 @@ export function activate(context: vscode.ExtensionContext) {
     }),
     vscode.commands.registerCommand(
       "kilo-code.new.showChanges",
-      (arg?: { sessionId?: string; turnId?: string; initialSourceId?: string }) => {
+      (arg?: { sessionId?: string; turnId?: string; initialSourceId?: string; directory?: string }) => {
         diffViewerProvider.openFromCommand(arg)
       },
     ),

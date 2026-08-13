@@ -30,7 +30,12 @@ export namespace TestBatch {
     groups: string[][]
     /** Files that get a process to themselves, as before. */
     isolated: string[]
-    /** Allowlist entries no longer present in the suite, for drift warnings. */
+    /**
+     * Allowlist entries that no longer exist anywhere in the suite, for drift
+     * warnings. Measured against `universe`, not `files`: a shard or a pattern
+     * filter legitimately runs a fraction of the allowlist, and warning about
+     * that on every sharded CI run would bury real drift in noise.
+     */
     stale: string[]
   }
 
@@ -62,9 +67,10 @@ export namespace TestBatch {
     allow: ReadonlySet<string>,
     concurrency: number,
     weight: (file: string) => number,
+    universe: readonly string[] = files,
   ): Plan {
     const eligible = files.filter((file) => allow.has(file))
-    const present = new Set(files)
+    const present = new Set(universe)
     const stale = [...allow].filter((file) => !present.has(file)).sort()
     const lanes = Math.max(1, concurrency)
 
