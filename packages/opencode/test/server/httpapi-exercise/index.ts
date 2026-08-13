@@ -37,6 +37,7 @@ import { disposeApps } from "./backend"
 import { publicApi, runtime } from "./runtime" // kilocode_change
 import { type Scenario, type Result } from "./types"
 import { kiloScenarios } from "../../kilocode/server/httpapi-exercise-scenarios" // kilocode_change
+import { sessionAfterDefaultAgent } from "../../kilocode/server/httpapi-exercise-ready" // kilocode_change
 
 function cursor(input: Record<string, unknown>) {
   return Buffer.from(JSON.stringify(input)).toString("base64url")
@@ -872,7 +873,7 @@ const scenarios: Scenario[] = [
   }),
   http.protected
     .post("/api/session/{sessionID}/permission", "v2.session.permission.create")
-    .seeded((ctx) => ctx.session({ title: "Permission create owner" }))
+    .seeded((ctx) => sessionAfterDefaultAgent(ctx, "Permission create owner")) // kilocode_change
     .at((ctx) => ({
       path: route("/api/session/{sessionID}/permission", { sessionID: ctx.state.id }),
       headers: ctx.headers(),
@@ -885,7 +886,7 @@ const scenarios: Scenario[] = [
       object(body)
       object(body.data)
       check(typeof body.data.id === "string", "permission create should return an ID")
-      check(body.data.effect === "ask", "permission create should create a pending request")
+      check(body.data.effect === "ask", `permission create should create a pending request, got ${JSON.stringify(body.data.effect)}`) // kilocode_change
     }),
   http.protected
     .get("/api/session/{sessionID}/permission", "v2.session.permission.list")
