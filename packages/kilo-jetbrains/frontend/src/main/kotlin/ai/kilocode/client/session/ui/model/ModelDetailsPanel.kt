@@ -157,14 +157,14 @@ internal class ModelDetailsPanel(
         return buildList {
             item.releaseDate?.let { add(KiloBundle.message("model.picker.details.released") to date(it)) }
             if (!item.free) {
-                item.cost?.let { cost ->
+                item.cost?.takeIf { it.input > 0.0 || it.output > 0.0 }?.let { cost ->
                     add(KiloBundle.message("model.picker.details.input") to price(cost.input))
                     add(KiloBundle.message("model.picker.details.output") to price(cost.output))
                     add(KiloBundle.message("model.picker.details.cached") to cached(cost.input, cost.cache?.read))
                     add(KiloBundle.message("model.picker.details.average") to price(average(cost.input, cost.output, cost.cache?.read)))
                 } ?: run {
-                    item.inputPrice?.let { add(KiloBundle.message("model.picker.details.input") to price(it)) }
-                    item.outputPrice?.let { add(KiloBundle.message("model.picker.details.output") to price(it)) }
+                    item.inputPrice?.takeIf { it > 0.0 }?.let { add(KiloBundle.message("model.picker.details.input") to price(it)) }
+                    item.outputPrice?.takeIf { it > 0.0 }?.let { add(KiloBundle.message("model.picker.details.output") to price(it)) }
                 }
             }
             ctx?.let { add(KiloBundle.message("model.picker.details.context") to context(it)) }

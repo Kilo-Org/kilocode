@@ -3,7 +3,6 @@ import path from "path"
 import fs from "fs/promises"
 import fsSync from "fs"
 import crypto from "crypto"
-import { createRequire } from "module"
 
 export namespace TestCli {
   export const ENV = "KILO_TEST_CLI_PATH"
@@ -68,7 +67,9 @@ export namespace TestCli {
             return bin
           }
         }
-      } catch {}
+      } catch (err) {
+        console.warn("[test-cli] failed to read fingerprint cache:", err)
+      }
     }
 
     const { createSolidTransformPlugin } = await import("@opentui/solid/bun-plugin")
@@ -86,20 +87,18 @@ export namespace TestCli {
     })
     if (!result.success) throw new AggregateError(result.logs, "Failed to build CLI subprocess test bundle")
     await fs.cp(path.join(root, "migration"), path.join(dir, "migration"), { recursive: true })
-    // Resolve through Node's lookup from the package root: Bun's isolated layout does not
-    // materialize package-level node_modules on every platform (e.g. the Windows runners).
-    const req = createRequire(path.join(root, "package.json"))
-    const core = path.dirname(req.resolve("@opentui/core"))
+    // Resolve through Bun's ESM-aware lookup: OpenTUI 0.4 no longer exposes a
+    // CommonJS entry, and the isolated layout differs across platforms.
+    const core = path.dirname(Bun.resolveSync("@opentui/core", root))
     const meta = JSON.parse(await Bun.file(path.join(core, "package.json")).text())
     const scope = path.join(dir, "node_modules/@opentui")
     await fs.mkdir(scope, { recursive: true })
     // Anchor variant lookup to the core package so links stay inside the same install tree.
-    const deps = createRequire(path.join(core, "package.json"))
     const kind = process.platform === "win32" ? "junction" : "dir"
     for (const name of Object.keys(meta.optionalDependencies ?? {})) {
       const target = await (async () => {
         try {
-          return path.dirname(deps.resolve(name))
+          return path.dirname(Bun.resolveSync(name, core))
         } catch {
           // Optional native variant is not installed for this platform.
           return
