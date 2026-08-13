@@ -14,6 +14,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.Color
+import java.awt.image.BufferedImage
 import javax.swing.JPanel
 
 @Suppress("UnstableApiUsage")
@@ -51,15 +52,23 @@ class TodoWriteViewTest : BasePlatformTestCase() {
         assertEquals("Pending to-do: Next", view.rowCheckAccessibleName(1))
     }
 
-    fun `test todo content is an opaque editor-background surface`() {
+    fun `test todo content is a rounded editor-background surface`() {
         val view = TodoWriteView(tool("todowrite", ToolExecState.COMPLETED).also {
             it.todos = listOf(TodoDto("A", "pending", "medium"))
         })
         val list = view.components.filterIsInstance<TodoListPanel>().single()
 
-        // The body wrapper stays transparent; the todo list itself is the raised editor surface.
-        assertTrue(list.isOpaque)
-        assertEquals(SessionUiStyle.Colors.codeBlockBackground().rgb, list.background.rgb)
+        // The todo list is the raised editor surface, but rounded like the header: non-opaque so the
+        // corners reveal the transparent card body, filled with the editor background in the middle.
+        assertFalse(list.isOpaque)
+
+        list.setSize(80, 80)
+        val image = BufferedImage(80, 80, BufferedImage.TYPE_INT_ARGB)
+        val graphics = image.createGraphics()
+        list.paint(graphics)
+        graphics.dispose()
+        assertEquals("rounded corner reveals the backdrop", 0, image.getRGB(0, 0) ushr 24)
+        assertEquals(SessionUiStyle.Colors.codeBlockBackground().rgb, image.getRGB(40, 4))
     }
 
     fun `test pending rows keep normal foreground`() {

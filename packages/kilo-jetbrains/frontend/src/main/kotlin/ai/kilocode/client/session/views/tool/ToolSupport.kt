@@ -7,6 +7,7 @@ import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.ToolKind
+import ai.kilocode.client.session.ui.SessionCodeScroll
 import ai.kilocode.client.session.ui.fileLinkHtml
 import ai.kilocode.client.session.ui.fileLinkText
 import ai.kilocode.client.session.ui.selection.SessionSelection
@@ -314,16 +315,15 @@ class ToolBody private constructor(
             )
         }
 
-        private fun pane(view: JComponent, scrolls: Boolean) = JBScrollPane(view).apply {
+        private fun pane(view: JComponent, scrolls: Boolean) = SessionCodeScroll(view).apply {
             // No separator line: the card's transparent header-to-content gap already sets the body
-            // apart, so the body is a clean raised code surface.
+            // apart, so the body is a raised, rounded code surface matching the header block arc.
             border = JBUI.Borders.empty()
             viewportBorder = JBUI.Borders.empty(
                 JBUI.scale(SessionUiStyle.View.Layout.VERTICAL_PADDING),
                 JBUI.scale(SessionUiStyle.View.Layout.HORIZONTAL_PADDING),
             ).takeIf { scrolls }
-            isOpaque = true
-            background = SessionUiStyle.Colors.codeBlockBackground()
+            viewport.isOpaque = true
             viewport.background = SessionUiStyle.Colors.codeBlockBackground()
             horizontalScrollBarPolicy = if (scrolls) {
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED

@@ -511,9 +511,9 @@ internal open class MdViewHybrid(
             }
             viewportBorder = JBUI.Borders.empty(
                 SessionUiStyle.View.Code.topPadding(),
-                SessionUiStyle.View.Code.VIEWPORT_HORIZONTAL_PADDING,
+                code.opts.horizontalPadding,
                 SessionUiStyle.View.Code.VIEWPORT_BOTTOM_PADDING,
-                SessionUiStyle.View.Code.VIEWPORT_HORIZONTAL_PADDING,
+                code.opts.horizontalPadding,
             )
             // CodePane paints its own (optionally rounded) fill, so the pane stays non-opaque; the
             // viewport still fills the inner rectangle with the surface color.

@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.views.todo
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.ui.SessionSurface
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
@@ -36,11 +37,17 @@ class TodoListPanel(
         sync()
     }
 
-    // The todo list is a raised content surface: opaque with the editor background so it fills the
-    // whole body (including padding) while the card body around it stays transparent.
-    override fun isOpaque(): Boolean = true
+    // The todo list is a raised content surface painted with the editor background, rounded to the
+    // same block arc as the card header. It stays non-opaque so the rounded corners reveal the
+    // transparent card body behind them; children are clipped to the rounded shape.
+    override fun paintComponent(g: Graphics) {
+        SessionSurface.fill(g, width, height)
+        super.paintComponent(g)
+    }
 
-    override fun getBackground(): Color = SessionUiStyle.Colors.codeBlockBackground()
+    override fun paintChildren(g: Graphics) {
+        SessionSurface.clipped(g, width, height) { super.paintChildren(it) }
+    }
 
     fun update(todos: List<TodoDto>, hiddenBefore: Int = 0, hiddenAfter: Int = 0) {
         val size = todos.size != items.size

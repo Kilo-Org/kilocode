@@ -2,6 +2,7 @@ package ai.kilocode.client.ui.md
 
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.selection.SessionSelection
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import javax.swing.ScrollPaneConstants
 
 object MdViewFactory {
@@ -31,6 +32,7 @@ data class MdCodeBlockOptions(
     val maxLines: Int? = null,
     val verticalPolicy: Int = ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER,
     val editorOnly: Boolean = false,
+    val horizontalPadding: Int = SessionUiStyle.View.Code.VIEWPORT_HORIZONTAL_PADDING,
 )
 
 enum class MdCodeBlockBorder { All, Horizontal, Bottom, None }

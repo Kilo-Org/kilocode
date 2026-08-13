@@ -341,10 +341,11 @@ private fun popupBody(tool: Tool, selection: SessionSelection?, openFile: Sessio
 
 private fun diffBody(selection: SessionSelection?) = ToolMarkdownBody(
     MdCodeBlockOptions(
-        border = MdCodeBlockBorder.Bottom,
+        border = MdCodeBlockBorder.None,
         maxLines = SessionUiStyle.View.Tool.DIFF_LINES,
         verticalPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
         editorOnly = true,
+        horizontalPadding = 0,
     ),
     selection,
     render = ::diffMarkdown,

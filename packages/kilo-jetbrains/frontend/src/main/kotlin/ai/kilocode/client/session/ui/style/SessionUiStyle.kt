@@ -107,9 +107,10 @@ object SessionUiStyle {
         /**
          * Standard transparent inset separating an expanded card header from its content, and
          * separating stacked content surfaces inside a [ai.kilocode.client.session.ui.SessionContentPanel].
-         * The gap shows the session backdrop, so surfaces read as distinct raised blocks.
+         * Matches the gap between views in the transcript ([SessionLayout.GAP]), so a card's internal
+         * spacing reads the same as the spacing between cards.
          */
-        fun contentGap() = JBUI.scale(Layout.GAP)
+        fun contentGap() = JBUI.scale(SessionLayout.GAP)
 
         /**
          * Single source of truth for the spacing of every session-card header (see `PartHeader`).

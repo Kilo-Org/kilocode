@@ -4,6 +4,7 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
+import ai.kilocode.client.session.ui.SessionCodeScroll
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
@@ -273,7 +274,7 @@ private class TaskBody(glyph: JBLabel) {
     val scroll = TaskBodyScroll(this)
 }
 
-private class TaskBodyScroll(val body: TaskBody) : JBScrollPane(body.panel) {
+private class TaskBodyScroll(val body: TaskBody) : SessionCodeScroll(body.panel) {
     val rows: Stack get() = body.rows
     val panel: JPanel get() = body.panel
 
@@ -285,7 +286,6 @@ private class TaskBodyScroll(val body: TaskBody) : JBScrollPane(body.panel) {
     override fun updateUI() {
         super.updateUI()
         border = JBUI.Borders.empty()
-        background = SessionUiStyle.Colors.codeBlockBackground()
         viewport?.background = SessionUiStyle.Colors.codeBlockBackground()
     }
 }

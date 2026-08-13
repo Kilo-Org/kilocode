@@ -195,10 +195,7 @@ class PatchBody(
             .next(DiffStatBadge(file.additions, file.deletions))
         return JBUI.Panels.simplePanel(row).apply {
             isOpaque = false
-            border = JBUI.Borders.compound(
-                JBUI.Borders.customLineBottom(NamedColorUtil.getBoundsColor()),
-                JBUI.Borders.emptyLeft(SessionUiStyle.View.Code.VIEWPORT_HORIZONTAL_PADDING),
-            )
+            border = JBUI.Borders.customLineBottom(NamedColorUtil.getBoundsColor())
         }
     }
 
@@ -225,10 +222,11 @@ class PatchBody(
 
     private companion object {
         val DIFF_OPTS = MdCodeBlockOptions(
-            border = MdCodeBlockBorder.Bottom,
+            border = MdCodeBlockBorder.None,
             maxLines = SessionUiStyle.View.Tool.DIFF_LINES,
             verticalPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
             editorOnly = true,
+            horizontalPadding = 0,
         )
     }
 }
