@@ -35,6 +35,9 @@ export type Options = {
   scenarioTimeout: Duration.Duration
   progress: boolean
   trace: boolean
+  // kilocode_change start - split the selected scenarios across parallel exerciser processes
+  shard: { index: number; total: number } | undefined
+  // kilocode_change end
 }
 
 export type RequestSpec = {
@@ -95,6 +98,7 @@ export type ActiveScenario = {
   mutates: boolean
   reset: boolean
   auth: AuthPolicy
+  degradesProcess: boolean // kilocode_change
 }
 
 export type BuilderState<S> = {
@@ -110,6 +114,7 @@ export type BuilderState<S> = {
   mutates: boolean
   reset: boolean
   auth: AuthPolicy
+  degradesProcess: boolean // kilocode_change
 }
 
 export type TodoScenario = {

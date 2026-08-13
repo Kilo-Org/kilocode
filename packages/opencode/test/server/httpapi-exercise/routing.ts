@@ -1,4 +1,5 @@
 import { Duration } from "effect"
+import { TestShard } from "../../../script/kilocode/test-shard" // kilocode_change - reuse the unit runner's LPT splitter
 import { OpenApiMethods, type OpenApiSpec, type Options, type Result, type Scenario } from "./types"
 
 type ScenarioTimeout = `${number} ${Duration.Unit}`
@@ -52,8 +53,17 @@ export function parseOptions(args: string[]): Options {
     scenarioTimeout: parseScenarioTimeout(option(args, "--scenario-timeout") ?? "30 seconds"),
     progress: args.includes("--progress"),
     trace: args.includes("--trace"),
+    shard: parseShard(option(args, "--shard") ?? (process.env.KILO_HTTPAPI_SHARD?.trim() || undefined)), // kilocode_change
   }
 }
+
+// kilocode_change start - `--shard N/M` splits the selection across parallel processes
+function parseShard(input: string | undefined) {
+  const parsed = TestShard.parse(input)
+  if (!parsed.ok) throw new Error(parsed.error)
+  return parsed.value
+}
+// kilocode_change end
 
 export function matches(options: Options, scenario: Scenario) {
   if (!options.include) return true
@@ -72,8 +82,47 @@ export function selectedScenarios(options: Options, scenarios: Scenario[]) {
     : included.length - 1
   if (start === -1) throw new Error(`--start-at matched no scenario: ${options.startAt}`)
   if (end === -1) throw new Error(`--stop-at matched no scenario: ${options.stopAt}`)
-  return included.slice(start, end + 1)
+  // kilocode_change start - shard first, then push process-degrading scenarios to the back of
+  // whatever shard they landed in. Both steps only reorder and partition; neither drops a
+  // scenario, and the `missing`/`extra` route gates in index.ts are computed from the full list
+  // either way.
+  const sliced = included.slice(start, end + 1)
+  return degradedLast(options.shard ? shardScenarios(sliced, options.shard) : sliced)
 }
+// kilocode_change end
+
+// kilocode_change start
+/**
+ * LPT-split the selection into `shard.total` groups and return this process's group.
+ *
+ * Scenarios are weighted equally rather than by observed duration. That is deliberate: with
+ * the process-degrading scenarios sorted to the back (see `degradesProcess` in dsl.ts), the
+ * measured spread is narrow -- median 0.71s against a 1.99s worst case -- so count balancing
+ * lands within a few percent of a duration-weighted split and needs no history plumbing.
+ * Keys carry an occurrence suffix because scenario names are not unique: 315 scenarios share
+ * 306 distinct `method path name` triples, so keying on the triple alone would collide and
+ * silently drop the duplicates.
+ */
+export function shardScenarios(scenarios: Scenario[], shard: { index: number; total: number }) {
+  const seen = new Map<string, number>()
+  const byKey = new Map<string, Scenario>()
+  const keys = scenarios.map((scenario) => {
+    const base = routeKey(scenario) + " " + scenario.name
+    const count = (seen.get(base) ?? 0) + 1
+    seen.set(base, count)
+    const key = count === 1 ? base : `${base}#${count}`
+    byKey.set(key, scenario)
+    return key
+  })
+  const group = TestShard.split(keys, () => 1, shard.total)[shard.index - 1] ?? []
+  return group.map((key) => byKey.get(key)!)
+}
+
+function degradedLast(scenarios: Scenario[]) {
+  const degrades = (scenario: Scenario) => scenario.kind === "active" && scenario.degradesProcess
+  return [...scenarios.filter((scenario) => !degrades(scenario)), ...scenarios.filter(degrades)]
+}
+// kilocode_change end
 
 function matchesName(value: string, scenario: Scenario) {
   return scenario.name.includes(value) || scenario.path.includes(value) || scenario.method.includes(value.toUpperCase())

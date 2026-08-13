@@ -380,11 +380,29 @@ jobs:
 
   # kilocode_change start
   httpapi:
-    name: HttpApi exerciser
+    # kilocode_change start - shard the exerciser across processes.
+    # The exerciser drives all 315 scenarios through one process at `concurrency: 1`, and that
+    # single step was 668s of this job's 720s in run 31648508417 (setup is only ~45s, and all 8
+    # turbo build deps were cache hits). It cannot be parallelised in-process: `resetState` in
+    # runner.ts calls `disposeApps()` and `disposeAllInstances()` between scenarios, which would
+    # tear down a concurrent scenario's app. Across processes it is already safe -- environment.ts
+    # keys both the database and the XDG root on `process.pid`, so each shard is fully isolated.
+    # `test:httpapi` reads KILO_HTTPAPI_SHARD, so `bun run test:httpapi` locally still runs
+    # everything. The turbo task sets `cache: false`, so no cache key needs to know about shards.
+    # Measured locally: coverage 2s, auth 18s, effect 468s -- of which 244s was one scenario
+    # poisoning the process (see `degradesProcess` in dsl.ts), now fixed. 6 shards over the
+    # remaining ~240s of scenario work puts this job near 2m at roughly today's billed minutes,
+    # since each added shard only pays its own ~45s of setup.
+    name: HttpApi exerciser (${{ matrix.shard }}/6)
     needs: changes
     if: needs.changes.outputs.general == 'true'
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
+    # kilocode_change end
     defaults:
       run:
         shell: bash
@@ -407,20 +425,27 @@ jobs:
         uses: actions/cache@v5
         with:
           path: .turbo/cache
-          key: turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-httpapi-${{ github.sha }}
+          # kilocode_change start - shard-scoped primary key so six concurrent shards do not all
+          # race to save the same entry; the shared restore-keys below still let them reuse each
+          # other's build cache from previous runs.
+          key: turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-httpapi-${{ matrix.shard }}-${{ github.sha }}
+          # kilocode_change end
           restore-keys: |
             turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-httpapi-
             turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-
             turbo-${{ runner.os }}-
 
       - name: Check generated client
-        if: runner.os == 'Linux'
+        # kilocode_change start - one shard is enough; this checks the committed client, not the shard
+        if: runner.os == 'Linux' && matrix.shard == 1
+        # kilocode_change end
         working-directory: packages/client
         run: bun run check:generated
       - name: Run HttpApi exerciser gates
         run: bun turbo test:httpapi --filter='@kilocode/cli'
         env:
           KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: "true" # kilocode_change - a watcher per scenario instance is too heavy for the exerciser
+          KILO_HTTPAPI_SHARD: ${{ matrix.shard }}/6 # kilocode_change - this shard's slice of the scenario list
 
   # kilocode_change end
 

@@ -32,6 +32,7 @@ class ScenarioBuilder<S = undefined> {
       mutates: false,
       reset: true,
       auth,
+      degradesProcess: false, // kilocode_change
     }
   }
 
@@ -64,6 +65,18 @@ class ScenarioBuilder<S = undefined> {
   mutating() {
     return this.clone({ mutates: true })
   }
+
+  // kilocode_change start - some routes leave the exerciser process permanently slower, so
+  // every scenario after them pays for it. `POST /kilocode/heap/snapshot` is the known case:
+  // writeHeapSnapshot walks and serialises the whole JS heap, and once it has run the
+  // remaining scenarios in that process cost ~12x more (measured: the last 20 scenarios took
+  // 244s after it and 17s without it -- roughly half of the entire exerciser's runtime).
+  // Marking a scenario here makes the runner sort it behind every undegraded scenario in its
+  // shard, so nothing else absorbs the cost. It changes ordering only, never coverage.
+  degradesProcess() {
+    return this.clone({ degradesProcess: true })
+  }
+  // kilocode_change end
 
   preserveDatabase() {
     return this.clone({ reset: false })
@@ -175,6 +188,7 @@ class ScenarioBuilder<S = undefined> {
       mutates: state.mutates,
       reset: state.reset,
       auth: state.auth,
+      degradesProcess: state.degradesProcess, // kilocode_change
     }
   }
 }

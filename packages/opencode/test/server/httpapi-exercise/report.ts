@@ -22,9 +22,12 @@ export function printHeader(
   console.log(`${color.cyan}HttpApi exerciser${color.reset}`)
   console.log(`${color.dim}db=${paths.database}${color.reset}`)
   console.log(`${color.dim}global=${paths.global}${color.reset}`)
+  // kilocode_change start - surface which shard this process ran
+  const shard = options.shard ? ` shard=${options.shard.index}/${options.shard.total}` : ""
   console.log(
-    `${color.dim}mode=${options.mode} selected=${selected.length} scenarioTimeout=${Duration.format(options.scenarioTimeout)} effectRoutes=${effectRoutes.length} missing=${missing.length} extra=${extra.length}${color.reset}`,
+    `${color.dim}mode=${options.mode}${shard} selected=${selected.length} scenarioTimeout=${Duration.format(options.scenarioTimeout)} effectRoutes=${effectRoutes.length} missing=${missing.length} extra=${extra.length}${color.reset}`,
   )
+  // kilocode_change end
   console.log("")
 }
 

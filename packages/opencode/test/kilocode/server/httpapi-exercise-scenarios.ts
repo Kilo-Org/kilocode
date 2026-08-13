@@ -532,6 +532,9 @@ export const kiloScenarios: Scenario[] = [
   http.protected
     .post("/kilocode/heap/snapshot", "kilocode.heap.snapshot")
     .mutating()
+    // kilocode_change - writeHeapSnapshot serialises the whole JS heap and leaves this process
+    // ~12x slower for every scenario that follows, so it has to run last. See dsl.ts.
+    .degradesProcess()
     .jsonEffect(200, (body) =>
       Effect.gen(function* () {
         check(typeof body === "string", "heap snapshot should return its file path")
@@ -567,7 +570,10 @@ export const kiloScenarios: Scenario[] = [
       check(item.builtin === false, "command file should not be builtin")
       check(item.model === "anthropic/claude-sonnet-4-6", "command file should include model metadata")
       check(item.variant === "high", "command file should include variant metadata")
-      check(typeof item.content === "string" && item.content.includes("Run command."), "command file should include content")
+      check(
+        typeof item.content === "string" && item.content.includes("Run command."),
+        "command file should include content",
+      )
     }),
   http.protected
     .post("/kilocode/command/remove", "kilocode.removeCommand")
@@ -583,10 +589,7 @@ export const kiloScenarios: Scenario[] = [
       Effect.gen(function* () {
         check(body === true, "command removal should return true")
         const location = path.join(directory(ctx), ".kilo/command/httpapi-remove.md")
-        check(
-          !(yield* Effect.promise(() => Bun.file(location).exists())),
-          "removed command should not remain on disk",
-        )
+        check(!(yield* Effect.promise(() => Bun.file(location).exists())), "removed command should not remain on disk")
       }),
     ),
   http.protected
