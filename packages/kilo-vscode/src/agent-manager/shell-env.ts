@@ -61,6 +61,15 @@ function parseEnvOutput(stdout: string): Record<string, string> {
  * Results are cached for 1 minute (10 seconds when the fallback was used).
  */
 export async function getShellEnvironment(): Promise<Record<string, string>> {
+  // Windows has no login shell to resolve; the extension-host environment
+  // already is the user's environment.
+  if (process.platform === "win32") {
+    const env: Record<string, string> = {}
+    for (const [key, value] of Object.entries(process.env)) {
+      if (typeof value === "string") env[key] = value
+    }
+    return env
+  }
   const now = Date.now()
   const ttl = wasFallback ? FALLBACK_TTL : TTL
   if (cached && now - cacheTime < ttl) return { ...cached }

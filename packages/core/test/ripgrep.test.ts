@@ -2,12 +2,13 @@ import { describe, expect } from "bun:test"
 import fs from "fs/promises"
 import path from "path"
 import { Effect } from "effect"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { RelativePath } from "@opencode-ai/core/schema"
 import { tmpdir } from "./fixture/tmpdir"
 import { testEffect } from "./lib/effect"
 
-const it = testEffect(Ripgrep.defaultLayer)
+const it = testEffect(LayerNode.compile(Ripgrep.node))
 
 describe("Ripgrep", () => {
   it.live("keeps ignored files out of catch-all find results", () =>
@@ -61,4 +62,18 @@ describe("Ripgrep", () => {
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
     ),
   )
+
+  // kilocode_change start - surfaced error keeps the underlying reason
+  it.live("includes the underlying reason in execution failures", () =>
+    Effect.gen(function* () {
+      const ripgrep = yield* Ripgrep.Service
+      const controller = new AbortController()
+      controller.abort()
+      const error = yield* ripgrep
+        .find({ cwd: process.cwd(), pattern: "*", limit: 1, signal: controller.signal })
+        .pipe(Effect.flip)
+      expect(error.message).toMatch(/^ripgrep execution failed: .+/)
+    }),
+  )
+  // kilocode_change end
 })

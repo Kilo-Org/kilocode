@@ -34,6 +34,8 @@ export interface Disposable {
  */
 export class SessionTerminalManager {
   private static readonly LOCAL_KEY = "__local__"
+  private static readonly SESSION_PREFIX = "session:"
+  private static readonly WORKTREE_PREFIX = "worktree:"
 
   private terminals = new Map<string, { terminal: TerminalHandle; cwd: string }>()
   private disposables: Disposable[] = []
@@ -47,10 +49,10 @@ export class SessionTerminalManager {
   ) {
     this.disposables.push(
       host.onTerminalClosed((terminal) => {
-        for (const [sessionId, entry] of this.terminals) {
+        for (const [key, entry] of this.terminals) {
           if (entry.terminal !== terminal) continue
-          this.terminals.delete(sessionId)
-          this.log(`Removed terminal mapping for session ${sessionId} (terminal closed)`)
+          this.terminals.delete(key)
+          this.log(`Removed terminal mapping for ${key} (terminal closed)`)
           break
         }
         this.updateContextKey()
@@ -86,7 +88,8 @@ export class SessionTerminalManager {
    */
   showTerminal(sessionId: string, state: WorktreeStateManager | undefined): void {
     // If terminal already exists, just focus it
-    if (this.showExisting(sessionId, false)) return
+    const key = SessionTerminalManager.sessionKey(sessionId)
+    if (this.showExistingKey(key, false)) return
 
     const repoPath = this.host.repoPath()
     const worktreePath = state?.directoryFor(sessionId)
@@ -102,7 +105,7 @@ export class SessionTerminalManager {
     const worktree = session?.worktreeId ? state?.getWorktree(session.worktreeId) : undefined
     const name = worktree ? `Agent: ${worktree.branch}` : "Agent: local"
 
-    this.showOrCreate(sessionId, cwd, name)
+    this.showOrCreate(key, cwd, name)
   }
 
   /**
@@ -110,7 +113,7 @@ export class SessionTerminalManager {
    * Used when the user triggers a terminal in local mode without an active session.
    */
   showLocalTerminal(): void {
-    if (this.showExisting(SessionTerminalManager.LOCAL_KEY, false)) return
+    if (this.showExistingKey(SessionTerminalManager.LOCAL_KEY, false)) return
 
     const cwd = this.host.repoPath()
     if (!cwd) {
@@ -123,10 +126,31 @@ export class SessionTerminalManager {
   }
 
   /**
+   * Show (or create) a terminal rooted at a worktree directory. Used when
+   * the worktree has no session to key the terminal off (e.g. all of its
+   * sessions were closed) so the shortcut never dead-ends on a sessionless
+   * worktree.
+   */
+  showWorktreeTerminal(worktreeId: string, state: WorktreeStateManager | undefined): void {
+    const key = SessionTerminalManager.worktreeKey(worktreeId)
+    if (this.showExistingKey(key, false)) return
+
+    const worktree = state?.getWorktree(worktreeId)
+    const cwd = worktree?.path ?? this.host.repoPath()
+    if (!cwd) {
+      this.log(`showWorktreeTerminal: no cwd resolved for worktree ${worktreeId}`)
+      this.host.showWarning("Open a folder that contains a git repository to use worktrees")
+      return
+    }
+
+    this.showOrCreate(key, cwd, worktree ? `Agent: ${worktree.branch}` : "Agent: worktree")
+  }
+
+  /**
    * Show the existing local terminal if one was previously created (used on context switch).
    */
   showExistingLocal(): boolean {
-    return this.showExisting(SessionTerminalManager.LOCAL_KEY)
+    return this.showExistingKey(SessionTerminalManager.LOCAL_KEY)
   }
 
   /**
@@ -159,34 +183,38 @@ export class SessionTerminalManager {
    * Pass preserveFocus=true to keep focus on the current editor (default for session switching).
    */
   showExisting(sessionId: string, preserveFocus = true): boolean {
-    const entry = this.terminals.get(sessionId)
+    return this.showExistingKey(SessionTerminalManager.sessionKey(sessionId), preserveFocus)
+  }
+
+  private showExistingKey(key: string, preserveFocus = true): boolean {
+    const entry = this.terminals.get(key)
     if (!entry) return false
 
     if (entry.terminal.exitStatus !== undefined) {
-      this.terminals.delete(sessionId)
-      this.log(`showExisting: terminal exited for session ${sessionId}, clearing`)
+      this.terminals.delete(key)
+      this.log(`showExisting: terminal exited for ${key}, clearing`)
       return false
     }
 
     entry.terminal.show(preserveFocus)
     this.panelOpen = true
-    this.log(`showExisting: revealed terminal for session ${sessionId}`)
+    this.log(`showExisting: revealed terminal for ${key}`)
     return true
   }
 
-  activeSession(): string | undefined {
+  private activeKey(): string | undefined {
     const active = this.host.activeTerminal()
     if (!active) return undefined
-    for (const [id, entry] of this.terminals) {
-      if (entry.terminal === active && entry.terminal.exitStatus === undefined) return id
+    for (const [key, entry] of this.terminals) {
+      if (entry.terminal === active && entry.terminal.exitStatus === undefined) return key
     }
     return undefined
   }
 
   prepareContext(sessionId: string): boolean {
     if (this.showExisting(sessionId)) return true
-    const active = this.activeSession()
-    return !active || active === sessionId
+    const active = this.activeKey()
+    return !active || active === SessionTerminalManager.sessionKey(sessionId)
   }
 
   dispose(): void {
@@ -254,32 +282,40 @@ export class SessionTerminalManager {
     void this.host.setContext("kilo-code.agentTerminalFocus", managed)
   }
 
-  private showOrCreate(sessionId: string, cwd: string, name: string): void {
-    let entry = this.terminals.get(sessionId)
+  private showOrCreate(key: string, cwd: string, name: string): void {
+    let entry = this.terminals.get(key)
 
     // Clean up exited terminals
     if (entry && entry.terminal.exitStatus !== undefined) {
-      this.terminals.delete(sessionId)
+      this.terminals.delete(key)
       entry = undefined
     }
 
     // Recreate if CWD changed
     if (entry && entry.cwd !== cwd) {
       entry.terminal.dispose()
-      this.terminals.delete(sessionId)
+      this.terminals.delete(key)
       entry = undefined
-      this.log(`showTerminal: cwd changed for session ${sessionId}, recreating`)
+      this.log(`showTerminal: cwd changed for ${key}, recreating`)
     }
 
     if (!entry) {
       const terminal = this.host.createTerminal({ cwd, name })
       entry = { terminal, cwd }
-      this.terminals.set(sessionId, entry)
-      this.log(`showTerminal: created terminal for session ${sessionId} (cwd=${cwd})`)
+      this.terminals.set(key, entry)
+      this.log(`showTerminal: created terminal for ${key} (cwd=${cwd})`)
     }
 
     entry.terminal.show(false)
     this.panelOpen = true
     this.updateContextKey()
+  }
+
+  private static sessionKey(id: string): string {
+    return `${SessionTerminalManager.SESSION_PREFIX}${id}`
+  }
+
+  private static worktreeKey(id: string): string {
+    return `${SessionTerminalManager.WORKTREE_PREFIX}${id}`
   }
 }

@@ -10,6 +10,27 @@ export interface PanelContext {
   hidePicker?: boolean
   /** User-picked base branch for the workspace source. Undefined = auto. */
   baseBranchOverride?: string
+  /**
+   * Explicit directory to diff inside, overriding the workspace root lookup.
+   * Agent Manager passes a worktree path so its sources operate in the
+   * worktree rather than the main checkout.
+   */
+  dir?: string
+  /**
+   * When true, a source whose `dir` resolves to undefined returns an empty
+   * diff instead of falling back to the workspace root. Agent Manager sets
+   * this so an unresolvable worktree context never silently diffs the main
+   * checkout.
+   */
+  strictDir?: boolean
+  /**
+   * Explicit base ref for the workspace source, skipping auto-resolution.
+   * Agent Manager passes the worktree's recorded parent ref.
+   */
+  baseBranch?: string
+  /** Shared GitOps / log injected by Agent Manager to avoid per-source channels. */
+  git?: import("../agent-manager/GitOps").GitOps
+  log?: (...args: unknown[]) => void
 }
 
 export type DiffImageError = "too-large" | "unreadable"

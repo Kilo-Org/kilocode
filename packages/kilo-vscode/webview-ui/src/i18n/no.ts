@@ -1,6 +1,8 @@
 import { dict as en } from "./en"
 type Keys = keyof typeof en
 
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Koble til Anaconda Desktop",
   "provider.anaconda.title.manage": "Administrer Anaconda Desktop",
@@ -56,6 +58,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Koble til leverandør",
 
@@ -165,6 +168,7 @@ export const dict = {
   "model.group.auto": "Automatiske modeller",
   "model.group.recommended": "Anbefalt",
   "model.group.favorites": "Favoritter",
+  "model.group.mostUsed": "Mest brukt",
   "model.favorite.add": "Legg til i favoritter",
   "model.favorite.remove": "Fjern fra favoritter",
   "model.preview.label.released": "Utgitt",
@@ -234,6 +238,8 @@ export const dict = {
     "Klikk for å begrense skrivetilgang til filsystemet. Nettverkstilgang er fortsatt tillatt av sandbox-innstillingene dine.",
 
   "speechToText.tooltip.start": "Start taleinndata med Kilo Gateway",
+  "speechToText.tooltip.shortcut":
+    "Trykk på knappen eller bruk Cmd/Ctrl+K for å starte eller stoppe opptaket; hold knappen inne mens du snakker, og slipp den for å transkribere og sende.",
   "speechToText.tooltip.starting": "Starter mikrofonen... Vent med å snakke.",
   "speechToText.tooltip.stop": "Stopp lydfangst",
   "speechToText.tooltip.transcribing": "Transkriberer... Klikk for å avbryte.",
@@ -272,6 +278,7 @@ export const dict = {
 
   "notification.permission.title": "Tillatelse påkrevd",
   "notification.permission.titleSubagent": "Tillatelse påkrevd (underagent)",
+  "notification.permission.titleSkillShell": "Kjøre skallkommandoer fra ferdigheten «{{skill}}»?",
   "ui.permission.manageAutoApprove": "Administrer regler for automatisk godkjenning",
   "ui.permission.doomLoop.prompt": "Mulig løkke oppdaget for verktøyet {{tool}}. Fortsette kjøringen?",
   "ui.permission.doomLoop.rule": "Fortsett {{tool}}-kall",
@@ -307,16 +314,24 @@ export const dict = {
   "ui.approval.source.yolo": "av automatisk godkjenning (YOLO)",
   "ui.approval.source.session": "av en økt-autogodkjenningsregel",
   "ui.approval.source.default": "som standard",
+  "ui.approval.outsideWorkspace": "(utenfor arbeidsområdet ditt: {{file}})",
 
   "session.tab.review": "Gjennomgang",
   "session.review.filesChanged": "{{count}} filer endret",
-  "session.review.change.other": "Endringer",
   "session.review.loadingChanges": "Laster endringer...",
   "session.review.noChanges": "Ingen endringer",
   "session.messages.loadingEarlier": "Laster inn tidligere meldinger...",
   "session.messages.loadEarlier": "Last inn tidligere meldinger",
   "session.messages.loading": "Laster meldinger...",
 
+  "sidebar.topBar.label": "Kilo Code-navigasjon",
+  "sidebar.topBar.newTask": "Ny Oppgave",
+  "sidebar.topBar.history": "Historikk",
+  "sidebar.topBar.agentManager": "Agent Manager",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "Markedsplass",
+  "sidebar.topBar.profile": "Profil",
+  "sidebar.topBar.settings": "Innstillinger",
   "sidebar.session.newSession": "Ny Økt",
   "sidebar.session.newSession.tooltip": "Start en ny samtale mens den nåværende økten holdes intakt.",
   "sidebar.session.newWorktree": "Nytt Worktree",
@@ -445,45 +460,8 @@ export const dict = {
   "provider.custom.models.name.placeholder": "Visningsnavn",
   "provider.custom.models.reasoning.label": "Resonnering",
   "provider.custom.models.modalities.image": "Bilde",
-  "provider.custom.models.variants.label": "Varianter",
-  "provider.custom.models.variants.add": "Legg til variant",
-  "provider.custom.models.variants.remove": "Fjern variant",
-  "provider.custom.models.variants.name.label": "Navn",
-  "provider.custom.models.variants.name.placeholder": "f.eks. thinking",
-  "provider.custom.models.variants.option.unset": "(ikke angitt)",
-  "provider.custom.models.variants.enableThinking.label": "Aktiver tenkning (f.eks. Alibaba)",
-  "provider.custom.models.variants.enableThinking.placeholder": "enable_thinking",
-  "provider.custom.models.variants.enableThinking.true": "true",
-  "provider.custom.models.variants.enableThinking.false": "false",
-  "provider.custom.models.variants.thinking.label": "Tenkningstype (f.eks. Z.ai)",
-  "provider.custom.models.variants.thinking.placeholder": "thinking",
-  "provider.custom.models.variants.thinking.enabled": "enabled",
-  "provider.custom.models.variants.thinking.disabled": "disabled",
-  "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
-  "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
-  "provider.custom.models.variants.splitReasoning.true": "true",
-  "provider.custom.models.variants.splitReasoning.false": "false",
-  "provider.custom.models.variants.chatTemplateArgs.label":
-    "Aktiver tenkning via chat-malargumenter (f.eks. Hugging Face)",
-  "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
-  "provider.custom.models.variants.chatTemplateArgs.true": "true",
-  "provider.custom.models.variants.chatTemplateArgs.false": "false",
-  "provider.custom.models.variants.reasoningEffort.label": "Resonneringsinnsats",
-  "provider.custom.models.variants.reasoningEffort.placeholder": "reasoningEffort",
-  "provider.custom.models.variants.reasoningEffort.none": "none",
-  "provider.custom.models.variants.reasoningEffort.minimal": "minimal",
-  "provider.custom.models.variants.reasoningEffort.low": "low",
-  "provider.custom.models.variants.reasoningEffort.medium": "medium",
-  "provider.custom.models.variants.reasoningEffort.high": "high",
-  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
-  "provider.custom.models.variants.outputEffort.placeholder": "effort",
-  "provider.custom.models.variants.outputEffort.low": "low",
-  "provider.custom.models.variants.outputEffort.medium": "medium",
-  "provider.custom.models.variants.outputEffort.high": "high",
-  "provider.custom.models.variants.outputEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.max": "max",
+  "provider.custom.models.toggleReasoning": "Veksle resonnering for alle",
+  "provider.custom.models.toggleImages": "Veksle bilde for alle",
   "provider.custom.models.remove": "Fjern modell",
   "provider.custom.models.add": "Legg til modell",
   "provider.custom.models.fetch.authError": "Autentisering mislyktes. Sjekk API-nøkkelen ovenfor og prøv igjen.",
@@ -497,6 +475,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "Søk etter modeller\u2026",
   "provider.custom.models.fetch.add": "Legg til {{count}} modell(er)",
   "provider.custom.edit.title": "Rediger leverandør",
+  "provider.custom.edit.advanced": "Rediger avanserte innstillinger i JSON-konfigurasjonsfilen",
   "provider.custom.headers.label": "Headere (valgfritt)",
   "provider.custom.headers.key.label": "Header",
   "provider.custom.headers.key.placeholder": "Header-Name",
@@ -665,7 +644,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "Agentoppførsel",
   "settings.autoApprove.title": "Automatisk godkjenning",
-  "settings.browser.title": "Nettleser",
+  "settings.webTools.title": "Nettverktøy",
+  "settings.webTools.description": "Konfigurer nettsøk og nettleserautomatisering.",
+  "settings.webTools.webSearch.enable": "Aktiver for alle leverandører",
+  "settings.webTools.browserAutomation": "Nettleserautomatisering",
+  "settings.webTools.webSearch.title": "Nettsøk",
+  "settings.webTools.webSearch.description": "Gjør nettsøk tilgjengelig for modeller fra alle leverandører.",
   "settings.checkpoints.title": "Kontrollpunkter",
   "settings.display.title": "Visning",
   "settings.autocomplete.title": "Autofullfør",
@@ -683,6 +667,13 @@ export const dict = {
   "session.messages.scrollToBottom": "Rull til bunnen",
   "session.messages.initializing": "Initialiserer...",
   "session.messages.taskStarting": "Starter...",
+  "session.prompts.navLabel": "Ledetekstnavigering",
+  "session.prompts.tick": "Ledetekst {{index}} av {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "Ingen svar ennå",
+  "session.prompts.queued": "I kø",
+  "session.prompts.first": "Første ledetekst",
+  "session.prompts.latest": "Siste ledetekst",
+  "session.prompts.overflow": "{{count}} tidligere ledetekster",
   "session.status.writingResponse": "Skriver svar…",
   "session.status.retry": "Prøver på nytt…",
   "session.status.working": "Arbeider…",
@@ -710,7 +701,8 @@ export const dict = {
 
   "prompt.placeholder.connecting": "Kobler til server...",
   "prompt.placeholder.error": "Tilkobling mislyktes. Sjekk utdatapanelet eller start utvidelsen på nytt.",
-  "prompt.placeholder.default": "Skriv en melding... (Enter for å sende, Shift+Enter for ny linje)",
+  "prompt.placeholder.default":
+    "Skriv en melding, @ for å nevne filer... (Enter for å sende, Shift+Enter for ny linje)",
 
   "context.usage.sessionCost": "Sesjonskostnad",
   "context.usage.olderSessions": "{{count}} eldre sesjoner",
@@ -808,8 +800,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Aktiver språkserverprotokoll-integrasjon",
   "settings.experimental.batch.title": "Batchverktøy",
   "settings.experimental.batch.description": "Aktiver batchbehandling av verktøykall",
-  "settings.experimental.codebaseSearch.title": "Kodesøk",
-  "settings.experimental.codebaseSearch.description": "Aktiver AI-drevet naturlig språksøk på tvers av kodebasen",
   "settings.experimental.imageGeneration.title": "Bildegenerering",
   "settings.experimental.imageGeneration.description": "Aktiver AI-bildegenerering",
   "settings.experimental.imageGenerationModel.title": "Bildemodell",
@@ -832,7 +822,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "Tillatte nettverksmål",
   "settings.sandboxing.allowedHosts.description":
-    "DNS-verts- og portdestinasjoner for HTTP- og HTTPS-proxytrafikk i sandkassen. GitHub CLI og HTTPS Git trenger vanligvis github.com:443 og api.github.com:443. Endringer gjelder for nye økter.",
+    "DNS-verts- og portdestinasjoner for HTTP- og HTTPS-proxytrafikk i sandkassen. GitHub CLI og HTTPS Git trenger vanligvis github.com:443 og api.github.com:443.",
   "settings.sandboxing.writablePaths.title": "Ytterligere skrivbare baner",
   "settings.sandboxing.writablePaths.description":
     "Ytterligere filsystembaner som sandkassen tillater skriving til (f.eks. /tmp, /var/log). Disse flettes med de standardskrivbare banene når sandkassen er aktiv.",
@@ -842,6 +832,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "SWE-Pruner-modell",
   "settings.experimental.swePrunerModel.description":
     "Modell som brukes til å beskjære verktøyutdata; som standard den konfigurerte lille modellen",
+  "settings.experimental.multiProject.title": "Multi-prosjekt Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Aktiver administrering av økter og worktrees på tvers av flere repositories i Agent Manager. Det nåværende workspace-repositoryet er alltid standardprosjektet.",
   "settings.experimental.mcpTimeout.title": "MCP-tidsavbrudd (ms)",
   "settings.experimental.mcpTimeout.description": "Tidsavbrudd for MCP-serverforespørsler i millisekunder",
   "settings.experimental.remote.title": "Remote-kontroll",
@@ -1007,6 +1000,9 @@ export const dict = {
     "Ingen egendefinerte kommandoer konfigurert. Legg til kommandoer i opencode.json for å se dem her.",
   "settings.agentBehaviour.workflows.detail.description": "Beskrivelse",
   "settings.agentBehaviour.workflows.detail.template": "Mal",
+  "settings.agentBehaviour.workflows.model": "modell",
+  "settings.agentBehaviour.workflows.variant": "variant",
+  "settings.agentBehaviour.workflows.modelDescription": "Global modelloverstyring",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Kjør shell-kommandoer for agenten i en sandbox på operativsystemnivå som begrenser skriving til prosjekt- og Kilo-tilstandsmapper",
@@ -1102,10 +1098,11 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Bytt resonnementsinnsats med Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Trykk Shift+Tab i et promptinndatafelt for å bytte til neste nivå for resonnementsinnsats. Deaktiver for å beholde Shift+Tab for tastaturnavigering av fokus.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "Blokker for terminalkommandoer",
+  "settings.display.terminalCommand.description":
+    "Velg om blokker for terminalkommandoer skal være utvidet eller skjult fra start.",
+  "settings.display.terminalCommand.expanded": "Utvidet",
+  "settings.display.terminalCommand.collapsed": "Skjult",
   "settings.display.codeEdit.title": "Blokker for kodeendringer",
   "settings.display.codeEdit.description":
     "Velg om blokker for kodeendringer og forskjeller skal være utvidet eller skjult fra start.",
@@ -1115,6 +1112,9 @@ export const dict = {
   "settings.display.tokenThroughput.title": "Vis genereringshastighet",
   "settings.display.tokenThroughput.description":
     "Vis tekstgenereringshastighet (tokens/sek) på den siste assistentmeldingen og i oppgaveoverskriften. Skjult som standard for å holde chatten ryddig.",
+  "settings.display.autoApprovalReason.title": "Vis årsak til automatisk godkjenning",
+  "settings.display.autoApprovalReason.description":
+    "Viser en linje ved verktøykall som forklarer hvorfor de ble automatisk godkjent (samsvarende regel, agentstandard, YOLO-modus osv.).",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

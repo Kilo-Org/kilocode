@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "เชื่อมต่อ Anaconda Desktop",
   "provider.anaconda.title.manage": "จัดการ Anaconda Desktop",
@@ -52,6 +54,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "เชื่อมต่อผู้ให้บริการ",
 
@@ -161,6 +164,7 @@ export const dict = {
   "model.group.auto": "โมเดลอัตโนมัติ",
   "model.group.recommended": "แนะนำ",
   "model.group.favorites": "รายการโปรด",
+  "model.group.mostUsed": "ใช้บ่อยที่สุด",
   "model.favorite.add": "เพิ่มในรายการโปรด",
   "model.favorite.remove": "ลบออกจากรายการโปรด",
   "model.preview.label.released": "เปิดตัว",
@@ -227,6 +231,8 @@ export const dict = {
     "คลิกเพื่อจำกัดการเขียนในระบบไฟล์ การตั้งค่า sandbox ของคุณยังคงอนุญาตให้เข้าถึงเครือข่าย",
 
   "speechToText.tooltip.start": "เริ่มการป้อนข้อมูลด้วยเสียงด้วย Kilo Gateway",
+  "speechToText.tooltip.shortcut":
+    "แตะหรือกด Cmd/Ctrl+K เพื่อเริ่มหรือหยุดบันทึก จากนั้นกดค้างไว้ขณะพูด แล้วปล่อยเพื่อถอดเสียงและส่ง",
   "speechToText.tooltip.starting": "กำลังเริ่มไมโครโฟน... โปรดรอก่อนพูด",
   "speechToText.tooltip.stop": "หยุดจับเสียง",
   "speechToText.tooltip.transcribing": "กำลังถอดเสียง... คลิกเพื่อยกเลิก",
@@ -263,6 +269,7 @@ export const dict = {
 
   "notification.permission.title": "ต้องการสิทธิ์",
   "notification.permission.titleSubagent": "ต้องการสิทธิ์ (ตัวแทนย่อย)",
+  "notification.permission.titleSkillShell": 'เรียกใช้คำสั่งเชลล์จากสกิล "{{skill}}" หรือไม่?',
   "ui.permission.manageAutoApprove": "จัดการกฎการอนุมัติอัตโนมัติ",
   "ui.permission.doomLoop.prompt": "ตรวจพบการวนซ้ำที่อาจเกิดขึ้นในเครื่องมือ {{tool}} ต้องการดำเนินการต่อหรือไม่",
   "ui.permission.doomLoop.rule": "เรียกใช้ {{tool}} ต่อไป",
@@ -298,10 +305,10 @@ export const dict = {
   "ui.approval.source.yolo": "โดยโหมดอนุมัติอัตโนมัติ (YOLO)",
   "ui.approval.source.session": "โดยกฎอนุมัติอัตโนมัติของเซสชัน",
   "ui.approval.source.default": "ตามค่าเริ่มต้น",
+  "ui.approval.outsideWorkspace": "(นอกพื้นที่ทำงานของคุณ: {{file}})",
 
   "session.tab.review": "ตรวจสอบ",
   "session.review.filesChanged": "{{count}} ไฟล์ที่เปลี่ยนแปลง",
-  "session.review.change.other": "การเปลี่ยนแปลง",
   "session.review.loadingChanges": "กำลังโหลดการเปลี่ยนแปลง...",
   "session.review.noChanges": "ไม่มีการเปลี่ยนแปลง",
 
@@ -309,6 +316,14 @@ export const dict = {
   "session.messages.loadEarlier": "โหลดข้อความก่อนหน้า",
   "session.messages.loading": "กำลังโหลดข้อความ...",
 
+  "sidebar.topBar.label": "การนำทาง Kilo Code",
+  "sidebar.topBar.newTask": "งานใหม่",
+  "sidebar.topBar.history": "ประวัติ",
+  "sidebar.topBar.agentManager": "ตัวจัดการเอเจนต์",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "มาร์เก็ตเพลส",
+  "sidebar.topBar.profile": "โปรไฟล์",
+  "sidebar.topBar.settings": "การตั้งค่า",
   "sidebar.session.newSession": "เซสชันใหม่",
   "sidebar.session.newSession.tooltip": "เริ่มการสนทนาใหม่โดยที่ยังคงเซสชันปัจจุบันไว้",
   "sidebar.session.newWorktree": "Worktree ใหม่",
@@ -476,45 +491,8 @@ export const dict = {
   "provider.custom.models.name.placeholder": "ชื่อที่แสดง",
   "provider.custom.models.reasoning.label": "การใช้เหตุผล",
   "provider.custom.models.modalities.image": "รูปภาพ",
-  "provider.custom.models.variants.label": "รูปแบบ",
-  "provider.custom.models.variants.add": "เพิ่มรูปแบบ",
-  "provider.custom.models.variants.remove": "ลบรูปแบบ",
-  "provider.custom.models.variants.name.label": "ชื่อ",
-  "provider.custom.models.variants.name.placeholder": "เช่น thinking",
-  "provider.custom.models.variants.option.unset": "(ไม่ได้ตั้งค่า)",
-  "provider.custom.models.variants.enableThinking.label": "เปิดใช้งานการคิด (เช่น Alibaba)",
-  "provider.custom.models.variants.enableThinking.placeholder": "enable_thinking",
-  "provider.custom.models.variants.enableThinking.true": "true",
-  "provider.custom.models.variants.enableThinking.false": "false",
-  "provider.custom.models.variants.thinking.label": "ประเภทการคิด (เช่น Z.ai)",
-  "provider.custom.models.variants.thinking.placeholder": "thinking",
-  "provider.custom.models.variants.thinking.enabled": "enabled",
-  "provider.custom.models.variants.thinking.disabled": "disabled",
-  "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
-  "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
-  "provider.custom.models.variants.splitReasoning.true": "true",
-  "provider.custom.models.variants.splitReasoning.false": "false",
-  "provider.custom.models.variants.chatTemplateArgs.label":
-    "เปิดใช้งานการคิดผ่านอาร์กิวเมนต์เทมเพลตแชท (เช่น Hugging Face)",
-  "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
-  "provider.custom.models.variants.chatTemplateArgs.true": "true",
-  "provider.custom.models.variants.chatTemplateArgs.false": "false",
-  "provider.custom.models.variants.reasoningEffort.label": "ระดับการใช้เหตุผล",
-  "provider.custom.models.variants.reasoningEffort.placeholder": "reasoningEffort",
-  "provider.custom.models.variants.reasoningEffort.none": "none",
-  "provider.custom.models.variants.reasoningEffort.minimal": "minimal",
-  "provider.custom.models.variants.reasoningEffort.low": "low",
-  "provider.custom.models.variants.reasoningEffort.medium": "medium",
-  "provider.custom.models.variants.reasoningEffort.high": "high",
-  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
-  "provider.custom.models.variants.outputEffort.placeholder": "effort",
-  "provider.custom.models.variants.outputEffort.low": "low",
-  "provider.custom.models.variants.outputEffort.medium": "medium",
-  "provider.custom.models.variants.outputEffort.high": "high",
-  "provider.custom.models.variants.outputEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.max": "max",
+  "provider.custom.models.toggleReasoning": "สลับการให้เหตุผลสำหรับทุกโมเดล",
+  "provider.custom.models.toggleImages": "สลับรูปภาพสำหรับทุกโมเดล",
   "provider.custom.models.remove": "ลบโมเดล",
   "provider.custom.models.add": "เพิ่มโมเดล",
   "provider.custom.models.fetch.authError": "การยืนยันตัวตนล้มเหลว ตรวจสอบคีย์ API ด้านบนแล้วลองอีกครั้ง",
@@ -528,6 +506,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "ค้นหาโมเดล\u2026",
   "provider.custom.models.fetch.add": "เพิ่ม {{count}} โมเดล",
   "provider.custom.edit.title": "แก้ไขผู้ให้บริการ",
+  "provider.custom.edit.advanced": "แก้ไขการตั้งค่าขั้นสูงในไฟล์การกำหนดค่า JSON",
   "provider.custom.headers.label": "ส่วนหัว (ไม่จำเป็น)",
   "provider.custom.headers.key.label": "ส่วนหัว",
   "provider.custom.headers.key.placeholder": "Header-Name",
@@ -695,7 +674,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "พฤติกรรมของเอเจนต์",
   "settings.autoApprove.title": "อนุมัติอัตโนมัติ",
-  "settings.browser.title": "เบราว์เซอร์",
+  "settings.webTools.title": "เครื่องมือเว็บ",
+  "settings.webTools.description": "กำหนดค่าการค้นหาเว็บและระบบอัตโนมัติของเบราว์เซอร์",
+  "settings.webTools.webSearch.enable": "เปิดใช้สำหรับผู้ให้บริการทั้งหมด",
+  "settings.webTools.browserAutomation": "ระบบอัตโนมัติของเบราว์เซอร์",
+  "settings.webTools.webSearch.title": "ค้นหาเว็บ",
+  "settings.webTools.webSearch.description": "ทำให้โมเดลจากผู้ให้บริการทั้งหมดใช้การค้นหาเว็บได้",
   "settings.checkpoints.title": "จุดตรวจสอบ",
   "settings.display.title": "การแสดงผล",
   "settings.autocomplete.title": "เติมข้อความอัตโนมัติ",
@@ -712,6 +696,13 @@ export const dict = {
   "session.messages.scrollToBottom": "เลื่อนไปด้านล่าง",
   "session.messages.initializing": "กำลังเริ่มต้น...",
   "session.messages.taskStarting": "กำลังเริ่มทำงาน...",
+  "session.prompts.navLabel": "ตัวนำทางพรอมต์",
+  "session.prompts.tick": "พรอมต์ {{index}} จาก {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "ยังไม่มีการตอบกลับ",
+  "session.prompts.queued": "อยู่ในคิว",
+  "session.prompts.first": "พรอมต์แรก",
+  "session.prompts.latest": "พรอมต์ล่าสุด",
+  "session.prompts.overflow": "พรอมต์ก่อนหน้า {{count}} รายการ",
   "session.status.writingResponse": "กำลังเขียนคำตอบ...",
   "session.status.retry": "กำลังลองใหม่…",
   "session.status.working": "กำลังทำงาน...",
@@ -739,7 +730,7 @@ export const dict = {
 
   "prompt.placeholder.connecting": "กำลังเชื่อมต่อกับเซิร์ฟเวอร์...",
   "prompt.placeholder.error": "การเชื่อมต่อล้มเหลว ตรวจสอบแผงเอาต์พุตหรือรีสตาร์ทส่วนขยาย",
-  "prompt.placeholder.default": "พิมพ์ข้อความ... (Enter เพื่อส่ง, Shift+Enter เพื่อขึ้นบรรทัดใหม่)",
+  "prompt.placeholder.default": "พิมพ์ข้อความ, @ เพื่ออ้างถึงไฟล์... (Enter เพื่อส่ง, Shift+Enter เพื่อขึ้นบรรทัดใหม่)",
 
   "context.usage.sessionCost": "ค่าใช้จ่ายเซสชัน",
   "context.usage.olderSessions": "{{count}} เซสชันก่อนหน้า",
@@ -834,8 +825,6 @@ export const dict = {
   "settings.experimental.lsp.description": "เปิดใช้งานการรวม Language Server Protocol",
   "settings.experimental.batch.title": "เครื่องมือแบทช์",
   "settings.experimental.batch.description": "เปิดใช้งานการประมวลผลแบทช์ของการเรียกเครื่องมือ",
-  "settings.experimental.codebaseSearch.title": "ค้นหาโค้ดเบส",
-  "settings.experimental.codebaseSearch.description": "เปิดใช้งานการค้นหาด้วยภาษาธรรมชาติโดย AI ทั่วทั้งโค้ดเบส",
   "settings.experimental.imageGeneration.title": "การสร้างภาพ",
   "settings.experimental.imageGeneration.description": "เปิดใช้งานการสร้างภาพด้วย AI",
   "settings.experimental.imageGenerationModel.title": "โมเดลภาพ",
@@ -858,7 +847,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "ปลายทางเครือข่ายที่อนุญาต",
   "settings.sandboxing.allowedHosts.description":
-    "โฮสต์ DNS และพอร์ตปลายทางสำหรับทราฟฟิกพร็อกซี HTTP และ HTTPS ในแซนด์บ็อกซ์ GitHub CLI และ HTTPS Git มักต้องใช้ github.com:443 และ api.github.com:443 การเปลี่ยนแปลงจะมีผลกับเซสชันใหม่",
+    "โฮสต์ DNS และพอร์ตปลายทางสำหรับทราฟฟิกพร็อกซี HTTP และ HTTPS ในแซนด์บ็อกซ์ GitHub CLI และ HTTPS Git มักต้องใช้ github.com:443 และ api.github.com:443",
   "settings.sandboxing.writablePaths.title": "เส้นทางที่เขียนได้เพิ่มเติม",
   "settings.sandboxing.writablePaths.description":
     "เส้นทางระบบไฟล์เพิ่มเติมที่แซนด์บ็อกซ์อนุญาตให้เขียนได้ (เช่น /tmp, /var/log) จะถูกรวมเข้ากับเส้นทางที่เขียนได้เริ่มต้นเมื่อแซนด์บ็อกซ์เปิดใช้งาน",
@@ -868,6 +857,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "โมเดล SWE-Pruner",
   "settings.experimental.swePrunerModel.description":
     "โมเดลที่ใช้ตัดทอนผลลัพธ์ของเครื่องมือ ค่าเริ่มต้นคือโมเดลขนาดเล็กที่กำหนดไว้",
+  "settings.experimental.multiProject.title": "Agent Manager หลายโปรเจกต์",
+  "settings.experimental.multiProject.description":
+    "เปิดใช้งานการจัดการเซสชันและเวิร์กทรีข้ามหลาย Repository ใน Agent Manager Repository ของ workspace ปัจจุบันเป็นโปรเจกต์เริ่มต้นเสมอ",
   "settings.experimental.mcpTimeout.title": "หมดเวลา MCP (มิลลิวินาที)",
   "settings.experimental.mcpTimeout.description": "หมดเวลาสำหรับคำขอเซิร์ฟเวอร์ MCP เป็นมิลลิวินาที",
   "settings.experimental.remote.title": "การควบคุม Remote",
@@ -993,6 +985,9 @@ export const dict = {
     "ไม่มีคำสั่งแบบกำหนดเองที่กำหนดค่าไว้ เพิ่มคำสั่งใน opencode.json เพื่อดูที่นี่",
   "settings.agentBehaviour.workflows.detail.description": "คำอธิบาย",
   "settings.agentBehaviour.workflows.detail.template": "เทมเพลต",
+  "settings.agentBehaviour.workflows.model": "โมเดล",
+  "settings.agentBehaviour.workflows.variant": "รูปแบบ",
+  "settings.agentBehaviour.workflows.modelDescription": "การแทนที่โมเดลส่วนกลาง",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "เรียกใช้คำสั่ง shell ของ agent ใน sandbox ระดับระบบปฏิบัติการที่จำกัดการเขียนไปยังโฟลเดอร์สถานะของโปรเจ็กต์และ Kilo",
@@ -1084,18 +1079,21 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "สลับระดับความพยายามในการให้เหตุผลด้วย Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "กด Shift+Tab ในช่องป้อนพรอมต์เพื่อสลับไปยังระดับความพยายามในการให้เหตุผลถัดไป ปิดใช้งานเพื่อคง Shift+Tab ไว้สำหรับการนำทางโฟกัสด้วยแป้นพิมพ์",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "บล็อกคำสั่งเทอร์มินัล",
+  "settings.display.terminalCommand.description": "เลือกว่าบล็อกคำสั่งเทอร์มินัลจะเริ่มต้นแบบขยายหรือยุบ",
+  "settings.display.terminalCommand.expanded": "ขยาย",
+  "settings.display.terminalCommand.collapsed": "ยุบ",
   "settings.display.codeEdit.title": "บล็อกการแก้ไขโค้ด",
   "settings.display.codeEdit.description": "เลือกว่าบล็อกการแก้ไขโค้ดและบล็อกแสดงความแตกต่างจะเริ่มต้นแบบขยายหรือยุบ",
   "settings.display.codeEdit.expanded": "ขยาย",
   "settings.display.codeEdit.collapsed": "ยุบ",
 
-  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.title": "แสดงอัตราการประมวลผลโทเคน",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+    "แสดงอัตราการสร้างข้อความ (โทเคน/วินาที) บนข้อความล่าสุดของผู้ช่วยและในส่วนหัวของงาน ซ่อนโดยค่าเริ่มต้นเพื่อให้แชทดูเรียบร้อย",
+  "settings.display.autoApprovalReason.title": "แสดงเหตุผลการอนุมัติอัตโนมัติ",
+  "settings.display.autoApprovalReason.description":
+    "แสดงบรรทัดในการเรียกใช้เครื่องมือเพื่ออธิบายว่าเหตุใดจึงได้รับการอนุมัติอัตโนมัติ (กฎที่ตรงกัน ค่าเริ่มต้นของเอเจนต์ โหมด YOLO ฯลฯ)",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

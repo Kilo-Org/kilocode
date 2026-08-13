@@ -29,7 +29,7 @@ const ALLOWED_MODELS = new Set([
   // kilocode_change end
 ])
 // kilocode_change start
-const DISALLOWED_MODELS = new Set(["gpt-5.5-pro"])
+const DISALLOWED_MODELS = new Set(["gpt-5.5-pro", "gpt-5.6"])
 // kilocode_change end
 
 interface PkceCodes {
@@ -158,6 +158,7 @@ async function refreshAccessToken(refreshToken: string, issuer = ISSUER, signal?
   return response.json()
 }
 
+// kilocode_change start - retain Kilo-branded OAuth callback until the shared page supports Kilo branding
 const HTML_SUCCESS = `<!doctype html>
 <html>
   <head>
@@ -253,6 +254,7 @@ export const renderOAuthError = (error: string) => `<!doctype html>
     </div>
   </body>
 </html>`
+// kilocode_change end
 
 interface PendingOAuth {
   pkce: PkceCodes
@@ -313,7 +315,7 @@ async function startOAuthServer(): Promise<{ port: number; redirectUri: string }
         .catch((err) => current.reject(err))
 
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" })
-      res.end(HTML_SUCCESS)
+      res.end(HTML_SUCCESS) // kilocode_change - shared callback page is currently OpenCode-branded
       return
     }
 
@@ -396,8 +398,10 @@ export async function CodexAuthPlugin(input: PluginInput, options: CodexAuthPlug
         return Object.fromEntries(
           Object.entries(provider.models)
             .filter(([, model]) => {
+              if (model.options?.reasoningMode === "pro") return false // kilocode_change - tolerate catalog entries without options
               if (ALLOWED_MODELS.has(model.api.id)) return true
               if (DISALLOWED_MODELS.has(model.api.id)) return false // kilocode_change
+              if (model.api.id === "gpt-5.6") return false
               const match = model.api.id.match(/^gpt-(\d+\.\d+)/)
               return match ? parseFloat(match[1]) > 5.4 : false
             })
@@ -416,7 +420,13 @@ export async function CodexAuthPlugin(input: PluginInput, options: CodexAuthPlug
                       input: 272_000,
                       output: 128_000,
                     }
-                  : model.limit,
+                  : model.id.includes("gpt-5.6")
+                    ? {
+                        context: 500_000,
+                        input: 372_000,
+                        output: 128_000,
+                      }
+                    : model.limit,
               },
             ]),
         )
@@ -519,6 +529,7 @@ export async function CodexAuthPlugin(input: PluginInput, options: CodexAuthPlug
 
             const requestInit = {
               ...init,
+              body: init?.body,
               headers,
             }
             if (websocketFetch && parsed.pathname.endsWith("/responses")) return websocketFetch(url, requestInit)

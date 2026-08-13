@@ -2,7 +2,10 @@ import { BusEvent } from "@/bus/bus-event"
 import { MessageID, SessionID } from "@/session/schema"
 import { Schema } from "effect"
 
-const CloseReason = Schema.Literals(["completed", "error", "interrupted"])
+// "superseded": the turn handed off to a queued follow-up after draining its
+// current step. Distinct from "interrupted" so clients do not surface a
+// premature-stop warning for a deliberate queue handoff.
+const CloseReason = Schema.Literals(["completed", "error", "interrupted", "superseded"])
 
 export const KiloSessionEvent = {
   TurnOpen: BusEvent.define(

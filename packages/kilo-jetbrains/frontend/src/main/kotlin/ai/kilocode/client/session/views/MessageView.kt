@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.views
 
+import ai.kilocode.client.session.SessionDiffOpener
 import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.Compaction
 import ai.kilocode.client.session.model.Content
@@ -18,6 +19,7 @@ import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.views.base.PartView
+import ai.kilocode.client.session.views.tool.EditToolView
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.ToolbarButtonAction
@@ -92,10 +94,12 @@ class MessageView(
     private var prompt: PromptView? = null
     private var promptBox: JPanel? = null
     private var wrap: PromptWrap? = null
+    private var openDiff: SessionDiffOpener = { _, _, _ -> }
+    private var sessionId: String? = null
 
     init {
         isOpaque = false
-        if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) background = style.editorScheme.defaultBackground
+        if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) background = SessionUiStyle.View.Prompt.bgColor(style)
         border = assistantBorder()
 
         // Populate content that already exists (e.g. after loadHistory)
@@ -104,6 +108,14 @@ class MessageView(
             if (isHidden(content)) continue
             addPart(content)
         }
+    }
+
+    fun setDiffOpener(openDiff: SessionDiffOpener, sessionId: String?) {
+        this.openDiff = openDiff
+        this.sessionId = sessionId
+        // Rebind parts created before the opener was wired (e.g. history load), matching the
+        // late-binding TurnView already does for its ModifiedFilesView card.
+        for (view in parts.values) if (view is EditToolView) view.setDiffOpener(openDiff, sessionId)
     }
 
     /**
@@ -200,12 +212,11 @@ class MessageView(
             }
         }
         val view = view(content)
-        val item = wrapPrompt(view)
         view.resize = resize
         view.hover = hover
         view.applyStyle(style)
         parts[content.id] = view
-        add(item)
+        wrapPrompt(view)?.let { add(it) }
     }
 
     @RequiresEdt
@@ -215,7 +226,9 @@ class MessageView(
             it.hover = hover
             it.applyStyle(style)
             attachments = it
-            add(it)
+            val node = ensurePromptWrap()
+            promptBox?.add(it, BorderLayout.SOUTH)
+            if (node.parent == null) add(node)
         }
         view.upsert(content)
         parts[content.id] = view
@@ -241,20 +254,23 @@ class MessageView(
 
     @RequiresEdt
     private fun replacePart(content: Content, existing: PartView) {
-        val at = components.indexOfFirst { it === existing }.takeIf { it >= 0 } ?: componentCount
+        // A replaced tool view is a direct child, so re-insert at its own slot. Only fall back to
+        // the prompt wrap's index when the replaced view is nested inside it, otherwise the wrap's
+        // lower index would push the replacement above the prompt bubble on user messages.
+        val at = (if (existing.parent !== this) components.indexOf(wrap) else components.indexOfFirst { it === existing })
+            .takeIf { it >= 0 } ?: componentCount
         parts.remove(content.id)
         aliases.values.removeAll { it == content.id }
         sources.keys.removeAll { it !in aliases }
-        detach(existing)
-        remove(existing)
+        removeView(existing)
+        if (existing === prompt) prompt = null
         Disposer.dispose(existing)
         val view = view(content)
-        val item = wrapPrompt(view)
         view.resize = resize
         view.hover = hover
         view.applyStyle(style)
         parts[content.id] = view
-        add(item, at)
+        wrapPrompt(view)?.let { add(it, at) }
         syncBorder()
         refresh()
     }
@@ -282,10 +298,11 @@ class MessageView(
         }
         aliases.values.removeAll { it == contentId }
         sources.keys.removeAll { it !in aliases }
-        detach(view)
-        remove(view)
+        removeView(view)
         Disposer.dispose(view)
+        if (view === prompt) prompt = null
         syncBorder()
+        syncPromptWrap()
         refresh()
         return true
     }
@@ -313,10 +330,10 @@ class MessageView(
     @RequiresEdt
     private fun rebuildParts() {
         parts.values.distinct().forEach {
-            detach(it)
-            remove(it)
+            removeView(it)
             Disposer.dispose(it)
         }
+        wrap?.let { remove(it) }
         parts.clear()
         aliases.clear()
         sources.clear()
@@ -340,9 +357,9 @@ class MessageView(
     }
 
     private fun view(content: Content) = if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) {
-        ViewFactory.createUser(content, openFile, openUrl, selection, repo, promptMentions(msg)) { openAttachment(msg.info.id, it) }
+        ViewFactory.createUser(content, openFile, openUrl, selection, repo, promptMentions(msg), { openAttachment(msg.info.id, it) }, openDiff, sessionId)
     } else {
-        ViewFactory.create(content, openFile, openUrl, selection, repo) { openAttachment(msg.info.id, it) }
+        ViewFactory.create(content, openFile, openUrl, selection, repo, { openAttachment(msg.info.id, it) }, openDiff, sessionId)
     }
 
     private fun syncPromptMentions() {
@@ -422,7 +439,7 @@ class MessageView(
     @RequiresEdt
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
-        if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) background = style.editorScheme.defaultBackground
+        if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) background = SessionUiStyle.View.Prompt.bgColor(style)
         for (view in parts.values) view.applyStyle(style)
         refresh()
     }
@@ -430,10 +447,10 @@ class MessageView(
     @RequiresEdt
     override fun dispose() {
         parts.values.forEach {
-            detach(it)
-            remove(it)
+            removeView(it)
             Disposer.dispose(it)
         }
+        wrap?.let { remove(it) }
         parts.clear()
         aliases.clear()
         sources.clear()
@@ -464,14 +481,17 @@ class MessageView(
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
             val arc = JBUI.scale(JBUI.getInt("Button.arc", SessionUiStyle.View.Prompt.CORNER_ARC))
             val pt = if (box === this) Point() else SwingUtilities.convertPoint(box, Point(), this)
-            val x = pt.x
-            val y = pt.y
-            val w = box.width - 1
-            val h = box.height - 1
-            g2.color = style.editorScheme.defaultBackground
-            g2.fillRoundRect(x, y, box.width, box.height, arc, arc)
-            g2.color = SessionUiStyle.View.Outline.color()
-            if (w > 0 && h > 0) g2.drawRoundRect(x, y, w, h, arc, arc)
+            val bg = SessionUiStyle.View.Prompt.bgColor(style)
+            g2.color = bg
+            g2.fillRoundRect(pt.x, pt.y, box.width, box.height, arc, arc)
+            // When the prompt shares the session background there is no fill contrast, so draw the
+            // outline to keep the bubble visible.
+            if (bg.rgb == style.editorBackground.rgb) {
+                val w = box.width - 1
+                val h = box.height - 1
+                g2.color = SessionUiStyle.View.Outline.color()
+                if (w > 0 && h > 0) g2.drawRoundRect(pt.x, pt.y, w, h, arc, arc)
+            }
         } finally {
             g2.dispose()
         }
@@ -490,19 +510,42 @@ class MessageView(
     }
 
     @RequiresEdt
-    private fun wrapPrompt(view: PartView): JComponent {
+    private fun removeView(view: PartView) {
+        detach(view)
+        view.parent?.remove(view)
+    }
+
+    @RequiresEdt
+    private fun wrapPrompt(view: PartView): JComponent? {
         if (role != SessionUiStyle.View.Message.USER_ROLE) return view
         if (view !is PromptView) return view
         prompt = view
+        val node = ensurePromptWrap()
+        val box = promptBox ?: return node
+        if (view.parent !== box) box.add(view, BorderLayout.CENTER)
+        node.bar.setActive(true)
+        return node.takeIf { it.parent == null }
+    }
+
+    @RequiresEdt
+    private fun ensurePromptWrap(): PromptWrap {
+        val existing = wrap
+        if (existing != null) return existing
         val box = JPanel(BorderLayout()).also {
             it.isOpaque = false
-            it.add(view, BorderLayout.CENTER)
             promptBox = it
         }
-        val node = PromptWrap(box)
-        wrap = node
-        node.bar.setActive(true)
-        return node
+        return PromptWrap(box).also { wrap = it }
+    }
+
+    @RequiresEdt
+    private fun syncPromptWrap() {
+        val node = wrap ?: return
+        val box = promptBox ?: return
+        if (box.componentCount > 0) return
+        node.parent?.remove(node)
+        wrap = null
+        promptBox = null
     }
 
     private inner class PromptWrap(

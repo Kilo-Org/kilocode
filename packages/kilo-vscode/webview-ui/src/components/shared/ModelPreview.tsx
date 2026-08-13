@@ -50,12 +50,13 @@ export const ModelPreview: Component<Props> = (props) => {
       <Show when={m()}>
         {(model) => {
           const cost = () => model().cost
+          const hasPricing = () => cost() && (cost()!.input > 0 || cost()!.output > 0)
           const bench = () => model().terminalBench
           const cachedText = () => {
-            if (!cost()) return ""
+            if (!cost() || !hasPricing()) return ""
             return fmtCachedPrice(cost()!) ?? language.t("model.preview.value.notSupported")
           }
-          const avg = () => (cost() ? avgPrice(cost()!) : undefined)
+          const avg = () => (cost() && hasPricing() ? avgPrice(cost()!) : undefined)
           const freeLabel = () => language.t("model.tag.free")
           const dataLabel = () => freeDataLabel(language.t("model.tag.free"), language.t("model.tag.dataCollected"))
           const autoLabel = () => autoSummary(model())
@@ -139,8 +140,8 @@ export const ModelPreview: Component<Props> = (props) => {
                   <span class="model-preview-value">{fmtDate(model().releaseDate!)}</span>
                 </Show>
 
-                {/* Pricing — hidden for free models */}
-                <Show when={cost() && !model().isFree}>
+                {/* Pricing — hidden for free models or models without fixed pricing */}
+                <Show when={cost() && !model().isFree && hasPricing()}>
                   <span class="model-preview-label">{language.t("model.preview.label.input")}</span>
                   <span class="model-preview-value">{fmtPrice(cost()!.input)}</span>
                   <span class="model-preview-label">{language.t("model.preview.label.output")}</span>

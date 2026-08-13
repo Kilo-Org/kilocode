@@ -26,6 +26,7 @@ While the specifics change constantly, some principles stay consistent:
 
 - Use the **model selector** in the chat prompt area to pick a model for the current session. You can also type `/models` to open the model picker.
 - When the selected model supports variants, type `/variant` to open the reasoning effort selector.
+- Press `Shift+Tab` in the prompt input to cycle to the next reasoning effort variant, wrapping after the last one. This works in the sidebar chat, the Agent Manager prompt, and the New Worktree dialog, and the variant selector tooltip shows the shortcut on hover. To keep `Shift+Tab` for keyboard focus navigation instead, disable the `kilo-code.new.chat.shiftTabCyclesVariant` setting (also available under **Settings → Display**).
 - Set per-agent defaults and a global default in the **Settings** panel (Models tab), or directly in the `kilo.jsonc` config file.
 - **Model precedence:** Session override → Last picked per agent → Per-agent config → Global config → [Auto Free](/docs/code-with-ai/agents/auto-model#tiers) (note: Auto Free may route to providers that log prompts — see the Auto Model page for details).
 - The model selector remembers the last model you picked for each agent — switching agents restores your previous choice. A manual pick always beats config settings; use the **reset button** (visible when your active model differs from config) to go back to the config default.

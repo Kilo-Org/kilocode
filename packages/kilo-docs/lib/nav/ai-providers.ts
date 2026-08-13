@@ -18,6 +18,7 @@ export const AiProvidersNav: NavSection[] = [
         children: "ChatGPT Plus/Pro",
       },
       { href: "/ai-providers/gemini", children: "Google Gemini" },
+      { href: "/ai-providers/poolside", children: "Poolside" },
       { href: "/ai-providers/mistral", children: "Mistral AI" },
       { href: "/ai-providers/deepseek", children: "DeepSeek" },
       { href: "/ai-providers/xai", children: "xAI (Grok)" },
@@ -28,6 +29,7 @@ export const AiProvidersNav: NavSection[] = [
     links: [
       { href: "/ai-providers/openrouter", children: "OpenRouter" },
       { href: "/ai-providers/requesty", children: "Requesty" },
+      { href: "/ai-providers/daoxe", children: "DaoXE" },
       { href: "/ai-providers/unbound", children: "Unbound" },
       { href: "/ai-providers/zenmux", children: "ZenMux" },
       {
@@ -46,6 +48,7 @@ export const AiProvidersNav: NavSection[] = [
       { href: "/ai-providers/groq", children: "Groq" },
       { href: "/ai-providers/cerebras", children: "Cerebras" },
       { href: "/ai-providers/fireworks", children: "Fireworks AI" },
+      { href: "/ai-providers/mixlayer", children: "Mixlayer" },
     ],
   },
   {

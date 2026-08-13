@@ -2,6 +2,7 @@ package ai.kilocode.client.testing
 
 import ai.kilocode.rpc.KiloWorkspaceRpcApi
 import ai.kilocode.rpc.dto.ConfigTargetDto
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.FileSearchResultDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
@@ -34,6 +35,10 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
     var searchResult = FileSearchResultDto()
     var search: ((String) -> FileSearchResultDto)? = null
     var gitChanges: String? = null
+    val branchDiffs = mutableListOf<DiffFileDto>()
+    val branchDiffCalls = CopyOnWriteArrayList<String>()
+    val branchDiffPatchCalls = CopyOnWriteArrayList<Boolean>()
+    var branchName: String? = null
     var openResult = true
     var localConfigPath = "/test/.kilo/kilo.jsonc"
     var globalConfigPath = "/config/kilo.jsonc"
@@ -94,10 +99,22 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
         return gitChanges
     }
 
-    override suspend fun openFile(path: String, line: Int?, column: Int?): Boolean {
+    override suspend fun branchDiff(directory: String, patches: Boolean): List<DiffFileDto> {
+        assertNotEdt("branchDiff")
+        branchDiffCalls.add(directory)
+        branchDiffPatchCalls.add(patches)
+        return branchDiffs.toList()
+    }
+
+    override suspend fun branchName(directory: String): String? {
+        assertNotEdt("branchName")
+        return branchName
+    }
+
+    override suspend fun openFile(path: String, line: Int?, column: Int?, endLine: Int?): Boolean {
         assertNotEdt("openFile")
         opened.add(path)
-        openedFiles.add(Opened(path, line, column))
+        openedFiles.add(Opened(path, line, column, endLine))
         return openResult
     }
 
@@ -133,5 +150,5 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
         return openResult
     }
 
-    data class Opened(val path: String, val line: Int?, val column: Int?)
+    data class Opened(val path: String, val line: Int?, val column: Int?, val endLine: Int? = null)
 }

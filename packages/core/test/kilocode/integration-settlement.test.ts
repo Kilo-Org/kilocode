@@ -5,13 +5,14 @@ import { Integration } from "@opencode-ai/core/integration"
 import { Credential } from "@opencode-ai/core/credential"
 import { EventV2 } from "@opencode-ai/core/event"
 import { it } from "../lib/effect"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 
 // Regression coverage for Kilo's OAuth attempt settlement guards: persistence
 // happens before completion is exposed, and settlement is atomic with
 // cancellation, expiry, and timeouts.
 
 const layer = Integration.locationLayer.pipe(
-  Layer.provide(EventV2.defaultLayer),
+  Layer.provide(AppNodeBuilder.build(EventV2.node)),
   Layer.provide(
     Layer.mock(Credential.Service)({
       create: () => Effect.die("unexpected credential creation"),
@@ -24,17 +25,17 @@ function connectionLayer(
   created: Array<{
     integrationID: Integration.ID
     label?: string
-    value: Credential.Info
+    value: Credential.Value
   }>,
 ) {
   return Integration.locationLayer.pipe(
-    Layer.provide(EventV2.defaultLayer),
+    Layer.provide(AppNodeBuilder.build(EventV2.node)),
     Layer.provide(
       Layer.mock(Credential.Service)({
         create: (input) =>
           Effect.sync(() => {
             created.push(input)
-            return new Credential.Stored({
+            return new Credential.Info({
               id: Credential.ID.create(),
               integrationID: input.integrationID,
               label: input.label ?? "default",
@@ -50,7 +51,7 @@ function connectionLayer(
 describe("Integration settlement guards", () => {
   it.effect("fails auto OAuth when credential persistence fails", () => {
     const failed = Integration.locationLayer.pipe(
-      Layer.provide(EventV2.defaultLayer),
+      Layer.provide(AppNodeBuilder.build(EventV2.node)),
       Layer.provide(
         Layer.mock(Credential.Service)({
           create: () => Effect.die(new Error("database unavailable")),
@@ -62,7 +63,7 @@ describe("Integration settlement guards", () => {
       const integrations = yield* Integration.Service
       const integrationID = Integration.ID.make("openai")
       const methodID = Integration.MethodID.make("browser")
-      yield* integrations.update((editor) =>
+      yield* integrations.transform((editor) =>
         editor.method.update({
           integrationID,
           method: { id: methodID, type: "oauth", label: "Browser" },
@@ -72,7 +73,7 @@ describe("Integration settlement guards", () => {
               url: "https://example.com/authorize",
               instructions: "Sign in",
               callback: Effect.succeed(
-                new Credential.OAuth({ type: "oauth", methodID, access: "access", refresh: "refresh", expires: 1 }),
+                Credential.OAuth.make({ type: "oauth", methodID, access: "access", refresh: "refresh", expires: 1 }),
               ),
             }),
         }),
@@ -89,7 +90,7 @@ describe("Integration settlement guards", () => {
 
   it.effect("fails code OAuth when credential persistence fails", () => {
     const failed = Integration.locationLayer.pipe(
-      Layer.provide(EventV2.defaultLayer),
+      Layer.provide(AppNodeBuilder.build(EventV2.node)),
       Layer.provide(
         Layer.mock(Credential.Service)({
           create: () => Effect.die(new Error("database unavailable")),
@@ -101,7 +102,7 @@ describe("Integration settlement guards", () => {
       const integrations = yield* Integration.Service
       const integrationID = Integration.ID.make("openai")
       const methodID = Integration.MethodID.make("chatgpt")
-      yield* integrations.update((editor) =>
+      yield* integrations.transform((editor) =>
         editor.method.update({
           integrationID,
           method: { id: methodID, type: "oauth", label: "ChatGPT" },
@@ -112,7 +113,7 @@ describe("Integration settlement guards", () => {
               instructions: "Paste the code",
               callback: () =>
                 Effect.succeed(
-                  new Credential.OAuth({ type: "oauth", methodID, access: "access", refresh: "refresh", expires: 1 }),
+                  Credential.OAuth.make({ type: "oauth", methodID, access: "access", refresh: "refresh", expires: 1 }),
                 ),
             }),
         }),
@@ -135,16 +136,16 @@ describe("Integration settlement guards", () => {
     Effect.gen(function* () {
       const started = yield* Deferred.make<void>()
       const release = yield* Deferred.make<void>()
-      const created: Credential.Stored[] = []
+      const created: Parameters<Credential.Interface["create"]>[0][] = []
       const delayed = Integration.locationLayer.pipe(
-        Layer.provide(EventV2.defaultLayer),
+        Layer.provide(AppNodeBuilder.build(EventV2.node)),
         Layer.provide(
           Layer.mock(Credential.Service)({
             create: (input) =>
               Effect.gen(function* () {
                 yield* Deferred.succeed(started, undefined)
                 yield* Deferred.await(release)
-                const credential = new Credential.Stored({
+                const credential = new Credential.Info({
                   id: Credential.ID.create(),
                   integrationID: input.integrationID,
                   label: input.label ?? "default",
@@ -162,7 +163,7 @@ describe("Integration settlement guards", () => {
         const integrations = yield* Integration.Service
         const integrationID = Integration.ID.make("openai")
         const methodID = Integration.MethodID.make("chatgpt")
-        yield* integrations.update((editor) =>
+        yield* integrations.transform((editor) =>
           editor.method.update({
             integrationID,
             method: { id: methodID, type: "oauth", label: "ChatGPT" },
@@ -173,7 +174,7 @@ describe("Integration settlement guards", () => {
                 instructions: "Paste the code",
                 callback: () =>
                   Effect.succeed(
-                    new Credential.OAuth({ type: "oauth", methodID, access: "access", refresh: "refresh", expires: 1 }),
+                    Credential.OAuth.make({ type: "oauth", methodID, access: "access", refresh: "refresh", expires: 1 }),
                   ),
               }),
           }),
@@ -201,7 +202,7 @@ describe("Integration settlement guards", () => {
     const created: Array<{
       integrationID: Integration.ID
       label?: string
-      value: Credential.Info
+      value: Credential.Value
     }> = []
     return Effect.gen(function* () {
       const started = yield* Deferred.make<void>()
@@ -209,7 +210,7 @@ describe("Integration settlement guards", () => {
       const integrations = yield* Integration.Service
       const integrationID = Integration.ID.make("openai")
       const methodID = Integration.MethodID.make("chatgpt")
-      yield* integrations.update((editor) =>
+      yield* integrations.transform((editor) =>
         editor.method.update({
           integrationID,
           method: { id: methodID, type: "oauth", label: "ChatGPT" },
@@ -222,7 +223,7 @@ describe("Integration settlement guards", () => {
                 Deferred.succeed(started, undefined).pipe(
                   Effect.andThen(Deferred.await(release)),
                   Effect.as(
-                    new Credential.OAuth({ type: "oauth", methodID, access: "access", refresh: "refresh", expires: 1 }),
+                    Credential.OAuth.make({ type: "oauth", methodID, access: "access", refresh: "refresh", expires: 1 }),
                   ),
                 ),
             }),
@@ -250,7 +251,7 @@ describe("Integration settlement guards", () => {
       const integrations = yield* Integration.Service
       const integrationID = Integration.ID.make("openai")
       const methodID = Integration.MethodID.make("chatgpt")
-      yield* integrations.update((editor) =>
+      yield* integrations.transform((editor) =>
         editor.method.update({
           integrationID,
           method: { id: methodID, type: "oauth", label: "ChatGPT" },
@@ -285,7 +286,7 @@ describe("Integration settlement guards", () => {
       const started = yield* Deferred.make<void>()
       let closed = false
       const stalled = Integration.locationLayer.pipe(
-        Layer.provide(EventV2.defaultLayer),
+        Layer.provide(AppNodeBuilder.build(EventV2.node)),
         Layer.provide(
           Layer.mock(Credential.Service)({
             create: () => Deferred.succeed(started, undefined).pipe(Effect.andThen(Effect.never)),
@@ -298,7 +299,7 @@ describe("Integration settlement guards", () => {
         const integrations = yield* Integration.Service
         const integrationID = Integration.ID.make("openai")
         const methodID = Integration.MethodID.make("chatgpt")
-        yield* integrations.update((editor) =>
+        yield* integrations.transform((editor) =>
           editor.method.update({
             integrationID,
             method: { id: methodID, type: "oauth", label: "ChatGPT" },
@@ -310,7 +311,7 @@ describe("Integration settlement guards", () => {
                   instructions: "Paste the code",
                   callback: () =>
                     Effect.succeed(
-                      new Credential.OAuth({
+                      Credential.OAuth.make({
                         type: "oauth",
                         methodID,
                         access: "access",

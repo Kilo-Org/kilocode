@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Poveži Anaconda Desktop",
   "provider.anaconda.title.manage": "Upravljaj Anaconda Desktopom",
@@ -53,6 +55,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Poveži provajdera",
 
@@ -163,6 +166,7 @@ export const dict = {
   "model.group.auto": "Automatski modeli",
   "model.group.recommended": "Preporučeno",
   "model.group.favorites": "Favoriti",
+  "model.group.mostUsed": "Najčešće korišteni",
   "model.favorite.add": "Dodaj u favorite",
   "model.favorite.remove": "Ukloni iz favorita",
   "model.preview.label.released": "Objavljeno",
@@ -230,6 +234,8 @@ export const dict = {
     "Kliknite da ograničite pisanje u datotečni sistem. Pristup mreži ostaje dozvoljen prema vašim sandbox postavkama.",
 
   "speechToText.tooltip.start": "Započni glasovni unos sa Kilo Gateway",
+  "speechToText.tooltip.shortcut":
+    "Dodirnite dugme ili pritisnite Cmd/Ctrl+K da pokrenete ili zaustavite snimanje; držite dugme pritisnutim dok govorite, a zatim ga otpustite da biste pretvorili govor u tekst i poslali ga.",
   "speechToText.tooltip.starting": "Pokretanje mikrofona... Sačekajte prije nego što progovorite.",
   "speechToText.tooltip.stop": "Zaustavi hvatanje zvuka",
   "speechToText.tooltip.transcribing": "Prepisivanje... Kliknite da otkažete.",
@@ -266,6 +272,7 @@ export const dict = {
 
   "notification.permission.title": "Potrebna dozvola",
   "notification.permission.titleSubagent": "Potrebna dozvola (podagent)",
+  "notification.permission.titleSkillShell": "Pokrenuti shell komande iz vještine „{{skill}}”?",
   "ui.permission.manageAutoApprove": "Upravljanje pravilima automatskog odobravanja",
   "ui.permission.doomLoop.prompt": "Otkrivena je moguća petlja za alat {{tool}}. Nastaviti izvršavanje?",
   "ui.permission.doomLoop.rule": "Nastavi pozive alata {{tool}}",
@@ -301,10 +308,10 @@ export const dict = {
   "ui.approval.source.yolo": "režimom automatskog odobravanja (YOLO)",
   "ui.approval.source.session": "pravilom automatskog odobravanja sesije",
   "ui.approval.source.default": "podrazumevano",
+  "ui.approval.outsideWorkspace": "(izvan vašeg radnog prostora: {{file}})",
 
   "session.tab.review": "Pregled",
   "session.review.filesChanged": "Izmijenjeno {{count}} datoteka",
-  "session.review.change.other": "Izmjene",
   "session.review.loadingChanges": "Učitavanje izmjena...",
   "session.review.noChanges": "Nema izmjena",
 
@@ -312,6 +319,14 @@ export const dict = {
   "session.messages.loadEarlier": "Učitaj ranije poruke",
   "session.messages.loading": "Učitavanje poruka...",
 
+  "sidebar.topBar.label": "Navigacija Kilo Code",
+  "sidebar.topBar.newTask": "Novi Zadatak",
+  "sidebar.topBar.history": "Historija",
+  "sidebar.topBar.agentManager": "Agent Manager",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "Marketplace",
+  "sidebar.topBar.profile": "Profil",
+  "sidebar.topBar.settings": "Postavke",
   "sidebar.session.newSession": "Nova Sesija",
   "sidebar.session.newSession.tooltip": "Započnite novi razgovor držeći trenutnu sesiju netaknutom.",
   "sidebar.session.newWorktree": "Novi Worktree",
@@ -484,45 +499,8 @@ export const dict = {
   "provider.custom.models.name.placeholder": "Naziv za prikaz",
   "provider.custom.models.reasoning.label": "Zaključivanje",
   "provider.custom.models.modalities.image": "Slika",
-  "provider.custom.models.variants.label": "Varijante",
-  "provider.custom.models.variants.add": "Dodaj varijantu",
-  "provider.custom.models.variants.remove": "Ukloni varijantu",
-  "provider.custom.models.variants.name.label": "Ime",
-  "provider.custom.models.variants.name.placeholder": "npr. thinking",
-  "provider.custom.models.variants.option.unset": "(nije postavljeno)",
-  "provider.custom.models.variants.enableThinking.label": "Omogući razmišljanje (npr. Alibaba)",
-  "provider.custom.models.variants.enableThinking.placeholder": "enable_thinking",
-  "provider.custom.models.variants.enableThinking.true": "true",
-  "provider.custom.models.variants.enableThinking.false": "false",
-  "provider.custom.models.variants.thinking.label": "Vrsta razmišljanja (npr. Z.ai)",
-  "provider.custom.models.variants.thinking.placeholder": "thinking",
-  "provider.custom.models.variants.thinking.enabled": "enabled",
-  "provider.custom.models.variants.thinking.disabled": "disabled",
-  "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
-  "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
-  "provider.custom.models.variants.splitReasoning.true": "true",
-  "provider.custom.models.variants.splitReasoning.false": "false",
-  "provider.custom.models.variants.chatTemplateArgs.label":
-    "Omogući razmišljanje preko argumenata chat predloška (npr. Hugging Face)",
-  "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
-  "provider.custom.models.variants.chatTemplateArgs.true": "true",
-  "provider.custom.models.variants.chatTemplateArgs.false": "false",
-  "provider.custom.models.variants.reasoningEffort.label": "Napor zaključivanja",
-  "provider.custom.models.variants.reasoningEffort.placeholder": "reasoningEffort",
-  "provider.custom.models.variants.reasoningEffort.none": "none",
-  "provider.custom.models.variants.reasoningEffort.minimal": "minimal",
-  "provider.custom.models.variants.reasoningEffort.low": "low",
-  "provider.custom.models.variants.reasoningEffort.medium": "medium",
-  "provider.custom.models.variants.reasoningEffort.high": "high",
-  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
-  "provider.custom.models.variants.outputEffort.placeholder": "effort",
-  "provider.custom.models.variants.outputEffort.low": "low",
-  "provider.custom.models.variants.outputEffort.medium": "medium",
-  "provider.custom.models.variants.outputEffort.high": "high",
-  "provider.custom.models.variants.outputEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.max": "max",
+  "provider.custom.models.toggleReasoning": "Uključi/isključi rezonovanje za sve",
+  "provider.custom.models.toggleImages": "Uključi/isključi slike za sve",
   "provider.custom.models.remove": "Ukloni model",
   "provider.custom.models.add": "Dodaj model",
   "provider.custom.models.fetch.authError":
@@ -537,6 +515,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "Pretraži modele\u2026",
   "provider.custom.models.fetch.add": "Dodaj {{count}} model(a)",
   "provider.custom.edit.title": "Uredi provajdera",
+  "provider.custom.edit.advanced": "Uredite napredne postavke u JSON konfiguracijskoj datoteci",
   "provider.custom.headers.label": "Zaglavlja (opcionalno)",
   "provider.custom.headers.key.label": "Zaglavlje",
   "provider.custom.headers.key.placeholder": "Header-Name",
@@ -705,7 +684,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "Ponašanje agenta",
   "settings.autoApprove.title": "Automatsko odobravanje",
-  "settings.browser.title": "Preglednik",
+  "settings.webTools.title": "Web alati",
+  "settings.webTools.description": "Konfigurišite web pretragu i automatizaciju preglednika.",
+  "settings.webTools.webSearch.enable": "Omogući za sve pružaoce",
+  "settings.webTools.browserAutomation": "Automatizacija preglednika",
+  "settings.webTools.webSearch.title": "Web pretraga",
+  "settings.webTools.webSearch.description": "Omogućite web pretragu modelima svih pružalaca.",
   "settings.checkpoints.title": "Kontrolne tačke",
   "settings.display.title": "Prikaz",
   "settings.autocomplete.title": "Automatsko dovršavanje",
@@ -723,6 +707,13 @@ export const dict = {
   "session.messages.scrollToBottom": "Pomakni se na dno",
   "session.messages.initializing": "Inicijalizacija...",
   "session.messages.taskStarting": "Pokretanje...",
+  "session.prompts.navLabel": "Navigator upita",
+  "session.prompts.tick": "Upit {{index}} od {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "Još nema odgovora",
+  "session.prompts.queued": "Na čekanju",
+  "session.prompts.first": "Prvi upit",
+  "session.prompts.latest": "Najnoviji upit",
+  "session.prompts.overflow": "{{count}} ranijih upita",
   "session.status.writingResponse": "Pisanje odgovora…",
   "session.status.retry": "Ponovni pokušaj…",
   "session.status.working": "Radim…",
@@ -750,7 +741,8 @@ export const dict = {
 
   "prompt.placeholder.connecting": "Povezivanje na server...",
   "prompt.placeholder.error": "Povezivanje nije uspjelo. Provjerite panel za izlaz ili ponovo pokrenite ekstenziju.",
-  "prompt.placeholder.default": "Unesite poruku... (Enter za slanje, Shift+Enter za novi red)",
+  "prompt.placeholder.default":
+    "Unesite poruku, @ za spominjanje datoteka... (Enter za slanje, Shift+Enter za novi red)",
 
   "context.usage.sessionCost": "Cijena sesije",
   "context.usage.olderSessions": "{{count}} starijih sesija",
@@ -848,8 +840,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Omogući integraciju jezičkog servera",
   "settings.experimental.batch.title": "Batch alat",
   "settings.experimental.batch.description": "Omogući batch obradu poziva alata",
-  "settings.experimental.codebaseSearch.title": "Pretraga koda",
-  "settings.experimental.codebaseSearch.description": "Omogući AI pretragu prirodnim jezikom kroz bazu koda",
   "settings.experimental.imageGeneration.title": "Generisanje slika",
   "settings.experimental.imageGeneration.description": "Omogući AI generisanje slika",
   "settings.experimental.imageGenerationModel.title": "Model slike",
@@ -872,7 +862,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "Dozvoljena mrežna odredišta",
   "settings.sandboxing.allowedHosts.description":
-    "DNS odredišta hosta i porta za sandboxirani HTTP i HTTPS proxy promet. GitHub CLI i HTTPS Git obično trebaju github.com:443 i api.github.com:443. Promjene se primjenjuju na nove sesije.",
+    "DNS odredišta hosta i porta za sandboxirani HTTP i HTTPS proxy promet. GitHub CLI i HTTPS Git obično trebaju github.com:443 i api.github.com:443.",
   "settings.sandboxing.writablePaths.title": "Dodatne upisive putanje",
   "settings.sandboxing.writablePaths.description":
     "Dodatne putanje sistema datoteka u koje sandbox dozvoljava upis (npr. /tmp, /var/log). Spajaju se sa zadanim upisivim putanjama kada je sandbox aktivan.",
@@ -882,6 +872,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "SWE-Pruner model",
   "settings.experimental.swePrunerModel.description":
     "Model koji se koristi za orezivanje izlaza alata; podrazumijevano konfigurisani mali model",
+  "settings.experimental.multiProject.title": "Višeprojektni Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Omogući upravljanje sesijama i worktree-ima kroz više repozitorija u Agent Manager-u. Trenutni workspace repozitorij je uvijek zadani projekat.",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",
   "settings.experimental.mcpTimeout.description": "Istek vremena za MCP server zahtjeve u milisekundama",
   "settings.experimental.remote.title": "Remote kontrola",
@@ -1009,6 +1002,9 @@ export const dict = {
     "Nema konfiguriranih prilagođenih komandi. Dodajte komande u opencode.json da ih vidite ovdje.",
   "settings.agentBehaviour.workflows.detail.description": "Opis",
   "settings.agentBehaviour.workflows.detail.template": "Predložak",
+  "settings.agentBehaviour.workflows.model": "model",
+  "settings.agentBehaviour.workflows.variant": "varijanta",
+  "settings.agentBehaviour.workflows.modelDescription": "Globalno premošćivanje modela",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Pokrenite shell komande agenta unutar sandboxa na nivou operativnog sistema koji ograničava pisanje na direktorije stanja projekta i Kilo",
@@ -1108,19 +1104,23 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Promijeni napor razmišljanja pomoću Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Pritisnite Shift+Tab u polju za unos upita da pređete na sljedeći nivo napora razmišljanja. Onemogućite ovu opciju kako biste zadržali Shift+Tab za navigaciju fokusom putem tastature.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "Blokovi terminalskih naredbi",
+  "settings.display.terminalCommand.description":
+    "Odaberite da li blokovi terminalskih naredbi počinju prošireni ili sažeti.",
+  "settings.display.terminalCommand.expanded": "Prošireni",
+  "settings.display.terminalCommand.collapsed": "Sažeti",
   "settings.display.codeEdit.title": "Blokovi izmjena koda",
   "settings.display.codeEdit.description":
     "Odaberite da li će blokovi koji prikazuju izmjene koda i razlike u početku biti prošireni ili sažeti.",
   "settings.display.codeEdit.expanded": "Prošireni",
   "settings.display.codeEdit.collapsed": "Sažeti",
 
-  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.title": "Prikaži protok tokena",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+    "Prikazuje brzinu generisanja teksta (tokena/s) na najnovijoj poruci asistenta i u zaglavlju zadatka. Podrazumevano skriveno radi urednijeg chata.",
+  "settings.display.autoApprovalReason.title": "Prikaži razlog automatskog odobravanja",
+  "settings.display.autoApprovalReason.description":
+    "Prikazuje red uz pozive alata koji objašnjava zašto su automatski odobreni (odgovarajuće pravilo, podrazumevana vrijednost agenta, YOLO režim itd.).",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

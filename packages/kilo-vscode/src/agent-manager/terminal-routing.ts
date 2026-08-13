@@ -26,12 +26,18 @@ interface ServerConfig {
 export interface TerminalRoutingDeps {
   /** Shared SDK client. Throws when the CLI backend is not connected. */
   getClient(): KiloClient
+  /** Shared SDK client, connecting the CLI backend when needed. */
+  getClientAsync(): Promise<KiloClient>
   /** Loopback URL + basic-auth password for the running `kilo serve`. */
   getServerConfig(): ServerConfig | undefined
   /** Workspace root — used as cwd fallback when no worktree is selected (LOCAL). */
   getRoot(): string | undefined
   /** Resolve a worktree id to its on-disk path, or undefined if unknown. */
   getWorktreePath(worktreeId: string): string | undefined
+  /** Project the current message is dispatched for; stamped onto
+   *  `terminal.created` so the webview can namespace its per-project
+   *  terminal state (worktree ids collide across projects). */
+  getProjectId(): string | undefined
   /** Output channel log — prefixed by the caller. */
   log(...args: unknown[]): void
   /** Send a message back to the webview. */
@@ -43,17 +49,23 @@ export interface TerminalRoutingDeps {
 /** True iff the message belongs to the terminal-tab subsystem. */
 function isTerminalMessage(
   m: AgentManagerInMessage,
-): m is Extract<AgentManagerInMessage, { type: `agentManager.terminal.${string}` }> {
+): m is Exclude<
+  Extract<AgentManagerInMessage, { type: `agentManager.terminal.${string}` }>,
+  { type: "agentManager.terminal.stop" | "agentManager.terminal.destinationSelected" }
+> {
   return (
     m.type === "agentManager.terminal.create" ||
     m.type === "agentManager.terminal.close" ||
-    m.type === "agentManager.terminal.resize"
+    m.type === "agentManager.terminal.resize" ||
+    m.type === "agentManager.terminal.restart"
   )
 }
 
 export class TerminalRouter {
   private manager: TerminalManager
-  private readonly ordinals = new Map<string, number>()
+  /** Ordinals reserved by in-flight creates, per context — prevents two
+   *  concurrent creates from grabbing the same "Terminal N" title. */
+  private readonly reserved = new Map<string, Set<number>>()
   private generation = 0
 
   constructor(private readonly deps: TerminalRoutingDeps) {
@@ -76,13 +88,29 @@ export class TerminalRouter {
   handle(m: AgentManagerInMessage): boolean {
     if (!isTerminalMessage(m)) return false
     if (m.type === "agentManager.terminal.create") {
-      void this.handleCreate(m.createId, m.placement, m.worktreeId)
+      void this.handleCreate(m.createId, m.placement, m.worktreeId, m.cols, m.rows)
       return true
     }
     if (m.type === "agentManager.terminal.close") {
       void this.manager.close(m.terminalId).then(() => {
         this.deps.post({ type: "agentManager.terminal.closed", terminalId: m.terminalId })
       })
+      return true
+    }
+    if (m.type === "agentManager.terminal.restart") {
+      void this.manager
+        .restart(m.terminalId, m.cols, m.rows)
+        .then((wsUrl) => {
+          if (!wsUrl) return
+          this.deps.post({ type: "agentManager.terminal.restarted", terminalId: m.terminalId, wsUrl })
+        })
+        .catch((error: unknown) => {
+          this.deps.post({
+            type: "agentManager.terminal.error",
+            terminalId: m.terminalId,
+            message: error instanceof Error ? error.message : String(error),
+          })
+        })
       return true
     }
     // resize
@@ -100,13 +128,23 @@ export class TerminalRouter {
     this.generation++
     const manager = this.manager
     this.manager = this.createManager()
+    this.reserved.clear()
     return manager.dispose()
   }
 
-  private async handleCreate(createId: string, placement: TerminalPlacement, worktreeId: string | null): Promise<void> {
+  private async handleCreate(
+    createId: string,
+    placement: TerminalPlacement,
+    worktreeId: string | null,
+    cols?: number,
+    rows?: number,
+  ): Promise<void> {
     const generation = this.generation
     const manager = this.manager
     const cwd = this.resolveCwd(worktreeId)
+    // Captured synchronously: the project scope is only current while the
+    // dispatch runs, not when the async create settles.
+    const pid = this.deps.getProjectId()
     if (!cwd) {
       this.deps.post({
         type: "agentManager.terminal.error",
@@ -117,9 +155,13 @@ export class TerminalRouter {
       })
       return
     }
-    const title = `Terminal ${this.nextOrdinal(worktreeId)}`
+    const ordinal = this.reserveOrdinal(worktreeId)
+    const title = `Terminal ${ordinal}`
     try {
-      const created = await manager.create({ worktreeId, cwd, title })
+      // Join the shared backend connection instead of racing its synchronous
+      // client accessor when this is the first Kilo action in the window.
+      await this.deps.getClientAsync()
+      const created = await manager.create({ terminalId: createId, worktreeId, cwd, title, cols, rows })
       if (generation !== this.generation) {
         await manager.close(created.terminalId)
         return
@@ -129,6 +171,7 @@ export class TerminalRouter {
         createId,
         placement,
         worktreeId: created.worktreeId,
+        ...(pid ? { projectId: pid } : {}),
         terminalId: created.terminalId,
         title: created.title,
         wsUrl: created.wsUrl,
@@ -139,6 +182,11 @@ export class TerminalRouter {
       const message = err instanceof Error ? err.message : String(err)
       this.deps.log(`Terminal create failed: ${message}`)
       this.deps.post({ type: "agentManager.terminal.error", createId, message })
+    } finally {
+      // Only a current-generation create may release: dispose() already
+      // cleared this create's reservation, and releasing here would
+      // delete a *new* panel's reservation for the same number.
+      if (generation === this.generation) this.releaseOrdinal(worktreeId, ordinal)
     }
   }
 
@@ -156,13 +204,38 @@ export class TerminalRouter {
     return this.deps.getWorktreePath(worktreeId)
   }
 
-  /** Per-context counter so default titles are "Terminal 1", "Terminal 2"…
-   *  Not persisted; a webview reload resets counts. */
-  private nextOrdinal(worktreeId: string | null): number {
+  /**
+   * Pick the lowest "Terminal N" ordinal not used by a live terminal or
+   * an in-flight create in this context, and reserve it until the
+   * create settles. Gap-filling keeps numbering consistent: closing
+   * "Terminal 1" of three frees 1 for the next terminal, instead of
+   * drifting to ever-higher numbers. Not persisted; a webview reload
+   * resets the live set.
+   */
+  private reserveOrdinal(worktreeId: string | null): number {
     const key = worktreeId ?? "__local__"
-    const next = (this.ordinals.get(key) ?? 0) + 1
-    this.ordinals.set(key, next)
+    const used = new Set<number>()
+    for (const title of this.manager.titles(worktreeId)) {
+      const match = /^Terminal (\d+)$/.exec(title)
+      if (match) used.add(Number(match[1]))
+    }
+    const pending = this.reserved.get(key)
+    if (pending) for (const n of pending) used.add(n)
+    let next = 1
+    while (used.has(next)) next++
+    const set = pending ?? new Set<number>()
+    set.add(next)
+    this.reserved.set(key, set)
     return next
+  }
+
+  /** Return an in-flight create's reservation. */
+  private releaseOrdinal(worktreeId: string | null, ordinal: number) {
+    const key = worktreeId ?? "__local__"
+    const set = this.reserved.get(key)
+    if (!set) return
+    set.delete(ordinal)
+    if (set.size === 0) this.reserved.delete(key)
   }
 
   /**
@@ -182,6 +255,9 @@ export class TerminalRouter {
     const token = Buffer.from(`kilo:${config.password}`).toString("base64")
     const dir = encodeURIComponent(cwd)
     const auth = encodeURIComponent(token)
-    return `${base}/pty/${encodeURIComponent(ptyID)}/connect?directory=${dir}&cursor=-1&auth_token=${auth}`
+    // A new terminal has one initial attachment. Replay its retained startup
+    // bytes so xterm can answer shell capability queries emitted before the
+    // WebSocket connected; tailing from -1 can make shells wait for a timeout.
+    return `${base}/pty/${encodeURIComponent(ptyID)}/connect?directory=${dir}&cursor=0&auth_token=${auth}`
   }
 }

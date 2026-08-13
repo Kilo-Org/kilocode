@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "توصيل Anaconda Desktop",
   "provider.anaconda.title.manage": "إدارة Anaconda Desktop",
@@ -52,6 +54,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "اتصال بموفر",
 
@@ -158,6 +161,7 @@ export const dict = {
   "model.group.auto": "النماذج التلقائية",
   "model.group.recommended": "موصى به",
   "model.group.favorites": "المفضلة",
+  "model.group.mostUsed": "الأكثر استخدامًا",
   "model.favorite.add": "إضافة إلى المفضلة",
   "model.favorite.remove": "إزالة من المفضلة",
   "model.preview.label.released": "الإصدار",
@@ -222,6 +226,8 @@ export const dict = {
     "انقر لتقييد الكتابة في نظام الملفات. يظل الوصول إلى الشبكة مسموحًا وفق إعدادات sandbox.",
 
   "speechToText.tooltip.start": "بدء الإدخال الصوتي باستخدام Kilo Gateway",
+  "speechToText.tooltip.shortcut":
+    "انقر أو اضغط على Cmd/Ctrl+K لبدء التسجيل أو إيقافه؛ اضغط باستمرار أثناء التحدث ثم اتركه لتحويل الكلام إلى نص وإرساله.",
   "speechToText.tooltip.starting": "جارٍ تشغيل الميكروفون... يُرجى الانتظار قبل التحدث.",
   "speechToText.tooltip.stop": "إيقاف التقاط الصوت",
   "speechToText.tooltip.transcribing": "جاري تحويل الصوت إلى نص... انقر للإلغاء.",
@@ -258,6 +264,7 @@ export const dict = {
 
   "notification.permission.title": "مطلوب إذن",
   "notification.permission.titleSubagent": "مطلوب إذن (وكيل فرعي)",
+  "notification.permission.titleSkillShell": "هل تريد تشغيل أوامر الصدفة من المهارة «{{skill}}»؟",
   "ui.permission.manageAutoApprove": "إدارة قواعد الموافقة التلقائية",
   "ui.permission.doomLoop.prompt": "تم اكتشاف حلقة محتملة في أداة {{tool}}. هل تريد متابعة التشغيل؟",
   "ui.permission.doomLoop.rule": "متابعة استدعاءات {{tool}}",
@@ -293,16 +300,24 @@ export const dict = {
   "ui.approval.source.yolo": "بواسطة وضع الموافقة التلقائية (YOLO)",
   "ui.approval.source.session": "بواسطة قاعدة موافقة تلقائية للجلسة",
   "ui.approval.source.default": "افتراضيًا",
+  "ui.approval.outsideWorkspace": "(خارج مساحة العمل: {{file}})",
 
   "session.tab.review": "مراجعة",
   "session.review.filesChanged": "تم تغيير {{count}} ملفات",
-  "session.review.change.other": "تغييرات",
   "session.review.loadingChanges": "جارٍ تحميل التغييرات...",
   "session.review.noChanges": "لا توجد تغييرات",
   "session.messages.loadingEarlier": "جارٍ تحميل الرسائل السابقة...",
   "session.messages.loadEarlier": "تحميل الرسائل السابقة",
   "session.messages.loading": "جارٍ تحميل الرسائل...",
 
+  "sidebar.topBar.label": "التنقل في Kilo Code",
+  "sidebar.topBar.newTask": "مهمة جديدة",
+  "sidebar.topBar.history": "السجل",
+  "sidebar.topBar.agentManager": "مدير الوكلاء",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "المتجر",
+  "sidebar.topBar.profile": "الملف الشخصي",
+  "sidebar.topBar.settings": "الإعدادات",
   "sidebar.session.newSession": "جلسة جديدة",
   "sidebar.session.newSession.tooltip": "ابدأ محادثة جديدة مع الاحتفاظ بالجلسة الحالية كما هي.",
   "sidebar.session.newWorktree": "Worktree جديد",
@@ -431,44 +446,8 @@ export const dict = {
   "provider.custom.models.name.placeholder": "الاسم المعروض",
   "provider.custom.models.reasoning.label": "الاستدلال",
   "provider.custom.models.modalities.image": "صورة",
-  "provider.custom.models.variants.label": "المتغيرات",
-  "provider.custom.models.variants.add": "إضافة متغير",
-  "provider.custom.models.variants.remove": "إزالة المتغير",
-  "provider.custom.models.variants.name.label": "الاسم",
-  "provider.custom.models.variants.name.placeholder": "على سبيل المثال: thinking",
-  "provider.custom.models.variants.option.unset": "(غير محدد)",
-  "provider.custom.models.variants.enableThinking.label": "تمكين التفكير (مثل Alibaba)",
-  "provider.custom.models.variants.enableThinking.placeholder": "enable_thinking",
-  "provider.custom.models.variants.enableThinking.true": "true",
-  "provider.custom.models.variants.enableThinking.false": "false",
-  "provider.custom.models.variants.thinking.label": "نوع التفكير (مثل Z.ai)",
-  "provider.custom.models.variants.thinking.placeholder": "thinking",
-  "provider.custom.models.variants.thinking.enabled": "enabled",
-  "provider.custom.models.variants.thinking.disabled": "disabled",
-  "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
-  "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
-  "provider.custom.models.variants.splitReasoning.true": "true",
-  "provider.custom.models.variants.splitReasoning.false": "false",
-  "provider.custom.models.variants.chatTemplateArgs.label": "تفعيل التفكير عبر وسائط قالب الدردشة (مثل Hugging Face)",
-  "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
-  "provider.custom.models.variants.chatTemplateArgs.true": "true",
-  "provider.custom.models.variants.chatTemplateArgs.false": "false",
-  "provider.custom.models.variants.reasoningEffort.label": "جهد الاستدلال",
-  "provider.custom.models.variants.reasoningEffort.placeholder": "reasoningEffort",
-  "provider.custom.models.variants.reasoningEffort.none": "none",
-  "provider.custom.models.variants.reasoningEffort.minimal": "minimal",
-  "provider.custom.models.variants.reasoningEffort.low": "low",
-  "provider.custom.models.variants.reasoningEffort.medium": "medium",
-  "provider.custom.models.variants.reasoningEffort.high": "high",
-  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
-  "provider.custom.models.variants.outputEffort.placeholder": "effort",
-  "provider.custom.models.variants.outputEffort.low": "low",
-  "provider.custom.models.variants.outputEffort.medium": "medium",
-  "provider.custom.models.variants.outputEffort.high": "high",
-  "provider.custom.models.variants.outputEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.max": "max",
+  "provider.custom.models.toggleReasoning": "تبديل التفكير للكل",
+  "provider.custom.models.toggleImages": "تبديل الصور للكل",
   "provider.custom.models.remove": "إزالة النموذج",
   "provider.custom.models.add": "إضافة نموذج",
   "provider.custom.models.fetch.authError": "فشلت المصادقة. تحقق من مفتاح API أعلاه وحاول مرة أخرى.",
@@ -482,6 +461,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "البحث في النماذج\u2026",
   "provider.custom.models.fetch.add": "إضافة {{count}} نموذج(نماذج)",
   "provider.custom.edit.title": "تعديل المزود",
+  "provider.custom.edit.advanced": "تحرير الإعدادات المتقدمة في ملف إعداد JSON",
   "provider.custom.headers.label": "الرؤوس (اختياري)",
   "provider.custom.headers.key.label": "الرأس",
   "provider.custom.headers.key.placeholder": "Header-Name",
@@ -649,7 +629,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "سلوك الوكيل",
   "settings.autoApprove.title": "الموافقة التلقائية",
-  "settings.browser.title": "المتصفح",
+  "settings.webTools.title": "أدوات الويب",
+  "settings.webTools.description": "اضبط البحث على الويب وأتمتة المتصفح.",
+  "settings.webTools.webSearch.enable": "تمكين لجميع المزوّدين",
+  "settings.webTools.browserAutomation": "أتمتة المتصفح",
+  "settings.webTools.webSearch.title": "البحث على الويب",
+  "settings.webTools.webSearch.description": "اجعل البحث على الويب متاحًا لنماذج جميع المزوّدين.",
   "settings.checkpoints.title": "نقاط التحقق",
   "settings.display.title": "العرض",
   "settings.autocomplete.title": "الإكمال التلقائي",
@@ -705,6 +690,13 @@ export const dict = {
   "session.messages.scrollToBottom": "التمرير إلى الأسفل",
   "session.messages.initializing": "جاري التهيئة...",
   "session.messages.taskStarting": "جاري البدء...",
+  "session.prompts.navLabel": "مستعرض المطالبات",
+  "session.prompts.tick": "المطالبة {{index}} من {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "لا توجد استجابة بعد",
+  "session.prompts.queued": "في قائمة الانتظار",
+  "session.prompts.first": "أول مطالبة",
+  "session.prompts.latest": "أحدث مطالبة",
+  "session.prompts.overflow": "{{count}} مطالبات سابقة",
   "session.status.writingResponse": "...جارٍ كتابة الرد",
   "session.status.retry": "جارٍ إعادة المحاولة…",
   "session.status.working": "...جارٍ العمل",
@@ -732,7 +724,7 @@ export const dict = {
 
   "prompt.placeholder.connecting": "جارٍ الاتصال بالخادم...",
   "prompt.placeholder.error": "فشل الاتصال. تحقق من لوحة الإخراج أو أعد تشغيل الإضافة.",
-  "prompt.placeholder.default": "اكتب رسالة... (Enter للإرسال، Shift+Enter لسطر جديد)",
+  "prompt.placeholder.default": "اكتب رسالة، @ للإشارة إلى الملفات... (Enter للإرسال، Shift+Enter لسطر جديد)",
 
   "context.usage.sessionCost": "تكلفة الجلسة",
   "context.usage.olderSessions": "{{count}} جلسات أقدم",
@@ -825,8 +817,6 @@ export const dict = {
   "settings.experimental.lsp.description": "تمكين تكامل بروتوكول خادم اللغة",
   "settings.experimental.batch.title": "أداة دفعية",
   "settings.experimental.batch.description": "تمكين المعالجة الدفعية لاستدعاءات الأدوات",
-  "settings.experimental.codebaseSearch.title": "بحث في قاعدة الكود",
-  "settings.experimental.codebaseSearch.description": "تمكين البحث بالذكاء الاصطناعي باللغة الطبيعية عبر قاعدة الكود",
   "settings.experimental.imageGeneration.title": "توليد الصور",
   "settings.experimental.imageGeneration.description": "تمكين توليد الصور بالذكاء الاصطناعي",
   "settings.experimental.imageGenerationModel.title": "نموذج الصور",
@@ -849,7 +839,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "وجهات الشبكة المسموح بها",
   "settings.sandboxing.allowedHosts.description":
-    "وجهات مضيف ومنفذ DNS لحركة مرور وكيل HTTP وHTTPS المعزولة. يحتاج GitHub CLI وHTTPS Git عادةً إلى github.com:443 وapi.github.com:443. تنطبق التغييرات على الجلسات الجديدة.",
+    "وجهات مضيف ومنفذ DNS لحركة مرور وكيل HTTP وHTTPS المعزولة. يحتاج GitHub CLI وHTTPS Git عادةً إلى github.com:443 وapi.github.com:443.",
   "settings.sandboxing.writablePaths.title": "مسارات قابلة للكتابة إضافية",
   "settings.sandboxing.writablePaths.description":
     "مسارات نظام ملفات إضافية يسمح صندوق الرمل بالكتابة إليها (مثل /tmp، /var/log). يتم دمجها مع مسارات الكتابة الافتراضية عندما يكون صندوق الرمل نشطًا.",
@@ -859,6 +849,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "نموذج SWE-Pruner",
   "settings.experimental.swePrunerModel.description":
     "النموذج المستخدم لتقليم مخرجات الأدوات؛ افتراضيًا النموذج الصغير المكوَّن",
+  "settings.experimental.multiProject.title": "إدارة متعددة المشاريع",
+  "settings.experimental.multiProject.description":
+    "تفعيل إدارة الجلسات وأشجار العمل عبر مستودعات متعددة في Agent Manager. المستودع الحالي هو دائمًا المشروع الافتراضي.",
   "settings.experimental.mcpTimeout.title": "مهلة MCP (مللي ثانية)",
   "settings.experimental.mcpTimeout.description": "مهلة طلبات خادم MCP بالمللي ثانية",
   "settings.experimental.remote.title": "التحكم Remote",
@@ -984,6 +977,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.empty": "لم يتم تهيئة أوامر مخصصة. أضف أوامر إلى opencode.json لرؤيتها هنا.",
   "settings.agentBehaviour.workflows.detail.description": "الوصف",
   "settings.agentBehaviour.workflows.detail.template": "القالب",
+  "settings.agentBehaviour.workflows.model": "النموذج",
+  "settings.agentBehaviour.workflows.variant": "المتغير",
+  "settings.agentBehaviour.workflows.modelDescription": "تجاوز النموذج العام",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "تشغيل أوامر shell الخاصة بالوكيل داخل sandbox على مستوى نظام التشغيل يقيّد الكتابة على مجلدات حالة المشروع و Kilo",
@@ -1076,19 +1072,22 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "تبديل جهد الاستدلال باستخدام Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "اضغط على Shift+Tab في حقل إدخال الموجه للتبديل إلى مستوى جهد الاستدلال التالي. عطّل هذا الخيار للاحتفاظ بـ Shift+Tab للتنقل بين عناصر التركيز باستخدام لوحة المفاتيح.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "كتل أوامر الطرفية",
+  "settings.display.terminalCommand.description": "اختر ما إذا كانت كتل أوامر الطرفية تبدأ موسّعة أم مطوية.",
+  "settings.display.terminalCommand.expanded": "موسّعة",
+  "settings.display.terminalCommand.collapsed": "مطوية",
   "settings.display.codeEdit.title": "كتل تعديلات التعليمات البرمجية",
   "settings.display.codeEdit.description":
     "اختر ما إذا كانت الكتل التي تعرض تعديلات التعليمات البرمجية والفروقات تبدأ موسّعة أم مطوية.",
   "settings.display.codeEdit.expanded": "موسّعة",
   "settings.display.codeEdit.collapsed": "مطوية",
 
-  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.title": "إظهار إنتاجية الرموز",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+    "عرض معدل توليد النص (رموز/ثانية) على آخر رسالة من المساعد وفي رأس المهمة. مخفي بشكل افتراضي للحفاظ على تنظيم المحادثة.",
+  "settings.display.autoApprovalReason.title": "إظهار سبب الموافقة التلقائية",
+  "settings.display.autoApprovalReason.description":
+    "إظهار سطر عند استدعاءات الأدوات يوضح سبب الموافقة التلقائية عليها (قاعدة مطابقة، إعداد افتراضي للوكيل، وضع YOLO، إلخ).",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

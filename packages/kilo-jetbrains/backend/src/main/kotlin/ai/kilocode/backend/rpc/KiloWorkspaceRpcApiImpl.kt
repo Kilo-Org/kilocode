@@ -15,6 +15,7 @@ import ai.kilocode.jetbrains.api.model.Agent
 import ai.kilocode.rpc.KiloWorkspaceRpcApi
 import ai.kilocode.rpc.isManagedWorktreeStorage
 import ai.kilocode.rpc.dto.ConfigTargetDto
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.FileSearchResultDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
@@ -25,6 +26,8 @@ import com.intellij.execution.process.CapturingProcessHandler
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.service
+import com.intellij.openapi.editor.ScrollType
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
@@ -55,6 +58,10 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.InvalidPathException
 import java.nio.file.Path
+import kotlin.io.path.fileSize
+import kotlin.io.path.inputStream
+import kotlin.io.path.isRegularFile
+import kotlin.io.path.readBytes
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.resume
 
@@ -76,6 +83,8 @@ class KiloWorkspaceRpcApiImpl internal constructor(
         private val GLOBAL = MODERN + LEGACY + "config.json"
         private val LOCAL_DIRS = listOf(".kilo", ".kilocode", ".opencode")
         private const val DIFF_CAP = 200_000
+        private const val BRANCH_DIFF_CAP = 8 * 1024 * 1024
+        private const val LARGE_FILE = 2 * 1024 * 1024L
         private val JSON = Json { ignoreUnknownKeys = true }
         private val CONFIG = """{
   "${'$'}schema": "$SCHEMA"
@@ -248,7 +257,40 @@ class KiloWorkspaceRpcApiImpl internal constructor(
         text.takeIf { it.isNotBlank() }?.take(DIFF_CAP)
     }
 
-    override suspend fun openFile(path: String, line: Int?, column: Int?): Boolean {
+    override suspend fun branchDiff(directory: String, patches: Boolean): List<DiffFileDto> = withContext(Dispatchers.IO) {
+        val base = file(clean(directory) ?: directory) ?: return@withContext emptyList()
+        if (!gitAvailable(base)) return@withContext emptyList()
+        val anc = mergeBase(base)
+        // --relative scopes diff output to the opened directory and emits project-relative paths, so
+        // tracked entries match the untracked list (ls-files is already cwd-relative) in monorepos.
+        val stats = parseNumstat(git(base, "-c", "core.quotepath=false", "diff", "--numstat", "--relative", "--no-color", "--no-renames", anc))
+        val status = parseNameStatus(git(base, "-c", "core.quotepath=false", "diff", "--name-status", "--relative", "--no-color", "--no-renames", anc))
+        val untrackedPaths = git(base, "-c", "core.quotepath=false", "ls-files", "--others", "--exclude-standard")
+            .lineSequence()
+            .filter { it.isNotBlank() }
+            .toList()
+        // Stats-only DTOs (empty patch); the badge path stops here. untracked() streams a line
+        // count on this path instead of materializing each file as a String.
+        val files = stats.map { DiffFileDto(it.path, it.additions, it.deletions, "", status[it.path] ?: "modified") } +
+            untrackedPaths.map { untracked(base, it, withPatch = false) }
+        if (!patches) return@withContext files
+        // Fetch patches lazily and stop once the running total reaches BRANCH_DIFF_CAP, so a branch with
+        // hundreds of changed files doesn't spawn a git subprocess (or read a file) per entry.
+        capDiff(files, BRANCH_DIFF_CAP) { file ->
+            if (file.status == "untracked") untracked(base, file.file, withPatch = true).patch.orEmpty()
+            else fileDiff(base, anc, file.file)
+        }
+    }
+
+    override suspend fun branchName(directory: String): String? = withContext(Dispatchers.IO) {
+        val base = file(clean(directory) ?: directory) ?: return@withContext null
+        if (!gitAvailable(base)) return@withContext null
+        git(base, "branch", "--show-current").trim().ifBlank {
+            git(base, "rev-parse", "--short", "HEAD").trim()
+        }.ifBlank { null }
+    }
+
+    override suspend fun openFile(path: String, line: Int?, column: Int?, endLine: Int?): Boolean {
         val item = clean(path) ?: return false
         val target = file(item)?.takeIf { it.isAbsolute } ?: return false
         val vf = LocalFileSystem.getInstance().refreshAndFindFileByPath(target.toString()) ?: return false
@@ -256,7 +298,7 @@ class KiloWorkspaceRpcApiImpl internal constructor(
             LOG.warn("No project available to open file: $path")
             return false
         }
-        navigate(project, vf, line, column)
+        navigate(project, vf, line, column, endLine)
         return true
     }
 
@@ -334,8 +376,26 @@ class KiloWorkspaceRpcApiImpl internal constructor(
         null
     }
 
-    private suspend fun navigate(project: Project, file: VirtualFile, line: Int? = null, column: Int? = null) = suspendCancellableCoroutine { cont ->
+    private suspend fun navigate(project: Project, file: VirtualFile, line: Int? = null, column: Int? = null, endLine: Int? = null) = suspendCancellableCoroutine { cont ->
         ApplicationManager.getApplication().invokeLater({
+            if (line != null && endLine != null) {
+                val editor = FileEditorManager.getInstance(project).openTextEditor(
+                    OpenFileDescriptor(project, file, (line - 1).coerceAtLeast(0), 0),
+                    true,
+                )
+                val doc = editor?.document
+                if (editor != null && doc != null && doc.lineCount > 0) {
+                    val start = (line - 1).coerceIn(0, doc.lineCount - 1)
+                    val end = (endLine - 1).coerceIn(start, doc.lineCount - 1)
+                    val from = doc.getLineStartOffset(start)
+                    val to = doc.getLineEndOffset(end)
+                    editor.selectionModel.setSelection(from, to)
+                    editor.caretModel.moveToOffset(from)
+                    editor.scrollingModel.scrollToCaret(ScrollType.CENTER)
+                }
+                if (cont.isActive) cont.resume(Unit)
+                return@invokeLater
+            }
             val descriptor = if (line == null) {
                 OpenFileDescriptor(project, file)
             } else {
@@ -366,6 +426,55 @@ class KiloWorkspaceRpcApiImpl internal constructor(
 
     private fun git(base: Path, vararg args: String): String {
         return runWorkspaceGit(base, *args)
+    }
+
+    /** Merge-base of the resolved default branch and HEAD, or HEAD when no base can be determined. */
+    private fun mergeBase(base: Path): String {
+        val ref = defaultBranch(base) ?: return "HEAD"
+        return git(base, "merge-base", ref, "HEAD").trim().ifBlank { "HEAD" }
+    }
+
+    /**
+     * Resolve the base branch ref, preferring the remote's declared default (origin HEAD), then the
+     * common origin and local main or master branches, so repos whose default is develop or trunk —
+     * or worktrees where only the remote branch exists locally — still resolve. Fully-qualified refs
+     * are used so a tag named "main" can't be mistaken for the branch.
+     */
+    private fun defaultBranch(base: Path): String? {
+        git(base, "symbolic-ref", "--quiet", "refs/remotes/origin/HEAD").trim()
+            .removePrefix("refs/remotes/")
+            .takeIf { it.isNotBlank() }
+            ?.let { return it }
+        return listOf(
+            "refs/remotes/origin/main" to "origin/main",
+            "refs/remotes/origin/master" to "origin/master",
+            "refs/heads/main" to "main",
+            "refs/heads/master" to "master",
+        ).firstOrNull { git(base, "rev-parse", "--verify", "--quiet", it.first).isNotBlank() }?.second
+    }
+
+    private fun fileDiff(base: Path, anc: String, path: String): String =
+        git(base, "-c", "core.quotepath=false", "diff", "--relative", "--no-color", "--no-ext-diff", "--no-renames", "--unified=2147483647", anc, "--", path)
+
+    private fun untracked(base: Path, rel: String, withPatch: Boolean): DiffFileDto {
+        return runCatching {
+            val path = base.resolve(rel).normalize()
+            if (!path.startsWith(base) || !path.isRegularFile() || path.fileSize() > LARGE_FILE) return@runCatching DiffFileDto(rel, 0, 0, "", "untracked")
+            if (!withPatch) {
+                // Badge path (runs on every turn end / revert): count lines by streaming bytes rather
+                // than allocating the whole file. null = binary (NUL byte), reported as 0/0.
+                val count = countLines(path) ?: return@runCatching DiffFileDto(rel, 0, 0, "", "untracked")
+                return@runCatching DiffFileDto(rel, count, 0, "", "untracked")
+            }
+            val bytes = path.readBytes()
+            if (bytes.any { it == 0.toByte() }) return@runCatching DiffFileDto(rel, 0, 0, "", "untracked")
+            val text = bytes.toString(StandardCharsets.UTF_8)
+            val additions = lines(text).size
+            DiffFileDto(rel, additions, 0, untrackedPatch(rel, text, additions), "untracked")
+        }.getOrElse { err ->
+            LOG.debug { "Failed to read untracked file for branch diff: $rel (${err.message})" }
+            DiffFileDto(rel, 0, 0, "", "untracked")
+        }
     }
 
     private fun agent(a: Agent) = AgentInfo(
@@ -426,6 +535,106 @@ internal fun resolveProjectDirectoryHint(hint: String, bases: List<String>): Str
     if (hint.isNotBlank()) return hint
     return bases.firstOrNull() ?: hint
 }
+
+/**
+ * Assemble capped diff DTOs. [fetch] lazily produces each file's full-context patch. Oversized
+ * patches are skipped, but a single generated/large file should not blank every later small file;
+ * after a bounded number of misses, stop fetching so large branches still don't run a git subprocess
+ * (or read a file) per entry only to discard the output. Files past the cap keep their stats but
+ * carry an empty patch, which the client renders from stats alone.
+ */
+internal fun capDiff(files: List<DiffFileDto>, cap: Int, fetch: (DiffFileDto) -> String): List<DiffFileDto> {
+    var used = 0
+    var misses = 0
+    var full = false
+    return files.map { file ->
+        if (full) return@map file.copy(patch = "")
+        val text = fetch(file)
+        when {
+            text.isBlank() -> file.copy(patch = "")
+            used + text.length <= cap -> {
+                used += text.length
+                if (used >= cap) full = true
+                file.copy(patch = text)
+            }
+            else -> {
+                misses++
+                full = misses >= MAX_OVERSIZED_PATCHES || used >= cap
+                file.copy(patch = "")
+            }
+        }
+    }
+}
+
+private const val MAX_OVERSIZED_PATCHES = 3
+
+private fun untrackedPatch(path: String, text: String, additions: Int): String = buildString {
+    appendLine("diff --git a/$path b/$path")
+    appendLine("new file mode 100644")
+    appendLine("--- /dev/null")
+    appendLine("+++ b/$path")
+    appendLine("@@ -0,0 +1,$additions @@")
+    lines(text).forEach { line -> appendLine("+$line") }
+    if (text.isNotEmpty() && !text.endsWith("\n")) appendLine("\\ No newline at end of file")
+}.removeSuffix("\n")
+
+private fun lines(text: String): List<String> {
+    if (text.isEmpty()) return emptyList()
+    return text.removeSuffix("\n").split('\n')
+}
+
+/**
+ * Count lines the way [lines] does (trailing newline ignored, empty file = 0) by streaming bytes,
+ * so the stats-only untracked path doesn't allocate the whole file. Returns null for binary content
+ * (a NUL byte), matching the with-patch path's binary guard.
+ */
+private fun countLines(path: Path): Int? {
+    var newlines = 0
+    var last = 0
+    var any = false
+    path.inputStream().buffered().use { input ->
+        val buf = ByteArray(8192)
+        while (true) {
+            val n = input.read(buf)
+            if (n <= 0) break
+            any = true
+            for (i in 0 until n) {
+                val b = buf[i].toInt()
+                if (b == 0) return null
+                if (b == '\n'.code) newlines++
+            }
+            last = buf[n - 1].toInt()
+        }
+    }
+    if (!any) return 0
+    return if (last == '\n'.code) newlines else newlines + 1
+}
+
+internal data class DiffStat(val path: String, val additions: Int, val deletions: Int)
+
+internal fun parseNameStatus(text: String): Map<String, String> = text.lineSequence()
+    .mapNotNull { line ->
+        val parts = line.split('\t')
+        if (parts.size < 2) return@mapNotNull null
+        val path = parts.drop(1).joinToString("\t").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+        val status = when (parts[0].firstOrNull()) {
+            'A' -> "added"
+            'D' -> "deleted"
+            'M' -> "modified"
+            else -> null
+        } ?: return@mapNotNull null
+        path to status
+    }
+    .toMap()
+
+internal fun parseNumstat(text: String): List<DiffStat> = text.lineSequence()
+    .mapNotNull { line ->
+        val parts = line.split('\t')
+        if (parts.size < 3) return@mapNotNull null
+        val path = parts.drop(2).joinToString("\t").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+        DiffStat(path, parts[0].toIntOrNull() ?: 0, parts[1].toIntOrNull() ?: 0)
+    }
+    .toList()
 
 internal fun workspaceGitAvailable(base: Path, cache: ConcurrentHashMap<String, Boolean> = ConcurrentHashMap()): Boolean {
     if (Files.exists(base.resolve(".git"))) return true

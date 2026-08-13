@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Anaconda Desktop に接続",
   "provider.anaconda.title.manage": "Anaconda Desktop を管理",
@@ -53,6 +55,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "プロバイダーに接続",
 
@@ -162,6 +165,7 @@ export const dict = {
   "model.group.auto": "自動モデル",
   "model.group.recommended": "推奨",
   "model.group.favorites": "お気に入り",
+  "model.group.mostUsed": "よく使うモデル",
   "model.favorite.add": "お気に入りに追加",
   "model.favorite.remove": "お気に入りから削除",
 
@@ -229,6 +233,8 @@ export const dict = {
     "クリックすると、ファイルシステムへの書き込みを制限します。サンドボックス設定により、ネットワークアクセスは引き続き許可されます。",
 
   "speechToText.tooltip.start": "Kilo Gatewayで音声入力を開始",
+  "speechToText.tooltip.shortcut":
+    "タップまたは Cmd/Ctrl+K を押して録音を開始／停止し、話している間は押し続け、離すと文字起こしして送信します。",
   "speechToText.tooltip.starting": "マイクを起動中... まだ話さないでください。",
   "speechToText.tooltip.stop": "音声キャプチャを停止",
   "speechToText.tooltip.transcribing": "文字起こし中... クリックしてキャンセル。",
@@ -265,6 +271,7 @@ export const dict = {
 
   "notification.permission.title": "権限が必要です",
   "notification.permission.titleSubagent": "権限が必要です（サブエージェント）",
+  "notification.permission.titleSkillShell": "スキル「{{skill}}」のシェルコマンドを実行しますか？",
   "ui.permission.manageAutoApprove": "自動承認ルールを管理",
   "ui.permission.doomLoop.prompt": "{{tool}} ツールでループの可能性が検出されました。実行を続行しますか？",
   "ui.permission.doomLoop.rule": "{{tool}} の呼び出しを続行",
@@ -300,16 +307,24 @@ export const dict = {
   "ui.approval.source.yolo": "自動承認（YOLO）モードによって",
   "ui.approval.source.session": "セッションの自動承認ルールによって",
   "ui.approval.source.default": "デフォルトで",
+  "ui.approval.outsideWorkspace": "（ワークスペース外：{{file}}）",
 
   "session.tab.review": "レビュー",
   "session.review.filesChanged": "{{count}} ファイル変更",
-  "session.review.change.other": "変更",
   "session.review.loadingChanges": "変更を読み込み中...",
   "session.review.noChanges": "変更なし",
   "session.messages.loadingEarlier": "以前のメッセージを読み込み中...",
   "session.messages.loadEarlier": "以前のメッセージを読み込む",
   "session.messages.loading": "メッセージを読み込み中...",
 
+  "sidebar.topBar.label": "Kilo Code ナビゲーション",
+  "sidebar.topBar.newTask": "新規タスク",
+  "sidebar.topBar.history": "履歴",
+  "sidebar.topBar.agentManager": "エージェントマネージャー",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "マーケットプレイス",
+  "sidebar.topBar.profile": "プロフィール",
+  "sidebar.topBar.settings": "設定",
   "sidebar.session.newSession": "新規セッション",
   "sidebar.session.newSession.tooltip": "現在のセッションを維持したまま、新しい会話を開始します。",
   "sidebar.session.newWorktree": "新規 Worktree",
@@ -478,44 +493,8 @@ export const dict = {
   "provider.custom.models.name.placeholder": "表示名",
   "provider.custom.models.reasoning.label": "推論",
   "provider.custom.models.modalities.image": "画像",
-  "provider.custom.models.variants.label": "バリアント",
-  "provider.custom.models.variants.add": "バリアントを追加",
-  "provider.custom.models.variants.remove": "バリアントを削除",
-  "provider.custom.models.variants.name.label": "名前",
-  "provider.custom.models.variants.name.placeholder": "例: thinking",
-  "provider.custom.models.variants.option.unset": "(未設定)",
-  "provider.custom.models.variants.enableThinking.label": "思考を有効にする (例: Alibaba)",
-  "provider.custom.models.variants.enableThinking.placeholder": "enable_thinking",
-  "provider.custom.models.variants.enableThinking.true": "true",
-  "provider.custom.models.variants.enableThinking.false": "false",
-  "provider.custom.models.variants.thinking.label": "思考タイプ (例: Z.ai)",
-  "provider.custom.models.variants.thinking.placeholder": "thinking",
-  "provider.custom.models.variants.thinking.enabled": "enabled",
-  "provider.custom.models.variants.thinking.disabled": "disabled",
-  "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
-  "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
-  "provider.custom.models.variants.splitReasoning.true": "true",
-  "provider.custom.models.variants.splitReasoning.false": "false",
-  "provider.custom.models.variants.chatTemplateArgs.label": "チャットテンプレート引数で思考を有効化 (例: Hugging Face)",
-  "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
-  "provider.custom.models.variants.chatTemplateArgs.true": "true",
-  "provider.custom.models.variants.chatTemplateArgs.false": "false",
-  "provider.custom.models.variants.reasoningEffort.label": "推論エフォート",
-  "provider.custom.models.variants.reasoningEffort.placeholder": "reasoningEffort",
-  "provider.custom.models.variants.reasoningEffort.none": "none",
-  "provider.custom.models.variants.reasoningEffort.minimal": "minimal",
-  "provider.custom.models.variants.reasoningEffort.low": "low",
-  "provider.custom.models.variants.reasoningEffort.medium": "medium",
-  "provider.custom.models.variants.reasoningEffort.high": "high",
-  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
-  "provider.custom.models.variants.outputEffort.placeholder": "effort",
-  "provider.custom.models.variants.outputEffort.low": "low",
-  "provider.custom.models.variants.outputEffort.medium": "medium",
-  "provider.custom.models.variants.outputEffort.high": "high",
-  "provider.custom.models.variants.outputEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.max": "max",
+  "provider.custom.models.toggleReasoning": "すべてのモデルの推論を切り替え",
+  "provider.custom.models.toggleImages": "すべてのモデルの画像を切り替え",
   "provider.custom.models.remove": "モデルを削除",
   "provider.custom.models.add": "モデルを追加",
   "provider.custom.models.fetch.authError": "認証に失敗しました。上記のAPIキーを確認して再試行してください。",
@@ -529,6 +508,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "モデルを検索\u2026",
   "provider.custom.models.fetch.add": "{{count}}個のモデルを追加",
   "provider.custom.edit.title": "プロバイダーを編集",
+  "provider.custom.edit.advanced": "JSON 設定ファイルで詳細設定を編集",
   "provider.custom.headers.label": "ヘッダー（任意）",
   "provider.custom.headers.key.label": "ヘッダー",
   "provider.custom.headers.key.placeholder": "Header-Name",
@@ -697,7 +677,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "エージェントの動作",
   "settings.autoApprove.title": "自動承認",
-  "settings.browser.title": "ブラウザ",
+  "settings.webTools.title": "ウェブツール",
+  "settings.webTools.description": "ウェブ検索とブラウザ自動化を設定します。",
+  "settings.webTools.webSearch.enable": "すべてのプロバイダーで有効化",
+  "settings.webTools.browserAutomation": "ブラウザ自動化",
+  "settings.webTools.webSearch.title": "ウェブ検索",
+  "settings.webTools.webSearch.description": "すべてのプロバイダーのモデルでウェブ検索を利用できるようにします。",
   "settings.checkpoints.title": "チェックポイント",
   "settings.display.title": "表示",
   "settings.autocomplete.title": "オートコンプリート",
@@ -715,6 +700,13 @@ export const dict = {
   "session.messages.scrollToBottom": "下にスクロール",
   "session.messages.initializing": "初期化中...",
   "session.messages.taskStarting": "開始中...",
+  "session.prompts.navLabel": "プロンプトナビゲーター",
+  "session.prompts.tick": "プロンプト {{index}}/{{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "まだ応答がありません",
+  "session.prompts.queued": "キューに追加済み",
+  "session.prompts.first": "最初のプロンプト",
+  "session.prompts.latest": "最新のプロンプト",
+  "session.prompts.overflow": "{{count}} 件前のプロンプト",
   "session.status.writingResponse": "応答を作成中…",
   "session.status.retry": "再試行中…",
   "session.status.working": "作業中…",
@@ -742,7 +734,7 @@ export const dict = {
 
   "prompt.placeholder.connecting": "サーバーに接続中...",
   "prompt.placeholder.error": "接続に失敗しました。出力パネルを確認するか、拡張機能を再起動してください。",
-  "prompt.placeholder.default": "メッセージを入力... (Enterで送信、Shift+Enterで改行)",
+  "prompt.placeholder.default": "メッセージを入力、@ でファイルを参照... (Enterで送信、Shift+Enterで改行)",
 
   "context.usage.sessionCost": "セッションコスト",
   "context.usage.olderSessions": "{{count}} 件の古いセッション",
@@ -841,8 +833,6 @@ export const dict = {
   "settings.experimental.lsp.description": "言語サーバープロトコル統合を有効にする",
   "settings.experimental.batch.title": "バッチツール",
   "settings.experimental.batch.description": "複数のツール呼び出しのバッチ処理を有効にする",
-  "settings.experimental.codebaseSearch.title": "コードベース検索",
-  "settings.experimental.codebaseSearch.description": "コードベース全体でAIによる自然言語検索を有効にする",
   "settings.experimental.imageGeneration.title": "画像生成",
   "settings.experimental.imageGeneration.description": "AI画像生成を有効にする",
   "settings.experimental.imageGenerationModel.title": "画像モデル",
@@ -865,7 +855,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "許可されたネットワーク接続先",
   "settings.sandboxing.allowedHosts.description":
-    "サンドボックス化された HTTP および HTTPS プロキシトラフィックの DNS ホストとポートの宛先。GitHub CLI と HTTPS Git では通常、github.com:443 と api.github.com:443 が必要です。変更は新しいセッションに適用されます。",
+    "サンドボックス化された HTTP および HTTPS プロキシトラフィックの DNS ホストとポートの宛先。GitHub CLI と HTTPS Git では通常、github.com:443 と api.github.com:443 が必要です。",
   "settings.sandboxing.writablePaths.title": "追加の書き込み可能パス",
   "settings.sandboxing.writablePaths.description":
     "サンドボックスでの書き込みを許可する追加のファイルシステムパス（例: /tmp、/var/log）。サンドボックス有効時、デフォルトの書き込み可能パスと統合されます。",
@@ -875,6 +865,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "SWE-Pruner モデル",
   "settings.experimental.swePrunerModel.description":
     "ツール出力の剪定に使用するモデル。既定では設定済みのスモールモデルを使用します",
+  "settings.experimental.multiProject.title": "マルチプロジェクト Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Agent Managerで複数のリポジトリにまたがるセッションとワークツリーの管理を有効にします。現在のワークスペースリポジトリは常にデフォルトプロジェクトです。",
   "settings.experimental.mcpTimeout.title": "MCPタイムアウト（ミリ秒）",
   "settings.experimental.mcpTimeout.description": "MCPサーバーリクエストのタイムアウト（ミリ秒）",
   "settings.experimental.remote.title": "Remote コントロール",
@@ -1002,6 +995,9 @@ export const dict = {
     "カスタムコマンドが設定されていません。opencode.json にコマンドを追加するとここに表示されます。",
   "settings.agentBehaviour.workflows.detail.description": "説明",
   "settings.agentBehaviour.workflows.detail.template": "テンプレート",
+  "settings.agentBehaviour.workflows.model": "モデル",
+  "settings.agentBehaviour.workflows.variant": "バリアント",
+  "settings.agentBehaviour.workflows.modelDescription": "グローバルモデルの上書き",
   "settings.sandboxing.enabled.title": "サンドボックス",
   "settings.sandboxing.enabled.description":
     "エージェントのシェルコマンドを、プロジェクトおよびKiloの状態ディレクトリへの書き込みを制限するOSレベルのサンドボックス内で実行",
@@ -1097,19 +1093,23 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Shift+Tab で推論の強度を切り替える",
   "settings.display.shiftTabCycle.description":
     "プロンプト入力欄で Shift+Tab を押すと、次の推論の強度レベルに切り替わります。Shift+Tab をキーボードフォーカスの移動に使用する場合は、無効にしてください。",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "ターミナルコマンドブロック",
+  "settings.display.terminalCommand.description":
+    "ターミナルコマンドブロックを最初から展開するか折りたたむかを選択します。",
+  "settings.display.terminalCommand.expanded": "展開",
+  "settings.display.terminalCommand.collapsed": "折りたたみ",
   "settings.display.codeEdit.title": "コード編集ブロック",
   "settings.display.codeEdit.description":
     "コード編集ブロックと差分ブロックを最初から展開するか折りたたむかを選択します。",
   "settings.display.codeEdit.expanded": "展開",
   "settings.display.codeEdit.collapsed": "折りたたみ",
 
-  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.title": "トークンスループットを表示",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+    "最新のアシスタントメッセージとタスクヘッダーにテキスト生成速度（トークン/秒）を表示します。チャットを整理するためデフォルトでは非表示です。",
+  "settings.display.autoApprovalReason.title": "自動承認の理由を表示",
+  "settings.display.autoApprovalReason.description":
+    "ツール呼び出しが自動承認された理由（一致したルール、エージェントのデフォルト、YOLOモードなど）を示す行を表示します。",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

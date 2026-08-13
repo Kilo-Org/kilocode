@@ -2,6 +2,8 @@ import { dict as en } from "./en"
 
 type Keys = keyof typeof en
 
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "連接 Anaconda Desktop",
   "provider.anaconda.title.manage": "管理 Anaconda Desktop",
@@ -54,6 +56,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "連接供應商",
 
@@ -158,6 +161,7 @@ export const dict = {
   "model.group.auto": "自動模型",
   "model.group.recommended": "推薦",
   "model.group.favorites": "我的最愛",
+  "model.group.mostUsed": "最常用",
   "model.favorite.add": "加入我的最愛",
   "model.favorite.remove": "從我的最愛中移除",
 
@@ -219,6 +223,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed": "點擊以限制檔案系統寫入。沙盒設定仍允許網路存取。",
 
   "speechToText.tooltip.start": "使用 Kilo Gateway 開始語音輸入",
+  "speechToText.tooltip.shortcut": "點擊或按下 Cmd/Ctrl+K 開始或停止錄音；說話時按住，放開後即可轉錄並提交。",
   "speechToText.tooltip.starting": "正在啟動麥克風... 請稍後再說。",
   "speechToText.tooltip.stop": "停止擷取音訊",
   "speechToText.tooltip.transcribing": "正在轉錄... 點擊取消。",
@@ -252,6 +257,7 @@ export const dict = {
 
   "notification.permission.title": "需要權限",
   "notification.permission.titleSubagent": "需要權限（子代理）",
+  "notification.permission.titleSkillShell": "要執行技能「{{skill}}」的 shell 指令嗎？",
   "ui.permission.manageAutoApprove": "管理自動核准規則",
   "ui.permission.doomLoop.prompt": "偵測到 {{tool}} 工具可能陷入迴圈。是否繼續執行？",
   "ui.permission.doomLoop.rule": "繼續呼叫 {{tool}}",
@@ -287,16 +293,24 @@ export const dict = {
   "ui.approval.source.yolo": "由自動核准（YOLO）模式",
   "ui.approval.source.session": "由工作階段自動核准規則",
   "ui.approval.source.default": "預設",
+  "ui.approval.outsideWorkspace": "（工作區之外：{{file}}）",
 
   "session.tab.review": "審查",
   "session.review.filesChanged": "{{count}} 個檔案變更",
-  "session.review.change.other": "變更",
   "session.review.loadingChanges": "正在載入變更...",
   "session.review.noChanges": "沒有變更",
   "session.messages.loadingEarlier": "正在載入更早的訊息...",
   "session.messages.loadEarlier": "載入更早的訊息",
   "session.messages.loading": "正在載入訊息...",
 
+  "sidebar.topBar.label": "Kilo Code 導覽",
+  "sidebar.topBar.newTask": "新建任務",
+  "sidebar.topBar.history": "歷史記錄",
+  "sidebar.topBar.agentManager": "代理管理器",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "市集",
+  "sidebar.topBar.profile": "個人資料",
+  "sidebar.topBar.settings": "設定",
   "sidebar.session.newSession": "新會話",
   "sidebar.session.newSession.tooltip": "在保持當前會話完整的同時開始全新的對話。",
   "sidebar.session.newWorktree": "新 Worktree",
@@ -422,44 +436,8 @@ export const dict = {
   "provider.custom.models.name.placeholder": "顯示名稱",
   "provider.custom.models.reasoning.label": "推理",
   "provider.custom.models.modalities.image": "圖片",
-  "provider.custom.models.variants.label": "變體",
-  "provider.custom.models.variants.add": "新增變體",
-  "provider.custom.models.variants.remove": "移除變體",
-  "provider.custom.models.variants.name.label": "名稱",
-  "provider.custom.models.variants.name.placeholder": "例如 thinking",
-  "provider.custom.models.variants.option.unset": "（未設定）",
-  "provider.custom.models.variants.enableThinking.label": "啟用思考 (例如 Alibaba)",
-  "provider.custom.models.variants.enableThinking.placeholder": "enable_thinking",
-  "provider.custom.models.variants.enableThinking.true": "true",
-  "provider.custom.models.variants.enableThinking.false": "false",
-  "provider.custom.models.variants.thinking.label": "思考類型 (例如 Z.ai)",
-  "provider.custom.models.variants.thinking.placeholder": "thinking",
-  "provider.custom.models.variants.thinking.enabled": "enabled",
-  "provider.custom.models.variants.thinking.disabled": "disabled",
-  "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
-  "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
-  "provider.custom.models.variants.splitReasoning.true": "true",
-  "provider.custom.models.variants.splitReasoning.false": "false",
-  "provider.custom.models.variants.chatTemplateArgs.label": "透過聊天範本參數啟用思考（如 Hugging Face）",
-  "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
-  "provider.custom.models.variants.chatTemplateArgs.true": "true",
-  "provider.custom.models.variants.chatTemplateArgs.false": "false",
-  "provider.custom.models.variants.reasoningEffort.label": "推理強度",
-  "provider.custom.models.variants.reasoningEffort.placeholder": "reasoningEffort",
-  "provider.custom.models.variants.reasoningEffort.none": "none",
-  "provider.custom.models.variants.reasoningEffort.minimal": "minimal",
-  "provider.custom.models.variants.reasoningEffort.low": "low",
-  "provider.custom.models.variants.reasoningEffort.medium": "medium",
-  "provider.custom.models.variants.reasoningEffort.high": "high",
-  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
-  "provider.custom.models.variants.outputEffort.placeholder": "effort",
-  "provider.custom.models.variants.outputEffort.low": "low",
-  "provider.custom.models.variants.outputEffort.medium": "medium",
-  "provider.custom.models.variants.outputEffort.high": "high",
-  "provider.custom.models.variants.outputEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.max": "max",
+  "provider.custom.models.toggleReasoning": "切換所有模型的推理",
+  "provider.custom.models.toggleImages": "切換所有模型的圖像",
   "provider.custom.models.remove": "移除模型",
   "provider.custom.models.add": "新增模型",
   "provider.custom.models.fetch.authError": "驗證失敗。請檢查上方的 API 金鑰後重試。",
@@ -473,6 +451,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "搜尋模型\u2026",
   "provider.custom.models.fetch.add": "新增 {{count}} 個模型",
   "provider.custom.edit.title": "編輯供應商",
+  "provider.custom.edit.advanced": "在 JSON 設定檔中編輯進階設定",
   "provider.custom.headers.label": "標頭（選填）",
   "provider.custom.headers.key.label": "標頭",
   "provider.custom.headers.key.placeholder": "Header-Name",
@@ -639,7 +618,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "Agent 行為",
   "settings.autoApprove.title": "自動核准",
-  "settings.browser.title": "瀏覽器",
+  "settings.webTools.title": "網路工具",
+  "settings.webTools.description": "設定網頁搜尋和瀏覽器自動化。",
+  "settings.webTools.webSearch.enable": "為所有供應商啟用",
+  "settings.webTools.browserAutomation": "瀏覽器自動化",
+  "settings.webTools.webSearch.title": "網頁搜尋",
+  "settings.webTools.webSearch.description": "讓所有供應商的模型都可使用網頁搜尋。",
   "settings.checkpoints.title": "檢查點",
   "settings.display.title": "顯示",
   "settings.autocomplete.title": "自動完成",
@@ -656,6 +640,13 @@ export const dict = {
   "session.messages.scrollToBottom": "捲動至底部",
   "session.messages.initializing": "初始化中...",
   "session.messages.taskStarting": "啟動中...",
+  "session.prompts.navLabel": "提示詞導覽",
+  "session.prompts.tick": "提示詞 {{index}}/{{total}}：{{prompt}}",
+  "session.prompts.noAnswer": "尚無回應",
+  "session.prompts.queued": "已排入佇列",
+  "session.prompts.first": "第一個提示",
+  "session.prompts.latest": "最新提示",
+  "session.prompts.overflow": "{{count}} 個較早的提示",
   "session.status.writingResponse": "正在撰寫回覆…",
   "session.status.retry": "正在重試…",
   "session.status.working": "處理中…",
@@ -682,7 +673,7 @@ export const dict = {
 
   "prompt.placeholder.connecting": "正在連線至伺服器...",
   "prompt.placeholder.error": "連線失敗。請檢查輸出面板或重新啟動擴充功能。",
-  "prompt.placeholder.default": "輸入訊息... (Enter 送出，Shift+Enter 換行)",
+  "prompt.placeholder.default": "輸入訊息，用 @ 提及檔案... (Enter 送出，Shift+Enter 換行)",
 
   "context.usage.sessionCost": "工作階段費用",
   "context.usage.olderSessions": "{{count}} 個較早的工作階段",
@@ -774,8 +765,6 @@ export const dict = {
   "settings.experimental.lsp.description": "啟用語言伺服器協定整合",
   "settings.experimental.batch.title": "批次工具",
   "settings.experimental.batch.description": "啟用多個工具呼叫的批次處理",
-  "settings.experimental.codebaseSearch.title": "程式碼庫搜尋",
-  "settings.experimental.codebaseSearch.description": "啟用 AI 驅動的自然語言程式碼庫搜尋",
   "settings.experimental.imageGeneration.title": "圖像生成",
   "settings.experimental.imageGeneration.description": "啟用 AI 圖像生成",
   "settings.experimental.imageGenerationModel.title": "圖像模型",
@@ -797,7 +786,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "允許的網路目的地",
   "settings.sandboxing.allowedHosts.description":
-    "適用於沙盒 HTTP 和 HTTPS Proxy 流量的 DNS 主機與連接埠目標。GitHub CLI 和 HTTPS Git 通常需要 github.com:443 和 api.github.com:443。變更將套用至新工作階段。",
+    "適用於沙盒 HTTP 和 HTTPS Proxy 流量的 DNS 主機與連接埠目標。GitHub CLI 和 HTTPS Git 通常需要 github.com:443 和 api.github.com:443。",
   "settings.sandboxing.writablePaths.title": "額外可寫路徑",
   "settings.sandboxing.writablePaths.description":
     "沙盒允許寫入的額外檔案系統路徑（例如 /tmp、/var/log）。沙盒啟用後，這些路徑會與預設可寫路徑合併。",
@@ -806,6 +795,9 @@ export const dict = {
     "啟用 SWE-Pruner：根據智能體提供的聚焦問題，對讀取、搜尋與 shell 工具的大型輸出進行任務感知裁剪",
   "settings.experimental.swePrunerModel.title": "SWE-Pruner 模型",
   "settings.experimental.swePrunerModel.description": "用於裁剪工具輸出的模型;預設為已設定的小模型",
+  "settings.experimental.multiProject.title": "多專案 Agent Manager",
+  "settings.experimental.multiProject.description":
+    "在 Agent Manager 中啟用跨多個儲存庫的工作階段和工作樹管理。當前工作區儲存庫始終是預設專案。",
   "settings.experimental.mcpTimeout.title": "MCP 逾時（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 伺服器請求的逾時時間（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",
@@ -923,6 +915,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.empty": "未設定自訂命令。將命令新增至 opencode.json 即可在此處看到。",
   "settings.agentBehaviour.workflows.detail.description": "描述",
   "settings.agentBehaviour.workflows.detail.template": "範本",
+  "settings.agentBehaviour.workflows.model": "模型",
+  "settings.agentBehaviour.workflows.variant": "變體",
+  "settings.agentBehaviour.workflows.modelDescription": "全域模型覆寫",
   "settings.sandboxing.enabled.title": "沙盒",
   "settings.sandboxing.enabled.description":
     "在作業系統層級沙盒中執行代理 shell 指令，將寫入限制在專案和 Kilo 狀態目錄內",
@@ -1008,18 +1003,21 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "使用 Shift+Tab 切換推理強度",
   "settings.display.shiftTabCycle.description":
     "在提示輸入框中按 Shift+Tab 可切換至下一個推理強度等級。停用此選項可保留 Shift+Tab 用於鍵盤焦點導覽。",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "終端命令區塊",
+  "settings.display.terminalCommand.description": "選擇終端命令區塊的初始狀態：展開或收合。",
+  "settings.display.terminalCommand.expanded": "展開",
+  "settings.display.terminalCommand.collapsed": "收合",
   "settings.display.codeEdit.title": "程式碼編輯區塊",
   "settings.display.codeEdit.description": "選擇程式碼編輯區塊與差異區塊的初始狀態：展開或收合。",
   "settings.display.codeEdit.expanded": "展開",
   "settings.display.codeEdit.collapsed": "收合",
 
-  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.title": "顯示權杖吞吐量",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+    "在最新的助理訊息與工作標題中顯示文字生成速率（權杖/秒）。預設隱藏，以保持對話簡潔。",
+  "settings.display.autoApprovalReason.title": "顯示自動核准原因",
+  "settings.display.autoApprovalReason.description":
+    "在工具呼叫中顯示一行說明其被自動核准的原因（符合的規則、代理預設值、YOLO 模式等）。",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

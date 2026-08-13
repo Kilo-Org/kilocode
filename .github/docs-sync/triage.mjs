@@ -21,6 +21,7 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { parseTriageEntries } from "./extract-json.mjs"
 import { appendSummary, backoffMsForAttempt, deadline, remainingMs, runKilo, sleepSync } from "./lib.mjs"
+import { readLearningsBlock } from "./learn.mjs"
 
 const CHUNK_SIZE = 25
 const ATTEMPTS = 3
@@ -28,7 +29,7 @@ const OUT_DIR = "docs-sync-out"
 const CHUNK_TIMEOUT_MS = 10 * 60 * 1000
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
-const prompt = fs.readFileSync(path.join(HERE, "triage-prompt.md"), "utf8")
+const prompt = fs.readFileSync(path.join(HERE, "triage-prompt.md"), "utf8") + readLearningsBlock("triage")
 const model = process.env.TRIAGE_MODEL
 if (!model) throw new Error("TRIAGE_MODEL is required")
 
@@ -71,8 +72,13 @@ function triageChunk(chunk, index, budgetDeadline) {
       break
     }
 
+    // Headless `kilo run` auto-rejects every permission ask; without --auto the
+    // agent cannot run shell commands. SECURITY: --auto grants unrestricted bash
+    // to an agent steered by external PR content. Hardening deferred: a scoped
+    // permission.bash map via KILO_CONFIG_CONTENT should replace --auto once the
+    // required shell patterns are stable (see PR #12605 review thread).
     const result = runKilo({
-      args: ["run", prompt, "-m", model, "--dir", process.cwd(), "-f", chunkFile],
+      args: ["run", "--auto", prompt, "-m", model, "--dir", process.cwd(), "-f", chunkFile],
       timeoutMs: Math.min(CHUNK_TIMEOUT_MS, left),
       streamStdout: false,
       label: `triage chunk ${index} attempt ${attempt}`,
@@ -110,9 +116,7 @@ function triageChunk(chunk, index, budgetDeadline) {
         console.warn(`chunk ${index}: backing off ${wait / 1000}s before attempt ${attempt + 1}`)
         sleepSync(wait)
       } else if (wait > 0) {
-        console.warn(
-          `chunk ${index}: skipping backoff — remaining budget cannot fit attempt ${attempt + 1} after wait`,
-        )
+        console.warn(`chunk ${index}: skipping backoff — remaining budget cannot fit attempt ${attempt + 1} after wait`)
       }
     }
   }
@@ -120,7 +124,12 @@ function triageChunk(chunk, index, budgetDeadline) {
   console.warn(
     `::warning::chunk ${index} failed triage after up to ${ATTEMPTS} attempts; marking ${chunk.length} PRs pending`,
   )
-  return chunk.map((d) => pendingEntry(d, lastCause.includes("triage failed") ? lastCause : `triage failed to classify this PR (${lastCause})`))
+  return chunk.map((d) =>
+    pendingEntry(
+      d,
+      lastCause.includes("triage failed") ? lastCause : `triage failed to classify this PR (${lastCause})`,
+    ),
+  )
 }
 
 const chunks = []

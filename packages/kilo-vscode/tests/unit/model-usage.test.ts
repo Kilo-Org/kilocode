@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import type { Provider, SessionModelUsage } from "../../webview-ui/src/types/messages"
 import {
+  cacheRate,
   groupModelUsage,
   hasModelUsage,
   isSameSessionTree,
@@ -44,6 +45,8 @@ describe("model usage", () => {
       }),
     ).toBeFalse()
     expect(tokenSummary(usage)).toEqual({ input: 10, output: 2, cached: 20 })
+    expect(cacheRate(models[0])).toBe("57.1%")
+    expect(cacheRate({ ...models[0], tokens: { ...tokens, input: 0, cache: { read: 0, write: 0 } } })).toBe("-")
     expect(groupModelUsage(models, providers).map((group) => group.providerName)).toEqual(["Kilo Gateway", "MiniMax"])
     expect(modelUsageName(models[0], providers)).toBe("Qwen 3.7 Plus")
     expect(modelUsageName(models[1], providers)).toBe("MiniMax M3")

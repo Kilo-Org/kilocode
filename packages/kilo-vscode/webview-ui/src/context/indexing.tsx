@@ -26,11 +26,18 @@ const IndexingContext = createContext<IndexingContextValue>()
 
 export const IndexingProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
-  const { features } = useConfig()
+  const { features, settings } = useConfig()
   const [status, setStatus] = createSignal<IndexingStatus>(initial)
   const [loading, setLoading] = createSignal(true)
 
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
+    if (
+      message.type === "indexingStatusLoaded" &&
+      message.projectId &&
+      message.projectId !== settings()["indexing.projectId"]
+    ) {
+      return
+    }
     applyIndexingStatusMessage(message, setStatus, setLoading)
   })
 

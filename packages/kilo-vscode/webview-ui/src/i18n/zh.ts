@@ -2,6 +2,8 @@ import { dict as en } from "./en"
 
 type Keys = keyof typeof en
 
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "连接 Anaconda Desktop",
   "provider.anaconda.title.manage": "管理 Anaconda Desktop",
@@ -54,6 +56,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "连接提供商",
 
@@ -158,6 +161,7 @@ export const dict = {
   "model.group.auto": "自动模型",
   "model.group.recommended": "推荐",
   "model.group.favorites": "收藏夹",
+  "model.group.mostUsed": "最常用",
   "model.favorite.add": "添加到收藏夹",
   "model.favorite.remove": "从收藏夹中移除",
 
@@ -221,6 +225,7 @@ export const dict = {
     "点击以限制文件系统写入。根据你的沙盒设置，网络访问仍然允许。",
 
   "speechToText.tooltip.start": "使用 Kilo Gateway 开始语音输入",
+  "speechToText.tooltip.shortcut": "点击或按下 Cmd/Ctrl+K 开始或停止录音；说话时按住，松开后即可转录并提交。",
   "speechToText.tooltip.starting": "正在启动麦克风... 请稍后再说。",
   "speechToText.tooltip.stop": "停止捕获音频",
   "speechToText.tooltip.transcribing": "正在转录... 点击取消。",
@@ -254,6 +259,7 @@ export const dict = {
 
   "notification.permission.title": "需要权限",
   "notification.permission.titleSubagent": "需要权限（子代理）",
+  "notification.permission.titleSkillShell": "要执行技能「{{skill}}」的 shell 命令吗？",
   "ui.permission.manageAutoApprove": "管理自动审批规则",
   "ui.permission.doomLoop.prompt": "检测到 {{tool}} 工具可能陷入循环。是否继续运行？",
   "ui.permission.doomLoop.rule": "继续调用 {{tool}}",
@@ -289,16 +295,24 @@ export const dict = {
   "ui.approval.source.yolo": "由自动批准（YOLO）模式",
   "ui.approval.source.session": "由会话自动批准规则",
   "ui.approval.source.default": "默认",
+  "ui.approval.outsideWorkspace": "（工作区之外：{{file}}）",
 
   "session.tab.review": "审查",
   "session.review.filesChanged": "{{count}} 个文件变更",
-  "session.review.change.other": "更改",
   "session.review.loadingChanges": "正在加载更改...",
   "session.review.noChanges": "无更改",
   "session.messages.loadingEarlier": "正在加载更早的消息...",
   "session.messages.loadEarlier": "加载更早的消息",
   "session.messages.loading": "正在加载消息...",
 
+  "sidebar.topBar.label": "Kilo Code 导航",
+  "sidebar.topBar.newTask": "新建任务",
+  "sidebar.topBar.history": "历史记录",
+  "sidebar.topBar.agentManager": "代理管理器",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "市场",
+  "sidebar.topBar.profile": "个人资料",
+  "sidebar.topBar.settings": "设置",
   "sidebar.session.newSession": "新会话",
   "sidebar.session.newSession.tooltip": "在保持当前会话完整的同时开始全新的对话。",
   "sidebar.session.newWorktree": "新 Worktree",
@@ -462,44 +476,8 @@ export const dict = {
   "provider.custom.models.name.placeholder": "显示名称",
   "provider.custom.models.reasoning.label": "推理",
   "provider.custom.models.modalities.image": "图片",
-  "provider.custom.models.variants.label": "变体",
-  "provider.custom.models.variants.add": "添加变体",
-  "provider.custom.models.variants.remove": "移除变体",
-  "provider.custom.models.variants.name.label": "名称",
-  "provider.custom.models.variants.name.placeholder": "例如 thinking",
-  "provider.custom.models.variants.option.unset": "（未设置）",
-  "provider.custom.models.variants.enableThinking.label": "启用思考 (例如 Alibaba)",
-  "provider.custom.models.variants.enableThinking.placeholder": "enable_thinking",
-  "provider.custom.models.variants.enableThinking.true": "true",
-  "provider.custom.models.variants.enableThinking.false": "false",
-  "provider.custom.models.variants.thinking.label": "思考类型 (例如 Z.ai)",
-  "provider.custom.models.variants.thinking.placeholder": "thinking",
-  "provider.custom.models.variants.thinking.enabled": "enabled",
-  "provider.custom.models.variants.thinking.disabled": "disabled",
-  "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
-  "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
-  "provider.custom.models.variants.splitReasoning.true": "true",
-  "provider.custom.models.variants.splitReasoning.false": "false",
-  "provider.custom.models.variants.chatTemplateArgs.label": "通过聊天模板参数启用思考（如 Hugging Face）",
-  "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
-  "provider.custom.models.variants.chatTemplateArgs.true": "true",
-  "provider.custom.models.variants.chatTemplateArgs.false": "false",
-  "provider.custom.models.variants.reasoningEffort.label": "推理强度",
-  "provider.custom.models.variants.reasoningEffort.placeholder": "reasoningEffort",
-  "provider.custom.models.variants.reasoningEffort.none": "none",
-  "provider.custom.models.variants.reasoningEffort.minimal": "minimal",
-  "provider.custom.models.variants.reasoningEffort.low": "low",
-  "provider.custom.models.variants.reasoningEffort.medium": "medium",
-  "provider.custom.models.variants.reasoningEffort.high": "high",
-  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
-  "provider.custom.models.variants.outputEffort.placeholder": "effort",
-  "provider.custom.models.variants.outputEffort.low": "low",
-  "provider.custom.models.variants.outputEffort.medium": "medium",
-  "provider.custom.models.variants.outputEffort.high": "high",
-  "provider.custom.models.variants.outputEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.max": "max",
+  "provider.custom.models.toggleReasoning": "切换所有模型的推理",
+  "provider.custom.models.toggleImages": "切换所有模型的图像",
   "provider.custom.models.remove": "移除模型",
   "provider.custom.models.add": "添加模型",
   "provider.custom.models.fetch.authError": "认证失败。请检查上方的 API 密钥后重试。",
@@ -513,6 +491,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "搜索模型\u2026",
   "provider.custom.models.fetch.add": "添加 {{count}} 个模型",
   "provider.custom.edit.title": "编辑提供商",
+  "provider.custom.edit.advanced": "在 JSON 配置文件中编辑高级设置",
   "provider.custom.headers.label": "请求头（可选）",
   "provider.custom.headers.key.label": "请求头",
   "provider.custom.headers.key.placeholder": "Header-Name",
@@ -679,7 +658,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "智能体行为",
   "settings.autoApprove.title": "自动审批",
-  "settings.browser.title": "浏览器",
+  "settings.webTools.title": "网络工具",
+  "settings.webTools.description": "配置网页搜索和浏览器自动化。",
+  "settings.webTools.webSearch.enable": "为所有提供商启用",
+  "settings.webTools.browserAutomation": "浏览器自动化",
+  "settings.webTools.webSearch.title": "网页搜索",
+  "settings.webTools.webSearch.description": "让所有提供商的模型都可使用网页搜索。",
   "settings.checkpoints.title": "检查点",
   "settings.display.title": "显示",
   "settings.autocomplete.title": "自动补全",
@@ -696,6 +680,13 @@ export const dict = {
   "session.messages.scrollToBottom": "滚动到底部",
   "session.messages.initializing": "初始化中...",
   "session.messages.taskStarting": "启动中...",
+  "session.prompts.navLabel": "提示词导航",
+  "session.prompts.tick": "提示词 {{index}}/{{total}}：{{prompt}}",
+  "session.prompts.noAnswer": "暂无响应",
+  "session.prompts.queued": "已排队",
+  "session.prompts.first": "首个提示",
+  "session.prompts.latest": "最新提示",
+  "session.prompts.overflow": "{{count}} 个更早的提示",
   "session.status.writingResponse": "正在撰写回复…",
   "session.status.retry": "正在重试…",
   "session.status.working": "处理中…",
@@ -722,7 +713,7 @@ export const dict = {
 
   "prompt.placeholder.connecting": "正在连接服务器...",
   "prompt.placeholder.error": "连接失败。请检查输出面板或重启扩展。",
-  "prompt.placeholder.default": "输入消息... (Enter 发送，Shift+Enter 换行)",
+  "prompt.placeholder.default": "输入消息，用 @ 提及文件... (Enter 发送，Shift+Enter 换行)",
 
   "context.usage.sessionCost": "会话费用",
   "context.usage.olderSessions": "{{count}} 个较早的会话",
@@ -814,8 +805,6 @@ export const dict = {
   "settings.experimental.lsp.description": "启用语言服务器协议集成",
   "settings.experimental.batch.title": "批量工具",
   "settings.experimental.batch.description": "启用多个工具调用的批处理",
-  "settings.experimental.codebaseSearch.title": "代码库搜索",
-  "settings.experimental.codebaseSearch.description": "启用 AI 驱动的自然语言代码库搜索",
   "settings.experimental.imageGeneration.title": "图像生成",
   "settings.experimental.imageGeneration.description": "启用 AI 图像生成",
   "settings.experimental.imageGenerationModel.title": "图像模型",
@@ -837,7 +826,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "允许的网络目标",
   "settings.sandboxing.allowedHosts.description":
-    "用于沙盒化 HTTP 和 HTTPS 代理流量的 DNS 主机和端口目标。GitHub CLI 和 HTTPS Git 通常需要 github.com:443 和 api.github.com:443。更改将应用于新会话。",
+    "用于沙盒化 HTTP 和 HTTPS 代理流量的 DNS 主机和端口目标。GitHub CLI 和 HTTPS Git 通常需要 github.com:443 和 api.github.com:443。",
   "settings.sandboxing.writablePaths.title": "额外可写路径",
   "settings.sandboxing.writablePaths.description":
     "沙盒允许写入的额外文件系统路径（例如 /tmp、/var/log）。沙盒启用后，这些路径会与默认可写路径合并。",
@@ -846,6 +835,9 @@ export const dict = {
     "启用 SWE-Pruner：根据智能体提供的聚焦问题，对读取、搜索和 shell 工具的大型输出进行任务感知裁剪",
   "settings.experimental.swePrunerModel.title": "SWE-Pruner 模型",
   "settings.experimental.swePrunerModel.description": "用于裁剪工具输出的模型;默认为已配置的小模型",
+  "settings.experimental.multiProject.title": "多项目 Agent Manager",
+  "settings.experimental.multiProject.description":
+    "在 Agent Manager 中启用跨多个仓库的会话和工作树管理。当前工作区仓库始终是默认项目。",
   "settings.experimental.mcpTimeout.title": "MCP 超时（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 服务器请求的超时时间（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",
@@ -961,6 +953,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.empty": "未配置自定义命令。将命令添加到 opencode.json 即可在此处看到。",
   "settings.agentBehaviour.workflows.detail.description": "描述",
   "settings.agentBehaviour.workflows.detail.template": "模板",
+  "settings.agentBehaviour.workflows.model": "模型",
+  "settings.agentBehaviour.workflows.variant": "变体",
+  "settings.agentBehaviour.workflows.modelDescription": "全局模型覆盖",
   "settings.sandboxing.enabled.title": "沙盒",
   "settings.sandboxing.enabled.description":
     "在操作系统级沙盒中运行代理 shell 命令，将写入限制在项目和 Kilo 状态目录内",
@@ -1045,18 +1040,21 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "使用 Shift+Tab 切换推理强度",
   "settings.display.shiftTabCycle.description":
     "在提示输入框中按 Shift+Tab 可切换到下一个推理强度等级。禁用此选项可将 Shift+Tab 用于键盘焦点导航。",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "终端命令块",
+  "settings.display.terminalCommand.description": "选择终端命令块的初始状态：展开或折叠。",
+  "settings.display.terminalCommand.expanded": "展开",
+  "settings.display.terminalCommand.collapsed": "折叠",
   "settings.display.codeEdit.title": "代码编辑块",
   "settings.display.codeEdit.description": "选择代码编辑块和差异块的初始状态：展开或折叠。",
   "settings.display.codeEdit.expanded": "展开",
   "settings.display.codeEdit.collapsed": "折叠",
 
-  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.title": "显示令牌吞吐量",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+    "在最新的助手消息和任务标题中显示文本生成速率（令牌/秒）。默认隐藏以保持聊天简洁。",
+  "settings.display.autoApprovalReason.title": "显示自动批准原因",
+  "settings.display.autoApprovalReason.description":
+    "在工具调用中显示一行说明其被自动批准的原因（匹配的规则、代理默认值、YOLO 模式等）。",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

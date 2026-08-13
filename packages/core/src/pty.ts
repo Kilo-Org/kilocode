@@ -1,16 +1,18 @@
 export * as Pty from "./pty"
 
+import { makeLocationNode } from "./effect/app-node"
 import type { Disp, Proc } from "#pty"
 import { Context, Effect, Layer, Schema, Types } from "effect"
+import { Pty } from "@opencode-ai/schema/pty"
 import { Config } from "./config"
 import { EventV2 } from "./event"
 import { Location } from "./location"
-import { NonNegativeInt, PositiveInt } from "./schema"
 import { PtyID } from "./pty/schema"
 import { SessionSchema } from "./session/schema" // kilocode_change
 import { Shell } from "./shell"
 import { lazy } from "./util/lazy"
 import { KiloPtySelfCommand } from "./kilocode/pty-self-command" // kilocode_change
+import { KiloPtyTermination } from "./kilocode/pty/termination" // kilocode_change
 
 const BUFFER_LIMIT = 1024 * 1024 * 2
 // Exited sessions stay observable (status, exit code, retained output) until removed explicitly.
@@ -35,46 +37,28 @@ type Active = {
   cursor: number
   subscribers: Map<object, Subscriber>
   listeners: Disp[]
+  stopping: boolean // kilocode_change
 }
 
-export const Info = Schema.Struct({
-  id: PtyID,
-  title: Schema.String,
-  command: Schema.String,
-  args: Schema.Array(Schema.String),
-  cwd: Schema.String,
-  status: Schema.Literals(["running", "exited"]),
-  // Windows ConPTY assigns the child pid asynchronously, so 0 is valid at spawn time.
-  pid: NonNegativeInt,
-  // Present once status is "exited".
-  exitCode: Schema.optional(NonNegativeInt),
-  sessionID: Schema.optional(Schema.NullOr(SessionSchema.ID)), // kilocode_change
-}).annotate({ identifier: "Pty" })
-
+// kilocode_change - the Kilo `sessionID` field now lives on the canonical shared schema (see
+// packages/schema/src/pty.ts) so the generated SDK carries it; reuse that schema verbatim here.
+export const Info = Pty.Info
 export type Info = Types.DeepMutable<typeof Info.Type>
 
-export const CreateInput = Schema.Struct({
-  command: Schema.optional(Schema.String),
-  args: Schema.optional(Schema.Array(Schema.String)),
-  cwd: Schema.optional(Schema.String),
-  title: Schema.optional(Schema.String),
-  env: Schema.optional(Schema.Record(Schema.String, Schema.String)),
-})
+export const CreateInput = Pty.CreateInput
 
 export type CreateInput = Types.DeepMutable<typeof CreateInput.Type>
 
 export const UpdateInput = Schema.Struct({
-  title: Schema.optional(Schema.String),
+  ...Pty.UpdateInput.fields,
   sessionID: Schema.optional(Schema.NullOr(SessionSchema.ID)), // kilocode_change
-  size: Schema.optional(
-    Schema.Struct({
-      rows: PositiveInt,
-      cols: PositiveInt,
-    }),
-  ),
 })
 
 export type UpdateInput = Types.DeepMutable<typeof UpdateInput.Type>
+
+// kilocode_change - the shared events already carry Kilo's extended Info (see packages/schema/src/pty.ts),
+// so reuse them verbatim instead of redefining pty.created/pty.updated here.
+export const Event = Pty.Event
 
 export type AttachInput = {
   // Absolute output cursor to replay from. -1 tails from the current end; omitted replays the full retained buffer.
@@ -83,6 +67,8 @@ export type AttachInput = {
   readonly onData: (chunk: string) => void
   // Fired once when the session stops producing output: process exit (exitCode set), removal, or service teardown.
   readonly onEnd: (event: { exitCode?: number }) => void
+  // Canonical routes can replay retained output after exit; legacy callers retain the former error.
+  readonly allowExited?: boolean // kilocode_change
 }
 
 export type Attachment = {
@@ -104,13 +90,6 @@ export class ExitedError extends Schema.TaggedErrorClass<ExitedError>()("Pty.Exi
   ptyID: PtyID,
 }) {}
 
-export const Event = {
-  Created: EventV2.define({ type: "pty.created", schema: { info: Info } }),
-  Updated: EventV2.define({ type: "pty.updated", schema: { info: Info } }),
-  Exited: EventV2.define({ type: "pty.exited", schema: { id: PtyID, exitCode: NonNegativeInt } }),
-  Deleted: EventV2.define({ type: "pty.deleted", schema: { id: PtyID } }),
-}
-
 export interface Interface {
   readonly list: () => Effect.Effect<Info[]>
   readonly get: (id: PtyID) => Effect.Effect<Info, NotFoundError>
@@ -123,7 +102,7 @@ export interface Interface {
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/v2/Pty") {}
 
-export const layer = Layer.effect(
+const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const events = yield* EventV2.Service
@@ -147,23 +126,25 @@ export const layer = Layer.effect(
       session.subscribers.clear()
     }
 
-    function teardown(session: Active) {
+    // kilocode_change start - terminate the complete PTY tree before reporting removal.
+    async function teardown(session: Active) {
+      session.stopping = true
+      if (session.info.status === "running") await KiloPtyTermination.terminate(session.process)
       for (const listener of session.listeners) listener.dispose()
       session.listeners.length = 0
-      if (session.info.status === "running") {
-        try {
-          session.process.kill()
-        } catch {}
-      }
-      notifyEnd(session, {})
+      notifyEnd(session, session.info.status === "exited" ? { exitCode: session.info.exitCode } : {})
     }
+    // kilocode_change end
 
-    yield* Effect.addFinalizer(() =>
-      Effect.sync(() => {
-        for (const session of sessions.values()) teardown(session)
-        sessions.clear()
-        exitOrder.length = 0
-      }),
+    yield* Effect.addFinalizer(
+      () =>
+        // kilocode_change start - wait for process-tree termination during async service teardown.
+        Effect.promise(async () => {
+          await Promise.all(Array.from(sessions.values()).map(teardown))
+          sessions.clear()
+          exitOrder.length = 0
+        }),
+      // kilocode_change end
     )
 
     const requireSession = Effect.fn("Pty.requireSession")(function* (id: PtyID) {
@@ -173,14 +154,18 @@ export const layer = Layer.effect(
     })
 
     const removeSession = Effect.fnUntraced(function* (id: PtyID) {
-      const session = sessions.get(id)
-      if (!session) return
-      sessions.delete(id)
-      const index = exitOrder.indexOf(id)
-      if (index !== -1) exitOrder.splice(index, 1)
-      yield* Effect.logInfo("removing session", { id })
-      teardown(session)
-      yield* events.publish(Event.Deleted, { id: session.info.id })
+      // kilocode_change start - removal and its deleted event are one uninterruptible lifecycle transition.
+      yield* Effect.gen(function* () {
+        const session = sessions.get(id)
+        if (!session) return
+        yield* Effect.logInfo("removing session", { id })
+        yield* Effect.promise(() => teardown(session))
+        sessions.delete(id)
+        const index = exitOrder.indexOf(id)
+        if (index !== -1) exitOrder.splice(index, 1)
+        yield* events.publish(Event.Deleted, { id: session.info.id })
+      }).pipe(Effect.uninterruptible)
+      // kilocode_change end
     })
 
     const remove = Effect.fn("Pty.remove")(function* (id: PtyID) {
@@ -204,9 +189,10 @@ export const layer = Layer.effect(
         args: input.args ? [...input.args] : undefined,
         cwd: input.cwd,
       })
+      const implicit = !resolved.command
       const command = resolved.command || Shell.preferred(Config.latest(yield* config.entries(), "shell"))
       const base = resolved.args ?? []
-      const args = Shell.login(command) ? [...base, "-l"] : [...base]
+      const args = implicit && Shell.login(command) ? [...base, "-l"] : [...base]
       const cwd = resolved.cwd || location.directory
       // kilocode_change end
       const env = {
@@ -228,7 +214,17 @@ export const layer = Layer.effect(
       }
       yield* Effect.logInfo("creating session", { id, cmd: command, args, cwd })
       const { spawn } = yield* Effect.promise(() => pty())
-      const proc = yield* Effect.sync(() => spawn(command, args, { name: "xterm-256color", cwd, env }))
+      // kilocode_change start - spawn with initial terminal dimensions
+      const proc = yield* Effect.sync(() =>
+        spawn(command, args, {
+          name: "xterm-256color",
+          cwd,
+          env,
+          cols: input.size?.cols,
+          rows: input.size?.rows,
+        }),
+      )
+      // kilocode_change end
       const info: Info = {
         id,
         title: input.title || `Terminal ${id.slice(-4)}`,
@@ -246,6 +242,7 @@ export const layer = Layer.effect(
         cursor: 0,
         subscribers: new Map(),
         listeners: [],
+        stopping: false, // kilocode_change
       }
       sessions.set(id, session)
       session.listeners.push(
@@ -269,7 +266,7 @@ export const layer = Layer.effect(
           session.bufferCursor += excess
         }),
         proc.onExit(({ exitCode }) => {
-          if (session.info.status === "exited") return
+          if (session.info.status === "exited" || session.stopping) return // kilocode_change
           session.info.status = "exited"
           session.info.exitCode = exitCode
           notifyEnd(session, { exitCode })
@@ -309,7 +306,7 @@ export const layer = Layer.effect(
 
     const attach = Effect.fn("Pty.attach")(function* (id: PtyID, input: AttachInput) {
       const session = yield* requireSession(id)
-      if (session.info.status !== "running") return yield* new ExitedError({ ptyID: id })
+      if (session.info.status !== "running" && !input.allowExited) return yield* new ExitedError({ ptyID: id }) // kilocode_change
       yield* Effect.logInfo("client attached to session", { id, directory: location.directory })
       const token = {}
       const subscriber: Subscriber = {
@@ -318,6 +315,7 @@ export const layer = Layer.effect(
         active: false,
         detached: false,
         pending: [],
+        end: session.info.status === "exited" ? { exitCode: session.info.exitCode } : undefined, // kilocode_change
       }
       session.subscribers.set(token, subscriber)
       const start = session.bufferCursor
@@ -365,3 +363,5 @@ export const layer = Layer.effect(
 )
 
 export const locationLayer = layer.pipe(Layer.provide(Config.locationLayer))
+
+export const node = makeLocationNode({ service: Service, layer, deps: [EventV2.node, Location.node, Config.node] })

@@ -2,6 +2,8 @@ import { dict as en } from "./en"
 
 type Keys = keyof typeof en
 
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Anaconda Desktop verbinden",
   "provider.anaconda.title.manage": "Anaconda Desktop verwalten",
@@ -59,6 +61,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Anbieter verbinden",
 
@@ -169,6 +172,7 @@ export const dict = {
   "model.group.auto": "Automatische Modelle",
   "model.group.recommended": "Empfohlen",
   "model.group.favorites": "Favoriten",
+  "model.group.mostUsed": "Am häufigsten verwendet",
   "model.favorite.add": "Zu Favoriten hinzufügen",
   "model.favorite.remove": "Aus Favoriten entfernen",
 
@@ -238,6 +242,8 @@ export const dict = {
     "Klicken, um Schreibvorgänge im Dateisystem einzuschränken. Der Netzwerkzugriff bleibt gemäß deinen Sandbox-Einstellungen erlaubt.",
 
   "speechToText.tooltip.start": "Spracheingabe mit Kilo Gateway starten",
+  "speechToText.tooltip.shortcut":
+    "Tippe oder drücke Cmd/Ctrl+K, um die Aufnahme zu starten oder zu stoppen; halte beim Sprechen gedrückt und lasse los, um zu transkribieren und abzusenden.",
   "speechToText.tooltip.starting": "Mikrofon wird gestartet... Bitte noch nicht sprechen.",
   "speechToText.tooltip.stop": "Audioerfassung beenden",
   "speechToText.tooltip.transcribing": "Transkribieren... Zum Abbrechen klicken.",
@@ -274,6 +280,7 @@ export const dict = {
 
   "notification.permission.title": "Berechtigung erforderlich",
   "notification.permission.titleSubagent": "Berechtigung erforderlich (Subagent)",
+  "notification.permission.titleSkillShell": "Shell-Befehle aus dem Skill „{{skill}}“ ausführen?",
   "ui.permission.manageAutoApprove": "Regeln für automatische Genehmigung verwalten",
   "ui.permission.doomLoop.prompt": "Potenzielle Schleife beim Tool {{tool}} erkannt. Weiter ausführen?",
   "ui.permission.doomLoop.rule": "{{tool}}-Aufrufe fortsetzen",
@@ -309,16 +316,24 @@ export const dict = {
   "ui.approval.source.yolo": "durch den Auto-Genehmigungsmodus (YOLO)",
   "ui.approval.source.session": "durch eine Sitzungs-Auto-Genehmigungsregel",
   "ui.approval.source.default": "standardmäßig",
+  "ui.approval.outsideWorkspace": "(außerhalb deines Arbeitsbereichs: {{file}})",
 
   "session.tab.review": "Überprüfung",
   "session.review.filesChanged": "{{count}} Dateien geändert",
-  "session.review.change.other": "Änderungen",
   "session.review.loadingChanges": "Lade Änderungen...",
   "session.review.noChanges": "Keine Änderungen",
   "session.messages.loadingEarlier": "Lade frühere Nachrichten...",
   "session.messages.loadEarlier": "Frühere Nachrichten laden",
   "session.messages.loading": "Lade Nachrichten...",
 
+  "sidebar.topBar.label": "Kilo Code Navigation",
+  "sidebar.topBar.newTask": "Neue Aufgabe",
+  "sidebar.topBar.history": "Verlauf",
+  "sidebar.topBar.agentManager": "Agent Manager",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "Marktplatz",
+  "sidebar.topBar.profile": "Profil",
+  "sidebar.topBar.settings": "Einstellungen",
   "sidebar.session.newSession": "Neue Sitzung",
   "sidebar.session.newSession.tooltip": "Starte eine neue Unterhaltung, während die aktuelle Sitzung intakt bleibt.",
   "sidebar.session.newWorktree": "Neuer Worktree",
@@ -492,45 +507,8 @@ export const dict = {
   "provider.custom.models.name.placeholder": "Anzeigename",
   "provider.custom.models.reasoning.label": "Schlussfolgerung",
   "provider.custom.models.modalities.image": "Bild",
-  "provider.custom.models.variants.label": "Varianten",
-  "provider.custom.models.variants.add": "Variante hinzufügen",
-  "provider.custom.models.variants.remove": "Variante entfernen",
-  "provider.custom.models.variants.name.label": "Name",
-  "provider.custom.models.variants.name.placeholder": "z.B. thinking",
-  "provider.custom.models.variants.option.unset": "(nicht festgelegt)",
-  "provider.custom.models.variants.enableThinking.label": "Nachdenken aktivieren (z.B. Alibaba)",
-  "provider.custom.models.variants.enableThinking.placeholder": "enable_thinking",
-  "provider.custom.models.variants.enableThinking.true": "true",
-  "provider.custom.models.variants.enableThinking.false": "false",
-  "provider.custom.models.variants.thinking.label": "Art des Nachdenkens (z.B. Z.ai)",
-  "provider.custom.models.variants.thinking.placeholder": "thinking",
-  "provider.custom.models.variants.thinking.enabled": "enabled",
-  "provider.custom.models.variants.thinking.disabled": "disabled",
-  "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
-  "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
-  "provider.custom.models.variants.splitReasoning.true": "true",
-  "provider.custom.models.variants.splitReasoning.false": "false",
-  "provider.custom.models.variants.chatTemplateArgs.label":
-    "Nachdenken über Chat-Vorlagenargumente aktivieren (z.B. Hugging Face)",
-  "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
-  "provider.custom.models.variants.chatTemplateArgs.true": "true",
-  "provider.custom.models.variants.chatTemplateArgs.false": "false",
-  "provider.custom.models.variants.reasoningEffort.label": "Reasoning-Aufwand",
-  "provider.custom.models.variants.reasoningEffort.placeholder": "reasoningEffort",
-  "provider.custom.models.variants.reasoningEffort.none": "none",
-  "provider.custom.models.variants.reasoningEffort.minimal": "minimal",
-  "provider.custom.models.variants.reasoningEffort.low": "low",
-  "provider.custom.models.variants.reasoningEffort.medium": "medium",
-  "provider.custom.models.variants.reasoningEffort.high": "high",
-  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
-  "provider.custom.models.variants.outputEffort.placeholder": "effort",
-  "provider.custom.models.variants.outputEffort.low": "low",
-  "provider.custom.models.variants.outputEffort.medium": "medium",
-  "provider.custom.models.variants.outputEffort.high": "high",
-  "provider.custom.models.variants.outputEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.max": "max",
+  "provider.custom.models.toggleReasoning": "Schlussfolgerung für alle umschalten",
+  "provider.custom.models.toggleImages": "Bild für alle umschalten",
   "provider.custom.models.remove": "Modell entfernen",
   "provider.custom.models.add": "Modell hinzufügen",
   "provider.custom.models.fetch.authError":
@@ -545,6 +523,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "Modelle suchen\u2026",
   "provider.custom.models.fetch.add": "{{count}} Modell(e) hinzufügen",
   "provider.custom.edit.title": "Anbieter bearbeiten",
+  "provider.custom.edit.advanced": "Erweiterte Einstellungen in der JSON-Konfigurationsdatei bearbeiten",
   "provider.custom.headers.label": "Header (optional)",
   "provider.custom.headers.key.label": "Kopfzeile",
   "provider.custom.headers.key.placeholder": "Header-Name",
@@ -716,7 +695,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "Agentenverhalten",
   "settings.autoApprove.title": "Automatisch genehmigen",
-  "settings.browser.title": "Browser",
+  "settings.webTools.title": "Web-Tools",
+  "settings.webTools.description": "Konfigurieren Sie Websuche und Browserautomatisierung.",
+  "settings.webTools.webSearch.enable": "Für alle Anbieter aktivieren",
+  "settings.webTools.browserAutomation": "Browserautomatisierung",
+  "settings.webTools.webSearch.title": "Websuche",
+  "settings.webTools.webSearch.description": "Machen Sie die Websuche für Modelle aller Anbieter verfügbar.",
   "settings.checkpoints.title": "Prüfpunkte",
   "settings.display.title": "Anzeige",
   "settings.autocomplete.title": "Autovervollständigung",
@@ -734,6 +718,13 @@ export const dict = {
   "session.messages.scrollToBottom": "Nach unten scrollen",
   "session.messages.initializing": "Initialisierung...",
   "session.messages.taskStarting": "Wird gestartet...",
+  "session.prompts.navLabel": "Prompt-Navigation",
+  "session.prompts.tick": "Prompt {{index}} von {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "Noch keine Antwort",
+  "session.prompts.queued": "In Warteschlange",
+  "session.prompts.first": "Erster Prompt",
+  "session.prompts.latest": "Neuester Prompt",
+  "session.prompts.overflow": "{{count}} frühere Prompts",
   "session.status.writingResponse": "Antwort wird geschrieben…",
   "session.status.retry": "Erneuter Versuch…",
   "session.status.working": "Wird bearbeitet…",
@@ -762,7 +753,8 @@ export const dict = {
   "prompt.placeholder.connecting": "Verbindung zum Server wird hergestellt...",
   "prompt.placeholder.error":
     "Verbindung fehlgeschlagen. Überprüfen Sie das Ausgabepanel oder starten Sie die Erweiterung neu.",
-  "prompt.placeholder.default": "Nachricht eingeben... (Enter zum Senden, Shift+Enter für neue Zeile)",
+  "prompt.placeholder.default":
+    "Nachricht eingeben, @ um Dateien zu erwähnen... (Enter zum Senden, Shift+Enter für neue Zeile)",
 
   "context.usage.sessionCost": "Sitzungskosten",
   "context.usage.olderSessions": "{{count}} ältere Sitzungen",
@@ -866,9 +858,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Language-Server-Protokoll-Integration aktivieren",
   "settings.experimental.batch.title": "Batch-Werkzeug",
   "settings.experimental.batch.description": "Bündelung mehrerer Werkzeugaufrufe aktivieren",
-  "settings.experimental.codebaseSearch.title": "Codebase-Suche",
-  "settings.experimental.codebaseSearch.description":
-    "KI-gestützte Suche in natürlicher Sprache über die gesamte Codebasis aktivieren",
   "settings.experimental.imageGeneration.title": "Bildgenerierung",
   "settings.experimental.imageGeneration.description": "KI-Bildgenerierung aktivieren",
   "settings.experimental.imageGenerationModel.title": "Bildmodell",
@@ -893,7 +882,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "Zulässige Netzwerkziele",
   "settings.sandboxing.allowedHosts.description":
-    "DNS-Host- und Portziele für Sandbox-HTTP- und HTTPS-Proxy-Datenverkehr. GitHub CLI und HTTPS Git benötigen üblicherweise github.com:443 und api.github.com:443. Änderungen gelten für neue Sitzungen.",
+    "DNS-Host- und Portziele für Sandbox-HTTP- und HTTPS-Proxy-Datenverkehr. GitHub CLI und HTTPS Git benötigen üblicherweise github.com:443 und api.github.com:443.",
   "settings.sandboxing.writablePaths.title": "Zusätzliche schreibbare Pfade",
   "settings.sandboxing.writablePaths.description":
     "Zusätzliche Dateisystempfade, in die die Sandbox Schreibvorgänge erlaubt (z. B. /tmp, /var/log). Diese werden mit den Standard-Schreibpfaden zusammengeführt, wenn die Sandbox aktiv ist.",
@@ -903,6 +892,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "SWE-Pruner-Modell",
   "settings.experimental.swePrunerModel.description":
     "Modell zum Kürzen von Tool-Ausgaben; standardmäßig das konfigurierte Small Model",
+  "settings.experimental.multiProject.title": "Multi-Projekt Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Aktivieren Sie die Verwaltung von Sitzungen und Worktrees über mehrere Repositories im Agent Manager. Das aktuelle Workspace-Repository ist immer das Standardprojekt.",
   "settings.experimental.mcpTimeout.title": "MCP-Zeitlimit (ms)",
   "settings.experimental.mcpTimeout.description": "Zeitlimit für MCP-Server-Anfragen in Millisekunden",
   "settings.experimental.remote.title": "Remote-Steuerung",
@@ -1032,6 +1024,9 @@ export const dict = {
     "Keine benutzerdefinierten Befehle konfiguriert. Fügen Sie Befehle zu opencode.json hinzu, um sie hier zu sehen.",
   "settings.agentBehaviour.workflows.detail.description": "Beschreibung",
   "settings.agentBehaviour.workflows.detail.template": "Vorlage",
+  "settings.agentBehaviour.workflows.model": "Modell",
+  "settings.agentBehaviour.workflows.variant": "Variante",
+  "settings.agentBehaviour.workflows.modelDescription": "Globale Modellüberschreibung",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Shell-Befehle des Agenten in einer Sandbox auf Betriebssystemebene ausführen, die Schreibvorgänge auf die Projekt- und Kilo-Statusverzeichnisse beschränkt",
@@ -1131,19 +1126,23 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Reasoning-Aufwand mit Shift+Tab durchlaufen",
   "settings.display.shiftTabCycle.description":
     "Drücken Sie Shift+Tab in einem Prompt-Eingabefeld, um zur nächsten Stufe des Reasoning-Aufwands zu wechseln. Deaktivieren Sie dies, um Shift+Tab für die Tastaturfokusnavigation beizubehalten.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "Terminalbefehlsblöcke",
+  "settings.display.terminalCommand.description":
+    "Wählen Sie, ob Terminalbefehlsblöcke anfangs aus- oder eingeklappt sind.",
+  "settings.display.terminalCommand.expanded": "Ausgeklappt",
+  "settings.display.terminalCommand.collapsed": "Eingeklappt",
   "settings.display.codeEdit.title": "Blöcke für Codebearbeitungen",
   "settings.display.codeEdit.description":
     "Wählen Sie, ob Blöcke mit Codebearbeitungen und Unterschieden anfangs aus- oder eingeklappt sind.",
   "settings.display.codeEdit.expanded": "Ausgeklappt",
   "settings.display.codeEdit.collapsed": "Eingeklappt",
 
-  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.title": "Token-Durchsatz anzeigen",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+    "Zeigt die Textgenerierungsrate (Tokens/Sek.) in der letzten Assistentennachricht und im Aufgabenkopf an. Standardmäßig ausgeblendet, um den Chat übersichtlich zu halten.",
+  "settings.display.autoApprovalReason.title": "Grund für automatische Genehmigung anzeigen",
+  "settings.display.autoApprovalReason.description":
+    "Zeigt bei Tool-Aufrufen eine Zeile an, die erklärt, warum sie automatisch genehmigt wurden (passende Regel, Agent-Standard, YOLO-Modus usw.).",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

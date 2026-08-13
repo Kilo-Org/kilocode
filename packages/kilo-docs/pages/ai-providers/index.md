@@ -28,6 +28,7 @@ Major AI companies offering powerful models via API:
 - **[Cloudflare](/docs/ai-providers/cloudflare)** - Workers AI and Cloudflare AI Gateway
 - **[DeepSeek](/docs/ai-providers/deepseek)** - DeepSeek V3., R1
 - **[Mistral](/docs/ai-providers/mistral)** - Mistral Large, Codestral
+- **[Poolside](/docs/ai-providers/poolside)** - Laguna models
 
 ### Local & Self-Hosted
 
@@ -45,6 +46,7 @@ Route requests through unified APIs with additional features:
 
 - **[OpenRouter](/docs/ai-providers/openrouter)** - Access multiple providers through one API
 - **[Requesty](/docs/ai-providers/requesty)** - Smart routing and fallbacks
+- **[DaoXE](/docs/ai-providers/daoxe)** - Connect multiple model families through one API
 - **[Cloudflare AI Gateway](/docs/ai-providers/cloudflare)** - Route providers through your Cloudflare account
 
 ## Choosing a Provider

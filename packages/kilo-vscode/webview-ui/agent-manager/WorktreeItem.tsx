@@ -10,7 +10,8 @@ import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { HoverCard } from "@kilocode/kilo-ui/hover-card"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { Button } from "@kilocode/kilo-ui/button"
-import type { WorktreeState, WorktreeGitStats, PRStatus, SectionState, RunStatus } from "../src/types/messages"
+import type { WorktreeState, WorktreeGitStats, SectionState, RunStatus } from "../src/types/messages"
+import type { PRStatus } from "../src/types/messages"
 import { colorCss } from "./section-colors"
 import { useLanguage } from "../src/context/language"
 import { formatRelativeDate } from "../src/utils/date"
@@ -21,6 +22,8 @@ const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigat
 
 interface WorktreeItemProps {
   worktree: WorktreeState
+  /** Stable composite ID used by multi-project sidebar bodies. */
+  sidebarId?: string
   /** Display label (resolved from label, first session title, or branch). */
   label: string
   /** Branch name shown as subtitle when it differs from the label. */
@@ -55,7 +58,7 @@ interface WorktreeItemProps {
   /** Keybinding string for the open-in-vscode action. */
   openKeybind: string
   /** PR status for this worktree's branch, or null if no PR. */
-  pr?: PRStatus | null
+  pr?: PRStatus
   runStatus?: RunStatus
   /** Callback when the PR badge is clicked. */
   onOpenPR?: () => void
@@ -92,14 +95,6 @@ const hasStats = (s: WorktreeGitStats | undefined): s is WorktreeGitStats =>
  * and review results are conveyed by a separate status icon (see prBadgeIndicator)
  * so a failing check is not mistaken for a closed PR.
  */
-export function prAccentColor(pr: PRStatus): string {
-  if (pr.state === "draft") return "var(--text-weaker)"
-  if (pr.state === "merged") return "#a78bfa"
-  if (pr.state === "closed") return "#f87171"
-  if (pr.checks.status === "pending") return "#fbbf24"
-  return "#34d399"
-}
-
 /** True while an open PR's checks are still running — drives the pulsing amber badge. */
 export function prChecksRunning(pr: PRStatus): boolean {
   return pr.state === "open" && pr.checks.status === "pending"
@@ -167,6 +162,13 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
     props.onOpenPR?.()
   }
 
+  /** Worktree directory basename shown in the hover card (e.g. "decorous-taker"). */
+  const name = () => {
+    const p = props.worktree.path.replace(/[\\/]+$/, "")
+    const i = Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\"))
+    return i >= 0 ? p.slice(i + 1) : p
+  }
+
   return (
     <>
       <Show when={props.groupStart}>
@@ -178,8 +180,8 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
       <ContextMenu>
         <HoverCard
           class="am-worktree-hover-card"
-          openDelay={50}
-          closeDelay={50}
+          openDelay={0}
+          closeDelay={0}
           placement="right-start"
           gutter={8}
           open={hovered() && !overClose() && !props.pendingDelete}
@@ -194,7 +196,7 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                   "am-wt-grouped": props.grouped,
                   "am-wt-group-end": props.groupEnd,
                 }}
-                data-sidebar-id={props.worktree.id}
+                data-sidebar-id={props.sidebarId ?? props.worktree.id}
                 onClick={() => props.onClick()}
               >
                 <div class="am-wt-icon">
@@ -340,18 +342,30 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                       }
                     >
                       {(pr) => {
-                        const accent = () => prAccentColor(pr())
                         const indicator = () => prBadgeIndicator(pr())
                         return (
                           <span
                             class="am-pr-badge"
-                            style={{ "--pr-accent": accent() }}
-                            data-pending={prChecksRunning(pr()) ? "" : undefined}
+                            classList={{
+                              "am-pr-accent-draft": pr().state === "draft",
+                              "am-pr-accent-merged": pr().state === "merged",
+                              "am-pr-accent-closed": pr().state === "closed",
+                              "am-pr-accent-pending": pr().state === "open" && pr().checks.status === "pending",
+                              "am-pr-accent-open": pr().state === "open" && pr().checks.status !== "pending",
+                              "am-pr-badge-pending": prChecksRunning(pr()),
+                            }}
                             onClick={handleOpenPR}
                           >
-                            <Switch fallback={<Icon name="branch" size="small" />}>
+                            <Icon name="pull-request" size="small" />
+                            <span class="am-pr-badge-number">#{pr().number}</span>
+                            <Switch>
                               <Match when={indicator() === "failure"}>
-                                <Icon name="circle-x" size="small" class="am-pr-badge-status" data-status="failure" />
+                                <Icon
+                                  name="circle-x-outline"
+                                  size="small"
+                                  class="am-pr-badge-status"
+                                  data-status="failure"
+                                />
                               </Match>
                               <Match when={indicator() === "changes"}>
                                 <Icon name="warning" size="small" class="am-pr-badge-status" data-status="changes" />
@@ -365,7 +379,6 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                                 />
                               </Match>
                             </Switch>
-                            <span class="am-pr-badge-number">#{pr().number}</span>
                           </span>
                         )
                       }}
@@ -386,6 +399,11 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
               <Show when={props.navHint}>
                 <span class="am-hover-card-keybind">{props.navHint}</span>
               </Show>
+            </div>
+            <div class="am-hover-card-divider" />
+            <div class="am-hover-card-row">
+              <span class="am-hover-card-row-label">{t("agentManager.hoverCard.worktree")}</span>
+              <span class="am-hover-card-row-value">{name()}</span>
             </div>
             <Show when={props.worktree.parentBranch}>
               <div class="am-hover-card-divider" />

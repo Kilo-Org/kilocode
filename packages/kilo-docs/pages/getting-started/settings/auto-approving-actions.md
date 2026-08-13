@@ -9,7 +9,7 @@ description: "Configure automatic approval settings for Kilo Code operations"
 **Security Warning:** Auto-approve settings bypass confirmation prompts, giving Kilo Code direct access to your system. This can result in data loss, file corruption, or worse. Command line access is particularly dangerous, as it can potentially execute harmful operations that could damage your system or compromise security. Only enable auto-approval for actions you fully trust.
 {% /callout %}
 
-Auto-approve settings speed up your workflow by eliminating repetitive confirmation prompts, but they significantly increase security risks. The VS Code extension and CLI share the same permission model; choose the tab that matches how you configure Kilo Code.
+Auto-approve settings speed up your workflow by eliminating repetitive confirmation prompts, but they significantly increase security risks. The VS Code extension, JetBrains plugin, and CLI share the same permission model; choose the tab that matches how you configure Kilo Code. In the JetBrains plugin, the same rules are configured under **Settings → Tools → Kilo Code → Auto-Approve**.
 
 {% callout type="note" %}
 **Editing project config while a session is running:** Kilo caches project-level `kilo.jsonc` / `kilo.json` (in `.kilo/`) when it first loads a workspace, and does not re-read it on every prompt. If you add, change, or remove a project permission rule while the backend is already running, reload the VS Code window (or start a fresh CLI session) for the change to take effect. Until then, Kilo keeps using the previously loaded rules — so an auto-approved call may still cite a project rule you just edited. Global config (`~/.config/kilo/`) is reloaded automatically.

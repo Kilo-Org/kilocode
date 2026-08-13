@@ -8,17 +8,27 @@ import type {
   CloudSessionInfo,
   Message,
   MessageLoadMode,
+  ProjectSessionInfo,
   SessionCloseReason,
   SessionInfo,
   SessionModelUsage,
   SessionUpdate,
 } from "./sessions"
+import type { AgentManagerSidebarTarget } from "./webview-messages"
 import type { PermissionRequest } from "./permissions"
 import type { AnacondaDesktopExtensionMessage } from "../../../../src/shared/anaconda-desktop-messages"
 import type { QuestionRequest, SuggestionRequest, TodoItem } from "./questions"
-import type { ModelSelection, Provider, ProviderAuthState } from "./providers"
+import type { ModelSelection, ModelUsageMap, Provider, ProviderAuthState } from "./providers"
+import type { SpeechToTextModelDef } from "../../../../src/speech-to-text/models"
 import type { AgentInfo, AgentRequirementResult, SkillInfo, SlashCommandInfo } from "./agents"
-import type { BrowserSettings, Config, FeatureFlags, IndexingStatus, KiloEmbeddingModelCatalog } from "./config"
+import type {
+  BrowserSettings,
+  Config,
+  ConfigCollections,
+  FeatureFlags,
+  IndexingStatus,
+  KiloEmbeddingModelCatalog,
+} from "./config"
 import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type { KilocodeNotification, ProfileData } from "./profile"
 import type {
@@ -138,6 +148,7 @@ export interface SessionTurnClosedMessage {
 
 export interface SessionErrorMessage {
   type: "sessionError"
+  eventID: string
   sessionID?: string
   error?: { name: string; data?: Record<string, unknown> }
 }
@@ -344,12 +355,16 @@ export interface NavigateMessage {
 export interface IndexingStatusLoadedMessage {
   type: "indexingStatusLoaded"
   status: IndexingStatus
+  projectId?: string
 }
 
 export interface IndexingSettingsLoadedMessage {
   type: "indexingSettingsLoaded"
   settings: {
     showButtonWhenDisabled: boolean
+    consent: boolean
+    projects: Array<{ id: string; root: string; label: string }>
+    projectId?: string
   }
 }
 
@@ -368,6 +383,11 @@ export interface KiloEmbeddingModelsLoadedMessage {
 export interface ImageModelsLoadedMessage {
   type: "imageModelsLoaded"
   models: Array<{ id: string; name: string; description?: string }>
+}
+
+export interface SpeechToTextModelsLoadedMessage {
+  type: "speechToTextModelsLoaded"
+  models: SpeechToTextModelDef[]
 }
 
 export interface ProvidersLoadedMessage {
@@ -465,6 +485,8 @@ export interface SessionSearchItem {
   id: string
   title: string
   updated: number
+  /** Name of the worktree the session runs in, when listed across the worktree family. */
+  worktreeName?: string
 }
 
 export interface SessionSearchResultMessage {
@@ -560,7 +582,22 @@ export interface ClaudeCompatSettingLoadedMessage {
 
 export interface ExtensionSettings {
   maxCost?: number
+  multiProject?: boolean
   [key: string]: unknown
+}
+
+export interface SettingsConfigBinding {
+  id: string
+  scope: "global" | "project"
+  target: {
+    scope: "global" | "project"
+    path: string
+    revision: string
+    exists: boolean
+    writable: boolean
+    raw: Record<string, unknown>
+  }
+  project?: { id: string; root: string; generation: number; pinned: boolean }
 }
 
 export interface ConfigLoadedMessage {
@@ -568,6 +605,8 @@ export interface ConfigLoadedMessage {
   config: Config
   globalConfig?: Config
   projectConfig?: Config
+  bindings?: { global?: SettingsConfigBinding; project?: SettingsConfigBinding }
+  collections?: ConfigCollections
   settings?: ExtensionSettings
   features: FeatureFlags
 }
@@ -577,6 +616,8 @@ export interface ConfigUpdatedMessage {
   config: Config
   globalConfig?: Config
   projectConfig?: Config
+  bindings?: { global?: SettingsConfigBinding; project?: SettingsConfigBinding }
+  collections?: ConfigCollections
   settings?: ExtensionSettings
   features: FeatureFlags
 }
@@ -585,6 +626,16 @@ export interface ConfigUpdateFailedMessage {
   type: "configUpdateFailed"
   message: string
   details?: string
+  completedScopes?: Array<"global" | "project">
+  config?: Config
+  globalConfig?: Config
+  projectConfig?: Config
+  bindings?: { global?: SettingsConfigBinding; project?: SettingsConfigBinding }
+}
+
+export interface ConfigBindingExpiredMessage {
+  type: "configBindingExpired"
+  reason: "project-changed" | "reconnected"
 }
 
 export interface GlobalConfigLoadedMessage {
@@ -607,6 +658,11 @@ export interface TimelineSettingLoadedMessage {
 
 export interface ThroughputSettingLoadedMessage {
   type: "throughputSettingLoaded"
+  visible: boolean
+}
+
+export interface AutoApprovalReasonSettingLoadedMessage {
+  type: "autoApprovalReasonSettingLoaded"
   visible: boolean
 }
 
@@ -642,6 +698,8 @@ export interface AgentManagerRepoInfoMessage {
 // Agent Manager worktree setup progress
 export interface AgentManagerWorktreeSetupMessage {
   type: "agentManager.worktreeSetup"
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
   status: "creating" | "starting" | "ready" | "error"
   message: string
   sessionId?: string
@@ -688,7 +746,43 @@ export interface AgentManagerStateMessage {
   runStatuses?: RunStatus[]
   runScriptConfigured?: boolean
   runScriptPath?: string
+  /** Owning project for this state payload. Absent in legacy single-project payloads. */
+  projectId?: string
+  /** Last selected sidebar target for seamless project-switch restore. */
+  activeTarget?: AgentManagerSidebarTarget
   terminalDestination?: TerminalDestination
+  terminalFont?: TerminalFont
+}
+
+// A registered Agent Manager project as shown in the sidebar
+export interface AgentProjectSnapshot {
+  id: string
+  root: string
+  label: string
+  pinned: boolean
+  active: boolean
+  expanded: boolean
+  initialized: boolean
+  trusted: boolean
+  missing: boolean
+}
+
+// Project catalog push from extension to webview
+export interface AgentManagerProjectsMessage {
+  type: "agentManager.projects"
+  multiProject: boolean
+  projects: AgentProjectSnapshot[]
+}
+
+export interface AgentManagerSelectionActivatedMessage {
+  type: "agentManager.selectionActivated"
+  target: AgentManagerSidebarTarget
+}
+
+export interface AgentManagerProjectSessionsMessage {
+  type: "agentManager.projectSessions"
+  projectId: string
+  sessions: ProjectSessionInfo[]
 }
 
 // ---------------------------------------------------------------------------
@@ -697,17 +791,26 @@ export interface AgentManagerStateMessage {
 
 export interface AgentManagerTerminalCreatedMessage {
   type: "agentManager.terminal.created"
-  /** Correlates with the create request; lets the webview spot stale
-   *  creates. Deliberately not named `requestId`: that field name is the
-   *  generic webview request/response correlation channel. */
+  /** Logical terminal id selected by the webview before PTY startup.
+   *  Deliberately not named `requestId`: that field name is the generic
+   *  webview request/response correlation channel. */
   createId: string
   placement: TerminalPlacement
   /** null for LOCAL, worktree id otherwise */
   worktreeId: string | null
+  /** Project that owns the create; the webview namespaces its per-project
+   *  terminal state with it (mirrors `ScriptTerminalView.projectId`). */
+  projectId?: string
   terminalId: string
   title: string
   wsUrl: string
   font: TerminalFont
+}
+
+export interface AgentManagerTerminalRestartedMessage {
+  type: "agentManager.terminal.restarted"
+  terminalId: string
+  wsUrl: string
 }
 
 export interface AgentManagerTerminalFontChangedMessage {
@@ -731,6 +834,28 @@ export interface AgentManagerTerminalErrorMessage {
 export interface AgentManagerTerminalDestinationChangedMessage {
   type: "agentManager.terminal.destinationChanged"
   destination: TerminalDestination
+}
+
+/** Provider-owned script terminal (Run/Setup). Full snapshots replace only these terminal kinds. */
+export type ScriptTerminalKind = "run" | "setup"
+
+export interface ScriptTerminalView {
+  terminalId: string
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
+  /** null for LOCAL, worktree id otherwise */
+  worktreeId: string | null
+  kind: ScriptTerminalKind
+  title: "Run" | "Setup"
+  wsUrl: string
+  state: "running" | "stopping" | "exited" | "failed"
+  exitCode?: number
+  font: TerminalFont
+}
+
+export interface AgentManagerScriptTerminalsMessage {
+  type: "agentManager.scriptTerminals"
+  terminals: ScriptTerminalView[]
 }
 
 export interface AgentManagerRunStatusMessage extends RunStatus {
@@ -782,6 +907,8 @@ export interface SandboxStatusErrorMessage {
 // Multi-version creation progress (extension → webview)
 export interface AgentManagerMultiVersionProgressMessage {
   type: "agentManager.multiVersionProgress"
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
   status: "creating" | "done"
   total: number
   completed: number
@@ -797,6 +924,11 @@ export interface VariantsLoadedMessage {
 export interface RecentsLoadedMessage {
   type: "recentsLoaded"
   recents: ModelSelection[]
+}
+
+export interface ModelUsageLoadedMessage {
+  type: "modelUsageLoaded"
+  usage: ModelUsageMap
 }
 
 // Persisted model-selector expand/collapse preference (extension → webview)
@@ -818,6 +950,7 @@ export interface ModelSelectionsLoadedMessage {
 
 export interface AgentManagerBranchesMessage {
   type: "agentManager.branches"
+  projectId?: string
   branches: BranchInfo[]
   defaultBranch: string
 }
@@ -825,6 +958,7 @@ export interface AgentManagerBranchesMessage {
 // Agent Manager Import tab: result feedback (extension → webview)
 export interface AgentManagerImportResultMessage {
   type: "agentManager.importResult"
+  projectId?: string
   success: boolean
   message: string
   errorCode?: WorktreeErrorCode
@@ -851,6 +985,13 @@ export interface AgentManagerWorktreeDiffLoadingMessage {
   loading: boolean
 }
 
+// Agent Manager: Source-level diff notice (extension → webview)
+export interface AgentManagerWorktreeDiffNoticeMessage {
+  type: "agentManager.worktreeDiffNotice"
+  sessionId: string
+  notice?: DiffViewerNotice
+}
+
 export interface AgentManagerApplyWorktreeDiffResultMessage {
   type: "agentManager.applyWorktreeDiffResult"
   worktreeId: string
@@ -868,24 +1009,47 @@ export interface AgentManagerRevertWorktreeFileResultMessage {
   message: string
 }
 
+// Agent Manager: Branch picker data for a diff context (extension → webview)
+export interface AgentManagerDiffBranchesMessage {
+  type: "agentManager.diffBranches"
+  sessionId: string
+  branches: BranchInfo[]
+  defaultBranch: string
+  autoBase?: string
+  currentBase?: string
+  isAuto: boolean
+  currentBranch?: string
+}
+
 // Agent Manager: Worktree git stats push (extension → webview)
 export interface AgentManagerWorktreeStatsMessage {
   type: "agentManager.worktreeStats"
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
   stats: WorktreeGitStats[]
 }
 
 // Agent Manager: Local workspace git stats push (extension → webview)
 export interface AgentManagerLocalStatsMessage {
   type: "agentManager.localStats"
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
   stats: LocalGitStats
 }
 
 // Agent Manager: PR status push (extension → webview)
 export interface AgentManagerPRStatusMessage {
   type: "agentManager.prStatus"
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
   worktreeId: string
   pr: PRStatus | null
   error?: "gh_missing" | "gh_auth" | "fetch_failed"
+}
+
+export interface AgentManagerPRErrorMessage {
+  type: "agentManager.prError"
+  error: "gh_missing" | "gh_auth" | "fetch_failed"
 }
 
 // Sidebar: Live worktree diff stats (extension → webview)
@@ -899,6 +1063,8 @@ export interface WorktreeStatsLoadedMessage {
 // Set the model for a session (extension → webview, used during multi-version creation)
 export interface AgentManagerSetSessionModelMessage {
   type: "agentManager.setSessionModel"
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
   sessionId: string
   providerID: string
   modelID: string
@@ -907,6 +1073,8 @@ export interface AgentManagerSetSessionModelMessage {
 // Request webview to send initial prompt to a newly created session (extension → webview)
 export interface AgentManagerSendInitialMessage {
   type: "agentManager.sendInitialMessage"
+  /** Owning project; absent in single-project mode. */
+  projectId?: string
   sessionId: string
   worktreeId: string
   text?: string
@@ -1147,6 +1315,7 @@ export type ExtensionMessage =
   | MessagesLoadedMessage
   | SessionModelUsageLoadedMessage
   | SessionModelUsageChangedMessage
+  | ModelUsageLoadedMessage
   | MessageCreatedMessage
   | SessionsLoadedMessage
   | CloudSessionsLoadedMessage
@@ -1163,6 +1332,7 @@ export type ExtensionMessage =
   | ChatSettingsLoadedMessage
   | KiloEmbeddingModelsLoadedMessage
   | ImageModelsLoadedMessage
+  | SpeechToTextModelsLoadedMessage
   | ProvidersLoadedMessage
   | AgentsLoadedMessage
   | SkillsLoadedMessage
@@ -1195,10 +1365,12 @@ export type ExtensionMessage =
   | ConfigLoadedMessage
   | ConfigUpdatedMessage
   | ConfigUpdateFailedMessage
+  | ConfigBindingExpiredMessage
   | GlobalConfigLoadedMessage
   | NotificationSettingsLoadedMessage
   | TimelineSettingLoadedMessage
   | ThroughputSettingLoadedMessage
+  | AutoApprovalReasonSettingLoadedMessage
   | WorkStyleLoadedMessage
   | WorkStyleAppliedMessage
   | WorkStyleApplyFailedMessage
@@ -1209,6 +1381,9 @@ export type ExtensionMessage =
   | AgentManagerSessionForkedMessage
   | AgentManagerSessionClosedMessage
   | AgentManagerStateMessage
+  | AgentManagerProjectsMessage
+  | AgentManagerSelectionActivatedMessage
+  | AgentManagerProjectSessionsMessage
   | AgentManagerRunStatusMessage
   | AgentManagerKeybindingsMessage
   | AutoApproveStateMessage
@@ -1235,16 +1410,21 @@ export type ExtensionMessage =
   | AgentManagerWorktreeDiffMessage
   | AgentManagerWorktreeDiffFileMessage
   | AgentManagerWorktreeDiffLoadingMessage
+  | AgentManagerWorktreeDiffNoticeMessage
   | AgentManagerApplyWorktreeDiffResultMessage
   | AgentManagerRevertWorktreeFileResultMessage
+  | AgentManagerDiffBranchesMessage
   | AgentManagerWorktreeStatsMessage
   | AgentManagerLocalStatsMessage
   | AgentManagerPRStatusMessage
+  | AgentManagerPRErrorMessage
   | AgentManagerTerminalCreatedMessage
+  | AgentManagerTerminalRestartedMessage
   | AgentManagerTerminalFontChangedMessage
   | AgentManagerTerminalClosedMessage
   | AgentManagerTerminalErrorMessage
   | AgentManagerTerminalDestinationChangedMessage
+  | AgentManagerScriptTerminalsMessage
   // legacy-migration start
   | MigrationStateMessage
   | MigrationDataMessage

@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Connect Anaconda Desktop",
   "provider.anaconda.title.manage": "Manage Anaconda Desktop",
@@ -52,6 +54,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Connect provider",
 
@@ -162,6 +165,7 @@ export const dict = {
   "model.group.auto": "Auto Models",
   "model.group.recommended": "Recommended",
   "model.group.favorites": "Favorites",
+  "model.group.mostUsed": "Most used",
   "model.favorite.add": "Add to favorites",
   "model.favorite.remove": "Remove from favorites",
   "model.preview.label.released": "Released",
@@ -227,6 +231,8 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.",
   "speechToText.tooltip.start": "Start voice input with Kilo Gateway",
+  "speechToText.tooltip.shortcut":
+    "Tap to start or stop recording. Hold while speaking, then release to transcribe and submit.",
   "speechToText.tooltip.starting": "Starting microphone... Wait to speak.",
   "speechToText.tooltip.stop": "Recording. Click to stop.",
   "speechToText.tooltip.transcribing": "Transcribing... Click to cancel.",
@@ -263,6 +269,7 @@ export const dict = {
 
   "notification.permission.title": "Permission required",
   "notification.permission.titleSubagent": "Permission required (subagent)",
+  "notification.permission.titleSkillShell": 'Run shell commands from skill "{{skill}}"?',
   "ui.permission.manageAutoApprove": "Manage Auto-Approve Rules",
   "ui.permission.doomLoop.prompt": "Potential loop detected for the {{tool}} tool. Continue running?",
   "ui.permission.doomLoop.rule": "Continue {{tool}} calls",
@@ -298,10 +305,10 @@ export const dict = {
   "ui.approval.source.yolo": "by auto-approve (YOLO) mode",
   "ui.approval.source.session": "by a session auto-approve rule",
   "ui.approval.source.default": "by default",
+  "ui.approval.outsideWorkspace": "(outside your workspace: {{file}})",
 
   "session.tab.review": "Review",
   "session.review.filesChanged": "{{count}} Files Changed",
-  "session.review.change.other": "Changes",
   "session.review.loadingChanges": "Loading changes...",
   "session.review.noChanges": "No changes",
 
@@ -404,45 +411,8 @@ export const dict = {
   "provider.custom.models.name.placeholder": "Display Name",
   "provider.custom.models.reasoning.label": "Reasoning",
   "provider.custom.models.modalities.image": "Image",
-  "provider.custom.models.variants.label": "Variants",
-  "provider.custom.models.variants.add": "Add variant",
-  "provider.custom.models.variants.remove": "Remove variant",
-  "provider.custom.models.variants.name.label": "Name",
-  "provider.custom.models.variants.name.placeholder": "e.g. thinking",
-  "provider.custom.models.variants.option.unset": "(not set)",
-  "provider.custom.models.variants.enableThinking.label": "Enable thinking (e.g. Alibaba)",
-  "provider.custom.models.variants.enableThinking.placeholder": "enable_thinking",
-  "provider.custom.models.variants.enableThinking.true": "true",
-  "provider.custom.models.variants.enableThinking.false": "false",
-  "provider.custom.models.variants.thinking.label": "Thinking type (e.g. Z.ai)",
-  "provider.custom.models.variants.thinking.placeholder": "thinking",
-  "provider.custom.models.variants.thinking.enabled": "enabled",
-  "provider.custom.models.variants.thinking.disabled": "disabled",
-  "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
-  "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
-  "provider.custom.models.variants.splitReasoning.true": "true",
-  "provider.custom.models.variants.splitReasoning.false": "false",
-  "provider.custom.models.variants.chatTemplateArgs.label":
-    "Enable thinking via chat template args (e.g. Hugging Face)",
-  "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
-  "provider.custom.models.variants.chatTemplateArgs.true": "true",
-  "provider.custom.models.variants.chatTemplateArgs.false": "false",
-  "provider.custom.models.variants.reasoningEffort.label": "Reasoning effort",
-  "provider.custom.models.variants.reasoningEffort.placeholder": "reasoningEffort",
-  "provider.custom.models.variants.reasoningEffort.none": "none",
-  "provider.custom.models.variants.reasoningEffort.minimal": "minimal",
-  "provider.custom.models.variants.reasoningEffort.low": "low",
-  "provider.custom.models.variants.reasoningEffort.medium": "medium",
-  "provider.custom.models.variants.reasoningEffort.high": "high",
-  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
-  "provider.custom.models.variants.outputEffort.placeholder": "effort",
-  "provider.custom.models.variants.outputEffort.low": "low",
-  "provider.custom.models.variants.outputEffort.medium": "medium",
-  "provider.custom.models.variants.outputEffort.high": "high",
-  "provider.custom.models.variants.outputEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.max": "max",
+  "provider.custom.models.toggleReasoning": "Toggle reasoning for all",
+  "provider.custom.models.toggleImages": "Toggle image for all",
   "provider.custom.models.remove": "Remove model",
   "provider.custom.models.add": "Add model",
   "provider.custom.models.fetch.authError": "Authentication failed. Check the API key above and try again.",
@@ -456,6 +426,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "Search models\u2026",
   "provider.custom.models.fetch.add": "Add {{count}} model(s)",
   "provider.custom.edit.title": "Edit provider",
+  "provider.custom.edit.advanced": "Edit advanced settings in the JSON config file",
   "provider.custom.headers.label": "Headers (optional)",
   "provider.custom.headers.key.label": "Header",
   "provider.custom.headers.key.placeholder": "Header-Name",
@@ -622,7 +593,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "Agent Behaviour",
   "settings.autoApprove.title": "Auto-Approve",
-  "settings.browser.title": "Browser",
+  "settings.webTools.title": "Web Tools",
+  "settings.webTools.description": "Configure web search and browser automation.",
+  "settings.webTools.webSearch.enable": "Enable for All Providers",
+  "settings.webTools.browserAutomation": "Browser Automation",
+  "settings.webTools.webSearch.title": "Web Search",
+  "settings.webTools.webSearch.description": "Make web search available to models from all providers.",
   "settings.checkpoints.title": "Checkpoints",
   "settings.display.title": "Display",
   "settings.autocomplete.title": "Autocomplete",
@@ -675,6 +651,13 @@ export const dict = {
   "session.messages.scrollToBottom": "Scroll to bottom",
   "session.messages.initializing": "Initializing...",
   "session.messages.taskStarting": "Starting...",
+  "session.prompts.navLabel": "Prompt navigator",
+  "session.prompts.tick": "Prompt {{index}} of {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "No response yet",
+  "session.prompts.queued": "Queued",
+  "session.prompts.first": "First prompt",
+  "session.prompts.latest": "Latest prompt",
+  "session.prompts.overflow": "{{count}} earlier prompts",
   "session.status.writingResponse": "Writing response...",
   "session.status.retry": "Retrying…",
   "session.status.working": "Working...",
@@ -693,6 +676,14 @@ export const dict = {
   "session.costAlert.question":
     "This session just went above your {{limit}} per-session alert threshold and cost {{cost}}. Keep going?",
   "session.costAlert.stop": "Stop",
+  "sidebar.topBar.label": "Kilo Code navigation",
+  "sidebar.topBar.newTask": "New Task",
+  "sidebar.topBar.history": "History",
+  "sidebar.topBar.agentManager": "Agent Manager",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "Marketplace",
+  "sidebar.topBar.profile": "Profile",
+  "sidebar.topBar.settings": "Settings",
   "sidebar.session.newSession": "New Session",
   "sidebar.session.newSession.tooltip": "Start a fresh conversation while keeping the current session intact.",
   "sidebar.session.newWorktree": "New Worktree",
@@ -724,7 +715,7 @@ export const dict = {
   "dialog.model.noProviders": "No providers",
 
   "prompt.placeholder.connecting": "Connecting to server...",
-  "prompt.placeholder.default": "Type a message... (Enter to send, Shift+Enter for new line)",
+  "prompt.placeholder.default": "Type a message, @ to mention files... (Enter to send, Shift+Enter for new line)",
   "prompt.placeholder.error": "Connection failed. Check the output panel or restart the extension.",
 
   "context.usage.sessionCost": "Session cost",
@@ -826,8 +817,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Enable language server protocol integration",
   "settings.experimental.batch.title": "Batch Tool",
   "settings.experimental.batch.description": "Enable batching of multiple tool calls",
-  "settings.experimental.codebaseSearch.title": "Codebase Search",
-  "settings.experimental.codebaseSearch.description": "Enable AI-powered natural language search across your codebase",
   "settings.experimental.imageGeneration.title": "Image Generation",
   "settings.experimental.imageGeneration.description": "Enable AI image generation",
   "settings.experimental.imageGenerationModel.title": "Image Model",
@@ -852,7 +841,7 @@ export const dict = {
     "Block direct outbound access from model-originated commands and HTTP tools. Local and remote MCP tools are unavailable while restricted. Provider traffic and trusted plugin hooks remain outside this restriction.",
   "settings.sandboxing.allowedHosts.title": "Allowed Network Destinations",
   "settings.sandboxing.allowedHosts.description":
-    "DNS host and port destinations for sandboxed HTTP and HTTPS proxy traffic. GitHub CLI and HTTPS Git commonly need github.com:443 and api.github.com:443. Changes apply to new sessions.",
+    "DNS host and port destinations for sandboxed HTTP and HTTPS proxy traffic. GitHub CLI and HTTPS Git commonly need github.com:443 and api.github.com:443.",
   "settings.sandboxing.writablePaths.title": "Additional Writable Paths",
   "settings.sandboxing.writablePaths.description":
     "Extra filesystem paths the sandbox allows writes to (e.g. /tmp, /var/log). These are merged with the default writable paths when the sandbox is active.",
@@ -862,6 +851,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "SWE-Pruner Model",
   "settings.experimental.swePrunerModel.description":
     "Model used to skim tool outputs; defaults to the configured small model",
+  "settings.experimental.multiProject.title": "Multi-Project Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Enable managing sessions and worktrees across multiple repositories in Agent Manager. The current workspace repository is always the default project.",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout for MCP server requests in milliseconds",
   "settings.experimental.remote.title": "Remote Control",
@@ -946,6 +938,9 @@ export const dict = {
     "No custom commands configured. Add commands to your opencode.json to see them here.",
   "settings.agentBehaviour.workflows.detail.description": "Description",
   "settings.agentBehaviour.workflows.detail.template": "Template",
+  "settings.agentBehaviour.workflows.model": "model",
+  "settings.agentBehaviour.workflows.variant": "variant",
+  "settings.agentBehaviour.workflows.modelDescription": "Global model override",
 
   "settings.agentBehaviour.createMode": "Create New Mode",
   "settings.agentBehaviour.createMode.name": "Name",
@@ -1091,6 +1086,9 @@ export const dict = {
   "settings.display.tokenThroughput.title": "Show Token Throughput",
   "settings.display.tokenThroughput.description":
     "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+  "settings.display.autoApprovalReason.title": "Show Auto-Approval Reason",
+  "settings.display.autoApprovalReason.description":
+    "Show a line on tool calls explaining why they were auto-approved (matched rule, agent default, YOLO mode, etc.).",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Anaconda Desktop'a bağlan",
   "provider.anaconda.title.manage": "Anaconda Desktop'ı yönet",
@@ -53,6 +55,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Sağlayıcı bağla",
 
@@ -162,6 +165,7 @@ export const dict = {
   "model.group.auto": "Otomatik Modeller",
   "model.group.recommended": "Önerilen",
   "model.group.favorites": "Favoriler",
+  "model.group.mostUsed": "En çok kullanılan",
   "model.favorite.add": "Favorilere ekle",
   "model.favorite.remove": "Favorilerden çıkar",
   "model.preview.label.released": "Yayınlanma",
@@ -228,6 +232,8 @@ export const dict = {
     "Dosya sistemi yazma işlemlerini kısıtlamak için tıklayın. Sandbox ayarlarınız ağ erişimine izin vermeye devam ediyor.",
 
   "speechToText.tooltip.start": "Kilo Gateway ile sesli girişi başlatın",
+  "speechToText.tooltip.shortcut":
+    "Kaydı başlatmak veya durdurmak için dokunun ya da Cmd/Ctrl+K tuşlarına basın; konuşurken basılı tutun, ardından metne dönüştürüp göndermek için bırakın.",
   "speechToText.tooltip.starting": "Mikrofon başlatılıyor... Henüz konuşmayın.",
   "speechToText.tooltip.stop": "Ses yakalamayı durdur",
   "speechToText.tooltip.transcribing": "Metne dönüştürülüyor... İptal etmek için tıklayın.",
@@ -264,6 +270,7 @@ export const dict = {
 
   "notification.permission.title": "İzin gerekli",
   "notification.permission.titleSubagent": "İzin gerekli (alt ajan)",
+  "notification.permission.titleSkillShell": "“{{skill}}” becerisindeki kabuk komutları çalıştırılsın mı?",
   "ui.permission.manageAutoApprove": "Otomatik Onay Kurallarını Yönet",
   "ui.permission.doomLoop.prompt": "{{tool}} aracında olası bir döngü algılandı. Çalıştırmaya devam edilsin mi?",
   "ui.permission.doomLoop.rule": "{{tool}} çağrılarına devam et",
@@ -299,10 +306,10 @@ export const dict = {
   "ui.approval.source.yolo": "otomatik onay (YOLO) modu tarafından",
   "ui.approval.source.session": "bir oturum otomatik onay kuralı tarafından",
   "ui.approval.source.default": "varsayılan olarak",
+  "ui.approval.outsideWorkspace": "(çalışma alanınızın dışında: {{file}})",
 
   "session.tab.review": "İnceleme",
   "session.review.filesChanged": "{{count}} Dosya Değişti",
-  "session.review.change.other": "Değişiklik",
   "session.review.loadingChanges": "Değişiklikler yükleniyor...",
   "session.review.noChanges": "Değişiklik yok",
 
@@ -310,6 +317,14 @@ export const dict = {
   "session.messages.loadEarlier": "Önceki mesajları yükle",
   "session.messages.loading": "Mesajlar yükleniyor...",
 
+  "sidebar.topBar.label": "Kilo Code Gezinme",
+  "sidebar.topBar.newTask": "Yeni Görev",
+  "sidebar.topBar.history": "Geçmiş",
+  "sidebar.topBar.agentManager": "Agent Manager",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "Marketplace",
+  "sidebar.topBar.profile": "Profil",
+  "sidebar.topBar.settings": "Ayarlar",
   "sidebar.session.newSession": "Yeni Oturum",
   "sidebar.session.newSession.tooltip": "Mevcut oturumu koruyarak yeni bir konuşma başlatın.",
   "sidebar.session.newWorktree": "Yeni Worktree",
@@ -430,45 +445,8 @@ export const dict = {
   "provider.custom.models.name.placeholder": "Görünen Ad",
   "provider.custom.models.reasoning.label": "Akıl Yürütme",
   "provider.custom.models.modalities.image": "Görüntü",
-  "provider.custom.models.variants.label": "Varyantlar",
-  "provider.custom.models.variants.add": "Varyant ekle",
-  "provider.custom.models.variants.remove": "Varyantı kaldır",
-  "provider.custom.models.variants.name.label": "Ad",
-  "provider.custom.models.variants.name.placeholder": "örn. thinking",
-  "provider.custom.models.variants.option.unset": "(ayarlanmadı)",
-  "provider.custom.models.variants.enableThinking.label": "Düşünmeyi etkinleştir (örn. Alibaba)",
-  "provider.custom.models.variants.enableThinking.placeholder": "enable_thinking",
-  "provider.custom.models.variants.enableThinking.true": "true",
-  "provider.custom.models.variants.enableThinking.false": "false",
-  "provider.custom.models.variants.thinking.label": "Düşünme türü (örn. Z.ai)",
-  "provider.custom.models.variants.thinking.placeholder": "thinking",
-  "provider.custom.models.variants.thinking.enabled": "enabled",
-  "provider.custom.models.variants.thinking.disabled": "disabled",
-  "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
-  "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
-  "provider.custom.models.variants.splitReasoning.true": "true",
-  "provider.custom.models.variants.splitReasoning.false": "false",
-  "provider.custom.models.variants.chatTemplateArgs.label":
-    "Sohbet şablonu argümanları ile düşünmeyi etkinleştir (ör. Hugging Face)",
-  "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
-  "provider.custom.models.variants.chatTemplateArgs.true": "true",
-  "provider.custom.models.variants.chatTemplateArgs.false": "false",
-  "provider.custom.models.variants.reasoningEffort.label": "Akıl yürütme çabası",
-  "provider.custom.models.variants.reasoningEffort.placeholder": "reasoningEffort",
-  "provider.custom.models.variants.reasoningEffort.none": "none",
-  "provider.custom.models.variants.reasoningEffort.minimal": "minimal",
-  "provider.custom.models.variants.reasoningEffort.low": "low",
-  "provider.custom.models.variants.reasoningEffort.medium": "medium",
-  "provider.custom.models.variants.reasoningEffort.high": "high",
-  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
-  "provider.custom.models.variants.outputEffort.placeholder": "effort",
-  "provider.custom.models.variants.outputEffort.low": "low",
-  "provider.custom.models.variants.outputEffort.medium": "medium",
-  "provider.custom.models.variants.outputEffort.high": "high",
-  "provider.custom.models.variants.outputEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.max": "max",
+  "provider.custom.models.toggleReasoning": "Tüm modeller için akıl yürütmeyi aç/kapat",
+  "provider.custom.models.toggleImages": "Tüm modeller için görüntüyü aç/kapat",
   "provider.custom.models.remove": "Modeli kaldır",
   "provider.custom.models.add": "Model ekle",
   "provider.custom.models.fetch.authError":
@@ -483,6 +461,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "Model ara\u2026",
   "provider.custom.models.fetch.add": "{{count}} model ekle",
   "provider.custom.edit.title": "Sağlayıcıyı düzenle",
+  "provider.custom.edit.advanced": "JSON yapılandırma dosyasında gelişmiş ayarları düzenle",
   "provider.custom.headers.label": "Başlıklar (isteğe bağlı)",
   "provider.custom.headers.key.label": "Başlık",
   "provider.custom.headers.key.placeholder": "Başlık-Adı",
@@ -653,7 +632,13 @@ export const dict = {
 
   "settings.agentBehaviour.title": "Ajan Davranışı",
   "settings.autoApprove.title": "Otomatik Onay",
-  "settings.browser.title": "Tarayıcı",
+  "settings.webTools.title": "Web Araçları",
+  "settings.webTools.description": "Web aramasını ve tarayıcı otomasyonunu yapılandırın.",
+  "settings.webTools.webSearch.enable": "Tüm Sağlayıcılar İçin Etkinleştir",
+  "settings.webTools.browserAutomation": "Tarayıcı Otomasyonu",
+  "settings.webTools.webSearch.title": "Web Araması",
+  "settings.webTools.webSearch.description":
+    "Web aramasını tüm sağlayıcıların modelleri için kullanılabilir hale getirin.",
   "settings.checkpoints.title": "Kontrol Noktaları",
   "settings.display.title": "Görünüm",
   "settings.autocomplete.title": "Otomatik Tamamlama",
@@ -707,6 +692,13 @@ export const dict = {
   "session.messages.scrollToBottom": "En alta kaydır",
   "session.messages.initializing": "Başlatılıyor...",
   "session.messages.taskStarting": "Başlıyor...",
+  "session.prompts.navLabel": "Komut gezgini",
+  "session.prompts.tick": "Komut {{index}} / {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "Henüz yanıt yok",
+  "session.prompts.queued": "Sırada",
+  "session.prompts.first": "İlk istem",
+  "session.prompts.latest": "En son istem",
+  "session.prompts.overflow": "{{count}} önceki istem",
   "session.status.writingResponse": "Yanıt yazılıyor...",
   "session.status.retry": "Yeniden deneniyor…",
   "session.status.working": "Çalışıyor...",
@@ -733,7 +725,8 @@ export const dict = {
   "dialog.model.noProviders": "Sağlayıcı yok",
 
   "prompt.placeholder.connecting": "Sunucuya bağlanılıyor...",
-  "prompt.placeholder.default": "Bir mesaj yazın... (Göndermek için Enter, yeni satır için Shift+Enter)",
+  "prompt.placeholder.default":
+    "Bir mesaj yazın, dosyaları belirtmek için @ kullanın... (Göndermek için Enter, yeni satır için Shift+Enter)",
   "prompt.placeholder.error": "Bağlantı başarısız. Çıktı panelini kontrol edin veya uzantıyı yeniden başlatın.",
 
   "context.usage.sessionCost": "Oturum maliyeti",
@@ -835,9 +828,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Dil sunucu protokolü entegrasyonunu etkinleştir",
   "settings.experimental.batch.title": "Toplu Araç",
   "settings.experimental.batch.description": "Birden fazla araç çağrısının toplu işlenmesini etkinleştir",
-  "settings.experimental.codebaseSearch.title": "Kod Tabanı Araması",
-  "settings.experimental.codebaseSearch.description":
-    "Kod tabanınız genelinde yapay zeka destekli doğal dil aramasını etkinleştir",
   "settings.experimental.imageGeneration.title": "Görüntü oluşturma",
   "settings.experimental.imageGeneration.description": "AI görüntü oluşturmayı etkinleştir",
   "settings.experimental.imageGenerationModel.title": "Görüntü modeli",
@@ -860,7 +850,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "İzin Verilen Ağ Hedefleri",
   "settings.sandboxing.allowedHosts.description":
-    "Korumalı alana alınmış HTTP ve HTTPS proxy trafiği için DNS ana bilgisayar ve bağlantı noktası hedefleri. GitHub CLI ve HTTPS Git genellikle github.com:443 ve api.github.com:443 gerektirir. Değişiklikler yeni oturumlara uygulanır.",
+    "Korumalı alana alınmış HTTP ve HTTPS proxy trafiği için DNS ana bilgisayar ve bağlantı noktası hedefleri. GitHub CLI ve HTTPS Git genellikle github.com:443 ve api.github.com:443 gerektirir.",
   "settings.sandboxing.writablePaths.title": "Ek Yazılabilir Yollar",
   "settings.sandboxing.writablePaths.description":
     "Sandığın yazılmasına izin veren ek dosya sistemi yolları (ör. /tmp, /var/log). Sandık etkinken varsayılan yazılabilir yollarla birleştirilir.",
@@ -870,6 +860,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "SWE-Pruner Modeli",
   "settings.experimental.swePrunerModel.description":
     "Araç çıktılarını budamak için kullanılan model; varsayılan olarak yapılandırılmış küçük model",
+  "settings.experimental.multiProject.title": "Çoklu Proje Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Agent Manager'da birden fazla depo genelinde oturum ve worktree yönetimini etkinleştirin. Mevcut çalışma alanı deposu her zaman varsayılan projedir.",
   "settings.experimental.mcpTimeout.title": "MCP Zaman Aşımı (ms)",
   "settings.experimental.mcpTimeout.description": "MCP sunucu istekleri için milisaniye cinsinden zaman aşımı",
   "settings.experimental.remote.title": "Remote Kontrolü",
@@ -967,6 +960,9 @@ export const dict = {
     "Yapılandırılmış özel komut yok. Burada görmek için opencode.json dosyasına komutlar ekleyin.",
   "settings.agentBehaviour.workflows.detail.description": "Açıklama",
   "settings.agentBehaviour.workflows.detail.template": "Şablon",
+  "settings.agentBehaviour.workflows.model": "model",
+  "settings.agentBehaviour.workflows.variant": "varyant",
+  "settings.agentBehaviour.workflows.modelDescription": "Global model geçersiz kılması",
 
   "settings.autoApprove.description":
     "Araçların nasıl çalıştırılacağını tanımlayın. Çoğu araç varsayılan olarak İzin Ver'dir. doom_loop ve external_directory varsayılan olarak Sor'dur.",
@@ -1063,19 +1059,23 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Shift+Tab ile akıl yürütme eforunu değiştir",
   "settings.display.shiftTabCycle.description":
     "Bir sonraki akıl yürütme eforu seviyesine geçmek için komut girişinde Shift+Tab tuşlarına basın. Shift+Tab tuşunu klavye odağında gezinmek için korumak üzere devre dışı bırakın.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "Terminal Komut Blokları",
+  "settings.display.terminalCommand.description":
+    "Terminal komut bloklarının başlangıçta genişletilmiş mi yoksa daraltılmış mı olacağını seçin.",
+  "settings.display.terminalCommand.expanded": "Genişletilmiş",
+  "settings.display.terminalCommand.collapsed": "Daraltılmış",
   "settings.display.codeEdit.title": "Kod Düzenleme Blokları",
   "settings.display.codeEdit.description":
     "Kod düzenleme ve fark bloklarının başlangıçta genişletilmiş mi yoksa daraltılmış mı olacağını seçin.",
   "settings.display.codeEdit.expanded": "Genişletilmiş",
   "settings.display.codeEdit.collapsed": "Daraltılmış",
 
-  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.title": "Token İşleme Hızını Göster",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+    "En son asistan mesajında ve görev başlığında metin üretim hızını (token/sn) gösterir. Sohbeti dağınık göstermemek için varsayılan olarak gizlidir.",
+  "settings.display.autoApprovalReason.title": "Otomatik Onay Nedenini Göster",
+  "settings.display.autoApprovalReason.description":
+    "Araç çağrılarının neden otomatik olarak onaylandığını açıklayan bir satır gösterir (eşleşen kural, aracı varsayılanı, YOLO modu vb.).",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

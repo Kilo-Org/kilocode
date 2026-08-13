@@ -14,7 +14,7 @@ export interface Interface {
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/SessionShare") {}
 
-export const layer = Layer.effect(
+const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const cfg = yield* Config.Service
@@ -48,12 +48,10 @@ export const layer = Layer.effect(
   }),
 )
 
-export const defaultLayer = layer.pipe(
-  Layer.provide(Session.defaultLayer),
-  Layer.provide(Config.defaultLayer),
-  Layer.provide(RuntimeFlags.defaultLayer),
-)
-
-export const node = LayerNode.make(layer, [Config.node, Session.node, RuntimeFlags.node]) // kilocode_change
+export const node = LayerNode.make({
+  service: Service,
+  layer: layer,
+  deps: [Config.node, Session.node, RuntimeFlags.node], // kilocode_change - Kilo public sharing uses KiloSession
+})
 
 export * as SessionShare from "./session"

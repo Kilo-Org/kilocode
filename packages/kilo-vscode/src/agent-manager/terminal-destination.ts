@@ -24,6 +24,45 @@ export function readTerminalDestination(): TerminalDestination {
   return resolveTerminalDestination(config.get("terminalButtonDestination"))
 }
 
+async function writeTerminalDestination(destination: TerminalDestination): Promise<void> {
+  const config = vscode.workspace.getConfiguration("kilo-code.new.agentManager")
+  await config.update("terminalButtonDestination", destination, vscode.ConfigurationTarget.Global)
+}
+
+/** Per-panel destination source of truth; local choices beat setting echoes. */
+export class DestinationState {
+  private local = false
+
+  constructor(private destination = readTerminalDestination()) {}
+
+  value(): TerminalDestination {
+    return this.destination
+  }
+
+  sync(destination: TerminalDestination): void {
+    if (!this.local) this.destination = destination
+  }
+
+  select(destination: TerminalDestination): void {
+    this.local = true
+    this.destination = destination
+  }
+}
+
+export function handleDestination(
+  state: DestinationState,
+  message: { type: string; destination?: unknown },
+  log: (message: string) => void,
+): boolean {
+  if (message.type !== "agentManager.terminal.destinationSelected") return false
+  const destination = resolveTerminalDestination(message.destination)
+  state.select(destination)
+  void writeTerminalDestination(destination).catch((error) => {
+    log(`Failed to persist terminal destination: ${error instanceof Error ? error.message : String(error)}`)
+  })
+  return true
+}
+
 export function affectsTerminalDestination(e: vscode.ConfigurationChangeEvent): boolean {
   return e.affectsConfiguration(KEY)
 }

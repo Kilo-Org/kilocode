@@ -64,7 +64,16 @@ describe("HttpApi CORS", () => {
     Effect.gen(function* () {
       const handler = HttpRouter.toWebHandler(
         HttpApiApp.createRoutes().pipe(
-          Layer.provide(ConfigProvider.layer(ConfigProvider.fromUnknown({ KILO_SERVER_PASSWORD: "secret" }))),
+          // kilocode_change start - keep the filewatcher-disable flag visible (see httpapi-instance-route-auth.test.ts)
+          Layer.provide(
+            ConfigProvider.layer(
+              ConfigProvider.fromUnknown({
+                KILO_SERVER_PASSWORD: "secret",
+                KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: process.env.KILO_EXPERIMENTAL_DISABLE_FILEWATCHER ?? "true",
+              }),
+            ),
+          ),
+          // kilocode_change end
         ),
         { disableLogger: true },
       ).handler

@@ -114,10 +114,19 @@ For manual docs validation, run the docs site locally, preview the affected page
 Build and launch the extension in an isolated VS Code instance:
 
 ```bash
-bun run extension        # Build + launch in dev mode
+bun run extension                  # Build + launch in dev mode
+bun run extension:isolated         # Build + launch with persistent isolated IDE + Kilo state
+bun run extension:isolated:clean   # Clear isolated state, then build + launch
 ```
 
-This auto-detects VS Code on macOS, Linux, and Windows. Override with `--app-path PATH` or `VSCODE_EXEC_PATH`. Use `--insiders` to prefer Insiders, `--workspace PATH` to open a specific folder, or `--clean` to reset cached state.
+This auto-detects VS Code on macOS, Linux, and Windows. Override with `--app-path PATH` or `VSCODE_EXEC_PATH`. Use `--insiders` to prefer Insiders, pass a directory argument to open a specific folder, or use `--workspace PATH` for the same behavior.
+
+The isolated modes are for testing the extension without touching your primary VS Code profile or real Kilo config. `extension:isolated` reuses `.kilo-dev/` on each run, so installed extensions, VS Code settings, Kilo auth, sessions, config, state, and cache persist across launches. `extension:isolated:clean` deletes `.kilo-dev/` before launching, which simulates a fresh install while still keeping all state inside this repo checkout.
+
+```bash
+bun run extension:isolated -- ../sample-project
+bun run extension:isolated:clean -- ../sample-project
+```
 
 ### Developing the JetBrains Plugin
 
@@ -267,7 +276,7 @@ Maintainers may close PRs that appear to be submitted without credible contribut
 
 Do not submit batches of agent-generated, untested, or weakly reviewed PRs.
 
-Please keep concurrent PRs focused and limited. As a rule, open no more than three PRs at a time, especially if you are a new contributor. Prioritize high-impact or high-priority issues first instead of opening many speculative fixes. If a contributor opens a large batch of low-value or duplicative PRs, maintainers may close the batch and ask the contributor to choose one PR to reopen, focus, and bring up to the documented review bar before submitting more.
+Prioritize high-impact or high-priority issues first instead of opening many speculative fixes. If a contributor opens a large batch of low-value or duplicative PRs, maintainers may close the batch and ask the contributor to choose one PR to reopen, focus, and bring up to the documented review bar before submitting more.
 
 For issues, do not mass-create tickets through automation or agents. Search existing issues first, open issues only when you have enough context for someone to act, and prioritize the most important reports instead of filing every possible finding. Maintainers may close duplicate, low-signal, automated, or weakly reviewed issues without action.
 

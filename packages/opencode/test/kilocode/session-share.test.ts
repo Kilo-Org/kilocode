@@ -1,23 +1,27 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { expect, spyOn } from "bun:test"
-import { Effect, Layer } from "effect"
+import { Effect } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Auth } from "../../src/auth"
-import { Config } from "../../src/config/config"
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { Session } from "../../src/session/session"
 import { SessionShare } from "../../src/share/session"
 import { Storage } from "../../src/storage/storage"
-import { SyncEvent } from "../../src/sync"
 import { testEffect } from "../lib/effect"
 
 const it = testEffect(
-  Layer.mergeAll(Auth.defaultLayer, Storage.defaultLayer, CrossSpawnSpawner.defaultLayer, RuntimeFlags.layer()),
-)
-
-const layer = SessionShare.layer.pipe(
-  Layer.provideMerge(Session.defaultLayer),
-  Layer.provide(Config.defaultLayer),
-  Layer.provide(SyncEvent.defaultLayer),
+  LayerNode.compile(
+    LayerNode.group([
+      SessionShare.node,
+      Session.node,
+      SessionProjector.node,
+      Auth.node,
+      Storage.node,
+      CrossSpawnSpawner.node,
+      RuntimeFlags.node,
+    ]),
+  ),
 )
 
 it.instance("shares and unshares sessions through Kilo public URLs", () => {
@@ -61,6 +65,5 @@ it.instance("shares and unshares sessions through Kilo public URLs", () => {
         request.mockRestore()
       }),
     ),
-    Effect.provide(layer),
   )
 })
