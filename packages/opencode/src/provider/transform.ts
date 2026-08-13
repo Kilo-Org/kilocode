@@ -1151,7 +1151,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
 
     case "@ai-sdk/mistral":
       // https://v5.ai-sdk.dev/providers/ai-sdk-providers/mistral
-      // https://docs.mistral.ai/capabilities/reasoning/adjustable
+      // https://docs.mistral.ai/studio-api/conversations/reasoning // kilocode_change - upstream URL is stale
       if (!model.capabilities.reasoning) return {}
       // Only Mistral Small 4 and Medium 3.5 support reasoning
       const MISTRAL_REASONING_IDS = [
