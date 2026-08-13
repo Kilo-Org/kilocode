@@ -62,7 +62,7 @@
   <!-- packages/opencode/src/cli/cmd/github.handler.ts -->
 - <https://docs.inceptionlabs.ai/capabilities/next-edit>
   <!-- packages/opencode/src/kilocode/server/httpapi/groups/kilo-gateway.ts -->
-- <https://docs.mistral.ai/studio-api/conversations/reasoning>
+- <https://docs.mistral.ai/capabilities/reasoning/adjustable>
   <!-- packages/opencode/src/provider/transform.ts -->
 - <https://docs.venice.ai/overview/guides/reasoning-models#reasoning-effort>
   <!-- packages/opencode/src/provider/transform.ts -->
