@@ -1386,7 +1386,7 @@ export const SessionProvider: ParentComponent = (props) => {
     if (prefs.model && prefs.variant) {
       const agent = prefs.agent ?? store.agentSelections[sessionID] ?? defaultAgent()
       const key = variantKey(prefs.model, agent, sessionID)
-      if (!store.variantSelections[key]) setStore("variantSelections", key, prefs.variant)
+      if (store.variantSelections[key] === undefined) setStore("variantSelections", key, prefs.variant)
     }
   }
 
