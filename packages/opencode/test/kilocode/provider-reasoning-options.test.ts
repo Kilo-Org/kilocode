@@ -144,22 +144,24 @@ describe("custom provider fallback reasoning efforts", () => {
   const efforts = ["none", "low", "medium", "high", "xhigh", "max"]
 
   for (const npm of ["@ai-sdk/openai-compatible", "@ai-sdk/openai", "@ai-sdk/anthropic"]) {
-    test(`${npm} exposes broad efforts after heuristics fail`, () => {
-      const model = mockModel({ id: "qwen-custom", api: { id: "qwen-custom", url: "https://api.test.com", npm } })
-      const generated = ProviderTransform.variants({ ...model, variants: {} })
-      expect(generated).toEqual({})
+    for (const id of ["qwen-custom", "glm-custom", "kimi-custom", "minimax-custom"]) {
+      test(`${npm} exposes broad efforts for ${id} after heuristics fail`, () => {
+        const model = mockModel({ id, api: { id, url: "https://api.test.com", npm } })
+        const generated = ProviderTransform.variants({ ...model, variants: {} })
+        expect(generated).toEqual({})
 
-      const result = customProviderVariants(model, npm, ProviderTransform.variants)
+        const result = customProviderVariants(model, npm, ProviderTransform.variants)
 
-      expect(Object.keys(result)).toEqual(efforts)
-      if (npm === "@ai-sdk/anthropic") {
-        expect(result.none).toEqual({ thinking: { type: "disabled" } })
-        expect(result.max).toEqual({ effort: "max" })
-        return
-      }
-      expect(result.none?.reasoningEffort).toBe("none")
-      expect(result.max?.reasoningEffort).toBe("max")
-    })
+        expect(Object.keys(result)).toEqual(efforts)
+        if (npm === "@ai-sdk/anthropic") {
+          expect(result.none).toEqual({ thinking: { type: "disabled" } })
+          expect(result.max).toEqual({ effort: "max" })
+          return
+        }
+        expect(result.none?.reasoningEffort).toBe("none")
+        expect(result.max?.reasoningEffort).toBe("max")
+      })
+    }
   }
 
   test("preserves successful heuristics", () => {
