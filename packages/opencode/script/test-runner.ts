@@ -269,11 +269,48 @@ const FAST_TIERS: Record<string, { weight: number; entries: string[] }> = {
     entries: ["kilocode/anaconda-desktop/", "kilocode/cloud/", "kilocode/tool/"],
   },
 }
+// Top-level kilocode/*.test.ts files batch too, except files that mutate process-wide
+// state and so can only run alone: bun's mock.module is process-wide and permanent,
+// AppRuntime.dispose() kills the shared runtime for every later file, global fetch spies
+// observe batch-mates' traffic, and process/watcher tests flake under batch CPU contention.
+const KILOCODE_ROOT_EXCLUDES = new Set([
+  // mock.module (process-wide, permanent)
+  "kilocode/background-process-shutdown.test.ts",
+  "kilocode/cli-shutdown.test.ts",
+  "kilocode/cloud-session.test.ts",
+  "kilocode/lancedb-runtime.test.ts",
+  "kilocode/local-model.test.ts",
+  "kilocode/run-auto.test.ts",
+  "kilocode/run-network.test.ts",
+  "kilocode/session-processor-retry-limit.test.ts",
+  // AppRuntime.dispose() in teardown (poisons the shared process)
+  "kilocode/session-compaction-chunks.test.ts",
+  "kilocode/session-fork-remap.test.ts",
+  "kilocode/session-prompt-queue.test.ts",
+  "kilocode/session-prompt-steering.test.ts",
+  // global fetch spies (see batch-mates' requests)
+  "kilocode/indexing-startup.test.ts",
+  "kilocode/kilo-sessions.test.ts",
+  "kilocode/session-share.test.ts",
+  // real subprocesses / fs watchers (timing-sensitive under contention)
+  "kilocode/background-process.test.ts",
+  "kilocode/instance-vcs-watcher.test.ts",
+])
+const KILOCODE_ROOT_TIERS = 4
+const KILOCODE_ROOT_WEIGHT = 115_000
+const kilocodeRootTier = (file: string) => {
+  if (!file.startsWith("kilocode/")) return undefined
+  if (file.slice("kilocode/".length).includes("/")) return undefined
+  if (KILOCODE_ROOT_EXCLUDES.has(file)) return undefined
+  let hash = 0
+  for (let i = 0; i < file.length; i++) hash = (hash * 31 + file.charCodeAt(i)) | 0
+  return `fast-tier-kilocode-root-${Math.abs(hash) % KILOCODE_ROOT_TIERS}`
+}
 const tierOf = (file: string) => {
   for (const [name, tier] of Object.entries(FAST_TIERS)) {
     if (tier.entries.some((entry) => (entry.endsWith(".ts") ? file === entry : file.startsWith(entry)))) return name
   }
-  return undefined
+  return kilocodeRootTier(file)
 }
 const batches = new Map<string, string[]>()
 if (patterns.length === 0 && !profile) {
@@ -288,7 +325,8 @@ if (patterns.length === 0 && !profile) {
 }
 const inBatch = (file: string) => batches.size > 0 && tierOf(file) !== undefined && batches.has(tierOf(file)!)
 const shardInput = [...batches.keys(), ...candidates.filter((file) => !inBatch(file))]
-const shardWeight = (file: string) => FAST_TIERS[file]?.weight ?? weight(file)
+const shardWeight = (file: string) =>
+  FAST_TIERS[file]?.weight ?? (file.startsWith("fast-tier-kilocode-root-") ? KILOCODE_ROOT_WEIGHT : weight(file))
 const files = shard ? TestShard.split(shardInput, shardWeight, shard.total)[shard.index - 1] : shardInput
 // kilocode_change end
 
