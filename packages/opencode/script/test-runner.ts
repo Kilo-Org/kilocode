@@ -206,7 +206,16 @@ const DURATION_HINTS: Record<string, number> = {
   "kilocode/daemon.test.ts": 65_000,
   "tool/task.test.ts": 64_000,
 }
-const weight = (file: string) => DURATION_HINTS[file] ?? Bun.file(path.join(root, "test", file)).size
+// Measured per-file durations (ms) from a full local run; regenerate by parsing the
+// runner's PASS/FAIL lines. Relative order is what LPT needs, so a macOS measurement
+// balances Windows shards fine. Hints above still win: they are Windows-observed maxima.
+const measuredDurations: Record<string, number> = await Bun.file(
+  path.join(root, "script", "kilocode", "test-durations.json"),
+)
+  .json()
+  .catch(() => ({}))
+const weight = (file: string) =>
+  DURATION_HINTS[file] ?? measuredDurations[file] ?? Bun.file(path.join(root, "test", file)).size
 // kilocode_change end
 
 // kilocode_change start - fast tier: run isolation-safe test files in ONE shared `bun test`
@@ -217,9 +226,9 @@ const weight = (file: string) => DURATION_HINTS[file] ?? Bun.file(path.join(root
 // The batch enters shard splitting as one pseudo-file with a duration-scale weight, so LPT
 // places it like any other heavy file and exactly one shard executes it. Extend the list only
 // with files proven to pass in a shared process (run: bun test <dirs> locally).
-// Deliberately excludes directories whose runtime is real I/O work (git/, lsp/, storage/,
-// auth/, ...): those parallelize well across the per-file worker pool, while a batch runs
-// its members sequentially. The tier is for files where boot cost dominates execution.
+// Deliberately excludes directories whose runtime is real I/O work (git/, server/, session/,
+// project/, provider/, ...): those parallelize well across the per-file worker pool, while a
+// batch runs its members sequentially. The tier is for files where boot cost dominates.
 // Several independent batches (instead of one) keep each batch short enough to schedule
 // like a normal heavy file, and let LPT spread them across shards and worker slots.
 // Weights are observed single-process durations (ms), same unit as DURATION_HINTS.
@@ -267,6 +276,48 @@ const FAST_TIERS: Record<string, { weight: number; entries: string[] }> = {
   "fast-tier-kilocode-tools": {
     weight: 50_000,
     entries: ["kilocode/anaconda-desktop/", "kilocode/cloud/", "kilocode/tool/"],
+  },
+  // cli/run/ stays per-file: it spawns real non-interactive runs (SIGINT/daemon timing).
+  "fast-tier-cli": {
+    weight: 90_000,
+    entries: [
+      "cli/account.test.ts",
+      "cli/auto-mode.test.ts",
+      "cli/bin-kilo.test.ts",
+      "cli/effect-cmd-instance-als.test.ts",
+      "cli/error.test.ts",
+      "cli/github-action.test.ts",
+      "cli/github-remote.test.ts",
+      "cli/import.test.ts",
+      "cli/mcp-add.test.ts",
+      "cli/plugin-auth-picker.test.ts",
+      "cli/pr.test.ts",
+      "cli/acp/",
+      "cli/cmd/",
+      "cli/help/",
+      "cli/serve/",
+      "cli/smokes/",
+      "cli/tui/",
+    ],
+  },
+  "fast-tier-misc": {
+    weight: 30_000,
+    entries: [
+      "acp/",
+      "auth/",
+      "bun/",
+      "filesystem/",
+      "ide/",
+      "lsp/",
+      "mcp/",
+      "plugin/",
+      "storage/",
+      "v2/",
+    ],
+  },
+  "fast-tier-tool": {
+    weight: 55_000,
+    entries: ["tool/"],
   },
 }
 // Top-level kilocode/*.test.ts files batch too, except files that mutate process-wide
@@ -325,6 +376,29 @@ if (patterns.length === 0 && !profile) {
     batches.set(tier, members)
   }
   for (const [name, members] of batches) if (members.length < 2) batches.delete(name)
+
+  // A batch shares one process, so process-wide mutations poison every later file in it.
+  // Refuse to batch files with the known-unsafe markers instead of failing mysteriously
+  // later: bun's mock.module is process-wide and permanent, AppRuntime.dispose() kills the
+  // shared runtime, and global-fetch spies observe batch-mates' traffic.
+  const unsafe = [/\bmock\.module\s*\(/, /\bAppRuntime\.dispose\s*\(/, /\bspyOn\s*\(\s*globalThis\b/]
+  const violations: string[] = []
+  for (const members of batches.values()) {
+    for (const member of members) {
+      const source = await Bun.file(path.join(root, "test", member)).text()
+      if (unsafe.some((pattern) => pattern.test(source))) violations.push(member)
+    }
+  }
+  if (violations.length > 0) {
+    console.error(
+      [
+        "These test files use process-wide mocks/disposal/spies and cannot run in a shared batch process.",
+        "Exclude them from batching (KILOCODE_ROOT_EXCLUDES or the FAST_TIERS entries in this script):",
+        ...violations.map((file) => `- ${file}`),
+      ].join("\n"),
+    )
+    process.exit(2)
+  }
 }
 const inBatch = (file: string) => batches.size > 0 && tierOf(file) !== undefined && batches.has(tierOf(file)!)
 const shardInput = [...batches.keys(), ...candidates.filter((file) => !inBatch(file))]
