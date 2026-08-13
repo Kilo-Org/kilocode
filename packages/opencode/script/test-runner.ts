@@ -297,8 +297,10 @@ const KILOCODE_ROOT_EXCLUDES = new Set([
   "kilocode/instance-vcs-watcher.test.ts",
   "kilocode/issue-8656-stall.test.ts",
 ])
-const KILOCODE_ROOT_TIERS = 4
-const KILOCODE_ROOT_WEIGHT = 115_000
+// 8 batches (~24 files each) keep the heaviest single work item small enough for
+// LPT to pack shards evenly; fewer, bigger batches set a floor under the slowest shard.
+const KILOCODE_ROOT_TIERS = 8
+const KILOCODE_ROOT_WEIGHT = 60_000
 const kilocodeRootTier = (file: string) => {
   if (!file.startsWith("kilocode/")) return undefined
   if (file.slice("kilocode/".length).includes("/")) return undefined
