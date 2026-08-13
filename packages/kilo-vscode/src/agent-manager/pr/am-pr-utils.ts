@@ -1,4 +1,4 @@
-import type { CheckStatus, PRComment, PRReviewer, ReviewerState } from "./types"
+import type { CheckStatus, PRComment, PRReviewer, ReviewerState } from "../types"
 import type { PRResult, GhThread, GhReviewRequest, GhReview } from "./am-pr-types"
 
 export function parsePRResult(json: string): PRResult | null {
@@ -73,6 +73,7 @@ export function parseComments(threads: GhThread[]): PRComment[] {
     if (!first) continue
     items.push({
       id: first.id,
+      threadId: thread.id ?? first.id,
       author: first.author?.login ?? "unknown",
       avatar: first.author?.avatarUrl,
       body: first.body ?? "",
@@ -81,6 +82,7 @@ export function parseComments(threads: GhThread[]): PRComment[] {
       url: first.url,
       resolved: thread.isResolved ?? false,
       createdAt: first.createdAt ? new Date(first.createdAt).getTime() : undefined,
+      diffHunk: first.diffHunk,
     })
   }
   return items
