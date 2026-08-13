@@ -1689,13 +1689,13 @@ it.instance(
 )
 
 it.instance(
-  "configured variants remain authoritative", // kilocode_change
+  "variant config merges with generated variants",
   Effect.gen(function* () {
     yield* set("ANTHROPIC_API_KEY", "test-api-key")
     const providers = yield* list
     const model = providers[ProviderV2.ID.anthropic].models["claude-sonnet-4-6"]
     expect(model.variants!["high"]).toBeDefined()
-    expect(model.variants!["high"].thinking).toBeUndefined() // kilocode_change
+    expect(model.variants!["high"].thinking).toBeDefined()
     expect(model.variants!["high"].extraOption).toBe("custom-value")
   }),
   {
