@@ -6,7 +6,7 @@ import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import ai.kilocode.client.session.views.base.SecondarySessionPartView
+import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.UiDataProvider
@@ -21,7 +21,7 @@ class ToolView(
     tool: Tool,
     private val selection: SessionSelection? = null,
     private val parts: ToolParts = toolParts(tool, mode = ToolBodyMode.EDITOR),
-) : SecondarySessionPartView(parts.header, { parts.scroll(tool) }), UiDataProvider {
+) : AbstractSessionPartView(parts.header, { parts.scroll(tool) }), UiDataProvider {
 
     override val contentId: String = tool.id
 
@@ -54,7 +54,7 @@ class ToolView(
     override fun getPreferredSize(): Dimension {
         val size = super.getPreferredSize()
         if (!bodyVisible()) return size
-        val height = row.preferredSize.height + bodyMaxHeight()
+        val height = row.preferredSize.height + expandedGap() + bodyMaxHeight()
         return Dimension(size.width, minOf(size.height, height))
     }
 

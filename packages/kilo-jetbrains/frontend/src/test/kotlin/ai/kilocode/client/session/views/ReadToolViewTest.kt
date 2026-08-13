@@ -3,7 +3,7 @@ package ai.kilocode.client.session.views
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
-import ai.kilocode.client.session.views.base.SecondarySessionPartView
+import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.session.views.tool.GlobToolView
 import ai.kilocode.client.session.views.tool.ReadToolView
 import ai.kilocode.client.session.views.tool.SearchToolView
@@ -20,7 +20,7 @@ class ReadToolViewTest : BasePlatformTestCase() {
         val view = ReadToolView(t)
         val base: Any = view
 
-        assertTrue(base is SecondarySessionPartView)
+        assertTrue(base is AbstractSessionPartView)
         assertTrue(view.labelText().contains("Read"))
         assertTrue(view.labelText().contains("README.MD"))
     }

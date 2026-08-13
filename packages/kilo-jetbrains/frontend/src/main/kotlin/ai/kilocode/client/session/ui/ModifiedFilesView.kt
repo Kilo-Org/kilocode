@@ -12,8 +12,8 @@ import ai.kilocode.client.session.ui.selection.hoverPlaceholder
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
+import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.session.views.base.PartHeader
-import ai.kilocode.client.session.views.base.SecondarySessionPartView
 import ai.kilocode.client.session.views.tool.EditFileChange
 import ai.kilocode.client.session.views.tool.POPUP_OPTS
 import ai.kilocode.client.session.views.tool.PatchBody
@@ -36,7 +36,7 @@ class ModifiedFilesView private constructor(
     private val selection: SessionSelection? = null,
     private val parts: Header = Header(),
     private val body: PatchBody = PatchBody(selection, openFile),
-) : SecondarySessionPartView(parts.panel, { body.mountFiles(emptyList()) }), SessionCopyTarget {
+) : AbstractSessionPartView(parts.panel, { body.mountFiles(emptyList()) }), SessionCopyTarget {
     override val contentId = CONTENT_ID
 
     private var style = SessionEditorStyle.current()

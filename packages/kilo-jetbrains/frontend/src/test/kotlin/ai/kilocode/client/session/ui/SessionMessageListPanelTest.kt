@@ -67,7 +67,6 @@ import javax.swing.JPanel
 import javax.swing.RepaintManager
 import javax.swing.ScrollPaneConstants
 import javax.swing.SwingUtilities
-import javax.swing.border.Border
 
 private val PATCH = """
     diff --git a/src/A.kt b/src/A.kt
@@ -1482,22 +1481,17 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         )
         val first = panel.findMessage("a1")!!.part("tp1") as QuestionResultView
         val second = panel.findMessage("a1")!!.part("tp2") as QuestionResultView
-        val firstRoot = root(first)
-        val secondRoot = root(second)
 
         first.toggle()
         second.toggle()
 
         enter(header(first))
         assertEquals(SessionUiStyle.View.Surface.headerHoverBgColor().rgb, header(first).background.rgb)
-        assertLine(firstRoot.border)
 
         enter(header(second))
 
         assertEquals(SessionUiStyle.View.Surface.headerBgColor().rgb, header(first).background.rgb)
         assertEquals(SessionUiStyle.View.Surface.headerHoverBgColor().rgb, header(second).background.rgb)
-        assertLine(firstRoot.border)
-        assertLine(secondRoot.border)
     }
 
     // ------ helpers ------
@@ -1588,9 +1582,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         input = mapOf("filePath" to "src/Main.kt", "pattern" to "query"),
     )
 
-    // The card is the view itself (border), and the hover surface is the base header row (child 0).
-    private fun root(view: QuestionResultView) = view
-
+    // The hover surface is the base header row (child 0) of the card.
     private fun header(view: QuestionResultView) = view.components[0] as JPanel
 
     private fun enter(component: Component) {
@@ -1604,19 +1596,6 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
             0,
             false,
         ))
-    }
-
-    private fun assertLine(border: Border) {
-        val image = BufferedImage(5, 5, BufferedImage.TYPE_INT_ARGB)
-        val item = JPanel()
-        val graphics = image.createGraphics()
-        border.paintBorder(item, graphics, 0, 0, image.width, image.height)
-        graphics.dispose()
-        val rgb = SessionUiStyle.View.Outline.brightColor().rgb
-        assertEquals(rgb, Color(image.getRGB(2, 0), true).rgb)
-        assertEquals(rgb, Color(image.getRGB(0, 2), true).rgb)
-        assertEquals(rgb, Color(image.getRGB(4, 2), true).rgb)
-        assertEquals(rgb, Color(image.getRGB(2, 4), true).rgb)
     }
 
     private fun count(root: Component): Int {

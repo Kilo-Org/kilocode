@@ -17,7 +17,7 @@ import com.intellij.ui.components.JBLabel
 class GenericView private constructor(
     content: Generic,
     private val label: JBLabel,
-) : SecondarySessionPartView(label, JBLabel()) {
+) : AbstractSessionPartView(label, JBLabel()) {
 
     constructor(content: Generic) : this(content, JBLabel("[${content.type}]"))
 

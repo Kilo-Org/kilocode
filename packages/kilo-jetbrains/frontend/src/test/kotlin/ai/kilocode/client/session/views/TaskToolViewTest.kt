@@ -4,7 +4,7 @@ import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import ai.kilocode.client.session.views.base.SecondarySessionPartView
+import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.session.views.tool.TaskToolView
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
@@ -36,7 +36,7 @@ class TaskToolViewTest : BasePlatformTestCase() {
     fun `test task tool uses secondary chrome`() {
         val base: Any = view(task())
 
-        assertTrue(base is SecondarySessionPartView)
+        assertTrue(base is AbstractSessionPartView)
     }
 
     fun `test task header shows agent description and count`() {

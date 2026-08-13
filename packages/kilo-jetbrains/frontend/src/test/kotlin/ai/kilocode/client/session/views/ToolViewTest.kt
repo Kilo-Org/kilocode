@@ -6,7 +6,7 @@ import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import ai.kilocode.client.session.views.base.SecondarySessionPartView
+import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.session.views.tool.ToolView
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.util.Disposer
@@ -14,11 +14,8 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.scale.JBUIScale
 import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
-import java.awt.Color
-import java.awt.image.BufferedImage
 import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
-import javax.swing.border.Border
 
 /**
  * Tests for [ToolView].
@@ -122,27 +119,28 @@ class ToolViewTest : BasePlatformTestCase() {
         val view = ToolView(tool("p1", "bash", ToolExecState.COMPLETED))
         val base: Any = view
 
-        assertTrue(base is SecondarySessionPartView)
+        assertTrue(base is AbstractSessionPartView)
     }
 
     fun `test unknown tool uses secondary chrome`() {
         val view = ToolView(tool("p1", "mystery", ToolExecState.COMPLETED))
         val base: Any = view
 
-        assertTrue(base is SecondarySessionPartView)
+        assertTrue(base is AbstractSessionPartView)
     }
 
-    fun `test tool outline is drawn only while expanded`() {
+    fun `test tool draws no outline and separates the body with the standard gap`() {
         val view = track(ToolView(tool("p1", "bash", ToolExecState.COMPLETED).also {
             it.input = mapOf("command" to "pwd")
             it.output = "/tmp"
         }))
 
-        assertEquals(0, paint(view.border).alpha)
+        assertNull("collapsed card draws no outline", view.border)
         view.toggle()
-        assertEquals(SessionUiStyle.View.Outline.color().rgb, paint(view.border).rgb)
+        assertNull("expanded card draws no outline", view.border)
+        assertEquals(SessionUiStyle.View.contentGap(), (view.layout as BorderLayout).vgap)
         view.toggle()
-        assertEquals(0, paint(view.border).alpha)
+        assertNull("collapsed card draws no outline", view.border)
     }
 
     fun `test bash toggle collapses and expands`() {
@@ -440,12 +438,4 @@ class ToolViewTest : BasePlatformTestCase() {
         return (header.layout as BorderLayout).hgap
     }
 
-    private fun paint(border: Border): Color {
-        val image = BufferedImage(3, 3, BufferedImage.TYPE_INT_ARGB)
-        val item = JPanel()
-        val graphics = image.createGraphics()
-        border.paintBorder(item, graphics, 0, 0, image.width, image.height)
-        graphics.dispose()
-        return Color(image.getRGB(0, 0), true)
-    }
 }

@@ -315,13 +315,9 @@ class ToolBody private constructor(
         }
 
         private fun pane(view: JComponent, scrolls: Boolean) = JBScrollPane(view).apply {
-            border = JBUI.Borders.customLine(
-                SessionUiStyle.View.Outline.color(),
-                SessionUiStyle.View.Outline.width(),
-                0,
-                0,
-                0,
-            )
+            // No separator line: the card's transparent header-to-content gap already sets the body
+            // apart, so the body is a clean raised code surface.
+            border = JBUI.Borders.empty()
             viewportBorder = JBUI.Borders.empty(
                 JBUI.scale(SessionUiStyle.View.Layout.VERTICAL_PADDING),
                 JBUI.scale(SessionUiStyle.View.Layout.HORIZONTAL_PADDING),

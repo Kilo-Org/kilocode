@@ -4,7 +4,7 @@ import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
-import ai.kilocode.client.session.views.base.SecondarySessionPartView
+import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.session.views.tool.GlobToolView
 import ai.kilocode.client.session.views.tool.ReadToolView
 import ai.kilocode.client.session.views.tool.SearchToolView
@@ -37,7 +37,7 @@ class SearchToolViewTest : BasePlatformTestCase() {
         })
         val base: Any = view
 
-        assertTrue(base is SecondarySessionPartView)
+        assertTrue(base is AbstractSessionPartView)
         assertTrue(view.labelText().contains("Search"))
         assertEquals(listOf("pattern=class SearchToolView", "include=*.{kt,kts}"), view.targetTexts())
         assertTrue(view.targetVisible(0))

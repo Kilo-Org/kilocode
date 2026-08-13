@@ -8,7 +8,7 @@ import ai.kilocode.client.session.model.ToolKind
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import ai.kilocode.client.session.views.base.SecondarySessionPartView
+import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
@@ -21,7 +21,7 @@ class ReadToolView(
     openFile: SessionFileOpener = { _, _ -> },
     private val selection: SessionSelection? = null,
     private val parts: ToolParts = toolParts(tool, openFile),
-    ) : SecondarySessionPartView(parts.header, parts.scroll(tool), expandable = false) {
+    ) : AbstractSessionPartView(parts.header, parts.scroll(tool), expandable = false) {
 
     companion object {
         fun canRender(tool: Tool): Boolean = tool.kind == ToolKind.READ

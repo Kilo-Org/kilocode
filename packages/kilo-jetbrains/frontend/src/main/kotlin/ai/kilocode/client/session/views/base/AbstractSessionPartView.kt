@@ -3,6 +3,7 @@ package ai.kilocode.client.session.views.base
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
 import com.intellij.ui.components.JBLabel
+import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
@@ -19,6 +20,13 @@ import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.SwingUtilities
 
+/**
+ * Base for every collapsible session card. A card is a header [row] plus an optional lazily built
+ * body. Collapsed, the card is just the header with a rounded hover fill. Expanded, the body is
+ * attached under the header and separated from it by a transparent [SessionUiStyle.View.contentGap]
+ * (the BorderLayout vgap) — the card draws no outline and no separator line, so content reads as
+ * standalone raised surfaces on the shared session backdrop.
+ */
 abstract class AbstractSessionPartView(
     header: JComponent,
     private val makeBody: () -> JComponent,
@@ -64,8 +72,16 @@ abstract class AbstractSessionPartView(
     }
 
     init {
-        layout = BorderLayout()
+        // The vgap becomes the transparent inset between the header and the body once a body is
+        // attached; collapsed cards have only the NORTH row, so no gap shows.
+        layout = BorderLayout(0, SessionUiStyle.View.contentGap())
         isOpaque = false
+        row.border = JBUI.Borders.empty(
+            JBUI.scale(SessionUiStyle.View.Layout.VERTICAL_PADDING),
+            SessionUiStyle.View.Header.left(),
+            JBUI.scale(SessionUiStyle.View.Layout.VERTICAL_PADDING),
+            SessionUiStyle.View.Header.right(),
+        )
         row.add(header, BorderLayout.CENTER)
         row.add(arrow, BorderLayout.EAST)
         add(row, BorderLayout.NORTH)
@@ -73,6 +89,12 @@ abstract class AbstractSessionPartView(
         if (expanded && expandable) add(body(), BorderLayout.CENTER)
         if (!expandable) syncExpandable(false) else syncArrow()
     }
+
+    /**
+     * The transparent header-to-content inset once expanded, else 0. Subclasses that cap their
+     * preferred height (`row.height + bodyHeight`) add this so the separator inset is accounted for.
+     */
+    protected fun expandedGap(): Int = if (isExpanded()) SessionUiStyle.View.contentGap() else 0
 
     fun isExpanded(): Boolean = body?.parent === this
 
@@ -138,10 +160,16 @@ abstract class AbstractSessionPartView(
         repaint()
     }
 
-    protected open fun hoverColor(value: Boolean): Color? = null
+    /**
+     * Header background, hovered or not. The header keeps the same rounded fill whether the card is
+     * collapsed or expanded — only the arrow toggles — because the card no longer draws an outline
+     * for the expanded body to meet.
+     */
+    protected open fun hoverColor(value: Boolean): Color =
+        if (value) SessionUiStyle.View.Surface.headerHoverBgColor() else SessionUiStyle.View.Surface.headerBgColor()
 
-    /** Corner arc (scaled) for the hover fill. 0 keeps the fill rectangular. */
-    protected open fun hoverArc(): Int = 0
+    /** Corner arc (scaled) for the header hover fill. */
+    protected open fun hoverArc(): Int = JBUI.scale(SessionUiStyle.View.BLOCK_ARC)
 
     override fun setHovered(value: Boolean) {
         hover?.invoke(this, value)
@@ -160,12 +188,12 @@ abstract class AbstractSessionPartView(
         override fun isOpaque(): Boolean = false
 
         override fun getBackground(): Color {
-            return hoverColor(isHovered) ?: super.getBackground()
+            return hoverColor(isHovered)
         }
 
         override fun paintComponent(g: Graphics) {
             super.paintComponent(g)
-            val color = hoverColor(isHovered) ?: return
+            val color = hoverColor(isHovered)
             val g2 = g.create() as Graphics2D
             try {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)

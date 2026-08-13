@@ -6,7 +6,7 @@ import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import ai.kilocode.client.session.views.base.SecondarySessionPartView
+import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.openapi.util.Disposer
 import com.intellij.util.concurrency.annotations.RequiresEdt
@@ -19,7 +19,7 @@ abstract class BaseSearchToolView(
     private val selection: SessionSelection? = null,
     private val parts: ToolParts,
     private val repo: String? = null,
-) : SecondarySessionPartView(parts.header, { parts.scroll(tool) }) {
+) : AbstractSessionPartView(parts.header, { parts.scroll(tool) }) {
 
     override val contentId: String = tool.id
 
@@ -51,7 +51,7 @@ abstract class BaseSearchToolView(
     override fun getPreferredSize(): Dimension {
         val size = super.getPreferredSize()
         if (!bodyVisible()) return size
-        val height = row.preferredSize.height + bodyMaxHeight()
+        val height = row.preferredSize.height + expandedGap() + bodyMaxHeight()
         return Dimension(size.width, minOf(size.height, height))
     }
 

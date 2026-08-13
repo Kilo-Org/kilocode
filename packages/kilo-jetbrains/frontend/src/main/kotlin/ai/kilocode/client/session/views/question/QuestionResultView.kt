@@ -36,30 +36,15 @@ class QuestionResultView(
     private var style = SessionEditorStyle.current()
 
     init {
-        row.border = JBUI.Borders.empty(
-            JBUI.scale(SessionUiStyle.View.Layout.VERTICAL_PADDING),
-            JBUI.scale(SessionUiStyle.View.Layout.HORIZONTAL_PADDING),
-        )
-        syncBorder()
         applyStyle(style)
         syncLabels()
     }
-
-    override fun hoverColor(value: Boolean) =
-        if (value) SessionUiStyle.View.Surface.headerHoverBgColor() else SessionUiStyle.View.Surface.headerBgColor()
 
     override fun expand(): Boolean {
         val changed = super.expand()
         if (!changed) return false
         parts.body.set(result.questions, result.answers)
-        syncBorder()
         return true
-    }
-
-    override fun collapse(): Boolean {
-        val changed = super.collapse()
-        if (changed) syncBorder()
-        return changed
     }
 
     override fun update(content: Content) {
@@ -104,14 +89,6 @@ class QuestionResultView(
         val count = result.answers.count { it.isNotEmpty() }
         parts.sub.text = KiloBundle.message("session.question.result.answered", count)
         parts.sub.foreground = SessionUiStyle.Text.Secondary.foreground()
-    }
-
-    private fun syncBorder() {
-        border = if (isExpanded()) {
-            JBUI.Borders.customLine(SessionUiStyle.View.Outline.brightColor(), SessionUiStyle.View.Outline.width())
-        } else {
-            JBUI.Borders.empty(1)
-        }
     }
 
     private fun setFont(label: JBLabel, font: Font): Boolean {
@@ -160,18 +137,11 @@ class QuestionResultBody(private val selection: SessionSelection?) : JPanel() {
     init {
         isOpaque = false
         layout = BoxLayout(this, BoxLayout.Y_AXIS)
-        border = JBUI.Borders.compound(
-            JBUI.Borders.customLine(
-                SessionUiStyle.View.Outline.brightColor(),
-                SessionUiStyle.View.Outline.width(),
-                0,
-                0,
-                0,
-            ),
-            JBUI.Borders.empty(
-                JBUI.scale(SessionUiStyle.View.Layout.VERTICAL_PADDING),
-                JBUI.scale(SessionUiStyle.View.Layout.HORIZONTAL_PADDING),
-            ),
+        // Transparent answers body: the base separates it from the header with the standard gap, so
+        // only content padding remains — no separator line.
+        border = JBUI.Borders.empty(
+            JBUI.scale(SessionUiStyle.View.Layout.VERTICAL_PADDING),
+            JBUI.scale(SessionUiStyle.View.Layout.HORIZONTAL_PADDING),
         )
     }
 

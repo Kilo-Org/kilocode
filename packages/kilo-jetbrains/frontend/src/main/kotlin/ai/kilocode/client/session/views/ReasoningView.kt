@@ -12,8 +12,8 @@ import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.session.views.base.PartHeader
-import ai.kilocode.client.session.views.base.SecondarySessionPartView
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.md.MdView
@@ -40,7 +40,7 @@ class ReasoningView(
     private val selection: SessionSelection? = null,
     private val parts: ReasoningParts = reasoningParts(selection),
 ) :
-    SecondarySessionPartView(
+    AbstractSessionPartView(
         parts.header,
         { parts.scroll(openFile, openUrl) },
         expanded = reasoning.content.isNotBlank() && !reasoning.done,
@@ -78,7 +78,6 @@ class ReasoningView(
         )
         applyStyle(style)
         if (bodyVisible()) syncBody()
-        syncBorder()
         sync()
     }
 
@@ -86,17 +85,8 @@ class ReasoningView(
     override fun expand(): Boolean {
         val changed = super.expand()
         if (!changed) return false
-        syncBorder()
         syncBody()
         applyBodyStyle()
-        return true
-    }
-
-    @RequiresEdt
-    override fun collapse(): Boolean {
-        val changed = super.collapse()
-        if (!changed) return false
-        syncBorder()
         return true
     }
 
@@ -202,7 +192,7 @@ class ReasoningView(
     override fun getPreferredSize(): Dimension {
         val size = super.getPreferredSize()
         if (!bodyVisible()) return size
-        val height = row.preferredSize.height + bodyMaxHeight()
+        val height = row.preferredSize.height + expandedGap() + bodyMaxHeight()
         return Dimension(size.width, minOf(size.height, height))
     }
 
@@ -221,20 +211,6 @@ class ReasoningView(
             changed = syncExpandable(canExpand()) || changed
         }
         return changed
-    }
-
-    private fun syncBorder() {
-        if (isExpanded()) {
-            border = JBUI.Borders.customLine(
-                SessionUiStyle.View.Outline.color(),
-                0,
-                SessionUiStyle.View.Outline.width(),
-                0,
-                0,
-            )
-            return
-        }
-        border = JBUI.Borders.empty(0, 1, 0, 0)
     }
 
     private fun apply(md: MdView): Boolean {

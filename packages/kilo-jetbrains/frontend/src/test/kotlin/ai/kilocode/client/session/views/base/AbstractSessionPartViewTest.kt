@@ -14,7 +14,6 @@ import javax.swing.Icon
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JPanel
-import javax.swing.border.Border
 
 @Suppress("UnstableApiUsage")
 class AbstractSessionPartViewTest : BasePlatformTestCase() {
@@ -117,20 +116,29 @@ class AbstractSessionPartViewTest : BasePlatformTestCase() {
         assertNotSameColor(SessionUiStyle.View.Surface.headerHoverBgColor(), SessionUiStyle.View.Outline.brightColor())
     }
 
-    fun `test primary card hover only changes header background`() {
+    fun `test hover only changes header background and draws no card outline`() {
         val view = TestView(content = JLabel("body"))
         val row = view.component(0) as JPanel
 
-        assertEquals(0, paint(view.border).alpha)
+        assertNull("collapsed card has no outline", view.border)
         view.expand()
 
         view.setHovered(true)
 
         assertEquals(SessionUiStyle.View.Surface.headerHoverBgColor().rgb, row.background.rgb)
-        assertLine(view.border)
+        assertNull("expanded card draws no outline", view.border)
         view.setHovered(false)
         assertEquals(SessionUiStyle.View.Surface.headerBgColor().rgb, row.background.rgb)
-        assertLine(view.border)
+        assertNull("expanded card draws no outline", view.border)
+    }
+
+    fun `test expanded body is separated from header by the standard gap`() {
+        val content = JLabel("body")
+        val view = TestView(content = content, expanded = true)
+
+        val layout = view.layout as BorderLayout
+        assertEquals(SessionUiStyle.View.contentGap(), layout.vgap)
+        assertSame(view, content.parent)
     }
 
     fun `test collapsed card hover fill is rounded`() {
@@ -146,7 +154,7 @@ class AbstractSessionPartViewTest : BasePlatformTestCase() {
         assertFalse("rounded corner is left unfilled", hover == image.getRGB(0, 0))
     }
 
-    fun `test expanded card hover fill is square`() {
+    fun `test expanded card hover fill stays rounded`() {
         val view = TestView(content = JLabel("body"))
         view.expand()
         val row = view.component(0) as JPanel
@@ -156,7 +164,8 @@ class AbstractSessionPartViewTest : BasePlatformTestCase() {
         val image = paintRow(row)
         val hover = SessionUiStyle.View.Surface.headerHoverBgColor().rgb
 
-        assertEquals("expanded header fill reaches the corner", hover, image.getRGB(0, 0))
+        assertEquals("center is filled with the hover color", hover, image.getRGB(20, 2))
+        assertFalse("expanded header keeps the rounded corner", hover == image.getRGB(0, 0))
     }
 
     private fun paintRow(row: JPanel): BufferedImage {
@@ -217,7 +226,7 @@ class AbstractSessionPartViewTest : BasePlatformTestCase() {
     }
 
     private open class TestView(content: JLabel, expanded: Boolean = false, expandable: Boolean = true) :
-        PrimarySessionPartView(JLabel("header"), content, expanded, expandable) {
+        AbstractSessionPartView(JLabel("header"), content, expanded, expandable) {
 
         override val contentId = "test"
         override fun update(content: Content) {}
@@ -225,12 +234,12 @@ class AbstractSessionPartViewTest : BasePlatformTestCase() {
         fun arrowIcon(): Icon = arrow.icon
     }
 
-    private class NestedView(header: JComponent) : PrimarySessionPartView(header, JLabel("body")) {
+    private class NestedView(header: JComponent) : AbstractSessionPartView(header, JLabel("body")) {
         override val contentId = "nested"
         override fun update(content: Content) {}
     }
 
-    private fun PrimarySessionPartView.component(index: Int): Component = components[index]
+    private fun AbstractSessionPartView.component(index: Int): Component = components[index]
 
     private fun click(component: Component) = event(component, MouseEvent.MOUSE_CLICKED, 1, 1)
 
@@ -249,28 +258,6 @@ class AbstractSessionPartViewTest : BasePlatformTestCase() {
             0,
             false,
         ))
-    }
-
-    private fun paint(border: Border): Color {
-        val image = BufferedImage(3, 3, BufferedImage.TYPE_INT_ARGB)
-        val panel = JPanel()
-        val graphics = image.createGraphics()
-        border.paintBorder(panel, graphics, 0, 0, image.width, image.height)
-        graphics.dispose()
-        return Color(image.getRGB(0, 0), true)
-    }
-
-    private fun assertLine(border: Border) {
-        val image = BufferedImage(5, 5, BufferedImage.TYPE_INT_ARGB)
-        val panel = JPanel()
-        val graphics = image.createGraphics()
-        border.paintBorder(panel, graphics, 0, 0, image.width, image.height)
-        graphics.dispose()
-        val rgb = SessionUiStyle.View.Outline.color().rgb
-        assertEquals(rgb, Color(image.getRGB(2, 0), true).rgb)
-        assertEquals(rgb, Color(image.getRGB(0, 2), true).rgb)
-        assertEquals(rgb, Color(image.getRGB(4, 2), true).rgb)
-        assertEquals(rgb, Color(image.getRGB(2, 4), true).rgb)
     }
 
     private fun assertNotSameColor(left: Color, right: Color) {

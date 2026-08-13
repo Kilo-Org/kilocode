@@ -4,7 +4,7 @@ import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import ai.kilocode.client.session.views.base.SecondarySessionPartView
+import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.session.views.tool.EditToolView
 import ai.kilocode.client.session.views.tool.ReadToolView
 import ai.kilocode.client.session.views.tool.ToolView
@@ -44,7 +44,7 @@ class EditToolViewTest : BasePlatformTestCase() {
         val view = track(EditToolView(tool(), openFile = { href, _ -> opened.add(href) }))
         val base: Any = view
 
-        assertTrue(base is SecondarySessionPartView)
+        assertTrue(base is AbstractSessionPartView)
         assertTrue(view.labelText().contains("Edit"))
         assertTrue(view.linkVisible())
         assertEquals("App.kt", view.linkLabel())

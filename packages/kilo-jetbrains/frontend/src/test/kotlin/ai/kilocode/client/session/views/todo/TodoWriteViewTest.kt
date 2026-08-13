@@ -5,7 +5,7 @@ import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import ai.kilocode.client.session.views.base.PrimarySessionPartView
+import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.rpc.dto.TodoDto
@@ -36,7 +36,7 @@ class TodoWriteViewTest : BasePlatformTestCase() {
         val base: Any = view
 
         assertTrue(view.labelText().contains("To-dos"))
-        assertTrue(base is PrimarySessionPartView)
+        assertTrue(base is AbstractSessionPartView)
         assertTrue(view.labelText().contains("1/2"))
         assertTrue(view.isExpanded())
         assertEquals(2, view.rowCount())
@@ -106,7 +106,9 @@ class TodoWriteViewTest : BasePlatformTestCase() {
         val body = view.components.filterIsInstance<TodoListPanel>().single()
         val ins = body.border.getBorderInsets(body)
 
-        assertEquals(UiStyle.Gap.lg() + SessionUiStyle.View.Outline.width(), ins.top)
+        // No separator line: just the standard content padding, so the list reads as transparent
+        // content set apart from the header by the base card's transparent gap.
+        assertEquals(UiStyle.Gap.lg(), ins.top)
         assertEquals(UiStyle.Gap.pad(), ins.left)
         assertEquals(UiStyle.Gap.lg(), ins.bottom)
         assertEquals(UiStyle.Gap.pad(), ins.right)

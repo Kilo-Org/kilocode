@@ -7,8 +7,8 @@ import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
+import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.session.views.base.PartHeader
-import ai.kilocode.client.session.views.base.PrimarySessionPartView
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import com.intellij.ui.components.JBLabel
@@ -17,7 +17,7 @@ import java.awt.Font
 import javax.swing.JComponent
 
 class TodoWriteView(tool: Tool, private val parts: TodoParts = todoParts()) :
-    PrimarySessionPartView(parts.header, parts.list, expanded = true) {
+    AbstractSessionPartView(parts.header, parts.list, expanded = true) {
 
     override val contentId = tool.id
 
@@ -25,16 +25,9 @@ class TodoWriteView(tool: Tool, private val parts: TodoParts = todoParts()) :
     private var style = SessionEditorStyle.current()
 
     init {
-        parts.list.border = JBUI.Borders.compound(
-            JBUI.Borders.customLine(
-                SessionUiStyle.View.Outline.color(),
-                SessionUiStyle.View.Outline.width(),
-                0,
-                0,
-                0,
-            ),
-            JBUI.Borders.empty(UiStyle.Gap.lg(), UiStyle.Gap.pad()),
-        )
+        // Transparent list body: the base separates it from the header with the standard gap, so no
+        // separator line is drawn here — only the content padding remains.
+        parts.list.border = JBUI.Borders.empty(UiStyle.Gap.lg(), UiStyle.Gap.pad())
         applyStyle(style)
         sync()
     }

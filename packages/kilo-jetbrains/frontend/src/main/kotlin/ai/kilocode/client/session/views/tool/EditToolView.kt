@@ -16,7 +16,7 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.session.views.base.PartHeader
-import ai.kilocode.client.session.views.base.SecondarySessionPartView
+import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.DiffStatBadge
 import ai.kilocode.client.ui.ToolbarButtonAction
@@ -47,7 +47,7 @@ class EditToolView(
     private val selection: SessionSelection? = null,
     private val parts: ToolParts = toolParts(tool, openFile),
     private var body: EditBody = editBody(tool, selection, openFile),
-) : SecondarySessionPartView(parts.header, { body.mount(tool) }), UiDataProvider, SessionCopyTarget {
+) : AbstractSessionPartView(parts.header, { body.mount(tool) }), UiDataProvider, SessionCopyTarget {
 
     override val contentId: String = tool.id
 
@@ -127,7 +127,7 @@ class EditToolView(
     override fun getPreferredSize(): Dimension {
         val size = super.getPreferredSize()
         if (!bodyVisible()) return size
-        val height = row.preferredSize.height + (body.panel()?.preferredSize?.height ?: 0)
+        val height = row.preferredSize.height + expandedGap() + (body.panel()?.preferredSize?.height ?: 0)
         return Dimension(size.width, minOf(size.height, height))
     }
 
