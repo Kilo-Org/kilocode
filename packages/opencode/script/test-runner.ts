@@ -220,30 +220,74 @@ const weight = (file: string) => DURATION_HINTS[file] ?? Bun.file(path.join(root
 // Deliberately excludes directories whose runtime is real I/O work (git/, lsp/, storage/,
 // auth/, ...): those parallelize well across the per-file worker pool, while a batch runs
 // its members sequentially. The tier is for files where boot cost dominates execution.
-const FAST_TIER: string[] = [
-  "account/",
-  "config/",
-  "effect/",
-  "event-manifest.test.ts",
-  "format/",
-  "image/",
-  "installation/",
-  "patch/",
-  "provider/model-status.test.ts",
-  "provider/transform.test.ts",
-  "question/",
-  "share/",
-  "suggestion/",
-  "util/",
-]
-const FAST_TIER_BATCH = "fast-tier-batch"
-const FAST_TIER_WEIGHT = 45_000 // observed single-process duration scale (~25-45s), same unit as DURATION_HINTS
-const inFastTier = (file: string) =>
-  FAST_TIER.some((entry) => (entry.endsWith(".ts") ? file === entry : file.startsWith(entry)))
-const batchMembers = patterns.length > 0 || profile ? [] : candidates.filter(inFastTier)
-const batched = batchMembers.length >= 2
-const shardInput = batched ? [FAST_TIER_BATCH, ...candidates.filter((file) => !inFastTier(file))] : candidates
-const shardWeight = (file: string) => (file === FAST_TIER_BATCH ? FAST_TIER_WEIGHT : weight(file))
+// Several independent batches (instead of one) keep each batch short enough to schedule
+// like a normal heavy file, and let LPT spread them across shards and worker slots.
+// Weights are observed single-process durations (ms), same unit as DURATION_HINTS.
+const FAST_TIERS: Record<string, { weight: number; entries: string[] }> = {
+  "fast-tier-core": {
+    weight: 45_000,
+    entries: [
+      "account/",
+      "config/",
+      "effect/",
+      "event-manifest.test.ts",
+      "format/",
+      "image/",
+      "installation/",
+      "patch/",
+      "provider/model-status.test.ts",
+      "provider/transform.test.ts",
+      "question/",
+      "share/",
+      "suggestion/",
+      "util/",
+    ],
+  },
+  "fast-tier-kilocode": {
+    weight: 55_000,
+    entries: [
+      "kilocode/config/",
+      "kilocode/memory/",
+      "kilocode/permission/",
+      "kilocode/presence/",
+      "kilocode/project/",
+      "kilocode/provider/",
+      "kilocode/skills/",
+      "kilocode/storage/",
+      "kilocode/suggestion/",
+      "kilocode/tui/",
+      "kilocode/util/",
+    ],
+  },
+  "fast-tier-kilocode-sessions": {
+    weight: 55_000,
+    entries: ["kilocode/session-export/", "kilocode/session/", "kilocode/sessions/"],
+  },
+  "fast-tier-kilocode-tools": {
+    weight: 50_000,
+    entries: ["kilocode/anaconda-desktop/", "kilocode/cloud/", "kilocode/tool/"],
+  },
+}
+const tierOf = (file: string) => {
+  for (const [name, tier] of Object.entries(FAST_TIERS)) {
+    if (tier.entries.some((entry) => (entry.endsWith(".ts") ? file === entry : file.startsWith(entry)))) return name
+  }
+  return undefined
+}
+const batches = new Map<string, string[]>()
+if (patterns.length === 0 && !profile) {
+  for (const file of candidates) {
+    const tier = tierOf(file)
+    if (!tier) continue
+    const members = batches.get(tier) ?? []
+    members.push(file)
+    batches.set(tier, members)
+  }
+  for (const [name, members] of batches) if (members.length < 2) batches.delete(name)
+}
+const inBatch = (file: string) => batches.size > 0 && tierOf(file) !== undefined && batches.has(tierOf(file)!)
+const shardInput = [...batches.keys(), ...candidates.filter((file) => !inBatch(file))]
+const shardWeight = (file: string) => FAST_TIERS[file]?.weight ?? weight(file)
 const files = shard ? TestShard.split(shardInput, shardWeight, shard.total)[shard.index - 1] : shardInput
 // kilocode_change end
 
@@ -373,11 +417,11 @@ async function terminate(proc: Proc) {
 // ---------------------------------------------------------------------------
 
 async function run(file: string): Promise<Result> {
-  // kilocode_change start - the fast-tier pseudo-file expands to all batch members in one
-  // process; a shared pass compiles once, so it gets a roomier process deadline than a
+  // kilocode_change start - a fast-tier pseudo-file expands to all of its batch members in
+  // one process; a shared pass compiles once, so it gets a roomier process deadline than a
   // single file even though each member is individually fast.
-  const targets =
-    file === FAST_TIER_BATCH ? batchMembers.map((member) => path.join("test", member)) : [path.join("test", file)]
+  const members = batches.get(file)
+  const targets = members ? members.map((member) => path.join("test", member)) : [path.join("test", file)]
   const cmd = ["bun", "test", ...targets, "--timeout", String(timeout)]
   // kilocode_change end
 
@@ -388,7 +432,7 @@ async function run(file: string): Promise<Result> {
 
   const start = performance.now()
   const killed = { value: false }
-  const fileDeadline = file === FAST_TIER_BATCH ? Math.max(deadline, 600_000) : deadline // kilocode_change
+  const fileDeadline = members ? Math.max(deadline, 600_000) : deadline // kilocode_change
 
   const proc = Bun.spawn(cmd, {
     cwd: root,
@@ -517,9 +561,11 @@ function report(result: Result) {
 // Parallel execution
 // ---------------------------------------------------------------------------
 
-// kilocode_change start - report the batch so shard logs stay interpretable
-if (batched && files.includes(FAST_TIER_BATCH))
-  console.log(`\nFast tier: ${bold(String(batchMembers.length))} isolation-safe files run in one shared process`)
+// kilocode_change start - report the batches so shard logs stay interpretable
+for (const [name, members] of batches) {
+  if (!files.includes(name)) continue
+  console.log(`\nFast tier ${bold(name)}: ${bold(String(members.length))} isolation-safe files in one shared process`)
+}
 // kilocode_change end
 console.log(`\nRunning ${bold(String(files.length))} test files with concurrency ${bold(String(concurrency))}`)
 if (shard) console.log(`Using balanced test shard ${shard.index}/${shard.total}`)
@@ -607,7 +653,7 @@ if (flaky.length > 0) {
   // the bottom of the job page and in the workflow summary email.
   if (process.env.GITHUB_ACTIONS === "true") {
     for (const r of sorted) {
-      if (r.file === FAST_TIER_BATCH) continue // kilocode_change - pseudo-file, no source path to annotate
+      if (batches.has(r.file)) continue // kilocode_change - pseudo-file, no source path to annotate
       const repo = `packages/opencode/test/${r.file}`
       console.log(`::warning file=${repo},title=Flaky test file::passed on attempt ${r.attempts} of ${retries + 1}`)
     }
