@@ -42,6 +42,7 @@ import java.awt.event.ActionEvent
 import java.awt.event.InputEvent
 import java.awt.event.KeyEvent
 import java.awt.event.MouseEvent
+import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.KeyStroke
 import javax.swing.SwingUtilities
@@ -86,10 +87,10 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
             assertNotNull(UIUtil.findComponentOfType(panel, WorktreePrHeaderView::class.java))
             val buttons = components(panel).filterIsInstance<ActionButton>().mapNotNull { it.presentation.text }
             assertTrue(buttons.contains("Hide sessions"))
-            assertTrue(buttons.contains("Open worktree in new window"))
             assertTrue(buttons.contains("New session"))
             assertTrue(buttons.contains("Rename session"))
             assertTrue(buttons.contains("Delete session"))
+            assertNotNull(components(panel).filterIsInstance<JButton>().singleOrNull { it.text == "Open" })
             assertNotNull(UIUtil.findComponentOfType(panel, JBList::class.java))
             assertNull(UIUtil.findComponentOfType(panel, SearchTextField::class.java))
         }
@@ -182,7 +183,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         }
 
         edt {
-            components(view).filterIsInstance<ActionButton>().single { it.presentation.text == "Open worktree in new window" }.click()
+            components(view).filterIsInstance<JButton>().single { it.text == "Open" }.doClick()
         }
 
         assertEquals(listOf(DIR), opened)
@@ -196,7 +197,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         }
 
         val button = edt {
-            components(view).filterIsInstance<ActionButton>().single { it.presentation.text == "Open worktree in new window" }
+            components(view).filterIsInstance<JButton>().single { it.text == "Open" }
         }
 
         assertFalse(edt { button.isEnabled })
@@ -498,7 +499,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
     }
 
     private fun toggle(root: java.awt.Component = panel): ActionButton {
-        val actions = setOf("Open worktree in new window", "New session", "Rename session", "Delete session")
+        val actions = setOf("New session", "Rename session", "Delete session")
         return components(root).filterIsInstance<ActionButton>().first { it.presentation.text !in actions }
     }
 

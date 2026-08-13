@@ -15,6 +15,7 @@ import java.awt.Cursor
 import java.awt.Point
 import java.awt.event.InputEvent
 import java.awt.event.MouseEvent
+import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.SwingUtilities
 
@@ -65,14 +66,19 @@ class WorktreePrHeaderViewTest : BasePlatformTestCase() {
     fun `test no PR keeps changes badge on the right`() {
         val view = edt { WorktreePrHeaderView {} }
         val changes = edt { UIUtil.findComponentOfType(view, WorktreeStatsView::class.java)!! }
+        val open = edt { components(view).filterIsInstance<JButton>().single { it.text == "Open" } }
 
         edt {
             view.update(WorktreeStatsDto("/repo", additions = 2), null, "feature-x")
             view.setSize(400, 32)
             view.doLayout()
+            components(view).filterIsInstance<Container>().forEach { it.doLayout() }
         }
 
-        assertTrue(edt { SwingUtilities.convertPoint(changes.parent, Point(0, 0), view).x > 300 })
+        val changesX = edt { SwingUtilities.convertPoint(changes, Point(0, 0), view).x }
+        val openX = edt { SwingUtilities.convertPoint(open, Point(0, 0), view).x }
+        assertTrue(changesX > 250)
+        assertTrue(changesX < openX)
     }
 
     fun `test changes view visibility follows stats`() {

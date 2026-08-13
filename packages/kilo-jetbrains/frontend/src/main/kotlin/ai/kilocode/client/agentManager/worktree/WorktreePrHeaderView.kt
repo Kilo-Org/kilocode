@@ -1,14 +1,17 @@
 package ai.kilocode.client.agentManager.worktree
 
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.HAlign
+import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreePrDto
 import ai.kilocode.rpc.dto.WorktreeStatsDto
 import com.intellij.ide.BrowserUtil
+import com.intellij.ide.ui.ProductIcons
 import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
@@ -20,17 +23,21 @@ import java.awt.BorderLayout
 import java.awt.Cursor
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import javax.swing.JButton
 import javax.swing.JComponent
 
 internal class WorktreePrHeaderView(
+    openWorktree: () -> Unit = {},
+    openEnabled: Boolean = true,
     openDiff: () -> Unit,
 ) : BorderLayoutPanel() {
+    private val open = JButton(KiloBundle.message("worktree.session.open.action"), ProductIcons.getInstance().productIcon)
     private val status = JBLabel()
     private val title = SimpleColoredComponent()
     private val changes = WorktreeStatsView(openDiff)
     private val statusPane = status.align(HAlign.LEFT, VAlign.CENTER)
     private val changesPane = changes.align(HAlign.RIGHT, VAlign.CENTER) as JComponent
-    private val actions = BorderLayoutPanel()
+    private val actions = Stack.horizontal(UiStyle.Gap.sm()).next(changesPane).next(open)
     private var pull: WorktreePrDto? = null
     private var state: GhState? = null
     private var text: String? = null
@@ -40,11 +47,13 @@ internal class WorktreePrHeaderView(
     init {
         isOpaque = false
         actions.isOpaque = false
+        open.isEnabled = openEnabled
+        open.toolTipText = KiloBundle.message("worktree.session.open.tooltip")
+        open.addActionListener { openWorktree() }
         status.border = JBUI.Borders.empty(0, UiStyle.Gap.md(), 0, UiStyle.Gap.xs())
         title.border = JBUI.Borders.empty(0, UiStyle.Gap.sm())
         title.isOpaque = false
         changesPane.border = JBUI.Borders.emptyRight(UiStyle.Gap.pad())
-        actions.addToRight(changesPane)
         addToLeft(statusPane)
         addToCenter(title)
         addToRight(actions)
@@ -93,12 +102,10 @@ internal class WorktreePrHeaderView(
 
     private fun syncPr(value: Boolean) {
         if (value) {
-            if (statusPane.parent !== this) add(statusPane, BorderLayout.WEST)
             if (title.parent !== this) add(title, BorderLayout.CENTER)
             title.isVisible = true
             return
         }
-        if (statusPane.parent === this) remove(statusPane)
         title.isVisible = false
         changed()
     }

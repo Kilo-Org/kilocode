@@ -46,6 +46,7 @@ import com.intellij.openapi.progress.currentThreadCoroutineScope
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.wm.IdeFocusManager
 import com.intellij.openapi.wm.WindowManager
@@ -61,7 +62,6 @@ import kotlinx.coroutines.launch
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Frame
-import java.nio.file.Path
 import javax.swing.JComponent
 import javax.swing.Icon
 import javax.swing.ListSelectionModel
@@ -83,8 +83,7 @@ class WorktreeSessionEditorPanel(
     private val rename = RenameAction()
     private val delete = DeleteAction()
     private val toggle = ToggleAction()
-    private val openAction = OpenAction()
-    private val toolbar = ActionManager.getInstance().createActionToolbar(ActionPlaces.TOOLBAR, DefaultActionGroup(toggle, openAction, add, rename, delete), true)
+    private val toolbar = ActionManager.getInstance().createActionToolbar(ActionPlaces.TOOLBAR, DefaultActionGroup(toggle, add, rename, delete), true)
     private val group = ActionManager.getInstance().getAction("Kilo.WorktreeSession.RowMenu") as? ActionGroup ?: DefaultActionGroup()
     private val list = ActiveList(
         KiloBundle.message("worktree.session.list.empty"),
@@ -103,7 +102,7 @@ class WorktreeSessionEditorPanel(
             (row as? SessionRow)?.session?.takeIf { canRename(it) || canDelete(it) }
         }),
     )
-    private val prHeader = WorktreePrHeaderView(::openBranchDiff)
+    private val prHeader = WorktreePrHeaderView(openWorktree = ::openInNewFrame, openEnabled = worktree.directory.isNotBlank(), openDiff = ::openBranchDiff)
     private val splitter = OnePixelSplitter(false, 0.25f)
     private var started = false
     private var stats: WorktreeStatsDto? = null
@@ -264,34 +263,42 @@ class WorktreeSessionEditorPanel(
     @RequiresEdt
     private fun openInNewFrame() {
         val dir = worktree.directory.takeIf { it.isNotBlank() } ?: return
+        LOG.info("worktree open: clicked dir=$dir seam=${openWorktree != null}")
         Telemetry.send("Worktree Opened In New Frame", mapOf("surface" to "worktree_toolbar"))
         if (openWorktree != null) {
             openWorktree.invoke(dir)
             return
         }
         if (focusExistingFrame(dir)) return
+        LOG.info("worktree open: no local frame matched, delegating to backend dir=$dir")
         currentThreadCoroutineScope().launch(Dispatchers.Default) {
-            service<KiloWorktreeService>().open(dir)
+            val focused = runCatching { service<KiloWorktreeService>().open(dir) }
+            focused.onFailure { LOG.warn("worktree open: backend call failed dir=$dir", it) }
+            focused.onSuccess { LOG.info("worktree open: backend returned=$it dir=$dir") }
         }
     }
 
     /**
      * Focus runs in the frontend client because it owns the visible windows in remote development.
-     * Match on presentableUrl, the same project identity the platform Window menu uses, and never ask
-     * the backend to reopen once the worktree is already open.
+     * Match on presentableUrl, the same project identity the platform Window menu uses (see
+     * com.intellij.openapi.wm.impl.ProjectWindowAction), and never ask the backend to reopen once the
+     * worktree is already open.
      */
     @RequiresEdt
     private fun focusExistingFrame(dir: String): Boolean {
-        val target = Path.of(dir).normalize()
         val projects = ProjectManager.getInstance().openProjects
-        val item = projects.firstOrNull { same(it.presentableUrl, target) || same(it.basePath, target) }
+        LOG.info(
+            "worktree focus: target=$dir among ${projects.size} open project(s): " +
+                projects.joinToString { "[name=${it.name} presentableUrl=${it.presentableUrl} basePath=${it.basePath} default=${it.isDefault}]" },
+        )
+        val item = projects.firstOrNull { same(it.presentableUrl, dir) || same(it.basePath, dir) }
         if (item == null) {
-            LOG.info("worktree focus: no open frame for $dir; open=" + projects.joinToString { "${it.name}@${it.presentableUrl}" })
+            LOG.info("worktree focus: no open project matched target=$dir")
             return false
         }
         val frame = WindowManager.getInstance().getFrame(item)
         if (frame == null) {
-            LOG.info("worktree focus: ${item.name} is open but has no frame yet")
+            LOG.info("worktree focus: matched project=${item.name} but it has no frame yet")
             return true
         }
         val state = frame.extendedState
@@ -299,11 +306,11 @@ class WorktreeSessionEditorPanel(
         frame.toFront()
         val focus = IdeFocusManager.getGlobalInstance()
         focus.doWhenFocusSettlesDown { frame.mostRecentFocusOwner?.let { focus.requestFocus(it, true) } }
+        LOG.info("worktree focus: brought frame to front for project=${item.name}")
         return true
     }
 
-    private fun same(path: String?, target: Path): Boolean =
-        path != null && runCatching { Path.of(path).normalize() == target }.getOrDefault(false)
+    private fun same(path: String?, dir: String): Boolean = FileUtil.pathsEqual(path, dir)
 
     @RequiresEdt
     private fun openBranchDiff() {
@@ -420,22 +427,6 @@ class WorktreeSessionEditorPanel(
 
         override fun actionPerformed(e: AnActionEvent) {
             toggleExpanded()
-        }
-    }
-
-    private inner class OpenAction : AnAction(
-        KiloBundle.message("worktree.session.open.action"),
-        null,
-        AllIcons.Actions.MoveToWindow,
-    ) {
-        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
-
-        override fun update(e: AnActionEvent) {
-            e.presentation.isEnabled = worktree.directory.isNotBlank()
-        }
-
-        override fun actionPerformed(e: AnActionEvent) {
-            openInNewFrame()
         }
     }
 
