@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { ProviderTransform } from "../../src/provider/transform"
 import { Provider } from "../../src/provider/provider"
+import { customProviderVariants } from "../../src/kilocode/provider/provider"
 import type * as ModelsDev from "@opencode-ai/core/models-dev"
 
 function mockModel(overrides: Partial<any> = {}): any {
@@ -71,30 +72,6 @@ describe("ProviderTransform.reasoningVariants - models.dev reasoning_options", (
     expect(result?.max).toEqual({ reasoning: { effort: "max" } })
   })
 
-  test("effort tiers from the Kilo catalog use reasoning object shape", () => {
-    const target = mockModel({
-      providerID: "kilo",
-      api: { id: "openai/gpt-5.6", url: "https://api.kilo.ai", npm: "@kilocode/kilo-gateway" },
-    })
-    const result = ProviderTransform.reasoningVariants(
-      raw([{ type: "effort", values: ["none", "low", "medium", "high", "xhigh", "max"] }]),
-      target,
-    )
-    expect(Object.keys(result ?? {})).toEqual(["none", "low", "medium", "high", "xhigh", "max"])
-    expect(result?.max).toEqual({ reasoning: { effort: "max" } })
-  })
-
-  test("explicit Kilo catalog variants take precedence over reasoning options", () => {
-    const variants = { fast: { reasoning: { effort: "low" } } }
-    const target = mockModel({
-      providerID: "kilo",
-      api: { id: "openai/gpt-5.6", url: "https://api.kilo.ai", npm: "@kilocode/kilo-gateway" },
-      variants,
-    })
-    const result = ProviderTransform.reasoningVariants(raw([{ type: "effort", values: ["high"] }]), target)
-    expect(result).toBe(variants)
-  })
-
   test("budget_tokens produces high/max budget variants on bedrock", () => {
     const target = mockModel({
       api: { id: "anthropic.claude-sonnet-4-5", url: "https://bedrock.amazonaws.com", npm: "@ai-sdk/amazon-bedrock" },
@@ -160,5 +137,69 @@ describe("ProviderTransform.reasoningVariants - models.dev reasoning_options", (
 
     const gpt5 = info.models["gpt-5"]
     expect(Object.keys(gpt5.variants ?? {})).toEqual(["minimal", "low", "medium", "high"])
+  })
+})
+
+describe("custom provider fallback reasoning efforts", () => {
+  const efforts = ["none", "low", "medium", "high", "xhigh", "max"]
+
+  for (const npm of ["@ai-sdk/openai-compatible", "@ai-sdk/openai", "@ai-sdk/anthropic"]) {
+    test(`${npm} exposes broad efforts after heuristics fail`, () => {
+      const model = mockModel({ id: "qwen-custom", api: { id: "qwen-custom", url: "https://api.test.com", npm } })
+      const generated = ProviderTransform.variants({ ...model, variants: {} })
+      expect(generated).toEqual({})
+
+      const result = customProviderVariants(model, npm, ProviderTransform.variants)
+
+      expect(Object.keys(result)).toEqual(efforts)
+      if (npm === "@ai-sdk/anthropic") {
+        expect(result.none).toEqual({ thinking: { type: "disabled" } })
+        expect(result.max).toEqual({ effort: "max" })
+        return
+      }
+      expect(result.none?.reasoningEffort).toBe("none")
+      expect(result.max?.reasoningEffort).toBe("max")
+    })
+  }
+
+  test("preserves successful heuristics", () => {
+    const model = mockModel({ api: { id: "custom", url: "https://api.test.com", npm: "@ai-sdk/openai-compatible" } })
+    const generated = { low: { reasoningEffort: "low" }, high: { reasoningEffort: "high" } }
+    expect(customProviderVariants(model, model.api.npm, () => generated)).toBe(generated)
+  })
+
+  test("prefers configured variants to inference", () => {
+    const variants = { custom: { reasoningEffort: "custom" } }
+    for (const npm of ["@ai-sdk/openai-compatible", "@ai-sdk/openai", "@ai-sdk/anthropic"]) {
+      const model = mockModel({ api: { id: "custom", url: "https://api.test.com", npm }, variants })
+      expect(
+        customProviderVariants(model, npm, () => {
+          throw new Error("inference should not run")
+        }),
+      ).toBe(variants)
+    }
+  })
+
+  test("requires a reasoning model with an explicitly configured supported package", () => {
+    const npm = "@ai-sdk/openai-compatible"
+    const plain = mockModel({
+      api: { id: "custom", url: "https://api.test.com", npm },
+      capabilities: { ...mockModel().capabilities, reasoning: false },
+    })
+    expect(customProviderVariants(plain, npm, () => ({}))).toEqual({})
+    expect(
+      customProviderVariants(
+        mockModel({ api: { id: "custom", url: "https://api.test.com", npm } }),
+        undefined,
+        () => ({}),
+      ),
+    ).toEqual({})
+    expect(
+      customProviderVariants(
+        mockModel({ api: { id: "custom", url: "https://api.test.com", npm: "unrelated-provider" } }),
+        "unrelated-provider",
+        () => ({}),
+      ),
+    ).toEqual({})
   })
 })

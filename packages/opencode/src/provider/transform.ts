@@ -981,7 +981,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
           effort,
           {
             reasoningEffort: effort,
-            reasoningSummary: "auto",
+            reasoningSummary: reasoningSummary(model), // kilocode_change
             include: INCLUDE_ENCRYPTED_REASONING,
           },
         ]),
@@ -1151,7 +1151,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
 
     case "@ai-sdk/mistral":
       // https://v5.ai-sdk.dev/providers/ai-sdk-providers/mistral
-      // https://docs.mistral.ai/studio-api/conversations/reasoning // kilocode_change - upstream URL is stale
+      // https://docs.mistral.ai/studio-api/conversations/reasoning // kilocode_change
       if (!model.capabilities.reasoning) return {}
       // Only Mistral Small 4 and Medium 3.5 support reasoning
       const MISTRAL_REASONING_IDS = [
@@ -1752,12 +1752,6 @@ export function schema(model: Provider.Model, schema: JSONSchema7): JSONSchema7 
 }
 
 export function reasoningVariants(model: ModelsDev.Model, target: Provider.Model): Provider.Model["variants"] {
-  // kilocode_change start - explicit Kilo catalog variants take precedence over metadata conversion
-  if (target.api.npm === "@kilocode/kilo-gateway" && target.variants && Object.keys(target.variants).length > 0) {
-    return target.variants
-  }
-  // kilocode_change end
-
   const options = model.reasoning_options
   if (options === undefined) return
   if (options.length === 0) return {}
@@ -1887,7 +1881,7 @@ function reasoningEffort(model: Provider.Model, effort: string) {
     case "venice-ai-sdk-provider":
     case "ai-gateway-provider":
       return { reasoningEffort: effort }
-    case "@kilocode/kilo-gateway": // kilocode_change - translate explicit catalog metadata
+    case "@kilocode/kilo-gateway": // kilocode_change - OpenRouter-shaped reasoning effort
       return { reasoning: { effort } } // kilocode_change
     case "@ai-sdk/cohere":
     case "@ai-sdk/perplexity":

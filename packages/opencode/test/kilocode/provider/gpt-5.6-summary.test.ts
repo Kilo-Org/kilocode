@@ -32,6 +32,11 @@ describe("GPT-5.6 reasoning summaries", () => {
     expect(result.reasoningSummary).toBe("detailed")
   })
 
+  test("requests detailed summaries for every direct OpenAI reasoning variant", () => {
+    const result = ProviderTransform.variants(model())
+    expect(Object.values(result).every((variant) => variant.reasoningSummary === "detailed")).toBe(true)
+  })
+
   test("keeps auto summaries for older and non-OpenAI GPT models", () => {
     expect(ProviderTransform.options({ model: model("gpt-5.5"), sessionID: "test-session" }).reasoningSummary).toBe(
       "auto",
