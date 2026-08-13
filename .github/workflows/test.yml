@@ -124,6 +124,36 @@ jobs:
         run: echo "Only isolated product, documentation, or metadata files changed; general unit tests are unchanged."
       # kilocode_change end
 
+      # kilocode_change start - exempt the workspace and temp dirs from Defender on Windows.
+      # Measured from CI run 31648508417: per-file process spawn costs ~6.0s on Windows against
+      # ~3.0s on Linux, and that spawn tax is 3978s of the 7142s of total Windows work (56%).
+      # Every `bun test <file>` is a fresh image load plus a tree of temp git repos, and
+      # real-time scanning inspects all of it. Nothing in CI excluded these paths before.
+      # Runs before checkout so install and test writes are both covered.
+      #
+      # Deliberately best-effort: Defender may be absent, already disabled, or locked by tamper
+      # protection on some runner images, and none of that should fail the unit matrix. The step
+      # reports what it managed to apply so a regression in spawn cost is diagnosable from logs.
+      - name: Exempt workspace from Defender scanning
+        if: matrix.settings.run && runner.os == 'Windows'
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          if (-not (Get-Command Add-MpPreference -ErrorAction SilentlyContinue)) {
+            Write-Host "Add-MpPreference unavailable; skipping Defender exclusions."
+            exit 0
+          }
+          $paths = @($env:GITHUB_WORKSPACE, $env:RUNNER_TEMP, $env:TEMP, "$env:USERPROFILE\.bun") |
+            Where-Object { $_ } | Select-Object -Unique
+          foreach ($p in $paths) {
+            try { Add-MpPreference -ExclusionPath $p -ErrorAction Stop; Write-Host "excluded path $p" }
+            catch { Write-Host "could not exclude path $p : $($_.Exception.Message)" }
+          }
+          foreach ($proc in @("bun.exe", "node.exe", "git.exe")) {
+            try { Add-MpPreference -ExclusionProcess $proc -ErrorAction Stop; Write-Host "excluded process $proc" }
+            catch { Write-Host "could not exclude process $proc : $($_.Exception.Message)" }
+          }
+      # kilocode_change end
       - name: Checkout repository
         if: matrix.settings.run # kilocode_change
         uses: actions/checkout@v6 # kilocode_change
