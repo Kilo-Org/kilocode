@@ -1,6 +1,6 @@
 import type { Accessor } from "solid-js"
 import type { ExtensionMessage, ModelSelection } from "../types/messages"
-import { getAgentVariant, getVariant, preserveVariant, variantKey } from "./session-variant-store"
+import { DEFAULT_VARIANT, getAgentVariant, getVariant, preserveVariant, variantKey } from "./session-variant-store"
 
 interface Model {
   variants?: Record<string, unknown>
@@ -40,18 +40,21 @@ export function createSessionVariants(options: Options) {
     return getVariant(options.selections(), selection, variants, options.agent(sid), sid)
   }
 
-  const select = (value: string, sessionID?: string) => {
+  const select = (value: string | undefined, sessionID?: string) => {
     const sid = sessionID ?? options.session()
     const selection = options.selected(sid)
     if (!selection) return
     const key = variantKey(selection, options.agent(sid), sid)
-    options.set(key, value)
-    if (!sid) options.post({ type: "persistVariant", key, value })
+    const next = value ?? DEFAULT_VARIANT
+    options.set(key, next)
+    if (!sid) options.post({ type: "persistVariant", key, value: next })
   }
 
   const carry = (selection: ModelSelection, value: string | undefined, name: string, sessionID?: string) => {
-    const next = preserveVariant(value, Object.keys(options.find(selection)?.variants ?? {}))
-    if (!next) return
+    const list = Object.keys(options.find(selection)?.variants ?? {})
+    if (list.length === 0) return
+    const next = value === undefined ? DEFAULT_VARIANT : preserveVariant(value, list)
+    if (next === undefined) return
     const key = variantKey(selection, name, sessionID)
     options.set(key, next)
     if (!sessionID) options.post({ type: "persistVariant", key, value: next })

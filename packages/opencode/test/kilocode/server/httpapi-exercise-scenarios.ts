@@ -209,14 +209,17 @@ export const kiloScenarios: Scenario[] = [
     .json(200, object),
   http.protected
     .get("/experimental/worktree/diff", "worktree.diff")
+    .inProject({ git: true })
     .at((ctx) => ({ path: "/experimental/worktree/diff?base=HEAD", headers: ctx.headers() }))
     .json(200, array),
   http.protected
     .get("/experimental/worktree/diff/summary", "worktree.diffSummary")
+    .inProject({ git: true })
     .at((ctx) => ({ path: "/experimental/worktree/diff/summary?base=HEAD", headers: ctx.headers() }))
     .json(200, array),
   http.protected
     .get("/experimental/worktree/diff/file", "worktree.diffFile")
+    .inProject({ git: true })
     .at((ctx) => ({
       path: `/experimental/worktree/diff/file?${new URLSearchParams({ base: "HEAD", file: "missing.txt" })}`,
       headers: ctx.headers(),
