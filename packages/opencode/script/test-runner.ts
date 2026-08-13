@@ -244,11 +244,12 @@ const FAST_TIERS: Record<string, { weight: number; entries: string[] }> = {
     ],
   },
   "fast-tier-kilocode": {
-    weight: 55_000,
+    weight: 45_000,
     entries: [
       "kilocode/config/",
       "kilocode/memory/",
-      "kilocode/permission/",
+      // kilocode/permission/ stays per-file: permission-origins asserts the merged config has
+      // no global-scope keys, so it cannot share an XDG root with tests that write global config.
       "kilocode/presence/",
       "kilocode/project/",
       "kilocode/provider/",
