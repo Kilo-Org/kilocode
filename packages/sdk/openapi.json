@@ -27284,6 +27284,10 @@
               },
               "diff": {
                 "type": "string"
+              },
+              "workspace": {
+                "type": "string",
+                "enum": ["restored", "snapshots-disabled", "unavailable"]
               }
             },
             "required": ["messageID"],
@@ -43986,6 +43990,10 @@
             "items": {
               "$ref": "#/components/schemas/FileDiff"
             }
+          },
+          "workspace": {
+            "type": "string",
+            "enum": ["restored", "snapshots-disabled", "unavailable"]
           }
         },
         "required": ["messageID"],
