@@ -1836,6 +1836,11 @@ const main = Effect.gen(function* () {
               console.log(
                 `${color.yellow}RETRY${color.reset} ${routeKey(scenario)} ${scenario.name} failed once, retrying`,
               )
+              // Back off before retrying: the observed failure mode is a readiness race (agent
+              // projections still warming when the request lands, so permission evaluation hits
+              // the deny-all fallback). An immediate retry on a saturated runner reproduces the
+              // same race; a short pause lets projections settle before the second attempt.
+              yield* Effect.sleep("1 second")
               const retried = yield* runScenario(options)(scenario)
               if (retried.status === "pass")
                 console.log(`${color.yellow}FLAKY${color.reset} ${routeKey(scenario)} ${scenario.name} passed on retry`)
