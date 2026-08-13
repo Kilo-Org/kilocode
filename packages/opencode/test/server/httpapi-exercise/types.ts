@@ -35,6 +35,7 @@ export type Options = {
   scenarioTimeout: Duration.Duration
   progress: boolean
   trace: boolean
+  shard: { index: number; total: number } | undefined // kilocode_change - subset execution for parallel exerciser processes
 }
 
 export type RequestSpec = {
