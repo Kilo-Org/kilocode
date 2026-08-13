@@ -55,9 +55,9 @@ export namespace KiloTask {
    * explicitly allows (e.g. `git status`), surfacing phantom deny rules the user never
    * wrote (#11523). The subagent's own bash policy governs its bash capabilities; an
    * explicit session-scoped bash lockdown (sandbox / session deny) still reaches the
-   * child via `deriveSubagentSessionPermission`, which inherits session deny rules. Plan's
-   * concrete destructive-command denies remain ceilings so its built-in Explore delegation
-   * cannot bypass the read-only boundary.
+   * child via `deriveSubagentSessionPermission`, which inherits session deny rules. Built-in
+   * Explore has its own enforcement-level read-only bash policy, so every caller retains that
+   * boundary without projecting a delegator's bash rules onto custom writable subagents.
    *
    * The caller must resolve `caller` (Agent.Info) and `session` (Session.Info)
    * before calling. This function is pure/synchronous.
@@ -78,12 +78,6 @@ export namespace KiloTask {
     for (const permission of mutation) {
       if (Permission.evaluate(permission, "*", rules).action !== "deny") continue
       inherited.push({ permission, pattern: "*", action: "deny" })
-    }
-    if (input.caller.name === "plan") {
-      for (const pattern of ["rm -rf *", "git push*"]) {
-        if (Permission.evaluate("bash", pattern, rules).action !== "deny") continue
-        inherited.push({ permission: "bash", pattern, action: "deny" })
-      }
     }
     return merge(inherited)
   }
