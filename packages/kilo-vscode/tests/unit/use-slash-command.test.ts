@@ -206,7 +206,7 @@ describe("useSlashCommand sandbox action", () => {
       focus: () => {},
     } as unknown as HTMLTextAreaElement
 
-    ctx.slash.onInput("/rev", 4)
+    ctx.slash.onInput(state.text, state.text.length)
 
     expect(ctx.slash.results()).toContainEqual(
       expect.objectContaining({ name: "review", description: expect.stringContaining("Review code changes") }),
