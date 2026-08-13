@@ -1,4 +1,5 @@
 import fs from "fs/promises"
+import { constants } from "fs"
 
 /**
  * Like `fs.mkdir({ recursive: true })` but also repairs broken symlinks and
@@ -20,4 +21,45 @@ export async function ensureRealDir(p: string) {
     await fs.rm(p, { force: true })
     await fs.mkdir(p, { recursive: true })
   }
+}
+
+async function ready(p: string) {
+  await ensureRealDir(p)
+  await fs.access(p, constants.W_OK | constants.X_OK)
+}
+
+export async function resolveState(p: string, fallback?: string) {
+  const sticky =
+    fallback === undefined
+      ? false
+      : await fs.stat(fallback).then(
+          (stat) =>
+            stat.isDirectory() &&
+            fs.access(fallback, constants.W_OK | constants.X_OK).then(
+              () => true,
+              () => false,
+            ),
+          () => false,
+        )
+  if (sticky && fallback !== undefined) return fallback
+
+  const err = await ready(p).then(
+    () => undefined,
+    (err: unknown) => err,
+  )
+  if (err === undefined) return p
+  if (fallback === undefined) throw err
+
+  const failed = await ready(fallback).then(
+    () => undefined,
+    (err: unknown) => err,
+  )
+  if (failed !== undefined) {
+    throw new AggregateError([err, failed], `Cannot use state directory "${p}" or fallback "${fallback}"`)
+  }
+
+  const msg = err instanceof Error ? err.message : "Unknown error"
+  // Logging is not initialized until Global.Path.log exists.
+  console.warn(`[kilo] Cannot use state directory "${p}"; using "${fallback}" instead: ${msg}`)
+  return fallback
 }
