@@ -26,6 +26,7 @@ import java.awt.Color
 import java.awt.Point
 import java.awt.datatransfer.DataFlavor
 import java.awt.event.MouseEvent
+import java.awt.image.BufferedImage
 import java.net.URI
 import javax.swing.Box
 import javax.swing.JPanel
@@ -88,7 +89,7 @@ class MdViewHybridTest : BasePlatformTestCase() {
         assertEquals(0, pane.verticalScrollBar.preferredSize.width)
     }
 
-    fun `test transparent markdown keeps code block background opaque`() {
+    fun `test transparent markdown keeps code block surface filled`() {
         view.opaque = false
 
         view.set("```kotlin\nval value = 1\n```")
@@ -97,7 +98,9 @@ class MdViewHybridTest : BasePlatformTestCase() {
         val bg = view.preBg
 
         assertFalse(view.component.isOpaque)
-        assertTrue(pane.isOpaque)
+        // The pane paints its own rounded surface fill, so it stays non-opaque; the inner viewport
+        // and editor keep the surface color.
+        assertFalse(pane.isOpaque)
         assertTrue(pane.viewport.isOpaque)
         assertTrue(editor.scrollPane.isOpaque)
         assertTrue(editor.scrollPane.viewport.isOpaque)
@@ -106,6 +109,22 @@ class MdViewHybridTest : BasePlatformTestCase() {
         assertEquals(bg.rgb, editor.backgroundColor.rgb)
         assertEquals(bg.rgb, editor.scrollPane.background.rgb)
         assertEquals(bg.rgb, editor.scrollPane.viewport.background.rgb)
+    }
+
+    fun `test fenced code block corners are rounded`() {
+        view.set("```kotlin\nval x = 1\n```")
+        val pane = scrolls().single()
+        pane.setSize(200, 60)
+        pane.doLayout()
+
+        val image = BufferedImage(200, 60, BufferedImage.TYPE_INT_ARGB)
+        val g = image.createGraphics()
+        pane.paint(g)
+        g.dispose()
+        val fill = view.preBg.rgb
+
+        assertEquals("surface fills along the top edge", fill, image.getRGB(100, 2))
+        assertFalse("rounded corner is left unfilled", fill == image.getRGB(0, 0))
     }
 
     fun `test fenced code block preserves multiline editor text and height`() {

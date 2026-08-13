@@ -32,7 +32,10 @@ import java.awt.Color
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.Font
+import java.awt.Graphics
+import java.awt.Graphics2D
 import java.awt.Point
+import java.awt.RenderingHints
 import java.awt.event.HierarchyEvent
 import java.awt.event.MouseEvent
 import javax.swing.Box
@@ -512,7 +515,8 @@ internal open class MdViewHybrid(
                 SessionUiStyle.View.Code.VIEWPORT_BOTTOM_PADDING,
                 SessionUiStyle.View.Code.VIEWPORT_HORIZONTAL_PADDING,
             )
-            isOpaque = true
+            // CodePane paints its own (optionally rounded) fill, so the pane stays non-opaque; the
+            // viewport still fills the inner rectangle with the surface color.
             background = opts.preBg
             viewport.isOpaque = true
             viewport.background = opts.preBg
@@ -677,6 +681,24 @@ internal open class MdViewHybrid(
     }
 
     private open inner class CodePane(component: JComponent) : JBScrollPane(component) {
+        // Non-opaque so the surface can round its corners over the backdrop; the fill is painted
+        // below. Bodies that draw their own edge separators (a non-None border, e.g. tool diffs)
+        // keep square corners.
+        override fun isOpaque(): Boolean = false
+
+        override fun paintComponent(g: Graphics) {
+            val g2 = g.create() as Graphics2D
+            try {
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                g2.color = background
+                val arc = if (code.opts.border == MdCodeBlockBorder.None) JBUI.scale(SessionUiStyle.View.BLOCK_ARC) else 0
+                if (arc > 0) g2.fillRoundRect(0, 0, width, height, arc, arc) else g2.fillRect(0, 0, width, height)
+            } finally {
+                g2.dispose()
+            }
+            super.paintComponent(g)
+        }
+
         override fun doLayout() {
             super.doLayout()
             if (code.opts.verticalPolicy != ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER) return
