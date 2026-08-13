@@ -208,7 +208,130 @@ const DURATION_HINTS: Record<string, number> = {
 }
 const weight = (file: string) => DURATION_HINTS[file] ?? Bun.file(path.join(root, "test", file)).size
 // kilocode_change end
-const files = shard ? TestShard.split(candidates, weight, shard.total)[shard.index - 1] : candidates
+
+// kilocode_change start - fast tier: run isolation-safe test files in ONE shared `bun test`
+// process instead of one process each. Per-file processes exist to contain cross-test state
+// (disk DBs, singletons, native handles); the directories below are verified to run together
+// cleanly in a single pass (empirically: all pass in one process). This trades ~1s of process
+// boot + TS compile per file for a single boot, the dominant cost for these small fast files.
+// The batch enters shard splitting as one pseudo-file with a duration-scale weight, so LPT
+// places it like any other heavy file and exactly one shard executes it. Extend the list only
+// with files proven to pass in a shared process (run: bun test <dirs> locally).
+// Deliberately excludes directories whose runtime is real I/O work (git/, lsp/, storage/,
+// auth/, ...): those parallelize well across the per-file worker pool, while a batch runs
+// its members sequentially. The tier is for files where boot cost dominates execution.
+// Several independent batches (instead of one) keep each batch short enough to schedule
+// like a normal heavy file, and let LPT spread them across shards and worker slots.
+// Weights are observed single-process durations (ms), same unit as DURATION_HINTS.
+const FAST_TIERS: Record<string, { weight: number; entries: string[] }> = {
+  "fast-tier-core": {
+    weight: 45_000,
+    entries: [
+      "account/",
+      "config/",
+      "effect/",
+      "event-manifest.test.ts",
+      "format/",
+      "image/",
+      "installation/",
+      "patch/",
+      "provider/model-status.test.ts",
+      "provider/transform.test.ts",
+      "question/",
+      "share/",
+      "suggestion/",
+      "util/",
+    ],
+  },
+  "fast-tier-kilocode": {
+    weight: 45_000,
+    entries: [
+      "kilocode/config/",
+      "kilocode/memory/",
+      // kilocode/permission/ stays per-file: permission-origins asserts the merged config has
+      // no global-scope keys, so it cannot share an XDG root with tests that write global config.
+      "kilocode/presence/",
+      "kilocode/project/",
+      "kilocode/provider/",
+      "kilocode/skills/",
+      "kilocode/storage/",
+      "kilocode/suggestion/",
+      "kilocode/tui/",
+      "kilocode/util/",
+    ],
+  },
+  "fast-tier-kilocode-sessions": {
+    weight: 55_000,
+    entries: ["kilocode/session-export/", "kilocode/session/", "kilocode/sessions/"],
+  },
+  "fast-tier-kilocode-tools": {
+    weight: 50_000,
+    entries: ["kilocode/anaconda-desktop/", "kilocode/cloud/", "kilocode/tool/"],
+  },
+}
+// Top-level kilocode/*.test.ts files batch too, except files that mutate process-wide
+// state and so can only run alone: bun's mock.module is process-wide and permanent,
+// AppRuntime.dispose() kills the shared runtime for every later file, global fetch spies
+// observe batch-mates' traffic, and process/watcher tests flake under batch CPU contention.
+const KILOCODE_ROOT_EXCLUDES = new Set([
+  // mock.module (process-wide, permanent)
+  "kilocode/background-process-shutdown.test.ts",
+  "kilocode/cli-shutdown.test.ts",
+  "kilocode/cloud-session.test.ts",
+  "kilocode/lancedb-runtime.test.ts",
+  "kilocode/local-model.test.ts",
+  "kilocode/run-auto.test.ts",
+  "kilocode/run-network.test.ts",
+  "kilocode/session-processor-retry-limit.test.ts",
+  // AppRuntime.dispose() in teardown (poisons the shared process)
+  "kilocode/session-compaction-chunks.test.ts",
+  "kilocode/session-fork-remap.test.ts",
+  "kilocode/session-prompt-queue.test.ts",
+  "kilocode/session-prompt-steering.test.ts",
+  // global fetch spies (see batch-mates' requests)
+  "kilocode/indexing-startup.test.ts",
+  "kilocode/kilo-sessions.test.ts",
+  "kilocode/session-share.test.ts",
+  // real subprocesses / fs watchers / stall simulations (timing-sensitive under contention)
+  "kilocode/background-process.test.ts",
+  "kilocode/instance-vcs-watcher.test.ts",
+  "kilocode/issue-8656-stall.test.ts",
+])
+// 8 batches (~24 files each) keep the heaviest single work item small enough for
+// LPT to pack shards evenly; fewer, bigger batches set a floor under the slowest shard.
+const KILOCODE_ROOT_TIERS = 8
+const KILOCODE_ROOT_WEIGHT = 60_000
+const kilocodeRootTier = (file: string) => {
+  if (!file.startsWith("kilocode/")) return undefined
+  if (file.slice("kilocode/".length).includes("/")) return undefined
+  if (KILOCODE_ROOT_EXCLUDES.has(file)) return undefined
+  let hash = 0
+  for (let i = 0; i < file.length; i++) hash = (hash * 31 + file.charCodeAt(i)) | 0
+  return `fast-tier-kilocode-root-${Math.abs(hash) % KILOCODE_ROOT_TIERS}`
+}
+const tierOf = (file: string) => {
+  for (const [name, tier] of Object.entries(FAST_TIERS)) {
+    if (tier.entries.some((entry) => (entry.endsWith(".ts") ? file === entry : file.startsWith(entry)))) return name
+  }
+  return kilocodeRootTier(file)
+}
+const batches = new Map<string, string[]>()
+if (patterns.length === 0 && !profile) {
+  for (const file of candidates) {
+    const tier = tierOf(file)
+    if (!tier) continue
+    const members = batches.get(tier) ?? []
+    members.push(file)
+    batches.set(tier, members)
+  }
+  for (const [name, members] of batches) if (members.length < 2) batches.delete(name)
+}
+const inBatch = (file: string) => batches.size > 0 && tierOf(file) !== undefined && batches.has(tierOf(file)!)
+const shardInput = [...batches.keys(), ...candidates.filter((file) => !inBatch(file))]
+const shardWeight = (file: string) =>
+  FAST_TIERS[file]?.weight ?? (file.startsWith("fast-tier-kilocode-root-") ? KILOCODE_ROOT_WEIGHT : weight(file))
+const files = shard ? TestShard.split(shardInput, shardWeight, shard.total)[shard.index - 1] : shardInput
+// kilocode_change end
 
 if (files.length === 0) {
   console.log("No test files found")
@@ -336,8 +459,13 @@ async function terminate(proc: Proc) {
 // ---------------------------------------------------------------------------
 
 async function run(file: string): Promise<Result> {
-  const target = path.join("test", file)
-  const cmd = ["bun", "test", target, "--timeout", String(timeout)]
+  // kilocode_change start - a fast-tier pseudo-file expands to all of its batch members in
+  // one process; a shared pass compiles once, so it gets a roomier process deadline than a
+  // single file even though each member is individually fast.
+  const members = batches.get(file)
+  const targets = members ? members.map((member) => path.join("test", member)) : [path.join("test", file)]
+  const cmd = ["bun", "test", ...targets, "--timeout", String(timeout)]
+  // kilocode_change end
 
   if (ci) {
     const name = file.replace(/[/\\]/g, "_") + ".xml"
@@ -346,6 +474,7 @@ async function run(file: string): Promise<Result> {
 
   const start = performance.now()
   const killed = { value: false }
+  const fileDeadline = members ? Math.max(deadline, 600_000) : deadline // kilocode_change
 
   const proc = Bun.spawn(cmd, {
     cwd: root,
@@ -361,7 +490,7 @@ async function run(file: string): Promise<Result> {
   const stderr = drain(proc.stderr)
   const code = await Promise.race([
     proc.exited.then((value) => ({ timedout: false, value })),
-    Bun.sleep(deadline).then(() => ({ timedout: true, value: -1 })),
+    Bun.sleep(fileDeadline).then(() => ({ timedout: true, value: -1 })), // kilocode_change
   ]).then(async (result) => {
     if (result.timedout) {
       killed.value = true
@@ -474,6 +603,12 @@ function report(result: Result) {
 // Parallel execution
 // ---------------------------------------------------------------------------
 
+// kilocode_change start - report the batches so shard logs stay interpretable
+for (const [name, members] of batches) {
+  if (!files.includes(name)) continue
+  console.log(`\nFast tier ${bold(name)}: ${bold(String(members.length))} isolation-safe files in one shared process`)
+}
+// kilocode_change end
 console.log(`\nRunning ${bold(String(files.length))} test files with concurrency ${bold(String(concurrency))}`)
 if (shard) console.log(`Using balanced test shard ${shard.index}/${shard.total}`)
 if (dots) console.log(dim(legend))
@@ -560,6 +695,7 @@ if (flaky.length > 0) {
   // the bottom of the job page and in the workflow summary email.
   if (process.env.GITHUB_ACTIONS === "true") {
     for (const r of sorted) {
+      if (batches.has(r.file)) continue // kilocode_change - pseudo-file, no source path to annotate
       const repo = `packages/opencode/test/${r.file}`
       console.log(`::warning file=${repo},title=Flaky test file::passed on attempt ${r.attempts} of ${retries + 1}`)
     }
