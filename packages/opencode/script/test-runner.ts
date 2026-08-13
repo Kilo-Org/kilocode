@@ -9,6 +9,8 @@ import path from "path"
 import fs from "fs/promises"
 import { TestProfile } from "./kilocode/test-profile"
 import { TestShard } from "./kilocode/test-shard"
+import { TestBatch } from "./kilocode/test-batch"
+import batchAllowlist from "./kilocode/test-batch.json"
 import { TestCli } from "./kilocode/test-cli"
 import { remove } from "../test/kilocode/cleanup"
 
@@ -39,6 +41,7 @@ if (argv.includes("--help") || argv.includes("-h")) {
       "  --bail               Stop on first failure",
       "  --dots               Show compact dot progress",
       "  --verbose            Show full output for every file",
+      "  --no-batch           Disable batched groups; one process per file (env: KILO_TEST_NO_BATCH)", // kilocode_change
       "  -h, --help           Show this help",
       "",
       "Positional:",
@@ -105,7 +108,15 @@ if (historyFlag && historyEnv && historyFlag !== historyEnv) {
 }
 const historyDir = historyFlag ?? historyEnv
 
-const valued = new Set(["--concurrency", "--timeout", "--file-timeout", "--retries", "--profile", "--shard", "--history"])
+const valued = new Set([
+  "--concurrency",
+  "--timeout",
+  "--file-timeout",
+  "--retries",
+  "--profile",
+  "--shard",
+  "--history",
+])
 const patterns = argv.filter((arg, i) => {
   if (arg.startsWith("-")) return false
   if (i > 0 && valued.has(argv[i - 1])) return false
@@ -177,9 +188,50 @@ if (files.length === 0) {
   process.exit(0)
 }
 
+// kilocode_change start - group isolation-safe files so they share a process.
+// `--no-batch` restores strict process-per-file, which is the way to check
+// whether a suspected contamination is caused by batching.
+const batching = !argv.includes("--no-batch") && !process.env.KILO_TEST_NO_BATCH
+const allow = TestBatch.allowlist(batchAllowlist)
+// One group per lane: fewer would idle workers, more would add back spawns.
+const plan = batching
+  ? TestBatch.plan(files, allow, concurrency, shardWeight)
+  : { groups: [], isolated: files.slice(), stale: [] }
+if (plan.stale.length > 0) {
+  console.log(
+    `warn: ${plan.stale.length} test batch allowlist entr${plan.stale.length === 1 ? "y is" : "ies are"} not in this run`,
+  )
+}
+const units: Unit[] = [
+  ...plan.groups.map((group, index) => ({
+    kind: "batch" as const,
+    label: `batch ${index + 1}/${plan.groups.length} (${group.length} files)`,
+    xml: `batch_${index + 1}`,
+    files: group,
+  })),
+  ...plan.isolated.map((file) => ({
+    kind: "file" as const,
+    label: file,
+    xml: file.replace(/[/\\]/g, "_"),
+    files: [file],
+  })),
+]
+// kilocode_change end
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+
+// kilocode_change start - a work unit is one process: either a single file or a batched group
+type Unit = {
+  kind: "file" | "batch"
+  /** How the unit is named in progress lines and failure output. */
+  label: string
+  /** Filesystem-safe stem for this unit's JUnit XML file. */
+  xml: string
+  files: string[]
+}
+// kilocode_change end
 
 type Result = {
   file: string
@@ -190,6 +242,7 @@ type Result = {
   duration: number
   timedout: boolean
   attempts: number
+  limit: number // kilocode_change - the deadline this unit actually ran under
 }
 
 type Proc = ReturnType<typeof Bun.spawn>
@@ -202,9 +255,7 @@ const xmldir = ci ? path.join(os.tmpdir(), `opencode-junit-${process.pid}`) : ""
 if (ci) await fs.mkdir(xmldir, { recursive: true })
 // kilocode_change start
 const supplied = process.env[TestCli.ENV]
-const built = supplied
-  ? { binary: supplied, dir: undefined }
-  : { binary: await TestCli.build(root), dir: undefined }
+const built = supplied ? { binary: supplied, dir: undefined } : { binary: await TestCli.build(root), dir: undefined }
 
 async function cleanBinary() {
   if (!built.dir) return
@@ -213,7 +264,10 @@ async function cleanBinary() {
 // kilocode_change end
 
 const counter = { done: 0 }
-const pad = String(files.length).length
+// kilocode_change - units, not files: a batch is one line, and the isolate-on-failure
+// fallback adds units mid-run, so the denominator has to be mutable.
+const total = { value: units.length }
+const pad = String(units.length).length
 const progress = { width: 80 }
 const active = new Map<number, ReturnType<typeof Bun.spawn>>()
 const pending = new Map<number, Promise<void>>()
@@ -299,14 +353,19 @@ async function terminate(proc: Proc) {
 // Run a single test file
 // ---------------------------------------------------------------------------
 
-async function run(file: string): Promise<Result> {
-  const target = path.join("test", file)
-  const cmd = ["bun", "test", target, "--timeout", String(timeout)]
+async function run(unit: Unit): Promise<Result> {
+  // kilocode_change start - one process may now cover several files
+  const cmd = ["bun", "test", ...unit.files.map((file) => path.join("test", file)), "--timeout", String(timeout)]
+  // A group runs its files serially in one process, so its legitimate runtime
+  // scales with file count. Three per-file deadlines is generous for that and
+  // still catches a genuine hang; when it trips, the fallback re-runs each file
+  // under the real per-file deadline anyway.
+  const limit = unit.kind === "batch" ? deadline * 3 : deadline
 
   if (ci) {
-    const name = file.replace(/[/\\]/g, "_") + ".xml"
-    cmd.push("--reporter=junit", `--reporter-outfile=${path.join(xmldir, name)}`)
+    cmd.push("--reporter=junit", `--reporter-outfile=${path.join(xmldir, unit.xml + ".xml")}`)
   }
+  // kilocode_change end
 
   const start = performance.now()
   const killed = { value: false }
@@ -325,7 +384,7 @@ async function run(file: string): Promise<Result> {
   const stderr = drain(proc.stderr)
   const code = await Promise.race([
     proc.exited.then((value) => ({ timedout: false, value })),
-    Bun.sleep(deadline).then(() => ({ timedout: true, value: -1 })),
+    Bun.sleep(limit).then(() => ({ timedout: true, value: -1 })), // kilocode_change - per-unit budget
   ]).then(async (result) => {
     if (result.timedout) {
       killed.value = true
@@ -345,7 +404,7 @@ async function run(file: string): Promise<Result> {
   })
 
   return {
-    file,
+    file: unit.label, // kilocode_change - the unit's name, which for a lone file is the file
     passed: code === 0,
     code,
     stdout: output[0],
@@ -353,6 +412,7 @@ async function run(file: string): Promise<Result> {
     duration: performance.now() - start,
     timedout: killed.value,
     attempts: 1,
+    limit, // kilocode_change
   }
 }
 
@@ -412,25 +472,25 @@ function report(result: Result) {
 
   if (result.timedout) {
     console.log(
-      `[${idx}/${files.length}] ${red("TIME")} ${result.file} ${dim(`(${secs}s - exceeded ${deadline / 1000}s)`)}${tries}`,
+      `[${idx}/${total.value}] ${red("TIME")} ${result.file} ${dim(`(${secs}s - exceeded ${result.limit / 1000}s)`)}${tries}`,
     )
     return
   }
 
   if (!result.passed) {
-    console.log(`[${idx}/${files.length}] ${red("FAIL")} ${result.file} ${dim(`(${secs}s)`)}${tries}`)
+    console.log(`[${idx}/${total.value}] ${red("FAIL")} ${result.file} ${dim(`(${secs}s)`)}${tries}`)
     if (verbose && result.stderr.trim()) console.log(result.stderr)
     if (verbose && result.stdout.trim()) console.log(result.stdout)
     return
   }
 
   if (result.attempts > 1) {
-    console.log(`[${idx}/${files.length}] ${yellow("FLAKY")} ${result.file} ${dim(`(${secs}s)`)}${tries}`)
+    console.log(`[${idx}/${total.value}] ${yellow("FLAKY")} ${result.file} ${dim(`(${secs}s)`)}${tries}`)
     if (verbose && result.stdout.trim()) console.log(dim(result.stdout))
     return
   }
 
-  console.log(`[${idx}/${files.length}] ${green("PASS")} ${result.file} ${dim(`(${secs}s)`)}`)
+  console.log(`[${idx}/${total.value}] ${green("PASS")} ${result.file} ${dim(`(${secs}s)`)}`)
   if (verbose && result.stdout.trim()) console.log(dim(result.stdout))
 }
 
@@ -440,23 +500,55 @@ function report(result: Result) {
 
 console.log(`\nRunning ${bold(String(files.length))} test files with concurrency ${bold(String(concurrency))}`)
 if (shard) console.log(`Using balanced test shard ${shard.index}/${shard.total}`)
+// kilocode_change start
+if (plan.groups.length > 0) {
+  const batched = plan.groups.reduce((sum, group) => sum + group.length, 0)
+  console.log(
+    `Batching ${batched} isolation-safe files into ${plan.groups.length} processes; ${plan.isolated.length} stay isolated`,
+  )
+} else if (batching) {
+  console.log("No batchable files in this run; every file gets its own process")
+}
+// kilocode_change end
 if (dots) console.log(dim(legend))
 console.log()
 
 const start = performance.now()
 const results: Result[] = []
-const queue = TestShard.order(files, weight)
+// kilocode_change - heaviest unit first, a batch weighted by the sum of its contents.
+// Sorted here rather than via TestShard.order because that helper is string-keyed.
+const unitWeight = (unit: Unit) => unit.files.reduce((sum, file) => sum + shardWeight(file), 0)
+const queue = units.slice().sort((a, b) => unitWeight(b) - unitWeight(a) || a.label.localeCompare(b.label))
 
-const workers = Array.from({ length: Math.min(concurrency, files.length) }, async () => {
+const workers = Array.from({ length: Math.min(concurrency, units.length) }, async () => {
   while (queue.length > 0 && !stopped.value) {
-    const file = queue.shift()!
-    let result = await run(file)
+    const unit = queue.shift()!
+    let result = await run(unit)
+
+    // kilocode_change start - a failed batch proves nothing about any single
+    // file in it, so re-run its files in isolation and report those instead.
+    // Batching can then only ever cost time, never change a verdict.
+    if (!result.passed && unit.kind === "batch" && !stopped.value) {
+      console.log(`${yellow("BATCH")} ${unit.label} failed; re-running its ${unit.files.length} files in isolation`)
+      total.value += unit.files.length - 1
+      queue.unshift(
+        ...unit.files.map((file) => ({
+          kind: "file" as const,
+          label: file,
+          xml: file.replace(/[/\\]/g, "_"),
+          files: [file],
+        })),
+      )
+      continue
+    }
+    // kilocode_change end
+
     // Retry failing files up to `retries` extra times. Bugs still fail on every
     // attempt; contention-based flakes (port races, slow FS, slow spawn) recover.
     // Preserve the last attempt's stdout/stderr/duration so a truly broken file
     // still shows a useful diagnostic.
     while (!result.passed && result.attempts <= retries && !stopped.value) {
-      const retry = await run(file)
+      const retry = await run(unit)
       retry.attempts = result.attempts + 1
       result = retry
     }
