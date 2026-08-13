@@ -292,9 +292,10 @@ const KILOCODE_ROOT_EXCLUDES = new Set([
   "kilocode/indexing-startup.test.ts",
   "kilocode/kilo-sessions.test.ts",
   "kilocode/session-share.test.ts",
-  // real subprocesses / fs watchers (timing-sensitive under contention)
+  // real subprocesses / fs watchers / stall simulations (timing-sensitive under contention)
   "kilocode/background-process.test.ts",
   "kilocode/instance-vcs-watcher.test.ts",
+  "kilocode/issue-8656-stall.test.ts",
 ])
 const KILOCODE_ROOT_TIERS = 4
 const KILOCODE_ROOT_WEIGHT = 115_000
