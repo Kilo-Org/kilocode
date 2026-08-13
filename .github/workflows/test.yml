@@ -412,28 +412,44 @@ jobs:
 
   # kilocode_change start
   httpapi:
-    # kilocode_change start - shard the exerciser across processes.
+    # kilocode_change start - run the exerciser as parallel processes on one runner.
     # The exerciser drives all 315 scenarios through one process at `concurrency: 1`, and that
     # single step was 668s of this job's 720s in run 31648508417 (setup is only ~45s, and all 8
     # turbo build deps were cache hits). It cannot be parallelised in-process: `resetState` in
     # runner.ts calls `disposeApps()` and `disposeAllInstances()` between scenarios, which would
     # tear down a concurrent scenario's app. Across processes it is already safe -- environment.ts
-    # keys both the database and the XDG root on `process.pid`, so each shard is fully isolated.
-    # `test:httpapi` reads KILO_HTTPAPI_SHARD, so `bun run test:httpapi` locally still runs
-    # everything. The turbo task sets `cache: false`, so no cache key needs to know about shards.
-    # Measured locally: coverage 2s, auth 18s, effect 468s -- of which 244s was one scenario
-    # poisoning the process (see `degradesProcess` in dsl.ts), now fixed. 6 shards over the
-    # remaining ~240s of scenario work puts this job near 2m at roughly today's billed minutes,
-    # since each added shard only pays its own ~45s of setup.
-    name: HttpApi exerciser (${{ matrix.shard }}/6)
+    # keys both the database and the XDG root on `process.pid`.
+    #
+    # That first bought parallelism by fanning out to six 4vCPU runners, each running one process.
+    # It hit the target (worst shard 108s in run 31657477161, of which 37s was setup) but paid the
+    # setup six times and gave every lane 4 vCPU when a lane wants ~1.8 (measured: 182% CPU).
+    # `KILO_HTTPAPI_LANES` moves the fan-out inside the job, so setup is paid once and the vCPU
+    # match the appetite. Sizing, from that run's per-shard step times (48/51/50/54/66/56s = 325s of
+    # lane-work behind a 37s setup) and the lane throughput curve in httpapi-lanes.ts, which
+    # measures efficiency against core demand over capacity -- 0.75 at 0.72, 0.55 at 1.08. In x64
+    # 2vCPU-minute units:
+    #   6 x  4vCPU, 1 lane each: wall 108s, billed 9.52 * 4  = 38
+    #   1 x  8vCPU, 4 lanes:     wall 145s, billed 2.42 * 8  = 19
+    #   1 x 16vCPU, 8 lanes:     wall 105s, billed 1.75 * 16 = 28
+    #   1 x 32vCPU, 8 lanes:     wall  85s, billed 1.42 * 32 = 45
+    # 16 vCPU over 8 lanes is 2 vCPU per lane -- the same ratio the unit matrix holds -- and is the
+    # only option that keeps this job inside its 2m target while cutting both machines and spend.
+    # 32 vCPU buys 20s for 60% more money; 8 vCPU is cheapest but 2m25.
+    #
+    # That 105s is a projection and the efficiency term is the soft part of it: 8 lanes want 14.4 of
+    # the 16 vCPU, so a pessimistic 0.5 would land at 2m05 instead. Worth it either way -- this job
+    # has ~3m of slack against the unit matrix and cannot become the critical path at any of these
+    # numbers. What is measured, not projected: the whole suite over 8 lanes on one 10-core laptop,
+    # 107s of work, all three gates green.
+    #
+    # `test:httpapi` still runs everything sequentially when KILO_HTTPAPI_LANES is unset, so `bun
+    # run test:httpapi` locally is unchanged. The turbo task sets `cache: false`, so no cache key
+    # needs to know about lanes.
+    name: HttpApi exerciser
     needs: changes
     if: needs.changes.outputs.general == 'true'
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: blacksmith-16vcpu-ubuntu-2404
     timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3, 4, 5, 6]
     # kilocode_change end
     defaults:
       run:
@@ -457,10 +473,10 @@ jobs:
         uses: actions/cache@v5
         with:
           path: .turbo/cache
-          # kilocode_change start - shard-scoped primary key so six concurrent shards do not all
-          # race to save the same entry; the shared restore-keys below still let them reuse each
-          # other's build cache from previous runs.
-          key: turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-httpapi-${{ matrix.shard }}-${{ github.sha }}
+          # kilocode_change start - job-scoped primary key. This was shard-scoped when six shards
+          # raced to save the same entry; one job cannot race itself, but the key stays distinct
+          # from the unit matrix's, and the shared restore-keys below still let it reuse theirs.
+          key: turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-httpapi-${{ github.sha }}
           # kilocode_change end
           restore-keys: |
             turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-httpapi-
@@ -468,16 +484,13 @@ jobs:
             turbo-${{ runner.os }}-
 
       - name: Check generated client
-        # kilocode_change start - one shard is enough; this checks the committed client, not the shard
-        if: runner.os == 'Linux' && matrix.shard == 1
-        # kilocode_change end
         working-directory: packages/client
         run: bun run check:generated
       - name: Run HttpApi exerciser gates
         run: bun turbo test:httpapi --filter='@kilocode/cli'
         env:
           KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: "true" # kilocode_change - a watcher per scenario instance is too heavy for the exerciser
-          KILO_HTTPAPI_SHARD: ${{ matrix.shard }}/6 # kilocode_change - this shard's slice of the scenario list
+          KILO_HTTPAPI_LANES: "8" # kilocode_change - 8 scenario processes on this runner's 16 vCPU; see the job comment
 
   # kilocode_change end
 
