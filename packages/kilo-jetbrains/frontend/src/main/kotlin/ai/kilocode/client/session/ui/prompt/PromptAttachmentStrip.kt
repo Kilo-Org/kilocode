@@ -23,6 +23,9 @@ class PromptAttachmentStrip(
     private val chips = LinkedHashMap<String, PromptAttachmentChip>()
 
     init {
+        // Transparent so the prompt shell background shows through instead of the strip
+        // painting its own panel background above the input surface.
+        isOpaque = false
         border = JBUI.Borders.emptyBottom(UiStyle.Gap.sm())
         isVisible = false
     }

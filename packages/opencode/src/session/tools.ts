@@ -5,6 +5,7 @@ import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { Provider } from "@/provider/provider"
 import { ProviderTransform } from "@/provider/transform"
 import { MCP } from "@/mcp"
+import { McpCatalog } from "@/mcp/catalog"
 import { Permission } from "@/permission"
 import { Tool } from "@/tool/tool"
 import { ToolJsonSchema } from "@/tool/json-schema"
@@ -29,6 +30,7 @@ import { Config } from "@/config/config"
 import { PermissionProvenance } from "@/kilocode/permission/provenance"
 // kilocode_change end
 import { isRecord } from "@/util/record"
+import { RuntimeFlags } from "@/effect/runtime-flags"
 
 const MCP_RESOURCE_TOOLS = {
   list: "list_mcp_resources",
@@ -71,6 +73,8 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   const swe = SwePruner.enabled(cfg)
   const permissionOrigins = cfg.permission_origins
   // kilocode_change end
+  const flags = yield* RuntimeFlags.Service
+  const restricted = yield* SandboxPolicy.networkRestricted(input.session.id) // kilocode_change
 
   const context = (args: Record<string, unknown>, options: ToolExecutionOptions): Tool.Context => ({
     sessionID: input.session.id,
@@ -137,6 +141,8 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
     providerID: input.model.providerID,
     family: input.model.family, // kilocode_change
     agent: input.agent,
+    permission: input.session.permission,
+    networkRestricted: restricted, // kilocode_change - let the registry suppress code-mode in restricted sessions
   })) {
     // kilocode_change start - SWE-Pruner (experimental): advertise the focus parameter on prunable tools
     const pruner = swe && SwePruner.prunable(item.id)
@@ -188,7 +194,6 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
     })
   }
 
-  const restricted = yield* SandboxPolicy.networkRestricted(input.session.id) // kilocode_change
   const hasMcpResourceServer = Object.values(yield* mcp.clients()).some(
     (client) => !!client.getServerCapabilities()?.resources,
   )
@@ -441,114 +446,116 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
     })
   }
 
+  if (flags.experimentalCodeMode) return tools
+
   const mcpTools = restricted ? {} : yield* mcp.tools() // kilocode_change
+  for (const [key, entry] of Object.entries(mcpTools)) {
+    const item = McpCatalog.convertTool(entry.def, entry.client, entry.timeout)
+    const execute = item.execute
+    if (!execute) continue
 
-  for (const [key, item] of Object.entries(mcpTools)) { // kilocode_change
-  const execute = item.execute
-  if (!execute) continue
+    const schema = yield* Effect.promise(() => Promise.resolve(asSchema(item.inputSchema).jsonSchema))
+    const transformed = ProviderTransform.schema(input.model, { ...schema, properties: schema.properties ?? {} })
+    item.inputSchema = jsonSchema(transformed)
+    item.execute = (args, opts) =>
+      run.promise(
+        Effect.gen(function* () {
+          const ctx = context(args, opts)
+          yield* plugin.trigger(
+            "tool.execute.before",
+            { tool: key, sessionID: ctx.sessionID, callID: opts.toolCallId },
+            { args },
+          )
+          // kilocode_change start
+          const result: Awaited<ReturnType<NonNullable<typeof execute>>> = yield* SandboxPolicy.executeMcp(
+            ctx.sessionID,
+            entry, // kilocode_change - retain the native entry's local/remote network authority marker
+            Effect.gen(function* () {
+              yield* ctx.ask({ permission: key, metadata: {}, patterns: ["*"], always: ["*"] })
+              return yield* Effect.promise(() => execute(args, opts))
+            }),
+          ).pipe(
+            // kilocode_change end
+            Effect.withSpan("Tool.execute", {
+              attributes: {
+                "tool.name": key,
+                "tool.call_id": opts.toolCallId,
+                "session.id": ctx.sessionID,
+                "message.id": input.processor.message.id,
+              },
+            }),
+          )
+          yield* plugin.trigger(
+            "tool.execute.after",
+            { tool: key, sessionID: ctx.sessionID, callID: opts.toolCallId, args },
+            result,
+          )
 
-  const schema = yield* Effect.promise(() => Promise.resolve(asSchema(item.inputSchema).jsonSchema))
-  const transformed = ProviderTransform.schema(input.model, { ...schema, properties: schema.properties ?? {} })
-  item.inputSchema = jsonSchema(transformed)
-  item.execute = (args, opts) =>
-    run.promise(
-      Effect.gen(function* () {
-        const ctx = context(args, opts)
-        yield* plugin.trigger(
-          "tool.execute.before",
-          { tool: key, sessionID: ctx.sessionID, callID: opts.toolCallId },
-          { args },
-        )
-        // kilocode_change start
-        const result: Awaited<ReturnType<NonNullable<typeof execute>>> = yield* SandboxPolicy.executeMcp(
-          ctx.sessionID,
-          item,
-          Effect.gen(function* () {
-            yield* ctx.ask({ permission: key, metadata: {}, patterns: ["*"], always: ["*"] })
-            return yield* Effect.promise(() => execute(args, opts))
-          }),
-        ).pipe(
-          // kilocode_change end
-          Effect.withSpan("Tool.execute", {
-            attributes: {
-              "tool.name": key,
-              "tool.call_id": opts.toolCallId,
-              "session.id": ctx.sessionID,
-              "message.id": input.processor.message.id,
-            },
-          }),
-        )
-        yield* plugin.trigger(
-          "tool.execute.after",
-          { tool: key, sessionID: ctx.sessionID, callID: opts.toolCallId, args },
-          result,
-        )
-
-        const textParts: string[] = []
-        const attachments: Omit<SessionV1.FilePart, "id" | "sessionID" | "messageID">[] = []
-        for (const contentItem of result.content) {
-          if (contentItem.type === "text") textParts.push(contentItem.text)
-          else if (contentItem.type === "image") {
-            attachments.push({
-              type: "file",
-              mime: contentItem.mimeType,
-              url: `data:${contentItem.mimeType};base64,${contentItem.data}`,
-            })
-          } else if (contentItem.type === "resource") {
-            const { resource } = contentItem
-            if (resource.text) textParts.push(resource.text)
-            if (resource.blob) {
-              const mime = resource.mimeType ?? "application/octet-stream"
-              const size = base64Size(resource.blob)
-              if (!SUPPORTED_MCP_RESOURCE_ATTACHMENT_MIMES.has(mime)) {
-                textParts.push(
-                  `[Binary MCP resource omitted: ${resource.uri} (${mime}, ${formatBytes(size)}) is not a supported attachment type]`,
-                )
-                continue
-              }
-              if (size > MAX_MCP_RESOURCE_BLOB_BYTES) {
-                textParts.push(
-                  `[Binary MCP resource omitted: ${resource.uri} (${mime}, ${formatBytes(size)}) exceeds ${formatBytes(MAX_MCP_RESOURCE_BLOB_BYTES)}]`,
-                )
-                continue
-              }
+          const textParts: string[] = []
+          const attachments: Omit<SessionV1.FilePart, "id" | "sessionID" | "messageID">[] = []
+          for (const contentItem of result.content) {
+            if (contentItem.type === "text") textParts.push(contentItem.text)
+            else if (contentItem.type === "image") {
               attachments.push({
                 type: "file",
-                mime,
-                url: `data:${mime};base64,${resource.blob}`,
-                filename: resource.uri,
+                mime: contentItem.mimeType,
+                url: `data:${contentItem.mimeType};base64,${contentItem.data}`,
               })
+            } else if (contentItem.type === "resource") {
+              const { resource } = contentItem
+              if (resource.text) textParts.push(resource.text)
+              if (resource.blob) {
+                const mime = resource.mimeType ?? "application/octet-stream"
+                const size = base64Size(resource.blob)
+                if (!SUPPORTED_MCP_RESOURCE_ATTACHMENT_MIMES.has(mime)) {
+                  textParts.push(
+                    `[Binary MCP resource omitted: ${resource.uri} (${mime}, ${formatBytes(size)}) is not a supported attachment type]`,
+                  )
+                  continue
+                }
+                if (size > MAX_MCP_RESOURCE_BLOB_BYTES) {
+                  textParts.push(
+                    `[Binary MCP resource omitted: ${resource.uri} (${mime}, ${formatBytes(size)}) exceeds ${formatBytes(MAX_MCP_RESOURCE_BLOB_BYTES)}]`,
+                  )
+                  continue
+                }
+                attachments.push({
+                  type: "file",
+                  mime,
+                  url: `data:${mime};base64,${resource.blob}`,
+                  filename: resource.uri,
+                })
+              }
             }
           }
-        }
 
-        const truncated = yield* truncate.output(textParts.join("\n\n"), {}, input.agent)
-        const metadata = {
-          ...result.metadata,
-          truncated: truncated.truncated,
-          ...(truncated.truncated && { outputPath: truncated.outputPath }),
-        }
+          const truncated = yield* truncate.output(textParts.join("\n\n"), {}, input.agent)
+          const metadata = {
+            ...result.metadata,
+            truncated: truncated.truncated,
+            ...(truncated.truncated && { outputPath: truncated.outputPath }),
+          }
 
-        const output = {
-          title: "",
-          metadata,
-          output: truncated.content,
-          attachments: attachments.map((attachment) => ({
-            ...attachment,
-            id: PartID.ascending(),
-            sessionID: ctx.sessionID,
-            messageID: input.processor.message.id,
-          })),
-          content: result.content,
-        }
-        if (opts.abortSignal?.aborted) {
-          yield* input.processor.completeToolCall(opts.toolCallId, output)
-        }
-        return output
-      }),
-    )
-  tools[key] = item
-}
+          const output = {
+            title: "",
+            metadata,
+            output: truncated.content,
+            attachments: attachments.map((attachment) => ({
+              ...attachment,
+              id: PartID.ascending(),
+              sessionID: ctx.sessionID,
+              messageID: input.processor.message.id,
+            })),
+            content: result.content,
+          }
+          if (opts.abortSignal?.aborted) {
+            yield* input.processor.completeToolCall(opts.toolCallId, output)
+          }
+          return output
+        }),
+      )
+    tools[key] = item
+  }
 
   return tools
 })
