@@ -871,7 +871,18 @@ const scenarios: Scenario[] = [
       object(body)
       object(body.data)
       check(typeof body.data.id === "string", "permission create should return an ID")
-      check(body.data.effect === "ask", "permission create should create a pending request")
+      // kilocode_change start - report the effect we actually got. This assertion flakes on CI
+      // (main runs 31427883185, 31454458256 and 31605385265 all failed here, unsharded) and the
+      // bare message could not distinguish the two causes, which need opposite fixes:
+      //   effect=allow -> a config or saved rule out-ranked the built-in `read *.env -> ask`
+      //   effect=deny  -> the session's agent did not resolve, so PermissionV2 fell back to its
+      //                   `* * deny` missing-agent ruleset (a startup race, not a config leak)
+      // Seeded sessions here do not pin an agent, so both are reachable.
+      check(
+        body.data.effect === "ask",
+        `permission create should create a pending request; got effect=${JSON.stringify(body.data.effect)}`,
+      )
+      // kilocode_change end
     }),
   http.protected
     .get("/api/session/{sessionID}/permission", "v2.session.permission.list")
