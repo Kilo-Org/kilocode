@@ -49,7 +49,7 @@ test("headless prompts preserve the agent selected when the session was created"
       const session = (await created.json()) as { id: string; agent?: string }
       expect(session.agent).toBe("test-engineer")
 
-      const prompted = await app.request(`/session/${session.id}/prompt`, {
+      const prompted = await app.request(`/session/${session.id}/message`, {
         method: "POST",
         headers,
         body: JSON.stringify({
