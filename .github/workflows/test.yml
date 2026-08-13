@@ -65,8 +65,9 @@ jobs:
           fi
           echo 'general=true' >> "$GITHUB_OUTPUT"
           # kilocode_change start - rebalanced shard counts: Linux 8 CLI shards + a dedicated
-          # packages job, Windows 4->6. Duration weighting alone could not get Linux under ~5m,
-          # for two measured reasons (CI run 31648508417, Linux at 4 shards):
+          # packages job, Windows consolidated onto one big runner (see below). Duration weighting
+          # alone could not get Linux under ~5m, for two measured reasons (CI run 31648508417,
+          # Linux at 4 shards):
           #   1. Shard 1 was the straggler at 6m51s against ~4m25s for its siblings, purely
           #      because it also ran every non-CLI package test. Those now get their own job,
           #      which makes the CLI shards symmetric and lets shard count actually buy time.
@@ -78,38 +79,52 @@ jobs:
           #      6 -> 3.78m, 7 -> 3.09m, 8 -> 2.66m. 8 is the first count under the 2m15-2m45
           #      target, hence 8 rather than 6.
           #
-          # Windows went 6 -> 10 -> 7. The 10 was projected from a 6-shard anchor, assuming
-          # Windows was throughput-bound so wall would scale close to 1/shards. Run
-          # 31657477161 measured that assumption and refuted it. At 10 shards the worst shard
+          # Windows went 6 -> 10 -> 7 -> ONE 16-vCPU runner. The 10 was projected from a 6-shard
+          # anchor, assuming Windows was throughput-bound so wall would scale close to 1/shards.
+          # Run 31657477161 measured that assumption and refuted it. At 10 shards the worst shard
           # is 5m10s: 188s of tests behind 118s of fixed per-shard cost, 83s of which is Setup
           # Bun (Windows skips the dep cache deliberately -- see setup-bun/action.yml).
           # Summing the ten shards gives ~1315s of test work, so balanced wall is
           # 118 + 1315/N -- but real wall is bounded below by 118s + the heaviest single file,
           # and cli/run/run-process.test.ts alone accounts for 188s of that worst shard:
           #   N=6 -> 337s   N=7 -> 306s   N=8 -> 306s   N=10 -> 306s   N=14 -> 306s
-          # 7 is the knee. Shards past it are billed Windows minutes buying zero wall clock,
-          # so 10 -> 7 costs nothing. Reaching the 2m45-3m15 target is not a shard-count
-          # problem at all: 118s of overhead against a 195s ceiling leaves a 77s test budget,
-          # and six files individually exceed it. Cutting the fixed overhead and subdividing
-          # those files are the only levers left -- sharding is exhausted.
+          # Past N=7 extra shards buy zero wall clock. The reason is that the 118s is paid N
+          # times over: sharding buys parallelism by duplicating the fixed cost.
           #
-          # Deliberately NOT changed: per-shard concurrency. PR #13077 throttled Windows CLI tests
+          # Scaling UP instead of OUT pays that 118s once. Blacksmith bills strictly by
+          # vCPU x minutes (docs: 1 Windows 2vCPU minute = 2 x64 2vCPU minutes, applied
+          # proportionally at higher vCPU counts), so with wall = overhead + max(heaviest file,
+          # work/lanes), in x64 2vCPU-minute units:
+          #   7 x  4vCPU, 2 lanes each: wall 306s, billed (1315 + 7*118)/60 * 4  = 143
+          #   1 x  8vCPU, 4 lanes:      wall 447s, billed 7.45 * 8               =  60
+          #   1 x 16vCPU, 8 lanes:      wall 306s, billed 5.10 * 16              =  82
+          #   1 x 32vCPU, 16 lanes:     wall 306s, billed 5.10 * 32              = 163
+          # 16 vCPU is the pick: same 306s wall as 7 shards for 43 percent less, because six
+          # of the seven Setup Bun + install cycles stop existing. 32 buys nothing -- at 8+
+          # lanes the wall is already pinned by the single heaviest file, not by throughput.
+          #
+          # Reaching the 2m45-3m15 target is still not a parallelism problem: 118s of overhead
+          # against a 195s ceiling leaves a 77s test budget and six files individually exceed
+          # it. Cutting the fixed overhead and subdividing those files are the only levers left.
+          #
+          # Held constant across that change: vCPU per lane. PR #13077 throttled Windows CLI tests
           # to KILO_TEST_CONCURRENCY=2 with a 600s per-file deadline because the default 4 gave
           # heavy real-server files ~1 vCPU each and blew their per-test timeouts -- Windows was
-          # ~62 percent of test-job failures. The 1315s of work measured above was measured WITH
-          # that throttle, so the numbers above already assume it. That base predates this
-          # branch: merging main must keep the KILO_TEST_CONCURRENCY and KILO_TEST_FILE_TIMEOUT
-          # env wiring on the Run CLI unit tests step -- a clean auto-merge silently dropped it
-          # once already -- or the shard counts buy speed back by reintroducing the flakiness
-          # #13077 fixed. Windows also keeps running every test file. A curated
-          # Windows profile like the darwin one would be the biggest single win, but it trades
-          # away what test-profile.ts calls the backstop for platform-neutral behavior, which is
-          # a coverage decision rather than a CI tuning one.
-          # Generated rather than written out: 17 entries on one line is not reviewable.
+          # ~62 percent of test-job failures. The fix was really 2 vCPU per lane, so the 16-vCPU
+          # runner runs 8 lanes and the per-lane budget is unchanged; see the concurrency comment
+          # on the Run CLI unit tests step. The 1315s of work above was measured under that same
+          # per-lane budget, so the model still holds. That base predates this branch: merging
+          # main must keep the KILO_TEST_CONCURRENCY and KILO_TEST_FILE_TIMEOUT env wiring on the
+          # Run CLI unit tests step -- a clean auto-merge silently dropped it once already -- or
+          # Windows reintroduces the flakiness #13077 fixed. Windows also keeps running every test
+          # file. A curated Windows profile like the darwin one would be the biggest single win,
+          # but it trades away what test-profile.ts calls the backstop for platform-neutral
+          # behavior, which is a coverage decision rather than a CI tuning one.
+          # Generated rather than written out: 11 entries on one line is not reviewable.
           LINUX_HOST=blacksmith-4vcpu-ubuntu-2404
-          WINDOWS_HOST=blacksmith-4vcpu-windows-2025
+          WINDOWS_HOST=blacksmith-16vcpu-windows-2025
           LINUX_SHARDS=8
-          WINDOWS_SHARDS=7
+          WINDOWS_SHARDS=1
           # os host index total packages
           shard() { printf '{"os":"%s","index":%s,"total":%s,"host":"%s","run":true,"packages":%s},' "$1" "$3" "$4" "$2" "$5"; }
           settings="$(
@@ -296,12 +311,15 @@ jobs:
           KILO_TEST_PROFILE: ${{ matrix.settings.os == 'macos' && 'darwin' || '' }}
           KILO_TEST_SHARD: ${{ format('{0}/{1}', matrix.settings.index, matrix.settings.total) }}
           KILO_TEST_HISTORY_DIR: ${{ matrix.settings.os == 'macos' && '' || '.artifacts/unit' }} # kilocode_change - feed observed durations into the sharder (runner cwd is packages/opencode, so this is runner-relative)
-          # kilocode_change - cap parallelism on the 4-vCPU Windows runner. At the default
-          # min(4, cpus)=4, four heavy real-server test files share 4 vCPUs (~1 each) and blow
-          # their per-test timeouts; 2 gives each process real CPU headroom. Windows carries more
-          # shards to absorb the lower per-shard parallelism. Linux/macOS (not timeout
+          # kilocode_change - pin Windows parallelism to 2 vCPU per lane. What #13077 actually
+          # fixed was per-lane starvation: on a 4-vCPU runner the default min(4, cpus)=4 gave four
+          # heavy real-server files ~1 vCPU each and they blew their per-test timeouts, so it was
+          # throttled to 2 lanes = 2 vCPU each. That ratio, not the number 2, is the constraint.
+          # Windows is now one 16-vCPU runner instead of seven 4-vCPU shards, so 8 lanes keeps
+          # exactly the same 2 vCPU per lane while doing all the work in one job. Raising lanes
+          # past 16/2 would re-create the starvation #13077 diagnosed. Linux/macOS (not timeout
           # offenders; macOS is a single unsharded job) keep the default.
-          KILO_TEST_CONCURRENCY: ${{ matrix.settings.os == 'windows' && '2' || '' }}
+          KILO_TEST_CONCURRENCY: ${{ matrix.settings.os == 'windows' && '8' || '' }}
           # kilocode_change - raise the per-file kill deadline on Windows only. Heavy real-server
           # files run ~230-270s serially there (vs ~40s on macOS/Linux), leaving only ~30s under
           # the 300s default; 600s gives healthy-but-slow files real margin without masking hangs
