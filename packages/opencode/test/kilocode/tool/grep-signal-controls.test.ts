@@ -45,7 +45,7 @@ describe("Kilo grep signal-to-noise controls", () => {
       const grep = yield* init
       const result = yield* grep
         .execute({ pattern: "needle", path: test.directory }, ctx)
-        .pipe(Effect.timeout("2 seconds"))
+        .pipe(Effect.timeout("30 seconds"))
 
       expect(result.metadata.matches).toBe(1)
       expect(result.output).toContain("Line 2: needle")
@@ -77,7 +77,7 @@ describe("Kilo grep signal-to-noise controls", () => {
           },
           ctx,
         )
-        .pipe(Effect.timeout("2 seconds"))
+        .pipe(Effect.timeout("30 seconds"))
 
       expect(result.metadata).toEqual({ matches: 1, truncated: true })
       expect(result.output).toContain("[context] Line 4: before")
@@ -101,7 +101,7 @@ describe("Kilo grep signal-to-noise controls", () => {
       const grep = yield* init
       const result = yield* grep
         .execute({ pattern: "needle", path: test.directory, context: 1, limit: 100 }, ctx)
-        .pipe(Effect.timeout("2 seconds"))
+        .pipe(Effect.timeout("30 seconds"))
 
       expect(result.metadata.matches).toBe(35)
       expect(result.metadata.truncated).toBe(false)

@@ -383,3 +383,66 @@ test("keeps organization catalog errors from silently falling back to personal m
   expect(calls[0]).toContain("/api/gateway/transcription-models")
   expect(headers[0]?.get("X-KILOCODE-ORGANIZATIONID")).toBe("org-1")
 })
+
+test("omits cost when pricing contains negative values (dynamic/auto-routed pricing)", async () => {
+  const orig = globalThis.fetch
+  stubFetch(
+    async () =>
+      new Response(
+        JSON.stringify({
+          data: [
+            {
+              id: "openrouter/auto",
+              name: "Auto Router",
+              context_length: 128000,
+              max_completion_tokens: 16384,
+              architecture: {
+                input_modalities: ["text"],
+                output_modalities: ["text"],
+              },
+              supported_parameters: ["tools"],
+              pricing: {
+                prompt: "-1",
+                completion: "-1",
+              },
+            },
+            {
+              id: "test/fixed-price",
+              name: "Fixed Price Model",
+              context_length: 128000,
+              max_completion_tokens: 16384,
+              architecture: {
+                input_modalities: ["text"],
+                output_modalities: ["text"],
+              },
+              supported_parameters: ["tools"],
+              pricing: {
+                prompt: "0.000003",
+                completion: "0.000015",
+                input_cache_read: "0.0000003",
+                input_cache_write: "-1",
+              },
+            },
+          ],
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        },
+      ),
+  )
+
+  const result = await fetchKiloModels({})
+
+  ;(globalThis as any).fetch = orig
+
+  expect(result.error).toBeUndefined()
+  expect(result.models["openrouter/auto"]).toBeDefined()
+  expect(result.models["openrouter/auto"].cost).toBeUndefined()
+  expect(result.models["test/fixed-price"].cost).toEqual({
+    input: 3,
+    output: 15,
+    cache_read: 0.3,
+  })
+})
+

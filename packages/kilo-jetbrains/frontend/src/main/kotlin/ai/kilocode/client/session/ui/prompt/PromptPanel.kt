@@ -42,6 +42,7 @@ import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.actionSystem.IdeActions
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
+import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.SpellCheckingEditorCustomizationProvider
 import com.intellij.openapi.editor.colors.CodeInsightColors
 import com.intellij.openapi.editor.colors.TextAttributesKey
@@ -126,11 +127,14 @@ class PromptPanel(
         private val INVALID_KEY = CodeInsightColors.WRONG_REFERENCES_ATTRIBUTES
     }
 
-    val mode = ModePicker()
+    // Prompt-bar pickers blend into the prompt background when idle and only show the standard
+    // hover fill on pointer-over (idleFill = null paints nothing behind the label).
+    val mode = ModePicker().apply { idleFill = null }
     val model = ModelPicker().apply {
         placement = ModelPicker.Placement.ABOVE
+        idleFill = null
     }
-    val reasoning = ReasoningPicker()
+    val reasoning = ReasoningPicker().apply { idleFill = null }
     var onReset: () -> Unit = {}
     var onChange: () -> Unit = {}
     var onAutoApproveToggle: (Boolean) -> Unit = {}
@@ -256,6 +260,7 @@ class PromptPanel(
     private var ready = false
     private var enhancing = false
     private var request = 0L
+    private var deferred = false
 
     override val isSendEnabled: Boolean
         get() = ready && !submitting && (text().isNotEmpty() || attachments.isNotEmpty())
@@ -270,11 +275,21 @@ class PromptPanel(
         editor.addDocumentListener(object : DocumentListener {
             override fun documentChanged(e: DocumentEvent) {
                 invalidateEnhancement()
+                if (e.document.isInBulkUpdate) {
+                    deferEditorSync()
+                    syncButton()
+                    onChange()
+                    return
+                }
                 syncEditorHeight()
                 triggerCompletion(e)
                 syncHighlights()
                 syncButton()
                 onChange()
+            }
+
+            override fun bulkUpdateFinished(document: Document) {
+                deferEditorSync()
             }
         })
         shell.add(strip, BorderLayout.NORTH)
@@ -399,7 +414,7 @@ class PromptPanel(
     @RequiresEdt
     private fun chrome(ed: EditorEx) {
         if (ed.isDisposed) return
-        style.applyPromptToEditor(ed)
+        style.applyPromptToEditor(ed, SessionUiStyle.View.Prompt.bgColor(style))
         if (ed.isDisposed) return
     }
 
@@ -485,11 +500,12 @@ class PromptPanel(
     @RequiresEdt
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
-        background = style.editorScheme.defaultBackground
-        shell.background = style.editorScheme.defaultBackground
+        val bg = SessionUiStyle.View.Prompt.bgColor(style)
+        background = bg
+        shell.background = bg
         style.applyTranscriptToField(editor)
         editor.getEditor(false)?.let(::chrome)
-        editor.background = style.editorBackground
+        editor.background = bg
         syncEditorHeight()
         syncAutoApprove()
         syncHighlights()
@@ -937,6 +953,10 @@ class PromptPanel(
 
     @RequiresEdt
     private fun syncEditorHeight() {
+        if (editor.document.isInBulkUpdate) {
+            deferEditorSync()
+            return
+        }
         val before = editor.preferredSize.height
         val lower = editor.minimumSize.height
         editor.setPreferredSize(null)
@@ -966,6 +986,19 @@ class PromptPanel(
         editor.minimumSize = Dimension(0, height)
         revalidate()
         repaint()
+    }
+
+    @RequiresEdt
+    private fun deferEditorSync() {
+        if (deferred) return
+        deferred = true
+        ApplicationManager.getApplication().invokeLater {
+            deferred = false
+            if (project.isDisposed || editor.document.isInBulkUpdate) return@invokeLater
+            syncEditorHeight()
+            syncHighlights()
+            syncButton()
+        }
     }
 
     @RequiresEdt

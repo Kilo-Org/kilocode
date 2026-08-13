@@ -76,7 +76,7 @@ type OpenRouterModel = z.infer<typeof openRouterModelSchema>
 function parseApiPrice(price: string | null | undefined): number | undefined {
   if (!price) return undefined
   const parsed = parseFloat(price)
-  if (isNaN(parsed)) return undefined
+  if (isNaN(parsed) || parsed < 0) return undefined
   return parsed * 1_000_000 // Convert $/token → $/M tokens
 }
 

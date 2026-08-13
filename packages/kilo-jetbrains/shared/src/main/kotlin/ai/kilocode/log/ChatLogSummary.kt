@@ -72,8 +72,20 @@ object ChatLogSummary {
         prompt.agent?.takeIf { it.isNotBlank() }?.let { out += "agent=$it" }
         model(prompt.providerID, prompt.modelID)?.let { out += "model=$it" }
         prompt.variant?.takeIf { it.isNotBlank() }?.let { out += "variant=$it" }
+        prompt.editorContext?.let { ctx ->
+            out += "editorContext=true"
+            ctx.activeFile?.let { file -> out += editorFile("activeFile", file) }
+            ctx.openTabs?.size?.takeIf { it > 0 }?.let { out += "openTabs=$it" }
+            ctx.visibleFiles?.size?.takeIf { it > 0 }?.let { out += "visibleFiles=$it" }
+            ctx.shell?.takeIf { it.isNotBlank() }?.let { out += "shell=$it" }
+        }
         preview(text)?.let { out += "preview=\"$it\"" }
         return out.joinToString(" ")
+    }
+
+    private fun editorFile(key: String, file: String): String {
+        if (mode() == Mode.OFF) return "${key}Hash=${hash(file)}"
+        return "$key=\"${clean(file)}\""
     }
 
     fun history(items: List<MessageWithPartsDto>): String {

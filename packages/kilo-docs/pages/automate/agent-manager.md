@@ -114,6 +114,19 @@ A new git worktree is created from your current branch. The agent works in isola
 
 To create a worktree immediately from the default base branch, press `Cmd+Shift+N` (macOS) / `Ctrl+Shift+N` (Windows/Linux).
 
+### Slash Commands in the Worktree Prompt
+
+The new worktree prompt supports slash commands for its configuration options, so you can change them from the keyboard:
+
+| Command | Aliases | Action |
+|---|---|---|
+| `/models` | `/model` | Open the model selector |
+| `/agents` | `/modes` | Open the agent selector |
+| `/variant` | `/variants`, `/reasoning`, `/thinking` | Open the reasoning effort selector |
+| `/sandbox` | — | Toggle the sandbox for the new worktree |
+
+Navigate the menu with the arrow keys, select with `Enter` or `Tab`, and close it with `Escape`. Focus returns to the prompt after a selection or cancellation. `/agents` appears only when multiple agents are available, `/variant` only when the selected model has reasoning variants, and `/sandbox` only when sandbox controls are enabled.
+
 ### Multi-Version Mode
 
 You can run up to 4 parallel implementations of the same prompt across separate worktrees:

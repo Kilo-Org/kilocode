@@ -3,8 +3,8 @@ export const dict = {
   "agentManager.sidebar.collapse": "بستن نوار کناری",
   "agentManager.sidebar.expand": "نمایش نوار کناری",
   "agentManager.section.worktrees": "WORKTREES",
-  "agentManager.section.sessions": "SESSIONS",
-  "agentManager.projects": "PROJECTS",
+  "agentManager.section.sessions": "جلسات",
+  "agentManager.projects": "پروژه‌ها",
   "agentManager.project.add": "افزودن پروژه",
   "agentManager.project.remove": "حذف از Agent Manager",
   "agentManager.project.trust": "اعتماد",
@@ -207,7 +207,7 @@ export const dict = {
   "agentManager.review.imageUnavailable": "پیش‌نمایش تصویر برای این نمونه جلسه در دسترس نیست.",
   "agentManager.review.endOfLongDiff": "به انتها رسیدید!",
 
-  "agentManager.import.pullRequest": "Pull Request",
+  "agentManager.import.pullRequest": "درخواست ادغام",
   "agentManager.import.pastePrUrl": "URL درخواست PR را وارد کنید...",
   "agentManager.import.open": "باز کردن",
   "agentManager.import.branches": "شاخه‌ها",
@@ -218,4 +218,9 @@ export const dict = {
   "agentManager.import.noBranchesFound": "هیچ شاخه‌ای یافت نشد.",
   "agentManager.import.noBranchesHint": "یک URL درخواست ادغام را در بالا جای‌گذاری کنید یا یک worktree جدید بسازید.",
   "agentManager.import.failed": "وارد کردن ناموفق بود",
+
+  "agentManager.pr.error.gh_auth.title": "احراز هویت GitHub لازم است",
+  "agentManager.pr.error.gh_auth.description": "برای بازیابی وضعیت PR، دستور 'gh auth login' را در ترمینال اجرا کنید.",
+  "agentManager.pr.error.gh_missing.title": "GitHub CLI نصب نشده است",
+  "agentManager.pr.error.gh_missing.description": "برای فعال کردن وضعیت PR، GitHub CLI را نصب کنید.",
 }
