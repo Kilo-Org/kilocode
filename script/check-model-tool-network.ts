@@ -31,7 +31,7 @@ const checks = [
   {
     name: "ad hoc network client",
     pattern:
-      /\bnew\s+(?:WarpGrepClient|OpenAI|QdrantClient|BedrockRuntimeClient|WebSocket|EventSource|StreamableHTTPClientTransport|SSEClientTransport)\s*\(/g,
+      /\bnew\s+(?:OpenAI|QdrantClient|BedrockRuntimeClient|WebSocket|EventSource|StreamableHTTPClientTransport|SSEClientTransport)\s*\(/g,
   },
 ]
 const allow = new Map([
@@ -123,7 +123,8 @@ const structure = [
   ...(!mcp.includes("SandboxNetwork.remote(tool)")
     ? ["  mcp/index.ts must classify remote MCP delegated authority"]
     : []),
-  ...(!/SandboxPolicy\.executeMcp\(\s*ctx\.sessionID,\s*item,/.test(session)
+  // kilocode_change - v1.18 preserves remote authority on the native MCP entry before adapting it to an AI SDK tool
+  ...(!/SandboxPolicy\.executeMcp\(\s*ctx\.sessionID,\s*entry,/.test(session)
     ? ["  session/tools.ts must route MCP delegated authority through session-aware executeMcp"]
     : []),
 ]

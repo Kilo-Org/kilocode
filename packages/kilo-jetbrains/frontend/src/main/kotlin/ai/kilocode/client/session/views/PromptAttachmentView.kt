@@ -4,6 +4,7 @@ import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.session.ui.attachment.AttachmentCard
 import ai.kilocode.client.session.ui.attachment.AttachmentCardItem
+import ai.kilocode.client.session.ui.attachment.AttachmentChip
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.ui.UiStyle
@@ -12,6 +13,8 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import java.awt.Dimension
+import java.net.URI
+import javax.swing.JComponent
 import javax.swing.ScrollPaneConstants
 
 class PromptAttachmentView(
@@ -21,10 +24,12 @@ class PromptAttachmentView(
     override val contentId: String = "attachments:$messageId"
 
     private val items = LinkedHashMap<String, FileAttachment>()
-    private val cards = LinkedHashMap<String, AttachmentCard>()
+    private val cards = LinkedHashMap<String, JComponent>()
     private val row = Stack.horizontal(gap = UiStyle.Gap.sm())
     private val scroll = JBScrollPane(row).apply {
-        border = null
+        // Empty borders remove the visible scroll pane frame; null can be replaced by the current UI.
+        border = JBUI.Borders.empty()
+        viewportBorder = JBUI.Borders.empty()
         isOpaque = false
         viewport.isOpaque = false
         horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED
@@ -33,10 +38,11 @@ class PromptAttachmentView(
 
     init {
         isOpaque = false
+        // Align the attachment chips with the prompt text horizontally, with only a small bottom inset.
         border = JBUI.Borders.empty(
             0,
             JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING),
-            JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING),
+            UiStyle.Gap.sm(),
             JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING),
         )
         add(scroll)
@@ -83,7 +89,7 @@ class PromptAttachmentView(
     override fun getPreferredSize(): Dimension {
         val ins = insets
         val pref = scroll.preferredSize
-        return Dimension(0, pref.height + bar() + ins.top + ins.bottom)
+        return Dimension(0, pref.height + ins.top + ins.bottom)
     }
 
     override fun getMinimumSize() = preferredSize
@@ -111,14 +117,23 @@ class PromptAttachmentView(
         repaint()
     }
 
-    private fun card(item: FileAttachment) = AttachmentCard(
-        AttachmentCardItem(name(item), item.mime, item.url),
-        open = { openAttachment(item) },
-    )
+    private fun card(item: FileAttachment): JComponent {
+        val card = AttachmentCardItem(name(item), item.mime, item.url)
+        if (item.mime.startsWith("image/")) return AttachmentCard(card, open = { openAttachment(item) })
+        return AttachmentChip(card, file = file(item), startLine = item.startLine, endLine = item.endLine, open = { openAttachment(item) })
+    }
 
-    private fun same(a: FileAttachment, b: FileAttachment) = a.mime == b.mime && a.url == b.url && a.filename == b.filename
+    private fun same(a: FileAttachment, b: FileAttachment) = a.mime == b.mime &&
+        a.url == b.url &&
+        a.filename == b.filename &&
+        a.startLine == b.startLine &&
+        a.endLine == b.endLine
 
-    private fun bar() = scroll.horizontalScrollBar.preferredSize.height
+    private fun file(item: FileAttachment): Boolean {
+        if (item.source?.path?.isNotBlank() == true) return true
+        val uri = runCatching { URI.create(item.url) }.getOrNull() ?: return false
+        return uri.scheme == "file"
+    }
 
     private fun name(item: FileAttachment) = item.filename?.takeIf { it.isNotBlank() }
         ?: tail(item.url).takeIf { it.isNotBlank() }
