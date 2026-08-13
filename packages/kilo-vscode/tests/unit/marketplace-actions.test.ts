@@ -215,7 +215,7 @@ describe("Marketplace agent removal", () => {
     const result = await removeMarketplaceItem(ctx, agent, "global", project, project)
 
     expect(result).toEqual({ success: true, slug: agent.id })
-    expect(remove).toHaveBeenCalledWith({ name: agent.id, directory: project })
+    expect(remove).toHaveBeenCalledWith({ name: agent.id, directory: project, scope: "global" })
     expect(marketplace.remove).not.toHaveBeenCalled()
     expect(dispose).toHaveBeenCalledWith({ directory: project })
   })
@@ -233,5 +233,27 @@ describe("Marketplace agent removal", () => {
     const result = await removeMarketplaceItem(ctx, agent, "project", project, project)
 
     expect(result).toEqual({ success: false, slug: agent.id, error: "Agent is still configured" })
+  })
+
+  it("uses friendly fallbacks for empty backend errors", async () => {
+    const remove = mock(async () => ({ error: new Error("") }))
+    const getClientAsync = mock(async () => ({ kilocode: { removeAgent: remove } }))
+    const ctx = {
+      connection: { getClientAsync },
+      marketplace: { remove: mock(async () => ({ success: true, slug: agent.id })) },
+    } as unknown as MarketplaceActionContext
+
+    const rejected = await removeMarketplaceItem(ctx, agent, "project", project, project)
+    expect(rejected).toEqual({
+      success: false,
+      slug: agent.id,
+      error: `Agent "${agent.id}" is still provided by another configuration.`,
+    })
+
+    getClientAsync.mockImplementation(async () => {
+      throw new Error("")
+    })
+    const failed = await removeMarketplaceItem(ctx, agent, "global", project, project)
+    expect(failed).toEqual({ success: false, slug: agent.id, error: `Failed to remove agent "${agent.id}".` })
   })
 })

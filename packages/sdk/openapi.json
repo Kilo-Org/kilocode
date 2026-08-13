@@ -15251,7 +15251,7 @@
             }
           }
         },
-        "description": "Remove a custom (non-native) agent by deleting its markdown file from disk and refreshing state.",
+        "description": "Remove a custom (non-native) agent from one writable configuration scope, or every writable scope when omitted, and dispose cached instance state.",
         "summary": "Remove a custom agent",
         "requestBody": {
           "content": {
@@ -15261,6 +15261,10 @@
                 "properties": {
                   "name": {
                     "type": "string"
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": ["global", "project"]
                   }
                 },
                 "required": ["name"],

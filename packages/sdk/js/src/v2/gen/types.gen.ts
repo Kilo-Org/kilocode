@@ -16610,6 +16610,7 @@ export type KilocodeRemoveSkillResponse = KilocodeRemoveSkillResponses[keyof Kil
 export type KilocodeRemoveAgentData = {
   body?: {
     name: string
+    scope?: "global" | "project"
   }
   path?: never
   query?: {

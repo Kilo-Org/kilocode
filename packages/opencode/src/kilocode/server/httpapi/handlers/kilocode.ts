@@ -15,6 +15,7 @@ import { Notebook } from "@/kilocode/notebook/service"
 import { ModelUsage } from "@/kilocode/session/model-usage"
 import { InstanceStore } from "@/project/instance-store"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
+import { InvalidRequestError } from "@/server/routes/instance/httpapi/errors"
 import { Skill } from "@/skill"
 import type { SessionID } from "@/session/schema"
 import {
@@ -102,11 +103,13 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
             dirs,
             directory: instance.directory,
             worktree: instance.worktree,
+            scope: ctx.payload.scope,
           }),
         catch: (err) => err,
       }).pipe(
         Effect.catch((err) => {
-          if (KiloAgent.RemoveError.isInstance(err)) return Effect.fail(new HttpApiError.BadRequest({}))
+          if (KiloAgent.RemoveError.isInstance(err))
+            return Effect.fail(new InvalidRequestError({ message: err.data.message }))
           return Effect.die(err)
         }),
       )

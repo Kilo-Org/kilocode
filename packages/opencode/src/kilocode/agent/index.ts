@@ -547,8 +547,7 @@ export const RemoveError = NamedError.create("AgentRemoveError", {
 /**
  * Remove a custom agent by deleting its markdown source file, removing it from
  * config-backed agent entries, and/or removing it from legacy .kilocodemodes YAML files.
- * Scans all config directories for agent/mode .md files matching the name,
- * then also checks the .kilocodemodes files the ModesMigrator reads.
+ * Scans the selected writable config scope, or every scope when none is selected.
  */
 export async function remove(input: {
   name: string
@@ -556,6 +555,7 @@ export async function remove(input: {
   dirs: string[]
   directory: string
   worktree?: string
+  scope?: "global" | "project"
 }) {
   if (!input.agent) throw new RemoveError({ name: input.name, message: "agent not found" })
   if (input.agent.native) throw new RemoveError({ name: input.name, message: "cannot remove native agent" })
@@ -568,10 +568,21 @@ export async function remove(input: {
 
   const { unlink, writeFile } = await import("fs/promises")
   let found = false
+  const result = await KilocodeConfigSources.list({ directory: input.directory, worktree: input.worktree })
+  const sources = result.sources.filter((source) => !input.scope || source.scope === input.scope)
+  const roots = new Set(
+    sources.flatMap((source) => {
+      if (!source.path) return []
+      if (source.kind === "config-dir") return [source.path]
+      if (source.kind === "global-file") return [path.dirname(source.path)]
+      return []
+    }),
+  )
+  const dirs = input.scope ? input.dirs.filter((dir) => roots.has(dir)) : input.dirs
 
   // 1. Delete .md files from config directories
   const patterns = ["{agent,agents}/**/" + input.name + ".md", "{mode,modes}/" + input.name + ".md"]
-  for (const dir of input.dirs) {
+  for (const dir of dirs) {
     for (const pattern of patterns) {
       const matches = await Glob.scan(pattern, { cwd: dir, absolute: true, dot: true })
       for (const file of matches) {
@@ -583,7 +594,7 @@ export async function remove(input: {
     }
   }
 
-  if (await removeConfigAgent(input.name, input.directory, input.worktree)) found = true
+  if (await removeConfigAgent(input.name, sources)) found = true
 
   // 2. Remove from legacy .kilocodemodes YAML files (read by ModesMigrator)
   const { ModesMigrator } = await import("@/kilocode/modes-migrator")
@@ -591,15 +602,22 @@ export async function remove(input: {
   const os = await import("os")
   const matter = (await import("gray-matter")).default
   const home = os.default.homedir()
-  const modesFiles = [
-    path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "custom_modes.yaml"),
-    path.join(home, ".kilocode", "cli", "global", "settings", "custom_modes.yaml"),
-    path.join(home, ".kilocodemodes"),
-    path.join(input.directory, ".kilocodemodes"),
+  const legacy = [
+    {
+      scope: "global" as const,
+      file: path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "custom_modes.yaml"),
+    },
+    {
+      scope: "global" as const,
+      file: path.join(home, ".kilocode", "cli", "global", "settings", "custom_modes.yaml"),
+    },
+    { scope: "global" as const, file: path.join(home, ".kilocodemodes") },
+    { scope: "project" as const, file: path.join(input.directory, ".kilocodemodes") },
   ]
 
-  for (const file of modesFiles) {
-    const modes = await ModesMigrator.readModesFile(file)
+  for (const item of legacy) {
+    if (input.scope && item.scope !== input.scope) continue
+    const modes = await ModesMigrator.readModesFile(item.file)
     if (!modes.length) continue
 
     const filtered = modes.filter((m: { slug: string }) => m.slug !== input.name)
@@ -610,23 +628,16 @@ export async function remove(input: {
       .stringify("", { customModes: filtered })
       .replace(/^---\n/, "")
       .replace(/\n---\n?$/, "")
-    await writeFile(file, yaml)
+    await writeFile(item.file, yaml)
     found = true
   }
 
   if (!found) throw new RemoveError({ name: input.name, message: "no agent file found on disk" })
 }
 
-async function removeConfigAgent(name: string, directory: string, worktree?: string) {
-  const result = await KilocodeConfigSources.list({ directory, worktree })
-  const files = result.sources
-    .filter(
-      (source) =>
-        source.exists &&
-        source.editable &&
-        source.path &&
-        ["global-file", "env-file", "project-file", "config-dir-file"].includes(source.kind),
-    )
+async function removeConfigAgent(name: string, sources: KilocodeConfigSources.Source[]) {
+  const files = sources
+    .filter((source) => source.exists && source.editable && source.path && source.kind.endsWith("-file"))
     .map((source) => source.path!)
   let found = false
 

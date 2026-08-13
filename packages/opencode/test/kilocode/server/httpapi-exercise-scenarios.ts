@@ -654,7 +654,10 @@ export const kiloScenarios: Scenario[] = [
   http.protected
     .post("/kilocode/agent/remove", "kilocode.removeAgent")
     .at((ctx) => ({ path: "/kilocode/agent/remove", headers: ctx.headers(), body: { name: "httpapi-missing" } }))
-    .status(400),
+    .json(400, (body) => {
+      object(body)
+      check(body.message === "agent not found", "agent removal should preserve the backend error message")
+    }),
   http.protected
     .post("/kilocode/session-import/project", "kilocode.sessionImport.project")
     .mutating()

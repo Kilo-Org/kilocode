@@ -69,8 +69,9 @@ export async function removeMarketplaceItem(
 
   try {
     if (item.type === "agent") {
-      const result = await removeAgent({ connection: ctx.connection, directory: dir, name: item.id })
-      if (result.success) await invalidate(ctx, scope, dir)
+      const target = scope === "project" ? project! : dir
+      const result = await removeAgent({ connection: ctx.connection, directory: target, name: item.id, scope })
+      if (result.success) await invalidate(ctx, scope, target)
       return result
     }
     if (item.type === "mcp") await removeLegacyMcp(ctx, item.id, project, scope)
