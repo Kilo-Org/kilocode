@@ -3,6 +3,23 @@ import * as path from "node:path"
 import * as vscode from "vscode"
 import { contains } from "../path-utils"
 
+// Streaming responses can turn most inline code spans into candidates, so a
+// single message can carry hundreds of paths. Running them all through
+// realpath+stat at once can overwhelm a slow or remote filesystem; cap how
+// many run concurrently instead of firing an unbounded Promise.all.
+const CONCURRENCY = 8
+
+function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const results: R[] = new Array(items.length)
+  const iter = items.entries()
+  const worker = async (): Promise<void> => {
+    for (const [index, item] of iter) {
+      results[index] = await fn(item)
+    }
+  }
+  return Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker)).then(() => results)
+}
+
 /**
  * Stat-check candidate paths and return which ones are actual files (not directories).
  *
@@ -33,7 +50,7 @@ export function validateFiles(root: string, paths: string[]): Promise<string[]> 
           () => null,
         )
       }
-      return Promise.all(paths.map(check)).then((r) => r.filter((x): x is string => x !== null))
+      return mapLimit(paths, CONCURRENCY, check).then((r) => r.filter((x): x is string => x !== null))
     },
     () => [],
   )
