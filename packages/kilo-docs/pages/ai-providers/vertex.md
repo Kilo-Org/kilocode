@@ -28,7 +28,7 @@ Kilo Code supports accessing models through Google Cloud Platform's Vertex AI, a
 3. Paste the complete service account JSON into **Service-account JSON**.
 4. Enter a **Google Cloud project ID** only if you want to override the `project_id` in the JSON.
 5. Enter the **Vertex AI location**, such as `us-central1` or `global`.
-6. Select **Connect**.
+6. Select **Submit**.
 
 The extension stores the service account JSON in Kilo's credential store, not in `kilo.json`. The JSON is visible while you edit it so you can verify the value before connecting.
 

@@ -44,7 +44,7 @@ You have three options for configuring AWS credentials:
 3. Choose an authentication method:
    - **AWS access keys:** Enter the AWS access key ID, AWS secret access key, optional AWS session token, and AWS region.
    - **Bedrock API key:** Enter a Bedrock API key.
-4. Select **Connect**.
+4. Select **Submit**.
 
 The extension stores these credentials in Kilo's credential store, not in `kilo.json`.
 
