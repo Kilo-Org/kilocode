@@ -570,6 +570,10 @@ console.log()
 
 const start = performance.now()
 const results: Result[] = []
+// kilocode_change - XML stems of batches whose files were re-run in isolation. Their
+// batch_N.xml is the partial record of a failed process, so `merge` must ignore it in
+// favour of the per-file XML the re-runs produce, or the two double-count each other.
+const retired = new Set<string>()
 // kilocode_change - heaviest unit first, a batch weighted by the sum of its contents.
 // Sorted here rather than via TestShard.order because that helper is string-keyed.
 const unitWeight = (unit: Unit) => unit.files.reduce((sum, file) => sum + shardWeight(file), 0)
@@ -585,6 +589,7 @@ const workers = Array.from({ length: Math.min(concurrency, units.length) }, asyn
     // Batching can then only ever cost time, never change a verdict.
     if (!result.passed && unit.kind === "batch" && !stopped.value) {
       console.log(`${yellow("BATCH")} ${unit.label} failed; re-running its ${unit.files.length} files in isolation`)
+      retired.add(unit.xml)
       total.value += unit.files.length - 1
       queue.unshift(
         ...unit.files.map((file) => ({
@@ -718,28 +723,48 @@ async function merge() {
   const suites: string[] = []
   const counts = { tests: 0, failures: 0, errors: 0 }
 
-  for (const file of files) {
-    const name = file.replace(/[/\\]/g, "_") + ".xml"
-    const fpath = path.join(xmldir, name)
-    const found = await Bun.file(fpath).exists()
-
-    if (found) {
-      const content = await Bun.file(fpath).text()
-      const extracted = extract(content)
-      if (extracted) {
-        suites.push(extracted)
-        // Counts come from the outer <testsuites ...> root attributes, not from
-        // regex-scanning the inner content, so nested <testsuite> blocks (bun
-        // emits one per `describe`) don't get double-counted.
-        const root = content.match(/<testsuites\b([^>]*)>/)
-        if (root) {
-          counts.tests += attr(root[1], "tests")
-          counts.failures += attr(root[1], "failures")
-          counts.errors += attr(root[1], "errors")
-        }
-        continue
-      }
+  const ingest = async (fpath: string) => {
+    if (!(await Bun.file(fpath).exists())) return false
+    const content = await Bun.file(fpath).text()
+    const extracted = extract(content)
+    if (!extracted) return false
+    suites.push(extracted)
+    // Counts come from the outer <testsuites ...> root attributes, not from
+    // regex-scanning the inner content, so nested <testsuite> blocks (bun
+    // emits one per `describe`) don't get double-counted.
+    const attrs = content.match(/<testsuites\b([^>]*)>/)
+    if (attrs) {
+      counts.tests += attr(attrs[1], "tests")
+      counts.failures += attr(attrs[1], "failures")
+      counts.errors += attr(attrs[1], "errors")
     }
+    return true
+  }
+
+  // kilocode_change start - a batched unit writes one batch_N.xml covering all of its
+  // files, so the per-file lookup below cannot find any of them: every batched file fell
+  // through to the synthetic-failure branch and was dropped for having passed. That
+  // silently cost the merged report ~2300 of the CLI package's testcases (measured in run
+  // 31703950716), which also starves `--history` of the durations it shards by. Ingest the
+  // batch XML here, skipping batches the isolation fallback superseded.
+  const batchedFiles = new Set<string>()
+  for (const unit of units) {
+    if (unit.kind !== "batch" || retired.has(unit.xml)) continue
+    if (await ingest(path.join(xmldir, unit.xml + ".xml"))) {
+      for (const file of unit.files) batchedFiles.add(file)
+      continue
+    }
+    // A passing batch that produced no usable XML would silently lose every file in it,
+    // which is the defect above all over again. Leave its files to the loop below so they
+    // at least get a synthetic entry, and say so rather than dropping them quietly.
+    console.log(`warn: batch ${unit.xml} produced no usable JUnit XML; ${unit.files.length} files unreported`)
+  }
+  // kilocode_change end
+
+  for (const file of files) {
+    if (batchedFiles.has(file)) continue // kilocode_change - already covered by its batch XML
+    // kilocode_change - same ingest as the batch pass above; behaviour is unchanged
+    if (await ingest(path.join(xmldir, file.replace(/[/\\]/g, "_") + ".xml"))) continue
 
     // No valid XML produced - generate synthetic entry for failed files
     const result = results.find((r) => r.file === file)
