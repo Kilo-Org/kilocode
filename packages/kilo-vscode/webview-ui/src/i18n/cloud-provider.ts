@@ -1,0 +1,27 @@
+export const cloudProviderDict = {
+  "provider.connect.bedrock.method.accessKeys": "AWS access keys",
+  "provider.connect.bedrock.method.apiKey": "Bedrock API key",
+  "provider.connect.bedrock.description":
+    "Enter the AWS credentials Kilo should use to access Amazon Bedrock. These credentials are stored securely in Kilo's credential store.",
+  "provider.connect.bedrock.accessKeyId.label": "AWS access key ID",
+  "provider.connect.bedrock.accessKeyId.placeholder": "AKIA...",
+  "provider.connect.bedrock.accessKeyId.required": "AWS access key ID is required",
+  "provider.connect.bedrock.secretAccessKey.label": "AWS secret access key",
+  "provider.connect.bedrock.secretAccessKey.placeholder": "Secret access key",
+  "provider.connect.bedrock.sessionToken.label": "AWS session token (optional)",
+  "provider.connect.bedrock.sessionToken.placeholder": "Session token for temporary credentials",
+  "provider.connect.bedrock.region.label": "AWS region",
+  "provider.connect.bedrock.region.placeholder": "e.g. us-east-1",
+  "provider.connect.vertex.method.serviceAccount": "Google Cloud service account",
+  "provider.connect.vertex.description":
+    "Paste the complete Google Cloud service-account JSON. Kilo stores it securely in its credential store.",
+  "provider.connect.vertex.credentials.label": "Service-account JSON",
+  "provider.connect.vertex.credentials.placeholder": "Paste the complete JSON credentials",
+  "provider.connect.vertex.credentials.required": "Service-account JSON is required",
+  "provider.connect.vertex.credentials.invalid": "Enter valid service-account JSON credentials",
+  "provider.connect.vertex.project.label": "Google Cloud project ID (optional)",
+  "provider.connect.vertex.project.placeholder": "Uses project_id from the JSON by default",
+  "provider.connect.vertex.project.required": "The credentials must include project_id or a project ID override",
+  "provider.connect.vertex.location.label": "Vertex AI location",
+  "provider.connect.vertex.location.placeholder": "e.g. us-central1 or global",
+}

@@ -24,7 +24,8 @@ import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
 import { FileComponentProvider } from "@kilocode/kilo-ui/context/file"
 import { DialogProvider } from "@kilocode/kilo-ui/context/dialog"
 import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
-import { I18nProvider } from "@kilocode/kilo-ui/context"
+import { I18nProvider, pluralCategory, pluralKey } from "@kilocode/kilo-ui/context"
+import type { UiI18nPluralKey } from "@kilocode/kilo-ui/context"
 import { Diff } from "@kilocode/kilo-ui/diff"
 import { Code } from "@kilocode/kilo-ui/code"
 import { File } from "@kilocode/kilo-ui/file"
@@ -63,6 +64,9 @@ const dict: Record<string, string> = { ...appEn, ...amEn, ...uiEn, ...kiloEn }
 export function t(key: string, params?: Record<string, string | number | boolean | undefined>) {
   return resolveTemplate(dict[key] ?? key, params)
 }
+
+const plural = (key: UiI18nPluralKey, count: number, params?: Record<string, string | number | boolean>) =>
+  t(pluralKey(key, pluralCategory("en", count)), { ...params, count })
 
 // ---------------------------------------------------------------------------
 // Default mock data (empty session)
@@ -453,7 +457,7 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
                       t,
                     }}
                   >
-                    <I18nProvider value={{ locale: () => "en", t }}>
+                    <I18nProvider value={{ locale: () => "en", t, plural }}>
                       <NotificationsContext.Provider value={notifications}>
                         <SessionContext.Provider value={session as any}>
                           <AgentRequirementsContext.Provider value={requirements}>

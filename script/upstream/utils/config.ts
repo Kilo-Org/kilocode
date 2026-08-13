@@ -135,8 +135,14 @@ export const defaultConfig: MergeConfig = {
     "nix/opencode.nix",
     // opencode CLI bin (Kilo uses its own build output)
     "packages/opencode/bin/opencode",
+    // Kilo does not ship upstream's embedded web UI command.
+    "packages/opencode/src/cli/cmd/web.ts",
     // Removed prompt file
     "packages/opencode/src/session/prompt/build-switch.txt",
+    // Upstream app translation automation targets products and binaries Kilo does not ship
+    "script/translate-app.ts",
+    "script/translate-app.test.ts",
+    "script/translate-app.md",
     // Vouch files (Kilo doesn't use Vouch).
     // Upstream currently ships VOUCHED.td (typo extension). The glob covers both
     // the current .td file and any future .md rename without another merge breaking.
@@ -174,6 +180,8 @@ export const defaultConfig: MergeConfig = {
   // Files that should take upstream version and apply Kilo branding transforms
   // These are files with only branding differences, no logic changes
   takeTheirsAndTransform: [
+    // Model-facing prompts that need Kilo product identity and documentation links
+    "packages/opencode/src/session/prompt/meta.txt",
     // UI components
     "packages/ui/src/components/**/*.tsx",
     "packages/ui/src/context/**/*.tsx",

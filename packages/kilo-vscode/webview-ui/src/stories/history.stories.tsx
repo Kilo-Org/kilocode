@@ -11,7 +11,8 @@ import { DiffComponentProvider } from "@kilocode/kilo-ui/context/diff"
 import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
 import { FileComponentProvider } from "@kilocode/kilo-ui/context/file"
 import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
-import { I18nProvider } from "@kilocode/kilo-ui/context"
+import { I18nProvider, pluralCategory, pluralKey } from "@kilocode/kilo-ui/context"
+import type { UiI18nPluralKey } from "@kilocode/kilo-ui/context"
 import { Diff } from "@kilocode/kilo-ui/diff"
 import { Code } from "@kilocode/kilo-ui/code"
 import { File } from "@kilocode/kilo-ui/file"
@@ -24,13 +25,16 @@ import { LanguageContext } from "../context/language"
 import { dict as uiEn } from "@kilocode/kilo-ui/i18n/en"
 import { dict as appEn } from "../i18n/en"
 import { dict as kiloEn } from "@kilocode/kilo-i18n/en"
+import { resolveTemplate } from "../context/language-utils"
 import SessionList from "../components/history/SessionList"
 import HistoryView from "../components/history/HistoryView"
 
 const dict: Record<string, string> = { ...appEn, ...uiEn, ...kiloEn }
-function t(key: string) {
-  return dict[key] ?? key
+function t(key: string, params?: Record<string, string | number | boolean | undefined>) {
+  return resolveTemplate(dict[key] ?? key, params)
 }
+const plural = (key: UiI18nPluralKey, count: number, params?: Record<string, string | number | boolean>) =>
+  t(pluralKey(key, pluralCategory("en", count)), { ...params, count })
 function noop() {}
 
 const now = new Date().toISOString()
@@ -109,7 +113,7 @@ const WithSessions: ParentComponent<{ sessions?: typeof mockSessions }> = (props
           <ProviderProvider>
             <DialogProvider>
               <LanguageContext.Provider value={{ locale, setLocale: noop, userOverride: () => "" as any, t }}>
-                <I18nProvider value={{ locale: () => "en", t }}>
+                <I18nProvider value={{ locale: () => "en", t, plural }}>
                   <SessionContext.Provider value={session as any}>
                     <DataProvider
                       data={{
