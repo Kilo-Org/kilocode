@@ -54,7 +54,7 @@ export function createSessionVariants(options: Options) {
     const list = Object.keys(options.find(selection)?.variants ?? {})
     if (list.length === 0) return
     const next = value === undefined ? DEFAULT_VARIANT : preserveVariant(value, list)
-    if (!next) return
+    if (next === undefined) return
     const key = variantKey(selection, name, sessionID)
     options.set(key, next)
     if (!sessionID) options.post({ type: "persistVariant", key, value: next })

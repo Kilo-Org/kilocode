@@ -1,7 +1,8 @@
 import type { ModelSelection } from "../types/messages"
 
 const effort = ["none", "minimal", "low", "medium", "high", "xhigh", "max"]
-export const DEFAULT_VARIANT = "default"
+// Variant names are non-empty, so this cannot collide with a provider variant.
+export const DEFAULT_VARIANT = ""
 
 /** Keep the selected effort when possible, falling back to the nearest known effort. */
 export function preserveVariant(current: string | undefined, variants: string[]) {
@@ -43,7 +44,7 @@ export function getVariant(
   const key = variantKey(sel, agent, session)
   const fallback = session ? store[variantKey(sel, agent)] : undefined
   const stored = store[key] ?? fallback ?? store[legacyVariantKey(sel)]
-  if (!stored || stored === DEFAULT_VARIANT) return undefined
+  if (stored === undefined || stored === DEFAULT_VARIANT) return undefined
   return preserveVariant(stored, variants)
 }
 

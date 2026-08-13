@@ -67,10 +67,14 @@ describe("session variants", () => {
   it("persists an explicit default selection", () => {
     const state = setup()
     state.variants.select(undefined)
-    expect(state.selections).toEqual({ "agent/code/anthropic/claude-sonnet-4": "default" })
+    expect(state.selections).toEqual({ "agent/code/anthropic/claude-sonnet-4": "" })
     expect(state.variants.current()).toBeUndefined()
-    expect(state.messages).toEqual([
-      { type: "persistVariant", key: "agent/code/anthropic/claude-sonnet-4", value: "default" },
-    ])
+    expect(state.messages).toEqual([{ type: "persistVariant", key: "agent/code/anthropic/claude-sonnet-4", value: "" }])
+  })
+
+  it("carries the model default across model changes", () => {
+    const state = setup()
+    state.variants.carry(model, undefined, "code")
+    expect(state.selections).toEqual({ "agent/code/anthropic/claude-sonnet-4": "" })
   })
 })

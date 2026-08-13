@@ -54,7 +54,12 @@ describe("per-session variant selection", () => {
 
   it("uses the model default when no variant is selected", () => {
     expect(getVariant({}, model, variants, "code")).toBeUndefined()
-    expect(getVariant({ [variantKey(model, "code")]: "default" }, model, variants, "code")).toBeUndefined()
+    expect(getVariant({ [variantKey(model, "code")]: "" }, model, variants, "code")).toBeUndefined()
+  })
+
+  it("preserves a provider variant named default", () => {
+    const store = { [variantKey(model, "code")]: "default" }
+    expect(getVariant(store, model, ["default", "thinking"], "code")).toBe("default")
   })
 
   it("carries the pre-submit agent variant into a newly created session", () => {
