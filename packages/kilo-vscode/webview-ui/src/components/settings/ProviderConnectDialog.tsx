@@ -450,9 +450,12 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
         <div class="provider-connect-body">{apiKeyDescription()}</div>
         <TextField
           autofocus
-          type="password"
+          type={vertexCredentials() ? "text" : "password"}
           multiline={vertexCredentials()}
-          style={{ "-webkit-text-security": vertexCredentials() ? "disc" : undefined }}
+          style={{
+            "max-height": vertexCredentials() ? "min(240px, 35vh)" : undefined,
+            "overflow-y": vertexCredentials() ? "auto" : undefined,
+          }}
           autocomplete="off"
           spellcheck={false}
           label={apiKeyLabel()}
