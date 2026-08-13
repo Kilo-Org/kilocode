@@ -65,9 +65,8 @@ jobs:
           fi
           echo 'general=true' >> "$GITHUB_OUTPUT"
           # kilocode_change start - rebalanced shard counts: Linux 8 CLI shards + a dedicated
-          # packages job, Windows consolidated onto one big runner (see below). Duration weighting
-          # alone could not get Linux under ~5m, for two measured reasons (CI run 31648508417,
-          # Linux at 4 shards):
+          # packages job, Windows 4 -> 7 (see below). Duration weighting alone could not get Linux
+          # under ~5m, for two measured reasons (CI run 31648508417, Linux at 4 shards):
           #   1. Shard 1 was the straggler at 6m51s against ~4m25s for its siblings, purely
           #      because it also ran every non-CLI package test. Those now get their own job,
           #      which makes the CLI shards symmetric and lets shard count actually buy time.
@@ -79,9 +78,9 @@ jobs:
           #      6 -> 3.78m, 7 -> 3.09m, 8 -> 2.66m. 8 is the first count under the 2m15-2m45
           #      target, hence 8 rather than 6.
           #
-          # Windows went 6 -> 10 -> 7 -> ONE 16-vCPU runner. The 10 was projected from a 6-shard
-          # anchor, assuming Windows was throughput-bound so wall would scale close to 1/shards.
-          # Run 31657477161 measured that assumption and refuted it. At 10 shards the worst shard
+          # Windows went 6 -> 10 -> 7. The 10 was projected from a 6-shard anchor, assuming Windows
+          # was throughput-bound so wall would scale close to 1/shards. Run 31657477161 measured
+          # that assumption and refuted it. At 10 shards the worst shard
           # is 5m10s: 188s of tests behind 118s of fixed per-shard cost, 83s of which is Setup
           # Bun (Windows skips the dep cache deliberately -- see setup-bun/action.yml).
           # Summing the ten shards gives ~1315s of test work, so balanced wall is
@@ -91,7 +90,7 @@ jobs:
           # Past N=7 extra shards buy zero wall clock. The reason is that the 118s is paid N
           # times over: sharding buys parallelism by duplicating the fixed cost.
           #
-          # Scaling UP instead of OUT pays that 118s once. Blacksmith bills strictly by
+          # Scaling UP instead of OUT would pay that 118s once. Blacksmith bills strictly by
           # vCPU x minutes (docs: 1 Windows 2vCPU minute = 2 x64 2vCPU minutes, applied
           # proportionally at higher vCPU counts), so with wall = overhead + max(heaviest file,
           # work/lanes), in x64 2vCPU-minute units:
@@ -99,9 +98,14 @@ jobs:
           #   1 x  8vCPU, 4 lanes:      wall 447s, billed 7.45 * 8               =  60
           #   1 x 16vCPU, 8 lanes:      wall 306s, billed 5.10 * 16              =  82
           #   1 x 32vCPU, 16 lanes:     wall 306s, billed 5.10 * 32              = 163
-          # 16 vCPU is the pick: same 306s wall as 7 shards for 43 percent less, because six
-          # of the seven Setup Bun + install cycles stop existing. 32 buys nothing -- at 8+
-          # lanes the wall is already pinned by the single heaviest file, not by throughput.
+          # On paper 16 vCPU is the pick -- same 306s wall for 43 percent less, because six of the
+          # seven Setup Bun + install cycles stop existing -- and it was tried. It does not run:
+          # `blacksmith-16vcpu-windows-2025` got no runner in 59.5 minutes and the job was cancelled
+          # without executing a step (run 31724918397, empty runner_name). Windows x64 is a
+          # Blacksmith public beta and this org evidently has no capacity above 4 vCPU there, so the
+          # scale-up is blocked by supply, not by the model. Keep 7 x 4vCPU until a probe shows
+          # 8vcpu-windows schedulable; the exerciser (see the httpapi job) takes the same trade on
+          # Linux, where the sizes are GA, and holds it to 8vCPU runner classes already in use here.
           #
           # Reaching the 2m45-3m15 target is still not a parallelism problem: 118s of overhead
           # against a 195s ceiling leaves a 77s test budget and six files individually exceed
@@ -110,21 +114,21 @@ jobs:
           # Held constant across that change: vCPU per lane. PR #13077 throttled Windows CLI tests
           # to KILO_TEST_CONCURRENCY=2 with a 600s per-file deadline because the default 4 gave
           # heavy real-server files ~1 vCPU each and blew their per-test timeouts -- Windows was
-          # ~62 percent of test-job failures. The fix was really 2 vCPU per lane, so the 16-vCPU
-          # runner runs 8 lanes and the per-lane budget is unchanged; see the concurrency comment
-          # on the Run CLI unit tests step. The 1315s of work above was measured under that same
-          # per-lane budget, so the model still holds. That base predates this branch: merging
-          # main must keep the KILO_TEST_CONCURRENCY and KILO_TEST_FILE_TIMEOUT env wiring on the
+          # ~62 percent of test-job failures. The fix was really 2 vCPU per lane, which is the ratio
+          # any future resize has to preserve; see the concurrency comment on the Run CLI unit tests
+          # step. The 1315s of work above was measured under that same per-lane budget, so the model
+          # still holds. That base predates this branch: merging main must keep the
+          # KILO_TEST_CONCURRENCY and KILO_TEST_FILE_TIMEOUT env wiring on the
           # Run CLI unit tests step -- a clean auto-merge silently dropped it once already -- or
           # Windows reintroduces the flakiness #13077 fixed. Windows also keeps running every test
           # file. A curated Windows profile like the darwin one would be the biggest single win,
           # but it trades away what test-profile.ts calls the backstop for platform-neutral
           # behavior, which is a coverage decision rather than a CI tuning one.
-          # Generated rather than written out: 11 entries on one line is not reviewable.
+          # Generated rather than written out: 17 entries on one line is not reviewable.
           LINUX_HOST=blacksmith-4vcpu-ubuntu-2404
-          WINDOWS_HOST=blacksmith-16vcpu-windows-2025
+          WINDOWS_HOST=blacksmith-4vcpu-windows-2025
           LINUX_SHARDS=8
-          WINDOWS_SHARDS=1
+          WINDOWS_SHARDS=7
           # os host index total packages
           shard() { printf '{"os":"%s","index":%s,"total":%s,"host":"%s","run":true,"packages":%s},' "$1" "$3" "$4" "$2" "$5"; }
           settings="$(
@@ -319,7 +323,7 @@ jobs:
           # exactly the same 2 vCPU per lane while doing all the work in one job. Raising lanes
           # past 16/2 would re-create the starvation #13077 diagnosed. Linux/macOS (not timeout
           # offenders; macOS is a single unsharded job) keep the default.
-          KILO_TEST_CONCURRENCY: ${{ matrix.settings.os == 'windows' && '8' || '' }}
+          KILO_TEST_CONCURRENCY: ${{ matrix.settings.os == 'windows' && '2' || '' }}
           # kilocode_change - raise the per-file kill deadline on Windows only. Heavy real-server
           # files run ~230-270s serially there (vs ~40s on macOS/Linux), leaving only ~30s under
           # the 300s default; 600s gives healthy-but-slow files real margin without masking hangs
@@ -412,7 +416,7 @@ jobs:
 
   # kilocode_change start
   httpapi:
-    # kilocode_change start - run the exerciser as parallel processes on one runner.
+    # kilocode_change start - run the exerciser as parallel processes, few runners.
     # The exerciser drives all 315 scenarios through one process at `concurrency: 1`, and that
     # single step was 668s of this job's 720s in run 31648508417 (setup is only ~45s, and all 8
     # turbo build deps were cache hits). It cannot be parallelised in-process: `resetState` in
@@ -423,33 +427,41 @@ jobs:
     # That first bought parallelism by fanning out to six 4vCPU runners, each running one process.
     # It hit the target (worst shard 108s in run 31657477161, of which 37s was setup) but paid the
     # setup six times and gave every lane 4 vCPU when a lane wants ~1.8 (measured: 182% CPU).
-    # `KILO_HTTPAPI_LANES` moves the fan-out inside the job, so setup is paid once and the vCPU
-    # match the appetite. Sizing, from that run's per-shard step times (48/51/50/54/66/56s = 325s of
+    # `KILO_HTTPAPI_LANES` moves the fan-out inside the job, so a runner's vCPU match the appetite
+    # of what it runs. Sizing, from that run's per-shard step times (48/51/50/54/66/56s = 325s of
     # lane-work behind a 37s setup) and the lane throughput curve in httpapi-lanes.ts, which
     # measures efficiency against core demand over capacity -- 0.75 at 0.72, 0.55 at 1.08. In x64
     # 2vCPU-minute units:
     #   6 x  4vCPU, 1 lane each: wall 108s, billed 9.52 * 4  = 38
     #   1 x  8vCPU, 4 lanes:     wall 145s, billed 2.42 * 8  = 19
-    #   1 x 16vCPU, 8 lanes:     wall 105s, billed 1.75 * 16 = 28
-    #   1 x 32vCPU, 8 lanes:     wall  85s, billed 1.42 * 32 = 45
-    # 16 vCPU over 8 lanes is 2 vCPU per lane -- the same ratio the unit matrix holds -- and is the
-    # only option that keeps this job inside its 2m target while cutting both machines and spend.
-    # 32 vCPU buys 20s for 60% more money; 8 vCPU is cheapest but 2m25.
+    #   2 x  8vCPU, 4 lanes each: wall 102s, billed 3.40 * 8 = 27
+    #   1 x 16vCPU, 8 lanes:     wall 102s, billed 1.70 * 16 = 27
+    # Eight lanes at 2 vCPU each -- the ratio the unit matrix holds -- is the shape that keeps this
+    # job inside its 2m target while cutting machines and spend. Two 8vCPU runners and one 16vCPU
+    # runner are the same 16 vCPU over the same 8 lanes, so they cost and finish the same; the split
+    # only pays the 37s setup twice, in parallel, where it is free. Take the split anyway, because
+    # capacity is not hypothetical: `blacksmith-16vcpu-windows-2025` got no runner in 59.5 minutes
+    # (run 31724918397) and 8vCPU is the largest class already in use in this repo.
     #
-    # That 105s is a projection and the efficiency term is the soft part of it: 8 lanes want 14.4 of
-    # the 16 vCPU, so a pessimistic 0.5 would land at 2m05 instead. Worth it either way -- this job
+    # That 102s is a projection and the efficiency term is the soft part of it: 4 lanes want 7.2 of
+    # the 8 vCPU, so a pessimistic 0.5 would land at 2m05 instead. Worth it either way -- this job
     # has ~3m of slack against the unit matrix and cannot become the critical path at any of these
     # numbers. What is measured, not projected: the whole suite over 8 lanes on one 10-core laptop,
     # 107s of work, all three gates green.
     #
-    # `test:httpapi` still runs everything sequentially when KILO_HTTPAPI_LANES is unset, so `bun
-    # run test:httpapi` locally is unchanged. The turbo task sets `cache: false`, so no cache key
-    # needs to know about lanes.
-    name: HttpApi exerciser
+    # Lanes compose with the shard env rather than replacing it -- shard s/2 with 4 lanes runs global
+    # slices ((s-1)*4 + i)/8 -- so `shardScenarios` still owns the partition. `test:httpapi` runs
+    # everything sequentially when KILO_HTTPAPI_LANES is unset, so `bun run test:httpapi` locally is
+    # unchanged. The turbo task sets `cache: false`, so no cache key needs to know about lanes.
+    name: HttpApi exerciser (${{ matrix.shard }}/2)
     needs: changes
     if: needs.changes.outputs.general == 'true'
-    runs-on: blacksmith-16vcpu-ubuntu-2404
+    runs-on: blacksmith-8vcpu-ubuntu-2404
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     # kilocode_change end
     defaults:
       run:
@@ -473,10 +485,10 @@ jobs:
         uses: actions/cache@v5
         with:
           path: .turbo/cache
-          # kilocode_change start - job-scoped primary key. This was shard-scoped when six shards
-          # raced to save the same entry; one job cannot race itself, but the key stays distinct
-          # from the unit matrix's, and the shared restore-keys below still let it reuse theirs.
-          key: turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-httpapi-${{ github.sha }}
+          # kilocode_change start - shard-scoped primary key so the two concurrent shards do not
+          # race to save the same entry; the shared restore-keys below still let them reuse each
+          # other's build cache from previous runs.
+          key: turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-httpapi-${{ matrix.shard }}-${{ github.sha }}
           # kilocode_change end
           restore-keys: |
             turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-httpapi-
@@ -484,13 +496,17 @@ jobs:
             turbo-${{ runner.os }}-
 
       - name: Check generated client
+        # kilocode_change start - one shard is enough; this checks the committed client, not the shard
+        if: matrix.shard == 1
+        # kilocode_change end
         working-directory: packages/client
         run: bun run check:generated
       - name: Run HttpApi exerciser gates
         run: bun turbo test:httpapi --filter='@kilocode/cli'
         env:
           KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: "true" # kilocode_change - a watcher per scenario instance is too heavy for the exerciser
-          KILO_HTTPAPI_LANES: "8" # kilocode_change - 8 scenario processes on this runner's 16 vCPU; see the job comment
+          KILO_HTTPAPI_SHARD: ${{ matrix.shard }}/2 # kilocode_change - this runner's half of the scenario list
+          KILO_HTTPAPI_LANES: "4" # kilocode_change - 4 scenario processes on this runner's 8 vCPU; see the job comment
 
   # kilocode_change end
 
