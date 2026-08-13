@@ -281,7 +281,7 @@ export const RunCommand = effectCmd({
     // kilocode_change start - lazy Kilo implementations (see top-of-file note)
     const { createKiloClient } = yield* Effect.promise(() => import("@kilocode/sdk/v2"))
     const { buildRunMessage } = yield* Effect.promise(() => import("@/kilocode/cli/cmd/run-message"))
-    const { importCloudSession, validateCloudFork } = yield* Effect.promise(() => import("@/kilocode/cloud-session"))
+    const { importCloudSession, validateCloudFork, reportCloudImportError } = yield* Effect.promise(() => import("@/kilocode/cloud-session"))
     const { KiloRunAuto } = yield* Effect.promise(() => import("@/kilocode/cli/run-auto"))
     const { KiloHeadless } = yield* Effect.promise(() => import("@/kilocode/permission/headless"))
     const { KiloRun, KiloRunDaemon } = yield* Effect.promise(() => import("@/kilocode/cli/cmd/run"))
@@ -505,28 +505,28 @@ export const RunCommand = effectCmd({
       async function session(sdk: KiloClient): Promise<SessionInfo | undefined> {
         // kilocode_change start - import cloud session before local lookup
         if (args.session && args["cloud-fork"]) {
-          const id = await importCloudSession(sdk, args.session).catch(() => undefined)
-          if (!id) {
-            UI.error("Failed to import session from cloud")
+          try {
+            const id = await importCloudSession(sdk, args.session)
+            const current = await sdk.session
+              .get({
+                sessionID: id,
+              })
+              .catch(() => undefined)
+
+            if (!current?.data) {
+              UI.error("Session not found")
+              process.exit(1)
+            }
+
+            return {
+              id: current.data.id,
+              title: current.data.title,
+              directory: current.data.directory,
+              model: current.data.model,
+            }
+          } catch (err) {
+            reportCloudImportError(err)
             process.exit(1)
-          }
-
-          const current = await sdk.session
-            .get({
-              sessionID: id,
-            })
-            .catch(() => undefined)
-
-          if (!current?.data) {
-            UI.error("Session not found")
-            process.exit(1)
-          }
-
-          return {
-            id: current.data.id,
-            title: current.data.title,
-            directory: current.data.directory,
-            model: current.data.model,
           }
         }
         // kilocode_change end
