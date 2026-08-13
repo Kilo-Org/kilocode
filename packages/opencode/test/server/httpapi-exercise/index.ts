@@ -116,18 +116,21 @@ const scenarios: Scenario[] = [
       },
       "status",
     ),
-  http.protected.get("/path", "path.get").json(200, (body, ctx) => {
+  // Non-git directories resolve to the global project (worktree "/"), so scenarios asserting
+  // per-project identity or project-scoped state need a real git repo.
+  http.protected.get("/path", "path.get").inProject({ git: true }).json(200, (body, ctx) => {
     object(body)
     check(body.directory === ctx.directory, "directory should resolve from x-kilo-directory")
     check(body.worktree === ctx.directory, "worktree should resolve from x-kilo-directory")
   }),
   http.protected.get("/vcs", "vcs.get").json(),
-  http.protected.get("/vcs/status", "vcs.status").json(200, array),
+  http.protected.get("/vcs/status", "vcs.status").inProject({ git: true }).json(200, array),
   http.protected
     .get("/vcs/diff", "vcs.diff")
+    .inProject({ git: true })
     .at((ctx) => ({ path: "/vcs/diff?mode=git", headers: ctx.headers() }))
     .json(200, array),
-  http.protected.get("/vcs/diff/raw", "vcs.diff.raw").status(
+  http.protected.get("/vcs/diff/raw", "vcs.diff.raw").inProject({ git: true }).status(
     200,
     (_ctx, result) =>
       Effect.sync(() => {
@@ -164,7 +167,7 @@ const scenarios: Scenario[] = [
     .status(400),
   http.protected.get("/config/providers", "config.providers").json(),
   http.protected.get("/project", "project.list").json(200, array, "status"),
-  http.protected.get("/project/current", "project.current").json(
+  http.protected.get("/project/current", "project.current").inProject({ git: true }).json(
     200,
     (body, ctx) => {
       object(body)
@@ -577,9 +580,10 @@ const scenarios: Scenario[] = [
     }))
     .json(200, array, "status"),
   http.protected.get("/experimental/tool/ids", "tool.ids").json(200, array),
-  http.protected.get("/experimental/worktree", "worktree.list").json(200, array),
+  http.protected.get("/experimental/worktree", "worktree.list").inProject({ git: true }).json(200, array),
   http.protected
     .post("/experimental/worktree", "worktree.create")
+    .inProject({ git: true })
     .mutating()
     .at((ctx) => ({ path: "/experimental/worktree", headers: ctx.headers(), body: { name: "api-dsl" } }))
     .jsonEffect(
@@ -598,6 +602,7 @@ const scenarios: Scenario[] = [
     .status(400),
   http.protected
     .delete("/experimental/worktree", "worktree.remove")
+    .inProject({ git: true })
     .mutating()
     .seeded((ctx) => ctx.worktree({ name: "api-remove" }))
     .at((ctx) => ({ path: "/experimental/worktree", headers: ctx.headers(), body: { directory: ctx.state.directory } }))
@@ -606,6 +611,7 @@ const scenarios: Scenario[] = [
     }),
   http.protected
     .post("/experimental/worktree/reset", "worktree.reset")
+    .inProject({ git: true })
     .mutating()
     .seeded((ctx) => ctx.worktree({ name: "api-reset" }))
     .at((ctx) => ({
@@ -861,6 +867,7 @@ const scenarios: Scenario[] = [
   }),
   http.protected
     .post("/api/session/{sessionID}/permission", "v2.session.permission.create")
+    .inProject({ git: true })
     .seeded((ctx) => ctx.session({ title: "Permission create owner" }))
     .at((ctx) => ({
       path: route("/api/session/{sessionID}/permission", { sessionID: ctx.state.id }),
