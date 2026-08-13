@@ -451,6 +451,8 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
         <TextField
           autofocus
           type="password"
+          multiline={vertexCredentials()}
+          style={{ "-webkit-text-security": vertexCredentials() ? "disc" : undefined }}
           autocomplete="off"
           spellcheck={false}
           label={apiKeyLabel()}

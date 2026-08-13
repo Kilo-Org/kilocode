@@ -369,7 +369,6 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       const providerOptions: Record<string, any> = {
         region: defaultRegion,
         ...(stored ? { credentialProvider: async () => stored.credentials } : {}), // kilocode_change
-        ...(awsBearerToken ? { apiKey: awsBearerToken } : {}), // kilocode_change
       }
 
       // Only use credential chain if no bearer token exists
