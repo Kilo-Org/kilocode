@@ -1,0 +1,158 @@
+diff --git a/dist/dev.cjs b/dist/dev.cjs
+index 3b7a5f401db13d0d44b6918146fc5d4b5068d1ce..18dc6307940fe4f34321fa102b0ddaaa7c9c35e7 100644
+--- a/dist/dev.cjs
++++ b/dist/dev.cjs
+@@ -997,18 +997,21 @@ function cleanNode(node) {
+     }
+   }
+   if (node.tOwned) {
+-    for (i = node.tOwned.length - 1; i >= 0; i--) cleanNode(node.tOwned[i]);
++    const tOwned = node.tOwned;
+     delete node.tOwned;
++    for (i = tOwned.length - 1; i >= 0; i--) cleanNode(tOwned[i]);
+   }
+   if (Transition && Transition.running && node.pure) {
+     reset(node, true);
+   } else if (node.owned) {
+-    for (i = node.owned.length - 1; i >= 0; i--) cleanNode(node.owned[i]);
++    const owned = node.owned;
+     node.owned = null;
++    for (i = owned.length - 1; i >= 0; i--) cleanNode(owned[i]);
+   }
+   if (node.cleanups) {
+-    for (i = node.cleanups.length - 1; i >= 0; i--) node.cleanups[i]();
++    const cleanups = node.cleanups;
+     node.cleanups = null;
++    for (i = cleanups.length - 1; i >= 0; i--) cleanups[i]();
+   }
+   if (Transition && Transition.running) node.tState = 0;else node.state = 0;
+   delete node.sourceMap;
+diff --git a/dist/dev.js b/dist/dev.js
+index 1001c820e101c6ec4cdb14c663c7d6b92a6c8ff8..8036a9ffe4ec7587cccb648c78c55e2ca608043e 100644
+--- a/dist/dev.js
++++ b/dist/dev.js
+@@ -995,18 +995,21 @@ function cleanNode(node) {
+     }
+   }
+   if (node.tOwned) {
+-    for (i = node.tOwned.length - 1; i >= 0; i--) cleanNode(node.tOwned[i]);
++    const tOwned = node.tOwned;
+     delete node.tOwned;
++    for (i = tOwned.length - 1; i >= 0; i--) cleanNode(tOwned[i]);
+   }
+   if (Transition && Transition.running && node.pure) {
+     reset(node, true);
+   } else if (node.owned) {
+-    for (i = node.owned.length - 1; i >= 0; i--) cleanNode(node.owned[i]);
++    const owned = node.owned;
+     node.owned = null;
++    for (i = owned.length - 1; i >= 0; i--) cleanNode(owned[i]);
+   }
+   if (node.cleanups) {
+-    for (i = node.cleanups.length - 1; i >= 0; i--) node.cleanups[i]();
++    const cleanups = node.cleanups;
+     node.cleanups = null;
++    for (i = cleanups.length - 1; i >= 0; i--) cleanups[i]();
+   }
+   if (Transition && Transition.running) node.tState = 0;else node.state = 0;
+   delete node.sourceMap;
+diff --git a/dist/server.cjs b/dist/server.cjs
+index e71530973087afe014bdae736a91a1e8dcba68be..188ba81687fb22ce1a4e2e0402aab806ac6395ca 100644
+--- a/dist/server.cjs
++++ b/dist/server.cjs
+@@ -127,12 +127,14 @@ function onCleanup(fn) {
+ }
+ function cleanNode(node) {
+   if (node.owned) {
+-    for (let i = 0; i < node.owned.length; i++) cleanNode(node.owned[i]);
++    const owned = node.owned;
+     node.owned = null;
++    for (let i = 0; i < owned.length; i++) cleanNode(owned[i]);
+   }
+   if (node.cleanups) {
+-    for (let i = 0; i < node.cleanups.length; i++) node.cleanups[i]();
++    const cleanups = node.cleanups;
+     node.cleanups = null;
++    for (let i = 0; i < cleanups.length; i++) cleanups[i]();
+   }
+ }
+ function catchError(fn, handler) {
+diff --git a/dist/server.js b/dist/server.js
+index d5f88034b3636145d964c1b04d21897253f97d2b..320d9af6c782832cb26b4c75f33226face5ddb04 100644
+--- a/dist/server.js
++++ b/dist/server.js
+@@ -125,12 +125,14 @@ function onCleanup(fn) {
+ }
+ function cleanNode(node) {
+   if (node.owned) {
+-    for (let i = 0; i < node.owned.length; i++) cleanNode(node.owned[i]);
++    const owned = node.owned;
+     node.owned = null;
++    for (let i = 0; i < owned.length; i++) cleanNode(owned[i]);
+   }
+   if (node.cleanups) {
+-    for (let i = 0; i < node.cleanups.length; i++) node.cleanups[i]();
++    const cleanups = node.cleanups;
+     node.cleanups = null;
++    for (let i = 0; i < cleanups.length; i++) cleanups[i]();
+   }
+ }
+ function catchError(fn, handler) {
+diff --git a/dist/solid.cjs b/dist/solid.cjs
+index a2abf2aab49ed6e0a848137f5d97182430bb0863..be5f484ffd6a040ba41e72757f749494fd0018af 100644
+--- a/dist/solid.cjs
++++ b/dist/solid.cjs
+@@ -952,18 +952,21 @@ function cleanNode(node) {
+     }
+   }
+   if (node.tOwned) {
+-    for (i = node.tOwned.length - 1; i >= 0; i--) cleanNode(node.tOwned[i]);
++    const tOwned = node.tOwned;
+     delete node.tOwned;
++    for (i = tOwned.length - 1; i >= 0; i--) cleanNode(tOwned[i]);
+   }
+   if (Transition && Transition.running && node.pure) {
+     reset(node, true);
+   } else if (node.owned) {
+-    for (i = node.owned.length - 1; i >= 0; i--) cleanNode(node.owned[i]);
++    const owned = node.owned;
+     node.owned = null;
++    for (i = owned.length - 1; i >= 0; i--) cleanNode(owned[i]);
+   }
+   if (node.cleanups) {
+-    for (i = node.cleanups.length - 1; i >= 0; i--) node.cleanups[i]();
++    const cleanups = node.cleanups;
+     node.cleanups = null;
++    for (i = cleanups.length - 1; i >= 0; i--) cleanups[i]();
+   }
+   if (Transition && Transition.running) node.tState = 0;else node.state = 0;
+ }
+diff --git a/dist/solid.js b/dist/solid.js
+index 10d3b70b2a4b8a8dd1c6f3e7d9c7f523185b6006..5b6ecde5118e8fe38e3fe24277d2f012988bd5ee 100644
+--- a/dist/solid.js
++++ b/dist/solid.js
+@@ -950,18 +950,21 @@ function cleanNode(node) {
+     }
+   }
+   if (node.tOwned) {
+-    for (i = node.tOwned.length - 1; i >= 0; i--) cleanNode(node.tOwned[i]);
++    const tOwned = node.tOwned;
+     delete node.tOwned;
++    for (i = tOwned.length - 1; i >= 0; i--) cleanNode(tOwned[i]);
+   }
+   if (Transition && Transition.running && node.pure) {
+     reset(node, true);
+   } else if (node.owned) {
+-    for (i = node.owned.length - 1; i >= 0; i--) cleanNode(node.owned[i]);
++    const owned = node.owned;
+     node.owned = null;
++    for (i = owned.length - 1; i >= 0; i--) cleanNode(owned[i]);
+   }
+   if (node.cleanups) {
+-    for (i = node.cleanups.length - 1; i >= 0; i--) node.cleanups[i]();
++    const cleanups = node.cleanups;
+     node.cleanups = null;
++    for (i = cleanups.length - 1; i >= 0; i--) cleanups[i]();
+   }
+   if (Transition && Transition.running) node.tState = 0;else node.state = 0;
+ }

@@ -5,9 +5,10 @@ import type { PRStatus } from "../../src/types/messages"
 
 interface PRSummaryProps {
   pr: PRStatus
+  onJumpToComments?: () => void
 }
 
-function summaryRows(pr: PRStatus): Array<{ icon: string; label: string; status: string }> {
+function summaryRows(pr: PRStatus): Array<{ icon: string; label: string; status: string; isComments?: boolean }> {
   const rows = []
 
   if (pr.checks.total > 0) {
@@ -28,11 +29,18 @@ function summaryRows(pr: PRStatus): Array<{ icon: string; label: string; status:
     })
   }
 
-  if (pr.comments && pr.comments.unresolved > 0) {
+  if (pr.comments && pr.comments.total > 0) {
+    const unresolved = pr.comments.unresolved
+    const total = pr.comments.total
+    const label =
+      unresolved > 0
+        ? `${unresolved} unresolved comment${unresolved > 1 ? "s" : ""}`
+        : `${total} comment${total > 1 ? "s" : ""}`
     rows.push({
       icon: "comment",
-      label: `${pr.comments.unresolved} unresolved comment${pr.comments.unresolved > 1 ? "s" : ""}`,
-      status: "warning",
+      label,
+      status: unresolved > 0 ? "warning" : "success",
+      isComments: true,
     })
   }
 
@@ -59,12 +67,28 @@ export function PRSummary(props: PRSummaryProps) {
           </span>
         </div>
         <div class="am-pr-summary-rows am-pr-col">
-          {rows().map((row) => (
-            <div class="am-pr-summary-row am-pr-row" data-status={row.status}>
-              <Icon name={row.icon} size="small" class="am-pr-summary-icon" />
-              <span class="am-pr-summary-label">{row.label}</span>
-            </div>
-          ))}
+          {rows().map((row) => {
+            const isClickable = !!(row.isComments && props.onJumpToComments)
+            const rowProps = {
+              class: "am-pr-summary-row am-pr-row",
+              classList: { "am-pr-summary-row-link": isClickable },
+              "data-status": row.status,
+            }
+            const content = (
+              <>
+                <Icon name={row.icon} size="small" class="am-pr-summary-icon" />
+                <span class="am-pr-summary-label">{row.label}</span>
+                {row.isComments && props.onJumpToComments && <span class="am-pr-summary-jump">Jump to comments ↓</span>}
+              </>
+            )
+            return isClickable ? (
+              <button {...rowProps} onClick={props.onJumpToComments}>
+                {content}
+              </button>
+            ) : (
+              <div {...rowProps}>{content}</div>
+            )
+          })}
         </div>
       </div>
     </Show>

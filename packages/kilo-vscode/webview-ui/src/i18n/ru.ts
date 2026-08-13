@@ -833,8 +833,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Включить интеграцию протокола языкового сервера",
   "settings.experimental.batch.title": "Пакетный инструмент",
   "settings.experimental.batch.description": "Включить пакетную обработку вызовов инструментов",
-  "settings.experimental.codebaseSearch.title": "Поиск по коду",
-  "settings.experimental.codebaseSearch.description": "Включить поиск на естественном языке с ИИ по всей кодовой базе",
   "settings.experimental.imageGeneration.title": "Генерация изображений",
   "settings.experimental.imageGeneration.description": "Включить генерацию изображений с помощью ИИ",
   "settings.experimental.imageGenerationModel.title": "Модель изображений",

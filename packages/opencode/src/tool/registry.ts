@@ -72,6 +72,10 @@ import { ModelV2 } from "@opencode-ai/core/model"
 import { RepositoryCache } from "@opencode-ai/core/repository-cache" // kilocode_change
 import { RipgrepBinary } from "@opencode-ai/core/ripgrep/binary" // kilocode_change
 import { AppProcess } from "@opencode-ai/core/process" // kilocode_change
+import { MCP } from "@/mcp"
+import { PermissionV1 } from "@opencode-ai/core/v1/permission"
+import { McpCatalog } from "@/mcp/catalog"
+import { InstanceRef } from "@/effect/instance-ref" // kilocode_change
 
 export function webSearchEnabled(
   providerID: ProviderV2.ID,
@@ -100,6 +104,8 @@ export interface Interface {
     modelID: ModelV2.ID
     family?: string
     agent: Agent.Info
+    permission?: PermissionV1.Ruleset
+    networkRestricted?: boolean // kilocode_change - hide network-backed code-mode catalogs in restricted sessions
   }) => Effect.Effect<Tool.Def[]>
   // kilocode_change end
 }
@@ -115,6 +121,8 @@ const layer = Layer.effect(
     const skill = yield* Skill.Service // kilocode_change - keep the available skill summary in model-facing tool context
     const truncate = yield* Truncate.Service
     const flags = yield* RuntimeFlags.Service
+    const mcp = yield* MCP.Service
+    const sessions = yield* Session.Service
 
     const invalid = yield* InvalidTool
     const task = yield* TaskTool
@@ -141,9 +149,20 @@ const layer = Layer.effect(
     const notebook = Option.getOrUndefined(yield* Effect.serviceOption(Notebook.Service))
     const kiloToolInfos = yield* KiloToolRegistry.infos(manager, notebook).pipe(Effect.provide(MemoryService.layer))
     // kilocode_change end
+    const codeMode = flags.experimentalCodeMode ? yield* Effect.promise(() => import("./code-mode")) : undefined
 
     const state = yield* InstanceState.make<State>(
       Effect.fn("ToolRegistry.state")(function* (ctx) {
+        const codeModeTool = codeMode
+          ? yield* codeMode.CodeModeTool.pipe(
+              Effect.provideService(MCP.Service, mcp),
+              Effect.provideService(Agent.Service, agents),
+              Effect.provideService(Session.Service, sessions),
+              Effect.provideService(Plugin.Service, plugin),
+              Effect.provideService(Truncate.Service, truncate),
+              Effect.provideService(InstanceRef, ctx),
+            )
+          : undefined // kilocode_change - initialize code mode with the active instance context
         const custom: Tool.Def[] = []
 
         function fromPlugin(id: string, def: ToolDefinition): Tool.Def {
@@ -253,7 +272,8 @@ const layer = Layer.effect(
           question: Tool.init(question),
           lsp: Tool.init(lsptool),
           plan: Tool.init(plan),
-          suggest: Tool.init(suggesttool), // kilocode_change
+          suggest: Tool.init(suggesttool),
+          ...(codeModeTool ? { execute: Tool.init(codeModeTool) } : {}), // kilocode_change
         })
 
         // kilocode_change start
@@ -287,6 +307,7 @@ const layer = Layer.effect(
               tool.plan,
               ...(["cli", "vscode"].includes(flags.client) ? [tool.suggest] : []),
               ...KiloToolRegistry.extra(kilo, cfg),
+              ...(tool.execute ? [tool.execute] : []),
               ...(flags.experimentalLspTool ? [tool.lsp] : []),
             ],
             kilo,
@@ -336,6 +357,19 @@ const layer = Layer.effect(
     })
     // kilocode_change end
 
+    const describeCodeMode = Effect.fn("ToolRegistry.describeCodeMode")(function* (input: {
+      agent: Agent.Info
+      permission?: PermissionV1.Ruleset
+      networkRestricted?: boolean // kilocode_change
+    }) {
+      if (!codeMode) return
+      if (input.networkRestricted) return // kilocode_change
+      const ruleset = Permission.merge(input.agent.permission, input.permission ?? [])
+      const tools = Permission.visibleTools(yield* mcp.tools(), ruleset)
+      if (Object.keys(tools).length === 0) return
+      return codeMode.describeCatalog(tools, Object.keys(yield* mcp.clients()).map(McpCatalog.sanitize))
+    })
+
     const tools: Interface["tools"] = Effect.fn("ToolRegistry.tools")(function* (input) {
       const cfg = yield* config.get() // kilocode_change
       const filtered = (yield* all()).filter((tool) => {
@@ -353,8 +387,13 @@ const layer = Layer.effect(
       })
       const kiloFiltered = yield* KiloToolRegistry.applyVisibility(filtered) // kilocode_change
 
+      const codeModeDescription = filtered.some((tool) => tool.id === "execute")
+        ? yield* describeCodeMode(input)
+        : undefined
+      const visible = kiloFiltered.filter((tool) => tool.id !== "execute" || codeModeDescription) // kilocode_change
+
       return yield* Effect.forEach(
-        kiloFiltered, // kilocode_change
+        visible,
         Effect.fnUntraced(function* (tool: Tool.Def) {
           const output = {
             description: tool.description,
@@ -373,6 +412,7 @@ const layer = Layer.effect(
               output.description,
               tool.id === TaskTool.id ? yield* describeTask(input.agent) : undefined,
               tool.id === SkillTool.id ? yield* describeSkill(input.agent) : undefined,
+              tool.id === "execute" ? codeModeDescription : undefined,
             ]
               .filter(Boolean)
               .join("\n"),
@@ -501,6 +541,7 @@ export const node = LayerNode.suspend(() =>
       Format.node,
       Truncate.node,
       RuntimeFlags.node,
+      MCP.node,
       Database.node,
       Ripgrep.node,
       Command.node,

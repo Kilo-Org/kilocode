@@ -72,6 +72,7 @@ import { interceptMessage } from "./kilo-provider/git-changes-request"
 import { matchFollowup, recordFollowup, type Followup } from "./kilo-provider/followup-session"
 import { clearCommandsCache, loadCommands } from "./kilo-provider/commands"
 import { fetchMessagePage, MESSAGE_PAGE_LIMIT } from "./kilo-provider/message-page"
+import { editPaths } from "./kilo-provider/session-edits"
 import {
   dismissNotification,
   fetchAndSendNotifications as fetchNotifications,
@@ -385,6 +386,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private readonly anacondaDesktop = new AnacondaDesktopBridge()
   private sessionStatusMap = new Map<string, SessionStatus["type"]>() // Latest status used for destructive config warnings.
   private sessionDirectories = new Map<string, string>() // Per-session directory overrides, such as Agent Manager worktrees.
+  private sessionGitDirectories = new Map<string, string>() // Stable Git root resolved for each session.
+  private sessionGitRecoveries = new Set<string>() // Sessions whose older history was scanned for a Git root.
   private readonly aborts = new SessionAbort()
   private projectID: string | undefined // Current workspace project ID used to filter sessions.
   private loadMessagesAbort: AbortController | null = null // Current load request cancellation.
@@ -911,6 +914,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return this.currentSession?.id ?? undefined
   }
 
+  /** Return the Git root used by the Changes panel for a session. */
+  public getSessionGitDirectory(sessionId: string): string | undefined {
+    return this.sessionGitDirectories.get(sessionId)
+  }
+
   /**
    * Re-fetch and send the full session list to the webview.
    * Called by AgentManagerProvider after worktree recovery completes.
@@ -1055,7 +1063,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           openAgentManager: () => vscode.commands.executeCommand("kilo-code.new.agentManagerOpen"),
           openAdvancedWorktree: () => vscode.commands.executeCommand("kilo-code.new.agentManager.advancedWorktree"),
           openChanges: (sessionId?: string, turnId?: string) =>
-            vscode.commands.executeCommand("kilo-code.new.showChanges", { sessionId, turnId }),
+            vscode.commands.executeCommand("kilo-code.new.showChanges", {
+              sessionId,
+              turnId,
+              directory: sessionId ? this.sessionGitDirectories.get(sessionId) : undefined,
+            }),
           openProfile: () => vscode.commands.executeCommand("kilo-code.new.profileButtonClicked"),
           currentSessionId: this.currentSession?.id,
           createWorktree: async (baseBranch, branchName) => {
@@ -1560,7 +1572,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private handleEditorOpenMessage(message: Parameters<typeof handleEditorAction>[0]): boolean {
     return handleEditorAction(message, {
-      dir: () => this.getWorkspaceDirectory(this.currentSession?.id),
+      // An explicit sessionID (e.g. from validateFiles) takes precedence over
+      // the live currentSession — see editor-actions.ts's validateFiles case.
+      dir: (sessionID) => this.getWorkspaceDirectory(sessionID ?? this.currentSession?.id),
       diff: this.diffVirtualProvider,
       storage: this.extensionContext?.globalStorageUri,
       post: (msg) => this.postMessage(msg),
@@ -1903,7 +1917,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /** Non-blocking: refresh session metadata + status for the webview after switching. */
   private refreshSessionDetails(sessionID: string, dir: string, signal?: AbortSignal): void {
     if (!this.client) return
-    void this.refreshGitStatus(dir)
+    void this.refreshGitStatus(this.sessionGitDirectories.get(sessionID) ?? dir, sessionID)
     const revision = this.revisions.get(sessionID)
     const refresh = (this.refreshes.get(sessionID) ?? 0) + 1
     this.refreshes.set(sessionID, refresh)
@@ -2006,6 +2020,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         parts: this.slimParts(m.parts),
         createdAt: new Date(m.info.time.created).toISOString(),
       }))
+      if (mode === "replace" || mode === "reconcile") {
+        void this.recoverSessionGitStatus(
+          page.items.flatMap((message) => message.parts),
+          sessionID,
+          page.cursor,
+        )
+      }
       for (const message of messages) {
         this.connectionService.recordMessageSessionId(message.id, message.sessionID)
       }
@@ -2054,6 +2075,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       if (dir) {
         this.sessionDirectories.set(sessionID, dir)
       }
+      const git = this.sessionGitDirectories.get(parentSessionID)
+      if (git) this.sessionGitDirectories.set(sessionID, git)
     }
 
     try {
@@ -2228,6 +2251,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.visibleTaskStreams.delete(sessionID)
     this.syncedChildSessions.delete(sessionID)
     this.sessionDirectories.delete(sessionID)
+    this.sessionGitDirectories.delete(sessionID)
+    this.sessionGitRecoveries.delete(sessionID)
     this.aborts.delete(sessionID)
     this.lastReconciledAt.delete(sessionID)
     this.checkpoints.delete(sessionID)
@@ -4783,21 +4808,54 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     event: Extract<ProviderEvent, { type: "message.part.updated" }>,
     sessionID?: string,
   ) {
-    const part = event.properties.part as {
-      type?: string
-      metadata?: Record<string, unknown>
-      state?: { status?: string; input?: Record<string, unknown>; metadata?: Record<string, unknown> }
-    }
-    if (part.type !== "tool" || part.state?.status !== "completed") return
-    const values = [part.metadata?.filepath, part.state?.metadata?.filepath, part.state?.input?.filePath]
-    const file = values.find((value): value is string => typeof value === "string" && value.length > 0)
-    if (!file) return
+    void this.refreshGitStatusFromParts([event.properties.part], sessionID)
+  }
+
+  private async refreshGitStatusFromParts(parts: unknown[], sessionID?: string, recover = false): Promise<boolean> {
     const base = this.getWorkspaceDirectory(sessionID)
-    const value = file.split(",")[0].trim()
-    const pathName = path.isAbsolute(value) ? value : path.resolve(base, value)
-    const directory = path.dirname(pathName)
-    if (!this.isCurrentProjectGitDirectory(directory, sessionID)) return
-    void this.refreshGitStatus(directory)
+    const edits = editPaths(parts, base)
+    if (!recover && edits.length === 0) return false
+
+    const cached = sessionID ? this.sessionGitDirectories.get(sessionID) : undefined
+    if (cached) {
+      await this.refreshGitStatus(cached, sessionID)
+      return true
+    }
+
+    const root = await this.resolveGitRoot(base)
+    if (root) {
+      await this.refreshGitStatus(root, sessionID)
+      return true
+    }
+
+    const file = edits.find((item) => this.isCurrentProjectGitDirectory(item, sessionID))
+    if (!file) return false
+    await this.refreshGitStatus(path.dirname(file), sessionID)
+    return sessionID ? this.sessionGitDirectories.has(sessionID) : true
+  }
+
+  private async recoverSessionGitStatus(parts: unknown[], sessionID: string, cursor?: string): Promise<void> {
+    if (await this.refreshGitStatusFromParts(parts, sessionID, true)) return
+    if (!cursor || !this.client || !this.trackedSessionIds.has(sessionID)) return
+    if (this.sessionGitRecoveries.has(sessionID)) return
+    this.sessionGitRecoveries.add(sessionID)
+
+    const directory = this.getWorkspaceDirectory(sessionID)
+    const history = await retry(() =>
+      this.client!.session.messages({ sessionID, directory, limit: 0 }, { throwOnError: true }),
+    ).catch((error: unknown) => {
+      console.warn("[Kilo New] KiloProvider: Failed to recover session Git directory:", error)
+      return undefined
+    })
+    if (!history) {
+      this.sessionGitRecoveries.delete(sessionID)
+      return
+    }
+    if (!this.trackedSessionIds.has(sessionID)) return
+    await this.refreshGitStatusFromParts(
+      history.data.flatMap((message) => message.parts),
+      sessionID,
+    )
   }
 
   private isCurrentProjectGitDirectory(directory: string, sessionID?: string): boolean {
@@ -4810,15 +4868,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
   }
 
-  public async refreshGitStatus(directory = this.getWorkspaceDirectory()): Promise<void> {
+  public async refreshGitStatus(directory = this.getWorkspaceDirectory(), sessionID?: string): Promise<void> {
     const client = this.client
     if (!client) return
-    const revision = ++this.gitStatusRevision
+    const active = !sessionID || sessionID === this.contextSessionID
+    const revision = active ? ++this.gitStatusRevision : undefined
     const repo = await hasGit(client, directory)
     const root = await this.resolveGitRoot(directory)
-    if (revision !== this.gitStatusRevision) return
     const found = repo || root !== undefined
     const target = root ?? directory
+    if (found && sessionID && !this.sessionGitDirectories.has(sessionID)) {
+      this.sessionGitDirectories.set(sessionID, target)
+    }
+    if (sessionID && sessionID !== this.contextSessionID) return
+    if (revision === undefined || revision !== this.gitStatusRevision) return
     const changed = !this.cachedGitDirectory || !sameDirectory(this.cachedGitDirectory, target)
     if (changed) {
       this.cachedStats = null

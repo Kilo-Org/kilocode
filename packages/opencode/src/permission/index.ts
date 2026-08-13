@@ -538,6 +538,11 @@ export function toConfig(rules: Ruleset): ConfigPermissionV1.Info {
 }
 // kilocode_change end
 
+export function visibleTools<T>(tools: Record<string, T>, ruleset: PermissionV1.Ruleset): Record<string, T> {
+  const hidden = disabled(Object.keys(tools), ruleset)
+  return Object.fromEntries(Object.entries(tools).filter(([name]) => !hidden.has(name)))
+}
+
 export const node = LayerNode.make({
   service: Service,
   layer,
