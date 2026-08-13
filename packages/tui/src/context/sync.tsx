@@ -632,6 +632,12 @@ export const {
         case "indexing.status":
           setStore("indexing", reconcile(event.properties.status))
           break
+        case "models-dev.refreshed":
+          // A late Kilo Gateway / models.dev fetch replaced the catalog the server built at
+          // bootstrap. Without this the picker keeps whatever snapshot it captured, including a
+          // public or bundled fallback, until a dispose+bootstrap.
+          void refreshProviders()
+          break
         // kilocode_change end
       }
     })
@@ -759,6 +765,41 @@ export const {
     const exit = useExit()
     const args = useArgs()
 
+    // kilocode_change start - the picker catalog has to follow later provider fetches, not just bootstrap
+    let providerSeq = 0
+    let providerApplied = 0
+
+    function applyProviders(
+      seq: number,
+      workspace: string | undefined,
+      providers: Provider[],
+      defaults: Record<string, string>,
+      next: ProviderListResponse,
+    ) {
+      if (seq < providerApplied) return
+      if (workspace !== project.workspace.current()) return
+      providerApplied = seq
+      setStore("provider", reconcile(providers))
+      setStore("provider_default", reconcile(defaults))
+      setStore("provider_next", reconcile(next))
+    }
+
+    async function refreshProviders() {
+      const workspace = project.workspace.current()
+      const seq = ++providerSeq
+      try {
+        const [providers, providerList] = await Promise.all([
+          sdk.client.config.providers({ workspace }, { throwOnError: true }).then((x) => x.data!),
+          sdk.client.provider.list({ workspace }, { throwOnError: true }).then((x) => x.data!),
+        ])
+        batch(() => applyProviders(seq, workspace, providers.providers, providers.default, providerList))
+      } catch (e) {
+        // Keep the catalog we already have; a disposed or restarting instance re-bootstraps anyway.
+        console.error("tui provider refresh failed", { error: e instanceof Error ? e.message : String(e) })
+      }
+    }
+    // kilocode_change end
+
     async function bootstrap(input: { fatal?: boolean } = {}) {
       const fatal = input.fatal ?? true
       const workspace = project.workspace.current()
@@ -775,6 +816,7 @@ export const {
       const projectPromise = project.sync()
       const sessionListPromise = projectPromise.then(() => listSessions())
       const version = vcsVersion // kilocode_change
+      const providerVersion = ++providerSeq // kilocode_change - a refresh that starts later wins
 
       // blocking - include session.list when continuing a session
       const providersPromise = sdk.client.config.providers({ workspace }, { throwOnError: true })
@@ -830,9 +872,9 @@ export const {
             const sessions = responses[7]
 
             batch(() => {
-              setStore("provider", reconcile(providers.providers))
-              setStore("provider_default", reconcile(providers.default))
-              setStore("provider_next", reconcile(providerList))
+              // kilocode_change start - shared with refreshProviders so a late catalog is not clobbered
+              applyProviders(providerVersion, workspace, providers.providers, providers.default, providerList)
+              // kilocode_change end
               setStore("capabilities", "experimentalBackgroundSubagents", capabilities?.backgroundSubagents === true)
               setStore("console_state", reconcile(consoleState))
               setStore("agent", reconcile(agents))
