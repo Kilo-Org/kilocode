@@ -981,7 +981,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
           effort,
           {
             reasoningEffort: effort,
-            reasoningSummary: reasoningSummary(model), // kilocode_change
+            reasoningSummary: "auto",
             include: INCLUDE_ENCRYPTED_REASONING,
           },
         ]),
@@ -1041,7 +1041,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
           effort,
           {
             reasoningEffort: effort,
-            reasoningSummary: "auto",
+            reasoningSummary: reasoningSummary(model), // kilocode_change
             include: INCLUDE_ENCRYPTED_REASONING,
           },
         ]),
