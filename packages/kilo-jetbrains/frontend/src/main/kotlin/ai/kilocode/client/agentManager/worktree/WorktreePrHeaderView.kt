@@ -50,10 +50,10 @@ internal class WorktreePrHeaderView(
         open.isEnabled = openEnabled
         open.toolTipText = KiloBundle.message("worktree.session.open.tooltip")
         open.addActionListener { openWorktree() }
+        actions.border = JBUI.Borders.emptyRight(UiStyle.Gap.pad())
         status.border = JBUI.Borders.empty(0, UiStyle.Gap.md(), 0, UiStyle.Gap.xs())
         title.border = JBUI.Borders.empty(0, UiStyle.Gap.sm())
         title.isOpaque = false
-        changesPane.border = JBUI.Borders.emptyRight(UiStyle.Gap.pad())
         addToLeft(statusPane)
         addToCenter(title)
         addToRight(actions)
