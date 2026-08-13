@@ -90,12 +90,18 @@ jobs:
           # because total Windows work is fixed at ~7142s and extra shards only add each jobs
           # own setup. 10 clears the httpapi job (12m) with margin even in the worst case, which
           # is what matters: httpapi is the next bound and is tracked separately in the epic.
-          # Deliberately NOT changed: per-shard concurrency, which test-runner.ts already caps at
-          # min(4, cpus) and these runners hit -- 8 was tried and lost to port and shared-FS
-          # races, so there is no headroom there. Windows also keeps running every test file. A
-          # curated Windows profile like the darwin one would be the biggest single win, but it
-          # trades away what test-profile.ts calls the backstop for platform-neutral behavior,
-          # which is a coverage decision rather than a CI tuning one.
+          #
+          # Deliberately NOT changed: per-shard concurrency. PR #13077 throttled Windows CLI tests
+          # to KILO_TEST_CONCURRENCY=2 with a 600s per-file deadline because the default 4 gave
+          # heavy real-server files ~1 vCPU each and blew their per-test timeouts -- Windows was
+          # ~62 percent of test-job failures. The 733s anchor above was measured WITH that
+          # throttle, so these projections already assume it. That base predates this branch:
+          # rebasing onto main must keep the KILO_TEST_CONCURRENCY and KILO_TEST_FILE_TIMEOUT env
+          # wiring on the Run CLI unit tests step, or 10 shards buys speed back by reintroducing
+          # the flakiness #13077 fixed. Windows also keeps running every test file. A curated
+          # Windows profile like the darwin one would be the biggest single win, but it trades
+          # away what test-profile.ts calls the backstop for platform-neutral behavior, which is
+          # a coverage decision rather than a CI tuning one.
           # Generated rather than written out: 20 entries on one line is not reviewable.
           LINUX_HOST=blacksmith-4vcpu-ubuntu-2404
           WINDOWS_HOST=blacksmith-4vcpu-windows-2025
