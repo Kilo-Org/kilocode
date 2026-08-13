@@ -38,7 +38,18 @@ function runActive(options: Options, scenario: ActiveScenario) {
       const result = yield* call(scenario, ctx)
       yield* trace(options, scenario, `response ${result.status}`)
       yield* trace(options, scenario, "expect start")
-      yield* scenario.expect(ctx, ctx.state, result)
+      // kilocode_change start - append the actual response to assertion failures so CI logs
+      // show what the route returned, not just which expectation broke
+      yield* scenario.expect(ctx, ctx.state, result).pipe(
+        Effect.catchCause((cause) =>
+          Effect.die(
+            new Error(
+              `${Cause.pretty(cause)}\n  response ${result.status}: ${result.text.slice(0, 1000)}`,
+            ),
+          ),
+        ),
+      )
+      // kilocode_change end
       yield* trace(options, scenario, "expect done")
     }),
   )

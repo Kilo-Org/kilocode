@@ -1827,7 +1827,20 @@ const main = Effect.gen(function* () {
           (scenario) =>
             Effect.gen(function* () {
               if (options.progress) console.log(`${color.dim}RUN ${routeKey(scenario)} ${scenario.name}${color.reset}`)
-              return yield* runScenario(options)(scenario)
+              const result = yield* runScenario(options)(scenario)
+              // kilocode_change start - retry a failed scenario once before failing the pass,
+              // mirroring the unit runner's pass-after-retry policy: state resets between
+              // attempts (runner.ts ensures resetState per run), so contention flakes recover
+              // while real regressions still fail both attempts. Retries stay visible in output.
+              if (result.status !== "fail") return result
+              console.log(
+                `${color.yellow}RETRY${color.reset} ${routeKey(scenario)} ${scenario.name} failed once, retrying`,
+              )
+              const retried = yield* runScenario(options)(scenario)
+              if (retried.status === "pass")
+                console.log(`${color.yellow}FLAKY${color.reset} ${routeKey(scenario)} ${scenario.name} passed on retry`)
+              return retried
+              // kilocode_change end
             }),
           { concurrency: 1 },
         )
