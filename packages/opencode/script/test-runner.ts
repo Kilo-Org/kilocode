@@ -10,6 +10,7 @@ import fs from "fs/promises"
 import { TestProfile } from "./kilocode/test-profile"
 import { TestShard } from "./kilocode/test-shard"
 import { TestBatch } from "./kilocode/test-batch"
+import { TestSplit } from "./kilocode/test-split" // kilocode_change
 import batchAllowlist from "./kilocode/test-batch.json"
 import { TestCli } from "./kilocode/test-cli"
 import { remove } from "../test/kilocode/cleanup"
@@ -202,37 +203,81 @@ const matched =
     : selected
 const candidates = patterns.length > 0 && !profile ? matched : matched.filter((file) => !skipped.has(file)) // kilocode_change
 // kilocode_change start - shard by estimated DURATION, not file size. File size is a poor
-// proxy: run-process.test.ts is ~7 KB but ~230s, while config-overlay is the single slowest
-// file — under size-weighting both landed in the same shard, stacking the two heaviest files.
-// DURATION_HINTS are max observed per-file durations (ms) from real Windows CI runs; the LPT
-// splitter places the highest-weight files first, so hinted heavy files get spread across
-// distinct shards. Unhinted files fall back to size (a fine proxy among the fast majority);
-// hint values (tens of thousands of ms) dominate byte sizes, so heavy files always sort first.
-// Refresh these from observed CI durations when the suite changes materially.
+// proxy: run-process.test.ts is ~7 KB but ~254s, while a 40 KB table-driven file can be
+// under a second — under size-weighting the two heaviest files landed in the same shard.
+//
+// Everything here is in SECONDS, so hints, history and size estimates are directly
+// comparable. DURATION_HINTS are max observed per-file durations from real Windows CI runs
+// (runs 31657477161 and 31703950716) and only matter for a file history has not measured
+// yet; the LPT splitter places the highest-weight files first, so heavy files get spread
+// across distinct shards. Refresh from observed CI durations when the suite changes
+// materially, and drop entries for files that no longer exist (the runner warns about them).
 const DURATION_HINTS: Record<string, number> = {
-  "kilocode/server/config-overlay.test.ts": 270_000,
-  "cli/run/run-process.test.ts": 233_000,
-  "snapshot/snapshot.test.ts": 165_000,
-  "session/prompt.test.ts": 128_000,
-  "tool/shell.test.ts": 95_000,
-  "kilocode/background-process.test.ts": 94_000,
-  "provider/provider.test.ts": 90_000,
-  "kilocode/indexing-startup.test.ts": 88_000,
-  "kilocode/daemon.test.ts": 65_000,
-  "tool/task.test.ts": 64_000,
+  "cli/run/run-process.test.ts": 254,
+  "snapshot/snapshot.test.ts": 139,
+  "session/prompt.test.ts": 121,
+  "kilocode/background-process.test.ts": 88,
+  "tool/shell.test.ts": 68,
+  "provider/provider.test.ts": 67,
+  "kilocode/server/config-overlay-scope.test.ts": 58,
+  "kilocode/session-prompt-permission-refresh.test.ts": 54,
+  "kilocode/kilo-sessions.test.ts": 54,
+  "server/httpapi-session.test.ts": 53,
+  "kilocode/indexing-startup.test.ts": 53,
+  "kilocode/daemon.test.ts": 51,
+  "kilocode/session-processor-incomplete-response-retry.test.ts": 43,
 }
-const weight = (file: string) => DURATION_HINTS[file] ?? Bun.file(path.join(root, "test", file)).size
+// Seconds per byte for files with neither a hint nor a measurement. Learned from the
+// history when there is one (unhinted measured files only, so the constant describes the
+// ordinary majority rather than the outliers the hints already cover) and otherwise the
+// same ratio measured off the Windows runs above: 2278s over 4.12 MB of test sources.
+// It exists so a size estimate lands in seconds; without it, raw byte counts would swamp
+// every real duration and the sharder would be back to balancing bytes.
+const SECONDS_PER_BYTE = 5.53e-4
+const sizeOf = (file: string) => Bun.file(path.join(root, "test", file)).size
 // kilocode_change end
 // kilocode_change start - measured durations beat hand-maintained hints, so use junit history
 // when `--history` supplied any; DURATION_HINTS above remain the no-history default.
 const durations = await loadHistory(historyDir)
-const shardWeight = TestShard.weightFromDurations(durations, weight)
+const learned = (() => {
+  let bytes = 0
+  let seconds = 0
+  for (const [file, time] of Object.entries(durations)) {
+    if (!(time > 0) || DURATION_HINTS[file] !== undefined) continue
+    const size = sizeOf(file)
+    if (size > 0) {
+      bytes += size
+      seconds += time
+    }
+  }
+  return bytes > 0 ? seconds / bytes : SECONDS_PER_BYTE
+})()
+const weight = (file: string) => DURATION_HINTS[file] ?? sizeOf(file) * learned
+const fileWeight = TestShard.weightFromDurations(durations, weight)
 // kilocode_change end
-if (shard && shard.total > candidates.length) {
-  console.error(`Test shard count ${shard.total} exceeds selected file count ${candidates.length}`)
+// kilocode_change start - a very heavy file is split into `-t`-filtered parts so the shard
+// splitter can place them separately; without that, the shard holding run-process.test.ts
+// costs at least its 254s however many shards exist. Items are shard-item keys: a plain
+// file path, or `path#IofN` for one part of a split file.
+const items = TestSplit.expand(candidates)
+const itemWeight = (key: string) => {
+  const part = TestSplit.lookup(key)
+  return part ? fileWeight(part.file) * part.share : fileWeight(key)
+}
+const staleHints = Object.keys(DURATION_HINTS).filter((file) => !all.includes(file))
+const staleSplits = TestSplit.stale(all)
+for (const [kind, list] of [
+  ["duration hint", staleHints],
+  ["split", staleSplits],
+] as const) {
+  if (list.length > 0) console.log(`warn: ${kind} entries no longer exist: ${list.join(", ")}`)
+}
+// kilocode_change end
+if (shard && shard.total > items.length) {
+  console.error(`Test shard count ${shard.total} exceeds selected unit count ${items.length}`) // kilocode_change
   process.exit(2)
 }
-const files = shard ? TestShard.split(candidates, shardWeight, shard.total)[shard.index - 1] : candidates
+const files = shard ? TestShard.split(items, itemWeight, shard.total)[shard.index - 1] : items // kilocode_change
 if (Object.keys(durations).length > 0) {
   console.log(`Loaded ${Object.keys(durations).length} file durations from ${historyDir ?? "history"}`)
 }
@@ -249,8 +294,11 @@ const batching = !argv.includes("--no-batch") && !process.env.KILO_TEST_NO_BATCH
 const allow = TestBatch.allowlist(batchAllowlist)
 // `all` rather than `files` is the staleness yardstick, so a shard or a pattern
 // filter running part of the allowlist is not mistaken for drift.
+// A split part's key is not a path, so it is never in the allowlist and always
+// stays isolated — which is what we want: a file heavy enough to split is far
+// too heavy to share a process.
 const plan = batching
-  ? TestBatch.plan(files, allow, concurrency, shardWeight, all)
+  ? TestBatch.plan(files, allow, concurrency, itemWeight, all)
   : { groups: [], isolated: files.slice(), stale: [] }
 if (plan.stale.length > 0) {
   console.log(
@@ -262,15 +310,24 @@ const units: Unit[] = [
     kind: "batch" as const,
     label: `batch ${index + 1}/${plan.groups.length} (${group.length} files)`,
     xml: `batch_${index + 1}`,
+    keys: group,
     files: group,
   })),
-  ...plan.isolated.map((file) => ({
-    kind: "file" as const,
-    label: file,
-    xml: file.replace(/[/\\]/g, "_"),
-    files: [file],
-  })),
+  ...plan.isolated.map((key) => unitFor(key)),
 ]
+
+/** The one-process unit that runs a shard item, split part or whole file. */
+function unitFor(key: string): Unit {
+  const part = TestSplit.lookup(key)
+  return {
+    kind: "file",
+    label: part?.label ?? key,
+    xml: key.replace(/[/\\]/g, "_"),
+    keys: [key],
+    files: [part?.file ?? key],
+    filter: part?.filter,
+  }
+}
 // kilocode_change end
 
 // ---------------------------------------------------------------------------
@@ -284,7 +341,11 @@ type Unit = {
   label: string
   /** Filesystem-safe stem for this unit's JUnit XML file. */
   xml: string
+  /** Shard-item keys this unit answers for; `files` except for split parts. */
+  keys: string[]
   files: string[]
+  /** `bun test -t` pattern, set only for one part of a split file. */
+  filter?: string
 }
 // kilocode_change end
 
@@ -416,6 +477,9 @@ async function run(unit: Unit): Promise<Result> {
   // still catches a genuine hang; when it trips, the fallback re-runs each file
   // under the real per-file deadline anyway.
   const limit = unit.kind === "batch" ? deadline * 3 : deadline
+  // One part of a split file. bun exits nonzero when a pattern matches nothing,
+  // so a filter gone stale fails this unit rather than silently skipping tests.
+  if (unit.filter) cmd.push("-t", unit.filter)
 
   if (ci) {
     cmd.push("--reporter=junit", `--reporter-outfile=${path.join(xmldir, unit.xml + ".xml")}`)
@@ -574,9 +638,11 @@ const results: Result[] = []
 // batch_N.xml is the partial record of a failed process, so `merge` must ignore it in
 // favour of the per-file XML the re-runs produce, or the two double-count each other.
 const retired = new Set<string>()
+// kilocode_change - units created mid-run by that fallback, so `merge` can find their XML.
+const extra: Unit[] = []
 // kilocode_change - heaviest unit first, a batch weighted by the sum of its contents.
 // Sorted here rather than via TestShard.order because that helper is string-keyed.
-const unitWeight = (unit: Unit) => unit.files.reduce((sum, file) => sum + shardWeight(file), 0)
+const unitWeight = (unit: Unit) => unit.keys.reduce((sum, key) => sum + itemWeight(key), 0)
 const queue = units.slice().sort((a, b) => unitWeight(b) - unitWeight(a) || a.label.localeCompare(b.label))
 
 const workers = Array.from({ length: Math.min(concurrency, units.length) }, async () => {
@@ -591,14 +657,9 @@ const workers = Array.from({ length: Math.min(concurrency, units.length) }, asyn
       console.log(`${yellow("BATCH")} ${unit.label} failed; re-running its ${unit.files.length} files in isolation`)
       retired.add(unit.xml)
       total.value += unit.files.length - 1
-      queue.unshift(
-        ...unit.files.map((file) => ({
-          kind: "file" as const,
-          label: file,
-          xml: file.replace(/[/\\]/g, "_"),
-          files: [file],
-        })),
-      )
+      const rerun = unit.files.map((file) => unitFor(file))
+      extra.push(...rerun)
+      queue.unshift(...rerun)
       continue
     }
     // kilocode_change end
@@ -723,51 +784,60 @@ async function merge() {
   const suites: string[] = []
   const counts = { tests: 0, failures: 0, errors: 0 }
 
-  const ingest = async (fpath: string) => {
+  // kilocode_change - `filtered` drops testcases this process skipped. A `-t` run still
+  // emits every testcase in the file, marking the ones it filtered out as <skipped/>, so
+  // the three parts of a split file would otherwise contribute three copies of each test
+  // — one real, two skipped — and treble the file's contribution to `tests`.
+  const ingest = async (fpath: string, filtered = false) => {
     if (!(await Bun.file(fpath).exists())) return false
     const content = await Bun.file(fpath).text()
     const extracted = extract(content)
     if (!extracted) return false
-    suites.push(extracted)
+    suites.push(filtered ? unskip(extracted) : extracted)
     // Counts come from the outer <testsuites ...> root attributes, not from
     // regex-scanning the inner content, so nested <testsuite> blocks (bun
     // emits one per `describe`) don't get double-counted.
     const attrs = content.match(/<testsuites\b([^>]*)>/)
     if (attrs) {
-      counts.tests += attr(attrs[1], "tests")
+      counts.tests += attr(attrs[1], "tests") - (filtered ? attr(attrs[1], "skipped") : 0) // kilocode_change
       counts.failures += attr(attrs[1], "failures")
       counts.errors += attr(attrs[1], "errors")
     }
     return true
   }
 
-  // kilocode_change start - a batched unit writes one batch_N.xml covering all of its
-  // files, so the per-file lookup below cannot find any of them: every batched file fell
-  // through to the synthetic-failure branch and was dropped for having passed. That
-  // silently cost the merged report ~2300 of the CLI package's testcases (measured in run
-  // 31703950716), which also starves `--history` of the durations it shards by. Ingest the
-  // batch XML here, skipping batches the isolation fallback superseded.
-  const batchedFiles = new Set<string>()
-  for (const unit of units) {
-    if (unit.kind !== "batch" || retired.has(unit.xml)) continue
-    if (await ingest(path.join(xmldir, unit.xml + ".xml"))) {
-      for (const file of unit.files) batchedFiles.add(file)
+  // kilocode_change start - a unit's XML does not always sit at the per-item path the loop
+  // below looks up: a batch writes one batch_N.xml covering all of its files, so every
+  // batched file used to fall through to the synthetic-failure branch and get dropped for
+  // having passed. That silently cost the merged report ~2300 of the CLI package's testcases
+  // (measured in run 31703950716), which also starves `--history` of the durations it shards
+  // by. Ingest by unit first — batches and split parts alike — and record which shard items
+  // each covered, skipping batches the isolation fallback superseded.
+  const covered = new Set<string>()
+  for (const unit of [...units, ...extra]) {
+    if (retired.has(unit.xml)) continue
+    if (await ingest(path.join(xmldir, unit.xml + ".xml"), unit.filter !== undefined)) {
+      for (const key of unit.keys) covered.add(key)
       continue
     }
-    // A passing batch that produced no usable XML would silently lose every file in it,
-    // which is the defect above all over again. Leave its files to the loop below so they
+    // A passing unit that produced no usable XML would silently lose every file in it,
+    // which is the defect above all over again. Leave its items to the loop below so they
     // at least get a synthetic entry, and say so rather than dropping them quietly.
-    console.log(`warn: batch ${unit.xml} produced no usable JUnit XML; ${unit.files.length} files unreported`)
+    if (unit.kind === "batch") {
+      console.log(`warn: batch ${unit.xml} produced no usable JUnit XML; ${unit.files.length} files unreported`)
+    }
   }
   // kilocode_change end
 
-  for (const file of files) {
-    if (batchedFiles.has(file)) continue // kilocode_change - already covered by its batch XML
-    // kilocode_change - same ingest as the batch pass above; behaviour is unchanged
-    if (await ingest(path.join(xmldir, file.replace(/[/\\]/g, "_") + ".xml"))) continue
-
+  for (const key of files) {
+    if (covered.has(key)) continue // kilocode_change - already ingested above
+    // kilocode_change start - `key` is a shard item, so a split part reports under the real
+    // path of the file it ran part of; JunitDurations sums the parts back into one duration.
+    const unit = unitFor(key)
+    const file = unit.files[0]
     // No valid XML produced - generate synthetic entry for failed files
-    const result = results.find((r) => r.file === file)
+    const result = results.find((r) => r.file === unit.label)
+    // kilocode_change end
     if (!result || result.passed) continue
 
     const secs = (result.duration / 1000).toFixed(3)
@@ -778,7 +848,7 @@ async function merge() {
 
     suites.push(
       `  <testsuite name="${esc(file)}" tests="1" failures="1" errors="0" time="${secs}">\n` +
-        `    <testcase name="${esc(file)}" classname="${esc(file)}" time="${secs}">\n` +
+        `    <testcase name="${esc(unit.label)}" classname="${esc(file)}" time="${secs}">\n` +
         `      <failure message="${esc(msg)}">${detail}</failure>\n` +
         `    </testcase>\n` +
         `  </testsuite>`,
@@ -839,6 +909,19 @@ function extract(content: string): string {
   if (end === -1 || end <= start) return ""
   return content.slice(start, end).trim()
 }
+
+// kilocode_change start - drop the <testcase> entries a `-t` run reported as skipped.
+// bun writes `<testcase ...>\n  <skipped />\n</testcase>` for a filtered-out test, so the
+// match is exact and nothing else is touched. Two knock-on effects, both accepted:
+// a `test.skip` inside a split file disappears from the report entirely, because every part
+// reports it identically to the tests it filtered out and the two are indistinguishable
+// here; and the enclosing <testsuite> keeps tests/skipped attributes that now overstate
+// what it contains, because rewriting those means re-deriving counts for every describe
+// level while report consumers read the testcase elements and the merged root attributes.
+function unskip(body: string): string {
+  return body.replace(/[ \t]*<testcase\b[^>]*>\s*<skipped\b[^>]*\/>\s*<\/testcase>\n?/g, "")
+}
+// kilocode_change end
 
 function attr(attrs: string, name: string): number {
   const m = attrs.match(new RegExp(`\\b${name}="(\\d+)"`))
