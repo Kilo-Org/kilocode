@@ -78,35 +78,38 @@ jobs:
           #      6 -> 3.78m, 7 -> 3.09m, 8 -> 2.66m. 8 is the first count under the 2m15-2m45
           #      target, hence 8 rather than 6.
           #
-          # Windows 6 -> 10 for a different reason. Windows was the actual critical path of the
-          # whole workflow in run 31648508417 (shard 3/6 at 12m13s). Unlike Linux it is not
-          # floor-bound: its heaviest file, cli/run/run-process.test.ts, is 185s, and modelling
-          # a split of the top five heavy files moved a 6-shard makespan by 3s. It is
-          # throughput-bound, so shard count is the lever that works. Windows sits far above its
-          # 185s floor at every count below, so wall scales close to 1/shards. Anchoring on the
-          # 733s observed at 6, and assuming the Defender exclusion above does nothing at all:
-          #   8 -> 9.0m   10 -> 7.3m   12 -> 6.1m   14 -> 5.3m
-          # Returns flatten after 10 and billed minutes are near flat across these counts,
-          # because total Windows work is fixed at ~7142s and extra shards only add each jobs
-          # own setup. 10 clears the httpapi job (12m) with margin even in the worst case, which
-          # is what matters: httpapi is the next bound and is tracked separately in the epic.
+          # Windows went 6 -> 10 -> 7. The 10 was projected from a 6-shard anchor, assuming
+          # Windows was throughput-bound so wall would scale close to 1/shards. Run
+          # 31657477161 measured that assumption and refuted it. At 10 shards the worst shard
+          # is 5m10s: 188s of tests behind 118s of fixed per-shard cost, 83s of which is Setup
+          # Bun (Windows skips the dep cache deliberately -- see setup-bun/action.yml).
+          # Summing the ten shards gives ~1315s of test work, so balanced wall is
+          # 118 + 1315/N -- but real wall is bounded below by 118s + the heaviest single file,
+          # and cli/run/run-process.test.ts alone accounts for 188s of that worst shard:
+          #   N=6 -> 337s   N=7 -> 306s   N=8 -> 306s   N=10 -> 306s   N=14 -> 306s
+          # 7 is the knee. Shards past it are billed Windows minutes buying zero wall clock,
+          # so 10 -> 7 costs nothing. Reaching the 2m45-3m15 target is not a shard-count
+          # problem at all: 118s of overhead against a 195s ceiling leaves a 77s test budget,
+          # and six files individually exceed it. Cutting the fixed overhead and subdividing
+          # those files are the only levers left -- sharding is exhausted.
           #
           # Deliberately NOT changed: per-shard concurrency. PR #13077 throttled Windows CLI tests
           # to KILO_TEST_CONCURRENCY=2 with a 600s per-file deadline because the default 4 gave
           # heavy real-server files ~1 vCPU each and blew their per-test timeouts -- Windows was
-          # ~62 percent of test-job failures. The 733s anchor above was measured WITH that
-          # throttle, so these projections already assume it. That base predates this branch:
-          # rebasing onto main must keep the KILO_TEST_CONCURRENCY and KILO_TEST_FILE_TIMEOUT env
-          # wiring on the Run CLI unit tests step, or 10 shards buys speed back by reintroducing
-          # the flakiness #13077 fixed. Windows also keeps running every test file. A curated
+          # ~62 percent of test-job failures. The 1315s of work measured above was measured WITH
+          # that throttle, so the numbers above already assume it. That base predates this
+          # branch: merging main must keep the KILO_TEST_CONCURRENCY and KILO_TEST_FILE_TIMEOUT
+          # env wiring on the Run CLI unit tests step -- a clean auto-merge silently dropped it
+          # once already -- or the shard counts buy speed back by reintroducing the flakiness
+          # #13077 fixed. Windows also keeps running every test file. A curated
           # Windows profile like the darwin one would be the biggest single win, but it trades
           # away what test-profile.ts calls the backstop for platform-neutral behavior, which is
           # a coverage decision rather than a CI tuning one.
-          # Generated rather than written out: 20 entries on one line is not reviewable.
+          # Generated rather than written out: 17 entries on one line is not reviewable.
           LINUX_HOST=blacksmith-4vcpu-ubuntu-2404
           WINDOWS_HOST=blacksmith-4vcpu-windows-2025
           LINUX_SHARDS=8
-          WINDOWS_SHARDS=10
+          WINDOWS_SHARDS=7
           # os host index total packages
           shard() { printf '{"os":"%s","index":%s,"total":%s,"host":"%s","run":true,"packages":%s},' "$1" "$3" "$4" "$2" "$5"; }
           settings="$(
