@@ -1,5 +1,5 @@
-import * as path from "path"
 import * as vscode from "vscode"
+import { resolveInside } from "./diff/shared/path"
 import { inspect } from "util"
 
 export function appendOutput(channel: vscode.OutputChannel, prefix: string, ...args: unknown[]): void {
@@ -36,10 +36,9 @@ export function openFileInEditor(
     .then(undefined, (err) => console.error(`[Kilo New] ${prefix}: Failed to open file:`, uri.fsPath, err))
 }
 
-export function openWorkspaceRelativeFile(relativePath: string, line?: number, column?: number): void {
-  const root = getWorkspaceRoot()
+export function openRelativeFile(root: string | undefined, relativePath: string, line?: number, column?: number): void {
   if (!root) return
-  const resolved = path.resolve(root, relativePath)
-  if (!resolved.startsWith(root + path.sep) && resolved !== root) return
+  const resolved = resolveInside(root, relativePath)
+  if (!resolved) return
   openFileInEditor(resolved, line, column, vscode.ViewColumn.Beside, "DiffPanel")
 }
