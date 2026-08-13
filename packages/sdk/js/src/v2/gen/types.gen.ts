@@ -532,6 +532,7 @@ export type Session = {
     partID?: string
     snapshot?: string
     diff?: string
+    workspace?: "restored" | "snapshots-disabled" | "unavailable"
   }
 }
 
@@ -5707,6 +5708,7 @@ export type RevertState = {
   snapshot?: string
   diff?: string
   files?: Array<FileDiff>
+  workspace?: "restored" | "snapshots-disabled" | "unavailable"
 }
 
 export type EventSessionNextRevertStaged = {
