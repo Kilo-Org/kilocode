@@ -332,7 +332,6 @@ describe("kilocode tool registry indexing", () => {
       execute: () => Effect.succeed({ title: id, output: id, metadata: {} }),
     })
     const tools = {
-      codebase: def("codebase_search"),
       semantic: def("semantic_search"),
       recall: def("recall"),
       managerModels: def("agent_manager_models"),
@@ -362,25 +361,9 @@ describe("kilocode tool registry indexing", () => {
         "notify_user",
         "send_file",
       ])
-      expect(KiloToolRegistry.extra(tools, { experimental: { codebase_search: true } }).map((tool) => tool.id)).toEqual(
-        [
-          "codebase_search",
-          "semantic_search",
-          "kilo_memory_recall",
-          "kilo_memory_save",
-          "recall",
-          "background_process",
-          "interactive_terminal",
-          "notify_user",
-          "send_file",
-        ],
-      )
       expect(
-        KiloToolRegistry.extra(tools, { experimental: { codebase_search: true, image_generation: true } }).map(
-          (tool) => tool.id,
-        ),
+        KiloToolRegistry.extra(tools, { experimental: { image_generation: true } }).map((tool) => tool.id),
       ).toEqual([
-        "codebase_search",
         "generate_image",
         "semantic_search",
         "kilo_memory_recall",
@@ -393,27 +376,23 @@ describe("kilocode tool registry indexing", () => {
       ])
 
       process.env["KILO_CLIENT"] = "vscode"
-      expect(KiloToolRegistry.extra(tools, { experimental: { codebase_search: true } }).map((tool) => tool.id)).toEqual(
-        [
-          "codebase_search",
-          "semantic_search",
-          "kilo_memory_recall",
-          "kilo_memory_save",
-          "recall",
-          "chart",
-          "background_process",
-          "agent_manager_models",
-          "agent_manager",
-          "notify_user",
-          "send_file",
-        ],
-      )
+      expect(KiloToolRegistry.extra(tools, {}).map((tool) => tool.id)).toEqual([
+        "semantic_search",
+        "kilo_memory_recall",
+        "kilo_memory_save",
+        "recall",
+        "chart",
+        "background_process",
+        "agent_manager_models",
+        "agent_manager",
+        "notify_user",
+        "send_file",
+      ])
       expect(
         KiloToolRegistry.extra(tools, {
-          experimental: { codebase_search: true, native_notebook_tools: true },
+          experimental: { native_notebook_tools: true },
         }).map((tool) => tool.id),
       ).toEqual([
-        "codebase_search",
         "semantic_search",
         "kilo_memory_recall",
         "kilo_memory_save",

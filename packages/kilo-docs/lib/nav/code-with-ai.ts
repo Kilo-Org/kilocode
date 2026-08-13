@@ -65,6 +65,10 @@ export const CodeWithAiNav: NavSection[] = [
         children: "Chat Interface",
       },
       {
+        href: "/code-with-ai/agents/session-history",
+        children: "Session History and Search",
+      },
+      {
         href: "/code-with-ai/agents/context-mentions",
         children: "Context & Mentions",
       },
