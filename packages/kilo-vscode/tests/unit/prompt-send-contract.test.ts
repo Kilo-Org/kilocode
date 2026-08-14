@@ -276,6 +276,22 @@ describe("sendMessage / sendCommand draft id contract", () => {
     )
   })
 
+  it("promptAgent sends an explicit selection instead of omitting the default agent", () => {
+    const match = source.match(/function promptAgent\(sessionID\?: string\) \{([\s\S]*?)\n  \}/)
+    expect(match).not.toBeNull()
+    expect(match![1]).toContain("store.agentSelections[sessionID]")
+    expect(match![1]).toContain("pendingAgentSelection()")
+    expect(match![1]).not.toContain("defaultAgent()")
+    expect(match![1]).not.toMatch(/name !== defaultAgent\(\) \? name : undefined/)
+  })
+
+  it("createSession and clearCurrentSession do not pin the provisional default agent", () => {
+    expect(extractFunctionBody(source, "createSession")).toContain("setPendingAgentSelection(null)")
+    expect(extractFunctionBody(source, "createSession")).not.toContain("setPendingAgentSelection(defaultAgent())")
+    expect(extractFunctionBody(source, "clearCurrentSession")).toContain("setPendingAgentSelection(null)")
+    expect(extractFunctionBody(source, "clearCurrentSession")).not.toContain("setPendingAgentSelection(defaultAgent())")
+  })
+
   it("does not clear a newer pending agent when a seeded draft is promoted", () => {
     const body = extractFunctionBody(source, "handleSessionCreated")
     const draftBlock = body.match(/if \(draftID\) \{([\s\S]*?)\} else if/)
