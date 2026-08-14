@@ -38,6 +38,7 @@ type Help = {
 
 type Show = {
   kind: "show"
+  rest?: string
 }
 
 type Operation =
@@ -64,6 +65,7 @@ type Operation =
   | {
       kind: "operation"
       operation: Exclude<MemoryOperation, "remember" | "correct" | "forget" | "purge" | "auto">
+      rest?: string
     }
 
 type Usage = {
@@ -93,10 +95,10 @@ function usage(reason: string): ParsedMemoryCommand {
 }
 
 function operation(verb: string, text: string): ParsedMemoryCommand | undefined {
-  if (verb === "on" || verb === "enable") return { kind: "operation", operation: "enable" }
-  if (verb === "off" || verb === "disable") return { kind: "operation", operation: "disable" }
+  if (verb === "on" || verb === "enable") return { kind: "operation", operation: "enable", rest: text }
+  if (verb === "off" || verb === "disable") return { kind: "operation", operation: "disable", rest: text }
   if (verb === "status" || verb === "inspect" || verb === "rebuild") {
-    return { kind: "operation", operation: verb }
+    return { kind: "operation", operation: verb, rest: text }
   }
   if (verb === "purge") {
     if (text.toLowerCase() === "confirm") return { kind: "operation", operation: "purge", confirm: true }
@@ -138,7 +140,7 @@ export function parseMemoryCommand(input: string): ParsedMemoryCommand | undefin
   const parts = split(picked.rest)
   const verb = parts.head
   if (!verb) return { kind: "help" }
-  if (verb === "show") return { kind: "show" }
+  if (verb === "show") return { kind: "show", rest: parts.tail }
 
   const op = operation(verb, parts.tail)
   if (op) return op
