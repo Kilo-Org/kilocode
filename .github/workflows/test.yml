@@ -203,6 +203,9 @@ jobs:
 
       - name: Upload unit artifacts
         if: always() && matrix.settings.run
+        # kilocode_change - diagnostics only: a runner-side network blip here must not
+        # fail a job whose tests already passed (seen as ECONNREFUSED on Blacksmith).
+        continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
           name: unit-${{ matrix.settings.os }}-${{ matrix.settings.index }}-${{ github.run_attempt }}
