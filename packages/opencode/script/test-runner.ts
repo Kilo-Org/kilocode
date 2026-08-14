@@ -208,9 +208,10 @@ const DURATION_HINTS: Record<string, number> = {
   "kilocode/daemon.test.ts": 65_000,
   "tool/task.test.ts": 64_000,
 }
-// Measured per-file durations (ms) from a full local run; regenerate by parsing the
-// runner's PASS/FAIL lines. Relative order is what LPT needs, so a macOS measurement
-// balances Windows shards fine. Hints above still win: they are Windows-observed maxima.
+// Measured per-file durations (ms) from a full local run; refresh with
+// `bun run script/test-runner.ts --update-durations`. Relative order is what LPT needs,
+// so a macOS measurement balances Windows shards fine. Hints above still win: they are
+// Windows-observed maxima.
 const measuredDurations: Record<string, number> = await Bun.file(
   path.join(root, "script", "kilocode", "test-durations.json"),
 )
@@ -234,75 +235,51 @@ const weight = (file: string) => {
 // cleanly in a single pass (empirically: all pass in one process). This trades ~1s of process
 // boot + TS compile per file for a single boot, the dominant cost for these small fast files.
 // The batch enters shard splitting as one pseudo-file with a duration-scale weight, so LPT
-// places it like any other heavy file and exactly one shard executes it. Extend the list only
-// with files proven to pass in a shared process (run: bun test <dirs> locally).
+// places it like any other heavy file and exactly one shard executes it. Directories are
+// batched by default; files that cannot share a process are excluded by BATCH_EXCLUDES or
+// demoted automatically by the unsafe-marker scan below.
 // Deliberately excludes directories whose runtime is real I/O work (git/, server/, session/,
 // project/, provider/, ...): those parallelize well across the per-file worker pool, while a
 // batch runs its members sequentially. The tier is for files where boot cost dominates.
 // Several independent batches (instead of one) keep each batch short enough to schedule
 // like a normal heavy file, and let LPT spread them across shards and worker slots.
 // Batch weights are computed from member durations, never hand-maintained.
-const FAST_TIERS: Record<string, { entries: string[] }> = {
-  "fast-tier-core": {
-    entries: [
-      "account/",
-      "config/",
-      "effect/",
-      "event-manifest.test.ts",
-      "format/",
-      "image/",
-      "installation/",
-      "patch/",
-      "provider/model-status.test.ts",
-      "provider/transform.test.ts",
-      "question/",
-      "share/",
-      "suggestion/",
-      "util/",
-    ],
-  },
-  "fast-tier-kilocode": {
-    entries: [
-      "kilocode/config/",
-      "kilocode/memory/",
-      // kilocode/permission/ stays per-file: permission-origins asserts the merged config has
-      // no global-scope keys, so it cannot share an XDG root with tests that write global config.
-      "kilocode/presence/",
-      "kilocode/project/",
-      "kilocode/provider/",
-      "kilocode/skills/",
-      "kilocode/storage/",
-      "kilocode/suggestion/",
-      "kilocode/tui/",
-      "kilocode/util/",
-    ],
-  },
-  "fast-tier-kilocode-sessions": {
-    entries: ["kilocode/session-export/", "kilocode/session/", "kilocode/sessions/"],
-  },
-  "fast-tier-kilocode-tools": {
-    entries: ["kilocode/anaconda-desktop/", "kilocode/cloud/", "kilocode/tool/"],
-  },
-  "fast-tier-cli": {
-    entries: ["cli/"],
-  },
-  "fast-tier-misc": {
-    entries: [
-      "acp/",
-      "auth/",
-      "bun/",
-      "filesystem/",
-      "ide/",
-      "lsp/",
-      "mcp/",
-      "plugin/",
-      "storage/",
-      "v2/",
-    ],
-  },
-  "fast-tier-tool": {
-    entries: ["tool/"],
-  },
+const FAST_TIERS: Record<string, string[]> = {
+  "fast-tier-core": [
+    "account/",
+    "config/",
+    "effect/",
+    "event-manifest.test.ts",
+    "format/",
+    "image/",
+    "installation/",
+    "patch/",
+    "provider/model-status.test.ts",
+    "provider/transform.test.ts",
+    "question/",
+    "share/",
+    "suggestion/",
+    "util/",
+  ],
+  "fast-tier-kilocode": [
+    "kilocode/config/",
+    "kilocode/memory/",
+    // kilocode/permission/ stays per-file: permission-origins asserts the merged config has
+    // no global-scope keys, so it cannot share an XDG root with tests that write global config.
+    "kilocode/presence/",
+    "kilocode/project/",
+    "kilocode/provider/",
+    "kilocode/skills/",
+    "kilocode/storage/",
+    "kilocode/suggestion/",
+    "kilocode/tui/",
+    "kilocode/util/",
+  ],
+  "fast-tier-kilocode-sessions": ["kilocode/session-export/", "kilocode/session/", "kilocode/sessions/"],
+  "fast-tier-kilocode-tools": ["kilocode/anaconda-desktop/", "kilocode/cloud/", "kilocode/tool/"],
+  "fast-tier-cli": ["cli/"],
+  "fast-tier-misc": ["acp/", "auth/", "bun/", "filesystem/", "ide/", "lsp/", "mcp/", "plugin/", "storage/", "v2/"],
+  "fast-tier-tool": ["tool/"],
 }
 // Files that must run alone, never in a shared batch, for reasons a source scan cannot
 // detect: real subprocesses, fs watchers, and wall-clock stall simulations are all
@@ -322,8 +299,7 @@ const BATCH_EXCLUDES = [
   "tool/task.test.ts",
 ]
 // Entry semantics shared by FAST_TIERS and BATCH_EXCLUDES: ".ts" = exact file, else prefix.
-const matchesEntry = (file: string, entry: string) =>
-  entry.endsWith(".ts") ? file === entry : file.startsWith(entry)
+const matchesEntry = (file: string, entry: string) => (entry.endsWith(".ts") ? file === entry : file.startsWith(entry))
 const isBatchExcluded = (file: string) => BATCH_EXCLUDES.some((entry) => matchesEntry(file, entry))
 // 8 batches (~24 files each) keep the heaviest single work item small enough for
 // LPT to pack shards evenly; fewer, bigger batches set a floor under the slowest shard.
@@ -337,13 +313,15 @@ const kilocodeRootTier = (file: string) => {
 }
 const tierOf = (file: string) => {
   if (isBatchExcluded(file)) return undefined
-  for (const [name, tier] of Object.entries(FAST_TIERS)) {
-    if (tier.entries.some((entry) => matchesEntry(file, entry))) return name
+  for (const [name, entries] of Object.entries(FAST_TIERS)) {
+    if (entries.some((entry) => matchesEntry(file, entry))) return name
   }
   return kilocodeRootTier(file)
 }
 const batches = new Map<string, string[]>()
-if (patterns.length === 0 && !profile) {
+// --update-durations disables batching so every file runs (and is measured) individually;
+// batched members otherwise never appear in results and their entries would rot.
+if (patterns.length === 0 && !profile && !updateDurations) {
   for (const file of candidates) {
     const tier = tierOf(file)
     if (!tier) continue
@@ -357,6 +335,8 @@ if (patterns.length === 0 && !profile) {
   // bun's mock.module is process-wide and permanent, AppRuntime.dispose() kills the shared
   // runtime, and global-fetch spies observe batch-mates' traffic. A developer adding such
   // a test anywhere keeps a green suite; the file just does not share a process.
+  // Limitation: only the test file's own source is scanned — a marker hidden in an
+  // imported helper is invisible; batch-only failures that vanish per-file point there.
   // Markers: bun module mocks, disposal of the shared app runtime, spies on true globals,
   // and module-scope env writes (column 0 — env set inside a test body is indented and
   // typically restored; a load-time write leaks into every batch-mate's import snapshot).
@@ -366,22 +346,28 @@ if (patterns.length === 0 && !profile) {
     /\bspyOn\s*\(\s*globalThis\b/,
     /^process\.env[.[]/m,
   ]
-  const demoted = new Set(
-    (
-      await Promise.all(
-        [...batches.values()].flat().map(async (member) => {
-          const source = await Bun.file(path.join(root, "test", member)).text()
-          return unsafe.some((pattern) => pattern.test(source)) ? member : undefined
-        }),
-      )
-    ).filter((member): member is string => member !== undefined),
-  )
+  const demoted = new Set<string>()
+  const members = [...batches.values()].flat()
+  // Bounded chunks: an unbounded Promise.all over ~440 files can exhaust low soft
+  // fd limits (macOS shells commonly default to 256) before a single test runs.
+  for (let i = 0; i < members.length; i += 64) {
+    await Promise.all(
+      members.slice(i, i + 64).map(async (member) => {
+        const source = await Bun.file(path.join(root, "test", member)).text()
+        if (unsafe.some((pattern) => pattern.test(source))) demoted.add(member)
+      }),
+    )
+  }
   if (demoted.size > 0) {
     console.log(
       `Fast tier: ${demoted.size} file(s) use process-wide mocks/disposal/spies and run per-file instead:\n` +
         [...demoted].map((file) => `- ${file}`).join("\n"),
     )
-    for (const [name, members] of batches) batches.set(name, members.filter((member) => !demoted.has(member)))
+    for (const [name, members] of batches)
+      batches.set(
+        name,
+        members.filter((member) => !demoted.has(member)),
+      )
   }
   for (const [name, members] of batches) if (members.length < 2) batches.delete(name)
 }
@@ -695,6 +681,26 @@ const results: Result[] = []
 // after everything else finished. Heaviest-first keeps the tail short. kilocode_change
 const queue = TestShard.order(files, shardWeight)
 
+// kilocode_change start - a flaky batch names only its pseudo-file; pull the members that
+// failed on the earlier attempt out of that attempt's output so annotations can attribute
+// the flake to real files. bun prints a "test/<file>:" heading before each file's tests.
+const flakyMembers = new Map<string, string[]>()
+const failedMembersOf = (stdout: string, members: string[]) => {
+  const failed = new Set<string>()
+  let current: string | undefined
+  for (const line of stdout.split("\n")) {
+    const heading = line.match(/^(?:.*[\\/])?test[\\/](.+\.test\.tsx?):\s*$/)
+    if (heading) {
+      const name = heading[1].replaceAll("\\", "/")
+      current = members.includes(name) ? name : undefined
+      continue
+    }
+    if (current && /^\(fail\)/.test(line.trim())) failed.add(current)
+  }
+  return [...failed]
+}
+// kilocode_change end
+
 const workers = Array.from({ length: Math.min(concurrency, files.length) }, async () => {
   while (queue.length > 0 && !stopped.value) {
     const file = queue.shift()!
@@ -703,7 +709,12 @@ const workers = Array.from({ length: Math.min(concurrency, files.length) }, asyn
     // attempt; contention-based flakes (port races, slow FS, slow spawn) recover.
     // Preserve the last attempt's stdout/stderr/duration so a truly broken file
     // still shows a useful diagnostic.
-    while (!result.passed && result.attempts <= retries && !stopped.value) {
+    // A timed-out item already burned the full kill deadline; retrying doubles a
+    // pathological hang (2x600s) and can push a shard past the 45-minute job budget.
+    // Contention flakes fail fast and still get their retry.
+    while (!result.passed && !result.timedout && result.attempts <= retries && !stopped.value) {
+      const members = batches.get(file) // kilocode_change
+      if (members) flakyMembers.set(file, failedMembersOf(result.stdout, members)) // kilocode_change
       const retry = await run(file)
       retry.attempts = result.attempts + 1
       result = retry
@@ -772,7 +783,16 @@ if (flaky.length > 0) {
   // the bottom of the job page and in the workflow summary email.
   if (process.env.GITHUB_ACTIONS === "true") {
     for (const r of sorted) {
-      if (batches.has(r.file)) continue // kilocode_change - pseudo-file, no source path to annotate
+      // kilocode_change start - annotate a flaky batch's failing members, not the pseudo-file
+      if (batches.has(r.file)) {
+        for (const member of flakyMembers.get(r.file) ?? []) {
+          console.log(
+            `::warning file=packages/opencode/test/${member},title=Flaky test file (in ${r.file})::passed on attempt ${r.attempts} of ${retries + 1}`,
+          )
+        }
+        continue
+      }
+      // kilocode_change end
       const repo = `packages/opencode/test/${r.file}`
       console.log(`::warning file=${repo},title=Flaky test file::passed on attempt ${r.attempts} of ${retries + 1}`)
     }
@@ -817,7 +837,9 @@ if (updateDurations) {
     // durations still feed the computed batch weights — replacing would erase them.
     const fresh = Object.fromEntries(
       results
-        .filter((result) => !batches.has(result.file))
+        // Only passing runs measure real duration: a timed-out file would record the kill
+        // deadline (~600s) and a failing file records contention noise, skewing LPT.
+        .filter((result) => result.passed && !batches.has(result.file))
         .map((result) => [result.file, Math.round(result.duration)] as const),
     )
     const files = new Set(candidates)

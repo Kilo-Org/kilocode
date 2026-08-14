@@ -80,6 +80,12 @@ jobs:
         settings: ${{ fromJSON(needs.changes.outputs.settings) }} # kilocode_change
     runs-on: ${{ matrix.settings.host }}
     timeout-minutes: 45 # kilocode_change
+    # kilocode_change start - manual dispatches exist to validate real execution (soak runs,
+    # timing measurements); every turbo step in this job bypasses the cache on dispatch
+    # instead of replaying a same-commit hit and executing nothing.
+    env:
+      TURBO_FORCE: ${{ github.event_name == 'workflow_dispatch' && 'true' || '' }}
+    # kilocode_change end
     defaults:
       run:
         shell: bash
@@ -99,14 +105,17 @@ jobs:
         continue-on-error: true
         shell: pwsh
         run: |
-          try {
-            foreach ($dir in @($env:GITHUB_WORKSPACE, $env:RUNNER_TEMP, $env:TEMP, "$env:USERPROFILE\.bun")) {
-              if ($dir) { Add-MpPreference -ExclusionPath $dir -ErrorAction Stop }
+          $applied = 0
+          foreach ($dir in @($env:GITHUB_WORKSPACE, $env:RUNNER_TEMP, $env:TEMP, "$env:USERPROFILE\.bun")) {
+            if (-not $dir) { continue }
+            try {
+              Add-MpPreference -ExclusionPath $dir -ErrorAction Stop
+              $applied++
+            } catch {
+              Write-Host "Defender exclusion failed for ${dir}: $($_.Exception.Message)"
             }
-            Write-Host "Defender path exclusions applied."
-          } catch {
-            Write-Host "Defender exclusions not applied: $($_.Exception.Message)"
           }
+          Write-Host "Defender path exclusions applied: $applied"
       # kilocode_change end
 
       - name: Checkout repository
@@ -191,9 +200,6 @@ jobs:
         if: matrix.settings.run
         run: bun turbo test:ci --output-logs=errors-only --log-order=grouped --log-prefix=task --filter='@kilocode/cli'
         env:
-          # kilocode_change - manual dispatches exist to validate real execution (soak runs,
-          # timing measurements); let them bypass the turbo cache instead of replaying it.
-          TURBO_FORCE: ${{ github.event_name == 'workflow_dispatch' && 'true' || '' }}
           KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: "true" # kilocode_change - was Windows-only; the CLI now starts a watcher per instance, too heavy/racy for unit tests. Watcher tests opt back in.
           KILO_TEST_PROFILE: ${{ matrix.settings.os == 'macos' && 'darwin' || '' }}
           KILO_TEST_SHARD: ${{ format('{0}/{1}', matrix.settings.index, matrix.settings.total) }}
