@@ -320,11 +320,17 @@ const FAST_TIERS: Record<string, { weight: number; entries: string[] }> = {
     entries: ["tool/"],
   },
 }
-// Top-level kilocode/*.test.ts files batch too, except files that mutate process-wide
-// state and so can only run alone: bun's mock.module is process-wide and permanent,
-// AppRuntime.dispose() kills the shared runtime for every later file, global fetch spies
-// observe batch-mates' traffic, and process/watcher tests flake under batch CPU contention.
-const KILOCODE_ROOT_EXCLUDES = new Set([
+// Files that mutate process-wide state can only run alone, never in a shared batch:
+// bun's mock.module is process-wide and permanent, AppRuntime.dispose() kills the shared
+// runtime for every later file, global fetch spies observe batch-mates' traffic (leaked
+// background timers included), and process/watcher tests flake under batch CPU contention.
+// The batch builder below verifies this list stays complete and refuses to run otherwise.
+const BATCH_EXCLUDES = new Set([
+  // mock.module / global fetch spies inside otherwise-batchable subdirectories
+  "kilocode/presence/service-presence.test.ts",
+  "kilocode/presence/service.test.ts",
+  "kilocode/sessions/kilo-sessions-title.test.ts",
+  "kilocode/sessions/send-agent-notification.test.ts",
   // mock.module (process-wide, permanent)
   "kilocode/background-process-shutdown.test.ts",
   "kilocode/cli-shutdown.test.ts",
@@ -355,12 +361,12 @@ const KILOCODE_ROOT_WEIGHT = 60_000
 const kilocodeRootTier = (file: string) => {
   if (!file.startsWith("kilocode/")) return undefined
   if (file.slice("kilocode/".length).includes("/")) return undefined
-  if (KILOCODE_ROOT_EXCLUDES.has(file)) return undefined
   let hash = 0
   for (let i = 0; i < file.length; i++) hash = (hash * 31 + file.charCodeAt(i)) | 0
   return `fast-tier-kilocode-root-${Math.abs(hash) % KILOCODE_ROOT_TIERS}`
 }
 const tierOf = (file: string) => {
+  if (BATCH_EXCLUDES.has(file)) return undefined
   for (const [name, tier] of Object.entries(FAST_TIERS)) {
     if (tier.entries.some((entry) => (entry.endsWith(".ts") ? file === entry : file.startsWith(entry)))) return name
   }
@@ -393,7 +399,7 @@ if (patterns.length === 0 && !profile) {
     console.error(
       [
         "These test files use process-wide mocks/disposal/spies and cannot run in a shared batch process.",
-        "Exclude them from batching (KILOCODE_ROOT_EXCLUDES or the FAST_TIERS entries in this script):",
+        "Add them to BATCH_EXCLUDES in this script:",
         ...violations.map((file) => `- ${file}`),
       ].join("\n"),
     )
