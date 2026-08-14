@@ -24,10 +24,10 @@ const scope = Effect.fnUntraced(function* () {
   return { root, svc }
 })
 
-// Storage rooted at `<root>/storage` via the injectable layer — migration tests stage
-// legacy layouts (e.g. `<root>/project`) as siblings, matching migration 1's `../project`
-// walk. Layer.fresh forces a new Storage instance — without it, Effect's in-test layer
-// cache returns the outer testEffect's Storage (rooted at the real data dir), not a new
+// kilocode_change start - Storage rooted at `<root>/storage` via the injectable layer — migration
+// tests stage legacy layouts (e.g. `<root>/project`) as siblings, matching migration 1's
+// `../project` walk. Layer.fresh forces a new Storage instance — without it, Effect's in-test
+// layer cache returns the outer testEffect's Storage (rooted at the real data dir), not a new
 // one rooted at the tmp dir.
 const injectedStorage = (root: string) =>
   Layer.fresh(
@@ -35,6 +35,7 @@ const injectedStorage = (root: string) =>
       Layer.provide(LayerNode.compile(LayerNode.group([FSUtil.node, Git.node]))),
     ),
   )
+// kilocode_change end
 
 describe("Storage", () => {
   it.live("round-trips JSON content", () =>
@@ -204,7 +205,7 @@ describe("Storage", () => {
           title: "legacy",
           summary: { additions: 5, deletions: 5 },
         })
-      }).pipe(Effect.provide(injectedStorage(tmp)))
+      }).pipe(Effect.provide(injectedStorage(tmp))) // kilocode_change
 
       expect(yield* fs.readFileString(path.join(storage, "migration"))).toBe("2")
     }),
@@ -246,7 +247,7 @@ describe("Storage", () => {
           role: "user",
           text: "hello",
         })
-      }).pipe(Effect.provide(injectedStorage(tmp)))
+      }).pipe(Effect.provide(injectedStorage(tmp))) // kilocode_change
 
       expect(yield* fs.readFileString(path.join(storage, "migration"))).toBe("2")
     }),
@@ -264,7 +265,7 @@ describe("Storage", () => {
       yield* Effect.gen(function* () {
         const svc = yield* Storage.Service
         expect(yield* svc.list(["project"])).toEqual([])
-      }).pipe(Effect.provide(injectedStorage(tmp)))
+      }).pipe(Effect.provide(injectedStorage(tmp))) // kilocode_change
 
       const exit = yield* fs.access(path.join(storage, "migration")).pipe(Effect.exit)
       expect(Exit.isFailure(exit)).toBe(true)

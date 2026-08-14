@@ -135,13 +135,15 @@ function withContext<A, E>(
           if (!context.llm) throw new Error("scenario needs fake LLM")
           return context.llm
         }
+        // kilocode_change start - headers closure extracted so scenarios can build their own requests
         const headers = (extra?: Record<string, string>) => ({
           ...(context.dir?.path ? { "x-kilo-directory": context.dir.path } : {}),
           ...extra,
         })
+        // kilocode_change end
         const base: ScenarioContext = {
           directory: context.dir?.path,
-          headers,
+          headers, // kilocode_change
           file: (name, content) =>
             Effect.promise(() => {
               return Bun.write(`${directory()}/${name}`, content)

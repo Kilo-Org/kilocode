@@ -32,11 +32,13 @@ export const Parameters = Schema.Struct({
 const WebSearchProviderSchema = Schema.Literals(["exa", "parallel", "kilo-exa"]) // kilocode_change - kilo-exa env override
 export type WebSearchProvider = Schema.Schema.Type<typeof WebSearchProviderSchema>
 
+// kilocode_change start - signature reflowed by the added override parameter (KILO_WEBSEARCH_PROVIDER resolved via Env.Service by the caller)
 export function selectWebSearchProvider(
   sessionID: string,
   flags = { exa: false, parallel: false },
-  override?: string, // kilocode_change - KILO_WEBSEARCH_PROVIDER resolved via Env.Service by the caller
+  override?: string,
 ): WebSearchProvider {
+  // kilocode_change end
   if (override === "exa" || override === "parallel" || override === "kilo-exa") return override // kilocode_change - kilo-exa env override
   if (flags.parallel) return "parallel"
   if (flags.exa) return "exa"
@@ -59,12 +61,13 @@ export function webSearchModelName(extra: Tool.Context["extra"]) {
   return (apiID ?? id)?.slice(0, 100)
 }
 
-// kilocode_change - API keys are resolved via Env.Service in the tool and passed down
+// kilocode_change start - API keys are resolved via Env.Service in the tool and passed down
 function parallelAuthHeaders(apiKey: string | undefined) {
   const headers = { "User-Agent": `opencode/${InstallationVersion}` }
   if (!apiKey) return headers
   return { ...headers, Authorization: `Bearer ${apiKey}` }
 }
+// kilocode_change end
 
 function callProvider(
   http: HttpClient.HttpClient,

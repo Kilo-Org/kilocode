@@ -156,9 +156,10 @@ describe("pty HttpApi bridge", () => {
 
     // Exited sessions are retained by core for the canonical surface, but the legacy
     // routes preserve pre-retention behavior: exited sessions are invisible here.
-    // Exit propagation can exceed 5s on a loaded CI shard; the loop breaks as soon
-    // as the session disappears, so a generous deadline costs nothing when healthy.
+    // kilocode_change start - exit propagation can exceed 5s on a loaded CI shard; the loop
+    // breaks as soon as the session disappears, so a generous deadline costs nothing when healthy.
     const deadline = Date.now() + 30_000
+    // kilocode_change end
     while (Date.now() < deadline) {
       const found = await app().request(PtyPaths.get.replace(":ptyID", info.id), { headers })
       if (found.status === 404) break
