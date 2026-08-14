@@ -182,6 +182,12 @@ jobs:
         settings: ${{ fromJSON(needs.changes.outputs.settings) }} # kilocode_change
     runs-on: ${{ matrix.settings.host }}
     timeout-minutes: 45 # kilocode_change
+    # kilocode_change start - manual dispatches exist to validate real execution (soak runs,
+    # timing measurements); every turbo step in this job bypasses the cache on dispatch
+    # instead of replaying a same-commit hit and executing nothing.
+    env:
+      TURBO_FORCE: ${{ github.event_name == 'workflow_dispatch' && 'true' || '' }}
+    # kilocode_change end
     defaults:
       run:
         shell: bash
@@ -276,32 +282,15 @@ jobs:
             turbo-${{ runner.os }}-
           # kilocode_change end
 
-      # kilocode_change start - reuse the previous run's merged junit.xml so the runner can weight shards by observed wall-clock duration instead of file size
-      - name: Restore unit junit history
-        # kilocode_change - the packages job runs no CLI shard, so it has no durations to weight
-        # and never writes packages/opencode/.artifacts/unit/junit.xml. Skip all three history
-        # steps there; actions/cache/save in particular hard-fails on a missing path.
-        if: matrix.settings.run && !matrix.settings.packagesOnly
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: packages/opencode/.artifacts/unit/junit.xml
-          key: unit-junit-${{ runner.os }}-${{ matrix.settings.index }}-${{ matrix.settings.total }}-${{ github.ref }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: |
-            unit-junit-${{ runner.os }}-${{ matrix.settings.index }}-${{ matrix.settings.total }}-${{ github.ref }}-
-            unit-junit-${{ runner.os }}-${{ matrix.settings.index }}-${{ matrix.settings.total }}-
-            unit-junit-${{ runner.os }}-
-
-      # kilocode_change start - cross-shard history: the aggregated junit from the previous run's `aggregate-junit-history` job, so each shard sees the slow files from sibling shards too
-      - name: Restore aggregated unit junit history
-        if: matrix.settings.run && matrix.settings.os != 'macos' && !matrix.settings.packagesOnly # kilocode_change
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: packages/opencode/.artifacts/unit/aggregate-${{ runner.os }}.xml
-          key: unit-junit-${{ runner.os }}-aggregate-${{ github.ref }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: |
-            unit-junit-${{ runner.os }}-aggregate-${{ github.ref }}-
-            unit-junit-${{ runner.os }}-aggregate-
-            unit-junit-${{ runner.os }}-
+      # kilocode_change start - the sharder weights files by the COMMITTED durations in
+      # script/kilocode/test-durations.json, never by cache-restored history. Every shard job
+      # computes the full split independently, so the weight input must be byte-identical on
+      # every shard of a run; cache restores with restore-key fallbacks cannot guarantee that
+      # (eviction and concurrent saves can hand two shards different entries), and shards that
+      # disagree double-run some files and silently ZERO-run others. The `aggregate junit
+      # history` job below uploads a refreshed durations file as an artifact; committing it is
+      # how the weights get better. Do not reintroduce a per-shard history input here.
+      # kilocode_change end
 
       # kilocode_change start - test non-CLI packages separately from sharded CLI tests
       - name: Verify package test scheduling
@@ -335,7 +324,6 @@ jobs:
           KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: "true" # kilocode_change - was Windows-only; the CLI now starts a watcher per instance, too heavy/racy for unit tests. Watcher tests opt back in.
           KILO_TEST_PROFILE: ${{ matrix.settings.os == 'macos' && 'darwin' || '' }}
           KILO_TEST_SHARD: ${{ format('{0}/{1}', matrix.settings.index, matrix.settings.total) }}
-          KILO_TEST_HISTORY_DIR: ${{ matrix.settings.os == 'macos' && '' || '.artifacts/unit' }} # kilocode_change - feed observed durations into the sharder (runner cwd is packages/opencode, so this is runner-relative)
           # kilocode_change - pin Windows parallelism to 2 vCPU per lane. What #13077 actually
           # fixed was per-lane starvation: on a 4-vCPU runner the default min(4, cpus)=4 gave four
           # heavy real-server files ~1 vCPU each and they blew their per-test timeouts, so it was
@@ -345,20 +333,13 @@ jobs:
           # past 16/2 would re-create the starvation #13077 diagnosed. Linux/macOS (not timeout
           # offenders; macOS is a single unsharded job) keep the default.
           KILO_TEST_CONCURRENCY: ${{ matrix.settings.os == 'windows' && '2' || '' }}
-          # kilocode_change - raise the per-file kill deadline on Windows only. Heavy real-server
-          # files run ~230-270s serially there (vs ~40s on macOS/Linux), leaving only ~30s under
-          # the 300s default; 600s gives healthy-but-slow files real margin without masking hangs
-          # elsewhere (Linux/macOS keep the 300s default).
-          KILO_TEST_FILE_TIMEOUT: ${{ matrix.settings.os == 'windows' && '600000' || '' }}
+          # kilocode_change - raise the per-file kill deadline on every OS (was Windows-only).
+          # The deadline exists to catch hangs, and a saturated shard can legitimately hold a
+          # heavy real-subprocess file past 300s on Linux too (observed: run-process passing
+          # every test and killed at the deadline). Healthy files never feel it; a real hang
+          # is capped at one deadline because the runner no longer retries timed-out units.
+          KILO_TEST_FILE_TIMEOUT: "600000"
       # kilocode_change end
-
-      # kilocode_change start - persist the freshly merged junit.xml so the next run can balance by wall-clock duration
-      - name: Save unit junit history
-        if: always() && matrix.settings.run && matrix.settings.os != 'macos' && !matrix.settings.packagesOnly # kilocode_change
-        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: packages/opencode/.artifacts/unit/junit.xml
-          key: unit-junit-${{ runner.os }}-${{ matrix.settings.index }}-${{ matrix.settings.total }}-${{ github.ref }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       # kilocode_change start
       - name: Publish unit reports
@@ -375,6 +356,9 @@ jobs:
 
       - name: Upload unit artifacts
         if: always() && matrix.settings.run
+        # kilocode_change - diagnostics only: a runner-side network blip here must not
+        # fail a job whose tests already passed (seen as ECONNREFUSED on Blacksmith).
+        continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
           name: unit-${{ matrix.settings.os }}-${{ matrix.settings.index }}-${{ github.run_attempt }}
@@ -386,7 +370,12 @@ jobs:
             packages/*/.artifacts/unit/junit.xml
       # kilocode_change end
 
-  # kilocode_change start - combine every per-shard junit into one per-OS aggregated file so sibling shards share slow-file history on the next run
+  # kilocode_change start - combine every per-shard junit into one per-OS aggregated file and
+  # refresh script/kilocode/test-durations.json from it. The result is uploaded as an artifact,
+  # NOT fed back into the next run automatically: the sharder reads only the committed file so
+  # that every shard of a run splits from identical weights (see the note in the unit job).
+  # To refresh the committed weights, download `test-durations-refresh` from a recent run of
+  # this job and commit its test-durations.json.
   aggregate-junit-history:
     name: aggregate junit history
     needs: unit
@@ -412,27 +401,22 @@ jobs:
 
       - name: Aggregate per-OS junit
         working-directory: packages/opencode
-        # cwd is packages/opencode; the output path is relative to that so
-        # the file lands at <workspace>/packages/opencode/.artifacts/unit,
-        # which matches the path the unit matrix restores.
         run: bun script/kilocode/aggregate-junit-history.ts ../../artifacts .artifacts/unit
 
-      # Save at the exact workspace-relative path the unit matrix restores
-      # to — `actions/cache` does not relocate files on restore, so the
-      # save path must match the restore path byte-for-byte.
-      - name: Save Linux aggregate
-        if: hashFiles('packages/opencode/.artifacts/unit/aggregate-Linux.xml') != ''
-        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: packages/opencode/.artifacts/unit/aggregate-Linux.xml
-          key: unit-junit-Linux-aggregate-${{ github.ref }}-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Refresh committed durations from the aggregates
+        working-directory: packages/opencode
+        run: bun script/kilocode/update-test-durations.ts .artifacts/unit && cp script/kilocode/test-durations.json .artifacts/unit/test-durations.json
 
-      - name: Save Windows aggregate
-        if: hashFiles('packages/opencode/.artifacts/unit/aggregate-Windows.xml') != ''
-        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      - name: Upload refreshed durations
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
         with:
-          path: packages/opencode/.artifacts/unit/aggregate-Windows.xml
-          key: unit-junit-Windows-aggregate-${{ github.ref }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name: test-durations-refresh
+          if-no-files-found: ignore
+          retention-days: 30
+          path: |
+            packages/opencode/.artifacts/unit/aggregate-*.xml
+            packages/opencode/.artifacts/unit/test-durations.json
   # kilocode_change end
 
   # kilocode_change start

@@ -236,9 +236,20 @@ const DURATION_HINTS: Record<string, number> = {
 const SECONDS_PER_BYTE = 5.53e-4
 const sizeOf = (file: string) => Bun.file(path.join(root, "test", file)).size
 // kilocode_change end
-// kilocode_change start - measured durations beat hand-maintained hints, so use junit history
-// when `--history` supplied any; DURATION_HINTS above remain the no-history default.
-const durations = await loadHistory(historyDir)
+// kilocode_change start - the committed durations file is the sharding weight source. It
+// MUST be the only run-to-run-variable input to the shard split: every shard job computes
+// the full split independently, so if two shards ever saw different weights (as they could
+// when history was restored per-shard from actions/cache with restore-key fallbacks) their
+// partitions would disagree and files would run twice on one shard and ZERO times on
+// another — a silent coverage hole. Committed data is identical on every shard of a run by
+// construction. Refresh it with script/kilocode/update-test-durations.ts from the aggregate
+// artifact the `aggregate junit history` job uploads, and commit the result.
+// `--history <dir>` still merges local junit output on top for experiments; CI does not set
+// it, and must not: reintroducing a per-shard history input reintroduces the hazard above.
+const committed: TestShard.Durations = await Bun.file(path.join(root, "script", "kilocode", "test-durations.json"))
+  .json()
+  .catch(() => ({}))
+const durations = TestShard.combineDurations(committed, await loadHistory(historyDir))
 const learned = (() => {
   let bytes = 0
   let seconds = 0
@@ -253,7 +264,12 @@ const learned = (() => {
   return bytes > 0 ? seconds / bytes : SECONDS_PER_BYTE
 })()
 const weight = (file: string) => DURATION_HINTS[file] ?? sizeOf(file) * learned
-const fileWeight = TestShard.weightFromDurations(durations, weight)
+// Hints outrank measurements: they are Windows-observed maxima for the files where Windows
+// is several times slower, while the committed measurements come from a full run on one
+// (usually faster) machine. Relative order is what LPT needs, and for the heavy tail the
+// Windows numbers are the order that matters.
+const measuredWeight = TestShard.weightFromDurations(durations, weight)
+const fileWeight = (file: string) => DURATION_HINTS[file] ?? measuredWeight(file)
 // kilocode_change end
 // kilocode_change start - a very heavy file is split into `-t`-filtered parts so the shard
 // splitter can place them separately; without that, the shard holding run-process.test.ts
@@ -279,7 +295,8 @@ if (shard && shard.total > items.length) {
 }
 const files = shard ? TestShard.split(items, itemWeight, shard.total)[shard.index - 1] : items // kilocode_change
 if (Object.keys(durations).length > 0) {
-  console.log(`Loaded ${Object.keys(durations).length} file durations from ${historyDir ?? "history"}`)
+  const source = historyDir ? `committed durations + ${historyDir}` : "committed durations"
+  console.log(`Loaded ${Object.keys(durations).length} file durations from ${source}`)
 }
 
 if (files.length === 0) {
@@ -292,13 +309,52 @@ if (files.length === 0) {
 // whether a suspected contamination is caused by batching.
 const batching = !argv.includes("--no-batch") && !process.env.KILO_TEST_NO_BATCH
 const allow = TestBatch.allowlist(batchAllowlist)
+// kilocode_change start - the allowlist says a file was SAFE WHEN ADDED; this scan keeps it
+// honest as files change. A batch shares one process, so process-wide mutations poison every
+// later file in it: bun's mock.module is process-wide and permanent, AppRuntime.dispose()
+// kills the shared runtime, spies on true globals observe batch-mates' traffic, and a
+// module-scope env write (column 0 — env set inside a test body is indented and typically
+// restored) leaks into every batch-mate's import snapshot. Allowlisted files that grow such
+// a marker are demoted to their own process instead of silently contaminating the batch;
+// the isolate-on-failure fallback would still keep the verdict right, but demotion avoids
+// paying the re-run and keeps the flake report clean. Limitation: only the test file's own
+// source is scanned — a marker hidden in an imported helper is invisible; batch-only
+// failures that vanish per-file point there.
+const UNSAFE_MARKERS = [
+  /\bmock\.module\s*\(/,
+  /\bAppRuntime\.dispose\s*\(/,
+  /\bspyOn\s*\(\s*globalThis\b/,
+  /^process\.env[.[]/m,
+]
+const demoted = new Set<string>()
+if (batching) {
+  const screen = files.filter((key) => allow.has(key))
+  // Bounded chunks: an unbounded Promise.all over hundreds of files can exhaust low soft
+  // fd limits (macOS shells commonly default to 256) before a single test runs.
+  for (let i = 0; i < screen.length; i += 64) {
+    await Promise.all(
+      screen.slice(i, i + 64).map(async (file) => {
+        const source = await Bun.file(path.join(root, "test", file)).text()
+        if (UNSAFE_MARKERS.some((pattern) => pattern.test(source))) demoted.add(file)
+      }),
+    )
+  }
+  if (demoted.size > 0) {
+    console.log(
+      `Batching: ${demoted.size} allowlisted file(s) use process-wide mocks/disposal/spies/env writes and run per-file instead:\n` +
+        [...demoted].map((file) => `- ${file}`).join("\n"),
+    )
+  }
+}
+const safeAllow: ReadonlySet<string> = demoted.size > 0 ? new Set([...allow].filter((f) => !demoted.has(f))) : allow
+// kilocode_change end
 // `all` rather than `files` is the staleness yardstick, so a shard or a pattern
 // filter running part of the allowlist is not mistaken for drift.
 // A split part's key is not a path, so it is never in the allowlist and always
 // stays isolated — which is what we want: a file heavy enough to split is far
 // too heavy to share a process.
 const plan = batching
-  ? TestBatch.plan(files, allow, concurrency, itemWeight, all)
+  ? TestBatch.plan(files, safeAllow, concurrency, itemWeight, all)
   : { groups: [], isolated: files.slice(), stale: [] }
 if (plan.stale.length > 0) {
   console.log(
@@ -473,10 +529,13 @@ async function run(unit: Unit): Promise<Result> {
   // kilocode_change start - one process may now cover several files
   const cmd = ["bun", "test", ...unit.files.map((file) => path.join("test", file)), "--timeout", String(timeout)]
   // A group runs its files serially in one process, so its legitimate runtime
-  // scales with file count. Three per-file deadlines is generous for that and
-  // still catches a genuine hang; when it trips, the fallback re-runs each file
-  // under the real per-file deadline anyway.
-  const limit = unit.kind === "batch" ? deadline * 3 : deadline
+  // scales with file count — but its members are the fast, boot-dominated
+  // majority, so 600s is still generous (a ~16-file batch legitimately runs a
+  // couple of minutes at worst on Windows). Not a multiple of the per-file
+  // deadline: with the per-file deadline itself at 600s in CI, 3x would hand a
+  // hung batch 30 minutes of a 45-minute job. When the limit trips, the
+  // fallback re-runs each file under the real per-file deadline anyway.
+  const limit = unit.kind === "batch" ? Math.max(deadline, 600_000) : deadline
   // One part of a split file. bun exits nonzero when a pattern matches nothing,
   // so a filter gone stale fails this unit rather than silently skipping tests.
   if (unit.filter) cmd.push("-t", unit.filter)
@@ -668,7 +727,10 @@ const workers = Array.from({ length: Math.min(concurrency, units.length) }, asyn
     // attempt; contention-based flakes (port races, slow FS, slow spawn) recover.
     // Preserve the last attempt's stdout/stderr/duration so a truly broken file
     // still shows a useful diagnostic.
-    while (!result.passed && result.attempts <= retries && !stopped.value) {
+    // kilocode_change - never retry a timed-out unit: it already burned the full kill
+    // deadline, and retrying doubles a pathological hang (2x600s) toward the job budget.
+    // Contention flakes fail fast and still get their retry.
+    while (!result.passed && !result.timedout && result.attempts <= retries && !stopped.value) {
       const retry = await run(unit)
       retry.attempts = result.attempts + 1
       result = retry

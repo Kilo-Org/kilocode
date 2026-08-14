@@ -48,12 +48,16 @@ describe("test shard", () => {
 
 describe("test shard durations", () => {
   test("extracts per-file durations from a merged junit body", () => {
+    // The per-file duration is the SUM of the suite's <testcase> times, nested describes
+    // included — bun writes time="0" on the file-level suite in practice, so the attribute
+    // (here a deliberately wrong 999) must not be what parse reads when testcases exist.
     const xml = [
       `<?xml version="1.0" encoding="UTF-8"?>`,
       `<testsuites tests="6" failures="0" time="12.345">`,
-      `  <testsuite name="test/foo.test.ts" file="test/foo.test.ts" tests="3" time="7.5">`,
+      `  <testsuite name="test/foo.test.ts" file="test/foo.test.ts" tests="3" time="999">`,
+      `    <testcase name="case 0" classname="foo" time="7.0"/>`,
       `    <testsuite name="describe a" file="test/foo.test.ts" tests="3" time="7.4">`,
-      `      <testcase name="case 1" classname="describe a" time="0.001"/>`,
+      `      <testcase name="case 1" classname="describe a" time="0.5"/>`,
       `    </testsuite>`,
       `  </testsuite>`,
       `  <testsuite name="kilocode/bar.test.ts" tests="1" failures="1" errors="0" time="4.8">`,
@@ -157,8 +161,10 @@ describe("test shard durations", () => {
       `  <testsuite name="test/y.test.ts" file="test/y.test.ts" tests="1" time="1.1"/>`,
       `</testsuites>`,
     ].join("\n")
+    // x reports the sum of its testcases (9.7, not its 9.9 attribute); the self-closing y
+    // has no testcases, so it falls back to the suite time attribute.
     expect(JunitDurations.parse(xml)).toEqual({
-      "x.test.ts": 9.9,
+      "x.test.ts": 9.7,
       "y.test.ts": 1.1,
     })
   })
