@@ -276,13 +276,10 @@ describe("sendMessage / sendCommand draft id contract", () => {
     )
   })
 
-  it("promptAgent sends an explicit selection instead of omitting the default agent", () => {
-    const match = source.match(/function promptAgent\(sessionID\?: string\) \{([\s\S]*?)\n  \}/)
-    expect(match).not.toBeNull()
-    expect(match![1]).toContain("store.agentSelections[sessionID]")
-    expect(match![1]).toContain("pendingAgentSelection()")
-    expect(match![1]).not.toContain("defaultAgent()")
-    expect(match![1]).not.toMatch(/name !== defaultAgent\(\) \? name : undefined/)
+  it("sendMessage and sendCommand post the agent returned by promptAgent", () => {
+    expect(extractFunctionBody(source, "sendMessage")).toContain("const agent = promptAgent(scope)")
+    expect(extractFunctionBody(source, "sendCommand")).toContain("const agent = promptAgent(scope)")
+    expect(extractFunctionBody(source, "promptAgent")).toContain("return resolvePromptAgent({")
   })
 
   it("createSession and clearCurrentSession do not pin the provisional default agent", () => {

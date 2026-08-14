@@ -85,7 +85,7 @@ import { clearSessionDraftDiscarded, deleteDraftsForSession } from "../utils/dra
 import { createAbortState } from "./abort-state"
 import { clearIfOn, createCloudPrune } from "./session-cloud-prune"
 import { isSameSessionTree } from "./model-usage"
-import { createDraftAgentSeed } from "./session-agent"
+import { createDraftAgentSeed, resolvePromptAgent } from "./session-agent"
 import { createModelSelector } from "./session-model-selector"
 
 const RECENT_LIMIT = 5
@@ -717,8 +717,11 @@ export const SessionProvider: ParentComponent = (props) => {
   })
 
   function promptAgent(sessionID?: string) {
-    if (sessionID) return store.agentSelections[sessionID]
-    return pendingAgentSelection() ?? undefined
+    return resolvePromptAgent({
+      sessionID,
+      selections: store.agentSelections,
+      pending: pendingAgentSelection(),
+    })
   }
 
   function hideErrors(sid: string) {
