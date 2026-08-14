@@ -3,6 +3,7 @@ import {
   cycleAgent,
   createDraftAgentSeed,
   draftAgentSelection,
+  resolvePromptAgent,
   resolveSessionAgent,
 } from "../../webview-ui/src/context/session-agent"
 import type { Message } from "../../webview-ui/src/types/messages"
@@ -127,6 +128,27 @@ describe("cycleAgent", () => {
       }),
     ).toBeUndefined()
     expect(selected).toEqual([])
+  })
+})
+
+describe("resolvePromptAgent", () => {
+  it("sends Code after an explicit Ask to Code selection", () => {
+    expect(
+      resolvePromptAgent({
+        sessionID: "ses_1",
+        selections: { ses_1: "code" },
+        pending: "ask",
+      }),
+    ).toBe("code")
+  })
+
+  it("sends an explicit pending Code selection on a new draft", () => {
+    expect(resolvePromptAgent({ selections: {}, pending: "code" })).toBe("code")
+  })
+
+  it("omits the agent when there is no explicit selection", () => {
+    expect(resolvePromptAgent({ sessionID: "ses_1", selections: {}, pending: null })).toBeUndefined()
+    expect(resolvePromptAgent({ selections: {}, pending: null })).toBeUndefined()
   })
 })
 
