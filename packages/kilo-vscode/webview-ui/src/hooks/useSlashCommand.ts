@@ -339,6 +339,7 @@ export function useSlashCommand(
       if (cmd.enabled && !cmd.enabled()) return
       textarea.value = trailingText
       setText(trailingText)
+      textarea.setSelectionRange(0, 0)
       close()
       onSelect?.()
       cmd.action()
