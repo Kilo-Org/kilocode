@@ -37,6 +37,21 @@ const agent = async (dir: string) => {
   )
 }
 
+const duplicates = async (dir: string) => {
+  for (const name of ["kilo.jsonc", "opencode.jsonc"]) {
+    await Bun.write(
+      path.join(dir, ".kilo", name),
+      JSON.stringify({
+        default_agent: "httpapi-duplicate",
+        agent: {
+          "httpapi-duplicate": { description: `Duplicate in ${name}` },
+          keep: { description: "Keep this agent" },
+        },
+      }),
+    )
+  }
+}
+
 const command = async (dir: string) => {
   await Bun.write(
     path.join(dir, ".kilo/command/httpapi-remove.md"),
@@ -624,9 +639,28 @@ export const kiloScenarios: Scenario[] = [
       }),
     ),
   http.protected
+    .post("/kilocode/agent/remove", "kilocode.removeAgent.duplicates")
+    .inProject({ git: true, init: duplicates })
+    .mutating()
+    .at((ctx) => ({ path: "/kilocode/agent/remove", headers: ctx.headers(), body: { name: "httpapi-duplicate" } }))
+    .jsonEffect(200, (body, ctx) =>
+      Effect.gen(function* () {
+        check(body === true, "duplicate agent removal should return true")
+        for (const name of ["kilo.jsonc", "opencode.jsonc"]) {
+          const cfg = yield* Effect.promise(() => Bun.file(path.join(directory(ctx), ".kilo", name)).json())
+          check(!cfg.agent["httpapi-duplicate"], `removed agent should not remain in ${name}`)
+          check(cfg.agent.keep.description === "Keep this agent", `unrelated agent should remain in ${name}`)
+          check(cfg.default_agent === undefined, `removed default agent should not remain in ${name}`)
+        }
+      }),
+    ),
+  http.protected
     .post("/kilocode/agent/remove", "kilocode.removeAgent")
     .at((ctx) => ({ path: "/kilocode/agent/remove", headers: ctx.headers(), body: { name: "httpapi-missing" } }))
-    .status(400),
+    .json(400, (body) => {
+      object(body)
+      check(body.message === "agent not found", "agent removal should preserve the backend error message")
+    }),
   http.protected
     .post("/kilocode/session-import/project", "kilocode.sessionImport.project")
     .mutating()
