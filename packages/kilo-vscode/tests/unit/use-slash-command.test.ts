@@ -454,4 +454,38 @@ describe("select", () => {
     expect(textarea.value).toBe("/memory remember ")
     ctx.dispose()
   })
+
+  it("keeps trailing text and cursor before it through nested selection", () => {
+    const ctx = setup(() => {})
+    let currentText = "hello"
+    const textarea = {
+      value: "hello",
+      selectionStart: 0,
+      setSelectionRange: (start: number, _end: number) => {
+        textarea.selectionStart = start
+      },
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+    const setText = (text: string) => {
+      currentText = text
+    }
+
+    textarea.value = "/memhello"
+    textarea.selectionStart = 4
+    ctx.slash.onInput("/memhello", 4)
+
+    const memory = ctx.slash.results().find((c) => c.name === "memory")
+    expect(memory).toBeDefined()
+    ctx.slash.select(memory!, textarea, setText)
+    expect(textarea.value).toBe("/memory hello")
+    expect(textarea.selectionStart).toBe("/memory ".length)
+
+    const rebuild = ctx.slash.results().find((c) => c.name === "memory rebuild")
+    expect(rebuild).toBeDefined()
+    ctx.slash.select(rebuild!, textarea, setText)
+
+    expect(textarea.value).toBe("/memory rebuild hello")
+    expect(textarea.selectionStart).toBe("/memory rebuild ".length)
+    ctx.dispose()
+  })
 })
