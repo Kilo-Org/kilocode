@@ -204,7 +204,10 @@ jobs:
           # files run ~230-270s serially there (vs ~40s on macOS/Linux), leaving only ~30s under
           # the 300s default; 600s gives healthy-but-slow files real margin without masking hangs
           # elsewhere (Linux/macOS keep the 300s default).
-          KILO_TEST_FILE_TIMEOUT: ${{ matrix.settings.os == 'windows' && '600000' || '' }}
+          # kilocode_change - 600s on every OS: the deadline guards against hangs, and a
+          # saturated shard can legitimately hold a heavy real-subprocess file past 300s
+          # (seen on Linux: run-process passing every test, killed at the deadline twice).
+          KILO_TEST_FILE_TIMEOUT: "600000"
       # kilocode_change end
 
       # kilocode_change start
