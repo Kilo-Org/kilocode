@@ -75,7 +75,7 @@ class EditToolView(
         parts.left.next(parts.link)
         parts.left.next(filesTag)
         parts.left.next(PartHeader.centered(badge))
-        parts.left.next(PartHeader.centered(diffAnchor))
+        parts.left.next(diffAnchor)
         // The base binds click-to-toggle across the whole header subtree, skipping controls that own
         // a mouse listener. parts.link (FileLinkLabel) installs its own click handler that opens the
         // file, so it is skipped automatically and does not also toggle the card.
@@ -346,6 +346,7 @@ private fun diffBody(selection: SessionSelection?) = ToolMarkdownBody(
         verticalPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
         editorOnly = true,
         horizontalPadding = 0,
+        overlapScrollbar = true,
     ),
     selection,
     render = ::diffMarkdown,
@@ -364,6 +365,7 @@ internal val POPUP_OPTS = MdCodeBlockOptions(
     verticalPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
     editorOnly = true,
     horizontalPadding = 0,
+    overlapScrollbar = true,
 )
 
 /**

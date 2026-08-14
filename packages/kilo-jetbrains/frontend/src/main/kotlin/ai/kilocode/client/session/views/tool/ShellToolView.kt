@@ -204,7 +204,7 @@ class ShellToolView(
         md.preBg = SessionUiStyle.Colors.codeBlockBackground()
         md.codeFont = style.editorFamily
         md.component.border = JBUI.Borders.empty()
-        md.set(popupMd(formatCommand(cmd)))
+        md.set(popupShellMarkdown(item, cmd))
         padPopup(md.component)
         return HeaderPopupBody(md.component, md, SessionUiStyle.Colors.codeBlockBackground(), SessionUiStyle.View.Popup.WIDE_MAX_WIDTH)
     }
@@ -374,6 +374,16 @@ private fun popupMd(text: String): String = buildString {
     if (!text.endsWith('\n')) append('\n')
     append(fence)
 }
+
+/**
+ * Popup markdown: the formatted command surface followed by the output/error surface, matching the
+ * expanded body. Like the changes popup, the output is not line-capped here — the popup's own scroll
+ * pane bounds its height — so the collapsed hover preview shows the command together with its output.
+ */
+private fun popupShellMarkdown(tool: Tool, cmd: String): String =
+    listOf(popupMd(formatCommand(cmd)), outputMarkdown(tool))
+        .filter { it.isNotBlank() }
+        .joinToString("\n\n")
 
 /**
  * Inserts line breaks after shell separators (`&&`, `||`, `|`, `;`) that sit outside quotes,

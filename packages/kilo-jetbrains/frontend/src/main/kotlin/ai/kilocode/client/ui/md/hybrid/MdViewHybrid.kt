@@ -523,7 +523,7 @@ internal open class MdViewHybrid(
             horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED
             verticalScrollBarPolicy = code.opts.verticalPolicy
             isWheelScrollingEnabled = true
-            setOverlappingScrollBar(false)
+            setOverlappingScrollBar(code.opts.overlapScrollbar)
             horizontalScrollBar.preferredSize = Dimension(0, JBUI.scale(SessionUiStyle.View.Code.SCROLLBAR_HEIGHT))
             horizontalScrollBar.isOpaque = true
             if (code.opts.verticalPolicy == ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER) {
@@ -575,8 +575,10 @@ internal open class MdViewHybrid(
         val pad = pane.viewportBorder.getBorderInsets(pane)
         val text = fieldText(component)
         val content = codeHeight(component, text, code.opts.maxLines)
-        val height = content + pane.insets.top + pane.insets.bottom +
-            pad.top + pad.bottom + pane.horizontalScrollBar.preferredSize.height
+        // An overlapping scrollbar floats over the content, so it reserves no bottom band; only add
+        // the scrollbar height when it takes its own row beneath the content.
+        val scrollbar = if (code.opts.overlapScrollbar) 0 else pane.horizontalScrollBar.preferredSize.height
+        val height = content + pane.insets.top + pane.insets.bottom + pad.top + pad.bottom + scrollbar
         pane.preferredSize = Dimension(0, height)
         pane.minimumSize = Dimension(0, height)
         pane.maximumSize = Dimension(Int.MAX_VALUE, height)

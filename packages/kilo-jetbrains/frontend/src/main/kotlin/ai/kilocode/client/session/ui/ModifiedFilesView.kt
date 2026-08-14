@@ -172,7 +172,7 @@ class ModifiedFilesView private constructor(
             leading(glyph)
             left(title)
             titleGap()
-            left(count, PartHeader.centered(bars), PartHeader.centered(anchor))
+            left(count, PartHeader.centered(bars), anchor)
         }
 
         @RequiresEdt

@@ -62,8 +62,13 @@ internal class SessionHoverCopyOverlay(
         if (limit.isEmpty) return Rectangle()
         if (item.copyToolbar != null) {
             val pt = SwingUtilities.convertPoint(anchor, Point(visible.x, visible.y), pane)
+            // A zero-height anchor is an inline header placeholder (edit/modified open-diff): center
+            // the floating button on the header row so it lines up with the change badge. A real-height
+            // anchor is a footer row (message/text copy): keep the button bottom-aligned inside it.
+            val inline = anchor.preferredSize.height == 0
+            val offset = if (inline) (visible.height - size.height) / 2 else visible.height - size.height
             val x = clamp(pt.x + visible.width - size.width, limit.x, limit.x + limit.width - size.width)
-            val y = clamp(pt.y + visible.height - size.height, limit.y, limit.y + limit.height - size.height)
+            val y = clamp(pt.y + offset, limit.y, limit.y + limit.height - size.height)
             return Rectangle(x, y, size.width, size.height)
         }
         val pt = SwingUtilities.convertPoint(anchor, Point(visible.x + visible.width, visible.y), pane)

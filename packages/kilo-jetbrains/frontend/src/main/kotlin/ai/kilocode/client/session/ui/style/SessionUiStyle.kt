@@ -100,6 +100,8 @@ object SessionUiStyle {
         object Layout {
             const val GAP = 5
             const val VERTICAL_PADDING = 7
+            /** Header vertical padding for the compact card variant (e.g. reasoning). */
+            const val COMPACT_VERTICAL_PADDING = 5
             const val HORIZONTAL_PADDING = 12
             const val BODY_EXTRA_HEIGHT = 16
         }
@@ -222,7 +224,6 @@ object SessionUiStyle {
         /** Reasoning block preview sizing. */
         object Reasoning {
             const val BODY_LINES = 5
-            const val HEADER_VERTICAL_PADDING = 5
             const val BODY_VERTICAL_PADDING = 4
             const val BODY_HORIZONTAL_PADDING = 8
         }

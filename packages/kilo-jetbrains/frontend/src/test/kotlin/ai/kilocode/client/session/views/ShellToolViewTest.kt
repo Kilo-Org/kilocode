@@ -411,6 +411,27 @@ class ShellToolViewTest : BasePlatformTestCase() {
         assertEquals(base, EditorFactory.getInstance().allEditors.size)
     }
 
+    fun `test shell header popup includes output and disposes both editors after hide`() {
+        val base = EditorFactory.getInstance().allEditors.size
+        val view = track(ShellToolView(tool().also {
+            it.input = mapOf("command" to "git status")
+            it.output = "on branch main"
+        }))
+        val req = view.headerPopup()!!
+        val body = req.build()
+
+        try {
+            val editors = popupCodeEditors(body.component)
+            editors.forEach { it.getEditor(true) }
+            assertEquals(listOf("git status", "on branch main"), editors.map { it.text })
+        } finally {
+            Disposer.dispose(body.disposable)
+        }
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertEquals(base, EditorFactory.getInstance().allEditors.size)
+    }
+
     fun `test shell header popup widens to command content`() {
         val view = track(ShellToolView(tool().also {
             it.input = mapOf("command" to "echo ${"x".repeat(180)}")

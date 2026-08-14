@@ -44,6 +44,7 @@ class ReasoningView(
         parts.header,
         { parts.scroll(openFile, openUrl) },
         expanded = reasoning.content.isNotBlank() && !reasoning.done,
+        compact = true,
     ) {
 
     override val contentId: String = reasoning.id
@@ -70,12 +71,6 @@ class ReasoningView(
     private var pinned = false
 
     init {
-        row.border = JBUI.Borders.empty(
-            JBUI.scale(SessionUiStyle.View.Reasoning.HEADER_VERTICAL_PADDING),
-            SessionUiStyle.View.Header.left(),
-            JBUI.scale(SessionUiStyle.View.Reasoning.HEADER_VERTICAL_PADDING),
-            SessionUiStyle.View.Header.right(),
-        )
         applyStyle(style)
         if (bodyVisible()) syncBody()
         sync()

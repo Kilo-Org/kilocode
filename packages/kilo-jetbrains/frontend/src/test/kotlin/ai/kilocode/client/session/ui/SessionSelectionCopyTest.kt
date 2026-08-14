@@ -24,6 +24,7 @@ import com.intellij.ui.components.JBScrollPane
 import java.awt.Component
 import java.awt.Container
 import java.awt.Cursor
+import java.awt.Dimension
 import java.awt.datatransfer.DataFlavor
 import java.awt.event.MouseEvent
 import java.awt.Point
@@ -270,6 +271,32 @@ class SessionSelectionCopyTest : SessionUiTestBase() {
         }
     }
 
+    fun `test hover toolbar centers on a zero-height inline anchor but bottom-aligns a footer anchor`() {
+        val root = ShowingPanel().also { it.setBounds(0, 0, 300, 300) }
+        val area = ShowingPanel().also { it.setBounds(0, 0, 300, 300) }
+        val toolbar = JPanel().also { it.preferredSize = Dimension(24, 24) }
+        root.add(area)
+
+        val inline = InlineTarget(fixed(24, 0), toolbar)
+        val footer = InlineTarget(fixed(24, 40), toolbar)
+        listOf(inline.copyAnchor, footer.copyAnchor).forEach { it.setBounds(100, 50, 24, 40); area.add(it) }
+        val parent = Disposer.newDisposable("overlay-center")
+        val overlay = SessionHoverCopyOverlay(root, area, parent)
+        root.add(overlay)
+
+        try {
+            show(overlay, inline)
+            // Zero-height anchor => inline header control: centered in the 40px row.
+            assertEquals(50 + (40 - 24) / 2, overlay.bounds(root, toolbar).y)
+
+            show(overlay, footer)
+            // Real-height anchor => footer row: button hugs the bottom.
+            assertEquals(50 + 40 - 24, overlay.bounds(root, toolbar).y)
+        } finally {
+            Disposer.dispose(parent)
+        }
+    }
+
     fun `test session context menu can reinstall after parent disposal`() {
         val root = JPanel(null)
         val one = Disposer.newDisposable("context-one")
@@ -451,7 +478,20 @@ class SessionSelectionCopyTest : SessionUiTestBase() {
         override fun copyText() = value
     }
 
-    private class ShowingPanel : JPanel(null) {
+    private class InlineTarget(
+        private val anchor: JComponent,
+        private val toolbar: JComponent,
+    ) : JPanel(), SessionCopyTarget {
+        override val copyAnchor: JComponent get() = anchor
+        override val copyToolbar: JComponent get() = toolbar
+        override fun copyText(): String? = null
+    }
+
+    private fun fixed(width: Int, height: Int): JComponent = object : ShowingPanel() {
+        override fun getPreferredSize() = Dimension(width, height)
+    }
+
+    private open class ShowingPanel : JPanel(null) {
         override fun isShowing() = true
     }
 }

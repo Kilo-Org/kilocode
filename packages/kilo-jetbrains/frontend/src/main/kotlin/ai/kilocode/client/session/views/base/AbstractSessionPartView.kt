@@ -32,6 +32,7 @@ abstract class AbstractSessionPartView(
     private val makeBody: () -> JComponent,
     expanded: Boolean = false,
     private val expandable: Boolean = true,
+    private val compact: Boolean = false,
 ) : PartView() {
 
     constructor(
@@ -39,7 +40,8 @@ abstract class AbstractSessionPartView(
         body: JComponent,
         expanded: Boolean = false,
         expandable: Boolean = true,
-    ) : this(header, { body }, expanded, expandable)
+        compact: Boolean = false,
+    ) : this(header, { body }, expanded, expandable, compact)
 
     protected val arrow = JBLabel()
     protected val row = Row()
@@ -76,12 +78,11 @@ abstract class AbstractSessionPartView(
         // attached; collapsed cards have only the NORTH row, so no gap shows.
         layout = BorderLayout(0, SessionUiStyle.View.contentGap())
         isOpaque = false
-        row.border = JBUI.Borders.empty(
-            JBUI.scale(SessionUiStyle.View.Layout.VERTICAL_PADDING),
-            SessionUiStyle.View.Header.left(),
-            JBUI.scale(SessionUiStyle.View.Layout.VERTICAL_PADDING),
-            SessionUiStyle.View.Header.right(),
+        val pad = JBUI.scale(
+            if (compact) SessionUiStyle.View.Layout.COMPACT_VERTICAL_PADDING
+            else SessionUiStyle.View.Layout.VERTICAL_PADDING,
         )
+        row.border = JBUI.Borders.empty(pad, SessionUiStyle.View.Header.left(), pad, SessionUiStyle.View.Header.right())
         row.add(header, BorderLayout.CENTER)
         row.add(arrow, BorderLayout.EAST)
         add(row, BorderLayout.NORTH)
@@ -197,6 +198,8 @@ abstract class AbstractSessionPartView(
             val g2 = g.create() as Graphics2D
             try {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                g2.color = SessionUiStyle.Colors.sessionBackground()
+                g2.fillRect(0, 0, width, height)
                 g2.color = color
                 val arc = hoverArc()
                 if (arc > 0) g2.fillRoundRect(0, 0, width, height, arc, arc) else g2.fillRect(0, 0, width, height)

@@ -225,6 +225,7 @@ class PatchBody(
             verticalPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
             editorOnly = true,
             horizontalPadding = 0,
+            overlapScrollbar = true,
         )
     }
 }

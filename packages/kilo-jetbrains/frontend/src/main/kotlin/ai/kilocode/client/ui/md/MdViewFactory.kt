@@ -33,6 +33,12 @@ data class MdCodeBlockOptions(
     val verticalPolicy: Int = ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER,
     val editorOnly: Boolean = false,
     val horizontalPadding: Int = SessionUiStyle.View.Code.VIEWPORT_HORIZONTAL_PADDING,
+    /**
+     * Float the horizontal scrollbar over the content instead of reserving a band beneath it. Keeps
+     * the block's bottom inset equal to the other views when the content fits (no empty scrollbar
+     * band), while the scrollbar still appears on demand for wide content such as diffs.
+     */
+    val overlapScrollbar: Boolean = false,
 )
 
 enum class MdCodeBlockBorder { All, Horizontal, Bottom, None }
