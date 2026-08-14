@@ -208,9 +208,10 @@ const DURATION_HINTS: Record<string, number> = {
   "kilocode/daemon.test.ts": 65_000,
   "tool/task.test.ts": 64_000,
 }
-// Measured per-file durations (ms) from a full local run; regenerate by parsing the
-// runner's PASS/FAIL lines. Relative order is what LPT needs, so a macOS measurement
-// balances Windows shards fine. Hints above still win: they are Windows-observed maxima.
+// Measured per-file durations (ms) from a full local run; refresh with
+// `bun run script/test-runner.ts --update-durations`. Relative order is what LPT needs,
+// so a macOS measurement balances Windows shards fine. Hints above still win: they are
+// Windows-observed maxima.
 const measuredDurations: Record<string, number> = await Bun.file(
   path.join(root, "script", "kilocode", "test-durations.json"),
 )
@@ -242,9 +243,8 @@ const weight = (file: string) => {
 // Several independent batches (instead of one) keep each batch short enough to schedule
 // like a normal heavy file, and let LPT spread them across shards and worker slots.
 // Batch weights are computed from member durations, never hand-maintained.
-const FAST_TIERS: Record<string, { entries: string[] }> = {
-  "fast-tier-core": {
-    entries: [
+const FAST_TIERS: Record<string, string[]> = {
+  "fast-tier-core": [
       "account/",
       "config/",
       "effect/",
@@ -259,10 +259,8 @@ const FAST_TIERS: Record<string, { entries: string[] }> = {
       "share/",
       "suggestion/",
       "util/",
-    ],
-  },
-  "fast-tier-kilocode": {
-    entries: [
+  ],
+  "fast-tier-kilocode": [
       "kilocode/config/",
       "kilocode/memory/",
       // kilocode/permission/ stays per-file: permission-origins asserts the merged config has
@@ -275,19 +273,14 @@ const FAST_TIERS: Record<string, { entries: string[] }> = {
       "kilocode/suggestion/",
       "kilocode/tui/",
       "kilocode/util/",
-    ],
+  ],
+  "fast-tier-kilocode-sessions": ["kilocode/session-export/", "kilocode/session/", "kilocode/sessions/"],
   },
-  "fast-tier-kilocode-sessions": {
-    entries: ["kilocode/session-export/", "kilocode/session/", "kilocode/sessions/"],
+  "fast-tier-kilocode-tools": ["kilocode/anaconda-desktop/", "kilocode/cloud/", "kilocode/tool/"],
   },
-  "fast-tier-kilocode-tools": {
-    entries: ["kilocode/anaconda-desktop/", "kilocode/cloud/", "kilocode/tool/"],
+  "fast-tier-cli": ["cli/"],
   },
-  "fast-tier-cli": {
-    entries: ["cli/"],
-  },
-  "fast-tier-misc": {
-    entries: [
+  "fast-tier-misc": [
       "acp/",
       "auth/",
       "bun/",
@@ -298,10 +291,8 @@ const FAST_TIERS: Record<string, { entries: string[] }> = {
       "plugin/",
       "storage/",
       "v2/",
-    ],
-  },
-  "fast-tier-tool": {
-    entries: ["tool/"],
+  ],
+  "fast-tier-tool": ["tool/"],
   },
 }
 // Files that must run alone, never in a shared batch, for reasons a source scan cannot
@@ -337,8 +328,8 @@ const kilocodeRootTier = (file: string) => {
 }
 const tierOf = (file: string) => {
   if (isBatchExcluded(file)) return undefined
-  for (const [name, tier] of Object.entries(FAST_TIERS)) {
-    if (tier.entries.some((entry) => matchesEntry(file, entry))) return name
+  for (const [name, entries] of Object.entries(FAST_TIERS)) {
+    if (entries.some((entry) => matchesEntry(file, entry))) return name
   }
   return kilocodeRootTier(file)
 }
@@ -366,16 +357,18 @@ if (patterns.length === 0 && !profile) {
     /\bspyOn\s*\(\s*globalThis\b/,
     /^process\.env[.[]/m,
   ]
-  const demoted = new Set(
-    (
-      await Promise.all(
-        [...batches.values()].flat().map(async (member) => {
-          const source = await Bun.file(path.join(root, "test", member)).text()
-          return unsafe.some((pattern) => pattern.test(source)) ? member : undefined
-        }),
-      )
-    ).filter((member): member is string => member !== undefined),
-  )
+  const demoted = new Set<string>()
+  const members = [...batches.values()].flat()
+  // Bounded chunks: an unbounded Promise.all over ~440 files can exhaust low soft
+  // fd limits (macOS shells commonly default to 256) before a single test runs.
+  for (let i = 0; i < members.length; i += 64) {
+    await Promise.all(
+      members.slice(i, i + 64).map(async (member) => {
+        const source = await Bun.file(path.join(root, "test", member)).text()
+        if (unsafe.some((pattern) => pattern.test(source))) demoted.add(member)
+      }),
+    )
+  }
   if (demoted.size > 0) {
     console.log(
       `Fast tier: ${demoted.size} file(s) use process-wide mocks/disposal/spies and run per-file instead:\n` +
