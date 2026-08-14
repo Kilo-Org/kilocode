@@ -8,6 +8,7 @@ import ai.kilocode.rpc.dto.CompactionPatchDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
+import ai.kilocode.rpc.dto.EditorContextDto
 import ai.kilocode.rpc.dto.McpConfigDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
@@ -1956,6 +1957,25 @@ class KiloCliDataParserTest {
             )
             val result = KiloCliDataParser.buildPromptJson(prompt)
             assertEquals("""{"parts":[{"type":"text","text":"Hi"}],"noReply":true}""", result)
+        }
+
+        @Test
+        fun `buildPromptJson - with editor context`() {
+            val prompt = PromptDto(
+                parts = listOf(PromptPartDto("text", "Hi")),
+                editorContext = EditorContextDto(
+                    activeFile = "src/App.kt",
+                    visibleFiles = listOf("src/App.kt"),
+                    openTabs = listOf("src/App.kt", "src/Other.kt"),
+                ),
+            )
+
+            val result = KiloCliDataParser.buildPromptJson(prompt)
+
+            assertEquals(
+                """{"parts":[{"type":"text","text":"Hi"}],"editorContext":{"visibleFiles":["src/App.kt"],"openTabs":["src/App.kt","src/Other.kt"],"activeFile":"src/App.kt"}}""",
+                result,
+            )
         }
 
         @Test

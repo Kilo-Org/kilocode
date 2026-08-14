@@ -11,6 +11,9 @@ export interface SkillInfo {
 export interface SlashCommandInfo {
   name: string
   description?: string
+  agent?: string
+  model?: string
+  variant?: string
   source?: "command" | "mcp" | "skill"
   hints: string[]
 }
@@ -19,6 +22,7 @@ export interface SlashCommandInfo {
 export interface AgentInfo {
   name: string
   displayName?: string
+  source?: string
   description?: string
   mode: "subagent" | "primary" | "all"
   native?: boolean

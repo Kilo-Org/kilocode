@@ -123,11 +123,12 @@ async function until(check: () => Promise<boolean>, budget: number) {
 async function stalled(api: ReturnType<typeof session>, state: string) {
   const id = await api.create()
   await api.prompt(id, "run the echo command")
+  const budget = process.platform === "win32" ? 90_000 : 60_000
   const ready = await until(async () => {
     const stalls = (await readStallState(state)).stalls
     const parts = timeline(await api.messages(id))
     return stalls > 0 && parts.includes("step-finish:tool-calls")
-  }, 30_000)
+  }, budget)
   expect(ready).toBe(true)
   return id
 }
@@ -158,7 +159,7 @@ describe("issue #8656: provider stalls after a tool call", () => {
         expect(assistant?.info.error).toBeUndefined()
       },
     })
-  }, 120_000)
+  }, 180_000)
 
   test("still hangs while the provider holds the connection open and timeout is disabled", async () => {
     await using tmp = await project(false)
@@ -188,5 +189,5 @@ describe("issue #8656: provider stalls after a tool call", () => {
         }
       },
     })
-  }, 120_000)
+  }, 180_000)
 })

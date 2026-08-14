@@ -61,6 +61,7 @@ export interface PRCheck {
 
 export interface PRComment {
   id: string
+  threadId: string
   author: string
   avatar?: string
   body: string
@@ -69,11 +70,21 @@ export interface PRComment {
   url?: string
   resolved: boolean
   createdAt?: number
+  diffHunk?: string
+}
+
+export type ReviewerState = "approved" | "changes_requested" | "pending" | "commented"
+
+export interface PRReviewer {
+  login: string
+  avatar?: string
+  state: ReviewerState
 }
 
 export interface PRStatus {
   number: number
   title: string
+  body?: string
   url: string
   state: PRState
   review: ReviewDecision | null
@@ -83,12 +94,13 @@ export interface PRStatus {
     passed: number
     failed: number
     pending: number
-    items: PRCheck[]
+    checks: PRCheck[]
   }
+  reviewers: PRReviewer[]
   comments?: {
     total: number
     unresolved: number
-    items: PRComment[]
+    comments: PRComment[]
   }
   additions: number
   deletions: number
@@ -379,6 +391,19 @@ interface PRStatusOutMessage {
   error?: "gh_missing" | "gh_auth" | "fetch_failed"
 }
 
+interface PRErrorOutMessage {
+  type: "agentManager.prError"
+  error: "gh_missing" | "gh_auth" | "fetch_failed"
+}
+
+interface CommentActionResultMessage {
+  type: "agentManager.resolveCommentResult" | "agentManager.unresolveCommentResult"
+  worktreeId: string
+  threadId: string
+  success: boolean
+  error?: string
+}
+
 interface ActionOutMessage {
   type: "action"
   action: string
@@ -418,6 +443,8 @@ export type AgentManagerOutMessage =
   | RevertWorktreeFileResultMessage
   | DiffBranchesMessage
   | PRStatusOutMessage
+  | PRErrorOutMessage
+  | CommentActionResultMessage
   | ActionOutMessage
   | RunStatusMessage
   | TerminalCreatedMessage
@@ -739,6 +766,13 @@ interface OpenPRIn {
   type: "agentManager.openPR"
   projectId?: string
   worktreeId: string
+  url?: string
+}
+
+interface CommentActionIn {
+  type: "agentManager.resolveComment" | "agentManager.unresolveComment"
+  worktreeId: string
+  threadId: string
 }
 
 interface OpenSessionsIn {
@@ -946,6 +980,8 @@ interface TerminalCreateIn {
   placement: TerminalPlacement
   /** null for LOCAL, worktree id otherwise */
   worktreeId: string | null
+  cols?: number
+  rows?: number
 }
 
 interface TerminalCloseIn {
@@ -1031,6 +1067,7 @@ export type AgentManagerInMessage =
   | SetDiffBaseBranchIn
   | RefreshPRIn
   | OpenPRIn
+  | CommentActionIn
   | OpenSessionsIn
   | VisibleSessionIn
   | OpenFileIn

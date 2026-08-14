@@ -13,6 +13,7 @@ import { useConfig } from "./config"
 import { useVSCode } from "./vscode"
 import type { ExtensionMessage } from "../types/messages"
 import { applyFontSize, clampFontSize, readFontSize } from "../font-size"
+import { ToolApprovalVisibilityProvider } from "@kilocode/kilo-ui/message-part"
 
 interface DisplayContextValue {
   reasoningAutoCollapse: Accessor<boolean>
@@ -25,6 +26,8 @@ interface DisplayContextValue {
   throughputVisible: Accessor<boolean>
   // Display-only completion stamp on assistant messages (time + duration).
   timestampVisible: Accessor<boolean>
+  // Whether the "why was this tool call approved" line renders on tool calls.
+  autoApprovalReasonVisible: Accessor<boolean>
 }
 
 export const DisplayContext = createContext<DisplayContextValue>()
@@ -36,12 +39,14 @@ export const DisplayProvider: ParentComponent = (props) => {
   const [fontSize, setFontSizeSignal] = createSignal(readFontSize())
   const [throughputVisible, setThroughputVisible] = createSignal(false)
   const [timestampVisible, setTimestampVisible] = createSignal(true)
+  const [autoApprovalReasonVisible, setAutoApprovalReasonVisible] = createSignal(true)
 
   // Request display toggles once on mount; the extension posts back
   // (and onDidChangeConfiguration forwards subsequent edits).
   onMount(() => {
     vscode.postMessage({ type: "requestThroughputSetting" })
     vscode.postMessage({ type: "requestTimestampSetting" })
+    vscode.postMessage({ type: "requestAutoApprovalReasonSetting" })
   })
 
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
@@ -49,6 +54,7 @@ export const DisplayProvider: ParentComponent = (props) => {
     if (message.type === "fontSizeChanged") setFontSizeSignal(clampFontSize(message.fontSize))
     if (message.type === "throughputSettingLoaded") setThroughputVisible(Boolean(message.visible))
     if (message.type === "timestampSettingLoaded") setTimestampVisible(Boolean(message.visible))
+    if (message.type === "autoApprovalReasonSettingLoaded") setAutoApprovalReasonVisible(Boolean(message.visible))
   })
 
   createEffect(() => {
@@ -70,9 +76,13 @@ export const DisplayProvider: ParentComponent = (props) => {
         },
         throughputVisible,
         timestampVisible,
+        autoApprovalReasonVisible,
       }}
     >
-      {props.children}
+      {/* Bridges the toggle into kilo-ui's generic gate so every tool render hides the line consistently. */}
+      <ToolApprovalVisibilityProvider value={autoApprovalReasonVisible}>
+        {props.children}
+      </ToolApprovalVisibilityProvider>
     </DisplayContext.Provider>
   )
 }

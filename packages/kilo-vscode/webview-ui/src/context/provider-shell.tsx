@@ -52,6 +52,8 @@ const Root: ParentComponent = (props) => (
         <MermaidDownloadBridge />
         <ServerProvider>
           <LanguageBridge>
+            {/* MarkedProvider is required here for all markdown consumers in the tree,
+                including PRPanel's PRDescription and PRComments components. Do not remove. */}
             <MarkedProvider>
               <DiffComponentProvider component={Diff}>
                 <CodeComponentProvider component={Code}>

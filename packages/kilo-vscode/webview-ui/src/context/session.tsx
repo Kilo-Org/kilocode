@@ -61,6 +61,7 @@ import {
   buildCostBreakdown,
   buildSessionToolParts,
   childID,
+  dropSet,
   reconcileSessionToolParts,
   removeSessionToolPart,
   removeSessionToolPartsForMessage,
@@ -70,9 +71,10 @@ import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
 import { getAgentModel } from "./session-model-store"
 import { resolveMessagePrefs } from "./session-preferences"
-import { errorIDs } from "./session-errors"
+import { errorIDs, preserveSessionErrors, withoutResolvedSessionErrors } from "./session-errors"
 import { PartStash } from "./part-stash"
-import { mergeParts, sameParts } from "./session-parts"
+import { mergeParts } from "./session-parts"
+import { mergeMessages, sameReconcileShape } from "./session-merge"
 import { state as todoState } from "./todo-revert"
 import { sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
 import { createSessionVariants } from "./session-variants"
@@ -84,16 +86,10 @@ import { createAbortState } from "./abort-state"
 import { clearIfOn, createCloudPrune } from "./session-cloud-prune"
 import { isSameSessionTree } from "./model-usage"
 import { createDraftAgentSeed } from "./session-agent"
+import { createModelSelector } from "./session-model-selector"
 
 const RECENT_LIMIT = 5
 const MESSAGE_PAGE_LIMIT = 80
-
-/** Remove ids from a Set immutably, returning the original when nothing changed. */
-function dropSet(prev: Set<string>, ids: Iterable<string>): Set<string> {
-  const next = new Set(prev)
-  for (const id of ids) next.delete(id)
-  return next.size === prev.size ? prev : next
-}
 
 type MessageMutation = Exclude<MessageLoadMode, "focus"> | "append" | "update"
 
@@ -244,7 +240,7 @@ interface SessionContextValue {
   variantList: (sessionID?: string) => string[]
   currentVariant: (sessionID?: string) => string | undefined
   variantForAgent: (agent: string, model: ModelSelection | null) => string | undefined
-  selectVariant: (value: string, sessionID?: string) => void
+  selectVariant: (value: string | undefined, sessionID?: string) => void
 
   // Model favorites
   recentModels: Accessor<ModelSelection[]>
@@ -283,6 +279,7 @@ interface SessionContextValue {
     draftID?: string,
     context?: string,
     origin?: string | null,
+    overrides?: { agent?: string; model?: string; variant?: string },
   ) => void
   abort: () => void
   compact: () => void
@@ -676,19 +673,17 @@ export const SessionProvider: ParentComponent = (props) => {
   })
   const { carry: carryVariant, list: variantList, agent: variantForAgent, current: currentVariant } = variants
   const selectVariant = variants.select
-
-  function selectModel(providerID: string, modelID: string, sessionID?: string) {
-    const sid = sessionID ?? currentSessionID()
-    const agent = agentForScope(sid)
-    const current = selected(sid)
-    const value = current ? currentVariant(sid) : undefined
-    const selection = { providerID, modelID }
-    applyModel(agent, selection, sid)
-    carryVariant(selection, value, agent, sid)
-    if (sid) {
-      hideErrors(sid)
-    }
-  }
+  const models = createModelSelector({
+    current: currentSessionID,
+    agent: agentForScope,
+    selected,
+    variant: currentVariant,
+    apply: applyModel,
+    set: (id, selection) => setStore("sessionOverrides", id, selection),
+    carry: carryVariant,
+    hide: hideErrors,
+  })
+  const selectModel = models.select
 
   function selectKiloModel(modelID?: string, agent?: string) {
     if (!modelID && !agent) return
@@ -1174,7 +1169,7 @@ export const SessionProvider: ParentComponent = (props) => {
         break
 
       case "sessionError": {
-        if (message.error?.name === "MessageAbortedError") break
+        if (!message.error || message.error.name === "MessageAbortedError") break
         const sid = message.sessionID ?? currentSessionID()
         if (!sid) break
         // Find the last user message in this session to use as parentID
@@ -1187,6 +1182,7 @@ export const SessionProvider: ParentComponent = (props) => {
           createdAt: new Date().toISOString(),
           parentID: parent?.id,
           error: message.error,
+          sessionErrorID: message.eventID,
         }
         handleMessageCreated(errorMsg)
         break
@@ -1379,28 +1375,6 @@ export const SessionProvider: ParentComponent = (props) => {
     setPages(sessionID, { ...(pages[sessionID] ?? emptyPageState), ...patch })
   }
 
-  function mergeMessages(current: Message[], incoming: Message[], mode: Exclude<MessageLoadMode, "focus">) {
-    if (mode === "reconcile") {
-      // Tail reconcile: incoming is the authoritative newest-N snapshot.
-      // Local state may already hold some of those IDs and may also hold
-      // newer optimistic entries created after the fetch was taken. Merge
-      // by id (server wins on collision) then sort by createdAt so new
-      // server messages land in the right position and optimistic tail
-      // entries stay at the end.
-      const byId = new Map<string, Message>()
-      for (const msg of current) byId.set(msg.id, msg)
-      for (const msg of incoming) byId.set(msg.id, msg)
-      return [...byId.values()].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-    }
-    const seen = new Set<string>()
-    const source = mode === "prepend" ? [...incoming, ...current] : incoming
-    return source.filter((msg) => {
-      if (seen.has(msg.id)) return false
-      seen.add(msg.id)
-      return true
-    })
-  }
-
   function recoverPrefs(sessionID: string, messages: Message[], names = agentNames()) {
     const prefs = resolveMessagePrefs(messages, names)
     if (prefs.agent && !store.agentSelections[sessionID]) {
@@ -1412,30 +1386,18 @@ export const SessionProvider: ParentComponent = (props) => {
     if (prefs.model && prefs.variant) {
       const agent = prefs.agent ?? store.agentSelections[sessionID] ?? defaultAgent()
       const key = variantKey(prefs.model, agent, sessionID)
-      if (!store.variantSelections[key]) setStore("variantSelections", key, prefs.variant)
+      if (store.variantSelections[key] === undefined) setStore("variantSelections", key, prefs.variant)
     }
   }
 
   function withPending(sessionID: string, messages: Message[]) {
-    const pending = pendingOptimistic.get(sessionID)
-    if (!pending || pending.size === 0) return messages
-    const ids = new Set(messages.map((msg) => msg.id))
     const current = store.messages[sessionID] ?? []
+    const merged = preserveSessionErrors(current, messages)
+    const pending = pendingOptimistic.get(sessionID)
+    if (!pending || pending.size === 0) return merged
+    const ids = new Set(merged.map((msg) => msg.id))
     const orphans = current.filter((msg) => pending.has(msg.id) && !ids.has(msg.id))
-    return [...messages, ...orphans]
-  }
-
-  // Cheap tail check: same ids in the same order and no visible streamed-part
-  // correction to apply. It skips store churn when SSE already matches the
-  // snapshot, but lets reconcile heal part removals and finalized text.
-  function sameReconcileShape(current: Message[], incoming: Message[]): boolean {
-    if (current.length !== incoming.length) return false
-    for (const [i, n] of incoming.entries()) {
-      const c = current[i]!
-      if (c.id !== n.id) return false
-      if (!sameParts(store.parts[c.id] ?? c.parts, n.parts)) return false
-    }
-    return true
+    return [...merged, ...orphans]
   }
 
   function setTools(sessionID: string, tools: ToolPart[]) {
@@ -1486,7 +1448,10 @@ export const SessionProvider: ParentComponent = (props) => {
     // Reconcile fast-path: if the tail matches local state shape-wise, every
     // message+part-count already agrees with the server. Skip the reactive
     // store churn entirely — virtualizer and rendering stay untouched.
-    if (mode === "reconcile" && sameReconcileShape(store.messages[sessionID] ?? [], messages)) {
+    if (
+      mode === "reconcile" &&
+      sameReconcileShape(store.messages[sessionID] ?? [], messages, (id) => store.parts[id])
+    ) {
       const parts = messageParts(messages)
       for (const msg of messages) {
         if (store.parts[msg.id]) delete parts[msg.id]
@@ -1600,16 +1565,18 @@ export const SessionProvider: ParentComponent = (props) => {
 
     const exists = (store.messages[message.sessionID] ?? []).some((msg) => msg.id === message.id)
     setStore("messages", message.sessionID, (msgs = []) => {
+      if (message.sessionErrorID && msgs.some((msg) => msg.sessionErrorID === message.sessionErrorID)) return msgs
+      const current = withoutResolvedSessionErrors(msgs, [message])
       // Check if message already exists (optimistic or update case).
       // Since we now use the same messageID for optimistic and server messages,
       // this naturally handles the optimistic→real transition.
-      const idx = msgs.findIndex((m) => m.id === message.id)
+      const idx = current.findIndex((m) => m.id === message.id)
       if (idx >= 0) {
-        const updated = [...msgs]
-        updated[idx] = { ...msgs[idx], ...message }
+        const updated = [...current]
+        updated[idx] = { ...current[idx], ...message }
         return updated
       }
-      return [...msgs, message]
+      return [...current, message]
     })
     patchPage(message.sessionID, { lastMutation: exists ? "update" : "append" })
 
@@ -2352,31 +2319,51 @@ export const SessionProvider: ParentComponent = (props) => {
     draftID?: string,
     context?: string,
     origin?: string | null,
+    overrides?: { agent?: string; model?: string; variant?: string },
   ) {
     if (!server.isConnected()) {
       console.warn("[Kilo New] Cannot send command: not connected")
       return
     }
 
-    // Cloud previews need import-then-command; post importAndSend with command metadata
     const sid = origin === undefined ? currentSessionID() : (origin ?? undefined)
-    const selection = providerID && modelID ? { providerID, modelID } : selected(sid)
-    recordModelUsage(selection?.providerID, selection?.modelID)
+    const effectiveDraftID = !sid && !draftID ? crypto.randomUUID() : draftID
+    const scope = effectiveDraftID ?? sid
+    if (!sid && !draftID && effectiveDraftID) agentDrafts.seed(effectiveDraftID)
+
+    if (overrides?.agent) {
+      selectAgent(overrides.agent, scope)
+    }
+    if (overrides?.model) {
+      const parsed = parseModelString(overrides.model)
+      if (parsed) {
+        selectModel(parsed.providerID, parsed.modelID, scope)
+      }
+    }
+    if (overrides?.variant) {
+      selectVariant(overrides.variant, scope)
+    }
+
+    const effectiveSelection = selected(scope)
+    const effectiveProvider = effectiveSelection?.providerID ?? providerID
+    const effectiveModel = effectiveSelection?.modelID ?? modelID
+    recordModelUsage(effectiveProvider, effectiveModel)
+
+    // Cloud previews need import-then-command; post importAndSend with command metadata
     const preview = sid?.startsWith("cloud:")
       ? sid.slice("cloud:".length)
       : origin === undefined
         ? cloudPreviewId()
         : null
     if (preview) {
-      const scope = draftID ?? sid
       const agent = promptAgent(scope)
       vscode.postMessage({
         type: "importAndSend",
         cloudSessionId: preview,
         text: `/${command} ${args}`.trim(),
         messageID: Identifier.ascending("message"),
-        providerID,
-        modelID,
+        providerID: effectiveProvider,
+        modelID: effectiveModel,
         agent,
         variant: currentVariant(scope),
         files,
@@ -2393,9 +2380,6 @@ export const SessionProvider: ParentComponent = (props) => {
       dismissQuestion(q.id)
     }
 
-    const effectiveDraftID = !sid && !draftID ? crypto.randomUUID() : draftID
-    const scope = effectiveDraftID ?? sid
-    if (!sid && !draftID && effectiveDraftID) agentDrafts.seed(effectiveDraftID)
     if (scope) {
       clearClose(scope)
       addOptimistic(scope, messageID, `/${command} ${args}`.trim(), files)
@@ -2414,8 +2398,8 @@ export const SessionProvider: ParentComponent = (props) => {
       messageID,
       sessionID: sid,
       draftID: effectiveDraftID,
-      providerID,
-      modelID,
+      providerID: effectiveProvider,
+      modelID: effectiveModel,
       agent,
       variant: currentVariant(scope),
       files,
@@ -3002,20 +2986,7 @@ export const SessionProvider: ParentComponent = (props) => {
     selectedAgent: agentForScope,
     selectAgent,
     getSessionAgent: (sessionID: string) => store.agentSelections[sessionID] ?? defaultAgent(),
-    setSessionModel: (sessionID: string, providerID: string, modelID: string) => {
-      // Only write per-session override — do NOT touch global modelSelections or
-      // userSetAgents.  The override is what selected() actually
-      // reads, and mutating the global map here is both redundant and harmful: the
-      // agent may not yet be assigned (sendInitialMessage calls setSessionModel
-      // before setSessionAgent), so the write would land on defaultAgent() and
-      // corrupt the default mode's model for later sessions.
-      const agent = store.agentSelections[sessionID] ?? defaultAgent()
-      const current = selected(sessionID)
-      const value = current ? currentVariant(sessionID) : undefined
-      const model = { providerID, modelID }
-      setStore("sessionOverrides", sessionID, model)
-      carryVariant(model, value, agent, sessionID)
-    },
+    setSessionModel: models.session,
     setSessionAgent: (sessionID: string, name: string) => {
       setStore("agentSelections", sessionID, name)
     },

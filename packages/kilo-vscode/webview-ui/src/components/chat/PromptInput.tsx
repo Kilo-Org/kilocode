@@ -943,7 +943,6 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       const list = session.variantList(sid())
       if (list.length === 0) return
       const next = cycleVariant(session.currentVariant(sid()), list)
-      if (!next) return
       e.preventDefault()
       session.selectVariant(next, sid())
       return
@@ -1239,6 +1238,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         pendingId,
         context,
         origin ?? null,
+        {
+          agent: matched.agent,
+          model: matched.model,
+          variant: matched.variant,
+        },
       )
     } else {
       session.sendMessage(message, sel?.providerID, sel?.modelID, attachments, pendingId, context, data, origin ?? null)

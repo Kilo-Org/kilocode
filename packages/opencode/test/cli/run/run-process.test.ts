@@ -5,6 +5,7 @@
 // `KILO_CONFIG_CONTENT` providing the test provider config inline.
 import { describe, expect } from "bun:test"
 import { Effect } from "effect"
+import { createKiloClient } from "@kilocode/sdk/v2" // kilocode_change
 import { reply } from "../../lib/llm-server"
 import { cliIt } from "../../lib/cli-process"
 
@@ -412,4 +413,60 @@ describe("opencode run (non-interactive subprocess)", () => {
       }),
     60_000, // kilocode_change
   )
+
+  // kilocode_change start - non-interactive runs exclude human-driven tools like suggest
+  cliIt.concurrent(
+    "kilo run --auto excludes suggest tool from LLM request",
+    ({ llm, opencode }) =>
+      Effect.gen(function* () {
+        yield* llm.text("done")
+        const result = yield* opencode.run("do work", { extraArgs: ["--auto"] })
+        opencode.expectExit(result, 0)
+        expect(result.stdout).toBe("done\n")
+        const inputs = yield* llm.inputs
+        const tools = (inputs[0]?.body as any)?.tools as Array<{ function?: { name?: string } }> | undefined
+        const toolNames = tools?.map((t) => t.function?.name).filter(Boolean) ?? []
+        expect(toolNames).not.toContain("suggest")
+        expect(toolNames).not.toContain("question")
+        expect(toolNames).not.toContain("interactive_terminal")
+      }),
+    60_000,
+  )
+
+  cliIt.live(
+    "kilo run auto-dismisses suggestion and exits cleanly if suggest tool is invoked in attached session",
+    ({ llm, opencode }) =>
+      Effect.gen(function* () {
+        const server = yield* opencode.serve()
+        const client = createKiloClient({ baseUrl: server.url })
+        const session = yield* Effect.promise(() =>
+          client.session.create({
+            permission: [{ permission: "suggest", action: "allow", pattern: "*" }],
+          }),
+        )
+        const sessionID = session.data?.id
+        expect(sessionID).toBeDefined()
+
+        yield* llm.push(
+          reply().tool("suggest", {
+            suggest: "Run checks?",
+            actions: [{ label: "Run checks", prompt: "Run checks" }],
+          }),
+        )
+        yield* llm.text("completed after dismissal")
+
+        const result = yield* opencode.run("do work", {
+          extraArgs: ["--attach", server.url, "--session", sessionID!, "--auto"],
+        })
+        opencode.expectExit(result, 0)
+
+        const messages = yield* Effect.promise(() => client.session.messages({ sessionID: sessionID! }))
+        const assistant = messages.data?.findLast((m) => m.info.role === "assistant")
+        const toolPart = assistant?.parts.find((p) => p.type === "tool" && p.tool === "suggest")
+        expect(toolPart).toBeDefined()
+        expect((toolPart as any)?.state?.metadata?.dismissed).toBe(true)
+      }),
+    60_000,
+  )
+  // kilocode_change end
 })

@@ -78,6 +78,7 @@ function loadedSettings(message: ExtensionMessage): Record<string, unknown> | un
   }
   if (message.type === "throughputSettingLoaded") return { showTokenThroughput: message.visible }
   if (message.type === "timestampSettingLoaded") return { showMessageTimestamp: message.visible }
+  if (message.type === "autoApprovalReasonSettingLoaded") return { showAutoApprovalReason: message.visible }
 }
 
 export const ConfigProvider: ParentComponent = (props) => {

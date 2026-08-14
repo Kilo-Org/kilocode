@@ -498,6 +498,61 @@ class SessionScrollTest : SessionUiTestBase() {
         assertFalse(jumpButton().isVisible)
     }
 
+    fun `test turn close after modified files keeps pending tail follow`() {
+        showMessages()
+        fillTranscript(24)
+        val bar = scrollBar()
+        setBottom(bar)
+
+        emit(ChatEventDto.TurnOpen("ses_test"))
+        drainScroll()
+        assertBottom(bar)
+        assertTrue(ui.scroll.following())
+        val id = "modified_close_tail"
+        val pid = "modified_close_part"
+        emit(ChatEventDto.MessageUpdated("ses_test", message(id).copy(summary = MessageSummaryDto(listOf(modifiedFile())))), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_test", part(pid, id, "text", "tail line\n".repeat(160))), flush = false)
+        forceFlushWithoutDispatch()
+
+        emit(ChatEventDto.TurnClose("ses_test", "completed"))
+        drainScroll()
+
+        assertBottom(bar)
+        assertTrue(ui.scroll.following())
+        assertFalse(jumpButton().isVisible)
+
+        findAll<EditorTextField>(ui).first().text = "next prompt"
+        find<PromptPanel>(ui).send()
+        settleShort(100)
+        val text = rpc.prompts.last().third.parts.single().text
+        val next = "modified_close_next"
+        emit(ChatEventDto.MessageUpdated("ses_test", message(next)), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_test", part("modified_close_next_part", next, "text", text)), flush = false)
+        forceFlush()
+        drainScroll()
+
+        assertBottom(bar)
+        assertFalse(jumpButton().isVisible)
+    }
+
+    fun `test turn close after modified files preserves user scroll position`() {
+        showMessages()
+        fillTranscript(24)
+        val bar = scrollBar()
+        setValue(bar, bottom(bar) / 2)
+        val value = bar.value
+
+        emit(ChatEventDto.TurnOpen("ses_test"), flush = false)
+        emit(ChatEventDto.MessageUpdated("ses_test", message("modified_close_middle").copy(summary = MessageSummaryDto(listOf(modifiedFile())))), flush = false)
+        emit(ChatEventDto.TurnClose("ses_test", "completed"), flush = false)
+        forceFlush()
+        drainScroll()
+
+        assertEquals(value, bar.value)
+        assertFalse(ui.scroll.following())
+        assertTrue(jumpButton().isVisible)
+    }
+
     fun `test prompt editor growth preserves middle scroll position`() {
         showMessages()
         fillTranscript(24)

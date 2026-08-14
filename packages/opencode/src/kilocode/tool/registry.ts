@@ -1,4 +1,3 @@
-import { CodebaseSearchTool } from "../../tool/warpgrep"
 import { RecallTool } from "../../tool/recall"
 import { AgentManagerModelsTool } from "./agent-manager-models"
 import { AgentManagerTool } from "./agent-manager"
@@ -68,7 +67,6 @@ export namespace KiloToolRegistry {
 
   export function infos(host?: AgentManager.Interface, notebook?: Notebook.Interface) {
     return Effect.gen(function* () {
-      const codebase = yield* CodebaseSearchTool
       const recall = yield* RecallTool
       const managerModels = yield* AgentManagerModelsTool
       const memory = yield* MemoryRecallTool
@@ -85,13 +83,13 @@ export namespace KiloToolRegistry {
       const notify = yield* NotifyUserTool.pipe(Effect.provideService(KiloSessions.Service, sessions))
       const send = yield* SendFileTool
       if (!notebook)
-        return { codebase, recall, managerModels, memory, save, manager, process, chart, image, terminal, notify, send }
+        return { recall, managerModels, memory, save, manager, process, chart, image, terminal, notify, send }
       const tools = yield* Effect.all({
         notebookRead: NotebookReadTool,
         notebookEdit: NotebookEditTool,
         notebookExecute: NotebookExecuteTool,
       }).pipe(Effect.provideService(Notebook.Service, notebook))
-      return { codebase, recall, managerModels, memory, save, manager, process, chart, image, terminal, notify, send, ...tools }
+      return { recall, managerModels, memory, save, manager, process, chart, image, terminal, notify, send, ...tools }
     })
   }
 
@@ -99,7 +97,6 @@ export namespace KiloToolRegistry {
    * it has no Service deps beyond what Tool.init itself needs. */
   export function build(
     tools: {
-      codebase: Tool.Info
       recall: Tool.Info
       managerModels: Tool.Info
       memory: Tool.Info
@@ -120,7 +117,6 @@ export namespace KiloToolRegistry {
   ) {
     return Effect.gen(function* () {
       const base = yield* Effect.all({
-        codebase: Tool.init(tools.codebase),
         recall: Tool.init(tools.recall),
         managerModels: Tool.init(tools.managerModels),
         memory: Tool.init(tools.memory),
@@ -194,7 +190,6 @@ export namespace KiloToolRegistry {
   /** Kilo-specific tools to append to the builtin list */
   export function extra(
     tools: {
-      codebase: Tool.Def
       semantic?: Tool.Def
       recall: Tool.Def
       managerModels: Tool.Def
@@ -211,10 +206,9 @@ export namespace KiloToolRegistry {
       notebookEdit?: Tool.Def
       notebookExecute?: Tool.Def
     },
-    cfg: { experimental?: { codebase_search?: boolean; image_generation?: boolean; native_notebook_tools?: boolean } },
+    cfg: { experimental?: { image_generation?: boolean; native_notebook_tools?: boolean } },
   ): Tool.Def[] {
     return [
-      ...(cfg.experimental?.codebase_search === true ? [tools.codebase] : []),
       ...(cfg.experimental?.image_generation === true ? [tools.image] : []),
       ...(tools.semantic ? [tools.semantic] : []),
       tools.memory,

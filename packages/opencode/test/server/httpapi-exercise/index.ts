@@ -31,12 +31,13 @@ import {
   exerciseGlobalRoot,
 } from "./environment"
 import { color, printHeader, printResults } from "./report"
-import { coverageResult, parseOptions, routeKey, routeKeys, selectedScenarios } from "./routing"
+import { coverageResult, parseOptions, routeKey, routeKeys, selectedScenarios, shardScenarios } from "./routing" // kilocode_change
 import { runScenario } from "./runner"
 import { disposeApps } from "./backend"
-import { runtime } from "./runtime"
-import { type Scenario } from "./types"
+import { publicApi, runtime } from "./runtime" // kilocode_change
+import { type Scenario, type Result } from "./types"
 import { kiloScenarios } from "../../kilocode/server/httpapi-exercise-scenarios" // kilocode_change
+import { sessionAfterDefaultAgent } from "../../kilocode/server/httpapi-exercise-ready" // kilocode_change
 
 function cursor(input: Record<string, unknown>) {
   return Buffer.from(JSON.stringify(input)).toString("base64url")
@@ -116,18 +117,21 @@ const scenarios: Scenario[] = [
       },
       "status",
     ),
-  http.protected.get("/path", "path.get").json(200, (body, ctx) => {
+  // kilocode_change start - opt into git init; the worktree assertion requires a git-backed project
+  http.protected.get("/path", "path.get").inProject({ git: true }).json(200, (body, ctx) => {
     object(body)
     check(body.directory === ctx.directory, "directory should resolve from x-kilo-directory")
     check(body.worktree === ctx.directory, "worktree should resolve from x-kilo-directory")
   }),
-  http.protected.get("/vcs", "vcs.get").json(),
-  http.protected.get("/vcs/status", "vcs.status").json(200, array),
+  // kilocode_change end
+  http.protected.get("/vcs", "vcs.get").inProject({ git: true }).json(),
+  http.protected.get("/vcs/status", "vcs.status").inProject({ git: true }).json(200, array),
   http.protected
     .get("/vcs/diff", "vcs.diff")
+    .inProject({ git: true })
     .at((ctx) => ({ path: "/vcs/diff?mode=git", headers: ctx.headers() }))
     .json(200, array),
-  http.protected.get("/vcs/diff/raw", "vcs.diff.raw").status(
+  http.protected.get("/vcs/diff/raw", "vcs.diff.raw").inProject({ git: true }).status(
     200,
     (_ctx, result) =>
       Effect.sync(() => {
@@ -164,14 +168,19 @@ const scenarios: Scenario[] = [
     .status(400),
   http.protected.get("/config/providers", "config.providers").json(),
   http.protected.get("/project", "project.list").json(200, array, "status"),
-  http.protected.get("/project/current", "project.current").json(
-    200,
-    (body, ctx) => {
-      object(body)
-      check(body.worktree === ctx.directory, "current project should resolve from scenario directory")
-    },
-    "status",
-  ),
+  // kilocode_change start - opt into git init; the worktree assertion requires a git-backed project
+  http.protected
+    .get("/project/current", "project.current")
+    .inProject({ git: true })
+    .json(
+      200,
+      (body, ctx) => {
+        object(body)
+        check(body.worktree === ctx.directory, "current project should resolve from scenario directory")
+      },
+      "status",
+    ),
+  // kilocode_change end
   http.protected
     .patch("/project/{projectID}", "project.update")
     .mutating()
@@ -581,6 +590,7 @@ const scenarios: Scenario[] = [
   http.protected
     .post("/experimental/worktree", "worktree.create")
     .mutating()
+    .inProject({ git: true })
     .at((ctx) => ({ path: "/experimental/worktree", headers: ctx.headers(), body: { name: "api-dsl" } }))
     .jsonEffect(
       200,
@@ -599,6 +609,7 @@ const scenarios: Scenario[] = [
   http.protected
     .delete("/experimental/worktree", "worktree.remove")
     .mutating()
+    .inProject({ git: true })
     .seeded((ctx) => ctx.worktree({ name: "api-remove" }))
     .at((ctx) => ({ path: "/experimental/worktree", headers: ctx.headers(), body: { directory: ctx.state.directory } }))
     .json(200, (body) => {
@@ -607,6 +618,7 @@ const scenarios: Scenario[] = [
   http.protected
     .post("/experimental/worktree/reset", "worktree.reset")
     .mutating()
+    .inProject({ git: true })
     .seeded((ctx) => ctx.worktree({ name: "api-reset" }))
     .at((ctx) => ({
       path: "/experimental/worktree/reset",
@@ -861,17 +873,20 @@ const scenarios: Scenario[] = [
   }),
   http.protected
     .post("/api/session/{sessionID}/permission", "v2.session.permission.create")
-    .seeded((ctx) => ctx.session({ title: "Permission create owner" }))
+    .seeded((ctx) => sessionAfterDefaultAgent(ctx, "Permission create owner")) // kilocode_change
     .at((ctx) => ({
       path: route("/api/session/{sessionID}/permission", { sessionID: ctx.state.id }),
       headers: ctx.headers(),
       body: { action: "read", resources: [".env"] },
     }))
+    // kilocode_change start - opt into git init; the permission resolver consults VCS state for unknown resources
+    .inProject({ git: true })
+    // kilocode_change end
     .json(200, (body) => {
       object(body)
       object(body.data)
       check(typeof body.data.id === "string", "permission create should return an ID")
-      check(body.data.effect === "ask", "permission create should create a pending request")
+      check(body.data.effect === "ask", `permission create should create a pending request, got ${JSON.stringify(body.data.effect)}`) // kilocode_change
     }),
   http.protected
     .get("/api/session/{sessionID}/permission", "v2.session.permission.list")
@@ -1314,6 +1329,7 @@ const scenarios: Scenario[] = [
     }),
   http.protected
     .get("/session/{sessionID}/diff", "session.diff")
+    .inProject({ git: true })
     .seeded((ctx) => ctx.session({ title: "Diff session" }))
     .at((ctx) => ({ path: route("/session/{sessionID}/diff", { sessionID: ctx.state.id }), headers: ctx.headers() }))
     .json(200, array),
@@ -1601,33 +1617,21 @@ const scenarios: Scenario[] = [
         const session = yield* ctx.session({ title: "Summarize session" })
         yield* ctx.message(session.id, { text: "summarize this work" })
         const summary = [
-          "## Goal",
+          "## Objective",
           "- Exercise session summarize.",
           "",
-          "## Constraints & Preferences",
+          "## Important Details",
           "- Use fake LLM.",
-          "",
-          "## Progress",
-          "### Done",
-          "- Summary generated.",
-          "",
-          "### In Progress",
-          "- (none)",
-          "",
-          "### Blocked",
-          "- (none)",
-          "",
-          "## Key Decisions",
           "- Keep route local.",
+          "- Test fixture: test/server/httpapi-exercise/index.ts.",
           "",
-          "## Next Steps",
-          "- (none)",
+          "## Work State",
+          "- Completed: Summary generated.",
+          "- Active: (none)",
+          "- Blocked: (none)",
           "",
-          "## Critical Context",
-          "- Test fixture.",
-          "",
-          "## Relevant Files",
-          "- test/server/httpapi-exercise/index.ts: scenario",
+          "## Next Move",
+          "1. (none)",
         ].join("\n")
         yield* ctx.llmText(summary)
         yield* ctx.llmText(summary)
@@ -1796,7 +1800,35 @@ const llmScenarios = new Set([
 ])
 
 const main = Effect.gen(function* () {
-  // kilocode_change start - dispose final non-mutating instances so shared test scopes can close
+  const options = parseOptions(Bun.argv.slice(2))
+  for (const scenario of scenarios) {
+    if (scenario.kind === "active" && llmScenarios.has(scenario.name) && !scenario.project?.llm) {
+      return yield* Effect.fail(new Error(`${scenario.name} must use TestLLMServer via .withLlm()`))
+    }
+  }
+  // kilocode_change start - coverage only needs the OpenAPI group; bypass runtime + LLM + DB allocation
+  if (options.mode === "coverage") {
+    const selected = selectedScenarios(options, scenarios)
+    const effectRoutes = routeKeys(OpenApi.fromApi(yield* Effect.promise(() => publicApi())))
+    const missing = effectRoutes.filter((route) => !scenarios.some((scenario) => route === routeKey(scenario)))
+    const extra = scenarios.filter((scenario) => !effectRoutes.includes(routeKey(scenario)))
+    printHeader(options, effectRoutes, selected, missing, extra, {
+      database: exerciseDatabasePath,
+      global: exerciseGlobalRoot,
+    })
+    const results = selected.map(coverageResult)
+    printResults(results, missing, extra)
+    if (results.some((result) => result.status === "fail"))
+      return yield* Effect.fail(new Error("one or more scenarios failed"))
+    if (options.failOnSkip && results.some((result) => result.status === "skip"))
+      return yield* Effect.fail(new Error("one or more scenarios are skipped"))
+    if (options.failOnMissing && missing.length > 0)
+      return yield* Effect.fail(new Error("one or more routes have no scenario"))
+    yield* cleanupExercisePaths
+    return undefined
+  }
+  // kilocode_change end
+  // kilocode_change start - dispose final non-mutating instances so shared test scopes can close; skip when coverage returned early so runtime() is never imported in static mode
   yield* Effect.addFinalizer(() =>
     Effect.gen(function* () {
       const modules = yield* Effect.promise(() => runtime())
@@ -1806,36 +1838,27 @@ const main = Effect.gen(function* () {
     }),
   )
   // kilocode_change end
-  const options = parseOptions(Bun.argv.slice(2))
   const modules = yield* Effect.promise(() => runtime())
   const effectRoutes = routeKeys(OpenApi.fromApi(modules.PublicApi))
   const selected = selectedScenarios(options, scenarios)
+  const sharded = shardScenarios(selected, options.shard)
   const missing = effectRoutes.filter((route) => !scenarios.some((scenario) => route === routeKey(scenario)))
   const extra = scenarios.filter((scenario) => !effectRoutes.includes(routeKey(scenario)))
 
-  for (const scenario of scenarios) {
-    if (scenario.kind === "active" && llmScenarios.has(scenario.name) && !scenario.project?.llm) {
-      return yield* Effect.fail(new Error(`${scenario.name} must use TestLLMServer via .withLlm()`))
-    }
-  }
-
-  printHeader(options, effectRoutes, selected, missing, extra, {
+  printHeader(options, effectRoutes, sharded, missing, extra, {
     database: exerciseDatabasePath,
     global: exerciseGlobalRoot,
   })
 
-  const results =
-    options.mode === "coverage"
-      ? selected.map(coverageResult)
-      : yield* Effect.forEach(
-          selected,
-          (scenario) =>
-            Effect.gen(function* () {
-              if (options.progress) console.log(`${color.dim}RUN ${routeKey(scenario)} ${scenario.name}${color.reset}`)
-              return yield* runScenario(options)(scenario)
-            }),
-          { concurrency: 1 },
-        )
+  const results: Result[] = yield* Effect.forEach(
+    sharded,
+    (scenario) =>
+      Effect.gen(function* () {
+        if (options.progress) console.log(`${color.dim}RUN ${routeKey(scenario)} ${scenario.name}${color.reset}`)
+        return yield* runScenario(options)(scenario)
+      }),
+    { concurrency: 1 },
+  )
   printResults(results, missing, extra)
 
   if (results.some((result) => result.status === "fail"))
@@ -1847,11 +1870,10 @@ const main = Effect.gen(function* () {
   return undefined
 })
 
-// kilocode_change start - route-only coverage must not acquire a listening fake LLM server
+// kilocode_change start - route-only coverage must not acquire a listening fake LLM server; effect/auth runs alone
+const initialOptions = parseOptions(Bun.argv.slice(2))
 const llm =
-  parseOptions(Bun.argv.slice(2)).mode === "coverage"
-    ? Layer.mock(TestLLMServer)({ url: "http://coverage.invalid" })
-    : TestLLMServer.layer
+  initialOptions.mode === "coverage" ? Layer.mock(TestLLMServer)({ url: "http://coverage.invalid" }) : TestLLMServer.layer
 
 Effect.runPromise(main.pipe(Effect.provide(llm), Effect.scoped)).then(
   () => process.exit(0),
