@@ -162,5 +162,5 @@ export function isPathMention(text: string): boolean {
  * auto, purge) consume their text, so nothing remains.
  */
 export function memoryRest(cmd: ParsedMemoryCommand): string {
-  return "rest" in cmd ? cmd.rest ?? "" : ""
+  return "rest" in cmd ? (cmd.rest ?? "") : ""
 }
