@@ -123,7 +123,7 @@ const scenarios: Scenario[] = [
     check(body.directory === ctx.directory, "directory should resolve from x-kilo-directory")
     check(body.worktree === ctx.directory, "worktree should resolve from x-kilo-directory")
   }),
-  http.protected.get("/vcs", "vcs.get").json(),
+  http.protected.get("/vcs", "vcs.get").inProject({ git: true }).json(),
   http.protected.get("/vcs/status", "vcs.status").inProject({ git: true }).json(200, array),
   http.protected
     .get("/vcs/diff", "vcs.diff")
