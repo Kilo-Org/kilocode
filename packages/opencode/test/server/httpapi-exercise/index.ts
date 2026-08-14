@@ -178,6 +178,10 @@ const scenarios: Scenario[] = [
   http.protected
     .patch("/project/{projectID}", "project.update")
     .mutating()
+    // Isolated git project: a non-git directory resolves to the shared global project
+    // (worktree "/"), and this scenario PATCHes the row — without isolation the mutation
+    // would leak into every later non-git scenario in the same pass.
+    .inProject({ git: true })
     .seeded((ctx) => ctx.project())
     .at((ctx) => ({
       path: route("/project/{projectID}", { projectID: ctx.state.id }),
@@ -1836,28 +1840,31 @@ const main = Effect.gen(function* () {
               // attempts (runner.ts ensures resetState per run), so contention flakes recover
               // while real regressions still fail both attempts. Retries stay visible in output.
               if (result.status !== "fail") return result
+              // preserveDatabase scenarios skip resetState between attempts; retrying them
+              // would run against state the failed attempt already mutated and can mask a
+              // real regression as FLAKY. Everything else resets, so retrying is sound.
+              if (!scenario.reset) return result
               // Back off before retrying: the observed failure mode is a readiness race (agent
               // projections still warming when the request lands, so permission evaluation hits
               // the deny-all fallback). An immediate retry on a saturated runner reproduces the
               // same race; growing pauses let projections settle. Sharded child processes run
               // fewer scenarios each, so early scenarios land in a colder process where one
               // second is not always enough.
-              const backoffs = ["1 second", "3 seconds"] as const
-              for (const [attempt, backoff] of backoffs.entries()) {
+              let last = result
+              for (const backoff of ["1 second", "3 seconds"] as const) {
                 console.log(
                   `${color.yellow}RETRY${color.reset} ${routeKey(scenario)} ${scenario.name} failed, retrying in ${backoff}`,
                 )
                 yield* Effect.sleep(backoff)
-                const retried = yield* runScenario(options)(scenario)
-                if (retried.status !== "fail") {
+                last = yield* runScenario(options)(scenario)
+                if (last.status !== "fail") {
                   console.log(
                     `${color.yellow}FLAKY${color.reset} ${routeKey(scenario)} ${scenario.name} passed on retry`,
                   )
-                  return retried
+                  break
                 }
-                if (attempt === backoffs.length - 1) return retried
               }
-              return result
+              return last
               // kilocode_change end
             }),
           { concurrency: 1 },

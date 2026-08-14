@@ -135,12 +135,13 @@ function withContext<A, E>(
           if (!context.llm) throw new Error("scenario needs fake LLM")
           return context.llm
         }
+        const headers = (extra?: Record<string, string>) => ({
+          ...(context.dir?.path ? { "x-kilo-directory": context.dir.path } : {}),
+          ...extra,
+        })
         const base: ScenarioContext = {
           directory: context.dir?.path,
-          headers: (extra) => ({
-            ...(context.dir?.path ? { "x-kilo-directory": context.dir.path } : {}),
-            ...extra,
-          }),
+          headers,
           file: (name, content) =>
             Effect.promise(() => {
               return Bun.write(`${directory()}/${name}`, content)
@@ -150,10 +151,12 @@ function withContext<A, E>(
           // The agent projection fills asynchronously after instance load; a permission
           // evaluated before it fills hits the deny-all fallback. Polling the projection
           // waits on the actual precondition instead of sleeping a guessed interval.
-          agentsReady: () =>
-            probe("/api/agent", {
-              ...(context.dir?.path ? { "x-kilo-directory": context.dir.path } : {}),
-            }).pipe(
+          agentsReady: () => {
+            // Without a project directory the server would fall back to process.cwd() —
+            // the real checkout — and the gate would observe an instance the scenario
+            // never targets. Readiness only makes sense for a seeded project instance.
+            if (!context.dir?.path) throw new Error("agentsReady needs a project directory")
+            return probe("/api/agent", headers()).pipe(
               Effect.flatMap((result) => {
                 const data = (result.body as { data?: unknown[] } | undefined)?.data
                 return result.status === 200 && Array.isArray(data) && data.length > 0
@@ -163,7 +166,8 @@ function withContext<A, E>(
               Effect.retry({ times: 100, schedule: Schedule.spaced("100 millis") }),
               Effect.orDie,
               Effect.asVoid,
-            ),
+            )
+          },
           sessionGet: (sessionID) =>
             run(modules.Session.Service.use((svc) => svc.get(sessionID))).pipe(
               Effect.catchCause(() => Effect.succeed(undefined)),
