@@ -178,6 +178,10 @@ const scenarios: Scenario[] = [
   http.protected
     .patch("/project/{projectID}", "project.update")
     .mutating()
+    // Isolated git project: a non-git directory resolves to the shared global project
+    // (worktree "/"), and this scenario PATCHes the row — without isolation the mutation
+    // would leak into every later non-git scenario in the same pass.
+    .inProject({ git: true })
     .seeded((ctx) => ctx.project())
     .at((ctx) => ({
       path: route("/project/{projectID}", { projectID: ctx.state.id }),
@@ -1836,6 +1840,10 @@ const main = Effect.gen(function* () {
               // attempts (runner.ts ensures resetState per run), so contention flakes recover
               // while real regressions still fail both attempts. Retries stay visible in output.
               if (result.status !== "fail") return result
+              // preserveDatabase scenarios skip resetState between attempts; retrying them
+              // would run against state the failed attempt already mutated and can mask a
+              // real regression as FLAKY. Everything else resets, so retrying is sound.
+              if (!scenario.reset) return result
               // Back off before retrying: the observed failure mode is a readiness race (agent
               // projections still warming when the request lands, so permission evaluation hits
               // the deny-all fallback). An immediate retry on a saturated runner reproduces the
