@@ -272,12 +272,10 @@ class TurnLifecycleTest : SessionControllerTestBase() {
     }
 
     fun `test turn outcome classifier`() {
-        assertNull(TurnOutcome.classify("completed", false))
-        assertNull(TurnOutcome.classify("superseded", false))
-        assertEquals(Outcome.INTERRUPTED to OutcomeTone.WARNING, TurnOutcome.classify("interrupted", false))
-        assertEquals(Outcome.FAILED to OutcomeTone.CRITICAL, TurnOutcome.classify("error", false))
-        assertNull(TurnOutcome.classify("error", true))
-        assertNull(TurnOutcome.classify("interrupted", true))
+        assertNull(TurnOutcome.classify("completed"))
+        assertNull(TurnOutcome.classify("superseded"))
+        assertEquals(Outcome.INTERRUPTED to OutcomeTone.WARNING, TurnOutcome.classify("interrupted"))
+        assertEquals(Outcome.FAILED to OutcomeTone.CRITICAL, TurnOutcome.classify("error"))
     }
 
     fun `test TurnClose completed preserves AwaitingQuestion state`() {

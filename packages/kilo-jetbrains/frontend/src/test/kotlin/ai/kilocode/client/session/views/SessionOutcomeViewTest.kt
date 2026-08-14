@@ -5,11 +5,13 @@ import ai.kilocode.client.session.model.Outcome
 import ai.kilocode.client.session.model.OutcomeTone
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextArea
 import java.awt.Container
+import javax.swing.Icon
 
 @Suppress("UnstableApiUsage")
 class SessionOutcomeViewTest : BasePlatformTestCase() {
@@ -40,7 +42,7 @@ class SessionOutcomeViewTest : BasePlatformTestCase() {
             assertTrue(view.isVisible)
             assertNotNull(findText(view, KiloBundle.message("session.outcome.interrupted.title")))
             assertNotNull(findText(view, KiloBundle.message("session.outcome.interrupted.description")))
-            assertTrue(findAll<JBLabel>(view).any { it.icon != null })
+            assertIcons(view, AllIcons.General.Warning)
         }
     }
 
@@ -53,6 +55,7 @@ class SessionOutcomeViewTest : BasePlatformTestCase() {
             assertNotNull(findText(view, KiloBundle.message("session.outcome.failed.title")))
             assertNotNull(findText(view, KiloBundle.message("session.outcome.failed.description")))
             assertNull(findText(view, KiloBundle.message("session.outcome.interrupted.description")))
+            assertIcons(view, AllIcons.General.Error)
         }
     }
 
@@ -81,6 +84,12 @@ class SessionOutcomeViewTest : BasePlatformTestCase() {
     }
 
     private fun findText(root: Container, text: String) = findAll<JBTextArea>(root).firstOrNull { it.text == text }
+
+    private fun assertIcons(root: Container, icon: Icon) {
+        val icons = findAll<JBLabel>(root).mapNotNull { it.icon }
+        assertTrue(icons.isNotEmpty())
+        assertTrue(icons.all { it == icon })
+    }
 
     private fun <T> edt(block: () -> T): T {
         var result: T? = null

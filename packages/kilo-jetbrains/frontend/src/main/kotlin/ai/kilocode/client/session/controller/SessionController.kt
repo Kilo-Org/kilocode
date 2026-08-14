@@ -1436,7 +1436,7 @@ class SessionController(
                 if (current is SessionState.AwaitingPermission) return
                 if (current is SessionState.LoginRequired) return
                 if (current is SessionState.Error && event.reason != "completed") return
-                val ended = TurnOutcome.classify(event.reason, current is SessionState.Error)
+                val ended = TurnOutcome.classify(event.reason)
                 when {
                     ended != null -> model.setState(SessionState.TurnEnded(ended.first, ended.second))
                     event.reason == "completed" -> {
