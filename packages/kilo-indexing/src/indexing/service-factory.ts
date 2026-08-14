@@ -15,7 +15,7 @@ import { OpenRouterEmbedder } from "./embedders/openrouter"
 import { VoyageEmbedder } from "./embedders/voyage"
 import { QdrantVectorStore } from "./vector-store/qdrant-client"
 import { LanceDBVectorStore } from "./vector-store/lancedb-vector-store"
-import { codeParser, DirectoryScanner, FileWatcher } from "./processors"
+import { CodeParser, DirectoryScanner, FileWatcher } from "./processors"
 import type { AvailableEmbedders, ICodeParser, IEmbedder, IFileWatcher, IVectorStore } from "./interfaces"
 import type { CodeIndexConfigManager } from "./config-manager"
 import type { CacheManager } from "./cache-manager"
@@ -313,7 +313,7 @@ export class CodeIndexServiceFactory {
 
     const embedder = this.createEmbedder()
     const vectorStore = this.createVectorStore()
-    const parser = codeParser
+    const parser = new CodeParser(config.fileExtensions)
     const scanner = this.createDirectoryScanner(embedder, vectorStore, parser, ignoreInstance)
     const fileWatcher = this.createFileWatcher(embedder, vectorStore, cacheManager, ignoreInstance, parser)
 
