@@ -144,6 +144,14 @@ export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
   "man *-H*": "deny",
 }
 
+const exploreBash: Record<string, "allow" | "ask" | "deny"> = {
+  ...readOnlyBash,
+  // Explore runs as a delegated agent, so it cannot answer permission prompts.
+  "gh *": "deny",
+  // `find` can mutate through `-delete` and `-exec`; use glob/list instead.
+  "find *": "deny",
+}
+
 function askGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
   return Permission.fromConfig({
     "*": "deny",
@@ -222,6 +230,20 @@ export function hardenPlan(
   if (key !== "plan" && key !== "architect") return
   const edit = explicit.map(editRestrictions)
   item.permission = Permission.merge(item.permission, planEditGuard(worktree), ...edit)
+}
+
+export function hardenExplore(
+  key: string,
+  item: { permission: Permission.Ruleset },
+  ...explicit: Permission.Ruleset[]
+) {
+  if (key !== "explore") return
+  item.permission = Permission.merge(
+    item.permission,
+    Permission.fromConfig({ bash: exploreBash }),
+    // Hardening is a ceiling, so retain any stricter user-authored denies.
+    ...explicit.map(denies),
+  )
 }
 
 function planGuard(worktree: string, mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
@@ -446,7 +468,6 @@ export function patchAgents(
           grep: "allow",
           glob: "allow",
           list: "allow",
-          bash: "allow",
           skill: "allow",
           webfetch: "allow",
           websearch: "allow",
@@ -463,6 +484,9 @@ export function patchAgents(
           },
         }),
         user,
+        // Explore is always delegated, so user allows cannot make its shell writable.
+        Permission.fromConfig({ bash: exploreBash }),
+        denies(user),
       ),
       prompt: PROMPT_EXPLORE,
     }

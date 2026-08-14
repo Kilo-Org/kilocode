@@ -722,25 +722,14 @@ function anthropicUsesModernAdaptiveThinking(apiId: string) {
   return major > 4 || (major === 4 && minor >= 7)
 }
 
-// kilocode_change start - Claude 5+ models are adaptive thinking models like opus-4.7/4.8
-function anthropicClaude5(apiId: string) {
-  const id = apiId.toLowerCase()
-  if (id.includes("fable")) return true
-  const version = /(?:opus|sonnet)[.-](\d+)(?:[.@-]|$)|claude-(\d+)(?:[.-]\d+)?-(?:opus|sonnet)(?:[.@-]|$)/.exec(id)
-  return Number(version?.[1] ?? version?.[2]) >= 5
-}
-// kilocode_change end
-
 function anthropicOpus45(apiId: string) {
   return ["opus-4-5", "opus-4.5"].some((value) => apiId.includes(value))
 }
 
 function anthropicAdaptiveEfforts(apiId: string): string[] | null {
-  // kilocode_change start - include Kilo Claude aliases
-  if (anthropicUsesModernAdaptiveThinking(apiId) || anthropicClaude5(apiId)) {
+  if (anthropicUsesModernAdaptiveThinking(apiId)) {
     return ["low", "medium", "high", "xhigh", "max"]
   }
-  // kilocode_change end
   if (
     ["opus-4-6", "opus-4.6", "4-6-opus", "4.6-opus", "sonnet-4-6", "sonnet-4.6", "4-6-sonnet", "4.6-sonnet"].some((v) =>
       apiId.includes(v),
@@ -752,7 +741,7 @@ function anthropicAdaptiveEfforts(apiId: string): string[] | null {
 }
 
 function anthropicOmitsThinking(apiId: string) {
-  return anthropicUsesModernAdaptiveThinking(apiId) || anthropicClaude5(apiId) // kilocode_change - include Kilo aliases
+  return anthropicUsesModernAdaptiveThinking(apiId)
 }
 
 function googleThinkingLevelEfforts(apiId: string) {
@@ -778,7 +767,6 @@ function wrapInSapModelParams(variants: Record<string, Record<string, any>>): Re
 
 function googleThinkingVariants(model: Provider.Model): Record<string, Record<string, any>> {
   const id = model.api.id.toLowerCase()
-  if (id.includes("gemma")) return {} // kilocode_change
   if (id.includes("2.5")) {
     return {
       high: { thinkingConfig: { includeThoughts: true, thinkingBudget: 16000 } },
@@ -862,11 +850,9 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
     id.includes("deepseek-reasoner") ||
     id.includes("deepseek-r1") ||
     id.includes("deepseek-v3") ||
-    // id.includes("minimax") || // kilocode_change
-    // id.includes("glm") || // kilocode_change
-    // id.includes("kimi") || // kilocode_change
-    (id.includes("kimi") && model.api.npm === "@ai-sdk/openai-compatible") || // kilocode_change
-    // TODO: Remove this after models.dev data is fixed to use "kimi-k2.5" instead of "k2p5"
+    id.includes("minimax") ||
+    (id.includes("glm") && !glm52) ||
+    id.includes("kimi") ||
     id.includes("k2p") ||
     id.includes("qwen") ||
     id.includes("big-pickle")
@@ -875,8 +861,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
 
   // see: https://docs.x.ai/docs/guides/reasoning#control-how-hard-the-model-thinks
   if (id.includes("grok") && id.includes("grok-3-mini")) {
-    if (model.api.npm === "@openrouter/ai-sdk-provider" || model.api.npm === "@kilocode/kilo-gateway") {
-      // kilocode_change - add Kilo Gateway support
+    if (model.api.npm === "@openrouter/ai-sdk-provider") {
       return {
         low: { reasoning: { effort: "low" } },
         high: { reasoning: { effort: "high" } },
@@ -887,44 +872,9 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
       high: { reasoningEffort: "high" },
     }
   }
-  // kilocode_change start - only grok-4.5 supports generic reasoning effort variants
-  if (id.includes("grok") && !id.includes("grok-4.5")) return {}
-  // kilocode_change end
-  switch (model.api.npm) {
-    case "@kilocode/kilo-gateway": // kilocode_change
-      // kilocode_change start
-      if (id.includes("glm") || id.includes("kimi") || id.includes("qwen") || id.includes("minimax")) {
-        return {
-          instant: { reasoning: { enabled: false } },
-          thinking: { reasoning: { enabled: true } },
-        }
-      }
-      // kilocode_change end
-      if (
-        !id.includes("gpt") &&
-        !id.includes("gemini-3") &&
-        !id.includes("claude") &&
-        !model.id.includes("mercury") // kilocode_change
-      )
-        return {}
-      return Object.fromEntries(
-        OPENAI_EFFORTS.map((effort) => [effort, { reasoning: { effort } }]), // kilocode_change
-      )
 
+  switch (model.api.npm) {
     case "@openrouter/ai-sdk-provider":
-      // kilocode_change start - preserve Kilo thinking toggles for supported OpenRouter models
-      if (id.includes("glm") || id.includes("kimi") || id.includes("qwen") || id.includes("minimax")) {
-        return {
-          instant: { reasoning: { enabled: false } },
-          thinking: { reasoning: { enabled: true } },
-        }
-      }
-      // kilocode_change end
-      // kilocode_change start - Mercury exposes the full OpenRouter effort set
-      if (model.id.includes("mercury")) {
-        return Object.fromEntries(OPENAI_EFFORTS.map((effort) => [effort, { reasoning: { effort } }]))
-      }
-      // kilocode_change end
       return Object.fromEntries(
         (model.api.id.startsWith("openai/") || id.includes("gpt")
           ? openaiCompatibleReasoningEfforts(model.api.id)
@@ -1102,26 +1052,12 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
     // https://v5.ai-sdk.dev/providers/ai-sdk-providers/anthropic
     case "@ai-sdk/google-vertex/anthropic":
       // https://v5.ai-sdk.dev/providers/ai-sdk-providers/google-vertex#anthropic-provider
-      // kilocode_change start - MiniMax M-series toggles thinking on/off rather than exposing effort levels
-      if (id.includes("minimax")) {
-        return {
-          instant: { thinking: { type: "disabled" } },
-          thinking: { thinking: { type: "adaptive" } },
-        }
-      }
-      // kilocode_change end
       if (adaptiveEfforts) {
         let efforts = [...adaptiveEfforts]
         if (model.providerID === "github-copilot") {
-          // kilocode_change start - include Claude 5+ models
-          if (
-            model.api.id.includes("opus-4.7") ||
-            model.api.id.includes("opus-4.8") ||
-            anthropicClaude5(model.api.id)
-          ) {
+          if (model.api.id.includes("opus-4.7")) {
             efforts = ["medium"]
           }
-          // kilocode_change end
           // Efforts currently supported are: low, medium, high
           efforts = efforts.filter((v) => v !== "max" && v !== "xhigh")
         }
@@ -1222,10 +1158,6 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
         "mistral-small-2603",
         "mistral-small-latest",
         "mistral-medium-3.5",
-        // kilocode_change start
-        "mistral-medium-3-5",
-        "mistral-medium-latest",
-        // kilocode_change end
         "mistral-medium-2604",
       ]
       const mistralId = model.api.id.toLowerCase()
