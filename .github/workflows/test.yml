@@ -105,14 +105,17 @@ jobs:
         continue-on-error: true
         shell: pwsh
         run: |
-          try {
-            foreach ($dir in @($env:GITHUB_WORKSPACE, $env:RUNNER_TEMP, $env:TEMP, "$env:USERPROFILE\.bun")) {
-              if ($dir) { Add-MpPreference -ExclusionPath $dir -ErrorAction Stop }
+          $applied = 0
+          foreach ($dir in @($env:GITHUB_WORKSPACE, $env:RUNNER_TEMP, $env:TEMP, "$env:USERPROFILE\.bun")) {
+            if (-not $dir) { continue }
+            try {
+              Add-MpPreference -ExclusionPath $dir -ErrorAction Stop
+              $applied++
+            } catch {
+              Write-Host "Defender exclusion failed for ${dir}: $($_.Exception.Message)"
             }
-            Write-Host "Defender path exclusions applied."
-          } catch {
-            Write-Host "Defender exclusions not applied: $($_.Exception.Message)"
           }
+          Write-Host "Defender path exclusions applied: $applied"
       # kilocode_change end
 
       - name: Checkout repository
