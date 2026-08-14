@@ -62,6 +62,27 @@
     "operation": "rebuild"
   },
   {
+    "name": "rebuild keeps trailing text",
+    "input": "/memory rebuild hello",
+    "result": "operation",
+    "operation": "rebuild",
+    "rest": "hello"
+  },
+  {
+    "name": "enable keeps trailing text",
+    "input": "/memory on hello",
+    "result": "operation",
+    "operation": "enable",
+    "rest": "hello"
+  },
+  {
+    "name": "project scope rebuild keeps trailing text",
+    "input": "/memory project rebuild hello",
+    "result": "operation",
+    "operation": "rebuild",
+    "rest": "hello"
+  },
+  {
     "name": "purge requires confirmation",
     "input": "/memory purge",
     "result": "usage",

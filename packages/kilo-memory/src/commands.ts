@@ -64,6 +64,7 @@ type Operation =
   | {
       kind: "operation"
       operation: Exclude<MemoryOperation, "remember" | "correct" | "forget" | "purge" | "auto">
+      rest?: string
     }
 
 type Usage = {
@@ -93,10 +94,10 @@ function usage(reason: string): ParsedMemoryCommand {
 }
 
 function operation(verb: string, text: string): ParsedMemoryCommand | undefined {
-  if (verb === "on" || verb === "enable") return { kind: "operation", operation: "enable" }
-  if (verb === "off" || verb === "disable") return { kind: "operation", operation: "disable" }
+  if (verb === "on" || verb === "enable") return { kind: "operation", operation: "enable", rest: text }
+  if (verb === "off" || verb === "disable") return { kind: "operation", operation: "disable", rest: text }
   if (verb === "status" || verb === "inspect" || verb === "rebuild") {
-    return { kind: "operation", operation: verb }
+    return { kind: "operation", operation: verb, rest: text }
   }
   if (verb === "purge") {
     if (text.toLowerCase() === "confirm") return { kind: "operation", operation: "purge", confirm: true }

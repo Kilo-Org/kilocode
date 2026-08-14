@@ -22,6 +22,7 @@ type Case = {
   text?: string
   query?: string
   reason?: string
+  rest?: string
 }
 
 const cases = (await Bun.file(
@@ -50,7 +51,7 @@ function expected(item: Case): ParsedMemoryCommand | undefined {
     if (item.confirm !== true) throw new Error(`Missing confirmation for fixture: ${item.name}`)
     return { kind: "operation", operation: item.operation, confirm: true }
   }
-  return { kind: "operation", operation: item.operation }
+  return { kind: "operation", operation: item.operation, rest: item.rest ?? "" }
 }
 
 describe("parseMemoryCommand", () => {

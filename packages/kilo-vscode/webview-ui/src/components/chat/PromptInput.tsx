@@ -52,6 +52,7 @@ import {
   isPromptBusy,
   isPathMention,
   applySandboxStates,
+  memoryRest,
   type SandboxDefaultState,
   type SandboxState,
 } from "./prompt-input-utils"
@@ -1131,7 +1132,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (memory) {
       if (!runMemory(memory)) return
       history.append(draft)
-      setText("")
+      setText(memoryRest(memory))
       clearReviewComments()
       imageAttach.clear()
       mention.closeMention()
