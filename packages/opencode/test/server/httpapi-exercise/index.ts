@@ -35,7 +35,7 @@ import { coverageResult, parseOptions, routeKey, routeKeys, selectedScenarios } 
 import { runScenario } from "./runner"
 import { disposeApps } from "./backend"
 import { runtime } from "./runtime"
-import { type Scenario } from "./types"
+import { type Result, type Scenario } from "./types" // kilocode_change - Result annotates the scenario-retry accumulator
 import { kiloScenarios } from "../../kilocode/server/httpapi-exercise-scenarios" // kilocode_change
 
 function cursor(input: Record<string, unknown>) {
@@ -175,6 +175,11 @@ const scenarios: Scenario[] = [
   http.protected
     .patch("/project/{projectID}", "project.update")
     .mutating()
+    // kilocode_change start - isolated git project: a non-git directory resolves to the
+    // shared global project (worktree "/"), and this scenario PATCHes the row — without
+    // isolation the mutation would leak into every later non-git scenario in the same pass.
+    .inProject({ git: true })
+    // kilocode_change end
     .seeded((ctx) => ctx.project())
     .at((ctx) => ({
       path: route("/project/{projectID}", { projectID: ctx.state.id }),
@@ -577,7 +582,7 @@ const scenarios: Scenario[] = [
     }))
     .json(200, array, "status"),
   http.protected.get("/experimental/tool/ids", "tool.ids").json(200, array),
-  http.protected.get("/experimental/worktree", "worktree.list").json(200, array),
+  http.protected.get("/experimental/worktree", "worktree.list").inProject({ git: true }).json(200, array), // kilocode_change - worktree listing needs a real git project, not the shared global row
   http.protected
     .post("/experimental/worktree", "worktree.create")
     .mutating()
@@ -1831,7 +1836,35 @@ const main = Effect.gen(function* () {
           (scenario) =>
             Effect.gen(function* () {
               if (options.progress) console.log(`${color.dim}RUN ${routeKey(scenario)} ${scenario.name}${color.reset}`)
-              return yield* runScenario(options)(scenario)
+              // kilocode_change start - retry a failed scenario before failing the pass,
+              // mirroring the unit runner's pass-after-retry policy: contention flakes recover
+              // while real regressions still fail every attempt. Retries stay visible in output.
+              const result = yield* runScenario(options)(scenario)
+              if (result.status !== "fail") return result
+              // preserveDatabase scenarios skip resetState between attempts; retrying them
+              // would run against state the failed attempt already mutated and can mask a
+              // real regression as FLAKY. Everything else resets, so retrying is sound.
+              if (scenario.kind !== "active" || !scenario.reset) return result
+              // Back off before retrying: the observed failure mode is a readiness race (agent
+              // projections still warming when the request lands). Sharded processes run fewer
+              // scenarios each, so early scenarios land in a colder process where one second is
+              // not always enough.
+              let last: Result = result
+              for (const backoff of ["1 second", "3 seconds"] as const) {
+                console.log(
+                  `${color.yellow}RETRY${color.reset} ${routeKey(scenario)} ${scenario.name} failed, retrying in ${backoff}`,
+                )
+                yield* Effect.sleep(backoff)
+                last = yield* runScenario(options)(scenario)
+                if (last.status !== "fail") {
+                  console.log(
+                    `${color.yellow}FLAKY${color.reset} ${routeKey(scenario)} ${scenario.name} passed on retry`,
+                  )
+                  break
+                }
+              }
+              return last
+              // kilocode_change end
             }),
           { concurrency: 1 },
         )

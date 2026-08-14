@@ -56,7 +56,10 @@ describe("session export worker e2e", () => {
 
 async function until(check: () => boolean): Promise<void> {
   const start = Date.now()
-  while (Date.now() - start < 1_000) {
+  // kilocode_change - the capture worker competes for CPU with the rest of the suite on a
+  // loaded CI shard; the loop returns on success, so a generous deadline costs healthy runs
+  // nothing.
+  while (Date.now() - start < 15_000) {
     if (check()) return
     await new Promise((resolve) => setTimeout(resolve, 10))
   }
@@ -74,7 +77,10 @@ function capture(posted: unknown[], snap: ConstructorParameters<typeof Capture>[
     nowMs: () => 100,
     syncSeq: () => seq.value++,
     snapshotProvider: snap,
-    baselineTimeoutMs: 1_000,
+    // kilocode_change - must match the generous until() budget above: on a loaded CI shard
+    // the git snapshot can exceed 1s, and a truncated baseline emits an empty envelope that
+    // makes the assertions fail no matter how long the test itself waits.
+    baselineTimeoutMs: 15_000,
   })
 }
 
