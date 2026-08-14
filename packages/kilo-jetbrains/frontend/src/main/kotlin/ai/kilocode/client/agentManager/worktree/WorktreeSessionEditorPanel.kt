@@ -344,12 +344,30 @@ class WorktreeSessionEditorPanel(
             ToolWindowManager.getInstance(target).getToolWindow(TerminalToolWindowFactory.TOOL_WINDOW_ID)?.activate(null)
             return
         }
+        val name = terminalName()
         val tab = tabs.createTabBuilder()
             .workingDirectory(dir)
-            .tabName(dir.trimEnd('/').substringAfterLast('/').takeIf { it.isNotBlank() })
+            .tabName(name)
             .requestFocus(true)
             .createTab()
         tab.content.putUserData(TERMINAL_DIR, dir)
+        // Pin the worktree label as the user-defined title so the shell's cwd/command title can't
+        // overwrite it, matching the worktree list and editor tab.
+        tab.view.title.change { userDefinedTitle = name }
+    }
+
+    /** The worktree label shared with the list and editor tab (PR title, else name, else path). */
+    @RequiresEdt
+    private fun terminalName(): String = service<WorktreeNameCache>().title(worktree.directory)
+
+    /** Retitles the worktree's terminal tab, if one is open, when its name or PR changes. */
+    @RequiresEdt
+    private fun syncTerminalName() {
+        val dir = worktree.directory.takeIf { it.isNotBlank() } ?: return
+        val target = project ?: return
+        val tab = TerminalToolWindowTabsManager.getInstance(target)
+            .tabs.firstOrNull { same(it.content.getUserData(TERMINAL_DIR), dir) } ?: return
+        tab.view.title.change { userDefinedTitle = terminalName() }
     }
 
     @RequiresEdt
@@ -410,7 +428,10 @@ class WorktreeSessionEditorPanel(
         val key = normalizeWorktreePath(worktree.directory)
         syncHeader()
         service<WorktreeNameCache>().addListener(this) { path, _ ->
-            if (normalizeWorktreePath(path) == key) syncHeader()
+            if (normalizeWorktreePath(path) == key) {
+                syncHeader()
+                syncTerminalName()
+            }
         }
         val target = project ?: return
         WorktreeStatusBinding(
