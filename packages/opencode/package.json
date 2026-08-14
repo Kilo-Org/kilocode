@@ -181,23 +181,14 @@
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "yargs": "18.0.0",
     "zod": "catalog:",
-    "@openauthjs/openauth": "catalog:",
-    "@opencode-ai/server": "workspace:*",
-    "@opentelemetry/context-async-hooks": "2.6.1",
-    "@opentelemetry/exporter-trace-otlp-http": "0.214.0",
-    "@pierre/diffs": "catalog:",
-    "@standard-schema/spec": "1.0.0",
-    "chokidar": "4.0.3",
-    "glob": "13.0.5",
-    "minimatch": "10.0.3",
-    "partial-json": "0.1.7",
-    "xdg-basedir": "5.1.0",
     "@ff-labs/fff-bun": "0.9.4",
-    "@opencode-ai/tui": "workspace:*",
-    "@solid-primitives/scheduled": "1.5.2",
+    "@opencode-ai/codemode": "workspace:*",
     "@opencode-ai/protocol": "workspace:*",
     "@opencode-ai/schema": "workspace:*",
-    "@opencode-ai/codemode": "workspace:*"
+    "@opencode-ai/tui": "workspace:*",
+    "@solid-primitives/scheduled": "1.5.2",
+    "glob": "13.0.5",
+    "partial-json": "0.1.7"
   },
   "overrides": {
     "drizzle-orm": "catalog:"
