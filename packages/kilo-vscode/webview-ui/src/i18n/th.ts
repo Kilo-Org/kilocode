@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "เชื่อมต่อ Anaconda Desktop",
   "provider.anaconda.title.manage": "จัดการ Anaconda Desktop",
@@ -52,6 +54,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "เชื่อมต่อผู้ให้บริการ",
 
@@ -822,8 +825,6 @@ export const dict = {
   "settings.experimental.lsp.description": "เปิดใช้งานการรวม Language Server Protocol",
   "settings.experimental.batch.title": "เครื่องมือแบทช์",
   "settings.experimental.batch.description": "เปิดใช้งานการประมวลผลแบทช์ของการเรียกเครื่องมือ",
-  "settings.experimental.codebaseSearch.title": "ค้นหาโค้ดเบส",
-  "settings.experimental.codebaseSearch.description": "เปิดใช้งานการค้นหาด้วยภาษาธรรมชาติโดย AI ทั่วทั้งโค้ดเบส",
   "settings.experimental.imageGeneration.title": "การสร้างภาพ",
   "settings.experimental.imageGeneration.description": "เปิดใช้งานการสร้างภาพด้วย AI",
   "settings.experimental.imageGenerationModel.title": "โมเดลภาพ",

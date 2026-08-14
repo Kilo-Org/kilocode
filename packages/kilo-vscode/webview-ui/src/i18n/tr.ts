@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Anaconda Desktop'a bağlan",
   "provider.anaconda.title.manage": "Anaconda Desktop'ı yönet",
@@ -53,6 +55,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Sağlayıcı bağla",
 
@@ -825,9 +828,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Dil sunucu protokolü entegrasyonunu etkinleştir",
   "settings.experimental.batch.title": "Toplu Araç",
   "settings.experimental.batch.description": "Birden fazla araç çağrısının toplu işlenmesini etkinleştir",
-  "settings.experimental.codebaseSearch.title": "Kod Tabanı Araması",
-  "settings.experimental.codebaseSearch.description":
-    "Kod tabanınız genelinde yapay zeka destekli doğal dil aramasını etkinleştir",
   "settings.experimental.imageGeneration.title": "Görüntü oluşturma",
   "settings.experimental.imageGeneration.description": "AI görüntü oluşturmayı etkinleştir",
   "settings.experimental.imageGenerationModel.title": "Görüntü modeli",

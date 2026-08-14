@@ -1,7 +1,7 @@
 /** @jsxImportSource @opentui/solid */
 import { expect, test } from "bun:test"
 import { BoxRenderable, RGBA, type RootRenderable } from "@opentui/core"
-import { testRender, useRenderer } from "@opentui/solid"
+import { extend, testRender, useRenderer } from "@opentui/solid" // kilocode_change - register test components in this renderer instance
 import { createSignal } from "solid-js"
 import { createDefaultOpenTuiKeymap } from "@opentui/keymap/opentui"
 import type { QuestionRequest } from "@kilocode/sdk/v2"
@@ -34,6 +34,10 @@ import type {
 import { RunQuestionBody } from "@/cli/cmd/run/footer.question"
 import { RejectField } from "@/cli/cmd/run/footer.permission"
 import { createTuiResolvedConfig } from "../../fixture/tui-runtime"
+
+// kilocode_change start - keep renderer tests independent of the animated spinner's native teardown
+extend({ spinner: BoxRenderable })
+// kilocode_change end
 
 const tuiConfig = createTuiResolvedConfig()
 
@@ -640,6 +644,47 @@ test("direct subagent panel renders active subagents", async () => {
     expect(frame).not.toContain("┃")
     expectPaletteList(list, 0)
     expect(rows).toBe(8)
+  } finally {
+    app.renderer.destroy()
+  }
+})
+
+test("direct subagent panel closes when moving up from the first item", async () => {
+  const [tabs] = createSignal([
+    subagent({ sessionID: "s-1", label: "Explore", description: "Inspect auth flow" }),
+    subagent({ sessionID: "s-2", label: "General", description: "Write migration plan" }),
+  ])
+  const [current] = createSignal<string | undefined>()
+  let closed = 0
+
+  const app = await testRender(
+    () => (
+      <box width={100} height={RUN_SUBAGENT_PANEL_ROWS}>
+        <RunSubagentSelectBody
+          theme={() => RUN_THEME_FALLBACK.footer}
+          tabs={tabs}
+          current={current}
+          onClose={() => closed++}
+          onSelect={() => {}}
+        />
+      </box>
+    ),
+    { width: 100, height: RUN_SUBAGENT_PANEL_ROWS },
+  )
+
+  try {
+    await app.renderOnce()
+    app.mockInput.pressKey("ARROW_DOWN")
+    app.mockInput.pressKey("ARROW_UP")
+    expect(closed).toBe(0)
+
+    // kilocode_change start - ctrl+p is the same navigation command as ArrowUp
+    app.mockInput.pressKey("p", { ctrl: true })
+    expect(closed).toBe(1)
+
+    app.mockInput.pressKey("ARROW_UP")
+    expect(closed).toBe(2)
+    // kilocode_change end
   } finally {
     app.renderer.destroy()
   }

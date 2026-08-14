@@ -139,6 +139,7 @@ Options:
   -s, --session       session id to continue  [string]
       --fork          fork the session when continuing (use with --continue or --session)  [boolean]
       --cloud-fork    fetch session from cloud and continue locally (use with --session)  [boolean]
+      --worktree      create (or reuse) a git worktree with this name and start kilo there  [string]
       --prompt        prompt to use  [string]
       --agent         agent to use  [string]
       --auto          auto-approve permissions that are not explicitly denied (dangerous!)  [boolean] [default: false]

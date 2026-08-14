@@ -29,7 +29,9 @@ const CommitMessageResponse = Schema.Struct({
 
 export class CommitMessageNoChangesError extends Schema.ErrorClass<CommitMessageNoChangesError>(
   "CommitMessageNoChangesError",
-)(
+)({ message: Schema.String }, { httpApiStatus: 422 }) {}
+
+export class CommitMessageFailedError extends Schema.ErrorClass<CommitMessageFailedError>("CommitMessageFailedError")(
   { message: Schema.String },
   { httpApiStatus: 422 },
 ) {}
@@ -42,7 +44,7 @@ export const CommitMessageApi = HttpApi.make("commit-message")
           query: WorkspaceRoutingQuery,
           payload: CommitMessagePayload,
           success: described(CommitMessageResponse, "Generated commit message"),
-          error: [HttpApiError.BadRequest, CommitMessageNoChangesError],
+          error: [HttpApiError.BadRequest, CommitMessageNoChangesError, CommitMessageFailedError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "commitMessage.generate",

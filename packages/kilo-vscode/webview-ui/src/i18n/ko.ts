@@ -1,5 +1,7 @@
 import { dict as en } from "./en"
 
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Anaconda Desktop 연결",
   "provider.anaconda.title.manage": "Anaconda Desktop 관리",
@@ -57,6 +59,7 @@ type Keys = keyof typeof en
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "공급자 연결",
 
@@ -827,8 +830,6 @@ export const dict = {
   "settings.experimental.lsp.description": "언어 서버 프로토콜 통합 활성화",
   "settings.experimental.batch.title": "배치 도구",
   "settings.experimental.batch.description": "여러 도구 호출의 배치 처리 활성화",
-  "settings.experimental.codebaseSearch.title": "코드베이스 검색",
-  "settings.experimental.codebaseSearch.description": "코드베이스 전체에서 AI 기반 자연어 검색 활성화",
   "settings.experimental.imageGeneration.title": "이미지 생성",
   "settings.experimental.imageGeneration.description": "AI 이미지 생성 활성화",
   "settings.experimental.imageGenerationModel.title": "이미지 모델",

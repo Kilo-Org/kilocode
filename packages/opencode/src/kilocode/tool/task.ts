@@ -38,11 +38,6 @@ export namespace KiloTask {
     if (info.mode === "primary") throw new Error(`Agent "${name}" is a primary agent and cannot be used as a subagent`)
   }
 
-  /** Kilo keeps delegation one level deep to avoid recursive subagent chains. */
-  export function nestedTask(): false {
-    return false
-  }
-
   /**
    * Build inherited permission ceilings from the calling agent.
    * Merges the static agent definition with the session's accumulated permissions
@@ -50,9 +45,20 @@ export namespace KiloTask {
    * overriding the selected subagent's own allowlist with parent ask/allow rules.
    *
    * OpenCode removed parent-agent inheritance entirely in anomalyco/opencode#31696.
-   * Kilo intentionally differs: parent denials remain hard ceilings for Plan Mode
-   * and MCP restrictions, while parent ask/allow rules must not replace the
-   * selected subagent's policy. Preserve this distinction during upstream merges.
+   * Kilo intentionally differs: parent edit/notebook/MCP denials remain hard ceilings
+   * for Plan Mode and MCP restrictions, while parent ask/allow rules must not replace
+   * the selected subagent's policy. Preserve this distinction during upstream merges.
+   *
+   * Broad bash denies are deliberately NOT inherited from the calling agent. A read-only/delegating
+   * agent (plan, ask, orchestrator) carries a `readOnlyBash` allowlist whose deny rules
+   * (`*`, `git *`, shell-operator guards) exist only to shape that allowlist. Projecting
+   * those denies onto a writable subagent capped commands the subagent's own config
+   * explicitly allows (e.g. `git status`), surfacing phantom deny rules the user never
+   * wrote (#11523). The subagent's own bash policy governs its bash capabilities; an
+   * explicit session-scoped bash lockdown (sandbox / session deny) still reaches the
+   * child via `deriveSubagentSessionPermission`, which inherits session deny rules. Built-in
+   * Explore has its own enforcement-level read-only bash policy, so every caller retains that
+   * boundary without projecting a delegator's bash rules onto custom writable subagents.
    *
    * The caller must resolve `caller` (Agent.Info) and `session` (Session.Info)
    * before calling. This function is pure/synchronous.
@@ -67,7 +73,8 @@ export namespace KiloTask {
     const isMcp = (p: string) => prefixes.some((prefix) => p.startsWith(prefix))
     // `guarded` covers the tools a read-only mode may never regain from config; keeping
     // it here too stops a Plan-launched subagent from reaching them under a catch-all.
-    const mutation = new Set(["edit", ...guarded])
+    // `bash` is intentionally excluded — see the doc comment above (#11523).
+    const mutation = new Set(["edit", ...guarded.filter((p) => p !== "bash")])
     const inherited = rules.filter(
       (r: Permission.Rule) => r.action === "deny" && (mutation.has(r.permission) || isMcp(r.permission)),
     )
@@ -79,9 +86,9 @@ export namespace KiloTask {
   }
 
   /** Extra permission rules appended to subagent sessions */
-  export function permissions(rules: Permission.Ruleset): Permission.Ruleset {
+  export function permissions(rules: Permission.Ruleset, task = false): Permission.Ruleset {
     return [
-      { permission: "task", pattern: "*", action: "deny" },
+      ...(task ? [] : [{ permission: "task", pattern: "*", action: "deny" as const }]),
       { permission: "question", pattern: "*", action: "deny" },
       { permission: "suggest", pattern: "*", action: "deny" },
       { permission: "interactive_terminal", pattern: "*", action: "deny" },

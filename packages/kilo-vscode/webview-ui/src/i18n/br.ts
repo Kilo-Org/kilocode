@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Conectar Anaconda Desktop",
   "provider.anaconda.title.manage": "Gerenciar Anaconda Desktop",
@@ -53,6 +55,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Conectar provedor",
 
@@ -842,9 +845,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Ativar integração do protocolo de servidor de linguagem",
   "settings.experimental.batch.title": "Ferramenta em lote",
   "settings.experimental.batch.description": "Ativar processamento em lote de chamadas de ferramentas",
-  "settings.experimental.codebaseSearch.title": "Pesquisa de código",
-  "settings.experimental.codebaseSearch.description":
-    "Ativar pesquisa por linguagem natural com IA em toda a base de código",
   "settings.experimental.imageGeneration.title": "Geração de imagens",
   "settings.experimental.imageGeneration.description": "Ativar geração de imagens por IA",
   "settings.experimental.imageGenerationModel.title": "Modelo de imagem",

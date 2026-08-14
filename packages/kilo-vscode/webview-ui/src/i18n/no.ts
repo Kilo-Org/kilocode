@@ -1,6 +1,8 @@
 import { dict as en } from "./en"
 type Keys = keyof typeof en
 
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Koble til Anaconda Desktop",
   "provider.anaconda.title.manage": "Administrer Anaconda Desktop",
@@ -56,6 +58,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Koble til leverandør",
 
@@ -797,8 +800,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Aktiver språkserverprotokoll-integrasjon",
   "settings.experimental.batch.title": "Batchverktøy",
   "settings.experimental.batch.description": "Aktiver batchbehandling av verktøykall",
-  "settings.experimental.codebaseSearch.title": "Kodesøk",
-  "settings.experimental.codebaseSearch.description": "Aktiver AI-drevet naturlig språksøk på tvers av kodebasen",
   "settings.experimental.imageGeneration.title": "Bildegenerering",
   "settings.experimental.imageGeneration.description": "Aktiver AI-bildegenerering",
   "settings.experimental.imageGenerationModel.title": "Bildemodell",

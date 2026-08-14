@@ -1047,6 +1047,11 @@ export interface AgentManagerPRStatusMessage {
   error?: "gh_missing" | "gh_auth" | "fetch_failed"
 }
 
+export interface AgentManagerPRErrorMessage {
+  type: "agentManager.prError"
+  error: "gh_missing" | "gh_auth" | "fetch_failed"
+}
+
 // Sidebar: Live worktree diff stats (extension → webview)
 export interface WorktreeStatsLoadedMessage {
   type: "worktreeStatsLoaded"
@@ -1412,6 +1417,7 @@ export type ExtensionMessage =
   | AgentManagerWorktreeStatsMessage
   | AgentManagerLocalStatsMessage
   | AgentManagerPRStatusMessage
+  | AgentManagerPRErrorMessage
   | AgentManagerTerminalCreatedMessage
   | AgentManagerTerminalRestartedMessage
   | AgentManagerTerminalFontChangedMessage

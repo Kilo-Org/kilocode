@@ -18,16 +18,22 @@ import path from "path"
 // bun process.
 const ORIGINAL_MODELS_PATH = Flag.KILO_MODELS_PATH
 const ORIGINAL_DISABLE_FETCH = Flag.KILO_DISABLE_MODELS_FETCH
+// kilocode_change start - isolate the mutable cache fixture from parallel package test processes
+const original = Global.Path.cache
+const root = path.join(Global.Path.tmp, `models-test-${process.pid}-${Math.random().toString(36).slice(2)}`)
+// kilocode_change end
 beforeAll(() => {
   Flag.KILO_MODELS_PATH = undefined
   Flag.KILO_DISABLE_MODELS_FETCH = true
+  Global.Path.cache = root // kilocode_change
 })
 afterAll(() => {
   Flag.KILO_MODELS_PATH = ORIGINAL_MODELS_PATH
   Flag.KILO_DISABLE_MODELS_FETCH = ORIGINAL_DISABLE_FETCH
+  Global.Path.cache = original // kilocode_change
 })
 
-const cacheFile = path.join(Global.Path.cache, "models.json")
+const cacheFile = path.join(root, "models.json") // kilocode_change
 
 const fixture: Record<string, ModelsDev.Provider> = {
   acme: {
@@ -117,7 +123,7 @@ beforeEach(async () => {
 })
 
 afterAll(async () => {
-  await rm(cacheFile, { force: true })
+  await rm(root, { recursive: true, force: true }) // kilocode_change
 })
 
 const initialState: MockState = {

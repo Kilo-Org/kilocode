@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Connetti Anaconda Desktop",
   "provider.anaconda.title.manage": "Gestisci Anaconda Desktop",
@@ -53,6 +55,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
   "command.provider.connect": "Connetti provider",
   "command.session.new": "Nuova sessione",
   "command.session.show.changes": "Mostra modifiche",
@@ -688,8 +691,6 @@ export const dict = {
   "settings.experimental.semanticIndexing.title": "Indicizzazione semantica",
   "settings.experimental.semanticIndexing.description":
     "Abilita l'indicizzazione semantica del codebase e il tool semantic_search. Richiede configurazione indicizzazione.",
-  "settings.experimental.codebaseSearch.title": "Ricerca codebase",
-  "settings.experimental.codebaseSearch.description": "Abilita ricerca in linguaggio naturale con AI nel codebase",
   "settings.experimental.imageGeneration.title": "Generazione di immagini",
   "settings.experimental.imageGeneration.description": "Abilita la generazione di immagini con AI",
   "settings.experimental.imageGenerationModel.title": "Modello di immagine",

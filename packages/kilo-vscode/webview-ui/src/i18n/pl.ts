@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Połącz Anaconda Desktop",
   "provider.anaconda.title.manage": "Zarządzaj Anaconda Desktop",
@@ -53,6 +55,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Połącz dostawcę",
 
@@ -793,8 +796,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Włącz integrację protokołu serwera języka",
   "settings.experimental.batch.title": "Narzędzie wsadowe",
   "settings.experimental.batch.description": "Włącz przetwarzanie wsadowe wywołań narzędzi",
-  "settings.experimental.codebaseSearch.title": "Wyszukiwanie kodu",
-  "settings.experimental.codebaseSearch.description": "Włącz wyszukiwanie w języku naturalnym z AI w całej bazie kodu",
   "settings.experimental.imageGeneration.title": "Generowanie obrazów",
   "settings.experimental.imageGeneration.description": "Włącz generowanie obrazów przez AI",
   "settings.experimental.imageGenerationModel.title": "Model obrazu",

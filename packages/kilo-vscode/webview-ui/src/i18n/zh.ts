@@ -2,6 +2,8 @@ import { dict as en } from "./en"
 
 type Keys = keyof typeof en
 
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "连接 Anaconda Desktop",
   "provider.anaconda.title.manage": "管理 Anaconda Desktop",
@@ -54,6 +56,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "连接提供商",
 
@@ -802,8 +805,6 @@ export const dict = {
   "settings.experimental.lsp.description": "启用语言服务器协议集成",
   "settings.experimental.batch.title": "批量工具",
   "settings.experimental.batch.description": "启用多个工具调用的批处理",
-  "settings.experimental.codebaseSearch.title": "代码库搜索",
-  "settings.experimental.codebaseSearch.description": "启用 AI 驱动的自然语言代码库搜索",
   "settings.experimental.imageGeneration.title": "图像生成",
   "settings.experimental.imageGeneration.description": "启用 AI 图像生成",
   "settings.experimental.imageGenerationModel.title": "图像模型",
