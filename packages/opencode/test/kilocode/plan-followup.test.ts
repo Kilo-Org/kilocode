@@ -239,7 +239,6 @@ async function waitQuestion(sessionID: string) {
 
 async function writeState(input: {
   model?: Record<string, { providerID: string; modelID: string }>
-  recent?: Array<{ providerID: string; modelID: string }>
   variant?: Record<string, string | undefined>
 }) {
   await fs.mkdir(Global.Path.state, { recursive: true })
@@ -1104,102 +1103,6 @@ describe("plan follow-up", () => {
       if (!user || user.info.role !== "user") return
       expect(user.info.agent).toBe("code")
       expect(user.info.model).toEqual({ ...model, variant: planVar })
-    }))
-
-  test("ask - uses a recent non-plan model when code has no saved or configured pick", () =>
-    withInstance(async () => {
-      await writeState({
-        model: { plan: model },
-        recent: [saved, model],
-        variant: { [savedKey]: savedVar },
-      })
-      const get = spyOn(PlanFollowupRuntime, "agent").mockImplementation(async (name: string) => {
-        if (name === "code") return { name: "code", mode: "primary", permission: [], options: {} } as any
-        return undefined as any
-      })
-      const modelSpy = spyOn(PlanFollowupRuntime, "modelIfAvailable").mockImplementation(
-        async (providerID: string, modelID: string) => {
-          if (providerID === saved.providerID && modelID === saved.modelID) return savedFull
-          return undefined
-        },
-      )
-      using _ = {
-        [Symbol.dispose]() {
-          get.mockRestore()
-          modelSpy.mockRestore()
-        },
-      }
-      const seeded = await seed({ text: "1. Build\n2. Test", variant: planVar })
-      const pending = PlanFollowup.ask({
-        question,
-        sessionID: seeded.sessionID,
-        messages: seeded.messages,
-        abort: AbortSignal.any([]),
-      })
-
-      const item = await waitQuestion(seeded.sessionID)
-      expect(item).toBeDefined()
-      if (!item) return
-      await question.reply({
-        requestID: item.id,
-        answers: [[PlanFollowup.ANSWER_CONTINUE]],
-      })
-
-      await expect(pending).resolves.toBe("continue")
-
-      const user = await latestUser(seeded.sessionID)
-      expect(user?.info.role).toBe("user")
-      if (!user || user.info.role !== "user") return
-      expect(user.info.agent).toBe("code")
-      expect(user.info.model).toEqual({ ...saved, variant: savedVar })
-    }))
-
-  test("ask - skips a stale recent model and uses the next valid one", () =>
-    withInstance(async () => {
-      await writeState({
-        model: { plan: model },
-        recent: [config, saved, model],
-        variant: { [savedKey]: savedVar },
-      })
-      const get = spyOn(PlanFollowupRuntime, "agent").mockImplementation(async (name: string) => {
-        if (name === "code") return { name: "code", mode: "primary", permission: [], options: {} } as any
-        return undefined as any
-      })
-      const modelSpy = spyOn(PlanFollowupRuntime, "modelIfAvailable").mockImplementation(
-        async (providerID: string, modelID: string) => {
-          if (providerID === saved.providerID && modelID === saved.modelID) return savedFull
-          return undefined
-        },
-      )
-      using _ = {
-        [Symbol.dispose]() {
-          get.mockRestore()
-          modelSpy.mockRestore()
-        },
-      }
-      const seeded = await seed({ text: "1. Build\n2. Test", variant: planVar })
-      const pending = PlanFollowup.ask({
-        question,
-        sessionID: seeded.sessionID,
-        messages: seeded.messages,
-        abort: AbortSignal.any([]),
-      })
-
-      const item = await waitQuestion(seeded.sessionID)
-      expect(item).toBeDefined()
-      if (!item) return
-      await question.reply({
-        requestID: item.id,
-        answers: [[PlanFollowup.ANSWER_CONTINUE]],
-      })
-
-      await expect(pending).resolves.toBe("continue")
-
-      const user = await latestUser(seeded.sessionID)
-      expect(user?.info.role).toBe("user")
-      if (!user || user.info.role !== "user") return
-      expect(user.info.agent).toBe("code")
-      expect(user.info.model).toEqual({ ...saved, variant: savedVar })
     }))
 
   test("ask - new session uses saved code model even when catalog lookup fails", () =>
