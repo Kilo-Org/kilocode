@@ -56,7 +56,9 @@ describe("session export worker e2e", () => {
 
 async function until(check: () => boolean): Promise<void> {
   const start = Date.now()
-  while (Date.now() - start < 1_000) {
+  // The capture worker competes for CPU with the rest of the suite on a loaded CI
+  // shard; the loop returns on success, so a generous deadline costs healthy runs nothing.
+  while (Date.now() - start < 15_000) {
     if (check()) return
     await new Promise((resolve) => setTimeout(resolve, 10))
   }
