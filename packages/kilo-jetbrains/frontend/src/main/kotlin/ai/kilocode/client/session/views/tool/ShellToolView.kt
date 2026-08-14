@@ -1,40 +1,42 @@
 package ai.kilocode.client.session.views.tool
 
-import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
-import ai.kilocode.client.telemetry.Telemetry
+import ai.kilocode.client.session.ui.SessionContentPanel
+import ai.kilocode.client.session.ui.SessionSurfacePanel
 import ai.kilocode.client.session.ui.popup.HeaderPopupBody
 import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import ai.kilocode.client.session.views.base.SecondarySessionPartView
-import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.ui.md.MdCodeBlockBorder
-import ai.kilocode.client.ui.md.MdCodeBlockFactory
 import ai.kilocode.client.ui.md.MdCodeBlockOptions
-import ai.kilocode.client.ui.md.MdView
-import ai.kilocode.client.ui.md.MdViewFactory
 import ai.kilocode.client.ui.md.hybrid.MdTerminal
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.ui.EditorTextField
-import com.intellij.ui.components.JBHtmlPane
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
+import java.awt.Component
 import java.awt.Dimension
 import javax.swing.JComponent
-import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
 
+/**
+ * Renders `bash` tool calls. The header stays a compact title row; the expanded body is a
+ * [SessionContentPanel] holding the command and the output as two separate raised code surfaces
+ * (no "Command"/"Output" labels), with a transparent footer reserved for ambient notes such as an
+ * auto-approved reason.
+ */
 class ShellToolView(
     tool: Tool,
     private val selection: SessionSelection? = null,
     private val parts: ToolParts = toolParts(tool),
-    private val body: ToolMarkdownBody = shellBody(selection),
-) : SecondarySessionPartView(parts.header, { body.mount(tool) }), UiDataProvider {
+    private val body: ShellBody = ShellBody(selection),
+) : AbstractSessionPartView(parts.header, { body.mount(tool) }), UiDataProvider {
 
     override val contentId: String = tool.id
 
@@ -43,7 +45,6 @@ class ShellToolView(
 
     init {
         body.parent = this
-        bindHeader(parts.glyph, parts.title, parts.sub, parts.state, parts.left, parts.right, parts.slot)
         applyStyle(style)
         sync()
     }
@@ -52,7 +53,7 @@ class ShellToolView(
         selection?.provideCopy(sink) { body.markdown() ?: fallbackText() }
     }
 
-    private fun fallbackText() = ShellContent(item).body
+    private fun fallbackText() = shellBodyText(item)
 
     @RequiresEdt
     override fun expand(): Boolean {
@@ -61,14 +62,6 @@ class ShellToolView(
         syncBody()
         body.applyStyle(style)
         return true
-    }
-
-    @RequiresEdt
-    override fun getPreferredSize(): Dimension {
-        val size = super.getPreferredSize()
-        if (!bodyVisible()) return size
-        val height = row.preferredSize.height + (body.panel()?.preferredSize?.height ?: 0)
-        return Dimension(size.width, minOf(size.height, height))
     }
 
     @RequiresEdt
@@ -98,7 +91,7 @@ class ShellToolView(
     fun errorText(): String = clean(item.error.orEmpty())
 
     @RequiresEdt
-    fun bodyText(): String = ShellContent(item).body
+    fun bodyText(): String = shellBodyText(item)
 
     @RequiresEdt
     fun hasToggle(): Boolean = arrow.isVisible
@@ -110,10 +103,13 @@ class ShellToolView(
     internal fun bodyVisible() = body.attached(this)
 
     @RequiresEdt
-    internal fun markdown() = body.markdown() ?: ShellContent(item).markdown
+    internal fun markdown() = body.markdown() ?: shellMarkdown(item)
 
     @RequiresEdt
     internal fun codeEditors(): List<EditorTextField> = body.codeEditors()
+
+    @RequiresEdt
+    internal fun scrolls(): List<JBScrollPane> = body.scrolls()
 
     @RequiresEdt
     internal fun commandFont() = codeEditors().firstOrNull()?.font ?: style.editorFont
@@ -137,7 +133,10 @@ class ShellToolView(
     internal fun controlCount() = if (arrow.isVisible) 1 else 0
 
     @RequiresEdt
-    internal fun mdComponent() = body.panel()
+    internal fun content(): SessionContentPanel? = body.panel()
+
+    @RequiresEdt
+    internal fun surfaces() = body.surfaces()
 
     @RequiresEdt
     internal fun horizontalPolicy() = body.scrolls().firstOrNull()?.horizontalScrollBarPolicy
@@ -145,11 +144,8 @@ class ShellToolView(
 
     @RequiresEdt
     override fun headerPopup(): HeaderPopupRequest? {
-        if (isExpanded()) return null
-        val cmd = command(item).takeIf { it.isNotBlank() } ?: return null
-        return HeaderPopupRequest(row, build = { buildPopupBody(cmd) }) {
-            Telemetry.send("Header Popup Shown", mapOf("surface" to "session", "tool" to "bash"))
-        }
+        val cmd = command(item)
+        return popup("tool", "bash", cmd.isNotBlank()) { buildPopupBody(cmd) }
     }
 
     @RequiresEdt
@@ -174,7 +170,7 @@ class ShellToolView(
         changed = setText(parts.title, title(item)) || changed
         changed = setText(parts.sub, subtitle(item)) || changed
         changed = setForeground(parts.title, titleColor(item)) || changed
-        changed = setForeground(parts.sub, UiStyle.Colors.weak()) || changed
+        changed = setForeground(parts.sub, SessionUiStyle.Text.Secondary.foreground()) || changed
         changed = setText(parts.state, stateText(item)) || changed
         changed = setForeground(parts.state, color(item)) || changed
         return changed
@@ -183,29 +179,14 @@ class ShellToolView(
     private fun syncBody(): Boolean = body.update(item)
 
     @RequiresEdt
-    private fun buildPopupBody(cmd: String): HeaderPopupBody {
-        val md = MdViewFactory.create(
+    private fun buildPopupBody(cmd: String): HeaderPopupBody =
+        markdownPopupBody(
             style,
-            null,
-            MdCodeBlockFactory.default(
-                MdCodeBlockOptions(
-                    border = MdCodeBlockBorder.None,
-                    verticalPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
-                    editorOnly = true,
-                ),
-            ),
-        )
-        md.applyStyle(style)
-        md.font = style.transcriptFont
-        md.foreground = style.editorForeground
-        md.background = style.editorBackground
-        md.preBg = style.editorBackground
-        md.codeFont = style.editorFamily
-        md.component.border = JBUI.Borders.empty()
-        md.set(popupMd(formatCommand(cmd)))
-        padPopup(md.component)
-        return HeaderPopupBody(md.component, md, style.editorBackground, SessionUiStyle.View.Popup.WIDE_MAX_WIDTH)
-    }
+            popupShellMarkdown(item, cmd),
+            options = SHELL_POPUP_OPTS,
+            font = style.transcriptFont,
+            foreground = style.editorForeground,
+        ) { padPopup(it.component) }
 
     override fun dumpLabel() = "ShellToolView#$contentId(${labelText()})"
 
@@ -213,6 +194,121 @@ class ShellToolView(
         fun canRender(tool: Tool) = tool.name == "bash"
     }
 }
+
+/**
+ * The expanded shell body: a [SessionContentPanel] with the command and output as two independent
+ * markdown code surfaces. Each surface is a [SessionSurfacePanel] (rounded code-block background),
+ * so the two blocks read as distinct raised boxes separated by the standard transparent gap. Both
+ * are built lazily on first expansion and mutated in place afterwards.
+ */
+class ShellBody(private val selection: SessionSelection?) {
+    var parent: Disposable? = null
+
+    private var panel: SessionContentPanel? = null
+    private var commandSurface: SessionSurfacePanel? = null
+    private var outputSurface: SessionSurfacePanel? = null
+    private var commandBody: ToolMarkdownBody? = null
+    private var outputBody: ToolMarkdownBody? = null
+
+    @RequiresEdt
+    fun mount(tool: Tool): JComponent {
+        panel?.let { return it }
+        val owner = parent ?: error("Shell body has no parent")
+        val panel = SessionContentPanel()
+        val commandSurface = SessionSurfacePanel()
+        val outputSurface = SessionSurfacePanel()
+        val commandBody = shellSection(selection) { commandMarkdown(it) }
+        val outputBody = shellSection(selection) { outputMarkdown(it) }
+        commandBody.parent = owner
+        outputBody.parent = owner
+        commandSurface.addToCenter(commandBody.mount(tool))
+        outputSurface.addToCenter(outputBody.mount(tool))
+        panel.content(commandSurface).content(outputSurface)
+        this.panel = panel
+        this.commandSurface = commandSurface
+        this.outputSurface = outputSurface
+        this.commandBody = commandBody
+        this.outputBody = outputBody
+        update(tool)
+        applyStyle(SessionEditorStyle.current())
+        return panel
+    }
+
+    @RequiresEdt
+    fun created(): Boolean = panel != null
+
+    @RequiresEdt
+    fun panel(): SessionContentPanel? = panel
+
+    @RequiresEdt
+    fun surfaces(): List<JComponent> = listOfNotNull(commandSurface, outputSurface)
+
+    @RequiresEdt
+    fun attached(host: Component): Boolean = panel?.parent === host
+
+    @RequiresEdt
+    fun update(tool: Tool): Boolean {
+        val commandBody = commandBody ?: return false
+        val outputBody = outputBody ?: return false
+        val commandSurface = commandSurface ?: return false
+        val outputSurface = outputSurface ?: return false
+        var changed = false
+        changed = commandBody.update(tool) || changed
+        changed = outputBody.update(tool) || changed
+        changed = show(commandSurface, command(tool).isNotBlank()) || changed
+        changed = show(outputSurface, output(tool).isNotBlank() || !tool.error.isNullOrBlank()) || changed
+        return changed
+    }
+
+    @RequiresEdt
+    fun applyStyle(style: SessionEditorStyle): Boolean {
+        val commandBody = commandBody ?: return false
+        val outputBody = outputBody ?: return false
+        var changed = false
+        changed = commandBody.applyStyle(style) || changed
+        changed = outputBody.applyStyle(style) || changed
+        return changed
+    }
+
+    @RequiresEdt
+    fun markdown(): String? {
+        if (panel == null) return null
+        return listOfNotNull(commandBody?.markdown(), outputBody?.markdown())
+            .filter { it.isNotBlank() }
+            .joinToString("\n\n")
+    }
+
+    @RequiresEdt
+    fun scrolls(): List<JBScrollPane> = commandBody?.scrolls().orEmpty() + outputBody?.scrolls().orEmpty()
+
+    @RequiresEdt
+    fun codeEditors(): List<EditorTextField> = commandBody?.codeEditors().orEmpty() + outputBody?.codeEditors().orEmpty()
+
+    private fun show(surface: JComponent, visible: Boolean): Boolean {
+        if (surface.isVisible == visible) return false
+        surface.isVisible = visible
+        return true
+    }
+}
+
+/** Editor-only code block used by the collapsed shell hover popup (uncapped; the popup scrolls). */
+private val SHELL_POPUP_OPTS = MdCodeBlockOptions(
+    border = MdCodeBlockBorder.None,
+    verticalPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+    editorOnly = true,
+)
+
+private fun shellSection(selection: SessionSelection?, render: (Tool) -> String) = ToolMarkdownBody(
+    MdCodeBlockOptions(
+        border = MdCodeBlockBorder.None,
+        maxLines = SessionUiStyle.View.Tool.BODY_LINES,
+        verticalPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+        editorOnly = true,
+    ),
+    selection,
+    render = render,
+    font = SessionEditorStyle::transcriptFont,
+)
 
 private fun padPopup(root: JComponent) {
     root.components.filterIsInstance<JBScrollPane>().forEach { pane ->
@@ -230,50 +326,42 @@ private fun padPopup(root: JComponent) {
 
 private fun grow(size: Dimension, pad: Int) = Dimension(size.width, size.height + pad)
 
-private fun shellBody(selection: SessionSelection?) = ToolMarkdownBody(
-    MdCodeBlockOptions(
-        border = MdCodeBlockBorder.Bottom,
-        maxLines = 15,
-        verticalPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
-        editorOnly = true,
-    ),
-    selection,
-    render = { ShellContent(it).markdown },
-    font = SessionEditorStyle::transcriptFont,
-    chrome = ::styleShellHtml,
-)
+/** Command markdown for the shell command surface: the raw command in a `bash` fence, or empty. */
+private fun commandMarkdown(tool: Tool): String {
+    val cmd = command(tool)
+    if (cmd.isBlank()) return ""
+    return fenced(cmd, "bash")
+}
 
-/** Pads the left edge of shell section headers ("Command"/"Output") to line up with code text. */
-@RequiresEdt
-private fun styleShellHtml(md: MdView) {
-    val root = md.component as? JPanel ?: return
-    root.components.filterIsInstance<JBHtmlPane>().forEach {
-        it.border = JBUI.Borders.emptyLeft(SessionUiStyle.View.Code.VIEWPORT_HORIZONTAL_PADDING)
+/** Output markdown for the shell output surface: the raw stdout then any stderr, or empty. */
+private fun outputMarkdown(tool: Tool): String {
+    val out = output(tool)
+    val err = tool.error.orEmpty()
+    return buildString {
+        if (out.isNotBlank()) append(fenced(out, outputLang(out)))
+        if (err.isNotBlank()) {
+            if (isNotEmpty()) append("\n\n")
+            append(fenced(err, "ansi-stderr"))
+        }
     }
 }
 
-private data class ShellContent(
-    val command: String,
-    val output: String,
-    val error: String,
-    val rawOutput: String = output,
-    val rawError: String = error,
-) {
-    constructor(tool: Tool) : this(
-        command(tool),
-        clean(output(tool)),
-        clean(tool.error.orEmpty()),
-        output(tool),
-        tool.error.orEmpty(),
-    )
+/** Full shell markdown (command surface then output surface), used for copy and popup fallbacks. */
+private fun shellMarkdown(tool: Tool): String =
+    listOf(commandMarkdown(tool), outputMarkdown(tool)).filter { it.isNotBlank() }.joinToString("\n\n")
 
-    val body: String = listOf(command, output, error).filter { it.isNotBlank() }.joinToString("\n\n")
+/** Plain, terminal-cleaned shell text used as the copy fallback before the body is built. */
+private fun shellBodyText(tool: Tool): String =
+    listOf(command(tool), clean(output(tool)), clean(tool.error.orEmpty()))
+        .filter { it.isNotBlank() }
+        .joinToString("\n\n")
 
-    val markdown: String = buildString {
-        section(KiloBundle.message("session.part.tool.shell.command"), command, "bash")
-        section(KiloBundle.message("session.part.tool.shell.output"), rawOutput, outputLang(rawOutput))
-        section(KiloBundle.message("session.part.tool.shell.error"), rawError, "ansi-stderr")
-    }
+private fun fenced(text: String, lang: String): String = buildString {
+    val fence = fence(text)
+    append(fence).append(lang).append('\n')
+    append(text)
+    if (!text.endsWith('\n')) append('\n')
+    append(fence)
 }
 
 private fun outputLang(text: String): String = if (MdTerminal.hasAnsi(text)) "ansi-stdout" else "shell-output"
@@ -285,6 +373,16 @@ private fun popupMd(text: String): String = buildString {
     if (!text.endsWith('\n')) append('\n')
     append(fence)
 }
+
+/**
+ * Popup markdown: the formatted command surface followed by the output/error surface, matching the
+ * expanded body. Like the changes popup, the output is not line-capped here — the popup's own scroll
+ * pane bounds its height — so the collapsed hover preview shows the command together with its output.
+ */
+private fun popupShellMarkdown(tool: Tool, cmd: String): String =
+    listOf(popupMd(formatCommand(cmd)), outputMarkdown(tool))
+        .filter { it.isNotBlank() }
+        .joinToString("\n\n")
 
 /**
  * Inserts line breaks after shell separators (`&&`, `||`, `|`, `;`) that sit outside quotes,
@@ -321,17 +419,6 @@ private fun formatCommand(cmd: String): String {
         }
     }
     return out.toString()
-}
-
-private fun StringBuilder.section(title: String, text: String, lang: String) {
-    if (text.isBlank()) return
-    if (isNotEmpty()) append("\n\n")
-    val fence = fence(text)
-    append("**").append(title).append("**\n\n")
-    append(fence).append(lang).append("\n")
-    append(text)
-    if (!text.endsWith('\n')) append('\n')
-    append(fence)
 }
 
 private fun clean(text: String): String = MdTerminal.strip(MdTerminal.reduce(text, keepSgr = false))
