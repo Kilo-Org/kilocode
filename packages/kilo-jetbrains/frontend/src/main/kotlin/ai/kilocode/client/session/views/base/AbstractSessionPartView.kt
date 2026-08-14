@@ -10,6 +10,7 @@ import ai.kilocode.client.ui.md.MdCodeBlockFactory
 import ai.kilocode.client.ui.md.MdCodeBlockOptions
 import ai.kilocode.client.ui.md.MdView
 import ai.kilocode.client.ui.md.MdViewFactory
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
@@ -224,6 +225,23 @@ abstract class AbstractSessionPartView(
         afterSet(md)
         val width = if (wide) SessionUiStyle.View.Popup.WIDE_MAX_WIDTH else SessionUiStyle.View.Popup.MAX_WIDTH
         return HeaderPopupBody(md.component, owner, SessionUiStyle.Colors.codeBlockBackground(), width)
+    }
+
+    /**
+     * Builds a popup body around an already-created Swing [component]. The disposable owner is still
+     * routed through the same popup-controller lifecycle as markdown popups, so the content subtree is
+     * released when the popup hides even when the component itself has no disposable resources today.
+     */
+    @RequiresEdt
+    protected fun componentPopupBody(
+        component: JComponent,
+        background: Color = SessionUiStyle.Colors.codeBlockBackground(),
+        wide: Boolean = true,
+    ): HeaderPopupBody {
+        val owner = Disposer.newDisposable("Header popup body")
+        if (component is Disposable) Disposer.register(owner, component)
+        val width = if (wide) SessionUiStyle.View.Popup.WIDE_MAX_WIDTH else SessionUiStyle.View.Popup.MAX_WIDTH
+        return HeaderPopupBody(component, owner, background, width)
     }
 
     /**

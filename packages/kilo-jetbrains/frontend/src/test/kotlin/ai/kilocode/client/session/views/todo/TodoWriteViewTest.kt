@@ -17,7 +17,6 @@ import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.image.BufferedImage
 import javax.swing.JComponent
-import javax.swing.JEditorPane
 import javax.swing.JPanel
 
 @Suppress("UnstableApiUsage")
@@ -199,9 +198,37 @@ class TodoWriteViewTest : BasePlatformTestCase() {
         assertFalse(view.isExpanded())
         val body = view.headerPopup()!!.build()
         try {
-            val html = popupHtml(body.component)
-            assertTrue(html.contains("Done"))
-            assertTrue(html.contains("Next"))
+            val list = popupTodoList(body.component)
+            assertEquals(2, list.rowCount())
+            assertTrue(list.rowChecked(0))
+            assertFalse(list.rowChecked(1))
+            assertTrue(list.rowText(0).contains("<s>Done</s>"))
+            assertTrue(list.rowText(1).contains("Next"))
+            assertEquals(view.rowCheckBackground(0), list.rowCheckBackground(0))
+            assertEquals(view.rowCheckForeground(0), list.rowCheckForeground(0))
+            assertEquals(view.rowCheckBorder(0), list.rowCheckBorder(0))
+        } finally {
+            Disposer.dispose(body.disposable)
+        }
+    }
+
+    fun `test todo header popup uses compact todo view rows`() {
+        val view = TodoWriteView(tool("todowrite", ToolExecState.COMPLETED).also {
+            it.todos = listOf(TodoDto("Hidden", "pending", "medium"))
+            it.todoView = TodoViewDto(
+                mode = "compact",
+                todos = listOf(TodoDto("Visible", "pending", "high", changed = true)),
+                hiddenBefore = 2,
+                hiddenAfter = 3,
+            )
+        })
+        view.toggle()
+        val body = view.headerPopup()!!.build()
+        try {
+            val list = popupTodoList(body.component)
+            assertEquals(1, list.rowCount())
+            assertTrue(list.rowText(0).contains("Visible"))
+            assertEquals(view.hiddenText(), list.hiddenText())
         } finally {
             Disposer.dispose(body.disposable)
         }
@@ -213,14 +240,12 @@ class TodoWriteViewTest : BasePlatformTestCase() {
         assertNull(view.headerPopup())
     }
 
-    private fun popupHtml(root: JComponent): String {
-        val out = StringBuilder()
-        fun visit(component: JComponent) {
-            if (component is JEditorPane) out.append(component.text)
-            component.components.filterIsInstance<JComponent>().forEach(::visit)
+    private fun popupTodoList(root: JComponent): TodoListPanel {
+        fun visit(component: JComponent): TodoListPanel? {
+            if (component is TodoListPanel) return component
+            return component.components.filterIsInstance<JComponent>().firstNotNullOfOrNull(::visit)
         }
-        visit(root)
-        return out.toString()
+        return visit(root) ?: error("TodoListPanel not found")
     }
 
     private fun tool(name: String, state: ToolExecState) = Tool("p1", name, toolKind(name)).also { it.state = state }

@@ -43,12 +43,18 @@ class TodoWriteView(tool: Tool, private val parts: TodoParts = todoParts()) :
 
     @RequiresEdt
     override fun headerPopup(): HeaderPopupRequest? {
-        val md = todoMarkdown(item.todos)
-        return popup("part", "todo", md.isNotBlank()) { markdownPopupBody(style, md) }
+        val data = rows(item)
+        val present = data.todos.isNotEmpty() || data.before > 0 || data.after > 0
+        return popup("part", "todo", present) { buildPopup(data) }
     }
 
-    private fun todoMarkdown(todos: List<TodoDto>): String =
-        todos.joinToString("\n") { "- [${if (it.status == "completed") "x" else " "}] ${it.content}" }
+    @RequiresEdt
+    private fun buildPopup(data: Rows) = componentPopupBody(
+        TodoListPanel(data.todos, data.before, data.after).apply {
+            border = JBUI.Borders.empty(UiStyle.Gap.lg(), UiStyle.Gap.pad())
+            applyStyle(style)
+        },
+    )
 
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
@@ -77,13 +83,11 @@ class TodoWriteView(tool: Tool, private val parts: TodoParts = todoParts()) :
 
     private fun sync() {
         parts.sub.text = subtitle(item)
-        val view = item.todoView
-        val compact = view?.mode == "compact"
-        val rows = if (compact) view.todos else item.todos
+        val data = rows(item)
         parts.list.update(
-            rows,
-            hiddenBefore = if (compact) view.hiddenBefore else 0,
-            hiddenAfter = if (compact) view.hiddenAfter else 0,
+            data.todos,
+            hiddenBefore = data.before,
+            hiddenAfter = data.after,
         )
         syncExpandable(true)
         refresh()
@@ -122,6 +126,14 @@ private fun subtitle(tool: Tool): String {
     if (total == 0) return ""
     val done = tool.todos.count { it.status == "completed" }
     return "$done/$total"
+}
+
+private data class Rows(val todos: List<TodoDto>, val before: Int, val after: Int)
+
+private fun rows(tool: Tool): Rows {
+    val view = tool.todoView
+    if (view?.mode == "compact") return Rows(view.todos, view.hiddenBefore, view.hiddenAfter)
+    return Rows(tool.todos, 0, 0)
 }
 
 private fun setFont(component: JComponent, font: Font): Boolean {
