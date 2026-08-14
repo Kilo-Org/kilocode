@@ -127,6 +127,21 @@ class MdViewHybridTest : BasePlatformTestCase() {
         assertFalse("rounded corner is left unfilled", fill == image.getRGB(0, 0))
     }
 
+    fun `test wide code block clips scrollbar to rounded bottom corners`() {
+        view.set("```kotlin\n${"x".repeat(500)}\n```")
+        val pane = scrolls().single()
+        pane.setSize(160, pane.preferredSize.height)
+        pane.doLayout()
+
+        val image = BufferedImage(160, pane.height, BufferedImage.TYPE_INT_ARGB)
+        val g = image.createGraphics()
+        pane.paint(g)
+        g.dispose()
+
+        assertTrue("wide content shows the horizontal scrollbar", pane.horizontalScrollBar.isVisible)
+        assertEquals("bottom corner stays transparent", 0, image.getRGB(0, pane.height - 1) ushr 24)
+    }
+
     fun `test fenced code block preserves multiline editor text and height`() {
         view.set("```kotlin\nval one = 1\nval two = 2\nval three = 3\n```")
         val pane = scrolls().single()

@@ -167,6 +167,10 @@ class ShellToolViewTest : BasePlatformTestCase() {
         }))
 
         assertFalse(view.bodyCreated())
+        assertNull(view.content())
+        assertTrue(view.surfaces().isEmpty())
+        assertTrue(view.codeEditors().isEmpty())
+        assertTrue(view.scrolls().isEmpty())
         view.toggle()
         val body = view.content()
         val cmd = view.codeEditors().first()

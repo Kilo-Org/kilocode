@@ -3,7 +3,6 @@ package ai.kilocode.client.session.views
 import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -24,10 +23,8 @@ class ReasoningViewTest : BasePlatformTestCase() {
 
     fun `test completed reasoning is collapsed by default`() {
         val view = ReasoningView(reasoning("p1", done = true, text = "one\ntwo\nthree\nfour"))
-        val base: Any = view
 
         assertFalse(view.isExpanded())
-        assertTrue(base is AbstractSessionPartView)
         assertEquals("Reasoning", view.headerText())
         assertEquals("one\ntwo\nthree\nfour", view.markdown())
         assertTrue(view.hasToggle())
@@ -399,16 +396,6 @@ class ReasoningViewTest : BasePlatformTestCase() {
     private fun icons(component: Component): List<Icon> {
         val found = mutableListOf<Icon>()
         collect(component, found)
-        return found
-    }
-
-    private fun popupEditors(root: JComponent): List<com.intellij.ui.EditorTextField> {
-        val found = mutableListOf<com.intellij.ui.EditorTextField>()
-        fun visit(component: JComponent) {
-            if (component is com.intellij.ui.EditorTextField) found.add(component)
-            component.components.filterIsInstance<JComponent>().forEach(::visit)
-        }
-        visit(root)
         return found
     }
 

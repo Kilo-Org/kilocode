@@ -5,7 +5,6 @@ import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.rpc.dto.TodoDto
@@ -36,10 +35,8 @@ class TodoWriteViewTest : BasePlatformTestCase() {
                 TodoDto("Next", "pending", "medium"),
             )
         })
-        val base: Any = view
 
         assertTrue(view.labelText().contains("To-dos"))
-        assertTrue(base is AbstractSessionPartView)
         assertTrue(view.labelText().contains("1/2"))
         assertTrue(view.isExpanded())
         assertEquals(2, view.rowCount())

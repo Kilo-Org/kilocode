@@ -151,7 +151,7 @@ class AbstractSessionPartViewTest : BasePlatformTestCase() {
         val hover = SessionUiStyle.View.Surface.headerHoverBgColor().rgb
 
         assertEquals("center is filled with the hover color", hover, image.getRGB(20, 2))
-        assertFalse("rounded corner is left unfilled", hover == image.getRGB(0, 0))
+        assertEquals("rounded corner is transparent", 0, image.getRGB(0, 0) ushr 24)
     }
 
     fun `test expanded card hover fill stays rounded`() {
@@ -165,7 +165,7 @@ class AbstractSessionPartViewTest : BasePlatformTestCase() {
         val hover = SessionUiStyle.View.Surface.headerHoverBgColor().rgb
 
         assertEquals("center is filled with the hover color", hover, image.getRGB(20, 2))
-        assertFalse("expanded header keeps the rounded corner", hover == image.getRGB(0, 0))
+        assertEquals("expanded header keeps the rounded corner transparent", 0, image.getRGB(0, 0) ushr 24)
     }
 
     private fun paintRow(row: JPanel): BufferedImage {

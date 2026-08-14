@@ -396,7 +396,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
             MessageWithPartsDto(msg("a1", "assistant"), listOf(part("a1p", "a1", "text", "hi"))),
         ))
 
-        // The bare user anchor renders nothing, so it is hidden and consumes no row/gap...
+        // The bare user anchor renders nothing, so it is hidden...
         assertFalse(panel.findMessage("u1")!!.isVisible)
         // ...but the turn and its assistant content remain visible.
         assertTrue(panel.findMessage("a1")!!.isVisible)

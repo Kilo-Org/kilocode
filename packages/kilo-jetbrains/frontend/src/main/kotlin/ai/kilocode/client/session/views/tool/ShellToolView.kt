@@ -201,46 +201,57 @@ class ShellToolView(
  * so the two blocks read as distinct raised boxes separated by the standard transparent gap. Both
  * are built lazily on first expansion and mutated in place afterwards.
  */
-class ShellBody(selection: SessionSelection?) {
+class ShellBody(private val selection: SessionSelection?) {
     var parent: Disposable? = null
 
-    private val panel = SessionContentPanel()
-    private val commandSurface = SessionSurfacePanel()
-    private val outputSurface = SessionSurfacePanel()
-    private val commandBody = shellSection(selection) { commandMarkdown(it) }
-    private val outputBody = shellSection(selection) { outputMarkdown(it) }
-    private var mounted = false
+    private var panel: SessionContentPanel? = null
+    private var commandSurface: SessionSurfacePanel? = null
+    private var outputSurface: SessionSurfacePanel? = null
+    private var commandBody: ToolMarkdownBody? = null
+    private var outputBody: ToolMarkdownBody? = null
 
     @RequiresEdt
     fun mount(tool: Tool): JComponent {
-        if (mounted) return panel
-        mounted = true
+        panel?.let { return it }
         val owner = parent ?: error("Shell body has no parent")
+        val panel = SessionContentPanel()
+        val commandSurface = SessionSurfacePanel()
+        val outputSurface = SessionSurfacePanel()
+        val commandBody = shellSection(selection) { commandMarkdown(it) }
+        val outputBody = shellSection(selection) { outputMarkdown(it) }
         commandBody.parent = owner
         outputBody.parent = owner
         commandSurface.addToCenter(commandBody.mount(tool))
         outputSurface.addToCenter(outputBody.mount(tool))
         panel.content(commandSurface).content(outputSurface)
+        this.panel = panel
+        this.commandSurface = commandSurface
+        this.outputSurface = outputSurface
+        this.commandBody = commandBody
+        this.outputBody = outputBody
         update(tool)
         applyStyle(SessionEditorStyle.current())
         return panel
     }
 
     @RequiresEdt
-    fun created(): Boolean = mounted
+    fun created(): Boolean = panel != null
 
     @RequiresEdt
-    fun panel(): SessionContentPanel? = if (mounted) panel else null
+    fun panel(): SessionContentPanel? = panel
 
     @RequiresEdt
-    fun surfaces(): List<JComponent> = if (mounted) listOf(commandSurface, outputSurface) else emptyList()
+    fun surfaces(): List<JComponent> = listOfNotNull(commandSurface, outputSurface)
 
     @RequiresEdt
-    fun attached(host: Component): Boolean = panel.parent === host
+    fun attached(host: Component): Boolean = panel?.parent === host
 
     @RequiresEdt
     fun update(tool: Tool): Boolean {
-        if (!mounted) return false
+        val commandBody = commandBody ?: return false
+        val outputBody = outputBody ?: return false
+        val commandSurface = commandSurface ?: return false
+        val outputSurface = outputSurface ?: return false
         var changed = false
         changed = commandBody.update(tool) || changed
         changed = outputBody.update(tool) || changed
@@ -251,6 +262,8 @@ class ShellBody(selection: SessionSelection?) {
 
     @RequiresEdt
     fun applyStyle(style: SessionEditorStyle): Boolean {
+        val commandBody = commandBody ?: return false
+        val outputBody = outputBody ?: return false
         var changed = false
         changed = commandBody.applyStyle(style) || changed
         changed = outputBody.applyStyle(style) || changed
@@ -259,17 +272,17 @@ class ShellBody(selection: SessionSelection?) {
 
     @RequiresEdt
     fun markdown(): String? {
-        if (!mounted) return null
-        return listOfNotNull(commandBody.markdown(), outputBody.markdown())
+        if (panel == null) return null
+        return listOfNotNull(commandBody?.markdown(), outputBody?.markdown())
             .filter { it.isNotBlank() }
             .joinToString("\n\n")
     }
 
     @RequiresEdt
-    fun scrolls(): List<JBScrollPane> = commandBody.scrolls() + outputBody.scrolls()
+    fun scrolls(): List<JBScrollPane> = commandBody?.scrolls().orEmpty() + outputBody?.scrolls().orEmpty()
 
     @RequiresEdt
-    fun codeEditors(): List<EditorTextField> = commandBody.codeEditors() + outputBody.codeEditors()
+    fun codeEditors(): List<EditorTextField> = commandBody?.codeEditors().orEmpty() + outputBody?.codeEditors().orEmpty()
 
     private fun show(surface: JComponent, visible: Boolean): Boolean {
         if (surface.isVisible == visible) return false

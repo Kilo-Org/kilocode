@@ -1,8 +1,9 @@
 package ai.kilocode.client.ui.md.hybrid
 
-import ai.kilocode.client.session.ui.style.SessionEditorStyle
-import ai.kilocode.client.session.ui.selection.SessionSelection
+import ai.kilocode.client.session.ui.SessionSurface
 import ai.kilocode.client.session.ui.selection.SessionCopyTarget
+import ai.kilocode.client.session.ui.selection.SessionSelection
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.md.MdCodeBlockBorder
 import ai.kilocode.client.ui.md.MdCodeBlockFactory
@@ -699,6 +700,11 @@ internal open class MdViewHybrid(
                 g2.dispose()
             }
             super.paintComponent(g)
+        }
+
+        override fun paintChildren(g: Graphics) {
+            if (code.opts.border != MdCodeBlockBorder.None) return super.paintChildren(g)
+            SessionSurface.clipped(g, width, height) { super.paintChildren(it) }
         }
 
         override fun doLayout() {
