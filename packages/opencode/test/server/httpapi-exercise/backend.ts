@@ -3,6 +3,7 @@ import { HttpRouter } from "effect/unstable/http"
 import { parse } from "./assertions"
 import { runtime, type Runtime } from "./runtime"
 import type { ActiveScenario, BackendApp, CallResult, CaptureMode, SeededContext } from "./types"
+import type { Method, RequestSpec } from "./types" // kilocode_change
 
 type CallOptions = {
   auth?: {
@@ -17,13 +18,22 @@ export function call(scenario: ActiveScenario, ctx: SeededContext<unknown>, opti
   )
 }
 
-// Minimal GET against the same in-memory app, for readiness gates in scenario seeds.
-export function probe(path: string, headers: Record<string, string>) {
-  return Effect.promise(async () => {
-    const response = await app(await runtime(), {}).request(new Request(new URL(path, "http://localhost"), { headers }))
-    return { status: response.status, body: (await response.json().catch(() => undefined)) as unknown }
-  })
+// kilocode_change start
+export function request(method: Method, spec: RequestSpec) {
+  return Effect.promise(async () =>
+    capture(
+      await app(await runtime(), {}).request(
+        new Request(new URL(spec.path, "http://localhost"), {
+          method,
+          headers: spec.body === undefined ? spec.headers : { "content-type": "application/json", ...spec.headers },
+          body: spec.body === undefined ? undefined : JSON.stringify(spec.body),
+        }),
+      ),
+      "full",
+    ),
+  )
 }
+// kilocode_change end
 
 export function callAuthProbe(scenario: ActiveScenario, credentials: "missing" | "valid" = "missing") {
   return Effect.promise(async () => {

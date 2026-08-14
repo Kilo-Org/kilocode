@@ -35,7 +35,7 @@ export type Options = {
   scenarioTimeout: Duration.Duration
   progress: boolean
   trace: boolean
-  shard: { index: number; total: number } | undefined // kilocode_change - subset execution for parallel exerciser processes
+  shard: { index: number; total: number } // kilocode_change - opt-in sharding so CI runners can fan out across processes
 }
 
 export type RequestSpec = {
@@ -62,7 +62,6 @@ export type ScenarioContext = {
   headers: (extra?: Record<string, string>) => Record<string, string>
   file: (name: string, content: string) => Effect.Effect<void>
   session: (input?: { title?: string; parentID?: SessionID }) => Effect.Effect<SessionInfo>
-  agentsReady: () => Effect.Effect<void>
   sessionGet: (sessionID: SessionID) => Effect.Effect<SessionInfo | undefined>
   project: () => Effect.Effect<Project.Info>
   message: (sessionID: SessionID, input?: { text?: string }) => Effect.Effect<MessageSeed>

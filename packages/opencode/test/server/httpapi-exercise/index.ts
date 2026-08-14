@@ -31,12 +31,13 @@ import {
   exerciseGlobalRoot,
 } from "./environment"
 import { color, printHeader, printResults } from "./report"
-import { coverageResult, parseOptions, routeKey, routeKeys, selectedScenarios } from "./routing"
+import { coverageResult, parseOptions, routeKey, routeKeys, selectedScenarios, shardScenarios } from "./routing" // kilocode_change
 import { runScenario } from "./runner"
 import { disposeApps } from "./backend"
-import { runtime } from "./runtime"
-import { type Scenario } from "./types"
+import { publicApi, runtime } from "./runtime" // kilocode_change
+import { type Scenario, type Result } from "./types"
 import { kiloScenarios } from "../../kilocode/server/httpapi-exercise-scenarios" // kilocode_change
+import { sessionAfterDefaultAgent } from "../../kilocode/server/httpapi-exercise-ready" // kilocode_change
 
 function cursor(input: Record<string, unknown>) {
   return Buffer.from(JSON.stringify(input)).toString("base64url")
@@ -116,13 +117,13 @@ const scenarios: Scenario[] = [
       },
       "status",
     ),
-  // Non-git directories resolve to the global project (worktree "/"), so scenarios asserting
-  // per-project identity or project-scoped state need a real git repo.
+  // kilocode_change start - opt into git init; the worktree assertion requires a git-backed project
   http.protected.get("/path", "path.get").inProject({ git: true }).json(200, (body, ctx) => {
     object(body)
     check(body.directory === ctx.directory, "directory should resolve from x-kilo-directory")
     check(body.worktree === ctx.directory, "worktree should resolve from x-kilo-directory")
   }),
+  // kilocode_change end
   http.protected.get("/vcs", "vcs.get").inProject({ git: true }).json(),
   http.protected.get("/vcs/status", "vcs.status").inProject({ git: true }).json(200, array),
   http.protected
@@ -167,14 +168,19 @@ const scenarios: Scenario[] = [
     .status(400),
   http.protected.get("/config/providers", "config.providers").json(),
   http.protected.get("/project", "project.list").json(200, array, "status"),
-  http.protected.get("/project/current", "project.current").inProject({ git: true }).json(
-    200,
-    (body, ctx) => {
-      object(body)
-      check(body.worktree === ctx.directory, "current project should resolve from scenario directory")
-    },
-    "status",
-  ),
+  // kilocode_change start - opt into git init; the worktree assertion requires a git-backed project
+  http.protected
+    .get("/project/current", "project.current")
+    .inProject({ git: true })
+    .json(
+      200,
+      (body, ctx) => {
+        object(body)
+        check(body.worktree === ctx.directory, "current project should resolve from scenario directory")
+      },
+      "status",
+    ),
+  // kilocode_change end
   http.protected
     .patch("/project/{projectID}", "project.update")
     .mutating()
@@ -589,6 +595,7 @@ const scenarios: Scenario[] = [
     .post("/experimental/worktree", "worktree.create")
     .inProject({ git: true })
     .mutating()
+    .inProject({ git: true })
     .at((ctx) => ({ path: "/experimental/worktree", headers: ctx.headers(), body: { name: "api-dsl" } }))
     .jsonEffect(
       200,
@@ -608,6 +615,7 @@ const scenarios: Scenario[] = [
     .delete("/experimental/worktree", "worktree.remove")
     .inProject({ git: true })
     .mutating()
+    .inProject({ git: true })
     .seeded((ctx) => ctx.worktree({ name: "api-remove" }))
     .at((ctx) => ({ path: "/experimental/worktree", headers: ctx.headers(), body: { directory: ctx.state.directory } }))
     .json(200, (body) => {
@@ -617,6 +625,7 @@ const scenarios: Scenario[] = [
     .post("/experimental/worktree/reset", "worktree.reset")
     .inProject({ git: true })
     .mutating()
+    .inProject({ git: true })
     .seeded((ctx) => ctx.worktree({ name: "api-reset" }))
     .at((ctx) => ({
       path: "/experimental/worktree/reset",
@@ -871,21 +880,20 @@ const scenarios: Scenario[] = [
   }),
   http.protected
     .post("/api/session/{sessionID}/permission", "v2.session.permission.create")
-    .inProject({ git: true })
-    // Wait for the agent projection before evaluating a permission: a request that lands
-    // before it fills resolves no agent and hits the deny-all fallback (effect "deny"
-    // instead of "ask"). Readiness is the precondition, so gate on it, not on sleeps.
-    .seeded((ctx) => ctx.agentsReady().pipe(Effect.andThen(ctx.session({ title: "Permission create owner" }))))
+    .seeded((ctx) => sessionAfterDefaultAgent(ctx, "Permission create owner")) // kilocode_change
     .at((ctx) => ({
       path: route("/api/session/{sessionID}/permission", { sessionID: ctx.state.id }),
       headers: ctx.headers(),
       body: { action: "read", resources: [".env"] },
     }))
+    // kilocode_change start - opt into git init; the permission resolver consults VCS state for unknown resources
+    .inProject({ git: true })
+    // kilocode_change end
     .json(200, (body) => {
       object(body)
       object(body.data)
       check(typeof body.data.id === "string", "permission create should return an ID")
-      check(body.data.effect === "ask", "permission create should create a pending request")
+      check(body.data.effect === "ask", `permission create should create a pending request, got ${JSON.stringify(body.data.effect)}`) // kilocode_change
     }),
   http.protected
     .get("/api/session/{sessionID}/permission", "v2.session.permission.list")
@@ -1328,6 +1336,7 @@ const scenarios: Scenario[] = [
     }),
   http.protected
     .get("/session/{sessionID}/diff", "session.diff")
+    .inProject({ git: true })
     .seeded((ctx) => ctx.session({ title: "Diff session" }))
     .at((ctx) => ({ path: route("/session/{sessionID}/diff", { sessionID: ctx.state.id }), headers: ctx.headers() }))
     .json(200, array),
@@ -1798,7 +1807,35 @@ const llmScenarios = new Set([
 ])
 
 const main = Effect.gen(function* () {
-  // kilocode_change start - dispose final non-mutating instances so shared test scopes can close
+  const options = parseOptions(Bun.argv.slice(2))
+  for (const scenario of scenarios) {
+    if (scenario.kind === "active" && llmScenarios.has(scenario.name) && !scenario.project?.llm) {
+      return yield* Effect.fail(new Error(`${scenario.name} must use TestLLMServer via .withLlm()`))
+    }
+  }
+  // kilocode_change start - coverage only needs the OpenAPI group; bypass runtime + LLM + DB allocation
+  if (options.mode === "coverage") {
+    const selected = selectedScenarios(options, scenarios)
+    const effectRoutes = routeKeys(OpenApi.fromApi(yield* Effect.promise(() => publicApi())))
+    const missing = effectRoutes.filter((route) => !scenarios.some((scenario) => route === routeKey(scenario)))
+    const extra = scenarios.filter((scenario) => !effectRoutes.includes(routeKey(scenario)))
+    printHeader(options, effectRoutes, selected, missing, extra, {
+      database: exerciseDatabasePath,
+      global: exerciseGlobalRoot,
+    })
+    const results = selected.map(coverageResult)
+    printResults(results, missing, extra)
+    if (results.some((result) => result.status === "fail"))
+      return yield* Effect.fail(new Error("one or more scenarios failed"))
+    if (options.failOnSkip && results.some((result) => result.status === "skip"))
+      return yield* Effect.fail(new Error("one or more scenarios are skipped"))
+    if (options.failOnMissing && missing.length > 0)
+      return yield* Effect.fail(new Error("one or more routes have no scenario"))
+    yield* cleanupExercisePaths
+    return undefined
+  }
+  // kilocode_change end
+  // kilocode_change start - dispose final non-mutating instances so shared test scopes can close; skip when coverage returned early so runtime() is never imported in static mode
   yield* Effect.addFinalizer(() =>
     Effect.gen(function* () {
       const modules = yield* Effect.promise(() => runtime())
@@ -1808,67 +1845,53 @@ const main = Effect.gen(function* () {
     }),
   )
   // kilocode_change end
-  const options = parseOptions(Bun.argv.slice(2))
   const modules = yield* Effect.promise(() => runtime())
   const effectRoutes = routeKeys(OpenApi.fromApi(modules.PublicApi))
   const selected = selectedScenarios(options, scenarios)
+  const sharded = shardScenarios(selected, options.shard)
   const missing = effectRoutes.filter((route) => !scenarios.some((scenario) => route === routeKey(scenario)))
   const extra = scenarios.filter((scenario) => !effectRoutes.includes(routeKey(scenario)))
 
-  for (const scenario of scenarios) {
-    if (scenario.kind === "active" && llmScenarios.has(scenario.name) && !scenario.project?.llm) {
-      return yield* Effect.fail(new Error(`${scenario.name} must use TestLLMServer via .withLlm()`))
-    }
-  }
-
-  printHeader(options, effectRoutes, selected, missing, extra, {
+  printHeader(options, effectRoutes, sharded, missing, extra, {
     database: exerciseDatabasePath,
     global: exerciseGlobalRoot,
   })
 
-  const results =
-    options.mode === "coverage"
-      ? selected.map(coverageResult)
-      : yield* Effect.forEach(
-          selected,
-          (scenario) =>
-            Effect.gen(function* () {
-              if (options.progress) console.log(`${color.dim}RUN ${routeKey(scenario)} ${scenario.name}${color.reset}`)
-              const result = yield* runScenario(options)(scenario)
-              // kilocode_change start - retry a failed scenario once before failing the pass,
-              // mirroring the unit runner's pass-after-retry policy: state resets between
-              // attempts (runner.ts ensures resetState per run), so contention flakes recover
-              // while real regressions still fail both attempts. Retries stay visible in output.
-              if (result.status !== "fail") return result
-              // preserveDatabase scenarios skip resetState between attempts; retrying them
-              // would run against state the failed attempt already mutated and can mask a
-              // real regression as FLAKY. Everything else resets, so retrying is sound.
-              if (!scenario.reset) return result
-              // Back off before retrying: the observed failure mode is a readiness race (agent
-              // projections still warming when the request lands, so permission evaluation hits
-              // the deny-all fallback). An immediate retry on a saturated runner reproduces the
-              // same race; growing pauses let projections settle. Sharded child processes run
-              // fewer scenarios each, so early scenarios land in a colder process where one
-              // second is not always enough.
-              let last = result
-              for (const backoff of ["1 second", "3 seconds"] as const) {
-                console.log(
-                  `${color.yellow}RETRY${color.reset} ${routeKey(scenario)} ${scenario.name} failed, retrying in ${backoff}`,
-                )
-                yield* Effect.sleep(backoff)
-                last = yield* runScenario(options)(scenario)
-                if (last.status !== "fail") {
-                  console.log(
-                    `${color.yellow}FLAKY${color.reset} ${routeKey(scenario)} ${scenario.name} passed on retry`,
-                  )
-                  break
-                }
-              }
-              return last
-              // kilocode_change end
-            }),
-          { concurrency: 1 },
-        )
+  const results: Result[] = yield* Effect.forEach(
+    sharded,
+    (scenario) =>
+      Effect.gen(function* () {
+        if (options.progress) console.log(`${color.dim}RUN ${routeKey(scenario)} ${scenario.name}${color.reset}`)
+        const result = yield* runScenario(options)(scenario)
+        // kilocode_change start - retry a failed scenario before failing the pass, mirroring
+        // the unit runner's pass-after-retry policy: contention flakes recover while real
+        // regressions still fail every attempt. Retries stay visible in output.
+        if (result.status !== "fail") return result
+        // preserveDatabase scenarios skip resetState between attempts; retrying them
+        // would run against state the failed attempt already mutated and can mask a
+        // real regression as FLAKY. Everything else resets, so retrying is sound.
+        if (!scenario.reset) return result
+        // Back off before retrying: the observed failure mode is a readiness race (agent
+        // projections still warming when the request lands). Sharded child processes run
+        // fewer scenarios each, so early scenarios land in a colder process where one
+        // second is not always enough.
+        let last = result
+        for (const backoff of ["1 second", "3 seconds"] as const) {
+          console.log(
+            `${color.yellow}RETRY${color.reset} ${routeKey(scenario)} ${scenario.name} failed, retrying in ${backoff}`,
+          )
+          yield* Effect.sleep(backoff)
+          last = yield* runScenario(options)(scenario)
+          if (last.status !== "fail") {
+            console.log(`${color.yellow}FLAKY${color.reset} ${routeKey(scenario)} ${scenario.name} passed on retry`)
+            break
+          }
+        }
+        return last
+        // kilocode_change end
+      }),
+    { concurrency: 1 },
+  )
   printResults(results, missing, extra)
 
   if (results.some((result) => result.status === "fail"))
@@ -1880,11 +1903,10 @@ const main = Effect.gen(function* () {
   return undefined
 })
 
-// kilocode_change start - route-only coverage must not acquire a listening fake LLM server
+// kilocode_change start - route-only coverage must not acquire a listening fake LLM server; effect/auth runs alone
+const initialOptions = parseOptions(Bun.argv.slice(2))
 const llm =
-  parseOptions(Bun.argv.slice(2)).mode === "coverage"
-    ? Layer.mock(TestLLMServer)({ url: "http://coverage.invalid" })
-    : TestLLMServer.layer
+  initialOptions.mode === "coverage" ? Layer.mock(TestLLMServer)({ url: "http://coverage.invalid" }) : TestLLMServer.layer
 
 Effect.runPromise(main.pipe(Effect.provide(llm), Effect.scoped)).then(
   () => process.exit(0),

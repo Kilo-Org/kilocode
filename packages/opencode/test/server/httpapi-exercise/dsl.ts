@@ -22,8 +22,8 @@ class ScenarioBuilder<S = undefined> {
       method,
       path,
       name,
-      // kilocode_change: non-git by default — a git repo costs ~6 subprocess spawns per
-      // scenario; the few VCS/worktree routes that need one opt in via .inProject({ git: true }).
+      // kilocode_change start - default to an in-memory project dir; opt into git init only for routes
+      // that exercise VCS primitives or HEAD-based diffs to avoid ~70 redundant `git init` calls per run.
       project: { git: false },
       // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- The unseeded builder state is intentionally undefined until `.seeded(...)` narrows it.
       seed: () => Effect.succeed(undefined as S),

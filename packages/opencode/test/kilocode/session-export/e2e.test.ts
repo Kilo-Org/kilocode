@@ -76,7 +76,10 @@ function capture(posted: unknown[], snap: ConstructorParameters<typeof Capture>[
     nowMs: () => 100,
     syncSeq: () => seq.value++,
     snapshotProvider: snap,
-    baselineTimeoutMs: 1_000,
+    // Must match the generous until() budget below: on a loaded CI shard the git
+    // snapshot can exceed 1s, and a truncated baseline emits an empty envelope that
+    // makes the assertions fail no matter how long the test itself waits.
+    baselineTimeoutMs: 15_000,
   })
 }
 

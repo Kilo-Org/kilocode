@@ -1,13 +1,13 @@
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
-import { Cause, Duration, Effect, Layer, Schedule, Scope } from "effect"
+import { Cause, Duration, Effect, Layer, Scope } from "effect"
 import { TestLLMServer } from "../../lib/llm-server"
 import type { Config } from "../../../src/config/config"
 
 import type { MessageV2 } from "../../../src/session/message-v2"
 import { MessageID, PartID } from "../../../src/session/schema"
-import { call, callAuthProbe, disposeApps, probe } from "./backend"
+import { call, callAuthProbe, disposeApps } from "./backend"
 import { original } from "./environment"
 import { runtime } from "./runtime"
 import type { ActiveScenario, Options, ProjectOptions, Result, Scenario, ScenarioContext, SeededContext } from "./types"
@@ -148,26 +148,6 @@ function withContext<A, E>(
             }).pipe(Effect.asVoid),
           session: (input) =>
             run(modules.Session.Service.use((svc) => svc.create({ title: input?.title, parentID: input?.parentID }))),
-          // The agent projection fills asynchronously after instance load; a permission
-          // evaluated before it fills hits the deny-all fallback. Polling the projection
-          // waits on the actual precondition instead of sleeping a guessed interval.
-          agentsReady: () => {
-            // Without a project directory the server would fall back to process.cwd() —
-            // the real checkout — and the gate would observe an instance the scenario
-            // never targets. Readiness only makes sense for a seeded project instance.
-            if (!context.dir?.path) throw new Error("agentsReady needs a project directory")
-            return probe("/api/agent", headers()).pipe(
-              Effect.flatMap((result) => {
-                const data = (result.body as { data?: unknown[] } | undefined)?.data
-                return result.status === 200 && Array.isArray(data) && data.length > 0
-                  ? Effect.void
-                  : Effect.fail(new Error("agent projection not warm yet"))
-              }),
-              Effect.retry({ times: 100, schedule: Schedule.spaced("100 millis") }),
-              Effect.orDie,
-              Effect.asVoid,
-            )
-          },
           sessionGet: (sessionID) =>
             run(modules.Session.Service.use((svc) => svc.get(sessionID))).pipe(
               Effect.catchCause(() => Effect.succeed(undefined)),
