@@ -150,6 +150,52 @@
 
 ## [Unreleased]
 
+## [7.0.16] - 2026-08-14
+
+### Added
+- feat(vs-code): Agent Manager - Code diff hunks to add context to comments in the PR view panel by @cosi-conda in https://github.com/Kilo-Org/kilocode/pull/13071
+- feat(cli): add --worktree flag to create/reuse a git worktree for the TUI by @bagatao-anaconda in https://github.com/Kilo-Org/kilocode/pull/12809
+- feat(ui): parse and render clickable file links by @sylwester-liljegren in https://github.com/Kilo-Org/kilocode/pull/11219
+
+### Fixed
+- fix(tui): separate autocomplete descriptions from labels by @lambertjosh in https://github.com/Kilo-Org/kilocode/pull/13047
+- fix(core): serialize concurrent database migrations by @johnnyeric in https://github.com/Kilo-Org/kilocode/pull/13067
+- fix(vscode): preserve changes in multi-repo sessions by @johnnyeric in https://github.com/Kilo-Org/kilocode/pull/13088
+- fix(ci): reduce Windows CLI test contention by @yzialionka-anaconda in https://github.com/Kilo-Org/kilocode/pull/13077
+- fix(vscode): preserve revert workspace status by @johnnyeric in https://github.com/Kilo-Org/kilocode/pull/13104
+- fix(vscode): support Bedrock and Vertex credentials by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/13100
+- fix(cli): surface real --cloud-fork import failure reasons by @rakshith1928 in https://github.com/Kilo-Org/kilocode/pull/12388
+- fix(vscode): show default model variant by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/13063
+- fix(cli): keep models.dev refresh errors off the TUI by @johnnyeric in https://github.com/Kilo-Org/kilocode/pull/13107
+- fix(cli): surface commit-message generation errors by @johnnyeric in https://github.com/Kilo-Org/kilocode/pull/13108
+- fix(cli): stop read-only agent bash denies from blocking delegated subagents by @mvanhorn in https://github.com/Kilo-Org/kilocode/pull/12373
+- fix(tui): stop leftover toast titles during update install by @johnnyeric in https://github.com/Kilo-Org/kilocode/pull/13114
+- fix(cli): preserve session agent for headless prompts by @quanzhuo in https://github.com/Kilo-Org/kilocode/pull/13102
+- fix(vscode): persist installed agent removal by @Githubguy132010 in https://github.com/Kilo-Org/kilocode/pull/12542
+- fix(webview): preserve existing text when selecting slash command at start by @rakshith1928 in https://github.com/Kilo-Org/kilocode/pull/11728
+- fix: keep Code agent after switching from Ask by @johnnyeric in https://github.com/Kilo-Org/kilocode/pull/13121
+- fix(cli): stop memory auto-save from parsing SSE as JSON by @johnnyeric in https://github.com/Kilo-Org/kilocode/pull/13122
+- fix(jetbrains): facelift session styles and unify color keys by @kirillk in https://github.com/Kilo-Org/kilocode/pull/13092
+
+### Changed
+- release(jetbrains): v7.0.15 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/13054
+- OpenCode Merge v1.17.14...v1.18.0 by @johnnyeric in https://github.com/Kilo-Org/kilocode/pull/12901
+- Opencode Merge v1.18.1…v1.18.13 by @johnnyeric in https://github.com/Kilo-Org/kilocode/pull/12917
+- chore(jetbrains): bump CLI pin to v7.4.21 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/13059
+- docs: auto-sync with merged PRs (through 2026-08-05) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/12835
+- docs: auto-sync with merged PRs (through 2026-08-06) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/12930
+- docs: remove no-more-than-three-PRs rule from contributor guidance by @IamCoder18 in https://github.com/Kilo-Org/kilocode/pull/13073
+- refactor(cli): remove built-in WarpGrep by @johnnyeric in https://github.com/Kilo-Org/kilocode/pull/13084
+- docs: add Poolside provider page by @amypoolside in https://github.com/Kilo-Org/kilocode/pull/12916
+- docs: update Bedrock and Vertex setup by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/13106
+- test(cli): optimize httpapi exerciser by removing redundant git fixtures and isolating scenario passes by @IamCoder18 in https://github.com/Kilo-Org/kilocode/pull/13091
+- docs: document --worktree flag in CLI reference by @johnnyeric in https://github.com/Kilo-Org/kilocode/pull/13111
+- test(cli): unflake permission.create after isolated fixtures by @johnnyeric in https://github.com/Kilo-Org/kilocode/pull/13113
+- refactor(cli): rely on catalog model variants by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/13103
+- perf(ci): halve test-pipeline critical path via shared-process batching; root-fix recurring flakes by @yzialionka-anaconda in https://github.com/Kilo-Org/kilocode/pull/13117
+- chore(jetbrains): bump CLI pin to v7.4.22 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/13116
+
+
 ## [7.0.15] - 2026-08-10
 
 ### Added
