@@ -1799,4 +1799,31 @@ describe("plan follow-up", () => {
       expect(result).toBe("")
       expect(handoverSpy).not.toHaveBeenCalled()
     }))
+
+  test("generateHandover - uses the plan model when the compaction model is missing", () =>
+    withInstance(async () => {
+      const agentSpy = spyOn(PlanFollowupRuntime, "agent").mockResolvedValue({
+        ...fakeAgent,
+        model: saved,
+      } as any)
+      const availableSpy = spyOn(PlanFollowupRuntime, "modelIfAvailable").mockImplementation(
+        async (providerID: string, modelID: string) => {
+          if (providerID === saved.providerID && modelID === saved.modelID) return undefined
+          if (providerID === model.providerID && modelID === model.modelID) return fakeModel
+          return undefined
+        },
+      )
+      const handoverSpy = spyOn(PlanFollowupRuntime, "handover").mockResolvedValue("## Discoveries\n\nFrom plan model")
+      using _ = {
+        [Symbol.dispose]() {
+          agentSpy.mockRestore()
+          availableSpy.mockRestore()
+          handoverSpy.mockRestore()
+        },
+      }
+      const seeded = await seed({ text: "1. Build\n2. Test" })
+      const result = await generateHandover({ messages: seeded.messages, model })
+      expect(result).toBe("## Discoveries\n\nFrom plan model")
+      expect(handoverSpy).toHaveBeenCalledTimes(1)
+    }))
 })

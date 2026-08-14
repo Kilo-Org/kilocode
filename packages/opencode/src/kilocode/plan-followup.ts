@@ -112,11 +112,14 @@ export async function generateHandover(input: {
   const log = Log.create({ service: "plan.followup" })
   try {
     const entry = await PlanFollowupRuntime.agent("compaction")
-    const ref = entry?.model ?? input.model
-    const model = await PlanFollowupRuntime.modelIfAvailable(ref.providerID, ref.modelID).catch((err) => {
-      log.warn("handover model lookup failed", { providerID: ref.providerID, modelID: ref.modelID, err })
-      return undefined
-    })
+    const lookup = async (providerID: ProviderV2.ID, modelID: ModelV2.ID) =>
+      PlanFollowupRuntime.modelIfAvailable(providerID, modelID).catch((err) => {
+        log.warn("handover model lookup failed", { providerID, modelID, err })
+        return undefined
+      })
+    const model =
+      (entry?.model && (await lookup(entry.model.providerID, entry.model.modelID))) ||
+      (await lookup(input.model.providerID, input.model.modelID))
     if (!model) return ""
 
     const sessionID = SessionID.make(Identifier.ascending("session"))
