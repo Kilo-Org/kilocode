@@ -38,6 +38,7 @@ import path from "path"
 import { useKV } from "./kv"
 import { handleSuggestionEvent } from "@/kilocode/suggestion/tui/sync" // kilocode_change
 import { appendTerminalOutput } from "@/kilocode/interactive-terminal/output" // kilocode_change
+import { apply, drop, queue, take, type Delta } from "../kilocode/live-output" // kilocode_change
 import { useToast } from "../ui/toast" // kilocode_change
 import { usePermission } from "./permission"
 
@@ -166,6 +167,7 @@ export const {
     const project = useProject()
     const sdk = useSDK()
     const toast = useToast() // kilocode_change
+    const pending = new Map<string, Delta[]>() // kilocode_change
 
     // kilocode_change start
     function evict(sessionID: string) {
@@ -188,6 +190,7 @@ export const {
         }),
       )
       fullSyncedSessions.delete(sessionID)
+      drop(pending, sessionID)
       for (const child of children) evict(child)
     }
 
@@ -210,6 +213,15 @@ export const {
     const touchPart = (sessionID: string, partID: string) => {
       hydratingSessions.get(sessionID)?.parts.add(partID)
     }
+
+    // kilocode_change start - replay orphan text deltas once the part exists
+    function seed(part: Part) {
+      const items = take(pending, part.id)
+      if (items.length === 0) return part
+      if (part.type !== "text" && part.type !== "reasoning") return part
+      return { ...part, text: apply(part.text, items) }
+    }
+    // kilocode_change end
 
     function sessionListQuery(): { scope?: "project"; path?: string } {
       if (!kv.get("session_directory_filter_enabled", true)) return { scope: "project" }
@@ -551,31 +563,38 @@ export const {
         }
         case "message.part.updated": {
           touchPart(event.properties.part.sessionID, event.properties.part.id)
-          const parts = store.part[event.properties.part.messageID]
+          // kilocode_change start - seed parts with any deltas that arrived first
+          const next = seed(event.properties.part)
+          const parts = store.part[next.messageID]
           if (!parts) {
-            setStore("part", event.properties.part.messageID, [event.properties.part])
+            setStore("part", next.messageID, [next])
             break
           }
-          const result = search(parts, event.properties.part.id, (p) => p.id)
+          const result = search(parts, next.id, (p) => p.id)
           if (result.found) {
-            setStore("part", event.properties.part.messageID, result.index, reconcile(event.properties.part))
+            setStore("part", next.messageID, result.index, reconcile(next))
             break
           }
           setStore(
             "part",
-            event.properties.part.messageID,
+            next.messageID,
             produce((draft) => {
-              draft.splice(result.index, 0, event.properties.part)
+              draft.splice(result.index, 0, next)
             }),
           )
+          // kilocode_change end
           break
         }
 
         case "message.part.delta": {
           const parts = store.part[event.properties.messageID]
-          if (!parts) break
-          const result = search(parts, event.properties.partID, (p) => p.id)
-          if (!result.found) break
+          // kilocode_change start - hold deltas that arrive before their part
+          const result = parts ? search(parts, event.properties.partID, (p) => p.id) : { found: false, index: 0 }
+          if (!parts || !result.found) {
+            queue(pending, event.properties)
+            break
+          }
+          // kilocode_change end
           touchPart(event.properties.sessionID, event.properties.partID)
           setStore(
             "part",
@@ -721,7 +740,7 @@ export const {
         }
         case "message.part.updated.1": {
           touchPart(event.data.sessionID, event.data.part.id)
-          const part = event.data.part
+          const part = seed(event.data.part) // kilocode_change
           const parts = store.part[part.messageID]
           if (!parts) {
             setStore("part", part.messageID, [part])
@@ -978,8 +997,8 @@ export const {
           if (last.role === "user") return "working"
           return last.time.completed ? "idle" : "working"
         },
-        async sync(sessionID: string) {
-          if (fullSyncedSessions.has(sessionID)) return
+        async sync(sessionID: string, opts?: { force?: boolean }) { // kilocode_change
+          if (!opts?.force && fullSyncedSessions.has(sessionID)) return // kilocode_change
           const syncing = syncingSessions.get(sessionID)
           if (syncing) return syncing
           const tracker = { messages: new Set<string>(), parts: new Set<string>() }
@@ -1039,11 +1058,11 @@ export const {
                   draft.part[message.info.id] = parts
                 }
                 for (const message of removed) delete draft.part[message.id]
-                draft.message[sessionID] = visible
+                if (messages.data) draft.message[sessionID] = visible // kilocode_change
                 draft.session_diff[sessionID] = diff.data ?? []
               }),
             )
-            fullSyncedSessions.add(sessionID)
+            if (messages.data) fullSyncedSessions.add(sessionID) // kilocode_change
           })().finally(() => {
             syncingSessions.delete(sessionID)
             hydratingSessions.delete(sessionID)

@@ -70,7 +70,10 @@ export function useEvent() {
         return
       }
 
-      if (event.directory !== "global" && event.project !== project.project()) return // kilocode_change
+      // kilocode_change start - fail open while the current project id is unknown
+      const current = project.project()
+      if (event.directory !== "global" && current && event.project !== current) return
+      // kilocode_change end
       handler(event.payload, { directory: event.directory, workspace: event.workspace })
     })
   }
@@ -79,7 +82,8 @@ export function useEvent() {
     return sdk.event.on("event", (event) => {
       const payload = normalizeSyncEvent(event.payload)
       if (!payload) return
-      if (event.directory === "global" || event.project === project.project()) {
+      const current = project.project() // kilocode_change
+      if (event.directory === "global" || !current || event.project === current) { // kilocode_change
         handler(payload, { directory: event.directory, workspace: event.workspace })
       }
     })

@@ -146,6 +146,49 @@ test("orphan live deltas do not suppress hydrated parts", async () => {
   }
 })
 
+// kilocode_change start - orphan deltas replay into the part once it exists
+test("orphan live deltas fill a later empty part", async () => {
+  await using tmp = await tmpdir()
+  await Bun.write(`${tmp.path}/kv.json`, "{}")
+
+  const { app, emit, sync } = await mount((url) => {
+    if (url.pathname === `/session/${sessionID}`) return json(session)
+    if (url.pathname === `/session/${sessionID}/message`) return json([])
+    if (url.pathname === `/session/${sessionID}/todo` || url.pathname === `/session/${sessionID}/diff`) return json([])
+    return undefined
+  }, tmp.path)
+
+  try {
+    emit(
+      global({
+        id: "evt_delta",
+        type: "message.part.delta",
+        properties: { sessionID, messageID, partID, field: "text", delta: "visible live content" },
+      }),
+    )
+    emit(global({ id: "evt_message", type: "message.updated", properties: { sessionID, info: assistant } }))
+    emit(
+      global({
+        id: "evt_part",
+        type: "message.part.updated",
+        properties: {
+          sessionID,
+          time: 2,
+          part: { id: partID, sessionID, messageID, type: "text", text: "" },
+        },
+      }),
+    )
+    await wait(() => {
+      const part = sync.data.part[messageID]?.[0]
+      return part?.type === "text" && part.text === "visible live content"
+    })
+    expect(sync.data.part[messageID][0]).toMatchObject({ text: "visible live content" })
+  } finally {
+    app.renderer.destroy()
+  }
+})
+// kilocode_change end
+
 test("hydration does not clear text streamed before it starts", async () => {
   await using tmp = await tmpdir()
   await Bun.write(`${tmp.path}/kv.json`, "{}")

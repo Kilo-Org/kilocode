@@ -6,7 +6,7 @@ import { onMount } from "solid-js"
 import { ProjectProvider, useProject } from "../../../src/context/project"
 import { SDKProvider } from "../../../src/context/sdk"
 import { useEvent } from "../../../src/context/event"
-import { createEventSource, createFetch, directory } from "../../fixture/tui-sdk"
+import { createEventSource, createFetch, directory, json } from "../../fixture/tui-sdk" // kilocode_change
 import { TestTuiContexts } from "../../fixture/tui-environment"
 
 const projectID = "proj_test"
@@ -162,4 +162,47 @@ describe("useEvent", () => {
       app.renderer.destroy()
     }
   })
+
+  // kilocode_change start - the filter fails open until the project id loads
+  test("fails open when the current project id is missing", async () => {
+    const events = createEventSource()
+    const calls = createFetch((url) => {
+      if (url.pathname === "/project/current") return json({})
+    })
+    const seen: Event[] = []
+    const workspaces: Array<string | undefined> = []
+    let project!: ReturnType<typeof useProject>
+    let done!: () => void
+    const ready = new Promise<void>((resolve) => {
+      done = resolve
+    })
+    const app = await testRender(() => (
+      <TestTuiContexts>
+        <SDKProvider url="http://test" directory={directory} events={events.source} fetch={calls.fetch}>
+          <ProjectProvider>
+            <Probe
+              onReady={async (ctx) => {
+                project = ctx.project
+                await project.sync()
+                done()
+              }}
+              seen={seen}
+              workspaces={workspaces}
+            />
+          </ProjectProvider>
+        </SDKProvider>
+      </TestTuiContexts>
+    ))
+    await ready
+
+    try {
+      expect(project.project()).toBeUndefined()
+      events.emit(event(vcs("kept"), { directory: "/tmp/other", project: "proj_foreign" }))
+      await wait(() => seen.length === 1)
+      expect(seen).toEqual([vcs("kept")])
+    } finally {
+      app.renderer.destroy()
+    }
+  })
+  // kilocode_change end
 })
