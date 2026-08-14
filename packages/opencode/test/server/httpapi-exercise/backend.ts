@@ -17,6 +17,14 @@ export function call(scenario: ActiveScenario, ctx: SeededContext<unknown>, opti
   )
 }
 
+// Minimal GET against the same in-memory app, for readiness gates in scenario seeds.
+export function probe(path: string, headers: Record<string, string>) {
+  return Effect.promise(async () => {
+    const response = await app(await runtime(), {}).request(new Request(new URL(path, "http://localhost"), { headers }))
+    return { status: response.status, body: (await response.json().catch(() => undefined)) as unknown }
+  })
+}
+
 export function callAuthProbe(scenario: ActiveScenario, credentials: "missing" | "valid" = "missing") {
   return Effect.promise(async () => {
     const controller = new AbortController()
