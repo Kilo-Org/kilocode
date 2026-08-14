@@ -22,6 +22,9 @@ import ai.kilocode.client.session.model.QuestionOption
 import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.model.ToolCallRef
 import ai.kilocode.client.session.model.Text
+import ai.kilocode.client.session.model.Outcome
+import ai.kilocode.client.session.model.OutcomeTone
+import ai.kilocode.client.session.model.TurnOutcome
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.telemetry.Telemetry
@@ -120,6 +123,7 @@ class SessionController(
 
     companion object {
         private val LOG = KiloLog.create(SessionController::class.java)
+        private const val ABORT_ERROR = "MessageAbortedError"
         internal const val RECENT_LIMIT = 5
         internal const val DISPLAY_DELAY_MS = 1_000L
         internal const val REVERT_TIMEOUT_MS = 30_000L
@@ -1310,6 +1314,8 @@ class SessionController(
                         model.setState(SessionState.AwaitingQuestion(toQuestion(questions.last())))
                     } else if (status != null) {
                         seedStatus(status)
+                    } else {
+                        seedOutcome()
                     }
                 }
             }
@@ -1340,6 +1346,15 @@ class SessionController(
             else -> return  // idle or unknown — leave as Idle
         }
         model.setState(state)
+    }
+
+    private fun seedOutcome() {
+        val err = model.messages().lastOrNull { it.info.role == "assistant" }?.info?.error ?: return
+        if (err.type == ABORT_ERROR) {
+            model.setState(SessionState.TurnEnded(Outcome.INTERRUPTED, OutcomeTone.WARNING))
+            return
+        }
+        model.setState(SessionState.Error(err.message ?: err.type, err.type))
     }
 
     private fun handle(event: ChatEventDto) {
@@ -1419,20 +1434,25 @@ class SessionController(
                 val current = model.state
                 if (current is SessionState.AwaitingQuestion) return
                 if (current is SessionState.AwaitingPermission) return
-                val clobberOk = event.reason == "completed"
-                    || current is SessionState.Busy
-                    || current is SessionState.Retry
-                    || current is SessionState.Offline
-                if (clobberOk) {
-                    if (event.reason == "completed") capture("Task Completed", sessionProps(event.sessionID))
-                    model.setState(SessionState.Idle)
+                if (current is SessionState.LoginRequired) return
+                if (current is SessionState.Error && event.reason != "completed") return
+                val ended = TurnOutcome.classify(event.reason, current is SessionState.Error)
+                when {
+                    ended != null -> model.setState(SessionState.TurnEnded(ended.first, ended.second))
+                    event.reason == "completed" -> {
+                        capture("Task Completed", sessionProps(event.sessionID))
+                        model.setState(SessionState.Idle)
+                    }
+                    current is SessionState.Busy || current is SessionState.Retry || current is SessionState.Offline -> model.setState(SessionState.Idle)
                 }
             }
 
             is ChatEventDto.SessionCreated -> adoptFollowup(event.info)
 
             is ChatEventDto.Error -> {
-                capture("Session Error", sessionProps(event.sessionID) + mapOf("context" to "event", "errorClass" to (event.error?.type ?: "unknown")))
+                if (event.error?.type != ABORT_ERROR) {
+                    capture("Session Error", sessionProps(event.sessionID) + mapOf("context" to "event", "errorClass" to (event.error?.type ?: "unknown")))
+                }
                 error(event, true)
             }
 
@@ -1553,6 +1573,7 @@ class SessionController(
             model.setState(SessionState.LoginRequired(KiloBundle.message("session.login.required.description")))
             return
         }
+        if (event.error?.type == ABORT_ERROR) return
         val msg = event.error?.message ?: event.error?.type ?: KiloBundle.message("session.error.unknown")
         model.setState(SessionState.Error(msg, event.error?.type))
     }
@@ -1657,7 +1678,11 @@ class SessionController(
         val state = when (dto.type) {
             "idle" -> {
                 val current = model.state
-                if (current is SessionState.LoginRequired || current is SessionState.Reverting) return
+                if (current is SessionState.Error
+                    || current is SessionState.TurnEnded
+                    || current is SessionState.LoginRequired
+                    || current is SessionState.Reverting
+                ) return
                 purgePending(sid)
                 // purgePending may promote a still-queued permission from another (unpurged) child
                 // session; mirror idle() and leave that card in place rather than clobbering it with Idle.
@@ -1666,7 +1691,7 @@ class SessionController(
             }
             "busy" -> {
                 val current = model.state
-                if (current is SessionState.Idle || current is SessionState.Error)
+                if (current is SessionState.Idle || current is SessionState.Error || current is SessionState.TurnEnded)
                     SessionState.Busy(KiloBundle.message("session.status.considering"))
                 else return // already in a more specific phase
             }
@@ -1770,6 +1795,7 @@ class SessionController(
         // Only apply if we're not in a more specific non-terminal state.
         val current = model.state
         if (current !is SessionState.Error
+            && current !is SessionState.TurnEnded
             && current !is SessionState.AwaitingPermission
             && current !is SessionState.AwaitingQuestion
             && current !is SessionState.LoginRequired
@@ -2430,6 +2456,7 @@ class SessionController(
                 out.add("[error]")
                 out.add("[${state.message}]")
             }
+            is SessionState.TurnEnded -> out.add("[${state.outcome.name.lowercase()}]")
             is SessionState.LoginRequired -> {
                 out.add("[login-required]")
                 out.add("[${state.message}]")

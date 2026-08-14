@@ -50,6 +50,7 @@ import ai.kilocode.client.session.controller.SessionControllerEvent
 import ai.kilocode.client.session.context.EditorContextGatherer
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.LoginRequiredView
+import ai.kilocode.client.session.views.SessionOutcomeView
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.settings.KiloSettingsConfigurable
@@ -188,6 +189,7 @@ class SessionUi(
     private lateinit var question: QuestionView
     private lateinit var permission: PermissionView
     private lateinit var login: LoginRequiredView
+    private lateinit var outcome: SessionOutcomeView
     private lateinit var connection: ConnectionPanel
 
     private lateinit var prompt: PromptPanel
@@ -260,7 +262,8 @@ class SessionUi(
         is SessionState.Reverting,
         is SessionState.Retry,
         is SessionState.Offline,
-        is SessionState.Error -> null
+        is SessionState.Error,
+        is SessionState.TurnEnded -> null
         is SessionState.LoginRequired -> SessionActivityKind.LOGIN_REQUIRED
         is SessionState.AwaitingPermission -> SessionActivityKind.PERMISSION
         is SessionState.AwaitingQuestion ->
@@ -360,6 +363,10 @@ class SessionUi(
             selection = selection,
             focus = focus,
         )
+        outcome = SessionOutcomeView(
+            selection = selection,
+            focus = focus,
+        )
         messageBody = SessionMessageListPanel(
             controller.model,
             this,
@@ -377,6 +384,7 @@ class SessionUi(
             deleteQueued = { id -> controller.deleteQueuedMessage(id) },
             banner = RevertBanner(controller.model, ::redo, controller::redoAll, ::cancelRevert, focus),
         ).also {
+            it.outcome = outcome
             it.setDiffOpener(::openInlineDiff, controller.id)
             it.onHover = { view, on -> if (on) popup.show(view) else popup.notifyExit(view) }
         }
@@ -952,7 +960,7 @@ class SessionUi(
         if (wasBusy && state is SessionState.Idle) refreshBranchChanges()
         wasBusy = busy
         if (state is SessionState.Reverting) overlay.clear()
-        if (state is SessionState.Error) {
+        if (state is SessionState.Error || state is SessionState.TurnEnded) {
             pendingRollback = null
             pendingRedo = null
         }
