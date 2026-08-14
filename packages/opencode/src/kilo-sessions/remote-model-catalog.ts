@@ -248,6 +248,7 @@ export namespace RemoteModelCatalog {
       default: defaults(all),
       connected: all.map((provider) => provider.id),
       failed: [],
+      disabled: [],
       protocolVersion: 1,
       truncated,
       ...(currentModel ? { currentModel } : {}),

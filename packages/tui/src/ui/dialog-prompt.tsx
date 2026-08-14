@@ -102,13 +102,13 @@ export function DialogPrompt(props: DialogPromptProps) {
         </Show>
       </box>
       <box paddingBottom={1} gap={1} flexDirection="row">
-        <Show when={!props.busy} fallback={<text fg={theme.textMuted}>processing...</text>}>
-          <Show when={submitShortcut()}>
-            <text fg={theme.text}>
-              {submitShortcut()} <span style={{ fg: theme.textMuted }}>submit</span>
-            </text>
-          </Show>
+        {/* kilocode_change start - the busy spinner above already communicates progress */}
+        <Show when={!props.busy && submitShortcut()}>
+          <text fg={theme.text}>
+            {submitShortcut()} <span style={{ fg: theme.textMuted }}>submit</span>
+          </text>
         </Show>
+        {/* kilocode_change end */}
       </box>
     </box>
   )

@@ -88,6 +88,7 @@ export namespace KilocodeConfigOverlay {
   const fieldPaths = [
     ["model"],
     ["small_model"],
+    ["subagent_model"],
     ["hide_prompt_training_models"],
     ["privacy_mode"],
     ["default_agent"],

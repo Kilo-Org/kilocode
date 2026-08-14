@@ -129,6 +129,7 @@ export const {
         default: {},
         connected: [],
         failed: [],
+        disabled: [], // kilocode_change
       },
       console_state: emptyConsoleState,
       capabilities: {
