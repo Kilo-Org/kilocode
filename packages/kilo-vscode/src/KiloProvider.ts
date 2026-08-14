@@ -57,6 +57,7 @@ import { resolveProjectDirectory } from "./project-directory"
 import { seedSessionStatuses } from "./session-status"
 import { normalizeEnhancePromptErrorMessage } from "./enhance-prompt-error"
 import { retry } from "./services/cli-backend/retry"
+import { removeAgent } from "./services/agent-removal"
 import { normalize, type SSEPayload, type SyncPayload, type WirePayload } from "./services/cli-backend/sdk-sse-adapter"
 import { slimInfo, slimPart, slimParts } from "./kilo-provider/slim-metadata"
 import { handleSidebarWorktreeMessage } from "./kilo-provider/sidebar-worktree"
@@ -221,6 +222,7 @@ function sandboxClient(client: KiloClient | null) {
 const mapAgent = (a: Agent) => ({
   name: a.name,
   displayName: a.displayName,
+  source: a.source,
   description: a.description,
   mode: a.mode,
   native: a.native,
@@ -2611,14 +2613,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /** Remove an agent via the CLI backend, then refresh. */
   private async handleRemoveAgent(name: string): Promise<void> {
-    if (!this.client) return
-    try {
-      const result = await this.client.kilocode.removeAgent({ name, directory: this.getWorkspaceDirectory() })
-      if (result.error) {
-        console.error("[Kilo New] removeAgent returned error:", result.error)
-      }
-    } catch (err) {
-      console.error("[Kilo New] Failed to remove agent:", err)
+    const result = await removeAgent({
+      connection: this.connectionService,
+      directory: this.getWorkspaceDirectory(),
+      name,
+    })
+    if (!result.success) {
+      console.error("[Kilo New] Failed to remove agent:", result.error)
+      void vscode.window.showErrorMessage(result.error ?? `Failed to remove agent "${name}".`)
     }
     this.cachedAgentsMessage = null
     await this.fetchAndSendAgents()
