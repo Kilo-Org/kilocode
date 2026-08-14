@@ -470,7 +470,11 @@ class MessageView(
             super.paintComponent(g)
             return
         }
-        paintPromptBox(g, this)
+        // Historical user prompts render their text as a plain child that relies on this surface fill,
+        // so paint it whenever the message has content. An empty user message (a bare turn anchor with
+        // no parts) lays out ~1px tall; painting its bubble there would leave a thin light stripe at
+        // the top of the turn, so skip it.
+        if (componentCount > 0) paintPromptBox(g, this)
         super.paintComponent(g)
     }
 

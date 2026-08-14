@@ -198,8 +198,6 @@ abstract class AbstractSessionPartView(
             val g2 = g.create() as Graphics2D
             try {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-                g2.color = SessionUiStyle.Colors.sessionBackground()
-                g2.fillRect(0, 0, width, height)
                 g2.color = color
                 val arc = hoverArc()
                 if (arc > 0) g2.fillRoundRect(0, 0, width, height, arc, arc) else g2.fillRect(0, 0, width, height)
