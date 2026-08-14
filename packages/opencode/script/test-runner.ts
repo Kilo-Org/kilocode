@@ -277,28 +277,9 @@ const FAST_TIERS: Record<string, { weight: number; entries: string[] }> = {
     weight: 50_000,
     entries: ["kilocode/anaconda-desktop/", "kilocode/cloud/", "kilocode/tool/"],
   },
-  // cli/run/ stays per-file: it spawns real non-interactive runs (SIGINT/daemon timing).
   "fast-tier-cli": {
     weight: 90_000,
-    entries: [
-      "cli/account.test.ts",
-      "cli/auto-mode.test.ts",
-      "cli/bin-kilo.test.ts",
-      "cli/effect-cmd-instance-als.test.ts",
-      "cli/error.test.ts",
-      "cli/github-action.test.ts",
-      "cli/github-remote.test.ts",
-      "cli/import.test.ts",
-      "cli/mcp-add.test.ts",
-      "cli/plugin-auth-picker.test.ts",
-      "cli/pr.test.ts",
-      "cli/acp/",
-      "cli/cmd/",
-      "cli/help/",
-      "cli/serve/",
-      "cli/smokes/",
-      "cli/tui/",
-    ],
+    entries: ["cli/"],
   },
   "fast-tier-misc": {
     weight: 30_000,
@@ -320,40 +301,20 @@ const FAST_TIERS: Record<string, { weight: number; entries: string[] }> = {
     entries: ["tool/"],
   },
 }
-// Files that mutate process-wide state can only run alone, never in a shared batch:
-// bun's mock.module is process-wide and permanent, AppRuntime.dispose() kills the shared
-// runtime for every later file, global fetch spies observe batch-mates' traffic (leaked
-// background timers included), and process/watcher tests flake under batch CPU contention.
-// The batch builder below verifies this list stays complete and refuses to run otherwise.
-const BATCH_EXCLUDES = new Set([
-  // mock.module / global fetch spies inside otherwise-batchable subdirectories
-  "kilocode/presence/service-presence.test.ts",
-  "kilocode/presence/service.test.ts",
-  "kilocode/sessions/kilo-sessions-title.test.ts",
-  "kilocode/sessions/send-agent-notification.test.ts",
-  // mock.module (process-wide, permanent)
-  "kilocode/background-process-shutdown.test.ts",
-  "kilocode/cli-shutdown.test.ts",
-  "kilocode/cloud-session.test.ts",
-  "kilocode/lancedb-runtime.test.ts",
-  "kilocode/local-model.test.ts",
-  "kilocode/run-auto.test.ts",
-  "kilocode/run-network.test.ts",
-  "kilocode/session-processor-retry-limit.test.ts",
-  // AppRuntime.dispose() in teardown (poisons the shared process)
-  "kilocode/session-compaction-chunks.test.ts",
-  "kilocode/session-fork-remap.test.ts",
-  "kilocode/session-prompt-queue.test.ts",
-  "kilocode/session-prompt-steering.test.ts",
-  // global fetch spies (see batch-mates' requests)
-  "kilocode/indexing-startup.test.ts",
-  "kilocode/kilo-sessions.test.ts",
-  "kilocode/session-share.test.ts",
-  // real subprocesses / fs watchers / stall simulations (timing-sensitive under contention)
+// Files that must run alone, never in a shared batch, for reasons a source scan cannot
+// detect: real subprocesses, fs watchers, and wall-clock stall simulations are all
+// timing-sensitive under batch CPU contention. Same entry semantics as FAST_TIERS
+// (".ts" = exact file, otherwise directory prefix). Files with *detectable* process-wide
+// markers (mock.module, AppRuntime.dispose, global fetch spies) do not need listing here:
+// the batch builder scans member sources and demotes them to per-file automatically.
+const BATCH_EXCLUDES = [
+  "cli/run/", // spawns real non-interactive runs (SIGINT/daemon timing)
   "kilocode/background-process.test.ts",
   "kilocode/instance-vcs-watcher.test.ts",
   "kilocode/issue-8656-stall.test.ts",
-])
+]
+const isBatchExcluded = (file: string) =>
+  BATCH_EXCLUDES.some((entry) => (entry.endsWith(".ts") ? file === entry : file.startsWith(entry)))
 // 8 batches (~24 files each) keep the heaviest single work item small enough for
 // LPT to pack shards evenly; fewer, bigger batches set a floor under the slowest shard.
 const KILOCODE_ROOT_TIERS = 8
@@ -366,7 +327,7 @@ const kilocodeRootTier = (file: string) => {
   return `fast-tier-kilocode-root-${Math.abs(hash) % KILOCODE_ROOT_TIERS}`
 }
 const tierOf = (file: string) => {
-  if (BATCH_EXCLUDES.has(file)) return undefined
+  if (isBatchExcluded(file)) return undefined
   for (const [name, tier] of Object.entries(FAST_TIERS)) {
     if (tier.entries.some((entry) => (entry.endsWith(".ts") ? file === entry : file.startsWith(entry)))) return name
   }
@@ -381,33 +342,42 @@ if (patterns.length === 0 && !profile) {
     members.push(file)
     batches.set(tier, members)
   }
-  for (const [name, members] of batches) if (members.length < 2) batches.delete(name)
 
   // A batch shares one process, so process-wide mutations poison every later file in it.
-  // Refuse to batch files with the known-unsafe markers instead of failing mysteriously
-  // later: bun's mock.module is process-wide and permanent, AppRuntime.dispose() kills the
-  // shared runtime, and global-fetch spies observe batch-mates' traffic.
-  const unsafe = [/\bmock\.module\s*\(/, /\bAppRuntime\.dispose\s*\(/, /\bspyOn\s*\(\s*globalThis\b/]
-  const violations = (
-    await Promise.all(
-      [...batches.values()].flat().map(async (member) => {
-        const source = await Bun.file(path.join(root, "test", member)).text()
-        return unsafe.some((pattern) => pattern.test(source)) ? member : undefined
-      }),
+  // Scan member sources for the known-unsafe markers and demote matches to per-file runs:
+  // bun's mock.module is process-wide and permanent, AppRuntime.dispose() kills the shared
+  // runtime, and global-fetch spies observe batch-mates' traffic. A developer adding such
+  // a test anywhere keeps a green suite; the file just does not share a process.
+  // Markers: bun module mocks, disposal of the shared app runtime, spies on true globals,
+  // and module-scope env writes (column 0 — env set inside a test body is indented and
+  // typically restored; a load-time write leaks into every batch-mate's import snapshot).
+  const unsafe = [
+    /\bmock\.module\s*\(/,
+    /\bAppRuntime\.dispose\s*\(/,
+    /\bspyOn\s*\(\s*globalThis\b/,
+    /^process\.env\.\w+\s*=/m,
+  ]
+  const demoted = new Set(
+    (
+      await Promise.all(
+        [...batches.values()].flat().map(async (member) => {
+          const source = await Bun.file(path.join(root, "test", member)).text()
+          return unsafe.some((pattern) => pattern.test(source)) ? member : undefined
+        }),
+      )
+    ).filter((member): member is string => member !== undefined),
+  )
+  if (demoted.size > 0) {
+    console.log(
+      `Fast tier: ${demoted.size} file(s) use process-wide mocks/disposal/spies and run per-file instead:\n` +
+        [...demoted].map((file) => `- ${file}`).join("\n"),
     )
-  ).filter((member): member is string => member !== undefined)
-  if (violations.length > 0) {
-    console.error(
-      [
-        "These test files use process-wide mocks/disposal/spies and cannot run in a shared batch process.",
-        "Add them to BATCH_EXCLUDES in this script:",
-        ...violations.map((file) => `- ${file}`),
-      ].join("\n"),
-    )
-    process.exit(2)
+    for (const [name, members] of batches) batches.set(name, members.filter((member) => !demoted.has(member)))
   }
+  for (const [name, members] of batches) if (members.length < 2) batches.delete(name)
 }
-const inBatch = (file: string) => batches.size > 0 && tierOf(file) !== undefined && batches.has(tierOf(file)!)
+const batchOf = new Map([...batches.entries()].flatMap(([name, members]) => members.map((m) => [m, name] as const)))
+const inBatch = (file: string) => batchOf.has(file)
 const shardInput = [...batches.keys(), ...candidates.filter((file) => !inBatch(file))]
 const shardWeight = (file: string) =>
   FAST_TIERS[file]?.weight ?? (file.startsWith("fast-tier-kilocode-root-") ? KILOCODE_ROOT_WEIGHT : weight(file))
