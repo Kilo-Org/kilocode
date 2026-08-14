@@ -20,6 +20,12 @@
     "result": "show"
   },
   {
+    "name": "show preserves trailing text",
+    "input": "/memory show draft notes",
+    "result": "show",
+    "rest": "draft notes"
+  },
+  {
     "name": "status operation",
     "input": "/memory status",
     "result": "operation",

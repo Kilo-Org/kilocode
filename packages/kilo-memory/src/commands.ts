@@ -38,6 +38,7 @@ type Help = {
 
 type Show = {
   kind: "show"
+  rest?: string
 }
 
 type Operation =
@@ -139,7 +140,7 @@ export function parseMemoryCommand(input: string): ParsedMemoryCommand | undefin
   const parts = split(picked.rest)
   const verb = parts.head
   if (!verb) return { kind: "help" }
-  if (verb === "show") return { kind: "show" }
+  if (verb === "show") return { kind: "show", rest: parts.tail }
 
   const op = operation(verb, parts.tail)
   if (op) return op

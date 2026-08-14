@@ -350,6 +350,11 @@ describe("memoryRest", () => {
     expect(memoryRest(parseMemoryCommand("/memory rebuild")!)).toBe("")
   })
 
+  it("keeps trailing text in the input after the show command", () => {
+    // /memory show draft notes -> show executes, "draft notes" stays in the input.
+    expect(memoryRest(parseMemoryCommand("/memory show draft notes")!)).toBe("draft notes")
+  })
+
   it("returns empty string for argument-taking operations", () => {
     // remember/correct/forget/auto/purge consume their text, so nothing remains.
     expect(memoryRest(parseMemoryCommand("/memory remember hello")!)).toBe("")
