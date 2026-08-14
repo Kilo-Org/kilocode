@@ -50,13 +50,13 @@ export namespace TestSplit {
       patterns: ["--format json", "permission|prints "],
       weights: [77.0, 83.7, 95.5],
     },
-    // 56 tests, 133-158s, all of them 2-4s: nothing dominates, so the halves
+    // 55 tests, 133-158s, all of them 2-4s: nothing dominates, so the halves
     // are chosen purely for even weight.
     "snapshot/snapshot.test.ts": {
       patterns: ["diffFull|revert|gitignore"],
       weights: [75.6, 78.1],
     },
-    // 75 tests, 198s, and the heaviest file on Linux once run-process is split.
+    // 74 tests, 198s, and the heaviest file on Linux once run-process is split.
     // The shell and loop cases are half the weight between them, which happens
     // to halve the file almost exactly.
     "session/prompt.test.ts": {
