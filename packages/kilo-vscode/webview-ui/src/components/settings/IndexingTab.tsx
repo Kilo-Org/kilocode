@@ -616,7 +616,11 @@ const IndexingTab: Component = () => {
         </Show>
         <Show when={vectorStore() === "valkey"}>
           <>
-            <SettingsRow title="Valkey URL" description="Connection URL for the Valkey vector store">
+            <SettingsRow
+              title={language.t("settings.indexing.valkeyUrl.title")}
+              description={description(language.t("settings.indexing.valkeyUrl.description"), [["valkey", "url"]])}
+              tag={() => tag(scope(), [["valkey", "url"]])}
+            >
               <TextField
                 value={storeValue("valkey", "url")}
                 placeholder="redis://localhost:6379"
@@ -630,11 +634,16 @@ const IndexingTab: Component = () => {
                 }}
               />
             </SettingsRow>
-            <SettingsRow title="Valkey Password" description="Optional authentication password" last>
+            <SettingsRow
+              title={language.t("settings.indexing.valkeyPassword.title")}
+              description={description(language.t("settings.indexing.valkeyPassword.description"), [["valkey", "password"]])}
+              tag={() => tag(scope(), [["valkey", "password"]])}
+              last
+            >
               <TextField
                 type="password"
                 value={storeValue("valkey", "password")}
-                placeholder="Optional password"
+                placeholder={language.t("settings.indexing.valkeyPassword.placeholder")}
                 onInput={(e: InputEvent) => {
                   const target = e.currentTarget as HTMLInputElement
                   setStoreDrafts((prev) => ({ ...prev, [`${scope()}.valkey.password`]: target.value }))
