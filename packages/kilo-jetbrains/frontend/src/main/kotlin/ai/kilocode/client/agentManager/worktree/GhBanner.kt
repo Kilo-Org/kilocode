@@ -49,12 +49,14 @@ internal class GhBanner(
     private fun sync(next: GhAvailability) {
         clear()
         text(when (next) {
+            GhAvailability.GIT_MISSING -> KiloBundle.message("worktree.git.missing.content")
             GhAvailability.MISSING -> KiloBundle.message("worktree.gh.missing.content")
             GhAvailability.UNAUTH -> KiloBundle.message("worktree.gh.unauth.content")
             GhAvailability.OK -> ""
         })
         createActionLabel(when (next) {
-            GhAvailability.MISSING -> KiloBundle.message("worktree.gh.install")
+            GhAvailability.GIT_MISSING -> KiloBundle.message("worktree.gh.learnMore")
+            GhAvailability.MISSING -> KiloBundle.message("worktree.gh.learnMore")
             GhAvailability.UNAUTH -> KiloBundle.message("worktree.gh.authorize")
             GhAvailability.OK -> ""
         }) { runAction() }
@@ -67,6 +69,10 @@ internal class GhBanner(
     }
 
     private fun runAction() {
+        if (state == GhAvailability.GIT_MISSING) {
+            BrowserUtil.browse("https://git-scm.com/downloads")
+            return
+        }
         if (state == GhAvailability.MISSING) {
             BrowserUtil.browse("https://cli.github.com/")
             return

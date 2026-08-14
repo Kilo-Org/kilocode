@@ -47,8 +47,18 @@ class GhBannerTest : BasePlatformTestCase() {
 
         assertTrue(edt { banner.isVisible })
         assertEquals("Install gh to show pull request badges for worktrees.", edt { banner.text })
-        assertNotNull(edt { links(banner).singleOrNull { it.text == "Install" } })
-        assertNull(edt { links(banner).singleOrNull { it.text == "Learn more" && it.isVisible } })
+        assertNotNull(edt { links(banner).singleOrNull { it.text == "Learn more" } })
+    }
+
+    fun `test banner shows git install guidance`() {
+        edt { service.report(project, GhAvailability.GIT_MISSING) }
+        pump()
+
+        val banner = edt { GhBanner(project, testRootDisposable) }
+
+        assertTrue(edt { banner.isVisible })
+        assertEquals("Install Git to show worktree stats and pull request badges.", edt { banner.text })
+        assertNotNull(edt { links(banner).singleOrNull { it.text == "Learn more" } })
     }
 
     fun `test banner hides immediately when coordinator reports ok`() {

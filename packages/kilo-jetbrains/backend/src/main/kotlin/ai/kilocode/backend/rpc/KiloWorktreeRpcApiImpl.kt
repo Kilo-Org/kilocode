@@ -168,6 +168,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
                 when (prError(out.stderr)) {
                     GhAvailability.UNAUTH -> status = GhAvailability.UNAUTH
                     GhAvailability.MISSING -> status = GhAvailability.MISSING
+                    GhAvailability.GIT_MISSING -> status = GhAvailability.GIT_MISSING
                     GhAvailability.OK -> Unit
                 }
                 return@parallel null
@@ -192,6 +193,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             val base = Path.of(directory).normalize()
             val ref = parsePrUrl(url) ?: return@withContext CreateWorktreeResultDto(error = "Enter a valid GitHub pull request URL")
             when (ghAvailable(base)) {
+                GhAvailability.GIT_MISSING -> return@withContext CreateWorktreeResultDto(error = "Git is not installed")
                 GhAvailability.MISSING -> return@withContext CreateWorktreeResultDto(error = "GitHub CLI (gh) is not installed")
                 GhAvailability.UNAUTH -> return@withContext CreateWorktreeResultDto(error = "GitHub CLI (gh) is not authorized")
                 GhAvailability.OK -> Unit
@@ -425,6 +427,13 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         }
         val start = System.currentTimeMillis()
         LOG.info("gh probe start reason=$reason dir=$root")
+        val git = runGit(root, "--version")
+        if (!git.ok) {
+            val value = GhAvailability.GIT_MISSING
+            ghCache = Timed(System.currentTimeMillis(), value)
+            LOG.info("gh probe result reason=$reason value=$value exit=${git.exit} ms=${System.currentTimeMillis() - start} stderr=${snippet(git.stderr)}")
+            return@synchronized value
+        }
         val res = runGh(root, "auth", "status")
         val value = if (res.ok) GhAvailability.OK else classifyGhError(res.stderr.ifBlank { res.stdout })
         ghCache = Timed(System.currentTimeMillis(), value)

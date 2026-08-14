@@ -42,7 +42,7 @@ data class WorktreePrDto(
 )
 
 @Serializable
-enum class GhAvailability { OK, MISSING, UNAUTH }
+enum class GhAvailability { OK, MISSING, UNAUTH, GIT_MISSING }
 
 @Serializable
 data class WorktreePrListDto(

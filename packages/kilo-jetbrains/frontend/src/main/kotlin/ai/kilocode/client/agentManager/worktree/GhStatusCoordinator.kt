@@ -184,17 +184,27 @@ class GhStatusCoordinator(
         GhAvailability.OK -> NORMAL
         GhAvailability.UNAUTH -> FAST
         GhAvailability.MISSING -> SLOW
+        GhAvailability.GIT_MISSING -> SLOW
     }
 
     @RequiresEdt
     private fun notify(project: Project?, value: GhAvailability) {
         val target = project ?: ProjectManager.getInstance().openProjects.firstOrNull { !it.isDefault }
+        if (value == GhAvailability.GIT_MISSING) {
+            KiloNotifications.suggestion(
+                target,
+                KiloBundle.message("worktree.git.missing.title"),
+                KiloBundle.message("worktree.git.missing.content"),
+                KiloBundle.message("worktree.gh.learnMore"),
+            ) { BrowserUtil.browse("https://git-scm.com/downloads") }
+            return
+        }
         if (value == GhAvailability.MISSING) {
             KiloNotifications.suggestion(
                 target,
                 KiloBundle.message("worktree.gh.missing.title"),
                 KiloBundle.message("worktree.gh.missing.content"),
-                KiloBundle.message("worktree.gh.install"),
+                KiloBundle.message("worktree.gh.learnMore"),
             ) { BrowserUtil.browse("https://cli.github.com/") }
             return
         }
