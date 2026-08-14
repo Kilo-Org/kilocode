@@ -90,6 +90,25 @@ jobs:
         run: echo "Only isolated product, documentation, or metadata files changed; general unit tests are unchanged."
       # kilocode_change end
 
+      # kilocode_change start - Defender real-time scanning taxes every process spawn and
+      # temp-file write on Windows; the suite spawns hundreds of test processes and builds
+      # temp git repos, so exclude the runner's work and temp paths up front. Best effort by
+      # design: on images where Defender is absent or locked down, the suite runs unchanged.
+      - name: Exclude runner work dirs from Defender scanning
+        if: matrix.settings.run && runner.os == 'Windows'
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          try {
+            foreach ($dir in @($env:GITHUB_WORKSPACE, $env:RUNNER_TEMP, $env:TEMP, "$env:USERPROFILE\.bun")) {
+              if ($dir) { Add-MpPreference -ExclusionPath $dir -ErrorAction Stop }
+            }
+            Write-Host "Defender path exclusions applied."
+          } catch {
+            Write-Host "Defender exclusions not applied: $($_.Exception.Message)"
+          }
+      # kilocode_change end
+
       - name: Checkout repository
         if: matrix.settings.run # kilocode_change
         uses: actions/checkout@v6 # kilocode_change
