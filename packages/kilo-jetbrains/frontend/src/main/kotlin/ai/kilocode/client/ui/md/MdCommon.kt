@@ -77,8 +77,8 @@ internal object MdCommon {
         rules.append("a.kilo-file-ref, code a.kilo-file-ref { color: ${hex(SessionUiStyle.View.Markdown.string())}; font-family: '${css(opts.codeFont)}', monospace; text-decoration: underline } ")
         rules.append("ul, ol { color: ${hex(opts.listMarkerFg)} } ")
         rules.append("li { color: ${hex(opts.foreground)} } ")
-        rules.append("tt, code, samp, pre, pre code { font-family: '${css(opts.codeFont)}', monospace } ")
-        rules.append("pre { background: ${hex(opts.preBg)}; color: ${hex(opts.preFg)}; border-color: ${hex(opts.codeBorder)} } ")
+        rules.append("tt, code, samp, pre, pre code { font-family: '${css(opts.codeFont)}', monospace; border-width: 0 } ")
+        rules.append("pre { background: ${hex(opts.preBg)}; color: ${hex(opts.preFg)}; border-color: ${hex(opts.codeBorder)}; border-width: 0 } ")
         rules.append("pre code { background: ${hex(opts.preBg)}; color: ${hex(opts.preFg)} } ")
         rules.append("blockquote { background: ${hex(opts.quoteBg)}; border-left-color: ${hex(opts.quoteBorder)}; color: ${hex(opts.quoteFg)} } ")
         rules.append("blockquote p { color: ${hex(opts.quoteFg)} } ")
@@ -94,7 +94,6 @@ internal object MdCommon {
             ?: fg(style, DefaultLanguageHighlighterColors.DOC_COMMENT)
             ?: UIUtil.getContextHelpForeground()
         val border = color(style, EditorColors.PREVIEW_BORDER_COLOR) ?: UiStyle.Colors.contentBorder()
-        val blockBg = UiStyle.Colors.codeBlockBackground(style.editorScheme)
         return MdStyle(
             font = style.transcriptFont,
             foreground = style.editorForeground,
@@ -103,7 +102,7 @@ internal object MdCommon {
             codeBg = bg(style, DefaultLanguageHighlighterColors.DOC_CODE_INLINE)
                 ?: bg(style, DefaultLanguageHighlighterColors.STRING)
                 ?: style.editorBackground,
-            preBg = blockBg,
+            preBg = style.editorBackground,
             preFg = fg(style, DefaultLanguageHighlighterColors.DOC_CODE_BLOCK) ?: style.editorForeground,
             codeFont = style.editorFamily,
             quoteBorder = border,

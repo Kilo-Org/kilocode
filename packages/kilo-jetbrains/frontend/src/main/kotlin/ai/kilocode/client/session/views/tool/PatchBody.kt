@@ -19,7 +19,6 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.EditorTextField
 import com.intellij.ui.components.JBScrollPane
-import com.intellij.util.ui.NamedColorUtil
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import java.awt.Component
@@ -184,7 +183,7 @@ class PatchBody(
     @RequiresEdt
     private fun header(file: EditFileChange): JComponent {
         val link = FileLinkLabel(openFile).apply {
-            foreground = UiStyle.Colors.fg()
+            foreground = SessionUiStyle.Colors.foreground()
             font = style.transcriptFont
             setTarget(file.path, tail(file.path))
             isVisible = true
@@ -195,10 +194,6 @@ class PatchBody(
             .next(DiffStatBadge(file.additions, file.deletions))
         return JBUI.Panels.simplePanel(row).apply {
             isOpaque = false
-            border = JBUI.Borders.compound(
-                JBUI.Borders.customLineBottom(NamedColorUtil.getBoundsColor()),
-                JBUI.Borders.emptyLeft(SessionUiStyle.View.Code.VIEWPORT_HORIZONTAL_PADDING),
-            )
         }
     }
 
@@ -207,8 +202,8 @@ class PatchBody(
         md.applyStyle(style)
         md.font = style.editorFont
         md.foreground = style.editorForeground
-        md.background = style.editorBackground
-        md.preBg = style.editorBackground
+        md.background = SessionUiStyle.Colors.codeBlockBackground()
+        md.preBg = SessionUiStyle.Colors.codeBlockBackground()
         md.codeFont = style.editorFamily
         md.component.border = JBUI.Borders.empty()
         rows.getOrNull(views.indexOf(md))?.let { installGutter(md, it) }
@@ -225,10 +220,12 @@ class PatchBody(
 
     private companion object {
         val DIFF_OPTS = MdCodeBlockOptions(
-            border = MdCodeBlockBorder.Bottom,
+            border = MdCodeBlockBorder.None,
             maxLines = SessionUiStyle.View.Tool.DIFF_LINES,
             verticalPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
             editorOnly = true,
+            horizontalPadding = 0,
+            overlapScrollbar = true,
         )
     }
 }
