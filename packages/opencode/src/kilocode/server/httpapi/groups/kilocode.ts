@@ -27,6 +27,7 @@ import { SessionID } from "@/session/schema"
 import { CommandFiles } from "@/kilocode/command-files"
 
 const root = "/kilocode"
+const Scope = Schema.Literals(["global", "project"])
 
 export const RemoveSkillPayload = Schema.Struct({
   location: Schema.String,
@@ -38,6 +39,7 @@ export const RemoveCommandPayload = Schema.Struct({
 
 export const RemoveAgentPayload = Schema.Struct({
   name: Schema.String,
+  scope: Schema.optional(Scope),
 })
 
 export const AgentRequirementQuery = Schema.Struct({
@@ -134,7 +136,7 @@ export const KilocodeApi = HttpApi.make("kilocode")
             identifier: "kilocode.removeAgent",
             summary: "Remove a custom agent",
             description:
-              "Remove a custom (non-native) agent by deleting its markdown file from disk and refreshing state.",
+              "Remove a custom (non-native) agent from one writable configuration scope, or every writable scope when omitted, and dispose cached instance state.",
           }),
         ),
         HttpApiEndpoint.get("notebookList", KilocodePaths.notebookList, {

@@ -3,6 +3,7 @@ package ai.kilocode.client.session.ui.header
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.ContextUsage
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
@@ -41,9 +42,10 @@ internal class ContextBar : JPanel(BorderLayout(UiStyle.Gap.md(), 0)) {
     }
 
     fun applyStyle(style: SessionEditorStyle) {
-        background = style.editorBackground
+        val bg = SessionUiStyle.Colors.sessionBackground()
+        background = bg
         foreground = style.editorForeground
-        meter.background = style.editorBackground
+        meter.background = bg
         used.font = style.smallFont
         used.foreground = style.editorForeground
         limit.font = style.smallFont
@@ -143,7 +145,7 @@ private class Meter : JComponent() {
     fun reservedColor(): Color = shade(0.28f)
 
     private fun shade(alpha: Float): Color {
-        val base = background ?: UiStyle.Colors.editorBackground()
+        val base = background ?: SessionUiStyle.Colors.sessionBackground()
         val grey = if (UiStyle.Colors.bright(base)) Color.BLACK else Color.WHITE
         return UiStyle.Colors.blend(base, grey, alpha)
     }

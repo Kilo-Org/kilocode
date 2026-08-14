@@ -22,7 +22,9 @@ class ScenarioBuilder<S = undefined> {
       method,
       path,
       name,
-      project: { git: true },
+      // kilocode_change start - default to an in-memory project dir; opt into git init only for routes
+      // that exercise VCS primitives or HEAD-based diffs to avoid ~70 redundant `git init` calls per run.
+      project: { git: false },
       // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- The unseeded builder state is intentionally undefined until `.seeded(...)` narrows it.
       seed: () => Effect.succeed(undefined as S),
       request: (ctx) => ({ path, headers: ctx.headers() }),
@@ -39,12 +41,12 @@ class ScenarioBuilder<S = undefined> {
     return this.clone({ project: undefined, request: () => ({ path: this.state.path }) })
   }
 
-  inProject(project: ProjectOptions = { git: true }) {
+  inProject(project: ProjectOptions = { git: false }) {
     return this.clone({ project })
   }
 
   withLlm() {
-    return this.clone({ project: { ...(this.state.project ?? { git: true }), llm: true } })
+    return this.clone({ project: { ...(this.state.project ?? { git: false }), llm: true } })
   }
 
   at(request: BuilderState<S>["request"]) {

@@ -15,6 +15,7 @@ export interface PRCheck {
 
 export interface PRComment {
   id: string
+  threadId: string
   author: string
   avatar?: string
   body: string
@@ -23,6 +24,7 @@ export interface PRComment {
   url?: string
   resolved: boolean
   createdAt?: number
+  diffHunk?: string
 }
 
 export type ReviewerState = "approved" | "changes_requested" | "pending" | "commented"

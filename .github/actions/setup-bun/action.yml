@@ -40,8 +40,8 @@ runs:
       shell: bash
       run: echo "dir=$(bun pm cache)" >> "$GITHUB_OUTPUT"
 
-    # Restoring and extracting the ~1 GB cache took 2m23s on Windows, while a # kilocode_change
-    # fresh install took 1m27s. Keep Windows off this cache until that reverses. # kilocode_change
+    # Restoring the ~1 GB cache buys nothing on Windows even with Defender exclusions # kilocode_change
+    # (measured 83-102s Setup Bun with cache vs ~86s fresh install); keep Windows off it. # kilocode_change
     - name: Restore Bun dependencies
       if: runner.os != 'Windows' # kilocode_change
       id: bun-cache

@@ -23,8 +23,8 @@ import kotlin.math.roundToInt
  * Editor-specific fields ([editorFont], [editorForeground], [editorBackground]) are derived from the active editor color
  * scheme and are used for code/editor-rendered content.
  *
- * UI font fields ([transcriptFont], [smallEditorFont], [boldEditorFont], [headerFont], [hintFont], [regularFont],
- * [boldFont], [smallFont]) come from [UiStyle.Fonts] and follow standard platform typography. Transcript fonts use the
+ * UI font fields ([transcriptFont], [smallEditorFont], [boldEditorFont], [headerFont], [regularFont], [boldFont],
+ * [smallFont]) come from [UiStyle.Fonts] and follow standard platform typography. Transcript fonts use the
  * editor size so the session body tracks editor zoom without adopting the editor family.
  */
 data class SessionEditorStyle(
@@ -38,7 +38,6 @@ data class SessionEditorStyle(
     val smallEditorFont: Font,
     val boldEditorFont: Font,
     val headerFont: Font,
-    val hintFont: Font,
     val regularFont: Font,
     val boldFont: Font,
     val smallFont: Font,
@@ -133,7 +132,6 @@ data class SessionEditorStyle(
                 smallEditorFont = uiFont(UiStyle.Fonts.small(), Font.PLAIN, small),
                 boldEditorFont = uiFont(UiStyle.Fonts.regular(), Font.BOLD, size),
                 headerFont = UiStyle.Fonts.header(),
-                hintFont = UiStyle.Fonts.hint(),
                 regularFont = UiStyle.Fonts.regular(),
                 boldFont = UiStyle.Fonts.bold(),
                 smallFont = UiStyle.Fonts.small(),

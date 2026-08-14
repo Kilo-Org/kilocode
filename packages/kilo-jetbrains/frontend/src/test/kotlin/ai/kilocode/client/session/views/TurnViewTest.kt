@@ -144,14 +144,22 @@ class TurnViewTest : BasePlatformTestCase() {
         assertFalse(mv.isOpaque)
     }
 
-    fun `test user message uses standard outline color`() {
+    // An empty user message is a bare turn anchor with no parts. It must paint nothing: painting the
+    // prompt surface on its ~1px-tall bounds would leave a thin light stripe at the top of the turn.
+    fun `test empty user message paints no prompt surface stripe`() {
         val mv = MessageView(msg("u1", "user"), openFile)
-        mv.setSize(120, 48)
-        val image = BufferedImage(120, 48, BufferedImage.TYPE_INT_ARGB)
+        mv.setSize(120, 4)
+        val image = BufferedImage(120, 4, BufferedImage.TYPE_INT_ARGB)
 
-        mv.paint(image.createGraphics())
+        val g = image.createGraphics()
+        mv.paint(g)
+        g.dispose()
 
-        assertEquals(SessionUiStyle.View.Outline.color().rgb, image.getRGB(60, 0))
+        for (x in 0 until 120) {
+            for (y in 0 until 4) {
+                assertEquals("pixel ($x,$y) must stay transparent", 0, (image.getRGB(x, y) ushr 24) and 0xff)
+            }
+        }
     }
 
     fun `test assistant message remains borderless`() {
@@ -369,8 +377,8 @@ class TurnViewTest : BasePlatformTestCase() {
     }
 
     fun `test consecutive messages use shared compact gap`() {
-        val tv = TurnView("u1", openFile)
-        tv.addMessage(msg("u1", "user").also { msg ->
+        val tv = TurnView("a1", openFile)
+        tv.addMessage(msg("a1", "assistant").also { msg ->
             msg.parts["t1"] = Tool("t1", "read", toolKind("read")).also { it.state = ToolExecState.COMPLETED }
         })
         tv.addMessage(msg("a2", "assistant").also { msg ->
@@ -379,7 +387,7 @@ class TurnViewTest : BasePlatformTestCase() {
 
         tv.setSize(400, 300)
         tv.doLayout()
-        val first = tv.messageView("u1")!!
+        val first = tv.messageView("a1")!!
         val second = tv.messageView("a2")!!
 
         assertEquals(JBUI.scale(SessionUiStyle.SessionLayout.GAP), second.y - first.bounds.maxY.toInt())
