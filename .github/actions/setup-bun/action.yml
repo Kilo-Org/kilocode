@@ -40,10 +40,9 @@ runs:
       shell: bash
       run: echo "dir=$(bun pm cache)" >> "$GITHUB_OUTPUT"
 
-    # Restoring and extracting the ~1 GB cache took 2m23s on Windows, while a # kilocode_change
-    # fresh install took 1m27s. Keep Windows off this cache until that reverses. # kilocode_change
+    # Windows uses this cache again: the old 2m23s restore-vs-1m27s-install measurement # kilocode_change
+    # predates the Defender exclusions, which cover both the bun cache and node_modules. # kilocode_change
     - name: Restore Bun dependencies
-      if: runner.os != 'Windows' # kilocode_change
       id: bun-cache
       uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
       with:
@@ -102,9 +101,8 @@ runs:
         fi
       shell: bash
 
-    # Do not upload a Windows cache that Windows jobs intentionally never restore. # kilocode_change
     - name: Save Bun dependencies
-      if: runner.os != 'Windows' && steps.bun-cache.outputs.cache-hit != 'true' && github.event_name != 'pull_request' && github.event_name != 'pull_request_target' # kilocode_change
+      if: steps.bun-cache.outputs.cache-hit != 'true' && github.event_name != 'pull_request' && github.event_name != 'pull_request_target' # kilocode_change
       uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
       with:
         path: ${{ steps.cache.outputs.dir }}
