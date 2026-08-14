@@ -40,8 +40,8 @@ export function MainView(props: {
       }))
 
     const pluginCount = Array.isArray(props.ctx.tui("plugin")) ? (props.ctx.tui("plugin") as unknown[]).length : 0
-    const disabledProvidersFooter = sync.data.provider_next.disabled.length
-      ? `${sync.data.provider_next.disabled.length} hidden`
+    const disabledProvidersFooter = props.ctx.store.disabledProviders.length
+      ? `${props.ctx.store.disabledProviders.length} hidden`
       : "none"
 
     return [
@@ -298,6 +298,8 @@ export function MainView(props: {
       placeholder="Search settings"
       options={options()}
       scrollbar={true}
+      truncateOverflow
+      compactFooter
       locked={props.ctx.store.loading || props.ctx.store.refreshing || props.ctx.store.busy !== undefined}
       onSelect={(option) => choose(option.value)}
       footer={<Status ctx={props.ctx} scope={props.scope} />}

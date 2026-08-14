@@ -71,6 +71,8 @@ import type {
   ConfigUpdateResponses,
   ConfigWarningsErrors,
   ConfigWarningsResponses,
+  DisabledProvidersListErrors,
+  DisabledProvidersListResponses,
   EnhancePromptEnhanceErrors,
   EnhancePromptEnhanceResponses,
   EventSubscribeResponses,
@@ -6445,6 +6447,42 @@ export class CommitMessage extends HeyApiClient {
   }
 }
 
+export class DisabledProviders extends HeyApiClient {
+  /**
+   * List disabled providers
+   *
+   * List providers hidden by the disabled_providers config so the settings UI can re-enable them.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      DisabledProvidersListResponses,
+      DisabledProvidersListErrors,
+      ThrowOnError
+    >({
+      url: "/provider/disabled",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class EnhancePrompt extends HeyApiClient {
   /**
    * Enhance prompt
@@ -11480,6 +11518,11 @@ export class KiloClient extends HeyApiClient {
   private _commitMessage?: CommitMessage
   get commitMessage(): CommitMessage {
     return (this._commitMessage ??= new CommitMessage({ client: this.client }))
+  }
+
+  private _disabledProviders?: DisabledProviders
+  get disabledProviders(): DisabledProviders {
+    return (this._disabledProviders ??= new DisabledProviders({ client: this.client }))
   }
 
   private _enhancePrompt?: EnhancePrompt

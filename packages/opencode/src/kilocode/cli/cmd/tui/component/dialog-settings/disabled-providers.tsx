@@ -1,16 +1,14 @@
 import { DialogSelect } from "@tui/ui/dialog-select"
 import { useBindings } from "@tui/keymap"
 import { Show } from "solid-js"
-import { useSync } from "@tui/context/sync"
 import { useTheme } from "@tui/context/theme"
 import { Spinner } from "@tui/component/spinner"
 import type { SettingsState } from "./state"
 
 export function DisabledProvidersView(props: { ctx: SettingsState; back: () => void }) {
   const { theme } = useTheme()
-  const sync = useSync()
   const options = () =>
-    sync.data.provider_next.disabled
+    props.ctx.store.disabledProviders
       .map((provider) => ({
         title: provider.name,
         description: provider.id,
@@ -30,6 +28,8 @@ export function DisabledProvidersView(props: { ctx: SettingsState; back: () => v
       options={options()}
       renderFilter={false}
       locked={props.ctx.store.busy !== undefined}
+      truncateOverflow
+      compactFooter
       onSelect={async (option) => {
         const ok = await props.ctx.enableProvider(option.value, option.title)
         if (ok) props.back()

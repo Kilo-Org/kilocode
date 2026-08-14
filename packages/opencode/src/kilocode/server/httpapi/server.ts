@@ -16,6 +16,7 @@ import { backgroundProcessHandlers } from "./handlers/background-process"
 import { branchNameHandlers } from "./handlers/branch-name"
 import { commitMessageHandlers } from "./handlers/commit-message"
 import { configConsoleHandlers } from "./handlers/config-console"
+import { disabledProvidersHandlers } from "./handlers/disabled-providers" // kilocode_change
 import { enhancePromptHandlers } from "./handlers/enhance-prompt"
 import { indexingHandlers } from "./handlers/indexing"
 import { instanceReloadHandlers } from "./handlers/instance-reload"
@@ -37,6 +38,7 @@ export const provide = Layer.provide([
   branchNameHandlers,
   commitMessageHandlers,
   configConsoleHandlers,
+  disabledProvidersHandlers, // kilocode_change
   enhancePromptHandlers,
   indexingHandlers,
   instanceReloadHandlers,

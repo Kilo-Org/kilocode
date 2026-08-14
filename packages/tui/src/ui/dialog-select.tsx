@@ -37,6 +37,8 @@ export interface DialogSelectProps<T> {
   locked?: boolean
   preserveSelection?: boolean
   scrollbar?: boolean // kilocode_change - allow Kilo dialogs to opt into a visible scrollbar
+  truncateOverflow?: boolean // kilocode_change - render "…" when the title text overflows
+  compactFooter?: boolean // kilocode_change - apply padding/wrapMode tweaks to the footer text
   actions?: DialogSelectAction<T>[] // kilocode_change - supports actions without a selected option
   footerHints?: {
     title: string
@@ -710,6 +712,8 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
                               footer={flatten() ? (option.category ?? option.footer) : option.footer}
                               titleWidth={option.titleWidth}
                               truncateTitle={option.truncateTitle}
+                              truncateOverflow={props.truncateOverflow} // kilocode_change
+                              compactFooter={props.compactFooter} // kilocode_change
                               description={option.description !== category ? option.description : undefined}
                               active={active()}
                               current={current()}
@@ -761,6 +765,8 @@ function Option(props: {
   footer?: JSX.Element | string
   titleWidth?: number
   truncateTitle?: boolean | "left"
+  truncateOverflow?: boolean // kilocode_change - opt-in ellipsis for long titles
+  compactFooter?: boolean // kilocode_change - opt-in padding/wrapMode tweaks to footer text
   gutter?: () => JSX.Element
   onMouseOver?: () => void
 }) {
@@ -792,7 +798,7 @@ function Option(props: {
         overflow="hidden"
         wrapMode="none"
         paddingLeft={3}
-        truncate // kilocode_change - append "…" when the row is narrower than the description
+        {...(props.truncateOverflow ? { truncate: true } : {})} // kilocode_change - opt-in ellipsis for long titles
       >
         {props.titleView ??
           (props.truncateTitle === false
@@ -804,15 +810,18 @@ function Option(props: {
           <span style={{ fg: props.active && !props.muted ? fg : theme.textMuted }}> {props.description}</span>
         </Show>
       </text>
-      {/* kilocode_change start - keep a visible gap and right edge when truncating long descriptions */}
       <Show when={props.footer}>
-        <box flexShrink={0} paddingLeft={1} marginRight={3}>
-          <text fg={props.active && !props.muted ? fg : theme.textMuted} wrapMode="none">
+        {/* kilocode_change start - opt-in padding/wrapMode tweaks for compact footer rows */}
+        <box flexShrink={0} paddingLeft={props.compactFooter ? 1 : 0} marginRight={props.compactFooter ? 3 : 0}>
+          <text
+            fg={props.active && !props.muted ? fg : theme.textMuted}
+            wrapMode={props.compactFooter ? "none" : undefined}
+          >
             {props.footer}
           </text>
         </box>
+        {/* kilocode_change end */}
       </Show>
-      {/* kilocode_change end */}
     </>
   )
 }
