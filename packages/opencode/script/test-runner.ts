@@ -807,22 +807,32 @@ if (ci) {
 
 // kilocode_change start - refresh the measured shard weights from this run. Only a full,
 // unfiltered pass measures every per-file work item, so gate on that. Batch pseudo-files
-// are skipped: their members are timed collectively and their weights live in FAST_TIERS.
+// are skipped: their members are timed collectively, so per-member entries are preserved.
 if (updateDurations) {
   if (patterns.length > 0 || profile || shard) {
     console.log("\n--update-durations skipped: needs a full run (no patterns, profile, or shard)")
   } else {
-    const measured = Object.fromEntries(
+    // Merge over the existing file rather than replacing it: batched members are timed
+    // collectively (only their pseudo-file appears in results), but their individual
+    // durations still feed the computed batch weights — replacing would erase them.
+    const fresh = Object.fromEntries(
       results
         .filter((result) => !batches.has(result.file))
-        .map((result) => [result.file, Math.round(result.duration)] as const)
+        .map((result) => [result.file, Math.round(result.duration)] as const),
+    )
+    const files = new Set(candidates)
+    const merged = Object.fromEntries(
+      Object.entries({ ...measuredDurations, ...fresh })
+        .filter(([file]) => files.has(file))
         .sort(([a], [b]) => a.localeCompare(b)),
     )
     await Bun.write(
       path.join(root, "script", "kilocode", "test-durations.json"),
-      JSON.stringify(measured, null, 1) + "\n",
+      JSON.stringify(merged, null, 1) + "\n",
     )
-    console.log(`\nUpdated script/kilocode/test-durations.json with ${Object.keys(measured).length} measured files`)
+    console.log(
+      `\nUpdated script/kilocode/test-durations.json: ${Object.keys(fresh).length} re-measured, ${Object.keys(merged).length} total`,
+    )
   }
 }
 // kilocode_change end
