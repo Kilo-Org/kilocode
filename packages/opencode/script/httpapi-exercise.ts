@@ -14,10 +14,16 @@ if (shardsIndex !== -1 && (!Number.isInteger(shards) || shards < 1)) {
 
 if (shards > 1) {
   const passthrough = args.filter((_, index) => index !== shardsIndex && index !== shardsIndex + 1)
+  // Children must key their database and global root by their own PID. If the parent's
+  // environment pins these (KILO_HTTPAPI_EXERCISE_*), every child would inherit the same
+  // SQLite file and XDG root and shards would collide — strip them so isolation holds.
+  const env = { ...process.env }
+  delete env["KILO_HTTPAPI_EXERCISE_DB"]
+  delete env["KILO_HTTPAPI_EXERCISE_GLOBAL"]
   const children = Array.from({ length: shards }, (_, index) =>
     Bun.spawn(
       [process.execPath, "run", import.meta.path, ...passthrough, "--shard", `${index + 1}/${shards}`],
-      { stdout: "pipe", stderr: "pipe" },
+      { stdout: "pipe", stderr: "pipe", env },
     ),
   )
   const relay = async (stream: ReadableStream<Uint8Array>, tag: string, sink: NodeJS.WriteStream) => {
