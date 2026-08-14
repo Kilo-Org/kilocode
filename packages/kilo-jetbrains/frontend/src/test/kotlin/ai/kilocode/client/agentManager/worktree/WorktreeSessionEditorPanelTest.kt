@@ -36,6 +36,7 @@ import com.intellij.ui.SearchTextField
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.UIUtil
+import java.awt.Color
 import java.awt.Container
 import java.awt.Point
 import java.awt.event.ActionEvent
@@ -46,6 +47,7 @@ import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.KeyStroke
 import javax.swing.SwingUtilities
+import javax.swing.UIManager
 
 @Suppress("UnstableApiUsage")
 class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
@@ -110,13 +112,31 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         assertEquals(activeListToolWindowBackground(), edt { scroll.background })
         assertEquals(activeListToolWindowBackground(), edt { scroll.viewport.background })
         assertEquals(activeListToolWindowBackground(), edt { (scroll.viewport.view as JComponent).background })
-        assertEquals(activeListToolWindowBackground(), edt { toolbar.background })
+        assertFalse(edt { toolbar.isOpaque })
         assertEquals(activeListToolWindowBackground(), edt { toolbarPanel.background })
         assertEquals(activeListToolWindowBackground(), edt { header.background })
         assertEquals(0, edt { scroll.border.getBorderInsets(scroll).left })
         assertEquals(0, edt { scroll.viewportBorder.getBorderInsets(scroll).left })
         assertTrue(edt { toolbarPanel.border.getBorderInsets(toolbarPanel).right > 0 })
         assertTrue(edt { header.border.getBorderInsets(header).bottom > 0 })
+    }
+
+    fun `test toolbar background tracks the theme automatically`() {
+        val button = edt { components(panel).filterIsInstance<ActionButton>().single { it.presentation.text == "New session" } }
+        val toolbar = edt { button.parent as JComponent }
+        val toolbarPanel = edt { toolbar.parent as JComponent }
+        val old = UIManager.get("ToolWindow.background")
+        val next = Color(17, 34, 51)
+
+        try {
+            // The toolbar is transparent, so its themed background comes from the parent and follows
+            // the theme's ToolWindow.background live -- no listener or manual assignment required.
+            assertFalse(edt { toolbar.isOpaque })
+            edt { UIManager.put("ToolWindow.background", next) }
+            assertEquals(next, edt { toolbarPanel.background })
+        } finally {
+            UIManager.put("ToolWindow.background", old)
+        }
     }
 
     fun `test expand collapse hides session list and edit toolbar but keeps header actions`() {

@@ -13,7 +13,6 @@ import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.session.history.LocalHistoryItem
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.telemetry.Telemetry
-import ai.kilocode.client.util.bindTheme
 import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListConfig
@@ -116,7 +115,9 @@ class WorktreeSessionEditorPanel(
         Disposer.register(parent, this)
         isOpaque = true
         toolbar.targetComponent = this
-        toolbar.component.background = activeListToolWindowBackground()
+        // Keep the toolbar transparent so it shows its themed parent background and tracks
+        // Look-and-Feel changes automatically, instead of caching a color that goes stale.
+        toolbar.component.isOpaque = false
         toolbar.updateActionsImmediately()
         list.installPopup(group)
         splitter.firstComponent = list
@@ -141,7 +142,6 @@ class WorktreeSessionEditorPanel(
             }
         }
         bindStatus()
-        bindTheme(this, this)
         sync()
     }
 

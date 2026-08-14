@@ -24,7 +24,6 @@ import ai.kilocode.client.diff.ensureDiffEditorKind
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.ui.UiStyle
-import ai.kilocode.client.util.bindTheme
 import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListConfig
@@ -108,7 +107,6 @@ class AgentManagerPanel(
         list.installPopup(group)
         sync()
         bindModel()
-        bindTheme(this, this)
         controller.onSelect = { key ->
             // Focus the list so the freshly created worktree renders as an active selection rather
             // than the inactive highlight it would get while focus stays on the toolbar.
