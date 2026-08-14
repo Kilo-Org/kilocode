@@ -380,10 +380,13 @@ class SessionMessageListPanel(
 
     private fun syncReverted() {
         for ((id, view) in msgToView) {
-            view.isVisible = !model.isRevertedMessage(id)
+            view.setReverted(model.isRevertedMessage(id))
         }
+        // Turn visibility tracks revert only, independent of a message being empty: an empty message
+        // hides its own row (MessageView.setReverted/syncVisibility), but the turn stays visible so its
+        // other content and modified-files card still render.
         for (view in turnViews.values) {
-            view.isVisible = view.messageIds().any { msgToView[it]?.isVisible == true }
+            view.isVisible = view.messageIds().any { !model.isRevertedMessage(it) }
         }
     }
 

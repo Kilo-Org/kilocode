@@ -377,8 +377,8 @@ class TurnViewTest : BasePlatformTestCase() {
     }
 
     fun `test consecutive messages use shared compact gap`() {
-        val tv = TurnView("u1", openFile)
-        tv.addMessage(msg("u1", "user").also { msg ->
+        val tv = TurnView("a1", openFile)
+        tv.addMessage(msg("a1", "assistant").also { msg ->
             msg.parts["t1"] = Tool("t1", "read", toolKind("read")).also { it.state = ToolExecState.COMPLETED }
         })
         tv.addMessage(msg("a2", "assistant").also { msg ->
@@ -387,7 +387,7 @@ class TurnViewTest : BasePlatformTestCase() {
 
         tv.setSize(400, 300)
         tv.doLayout()
-        val first = tv.messageView("u1")!!
+        val first = tv.messageView("a1")!!
         val second = tv.messageView("a2")!!
 
         assertEquals(JBUI.scale(SessionUiStyle.SessionLayout.GAP), second.y - first.bounds.maxY.toInt())

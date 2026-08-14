@@ -95,6 +95,7 @@ class MessageView(
     private var wrap: PromptWrap? = null
     private var openDiff: SessionDiffOpener = { _, _, _ -> }
     private var sessionId: String? = null
+    private var reverted = false
 
     init {
         isOpaque = false
@@ -107,6 +108,7 @@ class MessageView(
             if (isHidden(content)) continue
             addPart(content)
         }
+        syncVisibility()
     }
 
     fun setDiffOpener(openDiff: SessionDiffOpener, sessionId: String?) {
@@ -491,8 +493,30 @@ class MessageView(
         }
     }
 
+    /**
+     * Mark this message as reverted (rolled back). A reverted message is hidden regardless of its
+     * content; the panel drives this from the model's revert state.
+     */
+    @RequiresEdt
+    fun setReverted(value: Boolean) {
+        reverted = value
+        syncVisibility()
+    }
+
+    /**
+     * An empty message (no rendered parts) would otherwise lay out as a ~1px row and add a stray gap
+     * at the top of its turn — a bare user turn anchor is the common case. Keep such a message present
+     * for lookup/streaming but invisible so [ai.kilocode.client.session.ui.SessionLayout] skips it and
+     * its gap; it reappears as soon as content arrives. Reverted messages stay hidden either way.
+     */
+    @RequiresEdt
+    private fun syncVisibility() {
+        isVisible = componentCount > 0 && !reverted
+    }
+
     @RequiresEdt
     private fun refresh() {
+        syncVisibility()
         revalidate()
         repaint()
     }

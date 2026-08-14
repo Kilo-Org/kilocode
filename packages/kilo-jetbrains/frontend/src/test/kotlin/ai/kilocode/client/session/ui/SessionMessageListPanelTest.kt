@@ -360,10 +360,13 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
     }
 
     fun `test turn view hides when all messages are reverted`() {
-        model.upsertMessage(msg("u1", "user"))
-        model.upsertMessage(msg("a1", "assistant"))
-        model.upsertMessage(msg("u2", "user"))
-        model.upsertMessage(msg("a2", "assistant"))
+        // Messages carry content so their visibility reflects revert state rather than emptiness.
+        model.loadHistory(listOf(
+            MessageWithPartsDto(msg("u1", "user"), listOf(part("u1p", "u1", "text", "hi"))),
+            MessageWithPartsDto(msg("a1", "assistant"), listOf(part("a1p", "a1", "text", "ok"))),
+            MessageWithPartsDto(msg("u2", "user"), listOf(part("u2p", "u2", "text", "more"))),
+            MessageWithPartsDto(msg("a2", "assistant"), listOf(part("a2p", "a2", "text", "done"))),
+        ))
 
         model.setRevert(SessionRevertDto("u2"))
 
@@ -375,14 +378,29 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
     }
 
     fun `test turn view shows again when revert clears`() {
-        model.upsertMessage(msg("u1", "user"))
-        model.upsertMessage(msg("u2", "user"))
+        model.loadHistory(listOf(
+            MessageWithPartsDto(msg("u1", "user"), listOf(part("u1p", "u1", "text", "hi"))),
+            MessageWithPartsDto(msg("u2", "user"), listOf(part("u2p", "u2", "text", "more"))),
+        ))
         model.setRevert(SessionRevertDto("u2"))
 
         model.setRevert(null)
 
         assertTrue(panel.findTurn("u2")!!.isVisible)
         assertTrue(panel.findMessage("u2")!!.isVisible)
+    }
+
+    fun `test empty user anchor is hidden while its turn and assistant content stay visible`() {
+        model.loadHistory(listOf(
+            MessageWithPartsDto(msg("u1", "user"), emptyList()),
+            MessageWithPartsDto(msg("a1", "assistant"), listOf(part("a1p", "a1", "text", "hi"))),
+        ))
+
+        // The bare user anchor renders nothing, so it is hidden and consumes no row/gap...
+        assertFalse(panel.findMessage("u1")!!.isVisible)
+        // ...but the turn and its assistant content remain visible.
+        assertTrue(panel.findMessage("a1")!!.isVisible)
+        assertTrue(panel.findTurn("u1")!!.isVisible)
     }
 
     // ------ TurnRemoved ------
