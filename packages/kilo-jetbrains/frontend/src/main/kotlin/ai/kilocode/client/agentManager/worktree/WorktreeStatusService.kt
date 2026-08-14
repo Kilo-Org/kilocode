@@ -1,7 +1,5 @@
 package ai.kilocode.client.agentManager.worktree
 
-import ai.kilocode.client.KiloNotifications
-import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.util.UiTimer
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
@@ -41,7 +39,6 @@ class WorktreeStatusService internal constructor(
     private var prTimer: UiTimer? = null
     private var refs = 0
     private var lastPr = 0L
-    private var notified = false
 
     val stats: StateFlow<Map<String, WorktreeStatsDto>> get() = statsFlow
     val pr: StateFlow<Map<String, WorktreePrDto>> get() = prFlow
@@ -102,34 +99,9 @@ class WorktreeStatusService internal constructor(
                 .onSuccess { dto ->
                     prFlow.value = dto.items.associateBy { normalizeWorktreePath(it.path) }
                     ghFlow.value = dto.availability
-                    notify(dto.availability)
+                    service<GhStatusCoordinator>().report(project, dto.availability)
                 }
                 .onFailure { err -> LOG.warn("worktree PR refresh failed dir=$dir", err) }
         }
-    }
-
-    private fun notify(value: GhAvailability) {
-        // Re-arm once gh recovers so a later regression notifies again instead of staying silent.
-        if (value == GhAvailability.OK) {
-            notified = false
-            return
-        }
-        if (notified) return
-        notified = true
-        if (value == GhAvailability.MISSING) {
-            KiloNotifications.suggestion(
-                project,
-                KiloBundle.message("worktree.gh.missing.title"),
-                KiloBundle.message("worktree.gh.missing.content"),
-                KiloBundle.message("worktree.gh.install"),
-            ) { com.intellij.ide.BrowserUtil.browse("https://cli.github.com/") }
-            return
-        }
-        KiloNotifications.suggestion(
-            project,
-            KiloBundle.message("worktree.gh.unauth.title"),
-            KiloBundle.message("worktree.gh.unauth.content"),
-            KiloBundle.message("worktree.gh.authorize"),
-        ) { com.intellij.ide.BrowserUtil.browse("https://cli.github.com/manual/gh_auth_login") }
     }
 }

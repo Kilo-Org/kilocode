@@ -1,6 +1,7 @@
 package ai.kilocode.backend.rpc
 
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
+import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.GhState
 import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.execution.configurations.GeneralCommandLine
@@ -118,6 +119,15 @@ class KiloWorktreeRpcApiImplTest {
         val list = managedWorktrees(parseWorktreeList(raw))
 
         assertEquals(listOf("/repo"), list.map { it.path })
+    }
+
+    @Test
+    fun `classifyGhError detects missing and unauthorized gh states`() {
+        assertEquals(GhAvailability.UNAUTH, classifyGhError("You are not logged into any GitHub hosts. Run gh auth login to authenticate."))
+        assertEquals(GhAvailability.UNAUTH, classifyGhError("authentication required"))
+        assertEquals(GhAvailability.MISSING, classifyGhError("Cannot run program \"gh\": No such file or directory"))
+        assertEquals(GhAvailability.MISSING, classifyGhError("gh: command not found"))
+        assertEquals(GhAvailability.OK, classifyGhError("temporary network failure"))
     }
 
     @Test

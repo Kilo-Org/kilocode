@@ -2,6 +2,7 @@ package ai.kilocode.client.agentManager
 
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
+import ai.kilocode.client.agentManager.worktree.GhStatusCoordinator
 import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatcher
 import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatchers
@@ -63,6 +64,9 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         coroutines = TestCoroutines()
         rpc = FakeWorktreeRpcApi()
         service = KiloWorktreeService(coroutines.scope, rpc)
+        ApplicationManager.getApplication().replaceService(KiloWorktreeService::class.java, service, testRootDisposable)
+        ApplicationManager.getApplication()
+            .replaceService(GhStatusCoordinator::class.java, GhStatusCoordinator(coroutines.scope, TestUiTimers()), testRootDisposable)
     }
 
     override fun tearDown() {

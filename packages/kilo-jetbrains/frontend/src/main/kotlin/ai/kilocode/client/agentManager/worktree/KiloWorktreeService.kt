@@ -6,6 +6,7 @@ import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.KiloWorktreeRpcApi
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
+import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
@@ -67,6 +68,13 @@ class KiloWorktreeService internal constructor(
     } catch (e: Exception) {
         LOG.warn("worktree stats failed for $directory", e)
         WorktreeStatsListDto()
+    }
+
+    suspend fun ghStatus(directory: String): GhAvailability = try {
+        call { ghStatus(directory) }
+    } catch (e: Exception) {
+        LOG.warn("gh status failed for $directory", e)
+        GhAvailability.OK
     }
 
     suspend fun prStatus(directory: String): WorktreePrListDto = try {

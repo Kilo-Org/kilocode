@@ -2,6 +2,7 @@ package ai.kilocode.client.agentManager
 
 import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.agentManager.worktree.NewWorktreeDialog
+import ai.kilocode.client.agentManager.worktree.GhBanner
 import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.WorktreeDataKeys
 import ai.kilocode.client.agentManager.worktree.WorktreeIcons
@@ -102,8 +103,8 @@ class AgentManagerPanel(
     init {
         Disposer.register(parent, this)
         isOpaque = true
-        border = JBUI.Borders.empty(UiStyle.Gap.sm())
-        addToCenter(list)
+        project?.let { addToTop(GhBanner(it, this)) }
+        addToCenter(body())
         list.installPopup(group)
         sync()
         bindModel()
@@ -134,6 +135,15 @@ class AgentManagerPanel(
     val component: JComponent get() = this
 
     override fun getBackground(): Color = activeListToolWindowBackground()
+
+    private fun body(): JComponent {
+        return object : BorderLayoutPanel() {
+            override fun getBackground(): Color = activeListToolWindowBackground()
+        }.apply {
+            border = JBUI.Borders.empty(UiStyle.Gap.sm())
+            addToCenter(list)
+        }
+    }
 
     fun refresh() {
         selected = currentEditorWorktree()

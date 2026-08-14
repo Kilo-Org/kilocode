@@ -27,6 +27,8 @@ class WorktreeStatusServiceTest : BasePlatformTestCase() {
         rpc = FakeWorktreeRpcApi()
         ApplicationManager.getApplication()
             .replaceService(KiloWorktreeService::class.java, KiloWorktreeService(coroutines.scope, rpc), testRootDisposable)
+        ApplicationManager.getApplication()
+            .replaceService(GhStatusCoordinator::class.java, GhStatusCoordinator(coroutines.scope, TestUiTimers()), testRootDisposable)
         timers = TestUiTimers()
         service = WorktreeStatusService(project, coroutines.scope, timers)
     }

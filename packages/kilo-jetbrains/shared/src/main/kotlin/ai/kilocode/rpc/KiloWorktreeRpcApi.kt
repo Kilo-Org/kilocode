@@ -2,6 +2,7 @@ package ai.kilocode.rpc
 
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
+import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
@@ -37,6 +38,7 @@ interface KiloWorktreeRpcApi : RemoteApi<Unit> {
     suspend fun open(directory: String): Boolean
 
     suspend fun stats(directory: String): WorktreeStatsListDto
+    suspend fun ghStatus(directory: String): GhAvailability
     suspend fun prStatus(directory: String): WorktreePrListDto
     suspend fun listBranches(directory: String): WorktreeBranchesDto
     suspend fun create(directory: String, request: CreateWorktreeRequestDto): CreateWorktreeResultDto

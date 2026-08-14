@@ -24,6 +24,7 @@ import ai.kilocode.client.ui.list.ActiveListRowHeight
 import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.client.ui.list.ActiveListSurface
 import ai.kilocode.client.ui.list.activeListToolWindowBackground
+import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.SessionDto
@@ -40,6 +41,7 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.UiDataProvider
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.progress.currentThreadCoroutineScope
 import com.intellij.openapi.project.Project
@@ -118,11 +120,11 @@ class WorktreeSessionEditorPanel(
         // Keep the toolbar transparent so it shows its themed parent background and tracks
         // Look-and-Feel changes automatically, instead of caching a color that goes stale.
         toolbar.component.isOpaque = false
-        toolbar.updateActionsImmediately()
+        syncToolbar()
         list.installPopup(group)
         splitter.firstComponent = list
         splitter.secondComponent = manager.component
-        addToTop(header())
+        addToTop(top())
         addToCenter(splitter)
         syncExpanded(KiloPluginSettings.getWorktreeSessionListExpanded())
         bindModel()
@@ -236,6 +238,14 @@ class WorktreeSessionEditorPanel(
     }
 
     @RequiresEdt
+    private fun top(): JComponent {
+        val target = project ?: return header()
+        return Stack.vertical()
+            .next(GhBanner(target, this))
+            .next(header())
+    }
+
+    @RequiresEdt
     private fun toolbarPanel(): JComponent {
         return object : JPanel(BorderLayout()) {
             override fun getBackground(): Color = activeListToolWindowBackground()
@@ -255,10 +265,17 @@ class WorktreeSessionEditorPanel(
     private fun expanded(): Boolean = splitter.firstComponent != null
 
     @RequiresEdt
+    private fun syncToolbar() {
+        if (!ApplicationManager.getApplication().isUnitTestMode) return
+        @Suppress("DEPRECATION")
+        toolbar.updateActionsImmediately()
+    }
+
+    @RequiresEdt
     private fun syncExpanded(value: Boolean) {
         val changed = expanded() != value
         if (changed) splitter.firstComponent = if (value) list else null
-        toolbar.updateActionsImmediately()
+        syncToolbar()
         if (!changed) return
         splitter.revalidate()
         splitter.repaint()

@@ -3,6 +3,7 @@ package ai.kilocode.client.testing
 import ai.kilocode.rpc.KiloWorktreeRpcApi
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
+import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
@@ -20,6 +21,7 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     val listed = CopyOnWriteArrayList<WorktreeDto>()
     val branchesList = CopyOnWriteArrayList<String>()
     var statsResult = WorktreeStatsListDto()
+    var ghResult = GhAvailability.OK
     var prResult = WorktreePrListDto()
     var currentBranch: String? = null
     val creates = CopyOnWriteArrayList<CreateWorktreeRequestDto>()
@@ -28,9 +30,11 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     val renames = CopyOnWriteArrayList<Triple<String, String, String>>()
     val adopts = CopyOnWriteArrayList<Triple<String, String, String>>()
     val opens = CopyOnWriteArrayList<String>()
+    val ghCalls = CopyOnWriteArrayList<String>()
     var beforeCreate: suspend () -> Unit = {}
     var beforeRemove: suspend () -> Unit = {}
     var beforeRename: suspend () -> Unit = {}
+    var beforeGhStatus: suspend () -> Unit = {}
     var adoptResult: (String, String) -> RenameWorktreeResultDto = { path, name ->
         RenameWorktreeResultDto(worktree = WorktreeDto(path, name, name, path))
     }
@@ -65,6 +69,13 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     override suspend fun stats(directory: String): WorktreeStatsListDto {
         assertNotEdt("stats")
         return statsResult
+    }
+
+    override suspend fun ghStatus(directory: String): GhAvailability {
+        assertNotEdt("ghStatus")
+        ghCalls.add(directory)
+        beforeGhStatus()
+        return ghResult
     }
 
     override suspend fun prStatus(directory: String): WorktreePrListDto {

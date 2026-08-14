@@ -57,13 +57,17 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         internal val LOG = KiloLog.create(KiloWorktreeRpcApiImpl::class.java)
         private const val BASE_TTL = 60_000L
         private const val GH_PROBE_TTL = 300_000L
+        private const val GH_STATUS_TTL = 3_000L
         private const val PR_TTL = 90_000L
     }
 
     private val bases = ConcurrentHashMap<String, Timed<String>>()
     private val prs = ConcurrentHashMap<String, Timed<WorktreePrListDto>>()
+    private val ghLock = Any()
     @Volatile
     private var ghProbe: Timed<GhAvailability>? = null
+    @Volatile
+    private var ghCache: Timed<GhAvailability>? = null
 
     override suspend fun list(directory: String): WorktreeListDto = withContext(Dispatchers.IO) {
         val base = Path.of(directory).normalize()
@@ -141,6 +145,10 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         val main = items.firstOrNull { it.main }
         val fallback = main?.branch?.takeIf { it.isNotBlank() && it != "(detached)" } ?: "HEAD"
         WorktreeStatsListDto(parallel(items.filter { !it.main }) { item -> stats(item, fallback) })
+    }
+
+    override suspend fun ghStatus(directory: String): GhAvailability = withContext(Dispatchers.IO) {
+        probeGh(Path.of(directory).normalize(), "rpc")
     }
 
     override suspend fun prStatus(directory: String): WorktreePrListDto = withContext(Dispatchers.IO) {
@@ -399,12 +407,29 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
     }
 
     private fun ghAvailable(root: Path): GhAvailability {
+        val status = probeGh(root, "availability")
+        if (status != GhAvailability.MISSING) return status
         val now = System.currentTimeMillis()
         ghProbe?.takeIf { now - it.time < GH_PROBE_TTL }?.let { return it.value }
         val res = runGh(root, "--version")
         val value = if (res.ok) GhAvailability.OK else GhAvailability.MISSING
         ghProbe = Timed(now, value)
         return value
+    }
+
+    private fun probeGh(root: Path, reason: String): GhAvailability = synchronized(ghLock) {
+        val now = System.currentTimeMillis()
+        ghCache?.takeIf { now - it.time < GH_STATUS_TTL }?.let {
+            LOG.info("gh probe cache hit reason=$reason value=${it.value}")
+            return@synchronized it.value
+        }
+        val start = System.currentTimeMillis()
+        LOG.info("gh probe start reason=$reason dir=$root")
+        val res = runGh(root, "auth", "status")
+        val value = if (res.ok) GhAvailability.OK else classifyGhError(res.stderr.ifBlank { res.stdout })
+        ghCache = Timed(System.currentTimeMillis(), value)
+        LOG.info("gh probe result reason=$reason value=$value exit=${res.exit} ms=${System.currentTimeMillis() - start} stderr=${snippet(res.stderr)}")
+        value
     }
 
     private fun prError(stderr: String): GhAvailability {
@@ -414,6 +439,17 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         return GhAvailability.OK
     }
 
+    private fun snippet(text: String): String {
+        return text.trim().replace(Regex("\\s+"), " ").take(180)
+    }
+
+}
+
+internal fun classifyGhError(text: String): GhAvailability {
+    val msg = text.lowercase()
+    if (msg.contains("not logged") || msg.contains("gh auth login") || msg.contains("authentication")) return GhAvailability.UNAUTH
+    if (msg.contains("cannot run program") || msg.contains("no such file") || msg.contains("not found")) return GhAvailability.MISSING
+    return GhAvailability.OK
 }
 
 internal fun parsePr(path: String, raw: String): WorktreePrDto? {
