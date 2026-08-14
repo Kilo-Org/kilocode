@@ -1842,22 +1842,21 @@ const main = Effect.gen(function* () {
               // same race; growing pauses let projections settle. Sharded child processes run
               // fewer scenarios each, so early scenarios land in a colder process where one
               // second is not always enough.
-              const backoffs = ["1 second", "3 seconds"] as const
-              for (const [attempt, backoff] of backoffs.entries()) {
+              let last = result
+              for (const backoff of ["1 second", "3 seconds"] as const) {
                 console.log(
                   `${color.yellow}RETRY${color.reset} ${routeKey(scenario)} ${scenario.name} failed, retrying in ${backoff}`,
                 )
                 yield* Effect.sleep(backoff)
-                const retried = yield* runScenario(options)(scenario)
-                if (retried.status !== "fail") {
+                last = yield* runScenario(options)(scenario)
+                if (last.status !== "fail") {
                   console.log(
                     `${color.yellow}FLAKY${color.reset} ${routeKey(scenario)} ${scenario.name} passed on retry`,
                   )
-                  return retried
+                  break
                 }
-                if (attempt === backoffs.length - 1) return retried
               }
-              return result
+              return last
               // kilocode_change end
             }),
           { concurrency: 1 },

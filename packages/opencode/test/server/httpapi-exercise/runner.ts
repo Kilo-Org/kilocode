@@ -135,12 +135,13 @@ function withContext<A, E>(
           if (!context.llm) throw new Error("scenario needs fake LLM")
           return context.llm
         }
+        const headers = (extra?: Record<string, string>) => ({
+          ...(context.dir?.path ? { "x-kilo-directory": context.dir.path } : {}),
+          ...extra,
+        })
         const base: ScenarioContext = {
           directory: context.dir?.path,
-          headers: (extra) => ({
-            ...(context.dir?.path ? { "x-kilo-directory": context.dir.path } : {}),
-            ...extra,
-          }),
+          headers,
           file: (name, content) =>
             Effect.promise(() => {
               return Bun.write(`${directory()}/${name}`, content)
@@ -151,9 +152,7 @@ function withContext<A, E>(
           // evaluated before it fills hits the deny-all fallback. Polling the projection
           // waits on the actual precondition instead of sleeping a guessed interval.
           agentsReady: () =>
-            probe("/api/agent", {
-              ...(context.dir?.path ? { "x-kilo-directory": context.dir.path } : {}),
-            }).pipe(
+            probe("/api/agent", headers()).pipe(
               Effect.flatMap((result) => {
                 const data = (result.body as { data?: unknown[] } | undefined)?.data
                 return result.status === 200 && Array.isArray(data) && data.length > 0
