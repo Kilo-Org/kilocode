@@ -868,7 +868,10 @@ const scenarios: Scenario[] = [
   http.protected
     .post("/api/session/{sessionID}/permission", "v2.session.permission.create")
     .inProject({ git: true })
-    .seeded((ctx) => ctx.session({ title: "Permission create owner" }))
+    // Wait for the agent projection before evaluating a permission: a request that lands
+    // before it fills resolves no agent and hits the deny-all fallback (effect "deny"
+    // instead of "ask"). Readiness is the precondition, so gate on it, not on sleeps.
+    .seeded((ctx) => ctx.agentsReady().pipe(Effect.andThen(ctx.session({ title: "Permission create owner" }))))
     .at((ctx) => ({
       path: route("/api/session/{sessionID}/permission", { sessionID: ctx.state.id }),
       headers: ctx.headers(),
