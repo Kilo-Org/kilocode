@@ -4,7 +4,6 @@ import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.session.views.tool.EditToolView
 import ai.kilocode.client.session.views.tool.ReadToolView
 import ai.kilocode.client.session.views.tool.ToolView
@@ -44,9 +43,7 @@ class EditToolViewTest : BasePlatformTestCase() {
     fun `test edit tool shows Edit title and clickable file link`() {
         val opened = mutableListOf<String>()
         val view = track(EditToolView(tool(), openFile = { href, _ -> opened.add(href) }))
-        val base: Any = view
 
-        assertTrue(base is AbstractSessionPartView)
         assertTrue(view.labelText().contains("Edit"))
         assertTrue(view.linkVisible())
         assertEquals("App.kt", view.linkLabel())

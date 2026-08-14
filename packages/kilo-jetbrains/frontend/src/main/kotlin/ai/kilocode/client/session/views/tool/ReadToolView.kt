@@ -21,7 +21,7 @@ class ReadToolView(
     openFile: SessionFileOpener = { _, _ -> },
     private val selection: SessionSelection? = null,
     private val parts: ToolParts = toolParts(tool, openFile),
-    ) : AbstractSessionPartView(parts.header, parts.scroll(tool), expandable = false) {
+    ) : AbstractSessionPartView(parts.header, { parts.scroll(tool) }, expandable = false) {
 
     companion object {
         fun canRender(tool: Tool): Boolean = tool.kind == ToolKind.READ
@@ -33,8 +33,6 @@ class ReadToolView(
     private var style = SessionEditorStyle.current()
 
     init {
-        parts.text?.let { selection?.register(it, this) }
-        parts.text?.text = preview(item)
         applyStyle(style)
         sync()
     }
@@ -71,11 +69,11 @@ class ReadToolView(
     @RequiresEdt
     internal fun bodyMaxRows() = SessionUiStyle.View.Tool.BODY_LINES
     @RequiresEdt
-    internal fun bodyFont() = parts.text?.font ?: style.transcriptFont
+    internal fun bodyFont() = style.transcriptFont
     @RequiresEdt
     internal fun bodyCreated() = parts.bodyCreated()
     @RequiresEdt
-    internal fun bodyWrap() = parts.text?.lineWrap ?: false
+    internal fun bodyWrap() = parts.text?.lineWrap == true
     @RequiresEdt
     internal fun bodyEditor() = parts.content?.editor
     @RequiresEdt

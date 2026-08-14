@@ -6,7 +6,6 @@ import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.session.views.tool.ToolView
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.util.Disposer
@@ -115,20 +114,6 @@ class ToolViewTest : BasePlatformTestCase() {
 
         assertTrue(spans.contains("git" to DefaultLanguageHighlighterColors.KEYWORD))
         assertTrue(spans.contains("-v" to DefaultLanguageHighlighterColors.KEYWORD))
-    }
-
-    fun `test bash tool uses secondary chrome`() {
-        val view = ToolView(tool("p1", "bash", ToolExecState.COMPLETED))
-        val base: Any = view
-
-        assertTrue(base is AbstractSessionPartView)
-    }
-
-    fun `test unknown tool uses secondary chrome`() {
-        val view = ToolView(tool("p1", "mystery", ToolExecState.COMPLETED))
-        val base: Any = view
-
-        assertTrue(base is AbstractSessionPartView)
     }
 
     fun `test tool draws no outline and separates the body with the standard gap`() {

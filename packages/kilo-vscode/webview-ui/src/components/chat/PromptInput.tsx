@@ -52,6 +52,7 @@ import {
   isPromptBusy,
   isPathMention,
   applySandboxStates,
+  memoryRest,
   type SandboxDefaultState,
   type SandboxState,
 } from "./prompt-input-utils"
@@ -80,7 +81,7 @@ import {
 import { ReviewComments } from "./ReviewComments"
 import { partReview, reviewBody } from "../../../../src/shared/review-comments"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
-import { parseMemoryCommand } from "../../utils/memory-command"
+import { parseMemoryCommand, type ParsedMemoryCommand } from "../../utils/memory-command"
 import { useMemory } from "../../context/memory"
 
 function mergeReviewComments(current: ReviewComment[], incoming: ReviewComment[]): ReviewComment[] {
@@ -943,7 +944,6 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       const list = session.variantList(sid())
       if (list.length === 0) return
       const next = cycleVariant(session.currentVariant(sid()), list)
-      if (!next) return
       e.preventDefault()
       session.selectVariant(next, sid())
       return
@@ -1125,6 +1125,16 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     return true
   }
 
+  const setMemoryText = (memory: ParsedMemoryCommand) => {
+    const rest = memoryRest(memory)
+    setText(rest)
+    if (textareaRef) {
+      textareaRef.value = rest
+      textareaRef.setSelectionRange(0, 0)
+      textareaRef.focus()
+    }
+  }
+
   const handleSend = async () => {
     const draft = text().trim()
 
@@ -1132,7 +1142,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (memory) {
       if (!runMemory(memory)) return
       history.append(draft)
-      setText("")
+      setMemoryText(memory)
       clearReviewComments()
       imageAttach.clear()
       mention.closeMention()

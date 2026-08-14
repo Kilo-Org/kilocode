@@ -91,6 +91,7 @@ export type Event =
   | EventWorkspaceStatus1
   | EventWorktreeReady1
   | EventWorktreeFailed1
+  | EventWorktreeSetupReady1
   | EventServerConnected1
   | EventGlobalDisposed1
   | EventGlobalConfigUpdated1
@@ -209,6 +210,7 @@ export type Event =
   | EventWorkspaceStatus
   | EventWorktreeReady
   | EventWorktreeFailed
+  | EventWorktreeSetupReady
   | EventServerConnected
   | EventGlobalDisposed
   | EventGlobalConfigUpdated
@@ -532,6 +534,7 @@ export type Session = {
     partID?: string
     snapshot?: string
     diff?: string
+    workspace?: "restored" | "snapshots-disabled" | "unavailable"
   }
 }
 
@@ -1253,6 +1256,7 @@ export type GlobalEvent = {
     | EventWorkspaceStatus
     | EventWorktreeReady
     | EventWorktreeFailed
+    | EventWorktreeSetupReady
     | EventServerConnected
     | EventGlobalDisposed
     | EventGlobalConfigUpdated
@@ -2110,6 +2114,14 @@ export type GlobalEvent = {
         type: "worktree.failed"
         properties: {
           message: string
+        }
+      }
+    | {
+        id: string
+        type: "worktree.setup.ready"
+        properties: {
+          name: string
+          branch?: string
         }
       }
     | {
@@ -3916,6 +3928,10 @@ export type CommitMessageNoChangesError = {
   message: string
 }
 
+export type CommitMessageFailedError = {
+  message: string
+}
+
 export type ConfigOverlayResponse = {
   scope: "global" | "project"
   effective: Config
@@ -4728,6 +4744,7 @@ export type V2Event =
   | WorkspaceStatus
   | WorktreeReady
   | WorktreeFailed
+  | WorktreeSetupReady
   | ServerConnected
   | GlobalDisposed
   | GlobalConfigUpdated
@@ -5707,6 +5724,7 @@ export type RevertState = {
   snapshot?: string
   diff?: string
   files?: Array<FileDiff>
+  workspace?: "restored" | "snapshots-disabled" | "unavailable"
 }
 
 export type EventSessionNextRevertStaged = {
@@ -6184,6 +6202,15 @@ export type EventWorktreeFailed = {
   type: "worktree.failed"
   properties: {
     message: string
+  }
+}
+
+export type EventWorktreeSetupReady = {
+  id: string
+  type: "worktree.setup.ready"
+  properties: {
+    name: string
+    branch?: string
   }
 }
 
@@ -9116,6 +9143,24 @@ export type WorktreeFailed = {
   }
 }
 
+export type WorktreeSetupReady = {
+  id: string
+  metadata?: {
+    [key: string]: unknown
+  }
+  type: "worktree.setup.ready"
+  durable?: {
+    aggregateID: string
+    seq: number
+    version: number
+  }
+  location?: LocationRef
+  data: {
+    name: string
+    branch?: string
+  }
+}
+
 export type ServerConnected = {
   id: string
   metadata?: {
@@ -10152,6 +10197,15 @@ export type EventWorktreeFailed1 = {
   type: "worktree.failed"
   properties: {
     message: string
+  }
+}
+
+export type EventWorktreeSetupReady1 = {
+  id: string
+  type: "worktree.setup.ready"
+  properties: {
+    name: string
+    branch?: string
   }
 }
 
@@ -15091,9 +15145,9 @@ export type CommitMessageGenerateErrors = {
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * CommitMessageNoChangesError
+   * CommitMessageNoChangesError | CommitMessageFailedError
    */
-  422: CommitMessageNoChangesError
+  422: CommitMessageNoChangesError | CommitMessageFailedError
 }
 
 export type CommitMessageGenerateError = CommitMessageGenerateErrors[keyof CommitMessageGenerateErrors]
@@ -16610,6 +16664,7 @@ export type KilocodeRemoveSkillResponse = KilocodeRemoveSkillResponses[keyof Kil
 export type KilocodeRemoveAgentData = {
   body?: {
     name: string
+    scope?: "global" | "project"
   }
   path?: never
   query?: {

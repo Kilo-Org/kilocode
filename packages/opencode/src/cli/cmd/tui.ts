@@ -168,6 +168,12 @@ export const TuiThreadCommand = cmd({
         type: "boolean",
         describe: "fetch session from cloud and continue locally (use with --session)",
       })
+      // kilocode_change start - create/reuse a git worktree before starting
+      .option("worktree", {
+        type: "string",
+        describe: "create (or reuse) a git worktree with this name and start kilo there",
+      })
+      // kilocode_change end
       .option("prompt", {
         type: "string",
         describe: "prompt to use",
@@ -259,9 +265,10 @@ export const TuiThreadCommand = cmd({
 
     // kilocode_change start - lazy Kilo implementations so other CLI commands
     // don't pay their module cost at startup
-    const { importCloudSession, localSessionID, validateCloudFork } = await import("@/kilocode/cloud-session")
+    const { importCloudSession, localSessionID, validateCloudFork, reportCloudImportError } = await import("@/kilocode/cloud-session")
     const { KiloTuiThreadDaemon } = await import("@/kilocode/cli/cmd/tui/thread")
     const { preload } = await import("@/kilocode/cli/cmd/tui")
+    const { resolveTuiDirectory } = await import("@/kilocode/cli/cmd/tui-worktree")
     // kilocode_change end
     const unguard = win32InstallCtrlCGuard()
     const shutdown = {
@@ -286,7 +293,14 @@ export const TuiThreadCommand = cmd({
 
       // Resolve relative --project paths from PWD, then use the real cwd after
       // chdir so the thread and worker share the same directory key.
-      const next = resolveThreadDirectory(args.project)
+      // kilocode_change start - `--worktree <name>` creates/reuses a worktree; resuming
+      // an explicit `--session <id>` tries to restart in that session's worktree
+      const next = await resolveTuiDirectory(args, resolveThreadDirectory(args.project)).catch((error) => {
+        UI.error(errorMessage(error))
+        process.exitCode = 1
+      })
+      if (!next) return
+      // kilocode_change end
       const file = await target()
       // kilocode_change start
       const preloads = preload(typeof KILO_WORKER_PATH !== "undefined", () =>
@@ -440,14 +454,15 @@ export const TuiThreadCommand = cmd({
             headers: transport.headers, // kilocode_change
             directory: cwd,
           })
-          const id = await importCloudSession(sdk, args.session).catch(() => undefined)
-          if (!id) {
-            UI.error("Failed to import session from cloud")
+          try {
+            const id = await importCloudSession(sdk, args.session)
+            args.session = id
+            args.cloudFork = false
+          } catch (err) {
+            reportCloudImportError(err)
             shutdownAndExit({ reason: "cloud-fork-failed", code: 1 })
             return
           }
-          args.session = id
-          args.cloudFork = false
         }
         // kilocode_change end
 

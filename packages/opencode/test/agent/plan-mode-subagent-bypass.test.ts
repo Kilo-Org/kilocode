@@ -160,8 +160,9 @@ it.effect("subagent inherits parent session deny rules as hard runtime ceilings"
   }),
 )
 
-// kilocode_change start - preserve Plan mutation ceilings across Kilo task delegation
-it.instance("Plan delegation preserves notebook and process mutation ceilings", () =>
+// kilocode_change start - preserve Plan edit/notebook ceilings across Kilo task delegation,
+// but do NOT project the caller's read-only bash allowlist onto a writable subagent (#11523)
+it.instance("Plan delegation preserves notebook ceilings without projecting bash denies", () =>
   Effect.gen(function* () {
     const caller = yield* Agent.use.get("plan")
     expect(caller).toBeDefined()
@@ -173,7 +174,106 @@ it.instance("Plan delegation preserves notebook and process mutation ceilings", 
 
     expect(Permission.evaluate("notebook_edit", "notebook.ipynb", rules).action).toBe("deny")
     expect(Permission.evaluate("notebook_execute", "notebook.ipynb", rules).action).toBe("deny")
-    expect(Permission.evaluate("bash", "bun run server.ts", rules).action).toBe("deny")
+    expect(rules.filter((rule) => rule.permission === "bash")).toEqual([])
   }),
+)
+
+it.instance(
+  "built-in Explore enforces read-only bash for Plan and orchestrator delegation",
+  () =>
+    Effect.gen(function* () {
+      const plan = yield* Agent.use.get("plan")
+      const orchestrator = yield* Agent.use.get("orchestrator")
+      const explore = yield* Agent.use.get("explore")
+      expect(plan).toBeDefined()
+      expect(orchestrator).toBeDefined()
+      expect(explore).toBeDefined()
+
+      const inherited = (caller: Agent.Info) =>
+        KiloTask.inherited({
+          caller,
+          session: { permission: [] } as unknown as Parameters<typeof KiloTask.inherited>[0]["session"],
+          mcp: {},
+        })
+      const effective = (caller: Agent.Info) =>
+        Permission.merge(explore!.permission, KiloTask.permissions(inherited(caller)))
+      const rules = effective(plan!)
+
+      expect(Permission.evaluate("bash", "git status", rules).action).toBe("allow")
+      expect(Permission.evaluate("bash", "rg TODO src", rules).action).toBe("allow")
+
+      const denied = [
+        "rm -rf src",
+        "git push origin main",
+        "git -c user.name=test push origin main",
+        "git commit -m test",
+        "touch output.txt",
+        "mv source target",
+        "cp source target",
+        "mkdir output",
+        "npm install",
+      ]
+      for (const command of denied) {
+        expect(Permission.evaluate("bash", command, rules).action).toBe("deny")
+      }
+
+      // Delegated agents cannot answer an `ask`, and raw find can mutate via -exec/-delete.
+      expect(Permission.evaluate("bash", "gh repo view", rules).action).toBe("deny")
+      expect(Permission.evaluate("bash", "find . -name '*.ts'", rules).action).toBe("deny")
+      expect(Permission.evaluate("bash", "touch output.txt", effective(orchestrator!)).action).toBe("deny")
+    }),
+  {
+    config: {
+      agent: {
+        explore: {
+          permission: {
+            bash: "allow",
+          },
+        },
+      },
+    },
+  },
+)
+
+it.instance(
+  "read-only caller does not cap a writable subagent's own bash allowlist",
+  () =>
+    Effect.gen(function* () {
+      const caller = yield* Agent.use.get("plan")
+      const worker = yield* Agent.use.get("git_worker")
+      expect(caller).toBeDefined()
+      expect(worker).toBeDefined()
+
+      const rules = KiloTask.inherited({
+        caller: caller!,
+        session: { permission: [] } as unknown as Parameters<typeof KiloTask.inherited>[0]["session"],
+        mcp: {},
+      })
+      // The phantom deny rules the issue reports must not leak from the read-only caller.
+      expect(rules).not.toContainEqual({ permission: "bash", pattern: "git *", action: "deny" })
+      expect(rules).not.toContainEqual({ permission: "bash", pattern: "*", action: "deny" })
+
+      // Mirror task.ts: the subagent runs with its own permission plus the inherited ceilings.
+      const effective = Permission.merge(worker!.permission, KiloTask.permissions(rules))
+      expect(Permission.evaluate("bash", "git status", effective).action).toBe("allow")
+      expect(Permission.evaluate("bash", "touch output.txt", effective).action).toBe("allow")
+    }),
+  {
+    config: {
+      agent: {
+        git_worker: {
+          description: "A writable subagent that runs git",
+          mode: "subagent",
+          permission: {
+            bash: {
+              "*": "ask",
+              "git *": "allow",
+              "touch *": "allow",
+            },
+          },
+        },
+      },
+    },
+  },
 )
 // kilocode_change end

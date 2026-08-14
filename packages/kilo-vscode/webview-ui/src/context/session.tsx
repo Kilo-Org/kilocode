@@ -85,7 +85,7 @@ import { clearSessionDraftDiscarded, deleteDraftsForSession } from "../utils/dra
 import { createAbortState } from "./abort-state"
 import { clearIfOn, createCloudPrune } from "./session-cloud-prune"
 import { isSameSessionTree } from "./model-usage"
-import { createDraftAgentSeed } from "./session-agent"
+import { createDraftAgentSeed, resolvePromptAgent } from "./session-agent"
 import { createModelSelector } from "./session-model-selector"
 
 const RECENT_LIMIT = 5
@@ -240,7 +240,7 @@ interface SessionContextValue {
   variantList: (sessionID?: string) => string[]
   currentVariant: (sessionID?: string) => string | undefined
   variantForAgent: (agent: string, model: ModelSelection | null) => string | undefined
-  selectVariant: (value: string, sessionID?: string) => void
+  selectVariant: (value: string | undefined, sessionID?: string) => void
 
   // Model favorites
   recentModels: Accessor<ModelSelection[]>
@@ -717,8 +717,11 @@ export const SessionProvider: ParentComponent = (props) => {
   })
 
   function promptAgent(sessionID?: string) {
-    const name = agentForScope(sessionID)
-    return name !== defaultAgent() ? name : undefined
+    return resolvePromptAgent({
+      sessionID,
+      selections: store.agentSelections,
+      pending: pendingAgentSelection(),
+    })
   }
 
   function hideErrors(sid: string) {
@@ -1386,7 +1389,7 @@ export const SessionProvider: ParentComponent = (props) => {
     if (prefs.model && prefs.variant) {
       const agent = prefs.agent ?? store.agentSelections[sessionID] ?? defaultAgent()
       const key = variantKey(prefs.model, agent, sessionID)
-      if (!store.variantSelections[key]) setStore("variantSelections", key, prefs.variant)
+      if (store.variantSelections[key] === undefined) setStore("variantSelections", key, prefs.variant)
     }
   }
 
@@ -2549,9 +2552,9 @@ export const SessionProvider: ParentComponent = (props) => {
       return
     }
 
-    // Reset agent selection to default for the new session (model overrides persist)
+    // Clear the pending agent so the picker shows the default and send omits it
     agentDrafts.prune(draftSessionID())
-    setPendingAgentSelection(defaultAgent())
+    setPendingAgentSelection(null)
     vscode.postMessage({ type: "createSession" })
   }
 
@@ -2562,7 +2565,7 @@ export const SessionProvider: ParentComponent = (props) => {
     setDraftSessionID(undefined)
     setCloudPreviewId(null)
     setLoading(false)
-    setPendingAgentSelection(defaultAgent())
+    setPendingAgentSelection(null)
     vscode.postMessage({ type: "clearSession" })
   }
 

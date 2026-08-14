@@ -1,5 +1,7 @@
 import { dict as en } from "./en"
 
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Anaconda Desktop 연결",
   "provider.anaconda.title.manage": "Anaconda Desktop 관리",
@@ -57,6 +59,7 @@ type Keys = keyof typeof en
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "공급자 연결",
 

@@ -26,6 +26,15 @@ export function resolveSessionAgent(messages: Message[], names: Set<string>): st
   }
 }
 
+export function resolvePromptAgent(input: {
+  sessionID?: string
+  selections: Record<string, string>
+  pending: string | null
+}) {
+  if (input.sessionID) return input.selections[input.sessionID]
+  return input.pending ?? undefined
+}
+
 export function draftAgentSelection(selections: Record<string, string>, draft: string, pending: string | null) {
   if (selections[draft]) return undefined
   return pending ?? undefined
