@@ -1,5 +1,6 @@
 package ai.kilocode.client.agentManager.worktree
 
+import ai.kilocode.client.session.ui.header.BranchChangesBadge
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.util.edtWait
@@ -66,11 +67,11 @@ class WorktreePrHeaderViewTest : BasePlatformTestCase() {
 
     fun `test no PR keeps changes badge on the right`() {
         val view = edt { WorktreePrHeaderView {} }
-        val changes = edt { UIUtil.findComponentOfType(view, WorktreeStatsView::class.java)!! }
+        val changes = edt { UIUtil.findComponentOfType(view, BranchChangesBadge::class.java)!! }
         val open = edt { components(view).filterIsInstance<JButton>().single { it.text == "Open" } }
 
         edt {
-            view.update(WorktreeStatsDto("/repo", additions = 2), null, "feature-x")
+            view.update(WorktreeStatsDto("/repo", additions = 2, files = 1), null, "feature-x")
             view.setSize(400, 32)
             view.doLayout()
             components(view).filterIsInstance<Container>().forEach { it.doLayout() }
@@ -78,18 +79,21 @@ class WorktreePrHeaderViewTest : BasePlatformTestCase() {
 
         val changesX = edt { SwingUtilities.convertPoint(changes, Point(0, 0), view).x }
         val openX = edt { SwingUtilities.convertPoint(open, Point(0, 0), view).x }
-        assertTrue(changesX > 250)
+        val openRight = edt { openX + open.width }
+        assertTrue(edt { changes.isVisible })
+        // Changes badge precedes the Open button, and the whole action cluster hugs the right edge.
         assertTrue(changesX < openX)
+        assertTrue(400 - openRight <= 20)
     }
 
     fun `test changes view visibility follows stats`() {
         val view = edt { WorktreePrHeaderView {} }
-        val changes = edt { UIUtil.findComponentOfType(view, WorktreeStatsView::class.java)!! }
+        val changes = edt { UIUtil.findComponentOfType(view, BranchChangesBadge::class.java)!! }
 
         edt { view.update(WorktreeStatsDto("/repo"), null, "feature-x") }
         assertFalse(edt { changes.isVisible })
 
-        edt { view.update(WorktreeStatsDto("/repo", additions = 2, deletions = 1, ahead = 1, behind = 1), null, "feature-x") }
+        edt { view.update(WorktreeStatsDto("/repo", additions = 2, deletions = 1, ahead = 1, behind = 1, files = 2), null, "feature-x") }
         assertTrue(edt { changes.isVisible })
     }
 
@@ -97,33 +101,45 @@ class WorktreePrHeaderViewTest : BasePlatformTestCase() {
         var opened = 0
         val view = edt { WorktreePrHeaderView { opened++ } }
 
-        edt { view.update(WorktreeStatsDto("/repo", additions = 2), null, "feature-x") }
-        edt { click(components(view).filterIsInstance<JBLabel>().single { it.text == "+2" }) }
+        edt { view.update(WorktreeStatsDto("/repo", additions = 2, files = 1), null, "feature-x") }
+        edt { click(UIUtil.findComponentOfType(view, BranchChangesBadge::class.java)!!) }
 
         assertEquals(1, opened)
     }
 
     fun `test repeated update keeps child instances`() {
         val view = edt { WorktreePrHeaderView {} }
-        val stats = WorktreeStatsDto("/repo", additions = 2)
+        val stats = WorktreeStatsDto("/repo", additions = 2, files = 1)
         val pull = pull(GhState.DRAFT)
 
         edt { view.update(stats, pull, "feature-x") }
         val labels = edt { components(view).filterIsInstance<JBLabel>() }
         val title = edt { title(view) }
-        val changes = edt { UIUtil.findComponentOfType(view, WorktreeStatsView::class.java)!! }
+        val changes = edt { UIUtil.findComponentOfType(view, BranchChangesBadge::class.java)!! }
 
         edt { view.update(stats, pull, "feature-x") }
 
         assertEquals(labels, edt { components(view).filterIsInstance<JBLabel>() })
         assertSame(title, edt { title(view) })
-        assertSame(changes, edt { UIUtil.findComponentOfType(view, WorktreeStatsView::class.java) })
+        assertSame(changes, edt { UIUtil.findComponentOfType(view, BranchChangesBadge::class.java) })
+    }
+
+    fun `test changes badge reuses session branch badge with file count`() {
+        val view = edt { WorktreePrHeaderView {} }
+        val changes = edt { UIUtil.findComponentOfType(view, BranchChangesBadge::class.java)!! }
+
+        edt { view.update(WorktreeStatsDto("/repo", additions = 10, deletions = 4, ahead = 3, files = 2), null, "feature-x") }
+
+        assertEquals("2 files", edt { changes.countText() })
+        assertEquals(10 to 4, edt { changes.stats() })
+        assertTrue(edt { changes.isVisible })
+        assertEquals("Compare with base branch", edt { changes.toolTipText })
     }
 
     fun `test terminal button triggers callback`() {
         var opened = 0
         val view = edt { WorktreePrHeaderView(openDiff = {}, openTerminal = { opened++ }) }
-        val terminal = edt { components(view).filterIsInstance<HoverIcon>().single() }
+        val terminal = edt { components(view).filterIsInstance<HoverIcon>().single { it.text == "Terminal" } }
 
         edt { click(terminal) }
 

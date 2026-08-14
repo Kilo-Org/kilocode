@@ -360,11 +360,12 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             val anc = runGit(dir, "merge-base", "HEAD", base).stdout.trim().takeIf { it.isNotBlank() } ?: base
             val diff = runGit(dir, "-c", "core.quotepath=false", "diff", "--numstat", "--no-renames", anc)
             val tracked = if (diff.ok) parseNumstat(diff.stdout) else emptyList()
-            val untracked = runGit(dir, "-c", "core.quotepath=false", "ls-files", "--others", "--exclude-standard")
+            val untrackedFiles = runGit(dir, "-c", "core.quotepath=false", "ls-files", "--others", "--exclude-standard")
                 .stdout
                 .lineSequence()
                 .filter { it.isNotBlank() }
-                .sumOf { countUntracked(dir, it) }
+                .toList()
+            val untracked = untrackedFiles.sumOf { countUntracked(dir, it) }
             val counts = aheadBehind(dir, base)
             WorktreeStatsDto(
                 item.path,
@@ -372,6 +373,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
                 tracked.sumOf { it.deletions },
                 counts.second,
                 counts.first,
+                files = tracked.size + untrackedFiles.size,
             )
         }.getOrElse { err ->
             LOG.warn("worktree stats failed: path=${item.path} message=${err.message}", err)

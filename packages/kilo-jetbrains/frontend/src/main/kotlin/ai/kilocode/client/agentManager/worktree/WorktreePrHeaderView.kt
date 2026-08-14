@@ -1,9 +1,12 @@
 package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.ui.header.BranchChangesBadge
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.ui.FilledBadgeIcon
-import ai.kilocode.client.ui.HoverIcon
+import ai.kilocode.client.ui.ToolbarButtonAction
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.hoverTextButton
 import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.VAlign
@@ -25,8 +28,6 @@ import java.awt.BorderLayout
 import java.awt.Cursor
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
-import javax.swing.JButton
-import javax.swing.JComponent
 
 internal class WorktreePrHeaderView(
     openWorktree: () -> Unit = {},
@@ -34,14 +35,22 @@ internal class WorktreePrHeaderView(
     openTerminal: () -> Unit = {},
     openDiff: () -> Unit,
 ) : BorderLayoutPanel() {
-    private val terminal = HoverIcon().apply { icon = TerminalIcons.OpenTerminal_13x13 }
-    private val open = JButton(KiloBundle.message("worktree.session.open.action"), ProductIcons.getInstance().productIcon)
+    private val terminal = hoverTextButton(
+        ToolbarButtonAction(TerminalIcons.OpenTerminal_13x13, KiloBundle.message("worktree.session.terminal.action"), openTerminal),
+        tooltip = KiloBundle.message("worktree.session.terminal.tooltip"),
+    )
+    private val open = hoverTextButton(
+        ToolbarButtonAction(ProductIcons.getInstance().productIcon, KiloBundle.message("worktree.session.open.action"), openWorktree),
+        tooltip = KiloBundle.message("worktree.session.open.tooltip"),
+    )
     private val status = JBLabel()
     private val title = SimpleColoredComponent()
-    private val changes = WorktreeStatsView(openDiff)
+    private val changes = BranchChangesBadge(openDiff).apply { applyStyle(SessionEditorStyle.current()) }
     private val statusPane = status.align(HAlign.LEFT, VAlign.CENTER)
-    private val changesPane = changes.align(HAlign.RIGHT, VAlign.CENTER) as JComponent
-    private val actions = Stack.horizontal(UiStyle.Gap.sm()).next(changesPane).next(terminal).next(open)
+    private val actions = Stack.horizontal(UiStyle.Gap.sm())
+        .next(changes.align(HAlign.CENTER, VAlign.CENTER))
+        .next(terminal.align(HAlign.CENTER, VAlign.CENTER))
+        .next(open.align(HAlign.CENTER, VAlign.CENTER))
     private var pull: WorktreePrDto? = null
     private var state: GhState? = null
     private var text: String? = null
@@ -52,18 +61,14 @@ internal class WorktreePrHeaderView(
         isOpaque = false
         actions.isOpaque = false
         open.isEnabled = openEnabled
-        open.toolTipText = KiloBundle.message("worktree.session.open.tooltip")
-        open.addActionListener { openWorktree() }
         terminal.isEnabled = openEnabled
-        terminal.toolTipText = KiloBundle.message("worktree.session.terminal.tooltip")
-        terminal.addActionListener { openTerminal() }
-        actions.border = JBUI.Borders.emptyRight(UiStyle.Gap.pad())
+        actions.border = JBUI.Borders.emptyRight(UiStyle.Gap.sm())
         status.border = JBUI.Borders.empty(0, UiStyle.Gap.md(), 0, UiStyle.Gap.xs())
         title.border = JBUI.Borders.empty(0, UiStyle.Gap.sm())
         title.isOpaque = false
         addToLeft(statusPane)
         addToCenter(title)
-        addToRight(actions)
+        addToRight(actions.align(HAlign.RIGHT, VAlign.CENTER))
         val listener = object : MouseAdapter() {
             override fun mouseClicked(event: MouseEvent) {
                 url?.let(BrowserUtil::browse)
@@ -76,7 +81,7 @@ internal class WorktreePrHeaderView(
 
     @RequiresEdt
     fun update(stats: WorktreeStatsDto?, pull: WorktreePrDto?, name: String) {
-        changes.update(stats, null as WorktreePrDto?)
+        changes.update(stats?.files ?: 0, stats?.additions ?: 0, stats?.deletions ?: 0)
         this.pull = pull
         if (pull == null) {
             syncPr(false)

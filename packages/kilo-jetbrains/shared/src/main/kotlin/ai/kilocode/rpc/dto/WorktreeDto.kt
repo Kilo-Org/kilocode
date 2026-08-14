@@ -23,6 +23,7 @@ data class WorktreeStatsDto(
     val deletions: Int = 0,
     val ahead: Int = 0,
     val behind: Int = 0,
+    val files: Int = 0,
 )
 
 @Serializable

@@ -341,6 +341,8 @@ class KiloWorktreeRpcApiImplTest {
         assertEquals(0, item.deletions)
         assertEquals(1, item.ahead)
         assertEquals(0, item.behind)
+        // tracked.txt (committed ahead of base) + notes.txt (untracked) = 2 changed files.
+        assertEquals(2, item.files)
     }
 
     @Test

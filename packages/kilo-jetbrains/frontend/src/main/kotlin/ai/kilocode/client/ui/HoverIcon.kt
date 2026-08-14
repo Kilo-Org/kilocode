@@ -25,7 +25,10 @@ class HoverIcon(private val fill: Boolean = false) : JButton() {
         })
     }
 
-    override fun getPreferredSize(): Dimension = JBUI.size(24, 24)
+    // Icon-only buttons keep a fixed 24x24 hit target; labelled buttons size to their content plus
+    // their (symmetric) border so the hover pill has equal padding on every side.
+    override fun getPreferredSize(): Dimension =
+        if (text.isNullOrEmpty()) JBUI.size(24, 24) else super.getPreferredSize()
 
     override fun getMinimumSize(): Dimension = preferredSize
 
