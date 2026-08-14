@@ -35,6 +35,7 @@ if (argv.includes("--help") || argv.includes("-h")) {
       "  --retries <N>        Extra attempts for failing files (default: 1)",
       "  --profile <name>     Run a curated test profile (env: KILO_TEST_PROFILE)",
       "  --shard <N/M>        Run one balanced file shard (env: KILO_TEST_SHARD)",
+      "  --update-durations   After a full run, refresh script/kilocode/test-durations.json",
       "  --bail               Stop on first failure",
       "  --dots               Show compact dot progress",
       "  --verbose            Show full output for every file",
@@ -68,6 +69,7 @@ function text(name: string) {
 
 const ci = argv.includes("--ci")
 const bail = argv.includes("--bail")
+const updateDurations = argv.includes("--update-durations") // kilocode_change
 const verbose = argv.includes("--verbose")
 const dots = !verbose && (ci || argv.includes("--dots"))
 // Cap concurrency at 4 even on bigger runners: the bottleneck is shared
@@ -214,8 +216,16 @@ const measuredDurations: Record<string, number> = await Bun.file(
 )
   .json()
   .catch(() => ({}))
-const weight = (file: string) =>
-  DURATION_HINTS[file] ?? measuredDurations[file] ?? Bun.file(path.join(root, "test", file)).size
+// Memoized: weight() runs inside sort comparators (TestShard.order/split), and the
+// byte-size fallback is a blocking stat syscall — thousands of repeats without a cache.
+const weightCache = new Map<string, number>()
+const weight = (file: string) => {
+  const cached = weightCache.get(file)
+  if (cached !== undefined) return cached
+  const value = DURATION_HINTS[file] ?? measuredDurations[file] ?? Bun.file(path.join(root, "test", file)).size
+  weightCache.set(file, value)
+  return value
+}
 // kilocode_change end
 
 // kilocode_change start - fast tier: run isolation-safe test files in ONE shared `bun test`
@@ -231,10 +241,9 @@ const weight = (file: string) =>
 // batch runs its members sequentially. The tier is for files where boot cost dominates.
 // Several independent batches (instead of one) keep each batch short enough to schedule
 // like a normal heavy file, and let LPT spread them across shards and worker slots.
-// Weights are observed single-process durations (ms), same unit as DURATION_HINTS.
-const FAST_TIERS: Record<string, { weight: number; entries: string[] }> = {
+// Batch weights are computed from member durations, never hand-maintained.
+const FAST_TIERS: Record<string, { entries: string[] }> = {
   "fast-tier-core": {
-    weight: 45_000,
     entries: [
       "account/",
       "config/",
@@ -253,7 +262,6 @@ const FAST_TIERS: Record<string, { weight: number; entries: string[] }> = {
     ],
   },
   "fast-tier-kilocode": {
-    weight: 45_000,
     entries: [
       "kilocode/config/",
       "kilocode/memory/",
@@ -270,19 +278,15 @@ const FAST_TIERS: Record<string, { weight: number; entries: string[] }> = {
     ],
   },
   "fast-tier-kilocode-sessions": {
-    weight: 55_000,
     entries: ["kilocode/session-export/", "kilocode/session/", "kilocode/sessions/"],
   },
   "fast-tier-kilocode-tools": {
-    weight: 50_000,
     entries: ["kilocode/anaconda-desktop/", "kilocode/cloud/", "kilocode/tool/"],
   },
   "fast-tier-cli": {
-    weight: 90_000,
     entries: ["cli/"],
   },
   "fast-tier-misc": {
-    weight: 30_000,
     entries: [
       "acp/",
       "auth/",
@@ -297,7 +301,6 @@ const FAST_TIERS: Record<string, { weight: number; entries: string[] }> = {
     ],
   },
   "fast-tier-tool": {
-    weight: 55_000,
     entries: ["tool/"],
   },
 }
@@ -310,15 +313,21 @@ const FAST_TIERS: Record<string, { weight: number; entries: string[] }> = {
 const BATCH_EXCLUDES = [
   "cli/run/", // spawns real non-interactive runs (SIGINT/daemon timing)
   "kilocode/background-process.test.ts",
+  "kilocode/daemon.test.ts", // spawns real daemon subprocesses, races wall-clock deadlines
   "kilocode/instance-vcs-watcher.test.ts",
   "kilocode/issue-8656-stall.test.ts",
+  // Heavy real-work files: a batch runs members sequentially, so files whose runtime is
+  // dominated by real execution (not process boot) parallelize better in their own process.
+  "tool/shell.test.ts",
+  "tool/task.test.ts",
 ]
-const isBatchExcluded = (file: string) =>
-  BATCH_EXCLUDES.some((entry) => (entry.endsWith(".ts") ? file === entry : file.startsWith(entry)))
+// Entry semantics shared by FAST_TIERS and BATCH_EXCLUDES: ".ts" = exact file, else prefix.
+const matchesEntry = (file: string, entry: string) =>
+  entry.endsWith(".ts") ? file === entry : file.startsWith(entry)
+const isBatchExcluded = (file: string) => BATCH_EXCLUDES.some((entry) => matchesEntry(file, entry))
 // 8 batches (~24 files each) keep the heaviest single work item small enough for
 // LPT to pack shards evenly; fewer, bigger batches set a floor under the slowest shard.
 const KILOCODE_ROOT_TIERS = 8
-const KILOCODE_ROOT_WEIGHT = 60_000
 const kilocodeRootTier = (file: string) => {
   if (!file.startsWith("kilocode/")) return undefined
   if (file.slice("kilocode/".length).includes("/")) return undefined
@@ -329,7 +338,7 @@ const kilocodeRootTier = (file: string) => {
 const tierOf = (file: string) => {
   if (isBatchExcluded(file)) return undefined
   for (const [name, tier] of Object.entries(FAST_TIERS)) {
-    if (tier.entries.some((entry) => (entry.endsWith(".ts") ? file === entry : file.startsWith(entry)))) return name
+    if (tier.entries.some((entry) => matchesEntry(file, entry))) return name
   }
   return kilocodeRootTier(file)
 }
@@ -355,7 +364,7 @@ if (patterns.length === 0 && !profile) {
     /\bmock\.module\s*\(/,
     /\bAppRuntime\.dispose\s*\(/,
     /\bspyOn\s*\(\s*globalThis\b/,
-    /^process\.env\.\w+\s*=/m,
+    /^process\.env[.[]/m,
   ]
   const demoted = new Set(
     (
@@ -376,11 +385,23 @@ if (patterns.length === 0 && !profile) {
   }
   for (const [name, members] of batches) if (members.length < 2) batches.delete(name)
 }
-const batchOf = new Map([...batches.entries()].flatMap(([name, members]) => members.map((m) => [m, name] as const)))
-const inBatch = (file: string) => batchOf.has(file)
-const shardInput = [...batches.keys(), ...candidates.filter((file) => !inBatch(file))]
-const shardWeight = (file: string) =>
-  FAST_TIERS[file]?.weight ?? (file.startsWith("fast-tier-kilocode-root-") ? KILOCODE_ROOT_WEIGHT : weight(file))
+const batched = new Set([...batches.values()].flat())
+const shardInput = [...batches.keys(), ...candidates.filter((file) => !batched.has(file))]
+// A batch runs its members sequentially, so its weight is the sum of member durations
+// (hint > measured > a typical boot-dominated file) plus one process boot. Computed, not
+// hand-maintained: stale per-tier constants systematically under-weighted heavy batches.
+const TYPICAL_BATCHED_FILE_MS = 1_500
+const BATCH_BOOT_MS = 3_000
+const batchWeights = new Map(
+  [...batches.entries()].map(([name, members]) => [
+    name,
+    members.reduce(
+      (total, member) => total + (DURATION_HINTS[member] ?? measuredDurations[member] ?? TYPICAL_BATCHED_FILE_MS),
+      BATCH_BOOT_MS,
+    ),
+  ]),
+)
+const shardWeight = (file: string) => batchWeights.get(file) ?? weight(file)
 const files = shard ? TestShard.split(shardInput, shardWeight, shard.total)[shard.index - 1] : shardInput
 // kilocode_change end
 
@@ -401,6 +422,7 @@ type Result = {
   stderr: string
   duration: number
   timedout: boolean
+  deadline: number // kilocode_change - the kill deadline actually applied (batches get a roomier one)
   attempts: number
 }
 
@@ -568,6 +590,7 @@ async function run(file: string): Promise<Result> {
     stderr: output[1],
     duration: performance.now() - start,
     timedout: killed.value,
+    deadline: fileDeadline, // kilocode_change
     attempts: 1,
   }
 }
@@ -628,7 +651,7 @@ function report(result: Result) {
 
   if (result.timedout) {
     console.log(
-      `[${idx}/${files.length}] ${red("TIME")} ${result.file} ${dim(`(${secs}s - exceeded ${deadline / 1000}s)`)}${tries}`,
+      `[${idx}/${files.length}] ${red("TIME")} ${result.file} ${dim(`(${secs}s - exceeded ${result.deadline / 1000}s)`)}${tries}`,
     )
     return
   }
@@ -782,6 +805,28 @@ if (ci) {
   })
 }
 
+// kilocode_change start - refresh the measured shard weights from this run. Only a full,
+// unfiltered pass measures every per-file work item, so gate on that. Batch pseudo-files
+// are skipped: their members are timed collectively and their weights live in FAST_TIERS.
+if (updateDurations) {
+  if (patterns.length > 0 || profile || shard) {
+    console.log("\n--update-durations skipped: needs a full run (no patterns, profile, or shard)")
+  } else {
+    const measured = Object.fromEntries(
+      results
+        .filter((result) => !batches.has(result.file))
+        .map((result) => [result.file, Math.round(result.duration)] as const)
+        .sort(([a], [b]) => a.localeCompare(b)),
+    )
+    await Bun.write(
+      path.join(root, "script", "kilocode", "test-durations.json"),
+      JSON.stringify(measured, null, 1) + "\n",
+    )
+    console.log(`\nUpdated script/kilocode/test-durations.json with ${Object.keys(measured).length} measured files`)
+  }
+}
+// kilocode_change end
+
 await cleanBinary()
 
 process.exit(failures.length > 0 ? 1 : 0)
@@ -826,7 +871,7 @@ async function merge() {
 
     const secs = (result.duration / 1000).toFixed(3)
     const msg = result.timedout
-      ? `Test file timed out after ${deadline / 1000}s`
+      ? `Test file timed out after ${result.deadline / 1000}s`
       : `Test process exited with code ${result.code}`
     const detail = esc((result.stderr || result.stdout || msg).slice(0, 10000))
 
