@@ -388,13 +388,14 @@ if (patterns.length === 0 && !profile) {
   // later: bun's mock.module is process-wide and permanent, AppRuntime.dispose() kills the
   // shared runtime, and global-fetch spies observe batch-mates' traffic.
   const unsafe = [/\bmock\.module\s*\(/, /\bAppRuntime\.dispose\s*\(/, /\bspyOn\s*\(\s*globalThis\b/]
-  const violations: string[] = []
-  for (const members of batches.values()) {
-    for (const member of members) {
-      const source = await Bun.file(path.join(root, "test", member)).text()
-      if (unsafe.some((pattern) => pattern.test(source))) violations.push(member)
-    }
-  }
+  const violations = (
+    await Promise.all(
+      [...batches.values()].flat().map(async (member) => {
+        const source = await Bun.file(path.join(root, "test", member)).text()
+        return unsafe.some((pattern) => pattern.test(source)) ? member : undefined
+      }),
+    )
+  ).filter((member): member is string => member !== undefined)
   if (violations.length > 0) {
     console.error(
       [
@@ -696,7 +697,10 @@ console.log()
 
 const start = performance.now()
 const results: Result[] = []
-const queue = TestShard.order(files, weight)
+// Order by shardWeight, not weight: batch pseudo-files are not real paths, so weight()
+// gives them 0 and they would start LAST — leaving one worker running a whole batch
+// after everything else finished. Heaviest-first keeps the tail short. kilocode_change
+const queue = TestShard.order(files, shardWeight)
 
 const workers = Array.from({ length: Math.min(concurrency, files.length) }, async () => {
   while (queue.length > 0 && !stopped.value) {
