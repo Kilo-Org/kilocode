@@ -3,6 +3,7 @@ package ai.kilocode.client.session.views.tool
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
+import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
@@ -68,6 +69,14 @@ class ToolView(
         changed = sync() || changed
         changed = syncBody() || changed
         if (changed) refresh()
+    }
+
+    @RequiresEdt
+    override fun headerPopup(): HeaderPopupRequest? {
+        val md = toolBodyMarkdown(item)
+        return popup("tool", item.name, md.isNotBlank()) {
+            markdownPopupBody(style, md, options = POPUP_OPTS, foreground = bodyColor())
+        }
     }
 
     @RequiresEdt

@@ -4,6 +4,7 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
+import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
@@ -11,7 +12,9 @@ import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.session.views.base.PartHeader
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.rpc.dto.TodoDto
 import com.intellij.ui.components.JBLabel
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import java.awt.Font
 import javax.swing.JComponent
@@ -37,6 +40,15 @@ class TodoWriteView(tool: Tool, private val parts: TodoParts = todoParts()) :
         item = content
         sync()
     }
+
+    @RequiresEdt
+    override fun headerPopup(): HeaderPopupRequest? {
+        val md = todoMarkdown(item.todos)
+        return popup("part", "todo", md.isNotBlank()) { markdownPopupBody(style, md) }
+    }
+
+    private fun todoMarkdown(todos: List<TodoDto>): String =
+        todos.joinToString("\n") { "- [${if (it.status == "completed") "x" else " "}] ${it.content}" }
 
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style

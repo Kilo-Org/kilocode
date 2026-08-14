@@ -14,7 +14,6 @@ import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.session.views.base.PartHeader
-import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.md.MdView
 import ai.kilocode.client.ui.md.MdViewFactory
@@ -163,13 +162,8 @@ class ReasoningView(
     internal fun bodyScrollBottom() = parts.scrollOrNull?.verticalScrollBar?.let { it.maximum - it.visibleAmount } ?: 0
 
     @RequiresEdt
-    override fun headerPopup(): HeaderPopupRequest? {
-        if (isExpanded()) return null
-        val text = source.takeIf { it.isNotBlank() } ?: return null
-        return HeaderPopupRequest(row, build = { buildPopupBody(text) }) {
-            Telemetry.send("Header Popup Shown", mapOf("surface" to "session", "part" to "reasoning"))
-        }
-    }
+    override fun headerPopup(): HeaderPopupRequest? =
+        popup("part", "reasoning", source.isNotBlank()) { buildPopupBody(source) }
 
     @RequiresEdt
     override fun applyStyle(style: SessionEditorStyle) {

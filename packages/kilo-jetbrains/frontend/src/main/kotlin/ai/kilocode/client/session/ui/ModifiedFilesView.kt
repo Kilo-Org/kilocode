@@ -20,7 +20,6 @@ import ai.kilocode.client.session.views.tool.PatchBody
 import ai.kilocode.client.session.views.tool.setFont
 import ai.kilocode.client.session.views.tool.setForeground
 import ai.kilocode.client.session.views.tool.setIcon
-import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.DiffBars
 import ai.kilocode.client.ui.ToolbarButtonAction
 import ai.kilocode.client.ui.UiStyle
@@ -112,12 +111,8 @@ class ModifiedFilesView private constructor(
     override fun copyText(): String? = null
 
     @RequiresEdt
-    override fun headerPopup(): HeaderPopupRequest? {
-        if (isExpanded() || files.isEmpty()) return null
-        return HeaderPopupRequest(row, build = { buildPopup(files) }) {
-            Telemetry.send("Header Popup Shown", mapOf("surface" to "session", "tool" to "changes"))
-        }
-    }
+    override fun headerPopup(): HeaderPopupRequest? =
+        popup("tool", "changes", files.isNotEmpty()) { buildPopup(files) }
 
     @RequiresEdt
     override fun applyStyle(style: SessionEditorStyle) {

@@ -17,7 +17,6 @@ import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.session.views.base.PartHeader
 import ai.kilocode.client.session.views.base.AbstractSessionPartView
-import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.DiffStatBadge
 import ai.kilocode.client.ui.ToolbarButtonAction
 import ai.kilocode.client.ui.UiStyle
@@ -196,13 +195,8 @@ class EditToolView(
     internal fun codeEditors(): List<EditorTextField> = body.codeEditors()
 
     @RequiresEdt
-    override fun headerPopup(): HeaderPopupRequest? {
-        if (isExpanded()) return null
-        if (editDiff(item).isBlank()) return null
-        return HeaderPopupRequest(row, build = { buildPopupBody() }) {
-            Telemetry.send("Header Popup Shown", mapOf("surface" to "session", "tool" to "edit"))
-        }
-    }
+    override fun headerPopup(): HeaderPopupRequest? =
+        popup("tool", "edit", editDiff(item).isNotBlank()) { buildPopupBody() }
 
     @RequiresEdt
     override fun applyStyle(style: SessionEditorStyle) {

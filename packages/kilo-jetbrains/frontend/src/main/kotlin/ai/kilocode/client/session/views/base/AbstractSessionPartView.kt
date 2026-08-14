@@ -1,14 +1,25 @@
 package ai.kilocode.client.session.views.base
 
+import ai.kilocode.client.session.ui.popup.HeaderPopupBody
+import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
+import ai.kilocode.client.telemetry.Telemetry
+import ai.kilocode.client.ui.md.MdCodeBlockFactory
+import ai.kilocode.client.ui.md.MdCodeBlockOptions
+import ai.kilocode.client.ui.md.MdView
+import ai.kilocode.client.ui.md.MdViewFactory
+import com.intellij.openapi.util.Disposer
 import com.intellij.ui.components.JBLabel
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
 import java.awt.Container
 import java.awt.Cursor
+import java.awt.Font
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.RenderingHints
@@ -159,6 +170,60 @@ abstract class AbstractSessionPartView(
     protected fun refresh() {
         revalidate()
         repaint()
+    }
+
+    /**
+     * Standard collapsed hover-preview request anchored to the card header, or null when the card is
+     * not expandable, is already expanded, or has no [present] preview content. [kind]/[name] are the
+     * telemetry attributes (e.g. `"tool"`/`"bash"`, `"part"`/`"reasoning"`). [body] is built lazily
+     * when the popup actually shows; its disposable is owned by the popup controller and disposed on
+     * hide, so subclasses just build fresh, self-contained content.
+     */
+    @RequiresEdt
+    protected fun popup(kind: String, name: String, present: Boolean, body: () -> HeaderPopupBody): HeaderPopupRequest? {
+        if (!expandable || isExpanded() || !present) return null
+        return HeaderPopupRequest(row, body) {
+            Telemetry.send("Header Popup Shown", mapOf("surface" to "session", kind to name))
+        }
+    }
+
+    /**
+     * Builds a markdown-backed [HeaderPopupBody] from [markdown]. The created [MdView] is owned by a
+     * fresh disposable that the popup controller disposes when the popup hides, so its editor is always
+     * released. [options] renders through an editor-only code block (shell/diff style); null renders
+     * prose. Height is bounded centrally by the popup panel to the same cap every popup shares; width
+     * uses the wide or normal popup cap.
+     */
+    @RequiresEdt
+    protected fun markdownPopupBody(
+        style: SessionEditorStyle,
+        markdown: String,
+        wide: Boolean = true,
+        options: MdCodeBlockOptions? = null,
+        font: Font = style.editorFont,
+        foreground: Color = style.editorForeground,
+        link: ((String) -> Unit)? = null,
+        afterSet: (MdView) -> Unit = {},
+    ): HeaderPopupBody {
+        val owner = Disposer.newDisposable("Header popup body")
+        val md = if (options != null) {
+            MdViewFactory.create(style, null, MdCodeBlockFactory.default(options))
+        } else {
+            MdViewFactory.create(style, null)
+        }
+        Disposer.register(owner, md)
+        link?.let { l -> md.addLinkListener { l(it.href) } }
+        md.applyStyle(style)
+        md.font = font
+        md.foreground = foreground
+        md.background = SessionUiStyle.Colors.codeBlockBackground()
+        md.preBg = SessionUiStyle.Colors.codeBlockBackground()
+        md.codeFont = style.editorFamily
+        md.component.border = JBUI.Borders.empty()
+        md.set(markdown)
+        afterSet(md)
+        val width = if (wide) SessionUiStyle.View.Popup.WIDE_MAX_WIDTH else SessionUiStyle.View.Popup.MAX_WIDTH
+        return HeaderPopupBody(md.component, owner, SessionUiStyle.Colors.codeBlockBackground(), width)
     }
 
     /**

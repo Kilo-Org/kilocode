@@ -2,7 +2,6 @@ package ai.kilocode.client.session.views.tool
 
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
-import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.session.ui.SessionContentPanel
 import ai.kilocode.client.session.ui.SessionSurfacePanel
 import ai.kilocode.client.session.ui.popup.HeaderPopupBody
@@ -12,9 +11,7 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.ui.md.MdCodeBlockBorder
-import ai.kilocode.client.ui.md.MdCodeBlockFactory
 import ai.kilocode.client.ui.md.MdCodeBlockOptions
-import ai.kilocode.client.ui.md.MdViewFactory
 import ai.kilocode.client.ui.md.hybrid.MdTerminal
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataSink
@@ -147,11 +144,8 @@ class ShellToolView(
 
     @RequiresEdt
     override fun headerPopup(): HeaderPopupRequest? {
-        if (isExpanded()) return null
-        val cmd = command(item).takeIf { it.isNotBlank() } ?: return null
-        return HeaderPopupRequest(row, build = { buildPopupBody(cmd) }) {
-            Telemetry.send("Header Popup Shown", mapOf("surface" to "session", "tool" to "bash"))
-        }
+        val cmd = command(item)
+        return popup("tool", "bash", cmd.isNotBlank()) { buildPopupBody(cmd) }
     }
 
     @RequiresEdt
@@ -185,29 +179,14 @@ class ShellToolView(
     private fun syncBody(): Boolean = body.update(item)
 
     @RequiresEdt
-    private fun buildPopupBody(cmd: String): HeaderPopupBody {
-        val md = MdViewFactory.create(
+    private fun buildPopupBody(cmd: String): HeaderPopupBody =
+        markdownPopupBody(
             style,
-            null,
-            MdCodeBlockFactory.default(
-                MdCodeBlockOptions(
-                    border = MdCodeBlockBorder.None,
-                    verticalPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
-                    editorOnly = true,
-                ),
-            ),
-        )
-        md.applyStyle(style)
-        md.font = style.transcriptFont
-        md.foreground = style.editorForeground
-        md.background = SessionUiStyle.Colors.codeBlockBackground()
-        md.preBg = SessionUiStyle.Colors.codeBlockBackground()
-        md.codeFont = style.editorFamily
-        md.component.border = JBUI.Borders.empty()
-        md.set(popupShellMarkdown(item, cmd))
-        padPopup(md.component)
-        return HeaderPopupBody(md.component, md, SessionUiStyle.Colors.codeBlockBackground(), SessionUiStyle.View.Popup.WIDE_MAX_WIDTH)
-    }
+            popupShellMarkdown(item, cmd),
+            options = SHELL_POPUP_OPTS,
+            font = style.transcriptFont,
+            foreground = style.editorForeground,
+        ) { padPopup(it.component) }
 
     override fun dumpLabel() = "ShellToolView#$contentId(${labelText()})"
 
@@ -298,6 +277,13 @@ class ShellBody(selection: SessionSelection?) {
         return true
     }
 }
+
+/** Editor-only code block used by the collapsed shell hover popup (uncapped; the popup scrolls). */
+private val SHELL_POPUP_OPTS = MdCodeBlockOptions(
+    border = MdCodeBlockBorder.None,
+    verticalPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+    editorOnly = true,
+)
 
 private fun shellSection(selection: SessionSelection?, render: (Tool) -> String) = ToolMarkdownBody(
     MdCodeBlockOptions(

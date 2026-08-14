@@ -10,11 +10,14 @@ import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.rpc.dto.TodoDto
 import ai.kilocode.rpc.dto.TodoViewDto
+import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.image.BufferedImage
+import javax.swing.JComponent
+import javax.swing.JEditorPane
 import javax.swing.JPanel
 
 @Suppress("UnstableApiUsage")
@@ -183,6 +186,41 @@ class TodoWriteViewTest : BasePlatformTestCase() {
         val row = view.components.filterIsInstance<JPanel>().first()
         val header = (row.layout as BorderLayout).getLayoutComponent(BorderLayout.CENTER) as JPanel
         return (header.layout as BorderLayout).hgap
+    }
+
+    fun `test todo header popup shows when collapsed and lists todos`() {
+        val view = TodoWriteView(tool("todowrite", ToolExecState.COMPLETED).also {
+            it.todos = listOf(TodoDto("Done", "completed", "high"), TodoDto("Next", "pending", "medium"))
+        })
+        assertTrue(view.isExpanded())
+        assertNull(view.headerPopup())
+
+        view.toggle()
+        assertFalse(view.isExpanded())
+        val body = view.headerPopup()!!.build()
+        try {
+            val html = popupHtml(body.component)
+            assertTrue(html.contains("Done"))
+            assertTrue(html.contains("Next"))
+        } finally {
+            Disposer.dispose(body.disposable)
+        }
+    }
+
+    fun `test todo header popup is absent without todos`() {
+        val view = TodoWriteView(tool("todowrite", ToolExecState.COMPLETED))
+        view.toggle()
+        assertNull(view.headerPopup())
+    }
+
+    private fun popupHtml(root: JComponent): String {
+        val out = StringBuilder()
+        fun visit(component: JComponent) {
+            if (component is JEditorPane) out.append(component.text)
+            component.components.filterIsInstance<JComponent>().forEach(::visit)
+        }
+        visit(root)
+        return out.toString()
     }
 
     private fun tool(name: String, state: ToolExecState) = Tool("p1", name, toolKind(name)).also { it.state = state }

@@ -647,6 +647,19 @@ internal fun preview(tool: Tool): String = if (tool.name == "bash") shellPreview
 
 internal fun body(tool: Tool): String = if (tool.name == "bash") shellBody(tool) else plainBody(tool)
 
+/** Fenced markdown of a tool's body text for the collapsed hover popup; empty when nothing to show. */
+internal fun toolBodyMarkdown(tool: Tool): String {
+    val text = body(tool)
+    if (text.isBlank()) return ""
+    val fence = fence(text)
+    return buildString {
+        append(fence).append('\n')
+        append(text)
+        if (!text.endsWith('\n')) append('\n')
+        append(fence)
+    }
+}
+
 private fun shellPreview(tool: Tool): String {
     val cmd = command(tool)
     val out = output(tool)

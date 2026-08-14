@@ -10,9 +10,11 @@ import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.session.views.tool.ToolView
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.editor.EditorFactory
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.scale.JBUIScale
 import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
 import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
@@ -405,6 +407,45 @@ class ToolViewTest : BasePlatformTestCase() {
     fun `test contentId matches Tool id`() {
         val view = ToolView(Tool("part99", "edit", toolKind("edit")).also { it.state = ToolExecState.PENDING })
         assertEquals("part99", view.contentId)
+    }
+
+    // ---- header popup ------
+
+    fun `test tool header popup previews output when collapsed`() {
+        val view = track(ToolView(tool("g1", "grep", ToolExecState.COMPLETED).also { it.output = "match one\nmatch two" }))
+        val req = view.headerPopup()
+        assertNotNull(req)
+        val body = req!!.build()
+        try {
+            val editors = popupEditors(body.component)
+            editors.forEach { it.getEditor(true) }
+            assertEquals(listOf("match one\nmatch two"), editors.map { it.text })
+            assertTrue(body.component.preferredSize.height in 1..JBUI.scale(SessionUiStyle.View.Popup.MAX_HEIGHT))
+        } finally {
+            Disposer.dispose(body.disposable)
+        }
+    }
+
+    fun `test tool header popup is absent when empty or expanded`() {
+        val empty = track(ToolView(tool("g2", "grep", ToolExecState.COMPLETED)))
+        assertNull(empty.headerPopup())
+
+        val view = track(ToolView(tool("g3", "grep", ToolExecState.COMPLETED).also { it.output = "hit" }))
+        assertNotNull(view.headerPopup())
+        view.toggle()
+        assertNull(view.headerPopup())
+    }
+
+    fun `test tool header popup disposes editor after hide and churn`() {
+        val base = EditorFactory.getInstance().allEditors.size
+        val view = track(ToolView(tool("g4", "grep", ToolExecState.COMPLETED).also { it.output = "hit" }))
+        repeat(20) {
+            val body = view.headerPopup()!!.build()
+            popupEditors(body.component).forEach { it.getEditor(true) }
+            Disposer.dispose(body.disposable)
+        }
+        UIUtil.dispatchAllInvocationEvents()
+        assertEquals(base, EditorFactory.getInstance().allEditors.size)
     }
 
     // ---- helpers ------
