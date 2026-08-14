@@ -13,6 +13,7 @@ import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.AgentManagerPanel
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.log.KiloLog
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.DataProvider
@@ -25,6 +26,7 @@ import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.platform.project.projectIdOrNull
 import com.intellij.openapi.wm.impl.content.ToolWindowContentUi
+import com.intellij.ui.content.Content
 import com.intellij.ui.content.ContentManagerEvent
 import com.intellij.ui.content.ContentManagerListener
 import com.intellij.ui.content.ContentFactory
@@ -33,6 +35,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
+import java.awt.ComponentOrientation
 import javax.swing.JPanel
 
 /**
@@ -126,6 +129,7 @@ internal class KiloToolWindowSetupService(
             chatContent.setDisposer(manager)
             chatContent.setPreferredFocusedComponent { manager.defaultFocusedComponent }
             val agentContent = factory.createContent(agent, KiloBundle.message("sidePanel.mode.agentManager"), false)
+            agentContent.applyAgentManagerBetaBadge()
             agentContent.setPreferredFocusedComponent { agentManagerPanel.component }
             toolWindow.contentManager.addContent(chatContent)
             toolWindow.contentManager.addContent(agentContent)
@@ -157,4 +161,11 @@ internal class KiloToolWindowSetupService(
             LOG.error("Failed to set up Kilo tool window content", e)
         }
     }
+}
+
+internal fun Content.applyAgentManagerBetaBadge() {
+    icon = AllIcons.General.Beta
+    description = KiloBundle.message("sidePanel.mode.agentManager.beta.description")
+    putUserData(ToolWindow.SHOW_CONTENT_ICON, true)
+    putUserData(Content.TAB_LABEL_ORIENTATION_KEY, ComponentOrientation.RIGHT_TO_LEFT)
 }
