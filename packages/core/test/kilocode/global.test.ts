@@ -13,6 +13,7 @@ describe("global state directory", () => {
 
     expect(await resolveState(preferred, path.join(tmp.path, "fallback"))).toBe(preferred)
     expect((await fs.stat(preferred)).isDirectory()).toBe(true)
+    expect(await fs.readdir(preferred)).toEqual([])
   })
 
   test("falls back when the default state directory is unusable", async () => {
@@ -89,7 +90,7 @@ describe("global state directory", () => {
     await fs.writeFile(preferred, "not a directory")
 
     const err = await resolveState(preferred).catch((err: unknown) => err)
-    expect(err).toBeDefined()
+    expect(err).toBeInstanceOf(Error)
   })
 
   test("reports both paths when the fallback also fails", async () => {

@@ -1,5 +1,6 @@
 import fs from "fs/promises"
-import { constants } from "fs"
+import path from "path"
+import { randomUUID } from "crypto"
 
 /**
  * Like `fs.mkdir({ recursive: true })` but also repairs broken symlinks and
@@ -23,9 +24,15 @@ export async function ensureRealDir(p: string) {
   }
 }
 
+async function writable(p: string) {
+  const probe = path.join(p, `.kilo-write-${process.pid}-${randomUUID()}`)
+  await fs.writeFile(probe, "", { flag: "wx", mode: 0o600 })
+  await fs.unlink(probe)
+}
+
 async function ready(p: string) {
   await ensureRealDir(p)
-  await fs.access(p, constants.W_OK | constants.X_OK)
+  await writable(p)
 }
 
 export async function resolveState(p: string, fallback?: string) {
@@ -35,7 +42,7 @@ export async function resolveState(p: string, fallback?: string) {
       : await fs.stat(fallback).then(
           (stat) =>
             stat.isDirectory() &&
-            fs.access(fallback, constants.W_OK | constants.X_OK).then(
+            writable(fallback).then(
               () => true,
               () => false,
             ),
