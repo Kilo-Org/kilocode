@@ -26,6 +26,7 @@ import { createSettingsDialog } from "@/kilocode/cli/cmd/tui/component/dialog-se
 import { useIndexingWarnings } from "@/kilocode/cli/cmd/tui/indexing-warning"
 import { KiloTerminalTitle } from "./terminal-title"
 import type { KiloTitleIcon } from "./title-icon"
+import { isAllowEverything } from "./util/permission"
 import { Session as SessionApi } from "@/session/session"
 
 // Re-export so upstream can render the route without importing directly
@@ -53,14 +54,6 @@ export const APP_NAME = "Kilo"
 // ---------------------------------------------------------------------------
 // Utilities
 // ---------------------------------------------------------------------------
-
-export function isAllowEverything(permission: unknown): boolean {
-  if (typeof permission !== "object" || permission === null) return false
-  const wildcard = (permission as Record<string, unknown>)["*"]
-  if (typeof wildcard === "string") return wildcard === "allow"
-  if (typeof wildcard === "object" && wildcard !== null) return (wildcard as Record<string, unknown>)["*"] === "allow"
-  return false
-}
 
 // ---------------------------------------------------------------------------
 // Session effects

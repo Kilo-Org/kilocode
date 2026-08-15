@@ -4,11 +4,12 @@ import { Show, createSignal } from "solid-js"
 import { useTheme } from "@tui/context/theme"
 import { Spinner } from "@tui/component/spinner"
 import type { View } from "."
-import type { SettingsState } from "./state"
+import type { Scope, SettingsState } from "./state"
 
 export function ProviderView(props: {
   ctx: SettingsState
   view: Extract<View, { name: "provider" }>
+  scope: Scope
   back: () => void
 }) {
   const { theme } = useTheme()
@@ -117,7 +118,7 @@ export function ProviderView(props: {
           }
           const ok =
             confirm() === "disable"
-              ? await props.ctx.disableProvider(props.view.id, props.view.title)
+              ? await props.ctx.disableProvider(props.view.id, props.view.title, props.scope)
               : await props.ctx.disconnect(props.view.id, props.view.title)
           if (ok) props.back()
           return

@@ -85,7 +85,14 @@ function SettingsBody(props: {
         )}
       </Match>
       <Match when={provider()}>
-        {(current) => <ProviderView ctx={props.ctx} view={current()} back={() => props.setView({ name: "main" })} />}
+        {(current) => (
+          <ProviderView
+            ctx={props.ctx}
+            view={current()}
+            scope={props.scope()}
+            back={() => props.setView({ name: "main" })}
+          />
+        )}
       </Match>
       <Match when={props.view().name === "agent"}>
         <AgentView ctx={props.ctx} scope={props.scope()} back={() => props.setView({ name: "main" })} />
@@ -94,7 +101,11 @@ function SettingsBody(props: {
         <PluginsView ctx={props.ctx} back={() => props.setView({ name: "main" })} />
       </Match>
       <Match when={props.view().name === "disabledProviders"}>
-        <DisabledProvidersView ctx={props.ctx} back={() => props.setView({ name: "main" })} />
+        <DisabledProvidersView
+          ctx={props.ctx}
+          scope={props.scope()}
+          back={() => props.setView({ name: "main" })}
+        />
       </Match>
     </Switch>
   )

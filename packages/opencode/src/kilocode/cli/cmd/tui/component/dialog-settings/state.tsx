@@ -4,6 +4,7 @@ import { useSDK } from "@tui/context/sdk"
 import { useSync } from "@tui/context/sync"
 import { useToast } from "@tui/ui/toast"
 import { errorMessage } from "@/util/error"
+import { isAllowEverything } from "@/kilocode/cli/cmd/tui/util/permission"
 
 export type Scope = "project" | "global"
 export type TuiPatch = NonNullable<TuiConfigUpdateData["body"]>
@@ -31,8 +32,8 @@ export type SettingsState = {
   unsetField: (scope: Scope, key: string, label: string) => Promise<boolean>
   updateTui: (scope: Scope, patch: TuiPatch, label: string) => Promise<boolean>
   disconnect: (id: string, label: string) => Promise<boolean>
-  enableProvider: (id: string, label: string) => Promise<boolean>
-  disableProvider: (id: string, label: string) => Promise<boolean>
+  enableProvider: (id: string, label: string, scope: Scope) => Promise<boolean>
+  disableProvider: (id: string, label: string, scope: Scope) => Promise<boolean>
   togglePlugin: (id: string, enabled: boolean, label: string) => Promise<boolean>
   setAutoApprove: (enable: boolean) => Promise<boolean>
   isAutoApprove: () => boolean
@@ -55,10 +56,14 @@ export function createSettings(): SettingsState {
   })
   let pending: Promise<boolean> | undefined
 
-  function reload() {
+  function reload(opts: { keepError?: boolean } = {}) {
     if (pending) return pending
     setStore("refreshing", true)
-    setStore("error", undefined)
+    // keepError=true is used by run()'s failure-path reload so the write
+    // error set in catch stays visible inline. Normal reloads (manual refresh
+    // or dialog reopen) clear any stale error so the user doesn't see a
+    // permanent banner describing a problem that no longer exists.
+    const prevError = opts.keepError ? store.error : undefined
     pending = (async () => {
       const [overlay, tui, warnings, disabled] = await Promise.allSettled([
         deadline(sdk.client.config.overlay({ scope: "project" }), "Configuration"),
@@ -95,7 +100,11 @@ export function createSettings(): SettingsState {
         setStore("disabledProviders", disabled.value.data ?? [])
       }
 
-      setStore("error", errors.length ? errors.join(" · ") : undefined)
+      const fetched = errors.length ? errors.join(" · ") : undefined
+      // On the failure path the write error already tells the user what went
+      // wrong; layering fetch errors on top would duplicate on every retry and
+      // grow the banner without bound. Keep prevError as-is.
+      setStore("error", opts.keepError ? prevError : fetched)
       setStore("loading", false)
       setStore("refreshing", false)
       pending = undefined
@@ -125,6 +134,20 @@ export function createSettings(): SettingsState {
     return store.tui[key]
   }
 
+  // Read the raw disabled_providers list for the target scope. Using the
+  // effective overlay value would merge project + global and write entries
+  // that don't belong to the selected scope's file.
+  function currentScopeList(scope: Scope): unknown[] {
+    const overlay = store.overlay
+    if (!overlay) return []
+    if (scope === "global") {
+      const raw = Object(overlay.global)["disabled_providers"]
+      return Array.isArray(raw) ? (raw as unknown[]) : []
+    }
+    const raw = overlay.fields["disabled_providers"]?.local
+    return Array.isArray(raw) ? (raw as unknown[]) : []
+  }
+
   async function run(
     label: string,
     task: () => Promise<{ error?: unknown }>,
@@ -134,6 +157,7 @@ export function createSettings(): SettingsState {
     setStore("busy", label)
     setStore("error", undefined)
     setStore("notice", undefined)
+    let failed = false
     try {
       const result = await deadline(task(), label)
       if (result.error) throw new Error(errorMessage(result.error))
@@ -142,11 +166,17 @@ export function createSettings(): SettingsState {
       setStore("notice", opts?.notice ?? `${label} saved`)
       return true
     } catch (err) {
+      failed = true
       const message = errorMessage(err)
       setStore("error", message)
       toast.show({ variant: "error", message: `${label}: ${message}` })
       return false
     } finally {
+      // Reload only on failure: the success path already awaited reload()
+      // above. On failure the reload reconciles partially-applied multi-step
+      // writes (e.g. a cross-scope enable cascade) with disk while keeping the
+      // just-set error in place so the user still sees it inline.
+      if (failed) await reload({ keepError: true }).catch(() => {})
       setStore("busy", undefined)
     }
   }
@@ -187,20 +217,45 @@ export function createSettings(): SettingsState {
     })
   }
 
-  function enableProvider(id: string, label: string) {
-    const overlay = store.overlay
-    const scope: Scope = overlay?.scope === "global" ? "global" : "project"
-    const list = Array.isArray(overlay?.fields["disabled_providers"]?.value)
-      ? (overlay.fields["disabled_providers"].value as unknown[])
-      : []
+  function enableProvider(id: string, label: string, scope: Scope) {
+    const list = currentScopeList(scope)
+    if (!list.includes(id)) {
+      const other = scope === "global" ? "project" : "global"
+      toast.show({
+        variant: "warning",
+        message: `${label} is hidden in ${other} config; switch scope to re-enable it`,
+      })
+      return Promise.resolve(false)
+    }
+    // If the provider is also hidden in the other scope, remove it from both
+    // so the dialog's "enabled" notice matches what the user actually sees.
+    const otherScope: Scope = scope === "global" ? "project" : "global"
+    const otherList = currentScopeList(otherScope)
+    const cascade = otherList.includes(id)
     const next = list.filter((item) => item !== id)
-    return run(`Enable ${label}`, () =>
-      sdk.client.config.overlayUpdate({
-        scope,
-        ...(next.length ? { set: { disabled_providers: next } } : { unset: [["disabled_providers"]] }),
-      }),
+    const nextOther = otherList.filter((item) => item !== id)
+    return run(
+      cascade ? `Enable ${label} in both scopes` : `Enable ${label}`,
+      async () => {
+        const target = await sdk.client.config.overlayUpdate({
+          scope,
+          ...(next.length
+            ? { set: { disabled_providers: next } }
+            : { unset: [["disabled_providers"]] }),
+        })
+        if (target.error) throw new Error(`${scope}: ${errorMessage(target.error)}`)
+        if (!cascade) return target
+        const other = await sdk.client.config.overlayUpdate({
+          scope: otherScope,
+          ...(nextOther.length
+            ? { set: { disabled_providers: nextOther } }
+            : { unset: [["disabled_providers"]] }),
+        })
+        if (other.error) throw new Error(`${otherScope}: ${errorMessage(other.error)}`)
+        return other
+      },
       {
-        notice: `${label} enabled`,
+        notice: cascade ? `${label} enabled in both scopes` : `${label} enabled`,
         after: async () => {
           await deadline(sdk.client.instance.dispose(), "Provider cache refresh").catch((err) => {
             toast.show({ variant: "warning", message: `Provider cache refresh failed: ${errorMessage(err)}` })
@@ -213,13 +268,12 @@ export function createSettings(): SettingsState {
     )
   }
 
-  function disableProvider(id: string, label: string) {
-    const overlay = store.overlay
-    const scope: Scope = overlay?.scope === "global" ? "global" : "project"
-    const list = Array.isArray(overlay?.fields["disabled_providers"]?.value)
-      ? (overlay.fields["disabled_providers"].value as unknown[])
-      : []
-    if (list.includes(id)) return Promise.resolve(false)
+  function disableProvider(id: string, label: string, scope: Scope) {
+    const list = currentScopeList(scope)
+    if (list.includes(id)) {
+      toast.show({ variant: "warning", message: `${label} is already hidden` })
+      return Promise.resolve(false)
+    }
     const next = [...list, id]
     return run(`Disable ${label}`, () =>
       sdk.client.config.overlayUpdate({
@@ -241,18 +295,14 @@ export function createSettings(): SettingsState {
   }
 
   function togglePlugin(id: string, enabled: boolean, label: string) {
+    // plugins are global-only — the TUI config has no project file
     const current = (store.tui.plugin_enabled ?? {}) as Record<string, boolean>
     const next = { ...current, [id]: enabled }
     return updateTui("global", { plugin_enabled: next }, label)
   }
 
   function isAutoApprove() {
-    const wildcard = (sync.data.config.permission as Record<string, unknown> | undefined)?.["*"]
-    if (typeof wildcard === "string") return wildcard === "allow"
-    if (wildcard && typeof wildcard === "object") {
-      return Object(wildcard)["*"] === "allow"
-    }
-    return false
+    return isAllowEverything(sync.data.config.permission)
   }
 
   function setAutoApprove(enable: boolean) {
@@ -284,7 +334,7 @@ function deadline<T>(task: Promise<T>, label: string) {
   const timer = new Promise<never>((_, reject) => {
     handle = setTimeout(() => reject(new Error(`${label} timed out`)), 8_000)
   })
-  task.finally(() => clearTimeout(handle))
+  task.finally(() => clearTimeout(handle)).catch(() => {})
   timer.catch(() => {})
   return Promise.race([task, timer])
 }

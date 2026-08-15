@@ -3,9 +3,9 @@ import { useBindings } from "@tui/keymap"
 import { Show } from "solid-js"
 import { useTheme } from "@tui/context/theme"
 import { Spinner } from "@tui/component/spinner"
-import type { SettingsState } from "./state"
+import type { Scope, SettingsState } from "./state"
 
-export function DisabledProvidersView(props: { ctx: SettingsState; back: () => void }) {
+export function DisabledProvidersView(props: { ctx: SettingsState; scope: Scope; back: () => void }) {
   const { theme } = useTheme()
   const options = () =>
     props.ctx.store.disabledProviders
@@ -31,7 +31,7 @@ export function DisabledProvidersView(props: { ctx: SettingsState; back: () => v
       truncateOverflow
       compactFooter
       onSelect={async (option) => {
-        const ok = await props.ctx.enableProvider(option.value, option.title)
+        const ok = await props.ctx.enableProvider(option.value, option.title, props.scope)
         if (ok) props.back()
       }}
       footer={
