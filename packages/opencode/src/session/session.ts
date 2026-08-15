@@ -870,6 +870,7 @@ export const layer: Layer.Layer<
         model, // kilocode_change - preserve the model + variant active at the fork point
         sourceID: input.sessionID, // kilocode_change - forks preserve initialized confinement
         sandboxFallback, // kilocode_change - seed confinement from the source session's original directory
+        platform: KiloSession.resolvePlatform(original.id), // kilocode_change - inherit platform telemetry attribution
       })
       const idMap = new Map<string, MessageID>()
 

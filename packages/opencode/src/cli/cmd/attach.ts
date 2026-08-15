@@ -77,7 +77,7 @@ export const AttachCommand = cmd({
     const noReplay = args.replay === false || args.noReplay === true
 
     // kilocode_change start
-    const { importCloudSession, validateCloudFork } = await import("@/kilocode/cloud-session")
+    const { importCloudSession, validateCloudFork, reportCloudImportError } = await import("@/kilocode/cloud-session")
     const cloudForkError = validateCloudFork(args)
     if (cloudForkError) {
       UI.error(cloudForkError)
@@ -140,14 +140,15 @@ export const AttachCommand = cmd({
         directory,
         headers,
       })
-      const id = await importCloudSession(sdk, args.session).catch(() => undefined)
-      if (!id) {
-        UI.error("Failed to import session from cloud")
+      try {
+        const id = await importCloudSession(sdk, args.session)
+        args.session = id
+        args.cloudFork = false
+      } catch (err) {
+        reportCloudImportError(err)
         process.exitCode = 1
         return
       }
-      args.session = id
-      args.cloudFork = false
     }
     // kilocode_change end
     const config = await TuiConfig.get()

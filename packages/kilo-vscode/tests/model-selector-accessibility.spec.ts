@@ -80,6 +80,20 @@ test("auto efficient details show server description and model choices", async (
   await expect(preview).not.toContainText("openai/gpt-5.5")
 })
 
+test("auto frontier details show model choices when routes are present", async ({ page }) => {
+  await load(page, "shared--model-selector-accessible")
+
+  await page.getByRole("button", { name: "Review model: Alpha" }).click()
+  await page.getByRole("treeitem", { name: /Kilo Auto Frontier/ }).click()
+
+  const preview = page.locator(".model-selector-preview")
+  await expect(preview).toContainText("Routes each request to the strongest available models.")
+  await expect(preview).toContainText("Model choices")
+  await expect(preview).toContainText("openai/gpt-5.5")
+  await expect(preview).toContainText("anthropic/claude-opus-4.6")
+  await expect(preview).not.toContainText("google/gemini-2.5-flash")
+})
+
 test("search uses a flat relevance-ranked result list with provider labels", async ({ page }) => {
   await load(page, "shared--model-selector-accessible")
 

@@ -10,6 +10,7 @@ import path from "path"
 import { Global } from "@opencode-ai/core/global"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { applyEdits, modify, parse as parseJsonc } from "jsonc-parser"
+import { KilocodeConfigSources } from "../config/sources"
 
 import PROMPT_DEBUG from "../../agent/prompt/debug.txt"
 import PROMPT_ORCHESTRATOR from "../../agent/prompt/orchestrator.txt"
@@ -143,6 +144,14 @@ export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
   "man *-H*": "deny",
 }
 
+const exploreBash: Record<string, "allow" | "ask" | "deny"> = {
+  ...readOnlyBash,
+  // Explore runs as a delegated agent, so it cannot answer permission prompts.
+  "gh *": "deny",
+  // `find` can mutate through `-delete` and `-exec`; use glob/list instead.
+  "find *": "deny",
+}
+
 function askGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
   return Permission.fromConfig({
     "*": "deny",
@@ -161,7 +170,6 @@ function askGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
     mode_switch: "ask",
     webfetch: "allow",
     websearch: "allow",
-    codebase_search: "allow",
     semantic_search: "allow",
     external_directory: {
       [Truncate.GLOB]: "allow",
@@ -225,6 +233,20 @@ export function hardenPlan(
   item.permission = Permission.merge(item.permission, planEditGuard(worktree), ...edit)
 }
 
+export function hardenExplore(
+  key: string,
+  item: { permission: Permission.Ruleset },
+  ...explicit: Permission.Ruleset[]
+) {
+  if (key !== "explore") return
+  item.permission = Permission.merge(
+    item.permission,
+    Permission.fromConfig({ bash: exploreBash }),
+    // Hardening is a ceiling, so retain any stricter user-authored denies.
+    ...explicit.map(denies),
+  )
+}
+
 function planGuard(worktree: string, mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
   return Permission.fromConfig({
     "*": "deny",
@@ -249,7 +271,6 @@ function planGuard(worktree: string, mcp: Record<string, "allow" | "ask" | "deny
     list: "allow",
     webfetch: "allow",
     websearch: "allow",
-    codebase_search: "allow",
     semantic_search: "allow",
     external_directory: {
       [Truncate.GLOB]: "allow",
@@ -375,7 +396,7 @@ export function telemetryOptions(_cfg: Config.Info) {
 // Patch the base agents map in-place with all kilo-specific changes:
 // - Rename build → code
 // - Patch plan with readOnlyBash, mcpRules, .kilo paths
-// - Patch explore with codebase_search and conditional prompt
+// - Patch explore permissions and prompt
 // - Patch appropriate agents with semantic_search
 // - Add debug, orchestrator, ask agents
 export function patchAgents(
@@ -438,7 +459,7 @@ export function patchAgents(
     }
   }
 
-  // Patch explore with codebase_search and conditional prompt
+  // Patch explore permissions and prompt
   if (agents.explore) {
     agents.explore = {
       ...agents.explore,
@@ -449,11 +470,9 @@ export function patchAgents(
           grep: "allow",
           glob: "allow",
           list: "allow",
-          bash: "allow",
           skill: "allow",
           webfetch: "allow",
           websearch: "allow",
-          codebase_search: "allow",
           semantic_search: "allow",
           read: "allow",
           external_directory: {
@@ -467,10 +486,11 @@ export function patchAgents(
           },
         }),
         user,
+        // Explore is always delegated, so user allows cannot make its shell writable.
+        Permission.fromConfig({ bash: exploreBash }),
+        denies(user),
       ),
-      prompt: cfg.experimental?.codebase_search
-        ? `Prefer using the codebase_search tool for codebase searches — it performs intelligent multi-step code search and returns the most relevant code spans.\n\n${PROMPT_EXPLORE}`
-        : PROMPT_EXPLORE,
+      prompt: PROMPT_EXPLORE,
     }
   }
 
@@ -518,7 +538,6 @@ export function patchAgents(
         todowrite: "allow",
         webfetch: "allow",
         websearch: "allow",
-        codebase_search: "allow",
         external_directory: {
           [Truncate.GLOB]: "allow",
         },
@@ -556,10 +575,16 @@ export const RemoveError = NamedError.create("AgentRemoveError", {
 /**
  * Remove a custom agent by deleting its markdown source file, removing it from
  * config-backed agent entries, and/or removing it from legacy .kilocodemodes YAML files.
- * Scans all config directories for agent/mode .md files matching the name,
- * then also checks the .kilocodemodes files the ModesMigrator reads.
+ * Scans the selected writable config scope, or every scope when none is selected.
  */
-export async function remove(input: { name: string; agent?: AgentInfo; dirs: string[]; directory: string }) {
+export async function remove(input: {
+  name: string
+  agent?: AgentInfo
+  dirs: string[]
+  directory: string
+  worktree?: string
+  scope?: "global" | "project"
+}) {
   if (!input.agent) throw new RemoveError({ name: input.name, message: "agent not found" })
   if (input.agent.native) throw new RemoveError({ name: input.name, message: "cannot remove native agent" })
   // Prevent removal of organization-managed agents
@@ -571,10 +596,21 @@ export async function remove(input: { name: string; agent?: AgentInfo; dirs: str
 
   const { unlink, writeFile } = await import("fs/promises")
   let found = false
+  const result = await KilocodeConfigSources.list({ directory: input.directory, worktree: input.worktree })
+  const sources = result.sources.filter((source) => !input.scope || source.scope === input.scope)
+  const roots = new Set(
+    sources.flatMap((source) => {
+      if (!source.path) return []
+      if (source.kind === "config-dir") return [source.path]
+      if (source.kind === "global-file") return [path.dirname(source.path)]
+      return []
+    }),
+  )
+  const dirs = input.scope ? input.dirs.filter((dir) => roots.has(dir)) : input.dirs
 
   // 1. Delete .md files from config directories
   const patterns = ["{agent,agents}/**/" + input.name + ".md", "{mode,modes}/" + input.name + ".md"]
-  for (const dir of input.dirs) {
+  for (const dir of dirs) {
     for (const pattern of patterns) {
       const matches = await Glob.scan(pattern, { cwd: dir, absolute: true, dot: true })
       for (const file of matches) {
@@ -586,7 +622,7 @@ export async function remove(input: { name: string; agent?: AgentInfo; dirs: str
     }
   }
 
-  if (await removeConfigAgent(input.name, input.directory)) found = true
+  if (await removeConfigAgent(input.name, sources)) found = true
 
   // 2. Remove from legacy .kilocodemodes YAML files (read by ModesMigrator)
   const { ModesMigrator } = await import("@/kilocode/modes-migrator")
@@ -594,15 +630,22 @@ export async function remove(input: { name: string; agent?: AgentInfo; dirs: str
   const os = await import("os")
   const matter = (await import("gray-matter")).default
   const home = os.default.homedir()
-  const modesFiles = [
-    path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "custom_modes.yaml"),
-    path.join(home, ".kilocode", "cli", "global", "settings", "custom_modes.yaml"),
-    path.join(home, ".kilocodemodes"),
-    path.join(input.directory, ".kilocodemodes"),
+  const legacy = [
+    {
+      scope: "global" as const,
+      file: path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "custom_modes.yaml"),
+    },
+    {
+      scope: "global" as const,
+      file: path.join(home, ".kilocode", "cli", "global", "settings", "custom_modes.yaml"),
+    },
+    { scope: "global" as const, file: path.join(home, ".kilocodemodes") },
+    { scope: "project" as const, file: path.join(input.directory, ".kilocodemodes") },
   ]
 
-  for (const file of modesFiles) {
-    const modes = await ModesMigrator.readModesFile(file)
+  for (const item of legacy) {
+    if (input.scope && item.scope !== input.scope) continue
+    const modes = await ModesMigrator.readModesFile(item.file)
     if (!modes.length) continue
 
     const filtered = modes.filter((m: { slug: string }) => m.slug !== input.name)
@@ -613,19 +656,17 @@ export async function remove(input: { name: string; agent?: AgentInfo; dirs: str
       .stringify("", { customModes: filtered })
       .replace(/^---\n/, "")
       .replace(/\n---\n?$/, "")
-    await writeFile(file, yaml)
+    await writeFile(item.file, yaml)
     found = true
   }
 
   if (!found) throw new RemoveError({ name: input.name, message: "no agent file found on disk" })
 }
 
-async function removeConfigAgent(name: string, directory: string) {
-  const { KilocodeConfigOverlay } = await import("@/kilocode/config/overlay")
-  const files = [
-    KilocodeConfigOverlay.globalTarget(),
-    await KilocodeConfigOverlay.projectTarget({ directory }),
-  ]
+async function removeConfigAgent(name: string, sources: KilocodeConfigSources.Source[]) {
+  const files = sources
+    .filter((source) => source.exists && source.editable && source.path && source.kind.endsWith("-file"))
+    .map((source) => source.path!)
   let found = false
 
   for (const file of new Set(files)) {

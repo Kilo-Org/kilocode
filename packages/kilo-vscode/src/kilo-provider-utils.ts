@@ -454,7 +454,7 @@ export type WebviewMessage =
   | { type: "sessionAgentSwitched"; sessionID: string; agent: string }
   | { type: "sessionDeleted"; sessionID: string }
   | { type: "messageRemoved"; sessionID: string; messageID: string }
-  | { type: "sessionError"; sessionID?: string; error?: unknown }
+  | { type: "sessionError"; eventID: string; sessionID?: string; error?: unknown }
   | {
       type: "sandboxStatus"
       sessionID: string
@@ -624,6 +624,7 @@ export function mapSSEEventToWebviewMessage(event: StreamEvent, sessionID: strin
     case "session.error": {
       return {
         type: "sessionError",
+        eventID: event.id,
         sessionID: event.properties.sessionID,
         error: event.properties.error,
       }

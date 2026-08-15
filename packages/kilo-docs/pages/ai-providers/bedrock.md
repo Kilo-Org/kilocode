@@ -15,9 +15,9 @@ Kilo Code supports accessing models through Amazon Bedrock, a fully managed serv
 - **AWS Account:** You need an active AWS account.
 - **Bedrock Access:** You must request and be granted access to Amazon Bedrock. See the [AWS Bedrock documentation](https://docs.aws.amazon.com/bedrock/latest/userguide/getting-started.html) for details on requesting access.
 - **Model Access:** Within Bedrock, you need to request access to the specific models you want to use (e.g., Anthropic Claude).
-- **Install AWS CLI:** Use AWS CLI to configure your account for authentication
+- **AWS CLI (profile authentication only):** If you plan to use an AWS profile, install AWS CLI and configure your credentials:
   ```bash
-   aws configure
+  aws configure
   ```
 
 ## Getting Credentials
@@ -27,7 +27,7 @@ You have three options for configuring AWS credentials:
 1.  **Bedrock API Key:**
     - Create a Bedrock-specific API key in the AWS Console. This is a simple service-specific authentication method.
     - See the [AWS documentation on Bedrock credentials](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_bedrock.html) for instructions on creating an API key.
-2.  **AWS Access Keys (Recommended for Development):**
+2.  **AWS Access Keys:**
     - Create an IAM user with the necessary permissions (at least `bedrock:InvokeModel`).
     - Generate an access key ID and secret access key for that user.
     - _(Optional)_ Create a session token if required by your IAM configuration.
@@ -39,20 +39,32 @@ You have three options for configuring AWS credentials:
 {% tabs %}
 {% tab label="VSCode" %}
 
-Open **Settings** (gear icon) and go to the **Providers** tab to add AWS Bedrock. The extension uses the AWS credentials chain for authentication — configure your AWS credentials using the AWS CLI or environment variables before adding the provider.
+1. Open **Settings** and select **Providers**.
+2. Find **Amazon Bedrock** and select **Connect**.
+3. Choose an authentication method:
+   - **AWS access keys:** Enter the AWS access key ID, AWS secret access key, optional AWS session token, and AWS region.
+   - **Bedrock API key:** Enter a Bedrock API key.
+4. Select **Submit**.
 
-The extension stores this in your `kilo.json` config file. You can also edit the config file directly — see the **CLI** tab for the file format.
+The extension stores these credentials in Kilo's credential store, not in `kilo.json`.
 
 {% /tab %}
 {% tab label="CLI" %}
 
-Bedrock uses the AWS credentials chain for authentication. Configure your AWS credentials using the AWS CLI or environment variables:
+Bedrock supports a Bedrock API key or the AWS credentials chain.
 
-**Environment variables:**
+**Bedrock API key:**
+
+```bash
+export AWS_BEARER_TOKEN_BEDROCK="your-bedrock-api-key"
+```
+
+**AWS access key environment variables:**
 
 ```bash
 export AWS_ACCESS_KEY_ID="your-access-key"
 export AWS_SECRET_ACCESS_KEY="your-secret-key"
+export AWS_SESSION_TOKEN="your-session-token" # Optional
 export AWS_REGION="us-east-1"
 ```
 
@@ -60,6 +72,7 @@ Or use an AWS profile:
 
 ```bash
 aws configure --profile bedrock
+export AWS_PROFILE="bedrock"
 ```
 
 **Config file** (`~/.config/kilo/kilo.json` or `./kilo.json`):
