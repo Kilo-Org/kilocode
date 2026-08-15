@@ -26,6 +26,7 @@ import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
+import { Permission } from "../../src/permission" // kilocode_change
 
 afterEach(async () => {
   await disposeAllInstances()
@@ -665,6 +666,66 @@ describe("tool.task", () => {
       },
     },
   )
+
+  // kilocode_change start - test that subagent own read permissions are carried into child session permission
+  it.instance(
+    "execute preserves subagent read allow rules for env files",
+    () =>
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const { chat, assistant } = yield* seed()
+        const tool = yield* TaskTool
+        const def = yield* tool.init()
+        const promptOps = stubOps()
+
+        const result = yield* def.execute(
+          {
+            description: "read env",
+            prompt: "read the .env file",
+            subagent_type: "envreader",
+          },
+          {
+            sessionID: chat.id,
+            messageID: assistant.id,
+            agent: "build",
+            abort: new AbortController().signal,
+            extra: { promptOps },
+            messages: [],
+            metadata: () => Effect.void,
+            ask: () => Effect.void,
+          },
+        )
+
+        const child = yield* sessions.get(result.metadata.sessionId)
+        expect(child.parentID).toBe(chat.id)
+        expect(child.agent).toBe("envreader")
+        expect(child.permission).toEqual(
+          expect.arrayContaining([{ permission: "read", pattern: "*.env", action: "allow" }]),
+        )
+
+        const effective = child.permission ?? []
+        expect(Permission.evaluate("read", "project/.env", effective).action).toBe("allow")
+        expect(Permission.evaluate("read", "project/.env.local", effective).action).toBe("ask")
+      }),
+    {
+      config: {
+        agent: {
+          envreader: {
+            mode: "subagent",
+            permission: {
+              read: {
+                "*": "allow",
+                "*.env": "allow",
+                "*.env.*": "ask",
+                "*.env.example": "allow",
+              },
+            },
+          },
+        },
+      },
+    },
+  )
+  // kilocode_change end
 
   // kilocode_change start - terminal child assistant errors fail the task tool boundary
   it.instance("execute fails when child prompt returns assistant error", () =>

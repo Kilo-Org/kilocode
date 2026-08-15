@@ -169,6 +169,7 @@ export const TaskTool = Tool.define(
       const caller = yield* agent.get(ctx.agent)
       const rules = KiloTask.inherited({ caller, session: parent, mcp: cfg.mcp })
       const childPermission = KiloTask.merge(
+        next.permission ?? [],
         deriveSubagentSessionPermission({
           parentSessionPermission: parent.permission ?? [],
           subagent: next,
