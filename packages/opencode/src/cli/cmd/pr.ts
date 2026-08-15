@@ -1,10 +1,13 @@
 import { Effect } from "effect"
+import type { Argv } from "yargs"
 import { UI } from "../ui"
+import { cmd } from "./cmd"
 import { effectCmd, fail } from "../effect-cmd"
 import { Git } from "@/git"
 import { InstanceRef } from "@/effect/instance-ref"
 import { Process } from "@/util/process"
 import { existsSync } from "node:fs" // kilocode_change
+import { detectPrLink, parsePrUrl, readPrLinkOverride, writePrLinkOverride } from "@/kilo-sessions/pr-link" // kilocode_change
 
 const subcommand = "pr" // kilocode_change
 
@@ -26,8 +29,21 @@ export function cliCommand(
 }
 // kilocode_change end
 
-export const PrCommand = effectCmd({
-  command: `${subcommand} <number>`, // kilocode_change
+export const PrCommand = cmd({
+  command: subcommand,
+  describe: "manage pull requests", // kilocode_change
+  builder: (yargs: Argv) =>
+    yargs
+      .command(PrCheckoutCommand)
+      .command(PrLinkCommand)
+      .command(PrUnlinkCommand)
+      .command(PrStatusCommand)
+      .demandCommand(),
+  async handler() {},
+})
+
+export const PrCheckoutCommand = effectCmd({
+  command: "checkout <number>",
   describe: "fetch and checkout a GitHub PR branch, then run kilo", // kilocode_change
   builder: (yargs) =>
     yargs.positional("number", {
@@ -35,7 +51,7 @@ export const PrCommand = effectCmd({
       describe: "PR number to checkout",
       demandOption: true,
     }),
-  handler: Effect.fn("Cli.pr")(function* (args) {
+  handler: Effect.fn("Cli.pr.checkout")(function* (args) {
     const ctx = yield* InstanceRef
     if (!ctx) return yield* fail("Could not load instance context")
     if (ctx.project.vcs !== "git") {
@@ -137,3 +153,67 @@ export const PrCommand = effectCmd({
     if (code !== 0) return yield* Effect.die(new Error(`kilo exited with code ${code}`)) // kilocode_change
   }),
 })
+
+// kilocode_change start - link/unlink/status write and read the manual PR override in Storage
+export const PrLinkCommand = effectCmd({
+  command: "link <url>",
+  describe: "link the current worktree to a pull request",
+  builder: (yargs) =>
+    yargs.positional("url", {
+      type: "string",
+      describe: "PR URL to link",
+      demandOption: true,
+    }),
+  handler: Effect.fn("Cli.pr.link")(function* (args) {
+    const ctx = yield* InstanceRef
+    if (!ctx) return yield* fail("Could not load instance context")
+
+    const link = parsePrUrl(args.url)
+    if (!link) return yield* fail(`Invalid PR URL: ${args.url}`)
+
+    yield* Effect.promise(() => writePrLinkOverride(ctx.worktree, link))
+    UI.println(`Linked PR #${link.prNumber} (${link.platform})`)
+    UI.println(link.prUrl)
+  }),
+})
+
+export const PrUnlinkCommand = effectCmd({
+  command: "unlink",
+  describe: "clear the linked pull request",
+  handler: Effect.fn("Cli.pr.unlink")(function* () {
+    const ctx = yield* InstanceRef
+    if (!ctx) return yield* fail("Could not load instance context")
+
+    yield* Effect.promise(() => writePrLinkOverride(ctx.worktree, { cleared: true }))
+    UI.println("PR link cleared")
+  }),
+})
+
+export const PrStatusCommand = effectCmd({
+  command: "status",
+  describe: "show the linked pull request",
+  handler: Effect.fn("Cli.pr.status")(function* () {
+    const ctx = yield* InstanceRef
+    if (!ctx) return yield* fail("Could not load instance context")
+
+    const override = yield* Effect.promise(() => readPrLinkOverride(ctx.worktree))
+    if (override && "cleared" in override) {
+      UI.println("PR link cleared")
+      return
+    }
+    if (override) {
+      UI.println(`Linked PR #${override.prNumber} (${override.platform})`)
+      UI.println(override.prUrl)
+      return
+    }
+
+    const detected = yield* Effect.promise(() => detectPrLink())
+    if (detected) {
+      UI.println(`Detected PR #${detected.prNumber} (${detected.platform})`)
+      UI.println(detected.prUrl)
+      return
+    }
+    UI.println("no PR linked")
+  }),
+})
+// kilocode_change end
