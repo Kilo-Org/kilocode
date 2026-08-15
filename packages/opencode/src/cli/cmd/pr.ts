@@ -189,31 +189,33 @@ export const PrUnlinkCommand = effectCmd({
   }),
 })
 
+export const prStatusHandler = Effect.fn("Cli.pr.status")(function* () {
+  const ctx = yield* InstanceRef
+  if (!ctx) return yield* fail("Could not load instance context")
+
+  const override = yield* Effect.promise(() => readPrLinkOverride(ctx.worktree))
+  if (override && "cleared" in override) {
+    UI.println("PR link cleared")
+    return
+  }
+  if (override) {
+    UI.println(`Linked PR #${override.prNumber} (${override.platform})`)
+    UI.println(override.prUrl)
+    return
+  }
+
+  const detected = yield* Effect.promise(() => detectPrLink())
+  if (detected) {
+    UI.println(`Detected PR #${detected.prNumber} (${detected.platform})`)
+    UI.println(detected.prUrl)
+    return
+  }
+  UI.println("no PR linked")
+})
+
 export const PrStatusCommand = effectCmd({
   command: "status",
   describe: "show the linked pull request",
-  handler: Effect.fn("Cli.pr.status")(function* () {
-    const ctx = yield* InstanceRef
-    if (!ctx) return yield* fail("Could not load instance context")
-
-    const override = yield* Effect.promise(() => readPrLinkOverride(ctx.worktree))
-    if (override && "cleared" in override) {
-      UI.println("PR link cleared")
-      return
-    }
-    if (override) {
-      UI.println(`Linked PR #${override.prNumber} (${override.platform})`)
-      UI.println(override.prUrl)
-      return
-    }
-
-    const detected = yield* Effect.promise(() => detectPrLink())
-    if (detected) {
-      UI.println(`Detected PR #${detected.prNumber} (${detected.platform})`)
-      UI.println(detected.prUrl)
-      return
-    }
-    UI.println("no PR linked")
-  }),
+  handler: prStatusHandler,
 })
 // kilocode_change end
