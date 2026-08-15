@@ -512,6 +512,7 @@ export namespace KiloSessions {
           watch(Session.Event.Deleted, (evt) => {
             const sessionID = evt.properties.sessionID
             knownTitles.delete(sessionID)
+            lastPrLinkTriple.delete(sessionID)
             clearRenameMarks(sessionID)
           })
           watch(MessageV2.Event.Updated, async (evt) => {
