@@ -311,9 +311,17 @@ class MdViewTest : BasePlatformTestCase() {
         assertTrue(pre.contains("border-color:"))
     }
 
+    fun `test override sheet disables html code block borders`() {
+        val sheet = view.overrideSheet()
+        val pre = sheet.substringAfter("pre {").substringBefore("} pre code")
+
+        assertTrue(pre.contains("border-width: 0"))
+    }
+
     fun `test applyStyle derives markdown colors from editor scheme`() {
         val style = customStyle()
         val color = MdCommon.hex(SessionUiStyle.View.Markdown.string())
+        val pre = MdCommon.hex(style.editorBackground)
         val quote = "#445566"
 
         view.applyStyle(style)
@@ -325,7 +333,7 @@ class MdViewTest : BasePlatformTestCase() {
         assertTrue(html.contains("<code style=\"color: $color\">inline</code>"))
         assertFalse(html.contains("background: #112233"))
         assertFalse(html.contains("#cc8866"))
-        assertTrue(sheet.contains("pre { background: #445566; color: #ddeeff; border-color: #223344"))
+        assertTrue(sheet.contains("pre { background: $pre; color: #ddeeff; border-color: #223344"))
         assertTrue(sheet.contains("blockquote { background:"))
         assertTrue(sheet.contains("border-left-color: #223344; color: $quote"))
         assertTrue(sheet.contains("blockquote p { color: $quote"))
@@ -353,6 +361,13 @@ class MdViewTest : BasePlatformTestCase() {
         assertFalse(view.html().contains("#102030"))
     }
 
+    fun `test inline code rule disables borders`() {
+        val sheet = view.overrideSheet()
+        val code = sheet.substringAfter("tt, code, samp, pre, pre code {").substringBefore("}")
+
+        assertTrue(code.contains("border-width: 0"))
+    }
+
     fun `test pre bg and fg overrides appear in override sheet`() {
         view.preBg = Color(0x0A, 0x0B, 0x0C)
         view.preFg = Color(0xD0, 0xE0, 0xF0)
@@ -368,7 +383,7 @@ class MdViewTest : BasePlatformTestCase() {
         view.set("`x`")
         val sheet = view.overrideSheet()
 
-        assertTrue(sheet.contains("tt, code, samp, pre, pre code { font-family: 'Fira Code', monospace"))
+        assertTrue(sheet.contains("tt, code, samp, pre, pre code { font-family: 'Fira Code', monospace; border-width: 0"))
         assertTrue(sheet.contains("a.kilo-file-ref, code a.kilo-file-ref { color:"))
         assertTrue(sheet.contains("font-family: 'Fira Code', monospace; text-decoration: underline"))
     }
@@ -382,7 +397,7 @@ class MdViewTest : BasePlatformTestCase() {
 
         assertTrue(sheet.contains("body { color:"))
         assertTrue(sheet.contains("font-family: '${style.transcriptFont.name}', sans-serif"))
-        assertTrue(sheet.contains("tt, code, samp, pre, pre code { font-family: 'Courier New', monospace"))
+        assertTrue(sheet.contains("tt, code, samp, pre, pre code { font-family: 'Courier New', monospace; border-width: 0"))
     }
 
     fun `test blockquote color overrides appear in override sheet`() {

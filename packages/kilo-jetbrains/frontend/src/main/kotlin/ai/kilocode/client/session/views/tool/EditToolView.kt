@@ -16,8 +16,7 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.session.views.base.PartHeader
-import ai.kilocode.client.session.views.base.SecondarySessionPartView
-import ai.kilocode.client.telemetry.Telemetry
+import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.ui.DiffStatBadge
 import ai.kilocode.client.ui.ToolbarButtonAction
 import ai.kilocode.client.ui.UiStyle
@@ -47,7 +46,7 @@ class EditToolView(
     private val selection: SessionSelection? = null,
     private val parts: ToolParts = toolParts(tool, openFile),
     private var body: EditBody = editBody(tool, selection, openFile),
-) : SecondarySessionPartView(parts.header, { body.mount(tool) }), UiDataProvider, SessionCopyTarget {
+) : AbstractSessionPartView(parts.header, { body.mount(tool) }), UiDataProvider, SessionCopyTarget {
 
     override val contentId: String = tool.id
 
@@ -63,7 +62,7 @@ class EditToolView(
     )
     private val diffAnchor = hoverPlaceholder(diff)
     private val filesTag = JBLabel().apply {
-        foreground = UiStyle.Colors.weak()
+        foreground = SessionUiStyle.Text.Secondary.foreground()
         font = JBFont.small()
         isVisible = false
     }
@@ -75,11 +74,10 @@ class EditToolView(
         parts.left.next(parts.link)
         parts.left.next(filesTag)
         parts.left.next(PartHeader.centered(badge))
-        parts.left.next(PartHeader.centered(diffAnchor))
-        // parts.link is intentionally omitted: FileLinkLabel installs its own click handler that opens
-        // the file, and binding it here would also toggle the card on the same click (see ReadToolView,
-        // which likewise omits it). Header toggling still works via parts.left/row.
-        bindHeader(parts.glyph, parts.title, parts.sub, parts.state, parts.left, parts.right, parts.slot, filesTag, badge, diffAnchor)
+        parts.left.next(diffAnchor)
+        // The base binds click-to-toggle across the whole header subtree, skipping controls that own
+        // a mouse listener. parts.link (FileLinkLabel) installs its own click handler that opens the
+        // file, so it is skipped automatically and does not also toggle the card.
         applyStyle(style)
         sync()
     }
@@ -128,7 +126,7 @@ class EditToolView(
     override fun getPreferredSize(): Dimension {
         val size = super.getPreferredSize()
         if (!bodyVisible()) return size
-        val height = row.preferredSize.height + (body.panel()?.preferredSize?.height ?: 0)
+        val height = row.preferredSize.height + expandedGap() + (body.panel()?.preferredSize?.height ?: 0)
         return Dimension(size.width, minOf(size.height, height))
     }
 
@@ -197,13 +195,8 @@ class EditToolView(
     internal fun codeEditors(): List<EditorTextField> = body.codeEditors()
 
     @RequiresEdt
-    override fun headerPopup(): HeaderPopupRequest? {
-        if (isExpanded()) return null
-        if (editDiff(item).isBlank()) return null
-        return HeaderPopupRequest(row, build = { buildPopupBody() }) {
-            Telemetry.send("Header Popup Shown", mapOf("surface" to "session", "tool" to "edit"))
-        }
-    }
+    override fun headerPopup(): HeaderPopupRequest? =
+        popup("tool", "edit", editDiff(item).isNotBlank()) { buildPopupBody() }
 
     @RequiresEdt
     override fun applyStyle(style: SessionEditorStyle) {
@@ -233,7 +226,7 @@ class EditToolView(
         val path = if (count > 1) null else editPath(item)
         changed = setFileTarget(parts, path, if (path == null) "" else tail(path)) || changed
         changed = setForeground(parts.title, titleColor(item)) || changed
-        changed = setForeground(parts.link, UiStyle.Colors.fg()) || changed
+        changed = setForeground(parts.link, SessionUiStyle.Colors.foreground()) || changed
         changed = setText(parts.state, stateText(item)) || changed
         changed = setForeground(parts.state, color(item)) || changed
         syncDiffAction(count)
@@ -287,7 +280,7 @@ class EditToolView(
         // calls rebuild and sets its signature), so a follow-up update() here would be a no-op.
         val panel = popup.mount(item)
         popup.applyStyle(style)
-        return HeaderPopupBody(panel, owner, style.editorBackground, SessionUiStyle.View.Popup.WIDE_MAX_WIDTH)
+        return HeaderPopupBody(panel, owner, SessionUiStyle.Colors.codeBlockBackground(), SessionUiStyle.View.Popup.WIDE_MAX_WIDTH)
     }
 
     override fun dumpLabel() = "EditToolView#$contentId(${labelText()})"
@@ -342,10 +335,12 @@ private fun popupBody(tool: Tool, selection: SessionSelection?, openFile: Sessio
 
 private fun diffBody(selection: SessionSelection?) = ToolMarkdownBody(
     MdCodeBlockOptions(
-        border = MdCodeBlockBorder.Bottom,
+        border = MdCodeBlockBorder.None,
         maxLines = SessionUiStyle.View.Tool.DIFF_LINES,
         verticalPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
         editorOnly = true,
+        horizontalPadding = 0,
+        overlapScrollbar = true,
     ),
     selection,
     render = ::diffMarkdown,
@@ -363,6 +358,8 @@ internal val POPUP_OPTS = MdCodeBlockOptions(
     border = MdCodeBlockBorder.None,
     verticalPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
     editorOnly = true,
+    horizontalPadding = 0,
+    overlapScrollbar = true,
 )
 
 /**

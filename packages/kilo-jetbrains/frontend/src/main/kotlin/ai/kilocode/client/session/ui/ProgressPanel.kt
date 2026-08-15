@@ -6,6 +6,7 @@ import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
@@ -17,6 +18,7 @@ import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
+import java.awt.Color
 
 /**
  * Progress footer rendered at the bottom of the session transcript while the
@@ -44,13 +46,13 @@ class ProgressPanel(
         foreground = style.editorForeground
     }
     private val elapsed = JBLabel().apply {
-        foreground = UiStyle.Colors.weak()
+        foreground = SessionUiStyle.Text.Secondary.foreground()
     }
     private val spinner = JBLabel(AnimatedIcon.Default())
     private val tick = clock.timer(1000) { syncElapsed() }
 
     init {
-        isOpaque = false
+        isOpaque = true
         isVisible = false
         border = JBUI.Borders.empty(
             UiStyle.Gap.sm(),
@@ -81,6 +83,8 @@ class ProgressPanel(
 
     /** Exposed for test assertions. */
     fun labelForeground() = label.foreground
+
+    override fun getBackground(): Color = SessionUiStyle.Colors.sessionBackground()
 
     private fun onState(state: SessionState) {
         this.state = state
@@ -140,7 +144,7 @@ class ProgressPanel(
         this.style = style
         label.font = style.regularFont
         elapsed.font = style.regularFont
-        elapsed.foreground = UiStyle.Colors.weak()
+        elapsed.foreground = SessionUiStyle.Text.Secondary.foreground()
         if (state is SessionState.Busy) label.foreground = style.editorForeground
         revalidate()
         repaint()
