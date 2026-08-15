@@ -29,6 +29,18 @@ Then select a TrustedRouter model such as `trustedrouter/auto`, `trustedrouter/z
 {% /tab %}
 {% tab label="CLI" %}
 
+**Method 1 — `/connect` (recommended)**
+
+Run `kilo`, then use the `/connect` command, select **TrustedRouter**, and paste your API key when prompted:
+
+```bash
+kilo
+# then, inside Kilo, run:
+/connect
+```
+
+**Method 2 — config file**
+
 Set the API key as an environment variable:
 
 ```bash
