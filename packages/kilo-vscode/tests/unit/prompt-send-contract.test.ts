@@ -276,6 +276,19 @@ describe("sendMessage / sendCommand draft id contract", () => {
     )
   })
 
+  it("sendMessage and sendCommand post the agent returned by promptAgent", () => {
+    expect(extractFunctionBody(source, "sendMessage")).toContain("const agent = promptAgent(scope)")
+    expect(extractFunctionBody(source, "sendCommand")).toContain("const agent = promptAgent(scope)")
+    expect(extractFunctionBody(source, "promptAgent")).toContain("return resolvePromptAgent({")
+  })
+
+  it("createSession and clearCurrentSession do not pin the provisional default agent", () => {
+    expect(extractFunctionBody(source, "createSession")).toContain("setPendingAgentSelection(null)")
+    expect(extractFunctionBody(source, "createSession")).not.toContain("setPendingAgentSelection(defaultAgent())")
+    expect(extractFunctionBody(source, "clearCurrentSession")).toContain("setPendingAgentSelection(null)")
+    expect(extractFunctionBody(source, "clearCurrentSession")).not.toContain("setPendingAgentSelection(defaultAgent())")
+  })
+
   it("does not clear a newer pending agent when a seeded draft is promoted", () => {
     const body = extractFunctionBody(source, "handleSessionCreated")
     const draftBlock = body.match(/if \(draftID\) \{([\s\S]*?)\} else if/)

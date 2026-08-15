@@ -36,6 +36,23 @@ export function createChatFocus(deps: {
   }
 }
 
+export function createPromptFocus(
+  terms: { setActiveId: (id: undefined) => void; setFocusedId: (id: undefined) => void },
+  focus: (force?: boolean) => void,
+) {
+  let until = 0
+  return {
+    active: () => Date.now() < until,
+    focus: () => {
+      until = Date.now() + 500
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+      terms.setActiveId(undefined)
+      terms.setFocusedId(undefined)
+      focus(true)
+    },
+  }
+}
+
 /** Return whether the visible question dock has an enabled option to focus. */
 export function hasQuestionOption(root: ParentNode = document): boolean {
   for (const option of root.querySelectorAll<HTMLButtonElement>(OPTION)) {

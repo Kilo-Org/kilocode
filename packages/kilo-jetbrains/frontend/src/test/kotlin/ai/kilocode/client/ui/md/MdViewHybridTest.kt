@@ -26,6 +26,7 @@ import java.awt.Color
 import java.awt.Point
 import java.awt.datatransfer.DataFlavor
 import java.awt.event.MouseEvent
+import java.awt.image.BufferedImage
 import java.net.URI
 import javax.swing.Box
 import javax.swing.JPanel
@@ -88,7 +89,7 @@ class MdViewHybridTest : BasePlatformTestCase() {
         assertEquals(0, pane.verticalScrollBar.preferredSize.width)
     }
 
-    fun `test transparent markdown keeps code block background opaque`() {
+    fun `test transparent markdown keeps code block surface filled`() {
         view.opaque = false
 
         view.set("```kotlin\nval value = 1\n```")
@@ -97,7 +98,9 @@ class MdViewHybridTest : BasePlatformTestCase() {
         val bg = view.preBg
 
         assertFalse(view.component.isOpaque)
-        assertTrue(pane.isOpaque)
+        // The pane paints its own rounded surface fill, so it stays non-opaque; the inner viewport
+        // and editor keep the surface color.
+        assertFalse(pane.isOpaque)
         assertTrue(pane.viewport.isOpaque)
         assertTrue(editor.scrollPane.isOpaque)
         assertTrue(editor.scrollPane.viewport.isOpaque)
@@ -106,6 +109,37 @@ class MdViewHybridTest : BasePlatformTestCase() {
         assertEquals(bg.rgb, editor.backgroundColor.rgb)
         assertEquals(bg.rgb, editor.scrollPane.background.rgb)
         assertEquals(bg.rgb, editor.scrollPane.viewport.background.rgb)
+    }
+
+    fun `test fenced code block corners are rounded`() {
+        view.set("```kotlin\nval x = 1\n```")
+        val pane = scrolls().single()
+        pane.setSize(200, 60)
+        pane.doLayout()
+
+        val image = BufferedImage(200, 60, BufferedImage.TYPE_INT_ARGB)
+        val g = image.createGraphics()
+        pane.paint(g)
+        g.dispose()
+        val fill = view.preBg.rgb
+
+        assertEquals("surface fills along the top edge", fill, image.getRGB(100, 2))
+        assertFalse("rounded corner is left unfilled", fill == image.getRGB(0, 0))
+    }
+
+    fun `test wide code block clips scrollbar to rounded bottom corners`() {
+        view.set("```kotlin\n${"x".repeat(500)}\n```")
+        val pane = scrolls().single()
+        pane.setSize(160, pane.preferredSize.height)
+        pane.doLayout()
+
+        val image = BufferedImage(160, pane.height, BufferedImage.TYPE_INT_ARGB)
+        val g = image.createGraphics()
+        pane.paint(g)
+        g.dispose()
+
+        assertTrue("wide content shows the horizontal scrollbar", pane.horizontalScrollBar.isVisible)
+        assertEquals("bottom corner stays transparent", 0, image.getRGB(0, pane.height - 1) ushr 24)
     }
 
     fun `test fenced code block preserves multiline editor text and height`() {
@@ -237,6 +271,7 @@ class MdViewHybridTest : BasePlatformTestCase() {
         assertTrue(pane.text.contains("<code style=\"color: $color\">"))
         assertFalse(pane.text.contains("#cc8866"))
         assertFalse(pane.text.contains("background:"))
+        assertTrue(view.overrideSheet().contains("border-width: 0"))
         assertTrue(scrolls().isEmpty())
         assertTrue(editors().isEmpty())
     }
@@ -783,7 +818,7 @@ class MdViewHybridTest : BasePlatformTestCase() {
         assertEquals("one", editors().single().text)
     }
 
-    fun `test fenced code block width is bounded and boxed`() {
+    fun `test fenced code block width is bounded and borderless`() {
         view.set("```kotlin\n${"x".repeat(500)}\n```")
         val pane = scrolls().single()
         val editor = editors().single()
@@ -792,8 +827,10 @@ class MdViewHybridTest : BasePlatformTestCase() {
         assertEquals(0, pane.preferredSize.width)
         assertTrue(editor.preferredSize.width > pane.preferredSize.width)
         assertTrue(pane.maximumSize.width > 1000)
-        assertTrue(ins.top > 0)
-        assertTrue(ins.left > 0)
+        assertEquals(0, ins.top)
+        assertEquals(0, ins.left)
+        assertEquals(0, ins.bottom)
+        assertEquals(0, ins.right)
         assertEquals(pane.background, pane.viewport.background)
     }
 
@@ -980,6 +1017,7 @@ class MdViewHybridTest : BasePlatformTestCase() {
         val field = editors().single()
         val editor = field.getEditor(true)!!
         val style = customStyle()
+        val bg = style.editorBackground.rgb
 
         view.applyStyle(style)
 
@@ -989,11 +1027,11 @@ class MdViewHybridTest : BasePlatformTestCase() {
             Color(0xDD, 0xEE, 0xFF).rgb,
             editor.colorsScheme.getAttributes(DefaultLanguageHighlighterColors.DOC_CODE_BLOCK).foregroundColor.rgb,
         )
-        assertEquals(Color(0x44, 0x55, 0x66).rgb, editor.backgroundColor.rgb)
-        assertEquals(Color(0x44, 0x55, 0x66).rgb, pane.background.rgb)
-        assertEquals(Color(0x44, 0x55, 0x66).rgb, pane.viewport.background.rgb)
-        assertEquals(Color(0x44, 0x55, 0x66).rgb, editor.scrollPane.background.rgb)
-        assertEquals(Color(0x44, 0x55, 0x66).rgb, editor.scrollPane.viewport.background.rgb)
+        assertEquals(bg, editor.backgroundColor.rgb)
+        assertEquals(bg, pane.background.rgb)
+        assertEquals(bg, pane.viewport.background.rgb)
+        assertEquals(bg, editor.scrollPane.background.rgb)
+        assertEquals(bg, editor.scrollPane.viewport.background.rgb)
         assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER, editor.scrollPane.horizontalScrollBarPolicy)
         assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER, editor.scrollPane.verticalScrollBarPolicy)
     }

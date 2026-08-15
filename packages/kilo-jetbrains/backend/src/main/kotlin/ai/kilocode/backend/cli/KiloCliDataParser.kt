@@ -26,6 +26,7 @@ import ai.kilocode.rpc.dto.CustomModelDto
 import ai.kilocode.rpc.dto.CustomProviderConfigDto
 import ai.kilocode.rpc.dto.CustomProviderSaveDto
 import ai.kilocode.rpc.dto.DiffFileDto
+import ai.kilocode.rpc.dto.EditorContextDto
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageErrorDto
 import ai.kilocode.rpc.dto.MessageSummaryDto
@@ -822,9 +823,26 @@ object KiloCliDataParser {
         if (variant != null) {
             sb.append(""","variant":${escape(variant)}""")
         }
+        val editor = prompt.editorContext
+        if (editor != null) {
+            sb.append(""","editorContext":${editorContextJson(editor)}""")
+        }
         sb.append("}")
         return sb.toString()
     }
+
+    private fun editorContextJson(ctx: EditorContextDto): String {
+        val fields = mutableListOf<String>()
+        ctx.directory?.let { fields += "\"directory\":${escape(it)}" }
+        ctx.worktree?.let { fields += "\"worktree\":${escape(it)}" }
+        ctx.visibleFiles?.takeIf { it.isNotEmpty() }?.let { fields += "\"visibleFiles\":${array(it)}" }
+        ctx.openTabs?.takeIf { it.isNotEmpty() }?.let { fields += "\"openTabs\":${array(it)}" }
+        ctx.activeFile?.let { fields += "\"activeFile\":${escape(it)}" }
+        ctx.shell?.let { fields += "\"shell\":${escape(it)}" }
+        return "{${fields.joinToString(",")}}"
+    }
+
+    private fun array(values: List<String>): String = values.joinToString(",", "[", "]") { escape(it) }
 
     private fun buildPromptPartJson(part: PromptPartDto): String {
         val fields = mutableListOf("\"type\":${escape(part.type)}")

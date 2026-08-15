@@ -6,6 +6,7 @@ import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.session.views.base.BaseQuestionView
 import ai.kilocode.client.session.views.base.PartHeader
@@ -170,10 +171,10 @@ class RevertBanner(
     override fun applyStyle(style: SessionEditorStyle) {
         card.applyStyle(style)
         title.font = style.headerFont
-        title.foreground = UiStyle.Colors.fg()
+        title.foreground = SessionUiStyle.Colors.foreground()
         progress?.applyStyle(style)
         hint.foreground = UIUtil.getLabelForeground()
-        notice.foreground = UIUtil.getContextHelpForeground()
+        notice.foreground = SessionUiStyle.Text.Secondary.foreground()
         rows.values.forEach { it.applyStyle() }
     }
 

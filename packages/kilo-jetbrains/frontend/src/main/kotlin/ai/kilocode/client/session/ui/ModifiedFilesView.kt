@@ -12,15 +12,14 @@ import ai.kilocode.client.session.ui.selection.hoverPlaceholder
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
+import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.session.views.base.PartHeader
-import ai.kilocode.client.session.views.base.SecondarySessionPartView
 import ai.kilocode.client.session.views.tool.EditFileChange
 import ai.kilocode.client.session.views.tool.POPUP_OPTS
 import ai.kilocode.client.session.views.tool.PatchBody
 import ai.kilocode.client.session.views.tool.setFont
 import ai.kilocode.client.session.views.tool.setForeground
 import ai.kilocode.client.session.views.tool.setIcon
-import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.DiffBars
 import ai.kilocode.client.ui.ToolbarButtonAction
 import ai.kilocode.client.ui.UiStyle
@@ -36,7 +35,7 @@ class ModifiedFilesView private constructor(
     private val selection: SessionSelection? = null,
     private val parts: Header = Header(),
     private val body: PatchBody = PatchBody(selection, openFile),
-) : SecondarySessionPartView(parts.panel, { body.mountFiles(emptyList()) }), SessionCopyTarget {
+) : AbstractSessionPartView(parts.panel, { body.mountFiles(emptyList()) }), SessionCopyTarget {
     override val contentId = CONTENT_ID
 
     private var style = SessionEditorStyle.current()
@@ -56,7 +55,6 @@ class ModifiedFilesView private constructor(
         body.overflow = ::openDiffViewer
         parts.diff.addActionListener { openDiffViewer() }
         isVisible = false
-        bindHeader(parts.glyph, parts.title, parts.count, parts.panel.left, parts.bars, parts.anchor)
         applyStyle(style)
     }
 
@@ -113,12 +111,8 @@ class ModifiedFilesView private constructor(
     override fun copyText(): String? = null
 
     @RequiresEdt
-    override fun headerPopup(): HeaderPopupRequest? {
-        if (isExpanded() || files.isEmpty()) return null
-        return HeaderPopupRequest(row, build = { buildPopup(files) }) {
-            Telemetry.send("Header Popup Shown", mapOf("surface" to "session", "tool" to "changes"))
-        }
-    }
+    override fun headerPopup(): HeaderPopupRequest? =
+        popup("tool", "changes", files.isNotEmpty()) { buildPopup(files) }
 
     @RequiresEdt
     override fun applyStyle(style: SessionEditorStyle) {
@@ -156,7 +150,7 @@ class ModifiedFilesView private constructor(
         }
         val panel = popup.mountFiles(files)
         popup.applyStyle(style)
-        return HeaderPopupBody(panel, owner, style.editorBackground, SessionUiStyle.View.Popup.WIDE_MAX_WIDTH)
+        return HeaderPopupBody(panel, owner, SessionUiStyle.Colors.codeBlockBackground(), SessionUiStyle.View.Popup.WIDE_MAX_WIDTH)
     }
 
     private class Header {
@@ -173,7 +167,7 @@ class ModifiedFilesView private constructor(
             leading(glyph)
             left(title)
             titleGap()
-            left(count, PartHeader.centered(bars), PartHeader.centered(anchor))
+            left(count, PartHeader.centered(bars), anchor)
         }
 
         @RequiresEdt
@@ -189,8 +183,8 @@ class ModifiedFilesView private constructor(
             setForeground(glyph, SessionUiStyle.View.Tool.completed())
             setFont(title, style.boldEditorFont)
             setFont(count, style.transcriptFont)
-            setForeground(title, UiStyle.Colors.fg())
-            setForeground(count, UiStyle.Colors.weak())
+            setForeground(title, SessionUiStyle.Colors.foreground())
+            setForeground(count, SessionUiStyle.Text.Secondary.foreground())
         }
     }
 

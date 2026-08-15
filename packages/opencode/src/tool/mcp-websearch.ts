@@ -1,9 +1,13 @@
 import { Duration, Effect, Schema } from "effect"
 import { HttpClient, HttpClientRequest } from "effect/unstable/http"
 
-export const EXA_URL = process.env.EXA_API_KEY
-  ? `https://mcp.exa.ai/mcp?exaApiKey=${encodeURIComponent(process.env.EXA_API_KEY)}`
-  : "https://mcp.exa.ai/mcp"
+// kilocode_change start - the Exa URL is derived from a caller-provided key (resolved via
+// Env.Service in the tool) instead of a module-load process.env snapshot, so BYOK keys set
+// or cleared after startup are honored and the tool-env architecture ratchet stays clean.
+export const EXA_BASE_URL = "https://mcp.exa.ai/mcp"
+export const exaUrl = (apiKey: string | undefined) =>
+  apiKey ? `${EXA_BASE_URL}?exaApiKey=${encodeURIComponent(apiKey)}` : EXA_BASE_URL
+// kilocode_change end
 export const PARALLEL_URL = "https://search.parallel.ai/mcp"
 
 const McpResult = Schema.Struct({

@@ -75,3 +75,4 @@ Use filters to find the models or providers you want to block:
 - Individual users cannot override organization-level restrictions.
 - Blocking a provider blocks all its models, including models added by that provider in the future.
 - Unblocking a provider immediately restores access to all its models.
+- To grant models to specific sets of members instead of the whole organization, use [Groups](/docs/collaborate/enterprise/groups). These organization-wide controls remain a hard ceiling that group grants cannot exceed.

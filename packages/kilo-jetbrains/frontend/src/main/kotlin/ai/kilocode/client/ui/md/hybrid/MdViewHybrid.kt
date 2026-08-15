@@ -1,8 +1,9 @@
 package ai.kilocode.client.ui.md.hybrid
 
-import ai.kilocode.client.session.ui.style.SessionEditorStyle
-import ai.kilocode.client.session.ui.selection.SessionSelection
+import ai.kilocode.client.session.ui.SessionSurface
 import ai.kilocode.client.session.ui.selection.SessionCopyTarget
+import ai.kilocode.client.session.ui.selection.SessionSelection
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.md.MdCodeBlockBorder
 import ai.kilocode.client.ui.md.MdCodeBlockFactory
@@ -32,7 +33,10 @@ import java.awt.Color
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.Font
+import java.awt.Graphics
+import java.awt.Graphics2D
 import java.awt.Point
+import java.awt.RenderingHints
 import java.awt.event.HierarchyEvent
 import java.awt.event.MouseEvent
 import javax.swing.Box
@@ -329,7 +333,7 @@ internal open class MdViewHybrid(
         return object : JBHtmlPane(
             JBHtmlPaneStyleConfiguration {
                 enableInlineCodeBackground = false
-                enableCodeBlocksBackground = true
+                enableCodeBlocksBackground = false
             },
             JBHtmlPaneConfiguration {
                 customStyleSheetProvider { sheet() }
@@ -508,18 +512,19 @@ internal open class MdViewHybrid(
             }
             viewportBorder = JBUI.Borders.empty(
                 SessionUiStyle.View.Code.topPadding(),
-                SessionUiStyle.View.Code.VIEWPORT_HORIZONTAL_PADDING,
+                code.opts.horizontalPadding,
                 SessionUiStyle.View.Code.VIEWPORT_BOTTOM_PADDING,
-                SessionUiStyle.View.Code.VIEWPORT_HORIZONTAL_PADDING,
+                code.opts.horizontalPadding,
             )
-            isOpaque = true
+            // CodePane paints its own (optionally rounded) fill, so the pane stays non-opaque; the
+            // viewport still fills the inner rectangle with the surface color.
             background = opts.preBg
             viewport.isOpaque = true
             viewport.background = opts.preBg
             horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED
             verticalScrollBarPolicy = code.opts.verticalPolicy
             isWheelScrollingEnabled = true
-            setOverlappingScrollBar(false)
+            setOverlappingScrollBar(code.opts.overlapScrollbar)
             horizontalScrollBar.preferredSize = Dimension(0, JBUI.scale(SessionUiStyle.View.Code.SCROLLBAR_HEIGHT))
             horizontalScrollBar.isOpaque = true
             if (code.opts.verticalPolicy == ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER) {
@@ -571,8 +576,10 @@ internal open class MdViewHybrid(
         val pad = pane.viewportBorder.getBorderInsets(pane)
         val text = fieldText(component)
         val content = codeHeight(component, text, code.opts.maxLines)
-        val height = content + pane.insets.top + pane.insets.bottom +
-            pad.top + pad.bottom + pane.horizontalScrollBar.preferredSize.height
+        // An overlapping scrollbar floats over the content, so it reserves no bottom band; only add
+        // the scrollbar height when it takes its own row beneath the content.
+        val scrollbar = if (code.opts.overlapScrollbar) 0 else pane.horizontalScrollBar.preferredSize.height
+        val height = content + pane.insets.top + pane.insets.bottom + pad.top + pad.bottom + scrollbar
         pane.preferredSize = Dimension(0, height)
         pane.minimumSize = Dimension(0, height)
         pane.maximumSize = Dimension(Int.MAX_VALUE, height)
@@ -677,6 +684,29 @@ internal open class MdViewHybrid(
     }
 
     private open inner class CodePane(component: JComponent) : JBScrollPane(component) {
+        // Non-opaque so the surface can round its corners over the backdrop; the fill is painted
+        // below. Bodies that draw their own edge separators (a non-None border, e.g. tool diffs)
+        // keep square corners.
+        override fun isOpaque(): Boolean = false
+
+        override fun paintComponent(g: Graphics) {
+            val g2 = g.create() as Graphics2D
+            try {
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                g2.color = background
+                val arc = if (code.opts.border == MdCodeBlockBorder.None) JBUI.scale(SessionUiStyle.View.BLOCK_ARC) else 0
+                if (arc > 0) g2.fillRoundRect(0, 0, width, height, arc, arc) else g2.fillRect(0, 0, width, height)
+            } finally {
+                g2.dispose()
+            }
+            super.paintComponent(g)
+        }
+
+        override fun paintChildren(g: Graphics) {
+            if (code.opts.border != MdCodeBlockBorder.None) return super.paintChildren(g)
+            SessionSurface.clipped(g, width, height) { super.paintChildren(it) }
+        }
+
         override fun doLayout() {
             super.doLayout()
             if (code.opts.verticalPolicy != ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER) return

@@ -3,6 +3,7 @@ package ai.kilocode.client.session.views.base
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Generic
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.ui.components.JBLabel
 
@@ -16,14 +17,14 @@ import com.intellij.ui.components.JBLabel
 class GenericView private constructor(
     content: Generic,
     private val label: JBLabel,
-) : SecondarySessionPartView(label, JBLabel()) {
+) : AbstractSessionPartView(label, JBLabel()) {
 
     constructor(content: Generic) : this(content, JBLabel("[${content.type}]"))
 
     override val contentId: String = content.id
 
     init {
-        label.foreground = UiStyle.Colors.weak()
+        label.foreground = SessionUiStyle.Text.Secondary.foreground()
         applyStyle(SessionEditorStyle.current())
         syncExpandable(false)
         border = null
