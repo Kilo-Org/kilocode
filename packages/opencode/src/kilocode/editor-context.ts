@@ -64,5 +64,5 @@ export function environmentDetails(ctx?: EditorContext): string {
       lines.push(`  ${f}`)
     }
   }
-  return ["<environment_details>", ...lines, "</environment_details>"].join("\n")
+  return "\n\n" + ["<environment_details>", ...lines, "</environment_details>"].join("\n")
 }
