@@ -136,7 +136,7 @@ describe("detectPrLink", () => {
     }
     const link = await restoreWorktree(nextWorktree(), () => detectPrLink())
     expect(link).toEqual({ platform: "github", prUrl: "https://github.com/owner/repo/pull/123", prNumber: 123 })
-    expect(ghText.mock.calls[0]?.[0]).toEqual(["gh", "pr", "view", "--json", "url,number"])
+    expect(ghText.mock.calls[0]?.[0]).toEqual(["gh", "pr", "view", "--json", "url"])
   })
 
   test("returns undefined when gh is missing", async () => {

@@ -339,12 +339,8 @@ export namespace KiloSessions {
   // an unchanged link. Module-level (process-wide) like the instance advertisement.
   const lastPrLinkTriple = new Map<string, string>()
 
-  function prLinkTripleKey(triple: PrLinkTriple): string {
-    return JSON.stringify(triple)
-  }
-
   async function syncPrLinkTriple(sessionId: string, triple: PrLinkTriple) {
-    const key = prLinkTripleKey(triple)
+    const key = JSON.stringify(triple)
     if (lastPrLinkTriple.get(sessionId) === key) return
     // Record the triple only after ingest accepts (queues) it. A missing client
     // makes ingest.sync return false without queueing; recording before would

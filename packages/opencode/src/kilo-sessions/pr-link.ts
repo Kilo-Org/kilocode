@@ -19,7 +19,6 @@ const ttlMs = 10_000
 const prLinkKeyPrefix = "kilo-sessions:pr-link:"
 
 function platformFromHost(host: string): string {
-  if (host === "github.com") return "github"
   const label = host.replace(/^www\./, "").split(".")[0]
   return label || host
 }
@@ -66,7 +65,7 @@ export function parsePrUrl(url: string): PrLink | undefined {
 
 export async function detectPrLink(): Promise<PrLink | undefined> {
   return withInFlightCache(prLinkKeyPrefix + Instance.worktree, ttlMs, async () => {
-    const result = await Process.text(["gh", "pr", "view", "--json", "url,number"], {
+    const result = await Process.text(["gh", "pr", "view", "--json", "url"], {
       nothrow: true,
       cwd: Instance.worktree,
     }).catch(() => undefined)
@@ -75,7 +74,7 @@ export async function detectPrLink(): Promise<PrLink | undefined> {
     const raw = result.text.trim()
     if (!raw) return undefined
 
-    let parsed: { url?: unknown; number?: unknown }
+    let parsed: { url?: unknown }
     try {
       parsed = JSON.parse(raw)
     } catch {
@@ -83,20 +82,8 @@ export async function detectPrLink(): Promise<PrLink | undefined> {
     }
 
     if (typeof parsed.url !== "string" || parsed.url === "") return undefined
-    if (typeof parsed.number !== "number" || !Number.isInteger(parsed.number) || parsed.number <= 0) return undefined
 
-    let host: string
-    try {
-      host = new URL(parsed.url).hostname
-    } catch {
-      return undefined
-    }
-
-    return {
-      platform: platformFromHost(host),
-      prUrl: parsed.url,
-      prNumber: parsed.number,
-    }
+    return parsePrUrl(parsed.url)
   })
 }
 
