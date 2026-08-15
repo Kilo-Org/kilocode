@@ -20,7 +20,7 @@ void mock.module("@/util/process", () => ({
   },
 }))
 
-import { detectPrLink, parsePrUrl } from "@/kilo-sessions/pr-link"
+import { detectPrLink, overrideKey, parsePrUrl } from "@/kilo-sessions/pr-link"
 import { Instance } from "@/kilocode/instance"
 import type { InstanceContext } from "@/project/instance-context"
 
@@ -100,6 +100,23 @@ describe("parsePrUrl", () => {
   test("rejects non-positive PR number", () => {
     expect(parsePrUrl("https://github.com/owner/repo/pull/0")).toBeUndefined()
     expect(parsePrUrl("https://gitlab.com/group/proj/merge_requests/0")).toBeUndefined()
+  })
+})
+
+describe("overrideKey", () => {
+  test("encodes a Windows worktree into a single path segment", () => {
+    const key = overrideKey("C:\\Users\\igor\\Projects\\foo")
+    expect(key).toEqual(["session_pr_link", "C%3A%5CUsers%5Cigor%5CProjects%5Cfoo"])
+    expect(key[1]).not.toContain(":")
+    expect(key[1]).not.toContain("\\")
+    expect(key[1]).not.toContain("/")
+  })
+
+  test("encodes a POSIX worktree into a single path segment", () => {
+    const key = overrideKey("/Users/igor/Projects/foo")
+    expect(key).toEqual(["session_pr_link", "%2FUsers%2Figor%2FProjects%2Ffoo"])
+    expect(key[1]).not.toContain(":")
+    expect(key[1]).not.toContain("/")
   })
 })
 

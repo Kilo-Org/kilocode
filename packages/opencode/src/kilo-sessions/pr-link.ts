@@ -100,8 +100,11 @@ export async function detectPrLink(): Promise<PrLink | undefined> {
   })
 }
 
-function overrideKey(worktree: string) {
-  return ["session_pr_link", worktree]
+// Encode the worktree so it is a single valid path segment. Storage builds the
+// file as `path.join(dir, ...key) + ".json"`; a raw absolute worktree carries a
+// drive colon and path separators, which Windows rejects in a filename.
+export function overrideKey(worktree: string) {
+  return ["session_pr_link", encodeURIComponent(worktree)]
 }
 
 export async function writePrLinkOverride(worktree: string, value: PrLinkOverride) {
