@@ -7,40 +7,36 @@ import ai.kilocode.client.session.ui.SessionCodeScroll
 import ai.kilocode.client.session.ui.SessionView
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
-import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import ai.kilocode.client.session.views.base.BaseQuestionView
+import ai.kilocode.client.session.views.base.DialogView
 import com.intellij.icons.AllIcons
 import com.intellij.ui.components.JBTextArea
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
-import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.Dimension
 import javax.swing.ScrollPaneConstants
 
 class SessionOutcomeView(
     selection: SessionSelection? = null,
     focus: (() -> Unit)? = null,
-) : BorderLayoutPanel(), SessionEditorStyleTarget, SessionView {
+) : DialogView(selection, focus), SessionView {
 
     override val sessionViewKind = SessionView.Kind.Default
 
-    private val card = BaseQuestionView(selection, focus)
     private val error = ErrorBody()
 
     init {
         isOpaque = false
         isVisible = false
-        card.setActions(emptyList())
-        addToCenter(card)
+        setActions(emptyList())
     }
 
     @RequiresEdt
     fun showError(message: String, kind: String?) {
-        card.setHeaderIcon(AllIcons.General.Error, kind ?: KiloBundle.message("session.error.title"))
-        card.setHeader(KiloBundle.message("session.error.title"))
+        setHeaderIcon(AllIcons.General.Error, kind ?: KiloBundle.message("session.error.title"))
+        setHeader(KiloBundle.message("session.error.title"))
         error.text = message
-        card.setContent(error.scroll)
+        setContent(error.scroll)
         isVisible = true
         refresh()
     }
@@ -59,9 +55,9 @@ class SessionOutcomeView(
             OutcomeTone.WARNING -> AllIcons.General.Warning
             OutcomeTone.CRITICAL -> AllIcons.General.Error
         }
-        card.setHeaderIcon(icon, title)
-        card.setHeader(title, desc)
-        card.setContent(null)
+        setHeaderIcon(icon, title)
+        setHeader(title, desc)
+        setContent(null)
         isVisible = true
         refresh()
     }
@@ -75,15 +71,8 @@ class SessionOutcomeView(
 
     @RequiresEdt
     override fun applyStyle(style: SessionEditorStyle) {
-        card.applyStyle(style)
+        super.applyStyle(style)
         error.applyStyle(style)
-    }
-
-    private fun refresh() {
-        revalidate()
-        repaint()
-        parent?.revalidate()
-        parent?.repaint()
     }
 }
 

@@ -28,17 +28,16 @@ import javax.swing.JPanel
  * description text area, an optional component above the header, and slots
  * for view-specific content and a base-owned action-button footer.
  *
- * Both [ai.kilocode.client.session.views.question.QuestionView] and
- * [ai.kilocode.client.session.views.LoginRequiredView] use this as their
- * outer card shell so they share the same background, padding, and text
- * styling without duplicating the setup.
+ * Dialog-style views extend this so they share the same background, padding,
+ * header, content slot, action footer, and text styling without duplicating
+ * the setup.
  *
  * The root uses BorderLayout regions: optional top and header in north,
  * optional view content in center, and optional action controls in south.
  * Call [setTopPanel], [setHeaderIcon], [setHeader], [setDescription],
  * [setContent], [setActions], or [setActionEnabled] to configure the card.
  */
-class BaseQuestionView(
+open class DialogView(
     private val selection: SessionSelection? = null,
     private val focus: (() -> Unit)? = null,
 ) : RoundedContentPanel(
@@ -287,6 +286,14 @@ class BaseQuestionView(
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
         for ((area, bold) in tracked) applyFont(area, bold)
+    }
+
+    @RequiresEdt
+    protected fun refresh() {
+        revalidate()
+        repaint()
+        parent?.revalidate()
+        parent?.repaint()
     }
 
     // ---- contentColor override ----
