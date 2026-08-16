@@ -28,12 +28,18 @@ export function RunInteractiveTerminalBody(props: Props) {
   const [version, refresh] = createSignal(0)
   const [offset, setOffset] = createSignal(0)
   const [closing, setClosing] = createSignal(false)
+  const [error, setError] = createSignal("")
 
   function send(data: string) {
     if (!data || closing()) return
     state.input = state.input
       .then(() => props.onWrite({ terminalID: props.terminal().info.id, data }))
-      .catch(() => undefined)
+      .then(() => {
+        setError("")
+      })
+      .catch((err) => {
+        setError(`input failed: ${err instanceof Error ? err.message : String(err)}`)
+      })
   }
 
   function scroll(delta: number) {
@@ -43,7 +49,11 @@ export function RunInteractiveTerminalBody(props: Props) {
   function close() {
     if (closing()) return
     setClosing(true)
-    void props.onClose(props.terminal().info.id).catch(() => setClosing(false))
+    setError("")
+    void props.onClose(props.terminal().info.id).catch((err) => {
+      setClosing(false)
+      setError(`close failed: ${err instanceof Error ? err.message : String(err)}`)
+    })
   }
 
   useKeyboard((event) => {
@@ -94,7 +104,10 @@ export function RunInteractiveTerminalBody(props: Props) {
       state.vt.resize(width, VIEW_ROWS)
       setOffset((value) => Math.min(state.vt.scrollbackSize(), value))
       refresh((value) => value + 1)
-      void props.onResize({ terminalID: props.terminal().info.id, cols: width, rows: VIEW_ROWS }).catch(() => undefined)
+      void props
+        .onResize({ terminalID: props.terminal().info.id, cols: width, rows: VIEW_ROWS })
+        .then(() => setError(""))
+        .catch((err) => setError(`connection failed: ${err instanceof Error ? err.message : String(err)}`))
     }),
   )
 
@@ -107,7 +120,7 @@ export function RunInteractiveTerminalBody(props: Props) {
     <box width="100%" height={RUN_INTERACTIVE_TERMINAL_ROWS} flexDirection="column" paddingLeft={2} paddingRight={2}>
       <box height={1} flexDirection="row" justifyContent="space-between" flexShrink={0}>
         <text fg={props.theme.text} attributes={TextAttributes.BOLD} wrapMode="none" truncate>
-          {props.terminal().info.description ?? props.terminal().info.command}
+          TERMINAL INPUT ACTIVE · {props.terminal().info.description ?? props.terminal().info.command}
         </text>
         <box onMouseUp={close}>
           <text fg={closing() ? props.theme.muted : props.theme.error} wrapMode="none">
@@ -132,11 +145,16 @@ export function RunInteractiveTerminalBody(props: Props) {
         </text>
       </box>
       <box height={1} flexDirection="row" gap={2} flexShrink={0}>
+        <box onMouseUp={() => send("\x03")}>
+          <text fg={props.theme.text} wrapMode="none">
+            ctrl+c <span style={{ fg: props.theme.muted }}>interrupt</span>
+          </text>
+        </box>
         <text fg={props.theme.text} wrapMode="none">
-          ctrl+c <span style={{ fg: props.theme.muted }}>interrupt</span>
+          esc <span style={{ fg: props.theme.muted }}>close</span>
         </text>
-        <text fg={props.theme.text} wrapMode="none">
-          pgup/pgdn <span style={{ fg: props.theme.muted }}>scroll{offset() > 0 ? ` (${offset()} up)` : ""}</span>
+        <text fg={error() ? props.theme.error : props.theme.text} wrapMode="none" truncate>
+          {error() || `pgup/pgdn scroll${offset() > 0 ? ` (${offset()} up)` : ""}`}
         </text>
       </box>
     </box>

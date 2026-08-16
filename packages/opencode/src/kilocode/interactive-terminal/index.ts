@@ -121,6 +121,7 @@ export namespace InteractiveTerminal {
     cursor: number
     resolve: (result: Result) => void
     ready?: Promise<void>
+    mounted?: PromiseWithResolvers<void>
     timer?: ReturnType<typeof setTimeout>
     data?: Disp
     exit?: Disp
@@ -244,6 +245,7 @@ export namespace InteractiveTerminal {
     active.timer = undefined
     active.abort?.()
     active.abort = undefined
+    active.mounted?.resolve()
 
     if (input.kill) {
       try {
@@ -331,6 +333,7 @@ export namespace InteractiveTerminal {
     }
     state.terminals.set(id, active)
     const announced = Promise.withResolvers<void>()
+    active.mounted = Promise.withResolvers<void>()
     active.ready = announced.promise
     active.data = proc.onData((data) => append(active, data))
     active.exit = proc.onExit((event) => {
@@ -351,9 +354,10 @@ export namespace InteractiveTerminal {
       else input.abort.addEventListener("abort", abort, { once: true })
     }
 
-    if (!active.done) active.proc.write(release(input.shell))
     await publish(active, Event.Updated, { info: clone(active.info) })
     announced.resolve()
+    await active.mounted.promise
+    if (!active.done) active.proc.write(release(input.shell))
     return waiter.promise
   }
 
@@ -420,6 +424,7 @@ export namespace InteractiveTerminal {
     const width = Math.max(1, cols)
     const height = Math.max(1, rows)
     active.proc.resize(width, height)
+    active.mounted?.resolve()
     active.info.cols = width
     active.info.rows = height
     active.info.time.updated = Date.now()

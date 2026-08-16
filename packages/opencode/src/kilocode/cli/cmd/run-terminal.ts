@@ -33,21 +33,27 @@ export namespace KiloRunTerminal {
 
     return {
       write: async (input: { terminalID: string; data: string }) => {
-        await client.terminal.write({
+        const result = await client.terminal.write({
           terminalID: input.terminalID,
           workspace: await workspace(),
           interactiveTerminalWriteInput: { data: input.data },
         })
+        if (result.error) throw result.error
+        if (result.data !== true) throw new Error("Interactive terminal rejected input")
       },
       resize: async (input: { terminalID: string; cols: number; rows: number }) => {
-        await client.terminal.resize({
+        const result = await client.terminal.resize({
           terminalID: input.terminalID,
           workspace: await workspace(),
           interactiveTerminalResizeInput: { cols: input.cols, rows: input.rows },
         })
+        if (result.error) throw result.error
+        if (result.data !== true) throw new Error("Interactive terminal is no longer connected")
       },
       close: async (terminalID: string) => {
-        await client.terminal.close({ terminalID, workspace: await workspace() })
+        const result = await client.terminal.close({ terminalID, workspace: await workspace() })
+        if (result.error) throw result.error
+        if (result.data !== true) throw new Error("Interactive terminal is already closed")
       },
     }
   }

@@ -105,6 +105,20 @@ async function snapshot(ctx: InstanceContext, id: InteractiveTerminal.ID, expect
 }
 
 function run(input: { sessionID: SessionID; command: string; cwd: string; abort?: AbortSignal }) {
+  const ctx = capture()!
+  const ready = started(input.sessionID)
+  const pending = InteractiveTerminal.run({
+    ...input,
+    shell: Shell.acceptable(),
+    env: { ...process.env },
+  })
+  void ready.promise
+    .then((info) => Instance.restore(ctx, () => InteractiveTerminal.resize(info.id, 100, 18)))
+    .finally(() => ready.dispose())
+  return pending
+}
+
+function gated(input: { sessionID: SessionID; command: string; cwd: string }) {
   return InteractiveTerminal.run({
     ...input,
     shell: Shell.acceptable(),
@@ -226,12 +240,39 @@ process.stdin.once("data", (data) => {
       try {
         const pending = run({ sessionID, command, cwd: test.directory })
         const info = yield* Effect.promise(() => ready.promise)
+        const ctx = capture()!
+        yield* Effect.promise(() => snapshot(ctx, info.id, "READY"))
         const wrote = yield* Effect.promise(() => InteractiveTerminal.write(info.id, "hello\r"))
         expect(wrote).toBe(true)
         const result = yield* Effect.promise(() => pending)
         expect(result.closedBy).toBe("exit")
         expect(result.output).toContain("READY")
         expect(result.output).toContain("INPUT:hello")
+      } finally {
+        ready.dispose()
+        yield* Effect.promise(() => InteractiveTerminal.stopSession(sessionID))
+      }
+    }),
+  )
+
+  it.instance("waits for the terminal panel to mount before starting the command", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const sessionID = SessionID.descending()
+      const command = yield* Effect.promise(() =>
+        script(test.directory, "mounted.mjs", `console.log("COMMAND_STARTED")\n`),
+      )
+      const ready = started(sessionID)
+      try {
+        const pending = gated({ sessionID, command, cwd: test.directory })
+        const info = yield* Effect.promise(() => ready.promise)
+        yield* Effect.promise(() => Bun.sleep(100))
+        const before = yield* Effect.promise(() => InteractiveTerminal.get(info.id))
+        expect(before?.output).not.toContain("COMMAND_STARTED")
+
+        expect(yield* Effect.promise(() => InteractiveTerminal.resize(info.id, 80, 14))).toBe(true)
+        const result = yield* Effect.promise(() => pending)
+        expect(result.output).toContain("COMMAND_STARTED")
       } finally {
         ready.dispose()
         yield* Effect.promise(() => InteractiveTerminal.stopSession(sessionID))
