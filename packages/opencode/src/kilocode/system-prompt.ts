@@ -1,6 +1,7 @@
 // kilocode_change - new file
 
 import { Global } from "@opencode-ai/core/global"
+import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { Effect } from "effect"
 import { staticEnvLines, type EditorContext } from "@/kilocode/editor-context"
 import { KiloMemory } from "@kilocode/kilo-memory/effect"
@@ -21,6 +22,7 @@ export namespace KilocodeSystemPrompt {
         `<env>`,
         `  Is directory a git repo: ${input.ctx.project.vcs === "git" ? "yes" : "no"}`,
         `  Platform: ${process.platform}`,
+        `  Kilo Code version: ${InstallationVersion}`,
         `  Today's date: ${new Date().toDateString()}`,
         `  Project config: .kilo/command/*.md, .kilo/agent/*.md, kilo.json, AGENTS.md. Put new commands and agents in .kilo/. Do not use .kilocode/ or .opencode/.`,
         `  Global config: ${Global.Path.config}/ (same structure)`,

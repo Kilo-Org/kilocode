@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test"
 import { SystemPrompt } from "../../src/session/system"
+import { KilocodeSystemPrompt } from "../../src/kilocode/system-prompt"
 import { environmentDetails } from "../../src/kilocode/editor-context"
 import { ProviderTest } from "../fake/provider"
+import { ProjectV2 } from "@opencode-ai/core/project"
 
 import PROMPT_ANTHROPIC from "../../src/session/prompt/anthropic.txt"
 import PROMPT_DEFAULT from "../../src/session/prompt/default.txt"
@@ -140,5 +142,26 @@ describe("environmentDetails", () => {
     expect(result).toContain("Working directory: /repo/.kilo/worktrees/feature")
     expect(result).toContain("Workspace root folder: /repo/.kilo/worktrees/feature")
     expect(result).toContain("Active file: src/app.ts")
+  })
+})
+
+describe("KilocodeSystemPrompt.environment", () => {
+  test("includes Kilo Code version", () => {
+    const result = KilocodeSystemPrompt.environment({
+      ctx: {
+        directory: "/project",
+        worktree: "/project",
+        project: {
+          id: ProjectV2.ID.make("test-project"),
+          worktree: "/project",
+          vcs: "git",
+          time: { created: 0, updated: 0 },
+          sandboxes: [],
+        },
+      },
+      model: ProviderTest.model(),
+    })
+
+    expect(result[0]).toContain("Kilo Code version:")
   })
 })
