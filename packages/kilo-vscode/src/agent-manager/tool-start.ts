@@ -5,6 +5,7 @@ import type { WorktreeStateManager } from "./WorktreeStateManager"
 import type { PanelContext } from "./host"
 import { PLATFORM, SNAPSHOT_INITIALIZATION } from "./constants"
 import { sameDirectory } from "../kilo-provider-utils"
+import { promptWhenSafe } from "./managed-delivery"
 
 const LABEL_MAX = 28
 const PREFIX = new Set(["feat", "fix", "chore", "bug", "issue", "task", "branch"])
@@ -109,17 +110,16 @@ function versionedLabel(base: string | undefined, index: number, total: number):
 async function prompt(client: KiloClient, sid: string, dir: string, task: ToolTask) {
   const body = text(task)
   if (!body) return
-  await client.session.promptAsync(
-    {
-      sessionID: sid,
-      directory: dir,
-      parts: [{ type: "text", text: body }],
+  await promptWhenSafe(client, {
+    sessionId: sid,
+    directory: dir,
+    text: body,
+    extra: {
       model: task.model,
       variant: task.variant,
       snapshotInitialization: SNAPSHOT_INITIALIZATION,
     },
-    { throwOnError: true },
-  )
+  })
 }
 
 async function local(deps: ToolDeps, client: KiloClient, task: ToolTask, directory?: string, source?: ToolSource) {

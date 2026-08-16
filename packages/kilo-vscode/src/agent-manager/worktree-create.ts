@@ -4,6 +4,7 @@ import { chooseBaseBranch } from "./base-branch"
 import { classifyWorktreeError } from "./git-import"
 import { PLATFORM } from "./constants"
 import type { AgentManagerOutMessage } from "./types"
+import { assertSessionIsolation } from "@kilocode/kilo-foundation"
 
 export type CreateWorktreeOnDiskOptions = {
   groupId?: string
@@ -23,6 +24,7 @@ export type CreateWorktreeOnDiskResult = {
 export interface CreateWorktreeOnDiskContext {
   getWorktreeManager: () => WorktreeManager | undefined
   getStateManager: () => WorktreeStateManager | undefined
+  getWorkspaceRoot?: () => string | undefined
   postToWebview: (message: AgentManagerOutMessage) => void
   capture: (event: string, properties?: Record<string, unknown>) => void
   pushState: () => void
@@ -66,6 +68,14 @@ export async function createWorktreeOnDisk(
       branchName: opts?.branchName,
       existingBranch: opts?.existingBranch,
     })
+    const workspaceRoot = ctx.getWorkspaceRoot?.()
+    if (workspaceRoot) {
+      assertSessionIsolation({
+        workspaceRoot,
+        sessionDirectory: result.path,
+        isolated: true,
+      })
+    }
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
     ctx.postToWebview({

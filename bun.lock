@@ -279,6 +279,16 @@
         "vitest": "4.1.0",
       },
     },
+    "packages/kilo-foundation": {
+      "name": "@kilocode/kilo-foundation",
+      "version": "7.4.22",
+      "devDependencies": {
+        "@tsconfig/bun": "catalog:",
+        "@types/bun": "catalog:",
+        "@typescript/native-preview": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "packages/kilo-gateway": {
       "name": "@kilocode/kilo-gateway",
       "version": "7.4.22",
@@ -359,7 +369,7 @@
     },
     "packages/kilo-jetbrains": {
       "name": "@kilocode/kilo-jetbrains",
-      "version": "7.4.21",
+      "version": "7.4.22",
     },
     "packages/kilo-memory": {
       "name": "@kilocode/kilo-memory",
@@ -447,6 +457,7 @@
       "version": "7.4.22",
       "dependencies": {
         "@anthropic-ai/sdk": "^0.39.0",
+        "@kilocode/kilo-foundation": "workspace:*",
         "@kilocode/kilo-gateway": "workspace:*",
         "@kilocode/kilo-i18n": "workspace:*",
         "@kilocode/kilo-indexing": "workspace:*",
@@ -1693,6 +1704,8 @@
     "@kilocode/kilo-console": ["@kilocode/kilo-console@workspace:packages/kilo-console"],
 
     "@kilocode/kilo-docs": ["@kilocode/kilo-docs@workspace:packages/kilo-docs"],
+
+    "@kilocode/kilo-foundation": ["@kilocode/kilo-foundation@workspace:packages/kilo-foundation"],
 
     "@kilocode/kilo-gateway": ["@kilocode/kilo-gateway@workspace:packages/kilo-gateway"],
 

@@ -53,6 +53,8 @@ import {
 import { initContextState, pushProjectSessions, reactivateProject, registerProjectSessions } from "./project/init"
 import { createLocalDiff } from "./local-diff"
 import { parseToolRequest, startFromTool, type ToolRequest } from "./tool-start"
+import { flushIdleSession } from "./managed-delivery"
+import { SessionStallWatchdog } from "./session-stall-watchdog"
 import { handleToolEvent } from "./tool-project"
 import { sandboxSessionMetadata } from "../shared/sandbox-session"
 import { createOrchestrationBridge } from "./orchestration-setup"
@@ -65,7 +67,7 @@ import { buildKeybindingMap } from "./format-keybinding"
 import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from "./multi-version"
 import { ensureSandbox } from "./sandbox-bootstrap"
 import { Semaphore } from "./semaphore"
-import { PLATFORM } from "./constants"
+import { PLATFORM, SNAPSHOT_INITIALIZATION } from "./constants"
 import { ProjectRegistry } from "./project/registry"
 import type { ProjectContext } from "./project/context"
 import { ProjectContexts } from "./project/contexts"
@@ -116,6 +118,7 @@ export class AgentManagerProvider implements Disposable {
   // Tracks sessions owned by this panel until they are explicitly closed.
   private panelSessions = new Set<string>()
   private busySessions = new Set<string>()
+  private readonly stallWatchdog = new SessionStallWatchdog()
 
   /** Session ID most recently loaded via `loadMessages`; updated synchronously. */
   private activeSessionId: string | undefined
@@ -278,7 +281,7 @@ export class AgentManagerProvider implements Disposable {
     )
     this.unsubStatus = this.connectionService.onEventFiltered(
       (event) => (event as { type?: string }).type === "session.status",
-      (event) => this.onSessionStatus(event),
+      (event, directory) => this.onSessionStatus(event, directory),
     )
     this.unsubSessions = this.connectionService.onEventFiltered(
       (event) => {
@@ -292,6 +295,7 @@ export class AgentManagerProvider implements Disposable {
       },
       (event) => this.onSessionLifecycle(event),
     )
+    this.stallWatchdog.start()
   }
 
   /**
@@ -302,13 +306,17 @@ export class AgentManagerProvider implements Disposable {
   private onSessionLifecycle(event: unknown): void {
     const ev = event as { type?: string; properties?: { info?: Session; sessionID?: string } }
     if (ev.type === "session.error") {
-      if (ev.properties?.sessionID) this.busySessions.delete(ev.properties.sessionID)
+      if (ev.properties?.sessionID) {
+        this.busySessions.delete(ev.properties.sessionID)
+        this.stallWatchdog.forget(ev.properties.sessionID)
+      }
       return
     }
     if (ev.type === "session.deleted") {
       const id = ev.properties?.sessionID
       if (!id) return
       this.busySessions.delete(id)
+      this.stallWatchdog.forget(id)
       const ctx = this.contexts.byLiveSession(id)
       if (!ctx) return
       ctx.removeLiveSession(id)
@@ -334,14 +342,23 @@ export class AgentManagerProvider implements Disposable {
     this.postToWebview({ type: "agentManager.projectSessions", projectId: ctx.id, sessions: [...ctx.sessions()] })
   }
 
-  private onSessionStatus(event: unknown): void {
+  private onSessionStatus(event: unknown, directory?: string): void {
     const props = (event as { properties?: { sessionID?: string; status?: { type?: string } } }).properties
     const sid = props?.sessionID
     const type = props?.status?.type
     if (!sid || !type) return
+    this.stallWatchdog.noteStatus(sid, type, directory)
     if (type === "idle") {
       this.busySessions.delete(sid)
       this.naming.idle(sid)
+      try {
+        const client = this.connectionService.getClient()
+        void flushIdleSession(client, sid, { snapshotInitialization: SNAPSHOT_INITIALIZATION }).catch((err) =>
+          this.log("managed inbox flush failed", err),
+        )
+      } catch {
+        // Client not connected yet; queued prompts stay until the next idle event.
+      }
       return
     }
     this.busySessions.add(sid)
@@ -952,6 +969,7 @@ export class AgentManagerProvider implements Disposable {
       {
         getWorktreeManager: () => this.getWorktreeManager(),
         getStateManager: () => this.getStateManager(),
+        getWorkspaceRoot: () => this.getRoot(),
         postToWebview: (message) => this.postToWebview(message),
         capture: (event, properties) => this.host.capture(event, properties),
         pushState: () => this.pushState(),
@@ -1877,6 +1895,7 @@ export class AgentManagerProvider implements Disposable {
     this.unsubFont?.()
     this.unsubProjects?.()
     this.unsubDestination?.()
+    this.stallWatchdog.stop()
     await this.scripts.dispose()
     this.orchestration.dispose()
     this.visiblePresence.clear()
