@@ -1125,7 +1125,17 @@ export class WorktreeManager {
         await this.gitExec(["fetch", "origin", `refs/pull/${parsed.number}/head`])
         const exists = await this.gitTry(["rev-parse", "--verify", info.headRefName])
         if (exists) {
-          await this.gitExec(["branch", "--force", info.headRefName, "FETCH_HEAD"])
+          const localRev = (await this.exec("git", ["rev-parse", info.headRefName])).trim()
+          const fetchRev = (await this.exec("git", ["rev-parse", "FETCH_HEAD"])).trim()
+          if (localRev !== fetchRev) {
+            const canReset = await this.gitTry(["merge-base", "--is-ancestor", info.headRefName, "FETCH_HEAD"])
+            if (!canReset) {
+              throw new Error(
+                `Cannot import PR #${parsed.number}: local branch '${info.headRefName}' exists and has diverged from the PR head. Rename or delete the local branch and try again.`,
+              )
+            }
+            await this.gitExec(["branch", "--force", info.headRefName, "FETCH_HEAD"])
+          }
         } else {
           await this.gitExec(["branch", info.headRefName, "FETCH_HEAD"])
         }

@@ -1282,4 +1282,24 @@ describe("WorktreeManager.fetchPRBranch", () => {
     const upstream = (await simpleGit(clone).raw(["config", "--get", "branch.feature.merge"])).trim()
     expect(upstream).toBe("refs/pull/1/head")
   })
+
+  it("rejects import when a diverged local branch already uses the PR head name", async () => {
+    const { bare, clone } = await createTempRepoWithOriginAndPRRef()
+
+    gitExec(["git", "-C", bare, "branch", "-D", "feature"])
+
+    gitExec(["git", "-C", clone, "checkout", "-b", "feature"])
+    await fs.writeFile(path.join(clone, "local-only.txt"), "local")
+    gitExec(["git", "-C", clone, "add", "."])
+    gitExec(["git", "-C", clone, "commit", "-m", "local-only commit"])
+    gitExec(["git", "-C", clone, "checkout", "main"])
+
+    const mgr = createManager(clone)
+    const info: PRInfo = { headRefName: "feature", isCrossRepository: false, title: "feature" }
+    const parsed = { owner: "owner", repo: "repo", number: 1 }
+
+    await expect((mgr as any).fetchPRBranch(info, parsed, false, undefined)).rejects.toThrow(
+      /diverged from the PR head/,
+    )
+  })
 })
