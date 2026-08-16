@@ -1270,4 +1270,16 @@ describe("WorktreeManager.fetchPRBranch", () => {
     expect(exists.branch).toBe("feature")
     expect(await fs.readFile(path.join(exists.path, "feat.txt"), "utf-8")).toBe("feature")
   })
+
+  it("configures upstream tracking after importing a PR branch", async () => {
+    const { clone } = await createTempRepoWithOriginAndPRRef()
+    const mgr = createManager(clone)
+
+    const info: PRInfo = { headRefName: "feature", isCrossRepository: false, title: "feature" }
+    const parsed = { owner: "owner", repo: "repo", number: 1 }
+    await (mgr as any).fetchPRBranch(info, parsed, false, undefined)
+
+    const upstream = (await simpleGit(clone).raw(["config", "--get", "branch.feature.merge"])).trim()
+    expect(upstream).toBe("refs/pull/1/head")
+  })
 })
