@@ -19,10 +19,27 @@ export interface QueuedPrompt {
   text: string
 }
 
+/** Fields Agent Manager actually forwards into `session.promptAsync`. */
+export type PromptAsyncExtra = {
+  model?: { providerID: string; modelID: string }
+  variant?: string
+  snapshotInitialization?: "wait"
+}
+
+type PromptAsyncParameters = {
+  sessionID: string
+  directory?: string
+  parts: Array<{ type: "text"; text: string }>
+} & PromptAsyncExtra
+
+/**
+ * Duck-typed session client. Parameter fields must be assignable to the generated
+ * Kilo SDK `promptAsync` body (`model` cannot be `unknown`).
+ */
 type PromptClient = {
   session: {
-    status?: (input: { directory: string }) => Promise<{ data?: Record<string, { type?: string }> }>
-    promptAsync: (input: Record<string, unknown>, opts?: { throwOnError?: boolean }) => Promise<unknown>
+    status?(input: { directory: string }): Promise<{ data?: Record<string, { type?: string }> }>
+    promptAsync(parameters: PromptAsyncParameters, opts?: { throwOnError?: boolean }): Promise<unknown>
   }
 }
 
@@ -103,7 +120,7 @@ export async function promptWhenSafe(
     sessionId: string
     directory: string
     text: string
-    extra?: Record<string, unknown>
+    extra?: PromptAsyncExtra
   },
 ): Promise<DeliveryResult> {
   const lifecycle = mapKiloRuntimeStatus(await runtimeStatus(client, input.directory, input.sessionId))
@@ -130,7 +147,7 @@ export async function promptWhenSafe(
 export async function flushIdleSession(
   client: PromptClient,
   sessionId: string,
-  extra?: Record<string, unknown>,
+  extra?: PromptAsyncExtra,
 ): Promise<number> {
   const queued = managedInbox.takeForSession(sessionId)
   for (const item of queued) {
