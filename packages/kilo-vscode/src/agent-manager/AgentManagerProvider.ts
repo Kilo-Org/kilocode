@@ -118,7 +118,9 @@ export class AgentManagerProvider implements Disposable {
   // Tracks sessions owned by this panel until they are explicitly closed.
   private panelSessions = new Set<string>()
   private busySessions = new Set<string>()
-  private readonly stallWatchdog = new SessionStallWatchdog()
+  private readonly stallWatchdog = new SessionStallWatchdog({
+    onStall: (sessionId, resumable) => this.log("session stalled", sessionId, resumable ? "resumable" : "busy"),
+  })
 
   /** Session ID most recently loaded via `loadMessages`; updated synchronously. */
   private activeSessionId: string | undefined
@@ -353,9 +355,11 @@ export class AgentManagerProvider implements Disposable {
       this.naming.idle(sid)
       try {
         const client = this.connectionService.getClient()
-        void flushIdleSession(client, sid, { snapshotInitialization: SNAPSHOT_INITIALIZATION }).catch((err) =>
-          this.log("managed inbox flush failed", err),
-        )
+        void flushIdleSession(client, sid, { snapshotInitialization: SNAPSHOT_INITIALIZATION })
+          .then((n) => {
+            if (n > 0) this.log("managed inbox flushed", sid, n)
+          })
+          .catch((err) => this.log("managed inbox flush failed", err))
       } catch {
         // Client not connected yet; queued prompts stay until the next idle event.
       }

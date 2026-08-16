@@ -107,10 +107,10 @@ function versionedLabel(base: string | undefined, index: number, total: number):
   return base
 }
 
-async function prompt(client: KiloClient, sid: string, dir: string, task: ToolTask) {
+async function prompt(client: KiloClient, sid: string, dir: string, task: ToolTask, log: ToolDeps["log"]) {
   const body = text(task)
   if (!body) return
-  await promptWhenSafe(client, {
+  const result = await promptWhenSafe(client, {
     sessionId: sid,
     directory: dir,
     text: body,
@@ -120,6 +120,7 @@ async function prompt(client: KiloClient, sid: string, dir: string, task: ToolTa
       snapshotInitialization: SNAPSHOT_INITIALIZATION,
     },
   })
+  if (result !== "sent") log("managed prompt", result, sid)
 }
 
 async function local(deps: ToolDeps, client: KiloClient, task: ToolTask, directory?: string, source?: ToolSource) {
@@ -155,7 +156,7 @@ async function local(deps: ToolDeps, client: KiloClient, task: ToolTask, directo
   deps.push()
   deps.getPanel()?.sessions.registerSession(session)
   if (wt) deps.post({ type: "agentManager.sessionAdded", sessionId: session.id, worktreeId: wt.id })
-  await prompt(client, session.id, target, task)
+  await prompt(client, session.id, target, task, deps.log)
   deps.capture("Agent Manager Session Started", {
     source: PLATFORM,
     sessionId: session.id,
@@ -208,7 +209,7 @@ async function worktree(
   deps.registerWorktreeSession(session.id, created.result.path)
   deps.notifyReady(session.id, created.result, created.worktree.id)
   deps.getPanel()?.sessions.registerSession(session)
-  await prompt(client, session.id, created.result.path, task)
+  await prompt(client, session.id, created.result.path, task, deps.log)
   deps.capture("Agent Manager Session Started", {
     source: PLATFORM,
     sessionId: session.id,

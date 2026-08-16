@@ -18,6 +18,7 @@ export interface SessionStallWatchdogOptions {
   now?: () => Date
   setIntervalFn?: typeof setInterval
   clearIntervalFn?: typeof clearInterval
+  onStall?: (sessionId: string, resumable: boolean) => void
 }
 
 /**
@@ -32,6 +33,7 @@ export class SessionStallWatchdog {
   private readonly now: () => Date
   private readonly setIntervalFn: typeof setInterval
   private readonly clearIntervalFn: typeof clearInterval
+  private readonly onStall?: (sessionId: string, resumable: boolean) => void
   private timer: ReturnType<typeof setInterval> | undefined
 
   constructor(opts: SessionStallWatchdogOptions = {}) {
@@ -40,6 +42,7 @@ export class SessionStallWatchdog {
     this.now = opts.now ?? (() => new Date())
     this.setIntervalFn = opts.setIntervalFn ?? setInterval
     this.clearIntervalFn = opts.clearIntervalFn ?? clearInterval
+    this.onStall = opts.onStall
   }
 
   noteStatus(sessionId: string, runtimeType: string, directory?: string, nowIso = this.now().toISOString()): void {
@@ -78,7 +81,8 @@ export class SessionStallWatchdog {
         },
         nowIso,
       )
-      if (resumableAfterStall(session.activity)) {
+      const resumable = resumableAfterStall(session.activity)
+      if (resumable) {
         managedInbox.enqueueFoundationEvent(
           FOUNDATION_EVENT.RESUMABLE,
           session.sessionId,
@@ -89,6 +93,7 @@ export class SessionStallWatchdog {
           nowIso,
         )
       }
+      this.onStall?.(session.sessionId, resumable)
     }
     return stalled
   }

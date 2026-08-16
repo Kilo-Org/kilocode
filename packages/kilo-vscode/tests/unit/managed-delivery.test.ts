@@ -1,20 +1,21 @@
-import { describe, expect, test } from "bun:test"
-import { ManagedSessionInbox, promptWhenSafe } from "../../src/agent-manager/managed-delivery"
+import { afterEach, describe, expect, test } from "bun:test"
+import { flushIdleSession, managedInbox, promptWhenSafe } from "../../src/agent-manager/managed-delivery"
 
 describe("managed session delivery", () => {
+  afterEach(() => {
+    managedInbox.events.length = 0
+  })
+
   test("sends immediately when status is missing (idle default)", async () => {
-    const promptAsync = async () => ({})
-    const client = { session: { promptAsync } }
     const sent: string[] = []
-    const wrapped = {
+    const client = {
       session: {
         promptAsync: async (input: { parts: Array<{ text: string }> }) => {
           sent.push(input.parts[0]?.text ?? "")
-          return promptAsync()
         },
       },
     }
-    const result = await promptWhenSafe(wrapped, {
+    const result = await promptWhenSafe(client, {
       sessionId: "s1",
       directory: "/repo",
       text: "hello",
@@ -23,15 +24,9 @@ describe("managed session delivery", () => {
     expect(sent).toEqual(["hello"])
   })
 
-  test("queues while busy and flushes the same text later", async () => {
-    const inbox = new ManagedSessionInbox()
-    inbox.enqueuePrompt({ sessionId: "s1", directory: "/repo", text: "later" })
-    expect(inbox.takeForSession("s1")).toEqual([{ sessionId: "s1", directory: "/repo", text: "later" }])
-    expect(inbox.takeForSession("s1")).toEqual([])
-  })
-
-  test("queues promptWhenSafe when the session is busy", async () => {
-    const client = {
+  test("queues promptWhenSafe while busy then flushIdleSession sends the same text", async () => {
+    const sent: string[] = []
+    const busy = {
       session: {
         status: async () => ({ data: { s1: { type: "busy" as const } } }),
         promptAsync: async () => {
@@ -39,10 +34,18 @@ describe("managed session delivery", () => {
         },
       },
     }
-    const { managedInbox } = await import("../../src/agent-manager/managed-delivery")
-    const before = managedInbox.events.length
-    const result = await promptWhenSafe(client, { sessionId: "s1", directory: "/repo", text: "hold" })
-    expect(result).toBe("queued")
-    expect(managedInbox.events.length).toBeGreaterThan(before)
+    expect(await promptWhenSafe(busy, { sessionId: "s1", directory: "/repo", text: "hold" })).toBe("queued")
+
+    const idle = {
+      session: {
+        status: async () => ({ data: { s1: { type: "idle" as const } } }),
+        promptAsync: async (input: { parts: Array<{ text: string }> }) => {
+          sent.push(input.parts[0]?.text ?? "")
+        },
+      },
+    }
+    expect(await flushIdleSession(idle, "s1")).toBe(1)
+    expect(sent).toEqual(["hold"])
+    expect(await flushIdleSession(idle, "s1")).toBe(0)
   })
 })
