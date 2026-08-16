@@ -1129,17 +1129,24 @@ export class WorktreeManager {
         } else {
           await this.gitExec(["branch", info.headRefName, "FETCH_HEAD"])
         }
+        await this.configureImportedBranchUpstream(info.headRefName, parsed.number, "fetch-head")
+      } else {
+        await this.configureImportedBranchUpstream(info.headRefName, parsed.number, "local-branch")
       }
-      await this.configureImportedBranchUpstream(info.headRefName, parsed.number)
     }
   }
 
-  private async configureImportedBranchUpstream(branch: string, pr: number): Promise<void> {
+  private async configureImportedBranchUpstream(
+    branch: string,
+    pr: number,
+    source: "local-branch" | "fetch-head",
+  ): Promise<void> {
     validateGitRef(branch, "branch name")
-    // Explicit src:dst fetches write only refs/heads/<branch>. Track the PR
-    // head ref so status/ahead-behind work even when origin/<branch> is absent.
-    await this.gitExec(["fetch", "origin", `refs/pull/${pr}/head`])
-    await this.gitExec(["update-ref", `refs/remotes/origin/${branch}`, "FETCH_HEAD"])
+    // Explicit src:dst fetches write only refs/heads/<branch>. Mirror the PR
+    // head onto origin/<branch> from the ref we already have locally so pull/
+    // push status works without a second refs/pull/<n>/head fetch.
+    const ref = source === "fetch-head" ? "FETCH_HEAD" : `refs/heads/${branch}`
+    await this.gitExec(["update-ref", `refs/remotes/origin/${branch}`, ref])
     await this.gitExec(["config", `branch.${branch}.remote`, "origin"])
     await this.gitExec(["config", `branch.${branch}.merge`, `refs/pull/${pr}/head`])
   }
