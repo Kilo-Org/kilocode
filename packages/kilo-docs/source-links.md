@@ -72,6 +72,8 @@
   <!-- packages/kilo-vscode/src/agent-manager/WorktreeManager.ts -->
 - <https://github.com>
   <!-- packages/opencode/src/kilocode/security/github.ts -->
+- <https://github.com/anthropics/claude-code/issues/31375>
+  <!-- packages/kilo-vscode/src/utils.ts -->
 - <https://github.com/apps/kiloconnect>
   <!-- packages/opencode/src/cli/cmd/github.handler.ts -->
 - <https://github.com/cline/cline/blob/main/evals/diff-edits/diff-apply/diff-06-23-25.ts>
@@ -203,9 +205,7 @@
   <!-- packages/opencode/src/lsp/server.ts -->
 - <https://www.googleapis.com/auth/cloud-platform>
   <!-- packages/opencode/src/provider/provider.ts -->
-- <https://www.morphllm.com/>
-  <!-- packages/opencode/src/tool/warpgrep.ts -->
-- <https://www.rfc-editor.org/rfc/rfc8628#section-3.5>
+- <https://www.rfc-editor.org/rfc/rfc8628.html#section-3.5>
   <!-- packages/opencode/src/plugin/github-copilot/copilot.ts -->
 - <https://x.com>
   <!-- packages/opencode/src/kilocode/util/url.ts -->

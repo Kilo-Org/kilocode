@@ -513,6 +513,12 @@ After configuring an MCP server, Kilo Code will automatically detect available t
 
 Example: "Analyze the performance of my API" might use an MCP tool that tests API endpoints.
 
+### Server instructions and resources
+
+When a connected MCP server provides instructions, Kilo adds them to the model context so the agent can follow the server's usage guidance. Kilo omits those instructions when every tool from that server is denied.
+
+Resource-capable servers also make the `list_mcp_resources`, `list_mcp_resource_templates`, and `read_mcp_resource` tools available to the agent. Resource templates describe parameterized URIs; the agent fills in a template, then reads the resulting resource URI. Resource listing and reads use Kilo's normal read approval flow.
+
 ## Troubleshooting MCP Servers
 
 {% tabs %}

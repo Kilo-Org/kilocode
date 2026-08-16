@@ -10,6 +10,7 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { showToast } from "@kilocode/kilo-ui/toast"
+import { isTextControl } from "../../utils/focus"
 import { useSession } from "../../context/session"
 import { useLocalTabs } from "../../context/local-tabs"
 import { useServer } from "../../context/server"
@@ -34,6 +35,8 @@ import { hasGitChangesMention } from "../../hooks/git-changes-context-utils"
 import { useSlashCommand } from "../../hooks/useSlashCommand"
 import { useGhostText } from "../../hooks/useGhostText"
 import { useSpeechToText } from "../speech-to-text/useSpeechToText"
+import { useSpeechToTextModels } from "../../context/speech-to-text-models"
+import { createSpeechShortcut } from "../speech-to-text/shortcut"
 import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageAttachments"
 import { convertToMentionPath } from "../../utils/path-mentions"
 import { SessionMentionPicker } from "./SessionMentionPicker"
@@ -49,6 +52,7 @@ import {
   isPromptBusy,
   isPathMention,
   applySandboxStates,
+  memoryRest,
   type SandboxDefaultState,
   type SandboxState,
 } from "./prompt-input-utils"
@@ -77,7 +81,7 @@ import {
 import { ReviewComments } from "./ReviewComments"
 import { partReview, reviewBody } from "../../../../src/shared/review-comments"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
-import { parseMemoryCommand } from "../../utils/memory-command"
+import { parseMemoryCommand, type ParsedMemoryCommand } from "../../utils/memory-command"
 import { useMemory } from "../../context/memory"
 
 function mergeReviewComments(current: ReviewComment[], incoming: ReviewComment[]): ReviewComment[] {
@@ -108,8 +112,14 @@ interface PromptInputProps {
   suggesting?: () => boolean
   /** When true, session is busy only because a question is pending — treat as idle for input */
   questioning?: () => boolean
+  /** When true, defer prompt focus while switching to a pending question */
+  deferFocusToQuestion?: () => boolean
   boxId?: string
   pendingSessionID?: string
+  /** Agent Manager can suppress automatic prompt focus when this session last
+   *  used its side terminal instead. Other callers retain the old behavior. */
+  focusOnDraftChange?: () => boolean
+  onFocusChange?: (focused: boolean) => void
 }
 
 function MentionItemContent(props: { item: MentionResult }) {
@@ -341,6 +351,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   const ghost = useGhostText(vscode, text, () => server.isConnected())
   const speech = useSpeechToText(vscode, server, language)
+  const speechModels = useSpeechToTextModels()
 
   const replaceReviewComments = (next: ReviewComment[]) => {
     setReviewComments(next)
@@ -381,7 +392,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         textareaRef.scrollTop = scroll
         if (highlightRef) highlightRef.scrollTop = scroll
       }
-      window.dispatchEvent(new Event("focusPrompt"))
+      if (!props.deferFocusToQuestion?.() && (props.focusOnDraftChange?.() ?? true)) {
+        window.dispatchEvent(new Event("focusPrompt"))
+      }
     }),
   )
 
@@ -405,7 +418,14 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   // Focus textarea when any part of the app requests it
   const onFocusPrompt = (event: Event) => {
+    const defer = () =>
+      event instanceof CustomEvent && event.detail?.deferFocusToQuestion && props.deferFocusToQuestion?.()
+    const ownsFocus = () => {
+      const active = document.activeElement
+      return active !== textareaRef && isTextControl(active)
+    }
     const focus = () => {
+      if (defer() || ownsFocus()) return
       const ref = textareaRef
       if (!ref) return
       ref.focus({ preventScroll: true })
@@ -413,6 +433,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     focus()
     if (!(event instanceof CustomEvent) || !event.detail?.restore) return
     const restore = () => {
+      if (defer() || ownsFocus()) return
       window.focus()
       focus()
     }
@@ -498,7 +519,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     )
   const isDisabled = () => !server.isConnected()
   const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates())
-  const speechModel = () => selectedSpeechToTextModel(config())
+  const speechModel = () => selectedSpeechToTextModel(config(), speechModels.models())
   const hasInput = () => text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0
   const canSend = () =>
     !isDisabled() &&
@@ -923,7 +944,6 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       const list = session.variantList(sid())
       if (list.length === 0) return
       const next = cycleVariant(session.currentVariant(sid()), list)
-      if (!next) return
       e.preventDefault()
       session.selectVariant(next, sid())
       return
@@ -1024,6 +1044,32 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     })
   }
 
+  const shortcut = createSpeechShortcut({
+    speech,
+    disabled: () => !canUseSpeech() || isDisabled(),
+    start: startSpeech,
+    finish: (submit) => {
+      if (submit) {
+        transcribeAndSend()
+        return
+      }
+      speech.stop()
+    },
+  })
+  const speechDown = (e: KeyboardEvent): boolean => {
+    if (!shortcut.down(e)) return false
+    e.preventDefault()
+    e.stopPropagation()
+    return true
+  }
+  const speechUp = (e: KeyboardEvent): boolean => {
+    if (!shortcut.up(e)) return false
+    e.preventDefault()
+    e.stopPropagation()
+    return true
+  }
+  onCleanup(shortcut.reset)
+
   const handleSendClick = () => {
     if (speech.state() !== "recording" || !canSend()) {
       void handleSend()
@@ -1079,6 +1125,16 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     return true
   }
 
+  const setMemoryText = (memory: ParsedMemoryCommand) => {
+    const rest = memoryRest(memory)
+    setText(rest)
+    if (textareaRef) {
+      textareaRef.value = rest
+      textareaRef.setSelectionRange(0, 0)
+      textareaRef.focus()
+    }
+  }
+
   const handleSend = async () => {
     const draft = text().trim()
 
@@ -1086,7 +1142,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (memory) {
       if (!runMemory(memory)) return
       history.append(draft)
-      setText("")
+      setMemoryText(memory)
       clearReviewComments()
       imageAttach.clear()
       mention.closeMention()
@@ -1193,6 +1249,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         pendingId,
         context,
         origin ?? null,
+        {
+          agent: matched.agent,
+          model: matched.model,
+          variant: matched.variant,
+        },
       )
     } else {
       session.sendMessage(message, sel?.providerID, sel?.modelID, attachments, pendingId, context, data, origin ?? null)
@@ -1402,12 +1463,24 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             placeholder={placeholder()}
             value={text()}
             onInput={handleInput}
-            onKeyDown={handleKeyDown}
-            onKeyUp={syncGhost}
+            onKeyDown={(e) => {
+              if (speechDown(e)) return
+              handleKeyDown(e)
+            }}
+            onKeyUp={(e) => {
+              if (speechUp(e)) return
+              syncGhost()
+            }}
             onPaste={handlePaste}
             onClick={syncGhost}
-            onFocus={syncGhost}
-            onBlur={syncGhost}
+            onFocus={() => {
+              syncGhost()
+              props.onFocusChange?.(true)
+            }}
+            onBlur={() => {
+              syncGhost()
+              props.onFocusChange?.(false)
+            }}
             onSelect={() => {
               syncGhost()
               if (textareaRef) mention.snapSelection(textareaRef)

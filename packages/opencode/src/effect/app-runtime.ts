@@ -40,7 +40,7 @@ import { Command } from "@/command"
 import { Truncate } from "@/tool/truncate"
 import { ToolRegistry } from "@/tool/registry"
 import { Format } from "@/format"
-import { InstanceLayer } from "@/project/instance-layer"
+import { InstanceStore } from "@/project/instance-store"
 import { Project } from "@/project/project"
 import { Vcs } from "@/project/vcs"
 import { Workspace } from "@/control-plane/workspace"
@@ -58,96 +58,81 @@ import { Notebook } from "@/kilocode/notebook/service"
 import { AgentManager } from "@/kilocode/agent-manager/service"
 // kilocode_change end
 import { EventV2Bridge } from "@/event-v2-bridge"
-// kilocode_change start
-import { ProjectV2 } from "@opencode-ai/core/project"
-import { ProjectCopy } from "@opencode-ai/core/project/copy"
-import { ProjectDirectories } from "@opencode-ai/core/project/directories"
-import { MoveSession } from "@opencode-ai/core/control-plane/move-session"
-import { PtyTicket } from "@opencode-ai/core/pty/ticket"
-import { EventV2 } from "@opencode-ai/core/event"
-import { Git as GitV2 } from "@opencode-ai/core/git"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { AppNodeBuilderV1 } from "./app-node-builder-v1"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
+import { EventV2 } from "@opencode-ai/core/event" // kilocode_change
+import { ProjectV2 } from "@opencode-ai/core/project" // kilocode_change
+import { ProjectCopy } from "@opencode-ai/core/project/copy" // kilocode_change
+import { MoveSession } from "@opencode-ai/core/control-plane/move-session" // kilocode_change
+import { PtyTicket } from "@opencode-ai/core/pty/ticket" // kilocode_change
+
+// kilocode_change start - retain Kilo runtime services in the upstream node graph
+const memory = LayerNode.make({ service: MemoryService.Service, layer: MemoryService.layer, deps: [] })
+const kilo = LayerNode.group([Credential.node, ModelCache.node, AgentManager.node, Notebook.node, memory])
 // kilocode_change end
 
-const CoreLayer = Layer.mergeAll( // kilocode_change
-  Npm.defaultLayer,
-  FSUtil.defaultLayer,
-  Database.defaultLayer,
-  Credential.defaultLayer, // kilocode_change
-  Auth.defaultLayer,
-  Account.defaultLayer,
-  Config.defaultLayer,
-  Git.defaultLayer,
-  Storage.defaultLayer,
-  Snapshot.defaultLayer,
-  Plugin.defaultLayer,
-  ModelCache.defaultLayer, // kilocode_change
-  ModelsDev.defaultLayer,
-  Provider.defaultLayer,
-  ProviderAuth.defaultLayer,
-  Agent.defaultLayer,
-  Skill.defaultLayer,
-  Discovery.defaultLayer,
-) // kilocode_change
-
-// kilocode_change start
-const SessionLayer = Layer.mergeAll(
-  AgentManager.defaultLayer,
-// kilocode_change end
-  Question.defaultLayer,
-  Notebook.defaultLayer, // kilocode_change
-  Permission.defaultLayer,
-  Todo.defaultLayer,
-  Session.defaultLayer,
-  SessionStatus.defaultLayer,
-  BackgroundJob.defaultLayer,
-  RuntimeFlags.defaultLayer,
-  EventV2Bridge.defaultLayer,
-  SessionRunState.defaultLayer,
-  SessionProcessor.defaultLayer,
-  SessionCompaction.defaultLayer,
-  SessionRevert.defaultLayer,
-  SessionSummary.defaultLayer,
-  SessionPrompt.defaultLayer,
-  Instruction.defaultLayer,
-  LLM.defaultLayer,
-  LSP.defaultLayer,
-  MCP.defaultLayer,
-  McpAuth.defaultLayer,
-  Command.defaultLayer,
-  Truncate.defaultLayer,
-) // kilocode_change
-
-const FeatureLayer = Layer.mergeAll( // kilocode_change
-  ToolRegistry.defaultLayer,
-  Format.defaultLayer,
-  Project.defaultLayer,
-  // kilocode_change start
-  ProjectV2.defaultLayer,
-  EventV2.defaultLayer,
-  ProjectCopy.layer.pipe(
-    Layer.provide(Database.defaultLayer),
-    Layer.provide(FSUtil.defaultLayer),
-    Layer.provide(GitV2.defaultLayer),
-    Layer.provide(EventV2.defaultLayer),
-    Layer.provide(ProjectDirectories.defaultLayer),
-  ),
-  MoveSession.defaultLayer,
-  PtyTicket.defaultLayer,
-  // kilocode_change end
-  Vcs.defaultLayer,
-  Workspace.defaultLayer,
-  Worktree.appLayer,
-  Installation.defaultLayer,
-  MemoryService.layer, // kilocode_change
-  ShareNext.defaultLayer,
-  SessionShare.defaultLayer,
-) // kilocode_change
-
-export const AppLayer = Layer.mergeAll(CoreLayer, SessionLayer, FeatureLayer).pipe( // kilocode_change
-  Layer.provideMerge(Ripgrep.defaultLayer),
-  Layer.provideMerge(InstanceLayer.layer),
-  Layer.provideMerge(Observability.layer),
-)
+export const AppLayer = AppNodeBuilderV1.build(
+  LayerNode.group([
+    kilo, // kilocode_change
+    Npm.node,
+    FSUtil.node,
+    Database.node,
+    Auth.node,
+    Account.node,
+    Config.node,
+    Git.node,
+    Storage.node,
+    Snapshot.node,
+    Plugin.node,
+    ModelsDev.node,
+    Provider.node,
+    ProviderAuth.node,
+    Agent.node,
+    Skill.node,
+    Discovery.node,
+    Question.node,
+    Permission.node,
+    Todo.node,
+    Session.node,
+    SessionProjector.node,
+    SessionStatus.node,
+    BackgroundJob.node,
+    RuntimeFlags.node,
+    EventV2Bridge.node,
+    SessionRunState.node,
+    SessionProcessor.node,
+    SessionCompaction.node,
+    SessionRevert.node,
+    SessionSummary.node,
+    SessionPrompt.node,
+    Instruction.node,
+    LLM.node,
+    LSP.node,
+    MCP.node,
+    McpAuth.node,
+    Command.node,
+    Truncate.node,
+    ToolRegistry.node,
+    Format.node,
+    InstanceStore.node,
+    Project.node,
+    Vcs.node,
+    Workspace.node,
+    Worktree.node,
+    Installation.node,
+    ShareNext.node,
+    SessionShare.node,
+    // kilocode_change start - the app runtime must provide these; the v2 handlers resolve them
+    // when their layer is built, outside the server's own layer list
+    EventV2.node,
+    ProjectV2.node,
+    ProjectCopy.node,
+    MoveSession.node,
+    PtyTicket.node,
+    // kilocode_change end
+  ]),
+).pipe(Layer.provideMerge(AppNodeBuilderV1.build(Ripgrep.node)), Layer.provideMerge(Observability.layer))
 
 const rt = ManagedRuntime.make(AppLayer, { memoMap })
 type Runtime = Pick<typeof rt, "runSync" | "runPromise" | "runPromiseExit" | "runFork" | "runCallback" | "dispose">

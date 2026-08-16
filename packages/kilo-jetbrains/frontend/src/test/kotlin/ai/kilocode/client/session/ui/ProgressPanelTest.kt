@@ -5,6 +5,7 @@ import ai.kilocode.client.session.model.Permission
 import ai.kilocode.client.session.model.PermissionMeta
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.util.UiTimer
 import ai.kilocode.client.util.UiTimerSource
@@ -43,6 +44,11 @@ class ProgressPanelTest : BasePlatformTestCase() {
 
     fun `test panel is hidden initially`() {
         assertFalse(panel.isVisible)
+    }
+
+    fun `test panel paints the session background`() {
+        assertTrue(panel.isOpaque)
+        assertEquals(SessionUiStyle.Colors.sessionBackground().rgb, panel.background.rgb)
     }
 
     fun `test panel shows on Busy with text`() {

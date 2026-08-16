@@ -84,6 +84,66 @@ export namespace DiffFull {
     return map
   })
 
+  // Cap the full-content sides we return for a single editor diff tab. Anything larger falls back
+  // to the hunk-only view rather than shipping tens of MB of text over RPC.
+  export const MAX_DETAIL_SIZE = 20 * 1024 * 1024
+
+  /**
+   * Authoritative full-content detail for one file between two snapshot refs, for the editor diff
+   * tab. Returns status, additions/deletions, the hunk patch, and the whole before/after file
+   * contents (read from the snapshot objects via `git show`), so the client can render a whole-file
+   * diff regardless of the current working tree. `before`/`after` are omitted when a side exceeds
+   * [MAX_DETAIL_SIZE]; binary files carry no content. `run.diff` wraps quote+args, `run.show` wraps
+   * the plain config (no quotepath) so `git show ref:path` resolves correctly.
+   */
+  export const detail = Effect.fn("DiffFull.detail")(function* (
+    run: {
+      diff: (cmd: string[]) => Effect.Effect<GitResult>
+      show: (cmd: string[]) => Effect.Effect<GitResult>
+    },
+    from: string,
+    to: string,
+    path: string,
+  ) {
+    const names = yield* run.diff(["diff", "--no-ext-diff", "--name-status", "--no-renames", from, to, "--", path])
+    const row = names.text.trim().split("\n").find(Boolean)
+    if (!row) return undefined
+    const code = row.split("\t")[0] ?? ""
+    const status: "added" | "deleted" | "modified" =
+      code.startsWith("A") ? "added" : code.startsWith("D") ? "deleted" : "modified"
+
+    const numstat = yield* run.diff(["diff", "--no-ext-diff", "--no-renames", "--numstat", from, to, "--", path])
+    const [adds, dels] = numstat.text.trim().split("\n").find(Boolean)?.split("\t") ?? []
+    const binary = adds === "-" && dels === "-"
+    const additions = binary ? 0 : Number.parseInt(adds ?? "0", 10)
+    const deletions = binary ? 0 : Number.parseInt(dels ?? "0", 10)
+
+    const patch = binary ? "" : ((yield* batch(run.diff, from, to, [path])).get(path) ?? "")
+    const base = {
+      file: path,
+      patch,
+      additions: Number.isFinite(additions) ? additions : 0,
+      deletions: Number.isFinite(deletions) ? deletions : 0,
+      status,
+    }
+    // Uniform shape across branches: binary files carry no content, but keep the keys present
+    // (undefined) so the return type is a single object, not a union missing before/after.
+    if (binary) return { ...base, before: undefined, after: undefined }
+
+    const content = yield* Effect.all(
+      {
+        before: status === "added" ? Effect.succeed("") : run.show(["show", `${from}:${path}`]).pipe(Effect.map((r) => r.text)),
+        after: status === "deleted" ? Effect.succeed("") : run.show(["show", `${to}:${path}`]).pipe(Effect.map((r) => r.text)),
+      },
+      { concurrency: 2 },
+    )
+    return {
+      ...base,
+      before: Buffer.byteLength(content.before) <= MAX_DETAIL_SIZE ? content.before : undefined,
+      after: Buffer.byteLength(content.after) <= MAX_DETAIL_SIZE ? content.after : undefined,
+    }
+  })
+
   /**
    * Generate a structured + unified diff for a single file in the working
    * tree vs HEAD using `git diff --ignore-all-space --unified=3`.

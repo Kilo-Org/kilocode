@@ -12,6 +12,7 @@
 //   3. A concurrent setInterval keeps ticking — i.e. the event loop keeps
 //      breathing and ESC would be delivered.
 
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { test, expect, afterEach, mock } from "bun:test"
 import { $ } from "bun"
 import { Effect, Fiber, Layer } from "effect"
@@ -33,8 +34,8 @@ function run<A>(ctx: InstanceContext, body: (snapshot: Snapshot.Interface) => Ef
   return Effect.runPromise(
     seedProject.pipe(
       Effect.andThen(Snapshot.Service.use(body)),
-      Effect.provide(Snapshot.defaultLayer),
-      Effect.provide(Session.defaultLayer.pipe(Layer.provideMerge(Database.defaultLayer))),
+      Effect.provide(AppNodeBuilder.build(Snapshot.node)),
+      Effect.provide(AppNodeBuilder.build(Session.node).pipe(Layer.provideMerge(AppNodeBuilder.build(Database.node)))),
       Effect.provideService(InstanceRef, ctx),
     ),
   )

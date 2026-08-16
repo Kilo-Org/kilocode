@@ -36,7 +36,7 @@ export const dict = {
   "agentManager.section.moveUp": "Sposta su",
   "agentManager.section.moveDown": "Sposta giù",
 
-  "agentManager.hoverCard.branch": "BRANCH",
+  "agentManager.hoverCard.branch": "Ramo",
   "agentManager.hoverCard.worktree": "Worktree",
   "agentManager.hoverCard.base": "Base",
   "agentManager.hoverCard.sessions": "Sessioni",
@@ -68,6 +68,8 @@ export const dict = {
 
   "agentManager.terminal.new": "Nuova scheda terminale",
   "agentManager.terminal.ended": "terminale terminato - chiudi la scheda per nasconderlo",
+  "agentManager.terminal.endedRestartable":
+    "terminale terminato - digita per avviare una nuova shell o chiudi la scheda",
   "agentManager.terminal.setupFailed": "script di configurazione non riuscito",
   "agentManager.terminal.setupFailedCode": "script di configurazione non riuscito con codice di uscita",
   "agentManager.terminal.stopSetup": "Interrompi lo script di configurazione",
@@ -105,7 +107,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "Scheda successiva",
   "agentManager.shortcuts.newTab": "Nuova scheda",
   "agentManager.shortcuts.closeTab": "Chiudi scheda",
-  "agentManager.shortcuts.toggleTerminal": "Mostra/nascondi terminale",
+  "agentManager.shortcuts.toggleTerminal": "Metti a fuoco / nascondi il terminale",
   "agentManager.shortcuts.runScript": "Esegui script",
   "agentManager.run.options": "Opzioni di esecuzione",
   "agentManager.run.configure": "Configura script di esecuzione",
@@ -121,6 +123,9 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.cancel": "Annulla",
   "agentManager.dialog.removeStaleWorktree.confirm": "Rimuovi worktree obsoleto",
 
+  "agentManager.dialog.project.select": "Seleziona progetto",
+  "agentManager.dialog.project.untrusted": "Prima, fidati di questo progetto nella barra laterale",
+  "agentManager.dialog.project.missing": "Repository non trovata",
   "agentManager.dialog.openWorktree": "Nuovo worktree",
   "agentManager.dialog.tab.new": "Nuovo",
   "agentManager.dialog.tab.import": "Importa",
@@ -217,4 +222,10 @@ export const dict = {
   "agentManager.import.noBranchesFound": "Nessun branch trovato.",
   "agentManager.import.noBranchesHint": "Incolla un URL PR sopra o crea un nuovo worktree.",
   "agentManager.import.failed": "Importazione non riuscita",
+
+  "agentManager.pr.error.gh_auth.title": "Autenticazione GitHub richiesta",
+  "agentManager.pr.error.gh_auth.description":
+    "Esegui 'gh auth login' nel terminale per ripristinare lo stato della PR.",
+  "agentManager.pr.error.gh_missing.title": "GitHub CLI non installato",
+  "agentManager.pr.error.gh_missing.description": "Installa GitHub CLI per abilitare lo stato della PR.",
 }

@@ -28,6 +28,7 @@ import { sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { useVSCode } from "../src/context/vscode"
 import SectionHeader from "./SectionHeader"
+import { SidebarSectionHeader } from "./SidebarSectionHeader"
 import { WorktreeItem } from "./WorktreeItem"
 import { WorktreeSectionActions } from "./WorktreeSectionActions"
 import { UnassignedSessionsSection } from "./UnassignedSessionsSection"
@@ -123,86 +124,93 @@ export const SidebarBody: Component<SidebarBodyProps> = (props) => {
             <span class="am-local-branch">{props.repoBranch()}</span>
           </Show>
         </div>
-        <Show when={props.localStats() === undefined}>
-          <div class="am-worktree-stats-skeleton">
-            <div class="am-worktree-stats-skeleton-row" />
-            <div class="am-worktree-stats-skeleton-row" style={{ width: "70%" }} />
+        <div class="am-wt-actions-cell">
+          <Show when={props.localStats() === undefined}>
+            <div class="am-worktree-stats-skeleton">
+              <div class="am-worktree-stats-skeleton-row" />
+              <div class="am-worktree-stats-skeleton-row" style={{ width: "70%" }} />
+            </div>
+          </Show>
+          <Show
+            when={
+              props.localStats() &&
+              (props.localStats()!.files > 0 ||
+                props.localStats()!.additions > 0 ||
+                props.localStats()!.deletions > 0 ||
+                props.localStats()!.ahead > 0 ||
+                props.localStats()!.behind > 0)
+            }
+          >
+            <div class="am-worktree-stats">
+              <Show
+                when={props.localStats()!.additions > 0 || props.localStats()!.deletions > 0}
+                fallback={
+                  <Show when={props.localStats()!.files > 0}>
+                    <span class="am-stat-files">{props.localStats()!.files}f</span>
+                  </Show>
+                }
+              >
+                <div class="am-worktree-stats-row">
+                  <Show when={props.localStats()!.additions > 0}>
+                    <span class="am-stat-additions">+{props.localStats()!.additions}</span>
+                  </Show>
+                  <Show when={props.localStats()!.deletions > 0}>
+                    <span class="am-stat-deletions">
+                      {"−"}
+                      {props.localStats()!.deletions}
+                    </span>
+                  </Show>
+                </div>
+              </Show>
+              <Show when={props.localStats()!.ahead > 0 || props.localStats()!.behind > 0}>
+                <div class="am-worktree-stats-row">
+                  <Show when={props.localStats()!.ahead > 0}>
+                    <span class="am-worktree-commits">
+                      {"↑"}
+                      {props.localStats()!.ahead}
+                    </span>
+                  </Show>
+                  <Show when={props.localStats()!.behind > 0}>
+                    <span class="am-worktree-behind">
+                      {"↓"}
+                      {props.localStats()!.behind}
+                    </span>
+                  </Show>
+                </div>
+              </Show>
+            </div>
+          </Show>
+          <div class="am-wt-hover-actions">
+            <span class="am-shortcut-badge">{isMac ? "⌘" : "Ctrl+"}1</span>
           </div>
-        </Show>
-        <Show
-          when={
-            props.localStats() &&
-            (props.localStats()!.files > 0 ||
-              props.localStats()!.additions > 0 ||
-              props.localStats()!.deletions > 0 ||
-              props.localStats()!.ahead > 0 ||
-              props.localStats()!.behind > 0)
-          }
-        >
-          <div class="am-worktree-stats">
-            <Show
-              when={props.localStats()!.additions > 0 || props.localStats()!.deletions > 0}
-              fallback={
-                <Show when={props.localStats()!.files > 0}>
-                  <span class="am-stat-files">{props.localStats()!.files}f</span>
-                </Show>
-              }
-            >
-              <div class="am-worktree-stats-row">
-                <Show when={props.localStats()!.additions > 0}>
-                  <span class="am-stat-additions">+{props.localStats()!.additions}</span>
-                </Show>
-                <Show when={props.localStats()!.deletions > 0}>
-                  <span class="am-stat-deletions">
-                    {"−"}
-                    {props.localStats()!.deletions}
-                  </span>
-                </Show>
-              </div>
-            </Show>
-            <Show when={props.localStats()!.ahead > 0 || props.localStats()!.behind > 0}>
-              <div class="am-worktree-stats-row">
-                <Show when={props.localStats()!.ahead > 0}>
-                  <span class="am-worktree-commits">
-                    {"↑"}
-                    {props.localStats()!.ahead}
-                  </span>
-                </Show>
-                <Show when={props.localStats()!.behind > 0}>
-                  <span class="am-worktree-behind">
-                    {"↓"}
-                    {props.localStats()!.behind}
-                  </span>
-                </Show>
-              </div>
-            </Show>
-          </div>
-        </Show>
-        <span class="am-shortcut-badge">{isMac ? "⌘" : "Ctrl+"}1</span>
+        </div>
       </button>
 
       {/* WORKTREES section */}
       <div class={`am-section ${props.sessionsCollapsed() ? "am-section-grow" : ""}`}>
-        <div class="am-section-header">
-          <span class="am-section-label">{props.t("agentManager.section.worktrees")}</span>
-          <WorktreeSectionActions
-            items={props.search.items}
-            current={props.search.current}
-            bindings={props.bindings()}
-            branch={props.defaultBranch()}
-            git={props.isGitRepo()}
-            loaded={props.loaded()}
-            t={props.t}
-            onRef={(value) => props.onSearchRef(value)}
-            onSelect={props.onSearchSelect}
-            onCreate={props.onCreateWorktree}
-            onNew={props.onNewWorktree}
-            onSection={props.onNewSection}
-            onShortcuts={props.onShortcuts}
-            onSetup={props.onSetup}
-            onBranch={props.onBranch}
-          />
-        </div>
+        <SidebarSectionHeader
+          class="am-section-header"
+          label={<span class="am-section-label">{props.t("agentManager.section.worktrees")}</span>}
+          actions={
+            <WorktreeSectionActions
+              items={props.search.items}
+              current={props.search.current}
+              bindings={props.bindings()}
+              branch={props.defaultBranch()}
+              git={props.isGitRepo()}
+              loaded={props.loaded()}
+              t={props.t}
+              onRef={(value) => props.onSearchRef(value)}
+              onSelect={props.onSearchSelect}
+              onCreate={props.onCreateWorktree}
+              onNew={props.onNewWorktree}
+              onSection={props.onNewSection}
+              onShortcuts={props.onShortcuts}
+              onSetup={props.onSetup}
+              onBranch={props.onBranch}
+            />
+          }
+        />
         <div class="am-worktree-list">
           <Show
             when={props.worktreesLoaded() && props.sessionsLoaded()}

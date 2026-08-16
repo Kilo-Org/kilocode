@@ -2,7 +2,7 @@ import { useDialog } from "../ui/dialog"
 import { DialogSelect } from "../ui/dialog-select"
 import { useRoute } from "../context/route"
 import { useSync } from "../context/sync"
-import { createMemo, createResource, createSignal, onMount } from "solid-js"
+import { createMemo, createResource, createSignal, onCleanup, onMount } from "solid-js"
 import path from "path"
 import { Locale } from "../util/locale"
 import { useProject } from "../context/project"
@@ -17,6 +17,30 @@ import { Spinner } from "./spinner"
 import { errorMessage } from "../util/error"
 import { DialogSessionDeleteFailed } from "./dialog-session-delete-failed"
 import { useCommandShortcut } from "../keymap"
+import { useEvent } from "../context/event"
+
+type SessionListFilter = { scope?: "project"; path?: string }
+
+export function createDialogSessionListQuery(input: { search?: string; filter: SessionListFilter }) {
+  const search = input.search?.trim()
+  return {
+    roots: true,
+    limit: search ? 30 : 100,
+    ...(search ? { search } : {}),
+    ...input.filter,
+  }
+}
+
+export function loadDialogSessionList<T>(input: {
+  search?: string
+  filter: SessionListFilter
+  list: (query: ReturnType<typeof createDialogSessionListQuery>) => Promise<{ data?: T[] }>
+}) {
+  return input.list(createDialogSessionListQuery(input)).then(
+    (result) => result.data,
+    () => undefined,
+  )
+}
 
 export function DialogSessionList() {
   const dialog = useDialog()
@@ -25,41 +49,64 @@ export function DialogSessionList() {
   const project = useProject()
   const { theme } = useTheme()
   const sdk = useSDK()
+  const event = useEvent()
   const local = useLocal()
   const toast = useToast()
   const [toDelete, setToDelete] = createSignal<string>()
+  const [deleted, setDeleted] = createSignal(new Set<string>())
   const [search, setSearch] = createDebouncedSignal("", 150)
   const [global, setGlobal] = createSignal(false) // kilocode_change - show current worktree by default
   const deleteHint = useCommandShortcut("session.delete")
   const quickSwitch1 = useCommandShortcut("session.quick_switch.1")
   const quickSwitch9 = useCommandShortcut("session.quick_switch.9")
 
-  // kilocode_change start - always fetch from experimental endpoint (returns GlobalSession with worktree info)
-  // TODO: extend /experimental/session to accept `scope`/`path` so this dialog can respect the
-  // upstream `session_directory_filter_enabled` KV toggle (via sync.session.query()) while
-  // keeping worktree grouping.
-  const [searchResults, searchActions] = createResource(
-    () => ({ query: search(), global: global(), directory: project.instance.directory() }), // kilocode_change
-    async (input) => {
-      const result = await sdk.client.experimental.session.list(
-        {
-          search: input.query || undefined,
-          roots: true,
-          worktrees: true,
-          current: input.global ? undefined : "true",
-          directory: input.global ? undefined : input.directory || undefined,
-          limit: 30,
-        },
-        { throwOnError: true },
-      )
-      return result.data ?? []
-    },
+  // kilocode_change start - experimental sessions retain worktree labels and scope
+  const list = async (input: { search?: string; global: boolean; directory?: string; limit: number }) => {
+    const result = await sdk.client.experimental.session.list(
+      {
+        search: input.search,
+        roots: true,
+        worktrees: true,
+        current: input.global ? undefined : "true",
+        directory: input.global ? undefined : input.directory,
+        limit: input.limit,
+      },
+      { throwOnError: true },
+    )
+    return result.data ?? []
+  }
+  const [browseResults, { refetch: refetchBrowse }] = createResource(
+    () => ({ global: global(), directory: project.instance.directory() }),
+    (input) => list({ ...input, limit: 100 }),
+  )
+  const [searchResults, { refetch }] = createResource(
+    () => ({ search: search().trim() || undefined, global: global(), directory: project.instance.directory() }),
+    (input) => (input.search ? list({ ...input, limit: 30 }) : undefined),
   )
   // kilocode_change end
 
   const currentSessionID = createMemo(() => (route.data.type === "session" ? route.data.sessionID : undefined))
+  const sessions = createMemo(() => {
+    const result = searchResults() ?? browseResults() ?? sync.data.session
+    const synced = new Map(sync.data.session.map((session) => [session.id, session]))
+    const ids = new Set(result.map((session) => session.id))
+    const extra = [currentSessionID(), ...local.session.pinned()].flatMap((id) => {
+      if (!id || ids.has(id)) return []
+      const session = synced.get(id)
+      if (session) ids.add(id)
+      return session ? [session] : []
+    })
+    const query = search().trim().toLowerCase()
+    return [...result.map((session) => ({ ...session, ...synced.get(session.id) })), ...extra]
+      .filter((session) => !deleted().has(session.id))
+      .filter((session) => !query || session.title.toLowerCase().includes(query))
+  })
 
-  const sessions = createMemo(() => searchResults() ?? []) // kilocode_change - endpoint applies worktree scope
+  onCleanup(
+    event.on("session.deleted", (event) => {
+      setDeleted((current) => new Set(current).add(event.properties.info.id))
+    }),
+  )
 
   function recover(session: NonNullable<ReturnType<typeof sessions>[number]>) {
     const workspace = project.workspace.get(session.workspaceID!)
@@ -124,7 +171,8 @@ export function DialogSessionList() {
           }
           await project.workspace.sync()
           await sync.session.refresh()
-          if (search()) await searchActions.refetch() // kilocode_change - use createResource actions
+          await refetchBrowse()
+          if (search()) await refetch()
           if (info?.workspaceID === session.workspaceID) {
             route.navigate({ type: "home" })
           }
@@ -155,6 +203,7 @@ export function DialogSessionList() {
       .map((x) => x.id)
   }
 
+  const browseOrder = createMemo(() => orderByRecency(browseResults() ?? sync.data.session))
   const quickSwitchHint = createMemo(() => {
     const first = quickSwitch1()
     const last = quickSwitch9()
@@ -175,7 +224,10 @@ export function DialogSessionList() {
         .map((x) => [x.id, x]),
     )
 
-    const displayOrder = orderByRecency(sessions()) // kilocode_change - respect current scope
+    const searchResult = searchResults()
+    const order = searchResult ? orderByRecency(sessions()) : browseOrder()
+    const current = currentSessionID()
+    const displayOrder = current && sessionMap.has(current) && !order.includes(current) ? [...order, current] : order
 
     const pinned = local.session.pinned().filter((id) => sessionMap.has(id))
     const pinnedSet = new Set(pinned)
@@ -203,7 +255,7 @@ export function DialogSessionList() {
           : undefined
       return {
         title: isDeleting ? `Press ${deleteHint()} again to confirm` : x.title,
-        description: all && x.worktreeName ? `(${x.worktreeName})` : undefined, // kilocode_change - worktree label
+        description: all && "worktreeName" in x && x.worktreeName ? `(${x.worktreeName})` : undefined, // kilocode_change
         bg: isDeleting ? theme.error : undefined,
         value: x.id,
         category,
@@ -234,6 +286,7 @@ export function DialogSessionList() {
       title={global() ? "Sessions (all worktrees)" : "Sessions (current worktree)"} // kilocode_change
       options={options()}
       skipFilter={true}
+      preserveSelection={true}
       current={currentSessionID()}
       onFilter={setSearch}
       onMove={() => {
@@ -295,7 +348,8 @@ export function DialogSessionList() {
               if (status && status !== "connected") {
                 await sync.session.refresh()
               }
-              void searchActions.refetch() // kilocode_change
+              await refetchBrowse()
+              if (search()) await refetch()
               setToDelete(undefined)
               return
             }
@@ -313,7 +367,8 @@ export function DialogSessionList() {
                 session={option.value}
                 title={item?.title}
                 onConfirm={() => {
-                  void searchActions.refetch()
+                  void refetchBrowse()
+                  if (search()) void refetch()
                 }}
               />
             ))

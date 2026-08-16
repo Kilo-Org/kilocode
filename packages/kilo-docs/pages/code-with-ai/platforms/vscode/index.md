@@ -29,6 +29,7 @@ Key features include:
 - **[Workflows](/docs/customize/workflows)** — Repeatable prompt templates as `.md` files
 - **[Skills](/docs/customize/skills)** — Load specialized domain knowledge from SKILL.md files
 - **[Custom Subagents](/docs/customize/custom-subagents)** — Define specialized sub-agents for the `task` tool
+- **Charts** — Ask for a chart or plot and get an inline data visualization in the chat
 - **Open in Tab** — Pop the chat out into a full editor tab
 - **Transcript export:** Save complete local session transcripts as Markdown files
 - **Sub-Agent Viewer** — Read-only panels for viewing child agent sessions
@@ -37,6 +38,10 @@ Key features include:
 ## Shared Settings
 
 Settings apply across extension surfaces, including the sidebar and Agent Manager. The standalone CLI uses the same `~/.config/kilo/kilo.jsonc` (global) and `./kilo.jsonc` (project) files when used directly.
+
+## Interface Language
+
+The extension UI follows VS Code's display language by default. Override it with the `kilo-code.new.language` setting (for example `en`, `de`, `ja`, or `fa`). Right-to-left languages such as Arabic and Persian switch the layout direction automatically.
 
 ## Proxy and Certificate Troubleshooting
 

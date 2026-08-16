@@ -14,6 +14,11 @@ import { resetDatabase } from "../fixture/db"
 import { disposeAllInstances, tmpdir, tmpdirScoped } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
+// kilocode_change start - PTY route tests do not need an indexing worker per temp project;
+// detached indexing startup races PTY setup and can exhaust the Darwin test deadline.
+process.env.KILO_DISABLE_CODEBASE_INDEXING = "vscode-no-workspace"
+// kilocode_change end
+
 const context = Context.empty() as Context.Context<unknown>
 const testPty = process.platform === "win32" ? test.skip : test
 

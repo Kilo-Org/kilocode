@@ -30,6 +30,7 @@ import type {
 } from "@kilocode/sdk/v2"
 import { createEffect, createMemo, createSignal, For, Match, Show, Switch } from "solid-js"
 import { collapseToolOutput } from "@tui/util/collapse-tool-output"
+import { errorMessage } from "@/util/error"
 
 const id = "internal:session-v2-debug"
 const route = "session.v2.messages"
@@ -350,7 +351,7 @@ function AssistantMessage(props: {
           borderColor={theme.error}
           flexShrink={0}
         >
-          <text fg={theme.textMuted}>{props.message.error}</text>
+          <text fg={theme.textMuted}>{errorMessage(props.message.error)}</text>
         </box>
       </Show>
       <Show when={props.last || final() || props.message.error}>

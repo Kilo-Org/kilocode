@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { Bus } from "@/bus"
 import { Agent } from "@/agent/agent"
 import { Config } from "@/config/config"
@@ -21,13 +22,13 @@ import { TestInstance, tmpdirScoped } from "../fixture/fixture"
 import { it, testEffect } from "../lib/effect"
 
 const toolLayer = Layer.mergeAll(
-  CrossSpawnSpawner.defaultLayer,
-  FSUtil.defaultLayer,
-  Plugin.defaultLayer,
-  Truncate.defaultLayer,
-  Config.defaultLayer,
-  Agent.defaultLayer,
-  RuntimeFlags.defaultLayer,
+  AppNodeBuilder.build(CrossSpawnSpawner.node),
+  AppNodeBuilder.build(FSUtil.node),
+  AppNodeBuilder.build(Plugin.node),
+  AppNodeBuilder.build(Truncate.node),
+  AppNodeBuilder.build(Config.node),
+  AppNodeBuilder.build(Agent.node),
+  AppNodeBuilder.build(RuntimeFlags.node),
 )
 const toolIt = testEffect(toolLayer)
 

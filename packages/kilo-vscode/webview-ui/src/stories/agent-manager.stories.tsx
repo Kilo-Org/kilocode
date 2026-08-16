@@ -26,9 +26,18 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { ThinkingSelectorBase } from "../components/shared/ThinkingSelector"
+import { DeferredPopover } from "../components/shared/DeferredPopover"
+import { ProjectSelect } from "../../agent-manager/ProjectSelect"
 import { createSignal, onCleanup, onMount, type JSX } from "solid-js"
-import type { WorktreeFileDiff, WorktreeState, WorktreeGitStats, PRStatus } from "../types/messages"
+import type {
+  AgentProjectSnapshot,
+  WorktreeFileDiff,
+  WorktreeState,
+  WorktreeGitStats,
+  PRStatus,
+} from "../types/messages"
 import type { ReviewComment } from "../../diff-viewer/review-comments"
+import { createModeRouter } from "../../agent-manager/mode-router"
 import "../../agent-manager/agent-manager.css"
 import "../../agent-manager/agent-manager-review.css"
 
@@ -603,7 +612,8 @@ const basePR: PRStatus = {
   url: "https://github.com/org/repo/pull/8594",
   state: "open",
   review: null,
-  checks: { status: "success", total: 5, passed: 5, failed: 0, pending: 0, items: [] },
+  checks: { status: "success", total: 5, passed: 5, failed: 0, pending: 0, checks: [] },
+  reviewers: [],
   additions: 978,
   deletions: 202,
   files: 12,
@@ -953,6 +963,9 @@ export const SideTerminalPanelEmpty: Story = {
                   state={state}
                   contextKey={() => LOCAL}
                   visible={() => true}
+                  nextKeybind="⌘⇧]"
+                  closeKeybind="⌘W"
+                  onFocusPrompt={() => undefined}
                   onSelect={() => undefined}
                   onClose={() => undefined}
                   onCloseOthers={() => undefined}
@@ -995,6 +1008,9 @@ export const SideTerminalPanelTabs: Story = {
                   state={state}
                   contextKey={() => LOCAL}
                   visible={() => true}
+                  nextKeybind="⌘⇧]"
+                  closeKeybind="⌘W"
+                  onFocusPrompt={() => undefined}
                   onSelect={(id) => state.setSideActive(LOCAL, id)}
                   onClose={() => undefined}
                   onCloseOthers={() => undefined}
@@ -1070,6 +1086,115 @@ export const NewWorktreeVariantDropdown1280: Story = {
         </div>
       </div>
       <VariantPickerOpener />
+    </StoryProviders>
+  ),
+}
+
+const projectPickerProjects: AgentProjectSnapshot[] = [
+  {
+    id: "project-main",
+    root: "/workspace/kilocode",
+    label: "kilocode",
+    pinned: true,
+    active: true,
+    expanded: true,
+    initialized: true,
+    trusted: true,
+    missing: false,
+  },
+  {
+    id: "project-cloud",
+    root: "/workspace/cloud",
+    label: "cloud",
+    pinned: false,
+    active: false,
+    expanded: false,
+    initialized: true,
+    trusted: true,
+    missing: false,
+  },
+  {
+    id: "project-untrusted",
+    root: "/workspace/sample-app",
+    label: "sample-app",
+    pinned: false,
+    active: false,
+    expanded: false,
+    initialized: false,
+    trusted: false,
+    missing: false,
+  },
+]
+
+export const NewWorktreeProjectDropdown: Story = {
+  name: "NewWorktreeDialog — project dropdown open",
+  parameters: { layout: "fullscreen" },
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ height: "100vh", display: "flex", "flex-direction": "column" }}>
+        <div data-component="dialog" data-fit="true">
+          <div data-slot="dialog-container">
+            <div data-slot="dialog-content">
+              <div data-slot="dialog-header">
+                <div data-slot="dialog-title">New Worktree</div>
+              </div>
+              <div data-slot="dialog-body">
+                <div class="am-tab-switcher">
+                  <button class="am-tab-switcher-pill am-tab-switcher-pill-active" type="button">
+                    New
+                  </button>
+                  <button class="am-tab-switcher-pill" type="button">
+                    Import
+                  </button>
+                  <div class="am-nv-project-inline">
+                    <div class="am-selector-wrapper">
+                      <DeferredPopover
+                        open
+                        onOpenChange={() => undefined}
+                        placement="bottom-start"
+                        flip={false}
+                        sameWidth
+                        portal={false}
+                        deferDismiss
+                        class="am-dropdown"
+                        trigger={
+                          <button class="am-selector-trigger" type="button" aria-label="Select project">
+                            <span class="am-selector-left">
+                              <Icon name="folder" size="small" />
+                              <span class="am-selector-value">kilocode</span>
+                            </span>
+                            <span class="am-selector-right">
+                              <Icon name="selector" size="small" />
+                            </span>
+                          </button>
+                        }
+                      >
+                        <ProjectSelect
+                          projects={projectPickerProjects}
+                          selected="project-main"
+                          onSelect={() => undefined}
+                          labels={{
+                            untrusted: "Trust this project in the sidebar first",
+                            missing: "Repository not found",
+                          }}
+                        />
+                      </DeferredPopover>
+                    </div>
+                  </div>
+                </div>
+                <div class="am-nv-dialog" style={{ "max-height": "520px" }}>
+                  <div class="am-nv-dialog-content">
+                    <div style={{ height: "420px", "flex-shrink": 0 }} />
+                    <div class="am-nv-version-bar">
+                      <span class="am-nv-config-label">VERSIONS</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </StoryProviders>
   ),
 }
@@ -1197,12 +1322,7 @@ export const SidebarSearchOpen: Story = {
 // ---------------------------------------------------------------------------
 
 import { ProjectList } from "../../agent-manager/ProjectList"
-import type {
-  AgentManagerStateMessage,
-  AgentProjectSnapshot,
-  LocalGitStats,
-  ProjectSessionInfo,
-} from "../types/messages"
+import type { AgentManagerStateMessage, LocalGitStats, ProjectSessionInfo } from "../types/messages"
 
 const projectA: AgentProjectSnapshot = {
   id: "prj-aaaa1111aaaa",
@@ -1227,13 +1347,14 @@ const projectB: AgentProjectSnapshot = {
   missing: false,
 }
 
-const wt = (id: string, branch: string, label?: string): WorktreeState => ({
+const wt = (id: string, branch: string, label?: string, opts: Partial<WorktreeState> = {}): WorktreeState => ({
   id,
   branch,
   path: `/repos/x/.kilo/worktrees/${id}`,
   parentBranch: "main",
   createdAt: "2026-07-20T10:00:00Z",
   label,
+  ...opts,
 })
 
 const projectState = (
@@ -1242,12 +1363,18 @@ const projectState = (
   sessions: { id: string; worktreeId: string | null }[],
   sections: NonNullable<AgentManagerStateMessage["sections"]> = [],
   baseBranch = "main",
+  worktreeOrder?: string[],
 ): AgentManagerStateMessage => ({
   type: "agentManager.state",
   projectId,
   worktrees,
   sessions: sessions.map((s) => ({ id: s.id, worktreeId: s.worktreeId, createdAt: "2026-07-20T10:00:00Z" })),
   sections,
+  worktreeOrder: worktreeOrder ?? [
+    ...worktrees.filter((item) => !item.sectionId).map((item) => item.id),
+    ...sections.map((item) => item.id),
+    ...worktrees.filter((item) => item.sectionId).map((item) => item.id),
+  ],
   staleWorktreeIds: [],
   isGitRepo: true,
   defaultBaseBranch: baseBranch,
@@ -1292,22 +1419,35 @@ export const MultiProjectSidebar: Story = {
       <StoryProviders noPadding>
         <div style={{ display: "flex", "flex-direction": "column", "max-height": "720px", overflow: "auto" }}>
           <ProjectList
+            mode={createModeRouter()}
             projects={[projectA, projectB]}
             states={{
               [projectA.id]: projectState(
                 projectA.id,
-                [wt("wt-a1", "feature/project-list", "Project list UI"), wt("wt-a2", "fix/session-routing")],
+                [
+                  wt("wt-a1", "feature/project-list", "Project list UI", { sectionId: "sec-a1" }),
+                  wt("wt-a2", "fix/session-routing"),
+                  wt("wt-a3", "feat/project-list-v2", undefined, { groupId: "grp-a1" }),
+                  wt("wt-a4", "feat/project-list-v3", undefined, { groupId: "grp-a1" }),
+                ],
                 [
                   { id: "ses-a1", worktreeId: null },
                   { id: "ses-a2", worktreeId: "wt-a1" },
                 ],
+                [{ id: "sec-a1", name: "Agent Manager", color: "Blue", order: 0, collapsed: false }],
+                "main",
+                ["wt-a2", "sec-a1", "wt-a1", "wt-a3", "wt-a4"],
               ),
               [projectB.id]: projectState(
                 projectB.id,
-                [wt("wt-b1", "feat/gateway-routing", "Gateway routing")],
+                [
+                  wt("wt-b1", "feat/gateway-routing", "Gateway routing", { sectionId: "sec-b1" }),
+                  wt("wt-b2", "fix/api"),
+                ],
                 [{ id: "ses-b1", worktreeId: null }],
                 [{ id: "sec-b1", name: "In progress", color: null, order: 0, collapsed: false }],
                 "master",
+                ["wt-b2", "sec-b1", "wt-b1"],
               ),
             }}
             stats={{

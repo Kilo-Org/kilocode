@@ -68,6 +68,8 @@ export const dict = {
 
   "agentManager.terminal.new": "Нова вкладка термінала",
   "agentManager.terminal.ended": "термінал завершено — закрийте вкладку, щоб відхилити",
+  "agentManager.terminal.endedRestartable":
+    "термінал завершено - введіть текст, щоб запустити нову оболонку, або закрийте вкладку",
   "agentManager.terminal.setupFailed": "помилка скрипта налаштування",
   "agentManager.terminal.setupFailedCode": "помилка скрипта налаштування з кодом виходу",
   "agentManager.terminal.stopSetup": "Зупинити скрипт налаштування",
@@ -106,7 +108,7 @@ export const dict = {
   "agentManager.shortcuts.nextTab": "Наступна вкладка",
   "agentManager.shortcuts.newTab": "Нова вкладка",
   "agentManager.shortcuts.closeTab": "Закрити вкладку",
-  "agentManager.shortcuts.toggleTerminal": "Перемкнути термінал",
+  "agentManager.shortcuts.toggleTerminal": "Перейти до термінала / приховати термінал",
   "agentManager.shortcuts.runScript": "Запустити скрипт",
   "agentManager.run.options": "Параметри запуску",
   "agentManager.run.configure": "Налаштувати скрипт запуску",
@@ -122,6 +124,9 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.cancel": "Скасувати",
   "agentManager.dialog.removeStaleWorktree.confirm": "Видалити застаріле робоче дерево",
 
+  "agentManager.dialog.project.select": "Вибрати проєкт",
+  "agentManager.dialog.project.untrusted": "Спочатку підтвердьте, що довіряєте цьому проєкту, на бічній панелі",
+  "agentManager.dialog.project.missing": "Репозиторій не знайдено",
   "agentManager.dialog.openWorktree": "Нове робоче дерево",
   "agentManager.dialog.configureWorktree": "Налаштувати нове Worktree...",
   "agentManager.dialog.tab.new": "Нове",
@@ -207,7 +212,7 @@ export const dict = {
   "agentManager.review.imageUnavailable": "Попередній перегляд зображення недоступний для цього знімка сеансу.",
   "agentManager.review.endOfLongDiff": "Ви дійшли до кінця!",
 
-  "agentManager.import.pullRequest": "Pull Request",
+  "agentManager.import.pullRequest": "Пул-реквест",
   "agentManager.import.pastePrUrl": "Вставте URL PR...",
   "agentManager.import.open": "Відкрити",
   "agentManager.import.branches": "Гілки",
@@ -218,4 +223,9 @@ export const dict = {
   "agentManager.import.noBranchesFound": "Гілок не знайдено.",
   "agentManager.import.noBranchesHint": "Вставте URL PR вище або створіть нове робоче дерево.",
   "agentManager.import.failed": "Імпортування не вдалося",
+
+  "agentManager.pr.error.gh_auth.title": "Потрібна автентифікація GitHub",
+  "agentManager.pr.error.gh_auth.description": "Виконайте 'gh auth login' у терміналі, щоб відновити статус PR.",
+  "agentManager.pr.error.gh_missing.title": "GitHub CLI не встановлено",
+  "agentManager.pr.error.gh_missing.description": "Встановіть GitHub CLI, щоб увімкнути статус PR.",
 }

@@ -49,6 +49,7 @@ export class Service extends ConfigService.Service<Service>()("@opencode/Runtime
   experimentalLspTool: enabledByExperimental("KILO_EXPERIMENTAL_LSP_TOOL"),
   experimentalOxfmt: enabledByExperimental("KILO_EXPERIMENTAL_OXFMT"),
   experimentalPlanMode: enabledByExperimental("KILO_EXPERIMENTAL_PLAN_MODE"),
+  experimentalCodeMode: enabledByExperimental("KILO_EXPERIMENTAL_CODE_MODE"),
   experimentalEventSystem: enabledByExperimental("KILO_EXPERIMENTAL_EVENT_SYSTEM"),
   experimentalSessionSwitcher: enabledByExperimental("KILO_EXPERIMENTAL_SESSION_SWITCHER"), // kilocode_change
   experimentalWorkspaces: enabledByExperimental("KILO_EXPERIMENTAL_WORKSPACES"),
@@ -62,7 +63,7 @@ export class Service extends ConfigService.Service<Service>()("@opencode/Runtime
 
 export type Info = Context.Service.Shape<typeof Service>
 
-const emptyConfigLayer = Service.defaultLayer.pipe(
+const emptyConfigLayer = Service.layer.pipe(
   Layer.provide(ConfigProvider.layer(ConfigProvider.fromUnknown({}))),
   Layer.orDie,
 )
@@ -76,9 +77,7 @@ export const layer = (overrides: Partial<Info> = {}) =>
     }),
   ).pipe(Layer.provide(emptyConfigLayer))
 
-export const defaultLayer = Service.defaultLayer.pipe(Layer.orDie)
-
-export const node = LayerNode.make(defaultLayer, [])
+export const node = LayerNode.make({ service: Service, layer: Service.layer.pipe(Layer.orDie), deps: [] })
 
 export * as RuntimeFlags from "./runtime-flags"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"

@@ -10,15 +10,12 @@ import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBTextArea
-import java.awt.Color
 import java.awt.Component
 import java.awt.Container
 import java.awt.event.MouseEvent
-import java.awt.image.BufferedImage
 import javax.swing.Icon
 import javax.swing.JLabel
 import javax.swing.JPanel
-import javax.swing.border.Border
 
 @Suppress("UnstableApiUsage")
 class QuestionResultViewTest : BasePlatformTestCase() {
@@ -113,8 +110,7 @@ class QuestionResultViewTest : BasePlatformTestCase() {
         ))
 
         view.toggle()
-        val root = view.node(0)
-        val body = root.node(1)
+        val body = view.node(1)
         val row = body.node(0)
         val text = row.components[0] as JBTextArea
         val ins = text.border.getBorderInsets(text)
@@ -174,21 +170,18 @@ class QuestionResultViewTest : BasePlatformTestCase() {
             input = mapOf("questions" to """[{"question":"Q1"}]"""),
             metadata = mapOf("answers" to """[["A1"]]"""),
         ))
-        val root = view.node(0)
-        val header = root.node(0)
+        val row = view.node(0)
 
-        assertEquals(0, paint(root.border).alpha)
+        assertNull("collapsed card draws no outline", view.border)
         view.toggle()
-        val body = root.node(1)
 
         view.setHovered(true)
 
-        assertEquals(SessionUiStyle.View.Surface.headerHoverBgColor().rgb, header.background.rgb)
-        assertLine(root.border)
-        assertEquals(SessionUiStyle.View.Outline.brightColor().rgb, paint(body.border).rgb)
+        assertEquals(SessionUiStyle.View.Surface.headerHoverBgColor().rgb, row.background.rgb)
+        assertNull("expanded card draws no outline", view.border)
         view.setHovered(false)
-        assertEquals(SessionUiStyle.View.Surface.headerBgColor().rgb, header.background.rgb)
-        assertLine(root.border)
+        assertEquals(SessionUiStyle.View.Surface.headerBgColor().rgb, row.background.rgb)
+        assertNull("expanded card draws no outline", view.border)
     }
 
     // ------ view factory routing ------
@@ -324,28 +317,6 @@ class QuestionResultViewTest : BasePlatformTestCase() {
             0,
             false,
         ))
-    }
-
-    private fun paint(border: Border): Color {
-        val image = BufferedImage(3, 3, BufferedImage.TYPE_INT_ARGB)
-        val panel = JPanel()
-        val graphics = image.createGraphics()
-        border.paintBorder(panel, graphics, 0, 0, image.width, image.height)
-        graphics.dispose()
-        return Color(image.getRGB(0, 0), true)
-    }
-
-    private fun assertLine(border: Border) {
-        val image = BufferedImage(5, 5, BufferedImage.TYPE_INT_ARGB)
-        val panel = JPanel()
-        val graphics = image.createGraphics()
-        border.paintBorder(panel, graphics, 0, 0, image.width, image.height)
-        graphics.dispose()
-        val rgb = SessionUiStyle.View.Outline.brightColor().rgb
-        assertEquals(rgb, Color(image.getRGB(2, 0), true).rgb)
-        assertEquals(rgb, Color(image.getRGB(0, 2), true).rgb)
-        assertEquals(rgb, Color(image.getRGB(4, 2), true).rgb)
-        assertEquals(rgb, Color(image.getRGB(2, 4), true).rgb)
     }
 
     private fun icons(component: Component): List<Icon> {

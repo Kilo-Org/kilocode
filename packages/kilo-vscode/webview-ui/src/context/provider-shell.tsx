@@ -23,6 +23,7 @@ import { NotificationsProvider } from "./notifications"
 import { FeedbackProvider } from "./feedback"
 import { KiloEmbeddingModelsProvider } from "./kilo-embedding-models"
 import { ImageModelsProvider } from "./image-models"
+import { SpeechToTextModelsProvider } from "./speech-to-text-models"
 import { SpeechToTextPrewarm } from "../components/speech-to-text/SpeechToTextPrewarm"
 
 type MermaidImageEvent = CustomEvent<{ dataUrl: string; filename: string }>
@@ -51,6 +52,8 @@ const Root: ParentComponent = (props) => (
         <MermaidDownloadBridge />
         <ServerProvider>
           <LanguageBridge>
+            {/* MarkedProvider is required here for all markdown consumers in the tree,
+                including PRPanel's PRDescription and PRComments components. Do not remove. */}
             <MarkedProvider>
               <DiffComponentProvider component={Diff}>
                 <CodeComponentProvider component={Code}>
@@ -77,9 +80,11 @@ const Session: ParentComponent = (props) => (
   <IndexingProvider>
     <KiloEmbeddingModelsProvider>
       <ImageModelsProvider>
-        <NotificationsProvider>
-          <SessionProvider>{props.children}</SessionProvider>
-        </NotificationsProvider>
+        <SpeechToTextModelsProvider>
+          <NotificationsProvider>
+            <SessionProvider>{props.children}</SessionProvider>
+          </NotificationsProvider>
+        </SpeechToTextModelsProvider>
       </ImageModelsProvider>
     </KiloEmbeddingModelsProvider>
   </IndexingProvider>

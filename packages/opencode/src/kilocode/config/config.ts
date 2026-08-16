@@ -181,11 +181,49 @@ export namespace KilocodeConfig {
     return stripGlobalIndexing(info)
   }
 
-  export function retireIndexingFlag(info: Record<string, unknown>, source: string) {
-    if (!isRecord(info.experimental) || !("semantic_indexing" in info.experimental)) return info
+  /**
+   * Merge discovered agent markdown while preserving routing explicitly defined
+   * in config. Tracking config entries separately keeps normal directory
+   * precedence between markdown files intact.
+   */
+  export function mergeAgentMarkdown(
+    existing: Record<string, ConfigAgentV1.Info>,
+    incoming: Record<string, ConfigAgentV1.Info>,
+    configured: Record<string, ConfigAgentV1.Info>,
+  ) {
+    const result = { ...existing }
+    for (const [name, agent] of Object.entries(incoming)) {
+      const current = result[name]
+      if (!current) {
+        result[name] = agent
+        continue
+      }
+
+      const config = configured[name]
+      if (agent.mode === "primary" && config && config.mode !== "primary") {
+        result[name] = mergeDeep(mergeDeep(current, agent), { ...config, mode: config.mode ?? "all" })
+        continue
+      }
+
+      result[name] = mergeDeep(current, agent)
+    }
+    return result
+  }
+
+  export function retireExperimentalFlags(info: Record<string, unknown>, source: string) {
+    if (!isRecord(info.experimental)) return info
+    const indexing = "semantic_indexing" in info.experimental
+    const codebase = "codebase_search" in info.experimental
+    if (!indexing && !codebase) return info
     const experimental = { ...info.experimental }
-    delete experimental.semantic_indexing
-    log.warn("ignored retired experimental.semantic_indexing config; use indexing.enabled instead", { path: source })
+    if (indexing) {
+      delete experimental.semantic_indexing
+      log.warn("ignored retired experimental.semantic_indexing config; use indexing.enabled instead", { path: source })
+    }
+    if (codebase) {
+      delete experimental.codebase_search
+      log.warn("ignored retired experimental.codebase_search config", { path: source })
+    }
     return { ...info, experimental }
   }
 
@@ -501,13 +539,24 @@ export namespace KilocodeConfig {
    * 3. Strip null delete sentinels
    */
   export function mergeConfig(existing: Config.Info, patch: Config.Info): Config.Info {
+    return merge(existing, patch, true)
+  }
+
+  /** Merge an untrusted project layer without changing generic config merge semantics. */
+  export function mergeProject(existing: Config.Info, patch: Config.Info): Config.Info {
+    return merge(existing, patch, false)
+  }
+
+  function merge(existing: Config.Info, patch: Config.Info, clean: boolean): Config.Info {
     const e = { ...existing } as Record<string, unknown>
-    const p = patch as Record<string, unknown>
+    // Shallow-copy patch so MCP extraction (delete p.mcp) never mutates the caller's object.
+    // Callers may probe with mergeConfig({}, patch) then reuse the same patch for a write.
+    const p = { ...patch } as Record<string, unknown>
 
     // Normalize permission scalars before merge
     const existingPerm = e.permission
     const patchPerm = p.permission
-    if (isRecord(existingPerm) && isRecord(patchPerm)) {
+    if (clean && isRecord(existingPerm) && isRecord(patchPerm)) {
       const cloned = { ...existingPerm }
       for (const [key, value] of Object.entries(patchPerm)) {
         const existing = cloned[key]
@@ -518,7 +567,61 @@ export namespace KilocodeConfig {
       e.permission = cloned
     }
 
-    return stripNulls(mergeDeep(e, p) as Record<string, unknown>) as Config.Info
+    // MCP servers merge by name; project URL retargets must not inherit base headers.
+    const existingMcp = e.mcp
+    const patchMcp = p.mcp
+    if (!isRecord(existingMcp) && !isRecord(patchMcp)) {
+      return (clean ? stripNulls(mergeDeep(e, p) as Record<string, unknown>) : mergeDeep(e, p)) as Config.Info
+    }
+
+    delete e.mcp
+    delete p.mcp
+    const merged = (clean ? stripNulls(mergeDeep(e, p) as Record<string, unknown>) : mergeDeep(e, p)) as Config.Info
+    const baseMcp = isRecord(existingMcp) ? (existingMcp as NonNullable<Config.Info["mcp"]>) : undefined
+    const srcMcp = isRecord(patchMcp) ? (patchMcp as NonNullable<Config.Info["mcp"]>) : undefined
+    if (!srcMcp) {
+      if (baseMcp) merged.mcp = baseMcp
+      return merged
+    }
+    if (!baseMcp) {
+      merged.mcp = srcMcp
+      return merged
+    }
+
+    const out: NonNullable<Config.Info["mcp"]> = { ...baseMcp }
+    for (const [name, src] of Object.entries(srcMcp)) {
+      const base = baseMcp[name]
+      if (!isRecord(src) || !isRecord(base)) {
+        out[name] = src
+        continue
+      }
+
+      const kind = "type" in base && (base.type === "local" || base.type === "remote") ? base.type : undefined
+      const next = "type" in src && (src.type === "local" || src.type === "remote") ? src.type : undefined
+      const changed = next !== undefined && next !== kind
+      const seed = changed
+        ? {
+            ...("enabled" in base ? { enabled: base.enabled } : {}),
+            ...("timeout" in base ? { timeout: base.timeout } : {}),
+          }
+        : base
+      const entry = mergeDeep(seed, src) as (typeof out)[string]
+      const srcUrl = "url" in src && typeof src.url === "string" ? src.url : undefined
+      const baseUrl = "url" in base && typeof base.url === "string" ? base.url : undefined
+      const retargeted =
+        kind === "remote" && next !== "local" && srcUrl !== undefined && baseUrl !== undefined && srcUrl !== baseUrl
+      if (!retargeted || !isRecord(entry)) {
+        out[name] = entry
+        continue
+      }
+
+      const { headers: _headers, oauth: _oauth, ...rest } = entry as Record<string, unknown>
+      if ("headers" in src) rest.headers = src.headers
+      if ("oauth" in src) rest.oauth = src.oauth
+      out[name] = rest as (typeof out)[string]
+    }
+    merged.mcp = out
+    return merged
   }
 
   // ── Directory check helper ───────────────────────────────────────────

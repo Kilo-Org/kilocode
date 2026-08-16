@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Підключити Anaconda Desktop",
   "provider.anaconda.title.manage": "Керувати Anaconda Desktop",
@@ -53,6 +55,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Підключити провайдера",
 
@@ -163,6 +166,7 @@ export const dict = {
   "model.group.auto": "Автоматичні моделі",
   "model.group.recommended": "Рекомендовані",
   "model.group.favorites": "Обране",
+  "model.group.mostUsed": "Найчастіше використовувані",
   "model.favorite.add": "Додати до обраного",
   "model.favorite.remove": "Видалити з обраного",
   "model.preview.label.released": "Випущено",
@@ -229,6 +233,8 @@ export const dict = {
     "Натисніть, щоб обмежити запис у файлову систему. Доступ до мережі залишиться дозволеним відповідно до налаштувань пісочниці.",
 
   "speechToText.tooltip.start": "Почати голосове введення з Kilo Gateway",
+  "speechToText.tooltip.shortcut":
+    "Торкніться кнопки або натисніть Cmd/Ctrl+K, щоб почати чи зупинити запис; утримуйте кнопку під час мовлення, а потім відпустіть її, щоб транскрибувати й надіслати.",
   "speechToText.tooltip.starting": "Запуск мікрофона... Поки що не говоріть.",
   "speechToText.tooltip.stop": "Зупинити захоплення звуку",
   "speechToText.tooltip.transcribing": "Транскрибування... Натисніть, щоб скасувати.",
@@ -304,6 +310,7 @@ export const dict = {
   "ui.approval.source.yolo": "режимом автосхвалення (YOLO)",
   "ui.approval.source.session": "правилом автосхвалення сесії",
   "ui.approval.source.default": "за замовчуванням",
+  "ui.approval.outsideWorkspace": "(за межами вашого робочого простору: {{file}})",
 
   "session.tab.review": "Огляд",
   "session.review.filesChanged": "{{count}} файлів змінено",
@@ -314,6 +321,14 @@ export const dict = {
   "session.messages.loadEarlier": "Завантажити попередні повідомлення",
   "session.messages.loading": "Завантаження повідомлень...",
 
+  "sidebar.topBar.label": "Навігація Kilo Code",
+  "sidebar.topBar.newTask": "Нове завдання",
+  "sidebar.topBar.history": "Історія",
+  "sidebar.topBar.agentManager": "Agent Manager",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "Маркетплейс",
+  "sidebar.topBar.profile": "Профіль",
+  "sidebar.topBar.settings": "Налаштування",
   "sidebar.session.newSession": "Нова сесія",
   "sidebar.session.newSession.tooltip": "Почати нову розмову, зберігши поточну сесію незмінною.",
   "sidebar.session.newWorktree": "Нове Worktree",
@@ -434,45 +449,8 @@ export const dict = {
   "provider.custom.models.name.placeholder": "Відображувана назва",
   "provider.custom.models.reasoning.label": "Міркування",
   "provider.custom.models.modalities.image": "Зображення",
-  "provider.custom.models.variants.label": "Варіанти",
-  "provider.custom.models.variants.add": "Додати варіант",
-  "provider.custom.models.variants.remove": "Видалити варіант",
-  "provider.custom.models.variants.name.label": "Ім'я",
-  "provider.custom.models.variants.name.placeholder": "напр. thinking",
-  "provider.custom.models.variants.option.unset": "(не встановлено)",
-  "provider.custom.models.variants.enableThinking.label": "Увімкнути мислення (напр. Alibaba)",
-  "provider.custom.models.variants.enableThinking.placeholder": "enable_thinking",
-  "provider.custom.models.variants.enableThinking.true": "true",
-  "provider.custom.models.variants.enableThinking.false": "false",
-  "provider.custom.models.variants.thinking.label": "Тип мислення (напр. Z.ai)",
-  "provider.custom.models.variants.thinking.placeholder": "thinking",
-  "provider.custom.models.variants.thinking.enabled": "enabled",
-  "provider.custom.models.variants.thinking.disabled": "disabled",
-  "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
-  "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
-  "provider.custom.models.variants.splitReasoning.true": "true",
-  "provider.custom.models.variants.splitReasoning.false": "false",
-  "provider.custom.models.variants.chatTemplateArgs.label":
-    "Увімкнути мислення через аргументи шаблону чату (напр. Hugging Face)",
-  "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
-  "provider.custom.models.variants.chatTemplateArgs.true": "true",
-  "provider.custom.models.variants.chatTemplateArgs.false": "false",
-  "provider.custom.models.variants.reasoningEffort.label": "Зусилля міркування",
-  "provider.custom.models.variants.reasoningEffort.placeholder": "reasoningEffort",
-  "provider.custom.models.variants.reasoningEffort.none": "none",
-  "provider.custom.models.variants.reasoningEffort.minimal": "minimal",
-  "provider.custom.models.variants.reasoningEffort.low": "low",
-  "provider.custom.models.variants.reasoningEffort.medium": "medium",
-  "provider.custom.models.variants.reasoningEffort.high": "high",
-  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
-  "provider.custom.models.variants.outputEffort.placeholder": "effort",
-  "provider.custom.models.variants.outputEffort.low": "low",
-  "provider.custom.models.variants.outputEffort.medium": "medium",
-  "provider.custom.models.variants.outputEffort.high": "high",
-  "provider.custom.models.variants.outputEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.max": "max",
+  "provider.custom.models.toggleReasoning": "Перемкнути міркування для всіх",
+  "provider.custom.models.toggleImages": "Перемкнути зображення для всіх",
   "provider.custom.models.remove": "Видалити модель",
   "provider.custom.models.add": "Додати модель",
   "provider.custom.models.fetch.authError": "Автентифікація не вдалася. Перевірте API-ключ вище і спробуйте ще раз.",
@@ -486,6 +464,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "Пошук моделей\u2026",
   "provider.custom.models.fetch.add": "Додати {{count}} моделей",
   "provider.custom.edit.title": "Редагувати провайдера",
+  "provider.custom.edit.advanced": "Редагувати розширені налаштування у файлі конфігурації JSON",
   "provider.custom.headers.label": "Заголовки (необов'язково)",
   "provider.custom.headers.key.label": "Заголовок",
   "provider.custom.headers.key.placeholder": "Назва-заголовка",
@@ -851,9 +830,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Увімкнути інтеграцію з мовним сервером",
   "settings.experimental.batch.title": "Пакетний інструмент",
   "settings.experimental.batch.description": "Увімкнути пакетну обробку кількох викликів інструментів",
-  "settings.experimental.codebaseSearch.title": "Пошук по кодовій базі",
-  "settings.experimental.codebaseSearch.description":
-    "Увімкнути пошук природною мовою на основі ШІ по всій кодовій базі",
   "settings.experimental.imageGeneration.title": "Генерація зображень",
   "settings.experimental.imageGeneration.description": "Увімкнути генерацію зображень за допомогою ШІ",
   "settings.experimental.imageGenerationModel.title": "Модель зображень",
@@ -876,7 +852,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "Дозволені мережеві адреси",
   "settings.sandboxing.allowedHosts.description":
-    "DNS-вузли та порти призначення для ізольованого proxy-трафіку HTTP і HTTPS. GitHub CLI та HTTPS Git зазвичай потребують github.com:443 і api.github.com:443. Зміни застосовуються до нових сеансів.",
+    "DNS-вузли та порти призначення для ізольованого proxy-трафіку HTTP і HTTPS. GitHub CLI та HTTPS Git зазвичай потребують github.com:443 і api.github.com:443.",
   "settings.sandboxing.writablePaths.title": "Додаткові шляхи для запису",
   "settings.sandboxing.writablePaths.description":
     "Додаткові шляхи файлової системи, у які дозволено запис у пісочниці (наприклад, /tmp, /var/log). Вони об'єднуються зі шляхами запису за замовчуванням, коли пісочниця активна.",
@@ -984,6 +960,9 @@ export const dict = {
     "Власних команд не налаштовано. Додайте команди до opencode.json, щоб вони з'явилися тут.",
   "settings.agentBehaviour.workflows.detail.description": "Опис",
   "settings.agentBehaviour.workflows.detail.template": "Шаблон",
+  "settings.agentBehaviour.workflows.model": "модель",
+  "settings.agentBehaviour.workflows.variant": "варіант",
+  "settings.agentBehaviour.workflows.modelDescription": "Глобальне перевизначення моделі",
 
   "settings.autoApprove.description":
     "Визначте, як виконуються інструменти. Більшість інструментів за замовчуванням — Дозволити. doom_loop та external_directory за замовчуванням — Запитувати.",
@@ -1080,19 +1059,23 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Перемикати зусилля міркування за допомогою Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Натисніть Shift+Tab у полі введення запиту, щоб перейти до наступного рівня зусиль міркування. Вимкніть цю опцію, щоб зберегти Shift+Tab для навігації фокусом за допомогою клавіатури.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "Блоки команд термінала",
+  "settings.display.terminalCommand.description":
+    "Виберіть, чи будуть блоки команд термінала спочатку розгорнутими чи згорнутими.",
+  "settings.display.terminalCommand.expanded": "Розгорнуті",
+  "settings.display.terminalCommand.collapsed": "Згорнуті",
   "settings.display.codeEdit.title": "Блоки редагування коду",
   "settings.display.codeEdit.description":
     "Виберіть, чи будуть блоки редагування коду та відмінностей спочатку розгорнутими чи згорнутими.",
   "settings.display.codeEdit.expanded": "Розгорнуті",
   "settings.display.codeEdit.collapsed": "Згорнуті",
 
-  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.title": "Показувати пропускну здатність токенів",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+    "Показує швидкість генерації тексту (токенів/с) на останньому повідомленні асистента та в заголовку завдання. За замовчуванням приховано, щоб чат залишався охайним.",
+  "settings.display.autoApprovalReason.title": "Показувати причину автосхвалення",
+  "settings.display.autoApprovalReason.description":
+    "Показує рядок біля викликів інструментів, що пояснює, чому їх автоматично схвалено (відповідне правило, стандартне значення агента, режим YOLO тощо).",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

@@ -11,6 +11,7 @@ import { DaemonCommand } from "@/kilocode/cli/cmd/daemon"
 import { DevSetupCommand, DevAliasCommand } from "@/kilocode/cli/dev-setup"
 import { RemoteCommand } from "@/cli/cmd/remote"
 import { ConfigCommand as ConfigCLICommand } from "@/cli/cmd/config"
+import { WorktreeCommand } from "@/kilocode/cli/cmd/worktree"
 
 const log = Log.create({ service: "kilocode.cli" })
 
@@ -43,6 +44,8 @@ KiloShutdown.register(async () => {
 // in opencode#30453. The registered command modules must follow the same rule: a light
 // top level, with implementation imports inside their handlers.
 export namespace KiloCli {
+  let info = false
+
   // Register only the Kilo-specific commands. Upstream commands stay in index.ts's chain so
   // upstream merges that add or remove commands keep working without touching this file.
   export function register<T>(cli: Argv<T>): Argv<T> {
@@ -54,6 +57,7 @@ export namespace KiloCli {
       .command(RemoteCommand)
       .command(DaemonCommand)
       .command(ConfigCLICommand)
+      .command(WorktreeCommand)
     if (InstallationBuildKind !== "release") cli.command(DevSetupCommand).command(DevAliasCommand)
     // Safe self-reference: `cli` is a typed parameter and yargs `.command()` returns the same
     // instance, so the help command can resolve the fully-built root at handler time. This also
@@ -69,7 +73,10 @@ export namespace KiloCli {
 
   // Runs from the upstream `.middleware`, before any command handler. Env tagging is additive so
   // it never has to modify upstream's own env assignments.
-  export async function bootstrap(): Promise<void> {
+  export async function bootstrap(opts: { [key: string]: unknown }): Promise<void> {
+    info = opts.help === true || opts.version === true
+    if (info) return
+
     const { KiloLog } = await import("@/kilocode/log")
     await KiloLog.init()
 
@@ -120,6 +127,7 @@ export namespace KiloCli {
 
   // Runs from the `finally` block on every exit path.
   export async function shutdown(): Promise<void> {
+    if (info) return
     const { Telemetry } = await import("@kilocode/kilo-telemetry")
     const code = typeof process.exitCode === "number" ? process.exitCode : undefined
     Telemetry.trackCliExit(code)

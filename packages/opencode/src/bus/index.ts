@@ -194,7 +194,7 @@ export const layer = Layer.effect(
 )
 
 export const defaultLayer = layer
-export const node = LayerNode.make(layer, []) // kilocode_change
+export const node = LayerNode.make({ service: Service, layer, deps: [] }) // kilocode_change
 
 const { runPromise } = makeRuntime(Service, layer) // kilocode_change
 export function createID() {

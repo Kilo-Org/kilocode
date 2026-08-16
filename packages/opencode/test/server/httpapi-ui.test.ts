@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto"
 import { describe, expect } from "bun:test"
 import { Flag } from "@opencode-ai/core/flag/flag"
-import { ConfigProvider, Effect, Layer } from "effect"
+import { ConfigProvider, Effect, Layer, Option } from "effect"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import {
   HttpClient,
   HttpClientRequest,
@@ -38,7 +39,15 @@ const testStateLayer = Layer.effectDiscard(
   }),
 )
 
-const it = testEffect(Layer.mergeAll(testStateLayer, FSUtil.defaultLayer, RuntimeFlags.layer()))
+const fsUtilLayer = AppNodeBuilder.build(FSUtil.node)
+const it = testEffect(Layer.mergeAll(testStateLayer, fsUtilLayer, RuntimeFlags.layer()))
+
+function authConfigLayer(input?: { password?: string; username?: string }) {
+  return ServerAuth.Config.configLayer({
+    password: input?.password === undefined ? Option.none() : Option.some(input.password),
+    username: input?.username ?? "opencode",
+  })
+}
 
 function restoreEnv(key: string, value: string | undefined) {
   if (value === undefined) {
@@ -97,17 +106,15 @@ function uiApp(input?: {
         )
       }),
     ).pipe(
-      Layer.provide(authorizationRouterMiddleware.layer.pipe(Layer.provide(ServerAuth.Config.defaultLayer))),
+      Layer.provide(authorizationRouterMiddleware.layer.pipe(Layer.provide(authConfigLayer(input)))),
       Layer.provide([
-        FSUtil.defaultLayer,
+        fsUtilLayer,
         input?.client ?? httpClient(new Response("ui")),
         RuntimeFlags.layer({ disableEmbeddedWebUi: input?.disableEmbeddedWebUi ?? false }),
         HttpServer.layerServices,
         // kilocode_change start - keep the filewatcher-disable flag visible (see httpapi-instance-route-auth.test.ts)
         ConfigProvider.layer(
           ConfigProvider.fromUnknown({
-            KILO_SERVER_PASSWORD: input?.password,
-            KILO_SERVER_USERNAME: input?.username,
             KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: process.env.KILO_EXPERIMENTAL_DISABLE_FILEWATCHER ?? "true",
           }),
         ),
@@ -148,7 +155,7 @@ function routeOrderingApp() {
       }),
     ).pipe(
       Layer.provide([
-        FSUtil.defaultLayer,
+        fsUtilLayer,
         RuntimeFlags.layer({ disableEmbeddedWebUi: true }),
         httpClient(new Response("ui"), (request) => {
           proxiedUrl = request.url

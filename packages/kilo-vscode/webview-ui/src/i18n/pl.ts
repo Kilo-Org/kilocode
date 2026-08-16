@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Połącz Anaconda Desktop",
   "provider.anaconda.title.manage": "Zarządzaj Anaconda Desktop",
@@ -53,6 +55,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Połącz dostawcę",
 
@@ -162,6 +165,7 @@ export const dict = {
   "model.group.auto": "Modele automatyczne",
   "model.group.recommended": "Zalecane",
   "model.group.favorites": "Ulubione",
+  "model.group.mostUsed": "Najczęściej używane",
   "model.favorite.add": "Dodaj do ulubionych",
   "model.favorite.remove": "Usuń z ulubionych",
   "model.preview.label.released": "Wydano",
@@ -230,6 +234,8 @@ export const dict = {
     "Kliknij, aby ograniczyć zapisy w systemie plików. Ustawienia sandboxa nadal zezwalają na dostęp do sieci.",
 
   "speechToText.tooltip.start": "Rozpocznij wprowadzanie głosowe z Kilo Gateway",
+  "speechToText.tooltip.shortcut":
+    "Stuknij lub naciśnij Cmd/Ctrl+K, aby rozpocząć albo zatrzymać nagrywanie; przytrzymaj podczas mówienia, a następnie zwolnij, aby dokonać transkrypcji i wysłać.",
   "speechToText.tooltip.starting": "Uruchamianie mikrofonu... Poczekaj, zanim zaczniesz mówić.",
   "speechToText.tooltip.stop": "Zatrzymaj przechwytywanie dźwięku",
   "speechToText.tooltip.transcribing": "Transkrybowanie... Kliknij, aby anulować.",
@@ -302,6 +308,7 @@ export const dict = {
   "ui.approval.source.yolo": "przez tryb automatycznego zatwierdzania (YOLO)",
   "ui.approval.source.session": "przez regułę automatycznego zatwierdzania sesji",
   "ui.approval.source.default": "domyślnie",
+  "ui.approval.outsideWorkspace": "(poza obszarem roboczym: {{file}})",
 
   "session.tab.review": "Przegląd",
   "session.review.filesChanged": "Zmieniono {{count}} plików",
@@ -311,6 +318,14 @@ export const dict = {
   "session.messages.loadEarlier": "Załaduj wcześniejsze wiadomości",
   "session.messages.loading": "Ładowanie wiadomości...",
 
+  "sidebar.topBar.label": "Nawigacja Kilo Code",
+  "sidebar.topBar.newTask": "Nowe Zadanie",
+  "sidebar.topBar.history": "Historia",
+  "sidebar.topBar.agentManager": "Agent Manager",
+  "sidebar.topBar.kiloClaw": "KiloClaw",
+  "sidebar.topBar.marketplace": "Marketplace",
+  "sidebar.topBar.profile": "Profil",
+  "sidebar.topBar.settings": "Ustawienia",
   "sidebar.session.newSession": "Nowa Sesja",
   "sidebar.session.newSession.tooltip": "Rozpocznij nową konwersację, zachowując obecną sesję bez zmian.",
   "sidebar.session.newWorktree": "Nowe Worktree",
@@ -440,45 +455,8 @@ export const dict = {
   "provider.custom.models.name.placeholder": "Nazwa wyświetlana",
   "provider.custom.models.reasoning.label": "Rozumowanie",
   "provider.custom.models.modalities.image": "Obraz",
-  "provider.custom.models.variants.label": "Warianty",
-  "provider.custom.models.variants.add": "Dodaj wariant",
-  "provider.custom.models.variants.remove": "Usuń wariant",
-  "provider.custom.models.variants.name.label": "Nazwa",
-  "provider.custom.models.variants.name.placeholder": "np. thinking",
-  "provider.custom.models.variants.option.unset": "(nie ustawiono)",
-  "provider.custom.models.variants.enableThinking.label": "Włącz myślenie (np. Alibaba)",
-  "provider.custom.models.variants.enableThinking.placeholder": "enable_thinking",
-  "provider.custom.models.variants.enableThinking.true": "true",
-  "provider.custom.models.variants.enableThinking.false": "false",
-  "provider.custom.models.variants.thinking.label": "Typ myślenia (np. Z.ai)",
-  "provider.custom.models.variants.thinking.placeholder": "thinking",
-  "provider.custom.models.variants.thinking.enabled": "enabled",
-  "provider.custom.models.variants.thinking.disabled": "disabled",
-  "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
-  "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
-  "provider.custom.models.variants.splitReasoning.true": "true",
-  "provider.custom.models.variants.splitReasoning.false": "false",
-  "provider.custom.models.variants.chatTemplateArgs.label":
-    "Włącz myślenie przez argumenty szablonu czatu (np. Hugging Face)",
-  "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
-  "provider.custom.models.variants.chatTemplateArgs.true": "true",
-  "provider.custom.models.variants.chatTemplateArgs.false": "false",
-  "provider.custom.models.variants.reasoningEffort.label": "Wysiłek rozumowania",
-  "provider.custom.models.variants.reasoningEffort.placeholder": "reasoningEffort",
-  "provider.custom.models.variants.reasoningEffort.none": "none",
-  "provider.custom.models.variants.reasoningEffort.minimal": "minimal",
-  "provider.custom.models.variants.reasoningEffort.low": "low",
-  "provider.custom.models.variants.reasoningEffort.medium": "medium",
-  "provider.custom.models.variants.reasoningEffort.high": "high",
-  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
-  "provider.custom.models.variants.outputEffort.placeholder": "effort",
-  "provider.custom.models.variants.outputEffort.low": "low",
-  "provider.custom.models.variants.outputEffort.medium": "medium",
-  "provider.custom.models.variants.outputEffort.high": "high",
-  "provider.custom.models.variants.outputEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.max": "max",
+  "provider.custom.models.toggleReasoning": "Przełącz wnioskowanie dla wszystkich",
+  "provider.custom.models.toggleImages": "Przełącz obraz dla wszystkich",
   "provider.custom.models.remove": "Usuń model",
   "provider.custom.models.add": "Dodaj model",
   "provider.custom.models.fetch.authError":
@@ -493,6 +471,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "Szukaj modeli\u2026",
   "provider.custom.models.fetch.add": "Dodaj {{count}} model(i)",
   "provider.custom.edit.title": "Edytuj dostawcę",
+  "provider.custom.edit.advanced": "Edytuj ustawienia zaawansowane w pliku konfiguracji JSON",
   "provider.custom.headers.label": "Nagłówki (opcjonalnie)",
   "provider.custom.headers.key.label": "Nagłówek",
   "provider.custom.headers.key.placeholder": "Header-Name",
@@ -817,8 +796,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Włącz integrację protokołu serwera języka",
   "settings.experimental.batch.title": "Narzędzie wsadowe",
   "settings.experimental.batch.description": "Włącz przetwarzanie wsadowe wywołań narzędzi",
-  "settings.experimental.codebaseSearch.title": "Wyszukiwanie kodu",
-  "settings.experimental.codebaseSearch.description": "Włącz wyszukiwanie w języku naturalnym z AI w całej bazie kodu",
   "settings.experimental.imageGeneration.title": "Generowanie obrazów",
   "settings.experimental.imageGeneration.description": "Włącz generowanie obrazów przez AI",
   "settings.experimental.imageGenerationModel.title": "Model obrazu",
@@ -842,7 +819,7 @@ export const dict = {
 
   "settings.sandboxing.allowedHosts.title": "Dozwolone miejsca docelowe sieci",
   "settings.sandboxing.allowedHosts.description":
-    "Docelowe hosty DNS i porty dla ruchu HTTP i HTTPS przez proxy w piaskownicy. GitHub CLI i HTTPS Git zwykle wymagają github.com:443 i api.github.com:443. Zmiany dotyczą nowych sesji.",
+    "Docelowe hosty DNS i porty dla ruchu HTTP i HTTPS przez proxy w piaskownicy. GitHub CLI i HTTPS Git zwykle wymagają github.com:443 i api.github.com:443.",
   "settings.sandboxing.writablePaths.title": "Dodatkowe ścieżki zapisu",
   "settings.sandboxing.writablePaths.description":
     "Dodatkowe ścieżki systemu plików, do których sandbox zezwala na zapis (np. /tmp, /var/log). Są one łączone z domyślnymi ścieżkami zapisu, gdy sandbox jest aktywny.",
@@ -1024,6 +1001,9 @@ export const dict = {
     "Brak skonfigurowanych niestandardowych komend. Dodaj komendy do opencode.json, aby je tu zobaczyć.",
   "settings.agentBehaviour.workflows.detail.description": "Opis",
   "settings.agentBehaviour.workflows.detail.template": "Szablon",
+  "settings.agentBehaviour.workflows.model": "model",
+  "settings.agentBehaviour.workflows.variant": "wariant",
+  "settings.agentBehaviour.workflows.modelDescription": "Globalne nadpisanie modelu",
   "settings.sandboxing.enabled.title": "Sandbox",
   "settings.sandboxing.enabled.description":
     "Uruchamiaj polecenia shell agenta w sandboxie na poziomie systemu operacyjnego, który ogranicza zapisy do katalogów stanu projektu i Kilo",
@@ -1125,19 +1105,23 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Przełączaj wysiłek rozumowania za pomocą Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Naciśnij Shift+Tab w polu wprowadzania promptu, aby przełączyć się na następny poziom wysiłku rozumowania. Wyłącz tę opcję, aby zachować Shift+Tab do nawigacji fokusem za pomocą klawiatury.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "Bloki poleceń terminala",
+  "settings.display.terminalCommand.description":
+    "Wybierz, czy bloki poleceń terminala mają być początkowo rozwinięte czy zwinięte.",
+  "settings.display.terminalCommand.expanded": "Rozwinięte",
+  "settings.display.terminalCommand.collapsed": "Zwinięte",
   "settings.display.codeEdit.title": "Bloki edycji kodu",
   "settings.display.codeEdit.description":
     "Wybierz, czy bloki edycji kodu i podglądy różnic mają być początkowo rozwinięte czy zwinięte.",
   "settings.display.codeEdit.expanded": "Rozwinięte",
   "settings.display.codeEdit.collapsed": "Zwinięte",
 
-  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.title": "Pokaż przepustowość tokenów",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+    "Wyświetla szybkość generowania tekstu (tokeny/s) w ostatniej wiadomości asystenta i w nagłówku zadania. Domyślnie skryte, aby czat był przejrzysty.",
+  "settings.display.autoApprovalReason.title": "Pokaż powód automatycznego zatwierdzenia",
+  "settings.display.autoApprovalReason.description":
+    "Pokazuje wiersz przy wywołaniach narzędzi wyjaśniający, dlaczego zostały automatycznie zatwierdzone (dopasowana reguła, wartość domyślna agenta, tryb YOLO itp.).",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

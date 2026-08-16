@@ -21,12 +21,11 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     // ------ initial state ------
 
-    fun `test header and description text areas are in the component tree by default`() {
+    fun `test empty card does not render a header row by default`() {
         edt {
             val panel = BaseQuestionView()
             assertTrue("Root layout should be BorderLayout", panel.layout is BorderLayout)
-            val areas = findAll<JBTextArea>(panel)
-            assertTrue("Should have at least 2 text areas (header + description)", areas.size >= 2)
+            assertNull("Header row should be omitted until header content exists", headerRow(panel))
         }
     }
 
@@ -87,6 +86,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
     fun `test setTopPanel adds component before header`() {
         edt {
             val panel = BaseQuestionView()
+            panel.setHeader("Title")
             val top = JLabel("top")
             panel.setTopPanel(top)
 
@@ -249,15 +249,18 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test action buttons use question card surface background`() {
+    fun `test action buttons are non-opaque so no stray fill frame`() {
         edt {
             val panel = BaseQuestionView()
             panel.setActions(listOf(
                 BaseQuestionView.Action("a", "A", primary = false) {},
                 BaseQuestionView.Action("b", "B", primary = true) {},
             ))
-            assertEquals(SessionUiStyle.View.Surface.bgColor(), actionButton(panel, "A").background)
-            assertEquals(SessionUiStyle.View.Surface.bgColor(), actionButton(panel, "B").background)
+            // Non-opaque so Swing does not fill the rectangular bounds with the component
+            // background before DarculaButtonUI paints the rounded shape. That rectangle leaked
+            // as a stray frame around the button in the Islands Light theme.
+            assertFalse(actionButton(panel, "A").isOpaque)
+            assertFalse(actionButton(panel, "B").isOpaque)
         }
     }
 
@@ -280,9 +283,10 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test header row has no west icon gap by default`() {
+    fun `test header row has no west icon gap without icon`() {
         edt {
             val panel = BaseQuestionView()
+            panel.setHeader("Title")
             val header = headerRow(panel)!!
             val west = (header.layout as BorderLayout).getLayoutComponent(BorderLayout.WEST)
             assertNull("header should not reserve icon space when icon is absent", west)
@@ -393,7 +397,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
     // ------ applyStyle: UI fonts ----
 
-    fun `test applyStyle applies headerFont to header and hintFont to description`() {
+    fun `test applyStyle applies headerFont to header and secondary font to description`() {
         edt {
             val panel = BaseQuestionView()
             panel.setHeader("Title", "Hint")
@@ -404,7 +408,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
             val desc = areas.first { it.text == "Hint" }
 
             assertEquals("headerText should use headerFont", style.headerFont, header.font)
-            assertEquals("descriptionText should use hintFont", style.hintFont, desc.font)
+            assertEquals("descriptionText should use secondary text font", SessionUiStyle.Text.Secondary.font(style), desc.font)
         }
     }
 

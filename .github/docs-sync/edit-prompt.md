@@ -21,6 +21,7 @@ Hard rules:
 - Never remove or rename pages. Never document unreleased behavior. Never copy internal PR discussion into the docs; write user-facing documentation.
 - Do not run git commands and do not commit anything; automation handles git.
 - Keep the change small and precise. Do not rewrite sections that are already accurate.
+- Never create, modify, or delete packages/kilo-docs/LEARNINGS.md. Automation owns that file.
 
 When finished, write the summary JSON file named in the batch specifics below: a JSON array with exactly one entry per batch PR, consumed by automation (this file is never committed). Use `action` values like `updated <path>`, `created <path>`, or `skipped`. Example:
 

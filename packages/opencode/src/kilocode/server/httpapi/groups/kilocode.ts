@@ -24,15 +24,22 @@ import {
 } from "@/kilocode/notebook/protocol"
 import { ModelUsage } from "@/kilocode/session/model-usage"
 import { SessionID } from "@/session/schema"
+import { CommandFiles } from "@/kilocode/command-files"
 
 const root = "/kilocode"
+const Scope = Schema.Literals(["global", "project"])
 
 export const RemoveSkillPayload = Schema.Struct({
   location: Schema.String,
 })
 
+export const RemoveCommandPayload = Schema.Struct({
+  location: Schema.String,
+})
+
 export const RemoveAgentPayload = Schema.Struct({
   name: Schema.String,
+  scope: Schema.optional(Scope),
 })
 
 export const AgentRequirementQuery = Schema.Struct({
@@ -47,6 +54,8 @@ export const AgentManagerRejectPayload = Schema.Struct({ error: AgentManagerFail
 export const KilocodePaths = {
   heapSnapshot: `${root}/heap/snapshot`,
   agentRequirements: `${root}/agent/requirements`,
+  commandFiles: `${root}/command/files`,
+  removeCommand: `${root}/command/remove`,
   removeSkill: `${root}/skill/remove`,
   removeAgent: `${root}/agent/remove`,
   notebookList: `${root}/notebook`,
@@ -83,6 +92,28 @@ export const KilocodeApi = HttpApi.make("kilocode")
             description: "Check whether the selected agent's requirements are available in the request directory.",
           }),
         ),
+        HttpApiEndpoint.get("commandFiles", KilocodePaths.commandFiles, {
+          query: WorkspaceRoutingQuery,
+          success: described(Schema.Array(CommandFiles.Info), "Command files"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.commandFiles",
+            summary: "List command files",
+            description: "List commands with editable file locations for settings clients.",
+          }),
+        ),
+        HttpApiEndpoint.post("removeCommand", KilocodePaths.removeCommand, {
+          query: WorkspaceRoutingQuery,
+          payload: RemoveCommandPayload,
+          success: described(Schema.Boolean, "Command removed"),
+          error: HttpApiError.BadRequest,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.removeCommand",
+            summary: "Remove a command",
+            description: "Remove a command by deleting its markdown file from disk and clearing it from cache.",
+          }),
+        ),
         HttpApiEndpoint.post("removeSkill", KilocodePaths.removeSkill, {
           query: WorkspaceRoutingQuery,
           payload: RemoveSkillPayload,
@@ -105,7 +136,7 @@ export const KilocodeApi = HttpApi.make("kilocode")
             identifier: "kilocode.removeAgent",
             summary: "Remove a custom agent",
             description:
-              "Remove a custom (non-native) agent by deleting its markdown file from disk and refreshing state.",
+              "Remove a custom (non-native) agent from one writable configuration scope, or every writable scope when omitted, and dispose cached instance state.",
           }),
         ),
         HttpApiEndpoint.get("notebookList", KilocodePaths.notebookList, {

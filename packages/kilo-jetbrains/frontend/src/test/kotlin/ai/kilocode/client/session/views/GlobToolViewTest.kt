@@ -3,13 +3,16 @@ package ai.kilocode.client.session.views
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
-import ai.kilocode.client.session.views.base.SecondarySessionPartView
 import ai.kilocode.client.session.views.tool.GlobToolView
 import ai.kilocode.client.session.views.tool.ReadToolView
 import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionUiStyle
+import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.UIUtil
 import javax.swing.ScrollPaneConstants
 
 @Suppress("UnstableApiUsage")
@@ -29,9 +32,7 @@ class GlobToolViewTest : BasePlatformTestCase() {
         val view = GlobToolView(tool().also {
             it.input = mapOf("path" to "/repo/src", "pattern" to "**/*.kt")
         })
-        val base: Any = view
 
-        assertTrue(base is SecondarySessionPartView)
         assertTrue(view.labelText().contains("Glob"))
         assertEquals(listOf("/repo/src", "pattern=**/*.kt"), view.targetTexts())
         assertTrue(view.targetVisible(1))
@@ -153,6 +154,37 @@ class GlobToolViewTest : BasePlatformTestCase() {
         assertTrue(ViewFactory.shouldReplace(ToolView(read), glob))
         assertTrue(ViewFactory.shouldReplace(GlobToolView(glob), read))
         assertFalse(ViewFactory.shouldReplace(GlobToolView(glob), glob))
+    }
+
+    fun `test glob header popup previews matches when collapsed`() {
+        val view = track(GlobToolView(tool().also {
+            it.input = mapOf("pattern" to "**/*.kt")
+            it.output = "src/A.kt\nsrc/B.kt"
+        }))
+        val body = view.headerPopup()!!.build()
+        try {
+            val editors = popupEditors(body.component)
+            editors.forEach { it.getEditor(true) }
+            assertEquals(listOf("src/A.kt\nsrc/B.kt"), editors.map { it.text })
+            assertTrue(body.component.preferredSize.height in 1..JBUI.scale(SessionUiStyle.View.Popup.MAX_HEIGHT))
+        } finally {
+            Disposer.dispose(body.disposable)
+        }
+    }
+
+    fun `test glob header popup is absent when expanded and leaks no editors`() {
+        val base = EditorFactory.getInstance().allEditors.size
+        val view = track(GlobToolView(tool().also { it.output = "src/A.kt" }))
+        assertNotNull(view.headerPopup())
+        repeat(20) {
+            val body = view.headerPopup()!!.build()
+            popupEditors(body.component).forEach { it.getEditor(true) }
+            Disposer.dispose(body.disposable)
+        }
+        UIUtil.dispatchAllInvocationEvents()
+        assertEquals(base, EditorFactory.getInstance().allEditors.size)
+        view.toggle()
+        assertNull(view.headerPopup())
     }
 
     private fun tool() = Tool("p1", "glob", toolKind("glob")).also { it.state = ToolExecState.COMPLETED }

@@ -1,3 +1,5 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { NodeFileSystem } from "@effect/platform-node"
 import { expect } from "bun:test"
 import { Cause, Effect, Exit, Fiber, Layer } from "effect"
@@ -33,6 +35,7 @@ import { RepositoryCache } from "@opencode-ai/core/repository-cache"
 import { SessionCompaction } from "../../src/session/compaction"
 import { Instruction } from "../../src/session/instruction"
 import { LLM } from "../../src/session/llm"
+import { MessageV2 } from "../../src/session/message-v2"
 import { SessionProcessor } from "../../src/session/processor"
 import { SessionPrompt } from "../../src/session/prompt"
 import { SessionRevert } from "../../src/session/revert"
@@ -44,8 +47,6 @@ import { SessionSummary } from "../../src/session/summary"
 import { Todo } from "../../src/session/todo"
 import { Skill } from "../../src/skill"
 import { Snapshot } from "../../src/snapshot"
-import { Storage } from "../../src/storage/storage"
-import { SyncEvent } from "../../src/sync"
 import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { ToolRegistry } from "../../src/tool/registry"
 import { Truncate } from "../../src/tool/truncate"
@@ -88,6 +89,8 @@ const mcp = Layer.succeed(
     tools: () => Effect.succeed({}),
     prompts: () => Effect.succeed({}),
     resources: () => Effect.succeed({}),
+    instructions: () => Effect.succeed([]),
+    resourceTemplates: () => Effect.succeed({}),
     add: () => Effect.succeed({ status: { status: "disabled" as const } }),
     connect: () => Effect.void,
     disconnect: () => Effect.void,
@@ -123,89 +126,62 @@ const lsp = Layer.succeed(
   }),
 )
 
-const status = Layer.mergeAll(SessionStatus.defaultLayer, Bus.layer)
-const run = SessionRunState.layer.pipe(Layer.provide(status))
-const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLayer)
+// One compiled graph, mirroring test/session/prompt.test.ts. Effect v4 does
+// not memoize nested layers, so per-service AppNodeBuilder.build calls each stood up their own
+// Database and sessions written by the test were invisible to the prompt loop.
+const memoryNode = LayerNode.make({ service: MemoryService.Service, layer: MemoryService.layer, deps: [] })
+const testLLMServerNode = LayerNode.make({ service: TestLLMServer, layer: TestLLMServer.layer, deps: [] })
+
+const promptRoot = LayerNode.group([
+  SessionPrompt.node,
+  Session.node,
+  SessionProjector.node,
+  MessageV2.node,
+  Snapshot.node,
+  LLM.node,
+  Env.node,
+  AgentSvc.node,
+  Command.node,
+  Permission.node,
+  Plugin.node,
+  Config.node,
+  ProviderSvc.node,
+  LSP.node,
+  MCP.node,
+  FSUtil.node,
+  BackgroundJob.node,
+  SessionStatus.node,
+  SessionRunState.node,
+  Database.node,
+  EventV2Bridge.node,
+  Question.node,
+  Todo.node,
+  ToolRegistry.node,
+  Skill.node,
+  Git.node,
+  Ripgrep.node,
+  Format.node,
+  Truncate.node,
+  SessionProcessor.node,
+  Image.node,
+  SessionCompaction.node,
+  SessionRevert.node,
+  Instruction.node,
+  SystemPrompt.node,
+  CrossSpawnSpawner.node,
+  RuntimeFlags.node,
+  memoryNode,
+  testLLMServerNode,
+])
 
 function makeHttp() {
-  const deps = Layer.mergeAll(
-    Session.defaultLayer,
-    BackgroundJob.defaultLayer,
-    Snapshot.defaultLayer,
-    LLM.defaultLayer,
-    Env.defaultLayer,
-    AgentSvc.defaultLayer,
-    Command.defaultLayer,
-    Permission.defaultLayer,
-    Plugin.defaultLayer,
-    Config.defaultLayer,
-    RuntimeFlags.layer(),
-    ProviderSvc.defaultLayer,
-    lsp,
-    mcp,
-    FSUtil.defaultLayer,
-    SyncEvent.defaultLayer,
-    EventV2Bridge.defaultLayer,
-    Database.defaultLayer,
-    status,
-    MemoryService.layer,
-  ).pipe(Layer.provideMerge(infra))
-  const question = Question.layer.pipe(Layer.provideMerge(deps))
-  const todo = Todo.layer.pipe(Layer.provideMerge(deps))
-  const registry = ToolRegistry.layer.pipe(
-    Layer.provide(Skill.defaultLayer),
-    Layer.provide(FetchHttpClient.layer),
-    Layer.provide(CrossSpawnSpawner.defaultLayer),
-    Layer.provide(RepositoryCache.defaultLayer),
-    Layer.provide(Ripgrep.defaultLayer),
-    Layer.provide(Format.defaultLayer),
-    Layer.provide(Git.defaultLayer),
-    Layer.provide(Command.defaultLayer),
-    Layer.provide(Auth.defaultLayer),
-    Layer.provide(KiloSessions.testLayer),
-    Layer.provideMerge(todo),
-    Layer.provideMerge(question),
-    Layer.provideMerge(deps),
-  )
-  const trunc = Truncate.layer.pipe(Layer.provideMerge(deps))
-  const proc = SessionProcessor.layer.pipe(
-    Layer.provide(summary),
-    Layer.provide(Image.defaultLayer),
-    Layer.provideMerge(deps),
-  )
-  const compact = SessionCompaction.layer.pipe(Layer.provideMerge(proc), Layer.provideMerge(deps))
-  return Layer.mergeAll(
-    TestLLMServer.layer,
-    SessionPrompt.layer.pipe(
-      Layer.provide(SessionRevert.defaultLayer),
-      Layer.provide(Image.defaultLayer),
-      Layer.provide(summary),
-      Layer.provideMerge(run),
-      Layer.provideMerge(compact),
-      Layer.provideMerge(proc),
-      Layer.provideMerge(registry),
-      Layer.provideMerge(trunc),
-      Layer.provideMerge(question),
-      Layer.provide(Instruction.defaultLayer),
-      Layer.provide(SystemPrompt.defaultLayer),
-      Layer.provideMerge(deps),
-    ),
-  ).pipe(
-    Layer.provide(
-      Layer.mergeAll(
-        summary,
-        deps,
-        Config.defaultLayer,
-        RuntimeFlags.layer(),
-        BackgroundJob.defaultLayer,
-        Bus.layer,
-        infra,
-        Storage.defaultLayer,
-      ),
-    ),
-  )
+  return LayerNode.compile(promptRoot, [
+    [SessionSummary.node, summary],
+    [LSP.node, lsp],
+    [MCP.node, mcp],
+    [KiloSessions.node, KiloSessions.testLayer],
+  ])
 }
-
 const it = testEffect(makeHttp())
 const symlinkIt = process.platform === "win32" ? it.live.skip : it.live
 

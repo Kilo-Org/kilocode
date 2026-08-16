@@ -210,6 +210,7 @@
   font-family: inherit;
   font-size: var(--kilo-font-size-12);
   font-weight: 500;
+  white-space: nowrap;
   cursor: pointer;
   transition:
     background-color 0.15s,

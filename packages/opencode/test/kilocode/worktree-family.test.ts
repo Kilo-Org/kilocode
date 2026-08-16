@@ -1,3 +1,4 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { describe, expect } from "bun:test"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Effect, Layer } from "effect"
@@ -9,7 +10,7 @@ import { resetDatabase } from "../fixture/db"
 import { tmpdirScoped } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
-const it = testEffect(Layer.mergeAll(Project.defaultLayer, Git.defaultLayer, CrossSpawnSpawner.defaultLayer))
+const it = testEffect(Layer.mergeAll(AppNodeBuilder.build(Project.node), AppNodeBuilder.build(Git.node), AppNodeBuilder.build(CrossSpawnSpawner.node)))
 
 describe("WorktreeFamily.list", () => {
   it.live("returns recorded sandboxes when git worktree listing fails", () =>
