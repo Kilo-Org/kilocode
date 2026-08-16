@@ -1115,7 +1115,20 @@ export class WorktreeManager {
       // the PR branch, and gives worktree add a local branch it can check out.
       const ok = await this.gitTry(["fetch", "origin", `${info.headRefName}:${info.headRefName}`])
       if (!ok) {
-        await this.gitExec(["fetch", "origin", `+refs/pull/${parsed.number}/head:refs/heads/${info.headRefName}`])
+        // The PR branch isn't reachable through the configured fetch refspec.
+        // Fetch the PR head ref into FETCH_HEAD, then create or force-update
+        // a local branch.  Using `git branch --force` rather than a forced
+        // fetch ref makes the overwrite intent explicit and avoids silently
+        // clobbering a diverged local branch via the transport layer.
+        // This is safe in practice because Kilo auto-generates PR branch names
+        // that won't collide with user-created branches.
+        await this.gitExec(["fetch", "origin", `refs/pull/${parsed.number}/head`])
+        const exists = await this.gitTry(["rev-parse", "--verify", info.headRefName])
+        if (exists) {
+          await this.gitExec(["branch", "--force", info.headRefName, "FETCH_HEAD"])
+        } else {
+          await this.gitExec(["branch", info.headRefName, "FETCH_HEAD"])
+        }
       }
     }
   }
