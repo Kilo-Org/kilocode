@@ -53,6 +53,10 @@ export namespace IngestQueue {
         data: { status: "idle" | "busy" | "question" | "permission" | "retry" }
       }
     | {
+        type: "session_pr_link"
+        data: { platform: string | null; prUrl: string | null; prNumber: number | null }
+      }
+    | {
         type: "agent_notification"
         data: { id: string; message: string }
       }
@@ -145,6 +149,7 @@ export namespace IngestQueue {
       if (item.type === "session_open") return "session_open"
       if (item.type === "session_close") return "session_close"
       if (item.type === "session_status") return "session_status"
+      if (item.type === "session_pr_link") return "session_pr_link"
 
       if (item.type === "message") {
         const value = id(item.data)
@@ -376,8 +381,10 @@ export namespace IngestQueue {
       //   The next flush is scheduled ~1s after the first queued event (throttled), but never earlier
       //   than the current backoff window (if retries are active).
       // - A batch containing session_close is terminal: flush ASAP (respecting backoff only).
+      // Returns true when the item was queued, false when skipped (no client) so
+      // callers can defer dedupe bookkeeping until the item is actually accepted.
       const client = await options.getClient()
-      if (!client) return
+      if (!client) return false
 
       if (options.log.info) {
         const types = data.map((d) => d.type).join(",")
@@ -390,6 +397,7 @@ export namespace IngestQueue {
       const base = terminal ? now() : (queue.get(sessionId)?.due ?? now() + 1000)
       const due = Math.max(base, until)
       enqueue(sessionId, data, "overwrite", due, terminal)
+      return true
     }
 
     async function drain(bound = 3_000) {
