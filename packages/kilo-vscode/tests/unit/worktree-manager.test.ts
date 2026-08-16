@@ -11,6 +11,7 @@ import {
   versionedName,
 } from "../../src/agent-manager/branch-name"
 import { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
+import { type PRInfo } from "../../src/agent-manager/git-import"
 import simpleGit from "simple-git"
 
 // Each test gets its own temp directory -- no shared state, safe to run in parallel.
@@ -70,6 +71,47 @@ async function createTempRepoWithOrigin(): Promise<{ bare: string; clone: string
   gitExec(["git", "-C", clone, "add", "."])
   gitExec(["git", "-C", clone, "commit", "-m", "initial commit"])
   gitExec(["git", "-C", clone, "push", "-u", "origin", "main"])
+
+  return { bare, clone }
+}
+
+/** Create a temp repo with a bare origin that has `main`, a `feature` branch,
+ *  and a `refs/pull/1/head` ref pointing at the feature commit. Returns the bare
+ *  repo and a clone whose `remote.origin.fetch` is restricted to `main` only. */
+async function createTempRepoWithOriginAndPRRef(): Promise<{ bare: string; clone: string }> {
+  const bare = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-bare-"))
+  const clone = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-clone-"))
+  tempDirs.push(bare, clone)
+
+  const payload = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-wt-payload-"))
+  tempDirs.push(payload)
+
+  gitExec(["git", "init", "-b", "main", payload])
+  gitExec(["git", "-C", payload, "config", "user.email", "test@test.com"])
+  gitExec(["git", "-C", payload, "config", "user.name", "Test"])
+  await fs.writeFile(path.join(payload, "README.md"), "init")
+  gitExec(["git", "-C", payload, "add", "."])
+  gitExec(["git", "-C", payload, "commit", "-m", "initial commit"])
+
+  gitExec(["git", "-C", payload, "checkout", "-b", "feature"])
+  await fs.writeFile(path.join(payload, "feat.txt"), "feature")
+  gitExec(["git", "-C", payload, "add", "."])
+  gitExec(["git", "-C", payload, "commit", "-m", "feature commit"])
+
+  gitExec(["git", "init", "--bare", bare])
+  gitExec(["git", "-C", payload, "push", bare, "main", "feature"])
+
+  // Create refs/pull/1/head pointing at the feature commit.
+  const featureCommit = (await simpleGit(bare).revparse(["refs/heads/feature"])).trim()
+  await fs.mkdir(path.join(bare, "refs", "pull", "1"), { recursive: true })
+  await fs.writeFile(path.join(bare, "refs", "pull", "1", "head"), featureCommit, "utf-8")
+
+  gitExec(["git", "init", "-b", "main", clone])
+  gitExec(["git", "-C", clone, "config", "user.email", "test@test.com"])
+  gitExec(["git", "-C", clone, "config", "user.name", "Test"])
+  gitExec(["git", "-C", clone, "remote", "add", "origin", bare])
+  gitExec(["git", "-C", clone, "config", "remote.origin.fetch", "+refs/heads/main:refs/remotes/origin/main"])
+  gitExec(["git", "-C", clone, "fetch", "origin"])
 
   return { bare, clone }
 }
@@ -1192,5 +1234,40 @@ describe("WorktreeManager git lock serialization", () => {
     expect(created.branch).toBeTruthy()
     const stat = await fs.stat(path.join(created.path, ".git"))
     expect(stat.isFile()).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// WorktreeManager -- PR branch fetching
+// ---------------------------------------------------------------------------
+
+describe("WorktreeManager.fetchPRBranch", () => {
+  it("creates a local branch when remote.origin.fetch excludes the PR branch", async () => {
+    const { clone } = await createTempRepoWithOriginAndPRRef()
+    const mgr = createManager(clone)
+
+    const info: PRInfo = { headRefName: "feature", isCrossRepository: false, title: "feature" }
+    const parsed = { owner: "owner", repo: "repo", number: 1 }
+    await (mgr as any).fetchPRBranch(info, parsed, false, undefined)
+
+    const exists = await mgr.createWorktree({ existingBranch: "feature" })
+    expect(exists.branch).toBe("feature")
+    expect(await fs.readFile(path.join(exists.path, "feat.txt"), "utf-8")).toBe("feature")
+  })
+
+  it("falls back to refs/pull/n/head when the remote branch is not present", async () => {
+    const { bare, clone } = await createTempRepoWithOriginAndPRRef()
+
+    // Remove the branch on the origin, but keep refs/pull/1/head.
+    gitExec(["git", "-C", bare, "branch", "-D", "feature"])
+
+    const mgr = createManager(clone)
+    const info: PRInfo = { headRefName: "feature", isCrossRepository: false, title: "feature" }
+    const parsed = { owner: "owner", repo: "repo", number: 1 }
+    await (mgr as any).fetchPRBranch(info, parsed, false, undefined)
+
+    const exists = await mgr.createWorktree({ existingBranch: "feature" })
+    expect(exists.branch).toBe("feature")
+    expect(await fs.readFile(path.join(exists.path, "feat.txt"), "utf-8")).toBe("feature")
   })
 })

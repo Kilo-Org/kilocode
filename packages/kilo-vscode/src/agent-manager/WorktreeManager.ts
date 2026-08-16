@@ -1110,13 +1110,12 @@ export class WorktreeManager {
       await this.gitExec(["fetch", forkOwner, info.headRefName])
     } else {
       validateGitRef(info.headRefName, "branch name")
-      const ok = await this.gitTry(["fetch", "origin", info.headRefName])
+      // Explicitly fetch the remote branch into a local branch. This bypasses
+      // any restrictive remote.origin.fetch refspec that would otherwise skip
+      // the PR branch, and gives worktree add a local branch it can check out.
+      const ok = await this.gitTry(["fetch", "origin", `${info.headRefName}:${info.headRefName}`])
       if (!ok) {
-        await this.gitExec([
-          "fetch",
-          "origin",
-          `+refs/pull/${parsed.number}/head:refs/remotes/origin/${info.headRefName}`,
-        ])
+        await this.gitExec(["fetch", "origin", `+refs/pull/${parsed.number}/head:refs/heads/${info.headRefName}`])
       }
     }
   }
