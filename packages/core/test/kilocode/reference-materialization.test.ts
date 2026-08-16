@@ -7,6 +7,7 @@ import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { EventV2 } from "@opencode-ai/core/event"
 import { Global } from "@opencode-ai/core/global"
 import { Reference } from "@opencode-ai/core/reference"
+import { Repository } from "@opencode-ai/core/repository"
 import { commit, git, gitRemote } from "../fixture/git"
 import { tmpdir } from "../fixture/tmpdir"
 import { it } from "../lib/effect"
@@ -45,7 +46,8 @@ describe("Kilo reference compatibility", () => {
 
         const references = yield* Reference.Service
         const source = Reference.GitSource.make({ type: "git", repository: "owner/repo", branch: "main" })
-        const file = path.join(fixture.root, "repos", "github.com", "owner", "repo", "README.md")
+        const repo = Repository.parseRemote(source.repository)
+        const file = path.join(Repository.cachePath(path.join(fixture.root, "repos"), repo, source.branch), "README.md")
 
         yield* references.transform((editor) => editor.add("docs", source))
         yield* Effect.promise(() => content(file, "one\n"))

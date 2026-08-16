@@ -27,8 +27,9 @@ export function ModelInfoPanel(props: Props) {
   const maxHeight = createMemo(() => Math.floor(dimensions().height / 2) - 3)
 
   const cost = () => m().cost
-  const cached = () => (cost() ? fmtCachedPrice(cost()) : null)
-  const avg = () => (cost() ? avgPrice(cost()) : undefined)
+  const hasPricing = () => m().cost?.input > 0 || m().cost?.output > 0
+  const cached = () => (cost() && hasPricing() ? fmtCachedPrice(cost()) : null)
+  const avg = () => (cost() && hasPricing() ? avgPrice(cost()) : undefined)
   const caps = () => m().capabilities
   const inputs = () => caps()?.input
   const outputs = () => caps()?.output
@@ -99,25 +100,27 @@ export function ModelInfoPanel(props: Props) {
         </Show>
         <Show when={!m().isFree}>
           <box>
-            <box flexDirection="row" justifyContent="space-between">
-              <text fg={theme.textMuted}>Input</text>
-              <text fg={theme.text}>{m() ? fmtPrice(m().cost.input) : "—"}</text>
-            </box>
-            <box flexDirection="row" justifyContent="space-between">
-              <text fg={theme.textMuted}>Output</text>
-              <text fg={theme.text}>{m() ? fmtPrice(m().cost.output) : "—"}</text>
-            </box>
-            <Show when={cached()}>
+            <Show when={hasPricing()}>
               <box flexDirection="row" justifyContent="space-between">
-                <text fg={theme.textMuted}>Cached</text>
-                <text fg={theme.text}>{cached()}</text>
+                <text fg={theme.textMuted}>Input</text>
+                <text fg={theme.text}>{m() ? fmtPrice(m().cost.input) : "—"}</text>
               </box>
-            </Show>
-            <Show when={avg() !== undefined}>
               <box flexDirection="row" justifyContent="space-between">
-                <text fg={theme.textMuted}>Avg Cost</text>
-                <text fg={theme.text}>{m() ? fmtPrice(avg()!) : "—"}</text>
+                <text fg={theme.textMuted}>Output</text>
+                <text fg={theme.text}>{m() ? fmtPrice(m().cost.output) : "—"}</text>
               </box>
+              <Show when={cached()}>
+                <box flexDirection="row" justifyContent="space-between">
+                  <text fg={theme.textMuted}>Cached</text>
+                  <text fg={theme.text}>{cached()}</text>
+                </box>
+              </Show>
+              <Show when={avg() !== undefined}>
+                <box flexDirection="row" justifyContent="space-between">
+                  <text fg={theme.textMuted}>Avg Cost</text>
+                  <text fg={theme.text}>{m() ? fmtPrice(avg()!) : "—"}</text>
+                </box>
+              </Show>
             </Show>
             <box flexDirection="row" justifyContent="space-between">
               <text fg={theme.textMuted}>Context</text>

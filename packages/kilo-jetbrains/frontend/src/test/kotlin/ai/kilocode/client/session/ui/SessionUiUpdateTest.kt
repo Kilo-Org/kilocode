@@ -3,7 +3,9 @@ package ai.kilocode.client.session.ui
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.ui.attachment.AttachmentCard
+import ai.kilocode.client.session.ui.attachment.AttachmentChip
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.session.views.AttachmentView
 import ai.kilocode.client.session.views.PromptAttachmentView
 import ai.kilocode.client.session.views.tool.ReadToolView
@@ -20,6 +22,7 @@ import ai.kilocode.rpc.dto.PartSourceTextDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
 import java.awt.Container
 import java.awt.event.MouseEvent
@@ -270,15 +273,20 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
         val attachment = msg.part("f1")!!
         val other = msg.part("f2")!!
 
-        assertSame(msg, attachment.parent)
+        assertNotSame(msg, attachment.parent)
         assertSame(attachment, other)
         assertEquals(listOf("p1", "f1", "f2"), msg.partIds())
-        assertEquals(1, msg.components.filterIsInstance<PromptAttachmentView>().size)
-        assertEquals(2, findAll(attachment, AttachmentCard::class.java).size)
+        assertEquals(1, findAll(msg, PromptAttachmentView::class.java).size)
+        assertEquals(1, findAll(attachment, AttachmentCard::class.java).size)
+        assertEquals(1, findAll(attachment, AttachmentChip::class.java).size)
 
         val cards = findAll(attachment, AttachmentCard::class.java)
         for (card in cards) {
             card.dispatchEvent(MouseEvent(card, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), 0, 1, 1, 1, false))
+        }
+        val chips = findAll(attachment, AttachmentChip::class.java)
+        for (chip in chips) {
+            chip.dispatchEvent(MouseEvent(chip, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), 0, 1, 1, 1, false))
         }
 
         assertEquals(listOf("data:image/png;base64,aGVsbG8=", "data:text/plain;base64,aGVsbG8="), opened)
@@ -356,7 +364,26 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
         val view = panel.findMessage("u1")!!.part("f1")
 
         assertTrue(view is PromptAttachmentView)
-        assertNotNull(find(view!!, AttachmentCard::class.java))
+        assertNotNull(find(view!!, AttachmentChip::class.java))
+    }
+
+    fun `test source less file selection renders filename range chip`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", PartDto(
+            id = "f1",
+            sessionID = "ses",
+            messageID = "u1",
+            type = "file",
+            mime = "text/plain",
+            url = "file:///tmp/HvJwtFilter.java?start=12&end=40",
+            filename = "HvJwtFilter.java",
+        ))
+
+        val view = panel.findMessage("u1")!!.part("f1")!!
+        val chip = find(view, AttachmentChip::class.java)
+
+        assertNotNull(chip)
+        assertTrue(findAll(chip!!, JBLabel::class.java).any { it.text.contains("<u>HvJwtFilter.java:12-40</u>") })
     }
 
     fun `test source backed image attachment still renders in prompt strip`() {
@@ -400,7 +427,7 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
         assertNull(msg.part("p2"))
         assertEquals(listOf("p1", "f1"), msg.partIds())
         assertTrue(msg.part("p1") is TextView)
-        assertEquals(1, msg.components.filterIsInstance<PromptAttachmentView>().size)
+        assertEquals(1, findAll(msg, PromptAttachmentView::class.java).size)
     }
 
     fun `test prompt text panel is removed when content becomes empty`() {
@@ -441,11 +468,9 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
         assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED, pane.horizontalScrollBarPolicy)
         assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER, pane.verticalScrollBarPolicy)
         assertEquals(0, view.insets.top)
-        assertEquals(JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING), view.insets.bottom)
+        assertEquals(UiStyle.Gap.sm(), view.insets.bottom)
         assertEquals(
-            JBUI.scale(SessionUiStyle.View.Attachment.CARD_HEIGHT) +
-                pane.horizontalScrollBar.preferredSize.height +
-                JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING),
+            JBUI.scale(SessionUiStyle.View.Attachment.CARD_HEIGHT) + UiStyle.Gap.sm(),
             height,
         )
 
@@ -497,8 +522,8 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
             ),
         )
 
-        val card = find(item.findMessage("u1")!!.part("f1")!!, AttachmentCard::class.java)!!
-        card.dispatchEvent(MouseEvent(card, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), 0, 1, 1, 1, false))
+        val chip = find(item.findMessage("u1")!!.part("f1")!!, AttachmentChip::class.java)!!
+        chip.dispatchEvent(MouseEvent(chip, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), 0, 1, 1, 1, false))
 
         assertEquals(listOf("u1" to "data:text/plain;base64,aGVsbG8="), opened)
     }

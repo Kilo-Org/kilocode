@@ -149,6 +149,10 @@ export interface OpenFileRequest {
   filePath: string
   line?: number
   column?: number
+  // Optional session id the file reference was rendered for. When present the
+  // extension resolves the workspace directory from this instead of its live
+  // `currentSession`, so a session switch can't open the wrong worktree's file.
+  sessionID?: string
 }
 
 export interface OpenContentRequest {
@@ -160,6 +164,11 @@ export interface OpenContentRequest {
 export interface ValidateFilesRequest {
   type: "validateFiles"
   id: string
+  // Explicit session id the candidates were rendered for — the extension
+  // resolves the workspace directory from this instead of its own live
+  // `currentSession`, so a session switch mid-request can't validate paths
+  // against the wrong worktree.
+  sessionID: string
   paths: string[]
 }
 
@@ -988,6 +997,13 @@ export interface OpenPRMessage {
   type: "agentManager.openPR"
   projectId?: string
   worktreeId: string
+  url?: string
+}
+
+export interface CommentActionMessage {
+  type: "agentManager.resolveComment" | "agentManager.unresolveComment"
+  worktreeId: string
+  threadId: string
 }
 
 export interface ApplyWorktreeDiffMessage {
@@ -1531,6 +1547,7 @@ export type WebviewMessage =
   | SetDiffBaseBranchMessage
   | RefreshPRMessage
   | OpenPRMessage
+  | CommentActionMessage
   // legacy-migration start
   | RequestMigrationDataMessage
   | StartMigrationMessage

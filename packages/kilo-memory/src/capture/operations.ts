@@ -126,7 +126,7 @@ export namespace MemoryOperations {
     const adds = input.ops
       .filter((item): item is Add => item.action === "add")
       // Redact rejected text too: this filter runs before the secret one, so a rejected op never
-      // reaches it, and skips flow into the persistent decisions audit (/memory/show, TUI).
+      // reaches it, and skips remain visible in the operation result.
       .filter((op) => {
         const item = reject(op)
         if (!item) return true
@@ -314,7 +314,7 @@ export namespace MemoryOperations {
     }
   }
 
-  async function persist(input: { root: string; state: MemorySchema.State; count: number; removed: number }) {
+  async function persist(input: { root: string; state: MemorySchema.State; count: number }) {
     const index = await MemoryIndexer.rebuild({ root: input.root, state: input.state })
     await MemoryFiles.writeState(input.root, {
       ...input.state,
@@ -323,7 +323,6 @@ export namespace MemoryOperations {
         lastOperationCount: input.count,
       },
     })
-    await MemoryFiles.append(input.root, `apply ops=${input.count} removed=${input.removed}`)
     return index
   }
 
@@ -365,9 +364,9 @@ export namespace MemoryOperations {
       const prepared = prepare({ state, ops: input.ops, max: state.limits.maxLineChars })
       const removes = input.ops.filter((item): item is Remove => item.action === "remove")
       const plan = planOps({ docs, inventory, removes, adds: prepared.adds, now: Date.now() })
-      // Commit (IO): write changed documents, then rebuild the index, persist state, and audit.
+      // Commit (IO): write changed documents, then rebuild the index and persist state.
       await writeDocs({ root: input.root, plan })
-      const index = await persist({ root: input.root, state, count: plan.count, removed: plan.removed })
+      const index = await persist({ root: input.root, state, count: plan.count })
       return {
         operationCount: plan.count,
         added: plan.added,

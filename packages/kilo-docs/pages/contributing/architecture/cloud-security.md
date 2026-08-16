@@ -132,7 +132,7 @@ flowchart LR
 
 ## Identity and access
 
-Web control plane uses JWT-backed application sessions and supports multiple sign-in methods. Repository-supported providers include Google, Apple, GitHub, GitLab, Discord, LinkedIn OpenID Connect, WorkOS enterprise SSO, and email magic links.
+Web control plane uses JWT-backed application sessions and supports multiple sign-in methods. Repository-supported providers include Google, Apple, GitHub, GitLab, Discord, LinkedIn OpenID Connect, Anaconda, WorkOS enterprise SSO, and email magic links.
 
 Kilo Cloud uses several authorization contexts:
 

@@ -28,6 +28,7 @@ Major AI companies offering powerful models via API:
 - **[Cloudflare](/docs/ai-providers/cloudflare)** - Workers AI and Cloudflare AI Gateway
 - **[DeepSeek](/docs/ai-providers/deepseek)** - DeepSeek V3., R1
 - **[Mistral](/docs/ai-providers/mistral)** - Mistral Large, Codestral
+- **[Poolside](/docs/ai-providers/poolside)** - Laguna models
 
 ### Local & Self-Hosted
 

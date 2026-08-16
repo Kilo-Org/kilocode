@@ -52,6 +52,16 @@ describe("per-session variant selection", () => {
     expect(getAgentVariant(store, model, { variants: { low: {}, high: {} } }, "ask")).toBe("high")
   })
 
+  it("uses the model default when no variant is selected", () => {
+    expect(getVariant({}, model, variants, "code")).toBeUndefined()
+    expect(getVariant({ [variantKey(model, "code")]: "" }, model, variants, "code")).toBeUndefined()
+  })
+
+  it("preserves a provider variant named default", () => {
+    const store = { [variantKey(model, "code")]: "default" }
+    expect(getVariant(store, model, ["default", "thinking"], "code")).toBe("default")
+  })
+
   it("carries the pre-submit agent variant into a newly created session", () => {
     const store: Record<string, string> = {}
 
@@ -109,8 +119,8 @@ describe("cycleVariant", () => {
     expect(cycleVariant("medium", variants)).toBe("high")
   })
 
-  it("wraps back to the first variant after the last", () => {
-    expect(cycleVariant("high", variants)).toBe("low")
+  it("returns to the model default after the last variant", () => {
+    expect(cycleVariant("high", variants)).toBeUndefined()
   })
 
   it("starts at the first variant when current is missing or unknown", () => {

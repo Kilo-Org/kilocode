@@ -4,20 +4,23 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
+import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
+import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.session.views.base.PartHeader
-import ai.kilocode.client.session.views.base.PrimarySessionPartView
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.rpc.dto.TodoDto
 import com.intellij.ui.components.JBLabel
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import java.awt.Font
 import javax.swing.JComponent
 
 class TodoWriteView(tool: Tool, private val parts: TodoParts = todoParts()) :
-    PrimarySessionPartView(parts.header, parts.list, expanded = true) {
+    AbstractSessionPartView(parts.header, parts.list, expanded = true) {
 
     override val contentId = tool.id
 
@@ -25,17 +28,9 @@ class TodoWriteView(tool: Tool, private val parts: TodoParts = todoParts()) :
     private var style = SessionEditorStyle.current()
 
     init {
-        bindHeader(parts.glyph, parts.title, parts.sub, parts.left, parts.right)
-        parts.list.border = JBUI.Borders.compound(
-            JBUI.Borders.customLine(
-                SessionUiStyle.View.Outline.color(),
-                SessionUiStyle.View.Outline.width(),
-                0,
-                0,
-                0,
-            ),
-            JBUI.Borders.empty(UiStyle.Gap.lg(), UiStyle.Gap.pad()),
-        )
+        // Transparent list body: the base separates it from the header with the standard gap, so no
+        // separator line is drawn here — only the content padding remains.
+        parts.list.border = JBUI.Borders.empty(UiStyle.Gap.lg(), UiStyle.Gap.pad())
         applyStyle(style)
         sync()
     }
@@ -45,6 +40,21 @@ class TodoWriteView(tool: Tool, private val parts: TodoParts = todoParts()) :
         item = content
         sync()
     }
+
+    @RequiresEdt
+    override fun headerPopup(): HeaderPopupRequest? {
+        val data = rows(item)
+        val present = data.todos.isNotEmpty() || data.before > 0 || data.after > 0
+        return popup("part", "todo", present) { buildPopup(data) }
+    }
+
+    @RequiresEdt
+    private fun buildPopup(data: Rows) = componentPopupBody(
+        TodoListPanel(data.todos, data.before, data.after).apply {
+            border = JBUI.Borders.empty(UiStyle.Gap.lg(), UiStyle.Gap.pad())
+            applyStyle(style)
+        },
+    )
 
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
@@ -73,13 +83,11 @@ class TodoWriteView(tool: Tool, private val parts: TodoParts = todoParts()) :
 
     private fun sync() {
         parts.sub.text = subtitle(item)
-        val view = item.todoView
-        val compact = view?.mode == "compact"
-        val rows = if (compact) view.todos else item.todos
+        val data = rows(item)
         parts.list.update(
-            rows,
-            hiddenBefore = if (compact) view.hiddenBefore else 0,
-            hiddenAfter = if (compact) view.hiddenAfter else 0,
+            data.todos,
+            hiddenBefore = data.before,
+            hiddenAfter = data.after,
         )
         syncExpandable(true)
         refresh()
@@ -103,7 +111,7 @@ class TodoParts(
 private fun todoParts(): TodoParts {
     val glyph = JBLabel(SessionViewIcons.checklist)
     val title = JBLabel(KiloBundle.message("session.part.todo.title"))
-    val sub = JBLabel().apply { foreground = UiStyle.Colors.weak() }
+    val sub = JBLabel().apply { foreground = SessionUiStyle.Text.Secondary.foreground() }
     val header = PartHeader().apply {
         leading(glyph)
         left(title)
@@ -118,6 +126,14 @@ private fun subtitle(tool: Tool): String {
     if (total == 0) return ""
     val done = tool.todos.count { it.status == "completed" }
     return "$done/$total"
+}
+
+private data class Rows(val todos: List<TodoDto>, val before: Int, val after: Int)
+
+private fun rows(tool: Tool): Rows {
+    val view = tool.todoView
+    if (view?.mode == "compact") return Rows(view.todos, view.hiddenBefore, view.hiddenAfter)
+    return Rows(tool.todos, 0, 0)
 }
 
 private fun setFont(component: JComponent, font: Font): Boolean {

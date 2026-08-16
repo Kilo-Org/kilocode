@@ -1,6 +1,13 @@
 import { reconcile } from "solid-js/store"
 import type { Message, Part, ToolPart } from "../types/messages"
 
+/** Remove ids from a Set immutably, returning the original when nothing changed. */
+export function dropSet(prev: Set<string>, ids: Iterable<string>): Set<string> {
+  const next = new Set(prev)
+  for (const id of ids) next.delete(id)
+  return next.size === prev.size ? prev : next
+}
+
 export const SNAPSHOT_PROGRESS_TEXT = "Initializing snapshot..."
 
 type SnapshotPart = {
