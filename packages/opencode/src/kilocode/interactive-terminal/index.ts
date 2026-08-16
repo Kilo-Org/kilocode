@@ -20,6 +20,7 @@ import z from "zod"
 export namespace InteractiveTerminal {
   const log = Log.create({ service: "interactive-terminal" })
   const FLUSH_MS = 25
+  const MOUNT_TIMEOUT_MS = 5_000
   const DEFAULT_COLS = 100
   const DEFAULT_ROWS = 18
 
@@ -101,6 +102,7 @@ export namespace InteractiveTerminal {
     env: NodeJS.ProcessEnv
     cols?: number
     rows?: number
+    mountTimeout?: number
     abort?: AbortSignal
   }
 
@@ -356,7 +358,18 @@ export namespace InteractiveTerminal {
 
     await publish(active, Event.Updated, { info: clone(active.info) })
     announced.resolve()
-    await active.mounted.promise
+    const timeout = setTimeout(
+      () => active.mounted?.reject(new Error("Interactive terminal panel did not mount")),
+      input.mountTimeout ?? MOUNT_TIMEOUT_MS,
+    )
+    try {
+      await active.mounted.promise
+    } catch (err) {
+      await finish(state, active, { closedBy: "abort", kill: true })
+      throw err
+    } finally {
+      clearTimeout(timeout)
+    }
     if (!active.done) active.proc.write(release(input.shell))
     return waiter.promise
   }

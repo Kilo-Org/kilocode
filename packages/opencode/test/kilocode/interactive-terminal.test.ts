@@ -114,11 +114,12 @@ function run(input: { sessionID: SessionID; command: string; cwd: string; abort?
   })
   void ready.promise
     .then((info) => Instance.restore(ctx, () => InteractiveTerminal.resize(info.id, 100, 18)))
+    .catch(() => undefined)
     .finally(() => ready.dispose())
   return pending
 }
 
-function gated(input: { sessionID: SessionID; command: string; cwd: string }) {
+function gated(input: { sessionID: SessionID; command: string; cwd: string; mountTimeout?: number }) {
   return InteractiveTerminal.run({
     ...input,
     shell: Shell.acceptable(),
@@ -273,6 +274,32 @@ process.stdin.once("data", (data) => {
         expect(yield* Effect.promise(() => InteractiveTerminal.resize(info.id, 80, 14))).toBe(true)
         const result = yield* Effect.promise(() => pending)
         expect(result.output).toContain("COMMAND_STARTED")
+      } finally {
+        ready.dispose()
+        yield* Effect.promise(() => InteractiveTerminal.stopSession(sessionID))
+      }
+    }),
+  )
+
+  it.instance("fails cleanly when no terminal panel mounts", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const sessionID = SessionID.descending()
+      const command = yield* Effect.promise(() =>
+        script(test.directory, "unmounted.mjs", `console.log("SHOULD_NOT_START")\n`),
+      )
+      const ready = started(sessionID)
+      try {
+        const pending = gated({ sessionID, command, cwd: test.directory, mountTimeout: 25 })
+        yield* Effect.promise(() => ready.promise)
+        const err = yield* Effect.promise(() =>
+          pending.then(
+            () => undefined,
+            (cause) => cause,
+          ),
+        )
+        expect(err).toMatchObject({ message: "Interactive terminal panel did not mount" })
+        expect(yield* Effect.promise(() => InteractiveTerminal.list({ sessionID }))).toEqual([])
       } finally {
         ready.dispose()
         yield* Effect.promise(() => InteractiveTerminal.stopSession(sessionID))
