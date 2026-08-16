@@ -272,6 +272,11 @@ object SessionUiStyle {
             const val COMMAND_LINES = 3
         }
 
+        /** Outcome/error footer card preview limits. */
+        object Outcome {
+            const val ERROR_LINES = 5
+        }
+
         /** Tool session-view preview limits and state colors. */
         object Tool {
             const val BODY_LINES = 15
