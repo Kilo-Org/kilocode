@@ -159,6 +159,8 @@ When a pull request or merge request is opened or updated:
 
 Reviews are posted directly in your platform (GitHub or GitLab) as if coming from a team reviewer.
 
+When Kilo implements fixes in response to a review, it works on a branch with a readable name, assigns the resulting pull or merge request to you, and relies on your CI to run the tests. After pushing, it watches for CI failures and new review comments, pushes fixes, and repeats until checks pass and feedback is addressed.
+
 {% callout type="info" title="Bot-generated PRs are ignored by default" %}
 Kilo does not automatically review pull or merge requests opened by bots, such as Dependabot, Renovate, or other automation accounts. This keeps review credits and notifications focused on human-authored changes.
 {% /callout %}

@@ -73,6 +73,15 @@ When a review triggers:
 - A new review starts for the latest commit
 - If a previous summary comment exists, it is **updated in place**
 
+## Fixing Findings
+
+When Kilo implements fixes in response to a review:
+
+- The agent works on a **readable branch name** that describes the change, so you can tell at a glance which fix belongs to which review
+- The pull request is **assigned to you**, making ownership of bot-authored work clear
+- Your **CI runs the tests** — the agent does not duplicate your test suite itself
+- After pushing, the agent **watches for CI failures and new review comments**, pushes fixes, and repeats the cycle until checks pass and feedback is addressed
+
 ## Repository Selection
 
 - **All repositories** — Every repo accessible to the GitHub App triggers reviews

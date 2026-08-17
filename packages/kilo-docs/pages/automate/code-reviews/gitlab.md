@@ -72,6 +72,15 @@ When a review triggers:
 - A new review starts for the latest commit
 - If a previous summary note exists, it is **updated in place**
 
+## Fixing Findings
+
+When Kilo implements fixes in response to a review:
+
+- The agent works on a **readable branch name** that describes the change, so you can tell at a glance which fix belongs to which review
+- The merge request is **assigned to you**, making ownership of bot-authored work clear
+- Your **CI pipeline runs the tests** — the agent does not duplicate your test suite itself
+- After pushing, the agent **watches for pipeline failures and new review comments**, pushes fixes, and repeats the cycle until checks pass and feedback is addressed
+
 ## How the Bot Identity Works
 
 Review comments are posted by a **Kilo Code Review Bot** — not by your personal GitLab account. This bot is created automatically as a Project Access Token on each project.
