@@ -52,6 +52,7 @@ tsconfig.tsbuildinfo
 
 # Kilo
 .kilo/.gitignore
+.kilo/managed-inbox/
 .kilo/package.json
 .kilo/package-lock.json
 .kilo/pnpm-lock.yaml

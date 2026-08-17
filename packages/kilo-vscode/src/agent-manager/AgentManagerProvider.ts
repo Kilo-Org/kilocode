@@ -53,7 +53,7 @@ import {
 import { initContextState, pushProjectSessions, reactivateProject, registerProjectSessions } from "./project/init"
 import { createLocalDiff } from "./local-diff"
 import { parseToolRequest, startFromTool, type ToolRequest } from "./tool-start"
-import { flushIdleSession, queueBusyAgentSend } from "./managed-delivery"
+import { flushIdleSession, managedInbox, queueBusyAgentSend, resumeQueuedSessions } from "./managed-delivery"
 import { SessionStallWatchdog, stallWatchdogFromEnv } from "./session-stall-watchdog"
 import { handleToolEvent } from "./tool-project"
 import { sandboxSessionMetadata } from "../shared/sandbox-session"
@@ -356,7 +356,7 @@ export class AgentManagerProvider implements Disposable {
       this.naming.idle(sid)
       try {
         const client = this.connectionService.getClient()
-        void flushIdleSession(client, sid, { snapshotInitialization: SNAPSHOT_INITIALIZATION })
+        void flushIdleSession(client, sid, { snapshotInitialization: SNAPSHOT_INITIALIZATION }, true)
           .then((n) => {
             if (n > 0) this.log("managed inbox flushed", sid, n)
           })
@@ -508,6 +508,18 @@ export class AgentManagerProvider implements Disposable {
     // are registered with their directory overrides so the recovery queries the
     // correct CLI backend Instances.
     this.panel?.sessions.recoverPendingPrompts()
+    await this.resumePersistedInbox(ctx.root)
+  }
+
+  private async resumePersistedInbox(root: string): Promise<void> {
+    managedInbox.attachPersistence(path.join(root, ".kilo", "managed-inbox"))
+    try {
+      const client = this.connectionService.getClient()
+      const n = await resumeQueuedSessions(client, { snapshotInitialization: SNAPSHOT_INITIALIZATION })
+      if (n > 0) this.log("managed inbox resumed", n)
+    } catch (err) {
+      this.log("managed inbox resume failed", err)
+    }
   }
 
   /** Initialize an expanded background project and push its state (no panel wiring). */
