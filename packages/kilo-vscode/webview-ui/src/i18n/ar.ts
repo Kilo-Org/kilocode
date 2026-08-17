@@ -1081,10 +1081,14 @@ export const dict = {
     "اختر ما إذا كانت الكتل التي تعرض تعديلات التعليمات البرمجية والفروقات تبدأ موسّعة أم مطوية.",
   "settings.display.codeEdit.expanded": "موسّعة",
   "settings.display.codeEdit.collapsed": "مطوية",
+  "settings.display.mcpTool.title": "كتل أدوات MCP والأدوات العامة",
+  "settings.display.mcpTool.description": "اختر ما إذا كانت كتل أدوات MCP والأدوات العامة تبدأ موسّعة أم مطوية.",
+  "settings.display.mcpTool.expanded": "موسّعة",
+  "settings.display.mcpTool.collapsed": "مطوية",
 
   "settings.display.tokenThroughput.title": "إظهار إنتاجية الرموز",
   "settings.display.tokenThroughput.description":
-    "عرض معدل توليد النص (رموز/ثانية) على آخر رسالة من المساعد وفي رأس المهمة. مخفي بشكل افتراضي للحفاظ على تنظيم المحادثة.",
+    "عرض معدل توليد النص (tokens/sec) في أحدث رسالة للمساعد وفي رأس المهمة. يظهر افتراضيًا؛ عطّل هذا الإعداد لإخفائه عند الحاجة.",
   "settings.display.autoApprovalReason.title": "إظهار سبب الموافقة التلقائية",
   "settings.display.autoApprovalReason.description":
     "إظهار سطر عند استدعاءات الأدوات يوضح سبب الموافقة التلقائية عليها (قاعدة مطابقة، إعداد افتراضي للوكيل، وضع YOLO، إلخ).",

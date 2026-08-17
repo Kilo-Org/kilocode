@@ -969,10 +969,14 @@ export const dict = {
     "Scegli se i blocchi delle modifiche al codice e delle differenze iniziano espansi o compressi.",
   "settings.display.codeEdit.expanded": "Espansi",
   "settings.display.codeEdit.collapsed": "Compressi",
+  "settings.display.mcpTool.title": "Blocchi strumento MCP e generici",
+  "settings.display.mcpTool.description": "Scegli se i blocchi strumento MCP e generici iniziano espansi o compressi.",
+  "settings.display.mcpTool.expanded": "Espansi",
+  "settings.display.mcpTool.collapsed": "Compressi",
 
   "settings.display.tokenThroughput.title": "Mostra velocità di generazione dei token",
   "settings.display.tokenThroughput.description":
-    "Mostra la velocità di generazione del testo (token/sec) sull'ultimo messaggio dell'assistente e nell'intestazione dell'attività. Nascosto per impostazione predefinita per mantenere la chat ordinata.",
+    "Mostra la velocità di generazione del testo (tokens/sec) nell'ultimo messaggio dell'assistente e nell'intestazione dell'attività. Visualizzata per impostazione predefinita; disabilita questa impostazione per nasconderla quando necessario.",
   "settings.display.autoApprovalReason.title": "Mostra motivo dell'approvazione automatica",
   "settings.display.autoApprovalReason.description":
     "Mostra una riga sulle chiamate agli strumenti che spiega perché sono state approvate automaticamente (regola corrispondente, predefinito dell'agente, modalità YOLO, ecc.).",

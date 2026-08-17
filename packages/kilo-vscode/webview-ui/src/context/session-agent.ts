@@ -31,7 +31,17 @@ export function resolvePromptAgent(input: {
   selections: Record<string, string>
   pending: string | null
 }) {
-  if (input.sessionID) return input.selections[input.sessionID]
+  if (input.sessionID) {
+    const sel = input.selections[input.sessionID]
+    if (sel) return sel
+    // Only fall back to the pending selection for draft scopes, not real server
+    // sessions. A server session with no stored selection must keep its own agent
+    // rather than be flipped to the stale/default pending agent.
+    if (!input.sessionID.startsWith("ses_")) {
+      return input.pending ?? undefined
+    }
+    return undefined
+  }
   return input.pending ?? undefined
 }
 

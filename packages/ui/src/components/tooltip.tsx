@@ -1,5 +1,5 @@
 import { Tooltip as KobalteTooltip } from "@kobalte/core/tooltip"
-import { createEffect, Match, onCleanup, splitProps, Switch, type JSX } from "solid-js"
+import { createEffect, Match, onCleanup, Show, splitProps, Switch, type JSX } from "solid-js" // kilocode_change
 import type { ComponentProps } from "solid-js"
 import { createStore } from "solid-js/store"
 
@@ -103,7 +103,7 @@ export function Tooltip(props: TooltipProps) {
 
   return (
     <Switch>
-      <Match when={local.inactive}>{local.children}</Match>
+      <Match when={local.inactive || !local.value}>{/* kilocode_change */}{local.children}</Match>
       <Match when={true}>
         <KobalteTooltip
           gutter={4}
@@ -138,24 +138,28 @@ export function Tooltip(props: TooltipProps) {
           >
             {local.children}
           </KobalteTooltip.Trigger>
-          <KobalteTooltip.Portal>
-            <KobalteTooltip.Content
-              data-component="tooltip"
-              data-placement={props.placement}
-              data-force-open={local.forceOpen}
-              class={local.contentClass}
-              style={local.contentStyle}
-              onPointerDownOutside={(e) => {
-                if (ref === e.target || (e.target instanceof Node && ref?.contains(e.target))) {
-                  justClickedTrigger = true
-                }
-                e.preventDefault()
-              }}
-            >
-              {local.value}
-              {/* <KobalteTooltip.Arrow data-slot="tooltip-arrow" /> */}
-            </KobalteTooltip.Content>
-          </KobalteTooltip.Portal>
+          {/* kilocode_change start - only mount portal and content when open or forced open to avoid style computation when hidden */}
+          <Show when={local.forceOpen || state.open}>
+            <KobalteTooltip.Portal>
+              <KobalteTooltip.Content
+                data-component="tooltip"
+                data-placement={props.placement}
+                data-force-open={local.forceOpen}
+                class={local.contentClass}
+                style={local.contentStyle}
+                onPointerDownOutside={(e) => {
+                  if (ref === e.target || (e.target instanceof Node && ref?.contains(e.target))) {
+                    justClickedTrigger = true
+                  }
+                  e.preventDefault()
+                }}
+              >
+                {local.value}
+                {/* <KobalteTooltip.Arrow data-slot="tooltip-arrow" /> */}
+              </KobalteTooltip.Content>
+            </KobalteTooltip.Portal>
+          </Show>
+          {/* kilocode_change end */}
         </KobalteTooltip>
       </Match>
     </Switch>

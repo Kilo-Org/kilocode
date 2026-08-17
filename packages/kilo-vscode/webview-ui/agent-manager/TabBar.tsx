@@ -243,19 +243,14 @@ export const TabBar: Component<TabBarProps> = (props) => (
                     title={props.t("agentManager.diff.toggle")}
                   >
                     <Icon name="layers" size="small" />
-                    <Show when={props.prStatus()}>
-                      {(pr) => (
-                        <Show when={pr().additions > 0 || pr().deletions > 0}>
-                          <span class="am-diff-toggle-stats">
-                            <Show when={pr().additions > 0}>
-                              <span class="am-stat-additions">+{pr().additions}</span>
-                            </Show>
-                            <Show when={pr().deletions > 0}>
-                              <span class="am-stat-deletions">−{pr().deletions}</span>
-                            </Show>
-                          </span>
+                    <Show when={hasChanges()}>
+                      <span class="am-diff-toggle-stats">
+                        <Show when={stats()!.files > 0}>
+                          <span class="am-stat-files">{stats()!.files}f</span>
                         </Show>
-                      )}
+                        <span class="am-stat-additions">+{stats()!.additions}</span>
+                        <span class="am-stat-deletions">−{stats()!.deletions}</span>
+                      </span>
                     </Show>
                   </button>
                 </TooltipKeybind>
