@@ -14,7 +14,7 @@ export const dict = {
   "agentManager.worktree.new": "Novi Worktree",
   "agentManager.worktree.setupScript": "Skripta za postavljanje Worktree-a",
   "agentManager.worktree.delete": "Obriši Worktree",
-  "agentManager.worktree.confirmDelete": "Delete?",
+  "agentManager.worktree.confirmDelete": "Izbrisati?",
   "agentManager.worktree.stale": "Zastario",
   "agentManager.worktree.staleTooltip": "Nedostaje na disku ili ga git worktree više ne prati",
   "agentManager.worktree.removeStale": "Ukloni zastarjeli Worktree",
@@ -106,8 +106,8 @@ export const dict = {
   "agentManager.run.options": "Opcije pokretanja",
   "agentManager.run.configure": "Konfiguriši skriptu za pokretanje",
   "agentManager.shortcuts.openAgentManager": "Otvori Agent Manager",
-  "agentManager.shortcuts.cycleAgentMode": "Next agent mode",
-  "agentManager.shortcuts.cyclePreviousAgentMode": "Previous agent mode",
+  "agentManager.shortcuts.cycleAgentMode": "Sljedeći način rada agenta",
+  "agentManager.shortcuts.cyclePreviousAgentMode": "Prethodni način rada agenta",
   "agentManager.shortcuts.showShortcuts": "Prikaži prečice na tastaturi",
   "agentManager.dialog.removeStaleWorktree.title": "Ukloni zastarjeli Worktree",
   "agentManager.dialog.removeStaleWorktree.messagePre": "Ukloni zastarjeli Worktree ",
@@ -203,7 +203,7 @@ export const dict = {
   "agentManager.review.imageUnavailable": "Pregled slike nije dostupan za ovaj snimak sesije.",
   "agentManager.review.endOfLongDiff": "Došli ste do kraja!",
 
-  "agentManager.import.pullRequest": "Pull Request",
+  "agentManager.import.pullRequest": "Zahtjev za povlačenje",
   "agentManager.import.pastePrUrl": "Zalijepite PR URL...",
   "agentManager.import.open": "Otvori",
   "agentManager.import.branches": "Branchevi",
@@ -214,4 +214,9 @@ export const dict = {
   "agentManager.import.noBranchesFound": "Nisu pronađeni branchevi.",
   "agentManager.import.noBranchesHint": "Zalijepite PR URL iznad ili kreirajte novi Worktree.",
   "agentManager.import.failed": "Uvoz neuspješan",
+
+  "agentManager.pr.error.gh_auth.title": "Potrebna GitHub autentikacija",
+  "agentManager.pr.error.gh_auth.description": "Pokrenite 'gh auth login' u terminalu da vratite status PR-a.",
+  "agentManager.pr.error.gh_missing.title": "GitHub CLI nije instaliran",
+  "agentManager.pr.error.gh_missing.description": "Instalirajte GitHub CLI da omogućite status PR-a.",
 }

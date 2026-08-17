@@ -291,6 +291,28 @@ Rules:
 - Put user-visible strings in `*.properties` files.
 - Do not add decorative helper functions, wrappers, or defensive UI code unless they materially improve clarity or correctness.
 
+### Session UI Background Strategy
+
+The chat session UI intentionally uses a single-backdrop model. Do not make every
+container paint `SessionUiStyle.Colors.sessionBackground()` just because it sits
+inside the session. This avoids fragile component-hierarchy coupling and prevents
+theme-specific artifacts in transparent/rounded Swing painting.
+
+- `SessionRootPanel` is the primary opaque backdrop. It overrides `getBackground()` and returns `SessionUiStyle.Colors.sessionBackground()`.
+- `sessionBackground()` follows the panel background, but when that equals the raised editor surface (`codeBlockBackground()`) — e.g. Islands Dark/Darcula, where panel and editor backgrounds are identical — it shifts by `SESSION_DELTA` via `UiStyle.Colors.contrast` (lighter in dark themes, darker in light) so the prompt bubble/input and other raised surfaces stay visible. This is a universal fallback, not a per-theme override.
+- `SessionRootPanel.Blocker` is the only other session-background opaque panel. It also overrides `getBackground()` with `sessionBackground()` for modal blocking.
+- Scroll panes, viewports, transcript layout panels, message lists, turn containers, wrapper panels, and card bodies should be non-opaque unless they intentionally paint a distinct surface.
+- `applyStyle(style)` must not assign session-background colors. It may update fonts, foregrounds, editor colors, and other non-background styling. Background colors that must be dynamic should come from `getBackground()` or custom painting.
+- Transcript card header hover is `getBackground()`-driven: keep an `isHovered` flag on the hover row/header, set or clear it from mouse enter/exit, and repaint only that row/header. Do not assign `row.background` or `header.background` on hover.
+- Primary/secondary transcript card bodies are transparent by default. The actual content inside a body (code blocks, todo list, shell/tool output) is the raised surface: make that content component opaque and paint `SessionUiStyle.Colors.codeBlockBackground()` (the editor background), using its own insets so the fill covers the whole content. For `MdView`-backed bodies set `md.opaque = false` so the prose/body stays transparent while the code/output panes remain the opaque editor surface — do not make the whole body opaque.
+- Rounded cards that paint their own surface (for example `RoundedContentPanel`-based question/login cards) should do that in custom painting or a `contentColor()` override, not by making every nested panel opaque.
+- Standard platform buttons placed on custom-painted session cards should not force the card background. If a button sits on a rounded/custom-painted card, make it non-opaque when needed so Swing does not fill its rectangular bounds behind `DarculaButtonUI`'s rounded paint (notably visible in Islands Light).
+
+When adding a new session view, start with transparent containers and add opaque
+painting only for components that are actual visual surfaces. If a component's
+background must react to hover/theme state, prefer an override such as
+`getBackground()` over writing `background = ...` during setup or `applyStyle`.
+
 ### Swing Component Lifecycle
 
 Swing is retained-mode UI. For dynamic Swing surfaces such as session cards, transcript parts, hover rows, and collapsible panels, build a stable component tree once and then mutate existing components in response to model or interaction changes.
@@ -303,6 +325,7 @@ Swing is retained-mode UI. For dynamic Swing surfaces such as session cards, tra
 - Derive expanded state from containment (e.g. `scroll.parent === root`) rather than maintaining an `open` boolean.
 - Derive hover state from the current header background or other component property rather than maintaining a `hover` boolean.
 - Expand/collapse should attach or detach the existing body component and update controls only if attachment changed.
+- Expandable session cards extend `AbstractSessionPartView`, which binds click-to-toggle and hover across the whole header subtree automatically (including children added later). Do not re-bind header parts per view. A header control that must not toggle the card (file link, copy button, toolbar action) simply owns its own mouse listener and is skipped automatically.
 - Hover should update only the affected component (usually the header background) and repaint only that component when the effective color changed.
 - Lazy-create expensive bodies such as `JBTextArea`, `JBScrollPane`, markdown panes, and HTML panes on first expansion or first direct access.
 - Parent containers should refresh for add/remove/reorder operations, not automatically after every delegated child update or streaming delta.

@@ -244,12 +244,12 @@ export const NewWorktreeDialog: Component<{
     return Object.keys(found.variants)
   })
 
-  // Current effective variant — falls back to first available if stored value is invalid
+  // Current effective variant — an absent or invalid selection uses the model default.
   const effectiveVariant = createMemo(() => {
     const list = variants()
     if (list.length === 0) return undefined
     const stored = variant()
-    return stored && list.includes(stored) ? stored : list[0]
+    return stored && list.includes(stored) ? stored : undefined
   })
 
   // True when the user has changed the model from the session/config default
@@ -268,7 +268,7 @@ export const NewWorktreeDialog: Component<{
       return
     }
     const stored = variant()
-    if (!stored || !list.includes(stored)) setVariant(preserveVariant(stored, list) ?? list[0])
+    if (stored && !list.includes(stored)) setVariant(preserveVariant(stored, list))
   })
 
   createEffect(() => {
@@ -526,7 +526,6 @@ export const NewWorktreeDialog: Component<{
       const list = variants()
       if (list.length === 0) return
       const next = cycleVariant(effectiveVariant(), list)
-      if (!next) return
       e.preventDefault()
       setVariant(next)
       return
@@ -889,6 +888,9 @@ export const NewWorktreeDialog: Component<{
                       variants={variants()}
                       value={effectiveVariant()}
                       onSelect={setVariant}
+                      onClear={() => setVariant(undefined)}
+                      allowClear
+                      clearLabel={t("common.default")}
                       trigger={WORKTREE_PROMPT_SCOPE}
                       portal={false}
                       deferDismiss

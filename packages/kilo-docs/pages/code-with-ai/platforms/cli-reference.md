@@ -139,6 +139,7 @@ Options:
   -s, --session       session id to continue  [string]
       --fork          fork the session when continuing (use with --continue or --session)  [boolean]
       --cloud-fork    fetch session from cloud and continue locally (use with --session)  [boolean]
+      --worktree      create (or reuse) a git worktree with this name and start kilo there  [string]
       --prompt        prompt to use  [string]
       --agent         agent to use  [string]
       --auto          auto-approve permissions that are not explicitly denied (dangerous!)  [boolean] [default: false]
@@ -659,21 +660,6 @@ Options:
   --cors         additional domains to allow for CORS  [array] [default: []]
 ```
 
-## kilo web
-
-```
-start kilo server and open web interface
-
-Options:
-  --help         Show help  [boolean]
-  --version      Show version number  [boolean]
-  --port         port to listen on  [number] [default: 0]
-  --hostname     hostname to listen on  [string] [default: "127.0.0.1"]
-  --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)  [boolean] [default: false]
-  --mdns-domain  custom domain name for mDNS service (default: kilo.local)  [string] [default: "kilo.local"]
-  --cors         additional domains to allow for CORS  [array] [default: []]
-```
-
 ## kilo models
 
 ```
@@ -799,10 +785,59 @@ Options:
 ## kilo pr
 
 ```
+manage pull requests
+
+Commands:
+  kilo pr checkout <number>  fetch and checkout a GitHub PR branch, then run kilo
+  kilo pr link <url>         link the current worktree to a pull request
+  kilo pr unlink             clear the linked pull request
+  kilo pr status             show the linked pull request
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+```
+
+### kilo pr checkout
+
+```
 fetch and checkout a GitHub PR branch, then run kilo
 
 Positionals:
   number  PR number to checkout  [number]
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+```
+
+### kilo pr link
+
+```
+link the current worktree to a pull request
+
+Positionals:
+  url  PR URL to link  [string]
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+```
+
+### kilo pr unlink
+
+```
+clear the linked pull request
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+```
+
+### kilo pr status
+
+```
+show the linked pull request
 
 Options:
   --help     Show help  [boolean]

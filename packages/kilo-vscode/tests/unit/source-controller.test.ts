@@ -385,6 +385,7 @@ describe("SourceController.reactivate", () => {
   it("rebuilds the active source via the build factory and refetches", async () => {
     let builds = 0
     let fetches = 0
+    const dirs: Array<string | undefined> = []
     const factory = (): DiffSource => {
       builds++
       return {
@@ -397,7 +398,10 @@ describe("SourceController.reactivate", () => {
     }
     const posted: unknown[] = []
     const controller = new SourceController(
-      () => factory(),
+      (_id, ctx) => {
+        dirs.push(ctx.dir)
+        return factory()
+      },
       () => [WORKSPACE_DESC],
       (m) => posted.push(m),
     )
@@ -406,9 +410,11 @@ describe("SourceController.reactivate", () => {
     expect(builds).toBe(1)
     expect(fetches).toBe(1)
 
+    controller.setContext({ workspaceRoot: "/repo", dir: "/repo/app_beta" })
     await controller.reactivate()
     expect(builds).toBe(2)
     expect(fetches).toBe(2)
+    expect(dirs).toEqual([undefined, "/repo/app_beta"])
 
     controller.stop()
   })

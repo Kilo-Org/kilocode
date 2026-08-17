@@ -18,6 +18,7 @@ export const AiProvidersNav: NavSection[] = [
         children: "ChatGPT Plus/Pro",
       },
       { href: "/ai-providers/gemini", children: "Google Gemini" },
+      { href: "/ai-providers/poolside", children: "Poolside" },
       { href: "/ai-providers/mistral", children: "Mistral AI" },
       { href: "/ai-providers/deepseek", children: "DeepSeek" },
       { href: "/ai-providers/xai", children: "xAI (Grok)" },
@@ -27,6 +28,7 @@ export const AiProvidersNav: NavSection[] = [
     title: "AI Gateways",
     links: [
       { href: "/ai-providers/openrouter", children: "OpenRouter" },
+      { href: "/ai-providers/trustedrouter", children: "TrustedRouter" },
       { href: "/ai-providers/requesty", children: "Requesty" },
       { href: "/ai-providers/daoxe", children: "DaoXE" },
       { href: "/ai-providers/unbound", children: "Unbound" },

@@ -2,11 +2,21 @@ import { describe, expect, it } from "bun:test"
 import {
   mcpConfigScope,
   mcpEnabledPatch,
+  removable,
   selectedAgentNumberOverrideValue,
   selectedAgentTextOverrideValue,
   selectedDefaultAgentValue,
   shouldClearDefaultAgentWhenAgentBecomesUnavailable,
 } from "../../webview-ui/src/components/settings/agent-behaviour-patches"
+
+describe("removable", () => {
+  it("only allows user-managed custom agents", () => {
+    expect(removable({ name: "reviewer", mode: "primary", native: false })).toBe(true)
+    expect(removable({ name: "code", mode: "primary", native: true })).toBe(false)
+    expect(removable({ name: "managed", mode: "primary", source: "organization" })).toBe(false)
+    expect(removable(undefined)).toBe(false)
+  })
+})
 
 describe("mcpEnabledPatch", () => {
   it("returns only the enabled-state patch", () => {

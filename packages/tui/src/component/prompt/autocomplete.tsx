@@ -831,13 +831,14 @@ export function Autocomplete(props: {
                 moveTo(index)
               }}
               onMouseUp={() => select()}
+              gap={1} // kilocode_change - keep descriptions separated from labels in flex layout
             >
               <text fg={index === store.selected ? selectedForeground(theme) : theme.text} flexShrink={0}>
                 {option().display}
               </text>
               <Show when={option().description}>
                 <text fg={index === store.selected ? selectedForeground(theme) : theme.textMuted} wrapMode="none">
-                  {" " + option().description?.trimStart()}
+                  {option().description?.trimStart()}{/* kilocode_change */}
                 </text>
               </Show>
             </box>

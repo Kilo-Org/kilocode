@@ -2,6 +2,7 @@ package ai.kilocode.client.session.history
 
 import ai.kilocode.client.session.ui.PickerRow
 import ai.kilocode.client.session.SessionActivityKind
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.icons.AllIcons
@@ -106,7 +107,7 @@ internal open class HistoryRenderer<T : HistoryItem>(
     ): JPanel {
         val focused = selected || list.hasFocus() || focus
         val fg = UIUtil.getListForeground(selected, focused)
-        val weak = if (selected) fg else UIUtil.getContextHelpForeground()
+        val secondary = if (selected) fg else SessionUiStyle.Text.Secondary.foreground()
 
         background = list.background
         top.background = list.background
@@ -122,7 +123,7 @@ internal open class HistoryRenderer<T : HistoryItem>(
             SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, fg),
         )
         time.text = value?.let(HistoryTime::relative).orEmpty()
-        time.foreground = weak
+        time.foreground = secondary
         badge.setKind(value?.id?.let(activity()::get))
         if (deletable) del.icon = if (selected) icon else empty
 

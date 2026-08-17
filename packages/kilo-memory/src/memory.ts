@@ -8,7 +8,6 @@ import { MemorySchema } from "./schema"
 import { MemoryShared } from "./recall/shared"
 import { MemoryToken } from "./recall/token"
 import { MemorySlug } from "./slug"
-import { MemoryRedact } from "./capture/redact"
 
 /** Root-bound package facade. External Kilo surfaces should derive root from workspace context first. */
 export namespace Memory {
@@ -97,7 +96,6 @@ export namespace Memory {
       const state = await MemoryFiles.readState(input.root)
       const next = { ...state, enabled: false }
       await MemoryFiles.writeState(input.root, next)
-      await MemoryFiles.append(input.root, `disable ${next.scope} source=command`)
       return { root: input.root, state: next }
     })
   }
@@ -124,16 +122,6 @@ export namespace Memory {
         ...(input.settings.verbose === undefined ? {} : { verbose: input.settings.verbose }),
       }
       await MemoryFiles.writeState(input.root, next)
-      await MemoryFiles.append(
-        input.root,
-        [
-          `settings ${next.scope}`,
-          input.settings.autoConsolidate === undefined ? "" : `autoConsolidate=${next.autoConsolidate}`,
-          input.settings.verbose === undefined ? "" : `verbose=${next.verbose}`,
-        ]
-          .filter(Boolean)
-          .join(" "),
-      )
       return { root: input.root, state: next }
     })
   }
@@ -216,24 +204,6 @@ export namespace Memory {
     }
     const state = await MemoryFiles.readState(input.root)
     const ok = MemoryNotice.saved({ added: result.added, removed: result.removed })
-    if (trigger === "explicit") {
-      await MemoryFiles.decide(input.root, {
-        kind: "typed",
-        trigger,
-        sessionID: input.sessionID,
-        result: ok ? "saved" : "skipped",
-        llm: false,
-        parsed: true,
-        fallback: false,
-        tokens: input.tokens ?? 0,
-        operationCount: result.operationCount,
-        skippedCount: result.skipped.length || (ok ? 0 : 1),
-        skipped: MemoryNotice.skip(result.skipped),
-        operations: MemoryNotice.ops({ ops: accepted, skipped: result.skipped }),
-        files: MemoryShared.files(accepted),
-        summary: MemoryNotice.summary({ added: result.added, removed: result.removed, count: result.operationCount }),
-      })
-    }
     return {
       root: input.root,
       state,
@@ -318,31 +288,6 @@ export namespace Memory {
     const hits = result?.hits ?? []
     const files = [...new Set(hits.map((hit) => hit.source))]
     const topics = [...new Set(hits.flatMap((hit) => (hit.topics?.length ? hit.topics : [hit.kind])))]
-    await MemoryFiles.decide(input.root, {
-      kind: "recall",
-      trigger: "targeted-recall",
-      sessionID: input.sessionID,
-      result: result ? "recalled" : "skipped",
-      llm: false,
-      parsed: false,
-      fallback: false,
-      reason: result ? undefined : "no_matches",
-      query: MemoryShared.brief(MemoryRedact.text(input.query), 240),
-      topics,
-      files,
-      tokens: result?.tokens ?? 0,
-      operationCount: hits.length,
-      skippedCount: result ? 0 : 1,
-      summary: result ? `targeted recall matched ${hits.length} memories` : "targeted recall found no matches",
-    })
-    if (result) {
-      await MemoryFiles.queue(input.root, async () => {
-        await MemoryFiles.append(
-          input.root,
-          `recall session=${input.sessionID ?? ""} hits=${result.hits.length} tokens=${result.tokens} files=${files.join(",")}`,
-        )
-      })
-    }
     return { root: input.root, state, result, hits, files, topics }
   }
 
@@ -368,10 +313,6 @@ export namespace Memory {
       })
       await MemoryFiles.pruneSessions(input.root, state.limits.maxSessionFiles)
       const index = await MemoryIndexer.rebuild({ root: input.root, state })
-      await MemoryFiles.append(
-        input.root,
-        `session digest session=${input.sessionID} tokens=${input.tokens ?? 0} indexTokens=${index.tokens}`,
-      )
       return { root: input.root, state, skipped: false as const, index }
     })
   }
