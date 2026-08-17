@@ -189,7 +189,9 @@ describe("Agent Manager orchestration domain", () => {
       },
     } as unknown as KiloClient
 
-    await prompt({ client, root, state, sessionID: "ses_target", text: "Continue", messageID: "amr_prompt" })
+    expect(await prompt({ client, root, state, sessionID: "ses_target", text: "Continue", messageID: "amr_prompt" })).toBe(
+      "sent",
+    )
 
     expect(get).toHaveBeenCalledWith({ sessionID: "ses_target", directory: worktree })
     expect(promptAsync).toHaveBeenCalledWith(
@@ -216,7 +218,9 @@ describe("Agent Manager orchestration domain", () => {
       },
     } as unknown as KiloClient
 
-    await prompt({ client, root, state, sessionID: "ses_wait", text: "Continue", messageID: "amr_wait" })
+    expect(await prompt({ client, root, state, sessionID: "ses_wait", text: "Continue", messageID: "amr_wait" })).toBe(
+      "queued",
+    )
 
     expect(promptAsync).not.toHaveBeenCalled()
     expect(managedInbox.peekForSession("ses_wait")?.text).toBe("Continue")

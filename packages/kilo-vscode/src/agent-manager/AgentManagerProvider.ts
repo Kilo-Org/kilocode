@@ -53,7 +53,12 @@ import {
 import { initContextState, pushProjectSessions, reactivateProject, registerProjectSessions } from "./project/init"
 import { createLocalDiff } from "./local-diff"
 import { parseToolRequest, startFromTool, type ToolRequest } from "./tool-start"
-import { flushIdleSession, managedInbox, queueBusyAgentSend, resumeQueuedSessions } from "./managed-delivery"
+import {
+  flushIdleSession,
+  flushQueuedSessions,
+  managedInbox,
+  queueBusyAgentSend,
+} from "./managed-delivery"
 import { SessionStallWatchdog, stallWatchdogFromEnv } from "./session-stall-watchdog"
 import { handleToolEvent } from "./tool-project"
 import { sandboxSessionMetadata } from "../shared/sandbox-session"
@@ -112,6 +117,7 @@ export class AgentManagerProvider implements Disposable {
   /** Scratch set returned when no active context exists; mutations are discarded. */
   private readonly staleScratch = new Set<string>()
   private unsubDestination: (() => void) | undefined
+  private unsubConnection: (() => void) | undefined
   private destination = new DestinationState()
   private closing: Promise<void> | undefined
   private onVisibilityChange: ((visible: boolean) => void) | undefined
@@ -298,6 +304,9 @@ export class AgentManagerProvider implements Disposable {
       },
       (event) => this.onSessionLifecycle(event),
     )
+    this.unsubConnection = this.connectionService.onStateChange((state) => {
+      if (state === "connected") void this.flushPersistedInbox()
+    })
     this.stallWatchdog.start()
   }
 
@@ -320,6 +329,7 @@ export class AgentManagerProvider implements Disposable {
       if (!id) return
       this.busySessions.delete(id)
       this.stallWatchdog.forget(id)
+      managedInbox.forgetSession(id)
       const ctx = this.contexts.byLiveSession(id)
       if (!ctx) return
       ctx.removeLiveSession(id)
@@ -514,8 +524,18 @@ export class AgentManagerProvider implements Disposable {
   private async resumePersistedInbox(root: string): Promise<void> {
     managedInbox.attachPersistence(path.join(root, ".kilo", "managed-inbox"))
     try {
+      const ids = await managedInbox.hydrate()
+      if (ids.length > 0) this.log("managed inbox hydrated", ids.length)
+    } catch (err) {
+      this.log("managed inbox hydrate failed", err)
+    }
+    await this.flushPersistedInbox()
+  }
+
+  private async flushPersistedInbox(): Promise<void> {
+    try {
       const client = this.connectionService.getClient()
-      const n = await resumeQueuedSessions(client, { snapshotInitialization: SNAPSHOT_INITIALIZATION })
+      const n = await flushQueuedSessions(client, { snapshotInitialization: SNAPSHOT_INITIALIZATION })
       if (n > 0) this.log("managed inbox resumed", n)
     } catch (err) {
       this.log("managed inbox resume failed", err)
@@ -590,20 +610,62 @@ export class AgentManagerProvider implements Disposable {
   private queueBusySend(m: AgentManagerInMessage, msg: Record<string, unknown>): boolean {
     if (m.type !== "sendMessage") return false
     const sid = m.sessionID ?? this.activeSessionId
-    const directory =
-      (typeof msg.contextDirectory === "string" && msg.contextDirectory) ||
-      (typeof m.contextDirectory === "string" && m.contextDirectory) ||
-      this.getRoot()
+    const directory = this.sessionSendDirectory(sid, msg, m)
     const result = queueBusyAgentSend({
       busy: !!sid && this.busySessions.has(sid),
       sessionId: sid,
       directory,
       text: m.text,
       fileCount: m.files?.length ?? 0,
+      extra: {
+        messageID: m.messageID,
+        model: m.providerID && m.modelID ? { providerID: m.providerID, modelID: m.modelID } : undefined,
+        variant: m.variant,
+        snapshotInitialization: SNAPSHOT_INITIALIZATION,
+      },
     })
     if (result !== "queued") return false
+    if (m.messageID && sid) this.connectionService.recordMessageSessionId(m.messageID, sid)
     this.log("managed prompt queued", sid)
     return true
+  }
+
+  /**
+   * Directory the backend Instance actually owns for this session. Do not fall
+   * back to the workspace root for a worktree session — that targets the wrong
+   * Instance when the later flush runs.
+   */
+  private sessionSendDirectory(
+    sessionId: string | undefined,
+    msg: Record<string, unknown>,
+    m: AgentManagerInMessage,
+  ): string | undefined {
+    if (typeof msg.contextDirectory === "string" && msg.contextDirectory) return msg.contextDirectory
+    if ("contextDirectory" in m && typeof m.contextDirectory === "string" && m.contextDirectory) {
+      return m.contextDirectory
+    }
+    if (sessionId) {
+      const tracked = this.panel?.sessions.getSessionDirectories().get(sessionId)
+      if (tracked) return tracked
+      const state = this.getStateManager()
+      const managed = state?.getSession(sessionId)
+      if (managed?.worktreeId) {
+        const worktree = state?.getWorktree(managed.worktreeId)?.path
+        if (worktree) return worktree
+        const routed = this.routedSessionDirectory(sessionId)
+        if (routed) return routed
+        return undefined
+      }
+      const routed = this.routedSessionDirectory(sessionId)
+      if (routed) return routed
+    }
+    return this.getRoot()
+  }
+
+  private routedSessionDirectory(sessionId: string): string | undefined {
+    const projectId = this.projectScope.current()?.id ?? this.contexts.active()?.id
+    if (!projectId) return undefined
+    return this.panel?.sessions.routeSessionDirectoryFor?.({ projectId, sessionId })
   }
 
   private onBranchPrompt(m: AgentManagerInMessage): void {
@@ -1929,6 +1991,7 @@ export class AgentManagerProvider implements Disposable {
     this.unsubTool?.()
     this.unsubStatus?.()
     this.unsubSessions?.()
+    this.unsubConnection?.()
     this.unsubFont?.()
     this.unsubProjects?.()
     this.unsubDestination?.()

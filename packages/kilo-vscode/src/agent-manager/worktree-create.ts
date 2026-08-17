@@ -59,9 +59,9 @@ export async function createWorktreeOnDisk(
     ? undefined
     : await resolveBaseBranch(ctx, manager, state, opts?.baseBranch)
 
-  let result: CreateWorktreeResult
+  let created: CreateWorktreeResult | undefined
   try {
-    result = await manager.createWorktree({
+    created = await manager.createWorktree({
       prompt: opts?.name || "kilo",
       baseBranch: effectiveBase ?? opts?.baseBranch,
       baseRef: opts?.baseRef,
@@ -72,11 +72,18 @@ export async function createWorktreeOnDisk(
     if (workspaceRoot) {
       assertSessionIsolation({
         workspaceRoot,
-        sessionDirectory: result.path,
+        sessionDirectory: created.path,
         isolated: true,
       })
     }
   } catch (error) {
+    if (created) {
+      try {
+        await manager.removeWorktree(created.path, created.branch)
+      } catch (cleanup) {
+        ctx.log("Failed to roll back isolated worktree:", cleanup)
+      }
+    }
     const msg = error instanceof Error ? error.message : String(error)
     ctx.postToWebview({
       type: "agentManager.worktreeSetup",
@@ -91,6 +98,8 @@ export async function createWorktreeOnDisk(
     })
     return null
   }
+
+  const result = created
 
   const worktree = state.addWorktree({
     branch: result.branch,

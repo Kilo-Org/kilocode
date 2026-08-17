@@ -41,4 +41,17 @@ describe("session isolation", () => {
       }),
     ).not.toThrow()
   })
+
+  test("rejects an isolated session at the workspace root ignoring Windows path casing", () => {
+    const mixed = {
+      workspaceRoot: "C:\\Repo",
+      sessionDirectory: "C:\\repo",
+      isolated: true,
+    }
+    if (process.platform === "win32") {
+      expect(() => assertSessionIsolation(mixed)).toThrow("workspace root")
+    } else {
+      expect(() => assertSessionIsolation(mixed)).not.toThrow()
+    }
+  })
 })

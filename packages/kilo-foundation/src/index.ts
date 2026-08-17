@@ -1,7 +1,9 @@
 export { canSafelyResume, resumeDecision } from "./resume"
 export {
+  compactConsumed,
   consumeManagedBatch,
   enqueueManaged,
+  forgetManagedSession,
   shouldWakeCoordinator,
   unconsumedManaged,
 } from "./session-inbox"

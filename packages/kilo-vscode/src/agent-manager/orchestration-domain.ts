@@ -5,7 +5,7 @@ import type { LocalStats, WorktreeStats } from "./GitStatsPoller"
 import type { PRStatus } from "./types"
 import type { ManagedSession, Worktree, WorktreeStateManager } from "./WorktreeStateManager"
 import { SNAPSHOT_INITIALIZATION } from "./constants"
-import { promptWhenSafe } from "./managed-delivery"
+import { promptWhenSafe, managedInbox } from "./managed-delivery"
 
 export type Activity = "idle" | "busy" | "retry" | "offline"
 export type FilterState = Activity | "waiting"
@@ -320,9 +320,8 @@ export async function prompt(input: {
   text: string
   messageID: string
   signal?: AbortSignal
-  idleTimeoutMs?: number
-}): Promise<void> {
-  if (input.signal?.aborted) return
+}): Promise<"sent" | "queued"> {
+  if (input.signal?.aborted) return "queued"
   const managed = input.state.getSession(input.sessionID)
   if (!managed)
     throw new OrchestrationError("unknown_session", "The session is not managed by this Agent Manager workspace")
@@ -344,7 +343,7 @@ export async function prompt(input: {
   if (!(await sameManagedDirectory(response.data.directory, dir))) {
     throw new OrchestrationError("cross_workspace", "The managed session belongs to a different workspace directory")
   }
-  if (input.signal?.aborted) return
+  if (input.signal?.aborted) return "queued"
   const result = await promptWhenSafe(input.client, {
     sessionId: input.sessionID,
     directory: dir,
@@ -357,6 +356,10 @@ export async function prompt(input: {
   if (result === "rejected") {
     throw new OrchestrationError("unavailable_session", "The managed session cannot accept a prompt right now")
   }
+  if (input.signal?.aborted && result === "queued") {
+    await managedInbox.dropLastPrompt(input.sessionID, input.text)
+  }
+  return result
 }
 
 export function move(input: { state: WorktreeStateManager; sessionID: string; sectionID: string | null }): void {

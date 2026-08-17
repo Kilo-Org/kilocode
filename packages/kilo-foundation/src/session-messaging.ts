@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises"
+import { mkdir, readdir, readFile, rm, unlink, writeFile } from "node:fs/promises"
 import path from "node:path"
 import type { ManagedSessionClient, SessionId, SessionProbeResult } from "./types"
 
@@ -8,6 +8,16 @@ export interface SessionEnvelope {
   message?: string
   directory?: string
   createdAt: string
+  extra?: Record<string, unknown>
+}
+
+export type SessionMessengerClock = {
+  now(): number
+}
+
+type ListedEnvelope = {
+  file: string
+  envelope: SessionEnvelope | undefined
 }
 
 function sanitizeSessionId(sessionId: string): string {
@@ -19,11 +29,31 @@ function isNotFound(error: unknown): boolean {
   return typeof error === "object" && error !== null && "code" in error && (error as { code: unknown }).code === "ENOENT"
 }
 
+function sameEnvelope(left: SessionEnvelope, right: SessionEnvelope): boolean {
+  return (
+    left.sessionId === right.sessionId &&
+    left.kind === right.kind &&
+    left.message === right.message &&
+    left.directory === right.directory &&
+    left.createdAt === right.createdAt
+  )
+}
+
+function compareListed(left: ListedEnvelope, right: ListedEnvelope): number {
+  const byCreated = (left.envelope?.createdAt ?? "").localeCompare(right.envelope?.createdAt ?? "")
+  return byCreated !== 0 ? byCreated : left.file.localeCompare(right.file)
+}
+
 /**
  * Persist envelopes on disk and deliver at a safe boundary. No LLM polling.
  */
 export class FileBackedSessionMessenger implements ManagedSessionClient {
-  constructor(private readonly inboxRoot: string) {}
+  private seq = 0
+
+  constructor(
+    private readonly inboxRoot: string,
+    private readonly clock: SessionMessengerClock = { now: () => Date.now() },
+  ) {}
 
   private sessionDir(sessionId: string): string {
     return path.join(this.inboxRoot, sanitizeSessionId(sessionId))
@@ -54,44 +84,71 @@ export class FileBackedSessionMessenger implements ManagedSessionClient {
     await this.sendQueued(sessionId, message)
   }
 
-  async sendQueued(sessionId: SessionId, message: string, directory?: string): Promise<void> {
-    await this.writeEnvelope(sessionId, {
+  async sendQueued(
+    sessionId: SessionId,
+    message: string,
+    directory?: string,
+    extra?: Record<string, unknown>,
+    createdAt?: string,
+  ): Promise<void> {
+    const now = this.clock.now()
+    await this.writeEnvelope(
       sessionId,
-      kind: "message",
-      message,
-      directory,
-      createdAt: new Date().toISOString(),
-    })
+      {
+        sessionId,
+        kind: "message",
+        message,
+        directory,
+        createdAt: createdAt ?? new Date(now).toISOString(),
+        ...(extra ? { extra } : {}),
+      },
+      now,
+    )
   }
 
   async resume(sessionId: SessionId): Promise<void> {
-    await this.writeEnvelope(sessionId, {
+    const now = this.clock.now()
+    await this.writeEnvelope(
       sessionId,
-      kind: "resume",
-      createdAt: new Date().toISOString(),
-    })
+      {
+        sessionId,
+        kind: "resume",
+        createdAt: new Date(now).toISOString(),
+      },
+      now,
+    )
   }
 
   async listPending(sessionId: SessionId): Promise<SessionEnvelope[]> {
-    const files = await this.envelopeFiles(sessionId)
-    const pending: SessionEnvelope[] = []
-    for (const file of files) {
-      const envelope = await this.readEnvelope(file)
-      if (envelope) pending.push(envelope)
-    }
-    return pending.sort((left, right) => left.createdAt.localeCompare(right.createdAt))
+    const listed = await this.listedEnvelopes(sessionId)
+    return listed.flatMap((item) => (item.envelope ? [item.envelope] : []))
   }
 
   async consumePending(sessionId: SessionId, limit = 10): Promise<SessionEnvelope[]> {
-    const files = await this.envelopeFiles(sessionId)
-    const taken = files.slice(0, Math.max(0, limit))
+    const listed = await this.listedEnvelopes(sessionId)
+    const readable = listed.filter((item): item is ListedEnvelope & { envelope: SessionEnvelope } => !!item.envelope)
+    const taken = readable.slice(0, Math.max(0, limit))
     const pending: SessionEnvelope[] = []
-    for (const file of taken) {
-      const envelope = await this.readEnvelope(file)
-      if (envelope) pending.push(envelope)
-      await unlink(file)
+    for (const item of taken) {
+      pending.push(item.envelope)
+      await this.unlinkEnvelope(item.file)
     }
     return pending
+  }
+
+  async consumeEnvelope(sessionId: SessionId, envelope: SessionEnvelope): Promise<void> {
+    const listed = await this.listedEnvelopes(sessionId)
+    const match = listed.find((item) => item.envelope && sameEnvelope(item.envelope, envelope))
+    if (!match) return
+    await this.unlinkEnvelope(match.file)
+  }
+
+  async dropSession(sessionId: SessionId): Promise<void> {
+    try {
+      await rm(this.sessionDir(sessionId), { recursive: true, force: true })
+    } catch (error) {
+      if (!isNotFound(error)) throw error
+    }
   }
 
   async probe(): Promise<SessionProbeResult> {
@@ -104,14 +161,20 @@ export class FileBackedSessionMessenger implements ManagedSessionClient {
     }
   }
 
+  private async listedEnvelopes(sessionId: string): Promise<ListedEnvelope[]> {
+    const files = await this.envelopeFiles(sessionId)
+    const listed: ListedEnvelope[] = []
+    for (const file of files) {
+      listed.push({ file, envelope: await this.readEnvelope(file) })
+    }
+    return listed.sort(compareListed)
+  }
+
   private async envelopeFiles(sessionId: string): Promise<string[]> {
     try {
       const dir = this.sessionDir(sessionId)
       const entries = await readdir(dir)
-      return entries
-        .filter((name) => name.endsWith(".json"))
-        .map((name) => path.join(dir, name))
-        .sort()
+      return entries.filter((name) => name.endsWith(".json")).map((name) => path.join(dir, name))
     } catch (error) {
       if (isNotFound(error)) return []
       throw error
@@ -128,10 +191,19 @@ export class FileBackedSessionMessenger implements ManagedSessionClient {
     }
   }
 
-  private async writeEnvelope(sessionId: string, envelope: SessionEnvelope): Promise<void> {
+  private async unlinkEnvelope(file: string): Promise<void> {
+    try {
+      await unlink(file)
+    } catch (error) {
+      if (isNotFound(error)) return
+      console.warn("[kilo-foundation] failed to unlink managed inbox envelope", file, error)
+    }
+  }
+
+  private async writeEnvelope(sessionId: string, envelope: SessionEnvelope, now = this.clock.now()): Promise<void> {
     const dir = this.sessionDir(sessionId)
     await mkdir(dir, { recursive: true })
-    const filename = `${Date.now()}-${envelope.kind}-${crypto.randomUUID()}.json`
+    const filename = `${now}-${String(++this.seq).padStart(6, "0")}-${envelope.kind}-${crypto.randomUUID()}.json`
     await writeFile(path.join(dir, filename), `${JSON.stringify(envelope, null, 2)}\n`, "utf8")
   }
 }

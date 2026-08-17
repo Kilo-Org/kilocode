@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test"
 import {
+  compactConsumed,
   consumeManagedBatch,
   enqueueManaged,
+  forgetManagedSession,
   shouldWakeCoordinator,
   unconsumedManaged,
 } from "../session-inbox"
@@ -57,5 +59,24 @@ describe("foundation session inbox", () => {
     expect(shouldWakeCoordinator(FOUNDATION_EVENT.MESSAGE_RECEIVED, FOUNDATION_WAKE_TYPES)).toBe(true)
     expect(shouldWakeCoordinator(FOUNDATION_EVENT.STALLED, FOUNDATION_WAKE_TYPES)).toBe(true)
     expect(shouldWakeCoordinator(FOUNDATION_EVENT.STATUS_CHANGED, FOUNDATION_WAKE_TYPES)).toBe(false)
+  })
+
+  test("compactConsumed drops consumed events and forgetManagedSession drops a session", () => {
+    const items: ManagedEvent<GenericType>[] = []
+    const kept = event("CHILD_DONE", "keep", "2026-08-16T10:00:00.000Z")
+    kept.sessionId = "s1"
+    const gone = event("HEARTBEAT", "gone", "2026-08-16T10:00:01.000Z")
+    gone.sessionId = "s1"
+    gone.consumedAt = "2026-08-16T11:00:00.000Z"
+    const other = event("CHILD_DONE", "other", "2026-08-16T10:00:02.000Z")
+    other.sessionId = "s2"
+    enqueueManaged(items, kept, (item) => item.id)
+    enqueueManaged(items, gone, (item) => item.id)
+    enqueueManaged(items, other, (item) => item.id)
+
+    compactConsumed(items)
+    expect(items.map((item) => item.id)).toEqual(["keep", "other"])
+    forgetManagedSession(items, "s1")
+    expect(items.map((item) => item.id)).toEqual(["other"])
   })
 })
