@@ -114,6 +114,21 @@ export async function runtimeStatus(client: PromptClient, directory: string, ses
   }
 }
 
+/** Queue a follow-up Agent Manager text send when the session is already busy. */
+export function queueBusyAgentSend(input: {
+  busy: boolean
+  sessionId?: string
+  directory?: string
+  text?: string
+  fileCount?: number
+}): DeliveryResult | "pass" {
+  if (!input.busy || (input.fileCount ?? 0) > 0) return "pass"
+  const text = input.text?.trim()
+  if (!input.sessionId || !input.directory || !text) return "pass"
+  managedInbox.enqueuePrompt({ sessionId: input.sessionId, directory: input.directory, text })
+  return "queued"
+}
+
 export async function promptWhenSafe(
   client: PromptClient,
   input: {

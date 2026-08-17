@@ -12,6 +12,19 @@ import { managedInbox } from "./managed-delivery"
 
 const DEFAULT_SCAN_EVERY_MS = 60_000
 
+function positiveIntEnv(name: string): number | undefined {
+  const parsed = Number.parseInt(process.env[name] ?? "", 10)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
+}
+
+/** Optional live-check overrides. Unset values keep the 15m / 60s defaults. */
+export function stallWatchdogFromEnv(): Pick<SessionStallWatchdogOptions, "stallAfterMs" | "scanEveryMs"> {
+  return {
+    stallAfterMs: positiveIntEnv("KILO_STALL_AFTER_MS"),
+    scanEveryMs: positiveIntEnv("KILO_STALL_SCAN_EVERY_MS"),
+  }
+}
+
 export interface SessionStallWatchdogOptions {
   stallAfterMs?: number
   scanEveryMs?: number

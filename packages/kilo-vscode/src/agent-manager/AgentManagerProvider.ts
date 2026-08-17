@@ -53,8 +53,8 @@ import {
 import { initContextState, pushProjectSessions, reactivateProject, registerProjectSessions } from "./project/init"
 import { createLocalDiff } from "./local-diff"
 import { parseToolRequest, startFromTool, type ToolRequest } from "./tool-start"
-import { flushIdleSession } from "./managed-delivery"
-import { SessionStallWatchdog } from "./session-stall-watchdog"
+import { flushIdleSession, queueBusyAgentSend } from "./managed-delivery"
+import { SessionStallWatchdog, stallWatchdogFromEnv } from "./session-stall-watchdog"
 import { handleToolEvent } from "./tool-project"
 import { sandboxSessionMetadata } from "../shared/sandbox-session"
 import { createOrchestrationBridge } from "./orchestration-setup"
@@ -119,6 +119,7 @@ export class AgentManagerProvider implements Disposable {
   private panelSessions = new Set<string>()
   private busySessions = new Set<string>()
   private readonly stallWatchdog = new SessionStallWatchdog({
+    ...stallWatchdogFromEnv(),
     onStall: (sessionId, resumable) => this.log("session stalled", sessionId, resumable ? "resumable" : "busy"),
   })
 
@@ -569,8 +570,28 @@ export class AgentManagerProvider implements Disposable {
     if (bridge !== undefined) return bridge
     if (this.scripts.manager.intercept(m)) return null
     if (this.terminalRouter.handle(m)) return null
+    if (this.queueBusySend(m, msg)) return null
 
     return msg
+  }
+
+  private queueBusySend(m: AgentManagerInMessage, msg: Record<string, unknown>): boolean {
+    if (m.type !== "sendMessage") return false
+    const sid = m.sessionID ?? this.activeSessionId
+    const directory =
+      (typeof msg.contextDirectory === "string" && msg.contextDirectory) ||
+      (typeof m.contextDirectory === "string" && m.contextDirectory) ||
+      this.getRoot()
+    const result = queueBusyAgentSend({
+      busy: !!sid && this.busySessions.has(sid),
+      sessionId: sid,
+      directory,
+      text: m.text,
+      fileCount: m.files?.length ?? 0,
+    })
+    if (result !== "queued") return false
+    this.log("managed prompt queued", sid)
+    return true
   }
 
   private onBranchPrompt(m: AgentManagerInMessage): void {

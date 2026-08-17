@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { FOUNDATION_EVENT } from "@kilocode/kilo-foundation"
 import { managedInbox } from "../../src/agent-manager/managed-delivery"
-import { SessionStallWatchdog, resumableAfterStall } from "../../src/agent-manager/session-stall-watchdog"
+import { SessionStallWatchdog, resumableAfterStall, stallWatchdogFromEnv } from "../../src/agent-manager/session-stall-watchdog"
 
 describe("session stall watchdog", () => {
   afterEach(() => {
@@ -40,5 +40,20 @@ describe("session stall watchdog", () => {
     watchdog.noteStatus("s2", "offline", "/repo", "2026-08-16T12:00:00.000Z")
     watchdog.scan("2026-08-16T12:02:00.000Z")
     expect(managedInbox.events.some((event) => event.type === FOUNDATION_EVENT.RESUMABLE)).toBe(true)
+  })
+
+  test("stallWatchdogFromEnv reads positive KILO_STALL_* overrides", () => {
+    const after = process.env.KILO_STALL_AFTER_MS
+    const scan = process.env.KILO_STALL_SCAN_EVERY_MS
+    process.env.KILO_STALL_AFTER_MS = "20000"
+    process.env.KILO_STALL_SCAN_EVERY_MS = "5000"
+    try {
+      expect(stallWatchdogFromEnv()).toEqual({ stallAfterMs: 20_000, scanEveryMs: 5_000 })
+    } finally {
+      if (after === undefined) delete process.env.KILO_STALL_AFTER_MS
+      else process.env.KILO_STALL_AFTER_MS = after
+      if (scan === undefined) delete process.env.KILO_STALL_SCAN_EVERY_MS
+      else process.env.KILO_STALL_SCAN_EVERY_MS = scan
+    }
   })
 })
