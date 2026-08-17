@@ -15,4 +15,17 @@ describe("file-backed session messenger", () => {
     expect(probe.sessionCount).toBe(1)
     expect(await messenger.listSessions()).toEqual([id])
   })
+
+  test("lists and consumes pending envelopes in order", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "kilo-foundation-pending-"))
+    const messenger = new FileBackedSessionMessenger(root)
+    const id = await messenger.createSession("s1")
+    await messenger.sendQueued(id, "first", "/repo")
+    await messenger.sendQueued(id, "second", "/repo")
+    const listed = await messenger.listPending(id)
+    expect(listed.map((item) => item.message)).toEqual(["first", "second"])
+    const consumed = await messenger.consumePending(id, 1)
+    expect(consumed.map((item) => item.message)).toEqual(["first"])
+    expect((await messenger.listPending(id)).map((item) => item.message)).toEqual(["second"])
+  })
 })

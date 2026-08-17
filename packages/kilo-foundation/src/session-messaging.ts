@@ -1,4 +1,4 @@
-import { mkdir, readdir, writeFile } from "node:fs/promises"
+import { mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises"
 import path from "node:path"
 import type { ManagedSessionClient, SessionId, SessionProbeResult } from "./types"
 
@@ -6,6 +6,7 @@ export interface SessionEnvelope {
   sessionId: SessionId
   kind: "message" | "resume"
   message?: string
+  directory?: string
   createdAt: string
 }
 
@@ -50,10 +51,15 @@ export class FileBackedSessionMessenger implements ManagedSessionClient {
   }
 
   async sendMessage(sessionId: SessionId, message: string): Promise<void> {
+    await this.sendQueued(sessionId, message)
+  }
+
+  async sendQueued(sessionId: SessionId, message: string, directory?: string): Promise<void> {
     await this.writeEnvelope(sessionId, {
       sessionId,
       kind: "message",
       message,
+      directory,
       createdAt: new Date().toISOString(),
     })
   }
@@ -66,6 +72,28 @@ export class FileBackedSessionMessenger implements ManagedSessionClient {
     })
   }
 
+  async listPending(sessionId: SessionId): Promise<SessionEnvelope[]> {
+    const files = await this.envelopeFiles(sessionId)
+    const pending: SessionEnvelope[] = []
+    for (const file of files) {
+      const envelope = await this.readEnvelope(file)
+      if (envelope) pending.push(envelope)
+    }
+    return pending.sort((left, right) => left.createdAt.localeCompare(right.createdAt))
+  }
+
+  async consumePending(sessionId: SessionId, limit = 10): Promise<SessionEnvelope[]> {
+    const files = await this.envelopeFiles(sessionId)
+    const taken = files.slice(0, Math.max(0, limit))
+    const pending: SessionEnvelope[] = []
+    for (const file of taken) {
+      const envelope = await this.readEnvelope(file)
+      if (envelope) pending.push(envelope)
+      await unlink(file)
+    }
+    return pending
+  }
+
   async probe(): Promise<SessionProbeResult> {
     const sessions = await this.listSessions()
     return {
@@ -73,6 +101,30 @@ export class FileBackedSessionMessenger implements ManagedSessionClient {
       status: "reachable",
       sessionCount: sessions.length,
       detail: "file-backed session inbox",
+    }
+  }
+
+  private async envelopeFiles(sessionId: string): Promise<string[]> {
+    try {
+      const dir = this.sessionDir(sessionId)
+      const entries = await readdir(dir)
+      return entries
+        .filter((name) => name.endsWith(".json"))
+        .map((name) => path.join(dir, name))
+        .sort()
+    } catch (error) {
+      if (isNotFound(error)) return []
+      throw error
+    }
+  }
+
+  private async readEnvelope(file: string): Promise<SessionEnvelope | undefined> {
+    try {
+      const raw = JSON.parse(await readFile(file, "utf8")) as SessionEnvelope
+      if (!raw || typeof raw.sessionId !== "string" || typeof raw.kind !== "string") return undefined
+      return raw
+    } catch {
+      return undefined
     }
   }
 
