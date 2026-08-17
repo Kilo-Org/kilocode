@@ -6,7 +6,7 @@ sidebar_label: Eden AI
 
 # Using Eden AI With Kilo Code
 
-[Eden AI](https://www.edenai.co/) is an EU-based AI gateway that puts several hundred models from many vendors behind one OpenAI-compatible API. It is worth a look if you want a single key and a single invoice across vendors, an EU endpoint for data-residency requirements, or the actual per-request cost returned by the API instead of an estimate derived from token counts. Kilo Code uses the `edenai` provider ID and reads your API key from `EDENAI_API_KEY`.
+[Eden AI](https://www.edenai.co/) is an EU-based AI gateway that puts models from many vendors behind one OpenAI-compatible API. It is worth a look if you want a single key and a single invoice across vendors, or an EU endpoint for data-residency requirements. Kilo Code uses the `edenai` provider ID and reads your API key from `EDENAI_API_KEY`.
 
 ## Before you begin
 
@@ -141,7 +141,9 @@ Only a few of these variants appear in the picker. If the one you need is missin
 
 ## Cost tracking
 
-Eden AI returns the actual cost of each request in the response body rather than leaving it to be inferred from token counts, so reported spend matches what you are billed. The models endpoint also reports `cache_read_input_token_cost` for models that support prompt caching.
+The spend Kilo Code shows for Eden AI is derived from token counts and the per-model rates in the catalog, so treat it as an estimate. Eden AI returns the actual cost of each request in its own response body, and that figure, together with your Eden AI dashboard, is the authoritative one.
+
+If you declared a model yourself as shown above, set `cost` on it. Kilo Code has no catalog rates for a model it does not already know, so its estimate would otherwise stay at zero. The catalog carries cache-read rates where the underlying model supports prompt caching, so the estimate accounts for caching on the models it does know.
 
 ## Troubleshooting
 
