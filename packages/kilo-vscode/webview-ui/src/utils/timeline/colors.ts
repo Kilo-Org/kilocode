@@ -31,14 +31,6 @@ export type TimelineColor = (typeof palette)[keyof typeof palette]
 const READ_TOOLS = new Set(["read", "glob", "grep", "find", "ls", "diagnostics"])
 const WRITE_TOOLS = new Set(["edit", "write", "patch", "multi_edit", "multiedit", "apply_patch"])
 
-function isRead(name: string): boolean {
-  return READ_TOOLS.has(name)
-}
-
-function isWrite(name: string): boolean {
-  return WRITE_TOOLS.has(name)
-}
-
 // ── Part → color ─────────────────────────────────────────────────────
 
 export function color(part: Part): TimelineColor {
@@ -52,9 +44,9 @@ export function color(part: Part): TimelineColor {
     case "tool": {
       const tp = part as ToolPart
       if (tp.state.status === "error") return palette.error
-      const name = tp.tool.toLowerCase()
-      if (isRead(name)) return palette.read
-      if (isWrite(name)) return palette.write
+      const name = tp.tool
+      if (READ_TOOLS.has(name) || READ_TOOLS.has(name.toLowerCase())) return palette.read
+      if (WRITE_TOOLS.has(name) || WRITE_TOOLS.has(name.toLowerCase())) return palette.write
       return palette.tool
     }
 
