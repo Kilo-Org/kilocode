@@ -106,8 +106,7 @@ internal class SessionScroll(
     fun atBottom(): Boolean {
         return when {
             component.viewport.view !== messages -> tail
-            !tail -> false
-            else -> near()
+            else -> tail
         }
     }
 
@@ -170,6 +169,11 @@ internal class SessionScroll(
     fun preserve(anchor: JComponent, action: () -> Unit) {
         if (component.viewport.view !== messages) {
             action()
+            return
+        }
+        if (tail) {
+            action()
+            followBottom(true)
             return
         }
         val pos = SwingUtilities.convertPoint(anchor, Point(0, 0), messages)
@@ -420,9 +424,18 @@ internal class SessionScroll(
                 updateJump()
                 return
             }
-            if (tail && !user && !moved) {
+            if (tail && !user) {
                 user = false
-                followBottom(true)
+                stable = -1
+                auto = true
+                try {
+                    layoutScroll()
+                    scrollToBottom()
+                    updateJump()
+                } finally {
+                    auto = false
+                }
+                syncValue()
                 return
             }
             tail = false
@@ -438,7 +451,10 @@ internal class SessionScroll(
         val vp = component.viewport
         val e = vp.extentSize.height
         val c = vp.view?.height ?: 0
-        if (e == extent && c == content) return
+        if (e == extent && c == content) {
+            updateJump()
+            return
+        }
         extent = e
         content = c
         if (auto || opening) {
