@@ -1131,7 +1131,7 @@ export const dict = {
 
   "settings.display.tokenThroughput.title": "Mostrar taxa de tokens",
   "settings.display.tokenThroughput.description":
-    "Exibe a taxa de geração de texto (tokens/s) na última mensagem do assistente e no cabeçalho da tarefa. Oculto por padrão para manter o chat organizado.",
+    "Exibir a taxa de geração de texto (tokens/sec) na mensagem mais recente do assistente e no cabeçalho da tarefa. Exibida por padrão; desative esta configuração para ocultá-la quando necessário.",
   "settings.display.autoApprovalReason.title": "Mostrar motivo da aprovação automática",
   "settings.display.autoApprovalReason.description":
     "Mostra uma linha nas chamadas de ferramentas explicando por que foram aprovadas automaticamente (regra correspondente, padrão do agente, modo YOLO, etc.).",

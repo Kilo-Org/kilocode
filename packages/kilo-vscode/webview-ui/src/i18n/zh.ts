@@ -1055,7 +1055,7 @@ export const dict = {
 
   "settings.display.tokenThroughput.title": "显示令牌吞吐量",
   "settings.display.tokenThroughput.description":
-    "在最新的助手消息和任务标题中显示文本生成速率（令牌/秒）。默认隐藏以保持聊天简洁。",
+    "在最新的助手消息和任务标题中显示文本生成速率（tokens/sec）。默认显示；需要时禁用此设置即可隐藏。",
   "settings.display.autoApprovalReason.title": "显示自动批准原因",
   "settings.display.autoApprovalReason.description":
     "在工具调用中显示一行说明其被自动批准的原因（匹配的规则、代理默认值、YOLO 模式等）。",

@@ -1091,7 +1091,7 @@ export const dict = {
 
   "settings.display.tokenThroughput.title": "Tokendoorvoer weergeven",
   "settings.display.tokenThroughput.description":
-    "Toont de tekstgeneratiesnelheid (tokens/sec) bij het laatste assistentbericht en in de taakkop. Standaard verborgen om de chat overzichtelijk te houden.",
+    "Toon de tekstgeneratiesnelheid (tokens/sec) in het meest recente assistentbericht en in de taakkoptekst. Wordt standaard weergegeven; schakel deze instelling uit om de snelheid indien nodig te verbergen.",
   "settings.display.autoApprovalReason.title": "Reden voor automatische goedkeuring weergeven",
   "settings.display.autoApprovalReason.description":
     "Toont een regel bij tool-aanroepen die uitlegt waarom ze automatisch zijn goedgekeurd (overeenkomende regel, agentstandaard, YOLO-modus, enz.).",
