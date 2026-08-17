@@ -1011,6 +1011,10 @@ export const dict = {
   "settings.display.codeEdit.description": "選擇程式碼編輯區塊與差異區塊的初始狀態：展開或收合。",
   "settings.display.codeEdit.expanded": "展開",
   "settings.display.codeEdit.collapsed": "收合",
+  "settings.display.mcpTool.title": "MCP 與通用工具區塊",
+  "settings.display.mcpTool.description": "選擇 MCP 與通用工具區塊的初始狀態：展開或收合。",
+  "settings.display.mcpTool.expanded": "展開",
+  "settings.display.mcpTool.collapsed": "收合",
 
   "settings.display.tokenThroughput.title": "顯示權杖吞吐量",
   "settings.display.tokenThroughput.description":

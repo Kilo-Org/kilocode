@@ -1123,6 +1123,11 @@ export const dict = {
     "Escolha se os blocos que exibem edições de código e diferenças começam expandidos ou recolhidos.",
   "settings.display.codeEdit.expanded": "Expandidos",
   "settings.display.codeEdit.collapsed": "Recolhidos",
+  "settings.display.mcpTool.title": "Blocos de ferramentas MCP e genéricas",
+  "settings.display.mcpTool.description":
+    "Escolha se os blocos de ferramentas MCP e genéricas começam expandidos ou recolhidos.",
+  "settings.display.mcpTool.expanded": "Expandidos",
+  "settings.display.mcpTool.collapsed": "Recolhidos",
 
   "settings.display.tokenThroughput.title": "Mostrar taxa de tokens",
   "settings.display.tokenThroughput.description":
