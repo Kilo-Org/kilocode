@@ -2,6 +2,7 @@ package ai.kilocode.client.session.ui.header
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.DiffStatBadge
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
@@ -65,7 +66,7 @@ internal class BranchChangesBadge(
 
     fun applyStyle(style: SessionEditorStyle) {
         count.font = style.smallFont
-        count.foreground = UiStyle.Colors.weak()
+        count.foreground = SessionUiStyle.Text.Secondary.foreground()
     }
 
     override fun getPreferredSize(): Dimension {

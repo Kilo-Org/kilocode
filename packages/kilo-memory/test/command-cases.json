@@ -20,6 +20,12 @@
     "result": "show"
   },
   {
+    "name": "show preserves trailing text",
+    "input": "/memory show draft notes",
+    "result": "show",
+    "rest": "draft notes"
+  },
+  {
     "name": "status operation",
     "input": "/memory status",
     "result": "operation",
@@ -60,6 +66,27 @@
     "input": "/memory rebuild",
     "result": "operation",
     "operation": "rebuild"
+  },
+  {
+    "name": "rebuild keeps trailing text",
+    "input": "/memory rebuild hello",
+    "result": "operation",
+    "operation": "rebuild",
+    "rest": "hello"
+  },
+  {
+    "name": "enable keeps trailing text",
+    "input": "/memory on hello",
+    "result": "operation",
+    "operation": "enable",
+    "rest": "hello"
+  },
+  {
+    "name": "project scope rebuild keeps trailing text",
+    "input": "/memory project rebuild hello",
+    "result": "operation",
+    "operation": "rebuild",
+    "rest": "hello"
   },
   {
     "name": "purge requires confirmation",

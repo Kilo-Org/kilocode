@@ -373,6 +373,86 @@ describe("share ingest queue", () => {
     expect((statuses[0]!.data as { status: string }).status).toBe("idle")
   })
 
+  test("session_pr_link uses stable key and coalesces", async () => {
+    const sent: unknown[] = []
+    const sched = scheduler(() => clock.now)
+
+    const q = IngestQueue.create({
+      now: () => clock.now,
+      setTimeout: sched.setTimeout,
+      clearTimeout: sched.clearTimeout,
+      log: { error: () => {} },
+      getShare: async () => ({ ingestPath: "/ingest" }),
+      getClient: async () => ({
+        url: "https://ingest.test",
+        fetch: async (_input, init) => {
+          sent.push(JSON.parse((init?.body as string) ?? "{}"))
+          return new Response("{}", { status: 200 })
+        },
+      }),
+    })
+
+    await q.sync("s-pr", [
+      { type: "session_pr_link", data: { platform: "github", prUrl: "https://github.com/o/r/pull/1", prNumber: 1 } },
+    ])
+    clock.now = 100
+    await q.sync("s-pr", [
+      {
+        type: "session_pr_link",
+        data: { platform: "gitlab", prUrl: "https://gitlab.com/o/r/-/merge_requests/2", prNumber: 2 },
+      },
+    ])
+
+    clock.now = 1000
+    sched.run()
+    await Bun.sleep(0)
+    expect(sent.length).toBe(1)
+
+    const payload = sent[0] as { data: { type: string; data: unknown }[] }
+    const links = payload.data.filter((d) => d.type === "session_pr_link")
+    expect(links.length).toBe(1)
+    expect(links[0]!.data).toEqual({
+      platform: "gitlab",
+      prUrl: "https://gitlab.com/o/r/-/merge_requests/2",
+      prNumber: 2,
+    })
+  })
+
+  test("session_pr_link clear coalesces over a prior set", async () => {
+    const sent: unknown[] = []
+    const sched = scheduler(() => clock.now)
+
+    const q = IngestQueue.create({
+      now: () => clock.now,
+      setTimeout: sched.setTimeout,
+      clearTimeout: sched.clearTimeout,
+      log: { error: () => {} },
+      getShare: async () => ({ ingestPath: "/ingest" }),
+      getClient: async () => ({
+        url: "https://ingest.test",
+        fetch: async (_input, init) => {
+          sent.push(JSON.parse((init?.body as string) ?? "{}"))
+          return new Response("{}", { status: 200 })
+        },
+      }),
+    })
+
+    await q.sync("s-pr", [
+      { type: "session_pr_link", data: { platform: "github", prUrl: "https://github.com/o/r/pull/1", prNumber: 1 } },
+    ])
+    clock.now = 100
+    await q.sync("s-pr", [{ type: "session_pr_link", data: { platform: null, prUrl: null, prNumber: null } }])
+
+    clock.now = 1000
+    sched.run()
+    await Bun.sleep(0)
+
+    const payload = sent[0] as { data: { type: string; data: unknown }[] }
+    const links = payload.data.filter((d) => d.type === "session_pr_link")
+    expect(links.length).toBe(1)
+    expect(links[0]!.data).toEqual({ platform: null, prUrl: null, prNumber: null })
+  })
+
   test("flush sends request with ?v=2 query parameter", async () => {
     const urls: string[] = []
     const sched = scheduler(() => clock.now)

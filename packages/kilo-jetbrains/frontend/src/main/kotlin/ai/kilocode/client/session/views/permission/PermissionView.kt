@@ -12,6 +12,7 @@ import ai.kilocode.client.session.views.base.BaseQuestionView
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.iconButton
@@ -171,8 +172,8 @@ class PermissionView(
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
         card.applyStyle(style)
-        desc.font = style.hintFont
-        desc.foreground = UiStyle.Colors.weak()
+        desc.font = SessionUiStyle.Text.Secondary.font(style)
+        desc.foreground = SessionUiStyle.Text.Secondary.foreground()
         rules.applyStyle(style)
         md?.let { applyCodeStyle(it) }
         for (dv in diffViews) {
@@ -276,7 +277,7 @@ class PermissionView(
         view.applyStyle(style)
         view.font = style.transcriptFont
         view.foreground = style.editorForeground
-        view.background = style.editorBackground
+        view.background = SessionUiStyle.Colors.codeBlockBackground()
         view.preBg = MdCommon.defaults(style).preBg
         view.codeFont = style.editorFamily
         view.component.border = JBUI.Borders.empty()
@@ -353,8 +354,8 @@ class PermissionView(
             caret.isSelectionVisible = false
             lineWrap = true
             wrapStyleWord = true
-            foreground = UiStyle.Colors.weak()
-            font = style.hintFont
+            foreground = SessionUiStyle.Text.Secondary.foreground()
+            font = SessionUiStyle.Text.Secondary.font(style)
             border = JBUI.Borders.empty()
             isVisible = false
         }
@@ -705,8 +706,8 @@ internal class PermissionRulesView(
 
         @RequiresEdt
         fun applyStyle(style: SessionEditorStyle) {
-            hint.font = style.hintFont
-            hint.foreground = UiStyle.Colors.weak()
+            hint.font = SessionUiStyle.Text.Secondary.font(style)
+            hint.foreground = SessionUiStyle.Text.Secondary.foreground()
             field.applyStyle(style)
         }
 
@@ -771,11 +772,11 @@ internal class PermissionRulesView(
             ed.setBorder(JBUI.Borders.empty())
             ed.scrollPane.border = JBUI.Borders.empty()
             ed.scrollPane.viewportBorder = JBUI.Borders.empty()
-            ed.backgroundColor = style.editorBackground
-            ed.scrollPane.background = style.editorBackground
+            ed.backgroundColor = SessionUiStyle.Colors.codeBlockBackground()
+            ed.scrollPane.background = SessionUiStyle.Colors.codeBlockBackground()
             ed.scrollPane.isOpaque = true
             ed.scrollPane.viewport.isOpaque = true
-            ed.scrollPane.viewport.background = style.editorBackground
+            ed.scrollPane.viewport.background = SessionUiStyle.Colors.codeBlockBackground()
             ed.settings.isUseSoftWraps = false
             ed.settings.isAdditionalPageAtBottom = false
             ed.scrollPane.horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
@@ -839,7 +840,7 @@ internal class PermissionRulesView(
             val g2 = g.create() as Graphics2D
             try {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-                val base = UiStyle.Colors.bg()
+                val base = SessionUiStyle.Colors.sessionBackground()
                 g2.color = when {
                     active -> UiStyle.Colors.blend(base, if (approve) UiStyle.Colors.addedForeground() else UiStyle.Colors.removedForeground(), 0.15f)
                     else -> UiStyle.Colors.actionHoverBackground()

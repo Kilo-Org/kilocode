@@ -49,6 +49,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/ProjectList.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectActions.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SidebarBody.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/Skeleton.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/TabBar.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectBranchDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/DefaultBaseBranchDialog.tsx"),

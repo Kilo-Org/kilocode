@@ -25,6 +25,15 @@ export function sameParts(local: Part[] = [], snapshot: Part[] = []): boolean {
   return true
 }
 
+export function mergeOptimisticPart(current: Part[], ids: ReadonlySet<string>, part: Part) {
+  const index = current.findIndex((item) => ids.has(item.id) && item.type === part.type)
+  if (index < 0) return { parts: [...current, part] }
+  const old = current[index]!
+  const next = current.slice()
+  next[index] = part
+  return { parts: next, replaced: old.id }
+}
+
 /**
  * Reconcile snapshots may be older than in-flight streaming deltas. Preserve
  * only appended streamed tail parts and open prefix extensions while still

@@ -1,6 +1,7 @@
 /** @jsxImportSource solid-js */
 
 import {
+  batch,
   For,
   Show,
   createSignal,
@@ -1990,14 +1991,16 @@ const AgentManagerContent: Component = () => {
   }
 
   const selectSessionTab = (id: string, pending: boolean) => {
-    setReviewActive(false)
-    if (pending) {
-      setActivePendingId(id)
-      session.clearCurrentSession()
-    } else {
-      setActivePendingId(undefined)
-      session.selectSession(id)
-    }
+    batch(() => {
+      setReviewActive(false)
+      if (pending) {
+        setActivePendingId(id)
+        session.clearCurrentSession()
+      } else {
+        setActivePendingId(undefined)
+        session.selectSession(id)
+      }
+    })
   }
   const termHandlers = createTerminalHandlers({
     state: terms,
@@ -2512,75 +2515,73 @@ const AgentManagerContent: Component = () => {
                     </Show>
                   </div>
                 </Show>
-                <Show when={!contextEmpty()}>
-                  <div class="am-chat-wrapper">
-                    <ChatView
-                      onSelectSession={(id) => {
-                        if (addSessionToCurrentWorktree(id)) return
-                        if (localSessionIDs().includes(id)) {
+                <div class="am-chat-wrapper" classList={{ "am-chat-wrapper-hidden": contextEmpty() }}>
+                  <ChatView
+                    onSelectSession={(id) => {
+                      if (addSessionToCurrentWorktree(id)) return
+                      if (localSessionIDs().includes(id)) {
+                        session.selectSession(id)
+                        if (selection() === null) setSelection(LOCAL)
+                        requestChatFocus()
+                        return
+                      }
+                      // Navigate to owning worktree instead of forcing into local mode
+                      if (worktreeSessionIds().has(id)) {
+                        const ms = managedSessions().find((s) => s.id === id)
+                        if (ms?.worktreeId) {
+                          selectWorktree(ms.worktreeId)
                           session.selectSession(id)
-                          if (selection() === null) setSelection(LOCAL)
+                          setReviewActive(false)
                           requestChatFocus()
                           return
                         }
-                        // Navigate to owning worktree instead of forcing into local mode
-                        if (worktreeSessionIds().has(id)) {
-                          const ms = managedSessions().find((s) => s.id === id)
-                          if (ms?.worktreeId) {
-                            selectWorktree(ms.worktreeId)
-                            session.selectSession(id)
-                            setReviewActive(false)
-                            requestChatFocus()
-                            return
-                          }
-                        }
-                        openLocally(id)
-                      }}
-                      onShowHistory={() => setHistory(true)}
-                      onForkMessage={readOnly() ? undefined : handleForkSession}
-                      onForkSession={readOnly() ? undefined : handleForkSession}
-                      readonly={readOnly()}
-                      continueInWorktree={selection() === LOCAL}
-                      promptBoxId={`agent-manager:${selection() ?? "unassigned"}`}
-                      deferFocusToQuestion={hasQuestionOption}
-                      pendingSessionID={selection() === LOCAL ? activePendingId() : undefined}
-                      focusOnDraftChange={focusOnDraftChange}
-                      onFocusChange={rememberPromptFocus}
-                    />
-                    <Show when={readOnly()}>
-                      <div class="am-readonly-banner">
-                        <Icon name="branch" size="small" />
-                        <span class="am-readonly-text">{t("agentManager.session.readonly")}</span>
-                        <Button
-                          variant="secondary"
-                          size="small"
-                          onClick={() => {
-                            if (!loaded()) return
-                            const sid = session.currentSessionID()
-                            if (!sid) return
-                            metrics.track("open_session_locally", "readonly_banner")
-                            openLocally(sid)
-                          }}
-                        >
-                          {t("agentManager.session.openLocally")}
-                        </Button>
-                        <Button
-                          variant="primary"
-                          size="small"
-                          onClick={() => {
-                            if (!loaded()) return
-                            const sid = session.currentSessionID()
-                            if (!sid) return
-                            metrics.track("promote_session", "readonly_banner")
-                            vscode.postMessage({ type: "agentManager.promoteSession", sessionId: sid })
-                          }}
-                        >
-                          {t("agentManager.session.openInWorktree")}
-                        </Button>
-                      </div>
-                    </Show>
-                  </div>
-                </Show>
+                      }
+                      openLocally(id)
+                    }}
+                    onShowHistory={() => setHistory(true)}
+                    onForkMessage={readOnly() ? undefined : handleForkSession}
+                    onForkSession={readOnly() ? undefined : handleForkSession}
+                    readonly={readOnly()}
+                    continueInWorktree={selection() === LOCAL}
+                    promptBoxId={`agent-manager:${selection() ?? "unassigned"}`}
+                    deferFocusToQuestion={hasQuestionOption}
+                    pendingSessionID={selection() === LOCAL ? activePendingId() : undefined}
+                    focusOnDraftChange={focusOnDraftChange}
+                    onFocusChange={rememberPromptFocus}
+                  />
+                  <Show when={readOnly()}>
+                    <div class="am-readonly-banner">
+                      <Icon name="branch" size="small" />
+                      <span class="am-readonly-text">{t("agentManager.session.readonly")}</span>
+                      <Button
+                        variant="secondary"
+                        size="small"
+                        onClick={() => {
+                          if (!loaded()) return
+                          const sid = session.currentSessionID()
+                          if (!sid) return
+                          metrics.track("open_session_locally", "readonly_banner")
+                          openLocally(sid)
+                        }}
+                      >
+                        {t("agentManager.session.openLocally")}
+                      </Button>
+                      <Button
+                        variant="primary"
+                        size="small"
+                        onClick={() => {
+                          if (!loaded()) return
+                          const sid = session.currentSessionID()
+                          if (!sid) return
+                          metrics.track("promote_session", "readonly_banner")
+                          vscode.postMessage({ type: "agentManager.promoteSession", sessionId: sid })
+                        }}
+                      >
+                        {t("agentManager.session.openInWorktree")}
+                      </Button>
+                    </div>
+                  </Show>
+                </div>
               </div>
               {/* One inspector host for all right-side modes. It stays
                   mounted while a side terminal is alive — hidden via

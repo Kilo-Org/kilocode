@@ -35,7 +35,7 @@ export const TaskUsage: Component<TaskUsageProps> = (props) => {
     if (value > 0 && value < 0.000001) return "<$0.000001"
     return money().format(value)
   }
-  const Summary = () => (
+  const renderSummary = () => (
     <>
       <span class="task-header-tokens-label">Tokens</span>
       <Show when={props.tokens.input > 0}>
@@ -60,19 +60,10 @@ export const TaskUsage: Component<TaskUsageProps> = (props) => {
   )
 
   return (
-    <Show
-      when={props.usage?.models.length}
-      fallback={
-        <div class="task-header-tokens">
-          <Summary />
-        </div>
-      }
-    >
+    <Show when={props.usage?.models.length} fallback={<div class="task-header-tokens">{renderSummary()}</div>}>
       <Collapsible variant="ghost" class="task-header-usage tool-collapsible" defaultOpen={props.defaultOpen}>
         <Collapsible.Trigger class="task-header-usage-trigger">
-          <span class="task-header-tokens">
-            <Summary />
-          </span>
+          <span class="task-header-tokens">{renderSummary()}</span>
           <Collapsible.Arrow />
         </Collapsible.Trigger>
         <Collapsible.Content>

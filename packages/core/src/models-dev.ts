@@ -1,5 +1,5 @@
 import path from "path"
-import { Context, Duration, Effect, Layer, Option, Schedule, Schema } from "effect"
+import { Context, Duration, Effect, Layer, Logger, Option, Schedule, Schema } from "effect" // kilocode_change
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/unstable/http"
 import { ModelsDev } from "@opencode-ai/schema/models-dev"
 import { Global } from "./global"
@@ -12,6 +12,7 @@ import * as ModelsRefresh from "./kilocode/models-refresh" // kilocode_change
 import { EventV2 } from "./event"
 import { makeGlobalNode } from "./effect/app-node"
 import { httpClient } from "./effect/app-node-platform"
+import { Observability } from "./observability" // kilocode_change
 
 export const CatalogModelStatus = Schema.Literals(["alpha", "beta", "deprecated"])
 export type CatalogModelStatus = typeof CatalogModelStatus.Type
@@ -156,6 +157,7 @@ const layer = Layer.effect(
   Effect.gen(function* () {
     const fs = yield* FSUtil.Service
     const events = yield* EventV2.Service
+    const loggers = yield* Effect.service(Logger.CurrentLoggers) // kilocode_change
     const http = HttpClient.filterStatusOk(
       (yield* HttpClient.HttpClient).pipe(
         HttpClient.retryTransient({
@@ -259,6 +261,7 @@ const layer = Layer.effect(
       ).pipe(
         Effect.tapCause((cause) => Effect.logError("Failed to fetch models.dev", { cause: cause })),
         Effect.ignore,
+        Effect.provideService(Logger.CurrentLoggers, loggers), // kilocode_change
       )
     })
 
@@ -271,6 +274,12 @@ const layer = Layer.effect(
   }),
 )
 
-export const node = makeGlobalNode({ service: Service, layer: layer, deps: [FSUtil.node, EventV2.node, httpClient] })
+// kilocode_change start - capture file/OTLP loggers before the refresh fork
+export const node = makeGlobalNode({
+  service: Service,
+  layer: layer,
+  deps: [FSUtil.node, EventV2.node, httpClient, Observability.node],
+})
+// kilocode_change end
 
 export * as ModelsDev from "./models-dev"

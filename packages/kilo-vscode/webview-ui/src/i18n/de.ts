@@ -2,6 +2,8 @@ import { dict as en } from "./en"
 
 type Keys = keyof typeof en
 
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Anaconda Desktop verbinden",
   "provider.anaconda.title.manage": "Anaconda Desktop verwalten",
@@ -59,6 +61,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Anbieter verbinden",
 
@@ -1133,10 +1136,15 @@ export const dict = {
     "Wählen Sie, ob Blöcke mit Codebearbeitungen und Unterschieden anfangs aus- oder eingeklappt sind.",
   "settings.display.codeEdit.expanded": "Ausgeklappt",
   "settings.display.codeEdit.collapsed": "Eingeklappt",
+  "settings.display.mcpTool.title": "Blöcke für MCP- und generische Werkzeuge",
+  "settings.display.mcpTool.description":
+    "Wählen Sie, ob Blöcke für MCP- und generische Werkzeuge anfangs aus- oder eingeklappt sind.",
+  "settings.display.mcpTool.expanded": "Ausgeklappt",
+  "settings.display.mcpTool.collapsed": "Eingeklappt",
 
   "settings.display.tokenThroughput.title": "Token-Durchsatz anzeigen",
   "settings.display.tokenThroughput.description":
-    "Zeigt die Textgenerierungsrate (Tokens/Sek.) in der letzten Assistentennachricht und im Aufgabenkopf an. Standardmäßig ausgeblendet, um den Chat übersichtlich zu halten.",
+    "Die Textgenerierungsrate (tokens/sec) in der neuesten Assistentennachricht und in der Aufgabenüberschrift anzeigen. Standardmäßig angezeigt; deaktivieren Sie diese Einstellung, um sie bei Bedarf auszublenden.",
   "settings.display.autoApprovalReason.title": "Grund für automatische Genehmigung anzeigen",
   "settings.display.autoApprovalReason.description":
     "Zeigt bei Tool-Aufrufen eine Zeile an, die erklärt, warum sie automatisch genehmigt wurden (passende Regel, Agent-Standard, YOLO-Modus usw.).",
