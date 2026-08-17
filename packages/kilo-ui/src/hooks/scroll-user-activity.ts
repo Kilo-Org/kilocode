@@ -26,8 +26,8 @@ export const createUserActivity = (options: UserActivityOptions) => {
   const handleWheel = (event: WheelEvent) => {
     if (!isPotentialScrollInput(event)) return
     if (!scroll || scroll.scrollHeight - scroll.clientHeight <= 1) return
-    mark(event)
     if (event.deltaY >= 0 || scroll.scrollTop <= 0) return
+    mark(event)
     options.onWheelUp()
   }
 
