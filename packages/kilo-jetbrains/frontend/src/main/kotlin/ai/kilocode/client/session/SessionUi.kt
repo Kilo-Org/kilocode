@@ -422,11 +422,11 @@ class SessionUi(
         root.addOverlay(connection) { pane, child ->
             val size = child.preferredSize
             val point = SwingUtilities.convertPoint(prompt.parent ?: root.content, prompt.x, prompt.y, pane)
-            val overlap = SessionUiStyle.View.Outline.width()
+            val gap = SessionUiStyle.View.contentGap()
             java.awt.Rectangle(
-                point.x,
-                point.y - size.height - overlap,
-                prompt.width,
+                point.x + gap,
+                point.y - size.height - gap,
+                (prompt.width - gap * 2).coerceAtLeast(0),
                 size.height,
             )
         }

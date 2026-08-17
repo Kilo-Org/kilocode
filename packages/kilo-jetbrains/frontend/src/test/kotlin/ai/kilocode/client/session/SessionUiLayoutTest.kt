@@ -238,7 +238,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertEquals("rolled back prompt", prompt.text())
     }
 
-    fun `test connection panel overlays above full prompt width`() {
+    fun `test connection panel overlays above prompt with transparent inset`() {
         val root = find<SessionRootPanel>(ui)
         val connection = find<ConnectionPanel>(ui)
         val prompt = find<PromptPanel>(ui)
@@ -248,9 +248,9 @@ class SessionUiLayoutTest : SessionUiTestBase() {
 
         assertTrue(connection.isVisible)
         assertSame(root.overlay, connection.parent)
-        assertEquals(prompt.x, connection.x)
-        assertEquals(prompt.width, connection.width)
-        assertEquals(prompt.y - SessionUiStyle.View.Outline.width(), connection.y + connection.height)
+        assertEquals(prompt.x + SessionUiStyle.View.contentGap(), connection.x)
+        assertEquals(prompt.width - SessionUiStyle.View.contentGap() * 2, connection.width)
+        assertEquals(prompt.y - SessionUiStyle.View.contentGap(), connection.y + connection.height)
     }
 
     fun `test expanded connection panel remains anchored above prompt`() {
@@ -266,7 +266,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         layout()
 
         assertTrue(connection.detailsVisible())
-        assertEquals(prompt.y - SessionUiStyle.View.Outline.width(), connection.y + connection.height)
+        assertEquals(prompt.y - SessionUiStyle.View.contentGap(), connection.y + connection.height)
     }
 
     fun `test connection panel is unaffected by active question view`() {
@@ -284,7 +284,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertTrue(find<QuestionView>(ui).isVisible)
         assertSame(find<SessionMessageListPanel>(ui), find<QuestionView>(ui).parent)
         assertEquals(top, connection.y)
-        assertEquals(prompt.y - SessionUiStyle.View.Outline.width(), connection.y + connection.height)
+        assertEquals(prompt.y - SessionUiStyle.View.contentGap(), connection.y + connection.height)
         assertSame(find<SessionMessageListPanel>(ui), scrollView())
     }
 
@@ -303,7 +303,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertTrue(find<PermissionView>(ui).isVisible)
         assertSame(find<SessionMessageListPanel>(ui), find<PermissionView>(ui).parent)
         assertEquals(top, connection.y)
-        assertEquals(prompt.y - SessionUiStyle.View.Outline.width(), connection.y + connection.height)
+        assertEquals(prompt.y - SessionUiStyle.View.contentGap(), connection.y + connection.height)
         assertSame(find<SessionMessageListPanel>(ui), scrollView())
     }
 

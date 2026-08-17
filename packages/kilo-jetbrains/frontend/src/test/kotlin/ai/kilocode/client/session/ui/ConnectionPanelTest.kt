@@ -159,7 +159,7 @@ class ConnectionPanelTest : SessionControllerTestBase() {
     }
 
     fun `test panel uses prompt background without separator`() {
-        assertTrue(panel.isOpaque)
+        assertFalse(panel.isOpaque)
         assertEquals(SessionEditorStyle.current().editorScheme.defaultBackground.rgb, panel.background.rgb)
         assertFalse(panel.hasSeparator())
     }
