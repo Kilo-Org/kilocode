@@ -78,10 +78,10 @@ export const SideTerminalPanel: Component<Props> = (props) => {
             <SortableTerminalTab
               id={term.id}
               label={props.state.title(term.id) ?? term.title}
-               tooltip={props.state.title(term.id) ?? term.title}
-               status={props.state.scriptStatus(term.id)}
-               showKeybind={false}
-               keybind={active() === term.id ? "" : props.nextKeybind}
+              tooltip={props.state.title(term.id) ?? term.title}
+              status={props.state.scriptStatus(term.id)}
+              showKeybind={false}
+              keybind={active() === term.id ? "" : props.nextKeybind}
               closeKeybind={props.closeKeybind}
               active={active() === term.id}
               focused={props.state.sideFocusedId() === term.id}

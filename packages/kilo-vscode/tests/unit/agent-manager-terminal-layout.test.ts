@@ -36,13 +36,16 @@ test("uses one persisted width for every inspector panel", () => {
 })
 
 test("hides keyboard hints only in inspector tabs", () => {
-  const side = readFileSync(resolve(import.meta.dir, "../../webview-ui/agent-manager/terminal/SideTerminalPanel.tsx"), "utf8")
+  const side = readFileSync(
+    resolve(import.meta.dir, "../../webview-ui/agent-manager/terminal/SideTerminalPanel.tsx"),
+    "utf8",
+  )
 
   expect(subagent).toContain("showKeybind={false}")
   expect(side).toContain("showKeybind={false}")
-  expect(readFileSync(resolve(import.meta.dir, "../../webview-ui/agent-manager/terminal/render.tsx"), "utf8")).not.toContain(
-    "showKeybind={false}",
-  )
+  expect(
+    readFileSync(resolve(import.meta.dir, "../../webview-ui/agent-manager/terminal/render.tsx"), "utf8"),
+  ).not.toContain("showKeybind={false}")
 })
 
 test("limits inspector layout updates during resize", () => {

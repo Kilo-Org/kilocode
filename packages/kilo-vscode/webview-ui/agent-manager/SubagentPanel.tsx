@@ -88,10 +88,10 @@ export const SubagentPanel: Component<Props> = (props) => {
               <SortableClosableTab
                 id={id}
                 label={label}
-                 tooltip={label}
-                 icon="task"
-                 showKeybind={false}
-                 keybind={props.active() === id ? "" : props.nextKeybind}
+                tooltip={label}
+                icon="task"
+                showKeybind={false}
+                keybind={props.active() === id ? "" : props.nextKeybind}
                 closeKeybind={props.closeKeybind}
                 active={props.active() === id}
                 role="tab"
