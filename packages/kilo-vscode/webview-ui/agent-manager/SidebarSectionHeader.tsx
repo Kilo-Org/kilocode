@@ -10,6 +10,7 @@ interface Props {
   class?: string
   title?: string
   ariaLabel?: string
+  disabled?: boolean
 }
 
 /** Shared layout for sidebar headings with a fixed leading control column. */
@@ -19,7 +20,7 @@ export const SidebarSectionHeader: Component<Props> = (props) => {
       class={`am-sidebar-header${props.onToggle ? " am-sidebar-header-toggleable" : ""}${props.class ? ` ${props.class}` : ""}`}
       title={props.title}
       onClick={(event) => {
-        if (event.button === 0) props.onToggle?.()
+        if (event.button === 0 && !props.disabled) props.onToggle?.()
       }}
     >
       <div class="am-sidebar-header-main">
@@ -29,9 +30,10 @@ export const SidebarSectionHeader: Component<Props> = (props) => {
             type="button"
             aria-expanded={props.expanded}
             aria-label={props.ariaLabel}
+            disabled={props.disabled}
             onClick={(event) => {
               event.stopPropagation()
-              props.onToggle?.()
+              if (!props.disabled) props.onToggle?.()
             }}
           >
             <span class="am-sidebar-header-chevron" aria-hidden="true">

@@ -1090,6 +1090,10 @@ export const dict = {
   "settings.display.codeEdit.description": "코드 편집 블록과 차이점 블록을 처음부터 펼칠지 접을지 선택합니다.",
   "settings.display.codeEdit.expanded": "펼침",
   "settings.display.codeEdit.collapsed": "접힘",
+  "settings.display.mcpTool.title": "MCP 및 범용 도구 블록",
+  "settings.display.mcpTool.description": "MCP 및 범용 도구 블록을 처음부터 펼칠지 접을지 선택합니다.",
+  "settings.display.mcpTool.expanded": "펼침",
+  "settings.display.mcpTool.collapsed": "접힘",
 
   "settings.display.tokenThroughput.title": "토큰 처리량 표시",
   "settings.display.tokenThroughput.description":

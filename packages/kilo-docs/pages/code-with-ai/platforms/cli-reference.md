@@ -785,10 +785,59 @@ Options:
 ## kilo pr
 
 ```
+manage pull requests
+
+Commands:
+  kilo pr checkout <number>  fetch and checkout a GitHub PR branch, then run kilo
+  kilo pr link <url>         link the current worktree to a pull request
+  kilo pr unlink             clear the linked pull request
+  kilo pr status             show the linked pull request
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+```
+
+### kilo pr checkout
+
+```
 fetch and checkout a GitHub PR branch, then run kilo
 
 Positionals:
   number  PR number to checkout  [number]
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+```
+
+### kilo pr link
+
+```
+link the current worktree to a pull request
+
+Positionals:
+  url  PR URL to link  [string]
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+```
+
+### kilo pr unlink
+
+```
+clear the linked pull request
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+```
+
+### kilo pr status
+
+```
+show the linked pull request
 
 Options:
   --help     Show help  [boolean]

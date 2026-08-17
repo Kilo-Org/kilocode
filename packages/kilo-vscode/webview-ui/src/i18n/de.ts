@@ -1136,6 +1136,11 @@ export const dict = {
     "Wählen Sie, ob Blöcke mit Codebearbeitungen und Unterschieden anfangs aus- oder eingeklappt sind.",
   "settings.display.codeEdit.expanded": "Ausgeklappt",
   "settings.display.codeEdit.collapsed": "Eingeklappt",
+  "settings.display.mcpTool.title": "Blöcke für MCP- und generische Werkzeuge",
+  "settings.display.mcpTool.description":
+    "Wählen Sie, ob Blöcke für MCP- und generische Werkzeuge anfangs aus- oder eingeklappt sind.",
+  "settings.display.mcpTool.expanded": "Ausgeklappt",
+  "settings.display.mcpTool.collapsed": "Eingeklappt",
 
   "settings.display.tokenThroughput.title": "Token-Durchsatz anzeigen",
   "settings.display.tokenThroughput.description":

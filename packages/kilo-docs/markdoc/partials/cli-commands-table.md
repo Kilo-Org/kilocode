@@ -20,7 +20,7 @@
 | `kilo export [sessionID]` | export session data as JSON |
 | `kilo import <file>` | import session data from JSON file or URL |
 | `kilo github` | manage GitHub agent |
-| `kilo pr <number>` | fetch and checkout a GitHub PR branch, then run kilo |
+| `kilo pr` | manage pull requests |
 | `kilo session` | manage sessions |
 | `kilo remote` | enable remote connection for real-time session relay |
 | `kilo daemon` | manage the local kilo daemon |

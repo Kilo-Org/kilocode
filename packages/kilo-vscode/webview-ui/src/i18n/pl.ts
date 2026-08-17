@@ -1115,6 +1115,11 @@ export const dict = {
     "Wybierz, czy bloki edycji kodu i podglądy różnic mają być początkowo rozwinięte czy zwinięte.",
   "settings.display.codeEdit.expanded": "Rozwinięte",
   "settings.display.codeEdit.collapsed": "Zwinięte",
+  "settings.display.mcpTool.title": "Bloki narzędzi MCP i ogólnych",
+  "settings.display.mcpTool.description":
+    "Wybierz, czy bloki narzędzi MCP i ogólnych mają być początkowo rozwinięte czy zwinięte.",
+  "settings.display.mcpTool.expanded": "Rozwinięte",
+  "settings.display.mcpTool.collapsed": "Zwinięte",
 
   "settings.display.tokenThroughput.title": "Pokaż przepustowość tokenów",
   "settings.display.tokenThroughput.description":

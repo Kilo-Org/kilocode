@@ -1143,6 +1143,11 @@ export const dict = {
     "Choisissez si les blocs de modification du code et de différences sont initialement développés ou réduits.",
   "settings.display.codeEdit.expanded": "Développés",
   "settings.display.codeEdit.collapsed": "Réduits",
+  "settings.display.mcpTool.title": "Blocs d'outils MCP et génériques",
+  "settings.display.mcpTool.description":
+    "Choisissez si les blocs d'outils MCP et génériques sont initialement développés ou réduits.",
+  "settings.display.mcpTool.expanded": "Développés",
+  "settings.display.mcpTool.collapsed": "Réduits",
 
   "settings.display.tokenThroughput.title": "Afficher le débit de tokens",
   "settings.display.tokenThroughput.description":
