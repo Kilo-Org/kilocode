@@ -428,6 +428,7 @@ class SessionUi(
             onMentions = ::mentionParts,
             completion = completion,
             cs = cs,
+            hostedInEditorTab = manager?.hostedInEditorTab == true,
         )
         connection = ConnectionPanel(this, controller)
         root.addOverlay(connection) { pane, child ->

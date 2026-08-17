@@ -26,6 +26,8 @@ interface SessionManager {
 
     val showsBranchBadgeInHeader: Boolean get() = true
 
+    val hostedInEditorTab: Boolean get() = false
+
     fun openSession(session: SessionDto) {
         openSession(SessionRef.Local(session))
     }

@@ -5,9 +5,11 @@ import ai.kilocode.client.session.ui.ModifiedFilesView
 import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.ui.selection.SessionCopyTarget
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.tool.ShellToolView
 import ai.kilocode.client.session.views.tool.ToolView
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageErrorDto
@@ -645,6 +647,24 @@ class SessionScrollTest : SessionUiTestBase() {
         setBottom(bar)
         drainScroll()
         assertFalse(button.isVisible)
+    }
+
+    fun `test scroll button aligns to centered readable lane`() {
+        ui.setSize(1600, 600)
+        showMessages()
+        fillTranscript(24)
+        val button = jumpButton()
+        val bar = scrollBar()
+        setValue(bar, bottom(bar) / 2)
+        drainScroll()
+        val host = scrollComponent().parent as JComponent
+        val view = find<SessionMessageListPanel>(ui)
+        val lane = minOf(host.width, SessionUiStyle.SessionLayout.readableWidth(view, SessionEditorStyle.current().transcriptFont))
+        val right = host.x + (host.width + lane) / 2
+
+        assertTrue(button.isVisible)
+        assertEquals(right, button.x + button.width + UiStyle.Gap.pad())
+        assertTrue(right < host.x + host.width)
     }
 
     fun `test scroll button scrolls transcript to bottom`() {

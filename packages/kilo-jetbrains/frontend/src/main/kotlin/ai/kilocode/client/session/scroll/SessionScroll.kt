@@ -5,6 +5,7 @@ import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.ui.components.JBLabel
@@ -84,8 +85,10 @@ internal class SessionScroll(
         root.addOverlay(jump) { _, child ->
             val size = child.preferredSize
             val gap = UiStyle.Gap.pad()
+            val lane = minOf(host.width, SessionUiStyle.SessionLayout.readableWidth(messages, style.transcriptFont))
+            val right = host.x + (host.width + lane) / 2
             Rectangle(
-                host.x + host.width - size.width - gap,
+                right - size.width - gap,
                 host.y + host.height - size.height - gap,
                 size.width,
                 size.height,

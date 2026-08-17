@@ -230,6 +230,53 @@ class PromptPanelTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test editor tab prompt reserves focus inset and paints session backdrop`() {
+        val panel = PromptPanel(
+            project = project,
+            onSend = { _, _ -> },
+            onAbort = {},
+            onEnhance = { _, _ -> },
+            hostedInEditorTab = true,
+        )
+        realize(panel, 260, 400)
+        panel.setBounds(0, 0, 260, panel.preferredSize.height)
+        panel.doLayout()
+        val ins = panel.insets
+
+        assertEquals(JBUI.scale(SessionUiStyle.View.Prompt.FOCUS_WIDTH), ins.bottom)
+        assertEquals(ins.bottom, ins.left)
+        assertEquals(ins.bottom, ins.right)
+        assertEquals(SessionUiStyle.Colors.sessionBackground().rgb, paint(panel, 0, panel.height / 2).rgb)
+        assertEquals(SessionUiStyle.Colors.sessionBackground().rgb, paint(panel, panel.width - 1, panel.height / 2).rgb)
+        assertEquals(SessionUiStyle.Colors.sessionBackground().rgb, paint(panel, panel.width / 2, panel.height - 1).rgb)
+
+        val editor = (panel.defaultFocusedComponent as EditorTextField).getEditor(false)!!
+        val current = KeyboardFocusManager.getCurrentKeyboardFocusManager()
+        val focus = TestFocusManager()
+        KeyboardFocusManager.setCurrentKeyboardFocusManager(focus)
+        try {
+            focus.focus(editor.contentComponent)
+            editor.contentComponent.focusListeners.forEach {
+                it.focusGained(FocusEvent(editor.contentComponent, FocusEvent.FOCUS_GAINED))
+            }
+
+            assertEquals(
+                JBUI.CurrentTheme.Focus.focusColor().rgb,
+                paint(panel, panel.width / 2, panel.height - 1 - ins.bottom).rgb,
+            )
+            assertEquals(
+                JBUI.CurrentTheme.Focus.focusColor().rgb,
+                paint(panel, ins.left + 1, panel.height / 2).rgb,
+            )
+            assertEquals(
+                JBUI.CurrentTheme.Focus.focusColor().rgb,
+                paint(panel, panel.width - ins.right - 1, panel.height / 2).rgb,
+            )
+        } finally {
+            KeyboardFocusManager.setCurrentKeyboardFocusManager(current)
+        }
+    }
+
     fun `test applyStyle updates prompt input and height`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val style = SessionEditorStyle.create(family = "Courier New", size = 26)
