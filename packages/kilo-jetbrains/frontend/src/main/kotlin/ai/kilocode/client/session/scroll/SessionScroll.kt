@@ -15,9 +15,11 @@ import com.intellij.util.ui.JBUI
 import java.awt.Cursor
 import java.awt.Point
 import java.awt.Rectangle
+import java.awt.event.ActionEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.awt.event.MouseWheelListener
+import javax.swing.AbstractAction
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.JScrollBar
@@ -33,6 +35,9 @@ internal class SessionScroll(
         private const val THRESHOLD = 32
         private const val OPEN_PASSES = 12
         private const val FOLLOW_PASSES = 6
+        private val KEY_SCROLL_ACTIONS = listOf(
+            "scrollUp", "scrollDown", "scrollHome", "scrollEnd", "unitScrollUp", "unitScrollDown",
+        )
     }
 
     private var style = SessionEditorStyle.current()
@@ -80,6 +85,7 @@ internal class SessionScroll(
                 user = true
             }
         })
+        markKeyScrollAsUser()
         component.viewport.addChangeListener { onViewport() }
         component.verticalScrollBar.addAdjustmentListener { onScroll() }
         root.addOverlay(jump) { _, child ->
@@ -461,7 +467,10 @@ internal class SessionScroll(
             updateJump()
             return
         }
-        followTail()
+        // Only re-pin when following. Routing the not-following case through followBottom(false)
+        // would bump seq and abort in-flight multi-pass chains (e.g. the redo scrollMessageBottom
+        // pass) on the first streamed content growth. When not following, just refresh the jump button.
+        if (following()) followTail() else updateJump()
     }
 
     @RequiresEdt
@@ -482,5 +491,22 @@ internal class SessionScroll(
     @RequiresEdt
     private fun syncValue() {
         value = bar.value
+    }
+
+    // Keyboard scrolling (PageUp/PageDown/Home/End/arrows) fires the scroll pane's own scroll
+    // actions through its WHEN_ANCESTOR_OF_FOCUSED_COMPONENT bindings while a transcript child holds
+    // focus. Wrap those actions to flag a user gesture so keyboard scroll-up unfollows like a wheel
+    // or drag, instead of being re-pinned to the bottom by the programmatic follow branch in onScroll.
+    private fun markKeyScrollAsUser() {
+        val map = component.actionMap
+        for (key in KEY_SCROLL_ACTIONS) {
+            val base = map.get(key) ?: continue
+            map.put(key, object : AbstractAction() {
+                override fun actionPerformed(e: ActionEvent) {
+                    user = true
+                    base.actionPerformed(e)
+                }
+            })
+        }
     }
 }

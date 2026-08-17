@@ -701,6 +701,24 @@ class SessionScrollTest : SessionUiTestBase() {
         assertFalse(jumpButton().isVisible)
     }
 
+    fun `test keyboard scroll up while following unfollows`() {
+        showMessages()
+        fillTranscript(24)
+        val bar = scrollBar()
+        drainScroll()
+
+        assertBottom(bar)
+        assertTrue(ui.scroll.following())
+        assertFalse(jumpButton().isVisible)
+
+        keyScroll("scrollUp")
+        drainScroll()
+
+        assertTrue("value=${bar.value} bottom=${bottom(bar)}", bar.value < bottom(bar))
+        assertFalse(ui.scroll.following())
+        assertTrue(jumpButton().isVisible)
+    }
+
     fun `test user scroll while following still shows button`() {
         showMessages()
         fillTranscript(24)
@@ -1357,8 +1375,6 @@ class SessionScrollTest : SessionUiTestBase() {
         assertTrue("expected=$expected bottom=${bottom(bar)}", expected < bottom(bar))
         assertTrue("value=${bar.value} expected=$expected", kotlin.math.abs(bar.value - expected) <= 1)
     }
-
-    // ------ helpers ------
 
     private fun button(text: String): JButton = findAll<JButton>(ui).first { it.text == text }
 
