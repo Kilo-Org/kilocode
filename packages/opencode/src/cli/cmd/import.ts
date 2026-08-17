@@ -26,10 +26,19 @@ export type ShareData =
   | { type: "model"; data: unknown }
 
 // kilocode_change start
-/** Extract share ID from a Kilo share URL like https://app.kilo.ai/s/abc123 */
+/** Extract share token from a Kilo share URL like https://app.kilo.ai/s/<jwt> */
 export function parseShareUrl(url: string): string | null {
-  const match = url.match(/^https?:\/\/app\.kilo\.ai\/s\/([a-zA-Z0-9_-]+)$/)
-  return match ? match[1] : null
+  try {
+    const parsed = new URL(url)
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null
+    if (parsed.hostname !== "app.kilo.ai") return null
+    const match = parsed.pathname.match(/^\/s\/([^/]+)$/)
+    if (!match) return null
+    const token = decodeURIComponent(match[1]).trim()
+    return token || null
+  } catch {
+    return null
+  }
 }
 // kilocode_change end
 

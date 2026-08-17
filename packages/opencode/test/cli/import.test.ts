@@ -51,6 +51,11 @@ test("parses valid Kilo share URLs", () => {
   )
   expect(parseShareUrl("https://app.kilo.ai/s/Jsj3hNIW")).toBe("Jsj3hNIW")
   expect(parseShareUrl("https://app.kilo.ai/s/test_id-123")).toBe("test_id-123")
+  expect(
+    parseShareUrl(
+      "https://app.kilo.ai/s/eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJzZXNfMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMiJ9.signature",
+    ),
+  ).toBe("eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJzZXNfMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMiJ9.signature")
 })
 
 test("rejects invalid URLs", () => {
