@@ -180,7 +180,7 @@ describe("pty HttpApi bridge", () => {
     const created = await app().request(PtyPaths.create, {
       method: "POST",
       headers: { ...headers, "content-type": "application/json" },
-      body: JSON.stringify({ command: "/usr/bin/env", args: ["sh", "-c", "sleep 5"] }),
+      body: JSON.stringify({ command: "/usr/bin/env", args: ["sh", "-c", "sleep 30"] }),
     })
     expect(created.status).toBe(200)
     const info = await created.json()

@@ -11,7 +11,7 @@ import { Slug } from "@opencode-ai/core/util/slug"
 import { errorMessage } from "../util/error"
 import { GlobalBus } from "@/bus/global"
 import { Git } from "@/git"
-import { Effect, Layer, Option, Path, Schema, Scope, Context } from "effect"
+import { Effect, Layer, Option, Path, Schema, Scope, Context } from "effect" // kilocode_change
 import { ChildProcess } from "effect/unstable/process"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { AppProcess } from "@opencode-ai/core/process"
@@ -396,7 +396,15 @@ const layer: Layer.Layer<
       }
 
       const directory = yield* canonical(input.directory)
+      // kilocode_change start - PTY cleanup is best-effort and must not block worktree removal.
       const pty = yield* Effect.serviceOption(Pty.Service)
+      const clear = (target: string) =>
+        Option.isNone(pty)
+          ? Effect.void
+          : pty.value
+              .removeDirectory(target)
+              .pipe(Effect.catch((error) => Effect.logWarning("failed to remove worktree PTYs", { target, error })))
+      // kilocode_change end
 
       // Preserve the loaded path casing for the store cache; `directory` is lowercased on Windows.
       if (directory !== (yield* canonical(ctx.worktree))) yield* store.disposeDirectory(input.directory)
@@ -412,15 +420,16 @@ const layer: Layer.Layer<
       if (!entry?.path) {
         const directoryExists = yield* fs.exists(directory).pipe(Effect.orDie)
         if (directoryExists) {
+          yield* clear(directory)
           yield* stopFsmonitor(directory)
           yield* cleanDirectory(directory)
-          if (Option.isSome(pty)) yield* pty.value.removeDirectory(directory) // kilocode_change
         }
         return true
       }
 
       // Git may return the original casing when a caller supplied a normalized Windows path.
       yield* store.disposeDirectory(entry.path)
+      yield* clear(entry.path)
       const removed = yield* WorktreeCleanup.remove({
         root: ctx.worktree,
         target: entry.path,
@@ -444,7 +453,6 @@ const layer: Layer.Layer<
       }
 
       yield* cleanDirectory(entry.path)
-      if (Option.isSome(pty)) yield* pty.value.removeDirectory(entry.path) // kilocode_change
 
       const branch = entry.branch?.replace(/^refs\/heads\//, "")
       if (branch) {

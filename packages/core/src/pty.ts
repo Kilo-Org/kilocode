@@ -13,6 +13,7 @@ import { Shell } from "./shell"
 import { lazy } from "./util/lazy"
 import { KiloPtySelfCommand } from "./kilocode/pty-self-command" // kilocode_change
 import { KiloPtyTermination } from "./kilocode/pty/termination" // kilocode_change
+import { FSUtil } from "./fs-util" // kilocode_change
 
 const BUFFER_LIMIT = 1024 * 1024 * 2
 // Exited sessions stay observable (status, exit code, retained output) until removed explicitly.
@@ -152,7 +153,8 @@ const layer = Layer.effect(
       if (!session) return yield* new NotFoundError({ ptyID: id })
       // kilocode_change start - the global registry still enforces location isolation.
       const location = Option.getOrUndefined(yield* Effect.serviceOption(Location.Service))
-      if (location && session.directory !== location.directory) return yield* new NotFoundError({ ptyID: id })
+      if (location && session.directory !== FSUtil.resolve(location.directory))
+        return yield* new NotFoundError({ ptyID: id })
       // kilocode_change end
       return session
     })
@@ -179,8 +181,16 @@ const layer = Layer.effect(
 
     // kilocode_change start - explicit worktree deletion is the PTY cleanup boundary.
     const removeDirectory = Effect.fn("Pty.removeDirectory")(function* (directory: string) {
-      const owned = Array.from(sessions.values()).filter((session) => session.directory === directory)
-      yield* Effect.forEach(owned, (session) => removeSession(session.info.id), { concurrency: 4 })
+      const target = FSUtil.resolve(directory)
+      const owned = Array.from(sessions.values()).filter((session) => FSUtil.resolve(session.directory) === target)
+      yield* Effect.forEach(
+        owned,
+        (session) =>
+          removeSession(session.info.id).pipe(
+            Effect.catch((error) => Effect.logWarning("failed to remove PTY for worktree", { directory, error })),
+          ),
+        { concurrency: 4, discard: true },
+      )
     })
     // kilocode_change end
 
@@ -188,7 +198,7 @@ const layer = Layer.effect(
       // kilocode_change start - filter the process-wide registry by request location.
       const location = Option.getOrUndefined(yield* Effect.serviceOption(Location.Service))
       return Array.from(sessions.values())
-        .filter((session) => !location || session.directory === location.directory)
+        .filter((session) => !location || session.directory === FSUtil.resolve(location.directory))
         .map((session) => session.info)
       // kilocode_change end
     })
@@ -214,7 +224,7 @@ const layer = Layer.effect(
       const base = resolved.args ?? []
       const args = implicit && Shell.login(command) ? [...base, "-l"] : [...base]
       const cwd = resolved.cwd || location?.directory || process.cwd()
-      const directory = location?.directory || cwd
+      const directory = FSUtil.resolve(location?.directory || cwd)
       // kilocode_change end
       // kilocode_change end
       const env = {
@@ -390,4 +400,4 @@ const layer = Layer.effect(
 
 export const locationLayer = layer // kilocode_change
 
-export const node = makeGlobalNode({ service: Service, layer, deps: [EventV2.node] }) // kilocode_change
+export const node = makeGlobalNode({ service: Service, layer, deps: [EventV2.node, FSUtil.node] }) // kilocode_change

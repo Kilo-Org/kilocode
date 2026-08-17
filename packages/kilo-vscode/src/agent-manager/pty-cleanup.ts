@@ -9,6 +9,6 @@ export async function removePtys(
   if (error) throw error
   for (const pty of data ?? []) {
     const result = await client.pty.remove({ directory, ptyID: pty.id })
-    if (result.error) throw result.error
+    if (result.error) console.warn(`[Kilo New] Failed to remove PTY ${pty.id} in ${directory}:`, result.error)
   }
 }

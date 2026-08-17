@@ -119,7 +119,7 @@ export async function deleteLifecycleWorktree(
   // Disk removal after state is clean — pollers no longer reference this worktree.
   const branch = worktree.branchOwned === false ? undefined : (worktree.originalBranch ?? worktree.branch)
   try {
-    await host.removePtys(worktree.path)
+    await host.removePtys(worktree.path).catch((error) => host.log(`Failed to remove worktree PTYs: ${error}`))
     await ctx.worktreeManager().removeWorktree(worktree.path, branch)
   } catch (error) {
     host.log(`Failed to remove worktree from disk: ${error}`)

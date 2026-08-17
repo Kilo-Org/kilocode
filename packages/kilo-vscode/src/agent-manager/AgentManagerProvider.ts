@@ -1046,7 +1046,9 @@ export class AgentManagerProvider implements Disposable {
     }
 
     try {
-      await removePtys((directory) => this.connectionService.getClientAsync(directory), dir)
+      await removePtys((directory) => this.connectionService.getClientAsync(directory), dir).catch((error) =>
+        this.log(`Failed to remove PTYs after setup failure:`, error),
+      )
       await this.getWorktreeManager()?.removeWorktree(dir, branch)
     } catch (err) {
       this.log(`Failed to remove worktree ${id} after setup failed:`, err)
@@ -1116,7 +1118,9 @@ export class AgentManagerProvider implements Disposable {
         },
         cleanupWorktree: async (wid, dir) => {
           this.getStateManager()?.removeWorktree(wid)
-          await removePtys((directory) => this.connectionService.getClientAsync(directory), dir)
+          await removePtys((directory) => this.connectionService.getClientAsync(directory), dir).catch((error) =>
+            this.log(`Failed to remove PTYs during worktree cleanup:`, error),
+          )
           await this.getWorktreeManager()?.removeWorktree(dir)
           this.pushState()
         },
@@ -1149,21 +1153,18 @@ export class AgentManagerProvider implements Disposable {
     return deleteLifecycleWorktree(ctx, this.lifecycleHost, worktreeId)
   }
 
-  /** Remove a stale worktree entry from state without touching the filesystem. */
   private async onRemoveStaleWorktree(worktreeId: string): Promise<null> {
     const ctx = this.context
     if (!ctx) return null
     return removeStaleLifecycleWorktree(ctx, this.lifecycleHost, worktreeId)
   }
 
-  /** Promote a session: create a worktree and move the session into it. */
   private async onPromoteSession(sessionId: string): Promise<null> {
     const ctx = this.context
     if (!ctx) return null
     return promoteLifecycleSession(ctx, this.lifecycleHost, sessionId)
   }
 
-  /** Add a new session to an existing worktree. */
   private async onAddSessionToWorktree(worktreeId: string, sessionId?: string): Promise<null> {
     const ctx = this.context
     if (!ctx) return null
