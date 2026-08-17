@@ -295,4 +295,23 @@ describe("createAutoScroll non-scrollable layouts", () => {
     expect(ctx.el.scrollTop).toBe(600)
     ctx.dispose()
   })
+
+  test("pauses when a native scrollbar drag changes scroll position without input events", () => {
+    const ctx = setup({ working: true })
+    ctx.el.scrollHeight = 1000
+    ctx.el.clientHeight = 200
+    ctx.el.scrollTop = 800
+    ctx.scroll.handleScroll()
+
+    ctx.el.scrollTop = 600
+    ctx.scroll.handleScroll()
+
+    expect(ctx.scroll.userScrolled()).toBe(true)
+
+    ctx.el.scrollHeight = 1050
+    ctx.resize()
+
+    expect(ctx.el.scrollTop).toBe(600)
+    ctx.dispose()
+  })
 })
