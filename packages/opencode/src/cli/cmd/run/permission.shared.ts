@@ -102,7 +102,7 @@ export function permissionInfo(request: PermissionRequest): PermissionInfo {
     const command = text(input.command)
     return {
       icon: "!",
-      title: "Allow Git operation outside the sandbox",
+      title: "Allow Git operation outside the sandbox", // kilocode_change
       lines: command
         ? [`$ ${command}`, "This approval applies to this command only."]
         : ["This approval applies to this command only."],

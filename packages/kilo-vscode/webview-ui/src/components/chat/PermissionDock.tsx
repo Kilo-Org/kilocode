@@ -130,7 +130,7 @@ export const PermissionDock: Component<{
   }
 
   const title = () => {
-    if (sandboxEscalation()) return "Allow Git operation outside the sandbox?"
+    if (sandboxEscalation()) return language.t("notification.permission.titleSandboxEscalation")
     const skill = props.request.args?.skill
     if (skillShell() && typeof skill === "string" && skill.length > 0)
       // Escape the untrusted skill name so bidi/control chars can't reorder the header text.
