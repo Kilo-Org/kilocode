@@ -64,7 +64,7 @@ class ConnectionPanel(
     }
 
     private val label = JBLabel().apply {
-        foreground = UiStyle.Colors.weak()
+        foreground = SessionUiStyle.Text.Secondary.foreground()
         addMouseListener(click)
     }
 
@@ -83,7 +83,7 @@ class ConnectionPanel(
         isOpaque = false
         lineWrap = true
         wrapStyleWord = true
-        foreground = UiStyle.Colors.fg()
+        foreground = SessionUiStyle.Colors.foreground()
     }
 
     private val scroll = JBScrollPane(details).apply {
@@ -136,7 +136,7 @@ class ConnectionPanel(
     }
 
     private fun showConnecting() {
-        label.foreground = UiStyle.Colors.weak()
+        label.foreground = SessionUiStyle.Text.Secondary.foreground()
         label.text = KiloBundle.message("session.connection.connecting")
         detail = null
         expanded = false
@@ -147,7 +147,7 @@ class ConnectionPanel(
     }
 
     private fun showDownloading(percent: Int, version: String?, platform: String?) {
-        label.foreground = UiStyle.Colors.weak()
+        label.foreground = SessionUiStyle.Text.Secondary.foreground()
         val pct = percent.coerceIn(0, 100)
         label.text = if (version != null && platform != null) {
             KiloBundle.message("session.connection.downloading.version", version, platform, pct)

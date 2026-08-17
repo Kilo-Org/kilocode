@@ -23,8 +23,8 @@ import kotlin.math.roundToInt
  * Editor-specific fields ([editorFont], [editorForeground], [editorBackground]) are derived from the active editor color
  * scheme and are used for code/editor-rendered content.
  *
- * UI font fields ([transcriptFont], [smallEditorFont], [boldEditorFont], [headerFont], [hintFont], [regularFont],
- * [boldFont], [smallFont]) come from [UiStyle.Fonts] and follow standard platform typography. Transcript fonts use the
+ * UI font fields ([transcriptFont], [smallEditorFont], [boldEditorFont], [headerFont], [regularFont], [boldFont],
+ * [smallFont]) come from [UiStyle.Fonts] and follow standard platform typography. Transcript fonts use the
  * editor size so the session body tracks editor zoom without adopting the editor family.
  */
 data class SessionEditorStyle(
@@ -38,7 +38,6 @@ data class SessionEditorStyle(
     val smallEditorFont: Font,
     val boldEditorFont: Font,
     val headerFont: Font,
-    val hintFont: Font,
     val regularFont: Font,
     val boldFont: Font,
     val smallFont: Font,
@@ -80,7 +79,7 @@ data class SessionEditorStyle(
     }
 
     /** Apply the visible prompt-input text styling to embedded session editor components. */
-    fun applyPromptToEditor(editor: EditorEx) {
+    fun applyPromptToEditor(editor: EditorEx, background: Color = editorBackground) {
         if (editor.isDisposed) return
         applyTranscriptToEditor(editor)
         if (editor.isDisposed) return
@@ -92,11 +91,11 @@ data class SessionEditorStyle(
             0,
             JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_HORIZONTAL_INSET),
         )
-        editor.backgroundColor = editorBackground
-        editor.component.background = editorBackground
-        editor.contentComponent.background = editorBackground
-        editor.scrollPane.background = editorBackground
-        editor.scrollPane.viewport.background = editorBackground
+        editor.backgroundColor = background
+        editor.component.background = background
+        editor.contentComponent.background = background
+        editor.scrollPane.background = background
+        editor.scrollPane.viewport.background = background
         editor.scrollPane.horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
         editor.scrollPane.revalidate()
         editor.scrollPane.repaint()
@@ -133,7 +132,6 @@ data class SessionEditorStyle(
                 smallEditorFont = uiFont(UiStyle.Fonts.small(), Font.PLAIN, small),
                 boldEditorFont = uiFont(UiStyle.Fonts.regular(), Font.BOLD, size),
                 headerFont = UiStyle.Fonts.header(),
-                hintFont = UiStyle.Fonts.hint(),
                 regularFont = UiStyle.Fonts.regular(),
                 boldFont = UiStyle.Fonts.bold(),
                 smallFont = UiStyle.Fonts.small(),

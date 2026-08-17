@@ -24,6 +24,7 @@ import com.intellij.ui.components.JBScrollPane
 import java.awt.Component
 import java.awt.Container
 import java.awt.Cursor
+import java.awt.Dimension
 import java.awt.datatransfer.DataFlavor
 import java.awt.event.MouseEvent
 import java.awt.Point
@@ -235,7 +236,7 @@ class SessionSelectionCopyTest : SessionUiTestBase() {
         val root = ShowingPanel()
         val parent = Disposer.newDisposable("overlay-test")
         val target = TargetPanel("alpha")
-        val overlay = SessionHoverCopyOverlay(root, parent)
+        val overlay = SessionHoverCopyOverlay(root, root, parent)
         root.setBounds(0, 0, 100, 100)
         target.setBounds(10, 10, 80, 80)
         root.add(target)
@@ -245,6 +246,55 @@ class SessionSelectionCopyTest : SessionUiTestBase() {
         target.dispatchEvent(MouseEvent(target, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(), 0, 1, 1, 0, false))
 
         assertFalse(overlay.isVisible)
+    }
+
+    fun `test hover copy overlay bounds stay inside scroll area`() {
+        val root = ShowingPanel()
+        val area = ShowingPanel()
+        val parent = Disposer.newDisposable("overlay-test")
+        val target = TargetPanel("alpha")
+        val overlay = SessionHoverCopyOverlay(root, area, parent)
+        root.setBounds(0, 0, 200, 200)
+        area.setBounds(0, 0, 200, 100)
+        target.setBounds(170, 90, 20, 20)
+        area.add(target)
+        root.add(area)
+        root.add(overlay)
+
+        try {
+            show(overlay, target)
+            val bounds = overlay.bounds(root, overlay.components.single() as JComponent)
+
+            assertTrue("copy overlay should stay above the prompt/status area", bounds.y + bounds.height <= area.y + area.height)
+        } finally {
+            Disposer.dispose(parent)
+        }
+    }
+
+    fun `test hover toolbar centers on a zero-height inline anchor but bottom-aligns a footer anchor`() {
+        val root = ShowingPanel().also { it.setBounds(0, 0, 300, 300) }
+        val area = ShowingPanel().also { it.setBounds(0, 0, 300, 300) }
+        val toolbar = JPanel().also { it.preferredSize = Dimension(24, 24) }
+        root.add(area)
+
+        val inline = InlineTarget(fixed(24, 0), toolbar)
+        val footer = InlineTarget(fixed(24, 40), toolbar)
+        listOf(inline.copyAnchor, footer.copyAnchor).forEach { it.setBounds(100, 50, 24, 40); area.add(it) }
+        val parent = Disposer.newDisposable("overlay-center")
+        val overlay = SessionHoverCopyOverlay(root, area, parent)
+        root.add(overlay)
+
+        try {
+            show(overlay, inline)
+            // Zero-height anchor => inline header control: centered in the 40px row.
+            assertEquals(50 + (40 - 24) / 2, overlay.bounds(root, toolbar).y)
+
+            show(overlay, footer)
+            // Real-height anchor => footer row: button hugs the bottom.
+            assertEquals(50 + 40 - 24, overlay.bounds(root, toolbar).y)
+        } finally {
+            Disposer.dispose(parent)
+        }
     }
 
     fun `test session context menu can reinstall after parent disposal`() {
@@ -428,7 +478,20 @@ class SessionSelectionCopyTest : SessionUiTestBase() {
         override fun copyText() = value
     }
 
-    private class ShowingPanel : JPanel(null) {
+    private class InlineTarget(
+        private val anchor: JComponent,
+        private val toolbar: JComponent,
+    ) : JPanel(), SessionCopyTarget {
+        override val copyAnchor: JComponent get() = anchor
+        override val copyToolbar: JComponent get() = toolbar
+        override fun copyText(): String? = null
+    }
+
+    private fun fixed(width: Int, height: Int): JComponent = object : ShowingPanel() {
+        override fun getPreferredSize() = Dimension(width, height)
+    }
+
+    private open class ShowingPanel : JPanel(null) {
         override fun isShowing() = true
     }
 }

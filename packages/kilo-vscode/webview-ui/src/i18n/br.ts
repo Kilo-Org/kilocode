@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Conectar Anaconda Desktop",
   "provider.anaconda.title.manage": "Gerenciar Anaconda Desktop",
@@ -53,6 +55,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Conectar provedor",
 
@@ -307,6 +310,7 @@ export const dict = {
   "ui.approval.source.yolo": "pelo modo de aprovação automática (YOLO)",
   "ui.approval.source.session": "por uma regra de aprovação automática da sessão",
   "ui.approval.source.default": "por padrão",
+  "ui.approval.outsideWorkspace": "(fora do seu espaço de trabalho: {{file}})",
 
   "session.tab.review": "Revisão",
   "session.review.filesChanged": "{{count}} Arquivos Alterados",
@@ -453,45 +457,8 @@ export const dict = {
   "provider.custom.models.name.placeholder": "Nome de Exibição",
   "provider.custom.models.reasoning.label": "Raciocínio",
   "provider.custom.models.modalities.image": "Imagem",
-  "provider.custom.models.variants.label": "Variantes",
-  "provider.custom.models.variants.add": "Adicionar variante",
-  "provider.custom.models.variants.remove": "Remover variante",
-  "provider.custom.models.variants.name.label": "Nome",
-  "provider.custom.models.variants.name.placeholder": "ex. thinking",
-  "provider.custom.models.variants.option.unset": "(não definido)",
-  "provider.custom.models.variants.enableThinking.label": "Ativar pensamento (ex. Alibaba)",
-  "provider.custom.models.variants.enableThinking.placeholder": "enable_thinking",
-  "provider.custom.models.variants.enableThinking.true": "true",
-  "provider.custom.models.variants.enableThinking.false": "false",
-  "provider.custom.models.variants.thinking.label": "Tipo de pensamento (ex. Z.ai)",
-  "provider.custom.models.variants.thinking.placeholder": "thinking",
-  "provider.custom.models.variants.thinking.enabled": "enabled",
-  "provider.custom.models.variants.thinking.disabled": "disabled",
-  "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
-  "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
-  "provider.custom.models.variants.splitReasoning.true": "true",
-  "provider.custom.models.variants.splitReasoning.false": "false",
-  "provider.custom.models.variants.chatTemplateArgs.label":
-    "Ativar pensamento via args do template de chat (ex. Hugging Face)",
-  "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
-  "provider.custom.models.variants.chatTemplateArgs.true": "true",
-  "provider.custom.models.variants.chatTemplateArgs.false": "false",
-  "provider.custom.models.variants.reasoningEffort.label": "Esforço de raciocínio",
-  "provider.custom.models.variants.reasoningEffort.placeholder": "reasoningEffort",
-  "provider.custom.models.variants.reasoningEffort.none": "none",
-  "provider.custom.models.variants.reasoningEffort.minimal": "minimal",
-  "provider.custom.models.variants.reasoningEffort.low": "low",
-  "provider.custom.models.variants.reasoningEffort.medium": "medium",
-  "provider.custom.models.variants.reasoningEffort.high": "high",
-  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
-  "provider.custom.models.variants.outputEffort.placeholder": "effort",
-  "provider.custom.models.variants.outputEffort.low": "low",
-  "provider.custom.models.variants.outputEffort.medium": "medium",
-  "provider.custom.models.variants.outputEffort.high": "high",
-  "provider.custom.models.variants.outputEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.max": "max",
+  "provider.custom.models.toggleReasoning": "Alternar raciocínio para todos",
+  "provider.custom.models.toggleImages": "Alternar imagem para todos",
   "provider.custom.models.remove": "Remover modelo",
   "provider.custom.models.add": "Adicionar modelo",
   "provider.custom.models.fetch.authError": "Falha na autenticação. Verifique a chave de API acima e tente novamente.",
@@ -505,6 +472,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "Pesquisar modelos\u2026",
   "provider.custom.models.fetch.add": "Adicionar {{count}} modelo(s)",
   "provider.custom.edit.title": "Editar provedor",
+  "provider.custom.edit.advanced": "Editar configurações avançadas no arquivo de configuração JSON",
   "provider.custom.headers.label": "Headers (opcional)",
   "provider.custom.headers.key.label": "Cabeçalho",
   "provider.custom.headers.key.placeholder": "Header-Name",
@@ -877,9 +845,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Ativar integração do protocolo de servidor de linguagem",
   "settings.experimental.batch.title": "Ferramenta em lote",
   "settings.experimental.batch.description": "Ativar processamento em lote de chamadas de ferramentas",
-  "settings.experimental.codebaseSearch.title": "Pesquisa de código",
-  "settings.experimental.codebaseSearch.description":
-    "Ativar pesquisa por linguagem natural com IA em toda a base de código",
   "settings.experimental.imageGeneration.title": "Geração de imagens",
   "settings.experimental.imageGeneration.description": "Ativar geração de imagens por IA",
   "settings.experimental.imageGenerationModel.title": "Modelo de imagem",
@@ -1148,10 +1113,11 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Alternar o esforço de raciocínio com Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Pressione Shift+Tab em um campo de entrada de prompt para alternar para o próximo nível de esforço de raciocínio. Desative para manter Shift+Tab para navegação de foco pelo teclado.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "Blocos de comando do terminal",
+  "settings.display.terminalCommand.description":
+    "Escolha se os blocos de comando do terminal começam expandidos ou recolhidos.",
+  "settings.display.terminalCommand.expanded": "Expandidos",
+  "settings.display.terminalCommand.collapsed": "Recolhidos",
   "settings.display.codeEdit.title": "Blocos de edição de código",
   "settings.display.codeEdit.description":
     "Escolha se os blocos que exibem edições de código e diferenças começam expandidos ou recolhidos.",
@@ -1163,9 +1129,12 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Expandidos",
   "settings.display.mcpTool.collapsed": "Recolhidos",
 
-  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.title": "Mostrar taxa de tokens",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+    "Exibe a taxa de geração de texto (tokens/s) na última mensagem do assistente e no cabeçalho da tarefa. Oculto por padrão para manter o chat organizado.",
+  "settings.display.autoApprovalReason.title": "Mostrar motivo da aprovação automática",
+  "settings.display.autoApprovalReason.description":
+    "Mostra uma linha nas chamadas de ferramentas explicando por que foram aprovadas automaticamente (regra correspondente, padrão do agente, modo YOLO, etc.).",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

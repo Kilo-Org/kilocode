@@ -1,6 +1,6 @@
 {
   "name": "@opencode-ai/ui",
-  "version": "7.4.20",
+  "version": "7.4.22",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -35,6 +35,7 @@
   "exports": {
     "./package.json": "./package.json",
     "./*": "./src/components/*.tsx",
+    "./file-path": "./src/file-path.ts",
     "./session-diff": "./src/components/session-diff.ts",
     "./i18n/*": "./src/i18n/*.ts",
     "./pierre": "./src/pierre/index.ts",
@@ -117,7 +118,8 @@
     "luxon": "catalog:",
     "marked-katex-extension": "5.1.6",
     "marked-shiki": "catalog:",
-    "@shikijs/stream": "catalog:"
+    "@shikijs/stream": "catalog:",
+    "solid-sonner": "catalog:"
   },
   "peerDependencies": {
     "@solidjs/meta": "^0.29.0",

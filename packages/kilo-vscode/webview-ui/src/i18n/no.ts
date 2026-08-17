@@ -1,6 +1,8 @@
 import { dict as en } from "./en"
 type Keys = keyof typeof en
 
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Koble til Anaconda Desktop",
   "provider.anaconda.title.manage": "Administrer Anaconda Desktop",
@@ -56,6 +58,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Koble til leverandør",
 
@@ -311,6 +314,7 @@ export const dict = {
   "ui.approval.source.yolo": "av automatisk godkjenning (YOLO)",
   "ui.approval.source.session": "av en økt-autogodkjenningsregel",
   "ui.approval.source.default": "som standard",
+  "ui.approval.outsideWorkspace": "(utenfor arbeidsområdet ditt: {{file}})",
 
   "session.tab.review": "Gjennomgang",
   "session.review.filesChanged": "{{count}} filer endret",
@@ -456,45 +460,8 @@ export const dict = {
   "provider.custom.models.name.placeholder": "Visningsnavn",
   "provider.custom.models.reasoning.label": "Resonnering",
   "provider.custom.models.modalities.image": "Bilde",
-  "provider.custom.models.variants.label": "Varianter",
-  "provider.custom.models.variants.add": "Legg til variant",
-  "provider.custom.models.variants.remove": "Fjern variant",
-  "provider.custom.models.variants.name.label": "Navn",
-  "provider.custom.models.variants.name.placeholder": "f.eks. thinking",
-  "provider.custom.models.variants.option.unset": "(ikke angitt)",
-  "provider.custom.models.variants.enableThinking.label": "Aktiver tenkning (f.eks. Alibaba)",
-  "provider.custom.models.variants.enableThinking.placeholder": "enable_thinking",
-  "provider.custom.models.variants.enableThinking.true": "true",
-  "provider.custom.models.variants.enableThinking.false": "false",
-  "provider.custom.models.variants.thinking.label": "Tenkningstype (f.eks. Z.ai)",
-  "provider.custom.models.variants.thinking.placeholder": "thinking",
-  "provider.custom.models.variants.thinking.enabled": "enabled",
-  "provider.custom.models.variants.thinking.disabled": "disabled",
-  "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
-  "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
-  "provider.custom.models.variants.splitReasoning.true": "true",
-  "provider.custom.models.variants.splitReasoning.false": "false",
-  "provider.custom.models.variants.chatTemplateArgs.label":
-    "Aktiver tenkning via chat-malargumenter (f.eks. Hugging Face)",
-  "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
-  "provider.custom.models.variants.chatTemplateArgs.true": "true",
-  "provider.custom.models.variants.chatTemplateArgs.false": "false",
-  "provider.custom.models.variants.reasoningEffort.label": "Resonneringsinnsats",
-  "provider.custom.models.variants.reasoningEffort.placeholder": "reasoningEffort",
-  "provider.custom.models.variants.reasoningEffort.none": "none",
-  "provider.custom.models.variants.reasoningEffort.minimal": "minimal",
-  "provider.custom.models.variants.reasoningEffort.low": "low",
-  "provider.custom.models.variants.reasoningEffort.medium": "medium",
-  "provider.custom.models.variants.reasoningEffort.high": "high",
-  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
-  "provider.custom.models.variants.outputEffort.placeholder": "effort",
-  "provider.custom.models.variants.outputEffort.low": "low",
-  "provider.custom.models.variants.outputEffort.medium": "medium",
-  "provider.custom.models.variants.outputEffort.high": "high",
-  "provider.custom.models.variants.outputEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.max": "max",
+  "provider.custom.models.toggleReasoning": "Veksle resonnering for alle",
+  "provider.custom.models.toggleImages": "Veksle bilde for alle",
   "provider.custom.models.remove": "Fjern modell",
   "provider.custom.models.add": "Legg til modell",
   "provider.custom.models.fetch.authError": "Autentisering mislyktes. Sjekk API-nøkkelen ovenfor og prøv igjen.",
@@ -508,6 +475,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "Søk etter modeller\u2026",
   "provider.custom.models.fetch.add": "Legg til {{count}} modell(er)",
   "provider.custom.edit.title": "Rediger leverandør",
+  "provider.custom.edit.advanced": "Rediger avanserte innstillinger i JSON-konfigurasjonsfilen",
   "provider.custom.headers.label": "Headere (valgfritt)",
   "provider.custom.headers.key.label": "Header",
   "provider.custom.headers.key.placeholder": "Header-Name",
@@ -832,8 +800,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Aktiver språkserverprotokoll-integrasjon",
   "settings.experimental.batch.title": "Batchverktøy",
   "settings.experimental.batch.description": "Aktiver batchbehandling av verktøykall",
-  "settings.experimental.codebaseSearch.title": "Kodesøk",
-  "settings.experimental.codebaseSearch.description": "Aktiver AI-drevet naturlig språksøk på tvers av kodebasen",
   "settings.experimental.imageGeneration.title": "Bildegenerering",
   "settings.experimental.imageGeneration.description": "Aktiver AI-bildegenerering",
   "settings.experimental.imageGenerationModel.title": "Bildemodell",
@@ -1132,10 +1098,11 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Bytt resonnementsinnsats med Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Trykk Shift+Tab i et promptinndatafelt for å bytte til neste nivå for resonnementsinnsats. Deaktiver for å beholde Shift+Tab for tastaturnavigering av fokus.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "Blokker for terminalkommandoer",
+  "settings.display.terminalCommand.description":
+    "Velg om blokker for terminalkommandoer skal være utvidet eller skjult fra start.",
+  "settings.display.terminalCommand.expanded": "Utvidet",
+  "settings.display.terminalCommand.collapsed": "Skjult",
   "settings.display.codeEdit.title": "Blokker for kodeendringer",
   "settings.display.codeEdit.description":
     "Velg om blokker for kodeendringer og forskjeller skal være utvidet eller skjult fra start.",
@@ -1150,6 +1117,9 @@ export const dict = {
   "settings.display.tokenThroughput.title": "Vis genereringshastighet",
   "settings.display.tokenThroughput.description":
     "Vis tekstgenereringshastighet (tokens/sek) på den siste assistentmeldingen og i oppgaveoverskriften. Skjult som standard for å holde chatten ryddig.",
+  "settings.display.autoApprovalReason.title": "Vis årsak til automatisk godkjenning",
+  "settings.display.autoApprovalReason.description":
+    "Viser en linje ved verktøykall som forklarer hvorfor de ble automatisk godkjent (samsvarende regel, agentstandard, YOLO-modus osv.).",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

@@ -4,14 +4,16 @@ import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
+import java.awt.Cursor
 import java.awt.event.MouseEvent
 import java.awt.image.BufferedImage
 import javax.swing.Icon
+import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JPanel
-import javax.swing.border.Border
 
 @Suppress("UnstableApiUsage")
 class AbstractSessionPartViewTest : BasePlatformTestCase() {
@@ -87,29 +89,144 @@ class AbstractSessionPartViewTest : BasePlatformTestCase() {
         assertNull(content.parent)
     }
 
+    fun `test expandable card header shows the hand cursor`() {
+        val view = TestView(content = JLabel("body"))
+
+        assertEquals(Cursor.HAND_CURSOR, (view.component(0) as JPanel).cursor.type)
+    }
+
+    fun `test expandable card applies the hand cursor to nested header children`() {
+        val child = JLabel("plain")
+        val header = JPanel(BorderLayout()).apply { add(child, BorderLayout.WEST) }
+        NestedView(header)
+
+        assertEquals(Cursor.HAND_CURSOR, child.cursor.type)
+    }
+
+    fun `test fixed non expandable card keeps the default cursor`() {
+        val view = TestView(content = JLabel("body"), expandable = false)
+
+        assertEquals(Cursor.DEFAULT_CURSOR, (view.component(0) as JPanel).cursor.type)
+    }
+
     fun `test header hover fill differs from outline colors`() {
+        assertEquals(SessionUiStyle.Colors.sessionBackground(), SessionUiStyle.View.Surface.headerBgColor())
+        assertEquals(SessionUiStyle.Colors.sessionBackground(), SessionUiStyle.View.Surface.bgColor())
         assertNotSameColor(SessionUiStyle.View.Surface.headerHoverBgColor(), SessionUiStyle.View.Outline.hoverColor())
         assertNotSameColor(SessionUiStyle.View.Surface.headerHoverBgColor(), SessionUiStyle.View.Outline.brightColor())
     }
 
-    fun `test primary card hover only changes header background`() {
+    fun `test hover only changes header background and draws no card outline`() {
         val view = TestView(content = JLabel("body"))
         val row = view.component(0) as JPanel
 
-        assertEquals(0, paint(view.border).alpha)
+        assertNull("collapsed card has no outline", view.border)
         view.expand()
 
         view.setHovered(true)
 
         assertEquals(SessionUiStyle.View.Surface.headerHoverBgColor().rgb, row.background.rgb)
-        assertLine(view.border)
+        assertNull("expanded card draws no outline", view.border)
         view.setHovered(false)
         assertEquals(SessionUiStyle.View.Surface.headerBgColor().rgb, row.background.rgb)
-        assertLine(view.border)
+        assertNull("expanded card draws no outline", view.border)
     }
 
-    private class TestView(content: JLabel, expanded: Boolean = false, expandable: Boolean = true) :
-        PrimarySessionPartView(JLabel("header"), content, expanded, expandable) {
+    fun `test expanded body is separated from header by the standard gap`() {
+        val content = JLabel("body")
+        val view = TestView(content = content, expanded = true)
+
+        val layout = view.layout as BorderLayout
+        assertEquals(SessionUiStyle.View.contentGap(), layout.vgap)
+        assertSame(view, content.parent)
+    }
+
+    fun `test collapsed card hover fill is rounded`() {
+        val view = TestView(content = JLabel("body"))
+        val row = view.component(0) as JPanel
+        row.setSize(40, 40)
+        view.setHovered(true)
+
+        val image = paintRow(row)
+        val hover = SessionUiStyle.View.Surface.headerHoverBgColor().rgb
+
+        assertEquals("center is filled with the hover color", hover, image.getRGB(20, 2))
+        assertEquals("rounded corner is transparent", 0, image.getRGB(0, 0) ushr 24)
+    }
+
+    fun `test expanded card hover fill stays rounded`() {
+        val view = TestView(content = JLabel("body"))
+        view.expand()
+        val row = view.component(0) as JPanel
+        row.setSize(40, 40)
+        view.setHovered(true)
+
+        val image = paintRow(row)
+        val hover = SessionUiStyle.View.Surface.headerHoverBgColor().rgb
+
+        assertEquals("center is filled with the hover color", hover, image.getRGB(20, 2))
+        assertEquals("expanded header keeps the rounded corner transparent", 0, image.getRGB(0, 0) ushr 24)
+    }
+
+    private fun paintRow(row: JPanel): BufferedImage {
+        val image = BufferedImage(40, 40, BufferedImage.TYPE_INT_ARGB)
+        val graphics = image.createGraphics()
+        row.paint(graphics)
+        graphics.dispose()
+        return image
+    }
+
+    fun `test hover tracks nested header child and clears on leave`() {
+        val child = JLabel("link")
+        val header = JPanel(BorderLayout()).apply { add(child, BorderLayout.WEST) }
+        val view = NestedView(header)
+        val row = view.component(0) as JPanel
+        view.setSize(200, 40)
+        view.doLayout()
+
+        // A nested child that is not click-bound (e.g. a file link) must still report hover.
+        enter(child)
+        assertEquals(SessionUiStyle.View.Surface.headerHoverBgColor().rgb, row.background.rgb)
+
+        // Leaving the row through that nested child clears the fill instead of leaving it stuck.
+        exit(child, 10_000, 10_000)
+        assertEquals(SessionUiStyle.View.Surface.headerBgColor().rgb, row.background.rgb)
+    }
+
+    fun `test clicking a nested header child toggles the card`() {
+        val child = JLabel("plain")
+        val header = JPanel(BorderLayout()).apply { add(child, BorderLayout.WEST) }
+        val view = NestedView(header)
+        view.setSize(200, 40)
+        view.doLayout()
+
+        assertFalse(view.isExpanded())
+        click(child)
+        assertTrue("Clicking anywhere on the header toggles the card", view.isExpanded())
+        click(child)
+        assertFalse(view.isExpanded())
+    }
+
+    fun `test clicking an interactive header child runs its action without toggling`() {
+        var clicks = 0
+        val child = JLabel("link").apply {
+            addMouseListener(object : java.awt.event.MouseAdapter() {
+                override fun mouseClicked(e: MouseEvent) { clicks++ }
+            })
+        }
+        val header = JPanel(BorderLayout()).apply { add(child, BorderLayout.WEST) }
+        val view = NestedView(header)
+        view.setSize(200, 40)
+        view.doLayout()
+
+        click(child)
+
+        assertEquals("The child's own action runs", 1, clicks)
+        assertFalse("A control with its own click handler must not also toggle", view.isExpanded())
+    }
+
+    private open class TestView(content: JLabel, expanded: Boolean = false, expandable: Boolean = true) :
+        AbstractSessionPartView(JLabel("header"), content, expanded, expandable) {
 
         override val contentId = "test"
         override fun update(content: Content) {}
@@ -117,45 +234,30 @@ class AbstractSessionPartViewTest : BasePlatformTestCase() {
         fun arrowIcon(): Icon = arrow.icon
     }
 
-    private fun TestView.component(index: Int): Component = components[index]
+    private class NestedView(header: JComponent) : AbstractSessionPartView(header, JLabel("body")) {
+        override val contentId = "nested"
+        override fun update(content: Content) {}
+    }
 
-    private fun enter(component: Component) = event(component, MouseEvent.MOUSE_ENTERED)
+    private fun AbstractSessionPartView.component(index: Int): Component = components[index]
 
-    private fun exit(component: Component) = event(component, MouseEvent.MOUSE_EXITED)
+    private fun click(component: Component) = event(component, MouseEvent.MOUSE_CLICKED, 1, 1)
 
-    private fun event(component: Component, id: Int) {
+    private fun enter(component: Component) = event(component, MouseEvent.MOUSE_ENTERED, 1, 1)
+
+    private fun exit(component: Component, x: Int = 1, y: Int = 1) = event(component, MouseEvent.MOUSE_EXITED, x, y)
+
+    private fun event(component: Component, id: Int, x: Int, y: Int) {
         component.dispatchEvent(MouseEvent(
             component,
             id,
             System.currentTimeMillis(),
             0,
-            1,
-            1,
+            x,
+            y,
             0,
             false,
         ))
-    }
-
-    private fun paint(border: Border): Color {
-        val image = BufferedImage(3, 3, BufferedImage.TYPE_INT_ARGB)
-        val panel = JPanel()
-        val graphics = image.createGraphics()
-        border.paintBorder(panel, graphics, 0, 0, image.width, image.height)
-        graphics.dispose()
-        return Color(image.getRGB(0, 0), true)
-    }
-
-    private fun assertLine(border: Border) {
-        val image = BufferedImage(5, 5, BufferedImage.TYPE_INT_ARGB)
-        val panel = JPanel()
-        val graphics = image.createGraphics()
-        border.paintBorder(panel, graphics, 0, 0, image.width, image.height)
-        graphics.dispose()
-        val rgb = SessionUiStyle.View.Outline.color().rgb
-        assertEquals(rgb, Color(image.getRGB(2, 0), true).rgb)
-        assertEquals(rgb, Color(image.getRGB(0, 2), true).rgb)
-        assertEquals(rgb, Color(image.getRGB(4, 2), true).rgb)
-        assertEquals(rgb, Color(image.getRGB(2, 4), true).rgb)
     }
 
     private fun assertNotSameColor(left: Color, right: Color) {

@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Poveži Anaconda Desktop",
   "provider.anaconda.title.manage": "Upravljaj Anaconda Desktopom",
@@ -53,6 +55,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Poveži provajdera",
 
@@ -305,6 +308,7 @@ export const dict = {
   "ui.approval.source.yolo": "režimom automatskog odobravanja (YOLO)",
   "ui.approval.source.session": "pravilom automatskog odobravanja sesije",
   "ui.approval.source.default": "podrazumevano",
+  "ui.approval.outsideWorkspace": "(izvan vašeg radnog prostora: {{file}})",
 
   "session.tab.review": "Pregled",
   "session.review.filesChanged": "Izmijenjeno {{count}} datoteka",
@@ -495,45 +499,8 @@ export const dict = {
   "provider.custom.models.name.placeholder": "Naziv za prikaz",
   "provider.custom.models.reasoning.label": "Zaključivanje",
   "provider.custom.models.modalities.image": "Slika",
-  "provider.custom.models.variants.label": "Varijante",
-  "provider.custom.models.variants.add": "Dodaj varijantu",
-  "provider.custom.models.variants.remove": "Ukloni varijantu",
-  "provider.custom.models.variants.name.label": "Ime",
-  "provider.custom.models.variants.name.placeholder": "npr. thinking",
-  "provider.custom.models.variants.option.unset": "(nije postavljeno)",
-  "provider.custom.models.variants.enableThinking.label": "Omogući razmišljanje (npr. Alibaba)",
-  "provider.custom.models.variants.enableThinking.placeholder": "enable_thinking",
-  "provider.custom.models.variants.enableThinking.true": "true",
-  "provider.custom.models.variants.enableThinking.false": "false",
-  "provider.custom.models.variants.thinking.label": "Vrsta razmišljanja (npr. Z.ai)",
-  "provider.custom.models.variants.thinking.placeholder": "thinking",
-  "provider.custom.models.variants.thinking.enabled": "enabled",
-  "provider.custom.models.variants.thinking.disabled": "disabled",
-  "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
-  "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
-  "provider.custom.models.variants.splitReasoning.true": "true",
-  "provider.custom.models.variants.splitReasoning.false": "false",
-  "provider.custom.models.variants.chatTemplateArgs.label":
-    "Omogući razmišljanje preko argumenata chat predloška (npr. Hugging Face)",
-  "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
-  "provider.custom.models.variants.chatTemplateArgs.true": "true",
-  "provider.custom.models.variants.chatTemplateArgs.false": "false",
-  "provider.custom.models.variants.reasoningEffort.label": "Napor zaključivanja",
-  "provider.custom.models.variants.reasoningEffort.placeholder": "reasoningEffort",
-  "provider.custom.models.variants.reasoningEffort.none": "none",
-  "provider.custom.models.variants.reasoningEffort.minimal": "minimal",
-  "provider.custom.models.variants.reasoningEffort.low": "low",
-  "provider.custom.models.variants.reasoningEffort.medium": "medium",
-  "provider.custom.models.variants.reasoningEffort.high": "high",
-  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
-  "provider.custom.models.variants.outputEffort.placeholder": "effort",
-  "provider.custom.models.variants.outputEffort.low": "low",
-  "provider.custom.models.variants.outputEffort.medium": "medium",
-  "provider.custom.models.variants.outputEffort.high": "high",
-  "provider.custom.models.variants.outputEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.max": "max",
+  "provider.custom.models.toggleReasoning": "Uključi/isključi rezonovanje za sve",
+  "provider.custom.models.toggleImages": "Uključi/isključi slike za sve",
   "provider.custom.models.remove": "Ukloni model",
   "provider.custom.models.add": "Dodaj model",
   "provider.custom.models.fetch.authError":
@@ -548,6 +515,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "Pretraži modele\u2026",
   "provider.custom.models.fetch.add": "Dodaj {{count}} model(a)",
   "provider.custom.edit.title": "Uredi provajdera",
+  "provider.custom.edit.advanced": "Uredite napredne postavke u JSON konfiguracijskoj datoteci",
   "provider.custom.headers.label": "Zaglavlja (opcionalno)",
   "provider.custom.headers.key.label": "Zaglavlje",
   "provider.custom.headers.key.placeholder": "Header-Name",
@@ -872,8 +840,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Omogući integraciju jezičkog servera",
   "settings.experimental.batch.title": "Batch alat",
   "settings.experimental.batch.description": "Omogući batch obradu poziva alata",
-  "settings.experimental.codebaseSearch.title": "Pretraga koda",
-  "settings.experimental.codebaseSearch.description": "Omogući AI pretragu prirodnim jezikom kroz bazu koda",
   "settings.experimental.imageGeneration.title": "Generisanje slika",
   "settings.experimental.imageGeneration.description": "Omogući AI generisanje slika",
   "settings.experimental.imageGenerationModel.title": "Model slike",
@@ -1138,10 +1104,11 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Promijeni napor razmišljanja pomoću Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Pritisnite Shift+Tab u polju za unos upita da pređete na sljedeći nivo napora razmišljanja. Onemogućite ovu opciju kako biste zadržali Shift+Tab za navigaciju fokusom putem tastature.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "Blokovi terminalskih naredbi",
+  "settings.display.terminalCommand.description":
+    "Odaberite da li blokovi terminalskih naredbi počinju prošireni ili sažeti.",
+  "settings.display.terminalCommand.expanded": "Prošireni",
+  "settings.display.terminalCommand.collapsed": "Sažeti",
   "settings.display.codeEdit.title": "Blokovi izmjena koda",
   "settings.display.codeEdit.description":
     "Odaberite da li će blokovi koji prikazuju izmjene koda i razlike u početku biti prošireni ili sažeti.",
@@ -1153,9 +1120,12 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Prošireni",
   "settings.display.mcpTool.collapsed": "Sažeti",
 
-  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.title": "Prikaži protok tokena",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+    "Prikazuje brzinu generisanja teksta (tokena/s) na najnovijoj poruci asistenta i u zaglavlju zadatka. Podrazumevano skriveno radi urednijeg chata.",
+  "settings.display.autoApprovalReason.title": "Prikaži razlog automatskog odobravanja",
+  "settings.display.autoApprovalReason.description":
+    "Prikazuje red uz pozive alata koji objašnjava zašto su automatski odobreni (odgovarajuće pravilo, podrazumevana vrijednost agenta, YOLO režim itd.).",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

@@ -4,6 +4,7 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.Centerizer
@@ -33,7 +34,7 @@ class LoadingPanel : JPanel(BorderLayout()), SessionEditorStyleTarget {
 
             else -> {
                 label.text = KiloBundle.message("session.empty.loading")
-                label.foreground = UiStyle.Colors.weak()
+                label.foreground = SessionUiStyle.Text.Secondary.foreground()
             }
         }
         revalidate()

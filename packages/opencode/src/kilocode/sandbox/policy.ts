@@ -1,4 +1,4 @@
-import { readFileSync, statSync } from "node:fs"
+import { accessSync, constants, readFileSync, realpathSync, statSync } from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { Effect, Semaphore } from "effect"
@@ -194,6 +194,37 @@ function isolated(ctx: InstanceContext) {
   return linked(path.resolve(ctx.directory), path.resolve(ctx.worktree))
 }
 
+function canonical(dir: string) {
+  try {
+    return realpathSync.native(dir)
+  } catch {
+    return path.resolve(dir)
+  }
+}
+
+function ancestor(value: string, target: string) {
+  const relative = path.relative(canonical(value), canonical(target))
+  return relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative)
+}
+
+function accessible(dir: string) {
+  try {
+    accessSync(dir, constants.R_OK)
+    return true
+  } catch {
+    return false
+  }
+}
+
+function filterWritable(ctx: InstanceContext, values: readonly string[]) {
+  const list = values.filter(accessible)
+  if (!isolated(ctx)) return list
+  // A nested macOS sandbox cannot reliably canonicalize an inherited writable
+  // ancestor of the linked worktree. The active worktree is already writable;
+  // keep unrelated explicit paths, but do not widen it back to the repository.
+  return list.filter((value) => !ancestor(value, ctx.directory))
+}
+
 export function profile(
   ctx: InstanceContext,
   mode: Profile["network"]["mode"] = "deny",
@@ -215,7 +246,7 @@ export function profile(
     Global.Path.bin,
     Global.Path.log,
     Global.Path.repos,
-    ...(extraWritable ?? []),
+    ...filterWritable(ctx, extraWritable ?? []),
   ].map(root)
   return {
     filesystem: {

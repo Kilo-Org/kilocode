@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "Anaconda Desktop verbinden",
   "provider.anaconda.title.manage": "Anaconda Desktop beheren",
@@ -53,6 +55,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "Provider verbinden",
 
@@ -308,6 +311,7 @@ export const dict = {
   "ui.approval.source.yolo": "door de automatische goedkeuringsmodus (YOLO)",
   "ui.approval.source.session": "door een sessie-automatische-goedkeuringsregel",
   "ui.approval.source.default": "standaard",
+  "ui.approval.outsideWorkspace": "(buiten je werkruimte: {{file}})",
 
   "session.tab.review": "Beoordelen",
   "session.review.filesChanged": "{{count}} bestanden gewijzigd",
@@ -446,45 +450,8 @@ export const dict = {
   "provider.custom.models.name.placeholder": "Weergavenaam",
   "provider.custom.models.reasoning.label": "Redeneren",
   "provider.custom.models.modalities.image": "Afbeelding",
-  "provider.custom.models.variants.label": "Varianten",
-  "provider.custom.models.variants.add": "Variant toevoegen",
-  "provider.custom.models.variants.remove": "Variant verwijderen",
-  "provider.custom.models.variants.name.label": "Naam",
-  "provider.custom.models.variants.name.placeholder": "bijv. thinking",
-  "provider.custom.models.variants.option.unset": "(niet ingesteld)",
-  "provider.custom.models.variants.enableThinking.label": "Denken inschakelen (bijv. Alibaba)",
-  "provider.custom.models.variants.enableThinking.placeholder": "enable_thinking",
-  "provider.custom.models.variants.enableThinking.true": "true",
-  "provider.custom.models.variants.enableThinking.false": "false",
-  "provider.custom.models.variants.thinking.label": "Denktype (bijv. Z.ai)",
-  "provider.custom.models.variants.thinking.placeholder": "thinking",
-  "provider.custom.models.variants.thinking.enabled": "enabled",
-  "provider.custom.models.variants.thinking.disabled": "disabled",
-  "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
-  "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
-  "provider.custom.models.variants.splitReasoning.true": "true",
-  "provider.custom.models.variants.splitReasoning.false": "false",
-  "provider.custom.models.variants.chatTemplateArgs.label":
-    "Nadenken inschakelen via chat template args (bijv. Hugging Face)",
-  "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
-  "provider.custom.models.variants.chatTemplateArgs.true": "true",
-  "provider.custom.models.variants.chatTemplateArgs.false": "false",
-  "provider.custom.models.variants.reasoningEffort.label": "Redeneerinspanning",
-  "provider.custom.models.variants.reasoningEffort.placeholder": "reasoningEffort",
-  "provider.custom.models.variants.reasoningEffort.none": "none",
-  "provider.custom.models.variants.reasoningEffort.minimal": "minimal",
-  "provider.custom.models.variants.reasoningEffort.low": "low",
-  "provider.custom.models.variants.reasoningEffort.medium": "medium",
-  "provider.custom.models.variants.reasoningEffort.high": "high",
-  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
-  "provider.custom.models.variants.outputEffort.placeholder": "effort",
-  "provider.custom.models.variants.outputEffort.low": "low",
-  "provider.custom.models.variants.outputEffort.medium": "medium",
-  "provider.custom.models.variants.outputEffort.high": "high",
-  "provider.custom.models.variants.outputEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.max": "max",
+  "provider.custom.models.toggleReasoning": "Redeneren voor alle modellen in-/uitschakelen",
+  "provider.custom.models.toggleImages": "Afbeelding voor alle modellen in-/uitschakelen",
   "provider.custom.models.remove": "Model verwijderen",
   "provider.custom.models.add": "Model toevoegen",
   "provider.custom.models.fetch.authError":
@@ -499,6 +466,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "Modellen zoeken\u2026",
   "provider.custom.models.fetch.add": "{{count}} model(len) toevoegen",
   "provider.custom.edit.title": "Provider bewerken",
+  "provider.custom.edit.advanced": "Geavanceerde instellingen bewerken in het JSON-configuratiebestand",
   "provider.custom.headers.label": "Headers (optioneel)",
   "provider.custom.headers.key.label": "Header",
   "provider.custom.headers.key.placeholder": "Header-Naam",
@@ -870,9 +838,6 @@ export const dict = {
   "settings.experimental.lsp.description": "Schakel language server protocol integratie in",
   "settings.experimental.batch.title": "Batch Tool",
   "settings.experimental.batch.description": "Schakel batching van meerdere tool calls in",
-  "settings.experimental.codebaseSearch.title": "Codebase Zoeken",
-  "settings.experimental.codebaseSearch.description":
-    "Schakel AI-aangedreven zoeken in natuurlijke taal door je codebase in",
   "settings.experimental.imageGeneration.title": "Afbeeldingsgeneratie",
   "settings.experimental.imageGeneration.description": "AI-afbeeldingsgeneratie inschakelen",
   "settings.experimental.imageGenerationModel.title": "Afbeeldingsmodel",
@@ -1108,10 +1073,11 @@ export const dict = {
   "settings.display.shiftTabCycle.title": "Doorloop niveaus van redeneringsinspanning met Shift+Tab",
   "settings.display.shiftTabCycle.description":
     "Druk op Shift+Tab in een promptinvoerveld om naar het volgende niveau van redeneringsinspanning te gaan. Schakel dit uit om Shift+Tab te behouden voor focusnavigatie via het toetsenbord.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "Terminalopdrachtblokken",
+  "settings.display.terminalCommand.description":
+    "Kies of terminalopdrachtblokken standaard uitgeklapt of ingeklapt zijn.",
+  "settings.display.terminalCommand.expanded": "Uitgeklapt",
+  "settings.display.terminalCommand.collapsed": "Ingeklapt",
   "settings.display.codeEdit.title": "Blokken met codebewerkingen",
   "settings.display.codeEdit.description":
     "Kies of blokken met codebewerkingen en verschillen standaard uitgeklapt of ingeklapt zijn.",
@@ -1123,9 +1089,12 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Uitgeklapt",
   "settings.display.mcpTool.collapsed": "Ingeklapt",
 
-  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.title": "Tokendoorvoer weergeven",
   "settings.display.tokenThroughput.description":
-    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+    "Toont de tekstgeneratiesnelheid (tokens/sec) bij het laatste assistentbericht en in de taakkop. Standaard verborgen om de chat overzichtelijk te houden.",
+  "settings.display.autoApprovalReason.title": "Reden voor automatische goedkeuring weergeven",
+  "settings.display.autoApprovalReason.description":
+    "Toont een regel bij tool-aanroepen die uitlegt waarom ze automatisch zijn goedgekeurd (overeenkomende regel, agentstandaard, YOLO-modus, enz.).",
 
   "chat.throughput.tooltip":
     "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",

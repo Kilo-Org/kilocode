@@ -29,6 +29,14 @@ const item: McpMarketplaceItem = {
   url: "",
   content: "",
 }
+const agent = {
+  id: "reviewer",
+  type: "agent" as const,
+  name: "Code Reviewer",
+  description: "",
+  category: "development",
+  content: { mode: "all" as const, description: "Reviews code", prompt: "Review code" },
+}
 const fs = vscode.workspace.fs as unknown as {
   readFile: (uri: vscode.Uri) => Promise<Uint8Array>
   writeFile: (uri: vscode.Uri, data: Uint8Array) => Promise<void>
@@ -189,5 +197,63 @@ describe("Marketplace legacy MCP cleanup", () => {
     expect(has(files, local)).toBe(false)
     expect(has(files, legacy)).toBe(false)
     expect(has(files, global)).toBe(false)
+  })
+})
+
+describe("Marketplace agent removal", () => {
+  it("uses the authoritative CLI removal and invalidates the resolved directory", async () => {
+    const remove = mock(async () => ({ data: true }))
+    const dispose = mock(async () => ({}))
+    const getClientAsync = mock(async () => ({
+      kilocode: { removeAgent: remove },
+      global: { config: { update: mock(async () => ({})) } },
+      instance: { dispose },
+    }))
+    const marketplace = { remove: mock(async () => ({ success: true, slug: agent.id })) }
+    const ctx = { connection: { getClientAsync }, marketplace } as unknown as MarketplaceActionContext
+
+    const result = await removeMarketplaceItem(ctx, agent, "global", project, project)
+
+    expect(result).toEqual({ success: true, slug: agent.id })
+    expect(remove).toHaveBeenCalledWith({ name: agent.id, directory: project, scope: "global" })
+    expect(marketplace.remove).not.toHaveBeenCalled()
+    expect(dispose).toHaveBeenCalledWith({ directory: project })
+  })
+
+  it("returns a failure when the authoritative removal rejects the agent", async () => {
+    const getClientAsync = mock(async () => ({
+      kilocode: { removeAgent: mock(async () => ({ error: { message: "Agent is still configured" } })) },
+      instance: { dispose: mock(async () => ({})) },
+    }))
+    const ctx = {
+      connection: { getClientAsync },
+      marketplace: { remove: mock(async () => ({ success: true, slug: agent.id })) },
+    } as unknown as MarketplaceActionContext
+
+    const result = await removeMarketplaceItem(ctx, agent, "project", project, project)
+
+    expect(result).toEqual({ success: false, slug: agent.id, error: "Agent is still configured" })
+  })
+
+  it("uses friendly fallbacks for empty backend errors", async () => {
+    const remove = mock(async () => ({ error: new Error("") }))
+    const getClientAsync = mock(async () => ({ kilocode: { removeAgent: remove } }))
+    const ctx = {
+      connection: { getClientAsync },
+      marketplace: { remove: mock(async () => ({ success: true, slug: agent.id })) },
+    } as unknown as MarketplaceActionContext
+
+    const rejected = await removeMarketplaceItem(ctx, agent, "project", project, project)
+    expect(rejected).toEqual({
+      success: false,
+      slug: agent.id,
+      error: `Agent "${agent.id}" is still provided by another configuration.`,
+    })
+
+    getClientAsync.mockImplementation(async () => {
+      throw new Error("")
+    })
+    const failed = await removeMarketplaceItem(ctx, agent, "global", project, project)
+    expect(failed).toEqual({ success: false, slug: agent.id, error: `Failed to remove agent "${agent.id}".` })
   })
 })

@@ -10,7 +10,6 @@ import {
 export { KILO_GATEWAY_ID, PROVIDER_ORDER }
 
 export const KILO_AUTO_SMALL_IDS = new Set(["kilo-auto/small", "auto-small"])
-export const KILO_AUTO_EFFICIENT_ID = "kilo-auto/efficient"
 const AUTO_FALLBACK = "Routes requests automatically."
 
 interface Choice {
@@ -24,15 +23,11 @@ export function isAuto(model: Pick<EnrichedModel, "providerID" | "id">): boolean
   )
 }
 
-export function isAutoEfficient(model: Pick<EnrichedModel, "providerID" | "id">): boolean {
-  return model.providerID === KILO_GATEWAY_ID && model.id === KILO_AUTO_EFFICIENT_ID
-}
-
 export function autoChoices(
   model: Pick<EnrichedModel, "providerID" | "id" | "autoRouting">,
   catalog: readonly Pick<EnrichedModel, "id" | "name">[] = [],
 ): readonly Choice[] {
-  if (!isAutoEfficient(model)) return []
+  if (!isAuto(model)) return []
   const ids = model.autoRouting?.models
   if (!ids?.length) return []
   const names = new Map(catalog.map((item) => [item.id, stripSubProviderPrefix(sanitizeName(item.name))]))

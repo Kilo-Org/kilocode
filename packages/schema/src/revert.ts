@@ -20,5 +20,6 @@ export const State = Schema.Struct({
   snapshot: Schema.String.pipe(optional),
   diff: Schema.String.pipe(optional),
   files: Schema.Array(FileDiff).pipe(optional),
+  workspace: Schema.Literals(["restored", "snapshots-disabled", "unavailable"]).pipe(optional), // kilocode_change
 }).annotate({ identifier: "Revert.State" })
 export interface State extends Schema.Schema.Type<typeof State> {}

@@ -41,14 +41,15 @@ interface Failure {
 }
 
 interface Options {
-  root(): string | undefined
-  ready(): Promise<WorktreeStateManager | undefined>
-  state(): WorktreeStateManager | undefined
-  stats(): Promise<{ worktrees: WorktreeStats[]; local?: LocalStats }>
-  prs(): Map<string, PRStatus>
-  push(): void
-  managed(sessionID: string): boolean
-  close(sessionID: string): Promise<void>
+  root(directory?: string): string | undefined
+  ready(directory?: string): Promise<WorktreeStateManager | undefined>
+  state(directory?: string): WorktreeStateManager | undefined
+  stats(directory?: string): Promise<{ worktrees: WorktreeStats[]; local?: LocalStats }>
+  prs(directory?: string): Map<string, PRStatus>
+  push(directory?: string): void
+  managed(sessionID: string, directory?: string): boolean
+  close(sessionID: string, directory?: string): Promise<void>
+  directories?(): string[]
   log(...args: unknown[]): void
 }
 
@@ -108,6 +109,7 @@ export class AgentManagerOrchestrationBridge {
       })
     })
     this.unsubscribeDirectories = connection.registerDirectoryProvider(() => {
+      if (this.options.directories) return this.options.directories()
       const root = this.options.root()
       const dirs =
         this.options
@@ -181,8 +183,8 @@ export class AgentManagerOrchestrationBridge {
   }
 
   private async admit(request: Request, directory: string): Promise<void> {
-    const state = await this.options.ready()
-    const root = this.options.root()
+    const state = await this.options.ready(directory)
+    const root = this.options.root(directory)
     if (this.disposed || this.settled.has(request.id)) return
     if (!state || !root) {
       const accepted = await this.reject(request.id, directory, {
@@ -232,7 +234,7 @@ export class AgentManagerOrchestrationBridge {
 
   private async run(request: Request, origin: Origin, active: Active): Promise<void> {
     try {
-      const outcome = this.outcomes.get(request.id) ?? (await this.execute(request, active))
+      const outcome = this.outcomes.get(request.id) ?? (await this.execute(request, origin, active))
       if (!outcome || this.disposed || active.cancelled) return
       this.rememberOutcome(request.id, outcome)
       const accepted =
@@ -248,10 +250,10 @@ export class AgentManagerOrchestrationBridge {
     }
   }
 
-  private async execute(request: Request, active: Active): Promise<Outcome | undefined> {
+  private async execute(request: Request, origin: Origin, active: Active): Promise<Outcome | undefined> {
     try {
-      const state = await this.options.ready()
-      const root = this.options.root()
+      const state = await this.options.ready(origin.directory)
+      const root = this.options.root(origin.directory)
       if (!state || !root)
         throw new OrchestrationError("workspace_unavailable", "Agent Manager requires an open workspace")
       if (this.disposed || active.cancelled) return
@@ -260,7 +262,7 @@ export class AgentManagerOrchestrationBridge {
         // Git stats are refreshed by the poller independently. A forced refresh
         // here can spawn one diff/ahead-behind pair per worktree and exceed the
         // host request timeout before the overview can return its IDs.
-        const stats = await this.options.stats()
+        const stats = await this.options.stats(origin.directory)
         if (this.disposed || active.cancelled) return
         const result = await overview({
           client,
@@ -269,7 +271,7 @@ export class AgentManagerOrchestrationBridge {
           titles: this.titles,
           filter: request.filter,
           stats,
-          prs: this.options.prs(),
+          prs: this.options.prs(origin.directory),
         })
         return { result: { operation: "overview", overview: result } }
       }
@@ -288,7 +290,7 @@ export class AgentManagerOrchestrationBridge {
       }
       if (request.operation === "move") {
         move({ state, sessionID: request.targetSessionID, sectionID: request.sectionID })
-        this.options.push()
+        this.options.push(origin.directory)
         if (this.disposed || active.cancelled) return
         return {
           result: {
@@ -299,10 +301,10 @@ export class AgentManagerOrchestrationBridge {
           },
         }
       }
-      if (!this.options.managed(request.targetSessionID)) {
+      if (!this.options.managed(request.targetSessionID, origin.directory)) {
         throw new OrchestrationError("unknown_session", "The session is not managed by this Agent Manager workspace")
       }
-      await this.options.close(request.targetSessionID)
+      await this.options.close(request.targetSessionID, origin.directory)
       if (this.disposed || active.cancelled) return
       return { result: { operation: "stop", sessionID: request.targetSessionID, stopped: true } }
     } catch (error) {

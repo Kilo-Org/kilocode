@@ -1,3 +1,5 @@
+import { cloudProviderDict } from "./cloud-provider"
+
 export const anacondaDesktopDict = {
   "provider.anaconda.title.connect": "اتصال به Anaconda Desktop",
   "provider.anaconda.title.manage": "مدیریت Anaconda Desktop",
@@ -53,6 +55,7 @@ export const anacondaDesktopDict = {
 
 export const dict = {
   ...anacondaDesktopDict,
+  ...cloudProviderDict,
 
   "command.provider.connect": "اتصال به ارائه‌دهنده",
 
@@ -302,6 +305,7 @@ export const dict = {
   "ui.approval.source.yolo": "توسط حالت تأیید خودکار (YOLO)",
   "ui.approval.source.session": "توسط قانون تأیید خودکار جلسه",
   "ui.approval.source.default": "به‌طور پیش‌فرض",
+  "ui.approval.outsideWorkspace": "(خارج از فضای کاری شما: {{file}})",
 
   "session.tab.review": "بررسی",
   "session.review.filesChanged": "{{count}} فایل تغییر یافته",
@@ -408,45 +412,8 @@ export const dict = {
   "provider.custom.models.name.placeholder": "نام نمایشی",
   "provider.custom.models.reasoning.label": "استدلال",
   "provider.custom.models.modalities.image": "تصویر",
-  "provider.custom.models.variants.label": "نسخه‌های متغیر",
-  "provider.custom.models.variants.add": "افزودن نسخه متغیر",
-  "provider.custom.models.variants.remove": "حذف نسخه متغیر",
-  "provider.custom.models.variants.name.label": "نام",
-  "provider.custom.models.variants.name.placeholder": "مثلاً thinking",
-  "provider.custom.models.variants.option.unset": "(تنظیم نشده)",
-  "provider.custom.models.variants.enableThinking.label": "فعال‌سازی تفکر (مثلاً Alibaba)",
-  "provider.custom.models.variants.enableThinking.placeholder": "enable_thinking",
-  "provider.custom.models.variants.enableThinking.true": "true",
-  "provider.custom.models.variants.enableThinking.false": "false",
-  "provider.custom.models.variants.thinking.label": "نوع تفکر (مثلاً Z.ai)",
-  "provider.custom.models.variants.thinking.placeholder": "thinking",
-  "provider.custom.models.variants.thinking.enabled": "فعال",
-  "provider.custom.models.variants.thinking.disabled": "غیرفعال",
-  "provider.custom.models.variants.thinking.adaptive": "تطبیقی",
-  "provider.custom.models.variants.splitReasoning.label": "تقسیم استدلال (لازم برای مثلاً MiniMax)",
-  "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
-  "provider.custom.models.variants.splitReasoning.true": "true",
-  "provider.custom.models.variants.splitReasoning.false": "false",
-  "provider.custom.models.variants.chatTemplateArgs.label":
-    "فعال‌سازی تفکر از طریق آرگومان‌های قالب چت (مثلاً Hugging Face)",
-  "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
-  "provider.custom.models.variants.chatTemplateArgs.true": "true",
-  "provider.custom.models.variants.chatTemplateArgs.false": "false",
-  "provider.custom.models.variants.reasoningEffort.label": "سطح استدلال",
-  "provider.custom.models.variants.reasoningEffort.placeholder": "reasoningEffort",
-  "provider.custom.models.variants.reasoningEffort.none": "هیچ",
-  "provider.custom.models.variants.reasoningEffort.minimal": "حداقل",
-  "provider.custom.models.variants.reasoningEffort.low": "کم",
-  "provider.custom.models.variants.reasoningEffort.medium": "متوسط",
-  "provider.custom.models.variants.reasoningEffort.high": "زیاد",
-  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "تلاش خروجی (مثلاً Anthropic)",
-  "provider.custom.models.variants.outputEffort.placeholder": "تلاش",
-  "provider.custom.models.variants.outputEffort.low": "کم",
-  "provider.custom.models.variants.outputEffort.medium": "متوسط",
-  "provider.custom.models.variants.outputEffort.high": "زیاد",
-  "provider.custom.models.variants.outputEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.max": "حداکثر",
+  "provider.custom.models.toggleReasoning": "تغییر وضعیت استدلال برای همه",
+  "provider.custom.models.toggleImages": "تغییر وضعیت تصویر برای همه",
   "provider.custom.models.remove": "حذف مدل",
   "provider.custom.models.add": "افزودن مدل",
   "provider.custom.models.fetch.authError": "احراز هویت ناموفق بود. کلید API بالا را بررسی کرده و دوباره امتحان کنید.",
@@ -460,6 +427,7 @@ export const dict = {
   "provider.custom.models.fetch.search": "جستجوی مدل‌ها…",
   "provider.custom.models.fetch.add": "افزودن {{count}} مدل",
   "provider.custom.edit.title": "ویرایش ارائه‌دهنده",
+  "provider.custom.edit.advanced": "ویرایش تنظیمات پیشرفته در فایل پیکربندی JSON",
   "provider.custom.headers.label": "هدرها (اختیاری)",
   "provider.custom.headers.key.label": "هدر",
   "provider.custom.headers.key.placeholder": "Header-Name",
@@ -855,9 +823,6 @@ export const dict = {
   "settings.experimental.lsp.description": "فعال‌سازی یکپارچه‌سازی پروتکل سرور زبان",
   "settings.experimental.batch.title": "ابزار دسته‌ای",
   "settings.experimental.batch.description": "فعال‌سازی دسته‌بندی چندین فراخوانی ابزار",
-  "settings.experimental.codebaseSearch.title": "جستجوی پایگاه کد",
-  "settings.experimental.codebaseSearch.description":
-    "فعال‌سازی جستجوی زبان طبیعی مبتنی بر هوش مصنوعی در سراسر پایگاه کد",
   "settings.experimental.imageGeneration.title": "تولید تصویر",
   "settings.experimental.imageGeneration.description": "فعال‌سازی تولید تصویر با هوش مصنوعی",
   "settings.experimental.imageGenerationModel.title": "مدل تصویر",
@@ -1138,6 +1103,9 @@ export const dict = {
   "settings.display.tokenThroughput.title": "نمایش توان عملیاتی توکن",
   "settings.display.tokenThroughput.description":
     "نرخ تولید متن (توکن/ثانیه) را در آخرین پیام دستیار و در سربرگ وظیفه نمایش می‌دهد. به‌طور پیش‌فرض پنهان است تا چت شلوغ نشود.",
+  "settings.display.autoApprovalReason.title": "نمایش دلیل تأیید خودکار",
+  "settings.display.autoApprovalReason.description":
+    "نمایش خطی در فراخوانی ابزارها که توضیح می‌دهد چرا به‌طور خودکار تأیید شده‌اند (قانون مطابق، پیش‌فرض عامل، حالت YOLO و غیره).",
 
   "chat.throughput.tooltip":
     "میانگین {{speed}} توکن/ثانیه برای این نوبت. شامل توکن‌های خروجی و استدلال می‌شود؛ زمان اجرای ابزار و انتظار را شامل نمی‌شود.",
