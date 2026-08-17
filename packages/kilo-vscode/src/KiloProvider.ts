@@ -61,7 +61,7 @@ import { slimInfo, slimPart, slimParts } from "./kilo-provider/slim-metadata"
 import { handleSidebarWorktreeMessage } from "./kilo-provider/sidebar-worktree"
 import { parseMessageFiles, type MessageFile } from "./kilo-provider/message-files"
 import { renameSession } from "./kilo-provider/rename-session"
-import { handleFileSearch } from "./kilo-provider/file-search"
+import { handleFileSearch, prewarmFileSearch } from "./kilo-provider/file-search"
 import { handleSessionSearch } from "./kilo-provider/session-search"
 import { handleFilePicker } from "./kilo-provider/file-picker"
 import { watchFontSizeConfig } from "./kilo-provider/font-size"
@@ -1836,6 +1836,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.seedSessionStatusMap(),
       ])
       await this.refreshGitStatus(this.getWorkspaceDirectory())
+      prewarmFileSearch(this.client, this.getWorkspaceDirectory())
       this.sendNotificationSettings()
       this.sendTimelineSetting()
       this.postMessage(buildThroughputSettingMessage())

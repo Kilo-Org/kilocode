@@ -1,6 +1,12 @@
 import { createEffect, createSignal, onCleanup } from "solid-js"
 import type { Accessor } from "solid-js"
-import type { FileAttachment, SessionSearchItem, WebviewMessage, ExtensionMessage } from "../types/messages"
+import type {
+  FileAttachment,
+  FileSearchItem,
+  SessionSearchItem,
+  WebviewMessage,
+  ExtensionMessage,
+} from "../types/messages"
 import {
   AT_PATTERN,
   syncMentionedPaths as _syncMentionedPaths,
@@ -112,6 +118,8 @@ export function useFileMention(
   const [sessionPicker, setSessionPicker] = createSignal(false)
   const [sessionCandidates, setSessionCandidates] = createSignal<SessionSearchItem[]>([])
   let workspaceDir = ""
+  let cached: Array<FileSearchItem | string> = []
+  const cache = new Map<string, Array<FileSearchItem | string>>()
   // Accumulates every path ever mentioned so syncMentionedPaths can
   // rediscover them after a native undo restores the text.
   const knownPaths = new Set<string>()
@@ -139,6 +147,16 @@ export function useFileMention(
     if (!showMention()) setMentionIndex(0)
   })
 
+  createEffect(() => {
+    const id = sessionID?.()
+    vscode.postMessage({
+      type: "requestFileSearch",
+      query: "",
+      requestId: "file-search-prewarm",
+      ...(id ? { sessionID: id } : {}),
+    })
+  })
+
   const unsubscribe = vscode.onMessage((message) => {
     if (message.type === "sessionSearchResult") {
       if (message.requestId !== `session-search-${sessionSearchCounter}`) return
@@ -152,11 +170,17 @@ export function useFileMention(
       return
     }
     if (message.type !== "fileSearchResult") return
-    if (message.requestId === `file-search-${fileSearchCounter}`) {
+    if (message.requestId === `file-search-${fileSearchCounter}` || message.requestId === "file-search-prewarm") {
       const items = message.items ?? message.paths.map((path) => ({ path, type: "file" as const }))
       workspaceDir = message.dir
-      setMentionResults(buildMentionResults(mentionQuery() ?? "", items, git?.() ?? true))
-      setMentionIndex(0)
+      if (message.dir) cache.set(message.dir, items)
+      if (!mentionQuery()) {
+        cached = items
+      }
+      if (showMention() && message.requestId === `file-search-${fileSearchCounter}`) {
+        setMentionResults(buildMentionResults(mentionQuery() ?? "", items, git?.() ?? true))
+        setMentionIndex(0)
+      }
     }
   })
 
@@ -166,9 +190,9 @@ export function useFileMention(
     if (pendingArrowSnap) clearTimeout(pendingArrowSnap.timer)
   })
 
-  const requestFileSearch = (query: string) => {
+  const requestFileSearch = (query: string, immediate = false) => {
     if (fileSearchTimer) clearTimeout(fileSearchTimer)
-    fileSearchTimer = setTimeout(() => {
+    const send = () => {
       fileSearchCounter++
       const id = sessionID?.()
       vscode.postMessage({
@@ -177,7 +201,12 @@ export function useFileMention(
         requestId: `file-search-${fileSearchCounter}`,
         ...(id ? { sessionID: id } : {}),
       })
-    }, FILE_SEARCH_DEBOUNCE_MS)
+    }
+    if (immediate || !query) {
+      send()
+      return
+    }
+    fileSearchTimer = setTimeout(send, FILE_SEARCH_DEBOUNCE_MS)
   }
 
   const closeMention = () => {
@@ -298,8 +327,16 @@ export function useFileMention(
     if (match) {
       const query = match[1] ?? ""
       setMentionQuery(query)
+      const items = (workspaceDir && cache.get(workspaceDir)) || cached
+      if (!query) {
+        setMentionResults(buildMentionResults("", items, git?.() ?? true))
+        setMentionIndex(0)
+        requestFileSearch("", true)
+        return
+      }
       setMentionResults((prev) => {
-        const next = filterMentionResults(query, prev)
+        const base = prev.length ? prev : buildMentionResults("", items, git?.() ?? true)
+        const next = filterMentionResults(query, base)
         if (next.length) return next
         return buildMentionResults(query, [], git?.() ?? true)
       })

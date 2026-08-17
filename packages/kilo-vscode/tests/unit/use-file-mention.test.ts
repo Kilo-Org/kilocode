@@ -750,4 +750,63 @@ describe("useFileMention", () => {
 
     dispose.fn?.()
   })
+
+  it("renders cached files instantly when opening @ with empty query", async () => {
+    const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: (handler: (message: ExtensionMessage) => void) => {
+        handlers.add(handler)
+        return () => handlers.delete(handler)
+      },
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    // Simulate prewarm response
+    for (const handler of handlers) {
+      handler({
+        type: "fileSearchResult",
+        requestId: "file-search-prewarm",
+        dir: "/repo",
+        paths: ["src/index.ts", "package.json"],
+        items: [
+          { path: "src/index.ts", type: "opened-file" },
+          { path: "package.json", type: "file" },
+        ],
+      })
+    }
+
+    // Now user types @
+    mention.onInput("@", 1)
+
+    // Mention results must immediately contain the cached files without waiting for a debounce/IPC round-trip
+    expect(mention.mentionResults()).toEqual([
+      { type: "terminal", value: "terminal", label: "Terminal", description: "Active terminal output" },
+      { type: "past-chats", value: "past-chats", label: "Past chats", description: "Search previous sessions" },
+      { type: "opened-file", value: "src/index.ts" },
+      { type: "file", value: "package.json" },
+      FILE_PICKER_RESULT,
+    ])
+
+    // Close mention and reopen @ - should still be instant
+    mention.closeMention()
+    expect(mention.mentionResults().length).toBe(0)
+
+    mention.onInput("@", 1)
+    expect(mention.mentionResults()).toEqual([
+      { type: "terminal", value: "terminal", label: "Terminal", description: "Active terminal output" },
+      { type: "past-chats", value: "past-chats", label: "Past chats", description: "Search previous sessions" },
+      { type: "opened-file", value: "src/index.ts" },
+      { type: "file", value: "package.json" },
+      FILE_PICKER_RESULT,
+    ])
+
+    dispose.fn?.()
+  })
 })
