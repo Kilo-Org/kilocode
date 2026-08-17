@@ -61,13 +61,8 @@ import {
   buildCostBreakdown,
   buildSessionToolParts,
   childID,
-<<<<<<< HEAD
-  mergeMessages,
-  messageParts,
-||||||| f8490f3a33
-=======
   dropSet,
->>>>>>> origin/main
+  messageParts,
   reconcileSessionToolParts,
   removeSessionToolPart,
   removeSessionToolPartsForMessage,
