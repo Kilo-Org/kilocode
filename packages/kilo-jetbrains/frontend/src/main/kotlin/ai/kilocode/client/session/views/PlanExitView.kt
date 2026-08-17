@@ -6,11 +6,13 @@ import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.ui.md.MdViewFactory
 import ai.kilocode.client.session.openSessionLink
 import com.intellij.openapi.util.Disposer
+import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 
 class PlanExitView(
@@ -32,6 +34,9 @@ class PlanExitView(
     init {
         layout = BorderLayout()
         isOpaque = false
+        // Prose, not a raised block, but still indented to the regular card header's leading edge so
+        // the plan-ready line aligns left with the tool/message views above and below it.
+        border = JBUI.Borders.empty(0, SessionUiStyle.View.Header.left(), 0, 0)
         Disposer.register(this, md)
         md.addLinkListener { openSessionLink(it, openFile, openUrl) }
         add(md.component, BorderLayout.CENTER)
@@ -47,6 +52,9 @@ class PlanExitView(
 
     override fun applyStyle(style: SessionEditorStyle) {
         md.applyStyle(style)
+        // Plan-ready is transcript prose, not a raised block: stay transparent so it reads on the
+        // session backdrop like the assistant's other text.
+        md.opaque = false
         md.font = style.transcriptFont
         md.codeFont = style.editorFamily
         md.foreground = style.editorForeground

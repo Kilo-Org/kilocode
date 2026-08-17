@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.ui
 
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.ide.ui.UISettings
 import com.intellij.ide.ui.UISettingsUtils
@@ -97,9 +98,9 @@ class SessionEditorStyleTest : BasePlatformTestCase() {
         assertEquals(UiStyle.Fonts.header(), style.headerFont)
     }
 
-    fun `test hintFont equals UiStyle Fonts hint`() {
+    fun `test secondary text font equals UiStyle Fonts regular`() {
         val style = SessionEditorStyle.create(family = "Courier New", size = 22)
-        assertEquals(UiStyle.Fonts.hint(), style.hintFont)
+        assertEquals(UiStyle.Fonts.regular(), SessionUiStyle.Text.Secondary.font(style))
     }
 
     fun `test regularFont equals UiStyle Fonts regular`() {
@@ -122,7 +123,7 @@ class SessionEditorStyleTest : BasePlatformTestCase() {
         val style = SessionEditorStyle.create(family = "Courier New", size = 22)
 
         assertFalse("headerFont should not use editor font family", style.headerFont.name == "Courier New")
-        assertFalse("hintFont should not use editor font family", style.hintFont.name == "Courier New")
+        assertFalse("secondary text font should not use editor font family", SessionUiStyle.Text.Secondary.font(style).name == "Courier New")
         assertFalse("regularFont should not use editor font family", style.regularFont.name == "Courier New")
         assertFalse("boldFont should not use editor font family", style.boldFont.name == "Courier New")
         assertFalse("smallFont should not use editor font family", style.smallFont.name == "Courier New")

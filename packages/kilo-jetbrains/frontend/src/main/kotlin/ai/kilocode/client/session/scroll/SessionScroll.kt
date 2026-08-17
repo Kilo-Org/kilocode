@@ -40,6 +40,9 @@ internal class SessionScroll(
         border = JBUI.Borders.empty()
         verticalScrollBarPolicy = JBScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED
         horizontalScrollBarPolicy = JBScrollPane.HORIZONTAL_SCROLLBAR_NEVER
+        // Transparent over the self-rendered SessionUi backdrop; the message list paints its own.
+        isOpaque = false
+        viewport.isOpaque = false
     }
 
     internal val bar: JScrollBar get() = component.verticalScrollBar
@@ -223,8 +226,6 @@ internal class SessionScroll(
     @RequiresEdt
     fun applyStyle(style: SessionEditorStyle) {
         this.style = style
-        component.background = style.editorBackground
-        component.viewport.background = style.editorBackground
         syncIcon()
         messages.applyStyle(style)
         val view = component.viewport.view

@@ -153,6 +153,7 @@ function recalledMemory(turn: Turn) {
 // --- Model resolution + invocation (host provider/`ai` -> port ModelHandle) --------------------
 
 function consolidationOptions(model: Provider.Model) {
+  if (model.api.npm === "@ai-sdk/openai-compatible") return { ...ProviderTransform.smallOptions(model), stream: false }
   if (model.providerID === "openai" || model.api.npm === "@ai-sdk/openai") return { store: false }
   return ProviderTransform.smallOptions(model)
 }
@@ -191,6 +192,7 @@ async function memoryText(input: {
     temperature: input.temperature,
     topP: input.topP,
     topK: input.topK,
+    maxRetries: 1,
   }
   const work = async () => {
     if (!openai) return generateText(common)
@@ -210,7 +212,7 @@ async function memoryText(input: {
   const timeout = new Promise<never>((_, reject) => {
     timer = setTimeout(() => {
       ctl.abort()
-      reject(new Error("memory model timed out"))
+      reject(new DOMException("memory model timed out", "TimeoutError"))
     }, ms)
   })
   try {

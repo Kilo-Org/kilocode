@@ -3,6 +3,7 @@ package ai.kilocode.client.session.views.tool
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import com.intellij.openapi.Disposable
@@ -23,7 +24,7 @@ import javax.swing.JComponent
 @RequiresEdt
 internal fun diffOverflowPanel(open: () -> Unit): JComponent {
     val message = JBLabel(KiloBundle.message("diff.overflow.message")).apply {
-        foreground = UiStyle.Colors.weak()
+        foreground = SessionUiStyle.Text.Secondary.foreground()
     }
     val link = HyperlinkLabel(KiloBundle.message("diff.overflow.open")).apply {
         addHyperlinkListener { open() }
